@@ -12,6 +12,7 @@ import {
   type PubSub,
   REMOTE_PAUSE_PROTOCOL,
   RUNNER_STOPPED_CLOSE,
+  type TaskRoomReport,
 } from "@agenteschat/adapters";
 import {
   and,
@@ -37,7 +38,7 @@ import { publishOrgEvent } from "./events";
 import { can, requireActiveMembership, requirePermission } from "./organizations";
 import { maySql } from "./permissions";
 import { isRightHand, RIGHT_HAND, rightHandPermanent } from "./right-hand";
-import { liveSeats, removedSeatIds, removeSeat, SHARED_SEAT, seatName } from "./right-hand-seats";
+import { liveSeats, oneUserComputer, removedSeatIds, removeSeat, SHARED_SEAT, seatName } from "./right-hand-seats";
 
 const { machines, agents, users, organizationMembers } = schema;
 
@@ -434,12 +435,14 @@ export async function computerDriving(db: Database, userId: string, orgId: strin
     .where(and(eq(agents.id, agentId), eq(agents.orgId, orgId)));
   if (!agent) throw new NotFoundError("Agent not found");
   // The right hand's computer is each person's own seat on the workspace's (ADR 0175): theirs to drive with the role
-  // key that gives a person their own agents' computers, and reached only as themselves (`viewerScope`).
+  // key that gives a person their own agents' computers, and reached only as themselves (`viewerScope`). Where every
+  // agent there is one OS user, driving a seat is driving that user, which reads every other seat and agent: the rule
+  // of any agent's there (`driveRefusal`), so only who connected the computer.
   const home = isRightHand(agent) ? await workspaceHomeId(db, orgId) : null;
   const machineId = home ?? agent.machineId;
   const machine = machineId ? await getMachine(db, orgId, machineId) : null;
   if (!machine) throw new NotFoundError("This agent has no computer");
-  if (home && !shared) {
+  if (home && !shared && !oneUserComputer(machine)) {
     const keyed = can(membership, "own_computers") || can(membership, "control_computers");
     return { machine, refusal: keyed ? null : ("role" as const) };
   }
@@ -543,16 +546,15 @@ async function machineViews(db: Database, actorId: string, orgId: string, only?:
         .orderBy(agents.createdAt)
     : [];
   // The right hand uses the workspace's own computer, as each person's own seat there and a shared one (ADR 0175):
-  // listed on it where seats can be kept apart, so the apps show whoever looks their own.
+  // listed on it, so the apps show whoever looks their own.
   const home = await workspaceHomeId(db, orgId);
   const homeRow = rows.find((r) => r.machine.id === home)?.machine;
-  const [rightHand] =
-    homeRow?.executors?.mode === "system"
-      ? await db
-          .select({ id: agents.id, name: agents.name, handle: agents.handle, owner: agents.ownerUserId })
-          .from(agents)
-          .where(and(eq(agents.orgId, orgId), eq(agents.builtin, RIGHT_HAND), isNull(agents.archivedAt)))
-      : [];
+  const [rightHand] = homeRow
+    ? await db
+        .select({ id: agents.id, name: agents.name, handle: agents.handle, owner: agents.ownerUserId })
+        .from(agents)
+        .where(and(eq(agents.orgId, orgId), eq(agents.builtin, RIGHT_HAND), isNull(agents.archivedAt)))
+    : [];
   if (rightHand && homeRow) using.push({ ...rightHand, machineId: homeRow.id, listed: true });
   // Its shared seat there is opened like any agent's computer, by the admins of computers and its owner
   // (`computerDriving` with `shared`): only they are shown it.
@@ -677,9 +679,14 @@ export async function machineView(db: Database, actorId: string, orgId: string, 
   return view;
 }
 
-/** Its size as stored, with a new task limit (`TASK_LIMIT_PROTOCOL`); a row with no size yet keeps none. */
-export const withTaskLimit = (maxTasks: number) =>
-  sql`jsonb_set(${machines.size}, '{maxTasks}', to_jsonb(${maxTasks}::int))`;
+/**
+ * Its size as stored, with a new task limit (`TASK_LIMIT_PROTOCOL`) and room (`TASK_ROOM_PROTOCOL`); a row with no
+ * size yet keeps none.
+ */
+export const withTaskLimit = (maxTasks: number, room?: TaskRoomReport) => {
+  const limit = sql`jsonb_set(${machines.size}, '{maxTasks}', to_jsonb(${maxTasks}::int))`;
+  return room ? sql`jsonb_set(${limit}, '{room}', ${JSON.stringify(room)}::jsonb)` : limit;
+};
 
 /** `machine.updated` to every member: what changed (no access details: those are for admins and the pairer). */
 

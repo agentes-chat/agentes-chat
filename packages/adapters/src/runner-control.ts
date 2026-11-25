@@ -185,6 +185,8 @@ export interface ControlConfig extends Required<ControlConfigPatch> {
   workspace: string;
   /** The runner's own `maxConcurrentTasks` when the config has none, sized to the computer; absent: an older one (3). */
   defaultMaxConcurrentTasks?: number;
+  /** Background tasks start on the computer's room (`TASK_ROOM_PROTOCOL`): `maxConcurrentTasks` decides nothing there. */
+  tasksOnRoom?: boolean;
   managedBy?: "desktop";
 }
 

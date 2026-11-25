@@ -845,7 +845,7 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "data",
         heading: "Cosa invia",
         blocks: [
-          "Una volta al giorno il server invia ad agentes.chat statistiche d'uso anonime: conteggi come persone, agenti, dimensioni delle macchine, token di IA usati e quanti dati inviano e ricevono i browser degli agenti. Mai messaggi, file, nomi o siti. `docker compose run --rm agentes telemetry` mostra esattamente cosa invierebbe. Il proprietario le spegne in **Impostazioni\u00a0›\u00a0Generali**, oppure con `TELEMETRY=off` in `.env`.",
+          "Una volta al giorno il server invia ad agentes.chat statistiche d'uso anonime: conteggi come persone, agenti, dimensioni delle macchine, token di IA usati, quanti dati inviano e ricevono i browser degli agenti e quanto velocemente si aprono e rispondono le app. Mai messaggi, file, nomi o siti. `docker compose run --rm agentes telemetry` mostra esattamente cosa invierebbe. Il proprietario le spegne in **Impostazioni\u00a0›\u00a0Generali**, oppure con `TELEMETRY=off` in `.env`.",
           "I report degli errori non vanno da nessuna parte, a meno che tu non imposti `SENTRY_DSN` su un server compatibile con Sentry scelto da te. Un report contiene l'errore e dove è successo, mai messaggi, email, indirizzi IP, cookie o token.",
         ],
       },

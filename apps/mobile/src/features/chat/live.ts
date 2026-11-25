@@ -16,6 +16,7 @@ import {
   cacheAgentProposal,
   cacheApproval,
   cacheCardDelegate,
+  cacheCodeSuggestion,
   cacheDmRead,
   cacheMessage,
   cacheMessageActions,
@@ -42,10 +43,12 @@ import {
   markStopping,
   type OpenConsult,
   openConversation,
+  quietRunsByChannel,
   type ReactionCount,
   type ReceiptsState,
   readConversationListsOncePerBurst,
   readList,
+  recheckRuns,
   reconcileConsults,
   reconcileRuns,
   refreshRepliedThread,
@@ -103,6 +106,8 @@ type Action =
   | { type: "stopping"; runId: string; byUserId: string }
   | { type: "unstopping"; runId: string }
   | { type: "dismiss"; runId: string }
+  /** The server's active runs, asked about runs gone quiet (`recheckRuns`). */
+  | { type: "recheck"; runIds: string[]; active: Parameters<typeof recheckRuns>[2]; at: number }
   | { type: "sweep"; at: number }
   | { type: "typed"; at: number }
   | { type: "unavailable"; event: AgentUnavailableEvent }
@@ -214,6 +219,8 @@ function reduce(state: LiveState, action: Action): LiveState {
       return { ...state, streams: unmarkStopping(state.streams, action.runId) };
     case "dismiss":
       return { ...state, streams: dismissRun(state.streams, action.runId) };
+    case "recheck":
+      return { ...state, streams: recheckRuns(state.streams, action.runIds, action.active, action.at) };
     case "sweep": {
       const stale = staleProvisional(state.streams, action.at, PROVISIONAL_TTL_MS);
       if (stale.length === 0) return state;
@@ -278,8 +285,8 @@ function cacheSecret(qc: QueryClient, orgId: string, channelId: string, secretRe
   cacheMessageMeta(qc, orgId, channelId, secretRequest.messageId, () => ({ secretRequest }));
 }
 
-/** What each event changes in the caches (the run rows are the reducer's). */
-function applyToCache(qc: QueryClient, orgId: string, channelId: string, event: ChannelEvent) {
+/** What each event changes in the caches (the run rows are the reducer's). `meId`: who reads here. */
+function applyToCache(qc: QueryClient, orgId: string, channelId: string, event: ChannelEvent, meId: string | null) {
   // Who is in one of the conversation's live files changed: its cards ask again (ADR 0196 §5).
   if (applyLiveEvent(qc, orgId, event)) return;
   switch (event.type) {
@@ -302,8 +309,10 @@ function applyToCache(qc: QueryClient, orgId: string, channelId: string, event: 
       // A reply: its root's "2 respostas" link and the thread's header.
       const threadId = repliedThread(event);
       if (threadId) refreshRepliedThread(qc, orgId, threadId);
-      // The conversation list's last line and unread: once per burst, with my topic's own `channel.activity` read.
-      readConversationListsOncePerBurst(qc, orgId);
+      // The conversation list's last line: anyone else's message comes with its `channel.activity` on my topic, which
+      // puts it in the row; my own reaches no topic of mine, so the lists read once per burst.
+      const author = event.message ? event.message.author : { type: "person", id: event.authorUserId ?? null };
+      if (author.type === "person" && author.id === meId) readConversationListsOncePerBurst(qc, orgId);
       break;
     }
     // A DM between people: the other one read it ("Visto" moves).
@@ -314,6 +323,10 @@ function applyToCache(qc: QueryClient, orgId: string, channelId: string, event: 
     case "message.unpinned":
       cachePinned(qc, orgId, channelId, event.messageId, event.type === "message.pinned");
       void qc.invalidateQueries({ queryKey: keys.pins(orgId, channelId) });
+      break;
+    // A suggested code session was opened, kept here, or waits again (ADR 0215 §11): its card under the reply.
+    case "code.suggestion":
+      cacheCodeSuggestion(qc, orgId, event.channelId, event.messageId, event.suggestion);
       break;
     // A comment on a picture, a video or a PDF was resolved or opened again (ADR 0208): its line and its pin follow.
     case "message.resolved":
@@ -653,31 +666,48 @@ export function useChatLive(orgId: string, channelId: string, enabled: boolean, 
       if (event.type === "user.typing" && event.userId === meRef.current) return;
       if (event.type === "message.created") heard.current.add(event.messageId);
       dispatch({ type: "event", event, at: Date.now() });
-      applyToCache(qc, orgId, channelId, event);
+      applyToCache(qc, orgId, channelId, event, meRef.current);
       applyMembershipEvent(qc, orgId, event);
       // A file's cards (a deleted one says so) and an agent's memory list, as on the web.
-      applyConversationEvent(qc, orgId, event);
+      applyConversationEvent(qc, orgId, event, api);
     });
-    // Left, or the app went to the background: shown again, it reads what it missed, as on the web.
+    // Left: shown again, it reads what it missed, as on the web. Back from the background, `onSubscribed` above does.
     return () => {
       off();
       close();
     };
-  }, [connection, enabled, orgId, channelId, qc, dispatch]);
+  }, [connection, enabled, orgId, channelId, qc, dispatch, api]);
 
   // Safety net, as on the web: a "pensando…" the server never confirmed doesn't spin forever; the
-  // conversation resyncs instead (checked every 5 s while there is one).
-  const hasProvisional = Object.values(streams.runs).some((r) => r.provisional && r.channelId === channelId);
+  // conversation resyncs instead. A run gone quiet is asked about, unseen: its end may never have reached the phone, and
+  // its row would stay at work with the reply already posted (checked every 5 s while a run is here).
+  const hasLive = Object.values(streams.runs).some((r) => r.channelId === channelId && r.status !== "failed");
   useEffect(() => {
-    if (!hasProvisional) return;
+    if (!hasLive) return;
+    const checking = new Set<string>();
     const timer = setInterval(() => {
       const at = Date.now();
-      if (staleProvisional(stateRef.current.streams, at, PROVISIONAL_TTL_MS).length === 0) return;
-      dispatch({ type: "sweep", at });
-      void qc.invalidateQueries({ queryKey: ["org", orgId, "channel", channelId] });
+      if (staleProvisional(stateRef.current.streams, at, PROVISIONAL_TTL_MS).length > 0) {
+        dispatch({ type: "sweep", at });
+        void qc.invalidateQueries({ queryKey: ["org", orgId, "channel", channelId] });
+      }
+      const quiet = quietRunsByChannel(stateRef.current.streams, at, checking).get(channelId);
+      if (!quiet) return;
+      for (const id of quiet) checking.add(id);
+      api.agents
+        .activeRuns(orgId, channelId)
+        .then((active) => {
+          dispatch({ type: "recheck", runIds: quiet, active: active ?? undefined, at: Date.now() });
+          if (active && quiet.some((id) => !active.some((a) => a.runId === id)))
+            void qc.invalidateQueries({ queryKey: ["org", orgId, "channel", channelId] });
+        })
+        .catch(() => dispatch({ type: "recheck", runIds: quiet, active: undefined, at: Date.now() }))
+        .finally(() => {
+          for (const id of quiet) checking.delete(id);
+        });
     }, 5000);
     return () => clearInterval(timer);
-  }, [hasProvisional, qc, orgId, channelId, dispatch, stateRef]);
+  }, [hasLive, api, qc, orgId, channelId, dispatch, stateRef]);
 
   const typing = useMemo<LiveTyping>(
     () => ({

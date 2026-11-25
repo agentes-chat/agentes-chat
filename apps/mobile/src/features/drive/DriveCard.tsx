@@ -8,7 +8,7 @@ import { useRowDirectory } from "../chat/row-data";
 import { type FileRef, pdfPreviewable } from "../files/logic";
 import { useOpenFile } from "../files/open";
 import { PdfCover } from "../files/pdf-preview";
-import { useRemoteFile } from "../files/source";
+import { usePicture } from "../files/source";
 import { PresentFaces } from "../live-files/shared/HereFaces";
 import { LiveCover } from "../live-files/shared/LiveCover";
 import { Face } from "../shared/Face";
@@ -143,12 +143,13 @@ function LivePreview({ content }: { content: ArtifactLiveContent }) {
 
 function ImagePreview({ artifact: a }: { artifact: Artifact }) {
   const { colors: c } = useTheme();
-  const link = useRemoteFile(useOrgId(), a.id, a.version);
-  if (!link.data) return <View style={[StyleSheet.absoluteFill, { backgroundColor: c.sunken }]} />;
+  const picture = usePicture(useOrgId(), a.id, a.version);
+  if (!picture.source) return <View style={[StyleSheet.absoluteFill, { backgroundColor: c.sunken }]} />;
   return (
     <Image
-      source={{ uri: link.data.uri, headers: link.data.headers, cacheKey: `${a.id}@${a.version}` }}
-      recyclingKey={`${a.id}@${a.version}`}
+      source={picture.source}
+      recyclingKey={picture.key}
+      onError={picture.onError}
       // Kept decoded in memory too: a card scrolled back or a grid drawn again shows it without decoding it anew.
       cachePolicy="memory-disk"
       contentFit="cover"

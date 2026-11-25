@@ -84,7 +84,8 @@ const styles = StyleSheet.create({
     gap: 3,
     paddingLeft: 3,
     paddingRight: 7,
-    borderRadius: MEDIA_PIN_H / 2,
+    // Its corners follow the face's: the face's radius (30% of 18) plus the 3 around it.
+    borderRadius: 8,
     // The corner on the spot it points at, cut as the app's cards are; the zoom's steadying keeps it there.
     borderBottomLeftRadius: 3,
     transformOrigin: "left bottom",

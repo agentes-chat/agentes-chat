@@ -29,6 +29,16 @@ export const surfaceLinks = pgTable(
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     confirmedAt: timestamp({ withTimezone: true }),
     lastSeenAt: timestamp({ withTimezone: true }),
+    /**
+     * The person's six-digit PIN for confirming a sensitive act from the surface (ADR 0226), hashed. Null until they
+     * choose one. It goes with the link, so a new password or an unlink clears it too.
+     */
+    pinHash: text(),
+    pinFailures: integer().notNull().default(0),
+    /** Three wrong PINs in a row lock confirming until then. */
+    pinLockedUntil: timestamp({ withTimezone: true }),
+    /** Locks since the last right PIN: each one lasts longer (15 minutes, an hour, then a day). */
+    pinLockouts: integer().notNull().default(0),
   },
   (t) => [
     check("surface_links_status", sql`${t.status} in ('pending', 'active')`),
@@ -93,4 +103,41 @@ export const surfaceCalls = pgTable(
     externalHash: text(),
   },
   (t) => [index().on(t.at)],
+);
+
+/**
+ * A page of ours opened from a link sent on the surface (ADR 0226): one page, opened once within 10 minutes, then
+ * open for its kind's time in that browser alone (`browser_hash`). It ends with its surface link.
+ */
+export const surfacePageLinks = pgTable(
+  "surface_page_links",
+  {
+    id: uuid()
+      .primaryKey()
+      .$defaultFn(() => Bun.randomUUIDv7()),
+    orgId: uuid()
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    linkId: uuid()
+      .notNull()
+      .references(() => surfaceLinks.id, { onDelete: "cascade" }),
+    userId: text()
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    kind: text().$type<"confirm" | "screen" | "control">().notNull(),
+    /** What the page shows: an approval for `confirm`. */
+    targetId: uuid().notNull(),
+    /** SHA-256 of the token in the URL; the token itself is never kept. */
+    tokenHash: text().notNull(),
+    /** SHA-256 of the secret the first browser to open it holds in a cookie. */
+    browserHash: text(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    openedAt: timestamp({ withTimezone: true }),
+  },
+  (t) => [
+    check("surface_page_links_kind", sql`${t.kind} in ('confirm', 'screen', 'control')`),
+    uniqueIndex().on(t.tokenHash),
+    index().on(t.linkId),
+    index().on(t.createdAt),
+  ],
 );

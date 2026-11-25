@@ -126,7 +126,7 @@ test("not connected: the connect card when the agent has it, else how an admin c
   await f.close();
   const plain = await world();
   const text = await ask(plain, { ...KEY, name: "LINEAR_API_KEY", purpose: "Read issues" });
-  expect(text).toContain("Settings › Connectors and MCPs › Add connector › Linear");
+  expect(text).toContain("Settings › Connectors and MCPs › Browse connectors › Linear");
   expect(text).toContain("Tell the person this instead of asking for a key.");
 });
 

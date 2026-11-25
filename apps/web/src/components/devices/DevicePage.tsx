@@ -14,6 +14,7 @@ import {
   statusSentence,
   taskChoices,
   taskLimitLine,
+  tasksAutoText,
 } from "@agenteschat/client/lib/devices";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { clockAt } from "@agenteschat/client/lib/format";
@@ -427,8 +428,35 @@ function ComputerPage({ machineId }: { machineId: string }) {
             hint={t("devices.who.computerHint")}
             onChange={(audience: DeviceAudience) => save({ id: d.id, audience })}
           />
+          {/* Tasks start on room there: what's running and what still fits, and the owner's Push harder. */}
+          {d.taskRoom && (
+            <PrefRow
+              id="dv-pc-tasks"
+              icon="layers"
+              label={t("devices.maxTasks")}
+              hint={t("devices.tasksAutoHint")}
+              status={tasksAutoText(t, d)}
+            />
+          )}
+          {d.taskRoom && tasksEditable && d.machineKind === "connected" && (
+            <PrefRow
+              id="dv-pc-push"
+              icon="power"
+              label={t("devices.pushHarder")}
+              hint={t("devices.pushHarderHint")}
+              control={
+                <Switch
+                  id="dv-pc-push-switch"
+                  checked={d.taskRoom.pushHarder}
+                  // The computer applies it: offline, nothing would.
+                  disabled={status.kind === "offline"}
+                  onCheckedChange={(on) => save({ id: d.id, pushHarder: on })}
+                />
+              }
+            />
+          )}
           {/* Only once the computer says its limit: a guess here would be a setting that changes nothing. */}
-          {d.maxTasks !== null && (
+          {!d.taskRoom && d.maxTasks !== null && (
             <PrefRow
               id="dv-pc-tasks"
               icon="layers"

@@ -10,6 +10,7 @@ import { Arrival } from "@/components/arrival/Arrival";
 import { FeedbackHost } from "@/components/arrival/FeedbackDialog";
 import { ArtifactViewerProvider } from "@/components/artifacts/viewer-context";
 import { CommandMenu } from "@/components/CommandMenu";
+import { ConfirmEmailBanner } from "@/components/ConfirmEmail";
 import { ComputerDialogProvider } from "@/components/computer/provider";
 import { ConnectAiProvider } from "@/components/connect-ai-context";
 import { DesktopDragStrip } from "@/components/DesktopDragStrip";
@@ -18,7 +19,6 @@ import { DesktopTitleBar } from "@/components/DesktopTitleBar";
 import { DetailsHost } from "@/components/DetailsHost";
 import { InviteDialogProvider } from "@/components/invite/InviteDialog";
 import { LeaveChannelDialog } from "@/components/LeaveChannelDialog";
-import { RefetchBar } from "@/components/Loading";
 import { OutageNotices } from "@/components/MachineOutages";
 import { NavDrawerProvider, NavScrim, ShellBar } from "@/components/NavDrawer";
 import { NoticeIsland } from "@/components/NoticeIsland";
@@ -26,6 +26,7 @@ import { PushOpens } from "@/components/NotificationOpen";
 import { NotMember } from "@/components/NotMember";
 import { NewAgentProvider } from "@/components/new-agent/new-agent-context";
 import { OrgProvider } from "@/components/org-context";
+import { ReconnectPill } from "@/components/ReconnectPill";
 import { RemoveMemberProvider } from "@/components/RemoveMember";
 import { Sidebar } from "@/components/Sidebar";
 import { BootSplash } from "@/components/Sky";
@@ -36,6 +37,7 @@ import { HeaderSearchProvider } from "@/hooks/useWorkspaceSearch";
 import { useServerLocale } from "@/i18n";
 import { inDesktopApp } from "@/lib/desktop";
 import { preloadDialogs } from "@/lib/lazy-dialog";
+import { prefetchShell } from "@/lib/prefetch";
 import { notePlace } from "@/lib/return-to";
 import { rememberPlace, showWorkspace } from "@/lib/start";
 import { STORAGE_KEYS, storage } from "@/lib/storage";
@@ -57,6 +59,8 @@ export const Route = createFileRoute("/org/$orgId")({
       throw redirect({ to: "/onboarding" });
     return { me, membership };
   },
+  // The shell's lists start with the page's own reads (`prefetchShell`), not after its code loads.
+  loader: ({ context: { queryClient, api }, params: { orgId } }) => prefetchShell(queryClient, api, orgId),
   component: OrgLayout,
   // Opening the workspace takes a moment (the session check): the sky rises meanwhile.
   pendingComponent: BootSplash,
@@ -147,9 +151,9 @@ function OrgLayout() {
                     {/* One new agent's dialog for every way in (ADR 0164): the sidebar, the pages and the menus. */}
                     <NewAgentProvider>
                       <div className="shell">
-                        <RefetchBar />
                         <CommandMenu />
                         <LeaveChannelDialog />
+                        <ReconnectPill />
                         {!focused && (
                           <>
                             <NavScrim />
@@ -164,6 +168,7 @@ function OrgLayout() {
                           {membership.deletion && <DeletingBanner />}
                           {!focused && !membership.deletion && (
                             <>
+                              <ConfirmEmailBanner />
                               <HoldBanner />
                               <ComputerSetupNotice />
                               <OutageNotices />

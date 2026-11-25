@@ -799,6 +799,10 @@ html:not([data-pointer]) .ap-li:focus-visible {
   z-index: 3;
   padding: 18px 0 12px;
   background: var(--bg);
+  /* The cards scrolling under it draw their edge as a shadow, outside their box: the head covers that too. */
+  box-shadow:
+    -2px 0 0 var(--bg),
+    2px 0 0 var(--bg);
 }
 .ap-review__by,
 .ap-review__title {

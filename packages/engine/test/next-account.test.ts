@@ -25,6 +25,7 @@ import {
   STAND_IN_LINE,
   setAccountServes,
   setAgentBrain,
+  setPlanKeyFallback,
   thinkingAgent,
   usageQueue,
 } from "../src";
@@ -207,9 +208,33 @@ test("an account at its limit before the turn: the next account of its owner ans
   expect(switchOf((await runs(fx))[1])).toBeUndefined();
 });
 
+test("a run for someone besides the agent's owner goes on only with an account whose Atender todos takes them", async () => {
+  const { fx, machineId, walter, account, usage } = await world();
+  await account(WALTER_ALL, walter.id, { useOrder: 0 });
+  await account(OWN2, fx.owner.id, { useOrder: 1, replyMode: "everyone" });
+  await usage(OWN1, 100);
+  const agent = await agentRow(fx);
+  if (!agent) throw new Error("no agent");
+  const plan: BrainPlan = {
+    kind: "claude_code",
+    model: "sonnet",
+    session: { id: "s1", resume: true, machineId, cwd: "" },
+    account: { id: OWN1, label: "Conta a001", status: "active" },
+  };
+  const deps = { db: fx.db, machines: { status: async (id: string) => statusOf(id) } };
+  // The agent's owner asks: Walter's account answers them by its place.
+  expect((await nextAccountPlan(deps, agent, plan, [OWN1, OWN2])).plan?.account?.id).toBe(WALTER_ALL);
+  // Walter asks someone else's agent: his own account answers only the agent's owner, so it is passed over.
+  const asked = await nextAccountPlan(deps, agent, plan, [OWN1], { asker: walter.id });
+  expect(asked.plan?.account?.id).toBe(OWN2);
+  expect(await nextAccountPlan(deps, agent, plan, [OWN1, OWN2], { asker: walter.id })).toMatchObject({ plan: null });
+  expect(await movedAccountPlan(deps, agent, plan, WALTER_ALL, null, walter.id)).toBeNull();
+  expect(await movedAccountPlan(deps, agent, plan, OWN2, null, walter.id)).not.toBeNull();
+});
+
 test("the order: the owner's own accounts first, then others that serve everyone by their place; never an owner-only one", async () => {
   const { fx, machineId, walter, account, usage } = await world();
-  await account(WALTER_ONLY, walter.id, { serves: "owner", useOrder: 0 });
+  await account(WALTER_ONLY, walter.id, { serves: "owner", useMode: "owner", useOrder: 0 });
   await account(WALTER_ALL, walter.id, { useOrder: 1 });
   await account(WALTER_SOLO, walter.id, { shared: false, useOrder: 0 });
   await account(OWN2, fx.owner.id, { useOrder: 7 });
@@ -368,6 +393,23 @@ test("every account at its limit: the run waits until the first of them resets, 
     chain: 3,
     resetsAt: first,
   });
+});
+
+test("every account at its limit with Continuar com a chave de API on: the workspace's key answers instead of waiting", async () => {
+  const { fx, walter, account, usage } = await world();
+  await account(WALTER_ALL, walter.id);
+  await usage(OWN1, 100);
+  await usage(WALTER_ALL, 100);
+  await setPlanKeyFallback(fx.db, fx.owner.id, fx.org.id, true);
+  const { brain, seen } = scripted(() => answers);
+  await ask(fx);
+  await drainOutbox(fx.db, handlersWith(fx, brain));
+  expect(seen).toHaveLength(0);
+  const [run] = await runs(fx);
+  expect(run).toMatchObject({ status: "done", brain: "model" });
+  expect(await notes(fx, "plan_limit_all_wait")).toHaveLength(0);
+  // The move is the run's: the agent keeps its own account as its first choice.
+  expect((await agentRow(fx))?.brainAccountId).toBe(OWN1);
 });
 
 test("an agent pinned to its account waits for it, as before", async () => {

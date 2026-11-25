@@ -40,6 +40,7 @@ import {
   statusSentence,
   taskChoices,
   taskLimitLine,
+  tasksAutoText,
   waitEndedText,
   waitText,
   wifiHosts,
@@ -102,6 +103,27 @@ const computer = (c: Partial<ComputerDevice>): ComputerDevice => ({
 });
 
 describe("tasks at once", () => {
+  test("where tasks start on room: no count in the pill, what still fits in the row, why none does under the pill", () => {
+    const room = { more: 8, freeGb: 6.4, cpuBusy: false, pushHarder: false };
+    const busy = computer({ status: { kind: "busy", running: 3, max: null }, maxTasks: 5, taskRoom: room });
+    expect(statusPill(t, busy.status)).toBe("Busy · 3 running");
+    expect(tasksAutoText(t, busy)).toBe("Automatic · 3 running · room for about 8 more");
+    expect(taskLimitLine(t, busy, true)).toBeNull();
+    const full = { ...busy, taskRoom: { ...room, more: 0, freeGb: 1.4 } };
+    expect(tasksAutoText(t, full)).toBe("Automatic · 3 running · full for now");
+    expect(taskLimitLine(t, full, true)).toBe(
+      "No room for another task right now: 1.4 GB of memory free. The next one starts when one ends.",
+    );
+    expect(taskLimitLine(t, { ...full, taskRoom: { ...full.taskRoom, cpuBusy: true } }, true)).toContain(
+      "the processor is nearly full",
+    );
+    expect(taskLimitLine(t, { ...full, taskRoom: { ...full.taskRoom, freeGb: 0.6, pushHarder: true } }, false)).toBe(
+      "Pushing harder: 0.6 GB of memory free. Your own apps may slow down.",
+    );
+    expect(tasksAutoText(t, computer({ taskRoom: room }))).toBe("Automatic · 0 running · room for about 8 more");
+    expect(tasksAutoText(t, computer({}))).toBeNull();
+  });
+
   test("a busy computer says its limit and where it changes; its owner changes it, an admin only on nobody's", () => {
     const busy = computer({ status: { kind: "busy", running: 5, max: 5 }, maxTasks: 5 });
     expect(taskLimitLine(t, busy, true)).toBe("Tasks at once here: 5. Change it below.");

@@ -1104,6 +1104,8 @@ export async function scheduleAccountDeletion(deps: DeletionDeps, userId: string
     });
     return { dueAt, closed, orgs: mine };
   });
+  // Its sessions ended above: no process serves a kept one (`caches.sessions`).
+  caches.sessions.clear();
   // Their open sockets lose every subscription now.
   for (const m of orgs) {
     caches.membership.delete(`${m.orgId}:${userId}`);

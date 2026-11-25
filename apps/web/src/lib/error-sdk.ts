@@ -3,7 +3,7 @@ import type { ErrorReportsConfig } from "@agenteschat/client";
 import { captureException, init, setTags, setUser } from "@sentry/browser";
 import { reloadingForNewVersion } from "./app-version";
 import { desktopReportTags } from "./desktop";
-import { type ErrorSdk, shortErrorId } from "./error-reports";
+import { type ErrorSdk, foreignStack, shortErrorId } from "./error-reports";
 
 /**
  * The Sentry browser SDK for errors only (no sessions, traces or replays), every event scrubbed (ADR 0104). Its own
@@ -14,8 +14,9 @@ export function startSdk(config: ErrorReportsConfig, taken: (eventId: string) =>
     ...REPORT_OPTIONS,
     // After the SDK's own dedupe, which drops a repeat of the last report: what reaches here is sent.
     beforeSend: (event) => {
-      // Its own handlers too: what fails while the app reloads into a new version is the old version's.
-      if (reloadingForNewVersion()) return null;
+      // Its own handlers too: what fails while the app reloads into a new version is the old version's, and what
+      // fails in an extension's code is the extension's. This file's chunk holds the SDK too: nothing else imports it.
+      if (reloadingForNewVersion() || foreignStack(event, import.meta.url)) return null;
       if (event.event_id) taken(event.event_id);
       return scrubEvent(event);
     },

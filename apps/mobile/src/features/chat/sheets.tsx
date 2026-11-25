@@ -356,19 +356,30 @@ export function MessageActions(props: MessageActionsContext) {
 
 // ── "+" in the composer ──────────────────────────────────────────────────────
 
-export type PlusPick = "camera" | "photos" | "file" | "media" | "summary" | "remind";
+export type PlusPick = "camera" | "photos" | "file" | "paste" | "media" | "summary" | "remind";
 
 /**
- * The "+" of the chat: what goes with a message as tiles (camera, photos, file and, where they can be sent, the
- * GIFs and stickers, so the field itself only sends), then what to start here, in words.
+ * The "+" of the chat: what goes with a message as tiles (camera, photos, file, the picture on the clipboard when
+ * there is one and, where they can be sent, the GIFs and stickers, so the field itself only sends), then what to start
+ * here, in words. The phone's text field can't take a pasted picture: the Paste tile is how one gets in.
  */
-export function PlusActions({ onPick, media = false }: { onPick: (pick: PlusPick) => void; media?: boolean }) {
+export function PlusActions({
+  onPick,
+  media = false,
+  paste = false,
+}: {
+  onPick: (pick: PlusPick) => void;
+  media?: boolean;
+  /** A picture is on the clipboard. */
+  paste?: boolean;
+}) {
   const { t } = useTranslation();
   const c = useColors();
-  const tiles: { key: PlusPick; icon: "camera" | "image" | "file" | "sticker"; label: string }[] = [
+  const tiles: { key: PlusPick; icon: "camera" | "image" | "file" | "paste" | "sticker"; label: string }[] = [
     { key: "camera", icon: "camera", label: t("mobile.plus.camera") },
     { key: "photos", icon: "image", label: t("mobile.plus.photos") },
     { key: "file", icon: "file", label: t("mobile.plus.file") },
+    ...(paste ? [{ key: "paste" as const, icon: "paste" as const, label: t("mobile.plus.paste") }] : []),
     ...(media ? [{ key: "media" as const, icon: "sticker" as const, label: t("mobile.plus.media") }] : []),
   ];
   return (

@@ -10,6 +10,7 @@ import {
   HELLO_TIMEOUT_MS,
   IPHONE_WIFI_PROTOCOL,
   KEEP_RUNNING_PROTOCOL,
+  listenResumedTopic,
   MACHINE_CLOSE,
   MAX_FRAME_BYTES,
   type MachineErrorCode,
@@ -38,6 +39,7 @@ import { and, type Database, eq, inArray, lt, schema, sql } from "@agenteschat/d
 import type { ToolImage } from "@agenteschat/providers";
 import { getAgentCached } from "./agents";
 import { UUID } from "./authority";
+import { TtlCache } from "./cache";
 import { type MachinePhoneRow, publishDevicesChanged, syncMachinePhones } from "./devices";
 import { cutText } from "./format";
 import { agentCoAuthorLine } from "./git/signature";
@@ -343,7 +345,10 @@ export interface MachineHubDeps {
   replicaId?: string;
   heartbeatMs?: number;
   helloTimeoutMs?: number;
-  /** Cross-replica callers read the `machine_rpc` row this often (the signal usually comes first). */
+  /**
+   * Cross-replica callers read the `machine_rpc` row this often for a minute after the pub/sub missed events, and a
+   * repeated `mcp.call` reads its first run's row this often. Its signal usually comes first. Tests set it.
+   */
   rpcPollMs?: number;
   /** A machine offline this long has its running tasks interrupted (default `TASK_OFFLINE_GRACE_MS`). */
   taskOfflineGraceMs?: number;
@@ -566,12 +571,30 @@ export interface MachineBrowserHooks {
   connected?(machineId: string): void;
 }
 
+/** How often a cross-replica caller reads its request's row while the pub/sub delivers (its signal wakes it first). */
+export const RPC_QUIET_POLL_MS = 5_000;
+/** For how long after the pub/sub missed events (`listenResumedTopic`) callers read it every `rpcPollMs` instead. */
+const RPC_TROUBLED_MS = 60_000;
+/** `status` reads a computer's row at most this often. */
+const STATUS_ROW_MS = 2_000;
+
 export function createMachineHub(deps: MachineHubDeps) {
   const { db, pubsub } = deps;
   const replicaId = deps.replicaId ?? crypto.randomUUID();
   const heartbeatMs = deps.heartbeatMs ?? HEARTBEAT_MS;
   const helloTimeoutMs = deps.helloTimeoutMs ?? HELLO_TIMEOUT_MS;
   const rpcPollMs = deps.rpcPollMs ?? 500;
+  // While the pub/sub delivers, the reply's signal wakes a cross-replica caller: its own read of the row only backs a
+  // lost NOTIFY up, so it can wait. Once the pub/sub says events were missed, every caller reads at once, then often.
+  const rpcQuietPollMs = deps.rpcPollMs ?? RPC_QUIET_POLL_MS;
+  let rpcTroubledUntil = 0;
+  // ponytail: per process; another replica's change to a computer shows here within STATUS_ROW_MS.
+  const statusRows = new TtlCache<MachineRow | null>(STATUS_ROW_MS);
+  const rpcWaiting = new Set<() => void>();
+  pubsub.subscribe(listenResumedTopic, () => {
+    rpcTroubledUntil = Date.now() + RPC_TROUBLED_MS;
+    for (const wake of rpcWaiting) wake();
+  });
   const taskOfflineGraceMs = deps.taskOfflineGraceMs ?? TASK_OFFLINE_GRACE_MS;
   const mcpRepeatWaitMs = deps.mcpRepeatWaitMs ?? MCP_REPEAT_WAIT_MS;
   const brainIdleMs = deps.brainIdleMs ?? BRAIN_IDLE_TIMEOUT_MS;
@@ -987,7 +1010,7 @@ export function createMachineHub(deps: MachineHubDeps) {
         paused: conn.pause !== null,
         pausedUntil: conn.pause?.until ? new Date(conn.pause.until) : null,
         pausedByUserId: conn.pause?.by ?? null,
-        ...(frame.maxTasks ? { size: withTaskLimit(frame.maxTasks) } : {}),
+        ...(frame.maxTasks ? { size: withTaskLimit(frame.maxTasks, frame.room) } : {}),
         updatedAt: new Date(),
       })
       .where(eq(machines.id, machineId))
@@ -1380,13 +1403,16 @@ export function createMachineHub(deps: MachineHubDeps) {
           throw new MachineRequestError("timeout", `the computer ${machine.name} did not answer in time`);
         }
         await new Promise<void>((resolve) => {
-          const timer = setTimeout(done, Math.min(rpcPollMs, Math.max(0, deadline - Date.now())));
+          const pollMs = Date.now() < rpcTroubledUntil ? rpcPollMs : rpcQuietPollMs;
+          const timer = setTimeout(done, Math.min(pollMs, rpcLivenessMs, Math.max(0, deadline - Date.now())));
           function done() {
             clearTimeout(timer);
             wake = null;
+            rpcWaiting.delete(done);
             resolve();
           }
           wake = done;
+          rpcWaiting.add(done);
         });
       }
     } finally {
@@ -1479,6 +1505,8 @@ export function createMachineHub(deps: MachineHubDeps) {
     conn.pending.clear();
     if (conn.machineId && local.get(conn.machineId) === conn) {
       local.delete(conn.machineId);
+      // Its kept row says this replica holds it: a runner back on another replica a moment later reads as offline.
+      statusRows.delete(conn.machineId);
       browserHooks.closed?.(conn.machineId);
       const how = serverStop ? { code: 1001, reason: "server stopping" } : (close ?? { code: 1005, reason: "" });
       await markOffline(conn, serverStop, how).catch(() => undefined);
@@ -1495,6 +1523,7 @@ export function createMachineHub(deps: MachineHubDeps) {
     }),
     pubsub.subscribe(MACHINE_CONTROL_TOPIC, (event) => {
       if (event.type === "machine.connected" && typeof event.machineId === "string") {
+        statusRows.delete(event.machineId);
         if (event.replicaId === replicaId) return;
         const conn = local.get(event.machineId);
         if (!conn || conn.connectionId === event.connectionId) return;
@@ -1720,9 +1749,12 @@ export function createMachineHub(deps: MachineHubDeps) {
       return callRemote({ ...row, connectedReplica: row.connectedReplica }, named, options);
     },
 
-    /** The machine as tools see it: online here, or online (and recently seen) on another replica. */
+    /**
+     * The machine as tools see it: online here, or online (and recently seen) on another replica. Its row is read at
+     * most every `STATUS_ROW_MS` per computer (`statusRows`): every computer tool asks, and a run's burst asks in a row.
+     */
     async status(machineId: string): Promise<MachineStatus | null> {
-      const row = await getMachineById(db, machineId);
+      const row = await statusRows.getOrLoad(machineId, () => getMachineById(db, machineId));
       if (!row || row.deletedAt) return null;
       const online = local.has(machineId) || (machineOnline(row) && row.connectedReplica !== replicaId);
       const pause = machinePause(row);

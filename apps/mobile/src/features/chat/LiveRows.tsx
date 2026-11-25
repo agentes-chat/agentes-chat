@@ -219,6 +219,8 @@ export function WorkingLine({
         {lead || !someoneTypes(entries) || bothAtIt(entries) ? null : <TypingDots color={c.muted} />}
         {faces.length > 0 ? (
           <View style={styles.stack} importantForAccessibility="no-hide-descendants">
+            {/* Agents in their sky tile, standing in its middle: bare, a body sits at its box's foot under the room kept
+                for a hat, so two faces with different hats looked uneven and low beside the arrow and the words. */}
             {faces.map((e, i) => {
               const gap = i > 0 ? styles.overlap : undefined;
               if (e.type === "person")
@@ -231,7 +233,7 @@ export function WorkingLine({
                 return (
                   <Animated.View key={`c:${e.id}`} entering={pop} style={[styles.pair, gap]}>
                     <View style={plate}>
-                      <AgentFace agentId={e.id} size={18} mode="idle" />
+                      <AgentFace agentId={e.id} size={18} framed mode="idle" />
                     </View>
                     {/* What waits on me takes the arrow's place; a wait on someone else, the quiet clock. */}
                     {asking.yours ? (
@@ -242,13 +244,18 @@ export function WorkingLine({
                       <Icon name="right" size={12} color={c.faint} />
                     )}
                     <View style={plate}>
-                      <AgentFace agentId={asking.to} size={18} mode={asking.yours || asking.wait ? "idle" : "think"} />
+                      <AgentFace
+                        agentId={asking.to}
+                        size={18}
+                        framed
+                        mode={asking.yours || asking.wait ? "idle" : "think"}
+                      />
                     </View>
                   </Animated.View>
                 );
               return (
                 <Animated.View key={`a:${e.id}`} entering={pop} style={[plate, gap]}>
-                  <AgentFace agentId={e.id} size={18} mode="run" />
+                  <AgentFace agentId={e.id} size={18} framed mode="run" />
                 </Animated.View>
               );
             })}

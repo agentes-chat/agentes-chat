@@ -269,14 +269,27 @@ export const KNOWN_LOOK_MS = 10 * 60_000;
  */
 export function createLookMemory(now: () => number = Date.now, max = 1000) {
   const looks = new Map<string, ScreenObservation>();
+  let sweep: ReturnType<typeof setInterval> | null = null;
+  const prune = () => {
+    for (const [k, old] of looks) {
+      if (now() - old.at < KNOWN_LOOK_MS) break;
+      looks.delete(k);
+    }
+    if (looks.size === 0 && sweep) {
+      clearInterval(sweep);
+      sweep = null;
+    }
+  };
   return {
     remember(key: string, o: ScreenObservation) {
       looks.delete(key);
       looks.set(key, o);
       if (looks.size > max) looks.delete(looks.keys().next().value as string);
-      for (const [k, old] of looks) {
-        if (now() - old.at < KNOWN_LOOK_MS) break;
-        looks.delete(k);
+      prune();
+      // The last looks go once they are old even when no agent looks again (a quiet server keeps none of them).
+      if (!sweep && looks.size > 0) {
+        sweep = setInterval(prune, KNOWN_LOOK_MS);
+        sweep.unref?.();
       }
     },
     /** The last look, when it is younger than `ms`. */

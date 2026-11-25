@@ -33,7 +33,7 @@ import { CUSTOM_PROVIDER } from "@agenteschat/client/lib/endpoints";
 import { errorText, holdText, keyRefusal } from "@agenteschat/client/lib/errors";
 import { NAMES_SHOWN, namesText } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
-import { brainTool, installableCli } from "@agenteschat/client/lib/machines";
+import { brainTool, cliCommandWayOut, installableCli } from "@agenteschat/client/lib/machines";
 import {
   type AiChoice,
   ALL_AGENTS,
@@ -1736,11 +1736,12 @@ function GateWait({
     gate.state === "unsupported" &&
     (gate.reason === "not_installed" || gate.reason === "cant_start") &&
     !hold &&
-    installableCli(kind) &&
     row &&
-    row.kind !== "managed"
+    row.kind !== "managed" &&
+    (installableCli(kind) || cliCommandWayOut(t, kind, row, gate.reason, computer))
   ) {
-    // A computer someone connected that hasn't the program, or has it and it won't start: install it from here.
+    // A computer someone connected that hasn't the program, or has it and it won't start: install it from here, or
+    // the line to run there.
     wait = <CliMissing machine={row} kind={kind} computer={computer} reason={gate.reason} useKey={keyButton} />;
   } else if (why && !(gate.state === "offline" && signingIn)) {
     wait = (

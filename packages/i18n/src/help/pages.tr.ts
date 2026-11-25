@@ -846,7 +846,7 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "data",
         heading: "Ne gönderir",
         blocks: [
-          "Sunucu günde bir kez agentes.chat'e anonim kullanım istatistikleri gönderir: kişi, ajan sayısı, makine boyutları, kullanılan yapay zekâ token'ları ve ajanların tarayıcılarının ne kadar veri gönderip aldığı gibi sayılar. Asla mesajlar, dosyalar, adlar ya da siteler. `docker compose run --rm agentes telemetry` tam olarak ne gönderileceğini gösterir. Sahip bunu **Ayarlar\u00a0›\u00a0Genel** içinden ya da `.env` içinde `TELEMETRY=off` ile kapatır.",
+          "Sunucu günde bir kez agentes.chat'e anonim kullanım istatistikleri gönderir: kişi, ajan sayısı, makine boyutları, kullanılan yapay zekâ token'ları, ajanların tarayıcılarının ne kadar veri gönderip aldığı ve uygulamaların ne kadar hızlı açılıp çalıştığı gibi sayılar. Asla mesajlar, dosyalar, adlar ya da siteler. `docker compose run --rm agentes telemetry` tam olarak ne gönderileceğini gösterir. Sahip bunu **Ayarlar\u00a0›\u00a0Genel** içinden ya da `.env` içinde `TELEMETRY=off` ile kapatır.",
           "Hata raporları, `SENTRY_DSN` ile kendi seçtiğiniz Sentry uyumlu bir sunucu ayarlamadıkça hiçbir yere gitmez. Bir rapor hatayı ve nerede olduğunu içerir, asla mesajları, e-postaları, IP adreslerini, çerezleri ya da token'ları içermez.",
         ],
       },

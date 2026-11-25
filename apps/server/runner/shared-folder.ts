@@ -69,6 +69,19 @@ export function ensureSystemShared(spec: Required<SharedSpec>, run: RunCommand =
   return problems;
 }
 
+/**
+ * Single-user mode (every agent the runner's own user): a PATH with the shared folder's `bin/` at its end, so a CLI
+ * an agent put there (a Node it downloaded) runs by its name in every process of the agents', their subagents and
+ * the terminal included, and the computer's own tools still come first. Nothing crosses users here: they are all
+ * one. System mode never does this (`SHARED_BIN_ENV`).
+ */
+export function withSharedBin(pathVar: string | undefined, shared: string | null | undefined): string | undefined {
+  if (!shared) return pathVar;
+  const bin = path.join(shared, "bin");
+  const parts = (pathVar ?? "").split(path.delimiter).filter(Boolean);
+  return parts.includes(bin) ? pathVar : [...parts, bin].join(path.delimiter);
+}
+
 /** How often what agents brought into system mode's folder is handed to the group (`shareAgentFiles`). */
 export const SHARED_FIX_MS = 60_000;
 

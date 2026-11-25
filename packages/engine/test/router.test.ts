@@ -28,6 +28,8 @@ import {
   SPOKEN_TO,
   scoresOf,
   selectAgents,
+  WHY_LEAD_CALLED,
+  WHY_YOU_WERE_CALLED,
 } from "../src";
 import { TYPING_GRACE_MS, typingLogFor } from "../src/burst";
 import { addMember, type Fixture, setup } from "./fixtures";
@@ -66,6 +68,20 @@ describe("selectAgents (policy)", () => {
     expect(selectAgents(candidates, { agents, needsAgent: 0.9, forEveryone: 0.1 }, policy)).toEqual(["pm"]);
     expect(selectAgents(candidates, { agents, needsAgent: 0.9 }, policy)).toEqual(["pm"]);
     expect(selectAgents(candidates, { agents, needsAgent: 0.9, forEveryone: 0.8 }, policy)).toEqual(["pm", "research"]);
+  });
+
+  test("the right hand answers a message for every agent only when it fits best", () => {
+    const candidates = [cand("dev"), { ...cand("lodi"), rightHand: true }];
+    const result = (dev: number, lodi: number) => ({
+      agents: [
+        { agentId: "dev", score: dev },
+        { agentId: "lodi", score: lodi },
+      ],
+      needsAgent: 0.9,
+      forEveryone: 0.9,
+    });
+    expect(selectAgents(candidates, result(0.9, 0.7), policy)).toEqual(["dev"]);
+    expect(selectAgents(candidates, result(0.7, 0.9), policy)).toEqual(["lodi", "dev"]);
   });
 
   test("a low need-any-agent score means nobody", () => {
@@ -631,6 +647,43 @@ describe("routeMessage", () => {
       (await routeMessage({ db: f.db, strategy, policy }, { orgId: f.org.id, messageId: message.id })).skipped,
     ).toBe("no_candidates");
     expect(seen).toHaveLength(0);
+  });
+
+  test("the right hand answers a channel's message when it fits best, never as a rule's pick nor where no agent is", async () => {
+    f = await setup({ rightHand: true });
+    const [lodi] = await f.db.select().from(schema.agents).where(eq(schema.agents.builtin, "right_hand"));
+    if (!lodi) throw new Error("no right hand");
+    const route = async (strategy: RouterStrategy, body: string) =>
+      routeMessage({ db: f.db, strategy, policy }, { orgId: f.org.id, messageId: (await post(body)).id });
+    const decisionOf = async (messageId: string) =>
+      (await f.db.select().from(schema.routingDecisions)).find((d) => d.messageId === messageId);
+
+    // It fits best: it answers, as any agent the router picks.
+    const fits = fixedStrategy({ lodi: 0.9, dev: 0.3 });
+    const setUp = await route(fits.strategy, "how do I add a teammate here?");
+    expect(fits.seen[0]?.find((c) => c.agentId === lodi.id)).toMatchObject({ rightHand: true });
+    expect(setUp.runs.map((r) => [r.agentId, r.trigger])).toEqual([[lodi.id, "router"]]);
+    expect(setUp.seenBy?.sort()).toEqual([lodi.id, f.agent.id].sort());
+
+    // The channel's agent fits best: the right hand stays out of what the message shows as read.
+    const work = await route(fixedStrategy({ lodi: 0.3, dev: 0.9 }).strategy, "the build is red again, can you look?");
+    expect(work.selected).toEqual([f.agent.id]);
+    expect(work.seenBy).toEqual([f.agent.id]);
+    const [run] = work.runs;
+    expect((await decisionOf(run?.triggerMessageId ?? ""))?.candidates.map((c) => c.agentId)).toEqual([f.agent.id]);
+
+    // Nothing could read it: alone with the channel's one agent, that agent answers (R2), never the right hand.
+    const failing: RouterStrategy = { name: "boom", decide: async () => Promise.reject(new Error("down")) };
+    expect((await route(failing, "hi")).selected).toEqual([f.agent.id]);
+
+    // A channel with no agent of its own is people talking: nobody is asked.
+    await f.db
+      .update(schema.channelMembers)
+      .set({ autoReply: false })
+      .where(eq(schema.channelMembers.agentId, f.agent.id));
+    const empty = fixedStrategy({ lodi: 1 });
+    expect((await route(empty.strategy, "how do I add a teammate here?")).skipped).toBe("no_candidates");
+    expect(empty.seen).toHaveLength(0);
   });
 
   test("a failing strategy never goes back to the outbox: it is recorded, and the rules decide", async () => {
@@ -1364,6 +1417,174 @@ describe("named agents, a lone agent's follow-ups and system lines", () => {
     expect((await route(scored.strategy, asks.id)).selected).toEqual([ada.id]);
     const listed = await say("ada and dev, are you there?");
     expect(new Set((await route(quiet().strategy, listed.id)).selected)).toEqual(new Set([ada.id, f.agent.id]));
+  });
+
+  /** The channel's responsible agent (ADR 0095). */
+  const leadIs = (agentId: string) =>
+    f.db.update(schema.channels).set({ leadAgentId: agentId }).where(eq(schema.channels.id, f.general.id));
+  const reasonOf = async (messageId: string) =>
+    (
+      await f.db
+        .select({ reason: schema.routingDecisions.reason })
+        .from(schema.routingDecisions)
+        .where(eq(schema.routingDecisions.messageId, messageId))
+    )[0]?.reason;
+  /** A step that hears the message as said to every agent, each with its own answer (best first). */
+  const toEveryone = (ids: string[]) =>
+    quiet({
+      agents: ids.map((agentId, i) => ({ agentId, score: 0.9 - i * 0.2 })),
+      needsAgent: 0.9,
+      forEveryone: 0.9,
+    });
+
+  test("what is said to the room goes to the channel's responsible agent alone, told it answers for the team", async () => {
+    f = await setup();
+    const ada = await withAda();
+    // No responsible agent: each answers.
+    const before = await say("gente, alguém já fechou as notas fiscais de março?");
+    expect(new Set((await route(toEveryone([f.agent.id, ada.id]).strategy, before.id)).selected)).toEqual(
+      new Set([ada.id, f.agent.id]),
+    );
+    // They answered: what comes next starts runs of its own.
+    await f.db.update(schema.agentRuns).set({ status: "done" }).where(eq(schema.agentRuns.status, "queued"));
+    await leadIs(ada.id);
+    const room = await say("e as de abril, alguém já fechou?");
+    expect((await route(toEveryone([f.agent.id, ada.id]).strategy, room.id)).selected).toEqual([ada.id]);
+    expect(await reasonOf(room.id)).toBe("lead");
+    const [run] = await f.db.select().from(schema.agentRuns).where(eq(schema.agentRuns.triggerMessageId, room.id));
+    if (!run) throw new Error("no run");
+    const text = systemText((await buildRunContext(f.db, run, ada, { maxMessages: 10, mayPass: true })).system);
+    expect(text).toContain(WHY_LEAD_CALLED);
+    expect(text).not.toContain(WHY_YOU_WERE_CALLED);
+    // Listed by name, each of them answers.
+    const listed = await say("ada e dev, vocês estão aí?");
+    expect(new Set((await route(quiet().strategy, listed.id)).selected)).toEqual(new Set([ada.id, f.agent.id]));
+  });
+
+  test("the step's own pick of the lead for a room question is its turn as the lead; said to it, an ordinary one", async () => {
+    f = await setup();
+    const ada = await withAda();
+    await leadIs(ada.id);
+    const fits = (addressee?: string) =>
+      quiet({
+        agents: [
+          { agentId: ada.id, score: 0.9 },
+          { agentId: f.agent.id, score: 0.2 },
+        ],
+        needsAgent: 0.9,
+        ...(addressee ? { addressee } : {}),
+      });
+    const room = await say("pessoal, o que acharam do resumo de março?");
+    expect((await route(fits().strategy, room.id)).selected).toEqual([ada.id]);
+    expect(await reasonOf(room.id)).toBe("lead");
+    await f.db.update(schema.agentRuns).set({ status: "done" }).where(eq(schema.agentRuns.status, "queued"));
+    const toHer = await say("ada, o que achou do resumo de abril?", 0);
+    expect((await route(fits(ada.id).strategy, toHer.id)).selected).toEqual([ada.id]);
+    expect((await reasonOf(toHer.id)) ?? "").not.toStartWith("lead");
+    await f.db.update(schema.agentRuns).set({ status: "done" }).where(eq(schema.agentRuns.status, "queued"));
+    // Right after a talk with the lead, a question to the room is still the lead's to answer for the team.
+    await byAgent(ada.id, "Achei bom, só faltam os números de abril.", 0);
+    const again = await say("pessoal, alguém sabe quem vai fechar os números de abril e quando?", 0);
+    expect((await route(fits().strategy, again.id)).selected).toEqual([ada.id]);
+    expect(await reasonOf(again.id)).toBe("lead");
+  });
+
+  test("the responsible agent's own message brings no colleague in: it answers for the team", async () => {
+    f = await setup();
+    const ada = await withAda();
+    const asks = await byAgent(ada.id, "dev, você consegue revisar os números de março?", 0);
+    const step = quiet({ agents: [{ agentId: f.agent.id, score: 0.9 }], needsAgent: 0.9 });
+    // Not the lead: its question to a colleague may bring that colleague in.
+    expect((await route(step.strategy, asks.id)).skipped).toBeUndefined();
+    await leadIs(ada.id);
+    const again = await byAgent(ada.id, "dev, e os de abril, você revisa?", 0);
+    expect((await route(step.strategy, again.id)).skipped).toBe("lead_spoke");
+  });
+
+  test("a default pick goes to the responsible agent, but not while it is at work here", async () => {
+    f = await setup();
+    const ada = await withAda();
+    await leadIs(ada.id);
+    const anyone = await say("alguém aí?");
+    expect((await route(quiet().strategy, anyone.id)).selected).toEqual([ada.id]);
+    expect(await reasonOf(anyone.id)).toBe("lead; alone");
+    // Its turn working in the channel: what is said to the room keeps the step's picks instead of waiting for it.
+    await f.db.update(schema.agentRuns).set({ status: "running" }).where(eq(schema.agentRuns.agentId, ada.id));
+    const busy = await say("e as notas de abril, vocês já fecharam?");
+    expect(new Set((await route(toEveryone([f.agent.id, ada.id]).strategy, busy.id)).selected)).toEqual(
+      new Set([ada.id, f.agent.id]),
+    );
+  });
+
+  test("what speaks to another agent, replies to it or clearly fits it keeps its pick", async () => {
+    f = await setup();
+    const ada = await withAda();
+    await leadIs(ada.id);
+    const settle = () =>
+      f.db.update(schema.agentRuns).set({ status: "done" }).where(eq(schema.agentRuns.status, "queued"));
+    // The step's clear choice of another agent for a default pick.
+    const fits = await say("o certificado do site vence quando?");
+    const clear = quiet({ best: { agentId: f.agent.id, confidence: 0.95 }, needsAgent: 0.6 });
+    expect((await route(clear.strategy, fits.id)).selected).toEqual([f.agent.id]);
+    expect(await reasonOf(fits.id)).toBe("default; best");
+    await settle();
+    // Said to one agent.
+    const one = await say("dev, qual foi o último deploy?");
+    const spoken = quiet({
+      agents: [
+        { agentId: f.agent.id, score: 0.9 },
+        { agentId: ada.id, score: 0.2 },
+      ],
+      needsAgent: 0.9,
+      addressee: f.agent.id,
+    });
+    expect((await route(spoken.strategy, one.id)).selected).toEqual([f.agent.id]);
+    await settle();
+    // A greeting to one agent, alone with the agents.
+    const hello = await say("bom dia dev", 0);
+    const greeting = quiet({ addressee: f.agent.id, social: { react: true, emoji: "☀️" } });
+    expect((await route(greeting.strategy, hello.id)).selected).toEqual([f.agent.id]);
+  });
+
+  test("a quote reply to one agent heard as said to everyone keeps the step's picks", async () => {
+    f = await setup();
+    const ada = await withAda();
+    const bia = await createAgent(
+      f.db,
+      f.owner.id,
+      f.org.id,
+      { name: "Bia", handle: "bia", role: "Finance", credentialId: f.credential.id },
+      { model: "claude-sonnet-5-5" },
+    );
+    await f.db.insert(schema.channelMembers).values({ orgId: f.org.id, channelId: f.general.id, agentId: bia.id });
+    await leadIs(ada.id);
+    const report = await byAgent(f.agent.id, "Fechei as notas fiscais de março.", 30);
+    const quote = await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, {
+      body: "ficou ótimo! vocês concordam com os valores?",
+      replyTo: report.id,
+    });
+    const everyone = quiet({
+      agents: [
+        { agentId: f.agent.id, score: 0.9 },
+        { agentId: bia.id, score: 0.7 },
+        { agentId: ada.id, score: 0.2 },
+      ],
+      needsAgent: 0.9,
+      forEveryone: 0.9,
+    });
+    expect(new Set((await route(everyone.strategy, quote.id)).selected)).toEqual(new Set([f.agent.id, bia.id]));
+  });
+
+  test("a notice only the responsible agent reads never makes it the agent people were talking to", async () => {
+    f = await setup();
+    const ada = await withAda();
+    await leadIs(ada.id);
+    await byAgent(f.agent.id, "Fechei as notas fiscais de março.", 60);
+    await byAgent(ada.id, "Work another agent ended here, for the channel's responsible agent.", 30, {
+      notice: { kind: "channel_work", text: "Fechei as notas fiscais de março.", from: "@dev" },
+    });
+    const next = await say("e as de abril?");
+    expect((await route(quiet().strategy, next.id)).selected).toEqual([f.agent.id]);
   });
 
   test("the channel's one agent gets a short follow-up within 10 minutes of speaking, whatever the need score", async () => {

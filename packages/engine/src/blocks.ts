@@ -4,12 +4,14 @@ import type { BlockSpec } from "@agenteschat/ui/blocks/spec";
 import {
   type ArtifactContent,
   type ArtifactDeps,
+  type ArtifactDetailView,
   type ChoiceQuestion,
   createConversationArtifact,
   getArtifact,
   updateArtifact,
 } from "./artifacts";
-import { runAuthorityById } from "./authority";
+import { runAuthorityById, UUID } from "./authority";
+import { type BlockStateView, getBlockState } from "./block-state";
 import { requireChannelAccess } from "./channels";
 import { publishDelivery } from "./delivery";
 import { inAgentOnlyDm, isAgentOnlyDm } from "./dms";
@@ -644,4 +646,69 @@ export function createBlockToolSource(deps: ArtifactDeps): ToolSource {
           ? []
           : [showBlock, startPoll, ...((await someoneAnswers(ctx)) ? [askChoices] : [])],
   };
+}
+
+/** What the apps draw as a card in the conversation rather than a file's tile: its height depends on what it holds. */
+const CARD_KINDS = ["block", "poll", "choices"] as const;
+/** The most cards one page brings: a page of messages carries a few. */
+const MAX_PAGE_CARDS = 40;
+
+export interface MessageCards {
+  artifacts: ArtifactDetailView[];
+  polls: PollView[];
+  choices: ChoicesView[];
+  blocks: BlockStateView[];
+}
+
+/**
+ * What a page of messages needs to draw its cards whole on the first paint (`include=cards`, one round trip): each
+ * live block, vote and question card the messages carry (`meta.artifacts`), at the version they show, with the
+ * block's state, the vote's marks and the card's answer. One the person can't read is left out: its card asks for it
+ * and says so, as before.
+ */
+export async function messageCards(
+  deps: ArtifactDeps,
+  userId: string,
+  orgId: string,
+  messages: { meta?: Record<string, unknown> | null }[],
+): Promise<MessageCards> {
+  const shown = new Map<string, { id: string; version?: number }>();
+  for (const m of messages) {
+    const refs = m.meta?.artifacts;
+    if (!Array.isArray(refs)) continue;
+    for (const r of refs as { id?: unknown; version?: unknown; deleted?: unknown }[]) {
+      if (typeof r?.id !== "string" || !UUID.test(r.id) || r.deleted === true) continue;
+      const version = typeof r.version === "number" ? r.version : undefined;
+      shown.set(`${r.id}@${version ?? ""}`, { id: r.id, version });
+    }
+  }
+  const out: MessageCards = { artifacts: [], polls: [], choices: [], blocks: [] };
+  if (shown.size === 0) return out;
+  const rows = await deps.db
+    .select({ id: schema.artifacts.id })
+    .from(schema.artifacts)
+    .where(
+      and(
+        eq(schema.artifacts.orgId, orgId),
+        inArray(schema.artifacts.id, [...new Set([...shown.values()].map((r) => r.id))]),
+        inArray(schema.artifacts.kind, [...CARD_KINDS]),
+      ),
+    );
+  const cards = new Set(rows.map((r) => r.id));
+  const wanted = [...shown.values()].filter((r) => cards.has(r.id)).slice(0, MAX_PAGE_CARDS);
+  await Promise.all(
+    wanted.map(async ({ id, version }) => {
+      try {
+        const a = await getArtifact(deps, { type: "person", userId }, orgId, id, version);
+        if (a.kind === "poll") out.polls.push(await getPoll(deps, userId, orgId, id));
+        if (a.kind === "choices") out.choices.push(await getChoices(deps, userId, orgId, id));
+        if (a.kind === "block") out.blocks.push(await getBlockState(deps, userId, orgId, id, a.shownVersion));
+        out.artifacts.push(a);
+      } catch (err) {
+        // Not readable by this person, or gone: its card loads on its own and says so.
+        if (!(err instanceof NotFoundError || err instanceof ForbiddenError)) throw err;
+      }
+    }),
+  );
+  return out;
 }

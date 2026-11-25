@@ -80,6 +80,19 @@ describe("videos", () => {
   });
 });
 
+describe("audio", () => {
+  test("audio files play in the file screen's player; their tile stays a file card", () => {
+    expect(fileInfo(upload("entrevista.mp3", "audio/mpeg"))).toMatchObject({ view: "audio", type: "file", ext: "MP3" });
+    expect(fileInfo(upload("nota.m4a", "audio/x-m4a")).view).toBe("audio");
+    expect(fileInfo(upload("faixa.wav", "audio/wav")).view).toBe("audio");
+    expect(fileInfo(upload("midi.mid", "audio/midi")).view).toBe("other");
+    // Stored as plain bytes (an agent's recording with no type given): by its name.
+    expect(fileInfo(upload("entrevista.m4a", "application/octet-stream")).view).toBe("audio");
+    expect(fileInfo(upload("nota.opus", "application/octet-stream")).view).toBe("audio");
+    expect(fileInfo(upload("faixa.flac", "application/octet-stream")).view).toBe("audio");
+  });
+});
+
 describe("file kind, tile and size", () => {
   test("raster pictures are images; SVG is not", () => {
     expect(fileInfo(upload("home.png", "image/png")).view).toBe("image");
@@ -237,8 +250,8 @@ describe("viewer", () => {
     expect(viewer).toContain(
       '<Round icon="right" label={t("mobile.files.next")} plate={SCRIM} onPress={() => turn(next)} />',
     );
-    // Gone while zoomed, and while the conversation's sheet is up (a swipe still turns the page under it).
-    expect(viewer).toContain("visible={chrome && !zoomed && !shownSheet}");
+    // Gone while zoomed.
+    expect(viewer).toContain("visible={chrome && !zoomed}");
     expect(viewer).toContain("else pager.current?.setPage(to);");
     // The count took the dots' place: one place says where you are.
     expect(viewer).not.toContain("styles.dots");
@@ -472,8 +485,7 @@ describe("viewer", () => {
     expect(viewer).toContain("if (leaving.value) return;");
     expect(viewer).toContain("if (closed.current) return;");
     // Only the picture in sight, at 1×, while the pages are still.
-    // With the conversation's sheet up the pull rests: the sheet goes down first (ADR 0208).
-    expect(viewer).toContain("enabled: active && !zoomed && !paging && !marking,");
+    expect(viewer).toContain("enabled: active && !zoomed && !paging,");
     // It shrinks around the spot the finger took, from rest; caught mid-spring, around the one before.
     expect(viewer).toContain("if (resting)");
     expect(viewer).toContain("pulledPlacement(pullX.value, pullY.value, screen, grab.value)");

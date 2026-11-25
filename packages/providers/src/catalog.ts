@@ -722,7 +722,7 @@ export function setListedModels(models: Record<string, ModelInfo>) {
  * A workspace's own endpoint's models (ADR 0146), by organization, under ids `custom:<credentialId>:<model>`: the
  * credential in the id keeps two workspaces' models (and the catalog's ids) apart. Never in `listedModels`.
  */
-let custom = new Map<string, Map<string, ModelInfo>>();
+const custom = new Map<string, Map<string, ModelInfo>>();
 /**
  * Every endpoint model this process has loaded, kept after it is removed or its key revoked: a call already running
  * still settles its cost by it. Only `modelInfo` reads it; who may call a model is `customModelOf`.
@@ -758,12 +758,18 @@ export function endpointModelId(
   return best ? customModelId(credentialId, best.id) : null;
 }
 
-/** Replaces an organization's endpoint models (full ids); an empty record forgets them. */
+/**
+ * Replaces an organization's endpoint models (full ids); an empty record forgets them. Called before every model call,
+ * so in place, and nothing at all for the many organizations with no endpoint.
+ */
 export function setCustomModels(orgId: string, models: Record<string, ModelInfo>) {
-  custom = new Map(custom);
-  for (const [id, info] of Object.entries(models)) lastKnown.set(id, info);
-  if (Object.keys(models).length === 0) custom.delete(orgId);
-  else custom.set(orgId, new Map(Object.entries(models)));
+  const entries = Object.entries(models);
+  if (entries.length === 0) {
+    custom.delete(orgId);
+    return;
+  }
+  for (const [id, info] of entries) lastKnown.set(id, info);
+  custom.set(orgId, new Map(entries));
 }
 
 /** An organization's endpoint models, in the order they were set. */

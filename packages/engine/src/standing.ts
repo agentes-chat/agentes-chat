@@ -590,6 +590,8 @@ export async function setUserBlocked(
   });
   if (!done) return null;
   const { orgIds, ...state } = done;
+  // A block ended every session above: no process serves a kept one (`caches.sessions`).
+  if (state.sessionsRevoked > 0) caches.sessions.clear();
   for (const orgId of orgIds) {
     caches.membership.delete(`${orgId}:${userId}`);
     await publishOrgEvent(deps.pubsub, { type: "membership.revoked", orgId, userId, quiet: true });

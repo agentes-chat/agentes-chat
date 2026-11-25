@@ -15,6 +15,7 @@ import { cancelOrgTasks, type TaskCall } from "./machine-tasks";
 import { insertMessage, type Message, messageView } from "./messages";
 import { resolveQuestionNotifications } from "./notification-producers";
 import { can, type Membership, requireActiveMembership } from "./organizations";
+import { jobsOfRun } from "./outbox";
 import { type AgentQuestionRow, publishQuestion, syncQuestionMessage } from "./questions";
 import { isRightHandId } from "./right-hand";
 import { seatScopes } from "./right-hand-seats";
@@ -437,15 +438,7 @@ export async function stopRun(
       closedSecrets = await cancelSecretRequests(tx, run.id);
       for (const r of closedSecrets) await syncSecretMessage(tx, r);
       // Jobs of this run that haven't started never will.
-      await tx
-        .delete(outbox)
-        .where(
-          and(
-            eq(outbox.kind, "agent_run.execute"),
-            eq(outbox.status, "pending"),
-            sql`${outbox.payload}->>'runId' = ${run.id}`,
-          ),
-        );
+      await tx.delete(outbox).where(and(jobsOfRun(run.id), eq(outbox.status, "pending")));
       await recordAudit(tx, {
         orgId,
         // The right hand's stop is its own, on behalf of the person whose word it acted on.

@@ -76,7 +76,6 @@
       "connectors.category.docs",
       "connectors.category.email",
       "connectors.category.marketing",
-      "connectors.mcp.title",
       "connectors.names.cloudflare_bindings",
       "connectors.names.cloudflare_observability",
       "database.provider.neon",
@@ -205,6 +204,7 @@
       "shell.soundPixel",
       "shell.threads",
       "skills.agentTitle",
+      "agentPage.tabs.skills",
       "skills.source.url",
       "skills.title",
       "skills.version",
@@ -312,7 +312,7 @@
       "invites.types.links",
       "invites.links",
       "invites.linkLabel",
-      "appsDownload.appStore",
+      "appsDownload.testFlight",
       "appsDownload.googlePlay",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
@@ -334,9 +334,19 @@
       "live.shell.formats.md",
       "live.doc.link.title",
       "live.doc.keys.link",
-      "audit.operatorReview.items"
+      "audit.operatorReview.items",
+      "codeSessions.state.pr",
+      "codeSessions.home.beta",
+      "codeSessions.home.mode",
+      "codeSessions.home.was",
+      "codeSessions.panel.terminal",
+      "codeSessions.gitTab.label",
+      "codeSessions.gitTab.commits",
+      "codeTerminal.label",
+      "codeSessions.tabs.terminalN"
     ],
     "es": [
+      "aiHub.modes.roles",
       "devices.iphone.path.general",
       "devices.cpus",
       "devices.memory",
@@ -584,7 +594,7 @@
       "machines.oneClick.tools.grok",
       "machines.oneClick.tools.antigravity",
       "settings.section.roles",
-      "appsDownload.appStore",
+      "appsDownload.testFlight",
       "appsDownload.googlePlay",
       "onboarding.import.sheet.os.windows",
       "storage.connect.provider.r2",
@@ -615,9 +625,20 @@
       "live.shell.formats.pdf",
       "live.shell.formats.pptx",
       "live.shell.formats.xlsx",
-      "live.shell.shortcuts.general"
+      "live.shell.shortcuts.general",
+      "connectFlow.ownClient.scopes",
+      "codeSessions.state.pr",
+      "codeSessions.home.beta",
+      "codeSessions.home.mode",
+      "codeSessions.home.was",
+      "codeSessions.panel.terminal",
+      "codeSessions.gitTab.label",
+      "codeSessions.gitTab.commits",
+      "codeTerminal.label",
+      "codeSessions.tabs.terminalN"
     ],
     "fr": [
+      "agentPage.facts.budget",
       "usage.kinds.routines",
       "channel.tooLong.fileName",
       "calendar.moreRuns",
@@ -659,6 +680,7 @@
       "agentPage.settings.budget",
       "agentPage.tabs.instructions",
       "agentPage.work.brain.effort",
+      "rightHand.field.effort",
       "agentPage.work.steps.menuPause",
       "agentSecrets.title",
       "aiAccounts.connect.cursor",
@@ -1044,7 +1066,7 @@
       "invites.ttl.30m",
       "invites.type",
       "invites.typesCount",
-      "appsDownload.appStore",
+      "appsDownload.testFlight",
       "appsDownload.googlePlay",
       "onboarding.import.sheet.os.windows",
       "onboarding.import.sheet.routines",
@@ -1126,9 +1148,26 @@
       "settings.kinds.image",
       "files.comments.page",
       "live.conversation.what.point",
-      "live.conversation.what.page"
+      "live.conversation.what.page",
+      "connectFlow.ownClient.scopes",
+      "shell.code",
+      "codeSessions.title",
+      "codeSessions.state.pr",
+      "codeSessions.home.beta",
+      "codeSessions.home.mode",
+      "codeSessions.home.was",
+      "codeSessions.home.agent",
+      "codeSessions.panel.terminal",
+      "codeSessions.gitTab.label",
+      "codeSessions.gitTab.commits",
+      "codeTerminal.label",
+      "codeSessions.tabs.talk",
+      "codeSessions.tabs.terminalN",
+      "connectors.store.agents"
     ],
     "de": [
+      "agentPage.facts.budget",
+      "aiHub.detail.limits",
       "live.sheet.args.k",
       "live.sheet.args.x",
       "live.canvas.inks.orange",
@@ -1457,6 +1496,7 @@
       "shell.themeSystem",
       "shell.threads",
       "skills.agentTitle",
+      "agentPage.tabs.skills",
       "skills.name",
       "skills.source.url",
       "skills.title",
@@ -1590,7 +1630,7 @@
       "invites.types.links",
       "invites.links",
       "invites.linkLabel",
-      "appsDownload.appStore",
+      "appsDownload.testFlight",
       "appsDownload.googlePlay",
       "onboarding.import.sheet.os.windows",
       "storage.connect.provider.r2",
@@ -1611,9 +1651,24 @@
       "newAgentCard.proposal.routine.label",
       "newAgentCard.proposal.routine.lead",
       "orgAccent.sampleMention",
-      "teamWeek.budget.item"
+      "teamWeek.budget.item",
+      "connectFlow.ownClient.scopes",
+      "shell.code",
+      "codeSessions.title",
+      "codeSessions.state.pr",
+      "codeSessions.home.beta",
+      "codeSessions.home.mode",
+      "codeSessions.home.was",
+      "codeSessions.home.agent",
+      "codeSessions.panel.terminal",
+      "codeSessions.gitTab.label",
+      "codeSessions.gitTab.commits",
+      "cliTools.progress.subagent",
+      "codeTerminal.label",
+      "codeSessions.tabs.terminalN"
     ],
     "it": [
+      "agentPage.facts.budget",
       "live.sheet.args.a1",
       "live.sheet.args.k",
       "live.sheet.args.x",
@@ -1991,7 +2046,7 @@
       "invites.byLink",
       "invites.link",
       "invites.linkLabel",
-      "appsDownload.appStore",
+      "appsDownload.testFlight",
       "appsDownload.googlePlay",
       "appsDownload.computer",
       "onboarding.import.sheet.os.windows",
@@ -2005,9 +2060,20 @@
       "onboarding.import.choose.step.video",
       "newAgentCard.proposal.routine.label",
       "newAgentCard.proposal.routine.lead",
-      "teamWeek.budget.item"
+      "teamWeek.budget.item",
+      "brain.picker.accountOf",
+      "codeSessions.state.pr",
+      "codeSessions.home.beta",
+      "codeSessions.home.mode",
+      "codeSessions.home.was",
+      "codeSessions.gitTab.label",
+      "codeSessions.files.count",
+      "cliTools.files",
+      "connectors.store.account"
     ],
     "nl": [
+      "agentPage.facts.budget",
+      "aiHub.accounts",
       "usage.kinds.routines",
       "calendar.moreRuns",
       "devices.iphone.steps.account",
@@ -2404,6 +2470,7 @@
       "shell.team",
       "shell.threads",
       "skills.agentTitle",
+      "agentPage.tabs.skills",
       "skills.source.url",
       "skills.title",
       "skills.version",
@@ -2606,7 +2673,7 @@
       "invites.types.links",
       "invites.links",
       "invites.linkLabel",
-      "appsDownload.appStore",
+      "appsDownload.testFlight",
       "appsDownload.googlePlay",
       "appsDownload.computer",
       "onboarding.import.sheet.os.windows",
@@ -2667,7 +2734,26 @@
       "live.sheet.args.k",
       "live.sheet.args.x",
       "audit.operatorReview.items",
-      "teamWeek.budget.item"
+      "teamWeek.budget.item",
+      "connectFlow.ownClient.scopes",
+      "shell.code",
+      "brain.picker.accountOf",
+      "brain.picker.ais",
+      "codeSessions.title",
+      "codeSessions.state.pr",
+      "codeSessions.home.beta",
+      "codeSessions.home.mode",
+      "codeSessions.home.was",
+      "codeSessions.home.agent",
+      "codeSessions.panel.terminal",
+      "codeSessions.gitTab.label",
+      "codeSessions.gitTab.commits",
+      "cliTools.progress.subagent",
+      "cliTools.progress.agents",
+      "codeTerminal.label",
+      "codeSessions.tabs.terminalN",
+      "connectors.store.agents",
+      "connectors.store.account"
     ],
     "ja": [
       "live.sheet.args.k",
@@ -2838,12 +2924,18 @@
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
       "machines.oneClick.tools.antigravity",
-      "appsDownload.appStore",
+      "appsDownload.testFlight",
       "appsDownload.googlePlay",
       "onboarding.import.sheet.os.windows",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
-      "storage.connect.provider.b2"
+      "storage.connect.provider.b2",
+      "brain.picker.ais",
+      "codeSessions.state.pr",
+      "codeSessions.home.beta",
+      "codeSessions.home.mode",
+      "codeSessions.home.was",
+      "codeSessions.gitTab.label"
     ],
     "ko": [
       "live.sheet.args.k",
@@ -3008,12 +3100,18 @@
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
       "machines.oneClick.tools.antigravity",
-      "appsDownload.appStore",
+      "appsDownload.testFlight",
       "appsDownload.googlePlay",
       "onboarding.import.sheet.os.windows",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
-      "storage.connect.provider.b2"
+      "storage.connect.provider.b2",
+      "brain.picker.ais",
+      "codeSessions.state.pr",
+      "codeSessions.home.beta",
+      "codeSessions.home.mode",
+      "codeSessions.home.was",
+      "codeSessions.gitTab.label"
     ],
     "zh-Hans": [
       "channel.tooLong.fileName",
@@ -3166,12 +3264,18 @@
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
       "machines.oneClick.tools.antigravity",
-      "appsDownload.appStore",
+      "appsDownload.testFlight",
       "appsDownload.googlePlay",
       "onboarding.import.sheet.os.windows",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
-      "storage.connect.provider.b2"
+      "storage.connect.provider.b2",
+      "brain.picker.ais",
+      "codeSessions.state.pr",
+      "codeSessions.home.beta",
+      "codeSessions.home.mode",
+      "codeSessions.home.was",
+      "codeSessions.gitTab.label"
     ],
     "id": [
       "drive.folder",
@@ -3492,7 +3596,7 @@
       "machines.oneClick.tools.terminal",
       "invites.byEmail",
       "invites.edit",
-      "appsDownload.appStore",
+      "appsDownload.testFlight",
       "appsDownload.googlePlay",
       "onboarding.import.sheet.os.windows",
       "storage.connect.provider.r2",
@@ -3500,7 +3604,18 @@
       "storage.connect.provider.b2",
       "storage.connect.awsRegion.il-central-1",
       "onboarding.import.choose.skill",
-      "onboarding.import.choose.step.video"
+      "onboarding.import.choose.step.video",
+      "connectFlow.ownClient.clientId",
+      "connectFlow.ownClient.clientSecret",
+      "brain.picker.ais",
+      "codeSessions.state.pr",
+      "codeSessions.home.beta",
+      "codeSessions.home.mode",
+      "codeSessions.home.was",
+      "codeSessions.panel.terminal",
+      "codeSessions.gitTab.label",
+      "codeTerminal.label",
+      "codeSessions.tabs.terminalN"
     ],
     "tr": [
       "live.canvas.inspector.model",
@@ -3704,13 +3819,21 @@
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
       "machines.oneClick.tools.antigravity",
-      "appsDownload.appStore",
+      "appsDownload.testFlight",
       "appsDownload.googlePlay",
       "onboarding.import.sheet.os.windows",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
       "storage.connect.provider.b2",
-      "onboarding.import.choose.step.video"
+      "onboarding.import.choose.step.video",
+      "codeSessions.state.pr",
+      "codeSessions.home.beta",
+      "codeSessions.home.mode",
+      "codeSessions.home.was",
+      "codeSessions.panel.terminal",
+      "codeSessions.gitTab.label",
+      "codeTerminal.label",
+      "codeSessions.tabs.terminalN"
     ],
     "pl": [
       "drive.folder",
@@ -4007,7 +4130,7 @@
       "invites.byLink",
       "invites.link",
       "invites.linkLabel",
-      "appsDownload.appStore",
+      "appsDownload.testFlight",
       "appsDownload.googlePlay",
       "onboarding.import.sheet.os.windows",
       "storage.connect.provider.r2",
@@ -4036,7 +4159,20 @@
       "live.canvas.inspector.model",
       "live.sheet.args.a1",
       "live.sheet.args.k",
-      "live.sheet.args.x"
+      "live.sheet.args.x",
+      "brain.picker.ais",
+      "codeSessions.state.pr",
+      "codeSessions.home.beta",
+      "codeSessions.home.mode",
+      "codeSessions.home.was",
+      "codeSessions.home.agent",
+      "codeSessions.panel.terminal",
+      "codeSessions.gitTab.label",
+      "cliTools.progress.subagent",
+      "cliTools.progress.agents",
+      "codeTerminal.label",
+      "codeSessions.tabs.terminalN",
+      "connectors.store.agents"
     ],
     "ru": [
       "live.canvas.sizes.short.s",
@@ -4205,12 +4341,17 @@
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
       "machines.oneClick.tools.antigravity",
-      "appsDownload.appStore",
+      "appsDownload.testFlight",
       "appsDownload.googlePlay",
       "onboarding.import.sheet.os.windows",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
-      "storage.connect.provider.b2"
+      "storage.connect.provider.b2",
+      "codeSessions.state.pr",
+      "codeSessions.home.beta",
+      "codeSessions.home.mode",
+      "codeSessions.home.was",
+      "codeSessions.gitTab.label"
     ]
   },
   "mobile-base": {
@@ -4235,6 +4376,7 @@
       "chart.item",
       "chat.thread",
       "chats.thread",
+      "coding.commit",
       "connectors.mcps",
       "drive.kind.diff",
       "drive.type.diffs",
@@ -4268,7 +4410,9 @@
       "devices.connect.windows",
       "roles.icons.pullRequest",
       "live.card.slides",
-      "live.card.shapes"
+      "live.card.shapes",
+      "aiHub.orderGroup",
+      "aiHub.choice.api"
     ],
     "es": [
       "devices.os.android",
@@ -4303,7 +4447,13 @@
       "vault.field.keyNamePlaceholder",
       "vault.field.websitePlaceholder",
       "vault.scope.personal",
-      "vault.tab.personal"
+      "vault.tab.personal",
+      "coding.commit",
+      "aiHub.orderGroup",
+      "aiHub.audience.roles",
+      "aiHub.pickRoles",
+      "aiHub.choice.api",
+      "aiHub.audience.rolesCount"
     ],
     "fr": [
       "devices.os.android",
@@ -4387,7 +4537,11 @@
       "live.doc.styles.code",
       "live.slides.part.note",
       "live.slides.tools.photo",
-      "live.text.noteTitle"
+      "live.text.noteTitle",
+      "coding.commit",
+      "aiHub.orderGroup",
+      "aiHub.choice.effort",
+      "aiHub.choice.api"
     ],
     "de": [
       "live.doc.styles.code",
@@ -4465,7 +4619,11 @@
       "invite.ask.step.code",
       "settings.group.org",
       "threads.title",
-      "roles.icons.person"
+      "roles.icons.person",
+      "coding.commit",
+      "aiHub.orderGroup",
+      "aiHub.limits",
+      "aiHub.choice.api"
     ],
     "it": [
       "devices.status.offline",
@@ -4519,7 +4677,11 @@
       "agents.teamSection",
       "find.filterWord.in",
       "connectors.accountTitle",
-      "roles.icons.mail"
+      "roles.icons.mail",
+      "coding.commit",
+      "aiHub.orderGroup",
+      "aiHub.choice.account",
+      "aiHub.choice.api"
     ],
     "nl": [
       "devices.status.offline",
@@ -4607,7 +4769,15 @@
       "drive.type.spreadsheets",
       "drive.kind.spreadsheet",
       "live.canvas.tools.pen",
-      "live.doc.styles.code"
+      "live.doc.styles.code",
+      "coding.project",
+      "coding.commit",
+      "aiHub.accounts",
+      "aiHub.orderGroup",
+      "aiHub.choice.account",
+      "aiHub.choice.model",
+      "aiHub.choice.api",
+      "aiHub.missionAi"
     ],
     "ja": [
       "devices.os.android",
@@ -4622,7 +4792,10 @@
       "me.account.save",
       "onb.emailsPlaceholder",
       "vault.field.keyNamePlaceholder",
-      "vault.field.websitePlaceholder"
+      "vault.field.websitePlaceholder",
+      "aiHub.orderGroup",
+      "aiHub.choice.api",
+      "aiHub.missionAi"
     ],
     "ko": [
       "devices.os.android",
@@ -4634,7 +4807,10 @@
       "files.type.pdf",
       "onb.emailsPlaceholder",
       "vault.field.keyNamePlaceholder",
-      "vault.field.websitePlaceholder"
+      "vault.field.websitePlaceholder",
+      "aiHub.orderGroup",
+      "aiHub.choice.api",
+      "aiHub.missionAi"
     ],
     "zh-Hans": [
       "devices.os.android",
@@ -4648,7 +4824,10 @@
       "files.type.pdf",
       "onb.emailsPlaceholder",
       "vault.field.keyNamePlaceholder",
-      "vault.field.websitePlaceholder"
+      "vault.field.websitePlaceholder",
+      "aiHub.orderGroup",
+      "aiHub.choice.api",
+      "aiHub.missionAi"
     ],
     "id": [
       "files.type.spreadsheet",
@@ -4682,7 +4861,12 @@
       "vault.kind.login",
       "files.type.video",
       "me.status",
-      "roles.icons.mail"
+      "roles.icons.mail",
+      "coding.commit",
+      "aiHub.orderGroup",
+      "aiHub.choice.model",
+      "aiHub.choice.api",
+      "aiHub.missionAi"
     ],
     "tr": [
       "devices.os.android",
@@ -4700,7 +4884,11 @@
       "onb.logo",
       "vault.field.keyNamePlaceholder",
       "vault.field.websitePlaceholder",
-      "files.type.video"
+      "files.type.video",
+      "coding.commit",
+      "aiHub.orderGroup",
+      "aiHub.choice.model",
+      "aiHub.choice.api"
     ],
     "pl": [
       "devices.status.offline",
@@ -4733,7 +4921,12 @@
       "time.short.minutes",
       "time.short.days",
       "me.status",
-      "roles.reach.agents"
+      "roles.reach.agents",
+      "coding.commit",
+      "aiHub.orderGroup",
+      "aiHub.choice.model",
+      "aiHub.choice.api",
+      "aiHub.missionAi"
     ],
     "ru": [
       "devices.os.android",
@@ -4745,7 +4938,9 @@
       "files.type.pdf",
       "onb.emailsPlaceholder",
       "vault.field.keyNamePlaceholder",
-      "vault.field.websitePlaceholder"
+      "vault.field.websitePlaceholder",
+      "aiHub.orderGroup",
+      "aiHub.choice.api"
     ]
   },
   "desktop": {

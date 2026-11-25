@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import type { KeyWrapper } from "@agenteschat/adapters";
-import { and, asc, type Database, type Executor, eq, isNull, lt, ne, or, schema, sql } from "@agenteschat/db";
+import { and, asc, type Database, type Executor, eq, inArray, isNull, lt, ne, or, schema, sql } from "@agenteschat/db";
 import { StreamableHTTPError } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { reachableFromInternet } from "../apps/urls";
 import { type AuditEntry, recordAudit } from "../audit";
@@ -182,7 +182,16 @@ export async function grantToEveryAgent(
 }
 
 /** OAuth app credentials per connector (from env; real apps are configured per deployment). */
-export type OAuthApps = Record<string, { clientId: string; clientSecret: string } | undefined>;
+export type OAuthApps = Record<
+  string,
+  | {
+      clientId: string;
+      clientSecret: string;
+      /** Meta's Login for Business configuration: the authorize URL names it instead of scopes. */
+      configId?: string;
+    }
+  | undefined
+>;
 
 /** What's stored (encrypted) for a connection. Never returned by any API. */
 export interface ConnectionSecret {
@@ -420,7 +429,7 @@ const nativeHttp = (deps: Pick<ConnectorDeps, "http">) => deps.http ?? fetch;
  * vendor refuses is the person's to fix, so it fails the connect. Null for any other connector.
  */
 async function nativeAccount(deps: ConnectorDeps, connector: string, secret: ConnectionSecret) {
-  const service = CONNECTOR_CATALOG[connector]?.native ? NATIVE_SERVICES[connector] : undefined;
+  const service = nativeServiceOf(connector);
   if (!service?.account) return null;
   try {
     return await service.account(secret, nativeHttp(deps));
@@ -437,7 +446,7 @@ async function nativeAccount(deps: ConnectorDeps, connector: string, secret: Con
 
 /** What a connector of our own sets up once stored (Telegram's webhook), its secret sealed again when it changed. */
 async function nativeConnected(deps: ConnectorDeps, connection: ConnectorConnection, secret: ConnectionSecret) {
-  const service = CONNECTOR_CATALOG[connection.connector]?.native ? NATIVE_SERVICES[connection.connector] : undefined;
+  const service = nativeServiceOf(connection.connector);
   if (!service?.connected) return connection;
   const base = (await reachableFromInternet(deps.publicUrl, deps.resolveHost).catch(() => false))
     ? deps.publicUrl
@@ -576,7 +585,7 @@ export async function revokeAtProvider(deps: ConnectorDeps, orgId: string, conne
     .select()
     .from(connectorConnections)
     .where(and(eq(connectorConnections.id, connectionId), eq(connectorConnections.orgId, orgId)));
-  const service = c && CONNECTOR_CATALOG[c.connector]?.native ? NATIVE_SERVICES[c.connector] : undefined;
+  const service = c ? nativeServiceOf(c.connector) : undefined;
   if (c && !c.revokedAt && service?.revoke) {
     const secret = await openConnectionSecret(deps.keyWrappers, c).catch(() => null);
     if (!secret) return false;
@@ -869,13 +878,18 @@ export async function startOAuth(
     expiresAt: new Date((deps.now?.() ?? new Date()).getTime() + OAUTH_STATE_TTL_MS),
   });
   const url = new URL(def.oauth.authorizeUrl);
-  url.searchParams.set("client_id", app.clientId);
+  url.searchParams.set(def.oauth.clientIdParam ?? "client_id", app.clientId);
   url.searchParams.set("redirect_uri", oauthRedirectUri(deps.publicUrl));
   url.searchParams.set("response_type", "code");
-  url.searchParams.set("scope", def.oauth.scopes.join(def.oauth.scopeSeparator ?? " "));
+  if (app.configId) {
+    url.searchParams.set("config_id", app.configId);
+    url.searchParams.set("override_default_response_type", "true");
+  } else url.searchParams.set("scope", def.oauth.scopes.join(def.oauth.scopeSeparator ?? " "));
   url.searchParams.set("state", state);
-  url.searchParams.set("code_challenge", challenge);
-  url.searchParams.set("code_challenge_method", "S256");
+  if (def.oauth.pkce !== false) {
+    url.searchParams.set("code_challenge", challenge);
+    url.searchParams.set("code_challenge_method", "S256");
+  }
   return { authorizeUrl: url.toString(), state };
 }
 
@@ -936,6 +950,24 @@ async function tokenRequest(
     throw res.status < 500 && res.status !== 429 ? new TokenRefused(said) : new ValidationError(said);
   }
   return body;
+}
+
+/**
+ * How this server's own OAuth app shows itself at a vendor's token endpoint: in the form (`client_id`, or the vendor's
+ * name for it, and `client_secret`), or in HTTP Basic where the vendor takes it only there (X).
+ */
+function ownClient(
+  def: ConnectorDefinition,
+  app: { clientId: string; clientSecret: string },
+): { form: Record<string, string>; headers: Record<string, string> } {
+  if (def.oauth?.clientAuth === "basic") {
+    const basic = Buffer.from(`${encodeURIComponent(app.clientId)}:${encodeURIComponent(app.clientSecret)}`);
+    return { form: {}, headers: { authorization: `Basic ${basic.toString("base64")}` } };
+  }
+  return {
+    form: { [def.oauth?.clientIdParam ?? "client_id"]: app.clientId, client_secret: app.clientSecret },
+    headers: {},
+  };
 }
 
 /** The provider answered a token request with no: the sign-in it was made with no longer works. */
@@ -1033,6 +1065,7 @@ export async function completeOAuth(
   const app = deps.oauthApps?.[row.connector];
   if (!def.oauth || !app) throw new ValidationError(`OAuth for ${def.label} is not configured on this server`);
   const verifier = await stateVerifier(deps, row);
+  const client = ownClient(def, app);
   const token = await tokenRequest(
     deps,
     def.oauth.tokenUrl,
@@ -1040,20 +1073,32 @@ export async function completeOAuth(
       grant_type: "authorization_code",
       code: input.code,
       redirect_uri: oauthRedirectUri(deps.publicUrl),
-      client_id: app.clientId,
-      client_secret: app.clientSecret,
-      code_verifier: verifier,
+      ...client.form,
+      ...(def.oauth.pkce === false ? {} : { code_verifier: verifier }),
     },
-    {},
+    client.headers,
     def,
   );
+  const service = nativeServiceOf(row.connector);
+  if (service?.exchange && token.access_token) {
+    const long = await service.exchange(
+      { accessToken: token.access_token, ...(token.expires_in ? { expiresIn: token.expires_in } : {}) },
+      app,
+      nativeHttp(deps),
+    );
+    token.access_token = long.accessToken;
+    token.expires_in = long.expiresIn;
+  }
+  const signedIn: ConnectionSecret = { accessToken: token.access_token, refreshToken: token.refresh_token };
+  const account = await nativeAccount(deps, row.connector, signedIn);
   const stored = await storeConnection(deps, {
     orgId: row.orgId,
     actorId: user.id,
     connector: row.connector,
     authType: "oauth",
     serverUrl: checkServerUrl(row.serverUrl ?? def.serverUrl),
-    secret: { accessToken: token.access_token, refreshToken: token.refresh_token },
+    secret: signedIn,
+    ...(account ? { accountLabel: account.label, accountId: account.id } : {}),
     tokenExpiresAt: token.expires_in ? new Date(at.getTime() + token.expires_in * 1000) : null,
     // An empty `scope` (a GitHub App's client, which has no scopes) is unknown, never "none granted".
     oauthScopes:
@@ -1092,8 +1137,17 @@ export async function connectionSecret(deps: ConnectorDeps, c: ConnectorConnecti
   return fresh;
 }
 
-const expiring = (c: ConnectorConnection, secret: ConnectionSecret, at: Date) =>
-  Boolean(secret.refreshToken && c.tokenExpiresAt && c.tokenExpiresAt.getTime() - at.getTime() < 60_000);
+/** A connector of our own (ADR 0170), by its catalog id. */
+const nativeServiceOf = (connector: string) =>
+  CONNECTOR_CATALOG[connector]?.native ? NATIVE_SERVICES[connector] : undefined;
+
+function expiring(c: ConnectorConnection, secret: ConnectionSecret, at: Date) {
+  const left = c.tokenExpiresAt ? c.tokenExpiresAt.getTime() - at.getTime() : null;
+  if (left === null) return false;
+  const service = nativeServiceOf(c.connector);
+  if (service?.refresh) return Boolean(secret.accessToken) && left < (service.refreshBefore ?? 60_000);
+  return Boolean(secret.refreshToken) && left < 60_000;
+}
 
 /**
  * One refresh at a time per connection, across processes: many servers rotate the refresh token, so a second
@@ -1167,15 +1221,26 @@ async function refreshTokens(
       undefined,
       namedTokenFetch(deps),
     );
+  } else if (nativeServiceOf(c.connector)?.refresh) {
+    try {
+      const fresh = await nativeServiceOf(c.connector)?.refresh?.(
+        secret,
+        deps.oauthApps?.[c.connector],
+        nativeHttp(deps),
+      );
+      if (!fresh) return null;
+      token = { access_token: fresh.accessToken, ...(fresh.expiresIn ? { expires_in: fresh.expiresIn } : {}) };
+    } catch (error) {
+      if (error instanceof NativeError && error.code === "connector.needs_reconnect")
+        throw new TokenRefused(error.message);
+      throw error;
+    }
   } else {
     const def = c.connector.startsWith("custom:") ? null : connectorDefinition(c.connector);
     const app = deps.oauthApps?.[c.connector];
     if (!def?.oauth || !app) return null;
-    token = await tokenRequest(deps, def.oauth.tokenUrl, {
-      ...refresh,
-      client_id: app.clientId,
-      client_secret: app.clientSecret,
-    });
+    const own = ownClient(def, app);
+    token = await tokenRequest(deps, def.oauth.tokenUrl, { ...refresh, ...own.form }, own.headers);
   }
   const next: ConnectionSecret = {
     ...secret,
@@ -1324,4 +1389,57 @@ async function completeMcpOAuth(
     owner: row.personal ? user.id : null,
   });
   return { ...stored, returnTo: row.returnTo };
+}
+
+/**
+ * Tokens of our own connectors that renew by a call of their own (Threads' 60 days) and no call renewed in time: each
+ * renewed now, on the worker loop (`connectorTokens`). A refusal marks the connection to reconnect.
+ */
+export async function refreshNativeTokens(deps: ConnectorDeps, at = new Date()): Promise<number> {
+  const due = Object.entries(NATIVE_SERVICES).filter(([, s]) => s.refresh);
+  let renewed = 0;
+  for (const [connector, service] of due) {
+    const rows = await deps.db
+      .select()
+      .from(connectorConnections)
+      .where(
+        and(
+          eq(connectorConnections.connector, connector),
+          isNull(connectorConnections.revokedAt),
+          eq(connectorConnections.status, "active"),
+          lt(connectorConnections.tokenExpiresAt, new Date(at.getTime() + (service.refreshBefore ?? 60_000))),
+        ),
+      );
+    for (const row of rows) {
+      if (await connectionSecret({ ...deps, now: () => at }, row).catch(() => null)) renewed++;
+    }
+  }
+  return renewed;
+}
+
+/**
+ * A vendor says an account removed this server's app on its side (Meta's deauthorize and data deletion callbacks):
+ * every live connection of those connectors to that account goes, with its grants and rules, as Desconectar does.
+ */
+export async function dropVendorAccount(db: Database, connectors: string[], accountId: string) {
+  const gone = await db.transaction(async (tx) => {
+    const rows = await tx
+      .select()
+      .from(connectorConnections)
+      .where(
+        and(
+          inArray(connectorConnections.connector, connectors),
+          eq(connectorConnections.accountId, accountId),
+          isNull(connectorConnections.revokedAt),
+        ),
+      )
+      .for("update");
+    for (const row of rows) await dropConnection(tx, row.orgId, row, { type: "system", id: null });
+    return rows;
+  });
+  for (const row of gone) {
+    caches.connections.delete(`${row.orgId}:active`);
+    caches.scopes.deletePrefix(`${row.orgId}:`);
+  }
+  return gone.length;
 }

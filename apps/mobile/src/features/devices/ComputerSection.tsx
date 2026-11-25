@@ -1,5 +1,5 @@
 import { type ComputerDevice, useWifiIphones } from "@agenteschat/client";
-import { mayChangeTasks, taskChoices } from "@agenteschat/client/lib/devices";
+import { mayChangeTasks, taskChoices, tasksAutoText } from "@agenteschat/client/lib/devices";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { computerKind } from "@agenteschat/client/lib/machines";
 import { can } from "@agenteschat/client/lib/permissions";
@@ -33,6 +33,9 @@ export function ComputerSection({ device: d, name }: { device: ComputerDevice; n
   const tasks = useDeviceMutation((api, orgId, maxTasks: number) =>
     api.devices.updateComputer(orgId, d.id, { maxTasks }),
   );
+  const push = useDeviceMutation((api, orgId, on: boolean) =>
+    api.devices.updateComputer(orgId, d.id, { pushHarder: on }),
+  );
   const brought = d.machineKind === "connected";
   const admin = can(org, "configure");
   const maxTasks = (tasks.isPending ? tasks.variables : undefined) ?? d.maxTasks;
@@ -52,6 +55,8 @@ export function ComputerSection({ device: d, name }: { device: ComputerDevice; n
   // are read again (`useDeviceMutation`), so the saved value takes over with no flicker.
   const spillOn = (key: "own" | "others") => (spill.isPending ? spill.variables?.[key] : undefined) ?? d.spill[key];
   const belongs = (mark.isPending ? mark.variables : undefined) ?? d.belongsToWorkspace;
+  const pushing = (push.isPending ? push.variables : undefined) ?? d.taskRoom?.pushHarder ?? false;
+  const tasksEditable = mayChangeTasks(d, meId ?? "", admin);
   const wifi = useWifiIphones(
     useOrgId(),
     d.id,
@@ -73,13 +78,37 @@ export function ComputerSection({ device: d, name }: { device: ComputerDevice; n
                   }
                 : {})}
             />
+            {/* Tasks start on room there: what's running and what still fits, and the owner's Push harder. */}
+            {d.taskRoom ? (
+              <GroupedRow
+                label={t("devices.maxTasks")}
+                hint={{ name: t("common.about", { label: t("devices.maxTasks") }), text: t("devices.tasksAutoHint") }}
+                sub={tasksAutoText(t, d) ?? undefined}
+                subLines={2}
+              />
+            ) : null}
+            {d.taskRoom && tasksEditable && brought ? (
+              <GroupedRow
+                label={t("devices.pushHarder")}
+                hint={{
+                  name: t("common.about", { label: t("devices.pushHarder") }),
+                  text: t("devices.pushHarderHint"),
+                }}
+                toggle={pushing}
+                // The computer applies it: offline, nothing would.
+                disabled={d.status.kind === "offline"}
+                onPress={() =>
+                  push.mutate(!pushing, { onError: (err) => toast({ title: errorText(t, err), icon: "x" }) })
+                }
+              />
+            ) : null}
             {/* Only once the computer says its limit: a guess here would be a setting that changes nothing. */}
-            {maxTasks !== null ? (
+            {!d.taskRoom && maxTasks !== null ? (
               <GroupedRow
                 label={t("devices.maxTasks")}
                 hint={{ name: t("common.about", { label: t("devices.maxTasks") }), text: t("devices.maxTasksHint") }}
                 value={String(maxTasks)}
-                {...(mayChangeTasks(d, meId ?? "", admin)
+                {...(tasksEditable
                   ? {
                       menu: true,
                       // The computer applies it: offline, nothing would.

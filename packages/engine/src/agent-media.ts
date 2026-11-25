@@ -157,6 +157,7 @@ const NOT_A_LIGHT_REPLY = [
   "issueTaken",
   "missionLink",
   "missionSuggestion",
+  "codeSuggestion",
   "background",
   "routine",
   "viaRoutine",

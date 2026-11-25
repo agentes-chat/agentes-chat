@@ -22,6 +22,7 @@ import {
   TextInput,
   type TextInputInstance,
   type TextStyle,
+  useWindowDimensions,
   View,
 } from "react-native";
 import {
@@ -135,8 +136,6 @@ export interface ComposerProps {
   onLongAsFile?: (text: string) => void;
   /** Each change that leaves text in the field ("está digitando…" for the others; the screen throttles it). */
   onType?: (text: string) => void;
-  /** The field took the keyboard (true) or let it go (a conversation in a sheet rises with it, ADR 0208). */
-  onFocusChange?: ((focused: boolean) => void) | undefined;
   /**
    * Where the words wait when the person leaves before sending (a conversation, a thread): they are back in the field
    * when the person returns, until sent or erased. Kept while the app runs.
@@ -322,13 +321,17 @@ export function Composer({
   sendEmpty = false,
   onLongAsFile,
   onType,
-  onFocusChange,
   draftKey,
   media,
   voice,
 }: ComposerProps) {
   const { colors, shadows, reducedMotion } = useTheme();
   const { t, i18n } = useTranslation();
+  // An empty field is one line high on iOS (`oneLineIos`): emptied from code right after typing, a multiline field
+  // kept the height of the words that had gone (its height is measured from the text the native side last reported,
+  // and a late report of the old words won over the empty value: an empty five-line field after a long message).
+  const { fontScale } = useWindowDimensions();
+  const emptyCap = Platform.OS === "ios" ? { maxHeight: oneLineIos(fontScale) } : null;
   const toast = useToast();
   const [text, setText] = useState(() => (draftKey ? (DRAFTS.get(draftKey) ?? "") : ""));
   const tooLong = tooLongToSend(text);
@@ -653,16 +656,10 @@ export function Composer({
                 if (selection) setSelection(undefined);
               }}
               multiline
-              onFocus={() => {
-                setFocused(true);
-                onFocusChange?.(true);
-              }}
-              onBlur={() => {
-                setFocused(false);
-                onFocusChange?.(false);
-              }}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
               accessibilityLabel={placeholder}
-              style={[inputText, styles.inputFill, { color: colors.ink }]}
+              style={[inputText, styles.inputFill, { color: colors.ink }, text ? null : emptyCap]}
             />
           </View>
           {mediaButton ? (
@@ -891,6 +888,8 @@ const SendButton = memo(function SendButton({
  * keeps the font's own height and the padding centers it; Android centers it itself.
  */
 const body = systemText("body");
+/** The field's padding over and under its words on iOS. */
+const IOS_PAD_V = 8;
 const inputText: TextStyle = {
   flex: 1,
   minWidth: 0,
@@ -901,7 +900,7 @@ const inputText: TextStyle = {
   letterSpacing: body.letterSpacing,
   paddingHorizontal: 0,
   ...Platform.select<TextStyle>({
-    ios: { paddingTop: 8, paddingBottom: 8 },
+    ios: { paddingTop: IOS_PAD_V, paddingBottom: IOS_PAD_V },
     // The one line centered in the send button's height: the field is exactly as tall.
     default: {
       lineHeight: body.lineHeight,
@@ -912,6 +911,13 @@ const inputText: TextStyle = {
     },
   }),
 };
+
+/**
+ * One line of the field on iOS at the system's text size: the body's line (the font's size and a fifth, as SF draws
+ * it) and the padding over and under it, never under the send button's height.
+ */
+const oneLineIos = (fontScale: number) =>
+  Math.max(SEND, Math.ceil((body.fontSize ?? 17) * fontScale * 1.2) + IOS_PAD_V * 2);
 
 /** The placeholder's words, as the field's own text sits on its first line. */
 const placeholderText: TextStyle = {

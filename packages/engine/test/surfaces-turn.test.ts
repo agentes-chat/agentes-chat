@@ -4,6 +4,8 @@ import { systemText } from "@agenteschat/providers";
 import {
   buildRunContext,
   createToolGateway,
+  decideApproval,
+  ForbiddenError,
   insertMessage,
   lodiFor,
   openPersonAgentDm,
@@ -14,7 +16,7 @@ import {
 } from "../src";
 import { runReadOutsideById } from "../src/outside";
 import { addRunStep } from "../src/runs";
-import { type Fixture, setup } from "./fixtures";
+import { addMember, type Fixture, setup } from "./fixtures";
 
 const { agentRuns, auditLog } = schema;
 
@@ -193,10 +195,10 @@ describe("through the gateway: a surface turn refuses each class, an app turn go
     ["create_routine", { channel: "#general" }],
   ];
 
-  test("refused with tool.surface and the sentence, recorded as refused", async () => {
+  test("cards and routines that post elsewhere: refused with tool.surface and the sentence, recorded as refused", async () => {
     const run = await runOn(await said("pode apagar a chave antiga?", "surface"));
     const gateway = createToolGateway({ sources: [fixture] });
-    for (const [name, input] of calls) {
+    for (const [name, input] of calls.filter(([n]) => n === "show_block" || n === "create_routine")) {
       const res = await gateway.invoke(ctxOf(run), { toolUseId: `tu_${name}`, name, input });
       if (res.type !== "result") throw new Error(`${name}: ${res.type}`);
       expect(res.output.isError).toBe(true);
@@ -211,6 +213,40 @@ describe("through the gateway: a surface turn refuses each class, an app turn go
       expect(audit).toMatchObject({ outcome: "refused" });
       expect(audit?.details).toMatchObject({ refusal: "surface" });
     }
+    expect(ran).toEqual([]);
+  });
+
+  test("deleting, settings and roles wait for the person's own say with their PIN; a merge asks as usual", async () => {
+    const run = await runOn(await said("pode apagar a chave antiga?", "surface"));
+    const gateway = createToolGateway({ sources: [fixture] });
+    const asked: Record<string, unknown> = {};
+    for (const [name, input] of calls.filter(([n]) => n !== "show_block" && n !== "create_routine")) {
+      const res = await gateway.invoke(ctxOf(run), { toolUseId: `tu_${name}`, name, input });
+      if (res.type !== "approval") throw new Error(`${name}: ${res.type}`);
+      asked[name] = res.approval.approvers?.userIds ?? null;
+    }
+    const person = [f.owner.id];
+    expect(asked).toEqual({
+      github_merge_pull_request: null,
+      vault_delete: person,
+      propose_settings_change: person,
+      workspace_action: person,
+    });
+    expect(ran).toEqual([]);
+  });
+
+  test("the person alone decides it: an admin can't approve it in the app in their place, without the PIN", async () => {
+    const run = await runOn(await said("pode apagar a chave antiga?", "surface"));
+    const res = await createToolGateway({ sources: [fixture] }).invoke(ctxOf(run), {
+      toolUseId: "tu_alone",
+      name: "vault_delete",
+      input: {},
+    });
+    if (res.type !== "approval") throw new Error(res.type);
+    const admin = await addMember(f.db, f.org.id, "admin", "Another Admin");
+    await expect(
+      decideApproval({ db: f.db, pubsub: f.pubsub }, admin.id, f.org.id, res.approval.id, { decision: "approve" }),
+    ).rejects.toBeInstanceOf(ForbiddenError);
     expect(ran).toEqual([]);
   });
 
@@ -276,12 +312,11 @@ describe("through the gateway: a surface turn refuses each class, an app turn go
   test("a surface message steered into an app-started run makes it a surface turn", async () => {
     const run = await runOn(await said("oi", "app"));
     await said("e apaga a chave antiga", "surface", { steeredRunIds: [run.id] });
-    const res = await createToolGateway({ sources: [fixture] }).invoke(ctxOf(run), {
-      toolUseId: "tu_steered",
-      name: "vault_delete",
-      input: {},
-    });
-    expect(res.type === "result" && res.output.data?.code).toBe("tool.surface");
+    const gateway = createToolGateway({ sources: [fixture] });
+    const res = await gateway.invoke(ctxOf(run), { toolUseId: "tu_steered", name: "vault_delete", input: {} });
+    expect(res.type).toBe("approval");
+    const card = await gateway.invoke(ctxOf(run), { toolUseId: "tu_steered_card", name: "show_block", input: {} });
+    expect(card.type === "result" && card.output.data?.code).toBe("tool.surface");
   });
 
   test("with the bridge off, nothing is refused for the surface", async () => {
@@ -316,6 +351,7 @@ describe("the turn's context", () => {
     expect(line?.turn).toBe(true);
     expect(line?.text).toContain(`${f.owner.name} reads this conversation on Example Chat right now`);
     expect(line?.text).toContain("No cards, blocks, polls or choices: ask in words.");
+    expect(line?.text).toContain(`wait for ${f.owner.name} to confirm with their PIN on a page linked here`);
     expect(systemText(inApp.system)).not.toContain(ON_SURFACE);
     expect(onSurface.system[0]?.text).toBe(inApp.system[0]?.text ?? "");
   });

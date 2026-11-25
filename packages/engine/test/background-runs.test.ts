@@ -3,6 +3,7 @@ import { MACHINE_PROTOCOL_VERSION } from "@agenteschat/adapters";
 import { eq, schema } from "@agenteschat/db";
 import type { ModelRequest } from "@agenteschat/providers";
 import {
+  ANSWER_NUDGE,
   addChannelMember,
   addRunStep,
   type Brain,
@@ -707,9 +708,56 @@ describe("what a run owes", () => {
     expect((await runById(run?.id ?? ""))?.status).toBe("done");
     const posted = await agentMessages();
     expect(posted).toHaveLength(1);
-    expect(posted[0]?.meta).toMatchObject({ bodyCode: "done" });
+    // Never a stand-in reply ("Done."): the line says it wrote none.
+    expect(posted[0]?.meta).toMatchObject({ bodyCode: "no_reply" });
     const [action] = await f.db.select().from(schema.agentActions);
     expect(action?.messageId).toBe(posted[0]?.id ?? "");
+  });
+
+  test("a mention that changed something and never writes a word: asked for its answer, then its receipts go out saying it wrote none", async () => {
+    f = await setup({
+      toolSources: [workTools()],
+      reply: (_req, call) =>
+        call === 1 ? { chunks: [], toolUses: [{ name: "file_issue", input: {} }] } : { chunks: [] },
+    });
+    const ask = await insertMessage(f.db, {
+      orgId: f.org.id,
+      channelId: f.general.id,
+      author: { type: "person", userId: f.owner.id },
+      body: "@dev registra o bug do checkout",
+    });
+    const [run] = await f.db.transaction((tx) => createAgentRuns(tx, ask, [f.agent.id], "mention"));
+    await drainOutbox(f.db, f.handlers);
+
+    expect(f.provider.calls.some((c) => lastText(c.request).includes(ANSWER_NUDGE))).toBe(true);
+    expect((await runById(run?.id ?? ""))?.status).toBe("done");
+    const posted = await agentMessages();
+    expect(posted).toHaveLength(1);
+    expect(posted[0]?.body).not.toBe("Done.");
+    expect(posted[0]?.meta).toMatchObject({ bodyCode: "no_reply" });
+    const [action] = await f.db.select().from(schema.agentActions);
+    expect(action?.messageId).toBe(posted[0]?.id ?? "");
+  });
+
+  test("the same when its last call hit the output limit: the line says so", async () => {
+    f = await setup({
+      toolSources: [workTools()],
+      reply: (_req, call) =>
+        call === 1
+          ? { chunks: [], toolUses: [{ name: "file_issue", input: {} }] }
+          : { chunks: [], stopReason: "max_tokens" },
+    });
+    const ask = await insertMessage(f.db, {
+      orgId: f.org.id,
+      channelId: f.general.id,
+      author: { type: "person", userId: f.owner.id },
+      body: "@dev registra o bug do checkout",
+    });
+    await f.db.transaction((tx) => createAgentRuns(tx, ask, [f.agent.id], "mention"));
+    await drainOutbox(f.db, f.handlers);
+
+    const posted = await agentMessages();
+    expect(posted.map((m) => m.meta.bodyCode)).toEqual(["no_reply_limit"]);
   });
 
   test("a message read at the cap is never lost: it gets a run of its own", async () => {

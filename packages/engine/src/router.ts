@@ -11,6 +11,7 @@ import {
   isNull,
   lte,
   ne,
+  or,
   schema,
   sql,
 } from "@agenteschat/db";
@@ -37,6 +38,9 @@ import type { ModelGateway } from "./gateway";
 import { PLATFORM_CAP } from "./limits";
 import type { MachineCaller } from "./machine-hub";
 import { AGENT_CHIME_IN_MAX_HOP, getMessage, type Message, type ReplyRef } from "./messages";
+import { agentOnlyNoticeSql } from "./notices";
+import { LEAD } from "./reply-policy";
+import { isRightHand, RIGHT_HAND_AUTO, RIGHT_HAND_ROUTING_ABOUT, rightHandReaches } from "./right-hand";
 import { ACTIVE_RUN_STATUSES } from "./run-inbox";
 import { type AgentRun, KEPT_ON_HOLD, NO_AI } from "./runs";
 import { billingHold, OrgDeletingError, standingRefusal } from "./standing";
@@ -66,6 +70,11 @@ export interface RoutingCandidate {
   about: string;
   /** What its granted scopes let it do ("Files (Drive), GitHub"), so "should it answer" weighs whether it can help. */
   can?: string;
+  /**
+   * The right hand, which is in no channel (ADR 0137): it answers only what fits it best (a step's pick or the agent
+   * spoken to), never as the channel's only agent nor as a rule's default pick, and only where the channel has agents.
+   */
+  rightHand?: boolean;
 }
 
 /** A message as the router reads it. */
@@ -282,10 +291,11 @@ export function selectAgents(
   context: { continuityAgentId?: string | null } = {},
 ): string[] {
   const allowed = new Set(candidates.map((c) => c.agentId));
-  const single = candidates.length === 1;
+  const extra = new Set(candidates.filter((c) => c.rightHand).map((c) => c.agentId));
+  const single = candidates.length - extra.size === 1;
   const thresholdOf = (agentId: string) => {
     let t = policy.minScore;
-    if (single) t = Math.min(t, policy.singleAgentMinScore ?? t);
+    if (single && !extra.has(agentId)) t = Math.min(t, policy.singleAgentMinScore ?? t);
     if (agentId === context.continuityAgentId) t = Math.min(t, policy.continuityMinScore ?? t);
     return t;
   };
@@ -299,11 +309,15 @@ export function selectAgents(
   const clearPick = [...best.values()].some((score) => score >= (policy.clearPickScore ?? Number.POSITIVE_INFINITY));
   if (result.needsAgent !== undefined && result.needsAgent < needGateOf(policy, single) && !continuing && !clearPick)
     return [];
-  return [...best]
-    .filter(([agentId, score]) => score >= thresholdOf(agentId))
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, (result.forEveryone ?? 0) >= FOR_EVERYONE_THRESHOLD ? policy.maxAgents : 1)
-    .map(([agentId]) => agentId);
+  return (
+    [...best]
+      .filter(([agentId, score]) => score >= thresholdOf(agentId))
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, (result.forEveryone ?? 0) >= FOR_EVERYONE_THRESHOLD ? policy.maxAgents : 1)
+      .map(([agentId]) => agentId)
+      // The right hand answers only as the best fit, never as one more voice of a message for every agent.
+      .filter((agentId, i) => i === 0 || !extra.has(agentId))
+  );
 }
 
 /** The only reactions a step may choose for a social message (`RoutingResult.social`), with when each fits. */
@@ -719,6 +733,11 @@ export interface RouteResult {
     | "system_line"
     /** An agent's message that names nobody and asks nothing: no other agent chimes in on it. */
     | "asks_nobody"
+    /**
+     * The channel's responsible agent spoke (ADR 0095): it answers for the team, so no colleague chimes in on it. It
+     * asks one (`ask_agent`) or hands it work (`tell_agent`) when it needs one.
+     */
+    | "lead_spoke"
     /** The same person's next message right after it is one the router decides on too: that one decides for both. */
     | "continued";
   selected?: string[];
@@ -838,9 +857,10 @@ export async function routeMessage(
       name: agents.name,
       role: agents.role,
       instructions: agents.instructions,
+      builtin: agents.builtin,
     })
     .from(agents)
-    .innerJoin(
+    .leftJoin(
       channelMembers,
       and(eq(channelMembers.agentId, agents.id), eq(channelMembers.channelId, message.channelId)),
     )
@@ -850,7 +870,11 @@ export async function routeMessage(
         isNull(agents.archivedAt),
         // Held (`standing.ts`): the others answer instead.
         isNull(agents.operatorHoldAt),
-        eq(channelMembers.autoReply, true),
+        // The channel's agents that reply by themselves, and for a person's message the right hand, which is in no
+        // channel (ADR 0137 amendment of 2026-11-23).
+        byAgent
+          ? eq(channelMembers.autoReply, true)
+          : or(eq(channelMembers.autoReply, true), rightHandReaches(sql`${agents}`, sql`${message.channelId}::uuid`)),
         // Never the agent that wrote it.
         byAgent && message.authorAgentId ? ne(agents.id, message.authorAgentId) : undefined,
         // Never an agent this person can't talk to: not as a pick, not as "the last agent" of a follow-up.
@@ -861,13 +885,18 @@ export async function routeMessage(
     .orderBy(asc(agents.createdAt));
   let candidates: RoutingCandidate[] = rows
     .filter((r) => !options.except?.includes(r.agentId))
-    .map((r) => ({
-      agentId: r.agentId,
-      handle: r.handle,
-      name: r.name,
-      role: r.role,
-      about: cutText(r.instructions, 300),
-    }));
+    .map((r) =>
+      isRightHand(r)
+        ? {
+            agentId: r.agentId,
+            handle: r.handle,
+            name: r.name,
+            role: r.role || RIGHT_HAND_AUTO.role,
+            about: RIGHT_HAND_ROUTING_ABOUT,
+            rightHand: true,
+          }
+        : { agentId: r.agentId, handle: r.handle, name: r.name, role: r.role, about: cutText(r.instructions, 300) },
+    );
   // Out of office (ADR 0084 §12): with nothing to think with until a reset, an agent doesn't answer a message nobody
   // mentioned it in (the others do); a mention still reaches it.
   if (deps.outOfOffice && candidates.length > 0) {
@@ -879,6 +908,8 @@ export async function routeMessage(
       .catch(() => new Set<string>());
     candidates = candidates.filter((c) => !out.has(c.agentId));
   }
+  // A channel with no agent of its own is people talking: the right hand answers there only when named.
+  if (candidates.every((c) => c.rightHand)) candidates = [];
   if (candidates.length === 0) return waitsForPlan ? paused : { runs: [], skipped: "no_candidates" };
   // Routed to nobody without asking the strategy, and why (the receipts say it).
   const unrouted = async (
@@ -982,11 +1013,17 @@ export async function routeMessage(
   }
 
   const [channelRow] = await db
-    .select({ id: channels.id, name: channels.name, topic: channels.topic, kind: channels.kind })
+    .select({
+      id: channels.id,
+      name: channels.name,
+      topic: channels.topic,
+      kind: channels.kind,
+      leadAgentId: channels.leadAgentId,
+    })
     .from(channels)
     .where(and(eq(channels.id, message.channelId), eq(channels.orgId, message.orgId)));
   if (!channelRow) return { runs: [], skipped: "message_missing" };
-  const { kind: channelKind, ...channel } = channelRow;
+  const { kind: channelKind, leadAgentId, ...channel } = channelRow;
   const historyOf = (where: ReturnType<typeof and>) =>
     db
       .select({
@@ -1023,6 +1060,8 @@ export async function routeMessage(
     historyOf(
       and(
         isNull(messages.deletedAt),
+        // A notice only its agent reads (ADR 0095) is no line anyone said: it never decides who was talking.
+        sql`not ${agentOnlyNoticeSql(sql`${messages.meta}`)}`,
         // A top-level message: the channel as people see it, replies under earlier messages included.
         message.threadId ? eq(messages.threadId, message.threadId) : undefined,
         ne(messages.id, message.id),
@@ -1042,6 +1081,7 @@ export async function routeMessage(
     // A personal workspace (ADR 0159): the person mostly talks to their agents, not to other people.
     isPersonalWorkspace(db, message.orgId),
   ]);
+  if (byAgent && leadAgentId && message.authorAgentId === leadAgentId) return { runs: [], skipped: "lead_spoke" };
   if (byAgent) {
     // Bringing someone in: agents that already spoke here aren't new voices.
     const spoke = new Set(
@@ -1242,10 +1282,12 @@ export async function routeMessage(
     )
       lastTalkedTo = null;
   }
+  // The channel's own agents: the right hand is never its only agent, nor a rule's default pick.
+  const members = candidates.filter((c) => !c.rightHand);
   // R2: a person alone in the channel with its one agent.
   const onlyAgentId =
-    !byAgent && !options.forSomeoneElse && candidates.length === 1 && (await aloneHere())
-      ? (candidates[0]?.agentId ?? null)
+    !byAgent && !options.forSomeoneElse && members.length === 1 && (await aloneHere())
+      ? (members[0]?.agentId ?? null)
       : null;
 
   const lineOf = (m: (typeof history)[number]): RoutingLine => {
@@ -1286,12 +1328,12 @@ export async function routeMessage(
   const talkingWith = repliedAgentId ?? lastTalkedTo ?? justSpokeId;
   // The best placed agent: the step's tie-break, else the top score, then whoever spoke here last, then the oldest.
   const bestPlaced = (scoreOf: (agentId: string) => number, best?: RoutingResult["best"]) => {
-    if (best && candidateIds.has(best.agentId)) return best.agentId;
+    if (best && members.some((c) => c.agentId === best.agentId)) return best.agentId;
     const spokeAt = (agentId: string) => {
       const i = history.findIndex((m) => m.authorAgentId === agentId);
       return i < 0 ? history.length : i;
     };
-    return [...candidates].sort(
+    return [...members].sort(
       (a, b) => scoreOf(b.agentId) - scoreOf(a.agentId) || spokeAt(a.agentId) - spokeAt(b.agentId),
     )[0]?.agentId;
   };
@@ -1408,7 +1450,7 @@ export async function routeMessage(
       ),
       candidates,
       continuityHandle,
-      aloneWith: onlyAgentId ? (candidates[0]?.handle ?? null) : null,
+      aloneWith: onlyAgentId ? (members[0]?.handle ?? null) : null,
       authorUserId: byAgent ? null : message.authorUserId,
       ruleDecides: repliedAgentId !== null || onlyAgentId !== null,
       personal,
@@ -1470,7 +1512,7 @@ export async function routeMessage(
         channelId: message.channelId,
         messageId: message.id,
         strategy: "none",
-        candidates: candidates.map((c) => ({ agentId: c.agentId, score: 0 })),
+        candidates: members.map((c) => ({ agentId: c.agentId, score: 0 })),
         selectedAgentIds: [],
         error,
       })
@@ -1482,7 +1524,7 @@ export async function routeMessage(
       runs: [],
       selected: [],
       ...(reacted ? { reacted } : {}),
-      seenBy: candidates.map((c) => c.agentId),
+      seenBy: members.map((c) => c.agentId),
       reason: MENTION_NEEDED,
     };
   }
@@ -1497,7 +1539,7 @@ export async function routeMessage(
   const namedAll = !options.forSomeoneElse && !addressee && !namesPerson && listed.length >= 2;
   // The channel's one agent spoke here within continuity's window: a short follow-up ("e o relatório?") is for it, whatever
   // the need score says. An ok or a thanks still gets its reaction (`heldBack`).
-  const [sole] = candidates.length === 1 ? candidates : [];
+  const [sole] = members.length === 1 ? members : [];
   const soleFollowUp =
     !byAgent &&
     !options.forSomeoneElse &&
@@ -1621,7 +1663,7 @@ export async function routeMessage(
       // Said to every agent ("vocês viram…?"), or needing one as much as a pick does, it is for them even right
       // after a colleague spoke.
       ((decided.forEveryone ?? 0) >= FOR_EVERYONE_THRESHOLD ||
-        needs >= needGateOf(policy, candidates.length === 1) ||
+        needs >= needGateOf(policy, members.length === 1) ||
         // Talking with an agent is no reason on its own: "vou almoçar agora, volto em uma hora" 15 minutes after a
         // talk needs nobody. A question, or some need, is for the agent ("Entenderam?").
         (!peopleTalking && ((talkingWith !== null && hasQuestionMark(saidText)) || needs >= DEFAULT_NEED))) &&
@@ -1658,6 +1700,42 @@ export async function routeMessage(
       chosen = [agentId];
     }
   }
+  // The channel's responsible agent (ADR 0095, addendum of 2026-11-23) takes what a person says to the room: a
+  // message the policy gave several agents without listing them by name gets its one answer, and a default pick is
+  // its, not the best placed one's. What speaks to another agent, replies to it, follows a talk with it or clearly
+  // fits it keeps its pick, and so does the room while the lead is at work here: the message would wait for its turn.
+  const leadId =
+    !byAgent && !options.forSomeoneElse && leadAgentId && candidateIds.has(leadAgentId) ? leadAgentId : null;
+  const other = (id: string | null | undefined) => Boolean(id) && id !== leadId;
+  let led = false;
+  if (
+    leadId &&
+    !other(spokenTo) &&
+    !other(repliedAgentId) &&
+    ((chosen.length >= 2 && !namedAll) ||
+      ((fallback === "best" || (fallback === "alone" && !other(talkingWith))) &&
+        chosen[0] !== leadId &&
+        !(decided.best && other(decided.best.agentId) && decided.best.confidence >= CLEAR_CHOICE))) &&
+    !(await leadAtWork(db, message, leadId))
+  ) {
+    chosen = [leadId];
+    led = true;
+  }
+  // The step's own pick of the lead alone, for what was said to the room (not to it by name, not a reply to it, not a
+  // follow-up of a talk with it), is its turn as the lead too: it answers for the team, with the agents of the
+  // channel, instead of passing on a question its colleagues know or bringing in agents from elsewhere.
+  if (
+    leadId &&
+    !led &&
+    chosen.length === 1 &&
+    chosen[0] === leadId &&
+    spokenTo !== leadId &&
+    repliedAgentId !== leadId &&
+    !followUp
+  )
+    led = true;
+  // Who read it, as the receipts show it: the channel's agents, and the right hand only when it answers.
+  const seen = candidates.filter((c) => !c.rightHand || chosen.includes(c.agentId));
   const stepName = decided.strategy ?? deps.strategy.name;
   const strategy = fallback === "alone" ? ALONE_STRATEGY : fallback ? DEFAULT_STRATEGY : stepName;
   const decidedBy: DecidedBy | undefined = fallback
@@ -1674,7 +1752,7 @@ export async function routeMessage(
         channelId: message.channelId,
         messageId: message.id,
         strategy,
-        candidates: candidates.map((c) => ({
+        candidates: seen.map((c) => ({
           agentId: c.agentId,
           score: decided.agents.find((a) => a.agentId === c.agentId)?.score ?? 0,
         })),
@@ -1682,9 +1760,11 @@ export async function routeMessage(
         selectedAgentIds: chosen,
         reason:
           [
+            // First, like FOLLOW_UP: `reply-policy.ts` reads a leading LEAD as the lead's turn (`routedToLead`).
+            led ? LEAD : null,
             (followUp && selected.length > 0) || (fallback === "talk" && !mayPass) ? FOLLOW_UP : null,
             fallback === "alone" ? "alone" : fallback ? "default" : null,
-            fallback === "talk" ? "talking to" : fallback ? "best" : null,
+            fallback === "talk" ? "talking to" : fallback && !led ? "best" : null,
             followUp && resumes && selected.length > 0 ? "last talked to" : null,
             duplicate ? "already answered by another agent" : null,
             forPeople ? "for people" : heldBack ? "held back" : null,
@@ -1694,7 +1774,7 @@ export async function routeMessage(
             !forPeople &&
             !heldBack &&
             decided.needsAgent !== undefined &&
-            decided.needsAgent < needGateOf(policy, candidates.length === 1)
+            decided.needsAgent < needGateOf(policy, members.length === 1)
               ? UNDER_NEED_GATE
               : null,
             chosen.length === 0 && capped ? DEFAULT_CAP : null,
@@ -1720,10 +1800,31 @@ export async function routeMessage(
     runs,
     selected: chosen,
     ...(reacted ? { reacted } : {}),
-    seenBy: candidates.map((c) => c.agentId),
+    seenBy: seen.map((c) => c.agentId),
     continuityAgentId: talkingTo,
     ...(decidedBy ? { decidedBy } : {}),
   };
+}
+
+/**
+ * The channel's responsible agent has a run working in this channel (not a routine's): a room message given to it
+ * would wait for that turn to end, so the room keeps its own pick meanwhile. One still queued reads it when it starts.
+ */
+async function leadAtWork(db: Database, message: Pick<Message, "orgId" | "channelId">, leadId: string) {
+  const [busy] = await db
+    .select({ id: agentRuns.id })
+    .from(agentRuns)
+    .where(
+      and(
+        eq(agentRuns.orgId, message.orgId),
+        eq(agentRuns.agentId, leadId),
+        eq(agentRuns.channelId, message.channelId),
+        eq(agentRuns.status, "running"),
+        eq(agentRuns.background, false),
+      ),
+    )
+    .limit(1);
+  return Boolean(busy);
 }
 
 /** The marker a decision's `reason` starts with when the router kept the person with the agent they talk to. */

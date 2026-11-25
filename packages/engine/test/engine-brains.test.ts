@@ -1751,6 +1751,8 @@ test("someone else's plan never thinks for the agent: plan_not_owner makes the r
     label: "Pessoal",
     status: "active",
     createdBy: bia.id,
+    // "Atender todos": Bia lets her agents answer Ana on it.
+    replyMode: "everyone",
   });
   await f.db.update(schema.agents).set({ brainAccountId: ACCOUNT }).where(eq(schema.agents.id, f.agent.id));
   const [agent] = await f.db.select().from(schema.agents).where(eq(schema.agents.id, f.agent.id));
@@ -1789,6 +1791,8 @@ test("a run waiting on someone else's plan goes on once the agent's owner gives 
     label: "Pessoal",
     status: "active",
     createdBy: bia.id,
+    // "Atender todos": Bia lets her agents answer Ana on it.
+    replyMode: "everyone",
   });
   await setAgentBrain({ db: f.db }, bia.id, f.org.id, f.agent.id, { account: ACCOUNT });
   await drainOutbox(f.db, handlers);
@@ -3408,7 +3412,7 @@ test("a sign-in that never answered fails at once on its CLI's own error, noted 
   for (const worked of [false, true]) {
     if (worked) await f.close();
     f = await setup();
-    const machineId = await computerAgent(f, { brainFallback: false });
+    const machineId = await computerAgent(f);
     const account = crypto.randomUUID();
     await f.db.insert(schema.machineAccounts).values({
       id: account,

@@ -1,24 +1,12 @@
 import { type Artifact, type ArtifactDetail, useFileUnread } from "@agenteschat/client";
 import { activityText } from "@agenteschat/client/lib/activity";
 import { textOrMedia } from "@agenteschat/client/lib/media";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, StyleSheet, View } from "react-native";
 import { useKeyboardState } from "react-native-keyboard-controller";
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import {
-  Glass,
-  Icon,
-  PixelOrbit,
-  PressScale,
-  padPastFold,
-  SCREEN_X,
-  Text,
-  useFoldRoom,
-  useReducedMotion,
-  useTheme,
-} from "@/ui";
+import { Glass, Icon, PixelOrbit, PressScale, padPastFold, SCREEN_X, Text, useFoldRoom, useTheme } from "@/ui";
 import { nameInk, workingEntries } from "../../chat/logic";
 import { Face } from "../../shared/Face";
 import { useDirectory, useOrgId } from "../../shared/hooks";
@@ -26,7 +14,6 @@ import { agentLook } from "../../shared/logic";
 import { MentionCount } from "../../shared/parts";
 import { useOpenFileTalk, useTalkMessages, useTalkRuns } from "./hooks";
 import { talkKindOf, talkLine } from "./logic";
-import { useTalkSheet } from "./store";
 
 /** The line's height, and the least room under it (over a phone with no home indicator). */
 export const TALK_LINE_H = 56;
@@ -50,27 +37,21 @@ export function useTalkLineRoom(): number {
  * The conversation under a live file (ADR 0199, the task's conversation row in glass), a picture, a video or a PDF
  * (ADR 0208): the faces of who took part, then what an agent is doing there now in its color with the pixel orbit
  * ("Atlas is making images…"), else the last message ("Atlas: Done, summed by status."), else "Talk about this
- * canvas"; how many, my mentions in red, and the chevron. A tap opens the conversation in its sheet over the file
- * (ADR 0208), the only way into it from the file. It floats over the file at the bottom (`floating`), sits in a bar of
- * the screen's own (`bare`: the picture viewer's, which keeps the home indicator's room) or closes the screen's
- * column; with the keyboard up it goes, and comes back when it goes down. While the sheet is up over the file the line
- * goes too, and in a column its place holds the sheet's room, so what the file shows ends above the sheet and the
- * person reaches all of it there; `keepPlace` (a screen that scrolls its own room under the sheet, the PDF's pages):
- * the line fades where it stands and keeps its room, so nothing above it lays out again as the sheet comes and goes.
- * `onOpen`: what a tap does instead. Folded like a book, the line keeps to the half
- * past the fold rather than across it (ADR 0212); a bar it sits in keeps it there itself.
+ * canvas"; how many, my mentions in red, and the chevron. A tap pushes the conversation over the file (ADR 0208), the
+ * only way into it from the file. It floats over the file at the bottom (`floating`), sits in a bar of the screen's
+ * own (`bare`: the picture viewer's, which keeps the home indicator's room) or closes the screen's column; with the
+ * keyboard up it goes, and comes back when it goes down. `onOpen`: what a tap does instead. Folded like a book, the
+ * line keeps to the half past the fold rather than across it (ADR 0212); a bar it sits in keeps it there itself.
  */
 export function FileTalkLine({
   file,
   floating = false,
   bare = false,
-  keepPlace = false,
   onOpen,
 }: {
   file: TalkFile | undefined;
   floating?: boolean;
   bare?: boolean;
-  keepPlace?: boolean;
   onOpen?: () => void;
 }) {
   const { t } = useTranslation();
@@ -84,16 +65,7 @@ export function FileTalkLine({
   const runs = useTalkRuns(file?.id ?? "", talk);
   const { mentions } = useFileUnread(orgId, file?.id ?? "");
   const open = useOpenFileTalk(file);
-  const sheet = useTalkSheet(file?.id);
   const foldSide = useFoldRoom();
-  const reduced = useReducedMotion();
-  // Kept in its place under the sheet (`keepPlace`): unseen, faded out as the sheet comes up and back as it goes.
-  const unseen = keepPlace && sheet !== null;
-  const shown = useSharedValue(unseen ? 0 : 1);
-  useEffect(() => {
-    shown.value = reduced ? (unseen ? 0 : 1) : withTiming(unseen ? 0 : 1, { duration: 180 });
-  }, [unseen, reduced, shown]);
-  const fade = useAnimatedStyle(() => ({ opacity: shown.value }));
 
   const line = useMemo(() => {
     const entries = workingEntries(runs, [], (id) => dir.anyAgent(id)?.name ?? "");
@@ -106,9 +78,7 @@ export function FileTalkLine({
     });
   }, [runs, messages, talk?.count, dir, t]);
 
-  if (sheet && !unseen)
-    return floating || bare ? null : <View style={{ height: sheet.reserve, backgroundColor: c.bg }} />;
-  if (keyboardUp && !unseen) return null;
+  if (keyboardUp) return null;
   const kind = talkKindOf(file);
   // Not known yet: the home indicator's room, where the line will be (a floating one waits unseen).
   if (!file || !kind) return floating || bare ? null : <View style={{ height: Math.max(insets.bottom, SIDE) + 8 }} />;
@@ -129,17 +99,14 @@ export function FileTalkLine({
     .filter(Boolean)
     .join(", ");
   return (
-    <Animated.View
-      pointerEvents={unseen ? "none" : "box-none"}
-      accessibilityElementsHidden={unseen}
-      importantForAccessibility={unseen ? "no-hide-descendants" : "auto"}
+    <View
+      pointerEvents="box-none"
       style={[
         styles.at,
         floating && styles.floating,
         !bare && { paddingBottom: Math.max(insets.bottom, SIDE) },
         !floating && !bare && { backgroundColor: c.bg },
         !bare && foldSide && padPastFold(foldSide, SCREEN_X),
-        fade,
       ]}
     >
       <PressScale
@@ -193,7 +160,7 @@ export function FileTalkLine({
           <Icon name="right" size={16} color={c.faint} />
         </Glass>
       </PressScale>
-    </Animated.View>
+    </View>
   );
 }
 

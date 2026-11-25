@@ -11,6 +11,7 @@ import {
   useUnarchiveAgent,
   useWorkingRuns,
 } from "@agenteschat/client";
+import { seesFactsOnly } from "@agenteschat/client/lib/agent-facts";
 import { type WorkLine, workLine, workLineText } from "@agenteschat/client/lib/agent-work";
 import { listsAgent } from "@agenteschat/client/lib/audience";
 import { errorText } from "@agenteschat/client/lib/errors";
@@ -153,7 +154,8 @@ function AgentsList() {
       ),
     [statuses],
   );
-  const agents = useMemo(() => dir.agents.filter((a) => listsAgent(org, a)), [dir.agents, org]);
+  // A teammate's private agent seen by its facts alone is on the team too, locked.
+  const agents = useMemo(() => dir.agents.filter((a) => listsAgent(org, a) || seesFactsOnly(a)), [dir.agents, org]);
   // The same lines while nothing they come from changes: the rows below are memoized on what each line holds.
   const { waiting, working, free } = useMemo(
     () => teamLines(agents, work, dms.data ?? [], asking, offline, atWork),
@@ -712,6 +714,13 @@ const AgentRow = memo(function AgentRow({
         <Text variant="small" tone="faint" numberOfLines={1} style={[LIST_PREVIEW, styles.shrink]}>
           {statusText}
         </Text>
+      ) : seesFactsOnly(a) ? (
+        <>
+          <LineIcon name="lock" size={15} color={c.faint} variant="small" text={LIST_PREVIEW} />
+          <Text variant="small" tone="muted" numberOfLines={1} style={[LIST_PREVIEW, styles.shrink]}>
+            {[t("agentPage.facts.private"), role].filter(Boolean).join(" · ")}
+          </Text>
+        </>
       ) : role ? (
         <Text variant="small" tone="muted" numberOfLines={1} style={[LIST_PREVIEW, styles.shrink]}>
           {role}
@@ -759,7 +768,7 @@ const AgentRow = memo(function AgentRow({
         title={a.name}
         time={time}
         // An agent with no role and nothing on has no second line, never an empty one.
-        sub={(state === "free" || (state === "out" && statusText === null)) && !role ? null : sub}
+        sub={(state === "free" || (state === "out" && statusText === null)) && !role && !seesFactsOnly(a) ? null : sub}
       />
     </Animated.View>
   );

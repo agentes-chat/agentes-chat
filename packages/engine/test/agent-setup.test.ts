@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { ACCOUNTS_PROTOCOL } from "@agenteschat/adapters";
 import { and, eq, inArray, schema, sql } from "@agenteschat/db";
 import {
+  ACCOUNT_OPENED_JOB,
   type AgentSetupInput,
   applyAgentSetup,
   createAgent,
@@ -159,7 +160,8 @@ describe("Usar em outros agentes", () => {
         brainAccountId: ANAS,
         brainModel: "opus",
         brainEffort: "high",
-        audienceMode: "owner",
+        // Who it answers stays: on the plan, its "Atender todos" decides.
+        audienceMode: "everyone",
       });
       // Each is its own change in the audit log, saying where it came from.
       const [audit] = await w.brainAudits(id);
@@ -295,8 +297,12 @@ describe("Usar em outros agentes", () => {
 });
 
 describe("Usar em outros agentes on someone else's plan (ADR 0059 §5)", () => {
+  // On a plan account its "Atender todos" opens (`ACCOUNT_OPENED_JOB`); on a computer's own sign-in, the agent.
   const planJobs = (w: Awaited<ReturnType<typeof world>>) =>
-    w.fx.db.select().from(schema.outbox).where(eq(schema.outbox.kind, PLAN_OPENED_JOB));
+    w.fx.db
+      .select()
+      .from(schema.outbox)
+      .where(inArray(schema.outbox.kind, [PLAN_OPENED_JOB, ACCOUNT_OPENED_JOB]));
 
   test("an admin letting more people talk to Ana's agent on her plan: the preview says so, and Ana gets an email", async () => {
     const w = await world();

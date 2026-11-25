@@ -8,6 +8,7 @@ import {
   useRoles,
   useUnarchiveChannel,
 } from "@agenteschat/client";
+import { hidesAgentPage } from "@agenteschat/client/lib/agent-facts";
 import { ownsAgentAs } from "@agenteschat/client/lib/agent-owner";
 import { editsAgent, managesAgent, opensDm } from "@agenteschat/client/lib/audience";
 import { errorText } from "@agenteschat/client/lib/errors";
@@ -17,6 +18,7 @@ import { isRightHand } from "@agenteschat/client/lib/right-hand";
 import { leaves, removes } from "@agenteschat/client/lib/roles";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
+import { useDirectory } from "@/hooks/useDirectory";
 import { useMyRoleIds } from "@/hooks/useMyRoleIds";
 import { useSidebarPins } from "@/hooks/useSidebarPins";
 import { requestChannelDetails } from "@/lib/channel-details";
@@ -254,6 +256,7 @@ export function useAgentMenu() {
   const mention = useMention();
   const pins = useSidebarPins();
   const myRoleIds = useMyRoleIds();
+  const dir = useDirectory(org.id);
   /** `extra`: the sidebar row's own items (Mudar de grupo), after Fixar no topo. */
   return (
     a: Pick<
@@ -294,13 +297,18 @@ export function useAgentMenu() {
             },
           ] satisfies MenuEntry[])
         : []),
-      {
-        kind: "item",
-        id: "profile",
-        label: t("profile.viewProfile"),
-        icon: "agent",
-        run: () => (openPanel ? openPanel(a.id) : page()),
-      },
+      // A teammate's private agent whose page doesn't open for me: no way to a page that isn't there.
+      ...(hidesAgentPage(dir.agentById.get(a.id))
+        ? []
+        : ([
+            {
+              kind: "item",
+              id: "profile",
+              label: t("profile.viewProfile"),
+              icon: "agent",
+              run: () => (openPanel ? openPanel(a.id) : page()),
+            },
+          ] satisfies MenuEntry[])),
       ...(openComputer
         ? ([
             {

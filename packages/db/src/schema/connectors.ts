@@ -157,8 +157,9 @@ export const oauthStates = pgTable(
 
 /**
  * OAuth clients agentes.chat registered with an MCP server's authorization
- * server (Dynamic Client Registration, RFC 7591), one per org and issuer.
- * A client secret, when the server issues one, is sealed like other secrets.
+ * server (Dynamic Client Registration, RFC 7591), one per org and issuer, or
+ * one an admin pasted (`provided_by_person`) for a server that takes only
+ * clients it approved. A client secret is sealed like other secrets.
  */
 export const oauthClients = pgTable(
   "oauth_clients",
@@ -181,6 +182,11 @@ export const oauthClients = pgTable(
      * registered before we chose, as `none`, and a secret it gave anyway goes in the form.
      */
     tokenAuthMethod: text(),
+    /**
+     * An admin's own client (their app at the provider): never replaced by a registration of ours, kept with no
+     * connection using it, and its `scope`, when set, is the one every authorization asks for.
+     */
+    providedByPerson: boolean().notNull().default(false),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("oauth_clients_org_issuer").on(t.orgId, t.issuer)],
@@ -375,6 +381,8 @@ export const connectorUsageDays = pgTable(
     approvalsAsked: integer().notNull().default(0),
     /** Approved actions that ran. */
     approvalsGiven: integer().notNull().default(0),
+    /** What the vendor bills this server for the calls, as estimated from its price list (X), in nano-US$. */
+    costNanoUsd: bigint({ mode: "number" }).notNull().default(0),
   },
   (t) => [primaryKey({ columns: [t.day, t.connector, t.via, t.orgId, t.agentId, t.tool] }), index().on(t.orgId)],
 );

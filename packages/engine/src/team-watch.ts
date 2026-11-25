@@ -21,7 +21,7 @@ import { can, getMembership, type Membership } from "./organizations";
 import { maySql, type RolePermission } from "./permissions";
 import { personLocale } from "./requester";
 import { defineLodiLane, liveLodiSwitches } from "./right-hand-lane";
-import { knownZonesSql, lodiPrefsSql, zoneSql } from "./right-hand-prefs";
+import { knownZoneNames, knownZonesSql, lodiPrefsSql, zoneSql } from "./right-hand-prefs";
 import { lodiFor, lodiSwitches, saidKey, saidOnce } from "./right-hand-proactive";
 import { lastGoodRun, outsideRoutineFailure, routineResumeKey } from "./routine-ledger";
 import { ROUTINE_FATIGUE_LIMIT } from "./routine-state";
@@ -224,7 +224,7 @@ export async function enqueueTeamWatches(db: Database, now: Date = new Date()): 
     sql`, `,
   )})`;
   const orgs = rowsOf<{ id: string; level: number }>(
-    await db.execute(sql`with ${knownZonesSql}
+    await db.execute(sql`with ${knownZonesSql(await knownZoneNames(db))}
       select t.id, t.level from (
         select organizations.id, case
           when coalesce(s.team_watch, true) and exists (select 1 from agents a where a.org_id = organizations.id
@@ -774,7 +774,7 @@ async function remindUnread(deps: NotificationDeps, orgId: string, now: Date): P
   const { db } = deps;
   const at = sql`${now.toISOString()}::timestamptz`;
   const people = rowsOf<{ user_id: string; day: string; digest_off: boolean }>(
-    await db.execute(sql`with ${knownZonesSql}
+    await db.execute(sql`with ${knownZonesSql(await knownZoneNames(db))}
       select distinct n.user_id, ${localDay(at)} as day,
         ${lodiPrefsSql.digestOff} as digest_off
       from notifications n

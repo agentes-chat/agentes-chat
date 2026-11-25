@@ -70,6 +70,8 @@ export interface ConnectAiRequest {
    * onboarding's AI step names it, which may not be the card it opened on, since Back leads to every other choice.
    */
   onConnected?: (choice: AiChoice) => void;
+  /** Opened from another dialog that closed for it ("Conectar outra IA"): its first screen's Back opens that one again. */
+  onBack?: () => void;
 }
 
 /** How "Responder agora" went for a message, in this tab. */

@@ -106,6 +106,8 @@ Background tasks (`start_task`, mission items, resumes) ran their Claude Code or
 - **"Só esta conta".** Per agent (`agents.brain_account_pinned`): the agent waits for its own account, as before.
 - **Terms.** Subscriptions are personal. Whether working across several accounts suits a provider's terms is for the person who connects them to follow. An account set to serve only its owner stays out of everyone else's order.
 
+*Amended 2026-11-22:* one order of use for every chooser (`accountOrderSql` in `packages/engine/src/ai-accounts/chain.ts`, `compareInOrder` its JS twin in `@agenteschat/providers/plans`): the person's own accounts first (the agent's owner, or whom the right hand answers), then by `use_order`, the unplaced after, oldest first. Room left and being online are filters, never a re-sort, so the right hand's stand-in no longer ranks the workspace's home computer, an online one or the roomiest first, and the router's plan step goes by the same order instead of the most recently used. A workspace switch, off by default, lets a run go on with the workspace's API key once every plan account of its order is at its limit ("Continuar com a chave de API quando todos os planos estiverem no limite", `organization_settings.plan_key_fallback`, admins with `configure`, audited as `ai.key_fallback`); a mission's turn never does.
+
 ### 7. Removing an account
 
 The owner sees which agents use it and confirms; those agents go back to "Conta deste computador". The runner runs the CLI's logout in that folder and deletes it.

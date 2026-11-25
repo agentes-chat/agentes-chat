@@ -8,8 +8,9 @@ import { DesktopDragStrip } from "@/components/DesktopDragStrip";
 import { BootSplash } from "@/components/Sky";
 import { useServerBack } from "@/hooks/useServerBack";
 import { onVersionReload, reloadIfStale, reloadingForNewVersion } from "@/lib/app-version";
-import { inDesktopApp, pageReadyAfterPaint } from "@/lib/desktop";
+import { inDesktopApp } from "@/lib/desktop";
 import { onReportTaken, reportError, reportTaken, shortErrorId } from "@/lib/error-reports";
+import { firstScreenPainted } from "@/lib/vitals";
 
 /**
  * A page that broke, in place of the router's own screen: a short message, a reload, and the code of its report
@@ -29,7 +30,7 @@ export function ErrorScreen({ error }: ErrorComponentProps) {
   useServerBack(unreachable);
   // The sky only while the reload is on its way: a person who stayed (a page asked before leaving) gets the crash back.
   const reloading = useSyncExternalStore(onVersionReload, reloadingForNewVersion);
-  useEffect(pageReadyAfterPaint, []);
+  useEffect(firstScreenPainted, []);
   useEffect(() => {
     if (!unreachable) void reloadIfStale();
   }, [unreachable]);

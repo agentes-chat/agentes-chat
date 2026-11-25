@@ -479,11 +479,6 @@ function Row({
           <Disclosure />
         </View>
       ) : null}
-      {more ? (
-        <View style={onLine(20)}>
-          <Icon name="more" size={20} color={c.label2} />
-        </View>
-      ) : null}
       {remove ? (
         // A finger's 44 around the glyph, lit under the finger as the row's other buttons are; it takes the glyph's
         // place in the row (the circle reaches into the row's padding), so the row keeps its height.
@@ -516,6 +511,12 @@ function Row({
               <Icon name={b.icon} size={18} color={c.ink2} />
             </Pressable>
           ))}
+        </View>
+      ) : null}
+      {/* After the row's own buttons: the mark says what a tap on the rest of the row opens. */}
+      {more ? (
+        <View style={onLine(20)}>
+          <Icon name="more" size={20} color={c.label2} />
         </View>
       ) : null}
     </>
@@ -650,7 +651,7 @@ export function GroupedField({ label, hint, children, onPress, stacked = false }
 }
 
 /**
- * A field whose label has an ⓘ. With `onPress` the row's button lies under the label and the value rather than
+ * A field whose label has an ⓘ, at the row's end (after the value, before the chevron). With `onPress` the row's button lies under the label and the value rather than
  * around them: inside another button the ⓘ would be part of it to VoiceOver, never a button of its own.
  */
 function HintedField({ label, hint, children, onPress }: GroupedFieldProps & { hint: { name: string; text: string } }) {
@@ -668,22 +669,22 @@ function HintedField({ label, hint, children, onPress }: GroupedFieldProps & { h
             style={StyleSheet.absoluteFill}
           />
         ) : null}
-        <View style={[styles.key, styles.keyLine]} pointerEvents="box-none">
-          <View
-            pointerEvents={passive}
-            style={styles.shrink}
-            accessibilityElementsHidden={Boolean(onPress)}
-            importantForAccessibility={onPress ? "no-hide-descendants" : "auto"}
-          >
-            <Text variant="callout" tone="muted">
-              {label}
-            </Text>
-          </View>
-          {info.button}
+        {/* The label has its whole column, as a field's with no ⓘ: sharing it with the ⓘ broke a two-word label in
+            two lines. The ⓘ goes after the value, before the chevron. */}
+        <View
+          pointerEvents={passive}
+          style={styles.key}
+          accessibilityElementsHidden={Boolean(onPress)}
+          importantForAccessibility={onPress ? "no-hide-descendants" : "auto"}
+        >
+          <Text variant="callout" tone="muted">
+            {label}
+          </Text>
         </View>
         <View style={styles.grow} pointerEvents={passive}>
           {children}
         </View>
+        {info.button}
         {onPress ? (
           <View pointerEvents="none">
             <Disclosure />

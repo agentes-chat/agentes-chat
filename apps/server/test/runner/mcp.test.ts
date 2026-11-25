@@ -322,6 +322,37 @@ test.skipIf(!posix)("stdio MCP server → local socket → bridge → server, en
   expect(frames.filter((f) => f.type === "mcp.call")).toHaveLength(1);
 });
 
+test("a request whose handling fails is still answered: Claude Code never waits on it for good", async () => {
+  const input = new PassThrough();
+  const output = new PassThrough();
+  const lines: string[] = [];
+  output.on("data", (chunk: Buffer) => lines.push(...chunk.toString().split("\n").filter(Boolean)));
+  const server = runMcpServer({
+    taskId: TASK,
+    socketPath: "/nonexistent.sock",
+    token: "tok-123456789",
+    input,
+    output,
+    context: {},
+    ipc: () => Promise.reject(new Error("bridge gone")),
+  });
+  const send = (msg: Record<string, unknown>) => input.write(`${JSON.stringify({ jsonrpc: "2.0", ...msg })}\n`);
+  send({ id: 1, method: "tools/call", params: { name: "update_plan", arguments: { items: [] } } });
+  send({
+    id: 2,
+    method: "tools/call",
+    params: { name: "permission_prompt", arguments: { tool_name: "Bash", input: { command: "npm test" } } },
+  });
+  input.end();
+  expect(await server).toBe(0);
+  const parsed = lines.map(
+    (l) => JSON.parse(l) as { id: unknown; result?: { content: { text: string }[] }; error?: unknown },
+  );
+  expect(parsed.find((m) => m.id === 1)?.error).toMatchObject({ code: -32603, message: "Error: bridge gone" });
+  const prompt = parsed.find((m) => m.id === 2);
+  expect(JSON.parse(prompt?.result?.content[0]?.text ?? "{}")).toMatchObject({ behavior: "deny" });
+});
+
 test("executor arguments: Claude Code gets our MCP config, our tools allowed and the rules; quoting is safe", () => {
   expect(cleanRules("Don't merge! Use `x` & 100% $HOME")).toBe("Don t merge Use x 100 HOME");
   const args = missionExecutorArgs(

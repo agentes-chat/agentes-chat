@@ -249,3 +249,56 @@ test("the conversation list's threads are kept, their first page only: a launch 
   expect(await createSnapshot(next, store).restore()).toBe(true);
   expect(next.getQueryData(list)).toEqual({ pages: [{ threads: [{ id: "t1" }], nextCursor: "a" }], pageParams: [""] });
 });
+
+test("a kept chat's cards are kept with what they show: opened from the snapshot, a card draws whole, never a file's tile first", async () => {
+  const qc = new QueryClient();
+  const store = memory();
+  qc.setQueryData(keys.me, me("u1"));
+  const refs = [
+    { id: "card", version: 2, title: "Próximo passo" },
+    { id: "doc", version: 1, title: "Notas" },
+  ];
+  qc.setQueryData(keys.messages("o1", "c1"), [msg("m1", { meta: { artifacts: refs } })]);
+  qc.setQueryData(keys.artifact("o1", "card", 2), { id: "card", kind: "choices", shownVersion: 2 });
+  qc.setQueryData(keys.choices("o1", "card"), { id: "card", answer: null });
+  // A file is a tile of one size, and a card no kept message shows is nobody's.
+  qc.setQueryData(keys.artifact("o1", "doc", 1), { id: "doc", kind: "document", shownVersion: 1 });
+  qc.setQueryData(keys.poll("o1", "elsewhere"), { id: "elsewhere", votes: [] });
+  await createSnapshot(qc, store).flush();
+
+  const next = new QueryClient();
+  expect(await createSnapshot(next, store).restore()).toBe(true);
+  expect(next.getQueryData(keys.artifact("o1", "card", 2))).toEqual({ id: "card", kind: "choices", shownVersion: 2 });
+  expect(next.getQueryData(keys.choices("o1", "card"))).toEqual({ id: "card", answer: null });
+  expect(next.getQueryData(keys.artifact("o1", "doc", 1))).toBeUndefined();
+  expect(next.getQueryData(keys.poll("o1", "elsewhere"))).toBeUndefined();
+});
+
+test("leaving with nothing new since the last save writes nothing; leaving after a change writes it", async () => {
+  const qc = new QueryClient();
+  const store = memory();
+  let writes = 0;
+  const counting: SnapshotStorage = {
+    ...store,
+    write: async (v) => {
+      writes++;
+      await store.write(v);
+    },
+  };
+  qc.setQueryData(keys.me, me("u1"));
+  const snapshot = createSnapshot(qc, counting, { saveAfterMs: 60_000 });
+  const stop = snapshot.start();
+  await snapshot.flush();
+  expect(writes).toBe(1);
+  // The notification shade, a quick look at another app: nothing changed meanwhile.
+  await snapshot.flush();
+  await snapshot.flush();
+  expect(writes).toBe(1);
+  qc.setQueryData(keys.channels("o1"), [{ id: "c1" }]);
+  await snapshot.flush();
+  expect(writes).toBe(2);
+  stop();
+  // Not following the cache any more: a flush writes, as it can't know.
+  await snapshot.flush();
+  expect(writes).toBe(3);
+});

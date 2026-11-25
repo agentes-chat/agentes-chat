@@ -1,13 +1,19 @@
 import {
   type ApiClient,
+  agentsQuery,
   type Channel,
+  channelCategoriesQuery,
   channelMembersQuery,
   channelsQuery,
   channelThreadsQuery,
   type DirectMessage,
   dmsQuery,
+  formerAgentsQuery,
   keys,
+  membersQuery,
   messagesQuery,
+  rolesQuery,
+  sidebarItemsQuery,
 } from "@agenteschat/client";
 import type { QueryClient } from "@tanstack/react-query";
 
@@ -15,6 +21,21 @@ import type { QueryClient } from "@tanstack/react-query";
  * Route loaders' reads: they run on a link's hover (`defaultPreload: "intent"`) and on the navigation itself, are never
  * awaited (the page shows at once and fills in), and ask only for what isn't fresh in the cache already.
  */
+
+/**
+ * What the workspace's shell draws from before anything in it shows (the sidebar's lists, and the people and agents
+ * every row names), asked for with the page's own reads rather than once the shell's code has loaded and drawn.
+ */
+export function prefetchShell(qc: QueryClient, api: ApiClient, orgId: string) {
+  void qc.prefetchQuery(channelsQuery(api, orgId));
+  void qc.prefetchQuery(dmsQuery(api, orgId));
+  void qc.prefetchQuery(channelCategoriesQuery(api, orgId));
+  void qc.prefetchQuery(sidebarItemsQuery(api, orgId));
+  void qc.prefetchQuery(membersQuery(api, orgId));
+  void qc.prefetchQuery(agentsQuery(api, orgId));
+  void qc.prefetchQuery(formerAgentsQuery(api, orgId));
+  void qc.prefetchQuery(rolesQuery(api, orgId));
+}
 
 /** What a conversation opens with, all at once instead of one after another. */
 export function prefetchConversation(qc: QueryClient, api: ApiClient, orgId: string, channelId: string) {

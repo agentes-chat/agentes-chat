@@ -12,6 +12,8 @@ import {
   STREAM_CLOSE,
   STREAM_LIMITS,
   TASK_LIMIT_PROTOCOL,
+  TASK_ROOM_PROTOCOL,
+  type TaskRoomReport,
 } from "@agenteschat/adapters";
 import { and, type Database, type Executor, eq, gt, inArray, isNull, lt, schema, sql } from "@agenteschat/db";
 import { AUDIENCE_MODES, type AudienceMode } from "./audience";
@@ -68,7 +70,8 @@ export type DeviceStatus =
       since: string;
     }
   /** A computer running background tasks: `running` of `max`. */
-  | { kind: "busy"; running: number; max: number }
+  /** `max` null: tasks start on room there (`taskRoom`), no count. */
+  | { kind: "busy"; running: number; max: number | null }
   | { kind: "needs_you"; reason: PhoneReason | string }
   | { kind: "preparing"; reason: PhoneReason | string }
   | { kind: "paused"; until: string | null }
@@ -117,6 +120,11 @@ export interface ComputerDevice {
   status: DeviceStatus;
   /** Background tasks it runs at once, as its runner says (`TASK_LIMIT_PROTOCOL`); null: an older one, which runs 3. */
   maxTasks: number | null;
+  /**
+   * `TASK_ROOM_PROTOCOL`: tasks start on room, not on `maxTasks`: about how many more fit now, the free memory, and
+   * the owner's Push harder. Null: the count decides (an older app, or memory it can't read).
+   */
+  taskRoom: TaskRoomReport | null;
   toolchains: Record<string, string>;
   /** A Mac whose app opens Xcode and looks at its iPhone again for the iPhone guide (`IPHONE_DEV_MODE_PROTOCOL`). */
   opensXcode: boolean;
@@ -308,7 +316,7 @@ function computerStatus(m: MachineRow, running: number, now: Date): DeviceStatus
   }
   const pause = machinePause(m, now);
   if (pause) return { kind: "paused", until: pause.until };
-  if (running > 0) return { kind: "busy", running, max: m.size?.maxTasks ?? DEFAULT_MAX_TASKS };
+  if (running > 0) return { kind: "busy", running, max: m.size?.room ? null : (m.size?.maxTasks ?? DEFAULT_MAX_TASKS) };
   return { kind: "ready" };
 }
 
@@ -445,6 +453,7 @@ export async function listDevices(
       audience: rule.audience,
       status: computerStatus(m, busy.get(m.id) ?? 0, now),
       maxTasks: m.size?.maxTasks ?? null,
+      taskRoom: m.size?.room ?? null,
       toolchains: m.executors?.toolchains ?? {},
       opensXcode: !managed && m.os === "darwin" && m.protocol >= IPHONE_DEV_MODE_PROTOCOL,
       lastSeenAt: iso(m.lastSeenAt),
@@ -556,6 +565,8 @@ export interface ComputerDeviceInput {
   spill?: { own?: boolean; others?: boolean };
   /** Background tasks at once (`TASK_LIMIT_BOUNDS`): the computer applies it, so it must be online. */
   maxTasks?: number;
+  /** `TASK_ROOM_PROTOCOL`: tasks may fill memory down to 0.5 GB free, whatever the processor. Online, its owner's. */
+  pushHarder?: boolean;
 }
 
 /**
@@ -602,14 +613,19 @@ export async function updateComputerDevice(
     if (on && !owner) throw new ForbiddenError("Only the device's owner can turn this on", "device.spill_owner_only");
     set[column] = on;
   }
-  if (input.maxTasks !== undefined) {
+  if (input.maxTasks !== undefined || input.pushHarder !== undefined) {
     if (!owner && machine.pairedByUserId !== null) {
       throw new ForbiddenError(
         "Only the person who connected this computer can change how many tasks it runs at once",
         "device.tasks_owner_only",
       );
     }
-    if (machine.protocol < TASK_LIMIT_PROTOCOL) {
+    const needs = input.pushHarder !== undefined ? TASK_ROOM_PROTOCOL : TASK_LIMIT_PROTOCOL;
+    // Push harder is a person's own computer's: the Cloud sizes its computers itself.
+    if (input.pushHarder !== undefined && machine.kind !== "connected") {
+      throw new ForbiddenError("This computer's room is set by the Cloud, not here", "device.tasks_cloud");
+    }
+    if (machine.protocol < needs) {
       throw new ValidationError(
         "This computer's app is too old to change this from here. Update it.",
         "machine.outdated",
@@ -618,18 +634,25 @@ export async function updateComputerDevice(
     if (!deps.hub || !(await deps.hub.status(machine.id))?.online) {
       throw new MachineOfflineError(machine.name, machine.kind);
     }
-    const { maxTasks } = await deps.hub.call(machine.id, { op: "limits.set", maxTasks: input.maxTasks });
+    const { maxTasks, room } = await deps.hub.call(machine.id, {
+      op: "limits.set",
+      ...(input.maxTasks !== undefined ? { maxTasks: input.maxTasks } : {}),
+      ...(input.pushHarder !== undefined ? { pushHarder: input.pushHarder } : {}),
+    });
     // Its `runner.state` says the same soon after; the answer below reads the new one already.
     await deps.db
       .update(machines)
-      .set({ size: withTaskLimit(maxTasks), updatedAt: new Date() })
+      .set({ size: withTaskLimit(maxTasks, room), updatedAt: new Date() })
       .where(eq(machines.id, machine.id));
     await recordAudit(deps.db, {
       orgId,
       actor: { type: "person", id: actorId },
       action: "device.updated",
       target: { type: "machine", id: machine.id },
-      details: { maxTasks },
+      details: {
+        ...(input.maxTasks !== undefined ? { maxTasks } : {}),
+        ...(room ? { pushHarder: room.pushHarder } : {}),
+      },
     });
     await publishDevicesChanged(deps.pubsub, orgId);
   }

@@ -63,7 +63,13 @@ import { runControl } from "./control";
 import { configFromGrant, deviceInfo, prepareWorkspace, previousMachineFor, RunnerDaemon } from "./daemon";
 import { DesktopManager } from "./desktop";
 import { runDesktopBrowser } from "./desktop-browser";
-import { DesktopSessions, type DesktopSessionsOptions, runnerUser, systemDesktopUser } from "./desktop-session";
+import {
+  DesktopSessions,
+  type DesktopSessionsOptions,
+  runnerUser,
+  systemDesktopUser,
+  taskRoomNow,
+} from "./desktop-session";
 import { localSources, runDoctor } from "./doctor";
 import { RUNNER_VERSION } from "./errors";
 import { defaultHostState, HostComputer, readTokenFile, runnerChild } from "./host";
@@ -71,7 +77,7 @@ import { writeJson } from "./json-file";
 import { hasBunTerminal, runningCompiled, thisRunner } from "./launch";
 import { acquireLock, lockedMessage, pidAlive, readLock } from "./lock";
 import { RotatingFile } from "./logfile";
-import { adoptLoginPath } from "./login-path";
+import { addUsualDirs, adoptLoginPath } from "./login-path";
 import { LoopbackGuard, loopbackEndpoints, runnerEndpoints } from "./loopback-guard";
 import { MCP_TOKEN_FILE, mcpSocketPath, runMcpRelay, runMcpServer } from "./mcp";
 import { runMigrate } from "./migrate";
@@ -185,7 +191,7 @@ Every command takes --home <dir> (default $AGENTES_RUNNER_HOME or ~/.agentes-run
 On the server's own computer each organization has its own connection in <home>/orgs: folders and tools
 take --org <id | name> to pick one when it serves several.
 Config: <home>/config.json, mode 600. For background tasks, optional "maxConcurrentTasks" (default: one
-per 2 CPUs and 2 GiB of memory past 4 GiB, at least 3; also in the app's computer page) and "taskMaxSeconds"
+per 1.5 GiB of memory past 4 GiB, at least 3, at most 20; also in the app's computer page) and "taskMaxSeconds"
 (default 14400). For agents thinking with Claude Code, optional "brainIdleMinutes" (default 20 on Linux,
 3 elsewhere) and "brainMaxProcesses" (default 2 on Linux, 1 elsewhere). Changes apply while it runs.
 Background tasks keep running when the runner restarts. Their logs are in tasks/.
@@ -466,7 +472,16 @@ async function start(): Promise<number> {
     console.error(lockedMessage(home, lock.holder));
     return serviceSafe(4);
   }
-  const daemon = new RunnerDaemon({ home, mode: "start", log, print: (line) => console.log(line), agyCopy: true });
+  // Before anything starts a CLI: a service's PATH is the installing shell's (the daemon adds them again per look).
+  if (process.platform !== "win32" && config.mode !== "system") addUsualDirs();
+  const daemon = new RunnerDaemon({
+    home,
+    mode: "start",
+    log,
+    print: (line) => console.log(line),
+    agyCopy: true,
+    taskRoom: taskRoomNow,
+  });
   const stop = () => void daemon.stop();
   process.once("SIGINT", stop);
   process.once("SIGTERM", stop);
@@ -543,7 +558,7 @@ async function app(): Promise<number> {
       input: process.stdin,
       output: process.stdout,
       locked: lock.ok ? null : lock.holder,
-      daemon: { log: write, logFile, refreshPath: () => adoptLoginPath() },
+      daemon: { log: write, logFile, refreshPath: () => adoptLoginPath(), taskRoom: taskRoomNow },
       signal: ac.signal,
     });
   } finally {

@@ -14,7 +14,7 @@ import {
   ownsAgent,
   setAgentAudience,
 } from "./audience";
-import { normalizeBrainModel, setAgentBrain } from "./brain-settings";
+import { isBrainEffortSetting, normalizeBrainModel, setAgentBrain } from "./brain-settings";
 import { isComputerBrain } from "./brains/types";
 import { invalidateOrg } from "./cache";
 import { addChannelMember, removeChannelMember, setChannelAgentAutoReply } from "./channels";
@@ -60,6 +60,7 @@ type Proposal = typeof contextProposals.$inferSelect;
  */
 export const SETTING_GROUP: Record<SettingField, "admin" | "editor" | "admin_or_owner" | "account"> = {
   model: "admin",
+  effort: "admin",
   budget: "admin",
   owner: "admin",
   archive: "admin",
@@ -83,6 +84,7 @@ export const SETTING_GROUP: Record<SettingField, "admin" | "editor" | "admin_or_
 const ORDER: SettingField[] = [
   "ai_account",
   "model",
+  "effort",
   "budget",
   "owner",
   "audience",
@@ -134,6 +136,8 @@ async function valueNow(db: Executor, agent: Agent, line: Pick<ReceiptLine, "fie
       return departmentOf(db, agent);
     case "model":
       return isComputerBrain(agent.brain) ? agent.brainModel : agent.model;
+    case "effort":
+      return agent.brainEffort ?? null;
     case "budget":
       return agent.monthlyBudgetNanoUsd;
     case "owner":
@@ -259,6 +263,8 @@ async function setValue(
         return void (await setAgentBrain(deps, actorId, orgId, agentId, { model: value }));
       return void (await updateAgent(db, actorId, orgId, agentId, { model: String(value) }, { pubsub }));
     }
+    case "effort":
+      return void (await setAgentBrain(deps, actorId, orgId, agentId, { effort: value }));
     case "budget":
       return void (await updateAgent(
         db,
@@ -391,6 +397,7 @@ export async function settingsDeciders(db: Database, p: Proposal): Promise<strin
 /** What a card may change on the right hand: what its Settings let admins change. */
 const RIGHT_HAND_SETTINGS: ReadonlySet<SettingField> = new Set([
   "model",
+  "effort",
   "budget",
   "audience",
   "name",
@@ -474,13 +481,16 @@ async function refusal(db: Database, orgId: string, requesterId: string, agent: 
       return null;
     case "model":
       try {
-        // On a computer any name its CLI may take goes, as under Quem pensa: the vendor answers for the person's plan.
+        // On a computer any name its CLI may take goes, as under Quem pensa, but another maker's model, which its plan
+        // can't run: the refusal says to give it an AI account that runs it first.
         if (isComputerBrain(agent.brain)) normalizeBrainModel(agent.brain, w.to, agent.brainModel);
         else await validateAgentFields(db, orgId, { model: String(w.to) });
       } catch (error) {
         return error instanceof Error ? error.message : "unknown model";
       }
       return null;
+    case "effort":
+      return w.to === null || isBrainEffortSetting(w.to) ? null : "an effort is auto, low, medium, high, xhigh or max.";
     case "budget": {
       if (w.to !== null && !(typeof w.to === "number" && Number.isFinite(w.to) && w.to >= 0))
         return "a budget is 0 or more, or the workspace's default.";

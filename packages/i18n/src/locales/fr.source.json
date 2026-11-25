@@ -152,6 +152,21 @@
   "common.unreachable": {
     "value": "Can't reach agentes.chat right now. Try again in a moment."
   },
+  "reconnect.device": {
+    "value": "Reconnecting… No internet on this device."
+  },
+  "reconnect.server": {
+    "value": "Reconnecting… The server is unreachable or restarting."
+  },
+  "reconnect.signedOut": {
+    "value": "You're signed out."
+  },
+  "reconnect.retry": {
+    "value": "Try again now"
+  },
+  "reconnect.signIn": {
+    "value": "Sign in"
+  },
   "roles.owner": {
     "value": "Owner"
   },
@@ -1041,7 +1056,7 @@
     "value": "Edit agents"
   },
   "permissions.manage_agents.desc": {
-    "value": "Instructions, brain, budget and what each one uses, on the agents they talk to. Other people's private agents stay out."
+    "value": "Instructions, brain, budget and what each one uses, on the agents they talk to. Of other people's private agents, only the name, owner and usage."
   },
   "permissions.manage_agents.short": {
     "value": "edit agents"
@@ -1459,6 +1474,24 @@
   },
   "auth.newLinkSent": {
     "value": "We sent a new link to {{email}}."
+  },
+  "auth.confirm.title": {
+    "value": "Check your inbox"
+  },
+  "auth.confirm.lead": {
+    "value": "Open the link we sent to {{email}} to go on."
+  },
+  "auth.confirm.wrongAddress": {
+    "value": "Wrong address? Change it"
+  },
+  "auth.confirm.banner": {
+    "value": "Confirm your email"
+  },
+  "auth.confirm.bannerSub": {
+    "value": "Open the link we sent to {{email}}."
+  },
+  "auth.confirm.change": {
+    "value": "Change address"
   },
   "auth.unconfirmed": {
     "value": "This email already has an account with a password that isn't confirmed yet. Sign in with the password, or create a new one by email."
@@ -4568,6 +4601,15 @@
   "contextMenu.download": {
     "value": "Download"
   },
+  "contextMenu.copyImage": {
+    "value": "Copy image"
+  },
+  "contextMenu.imageCopied": {
+    "value": "Image copied."
+  },
+  "contextMenu.copyImageFailed": {
+    "value": "The image couldn't be copied. Use Download instead."
+  },
   "contextMenu.conversation": {
     "value": "Message"
   },
@@ -5313,7 +5355,7 @@
     "value": "What agents ask you to allow"
   },
   "shell.moreWhat.proposals": {
-    "value": "What agents propose to change"
+    "value": "What agents changed, and why"
   },
   "shell.moreWhat.threads": {
     "value": "Conversations that branch off, and missions"
@@ -5342,6 +5384,9 @@
   "shell.moreWhat.taskManager": {
     "value": "What each agent does now, and stop what you need"
   },
+  "shell.moreWhat.code": {
+    "value": "Program with the agents, each request in its own worktree"
+  },
   "shell.moreWhat.approvalsPersonal": {
     "value": "What your agents ask you to allow"
   },
@@ -5368,6 +5413,9 @@
   },
   "shell.moreWhat.taskManagerPersonal": {
     "value": "What your agents do now, and stop what you need"
+  },
+  "shell.moreWhat.codePersonal": {
+    "value": "Program with your agents"
   },
   "shell.moreWhat.homePersonal": {
     "value": "Your day: what waits for you and what your agents are doing"
@@ -5637,13 +5685,13 @@
     }
   },
   "shell.waiting": {
-    "value": "Waiting on you"
+    "value": "Inbox"
   },
   "shell.approvals": {
     "value": "Approvals"
   },
   "shell.proposals": {
-    "value": "Improvement proposals"
+    "value": "Agent improvements"
   },
   "shell.issues": {
     "value": "Tasks"
@@ -5668,6 +5716,9 @@
   },
   "shell.taskManager": {
     "value": "Task manager"
+  },
+  "shell.code": {
+    "value": "Code"
   },
   "shell.calendar": {
     "value": "Calendar"
@@ -5769,12 +5820,6 @@
     "value": {
       "one": "{{count}} pending approval",
       "other": "{{count}} pending approvals"
-    }
-  },
-  "shell.pendingProposals": {
-    "value": {
-      "one": "{{count}} proposal waiting for you",
-      "other": "{{count}} proposals waiting for you"
     }
   },
   "shell.home": {
@@ -5969,8 +6014,8 @@
   "appsDownload.phoneText": {
     "value": "Notifications in your pocket, to answer from anywhere."
   },
-  "appsDownload.appStore": {
-    "value": "App Store"
+  "appsDownload.testFlight": {
+    "value": "TestFlight"
   },
   "appsDownload.googlePlay": {
     "value": "Google Play"
@@ -6128,6 +6173,78 @@
   "surface.undo.sender": {
     "value": "That sender"
   },
+  "surface.page.opening": {
+    "value": "Opening the page"
+  },
+  "surface.page.gone": {
+    "value": "This link no longer works"
+  },
+  "surface.page.lead": {
+    "value": "Type your PIN to approve it."
+  },
+  "surface.page.leadFirst": {
+    "value": "Choose a 6-digit PIN to approve it. It confirms actions like this one from {{surface}}."
+  },
+  "surface.page.choosePin": {
+    "value": "Choose a PIN"
+  },
+  "surface.page.repeatPin": {
+    "value": "Type it again"
+  },
+  "surface.page.pin": {
+    "value": "Your PIN"
+  },
+  "surface.page.mismatch": {
+    "value": "The two PINs don't match. Type the second one again."
+  },
+  "surface.page.approve": {
+    "value": "Approve"
+  },
+  "surface.page.refuse": {
+    "value": "Refuse"
+  },
+  "surface.page.forgot": {
+    "value": "Forgot your PIN?"
+  },
+  "surface.page.emailed": {
+    "value": "We emailed you a link. Choose your PIN there, then come back to this page."
+  },
+  "surface.page.notYours": {
+    "value": "{{who}} decides this in the app."
+  },
+  "surface.page.notYoursSomeone": {
+    "value": "Someone who can approve it decides this in the app."
+  },
+  "surface.page.approved": {
+    "value": "Approved"
+  },
+  "surface.page.refused": {
+    "value": "Refused"
+  },
+  "surface.page.expired": {
+    "value": "This request ran out"
+  },
+  "surface.page.back": {
+    "value": "Go back to {{surface}}. Your assistant goes on there."
+  },
+  "surface.pinReset.title": {
+    "value": "Choose your PIN"
+  },
+  "surface.pinReset.lead": {
+    "value": "Six digits. You'll type it to approve actions you ask for from your chat app."
+  },
+  "surface.pinReset.button": {
+    "value": "Save my PIN"
+  },
+  "surface.pinReset.done": {
+    "value": "PIN saved"
+  },
+  "surface.pinReset.doneLead": {
+    "value": "Go back to the page from {{surface}} and approve with it."
+  },
+  "surface.pinReset.gone": {
+    "value": "This link no longer works"
+  },
   "surface.via": {
     "value": "via {{surface}}"
   },
@@ -6180,7 +6297,7 @@
     "value": "Governance and usage"
   },
   "team.noOwner": {
-    "value": "No one responsible"
+    "value": "Admins"
   },
   "team.workingNow": {
     "value": "Working now"
@@ -6234,7 +6351,7 @@
     "value": "Waiting for you"
   },
   "team.list.filter.noOwner": {
-    "value": "No one responsible"
+    "value": "With the admins"
   },
   "team.list.groupBy": {
     "value": "Group by"
@@ -7043,12 +7160,6 @@
   "channel.unreadDivider": {
     "value": "New"
   },
-  "channel.offline": {
-    "value": "No connection. Whatever you send goes out on its own when it's back."
-  },
-  "channel.backOnline": {
-    "value": "Connected again"
-  },
   "channel.sendingOffline": {
     "value": "goes out when the connection is back"
   },
@@ -7496,9 +7607,6 @@
   "rightHand.settings.useWorkspace": {
     "value": "Use the workspace's"
   },
-  "rightHand.settings.useMine": {
-    "value": "Use my plan"
-  },
   "rightHand.settings.mineYours": {
     "value": "your plan"
   },
@@ -7578,7 +7686,7 @@
     "value": "Add a computer"
   },
   "rightHand.computerOneUser": {
-    "value": "No computer here. The workspace's computer runs every agent as one user, so it can't keep each person's place apart. A Linux server set up with the installer's --system option can."
+    "value": "Your own folder and browser on the workspace's computer. It runs every agent as one user: other agents' commands there can read them, and only who connected it takes control. A Linux server set up with --system keeps each place apart."
   },
   "rightHand.powers.title": {
     "value": "Workspace powers"
@@ -7596,7 +7704,7 @@
     "value": "In your own conversation, reads the Drive, the wiki and the tasks you can see"
   },
   "rightHand.powers.mentions": {
-    "value": "Answers an @mention in any channel without being a member"
+    "value": "Answers an @mention in any channel without being a member, and messages it fits best"
   },
   "rightHand.card.settings": {
     "value": "{{name}} · Settings"
@@ -7667,50 +7775,11 @@
   "rightHand.card.onlyCreators": {
     "value": "Only admins create agents"
   },
-  "rightHand.card.only.model": {
-    "value": "Only admins change an agent's model"
-  },
-  "rightHand.card.only.budget": {
-    "value": "Only admins change an agent's budget"
-  },
-  "rightHand.card.only.owner": {
-    "value": "Only admins change who owns an agent"
-  },
-  "rightHand.card.only.archive": {
-    "value": "Only admins archive an agent"
-  },
-  "rightHand.card.only.delete": {
-    "value": "Only admins delete an agent"
-  },
-  "rightHand.card.only.audience": {
-    "value": "Only admins and its owner change who talks to it"
-  },
-  "rightHand.card.only.channels": {
-    "value": "Only admins and its owner change its channels"
-  },
-  "rightHand.card.only.skill": {
-    "value": "Only whoever can edit an agent changes its skills"
-  },
-  "rightHand.card.only.ai_account": {
-    "value": "Only the account's owner gives it"
-  },
-  "rightHand.card.only.name": {
-    "value": "Only admins rename an agent"
-  },
-  "rightHand.card.only.look": {
-    "value": "Only admins and its owner change its look"
-  },
-  "rightHand.card.only.group": {
-    "value": "Only admins move an agent to another department"
-  },
-  "rightHand.card.only.reports_to": {
-    "value": "Only admins change who an agent reports to"
-  },
-  "rightHand.card.only.many": {
-    "value": "Only admins make these changes"
-  },
   "rightHand.field.model": {
     "value": "Model"
+  },
+  "rightHand.field.effort": {
+    "value": "Effort"
   },
   "rightHand.field.ai_account": {
     "value": "AI account"
@@ -7806,24 +7875,6 @@
     "value": {
       "one": "Delete {{count}} agent for good?",
       "other": "Delete {{count}} agents for good?"
-    }
-  },
-  "rightHand.remove.archiveAll": {
-    "value": "Archive all"
-  },
-  "rightHand.remove.deleteAll": {
-    "value": "Delete all"
-  },
-  "rightHand.remove.archiveSome": {
-    "value": {
-      "one": "Archive {{count}}",
-      "other": "Archive {{count}}"
-    }
-  },
-  "rightHand.remove.deleteSome": {
-    "value": {
-      "one": "Delete {{count}}",
-      "other": "Delete {{count}}"
     }
   },
   "rightHand.remove.deleteHelp": {
@@ -8598,6 +8649,15 @@
   },
   "connectAi.cli.asked": {
     "value": "Request sent. {{name}} gets a button to install it."
+  },
+  "connectAi.cli.runThis": {
+    "value": "Run this command there to install it."
+  },
+  "connectAi.cli.missingSystem": {
+    "value": "{{program}} isn't on {{computer}} for its agents yet, who each work as their own user. Run this command there to install it for all of them."
+  },
+  "connectAi.cli.homeOnly": {
+    "value": "{{program}} is installed only for root on {{computer}}. Each agent works as its own user and can't reach it. Run this command there to install it for all of them."
   },
   "connectAi.titleFor": {
     "value": "Connect an AI for {{name}}"
@@ -9621,7 +9681,7 @@
     "value": "{{role}} · owned by {{owner}}"
   },
   "dm.subtitleNoOwner": {
-    "value": "{{role}} · no owner"
+    "value": "{{role}} · owned by the admins"
   },
   "dm.emptyAgent": {
     "value": "Ask him to remember, forget or work differently.",
@@ -10130,11 +10190,8 @@
   "inlineProposal.groupMany": {
     "value": "{{name}}'s change proposal for {{count}} agents"
   },
-  "inlineProposal.edit": {
-    "value": "Edit"
-  },
   "inlineProposal.open": {
-    "value": "Open in Proposals"
+    "value": "Open in Agent improvements"
   },
   "newChannel.open": {
     "value": "Create channel"
@@ -10486,6 +10543,12 @@
   "channelMembers.mentionLine": {
     "value": "Waits for someone to write @{{handle}}"
   },
+  "channelMembers.lead": {
+    "value": "Responsible for the channel"
+  },
+  "channelMembers.leadHelp": {
+    "value": "Gets what is said to the whole team and keeps the work moving between the agents"
+  },
   "channelMembers.readOnly": {
     "value": "Only the channel's creator and admins change members."
   },
@@ -10547,7 +10610,7 @@
     "value": "Owner"
   },
   "profile.noOwner": {
-    "value": "no owner"
+    "value": "Admins"
   },
   "profile.model": {
     "value": "Model"
@@ -12277,6 +12340,9 @@
   "ask.kind.firstTask": {
     "value": "First task"
   },
+  "ask.kind.code": {
+    "value": "Suggests a code session"
+  },
   "ask.waitingYou": {
     "value": "waiting for you"
   },
@@ -12318,6 +12384,9 @@
   },
   "ask.bar.firstTask": {
     "value": "<b>{{name}}</b> suggests a first task · {{what}}"
+  },
+  "ask.bar.code": {
+    "value": "<b>{{name}}</b> suggests a code session · {{what}}"
   },
   "ask.bar.more": {
     "value": "+{{count}}"
@@ -12549,9 +12618,6 @@
   },
   "approval.asks": {
     "value": "<b>{{agent}}</b> asks for approval"
-  },
-  "approval.waitingYou": {
-    "value": "Waiting for you"
   },
   "approval.approve.merge": {
     "value": "Approve merge"
@@ -12854,7 +12920,7 @@
     "value": "Pick up where you left off · {{done}} of {{total}}"
   },
   "notifications.title": {
-    "value": "Notifications"
+    "value": "Inbox"
   },
   "notifications.planLent.takeBack": {
     "value": "Take it back"
@@ -12929,7 +12995,7 @@
     "value": "Switch computer"
   },
   "notifications.docTitleUnread": {
-    "value": "({{count}}) Notifications"
+    "value": "({{count}}) Inbox"
   },
   "notifications.summaryWaiting": {
     "value": {
@@ -12972,6 +13038,9 @@
   },
   "notifications.filter.reactions": {
     "value": "Reactions"
+  },
+  "notifications.filter.requests": {
+    "value": "Decided requests"
   },
   "notifications.filter.done": {
     "value": "Done"
@@ -13260,6 +13329,24 @@
   },
   "notifications.what.proposalWaiting": {
     "value": "Improvement proposals from <b>{{names}}</b>"
+  },
+  "notifications.what.proposalApplied": {
+    "value": {
+      "one": "<b>{{name}}</b> applied an improvement",
+      "other": "<b>{{name}}</b> applied {{count}} improvements"
+    }
+  },
+  "notifications.what.proposalAppliedMany": {
+    "value": {
+      "one": "<b>{{names}}</b> applied an improvement",
+      "other": "<b>{{names}}</b> applied {{count}} improvements"
+    }
+  },
+  "notifications.what.proposalAppliedAuto": {
+    "value": {
+      "one": "An improvement was applied automatically",
+      "other": "{{count}} improvements were applied automatically"
+    }
   },
   "notifications.what.changeRequestAgent": {
     "value": "<b>{{name}}</b> asks for a new agent: <b>{{agent}}</b>"
@@ -13605,6 +13692,9 @@
   },
   "notifications.noneDone": {
     "value": "Nothing marked done in the last 30 days."
+  },
+  "notifications.noneRequests": {
+    "value": "No request decided yet."
   },
   "notifications.more": {
     "value": "Show more"
@@ -14632,6 +14722,45 @@
       "other": "{{count}} agents didn't change."
     }
   },
+  "agentPage.work.brain.add.pickTitle": {
+    "value": "Add account"
+  },
+  "agentPage.work.brain.add.pickFoot": {
+    "value": "You sign in on the AI's own page."
+  },
+  "agentPage.work.brain.add.have": {
+    "value": {
+      "one": "You have 1",
+      "other": "You have {{count}}"
+    }
+  },
+  "agentPage.work.brain.add.others": {
+    "value": "Another plan"
+  },
+  "agentPage.work.brain.add.key": {
+    "value": "API key"
+  },
+  "agentPage.work.brain.add.keyLine": {
+    "value": "Pay as you go"
+  },
+  "agentPage.work.brain.add.titlePlan": {
+    "value": "Add {{plan}}"
+  },
+  "agentPage.work.brain.add.againTitle": {
+    "value": "Sign in to {{brand}} again"
+  },
+  "agentPage.work.brain.add.haveNote": {
+    "value": "You already have {{accounts}} here. To sign in with another account, sign out of {{brand}} in your browser first, or copy the link and open it in a private window."
+  },
+  "agentPage.work.brain.add.againNote": {
+    "value": "Sign in again as {{account}}. {{name}} thinks with it again as soon as you're done."
+  },
+  "agentPage.work.brain.add.footSignIn": {
+    "value": "You type your password on {{brand}}'s page."
+  },
+  "agentPage.work.brain.add.footKey": {
+    "value": "The key goes encrypted straight to {{computer}}."
+  },
   "agentPage.work.brain.add.title.claude_code": {
     "value": "Add a Claude account"
   },
@@ -14839,42 +14968,6 @@
   "agentPage.work.brain.v2.more": {
     "value": "More options"
   },
-  "agentPage.work.brain.v2.switch": {
-    "value": "Change account"
-  },
-  "agentPage.work.brain.v2.switchTitle": {
-    "value": "Change {{name}}'s account"
-  },
-  "agentPage.work.brain.v2.inUse": {
-    "value": "In use"
-  },
-  "agentPage.work.brain.v2.switchTo": {
-    "value": "Switch to {{label}}"
-  },
-  "agentPage.work.brain.v2.teamTitle": {
-    "value": "Change the team's account"
-  },
-  "agentPage.work.brain.v2.teamAria": {
-    "value": "Whom it is for"
-  },
-  "agentPage.work.brain.v2.justOne": {
-    "value": "Only {{name}}"
-  },
-  "agentPage.work.brain.v2.everyone": {
-    "value": "Everyone on this account"
-  },
-  "agentPage.work.brain.v2.target": {
-    "value": "Switch to"
-  },
-  "agentPage.work.brain.v2.switchMany": {
-    "value": {
-      "one": "Switch {{count}} agent",
-      "other": "Switch the {{count}} agents"
-    }
-  },
-  "agentPage.work.brain.v2.limitTitle": {
-    "value": "{{name}}'s account is at its limit"
-  },
   "agentPage.work.brain.v2.limitBack": {
     "value": "{{account}} is back {{when}}"
   },
@@ -14887,12 +14980,6 @@
   "agentPage.work.brain.v2.fullWait": {
     "value": "On this account {{name}} waits until the plan renews."
   },
-  "agentPage.work.brain.v2.seeUsage": {
-    "value": "See usage"
-  },
-  "agentPage.work.brain.v2.wait": {
-    "value": "Wait"
-  },
   "agentPage.work.brain.v2.modelTitle": {
     "value": "{{name}}'s model"
   },
@@ -14901,12 +14988,6 @@
   },
   "agentPage.work.brain.v2.computer": {
     "value": "Computer"
-  },
-  "agentPage.work.brain.v2.doneTitle": {
-    "value": "All set"
-  },
-  "agentPage.work.brain.v2.doneSub": {
-    "value": "What was under way goes on with the new account."
   },
   "agentPage.work.brain.v2.finish": {
     "value": "Done"
@@ -14922,6 +15003,24 @@
       "one": "{{names}} kept the account it had.",
       "other": "{{names}} kept the accounts they had."
     }
+  },
+  "agentPage.work.brain.v2.added": {
+    "value": "Account added. {{name}} now thinks with {{account}}."
+  },
+  "agentPage.work.brain.v2.alsoUses": {
+    "value": {
+      "one": "{{names}} also thinks with {{account}}.",
+      "other": "{{names}} also think with {{account}}."
+    }
+  },
+  "agentPage.work.brain.v2.alsoSwitch": {
+    "value": "Switch them too"
+  },
+  "agentPage.work.brain.v2.signedOut": {
+    "value": "{{account}} signed out of {{brand}}. {{name}} won't answer until you sign in again or pick another account."
+  },
+  "agentPage.work.brain.v2.empty": {
+    "value": "{{name}} has no AI account to think with yet."
   },
   "agentPage.work.computer.title": {
     "value": "Where does {{name}} work?"
@@ -15043,6 +15142,9 @@
   },
   "agentPage.tabs.access": {
     "value": "Tools and access"
+  },
+  "agentPage.tabs.skills": {
+    "value": "Skills"
   },
   "agentPage.tabs.memory": {
     "value": "Memory"
@@ -15327,6 +15429,42 @@
   "agentPage.copied": {
     "value": "@{{handle}} copied."
   },
+  "agentPage.facts.private": {
+    "value": "Private"
+  },
+  "agentPage.facts.created": {
+    "value": "Made"
+  },
+  "agentPage.facts.createdBy": {
+    "value": "{{name}}, {{date}}"
+  },
+  "agentPage.facts.usage": {
+    "value": "Usage in {{month}}"
+  },
+  "agentPage.facts.budget": {
+    "value": "Budget"
+  },
+  "agentPage.facts.budgetUsed": {
+    "value": "{{percent}} used"
+  },
+  "agentPage.facts.last": {
+    "value": "Last activity"
+  },
+  "agentPage.facts.never": {
+    "value": "None yet"
+  },
+  "agentPage.facts.title": {
+    "value": "What it does"
+  },
+  "agentPage.facts.locked": {
+    "value": "{{name}}'s instructions, memory, tools, conversations, routines and files stay with {{owner}}, whoever they ask to edit it and the admins."
+  },
+  "agentPage.facts.lockedNoOwner": {
+    "value": "{{name}}'s instructions, memory, tools, conversations, routines and files stay with whoever edits it and the admins."
+  },
+  "agentPage.facts.ask": {
+    "value": "Ask {{owner}}"
+  },
   "agentPage.overview.approvals": {
     "value": {
       "one": "{{count}} approval request",
@@ -15341,13 +15479,6 @@
   },
   "agentPage.overview.seeApprovals": {
     "value": "See requests"
-  },
-  "agentPage.overview.proposes": {
-    "value": "{{name}} proposes changing his instructions",
-    "female": "{{name}} proposes changing her instructions"
-  },
-  "agentPage.overview.review": {
-    "value": "Review"
   },
   "agentPage.overview.does": {
     "value": "What {{name}} does"
@@ -15435,12 +15566,6 @@
   "agentPage.instructions.add": {
     "value": "Add"
   },
-  "agentPage.instructions.proposals": {
-    "value": {
-      "one": "{{count}} proposed change",
-      "other": "{{count}} proposed changes"
-    }
-  },
   "agentPage.access.search": {
     "value": "Search a connector or area"
   },
@@ -15516,35 +15641,14 @@
   "agentPage.memory.fromTeamRightHand": {
     "value": "learned from you"
   },
-  "agentPage.memory.proposals": {
-    "value": "Proposals"
+  "agentPage.memory.improvements": {
+    "value": "Improvements"
   },
-  "agentPage.memory.waiting": {
-    "value": "waiting for a decision"
-  },
-  "agentPage.memory.noneWaiting": {
-    "value": "none waiting"
-  },
-  "agentPage.memory.waitingCount": {
-    "value": {
-      "one": "{{count}} proposal waiting",
-      "other": "{{count}} proposals waiting"
-    }
+  "agentPage.memory.improvementsApplied": {
+    "value": "applied"
   },
   "agentPage.memory.full": {
     "value": "Open the full memory"
-  },
-  "agentPage.memory.accepted": {
-    "value": "Change accepted. The instructions were updated."
-  },
-  "agentPage.memory.refused": {
-    "value": "Proposal declined. {{name}} kept the reason."
-  },
-  "agentPage.memory.decides": {
-    "value": "{{who}} decides."
-  },
-  "agentPage.memory.adminDecides": {
-    "value": "An admin decides."
   },
   "agentPage.memory.learned": {
     "value": "What it learned"
@@ -15605,6 +15709,48 @@
   },
   "agentPage.memory.details": {
     "value": "Technical details"
+  },
+  "agentPage.memory.learning.title": {
+    "value": "How it learns"
+  },
+  "agentPage.memory.learning.fromYou": {
+    "value": "Learns from your conversations"
+  },
+  "agentPage.memory.learning.fromYouHint": {
+    "value": "What it learns in your DM stays yours. What it learns in a channel, everyone who reads that channel sees. What it learns about you stays yours."
+  },
+  "agentPage.memory.learning.workspaceOff": {
+    "value": "Off for the whole workspace"
+  },
+  "agentPage.memory.learning.forgetAll": {
+    "value": "Forget all"
+  },
+  "agentPage.memory.learning.forgetAllHint": {
+    "value": "Removes what it learned from you on its own. What you asked it to remember stays."
+  },
+  "agentPage.memory.learning.forgetTitle": {
+    "value": "Forget what it learned from you?"
+  },
+  "agentPage.memory.learning.forgetText": {
+    "value": "Everything it learned from you on its own goes, for good. What you asked it to remember stays, and so does what it learned in channels."
+  },
+  "agentPage.memory.learning.forgotten": {
+    "value": "Done. What it learned from you on its own is gone."
+  },
+  "agentPage.memory.learning.workspace": {
+    "value": "Learns in this workspace"
+  },
+  "agentPage.memory.learning.workspaceHint": {
+    "value": "Off, it learns from nobody on its own. Either way, nobody can read anyone else's memories."
+  },
+  "agentPage.memory.learning.onlyYou": {
+    "value": "Only you"
+  },
+  "agentPage.memory.learning.everyoneIn": {
+    "value": "Everyone in #{{channel}}"
+  },
+  "agentPage.memory.learning.everyone": {
+    "value": "Everyone who can see it"
   },
   "agentPage.memory.skills": {
     "value": "Skills it made"
@@ -15761,13 +15907,19 @@
     "value": "The AI on its computer couldn't answer. Check the computer and ask again."
   },
   "agentPage.activity.errors.empty_reply": {
-    "value": "The model returned nothing."
+    "value": "The AI ended its turn without writing a reply. Try again, or choose another model in the agent's settings."
+  },
+  "agentPage.activity.errors.empty_reply_limit": {
+    "value": "The AI hit its output limit before writing a reply. Try again, or choose another model in the agent's settings."
   },
   "agentPage.activity.errors.model_refused": {
     "value": "The model refused to answer."
   },
   "agentPage.activity.errors.agent_archived": {
     "value": "The agent was archived."
+  },
+  "agentPage.activity.errors.code_session_unavailable": {
+    "value": "The session's worktree isn't available on its computer."
   },
   "agentPage.activity.errors.provider_error": {
     "value": "The model provider returned an error: {{detail}}"
@@ -16116,12 +16268,6 @@
   "memory.subtitlePersonal": {
     "value": "What {{name}} learned from your conversations and corrections."
   },
-  "memory.proposals": {
-    "value": {
-      "one": "{{count}} improvement proposal",
-      "other": "{{count}} improvement proposals"
-    }
-  },
   "memory.tabsLabel": {
     "value": "Type"
   },
@@ -16187,15 +16333,6 @@
   },
   "memory.lowTrust": {
     "value": "External source, not trusted"
-  },
-  "memory.confirm": {
-    "value": "Confirm"
-  },
-  "memory.confirmTitle": {
-    "value": "Say it's right: agents then use it as trusted."
-  },
-  "memory.confirmed": {
-    "value": "Confirmed"
   },
   "memory.used": {
     "value": {
@@ -16277,7 +16414,7 @@
     "value": " in #{{channel}}"
   },
   "proposals.title": {
-    "value": "Improvement proposals"
+    "value": "Agent improvements"
   },
   "proposals.whyCode.refused": {
     "value": "A person refused: {{text}}"
@@ -16301,13 +16438,13 @@
     "value": "It is in no channel."
   },
   "proposals.subtitle": {
-    "value": "Changes the agents propose. Nothing changes until someone accepts."
+    "value": "What the agents changed in the team, and why. You can undo it."
   },
   "proposals.subtitlePersonal": {
-    "value": "Changes your agents propose. Nothing changes until you accept."
+    "value": "What your agents changed, and why. You can undo it."
   },
   "proposals.list": {
-    "value": "Proposals"
+    "value": "Improvements"
   },
   "proposals.proposes": {
     "value": "<b>{{agent}}</b> proposes · {{target}}"
@@ -16351,62 +16488,32 @@
   "proposals.accessOff": {
     "value": "Turn off: {{app}}"
   },
-  "proposals.include": {
-    "value": "Include {{name}}"
+  "proposals.reviewing": {
+    "value": "Reviewing…"
   },
-  "proposals.acceptAll": {
-    "value": "Accept for all"
+  "proposals.appliedByAgent": {
+    "value": "Applied by {{name}}"
   },
-  "proposals.acceptSome": {
-    "value": "Accept for {{count}}"
+  "proposals.appliedAuto": {
+    "value": "Applied automatically"
   },
-  "proposals.all.label": {
-    "value": "Decide every proposal"
+  "proposals.leftOutBy": {
+    "value": "Left out by {{name}}"
   },
-  "proposals.all.accept": {
-    "value": "Accept all"
+  "proposals.leftOut": {
+    "value": "Left out"
   },
-  "proposals.all.refuse": {
-    "value": "Refuse all"
+  "proposals.undoneBy": {
+    "value": "Undone by {{name}}"
   },
-  "proposals.all.acceptAsk": {
-    "value": {
-      "one": "Accept the proposal? It applies right away.",
-      "other": "Accept all {{count}} proposals? Each one applies right away."
-    }
+  "proposals.undoneByYou": {
+    "value": "Undone by you"
   },
-  "proposals.all.refuseAsk": {
-    "value": {
-      "one": "Refuse the proposal? The agent won't propose it again.",
-      "other": "Refuse all {{count}} proposals? The agents won't propose them again."
-    }
+  "proposals.undo": {
+    "value": "Undo"
   },
-  "proposals.all.acceptGo": {
-    "value": {
-      "one": "Accept",
-      "other": "Accept {{count}}"
-    }
-  },
-  "proposals.all.refuseGo": {
-    "value": {
-      "one": "Refuse",
-      "other": "Refuse {{count}}"
-    }
-  },
-  "proposals.staleSome": {
-    "value": {
-      "one": "One wasn't accepted: its text changed after the proposal.",
-      "other": "{{count}} weren't accepted: their text changed after the proposal."
-    }
-  },
-  "proposals.staleSomeAgent": {
-    "value": {
-      "one": "One wasn't accepted: the agent changed after the proposal.",
-      "other": "{{count}} weren't accepted: the agents changed after the proposal."
-    }
-  },
-  "proposals.waitingFor": {
-    "value": "Waiting for {{name}}"
+  "proposals.appliedSome": {
+    "value": "{{done}} of {{total}} applied"
   },
   "proposals.waitingAdmin": {
     "value": "Waiting for an admin"
@@ -16414,38 +16521,17 @@
   "proposals.stale": {
     "value": "Stale"
   },
-  "proposals.staleError": {
-    "value": "This proposal is stale: the text changed after it was made. The list was refreshed."
-  },
   "proposals.staleNote": {
-    "value": "The text changed after this proposal, so it can't be accepted anymore."
-  },
-  "proposals.staleErrorAgent": {
-    "value": "This proposal is stale: the agent changed after it was made. The list was refreshed."
+    "value": "The text changed after this proposal, so it can't be applied anymore."
   },
   "proposals.staleNoteAgent": {
-    "value": "The agent changed after this proposal, so it can't be accepted anymore."
+    "value": "The agent changed after this proposal, so it can't be applied anymore."
   },
   "proposals.accepted": {
     "value": "Accepted"
   },
   "proposals.refused": {
     "value": "Refused"
-  },
-  "proposals.acceptedSome": {
-    "value": "{{done}} of {{total}} accepted"
-  },
-  "proposals.acceptedBy": {
-    "value": "Accepted by {{name}} · {{when}}"
-  },
-  "proposals.refusedBy": {
-    "value": "Refused by {{name}} · {{when}}"
-  },
-  "proposals.acceptedByYou": {
-    "value": "Accepted by you · {{when}}"
-  },
-  "proposals.refusedByYou": {
-    "value": "Refused by you · {{when}}"
   },
   "proposals.why": {
     "value": "Why"
@@ -16455,30 +16541,6 @@
   },
   "proposals.changeLabel": {
     "value": "Proposed change"
-  },
-  "proposals.editFirst": {
-    "value": "Edit before accepting"
-  },
-  "proposals.viewDiff": {
-    "value": "View differences"
-  },
-  "proposals.finalText": {
-    "value": "Final instructions text"
-  },
-  "proposals.finalTextContext": {
-    "value": "Final context text"
-  },
-  "proposals.accept": {
-    "value": "Accept change"
-  },
-  "proposals.acceptEdited": {
-    "value": "Accept with edits"
-  },
-  "proposals.refuse": {
-    "value": "Refuse"
-  },
-  "proposals.refuseNote": {
-    "value": "Refusing teaches {{name}} not to propose this again."
   },
   "proposals.added": {
     "value": "Added: "
@@ -16493,10 +16555,10 @@
     }
   },
   "proposals.empty": {
-    "value": "When someone asks an agent for a change, or a lesson repeats, the proposal shows up here."
+    "value": "When an agent improves its instructions or a teammate's, the change shows here, with Undo."
   },
   "proposals.emptyTitle": {
-    "value": "Nothing to review"
+    "value": "Nothing changed yet"
   },
   "proposals.titleInstructions": {
     "value": "Update {{name}}'s instructions"
@@ -17525,13 +17587,13 @@
     "value": "{{name}} (you)"
   },
   "newAgent.noOwnerOption": {
-    "value": "No owner"
+    "value": "Admins"
   },
   "newAgent.noOwnerShort": {
-    "value": "Admins get the alerts and approve"
+    "value": "Get the alerts and approve"
   },
   "newAgent.noOwnerHelp": {
-    "value": "Without an owner, admins get the alerts and approve sensitive actions."
+    "value": "The admins get the alerts and approve sensitive actions."
   },
   "newAgent.ownerHelp": {
     "value": "Gets the budget alerts and approves sensitive actions."
@@ -17677,9 +17739,6 @@
   },
   "newAgent.noChannelsReview": {
     "value": "No channels: call it by @ or direct message"
-  },
-  "newAgent.noOwnerAdmins": {
-    "value": "No owner (admins)"
   },
   "newAgent.editSection": {
     "value": "Edit {{section}}"
@@ -19033,7 +19092,7 @@
     "value": "Owner: {{name}}"
   },
   "members.noOwner": {
-    "value": "No owner"
+    "value": "Owner: admins"
   },
   "members.budgetLine": {
     "value": "{{percent}} of the {{month}} budget"
@@ -19680,6 +19739,66 @@
   },
   "scopes.custom_write.description": {
     "value": "Use the write tools. Those marked sensitive always ask for approval."
+  },
+  "scopes.telegram_messages_read.label": {
+    "value": "Read messages"
+  },
+  "scopes.telegram_messages_read.description": {
+    "value": "List the bot's chats and read what people wrote to it or where it is."
+  },
+  "scopes.telegram_messages_write.label": {
+    "value": "Send messages"
+  },
+  "scopes.telegram_messages_write.description": {
+    "value": "Send, edit and pin messages and files as the bot. Deleting messages, banning people and invite links ask for approval."
+  },
+  "scopes.x_posts_read.label": {
+    "value": "Read posts"
+  },
+  "scopes.x_posts_read.description": {
+    "value": "Read the account's posts and mentions, posts by id and recent posts by search."
+  },
+  "scopes.x_posts_write.label": {
+    "value": "Post"
+  },
+  "scopes.x_posts_write.description": {
+    "value": "Post on the account, with pictures or a video from the Drive. Deleting a post asks for approval."
+  },
+  "scopes.threads_posts_read.label": {
+    "value": "Read posts"
+  },
+  "scopes.threads_posts_read.description": {
+    "value": "Read the account's posts, their replies, mentions and results."
+  },
+  "scopes.threads_posts_write.label": {
+    "value": "Post and reply"
+  },
+  "scopes.threads_posts_write.description": {
+    "value": "Post with pictures or videos from the Drive, reply and hide replies. Deleting a post asks for approval."
+  },
+  "scopes.meta_ads_ads_read.label": {
+    "value": "Read ads"
+  },
+  "scopes.meta_ads_ads_read.description": {
+    "value": "List ad accounts, campaigns, ad sets and ads, and read their results."
+  },
+  "scopes.meta_ads_ads_write.label": {
+    "value": "Manage ads"
+  },
+  "scopes.meta_ads_ads_write.description": {
+    "value": "Create campaigns, ad sets and ads (always paused), edit and pause them. Turning one on and changing a budget always ask. Archiving and deleting ask."
+  },
+  "scopes.tiktok_videos_read.label": {
+    "value": "Read videos"
+  },
+  "scopes.tiktok_videos_read.description": {
+    "value": "Read the creator's profile, public videos and what they may post."
+  },
+  "scopes.tiktok_videos_write.label": {
+    "value": "Send videos to drafts"
+  },
+  "scopes.tiktok_videos_write.description": {
+    "value": "Send a Drive video to the creator's TikTok drafts, where they finish the post. Each upload asks for approval."
   },
   "issues.handedBy": {
     "value": "handed by <0/>{{name}}"
@@ -20652,6 +20771,24 @@
   "issues.files.linked": {
     "value": "Linked by {{name}}"
   },
+  "issues.files.remove": {
+    "value": "Remove {{name}} from the task"
+  },
+  "issues.files.removeShort": {
+    "value": "Remove from the task"
+  },
+  "issues.files.removed": {
+    "value": "{{name}} removed from the task. It's still in the Drive."
+  },
+  "issues.files.added": {
+    "value": {
+      "one": "File added to the attachments",
+      "other": "{{count}} files added to the attachments"
+    }
+  },
+  "issues.files.see": {
+    "value": "See attachments"
+  },
   "issues.history.commented": {
     "value": "commented"
   },
@@ -20822,6 +20959,21 @@
   },
   "routines.webhook.methodsLine": {
     "value": "Accepts {{methods}}."
+  },
+  "routines.webhook.groupBy": {
+    "value": "Group calls by"
+  },
+  "routines.webhook.groupByHelp": {
+    "value": "A field in each call's data, like conversation.id. Calls with the same value run one at a time, in order. Different values run side by side."
+  },
+  "routines.webhook.groupByOff": {
+    "value": "Every call waits in one line, in order."
+  },
+  "routines.webhook.groupByOn": {
+    "value": "Calls with the same {{path}} run in order. Others run side by side."
+  },
+  "routines.webhook.groupBySaved": {
+    "value": "Grouping saved."
   },
   "routines.webhook.address": {
     "value": "Address"
@@ -21756,6 +21908,9 @@
   "routines.event.deploy.succeeded": {
     "value": "Deploy finished"
   },
+  "routines.event.telegram.message": {
+    "value": "Message to the Telegram bot"
+  },
   "routines.when.event": {
     "value": "When: {{event}}"
   },
@@ -22140,6 +22295,9 @@
   },
   "routines.code.empty_reply": {
     "value": "The model answered nothing"
+  },
+  "routines.code.empty_reply_limit": {
+    "value": "The model hit its output limit before answering"
   },
   "routines.code.model_refused": {
     "value": "The model refused to answer"
@@ -25988,6 +26146,198 @@
   "jev.remove.text": {
     "value": "Agents keep working without it."
   },
+  "aiHub.tab": {
+    "value": "AI accounts"
+  },
+  "aiHub.usageTab": {
+    "value": "Usage"
+  },
+  "aiHub.accounts": {
+    "value": "Accounts"
+  },
+  "aiHub.accountsHint": {
+    "value": "Every plan and API key the agents can think with, whoever connected it."
+  },
+  "aiHub.apiKey": {
+    "value": "API key"
+  },
+  "aiHub.of": {
+    "value": "{{name}}'s"
+  },
+  "aiHub.moreSpeed": {
+    "value": "Speed and context window"
+  },
+  "aiHub.whoThinks": {
+    "value": "Who thinks"
+  },
+  "aiHub.thinks": {
+    "value": {
+      "one": "{{names}} thinks with it",
+      "other": "{{names}} think with it"
+    }
+  },
+  "aiHub.thinksNone": {
+    "value": "No agent thinks with it"
+  },
+  "aiHub.bulk.sub": {
+    "value": "Pick the AI, then the agents that take it."
+  },
+  "aiHub.choice.workspace": {
+    "value": "The workspace's"
+  },
+  "aiHub.choice.none": {
+    "value": "Pick an account"
+  },
+  "aiHub.choice.search": {
+    "value": "Search by name, AI, plan or owner"
+  },
+  "aiHub.choice.noMatch": {
+    "value": "No account matches."
+  },
+  "aiHub.choice.noModel": {
+    "value": "No model matches."
+  },
+  "aiHub.choice.empty": {
+    "value": "No account yet."
+  },
+  "aiHub.choice.add": {
+    "value": "Add account"
+  },
+  "aiHub.choice.addLine": {
+    "value": "Claude, ChatGPT, Gemini and more, or an API key"
+  },
+  "aiHub.choice.manage": {
+    "value": "Manage accounts"
+  },
+  "aiHub.choice.groups.yours": {
+    "value": "Your accounts"
+  },
+  "aiHub.choice.groups.others": {
+    "value": "The team's"
+  },
+  "aiHub.choice.groups.keys": {
+    "value": "API keys"
+  },
+  "aiHub.order.title": {
+    "value": "Order of use"
+  },
+  "aiHub.order.tip": {
+    "value": "Which account agents use first"
+  },
+  "aiHub.order.sub": {
+    "value": "At a limit, agents move on to the next account."
+  },
+  "aiHub.order.group": {
+    "value": "{{maker}} · {{computer}}"
+  },
+  "aiHub.order.signedOut": {
+    "value": "Signed out · skipped"
+  },
+  "aiHub.order.skipped": {
+    "value": "Skipped"
+  },
+  "aiHub.order.fallback": {
+    "value": "Continue with the API key when every plan is at its limit"
+  },
+  "aiHub.order.fallbackHint": {
+    "value": "Off: agents wait for the first plan to renew. On: they go on with the workspace's API key, which is paid per use. A mission never does."
+  },
+  "aiHub.detail.limits": {
+    "value": "Limits"
+  },
+  "aiHub.detail.noLimits": {
+    "value": "No limits read yet."
+  },
+  "aiHub.detail.permissions": {
+    "value": "Permissions"
+  },
+  "aiHub.detail.saved": {
+    "value": "Permissions saved."
+  },
+  "aiHub.detail.more": {
+    "value": "More for {{name}}"
+  },
+  "aiHub.detail.manage": {
+    "value": "Manage"
+  },
+  "aiHub.detail.manageLine": {
+    "value": "Rename, sign in again, remove"
+  },
+  "aiHub.detail.manageHint": {
+    "value": "Who may rename this account, sign in to it again, remove it and change these permissions."
+  },
+  "aiHub.detail.use": {
+    "value": "Use in agents"
+  },
+  "aiHub.detail.useLine": {
+    "value": "Pick it in Who thinks"
+  },
+  "aiHub.detail.useHint": {
+    "value": "Whose agents may think with this account."
+  },
+  "aiHub.detail.reply": {
+    "value": "Answer everyone"
+  },
+  "aiHub.detail.replyLine": {
+    "value": "Who agents on it talk to"
+  },
+  "aiHub.detail.replyHint": {
+    "value": "Who an agent on this account answers besides its own owner."
+  },
+  "aiHub.detail.claudeTerms": {
+    "value": "Under Claude's terms a personal plan is one person's. Sharing it is a gray area."
+  },
+  "aiHub.detail.pickRoles": {
+    "value": "The people who hold these roles."
+  },
+  "aiHub.detail.pickPeople": {
+    "value": "Besides the account's owner."
+  },
+  "aiHub.detail.searchRoles": {
+    "value": "Search roles"
+  },
+  "aiHub.detail.searchPeople": {
+    "value": "Search people"
+  },
+  "aiHub.detail.nobody": {
+    "value": "Nobody to pick."
+  },
+  "aiHub.modes.owner": {
+    "value": "Only you"
+  },
+  "aiHub.modes.ownerOf": {
+    "value": "Only {{name}}"
+  },
+  "aiHub.modes.admins": {
+    "value": "You and admins"
+  },
+  "aiHub.modes.adminsOf": {
+    "value": "{{name}} and admins"
+  },
+  "aiHub.modes.roles": {
+    "value": "Roles…"
+  },
+  "aiHub.modes.people": {
+    "value": "People…"
+  },
+  "aiHub.modes.everyone": {
+    "value": "Everyone"
+  },
+  "aiHub.modes.replyOwner": {
+    "value": "Only the agent's owner"
+  },
+  "aiAccounts.useReason.signed_out": {
+    "value": "Signed out"
+  },
+  "aiAccounts.useReason.owner_left": {
+    "value": "{{owner}} left the workspace"
+  },
+  "aiAccounts.useReason.owner_only": {
+    "value": "Only {{owner}} uses it"
+  },
+  "aiAccounts.useReason.not_allowed": {
+    "value": "Not open to your agents"
+  },
   "aiAccounts.unnamed": {
     "value": "Unnamed account"
   },
@@ -27247,6 +27597,434 @@
   },
   "palette.empty": {
     "value": "Nothing for “{{q}}”."
+  },
+  "codeSessions.beta.title": {
+    "value": "Coding mode is in beta"
+  },
+  "codeSessions.beta.text": {
+    "value": "It works for real and changes every week. Sometimes it gets stuck. When it does, the problem is ours."
+  },
+  "codeSessions.beta.go": {
+    "value": "Get started"
+  },
+  "codeSessions.beta.added.worktree": {
+    "value": "Each request in its own worktree, with Git, Files, Screen and Terminal"
+  },
+  "codeSessions.beta.added.anyAi": {
+    "value": "Any AI: Claude Code, Codex, OpenCode, or a model by its key"
+  },
+  "codeSessions.beta.added.beside": {
+    "value": "Edit the files and open a terminal beside the conversation"
+  },
+  "codeSessions.beta.removed.paste": {
+    "value": "Copying and pasting code between the chat and the editor"
+  },
+  "codeSessions.beta.removed.watch": {
+    "value": "Watching the terminal until the agent is done"
+  },
+  "codeSessions.title": {
+    "value": "Code"
+  },
+  "codeSessions.state.waiting": {
+    "value": "waiting for you"
+  },
+  "codeSessions.state.working": {
+    "value": "working"
+  },
+  "codeSessions.state.preparing": {
+    "value": "preparing the worktree"
+  },
+  "codeSessions.state.failed": {
+    "value": "couldn't prepare"
+  },
+  "codeSessions.state.pr": {
+    "value": "PR #{{number}}"
+  },
+  "codeSessions.state.idle": {
+    "value": "ready"
+  },
+  "codeSessions.list.label": {
+    "value": "Code sessions"
+  },
+  "codeSessions.list.new": {
+    "value": "New session"
+  },
+  "codeSessions.list.newRow": {
+    "value": "New session"
+  },
+  "codeSessions.list.resize": {
+    "value": "List width"
+  },
+  "codeSessions.list.local": {
+    "value": "on the computer"
+  },
+  "codeSessions.list.empty": {
+    "value": "The sessions you open, or are called into, show here."
+  },
+  "codeSessions.home.mode": {
+    "value": "Coding mode"
+  },
+  "codeSessions.home.was": {
+    "value": "Chat mode"
+  },
+  "codeSessions.home.beta": {
+    "value": "Beta"
+  },
+  "codeSessions.home.noAgents": {
+    "value": "No agent codes on a computer yet. In an agent's settings, give it a computer and a coding app, or let it run code there."
+  },
+  "codeSessions.home.placeholder": {
+    "value": "Describe the change, the bug or the question"
+  },
+  "codeSessions.home.label": {
+    "value": "What to do"
+  },
+  "codeSessions.home.agent": {
+    "value": "Agent"
+  },
+  "codeSessions.home.repo": {
+    "value": "Where to work"
+  },
+  "codeSessions.home.repoPlaceholder": {
+    "value": "Repository or project"
+  },
+  "codeSessions.home.repoSearch": {
+    "value": "Search, or type owner/name or a new name"
+  },
+  "codeSessions.home.newLocal": {
+    "value": "New project on the computer: {{name}}"
+  },
+  "codeSessions.home.useRepo": {
+    "value": "Use {{repo}}"
+  },
+  "codeSessions.home.repoNote": {
+    "value": "A name with no owner starts a project on the agent's computer, outside GitHub."
+  },
+  "codeSessions.home.hint": {
+    "value": "@ calls someone into the session"
+  },
+  "codeSessions.home.start": {
+    "value": "Start"
+  },
+  "codeSessions.view.gone": {
+    "value": "This session is gone, or isn't yours to see."
+  },
+  "codeSessions.view.resize": {
+    "value": "Conversation width"
+  },
+  "codeSessions.view.composer": {
+    "value": "Reply · @ calls someone · / commands"
+  },
+  "codeSessions.view.more": {
+    "value": "More"
+  },
+  "codeSessions.view.openPr": {
+    "value": "Open PR #{{number}}"
+  },
+  "codeSessions.view.close": {
+    "value": "Close the session"
+  },
+  "codeSessions.view.closeHint": {
+    "value": "It leaves the list: the worktree goes, the branch stays"
+  },
+  "codeSessions.view.failed": {
+    "value": "The worktree couldn't be prepared."
+  },
+  "codeSessions.view.retry": {
+    "value": "Try again"
+  },
+  "codeSessions.view.githubAccess": {
+    "value": "This workspace has no GitHub access for this repository. Connect GitHub in Settings › Connectors, or start a session on a project on the computer (just a name)."
+  },
+  "codeSessions.panel.label": {
+    "value": "Session panel"
+  },
+  "codeSessions.panel.screen": {
+    "value": "Screen"
+  },
+  "codeSessions.panel.terminal": {
+    "value": "Terminal"
+  },
+  "codeSessions.panel.terminalHeight": {
+    "value": "Terminal height"
+  },
+  "codeSessions.panel.notReady": {
+    "value": "The worktree is still being prepared."
+  },
+  "codeSessions.panel.agent_preparing": {
+    "value": "is preparing the worktree"
+  },
+  "codeSessions.panel.agent_failed": {
+    "value": "couldn't prepare the worktree"
+  },
+  "codeSessions.panel.agent_working": {
+    "value": "is working"
+  },
+  "codeSessions.panel.agent_waiting": {
+    "value": "is waiting for you"
+  },
+  "codeSessions.panel.agent_idle": {
+    "value": "is free"
+  },
+  "codeSessions.gitTab.openFile": {
+    "value": "Open the file"
+  },
+  "codeSessions.gitTab.label": {
+    "value": "Git"
+  },
+  "codeSessions.gitTab.from": {
+    "value": "from {{base}}"
+  },
+  "codeSessions.gitTab.ahead": {
+    "value": {
+      "one": "{{count}}{{more}} commit ahead",
+      "other": "{{count}}{{more}} commits ahead"
+    }
+  },
+  "codeSessions.gitTab.refresh": {
+    "value": "Read again"
+  },
+  "codeSessions.gitTab.reading": {
+    "value": "Reading git on the computer…"
+  },
+  "codeSessions.gitTab.all": {
+    "value": "Everything since {{base}}"
+  },
+  "codeSessions.gitTab.uncommitted": {
+    "value": "Not committed"
+  },
+  "codeSessions.gitTab.clean": {
+    "value": "Everything is committed."
+  },
+  "codeSessions.gitTab.changesMore": {
+    "value": "And more changes: the first thousand are here."
+  },
+  "codeSessions.gitTab.commits": {
+    "value": "Commits"
+  },
+  "codeSessions.gitTab.noCommits": {
+    "value": "No commits since {{base}} yet."
+  },
+  "codeSessions.gitTab.more": {
+    "value": "And older commits."
+  },
+  "codeSessions.gitTab.back": {
+    "value": "Back"
+  },
+  "codeSessions.gitTab.split": {
+    "value": "Side by side"
+  },
+  "codeSessions.gitTab.none": {
+    "value": "Nothing changed here."
+  },
+  "codeSessions.gitTab.tooLarge": {
+    "value": "Too large to show here. The files that changed are listed."
+  },
+  "codeSessions.gitTab.status.modified": {
+    "value": "Modified"
+  },
+  "codeSessions.gitTab.status.added": {
+    "value": "Added"
+  },
+  "codeSessions.gitTab.status.deleted": {
+    "value": "Deleted"
+  },
+  "codeSessions.gitTab.status.renamed": {
+    "value": "Renamed"
+  },
+  "codeSessions.gitTab.status.untracked": {
+    "value": "New, not in git yet"
+  },
+  "codeSessions.files.label": {
+    "value": "Files"
+  },
+  "codeSessions.files.search": {
+    "value": "Search files"
+  },
+  "codeSessions.files.searchPlaceholder": {
+    "value": "Find a file by name or folder"
+  },
+  "codeSessions.files.changedGroup": {
+    "value": "Changed"
+  },
+  "codeSessions.files.count": {
+    "value": {
+      "one": "{{formatted}} file",
+      "other": "{{formatted}} files"
+    }
+  },
+  "codeSessions.files.refresh": {
+    "value": "Read again"
+  },
+  "codeSessions.files.reading": {
+    "value": "Reading the files on the computer…"
+  },
+  "codeSessions.files.empty": {
+    "value": "No files yet."
+  },
+  "codeSessions.files.noMatch": {
+    "value": "No file matches “{{query}}”."
+  },
+  "codeSessions.files.truncated": {
+    "value": {
+      "one": "Showing the first {{formatted}} file.",
+      "other": "Showing the first {{formatted}} files."
+    }
+  },
+  "codeSessions.files.hasChanges": {
+    "value": "Has changes"
+  },
+  "codeSessions.files.opening": {
+    "value": "Opening the file…"
+  },
+  "codeSessions.files.cut": {
+    "value": "Only the first {{size}} show here."
+  },
+  "codeSessions.files.save": {
+    "value": "Save"
+  },
+  "codeSessions.files.unsaved": {
+    "value": "Not saved"
+  },
+  "codeSessions.files.tooLong": {
+    "value": "Too long to edit here"
+  },
+  "codeSessions.files.moved": {
+    "value": "This file changed on the computer after you opened it."
+  },
+  "codeSessions.files.reload": {
+    "value": "Load that one"
+  },
+  "codeSessions.files.overwrite": {
+    "value": "Save mine over it"
+  },
+  "codeSessions.files.unsavedAsk": {
+    "value": "This file has changes you didn't save."
+  },
+  "codeSessions.files.keepEditing": {
+    "value": "Keep editing"
+  },
+  "codeSessions.files.discard": {
+    "value": "Discard"
+  },
+  "codeSessions.files.state.binary": {
+    "value": "A binary file: nothing to show here."
+  },
+  "codeSessions.files.state.missing": {
+    "value": "This file isn't there anymore."
+  },
+  "codeSessions.files.state.ignored": {
+    "value": "Git ignores this file, so it doesn't show here."
+  },
+  "codeSessions.files.state.secret": {
+    "value": ".env files don't show here: they usually hold secrets."
+  },
+  "codeSessions.files.state.outside": {
+    "value": "This file is a link out of the worktree."
+  },
+  "codeSessions.tabs.label": {
+    "value": "The session's tabs"
+  },
+  "codeSessions.tabs.talk": {
+    "value": "Conversation"
+  },
+  "codeSessions.tabs.terminalN": {
+    "value": "Terminal {{n}}"
+  },
+  "codeSessions.tabs.close": {
+    "value": "Close {{name}}"
+  },
+  "codeSessions.tabs.add": {
+    "value": "New tab"
+  },
+  "codeSessions.screen.computer": {
+    "value": "{{name}}'s computer",
+    "female": "{{name}}'s computer"
+  },
+  "codeSessions.screen.menu": {
+    "value": "Screens {{name}} uses",
+    "female": "Screens {{name}} uses"
+  },
+  "codeSessions.screen.computerHint": {
+    "value": "Where the worktree is"
+  },
+  "codeSessions.screen.onHost": {
+    "value": "on {{host}}"
+  },
+  "codeSessions.screen.exitFull": {
+    "value": "Exit full screen"
+  },
+  "codeSessions.who.label": {
+    "value": "In this session"
+  },
+  "codeSessions.who.open": {
+    "value": {
+      "one": "{{count}} in this session",
+      "other": "{{count}} in this session"
+    }
+  },
+  "codeSessions.who.agent": {
+    "value": "works in the worktree"
+  },
+  "codeSessions.who.opener": {
+    "value": "opened the session"
+  },
+  "codeSessions.who.leave": {
+    "value": "Leave"
+  },
+  "codeSessions.who.remove": {
+    "value": "Remove {{name}} from the session"
+  },
+  "codeSessions.who.invite": {
+    "value": "To bring someone in, type @ and their name in the conversation."
+  },
+  "codeSessions.screenLine.show": {
+    "value": "See on Screen"
+  },
+  "codeSessions.screenLine.held": {
+    "value": "A person has the screen"
+  },
+  "codeSessions.suggestion.label": {
+    "value": "Code session suggestion"
+  },
+  "codeSessions.suggestion.detail": {
+    "value": "{{repo}} · on {{name}}'s computer"
+  },
+  "codeSessions.suggestion.more": {
+    "value": "See the request"
+  },
+  "codeSessions.suggestion.open": {
+    "value": "Open session"
+  },
+  "codeSessions.suggestion.here": {
+    "value": "Do it here"
+  },
+  "codeSessions.suggestion.opening": {
+    "value": "Opening the session…"
+  },
+  "codeSessions.suggestion.opened": {
+    "value": "You opened the session"
+  },
+  "codeSessions.suggestion.openedBy": {
+    "value": "{{name}} opened the session"
+  },
+  "codeSessions.suggestion.keptHere": {
+    "value": "You chose to do it here"
+  },
+  "codeSessions.suggestion.keptHereBy": {
+    "value": "{{name}} chose to do it here"
+  },
+  "codeSessions.suggestion.see": {
+    "value": "See session"
+  },
+  "codeSessions.from.dm": {
+    "value": "Opened from your conversation with {{name}}"
+  },
+  "codeSessions.from.channel": {
+    "value": "Opened from #{{name}}"
+  },
+  "codeSessions.from.see": {
+    "value": "See conversation"
   },
   "code.ranSummary": {
     "value": {
@@ -29258,12 +30036,6 @@
   "run.inProgress": {
     "value": "in progress"
   },
-  "run.quiet": {
-    "value": "no news for {{minutes}} min"
-  },
-  "run.refresh": {
-    "value": "Refresh"
-  },
   "run.stop": {
     "value": "Stop"
   },
@@ -29380,6 +30152,15 @@
   },
   "brain.picker.account": {
     "value": "Account"
+  },
+  "brain.picker.accountOf": {
+    "value": "Account: {{account}}"
+  },
+  "brain.picker.connectAccount": {
+    "value": "Connect another account"
+  },
+  "brain.picker.ais": {
+    "value": "AI"
   },
   "brain.picker.connect": {
     "value": "Connect an AI"
@@ -29578,6 +30359,9 @@
   },
   "brain.reasons.cant_start": {
     "value": "{{program}} is on {{computer}}, but it won't start."
+  },
+  "brain.reasons.home_only": {
+    "value": "{{program}} is installed only for root on {{computer}}, where the agents can't reach it."
   },
   "brain.reasons.not_reported": {
     "value": "{{computer}} is still checking which programs it has. This changes by itself when it's done."
@@ -30584,9 +31368,6 @@
   "drive.who": {
     "value": "Made by"
   },
-  "drive.everyone": {
-    "value": "Everyone"
-  },
   "drive.kindMany.document": {
     "value": "Documents"
   },
@@ -30632,11 +31413,17 @@
   "drive.viewList": {
     "value": "List"
   },
-  "drive.arrange": {
-    "value": "Arrange"
+  "drive.display": {
+    "value": "Display"
   },
-  "drive.arrangeValue": {
-    "value": "Arrange: {{group}}"
+  "drive.displayValue": {
+    "value": "Display: {{view}} · {{group}}"
+  },
+  "drive.filterButton": {
+    "value": "Filter"
+  },
+  "drive.filterValue": {
+    "value": "{{filter}}: {{value}}"
   },
   "drive.groupBy": {
     "value": "Group by"
@@ -31818,23 +32605,125 @@
   "repos.added": {
     "value": "{{repo}} joins the list when you save."
   },
+  "connectors.store.featured": {
+    "value": "Featured"
+  },
+  "connectors.store.suggested": {
+    "value": "Suggested"
+  },
+  "connectors.store.seeAll": {
+    "value": "See all"
+  },
+  "connectors.store.more": {
+    "value": "See more"
+  },
+  "connectors.store.moreName": {
+    "value": "See more about {{name}}"
+  },
+  "connectors.store.connected": {
+    "value": "Connected"
+  },
+  "connectors.store.browse": {
+    "value": "Browse connectors"
+  },
+  "connectors.store.notListed": {
+    "value": "Is a service missing from the store?"
+  },
+  "connectors.store.howLabel": {
+    "value": "How it connects"
+  },
+  "connectors.store.whoAll": {
+    "value": "Every agent"
+  },
+  "connectors.store.whoChoose": {
+    "value": "You choose later"
+  },
+  "connectors.store.asksLabel": {
+    "value": "Approval"
+  },
+  "connectors.store.asksSensitive": {
+    "value": "Sensitive actions ask you"
+  },
+  "connectors.store.afterTitle": {
+    "value": "After connecting"
+  },
+  "connectors.store.agents": {
+    "value": {
+      "one": "{{count}} agent",
+      "other": "{{count}} agents"
+    }
+  },
+  "connectors.store.whoEvery": {
+    "value": {
+      "one": "Your agent uses it.",
+      "other": "All {{count}} agents use it."
+    }
+  },
+  "connectors.store.whoSome": {
+    "value": {
+      "one": "{{names}}. The other agent doesn't use it.",
+      "other": "{{names}}. The other {{count}} agents don't use it."
+    }
+  },
+  "connectors.store.change": {
+    "value": "Change"
+  },
+  "connectors.store.see": {
+    "value": "View"
+  },
+  "connectors.store.account": {
+    "value": "Account"
+  },
+  "connectors.store.toolsText": {
+    "value": "What agents can do with it, and what asks you."
+  },
+  "connectors.store.addressesText": {
+    "value": "Who agents can talk to through this mailbox."
+  },
+  "connectors.store.bandTitle": {
+    "value": {
+      "one": "{{count}} service to connect",
+      "other": "{{count}} services to connect"
+    }
+  },
+  "connectors.store.bandText": {
+    "value": "{{names}} and more."
+  },
+  "connectors.store.appMissing": {
+    "value": "This server's app isn't created yet"
+  },
+  "connectors.store.appEvents": {
+    "value": "The app is missing events"
+  },
+  "connectors.store.appLine": {
+    "value": "This server's app"
+  },
+  "connectors.store.eventsLine": {
+    "value": "Events"
+  },
+  "connectors.howShort.oneClick": {
+    "value": "One click"
+  },
+  "connectors.howShort.oauthOrKey": {
+    "value": "One click or an API key"
+  },
+  "connectors.howShort.key": {
+    "value": "API key"
+  },
+  "connectors.howShort.appPassword": {
+    "value": "App password"
+  },
+  "connectors.howShort.addressPassword": {
+    "value": "Address and password"
+  },
+  "connectors.howShort.composio": {
+    "value": "Through Composio"
+  },
   "connectors.title": {
     "value": "Connectors"
   },
   "connectors.add": {
     "value": "Add connector"
-  },
-  "connectors.mcp.title": {
-    "value": "MCPs"
-  },
-  "connectors.mcp.add": {
-    "value": "Add MCP"
-  },
-  "connectors.mcp.list": {
-    "value": "Connected MCP servers"
-  },
-  "connectors.mcp.none": {
-    "value": "MCP servers you connect by their address show up here."
   },
   "connectors.personal.note": {
     "value": "Only you open these connections. Your agents use them only when you ask."
@@ -31923,15 +32812,6 @@
   "connectors.personal.moved": {
     "value": "{{name}} now belongs to the team."
   },
-  "connectors.addTitle": {
-    "value": "Add connector"
-  },
-  "connectors.catalogText": {
-    "value": "Connect once for {{org}}. Then choose what each agent can use."
-  },
-  "connectors.catalog": {
-    "value": "Available connectors"
-  },
   "connectors.categories": {
     "value": "Categories"
   },
@@ -31986,12 +32866,6 @@
   "connectors.addAccountName": {
     "value": "Add another {{name}} account"
   },
-  "connectors.other": {
-    "value": "Can't find it?"
-  },
-  "connectors.otherText": {
-    "value": "Connect any service by its address."
-  },
   "connectors.search": {
     "value": "Search connectors"
   },
@@ -32031,12 +32905,6 @@
   "connectors.tileSoon": {
     "value": "{{name}}, soon"
   },
-  "connectors.otherTitle": {
-    "value": "Another service"
-  },
-  "connectors.otherDetail": {
-    "value": "Any service that offers a connection for agents, by its address (it starts with https://)."
-  },
   "connectors.otherSteps.1": {
     "value": "You paste the address and authorize on the service's page"
   },
@@ -32048,9 +32916,6 @@
   },
   "connectors.otherConnect": {
     "value": "Connect by address"
-  },
-  "connectors.detail.close": {
-    "value": "Close details"
   },
   "connectors.detail.can": {
     "value": "What agents will be able to do"
@@ -32072,12 +32937,6 @@
   },
   "connectors.detail.replaceText": {
     "value": "Replaces the current sign-in. Who uses it stays the same."
-  },
-  "connectors.detail.connected": {
-    "value": "Already connected"
-  },
-  "connectors.detail.how": {
-    "value": "How it works"
   },
   "connectors.how.oneClick": {
     "value": "One click: you authorize on the service's page"
@@ -32406,6 +33265,15 @@
   "connectors.can.meta_ads.2": {
     "value": "Create and adjust campaigns"
   },
+  "connectors.can.meta_ads.ask": {
+    "value": "Turning ads on and changing budgets always ask for your approval"
+  },
+  "connectors.can.tiktok_ads.1": {
+    "value": "See campaigns, ad groups and results"
+  },
+  "connectors.can.tiktok_ads.2": {
+    "value": "Create and adjust campaigns and ads"
+  },
   "connectors.can.google_docs.1": {
     "value": "Search and read documents"
   },
@@ -32613,8 +33481,41 @@
   "connectors.can.database.3": {
     "value": "Never changes anything"
   },
-  "connectors.connectedList": {
-    "value": "Connected"
+  "connectors.can.telegram.1": {
+    "value": "Read what people write to the bot"
+  },
+  "connectors.can.telegram.2": {
+    "value": "Send messages and files as the bot"
+  },
+  "connectors.can.telegram.ask": {
+    "value": "Deleting, banning and invite links always ask for your approval"
+  },
+  "connectors.can.x.1": {
+    "value": "Read the account's posts and mentions"
+  },
+  "connectors.can.x.2": {
+    "value": "Post with pictures or a video"
+  },
+  "connectors.can.x.ask": {
+    "value": "Deleting posts always asks for your approval"
+  },
+  "connectors.can.threads.1": {
+    "value": "See posts, replies and results"
+  },
+  "connectors.can.threads.2": {
+    "value": "Post with pictures or videos and reply"
+  },
+  "connectors.can.threads.ask": {
+    "value": "Deleting posts always asks for your approval"
+  },
+  "connectors.can.tiktok.1": {
+    "value": "See the profile and videos"
+  },
+  "connectors.can.tiktok.2": {
+    "value": "Send videos to your drafts to finish in TikTok"
+  },
+  "connectors.can.tiktok.ask": {
+    "value": "Each upload always asks for your approval"
   },
   "connectors.connected": {
     "value": "Connected"
@@ -32961,6 +33862,9 @@
   "connectors.descriptions.meta_ads": {
     "value": "Facebook and Instagram ad campaigns and results."
   },
+  "connectors.descriptions.tiktok_ads": {
+    "value": "TikTok ad campaigns, ad groups, ads and their results."
+  },
   "connectors.descriptions.klaviyo": {
     "value": "Campaigns, flows, lists and profiles."
   },
@@ -33023,6 +33927,21 @@
   },
   "connectors.descriptions.whatsapp": {
     "value": "WhatsApp Business messages and templates."
+  },
+  "connectors.descriptions.telegram": {
+    "value": "A Telegram bot of yours: its chats, groups and channels."
+  },
+  "connectors.descriptions.x": {
+    "value": "Posts on your X account: write, read mentions and search."
+  },
+  "connectors.descriptions.threads": {
+    "value": "Posts and replies on your Threads account."
+  },
+  "connectors.descriptions.tiktok": {
+    "value": "Your TikTok profile and videos, and videos sent to your drafts."
+  },
+  "connectors.needsApp": {
+    "value": "This server has no {{name}} app yet: whoever runs it registers one with {{name}} and sets its variables (docs/social-apps-checklist.md)."
   },
   "toolNames.order": {
     "value": "modifiers-first"
@@ -35346,6 +36265,9 @@
   "toolNames.label.image_search": {
     "value": "Search for pictures"
   },
+  "toolNames.label.show_image": {
+    "value": "Show pictures from the web"
+  },
   "toolNames.label.create_routine": {
     "value": "Create routine"
   },
@@ -35492,6 +36414,102 @@
   },
   "toolNames.label.offer_feedback": {
     "value": "Offer to report a problem"
+  },
+  "toolNames.label.list_chats": {
+    "value": "List chats"
+  },
+  "toolNames.label.read_messages": {
+    "value": "Read messages"
+  },
+  "toolNames.label.get_chat": {
+    "value": "See chat"
+  },
+  "toolNames.label.send_file": {
+    "value": "Send file"
+  },
+  "toolNames.label.edit_message": {
+    "value": "Edit message"
+  },
+  "toolNames.label.pin_message": {
+    "value": "Pin message"
+  },
+  "toolNames.label.ban_member": {
+    "value": "Ban member"
+  },
+  "toolNames.label.create_invite_link": {
+    "value": "Create invite link"
+  },
+  "toolNames.label.get_my_posts": {
+    "value": "See my posts"
+  },
+  "toolNames.label.get_mentions": {
+    "value": "See mentions"
+  },
+  "toolNames.label.search_recent": {
+    "value": "Search recent posts"
+  },
+  "toolNames.label.get_replies": {
+    "value": "See replies"
+  },
+  "toolNames.label.get_insights": {
+    "value": "See results"
+  },
+  "toolNames.label.reply": {
+    "value": "Reply"
+  },
+  "toolNames.label.hide_reply": {
+    "value": "Hide reply"
+  },
+  "toolNames.label.list_ad_accounts": {
+    "value": "List ad accounts"
+  },
+  "toolNames.label.list_campaigns": {
+    "value": "List campaigns"
+  },
+  "toolNames.label.list_ad_sets": {
+    "value": "List ad sets"
+  },
+  "toolNames.label.list_ads": {
+    "value": "List ads"
+  },
+  "toolNames.label.create_campaign": {
+    "value": "Create campaign"
+  },
+  "toolNames.label.create_ad_set": {
+    "value": "Create ad set"
+  },
+  "toolNames.label.create_ad": {
+    "value": "Create ad"
+  },
+  "toolNames.label.update": {
+    "value": "Update"
+  },
+  "toolNames.label.pause": {
+    "value": "Pause"
+  },
+  "toolNames.label.activate": {
+    "value": "Turn on"
+  },
+  "toolNames.label.set_budget": {
+    "value": "Set budget"
+  },
+  "toolNames.label.archive": {
+    "value": "Archive"
+  },
+  "toolNames.label.delete": {
+    "value": "Delete"
+  },
+  "toolNames.label.list_videos": {
+    "value": "List videos"
+  },
+  "toolNames.label.get_creator_info": {
+    "value": "See posting options"
+  },
+  "toolNames.label.get_post_status": {
+    "value": "See upload status"
+  },
+  "toolNames.label.upload_draft": {
+    "value": "Send to drafts"
   },
   "toolReview.title": {
     "value": "Review what the agent can do on its own"
@@ -35865,6 +36883,57 @@
   "connectFlow.serverSaid": {
     "value": "The server answered: {{detail}}"
   },
+  "connectFlow.ownClient.title": {
+    "value": "Use your own OAuth app"
+  },
+  "connectFlow.ownClient.notApproved": {
+    "value": "{{name}} only lets in apps it approved, and agentes.chat isn't one yet. You can connect it with your own app there."
+  },
+  "connectFlow.ownClient.askAdmin": {
+    "value": "An admin can connect it with the workspace's own app."
+  },
+  "connectFlow.ownClient.help": {
+    "value": "Create an app at the provider, register this redirect URI in it and paste its client ID. Every sign-in there from the workspace then uses your app."
+  },
+  "connectFlow.ownClient.guide.metaAds": {
+    "value": "In Meta for Developers, create an app with the Marketing API use case. Add this redirect URI to its valid OAuth redirect URIs, then paste the App ID, and the App Secret if your app requires it."
+  },
+  "connectFlow.ownClient.redirectUri": {
+    "value": "Redirect URI"
+  },
+  "connectFlow.ownClient.copied": {
+    "value": "Redirect URI copied."
+  },
+  "connectFlow.ownClient.clientId": {
+    "value": "Client ID"
+  },
+  "connectFlow.ownClient.clientIdMissing": {
+    "value": "Paste the app's client ID."
+  },
+  "connectFlow.ownClient.clientSecret": {
+    "value": "Client secret"
+  },
+  "connectFlow.ownClient.clientSecretHelp": {
+    "value": "Only if the app requires one. It's kept encrypted and never shown again."
+  },
+  "connectFlow.ownClient.secretSaved": {
+    "value": "A secret is saved. Leave this empty to keep it."
+  },
+  "connectFlow.ownClient.scopes": {
+    "value": "Scopes"
+  },
+  "connectFlow.ownClient.scopesHelp": {
+    "value": "What every sign-in asks for, separated by spaces. Leave it empty for what the server lists."
+  },
+  "connectFlow.ownClient.save": {
+    "value": "Save and continue"
+  },
+  "connectFlow.ownClient.remove": {
+    "value": "Remove"
+  },
+  "connectFlow.ownClient.removed": {
+    "value": "Your app was removed."
+  },
   "connectFlow.headers.title": {
     "value": "Request headers"
   },
@@ -36011,6 +37080,15 @@
   },
   "connectFlow.done.ok": {
     "value": "Done"
+  },
+  "connectFlow.telegram.token": {
+    "value": "Bot token"
+  },
+  "connectFlow.telegram.steps": {
+    "value": "In Telegram, open @BotFather, send /newbot, pick a name and a username that ends in “bot”, then paste the token it gives you here. To read a group, add the bot to it. To post in a channel, make it an admin there."
+  },
+  "connectFlow.x.consent": {
+    "value": "Agents you give X post on this account by themselves. Deleting a post asks first, and each agent's page narrows what it may do. An X account works in one workspace at a time."
   },
   "database.name": {
     "value": "Database"
@@ -37347,6 +38425,15 @@
   "files.comments.loadFailed": {
     "value": "This image can't be shown here."
   },
+  "files.comments.mark": {
+    "value": "Mark"
+  },
+  "files.comments.markOff": {
+    "value": "Stop marking: a click moves the file again"
+  },
+  "files.comments.markOn": {
+    "value": "Mark: a click comments on a point or an area"
+  },
   "files.comments.hint.image": {
     "value": "Click to mark a point or drag to mark an area"
   },
@@ -37457,6 +38544,24 @@
   },
   "errors.surface.codeGone": {
     "value": "This code is wrong, used or ran out after 10 minutes. Make a new code and send it again."
+  },
+  "errors.surface.pageGone": {
+    "value": "This link ran out. Ask your assistant in the chat for a new one."
+  },
+  "errors.surface.pageElsewhere": {
+    "value": "This link was opened on another device. Ask your assistant in the chat for a new one."
+  },
+  "errors.surface.pinWrong": {
+    "value": "Wrong PIN. Tries left: {{left}}."
+  },
+  "errors.surface.pinLocked": {
+    "value": "Too many wrong PINs. Try again later, or choose a new PIN in the app."
+  },
+  "errors.surface.pinShape": {
+    "value": "Your PIN has 6 digits."
+  },
+  "errors.surface.pinResetGone": {
+    "value": "This link was already used or ran out. Ask for a new one with “Forgot your PIN?”."
   },
   "errors.wallpaper.notYours": {
     "value": "That photo isn't yours."
@@ -37578,6 +38683,12 @@
   "errors.said.generalStays": {
     "value": "Everyone stays in #general."
   },
+  "errors.said.leadChannelOnly": {
+    "value": "Only channels have a responsible agent."
+  },
+  "errors.said.leadNotMember": {
+    "value": "The responsible agent has to be in the channel."
+  },
   "errors.said.mcpUnreachable": {
     "value": "Couldn't connect to the MCP server. Check its address and try again."
   },
@@ -37640,6 +38751,33 @@
   },
   "errors.said.computer": {
     "value": "The computer couldn't do this now. Check that it's on and try again."
+  },
+  "errors.codeSession.noComputer": {
+    "value": "This agent has no computer yet. Give it one in its settings to code with it."
+  },
+  "errors.codeSession.cannotCode": {
+    "value": "This agent can't code on its computer. Give it a coding app in its settings, or let it run code there."
+  },
+  "errors.codeSession.repoNotAllowed": {
+    "value": "This agent can't work in that repository. Pick another one, or add it in the agent's settings."
+  },
+  "errors.codeSession.notYours": {
+    "value": "Only who opened the session, or an admin, closes it."
+  },
+  "errors.codeSession.notReady": {
+    "value": "The session's worktree isn't ready yet. Try again in a moment."
+  },
+  "errors.codeSession.fileChanged": {
+    "value": "This file changed on the computer after you opened it."
+  },
+  "errors.codeSession.fileLocked": {
+    "value": "This file can't be edited here."
+  },
+  "errors.codeSession.suggestionGone": {
+    "value": "This suggestion was answered already."
+  },
+  "errors.codeSession.suggestionNotYours": {
+    "value": "Only who asked decides whether to open the session."
   },
   "errors.webhook.githubNoAccess": {
     "value": "This workspace's GitHub can't add webhooks to {{repo}}. Follow the steps below to add it by hand."
@@ -37728,6 +38866,15 @@
   "errors.connector.headersUnreadable": {
     "value": "The saved headers couldn't be read. Type them again, or remove them."
   },
+  "errors.connector.noOAuth": {
+    "value": "The MCP server doesn't sign in with OAuth, so it takes no app of yours. Connect it with an API key."
+  },
+  "errors.connector.ownClientInUse": {
+    "value": "Accounts still sign in with the app saved before. Disconnect them first, then change it."
+  },
+  "errors.connector.ownClientId": {
+    "value": "Check the client ID: one word, as the provider shows it."
+  },
   "errors.wiki.githubNoNotes": {
     "value": "No Markdown notes in this link."
   },
@@ -37815,6 +38962,18 @@
   "errors.teamProposal.undoExpired": {
     "value": "It is more than a day since this team was created, so it can't be undone here. Archive its agents on their pages."
   },
+  "errors.proposal.changed": {
+    "value": "This changed after it was applied: adjust it by hand."
+  },
+  "errors.proposal.notApplied": {
+    "value": "This change wasn't applied, so there is nothing to undo."
+  },
+  "errors.proposal.notUndoable": {
+    "value": "A deleted agent can't come back."
+  },
+  "errors.proposal.notAllowed": {
+    "value": "Only someone who may make this change can undo it."
+  },
   "errors.agentProposal.decided": {
     "value": "Someone already decided this proposal."
   },
@@ -37901,6 +39060,9 @@
   },
   "errors.org.createInviteOnly": {
     "value": "New workspaces need an invitation for now."
+  },
+  "errors.org.createUnconfirmed": {
+    "value": "Open the link we sent to your email first. Then create the workspace."
   },
   "errors.org.membersFull": {
     "value": "Every seat in this workspace is taken right now. Ask whoever invited you to open a seat."
@@ -38088,6 +39250,9 @@
   "errors.routine.webhookPaused": {
     "value": "Turn the routine on to test it."
   },
+  "errors.routine.groupByInvalid": {
+    "value": "Write a path such as conversation.id, with a field name between each dot."
+  },
   "errors.routine.continueExtraOff": {
     "value": "This plan's window is used up and this agent's long work doesn't use the plan's paid extra usage. It picks up after the reset."
   },
@@ -38169,6 +39334,12 @@
   "errors.artifact.notInDrive": {
     "value": "This lives only in its conversation, so it can't be shared."
   },
+  "errors.artifact.viewOnly": {
+    "value": "You can view this file but not change it. Ask whoever made it for edit access."
+  },
+  "errors.artifact.accessInvalid": {
+    "value": "This access couldn't be saved. Check who sees and who edits it and try again."
+  },
   "errors.drive.folderIntoItself": {
     "value": "A folder can't go inside itself or a folder inside it."
   },
@@ -38234,6 +39405,9 @@
   },
   "errors.device.tasksOwnerOnly": {
     "value": "Only the person who connected this computer can change how many tasks it runs at once."
+  },
+  "errors.device.tasksCloud": {
+    "value": "The Cloud sizes this computer's room for tasks itself."
   },
   "errors.device.notHome": {
     "value": "Agents live on the workspace computer and use this one when they name it."
@@ -38402,6 +39576,9 @@
   },
   "errors.account.notOwner": {
     "value": "Only the person who connected this account or plan can do this."
+  },
+  "errors.account.permissionForbidden": {
+    "value": "Only the account's owner, an admin or whoever may manage it can change this."
   },
   "errors.account.orderForbidden": {
     "value": "Only the person who connected this account or an admin can change its place in the order."
@@ -39281,6 +40458,21 @@
   "devices.maxTasksHint": {
     "value": "How many background tasks agents run here at the same time. The rest wait their turn."
   },
+  "devices.tasksAutoRoom": {
+    "value": "Automatic · {{running}} running · room for about {{more}} more"
+  },
+  "devices.tasksAutoFull": {
+    "value": "Automatic · {{running}} running · full for now"
+  },
+  "devices.tasksAutoHint": {
+    "value": "Agents start background tasks while this computer has memory to spare, keeping 1.5 GB free for your own apps. The rest wait their turn."
+  },
+  "devices.pushHarder": {
+    "value": "Push harder"
+  },
+  "devices.pushHarderHint": {
+    "value": "More tasks at once: only 0.5 GB of memory stays free and a busy processor doesn't hold them. Your own apps may slow down."
+  },
   "devices.belongs": {
     "value": "Belongs to the workspace"
   },
@@ -39434,6 +40626,9 @@
   "devices.status.busy": {
     "value": "Busy {{running}}/{{max}}"
   },
+  "devices.status.busyRunning": {
+    "value": "Busy · {{running}} running"
+  },
   "devices.status.needs": {
     "value": "Needs you"
   },
@@ -39490,6 +40685,15 @@
   },
   "devices.line.tasksUpdate": {
     "value": "Tasks at once here: {{max}}. Update its app to change that from here."
+  },
+  "devices.line.tasksNoMemory": {
+    "value": "No room for another task right now: {{gb, number}} GB of memory free. The next one starts when one ends."
+  },
+  "devices.line.tasksNoCpu": {
+    "value": "No room for another task right now: the processor is nearly full. The next one starts when it calms down."
+  },
+  "devices.line.tasksPushing": {
+    "value": "Pushing harder: {{gb, number}} GB of memory free. Your own apps may slow down."
   },
   "devices.line.offline": {
     "value": "Agents wait for it to come back."
@@ -39761,11 +40965,20 @@
   "devices.who.followsHint": {
     "value": "An iPhone follows the rule of the Mac it's plugged into."
   },
-  "devices.who.serverHelp": {
-    "value": "Each agent runs as its own user on it."
+  "devices.share.title": {
+    "value": "Let the whole workspace use it"
   },
-  "devices.who.computerHelp": {
-    "value": "Agents' commands run as your user on it."
+  "devices.share.off": {
+    "value": "Only you for now"
+  },
+  "devices.share.on": {
+    "value": "Everyone in {{org}}"
+  },
+  "devices.share.hint": {
+    "value": "Everyone's agents in {{org}} can run tasks on it, as your user."
+  },
+  "devices.share.hintServer": {
+    "value": "Everyone's agents in {{org}} can run tasks on it, each as its own user."
   },
   "devices.request.title": {
     "value": "{{name}} wants to join {{org}}"
@@ -39781,9 +40994,6 @@
   },
   "devices.request.denied": {
     "value": "{{name}} won't join."
-  },
-  "devices.request.joined": {
-    "value": "{{name}} joined."
   },
   "devices.empty.title": {
     "value": "No devices yet"
@@ -42750,7 +43960,7 @@
     "value": "Send anonymous usage statistics to agentes.chat"
   },
   "settings.telemetry.help": {
-    "value": "Counts such as people, agents, machine sizes, AI tokens used and how much data the agents' browsers send and receive. Never messages, files, names or sites."
+    "value": "Counts such as people, agents, machine sizes, AI tokens used, how much data the agents' browsers send and receive, and how fast the apps open and run. Never messages, files, names or sites."
   },
   "settings.telemetry.envOff": {
     "value": "Turned off in this server's settings (TELEMETRY=off)."
@@ -42955,9 +44165,6 @@
   },
   "settings.noKeys": {
     "value": "With an API key, you pay the provider directly and choose the models."
-  },
-  "settings.noKeysTitle": {
-    "value": "Bring your own AI key"
   },
   "settings.platformAvailable": {
     "value": "This server's Claude key is also available."
@@ -44294,18 +45501,6 @@
       "other": "{{count}} messages"
     }
   },
-  "chat.consultPanel.origin": {
-    "value": "{{from}} asked {{to}} in #{{channel}} · {{time}}"
-  },
-  "chat.consultPanel.originDm": {
-    "value": "{{from}} asked {{to}} · {{time}}"
-  },
-  "chat.consultPanel.originNote": {
-    "value": "{{from}} handed {{to}} work in #{{channel}} · {{time}}"
-  },
-  "chat.consultPanel.originNoteDm": {
-    "value": "{{from}} handed {{to}} work · {{time}}"
-  },
   "chat.consultPanel.readOnly": {
     "value": "Read only."
   },
@@ -44398,6 +45593,12 @@
   },
   "chat.notice.github.closedIssue": {
     "value": "{{who}} closed issue #{{number}} ({{repo}}) on GitHub"
+  },
+  "chat.notice.github.checkFailed": {
+    "value": "Check «{{check}}» didn't pass on PR #{{number}} ({{repo}}) on GitHub"
+  },
+  "chat.notice.github.checkFailedCommit": {
+    "value": "Check «{{check}}» didn't pass on commit {{commit}} ({{repo}}) on GitHub"
   },
   "chat.notice.github.ask": {
     "value": "Ask for a reply"
@@ -44655,6 +45856,9 @@
   },
   "chat.work.step.proposingMission": {
     "value": "Proposed a mission"
+  },
+  "chat.work.step.suggestingCodeSession": {
+    "value": "Suggested a code session"
   },
   "chat.work.step.messagingMission": {
     "value": "Sent a note to the mission"
@@ -45006,6 +46210,9 @@
   },
   "chat.activity.proposingMission": {
     "value": "proposing a mission"
+  },
+  "chat.activity.suggestingCodeSession": {
+    "value": "suggesting a code session"
   },
   "chat.activity.messagingMission": {
     "value": "sending a note to the mission"
@@ -45729,6 +46936,12 @@
   },
   "chat.body.done": {
     "value": "Done."
+  },
+  "chat.body.no_reply": {
+    "value": "The AI ended its turn without writing a reply. What it changed is below. Ask again for its answer."
+  },
+  "chat.body.no_reply_limit": {
+    "value": "The AI hit its output limit before writing a reply. What it changed is below. Ask again for its answer."
   },
   "chat.body.stretch_paused_runs": {
     "value": {
@@ -47759,6 +48972,12 @@
   "billing.ownBucket": {
     "value": "On your own bucket, with no limit from us"
   },
+  "billing.connectors": {
+    "value": "X this month"
+  },
+  "billing.shareUsed": {
+    "value": "{{share}} used"
+  },
   "referrals.open": {
     "value": "Refer and earn"
   },
@@ -48306,6 +49525,123 @@
   "agentSide.screenOffHelp": {
     "value": "It turns on when someone watches."
   },
+  "cliTools.read": {
+    "value": "Read"
+  },
+  "cliTools.search": {
+    "value": "Searched"
+  },
+  "cliTools.edit": {
+    "value": "Edited"
+  },
+  "cliTools.write": {
+    "value": "Wrote"
+  },
+  "cliTools.run": {
+    "value": "Ran"
+  },
+  "cliTools.fetch": {
+    "value": "Fetched"
+  },
+  "cliTools.delegate": {
+    "value": "Asked a subagent"
+  },
+  "cliTools.skill": {
+    "value": "Used the skill"
+  },
+  "cliTools.workflow": {
+    "value": "Ran a workflow"
+  },
+  "cliTools.other": {
+    "value": "Used"
+  },
+  "cliTools.running.read": {
+    "value": "Reading"
+  },
+  "cliTools.running.search": {
+    "value": "Searching"
+  },
+  "cliTools.running.edit": {
+    "value": "Editing"
+  },
+  "cliTools.running.write": {
+    "value": "Writing"
+  },
+  "cliTools.running.run": {
+    "value": "Running"
+  },
+  "cliTools.running.fetch": {
+    "value": "Fetching"
+  },
+  "cliTools.running.delegate": {
+    "value": "Asking a subagent"
+  },
+  "cliTools.running.skill": {
+    "value": "Using the skill"
+  },
+  "cliTools.running.workflow": {
+    "value": "Running a workflow"
+  },
+  "cliTools.running.other": {
+    "value": "Using"
+  },
+  "cliTools.lines": {
+    "value": "+{{added}} −{{removed}}"
+  },
+  "cliTools.added": {
+    "value": "+{{added}}"
+  },
+  "cliTools.found": {
+    "value": {
+      "one": "{{count}} place",
+      "other": "{{count}} places"
+    }
+  },
+  "cliTools.files": {
+    "value": {
+      "one": "{{count}} file",
+      "other": "{{count}} files"
+    }
+  },
+  "cliTools.passed": {
+    "value": {
+      "one": "{{count}} passed",
+      "other": "{{count}} passed"
+    }
+  },
+  "cliTools.failedTests": {
+    "value": {
+      "one": "{{count}} failed",
+      "other": "{{count}} failed"
+    }
+  },
+  "cliTools.exit": {
+    "value": "exit {{code}}"
+  },
+  "cliTools.progress.block": {
+    "value": "{{name}}'s subagents"
+  },
+  "cliTools.progress.subagent": {
+    "value": "Subagent"
+  },
+  "cliTools.progress.agents": {
+    "value": {
+      "one": "{{count}} subagent",
+      "other": "{{count}} subagents"
+    }
+  },
+  "cliTools.progress.done": {
+    "value": "{{done}} of {{total}} done"
+  },
+  "cliTools.progress.asking": {
+    "value": {
+      "one": "Asking a subagent",
+      "other": "Asking {{count}} subagents"
+    }
+  },
+  "cliTools.progress.workflowShort": {
+    "value": "workflow {{done}} of {{total}}"
+  },
   "agentComputer.title": {
     "value": "{{name}}'s computer"
   },
@@ -48542,6 +49878,54 @@
   },
   "agentComputer.phone.message": {
     "value": "Message {{name}}"
+  },
+  "codeTerminal.label": {
+    "value": "Terminal"
+  },
+  "codeTerminal.opening": {
+    "value": "Opening the terminal…"
+  },
+  "codeTerminal.openAgain": {
+    "value": "Open again"
+  },
+  "codeTerminal.ended": {
+    "value": "The shell ended"
+  },
+  "codeTerminal.dropped": {
+    "value": "The connection to the terminal dropped"
+  },
+  "codeTerminal.moved": {
+    "value": "This terminal is open in another window"
+  },
+  "codeTerminal.screening": {
+    "value": "Terminals are off here"
+  },
+  "codeTerminal.forbidden": {
+    "value": "Only whoever may use this computer opens a terminal"
+  },
+  "codeTerminal.offline": {
+    "value": "The computer is offline"
+  },
+  "codeTerminal.outdated": {
+    "value": "Update the computer to open the terminal in the session's folder"
+  },
+  "codeTerminal.unavailable": {
+    "value": "This agent's computer doesn't open terminals"
+  },
+  "codeTerminal.off": {
+    "value": "The terminal is off on {{computer}}"
+  },
+  "codeTerminal.busy": {
+    "value": "This computer has as many terminals open as it takes. Close one and open again."
+  },
+  "codeTerminal.paused": {
+    "value": "The computer is paused"
+  },
+  "codeTerminal.failed": {
+    "value": "Couldn't open the terminal"
+  },
+  "codeTerminal.agentFolder": {
+    "value": "The terminal opened in the agent's folder. Update the computer to open it in the session's folder."
   },
   "agora.label": {
     "value": "Now"
@@ -48842,6 +50226,9 @@
   },
   "taskManager.actions.openManager": {
     "value": "Open in the task manager"
+  },
+  "taskManager.actions.more": {
+    "value": "More actions"
   },
   "taskManager.confirm.chainTitle": {
     "value": {
@@ -50550,6 +51937,63 @@
   "share.someOnlyHere": {
     "value": "Some of these links open only for who already sees the file."
   },
+  "share.level.none": {
+    "value": "No access"
+  },
+  "share.level.view": {
+    "value": "View"
+  },
+  "share.level.edit": {
+    "value": "Edit"
+  },
+  "share.levelOf": {
+    "value": "What {{name}} can do"
+  },
+  "share.madeIt": {
+    "value": "Made the file"
+  },
+  "share.placeText": {
+    "value": "Where the file lives"
+  },
+  "share.everyoneText": {
+    "value": "Anyone in this workspace"
+  },
+  "share.everyoneTextPersonal": {
+    "value": "Anyone here"
+  },
+  "share.agentsAll": {
+    "value": "All agents"
+  },
+  "share.agentsAllText": {
+    "value": "Any agent in the workspace"
+  },
+  "share.agentsHere": {
+    "value": "Agents in this conversation"
+  },
+  "share.agentsHereText": {
+    "value": "The agents where the file lives"
+  },
+  "share.addAll": {
+    "value": "Add a person, role or agent"
+  },
+  "share.addAllPersonal": {
+    "value": "Add a person or agent"
+  },
+  "share.addAllSearch": {
+    "value": "Search people, roles and agents"
+  },
+  "share.addAllSearchPersonal": {
+    "value": "Search people and agents"
+  },
+  "share.groupAgents": {
+    "value": "Agents"
+  },
+  "share.addRow": {
+    "value": "Add"
+  },
+  "share.saved": {
+    "value": "Access saved."
+  },
   "linkErrors.signIn.title": {
     "value": "Sign in to open this link"
   },
@@ -52196,6 +53640,15 @@
   },
   "live.shell.status.closing": {
     "value": "The workspace is being deleted. Its files can only be read."
+  },
+  "live.shell.requestEdit": {
+    "value": "Ask to edit"
+  },
+  "live.shell.requestEditText": {
+    "value": "can you give me edit access to this file?"
+  },
+  "live.shell.requestEditAnyone": {
+    "value": "Can someone give me edit access to this file?"
   },
   "live.shell.present": {
     "value": "Present"
@@ -55026,133 +56479,40 @@
   "live.sheet.fn.YEARFRAC": {
     "value": "The share of a year between two dates"
   },
-  "errors.artifact.viewOnly": {
-    "value": "You can view this file but not change it. Ask whoever made it for edit access."
+  "surface.page.setFirst": {
+    "value": "Set your PIN first"
   },
-  "errors.artifact.accessInvalid": {
-    "value": "This access couldn't be saved. Check who sees and who edits it and try again."
+  "surface.page.setFirstLead": {
+    "value": "Approving from {{surface}} takes a PIN, and a link from the chat can't choose one. Choose it in the app, signed in, then come back to this page."
   },
-  "share.level.none": {
-    "value": "No access"
+  "surface.page.setFirstLeadEmail": {
+    "value": "Approving from {{surface}} takes a PIN, and a link from the chat can't choose one. Choose it in the app, signed in, or with a link we email you. Then come back to this page."
   },
-  "share.level.view": {
-    "value": "View"
+  "surface.page.openApp": {
+    "value": "Choose it in the app"
   },
-  "share.level.edit": {
-    "value": "Edit"
+  "surface.page.emailMe": {
+    "value": "Email me a link"
   },
-  "share.levelOf": {
-    "value": "What {{name}} can do"
+  "surface.pin.set": {
+    "value": "Set PIN"
   },
-  "share.madeIt": {
-    "value": "Made the file"
+  "surface.pin.change": {
+    "value": "Change PIN"
   },
-  "share.placeText": {
-    "value": "Where the file lives"
+  "surface.pin.title": {
+    "value": "Your {{surface}} PIN"
   },
-  "share.everyoneText": {
-    "value": "Anyone in this workspace"
+  "surface.pin.text": {
+    "value": "Six digits you type to approve actions you ask for from {{surface}}. It's never sent in the chat."
   },
-  "share.everyoneTextPersonal": {
-    "value": "Anyone here"
+  "surface.pin.save": {
+    "value": "Save PIN"
   },
-  "share.agentsAll": {
-    "value": "All agents"
+  "errors.surface.pinUnset": {
+    "value": "Set your PIN first. Choose it in the app, signed in."
   },
-  "share.agentsAllText": {
-    "value": "Any agent in the workspace"
-  },
-  "share.agentsHere": {
-    "value": "Agents in this conversation"
-  },
-  "share.agentsHereText": {
-    "value": "The agents where the file lives"
-  },
-  "share.addAll": {
-    "value": "Add a person, role or agent"
-  },
-  "share.addAllPersonal": {
-    "value": "Add a person or agent"
-  },
-  "share.addAllSearch": {
-    "value": "Search people, roles and agents"
-  },
-  "share.addAllSearchPersonal": {
-    "value": "Search people and agents"
-  },
-  "share.groupAgents": {
-    "value": "Agents"
-  },
-  "share.addRow": {
-    "value": "Add"
-  },
-  "share.saved": {
-    "value": "Access saved."
-  },
-  "live.shell.requestEdit": {
-    "value": "Ask to edit"
-  },
-  "live.shell.requestEditText": {
-    "value": "can you give me edit access to this file?"
-  },
-  "live.shell.requestEditAnyone": {
-    "value": "Can someone give me edit access to this file?"
-  },
-  "scopes.telegram_messages_read.label": {
-    "value": "Read messages"
-  },
-  "scopes.telegram_messages_read.description": {
-    "value": "List the bot's chats and read what people wrote to it or where it is."
-  },
-  "scopes.telegram_messages_write.label": {
-    "value": "Send messages"
-  },
-  "scopes.telegram_messages_write.description": {
-    "value": "Send, edit and pin messages and files as the bot. Deleting messages, banning people and invite links ask for approval."
-  },
-  "connectors.descriptions.telegram": {
-    "value": "A Telegram bot of yours: its chats, groups and channels."
-  },
-  "connectors.can.telegram.1": {
-    "value": "Read what people write to the bot"
-  },
-  "connectors.can.telegram.2": {
-    "value": "Send messages and files as the bot"
-  },
-  "connectors.can.telegram.ask": {
-    "value": "Deleting, banning and invite links always ask for your approval"
-  },
-  "toolNames.label.list_chats": {
-    "value": "List chats"
-  },
-  "toolNames.label.read_messages": {
-    "value": "Read messages"
-  },
-  "toolNames.label.get_chat": {
-    "value": "See chat"
-  },
-  "toolNames.label.send_file": {
-    "value": "Send file"
-  },
-  "toolNames.label.edit_message": {
-    "value": "Edit message"
-  },
-  "toolNames.label.pin_message": {
-    "value": "Pin message"
-  },
-  "toolNames.label.ban_member": {
-    "value": "Ban member"
-  },
-  "toolNames.label.create_invite_link": {
-    "value": "Create invite link"
-  },
-  "routines.event.telegram.message": {
-    "value": "Message to the Telegram bot"
-  },
-  "connectFlow.telegram.token": {
-    "value": "Bot token"
-  },
-  "connectFlow.telegram.steps": {
-    "value": "In Telegram, open @BotFather, send /newbot, pick a name and a username that ends in “bot”, then paste the token it gives you here. To read a group, add the bot to it. To post in a channel, make it an admin there."
+  "errors.surface.emailUnverified": {
+    "value": "Your email address isn't verified yet. Choose your PIN in the app instead."
   }
 }

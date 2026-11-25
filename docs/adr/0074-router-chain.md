@@ -1,6 +1,6 @@
 # 0074. Who answers a message nobody mentioned: the chain
 
-- Status: Accepted (built: the engine, the runner's `brain.route`, the shared client's receipts and status; the screens follow)
+- Status: Accepted (built: the engine, the runner's `brain.route`, the shared client's receipts and status; the screens follow); amended 2026-11-23 by ADR 0095 (in a channel with a responsible agent, that agent takes R5's default pick and what the policy gave several agents)
 - Date: 2026-10-27
 - Amends: ADR 0013 (failures and strategies), ADR 0034 §4 (agents' messages), ADR 0059 §5 (a personal plan answers its owner)
 - Code: `packages/engine/src/router.ts` (`routeMessage`, `smallModelFor`, the rules), `packages/engine/src/router-jev.ts` (`routeChain`), `packages/engine/src/router-plan.ts` (`planSignInsOf`, `createPlanRouterStrategy`), `packages/engine/src/ai-status.ts` (`orgRouting`), `packages/providers/src/catalog.ts` (`router`, `leastThinking`, `routerModelOf`), `apps/server/runner/brain-route.ts`

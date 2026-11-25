@@ -39,6 +39,7 @@ import { withdrawQuestion } from "./questions";
 import { releaseInbox } from "./run-inbox";
 import { resumeRunWithResult } from "./run-resume";
 import { joinsRun, placeAfter } from "./run-scope";
+import { runState } from "./run-state";
 import { type AgentRun, addRunStep, computerWaitOf, replyThreadOf, transitionRun, usageWaitOf } from "./runs";
 import { withdrawSecretRequest } from "./secrets";
 import type { ToolDefinition, ToolSource } from "./tools/types";
@@ -646,7 +647,7 @@ async function parkedOn(
         eq(agentRuns.background, false),
         sql`${agentRuns.workId} is null`,
         sql`(${agentRuns.waitingMachineId} is not null
-          or ${agentRuns.transcript}->'waitingForBrain'->>'code' in ('plan_limit', 'budget', 'usage_pause'))`,
+          or ${runState}->'waitingForBrain'->>'code' in ('plan_limit', 'budget', 'usage_pause'))`,
         sql`(${agentRuns.triggerMessageId} = any(${list}::uuid[]) or ${agentRuns.pendingMessageIds} && ${list}::uuid[])`,
       ),
     )

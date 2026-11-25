@@ -1,4 +1,5 @@
 import { ApiError } from "@agenteschat/client";
+import { busyRetryDelay, retryBusy } from "@agenteschat/client/lib/busy-retry";
 import { sessionEnded } from "@agenteschat/client/lib/errors";
 import { LiveQueryClient } from "@agenteschat/client/lib/live-query-client";
 import { MutationCache, QueryCache } from "@tanstack/react-query";
@@ -22,7 +23,8 @@ export function createQueryClient(handlers: {
   return new LiveQueryClient({
     defaultOptions: {
       queries: {
-        retry: (count, error) => !(error instanceof ApiError && error.status < 500) && count < 2,
+        retry: retryBusy((count, error) => !(error instanceof ApiError && error.status < 500) && count < 2),
+        retryDelay: busyRetryDelay,
         refetchOnWindowFocus: false,
         // The socket keeps what is cached current (its events update or invalidate it, and a reconnect reads it all
         // again), so a page shown again within this window shows what it has without asking the server once more.

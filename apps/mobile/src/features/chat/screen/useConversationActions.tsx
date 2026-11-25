@@ -1,5 +1,6 @@
 import {
   ApiError,
+  cardsInto,
   type Message,
   type MessagePin,
   type ReplyRef,
@@ -7,6 +8,7 @@ import {
   type useApi,
 } from "@agenteschat/client";
 import { canTalk } from "@agenteschat/client/lib/audience";
+import { useQueryClient } from "@tanstack/react-query";
 import { type ComponentProps, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { useTranslation } from "react-i18next";
 import type { useToast } from "@/ui";
@@ -102,6 +104,7 @@ export function useConversationActions({
     | "top"
   >;
 }) {
+  const qc = useQueryClient();
   const { aimAt, letGo, listRef, shownRows, toEnd } = follow;
   const {
     channel,
@@ -193,7 +196,7 @@ export function useConversationActions({
     if (around?.id === seek) return;
     setAround({ id: seek, done: false });
     api.chat
-      .messages(orgId, channelId, { around: seek, limit: SEEK_PAGE })
+      .messages(orgId, channelId, { around: seek, limit: SEEK_PAGE, onCards: cardsInto(qc, orgId) })
       .then((page) => {
         showAround(page);
         setAround({ id: seek, done: true });
@@ -207,6 +210,7 @@ export function useConversationActions({
     isThread,
     around,
     api,
+    qc,
     orgId,
     channelId,
     showAround,

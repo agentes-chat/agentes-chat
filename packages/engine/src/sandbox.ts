@@ -23,6 +23,7 @@ import { isRightHand } from "./right-hand";
 import { machineScope, NO_HOME_MESSAGE, type ScopeContext, toolMachineId } from "./right-hand-seats";
 import { runnerUpdateWay } from "./runner-update";
 import { SANDBOX_SCOPE } from "./sandbox-scope";
+import { grantedScopeKeys, isAllowed, toolAccess } from "./tools/scopes";
 import type { ToolContext } from "./tools/types";
 
 const { orgSandboxSettings } = schema;
@@ -108,6 +109,26 @@ export async function getSandboxSettings(db: Database, orgId: string): Promise<S
   return { enabled: row.enabled, execTimeoutSeconds: row.execTimeoutSeconds, requireApproval: row.requireApproval };
 }
 
+/** `run_code` as the gateway checks it: what running commands on a computer takes. */
+export const RUN_CODE_TOOL = { name: "run_code", scope: SANDBOX_SCOPE } as const;
+
+/**
+ * Whether the agent may run commands on a computer: its grants allow `run_code` (`toolAccess`: a denial wins, then
+ * the tool, then `sandbox:run`) and the workspace's code environment is on. The agent's desktop needs it, and so does
+ * an agent that thinks through the API to work in a code session. `refused` says which of the two is missing.
+ */
+export async function codeRunning(
+  db: Database,
+  orgId: string,
+  agentId: string,
+  granted?: Set<string>,
+): Promise<{ refused: "grant" | "off" } | { refused: null; approvals: boolean }> {
+  const keys = granted ?? (await grantedScopeKeys(db, orgId, agentId));
+  if (!isAllowed(toolAccess(keys, RUN_CODE_TOOL))) return { refused: "grant" };
+  const settings = await getSandboxSettings(db, orgId);
+  return settings.enabled ? { refused: null, approvals: settings.requireApproval } : { refused: "off" };
+}
+
 /**
  * Org settings (admins, `configure`). The default timeout is clamped between 5 s and
  * `SANDBOX_LIMITS.maxTimeoutSeconds`.
@@ -176,7 +197,10 @@ export async function withSandbox<T>(
       options,
     );
   }
-  const machineId = await toolMachineId(deps.db, agent);
+  // In a code session (ADR 0215) the work runs on the session's computer, where its worktree is; with no worktree
+  // there for its own agent, nothing runs in the agent's own folder instead.
+  if (ctx.codeSession?.unavailable) throw new SandboxUnavailableError(ctx.codeSession.unavailable);
+  const machineId = ctx.codeSession?.place?.machineId ?? (await toolMachineId(deps.db, agent));
   if (agent && machineId) {
     return withMachine(deps, ctx, { machineId, handle: agent.handle, name: agent.name }, fn, options);
   }

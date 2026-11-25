@@ -34,6 +34,25 @@ describe("problem report", () => {
     expect(problemReportSchema.parse({ ...vector.minimal, extra: 1 })).not.toHaveProperty("extra");
   });
 
+  test("the desktop app's computer: its system's version is optional in format 1, its size and opening fit as they are", () => {
+    const desktop = {
+      ...vector.minimal,
+      source: "desktop",
+      place: "desktop_server",
+      timings: { opening: 6200 },
+      versions: { desktop: "0.8.18", os: "windows", osVersion: "10.0.19045", arch: "x86_64" },
+      facts: { "desktop.cpus": 8, "desktop.memoryGb": 15.5, "desktop.webviewMb": 412 },
+    };
+    expect(problemReportSchema.parse(desktop)).toMatchObject({
+      versions: { osVersion: "10.0.19045" },
+      timings: { opening: 6200 },
+      facts: { "desktop.cpus": 8, "desktop.memoryGb": 15.5, "desktop.webviewMb": 412 },
+    });
+    const withVersion = (osVersion: string) => problemReportSchema.safeParse({ ...desktop, versions: { osVersion } });
+    expect(withVersion("6.8.0-45-generic").success).toBe(true);
+    expect(withVersion("build/19045").success).toBe(false);
+  });
+
   test("a 5 MB log fits the cap and still parses", () => {
     const line = "x".repeat(999);
     const big: ProblemReport = {

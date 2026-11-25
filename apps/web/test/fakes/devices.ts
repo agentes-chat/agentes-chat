@@ -151,7 +151,26 @@ export function createFakeDevices(
     approveRequest: async (orgId, id, input) => {
       record("devices.approveRequest", orgId, id, input);
       const list = current();
-      own = { ...list, requests: list.requests.filter((r) => r.id !== id) };
+      const request = list.requests.find((r) => r.id === id);
+      // The computer joins as the server adds it: the maker's, with the name and rule they let it in with.
+      const joined: ComputerDevice[] = request
+        ? [
+            {
+              ...deviceOf({
+                id: `m-${id}`,
+                name: input.name ?? request.name,
+                os: request.os,
+                arch: request.arch,
+                hostname: request.hostname,
+                online: true,
+                lastSeenAt: now().toISOString(),
+                canManage: true,
+              } as Machine),
+              ...(input.audience ? { audience: input.audience } : {}),
+            },
+          ]
+        : [];
+      own = { ...list, devices: [...list.devices, ...joined], requests: list.requests.filter((r) => r.id !== id) };
       link = { ...link, status: "joined", machineId: `m-${id}` };
       return { machineId: `m-${id}` };
     },

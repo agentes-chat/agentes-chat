@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { freemem, totalmem } from "node:os";
+import { freemem, hostname, totalmem } from "node:os";
 import { join, resolve } from "node:path";
 import {
   type Adapters,
@@ -22,7 +22,9 @@ import {
   createPhonePushSender,
   createPostgresBlobStore,
   createPostgresDatabaseDriver,
+  createPostgresPresence,
   createPostgresPubSub,
+  createPostgresRateLimiter,
   createPostgresSearchResolver,
   createRelayPushSender,
   createS3BlobStore,
@@ -72,6 +74,7 @@ import {
   memoryBudget,
   meterComposio,
   moveIssueComments,
+  poolNeededFor,
   publicHostAddress,
   publicHttpsFetch,
   queueEmbeddingBackfill,
@@ -79,6 +82,7 @@ import {
   resolveHostDns,
   retireHostTokens,
   retireMillionSendMailboxes,
+  STARTUP_RAMP_MS,
   SURFACE_PREFIX,
   setMessageLinkBase,
   setRestrictionNotices,
@@ -96,22 +100,26 @@ import { type AgentesModule, type Edition, type ModuleContext, resolveAdapters }
 import { createModelProviders, enableOpenRouterModels } from "@agenteschat/providers";
 import { createApp } from "./app";
 import { createAuth } from "./auth";
+import { clientVitals } from "./client-vitals";
 import { buildEngine } from "./engine";
 import { watchEventLoopLag } from "./event-loop-lag";
 import { startFreezeWatch } from "./freeze-watch";
 import { checkHumanCheckAtBoot, createHumanCheck } from "./http/human-check";
+import { watchLoad } from "./load-shed";
 import { createLogger, type Logger } from "./logger";
 import { OPERATOR_API_PREFIX, serveOperatorApi } from "./operator/app";
+import { watchProcessHealth } from "./process-health";
 import { apnsKeyGaps, directPushSenders, phonePushMode, relayServeSender } from "./push-senders";
 import { createLiveSockets } from "./realtime/live";
 import { createMachineSockets } from "./realtime/machines";
 import { createStreamSockets } from "./realtime/streams";
 import { createRealtime, type SocketData } from "./realtime/ws";
+import { takeRouteTimes } from "./route-times";
 import type { AppDeps } from "./routes/app/context";
 import { workerHealth } from "./routes/health";
 import { startTelemetry } from "./telemetry";
 import { releaseOf, version } from "./version";
-import { startWorkers } from "./workers";
+import { type BootTask, startWorkers } from "./workers";
 
 /** On SIGTERM, how long runs in progress get to finish before they are handed to the next instance. */
 const RUN_DRAIN_MS = 20_000;
@@ -224,7 +232,11 @@ async function boot(
     );
   }
 
-  const database = createDatabase({ url: config.DATABASE_URL, poolMax: config.DATABASE_POOL_MAX });
+  const database = createDatabase({
+    url: config.DATABASE_URL,
+    poolMax: config.DATABASE_POOL_MAX,
+    applicationName: `agentes:${config.SERVER_ROLE}:${hostname()}`,
+  });
   await prepareDatabase(database, log, config.RUN_MIGRATIONS_ON_BOOT);
   // Best effort: a replica that boots before the migrations ran (RUN_MIGRATIONS_ON_BOOT=false) still starts.
   await retireHostTokens(database.db, config.HOST_COMPUTER_TOKEN).then(
@@ -277,8 +289,11 @@ async function boot(
           },
         })
       : createMemoryPubSub(),
-    presence: createMemoryPresence(),
-    rateLimiter: createMemoryRateLimiter(),
+    // On Postgres, several processes may each hold some of the open apps and answer some of the requests: who is
+    // online and how many tries a limit has left are counted where all of them read. The built-in database is one
+    // process's.
+    presence: database.client ? createPostgresPresence(database.db) : createMemoryPresence(),
+    rateLimiter: database.client ? createPostgresRateLimiter(database.db) : createMemoryRateLimiter(),
     keyWrapper: localKeyWrapper,
     legacyKeyWrappers: [],
     email: emailSender(config, log),
@@ -452,29 +467,6 @@ async function boot(
   await engine.githubApp.ready();
   await engine.speech.ready();
   log.info("voice messages", { engines: engine.speech.chain().map((e) => e.id) });
-  // Off the boot path: it calls MillionSend once per mailbox left from the withdrawn path (ADR 0102).
-  void retireMillionSendMailboxes({ db: database.db, keyWrappers: engine.mail.keyWrappers })
-    .then((r) => {
-      if (r.checked > 0)
-        log.info("MillionSend mailboxes disconnected", { checked: r.checked, webhooksLeft: r.webhooksLeft });
-    })
-    .catch((error: unknown) => log.warn("MillionSend mailboxes cleanup failed", { error: String(error) }));
-  // Off the boot path: every workspace made before the right hand gets one (ADR 0137); one query once they all have it.
-  void ensureRightHands(database.db)
-    .then((made) => {
-      if (made > 0) log.info("right hands created", { made });
-    })
-    .catch((error: unknown) => log.warn("right hands backfill failed", { error: String(error) }));
-  // Off the boot path, once (ADR 0167): untrusted memories saved from a person's own words are trusted again, and
-  // how-tos agents worked out between themselves that name nobody reach their other work.
-  void backfillMemoryTrust(database.db)
-    .then(async (r) => {
-      if (Object.keys(r.changed).length > 0) log.info("memory trust re-derived", { ...r });
-      const widened = await widenDmHowTos(database.db);
-      if (widened > 0) log.info("how-tos out of agents' DMs", { widened });
-    })
-    .catch((error: unknown) => log.warn("memory backfill failed", { error: String(error) }));
-  // Off the boot path (ADR 0167): what this model hasn't embedded yet gets its vectors, a reindex per workspace.
   const vectors = engine.embeddings;
   if (config.EMBEDDINGS_PROVIDER !== "none" && !vectors) {
     const missing = config.EMBEDDINGS_PROVIDER === "voyage" ? "VOYAGE_API_KEY" : "EMBEDDINGS_URL";
@@ -482,25 +474,72 @@ async function boot(
       because: `EMBEDDINGS_PROVIDER=${config.EMBEDDINGS_PROVIDER} needs ${missing}`,
     });
   }
-  if (vectors?.kinds) {
-    void queueEmbeddingBackfill(database.db, { model: vectors.provider.model, kinds: vectors.kinds })
-      .then((queued) => {
-        if (queued > 0) log.info("embeddings backfill queued", { workspaces: queued, model: vectors.provider.model });
-      })
-      .catch((error: unknown) => log.warn("embeddings backfill failed", { error: String(error) }));
-  }
-  // Off the boot path: tasks' comments from before their conversations move into them once (ADR 0145).
-  void moveIssueComments(database.db)
-    .then((moved) => {
-      if (moved > 0) log.info("task comments moved to conversations", { moved });
-    })
-    .catch((error: unknown) => log.warn("task comments move failed", { error: String(error) }));
-  // Off the boot path: files agents saved in rooms no person reads go to the person they worked for (ADR 0111).
-  void surfaceRoomFiles(database.db)
-    .then((moved) => {
-      if (moved > 0) log.info("files moved out of agent rooms", { moved });
-    })
-    .catch((error: unknown) => log.warn("files move out of agent rooms failed", { error: String(error) }));
+  // Off the boot path, in the process that does the database's sweeps (`BootTask`).
+  const bootTasks: BootTask[] = [
+    // MillionSend is called once per mailbox left from the withdrawn path (ADR 0102); a delete that failed goes again.
+    {
+      name: "millionsend-mailboxes",
+      run: async () => {
+        const r = await retireMillionSendMailboxes({ db: database.db, keyWrappers: engine.mail.keyWrappers });
+        if (r.checked > 0)
+          log.info("MillionSend mailboxes disconnected", { checked: r.checked, webhooksLeft: r.webhooksLeft });
+      },
+    },
+    // Every workspace made before the right hand gets one (ADR 0137): one query once they all have it.
+    {
+      name: "right-hands",
+      run: async () => {
+        const made = await ensureRightHands(database.db);
+        if (made > 0) log.info("right hands created", { made });
+      },
+    },
+    // Untrusted memories saved from a person's own words are trusted again, and how-tos agents worked out between
+    // themselves that name nobody reach their other work (ADR 0167).
+    {
+      name: "memory-trust",
+      once: true,
+      run: async () => {
+        const r = await backfillMemoryTrust(database.db);
+        if (Object.keys(r.changed).length > 0) log.info("memory trust re-derived", { ...r });
+        const widened = await widenDmHowTos(database.db);
+        if (widened > 0) log.info("how-tos out of agents' DMs", { widened });
+      },
+    },
+    // What this model hasn't embedded yet gets its vectors, a reindex per workspace (ADR 0167); a failed one goes again.
+    ...(vectors?.kinds
+      ? [
+          {
+            name: "embeddings",
+            run: async () => {
+              const queued = await queueEmbeddingBackfill(database.db, {
+                model: vectors.provider.model,
+                kinds: vectors.kinds ?? [],
+              });
+              if (queued > 0)
+                log.info("embeddings backfill queued", { workspaces: queued, model: vectors.provider.model });
+            },
+          },
+        ]
+      : []),
+    // Tasks' comments from before their conversations move into them (ADR 0145).
+    {
+      name: "issue-comments",
+      once: true,
+      run: async () => {
+        const moved = await moveIssueComments(database.db);
+        if (moved > 0) log.info("task comments moved to conversations", { moved });
+      },
+    },
+    // Files agents saved in rooms no person reads go to the person they worked for (ADR 0111).
+    {
+      name: "room-files",
+      once: true,
+      run: async () => {
+        const moved = await surfaceRoomFiles(database.db);
+        if (moved > 0) log.info("files moved out of agent rooms", { moved });
+      },
+    },
+  ];
   // A worker (`SERVER_ROLE=worker`) runs jobs only: no app, API, sockets or usage report, its health check alone. Its
   // runs reach computers through the process that holds their socket (`machine_rpc`).
   const worker = config.SERVER_ROLE === "worker";
@@ -510,9 +549,18 @@ async function boot(
     rssBytes: process.memoryUsage().rss,
     freeBytes: freemem(),
   });
+  if (database.client && config.DATABASE_POOL_MAX < poolNeededFor(config.OUTBOX_MAX_IN_FLIGHT)) {
+    log.warn("too few database connections for the job slots: jobs and requests will wait on each other", {
+      DATABASE_POOL_MAX: config.DATABASE_POOL_MAX,
+      OUTBOX_MAX_IN_FLIGHT: config.OUTBOX_MAX_IN_FLIGHT,
+      needsAtLeast: poolNeededFor(config.OUTBOX_MAX_IN_FLIGHT),
+    });
+  }
   const outbox = {
     maxInFlight: config.OUTBOX_MAX_IN_FLIGHT,
     quickSlots: config.OUTBOX_QUICK_SLOTS,
+    // The runs a restart left waiting start over a minute, the starting long slots in their first 10 seconds.
+    startupRamp: { perSecond: Math.max(1, Math.ceil(slots.long / 10)), forMs: STARTUP_RAMP_MS },
     ...(worker && { skipKinds: APP_JOB_KINDS }),
     // The built-in database is one process's, on one computer: its slots stay where they start.
     ...(database.client && {
@@ -546,6 +594,8 @@ async function boot(
       : {}),
     outbox,
     builtInDatabase: !database.client,
+    role: config.SERVER_ROLE,
+    bootTasks,
     errors,
     log,
   });
@@ -561,6 +611,19 @@ async function boot(
     pubsub: adapters.pubsub,
   });
   let stopping = false;
+  const load = worker
+    ? null
+    : watchLoad({
+        ping: database.ping,
+        sockets: () => realtime.sockets(),
+        limits: {
+          eventLoopMs: config.LOAD_SHED_EVENT_LOOP_MS,
+          dbWaitMs: config.LOAD_SHED_DB_WAIT_MS,
+          sockets: config.LOAD_SHED_MAX_SOCKETS,
+        },
+        log,
+      });
+  const overloaded = () => load?.overloaded() ?? null;
   const services: AppDeps = {
     db: database.db,
     auth,
@@ -595,6 +658,7 @@ async function boot(
     version,
     modules,
     draining: () => stopping,
+    overloaded,
     moduleContext: ctx,
     services,
     log,
@@ -622,6 +686,7 @@ async function boot(
     ...adapters,
     machines: createMachineSockets(engine.machineHub),
     browserLive: engine.browserLive,
+    overloaded,
     streams: createStreamSockets({ db: database.db, auth, config, broker: engine.streams }),
     live: liveSockets,
   });
@@ -672,6 +737,17 @@ async function boot(
     url: `http://${config.HOST}:${config.PORT}`,
   });
   const eventLoopLag = watchEventLoopLag(log);
+  const processHealth = watchProcessHealth({
+    db: database.db,
+    log,
+    role: config.SERVER_ROLE,
+    version: release,
+    eventLoopLag,
+    clientVitals: () => clientVitals.take(),
+    heapSnapshotMb: config.HEAP_SNAPSHOT_MB,
+    heapSnapshotDir: config.HEAP_SNAPSHOT_DIR,
+    ...(worker ? {} : { routeTimes: takeRouteTimes }),
+  });
   const operator = worker
     ? null
     : serveOperatorApi({
@@ -714,6 +790,8 @@ async function boot(
     // HTTP stops taking requests (the new deploy serves them). Not awaited: the
     // promise resolves only once every socket is closed, and browser tabs never close theirs.
     telemetry?.stop();
+    load?.stop();
+    processHealth.stop();
     void server?.stop();
     void operator?.stop();
     // Runners reconnect to the next instance, and people's desktops and terminals open again there.
@@ -819,14 +897,17 @@ function platformBlobStore(config: Config, db: Database) {
   if (!S3_ENDPOINT || !S3_BUCKET || !S3_ACCESS_KEY_ID || !S3_SECRET_ACCESS_KEY) {
     return config.FILES_DIR ? createDiskBlobStore(config.FILES_DIR) : createPostgresBlobStore(db);
   }
-  return createS3BlobStore({
-    endpoint: S3_ENDPOINT,
-    region: config.S3_REGION,
-    bucket: S3_BUCKET,
-    accessKeyId: S3_ACCESS_KEY_ID,
-    secretAccessKey: S3_SECRET_ACCESS_KEY,
-    pathStyle: config.S3_PATH_STYLE,
-  });
+  return createS3BlobStore(
+    {
+      endpoint: S3_ENDPOINT,
+      region: config.S3_REGION,
+      bucket: S3_BUCKET,
+      accessKeyId: S3_ACCESS_KEY_ID,
+      secretAccessKey: S3_SECRET_ACCESS_KEY,
+      pathStyle: config.S3_PATH_STYLE,
+    },
+    { presign: config.S3_PRESIGNED_URLS },
+  );
 }
 
 /** At most one log line this often about push services refusing this server's signature. */

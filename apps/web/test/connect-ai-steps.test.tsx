@@ -105,7 +105,7 @@ async function withPopup(run: () => Promise<void>) {
 
 /**
  * Settings › AI accounts with Ada (Walter's) on the MacBook, a computer someone else connected for the workspace
- * (`brain`: Ada's view; `machine`: over its row), and "Conectar uma IA" opened. `setup`: the workspace gets its own
+ * (`brain`: Ada's view; `machine`: over its row), and "Add account" opened (Connect). `setup`: the workspace gets its own
  * computer, this far.
  */
 async function connect({
@@ -169,7 +169,7 @@ async function connect({
   api.agents.brain = async (orgId, agentId) => ({ ...(await viewOf(orgId, agentId)), ownSignIn: false, ...brain });
   const { router, services } = await renderApp(path, { api });
   await settle(6);
-  if (!path.includes("connect=ai")) await click(screen().getByRole("button", { name: "Conectar uma IA" }));
+  if (!path.includes("connect=ai")) await click(screen().getByRole("button", { name: "Adicionar conta" }));
   await settle(4);
   // For one agent the picker; for the team (`crew`) the narrow dialog under the sky, whose title follows its screen.
   const dialog = screen().getByRole("dialog");
@@ -999,6 +999,27 @@ describe("Conectar uma IA: one picker, plans first", () => {
     expect(within(there).queryByRole("button", { name: "Instalar o Claude Code para mim" })).toBeNull();
   });
 
+  test("the Antigravity CLI only in root's folders, where agents can't reach it: why, the line that installs it for all, Check again", async () => {
+    const options = [
+      ...fakeAgentBrain(ADA_ID).options,
+      { kind: "antigravity" as const, available: false, reason: "cant_start" as const, models: [], defaultModel: null },
+    ];
+    const name = "srv-1";
+    const { dialog, choose, state } = await connect({
+      machine: { os: "linux", name, mode: "system", cliInstall: true, cliErrors: { antigravity: "home_only" } },
+      brain: { computer: { machineId: "machine_1", name, online: true }, options },
+    });
+    await choose("Gemini");
+    const panel = within(dialog).getByRole("region", { name: "Seu plano do Gemini" });
+    expect(panel.textContent).toContain("O Antigravity CLI está instalado só para o root no srv-1.");
+    expect(panel.querySelector("code")?.textContent).toBe(
+      "sudo env HOME=/opt/agy sh -c 'curl -fsSL https://antigravity.google/cli/install.sh | bash -s -- --skip-path' && sudo chmod -R a+rX /opt/agy && sudo ln -sf /opt/agy/.local/bin/agy /usr/local/bin/agy",
+    );
+    await click(within(panel).getByRole("button", { name: "Já instalei, verificar de novo" }));
+    await settle(4);
+    expect(calls(state, "machines.checkClis")).toHaveLength(1);
+  });
+
   test("a plan whose program is off on its computer: the cause alone, then one way out by whose computer it is", async () => {
     const panel = async (machine: Partial<Machine>, name = "MacBook") => {
       cleanup();
@@ -1059,7 +1080,7 @@ describe("Conectar uma IA: one picker, plans first", () => {
     api.machines.computerSetup = () => new Promise(() => {});
     await renderApp(`/org/${ORG_ID}/settings/keys`, { api });
     await settle(6);
-    await click(screen().getByRole("button", { name: "Conectar uma IA" }));
+    await click(screen().getByRole("button", { name: "Adicionar conta" }));
     const dialog = screen().getByRole("dialog", { name: "Conectar uma IA" });
     expect(within(dialog).queryByRole("button", { name: "Conectar um computador" })).toBeNull();
     expect(dialog.textContent).not.toMatch(/Conecte um seu|computador conectado/);

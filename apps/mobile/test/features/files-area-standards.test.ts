@@ -231,7 +231,7 @@ describe("the search tab", () => {
     const results = src("features/search/SearchResults.tsx");
     expect(results).toContain("const failed = words && hits.isError && !hits.data;");
     expect(results).toContain("{failed ? <LoadFailed onRetry={() => void hits.refetch()} /> : null}");
-    expect(results).toContain("{words && !failed && isEmpty(r) && !hits.isFetching ? (");
+    expect(results).toContain("{words && !failed && isEmpty(r) && settingItems.length === 0 && !hits.isFetching ? (");
   });
 
   test("taking the filters off is the kit's button, not a press drawn by hand", () => {

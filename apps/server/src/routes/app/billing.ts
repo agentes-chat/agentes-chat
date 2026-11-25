@@ -133,6 +133,12 @@ export function billingRoutes(deps: AppDeps) {
               usedBytes24h: z.number().int().openapi({ description: "Written to this server's storage in 24 hours." }),
               limitBytesPerDay: z.number().int().nullable(),
             }),
+            connectors: z.object({
+              usedUsd: z.number().openapi({
+                description: "What vendors that bill this server per call (X) charged for it this UTC month, in US$.",
+              }),
+              limitUsd: z.number().nullable(),
+            }),
           }),
         ),
         ...errors,

@@ -58,19 +58,19 @@ export function usePersonPresence(userId: string | null | undefined): PersonPres
 
 const presenceMap = (list: Person[]) => new Map(list.map((p) => [p.userId, p.presence]));
 
-/** Everyone's presence in the workspace by user id (empty while the people load). */
-export function usePresences(): Map<string, MemberPresence> {
+const usePeople = () => {
   const { org } = useOrg();
   const api = useApi();
-  return (
-    useQuery({
-      queryKey: keys.people(org.id),
-      queryFn: () => api.orgs.people(org.id),
-      staleTime: 30_000,
-      select: presenceMap,
-    }).data ?? EMPTY_PRESENCES
-  );
+  return { queryKey: keys.people(org.id), queryFn: () => api.orgs.people(org.id), staleTime: 30_000 };
+};
+
+/** Everyone's presence in the workspace by user id (empty while the people load). */
+export function usePresences(): Map<string, MemberPresence> {
+  return useQuery({ ...usePeople(), select: presenceMap }).data ?? EMPTY_PRESENCES;
 }
+
+/** Whether `usePresences` has its people yet (or failed): before, everyone reads offline. */
+export const usePresencesLoaded = () => !useQuery(usePeople()).isPending;
 const EMPTY_PRESENCES = new Map<string, MemberPresence>();
 
 export interface AgentShown {

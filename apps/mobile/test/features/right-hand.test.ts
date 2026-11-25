@@ -236,7 +236,8 @@ test("its Computador row is always there: it opens the viewer's own place, or sa
   expect(screen).toContain("const none = rightHandNoComputer(view.desktopQ.data?.reason, selfHosted(auth.data));");
   // With none there is nothing to open: no chevron, no press, and the reason under the row.
   expect(screen).toContain('<GroupedRow icon="laptop" label={t("agentComputer.button")} />');
-  expect(screen).toContain('t(none ?? "rightHand.computerYours")');
+  // Its place's line says whether the computer keeps it apart (`rightHandComputerLine`, from the computer's mode).
+  expect(screen).toContain("t(none ?? rightHandComputerLine(view.machine))");
   // On a self-hosted server with none, the line links to making this server the agents' computer.
   expect(screen).toContain('none === "rightHand.computerNoHomeServer" ? (');
   // No computer of the workspace's own: whoever may add one opens Dispositivos from the row.

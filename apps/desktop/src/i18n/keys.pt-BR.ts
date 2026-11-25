@@ -250,7 +250,7 @@ export const desktopPtBR = {
     getTailscale: "Baixar o Tailscale",
     usage: "Enviar estatísticas de uso anônimas ao agentes.chat",
     usageText:
-      "Contagens como pessoas, agentes, tamanho das máquinas, tokens de IA usados e o volume de dados que os navegadores dos agentes enviam e recebem. Nunca mensagens, arquivos, nomes ou sites.",
+      "Contagens como pessoas, agentes, tamanho das máquinas, tokens de IA usados, o volume de dados que os navegadores dos agentes enviam e recebem e com que rapidez os apps abrem e respondem. Nunca mensagens, arquivos, nomes ou sites.",
     start: "Começar",
     setting: "Preparando tudo",
     rest: "Quando você fechar o app, seus agentes descansam. Eles voltam assim que você abrir de novo.",
@@ -494,6 +494,9 @@ export const desktopPtBR = {
     linkBody: "Se não foi você que pediu, escolha Agora não.",
     waiting: "Esperando {{by}} deixar entrar…",
     done: "Conectado a {{org}}",
+    share: "Deixar o workspace todo usar",
+    shareOff: "Só você por enquanto",
+    shareHint: "Os agentes de todos em {{org}} podem rodar tarefas nele, com o seu usuário.",
     addFolders: "Adicionar pastas",
     expired: "Este link expirou. Crie outro em Dispositivos.",
     openDevices: "Abrir Dispositivos",

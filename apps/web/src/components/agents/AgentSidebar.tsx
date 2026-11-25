@@ -5,8 +5,10 @@ import {
   browserSiteUrl,
   useAgentDetail,
   useBrowserHandoffMutations,
+  useComputerSetup,
   useDesktopPicture,
   useIssues,
+  useModels,
   useRoutines,
   useUsage,
 } from "@agenteschat/client";
@@ -73,21 +75,23 @@ export function AgentSidebar({ agent, onClose }: { agent: Agent; onClose?: () =>
   const body = (
     <ErrorBoundary resetKey={agent} fallback={() => null}>
       <AgentHead agent={agent} />
-      {seesDetails(agent) && (
-        <>
-          <ComputerSection agent={agent} />
-          <RoutinesSection agent={agent} />
-        </>
-      )}
-      {isRightHand(agent) ? (
-        // Each person's DM with the right hand thinks with their own AI (ADR 0137 §11).
-        <Section title={t("agentSide.thinks")} hint={mineHint}>
-          <RightHandMineRow agent={agent} />
-        </Section>
-      ) : (
-        seesDetails(agent) && <ThinksSection agent={agent} />
-      )}
-      {seesDetails(agent) && <TasksSection agent={agent} />}
+      <Sections agent={agent}>
+        {seesDetails(agent) && (
+          <>
+            <ComputerSection agent={agent} />
+            <RoutinesSection agent={agent} />
+          </>
+        )}
+        {isRightHand(agent) ? (
+          // Each person's DM with the right hand thinks with their own AI (ADR 0137 §11).
+          <Section title={t("agentSide.thinks")} hint={mineHint}>
+            <RightHandMineRow agent={agent} />
+          </Section>
+        ) : (
+          seesDetails(agent) && <ThinksSection agent={agent} />
+        )}
+        {seesDetails(agent) && <TasksSection agent={agent} />}
+      </Sections>
     </ErrorBoundary>
   );
   if (!onClose) {
@@ -98,6 +102,30 @@ export function AgentSidebar({ agent, onClose }: { agent: Agent; onClose?: () =>
     );
   }
   return <FloatingSide onClose={onClose}>{body}</FloatingSide>;
+}
+
+/**
+ * Its computer, routines, brain and tasks: they show together, once each has what it draws (or failed to get it), so
+ * none pushes the next down when its data comes (laid out but unseen until then).
+ */
+function Sections({ agent, children }: { agent: Agent; children: ReactNode }) {
+  const { org } = useOrg();
+  const computer = useAgentComputer(agent);
+  const setup = useComputerSetup(org.id);
+  const reads = [
+    useRoutines(org.id),
+    useAgentDetail(org.id, agent.id),
+    useUsage(org.id),
+    useIssues(org.id),
+    useModels(),
+  ];
+  const computerKnown = computer.ready || computer.desktopQ.isError || setup.isError;
+  const pending = seesDetails(agent) && (!computerKnown || reads.some((q) => q.isPending));
+  return (
+    <div className="dm-side__secs" data-pending={pending || undefined}>
+      {children}
+    </div>
+  );
 }
 
 function FloatingSide({ onClose, children }: { onClose: () => void; children: ReactNode }) {

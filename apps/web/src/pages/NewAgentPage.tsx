@@ -1705,7 +1705,7 @@ function NewAgentFlow({ channelId = null }: { channelId?: string | null }) {
                 "where",
                 "members",
                 t("newAgent.owner"),
-                <span>{ownerRole?.name ?? ownerMember?.name ?? t("newAgent.noOwnerAdmins")}</span>,
+                <span>{ownerRole?.name ?? ownerMember?.name ?? t("newAgent.noOwnerOption")}</span>,
               )}
             {!audienceHidden && row("where", "message", t("audience.section"), <span>{audienceText()}</span>)}
             {row(

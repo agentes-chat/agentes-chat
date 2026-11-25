@@ -33,9 +33,20 @@ test("a title's line is drawn with it, kept clear of the wider side so the bar c
   expect(parts).toContain("side={line !== undefined ? titleSide(word, rightCount) : word !== null ? 100 : 75}");
 });
 
+test("words too long to centre beside a wide right side start by the back button on iOS; short ones stay centred", () => {
+  const parts = read("src/features/shared/parts.tsx");
+  // A task's "#219" beside "Concluir" and "…": a word with a button, or several buttons, outweighs the back button.
+  // "Você" beside "Editar" fits between them: the system's own title, centred.
+  expect(parts).toContain("titleSide(word, rightCount) > LEADING_FROM &&");
+  expect(parts).toContain("!titleFitsCentred(text, titleSide(word, rightCount), width, fontScale);");
+  expect(parts).toContain("text.length * 9 * fontScale <= width - 2 * side;");
+  expect(parts).toContain("const LEADING_FROM = BACK_SIDE + 40;");
+  expect(parts).toContain("? () => <LeadingTitle text={text} side={titleSide(word, rightCount)} />");
+  expect(parts).toContain("<View style={{ width: Math.max(0, width - BACK_SIDE - side - 8) }}>");
+});
+
 test("the screens hand their line to the bar", () => {
   expect(read("src/features/settings/parts.tsx")).toMatch(/<PushedHeader\s+title=\{title\}\s+subtitle=\{subtitle\}/);
-  expect(read("src/features/ai/KeyForAllScreen.tsx")).toContain("subtitle={plan?.label}");
   expect(read("src/features/dashboards/ShareScreen.tsx")).toContain("subtitle={board.title}");
   expect(read("src/features/dashboards/OrganizeScreen.tsx")).toContain(
     'subtitle={home ? t("dashboards.home") : board.title}',

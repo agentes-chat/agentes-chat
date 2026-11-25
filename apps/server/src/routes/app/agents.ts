@@ -69,6 +69,7 @@ import {
   rightHandWidgetsReady,
   SETUP_AGENTS_MAX,
   seesAgentDetails,
+  seesAgentFactsOnly,
   setAgentBrain,
   setReportsTo,
   speakerOf,
@@ -172,6 +173,7 @@ const toAgent = (
     canTalk: canTalkTo(a, viewerId, speakerOf(viewer)),
     ...agentRights(a, viewerId, viewer),
     editors: seesDetails ? editorsOf(a) : { userIds: [], roleIds: [] },
+    factsOnly: seesAgentFactsOnly(a, viewerId, viewer),
     listed: listsAgentTo(a, viewerId, viewer),
   };
 };
@@ -888,7 +890,7 @@ export function agentRoutes(deps: AppDeps) {
                       description:
                         "Where it shows when you read it: its conversation, or for work another agent handed it, where that agent handed it off. Null otherwise.",
                     }),
-                    channelKind: z.enum(["channel", "dm", "task", "file"]).nullable(),
+                    channelKind: z.enum(["channel", "dm", "task", "file", "code"]).nullable(),
                     channelName: z.string().nullable(),
                     threadId: z.uuid().nullable(),
                     messageId: z
@@ -937,6 +939,10 @@ export function agentRoutes(deps: AppDeps) {
       .openapi({ description: "The channels it is in that the current person may see, in the sidebar's order." }),
     canTalk: z.boolean(),
     seesDetails: z.boolean().openapi({ description: "Whether the current person sees how it works." }),
+    factsOnly: z.boolean().optional().openapi({
+      description:
+        "A teammate's private agent seen through \"Editar agentes\" (ADR 0085, addendum of 2026-11-24): listed on Equipe with a lock, its page shows its facts and this month's usage, never how it works, and nothing to change. Absent (older servers): false.",
+    }),
     canManage: z.boolean().openapi({
       description: "Whether the current person manages it (`manage_agents` where it reaches, ADR 0085 addendum).",
     }),

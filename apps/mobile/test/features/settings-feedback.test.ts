@@ -41,6 +41,18 @@ describe("a switch moves as it is tapped", () => {
     expect(computer).not.toContain("disabled={mark.isPending}");
     expect(computer).not.toContain("spill.isPending ||");
   });
+
+  test("a computer whose tasks start on room: Automatic with what fits, and its owner's Push harder switch", () => {
+    const computer = flat("features/devices/ComputerSection.tsx");
+    expect(computer).toContain("sub={tasksAutoText(t, d) ?? undefined}");
+    expect(computer).toContain(
+      "const pushing = (push.isPending ? push.variables : undefined) ?? d.taskRoom?.pushHarder ?? false;",
+    );
+    expect(computer).toContain("{d.taskRoom && tasksEditable && brought ? (");
+    expect(computer).toContain("api.devices.updateComputer(orgId, d.id, { pushHarder: on })");
+    // The count's picker stays only where the computer still decides by a count.
+    expect(computer).toContain("{!d.taskRoom && maxTasks !== null ? (");
+  });
 });
 
 describe("a list that didn't load says so, with the way to ask again", () => {
@@ -67,7 +79,7 @@ describe("a list that didn't load says so, with the way to ask again", () => {
     expect(query).toContain("return () => sub.remove();");
     expect(query).toContain("bindOnlineToNetwork(); return new LiveQueryClient(");
     // Nothing waits paused for a network: a screen still says it couldn't load, a change still says it failed.
-    expect(query).toContain('refetchOnWindowFocus: true, networkMode: "always" }');
+    expect(query).toContain('refetchOnWindowFocus: false, networkMode: "always", }');
     expect(query).toContain('mutations: { retry: 0, networkMode: "always" }');
   });
 });

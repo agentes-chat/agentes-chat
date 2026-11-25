@@ -101,6 +101,7 @@ export const MATERIAL_NAMES: Record<IconName, string | null> = {
   replyTo: "reply",
   swap: "swap_horiz",
   updown: "unfold_more",
+  grip: "drag_handle",
   up: "arrow_upward",
   wallet: "account_balance_wallet",
   book: "menu_book",

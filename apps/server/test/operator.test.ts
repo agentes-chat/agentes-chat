@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { orgTopic } from "@agenteschat/adapters";
 import { testConfig } from "@agenteschat/config";
-import { desc, eq, schema, sql } from "@agenteschat/db";
+import { desc, eq, inArray, schema, sql } from "@agenteschat/db";
 import {
   countComposio,
   countToolCall,
@@ -105,6 +105,8 @@ test("401 without the right bearer token, on every path under the prefix", async
     ["/health", `Basic ${TOKEN}`],
     ["/health", TOKEN],
     ["/orgs", `${BEARER}x`],
+    ["/storage", null],
+    ["/storage", "Bearer wrong"],
     ["/openapi.json", null],
     ["/nope", null],
   ] as const) {
@@ -137,6 +139,7 @@ test("the read-only token: GET and HEAD outside /review; 403 for a write or a re
     `/orgs/${acme.orgId}`,
     `/users/${acme.ownerId}`,
     "/events",
+    "/storage",
     "/openapi.json",
   ]) {
     expect({ path, status: (await as(READ, path)).status }).toEqual({ path, status: 200 });
@@ -407,9 +410,16 @@ test("org detail: owners and admins, and counts of what is in it", async () => {
       storageBytes: null,
       uploadBytesPerDay: null,
       platformUsdPerMonth: null,
+      connectorUsdPerMonth: null,
       updatedAt: null,
     },
-    meters: { storageBytes: 0, uploadBytes24h: 0, ownStorage: false, platformUsdThisMonth: 0 },
+    meters: {
+      storageBytes: 0,
+      uploadBytes24h: 0,
+      ownStorage: false,
+      platformUsdThisMonth: 0,
+      connectorUsdThisMonth: 0,
+    },
     deletion: null,
     deletionHold: null,
   });
@@ -434,7 +444,7 @@ test("user detail: workspaces and at most the 10 newest sessions", async () => {
   const user = await body<{ sessions: { ip: string | null; userAgent: string | null; createdAt: string }[] }>(
     await op(`/users/${acme.ownerId}`),
   );
-  expect(user).toMatchObject({ id: acme.ownerId, email: "owner@acme.test", name: "owner", emailVerified: false });
+  expect(user).toMatchObject({ id: acme.ownerId, email: "owner@acme.test", name: "owner", emailVerified: true });
   expect(user).toMatchObject({
     orgs: [{ orgId: acme.orgId, name: "Acme", role: "owner", joinedAt: expect.any(String), lastSeenAt: null }],
   });
@@ -919,6 +929,7 @@ test("limits: set them all, read back with what the workspace uses; any standing
     storageBytes: 200 * 1024 ** 3,
     uploadBytesPerDay: 10 * 1024 ** 3,
     platformUsdPerMonth: 10,
+    connectorUsdPerMonth: 4.35,
   };
   for (const bad of [
     {},
@@ -930,6 +941,7 @@ test("limits: set them all, read back with what the workspace uses; any standing
     { ...limits, storageBytes: -1 },
     { ...limits, platformUsdPerMonth: 100_001 },
     { ...limits, platformUsdPerMonth: "10" },
+    { ...limits, connectorUsdPerMonth: -1 },
   ]) {
     expect({ bad, status: (await put(`/orgs/${orgId}/limits`, bad)).status }).toEqual({ bad, status: 400 });
   }
@@ -948,21 +960,104 @@ test("limits: set them all, read back with what the workspace uses; any standing
   expect(heard).toHaveLength(1);
   const org = await body<{ limits: unknown; meters: unknown }>(await op(`/orgs/${orgId}`));
   expect(org.limits).toEqual(set);
-  expect(org.meters).toEqual({ storageBytes: 0, uploadBytes24h: 0, ownStorage: false, platformUsdThisMonth: 0 });
+  expect(org.meters).toEqual({
+    storageBytes: 0,
+    uploadBytes24h: 0,
+    ownStorage: false,
+    platformUsdThisMonth: 0,
+    connectorUsdThisMonth: 0,
+  });
 
   // Limits and standing are apart: a held workspace takes new limits too.
   await body(await put(`/orgs/${orgId}/billing-hold`, { hold: "unpaid" }));
-  // Left out, the plan's top and who pays are none.
+  // Left out, the plan's top, who pays and the connectors' money are none.
   const none = { members: null, storageBytes: null, uploadBytesPerDay: null, platformUsdPerMonth: null };
   heard.length = 0;
   expect(await body(await put(`/orgs/${orgId}/limits`, none))).toEqual({
     ...none,
     membersMax: null,
     payerUserId: null,
+    connectorUsdPerMonth: null,
     updatedAt: expect.any(String),
   });
   expect(heard).toEqual([{ type: "org.limits", orgId }]);
   await body(await put(`/orgs/${orgId}/billing-hold`, { hold: null }));
+});
+
+test("the instance's stored bytes: zeros while no workspace keeps a file", async () => {
+  expect(await body(await op("/storage"))).toEqual({ storageBytes: 0, workspaces: 0, ownStorageWorkspaces: 0 });
+});
+
+test("the instance's stored bytes: the sum of the workspaces' meters, the trash and a workspace with its own bucket left out", async () => {
+  const { organizations, artifacts, artifactVersions, storageConfigs } = schema;
+  const made = await t.db
+    .insert(organizations)
+    .values(["Files A", "Files B", "Own bucket", "No files"].map((name) => ({ name })))
+    .returning({ id: organizations.id });
+  const ids = made.map((org) => org.id);
+  const [a = "", b = "", own = ""] = ids;
+  try {
+    const by = { type: "person", id: acme.ownerId };
+    /** A file of the Drive, one version of `size` bytes: on this server's storage unless written to `bucket`. */
+    const file = async (orgId: string, size: number, at: { trashed?: boolean; bucket?: string } = {}) => {
+      const [artifact] = await t.db
+        .insert(artifacts)
+        .values({
+          orgId,
+          kind: "file",
+          title: "report.pdf",
+          createdByType: by.type,
+          createdById: by.id,
+          updatedByType: by.type,
+          updatedById: by.id,
+          deletedAt: at.trashed ? new Date() : null,
+        })
+        .returning({ id: artifacts.id });
+      await t.db.insert(artifactVersions).values({
+        orgId,
+        artifactId: artifact?.id ?? "",
+        version: 1,
+        storageConfigId: at.bucket ?? null,
+        blobKey: `files/${artifact?.id}`,
+        contentType: "application/pdf",
+        size,
+        sha256: "",
+        authorType: by.type,
+        authorId: by.id,
+      });
+    };
+    await file(a, 3000);
+    await file(a, 5000);
+    await file(a, 7000, { trashed: true });
+    await file(b, 11_000);
+    // One file from before its bucket, still on this server, and one written to the bucket.
+    await file(own, 2000);
+    const [bucket] = await t.db
+      .insert(storageConfigs)
+      .values({ orgId: own, kind: "s3", options: {}, fingerprint: "test", status: "active" })
+      .returning({ id: storageConfigs.id });
+    await file(own, 6000, { bucket: bucket?.id });
+
+    const meters = await Promise.all(
+      ids.map(async (id) => {
+        const org = await body<{ meters: { storageBytes: number; ownStorage: boolean } }>(await op(`/orgs/${id}`));
+        return [org.meters.storageBytes, org.meters.ownStorage];
+      }),
+    );
+    expect(meters).toEqual([
+      [8000, false],
+      [11_000, false],
+      [2000, true],
+      [0, false],
+    ]);
+    expect(await body(await op("/storage"))).toEqual({
+      storageBytes: 8000 + 11_000,
+      workspaces: 2,
+      ownStorageWorkspaces: 1,
+    });
+  } finally {
+    await t.db.delete(organizations).where(inArray(organizations.id, ids));
+  }
 });
 
 test("outside collaborators (ADR 0191): asked for here, answered in the workspace, never counted, ended here", async () => {

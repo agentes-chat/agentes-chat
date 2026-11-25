@@ -320,6 +320,20 @@ function NativeHeader({
   });
   const word = action?.label ?? null;
   const wordOff = action?.disabled ?? false;
+  const wordOpens = action?.opens ?? false;
+  const { width } = useWindowDimensions();
+  const fontScale = useFontScale();
+  // iOS: words too long to centre between a wide right side (a word beside a button, several buttons) and the back
+  // button start by the back button, as the system lays out a title that can't be centred. Centred on the screen they
+  // sat against that side's buttons, far from the back button. A short one ("Você" beside "Editar") stays the system's
+  // own, centred. Not a large title (the system draws it), not on Android (the bar's start already).
+  const leading =
+    IOS &&
+    !custom &&
+    !largeTitle &&
+    text !== "" &&
+    titleSide(word, rightCount) > LEADING_FROM &&
+    !titleFitsCentred(text, titleSide(word, rightCount), width, fontScale);
   const actionOptions = useHeaderActionOptions({ right: actions, lead });
   const hasActions = (actions?.length ?? 0) > 0 || lead != null;
   // Stable options: `setOptions` runs when the title or the presence of actions change, not on
@@ -335,17 +349,19 @@ function NativeHeader({
         ? { headerLargeTitleShadowVisible: false, headerLargeTitleStyle: { color: colors.ink } }
         : null),
       title: text,
-      headerTitle: custom
-        ? () => (
-            <HeaderTitle
-              text={line !== undefined ? text : ""}
-              node={titleNode}
-              line={line}
-              lineColor={subtitleColor}
-              side={line !== undefined ? titleSide(word, rightCount) : word !== null ? 100 : 75}
-            />
-          )
-        : text,
+      headerTitle: leading
+        ? () => <LeadingTitle text={text} side={titleSide(word, rightCount)} />
+        : custom
+          ? () => (
+              <HeaderTitle
+                text={line !== undefined ? text : ""}
+                node={titleNode}
+                line={line}
+                lineColor={subtitleColor}
+                side={line !== undefined ? titleSide(word, rightCount) : word !== null ? 100 : 75}
+              />
+            )
+          : text,
       ...(word !== null && IOS
         ? {
             unstable_headerRightItems: () => [
@@ -353,7 +369,7 @@ function NativeHeader({
                 type: "button" as const,
                 label: word,
                 accessibilityLabel: word,
-                variant: liquidGlass ? ("prominent" as const) : ("done" as const),
+                variant: wordVariant(wordOpens),
                 disabled: wordOff,
                 onPress: () => press.current?.(),
               },
@@ -377,11 +393,17 @@ function NativeHeader({
         : word !== null && !IOS
           ? () => (
               <View style={styles.headerRight}>
-                <Button size="sm" variant="primary" label={word} disabled={wordOff} onPress={() => press.current?.()} />
+                <Button
+                  size="sm"
+                  variant={wordOpens ? "secondary" : "primary"}
+                  label={word}
+                  disabled={wordOff}
+                  onPress={() => press.current?.()}
+                />
               </View>
             )
           : undefined,
-      ...(hasActions ? withWord(actionOptions, word, wordOff, () => press.current?.()) : null),
+      ...(hasActions ? withWord(actionOptions, word, wordOff, wordOpens, () => press.current?.()) : null),
     }),
     [
       hasActions,
@@ -394,6 +416,7 @@ function NativeHeader({
       colors.ink,
       text,
       custom,
+      leading,
       line,
       subtitleColor,
       rightCount,
@@ -402,6 +425,7 @@ function NativeHeader({
       rightNode,
       word,
       wordOff,
+      wordOpens,
     ],
   );
   // Nothing of its own in the screen, only its options: the navigator finds a screen's list through its first
@@ -421,6 +445,38 @@ const titleSide = (word: string | null, buttons: number) => {
 };
 
 /**
+ * Whether the bar's title fits centred between its two sides (`side`, the wider one's), at the bar's 17 points
+ * (about 9 a letter) scaled with the person's text size.
+ */
+export const titleFitsCentred = (text: string, side: number, width: number, fontScale = 1) =>
+  text.length * 9 * fontScale <= width - 2 * side;
+
+/** The system's bar button for a word: plain when it opens a screen, filled (prominent on iOS 26) when it saves. */
+const wordVariant = (opens: boolean) =>
+  opens ? ("plain" as const) : liquidGlass ? ("prominent" as const) : ("done" as const);
+
+/** The back button's side (`titleSide` with nothing on the right). */
+const BACK_SIDE = titleSide(null, 0);
+/** Past this the right side outweighs the back button: more than one button, or a word with one. */
+const LEADING_FROM = BACK_SIDE + 40;
+
+/**
+ * A title in words where the right side is wide (`leading`): nearly as wide as the room between the back button and
+ * that side (8 points short, so the bar never squeezes it), too wide to centre, so the bar lays it by the back
+ * button, the words at its start.
+ */
+function LeadingTitle({ text, side }: { text: string; side: number }) {
+  const { width } = useWindowDimensions();
+  return (
+    <View style={{ width: Math.max(0, width - BACK_SIDE - side - 8) }}>
+      <Text variant="body" numberOfLines={1} accessibilityRole="header" style={styles.titleText}>
+        {text}
+      </Text>
+    </View>
+  );
+}
+
+/**
  * A word and buttons together on a bar (a task's "Concluir" beside its "…"): the word at the bar's end, the buttons
  * before it (the system's own on iOS; on Android our capsule, then the word's button).
  */
@@ -428,6 +484,7 @@ function withWord(
   opts: NativeStackNavigationOptions,
   word: string | null,
   disabled: boolean,
+  opens: boolean,
   onPress: () => void,
 ): NativeStackNavigationOptions {
   if (word === null) return opts;
@@ -440,7 +497,7 @@ function withWord(
           type: "button" as const,
           label: word,
           accessibilityLabel: word,
-          variant: liquidGlass ? ("prominent" as const) : ("done" as const),
+          variant: wordVariant(opens),
           disabled,
           onPress,
         },
@@ -454,7 +511,13 @@ function withWord(
     headerRight: (props) => (
       <View style={[styles.headerRight, styles.headerWithWord]}>
         {buttons?.(props)}
-        <Button size="sm" variant="primary" label={word} disabled={disabled} onPress={onPress} />
+        <Button
+          size="sm"
+          variant={opens ? "secondary" : "primary"}
+          label={word}
+          disabled={disabled}
+          onPress={onPress}
+        />
       </View>
     ),
   };
@@ -465,6 +528,11 @@ export interface HeaderWordAction {
   label: string;
   onPress: () => void;
   disabled?: boolean;
+  /**
+   * A word that opens another screen rather than saving this one (Você's "Editar", an agent's): the system's plain
+   * bar button, as the phone's own apps draw it, not the filled one that saves; our secondary button on Android.
+   */
+  opens?: boolean;
 }
 
 /**

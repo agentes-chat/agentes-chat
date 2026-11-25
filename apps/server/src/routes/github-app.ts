@@ -514,7 +514,7 @@ export function githubAppRoutes(deps: AppDeps) {
       const target = `https://github.com/settings/apps/new?state=${encodeURIComponent(state ?? "")}`;
       const manifest = JSON.stringify(githubAppManifest(deps.config.PUBLIC_URL));
       const page = `<!doctype html>
-<html lang="${escapeHtml(locale)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHtml(serverText(locale, "githubApp.manifestPage.title"))}</title></head>
+<html lang="${escapeHtml(locale)}" translate="no"><head><meta charset="utf-8"><meta name="google" content="notranslate"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHtml(serverText(locale, "githubApp.manifestPage.title"))}</title></head>
 <body><form id="manifest" method="post" action="${escapeHtml(target)}"><input type="hidden" name="manifest" value="${escapeHtml(manifest)}"><button type="submit">${escapeHtml(serverText(locale, "githubApp.manifestPage.continue"))}</button></form>
 <script nonce="${nonce}">document.getElementById("manifest").submit();</script></body></html>`;
       return c.html(page, 200, {

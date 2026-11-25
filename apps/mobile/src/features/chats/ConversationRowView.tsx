@@ -4,7 +4,7 @@ import { memo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, StyleSheet, View } from "react-native";
 import { TAB_BADGE } from "@/lib/nav";
-import { Count, LIST_AVATAR, LIST_PREVIEW, LineIcon, ListRow, PixelOrbit, Text } from "@/ui";
+import { Count, LIST_AVATAR, LIST_PREVIEW, LineIcon, ListRow, PixelOrbit, Tag, Text } from "@/ui";
 import { router } from "@/ui/navigation";
 import { withAlpha } from "@/ui/palette";
 import type { RowAction } from "../categories/menus";
@@ -32,7 +32,7 @@ export interface ConversationItemProps {
   facts: RowFacts;
   /** A hairline above (every row but the first). */
   divider?: boolean;
-  /** Its agent moves (the first rows only); further down, its face and its orbit hold still. */
+  /** Its agent's face moves (the first rows only); further down it holds still. The orbit turns on every row. */
   live?: boolean;
   /** A row on the home: its menu (Fixar no topo, or Tirar do topo, a channel's Mover para…), given the row. */
   onHold?: (row: ConversationRow) => void;
@@ -59,9 +59,10 @@ export interface ConversationItemProps {
  * (dozing, "Esperando o MacBook Air"), or what it is doing with the pixel orbit. Unread: bold name, darker time and preview, the count. Threads and missions
  * add a faint line with what and where ("Missão · #canal"): a mission shows its agent, its state
  * and items ("Esperando você · 4 de 9 itens") and what waits on you in it; a thread shows the face and the
- * line of its last reply. `live`: the agent moves (the first rows only). A DM's face carries the presence badge
- * (ADR 0084; no status emoji in the list); an agent with a line says it in place of its last message. Drawn from plain
- * values the screen worked out once (`facts`): memoized, it draws again only when its row or its words change.
+ * line of its last reply. `live`: the agent's face moves (the first rows only; the orbit always turns). A DM's face
+ * carries the presence badge (ADR 0084; no status emoji in the list); an agent with a line says it in place of its last
+ * message. Drawn from plain values the screen worked out once (`facts`): memoized, it draws again only when its row or
+ * its words change.
  */
 export const ConversationItem = memo(function ConversationItem({
   row: r,
@@ -83,6 +84,9 @@ export const ConversationItem = memo(function ConversationItem({
   const opener = useChatOpener();
   const chosen = useIsChosen(opener, chatOfRow(r));
   const agentDm = r.kind === "dm" && r.with.type === "agent";
+  // An agent's role (its Função, "Ops") beside its name as a tag, as the web's lists show it: read once for the list
+  // with the row's other facts, never by the row itself.
+  const role = facts.role;
   const leading =
     r.kind === "dm" ? (
       agentDm ? (
@@ -99,8 +103,9 @@ export const ConversationItem = memo(function ConversationItem({
     );
   // A thread on a GIF or a sticker has no words of its own to title it (ADR 0091).
   const name = r.kind === "channel" ? r.name : r.kind === "dm" ? r.with.name : r.title || t("mobile.chat.thread");
-  // Past the moving rows, an orbit holds its first frame, as the faces hold theirs.
-  const orbit = <PixelOrbit color={facts.orbit} size={ORBIT} still={!live} />;
+  // The orbit turns on every row at work, past the moving faces too: held on one frame it read as work that hung.
+  // It turns on the UI thread, in step with the others, and stops with the screen (`PixelOrbit`).
+  const orbit = <PixelOrbit color={facts.orbit} size={ORBIT} />;
   const l = facts.line;
   const line =
     l.kind === "state" ? (
@@ -150,6 +155,7 @@ export const ConversationItem = memo(function ConversationItem({
   const { badge, mention } = facts;
   const a11y = [
     name,
+    role,
     meta ?? null,
     facts.presence,
     facts.status,
@@ -187,6 +193,7 @@ export const ConversationItem = memo(function ConversationItem({
           {...(chosen ? { background: withAlpha(c.ink, CHOSEN_TINT), accessibilityState: { selected: true } } : {})}
           leading={leading}
           title={name}
+          {...(role ? { titleAside: <Tag label={role} /> } : {})}
           time={meta ?? facts.time}
           dot={fresh && badge === 0}
           over={
