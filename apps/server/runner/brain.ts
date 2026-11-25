@@ -3281,6 +3281,8 @@ export class BrainManager {
         ...(mode === "chat" ? { chat: true } : {}),
         ...(delegated.task ? { task: delegated.task.kind } : {}),
         ...(persistent ? {} : { oneShot: true as const }),
+        // Its commands run in the agent's worker, with the CLI's clock too.
+        ...(req.timeZone && turnZoneEnv(req.timeZone).TZ ? { timeZone: req.timeZone } : {}),
       };
       this.bridge.set(id, { token, agentId: ctx.agent.id, cwd, folder: ctx.folder, runId: null, runToken: null });
       bridged = { frame, to: delegated };

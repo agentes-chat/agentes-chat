@@ -44,6 +44,7 @@ import {
 import { isInside, realOrNearest } from "./paths";
 import type { Spawn } from "./scope-gate";
 import { holdsSecretFile } from "./secrets";
+import { turnZoneEnv } from "./turn-zone";
 
 /**
  * Claude Code's own tools, served by the agent's worker, for a sign-in shared by several agents. The CLI holding the
@@ -311,6 +312,8 @@ export interface DelegatedScope {
   task?: "mission" | "local";
   /** The CLI's stdin closes after its prompt, so no notice can reach it. */
   oneShot?: boolean;
+  /** The zone of the turn's "Now": its commands' `TZ` (`turnZoneEnv`), as the CLI's own. */
+  timeZone?: string;
 }
 
 /** `agentSecrets`' answer: what commands get, and what no result may show. */
@@ -815,7 +818,7 @@ export class DelegatedTools {
         ["-c", SHELL_SCRIPT, "bash", command, `${file}.cwd`],
         {
           cwd: s.cwd,
-          env: { ...process.env, ...r.secrets?.env },
+          env: { ...process.env, ...r.secrets?.env, ...turnZoneEnv(s.scope.timeZone) },
           stdio: ["ignore", fd, fd],
           detached: true,
         },
@@ -1413,6 +1416,8 @@ export interface DelegatedBridge {
   task?: "mission" | "local";
   /** `DelegatedScope.oneShot`. */
   oneShot?: true;
+  /** `DelegatedScope.timeZone`. */
+  timeZone?: string;
 }
 
 const strings = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : undefined);
@@ -1442,6 +1447,7 @@ export function parseBridge(f: Record<string, unknown>): DelegatedBridge | null 
     ...(f.chat === true ? { chat: true as const } : {}),
     ...(f.task === "mission" || f.task === "local" ? { task: f.task } : {}),
     ...(f.oneShot === true ? { oneShot: true as const } : {}),
+    ...(turnZoneEnv(f.timeZone).TZ ? { timeZone: f.timeZone as string } : {}),
   };
 }
 
@@ -1475,6 +1481,7 @@ export function delegatedTask(
       ...(bridge.chat ? { chat: true } : {}),
       ...(bridge.task ? { task: bridge.task } : {}),
       ...(bridge.oneShot ? { oneShot: true } : {}),
+      ...(bridge.timeZone ? { timeZone: bridge.timeZone } : {}),
     }),
   };
 }

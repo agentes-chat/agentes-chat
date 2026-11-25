@@ -219,6 +219,15 @@ test("commands get what root's turn named for its agent (its commits' lines), th
   expect(asked).toEqual([{ ...AGENT, coAuthors: [line] }, AGENT]);
 });
 
+test("commands run on the clock of the turn's zone, as the CLI does; an unknown zone keeps the computer's", async () => {
+  const { call, state } = setup({ timeZone: "Asia/Tokyo" });
+  state.answer = allow;
+  expect(textOf(await call("Bash", { command: 'echo "[$TZ]"' }))).toBe("[Asia/Tokyo]");
+  // Root's frame carries it to the worker: a zone no clock knows never reaches a command.
+  expect(parseBridge({ ...bridgeFrame, timeZone: "Asia/Tokyo" })?.timeZone).toBe("Asia/Tokyo");
+  expect(parseBridge({ ...bridgeFrame, timeZone: "Mars/Olympus" })?.timeZone).toBeUndefined();
+});
+
 test("output past the inline limit comes back as a preview and a file Read can page, redacted", async () => {
   const { call, state } = setup({}, { secrets: async () => SECRETS });
   state.answer = allow;
