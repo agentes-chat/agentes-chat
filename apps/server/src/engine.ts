@@ -596,6 +596,7 @@ export function buildEngine(o: EngineOptions) {
       // own browser, else DuckDuckGo's HTML page.
       createWebToolSource({
         braveKey: config.BRAVE_SEARCH_API_KEY,
+        parallelKey: config.PARALLEL_API_KEY,
         searxngUrl: config.SEARXNG_URL,
         browser: browserTools.readPage,
         resolveHost: o.resolveHost,

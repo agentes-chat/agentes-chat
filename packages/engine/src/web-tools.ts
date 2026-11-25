@@ -21,8 +21,9 @@ export const WEB_USAGE_PROVIDER = "web";
  * still take one away from an agent (`deny:web_fetch`). Both only read: search asks a provider, fetch is one GET
  * through the public-URL guard. Every call is a run step (the Tool Gateway's) and a usage row.
  *
- * Search providers, first that answers: Brave (`BRAVE_SEARCH_API_KEY`), SearXNG (`SEARXNG_URL`), the agent's own
- * browser when it may use one (Google, then Bing or DuckDuckGo on a captcha or a block), DuckDuckGo's HTML page.
+ * Search providers, first that answers: Brave (`BRAVE_SEARCH_API_KEY`), Parallel (`PARALLEL_API_KEY`), SearXNG
+ * (`SEARXNG_URL`), the agent's own browser when it may use one (Google, then Bing or DuckDuckGo on a captcha or a
+ * block), DuckDuckGo's HTML page.
  */
 export const WEB_SEARCH_TOOL = "web_search";
 export const WEB_FETCH_TOOL = "web_fetch";
@@ -72,6 +73,7 @@ export type BrowserPageReader = (ctx: ToolContext, url: string) => Promise<{ tex
 
 export interface WebToolDeps {
   braveKey?: string | null;
+  parallelKey?: string | null;
   searxngUrl?: string | null;
   browser?: BrowserPageReader | null;
   fetch?: (url: string, init?: RequestInit) => Promise<Response>;
@@ -194,8 +196,17 @@ type Provider = { id: string; search(query: string, limit: number, ctx: ToolCont
 export function createWebToolSource(deps: WebToolDeps = {}): ToolSource {
   const http = deps.fetch ?? ((url: string, init?: RequestInit) => fetch(url, init));
 
-  const getJson = async (url: string, headers: Record<string, string>, signal?: AbortSignal) => {
-    const res = await http(url, { headers: { accept: "application/json", ...headers }, signal: timeout(signal) });
+  const getJson = async (
+    url: string,
+    headers: Record<string, string>,
+    signal?: AbortSignal,
+    init?: { method?: string; body?: string },
+  ) => {
+    const res = await http(url, {
+      ...init,
+      headers: { accept: "application/json", ...headers },
+      signal: timeout(signal),
+    });
     if (!res.ok) throw new Error(`answered ${res.status}`);
     return (await res.json()) as Record<string, unknown>;
   };
@@ -210,6 +221,34 @@ export function createWebToolSource(deps: WebToolDeps = {}): ToolSource {
         const data = await getJson(url, { "x-subscription-token": key }, ctx.signal);
         const list = ((data.web as { results?: unknown[] } | undefined)?.results ?? []) as Record<string, unknown>[];
         return { results: list.map((r) => result(r.title, r.url, r.description)) };
+      },
+    });
+  }
+  if (deps.parallelKey) {
+    const key = deps.parallelKey;
+    providers.push({
+      id: "parallel",
+      async search(query, limit, ctx) {
+        const data = await getJson(
+          "https://api.parallel.ai/v1/search",
+          { "Content-Type": "application/json", "x-api-key": key },
+          ctx.signal,
+          {
+            method: "POST",
+            body: JSON.stringify({
+              objective: query,
+              search_queries: [query],
+              advanced_settings: { max_results: limit },
+            }),
+          },
+        );
+        const list = (data.results ?? []) as Record<string, unknown>[];
+        return {
+          results: list.map((r) => {
+            const excerpts = Array.isArray(r.excerpts) ? (r.excerpts as unknown[]).join(" ") : "";
+            return result(r.title, r.url, cutText(excerpts, 1000));
+          }),
+        };
       },
     });
   }

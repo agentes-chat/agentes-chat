@@ -26,13 +26,16 @@ import {
 const ctx = { orgId: "o", agentId: "a", runId: "r" } as unknown as ToolContext;
 const DDG = `<div class="result results_links"><a rel="nofollow" class="result__a" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fnews.example.com%2Fa&amp;rut=x">Notícia <b>A</b></a><a class="result__snippet" href="#">Texto &amp; mais</a></div>`;
 
-function web(routes: Record<string, () => Response>, extra: Parameters<typeof createWebToolSource>[0] = {}) {
+function web(
+  routes: Record<string, (init?: RequestInit) => Response>,
+  extra: Parameters<typeof createWebToolSource>[0] = {},
+) {
   const asked: string[] = [];
   const source = createWebToolSource({
-    fetch: async (url) => {
+    fetch: async (url, init) => {
       asked.push(url);
       const hit = Object.entries(routes).find(([prefix]) => url.startsWith(prefix));
-      return hit ? hit[1]() : new Response("not found", { status: 404 });
+      return hit ? hit[1](init) : new Response("not found", { status: 404 });
     },
     resolveHost: async (host) => (host.endsWith(".internal.example") ? ["10.0.0.7"] : ["93.184.216.34"]),
     ...extra,
@@ -104,6 +107,56 @@ describe("web_search", () => {
       { braveKey: "k", searxngUrl: "https://searx.example.com/" },
     );
     expect((await down.run("web_search", { query: "x" })).data).toMatchObject({ provider: "searxng" });
+  });
+
+  test("Parallel second when its key is set; on its failure, SearXNG", async () => {
+    const parallel = {
+      results: [{ title: "P", url: "https://p.example.com", excerpts: ["Excerpt 1", "Excerpt 2"] }],
+    };
+    let capturedInit: RequestInit | undefined;
+    const ok = web(
+      {
+        "https://api.parallel.ai/": (init) => {
+          capturedInit = init;
+          return Response.json(parallel);
+        },
+      },
+      { parallelKey: "k" },
+    );
+    const res = await ok.run("web_search", { query: "x", limit: 6 });
+    expect(res.data).toMatchObject({ provider: "parallel" });
+    expect(res.content).toContain("1. P\n   https://p.example.com\n   Excerpt 1 Excerpt 2");
+
+    expect(capturedInit?.method).toBe("POST");
+    expect((capturedInit?.headers as Record<string, string>)?.["x-api-key"]).toBe("k");
+    expect((capturedInit?.headers as Record<string, string>)?.["Content-Type"]).toBe("application/json");
+    expect(JSON.parse(String(capturedInit?.body))).toEqual({
+      objective: "x",
+      search_queries: ["x"],
+      advanced_settings: { max_results: 6 },
+    });
+
+    for (const status of [500, 429]) {
+      const down = web(
+        {
+          "https://api.parallel.ai/": () => new Response("", { status }),
+          "https://searx.example.com/": () =>
+            Response.json({ results: [{ title: "S", url: "https://s.example.com" }] }),
+        },
+        { parallelKey: "k", searxngUrl: "https://searx.example.com/" },
+      );
+      expect((await down.run("web_search", { query: "x" })).data).toMatchObject({ provider: "searxng" });
+    }
+
+    const noKey = web(
+      {
+        "https://api.parallel.ai/": () => Response.json(parallel),
+        "https://searx.example.com/": () => Response.json({ results: [{ title: "S", url: "https://s.example.com" }] }),
+      },
+      { searxngUrl: "https://searx.example.com/" },
+    );
+    expect((await noKey.run("web_search", { query: "x" })).data).toMatchObject({ provider: "searxng" });
+    expect(noKey.asked.some((u) => u.startsWith("https://api.parallel.ai/"))).toBe(false);
   });
 
   test("the agent's browser: Google, then Bing on a captcha; DuckDuckGo's page when it has none", async () => {
