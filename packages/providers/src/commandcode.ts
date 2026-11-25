@@ -18,7 +18,7 @@ export function createCommandCodeProvider(options: { fetch?: typeof fetch; maxRe
   const messages = createAnthropicProvider({
     id: "commandcode",
     baseURL: COMMANDCODE_API,
-    compat: { toolChoiceAny: true },
+    compat: { toolChoiceAny: true, images: true },
     fetch: options.fetch,
     maxRetries: options.maxRetries,
   });

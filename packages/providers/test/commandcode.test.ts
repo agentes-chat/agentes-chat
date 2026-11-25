@@ -193,6 +193,46 @@ describe("calls (scripted transport)", () => {
     expect(JSON.parse(result.content.map((b) => (b.type === "text" ? b.text : "")).join(""))).toEqual({ ok: true });
   });
 
+  test("Claude on Command Code keeps tool result images (compat.images enabled)", async () => {
+    const { fetcher, requests } = scripted(
+      message([
+        { type: "content_block_start", index: 0, content_block: { type: "text", text: "seen" } },
+        { type: "content_block_delta", index: 0, delta: { type: "text_delta", text: "" } },
+        { type: "content_block_stop", index: 0 },
+        { type: "message_delta", delta: { stop_reason: "end_turn", stop_sequence: null }, usage: { output_tokens: 1 } },
+      ]),
+    );
+    const messages = [
+      { role: "user" as const, content: "what is in the file?" },
+      { role: "assistant" as const, content: [{ type: "tool_use" as const, id: "t1", name: "read_artifact", input: {} }] },
+      {
+        role: "user" as const,
+        content: [
+          {
+            type: "tool_result" as const,
+            toolUseId: "t1",
+            content: "diagram.png",
+            images: [{ mediaType: "image/png", data: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==" }],
+          },
+        ],
+      },
+    ];
+    const result = await createCommandCodeProvider({ fetch: fetcher, maxRetries: 0 }).stream(
+      {
+        model: "commandcode:claude-sonnet-5-5",
+        system: "s",
+        messages,
+        maxTokens: 100,
+      },
+      { apiKey: "user_k123456789", onDelta: () => {} },
+    );
+    const req = requests[0];
+    const bodyStr = JSON.stringify(req?.body.messages);
+    expect(bodyStr).toContain('"type":"image"');
+    expect(result.imagesLeftOut).toBeUndefined();
+    expect(bodyStr).not.toContain("reads text only through this connection");
+  });
+
   test("a refusal keeps Command Code's words; an id that isn't its own fails before any call", async () => {
     const refused = scripted(
       JSON.stringify({
