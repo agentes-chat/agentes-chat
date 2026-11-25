@@ -63,6 +63,10 @@ const failed = (error: unknown): ToolOutput => ({
 /** The right hand's tasks are its person's, in their DM (ADR 0137 §13): in a channel, others read the reply. */
 const ONLY_IN_DM: ToolOutput = { content: "Tasks only in your private conversation with a person.", isError: true };
 
+/** What `comment_issue` adds when the comment went into the conversation the run is in, the task's own. */
+const SAID_HERE = (n: number) =>
+  `The comment is already in this conversation, #${n}'s own, right above your reply: don't repeat it there. Your reply only adds what the comment doesn't say, in a line or two.`;
+
 /** Who each assignee is, as the agent can name them: "@ada (you)", "Walter (@walter)". */
 async function assigneeNames(deps: IssueDeps, ctx: ToolContext, list: IssueView[]) {
   const names = new Map<string, string>();
@@ -748,8 +752,11 @@ export function createIssueToolSource(deps: ArtifactDeps): ToolSource {
           });
           const note =
             files.brought.length || files.refused.length ? filesNote(await find(deps, ctx, current.id), files) : "";
+          // A comment on the task whose conversation this run is in is a message right here (ADR 0145): the reply
+          // that follows must not repeat it, or the people read the same findings twice.
+          const here = current.conversation?.channelId === ctx.channelId ? ` ${SAID_HERE(current.number)}` : "";
           return {
-            content: `Commented on #${current.number}.${note}`,
+            content: `Commented on #${current.number}.${note}${here}`,
             data: { issue: { id: current.id, number: current.number } },
           };
         } catch (error) {

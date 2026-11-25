@@ -228,6 +228,67 @@ describe("issues", () => {
     expect(askedEvent?.textParams).toMatchObject({ threadId: root?.id });
   });
 
+  test("in the task's own conversation the reply is the update: told so, and a comment there says it's already here", async () => {
+    // "I've added the token": the agent checks access, records what it found as a dated comment on the task, then
+    // replies. Both land in the same conversation, so the reply must not say the comment again.
+    const requests: ModelRequest[] = [];
+    let woken = false;
+    f = await setup({
+      issueTools: true,
+      reply: (req: ModelRequest) => {
+        if (!woken) return { chunks: ["Starting: I need the API token first."] };
+        requests.push(req);
+        if (requests.length === 1)
+          return {
+            chunks: [],
+            toolUses: [
+              {
+                name: "comment_issue",
+                input: { issue: "#1", text: "Update 2026-11-25: token works; 3 repositories, 2 webhooks found." },
+              },
+            ],
+          };
+        return { chunks: ["The token works: I can read the 3 repositories now. The inventory is on the task."] };
+      },
+    });
+    await grantScopes(f.db, f.org.id, f.agent.id, ISSUES);
+    const deps = { db: f.db, pubsub: f.pubsub };
+    const issue = await createIssue(deps, person(f.owner.id), f.org.id, {
+      title: "Inventory the GitHub org",
+      criteria: ["List every repository and webhook"],
+    });
+    const asked = await askAgentToImplement(deps, f.owner.id, f.org.id, issue.id, f.agent.id);
+    const at = asked.conversation;
+    if (!at) throw new Error("no conversation");
+    await drainOutbox(f.db, f.handlers);
+
+    woken = true;
+    await postPersonMessage(deps, f.owner.id, f.org.id, at.channelId, {
+      body: "@dev I've added the token.",
+      threadId: at.rootId,
+    });
+    await drainOutbox(f.db, f.handlers);
+
+    // The run read that its reply is the task's update and how to write it.
+    const system = systemText(requests[0]?.system ?? []);
+    expect(system).toContain("Your reply here is the task's update. Don't also post it with `comment_issue` on #1");
+    expect(system).toContain("Lead with what changed");
+    expect(system).toContain("Keep the full findings (lists, inventories, sources) on the task");
+    expect(system).toContain("Here the reply is the record: what you found is said once, in it.");
+    expect(system).toContain("In the task's own conversation your reply is that update: no comment besides it.");
+    // A comment it still made lands right here, and its result says so before the reply is written.
+    const after = JSON.stringify(requests[1]?.messages ?? []);
+    expect(after).toContain("Commented on #1. The comment is already in this conversation, #1's own");
+    expect(after).toContain("don't repeat it there");
+    const replies = (await f.db.select().from(schema.messages))
+      .filter((m) => m.authorType === "agent" && m.channelId === at.channelId)
+      .map((m) => m.body);
+    expect(replies.slice(-2)).toEqual([
+      "Update 2026-11-25: token works; 3 repositories, 2 webhooks found.",
+      "The token works: I can read the 3 repositories now. The inventory is on the task.",
+    ]);
+  });
+
   test("asking to implement an issue from a channel message: one line there, a private issue still works", async () => {
     let system = "";
     let step = 0;
