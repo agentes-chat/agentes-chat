@@ -1,4 +1,4 @@
-# 0189. The site installs as a web app: a manifest with its name and icons
+# 0249. The site installs as a web app: a manifest with its name and icons
 
 - Status: Proposed
 - Date: 2026-11-16
@@ -17,11 +17,10 @@ conversation") and gets whatever icon the browser derives, and the browser never
 
 iPhones and iPads read their own tags for the home screen's icon and title: `index.html` already has them
 (`apple-touch-icon`, drawn by ADR 0179's generator, and `apple-mobile-web-app-title`), and they are not repeated
-here. Safari already opens the site as a web app when it is added to the Dock on a Mac, and on iOS 26 when it is
-added to the Home Screen
-([WebKit, Safari 26](https://webkit.org/blog/16993/news-from-wwdc25-web-technology-coming-this-fall-in-safari-26-beta/)),
-so the app already runs without browser bars: `viewport-fit=cover` with `env(safe-area-inset-*)` padding, and the
-desktop app told apart by the `window.__agentesDesktop` its window sets (ADR 0036), never by the display mode.
+here. On iOS 26 and iPadOS 26, adding to the Home Screen defaults to opening as a web app even without a manifest
+([WebKit, Safari 26](https://webkit.org/blog/17333/webkit-features-in-safari-26-0/#every-site-can-be-a-web-app-on-ios-and-ipados)).
+The app already handles standalone layout through `viewport-fit=cover` and `env(safe-area-inset-*)` padding.
+The native desktop app still identifies itself by `window.__agentesDesktop` (ADR 0036), not by display mode.
 
 Every app icon is drawn by one generator from the agent engine's scenes (ADR 0179), which already writes the web's
 `favicon.ico`, `apple-touch-icon.png` and `icon-512.png` and the phone's Android adaptive layers. A person picks an
@@ -58,18 +57,17 @@ icon per device; in a browser that pick is the tab's icon.
   next to the native desktop app, which still does what a browser can't (the menu bar, this computer's runner, its
   own notifications); the download page keeps offering the native one.
 - Chrome on Android installs it with the maskable icon and opens it without the browser's bar.
-- iPhone and iPad: Web Push reaches only a site added to the Home Screen as a web app, which a manifest whose
-  `display` is `standalone` or `fullscreen` makes it
-  ([WebKit, Web Push for Web Apps on iOS and iPadOS](https://webkit.org/blog/13878/web-push-for-web-apps-on-ios-and-ipados/),
-  checked 2026-11-11). With this manifest, the site added there gets ADR 0071's browser push on every iOS version that
-  has it, where the page already offers it (`canOfferWebPush` checks `display-mode: standalone`).
+- iPhone and iPad: the manifest makes Home Screen installs standalone where older Safari versions require one.
+  Web Push still requires a supported OS and the site to be opened as a web app
+  ([WebKit](https://webkit.org/blog/13878/web-push-for-web-apps-on-ios-and-ipados/)).
 - An installed web app shows the shipped icon even when the person picked another one in the page: the manifest is a
   static file, and the pick (ADR 0179 §4) changes only the tab's icon, as the home screen's `apple-touch-icon` already
   stays the shipped one. Following the pick would need a manifest written per person, and an installed app takes a
   new icon only when the browser updates it in its own time; that is accepted.
-- A link to another site (`target="_blank"`, outside `scope`) still opens outside the app, in the browser.
-- Every server, self-hosted or not, installs as "agentes.chat" with this icon: the manifest is a static file of the
-  build. A name per server would need the server to write the manifest, which nothing asks for yet.
+- Sign-in, workspaces and deep links on the same origin are in scope. Another origin is not, including the
+  public site when it is separate. The manifest does not change links that intentionally open another window.
+- Each server installs from its own address with the same name and shipped icon. If an existing Home Screen icon
+  still opens as a bookmark, add the app again from that server's address and enable Open as Web App if offered.
 - The icons change only through the generator: a new shipped scene gives the manifest's icons with the rest when the
   script runs again (ADR 0179 §1).
 

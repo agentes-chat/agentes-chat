@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-// The web app manifest (ADR 0189): the name and icons a browser gives the site when it is installed or put on a
+// The web app manifest (ADR 0249): the name and icons a browser gives the site when it is installed or put on a
 // home screen. Vite copies public/ to the build's root, so "/x.png" in the manifest is public/x.png. The icons are
 // drawn by the app icons' generator (ADR 0179), never by hand.
 const PUBLIC = join(import.meta.dir, "../public");

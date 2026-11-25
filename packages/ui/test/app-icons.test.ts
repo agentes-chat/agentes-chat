@@ -52,7 +52,7 @@ describe("app icons (ADR 0179)", () => {
     expect(icoSizes(read("apps/web/public/favicon.ico"))).toEqual([16, 32, 48]);
     expect(sizeOf(read("apps/web/public/apple-touch-icon.png"))).toEqual([180, 180]);
     expect(sizeOf(read("apps/web/public/app-icons/night-sky.png"))).toEqual([512, 512]);
-    // The web app manifest's (ADR 0189), all opaque (a PNG's color type 2: RGB, no alpha).
+    // The web app manifest's (ADR 0249), all opaque (a PNG's color type 2: RGB, no alpha).
     for (const [name, size] of [
       ["icon-192.png", 192],
       ["icon-512.png", 512],
