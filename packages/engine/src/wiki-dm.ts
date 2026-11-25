@@ -9,6 +9,13 @@ const { channels, messages } = schema;
 export const RESTRICTED_HERE =
   "Part of what was asked is restricted: not everyone in this conversation may see it, so its text isn't available to you here. You are answering the person who asked in your DM with them, right away. Say here, in one short line, that it's restricted and that you're answering by DM, and answer here only what you can without it. Don't guess what it says.";
 
+/**
+ * The same, where no DM takes the question (a DM of its own, an agent's message): the page is there, only not here, so
+ * the run stops asking for it instead of reading it as missing and trying again.
+ */
+export const RESTRICTED_NOT_HERE =
+  "Part of what was asked is restricted: not everyone in this conversation may see it, so its text isn't available to you here, and asking for it again here gets the same answer. Don't guess what it says: answer only what you can without it, and say in one short line that it's restricted and that the person who needs it can ask you in your DM with them.";
+
 export interface HeldRun {
   orgId: string;
   agentId: string;

@@ -13,6 +13,7 @@ import {
   openPersonAgentDm,
   parseWikiLinks,
   RESTRICTED_HERE,
+  RESTRICTED_NOT_HERE,
   recordWikiReads,
   removeMember,
   renameWikiPage,
@@ -303,6 +304,58 @@ describe("agents with a restricted page", () => {
     expect(refused.content).not.toBe(RESTRICTED_HERE);
     const biaDm = await openPersonAgentDm(f.db, f.org.id, bia.id, f.agent.id);
     expect(await f.db.select().from(schema.messages).where(eq(schema.messages.channelId, biaDm.id))).toEqual([]);
+  });
+
+  test("a page kept from a conversation no DM takes reads as restricted there, not as missing", async () => {
+    f = await setup({ wikiTools: true });
+    const deps = wikiDeps();
+    const ana = await addMember(f.db, f.org.id, "member", "ana");
+    const bia = await addMember(f.db, f.org.id, "member", "bia");
+    await createWikiPage(deps, person(f.owner.id), f.org.id, { title: "Margens", body: "Margem mínima de 40%." });
+    await setWikiPageAudience(deps, f.owner.id, f.org.id, "margens", { roleIds: [], userIds: [ana.id] });
+    // A conversation that is itself a DM (a group DM): the question has nowhere better to go.
+    await f.db.update(schema.channels).set({ kind: "dm" }).where(eq(schema.channels.id, f.general.id));
+    await f.db
+      .insert(schema.channelMembers)
+      .values({ orgId: f.org.id, channelId: f.general.id, userId: bia.id })
+      .onConflictDoNothing();
+    const trigger = await insertMessage(f.db, {
+      orgId: f.org.id,
+      channelId: f.general.id,
+      author: { type: "person", userId: ana.id },
+      body: "@dev qual é a margem mínima?",
+    });
+    const [run] = await f.db
+      .insert(schema.agentRuns)
+      .values({
+        orgId: f.org.id,
+        agentId: f.agent.id,
+        channelId: f.general.id,
+        threadRootId: trigger.id,
+        triggerMessageId: trigger.id,
+        trigger: "mention",
+        hop: 0,
+      })
+      .returning();
+    const ctx: ToolContext = {
+      db: f.db,
+      orgId: f.org.id,
+      agentId: f.agent.id,
+      runId: (run as { id: string }).id,
+      channelId: f.general.id,
+      threadRootId: trigger.id,
+      triggerMessageId: trigger.id,
+    };
+    const tools = await createWikiToolSource({ pubsub: f.pubsub, search: f.context }).tools(ctx);
+    const read = tools.find((t) => t.name === "read_wiki_page");
+    const search = tools.find((t) => t.name === "search_wiki");
+    if (!read || !search) throw new Error("wiki tools missing");
+    expect((await read.execute({ page: "margens" }, ctx)).content).toBe(RESTRICTED_NOT_HERE);
+    expect((await search.execute({ query: "margem mínima" }, ctx)).content).toBe(RESTRICTED_NOT_HERE);
+    // A page that isn't there stays plainly missing.
+    expect((await read.execute({ page: "nada-aqui" }, ctx)).content).toBe("Failed: Page not found");
+    const dm = await openPersonAgentDm(f.db, f.org.id, ana.id, f.agent.id);
+    expect(await f.db.select().from(schema.messages).where(eq(schema.messages.channelId, dm.id))).toEqual([]);
   });
 
   test("the wiki tools act for the person behind the call, and the receipt leaves out the title", async () => {
