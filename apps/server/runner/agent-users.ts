@@ -21,6 +21,8 @@ import { agentId8 } from "./paths";
 import {
   AGENT_DISK_TMP_ROOT,
   AGENT_RAM_ROOT,
+  AGENT_TMP_POOL,
+  AGENT_TMP_POOL_SHARE,
   AGENT_TMP_ROOT,
   agentCategorySlice,
   agentSlice,
@@ -68,31 +70,57 @@ export interface Launcher {
 const TMPFS = 'mount -t tmpfs -o mode=0700,size=50%,nr_inodes=1m agentes-runner-tmp "$1"';
 
 /**
- * Root, under the lock, at an agent's first launch after a boot with its /tmp on disk (`$1` its tmpfs, `$2`
- * `AGENT_DISK_TMP_ROOT`, `$3` its uid). The agents' /tmp is a filesystem of their own, `fs` there, made anew at the
- * boot's first such launch from a sparse `image` of half what the disk has free: agents can't take the system's
- * inodes or more than half its room, and each boot starts empty. A new file, never the old one rewritten: an agent
- * still bound into an earlier one keeps it. No journal, since nothing in it outlives the boot.
+ * Root, under the lock, at an agent's first launch after a boot (`$1` its tmpfs, `$2` its uid, `$3` `AGENT_TMP_POOL`,
+ * with `tmpOnDisk` `$4` `AGENT_DISK_TMP_ROOT`): its tmpfs, for its /dev/shm, /run/lock and runtime dir, and its /tmp
+ * bound into it from its folder in one filesystem all agents' /tmp share. On disk (`tmpOnDisk`), that is `fs` there,
+ * made anew at the boot's first such launch from a sparse `image` of half what the disk has free: agents can't take the
+ * system's inodes or more than half its room, and each boot starts empty. A new file, never the old one rewritten: an
+ * agent still bound into an earlier one keeps it. No journal, since nothing in it outlives the boot. Where it can't be
+ * made (no loop devices, no mkfs.ext4), or in memory, it is the pool: one tmpfs of `AGENT_TMP_POOL_SHARE`% of the RAM
+ * for all agents, so what they leave in /tmp fills that and fails there, never the computer's memory.
  */
-const DISK_TMP = [
-  'mountpoint -q "$1" && exit',
-  'mkdir -p "$2/fs"',
-  'chmod 0700 "$2"',
-  'mountpoint -q "$2/fs" || { rm -f "$2/image"; truncate -s $(($(findmnt -bno AVAIL -T "$2") / 2)) "$2/image"; /usr/sbin/mkfs.ext4 -q -F -m 0 -i 4096 -O ^has_journal "$2/image"; mount -o loop,discard,nosuid,nodev "$2/image" "$2/fs"; }',
-  'mkdir -p "$2/fs/$3"',
-  TMPFS,
-  'mkdir "$1/tmp"',
-  'mount --bind "$2/fs/$3" "$1/tmp"',
-].join("; ");
+const tmpStep = (tmpOnDisk: boolean) =>
+  [
+    'mountpoint -q "$1" && exit',
+    't="$3"',
+    ...(tmpOnDisk
+      ? [
+          'if { mkdir -p "$4/fs" && chmod 0700 "$4" && { mountpoint -q "$4/fs" || { rm -f "$4/image" && truncate -s $(($(findmnt -bno AVAIL -T "$4") / 2)) "$4/image" && /usr/sbin/mkfs.ext4 -q -F -m 0 -i 4096 -O ^has_journal "$4/image" && mount -o loop,discard,nosuid,nodev "$4/image" "$4/fs"; }; }; } 2>/dev/null; then t="$4/fs"; fi',
+        ]
+      : []),
+    `[ "$t" != "$3" ] || mountpoint -q "$3" || { mkdir -p "$3"; mount -t tmpfs -o mode=0700,size=${AGENT_TMP_POOL_SHARE}%,nr_inodes=1m agentes-runner-tmp "$3"; }`,
+    'mkdir -p "$t/$2"',
+    TMPFS,
+    'mkdir "$1/tmp"',
+    'mount --bind "$t/$2" "$1/tmp"',
+  ].join("; ");
 
 /**
- * Runs as root on the computer, before the agent's own mount namespace (`$1` its uid): the agent's tmpfs, so its
- * /tmp, /dev/shm and /run/lock are in memory as the computer's are, each with its own room, or (`tmpOnDisk`) its /tmp
- * on the system disk, bound into that tmpfs (`DISK_TMP`). Made at its first launch after the computer starts, under a
- * lock (two first launches at once would stack two mounts), and kept until the next boot: whatever a later launch
- * says, all of the agent's processes see one /tmp.
+ * Runs as root on the computer, before the agent's own mount namespace (`$1` its uid): its tmpfs and /tmp
+ * (`tmpStep`). Made at its first launch after the computer starts, under a lock (two first launches at once would
+ * stack two mounts), and kept until the next boot: whatever a later launch says, all of the agent's processes see one
+ * /tmp.
  */
 const agentRam = (tmpOnDisk: boolean) =>
+  [
+    "set -e",
+    `r=${AGENT_RAM_ROOT}`,
+    'mkdir -p "$r"',
+    'chmod 0700 "$r"',
+    'd="$r/$1"',
+    'u="$1"',
+    "shift",
+    'mkdir -p "$d"',
+    `flock "$r/.lock" sh -ec '${tmpStep(tmpOnDisk)}' sh "$d" "$u" ${AGENT_TMP_POOL}${tmpOnDisk ? ` ${AGENT_DISK_TMP_ROOT}` : ""}`,
+    'exec "$@"',
+  ].join("\n");
+
+/**
+ * `agentRam` as it was before the pool (ADR 0185), which names the step in the containers service's hash
+ * (`ensureContainers`): the step acts only at the agent's first launch after a boot, so a running service has nothing
+ * to restart for when it changes, and restarting would stop its containers.
+ */
+const hashedRamStep = (tmpOnDisk: boolean) =>
   [
     "set -e",
     `r=${AGENT_RAM_ROOT}`,
@@ -103,7 +131,16 @@ const agentRam = (tmpOnDisk: boolean) =>
     "shift",
     'mkdir -p "$d"',
     tmpOnDisk
-      ? `flock "$r/.lock" sh -ec '${DISK_TMP}' sh "$d" ${AGENT_DISK_TMP_ROOT} "$u"`
+      ? `flock "$r/.lock" sh -ec '${[
+          'mountpoint -q "$1" && exit',
+          'mkdir -p "$2/fs"',
+          'chmod 0700 "$2"',
+          'mountpoint -q "$2/fs" || { rm -f "$2/image"; truncate -s $(($(findmnt -bno AVAIL -T "$2") / 2)) "$2/image"; /usr/sbin/mkfs.ext4 -q -F -m 0 -i 4096 -O ^has_journal "$2/image"; mount -o loop,discard,nosuid,nodev "$2/image" "$2/fs"; }',
+          'mkdir -p "$2/fs/$3"',
+          TMPFS,
+          'mkdir "$1/tmp"',
+          'mount --bind "$2/fs/$3" "$1/tmp"',
+        ].join("; ")}' sh "$d" ${AGENT_DISK_TMP_ROOT} "$u"`
       : `flock "$r/.lock" sh -c 'mountpoint -q "$1" || ${TMPFS}' sh "$d"`,
     'exec "$@"',
   ].join("\n");
@@ -699,13 +736,14 @@ export function containersCommand(
   literal = installedSystemd() >= 254,
   tmpOnDisk = agentTmpOnDisk(),
   docker = rootlessDocker(),
+  ramStep = agentRam,
 ): string[] {
   const env = Object.entries(agentEnv(u, true)).map(([name, value]) => `${name}=${value}`);
   const hook = networkPrefix(u);
   const command = [
     "/bin/sh",
     "-c",
-    agentRam(tmpOnDisk),
+    ramStep(tmpOnDisk),
     "sh",
     String(u.uid),
     "/usr/bin/unshare",
@@ -757,14 +795,17 @@ export function containersCommand(
 /**
  * The agent's containers service running as `containersCommand` says now: started when it isn't, and started again
  * when what it would run changed (its network hook above all: a namespace's containers live where the agent's other
- * processes do), which stops its containers. Its description carries that command's hash. One its start limit stopped
+ * processes do), which stops its containers. Its description carries that command's hash, its first step as
+ * `hashedRamStep` names it. One its start limit stopped
  * stays down for that same command, which would fail the same way: started again once the command changes, the
  * computer restarts, or someone runs `systemctl reset-failed` on it. Returns why it doesn't run, or null.
  */
 export function ensureContainers(u: AgentUser, run: RunCommand = runSync): string | null {
-  const [file = "", ...args] = containersCommand(u);
+  const tmpOnDisk = agentTmpOnDisk();
+  const [file = "", ...args] = containersCommand(u, undefined, tmpOnDisk);
+  const named = containersCommand(u, undefined, tmpOnDisk, undefined, hashedRamStep);
   const description = `agentes.chat containers ${createHash("sha256")
-    .update([file, ...args].join("\0"))
+    .update(named.join("\0"))
     .digest("hex")
     .slice(0, 16)}`;
   const unit = containersUnit(u.uid);

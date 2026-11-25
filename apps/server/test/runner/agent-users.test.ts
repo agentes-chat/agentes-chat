@@ -1,5 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   chmodSync,
   existsSync,
@@ -355,34 +356,21 @@ test("the launcher: the agent's slice, its own temporary folders, its user, abso
   expect(p.join("\n")).not.toContain("hidepid=");
   expect(p.slice(19)).toEqual(["sh", "21003", ...AS_AGENT]);
   expect(launcher).toMatchObject({ env, home: "/home/ag-a1b2c3d4", tmp: "/run/agentes-runner-tmp/21003/tmp" });
-  // Root on the computer: the agent's own tmpfs, mounted once (a lock, so two first launches don't stack two).
-  expect((p[8] ?? "").split("\n")).toEqual([
-    "set -e",
-    "r=/run/agentes-runner-tmp",
-    'mkdir -p "$r"',
-    'chmod 0700 "$r"',
-    'd="$r/$1"',
-    "shift",
-    'mkdir -p "$d"',
-    `flock "$r/.lock" sh -c 'mountpoint -q "$1" || mount -t tmpfs -o mode=0700,size=50%,nr_inodes=1m agentes-runner-tmp "$1"' sh "$d"`,
-    'exec "$@"',
-  ]);
-  // Its /tmp on disk (`agentTmpOnDisk`), at its first launch after a boot, under the same lock: the agents' own
-  // filesystem, made anew if this boot has none yet (half of what the disk has free, under a root-only folder), its
-  // folder there bound into its tmpfs. A later launch finds the tmpfs and changes nothing, so the agent keeps that /tmp
-  // until the next boot. Nothing else of the launch changes.
-  const onDisk = systemLauncher(user, true, false, false, true).prefix;
-  const diskStep = [
-    'mountpoint -q "$1" && exit',
-    'mkdir -p "$2/fs"',
-    'chmod 0700 "$2"',
-    'mountpoint -q "$2/fs" || { rm -f "$2/image"; truncate -s $(($(findmnt -bno AVAIL -T "$2") / 2)) "$2/image"; /usr/sbin/mkfs.ext4 -q -F -m 0 -i 4096 -O ^has_journal "$2/image"; mount -o loop,discard,nosuid,nodev "$2/image" "$2/fs"; }',
-    'mkdir -p "$2/fs/$3"',
-    'mount -t tmpfs -o mode=0700,size=50%,nr_inodes=1m agentes-runner-tmp "$1"',
-    'mkdir "$1/tmp"',
-    'mount --bind "$2/fs/$3" "$1/tmp"',
-  ].join("; ");
-  expect((onDisk[8] ?? "").split("\n")).toEqual([
+  // Root on the computer, once (a lock, so two first launches don't stack two): the agent's own tmpfs for its
+  // /dev/shm, /run/lock and runtime dir, and its /tmp bound in from its folder in the pool, one tmpfs all agents' /tmp
+  // share, a fifth of the RAM at most: what they leave there fills that, never the computer's memory.
+  const pooled = (disk: string[]) =>
+    [
+      'mountpoint -q "$1" && exit',
+      't="$3"',
+      ...disk,
+      '[ "$t" != "$3" ] || mountpoint -q "$3" || { mkdir -p "$3"; mount -t tmpfs -o mode=0700,size=20%,nr_inodes=1m agentes-runner-tmp "$3"; }',
+      'mkdir -p "$t/$2"',
+      'mount -t tmpfs -o mode=0700,size=50%,nr_inodes=1m agentes-runner-tmp "$1"',
+      'mkdir "$1/tmp"',
+      'mount --bind "$t/$2" "$1/tmp"',
+    ].join("; ");
+  const ram = (step: string, args: string) => [
     "set -e",
     "r=/run/agentes-runner-tmp",
     'mkdir -p "$r"',
@@ -391,9 +379,20 @@ test("the launcher: the agent's slice, its own temporary folders, its user, abso
     'u="$1"',
     "shift",
     'mkdir -p "$d"',
-    `flock "$r/.lock" sh -ec '${diskStep}' sh "$d" /var/cache/agentes-runner-tmp "$u"`,
+    `flock "$r/.lock" sh -ec '${step}' sh "$d" "$u" /run/agentes-runner-tmp-pool${args}`,
     'exec "$@"',
+  ];
+  expect((p[8] ?? "").split("\n")).toEqual(ram(pooled([]), ""));
+  // Its /tmp on disk (`agentTmpOnDisk`), at its first launch after a boot, under the same lock: the agents' own
+  // filesystem, made anew if this boot has none yet (half of what the disk has free, under a root-only folder), its
+  // folder there bound into its tmpfs; where that can't be made (no loop devices, no mkfs.ext4), the pool, never a
+  // launch that fails. A later launch finds the tmpfs and changes nothing, so the agent keeps that /tmp until the next
+  // boot. Nothing else of the launch changes.
+  const onDisk = systemLauncher(user, true, false, false, true).prefix;
+  const diskStep = pooled([
+    'if { mkdir -p "$4/fs" && chmod 0700 "$4" && { mountpoint -q "$4/fs" || { rm -f "$4/image" && truncate -s $(($(findmnt -bno AVAIL -T "$4") / 2)) "$4/image" && /usr/sbin/mkfs.ext4 -q -F -m 0 -i 4096 -O ^has_journal "$4/image" && mount -o loop,discard,nosuid,nodev "$4/image" "$4/fs"; }; }; } 2>/dev/null; then t="$4/fs"; fi',
   ]);
+  expect((onDisk[8] ?? "").split("\n")).toEqual(ram(diskStep, " /var/cache/agentes-runner-tmp"));
   expect(onDisk.filter((_, i) => i !== 8)).toEqual(p.filter((_, i) => i !== 8));
   // Root, in the agent's own mount namespace, before it becomes the agent: its folders under root-only ones, bound
   // over the shared ones (/tmp, /dev/shm and /run/lock from its tmpfs, /var/tmp from the disk); in its own /tmp only
@@ -948,6 +947,43 @@ test("ensureContainers: started when it isn't, left when it runs as it would sta
   calls.length = 0;
   stopContainers(21003, run);
   expect(calls).toEqual([["systemctl", "stop", "--no-block", "agentes-containers-21003.service"]]);
+});
+
+test("ensureContainers: an upgrade that changes only the step making the agent's /tmp leaves a running service as it is", () => {
+  const home = tempDir("tmp-hash-");
+  dirs.push(home);
+  const before = process.env.AGENTES_RUNNER_HOME;
+  process.env.AGENTES_RUNNER_HOME = home;
+  try {
+    const user = { id: ANA.id, user: "ag-a1b2c3d4", uid: 21003 };
+    const calls: string[][] = [];
+    const run: RunCommand = (file, args) => {
+      calls.push([file, ...args]);
+      return { code: 0, output: file === "systemctl" ? "ActiveState=inactive\n" : "" };
+    };
+    expect(ensureContainers(user, run)).toBeNull();
+    // Its hash names the step as it was before the pool (ADR 0185), which acts only at a first launch after a boot.
+    const before0185 = [
+      "set -e",
+      "r=/run/agentes-runner-tmp",
+      'mkdir -p "$r"',
+      'chmod 0700 "$r"',
+      'd="$r/$1"',
+      "shift",
+      'mkdir -p "$d"',
+      `flock "$r/.lock" sh -c 'mountpoint -q "$1" || mount -t tmpfs -o mode=0700,size=50%,nr_inodes=1m agentes-runner-tmp "$1"' sh "$d"`,
+      'exec "$@"',
+    ].join("\n");
+    const named = containersCommand(user, undefined, false, undefined, () => before0185);
+    const hash = createHash("sha256").update(named.join("\0")).digest("hex").slice(0, 16);
+    expect(calls[1]?.[1]).toBe(`--description=agentes.chat containers ${hash}`);
+    // What it runs is the step as it is now.
+    expect(calls[1]?.slice(2)).toEqual(containersCommand(user, undefined, false).slice(1));
+    expect(calls[1]?.join("\n")).toContain("/run/agentes-runner-tmp-pool");
+  } finally {
+    if (before === undefined) delete process.env.AGENTES_RUNNER_HOME;
+    else process.env.AGENTES_RUNNER_HOME = before;
+  }
 });
 
 test("ensureContainers: one its start limit stopped stays down for the same command, with the reason its journal has", () => {
