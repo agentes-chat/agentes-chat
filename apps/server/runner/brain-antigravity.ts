@@ -92,6 +92,8 @@ export const AGY_RUN_ENV = "AGENTES_MCP_RUN";
  */
 const OURS = new RegExp(`^(?:mcp[_.:/-]{1,2})?${CODEX_MCP_SERVER}(?:__|[_.:/-])[\\w.-]+$`);
 export const isOurAgyTool = (name: unknown) => typeof name === "string" && OURS.test(name);
+/** Our `post_message`, which puts the reply in the conversation by itself. */
+const isOurPostTool = (name: string) => isOurAgyTool(name) && /post_message$/.test(name);
 
 /**
  * `--effort`: low, medium or high (`xhigh` and `max` as high: not every model has the extra level); a slug that names
@@ -242,10 +244,32 @@ export interface AntigravityTurnOptions {
   now?: () => number;
 }
 
+/** Human-readable labels for `result.denied_actions` when headless mode auto-denies a tool permission. */
+function deniedActionNames(r: Record<string, unknown>): string[] {
+  if (!Array.isArray(r.denied_actions)) return [];
+  return r.denied_actions
+    .map((d) =>
+      isRecord(d)
+        ? typeof d.display_name === "string" && d.display_name
+          ? d.display_name
+          : typeof d.action === "string" && d.action
+            ? d.action
+            : ""
+        : "",
+    )
+    .filter(Boolean);
+}
+
 /** Runs one Antigravity turn and emits its events; ends with exactly one `done` or `error`. Never throws. */
 export async function runAntigravityTurn(input: AntigravityTurnInput, opts: AntigravityTurnOptions): Promise<void> {
-  const fail = (code: string, message: string, retryable?: boolean) =>
-    opts.emit({ type: "error", code, message, ...(retryable ? { retryable } : {}) });
+  const fail = (code: string, message: string, retryable?: boolean, worked?: boolean) =>
+    opts.emit({
+      type: "error",
+      code,
+      message,
+      ...(retryable ? { retryable } : {}),
+      ...(worked !== undefined ? { worked } : {}),
+    });
   // On Windows the CLI keeps its sign-in in the one Credential Manager of the computer's user (ADR 0143).
   if ((opts.platform ?? process.platform) === "win32") {
     return fail("unsupported", "Gemini plans don't think on Windows computers yet.");
@@ -277,11 +301,20 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
   const clean = (text: string) => (opts.redact ? opts.redact(text) : text);
   const hold = opts.redact ? (opts.redactHold ?? 0) : 0;
 
-  // One retry, as a new chat, when the CLI doesn't have the conversation it was to resume.
-  for (let attempt = 0; ; attempt++) {
+  // Retries: at most once as a new chat if the CLI doesn't know the conversation, and at most once on the same
+  // conversation if headless mode auto-denied a tool permission (`denied_actions`) and stopped without replying.
+  const totalUsage = { input: 0, output: 0, cacheRead: 0 };
+  let anyWorked = false;
+  // A turn that already posted through our `post_message` has its reply: a denial then needs no extra model turn.
+  let posted = false;
+  let retriedLost = false;
+  let continuedAfterDenial = false;
+  let followUpPrompt: string | null = null;
+  for (;;) {
     const chat = opts.chats.get(chatKey);
+    const prompt = followUpPrompt ?? cursorPrompt(input.system, input.prompt, !chat);
     const args = antigravityTurnArgs({
-      prompt: cursorPrompt(input.system, input.prompt, !chat),
+      prompt,
       ...(chat ? { chat } : {}),
       ...(input.model ? { model: input.model } : {}),
       ...(input.effort ? { effort: input.effort } : {}),
@@ -305,25 +338,45 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
     });
     let tail = "";
     let streamed = false;
+    let streamedText = "";
+    let postToolText = "";
     let worked = false;
     const flush = (text: string, whole: boolean) => {
       const out = clean(tail + text);
       const at = whole ? out.length : Math.max(0, out.length - hold);
       tail = out.slice(at);
       if (at > 0) {
+        const chunk = out.slice(0, at);
         streamed = true;
-        opts.emit({ type: "text_delta", text: out.slice(0, at) });
+        streamedText += chunk;
+        postToolText += chunk;
+        opts.emit({ type: "text_delta", text: chunk });
       }
     };
     let sawInit = false;
+    let convId: string | undefined;
     let lost = false;
+    let lostAfterDenial = false;
     let breach: string | null = null;
     let result: Record<string, unknown> | undefined;
     let model = input.model;
     const used = { input: 0, output: 0, cacheRead: 0, steps: 0 };
+    // `agy` 1.5.x can emit a headless-denied native tool step as `state: "DONE"` with empty output and only list
+    // `denied_actions` on `result`: hold a trailing empty tool until the next step or `result` settles its outcome.
+    let pendingEmptyTool: { stepIndex: unknown; id: string; name: string; input: unknown } | null = null;
+    const flushPendingTool = (denied?: string[]) => {
+      if (!pendingEmptyTool) return;
+      const tool = pendingEmptyTool;
+      pendingEmptyTool = null;
+      const executed =
+        denied && denied.length > 0
+          ? { content: clean(`denied: headless mode cannot prompt for approval (${denied.join(", ")})`), isError: true }
+          : { content: "" };
+      opts.emit({ type: "tool_call", id: tool.id, name: tool.name, input: tool.input, executed });
+    };
     const lines = createInterface({ input: child.stdout as NonNullable<ChildProcess["stdout"]> });
     (lines as unknown as EventEmitter).on("line", (line: string) => {
-      if (breach || lost || result) return;
+      if (breach || lost || lostAfterDenial || result) return;
       let ev: unknown;
       try {
         ev = JSON.parse(line);
@@ -343,12 +396,22 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
         const id = typeof ev.conversation_id === "string" ? ev.conversation_id : undefined;
         if (isRecord(ev.init) && typeof ev.init.model === "string") model = ev.init.model;
         // A resume the CLI didn't have comes back as a new conversation, without the context.
-        if (chat && id && id !== chat && attempt === 0) {
-          lost = true;
-          killTree(child, "SIGKILL");
-          return;
+        if (chat && id && id !== chat) {
+          if (continuedAfterDenial) {
+            lostAfterDenial = true;
+            killTree(child, "SIGKILL");
+            return;
+          }
+          if (!retriedLost) {
+            lost = true;
+            killTree(child, "SIGKILL");
+            return;
+          }
         }
-        if (id) opts.chats.set(chatKey, id);
+        if (id) {
+          convId = id;
+          opts.chats.set(chatKey, id);
+        }
         return;
       }
       if (ev.event === "result") {
@@ -357,6 +420,9 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
       }
       if (ev.event !== "step_update" || !isRecord(ev.step_update)) return;
       const step = ev.step_update;
+      if (pendingEmptyTool && (step.step_index === undefined || step.step_index !== pendingEmptyTool.stepIndex)) {
+        flushPendingTool();
+      }
       if (step.step_type === "agent_response") {
         if (typeof step.text_delta === "string" && step.text_delta) flush(step.text_delta, false);
         if (step.state === "DONE" && isRecord(step.usage)) {
@@ -369,20 +435,33 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
         return;
       }
       const info = isRecord(step.tool_info) ? step.tool_info : null;
-      if (step.step_type !== "tool" || step.state !== "DONE" || !info) return;
+      if (step.step_type !== "tool" || (step.state !== "DONE" && step.state !== "ERROR") || !info) return;
       const name = typeof step.tool_name === "string" ? step.tool_name : String(info.name ?? "tool");
       worked = true;
-      // Our bridge's calls: the engine ran them.
-      if (isOurAgyTool(name)) return;
       flush("", true);
+      postToolText = "";
       const error = isRecord(info.error) ? info.error : null;
-      const output = error ? String(error.message ?? error.type ?? "failed") : String(info.output ?? "");
+      const isError = Boolean(error) || step.state === "ERROR";
+      // Our bridge's calls: the engine ran them.
+      if (isOurAgyTool(name)) {
+        if (!isError && isOurPostTool(name)) posted = true;
+        return;
+      }
+      const rawOutput = error ? String(error.message ?? error.type ?? "failed") : String(info.output ?? "");
+      const output = isError && !rawOutput.trim() ? "failed" : rawOutput;
+      const id = `${String(step.conversation_id ?? "agy")}:${String(step.step_index ?? used.steps)}`;
+      const toolInput = redactDeep(info.parameters ?? {}, clean);
+      if (!isError && !output.trim()) {
+        if (pendingEmptyTool) flushPendingTool();
+        pendingEmptyTool = { stepIndex: step.step_index, id, name, input: toolInput };
+        return;
+      }
       opts.emit({
         type: "tool_call",
-        id: `${String(step.conversation_id ?? "agy")}:${String(step.step_index ?? used.steps)}`,
+        id,
         name,
-        input: redactDeep(info.parameters ?? {}, clean),
-        executed: { content: clean(output.slice(0, 20_000)), ...(error ? { isError: true } : {}) },
+        input: toolInput,
+        executed: { content: clean(output.slice(0, 20_000)), ...(isError ? { isError: true } : {}) },
       });
     });
     let killTimer: ReturnType<typeof setTimeout> | undefined;
@@ -421,30 +500,82 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
         true,
       );
     }
-    if (chat && attempt === 0 && (lost || (!sawInit && /conversation[^\n]*not found/i.test(stderr)))) {
+    if (lostAfterDenial || (continuedAfterDenial && chat && !sawInit && /conversation[^\n]*not found/i.test(stderr))) {
+      opts.chats.delete(chatKey);
+      if (totalUsage.input || totalUsage.output) {
+        opts.emit({
+          type: "usage",
+          input: totalUsage.input,
+          output: totalUsage.output,
+          source: "plan",
+          ...(model ? { model } : {}),
+          ...(totalUsage.cacheRead ? { cacheRead: totalUsage.cacheRead } : {}),
+        });
+      }
+      return fail(
+        "antigravity_failed",
+        "The Antigravity CLI lost the conversation while recovering from a denied tool action.",
+        false,
+        anyWorked || streamed,
+      );
+    }
+    if (
+      chat &&
+      !retriedLost &&
+      !continuedAfterDenial &&
+      (lost || (!sawInit && /conversation[^\n]*not found/i.test(stderr)))
+    ) {
+      retriedLost = true;
       opts.chats.delete(chatKey);
       continue;
     }
     flush("", true);
     const r = result ?? {};
-    const u = used.steps === 0 && !chat && isRecord(r.usage) ? usageOf(r.usage) : used;
-    if (u.input || u.output) {
-      opts.emit({
-        type: "usage",
-        input: u.input,
-        output: u.output,
-        source: "plan",
-        ...(model ? { model } : {}),
-        ...(u.cacheRead ? { cacheRead: u.cacheRead } : {}),
-      });
-    }
+    const denied = deniedActionNames(r);
+    flushPendingTool(denied);
+    const stepUsage = used.steps === 0 && !chat && isRecord(r.usage) ? usageOf(r.usage) : used;
+    totalUsage.input += stepUsage.input;
+    totalUsage.output += stepUsage.output;
+    totalUsage.cacheRead += stepUsage.cacheRead;
+    anyWorked ||= worked;
+    const emitUsage = () => {
+      if (totalUsage.input || totalUsage.output) {
+        opts.emit({
+          type: "usage",
+          input: totalUsage.input,
+          output: totalUsage.output,
+          source: "plan",
+          ...(model ? { model } : {}),
+          ...(totalUsage.cacheRead ? { cacheRead: totalUsage.cacheRead } : {}),
+        });
+      }
+    };
     const response = typeof r.response === "string" ? r.response : "";
     if (r.status === "SUCCESS" && exit.code === 0) {
-      const text = clean(response.trimEnd());
+      const text = clean((response || streamedText).trimEnd());
+      const replyAfterTool = clean((response || postToolText).trimEnd());
+      if (!replyAfterTool && denied.length > 0 && !posted) {
+        if (!continuedAfterDenial && convId) {
+          continuedAfterDenial = true;
+          followUpPrompt = `A tool action (${denied.join(", ")}) was denied because headless mode cannot prompt for interactive approval. Do not retry that blocked action; reply to the user now using the information you already have.`;
+          continue;
+        }
+        emitUsage();
+        return fail(
+          "antigravity_failed",
+          clean(
+            `The Antigravity CLI stopped without replying because headless permissions denied: ${denied.join(", ")}.`,
+          ),
+          false,
+          anyWorked || streamed,
+        );
+      }
+      emitUsage();
       if (text && !streamed) opts.emit({ type: "text_delta", text });
       opts.emit({ type: "done", text, session: { id: input.sessionId } });
       return;
     }
+    emitUsage();
     const agyError = parseAgyError(stderr);
     const why =
       agyError?.message ??
@@ -456,7 +587,7 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
             ? "The Antigravity CLI ended without finishing the turn"
             : `The Antigravity CLI exited with code ${exit.code ?? "?"}${stderr.trim() ? `: ${stderr.trim().slice(-500)}` : ""}`);
     for (const event of antigravityProblem(clean(why), {
-      worked: worked || streamed,
+      worked: anyWorked || streamed,
       limit: agyError?.limit ?? false,
       auth: agyError?.auth ?? false,
       ...(opts.now ? { now: opts.now() } : {}),

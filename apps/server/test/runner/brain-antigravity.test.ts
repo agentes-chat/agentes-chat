@@ -60,6 +60,7 @@ afterEach(async () => {
   delete process.env.FAKE_AGY_KEYRING;
   delete process.env.FAKE_AGY_REFRESH_MS;
   delete process.env.FAKE_AGY_CHECK;
+  delete process.env.FAKE_AGY_STILL_DENIED;
   removeDirs(dirs);
 });
 
@@ -516,6 +517,187 @@ test.skipIf(!posix)(
     process.env.FAKE_AGY_TOOLS = `${CODEX_MCP_SERVER}/post_message,run_command`;
     const listed = await run(ctx, turn({ ...chat, runId: RUN.replace(/1$/, "8"), prompt: "BRIDGE_ONLY" }));
     expect(listed.at(-1)).toMatchObject({ code: "tools_not_locked", message: expect.stringContaining("run_command") });
+  },
+  20_000,
+);
+
+test.skipIf(!posix)(
+  "headless permission denial: continues once on the same conversation, fails clearly if still denied, and preserves streamed text",
+  async () => {
+    const root = tempDir("brain-agy-denied-");
+    dirs.push(root);
+    const { ctx, accountDir } = turnContext(root);
+    signIn(accountDir);
+    const log = path.join(root, "agy.log");
+    process.env.FAKE_AGY_LOG = log;
+
+    // 1. Denied command with empty response: records errored tool step, resumes same conversation, returns real reply.
+    const recovered = await run(ctx, turn({ runId: RUN.replace(/1$/, "c"), prompt: "DENIED_RECOVER check" }));
+    expect(recovered.at(-1)).toEqual({
+      type: "done",
+      text: "Recovered answer without running commands.",
+      session: { id: SESSION },
+    });
+    expect(recovered.filter((e) => e.type === "tool_call")).toEqual([
+      expect.objectContaining({
+        name: "run_command",
+        executed: expect.objectContaining({ isError: true }),
+      }),
+    ]);
+    expect(recovered.filter((e) => e.type === "usage")).toEqual([
+      { type: "usage", source: "plan", input: 1100, output: 170, cacheRead: 300 },
+    ]);
+    const calls = logOf(log);
+    expect(calls).toHaveLength(2);
+    expect(calls[1]?.args.join(" ")).toContain(`--conversation ${FIRST}`);
+
+    // 2. Still denied with empty response on continuation: emits explicit error instead of empty done.
+    process.env.FAKE_AGY_STILL_DENIED = "1";
+    const stillDenied = await run(
+      ctx,
+      turn({
+        runId: RUN.replace(/1$/, "d"),
+        session: { id: SESSION.replace(/1$/, "2"), resume: false },
+        prompt: "DENIED_RECOVER",
+      }),
+    );
+    expect(stillDenied.at(-1)).toMatchObject({
+      type: "error",
+      code: "antigravity_failed",
+      message: expect.stringContaining("Bash"),
+      worked: true,
+    });
+    delete process.env.FAKE_AGY_STILL_DENIED;
+
+    // 3. Streamed text preserved when result.response is empty.
+    const streamedOnly = await run(
+      ctx,
+      turn({
+        runId: RUN.replace(/1$/, "e"),
+        session: { id: SESSION.replace(/1$/, "3"), resume: false },
+        prompt: "EMPTY_RESULT_RESPONSE",
+      }),
+    );
+    expect(streamedOnly.at(-1)).toEqual({
+      type: "done",
+      text: "Streamed reply.",
+      session: { id: SESSION.replace(/1$/, "3") },
+    });
+
+    // 4. agy 1.5.13 silent DONE tool denial: marks the empty trailing tool_call as errored with the denial reason.
+    const silentDenied = await run(
+      ctx,
+      turn({
+        runId: RUN.replace(/1$/, "f"),
+        session: { id: SESSION.replace(/1$/, "4"), resume: false },
+        prompt: "DENIED_SILENT_DONE",
+      }),
+    );
+    expect(silentDenied.at(-1)).toEqual({
+      type: "done",
+      text: "Recovered answer without running commands.",
+      session: { id: SESSION.replace(/1$/, "4") },
+    });
+    expect(silentDenied.filter((e) => e.type === "tool_call")).toEqual([
+      expect.objectContaining({
+        name: "run_command",
+        input: { CommandLine: "uname -r" },
+        executed: {
+          content: "denied: headless mode cannot prompt for approval (Bash)",
+          isError: true,
+        },
+      }),
+    ]);
+
+    // 5. Normal empty-output tool followed by an agent response stays non-error.
+    const emptyOk = await run(
+      ctx,
+      turn({
+        runId: RUN.replace(/1$/, "0"),
+        session: { id: SESSION.replace(/1$/, "5"), resume: false },
+        prompt: "EMPTY_TOOL_OK",
+      }),
+    );
+    expect(emptyOk.at(-1)).toEqual({
+      type: "done",
+      text: "Created out.",
+      session: { id: SESSION.replace(/1$/, "5") },
+    });
+    expect(emptyOk.filter((e) => e.type === "tool_call")).toEqual([
+      expect.objectContaining({
+        name: "run_command",
+        input: { CommandLine: "mkdir -p out" },
+        executed: { content: "" },
+      }),
+    ]);
+
+    // 6. Preamble text_delta streamed before the denied tool still triggers recovery instead of stopping on the preamble.
+    const preambleLog = path.join(root, "agy-preamble.log");
+    process.env.FAKE_AGY_LOG = preambleLog;
+    const preambleRecovered = await run(
+      ctx,
+      turn({
+        runId: RUN.replace(/1$/, "a"),
+        session: { id: SESSION.replace(/1$/, "6"), resume: false },
+        prompt: "DENIED_PREAMBLE",
+      }),
+    );
+    expect(preambleRecovered.at(-1)).toEqual({
+      type: "done",
+      text: "Recovered answer without running commands.",
+      session: { id: SESSION.replace(/1$/, "6") },
+    });
+    expect(logOf(preambleLog)).toHaveLength(2);
+
+    // 7. If continuation after denial returns a brand-new conversation_id, fail with antigravity_failed and drop the chat key.
+    process.env.FAKE_AGY_LOST_ON_CONTINUE = "1";
+    const lostSession = SESSION.replace(/1$/, "7");
+    const lostAfterDenial = await run(
+      ctx,
+      turn({
+        runId: RUN.replace(/1$/, "b"),
+        session: { id: lostSession, resume: false },
+        prompt: "DENIED_RECOVER",
+      }),
+    );
+    delete process.env.FAKE_AGY_LOST_ON_CONTINUE;
+    expect(lostAfterDenial.at(-1)).toMatchObject({
+      type: "error",
+      code: "antigravity_failed",
+      worked: true,
+    });
+    const savedChats = JSON.parse(readFileSync(antigravityChatsFile(ctx.runnerHome), "utf8")) as Record<string, string>;
+    expect(savedChats[`${ACCOUNT}:${lostSession}`]).toBeUndefined();
+
+    // 9. A turn that already posted its reply through our post_message runs no extra turn after a denial.
+    const postedLog = path.join(root, "agy-posted.log");
+    process.env.FAKE_AGY_LOG = postedLog;
+    const postedThenDenied = await run(
+      ctx,
+      turn({
+        runId: RUN.replace(/1$/, "9"),
+        session: { id: SESSION.replace(/1$/, "9"), resume: false },
+        prompt: "DENIED_AFTER_POST",
+      }),
+    );
+    expect(postedThenDenied.at(-1)).toEqual({ type: "done", text: "", session: { id: SESSION.replace(/1$/, "9") } });
+    expect(logOf(postedLog)).toHaveLength(1);
+
+    // 8. Two consecutive empty tools without step_index both emit tool_call events (first is not overwritten).
+    const twoEmpty = await run(
+      ctx,
+      turn({
+        runId: RUN.replace(/1$/, "c"),
+        session: { id: SESSION.replace(/1$/, "8"), resume: false },
+        prompt: "TWO_EMPTY_NO_INDEX",
+      }),
+    );
+    expect(twoEmpty.at(-1)).toMatchObject({ type: "done", text: "Created both." });
+    expect(
+      twoEmpty
+        .filter((e) => e.type === "tool_call")
+        .map((e) => (e as { input?: { CommandLine?: string } }).input?.CommandLine),
+    ).toEqual(["mkdir -p a", "mkdir -p b"]);
   },
   20_000,
 );

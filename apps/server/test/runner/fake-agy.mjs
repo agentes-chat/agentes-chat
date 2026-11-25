@@ -144,7 +144,9 @@ if (args[0] === "-p") {
   const known = path.join(dir, "fake-conversations.json");
   const conversations = existsSync(known) ? JSON.parse(readFileSync(known, "utf8")) : [];
   let conversation = flag("--conversation");
-  if (conversation && !conversations.includes(conversation)) {
+  if (prompt.includes("headless mode cannot prompt") && env.FAKE_AGY_LOST_ON_CONTINUE) {
+    conversation = "c3b60000-0000-4000-8000-999999999999";
+  } else if (conversation && !conversations.includes(conversation)) {
     process.stderr.write(`warning: conversation ${conversation} not found, starting a new one\n`);
     conversation = undefined;
   }
@@ -175,6 +177,204 @@ if (args[0] === "-p") {
     );
     out({ event: "result", result: { conversation_id: conversation, status: "ERROR", response: "", error: "quota" } });
     process.exit(3);
+  }
+  if (prompt.includes("DENIED_SILENT_DONE") && !prompt.includes("headless mode cannot prompt")) {
+    step({
+      step_index: 1,
+      state: "DONE",
+      step_type: "agent_response",
+      usage: { input_tokens: 500, output_tokens: 120, thinking_tokens: 100, cache_read_tokens: 0, total_tokens: 620 },
+    });
+    step({
+      step_index: 2,
+      state: "DONE",
+      step_type: "tool",
+      tool_name: "run_command",
+      tool_info: {
+        name: "run_command",
+        parameters: { CommandLine: "uname -r" },
+        output: "",
+      },
+    });
+    out({
+      event: "result",
+      result: {
+        conversation_id: conversation,
+        status: "SUCCESS",
+        response: "",
+        num_turns: 1,
+        denied_actions: [{ action: "command", display_name: "Bash" }],
+      },
+    });
+    process.exit(0);
+  }
+  if (prompt.includes("DENIED_AFTER_POST") && !prompt.includes("headless mode cannot prompt")) {
+    step({
+      step_index: 1,
+      state: "DONE",
+      step_type: "tool",
+      tool_name: "agenteschat_agentes/post_message",
+      tool_info: { name: "agenteschat_agentes/post_message", parameters: { text: "Here it is." }, output: "posted" },
+    });
+    step({
+      step_index: 2,
+      state: "ERROR",
+      step_type: "tool",
+      tool_name: "run_command",
+      tool_info: {
+        name: "run_command",
+        parameters: { CommandLine: "which grok" },
+        error: { type: "TOOL_ERROR", message: "permission check failed for unsandboxed command" },
+      },
+    });
+    step({
+      step_index: 3,
+      state: "DONE",
+      step_type: "agent_response",
+      usage: { input_tokens: 400, output_tokens: 30, thinking_tokens: 0, cache_read_tokens: 0, total_tokens: 430 },
+    });
+    out({
+      event: "result",
+      result: {
+        conversation_id: conversation,
+        status: "SUCCESS",
+        response: "",
+        num_turns: 1,
+        denied_actions: [{ action: "command", display_name: "Bash" }],
+      },
+    });
+    process.exit(0);
+  }
+  if (prompt.includes("TWO_EMPTY_NO_INDEX")) {
+    step({
+      state: "DONE",
+      step_type: "tool",
+      tool_name: "run_command",
+      tool_info: { name: "run_command", parameters: { CommandLine: "mkdir -p a" }, output: "" },
+    });
+    step({
+      state: "DONE",
+      step_type: "tool",
+      tool_name: "run_command",
+      tool_info: { name: "run_command", parameters: { CommandLine: "mkdir -p b" }, output: "" },
+    });
+    step({
+      step_index: 3,
+      state: "DONE",
+      step_type: "agent_response",
+      text_delta: "Created both.\n",
+      usage: { input_tokens: 200, output_tokens: 15, thinking_tokens: 0, cache_read_tokens: 0, total_tokens: 215 },
+    });
+    out({
+      event: "result",
+      result: { conversation_id: conversation, status: "SUCCESS", response: "Created both.\n", num_turns: 1 },
+    });
+    process.exit(0);
+  }
+  if (prompt.includes("EMPTY_TOOL_OK")) {
+    step({
+      step_index: 1,
+      state: "DONE",
+      step_type: "tool",
+      tool_name: "run_command",
+      tool_info: {
+        name: "run_command",
+        parameters: { CommandLine: "mkdir -p out" },
+        output: "",
+      },
+    });
+    step({
+      step_index: 2,
+      state: "DONE",
+      step_type: "agent_response",
+      text_delta: "Created out.\n",
+      usage: { input_tokens: 300, output_tokens: 20, thinking_tokens: 0, cache_read_tokens: 0, total_tokens: 320 },
+    });
+    out({
+      event: "result",
+      result: { conversation_id: conversation, status: "SUCCESS", response: "Created out.\n", num_turns: 1 },
+    });
+    process.exit(0);
+  }
+  if (
+    (prompt.includes("DENIED_RECOVER") || prompt.includes("DENIED_PREAMBLE")) &&
+    !prompt.includes("headless mode cannot prompt")
+  ) {
+    step({
+      step_index: 1,
+      state: "DONE",
+      step_type: "agent_response",
+      ...(prompt.includes("DENIED_PREAMBLE") ? { text_delta: "Checking now." } : {}),
+      usage: { input_tokens: 500, output_tokens: 120, thinking_tokens: 100, cache_read_tokens: 0, total_tokens: 620 },
+    });
+    step({
+      step_index: 2,
+      state: "ERROR",
+      step_type: "tool",
+      tool_name: "run_command",
+      tool_info: {
+        name: "run_command",
+        parameters: { CommandLine: "which grok" },
+        error: { type: "TOOL_ERROR", message: "permission check failed for unsandboxed command" },
+      },
+    });
+    out({
+      event: "result",
+      result: {
+        conversation_id: conversation,
+        status: "SUCCESS",
+        response: "",
+        num_turns: 1,
+        denied_actions: [{ action: "command", display_name: "Bash" }],
+      },
+    });
+    process.exit(0);
+  }
+  if (prompt.includes("headless mode cannot prompt")) {
+    if (env.FAKE_AGY_STILL_DENIED) {
+      out({
+        event: "result",
+        result: {
+          conversation_id: conversation,
+          status: "SUCCESS",
+          response: "",
+          num_turns: 1,
+          denied_actions: [{ action: "command", display_name: "Bash" }],
+        },
+      });
+      process.exit(0);
+    }
+    step({
+      step_index: 3,
+      state: "DONE",
+      step_type: "agent_response",
+      text_delta: "Recovered answer without running commands.\n",
+      usage: { input_tokens: 600, output_tokens: 50, thinking_tokens: 10, cache_read_tokens: 300, total_tokens: 650 },
+    });
+    out({
+      event: "result",
+      result: {
+        conversation_id: conversation,
+        status: "SUCCESS",
+        response: "Recovered answer without running commands.\n",
+        num_turns: 1,
+      },
+    });
+    process.exit(0);
+  }
+  if (prompt.includes("EMPTY_RESULT_RESPONSE")) {
+    step({
+      step_index: 1,
+      state: "DONE",
+      step_type: "agent_response",
+      text_delta: "Streamed reply.\n",
+      usage: { input_tokens: 300, output_tokens: 20, thinking_tokens: 0, cache_read_tokens: 0, total_tokens: 320 },
+    });
+    out({
+      event: "result",
+      result: { conversation_id: conversation, status: "SUCCESS", response: "", num_turns: 1 },
+    });
+    process.exit(0);
   }
   step({ step_index: 1, state: "ACTIVE", step_type: "agent_response", text_delta: "Let me check. " });
   if (!prompt.includes("BRIDGE_ONLY")) {
