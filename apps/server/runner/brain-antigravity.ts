@@ -92,6 +92,8 @@ export const AGY_RUN_ENV = "AGENTES_MCP_RUN";
  */
 const OURS = new RegExp(`^(?:mcp[_.:/-]{1,2})?${CODEX_MCP_SERVER}(?:__|[_.:/-])[\\w.-]+$`);
 export const isOurAgyTool = (name: unknown) => typeof name === "string" && OURS.test(name);
+/** Our `post_message`, which puts the reply in the conversation by itself. */
+const isOurPostTool = (name: string) => isOurAgyTool(name) && /post_message$/.test(name);
 
 /**
  * `--effort`: low, medium or high (`xhigh` and `max` as high: not every model has the extra level); a slug that names
@@ -302,6 +304,8 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
   // conversation if headless mode auto-denied a tool permission (`denied_actions`) and stopped without replying.
   const totalUsage = { input: 0, output: 0, cacheRead: 0 };
   let anyWorked = false;
+  // A turn that already posted through our `post_message` has its reply: a denial then needs no extra model turn.
+  let posted = false;
   let retriedLost = false;
   let continuedAfterDenial = false;
   let followUpPrompt: string | null = null;
@@ -435,10 +439,13 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
       worked = true;
       flush("", true);
       postToolText = "";
-      // Our bridge's calls: the engine ran them.
-      if (isOurAgyTool(name)) return;
       const error = isRecord(info.error) ? info.error : null;
       const isError = Boolean(error) || step.state === "ERROR";
+      // Our bridge's calls: the engine ran them.
+      if (isOurAgyTool(name)) {
+        if (!isError && isOurPostTool(name)) posted = true;
+        return;
+      }
       const rawOutput = error ? String(error.message ?? error.type ?? "failed") : String(info.output ?? "");
       const output = isError && !rawOutput.trim() ? "failed" : rawOutput;
       const id = `${String(step.conversation_id ?? "agy")}:${String(step.step_index ?? used.steps)}`;
@@ -546,7 +553,7 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
     if (r.status === "SUCCESS" && exit.code === 0) {
       const text = clean((response || streamedText).trimEnd());
       const replyAfterTool = clean((response || postToolText).trimEnd());
-      if (!replyAfterTool && denied.length > 0) {
+      if (!replyAfterTool && denied.length > 0 && !posted) {
         if (!continuedAfterDenial && convId) {
           continuedAfterDenial = true;
           followUpPrompt = `A tool action (${denied.join(", ")}) was denied because headless mode cannot prompt for interactive approval. Do not retry that blocked action; reply to the user now using the information you already have.`;

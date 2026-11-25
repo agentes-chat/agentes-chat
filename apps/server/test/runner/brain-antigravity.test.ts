@@ -636,6 +636,20 @@ test.skipIf(!posix)(
     const savedChats = JSON.parse(readFileSync(antigravityChatsFile(ctx.runnerHome), "utf8")) as Record<string, string>;
     expect(savedChats[`${ACCOUNT}:${lostSession}`]).toBeUndefined();
 
+    // 9. A turn that already posted its reply through our post_message runs no extra turn after a denial.
+    const postedLog = path.join(root, "agy-posted.log");
+    process.env.FAKE_AGY_LOG = postedLog;
+    const postedThenDenied = await run(
+      ctx,
+      turn({
+        runId: RUN.replace(/1$/, "9"),
+        session: { id: SESSION.replace(/1$/, "9"), resume: false },
+        prompt: "DENIED_AFTER_POST",
+      }),
+    );
+    expect(postedThenDenied.at(-1)).toEqual({ type: "done", text: "", session: { id: SESSION.replace(/1$/, "9") } });
+    expect(logOf(postedLog)).toHaveLength(1);
+
     // 8. Two consecutive empty tools without step_index both emit tool_call events (first is not overwritten).
     const twoEmpty = await run(
       ctx,

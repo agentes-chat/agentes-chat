@@ -208,6 +208,43 @@ if (args[0] === "-p") {
     });
     process.exit(0);
   }
+  if (prompt.includes("DENIED_AFTER_POST") && !prompt.includes("headless mode cannot prompt")) {
+    step({
+      step_index: 1,
+      state: "DONE",
+      step_type: "tool",
+      tool_name: "agenteschat_agentes/post_message",
+      tool_info: { name: "agenteschat_agentes/post_message", parameters: { text: "Here it is." }, output: "posted" },
+    });
+    step({
+      step_index: 2,
+      state: "ERROR",
+      step_type: "tool",
+      tool_name: "run_command",
+      tool_info: {
+        name: "run_command",
+        parameters: { CommandLine: "which grok" },
+        error: { type: "TOOL_ERROR", message: "permission check failed for unsandboxed command" },
+      },
+    });
+    step({
+      step_index: 3,
+      state: "DONE",
+      step_type: "agent_response",
+      usage: { input_tokens: 400, output_tokens: 30, thinking_tokens: 0, cache_read_tokens: 0, total_tokens: 430 },
+    });
+    out({
+      event: "result",
+      result: {
+        conversation_id: conversation,
+        status: "SUCCESS",
+        response: "",
+        num_turns: 1,
+        denied_actions: [{ action: "command", display_name: "Bash" }],
+      },
+    });
+    process.exit(0);
+  }
   if (prompt.includes("TWO_EMPTY_NO_INDEX")) {
     step({
       state: "DONE",
