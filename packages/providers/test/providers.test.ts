@@ -168,6 +168,8 @@ describe("pricing", () => {
       // OpenRouter's come from its list.
       [],
       ["commandcode:zai-org/GLM-5.3"],
+      // LLMTR has no frozen catalog models; ids are supplied at use time.
+      [],
     ]);
   });
 
@@ -199,6 +201,7 @@ describe("pricing", () => {
       null,
       "commandcode:deepseek/deepseek-v4.1-flash",
       null,
+      null,
     ]);
     const line = (provider: string) => MODEL_TIERS.map((tier) => modelForTier(provider, tier));
     expect(line("gemini")).toEqual(["gemini-3.5-flash-lite", "gemini-4-hydrogen", "gemini-4-argon"]);
@@ -225,10 +228,11 @@ describe("pricing", () => {
       null,
       "commandcode:claude-haiku-5-5",
       null,
+      null,
     ]);
     for (const provider of PROVIDER_IDS) {
       const picks = Object.values(MODEL_CATALOG).filter((m) => m.provider === provider && m.router);
-      expect(picks).toHaveLength(["moonshot", "openrouter", "custom"].includes(provider) ? 0 : 1);
+      expect(picks).toHaveLength(["moonshot", "openrouter", "llmtr", "custom"].includes(provider) ? 0 : 1);
     }
     // GLM-5.3 Flash can't stop thinking, Flash-Lite keeps a little, every other pick turns it off.
     expect(MODEL_CATALOG["glm-5.3-flash"]?.leastThinking).toBeUndefined();

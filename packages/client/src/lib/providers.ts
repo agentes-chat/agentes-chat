@@ -105,6 +105,13 @@ export const PROVIDERS = [
     site: "commandcode.ai/settings/keys",
     privacy: true,
   },
+  {
+    id: "llmtr",
+    label: "LLMTR",
+    pattern: /^[A-Za-z0-9._-]{8,}$/,
+    site: "llmtr.com/dashboard/keys",
+    privacy: true,
+  },
 ] as const satisfies readonly ProviderEntry[];
 
 export type ProviderId = (typeof PROVIDERS)[number]["id"];

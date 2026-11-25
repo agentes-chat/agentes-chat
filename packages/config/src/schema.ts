@@ -558,6 +558,13 @@ export const envVars = {
     section: "Agents",
     secret: true,
   },
+  PLATFORM_LLMTR_API_KEY: {
+    schema: z.string().optional(),
+    description:
+      "The server's own LLMTR API key. Workspaces without an LLMTR key of their own can use it for agents on LLMTR (https://llmtr.com/v1). Usage is still recorded per organization.",
+    section: "Agents",
+    secret: true,
+  },
   MODEL_ENDPOINTS_PRIVATE: {
     schema: z.stringbool().optional(),
     description:
