@@ -778,10 +778,12 @@ const OLD_START_PAGE_ID = "mbgkclemiokgppkieijlfaoehgdjlhbl";
  *   check and its address and card autofill are off (ADR 0144): passwords
  *   reach an agent's pages only through the runner's typing, which checks
  *   where it types, and nothing an agent typed is saved in its profile.
+ * - Chrome's own downloads go to the agent's `downloads/` folder, the same
+ *   place the runner passes to `agent-browser` for downloads.
  * A Preferences file that isn't JSON is Chrome's to deal with, and neither is
  * worth failing a start for.
  */
-export function prepareProfile(profile: string) {
+export function prepareProfile(profile: string, downloadsDirectory?: string) {
   const file = path.join(profile, "Default", "Preferences");
   try {
     const prefs = existsSync(file) ? readJson<unknown>(file) : {};
@@ -806,6 +808,10 @@ export function prepareProfile(profile: string) {
     if (extensions && overrides && Array.isArray(overrides.newtab)) {
       const newtab = overrides.newtab.filter((e) => !JSON.stringify(e).includes(OLD_START_PAGE_ID));
       next.extensions = { ...extensions, chrome_url_overrides: { ...overrides, newtab } };
+    }
+    if (downloadsDirectory) {
+      const download = isRecord(prefs.download) ? prefs.download : {};
+      next.download = { ...download, default_directory: path.resolve(downloadsDirectory) };
     }
     if (JSON.stringify(next) === JSON.stringify(prefs)) return;
     mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
@@ -3256,7 +3262,7 @@ export class BrowserManager {
       // A Chrome that only restarts or moves to or from the desktop keeps to its one page.
       const reopened = running || profileSession ? null : this.reopenedTabs(profile, allowed);
       const launch = async (on: ChromeDisplay | null) => {
-        prepareProfile(profile);
+        prepareProfile(profile, path.join(session.folder, "downloads"));
         const startPage = this.opts.startPageDirectory
           ? path.join(this.opts.startPageDirectory, START_FILE)
           : prepareStartPage(this.startDir(agent, session.folder, exe), agent, this.opts.startPageData?.(agent));
