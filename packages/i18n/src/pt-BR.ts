@@ -22858,6 +22858,7 @@ export const ptBR = {
         placeholder: "Cole ou digite um endereço",
         apply: "Aplicar",
         remove: "Tirar o link",
+        open: "Abrir link",
       },
       image: {
         add: "Imagem",
@@ -22902,6 +22903,7 @@ export const ptBR = {
         bulletList: "Lista",
         numberedList: "Lista numerada",
         link: "Link",
+        openLink: "Abrir o link do cursor",
         lineBreak: "Quebra de linha",
         nextCell: "Próxima célula da tabela",
       },

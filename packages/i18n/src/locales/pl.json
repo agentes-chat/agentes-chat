@@ -23438,7 +23438,8 @@
         "address": "Adres linku",
         "placeholder": "Wklej lub wpisz adres",
         "apply": "Zastosuj",
-        "remove": "Usuń link"
+        "remove": "Usuń link",
+        "open": "Otwórz link"
       },
       "image": {
         "add": "Obraz",
@@ -23485,6 +23486,7 @@
         "bulletList": "Lista punktowana",
         "numberedList": "Lista numerowana",
         "link": "Link",
+        "openLink": "Otwórz link przy kursorze",
         "lineBreak": "Podział wiersza",
         "nextCell": "Następna komórka tabeli"
       }

@@ -23017,6 +23017,8 @@ export const en = {
         placeholder: "Paste or type an address",
         apply: "Apply",
         remove: "Remove link",
+        /** Over the link the caret is in while editing: opens it in a new tab. */
+        open: "Open link",
       },
       image: {
         /** The toolbar's button: where a picture comes from. */
@@ -23067,6 +23069,7 @@ export const en = {
         bulletList: "Bulleted list",
         numberedList: "Numbered list",
         link: "Link",
+        openLink: "Open the link at the caret",
         lineBreak: "Line break",
         nextCell: "Next cell of a table",
       },

@@ -11,6 +11,7 @@ export function documentShortcuts(t: TFunction, mod: string): [string, string[]]
     [t("live.doc.keys.strike"), [mod, "⇧", "X"]],
     [t("live.doc.keys.code"), [mod, "E"]],
     [t("live.doc.keys.link"), [mod, "K"]],
+    [t("live.doc.keys.openLink"), [alt, "↵"]],
     [t("live.doc.keys.text"), [mod, alt, "0"]],
     [t("live.doc.keys.heading"), [mod, alt, "1–3"]],
     [t("live.doc.keys.bulletList"), [mod, "⇧", "8"]],

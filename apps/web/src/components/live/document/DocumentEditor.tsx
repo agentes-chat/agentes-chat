@@ -5,7 +5,7 @@ import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { type FileFonts, type FontRef, isFontRole, LOCAL } from "@agenteschat/live";
 import { type PeerUser, readPeerState } from "@agenteschat/live/awareness";
 import { DOC_BODY, documentFonts, setDocumentFonts } from "@agenteschat/live/document";
-import { Button } from "@agenteschat/ui";
+import { Button, Icon, isApple } from "@agenteschat/ui";
 import { deleteSelection } from "prosemirror-commands";
 import type { Node as PMNode } from "prosemirror-model";
 import { type Command, EditorState, NodeSelection, Selection, TextSelection } from "prosemirror-state";
@@ -36,9 +36,11 @@ import {
   deleteDocRow,
   deleteDocTable,
   docFormat,
+  docLinkAt,
   insertDocImage,
   insertDocTable,
   NO_DOC_FORMAT,
+  openDocHref,
   sameDocFormat,
   setDocCaps,
   setDocLink,
@@ -69,7 +71,9 @@ import "./document.css";
  * top-level block keeps an id of its own (`blockIds`), and pictures are the file's own (uploaded, or copied from the
  * Drive). What the person selects goes over the file's conversation's composer (`onSelection`: the words, at most 200
  * characters, and their block); "Ask Atlas" floats over a selection; a message's line about the document lights
- * up the words or the block it names (`reveal`).
+ * up the words or the block it names (`reveal`). While editing, the link the caret is in gets "Open link" over it
+ * (also ⌥↵ / Alt+Enter, and ⌘ / Ctrl-click): a click in editable text only places the caret, so a link there never
+ * opened. Read-only, a link is a plain link and opens as one.
  */
 
 /** Pictures a document takes (what the server stores as the file's pictures). */
@@ -82,6 +86,9 @@ const REVEAL_MS = 2400;
 
 const keep = (e: { preventDefault(): void }) => e.preventDefault();
 const noop = () => {};
+
+/** ⌥↵ / Alt+Enter as the platform writes it and as `aria-keyshortcuts` names it (`openDocLink` in keys.ts). */
+const openLinkKeys = () => ({ shown: isApple() ? "⌥↵" : "Alt+Enter", aria: "Alt+Enter" });
 
 /** The app's own text font: what a document draws its headings and text with until it has fonts of its own. */
 const APP_FONT: FontRef = "onest";
@@ -210,6 +217,8 @@ export function DocumentEditor(props: LiveEditorProps) {
   const [driveOpen, setDriveOpen] = useState(false);
   const [uploading, setUploading] = useState(0);
   const [bubble, setBubble] = useState<{ x: number; y: number } | null>(null);
+  /** "Open link" over the link the caret is in (editing only; never with "Ask Atlas" over the same words). */
+  const [linkChip, setLinkChip] = useState<{ x: number; y: number; href: string } | null>(null);
   const [agents, setAgents] = useState<AgentCaret[]>([]);
   const agentHosts = useRef(new Map<number, HTMLElement>());
   const fileId = artifact.id;
@@ -277,18 +286,26 @@ export function DocumentEditor(props: LiveEditorProps) {
       latest.current.selectionKey = key;
       latest.current.onSelection(selection);
     }
-    let at: { x: number; y: number } | null = null;
-    if (latest.current.canAsk && next.ranged && view.hasFocus() && page.current) {
+    /** Where something floats over the text from `pos`, on the page. */
+    const over = (pos: number) => {
+      if (!page.current) return null;
       try {
         const box = page.current.getBoundingClientRect();
-        const start = view.coordsAtPos(state.selection.from);
-        at = { x: Math.max(0, start.left - box.left), y: Math.max(0, start.top - box.top) };
+        const start = view.coordsAtPos(pos);
+        return { x: Math.max(0, start.left - box.left), y: Math.max(0, start.top - box.top) };
       } catch {
         // No layout (a page being drawn): at the page's corner.
-        at = { x: 0, y: 0 };
+        return { x: 0, y: 0 };
       }
-    }
+    };
+    const at = latest.current.canAsk && next.ranged && view.hasFocus() ? over(state.selection.from) : null;
     setBubble((was) => (was && at && was.x === at.x && was.y === at.y ? was : at));
+    const link = !at && !latest.current.readOnly && view.hasFocus() ? docLinkAt(state) : null;
+    const chip = link ? over(link.from) : null;
+    const shown = link && chip ? { ...chip, href: link.href } : null;
+    setLinkChip((was) =>
+      was && shown && was.x === shown.x && was.y === shown.y && was.href === shown.href ? was : shown,
+    );
   }, []);
 
   const assetUrl = useCallback((asset: string) => api.live.assetUrl(orgId, fileId, asset), [api, orgId, fileId]);
@@ -396,6 +413,14 @@ export function DocumentEditor(props: LiveEditorProps) {
         "aria-label": latest.current.t("live.doc.body"),
         ...(latest.current.readOnly ? { "aria-readonly": "true" } : {}),
       }),
+      // ⌘-click (Ctrl-click elsewhere) opens a link while editing, where a click only places the caret. Read-only, the
+      // link opens by itself.
+      handleClick: (_view, _pos, event) => {
+        if (latest.current.readOnly || !(isApple() ? event.metaKey : event.ctrlKey)) return false;
+        const a = event.target instanceof Element ? event.target.closest("a[href]") : null;
+        const href = a && el.contains(a) ? a.getAttribute("href") : null;
+        return href ? openDocHref(href) : false;
+      },
       // `this` is the view: a plugin may dispatch while the view is still being made.
       dispatchTransaction(this: EditorView, tr) {
         this.updateState(this.state.apply(tr));
@@ -677,6 +702,26 @@ export function DocumentEditor(props: LiveEditorProps) {
             >
               <div ref={host} className="lf-doc__host" />
             </div>
+            {linkChip && (
+              <div
+                className="lf-doc__ask lf-doc__link ac-glass"
+                style={{ left: linkChip.x, top: linkChip.y } as CSSProperties}
+              >
+                <Button asChild size="sm" variant="ghost" className="lf-doc__ask-btn">
+                  <a
+                    href={linkChip.href}
+                    target="_blank"
+                    rel="noopener noreferrer nofollow"
+                    title={`${linkChip.href} (${openLinkKeys().shown})`}
+                    aria-keyshortcuts={openLinkKeys().aria}
+                    onMouseDown={keep}
+                  >
+                    <Icon name="external" />
+                    <span className="ac-btn__label">{t("live.doc.link.open")}</span>
+                  </a>
+                </Button>
+              </div>
+            )}
             {bubble && fileAgent && onAsk && (
               <div className="lf-doc__ask ac-glass" style={{ left: bubble.x, top: bubble.y } as CSSProperties}>
                 <Button

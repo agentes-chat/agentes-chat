@@ -22836,7 +22836,8 @@
         "address": "Adresse du lien",
         "placeholder": "Collez ou saisissez une adresse",
         "apply": "Appliquer",
-        "remove": "Retirer le lien"
+        "remove": "Retirer le lien",
+        "open": "Ouvrir le lien"
       },
       "image": {
         "add": "Image",
@@ -22882,6 +22883,7 @@
         "bulletList": "Liste à puces",
         "numberedList": "Liste numérotée",
         "link": "Lien",
+        "openLink": "Ouvrir le lien sous le curseur",
         "lineBreak": "Saut de ligne",
         "nextCell": "Cellule suivante d'un tableau"
       }

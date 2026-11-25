@@ -53824,6 +53824,9 @@
   "live.doc.link.remove": {
     "value": "Remove link"
   },
+  "live.doc.link.open": {
+    "value": "Open link"
+  },
   "live.doc.image.add": {
     "value": "Image"
   },
@@ -53931,6 +53934,9 @@
   },
   "live.doc.keys.link": {
     "value": "Link"
+  },
+  "live.doc.keys.openLink": {
+    "value": "Open the link at the caret"
   },
   "live.doc.keys.lineBreak": {
     "value": "Line break"

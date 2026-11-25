@@ -10,15 +10,18 @@ import {
   type DocBlock,
   type DocTable,
   insertBlocks,
+  markdownToBlocks,
   readDocument,
   writeDocument,
 } from "@agenteschat/live/document";
+import { isApple } from "@agenteschat/ui";
 import { act, cleanup, fireEvent, waitFor, within } from "@testing-library/react";
 import { TextSelection } from "prosemirror-state";
 import type { EditorView } from "prosemirror-view";
 import { useState } from "react";
 import * as Y from "yjs";
 import { DocumentEditor, docSchema, docViewOf, tableAt } from "@/components/live/document";
+import { openDocHref } from "@/components/live/document/commands";
 import { DocCover } from "@/components/live/document/DocCover";
 import { pastedText } from "@/components/live/document/input";
 import type { LiveReveal, LiveSelection } from "@/components/live/editor";
@@ -166,7 +169,7 @@ function wordsOf(view: EditorView, id: string): number {
 }
 
 /** A key through the editor's keymaps (Enter, Tab). */
-function press(view: EditorView, key: string, opts: { shiftKey?: boolean } = {}) {
+function press(view: EditorView, key: string, opts: { shiftKey?: boolean; altKey?: boolean } = {}) {
   const event = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true, ...opts });
   const handled = view.someProp("handleKeyDown", (f) => f(view, event));
   if (!handled) throw new Error(`${key} did nothing`);
@@ -390,6 +393,126 @@ describe("read-only", () => {
     expect(body?.getAttribute("aria-readonly")).toBe("true");
     expect(screen().queryByRole("textbox", { name: "Título do documento" })).toBeNull();
     expect(screen().getByRole("heading", { level: 1 }).textContent).toBe("Campanha de verão");
+  });
+});
+
+describe("links", () => {
+  /** A link in a paragraph and one in a table's cell, as an agent or an import writes them. */
+  const LINKED = markdownToBlocks(
+    "Veja [Example docs](https://example.com/docs) aqui.\n\n| Nome | Link |\n| --- | --- |\n| Docs | [Cell docs](https://example.com/cell) |\n",
+  );
+  const HREFS = ["https://example.com/docs", "https://example.com/cell"];
+
+  /** Where the words of the link to `href` start (ProseMirror's position). */
+  function linkPos(view: EditorView, href: string): number {
+    let at = -1;
+    view.state.doc.descendants((node, pos) => {
+      if (at < 0 && node.isText && node.marks.some((m) => m.type.name === "link" && m.attrs.href === href)) at = pos;
+    });
+    if (at < 0) throw new Error(`no link to ${href}`);
+    return at;
+  }
+
+  /** `window.open` for the test's length: what it was asked to open. */
+  function spyOpen() {
+    const opened: unknown[][] = [];
+    const was = window.open;
+    window.open = ((...args: unknown[]) => {
+      opened.push(args);
+      return null;
+    }) as typeof window.open;
+    const restore = () => {
+      window.open = was;
+    };
+    return { opened, restore };
+  }
+
+  test("read-only: links in a paragraph and a table cell are plain links that open in a new tab", async () => {
+    await setup({ blocks: LINKED, readOnly: true });
+    expect(document.querySelector(".lf-doc__body")?.getAttribute("contenteditable")).toBe("false");
+    for (const href of HREFS) {
+      const a = document.querySelector<HTMLAnchorElement>(`.lf-doc__body a[href="${href}"]`);
+      expect(a?.target).toBe("_blank");
+      expect(a?.rel).toContain("noopener");
+    }
+    expect(document.querySelector(".lf-doc__body td a")?.getAttribute("href")).toBe(HREFS[1] ?? "");
+    // Nothing floats over the text: the link itself is what opens.
+    expect(screen().queryByRole("link", { name: "Abrir link" })).toBeNull();
+  });
+
+  test("editing: Open link floats over the link the caret is in, in a paragraph and in a table cell", async () => {
+    const { view } = await setup({ blocks: LINKED });
+    for (const href of HREFS) {
+      act(() => {
+        view().focus();
+        select(view(), linkPos(view(), href) + 2);
+      });
+      const open = await waitFor(() => screen().getByRole("link", { name: "Abrir link" }));
+      expect(open.getAttribute("href")).toBe(href);
+      expect(open.getAttribute("target")).toBe("_blank");
+      expect(open.getAttribute("rel")).toContain("noopener");
+      expect(open.getAttribute("aria-keyshortcuts")).toBe("Alt+Enter");
+    }
+    // Plain words: no link to open, and the caret stays where it was put.
+    act(() => select(view(), 2));
+    await waitFor(() => expect(screen().queryByRole("link", { name: "Abrir link" })).toBeNull());
+    expect(view().state.selection.from).toBe(2);
+  });
+
+  test("editing: Alt+Enter opens the link at the caret; outside a link it does what it did", async () => {
+    const { view } = await setup({ blocks: LINKED });
+    const spy = spyOpen();
+    try {
+      for (const href of HREFS) {
+        act(() => select(view(), linkPos(view(), href) + 1));
+        press(view(), "Enter", { altKey: true });
+      }
+      expect(spy.opened.map((args) => args[0])).toEqual(HREFS);
+      expect(spy.opened[0]?.[1]).toBe("_blank");
+      act(() => select(view(), 2));
+      const event = new KeyboardEvent("keydown", { key: "Enter", altKey: true, bubbles: true, cancelable: true });
+      expect(view().someProp("handleKeyDown", (f) => f(view(), event))).toBeFalsy();
+      expect(spy.opened).toHaveLength(2);
+    } finally {
+      spy.restore();
+    }
+  });
+
+  test("editing: ⌘ / Ctrl-click opens a link; a plain click only places the caret", async () => {
+    const { view } = await setup({ blocks: LINKED });
+    const spy = spyOpen();
+    const mod = isApple() ? { metaKey: true } : { ctrlKey: true };
+    const click = (target: Element, keys: object) =>
+      view().someProp("handleClick", (f) =>
+        f(view(), linkPos(view(), HREFS[1] ?? ""), {
+          target,
+          metaKey: false,
+          ctrlKey: false,
+          ...keys,
+        } as unknown as MouseEvent),
+      );
+    try {
+      const cell = document.querySelector(".lf-doc__body td a");
+      if (!cell) throw new Error("no link in the table");
+      expect(click(cell, {})).toBeFalsy();
+      expect(spy.opened).toHaveLength(0);
+      expect(click(cell, mod)).toBe(true);
+      expect(spy.opened.map((args) => args[0])).toEqual([HREFS[1]]);
+    } finally {
+      spy.restore();
+    }
+  });
+
+  test("only an address a document may link to opens", () => {
+    const spy = spyOpen();
+    try {
+      expect(openDocHref("javascript:alert(1)")).toBe(false);
+      expect(openDocHref("data:text/html,hi")).toBe(false);
+      expect(openDocHref("mailto:ana@example.com")).toBe(true);
+      expect(spy.opened.map((args) => args[0])).toEqual(["mailto:ana@example.com"]);
+    } finally {
+      spy.restore();
+    }
   });
 });
 

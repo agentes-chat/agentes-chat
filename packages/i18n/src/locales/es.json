@@ -22689,7 +22689,8 @@
         "address": "Dirección del enlace",
         "placeholder": "Pega o escribe una dirección",
         "apply": "Aplicar",
-        "remove": "Quitar el enlace"
+        "remove": "Quitar el enlace",
+        "open": "Abrir enlace"
       },
       "image": {
         "add": "Imagen",
@@ -22735,6 +22736,7 @@
         "bulletList": "Lista con viñetas",
         "numberedList": "Lista numerada",
         "link": "Enlace",
+        "openLink": "Abrir el enlace del cursor",
         "lineBreak": "Salto de línea",
         "nextCell": "Siguiente celda de una tabla"
       }
