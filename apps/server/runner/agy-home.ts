@@ -19,6 +19,12 @@ const configDir = (home: string) => path.join(home, ".gemini", "config");
 /** The agent Lodi's turns run as (`--agent`): no built-in tool, our server's alone. */
 export const AGY_CHAT_AGENT = "agenteschat-chat";
 
+/**
+ * The agent every other turn runs as (`--agent`): the CLI's own file tools, but none of its terminal (`run_command`,
+ * `manage_task`) or web search (`search_web`); commands and the web go through our server's tools.
+ */
+export const AGY_WORK_AGENT = "agenteschat-work";
+
 /** How the account signs in (`auth.type`): a personal Google account, or Gemini Enterprise. */
 export type AgyAuth = "oauth-personal" | "oauth-business";
 
@@ -222,12 +228,86 @@ export const AGY_PLANTED = [
   ".gemini/AGENTS.md",
 ] as const;
 
-/** `mcp_config.json` with our server alone: `agentes-runner mcp`, the run and its token from the env it inherits. */
-export function agyMcpConfig(command: string[] | undefined): string {
+/** A tool name our server could list: what `tools` in `mcp_config.json` may name. */
+const MCP_TOOL_NAME = /^[\w.-]{1,64}$/;
+/** The most tools a turn declares up front; past it the rest stay lazy. */
+const MAX_EAGER_TOOLS = 400;
+
+/**
+ * `mcp_config.json` with our server alone: `agentes-runner mcp`, the run and its token from the env it inherits.
+ * `eagerTools`: the turn's own tools (the engine's `mcp.tools`), each marked `eager` (`tools: {<name>: {eager: true}}`),
+ * so the model gets their declarations up front. Without it the CLI only writes each tool's schema to a file under
+ * `.gemini/antigravity-cli/mcp/` and the model must read that file before `call_mcp_tool`; those files are rewritten
+ * and pruned on every start of the CLI, so a read can come back empty and Gemini then ends its turn with no reply.
+ * Eager tools follow the same `mcp(server/tool)` permission rules (Antigravity CLI 1.5.10 changelog; the map shape is
+ * the one `agy mcp list` accepts, checked 2026-11-24).
+ */
+export function agyMcpConfig(command: string[] | undefined, eagerTools?: readonly string[]): string {
   const [bin, ...args] = command ?? [];
-  const server = { command: bin ?? "agentes-runner", args: [...args, "mcp"], timeoutSeconds: 360 };
+  const eager = [...new Set(eagerTools ?? [])].filter((t) => MCP_TOOL_NAME.test(t)).slice(0, MAX_EAGER_TOOLS);
+  const server = {
+    command: bin ?? "agentes-runner",
+    args: [...args, "mcp"],
+    timeoutSeconds: 360,
+    ...(eager.length > 0 ? { tools: Object.fromEntries(eager.map((t) => [t, { eager: true }])) } : {}),
+  };
   return `${JSON.stringify({ mcpServers: { [CODEX_MCP_SERVER]: server } }, null, 2)}\n`;
 }
+
+/** The engine's `mcp.tools` (names joined by spaces) as a list. */
+export const agyEagerTools = (tools: string | undefined): string[] =>
+  (tools ?? "").split(/\s+/).filter((t) => MCP_TOOL_NAME.test(t));
+
+/**
+ * `--settings` for Lodi's `chat` turns alone (never saved, so the account's other agents keep theirs): our server
+ * allowed, every file, command and web action of the CLI's own denied by rule (deny wins over ask and allow). With
+ * `tools: []` the model is offered none of them; were one offered anyway, its call is refused by the CLI with a
+ * denial the model reads, never an empty output.
+ */
+export const AGY_CHAT_SETTINGS = JSON.stringify({
+  permissions: {
+    allow: [`mcp(${CODEX_MCP_SERVER}/*)`],
+    deny: ["command(*)", "read_file(*)", "write_file(*)", "read_url(*)", "execute_url(*)"],
+  },
+});
+
+/**
+ * `--settings` for every other turn (never saved): our server allowed, the CLI's own commands and URL actions denied
+ * by rule, so a call the model still makes to one is refused with a denial it reads, never an empty output (the CLI's
+ * sandboxed terminal gave Gemini empty outputs, and Gemini then ended its turn with no reply). Its file tools stay.
+ */
+export const AGY_WORK_SETTINGS = JSON.stringify({
+  permissions: {
+    allow: [`mcp(${CODEX_MCP_SERVER}/*)`],
+    deny: ["command(*)", "read_url(*)", "execute_url(*)"],
+  },
+});
+
+/**
+ * The agent of every turn but Lodi's: the CLI's own tool groups as its agent files name them (`read_file`,
+ * `edit_file`, `write_file`, `run_command`, `manage_task`, `search_web`; Antigravity CLI 1.5.10's own migration guide,
+ * read off its binary 2026-11-24) but the terminal and web search, and what the model reaches for instead. Our server's
+ * tools are not in that list: MCP tools come with the server, as Lodi's agent shows with `tools: []`.
+ */
+export const agyWorkAgent = (): string =>
+  [
+    "---",
+    `name: ${AGY_WORK_AGENT}`,
+    "description: Works for the team in agentes.chat: the agentes tools for commands, the web and files.",
+    "tools: [read_file, edit_file, write_file]",
+    "mainAgent: true",
+    "subagent: false",
+    "commandExecutionPolicy: off",
+    "---",
+    "Your own terminal, web search and URL tools are off in this session. Use the agentes tools instead:",
+    "run_code to run commands and scripts, read_file and write_file for files on the computer, web_search and",
+    "web_fetch for the web, export_file (with the file's artifact_id for a new version) to save a file to the Drive.",
+    "When a tool you need isn't in your list, say so in your reply instead of trying another way.",
+    "To change a big file (a long HTML page, a dataset), don't read it whole into the conversation in pieces: bring it",
+    "to the computer (import_file), change it there with one run_code script (python3 that reads, edits and writes",
+    "it), then save it with export_file. Every turn ends with a reply in text: the result, or what blocked you.",
+    "",
+  ].join("\n");
 
 /** Lodi's agent: none of the CLI's tools, no commands, never a subagent; it answers through our server. */
 export const agyChatAgent = (): string =>
@@ -245,12 +325,13 @@ export const agyChatAgent = (): string =>
   ].join("\n");
 
 /**
- * Before a turn: what an earlier turn planted dropped, then our settings, our server alone and Lodi's agent written
- * (each only when it differs).
+ * Before a turn: what an earlier turn planted dropped, then our settings, our server alone (the turn's tools up front),
+ * Lodi's agent and the work agent written (each only when it differs).
  */
-export function prepareAgyHome(home: string, command: string[] | undefined) {
+export function prepareAgyHome(home: string, command: string[] | undefined, eagerTools?: readonly string[]) {
   for (const rel of AGY_PLANTED) rmSync(path.join(home, rel), { recursive: true, force: true });
   writeAgySettings(home);
-  writeIfChanged(path.join(configDir(home), "mcp_config.json"), agyMcpConfig(command));
+  writeIfChanged(path.join(configDir(home), "mcp_config.json"), agyMcpConfig(command, eagerTools));
   writeIfChanged(path.join(configDir(home), "agents", AGY_CHAT_AGENT, "agent.md"), agyChatAgent());
+  writeIfChanged(path.join(configDir(home), "agents", AGY_WORK_AGENT, "agent.md"), agyWorkAgent());
 }
