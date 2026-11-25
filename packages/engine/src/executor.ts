@@ -194,6 +194,7 @@ import {
   teammatesNowAgain,
   thisTurnParts,
   type WorkspaceComputer,
+  zoneOf,
 } from "./context";
 import { recordContextUse } from "./context/feedback";
 import { afterTurnDone, learnTags, reportLearnFailure } from "./context/learn";
@@ -2062,7 +2063,14 @@ async function executeRunInner(
       brainOf(agent.brain) === "claude_code" &&
       !runMessageMeta(run, trigger).viaRoutine
     ) {
-      void warmAtClaim(deps, agent, run, replyThreadId ?? run.channelId, ctx.codeSession ?? null).catch(() => {});
+      void warmAtClaim(
+        deps,
+        agent,
+        run,
+        replyThreadId ?? run.channelId,
+        ctx.codeSession ?? null,
+        trigger?.authorUserId ?? null,
+      ).catch(() => {});
     }
   }
   if (!askingForRoom) await publishChannelEvent(deps.pubsub, event("running"));
@@ -6828,6 +6836,8 @@ async function warmAtClaim(
   run: AgentRun,
   conversation: string,
   codeSession: CodeSessionContext | null,
+  /** Who wrote the trigger: the turn's "Now" is in their zone (`zoneOf`), so the CLI starts in it. */
+  author: string | null,
 ) {
   const factory = deps.brains?.claude_code;
   if (!factory) return;
@@ -6855,6 +6865,7 @@ async function warmAtClaim(
     ...(plan.account ? { account: plan.account } : {}),
     ...(plan.effort ? { effort: plan.effort } : {}),
     ...(agent.contextTokens ? { contextTokens: agent.contextTokens } : {}),
+    timeZone: await zoneOf(deps.db, run.orgId, author),
   });
 }
 
@@ -6938,6 +6949,7 @@ function brainTurnOf(
   } = {},
 ): ComputerTurn {
   const model = plan.kind === "model" ? agent.model : plan.model;
+  const zone = (t.system as readonly ContextBlock[]).find((b) => b.now)?.now?.zone;
   // Refused once in this run, its other turns don't ask again.
   const speed = t.speedFallback ? undefined : brainSpeedFor(agent, plan, run, options.unattended === true);
   const turnParts = () => {
@@ -6994,6 +7006,7 @@ function brainTurnOf(
     ...(plan.effort ? { effort: plan.effort } : {}),
     ...(speed ? { speed } : {}),
     ...(agent.contextTokens ? { contextTokens: agent.contextTokens } : {}),
+    ...(plan.kind !== "model" && zone ? { timeZone: zone } : {}),
     trigger,
     ...(options.code ? { code: options.code } : {}),
     ...(options.personId ? { personId: options.personId } : {}),

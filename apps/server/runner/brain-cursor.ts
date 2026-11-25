@@ -23,6 +23,7 @@ import { CODEX_MCP_ENV, CODEX_MCP_SERVER, redactDeep } from "./mcp";
 import { resolveForAgent } from "./paths";
 import type { Spawn } from "./scope-gate";
 import { agentSecrets } from "./secrets";
+import { turnZoneEnv } from "./turn-zone";
 
 /**
  * The Cursor branch of `brain.turn` (protocol 36, ADR 0114): one agent turn as
@@ -71,6 +72,8 @@ const KILL_GRACE_MS = 5000;
 export interface CursorBrainTurnRequest {
   runId: string;
   kind: "cursor";
+  /** The zone of the turn's "Now" (`turnZoneEnv`). */
+  timeZone?: string;
   session: { id: string; resume: boolean };
   cwd?: string;
   model?: string;
@@ -645,7 +648,8 @@ export async function handleCursorBrainTurn(
       signal: scope.signal,
       runnerHome: ctx.runnerHome,
       ...(ctx.mcp ? { mcpCommand: ctx.mcp.command, socketPath: ctx.mcp.socketPath } : {}),
-      ...(secrets ? { env: secrets.env, redact: secrets.redact, redactHold: secrets.hold } : {}),
+      env: { ...secrets?.env, ...turnZoneEnv(req.timeZone) },
+      ...(secrets ? { redact: secrets.redact, redactHold: secrets.hold } : {}),
       ...(ctx.bin ? { bin: ctx.bin } : {}),
       ...(ctx.spawn ? { spawn: ctx.spawn } : {}),
     },

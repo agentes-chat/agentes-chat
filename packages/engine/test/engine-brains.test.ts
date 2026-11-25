@@ -1420,6 +1420,29 @@ test("a turn says a person waits on it only in the line's first rank: not for a 
   ).toBeUndefined();
 });
 
+test("a computer brain's turn carries the zone of its Now: the person's, else the workspace's", async () => {
+  f = await setup({});
+  await computerAgent(f);
+  const { brain, seen } = scriptedComputerBrain(() => [{ type: "done", text: "Feito." }]);
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id) },
+  });
+  const fx = f as Fixture;
+  const zoneOfTurn = async () => {
+    await post(fx, "@dev que dia é hoje?");
+    await drainOutbox(fx.db, handlers);
+    return seen.at(-1)?.timeZone;
+  };
+  expect(await zoneOfTurn()).toBe("UTC");
+  await fx.db
+    .update(schema.organizationMembers)
+    .set({ timezone: "America/Sao_Paulo" })
+    .where(eq(schema.organizationMembers.userId, fx.owner.id));
+  expect(await zoneOfTurn()).toBe("America/Sao_Paulo");
+});
+
 test("Fast stays out of every run nobody waits for", async () => {
   f = await setup({});
   await computerAgent(f, { brain: "codex", brainModel: "gpt-6.1-sol", brainSpeed: "fast" });

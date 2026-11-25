@@ -153,6 +153,11 @@ export interface BrainTurn {
   contextTokens?: number;
   /** Computer brains: a person waits on this turn (the line's first rank); the runner holds a slot for one. */
   personWaiting?: boolean;
+  /**
+   * Computer brains: the IANA zone of "Now" in the context (the person's, else the workspace's, a routine's own), which
+   * the CLI's clock reads too, so the date it sees is the one the person lives.
+   */
+  timeZone?: string;
   /** The text the person/system sent that starts this turn (also the last user message). */
   trigger: string;
   /**

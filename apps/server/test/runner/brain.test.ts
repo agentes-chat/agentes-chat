@@ -1690,6 +1690,25 @@ test.if(posix)(
 );
 
 test.if(posix)(
+  "the turn's zone is the CLI's TZ, so its date is the person's; a turn in another zone restarts it, resumed",
+  async () => {
+    const { spawns, turn } = setup();
+    const logged = () => spawns() as unknown as { args: string[]; tz: string | null }[];
+    await turn(1, "first", { timeZone: "America/Sao_Paulo" });
+    expect(logged()[0]?.tz).toBe("America/Sao_Paulo");
+    await turn(2, "second", { timeZone: "America/Sao_Paulo" });
+    expect(logged()).toHaveLength(1);
+    await turn(3, "third", { timeZone: "Asia/Tokyo" });
+    expect(logged()).toHaveLength(2);
+    expect(logged()[1]?.tz).toBe("Asia/Tokyo");
+    expect(logged()[1]?.args.slice(-2)).toEqual(["--resume", SESSION(1)]);
+    // None, or one no clock knows: the computer's own.
+    await turn(4, "fourth", { timeZone: "Mars/Olympus" });
+    expect(logged()[2]?.tz).toBe(process.env.TZ ?? null);
+  },
+);
+
+test.if(posix)(
   "a session started with no limit takes 200K once, resumed in the same session; later turns keep the process",
   async () => {
     const { spawns, turn } = setup();

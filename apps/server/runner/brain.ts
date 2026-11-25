@@ -108,6 +108,7 @@ import { claudeAtLeast, REPO_PLUGIN_MIN_CLAUDE, repoPlugin, repoPluginPrint } fr
 import type { Spawn } from "./scope-gate";
 import { withSharedBin } from "./shared-folder";
 import { claudeSessionExists, claudeSessionFile, type TaskSecrets, WRONG_SESSION_FLAG } from "./tasks";
+import { turnZoneEnv } from "./turn-zone";
 
 /**
  * Brain turns (protocol 8, ADR 0032): Claude Code thinks for an agent on
@@ -2738,6 +2739,8 @@ export class BrainManager {
       coAuthors: coAuthorLines(ctx.agent),
       // Who its commits are by is in its env too: another person asking in a code session, a new one (resumed).
       author: commitAuthorEnv(ctx.agent).GIT_AUTHOR_EMAIL ?? null,
+      // Its clock's zone is in its env (`turnZoneEnv`): a turn for someone in another zone, a new one (resumed).
+      zone: turnZoneEnv(req.timeZone).TZ ?? null,
       // A code session's turn starts with its session's tools and the repository's plugin (ADR 0215 §6).
       code: req.codeSession === true,
     });
@@ -3242,6 +3245,7 @@ export class BrainManager {
     if (plan && ctx.planKey) env[plan.claudeCode.tokenEnv] = ctx.planKey.key;
     // Protocol 28: the agent's context limit; Claude Code compacts the conversation there instead of at its window.
     if (isContextTokens(req.contextTokens)) env.CLAUDE_CODE_AUTO_COMPACT_WINDOW = String(req.contextTokens);
+    Object.assign(env, turnZoneEnv(req.timeZone));
     const model = plan ? claudeCodeModel(plan, req.model) : typeof req.model === "string" ? req.model : undefined;
     const branches = ownBranches(ctx.agent, missionBranchPrefix(ctx.agent.id, req.permissions?.branchPrefix));
     const allow = Array.isArray(req.permissions?.allow)

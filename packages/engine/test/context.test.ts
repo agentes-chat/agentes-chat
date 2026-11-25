@@ -16,6 +16,7 @@ import {
   PLAIN_WORDS_LINE,
   postPersonMessage,
   toTurns,
+  zonesElsewhere,
 } from "../src";
 import { type Fixture, setup } from "./fixtures";
 
@@ -29,6 +30,24 @@ test("nowLine: the person's local time with its zone and how long since the prev
   );
   // A bad zone falls back to UTC; no person (an agent asked) and nothing before.
   expect(nowLine("Mars/Olympus", null, null, now)).toBe("# Now\nWed, Oct 21, 2026, 10:40 (UTC).");
+});
+
+test("nowLine: people here in other zones are named, with whose zone a date is in", () => {
+  const now = new Date("2026-11-24T23:43:00Z");
+  const members = [
+    { userId: "u1", userName: "Ana", userZone: "America/Sao_Paulo" },
+    { userId: "u2", userName: "Rui", userZone: "Europe/Lisbon" },
+    { userId: "u3", userName: "Kai", userZone: null },
+    { userId: null, userName: null, userZone: null },
+  ];
+  // Kai has no zone of their own: the workspace's, here the same as Ana's.
+  const elsewhere = zonesElsewhere(members, "America/Sao_Paulo", "America/Sao_Paulo", "u1");
+  expect(elsewhere).toEqual(["Rui (Europe/Lisbon)"]);
+  expect(nowLine("America/Sao_Paulo", "Ana", null, now, elsewhere)).toBe(
+    '# Now\nTue, Nov 24, 2026, 20:43 for Ana (America/Sao_Paulo).\nOthers here live in other zones: Rui (Europe/Lisbon). "Today" and any time you write are in America/Sao_Paulo: name the zone beside them.',
+  );
+  // Everyone in one zone: nothing more.
+  expect(zonesElsewhere(members.slice(0, 1), "America/Sao_Paulo", "UTC", "u1")).toEqual([]);
 });
 
 test("toTurns: own messages are assistant turns, others are prefixed user turns, merged and user-bounded", () => {

@@ -414,6 +414,7 @@ export function createClaudeCodeBrain(deps: ClaudeCodeBrainDeps): Brain {
             ...(permissions ? { permissions } : {}),
             ...accountFields(status.protocol, turn),
             ...contextFields(status.protocol, turn, "claude_code"),
+            ...(turn.timeZone ? { timeZone: turn.timeZone } : {}),
             agent,
           },
           { timeoutMs: WARM_CALL_MS },
@@ -492,6 +493,7 @@ export function createClaudeCodeBrain(deps: ClaudeCodeBrainDeps): Brain {
           ...accountFields(status?.protocol, turn),
           ...contextFields(status?.protocol, turn, "claude_code"),
           ...(turn.personWaiting ? { personWaiting: true } : {}),
+          ...(turn.timeZone ? { timeZone: turn.timeZone } : {}),
           // Each answer the turn finishes before it goes on is its own message (ADR 0112).
           answers: "each",
         };

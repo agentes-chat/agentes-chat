@@ -2448,6 +2448,12 @@ export interface BrainTurnRequest {
    */
   personWaiting?: boolean;
   /**
+   * The IANA zone the turn's "Now" is in (the person's, else the workspace's, a routine's own): the CLI runs with it as
+   * its `TZ`, so its own clock, and the date its system prompt states, match the person's day. The computer's own
+   * zone stays as its egress sets it. No protocol step: a runner that doesn't read it keeps the computer's zone.
+   */
+  timeZone?: string;
+  /**
    * `each` (ADR 0112): an answer the turn finished before it went on (a message handed to it mid-turn was read after
    * it, work moved to the background, a background task's notice) goes out at once as an `answer` event, and `done`
    * holds only what came after it. No protocol step: a runner that doesn't read it joins them into `done`, as before.
@@ -2549,6 +2555,7 @@ export type BrainWarmRequest = Pick<
   | "effort"
   | "contextTokens"
   | "codeSession"
+  | "timeZone"
 >;
 
 /** `open`: the session has a CLI now; `started`: this request started it. */

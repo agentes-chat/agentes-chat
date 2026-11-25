@@ -439,7 +439,7 @@ export interface ContextBlock extends SystemBlock {
    */
   found?: boolean;
   /** The "# Now" block's inputs, so each turn renders the time it runs at (`gapMs`: since the message before). */
-  now?: { zone: string; who: string | null; gapMs: number | null };
+  now?: { zone: string; who: string | null; gapMs: number | null; elsewhere?: string[] };
   /** The agents "# Your teammates now" lists, so a run that resumes reads how they are then (`teammatesNowAgain`). */
   teammates?: { id: string; handle: string }[];
   /** Where the agent's plan stands from 90% (ADR 0118): replaced on every claim of the run. */
@@ -517,7 +517,13 @@ export function thisTurnParts(
   const parts = ordered.map((b) =>
     level(
       b.now
-        ? nowLine(b.now.zone, b.now.who, b.now.gapMs === null ? null : new Date(now.getTime() - b.now.gapMs), now)
+        ? nowLine(
+            b.now.zone,
+            b.now.who,
+            b.now.gapMs === null ? null : new Date(now.getTime() - b.now.gapMs),
+            now,
+            b.now.elsewhere,
+          )
         : b.text,
     ),
   );
@@ -917,6 +923,7 @@ export async function buildRunContext(
           userId: channelMembers.userId,
           userName: users.name,
           userHandle: schema.organizationMembers.handle,
+          userZone: schema.organizationMembers.timezone,
           agentId: agents.id,
           agentName: agents.name,
           agentHandle: agents.handle,
@@ -945,6 +952,7 @@ export async function buildRunContext(
         userId: string | null;
         userName: string | null;
         userHandle: string | null;
+        userZone: string | null;
         agentId: string | null;
         agentName: string | null;
         agentHandle: string | null;
@@ -1158,12 +1166,16 @@ export async function buildRunContext(
   // A routine's background run: its routine block, time line and where it reports (ADR 0053 §4).
   const routine = background ? await routineContext(db, run, agent, trigger, zone, personal) : null;
   const previous = history[history.findIndex((m) => m.id === trigger.id) - 1];
+  // The people here who live in another zone than the one "Now" is in (theirs, else the workspace's).
+  const orgZone = routine ? null : await zoneOf(db, run.orgId, null);
+  const elsewhere = orgZone ? zonesElsewhere(members, zone, orgZone, trigger.authorUserId) : [];
   const nowFor: NonNullable<ContextBlock["now"]> = routine
     ? { zone: routine.zone, who: null, gapMs: null }
     : {
         zone,
         who: trigger.authorUserId ? requesterName : null,
         gapMs: previous ? Math.max(0, Date.now() - previous.createdAt.getTime()) : null,
+        ...(elsewhere.length ? { elsewhere } : {}),
       };
 
   const capabilities = await options.capabilities;
@@ -1378,7 +1390,13 @@ export async function buildRunContext(
     // The local time (the person's, or the routine's zone).
     {
       turn: true,
-      text: nowLine(nowFor.zone, nowFor.who, nowFor.gapMs === null ? null : new Date(Date.now() - nowFor.gapMs)),
+      text: nowLine(
+        nowFor.zone,
+        nowFor.who,
+        nowFor.gapMs === null ? null : new Date(Date.now() - nowFor.gapMs),
+        new Date(),
+        nowFor.elsewhere,
+      ),
       now: nowFor,
     },
     ...(routine ? [{ turn: true, text: routine.timeLine }] : []),
@@ -2015,8 +2033,39 @@ function safeZone(zone: string) {
   }
 }
 
-/** "# Now\nTue, Oct 21, 2026, 07:40 for Ana (America/Sao_Paulo); the previous message here was 14 h ago." */
-export function nowLine(zone: string, who: string | null, previousAt: Date | null, now = new Date()) {
+/** At most this many people of other zones are named in "# Now". */
+const ELSEWHERE_MAX = 5;
+
+/**
+ * The people in a conversation who live in another zone than `zone` ("Rui (Europe/Lisbon)"), each in theirs or the
+ * workspace's, the trigger's author left out; at most `ELSEWHERE_MAX`.
+ */
+export function zonesElsewhere(
+  members: readonly { userId: string | null; userName: string | null; userZone: string | null }[],
+  zone: string,
+  orgZone: string,
+  author: string | null,
+): string[] {
+  const out: string[] = [];
+  for (const m of members) {
+    if (!m.userId || m.userId === author || !m.userName) continue;
+    const theirs = safeZone(m.userZone ?? orgZone);
+    if (theirs !== safeZone(zone) && out.length < ELSEWHERE_MAX) out.push(`${m.userName} (${theirs})`);
+  }
+  return out;
+}
+
+/**
+ * "# Now\nTue, Oct 21, 2026, 07:40 for Ana (America/Sao_Paulo); the previous message here was 14 h ago." With people
+ * here in other zones (`elsewhere`), it names them and asks for the zone beside every time given.
+ */
+export function nowLine(
+  zone: string,
+  who: string | null,
+  previousAt: Date | null,
+  now = new Date(),
+  elsewhere: readonly string[] = [],
+) {
   const timeZone = safeZone(zone);
   // Date and time apart: how ICU joins them ("," or "at") changes between versions.
   const day = new Intl.DateTimeFormat("en-US", {
@@ -2029,7 +2078,10 @@ export function nowLine(zone: string, who: string | null, previousAt: Date | nul
   const time = new Intl.DateTimeFormat("en-US", { timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
   const when = `${day}, ${time.format(now)}`;
   const before = previousAt ? `; the previous message here was ${ago(previousAt, now.getTime())}` : "";
-  return `# Now\n${when}${who ? ` for ${who}` : ""} (${timeZone})${before}.`;
+  const zones = elsewhere.length
+    ? `\nOthers here live in other zones: ${elsewhere.join(", ")}. "Today" and any time you write are in ${timeZone}: name the zone beside them.`
+    : "";
+  return `# Now\n${when}${who ? ` for ${who}` : ""} (${timeZone})${before}.${zones}`;
 }
 
 /** Where `authorNames` keeps an agent's name alone, for its stickers (ADR 0091). */

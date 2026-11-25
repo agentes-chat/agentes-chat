@@ -438,6 +438,7 @@ export class CodexBrain implements Brain {
       ...(this.deps.keepAlive === false ? { keepAlive: false } : {}),
       ...(freeTier ? { freeTier } : {}),
       ...(turn.personWaiting ? { personWaiting: true } : {}),
+      ...(turn.timeZone ? { timeZone: turn.timeZone } : {}),
       // Each answer the turn finishes before it goes on is its own message (ADR 0112).
       answers: "each",
     };

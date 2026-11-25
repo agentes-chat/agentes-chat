@@ -26,6 +26,7 @@ import { CODEX_MCP_ENV, CODEX_MCP_SERVER, redactDeep } from "./mcp";
 import { resolveForAgent } from "./paths";
 import type { Spawn } from "./scope-gate";
 import { agentSecrets } from "./secrets";
+import { turnZoneEnv } from "./turn-zone";
 
 /**
  * The Grok branch of `brain.turn` (protocol 43, ADR 0142): one agent turn as one run of xAI's Grok Build CLI
@@ -58,6 +59,8 @@ const KILL_GRACE_MS = 5000;
 export interface GrokBrainTurnRequest {
   runId: string;
   kind: "grok";
+  /** The zone of the turn's "Now" (`turnZoneEnv`). */
+  timeZone?: string;
   session: { id: string; resume: boolean };
   cwd?: string;
   model?: string;
@@ -587,7 +590,8 @@ export async function handleGrokBrainTurn(
         signal: scope.signal,
         runnerHome: ctx.runnerHome,
         ...(ctx.mcp ? { mcpCommand: ctx.mcp.command, socketPath: ctx.mcp.socketPath } : {}),
-        ...(secrets ? { env: secrets.env, redact: secrets.redact, redactHold: secrets.hold } : {}),
+        env: { ...secrets?.env, ...turnZoneEnv(req.timeZone) },
+        ...(secrets ? { redact: secrets.redact, redactHold: secrets.hold } : {}),
         ...(ctx.bin ? { bin: ctx.bin } : {}),
         ...(ctx.spawn ? { spawn: ctx.spawn } : {}),
       },

@@ -38,6 +38,7 @@ import { CODEX_MCP_ENV, CODEX_MCP_SERVER, codexWritableRoots } from "./mcp";
 import { isInside, resolveForAgent } from "./paths";
 import type { Spawn } from "./scope-gate";
 import { agentSecrets } from "./secrets";
+import { turnZoneEnv } from "./turn-zone";
 
 /**
  * The Codex branch of `brain.turn` (ADR 0032, ADR 0029 "Codex"): one agent
@@ -130,6 +131,8 @@ export type CodexBrainEvent =
 export interface CodexBrainTurnRequest {
   runId: string;
   kind: "codex";
+  /** The zone of the turn's "Now" (`turnZoneEnv`). */
+  timeZone?: string;
   session: { id: string; resume: boolean };
   /** Relative to the agent's folder. */
   cwd?: string;
@@ -1195,7 +1198,8 @@ export async function handleCodexBrainTurn(
         signal: scope.signal,
         runnerHome: ctx.runnerHome,
         ...(ctx.mcp ? { mcpCommand: ctx.mcp.command, socketPath: ctx.mcp.socketPath } : {}),
-        ...(secrets ? { env: secrets.env, redact: secrets.redact, redactHold: secrets.hold } : {}),
+        env: { ...secrets?.env, ...turnZoneEnv(req.timeZone) },
+        ...(secrets ? { redact: secrets.redact, redactHold: secrets.hold } : {}),
         ...(ctx.codexVersion ? { codexVersion: ctx.codexVersion } : {}),
         ...(ctx.bin ? { bin: ctx.bin } : {}),
         ...(ctx.app ? { app: ctx.app } : {}),
