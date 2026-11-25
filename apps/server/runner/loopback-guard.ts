@@ -1,4 +1,4 @@
-import { readFileSync, statSync, writeFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { NETWORK_ENV } from "./accounts";
 import { browserBand, checkEphemeralRange, EPHEMERAL_RANGE_FILE, validateBrowserUidRange } from "./browser-ports";
@@ -219,6 +219,8 @@ export interface LoopbackGuardOptions {
   ephemeralRange?: string;
   /** A cgroup's id (its inode), or null when it isn't there. */
   cgroupId?: (dir: string) => string | null;
+  /** The names in `agents.slice` (`agents-<uid>.slice`, …): every agent on this computer, whichever runner made it. */
+  slices?: () => string[];
   routes?: () => [route4: string, route6: string];
   /** Tests: the interfaces this computer has (`/proc/net/dev`). */
   devices?: () => string;
@@ -233,6 +235,16 @@ const cgroupInode = (dir: string) => {
     return null;
   }
 };
+
+const cgroupEntries = () => {
+  try {
+    return readdirSync(AGENTS_CGROUP);
+  } catch {
+    return [];
+  }
+};
+
+const AGENT_SLICE_NAME = /^agents-(\d+)\.slice$/;
 
 const readOr = (file: string) => {
   try {
@@ -357,9 +369,15 @@ export class LoopbackGuard {
     const id = this.opts.cgroupId ?? cgroupInode;
     const root = id(AGENTS_CGROUP);
     if (root === null) return null;
+    // Every agent slice in the range, not only this runner's: two runners on one computer load the same table,
+    // and each load replaces the whole of it, so each must map the other's agents too or refuse them their own ports.
+    const [first, last] = this.opts.uidRange;
+    const here = (this.opts.slices ?? cgroupEntries)()
+      .map((name) => Number(AGENT_SLICE_NAME.exec(name)?.[1]))
+      .filter((uid) => Number.isInteger(uid) && uid >= first && uid <= last);
     const agents: number[] = [];
     const ids: string[] = [];
-    for (const uid of [...uids].sort((a, b) => a - b)) {
+    for (const uid of [...new Set([...uids, ...here])].sort((a, b) => a - b)) {
       const slice = id(agentCgroup(uid));
       if (slice === null) continue;
       agents.push(uid);

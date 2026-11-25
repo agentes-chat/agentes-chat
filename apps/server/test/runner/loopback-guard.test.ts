@@ -245,6 +245,10 @@ function computer(opts: { nft?: boolean; refuse?: (text: string) => string | nul
       systemd: true,
       ephemeralRange: "32768 60999",
       cgroupId: (dir) => state.slices.get(dir) ?? null,
+      slices: () =>
+        [...state.slices.keys()]
+          .filter((d) => d.startsWith(`${AGENTS_CGROUP}/`))
+          .map((d) => d.slice(AGENTS_CGROUP.length + 1)),
       routes: () => [state.route4, ""],
       devices: () => state.dev,
       ...o,
@@ -315,6 +319,28 @@ test("a check loads it again only when what it is made of changed, or when it is
   pc.state.tables = false;
   g.reconcile();
   expect(pc.loaded).toHaveLength(changes.length + 2);
+  g.stop();
+});
+
+test("another runner's agents on this computer: mapped too, so its load and ours are the same table", () => {
+  const pc = computer();
+  pc.state.slices.set(agentCgroup(20001), "201");
+  // Another runner's agent (not in our agents.json), something else's slice, and a slice outside the range.
+  pc.state.slices.set(agentCgroup(20009), "209");
+  pc.state.slices.set(`${AGENTS_CGROUP}/agents-helper.slice`, "900");
+  pc.state.slices.set(agentCgroup(19999), "199");
+  const g = pc.guard();
+  g.start();
+  const table = pc.loaded.at(-1) ?? "";
+  expect(table).toContain('"agents.slice/agents-20001.slice" : 0x41004e21');
+  expect(table).toContain('"agents.slice/agents-20009.slice" : 0x41004e29');
+  expect(table).not.toContain("agents-helper.slice");
+  expect(table).not.toContain("agents-19999.slice");
+  // Its new agent loads ours again, as one of our own would.
+  pc.state.slices.set(agentCgroup(20010), "210");
+  g.reconcile();
+  expect(pc.loaded).toHaveLength(2);
+  expect(pc.loaded.at(-1)).toContain('"agents.slice/agents-20010.slice" : 0x41004e2a');
   g.stop();
 });
 
