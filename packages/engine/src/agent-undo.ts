@@ -685,7 +685,7 @@ async function changeAction(
 ) {
   // Claim first: two clicks never invert twice.
   const until = new Date(now.getTime() + UNDO_WINDOW_MS);
-  const claimed = await deps.db
+  const [claimed] = await deps.db
     .update(agentActions)
     .set(
       direction === "undo"
@@ -699,16 +699,18 @@ async function changeAction(
         gt(agentActions.undoableUntil, now),
       ),
     )
-    .returning({ id: agentActions.id });
-  if (claimed.length === 0) {
+    .returning({ state: agentActions.state });
+  if (!claimed) {
     throw new ConflictError(
       "Someone did this already",
       direction === "undo" ? "action.already_undone" : "action.not_undone",
     );
   }
+  // A settings receipt may have been undone and redone again while this click waited to claim it.
+  const current = a.kind === "agent.settings_changed" ? { ...a, state: claimed.state } : a;
   let state: Record<string, unknown> | undefined;
   try {
-    state = await handler(deps, a, userId, direction);
+    state = await handler(deps, current, userId, direction);
   } catch (error) {
     if (a.kind === "agent.settings_changed") throw error; // The transaction rolls back the claim as well.
     await deps.db
@@ -725,7 +727,7 @@ async function changeAction(
   // `checkpoint`: changes before it are this flow's own (the next undo compares from there).
   await deps.db
     .update(agentActions)
-    .set({ state: { ...obj(a.state), ...state, checkpoint: new Date().toISOString() } })
+    .set({ state: { ...obj(current.state), ...state, checkpoint: new Date().toISOString() } })
     .where(eq(agentActions.id, a.id));
   await recordAudit(deps.db, {
     orgId: a.orgId,
