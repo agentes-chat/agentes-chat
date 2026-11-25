@@ -153,13 +153,13 @@ test("one tool at a time: the server keeps the other choices, so a device that n
   expect(await (await move({ item: "drive", place: "more" })).json()).toEqual({
     items: { wiki: "always", drive: "more" },
   });
-  expect(await (await move({ item: "proposals", place: "auto" })).json()).toEqual({
-    items: { wiki: "always", drive: "more", proposals: "auto" },
+  expect(await (await move({ item: "threads", place: "auto" })).json()).toEqual({
+    items: { wiki: "always", drive: "more", threads: "auto" },
   });
 
   // Back on its default: the tool leaves the choices, the others stay.
   expect(await (await move({ item: "wiki", place: null })).json()).toEqual({
-    items: { drive: "more", proposals: "auto" },
+    items: { drive: "more", threads: "auto" },
   });
 
   // A tool or a place the app doesn't know, "when there's something" for a tool with no count, no place: refused, kept.
@@ -168,17 +168,19 @@ test("one tool at a time: the server keeps the other choices, so a device that n
     { item: "approvals", place: "always" },
     { item: "wiki", place: "hidden" },
     { item: "wiki", place: "auto" },
+    // Agent improvements wait on nobody (ADR 0219): it has no count.
+    { item: "proposals", place: "auto" },
     { item: "wiki" },
   ])
     expect((await move(bad)).status).toBe(400);
-  expect(await items()).toEqual({ drive: "more", proposals: "auto" });
+  expect(await items()).toEqual({ drive: "more", threads: "auto" });
 
   // Not a member (invited, not in yet): refused.
   await owner(`/api/app/organizations/${orgId}/invitations`, { json: { email: "stranger@example.com" } });
   const stranger = browser(t);
   await signUp(stranger, "stranger@example.com");
   expect((await move({ item: "wiki", place: "always" }, stranger)).status).toBe(403);
-  expect(await items()).toEqual({ drive: "more", proposals: "auto" });
+  expect(await items()).toEqual({ drive: "more", threads: "auto" });
 });
 
 test("the sections' order: each person's own, per workspace, every section once, beside the tools' places", async () => {

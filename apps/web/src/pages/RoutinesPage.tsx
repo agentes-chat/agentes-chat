@@ -104,6 +104,7 @@ import {
   Icon,
   type IconName,
   InfoHint,
+  InlineName,
   Input,
   LimitLine,
   Locked,
@@ -1639,49 +1640,36 @@ function RoutineName({ routine: r, onSaved }: { routine: Routine; onSaved: () =>
   const { org } = useOrg();
   const toast = useToast();
   const action = useRoutineAction(org.id);
-  const [draft, setDraft] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
   const sent = useSent<string>(r.name);
   const name = sent.pending ?? r.name;
-  const ref = useFocusAtEnd<HTMLInputElement>(draft !== null);
   const shown = (isWidgetRoutine(r) && r.widget?.title) || routineTitle({ name, prompt: r.prompt });
   if (!r.canManage || isWidgetRoutine(r)) return <h1 className="issue-details__title">{shown}</h1>;
-  const save = () => {
-    if (draft === null) return;
-    const next = draft.trim();
-    setDraft(null);
-    if (!next || next === name) return;
-    sent.send(next);
-    action.mutate(
-      { type: "update", id: r.id, patch: { name: next } },
-      {
-        onSuccess: onSaved,
-        onError: (error) => {
-          sent.clear();
-          toast.show(errorText(t, error), "error");
-        },
-      },
-    );
-  };
-  if (draft !== null)
+  if (editing)
     return (
-      <input
-        ref={ref}
+      <InlineName
         className="issue-inplace__title"
-        value={draft}
+        value={name}
         maxLength={120}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={save}
-        onKeyDown={(e) => {
-          if (e.key !== "Enter" && e.key !== "Escape") return;
-          e.preventDefault();
-          e.currentTarget.blur();
-        }}
         aria-label={t("routines.panel.nameLabel")}
-        data-inplace=""
+        onSave={(next) => {
+          sent.send(next);
+          action.mutate(
+            { type: "update", id: r.id, patch: { name: next } },
+            {
+              onSuccess: onSaved,
+              onError: (error) => {
+                sent.clear();
+                toast.show(errorText(t, error), "error");
+              },
+            },
+          );
+        }}
+        onDone={() => setEditing(false)}
       />
     );
   return (
-    <EditInPlace label={t("routines.panel.editName")} onEdit={() => setDraft(name)}>
+    <EditInPlace label={t("routines.panel.editName")} onEdit={() => setEditing(true)}>
       <h1 className="issue-details__title">{shown}</h1>
     </EditInPlace>
   );

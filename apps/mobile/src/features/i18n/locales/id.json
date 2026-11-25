@@ -863,6 +863,9 @@
     },
     "kind": {
       "proposal_waiting_other": "{{names}} mengusulkan perbaikan",
+      "proposal_applied_other": "{{names}} menerapkan {{count}} perbaikan",
+      "proposal_applied_agents_other": "{{names}} menerapkan {{count}} perbaikan",
+      "proposal_applied_auto_other": "{{count}} perbaikan diterapkan secara otomatis",
       "mention_other": "{{names}} menyebutmu",
       "thread_reply_other": "{{names}} membalas di utas",
       "agent_reply_other": "{{names}} membalas",
@@ -1054,7 +1057,6 @@
     "fromWorkspace": "Dari ruang kerja",
     "issues": "Tugas",
     "issuesWithMe_other": "{{count}} bersamamu",
-    "proposalsWaiting_other": "{{count}} menunggu",
     "drive": "Drive",
     "connectors": "Konektor dan MCP",
     "preferences": "Preferensi",
@@ -1349,13 +1351,26 @@
     "agentLine_other": "{{count}} memori",
     "uses_other": "Dipakai {{count}} kali",
     "confirmed": "Dikonfirmasi oleh seseorang",
-    "confirm": "Konfirmasi",
-    "confirmedToast": "Dikonfirmasi",
     "details": "Detail teknis",
     "before": "Sebelumnya tertulis: {{text}}",
     "fix": "Perbaiki",
     "forgetTitle": "Lupakan memori ini?",
     "forgetText": "{{name}} berhenti memakai ini di percakapan berikutnya."
+  },
+  "proposals": {
+    "title": "Perbaikan agen",
+    "emptyTitle": "Belum ada yang berubah",
+    "empty": "Saat agen memperbaiki instruksinya sendiri atau instruksi rekannya, perubahannya muncul di sini, dengan Urungkan.",
+    "more": "Tampilkan lainnya",
+    "reviewing": "Sedang ditinjau…",
+    "appliedBy": "Diterapkan oleh {{name}}",
+    "appliedBy_female": "Diterapkan oleh {{name}}",
+    "appliedAuto": "Diterapkan otomatis",
+    "leftOutBy": "Tidak diterapkan oleh {{name}}",
+    "leftOutBy_female": "Tidak diterapkan oleh {{name}}",
+    "leftOut": "Tidak diterapkan",
+    "undoneBy": "Diurungkan oleh {{name}}",
+    "undoneByYou": "Diurungkan olehmu"
   },
   "wiki": {
     "map": "Peta halaman",
@@ -1407,6 +1422,15 @@
     "next": {
       "pr": "Branch sudah dikirim, belum ada pull request",
       "mergeLocal": "Siap di-merge ke {{base}}"
+    },
+    "terminal": {
+      "keys": "Tombol terminal",
+      "keyboard": "Papan ketik",
+      "pasteHint": "Tempel yang Anda salin ke terminal",
+      "key": {
+        "CtrlC": "Control-C, hentikan",
+        "CtrlD": "Control-D, akhir input"
+      }
     }
   },
   "taskManager": {
@@ -3047,6 +3071,59 @@
       "editHint": "Mengubah bagian ini",
       "notHere": "Bagian ini diubah di komputer"
     }
+  },
+  "aiHub": {
+    "accounts": "Akun",
+    "accountsHint": "Semua paket dan kunci API di workspace ini, siapa pun yang menghubungkannya. Ketuk akun untuk melihat batasnya dan siapa yang boleh memakainya.",
+    "order": "Urutan pemakaian",
+    "orderSub": "Saat mencapai batas, agen lanjut dengan akun berikutnya.",
+    "skipped": "dilewati",
+    "orderGroup": "{{plan}} · {{computer}}",
+    "noOrder": "Jika ada dua akun dari AI yang sama di satu komputer, urutannya muncul di sini.",
+    "keyFallback": "Lanjut dengan kunci API saat semua paket mencapai batas",
+    "keyFallbackHint": "Setelah akun terakhir, agen lanjut dengan kunci API workspace, yang ditagih per pemakaian. Misi tidak pernah pindah ke kunci.",
+    "keyFallbackLocked": "Hanya admin yang bisa mengubah ini.",
+    "limits": "Batas",
+    "permissions": "Izin",
+    "manage": "Kelola",
+    "manageSub": "Ganti nama, masuk lagi, hapus",
+    "manageHint": "Siapa yang boleh mengganti nama akun ini, masuk lagi, dan menghapusnya. Hanya yang menghubungkannya yang bisa mengubah ini.",
+    "use": "Pakai di agen",
+    "useSub": "Pilih di Siapa yang berpikir",
+    "useHint": "Agen milik siapa yang boleh berpikir dengan akun ini, dan Lodi milik siapa. Yang mengelolanya bisa mengubah ini.",
+    "reply": "Layani semua",
+    "replySub": "Dengan siapa agen berbicara",
+    "replyHint": "Siapa yang dijawab agen di akun ini selain pemiliknya sendiri. Ketentuan Claude meminta paket dipakai oleh orang yang membayarnya: periksa sebelum membukanya untuk semua.",
+    "audience": {
+      "owner": "Hanya kamu",
+      "ownerOf": "Hanya {{name}}",
+      "admins": "Kamu dan admin",
+      "adminsOf": "{{name}} dan admin",
+      "roles": "Peran…",
+      "people": "Orang…",
+      "everyone": "Semua",
+      "agentOwner": "Hanya pemilik agen",
+      "rolesCount_other": "{{count}} peran",
+      "peopleCount_other": "{{count}} orang"
+    },
+    "pickRoles": "Peran",
+    "pickPeople": "Orang",
+    "pickNone": "Pilih setidaknya satu.",
+    "choice": {
+      "account": "Akun",
+      "model": "Model",
+      "effort": "Upaya",
+      "yours": "Milikmu",
+      "others": "Milik tim",
+      "keys": "Kunci API",
+      "workspace": "Milik workspace",
+      "workspaceSub": "Kunci API workspace",
+      "key": "Kunci API",
+      "keyDefault": "default workspace",
+      "api": "API"
+    },
+    "missionAi": "AI",
+    "missionLocked": "Siapa yang mengerjakan dipilih sebelum Mulai. Modelnya bisa diubah kapan saja."
   },
   "surface": {
     "on": "Aktif",

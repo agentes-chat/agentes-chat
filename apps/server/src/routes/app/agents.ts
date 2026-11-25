@@ -69,6 +69,7 @@ import {
   rightHandWidgetsReady,
   SETUP_AGENTS_MAX,
   seesAgentDetails,
+  seesAgentFactsOnly,
   setAgentBrain,
   setReportsTo,
   speakerOf,
@@ -172,6 +173,7 @@ const toAgent = (
     canTalk: canTalkTo(a, viewerId, speakerOf(viewer)),
     ...agentRights(a, viewerId, viewer),
     editors: seesDetails ? editorsOf(a) : { userIds: [], roleIds: [] },
+    factsOnly: seesAgentFactsOnly(a, viewerId, viewer),
     listed: listsAgentTo(a, viewerId, viewer),
   };
 };
@@ -809,7 +811,7 @@ export function agentRoutes(deps: AppDeps) {
       security,
       summary: "Each agent's presence (online, busy, away, out of office, offline) and what it says it is doing",
       description:
-        "From its work (ADR 0084): `busy` on a routine, a task, a run going for over 2 minutes or one rated heavy, or when it said so; `online` while answering, waiting on an answer or active in the last 30 minutes (one never active, in the 30 minutes since it was made; the right hand always); `away` after that; `out` (out of office, §12) while its plan is at its limit or its monthly budget is spent, with an `out_of_plan`/`out_of_budget` line whose `until` says when it is back, and the router leaves it out of messages nobody mentioned it in; `offline` when held. An agent with no AI is drawn offline by the apps (`ai-status`). `status`: its own words (`set_status`), a line picked for its run (`kind` + `subject`), or what its run waits on; gone when the run ends unless it set `until`. Refreshed on `agent.status` events and every 30 seconds while open.",
+        'From its work (ADR 0084): `busy` on a routine, a task, a run going for over 2 minutes or one rated heavy, or when it said so; `online` while answering, or active in the last 10 minutes (a run waiting on an answer or an approval counts from its last change; one never active, from when it was made); `away` after that, the right hand too (the apps say "Inativo"); `out` (out of office, §12) while its plan is at its limit or its monthly budget is spent, with an `out_of_plan`/`out_of_budget` line whose `until` says when it is back, and the router leaves it out of messages nobody mentioned it in; `offline` when held. An agent with no AI is drawn offline by the apps (`ai-status`). `status`: its own words (`set_status`), a line picked for its run (`kind` + `subject`), or what its run waits on; gone when the run ends unless it set `until`. Refreshed on `agent.status` events and every 30 seconds while open.',
       request: { params: OrgParams },
       responses: {
         200: json(
@@ -937,6 +939,10 @@ export function agentRoutes(deps: AppDeps) {
       .openapi({ description: "The channels it is in that the current person may see, in the sidebar's order." }),
     canTalk: z.boolean(),
     seesDetails: z.boolean().openapi({ description: "Whether the current person sees how it works." }),
+    factsOnly: z.boolean().optional().openapi({
+      description:
+        "A teammate's private agent seen through \"Editar agentes\" (ADR 0085, addendum of 2026-11-24): listed on Equipe with a lock, its page shows its facts and this month's usage, never how it works, and nothing to change. Absent (older servers): false.",
+    }),
     canManage: z.boolean().openapi({
       description: "Whether the current person manages it (`manage_agents` where it reaches, ADR 0085 addendum).",
     }),

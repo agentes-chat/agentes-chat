@@ -22,6 +22,7 @@ export const NOTICE_KINDS = [
   "github_event",
   "github_check",
   "work_follow_up",
+  "channel_work",
 ] as const;
 export type NoticeKind = (typeof NOTICE_KINDS)[number];
 
@@ -45,6 +46,7 @@ export interface MessageNotice {
  * them, the agent says in its reply.
  */
 export const AGENT_ONLY_NOTICES: ReadonlySet<string> = new Set<NoticeKind>([
+  "channel_work",
   "agent_note",
   "wait_result",
   "proposal_result",
@@ -244,6 +246,7 @@ export function noticeView(
     case "poll_result":
     case "work_check_in":
     case "work_follow_up":
+    case "channel_work":
     case "talker_reply":
     case "run_stopped":
       return line("chat.notice.other", { name: names.author });

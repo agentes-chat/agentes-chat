@@ -411,9 +411,9 @@ export const helpPtBR: Record<HelpSlug, HelpDocument> = {
       },
       {
         id: "proposals",
-        heading: "Mudanças propostas",
+        heading: "Melhorias dos agentes",
         blocks: [
-          "Quando uma lição se repete, o agente pode propor mudar as próprias instruções ou o contexto do workspace. Nada muda sem alguém aceitar, e dá para ajustar o texto antes. A versão anterior fica no histórico. Uma proposta recusada vira lição, para não ser proposta de novo.",
+          "Quando uma lição se repete, o agente pode propor mudar as próprias instruções ou o contexto do workspace. Uma revisão do agente aplica a mudança se ela fizer sentido, escrita como uma regra curta, ou deixa de fora e diz por quê. Toda mudança aparece em Melhorias dos agentes, e dá para desfazer. Uma mudança desfeita vira lição, para o agente não repetir.",
         ],
       },
     ],
@@ -840,7 +840,7 @@ export const helpPtBR: Record<HelpSlug, HelpDocument> = {
         id: "data",
         heading: "O que ele envia",
         blocks: [
-          "Uma vez por dia, o servidor manda ao agentes.chat estatísticas de uso anônimas: contagens como pessoas, agentes, tamanho das máquinas, tokens de IA usados e quantos dados os navegadores dos agentes enviam e recebem. Nunca mensagens, arquivos, nomes ou sites. `docker compose run --rm agentes telemetry` mostra exatamente o que seria enviado. Quem é dono desliga em **Configurações\u00a0›\u00a0Geral**, ou com `TELEMETRY=off` no `.env`.",
+          "Uma vez por dia, o servidor manda ao agentes.chat estatísticas de uso anônimas: contagens como pessoas, agentes, tamanho das máquinas, tokens de IA usados, quantos dados os navegadores dos agentes enviam e recebem, e com que rapidez os apps abrem e respondem. Nunca mensagens, arquivos, nomes ou sites. `docker compose run --rm agentes telemetry` mostra exatamente o que seria enviado. Quem é dono desliga em **Configurações\u00a0›\u00a0Geral**, ou com `TELEMETRY=off` no `.env`.",
           "Relatórios de erro não vão para lugar nenhum, a não ser que você defina `SENTRY_DSN` com um servidor compatível com o Sentry que você escolher. Um relatório tem o erro e onde ele aconteceu, nunca mensagens, e-mails, endereços IP, cookies ou tokens.",
         ],
       },

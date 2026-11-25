@@ -318,15 +318,19 @@ export function WorkCard({
       </section>
       {machine && !machine.online && kind !== "model" && (
         <SettingNote icon="pause">
-          {edition === "cloud"
-            ? t("agentPage.work.offlineCloud", {
-                ...g,
+          {machineRow?.moving
+            ? t("machines.moving.named", {
                 computer: computerNameOf(t, org.name, machine.name, isPersonal(org)),
               })
-            : t("agentPage.work.offline", {
-                ...g,
-                computer: computerNameOf(t, org.name, machine.name, isPersonal(org)),
-              })}
+            : edition === "cloud"
+              ? t("agentPage.work.offlineCloud", {
+                  ...g,
+                  computer: computerNameOf(t, org.name, machine.name, isPersonal(org)),
+                })
+              : t("agentPage.work.offline", {
+                  ...g,
+                  computer: computerNameOf(t, org.name, machine.name, isPersonal(org)),
+                })}
           <ThisMacReconnect machineId={machine.machineId} />
         </SettingNote>
       )}
@@ -498,8 +502,8 @@ export function WorkDialogs({
   /** The screen "Quem pensa" opens on, from a link; its first one otherwise. */
   brainAt?: BrainScreen;
   onClose: () => void;
-  /** Opens "Quem pensa" again (Back from the Connect it closed for). */
-  onReopen?: () => void;
+  /** Opens "Quem pensa" again, on `at` (Back from the Connect it closed for). */
+  onReopen?: (at?: BrainScreen) => void;
 }) {
   // Who thinks has its own dialog, under the sky like Connect's (ADR 0032 §5, addendum 2026-11-10).
   if (open === "brain") return <BrainDialog onClose={onClose} at={brainAt} onReopen={onReopen} />;
@@ -602,11 +606,15 @@ function ComputerForm({ onClose }: { onClose: () => void }) {
       ...(brain !== "model" && !has(id, brain)
         ? [t("agentPage.work.computer.alsoBrain", { brain: t(`brain.card.${brain}`) })]
         : []),
-      ...(m && !m.online ? [t("agentPage.work.computer.alsoOffline", g)] : []),
+      ...(m && !m.online ? [m.moving ? t("machines.moving.line") : t("agentPage.work.computer.alsoOffline", g)] : []),
     ];
   };
   const status = (m: Machine) =>
-    m.online ? t("agentPage.work.computer.online") : t("agentPage.work.computer.offline");
+    m.online
+      ? t("agentPage.work.computer.online")
+      : m.moving
+        ? t("machines.moving.short")
+        : t("agentPage.work.computer.offline");
   const chosen = pickable.find((m) => m.id === choice);
   const use = async () => {
     setBusy(true);

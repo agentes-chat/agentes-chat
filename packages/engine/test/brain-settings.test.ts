@@ -5,6 +5,7 @@ import {
   ACCOUNTS_PROTOCOL,
   ANTIGRAVITY_MAC_PROTOCOL,
   BRAIN_PROTOCOL,
+  CODEX_UNELEVATED_PROTOCOL,
   CODEX_WINDOWS_PROTOCOL,
   CONTEXT_LIMIT_PROTOCOL,
   MISSION_PROTOCOL,
@@ -74,6 +75,7 @@ describe("brain settings", () => {
     expect(normalizeBrainModel("claude_code", "fable")).toBe("fable");
     expect(normalizeBrainModel("claude_code", "claude-fable-5-2")).toBe("fable");
     expect(brainModelId("claude_code", "fable")).toBe("claude-fable-5-2");
+    expect(brainModelLabel("claude_code", "fable")).toBe("Fable 5.2");
     expect(brainModelOptions("codex").every((o) => o.modelId?.startsWith("gpt"))).toBe(true);
     // Codex offers the catalog's OpenAI rows, the Astras among them; the newest Sol is its default.
     expect(brainModelOptions("codex").map((o) => o.label)).toEqual([
@@ -173,6 +175,52 @@ describe("brain settings", () => {
       true,
       null,
     ]);
+  });
+
+  test("options: on Windows, Codex says what holds its commands there before anyone picks it", () => {
+    const codexOf = (
+      sandbox: "mxc" | "unelevated" | "none" | undefined,
+      patch: Record<string, unknown> = {},
+      chat = false,
+    ) =>
+      brainOptions(
+        mac({
+          os: "windows",
+          protocol: CODEX_UNELEVATED_PROTOCOL,
+          executors: {
+            claude: { version: "2" },
+            codex: { version: "codex-cli 0.170.0", ...(sandbox ? { sandbox } : {}) },
+            detectedAt: "x",
+          },
+          ...patch,
+        }),
+        { chat },
+      ).find((o) => o.kind === "codex");
+    // MXC, or not known yet: nothing new to say.
+    for (const sandbox of ["mxc", undefined] as const) {
+      expect(codexOf(sandbox)).toMatchObject({ available: true });
+      expect(codexOf(sandbox)).not.toHaveProperty("reason");
+      expect(codexOf(sandbox)).not.toHaveProperty("sandbox");
+    }
+    // Codex's own sandbox: it stays a choice, with its hint.
+    expect(codexOf("unelevated")).toMatchObject({ available: true, sandbox: "partial" });
+    expect(codexOf("unelevated")).not.toHaveProperty("reason");
+    // Nothing could hold it: unavailable there, with its own reason, instead of failing in the chat.
+    expect(codexOf("none")).toMatchObject({ available: false, reason: "windows_sandbox" });
+    expect(codexOf("none")).not.toHaveProperty("sandbox");
+    // Switched off there: that first (turning it on is the way out, and its runner checks only then).
+    const off = { access: { folders: [], tools: { claude: true, codex: false, commands: true } } };
+    expect(codexOf("none", off)).toMatchObject({ available: false, reason: "tool_off" });
+    expect(codexOf("unelevated", off)).not.toHaveProperty("sandbox");
+    // Only Windows reads it, and only for Codex.
+    expect(codexOf("none", { os: "linux" })).toMatchObject({ available: true });
+    expect(brainOptions(mac({ os: "windows", protocol: CODEX_UNELEVATED_PROTOCOL }))[1]).not.toHaveProperty("sandbox");
+    // Turns that run no commands (the team's right hand): nothing for a sandbox to hold, so nothing to say either.
+    for (const sandbox of ["unelevated", "none"] as const) {
+      expect(codexOf(sandbox, {}, true)).toMatchObject({ available: true });
+      expect(codexOf(sandbox, {}, true)).not.toHaveProperty("reason");
+      expect(codexOf(sandbox, {}, true)).not.toHaveProperty("sandbox");
+    }
   });
 
   test("options: on Windows OpenCode needs a runner that speaks ACP; a CLI that doesn't run on the computer's system says so", () => {
@@ -685,7 +733,10 @@ describe("a plan thinks only for its owner's agents, one account each", () => {
       .returning();
     if (!theo) throw new Error("no agent");
     // Bia keeps hers to herself ("Só eu", ADR 0059 §3): Dev's page lists Ana's account, never Bia's.
-    await fx.db.update(schema.machineAccounts).set({ serves: "owner" }).where(eq(schema.machineAccounts.id, BIAS));
+    await fx.db
+      .update(schema.machineAccounts)
+      .set({ serves: "owner", useMode: "owner" })
+      .where(eq(schema.machineAccounts.id, BIAS));
     const dan = await editor();
     const seen = await getAgentBrain(deps, dan.id, fx.org.id, fx.agent.id);
     expect(seen.accounts.map((a) => a.id)).toEqual([ANAS]);
@@ -808,9 +859,15 @@ describe("Usar planos de outras pessoas (ADR 0059 §3, amended 2026-11-04)", () 
     const agent = await row();
     expect(await planIsOwners(fx.db, agent, machineId, { id: BIAS })).toBe(true);
     // Kept to Bia ("Só eu"), it thinks for nobody else's agent.
-    await fx.db.update(schema.machineAccounts).set({ serves: "owner" }).where(eq(schema.machineAccounts.id, BIAS));
+    await fx.db
+      .update(schema.machineAccounts)
+      .set({ serves: "owner", useMode: "owner" })
+      .where(eq(schema.machineAccounts.id, BIAS));
     expect(await planIsOwners(fx.db, agent, machineId, { id: BIAS })).toBe(false);
-    await fx.db.update(schema.machineAccounts).set({ serves: "everyone" }).where(eq(schema.machineAccounts.id, BIAS));
+    await fx.db
+      .update(schema.machineAccounts)
+      .set({ serves: "everyone", useMode: "everyone" })
+      .where(eq(schema.machineAccounts.id, BIAS));
     expect((await brainAccountFor(fx.db, agent, "claude_code", machineId))?.id).toBe(BIAS);
     const usage = await recordPlanUsage(fx.db, {
       orgId: fx.org.id,
@@ -849,17 +906,13 @@ describe("Usar planos de outras pessoas (ADR 0059 §3, amended 2026-11-04)", () 
     expect(paysExtraUsage(await row())).toBe(true);
     const lent = await setAgentBrain(deps, caio.id, fx.org.id, fx.agent.id, { brain: "claude_code", account: BIAS });
     expect(paysExtraUsage(await row())).toBe(false);
-    // Older phone builds read the view's switch; the previous release reads the column during a deploy or a rollback.
+    // Older phone builds read the view's switch.
     expect(lent.extraUsage).toBe(false);
-    expect((await row()).brainExtraUsage).toBe(false);
-    // On her plan someone let everyone talk to Dev, and the previous release's switch was turned on.
-    await fx.db
-      .update(schema.agents)
-      .set({ audienceMode: "everyone", brainExtraUsage: true })
-      .where(eq(schema.agents.id, fx.agent.id));
+    // On her plan someone let everyone talk to Dev.
+    await fx.db.update(schema.agents).set({ audienceMode: "everyone" }).where(eq(schema.agents.id, fx.agent.id));
     await takeBackPlan(deps, bia.id, fx.org.id, BIAS, fx.agent.id);
     // Back on its owner's own sign-in, which answers no one else until its owner says so.
-    expect(await row()).toMatchObject({ brain: "claude_code", audienceMode: "owner", brainExtraUsage: false });
+    expect(await row()).toMatchObject({ brain: "claude_code", audienceMode: "owner" });
     expect(paysExtraUsage(await row())).toBe(true);
   });
 
@@ -912,13 +965,19 @@ describe("Usar planos de outras pessoas (ADR 0059 §3, amended 2026-11-04)", () 
       .returning();
     if (!lodi) throw new Error("no agent");
     const dan = await editor();
-    await fx.db.update(schema.machineAccounts).set({ serves: "owner" }).where(eq(schema.machineAccounts.id, BIAS));
+    await fx.db
+      .update(schema.machineAccounts)
+      .set({ serves: "owner", useMode: "owner" })
+      .where(eq(schema.machineAccounts.id, BIAS));
     const refused = await setAgentBrain(deps, caio.id, fx.org.id, lodi.id, {
       brain: "claude_code",
       account: BIAS,
     }).catch((e) => e);
     expect(refused.code).toBe("account.not_owner");
-    await fx.db.update(schema.machineAccounts).set({ serves: "everyone" }).where(eq(schema.machineAccounts.id, BIAS));
+    await fx.db
+      .update(schema.machineAccounts)
+      .set({ serves: "everyone", useMode: "everyone" })
+      .where(eq(schema.machineAccounts.id, BIAS));
     expect(
       await setAgentBrain(deps, dan.id, fx.org.id, lodi.id, { brain: "claude_code", account: BIAS }),
     ).toMatchObject({ account: BIAS });

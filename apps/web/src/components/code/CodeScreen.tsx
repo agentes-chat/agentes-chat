@@ -113,7 +113,7 @@ function AgentScreen({ agent, sub, acts }: { agent: Agent; sub: HTMLElement | nu
           agent={agent}
           view={view}
           surface={surface}
-          slots={{ sub, actions: acts, full, setFull, say: (text) => say(text, true), picture }}
+          slots={{ sub, actions: acts, full, setFull, say: (text) => say(text, true), picture, notice: "hint" }}
           onLeave={() => setFull(false)}
         />
       </div>

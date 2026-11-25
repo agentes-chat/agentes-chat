@@ -171,7 +171,7 @@ test("Threads: a post is a container, then a publish; a picture goes by our link
   const link = container?.body.image_url ?? "";
   expect(link).toStartWith("https://chat.example.com/api/connector-media/");
   const token = link.split("/").at(-1) ?? "";
-  expect((await openConnectorMedia({ ...f.artifactDeps, secret: SECRET }, token))?.name).toBe("launch.png");
+  expect((await openConnectorMedia({ ...f.artifactDeps, secret: SECRET }, token))?.filename).toBe("launch.png");
   expect(await openConnectorMedia({ ...f.artifactDeps, secret: SECRET }, token, Date.now() + 2 * 3600_000)).toBeNull();
   expect(await openConnectorMedia({ ...f.artifactDeps, secret: SECRET }, `${token}x`)).toBeNull();
 });

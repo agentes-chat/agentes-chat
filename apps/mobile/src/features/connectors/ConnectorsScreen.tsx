@@ -21,6 +21,7 @@ import {
   itemName,
   personalAllowed,
   personalOfText,
+  personalServesAgents,
 } from "@agenteschat/client/lib/connected";
 import { settingsFrozen } from "@agenteschat/client/lib/deletion";
 import { choiceOf, MAIL_BRANDS, mailboxName } from "@agenteschat/client/lib/mail";
@@ -268,7 +269,7 @@ function Gallery() {
   useEffect(() => {
     if (offeredOnce.current || (connect === undefined && mcp === undefined) || !catalog.data || frozen) return;
     // Who may not add the team's connects it as their own, on Pessoal; GitHub stays with who manages connectors.
-    if (!manages && !personalAllowed(connect)) return;
+    if (!manages && !personalServesAgents(connect)) return;
     offeredOnce.current = true;
     const def = connect ? catalog.data.connectors.find((d) => d.id === connect) : undefined;
     const theirs = !manages || personal;

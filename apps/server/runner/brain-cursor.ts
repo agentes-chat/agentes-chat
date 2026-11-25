@@ -358,7 +358,11 @@ export class CursorEventMapper {
       }
       case "result": {
         if (ev.is_error === true || (ev.subtype !== undefined && ev.subtype !== "success")) {
-          this.failed = this.clean(str(ev.result) || str(ev.error) || "The turn failed");
+          this.failed = this.clean(
+            str(ev.result) ||
+              str(ev.error) ||
+              `Cursor ended the turn with ${str(ev.subtype) || "an error and no message"}`,
+          );
           return [];
         }
         this.completed = true;

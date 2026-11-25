@@ -190,6 +190,18 @@ const HEARTBEAT_TOPIC = "pubsub.heartbeat";
 /** Some events never went out (a NOTIFY failed or timed out): every replica that hears it tells its subscribers. */
 const MISSED_TOPIC = "pubsub.missed";
 
+/**
+ * A payload's topic, read without parsing it: `publish` writes `{"t":"<topic>","e":…}`, the topic first. Null for
+ * anything else, or a topic JSON had to escape, which the caller parses whole.
+ */
+export function topicOf(payload: string): string | null {
+  if (!payload.startsWith('{"t":"')) return null;
+  const end = payload.indexOf('"', 6);
+  if (end < 0) return null;
+  const topic = payload.slice(6, end);
+  return topic.includes("\\") ? null : topic;
+}
+
 class TimedOut extends Error {
   constructor(what: string, ms: number) {
     super(`${what} took longer than ${ms} ms`);
@@ -297,6 +309,12 @@ export async function createPostgresPubSub(
       PG_CHANNEL,
       (payload) => {
         if (mine !== generation) return;
+        // Every replica hears every event: one whose topic nobody here listens to isn't parsed at all.
+        const peeked = topicOf(payload);
+        if (peeked !== null && !registry.topics.has(peeked) && peeked !== HEARTBEAT_TOPIC && peeked !== MISSED_TOPIC) {
+          if (gap) resumed();
+          return;
+        }
         let topic = "";
         try {
           const { t, e } = JSON.parse(payload) as { t: string; e: RealtimeEvent };

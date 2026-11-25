@@ -50,6 +50,7 @@ import { resumeBudgetWaits } from "./usage-pause";
 import { isWorkspaceMode, WORKSPACE_MODES, type WorkspaceMode, workspaceModeCacheKey } from "./workspace-mode";
 
 const {
+  auditLog,
   organizations,
   organizationSettings,
   organizationMembers,
@@ -95,6 +96,8 @@ export interface OrgSettings extends MediaSettings {
   teamWatch: boolean;
   /** The right hand greets each person who joins, once. On by default. */
   welcomePeople: boolean;
+  /** The right hand learns from conversations on its own (each person may also turn it off for themselves). On by default. */
+  rightHandLearns: boolean;
   /** What agents without their own choice ask before acting (ADR 0173). Set with `setWorkspaceApprovalsLevel`. */
   approvalsLevel: ApprovalsLevel;
 }
@@ -123,6 +126,7 @@ export async function getOrgSettings(db: Database, actorId: string, orgId: strin
     mode: isWorkspaceMode(s?.mode) ? s.mode : "team",
     teamWatch: s?.teamWatch ?? true,
     welcomePeople: s?.welcomePeople ?? true,
+    rightHandLearns: s?.rightHandLearns ?? true,
     approvalsLevel: s?.approvalsLevel ?? DEFAULT_APPROVALS_LEVEL,
     ...mediaSettingsFrom(s),
   };
@@ -258,6 +262,7 @@ export async function updateOrgSettings(
       ...(input.mode !== undefined ? { mode: input.mode } : {}),
       ...(input.teamWatch !== undefined ? { teamWatch: input.teamWatch } : {}),
       ...(input.welcomePeople !== undefined ? { welcomePeople: input.welcomePeople } : {}),
+      ...(input.rightHandLearns !== undefined ? { rightHandLearns: input.rightHandLearns } : {}),
       ...(input.autoModels !== undefined
         ? { autoModels: mergeAutoModels(await storedAutoModels(), input.autoModels) }
         : {}),
@@ -362,8 +367,6 @@ export async function agentDetail(db: Database, actorId: string, orgId: string, 
   const since = monthStartUtc(now);
   const [usage] = await db
     .select({
-      // What its budget paid: its own calls and pictures, as `agentBudgetsThisMonth` counts them.
-      cost: sql<string>`coalesce(sum(${usageRecords.costNanoUsd}) filter (where ${usageRecords.kind} in ('agent', 'image')), 0)`,
       tokens: sql<string>`coalesce(sum(${usageRecords.inputTokens} + ${usageRecords.outputTokens} + ${usageRecords.cacheReadTokens} + ${usageRecords.cacheWriteTokens}), 0)`,
     })
     .from(usageRecords)
@@ -379,14 +382,35 @@ export async function agentDetail(db: Database, actorId: string, orgId: string, 
     .where(and(eq(agentRuns.orgId, orgId), eq(agentRuns.agentId, agentId), gte(agentRuns.createdAt, since)))
     .groupBy(sql`1`)
     .orderBy(sql`1`);
+  const [last] = await db
+    .select({ at: sql<Date | null>`max(${agentRuns.createdAt})` })
+    .from(agentRuns)
+    .where(and(eq(agentRuns.orgId, orgId), eq(agentRuns.agentId, agentId)));
+  // Who made it: the person its `agent.created` audit row names. That row is written with the agent, so the minute
+  // around its creation keeps the read on the log's (org, time) index.
+  const [made] = await db
+    .select({ userId: auditLog.actorId })
+    .from(auditLog)
+    .where(
+      and(
+        eq(auditLog.orgId, orgId),
+        gte(auditLog.createdAt, new Date(agent.createdAt.getTime() - 60_000)),
+        lt(auditLog.createdAt, new Date(agent.createdAt.getTime() + 60_000)),
+        eq(auditLog.action, "agent.created"),
+        eq(auditLog.actorType, "person"),
+        eq(auditLog.targetId, agentId),
+      ),
+    )
+    .limit(1);
   const [pending] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(approvals)
     .where(and(eq(approvals.agentId, agentId), eq(approvals.status, "pending")));
   const channelsOf = await listAgentChannels(db, actorId, orgId, agentId);
+  // What its budget paid (its own calls and pictures): the gateway's counter, as `agentBudgetsThisMonth` reads it.
   const budget = await agentBudgetState(db, orgId, agentId, now);
   const budgetNanoUsd = await effectiveAgentBudget(db, agent);
-  const spentNanoUsd = Number(usage?.cost ?? 0);
+  const spentNanoUsd = budget.spentNanoUsd;
   return {
     agent,
     month: {
@@ -404,6 +428,9 @@ export async function agentDetail(db: Database, actorId: string, orgId: string, 
     },
     pendingApprovals: pending?.n ?? 0,
     channels: channelsOf,
+    /** When its last run started, any month. */
+    lastRunAt: last?.at ? new Date(last.at) : null,
+    createdByUserId: made?.userId ?? null,
   };
 }
 
@@ -525,6 +552,20 @@ export async function setAgentChannels(
           ),
         ),
       );
+      // Out of a channel, it is no longer responsible for it.
+      await tx
+        .update(channels)
+        .set({ leadAgentId: null })
+        .where(
+          and(
+            eq(channels.orgId, orgId),
+            eq(channels.leadAgentId, agentId),
+            inArray(
+              channels.id,
+              removing.map((c) => c.id),
+            ),
+          ),
+        );
     }
     for (const c of adding) {
       await tx
@@ -540,6 +581,8 @@ export async function setAgentChannels(
     }
   });
   caches.channelMembers.deletePrefix(`${orgId}:`);
+  // The rows of the channels it left: their responsible agent may have gone with it.
+  for (const c of removing) caches.channels.delete(`${orgId}:${c.id}`);
   caches.scopes.deletePrefix(`${orgId}:${agentId}:visible`);
   // Each channel's members column follows, as when it is added or taken out from the channel itself.
   const member = (autoReply?: boolean) => ({
@@ -584,6 +627,8 @@ export async function updateChannel(
     visibility?: "public" | "private";
     audienceRoleIds?: string[];
     replyInThreads?: boolean;
+    /** The agent responsible for the channel, one of its member agents; null: none. */
+    leadAgentId?: string | null;
   },
   options: { pubsub?: PubSub } = {},
 ) {
@@ -604,6 +649,8 @@ export async function updateChannel(
   if (channel.kind === "dm") throw new ValidationError("A direct conversation keeps its participants");
   if (input.replyInThreads !== undefined && channel.kind !== "channel")
     throw new ValidationError("Only a channel can reply in threads", "channel.reply_in_threads");
+  if (input.leadAgentId !== undefined && channel.kind !== "channel")
+    throw new ValidationError("Only channels have a responsible agent", "channel.lead_channel_only");
   const accessChanges = input.visibility !== undefined || input.audienceRoleIds !== undefined;
   const visibility = input.visibility ?? channel.visibility;
   const asked =
@@ -628,12 +675,32 @@ export async function updateChannel(
         dropped = audienceRoleIds.length > 0 ? before.filter((id) => !audienceRoleIds.includes(id)) : [];
         access = { visibility, audienceRoleIds };
       }
+      if (input.leadAgentId) {
+        // Its member row FOR SHARE (ADR 0095): taking the agent out of the channel either went first and the row is
+        // gone here, or waits for this save and then clears the lead it wrote.
+        const [member] = await tx
+          .select({ id: channelMembers.id })
+          .from(channelMembers)
+          .innerJoin(agents, eq(agents.id, channelMembers.agentId))
+          .where(
+            and(
+              eq(channelMembers.orgId, orgId),
+              eq(channelMembers.channelId, channelId),
+              eq(channelMembers.agentId, input.leadAgentId),
+              isNull(agents.archivedAt),
+            ),
+          )
+          .for("share", { of: channelMembers });
+        if (!member)
+          throw new ValidationError("The responsible agent must be in the channel", "channel.lead_not_member");
+      }
       const [row] = await tx
         .update(channels)
         .set({
           ...(name !== undefined ? { name } : {}),
           ...(input.topic !== undefined ? { topic: input.topic } : {}),
           ...(input.replyInThreads !== undefined ? { replyInThreads: input.replyInThreads } : {}),
+          ...(input.leadAgentId !== undefined ? { leadAgentId: input.leadAgentId } : {}),
           ...access,
         })
         .where(eq(channels.id, channelId))

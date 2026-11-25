@@ -7,6 +7,7 @@ import type { WorkspaceComputer } from "./context";
 import { checkDeviceUse, noteDeviceInUse, pickDevice, seenAgo, waitHint, workspaceDevices } from "./device-resolve";
 import { ForbiddenError, NotFoundError } from "./errors";
 import { cutText, cutTextEnd } from "./format";
+import { codeCommitAuthor } from "./git/person-account";
 import { computerBackSoon, type MachineCaller } from "./machine-hub";
 import { createMachineSandboxProvider } from "./machine-provider";
 import { computerPreparing } from "./machine-provisioning";
@@ -316,7 +317,11 @@ export async function withConnectedMachine<T>(
     );
   }
   // The right hand's requests go to the seat its run works in (a person's own, the shared one), or nowhere (ADR 0175).
-  const provider = createMachineSandboxProvider(hub, await machineScope(hub, ctx, machineId), device);
+  const scope = await machineScope(hub, ctx, machineId);
+  // In a code session the commands' commits are authored as the person who asked, by their own GitHub account
+  // (ADR 0215 §13).
+  const author = await codeCommitAuthor(ctx.db, ctx.orgId, ctx.runId).catch(() => null);
+  const provider = createMachineSandboxProvider(hub, author ? { ...scope, author } : scope, device);
   return fn({ id: machineId, provider, ref: `machine:${machineId}`, machineId });
 }
 

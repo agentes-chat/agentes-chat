@@ -442,7 +442,7 @@ export async function orgToolCatalog(db: Database, orgId: string, options: { vie
       continue;
     }
     if (isCustom(c)) {
-      const tools = await classifiedTools(db, c.id);
+      const tools = await classifiedTools(db, c);
       const byScope = new Map<string, CatalogTool[]>();
       for (const t of tools) {
         const scope = customScope(c.id, t.access as ToolAccess);

@@ -16,13 +16,11 @@ import {
   schema,
   sql,
 } from "@agenteschat/db";
-import { plainLine } from "@agenteschat/ui/markdown";
 import { decidableBySql } from "./approvals";
 import { NotFoundError, ValidationError } from "./errors";
 import { publishUserEvent } from "./events";
-import { cutText } from "./format";
 import { queueLiveActivity } from "./live-activity-queue";
-import type { PreviewMeta } from "./message-preview";
+import { type PreviewMeta, snippetOf } from "./message-preview";
 import { noticeOn, noticePrefsOf, readNoticePrefs } from "./notice-prefs";
 import { listMemberships, requirePermission } from "./organizations";
 import { enqueuePush } from "./push";
@@ -244,6 +242,12 @@ export const NOTIFICATION_KINDS = [
    * `latest.title` the newest one's agent, `source.agentId` the right hand (its name in `label`). Inbox only.
    */
   "right_hand_decided",
+  /**
+   * An agent applied a change it judged worth making (ADR 0219) to an agent this person looks after or to the
+   * workspace's context: one row a day while unread, `count` how many, `latest.title` the newest change in a line,
+   * `source.agentId` the agent that applied it, `source.proposalId` the newest change. Inbox only.
+   */
+  "proposal_applied",
   /**
    * The right hand stopped deciding for this person: three of its decisions undone in a week (ADR 0139 §2). Waiting
    * until they turn it back on, so it reaches their devices.
@@ -504,6 +508,8 @@ const MERGING: ReadonlySet<NotificationKind> = new Set([
   "catch_up_closed",
   // The day's decisions the right hand made for the person, one row while unread.
   "right_hand_decided",
+  // The day's changes agents applied, one row while unread.
+  "proposal_applied",
   // One per person, read or not, until nothing waits on them.
   "proposal_waiting",
 ]);
@@ -529,11 +535,9 @@ const nowOf = (deps: { now?: () => Date }) => deps.now?.() ?? new Date();
 /** How many people a merged row names (`latest.names`); the rest are counted. */
 const MAX_NAMES = 2;
 
-/** Plain text for a card (`plainLine`), at most `max` chars. `@mentions` stay. */
+/** Plain text for a card (`snippetOf`), at most `max` chars. `@mentions` stay. */
 export function notificationSnippet(text: string | null | undefined, max = SNIPPET_LENGTH): string {
-  if (!text) return "";
-  const plain = plainLine(text, max);
-  return plain.length > max ? `${cutText(plain, max - 1).trimEnd()}…` : plain;
+  return snippetOf(text, max);
 }
 
 export function notificationView(r: Row): NotificationView {

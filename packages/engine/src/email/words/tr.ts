@@ -501,6 +501,36 @@ export const words: EmailWords = {
     table: (day) => `Tablonun tamamı: bun run report:autonomy --day ${day}`,
     why: "Bu e-postayı, bu adres bu sunucudaki OPS_REPORT_EMAIL içinde olduğu için aldınız. Günde bir kez gönderilir.",
   },
+  accountOpened: {
+    subject: (plan) => `${plan} hesabını daha fazla kişi kullanabilir`,
+    preheader: (plan) => `Onunla yaptıkları ${plan} planını ve limitlerini kullanır.`,
+    headline: "Biri yapay zekâ hesabını kimlerin kullanabileceğini değiştirdi",
+    body: (by, account, plan) => [
+      { b: by },
+      `, ${plan} hesabın `,
+      { b: account },
+      ` için kimlerin kullanabileceğini değiştirdi. Onunla yapılanlar planını ve limitlerini kullanır.`,
+    ],
+    account: "Hesap",
+    by: "Değiştiren",
+    setting: "İzin",
+    use: "Ajanlarda kullan",
+    reply: "Herkese yanıt ver",
+    was: "Önce",
+    now: "Şimdi",
+    everyone: "Workspace'teki herkes",
+    admins: "Sen ve yöneticiler",
+    onlyYou: "Yalnızca sen",
+    agentOwner: "Yalnızca ajanın sahibi",
+    note: "Geri almak için hesabı Yapay zekâ ve kullanım bölümünde aç ve izinlerini değiştir.",
+    button: "Yapay zekâ hesaplarını aç",
+    why: (org) =>
+      `Bu e-postayı, ${org} içinde bu yapay zekâ hesabını bağladığın ve başka biri onu kimlerin kullanabileceğini değiştirdiği için aldın.`,
+    personal: {
+      why: () =>
+        "Bu e-postayı, bu yapay zekâ hesabını bağladığın ve başka biri onu kimlerin kullanabileceğini değiştirdiği için aldın.",
+    },
+  },
   planOpened: {
     subject: (plan) => `${plan} planın üzerinden ajanınla daha fazla kişi konuşabilir`,
     preheader: (plan) => `Onların konuşmaları ${plan} planını ve limitlerini kullanır.`,
@@ -599,6 +629,27 @@ export const words: EmailWords = {
       small: "Sensen Ayarlar'dan yeniden bağla.",
       why: (surface) => `Bu e-postayı ${surface} agentes.chat hesabına bağlı olduğu için aldın.`,
       picture: "Asistanın, artık telefonunda değil",
+    },
+    pinReset: {
+      subject: (surface) => `${surface} PIN'ini seç`,
+      preheader: "Sohbet uygulamandan işlemleri onaylayan PIN'i seç.",
+      headline: (surface) => `${surface} PIN'ini seç`,
+      body: (surface) =>
+        `${surface} üzerinden işlemleri onaylamak için kullandığın PIN'i seçmek üzere bir bağlantı istendi. Sen istediysen, bu düğmenin açtığı sayfada seç.`,
+      button: "PIN'imi seç",
+      small: "Bağlantı bir saat boyunca bir kez çalışır. Sen değilsen bu e-postayı yok say. Hiçbir şey değişmez.",
+      why: (surface) => `Bu e-postayı ${surface} agentes.chat hesabına bağlı olduğu için aldın.`,
+    },
+    pinLocked: {
+      subject: (surface) => `${surface} PIN'in kilitlendi`,
+      preheader: "Üst üste üç yanlış PIN. Sohbet uygulamandan onaylama şimdilik duraklatıldı.",
+      headline: (surface) => `${surface} PIN'in kilitlendi`,
+      body: (surface, time) =>
+        `Biri ${surface} üzerinden bir işlemi onaylamak için üst üste üç kez yanlış PIN girdi. ${surface} üzerinden onaylama ${time} boyunca duraklatıldı.`,
+      lockedFor: ["15 dakika", "1 saat", "24 saat"],
+      small: (surface) =>
+        `Sen girdiysen daha sonra tekrar dene. Sen değilsen, kimse oradan onaylayamasın diye bildirim ayarlarından ${surface} bağlantısını kaldır.`,
+      button: "Bildirim ayarlarını aç",
     },
   },
   supportReply: {

@@ -472,15 +472,22 @@ function notebookContent(raw: string): McpContent[] {
 
 /** `"3"` or `"1-5"`, or null. */
 function pageRange(pages: string) {
-  const m = /^\s*(\d+)\s*(?:-\s*(\d+))?\s*$/.exec(pages);
+  // The spaces before `-` go with it: two runs of spaces in a row would split a long run every way before failing.
+  const m = /^\s*(\d+)(?:\s*-\s*(\d+))?\s*$/.exec(pages);
   if (!m) return null;
   const first = Number(m[1]);
   const last = m[2] === undefined ? first : Number(m[2]);
   return first >= 1 && last >= first ? { first, last } : null;
 }
 
-/** `glob` split as rg takes it: by spaces and commas outside braces. */
-const grepGlobs = (glob: string) => glob.match(/(?:[^\s,{]|\{[^}]*\})+/g) ?? [];
+/**
+ * `glob` split as rg takes it: by spaces and commas outside braces. A `{` with no `}` after it opens nothing and splits
+ * as a comma does; read as one, so the pattern doesn't read on to the end from each.
+ */
+const grepGlobs = (glob: string) => {
+  const closed = glob.lastIndexOf("}") + 1;
+  return `${glob.slice(0, closed)}${glob.slice(closed).replaceAll("{", ",")}`.match(/(?:[^\s,{]|\{[^}]*\})+/g) ?? [];
+};
 
 const relativeTo = (cwd: string, file: string) => {
   const rel = path.relative(cwd, file);

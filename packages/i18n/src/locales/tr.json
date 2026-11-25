@@ -54,6 +54,13 @@
     "offline": "Çevrimdışısınız. Bağlantınızı kontrol edip tekrar deneyin.",
     "unreachable": "agentes.chat'e şu anda ulaşılamıyor. Birazdan tekrar deneyin."
   },
+  "reconnect": {
+    "device": "Yeniden bağlanıyor… Bu cihazda internet yok.",
+    "server": "Yeniden bağlanıyor… Sunucuya ulaşılamıyor ya da yeniden başlatılıyor.",
+    "signedOut": "Oturumunuz kapandı.",
+    "retry": "Şimdi yeniden dene",
+    "signIn": "Giriş yap"
+  },
   "roles": {
     "owner": "Sahip",
     "admin": "Yönetici",
@@ -424,7 +431,7 @@
     },
     "manage_agents": {
       "title": "Ajanları düzenleme",
-      "desc": "Talimatlar, beyin, bütçe ve her birinin kullandıkları, kişinin konuştuğu ajanlarda. Başkalarının özel ajanları hariç.",
+      "desc": "Talimatlar, beyin, bütçe ve her birinin kullandıkları, kişinin konuştuğu ajanlarda. Başkalarının özel ajanlarından yalnızca adı, sorumlusu ve kullanımı.",
       "short": "ajanları düzenleme",
       "say": "konuştuğu ajanları düzenler"
     },
@@ -697,6 +704,8 @@
       "confirmNo": "Bu ben değildim",
       "done": "Her şey hazır.",
       "doneLead": "agentes uygulamasında giriş yaptınız. Bu sekmeyi kapatabilirsiniz.",
+      "back": "Uygulamaya dönülüyor.",
+      "openApp": "Uygulamayı aç",
       "expired": "Bu isteğin süresi doldu.",
       "expiredLead": "Uygulamaya dönüp yeniden {{provider}} seçin.",
       "handover": "Diğer cihazdaki hesabınızla giriş yapılıyor…",
@@ -1221,7 +1230,7 @@
         "fileLead": "Tanıdığımız herhangi bir uygulamanın dosyası. Kendiliğinden tanınır.",
         "paths": {
           "lead": "Nasıl getireceğinizi seçin. Bir şey oluşturulmadan önce her şeyi kontrol edersiniz.",
-          "best": "en eksiksizi",
+          "best": "En eksiksizi",
           "safe": "{{app}} anahtarları, şifreleri ve oturumları hiçbir yolla gelmez.",
           "command": {
             "title": "Bir komutla",
@@ -2173,7 +2182,7 @@
     "moreWhat": {
       "waiting": "Yanıtınızı bekleyen her şey",
       "approvals": "Ajanların sizden izin istedikleri",
-      "proposals": "Ajanların değiştirmeyi önerdikleri",
+      "proposals": "Ajanların değiştirdikleri ve nedenleri",
       "threads": "Ayrılan konuşmalar ve misyonlar",
       "issues": "Kişiler ve ajanlar için ekibin işleri",
       "wiki": "Ekibin bildikleri, herkes için yazılmış",
@@ -2292,7 +2301,7 @@
     "summary_other": "{{people}} üye · {{agents}} ajan",
     "waiting": "Gelen kutusu",
     "approvals": "Onaylar",
-    "proposals": "İyileştirme önerileri",
+    "proposals": "Ajan iyileştirmeleri",
     "issues": "Görevler",
     "missionsWaiting_one": "Sizi bekleyen {{count}} misyon",
     "missionsWaiting_other": "Sizi bekleyen {{count}} misyon",
@@ -2336,8 +2345,6 @@
     "unread_other": "{{count}} okunmamış mesaj",
     "pendingApprovals_one": "{{count}} bekleyen onay",
     "pendingApprovals_other": "{{count}} bekleyen onay",
-    "pendingProposals_one": "{{count}} öneri sizi bekliyor",
-    "pendingProposals_other": "{{count}} öneri sizi bekliyor",
     "home": "Ana sayfa",
     "notifications": "Bildirimler",
     "unreadMark": "Okunmadı",
@@ -2477,10 +2484,50 @@
       "gone": "Bu geri alma bağlantısı artık çalışmıyor",
       "sender": "O gönderen"
     },
+    "page": {
+      "opening": "Sayfa açılıyor",
+      "gone": "Bu bağlantı artık çalışmıyor",
+      "lead": "Onaylamak için PIN'ini yaz.",
+      "leadFirst": "Onaylamak için 6 haneli bir PIN seç. {{surface}} üzerinden bunun gibi işlemleri onaylar.",
+      "choosePin": "PIN seç",
+      "repeatPin": "Tekrar yaz",
+      "pin": "PIN'in",
+      "mismatch": "İki PIN eşleşmiyor. İkincisini tekrar yaz.",
+      "approve": "Onayla",
+      "refuse": "Reddet",
+      "forgot": "PIN'ini mi unuttun?",
+      "emailed": "Sana e-postayla bir bağlantı gönderdik. PIN'ini orada seç, sonra bu sayfaya dön.",
+      "notYours": "Buna uygulamada {{who}} karar verir.",
+      "notYoursSomeone": "Buna uygulamada onaylama yetkisi olan biri karar verir.",
+      "approved": "Onaylandı",
+      "refused": "Reddedildi",
+      "expired": "Bu isteğin süresi doldu",
+      "back": "{{surface}} uygulamasına dön. Asistanın orada devam eder.",
+      "setFirst": "Önce PIN'ini seç",
+      "setFirstLead": "{{surface}} üzerinden onaylamak için PIN gerekir ve sohbetteki bir bağlantı onu seçemez. PIN'i oturum açtığın uygulamada seç, sonra bu sayfaya dön.",
+      "setFirstLeadEmail": "{{surface}} üzerinden onaylamak için PIN gerekir ve sohbetteki bir bağlantı onu seçemez. PIN'i oturum açtığın uygulamada ya da e-postayla gönderdiğimiz bağlantıyla seç. Sonra bu sayfaya dön.",
+      "openApp": "Uygulamada seç",
+      "emailMe": "Bana bağlantı gönder"
+    },
+    "pinReset": {
+      "title": "PIN'ini seç",
+      "lead": "Altı rakam. Sohbet uygulamandan istediğin işlemleri onaylamak için gireceksin.",
+      "button": "PIN'imi kaydet",
+      "done": "PIN kaydedildi",
+      "doneLead": "{{surface}} üzerinden açılan sayfaya dön ve bu PIN'le onayla.",
+      "gone": "Bu bağlantı artık çalışmıyor"
+    },
     "via": "{{surface}} aracılığıyla",
     "viaTip": "{{person}} tarafından {{surface}} üzerinden gönderildi",
     "forwarded": "{{surface}} üzerinden iletildi",
-    "forwardedTip": "{{person}} bunu {{surface}} üzerinden iletti. Bu sözler başka birine ait."
+    "forwardedTip": "{{person}} bunu {{surface}} üzerinden iletti. Bu sözler başka birine ait.",
+    "pin": {
+      "set": "PIN belirle",
+      "change": "PIN'i değiştir",
+      "title": "{{surface}} PIN'in",
+      "text": "{{surface}} üzerinden istediğin işlemleri onaylamak için girdiğin altı rakam. Sohbette asla gönderilmez.",
+      "save": "PIN'i kaydet"
+    }
   },
   "team": {
     "title": "Ekip",
@@ -3022,7 +3069,6 @@
       "mineHelp": "{{name}} ile konuşman, kendi planınla ya da seninle paylaşılan bir planla düşünür, yalnızca seninki.",
       "connectMine": "Planımı bağla",
       "useWorkspace": "Çalışma alanınınkini kullan",
-      "useMine": "Planımı kullan",
       "mineYours": "senin planın",
       "mineOf": "{{owner}} kişisinin planı",
       "mineKey": "çalışma alanı anahtarı",
@@ -3057,7 +3103,7 @@
       "team": "Bir kişinin uyguladığı kartlarla tüm ekibi kurar ve değiştirir: ajanlar, kişiler ve çalışma alanı ayarları",
       "routines": "Yönetebildiğin her ajanın rutinini çalıştırır ve siler",
       "asYou": "Kendi sohbetinde, görebildiğin Drive'ı, wikiyi ve görevleri okur",
-      "mentions": "Üyesi olmadan her kanaldaki bir @bahsetmeye yanıt verir"
+      "mentions": "Üyesi olmadan her kanaldaki bir @bahsetmeye ve en iyi uyduğu mesajlara yanıt verir"
     },
     "card": {
       "settings": "{{name}} · Ayarlar",
@@ -3082,24 +3128,7 @@
       "to": "yerine",
       "editFirst": "Önce düzenle",
       "superseded": "Daha yeni öneriyle değiştirildi",
-      "onlyCreators": "Ajanları yalnızca yöneticiler oluşturur",
-      "only": {
-        "model": "Bir ajanın modelini yalnızca yöneticiler değiştirir",
-        "effort": "Bir ajanın çabasını yalnızca yöneticiler değiştirir",
-        "budget": "Bir ajanın bütçesini yalnızca yöneticiler değiştirir",
-        "owner": "Bir ajanın sorumlusunu yalnızca yöneticiler değiştirir",
-        "archive": "Bir ajanı yalnızca yöneticiler arşivler",
-        "delete": "Bir ajanı yalnızca yöneticiler siler",
-        "audience": "Onunla kimin konuşacağını yalnızca yöneticiler ve sorumlusu değiştirir",
-        "channels": "Kanallarını yalnızca yöneticiler ve sorumlusu değiştirir",
-        "skill": "Bir ajanın becerilerini yalnızca onu düzenleyebilenler değiştirir",
-        "ai_account": "Yalnızca hesabın sahibi verebilir",
-        "name": "Bir ajanın adını yalnızca yöneticiler değiştirir",
-        "look": "Görünümünü yalnızca yöneticiler ve sorumlusu değiştirir",
-        "group": "Bir ajanın departmanını yalnızca yöneticiler değiştirir",
-        "reports_to": "Bir ajanın kime rapor verdiğini yalnızca yöneticiler değiştirir",
-        "many": "Bu değişiklikleri yalnızca yöneticiler yapar"
-      }
+      "onlyCreators": "Ajanları yalnızca yöneticiler oluşturur"
     },
     "field": {
       "model": "Model",
@@ -3140,12 +3169,6 @@
       "archiveTitle_other": "{{count}} ajan arşivlensin mi?",
       "deleteTitle_one": "{{count}} ajan kalıcı olarak silinsin mi?",
       "deleteTitle_other": "{{count}} ajan kalıcı olarak silinsin mi?",
-      "archiveAll": "Hepsini arşivle",
-      "deleteAll": "Hepsini sil",
-      "archiveSome_one": "{{count}} ajanı arşivle",
-      "archiveSome_other": "{{count}} ajanı arşivle",
-      "deleteSome_one": "{{count}} ajanı sil",
-      "deleteSome_other": "{{count}} ajanı sil",
       "deleteHelp": "Talimatları, hafızaları ve rutinleri kalıcı olarak silinir. Mesajları kalır."
     },
     "people": {
@@ -4152,8 +4175,7 @@
   "inlineProposal": {
     "group": "{{name}} tarafından önerilen değişiklik",
     "groupMany": "{{name}} tarafından {{count}} ajan için önerilen değişiklik",
-    "edit": "Düzenle",
-    "open": "Öneriler'de aç"
+    "open": "Ajan iyileştirmeleri'nde aç"
   },
   "newChannel": {
     "open": "Kanal oluştur",
@@ -4280,6 +4302,8 @@
     "aloneLine": "Sohbete kendiliğinden katılır",
     "aloneLine_female": "Sohbete kendiliğinden katılır",
     "mentionLine": "Birinin @{{handle}} yazmasını bekler",
+    "lead": "Kanalın sorumlusu",
+    "leadHelp": "Tüm ekibe söyleneni alır ve ajanlar arasında işin ilerlemesini sağlar",
     "readOnly": "Üyeleri yalnızca kanalı oluşturan kişi ve yöneticiler değiştirebilir.",
     "people": "Kişiler",
     "agents": "Ajanlar"
@@ -4322,6 +4346,7 @@
     "available": "Müsait",
     "working": "Çalışıyor",
     "waiting": "Sizi bekliyor",
+    "idle": "Boşta",
     "lower": {
       "online": "çevrimiçi",
       "away": "uzakta",
@@ -4474,7 +4499,8 @@
   "accountSwitch": {
     "limit": "<from/> hesabı sınırına ulaştığı için <to/> hesabıyla devam etti",
     "line": "<from/> hesabı sınırına yaklaştığı için <to/> hesabıyla devam etti",
-    "extra": "<from/> hesabı ücretli ek kullanıma geçeceği için <to/> hesabıyla devam etti"
+    "extra": "<from/> hesabı ücretli ek kullanıma geçeceği için <to/> hesabıyla devam etti",
+    "busy": "<from/> hesabı aynı anda yanıtlayabileceği kadar sohbeti zaten yanıtladığı için <to/> hesabıyla devam etti"
   },
   "channelRefs": {
     "list": "Kanallar",
@@ -5122,7 +5148,6 @@
       }
     },
     "asks": "<b>{{agent}}</b> onay istiyor",
-    "waitingYou": "Sizi bekliyor",
     "approve": {
       "merge": "Birleştirmeyi onayla",
       "deploy": "Dağıtımı onayla",
@@ -5417,6 +5442,12 @@
       "joinOutside": "<b>{{name}}</b>, <b>{{outsideOf}}</b> adına harici çalışan olarak katılmak istiyor ve yer kaplamıyor",
       "changeRequest": "<b>{{name}}</b>, <b>{{agent}}</b> için bir değişiklik istiyor",
       "proposalWaiting": "<b>{{names}}</b> tarafından iyileştirme önerileri",
+      "proposalApplied_one": "<b>{{name}}</b> bir iyileştirme uyguladı",
+      "proposalApplied_other": "<b>{{name}}</b> {{count}} iyileştirme uyguladı",
+      "proposalAppliedMany_one": "<b>{{names}}</b> bir iyileştirme uyguladı",
+      "proposalAppliedMany_other": "<b>{{names}}</b> {{count}} iyileştirme uyguladı",
+      "proposalAppliedAuto_one": "Bir iyileştirme otomatik olarak uygulandı",
+      "proposalAppliedAuto_other": "{{count}} iyileştirme otomatik olarak uygulandı",
       "changeRequestAgent": "<b>{{name}}</b> yeni bir ajan istiyor: <b>{{agent}}</b>",
       "changeRequestAction": "<b>{{name}}</b>, çalışma alanında bir değişiklik istiyor",
       "approvalCover": "<b>{{name}}</b> sizi Benim yerime kim onaylar bölümünde seçti",
@@ -5546,7 +5577,6 @@
     "noneHere": "Şimdilik burada bir şey yok.",
     "noneDone": "Son 30 günde tamamlandı olarak işaretlenen bir şey yok.",
     "noneRequests": "Henüz karara bağlanan istek yok.",
-    "proposes": "bir iyileştirme öneriyor",
     "more": "Daha fazla göster"
   },
   "approvals": {
@@ -5950,6 +5980,19 @@
           "missed_other": "{{count}} ajan değişmedi."
         },
         "add": {
+          "pickTitle": "Hesap ekle",
+          "pickFoot": "Yapay zekânın kendi sayfasında giriş yaparsınız.",
+          "have_one": "{{count}} hesabınız var",
+          "have_other": "{{count}} hesabınız var",
+          "others": "Başka bir plan",
+          "key": "API anahtarı",
+          "keyLine": "Kullandıkça öde",
+          "titlePlan": "{{plan}} ekle",
+          "againTitle": "{{brand}} hesabına yeniden giriş yap",
+          "haveNote": "Burada zaten {{accounts}} var. Başka bir hesapla giriş yapmak için önce tarayıcıda {{brand}} hesabından çıkın ya da bağlantıyı kopyalayıp gizli bir pencerede açın.",
+          "againNote": "{{account}} olarak yeniden giriş yapın. İşiniz biter bitmez {{name}} yeniden onunla düşünür.",
+          "footSignIn": "Şifrenizi {{brand}} sayfasında girersiniz.",
+          "footKey": "Anahtar şifrelenmiş olarak doğrudan {{computer}} bilgisayarına gider.",
           "title": {
             "claude_code": "Claude hesabı ekle",
             "codex": "ChatGPT hesabı ekle",
@@ -6031,34 +6074,24 @@
           "title": "{{name}} için kim düşünüyor",
           "only": "Yalnızca {{name}} için.",
           "more": "Diğer seçenekler",
-          "switch": "Hesabı değiştir",
-          "switchTitle": "{{name}} için hesabı değiştir",
-          "inUse": "Kullanımda",
-          "switchTo": "{{label}} hesabına geç",
-          "teamTitle": "Ekibin hesabını değiştir",
-          "teamAria": "Kimin için",
-          "justOne": "Yalnızca {{name}}",
-          "everyone": "Bu hesaptaki herkes",
-          "target": "Geçilecek hesap",
-          "switchMany_one": "{{count}} ajanı değiştir",
-          "switchMany_other": "{{count}} ajanın hepsini değiştir",
-          "limitTitle": "{{name}} için kullanılan hesap sınıra ulaştı",
           "limitBack": "{{account}} {{when}} geri dönüyor",
           "limitSoon": "{{account}} plan yenilenince geri dönüyor",
           "limitHelp": "Bu arada {{name}}, zaten bağlı olan başka bir hesapla düşünebilir.",
           "fullWait": "Bu hesapta {{name}}, plan yenilenene kadar bekler.",
-          "seeUsage": "Kullanımı gör",
-          "wait": "Bekle",
           "modelTitle": "{{name}} için model",
           "moreTitle": "{{name}} için diğer seçenekler",
           "computer": "Bilgisayar",
-          "doneTitle": "Her şey hazır",
-          "doneSub": "Devam eden işler yeni hesapla sürüyor.",
           "finish": "Bitti",
           "undo": "Geri al",
           "undone": "Eski haline döndü.",
           "missed_one": "{{names}} önceki hesabıyla kaldı.",
-          "missed_other": "{{names}} önceki hesaplarıyla kaldı."
+          "missed_other": "{{names}} önceki hesaplarıyla kaldı.",
+          "added": "Hesap eklendi. {{name}} artık {{account}} ile düşünüyor.",
+          "alsoUses_one": "{{names}} da {{account}} ile düşünüyor.",
+          "alsoUses_other": "{{names}} da {{account}} ile düşünüyor.",
+          "alsoSwitch": "Onları da değiştir",
+          "signedOut": "{{account}}, {{brand}} hesabından çıktı. Yeniden giriş yapana ya da başka bir hesap seçene kadar {{name}} yanıt vermeyecek.",
+          "empty": "{{name}} için henüz düşünecek bir yapay zekâ hesabı yok."
         }
       },
       "computer": {
@@ -6110,6 +6143,7 @@
       "overview": "Genel bakış",
       "instructions": "Talimatlar",
       "access": "Araçlar ve erişim",
+      "skills": "Beceriler",
       "memory": "Bellek",
       "files": "Dosyalar",
       "usage": "Kullanım",
@@ -6225,15 +6259,26 @@
     },
     "copyHandle": "@{{handle}} kopyala",
     "copied": "@{{handle}} kopyalandı.",
+    "facts": {
+      "private": "Özel",
+      "created": "Oluşturuldu",
+      "createdBy": "{{name}}, {{date}}",
+      "usage": "{{month}} kullanımı",
+      "budget": "Bütçe",
+      "budgetUsed": "%{{percent}} kullanıldı",
+      "last": "Son etkinlik",
+      "never": "Henüz yok",
+      "title": "Ne yapar",
+      "locked": "{{name}} adlı ajanın talimatları, belleği, araçları, konuşmaları, rutinleri ve dosyaları {{owner}}, bu kişinin düzenlemeye çağırdıkları ve yöneticilerde kalır.",
+      "lockedNoOwner": "{{name}} adlı ajanın talimatları, belleği, araçları, konuşmaları, rutinleri ve dosyaları onu düzenleyebilenlerde ve yöneticilerde kalır.",
+      "ask": "{{owner}} kişisine sor"
+    },
     "overview": {
       "approvals_one": "{{count}} onay isteği",
       "approvals_other": "{{count}} onay isteği",
       "approvalsYou": "Onaylar bölümünde veya sohbette onaylayın ya da reddedin",
       "approvalsWait": "Sahibi veya bir yöneticiyi bekliyor",
       "seeApprovals": "İstekleri gör",
-      "proposes": "{{name}}, talimatlarını değiştirmeyi öneriyor",
-      "proposes_female": "{{name}}, talimatlarını değiştirmeyi öneriyor",
-      "review": "İncele",
       "does": "{{name}} ne yapar",
       "readAll": "Tümünü oku",
       "recent": "Son çalışmalar",
@@ -6265,9 +6310,7 @@
       "showDiff": "Neyin değiştiğini gör",
       "hideDiff": "Neyin değiştiğini gizle",
       "diff": "Talimatlarda neler değişti",
-      "add": "Ekle",
-      "proposals_one": "{{count}} önerilen değişiklik",
-      "proposals_other": "{{count}} önerilen değişiklik"
+      "add": "Ekle"
     },
     "access": {
       "search": "Bağlayıcı veya alan ara",
@@ -6301,16 +6344,9 @@
       "lessons": "Dersler",
       "fromTeam": "ekipten öğrenildi",
       "fromTeamRightHand": "senden öğrenildi",
-      "proposals": "Öneriler",
-      "waiting": "karar bekliyor",
-      "noneWaiting": "bekleyen yok",
-      "waitingCount_one": "{{count}} öneri bekliyor",
-      "waitingCount_other": "{{count}} öneri bekliyor",
+      "improvements": "İyileştirmeler",
+      "improvementsApplied": "uygulandı",
       "full": "Belleğin tamamını aç",
-      "accepted": "Değişiklik kabul edildi. Talimatlar güncellendi.",
-      "refused": "Öneri reddedildi. {{name}} gerekçeyi not etti.",
-      "decides": "{{who}} karar verir.",
-      "adminDecides": "Bir yönetici karar verir.",
       "learned": "Öğrendikleri",
       "learnedEmpty": "Keşfettiği düzeltmeler, tercihler ve çalışma biçimleri burada görünür.",
       "learnedEmptyTitle": "Her düzeltmeden öğrenir",
@@ -6331,6 +6367,22 @@
       "playbook": "{{name}} nasıl çalışır",
       "playbookNote": "Kendisi için sakladığı çalışma yolları. Sohbette görünmezler. Dışarıdan edinip bir daha kullanmadığı şeyler kendiliğinden Arşivlenenler'e taşınır.",
       "details": "Teknik ayrıntılar",
+      "learning": {
+        "title": "Nasıl öğrenir",
+        "fromYou": "Konuşmalarından öğrenir",
+        "fromYouHint": "DM'inde öğrendikleri yalnızca sende kalır. Bir kanalda öğrendiklerini o kanalı okuyan herkes görür. Senin hakkında öğrendikleri yalnızca sende kalır.",
+        "workspaceOff": "Tüm çalışma alanı için kapalı",
+        "forgetAll": "Hepsini unut",
+        "forgetAllHint": "Senden kendi kendine öğrendiklerini siler. Hatırlamasını istediklerin kalır.",
+        "forgetTitle": "Senden öğrendiklerini unutsun mu?",
+        "forgetText": "Senden kendi kendine öğrendiği her şey kalıcı olarak silinir. Hatırlamasını istediklerin kalır, kanallarda öğrendikleri de.",
+        "forgotten": "Tamam. Senden kendi kendine öğrendikleri silindi.",
+        "workspace": "Bu çalışma alanında öğrenir",
+        "workspaceHint": "Kapalıyken kimseden kendi kendine öğrenmez. Her durumda kimse başkasının anılarını okuyamaz.",
+        "onlyYou": "Yalnızca sen",
+        "everyoneIn": "#{{channel}} kanalındaki herkes",
+        "everyone": "Görebilen herkes"
+      },
       "skills": "Oluşturduğu beceriler",
       "skillUses_one": "bir kez yüklendi",
       "skillUses_other": "{{count}} kez yüklendi",
@@ -6387,7 +6439,8 @@
         "stuck": "Takıldığı için durdu.",
         "brain_interrupted": "Yapay zeka bitirmeden durdu.",
         "brain_unavailable": "Bilgisayarındaki yapay zeka yanıt veremedi. Bilgisayarı kontrol edip yeniden isteyin.",
-        "empty_reply": "Model hiçbir şey döndürmedi.",
+        "empty_reply": "Yapay zeka yanıt yazmadan sırasını bitirdi. Tekrar deneyin ya da ajanın ayarlarından başka bir model seçin.",
+        "empty_reply_limit": "Yapay zeka yanıt yazmadan önce çıktı sınırına ulaştı. Tekrar deneyin ya da ajanın ayarlarından başka bir model seçin.",
         "model_refused": "Model yanıt vermeyi reddetti.",
         "agent_archived": "Ajan arşivlendi.",
         "code_session_unavailable": "Oturumun worktree'si bilgisayarda kullanılamıyor.",
@@ -6425,7 +6478,7 @@
         "cli_sandbox": "{{brain}} programı bu bilgisayarda sandbox'ını başlatamıyor. Ajanın ayarlarından başka bir yapay zekâ seçin.",
         "cli_system": "{{brain}} programı henüz bu bilgisayarın sisteminde çalışmıyor. Ajanın ayarlarından başka bir yapay zekâ seçin.",
         "account_missing": "Bu ajan için seçilen hesap artık bilgisayarında değil. Ajanın ayarlarından başka bir hesap seçin ya da yeniden ekleyin.",
-        "windows_sandbox": "Bu Windows bilgisayar Codex'in komutlarını yalıtamıyor: Windows 11 24H2 veya daha yenisi gerekiyor. Windows'u güncelleyin, bu ajan için Claude'u ya da bir API anahtarını seçin veya onu bir Linux bilgisayara taşıyın.",
+        "windows_sandbox": "Codex bu Windows bilgisayarda komutları için hiçbir yalıtım başlatamadı. Bu ajan için Claude'u ya da bir API anahtarını seçin veya bilgisayarı en son güncellemeleriyle Windows 11 24H2 ya da daha yeni bir sürüme güncelleyin.",
         "our_error": "Bizim tarafımızda bir şeyler ters gitti ve görev durdu. Birazdan yeniden isteyin.",
         "unknown": "Başarısız oldu."
       }
@@ -6530,8 +6583,6 @@
     "title": "{{name}} neler biliyor",
     "subtitle": "{{name}} kişisinin sohbetlerden ve ekibin düzeltmelerinden öğrendikleri.",
     "subtitlePersonal": "{{name}} ajanının sohbetlerinizden ve düzeltmelerinizden öğrendikleri.",
-    "proposals_one": "{{count}} iyileştirme önerisi",
-    "proposals_other": "{{count}} iyileştirme önerisi",
     "tabsLabel": "Tür",
     "tabs": {
       "known": "Bilgiler ve kararlar",
@@ -6560,9 +6611,6 @@
     "unverifiedTitle": "Bunu yalnızca ajanlar söyledi. Bağlama işaretli bir ipucu olarak girer.",
     "pinned": "Her zaman bağlamda",
     "lowTrust": "Dış kaynak, güvenilir değil",
-    "confirm": "Onayla",
-    "confirmTitle": "Doğru olduğunu söyleyin: ajanlar bunu güvenilir olarak kullanır.",
-    "confirmed": "Onaylandı",
     "used_one": "{{count}} kez kullanıldı",
     "used_other": "{{count}} kez kullanıldı",
     "unusedFor": "{{days}} gündür kullanılmadı",
@@ -6593,7 +6641,7 @@
     }
   },
   "proposals": {
-    "title": "İyileştirme önerileri",
+    "title": "Ajan iyileştirmeleri",
     "whyCode": {
       "refused": "Bir kişi reddetti: {{text}}",
       "corrected": "Bir kişi düzeltti: {{text}}",
@@ -6603,9 +6651,9 @@
       "budget": "Bu hafta aylık bütçesine ulaşıp durdu.",
       "noChannel": "Hiçbir kanalda değil."
     },
-    "subtitle": "Ajanların önerdiği değişiklikler. Biri kabul etmeden hiçbir şey değişmez.",
-    "subtitlePersonal": "Ajanlarınızın önerdiği değişiklikler. Siz kabul edene kadar hiçbir şey değişmez.",
-    "list": "Öneriler",
+    "subtitle": "Ajanların ekipte değiştirdikleri ve nedenleri. Geri alabilirsiniz.",
+    "subtitlePersonal": "Ajanlarınızın değiştirdikleri ve nedenleri. Geri alabilirsiniz.",
+    "list": "İyileştirmeler",
     "proposes": "<b>{{agent}}</b> öneriyor · {{target}}",
     "proposesMany": "<b>{{agent}}</b> öneriyor · {{count}} ajanın talimatları",
     "proposesManyChanges": "<b>{{agent}}</b> öneriyor · {{count}} ajanda değişiklik",
@@ -6620,57 +6668,32 @@
     "roleLine": "Rol: {{from}} → {{to}}",
     "accessOn": "Aç: {{app}}",
     "accessOff": "Kapat: {{app}}",
-    "include": "{{name}} dahil et",
-    "acceptAll": "Hepsi için kabul et",
-    "acceptSome": "{{count}} tanesi için kabul et",
-    "all": {
-      "label": "Tüm önerilere karar ver",
-      "accept": "Tümünü kabul et",
-      "refuse": "Tümünü reddet",
-      "acceptAsk_one": "Öneri kabul edilsin mi? Hemen geçerli olur.",
-      "acceptAsk_other": "{{count}} önerinin tümü kabul edilsin mi? Her biri hemen geçerli olur.",
-      "refuseAsk_one": "Öneri reddedilsin mi? Ajan bunu bir daha önermez.",
-      "refuseAsk_other": "{{count}} önerinin tümü reddedilsin mi? Ajanlar bunları bir daha önermez.",
-      "acceptGo_one": "Kabul et",
-      "acceptGo_other": "{{count}} öneriyi kabul et",
-      "refuseGo_one": "Reddet",
-      "refuseGo_other": "{{count}} öneriyi reddet"
-    },
-    "staleSome_one": "Biri kabul edilmedi: metni öneriden sonra değişti.",
-    "staleSome_other": "{{count}} tanesi kabul edilmedi: metinleri öneriden sonra değişti.",
-    "staleSomeAgent_one": "Biri kabul edilmedi: ajan öneriden sonra değişti.",
-    "staleSomeAgent_other": "{{count}} tanesi kabul edilmedi: ajanlar öneriden sonra değişti.",
-    "waitingFor": "{{name}} bekleniyor",
+    "reviewing": "İnceleniyor…",
+    "appliedByAgent": "{{name}} uyguladı",
+    "appliedByAgent_female": "{{name}} uyguladı",
+    "appliedAuto": "Otomatik olarak uygulandı",
+    "leftOutBy": "{{name}} uygulamadı",
+    "leftOutBy_female": "{{name}} uygulamadı",
+    "leftOut": "Uygulanmadı",
+    "undoneBy": "{{name}} tarafından geri alındı",
+    "undoneByYou": "Sizin tarafınızdan geri alındı",
+    "undo": "Geri al",
+    "appliedSome": "{{total}} iyileştirmeden {{done}} tanesi uygulandı",
     "waitingAdmin": "Bir yönetici bekleniyor",
     "stale": "Eskidi",
-    "staleError": "Bu öneri eskidi: metin, öneri yapıldıktan sonra değişti. Liste yenilendi.",
-    "staleNote": "Metin bu öneriden sonra değişti, bu yüzden artık kabul edilemez.",
-    "staleErrorAgent": "Bu öneri eskidi: ajan, öneri yapıldıktan sonra değişti. Liste yenilendi.",
-    "staleNoteAgent": "Ajan bu öneriden sonra değişti, bu yüzden artık kabul edilemez.",
+    "staleNote": "Metin bu öneriden sonra değişti, bu yüzden artık uygulanamaz.",
+    "staleNoteAgent": "Ajan bu öneriden sonra değişti, bu yüzden artık uygulanamaz.",
     "accepted": "Kabul edildi",
     "refused": "Reddedildi",
-    "acceptedSome": "{{total}} öneriden {{done}} tanesi kabul edildi",
-    "acceptedBy": "{{name}} kabul etti · {{when}}",
-    "refusedBy": "{{name}} reddetti · {{when}}",
-    "acceptedByYou": "Siz kabul ettiniz · {{when}}",
-    "refusedByYou": "Siz reddettiniz · {{when}}",
     "why": "Neden",
     "change": "{{target}} üzerinde değişiklik",
     "changeLabel": "Önerilen değişiklik",
-    "editFirst": "Kabul etmeden önce düzenle",
-    "viewDiff": "Farkları gör",
-    "finalText": "Talimatların son metni",
-    "finalTextContext": "Bağlamın son metni",
-    "accept": "Değişikliği kabul et",
-    "acceptEdited": "Düzenlemelerle kabul et",
-    "refuse": "Reddet",
-    "refuseNote": "Reddetmek, {{name}} ajanına bunu bir daha önermemeyi öğretir.",
     "added": "Eklendi:",
     "removed": "Kaldırıldı:",
     "sameLines_one": "{{count}} değişmeyen satır",
     "sameLines_other": "{{count}} değişmeyen satır",
-    "empty": "Biri bir ajandan değişiklik istediğinde veya bir ders tekrarlandığında öneri burada görünür.",
-    "emptyTitle": "İncelenecek bir şey yok",
+    "empty": "Bir ajan kendi talimatlarını veya bir ekip arkadaşınınkileri iyileştirdiğinde, değişiklik Geri al seçeneğiyle burada görünür.",
+    "emptyTitle": "Henüz hiçbir şey değişmedi",
     "titleInstructions": "{{name}} talimatlarını güncelle",
     "titleRole": "{{name}} rolünü değiştir",
     "titleAccess": "{{name}} erişimini değiştir",
@@ -8063,6 +8086,38 @@
       "label": "Vault iletişim bilgilerini düzenleme",
       "description": "Vault'ta iletişim bilgilerini kaydetme ve güncelleme, kayıtlı bir girişin kullanıcı adını ya da bir açıklamayı değiştirme, açtığı hesaplar için şifre oluşturma ve kendi kaydettiklerini silme."
     },
+    "gitlab_git_read": {
+      "label": "Depo klonlama (git)",
+      "description": "Proxy'miz üzerinden git ile ajanın bilgisayarına depo klonlama ve güncelleme. GitLab token'ı asla makineye girmez."
+    },
+    "gitlab_git_write": {
+      "label": "Dal gönderme (git push)",
+      "description": "agentes/{agent}/… dallarına commit gönderme: asla varsayılan dala değil, force push yok, etiket yok. Dal silmek ve başkasının dalına göndermek önce onay ister."
+    },
+    "gitlab_pr_write": {
+      "label": "Merge request açma",
+      "description": "Merge request açma ve yorum yapma."
+    },
+    "bitbucket_git_read": {
+      "label": "Depo klonlama (git)",
+      "description": "Proxy'miz üzerinden git ile ajanın bilgisayarına depo klonlama ve güncelleme. Bitbucket token'ı asla makineye girmez."
+    },
+    "bitbucket_git_write": {
+      "label": "Dal gönderme (git push)",
+      "description": "agentes/{agent}/… dallarına commit gönderme: asla varsayılan dala değil, force push yok, etiket yok. Dal silmek ve başkasının dalına göndermek önce onay ister."
+    },
+    "bitbucket_pr_write": {
+      "label": "Pull request açma",
+      "description": "Pull request açma ve yorum yapma."
+    },
+    "git_git_read": {
+      "label": "Depo klonlama (git)",
+      "description": "Proxy'miz üzerinden git ile ajanın bilgisayarına depo klonlama ve güncelleme. Git token'ı asla makineye girmez."
+    },
+    "git_git_write": {
+      "label": "Dal gönderme (git push)",
+      "description": "agentes/{agent}/… dallarına commit gönderme: asla varsayılan dala değil, force push yok, etiket yok. Dal silmek ve başkasının dalına göndermek önce onay ister."
+    },
     "github_git_read": {
       "label": "Depo klonlama (git)",
       "description": "Proxy'miz üzerinden git ile ajanın bilgisayarına depo klonlama ve güncelleme. GitHub token'ı asla makineye girmez."
@@ -9152,6 +9207,7 @@
       "provider_unavailable": "Model yanıt vermedi",
       "gave_up": "Model birkaç denemeden sonra yanıt vermedi",
       "empty_reply": "Model boş yanıt verdi",
+      "empty_reply_limit": "Model yanıt vermeden önce çıktı sınırına ulaştı",
       "model_refused": "Model yanıt vermeyi reddetti",
       "runner_outdated": "Bilgisayardaki programın güncellenmesi gerekiyor",
       "too_many_tool_calls": "Tek çalıştırma için adım sınırını aştı",
@@ -10688,7 +10744,87 @@
       "text": "Ajanlar onsuz da çalışmaya devam eder."
     }
   },
+  "aiHub": {
+    "tab": "Yapay zekâ hesapları",
+    "usageTab": "Kullanım",
+    "accounts": "Hesaplar",
+    "accountsHint": "Kim bağlamış olursa olsun, ajanların düşünmek için kullanabileceği her plan ve API anahtarı.",
+    "apiKey": "API anahtarı",
+    "of": "{{name}} kişisinin",
+    "moreSpeed": "Hız ve bağlam penceresi",
+    "whoThinks": "Kim düşünüyor",
+    "thinks_one": "{{names}} bununla düşünüyor",
+    "thinks_other": "{{names}} bununla düşünüyor",
+    "thinksNone": "Bununla düşünen ajan yok",
+    "bulk": {
+      "sub": "Yapay zekâyı, sonra onu kullanacak ajanları seçin."
+    },
+    "choice": {
+      "workspace": "Çalışma alanınınki",
+      "none": "Bir hesap seçin",
+      "search": "Ada, yapay zekâya, plana veya sahibine göre arayın",
+      "noMatch": "Eşleşen hesap yok.",
+      "noModel": "Eşleşen model yok.",
+      "empty": "Henüz hesap yok.",
+      "add": "Hesap ekle",
+      "addLine": "Claude, ChatGPT, Gemini ve diğerleri ya da bir API anahtarı",
+      "manage": "Hesapları yönet",
+      "groups": {
+        "yours": "Hesaplarınız",
+        "others": "Ekibin",
+        "keys": "API anahtarları"
+      }
+    },
+    "order": {
+      "title": "Kullanım sırası",
+      "tip": "Ajanların önce hangi hesabı kullandığı",
+      "sub": "Sınıra gelince ajanlar sonraki hesaba geçer.",
+      "group": "{{maker}} · {{computer}}",
+      "signedOut": "Oturum kapalı · atlandı",
+      "skipped": "Atlandı",
+      "fallback": "Tüm planlar sınıra gelince API anahtarıyla devam et",
+      "fallbackHint": "Kapalı: ajanlar ilk planın yenilenmesini bekler. Açık: kullanım başına ödenen çalışma alanı API anahtarıyla devam ederler. Bir görev asla devam etmez."
+    },
+    "detail": {
+      "limits": "Sınırlar",
+      "noLimits": "Sınırlar henüz okunmadı.",
+      "permissions": "İzinler",
+      "saved": "İzinler kaydedildi.",
+      "more": "{{name}} için daha fazlası",
+      "manage": "Yönet",
+      "manageLine": "Yeniden adlandır, yeniden giriş yap, kaldır",
+      "manageHint": "Bu hesabı kimin yeniden adlandırabileceği, yeniden giriş yapabileceği, kaldırabileceği ve bu izinleri değiştirebileceği.",
+      "use": "Ajanlarda kullan",
+      "useLine": "Kim düşünüyor içinde seç",
+      "useHint": "Kimin ajanlarının bu hesapla düşünebileceği.",
+      "reply": "Herkese yanıt ver",
+      "replyLine": "Ajanların kiminle konuştuğu",
+      "replyHint": "Bu hesaptaki bir ajanın kendi sahibi dışında kime yanıt verdiği.",
+      "claudeTerms": "Claude koşullarına göre kişisel plan tek bir kişiye aittir. Paylaşmak gri bir alandır.",
+      "pickRoles": "Bu rollere sahip kişiler.",
+      "pickPeople": "Hesap sahibine ek olarak.",
+      "searchRoles": "Rol ara",
+      "searchPeople": "Kişi ara",
+      "nobody": "Seçilecek kimse yok."
+    },
+    "modes": {
+      "owner": "Yalnızca siz",
+      "ownerOf": "Yalnızca {{name}}",
+      "admins": "Siz ve yöneticiler",
+      "adminsOf": "{{name}} ve yöneticiler",
+      "roles": "Roller…",
+      "people": "Kişiler…",
+      "everyone": "Herkes",
+      "replyOwner": "Yalnızca ajanın sahibi"
+    }
+  },
   "aiAccounts": {
+    "useReason": {
+      "signed_out": "Oturum kapalı",
+      "owner_left": "{{owner}} workspace'ten ayrıldı",
+      "owner_only": "Yalnızca {{owner}} kullanıyor",
+      "not_allowed": "Ajanlarına açık değil"
+    },
     "unnamed": "Adsız hesap",
     "rename": {
       "action": "{{label}} adını değiştir",
@@ -11243,10 +11379,10 @@
       "agent": "Ajan",
       "repo": "Nerede çalışılacak",
       "repoPlaceholder": "Depo veya proje",
-      "repoSearch": "Arayın ya da sahip/ad veya yeni bir ad yazın",
+      "repoSearch": "Arayın ya da owner/name, deponun adresini veya yeni bir ad yazın",
       "newLocal": "Bilgisayarda yeni proje: {{name}}",
       "useRepo": "{{repo}} kullan",
-      "repoNote": "Sahibi olmayan bir ad, ajanın bilgisayarında GitHub dışında bir proje başlatır.",
+      "repoNote": "owner içermeyen bir ad, yalnızca ajanın bilgisayarında, uzak depo olmadan bir proje oluşturur.",
       "hint": "@ birini oturuma çağırır",
       "start": "Başlat"
     },
@@ -11260,7 +11396,7 @@
       "closeHint": "Listeden kalkar: worktree silinir, dal kalır",
       "failed": "Worktree hazırlanamadı.",
       "retry": "Tekrar dene",
-      "githubAccess": "Bu çalışma alanının bu depo için GitHub erişimi yok. GitHub'ı Ayarlar › Bağlayıcılar bölümünden bağlayın ya da bilgisayardaki bir projede oturum başlatın (yalnızca bir ad)."
+      "githubAccess": "Bu çalışma alanının bu depoya erişimi yok. Deponun bulunduğu yeri (GitHub, GitLab veya Bitbucket) Ayarlar › Bağlayıcılar’dan bağlayın ya da bilgisayardaki bir projede (yalnızca bir ad) oturum başlatın."
     },
     "panel": {
       "label": "Oturum paneli",
@@ -12162,8 +12298,6 @@
     "steered": "{{name}} görev sırasında aldı",
     "stillWorking": "{{name}} hâlâ çalışıyor",
     "inProgress": "sürüyor",
-    "quiet": "{{minutes}} dakikadır yenilik yok",
-    "refresh": "Yenile",
     "stop": "Durdur",
     "stopping": "Durduruluyor…",
     "stopHint": "Görevi durdur · Esc",
@@ -12296,8 +12430,11 @@
       "home_only": "{{program}}, {{computer}} üzerinde yalnızca root için kurulu ve ajanlar ona erişemez.",
       "not_reported": "{{computer}} hangi programların olduğunu hâlâ kontrol ediyor. Bittiğinde bu kendiliğinden değişir.",
       "system": "{{program}} henüz {{computer}} sisteminde çalışmıyor.",
+      "systemAntigravity": "Gemini planları {{computer}} üzerinde henüz çalışmıyor: Windows'ta Antigravity CLI, Google oturumunu Kimlik Bilgileri Yöneticisi'nde tutuyor ve agentes.chat bunu henüz hesap başına ayıramıyor. Bunun yerine bir Gemini API anahtarı kullanın.",
+      "windows_sandbox": "{{computer}} üzerindeki Windows, {{program}} komutlarını yalıtamıyor. Bunun yerine Claude'u ya da bir API anahtarını seçin veya o bilgisayarı en son güncellemeleriyle Windows 11 24H2 ya da daha yeni bir sürüme güncelleyin.",
       "no_computerCloud": "{{computer}} hazır olur olmaz hazır."
     },
+    "sandboxPartial": "Bu Windows'ta Codex'in komutları yalnızca ajanların klasörlerine yazabilir, ancak internet onlar için yalnızca kısmen engellenir. En son güncellemeleri yüklü Windows 11 24H2 ya da daha yenisi onu tamamen engeller.",
     "notAvailableNow": "Seçildi ama şu anda kullanılamıyor.",
     "offline": "{{computer}} şu anda çevrimdışı.",
     "modelLabel": "Model",
@@ -12372,7 +12509,7 @@
     "rule": "Yeni iş, bilgisayarda boş bellek olduğunda başlar. Önce insanlar. Birlikte anılan ajanlar tek tek başlar.",
     "spill": {
       "title": "Bilgisayarlarınız",
-      "text": "Bu bilgisayar dolduğunda sana gelen yanıtlar senin bilgisayarlarından birinde başlayabilir. Uzun işler ve ajanların dosyaları burada kalır.",
+      "text": "Bu bilgisayar dolu ya da uzaktayken ajanların senin bilgisayarlarından birinde başlayabilir. Görevler, kod oturumları ve depoları olan ajanlar burada kalır.",
       "plan": "{{plan}} planın"
     },
     "youFirst": "Önce sen",
@@ -12708,7 +12845,6 @@
     "count_other": "{{count}} öğe",
     "searchHint": "Arama kısayolu",
     "who": "Oluşturan",
-    "everyone": "Herkes",
     "kindMany": {
       "document": "Belgeler",
       "table": "Tablolar",
@@ -12726,8 +12862,10 @@
     "view": "Görünüm",
     "viewGrid": "Izgara",
     "viewList": "Liste",
-    "arrange": "Düzenle",
-    "arrangeValue": "Düzen: {{group}}",
+    "display": "Görünüm",
+    "displayValue": "Görünüm: {{view}} · {{group}}",
+    "filterButton": "Filtre",
+    "filterValue": "{{filter}}: {{value}}",
     "groupBy": "Grupla",
     "group": {
       "date": "Tarih",
@@ -13239,6 +13377,7 @@
       "teamLocked": "Ekibinkileri yalnızca bağlayıcıları yönetenler ekler.",
       "mailLocked": "Bir posta kutusu her zaman onu bağlayan kişinindir.",
       "done": "Ajanların onu yalnızca sen istediğinde kullanır.",
+      "githubDone": "Kod oturumlarında, istediğiniz işin commit’leri, push’ları ve pull request’leri sizin adınıza gider.",
       "worksWhenAsked": "Yalnızca sen istediğinde çalışır.",
       "remove": "Kaldır",
       "removeName": "{{name}} kaldır",
@@ -14009,6 +14148,7 @@
     },
     "label": {
       "git_clone": "Depoyu klonla",
+      "list_repositories": "Depoları listele",
       "create_repository": "Depo oluştur",
       "delete_repository": "Depoyu sil",
       "fork_repository": "Depoyu fork'la",
@@ -14924,6 +15064,19 @@
       "adjust": "Ayarla",
       "ok": "Tamam"
     },
+    "git": {
+      "token": "Erişim belirteci",
+      "address": "Adres",
+      "addressHelp": {
+        "gitlab": "Yalnızca şirketinizin kendi barındırdığı bir GitLab için. Boş bırakılırsa gitlab.com olur.",
+        "git": "Git sunucusunun bulunduğu yer, örneğin https://git.company.com."
+      },
+      "tokenHelp": {
+        "gitlab": "api ve write_repository kapsamlarına sahip bir GitLab erişim belirteci (kişisel, grup veya proje). Sunucuda kalır: ajanların bilgisayarlarına hiç gitmez.",
+        "bitbucket": "Depolara ve pull request’lere yazma izni olan bir çalışma alanı veya depo erişim belirteci. Kendi API belirtecinizle, Atlassian e-postanızı, iki nokta üst üste ve belirteci yazın: you@company.com:TOKEN.",
+        "git": "Sunucunun git parolası olarak kabul ettiği belirteç. Kullanıcı adı isterse username:token yazın."
+      }
+    },
     "telegram": {
       "token": "Bot token'ı",
       "steps": "Telegram'da @BotFather'ı açın, /newbot gönderin, bir ad ve “bot” ile biten bir kullanıcı adı seçin, sonra verdiği token'ı buraya yapıştırın. Bir grubu okumak için botu gruba ekleyin. Bir kanalda paylaşmak için orada yönetici yapın."
@@ -15558,7 +15711,15 @@
       "linkGone": "Bu bağlantı artık beklemiyor: 10 dakika sonra süresi doldu ya da iptal edildi. Yeniden başlamak için yeni bir kod oluşturun.",
       "taken": "Bu gönderen başka bir agentes.chat hesabına bağlı. Önce oradaki bağlantıyı kaldırın, sonra yeni bir kod gönderin.",
       "undoGone": "Bu geri alma bağlantısı zaten kullanılmış ya da süresi dolmuş. Bunun yerine bildirim ayarlarınızdan bağlantıyı kaldırın.",
-      "codeGone": "Bu kod yanlış, kullanılmış ya da 10 dakika sonra süresi dolmuş. Yeni bir kod oluşturup tekrar gönderin."
+      "codeGone": "Bu kod yanlış, kullanılmış ya da 10 dakika sonra süresi dolmuş. Yeni bir kod oluşturup tekrar gönderin.",
+      "pageGone": "Bu bağlantının süresi doldu. Sohbette asistanından yenisini iste.",
+      "pageElsewhere": "Bu bağlantı başka bir cihazda açıldı. Sohbette asistanından yenisini iste.",
+      "pinWrong": "PIN yanlış. Kalan deneme: {{left}}.",
+      "pinLocked": "Çok fazla yanlış PIN. Daha sonra tekrar dene ya da uygulamada yeni bir PIN seç.",
+      "pinShape": "PIN'in 6 hanelidir.",
+      "pinResetGone": "Bu bağlantı zaten kullanıldı ya da süresi doldu. “PIN'ini mi unuttun?” ile yenisini iste.",
+      "pinUnset": "Önce PIN'ini seç. PIN'i oturum açtığın uygulamada seç.",
+      "emailUnverified": "E-posta adresin henüz doğrulanmadı. PIN'ini uygulamada seç."
     },
     "wallpaper": {
       "notYours": "Bu fotoğraf sizin değil.",
@@ -15605,6 +15766,8 @@
       "deleteName": "Silmek için kanalın adını yazın.",
       "generalKept": "#general silinemez.",
       "generalStays": "Herkes #general kanalında kalır.",
+      "leadChannelOnly": "Yalnızca kanalların sorumlu ajanı olur.",
+      "leadNotMember": "Sorumlu ajan kanalda olmalı.",
       "mcpUnreachable": "MCP sunucusuna bağlanılamadı. Adresini kontrol edip tekrar deneyin.",
       "notApproved": "Bu hizmet henüz agentes.chat için onay vermedi.",
       "alreadyInvited": "Bu kişinin zaten bir daveti var.",
@@ -15714,6 +15877,12 @@
     },
     "teamProposal": {
       "undoExpired": "Bu ekip oluşturulalı bir günden fazla oldu, bu yüzden burada geri alınamaz. Ajanları kendi sayfalarından arşivle."
+    },
+    "proposal": {
+      "changed": "Bu, uygulandıktan sonra değişti: elle düzenleyin.",
+      "notApplied": "Bu değişiklik uygulanmadı, bu yüzden geri alınacak bir şey yok.",
+      "notUndoable": "Silinen bir ajan geri gelemez.",
+      "notAllowed": "Bu değişikliği yalnızca onu yapma yetkisi olan biri geri alabilir."
     },
     "agentProposal": {
       "decided": "Bu öneri hakkında zaten biri karar verdi.",
@@ -15873,6 +16042,7 @@
       "tooLarge": "Bu dosya boyut sınırına ulaştı. Önce içinden bir şey kaldırın.",
       "assetTooLarge": "Görsel, görsel başına sınır olan {{max}} MB'ı aşıyor.",
       "assetType": "Bu dosyaya yalnızca görsel eklenebilir: PNG, JPEG, WebP veya GIF.",
+      "fontInvalid": "Bu yazı tipi kullanılamıyor: dosya, uygulamanın okuyabildiği bir yazı tipi değil. Bir .ttf, .otf veya .woff dosyası deneyin.",
       "liveOnly": "Bu dosya bulunduğu yerde düzenlenir, bu yüzden bütünüyle başkasıyla değiştirilemez."
     },
     "office": {
@@ -15894,8 +16064,9 @@
     "device": {
       "notLinkMaker": "Bu bilgisayarı yalnızca bağlantıyı oluşturan kişi katılmaya izin verebilir.",
       "widenForbidden": "Yöneticiler birinin kendi cihazını kimin kullanabileceğini yalnızca daraltabilir.",
-      "spillOwnerOnly": "Yanıtların bu bilgisayarda düşünmesine yalnızca onu bağlayan kişi izin verebilir. Kapatmak senin elinde.",
+      "spillOwnerOnly": "Bu bilgisayarın yardımını yalnızca onu bağlayan kişi açabilir. Sen kapatabilirsin.",
       "tasksOwnerOnly": "Bu bilgisayarın aynı anda kaç görev çalıştıracağını yalnızca onu bağlayan kişi değiştirebilir.",
+      "tasksCloud": "Bu bilgisayarın görevler için yerini Cloud kendisi belirler.",
       "notHome": "Ajanlar workspace bilgisayarında yaşar ve adını söylediklerinde bunu kullanır."
     },
     "machine": {
@@ -15966,6 +16137,7 @@
     "account": {
       "notRestorable": "Bu hesap artık geri yüklenemez.",
       "notOwner": "Bunu yalnızca bu hesabı veya planı bağlayan kişi yapabilir.",
+      "permissionForbidden": "Bunu yalnızca hesabın sahibi, bir yönetici veya hesabı yönetebilen kişi değiştirebilir.",
       "orderForbidden": "Bu hesabın sıradaki yerini yalnızca onu bağlayan kişi veya bir yönetici değiştirebilir."
     },
     "channel": {
@@ -16046,6 +16218,11 @@
       "line": "Çıkış IP’si {{ip}}",
       "hint": "Ajanlar gezinirken sitelerin gördüğü adres. Bilgisayarın ağı değişince güncellenir.",
       "waiting": "Ajanların internet bağlantısı yeniden kuruluyor. Bağlantıları geri gelene kadar bekler."
+    },
+    "moving": {
+      "short": "Sunucu değiştiriyor",
+      "line": "Yeni bir sunucuya taşınıyor… birkaç dakika içinde döner",
+      "named": "{{computer}} yeni bir sunucuya taşınıyor… birkaç dakika içinde döner"
     },
     "online": "Çevrimiçi",
     "offline": "Çevrimdışı",
@@ -16313,12 +16490,19 @@
     "phonesHere": "Bu bilgisayardaki telefonlar",
     "maxTasks": "Aynı anda görev",
     "maxTasksHint": "Ajanların burada aynı anda kaç arka plan görevi çalıştırdığı. Diğerleri sırasını bekler.",
+    "tasksAutoRoom": "Otomatik · {{running}} çalışıyor · yaklaşık {{more}} tane daha sığar",
+    "tasksAutoFull": "Otomatik · {{running}} çalışıyor · şimdilik dolu",
+    "tasksAutoHint": "Ajanlar, bu bilgisayarda boş bellek oldukça arka plan görevleri başlatır ve kendi uygulamaların için 1,5 GB boş bırakır. Diğerleri sırasını bekler.",
+    "pushHarder": "Daha fazla zorla",
+    "pushHarderHint": "Aynı anda daha fazla görev: yalnızca 0,5 GB bellek boş kalır ve meşgul bir işlemci onları durdurmaz. Kendi uygulamaların yavaşlayabilir.",
     "belongs": "Çalışma alanına ait",
     "belongsHint": "Onu bağlayan kişi ayrıldığında burada kalır ve sahibi olmadığı sürece herkes kullanabilir.",
-    "spillOwn": "Sana gelen yanıtlar burada düşünebilir",
-    "spillOwnHint": "Bir ajanın bilgisayarı dolduğunda sana gelen yanıtları burada başlar.",
-    "spillOthers": "Başkalarının ajanları burada düşünebilir",
-    "spillOthersHint": "Bir ajanın bilgisayarı dolduğunda başkalarına gelen yanıtları da burada başlayabilir.",
+    "spillOwn": "Ekibin bilgisayarı dolu ya da uzaktayken yardım et",
+    "spillOwnHint": "Ajanlarının bilgisayarı dolu ya da uzaktayken yanıtları, istekleri ve rutinleri burada senin oturumunla düşünebilir.",
+    "spillTeamHint": "Bir ajanın bilgisayarı dolu ya da uzaktayken yanıtları, istekleri ve rutinleri burada sahibinin bu bilgisayardaki oturumuyla düşünebilir.",
+    "spillWorkspaceOff": "Bir yönetici bunu çalışma alanı için kapattı.",
+    "helpWorkspace": "Ekibin bilgisayarı dolu ya da uzaktayken bilgisayarlar yardım eder",
+    "helpWorkspaceHint": "Her bilgisayar yalnızca sahibi izin verirse yardım eder. Kapalı: sahibi ne seçerse seçsin hiçbiri yardım etmez.",
     "connectedBy": "Bağlayan: {{name}}",
     "downloadFor": "{{system}} için indir",
     "downloadApp": "Uygulamayı indir",
@@ -16367,6 +16551,7 @@
       "inUse": "Kullanımda",
       "inUseBy": "Kullanan: {{name}}",
       "busy": "Meşgul {{running}}/{{max}}",
+      "busyRunning": "Meşgul · {{running}} çalışıyor",
       "needs": "Size ihtiyacı var",
       "preparing": "Hazırlanıyor",
       "paused": "Duraklatıldı",
@@ -16390,6 +16575,9 @@
       "tasksChange": "Burada aynı anda görev: {{max}}. Aşağıdan değiştir.",
       "tasksOwner": "Burada aynı anda görev: {{max}}. Onu bağlayan kişi bunu değiştirebilir.",
       "tasksUpdate": "Burada aynı anda görev: {{max}}. Buradan değiştirmek için uygulamasını güncelle.",
+      "tasksNoMemory": "Şu an başka bir göreve yer yok: {{gb, number}} GB bellek boş. Biri bitince sıradaki başlar.",
+      "tasksNoCpu": "Şu an başka bir göreve yer yok: işlemci neredeyse tamamen dolu. Rahatlayınca sıradaki başlar.",
+      "tasksPushing": "Daha fazla zorlanıyor: {{gb, number}} GB bellek boş. Kendi uygulamaların yavaşlayabilir.",
       "offline": "Ajanlar geri gelmesini bekliyor.",
       "offlineSeen": "Son görülme: {{time}}. Ajanlar geri gelmesini bekliyor.",
       "offlineWithHost": "{{host}} çevrimdışı. Ajanlar geri gelmesini bekliyor.",
@@ -16489,17 +16677,21 @@
       "rolesHint": "Bu role sahip herkes kullanabilir, rolü sonradan alanlar da.",
       "computerHint": "Burada kimlerin ajanlarının görev çalıştırabileceği. Yöneticiler daraltabilir, yalnızca sahibi genişletebilir.",
       "phoneHint": "Bir telefonu paylaşmak {{host}} bilgisayarını asla paylaşmaz.",
-      "followsHint": "Bir iPhone, takılı olduğu Mac'in kuralını izler.",
-      "serverHelp": "Her ajan üzerinde kendi kullanıcısı olarak çalışır.",
-      "computerHelp": "Ajanların komutları üzerinde sizin kullanıcınız olarak çalışır."
+      "followsHint": "Bir iPhone, takılı olduğu Mac'in kuralını izler."
+    },
+    "share": {
+      "title": "Tüm çalışma alanı kullansın",
+      "off": "Şimdilik yalnızca siz",
+      "on": "{{org}} içindeki herkes",
+      "hint": "{{org}} içindeki herkesin ajanları üzerinde sizin kullanıcınız olarak görev çalıştırabilir.",
+      "hintServer": "{{org}} içindeki herkesin ajanları üzerinde her biri kendi kullanıcısı olarak görev çalıştırabilir."
     },
     "request": {
       "title": "{{name}}, {{org}} çalışma alanına katılmak istiyor",
       "list": "Katılmak isteyenler",
       "letJoin": "Katılmasına izin ver",
       "deny": "Reddet",
-      "denied": "{{name}} katılmayacak.",
-      "joined": "{{name}} katıldı."
+      "denied": "{{name}} katılmayacak."
     },
     "empty": {
       "title": "Henüz cihaz yok",
@@ -17688,7 +17880,7 @@
     "telemetry": {
       "title": "Kullanım istatistikleri",
       "label": "agentes.chat'e anonim kullanım istatistikleri gönder",
-      "help": "Kişi ve ajan sayısı, makine boyutları, kullanılan yapay zeka token'ları ve ajanların tarayıcılarının ne kadar veri gönderip aldığı gibi sayılar. Asla mesajlar, dosyalar, adlar ya da siteler değil.",
+      "help": "Kişi ve ajan sayısı, makine boyutları, kullanılan yapay zeka token'ları, ajanların tarayıcılarının ne kadar veri gönderip aldığı ve uygulamaların ne kadar hızlı açılıp çalıştığı gibi sayılar. Asla mesajlar, dosyalar, adlar ya da siteler değil.",
       "envOff": "Bu sunucunun ayarlarında kapatıldı (TELEMETRY=off).",
       "envOffDesktop": "Bu sunucunun bilgisayarındaki agentes.chat uygulamasında kapatıldı (Tercihler › Sunucular).",
       "envOffHere": "Bu bilgisayardaki agentes.chat uygulamasında kapatıldı.",
@@ -17764,7 +17956,6 @@
     "removeUsedNone_one": "{{agents}} bu anahtarla düşünüyor ve başka bir şeyi yok. Anahtar gidince sen başka bir yapay zekâ bağlayana kadar yanıt vermez.",
     "removeUsedNone_other": "{{agents}} bu anahtarla düşünüyor ve başka bir şeyleri yok. Anahtar gidince sen başka bir yapay zekâ bağlayana kadar yanıt vermezler.",
     "noKeys": "API anahtarıyla doğrudan sağlayıcıya ödeme yapar ve modelleri seçersiniz.",
-    "noKeysTitle": "Kendi yapay zeka anahtarınızı getirin",
     "platformAvailable": "Bu sunucunun Claude anahtarı da kullanılabilir.",
     "usageTitle": "Türe göre API harcaması",
     "usageAgentLine": "{{spent}} / {{budget}}",
@@ -18256,6 +18447,11 @@
       "cant": "{{via}} ile yanıtladım: {{plan}} şu an düşünemiyor.",
       "change": "Değiştir"
     },
+    "spilled": {
+      "full": "{{to}} üzerinde düşündü: {{from}} doluydu.",
+      "away": "{{to}} üzerinde düşündü: {{from}} uzaktaydı.",
+      "itsComputer": "kendi bilgisayarı"
+    },
     "modelStandIn": {
       "text": "{{plan}} bu anahtarla {{from}} modelini reddetti. Onunla çalışan {{to}} ile yanıt verdim.",
       "useAll": "Hepsinde {{model}} kullan",
@@ -18273,6 +18469,11 @@
       "thinking": "Düşünüyor…",
       "held": "Onay bekleniyor…",
       "said": "“{{text}}”"
+    },
+    "trail": {
+      "label": "{{name}} şimdiye kadar ne yaptı",
+      "earlier_one": "{{count}} önceki adım",
+      "earlier_other": "{{count}} önceki adım"
     },
     "consult": {
       "asking": "{{from}}, {{to}} ajanına soruyor",
@@ -18502,6 +18703,7 @@
         "runningCommandAny": "Bir komut çalıştırdı",
         "usingScreen": "Ekranı kullandı",
         "cloningRepo": "Bir depoyu klonladı",
+        "listingRepos": "Depoları listeledi",
         "openingPullRequest": "Bir pull request açtı",
         "handingOff": "Bir rapor teslim etti",
         "recordingFindings": "Bulguları not etti",
@@ -18623,6 +18825,7 @@
       "runningCommandAny": "komut çalıştırıyor",
       "usingScreen": "ekranı kullanıyor",
       "cloningRepo": "depo klonluyor",
+      "listingRepos": "depoları listeliyor",
       "openingPullRequest": "pull request açıyor",
       "handingOff": "rapor teslim ediyor",
       "recordingFindings": "bulguları not ediyor",
@@ -18833,6 +19036,8 @@
       "surfaceUnlinked": "{{surface}} kimliği değiştiği için ayrıldı. Sensen Ayarlar'dan yeniden bağla.",
       "surfaceVoiceDropped": "O sesli mesajı anlayamadım. Tekrar gönderebilir ya da yazabilir misin?",
       "done": "Bitti.",
+      "no_reply": "Yapay zeka yanıt yazmadan sırasını bitirdi. Değiştirdikleri aşağıda. Yanıtını yeniden isteyin.",
+      "no_reply_limit": "Yapay zeka yanıt yazmadan önce çıktı sınırına ulaştı. Değiştirdikleri aşağıda. Yanıtını yeniden isteyin.",
       "stretch_paused_runs_one": "{{agents}} devam etmeden önce size danışmak için durdu",
       "stretch_paused_runs_other": "{{agents}} devam etmeden önce size danışmak için durdu",
       "stretch_paused_spend_one": "{{agents}} size danışmak için durdu · aylık bütçenin %{{percent}} kadarını kullandı",
@@ -20159,6 +20364,7 @@
       "notAnsweringHelp": "Genellikle birkaç dakika içinde geri gelir. İlgileniyoruz.",
       "offline": "{{computer}} çevrimdışı",
       "offlineHelpPlain": "{{name}}, bilgisayarın geri gelmesini bekliyor.",
+      "helping": "Bu arada yeni işler {{names}} üzerinde düşünebilir.",
       "noRoom": "{{computer}} gösterebileceği kadar ekran gösteriyor. Birazdan tekrar deneyin.",
       "unavailable": "{{name}} ajanının ekranı şu anda gösterilemiyor",
       "unavailableHelp": "Birazdan tekrar deneyin.",
@@ -21444,6 +21650,92 @@
     "settingsText": "Teknik ayrıntıları agentes.chat ekibine gönderin."
   },
   "live": {
+    "type": {
+      "font": "Yazı tipi",
+      "search": "Yazı tipi ara",
+      "noResults": "Bu adda bir yazı tipi yok",
+      "list": "Yazı tipleri",
+      "groups": {
+        "slides": "Bu sunumda",
+        "canvas": "Bu tuvalde",
+        "document": "Bu belgede",
+        "company": "Şirketinizden",
+        "sans": "Serifsiz",
+        "serif": "Serifli",
+        "display": "Başlıklar için",
+        "mono": "Eş aralıklı",
+        "handwriting": "El yazısı"
+      },
+      "headings": "Başlıklar",
+      "body": "Metin",
+      "fromDrive": "Drive'dan",
+      "ownFont": "Dosyanın yazı tipi",
+      "fileFonts": {
+        "slides": "Sunumun yazı tipleri",
+        "document": "Belgenin yazı tipleri"
+      },
+      "fileFontsNote": "Tüm dosya için geçerlidir. Kendi yazı tipi olan metin onu korur.",
+      "headingFont": "Başlıkların yazı tipi",
+      "bodyFont": "Metnin yazı tipi",
+      "bring": "Drive'dan yazı tipi getir…",
+      "bringButton": "Drive'dan getir",
+      "bringTitle": "Drive'dan yazı tipi getir",
+      "bringSearch": "Drive'da yazı tipi ara",
+      "bringEmpty": "Drive'da yazı tipi yok. Önce Drive'a bir .ttf, .otf veya .woff dosyası yükleyin.",
+      "brought": "{{name}} artık dosyada",
+      "notFont": "Bu dosya bir yazı tipi değil. Bir .ttf, .otf veya .woff seçin.",
+      "done": "Tamam",
+      "text": "Metin stili",
+      "glyph": "Aa",
+      "weight": "Kalınlık",
+      "weights": {
+        "w300": "İnce",
+        "w400": "Normal",
+        "w500": "Orta",
+        "w600": "Yarı kalın",
+        "w700": "Kalın",
+        "w800": "Ekstra kalın"
+      },
+      "tracking": "Harf aralığı",
+      "trackings": {
+        "tight": "Daha sıkı",
+        "normal": "Normal",
+        "open": "Açık",
+        "wide": "Çok açık"
+      },
+      "lineHeight": "Satır yüksekliği",
+      "caps": "Tümü büyük harf",
+      "highlight": "Vurgulama",
+      "highlights": {
+        "none": "Yok",
+        "yellow": "Sarı",
+        "green": "Yeşil",
+        "blue": "Mavi",
+        "pink": "Pembe",
+        "orange": "Turuncu"
+      },
+      "effects": "Efektler",
+      "shadow": "Gölge",
+      "shadows": {
+        "none": "Yok",
+        "soft": "Yumuşak",
+        "strong": "Güçlü"
+      },
+      "border": "Kenarlık",
+      "dashes": {
+        "solid": "Düz",
+        "dashed": "Kesik çizgili",
+        "dotted": "Noktalı"
+      },
+      "gradient": "Gradyan",
+      "gradients": {
+        "none": "Yok",
+        "ocean": "Okyanus",
+        "graphite": "Grafit",
+        "sunset": "Gün batımı",
+        "violet": "Mor"
+      }
+    },
     "slides": {
       "rail": {
         "label": "Slaytlar",

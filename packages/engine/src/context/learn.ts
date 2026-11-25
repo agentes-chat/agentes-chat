@@ -25,6 +25,7 @@ import { enqueue } from "../outbox";
 import { runReadOutsideById } from "../outside";
 import { personBehindCall } from "../requester";
 import { isRightHand } from "../right-hand";
+import { lodiPrefsOf } from "../right-hand-prefs";
 import { addRunStep } from "../runs";
 import type { ToolContext } from "../tools/types";
 import { agentBudgetState } from "../usage";
@@ -52,6 +53,8 @@ const {
   channels,
   contextItems,
   messages,
+  organizationMembers,
+  organizationSettings,
   skills,
   users,
 } = schema;
@@ -434,6 +437,7 @@ export interface LearnResult {
     | "no_model"
     | "model_failed"
     | "right_hand"
+    | "learning_off"
     | "confidential";
   saved: { id: string; action: string; trust: string; scopeType: string }[];
   rejected: { content: string; reason: "no_sources" | "secret" | "refused" }[];
@@ -486,8 +490,19 @@ export async function learnRun(deps: ContextDeps, input: { orgId: string; runId:
   if (await threadIsConfidential(db, run.orgId, run.threadRootId)) return { ...out, skipped: "confidential" };
   const [agent] = await db.select().from(agents).where(eq(agents.id, run.agentId));
   if (!agent || agent.archivedAt) return { ...out, skipped: "missing" };
-  // Nothing is learned from its runs for the team (ADR 0137): it keeps only what it saves for the person it answers.
-  if (isRightHand(agent)) return { ...out, skipped: "right_hand" };
+  // The right hand learns like every agent, but answers everyone: what it learns stays where it was said, and a person
+  // (or the workspace) can turn it off. Nobody behind the run: nobody to keep it for.
+  const rightHand = isRightHand(agent);
+  if (rightHand) {
+    const person = await personBehindCall({
+      db,
+      orgId: run.orgId,
+      runId: run.id,
+      triggerMessageId: run.triggerMessageId,
+    });
+    if (!person) return { ...out, skipped: "right_hand" };
+    if (!(await rightHandLearnsFrom(db, run.orgId, person))) return { ...out, skipped: "learning_off" };
+  }
   if (agent.monthlyBudgetNanoUsd !== null) {
     const spent = await agentBudgetState(db, run.orgId, agent.id);
     if (spent.spentNanoUsd + spent.reservedNanoUsd >= agent.monthlyBudgetNanoUsd) return { ...out, skipped: "budget" };
@@ -604,6 +619,13 @@ export async function learnRun(deps: ContextDeps, input: { orgId: string; runId:
     mayReplace: (old: { createdByKind: string }) => old.createdByKind !== "person",
   };
 
+  const learnsFrom = new Map<string, Promise<boolean>>();
+  const letsLearn = (userId: string) => {
+    const on = learnsFrom.get(userId) ?? rightHandLearnsFrom(db, run.orgId, userId);
+    learnsFrom.set(userId, on);
+    return on;
+  };
+
   for (const item of parsed.items.slice(0, 10)) {
     const refs = item.refs.map((r) => r.trim());
     const cited = {
@@ -657,8 +679,23 @@ export async function learnRun(deps: ContextDeps, input: { orgId: string; runId:
     // Who holds which access is the whole team's to know, read from a page or not: it only points at the holder (it
     // grants nothing, and an untrusted one is labeled so), and kept to one agent it can't stop another from saying
     // nobody has it. Untrusted, it may only name this agent as the holder: a page can't point the team at someone.
-    const scope =
-      item.kind === "access" && (trust === "high" || ownAccess(agent.handle, key))
+    // The right hand: nothing from the words of someone who turned its learning off, whoever's run read them. A
+    // person's own preference stays theirs, trusted or not; the rest stays its own where it was said, never the team's.
+    if (rightHand) {
+      const authors = new Set(
+        cited.messages.flatMap((m) => (m.authorType === "person" && m.authorUserId ? [m.authorUserId] : [])),
+      );
+      const allowed = (await Promise.all([...authors].map(letsLearn))).every(Boolean);
+      if (!allowed || (item.scope === "person" && !person)) {
+        out.rejected.push({ content: item.content, reason: "refused" });
+        continue;
+      }
+    }
+    const scope = rightHand
+      ? item.scope === "person"
+        ? "person"
+        : "own"
+      : item.kind === "access" && (trust === "high" || ownAccess(agent.handle, key))
         ? "workspace"
         : trust !== "high" || item.kind === "how_to"
           ? "own"
@@ -671,7 +708,8 @@ export async function learnRun(deps: ContextDeps, input: { orgId: string; runId:
       kind: item.kind === "how_to" ? "note" : item.kind === "term" || item.kind === "access" ? "fact" : item.kind,
       scopeType: scope === "own" ? "agent" : scope === "person" ? "person" : "org",
       scopeId: scope === "own" ? agent.id : scope === "person" ? person : run.orgId,
-      agentId: scope === "own" ? agent.id : null,
+      // Its people's preferences are its own to read, as its `remember` keeps them (ADR 0137).
+      agentId: scope === "own" || rightHand ? agent.id : null,
       title,
       subject:
         item.kind === "how_to"
@@ -684,8 +722,9 @@ export async function learnRun(deps: ContextDeps, input: { orgId: string; runId:
       // A pointer, not a page's say: short.
       content: item.kind === "access" ? cutText(item.content.trim(), 300) : item.content.trim(),
       sourceIds: [...new Set(cited.messages.map((m) => m.id))],
-      channelIds:
-        scope === "workspace" && item.kind === "access" && everywhere
+      channelIds: rightHand
+        ? [run.channelId]
+        : scope === "workspace" && item.kind === "access" && everywhere
           ? []
           : item.kind === "how_to" && where
             ? await howToChannels(db, run.orgId, where, `${title}\n${item.content}`)
@@ -722,7 +761,8 @@ export async function learnRun(deps: ContextDeps, input: { orgId: string; runId:
     }
   }
 
-  for (const fix of parsed.skillFixes) {
+  // Skills are the team's: the right hand's learning doesn't change them.
+  for (const fix of rightHand ? [] : parsed.skillFixes) {
     const slug = fix.slug.trim().toLowerCase();
     if (!loaded.includes(slug)) continue;
     try {
@@ -739,6 +779,16 @@ export async function learnRun(deps: ContextDeps, input: { orgId: string; runId:
     }
   }
   return out;
+}
+
+/** The right hand learns on its own from this person: the workspace and the person both leave it on. */
+export async function rightHandLearnsFrom(db: Database, orgId: string, userId: string) {
+  const [row] = await db
+    .select({ workspace: organizationSettings.rightHandLearns, prefs: organizationMembers.teamWeek })
+    .from(organizationMembers)
+    .leftJoin(organizationSettings, eq(organizationSettings.orgId, organizationMembers.orgId))
+    .where(and(eq(organizationMembers.orgId, orgId), eq(organizationMembers.userId, userId)));
+  return !!row && (row.workspace ?? true) && !lodiPrefsOf(row.prefs).learnOff;
 }
 
 /** An access fact's key names this agent as the holder (`@handle service`). */

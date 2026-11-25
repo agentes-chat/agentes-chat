@@ -139,6 +139,7 @@ test("a turn that went wrong: a usage limit, a sign-in that ended, anything else
     },
   ]);
   expect(grokProblem("You are not authenticated. Run grok login.")[0]).toMatchObject({ code: "not_logged_in" });
+  expect(grokProblem("Error: oauth2 invalid_grant")[0]).toMatchObject({ code: "not_logged_in" });
   expect(grokProblem("boom")[0]).toMatchObject({ code: "grok_failed" });
 });
 
@@ -149,6 +150,16 @@ test("the CLI's words: its models, its sign-in status and its device sign-in", (
   expect(parseGrokStatus(0, "Available models:\n  * grok-4.6", true)).toEqual({ loggedIn: true });
   expect(parseGrokStatus(0, models, true)).toEqual({ loggedIn: false });
   expect(parseGrokStatus(0, "Available models:", false)).toEqual({ loggedIn: false });
+  expect(parseGrokStatus(1, "Error: dial tcp: i/o timeout\n", true)).toEqual({ loggedIn: false, statusUnknown: true });
+  expect(parseGrokStatus(null, "", true)).toEqual({ loggedIn: false, statusUnknown: true });
+  expect(parseGrokStatus(1, models, true)).toEqual({ loggedIn: false });
+  expect(parseGrokStatus(1, "Error: dial tcp: i/o timeout\n", false)).toEqual({ loggedIn: false });
+  expect(parseGrokStatus(0, models, true, true)).toEqual({
+    loggedIn: false,
+    statusUnknown: true,
+  });
+  expect(parseGrokStatus(1, "Error: oauth2 invalid_grant\n", true, true)).toEqual({ loggedIn: false });
+  expect(parseGrokStatus(0, `invalid_grant\n${models}`, true, true)).toEqual({ loggedIn: false });
   const login = "Open https://accounts.x.ai/device on any device\nand enter the code: WDJB-MJHT\n";
   expect(parseGrokLogin(login)).toEqual({ url: "https://accounts.x.ai/device", userCode: "WDJB-MJHT" });
   expect(parseGrokLogin("Open https://accounts.x.ai/device")).toBeNull();

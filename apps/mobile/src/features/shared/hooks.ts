@@ -183,7 +183,7 @@ export function useRememberAgentLooks() {
   }, [agents.data]);
 }
 
-/** The organization's WebSocket (null until it opens). */
+/** The organization's WebSocket (null without one; stopped while the app is in the background). */
 export function useConnection(): RealtimeConnection | null {
   return useRealtime().connection;
 }

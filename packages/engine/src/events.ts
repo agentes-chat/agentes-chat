@@ -11,12 +11,22 @@ import type { BrowserHandoffView } from "./browser/handoff";
 import type { CalendarEventView, CalendarProposalView } from "./calendar";
 import type { CliProgress, CliToolSummary } from "./cli-tools";
 import type { CodeSuggestion } from "./code-suggestions";
+import { isConfidential, wordsOf } from "./confidential";
 import type { FeedbackOfferView } from "./feedback-offers";
 import type { IssueActivityView, IssueView } from "./issues";
 import type { MachineTaskView } from "./machine-tasks";
 import { oneLine } from "./mail/text";
 import type { MessageMemory } from "./message-memories";
+import {
+  CHANNEL_PREVIEW_LENGTH,
+  type PreviewMeta,
+  previewMediaKind,
+  previewMeta,
+  readableBody,
+  snippetOf,
+} from "./message-preview";
 import type { MessageView, ReactionCount } from "./messages";
+import { isQuietNotice } from "./notices";
 import { stripSentinel } from "./reply-policy";
 import type { TeamProposalCard } from "./team-proposals";
 import { redactCredentials } from "./tool-detail";
@@ -181,7 +191,8 @@ export type ChannelEvent =
     }
   /**
    * An agent's question to another agent (`ask_agent`, ADR 0034), or the work it handed it (`kind` `note`), came
-   * back: `status` answered, expired or failed.
+   * back: `status` answered, expired or failed. `goesOn: false`: work handed off whose result woke nobody (ADR 0095),
+   * so the agent that handed it isn't writing; `stillOutAgentId`: a colleague still at work on another part it handed.
    */
   | {
       type: "agent.consulted";
@@ -192,6 +203,8 @@ export type ChannelEvent =
       consultedAgentId: string;
       status: "answered" | "expired" | "failed";
       kind?: "note";
+      goesOn?: false;
+      stillOutAgentId?: string;
     }
   /**
    * A question or hand-off still out changed without closing: the consulted agent stopped on a person (an approval,
@@ -782,6 +795,60 @@ export async function publishTyping(
   );
 }
 
+/**
+ * A new message as the conversation lists show it (`listChannels`, `listDms`), for its `channel.activity`: whether it
+ * counts as unread and, when it may be a list's last line, that line. The apps patch their row with it instead of
+ * reading the list again.
+ */
+export interface ActivityLine {
+  id: string;
+  createdAt: string;
+  /** It counts as unread for whoever hears it: not a quiet notice, nor an agent's sticker after its own reply. */
+  counts: boolean;
+  /** Its line, when it may be the last one: a channel's top-level message, any of a DM's. Absent: a routine's call. */
+  last?: {
+    authorType: "person" | "agent";
+    authorId: string | null;
+    /** As a channel's row has it, at most `CHANNEL_PREVIEW_LENGTH` chars. */
+    preview: string;
+    /** As a DM's row has it. */
+    body: string;
+    meta: PreviewMeta | null;
+    mediaKind: "gif" | "sticker" | "voice" | null;
+  };
+}
+
+/** A heavier line is left out (the lists read again instead): the whole payload must stay under NOTIFY's limit. */
+const ACTIVITY_LINE_LIMIT = 2000;
+
+/** `message`'s `ActivityLine`; null for a confidential one (its readers may be fewer than the channel's) or a heavy one. */
+export function activityLine(message: MessageView): ActivityLine | null {
+  const meta = message.meta ?? {};
+  if (isConfidential(meta)) return null;
+  const counts = !isQuietNotice(meta) && meta.mediaAfter == null;
+  // A routine's call is hidden in the chat: the agent's answer is the line.
+  const shown = counts && !(message.author.type === "person" && meta.routine !== undefined);
+  const words = readableBody(wordsOf(message.body, meta), meta);
+  const line: ActivityLine = {
+    id: message.id,
+    createdAt: message.createdAt,
+    counts,
+    ...(shown
+      ? {
+          last: {
+            authorType: message.author.type,
+            authorId: message.author.id,
+            preview: snippetOf(words, CHANNEL_PREVIEW_LENGTH),
+            body: words.slice(0, 200),
+            meta: previewMeta(meta),
+            mediaKind: previewMediaKind(message.body, meta),
+          },
+        }
+      : {}),
+  };
+  return Buffer.byteLength(JSON.stringify(line)) <= ACTIVITY_LINE_LIMIT ? line : null;
+}
+
 export async function publishMessageCreated(pubsub: PubSub, message: MessageView) {
   const inline = Buffer.byteLength(JSON.stringify(message)) <= INLINE_LIMIT;
   const authorUserId = message.author.type === "person" ? message.author.id : null;
@@ -792,12 +859,14 @@ export async function publishMessageCreated(pubsub: PubSub, message: MessageView
     ...(inline ? { message } : { threadId: message.threadId, agentRunId: message.agentRunId, authorUserId }),
   });
   try {
+    const line = activityLine(message);
     await pubsub.publish(chatActivityTopic, {
       type: "channel.activity",
       channelId: message.channelId,
       threadId: message.threadId,
       authorUserId,
       mentionedUserIds: message.mentionedUserIds,
+      ...(line ? { line } : {}),
     });
   } catch {
     // Best effort: the lists catch up when they're read again.

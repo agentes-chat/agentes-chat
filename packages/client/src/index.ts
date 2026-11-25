@@ -8,6 +8,7 @@ import type { ApiClient } from "./api/client";
 import type { FetchLike } from "./api/http";
 import { createHttpApi } from "./api/http-client";
 
+export * from "./api/ai-hub";
 export * from "./api/client";
 export * from "./api/context";
 export * from "./api/http";
@@ -27,6 +28,7 @@ export * from "./realtime/connection";
 export * from "./realtime/consults";
 export * from "./realtime/machines";
 export * from "./realtime/receipts";
+export * from "./realtime/reconnect";
 export * from "./realtime/steer";
 export * from "./realtime/streams";
 export * from "./realtime/typing";

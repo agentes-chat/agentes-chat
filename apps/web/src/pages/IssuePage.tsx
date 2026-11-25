@@ -32,6 +32,7 @@ import {
   DetailsSection,
   Field,
   Icon,
+  InlineName,
   Input,
   LimitLine,
   Locked,
@@ -404,43 +405,33 @@ export function IssueDetails({
   );
 }
 
-/** The title, edited in place: Enter, Esc or leaving the field saves it (an empty one keeps the old title). */
+/** The title, edited in place (the kit's InlineName): Enter or leaving the field saves it, Esc keeps the old title. */
 function IssueTitle({ issue: i, onSaved }: { issue: Issue; onSaved: () => void }) {
   const { t } = useTranslation();
   const { org } = useOrg();
   const action = useIssueAction(org.id);
-  const [draft, setDraft] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
   const sent = useSent<string>(i.title);
   const title = sent.pending ?? i.title;
-  const ref = useFocusAtEnd<HTMLInputElement>(draft !== null);
-  const save = () => {
-    if (draft === null) return;
-    const next = draft.trim();
-    setDraft(null);
-    if (!next || next === title) return;
-    sent.send(next);
-    action.mutate({ type: "update", id: i.id, patch: { title: next } }, { onSuccess: onSaved, onError: sent.clear });
-  };
-  if (draft !== null)
+  if (editing)
     return (
-      <input
-        ref={ref}
+      <InlineName
         className="issue-inplace__title"
-        value={draft}
+        value={title}
         maxLength={300}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={save}
-        onKeyDown={(e) => {
-          if (e.key !== "Enter" && e.key !== "Escape") return;
-          e.preventDefault();
-          e.currentTarget.blur();
-        }}
         aria-label={t("issues.form.title")}
-        data-inplace=""
+        onSave={(next) => {
+          sent.send(next);
+          action.mutate(
+            { type: "update", id: i.id, patch: { title: next } },
+            { onSuccess: onSaved, onError: sent.clear },
+          );
+        }}
+        onDone={() => setEditing(false)}
       />
     );
   return (
-    <EditInPlace label={t("issues.edit.title")} onEdit={() => setDraft(title)}>
+    <EditInPlace label={t("issues.edit.title")} onEdit={() => setEditing(true)}>
       <h1 className="issue-details__title">{codeAndBold(title)}</h1>
     </EditInPlace>
   );

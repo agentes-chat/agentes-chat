@@ -235,7 +235,7 @@ pub fn open(app: &AppHandle, url: Option<Url>) -> Result<(), String> {
         // ADR 0154), that it takes the person's app icon (`appIcon`, ADR 0179) and how this computer draws
         // (`renderer`, and Linux's `system` facts: graphics.rs); nothing else.
         .initialization_script(format!(
-            "window.__agentesDesktop = Object.freeze({{ version: {version:?}, platform: {PLATFORM:?}, servers: true, files: true, connectorReturn: true, workspaces: true, appIcon: true, renderer: {renderer:?}, system: {system} }});",
+            "window.__agentesDesktop = Object.freeze({{ version: {version:?}, platform: {PLATFORM:?}, servers: true, files: true, connectorReturn: true, signedInLink: true, workspaces: true, appIcon: true, renderer: {renderer:?}, system: {system} }});",
             renderer = crate::graphics::renderer(),
             system = serde_json::to_string(&crate::graphics::system()).unwrap_or_else(|_| "null".into()),
         ))
@@ -270,9 +270,10 @@ pub fn open(app: &AppHandle, url: Option<Url>) -> Result<(), String> {
         })
         // A whole page loading again (⌘R, macOS ended it, a full navigation): the cover, never a blank window.
         .on_page_load(move |page, payload| match payload.event() {
-            PageLoadEvent::Started => crate::cover::show(&on_load, Duration::ZERO),
+            PageLoadEvent::Started => crate::cover::show(&on_load),
             // The page's own sizes follow the zoom (desktop.css), and the bar knows about full screen.
             PageLoadEvent::Finished => {
+                page_loaded();
                 fit_page(&on_load);
                 crate::cover::site_loaded(&on_load, &page);
             }
@@ -287,8 +288,9 @@ pub fn open(app: &AppHandle, url: Option<Url>) -> Result<(), String> {
             },
             DownloadEvent::Finished { path, success, .. } => {
                 if success {
-                    if let Some(p) = path.as_ref() {
-                        quarantine(p);
+                    // Marked off the main thread: `xattr` is a program it would wait on.
+                    if let Some(p) = path.clone() {
+                        std::thread::spawn(move || quarantine(&p));
                     }
                     if let Some(name) = path.as_ref().and_then(|p| p.file_name()) {
                         crate::menus::downloaded(&on_download, &name.to_string_lossy());
@@ -302,12 +304,15 @@ pub fn open(app: &AppHandle, url: Option<Url>) -> Result<(), String> {
         (Some(x), Some(y)) => builder.position(x, y),
         _ => builder.center(),
     };
+    #[cfg(target_os = "windows")]
+    let builder = builder.zoom_hotkeys_enabled(true);
     #[cfg(target_os = "macos")]
     let builder = builder
         .title_bar_style(tauri::TitleBarStyle::Overlay)
         // The buttons are placed by `place_lights` (on every fit), not with `traffic_light_position`.
         .hidden_title(true);
     let built = builder.build().map_err(|e| e.to_string())?;
+    crate::bench::window_built();
     // Linux's side of lib.rs `on_web_content_process_terminate` (macOS only in Tauri): a web process that died
     // leaves the window blank, so the page loads again.
     #[cfg(target_os = "linux")]
@@ -315,8 +320,9 @@ pub fn open(app: &AppHandle, url: Option<Url>) -> Result<(), String> {
         let app = app.clone();
         let _ = built.with_webview(move |view| {
             use webkit2gtk::WebViewExt;
-            view.inner().connect_web_process_terminated(move |view, _| {
-                crate::cover::show(&app, Duration::ZERO);
+            view.inner().connect_web_process_terminated(move |view, reason| {
+                crate::health::note(&app, &format!("the web process of {LABEL} ended ({reason:?}): loading it again"));
+                crate::cover::show(&app);
                 view.reload();
             });
         });
@@ -350,7 +356,8 @@ fn window_title(title: &str) -> &str {
 
 /// Tells the page the zoom (`--app-zoom`: its title bar stays 48pt and level with the window's buttons) and
 /// whether the window is full screen (no room kept for the buttons then), and puts the buttons back in the
-/// bar's middle (a resize or full screen lays them out anew). AppKit is touched on the main thread.
+/// bar's middle (a resize or full screen lays them out anew). AppKit is touched on the main thread. The page hears
+/// only a change: a live resize calls this for every frame, and each script run costs the page a style pass.
 pub fn fit_page(app: &AppHandle) {
     keep_lights(app);
     let handle = app.clone();
@@ -358,12 +365,26 @@ pub fn fit_page(app: &AppHandle) {
         let window = handle.get_window(LABEL);
         let full = window.as_ref().is_some_and(in_full_screen);
         let Some(page) = handle.get_webview(LABEL) else { return };
-        let zoom = crate::menus::current_zoom(&handle);
-        let _ = page.eval(format!(
+        let zoom = crate::menus::current_zoom(&handle).to_string();
+        let mut told = PAGE_TOLD.lock().unwrap_or_else(|e| e.into_inner());
+        if told.as_ref() == Some(&(zoom.clone(), full)) {
+            return;
+        }
+        let sent = page.eval(format!(
             "document.documentElement.style.setProperty('--app-zoom','{zoom}');\
              document.documentElement.toggleAttribute('data-fullscreen',{full});"
         ));
+        *told = sent.is_ok().then_some((zoom, full));
     });
+}
+
+/// The zoom and full screen the page loaded now was told (`fit_page`); a new page load starts with none.
+static PAGE_TOLD: Mutex<Option<(String, bool)>> = Mutex::new(None);
+
+/// A whole page loaded: it hears the zoom and full screen again. Not as it starts loading: a resize meanwhile is told
+/// to the page being replaced, and the new one would never hear it.
+fn page_loaded() {
+    *PAGE_TOLD.lock().unwrap_or_else(|e| e.into_inner()) = None;
 }
 
 /// Whether the window is in full screen, asked of AppKit. tao's `is_fullscreen` takes the lock it holds through a
@@ -389,29 +410,69 @@ pub fn in_full_screen(window: &tauri::Window) -> bool {
 }
 
 /// The window's buttons back in the middle of the site's title bar after AppKit lays it out anew (a resize,
-/// a new title, focus, the cover going): now, on the next turn of the main loop, and once more a moment later
-/// (a new title's layout pass can come after both). Nothing in full screen (no buttons).
+/// a new title, focus, the cover going): now, on the next turn of the main loop, and once more a moment after the
+/// last call (a new title's layout pass can come after both). Nothing in full screen (no buttons). A live resize
+/// calls this for every frame: while a placement waits for the main thread, more calls add nothing, and one timer
+/// thread, pushed back by each call, does the later one.
 pub fn keep_lights(app: &AppHandle) {
     #[cfg(target_os = "macos")]
     {
-        let handle = app.clone();
-        let _ = app.run_on_main_thread(move || {
-            place_now(&handle);
-            let again = handle.clone();
-            let _ = handle.run_on_main_thread(move || place_now(&again));
-        });
-        let later = app.clone();
-        std::thread::spawn(move || {
-            std::thread::sleep(LIGHTS_AGAIN);
-            let handle = later.clone();
-            let _ = later.run_on_main_thread(move || place_now(&handle));
-        });
+        if !LIGHTS_QUEUED.swap(true, Ordering::AcqRel) {
+            let handle = app.clone();
+            let queued = app.run_on_main_thread(move || {
+                LIGHTS_QUEUED.store(false, Ordering::Release);
+                place_now(&handle);
+                let again = handle.clone();
+                let _ = handle.run_on_main_thread(move || place_now(&again));
+            });
+            if queued.is_err() {
+                LIGHTS_QUEUED.store(false, Ordering::Release);
+            }
+        }
+        lights_later(app);
     }
     #[cfg(not(target_os = "macos"))]
     let _ = app;
 }
 
-/// How long after a layout the buttons are placed once more.
+/// A placement is waiting for the main thread (`keep_lights`).
+#[cfg(target_os = "macos")]
+static LIGHTS_QUEUED: AtomicBool = AtomicBool::new(false);
+
+/// The placement `LIGHTS_AGAIN` after the last call to `keep_lights`, from one thread made on first use.
+#[cfg(target_os = "macos")]
+fn lights_later(app: &AppHandle) {
+    static LATER: std::sync::OnceLock<mpsc::Sender<()>> = std::sync::OnceLock::new();
+    let app = app.clone();
+    let later = LATER.get_or_init(move || {
+        debounced(LIGHTS_AGAIN, move || {
+            let handle = app.clone();
+            let _ = app.run_on_main_thread(move || place_now(&handle));
+        })
+    });
+    let _ = later.send(());
+}
+
+/// A thread that runs `run` once `wait` has passed since the last signal sent to it: a burst of signals runs it once.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+fn debounced(wait: Duration, run: impl Fn() + Send + 'static) -> mpsc::Sender<()> {
+    let (tx, rx) = mpsc::channel::<()>();
+    std::thread::spawn(move || {
+        while rx.recv().is_ok() {
+            loop {
+                match rx.recv_timeout(wait) {
+                    Ok(()) => continue,
+                    Err(mpsc::RecvTimeoutError::Timeout) => break,
+                    Err(mpsc::RecvTimeoutError::Disconnected) => return,
+                }
+            }
+            run();
+        }
+    });
+    tx
+}
+
+/// How long after the last layout the buttons are placed once more.
 #[cfg(target_os = "macos")]
 const LIGHTS_AGAIN: Duration = Duration::from_millis(300);
 
@@ -712,9 +773,10 @@ fn front(app: &AppHandle) -> Result<(), String> {
 /// code with its own session), reconnecting it (`reconnect`), Preferences on a tab (`prefs`), the menu bar's
 /// access requests (`requests`), the Dock's badge (`badge`), the Go menu's organizations (`orgs`), a
 /// notification while the app is in the background (`notify`), the first run's window to pick another server
-/// (`servers`: the sign-in page's way out, the same window as Servers › Add a server…) and, on the server
-/// here, signing its owner in (`signIn`: the app spends its owner key on a one-time sign-in, which the window
-/// trades itself) and the folder of its files (`files`: Storage's "Show the folder"). Rust checks
+/// (`servers`: the sign-in page's way out, the same window as Servers › Add a server…), the app's own speed numbers
+/// for the site's report (`vitals`: its opening and its web view's memory) and, on the server here, signing its
+/// owner in (`signIn`: the app spends its owner key on a one-time sign-in, which the window trades itself) and the
+/// folder of its files (`files`: Storage's "Show the folder"). Rust checks
 /// each request, rebuilds it from the keys it may have, adds the asking page's own `origin`, whether agents may
 /// work here for it and whether it is the server here (`local`), and relays it: the popover's code owns the
 /// runners (apps/desktop/src/control/this-mac.ts) and answers through `this_mac_reply`. The machine's token
@@ -798,6 +860,8 @@ fn checked(request: &Value) -> Result<Value, String> {
         }
         // The folder is the app's to know: the page names none.
         Some("files") => Ok(json!({ "kind": "files" })),
+        // The app's own speed numbers (vitals.rs): the page asks, and says nothing.
+        Some("vitals") => Ok(json!({ "kind": "vitals" })),
         // The app icon (ADR 0179): one of the app's own ids, an agent the site drew (who it is and its two PNGs), or
         // none to read the one kept.
         Some("appIcon") => {
@@ -1086,6 +1150,14 @@ pub async fn this_mac(app: AppHandle, webview: tauri::Webview, request: Value) -
     }
     // What the app itself answers (the popover isn't needed).
     match request["kind"].as_str() {
+        // Its opening (once) and its web view's memory, for the site's speed report.
+        Some("vitals") => {
+            let measurer = app.clone();
+            let vitals = tauri::async_runtime::spawn_blocking(move || crate::vitals::for_site(&measurer))
+                .await
+                .map_err(|e| e.to_string())?;
+            return serde_json::to_value(vitals).map_err(|e| e.to_string());
+        }
         Some("badge") => {
             let count = |key: &str| u32::try_from(request[key].as_u64().unwrap_or(0)).unwrap_or(u32::MAX);
             crate::dock::set_badge(&app, count("waiting"), count("unread"));
@@ -1141,15 +1213,14 @@ pub async fn this_mac(app: AppHandle, webview: tauri::Webview, request: Value) -
             crate::present(&app, "welcome")?;
             return Ok(json!({}));
         }
-        // The other servers' workspaces, as last read (the page's own server lists its own).
+        // The other servers' workspaces, as last read (the page's own server lists its own): the app reads them every
+        // minute while this window shows.
         Some("workspaces") => {
             // Never read yet (the app's first check ran before this window existed): read now and answer with it,
             // so the site's menu never starts empty for a minute.
             if crate::workspaces::never_read(&app) {
                 let reader = app.clone();
                 let _ = tauri::async_runtime::spawn_blocking(move || crate::workspaces::refresh_now(&reader)).await;
-            } else if crate::workspaces::stale(&app) {
-                crate::workspaces::trigger(&app);
             }
             let others: Vec<_> = crate::workspaces::list(&app).into_iter().filter(|s| s.server != origin).collect();
             return Ok(json!({ "servers": others }));
@@ -1290,6 +1361,27 @@ mod tests {
     }
 
     #[test]
+    fn a_burst_of_layouts_places_the_buttons_once_after_it() {
+        use std::sync::atomic::AtomicUsize;
+        use std::sync::Arc;
+        let runs = Arc::new(AtomicUsize::new(0));
+        let counted = runs.clone();
+        let later = debounced(Duration::from_millis(150), move || {
+            counted.fetch_add(1, Ordering::SeqCst);
+        });
+        for _ in 0..20 {
+            later.send(()).unwrap();
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        assert_eq!(runs.load(Ordering::SeqCst), 0, "not while the burst lasts");
+        std::thread::sleep(Duration::from_millis(600));
+        assert_eq!(runs.load(Ordering::SeqCst), 1, "once after it");
+        later.send(()).unwrap();
+        std::thread::sleep(Duration::from_millis(600));
+        assert_eq!(runs.load(Ordering::SeqCst), 2, "and once more for the next one");
+    }
+
+    #[test]
     fn only_a_click_opens_a_notice_page() {
         // The click opens the page the notification was shown with.
         assert_eq!(
@@ -1378,6 +1470,8 @@ mod tests {
     #[test]
     fn bridge_requests() {
         assert_eq!(checked(&json!({ "kind": "status", "extra": 1 })), Ok(json!({ "kind": "status" })));
+        // The app's speed numbers: whatever else the page sends is dropped.
+        assert_eq!(checked(&json!({ "kind": "vitals", "pid": 4 })), Ok(json!({ "kind": "vitals" })));
         // The app icon: an id of the app's, or an agent with its two PNGs (ADR 0179).
         assert_eq!(checked(&json!({ "kind": "appIcon", "icon": "moon" })), Ok(json!({ "kind": "appIcon", "icon": "moon" })));
         assert!(checked(&json!({ "kind": "appIcon", "icon": "../x" })).is_err());

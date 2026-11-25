@@ -13,12 +13,15 @@ export class ApiError extends Error {
   readonly code: string;
   /** Details for the translated text (`{ error: { params } }`), e.g. who can't see a range. */
   readonly params?: Record<string, unknown>;
-  constructor(status: number, code: string, message: string, params?: Record<string, unknown>) {
+  /** How long the server asked to wait before trying again (`Retry-After`, a busy server's 503). */
+  readonly retryAfterMs?: number;
+  constructor(status: number, code: string, message: string, params?: Record<string, unknown>, retryAfterMs?: number) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.code = code;
     if (params) this.params = params;
+    if (retryAfterMs !== undefined) this.retryAfterMs = retryAfterMs;
   }
 }
 
@@ -223,11 +226,13 @@ async function parseResponse<T>(res: Response): Promise<T> {
     )?.error;
     // Some routes answer `{ error: "auth" }`: the string is the code.
     const error = typeof raw === "string" ? { code: raw, message: raw, params: undefined } : raw;
+    const retryAfter = Number(res.headers.get("retry-after"));
     throw new ApiError(
       res.status,
       error?.code ?? `http_${res.status}`,
       error?.message ?? (res.statusText || `HTTP ${res.status}`),
       error?.params && typeof error.params === "object" ? error.params : undefined,
+      retryAfter > 0 ? retryAfter * 1000 : undefined,
     );
   }
   return data as T;

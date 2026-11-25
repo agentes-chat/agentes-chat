@@ -9,6 +9,7 @@ import {
   useCardApprovals,
   useDecideApproval,
   useDecideApprovals,
+  usePrefetchConversation,
 } from "@agenteschat/client";
 import { questionWaitsOn } from "@agenteschat/client/lib/agent-questions";
 import {
@@ -932,8 +933,11 @@ export function ThreadLink({ thread }: { thread: ThreadInfo }) {
   const tone = state ? threadWorkTone(state) : null;
   // A return says when it comes ("Retorno às 00:32"), never for how long.
   const held = state && state !== "later" ? workTime(i18n.language, thread.since, now) : null;
+  // From the touch on: its replies load while the finger is down, so it opens on them, at its end.
+  const prefetch = usePrefetchConversation(useOrgId());
   return (
     <PressScale
+      onPressIn={() => prefetch(thread.channelId, thread.id)}
       onPress={() => router.push(chatHref(thread.channelId, thread.id))}
       accessibilityRole="button"
       accessibilityLabel={t("mobile.chat.replies", { count: thread.replyCount })}

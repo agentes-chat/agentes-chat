@@ -288,6 +288,7 @@ export function createMockArtifacts(
     },
     reply: async () => ({ id: mockId("msg") }),
     blockState: async (_orgId, id, version) => ({ id, version, state: {}, changes: {}, rev: 0 }),
+    setWave: async (_orgId, _id, _version, wave) => wave,
     setBlockState: async (_orgId, id, version, values) => ({ id, version, state: values, changes: {}, rev: 1 }),
     drawBlock: async (_orgId, id, version, name, options) => ({
       id,
@@ -333,6 +334,8 @@ export function createMockArtifacts(
       const qs = params.toString();
       return `/api/app/organizations/${orgId}/artifacts/${id}/file${qs ? `?${qs}` : ""}`;
     },
+    thumbUrl: (orgId, id, { version, width }) =>
+      `/api/app/organizations/${orgId}/artifacts/${id}/thumb?version=${version}&w=${width}`,
     download: async (orgId, id, version) => {
       const { text, type } = serializeContent((await detail(orgId, await find(orgId, id), version)).content);
       return {

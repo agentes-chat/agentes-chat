@@ -209,7 +209,7 @@ describe("a computer's line", () => {
     }
   });
 
-  test("the line offers my own computers for my replies", async () => {
+  test("the line offers my own computers to help", async () => {
     const { api, state, me, machines } = setup();
     const mac = machines?.pair({ name: "MacBook da Ana", pairedBy: { id: me, name: "Ana" } });
     machines?.setAiAccounts({
@@ -245,7 +245,9 @@ describe("a computer's line", () => {
     await settle(6);
     const dialog = screen().getByRole("dialog", { name: "Fila de Studio" });
     expect(dialog.textContent).toContain("Seus computadores");
-    const own = within(dialog).getByRole("switch", { name: "Suas respostas podem pensar aqui: MacBook da Ana" });
+    const own = within(dialog).getByRole("switch", {
+      name: "Ajudar quando o computador da equipe estiver cheio ou fora: MacBook da Ana",
+    });
     expect(own.getAttribute("aria-checked")).toBe("true");
     expect(dialog.querySelector(".cq-spill__name small")?.textContent).toContain("seu plano Claude Max");
     // Studio itself, and computers someone else connected, are never offered here.
@@ -254,6 +256,30 @@ describe("a computer's line", () => {
     await settle(4);
     const call = state.calls.find((c) => c.method === "devices.updateComputer");
     expect(call?.args.at(-1)).toEqual({ spill: { own: false } });
+  });
+
+  test("with the workspace's switch off, the line offers no computer: none would help", async () => {
+    const { api, state, me, machines } = setup();
+    machines?.pair({ name: "MacBook da Ana", pairedBy: { id: me, name: "Ana" } });
+    await api.devices.setHelp(ORG_ID, false);
+    state.messages.push(
+      said({
+        author: { type: "person", id: me },
+        receipts: {
+          seenBy: [ATLAS_ID],
+          pickedBy: [ATLAS_ID],
+          handled: [{ agentId: ATLAS_ID, runId: "r-atlas", status: "waiting_input", computer: "queued" }],
+          blocked: [],
+        },
+      }),
+    );
+    await renderApp(`/org/${ORG_ID}/c/${ENG_ID}`, { api });
+    await settle(10);
+    const [turn] = turns();
+    await click(within(turn as HTMLElement).getByRole("button", { name: "Ver fila" }));
+    await settle(6);
+    const dialog = screen().getByRole("dialog", { name: "Fila de Studio" });
+    expect(dialog.textContent).not.toContain("Seus computadores");
   });
 
   test("an agent further back says the same line, never who is ahead", async () => {

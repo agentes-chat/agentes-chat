@@ -474,6 +474,16 @@ describe("the model picker: the agent's AI changed in place", () => {
     const claude = modelPickerModels(t, "pt-BR", view, claudeTile, claudeTile.accounts[1], api, "auto");
     expect(claude.map((r) => r.label)).toEqual(["brain.auto.label", "Opus", "Sonnet", "Haiku"]);
     expect(claude.some((r) => r.checked)).toBe(false);
+    // Claude Fable stays checked as Fable (never downgraded to Sonnet).
+    const withFable: BrainOption = {
+      ...claudeCode,
+      models: [{ value: "fable", label: "Fable 5.2" }, ...claudeCode.models],
+    };
+    const fableView = { ...view, options: [withFable], account: "acc-claude", model: "fable", effectiveModel: "fable" };
+    const fableTile = modelPickerTiles(t, fableView, "u1", api, "auto", MODELS).find((x) => x.key === "claude");
+    if (!fableTile) throw new Error("no Fable Claude tile");
+    const fableRows = modelPickerModels(t, "pt-BR", fableView, fableTile, fableTile.accounts[0], api, "auto");
+    expect(fableRows.find((r) => r.checked)?.value).toBe("fable");
     const keys = tiles.find((x) => x.key === "api:anthropic");
     if (!keys) throw new Error("no key tile");
     expect(modelPickerModels(t, "pt-BR", view, keys, undefined, api, "auto").map((r) => r.value)).toEqual([

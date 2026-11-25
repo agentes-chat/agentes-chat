@@ -1,6 +1,7 @@
 import type { Message } from "@agenteschat/client";
 import { voiceAudioGone, voiceAudioUrl, voiceClock, voiceExpired, voiceOf } from "@agenteschat/client/lib/voice";
 import { Skia } from "@shopify/react-native-skia";
+import type { AudioSource } from "expo-audio";
 import { memo, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
@@ -13,6 +14,7 @@ import { Icon, PressScale, Text, TOUCH } from "@/ui";
 import { useColors, useOrgId } from "../shared/hooks";
 import { nextSpeed, spokenWords, waveAt } from "./logic";
 import {
+  lengthOf,
   placeOf,
   playingId,
   seekPlayback,
@@ -43,13 +45,63 @@ const expired = new Set<string>();
  * else; a tap opens the rest there. A recording the server no longer keeps stays as a dimmed wave with its words.
  */
 export const VoiceMessage = memo(function VoiceMessage({ message }: { message: Message }) {
-  const { t, i18n } = useTranslation();
-  const c = useColors();
   const orgId = useOrgId();
   const voice = voiceOf(message.meta);
-  const clipId = voice?.clipId ?? "";
-  const durationMs = voice?.durationMs ?? 0;
-  const sending = Boolean(message.local);
+  const words = useMemo(() => spokenWords(message), [message]);
+  if (!voice) return null;
+  const url = voiceAudioUrl(orgId, voice.clipId, serverUrl());
+  return (
+    <VoiceClip
+      clipId={voice.clipId}
+      rowKey={message.id}
+      // Read at the press: the session's cookie as it is then.
+      source={() => ({ uri: url, headers: appHeaders(lastCookie()) })}
+      peaks={voice.peaks}
+      durationMs={voice.durationMs}
+      words={words}
+      sending={Boolean(message.local)}
+      expiredAtStart={voiceExpired(voice)}
+      isGone={() => voiceAudioGone(url, authedFetch as typeof fetch)}
+    />
+  );
+});
+
+/**
+ * The player of a sound, as a voice message draws it: play, the wave (a tap or a drag moves through it), the clock and
+ * the speed every voice shares, with its words under it when it has some. An audio file plays in it too (`FileVoice`).
+ */
+export function VoiceClip({
+  clipId,
+  rowKey,
+  source,
+  peaks,
+  durationMs: givenMs,
+  words = null,
+  sending = false,
+  expiredAtStart = false,
+  isGone,
+  onFailed,
+}: {
+  /** The playback's id: one sound plays at a time, and each keeps its place. */
+  clipId: string;
+  /** What its words' open state is kept under, as the list recycles rows. */
+  rowKey: string;
+  source: () => AudioSource;
+  peaks: readonly number[];
+  /** 0 when not known yet: the player's own, once it has loaded. */
+  durationMs: number;
+  words?: string | null;
+  sending?: boolean;
+  expiredAtStart?: boolean;
+  /** Asked when it fails: true when the server no longer keeps it (it dims). */
+  isGone?: () => Promise<boolean>;
+  /** Given: a sound that can't play hands its place back instead of offering to try again. */
+  onFailed?: () => void;
+}) {
+  const { t, i18n } = useTranslation();
+  const c = useColors();
+  const learnt = useSyncExternalStore(subscribePlayback, () => lengthOf(clipId));
+  const durationMs = givenMs > 0 ? givenMs : learnt;
   const playing = useSyncExternalStore(subscribePlayback, playingId) === clipId;
   // Asked to play and not moving yet: the button spins from the tap on.
   const starting = useSyncExternalStore(subscribePlayback, startingId) === clipId;
@@ -66,17 +118,17 @@ export const VoiceMessage = memo(function VoiceMessage({ message }: { message: M
   });
   const time = second < 0 ? durationMs : second * 1000;
   const rate = useSyncExternalStore(subscribeVoiceSpeed, voiceSpeed);
-  const [gone, setGone] = useState(() => expired.has(clipId) || Boolean(voice && voiceExpired(voice)));
-  const [open, setOpen] = useState(() => opened.has(message.id));
+  const [gone, setGone] = useState(() => expired.has(clipId) || expiredAtStart);
+  const [open, setOpen] = useState(() => opened.has(rowKey));
   const [broken, setBroken] = useState(false);
 
   // A recycled row takes on another message.
   // biome-ignore lint/correctness/useExhaustiveDependencies: only when the row shows another recording
   useEffect(() => {
-    setGone(expired.has(clipId) || Boolean(voice && voiceExpired(voice)));
-    setOpen(opened.has(message.id));
+    setGone(expired.has(clipId) || expiredAtStart);
+    setOpen(opened.has(rowKey));
     setBroken(false);
-  }, [clipId, message.id]);
+  }, [clipId, rowKey]);
   // The wave follows its clip's place on every tick without a render (the UI thread draws it), from wherever it stands
   // as the row is drawn (a clip that kept playing while its row was away included); never under a scrubbing finger.
   useEffect(() => {
@@ -91,11 +143,11 @@ export const VoiceMessage = memo(function VoiceMessage({ message }: { message: M
     if (playing) setPlaybackSpeed(clipId, rate);
   }, [playing, rate, clipId]);
   useEffect(() => {
-    if (width <= 0 || !voice) return;
-    const wave = wavePaths(voice.peaks, width, WAVE);
+    if (width <= 0) return;
+    const wave = wavePaths(peaks, width, WAVE);
     inner.value = wave.inner;
     edge.value = wave.edge;
-  }, [width, voice, inner, edge]);
+  }, [width, peaks, inner, edge]);
 
   const lose = () => {
     expired.add(clipId);
@@ -109,15 +161,18 @@ export const VoiceMessage = memo(function VoiceMessage({ message }: { message: M
       return;
     }
     setBroken(false);
-    const url = voiceAudioUrl(orgId, clipId, serverUrl());
     // It plays at once; only a player that failed asks the server why (a player says nothing of it): a recording the
-    // server no longer keeps dims, anything else offers to try again.
+    // server no longer keeps dims, anything else offers to try again (or hands its place back, `onFailed`).
     const failed = () => {
-      void voiceAudioGone(url, authedFetch as typeof fetch).then((isGone) => (isGone ? lose() : setBroken(true)));
+      if (onFailed) {
+        onFailed();
+        return;
+      }
+      void (isGone?.() ?? Promise.resolve(false)).then((yes) => (yes ? lose() : setBroken(true)));
     };
     void startPlayback({
       id: clipId,
-      source: { uri: url, headers: appHeaders(lastCookie()) },
+      source: source(),
       durationMs,
       from: placeOf(clipId),
       speed: voiceSpeed(),
@@ -134,8 +189,8 @@ export const VoiceMessage = memo(function VoiceMessage({ message }: { message: M
   };
   const cycle = () => setVoiceSpeed(nextSpeed(rate));
   const flip = () => {
-    if (open) opened.delete(message.id);
-    else opened.add(message.id);
+    if (open) opened.delete(rowKey);
+    else opened.add(rowKey);
     setOpen(!open);
   };
 
@@ -178,14 +233,12 @@ export const VoiceMessage = memo(function VoiceMessage({ message }: { message: M
   });
   const scrub = useExclusiveGestures(pan, tap);
 
-  const words = useMemo(() => spokenWords(message), [message]);
   // The speed as the language writes it ("1,5×" in Portuguese).
   const speedFormat = useMemo(
     () => new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 1 }),
     [i18n.language],
   );
   const more = words && !open && (words.length > ONE_LINE || words.includes("\n"));
-  if (!voice) return null;
   return (
     <View style={styles.box}>
       <View style={[styles.card, { backgroundColor: c.raised, borderColor: c.line }]}>
@@ -294,7 +347,7 @@ export const VoiceMessage = memo(function VoiceMessage({ message }: { message: M
       ) : null}
     </View>
   );
-});
+}
 
 const styles = StyleSheet.create({
   box: { gap: 6, maxWidth: 320 },

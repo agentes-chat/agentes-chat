@@ -4,7 +4,8 @@
 - Date: 2026-11-20
 - Extends: 0032 ("One reply placement": `replyThreadOf`), 0112 (the floor and one active run per conversation),
   0190 (a run asked in the main timeline that answers under its trigger)
-- Code: db `channels.reply_in_threads`, `agent_runs.reply_in_thread` (migration 0314); engine `runs.ts`
+- Code: db `channels.reply_in_threads`, `agent_runs.reply_in_thread` (migration 0314; on by default since 0325);
+  engine `runs.ts`
   (`replyThreadOf`), `run-scope.ts` (`inChannelRun`, `joinsRun`, `askedBy`, `placeAfter`, `repliesInThreadSql`),
   `messages.ts` (the `floor_runs`, `active`, `runs` and `opened` parts of `insertMessageWithRuns`,
   `postPersonMessage`'s thinking events), `dispatch.ts` (`startOrJoinRun`'s `after` and `several`, `createAgentRuns`),
@@ -26,9 +27,12 @@ in the thread under the message that made it, as bots do in other chat apps (iss
 
 ## Decision
 
-1. **A channel setting.** `channels.reply_in_threads`, off by default, only for regular channels (`kind = 'channel'`;
+1. **A channel setting.** `channels.reply_in_threads`, on by default, only for regular channels (`kind = 'channel'`;
    DMs, task and file conversations keep today's behavior, and `updateChannel` refuses it there with
-   `channel.reply_in_threads`). Whoever may change the channel's topic may change it (its creator or an admin). The
+   `channel.reply_in_threads`; the column's value on those kinds is never read). Migration 0325 turned it on for every
+   existing channel too, since the setting had no way to be chosen before then except in the hours between the two
+   deploys; a channel that wants answers in its main timeline turns it off. Test databases keep the old default
+   (`packages/db/test/pglite.ts`), so the tests that pin main-timeline answers stay as they are. Whoever may change the channel's topic may change it (its creator or an admin). The
    apps read it on the channel list and change it with the channel's `PATCH`.
 2. **A copy on the run, and a place that goes on with it.** A run created on a message in such a channel's main
    timeline gets `agent_runs.reply_in_thread = true` (`repliesInThreadSql`, read once in the statement that creates

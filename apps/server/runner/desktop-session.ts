@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createCipheriv, createHash, randomBytes, randomInt } from "node:crypto";
 import type { EventEmitter } from "node:events";
 import {
@@ -303,6 +303,32 @@ export function hostMemAvailable(): number | null {
     return null;
   }
 }
+
+/** `kern.memorystatus_level` (the share of memory macOS can hand out now, in percent) in bytes; null when unreadable. */
+export function pressureLevelBytes(level: string, totalBytes: number): number | null {
+  const text = level.trim();
+  const n = Number(text);
+  return text !== "" && Number.isInteger(n) && n >= 0 && n <= 100 ? (n / 100) * totalBytes : null;
+}
+
+/**
+ * Free memory now, for background tasks' room: Linux `MemAvailable`, macOS its memory-pressure level (`os.freemem()`
+ * reads near zero on a healthy Mac, whose free memory sits in caches it hands back), Windows its available physical
+ * memory (`os.freemem()` there). Null where none can be read.
+ */
+export function freeMemoryNow(): number | null {
+  if (process.platform === "linux") return hostMemAvailable();
+  if (process.platform === "win32") return os.freemem();
+  if (process.platform !== "darwin") return null;
+  const r = spawnSync("sysctl", ["-n", "kern.memorystatus_level"], { encoding: "utf8", timeout: 2000 });
+  return r.status === 0 ? pressureLevelBytes(r.stdout, os.totalmem()) : null;
+}
+
+/** The processor has stayed over 90% busy for the last minute: the 1-minute load average against its CPUs (0 on Windows). */
+export const cpuBusyNow = (load = os.loadavg()[0] ?? 0, cpus = os.availableParallelism()) => load >= 0.9 * cpus;
+
+/** What a background task's start reads (`TaskManagerOptions.room`). */
+export const taskRoomNow = () => ({ free: freeMemoryNow(), cpuBusy: cpuBusyNow() });
 
 /** Where and as whom an agent's desktop runs. */
 export interface DesktopUser {

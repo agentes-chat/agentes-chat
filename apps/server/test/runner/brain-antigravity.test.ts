@@ -202,6 +202,8 @@ test("a turn that went wrong: AGY_ERROR's quota is a plan limit with its reset, 
   expect(antigravityProblem("Error: authentication required")[0]).toMatchObject({ code: "not_logged_in" });
   expect(antigravityProblem("boom")[0]).toMatchObject({ code: "antigravity_failed" });
   expect(parseAgyError("plain failure")).toBeNull();
+  // Nothing it knows to read: the line itself, never a made-up reason.
+  expect(parseAgyError('AGY_ERROR: {"reason":"sandbox setup"}')?.message).toBe('{"reason":"sandbox setup"}');
 });
 
 test("the CLI's words: its models, its sign-in status, its sign-in link and its /usage quotas", () => {

@@ -76,7 +76,7 @@ export function useUpdateComputer(orgId: string) {
   return useDevicesMutation(
     orgId,
     ({ id, ...input }: ComputerDeviceInput & { id: string }) => api.devices.updateComputer(orgId, id, input),
-    // Its name, who may use it, whose it is, its limit and its spill show at once.
+    // Its name, who may use it, whose it is, its limit and its help show at once.
     ({ id, name, audience, belongsToWorkspace, maxTasks, spill }) => [
       computerEdit(orgId, id, (c) => ({
         ...c,
@@ -87,6 +87,16 @@ export function useUpdateComputer(orgId: string) {
         ...(spill ? { spill: { ...c.spill, ...spill } } : {}),
       })),
     ],
+  );
+}
+
+/** Admins: people's computers may help when the workspace's is full or away (`devicesHelp`), or none may. */
+export function useSetDevicesHelp(orgId: string) {
+  const api = useApi();
+  return useDevicesMutation(
+    orgId,
+    (on: boolean) => api.devices.setHelp(orgId, on),
+    (on) => [edit<DevicesList>(keys.devices(orgId), (list) => ({ ...list, devicesHelp: on }))],
   );
 }
 

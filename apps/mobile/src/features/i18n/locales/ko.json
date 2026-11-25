@@ -863,6 +863,9 @@
     },
     "kind": {
       "proposal_waiting_other": "{{names}}이(가) 개선을 제안해요",
+      "proposal_applied_other": "{{names}}이(가) 개선 {{count}}개를 적용했어요",
+      "proposal_applied_agents_other": "{{names}}이(가) 개선 {{count}}개를 적용했어요",
+      "proposal_applied_auto_other": "개선 {{count}}개가 자동으로 적용됐어요",
       "mention_other": "{{names}}이(가) 나를 멘션했어요",
       "thread_reply_other": "{{names}}이(가) 스레드에 답장했어요",
       "agent_reply_other": "{{names}}이(가) 답했어요",
@@ -1054,7 +1057,6 @@
     "fromWorkspace": "워크스페이스에서",
     "issues": "작업",
     "issuesWithMe_other": "나와 관련된 작업 {{count}}개",
-    "proposalsWaiting_other": "{{count}}개 대기 중",
     "drive": "Drive",
     "connectors": "커넥터와 MCP",
     "preferences": "환경설정",
@@ -1349,13 +1351,26 @@
     "agentLine_other": "메모리 {{count}}개",
     "uses_other": "{{count}}번 사용됨",
     "confirmed": "사람이 확인함",
-    "confirm": "확인",
-    "confirmedToast": "확인됨",
     "details": "기술 세부 정보",
     "before": "이전 내용: {{text}}",
     "fix": "수정",
     "forgetTitle": "이 메모리를 잊게 할까요?",
     "forgetText": "{{name}}이(가) 앞으로 대화에서 이 내용을 쓰지 않아요."
+  },
+  "proposals": {
+    "title": "에이전트 개선",
+    "emptyTitle": "아직 바뀐 것이 없어요",
+    "empty": "에이전트가 자신이나 동료의 지침을 개선하면 그 변경이 여기에 되돌리기와 함께 표시돼요.",
+    "more": "더 보기",
+    "reviewing": "검토 중…",
+    "appliedBy": "{{name}}이(가) 적용함",
+    "appliedBy_female": "{{name}}이(가) 적용함",
+    "appliedAuto": "자동으로 적용됨",
+    "leftOutBy": "{{name}}이(가) 적용하지 않음",
+    "leftOutBy_female": "{{name}}이(가) 적용하지 않음",
+    "leftOut": "적용 안 됨",
+    "undoneBy": "{{name}}님이 되돌림",
+    "undoneByYou": "내가 되돌림"
   },
   "wiki": {
     "map": "페이지 맵",
@@ -1407,6 +1422,15 @@
     "next": {
       "pr": "브랜치 푸시됨, 아직 풀 리퀘스트 없음",
       "mergeLocal": "{{base}}에 머지할 준비가 됐어요"
+    },
+    "terminal": {
+      "keys": "터미널 키",
+      "keyboard": "키보드",
+      "pasteHint": "복사한 내용을 터미널에 붙여넣기",
+      "key": {
+        "CtrlC": "Control-C, 중단",
+        "CtrlD": "Control-D, 입력 끝"
+      }
     }
   },
   "taskManager": {
@@ -3047,6 +3071,59 @@
       "editHint": "이 부분을 편집해요",
       "notHere": "이 부분은 컴퓨터에서 편집해요"
     }
+  },
+  "aiHub": {
+    "accounts": "계정",
+    "accountsHint": "누가 연결했든 이 워크스페이스의 모든 요금제와 API 키입니다. 계정을 탭하면 한도와 사용할 수 있는 사람을 볼 수 있어요.",
+    "order": "사용 순서",
+    "orderSub": "한도에 도달하면 에이전트가 다음 계정으로 이어갑니다.",
+    "skipped": "건너뜀",
+    "orderGroup": "{{plan}} · {{computer}}",
+    "noOrder": "한 컴퓨터에 같은 AI 계정이 두 개 있으면 순서가 여기에 표시됩니다.",
+    "keyFallback": "모든 요금제가 한도에 도달하면 API 키로 계속",
+    "keyFallbackHint": "마지막 계정 다음에는 사용량만큼 청구되는 워크스페이스 API 키로 이어갑니다. 미션은 키로 넘어가지 않아요.",
+    "keyFallbackLocked": "관리자만 변경할 수 있어요.",
+    "limits": "한도",
+    "permissions": "권한",
+    "manage": "관리",
+    "manageSub": "이름 변경, 다시 로그인, 삭제",
+    "manageHint": "이 계정의 이름을 바꾸고, 다시 로그인하고, 삭제할 수 있는 사람입니다. 연결한 사람만 변경할 수 있어요.",
+    "use": "에이전트에서 사용",
+    "useSub": "생각하는 AI에서 선택",
+    "useHint": "누구의 에이전트가 이 계정으로 생각할 수 있는지, 누구의 Lodi인지 정합니다. 관리하는 사람이 변경할 수 있어요.",
+    "reply": "모두에게 응답",
+    "replySub": "에이전트가 대화하는 상대",
+    "replyHint": "이 계정의 에이전트가 자신의 소유자 외에 누구에게 응답할지 정합니다. Claude 약관은 요금제를 결제한 사람이 쓰도록 하고 있으니, 모두에게 열기 전에 확인하세요.",
+    "audience": {
+      "owner": "나만",
+      "ownerOf": "{{name}}만",
+      "admins": "나와 관리자",
+      "adminsOf": "{{name}}와 관리자",
+      "roles": "역할…",
+      "people": "사람…",
+      "everyone": "모두",
+      "agentOwner": "에이전트 소유자만",
+      "rolesCount_other": "역할 {{count}}개",
+      "peopleCount_other": "{{count}}명"
+    },
+    "pickRoles": "역할",
+    "pickPeople": "사람",
+    "pickNone": "하나 이상 선택하세요.",
+    "choice": {
+      "account": "계정",
+      "model": "모델",
+      "effort": "노력",
+      "yours": "내 계정",
+      "others": "팀 계정",
+      "keys": "API 키",
+      "workspace": "워크스페이스 것",
+      "workspaceSub": "워크스페이스 API 키",
+      "key": "API 키",
+      "keyDefault": "워크스페이스 기본값",
+      "api": "API"
+    },
+    "missionAi": "AI",
+    "missionLocked": "작업할 주체는 시작 전에 고릅니다. 모델은 언제든 바꿀 수 있어요."
   },
   "surface": {
     "on": "켜짐",

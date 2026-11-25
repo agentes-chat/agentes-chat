@@ -8,14 +8,17 @@ import type {
   DeviceStatus,
   MachineOfflineCause,
   MachineTool,
+  OrgSummary,
   PhoneDevice,
   WifiPairing,
 } from "../api/types";
 import { DESKTOP_CLOSE, type DesktopMode, type DesktopRetry } from "../desktop";
 import { type SocketBase, socketUrl } from "../realtime/connection";
-import { clockAt, firstName } from "./format";
+import { computerNameOf } from "./computer";
+import { clockAt, firstName, joinNames } from "./format";
 import { computerKind } from "./machines";
 import { norm as fold } from "./tool-review";
+import { isPersonal } from "./workspace-mode";
 
 /**
  * Bring your own devices: the words, pictures and order the web and phone apps give the devices list
@@ -36,11 +39,13 @@ export const statusLook = (s: DeviceStatus): StatusLook =>
     ? "inuse"
     : s.kind === "needs_you"
       ? "needs"
-      : s.kind === "busy" || s.kind === "preparing" || s.kind === "paused" || s.kind === "offline"
-        ? s.kind
-        : s.kind === "unsupported"
-          ? "unsupported"
-          : "ready";
+      : s.kind === "moving"
+        ? "preparing"
+        : s.kind === "busy" || s.kind === "preparing" || s.kind === "paused" || s.kind === "offline"
+          ? s.kind
+          : s.kind === "unsupported"
+            ? "unsupported"
+            : "ready";
 
 /** The pill's words: the state only ("In use by Lia", "Busy 1/1"); the rest goes beside it (`statusDetail`). */
 export function statusPill(t: TFunction, s: DeviceStatus): string {
@@ -51,13 +56,17 @@ export function statusPill(t: TFunction, s: DeviceStatus): string {
       return name ? t("devices.status.inUseBy", { name }) : t("devices.status.inUse");
     }
     case "busy":
-      return t("devices.status.busy", { running: s.running, max: s.max });
+      return s.max === null
+        ? t("devices.status.busyRunning", { running: s.running })
+        : t("devices.status.busy", { running: s.running, max: s.max });
     case "needs_you":
       return t("devices.status.needs");
     case "preparing":
       return t("devices.status.preparing");
     case "paused":
       return t("devices.status.paused");
+    case "moving":
+      return t("machines.moving.short");
     case "offline":
       return t("devices.status.offline");
     case "unsupported":
@@ -179,6 +188,8 @@ export function statusSentence(
   switch (s.kind) {
     case "needs_you":
       return reasonText(t, s.reason, options.hostOs);
+    case "moving":
+      return t("machines.moving.line");
     case "offline":
       if (s.withHost && options.host) return t("devices.line.offlineWithHost", { host: options.host });
       if (s.cause && s.lastSeenAt) return offlineCauseText(t, s.cause, clockAt(locale, s.lastSeenAt, now), "line");
@@ -246,13 +257,84 @@ export const mayChangeTasks = (d: ComputerDevice, viewerId: string, admin: boole
  */
 export function taskLimitLine(t: TFunction, d: ComputerDevice, mayChange: boolean): string | null {
   if (d.status.kind !== "busy") return null;
+  const room = d.taskRoom;
+  if (room) {
+    if (room.pushHarder) return t("devices.line.tasksPushing", { gb: room.freeGb });
+    if (room.more > 0) return null;
+    return room.cpuBusy ? t("devices.line.tasksNoCpu") : t("devices.line.tasksNoMemory", { gb: room.freeGb });
+  }
   if (d.maxTasks === null) return t("devices.line.tasksUpdate", { max: d.status.max });
   return t(mayChange ? "devices.line.tasksChange" : "devices.line.tasksOwner", { max: d.maxTasks });
+}
+
+/** The Tasks at once row where tasks start on room: "Automatic · 3 running · room for about 8 more". */
+export function tasksAutoText(t: TFunction, d: ComputerDevice): string | null {
+  if (!d.taskRoom) return null;
+  const running = d.status.kind === "busy" ? d.status.running : 0;
+  return d.taskRoom.more > 0
+    ? t("devices.tasksAutoRoom", { running, more: d.taskRoom.more })
+    : t("devices.tasksAutoFull", { running });
 }
 
 /** A computer in the line's "More computers" list: "Online · macOS · 16 GB · your Claude Max plan" (`plan`: the viewer's there). */
 export const spillDeviceText = (t: TFunction, d: ComputerDevice, plan: string | null) =>
   [statusPill(t, d.status), computerLine(t, d), plan && t("queue.spill.plan", { plan })].filter(Boolean).join(" · ");
+
+/**
+ * The line under a reply that thought on another computer because the agent's own was full or away (`meta.spilled`,
+ * ADR 0233): "Thought on Bruno's MacBook: Acme's computer was full." The workspace's own computer reads in the
+ * reader's words (`computerNameOf`). Null on any other reply.
+ */
+export function spilledText(
+  t: TFunction,
+  meta: Record<string, unknown> | null | undefined,
+  org: Pick<OrgSummary, "name" | "mode"> | null | undefined,
+): string | null {
+  const s = meta?.spilled as { to?: unknown; from?: unknown; cause?: unknown } | undefined;
+  if (!s || typeof s.to !== "string") return null;
+  const from =
+    typeof s.from === "string" && s.from
+      ? computerNameOf(t, org?.name ?? "", s.from, isPersonal(org))
+      : t("chat.spilled.itsComputer");
+  return t(s.cause === "away" ? "chat.spilled.away" : "chat.spilled.full", { to: s.to, from });
+}
+
+/**
+ * The computers that take an agent's new work while its own (`home`) is away (ADR 0233), as the server picks them
+ * (`spillTarget`): online and helping in a workspace that lets them, never a server install, and its owner's own or
+ * one marked the workspace's.
+ */
+export function helpingDevices(
+  list: { devices: ComputerDevice[]; devicesHelp?: boolean } | undefined,
+  agentOwner: string | null,
+  home: string | null,
+): ComputerDevice[] {
+  if (!list || list.devicesHelp === false) return [];
+  return list.devices.filter(
+    (d) =>
+      d.id !== home &&
+      d.machineKind === "connected" &&
+      !d.systemMode &&
+      d.spill.own &&
+      (d.status.kind === "ready" || d.status.kind === "busy") &&
+      (d.belongsToWorkspace || (agentOwner !== null && d.ownerUserId === agentOwner)),
+  );
+}
+
+/**
+ * Under the agent's computer while it is away, appended to what the cover says (`help`): "Meanwhile, its new work
+ * thinks on Bruno's MacBook." when computers help (`helpingDevices`), else `help` alone.
+ */
+export function withHelping(t: TFunction, help: string | undefined, helping: ComputerDevice[]): string | undefined {
+  if (helping.length === 0) return help;
+  const line = t("agentComputer.state.helping", {
+    names: joinNames(
+      helping.map((d) => d.name),
+      t,
+    ),
+  });
+  return help ? t("common.joinSentences", { a: help, b: line }) : line;
+}
 
 /** "Android 16" or "iOS 27.1". */
 export const phoneSystem = (t: TFunction, p: Pick<PhoneDevice, "platform" | "osVersion">) =>

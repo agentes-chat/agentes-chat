@@ -83,6 +83,8 @@ export function statusView(
         "pause",
         s.until ? t("mobile.devices.status.until", { time: when.time(s.until) }) : null,
       );
+    case "moving":
+      return view(t("machines.moving.short"), "spin", t("machines.moving.line"));
     case "offline":
       return view(
         t("mobile.devices.status.offline"),

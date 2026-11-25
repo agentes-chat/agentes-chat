@@ -5,6 +5,7 @@ import {
   awakeForPerson,
   callWhenBack,
   computerBackSoon,
+  computerQueue,
   createMachineHub,
   enableOperatorEvents,
   issueManagedMachine,
@@ -13,11 +14,13 @@ import {
   type MachineHub,
   MachineOfflineError,
   type MachineStatus,
+  MOVING_SHOWN_MS,
   machineActivity,
   operatorMachines,
   pollDeviceToken,
   revokeManagedMachine,
   setMachineEgressWaiting,
+  setMachineMoving,
   setMachineStandby,
   shownOnline,
   TASK_OFFLINE_GRACE_MS,
@@ -190,6 +193,59 @@ describe("agents waiting for their way out", () => {
     await setMachineEgressWaiting(deps(), f.org.id, machineId, true);
     await revokeManagedMachine(deps(), f.org.id, machineId);
     expect((await machineRow(machineId)).egressWaitingAt).toBeNull();
+  });
+});
+
+describe("moving to another server", () => {
+  test("away while the operator says it moves: moving everywhere people look, never offline, for a while at most", async () => {
+    f = await setup();
+    const { machineId, token } = await managedComputer();
+    const heard: unknown[] = [];
+    f.pubsub.subscribe(orgTopic(f.org.id), (e) => {
+      const event = (e as { event?: { type?: string } }).event;
+      if (e.type === "org.broadcast" && event?.type === "machine.updated") heard.push(event);
+    });
+    const shown = async () => (await listMachines(f.db, f.owner.id, f.org.id)).find((m) => m.id === machineId);
+    const device = async (now?: Date) =>
+      (await listDevices(f.db, f.org.id, f.owner.id, now)).devices.find((d) => d.id === machineId)?.status;
+    expect((await device())?.kind).toBe("offline");
+
+    expect(await setMachineMoving(deps(), f.org.id, machineId, true)).toEqual({ moving: true });
+    // Said again at a later step of the move: its while counts from then.
+    await f.db
+      .update(schema.machines)
+      .set({ movingAt: new Date(Date.now() - MOVING_SHOWN_MS) })
+      .where(eq(schema.machines.id, machineId));
+    expect(await setMachineMoving(deps(), f.org.id, machineId, true)).toEqual({ moving: true });
+    const first = (await machineRow(machineId)).movingAt;
+    expect(Date.now() - (first?.getTime() ?? 0)).toBeLessThan(60_000);
+    expect(heard).toEqual([
+      { type: "machine.updated", machineId, moving: true },
+      { type: "machine.updated", machineId, moving: true },
+    ]);
+    expect((await shown())?.moving).toBe(true);
+    expect(await device()).toEqual({ kind: "moving", since: first?.toISOString() ?? "" });
+    expect((await computerQueue(f.db, f.owner.id, f.org.id, machineId)).moving).toBe(true);
+    // A move nobody said ended shows the computer's real state after a while.
+    const later = new Date(Date.now() + MOVING_SHOWN_MS + 1_000);
+    expect((await device(later))?.kind).toBe("offline");
+
+    // Back on the new server: online, nothing more to say.
+    await hello(token);
+    expect((await shown())?.moving).toBe(false);
+    expect((await device())?.kind).toBe("ready");
+
+    // A computer someone connected, another workspace's id, or no such computer: nothing.
+    const paired = await pairMachine(deps(), f.owner.id, f.org.id, { name: "Laptop" });
+    expect(await setMachineMoving(deps(), f.org.id, paired.machineId, true)).toBeNull();
+    expect(await setMachineMoving(deps(), crypto.randomUUID(), machineId, false)).toBeNull();
+
+    expect(await setMachineMoving(deps(), f.org.id, machineId, false)).toEqual({ moving: false });
+    expect((await machineRow(machineId)).movingAt).toBeNull();
+    // Removed: issued again, it isn't moving.
+    await setMachineMoving(deps(), f.org.id, machineId, true);
+    await revokeManagedMachine(deps(), f.org.id, machineId);
+    expect((await machineRow(machineId)).movingAt).toBeNull();
   });
 });
 

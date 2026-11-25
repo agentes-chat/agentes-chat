@@ -47,7 +47,6 @@ test("words too long to centre beside a wide right side start by the back button
 
 test("the screens hand their line to the bar", () => {
   expect(read("src/features/settings/parts.tsx")).toMatch(/<PushedHeader\s+title=\{title\}\s+subtitle=\{subtitle\}/);
-  expect(read("src/features/ai/KeyForAllScreen.tsx")).toContain("subtitle={plan?.label}");
   expect(read("src/features/dashboards/ShareScreen.tsx")).toContain("subtitle={board.title}");
   expect(read("src/features/dashboards/OrganizeScreen.tsx")).toContain(
     'subtitle={home ? t("dashboards.home") : board.title}',

@@ -190,11 +190,11 @@ async function runsOf(db: Database, userId: string, orgId: string, orgName: stri
   const rows = rowsOf<RunRow>(
     await db.execute(sql`with ${anchorsSql(orgId)}
       select r.id as run_id, r.agent_id, g.name as agent_name, r.status, r.trigger_message_id, r.background,
-        r.transcript->>'steeredBy' as steered_by, r.started_at, r.created_at,
+        coalesce(r.state, r.transcript)->>'steeredBy' as steered_by, r.started_at, r.created_at,
         r.waiting_machine_id is not null as on_machine, ${outageIn("r")} as outage,
-        case when r.transcript->'waitingForBrain'->>'code' = 'usage_pause'
-          then (case when r.transcript->'waitingForBrain'->>'source' = 'budget' then 'budget' else 'plan_limit' end)
-          else r.transcript->'waitingForBrain'->>'code' end as wait_code,
+        case when coalesce(r.state, r.transcript)->'waitingForBrain'->>'code' = 'usage_pause'
+          then (case when coalesce(r.state, r.transcript)->'waitingForBrain'->>'source' = 'budget' then 'budget' else 'plan_limit' end)
+          else coalesce(r.state, r.transcript)->'waitingForBrain'->>'code' end as wait_code,
         g.status_run_id as line_run_id, g.status_source as line_source, g.status_kind as line_kind,
         g.status_subject as line_subject, g.status_text as line_text,
         c.id as channel_id, c.kind as channel_kind, c.name as channel_name, a.thread_root_id,

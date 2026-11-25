@@ -85,7 +85,7 @@ export const workKeepsThread = (r: SQL) =>
  * from who asked for it: anyone else's runs after the work, as them, so it never acts on the asker's access.
  */
 export const workTakesPersonMessage = (r: SQL, userId: string | null) =>
-  sql`(${r}.work_id is null or (${r}.status = 'waiting_input' and ${r}.transcript->'waitingForBrain' is null and ${workKeepsThread(r)}
+  sql`(${r}.work_id is null or (${r}.status = 'waiting_input' and coalesce(${r}.state, ${r}.transcript)->'waitingForBrain' is null and ${workKeepsThread(r)}
     and exists (select 1 from agent_works w where w.id = ${r}.work_id and w.requested_by_user_id = ${userId})))`;
 
 /**
@@ -93,4 +93,4 @@ export const workTakesPersonMessage = (r: SQL, userId: string | null) =>
  * computer, it takes every new message of its conversation instead of a second run beside it.
  */
 export const waitsOnUsage = (r: SQL) =>
-  sql`(${r}.status = 'waiting_input' and ${r}.transcript->'waitingForBrain'->>'code' in ('plan_limit', 'budget'))`;
+  sql`(${r}.status = 'waiting_input' and coalesce(${r}.state, ${r}.transcript)->'waitingForBrain'->>'code' in ('plan_limit', 'budget'))`;

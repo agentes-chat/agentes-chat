@@ -10,14 +10,12 @@ import {
   type SecretRequest,
   useApproval,
   useBrowserHandoff,
-  useCardProposals,
 } from "@agenteschat/client";
 import { agentProposalOf, proposalStatus } from "@agenteschat/client/lib/action-cards";
 import { questionWaitsOn } from "@agenteschat/client/lib/agent-questions";
 import { askKindWords } from "@agenteschat/client/lib/approval-words";
 import { timeLeft } from "@agenteschat/client/lib/format";
 import { can } from "@agenteschat/client/lib/permissions";
-import { isOpen, messageProposalCards, proposalTarget, proposerOf } from "@agenteschat/client/lib/proposals";
 import { secretLabel } from "@agenteschat/client/lib/secret-requests";
 import { LinearGradient } from "expo-linear-gradient";
 import {
@@ -164,7 +162,6 @@ const AskProbe = memo(function AskProbe({ message: m, order }: { message: Messag
   const secret = secretRequestOf(m.meta);
   const handoff = browserHandoffOf(m.meta);
   const proposal = agentProposalOf(m.meta);
-  const changes = messageProposalCards(m.meta);
   const asked: PendingAsk | null =
     question?.status === "open" && questionWaitsOn(question, meId)
       ? { id: question.id, kind: "question", agentId: question.agentId, what: question.text, messageId: m.id, order }
@@ -185,9 +182,6 @@ const AskProbe = memo(function AskProbe({ message: m, order }: { message: Messag
       {proposal && m.author.id ? (
         <ProposalProbe card={proposal} agentId={m.author.id} messageId={m.id} order={order} />
       ) : null}
-      {changes.map((ids) => (
-        <ChangeProposalProbe key={ids.join(",")} ids={ids} messageId={m.id} order={order} />
-      ))}
     </>
   );
 });
@@ -284,31 +278,6 @@ function ProposalProbe({
       ? { id: messageId, kind: "agent" as const, agentId, what: card.params.draft.name, messageId, order }
       : null;
   return <Report id={messageId} ask={ask} />;
-}
-
-/**
- * A proposal card of the agent's (a change to the context or to agents' instructions, roles or apps, for one agent or
- * several): one request while any of its rows waits on the person. Its id is the card's (`InstructionProposals`).
- */
-function ChangeProposalProbe({ ids, messageId, order }: { ids: string[]; messageId: string; order: number }) {
-  const { t } = useTranslation();
-  const { orgId, org } = useOrg();
-  const dir = useDirectory();
-  const rows = useCardProposals(orgId, ids);
-  const open = rows.find((p) => isOpen(p) && p.canDecide);
-  const id = ids.join(",");
-  const agentName = (a: string) => dir.anyAgent(a)?.name ?? t("channel.unknownAgent");
-  const ask = open
-    ? {
-        id,
-        kind: "proposal" as const,
-        agentId: proposerOf(open),
-        what: proposalTarget(t, open, agentName, org ?? ""),
-        messageId,
-        order,
-      }
-    : null;
-  return <Report id={id} ask={ask} />;
 }
 
 // ── What shows ───────────────────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 import { type ComputerDevice, useWifiIphones } from "@agenteschat/client";
-import { mayChangeTasks, taskChoices } from "@agenteschat/client/lib/devices";
+import { mayChangeTasks, taskChoices, tasksAutoText } from "@agenteschat/client/lib/devices";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { computerKind } from "@agenteschat/client/lib/machines";
 import { can } from "@agenteschat/client/lib/permissions";
@@ -11,7 +11,7 @@ import { chooseAction, Gap } from "../settings/parts";
 import { useMeId, useOrgId } from "../shared/hooks";
 import { openPhone } from "./DevicesScreen";
 import { DevicePortrait, StatusLine, useAudienceText } from "./parts";
-import { useDeviceMutation } from "./queries";
+import { useDeviceMutation, useDevices } from "./queries";
 
 /**
  * On a computer's page, what bringing devices adds: who can use it (its owner changes it, an admin narrows it), the
@@ -27,11 +27,15 @@ export function ComputerSection({ device: d, name }: { device: ComputerDevice; n
   const mark = useDeviceMutation((api, orgId, on: boolean) =>
     api.devices.updateComputer(orgId, d.id, { belongsToWorkspace: on }),
   );
-  const spill = useDeviceMutation((api, orgId, input: { own?: boolean; others?: boolean }) =>
-    api.devices.updateComputer(orgId, d.id, { spill: input }),
+  const spill = useDeviceMutation((api, orgId, own: boolean) =>
+    api.devices.updateComputer(orgId, d.id, { spill: { own } }),
   );
+  const helpOff = useDevices().data?.devicesHelp === false;
   const tasks = useDeviceMutation((api, orgId, maxTasks: number) =>
     api.devices.updateComputer(orgId, d.id, { maxTasks }),
+  );
+  const push = useDeviceMutation((api, orgId, on: boolean) =>
+    api.devices.updateComputer(orgId, d.id, { pushHarder: on }),
   );
   const brought = d.machineKind === "connected";
   const admin = can(org, "configure");
@@ -50,8 +54,10 @@ export function ComputerSection({ device: d, name }: { device: ComputerDevice; n
     );
   // What is being saved shows at once: a switch moves as it is tapped. Each change stays pending until the computers
   // are read again (`useDeviceMutation`), so the saved value takes over with no flicker.
-  const spillOn = (key: "own" | "others") => (spill.isPending ? spill.variables?.[key] : undefined) ?? d.spill[key];
+  const spillOn = (spill.isPending ? spill.variables : undefined) ?? d.spill.own;
   const belongs = (mark.isPending ? mark.variables : undefined) ?? d.belongsToWorkspace;
+  const pushing = (push.isPending ? push.variables : undefined) ?? d.taskRoom?.pushHarder ?? false;
+  const tasksEditable = mayChangeTasks(d, meId ?? "", admin);
   const wifi = useWifiIphones(
     useOrgId(),
     d.id,
@@ -73,13 +79,37 @@ export function ComputerSection({ device: d, name }: { device: ComputerDevice; n
                   }
                 : {})}
             />
+            {/* Tasks start on room there: what's running and what still fits, and the owner's Push harder. */}
+            {d.taskRoom ? (
+              <GroupedRow
+                label={t("devices.maxTasks")}
+                hint={{ name: t("common.about", { label: t("devices.maxTasks") }), text: t("devices.tasksAutoHint") }}
+                sub={tasksAutoText(t, d) ?? undefined}
+                subLines={2}
+              />
+            ) : null}
+            {d.taskRoom && tasksEditable && brought ? (
+              <GroupedRow
+                label={t("devices.pushHarder")}
+                hint={{
+                  name: t("common.about", { label: t("devices.pushHarder") }),
+                  text: t("devices.pushHarderHint"),
+                }}
+                toggle={pushing}
+                // The computer applies it: offline, nothing would.
+                disabled={d.status.kind === "offline"}
+                onPress={() =>
+                  push.mutate(!pushing, { onError: (err) => toast({ title: errorText(t, err), icon: "x" }) })
+                }
+              />
+            ) : null}
             {/* Only once the computer says its limit: a guess here would be a setting that changes nothing. */}
-            {maxTasks !== null ? (
+            {!d.taskRoom && maxTasks !== null ? (
               <GroupedRow
                 label={t("devices.maxTasks")}
                 hint={{ name: t("common.about", { label: t("devices.maxTasks") }), text: t("devices.maxTasksHint") }}
                 value={String(maxTasks)}
-                {...(mayChangeTasks(d, meId ?? "", admin)
+                {...(tasksEditable
                   ? {
                       menu: true,
                       // The computer applies it: offline, nothing would.
@@ -89,32 +119,23 @@ export function ComputerSection({ device: d, name }: { device: ComputerDevice; n
                   : {})}
               />
             ) : null}
-            {/* Spill-over: its owner turns these on; an admin may only turn them off. */}
-            {brought && d.mayManage && !d.systemMode
-              ? (["own", "others"] as const).map((key) => {
-                  const label = t(key === "own" ? "devices.spillOwn" : "devices.spillOthers");
-                  const on = spillOn(key);
-                  return (
-                    <GroupedRow
-                      key={key}
-                      label={label}
-                      labelLines={2}
-                      hint={{
-                        name: t("common.about", { label }),
-                        text: t(key === "own" ? "devices.spillOwnHint" : "devices.spillOthersHint"),
-                      }}
-                      toggle={on}
-                      disabled={d.ownerUserId !== meId && !on}
-                      onPress={() =>
-                        spill.mutate(
-                          { [key]: !on },
-                          { onError: (err) => toast({ title: errorText(t, err), icon: "x" }) },
-                        )
-                      }
-                    />
-                  );
-                })
-              : null}
+            {/* Its help: its owner turns it on, an admin only off, and the workspace's switch off wins. */}
+            {brought && d.mayManage && !d.systemMode ? (
+              <GroupedRow
+                label={t("devices.spillOwn")}
+                labelLines={2}
+                hint={{
+                  name: t("common.about", { label: t("devices.spillOwn") }),
+                  text: t(d.belongsToWorkspace ? "devices.spillTeamHint" : "devices.spillOwnHint"),
+                }}
+                {...(helpOff ? { sub: t("devices.spillWorkspaceOff"), subLines: 0 } : {})}
+                toggle={spillOn && !helpOff}
+                disabled={helpOff || (d.ownerUserId !== meId && !spillOn)}
+                onPress={() =>
+                  spill.mutate(!spillOn, { onError: (err) => toast({ title: errorText(t, err), icon: "x" }) })
+                }
+              />
+            ) : null}
             {brought && admin ? (
               <GroupedRow
                 label={t("mobile.devices.page.belongs")}

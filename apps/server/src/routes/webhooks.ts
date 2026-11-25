@@ -20,6 +20,7 @@ import {
   webhookSetup,
 } from "@agenteschat/engine";
 import { createRoute, type OpenAPIHono, z } from "@hono/zod-openapi";
+import { storedResponse } from "../http/byte-range";
 import { requestLimitIp } from "../http/client-ip";
 import { apiError } from "../http/errors";
 import {
@@ -95,13 +96,10 @@ export function registerWebhookReceiver(api: OpenAPIHono, deps: AppDeps) {
     if (!files) return c.json({ error: "not found" }, 404);
     const file = await openConnectorMedia({ ...files, secret: deps.config.AGENTES_SECRET }, c.req.param("token"));
     if (!file) return c.json({ error: "not found" }, 404);
-    return new Response(file.bytes, {
-      headers: {
-        "content-type": file.contentType,
-        "content-length": String(file.bytes.byteLength),
-        "cache-control": "private, max-age=3600",
-        "x-content-type-options": "nosniff",
-      },
+    return storedResponse(file, c.req.header("range"), {
+      "content-type": file.contentType,
+      "cache-control": "private, max-age=3600",
+      "x-content-type-options": "nosniff",
     });
   });
   // A workspace's Telegram bot (ADR 0170 §5): its updates, checked by the secret `setWebhook` gave Telegram.

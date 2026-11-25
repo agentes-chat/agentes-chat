@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { createFakeComposioClient, createFakeErrorReporter, createFakeMailConnector } from "@agenteschat/adapters";
 import { and, eq, schema } from "@agenteschat/db";
-import { type McpConnect, mcpPreset } from "@agenteschat/engine";
+import { desktopBackLink, type McpConnect, mcpPreset } from "@agenteschat/engine";
 import { browser, createTestServer, joinByInvitation, seedOrg, signUp, type TestServer } from "./harness";
 
 let t: TestServer;
@@ -188,7 +188,11 @@ test("connectors API: the phone app's OAuth hands the code back to the app, whic
   const toDesktop = await systemBrowser(`/api/app/connectors/oauth/callback?state=${desktop}&code=abc`, {
     origin: null,
   });
-  const desktopLink = new URL(toDesktop.headers.get("location") ?? "");
+  // Through the browser's page that says where the person went (the tab no longer stands on the provider's page).
+  const toPage = new URL(toDesktop.headers.get("location") ?? "");
+  expect(toPage.pathname).toBe("/desktop/back");
+  expect(toPage.search).toBe("");
+  const desktopLink = new URL(desktopBackLink(toPage.href));
   expect(`${desktopLink.protocol}//${desktopLink.host}${desktopLink.pathname}`).toBe(
     "agenteschat://desktop/connectors/oauth",
   );
@@ -210,7 +214,7 @@ test("connectors API: the phone app's OAuth hands the code back to the app, whic
     `/api/app/connectors/oauth/callback?state=${refusedDesktop}&error=access_denied`,
     { origin: null },
   );
-  expect(noDesktop.headers.get("location")).toBe(
+  expect(desktopBackLink(noDesktop.headers.get("location") ?? "")).toBe(
     `agenteschat://desktop/connectors/oauth?org=${orgId}&error=access_denied`,
   );
 

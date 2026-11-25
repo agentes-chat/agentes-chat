@@ -611,10 +611,11 @@ export const MCP_PRESETS: readonly McpPreset[] = [
     },
   },
   {
-    id: "gitlab",
+    // `gitlab` is the git host (ADR 0227): repositories and merge requests through our proxy.
+    id: "gitlab-mcp",
     category: "dev",
-    label: "GitLab",
-    description: "GitLab.com projects, merge requests, issues and pipelines.",
+    label: "GitLab (issues and pipelines)",
+    description: "GitLab.com issues, merge requests and pipelines, through GitLab's own server.",
     icon: "gitlab",
     serverUrl: "https://gitlab.com/api/v4/mcp",
   },

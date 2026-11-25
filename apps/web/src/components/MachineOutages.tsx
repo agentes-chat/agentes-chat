@@ -118,7 +118,7 @@ function OutageNotice({
     t,
   );
   const sub = [
-    cloud ? t("outage.cloudSub") : null,
+    cloud && !o.moving ? t("outage.cloudSub") : null,
     t("outage.waitFor", { count: o.agents.length, names }),
     o.waitingRuns > 0 ? t("outage.stopped", { count: o.waitingRuns }) : null,
   ]
@@ -131,9 +131,11 @@ function OutageNotice({
         <b>
           {here
             ? t("machines.thisMac.outageTitle", { ago: timeAgo(t, o.offlineSince, now) })
-            : cloud
-              ? t("outage.titleCloud", { name: o.name, ago: timeAgo(t, o.offlineSince, now) })
-              : t("outage.title", { name: o.name, ago: timeAgo(t, o.offlineSince, now) })}
+            : o.moving
+              ? t("machines.moving.line")
+              : cloud
+                ? t("outage.titleCloud", { name: o.name, ago: timeAgo(t, o.offlineSince, now) })
+                : t("outage.title", { name: o.name, ago: timeAgo(t, o.offlineSince, now) })}
         </b>
         <span>{sub}</span>
       </span>
@@ -359,7 +361,7 @@ export function WaitingCard({ notice, agentId }: { notice: BrainUnavailable; age
   const agent = useDirectory(org.id).agentById.get(who ?? "");
   const switches = selfHost && managesAgent(agent);
   const [open, setOpen] = useState(false);
-  const { outages, outage, mine, state, name } = useWaitState(notice, agentId);
+  const { outages, outage, mine, state, name, moving } = useWaitState(notice, agentId);
   const waiting = mine ? waitingText(t, mine.waiting) : null;
   if (state !== "waiting") {
     const text = state === "back" ? t("outage.card.back", { name }) : t("outage.card.moved");
@@ -369,7 +371,7 @@ export function WaitingCard({ notice, agentId }: { notice: BrainUnavailable; age
       </RequestDone>
     );
   }
-  const title = t("outage.card.waiting", { name });
+  const title = moving ? t("machines.moving.named", { computer: name }) : t("outage.card.waiting", { name });
   return (
     <>
       <RequestOpen
@@ -426,7 +428,9 @@ function useWaitState(notice: BrainUnavailable, agentId: string | null) {
   const seen = useRef<string | null>(null);
   if (outage) seen.current = outage.name;
   const name = outage?.name ?? machine?.name ?? seen.current ?? t("outage.someComputer");
-  return { outages, outage, mine, state, name };
+  // Away moving to another server: the outages say it to who manages the agent, the computers list to anyone.
+  const moving = outage?.moving === true || (machine?.moving === true && !machine.online);
+  return { outages, outage, mine, state, name, moving };
 }
 
 /** "Away 3 min" on the waiting note's author line, beside its time, while its computer is still gone. */

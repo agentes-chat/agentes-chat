@@ -40,6 +40,8 @@ export interface RunnerConfig {
   exec: boolean;
   /** Background tasks at once on this computer (default: sized to it, `sizedTaskLimit`). */
   maxConcurrentTasks?: number;
+  /** The owner's Push harder (`TASK_ROOM_PROTOCOL`): tasks may fill memory down to 0.5 GB free, whatever the processor. */
+  pushHarder?: boolean;
   /** A background task is stopped after this many seconds (default 4 h). */
   taskMaxSeconds?: number;
   /** Brain turns (protocol 8): a Claude Code process with no turn this long is closed (default 10). */
@@ -248,6 +250,7 @@ export function normalizeStored(raw: Record<string, unknown>): StoredConfig {
     ...(text(raw.workspace, 4000) ? { workspace: text(raw.workspace, 4000) } : {}),
     ...(typeof raw.exec === "boolean" ? { exec: raw.exec } : {}),
     ...(positive(raw.maxConcurrentTasks) ? { maxConcurrentTasks: positive(raw.maxConcurrentTasks) } : {}),
+    ...(raw.pushHarder === true ? { pushHarder: true } : {}),
     ...(positive(raw.taskMaxSeconds) ? { taskMaxSeconds: positive(raw.taskMaxSeconds) } : {}),
     ...(positive(raw.brainIdleMinutes) ? { brainIdleMinutes: positive(raw.brainIdleMinutes) } : {}),
     ...(positive(raw.brainMaxProcesses) ? { brainMaxProcesses: positive(raw.brainMaxProcesses) } : {}),

@@ -251,7 +251,7 @@
    * column, Google's, its words from its start and the room after them the column's.
    */
   const PILLS =
-    ".ac-btn:not(.ac-btn--icon,.ac-btn--glyph,.ac-btn--loading),.ac-token,.ac-chip,.ac-countchip,[class*='pill'],[class*='chip']:not(.cal-chip),[class*='__tag'],[class*='-tag']";
+    ".ac-btn:not(.ac-btn--icon,.ac-btn--glyph,.ac-btn--loading),.ac-token,.ac-chip,.ac-countchip,[class*='pill'],[class*='chip']:not(.cal-chip,.ac-menu),[class*='__tag'],[class*='-tag']";
   /**
    * A card: a row with a surface of its own that starts with an icon and ends with what can be done about it (a button,
    * a link) or another icon. Pills are the `pad` rule's.

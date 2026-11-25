@@ -9,6 +9,7 @@ import {
   PROVISIONING_STEPS,
   revokeManagedMachine,
   setMachineEgressWaiting,
+  setMachineMoving,
   setMachineStandby,
   setProvisioning,
 } from "@agenteschat/engine";
@@ -306,6 +307,25 @@ export function registerOperatorMachines(api: OpenAPIHono, { db, config, pubsub,
     async (c) => {
       const { orgId, machineId } = c.req.valid("param");
       const set = await setMachineEgressWaiting({ db, pubsub }, orgId, machineId, c.req.valid("json").waiting);
+      if (!set) return apiError(c, 404, "not_found", "This workspace has no managed computer with this id");
+      return c.json(set, 200);
+    },
+  );
+
+  api.openapi(
+    createRoute({
+      method: "put",
+      path: "/orgs/{orgId}/machines/{machineId}/moving",
+      tags,
+      summary: "Say the workspace's computer is moving to another server, or no longer",
+      description:
+        "Say it (`true`) when its move starts, and `false` once its runner paired on the new server, or the move was cancelled or failed. While it is away its people see that it is moving and comes back in a few minutes, never that it is offline or not answering, for at most two hours after the latest `true` (say it again at each step of a long move). Removing the computer ends it. A change comes as `machine.updated`. 404 when the workspace has no such managed computer.",
+      request: { params: MachineParams, body: body(z.object({ moving: z.boolean() })) },
+      responses: { 200: json(z.object({ moving: z.boolean() }).openapi("OperatorMoving")), ...errors },
+    }),
+    async (c) => {
+      const { orgId, machineId } = c.req.valid("param");
+      const set = await setMachineMoving({ db, pubsub }, orgId, machineId, c.req.valid("json").moving);
       if (!set) return apiError(c, 404, "not_found", "This workspace has no managed computer with this id");
       return c.json(set, 200);
     },

@@ -13,3 +13,26 @@ test("the server's pool starts its sessions with JIT off; the URL may turn it ba
     await on.close();
   }
 });
+
+test("each process's connections carry its name, its LISTEN's and migrations' marked apart; the URL's wins", async () => {
+  const named = createDatabase({
+    url: "postgres://u:p@127.0.0.1:1/x",
+    poolMax: 1,
+    applicationName: "agentes:worker:h1",
+  });
+  const plain = createDatabase({ url: "postgres://u:p@127.0.0.1:1/x", poolMax: 1 });
+  const url = createDatabase({
+    url: "postgres://u:p@127.0.0.1:1/x?application_name=mine",
+    poolMax: 1,
+    applicationName: "x",
+  });
+  const listen = named.listenClient?.();
+  try {
+    expect(named.client?.options.connection).toMatchObject({ application_name: "agentes:worker:h1" });
+    expect(listen?.options.connection).toMatchObject({ application_name: "agentes:worker:h1:listen" });
+    expect(plain.client?.options.connection).toMatchObject({ application_name: "agentes" });
+    expect(url.client?.options.connection).toMatchObject({ application_name: "mine" });
+  } finally {
+    await Promise.all([named.close(), plain.close(), url.close(), listen?.end()]);
+  }
+});

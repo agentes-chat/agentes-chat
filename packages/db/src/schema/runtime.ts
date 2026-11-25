@@ -55,7 +55,7 @@ export const outbox = pgTable(
     lastError: text(),
     /** The HTTP status the error behind `lastError` carried (a provider's refusal), when it carried one. */
     lastErrorStatus: integer(),
-    /** Optional idempotency key: enqueueing the same key twice is a no-op. */
+    /** Optional idempotency key: enqueueing the same key twice is a no-op, also once the row left (`outboxDedupe`). */
     dedupeKey: text().unique(),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     completedAt: timestamp({ withTimezone: true }),
@@ -74,8 +74,28 @@ export const outbox = pgTable(
       .on(t.dedupeKey.op("text_pattern_ops"))
       .where(sql`${t.kind} = 'agent_run.execute'`)
       .concurrently(),
+    // Open jobs by the message they are for: a question's or a note's wake, a follow-up's return. They are a few
+    // thousand rows among millions of finished ones, which a lookup by payload otherwise scans.
+    index("outbox_open_message_idx")
+      .on(t.kind, sql`(${t.payload}->>'messageId')`)
+      .where(sql`${t.status} in ('pending', 'processing')`)
+      .concurrently(),
+    // Emails by when they were queued: the daily sweeps of their words and codes, and the operator's list of them.
+    index("outbox_email_created_idx").on(t.createdAt).where(sql`${t.kind} = 'email.send'`).concurrently(),
   ],
 );
+
+/**
+ * The dedupe keys of done jobs that left the outbox (`pruneDoneJobs`), until they expire. A row inserted into the
+ * outbox with a key held here is skipped, as a conflict on the key would skip it: the `outbox_dedupe_refuses` trigger
+ * (migration 0329), so every insert, raw SQL included, keeps refusing a key whose row was pruned.
+ */
+export const outboxDedupe = pgTable("outbox_dedupe", {
+  dedupeKey: text().primaryKey(),
+  orgId: uuid().references(() => organizations.id, { onDelete: "cascade" }),
+  /** When its job was queued: the key expires from it. */
+  createdAt: timestamp({ withTimezone: true }).notNull(),
+});
 
 /**
  * Durable state machine of one agent turn (docs/adr/0008-agent-runs.md):
@@ -130,6 +150,12 @@ export const agentRuns = pgTable(
      * prompt caches stay valid). See docs/adr/0015-tool-gateway-and-approvals.md.
      */
     transcript: jsonb().$type<Record<string, unknown>>(),
+    /**
+     * The transcript's small keys that say where the run stands, copied by the `agent_runs_state` trigger on every write
+     * of the transcript (`RUN_STATE_KEYS` in the engine), so status reads never decompress it. Null on a run whose
+     * transcript wasn't written since the copy began (migration 0331): the runs that had ended by then.
+     */
+    state: jsonb().$type<Record<string, unknown>>(),
     /**
      * Each claim's stage profile (the last `RUN_PROFILES_KEPT`), for the operator's work analytics. Its own column so
      * analytics read it without decompressing the transcript; null on runs that ended before it existed.
@@ -232,6 +258,12 @@ export const agentRuns = pgTable(
     // The task manager's count of today's finished tasks, asked at every poll: only today's rows read, not every run
     // the workspace ever finished. Built CONCURRENTLY (its migration), as agent_runs is large.
     index("agent_runs_done_finished_idx").on(t.orgId, t.finishedAt).where(sql`${t.status} = 'done'`),
+    // The task manager's tasks that ended since a time, asked at every poll: without it each ask read every run the
+    // workspace ever had, through (org_id, agent_id, created_at), to keep the last day's. Built concurrently.
+    index("agent_runs_finished_idx").on(t.orgId, t.finishedAt).where(sql`${t.finishedAt} is not null`).concurrently(),
+    // A conversation's runs: a run's context reads what agents did there before it starts, and most runs are in DMs,
+    // where no thread narrows it; without it that read went through every run of the workspace. Built concurrently.
+    index("agent_runs_channel_created_idx").on(t.channelId, t.createdAt).concurrently(),
     // Runs still holding unread messages, found by the inbox sweep (`sweepEndedInboxes`) every tick; the predicate is
     // the sweep's own expression, so the planner matches it. Not keyed on updated_at, which every update moves: that
     // would make all of agent_runs' updates non-HOT.
@@ -448,6 +480,12 @@ export const usageRecords = pgTable(
     index().on(t.createdAt),
     // Usage by run (the task list, routines, cost): read per run id, never by time.
     index().on(t.runId),
+    // The platform AI cap's month sum (`platformSpendNano`), read from the index alone: the cost is in it. Most rows
+    // of a busy workspace are its platform calls.
+    index("usage_records_platform_month_idx")
+      .on(t.orgId, t.createdAt, t.costNanoUsd)
+      .where(sql`${t.billedTo} = 'platform'`)
+      .concurrently(),
   ],
 );
 

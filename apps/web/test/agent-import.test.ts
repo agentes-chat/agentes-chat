@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type { MigrationBundle } from "@agenteschat/client";
-import { cronOf, everyMinutes, sha256, splitNote } from "@agenteschat/client/lib/import/shared";
+import { cronOf, everyMinutes, holdsKey, sha256, splitNote } from "@agenteschat/client/lib/import/shared";
 import { en } from "@agenteschat/i18n/en";
 import {
   detectSource,
@@ -1413,6 +1413,18 @@ describe("helpers", () => {
     for (const text of ["", "abc", "🦞 OpenClaw", "x".repeat(1000)]) {
       expect(sha256(text)).toBe(createHash("sha256").update(text).digest("hex"));
     }
+  });
+
+  test("a long run of JWT starts is read in time, and a JWT it runs into or follows is still redacted", () => {
+    // Each took seconds when every `eyJ` after a `-` in a long run read the run to its end.
+    const run = "eyJ-".repeat(50_000);
+    const jwt = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.c2lnbmF0dXJl";
+    const started = performance.now();
+    expect(holdsKey(run)).toBe(false);
+    expect(scrubSecrets(run)).toEqual({ text: run, redacted: false });
+    expect(holdsKey(`${run} ${jwt}`)).toBe(true);
+    expect(scrubSecrets(`${run}${jwt}`)).toEqual({ text: "[redacted]", redacted: true });
+    expect(performance.now() - started).toBeLessThan(1000);
   });
 
   test("the same agent always gets the same look", () => {

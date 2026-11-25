@@ -184,7 +184,8 @@ export const proposalTargetEnum = pgEnum("proposal_target", [
   "skill",
   "agent_settings",
 ]);
-export const proposalStatusEnum = pgEnum("proposal_status", ["pending", "accepted", "rejected", "stale"]);
+/** `undone`: applied, then put back by a person (ADR 0219). */
+export const proposalStatusEnum = pgEnum("proposal_status", ["pending", "accepted", "rejected", "stale", "undone"]);
 
 /** An app turned on or off for an agent: `request_permission`'s unit (a built-in scope or `connector:<connectionId>`). */
 export interface ProposedAccessLine {
@@ -266,7 +267,13 @@ export const contextProposals = pgTable(
     itemIds: uuid().array().notNull().default(sql`'{}'::uuid[]`),
     status: proposalStatusEnum().notNull().default("pending"),
     decidedByUserId: text().references(() => users.id, { onDelete: "set null" }),
+    /** The agent that decided it after its review (ADR 0219); null when a person did. */
+    decidedByAgentId: uuid().references(() => agents.id, { onDelete: "set null" }),
+    /** The review's one line on why it was applied or left out (English, for the agent and the apps). */
+    review: text(),
     decidedAt: timestamp({ withTimezone: true }),
+    undoneByUserId: text().references(() => users.id, { onDelete: "set null" }),
+    undoneAt: timestamp({ withTimezone: true }),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

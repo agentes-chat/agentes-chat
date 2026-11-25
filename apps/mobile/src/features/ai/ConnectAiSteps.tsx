@@ -927,6 +927,24 @@ function CliCommandCard({
   );
 }
 
+/** Looks for the computer's programs again, once one that wouldn't start was fixed there by hand. */
+function CliCheckAgain({ machine }: { machine: Machine }) {
+  const { t } = useTranslation();
+  const { orgId } = useAiOrg();
+  const toast = useToast();
+  const check = useCheckMachineClis(orgId);
+  return (
+    <Button
+      size="sm"
+      variant="secondary"
+      label={t("connectAi.cli.check")}
+      disabled={check.isPending || !machine.online}
+      loading={check.isPending}
+      onPress={() => check.mutate(machine.id, { onError: (err) => toast({ title: errorText(t, err), icon: "x" }) })}
+    />
+  );
+}
+
 /** A line in a white card (why the steps wait), with its action. `live`: announced when it comes. */
 function InfoCard({
   icon,
@@ -1550,7 +1568,21 @@ function GateWait({
   ) {
     wait = <CliCommandCard machine={row} kind={kind} computer={computer} reason={gate.reason} />;
   } else if (why && !(gate.state === "offline" && signingIn)) {
-    wait = <InfoCard icon={why.rechecks ? "clock" : "laptop"}>{why.text}</InfoCard>;
+    // A program there that won't start, on a computer someone connected: its own words, then a look once it's fixed.
+    const recheck =
+      gate.state === "unsupported" &&
+      gate.reason === "cant_start" &&
+      !hold &&
+      row?.kind !== "managed" &&
+      row?.cliInstall;
+    wait = (
+      <InfoCard
+        icon={why.rechecks ? "clock" : "laptop"}
+        action={recheck && row ? <CliCheckAgain machine={row} /> : undefined}
+      >
+        {why.text}
+      </InfoCard>
+    );
   } else if (gate.state === "missing") {
     wait = (
       <>

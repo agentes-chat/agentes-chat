@@ -86,7 +86,9 @@ export function ConsultationDialog({
   const timeline = useMemo(() => buildTimeline(list ?? [], [], []), [list]);
   // While a chosen exchange loads, the row's asker still names the dialog.
   const asker = dir.agentById.get(c?.agentId ?? askerOf ?? "");
-  const consulted = c ? dir.agentById.get(c.consultedAgentId) : undefined;
+  const consulted = dir.agentById.get(
+    c?.consultedAgentId ?? (items.find((i) => i.id === pick) ?? items[0])?.consultedAgentId ?? "",
+  );
   const from = agentGrammar(asker?.name ?? t("channel.unknownAgent"));
   const to = agentGrammar(consulted?.name ?? t("channel.unknownAgent"));
   const label = t("chat.consultPanel.label", {

@@ -683,9 +683,6 @@ html:not([data-pointer]) .nt-nb:focus-visible {
 
 /* ── Phones ─────────────────────────────────────────────────────────────── */
 @media (max-width: 720px) {
-  .nt .ac-pagehead__actions {
-    width: 100%;
-  }
   .nt-tb {
     margin-bottom: 14px;
   }
@@ -854,14 +851,16 @@ html:not([data-pointer]) .nt-fails .nt-rep:focus-visible {
   padding: var(--page-top) 16px 12px 24px;
   background: var(--pane);
 }
-/* A narrow column: the filter stays on the title's row. */
-.ib-head .ac-pagehead__row {
-  flex-wrap: nowrap;
-}
-.ib-head .ac-pagehead__text {
-  flex: 1 1 0;
+/* The filter and Mark all as read are small: beside the title while it fits whole, under it when it doesn't (a long
+   filter's name, a narrow column), on a phone too, where page buttons take a row of their own. */
+.ib-head .ac-pagehead__actions {
+  flex-basis: auto;
 }
 .ib-filter {
+  flex: none;
+  color: var(--muted);
+}
+.ib-readall {
   flex: none;
   color: var(--muted);
 }
@@ -935,7 +934,7 @@ html:not([data-pointer]) .ib-row:focus-visible {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-/* Unread is the weight of the name (no dot and no bar on the side). */
+/* Unread is the weight of the name and a dot under the time (no bar on the side). */
 .ib-row__line.nt-what b {
   font-weight: 500;
 }
@@ -968,6 +967,20 @@ html:not([data-pointer]) .ib-row:focus-visible {
 .ib-row__end.is-urgent {
   color: var(--warn);
   font-weight: 600;
+}
+/* The unread dot: under the time, on the second line's middle. */
+.ib-row.is-unread .ib-row__end {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+.ib-row.is-unread .ib-row__end::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  margin-top: 5px;
+  border-radius: 50%;
+  background: var(--danger);
 }
 
 .ib-read {

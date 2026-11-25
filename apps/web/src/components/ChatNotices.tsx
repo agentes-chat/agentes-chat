@@ -192,6 +192,15 @@ export function SpeedFallbackLine({ agent }: { agent: Agent | undefined }) {
   );
 }
 
+/** Under a reply that thought on another computer because the agent's own was full or away (`meta.spilled`). */
+export function SpilledLine({ text }: { text: string }) {
+  return (
+    <EventPill className="cn-pill cn-pill--part" mark={<Icon name="computer" size={14} />}>
+      {text}
+    </EventPill>
+  );
+}
+
 /** Who stopped a task, as its pill says it: the notice when there is one, else what the stopped reply knows. */
 export interface StopWho {
   /** The notice the agent got (ADR 0128): who, their name, the reason, and "Dizer o motivo" for who stopped it. */

@@ -843,7 +843,7 @@ export const helpJa: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "data",
         heading: "送信される情報",
         blocks: [
-          "サーバーは 1 日に 1 回、匿名の利用統計を agentes.chat に送ります。人数、エージェント数、マシンのサイズ、使った AI トークン、エージェントのブラウザーが送受信したデータ量などの数です。メッセージ、ファイル、名前、サイトは送りません。`docker compose run --rm agentes telemetry` で送られる内容をそのまま表示できます。オーナーは **設定\u00a0›\u00a0一般** か、`.env` の `TELEMETRY=off` でオフにできます。",
+          "サーバーは 1 日に 1 回、匿名の利用統計を agentes.chat に送ります。人数、エージェント数、マシンのサイズ、使った AI トークン、エージェントのブラウザーが送受信したデータ量、アプリの起動や動作の速さなどの数です。メッセージ、ファイル、名前、サイトは送りません。`docker compose run --rm agentes telemetry` で送られる内容をそのまま表示できます。オーナーは **設定\u00a0›\u00a0一般** か、`.env` の `TELEMETRY=off` でオフにできます。",
           "エラーレポートは、自分で選んだ Sentry 互換サーバーを `SENTRY_DSN` に設定しない限りどこにも送られません。レポートにはエラーと発生場所が入り、メッセージ、メールアドレス、IP アドレス、Cookie、トークンは入りません。",
         ],
       },

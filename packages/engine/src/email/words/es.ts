@@ -498,6 +498,35 @@ export const words: EmailWords = {
     table: (day) => `La tabla completa: bun run report:autonomy --day ${day}`,
     why: "Recibiste este correo porque esta dirección está en OPS_REPORT_EMAIL en este servidor. Se envía una vez al día.",
   },
+  accountOpened: {
+    subject: (plan) => `Más personas pueden usar tu cuenta de ${plan}`,
+    preheader: (plan) => `Lo que hagan con ella usa tu plan de ${plan} y sus límites.`,
+    headline: "Alguien cambió quién puede usar tu cuenta de IA",
+    body: (by, account, plan) => [
+      { b: by },
+      ` cambió quién puede usar tu cuenta de ${plan} `,
+      { b: account },
+      `. Lo que hagan con ella usa tu plan y sus límites.`,
+    ],
+    account: "Cuenta",
+    by: "Cambiado por",
+    setting: "Permiso",
+    use: "Usar en agentes",
+    reply: "Atender a todos",
+    was: "Antes",
+    now: "Ahora",
+    everyone: "Todos en el workspace",
+    admins: "Tú y los administradores",
+    onlyYou: "Solo tú",
+    agentOwner: "Solo el dueño del agente",
+    note: "Para deshacerlo, abre la cuenta en IA y uso y cambia sus permisos.",
+    button: "Abrir cuentas de IA",
+    why: (org) =>
+      `Recibiste este correo porque conectaste esta cuenta de IA en ${org} y otra persona cambió quién puede usarla.`,
+    personal: {
+      why: () => "Recibiste este correo porque conectaste esta cuenta de IA y otra persona cambió quién puede usarla.",
+    },
+  },
   planOpened: {
     subject: (plan) => `Más personas pueden hablar con tu agente con tu plan de ${plan}`,
     preheader: (plan) => `Sus conversaciones usan tu plan de ${plan} y sus límites.`,
@@ -596,6 +625,27 @@ export const words: EmailWords = {
       small: "Vincúlalo de nuevo en Configuración si fuiste tú.",
       why: (surface) => `Recibiste este correo porque ${surface} estaba vinculado a tu cuenta de agentes.chat.`,
       picture: "Tu asistente, ya no en tu teléfono",
+    },
+    pinReset: {
+      subject: (surface) => `Elige tu PIN de ${surface}`,
+      preheader: "Elige el PIN que aprueba acciones desde tu app de chat.",
+      headline: (surface) => `Elige tu PIN de ${surface}`,
+      body: (surface) =>
+        `Alguien pidió un enlace para elegir el PIN que usas para aprobar acciones desde ${surface}. Si fuiste tú, elígelo en la página que abre este botón.`,
+      button: "Elegir mi PIN",
+      small: "El enlace funciona una vez, durante una hora. Si no fuiste tú, ignora este correo. No cambia nada.",
+      why: (surface) => `Recibiste este correo porque ${surface} está vinculado a tu cuenta de agentes.chat.`,
+    },
+    pinLocked: {
+      subject: (surface) => `Tu PIN de ${surface} está bloqueado`,
+      preheader: "Tres PIN incorrectos seguidos. Aprobar desde tu app de chat está en pausa por ahora.",
+      headline: (surface) => `Tu PIN de ${surface} está bloqueado`,
+      body: (surface, time) =>
+        `Alguien escribió un PIN incorrecto tres veces seguidas para aprobar una acción desde ${surface}. Aprobar desde ${surface} queda en pausa durante ${time}.`,
+      lockedFor: ["15 minutos", "1 hora", "24 horas"],
+      small: (surface) =>
+        `Si fuiste tú, vuelve a intentarlo más tarde. Si no, desvincula ${surface} en tus ajustes de notificaciones para que nadie pueda aprobar desde ahí.`,
+      button: "Abrir ajustes de notificaciones",
     },
   },
   supportReply: {

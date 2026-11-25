@@ -479,11 +479,6 @@ function Row({
           <Disclosure />
         </View>
       ) : null}
-      {more ? (
-        <View style={onLine(20)}>
-          <Icon name="more" size={20} color={c.label2} />
-        </View>
-      ) : null}
       {remove ? (
         // A finger's 44 around the glyph, lit under the finger as the row's other buttons are; it takes the glyph's
         // place in the row (the circle reaches into the row's padding), so the row keeps its height.
@@ -516,6 +511,12 @@ function Row({
               <Icon name={b.icon} size={18} color={c.ink2} />
             </Pressable>
           ))}
+        </View>
+      ) : null}
+      {/* After the row's own buttons: the mark says what a tap on the rest of the row opens. */}
+      {more ? (
+        <View style={onLine(20)}>
+          <Icon name="more" size={20} color={c.label2} />
         </View>
       ) : null}
     </>

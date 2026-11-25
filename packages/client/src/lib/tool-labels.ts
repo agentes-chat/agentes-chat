@@ -8,6 +8,8 @@ import type { TFunction } from "i18next";
 const APPS: Record<string, string> = {
   github: "GitHub",
   gitlab: "GitLab",
+  bitbucket: "Bitbucket",
+  gitserver: "Git",
   linear: "Linear",
   jira: "Jira",
   confluence: "Confluence",

@@ -7,8 +7,9 @@ import {
   telemetryState,
 } from "@agenteschat/engine";
 import { createRoute, z } from "@hono/zod-openapi";
+import { ClientVitalsReport, clientVitals } from "../../client-vitals";
 import { telemetryFacts } from "../../telemetry";
-import { type AppDeps, body, createAppRouter, errors, json, requireSession, security } from "./context";
+import { type AppDeps, body, createAppRouter, errors, json, noContent, requireSession, security } from "./context";
 
 const tags = ["System"];
 
@@ -44,6 +45,9 @@ const BrowserTraffic = z
       "What the agents' browsers on these computers sent and received over the last day, in MB (10^6 bytes), as their Chrome counts each request's headers and body, with the `hours` counted on average and how many of them said. Null when none did.",
   });
 
+/** One measure of the apps' speed reports since the last report: how many values, their median and 95th percentile. */
+const VitalStat = z.object({ n: z.number().int(), p50: z.number(), p95: z.number() });
+
 const Report = z
   .object({
     report: z.literal(1),
@@ -52,6 +56,9 @@ const Report = z
     edition: z.enum(["selfhost", "cloud"]),
     install: z.enum(["docker", "native", "desktop"]),
     os: z.string(),
+    osVersion: z.string().openapi({
+      description: "The server's system version as numbers alone (`10.0.19045`, a kernel's `6.8.0`), else `other`.",
+    }),
     arch: z.string(),
     uptimeHours: z.number(),
     host: z.object({ size: Size, container: z.boolean(), load: Load }),
@@ -89,6 +96,25 @@ const Report = z
           outputTokens: z.number().int(),
         }),
       ),
+      clientVitals: z
+        .record(
+          z.string(),
+          z.object({
+            reports: z.number().int(),
+            coldStartMs: VitalStat.optional(),
+            firstRowsMs: VitalStat.optional(),
+            jsLagP95Ms: VitalStat.optional(),
+            jsLagMaxMs: VitalStat.optional(),
+            heapBytes: VitalStat.optional(),
+            webviewBytes: VitalStat.optional(),
+            getsPerReturn: VitalStat.optional(),
+            reconnects: VitalStat.optional(),
+          }),
+        )
+        .openapi({
+          description:
+            "How fast the apps ran since the last report, by platform (`ios`, `android`, `web`, the desktop app's `macos`, `windows`, `linux`): how many speed reports, and per measure how many values with their median and 95th percentile.",
+        }),
     }),
   })
   .openapi("TelemetryReport");
@@ -149,6 +175,31 @@ export function telemetryRoutes(deps: AppDeps) {
       await requireOwner(c.get("user").id);
       await setTelemetryEnabled(db, c.req.valid("json").enabled);
       return c.json(await view(), 200);
+    },
+  );
+
+  /** An app's reports: about one at each start and each return to it, numbers only. */
+  const CLIENT_VITALS_PER_USER = { limit: 30, windowMs: 60_000 };
+  app.use("/client-vitals", requireSession(deps.auth));
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/client-vitals",
+      tags,
+      summary: "How fast an app ran: its cold start, JavaScript stalls, heap and reads per return",
+      description:
+        "Summed up once a minute into the process's vitals (the operator's `GET /vitals`), with nobody's id. A bounded sample is also kept in `instance_telemetry.client_vitals` until the next usage report, which sends its per-platform summary (ADR 0060 §5); none with `TELEMETRY=off`. Past the per-person limit a report is dropped, still answered 204.",
+      security,
+      request: { body: body(ClientVitalsReport) },
+      responses: { 204: noContent[204], 401: errors[401] },
+    }),
+    async (c) => {
+      const limit = await deps.adapters.rateLimiter.consume(
+        `client-vitals:${c.get("user").id}`,
+        CLIENT_VITALS_PER_USER,
+      );
+      if (limit.allowed) clientVitals.add(c.req.valid("json"));
+      return c.body(null, 204);
     },
   );
 

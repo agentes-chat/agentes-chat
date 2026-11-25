@@ -1,9 +1,6 @@
-import type { Agent, AgentBrain, AgentBrainInput } from "@agenteschat/client";
+import type { Agent, AgentBrain } from "@agenteschat/client";
 import {
-  keys,
   useAgentBrain,
-  useAiAccounts,
-  useApi,
   useAuthConfig,
   useCredentials,
   useModels,
@@ -16,20 +13,14 @@ import {
   useWorkspaceUsesApi,
 } from "@agenteschat/client";
 import { selfHosted } from "@agenteschat/client/lib/about";
-import {
-  accountAbout,
-  accountChoices,
-  accountTitle,
-  ownSignInTitle,
-  unnamedAccount,
-} from "@agenteschat/client/lib/ai-accounts";
+import { accountTitle } from "@agenteschat/client/lib/ai-accounts";
 import { audienceOf, audiencePatch } from "@agenteschat/client/lib/audience";
-import { effortOf } from "@agenteschat/client/lib/brain-advanced";
-import { modelInput, modelRows } from "@agenteschat/client/lib/brain-picker";
+
+import { modelRows } from "@agenteschat/client/lib/brain-picker";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { handleAfterRename } from "@agenteschat/client/lib/new-agent";
-import { rightHandUnusable } from "@agenteschat/client/lib/no-ai";
+
 import { can } from "@agenteschat/client/lib/permissions";
 import { brainPlan } from "@agenteschat/client/lib/plans";
 import { AUTO, modelChoices } from "@agenteschat/client/lib/providers";
@@ -58,22 +49,21 @@ import {
   DialogFooter,
   GroupHeading,
   Icon,
-  type IconName,
   Input,
   ProviderLogo,
   Switch,
 } from "@agenteschat/ui";
-import { useQueryClient } from "@tanstack/react-query";
+
 import { Link } from "@tanstack/react-router";
-import type { TFunction } from "i18next";
+
 import { type ReactNode, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { AudienceChoice } from "@/components/AgentAudience";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { LookRows, modelOptions } from "@/components/AgentFields";
 import { RightHandApprovalsCard } from "@/components/ApprovalCover";
+import { AiChoiceDialog } from "@/components/ai/AiChoiceDialog";
 import { PlanHold, usePlanHold } from "@/components/ai/plan-hold";
-import { type HaveItem, renameOf } from "@/components/arrival/ConnectHave";
 import { useAgentComputer } from "@/components/computer/facts";
 import { useOpenComputer } from "@/components/computer/open";
 import { useConnectAi } from "@/components/connect-ai-context";
@@ -81,17 +71,11 @@ import { HelpLink } from "@/components/HelpLink";
 import { LoadingLine } from "@/components/Loading";
 import { PrefRow } from "@/components/NoticePrefs";
 import { useOrg } from "@/components/org-context";
-import {
-  RightHandBrainDialog,
-  type RightHandEffort,
-  type RightHandLink,
-  type RightHandModel,
-} from "@/components/RightHandBrainDialog";
 import { TeamWeekSchedule } from "@/components/TeamWeekSchedule";
-import { useComputerEdition } from "@/components/WorkspaceComputer";
+
 import { useDirectory } from "@/hooks/useDirectory";
 import { usePersonalView } from "@/hooks/usePersonalView";
-import { useRenameAccount } from "@/hooks/useRenameAccount";
+
 import { fullLook, lookOf } from "@/lib/look";
 import { useToast } from "@/lib/toast";
 
@@ -152,30 +136,6 @@ function PlanLine({ kind, label, owner, model }: { kind: PlanKind; label?: strin
   );
 }
 
-/**
- * A plan's model as the dialog's "Modelo" line and the list it opens: the account and its model are one choice, as in
- * an agent's "Quem pensa". Every model the plan in use offers, Automático first.
- */
-function planModelOf(t: TFunction, view: AgentBrain, onChange: (input: AgentBrainInput) => void): RightHandModel {
-  const rows = modelRows(t, view, brainPlan(view));
-  const chosen = rows.find((r) => r.checked);
-  const value = chosen?.value ?? AUTO;
-  return {
-    label: chosen?.label ?? t("brain.auto.label"),
-    lead: value === AUTO ? <Icon name="bulb" size={16} /> : undefined,
-    value,
-    options: rows.map((r) => ({ value: r.value, label: r.label, description: r.sub, hint: r.note })),
-    onPick: (next) => onChange(modelInput(next, view)),
-  };
-}
-
-/** The effort line under the model: what the view thinks with and how hard, saved with `save`. */
-const effortOfView = (view: AgentBrain, save: (input: AgentBrainInput) => Promise<unknown>): RightHandEffort => ({
-  kind: view.brain,
-  value: effortOf(view.brain, view.effort),
-  onPick: (effort) => save({ effort }),
-});
-
 /** The model a plan's view runs, by its name (Automático included). */
 const usePlanModelLabel = (view: AgentBrain | undefined) => {
   const { t } = useTranslation();
@@ -195,34 +155,15 @@ export function RightHandMineRow({ agent }: { agent: Agent }) {
   const { t } = useTranslation();
   const { org, me } = useOrg();
   const dir = useDirectory(org.id);
-  const api = useApi();
-  const qc = useQueryClient();
-  const toast = useToast();
   const connect = useConnectAi();
   const held = usePlanHold() !== null;
   const view = useAgentBrain(org.id, agent.id).data;
   const platform = usePlatformKey(org.id).data === true;
   const [open, setOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
   const status = mineStatus(view, me.user.id, platform, agent.brain?.maker);
   const first = (id: string) => dir.memberById.get(id)?.name.split(" ")[0] ?? "";
   const model = usePlanModelLabel(view);
   if (!status) return null;
-  const setMine = (input: AgentBrainInput, done?: () => void) => {
-    setBusy(true);
-    return api.agents
-      .setBrain(org.id, agent.id, { scope: "mine", ...input })
-      .then(() =>
-        Promise.all([
-          qc.invalidateQueries({ queryKey: keys.agentBrain(org.id, agent.id) }),
-          qc.invalidateQueries({ queryKey: keys.aiStatus(org.id) }),
-        ]),
-      )
-      .then(done)
-      .catch((e) => toast.show(errorText(t, e), "error"))
-      .finally(() => setBusy(false));
-  };
-  const back = () => setMine({ brain: "model" }, () => setOpen(false));
   // Connecting is a dialog of its own: this one closes for it, and its Back opens this one again.
   const connectMine = connect
     ? () => {
@@ -264,44 +205,6 @@ export function RightHandMineRow({ agent }: { agent: Agent }) {
     </span>
   );
   const g = agentGrammar(agent.name);
-  const account = view?.accounts.find((a) => a.id === view.account);
-  const planOf = status.kind === "own" || status.kind === "plan" ? planKind(status.brain) : null;
-  const logoId = planOf
-    ? ((own ? account?.provider : undefined) ?? planOf)
-    : status.kind === "key"
-      ? status.provider
-      : null;
-  const current: HaveItem | null =
-    status.kind === "nobody"
-      ? null
-      : {
-          id: "current",
-          title: name,
-          about: what ?? undefined,
-          whose: what ?? "",
-          group: { key: "current", label: "" },
-          mark: logoId ? (
-            <ProviderLogo id={logoId} size="xs" />
-          ) : (
-            <Icon name="key" size={20} className="arrival-have__mark" />
-          ),
-          usage: own ? (account?.usage ?? null) : null,
-        };
-  // On a billing hold nothing connects before the plan, whose one way in is the hold's banner (ADR 0162).
-  const links: RightHandLink[] = [];
-  if (connectMine && !held)
-    links.push({
-      opensDialog: true,
-      label: own
-        ? t("connectAi.chat.other")
-        : t(status.kind === "nobody" ? "rightHand.settings.connectMine" : "rightHand.settings.useMine"),
-      onClick: connectMine,
-    });
-  if (own) links.push({ label: t("rightHand.settings.useWorkspace"), onClick: back });
-  // The AI's mark beside the right hand under the sky: its maker's, a key's, or none while nothing answers.
-  let mineMark: ReactNode;
-  if (logoId) mineMark = <ProviderLogo id={logoId} size="tile" />;
-  else if (current) mineMark = <Icon name="key" />;
   return (
     <>
       <PrefRow
@@ -311,19 +214,16 @@ export function RightHandMineRow({ agent }: { agent: Agent }) {
         status={value}
         onOpen={() => setOpen(true)}
       />
-      <RightHandBrainDialog
-        agent={agent}
+      <AiChoiceDialog
         open={open}
         onClose={() => setOpen(false)}
+        agent={agent}
+        target={{ kind: "lodi", agentId: agent.id, scope: "mine" }}
         title={t("rightHand.settings.mineTitle", g)}
         note={t("rightHand.settings.mineOnly", g)}
-        mark={mineMark}
-        current={current}
-        empty={t(held ? "agentSetup.firstRun.afterPlan" : "rightHand.settings.mineNobody")}
-        model={own && view ? planModelOf(t, view, (input) => setMine(input)) : null}
-        effort={own && view ? effortOfView(view, setMine) : null}
-        links={links}
-        busy={busy}
+        // "Adicionar conta", at the account list's foot: Connect, its Back opening this again. On a billing hold nothing
+        // connects before the plan, whose one way in is the hold's banner (ADR 0162).
+        {...(connectMine && !held ? { onAdd: connectMine } : {})}
       />
     </>
   );
@@ -429,7 +329,6 @@ export function useRightHandMineHint(agent: Agent) {
 
 function RightHandForm({ agent }: { agent: Agent }) {
   const { t, i18n } = useTranslation();
-  const renameAccount = useRenameAccount();
   const { org, me } = useOrg();
   const toast = useToast();
   const update = useUpdateAgent(org.id, agent.id);
@@ -442,17 +341,12 @@ function RightHandForm({ agent }: { agent: Agent }) {
   const [budget, setBudget] = useState(agent.monthlyBudgetUsd == null ? "" : String(agent.monthlyBudgetUsd));
   const [looking, setLooking] = useState(false);
   const [choosing, setChoosing] = useState(false);
-  const [busy, setBusy] = useState(false);
   const [look, setLook] = useState(() => fullLook(lookOf(agent)));
   const g = agentGrammar(agent.name);
   const label = t("rightHand.label");
-  const api = useApi();
-  const qc = useQueryClient();
   const dir = useDirectory(org.id);
   const hold = usePlanHold();
   const connect = useConnectAi();
-  const aiAccounts = useAiAccounts(org.id).data;
-  const edition = useComputerEdition(org.id);
   // The workspace's AI (ADR 0137 §11): what every DM thinks with while its person has no plan of their own.
   const kind = planKind(agent.brain?.kind);
   const view = useAgentBrain(org.id, agent.id, true, false, "workspace").data;
@@ -463,20 +357,6 @@ function RightHandForm({ agent }: { agent: Agent }) {
   const firstOf = (id: string | null | undefined) => (id ? dir.memberById.get(id)?.name.split(" ")[0] : undefined);
   const save = (patch: Parameters<typeof update.mutate>[0], onSuccess?: () => void) =>
     update.mutate(patch, { onSuccess, onError: (e) => toast.show(errorText(t, e), "error") });
-  const setWorkspace = (input: AgentBrainInput) => {
-    setBusy(true);
-    return api.agents
-      .setBrain(org.id, agent.id, { scope: "workspace", ...input })
-      .then(() =>
-        Promise.all(
-          [keys.agentBrain(org.id, agent.id), keys.agents(org.id), keys.aiStatus(org.id)].map((queryKey) =>
-            qc.invalidateQueries({ queryKey }),
-          ),
-        ),
-      )
-      .catch((e) => toast.show(errorText(t, e), "error"))
-      .finally(() => setBusy(false));
-  };
   const rename = () => {
     const next = name.trim();
     if (!next || next === agent.name) return setName(agent.name);
@@ -494,124 +374,9 @@ function RightHandForm({ agent }: { agent: Agent }) {
     i18n.language,
     modelChoices(models.data?.models ?? [], credentials.data ?? [], platform.data ?? false),
   );
-  // Plans it may think with for everyone: the admin's own, and everyone's that serve the whole workspace.
-  const plans = (view?.accounts ?? []).filter((a) => a.status === "active");
   const theirs = (id: string | null | undefined) => (id && id !== me.user.id ? firstOf(id) : undefined);
-  // The choice in the dialog: each plan once (its logins grouped, as any agent's accounts are), by owner, then the API
-  // key. A plan in use that is no longer active stays listed, so the choice never shows empty.
-  const KEY = "key";
-  const listed = signIn && !plans.some((p) => p.id === signIn.id) ? [signIn, ...plans] : plans;
-  const mineGroup = { key: "mine", label: t("connectAi.chat.mine") };
-  const keysGroup = { key: "keys", label: t("connectAi.chat.keys") };
-  const keyItem: HaveItem = {
-    id: KEY,
-    title: key?.label ?? t("rightHand.settings.mineKeyName"),
-    whose: keysGroup.label,
-    group: keysGroup,
-    mark: key ? (
-      <ProviderLogo id={key.provider} size="xs" />
-    ) : (
-      <Icon name="key" size={20} className="arrival-have__mark" />
-    ),
-    usage: null,
-    isKey: true,
-  };
-  const planItems = accountChoices(listed, [view?.account]).map((c): HaveItem => {
-    const a = c.login;
-    const owner = theirs(a.ownerId);
-    const whose = owner ? t("agentPage.work.brain.accountOf", { name: owner }) : t("connectAi.chat.yours");
-    return {
-      id: a.id,
-      title: accountTitle(t, a),
-      unnamed: unnamedAccount(a),
-      // The accounts listed here are on the right hand's computer.
-      rename: renameOf(t, a, view?.computer?.machineId, renameAccount),
-      about: accountAbout(t, c, agent.name),
-      whose,
-      group: owner ? { key: `owner:${a.ownerId}`, label: whose } : mineGroup,
-      mark: <ProviderLogo id={a.provider ?? a.kind} size="xs" />,
-      usage: a.usage ?? null,
-    };
-  });
-  const current = kind ? (planItems.find((i) => i.id === view?.account) ?? null) : keyItem;
-  // Plans it can't think with now, dimmed under the others with why: it stands in on what can meanwhile.
-  const cant = rightHandUnusable(aiAccounts, current?.id);
-  const away = new Set(cant.flatMap((u) => u.ids));
-  const others = [...planItems.filter((i) => i.id !== current?.id && !away.has(i.id)), ...(kind ? [keyItem] : [])];
-  // Connecting one is self-host's way out: Cloud's own computer is always on, and its way out is the plan.
-  const pairs = can(org, "pair_computers") && edition !== "cloud";
-  const unusable = cant.map((u) => {
-    if (u.why === "computerOnly")
-      return {
-        id: u.id,
-        item: { title: ownSignInTitle(t, u.own), mark: <ProviderLogo id={u.own.kind} size="xs" /> },
-        why: t("rightHand.unusable.computerOnly", { ...g, computer: u.own.computer }),
-      };
-    const a = u.account;
-    const owner = theirs(a.ownerId);
-    return {
-      id: u.id,
-      item: { title: accountTitle(t, a), mark: <ProviderLogo id={a.provider ?? a.kind} size="xs" /> },
-      why: (
-        <>
-          {owner
-            ? t("rightHand.unusable.away", { owner, computer: a.computer })
-            : t("rightHand.unusable.awayYours", { computer: a.computer })}
-          {pairs && (
-            <>
-              {" "}
-              <Link
-                className="ac-link"
-                to="/org/$orgId/settings/$section"
-                params={{ orgId: org.id, section: "devices" }}
-                search={{}}
-              >
-                {t("rightHand.unusable.connect")}
-              </Link>
-            </>
-          )}
-        </>
-      ),
-    };
-  });
-  const pick = (id: string) => {
-    if (id === KEY) return void (kind && setWorkspace({ brain: "model" }));
-    const plan = listed.find((p) => p.id === id);
-    if (plan && plan.id !== view?.account) setWorkspace({ brain: plan.kind, account: plan.id });
-  };
   // Another AI: the Connect dialog, with every provider to pick from, over this one. On a billing hold nothing connects
   // before the plan (ADR 0162).
-  const connectOther: (RightHandLink & { icon: IconName }) | null =
-    connect && !hold
-      ? {
-          icon: "plus",
-          label: t("connectAi.chat.other"),
-          opensDialog: true,
-          onClick: () => {
-            setChoosing(false);
-            connect.open({ agentId: agent.id, onBack: () => setChoosing(true) });
-          },
-        }
-      : null;
-  // The key's model: every model the workspace's keys reach, Automático first, the one in use kept on the list.
-  const keyModels = [
-    { value: AUTO, label: t("brain.auto.label"), description: t("brain.auto.hint") },
-    ...(agent.model === AUTO || list.some((o) => o.value === agent.model)
-      ? []
-      : [{ value: agent.model, label: agent.model }]),
-    ...list,
-  ];
-  const model: RightHandModel | null =
-    kind && view
-      ? planModelOf(t, view, setWorkspace)
-      : {
-          label: keyModels.find((o) => o.value === agent.model)?.label ?? agent.model,
-          lead: agent.model === AUTO ? <Icon name="bulb" size={16} /> : undefined,
-          value: agent.model,
-          options: keyModels,
-          search: t("models.search"),
-          onPick: (next) => next !== agent.model && save({ model: next }),
-        };
   return (
     <>
       {hold && (
@@ -724,36 +489,21 @@ function RightHandForm({ agent }: { agent: Agent }) {
           />
         </Card>
       )}
-      <RightHandBrainDialog
-        agent={agent}
+      <AiChoiceDialog
         open={choosing}
         onClose={() => setChoosing(false)}
+        agent={agent}
+        target={{ kind: "lodi", agentId: agent.id, scope: "workspace" }}
         title={t("rightHand.settings.workspaceTitle", g)}
         note={t("rightHand.settings.workspaceOnly")}
-        mark={
-          kind ? (
-            <ProviderLogo id={signIn?.provider ?? kind} size="tile" />
-          ) : key ? (
-            <ProviderLogo id={key.provider} size="tile" />
-          ) : (
-            <Icon name="key" />
-          )
-        }
-        current={current}
-        model={model}
-        effort={view ? effortOfView(view, setWorkspace) : null}
-        accounts={{
-          items: others,
-          onPick: pick,
-          empty: t("rightHand.settings.noPlans", g),
-          ...(connectOther ? { more: connectOther } : {}),
-        }}
-        links={connectOther ? [connectOther] : []}
-        unusable={unusable}
+        {...(connect && !hold
+          ? { onAdd: () => connect.open({ agentId: agent.id, onBack: () => setChoosing(true) }) }
+          : {})}
         // On a billing hold nothing changes before the plan (ADR 0162).
-        busy={busy || update.isPending}
-        locked={!!hold}
-      />
+        disabled={!!hold}
+      >
+        {hold && <PlanHold hold={hold} />}
+      </AiChoiceDialog>
       <Dialog
         open={looking}
         onOpenChange={setLooking}

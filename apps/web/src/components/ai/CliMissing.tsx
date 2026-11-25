@@ -189,6 +189,24 @@ export function CliMissing({
   );
 }
 
+/** Looks for the computer's programs again, once one that wouldn't start was fixed there by hand. */
+export function CliCheckAgain({ machine }: { machine: Machine }) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const toast = useToast();
+  const check = useCheckMachineClis(org.id);
+  return (
+    <Button
+      size="sm"
+      disabled={check.isPending || !machine.online}
+      loading={check.isPending}
+      onClick={() => check.mutate(machine.id, { onError: (err) => toast.show(errorText(t, err), "error") })}
+    >
+      {t("connectAi.cli.check")}
+    </Button>
+  );
+}
+
 /**
  * The inbox row's one click for whoever connected the computer, when someone asked them for a coding CLI there: it
  * installs it, and says so while it runs.

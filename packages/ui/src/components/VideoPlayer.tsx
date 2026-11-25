@@ -10,7 +10,7 @@ import {
 } from "react";
 import { cx } from "../cx";
 import { Icon } from "../icons/Icon";
-import { claimPlayback, type PlaybackState, releasePlayback, seatTile, takeOver } from "./media-playback";
+import { claimPlayback, type PlaybackState, playbackOf, releasePlayback, seatTile, takeOver } from "./media-playback";
 import { PixelSpinner } from "./PixelSpinner";
 
 export interface VideoPlayerLabels {
@@ -52,6 +52,11 @@ export interface VideoPlayerProps {
   onTime?: (seconds: number, duration: number) => void;
   /** The video element, to seek or pause from outside and take a frame of it. */
   onVideo?: (video: HTMLVideoElement | null) => void;
+  /**
+   * `anonymous`: loaded under CORS, so a frame drawn into a canvas can be read back (`onVideo`'s frames). The server
+   * then sends the bytes itself, where an element without it may be sent on to the file store, another origin.
+   */
+  crossOrigin?: "anonymous";
   /** Over the timeline (a file's comments as marks, ADR 0208): placed by the caller, in fractions of its length. */
   marks?: ReactNode;
   /**
@@ -66,6 +71,10 @@ const SPEEDS = [1, 1.5, 2];
 /** The controls hide this long after the pointer stops, while it plays. */
 const IDLE_MS = 2000;
 const STEP_S = 5;
+/** `MediaError.MEDIA_ERR_NETWORK`: the bytes stopped coming after the video had loaded. */
+const MEDIA_ERR_NETWORK = 2;
+/** A fresh signed link lives an hour: failing again sooner than this after asking for one is no expired link. */
+const RELOAD_GAP_MS = 60_000;
 const clock = (seconds: number) => {
   const s = Math.max(0, Math.floor(Number.isFinite(seconds) ? seconds : 0));
   const h = Math.floor(s / 3600);
@@ -192,9 +201,11 @@ export function VideoPlayer({
   onVideo,
   marks,
   handoff,
+  crossOrigin,
 }: VideoPlayerProps) {
   const root = useRef<HTMLDivElement>(null);
   const video = useRef<HTMLVideoElement>(null);
+  const reloadedAt = useRef(Number.NEGATIVE_INFINITY);
   const frame = useRef(0);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const lastTouch = useRef(false);
@@ -385,6 +396,7 @@ export function VideoPlayer({
         className="ac-video__media"
         // `#t`: the first frame shows before it plays (Safari shows nothing otherwise).
         src={`${src}${src.includes("#") ? "" : "#t=0.001"}`}
+        crossOrigin={crossOrigin}
         preload="metadata"
         playsInline
         onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
@@ -423,7 +435,20 @@ export function VideoPlayer({
           setMuted(e.currentTarget.muted);
           setVolume(e.currentTarget.volume);
         }}
-        onError={() => onFailed?.()}
+        onError={(e) => {
+          const v = e.currentTarget;
+          // Our address may send it on to the file store's signed link, which can expire while the page stays open
+          // (hours, for a conversation left open): it asks our address again for a fresh one and goes on from where
+          // it was, each time that link has had the time to expire too.
+          if (v.error?.code !== MEDIA_ERR_NETWORK || Date.now() - reloadedAt.current < RELOAD_GAP_MS) {
+            onFailed?.();
+            return;
+          }
+          reloadedAt.current = Date.now();
+          const state = playbackOf(v);
+          v.load();
+          if (state.playing || state.time > 0) resume(state);
+        }}
       />
 
       {phase === "idle" && (

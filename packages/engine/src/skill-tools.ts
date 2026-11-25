@@ -275,7 +275,7 @@ export function createSkillToolSource(
     {
       name: "update_skill",
       description:
-        "Fix a skill you loaded this turn: `body` its new body, `files` whole text files to change or add (read them first). Also another agent's skill, when the person who asked manages skills: load it first. Files that run wait for a person. No credentials.",
+        "Fix a skill you loaded this turn: `body` its new body, `files` whole text files to change or add (read them first). Also another agent's skill, when the person who asked manages skills: load it first. Files that run go through a quick review first. No credentials.",
       scope: "skills:read",
       inputSchema: {
         type: "object",
@@ -325,7 +325,7 @@ export function createSkillToolSource(
             { person, decides, words },
           );
           const waits = change.scripts.length
-            ? ` ${change.scripts.join(", ")} run${change.scripts.length === 1 ? "s" : ""} as code, so that change waits for a person who manages agents (a proposal).`
+            ? ` ${change.scripts.join(", ")} run${change.scripts.length === 1 ? "s" : ""} as code, so that change goes through a quick review that applies it in a moment if it makes sense; its card shows the outcome.`
             : "";
           const membership = person ? await getMembership(ctx.db, person, ctx.orgId) : null;
           /** With a person behind the run its card sits under the reply; with nobody, the deciders' inbox row is the way in. */
@@ -347,14 +347,10 @@ export function createSkillToolSource(
           if (change.action === "unchanged") return { content: "Nothing changed: it is the same." };
           const why =
             change.why === "outside"
-              ? "This turn read outside content (the web, mail or a connected app), so the change is a proposal"
-              : change.why === "person"
-                ? "Agents don't change this skill by themselves here, so the change is a proposal"
-                : change.why === "locked"
-                  ? "A person locked this skill, so the change is a proposal"
-                  : "The change is a proposal";
+              ? "This turn read outside content (the web, mail or a connected app), so the change"
+              : "The change";
           return carded(
-            `${why} (${change.proposalIds.join(", ")}): someone who manages agents accepts it on the card under your reply.${waits} Use your fix in this turn.`,
+            `${why} goes through a quick review that applies it in a moment if it makes sense; its card shows the outcome.${waits} Use your fix in this turn.`,
           );
         } catch (error) {
           return failed(error);

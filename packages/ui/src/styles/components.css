@@ -870,6 +870,10 @@ textarea.ac-input:not(:hover, :focus-visible) {
 .ac-brand svg {
   fill: currentColor;
 }
+/* The kit's own line icon on a tile (a key, a computer): its strokes, never filled. */
+.ac-brand > svg.ac-icon {
+  fill: none;
+}
 /* An image mark that isn't square (Tux) keeps its shape in the square box. */
 .ac-brand img {
   object-fit: contain;
@@ -5163,33 +5167,6 @@ html:not([data-pointer]) .ac-switch:focus-visible {
   border-radius: var(--radius-md);
   background: var(--surface-raised);
 }
-.ac-top-progress {
-  position: absolute;
-  inset: 0 0 auto;
-  height: 2px;
-  overflow: hidden;
-  z-index: var(--z-sticky);
-  pointer-events: none;
-}
-.ac-top-progress::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  width: 40%;
-  background: var(--ink-muted);
-  opacity: 0.6;
-}
-@media (prefers-reduced-motion: no-preference) {
-  .ac-top-progress::before {
-    animation: ac-top-progress 1.1s ease-in-out infinite;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .ac-top-progress::before {
-    width: 100%;
-    opacity: 0.35;
-  }
-}
 @keyframes ac-top-progress {
   from {
     transform: translateX(-100%);
@@ -6491,6 +6468,8 @@ html:not([data-pointer]) .ac-hint:focus-visible {
   max-width: min(280px, calc(100vw - 32px));
   padding: 8px 12px;
   text-wrap: pretty;
+  /* A name with no place to break (a computer named by its address) wraps inside the bubble. */
+  overflow-wrap: anywhere;
   border-radius: 12px;
   color: var(--ink2);
   font-size: 13px;
@@ -9381,6 +9360,99 @@ html:not([data-pointer]) button.ac-tools__row:focus-visible {
   min-width: 0;
 }
 
+/*
+ * An agent at work (`OrbitGlyph`): rings orbit its glyph, their far halves behind it and their near halves in front,
+ * in its colour (`--orbit`) and two neighbours mixed from it (`orbitColors`). The overlay is 3.6 glyphs wide and takes no room
+ * (it reaches into the row's gap), but its box counts as overflow: the row holding it clips (`overflow: clip`), or a
+ * scrolling list would scroll by it. Only transforms move; reduced motion draws them still, and off screen they pause.
+ */
+.ac-orbit {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  isolation: isolate;
+}
+.ac-orbit > .ac-orbit__back,
+.ac-orbit > .ac-orbit__front {
+  position: absolute;
+  inset: -130%;
+  overflow: visible;
+  pointer-events: none;
+}
+.ac-orbit > .ac-orbit__back {
+  z-index: var(--z-under);
+}
+.ac-orbit > :not(svg) {
+  position: relative;
+}
+.ac-orbit > .ac-orbit__front {
+  z-index: var(--z-raised);
+}
+.ac-orbit__ring {
+  --ring: var(--orbit);
+  color: var(--ring);
+}
+.ac-orbit__ring--2 {
+  --ring: var(--orbit-2, var(--orbit));
+}
+.ac-orbit__ring--3 {
+  --ring: var(--orbit-3, var(--orbit));
+}
+.ac-orbit__path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.25;
+  vector-effect: non-scaling-stroke;
+  opacity: 0.5;
+}
+.ac-orbit__back .ac-orbit__path {
+  opacity: 0.28;
+}
+.ac-orbit__dot {
+  fill: currentColor;
+}
+.ac-orbit__spin {
+  transform-origin: 0 0;
+  transform: rotate(var(--start));
+}
+.ac-orbit__unspin {
+  transform-origin: 0 0;
+  transform: rotate(calc(-1 * var(--start)));
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ac-orbit__spin {
+    animation: ac-orbit-turn var(--turn) linear infinite;
+    animation-direction: var(--dir, normal);
+  }
+  .ac-orbit__unspin {
+    animation: ac-orbit-unturn var(--turn) linear infinite;
+    animation-direction: var(--dir, normal);
+  }
+  .ac-orbit[data-paused="true"] :is(.ac-orbit__spin, .ac-orbit__unspin) {
+    animation-play-state: paused;
+  }
+}
+@keyframes ac-orbit-turn {
+  from {
+    transform: rotate(var(--start));
+  }
+  to {
+    transform: rotate(calc(var(--start) + 360deg));
+  }
+}
+@keyframes ac-orbit-unturn {
+  from {
+    transform: rotate(calc(-1 * var(--start)));
+  }
+  to {
+    transform: rotate(calc(-1 * var(--start) - 360deg));
+  }
+}
+/* The glyph's own working halo would be a second ring: the orbit says it. */
+.ac-orbit .ac-avatar--running::after {
+  display: none;
+}
+
 /* Agent look: the halo takes the agent's color. */
 .ac-avatar--agent[style*="--av-top"].ac-avatar--running::after {
   border-color: color-mix(in srgb, var(--av-bottom) 45%, transparent);
@@ -9613,6 +9685,14 @@ html:not([data-pointer]) .ac-recur__day:focus-visible {
   font-size: 13px;
   color: var(--muted);
 }
+/* SearchSelect's `footer`: under the list whatever is typed, past a menu's separator, its rows drawn as a menu's. */
+.ac-tz__foot {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 var(--menu-pad) var(--menu-pad);
+}
 .ac-tz__option[aria-disabled="true"] {
   color: var(--ink-muted);
   cursor: not-allowed;
@@ -9620,6 +9700,14 @@ html:not([data-pointer]) .ac-recur__day:focus-visible {
 /* SearchSelect's own rows: a mark, then the name over its description, as a menu draws them. */
 .ac-search__option {
   align-items: center;
+}
+/* One choice, so no check column (as `Select`): the chosen option sits on its plate, its name heavier. */
+.ac-search__list .ac-tz__option[aria-selected="true"] {
+  background: rgba(127, 127, 127, 0.14);
+  font-weight: 600;
+}
+.ac-search__list .ac-tz__option[data-active]:not([aria-selected="true"]) {
+  background: rgba(127, 127, 127, 0.07);
 }
 /* A searchable list with people, agents or roles in it is an OptionRow list: every row the faces' room around them (6,
    10 on touch), every face and mark the list's one size. */
@@ -9706,8 +9794,10 @@ html:not([data-pointer]) .ac-recur__day:focus-visible {
   justify-content: space-between;
   gap: 12px 16px;
 }
+/* As wide as the title on one line: when the buttons don't fit beside it, they go under it and the title stays whole. A
+   title wider than the page on its own wraps there. */
 .ac-pagehead__text {
-  flex: 1 1 280px;
+  flex: 1 1 auto;
   min-width: 0;
 }
 .ac-pagehead__titleline {
@@ -9728,7 +9818,9 @@ html:not([data-pointer]) .ac-recur__day:focus-visible {
   text-wrap: balance;
   overflow-wrap: anywhere;
 }
+/* Its words never widen the header: only the title decides when the buttons go under it. */
 .ac-pagehead__meta {
+  contain: inline-size;
   min-height: 20px;
   margin: -2px 0 0;
   font-size: 14px;
@@ -10382,12 +10474,14 @@ html:not([data-pointer]) .ac-filtertoggle:focus-visible {
 .ac-filter--active:hover {
   background: color-mix(in srgb, var(--ink) 88%, var(--bg));
 }
+/* On the filled chip the × is its words' color, quieter; its plate shows only under the pointer. */
 .ac-filter--active .ac-filter__clear {
-  background: color-mix(in srgb, var(--bg) 20%, transparent);
-  color: var(--bg);
+  background: transparent;
+  color: color-mix(in srgb, var(--bg) 70%, transparent);
 }
 .ac-filter--active .ac-filter__clear:hover {
-  background: color-mix(in srgb, var(--bg) 32%, transparent);
+  background: color-mix(in srgb, var(--bg) 20%, transparent);
+  color: var(--bg);
 }
 .ac-filter__trigger {
   display: inline-flex;
@@ -10437,9 +10531,12 @@ html:not([data-pointer]) .ac-filter__clear:focus-visible {
   margin-right: var(--in);
   border: 0;
   border-radius: calc(var(--tool-r, var(--control-r-sm)) - var(--in));
-  background: var(--sunken);
+  background: transparent;
   color: var(--ink2);
   cursor: pointer;
+  transition:
+    background-color 0.15s var(--out),
+    color 0.15s var(--out);
 }
 .ac-filter__clear:hover {
   background: var(--plate);
@@ -10964,6 +11061,16 @@ html:not([data-pointer]) .ac-filter__option:focus-visible {
   white-space: normal;
   overflow-wrap: anywhere;
 }
+/* In a list with faces every option is one size (OptionRow): a row led by a bare glyph there (a channel, a kind) keeps
+   its one line too, a name wider than the menu ending in "…", so its glyph stays beside it. */
+:is(.ac-menu, .ac-palette__list):has(.ac-menu__leading > .ac-avatar)
+  .ac-menu__item:not(:has(> .ac-menu__leading > .ac-avatar))
+  > .ac-menu__label:not(:has(> .ac-menu__desc)) {
+  display: block;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  text-overflow: ellipsis;
+}
 /* Its lead no taller than a line (an icon, a mark) keeps to the name's first line then, as an `.ac-iconline` lead. A list
    with faces centres every lead in its taller row instead. */
 :is(.ac-menu--dropdown, .ac-menu--select):not(:has(.ac-menu__leading > .ac-avatar))
@@ -11214,6 +11321,45 @@ html:not([data-pointer]) .ac-run-bars__bar:focus-visible {
 }
 .ac-menu__hint > .ac-chip {
   margin-block: -1px;
+}
+
+/* ---------- InlineName: a name renamed where it stands ---------- */
+/* The font, size and line of what it replaces, so nothing moves; no box, only the ring. Its 4px of side padding are
+   pulled back out, so the text stays on the name's own edge. */
+.ac-inlinename {
+  display: block;
+  box-sizing: content-box;
+  width: 100%;
+  min-width: 0;
+  height: auto;
+  margin: 0 -4px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  line-height: inherit;
+  outline: none;
+  box-shadow: inset 0 -1px 0 var(--line2);
+}
+@supports (top: 1lh) {
+  .ac-inlinename {
+    height: 1lh;
+  }
+}
+.ac-inlinename:focus {
+  box-shadow: var(--field-ring);
+}
+.ac-inlinename--fit {
+  width: auto;
+}
+.ac-inlinename[aria-busy] {
+  opacity: 0.6;
+}
+.ac-inlinename::placeholder {
+  color: var(--faint);
 }
 
 /* ---------- Choice rows (OptionList.tsx): full width, one left edge, neutral selection ---------- */
@@ -11598,6 +11744,125 @@ html:not([data-pointer]) .ac-effort:focus-visible .ac-effort__ramp {
 @media (max-width: 640px) {
   .ac-optrow__side {
     display: none;
+  }
+}
+/*
+ * Links (OptionLinks): the row's look for a choice that opens its own steps. The title is the button, stretched over
+ * the row, so a link in the description stays clickable above it; nothing stays chosen, the chevron says it moves on.
+ */
+.ac-optlinks {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ac-optrow--link {
+  position: relative;
+  cursor: pointer;
+}
+/* The chevron ends every row 16 in: the leading picture starts as far in. */
+.ac-optrow--link.ac-optrow--lead {
+  padding-left: 16px;
+}
+.ac-optrow__hit {
+  appearance: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: inherit;
+  cursor: pointer;
+}
+.ac-optrow__hit::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+html:not([data-pointer]) .ac-optrow__hit:focus-visible {
+  outline: none;
+}
+html:not([data-pointer]) .ac-optrow--link:has(.ac-optrow__hit:focus-visible) {
+  box-shadow:
+    inset 0 0 0 1px var(--line2),
+    var(--field-ring);
+}
+.ac-optrow--link .ac-optrow__title {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+.ac-optrow--link .ac-optrow__desc :is(a, button) {
+  position: relative;
+  z-index: var(--z-raised);
+}
+.ac-optrow__go {
+  flex: none;
+  color: var(--faint);
+  transition:
+    color 0.15s,
+    transform 0.2s var(--out);
+}
+.ac-optrow--link:hover .ac-optrow__go {
+  color: var(--ink);
+  transform: translateX(2px);
+}
+.ac-optrow--link[data-disabled] {
+  cursor: default;
+  opacity: 0.5;
+}
+.ac-optrow--link[data-disabled]:hover {
+  box-shadow: inset 0 0 0 1px var(--line2);
+}
+.ac-optrow--link[data-disabled]:active,
+.ac-optrow--link[data-disabled]:hover .ac-optrow__go {
+  transform: none;
+}
+.ac-optrow--link[data-disabled] .ac-optrow__hit {
+  cursor: default;
+}
+/* A row's quiet end words stay on a phone too: they are part of the choice ("Um login por agente"). */
+.ac-optrow__side--link {
+  display: inline-flex;
+  flex: 0 1 auto;
+  max-width: 40%;
+  white-space: normal;
+  text-align: end;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ac-optrow--link:hover .ac-optrow__go {
+    transform: none;
+  }
+}
+/* A phone: the leading picture and the title share the first line, the line under them takes the row's width. */
+@media (width <= 480px) {
+  .ac-optrow--link.ac-optrow--lead {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    row-gap: 4px;
+  }
+  .ac-optrow--link.ac-optrow--lead > .ac-optrow__text {
+    display: contents;
+  }
+  .ac-optrow--link.ac-optrow--lead > .ac-optrow__lead {
+    grid-area: 1 / 1;
+  }
+  .ac-optrow--link.ac-optrow--lead .ac-optrow__title {
+    grid-area: 1 / 2;
+  }
+  .ac-optrow--link.ac-optrow--lead > .ac-optrow__go {
+    grid-area: 1 / 3;
+  }
+  .ac-optrow--link.ac-optrow--lead .ac-optrow__desc {
+    grid-column: 1 / -1;
+    margin-top: 0;
+  }
+  .ac-optrow--link.ac-optrow--lead > .ac-optrow__side--link {
+    grid-column: 1 / -1;
+    max-width: none;
+    text-align: start;
   }
 }
 .ac-optrow__more--cards {

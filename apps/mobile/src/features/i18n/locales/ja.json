@@ -863,6 +863,9 @@
     },
     "kind": {
       "proposal_waiting_other": "{{names}} が改善を提案しています",
+      "proposal_applied_other": "{{names}} が改善を{{count}}件適用しました",
+      "proposal_applied_agents_other": "{{names}} が改善を{{count}}件適用しました",
+      "proposal_applied_auto_other": "{{count}}件の改善が自動で適用されました",
       "mention_other": "{{names}}があなたをメンションしました",
       "thread_reply_other": "{{names}}がスレッドで返信しました",
       "agent_reply_other": "{{names}}が返信しました",
@@ -1054,7 +1057,6 @@
     "fromWorkspace": "ワークスペースから",
     "issues": "タスク",
     "issuesWithMe_other": "あなた担当: {{count}}件",
-    "proposalsWaiting_other": "{{count}} 件待ち",
     "drive": "Drive",
     "connectors": "コネクタとMCP",
     "preferences": "環境設定",
@@ -1349,13 +1351,26 @@
     "agentLine_other": "{{count}}件のメモリ",
     "uses_other": "{{count}}回使用",
     "confirmed": "人が確認済み",
-    "confirm": "確認する",
-    "confirmedToast": "確認しました",
     "details": "技術的な詳細",
     "before": "以前の内容: {{text}}",
     "fix": "修正",
     "forgetTitle": "このメモリを忘れますか？",
     "forgetText": "{{name}}は今後の会話でこれを使わなくなります。"
+  },
+  "proposals": {
+    "title": "エージェントの改善",
+    "emptyTitle": "まだ何も変わっていません",
+    "empty": "エージェントが自分や仲間の指示を改善すると、その変更が「元に戻す」付きでここに表示されます。",
+    "more": "もっと見る",
+    "reviewing": "確認中…",
+    "appliedBy": "{{name}}が適用",
+    "appliedBy_female": "{{name}}が適用",
+    "appliedAuto": "自動で適用",
+    "leftOutBy": "{{name}}が見送り",
+    "leftOutBy_female": "{{name}}が見送り",
+    "leftOut": "見送り",
+    "undoneBy": "{{name}}が元に戻しました",
+    "undoneByYou": "あなたが元に戻しました"
   },
   "wiki": {
     "map": "ページマップ",
@@ -1407,6 +1422,15 @@
     "next": {
       "pr": "ブランチはプッシュ済み、プルリクエストはまだ",
       "mergeLocal": "{{base}}にマージする準備ができています"
+    },
+    "terminal": {
+      "keys": "ターミナルのキー",
+      "keyboard": "キーボード",
+      "pasteHint": "コピーした内容をターミナルに貼り付け",
+      "key": {
+        "CtrlC": "Control-C、中断",
+        "CtrlD": "Control-D、入力の終わり"
+      }
     }
   },
   "taskManager": {
@@ -3047,6 +3071,59 @@
       "editHint": "この部分を編集します",
       "notHere": "この部分はコンピューターで編集します"
     }
+  },
+  "aiHub": {
+    "accounts": "アカウント",
+    "accountsHint": "このワークスペースのすべてのプランとAPIキー(接続した人を問わず)。アカウントをタップすると、上限と使える人を確認できます。",
+    "order": "使用順",
+    "orderSub": "上限に達すると、エージェントは次のアカウントで続けます。",
+    "skipped": "スキップ",
+    "orderGroup": "{{plan}} · {{computer}}",
+    "noOrder": "1台のコンピューターに同じAIのアカウントが2つあると、その順番がここに表示されます。",
+    "keyFallback": "すべてのプランが上限に達したらAPIキーで続ける",
+    "keyFallbackHint": "最後のアカウントの後は、ワークスペースのAPIキー(従量課金)で続けます。ミッションはキーに切り替わりません。",
+    "keyFallbackLocked": "変更できるのは管理者だけです。",
+    "limits": "上限",
+    "permissions": "権限",
+    "manage": "管理",
+    "manageSub": "名前の変更、再ログイン、削除",
+    "manageHint": "このアカウントの名前を変更し、再ログインし、削除できる人。変更できるのは接続した人だけです。",
+    "use": "エージェントで使う",
+    "useSub": "考えるAIで選ぶ",
+    "useHint": "このアカウントで考えられるのは誰のエージェントか、誰のLodiか。管理する人が変更できます。",
+    "reply": "全員に対応",
+    "replySub": "エージェントが話す相手",
+    "replyHint": "このアカウントのエージェントが、自分のオーナー以外に誰に応答するか。Claudeの規約では、プランは料金を払う本人が使うことになっています。全員に開く前に確認してください。",
+    "audience": {
+      "owner": "あなただけ",
+      "ownerOf": "{{name}}だけ",
+      "admins": "あなたと管理者",
+      "adminsOf": "{{name}}と管理者",
+      "roles": "役割…",
+      "people": "メンバー…",
+      "everyone": "全員",
+      "agentOwner": "エージェントのオーナーだけ",
+      "rolesCount_other": "{{count}}個の役割",
+      "peopleCount_other": "{{count}}人"
+    },
+    "pickRoles": "役割",
+    "pickPeople": "メンバー",
+    "pickNone": "少なくとも1つ選んでください。",
+    "choice": {
+      "account": "アカウント",
+      "model": "モデル",
+      "effort": "思考量",
+      "yours": "あなたの",
+      "others": "チームの",
+      "keys": "APIキー",
+      "workspace": "ワークスペースのもの",
+      "workspaceSub": "ワークスペースのAPIキー",
+      "key": "APIキー",
+      "keyDefault": "ワークスペースの既定",
+      "api": "API"
+    },
+    "missionAi": "AI",
+    "missionLocked": "作業する人は開始前に選びます。モデルはいつでも変更できます。"
   },
   "surface": {
     "on": "オン",

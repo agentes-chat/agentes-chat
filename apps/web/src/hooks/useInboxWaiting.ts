@@ -1,14 +1,13 @@
-import { useNotificationCount, useNotifications, useOverview } from "@agenteschat/client";
+import { useNotificationCount, useNotifications } from "@agenteschat/client";
 import { allItems } from "@agenteschat/client/lib/notifications";
 
 /**
- * How many things wait on me in the inbox: what the notifications count, and each proposal I may decide (the inbox
- * lists them one by one, in place of the one notice that says "proposals wait on you", which is left out here).
+ * How many things wait on me in the inbox: what the notifications count, less an older notice that proposals wait on
+ * me. Agents apply their improvements themselves now (ADR 0219), so the inbox doesn't list that notice.
  */
 export function useInboxWaiting(orgId: string): number {
   const waiting = useNotificationCount(orgId).data?.waiting ?? 0;
-  const proposals = useOverview(orgId).data?.proposalsWaitingForMe ?? 0;
   const list = useNotifications(orgId, "waiting");
   const notice = allItems(list.data).some((n) => n.kind === "proposal_waiting" && n.waiting && !n.doneAt);
-  return Math.max(0, waiting + proposals - (notice ? 1 : 0));
+  return Math.max(0, waiting - (notice ? 1 : 0));
 }

@@ -61,6 +61,13 @@ What names nobody in the session goes to the session's agent (`codeAgentSql` in 
 `insertMessageWithRuns`, `meta.forTask`), never to the router (`jobs.ts`). Before the worktree is ready nothing runs:
 the request waits, and `prepareCodeSession` hands the newest person's message to the agent as one run once it is.
 
+Who the agent answers holds here as anywhere (its audience and `talk_to_agents`, `canTalkTo`): only someone it answers
+opens a session with it or is offered it (`createCodeSession`, `codeStartOptions`), a person called in whom it doesn't
+answer reads the session and is told so when they write, and the message that waited for the worktree is the newest
+of someone it answers (`releaseRequest`). Since the router never decides here, a message nobody answers (that person's,
+one that waits for the worktree, one for a person) has its receipt settled when it is posted (`message.routed` with
+nobody), so the apps never wait for a decision.
+
 ### 3. The worktree is the mission's, made for any request
 
 `prepareCodeSession` clones or updates the repository's checkout through the git proxy (`git.sync`, `cloneOnMachine`)
@@ -128,7 +135,9 @@ config once the worktree is made (`ensureGitIdentity`): the CLI commits with pla
   by the window folds the app's sidebar to its rail until the room comes back (`usePageRoom`, as beside a live file's
   conversation):
   - **Git**: read with `git` in the worktree as its agent (the runner's `exec`, read-only commands), again every few
-    seconds while it works (`codeSessionGitLog`): the branch and what it came from, the whole change since the base
+    seconds while it works (`codeSessionGitLog`); each read is cut at 20 s on the computer and answered within 25 s,
+    under the apps' own wait for a read, so a computer busy with the agent's work reads as slow (`machine.timeout`),
+    never as the server being away: the branch and what it came from, the whole change since the base
     (committed or not, new files included), what isn't committed as `git status` letters it (with its lines), and the
     branch's commits since the base as a line of nodes. Any row opens its diff in place (an uncommitted file's, a
     commit's `git show`, everything's), unified or side by side from the diff's own head. The sky rises behind it from
@@ -156,7 +165,7 @@ config once the worktree is made (`ensureGitIdentity`): the CLI commits with pla
   sized again so a full-screen program redraws. Closing the tab ends the shell (`end`); nobody back in 30 minutes
   ends it too, and the limits per agent count it meanwhile. The tabs of terminals come back with the session's.
 - **A person edits a file.** A file's tab is an editor (CodeMirror 6, loaded with the first file: line numbers, the
-  language its name says, undo, search). Whoever is in the session saves (`saveCodeSessionFile`, `PUT …/file`), since
+  language its name says, undo, search). Whoever is in the session and its agent answers saves (`saveCodeSessionFile`, `PUT …/file`), since
   they could ask its agent for the same change: written as the agent by the runner's own file op (the file's mode
   kept, never into a `.git` folder), only over a file the session shows whole. A read says what the file holds
   (`rev`, git's blob hash) and a save says which one it started from: a file the agent wrote meanwhile is refused
@@ -294,11 +303,23 @@ suggests one and makes the change as before.
 ### 12. Code only where it has anything
 
 Most workspaces have no agent that programs, and for them Code would be an empty page in every menu. The overview says
-whether it has anything for the person (`OrgOverview.code`, `hasCodeWork`): an agent a session can start with
+whether it has anything for the person (`OrgOverview.code`, `hasCodeWork`): an agent they can start a session with
 (`worksInSessions`, not archived) or an open session they take part in, whose agent may have left since.
 Only then do the apps offer it (`offersCode`, `offeredTools`): the sidebar's More and its setup dialog, ⌘K, and Eu on
 the phone. A person who put Code in the sidebar's list keeps it there. The address still opens the page, which says
 what is missing, and a session's links keep working.
+
+### 13. Any git host, and in the person's name (addendum 2026-11-24, ADR 0227)
+
+A session works on a repository of any git host the workspace connected: GitHub's `owner/name`, or another host's with
+the host first (`gitlab:group/project`, `bitbucket:workspace/repo`, a git server's `git:team/project.git`), by name or
+by its address. A project only on the computer stays a plain name.
+
+When the person who asked connected that host as their own account (ADR 0099), the session's work on its repository
+goes out as them: the commits are authored with their name and the host's no-reply address for the account, the
+branch is pushed with their token, and the pull request is opened with it. Their token stays on the server; the
+agent's computer gets a name and an address for that turn. A host refusing their token, a run nobody asked for or a
+person with no account there: the workspace's connection, as before (ADR 0227 §5).
 
 ## Consequences
 

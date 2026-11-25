@@ -55,6 +55,7 @@ import {
 import {
   ACCOUNT_MISSING_MESSAGE,
   ACCOUNT_SIGNED_OUT,
+  ACCOUNT_TRANSCRIPT_DAYS,
   type AccountGrant,
   accountEnv,
   accountSettingsEnv,
@@ -80,7 +81,7 @@ import {
   stallNote,
   stallWords,
 } from "./brain-silence";
-import { coAuthorLines } from "./co-authors";
+import { coAuthorLines, commitAuthorEnv } from "./co-authors";
 import { ownBranches } from "./command-gate";
 import { DELEGATED_RESULT_CHARS, type DelegatedBridge } from "./delegated-tools";
 import { hostMemAvailable, MIN_FREE_BYTES } from "./desktop-session";
@@ -471,6 +472,12 @@ export interface ClaudeTurnStats {
   thinkingChars: number;
 }
 
+/** A real model id from an assistant/message_start frame (ignores empty strings and `<synthetic>` placeholders). */
+const realModel = (v: unknown) => {
+  const s = str(v).trim();
+  return s && !s.startsWith("<") ? s : "";
+};
+
 /**
  * Claude Code's `stream-json` output → `WireBrainEvent`s. One parser per
  * process (the session id persists); `beginTurn` resets what a turn tracks.
@@ -508,6 +515,8 @@ export class ClaudeStreamParser {
   private sawDelta = false;
   /** The API message whose text streamed (`message_start`): Claude Code says it in one `assistant` per block. */
   private streamedMessage: string | null = null;
+  /** The model that answered the main conversation in this turn (`message_start` / `assistant`). */
+  private turnModel?: string;
   private limited = false;
   /** A `rate_limit_event` said `rejected`: the plan itself refused, whatever the result's text. */
   private rejected = false;
@@ -541,6 +550,7 @@ export class ClaudeStreamParser {
     this.openBlocks = 0;
     this.sawDelta = false;
     this.streamedMessage = null;
+    this.turnModel = undefined;
     this.limited = false;
     this.rejected = false;
     this.limitSent = false;
@@ -612,6 +622,8 @@ export class ClaudeStreamParser {
         if (main && e.type === "content_block_stop") this.openBlocks = Math.max(0, this.openBlocks - 1);
         if (main && e.type === "message_start") {
           this.streamedMessage = isObj(e.message) ? str(e.message.id) || null : null;
+          const m = isObj(e.message) ? realModel(e.message.model) : "";
+          if (m) this.turnModel = m;
           this.stats.firstTokenAt ??= Date.now();
         }
         if (main && e.type === "content_block_delta" && delta.type === "text_delta" && str(delta.text)) {
@@ -634,6 +646,8 @@ export class ClaudeStreamParser {
         } else {
           // A reply came through: an earlier retry's cause is not why the turn may fail later.
           this.failure = {};
+          const m = isObj(ev.message) ? realModel(ev.message.model) : "";
+          if (m) this.turnModel = m;
           this.stats.firstAssistantAt ??= Date.now();
         }
         const messageId = isObj(ev.message) ? str(ev.message.id) : "";
@@ -813,6 +827,8 @@ export class ClaudeStreamParser {
     const input = num(usage.input_tokens) + cacheRead + cacheWrite;
     const output = num(usage.output_tokens);
     const models = isObj(ev.modelUsage) ? Object.keys(ev.modelUsage) : [];
+    // `modelUsage` on a resumed session keeps earlier turns' models first; prefer the model that answered this turn.
+    const model = this.turnModel ?? models[0];
     // `usage` adds up every API call of the turn: how many there were, and the largest ones (uncached, and whole),
     // tell more calls from bigger ones.
     const calls = num(ev.num_turns);
@@ -826,7 +842,7 @@ export class ClaudeStreamParser {
         input,
         output,
         source: "plan",
-        ...(models[0] ? { model: models[0] } : {}),
+        ...(model ? { model } : {}),
         ...(cacheRead > 0 ? { cacheRead } : {}),
         ...(cacheWrite > 0 ? { cacheWrite } : {}),
         ...(calls > 0 ? { calls } : {}),
@@ -836,6 +852,7 @@ export class ClaudeStreamParser {
       });
     }
     this.tools.clear();
+    this.turnModel = undefined;
     const session = str(ev.session_id) || this.session;
     const text = str(ev.result) || (Array.isArray(ev.errors) ? ev.errors.map(str).join("\n") : "");
     if (ev.is_error === true || (typeof ev.subtype === "string" && ev.subtype !== "success")) {
@@ -2719,6 +2736,8 @@ export class BrainManager {
       context: isContextTokens(req.contextTokens) ? req.contextTokens : null,
       // Its commits' lines are in its env (`co-authors.ts`): turned off or the agent renamed, a new one (resumed).
       coAuthors: coAuthorLines(ctx.agent),
+      // Who its commits are by is in its env too: another person asking in a code session, a new one (resumed).
+      author: commitAuthorEnv(ctx.agent).GIT_AUTHOR_EMAIL ?? null,
       // A code session's turn starts with its session's tools and the repository's plugin (ADR 0215 §6).
       code: req.codeSession === true,
     });
@@ -3304,7 +3323,7 @@ export class BrainManager {
     const settingsFile = path.join(dir, "settings.json");
     const settings = delegated
       ? // The turn's rules are the worker's to apply: none of the CLI's own tools is left for them.
-        { disableAllHooks: true, env: accountSettingsEnv(undefined, model) }
+        { disableAllHooks: true, cleanupPeriodDays: ACCOUNT_TRANSCRIPT_DAYS, env: accountSettingsEnv(undefined, model) }
       : {
           ...claudePermissionSettings(
             mode,
@@ -3321,7 +3340,7 @@ export class BrainManager {
           ...(codeTurn ? { enableWorkflows: true } : {}),
           // With the owner's own settings loaded (`personalMcp`), theirs decide the computer's own sign-in.
           ...(ctx.accountHome
-            ? { env: accountSettingsEnv(plan, model) }
+            ? { cleanupPeriodDays: ACCOUNT_TRANSCRIPT_DAYS, env: accountSettingsEnv(plan, model) }
             : req.personalMcp === true && mode !== "chat"
               ? {}
               : { env: accountSettingsEnv(undefined, model, process.env, true) }),

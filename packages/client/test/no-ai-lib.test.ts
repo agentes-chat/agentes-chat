@@ -351,6 +351,12 @@ describe("the Cloud's plan gate tells the truth", () => {
     expect(line(CLOUD_AWAY_MS + 60_000)).toContain("away longer");
   });
 
+  test("a computer away moving to another server says so, never to use an API key for now", () => {
+    const moving = { lastSeenAt: new Date(NOW - CLOUD_AWAY_MS - 60_000).toISOString(), moving: true };
+    const line = cloudLine({ state: "offline" }, "claude_code", moving);
+    expect(line?.text).toBe("Acme is moving to a new server… back in a few minutes");
+  });
+
   function cloudLine(
     g: Parameters<typeof gateLine>[1]["gate"],
     kind: Parameters<typeof gateLine>[1]["kind"] = "codex",

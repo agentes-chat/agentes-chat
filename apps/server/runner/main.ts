@@ -63,7 +63,13 @@ import { runControl } from "./control";
 import { configFromGrant, deviceInfo, prepareWorkspace, previousMachineFor, RunnerDaemon } from "./daemon";
 import { DesktopManager } from "./desktop";
 import { runDesktopBrowser } from "./desktop-browser";
-import { DesktopSessions, type DesktopSessionsOptions, runnerUser, systemDesktopUser } from "./desktop-session";
+import {
+  DesktopSessions,
+  type DesktopSessionsOptions,
+  runnerUser,
+  systemDesktopUser,
+  taskRoomNow,
+} from "./desktop-session";
 import { localSources, runDoctor } from "./doctor";
 import { RUNNER_VERSION } from "./errors";
 import { defaultHostState, HostComputer, readTokenFile, runnerChild } from "./host";
@@ -468,7 +474,14 @@ async function start(): Promise<number> {
   }
   // Before anything starts a CLI: a service's PATH is the installing shell's (the daemon adds them again per look).
   if (process.platform !== "win32" && config.mode !== "system") addUsualDirs();
-  const daemon = new RunnerDaemon({ home, mode: "start", log, print: (line) => console.log(line), agyCopy: true });
+  const daemon = new RunnerDaemon({
+    home,
+    mode: "start",
+    log,
+    print: (line) => console.log(line),
+    agyCopy: true,
+    taskRoom: taskRoomNow,
+  });
   const stop = () => void daemon.stop();
   process.once("SIGINT", stop);
   process.once("SIGTERM", stop);
@@ -545,7 +558,7 @@ async function app(): Promise<number> {
       input: process.stdin,
       output: process.stdout,
       locked: lock.ok ? null : lock.holder,
-      daemon: { log: write, logFile, refreshPath: () => adoptLoginPath() },
+      daemon: { log: write, logFile, refreshPath: () => adoptLoginPath(), taskRoom: taskRoomNow },
       signal: ac.signal,
     });
   } finally {

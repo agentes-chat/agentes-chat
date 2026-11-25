@@ -1,4 +1,16 @@
+import { plainLine } from "@agenteschat/ui/markdown";
+import { cutText } from "./format";
 import { type MessageMedia, mediaOf } from "./media";
+
+/** Length of a channel's last-message preview (plain text). */
+export const CHANNEL_PREVIEW_LENGTH = 140;
+
+/** Plain text for a card or a preview (`plainLine`), at most `max` chars. `@mentions` stay. */
+export function snippetOf(text: string | null | undefined, max: number): string {
+  if (!text) return "";
+  const plain = plainLine(text, max);
+  return plain.length > max ? `${cutText(plain, max - 1).trimEnd()}…` : plain;
+}
 
 /** `meta.voice` of a message (ADR 0100): all the apps need to draw and play it. */
 export interface MessageVoice {

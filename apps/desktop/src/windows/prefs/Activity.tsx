@@ -2,7 +2,7 @@ import type { ActivityEntry } from "@agenteschat/adapters/runner-control";
 import { Avatar, Button, Icon, PixelSpinner, Segmented } from "@agenteschat/ui";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useSnapshot, useStore } from "../../app";
+import { useHost, useSnapshot, useStore } from "../../app";
 import {
   type ActivityCursor,
   groupByDay,
@@ -189,6 +189,7 @@ export function Activity() {
  */
 function ComputerReport({ homeId, onClose }: { homeId: string; onClose: () => void }) {
   const store = useStore();
+  const app = useHost();
   const info = useAppInfo();
   const { i18n } = useTranslation();
   const host = useRef<HTMLDivElement>(null);
@@ -201,13 +202,14 @@ function ComputerReport({ homeId, onClose }: { homeId: string; onClose: () => vo
     const words = desktopStrings(systemLocale()).report;
     let unmount = () => {};
     let live = true;
-    store.request(homeId, { type: "report" }).then(
-      (parts) => {
+    // This computer's system and size come too; an app whose Rust is older than its page goes without them.
+    Promise.all([store.request(homeId, { type: "report" }), app.reportFacts().catch(() => null)]).then(
+      ([parts, about]) => {
         if (!live) return;
         unmount = mountReportPanel(el, {
           words,
           lead: words.computerLead,
-          report: computerReport(parts, info, [], i18n.language),
+          report: computerReport(parts, info, about, [], i18n.language),
           onClose: () => close.current(),
         });
       },
@@ -226,7 +228,7 @@ function ComputerReport({ homeId, onClose }: { homeId: string; onClose: () => vo
       live = false;
       unmount();
     };
-  }, [store, homeId, info, i18n.language]);
+  }, [store, app, homeId, info, i18n.language]);
   return <div className="dk-report-scrim" ref={host} />;
 }
 

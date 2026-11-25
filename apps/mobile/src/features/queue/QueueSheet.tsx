@@ -162,7 +162,7 @@ export function QueueSheet({ machineId, computer }: { machineId: string; compute
   return (
     <>
       <View accessible accessibilityRole="header" accessibilityLabel={t("queue.label", { name: q.data.name })}>
-        <SheetTitle title={q.data.name} subtitle={queueStatusText(t, view)} />
+        <SheetTitle title={q.data.name} subtitle={queueStatusText(t, view, q.data)} />
       </View>
       <View style={styles.group}>
         {/* What fills the computer now beside the head, as "In line" says when all of it starts: on a line of its own
@@ -208,8 +208,8 @@ export function QueueSheet({ machineId, computer }: { machineId: string; compute
 }
 
 /**
- * "Your computers": my other online computers, each with its switch for my replies to start there while
- * this one is full (`spill.own`). Nothing when I have none.
+ * "Your computers": my other computers, each with its switch to help while this one is full or away (`spill.own`).
+ * Nothing when I have none, or while an admin turned devices' help off for the workspace.
  */
 function SpillHere({ machineId }: { machineId: string }) {
   const { t } = useTranslation();
@@ -224,7 +224,7 @@ function SpillHere({ machineId }: { machineId: string }) {
   const mine = (devices.data?.devices ?? []).filter(
     (d) => d.id !== machineId && d.ownerUserId === meId && d.machineKind === "connected" && !d.systemMode,
   );
-  if (mine.length === 0) return null;
+  if (mine.length === 0 || devices.data?.devicesHelp === false) return null;
   const plan = (name: string | null) => (name ? t("queue.spill.plan", { plan: name }) : undefined);
   return (
     <View style={[styles.group, styles.nextGroup, { borderTopColor: c.line }]}>

@@ -103,6 +103,7 @@ export const RUN_CODES = [
   "provider_unavailable",
   "gave_up",
   "empty_reply",
+  "empty_reply_limit",
   "model_refused",
   "runner_outdated",
   "too_many_tool_calls",

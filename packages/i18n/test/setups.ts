@@ -223,6 +223,11 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     // An address never confirmed holds anything back only where the server sends e-mail (`emailConfirmation`).
     "auth.confirm.",
     "errors.org.createUnconfirmed",
+    // A link to choose the PIN is emailed only where the server sends email (ADR 0226).
+    "surface.page.emailed",
+    "surface.page.emailMe",
+    "surface.page.setFirstLeadEmail",
+    "errors.surface.emailUnverified",
   ],
   apiKey: [],
   // A message nobody mentions still gets an agent: routing.mine (the chip and its help line), routing.by (Settings),

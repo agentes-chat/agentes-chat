@@ -27,7 +27,7 @@ import {
 } from "./accounts";
 import { RunnerError } from "./errors";
 import { killTree } from "./exec";
-import { resolveCommand } from "./executors";
+import { cliSpawn, envValue } from "./executors";
 
 /**
  * `brain.route` (protocol 24, ADR 0074): a person's own Claude or ChatGPT plan picks who answers their
@@ -207,6 +207,8 @@ export interface RouteDeps {
   codexCommand?: string[];
   timeoutMs?: number;
   tmpDir?: string;
+  spawn?: typeof spawn;
+  platform?: NodeJS.Platform;
 }
 
 /** Codex's small model per sign-in, looked up at most hourly (each lookup starts the CLI). */
@@ -303,6 +305,8 @@ async function claudeRoute(req: BrainRouteRequest, o: RouteDeps & { dir: string;
     timeoutMs: o.timeoutMs ?? ROUTE_TIMEOUT_MS,
     signal: o.signal,
     ...(token ? { token } : {}),
+    spawn: o.spawn,
+    platform: o.platform,
   });
   const answer = claudeRouteAnswer(run.stdout);
   if (!answer) throw new RunnerError("internal", `Claude Code didn't answer${run.why(started)}`);
@@ -323,6 +327,8 @@ async function codexRoute(req: BrainRouteRequest, o: RouteDeps & { dir: string; 
     input: `${req.system}\n\n${req.prompt}`,
     timeoutMs: o.timeoutMs ?? ROUTE_TIMEOUT_MS,
     signal: o.signal,
+    spawn: o.spawn,
+    platform: o.platform,
   });
   let json: unknown = null;
   try {
@@ -344,6 +350,8 @@ async function codexLuna(o: RouteDeps & { dir: string; key: string }, env: NodeJ
     input: "",
     timeoutMs: 15_000,
     signal: o.signal,
+    spawn: o.spawn,
+    platform: o.platform,
   });
   let catalog: unknown = null;
   try {
@@ -369,9 +377,10 @@ function runCli(
     signal?: AbortSignal;
     /** A token root handed over, on its own descriptor (`TOKEN_FD_ENV`). */
     token?: string;
+    spawn?: typeof spawn;
+    platform?: NodeJS.Platform;
   },
 ): Promise<{ stdout: string; why(started: number): string }> {
-  const [file, ...pre] = command;
   return new Promise((resolve) => {
     let stdout = "";
     let stderr = "";
@@ -405,12 +414,17 @@ function runCli(
       });
     };
     try {
-      child = spawn(resolveCommand(file ?? "", o.env.PATH), [...pre, ...args], {
+      // On Windows as every CLI the runner starts: found on the PATH with its extension, an npm `.cmd` through cmd.exe.
+      const platform = o.platform ?? process.platform;
+      const run = cliSpawn(command, args, envValue(o.env, "PATH", platform), platform);
+      child = (o.spawn ?? spawn)(run.file, run.args, {
         cwd: o.cwd,
-        env: o.env,
+        env: run.env ? { ...o.env, ...run.env } : o.env,
         stdio: o.token ? [...TOKEN_STDIO] : ["pipe", "pipe", "pipe"],
-        detached: true,
+        // Not on Windows, where it would open a console of its own (`taskkill /T` follows the tree anyway).
+        detached: platform !== "win32",
         windowsHide: true,
+        ...(run.windowsVerbatimArguments ? { windowsVerbatimArguments: true } : {}),
       });
     } catch (error) {
       return done(null, error instanceof Error ? error : new Error(String(error)));

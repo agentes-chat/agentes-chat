@@ -547,24 +547,35 @@ export const ELSEWHERE_SURE = 0.75;
  * way less likely than `STEER_SURE` (`ELSEWHERE_SURE` for `elsewhere`) is `add`. `task`: what the agent works on (its
  * request), null when unknown. Never asked for a run of a confidential thread (`refuseConfidential`): it throws.
  */
-export async function steerHandling(
+export async function steerHandling(judge: Judge, input: SteerInput): Promise<SteerHandling> {
+  return (await steerJudgment(judge, input)).handling;
+}
+
+export interface SteerInput {
+  orgId: string;
+  text: string;
+  agentName: string;
+  task: string | null;
+  agentId?: string;
+  runId?: string;
+  /**
+   * Written in a channel others share, without @mentioning the agent: it may be for someone else (`elsewhere`).
+   * `fromAsker`: its writer is the person who asked for the task.
+   */
+  shared?: { fromAsker: boolean };
+}
+
+/**
+ * `steerHandling` with whether the judge chose that way itself (`sure`): an `add` that only stands for a judge that
+ * wasn't sure, or gave no answer, is not one.
+ */
+export async function steerJudgment(
   judge: Judge,
-  input: {
-    orgId: string;
-    text: string;
-    agentName: string;
-    task: string | null;
-    agentId?: string;
-    runId?: string;
-    /**
-     * Written in a channel others share, without @mentioning the agent: it may be for someone else (`elsewhere`).
-     * `fromAsker`: its writer is the person who asked for the task.
-     */
-    shared?: { fromAsker: boolean };
-  },
-): Promise<SteerHandling> {
+  input: SteerInput,
+): Promise<{ handling: SteerHandling; sure: boolean }> {
+  const unsure = { handling: "add" as const, sure: false };
   const text = input.text.trim();
-  if (!text) return "add";
+  if (!text) return unsure;
   const shared = input.shared;
   const criteria: Record<string, string> = shared
     ? { ...STEER_CRITERIA, elsewhere: ELSEWHERE_CRITERION }
@@ -597,9 +608,9 @@ export async function steerHandling(
   });
   const answer = answers.handling;
   const choice = Object.keys(criteria).find((k) => k === answer?.choice) as SteerHandling | undefined;
-  if (!choice) return "add";
+  if (!choice) return unsure;
   const sure = choice === "elsewhere" ? ELSEWHERE_SURE : STEER_SURE;
-  return (answer?.probabilities?.[choice] ?? 1) >= sure ? choice : "add";
+  return (answer?.probabilities?.[choice] ?? 1) >= sure ? { handling: choice, sure: true } : unsure;
 }
 
 /**

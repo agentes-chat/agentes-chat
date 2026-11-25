@@ -21,6 +21,7 @@ import { agentRepositoryList, parseRepo, repoInList } from "./git/repos";
 import { getMessage, type Message } from "./messages";
 import type { Notice } from "./notices";
 import { deliverNoticeToRun } from "./run-resume";
+import { runColumns } from "./run-state";
 import type { AgentRun } from "./runs";
 import type { ToolContext, ToolDefinition, ToolOutput, ToolSource } from "./tools/types";
 
@@ -114,7 +115,7 @@ const str = (v: unknown) => (typeof v === "string" ? v : "");
 async function runOf(ctx: ToolContext) {
   if (!ctx.runId || ctx.background || ctx.bridge?.taskId) return null;
   const [run] = await ctx.db
-    .select()
+    .select(runColumns)
     .from(agentRuns)
     .where(and(eq(agentRuns.id, ctx.runId), eq(agentRuns.orgId, ctx.orgId), eq(agentRuns.agentId, ctx.agentId)));
   return run ?? null;

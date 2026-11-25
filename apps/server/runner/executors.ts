@@ -30,7 +30,7 @@ export const EXECUTORS_RETRY_MS = 30_000;
 export const EXECUTORS_EXIT_STRIKES = 3;
 
 type Executors = NonNullable<RunnerInfo["executors"]>;
-type RunResult = { status: number | null; stdout: string; stderr?: string; error?: unknown };
+export type RunResult = { status: number | null; stdout: string; stderr?: string; error?: unknown };
 export type ExecutorRun = (command: string, args: string[]) => RunResult | Promise<RunResult>;
 type Run = ExecutorRun;
 
@@ -292,19 +292,22 @@ const defaultRun: Run = (command, args) =>
         env: run.env ? { ...process.env, ...run.env } : process.env,
         windowsVerbatimArguments: run.windowsVerbatimArguments,
       },
-      (err, stdout, stderr) => {
-        const code = (err as { code?: unknown } | null)?.code;
-        const out = `${stdout ?? ""}`;
-        resolve(
-          typeof code === "number"
-            ? { status: code, stdout: out, stderr: `${stderr ?? ""}` }
-            : err
-              ? { status: null, stdout: out, error: err }
-              : { status: 0, stdout: out },
-        );
-      },
+      (err, stdout, stderr) => resolve(execResult(err, stdout, stderr)),
     );
   });
+
+/**
+ * `execFile`'s answer as a look reads it. One killed past its time limit couldn't tell: on Windows the runtime reports
+ * the killed process's exit code (1, from `TerminateProcess`) where elsewhere there is none, which read as a CLI that
+ * can't start, when it was only slow (a large binary's first start under the antivirus' scan).
+ */
+export function execResult(err: unknown, stdout: unknown, stderr: unknown): RunResult {
+  const e = err as { code?: unknown; killed?: unknown } | null;
+  const out = `${stdout ?? ""}`;
+  if (e && typeof e.code === "number" && e.killed !== true)
+    return { status: e.code, stdout: out, stderr: `${stderr ?? ""}` };
+  return e ? { status: null, stdout: out, error: e } : { status: 0, stdout: out };
+}
 
 const word = (v: unknown) => (typeof v === "string" && /^[\w.-]{1,40}$/.test(v) ? v : undefined);
 
@@ -560,6 +563,15 @@ export function newerVersion(a: string, b: string): boolean {
   const y = parts(b);
   for (let i = 0; i < 3; i++) if ((x[i] ?? 0) !== (y[i] ?? 0)) return (x[i] ?? 0) > (y[i] ?? 0);
   return false;
+}
+
+/**
+ * The line of a Codex that refused its command line (a flag or subcommand it doesn't have yet, in clap's words), as it
+ * said it; null for any other failure.
+ */
+export function codexRefusal(stderr: string): string | null {
+  const line = /^error: (?:unexpected argument|unrecognized subcommand|invalid value)\b.*$/m.exec(stderr)?.[0];
+  return line ? line.trim().slice(0, 300) : null;
 }
 
 /**

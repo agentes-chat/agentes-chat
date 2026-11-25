@@ -67,6 +67,8 @@ const DOCK_LINE = 55;
 const DOCK_REST = 16;
 /** Air under the conversation's last message, before the composer's box. */
 const LIST_END_AIR = 22;
+/** The composer's box over its field (`ChatDock`'s `composer`): part of the gap from the list's end to the field. */
+const DOCK_TOP = 6;
 /** The notifications line was shown and answered here: it doesn't come back on this screen. */
 const OFFER_DONE = "done";
 
@@ -511,8 +513,18 @@ function Chat({
   // Who works and who types here, and at rest who comes back when: the conversation's last line, under its last
   // message and scrolling with it (the list's footer, `WORK_FOOTER`), as a reply on its way. Pinned above the composer,
   // it stayed over the words being read and moved the conversation's end each time an agent started or finished.
-  // Above the composer only while there is no conversation to end with. The composer's edges, a turn's gap above it.
-  const lineInList = useMemo(() => ({ paddingHorizontal: DOCK_SIDE, paddingTop: rhythm.turn }), [rhythm.turn]);
+  // Above the composer only while there is no conversation to end with. The composer's edges, and a turn's gap on
+  // both sides: above it from the last message, under it to the field. Under it, the list's end air and the composer's
+  // box give way to that gap; its own padding under it is for when it sits above the composer.
+  const lineInList = useMemo(
+    () => ({
+      paddingHorizontal: DOCK_SIDE,
+      paddingTop: rhythm.turn,
+      paddingBottom: 0,
+      marginBottom: rhythm.turn - LIST_END_AIR - DOCK_TOP,
+    }),
+    [rhythm.turn],
+  );
   const listReturns = useMemo(
     () => <HereReturns channelId={channelId} threadId={threadId} onOpen={openReturns} style={lineInList} />,
     [channelId, threadId, openReturns, lineInList],

@@ -120,6 +120,7 @@ export class ModelBrain implements Brain {
         ...request,
         maxTokens: maxOutputTokens ?? agentOutputTokens(agent.model, request.effort),
         onDelta: (text) => deltas.push({ type: "text_delta", text }),
+        onNote: (text) => deltas.push({ type: "note", text }),
         signal: io.signal,
       })
       .then(

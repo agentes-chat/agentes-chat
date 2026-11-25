@@ -123,6 +123,30 @@ export function coAuthorLines(agent: AgentScope | undefined): string[] {
   return given.filter((l): l is string => typeof l === "string" && CO_AUTHOR.test(l)).slice(0, 4);
 }
 
+// biome-ignore lint/suspicious/noControlCharactersInRegex: a control character would break the commit's header
+const AUTHOR_NAME = /^[^\u0000-\u001f\u007f<>]{1,200}$/;
+// biome-ignore lint/suspicious/noControlCharactersInRegex: a control character would break the commit's header
+const AUTHOR_EMAIL = /^[^\u0000- \u007f<>@]{1,100}@[^\u0000- \u007f<>@]{1,100}$/;
+
+/**
+ * The person a request's commits are authored as (`AgentScope.author`, ADR 0215 §13), checked, as the env git reads
+ * before any config: author and committer, in the agent's own processes alone. Nothing changes in a repository,
+ * whose config other sessions share. Empty when the request names nobody: the checkout's author, the agent, stays.
+ */
+export function commitAuthorEnv(agent: AgentScope | undefined): Record<string, string> {
+  const given: unknown = agent?.author;
+  if (!given || typeof given !== "object") return {};
+  const { name, email } = given as { name?: unknown; email?: unknown };
+  if (typeof name !== "string" || typeof email !== "string") return {};
+  if (!AUTHOR_NAME.test(name.trim()) || !AUTHOR_EMAIL.test(email)) return {};
+  return {
+    GIT_AUTHOR_NAME: name.trim(),
+    GIT_AUTHOR_EMAIL: email,
+    GIT_COMMITTER_NAME: name.trim(),
+    GIT_COMMITTER_EMAIL: email,
+  };
+}
+
 /** One `git -c` setting as `GIT_CONFIG_PARAMETERS` holds it (the form every git reads, before 2.31 too). */
 const gitParameter = (setting: string) => `'${setting.replace(/'/g, "'\\''")}'`;
 

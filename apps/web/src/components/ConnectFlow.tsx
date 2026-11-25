@@ -39,6 +39,7 @@ import {
   connectedSummary,
   fromConnection,
   fromServer,
+  isGitHostConnector,
   itemName,
   orgAccessChange,
   outcomeText,
@@ -297,6 +298,8 @@ function ConnectStep({
   const [url, setUrl] = useState(initialUrl ?? "");
   const [label, setLabel] = useState("");
   const [apiKey, setApiKey] = useState("");
+  /** A git host at an address of one's own (a company's GitLab, a git server): asked for with the key. */
+  const [address, setAddress] = useState("");
   const [keyOpen, setKeyOpen] = useState(false);
   const [ownOpen, setOwnOpen] = useState(false);
   const [needsKey, setNeedsKey] = useState<Extract<CustomConnectStart, { status: "needs_key" }> | null>(null);
@@ -343,8 +346,9 @@ function ConnectStep({
   const mine = personal ? { personal: true } : {};
   // The accounts this one joins or replaces: the person's own for a personal one, else the team's.
   const sameOwner = (owner: string | null | undefined) => (personal ? owner === me.user.id : !owner);
+  // The app is the workspace's GitHub: a person's own account is always a sign-in.
   const appOffered =
-    def?.id === "github" && !viaComposio && !mode && !accountOnly && githubApp.data?.installable === true;
+    def?.id === "github" && !viaComposio && !mode && !accountOnly && !personal && githubApp.data?.installable === true;
   const viaApp = appOffered && how === "app";
   // Read once its form opens: asking takes a request to the server.
   const own = useOwnOAuthClient(org.id, serverUrl, ownOffered && ownOpen);
@@ -426,9 +430,14 @@ function ConnectStep({
     }
   };
   const startApp = () => installApp.mutate(back, { onSuccess: (to) => navigateAway(to) });
+  const typedAddress = def?.address ? address.trim() : "";
+  const addressError =
+    def?.address && (typedAddress ? !isHttpsUrl(typedAddress) : def.address === "required")
+      ? t("connectors.serverUrlInvalid")
+      : undefined;
   const submitKey = () => {
     setTouched("key");
-    if ((askUrl && !isHttpsUrl(url)) || apiKey.trim().length < 8) return;
+    if ((askUrl && !isHttpsUrl(url)) || apiKey.trim().length < 8 || addressError) return;
     if (byAddress) {
       setRefused(null);
       connect.mutate(
@@ -437,7 +446,7 @@ function ConnectStep({
       );
     } else if (def) {
       withKey.mutate(
-        { connector: def.id, apiKey: apiKey.trim(), ...mine },
+        { connector: def.id, apiKey: apiKey.trim(), ...(typedAddress ? { serverUrl: typedAddress } : {}), ...mine },
         {
           onSuccess: (c) =>
             done(fromConnection(c, catalog.data?.connectors ?? []), again ? "reconnected" : "connected"),
@@ -448,8 +457,18 @@ function ConnectStep({
 
   // A Telegram bot connects with the token @BotFather gives, not an API key.
   const telegram = def?.id === "telegram";
-  const keyLabel = telegram ? t("connectFlow.telegram.token") : t("connectors.apiKey");
-  const keyHelp = telegram ? t("connectFlow.telegram.steps") : t("connectors.apiKeyHelp");
+  // A git host (GitLab, Bitbucket, a git server) connects with an access token, and may run at its own address.
+  const gitHost = def?.id === "gitlab" || def?.id === "bitbucket" || def?.id === "git" ? def.id : null;
+  const keyLabel = telegram
+    ? t("connectFlow.telegram.token")
+    : gitHost
+      ? t("connectFlow.git.token")
+      : t("connectors.apiKey");
+  const keyHelp = telegram
+    ? t("connectFlow.telegram.steps")
+    : gitHost
+      ? t(`connectFlow.git.tokenHelp.${gitHost}`)
+      : t("connectors.apiKeyHelp");
   const notApproved = needsKey?.reason === "not_approved";
   const needsKeyAlert = needsKey && (
     <Alert tone="neutral">
@@ -481,6 +500,25 @@ function ConnectStep({
       }}
     >
       {!(notApproved && ownOffered) && needsKeyAlert}
+      {def?.address && gitHost && (
+        <Field
+          label={t("connectFlow.git.address")}
+          id="cflow-address"
+          hint={{
+            name: t("common.about", { label: t("connectFlow.git.address") }),
+            text: t(`connectFlow.git.addressHelp.${gitHost === "git" ? "git" : "gitlab"}`),
+          }}
+          error={touched === "key" ? addressError : undefined}
+        >
+          <Input
+            type="url"
+            autoComplete="off"
+            placeholder={def.address === "optional" ? "https://gitlab.com" : "https://"}
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+          />
+        </Field>
+      )}
       <Field
         label={keyLabel}
         id="cflow-key"
@@ -639,7 +677,7 @@ function ConnectStep({
               : again && unchecked
                 ? t("connectFlow.newAccountUnchecked")
                 : personal
-                  ? t("connectors.personal.done")
+                  ? t(isGitHostConnector(def?.id) ? "connectors.personal.githubDone" : "connectors.personal.done")
                   : t("connectFlow.allCanUse")
         }
       >

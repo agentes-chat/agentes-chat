@@ -69,7 +69,8 @@ export const queueButtonText = (t: TFunction, queue: ComputerQueue | null | unde
   queue?.waiting.length ? t("queue.button", { count: queue.waiting.length }) : t("queue.buttonIdle");
 
 /** "In line · starts soon" whatever holds the line, or "Nobody in line". */
-export const queueStatusText = (t: TFunction, view: QueueView) => t(view.full ? "queue.waiting" : "queue.free");
+export const queueStatusText = (t: TFunction, view: QueueView, queue?: Pick<ComputerQueue, "moving">) =>
+  queue?.moving ? t("machines.moving.line") : t(view.full ? "queue.waiting" : "queue.free");
 
 /** "all started in ~6 min", or null with no basis or one in line (its row says it). */
 export const queueAllStartedText = (t: TFunction, view: QueueView, now: number) =>

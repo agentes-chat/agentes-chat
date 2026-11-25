@@ -1,5 +1,5 @@
 import type { Agent, Channel, Member } from "@agenteschat/client";
-import { agentStateIn, useChannels, useRoles } from "@agenteschat/client";
+import { agentStateIn, useChannelName, useRoles } from "@agenteschat/client";
 import { WORK_TICK_MS, workLine, workLineText } from "@agenteschat/client/lib/agent-work";
 import { ErrorBoundary } from "@agenteschat/client/lib/error-boundary";
 import { relativeTime } from "@agenteschat/client/lib/format";
@@ -34,6 +34,7 @@ import {
   useAgentsWorking,
   usePersonPresence,
   usePresences,
+  usePresencesLoaded,
 } from "@/hooks/usePresence";
 import { useStreams } from "@/realtime/context";
 import "./members.css";
@@ -49,6 +50,8 @@ interface Lists {
   agents: Agent[];
   /** Who manages the channel: "Adicionar pessoa ou agente" at the bottom, the channel details' add flow. */
   onAdd?: () => void;
+  /** Its members still loading: laid out but unseen, so the rows never push "Adicionar" down as they come. */
+  pending?: boolean;
 }
 
 /** The channel's members on the right, as Discord's: grouped by the owner, hoisted roles, agents, online, offline. */
@@ -163,11 +166,15 @@ export function MembersSheet({
 }
 
 // The right hand (ADR 0137) is in no channel and isn't listed as a member: an @mention reaches it anywhere.
-function MembersList({ channelId, people, agents, onAdd }: Lists) {
+function MembersList({ channelId, people, agents, onAdd, pending }: Lists) {
   const { t } = useTranslation();
   const { org, me } = useOrg();
   const presences = usePresences();
-  const roles = useRoles(org.id).data?.roles ?? [];
+  const rolesRead = useRoles(org.id);
+  const roles = rolesRead.data?.roles ?? [];
+  // Who is online and the hoisted roles group the rows: until both are in, the column waits unseen.
+  const presencesLoaded = usePresencesLoaded();
+  const waiting = pending || !presencesLoaded || rolesRead.isPending;
   const busyKey = useStreams((s) =>
     agents
       .filter((a) => agentStateIn(s, a.id) !== "idle")
@@ -205,7 +212,7 @@ function MembersList({ channelId, people, agents, onAdd }: Lists) {
         : t(key === "online" ? "presence.online" : "presence.offline");
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: arrow keys between the row buttons
-    <div className="members-side__groups" onKeyDown={onKey}>
+    <div className="members-side__groups" data-pending={waiting || undefined} onKeyDown={onKey}>
       <h2 className="members-side__title">{t("members.title")}</h2>
       {groups.map((g) => {
         const label = g.role?.name ?? name(g.key);
@@ -314,10 +321,11 @@ function AgentRow({ agent, channelId, busy }: { agent: Agent; channelId: string;
   const { t, i18n } = useTranslation();
   const { org } = useOrg();
   const dir = useDirectory(org.id);
-  const channels = useChannels(org.id).data;
   const state = useStreams((s) => agentStateIn(s, agent.id, channelId));
   const shown = useAgentPresence(agent.id);
   const work = shown?.work ?? null;
+  // The name of where it works alone: the whole list moves with every message's unread count.
+  const workChannel = useChannelName(org.id, work?.channelId);
   const clock = useNow(work !== null, WORK_TICK_MS);
   const now = workLine(
     t,
@@ -325,7 +333,7 @@ function AgentRow({ agent, channelId, busy }: { agent: Agent; channelId: string;
     work,
     {
       agentName: (id) => dir.agentById.get(id)?.name,
-      channelName: (id) => channels?.find((c) => c.id === id)?.name,
+      channelName: () => workChannel,
       here: channelId,
     },
     clock,

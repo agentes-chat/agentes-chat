@@ -20,6 +20,7 @@ import {
   getMembership,
   getOrgSettings,
   getRun,
+  hidesAgentPage,
   INVITE_CHOICES_MAX,
   INVITE_NOTE_MAX,
   ISSUE_COLUMN_WIDTHS,
@@ -48,6 +49,7 @@ import {
   mySidebarOrder,
   mySidebarToolOrder,
   mySidebarView,
+  NotFoundError,
   orgOverview,
   pickerEndpoint,
   pickerModels,
@@ -67,6 +69,7 @@ import {
   STATUS_TEXT_MAX,
   STOP_REASON_MAX,
   seesAgentDetails,
+  seesAgentFactsOnly,
   setAgentChannels,
   setAgentStyle,
   setChatPrefs,
@@ -242,6 +245,10 @@ const Settings = z
     welcomePeople: z.boolean().openapi({
       description: "The right hand greets each person who joins the workspace, once. On by default.",
     }),
+    rightHandLearns: z.boolean().openapi({
+      description:
+        "The right hand learns from conversations on its own, kept where it was said (each person can also turn it off for themselves, `learnOff` in `…/team-week`). Turning it off reveals nobody's memories. On by default.",
+    }),
     approvalsLevel: ApprovalsLevel.openapi({
       description:
         "What every agent without its own choice asks before acting (ADR 0173). `risky` by default. Set with `PUT …/approvals-level`.",
@@ -387,6 +394,15 @@ const AgentDetail = z
       description:
         "Whether the current person sees how it works (who edits it and whoever it answers). Without it the instructions are empty and the month's numbers zero: only its public card.",
     }),
+    factsOnly: z.boolean().openapi({
+      description:
+        "A teammate's private agent seen through \"Editar agentes\" (ADR 0085, addendum of 2026-11-24): its facts and this month's numbers, who edits it, who made it and when, never how it works. A private agent whose page the person may not open is a 404.",
+    }),
+    createdByUserId: z.string().nullable().openapi({ description: "Who made it, for who sees its details or facts." }),
+    lastActivityAt: z
+      .string()
+      .nullable()
+      .openapi({ description: "When its last run started, for who sees its details or facts." }),
     appearance: AgentAppearance.nullable(),
     mediaReplies: z.boolean().openapi({
       description:
@@ -427,12 +443,12 @@ const Run = z
       .object({
         from: z.object({ id: z.uuid(), name: z.string() }),
         to: z.object({ id: z.uuid(), name: z.string() }),
-        cause: z.enum(["limit", "line", "extra"]),
+        cause: z.enum(["limit", "line", "extra", "busy"]),
       })
       .nullable()
       .openapi({
         description:
-          "It went on with another account than its agent's own: the first it left, the last it moved to, and why (its plan's limit, the pause line of long work, or the paid extra usage it would go into). Said in its details, never in the chat.",
+          "It went on with another account than its agent's own: the first it left, the last it moved to, and why (its plan's limit, the pause line of long work, the paid extra usage it would go into, or every run the account takes at once already thinking on it). Said in its details, never in the chat.",
       }),
   })
   .openapi("Run");
@@ -550,6 +566,10 @@ const ManagedTask = z
         resetsAt: z.string().nullable(),
         since: z.string().nullable(),
         canContinue: z.boolean(),
+        moving: z
+          .boolean()
+          .optional()
+          .openapi({ description: "Its computer is away moving to another server: it comes back by itself." }),
       })
       .nullable()
       .openapi({
@@ -696,6 +716,7 @@ export function managementRoutes(deps: AppDeps) {
             mode: z.enum(WORKSPACE_MODES).optional().openapi({ description: "`team` or `personal` (ADR 0159)." }),
             teamWatch: z.boolean().optional(),
             welcomePeople: z.boolean().optional(),
+            rightHandLearns: z.boolean().optional(),
           }),
         ),
       },
@@ -1632,7 +1653,11 @@ export function managementRoutes(deps: AppDeps) {
       const v = agentView(d.agent);
       const [seesCost, viewer] = await Promise.all([canViewCost(db, userId, orgId), getMembership(db, userId, orgId)]);
       const seesDetails = seesAgentDetails(d.agent, userId, viewer);
-      const month = seesDetails
+      // A private agent's link opens nothing for who sees neither its details nor its facts.
+      if (hidesAgentPage(d.agent, userId, viewer)) throw new NotFoundError("Agent not found");
+      const factsOnly = seesAgentFactsOnly(d.agent, userId, viewer);
+      const seesUsage = seesDetails || factsOnly;
+      const month = seesUsage
         ? d.month
         : { ...d.month, budgetUsedPercent: 0, tokens: 0, runs: 0, failures: 0, byDay: [] };
       return c.json(
@@ -1662,12 +1687,15 @@ export function managementRoutes(deps: AppDeps) {
           audienceMode: d.agent.audienceMode,
           canTalk: canTalkTo(d.agent, userId, speakerOf(viewer)),
           ...agentRights(d.agent, userId, viewer),
-          editors: seesDetails ? editorsOf(d.agent) : { userIds: [], roleIds: [] },
+          editors: seesUsage ? editorsOf(d.agent) : { userIds: [], roleIds: [] },
           seesDetails,
+          factsOnly,
           appearance: v.appearance,
           mediaReplies: v.mediaReplies,
           channels: d.channels,
           createdAt: v.createdAt.toISOString(),
+          createdByUserId: seesUsage ? d.createdByUserId : null,
+          lastActivityAt: seesUsage ? (d.lastRunAt?.toISOString() ?? null) : null,
         },
         200,
       );

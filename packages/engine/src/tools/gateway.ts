@@ -51,6 +51,7 @@ import { sha256 } from "../crypto";
 import { provenReadOnly } from "../databases/guard";
 import { errorNumber, isUnexpectedError, ToolOffError } from "../errors";
 import { cutMarked, cutText, inertJson, inertLinks, pgSafeJson, pgSafeText } from "../format";
+import { gitVerbOf } from "../git/hosts/refs";
 import { mergeReposOfCall, recordMergeDone, reposOfGithubCall } from "../git/repos";
 import { recordRead } from "../outbound";
 import { ownerOnlyPerson, personalLostNote } from "../personal-use";
@@ -61,7 +62,7 @@ import { keysOfCall, RUN_CODE_TOOL, routineKeysAllowed, routineKeysKind } from "
 import { addRunStep } from "../runs";
 import { describeWhen } from "../schedule";
 import { REQUEST_SECRET_TOOL } from "../secrets";
-import { surfaceRefusal } from "../surfaces/turn";
+import { surfaceGate } from "../surfaces/turn";
 import {
   callTargets,
   checkTeamAction,
@@ -217,7 +218,7 @@ export async function rememberKinds(
 /** Our own tools whose job is asking a person: the agent chose to ask, so one that never asks still does. */
 const ASKING_TOOLS = new Set(["request_approval", REQUEST_PERMISSION_TOOL, "send_feedback"]);
 export const asksByChoice = (tool: Pick<ToolDefinition, "name" | "scope" | "connectionId">) =>
-  tool.connectionId ? tool.name === "request_branch_push" && serverGitTool(tool) : ASKING_TOOLS.has(tool.name);
+  tool.connectionId ? gitVerbOf(tool) === "request_branch_push" : ASKING_TOOLS.has(tool.name);
 
 /**
  * "Nunca perguntar" (`agents.approvals_level` = `never`, ADR 0173 as amended 2026-11-12): whether a call of this tool
@@ -336,10 +337,7 @@ const TOOL_NAME = /^[a-zA-Z0-9_-]{1,64}$/;
 /** The most of a tool's output the model gets. */
 export const MAX_RESULT_CHARS = 50_000;
 /** Server-owned Git tools have a connection ID only to use that connection's credential. */
-const serverGitTool = (tool: Pick<ToolDefinition, "name" | "scope">) =>
-  (tool.name === "git_clone" && tool.scope === "github:git.read") ||
-  (tool.name === "open_pull_request" && tool.scope === "github:pr.write") ||
-  ((tool.name === "delete_branches" || tool.name === "request_branch_push") && tool.scope === "github:git.write");
+const serverGitTool = (tool: Pick<ToolDefinition, "name" | "scope">) => gitVerbOf(tool) !== null;
 /**
  * One of the server's own tools, never a connected app's: its name is written here, not by a workspace or by the
  * server it connected.
@@ -1473,10 +1471,10 @@ export function createToolGateway(deps: {
         if (actions?.length && actions.every(opensPullRequestName)) tool = { ...tool, opensPullRequest: true };
       }
       if (tool.sensitive && tool.asksNobody?.(call.input)) tool = { ...tool, sensitive: false };
-      const surfaceNo = await surfaceRefusal(ctx, tool, call.input);
-      if (surfaceNo) {
+      const surfaceSays = await surfaceGate(ctx, tool, call.input);
+      if (surfaceSays && "refuse" in surfaceSays) {
         return finish(
-          { content: surfaceNo, isError: true, data: { code: "tool.surface", refusal: "surface" } },
+          { content: surfaceSays.refuse, isError: true, data: { code: "tool.surface", refusal: "surface" } },
           "refused",
         );
       }
@@ -1750,7 +1748,12 @@ export function createToolGateway(deps: {
         const [ran] = await ctx.db.select().from(approvals).where(eq(approvals.id, ahead.id));
         return { type: "result", output, ...(ran ? { ran } : {}) };
       }
-      const askPerson = async (why: string, remember: RememberedKind | null): Promise<InvokeResult> => {
+      const askPerson = async (
+        why: string,
+        remember: RememberedKind | null,
+        /** The person of a surface turn, who alone decides it, with their PIN (ADR 0226). */
+        onSurface?: { userId: string; name: string },
+      ): Promise<InvokeResult> => {
         const owner = await ownerOf(ctx);
         // A routine's request goes to the conversation it reports to, never its room; one asked by another
         // agent (ADR 0034) where the person is, not in the agents' DM.
@@ -1800,7 +1803,16 @@ export function createToolGateway(deps: {
             ownerRoleId: owner.ownerRoleId,
             expiresAt: new Date(now().getTime() + APPROVAL_TTL_MS),
             approveAlways: remember,
-            approvers: asked?.approvers ?? null,
+            approvers: onSurface
+              ? {
+                  userIds: [onSurface.userId],
+                  label: onSurface.name,
+                  requestedBy: onSurface.userId,
+                  requesterDecides: true,
+                  // Not an admin nor whoever covers them: their say would stand in for the PIN.
+                  required: true,
+                }
+              : (asked?.approvers ?? null),
             requestedByUserId: authority ? (authority.personId ?? routineCreatorOf(authority)) : null,
             highRisk: highRisk(tool.name, tool.scope),
           })
@@ -1824,6 +1836,13 @@ export function createToolGateway(deps: {
         await audit("pending", { reason: why || null, approvalId: row.id });
         return { type: "approval", approval: row };
       };
+      // A surface turn's act that would run without asking anyone waits for the person's own say, given with their
+      // PIN on a page the surface links to (ADR 0226): no rule, level or allowed repository stands in for it, since
+      // nothing typed on the surface proves who typed it. What asks someone anyway asks them as usual.
+      if (surfaceSays && !approves) {
+        unasked = false;
+        return askPerson(why, null, surfaceSays.confirm);
+      }
       if (approves) {
         // A card of a run doing a routine's job (its own run, or one its report or a teammate's answer woke:
         // `ownJobBrief`) offers "Sempre nesta rotina" where the action can be its own: the narrower word for the same

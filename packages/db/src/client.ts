@@ -8,7 +8,7 @@ import postgres from "postgres";
 import { assertMigrationsMatch } from "./migration-guard";
 import { openPglite, pgliteFolder } from "./pglite";
 import * as schema from "./schema";
-import { tracingLogger } from "./trace";
+import { tracingLogger, trackTransactions } from "./trace";
 
 /**
  * Driver-agnostic database handle. A Postgres server goes through postgres.js; native mode
@@ -31,6 +31,12 @@ export const migrationsFolder = resolve(import.meta.dir, "../migrations");
 export interface DatabaseOptions {
   url: string;
   poolMax: number;
+  /**
+   * How its connections show in `pg_stat_activity` (`application_name`), so a busy or stuck one is traced to its
+   * process: the server names its role and host. Its LISTEN and migration connections add `:listen` and `:migrate`.
+   * Default `agentes`; an `?application_name=` in the URL wins.
+   */
+  applicationName?: string;
 }
 
 export interface DatabaseHandle {
@@ -94,6 +100,8 @@ export const MIGRATIONS_LOCK = 4_242_017;
 export function createDatabase(options: DatabaseOptions): DatabaseHandle {
   const folder = pgliteFolder(options.url);
   if (folder) return createPgliteDatabase(folder);
+  // Postgres keeps the first 63 bytes.
+  const name = (suffix = "") => `${options.applicationName ?? "agentes"}${suffix}`.slice(0, 63);
   const client = postgres(options.url, {
     max: options.poolMax,
     // Silence "relation already exists, skipping" notices from migrations.
@@ -101,21 +109,32 @@ export function createDatabase(options: DatabaseOptions): DatabaseHandle {
     // Drizzle's `db.execute` sends unnamed statements, so each call is planned anew. The channel list's plan of a big
     // workspace costs past `jit_above_cost` (and `jit_optimize_above_cost`): LLVM compiled ~550 functions on every
     // call, CPU spent before an indexed read even starts. `?jit=on` in the URL still overrides it.
-    connection: { jit: "off" },
+    connection: { application_name: name(), jit: "off" },
   });
-  const db = drizzle(client, { schema, casing: "snake_case", logger: tracingLogger });
+  const db = trackTransactions(drizzle(client, { schema, casing: "snake_case", logger: tracingLogger }));
   serializeDates(client);
   return {
     db: db as unknown as Database,
     client,
     // Its LISTEN connection is never closed for its age or idleness (postgres.js spares it): only the pub/sub ends it,
     // when its own heartbeat stops coming back.
-    listenClient: () => postgres(options.url, { max: 1, max_lifetime: null, onnotice: () => {} }),
+    listenClient: () =>
+      postgres(options.url, {
+        max: 1,
+        max_lifetime: null,
+        onnotice: () => {},
+        connection: { application_name: name(":listen") },
+      }),
     migrate: async () => {
       // On a connection of its own: with a pool of one, the migrations need that one. Never closed for its age, as
       // postgres.js closes an idle connection after 30 to 60 minutes: the lock is its session's, and a migration that
       // builds an index concurrently can wait that long behind a dump.
-      const lock = postgres(options.url, { max: 1, max_lifetime: null, onnotice: () => {} });
+      const lock = postgres(options.url, {
+        max: 1,
+        max_lifetime: null,
+        onnotice: () => {},
+        connection: { application_name: name(":migrate") },
+      });
       try {
         // Asked for again and again, never waited for: a session waiting inside `pg_advisory_lock` holds a snapshot
         // until the lock is its own, and a concurrent index build, in the process that has the lock, ends only when
@@ -153,7 +172,7 @@ export function serializeDates(client: postgres.Sql) {
 
 function createPgliteDatabase(folder: string): DatabaseHandle {
   const { pg, ready } = openPglite(folder);
-  const db = drizzlePglite(pg, { schema, casing: "snake_case", logger: tracingLogger });
+  const db = trackTransactions(drizzlePglite(pg, { schema, casing: "snake_case", logger: tracingLogger }));
   return {
     db: db as unknown as Database,
     client: null,

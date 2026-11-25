@@ -10,6 +10,7 @@ import {
   HELLO_TIMEOUT_MS,
   IPHONE_WIFI_PROTOCOL,
   KEEP_RUNNING_PROTOCOL,
+  listenResumedTopic,
   MACHINE_CLOSE,
   MAX_FRAME_BYTES,
   type MachineErrorCode,
@@ -38,8 +39,10 @@ import { and, type Database, eq, inArray, lt, schema, sql } from "@agenteschat/d
 import type { ToolImage } from "@agenteschat/providers";
 import { getAgentCached } from "./agents";
 import { UUID } from "./authority";
+import { TtlCache } from "./cache";
 import { type MachinePhoneRow, publishDevicesChanged, syncMachinePhones } from "./devices";
 import { cutText } from "./format";
+import { codeCommitAuthor } from "./git/person-account";
 import { agentCoAuthorLine } from "./git/signature";
 import {
   applyAccessDecided,
@@ -88,6 +91,7 @@ import {
   publishMachineAgentsChanged,
   publishMachineStatus,
   publishMachineUpdated,
+  shownMoving,
   shownStandby,
   withTaskLimit,
 } from "./machines";
@@ -188,6 +192,8 @@ export interface MachineStatus {
   access?: RunnerAccess | null;
   /** The operator put the workspace's own computer in standby (ADR 0161): asleep, it is woken when wanted. */
   standby?: boolean;
+  /** The workspace's own computer is away moving to another server (`shownMoving`). */
+  moving?: boolean;
   /** `system`: each agent works as its own OS user there (ADR 0058 §10); absent, all as the runner's user. */
   mode?: "system";
 }
@@ -343,7 +349,10 @@ export interface MachineHubDeps {
   replicaId?: string;
   heartbeatMs?: number;
   helloTimeoutMs?: number;
-  /** Cross-replica callers read the `machine_rpc` row this often (the signal usually comes first). */
+  /**
+   * Cross-replica callers read the `machine_rpc` row this often for a minute after the pub/sub missed events, and a
+   * repeated `mcp.call` reads its first run's row this often. Its signal usually comes first. Tests set it.
+   */
   rpcPollMs?: number;
   /** A machine offline this long has its running tasks interrupted (default `TASK_OFFLINE_GRACE_MS`). */
   taskOfflineGraceMs?: number;
@@ -566,12 +575,30 @@ export interface MachineBrowserHooks {
   connected?(machineId: string): void;
 }
 
+/** How often a cross-replica caller reads its request's row while the pub/sub delivers (its signal wakes it first). */
+export const RPC_QUIET_POLL_MS = 5_000;
+/** For how long after the pub/sub missed events (`listenResumedTopic`) callers read it every `rpcPollMs` instead. */
+const RPC_TROUBLED_MS = 60_000;
+/** `status` reads a computer's row at most this often. */
+const STATUS_ROW_MS = 2_000;
+
 export function createMachineHub(deps: MachineHubDeps) {
   const { db, pubsub } = deps;
   const replicaId = deps.replicaId ?? crypto.randomUUID();
   const heartbeatMs = deps.heartbeatMs ?? HEARTBEAT_MS;
   const helloTimeoutMs = deps.helloTimeoutMs ?? HELLO_TIMEOUT_MS;
   const rpcPollMs = deps.rpcPollMs ?? 500;
+  // While the pub/sub delivers, the reply's signal wakes a cross-replica caller: its own read of the row only backs a
+  // lost NOTIFY up, so it can wait. Once the pub/sub says events were missed, every caller reads at once, then often.
+  const rpcQuietPollMs = deps.rpcPollMs ?? RPC_QUIET_POLL_MS;
+  let rpcTroubledUntil = 0;
+  // ponytail: per process; another replica's change to a computer shows here within STATUS_ROW_MS.
+  const statusRows = new TtlCache<MachineRow | null>(STATUS_ROW_MS);
+  const rpcWaiting = new Set<() => void>();
+  pubsub.subscribe(listenResumedTopic, () => {
+    rpcTroubledUntil = Date.now() + RPC_TROUBLED_MS;
+    for (const wake of rpcWaiting) wake();
+  });
   const taskOfflineGraceMs = deps.taskOfflineGraceMs ?? TASK_OFFLINE_GRACE_MS;
   const mcpRepeatWaitMs = deps.mcpRepeatWaitMs ?? MCP_REPEAT_WAIT_MS;
   const brainIdleMs = deps.brainIdleMs ?? BRAIN_IDLE_TIMEOUT_MS;
@@ -794,14 +821,16 @@ export function createMachineHub(deps: MachineHubDeps) {
         // Protocol 12: whether it can run the agent browser (ADR 0040), kept with what it found; protocol 18:
         // the same for the agents' desktops and the terminal, and whether each agent is its own OS user (ADR 0058);
         // protocol 21: whether agents can use their desktops (ADR 0062); protocol 50: which Claude sign-ins for all
-        // agents it can make (an older runner says nothing: `claudeLoginMethodsOf` reads that).
+        // agents it can make (an older runner says nothing: `claudeLoginMethodsOf` reads that); protocol 80: a Windows
+        // computer's build.
         ...(frame.executors ||
         frame.browser ||
         frame.desktop ||
         frame.terminal ||
         frame.desktopUse ||
         frame.claudeLoginMethods ||
-        frame.toolchains
+        frame.toolchains ||
+        frame.windowsBuild
           ? {
               executors: {
                 // A runner that hasn't looked yet leaves the CLIs out: the last ones stored stand.
@@ -813,6 +842,7 @@ export function createMachineHub(deps: MachineHubDeps) {
                 ...(frame.terminal ? { terminal: frame.terminal } : {}),
                 ...(frame.desktopUse ? { desktopUse: frame.desktopUse } : {}),
                 ...(system ? { mode: "system" as const } : {}),
+                ...(frame.windowsBuild ? { windowsBuild: frame.windowsBuild } : {}),
                 ...(frame.claudeLoginMethods ? { claudeLoginMethods: frame.claudeLoginMethods } : {}),
                 ...(loginBlocked ? { claudeLoginBlocked: loginBlocked } : {}),
                 ...(frame.authEgressGroup ? { authEgressGroup: true as const } : {}),
@@ -987,7 +1017,7 @@ export function createMachineHub(deps: MachineHubDeps) {
         paused: conn.pause !== null,
         pausedUntil: conn.pause?.until ? new Date(conn.pause.until) : null,
         pausedByUserId: conn.pause?.by ?? null,
-        ...(frame.maxTasks ? { size: withTaskLimit(frame.maxTasks) } : {}),
+        ...(frame.maxTasks ? { size: withTaskLimit(frame.maxTasks, frame.room) } : {}),
         updatedAt: new Date(),
       })
       .where(eq(machines.id, machineId))
@@ -1028,8 +1058,21 @@ export function createMachineHub(deps: MachineHubDeps) {
     if (!agent) return request;
     const runs = request.op === "exec" || request.op === "brain.turn" || request.op === "task.start";
     const line = runs ? await agentCoAuthorLine(db, orgId, agent).catch(() => null) : null;
-    if (scope.name && !line) return request;
-    return { ...request, agent: { ...scope, name: scope.name || agent.name, ...(line ? { coAuthors: [line] } : {}) } };
+    // A code session's turn is authored as the person who asked, by the GitHub account they connected as their own
+    // (ADR 0215 §13); its commands carry theirs already (`withMachineSandbox`).
+    const author =
+      scope.author ??
+      (request.op === "brain.turn" ? await codeCommitAuthor(db, orgId, request.runId).catch(() => null) : null);
+    if (scope.name && !line && !author) return request;
+    return {
+      ...request,
+      agent: {
+        ...scope,
+        name: scope.name || agent.name,
+        ...(line ? { coAuthors: [line] } : {}),
+        ...(author ? { author } : {}),
+      },
+    };
   }
 
   /** Bridge calls of work already on the machine stop with its workspace (`standing.ts`). */
@@ -1380,13 +1423,16 @@ export function createMachineHub(deps: MachineHubDeps) {
           throw new MachineRequestError("timeout", `the computer ${machine.name} did not answer in time`);
         }
         await new Promise<void>((resolve) => {
-          const timer = setTimeout(done, Math.min(rpcPollMs, Math.max(0, deadline - Date.now())));
+          const pollMs = Date.now() < rpcTroubledUntil ? rpcPollMs : rpcQuietPollMs;
+          const timer = setTimeout(done, Math.min(pollMs, rpcLivenessMs, Math.max(0, deadline - Date.now())));
           function done() {
             clearTimeout(timer);
             wake = null;
+            rpcWaiting.delete(done);
             resolve();
           }
           wake = done;
+          rpcWaiting.add(done);
         });
       }
     } finally {
@@ -1479,6 +1525,8 @@ export function createMachineHub(deps: MachineHubDeps) {
     conn.pending.clear();
     if (conn.machineId && local.get(conn.machineId) === conn) {
       local.delete(conn.machineId);
+      // Its kept row says this replica holds it: a runner back on another replica a moment later reads as offline.
+      statusRows.delete(conn.machineId);
       browserHooks.closed?.(conn.machineId);
       const how = serverStop ? { code: 1001, reason: "server stopping" } : (close ?? { code: 1005, reason: "" });
       await markOffline(conn, serverStop, how).catch(() => undefined);
@@ -1495,6 +1543,7 @@ export function createMachineHub(deps: MachineHubDeps) {
     }),
     pubsub.subscribe(MACHINE_CONTROL_TOPIC, (event) => {
       if (event.type === "machine.connected" && typeof event.machineId === "string") {
+        statusRows.delete(event.machineId);
         if (event.replicaId === replicaId) return;
         const conn = local.get(event.machineId);
         if (!conn || conn.connectionId === event.connectionId) return;
@@ -1720,9 +1769,12 @@ export function createMachineHub(deps: MachineHubDeps) {
       return callRemote({ ...row, connectedReplica: row.connectedReplica }, named, options);
     },
 
-    /** The machine as tools see it: online here, or online (and recently seen) on another replica. */
+    /**
+     * The machine as tools see it: online here, or online (and recently seen) on another replica. Its row is read at
+     * most every `STATUS_ROW_MS` per computer (`statusRows`): every computer tool asks, and a run's burst asks in a row.
+     */
     async status(machineId: string): Promise<MachineStatus | null> {
-      const row = await getMachineById(db, machineId);
+      const row = await statusRows.getOrLoad(machineId, () => getMachineById(db, machineId));
       if (!row || row.deletedAt) return null;
       const online = local.has(machineId) || (machineOnline(row) && row.connectedReplica !== replicaId);
       const pause = machinePause(row);
@@ -1742,6 +1794,7 @@ export function createMachineHub(deps: MachineHubDeps) {
         access: row.access ?? null,
         // Still starting after its standby ended counts too: what waits for it waits on (`shownStandby`).
         standby: inStandby(row) || shownStandby(row),
+        ...(shownMoving(row) ? { moving: true } : {}),
         ...(row.executors?.mode === "system" ? { mode: "system" as const } : {}),
       };
     },

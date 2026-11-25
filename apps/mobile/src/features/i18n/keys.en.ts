@@ -966,6 +966,13 @@ export const featureKeysEn = {
     kind: {
       proposal_waiting_one: "{{names}} proposes an improvement",
       proposal_waiting_other: "{{names}} propose improvements",
+      /** What agents applied today (ADR 0219), `count` the changes; `_agents`: several applied, `_auto`: none did. */
+      proposal_applied_one: "{{names}} applied an improvement",
+      proposal_applied_other: "{{names}} applied {{count}} improvements",
+      proposal_applied_agents_one: "{{names}} applied an improvement",
+      proposal_applied_agents_other: "{{names}} applied {{count}} improvements",
+      proposal_applied_auto_one: "An improvement was applied automatically",
+      proposal_applied_auto_other: "{{count}} improvements were applied automatically",
       mention_one: "{{names}} mentioned you",
       mention_other: "{{names}} mentioned you",
       thread_reply_one: "{{names}} replied in the thread",
@@ -1213,8 +1220,6 @@ export const featureKeysEn = {
     issues: "Tasks",
     issuesWithMe_one: "{{count}} with you",
     issuesWithMe_other: "{{count}} with you",
-    proposalsWaiting_one: "{{count}} waiting",
-    proposalsWaiting_other: "{{count}} waiting",
     drive: "Drive",
     connectors: "Connectors and MCPs",
     preferences: "Preferences",
@@ -1539,13 +1544,33 @@ export const featureKeysEn = {
     uses_one: "Used {{count}} time",
     uses_other: "Used {{count}} times",
     confirmed: "Confirmed by a person",
-    confirm: "Confirm",
-    confirmedToast: "Confirmed",
     details: "Technical details",
     before: "It used to say: {{text}}",
     fix: "Fix",
     forgetTitle: "Forget this memory?",
     forgetText: "{{name}} stops using this in future conversations.",
+  },
+  /**
+   * Agent improvements (ADR 0219): what agents changed in their own or their teammates' instructions, roles, apps and
+   * settings, a skill or the workspace's context. Their review applies each change or leaves it out; nobody is asked.
+   */
+  proposals: {
+    title: "Agent improvements",
+    emptyTitle: "Nothing changed yet",
+    empty: "When an agent improves its instructions or a teammate's, the change shows here, with Undo.",
+    /** Adds more of the history under it. */
+    more: "Show more",
+    /** A change the agent's review hasn't weighed yet (a few seconds). */
+    reviewing: "Reviewing…",
+    appliedBy: "Applied by {{name}}",
+    appliedBy_female: "Applied by {{name}}",
+    /** A workspace-wide lesson no agent holds. */
+    appliedAuto: "Applied automatically",
+    leftOutBy: "Left out by {{name}}",
+    leftOutBy_female: "Left out by {{name}}",
+    leftOut: "Left out",
+    undoneBy: "Undone by {{name}}",
+    undoneByYou: "Undone by you",
   },
   wiki: {
     map: "Page map",
@@ -1620,6 +1645,18 @@ export const featureKeysEn = {
     next: {
       pr: "Branch sent, no pull request yet",
       mergeLocal: "Ready to merge into {{base}}",
+    },
+    /** A session's terminal (the web's words are `codeTerminal.*`): the row of keys a phone keyboard lacks. */
+    terminal: {
+      keys: "Terminal keys",
+      /** The row's first button: shows or hides the phone's keyboard. */
+      keyboard: "Keyboard",
+      /** What VoiceOver says for a paste into the shell. */
+      pasteHint: "Paste what you copied into the terminal",
+      key: {
+        CtrlC: "Control-C, interrupt",
+        CtrlD: "Control-D, end of input",
+      },
     },
   },
   // The task manager (ADR 0128; the rest of its words are shared, `taskManager.*`).
@@ -3414,6 +3451,76 @@ export const featureKeysEn = {
       editHint: "Edits this part",
       notHere: "This part is edited on the computer",
     },
+  },
+  /** "Contas de IA" (ADR 0059, ADR 0041 §6): every AI account of the workspace, its permissions, the order of use. */
+  aiHub: {
+    /** The list's header: plans and keys, whoever added them. */
+    accounts: "Accounts",
+    accountsHint:
+      "Every plan and API key in this workspace, whoever connected it. Tap an account for its limits and who may use it.",
+    /** The header's button to the order of use, and that screen's title. */
+    order: "Order of use",
+    orderSub: "At a limit, agents go on with the next account.",
+    /** After a signed-out account in the order: runs skip it. */
+    skipped: "skipped",
+    /** The order's group of a computer: its maker and the computer ("Claude · Walter's MacBook"). */
+    orderGroup: "{{plan}} · {{computer}}",
+    noOrder: "With two accounts of the same AI on one computer, their order shows here.",
+    keyFallback: "Go on with the API key when every plan is at its limit",
+    keyFallbackHint:
+      "After the last account, agents go on with the workspace's API key, which is paid per use. Missions never move to the key.",
+    /** Only admins turn it on or off. */
+    keyFallbackLocked: "Only an admin changes this.",
+    limits: "Limits",
+    permissions: "Permissions",
+    manage: "Manage",
+    manageSub: "Rename, sign in again, remove",
+    manageHint:
+      "Who may rename this account, sign in to it again and remove it. Only whoever connected it changes this.",
+    use: "Use in agents",
+    useSub: "Pick it in Who thinks",
+    useHint: "Whose agents may think with this account, and whose Lodi. Whoever manages it changes this.",
+    reply: "Answer everyone",
+    replySub: "Who the agents talk to",
+    replyHint:
+      "Who an agent on this account answers besides its own owner. Claude's terms ask that a plan is used by the person who pays for it: check them before opening it to everyone.",
+    audience: {
+      owner: "Only you",
+      ownerOf: "Only {{name}}",
+      admins: "You and admins",
+      adminsOf: "{{name}} and admins",
+      roles: "Roles…",
+      people: "People…",
+      everyone: "Everyone",
+      /** Atender todos's narrowest: only the owner of each agent on the account. */
+      agentOwner: "Only the agent's owner",
+      rolesCount_one: "{{count}} role",
+      rolesCount_other: "{{count}} roles",
+      peopleCount_one: "{{count}} person",
+      peopleCount_other: "{{count}} people",
+    },
+    /** The screen that picks the roles or the people of a permission. */
+    pickRoles: "Roles",
+    pickPeople: "People",
+    pickNone: "Pick at least one.",
+    /** The "Quem pensa" choice: three fields, each opening its list. */
+    choice: {
+      account: "Account",
+      model: "Model",
+      effort: "Effort",
+      yours: "Yours",
+      others: "Team's",
+      keys: "API keys",
+      /** Lodi's own AI: the workspace's, first. */
+      workspace: "The workspace's",
+      workspaceSub: "The workspace's API key",
+      key: "API key",
+      keyDefault: "workspace default",
+      api: "API",
+    },
+    /** A mission's AI, on its screen. */
+    missionAi: "AI",
+    missionLocked: "Who does the work is chosen before Start. The model can change any time.",
   },
   /** Linking the outside chat app in Notificações (ADR 0187). {{surface}} is that app's name, as the server sets it. */
   surface: {

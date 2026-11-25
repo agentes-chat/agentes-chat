@@ -18,6 +18,7 @@ import {
   baseUrlFor,
   CODE_LIMITS,
   ConflictError,
+  caches,
   changeAsked,
   clearPassword,
   countUsers,
@@ -562,8 +563,9 @@ export function createAuth(deps: {
         },
         update: {
           // Their name (`/update-user`, from the web or the phone): open apps show the new one at once. A new address
-          // (its link opened): the one it left is told, with "This wasn't me".
+          // (its link opened): the one it left is told, with "This wasn't me". Kept sessions carry the person: all go.
           after: async (user) => {
+            caches.sessions.clear();
             await announceProfile(db, deps.pubsub, user.id).catch((error) =>
               log.error("profile change not announced", { userId: user.id, error }),
             );
@@ -610,6 +612,7 @@ export function createAuth(deps: {
           after: async (session) => {
             if (await undoneMeanwhile(session.userId)) {
               await db.delete(schema.sessions).where(eq(schema.sessions.id, session.id));
+              forgetSession(session.token);
               throw new APIError("UNAUTHORIZED", SIGN_IN_UNDONE);
             }
             await recordSession(db, session).catch((error) =>
@@ -617,6 +620,10 @@ export function createAuth(deps: {
             );
           },
         },
+        // Signed out, revoked, a new password, expiry renewed, another workspace made active: no process serves the
+        // kept copy again (`sessionOf`). An update of many at once tells no token: all of them go.
+        update: { after: async (session) => forgetSessionOf(session) },
+        delete: { after: async (session) => forgetSessionOf(session) },
       },
     },
   });
@@ -853,17 +860,39 @@ export async function signOutDeviceAccount(
 const sessionReads = new WeakMap<Headers, ReturnType<Auth["api"]["getSession"]>>();
 
 /**
- * The session of the request whose `headers` these are, read from the database once for the whole request: its
- * middleware and route share the read. Only a request's own `headers`, never a set kept across requests.
+ * The session of the request whose `headers` these are, read once for the whole request: its middleware and route
+ * share the read. Only a request's own `headers`, never a set kept across requests. A signed session cookie read in
+ * the last few seconds isn't read again (`caches.sessions`), so a tab's polls cost no session and user rows each;
+ * a session that ends or changes is forgotten at once, everywhere (`forgetSession`, `createAuth`'s hooks).
  */
 export function sessionOf(auth: Auth, headers: Headers) {
   let read = sessionReads.get(headers);
   if (!read) {
-    read = auth.api.getSession({ headers });
+    read = keptSession(auth, headers);
     sessionReads.set(headers, read);
   }
   return read;
 }
+
+async function keptSession(auth: Auth, headers: Headers): ReturnType<Auth["api"]["getSession"]> {
+  const { authCookies } = await auth.$context;
+  // The cookie Better Auth verified, signature and all: a token with another signature is read (and refused) anew.
+  const signed = parseCookies(headers.get("cookie") ?? "").get(authCookies.sessionToken.name);
+  if (!signed) return auth.api.getSession({ headers });
+  return caches.sessions.getOrLoad(
+    signed,
+    () => auth.api.getSession({ headers }),
+    (found) => found !== null,
+  ) as ReturnType<Auth["api"]["getSession"]>;
+}
+
+/** Forgets a kept session (`sessionOf`) by its token, here and in every other process: it ended or changed. */
+export const forgetSession = (token: string) => caches.sessions.deletePrefix(`${token}.`);
+const forgetSessionOf = (row: unknown) => {
+  const token = (row as { token?: unknown } | null)?.token;
+  if (typeof token === "string") forgetSession(token);
+  else caches.sessions.clear();
+};
 
 /** Resolves the signed-in person from request headers (cookie), or null. Used by HTTP and WebSocket. */
 export async function sessionUser(auth: Auth, headers: Headers): Promise<SessionUser | null> {
@@ -1274,6 +1303,7 @@ export async function replacePassword(auth: Auth, db: Database, userId: string, 
   const context = await auth.$context;
   await context.internalAdapter.updatePassword(userId, await context.password.hash(password));
   await db.delete(schema.sessions).where(and(eq(schema.sessions.userId, userId), ne(schema.sessions.token, keepToken)));
+  caches.sessions.clear();
   await revokeUserApps(db, userId);
 }
 

@@ -1,6 +1,7 @@
 import type { PubSub } from "@agenteschat/adapters";
 import { and, type Database, type Executor, eq, inArray, isNull, type SQL, schema, sql } from "@agenteschat/db";
 import { type Agent, getAgent } from "./agents";
+import { replyAllowsSql } from "./ai-accounts/reply";
 import { recordAudit } from "./audit";
 import { isComputerBrain } from "./brains/types";
 import { caches } from "./cache";
@@ -405,6 +406,22 @@ export const listsAgentTo = (a: AgentAccessFields, userId: string, membership: V
   (listsAllAgents(membership ?? null) && !isPrivateAgent(a)) || seesAgentDetails(a, userId, membership);
 
 /**
+ * Whether a person sees a teammate's private agent (`isPrivateAgent`) by its facts alone (ADR 0085, addendum of
+ * 2026-11-24): "Editar agentes" without seeing how it works. Its Equipe row and page show who made it and when, who
+ * talks to it and edits it, where it works and this month's usage, never its instructions, memory, conversations or
+ * files, and nothing to change. Admins, its owner and its "Quem pode editar" see its details instead.
+ */
+export const seesAgentFactsOnly = (a: AgentAccessFields, userId: string, membership: Viewer) =>
+  isPrivateAgent(a) && can(membership, "manage_agents") && !seesAgentDetails(a, userId, membership);
+
+/**
+ * A private agent whose page this person doesn't open at all: neither its details nor its facts
+ * (`seesAgentFactsOnly`). Its messages in shared channels still show who wrote them.
+ */
+export const hidesAgentPage = (a: AgentAccessFields, userId: string, membership: Viewer) =>
+  isPrivateAgent(a) && !seesAgentDetails(a, userId, membership) && !can(membership, "manage_agents");
+
+/**
  * Whether a run for `person` finds the agent among its teammates (`find_agent`, "# Your team", the handles it is
  * offered): one it may ask for them (`canTalkTo` with `speaker`), and a private one (`isPrivateAgent`) only for its
  * owner, an administrator or who its "Quem pode editar" names, so a teammate's agent doesn't discover it either.
@@ -463,8 +480,10 @@ export async function agentIdsSeen(db: Database, userId: string, orgId: string) 
 }
 
 /**
- * The same rule in SQL, for an `agents` row aliased `alias` and a person id expression. An agent with no owner
- * compares to null: `coalesce` makes that a no, so `not allowed` holds for it too (the blocked person's notice).
+ * The same rule in SQL, for an `agents` row aliased `alias` and a person id expression, plus the "Atender todos" of a
+ * plan account it thinks with (`replyAllowsSql`, which `canTalkTo` leaves to the run's start, `replyRefusal`). An agent
+ * with no owner compares to null: `coalesce` makes that a no, so `not allowed` holds for it too (the blocked person's
+ * notice).
  * In a channel (`channelId`), `talk_to_agents` is the person's in that channel, with its exceptions (ADR 0134).
  */
 export function audienceSql(alias: string, userId: SQL, options: { channelId?: SQL } = {}): SQL {
@@ -477,7 +496,16 @@ export function audienceSql(alias: string, userId: SQL, options: { channelId?: S
         or (${userId} is not null and ${a}.audience_mode = 'people' and (${userId} = any(${a}.audience_user_ids)
           or exists (select 1 from organization_member_roles amr where amr.org_id = ${a}.org_id
             and amr.user_id = ${userId} and amr.role_id = any(${a}.audience_role_ids)))))
-      and (${userId} is null or ${talks})), false)`;
+      and (${userId} is null or (${talks} and ${replyAllowsSql(alias, userId)}))), false)`;
+}
+
+/** `audienceSql` for one agent and person: who may start its runs, its plan's "Atender todos" included. */
+export async function reachesAgent(db: Executor, orgId: string, agentId: string, userId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ ok: audienceSql("agents", sql`${userId}::text`) })
+    .from(agents)
+    .where(and(eq(agents.orgId, orgId), eq(agents.id, agentId)));
+  return row?.ok === true;
 }
 
 /**
@@ -553,6 +581,28 @@ export async function agentEditorIds(db: Executor, orgId: string, agentId: strin
     .from(organizationMembers)
     .innerJoin(agents, and(eq(agents.orgId, organizationMembers.orgId), eq(agents.id, agentId)))
     .where(and(eq(organizationMembers.orgId, orgId), editsAgentSql("agents", sql`${organizationMembers.userId}`)));
+  return rows.map((r) => r.userId);
+}
+
+/**
+ * Who looks after the agent, as member ids: its owner (`ownsAgent`) and the people its "Quem pode editar" names
+ * (`namedEditor`), never who merely manages agents. They talk to it and know what it was told, so a change to its
+ * instructions waits on them (ADR 0085, addendum of 2026-11-24). Empty: the callers turn to who reviews memory.
+ */
+export async function agentKeeperIds(db: Executor, orgId: string, agentId: string): Promise<string[]> {
+  const userId = sql`${organizationMembers.userId}`;
+  const rows = await db
+    .select({ userId: organizationMembers.userId })
+    .from(organizationMembers)
+    .innerJoin(agents, and(eq(agents.orgId, organizationMembers.orgId), eq(agents.id, agentId)))
+    .where(
+      and(
+        eq(organizationMembers.orgId, orgId),
+        sql<boolean>`(${ownsAgentSql("agents", userId)} or ${userId} = any(agents.editor_user_ids)
+          or exists (select 1 from organization_member_roles kr where kr.org_id = agents.org_id
+            and kr.user_id = ${userId} and kr.role_id = any(agents.editor_role_ids)))`,
+      ),
+    );
   return rows.map((r) => r.userId);
 }
 

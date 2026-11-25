@@ -18,7 +18,7 @@ import { answersOthers, audienceOf, managesAgent } from "./audience";
 import { type BillingHold, billingHoldOf } from "./billing";
 import { type SetupView, setupPending } from "./computer";
 import { firstName } from "./format";
-import { CLI_HOME_ONLY } from "./machines";
+import { brainTool, CLI_GIT_MISSING, CLI_HOME_ONLY } from "./machines";
 import { can } from "./permissions";
 import { CODING_PLANS, isPlanId, loginPerAgent, PLAN_IDS, type PlanId } from "./plans";
 import { isRightHand } from "./right-hand";
@@ -618,6 +618,7 @@ const CLOUD_REASON = {
   not_reported: "stuck",
   // The Cloud's computers run Linux, where every CLI runs: never said there.
   system: "stuck",
+  windows_sandbox: "stuck",
   cant_start: "stuck",
 } as const satisfies Record<BrainUnavailable | "keys", string>;
 
@@ -646,7 +647,7 @@ export function gateLine(
     edition: Edition | null;
     kind: MachineAccountKind;
     computer: string;
-    machine?: Partial<Pick<Machine, "lastSeenAt" | "kind" | "cliErrors">> | null;
+    machine?: Partial<Pick<Machine, "lastSeenAt" | "kind" | "cliErrors" | "moving">> | null;
     hold?: string | null;
     now?: number;
   },
@@ -658,6 +659,8 @@ export function gateLine(
   if (gate.state === "missing" && edition === "cloud")
     return { text: t("aiAccounts.connect.needsCloud.stuck", { computer, program }), rechecks };
   if (gate.state === "offline") {
+    // Away moving to another server: back by itself, never "use an API key for now".
+    if (machine?.moving) return { text: t("machines.moving.named", { computer }), rechecks };
     const seen = machine?.lastSeenAt ? Date.parse(machine.lastSeenAt) : null;
     if (edition === "cloud" && seen !== null && now - seen >= CLOUD_AWAY_MS)
       return { text: t("aiAccounts.connect.needsCloud.away", { computer }), rechecks };
@@ -682,8 +685,17 @@ export function gateLine(
     };
   if (gate.reason === "keys") return { text: t("aiAccounts.connect.needs.keys"), rechecks };
   if (gate.reason === "tool_off") return { text: t("brain.reasons.tool_offOne", { computer, program }), rechecks };
-  if (gate.reason === "cant_start" && machine?.cliErrors?.[kind] === CLI_HOME_ONLY)
-    return { text: t("brain.reasons.home_only", { computer, program }), rechecks };
+  if (gate.reason === "cant_start") {
+    // The runner's error line for it, by the CLI's own name (Claude Code's is `claude`), or one of its codes.
+    const said = machine?.cliErrors?.[brainTool(kind)] ?? machine?.cliErrors?.[kind];
+    const words = { computer, program };
+    if (said === CLI_HOME_ONLY) return { text: t("brain.reasons.home_only", words), rechecks };
+    if (said === CLI_GIT_MISSING) return { text: t("connectAi.cli.gitMissing", words), rechecks };
+    if (said) return { text: t("connectAi.cli.cantStart", { ...words, message: said }), rechecks };
+  }
+  // The Antigravity CLI's `system` is Windows, where it keeps every Google sign-in in one Credential Manager (ADR 0143).
+  if (gate.reason === "system" && kind === "antigravity")
+    return { text: t("brain.reasons.systemAntigravity", { computer }), rechecks };
   return { text: t(`brain.reasons.${gate.reason}`, { computer, program }), rechecks };
 }
 

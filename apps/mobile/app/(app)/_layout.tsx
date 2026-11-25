@@ -11,6 +11,7 @@ import { LiveActivityWork } from "@/features/live-activity/LiveActivityWork";
 import { ShareInbox } from "@/features/share/ShareInbox";
 import { useConnection, useRememberAgentLooks } from "@/features/shared/hooks";
 import { useAppIconBadge } from "@/features/shared/queries";
+import { ReconnectPill } from "@/features/shared/ReconnectPill";
 import { ScreenError } from "@/features/shared/ScreenError";
 import { useUserEvents } from "@/features/shared/userEvents";
 import { useVaultEvents } from "@/features/vault/live";
@@ -47,6 +48,8 @@ export default function AppLayout() {
       <LiveActivityWork />
       {/* What reaches me while the app is open, out of the camera's island (ADR 0071 §9). */}
       <NoticeIsland />
+      {/* The live connection down for two minutes: why, and one way out. */}
+      <ReconnectPill />
       {/* What other apps share through the system's share sheet opens "Compartilhar com…". */}
       <ShareInbox />
     </>

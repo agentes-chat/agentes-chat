@@ -2,7 +2,7 @@ import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { eq, schema, sql } from "@agenteschat/db";
 import type { ModelRequest } from "@agenteschat/providers";
 import { drainOutbox, executeRun, getMessage, listMessages, openDm, postPersonMessage, type ToolSource } from "../src";
-import { waitForBurst } from "../src/burst";
+import * as burst from "../src/burst";
 import { type Fixture, setup } from "./fixtures";
 
 let f: Fixture;
@@ -140,14 +140,27 @@ describe("mid-round queueing (ADR 0029 section 1)", () => {
 describe("messages in a row (ADR 0112)", () => {
   const postIn = (channelId: string, body: string, threadId?: string) =>
     postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, channelId, { body, threadId });
-  // A loaded CI machine can take more than 20 s to start a run on PGlite (its shard runs four files at once): wait up
-  // to 50 s, under the test's own limit below.
-  const waitRunning = async () => {
-    const start = Date.now();
-    while (!(await runs()).some((r) => r.status === "running")) {
-      if (Date.now() - start > 50_000) throw new Error("the run never started");
-      await Bun.sleep(5);
-    }
+  /**
+   * Holds a run at its quiet window until `open()`: `started` resolves once it is there, running. The window is measured
+   * from the message's own time, so a run a loaded machine claims after it has passed rightly waits nothing and can
+   * end between two looks at its status; held, the rest of the burst lands while it starts, however slow the machine.
+   */
+  const holdAtQuietWindow = () => {
+    let open = () => {};
+    const opened = new Promise<void>((resolve) => {
+      open = resolve;
+    });
+    let reached = () => {};
+    const started = new Promise<void>((resolve) => {
+      reached = resolve;
+    });
+    const real = burst.waitForBurst;
+    const spy = spyOn(burst, "waitForBurst").mockImplementation(async (...args) => {
+      reached();
+      await opened;
+      return real(...args);
+    });
+    return { started, open, restore: () => spy.mockRestore() };
   };
 
   test.each([
@@ -168,11 +181,18 @@ describe("messages in a row (ADR 0112)", () => {
       const root = where === "thread" ? await post("o relatório de ontem") : null;
       const channelId = dm ?? f.general.id;
       await postIn(channelId, dm ? "oi" : "@dev oi", root?.id);
-      const drained = drainOutbox(f.db, f.handlers);
-      await waitRunning();
-      await postIn(channelId, "preciso de uma coisa", root?.id);
-      await postIn(channelId, "olha o relatório de ontem e me diz se bate com o quadro", root?.id);
-      await drained;
+      const hold = holdAtQuietWindow();
+      try {
+        const drained = drainOutbox(f.db, f.handlers);
+        await hold.started;
+        expect((await runs()).map((r) => r.status)).toEqual(["running"]);
+        await postIn(channelId, "preciso de uma coisa", root?.id);
+        await postIn(channelId, "olha o relatório de ontem e me diz se bate com o quadro", root?.id);
+        hold.open();
+        await drained;
+      } finally {
+        hold.restore();
+      }
       await drainOutbox(f.db, f.handlers);
       expect(await runs()).toHaveLength(1);
       expect(f.provider.calls).toHaveLength(1);
@@ -316,10 +336,10 @@ describe("messages in a row (ADR 0112)", () => {
       .returning();
     if (!old) throw new Error("not moved");
     const start = Date.now();
-    await waitForBurst(f.db, old, 2500);
+    await burst.waitForBurst(f.db, old, 2500);
     expect(Date.now() - start).toBeLessThan(200);
     const fresh = await row("@dev oi de novo");
-    await waitForBurst(f.db, fresh, 600);
+    await burst.waitForBurst(f.db, fresh, 600);
     // Quiet from when it was sent, not from when the run got to it.
     expect(Date.now() - fresh.createdAt.getTime()).toBeGreaterThanOrEqual(590);
     expect(Date.now() - fresh.createdAt.getTime()).toBeLessThan(1500);
@@ -333,7 +353,7 @@ describe("messages in a row (ADR 0112)", () => {
     const stop = new AbortController();
     setTimeout(() => stop.abort(), 100);
     const start = Date.now();
-    await waitForBurst(f.db, sent, 5000, stop.signal);
+    await burst.waitForBurst(f.db, sent, 5000, stop.signal);
     expect(Date.now() - start).toBeLessThan(1000);
   });
 

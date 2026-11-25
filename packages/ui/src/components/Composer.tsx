@@ -33,7 +33,7 @@ import { dragsFiles, pastedFiles, transferFiles } from "../transfer";
 import { typeInto } from "../type-into";
 import { Button } from "./Button";
 import { type EmojiPickerLabels, EmojiPickerPopover, type PickerTab } from "./EmojiPicker";
-import { useAutoGrow, useLocked } from "./Field";
+import { useAutoGrow, useLocked, useStillDefaultText } from "./Field";
 import { modKey } from "./Kbd";
 import { PixelStop } from "./PixelMarks";
 import { Spinner } from "./Skeleton";
@@ -592,6 +592,7 @@ export function Composer({
     setSelected((was) => (start === end ? null : was?.[0] === start && was[1] === end ? was : [start, end]));
   const listId = useId();
   useImperativeHandle(textareaRef, () => ref.current as HTMLTextAreaElement, []);
+  useStillDefaultText(ref);
   // The "@…" being typed, and the one the person closed with Esc.
   const [token, setToken] = useState<{ start: number; query: string } | null>(null);
   // `[[que` being typed (wiki links).

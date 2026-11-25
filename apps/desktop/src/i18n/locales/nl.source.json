@@ -627,7 +627,7 @@
     "value": "Send anonymous usage statistics to agentes.chat"
   },
   "here.usageText": {
-    "value": "Counts such as people, agents, machine sizes, AI tokens used and how much data the agents' browsers send and receive. Never messages, files, names or sites."
+    "value": "Counts such as people, agents, machine sizes, AI tokens used, how much data the agents' browsers send and receive, and how fast the apps open and run. Never messages, files, names or sites."
   },
   "here.start": {
     "value": "Start"
@@ -1243,6 +1243,15 @@
   },
   "pair.done": {
     "value": "Connected to {{org}}"
+  },
+  "pair.share": {
+    "value": "Let the whole workspace use it"
+  },
+  "pair.shareOff": {
+    "value": "Only you for now"
+  },
+  "pair.shareHint": {
+    "value": "Everyone's agents in {{org}} can run tasks on it, as your user."
   },
   "pair.addFolders": {
     "value": "Add folders"

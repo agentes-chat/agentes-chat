@@ -688,6 +688,45 @@ test("a tool turned on from the apps: only whoever connected it; anyone else ask
   expect(sent).toHaveLength(1);
 }, 30_000);
 
+test("a Windows computer says its build and what holds Codex there; the apps read it as its runner learns it", async () => {
+  const { api } = await start();
+  const runner = { ...RUNNER, os: "windows", protocol: MACHINE_PROTOCOL_VERSION };
+  const paired = await pairComputer(t, api, { ...runner, exec: true }, { name: "Desk" });
+  const hub = t.engine.machineHub;
+  const conn = hub.open({ send() {}, close() {} });
+  const codex = { version: "codex-cli 0.170.0" };
+  await hub.message(
+    conn,
+    JSON.stringify({
+      type: "hello",
+      token: paired.token,
+      ...runner,
+      exec: true,
+      windowsBuild: "10.0.19045",
+      executors: { codex },
+    }),
+  );
+  type Listed = { machines: { codexSandbox?: string | null }[] };
+  const listed = async () => ((await (await api("/machines")).json()) as Listed).machines[0];
+  const stored = async () =>
+    (
+      await t.db
+        .select({ executors: schema.machines.executors })
+        .from(schema.machines)
+        .where(eq(schema.machines.id, paired.machineId))
+    )[0]?.executors;
+  // Its check hasn't ended: nothing said yet.
+  expect(await listed()).toMatchObject({ codexSandbox: null });
+  expect(await stored()).toMatchObject({ windowsBuild: "10.0.19045", codex });
+  // It ends after hello: the apps hear what holds Codex there, and the build stays through the CLIs' looks.
+  await hub.message(
+    conn,
+    JSON.stringify({ type: "executors.changed", executors: { codex: { ...codex, sandbox: "unelevated" } } }),
+  );
+  expect(await listed()).toMatchObject({ codexSandbox: "unelevated" });
+  expect(await stored()).toMatchObject({ windowsBuild: "10.0.19045", codex: { ...codex, sandbox: "unelevated" } });
+});
+
 test("a coding CLI from the apps: anyone looks again; only whoever connected it installs it, anyone else asks them", async () => {
   const { owner, orgId } = await start();
   const orgApi = (b: typeof owner) => (path: string, init?: Parameters<typeof owner>[1]) =>

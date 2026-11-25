@@ -2051,3 +2051,127 @@ test("system mode: root keeps a Grok copy back only from the account it lent, ne
   // A copy for an account made for one agent is never taken.
   expect(m.keepGrokAuth(LOGIN(93), grokAuth("y", at))).toBe(false);
 });
+
+test.if(posix)(
+  "Grok Build's status look: an expired access token refreshed in the background looks once more; a transient failure keeps statusUnknown and retries on its own",
+  async () => {
+    const home = tempDir("grok-probe-");
+    dirs.push(home);
+    const root = path.join(home, "accounts");
+    const stateFile = path.join(home, "probe-state.json");
+    const cli = path.join(home, "fake-grok-probe.mjs");
+    writeFileSync(
+      cli,
+      [
+        'import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";',
+        'import path from "node:path";',
+        "const authFile = path.join(process.env.GROK_HOME, 'auth.json');",
+        `const { mode } = JSON.parse(readFileSync(${JSON.stringify(stateFile)}, "utf8"));`,
+        'if (mode === "cli_crash") { process.stderr.write("Error: connection reset by peer\\n"); process.exit(1); }',
+        'if (mode === "revoked") { rmSync(authFile, { force: true }); process.stdout.write("You are not authenticated.\\n"); process.exit(0); }',
+        'const store = existsSync(authFile) ? JSON.parse(readFileSync(authFile, "utf8")) : {};',
+        'const entry = store["https://accounts.x.ai/sign-in"];',
+        "const expired = entry && Date.parse(entry.expires_at) <= Date.now();",
+        'if (mode === "refresh_race" && expired) {',
+        '  store["https://accounts.x.ai/sign-in"] = { ...entry, key: "access-r2", refresh_token: "r2", expires_at: new Date(Date.now() + 6 * 3600_000).toISOString() };',
+        "  writeFileSync(authFile, JSON.stringify(store));",
+        '  process.stdout.write("You are not authenticated.\\n\\nDefault model: grok-4.6\\n\\nAvailable models:\\n  * grok-4.6 (default)\\n  - grok-4.5\\n");',
+        "  process.exit(0);",
+        "}",
+        'if (mode === "transient_503" && expired) {',
+        '  process.stdout.write("You are not authenticated.\\n\\nDefault model: grok-4.6\\n\\nAvailable models:\\n  * grok-4.6 (default)\\n  - grok-4.5\\n");',
+        "  process.exit(0);",
+        "}",
+        'process.stdout.write("You are logged in with grok.com.\\n\\nDefault model: grok-4.7\\n\\nAvailable models:\\n  * grok-4.7 (default)\\n  - grok-4.6\\n  - grok-4.5\\n");',
+        "process.exit(0);",
+      ].join("\n"),
+    );
+    const id = LOGIN(94);
+    const dir = path.join(root, "grok", id);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(path.join(dir, "auth.json"), grokAuth("r1", Date.now() - 60_000));
+    writeFileSync(stateFile, JSON.stringify({ mode: "refresh_race" }));
+    let changed = 0;
+    const m = new AccountManager({
+      root,
+      commands: { grok: [process.execPath, cli] },
+      statusRetryMs: 40,
+      onChange: () => {
+        changed++;
+      },
+    });
+    managers.push(m);
+
+    // 1. First look hits Grok 1.0.73's expired-token startup race: retries once immediately, stays signed in, keeps full models.
+    expect(await m.list()).toEqual([{ id, kind: "grok", loggedIn: true, shared: true, authMethod: "cli_login" }]);
+    expect(m.listedModels("grok")).toEqual([{ id: "grok-4.7" }, { id: "grok-4.6" }, { id: "grok-4.5" }]);
+
+    // 2. Non-zero CLI failure without sign-out text keeps the last known sign-in with statusUnknown.
+    writeFileSync(stateFile, JSON.stringify({ mode: "cli_crash" }));
+    m.invalidate();
+    expect(await m.list()).toEqual([
+      { id, kind: "grok", loggedIn: true, statusUnknown: true, shared: true, authMethod: "cli_login" },
+    ]);
+
+    // 3. Transient OIDC refresh failure (expired access token still kept on disk) also sets statusUnknown, then recovers automatically.
+    writeFileSync(path.join(dir, "auth.json"), grokAuth("r2", Date.now() - 60_000));
+    writeFileSync(stateFile, JSON.stringify({ mode: "transient_503" }));
+    m.invalidate();
+    expect(await m.list()).toEqual([
+      { id, kind: "grok", loggedIn: true, statusUnknown: true, shared: true, authMethod: "cli_login" },
+    ]);
+    const beforeRecovery = changed;
+    writeFileSync(stateFile, JSON.stringify({ mode: "ok" }));
+    await waitFor(() => m.snapshot()?.[0]?.statusUnknown === undefined, 3000);
+    expect(await m.list()).toEqual([{ id, kind: "grok", loggedIn: true, shared: true, authMethod: "cli_login" }]);
+    expect(changed).toBeGreaterThan(beforeRecovery);
+
+    // 4. Permanent refresh rejection (auth.json cleared by Grok CLI) signs the account out conclusively.
+    writeFileSync(stateFile, JSON.stringify({ mode: "revoked" }));
+    m.invalidate();
+    expect(await m.list()).toEqual([{ id, kind: "grok", loggedIn: false, shared: true, authMethod: "cli_login" }]);
+  },
+  15_000,
+);
+
+test.if(posix)(
+  "an inconclusive status look is looked at again at doubling waits, and no more once the wait reaches the list's TTL",
+  async () => {
+    const home = tempDir("grok-retry-");
+    dirs.push(home);
+    const root = path.join(home, "accounts");
+    const looked = path.join(home, "looks.log");
+    const cli = path.join(home, "fake-grok-down.mjs");
+    // Signed in on disk, but every status look fails without saying why: never conclusive.
+    writeFileSync(
+      cli,
+      [
+        'import { appendFileSync } from "node:fs";',
+        `if (process.argv.includes("models")) appendFileSync(${JSON.stringify(looked)}, "x");`,
+        'process.stderr.write("Error: connection reset by peer\\n");',
+        "process.exit(1);",
+      ].join("\n"),
+    );
+    const id = LOGIN(195);
+    const dir = path.join(root, "grok", id);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(path.join(dir, "auth.json"), grokAuth("r1", Date.now() + 6 * 3600_000));
+    const m = new AccountManager({
+      root,
+      commands: { grok: [process.execPath, cli] },
+      statusRetryMs: 20,
+      listTtlMs: 100,
+    });
+    managers.push(m);
+    const looks = () => (existsSync(looked) ? readFileSync(looked, "utf8").length : 0);
+
+    expect(await m.list()).toEqual([
+      { id, kind: "grok", loggedIn: true, statusUnknown: true, shared: true, authMethod: "cli_login" },
+    ]);
+    // Again after 20, 40 and 80 ms; the next wait (160 ms) passes the 100 ms TTL, so no timer is set.
+    await waitFor(() => looks() >= 4, 5000);
+    await new Promise((r) => setTimeout(r, 600));
+    expect(looks()).toBe(4);
+  },
+  15_000,
+);

@@ -294,6 +294,8 @@ export function notificationHref(
     return isSafeId(s.agentId) ? `/agent/${s.agentId}` : s.routineId ? routineHref(s.routineId) : null;
   if (n.kind === "join_request") return "/join-requests";
   if (n.kind === "proposal_waiting") return "/proposals";
+  // What agents applied today (ADR 0219): the history of their improvements, newest first, each with Undo there.
+  if (n.kind === "proposal_applied") return "/proposals";
   // Someone who joined: Membros, where they now are (the app has no "say hi" of its own for them).
   if (n.kind === "invitation_accepted") return "/me/members";
   // Who approves for whom (ADR 0139): Perfil › Aprovações, where it is set and declined.
