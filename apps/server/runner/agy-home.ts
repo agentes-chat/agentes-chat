@@ -1,5 +1,14 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import path from "node:path";
 import { isObject } from "@agenteschat/adapters/machine-protocol";
 import { readSmallJson } from "./json-file";
@@ -279,24 +288,27 @@ export function prepareAgyHome(home: string, command: string[] | undefined) {
     rmSync(path.join(home, rel), { recursive: true, force: true });
   }
   const agentsDir = path.join(configDir(home), "agents");
-  if (existsSync(agentsDir)) {
+  // Only real folders and files stay: a link planted by a turn could point a later locked turn's agent elsewhere.
+  const real = (p: string, dir: boolean) => {
     try {
-      for (const entry of readdirSync(agentsDir)) {
-        const entryPath = path.join(agentsDir, entry);
-        if (!MANAGED_AGY_AGENTS.has(entry)) {
-          rmSync(entryPath, { recursive: true, force: true });
-          continue;
-        }
-        try {
-          for (const child of readdirSync(entryPath)) {
-            if (child !== "agent.md") rmSync(path.join(entryPath, child), { recursive: true, force: true });
-          }
-        } catch {
-          rmSync(entryPath, { recursive: true, force: true });
-        }
-      }
+      const st = lstatSync(p);
+      return dir ? st.isDirectory() : st.isFile();
     } catch {
-      rmSync(agentsDir, { recursive: true, force: true });
+      return false;
+    }
+  };
+  if (!real(agentsDir, true)) rmSync(agentsDir, { recursive: true, force: true });
+  else {
+    for (const entry of readdirSync(agentsDir)) {
+      const entryPath = path.join(agentsDir, entry);
+      if (!MANAGED_AGY_AGENTS.has(entry) || !real(entryPath, true)) {
+        rmSync(entryPath, { recursive: true, force: true });
+        continue;
+      }
+      for (const child of readdirSync(entryPath)) {
+        const childPath = path.join(entryPath, child);
+        if (child !== "agent.md" || !real(childPath, false)) rmSync(childPath, { recursive: true, force: true });
+      }
     }
   }
   writeAgySettings(home);

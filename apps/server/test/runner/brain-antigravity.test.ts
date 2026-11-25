@@ -1,6 +1,16 @@
 import { afterEach, expect, test } from "bun:test";
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import path from "node:path";
 import { accountCodeAad, CLI_HOME_ONLY } from "@agenteschat/adapters/machine-protocol";
 import { cutAtWord } from "@agenteschat/adapters/redact";
@@ -25,6 +35,7 @@ import {
   AGY_SIGN_IN_FILE,
   AGY_WORK_NO_CMD_AGENT,
   agyAuthOf,
+  agyChatAgent,
   agyKeychain,
   agyRuntimeDir,
   agySignInOf,
@@ -164,6 +175,20 @@ test("the account's home: what a turn planted goes, our settings, our server alo
   expect(existsSync(path.join(home, `.gemini/config/agents/${AGY_CHAT_AGENT}/extra.txt`))).toBe(false);
   expect(statSync(chatAgentPath).mtimeMs).toBe(oldDate.getTime());
   expect(statSync(workAgentPath).mtimeMs).toBe(oldDate.getTime());
+
+  // A link a turn planted is never followed: neither the managed agent's file nor its folder points outside.
+  const outside = tempDir("agy-outside-");
+  dirs.push(outside);
+  writeFileSync(path.join(outside, "keep.txt"), "theirs");
+  writeFileSync(path.join(outside, "agent.md"), agyChatAgent());
+  rmSync(chatAgentPath);
+  symlinkSync(path.join(outside, "agent.md"), chatAgentPath);
+  rmSync(path.dirname(workAgentPath), { recursive: true });
+  symlinkSync(outside, path.dirname(workAgentPath));
+  prepareAgyHome(home, ["/usr/bin/agentes-runner"]);
+  expect(lstatSync(chatAgentPath).isSymbolicLink()).toBe(false);
+  expect(lstatSync(path.dirname(workAgentPath)).isSymbolicLink()).toBe(false);
+  expect(readFileSync(path.join(outside, "keep.txt"), "utf8")).toBe("theirs");
 });
 
 test("macOS: each Gemini account signs in to a keychain of its own in its folder, made once and unlocked before every run", () => {
