@@ -33,6 +33,7 @@ import {
   machineOnline,
   publishMachineStatus,
 } from "./machines";
+
 import { getMessage, insertMessage, type Message, messageView } from "./messages";
 import { blockedOfTask, missionAllowRules, recordTaskDenials } from "./mission-command-rules";
 import { MISSION_RULES } from "./mission-rules";
@@ -62,11 +63,9 @@ const { machineTasks, agentRuns } = schema;
 export type MachineTaskRow = typeof machineTasks.$inferSelect;
 export type MachineTaskStatus = MachineTaskRow["status"];
 
-/**
- * Running tasks of a machine that went offline become `interrupted` after this (it may just be a network blip
- * or a runner dialing again); it is also when an offline computer becomes an outage people see.
- */
-export const TASK_OFFLINE_GRACE_MS = 2 * 60_000;
+/** Defined in `machines.ts` for `shownStandby` there: that module can't import this one (an import cycle). */
+export { TASK_OFFLINE_GRACE_MS } from "./machines";
+
 /**
  * A start may still be underway on the computer this long after it began (its journal doesn't list the task
  * yet): a hello in that time says nothing about it.
@@ -274,6 +273,8 @@ export interface StartTaskInput {
   worktreeBranch?: string | null;
   /** A person approved starting this very task: a shell task's command runs even when the computer would hold it. */
   approved?: boolean;
+  /** `TaskStart.pushHarder`: the person asked, in their own message, to push the computer harder for it. */
+  pushHarder?: boolean;
 }
 
 /** What a task waiting in our queue keeps to start later (`machine_tasks.start_request`). */
@@ -489,6 +490,7 @@ export async function launchTask(
       ...(input.commit ? { commit: input.commit } : {}),
       ...(input.baseCheck ? { baseCheck: input.baseCheck } : {}),
       ...(input.approved ? { approved: true } : {}),
+      ...(input.pushHarder ? { pushHarder: true } : {}),
       ...signIn,
     });
     const at = new Date(started.startedAt);
@@ -1353,6 +1355,8 @@ export async function wakeConversationForTask(deps: TaskDeps, taskId: string, op
           stretchId: agentRuns.stretchId,
           triggerMessageId: agentRuns.triggerMessageId,
           background: agentRuns.background,
+          threadRootId: agentRuns.threadRootId,
+          replyInThread: agentRuns.replyInThread,
         })
         .from(agentRuns)
         .where(eq(agentRuns.id, row.runId))
@@ -1402,7 +1406,8 @@ export async function wakeConversationForTask(deps: TaskDeps, taskId: string, op
     });
     const runs =
       !blocked && eligible.length > 0 && !(await hopLimitReached(tx, message, options.maxHops))
-        ? await createAgentRuns(tx, message, [row.agentId], "mention")
+        ? // Where the origin run answered, the agent goes on where it did (ADR 0214).
+          await createAgentRuns(tx, message, [row.agentId], "mention", origin && !report ? { after: origin } : {})
         : [];
     return { message, runs };
   });

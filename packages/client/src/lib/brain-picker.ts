@@ -24,6 +24,7 @@ import {
   planSearchNames,
 } from "./no-ai";
 import {
+  antigravityLabel,
   type BrainModelChoice,
   brainModelChoice,
   brainModelChoices,
@@ -81,7 +82,7 @@ export interface BrainPickOption {
 }
 
 /** Claude's own models describe themselves by family; any other, by its price ("Grátis" for a free one). */
-const CLAUDE_FAMILIES = ["sonnet", "opus", "haiku"] as const;
+const CLAUDE_FAMILIES = ["sonnet", "opus", "haiku", "fable"] as const;
 const claudeFamily = (model: Model) =>
   model.provider === "anthropic" ? CLAUDE_FAMILIES.find((f) => model.id.toLowerCase().includes(f)) : undefined;
 const freeModel = (model: Model) => model.inputUsdPerMTok === 0 && model.outputUsdPerMTok === 0;
@@ -318,7 +319,7 @@ export function brainPickOptions(
         ),
       ),
       ...mine
-        .map((a) => ({ ...a, label: accountTitle(a) }))
+        .map((a) => ({ ...a, label: accountTitle(t, a) }))
         .flatMap((a) =>
           rows(
             { kind, choice, machineId: a.machineId, accountId: a.id, account: a.label },
@@ -388,13 +389,17 @@ export function needsOwnSignIn(
   return !ownSignInReady({ ownSignIn: row?.mine === true }, row, p.kind);
 }
 
-/** The list's runs of options under one heading, in order (the phone draws each as a group). */
-export function pickGroups<O extends Pick<BrainPickOption, "group">>(options: readonly O[]) {
-  const out: { group?: string; options: O[] }[] = [];
+/**
+ * The list's runs of options under one heading, in order (the phone draws each as a group). `groupKey` tells apart
+ * two groups whose headings read alike (two owners of one first name); `key`, the group's own.
+ */
+export function pickGroups<O extends Pick<BrainPickOption, "group"> & { groupKey?: string }>(options: readonly O[]) {
+  const out: { key?: string; group?: string; options: O[] }[] = [];
   for (const o of options) {
+    const key = o.groupKey ?? o.group;
     const last = out.at(-1);
-    if (last && last.group === o.group) last.options.push(o);
-    else out.push({ ...(o.group ? { group: o.group } : {}), options: [o] });
+    if (last && last.key === key) last.options.push(o);
+    else out.push({ ...(key ? { key } : {}), ...(o.group ? { group: o.group } : {}), options: [o] });
   }
   return out;
 }
@@ -432,7 +437,10 @@ export function modelRows(
   const rows: Omit<ModelRow, "checked">[] = [
     { value: AUTO, label: t("brain.auto.label"), sub: t("brain.auto.hint") },
     // The model it runs stays a row when its list doesn't have it, as the web's picker keeps it: one row is checked.
-    ...(!chosen || isAuto(chosen) || models.some((m) => m.value === chosen) ? [] : [{ value: chosen, label: chosen }]),
+    // Gemini's by its name ("Gemini 4 Argon (High)"), never its slug.
+    ...(!chosen || isAuto(chosen) || models.some((m) => m.value === chosen)
+      ? []
+      : [{ value: chosen, label: view.brain === "antigravity" ? antigravityLabel(chosen) : chosen }]),
     ...models.map((m) => {
       // What each is for (Claude's own), sold as, or costs: the agent's page's line.
       const sub = brainModelLine(t, view.brain, plan, m, cursorSays);
@@ -573,6 +581,8 @@ export function modelPickerTiles(
   api: [string, ModelChoice[]][],
   apiModel: string | null,
   models: readonly Model[],
+  /** The agent's computer's row of `GET …/ai-accounts`: its own sign-ins, as "Quem pensa" lists them. */
+  computer?: Parameters<typeof ownSignInReady>[1],
 ): PickerTile[] {
   const runs = (k: MachineAccountKind) => view.options.some((o) => o.kind === k && (o.available || view.brain === k));
   const byChoice = new Map<PlanChoice, PickerAccount[]>();
@@ -580,13 +590,15 @@ export function modelPickerTiles(
   for (const a of view.accounts) {
     const theirs = a.mine || a.ownerId === ownerUserId || a.id === view.account;
     if (!theirs || !runs(a.kind) || (a.status !== "active" && a.id !== view.account)) continue;
-    add(planOfAccount(a), { id: a.id, label: accountTitle(a), usage: a.usage, provider: a.provider });
+    add(planOfAccount(a), { id: a.id, label: accountTitle(t, a), usage: a.usage, provider: a.provider });
   }
   for (const o of view.options) {
     if (o.kind === "model" || !runs(o.kind)) continue;
     const k = o.kind as MachineAccountKind;
     const own = view.brain === k && view.account === null;
-    if (own || (view.ownSignIn && o.available))
+    // The computer's own sign-in only where its runner reported it signed in (`ownSignInReady`): a CLI being there, or
+    // coming with the first sign-in (the Antigravity CLI the runner brings), isn't a sign-in.
+    if (own || (o.available && ownSignInReady(view, computer, k)))
       add(planOfKind(k), {
         id: null,
         label: t("brain.picker.ownSignIn"),

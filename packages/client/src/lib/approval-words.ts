@@ -1,6 +1,7 @@
 import type { TFunction } from "i18next";
 import type { Approval, ApprovalCoverView, ApprovalRule, CardDelegate } from "../api/types";
 import { serviceKey } from "./activity";
+import type { AgentOwnerLike } from "./agent-owner";
 import { aheadPhase, approvalAction, emailTitleWords, sqlReadsTarget } from "./approval-kind";
 import { humanize } from "./custom-tools";
 import { formatShortDate, formatTime, isUuid, lowerFirst, relativeDay } from "./format";
@@ -472,7 +473,19 @@ export function decisionOutcome(
   return t(approved ? "approvals.status.approved" : "approvals.status.refused");
 }
 
-/** Who an approval waits for, by name: the people `request_approval` asked (ADR 0126), else the agent's owner. */
+/**
+ * Who answers for a request: the owner it was made with (a person or a role, ADR 0085, addendum of 2026-11-21), else
+ * its agent's now (a request from before the server kept one). Its name is `ownerNameOf`'s.
+ */
+export const approvalOwnerOf = (
+  a: Pick<Approval, "ownerUserId" | "ownerRoleId">,
+  agent: AgentOwnerLike | undefined,
+): AgentOwnerLike => (a.ownerUserId || a.ownerRoleId ? a : (agent ?? {}));
+
+/**
+ * Who an approval waits for, by name: the people `request_approval` asked (ADR 0126), else the agent's owner (a
+ * person's name, or the role's: "Waiting for Engineering").
+ */
 export const approvalWaitsFor = (approval: Pick<Approval, "approvers">, ownerName: string | undefined) =>
   approval.approvers?.label || ownerName;
 
@@ -489,7 +502,9 @@ export function approvalGroupWaitsFor(items: Pick<Approval, "approvers" | "statu
 
 /**
  * The keys that let someone decide any approval of its kind, as the server's `decidingKeys` (engine `approvals.ts`):
- * `approve_actions`; turning on access for good (`request_permission`), the keys that give it on the agent's page.
+ * `approve_actions`; turning on access for good (`request_permission`), the keys that give it on the agent's page,
+ * where `manage_agents` counts only on an agent the person manages (the agent's `canManage`, as the server's
+ * `decides`, ADR 0085 addendum of 2026-11-17): the keys alone don't decide a request of someone's private agent.
  */
 export function approvalDecidingKeys(a: Pick<Approval, "tool" | "params">): string[] {
   if (a.tool !== "request_permission") return ["approve_actions"];

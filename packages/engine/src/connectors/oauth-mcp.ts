@@ -72,8 +72,16 @@ export function canonicalResource(serverUrl: string) {
   return u.toString().replace(/\/$/, "");
 }
 
-/** One MCP address however it was typed: no trailing slash, any case (mirrors the apps' `sameServer`). */
-export const serverKey = (serverUrl: string) => serverUrl.replace(/\/+$/, "").toLowerCase();
+/**
+ * One MCP address however it was typed: no trailing slash, any case (mirrors the apps' `sameServer`). Read from the
+ * end, not by a pattern: a person types the address, and a pattern backtracks on a long run of slashes that does not
+ * end it.
+ */
+export const serverKey = (serverUrl: string) => {
+  let end = serverUrl.length;
+  while (end > 0 && serverUrl[end - 1] === "/") end--;
+  return serverUrl.slice(0, end).toLowerCase();
+};
 
 /**
  * Asks the server who it is without credentials and reads where its OAuth lives. `headers`: what a person typed for
@@ -160,7 +168,7 @@ export async function authServerMetadata(deps: McpOAuthDeps, issuer: string): Pr
   return null;
 }
 
-const clientAad = (orgId: string, id: string) => `oauth-client|${orgId}|${id}`;
+export const clientAad = (orgId: string, id: string) => `oauth-client|${orgId}|${id}`;
 
 /** It has OAuth but only takes clients it approved; `detail`: how it refused our registration, in its words. */
 export interface NotApproved {
@@ -206,7 +214,7 @@ export function oauthScope(meta: AuthServerMetadata, scopes: string[]): string |
  * client_id"), so we register again and replace the row. Null when the server
  * doesn't offer PKCE S256 or the registration fails; `NotApproved` when it
  * has OAuth but only takes clients it approved (no registration for us, or a
- * refused one).
+ * refused one). An admin's own client (`provided_by_person`) is always the one, used or not.
  */
 export async function ensureOAuthClient(
   deps: McpOAuthDeps,
@@ -219,6 +227,7 @@ export async function ensureOAuthClient(
     .select()
     .from(oauthClients)
     .where(and(eq(oauthClients.orgId, orgId), eq(oauthClients.issuer, issuer)));
+  if (existing?.providedByPerson) return existing;
   if (existing) {
     const [inUse] = await deps.db
       .select({ id: connectorConnections.id })

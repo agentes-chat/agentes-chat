@@ -56,7 +56,7 @@ let get: (path: string, token?: string | null) => Promise<Response>;
 let lastSeen: Date;
 
 beforeAll(async () => {
-  t = await createTestServer({ env: { OPERATOR_API_TOKEN: TOKEN } });
+  t = await createTestServer({ env: { OPERATOR_API_TOKEN: TOKEN }, unconfirmedSignUps: true });
   const deps = { db: t.db, config: t.config, version: "test", log: createLogger("error") };
   const app = createOperatorApp(deps, TOKEN, READ);
   get = async (path, token = READ) =>
@@ -826,7 +826,7 @@ test("a workspace's agents, and one agent: who thinks for it, its computer, its 
   expect(await ok(await get(`/agents/${DEV}`))).toEqual({
     ...summary,
     previousHandles: ["coder"],
-    fallback: true,
+    fallback: false,
     provider: "openai",
     credential: { id: CREDENTIAL, provider: "openai", revokedAt: null },
     account: {

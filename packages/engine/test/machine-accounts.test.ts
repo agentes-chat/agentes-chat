@@ -2,6 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import {
   ACCOUNT_LOGIN_TTL_MS,
   ACCOUNTS_PROTOCOL,
+  ANTIGRAVITY_MAC_PROTOCOL,
   accountCodeAad,
   BRAIN_PROTOCOL,
   CLAUDE_AUTH_PROTOCOL,
@@ -30,6 +31,7 @@ import {
   beginAccountLogin,
   ConflictError,
   cancelAccountLogin,
+  claudeAuthBucket,
   claudeAuthMethodFor,
   claudeAuthPolicy,
   createAgent,
@@ -56,6 +58,7 @@ import {
   syncMachineAccounts,
   ValidationError,
 } from "../src";
+import { isDefaultAccountLabel } from "../src/machine-accounts";
 import { addMember, addUser, type Fixture, setup } from "./fixtures";
 import { pairMachine } from "./machine-fixtures";
 
@@ -462,6 +465,7 @@ test("signing in: the person who connected the computer; the code is sealed to i
       id: login.loginId,
       kind: "claude_code",
       label: "Claude",
+      named: false,
       email: "ana@example.com",
       plan: "max",
       status: "active",
@@ -477,6 +481,10 @@ test("signing in: the person who connected the computer; the code is sealed to i
       shared: false,
       providerOrgId: null,
       serves: "everyone",
+      useOrder: null,
+      sameAs: login.loginId,
+      // A login for one agent is never a next account.
+      movable: false,
     },
   });
   // Polled again: the same account, added once.
@@ -582,10 +590,20 @@ test("a coding plan's key: no sign-in page but the plan's key page, the key seal
   expect(row).toMatchObject({ provider: "zai", keyHint: "MnOp", email: null });
   expect(JSON.stringify(row)).not.toContain("0123456789abcdef");
 
-  // The same key again: another login of that account (one per agent), under its name. Another key is another.
+  // The same key again: another login of that account (one per agent), under its name and with its permissions.
+  // Another key is another.
+  await f.db
+    .update(schema.machineAccounts)
+    .set({ serves: "owner", useMode: "owner", replyMode: "everyone" })
+    .where(eq(schema.machineAccounts.id, login.loginId));
   const again = await add(KEY);
   expect(again.status).toMatchObject({ state: "done", account: { label: "GLM Coding", keyHint: "MnOp" } });
   expect(again.status.account?.id).not.toBe(login.loginId);
+  expect(await accountRow(again.status.account?.id ?? "")).toMatchObject({
+    serves: "owner",
+    useMode: "owner",
+    replyMode: "everyone",
+  });
   const second = await add(`${KEY.slice(0, -4)}WxYz`);
   expect(second.status.account).toMatchObject({ label: "GLM Coding 2", keyHint: "WxYz" });
 
@@ -735,6 +753,27 @@ test("a sign-in needs the computer online, a runner that knows accounts and a pr
   const old = await beginAccountLogin(codex.deps, f.owner.id, f.org.id, machineId, "codex").catch((e) => e);
   expect(old).toBeInstanceOf(ConflictError);
   expect(old.code).toBe("account.runner_old");
+});
+
+test("a sign-in on a computer asleep in standby wakes it once and goes on when it is back (ADR 0161)", async () => {
+  f = await setup();
+  const { machineId } = await ownedMachine();
+  const codex = fakeHub(machineId, () => ({ url: "https://auth.openai.com/codex/device", userCode: "ABCD-1234" }));
+  let awake = false;
+  const woke: string[] = [];
+  const hub = {
+    ...codex.deps.hub,
+    status: async () => ({ ...(await codex.deps.hub.status()), online: awake, standby: !awake }),
+    wake: async (_id: string, why: string) => {
+      woke.push(why);
+      awake = true;
+    },
+  };
+  expect(await beginAccountLogin({ ...codex.deps, hub }, f.owner.id, f.org.id, machineId, "codex")).toMatchObject({
+    kind: "codex",
+    url: "https://auth.openai.com/codex/device",
+  });
+  expect(woke).toEqual(["call"]);
 });
 
 test("the email that names the account: a plain address only, never one a shell would read", async () => {
@@ -896,10 +935,18 @@ test("Gemini's sign-in is made for all of its owner's agents from runner protoco
     );
     return (runner.calls.find((c) => c.action === "begin") as { shared?: boolean } | undefined)?.shared;
   };
+  await f.db.update(schema.machines).set({ os: "linux" }).where(eq(schema.machines.id, machineId));
   expect(await begun(SHARED_GEMINI_PROTOCOL)).toBe(true);
   // A Gemini Enterprise seat too.
   expect(await begun(SHARED_GEMINI_PROTOCOL, "enterprise")).toBe(true);
   expect(await begun(SHARED_GEMINI_PROTOCOL - 1)).toBeUndefined();
+  // A Mac signs in to Gemini from `ANTIGRAVITY_MAC_PROTOCOL` on: an older runner there refuses it.
+  await f.db
+    .update(schema.machines)
+    .set({ os: "darwin", protocol: ANTIGRAVITY_MAC_PROTOCOL })
+    .where(eq(schema.machines.id, machineId));
+  expect(await begun(ANTIGRAVITY_MAC_PROTOCOL)).toBe(true);
+  await expect(begun(ANTIGRAVITY_MAC_PROTOCOL - 1)).rejects.toMatchObject({ code: "account.runner_old" });
 });
 
 test("Claude: an account another agent thinks with signs in again as a login of its own, under the account's name", async () => {
@@ -1123,7 +1170,7 @@ test("one login per agent where the account allows it: a key's logins share its 
   expect(again.duplicate).toBeUndefined();
 });
 
-test("rename and remove: the owner renames; the owner or the pairer removes; offline, a tombstone until the next hello", async () => {
+test("rename and remove: whoever manages it renames; they or the pairer remove; offline, a tombstone until the next hello", async () => {
   f = await setup();
   const hub = createMachineHub({ db: f.db, pubsub: f.pubsub, replicaId: "replica-a" });
   hubs.push(hub);
@@ -1134,8 +1181,17 @@ test("rename and remove: the owner renames; the owner or the pairer removes; off
     .set({ machineId, brain: "claude_code", brainAccountId: CLAUDE_ID })
     .where(eq(schema.agents.id, f.agent.id));
   const admin = await addMember(f.db, f.org.id, "admin", "bia");
+  const member = await addMember(f.db, f.org.id, "member", "caio");
   const online = fakeHub(machineId, () => ({}));
 
+  expect(
+    await renameMachineAccount(online.deps, member.id, f.org.id, machineId, CLAUDE_ID, "Meu").catch((e) => e),
+  ).toBeInstanceOf(ForbiddenError);
+  // "Gerenciar" is its owner's and the administrators' by default; "Só você" keeps the administrators out.
+  await f.db
+    .update(schema.machineAccounts)
+    .set({ manageMode: "owner" })
+    .where(eq(schema.machineAccounts.id, CLAUDE_ID));
   expect(
     await renameMachineAccount(online.deps, admin.id, f.org.id, machineId, CLAUDE_ID, "Meu").catch((e) => e),
   ).toBeInstanceOf(ForbiddenError);
@@ -1151,7 +1207,7 @@ test("rename and remove: the owner renames; the owner or the pairer removes; off
     await renameMachineAccount(online.deps, f.owner.id, f.org.id, machineId, CODEX_ID, "Outro").catch((e) => e),
   ).toBeInstanceOf(NotFoundError);
 
-  // An admin removes only where the computer or the account has no person.
+  // Outside "Gerenciar", an admin removes only where the computer or the account has no person.
   expect(
     await removeMachineAccount(online.deps, admin.id, f.org.id, machineId, CLAUDE_ID).catch((e) => e),
   ).toBeInstanceOf(ForbiddenError);
@@ -2007,6 +2063,7 @@ test("the Claude sign-in policy: no row is setup-token for the listed workspaces
     method: "setup_token",
     rollout: "selected",
     orgIds: [],
+    percent: 0,
     changedAt: null,
   });
   const at = new Date("2026-03-02T10:00:00Z");
@@ -2015,7 +2072,7 @@ test("the Claude sign-in policy: no row is setup-token for the listed workspaces
     { method: "cli_login", rollout: "selected", orgIds: [f.org.id.toUpperCase(), f.org.id] },
     at,
   );
-  expect(set).toEqual({ method: "cli_login", rollout: "selected", orgIds: [f.org.id], changedAt: at });
+  expect(set).toEqual({ method: "cli_login", rollout: "selected", orgIds: [f.org.id], percent: 0, changedAt: at });
   // The same again changes nothing, its time included.
   const again = await setClaudeAuthPolicy(f.db, { method: "cli_login", rollout: "selected", orgIds: [f.org.id] });
   expect(again.changedAt).toEqual(at);
@@ -2049,13 +2106,39 @@ test("the Claude sign-in policy: no row is setup-token for the listed workspaces
   ).rejects.toMatchObject({ code: "claude_auth.unknown_org" });
 
   const other = "0193dddd-0000-4000-8000-0000000000fe";
-  const listed = { method: "cli_login" as const, rollout: "selected" as const, orgIds: [f.org.id] };
+  const listed = { method: "cli_login" as const, rollout: "selected" as const, orgIds: [f.org.id], percent: 0 };
   expect(claudeAuthMethodFor(listed, f.org.id, true)).toBe("cli_login");
   expect(claudeAuthMethodFor(listed, other, true)).toBe("setup_token");
   expect(claudeAuthMethodFor({ ...listed, rollout: "all" }, other, true)).toBe("cli_login");
   expect(claudeAuthMethodFor({ ...listed, method: "setup_token", rollout: "all" }, f.org.id, true)).toBe("setup_token");
   // Where the agents are the runner's own user, always Claude's own login.
   expect(claudeAuthMethodFor({ ...listed, method: "setup_token" }, f.org.id, false)).toBe("cli_login");
+
+  // A percent: the listed ones plus the workspaces whose stable bucket is under it; a percent kept only with `percent`.
+  expect(claudeAuthBucket("0193DDDD-0000-4000-8000-0000000000FE")).toBe(claudeAuthBucket(other));
+  const ids = Array.from({ length: 1000 }, (_, i) => `0193dddd-0000-4000-8000-${String(i).padStart(12, "0")}`);
+  const share = (percent: number) =>
+    ids.filter((id) => claudeAuthMethodFor({ ...listed, rollout: "percent", percent }, id, true) === "cli_login");
+  expect(share(0)).toEqual([]);
+  expect(share(100)).toHaveLength(1000);
+  // Pinned: a service that decides the same rollout outside core must give these same answers.
+  expect(ids.slice(0, 5).map(claudeAuthBucket)).toEqual([12, 96, 82, 17, 68]);
+  expect(share(20).length).toBeGreaterThan(150);
+  expect(share(20).length).toBeLessThan(250);
+  // Raising it only adds workspaces.
+  expect(share(30).filter((id) => !share(20).includes(id))).toHaveLength(share(30).length - share(20).length);
+  expect(claudeAuthMethodFor({ ...listed, rollout: "percent", percent: 0 }, f.org.id, true)).toBe("cli_login");
+  expect(claudeAuthMethodFor({ ...listed, method: "setup_token", rollout: "percent", percent: 100 }, other, true)).toBe(
+    "setup_token",
+  );
+  const pct = await setClaudeAuthPolicy(f.db, { method: "cli_login", rollout: "percent", orgIds: [], percent: 20 });
+  expect(pct).toMatchObject({ rollout: "percent", percent: 20 });
+  expect(
+    (await setClaudeAuthPolicy(f.db, { method: "cli_login", rollout: "all", orgIds: [], percent: 20 })).percent,
+  ).toBe(0);
+  await expect(
+    setClaudeAuthPolicy(f.db, { method: "cli_login", rollout: "percent", orgIds: [], percent: 101 }),
+  ).rejects.toBeInstanceOf(ValidationError);
 });
 
 test("a new Claude sign-in for all agents takes the policy's method once; signing in again keeps the row's", async () => {
@@ -2276,4 +2359,17 @@ test("hello keeps what a new Claude sign-in for all agents can use on the comput
   // An older runner says nothing: nothing of a newer one's stays.
   await runner.hello([], CLAUDE_AUTH_PROTOCOL - 1, { executors: { claude: { version: "2.1.304" } } });
   expect((await executors())?.claudeLoginMethods).toBeUndefined();
+});
+
+test("a name is the automatic one only as the server gives it; any other is its owner's", () => {
+  expect(isDefaultAccountLabel("claude_code", "Claude")).toBe(true);
+  expect(isDefaultAccountLabel("claude_code", "Claude 2")).toBe(true);
+  // Servers before ADR 0059's 2026-10-30 amendment put the plan in it.
+  expect(isDefaultAccountLabel("claude_code", "Claude Max 2")).toBe(true);
+  expect(isDefaultAccountLabel("codex", "ChatGPT 3")).toBe(true);
+  expect(isDefaultAccountLabel("claude_code", "GLM Coding 2", "zai")).toBe(true);
+  expect(isDefaultAccountLabel("claude_code", "Trabalho")).toBe(false);
+  expect(isDefaultAccountLabel("claude_code", "Claude pessoal")).toBe(false);
+  expect(isDefaultAccountLabel("claude_code", "Claudette")).toBe(false);
+  expect(isDefaultAccountLabel("claude_code", "ana@acme.com")).toBe(false);
 });

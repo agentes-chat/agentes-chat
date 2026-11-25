@@ -6,6 +6,7 @@ import { createInterface } from "node:readline";
 import type { CommandProfile } from "@agenteschat/adapters/command-policy";
 import type { AgentScope, BrainEffort } from "@agenteschat/adapters/machine-protocol";
 import { isAccountId } from "@agenteschat/adapters/machine-protocol";
+import { ANTIGRAVITY_LEVEL } from "@agenteschat/providers/plans";
 import {
   ACCOUNT_MISSING_MESSAGE,
   ACCOUNT_SIGNED_OUT,
@@ -92,9 +93,12 @@ export const AGY_RUN_ENV = "AGENTES_MCP_RUN";
 const OURS = new RegExp(`^(?:mcp[_.:/-]{1,2})?${CODEX_MCP_SERVER}(?:__|[_.:/-])[\\w.-]+$`);
 export const isOurAgyTool = (name: unknown) => typeof name === "string" && OURS.test(name);
 
-/** `--effort`: low, medium or high (`xhigh` and `max` as high); a slug that names its level (`…-high`) takes none. */
+/**
+ * `--effort`: low, medium or high (`xhigh` and `max` as high: not every model has the extra level); a slug that names
+ * its level (`…-high`, `…-xhigh`) takes none.
+ */
 const agyEffort = (effort?: BrainEffort, model?: string) =>
-  model && /-(?:low|medium|high)$/.test(model) ? undefined : effort === "xhigh" || effort === "max" ? "high" : effort;
+  model && ANTIGRAVITY_LEVEL.test(model) ? undefined : effort === "xhigh" || effort === "max" ? "high" : effort;
 
 /** The `agy` arguments for one turn. */
 export function antigravityTurnArgs(input: {
@@ -164,7 +168,8 @@ export function parseAgyError(stderr: string): { message: string; limit: boolean
   }
   const str = (v: unknown) => (typeof v === "string" ? v : typeof v === "number" ? String(v) : "");
   const status = `${str(o.status)} ${str(o.canonical_status)} ${str(o.code)} ${str(o.http_status)}`;
-  const message = (str(o.message) || str(o.error) || status.trim() || "The model call failed").slice(0, 500);
+  const raw = line.slice("AGY_ERROR:".length).trim();
+  const message = (str(o.message) || str(o.error) || status.trim() || raw).slice(0, 500);
   return {
     message,
     limit: /RESOURCE_EXHAUSTED|\b429\b/i.test(status) || AGY_LIMIT.test(message),
@@ -241,9 +246,9 @@ export interface AntigravityTurnOptions {
 export async function runAntigravityTurn(input: AntigravityTurnInput, opts: AntigravityTurnOptions): Promise<void> {
   const fail = (code: string, message: string, retryable?: boolean) =>
     opts.emit({ type: "error", code, message, ...(retryable ? { retryable } : {}) });
-  // Elsewhere the CLI keeps its sign-in in the one keychain of the computer's user (ADR 0143).
-  if ((opts.platform ?? process.platform) !== "linux") {
-    return fail("unsupported", "Gemini plans think on Linux computers only, for now.");
+  // On Windows the CLI keeps its sign-in in the one Credential Manager of the computer's user (ADR 0143).
+  if ((opts.platform ?? process.platform) === "win32") {
+    return fail("unsupported", "Gemini plans don't think on Windows computers yet.");
   }
   try {
     prepareAgyHome(input.account.home, opts.mcpCommand);

@@ -255,6 +255,9 @@ const Routine = z
         }),
         signed: z.boolean().openapi({ description: "Calls must carry an HMAC-SHA256 signature of the body." }),
         methods: z.array(HookMethodSchema).openapi({ description: "The HTTP methods its address answers." }),
+        groupBy: z.string().nullable().openapi({
+          description: "A dot path into each call's data: calls with the same value run in order, others side by side.",
+        }),
       }),
       z.object({
         type: z.literal("connector"),
@@ -311,11 +314,11 @@ const Routine = z
         plan: z.string().nullable().openapi({ description: 'The plan it waits for ("Claude"); null for a budget.' }),
         extraOff: z.boolean().openapi({
           description:
-            "A plan pause whose window is used up, on an agent whose long work may not use paid extra usage: continuing is refused.",
+            "A plan pause whose window is used up, on an agent whose long work never uses paid extra usage (someone else's plan lent to it, or the team's right hand): continuing is refused.",
         }),
         extraUsedUp: z.boolean().openapi({
           description:
-            "A plan pause whose window is used up, on an agent whose long work may use paid extra usage but the plan has none left: continuing is refused.",
+            "A plan pause whose window is used up, on an agent whose long work uses paid extra usage but the plan has none left: continuing is refused.",
         }),
       })
       .nullable()
@@ -410,6 +413,10 @@ const TriggerInput = z.union([
       methods: z.array(HookMethodSchema).min(1).max(HOOK_METHODS.length).optional().openapi({
         description: "The HTTP methods its address answers (default POST; left out on a change, what it had).",
       }),
+      groupBy: z.string().max(200).nullable().optional().openapi({
+        description:
+          "Group calls by a dot path into each call's data (`conversation.id`): the same value runs in order, different ones side by side. Null or blank: one line; left out on a change, what it had.",
+      }),
     })
     .openapi({ description: "A call to an address of its own (`GET …/hook` gives it to who manages the routine)." }),
   z
@@ -445,6 +452,7 @@ const Hook = z
     url: z.string(),
     signed: z.boolean(),
     methods: z.array(HookMethodSchema),
+    groupBy: z.string().nullable().openapi({ description: "Group calls by (null: one line for every call)." }),
     calls: z.array(HookCall).openapi({ description: "The latest calls, newest first (at most 20)." }),
   })
   .openapi("RoutineHook");
@@ -679,7 +687,7 @@ export function routineRoutes(deps: AppDeps) {
       path: "/organizations/{orgId}/routines",
       tags,
       security,
-      summary: "Create a routine (admins or the agent's owner)",
+      summary: "Create a routine (who manages the agent's routines: who edits it, `manage_routines` where it reaches)",
       description:
         "Refused: `routine.too_frequent` (a routine that starts the agent runs at most every 15 minutes), `routine.too_many` (20 active routines per agent), `routine.creator_cannot_post` (you must be able to post where it reports).",
       request: {
@@ -714,7 +722,7 @@ export function routineRoutes(deps: AppDeps) {
       tags,
       security,
       summary:
-        "Edit a routine (its creator, admins or the agent's owner): what, when, where, access, report, pause/resume",
+        "Edit a routine (its creator or who manages the agent's routines): what, when, where, access, report, pause/resume",
       request: {
         params: RoutineParams,
         body: body(
@@ -821,7 +829,7 @@ export function routineRoutes(deps: AppDeps) {
       path: "/organizations/{orgId}/routines/{routineId}/stop",
       tags,
       security,
-      summary: "Stop the routine's run in progress (its creator, admins or the agent's owner)",
+      summary: "Stop the routine's run in progress (its creator or who manages the agent's routines)",
       description:
         "The background run is canceled quietly (nothing is posted) and the run ends `canceled` with code `stopped` and who stopped it. The routine keeps its schedule.",
       request: { params: RoutineParams },
@@ -841,9 +849,10 @@ export function routineRoutes(deps: AppDeps) {
       path: "/organizations/{orgId}/routines/{routineId}/continue",
       tags,
       security,
-      summary: "Continue a run paused near its plan's or budget's limit now (its creator, admins or the agent's owner)",
+      summary:
+        "Continue a run paused near its plan's or budget's limit now (its creator or who manages the agent's routines)",
       description:
-        "The paused run goes on past the pause line until that window resets. Nothing is posted. With paid extra usage off it goes on up to the plan's own allowance: refused with `routine.continue_extra_off` (409) once that window is used up, or `routine.continue_extra_used_up` when the switch is on but the plan has no extra usage left. Nothing paused: the routine as it is.",
+        "The paused run goes on past the pause line until that window resets. Nothing is posted. Where its long work never uses paid extra usage (someone else's plan lent to the agent, or the team's right hand) it goes on up to the plan's own allowance: refused with `routine.continue_extra_off` (409) once that window is used up, or `routine.continue_extra_used_up` when the plan has no extra usage left. Nothing paused: the routine as it is.",
       request: { params: RoutineParams },
       responses: { 200: json(Routine), ...errors },
     }),
@@ -862,7 +871,7 @@ export function routineRoutes(deps: AppDeps) {
       path: "/organizations/{orgId}/routines/{routineId}/take-over",
       tags,
       security,
-      summary: "Take a routine over (admins or the agent's owner): you become its creator",
+      summary: "Take a routine over (who manages the agent's routines): you become its creator",
       description:
         "For a routine whose creator left or can no longer post where it reports: you become accountable for it (its approvals and notifications come to you).",
       request: { params: RoutineParams },
@@ -892,7 +901,8 @@ export function routineRoutes(deps: AppDeps) {
     },
   );
 
-  // A webhook routine's address (ADR 0106): its creator, admins and the agent's owner.
+  // A webhook routine's address (ADR 0106): its creator and who manages the agent's routines (ADR 0085 addendum of
+  // 2026-11-17).
   const managed = (actor: string, param: { orgId: string; routineId: string }) =>
     managedWebhookRoutine(db, actor, param.orgId, param.routineId);
 

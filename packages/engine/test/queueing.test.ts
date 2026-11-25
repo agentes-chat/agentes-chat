@@ -2,7 +2,7 @@ import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { eq, schema, sql } from "@agenteschat/db";
 import type { ModelRequest } from "@agenteschat/providers";
 import { drainOutbox, executeRun, getMessage, listMessages, openDm, postPersonMessage, type ToolSource } from "../src";
-import { waitForBurst } from "../src/burst";
+import * as burst from "../src/burst";
 import { type Fixture, setup } from "./fixtures";
 
 let f: Fixture;
@@ -140,13 +140,27 @@ describe("mid-round queueing (ADR 0029 section 1)", () => {
 describe("messages in a row (ADR 0112)", () => {
   const postIn = (channelId: string, body: string, threadId?: string) =>
     postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, channelId, { body, threadId });
-  // A loaded CI machine can take more than 5 s to start a run on PGlite: wait up to 20 s, the test's own limit below.
-  const waitRunning = async () => {
-    const start = Date.now();
-    while (!(await runs()).some((r) => r.status === "running")) {
-      if (Date.now() - start > 20_000) throw new Error("the run never started");
-      await Bun.sleep(5);
-    }
+  /**
+   * Holds a run at its quiet window until `open()`: `started` resolves once it is there, running. The window is measured
+   * from the message's own time, so a run a loaded machine claims after it has passed rightly waits nothing and can
+   * end between two looks at its status; held, the rest of the burst lands while it starts, however slow the machine.
+   */
+  const holdAtQuietWindow = () => {
+    let open = () => {};
+    const opened = new Promise<void>((resolve) => {
+      open = resolve;
+    });
+    let reached = () => {};
+    const started = new Promise<void>((resolve) => {
+      reached = resolve;
+    });
+    const real = burst.waitForBurst;
+    const spy = spyOn(burst, "waitForBurst").mockImplementation(async (...args) => {
+      reached();
+      await opened;
+      return real(...args);
+    });
+    return { started, open, restore: () => spy.mockRestore() };
   };
 
   test.each([
@@ -167,11 +181,18 @@ describe("messages in a row (ADR 0112)", () => {
       const root = where === "thread" ? await post("o relatório de ontem") : null;
       const channelId = dm ?? f.general.id;
       await postIn(channelId, dm ? "oi" : "@dev oi", root?.id);
-      const drained = drainOutbox(f.db, f.handlers);
-      await waitRunning();
-      await postIn(channelId, "preciso de uma coisa", root?.id);
-      await postIn(channelId, "olha o relatório de ontem e me diz se bate com o quadro", root?.id);
-      await drained;
+      const hold = holdAtQuietWindow();
+      try {
+        const drained = drainOutbox(f.db, f.handlers);
+        await hold.started;
+        expect((await runs()).map((r) => r.status)).toEqual(["running"]);
+        await postIn(channelId, "preciso de uma coisa", root?.id);
+        await postIn(channelId, "olha o relatório de ontem e me diz se bate com o quadro", root?.id);
+        hold.open();
+        await drained;
+      } finally {
+        hold.restore();
+      }
       await drainOutbox(f.db, f.handlers);
       expect(await runs()).toHaveLength(1);
       expect(f.provider.calls).toHaveLength(1);
@@ -183,8 +204,76 @@ describe("messages in a row (ADR 0112)", () => {
       expect(run?.pendingMessageIds).toEqual([]);
       expect((run?.transcript as { request?: string } | undefined)?.request).toContain("se bate com o quadro");
     },
-    30_000,
+    70_000,
   );
+
+  test("a reply that only talked, overtaken by the person before it went out, is rewritten: one answer to all of it", async () => {
+    const requests: string[] = [];
+    let dm = "";
+    f = await setup({
+      reply: (req: ModelRequest, call: number) => {
+        requests.push(JSON.stringify(req.messages));
+        // While it writes its greeting, the person asks for something else.
+        return call === 1
+          ? {
+              chunks: ["Olá! Em que posso ajudar hoje?"],
+              hold: postIn(dm, "pesquisa hotéis em Recife para março"),
+            }
+          : { chunks: ["Claro: para quantas noites?"] };
+      },
+    });
+    dm = (await openDm(f.db, f.owner.id, f.org.id, { agentId: f.agent.id })).id;
+    await postIn(dm, "olá");
+    await drainOutbox(f.db, f.handlers);
+    const said = (await listMessages(f.db, f.owner.id, f.org.id, dm))
+      .filter((m) => m.author.type === "agent")
+      .map((m) => m.body);
+    expect(said).toEqual(["Claro: para quantas noites?"]);
+    expect(f.provider.calls).toHaveLength(2);
+    // The next turn knew its draft went nowhere, and read what overtook it.
+    expect(requests[1]).toContain("Your reply was not sent");
+    expect(requests[1]).toContain("Em que posso ajudar hoje?");
+    expect(requests[1]).toContain("pesquisa hotéis em Recife para março");
+    const [run] = await runs();
+    expect(run?.status).toBe("done");
+    expect((run?.transcript as { overtaken?: number } | undefined)?.overtaken).toBe(1);
+  });
+
+  test("a reply after work (a tool called) goes out as it is, and what came meanwhile gets the next one", async () => {
+    let dm = "";
+    f = await setup({
+      toolSources: [slowTool(async () => {})],
+      reply: (_req: ModelRequest, call: number) =>
+        call === 1
+          ? { chunks: [], toolUses: [{ name: "build", input: {} }] }
+          : call === 2
+            ? { chunks: ["Build ok."], hold: postIn(dm, "e roda os testes também") }
+            : { chunks: ["Testes rodando."] },
+    });
+    dm = (await openDm(f.db, f.owner.id, f.org.id, { agentId: f.agent.id })).id;
+    await postIn(dm, "builda o projeto");
+    await drainOutbox(f.db, f.handlers);
+    const said = (await listMessages(f.db, f.owner.id, f.org.id, dm))
+      .filter((m) => m.author.type === "agent")
+      .map((m) => m.body);
+    expect(said).toEqual(["Build ok.", "Testes rodando."]);
+  });
+
+  test("a person who keeps writing still gets an answer: at most two rewrites in a row", async () => {
+    let dm = "";
+    f = await setup({
+      reply: (_req: ModelRequest, call: number) =>
+        call <= 3 ? { chunks: [`Resposta ${call}.`], hold: postIn(dm, `mais uma ${call}`) } : { chunks: ["Fim."] },
+    });
+    dm = (await openDm(f.db, f.owner.id, f.org.id, { agentId: f.agent.id })).id;
+    await postIn(dm, "oi");
+    await drainOutbox(f.db, f.handlers);
+    const said = (await listMessages(f.db, f.owner.id, f.org.id, dm))
+      .filter((m) => m.author.type === "agent")
+      .map((m) => m.body);
+    // The first two are rewritten; the third goes out, and the fourth answers what overtook it.
+    expect(said).toEqual(["Resposta 3.", "Fim."]);
+  });
 
   test("a message to a model-brain run that is still starting never holds the send for a live delivery", async () => {
     f = await setup();
@@ -247,10 +336,10 @@ describe("messages in a row (ADR 0112)", () => {
       .returning();
     if (!old) throw new Error("not moved");
     const start = Date.now();
-    await waitForBurst(f.db, old, 2500);
+    await burst.waitForBurst(f.db, old, 2500);
     expect(Date.now() - start).toBeLessThan(200);
     const fresh = await row("@dev oi de novo");
-    await waitForBurst(f.db, fresh, 600);
+    await burst.waitForBurst(f.db, fresh, 600);
     // Quiet from when it was sent, not from when the run got to it.
     expect(Date.now() - fresh.createdAt.getTime()).toBeGreaterThanOrEqual(590);
     expect(Date.now() - fresh.createdAt.getTime()).toBeLessThan(1500);
@@ -264,7 +353,7 @@ describe("messages in a row (ADR 0112)", () => {
     const stop = new AbortController();
     setTimeout(() => stop.abort(), 100);
     const start = Date.now();
-    await waitForBurst(f.db, sent, 5000, stop.signal);
+    await burst.waitForBurst(f.db, sent, 5000, stop.signal);
     expect(Date.now() - start).toBeLessThan(1000);
   });
 
@@ -304,22 +393,27 @@ describe("messages in a row (ADR 0112)", () => {
 
   test("a message sent while it writes its answer is never lost: the same run reads it next", async () => {
     let dmId = "";
+    const requests: string[] = [];
     f = await setup({
-      reply: (_req: ModelRequest, call: number) =>
-        call === 1
+      reply: (req: ModelRequest, call: number) => {
+        requests.push(JSON.stringify(req.messages));
+        return call === 1
           ? { chunks: ["Feito."], hold: postIn(dmId, "e manda pro canal também") }
-          : { chunks: ["Mandei no canal."] },
+          : { chunks: ["Feito, e mandei no canal."] };
+      },
     });
     dmId = (await openDm(f.db, f.owner.id, f.org.id, { agentId: f.agent.id })).id;
     await postIn(dmId, "fecha o relatório");
     await drainOutbox(f.db, f.handlers);
     expect((await runs()).map((r) => r.status)).toEqual(["done"]);
+    // Its reply only talked (no tool called): overtaken, it was rewritten with what came, in one answer.
+    expect(requests[1]).toContain("e manda pro canal também");
+    expect(requests[1]).toContain('It was: \\"Feito.\\"');
     const dm = await listMessages(f.db, f.owner.id, f.org.id, dmId);
     expect(dm.map((m) => m.body)).toEqual([
       "fecha o relatório",
       "e manda pro canal também",
-      "Feito.",
-      "Mandei no canal.",
+      "Feito, e mandei no canal.",
     ]);
   });
 });

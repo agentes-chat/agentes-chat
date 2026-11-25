@@ -1,10 +1,13 @@
-import { useAuthConfig, useChannels, useWikiTree } from "@agenteschat/client";
+import { useAuthConfig, useChannels, useOverview, useSidebarItems, useWikiTree } from "@agenteschat/client";
 import { AGENT_SECTIONS, AGENT_TABS, PERSONAL_AGENT_TABS } from "@agenteschat/client/lib/agent-edit";
-import { canTalk, listsAgent } from "@agenteschat/client/lib/audience";
+import { ownsAgentAs } from "@agenteschat/client/lib/agent-owner";
+import { canTalk, listsAgent, managesAgent, opensDm } from "@agenteschat/client/lib/audience";
 import { joinable } from "@agenteschat/client/lib/channel-access";
 import { setDraftFor } from "@agenteschat/client/lib/drafts";
 import { can, makesAgents } from "@agenteschat/client/lib/permissions";
 import { settingsSectionNameKey } from "@agenteschat/client/lib/personal-view";
+import { isRightHand } from "@agenteschat/client/lib/right-hand";
+import { offersCode } from "@agenteschat/client/lib/sidebar-items";
 import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
 import { Avatar, CommandPalette, Icon, type PaletteItem } from "@agenteschat/ui";
 import { useNavigate } from "@tanstack/react-router";
@@ -13,19 +16,13 @@ import { useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { useInviteDialog } from "@/components/invite/InviteDialog";
 import { NewChannelDialog } from "@/components/NewChannelDialog";
-import { useNewAgent } from "@/components/new-agent/NewAgentDialog";
+import { useNewAgent } from "@/components/new-agent/new-agent-context";
 import { useOrg } from "@/components/org-context";
 import { MyFace } from "@/components/ProfilePhoto";
 import { useDirectory } from "@/hooks/useDirectory";
 import { type ThemePreference, useTheme } from "@/lib/theme";
 import { SETTINGS_SECTIONS } from "@/pages/settings-sections";
-
-/** ⌘K / Ctrl+K anywhere in the workspace (also when typing): opens the palette. */
-export const isPaletteShortcut = (e: Pick<KeyboardEvent, "key" | "metaKey" | "ctrlKey" | "altKey" | "shiftKey">) =>
-  (e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === "k";
-
-/** Opens the palette from elsewhere (a button). */
-export const openPalette = () => window.dispatchEvent(new Event("agentes:palette"));
+import { isPaletteShortcut } from "./palette";
 
 /**
  * The ⌘K palette: go to any channel, agent, person, page or settings section,
@@ -39,6 +36,8 @@ export function CommandMenu() {
   const dir = useDirectory(org.id);
   const channels = useChannels(org.id);
   const server = useAuthConfig().data;
+  // Code only where it has anything for me, as in the sidebar (ADR 0215 §12).
+  const code = offersCode(useOverview(org.id).data?.code, useSidebarItems(org.id).data);
   const navigate = useNavigate();
   const invite = useInviteDialog();
   const newAgent = useNewAgent();
@@ -79,8 +78,10 @@ export function CommandMenu() {
         onSelect: () => void navigate({ to: "/org/$orgId/c/$channelId", params: { orgId, channelId: c.id } }),
       });
     }
+    // An agent goes to its DM: only one whose DM opens for me (`opensDm`, ADR 0085 addendum of 2026-11-17). One I only
+    // edit is among its own options below, on its page.
     for (const a of dir.agents) {
-      if (!listsAgent(org, a)) continue;
+      if (!opensDm(a)) continue;
       list.push({
         key: `a:${a.id}`,
         group: goTo,
@@ -106,12 +107,12 @@ export function CommandMenu() {
     const pages = [
       { key: "home", to: "/org/$orgId/home", icon: "home", label: t("shell.home") },
       { key: "dashboards", to: "/org/$orgId/dashboards", icon: "chart", label: t("dashboards.title") },
-      { key: "waiting", to: "/org/$orgId/waiting", icon: "question", label: t("shell.waiting") },
-      { key: "approvals", to: "/org/$orgId/approvals", icon: "waiting", label: t("shell.approvals") },
+      { key: "waiting", to: "/org/$orgId/notifications", icon: "inbox", label: t("shell.waiting") },
       { key: "proposals", to: "/org/$orgId/proposals", icon: "bulb", label: t("shell.proposals") },
       { key: "issues", to: "/org/$orgId/issues", icon: "issues", label: t("shell.issues") },
       { key: "routines", to: "/org/$orgId/routines", icon: "routines", label: t("shell.routines") },
       { key: "task-manager", to: "/org/$orgId/task-manager", icon: "stageProgress", label: t("taskManager.title") },
+      { key: "code", to: "/org/$orgId/code", icon: "code", label: t("shell.code") },
       { key: "calendar", to: "/org/$orgId/calendar", icon: "calendar", label: t("shell.calendar") },
       { key: "drive", to: "/org/$orgId/drive", icon: "drive", label: t("shell.drive") },
       { key: "team", to: "/org/$orgId/team", icon: "agent", label: t("shell.team") },
@@ -119,6 +120,7 @@ export function CommandMenu() {
       { key: "search", to: "/org/$orgId/search", icon: "search", label: t("shell.searchWorkspace") },
     ] as const;
     for (const p of pages) {
+      if (p.key === "code" && !code) continue;
       list.push({
         key: `g:${p.key}`,
         group: goTo,
@@ -152,18 +154,21 @@ export function CommandMenu() {
       });
     // Each agent's own options, only for a typed query ("ada model", "instructions").
     const agentsGroup = t("palette.agents");
-    const manages = can(org, "manage_agents");
     // A personal workspace's bar has fewer tabs (ADR 0159); "advanced" is where its sections land, not a place to name.
     const tabs = AGENT_TABS.filter(
       (tab) => tab !== "advanced" && (!isPersonal(org) || (PERSONAL_AGENT_TABS as readonly string[]).includes(tab)),
     );
+    // The roles I hold: an agent one of them answers for is mine too (ADR 0085, addendum of 2026-11-21).
+    const myRoleIds = dir.members.find((m) => m.userId === me.user.id)?.roleIds ?? [];
     for (const a of dir.agents) {
       if (!listsAgent(org, a)) continue;
       const mark = <AgentAvatar agentId={a.id} size="sm" name={a.name} />;
       const keywords = [a.handle, t("palette.agentKeywords")].join(" ");
       const params = { orgId, agentId: a.id };
-      // Who manages agents changes everything; its owner who thinks, its look, audience and computer (the server's rules).
-      const edits = manages || a.ownerUserId === me.user.id;
+      // Who manages the agent changes everything; its owner who thinks, its look, audience and computer (the server's
+      // rules, per agent: ADR 0085 addendum of 2026-11-17).
+      const manages = managesAgent(a);
+      const edits = manages || ownsAgentAs(a, me.user.id, myRoleIds);
       if (edits)
         list.push({
           key: `am:${a.id}`,
@@ -195,8 +200,9 @@ export function CommandMenu() {
         });
       if (!edits) continue;
       for (const sec of AGENT_SECTIONS) {
-        // "Quem pensa" is the model item above; archiving is for who manages agents.
-        if (sec === "brain" || (sec === "danger" && !manages)) continue;
+        // "Quem pensa" is the model item above; archiving is for who manages the agent; the right hand's page has no
+        // "Quem pode editar" (its workings are the product's, ADR 0137).
+        if (sec === "brain" || (sec === "danger" && !manages) || (sec === "editors" && isRightHand(a))) continue;
         list.push({
           key: `as:${a.id}:${sec}`,
           group: agentsGroup,
@@ -306,6 +312,7 @@ export function CommandMenu() {
     me.user.id,
     org,
     server,
+    code,
     navigate,
     t,
     goTo,

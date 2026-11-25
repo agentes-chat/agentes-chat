@@ -23,6 +23,7 @@ import {
   CursorBrain,
   composioConnectorsOf,
   connectOverHttp,
+  connectorMediaLinks,
   createAgentGifPoster,
   createAgentStyleToolSource,
   createApprovalRequestToolSource,
@@ -38,6 +39,8 @@ import {
   createChatToolSource,
   createClaudeCodeBrain,
   createCoAuthorToolSource,
+  createCodeSuggestionToolSource,
+  createCommentToolSource,
   createConnectorToolSource,
   createContextToolSource,
   createDashboardToolSource,
@@ -56,6 +59,10 @@ import {
   createJevJudge,
   createJevKey,
   createJobHandlers,
+  createLiveDocs,
+  createLiveFileToolSource,
+  createLiveImages,
+  createLlmIntentWriter,
   createLlmJudge,
   createMachineHub,
   createMailToolSource,
@@ -64,11 +71,13 @@ import {
   createMissionRunToolSource,
   createMissionToolSource,
   createModelGateway,
+  createNativeConnectorToolSource,
   createPassToolSource,
   createPermissionToolSource,
   createReactToolSource,
   createReleaseAsksToolSource,
   createSandboxToolSource,
+  createSayNowToolSource,
   createScheduleToolSource,
   createSessionScreening,
   createSetStatusToolSource,
@@ -89,6 +98,7 @@ import {
   deviceWaitHooks,
   type EmailArt,
   emailArtAt,
+  ensureCodeSessionsOn,
   envSpeechEngines,
   feedbackDestination,
   type GatewayEmbeddings,
@@ -96,16 +106,19 @@ import {
   GrokBrain,
   getAgentCached,
   hubBrainLink,
+  type IntentWriter,
   isAgentesCloud,
   isRightHand,
   type JobDeps,
   type Judge,
+  type LiveDeps,
   type MailDeps,
   type McpConnect,
   messageRouter,
   missionTurnPermissions,
   notifyOwnerOnBudget,
   OpencodeBrain,
+  officeLiveExporter,
   platformCapJudge,
   prepareAgentCode,
   publishUserEvent,
@@ -123,6 +136,7 @@ import {
   type ScheduleReader,
   type SkillDeps,
   type StorageDeps,
+  setLiveExporter,
   setWorkOrgCap,
   shareSavedFile,
   smallModelFor,
@@ -139,6 +153,7 @@ import { createOpenAIEmbeddings, createVoyageEmbeddings, type ModelProvider } fr
 import { type AppleTokenRevoker, appleTokenRevoker } from "./auth";
 import { hookConfig } from "./routes/app/context";
 import { version } from "./version";
+import { WAKE_TOPIC } from "./workers";
 
 /** Why `/api/terminal` closes (with 4404) where sessions are screened (ADR 0076 §7). */
 export const NO_TERMINAL = "no_terminal";
@@ -166,6 +181,8 @@ export interface EngineOptions {
   routerQuietMs?: number;
   /** Tests: a fake judge (no model calls for "is this a stop?" and the like). */
   judge?: Judge;
+  /** Tests: a fake writer of the working line's first words, or null for none (no model call at a run's start). */
+  intents?: IntentWriter | null;
   /** Tests: a fake schedule reader (no model calls for "toda segunda às 9h" and the like). */
   schedules?: ScheduleReader;
   /** Tests: fake S3 server and DNS for org buckets. */
@@ -186,6 +203,7 @@ export interface EngineOptions {
   log?: {
     info(message: string, data?: Record<string, unknown>): void;
     warn(message: string, data?: Record<string, unknown>): void;
+    error?(message: string, data?: Record<string, unknown>): void;
   };
   /** Error reports (ADR 0104) for failures nothing logs: learning's (`reportLearnFailure`). */
   errors?: ErrorReporter;
@@ -281,6 +299,10 @@ export function buildEngine(o: EngineOptions) {
       () => jevKey.usable(),
     );
   }
+  context.intents =
+    o.intents === undefined
+      ? createLlmIntentWriter({ gateway, resolveModel: (orgId) => smallModelFor({ db, gateway }, orgId, smallModels) })
+      : (o.intents ?? undefined);
   // Screenshots go only to Jev's vision model: with a fake judge (tests) nothing looks at them.
   const vision = o.judge ? undefined : () => jevKey.usable();
   // Nothing is judged for a workspace on hold or suspended: Jev bills the server, not the workspace.
@@ -318,6 +340,31 @@ export function buildEngine(o: EngineOptions) {
     replicaId: o.replicaId,
     readyEmail: adapters.email.delivers ? { publicUrl: config.PUBLIC_URL, gateway } : null,
     errors: o.errors,
+  });
+  // Live files (ADR 0196): the documents this process hosts, for people's sockets and for agents' tools, which may run
+  // in any process. A change crosses processes through the database and pub/sub, so it names this one (`replicaId`).
+  const liveDeps: LiveDeps = {
+    ...artifacts,
+    pubsub: adapters.pubsub,
+    replicaId: machineHub.replicaId,
+    // To the server's log (nowhere in tests), errors as errors where that log has them.
+    log: {
+      info: (message: string, data?: Record<string, unknown>) => o.log?.info(message, data),
+      warn: (message: string, data?: Record<string, unknown>) => o.log?.warn(message, data),
+      error: (message: string, data?: Record<string, unknown>) => (o.log?.error ?? o.log?.warn)?.(message, data),
+    },
+  };
+  const live = createLiveDocs(liveDeps);
+  // Live files' downloads as Excel, PowerPoint, CSV and PDF, versions included (ADR 0198).
+  setLiveExporter(officeLiveExporter);
+  // Pictures on canvases (ADR 0197): asked by people's routes and agents' tools, made by the `live.image` job, whose
+  // workers in any process are woken as soon as one is asked.
+  const images = createLiveImages({
+    artifacts,
+    live,
+    gateway,
+    wake: () => void adapters.pubsub.publish(WAKE_TOPIC, { type: "wake" }).catch(() => {}),
+    log: o.log,
   });
   const workspaceComputer =
     config.MACHINE_PROVISIONING === "external" ? { billing: Boolean(config.BILLING_URL) } : undefined;
@@ -416,7 +463,7 @@ export function buildEngine(o: EngineOptions) {
         judge: context.judge,
       }),
       createFindAgentToolSource({ machines: machineHub }),
-      createUsageToolSource(),
+      createUsageToolSource({ pubsub: adapters.pubsub }),
       // What people saved for the agent in the Vault, found before it asks them (ADR 0144).
       createVaultToolSource(vault),
       // What the agent says it is doing, next to its name (ADR 0084).
@@ -433,6 +480,9 @@ export function buildEngine(o: EngineOptions) {
         rateLimiter: adapters.rateLimiter,
       }),
       createReactToolSource({ pubsub: adapters.pubsub }),
+      createSayNowToolSource({ pubsub: adapters.pubsub }),
+      // An agent that programs on a computer suggests a code session for a change asked in the chat (ADR 0215 §11).
+      createCodeSuggestionToolSource(),
       // A GIF or the agent's sticker when asked (ADR 0091): listed by the workspace's switches and the agent's.
       createMediaToolSource({ pubsub: adapters.pubsub, gifs: adapters.gifs ?? null }),
       // Long work goes to the background and reports back by itself, on every brain (ADR 0121).
@@ -451,6 +501,11 @@ export function buildEngine(o: EngineOptions) {
       // Runs nobody called by name may stay quiet (reply-policy.ts): listed only for them.
       createPassToolSource(),
       createArtifactToolSource(artifacts),
+      // Spreadsheets, presentations and canvases agents edit with people, and images onto a canvas (ADR 0196, 0197);
+      // pictures from the web are downloaded through the public-address guard (ADR 0196 §8).
+      createLiveFileToolSource({ artifacts, live, images, web: { resolveHost: o.resolveHost } }),
+      // Comments on a picture, a video or a PDF, seen, made and resolved by the agent there (ADR 0208).
+      createCommentToolSource({ artifacts, pubsub: adapters.pubsub, judge: context.judge }),
       // Live blocks and votes in the agent's own conversation (ADR 0113).
       createBlockToolSource(artifacts),
       createChatToolSource({ pubsub: adapters.pubsub, artifacts, gif: createAgentGifPoster(adapters.gifs) }),
@@ -489,6 +544,17 @@ export function buildEngine(o: EngineOptions) {
         githubApp: githubAppAccess,
         callerIdentity: mcpCallerIdentity(config),
       }),
+      // Connectors of our own (ADR 0170): no MCP server, every tool served here.
+      createNativeConnectorToolSource({
+        ...connectorDeps,
+        artifacts,
+        monthlyCaps: { x: config.CONNECTOR_X_CALLS_PER_MONTH },
+        media: connectorMediaLinks({
+          secret: config.AGENTES_SECRET,
+          publicUrl: config.PUBLIC_URL,
+          resolveHost: o.resolveHost,
+        }),
+      }),
       // People's mailboxes (ADR 0038): only when the server has a mail path (Composio, IMAP).
       createMailToolSource({
         keyWrappers,
@@ -521,6 +587,7 @@ export function buildEngine(o: EngineOptions) {
         pubsub: adapters.pubsub,
         artifacts,
         publicUrl: config.PUBLIC_URL,
+        rateLimiter: adapters.rateLimiter,
       }),
       browserTools,
       // Reading the web, for every agent and run (ADR 0109): a search service when configured, else the agent's
@@ -531,6 +598,8 @@ export function buildEngine(o: EngineOptions) {
         browser: browserTools.readPage,
         resolveHost: o.resolveHost,
         usage: gateway,
+        // `show_image` (ADR 0217): pictures from the web saved where the run posts.
+        artifacts,
       }),
       // The agent's own desktop (ADR 0062): `desktop:use` with Run code, when its computer serves desktop use.
       createDesktopToolSource({
@@ -567,6 +636,10 @@ export function buildEngine(o: EngineOptions) {
     online: async (machineId: string) => {
       await missionHooks.online?.(machineId);
       await deviceWaits.online(machineId).catch(() => undefined);
+      // Code sessions whose worktree waited for this computer (ADR 0215) are prepared now.
+      await ensureCodeSessionsOn({ db, pubsub: adapters.pubsub, hub: machineHub, git: sandbox.git }, machineId).catch(
+        () => undefined,
+      );
     },
     phonesChanged: deviceWaits.phonesChanged,
   };
@@ -792,6 +865,8 @@ export function buildEngine(o: EngineOptions) {
     pushServer: new URL(config.PUBLIC_URL).origin,
     storage,
     artifacts,
+    // The image job places pictures on canvases through the documents this process hosts (ADR 0197).
+    live,
     sandbox,
     skills: skillDeps,
     // A workspace's deletion revokes its grants at GitHub and Composio, and leaves a line in the log.
@@ -804,6 +879,7 @@ export function buildEngine(o: EngineOptions) {
     gifs: adapters.gifs ?? null,
     log: o.log,
     maxToolTurns: config.AGENT_MAX_TOOL_TURNS,
+    signInConcurrency: config.CLAUDE_PLAN_CONCURRENCY,
     // A run started on a person's message reads what they add in the next seconds with it (ADR 0112).
     quietMs: o.routerQuietMs ?? ROUTER_QUIET_MS,
     // It ends early when the person isn't typing, and Claude's API reads the prompt into its cache meanwhile.
@@ -881,6 +957,12 @@ export function buildEngine(o: EngineOptions) {
     machineHub,
     browserLive,
     streams,
+    /** Live files (ADR 0196): the documents this process hosts (its sockets, agents' tools, the routes). */
+    live,
+    /** What live files' engine functions take (making one, its pictures, office files). */
+    liveDeps,
+    /** Pictures on canvases (ADR 0197): the image routes and the agents' `generate_image`. */
+    images,
     /** Screened sessions (ADR 0076), for the operator API's review door; null where nothing is screened. */
     sessions,
     desktops,

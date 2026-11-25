@@ -79,8 +79,12 @@ describe("who can't act gets an honest line and no button that fails", () => {
     expect(screen().queryByRole("button", { name: "Enviar arquivo" })).toBeNull();
   });
 
-  test("Conectores without manage_connectors", async () => {
+  test("Conectores without manage_connectors: their own to add on Pessoal, the team's to look at", async () => {
     await go(fresh(["read"]), "settings/connectors");
+    expect(title()).toBe("Conecte suas próprias contas");
+    expect(buttons().map((b) => b.textContent)).toEqual(["Ver conectores"]);
+    await act(async () => fireEvent.click(screen().getByRole("radio", { name: /Equipe/ })));
+    await settle(2);
     expect(title()).toBe("Veja o que os agentes podem usar");
     expect(buttons()).toEqual([]);
   });
@@ -113,11 +117,15 @@ describe("no results: no agent, a line and the way out", () => {
 });
 
 describe("all clear: a calm win, nothing to do", () => {
-  test("Aprovações with nothing waiting", async () => {
+  test("the inbox with nothing waiting, where the requests' old address lands (ADR 0218)", async () => {
     const state = fresh();
+    // No request and no proposal to decide: both are rows of what waits on me.
     state.approvals = [];
-    await go(state, "approvals");
-    expect(title()).toBe("Tudo decidido");
+    state.proposals = [];
+    const { router } = await go(state, "approvals");
+    expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/notifications`);
+    expect(document.querySelector(".ib-filter")?.textContent).toBe("Esperando você");
+    expect(empty().textContent).toBe("Ninguém está esperando você.");
     expect(empty().querySelector(".ac-empty__agent canvas")).not.toBeNull();
     expect(buttons()).toEqual([]);
   });
@@ -284,7 +292,7 @@ describe("the right words for the right empty", () => {
     api.orgs.planUsage = async () => ({ month: "2026-10", money: false, accounts: [], api: [] });
     await renderApp(`/org/${ORG_ID}/settings/usage`, { api });
     await settle(8);
-    expect(within(empty()).getByRole("button", { name: "Conectar uma IA" })).toBeDefined();
+    expect(within(empty()).getByRole("button", { name: "Adicionar conta" })).toBeDefined();
   });
 
   test("a channel I only read: no greeting, no chips for a composer that isn't there", async () => {

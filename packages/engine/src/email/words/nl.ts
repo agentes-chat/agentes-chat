@@ -236,6 +236,11 @@ export const words: EmailWords = {
     preheader: "Keur het goed of weiger het in Leden. Er gebeurt niets tot je antwoordt.",
     headline: "Er wacht een verzoek om lid te worden",
     body: (org) => ["Diegene opende de uitnodigingslink van ", { b: org }, " en vraagt om lid te worden."],
+    outside: (by) => [
+      "Diegene werkt voor ",
+      { b: by },
+      " en vraagt om lid te worden als externe medewerker. Diegene neemt geen plek in je abonnement in, en je kunt diegene altijd verwijderen.",
+    ],
     note: "Keur alleen mensen goed die je verwacht. Ze worden lid, tenzij je op de pagina een andere rol kiest.",
     approve: "Goedkeuren",
     deny: "Weigeren",
@@ -307,6 +312,14 @@ export const words: EmailWords = {
   deletionCode: {
     subjectWorkspace: (code) => `${code} is je code om een werkruimte te verwijderen`,
     subjectAccount: (code) => `${code} is je code om je hele account te verwijderen`,
+    subjectReset: (code) => `${code} is je code om een werkruimte te resetten`,
+    reset: (org) => [
+      "Typ deze code om de werkruimte ",
+      { b: org },
+      " te resetten. Agents, gesprekken, bestanden en geheugen worden meteen en definitief gewist, en hij begint opnieuw als een nieuwe werkruimte.",
+    ],
+    whyReset: (org) =>
+      `Je krijgt deze e-mail omdat vanuit je account is gevraagd om ${org} op agentes.chat te resetten.`,
     preheader: "Typ hem in agentes.chat om te bevestigen. Hij werkt 10 minuten.",
     headline: "Je code",
     workspace: (org) => [
@@ -491,6 +504,36 @@ export const words: EmailWords = {
     table: (day) => `De hele tabel: bun run report:autonomy --day ${day}`,
     why: "Je krijgt deze e-mail omdat dit adres in OPS_REPORT_EMAIL op deze server staat. We sturen hem één keer per dag.",
   },
+  accountOpened: {
+    subject: (plan) => `Meer mensen kunnen je ${plan}-account gebruiken`,
+    preheader: (plan) => `Wat ze ermee doen, gebruikt je ${plan}-abonnement en de limieten ervan.`,
+    headline: "Iemand heeft gewijzigd wie je AI-account mag gebruiken",
+    body: (by, account, plan) => [
+      { b: by },
+      ` heeft gewijzigd wie je ${plan}-account `,
+      { b: account },
+      ` mag gebruiken. Wat ze ermee doen, gebruikt je abonnement en de limieten ervan.`,
+    ],
+    account: "Account",
+    by: "Gewijzigd door",
+    setting: "Recht",
+    use: "Gebruiken in agents",
+    reply: "Iedereen antwoorden",
+    was: "Eerst",
+    now: "Nu",
+    everyone: "Iedereen in de workspace",
+    admins: "Jij en beheerders",
+    onlyYou: "Alleen jij",
+    agentOwner: "Alleen de eigenaar van de agent",
+    note: "Ongedaan maken? Open het account bij AI en gebruik en wijzig de rechten.",
+    button: "AI-accounts openen",
+    why: (org) =>
+      `Je krijgt deze e-mail omdat je dit AI-account in ${org} hebt gekoppeld en iemand anders heeft gewijzigd wie het mag gebruiken.`,
+    personal: {
+      why: () =>
+        "Je krijgt deze e-mail omdat je dit AI-account hebt gekoppeld en iemand anders heeft gewijzigd wie het mag gebruiken.",
+    },
+  },
   planOpened: {
     subject: (plan) => `Meer mensen kunnen met je agent praten via je ${plan}-abonnement`,
     preheader: (plan) => `Hun gesprekken gebruiken je ${plan}-abonnement en de limieten ervan.`,
@@ -564,5 +607,71 @@ export const words: EmailWords = {
       why: () =>
         "Je krijgt deze e-mail omdat deze werkruimte op agentes.chat van jou is. We sturen maar twee van deze berichten.",
     },
+  },
+  surface: {
+    linked: {
+      subject: (surface) => `${surface} is gekoppeld aan je agentes.chat-account`,
+      preheader: "Je assistent antwoordt je daar nu. Was jij het niet? Ontkoppel het.",
+      headline: (surface) => `${surface} is gekoppeld`,
+      body: (surface, display, org) => [
+        { b: display },
+        ` op ${surface} praat nu met je assistent in `,
+        { b: org },
+        ".",
+      ],
+      notYou: "Was jij het niet? Ontkoppel het. Berichten van daar bereiken je account dan meteen niet meer.",
+      button: "Ontkoppelen",
+      small: "Was jij het wel? Dan hoef je niets te doen. Je kunt het altijd ontkoppelen in Instellingen.",
+      why: (surface) => `Je krijgt deze e-mail omdat ${surface} aan je agentes.chat-account is gekoppeld.`,
+      picture: "Je assistent, nu ook op je telefoon",
+    },
+    unlinked: {
+      subject: (surface) => `${surface} is ontkoppeld van je agentes.chat-account`,
+      preheader: "De identiteit is veranderd. Koppel het opnieuw in Instellingen als jij het was.",
+      headline: (surface) => `${surface} is ontkoppeld`,
+      body: (surface, display) => [{ b: display }, ` op ${surface} is ontkoppeld omdat de identiteit is veranderd.`],
+      small: "Koppel het opnieuw in Instellingen als jij het was.",
+      why: (surface) => `Je krijgt deze e-mail omdat ${surface} aan je agentes.chat-account gekoppeld was.`,
+      picture: "Je assistent, niet meer op je telefoon",
+    },
+    pinReset: {
+      subject: (surface) => `Kies je ${surface}-pincode`,
+      preheader: "Kies de pincode waarmee je acties via je chat-app goedkeurt.",
+      headline: (surface) => `Kies je ${surface}-pincode`,
+      body: (surface) =>
+        `Iemand vroeg om een link om de pincode te kiezen waarmee je acties via ${surface} goedkeurt. Was jij het? Kies hem dan op de pagina die deze knop opent.`,
+      button: "Mijn pincode kiezen",
+      small: "De link werkt één keer, een uur lang. Was jij het niet? Negeer deze e-mail. Er verandert niets.",
+      why: (surface) => `Je krijgt deze e-mail omdat ${surface} aan je agentes.chat-account gekoppeld is.`,
+    },
+    pinLocked: {
+      subject: (surface) => `Je ${surface}-pincode is geblokkeerd`,
+      preheader: "Drie keer achter elkaar een verkeerde pincode. Goedkeuren via je chat-app is voorlopig gepauzeerd.",
+      headline: (surface) => `Je ${surface}-pincode is geblokkeerd`,
+      body: (surface, time) =>
+        `Iemand typte drie keer achter elkaar een verkeerde pincode om een actie via ${surface} goed te keuren. Goedkeuren via ${surface} is ${time} gepauzeerd.`,
+      lockedFor: ["15 minuten", "1 uur", "24 uur"],
+      small: (surface) =>
+        `Was jij het? Probeer het later opnieuw. Zo niet, ontkoppel ${surface} in je meldingsinstellingen, zodat niemand er nog mee kan goedkeuren.`,
+      button: "Meldingsinstellingen openen",
+    },
+  },
+  supportReply: {
+    subject: "Een antwoord op je hulpvraag",
+    preheader: "Over de hulp die je vroeg op agentes.chat.",
+    headline: "Een antwoord op je hulpvraag",
+    answers: {
+      received: "We hebben je vraag ontvangen en kijken ernaar.",
+      need_more: "We hebben meer informatie nodig om je te helpen: wat je deed, wat je verwachtte en wat er gebeurde.",
+      resolved: "Wat je meldde is opgelost.",
+      handed_over: "Een persoon heeft je vraag nu en geeft je antwoord.",
+    },
+    from: (host) =>
+      host
+        ? atHost("Beantwoord door de beheerders van de agentes.chat-server", "op", host)
+        : "Beantwoord door agentes.chat.",
+    ai: "Een AI-assistent schreef dit antwoord.",
+    reply: (address) => ["Wil je antwoorden? Schrijf naar ", { mail: address }, "."],
+    why: "Je krijgt deze e-mail omdat je om hulp vroeg op agentes.chat.",
   },
 };

@@ -1,12 +1,13 @@
 import {
   moveErrorOf,
   pickedTargetKey,
+  planDroppedText,
   type TargetOption,
   targetOptions,
 } from "@agenteschat/client/lib/machine-outages";
 import { type ReactNode, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import {
   Button,
   GroupedFooter,
@@ -18,11 +19,13 @@ import {
   OPTION_ROW,
   ProviderLogo,
   SheetScreen,
+  SkeletonList,
   Text,
   useToast,
 } from "@/ui";
+import { openConnectAi } from "../ai/NoAiCard";
 import { AgentFace } from "../shared/Face";
-import { useColors } from "../shared/hooks";
+import { LoadFailed } from "../shared/FirstUse";
 import { SheetTitle } from "../shared/PromptForm";
 import { successHaptic, tapHaptic } from "../shared/parts";
 import { computerIcon, type MachineOutage, moveToast, sheetDesc, targetText, waitingText } from "./logic";
@@ -36,13 +39,12 @@ import { useMachineOutages, useMoveAgents } from "./queries";
  */
 export function SwitchComputerSheet({ machineId, onClose }: { machineId: string; onClose: () => void }) {
   const { t } = useTranslation();
-  const c = useColors();
   const q = useMachineOutages();
   const outage = q.data?.outages.find((o) => o.machineId === machineId) ?? null;
 
   let body: ReactNode;
   if (!q.data) {
-    body = q.isError ? <Text tone="muted">{t("mobile.app.failed")}</Text> : <ActivityIndicator color={c.muted} />;
+    body = q.isError ? <LoadFailed onRetry={() => void q.refetch()} /> : <SkeletonList rows={3} />;
   } else if (!outage || outage.agents.length === 0) {
     body = (
       <>
@@ -103,11 +105,23 @@ function SwitchForm({
       {
         onSuccess: (r) => {
           const said = moveToast(t, r, o.name);
+          const nameOf = (agentId: string) => o.agents.find((a) => a.agentId === agentId)?.name ?? "";
+          const plans = planDroppedText(t, r, { from: o.name, to: target.name, nameOf });
+          const subtitle = [...plans.lines, said.subtitle].filter(Boolean).join(" · ");
+          const signIn = plans.signIn;
           if (said.ok) successHaptic();
           toast({
             title: said.title,
-            ...(said.subtitle ? { subtitle: said.subtitle } : {}),
+            ...(subtitle ? { subtitle } : {}),
             icon: said.ok ? "check" : "x",
+            ...(signIn
+              ? {
+                  action: {
+                    label: t("outage.done.signIn", { name: target.name }),
+                    onPress: () => openConnectAi({ agentId: signIn.agentId, plan: signIn.plan }),
+                  },
+                }
+              : {}),
           });
           onClose();
         },

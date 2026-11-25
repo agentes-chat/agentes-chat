@@ -102,16 +102,29 @@ describe("the server's rules for a run's prompts (Claude Code and Codex alike)",
       behavior: string;
       message?: string;
     };
-  test("secrets, inline code and writes outside its folders are refused; its own work is allowed", () => {
+  test("secrets and system files are refused; its own work, inline code and edits elsewhere are allowed", () => {
     expect(ask("Read", { file_path: "/Users/w/.ssh/id_ed25519" })).toMatchObject({ behavior: "deny" });
     expect(ask("Bash", { command: "cat ~/.aws/credentials" })).toMatchObject({ behavior: "deny" });
-    const inline = ask("Bash", { command: "python3 -c 'import os'" });
-    expect(inline.behavior).toBe("deny");
-    expect(inline.message).toContain("runs code given inline");
+    expect(ask("Bash", { command: "python3 -c 'import os'" }).behavior).toBe("allow");
+    expect(ask("Bash", { command: "python3 -c 'import os; os.system(\"sudo id\")'" }).behavior).toBe("deny");
     expect(ask("Write", { file_path: "/etc/hosts" }).behavior).toBe("deny");
+    expect(ask("Write", { file_path: "/Users/w/notes/plan.md" }).behavior).toBe("allow");
     expect(ask("Bash", { command: "gh -R acme/app pr merge 3" }).behavior).toBe("deny");
     expect(ask("Bash", { command: "npm install" }).behavior).toBe("allow");
     expect(ask("Write", { file_path: "/w/dev/repos/acme/app/src/a.ts" }).behavior).toBe("allow");
+  });
+
+  test("a privileged container runs on the agent's own rootless engine, only there (ADR 0209)", () => {
+    const run = (s: Record<string, unknown>) =>
+      JSON.parse(
+        runPermissionPrompt(
+          { tool_name: "Bash", input: { command: "docker run --privileged docker:dind" }, scope: s },
+          { canRun: true },
+        ),
+      ).behavior;
+    expect(run({ ...scope, rootlessContainers: true })).toBe("allow");
+    expect(run(scope)).toBe("deny");
+    expect(run({ ...scope, rootlessContainers: "yes" })).toBe("deny");
   });
 
   test("the runner's home, wherever the runner says it is, holds secrets (its AI accounts)", () => {

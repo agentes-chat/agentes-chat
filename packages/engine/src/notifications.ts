@@ -16,12 +16,11 @@ import {
   schema,
   sql,
 } from "@agenteschat/db";
-import { plainLine } from "@agenteschat/ui/markdown";
 import { decidableBySql } from "./approvals";
 import { NotFoundError, ValidationError } from "./errors";
 import { publishUserEvent } from "./events";
-import { cutText } from "./format";
-import type { PreviewMeta } from "./message-preview";
+import { queueLiveActivity } from "./live-activity-queue";
+import { type PreviewMeta, snippetOf } from "./message-preview";
 import { noticeOn, noticePrefsOf, readNoticePrefs } from "./notice-prefs";
 import { listMemberships, requirePermission } from "./organizations";
 import { enqueuePush } from "./push";
@@ -85,6 +84,13 @@ export const NOTIFICATION_KINDS = [
    * once per wait): `latest.title` the plan's name, `source.label` the agent's.
    */
   "plan_reset_unknown",
+  /**
+   * An agent's work stopped on its monthly budget (`budget-pause.ts`): who manages it, its owner and the person behind
+   * the work, once per agent, month and budget. `source.agentId` the agent, its name in `label`, `channelId` /
+   * `threadId` the conversation the work started from; `latest.percent` the budget used, `latest.text` the line in
+   * the person's language (the push). Waiting; done once its budget changes or a new month lets it go on.
+   */
+  "budget_paused",
   /**
    * An agent back from its plan or budget skipped catch-ups that looked handled (ADR 0136): its owner, one row per line
    * (`count` the conversations they can read), opening the latest skipped note. Inbox only (no category, no push).
@@ -237,6 +243,12 @@ export const NOTIFICATION_KINDS = [
    */
   "right_hand_decided",
   /**
+   * An agent applied a change it judged worth making (ADR 0219) to an agent this person looks after or to the
+   * workspace's context: one row a day while unread, `count` how many, `latest.title` the newest change in a line,
+   * `source.agentId` the agent that applied it, `source.proposalId` the newest change. Inbox only.
+   */
+  "proposal_applied",
+  /**
    * The right hand stopped deciding for this person: three of its decisions undone in a week (ADR 0139 §2). Waiting
    * until they turn it back on, so it reaches their devices.
    */
@@ -352,6 +364,10 @@ export interface NotificationSource {
   phoneId?: string;
   /** `device.in_use`, `device.waiting`, `device.access_request`: the agent's run on the device. */
   runId?: string;
+  /** A message in a live file's conversation (ADR 0199): the file, which the apps open with it at `messageId`. */
+  artifactId?: string;
+  /** A code session's conversation (ADR 0215): the apps open the session on the Code page. */
+  codeSessionId?: string;
   /** Channel name, thread title, issue title, topic title, mission or routine name, widget or board title. */
   label?: string;
 }
@@ -398,6 +414,8 @@ export interface NotificationLatest {
   names?: string[];
   /** `join_request` from a member's suggestion (ADR 0090): who suggested, so a row of one says so. */
   suggestedBy?: string;
+  /** `join_request` for an outside collaborator (ADR 0191): who they work for, so a row of one says so. */
+  outsideOf?: string;
   /** `composio_limit`: the calls a month allows. */
   calls?: number;
   /** `computer_disk_full`: the share of the disk in use (0 to 1) and the GB left. */
@@ -490,6 +508,8 @@ const MERGING: ReadonlySet<NotificationKind> = new Set([
   "catch_up_closed",
   // The day's decisions the right hand made for the person, one row while unread.
   "right_hand_decided",
+  // The day's changes agents applied, one row while unread.
+  "proposal_applied",
   // One per person, read or not, until nothing waits on them.
   "proposal_waiting",
 ]);
@@ -515,11 +535,9 @@ const nowOf = (deps: { now?: () => Date }) => deps.now?.() ?? new Date();
 /** How many people a merged row names (`latest.names`); the rest are counted. */
 const MAX_NAMES = 2;
 
-/** Plain text for a card (`plainLine`), at most `max` chars. `@mentions` stay. */
+/** Plain text for a card (`snippetOf`), at most `max` chars. `@mentions` stay. */
 export function notificationSnippet(text: string | null | undefined, max = SNIPPET_LENGTH): string {
-  if (!text) return "";
-  const plain = plainLine(text, max);
-  return plain.length > max ? `${cutText(plain, max - 1).trimEnd()}…` : plain;
+  return snippetOf(text, max);
 }
 
 export function notificationView(r: Row): NotificationView {
@@ -1260,6 +1278,8 @@ export async function notificationCountsByOrg(
 }
 
 async function publishCounts(deps: NotificationDeps, orgId: string, userId: string) {
+  // What waits on them moved (a request made, answered, dismissed, snoozed): their phone's Live Activity too (ADR 0210).
+  await queueLiveActivity(deps.db, userId).catch(() => {});
   if (!deps.pubsub) return;
   const c = await countsOf(deps.db, orgId, userId, nowOf(deps)).catch(() => null);
   if (c)

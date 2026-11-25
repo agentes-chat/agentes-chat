@@ -6,6 +6,7 @@ import type {
   ConnectLinkState,
   DeviceAudience,
   DeviceStatus,
+  MachineOfflineCause,
   MachineTool,
   PhoneDevice,
   WifiPairing,
@@ -50,7 +51,9 @@ export function statusPill(t: TFunction, s: DeviceStatus): string {
       return name ? t("devices.status.inUseBy", { name }) : t("devices.status.inUse");
     }
     case "busy":
-      return t("devices.status.busy", { running: s.running, max: s.max });
+      return s.max === null
+        ? t("devices.status.busyRunning", { running: s.running })
+        : t("devices.status.busy", { running: s.running, max: s.max });
     case "needs_you":
       return t("devices.status.needs");
     case "preparing":
@@ -153,6 +156,7 @@ export function statusDetail(
       return s.until ? t("devices.detail.until", { time: clockAt(locale, s.until, now) }) : null;
     case "offline":
       if (s.withHost && options.host) return t("devices.detail.withHost", { host: options.host });
+      if (s.cause && s.lastSeenAt) return offlineCauseText(t, s.cause, clockAt(locale, s.lastSeenAt, now), "detail");
       return s.lastSeenAt ? t("devices.detail.lastSeen", { time: clockAt(locale, s.lastSeenAt, now) }) : null;
     case "unsupported":
       return s.reason === "os_too_old" && options.ios != null
@@ -163,7 +167,10 @@ export function statusDetail(
   }
 }
 
-/** The device page's status line, after the pill: the reason in words, never a bare code. */
+/**
+ * The device page's line under its chips: the reason in words, never a bare code. Null when the pill says it all (ready,
+ * busy with its count), so the page shows no line then.
+ */
 export function statusSentence(
   t: TFunction,
   locale: string,
@@ -176,13 +183,13 @@ export function statusSentence(
       return reasonText(t, s.reason, options.hostOs);
     case "offline":
       if (s.withHost && options.host) return t("devices.line.offlineWithHost", { host: options.host });
+      if (s.cause && s.lastSeenAt) return offlineCauseText(t, s.cause, clockAt(locale, s.lastSeenAt, now), "line");
       return s.lastSeenAt
         ? t("devices.line.offlineSeen", { time: clockAt(locale, s.lastSeenAt, now) })
         : t("devices.line.offline");
     case "busy":
-      return t("devices.line.busy", { count: s.running, max: s.max });
     case "ready":
-      return t("devices.line.ready");
+      return null;
     default:
       return statusDetail(t, locale, s, options);
   }
@@ -223,6 +230,41 @@ export function computerLine(t: TFunction, d: ComputerDevice): string {
   ]
     .filter(Boolean)
     .join(" · ");
+}
+
+// ── Tasks at once ────────────────────────────────────────────────────────────
+
+/** The choices for a computer's tasks at once (`TASK_LIMIT_BOUNDS`), with the one it has when that isn't one of them. */
+export const taskChoices = (current: number) =>
+  [...new Set([1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 20, current])].sort((a, b) => a - b);
+
+/** Who changes it: whoever connected the computer, or an admin on one nobody did (`updateComputerDevice`). */
+export const mayChangeTasks = (d: ComputerDevice, viewerId: string, admin: boolean) =>
+  d.machineKind !== "managed" && (d.ownerUserId === viewerId || (d.ownerUserId === null && admin));
+
+/**
+ * Under a busy computer's pill: its limit and where it changes, so a full one doesn't read as stuck. `maxTasks` null:
+ * an app too old to say it or change it from here.
+ */
+export function taskLimitLine(t: TFunction, d: ComputerDevice, mayChange: boolean): string | null {
+  if (d.status.kind !== "busy") return null;
+  const room = d.taskRoom;
+  if (room) {
+    if (room.pushHarder) return t("devices.line.tasksPushing", { gb: room.freeGb });
+    if (room.more > 0) return null;
+    return room.cpuBusy ? t("devices.line.tasksNoCpu") : t("devices.line.tasksNoMemory", { gb: room.freeGb });
+  }
+  if (d.maxTasks === null) return t("devices.line.tasksUpdate", { max: d.status.max });
+  return t(mayChange ? "devices.line.tasksChange" : "devices.line.tasksOwner", { max: d.maxTasks });
+}
+
+/** The Tasks at once row where tasks start on room: "Automatic · 3 running · room for about 8 more". */
+export function tasksAutoText(t: TFunction, d: ComputerDevice): string | null {
+  if (!d.taskRoom) return null;
+  const running = d.status.kind === "busy" ? d.status.running : 0;
+  return d.taskRoom.more > 0
+    ? t("devices.tasksAutoRoom", { running, more: d.taskRoom.more })
+    : t("devices.tasksAutoFull", { running });
 }
 
 /** A computer in the line's "More computers" list: "Online · macOS · 16 GB · your Claude Max plan" (`plan`: the viewer's there). */
@@ -607,6 +649,17 @@ export function xcodeBlockedOf(host: ComputerDevice | undefined): XcodeBlocked |
 
 /** What updates a runner installed from the Terminal (the app updates its own). */
 export const RUNNER_UPDATE_COMMAND = "agentes-runner update";
+/** What tells why a runner installed from the Terminal is down. */
+export const RUNNER_DOCTOR_COMMAND = "agentes-runner doctor";
+
+const CAUSE_KEY = { unresponsive: "Unresponsive", stopped: "Stopped", dropped: "Dropped" } as const;
+
+/**
+ * Why a computer someone brought went offline, at `time` (already in words): `detail`, the short words after a row's
+ * pill; `line`, the sentence on its page with the one way out.
+ */
+export const offlineCauseText = (t: TFunction, cause: MachineOfflineCause, time: string, form: "detail" | "line") =>
+  t(`devices.${form}.offline${CAUSE_KEY[cause]}`, { time, command: RUNNER_DOCTOR_COMMAND });
 
 /** How often the iPhone guide asks where a fix of the Mac's Xcode stands while it runs. */
 export const XCODE_FIX_POLL_MS = 1500;

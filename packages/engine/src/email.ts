@@ -19,11 +19,15 @@ import { appLocale, localeInfo } from "@agenteschat/i18n/locale";
 import { deepMerge } from "@agenteschat/i18n/tree";
 import { nanoUsdToUsd } from "@agenteschat/providers";
 import { z } from "zod";
+import type { AccountAudienceMode } from "./ai-accounts/serves";
 import { notifiedIds } from "./approvals";
-import { isComputerBrain, planName } from "./brains/types";
+import { agentOwnerIds } from "./audience";
+import { type BrainKind, isComputerBrain, planName } from "./brains/types";
+import { confidentialRoots } from "./confidential";
 import { invitationMailProof } from "./crypto";
-import { inertText } from "./email/inert";
+import { inertSender, inertText } from "./email/inert";
 import {
+  ASSISTANT_LOOK,
   type Block,
   EMAIL_PICTURES,
   type EmailArt,
@@ -36,13 +40,14 @@ import {
   type Scene,
   type Text,
 } from "./email/layout";
-import { wordsFor } from "./email/words";
+import { type Words, wordsFor } from "./email/words";
 import { dayAndTime } from "./format";
 import { adminIds } from "./gateway";
 import { publicHostAddress, type ResolveHost, resolveHostDns } from "./net-guard";
 import { enqueue, PermanentJobError } from "./outbox";
 import { billingHold } from "./standing";
 import { isAgentesCloud } from "./telemetry";
+import { withoutTrailingSlashes } from "./url-text";
 import { budgetPercent } from "./usage";
 import { isPersonalWorkspace } from "./workspace-mode";
 
@@ -124,6 +129,8 @@ export type EmailTemplate =
       email: string;
       url: string;
       denyUrl: string;
+      /** An outside collaborator's request (ADR 0191): who they work for, said in place of the link they came by. */
+      outsideOf?: string;
       personal?: true;
     }
   /**
@@ -166,6 +173,8 @@ export type EmailTemplate =
       url: string;
       /** With `orgName`: a personal workspace's (ADR 0159). */
       personal?: true;
+      /** With `orgName`: the code resets the workspace instead of deleting it. */
+      reset?: true;
     }
   /**
    * A code to type before the account's address becomes `newEmail` (ADR 0088 §2, addendum 2026-11-13), to its current
@@ -188,6 +197,27 @@ export type EmailTemplate =
    * `email` back for 7 days (`EMAIL_UNDO_DAYS`).
    */
   | { kind: "email_changed"; locale: EmailLocale; email: string; newEmail: string; url: string }
+  /**
+   * An outside chat surface was linked to the account (ADR 0187): `display` is how the surface shows the sender, `url`
+   * the undo page that unlinks it, for 7 days.
+   */
+  | ({
+      kind: "surface_linked";
+      locale: EmailLocale;
+      surface: string;
+      display: string;
+      orgName: string;
+      url: string;
+    } & Beside)
+  /** The surface unlinked the account because the sender's identity there changed. `url`: the server, for the pictures. */
+  | ({ kind: "surface_unlinked"; locale: EmailLocale; surface: string; display: string; url: string } & Beside)
+  /**
+   * "Email me a link" or "Forgot your PIN?" on a page the surface linked to (ADR 0226): `url` is the page that chooses
+   * the PIN, once, for an hour.
+   */
+  | ({ kind: "surface_pin_reset"; locale: EmailLocale; surface: string; url: string } & Beside)
+  /** Three wrong PINs locked approving from the surface; `step` 0, 1, 2: for 15 minutes, an hour, a day. `url`: settings. */
+  | ({ kind: "surface_pin_locked"; locale: EmailLocale; surface: string; step: 0 | 1 | 2; url: string } & Beside)
   /**
    * Double opt-in for the landing page's waiting list, in the language they
    * joined in. `email` is the address being confirmed (absent in jobs queued
@@ -257,6 +287,23 @@ export type EmailTemplate =
       plan: string;
       was: PlanAudience;
       now: PlanAudience;
+      url: string;
+      personal?: true;
+    }
+  /**
+   * Someone other than the reader let more people use the reader's AI account ("Usar em agentes", `right: "use"`) or be
+   * answered on it ("Atender todos", `right: "reply"`). `plan`: its maker's name ("Claude"). `url`: IA e uso.
+   */
+  | {
+      kind: "account_opened";
+      locale: EmailLocale;
+      orgName: string;
+      byName: string;
+      account: string;
+      plan: string;
+      right: "use" | "reply";
+      was: AccountAudienceNames;
+      now: AccountAudienceNames;
       url: string;
       personal?: true;
     }
@@ -336,6 +383,21 @@ export type EmailTemplate =
       personal?: true;
     }
   /**
+   * The answer of whoever runs the server to a member's support request (ADR 0056), to the address of their account:
+   * one of our own sentences (`reply`), or the operator's words (`text`), which are another party's and print inert,
+   * line by line. With neither, the words were sent already (`forgetReplyWords`). `support`: where to answer back
+   * (`SUPPORT_EMAIL`), or nowhere. `url`: the server's own address, for the pictures.
+   */
+  | {
+      kind: "support_reply";
+      locale: EmailLocale;
+      reply?: keyof Words["supportReply"]["answers"];
+      text?: string;
+      assistedByAi: boolean;
+      support: string | null;
+      url: string;
+    }
+  /**
    * The daily stall-and-noise report to the people who run the server (`OPS_REPORT_EMAIL`, `autonomy-report.ts`):
    * each count of the UTC `day` against its daily average over the 7 days before, and the workspaces with the most.
    * Workspace names and counts only. `url`: the server's own address, for the pictures.
@@ -360,8 +422,14 @@ export interface PlanAudience {
   names: string[];
 }
 
+/** An account's permission as its owner reads it: names of the people or roles it names. */
+export interface AccountAudienceNames {
+  mode: AccountAudienceMode;
+  names: string[];
+}
+
 export function emailArtAt(publicUrl: string): EmailArt {
-  const home = publicUrl.replace(/\/+$/, "");
+  const home = withoutTrailingSlashes(publicUrl);
   return { home, base: `${home}/email/`, files: null };
 }
 
@@ -381,7 +449,8 @@ export async function emailArtFor(
   resolve: ResolveHost = resolveHostDns,
 ): Promise<EmailArt & { attached?: "attach" | "blocked" | "unreachable" }> {
   const art = emailArtAt(publicUrl);
-  const host = mode === "auto" ? await publicHostAddress(new URL(publicUrl).hostname, resolve) : null;
+  const host =
+    mode === "auto" ? await publicHostAddress(new URL(publicUrl).hostname, resolve, { internet: true }) : null;
   if (host?.ok) return art;
   const files = webDir ? await readPictures(join(webDir, "email")) : null;
   return files ? { ...art, base: null, files, attached: host?.reason ?? "attach" } : art;
@@ -396,6 +465,30 @@ async function readPictures(dir: string) {
     return null;
   }
 }
+
+/** The workspace's assistant beside the phone in the surface emails' picture (`emailAssistant`); none: its default look. */
+interface Beside {
+  assistant?: Look;
+}
+
+/** The look of the workspace's assistant (ADR 0137), when it has one of its own. */
+export async function emailAssistant(db: Executor, orgId: string | null): Promise<Look | undefined> {
+  if (!orgId) return undefined;
+  const { RIGHT_HAND } = await import("./right-hand");
+  const [row] = await db
+    .select({ appearance: agents.appearance })
+    .from(agents)
+    .where(and(eq(agents.orgId, orgId), eq(agents.builtin, RIGHT_HAND), isNull(agents.archivedAt)));
+  const a = row?.appearance;
+  return a ? { color: a.color, eyes: a.eyes, accessory: a.accessory } : undefined;
+}
+
+/** The surface emails' stage: the assistant beside the phone, between two of the onboarding's agents. */
+const surfaceCrew = (assistant: Look | undefined): Look[] => {
+  // Lia, not Ada: Ada's green and headphones read as the teal, headset assistant's twin beside it.
+  const [theo, , lia] = ONBOARDING_CREW;
+  return [theo, assistant ?? ASSISTANT_LOOK, lia];
+};
 
 /** How many agents a picture shows: two on each side of the computer still fit a 320 px phone. */
 const CREW = 4;
@@ -436,8 +529,12 @@ const INVITE_NOTE_SHOWN = 300;
 const INVITE_NAMES_SHOWN = 5;
 /** A name typed on an invitation link's page, as the admins' email shows it (ADR 0068). */
 const JOIN_NAME_SHOWN = 60;
+/** Who an outside collaborator works for, shown whole: the server keeps at most 80 characters (`OUTSIDE_OF_MAX`). */
+const OUTSIDE_OF_SHOWN = 80;
 /** An admin's reason for denying a request to join, as long as it is kept. */
 const JOIN_REASON_SHOWN = 300;
+/** The operator's own words in a reply to a support request, shown whole: the route takes no more. */
+export const REPLY_TEXT_MAX = 2000;
 
 /**
  * The template's stamp for a personal workspace (ADR 0159), spread into it where it is queued: the mode it had then
@@ -453,6 +550,20 @@ export const modeStamp = async (db: Executor, orgId: string): Promise<{ personal
  */
 const inMode = <G extends { personal: object }>(group: G, personal: boolean | undefined): G =>
   personal ? deepMerge(group, group.personal) : group;
+
+const LINE_BREAKS = new Set(["\n", "\r", "\u2028", "\u2029"]);
+
+/**
+ * `url` without its query and fragment, cut where `/[?#].*$/` cuts it: at the first `?` or `#` past its last line
+ * break (`.` doesn't cross one). Read by index: that pattern reads the rest of the text again from each `?` or `#`
+ * that a line break follows, quadratic in its length.
+ */
+function withoutQuery(url: string): string {
+  let from = url.length;
+  while (from > 0 && !LINE_BREAKS.has(url.charAt(from - 1))) from--;
+  for (let i = from; i < url.length; i++) if (url.charAt(i) === "?" || url.charAt(i) === "#") return url.slice(0, i);
+  return url;
+}
 
 /**
  * One email's content: our words in the subject, preheader, headline and buttons; what people typed or
@@ -667,7 +778,7 @@ function docOf(t: EmailTemplate, sender: string | null): EmailDoc {
             people: shown.map((i) => ({
               name: inertText(i.agentName) || w.anAgent,
               agent: i.agentColor ?? "sky",
-              detail: `${inertText(i.title, 120)} · ${c.age(Math.max(1, Math.round(i.ageHours)))}`,
+              detail: [inertText(i.title, 120), c.age(Math.max(1, Math.round(i.ageHours)))].filter(Boolean).join(" · "),
             })),
           },
           ...(n > shown.length ? [{ small: c.more(n - shown.length) }] : []),
@@ -685,7 +796,7 @@ function docOf(t: EmailTemplate, sender: string | null): EmailDoc {
         ? [...(t.needsAi ? (["ai"] as const) : []), "task", "watch"]
         : ["create", ...(t.needsAi ? (["ai"] as const) : [])];
       // `url` is the workspace in every job, however old: the button's address follows its step.
-      const home = t.url.replace(/[?#].*$/, "").replace(/\/$/, "");
+      const home = withoutQuery(t.url).replace(/\/$/, "");
       const url = { ai: `${t.keptUrl ?? home}?connect=ai`, task: t.keptUrl ?? home, create: `${home}/agents/new` }[
         first
       ];
@@ -728,7 +839,7 @@ function docOf(t: EmailTemplate, sender: string | null): EmailDoc {
         c.headline,
         [
           { people: [{ name: inertText(t.name, JOIN_NAME_SHOWN), detail: address }] },
-          { p: c.body(org) },
+          { p: t.outsideOf ? c.outside(inertText(t.outsideOf, OUTSIDE_OF_SHOWN)) : c.body(org) },
           { note: c.note },
           { button: c.approve, url: t.url, also: { label: c.deny, url: t.denyUrl, danger: true } },
           { small: c.more },
@@ -791,6 +902,14 @@ function docOf(t: EmailTemplate, sender: string | null): EmailDoc {
     case "deletion_code": {
       const c = inMode(w.deletionCode, t.personal);
       const org = t.orgName === undefined ? null : inertText(t.orgName);
+      if (org !== null && t.reset)
+        return doc(
+          c.subjectReset(t.code),
+          c.preheader,
+          c.headline,
+          [{ p: c.reset(org) }, { code: t.code }, { small: t.support ? c.support(t.support) : c.noSupport }],
+          c.whyReset(org),
+        );
       return doc(
         org === null ? c.subjectAccount(t.code) : c.subjectWorkspace(t.code),
         c.preheader,
@@ -841,6 +960,60 @@ function docOf(t: EmailTemplate, sender: string | null): EmailDoc {
           fallback(t.url),
         ],
         c.why,
+      );
+    }
+    case "surface_linked": {
+      const c = w.surface.linked;
+      return doc(
+        c.subject(t.surface),
+        c.preheader,
+        c.headline(t.surface),
+        [
+          { p: c.body(t.surface, inertSender(t.display), inertText(t.orgName)) },
+          { note: c.notYou },
+          { button: c.button, url: t.url },
+          { small: c.small },
+          fallback(t.url),
+        ],
+        c.why(t.surface),
+        { crew: surfaceCrew(t.assistant), phone: { alt: c.picture, on: true } },
+      );
+    }
+    case "surface_unlinked": {
+      const c = w.surface.unlinked;
+      return doc(
+        c.subject(t.surface),
+        c.preheader,
+        c.headline(t.surface),
+        [{ p: c.body(t.surface, inertSender(t.display)) }, { small: c.small }],
+        c.why(t.surface),
+        { crew: surfaceCrew(t.assistant), phone: { alt: c.picture, on: false } },
+      );
+    }
+    case "surface_pin_reset": {
+      const c = w.surface.pinReset;
+      return doc(
+        c.subject(t.surface),
+        c.preheader,
+        c.headline(t.surface),
+        [{ p: c.body(t.surface) }, { button: c.button, url: t.url }, { small: c.small }, fallback(t.url)],
+        c.why(t.surface),
+        { crew: surfaceCrew(t.assistant), phone: { alt: w.surface.linked.picture, on: true } },
+      );
+    }
+    case "surface_pin_locked": {
+      const c = w.surface.pinLocked;
+      return doc(
+        c.subject(t.surface),
+        c.preheader,
+        c.headline(t.surface),
+        [
+          { p: c.body(t.surface, c.lockedFor[t.step]) },
+          { button: c.button, url: t.url },
+          { small: c.small(t.surface) },
+        ],
+        w.surface.pinReset.why(t.surface),
+        { crew: surfaceCrew(t.assistant), phone: { alt: w.surface.linked.picture, on: true } },
       );
     }
     case "autonomy_report": {
@@ -951,6 +1124,40 @@ function docOf(t: EmailTemplate, sender: string | null): EmailDoc {
         c.why(inertText(t.orgName)),
       );
     }
+    case "account_opened": {
+      const c = inMode(w.accountOpened, t.personal);
+      const who = (a: AccountAudienceNames): Text =>
+        a.mode === "everyone"
+          ? c.everyone
+          : a.mode === "admins"
+            ? c.admins
+            : (a.mode === "people" || a.mode === "roles") && a.names.length > 0
+              ? new Intl.ListFormat(lang, { type: "conjunction" }).format(a.names.map((n) => inertText(n)))
+              : t.right === "reply"
+                ? c.agentOwner
+                : c.onlyYou;
+      const by = inertText(t.byName) || w.someone;
+      return doc(
+        c.subject(t.plan),
+        c.preheader(t.plan),
+        c.headline,
+        [
+          { p: c.body(by, inertText(t.account), t.plan) },
+          {
+            facts: [
+              [c.account, inertText(t.account)],
+              [c.by, by],
+              [c.setting, t.right === "use" ? c.use : c.reply],
+              [c.was, who(t.was)],
+              [c.now, who(t.now)],
+            ],
+          },
+          { small: c.note },
+          { button: c.button, url: t.url },
+        ],
+        c.why(inertText(t.orgName)),
+      );
+    }
     case "plan_lent": {
       const c = inMode(w.planLent, t.personal);
       const by = inertText(t.byName) || w.someone;
@@ -1020,6 +1227,28 @@ function docOf(t: EmailTemplate, sender: string | null): EmailDoc {
             ? [{ p: c.closes(t.orgNames.length, dayAndTime(new Date(t.dueAt), t.timeZone, lang).day, names) }]
             : []),
           { small: t.support ? c.support(t.support) : c.noSupport },
+        ],
+        c.why,
+      );
+    }
+    case "support_reply": {
+      const c = w.supportReply;
+      // A line break ends a paragraph, as it was written: each line is inert on its own.
+      const answer = t.reply
+        ? [c.answers[t.reply]]
+        : (t.text ?? "")
+            .split(/[\r\n\u2028\u2029]+/)
+            .map((line) => inertText(line, REPLY_TEXT_MAX))
+            .filter(Boolean);
+      return doc(
+        c.subject,
+        c.preheader,
+        c.headline,
+        [
+          ...answer.map((p): Block => ({ p })),
+          { small: c.from(sender) },
+          ...(t.assistedByAi ? [{ small: c.ai }] : []),
+          ...(t.support ? [{ small: c.reply(t.support) }] : []),
         ],
         c.why,
       );
@@ -1183,7 +1412,10 @@ export async function sendPlanWaitingEmail(db: Database, publicUrl: string, orgI
 export async function sendQueuedEmail(sender: EmailSender, payload: Record<string, unknown>, art?: EmailArt) {
   const to = Array.isArray(payload.to) ? payload.to.map(String) : [];
   if (to.length === 0) throw new PermanentJobError("email without recipients");
-  const { subject, html, text, inline } = renderEmail(payload.template as EmailTemplate, art);
+  const template = payload.template as EmailTemplate;
+  // A reply whose words are gone was sent, or given up: its job run again (a lease lost after the send) sends nothing.
+  if (template.kind === "support_reply" && !template.reply && template.text === undefined) return;
+  const { subject, html, text, inline } = renderEmail(template, art);
   await sender
     .send({
       subject,
@@ -1192,7 +1424,7 @@ export async function sendQueuedEmail(sender: EmailSender, payload: Record<strin
       ...(inline.length > 0 ? { inline } : {}),
       to,
       idempotencyKey: String(payload.key),
-      tags: [{ name: "kind", value: (payload.template as EmailTemplate).kind }],
+      tags: [{ name: "kind", value: template.kind }],
     })
     .catch(rethrowEmailError);
 }
@@ -1208,14 +1440,18 @@ export async function queueBudgetEmail(
   db: Database,
   publicUrl: string,
   e: {
-    agent: { id: string; orgId: string; name: string; ownerUserId: string | null };
+    agent: { id: string; orgId: string; name: string; ownerUserId: string | null; ownerRoleId?: string | null };
     level: "warning" | "exhausted";
     spentNanoUsd: number;
     budgetNanoUsd: number;
   },
 ) {
-  // The owner, or the org's admins when the agent has none.
-  const recipientIds = e.agent.ownerUserId ? [e.agent.ownerUserId] : await adminIds(db, e.agent.orgId);
+  // The owner (or whoever holds its owner role), or the org's admins when the agent has neither.
+  const owners = await agentOwnerIds(db, e.agent.orgId, {
+    ownerUserId: e.agent.ownerUserId,
+    ownerRoleId: e.agent.ownerRoleId ?? null,
+  });
+  const recipientIds = owners.length > 0 ? owners : await adminIds(db, e.agent.orgId);
   if (recipientIds.length === 0) return;
   const recipients = await db
     .select({ email: users.email, locale: users.locale })
@@ -1351,6 +1587,75 @@ export async function queuePlanOpenedEmail(
 }
 
 /**
+ * Job `account.opened` (`ACCOUNT_OPENED_JOB`): the account owner's email, in their language, through `email.send`.
+ * Nothing when the account, its owner or the person who changed it is gone, or the change was undone since.
+ */
+export async function queueAccountOpenedEmail(
+  db: Database,
+  publicUrl: string,
+  orgId: string,
+  jobId: string,
+  payload: Record<string, unknown>,
+) {
+  const { accountId, actorId } = payload as { accountId: string; actorId: string };
+  const right = payload.right === "use" ? "use" : "reply";
+  const from = payload.from as { mode: AccountAudienceMode; userIds: string[]; roleIds: string[] };
+  const to = payload.to as typeof from;
+  const [account] = await db
+    .select({
+      label: schema.machineAccounts.label,
+      kind: schema.machineAccounts.kind,
+      provider: schema.machineAccounts.provider,
+      ownerId: schema.machineAccounts.createdBy,
+      mode: right === "use" ? schema.machineAccounts.useMode : schema.machineAccounts.replyMode,
+    })
+    .from(schema.machineAccounts)
+    .where(and(eq(schema.machineAccounts.orgId, orgId), eq(schema.machineAccounts.id, accountId)));
+  if (!account?.ownerId || account.mode !== to.mode) return;
+  const userIds = [...new Set([account.ownerId, actorId, ...from.userIds, ...to.userIds])];
+  const roleIds = [...new Set([...from.roleIds, ...to.roleIds])];
+  const [people, roles, [org]] = await Promise.all([
+    db
+      .select({ id: users.id, name: users.name, email: users.email, locale: users.locale })
+      .from(users)
+      .where(inArray(users.id, userIds)),
+    roleIds.length
+      ? db
+          .select({ id: schema.orgRoles.id, name: schema.orgRoles.name })
+          .from(schema.orgRoles)
+          .where(and(eq(schema.orgRoles.orgId, orgId), inArray(schema.orgRoles.id, roleIds)))
+      : Promise.resolve([]),
+    db.select({ name: organizations.name }).from(organizations).where(eq(organizations.id, orgId)),
+  ]);
+  const owner = people.find((p) => p.id === account.ownerId);
+  const actor = people.find((p) => p.id === actorId);
+  if (!owner || !actor || !org) return;
+  const name = new Map([...people, ...roles].map((x) => [x.id, x.name]));
+  const names = (a: typeof from): AccountAudienceNames => ({
+    mode: a.mode,
+    names: [...a.roleIds, ...a.userIds].flatMap((id) => name.get(id) ?? []),
+  });
+  await queueEmail(db, {
+    orgId,
+    key: `account-opened:${jobId}`,
+    to: [owner.email],
+    template: {
+      kind: "account_opened",
+      locale: emailLocale(owner.locale),
+      orgName: org.name,
+      byName: actor.name,
+      account: account.label,
+      plan: planName(account.kind as BrainKind, account.provider ?? undefined),
+      right,
+      was: names(from),
+      now: names(to),
+      url: `${publicUrl.replace(/\/$/, "")}/org/${orgId}/settings/usage`,
+      ...(await modeStamp(db, orgId)),
+    },
+  });
+}
+
+/**
  * Job `agent.plan_lent` (`PLAN_LENT_JOB`): the plan's owner hears that someone else gave an agent their plan, by
  * email in their language and in their inbox (`notifyPlanLent`). Nothing once the agent no longer has it lent, or the
  * owner or the person who gave it is gone.
@@ -1451,6 +1756,8 @@ export async function queueApprovalDigests(db: Database, publicUrl: string, afte
     .from(agents)
     .where(inArray(agents.id, [...new Set(due.map((a) => a.agentId))]));
   const agentOf = new Map(agentRows.map((a) => [a.id, a]));
+  // A request made in a confidential thread (ADR 0190) is counted and never quoted: its title is the agent's words.
+  const sealed = await confidentialRoots(db, [...new Set(due.map((a) => a.threadRootId))]);
   let queued = 0;
   for (const orgId of new Set(due.map((a) => a.orgId))) {
     const mine = due.filter((a) => a.orgId === orgId);
@@ -1486,7 +1793,7 @@ export async function queueApprovalDigests(db: Database, publicUrl: string, afte
             items: items.map((i) => ({
               agentName: agentOf.get(i.agentId)?.name ?? "",
               agentColor: agentOf.get(i.agentId)?.appearance?.color,
-              title: i.title,
+              title: sealed.has(i.threadRootId) ? "" : i.title,
               ageHours: (now.getTime() - i.createdAt.getTime()) / 3600_000,
             })),
             // One request: the button opens it.

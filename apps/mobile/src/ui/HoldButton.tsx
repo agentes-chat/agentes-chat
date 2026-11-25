@@ -8,20 +8,24 @@ import Animated, {
   Easing,
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
   withTiming,
 } from "react-native-reanimated";
 import { BUTTON_SIZES, type ButtonSize, primaryLook, slopOf } from "./Button";
 import { haptics } from "./haptics";
+import { PRESS_IN, PRESS_OUT } from "./PressScale";
 import { systemText } from "./Text";
-import { useTheme } from "./theme";
+import { motion, useTheme } from "./theme";
 import { CHROME_MAX_SCALE, weights } from "./type-scale";
+
+/** Let go early, the fill snaps back fast; once confirmed it drains a little slower, the decision made. */
+const LET_GO = { duration: motion.base, easing: motion.easeOut };
+const DRAIN = { duration: motion.panel, easing: motion.easeOut };
 
 export interface HoldButtonProps {
   /** "Segure para aprovar". One label: a shorter one while held would shrink the button under the finger. */
   label: string;
   onConfirm: () => void;
-  /** How long to hold (default 1100 ms). */
+  /** How long to hold (default 700 ms). */
   durationMs?: number;
   /** Not yet: dimmed, and holding does nothing (as `Button`'s). */
   disabled?: boolean;
@@ -29,10 +33,22 @@ export interface HoldButtonProps {
   size?: ButtonSize;
 }
 
+/** The hold's own curve: the fill starts slow and speeds up, so the end of the hold is felt coming. */
+const HOLD_EASE = Easing.bezier(0.4, 0, 1, 1);
+/** Light taps while held, closer together as the fill speeds up (shares of the hold: 190 to 620 of its 700 ms). */
+const TICKS = [190, 340, 460, 550, 620].map((ms) => ms / 700);
+/**
+ * The press's mark for iOS: a message's system menu (`MessageMenu`) starts before a hold fills, so a hold inside the
+ * message (an approval's) was cancelled and the menu opened instead. A press that starts on a view with this `testID`
+ * (its accessibilityIdentifier) opens no menu (`patches/expo-router@58.0.23.patch`).
+ */
+export const OWN_HOLD = "own-hold";
+
 /**
  * Hold to confirm (high-risk approvals): the button rests a shade lighter and fills from the left in the ink's own
- * tone while held, linearly (it shows time passing), with a light tap at the start and a success one when full.
- * Released early it snaps back fast on an ease-out, nothing asked. No icon: the words are the button.
+ * tone while held, slowly then faster, with light taps that come closer together and a success one when full.
+ * Released early it snaps back fast on an ease-out, the taps stop, nothing asked. With reduced motion the fill is
+ * linear (it shows time passing) with one tap at the start. No icon: the words are the button.
  */
 export function HoldButton({ label, onConfirm, durationMs = 700, disabled = false, size = "md" }: HoldButtonProps) {
   const theme = useTheme();
@@ -42,24 +58,33 @@ export function HoldButton({ label, onConfirm, durationMs = 700, disabled = fals
   const fill = useSharedValue(0);
   const press = useSharedValue(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ticks = useRef<ReturnType<typeof setTimeout>[]>([]);
   const confirmRef = useRef(onConfirm);
   confirmRef.current = onConfirm;
 
+  const stopTicks = () => {
+    for (const tick of ticks.current) clearTimeout(tick);
+    ticks.current = [];
+  };
   useEffect(
     () => () => {
       if (timer.current) clearTimeout(timer.current);
+      for (const tick of ticks.current) clearTimeout(tick);
     },
     [],
   );
 
   const start = () => {
     haptics.light();
-    fill.value = withTiming(1, { duration: durationMs, easing: Easing.linear });
-    press.value = theme.reducedMotion ? 1 : withSpring(1, theme.motion.press);
+    stopTicks();
+    if (!theme.reducedMotion) ticks.current = TICKS.map((share) => setTimeout(haptics.light, share * durationMs));
+    fill.value = withTiming(1, { duration: durationMs, easing: theme.reducedMotion ? Easing.linear : HOLD_EASE });
+    press.value = theme.reducedMotion ? 1 : withTiming(1, PRESS_IN);
     timer.current = setTimeout(() => {
       timer.current = null;
-      press.value = withTiming(0, { duration: 120 });
-      fill.value = withTiming(0, { duration: 250 });
+      ticks.current = [];
+      press.value = theme.reducedMotion ? 0 : withTiming(0, PRESS_OUT);
+      fill.value = withTiming(0, DRAIN);
       haptics.success();
       confirmRef.current();
     }, durationMs);
@@ -68,9 +93,10 @@ export function HoldButton({ label, onConfirm, durationMs = 700, disabled = fals
     if (!timer.current) return;
     clearTimeout(timer.current);
     timer.current = null;
+    stopTicks();
     cancelAnimation(fill);
-    fill.value = withTiming(0, { duration: 180, easing: Easing.bezier(0.23, 1, 0.32, 1) });
-    press.value = theme.reducedMotion ? 0 : withSpring(0, theme.motion.press);
+    fill.value = withTiming(0, LET_GO);
+    press.value = theme.reducedMotion ? 0 : withTiming(0, PRESS_OUT);
   };
 
   const fillStyle = useAnimatedStyle(() => ({ transform: [{ scaleX: fill.value }] }));
@@ -93,6 +119,7 @@ export function HoldButton({ label, onConfirm, durationMs = 700, disabled = fals
       <Pressable
         onPressIn={start}
         onPressOut={stop}
+        testID={OWN_HOLD}
         disabled={disabled}
         accessibilityRole="button"
         accessibilityLabel={label}

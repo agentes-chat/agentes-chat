@@ -1,7 +1,8 @@
 import type { PubSub } from "@agenteschat/adapters";
 import { and, type Database, desc, eq, gt, gte, isNull, ne, or, schema, sql } from "@agenteschat/db";
 import { actionsFor, actionView, describeAction, publishMessageActions, UNDO_WINDOW_MS } from "./agent-actions";
-import { getAgentCached } from "./agents";
+import { getAgent } from "./agents";
+import { editsAgent, managesAgent, ownsAgent } from "./audience";
 import { recordAudit } from "./audit";
 import { caches } from "./cache";
 import { addChannelMember, archiveChannel, removeChannelMember, unarchiveChannel } from "./channels";
@@ -393,16 +394,22 @@ const handlers: Record<string, Handler> = {
     const row = await routineRow(deps.db, a.orgId, a.targetId);
     if (!row || row.deletedAt) throw new NotFoundError("The routine is gone", "action.target_gone");
     const [from, to] = direction === "undo" ? [obj(a.after), obj(a.before)] : [obj(a.before), obj(a.after)];
-    // The methods its webhook address answers are kept with the address, not on the routine.
-    const { methods: fromMethods, ...fromRow } = from;
-    const { methods: toMethods, ...toRow } = to;
+    // The methods its webhook address answers and its grouping are kept with the address, not on the routine.
+    const { methods: fromMethods, groupBy: fromGroupBy, ...fromRow } = from;
+    const { methods: toMethods, groupBy: toGroupBy, ...toRow } = to;
     const now = routineSnapshot(row);
     if (Object.keys(fromRow).some((k) => !same(now[k], fromRow[k]))) throw changedSince();
-    if (Array.isArray(toMethods)) {
-      if (!same((await routineHookKeys(deps.db, [row.id])).get(row.id)?.methods, fromMethods)) throw changedSince();
+    if (Array.isArray(toMethods) || "groupBy" in to) {
+      const hook = (await routineHookKeys(deps.db, [row.id])).get(row.id);
+      if (Array.isArray(toMethods) && !same(hook?.methods, fromMethods)) throw changedSince();
+      if ("groupBy" in to && !same(hook?.groupBy ?? null, fromGroupBy ?? null)) throw changedSince();
       await deps.db
         .update(routineHooks)
-        .set({ methods: hookMethodsOf(toMethods.map(String)), updatedAt: new Date() })
+        .set({
+          ...(Array.isArray(toMethods) ? { methods: hookMethodsOf(toMethods.map(String)) } : {}),
+          ...("groupBy" in to ? { groupBy: typeof toGroupBy === "string" ? toGroupBy : null } : {}),
+          updatedAt: new Date(),
+        })
         .where(eq(routineHooks.routineId, row.id));
     }
     await setRoutine(deps.db, row, toRow);
@@ -581,19 +588,29 @@ async function loadAction(db: Database, orgId: string, id: string) {
   return row;
 }
 
-/** The person the agent worked for, an admin, or the agent's owner. A change to skills: only an admin. */
+/**
+ * The person the agent worked for, who manages the agent (`managesAgent`, ADR 0085 addendum of 2026-11-17; with the
+ * agent gone, who holds "Editar qualquer agente"), or its owner. A change to its skills: who edits it (`editsAgent`),
+ * as on its page.
+ */
 async function requireMayUndo(db: Database, userId: string, a: Row) {
   const membership = await getMembership(db, userId, a.orgId);
   if (!membership) throw new NotFoundError("Action not found", "action.not_found");
   assertActiveMembership(membership);
-  if (can(membership, "manage_agents")) return;
-  // Skills are who manages agents' on the agent's page (`SETTING_GROUP`), though `setAgentSkills` takes its owner too.
+  // A settings change is on its target (the right hand's card changes another agent's): rights are that agent's, not
+  // those of the agent that wrote the card (ADR 0085 addendum of 2026-11-17).
+  const subjectId =
+    a.kind === "agent.settings_changed" && a.targetType === "agent" && a.targetId ? a.targetId : a.agentId;
+  const agent = await getAgent(db, a.orgId, subjectId);
+  if (agent ? managesAgent(agent, userId, membership) : can(membership, "manage_agents")) return;
+  // Which skills it has is who edits it (`SETTING_GROUP`), as `setAgentSkills` takes.
   const fields = (a.params as { fields?: unknown }).fields;
-  if (a.kind === "agent.settings_changed" && Array.isArray(fields) && fields.includes("skill"))
+  if (a.kind === "agent.settings_changed" && Array.isArray(fields) && fields.includes("skill")) {
+    if (agent && editsAgent(agent, userId, membership)) return;
     throw new ForbiddenError("Only an admin can undo or redo a change to an agent's skills", "action.skills_admins");
+  }
   if (a.requestedByUserId === userId) return;
-  const agent = await getAgentCached(db, a.orgId, a.agentId);
-  if (agent?.ownerUserId === userId) return;
+  if (agent && ownsAgent(agent, userId, membership.roleIds)) return;
   throw new ForbiddenError(
     "Only the person the agent worked for, its owner or an admin can undo this",
     "action.not_allowed",

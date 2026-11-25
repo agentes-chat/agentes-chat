@@ -29,7 +29,8 @@ import {
   SKILL_ZIP_BYTES,
   SKILL_ZIP_MB,
 } from "@agenteschat/client/lib/files";
-import { formatPercent, relativeTime } from "@agenteschat/client/lib/format";
+import { formatPercent, joinNames, relativeTime } from "@agenteschat/client/lib/format";
+import { ownerTabOf } from "@agenteschat/client/lib/owner-split";
 import { can } from "@agenteschat/client/lib/permissions";
 import {
   changedByText,
@@ -57,10 +58,10 @@ import {
   skillWaitingChip,
   skippedSkillText,
 } from "@agenteschat/client/lib/skills";
-import { modeKey } from "@agenteschat/client/lib/workspace-mode";
 import {
   Alert,
   Avatar,
+  AvatarStack,
   Button,
   Card,
   CardHeader,
@@ -86,8 +87,6 @@ import {
   Menu,
   MenuItem,
   SearchField,
-  Segmented,
-  SettingNote,
   Switch,
   TabPanel,
   Tabs,
@@ -96,9 +95,12 @@ import {
 } from "@agenteschat/ui";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { AgentAvatar } from "@/components/AgentAvatar";
+import { AgentSwitches } from "@/components/AgentSwitches";
 import { ConnectFlow, type FlowState } from "@/components/ConnectFlow";
-import { ConnectorIcon } from "@/components/ConnectorCatalog";
+import { ConnectorIcon } from "@/components/ConnectorIcon";
 import { LoadingLine, LoadingList, useStepText } from "@/components/Loading";
+import { ForWhom, type OwnerTab, OwnerTabs } from "@/components/OwnerScope";
 import { useOrg } from "@/components/org-context";
 import { useDirectory } from "@/hooks/useDirectory";
 import { useEdited } from "@/hooks/useEdited";
@@ -152,7 +154,18 @@ function SourceChip({ skill }: { skill: Skill }) {
   );
 }
 
-function SkillRow({ skill, users, onOpen }: { skill: Skill; users: number | null; onOpen: () => void }) {
+/** Faces a library row shows of the agents that have its skill on, before its count. */
+const ROW_FACES = 5;
+
+function SkillRow({
+  skill,
+  users,
+  onOpen,
+}: {
+  skill: Skill;
+  users: { id: string; name: string }[] | null;
+  onOpen: () => void;
+}) {
   const { t } = useTranslation();
   return (
     <div className="ac-list__row skill-row">
@@ -170,8 +183,15 @@ function SkillRow({ skill, users, onOpen }: { skill: Skill; users: number | null
         )}
         <span className="small muted tabular">
           {t("skills.version", { version: skill.version })}
-          {users !== null && <> · {t("skills.usedBy", { count: users })}</>}
+          {users !== null && <> · {t("skills.usedBy", { count: users.length })}</>}
         </span>
+        {users && users.length > 0 && (
+          <AvatarStack>
+            {users.slice(0, ROW_FACES).map((a) => (
+              <AgentAvatar key={a.id} agentId={a.id} name={a.name} size="xs" labelled title={a.name} />
+            ))}
+          </AvatarStack>
+        )}
       </span>
       <span className="small muted">{inlineWords(skill.description)}</span>
     </div>
@@ -188,7 +208,7 @@ function ViaLine({ children }: { children: string }) {
   );
 }
 
-type SkillScope = "team" | "personal";
+type SkillScope = OwnerTab;
 
 /**
  * Configurações → Skills, for every member: the team's library (who manages agents changes it, everyone reads it) and,
@@ -231,7 +251,7 @@ export function SkillsSection({
   const everything = skills.data ?? [];
   const scopes = skillScopes(everything, me.user.id);
   const split = skillsSplit(dir.members.length, everything);
-  const scope: SkillScope = !split ? "team" : (picked ?? (admin ? "team" : "personal"));
+  const scope: SkillScope = ownerTabOf(split, picked, admin, { team: scopes.team.length, mine: scopes.mine.length });
   const list = scope === "team" ? scopes.team : scopes.mine;
   const usage = useSkillUsage(org.id, admin && everything.length > 0);
   const settings = useSkillSettings(org.id, admin);
@@ -255,15 +275,12 @@ export function SkillsSection({
       />
       {unavailable && <p className="small muted">{t("skills.unavailable")}</p>}
       {split && skills.isSuccess && (
-        <Segmented<SkillScope>
-          block
+        <OwnerTabs
           label={t("skills.title")}
           value={scope}
           onValueChange={setPicked}
-          options={[
-            { value: "team", label: t(modeKey(org, "vault.tab.team")), count: scopes.team.length },
-            { value: "personal", label: t("vault.tab.personal"), count: scopes.mine.length },
-          ]}
+          team={scopes.team.length}
+          personal={scopes.mine.length}
         />
       )}
       {scope === "personal" && list.length > 0 && (
@@ -277,7 +294,6 @@ export function SkillsSection({
           <Switch
             id="skills-agents-improve"
             checked={settings.data.agentsImprove}
-            disabled={action.isPending}
             onCheckedChange={(on) => action.mutate({ type: "settings", settings: { agentsImprove: on } })}
           />
           <span className="ac-hintline">
@@ -302,7 +318,7 @@ export function SkillsSection({
       {list.length > 0 && (
         <List aria-label={t("skills.title")}>
           {list.slice(0, INLINE).map((s) => (
-            <SkillRow key={s.id} skill={s} users={usage.get(s.id)?.length ?? 0} onOpen={() => setOpen(s.id)} />
+            <SkillRow key={s.id} skill={s} users={usage.get(s.id) ?? []} onOpen={() => setOpen(s.id)} />
           ))}
         </List>
       )}
@@ -327,7 +343,7 @@ export function SkillsSection({
             <SkillRow
               key={s.id}
               skill={s}
-              users={usage.get(s.id)?.length ?? 0}
+              users={usage.get(s.id) ?? []}
               onOpen={() => {
                 setAll(false);
                 setOpen(s.id);
@@ -973,23 +989,16 @@ export function InstallSkillDialog({
                 </TabPanel>
               </Tabs>
               {startScope !== undefined && (
-                <Field label={t("skills.personal.forWhom")} group>
-                  <Segmented<SkillScope>
-                    block
-                    label={t("skills.personal.forWhom")}
-                    value={scope}
-                    disabled={!admin}
-                    onValueChange={(next) => {
-                      setScope(next);
-                      setChoices(null);
-                    }}
-                    options={[
-                      { value: "personal", label: t("vault.tab.personal") },
-                      { value: "team", label: t(modeKey(org, "vault.tab.team")) },
-                    ]}
-                  />
-                  {!admin && <SettingNote icon="lock">{t("skills.personal.teamLocked")}</SettingNote>}
-                </Field>
+                <ForWhom
+                  label={t("skills.personal.forWhom")}
+                  value={scope}
+                  locked={!admin}
+                  note={t("skills.personal.teamLocked")}
+                  onValueChange={(next) => {
+                    setScope(next);
+                    setChoices(null);
+                  }}
+                />
               )}
               {error && <Alert>{error}</Alert>}
             </DialogBody>
@@ -1292,7 +1301,6 @@ function SourceUpdate({ skill: s }: { skill: SkillDetail }) {
         <Switch
           id={`skill-auto-${s.id}`}
           checked={s.autoUpdate ?? false}
-          disabled={action.isPending}
           onCheckedChange={(on) => action.mutate({ type: "update", id: s.id, patch: { autoUpdate: on } })}
         />
         <span className="ac-hintline">
@@ -1386,7 +1394,6 @@ function AgentImprove({ skill: s }: { skill: SkillDetail }) {
         <Switch
           id={`skill-improve-${s.id}`}
           checked={s.agentsImprove ?? settings.data?.agentsImprove ?? true}
-          disabled={action.isPending}
           onCheckedChange={(on) => action.mutate({ type: "update", id: s.id, patch: { agentsImprove: on } })}
         />
         <label htmlFor={`skill-improve-${s.id}`}>{t("skills.agentsImproveThis")}</label>
@@ -1410,6 +1417,88 @@ function AgentImprove({ skill: s }: { skill: SkillDetail }) {
         )}
       </section>
     </>
+  );
+}
+
+/**
+ * Which agents have the skill on, and "Escolher agentes" to give it or take it away from several at once, each as on
+ * its agent's page (who edits that agent).
+ */
+function SkillAgents({ skill, users }: { skill: SkillDetail; users: { id: string; name: string }[] }) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const action = useSkillAction(org.id);
+  const [picked, setPicked] = useState<string[] | null>(null);
+  const [saving, setSaving] = useState(false);
+  const save = async (ids: string[]) => {
+    const before = new Set(users.map((u) => u.id));
+    const after = new Set(ids);
+    const changed = [...new Set([...before, ...after])].filter((id) => before.has(id) !== after.has(id));
+    setSaving(true);
+    try {
+      for (const agentId of changed)
+        await action.mutateAsync({
+          type: "assign",
+          agentId,
+          skills: [{ skillId: skill.id, enabled: after.has(agentId) }],
+        });
+      setPicked(null);
+    } catch {
+      // The app's error toast says why; the dialog stays open on what was picked.
+    } finally {
+      setSaving(false);
+    }
+  };
+  return (
+    <section className="skill-history" aria-labelledby={`skill-agents-${skill.id}`}>
+      <h3 id={`skill-agents-${skill.id}`} className="ac-eyebrow">
+        {t("skills.agents.title")}
+      </h3>
+      <p className="skill-line small">
+        {users.length > 0 && (
+          <AvatarStack>
+            {users.slice(0, 4).map((a) => (
+              <AgentAvatar key={a.id} agentId={a.id} name={a.name} size="xs" />
+            ))}
+          </AvatarStack>
+        )}
+        <span className={users.length ? undefined : "muted"}>
+          {users.length
+            ? joinNames(
+                users.map((a) => a.name),
+                t,
+              )
+            : t("skills.agents.none")}
+        </span>
+        <Button variant="link" onClick={() => setPicked(users.map((u) => u.id))}>
+          {t("skills.agents.choose")}
+        </Button>
+      </p>
+      {picked && (
+        <Dialog
+          open
+          onOpenChange={(o) => !o && !saving && setPicked(null)}
+          title={t("skills.agents.dialogTitle", { name: skill.name })}
+          description={t("skills.agents.dialogText")}
+          closeLabel={t("common.close")}
+          width={480}
+        >
+          <Locked when={saving}>
+            <DialogBody>
+              <AgentSwitches value={picked} onChange={setPicked} />
+            </DialogBody>
+          </Locked>
+          <DialogFooter>
+            <Button disabled={saving} onClick={() => setPicked(null)}>
+              {t("common.cancel")}
+            </Button>
+            <Button variant="primary" loading={saving} disabled={saving} onClick={() => void save(picked)}>
+              {t("common.save")}
+            </Button>
+          </DialogFooter>
+        </Dialog>
+      )}
+    </section>
   );
 }
 
@@ -1504,6 +1593,7 @@ export function SkillSheet({
           <div className="skill-sheet__main">
             <p className="muted">{s.description}</p>
             {via && <ViaLine>{via}</ViaLine>}
+            {manages && can(org, "manage_agents") && <SkillAgents skill={s} users={users} />}
             {manages && <SourceUpdate skill={s} />}
             {manages && <AgentImprove skill={s} />}
             {editing ? <EditSkill skill={s} onDone={() => setEditing(false)} /> : <Markdown source={s.body} />}

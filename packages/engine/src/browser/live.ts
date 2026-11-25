@@ -16,7 +16,7 @@ import { and, eq, inArray, schema } from "@agenteschat/db";
 import { getAgentCached } from "../agents";
 import { ForbiddenError, NotFoundError, ValidationError } from "../errors";
 import { type MachineHub, MachineRequestError } from "../machine-hub";
-import { getMachineById, machineOnline } from "../machines";
+import { getMachineById, shownOnline } from "../machines";
 import { isRightHand } from "../right-hand";
 import type { ClaimedStream, StreamSocket } from "../streams";
 import {
@@ -973,7 +973,7 @@ export function createBrowserLive(deps: BrowserLiveDeps) {
       if (!deps.hub.isLocal(machineId)) {
         // Held by another replica (or not connected): frames only flow where the socket is.
         const machine = await getMachineById(deps.db, machineId);
-        const online = machine && !machine.deletedAt && machineOnline(machine);
+        const online = machine && shownOnline(machine);
         viewer.send({ type: "browser.unavailable", agentId, reason: online ? "reconnecting" : "offline" });
         return { stop: () => {}, streaming: false };
       }
@@ -1064,6 +1064,11 @@ export function createBrowserLive(deps: BrowserLiveDeps) {
         if (!current.viewers.delete(viewer)) return;
         current.unsubscribe.get(viewer)?.();
         current.unsubscribe.delete(viewer);
+        // Their last view of it: what was checked for them goes (one entry per person and agent ever watched, else).
+        if (![...current.viewers].some((v) => v.userId === viewer.userId)) {
+          checked.delete(`${viewer.userId}:${agentId}`);
+          checked.delete(`control:${viewer.userId}:${agentId}`);
+        }
         const controller = current.controllerUserId;
         if (controller === viewer.userId && ![...current.viewers].some((v) => v.userId === controller)) {
           startGrace(agentId, current, controller);

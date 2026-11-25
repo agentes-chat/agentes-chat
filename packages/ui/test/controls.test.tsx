@@ -16,6 +16,7 @@ import {
   Radio,
   RadioCard,
   RadioGroup,
+  Segmented,
   Switch,
   TabPanel,
   Tabs,
@@ -185,6 +186,26 @@ describe("Radio", () => {
     expect(b?.getAttribute("aria-checked")).toBe("true");
     expect(a?.getAttribute("aria-checked")).toBe("false");
   });
+
+  test("the chosen one shows its dot, on a card too, and no card is marked by a ring alone", async () => {
+    render(
+      <RadioGroup value="own" onValueChange={() => {}} aria-label="Qual chave o agente usa?">
+        <Radio value="platform" aria-label="Chave do agentes" />
+        <RadioCard value="own" id="own" checked title="Chave da Acme" />
+      </RadioGroup>,
+    );
+    const [plain, card] = body().getAllByRole("radio");
+    expect(plain?.querySelector(".ac-radio__dot")).toBeNull();
+    expect(card?.querySelector(".ac-radio__dot")).not.toBeNull();
+    const css = await Bun.file(new URL("../src/styles/components.css", import.meta.url).pathname).text();
+    expect(css.split("\n.ac-radio {")[1]?.split("}")[0]).not.toContain("clip:");
+    expect(css).toContain("\n.ac-radio__dot {");
+    const chosen = css
+      .split('\n.ac-option[data-state="checked"] {')
+      .slice(1)
+      .map((r) => r.split("}")[0]);
+    expect(chosen.some((r) => r?.includes("var(--ink)"))).toBe(false);
+  });
 });
 
 describe("RadioCard", () => {
@@ -338,5 +359,38 @@ describe("PickerHeading", () => {
     const rule = (selector: string) => css.split(`\n${selector} {`)[1]?.split("}")[0] ?? "";
     expect(rule(".ac-picker-head")).toContain("flex-direction: column;");
     expect(rule(".ac-picker-head")).toContain("gap: var(--space-1);");
+  });
+});
+
+describe("Segmented", () => {
+  test("one option that can't be chosen fades alone, and the arrow keys pass over it", async () => {
+    const Pick = () => {
+      const [value, setValue] = useState("a");
+      return (
+        <Segmented
+          label="Para quem"
+          value={value}
+          onValueChange={setValue}
+          options={[
+            { value: "a", label: "Pessoal" },
+            { value: "b", label: "Equipe", disabled: true },
+            { value: "c", label: "Outro" },
+          ]}
+        />
+      );
+    };
+    render(<Pick />);
+    const group = body().getByRole("radiogroup", { name: "Para quem" });
+    const radio = (name: string) => within(group).getByRole("radio", { name }) as HTMLButtonElement;
+    expect(group.hasAttribute("aria-disabled")).toBe(false);
+    expect([radio("Pessoal").disabled, radio("Equipe").disabled, radio("Outro").disabled]).toEqual([
+      false,
+      true,
+      false,
+    ]);
+    await act(async () => fireEvent.keyDown(group, { key: "ArrowRight" }));
+    expect(radio("Outro").getAttribute("aria-checked")).toBe("true");
+    await act(async () => fireEvent.keyDown(group, { key: "ArrowLeft" }));
+    expect(radio("Pessoal").getAttribute("aria-checked")).toBe("true");
   });
 });

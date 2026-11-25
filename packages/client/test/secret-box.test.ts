@@ -29,4 +29,11 @@ describe("on a plain-http page", () => {
     plainHttp();
     expect(newClientId()).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
   });
+
+  test("with no crypto at all (the phone's engine) a send still gets a v4 UUID, never an error", () => {
+    Object.defineProperty(globalThis, "crypto", { configurable: true, value: undefined });
+    const ids = new Set(Array.from({ length: 50 }, () => newClientId()));
+    expect(ids.size).toBe(50);
+    for (const id of ids) expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+  });
 });

@@ -3,12 +3,14 @@ import { type Config, connectorOAuthApps } from "@agenteschat/config";
 import type { Database } from "@agenteschat/db";
 import {
   type AiStatusDeps,
+  baseUrlFor,
   type ConnectorTriggerDeps,
   closedRefusal,
   composioConnectorsOf,
   connectOverHttp,
   ForbiddenError,
   getMembership,
+  hostOrigin,
   MisconfiguredError,
   OrgDeletingError,
   orgStanding,
@@ -68,6 +70,13 @@ export const routineConnectorDeps = (deps: AppDeps): ConnectorTriggerDeps => {
   };
 };
 
+/**
+ * Where a link for the person acting through this request points (ADR 0194): its registered host, else `PUBLIC_URL`.
+ * Without a trailing slash.
+ */
+export const requestBaseUrl = (deps: Pick<AppDeps, "db" | "config">, headers: Headers) =>
+  baseUrlFor(deps.db, deps.config.PUBLIC_URL, headers.get("host"));
+
 /** Allowed browser origins for state-changing requests and WebSocket upgrades. */
 export function allowedOrigins(config: Config): Set<string> {
   return new Set([
@@ -89,13 +98,12 @@ export const MOBILE_CLIENT = "mobile";
 
 /**
  * CSRF rule for state-changing requests and WebSocket upgrades: with an
- * `Origin`, it must be one of ours; without one, only the phone app
- * (`X-Agentes-Client: mobile`) gets through. Either way the session still
- * comes from the cookie.
+ * `Origin`, it must be one of ours (`origins`, or this request's registered host's, `hostOrigin`); without one, only
+ * the phone app (`X-Agentes-Client: mobile`) gets through. Either way the session still comes from the cookie.
  */
-export function requestOriginAllowed(origins: Set<string>, headers: Headers): boolean {
+export async function requestOriginAllowed(db: Database, origins: Set<string>, headers: Headers): Promise<boolean> {
   const origin = headers.get("origin");
-  if (origin) return origins.has(origin);
+  if (origin) return origins.has(origin) || origin === (await hostOrigin(db, headers));
   return headers.get(APP_CLIENT_HEADER) === MOBILE_CLIENT;
 }
 
@@ -110,6 +118,10 @@ export function requestOriginAllowed(origins: Set<string>, headers: Headers): bo
  */
 export const MULTIPART_PATHS = [
   /\/organizations\/[^/]+\/artifacts(\/[^/]+)?\/files$/,
+  // A picture dropped on a live file (ADR 0196 §8).
+  /\/organizations\/[^/]+\/artifacts\/[^/]+\/assets$/,
+  // The app's picture of the place a comment points at in a picture, a video or a PDF (ADR 0208).
+  /\/organizations\/[^/]+\/artifacts\/[^/]+\/marks$/,
   /\/organizations\/[^/]+\/imports\/files$/,
   /\/organizations\/[^/]+\/channels\/[^/]+\/voice$/,
   /\/feedback\/files$/,
@@ -126,7 +138,7 @@ export function createAppRouter(deps: AppDeps) {
   // `requestOriginAllowed`) and be JSON (a plain HTML form can't send it).
   app.use("*", async (c, next) => {
     if (c.req.method === "GET" || c.req.method === "HEAD") return next();
-    if (!requestOriginAllowed(origins, c.req.raw.headers)) {
+    if (!(await requestOriginAllowed(deps.db, origins, c.req.raw.headers))) {
       return apiError(c, 403, "bad_origin", "Cross-origin request refused");
     }
     const type = c.req.header("content-type") ?? "";
@@ -198,11 +210,11 @@ export function agentDetailsGate(deps: Pick<AppDeps, "auth" | "db">) {
 
 /**
  * What a workspace being deleted still takes (ADR 0088 §7): restoring or deleting it, the person's own settings there,
- * their inbox and what they read, opening a DM it already has (`openDm` starts none then) and the payer's way to its
- * invoices and card (`billing-link`).
+ * their inbox and what they read, opening a DM it already has (`openDm` starts none then), the payer's way to its
+ * invoices and card (`billing-link`) and their move of its plan to another workspace (`plan-move`).
  */
 const OPEN_WHILE_DELETING =
-  /\/organizations\/[^/]+\/(?:deletion(?:\/code)?|me(?:\/.*)?|notification-prefs|notifications\/.+|(?:channels|threads)\/[^/]+\/read|dms|billing-link)$/;
+  /\/organizations\/[^/]+\/(?:deletion(?:\/code)?|me(?:\/.*)?|notification-prefs|notifications\/.+|(?:channels|threads)\/[^/]+\/read|dms|billing-link|plan-move)$/;
 
 /**
  * Before every route under a workspace: one being deleted reads as ever but changes nothing, so any write but leaving it

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, spyOn, test } from "bun:test";
+import { afterEach, describe, expect, mock, spyOn, test } from "bun:test";
 import { setupDom } from "@agenteschat/ui/testing/dom";
 
 setupDom();
@@ -14,7 +14,7 @@ import { ErrorScreen } from "@/components/ErrorScreen";
 import { ErrorState } from "@/components/Loading";
 import { createI18n } from "@/i18n";
 import { createVersionWatch, reloadForNewVersion, resetVersionReload, startVersionWatch } from "@/lib/app-version";
-import { catchEarlyErrors, type ErrorSdk, reportError, startErrorReports } from "@/lib/error-reports";
+import { catchEarlyErrors, type ErrorSdk, foreignStack, reportError, startErrorReports } from "@/lib/error-reports";
 import { Route as RootRoute } from "@/routes/__root";
 import { createFakeApi } from "./fake-api";
 import { renderPage, screen, settle } from "./render";
@@ -316,6 +316,66 @@ describe("a request that got no answer, or only the proxy's", () => {
     } finally {
       fetch.mockRestore();
     }
+  });
+});
+
+describe("what fails in code the app doesn't serve", () => {
+  const EXTENSION = "chrome-extension://abcdefghijklmnopabcdefghijklmnop";
+  const app = (file: string) => `${location.origin}/assets/${file}`;
+  /** A report as the SDK gives it to `beforeSend`: an exception (and each of its causes) with the files of its frames. */
+  const report = (...stacks: (string | undefined)[][]) => ({
+    exception: { values: stacks.map((files) => ({ stacktrace: { frames: files.map((filename) => ({ filename })) } })) },
+  });
+
+  test("a stack with none of the app's files isn't sent; one with any, or with no stack, is", () => {
+    expect(foreignStack(report([`${EXTENSION}/inpage.js`, `${EXTENSION}/inpage.js`]))).toBe(true);
+    // A script an extension injected into the page: its frames name the pages it was injected at.
+    expect(foreignStack(report([`${location.origin}/org/1/drive`, `${location.origin}/org/1/dm/person/2`]))).toBe(true);
+    // The engine's own frames say nothing either way.
+    expect(foreignStack(report(["<anonymous>", `${EXTENSION}/evm.js`]))).toBe(true);
+
+    expect(foreignStack(report([app("main-AbC123.js"), app("main-AbC123.js")]))).toBe(false);
+    // Thrown in an extension's code the app called, or with a cause in the app's files: the app's to look at.
+    expect(foreignStack(report([app("main-AbC123.js"), `${EXTENSION}/inpage.js`]))).toBe(false);
+    expect(foreignStack(report([`${EXTENSION}/inpage.js`], [app("calendar-DeF456.js")]))).toBe(false);
+
+    expect(foreignStack({})).toBe(false);
+    expect(foreignStack(report([]))).toBe(false);
+    expect(foreignStack(report(["[native code]", undefined]))).toBe(false);
+  });
+
+  test("the SDK's wrapper around a timer's or a listener's callback says nothing either way", () => {
+    const sdk = app("error-sdk-GhI789.js");
+    expect(foreignStack(report([sdk, `${EXTENSION}/inpage.js`]), sdk)).toBe(true);
+    expect(foreignStack(report([sdk, `${location.origin}/org/1/drive`]), sdk)).toBe(true);
+    expect(foreignStack(report([sdk, app("main-AbC123.js")]), sdk)).toBe(false);
+    expect(foreignStack(report([sdk]), sdk)).toBe(false);
+  });
+
+  test("the SDK sends none of them, and gives the code only of what it sends", async () => {
+    let options: { beforeSend: (event: object) => object | null } | undefined;
+    mock.module("@sentry/browser", () => ({
+      init: (given: typeof options) => {
+        options = given;
+      },
+      captureException: () => {},
+      setTags: () => {},
+      setUser: () => {},
+    }));
+    const { startSdk } = await import("@/lib/error-sdk");
+    const taken: string[] = [];
+    startSdk(CONFIG, (id) => taken.push(id));
+    const send = (id: string, ...files: string[]) => {
+      const event = { event_id: id, ...report(files) };
+      return options?.beforeSend(event) === event;
+    };
+    // The SDK's file: in a build, its chunk, among the app's files.
+    const sdk = new URL("../src/lib/error-sdk.ts", import.meta.url).href;
+    expect(send("1", `${EXTENSION}/inpage.js`)).toBe(false);
+    expect(send("2", sdk, `${EXTENSION}/inpage.js`)).toBe(false);
+    expect(send("3", sdk, app("main-AbC123.js"))).toBe(true);
+    expect(send("4", sdk)).toBe(true);
+    expect(taken).toEqual(["3", "4"]);
   });
 });
 

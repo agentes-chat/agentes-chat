@@ -234,7 +234,11 @@ describe("the steps", () => {
     await renderApp("/onboarding", { api: createFakeApi(state) });
     await settle(10);
     expect(document.querySelector(".onb__say")?.textContent).toContain("Eu sou o Lodi.");
+    // The rail's first step is the question on screen until it is answered, then the team's name.
+    const firstStep = () => document.querySelector(".onb__step-name")?.textContent;
+    expect(firstStep()).toBe("Para que vai usar");
     await forATeam();
+    expect(firstStep()).toBe("Nome do workspace");
     expect(eyebrow()).toBe("Passo 1 de 6");
     // The whole path on the rail, connecting an AI last.
     expect(document.querySelector(".onb__steps")?.textContent).toContain("Conectar uma IA");
@@ -1198,6 +1202,52 @@ describe("for me (ADR 0159)", () => {
     await click(button("Voltar"), 4);
     expect(answer(/Para meu time/).getAttribute("aria-checked")).toBe("true");
     expect(calls(state, "orgs.create")).toEqual([]);
+  });
+});
+
+describe("the first question and the way out (ADR 0162, amended 2026-11-21)", () => {
+  test("two answers that say what each view is, a note that it can change, and an agent saying what it does", async () => {
+    await renderApp("/onboarding", { api: createFakeApi(newcomer(false)) });
+    await settle(10);
+    expect(document.querySelector(".onb__lead")?.textContent).toBe("Escolha como você quer ver o agentes.chat.");
+    expect(answer(/^Para mim(?!ha)/).textContent).toContain("Uma visão mais simples, com todos os recursos.");
+    expect(answer(/Para meu time/).textContent).toContain("A visão completa, com canais e pessoas.");
+    // Between the answers and Continue, where the person hesitates.
+    const note = document.querySelector(".onb-purpose__note");
+    expect(note?.textContent).toBe(
+      "Troque quando quiser. O modo do workspace muda nas Configurações, e nada se perde.",
+    );
+    expect(note?.previousElementSibling?.classList.contains("onb-purpose")).toBe(true);
+    // No pills beside the drawing, no horizon under it, no sky at the window's foot.
+    expect(document.querySelector(".onb-pill, .onb-cluster, .onb-scene__sky, .onb__stage-sky")).toBeNull();
+    // Nobody to go back to: no way out on the rail.
+    expect(document.querySelector(".onb__leave")).toBeNull();
+    // Pointing at an agent of the drawing: it says what it does.
+    const agenda = document.querySelectorAll('.onb-scene[data-kind="personal"] .onb-scene__face')[2] as HTMLElement;
+    await act(async () => fireEvent.pointerEnter(agenda));
+    expect(agenda.querySelector(".onb-scene__say")?.textContent).toBe("Agenda do dia");
+    await act(async () => fireEvent.pointerLeave(agenda));
+    expect(agenda.querySelector(".onb-scene__say")).toBeNull();
+  });
+
+  test("someone with another workspace leaves at any step, back to it; the one being made stays", async () => {
+    const state = seedState({ agents: [] });
+    state.teamTemplates = TEMPLATES;
+    const { router } = await renderApp("/onboarding", { api: createFakeApi(state) });
+    await settle(10);
+    const leave = () => document.querySelector<HTMLAnchorElement>(".onb__leave");
+    expect(leave()?.getAttribute("aria-label")).toBe("Voltar para Acme e terminar depois");
+    expect(leave()?.getAttribute("href")).toBe(`/org/${ORG_ID}`);
+    // Past the first question the workspace exists, and the way out is still there.
+    await forATeam();
+    await type("Nome", "Ateliê Couto");
+    await click(button("Continuar"), 14);
+    expect(calls(state, "orgs.create")).toHaveLength(1);
+    expect(heading()).not.toBe("Como se chama o seu workspace?");
+    expect(leave()).not.toBeNull();
+    await click(leave() as HTMLAnchorElement, 10);
+    expect(router.state.location.pathname.startsWith(`/org/${ORG_ID}`)).toBe(true);
+    expect(calls(state, "orgs.deleteWorkspace")).toEqual([]);
   });
 });
 

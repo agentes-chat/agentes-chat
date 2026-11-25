@@ -17,12 +17,12 @@ const last = (sheet: string, selector: string, property: string) =>
     .at(-1)?.[1];
 
 describe("a request card on the compact rhythm", () => {
-  test("its parts 12 apart, a 48px foot whose buttons stand 32 tall and 8 apart, their targets 44 on touch", () => {
+  test("its parts 12 apart, a foot 12 above and below as the card's top, its buttons 32 tall and 8 apart, their targets 44 on touch", () => {
     expect(last(top, ".rq", "padding")).toBe("12px 16px 0");
     expect(last(top, ".rq__lead", "margin")).toBe("6px 0 0");
     expect(last(top, ".rq__foot", "margin")).toBe("12px -16px 0");
-    expect(last(top, ".rq__foot", "padding")).toBe("8px 16px");
-    expect(last(top, ".rq__foot", "min-height")).toBe("48px");
+    expect(last(top, ".rq__foot", "padding")).toBe("var(--space-3) var(--space-4)");
+    expect(last(top, ".rq__foot", "min-height")).toBe("calc(var(--control-h-sm) + 2 * var(--space-3))");
     expect(last(top, ".rq__foot > .ac-btn", "height")).toBe("32px");
     expect(last(top, ".rq__foot", "column-gap")).toBe("var(--space-2)");
     expect(last(top, ".rq__item-acts", "column-gap")).toBe("var(--space-2)");
@@ -37,7 +37,8 @@ describe("a request card on the compact rhythm", () => {
     // The build folds align-self and justify-self into place-self.
     const more = Object.fromEntries(declarations(top, ".rq__wt > .rq__more"));
     expect(more["place-self"] ?? more["align-self"]).toMatch(/^flex-start/);
-    expect(more.margin).toBe("2px 0 0 -6px");
+    // Its words, past its 8 of padding, start where the words above do.
+    expect(more.margin).toBe("2px 0 0 -8px");
     expect(last(top, ".rq__well", "padding")).toBe("var(--row-py) 16px");
     const narrow = atRule(shipped, "@container (max-width: 479px)");
     expect(last(narrow, ".rq__well", "display")).toBe("grid");
@@ -45,6 +46,13 @@ describe("a request card on the compact rhythm", () => {
     expect(last(narrow, ".rq__wt > :not(b)", "grid-column")).toBe("1/-1");
     // A grouped item's decision, or how it ended, starts at the card's edge too, under the mark.
     expect(last(narrow, ".rq__item > :is(.rq__item-acts, .rq__item-outcome)", "margin-inline-start")).toBe("0");
+    // Several requests: the decision for all, and its link, start on the items' column (one column of buttons), back
+    // at the card's edge in a narrow card; an item's buttons end it 12 above the next hairline.
+    expect(last(top, ".rq__items ~ .rq__foot", "padding-inline-start")?.replace(/\s+/g, "")).toMatch(
+      /^calc\(var\(--space-4\)\+(22px\+10px|32px)\)$/,
+    );
+    expect(last(narrow, ".rq__items ~ .rq__foot", "padding-inline-start")).toBe("var(--space-4)");
+    expect(last(top, ".rq__item:has(> .rq__item-acts)", "padding-bottom")).toBe("var(--space-3)");
     // Its Cancelar on the words' middle, not lifted by its icon's baseline.
     expect(last(top, ".rq__item-outcome > .ac-btn", "vertical-align")).toBe("middle");
     // The old column beside the words, and the grouped card's own narrow rule, are gone.
@@ -82,5 +90,26 @@ describe("a request card on the compact rhythm", () => {
       "main",
     ]);
     expect(well.querySelector(".rq__wt small > code.ac-inlinecode")?.textContent).toBe("apps/web");
+  });
+
+  test("the time left ends the buttons' line, or wraps to start its own at their edge, never floating at the end", () => {
+    const { container } = render(
+      <RequestCard
+        id="r2"
+        kind="approval"
+        agent={undefined}
+        label="Pedido de aprovação"
+        mine
+        actions={<button type="button">Aprovar</button>}
+        end="24 h para decidir"
+        under={<button type="button">Mudar quando perguntar</button>}
+        what="Rodar comando"
+      />,
+    );
+    const foot = container.querySelector(".rq__foot") as HTMLElement;
+    expect(foot.classList.contains("ac-tailrow")).toBe(true);
+    expect(foot.querySelector(":scope > .rq__end")?.classList.contains("ac-tail")).toBe(true);
+    // No auto margin pushes it: the kit's spring before it takes the first line's room.
+    expect(declarations(top, ".rq__end").map(([p]) => p)).not.toContain("margin-left");
   });
 });

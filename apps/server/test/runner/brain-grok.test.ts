@@ -139,6 +139,7 @@ test("a turn that went wrong: a usage limit, a sign-in that ended, anything else
     },
   ]);
   expect(grokProblem("You are not authenticated. Run grok login.")[0]).toMatchObject({ code: "not_logged_in" });
+  expect(grokProblem("Error: oauth2 invalid_grant")[0]).toMatchObject({ code: "not_logged_in" });
   expect(grokProblem("boom")[0]).toMatchObject({ code: "grok_failed" });
 });
 
@@ -149,6 +150,16 @@ test("the CLI's words: its models, its sign-in status and its device sign-in", (
   expect(parseGrokStatus(0, "Available models:\n  * grok-4.6", true)).toEqual({ loggedIn: true });
   expect(parseGrokStatus(0, models, true)).toEqual({ loggedIn: false });
   expect(parseGrokStatus(0, "Available models:", false)).toEqual({ loggedIn: false });
+  expect(parseGrokStatus(1, "Error: dial tcp: i/o timeout\n", true)).toEqual({ loggedIn: false, statusUnknown: true });
+  expect(parseGrokStatus(null, "", true)).toEqual({ loggedIn: false, statusUnknown: true });
+  expect(parseGrokStatus(1, models, true)).toEqual({ loggedIn: false });
+  expect(parseGrokStatus(1, "Error: dial tcp: i/o timeout\n", false)).toEqual({ loggedIn: false });
+  expect(parseGrokStatus(0, models, true, true)).toEqual({
+    loggedIn: false,
+    statusUnknown: true,
+  });
+  expect(parseGrokStatus(1, "Error: oauth2 invalid_grant\n", true, true)).toEqual({ loggedIn: false });
+  expect(parseGrokStatus(0, `invalid_grant\n${models}`, true, true)).toEqual({ loggedIn: false });
   const login = "Open https://accounts.x.ai/device on any device\nand enter the code: WDJB-MJHT\n";
   expect(parseGrokLogin(login)).toEqual({ url: "https://accounts.x.ai/device", userCode: "WDJB-MJHT" });
   expect(parseGrokLogin("Open https://accounts.x.ai/device")).toBeNull();
@@ -406,10 +417,10 @@ test.skipIf(!posix)("sign-in on the computer: Grok's device link and code, then 
   expect(m.accountDir("grok", id)).toBe(path.join(home, "accounts", "grok", id));
   // The models it lists signed in, which the computer's own `grok models` (signed out) doesn't: kept for a restart.
   const listed = [{ id: "grok-4.7" }, { id: "grok-4.6" }, { id: "grok-4.5" }];
-  expect(m.grokModels()).toEqual(listed);
+  expect(m.listedModels("grok")).toEqual(listed);
   const again = new AccountManager({ root: path.join(home, "accounts") });
   managers.push(again);
-  expect(again.grokModels()).toEqual(listed);
+  expect(again.listedModels("grok")).toEqual(listed);
 });
 
 /** A system-mode manager with Grok Build's folders apart (`grokRoot`), and the sandbox check as given. */

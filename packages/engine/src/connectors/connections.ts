@@ -1,22 +1,35 @@
 import { createHash } from "node:crypto";
 import type { KeyWrapper } from "@agenteschat/adapters";
-import { and, asc, type Database, type Executor, eq, isNull, lt, ne, or, schema, sql } from "@agenteschat/db";
+import { and, asc, type Database, type Executor, eq, inArray, isNull, lt, ne, or, schema, sql } from "@agenteschat/db";
 import { StreamableHTTPError } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { reachableFromInternet } from "../apps/urls";
 import { type AuditEntry, recordAudit } from "../audit";
 import { caches } from "../cache";
 import { openSecret, randomToken, sealSecret, sha256 } from "../crypto";
 import { ConflictError, ForbiddenError, MisconfiguredError, NotFoundError, ValidationError } from "../errors";
 import { forgetInstallationTokens } from "../git/github-app";
 import { outboundFetch, type ResolveHost } from "../net-guard";
-import { requireChangePermission, requirePermission } from "../organizations";
+import { can, requireChangePermission, requirePermission } from "../organizations";
+import { enqueue } from "../outbox";
 import { CONNECTOR_ALL } from "../tools/scopes";
 import { CONNECTOR_CATALOG, type ConnectorDefinition } from "./catalog";
 import { type ComposioConnectors, completeComposioOAuth, forgetComposioAccount } from "./composio";
 import { beginMcpOAuth, isCustom, storeCustomConnection } from "./custom";
 import { offersCatalog } from "./listing";
 import type { McpConnect } from "./mcp";
+import { NATIVE_SERVICES } from "./native/services";
+import { NativeError } from "./native/types";
 import { clientAuth, getOAuthClient, type McpOAuthDeps, probeMcpServer } from "./oauth-mcp";
 import { oauthReturnTo } from "./oauth-return";
+import {
+  auditLabel,
+  connectionFor,
+  connectionsOf,
+  othersLabel,
+  othersPersonal,
+  requireConnect,
+  seenBy,
+} from "./personal";
 import { presetForServer } from "./presets";
 
 const { connectorConnections, oauthStates, agentScopes, agents, approvalRules, githubAppInstallations } = schema;
@@ -68,30 +81,36 @@ export async function freeToolPrefix(tx: Executor, orgId: string, base: string, 
   return `${base}_${n}`;
 }
 
-async function labelsTaken(tx: Executor, orgId: string, exceptId?: string) {
+/** The names in use beside a connection of `owner`: the team's, and that person's own (never another person's). */
+async function labelsTaken(tx: Executor, orgId: string, owner: string | null, exceptId?: string) {
   const rows = await tx
     .select({ id: connectorConnections.id, label: connectorConnections.label })
     .from(connectorConnections)
-    .where(activeOf(orgId));
+    .where(and(activeOf(orgId), owner ? seenBy(owner) : connectionsOf(null)));
   return new Set(rows.filter((r) => r.id !== exceptId).map((r) => r.label.toLowerCase()));
 }
 
-/** `base`, else `base 2`, `base 3`…: a name no other live connection of the workspace has. */
-export async function freeLabel(tx: Executor, orgId: string, base: string) {
-  const taken = await labelsTaken(tx, orgId);
+/** `base`, else `base 2`, `base 3`…: a name no other connection `owner` sees has (`labelsTaken`). */
+export async function freeLabel(tx: Executor, orgId: string, base: string, owner: string | null) {
+  const taken = await labelsTaken(tx, orgId, owner);
   if (!taken.has(base.toLowerCase())) return base;
   let n = 2;
   while (taken.has(`${base} ${n}`.toLowerCase())) n++;
   return `${base} ${n}`;
 }
 
-/** A connection's name: 1 to 80 characters, and no other live connection of the workspace has it (409). */
-export async function checkLabel(tx: Executor, orgId: string, label: string, connectionId: string) {
+/** A connection's name: 1 to 80 characters, and no other connection its owner sees has it (409). */
+export async function checkLabel(
+  tx: Executor,
+  orgId: string,
+  label: string,
+  connection: Pick<ConnectorConnection, "id" | "ownerUserId">,
+) {
   const name = label.trim();
   if (name.length < 1 || name.length > 80) {
     throw new ValidationError("The name must have 1 to 80 characters", "connector.label_invalid");
   }
-  if ((await labelsTaken(tx, orgId, connectionId)).has(name.toLowerCase())) {
+  if ((await labelsTaken(tx, orgId, connection.ownerUserId, connection.id)).has(name.toLowerCase())) {
     throw new ConflictError("Another connector already has this name", "connector.label_taken");
   }
   return name;
@@ -114,19 +133,28 @@ export function secretHeaders(secret: ConnectionSecret, serverUrl: string): Reco
 /**
  * A new connection starts at "Ler e escrever" (`connector:*`) for every agent: agents get the basics and people take
  * access away where they want. Sensitive tools still ask a person on every call, whatever the grant. Connecting is an
- * admin's call, as giving grants is; each agent's grant is an `agent.access_changed` audit row. Runs in the caller's
- * transaction, which clears the org's scope cache once it commits.
+ * admin's call, as giving grants is; each agent's grant is an `agent.access_changed` audit row. A personal connection
+ * goes on for its person's own agents only (the Vault's "any agent I ask, for me"). Runs in the caller's transaction,
+ * which clears the org's scope cache once it commits.
  */
 export async function grantToEveryAgent(
   tx: Executor,
   orgId: string,
   actorId: string,
-  connection: Pick<ConnectorConnection, "id" | "label">,
+  connection: Pick<ConnectorConnection, "id" | "label"> &
+    Partial<Pick<ConnectorConnection, "ownerUserId" | "accountLabel">>,
 ) {
+  const owner = connection.ownerUserId ?? null;
   const everyone = await tx
     .select({ id: agents.id })
     .from(agents)
-    .where(and(eq(agents.orgId, orgId), isNull(agents.archivedAt)));
+    .where(
+      and(
+        eq(agents.orgId, orgId),
+        isNull(agents.archivedAt),
+        owner ? and(eq(agents.ownerUserId, owner), isNull(agents.deletedAt)) : undefined,
+      ),
+    );
   if (everyone.length === 0) return;
   await tx.insert(agentScopes).values(
     everyone.map((a) => ({
@@ -143,13 +171,27 @@ export async function grantToEveryAgent(
       actor: { type: "person", id: actorId },
       action: "agent.access_changed",
       target: { type: "agent", id: a.id },
-      details: { connectionId: connection.id, label: connection.label, level: "write" },
+      details: {
+        connectionId: connection.id,
+        label: auditLabel({ ownerUserId: null, accountLabel: null, ...connection }),
+        level: "write",
+        ...(owner ? { personal: true } : {}),
+      },
     });
   }
 }
 
 /** OAuth app credentials per connector (from env; real apps are configured per deployment). */
-export type OAuthApps = Record<string, { clientId: string; clientSecret: string } | undefined>;
+export type OAuthApps = Record<
+  string,
+  | {
+      clientId: string;
+      clientSecret: string;
+      /** Meta's Login for Business configuration: the authorize URL names it instead of scopes. */
+      configId?: string;
+    }
+  | undefined
+>;
 
 /** What's stored (encrypted) for a connection. Never returned by any API. */
 export interface ConnectionSecret {
@@ -158,6 +200,8 @@ export interface ConnectionSecret {
   apiKey?: string;
   /** A server by address: the request headers a person typed for it, names as typed (ADR 0186). */
   headers?: Record<string, string>;
+  /** Telegram: what its webhook calls carry in `X-Telegram-Bot-Api-Secret-Token`. */
+  webhookSecret?: string;
 }
 
 export interface ConnectorDeps {
@@ -206,6 +250,7 @@ export function missingOAuthScopes(c: Pick<ConnectorConnection, "connector" | "a
 /** Public view: no secrets. */
 export const connectionView = (c: ConnectorConnection) => ({
   id: c.id,
+  ownerUserId: c.ownerUserId,
   connector: c.connector,
   label: c.label,
   serverUrl: c.serverUrl,
@@ -217,6 +262,23 @@ export const connectionView = (c: ConnectorConnection) => ({
   reconnectAdds: missingOAuthScopes(c),
   status: c.status === "needs_reconnect" ? ("needs_reconnect" as const) : ("active" as const),
 });
+
+/**
+ * A connection as `actorId` may see it: someone else's personal connection shows its service, name and person only,
+ * never its address, account or sign-in.
+ */
+export function connectionViewFor(c: ConnectorConnection, actorId: string, agents?: Map<string, string[]>) {
+  const v = { ...connectionView(c), ...(c.ownerUserId ? { agentIds: agents?.get(c.id) ?? [] } : {}) };
+  if (!othersPersonal(c, actorId)) return v;
+  return {
+    ...v,
+    label: othersLabel(v.label, c.accountLabel),
+    serverUrl: "",
+    accountLabel: null,
+    tokenExpiresAt: null,
+    reconnectAdds: [],
+  };
+}
 
 function checkServerUrl(url: string) {
   let parsed: URL;
@@ -243,18 +305,23 @@ async function storeConnection(
     secret: ConnectionSecret | null;
     tokenExpiresAt?: Date | null;
     accountLabel?: string | null;
+    accountId?: string | null;
     oauthClientId?: string | null;
     resource?: string | null;
     oauthScopes?: string | null;
+    /** A personal connection's person; null or absent: the team's. */
+    owner?: string | null;
   },
 ): Promise<{ connection: ConnectorConnection; outcome: ConnectOutcome }> {
   const def = connectorDefinition(input.connector);
+  const owner = input.owner ?? null;
   const wrapper = deps.keyWrappers[0];
   if (!wrapper) throw new Error("no key wrapper");
   const id = crypto.randomUUID();
   const sealed = input.secret ? await sealSecret(wrapper, JSON.stringify(input.secret), aadFor(input.orgId, id)) : null;
   return deps.db.transaction(async (tx) => {
-    // One active connection per connector: a new one replaces the old (grants move over); a first one is every agent's.
+    // One active connection per connector for the team and one for each person: a new one replaces that owner's old
+    // one (grants move over); a first one is every agent's (a personal one, its person's agents').
     const [previous] = await tx
       .update(connectorConnections)
       .set({ revokedAt: deps.now?.() ?? new Date() })
@@ -263,6 +330,7 @@ async function storeConnection(
           eq(connectorConnections.orgId, input.orgId),
           eq(connectorConnections.connector, input.connector),
           isNull(connectorConnections.revokedAt),
+          connectionsOf(owner),
         ),
       )
       .returning();
@@ -272,7 +340,7 @@ async function storeConnection(
         id,
         orgId: input.orgId,
         connector: input.connector,
-        label: previous?.label ?? (await freeLabel(tx, input.orgId, input.label?.trim() || def.label)),
+        label: previous?.label ?? (await freeLabel(tx, input.orgId, input.label?.trim() || def.label, owner)),
         toolPrefix: previous
           ? toolPrefixOfConnection(previous)
           : await freeToolPrefix(tx, input.orgId, def.id, deps.oauthApps, def.id),
@@ -283,10 +351,12 @@ async function storeConnection(
         kekId: sealed?.kekId ?? null,
         tokenExpiresAt: input.tokenExpiresAt ?? null,
         accountLabel: input.accountLabel ?? null,
+        accountId: input.accountId ?? null,
         oauthClientId: input.oauthClientId ?? null,
         resource: input.resource ?? null,
         oauthScopes: input.oauthScopes ?? null,
         createdByUserId: input.actorId,
+        ownerUserId: owner,
       })
       .returning();
     if (!row) throw new Error("connection insert returned nothing");
@@ -302,7 +372,12 @@ async function storeConnection(
         actor: { type: "person", id: input.actorId },
         action: previous ? "connector.reconnected" : "connector.connected",
         target: { type: "connector", id: row.id },
-        details: { connector: input.connector, label: row.label, auth: input.authType },
+        details: {
+          connector: input.connector,
+          label: auditLabel(row),
+          auth: input.authType,
+          ...(owner ? { personal: true, personalOf: owner } : {}),
+        },
       });
     }
     if (!previous) await grantToEveryAgent(tx, input.orgId, input.actorId, row);
@@ -316,18 +391,23 @@ async function storeConnection(
   });
 }
 
-/** Connects with an API key (or a server that needs no auth). Admins only. */
+/**
+ * Connects with an API key (or a server that needs no auth): the team's (who manages connectors), or with `personal`
+ * the actor's own, which any member adds.
+ */
 export async function createApiKeyConnection(
   deps: ConnectorDeps,
   actorId: string,
   orgId: string,
-  input: { connector: string; apiKey?: string; label?: string },
+  input: { connector: string; apiKey?: string; label?: string; personal?: boolean },
 ) {
-  await requirePermission(deps.db, actorId, orgId, "manage_connectors");
+  await requireConnect(deps.db, actorId, orgId, input.personal === true, input.connector);
   const def = connectorDefinition(input.connector);
   const serverUrl = checkServerUrl(def.serverUrl);
   const apiKey = input.apiKey?.trim();
   if (apiKey !== undefined && apiKey.length < 8) throw new ValidationError("apiKey looks too short");
+  const secret = apiKey ? { apiKey } : null;
+  const account = secret ? await nativeAccount(deps, input.connector, secret) : null;
   const { connection } = await storeConnection(deps, {
     orgId,
     actorId,
@@ -335,13 +415,68 @@ export async function createApiKeyConnection(
     authType: apiKey ? "api_key" : "none",
     serverUrl,
     label: input.label,
-    secret: apiKey ? { apiKey } : null,
+    secret,
+    ...(account ? { accountLabel: account.label, accountId: account.id } : {}),
+    owner: input.personal ? actorId : null,
   });
-  return connection;
+  return secret ? nativeConnected(deps, connection, secret) : connection;
 }
 
-export async function listConnections(db: Database, actorId: string, orgId: string) {
-  await requirePermission(db, actorId, orgId, "read");
+const nativeHttp = (deps: Pick<ConnectorDeps, "http">) => deps.http ?? fetch;
+
+/**
+ * A connector of our own checks the key or sign-in before it is stored and names its account (`@acme_bot`); a key the
+ * vendor refuses is the person's to fix, so it fails the connect. Null for any other connector.
+ */
+async function nativeAccount(deps: ConnectorDeps, connector: string, secret: ConnectionSecret) {
+  const service = nativeServiceOf(connector);
+  if (!service?.account) return null;
+  try {
+    return await service.account(secret, nativeHttp(deps));
+  } catch (error) {
+    if (error instanceof NativeError) {
+      throw new ValidationError(
+        error.message,
+        error.code === "connector.failed" ? "connector.busy" : "connector.key_refused",
+      );
+    }
+    throw error;
+  }
+}
+
+/** What a connector of our own sets up once stored (Telegram's webhook), its secret sealed again when it changed. */
+async function nativeConnected(deps: ConnectorDeps, connection: ConnectorConnection, secret: ConnectionSecret) {
+  const service = nativeServiceOf(connection.connector);
+  if (!service?.connected) return connection;
+  const base = (await reachableFromInternet(deps.publicUrl, deps.resolveHost).catch(() => false))
+    ? deps.publicUrl
+    : null;
+  const next = await service.connected(secret, connection, nativeHttp(deps), base).catch(() => undefined);
+  if (!next) return connection;
+  const wrapper = deps.keyWrappers[0];
+  if (!wrapper) throw new Error("no key wrapper");
+  const sealed = await sealSecret(wrapper, JSON.stringify(next), aadFor(connection.orgId, connection.id));
+  const [row] = await deps.db
+    .update(connectorConnections)
+    .set({ secretCiphertext: sealed.ciphertext, wrappedDataKey: sealed.wrappedDataKey, kekId: sealed.kekId })
+    .where(eq(connectorConnections.id, connection.id))
+    .returning();
+  caches.connections.delete(`${connection.orgId}:active`);
+  return row ?? connection;
+}
+
+/**
+ * The team's connections and the actor's own personal ones. `others`: also everyone else's personal connections, for
+ * who manages connectors, to be shown as `connectionViewFor` says.
+ */
+export async function listConnections(
+  db: Database,
+  actorId: string,
+  orgId: string,
+  options: { others?: boolean } = {},
+) {
+  const membership = await requirePermission(db, actorId, orgId, "read");
+  const others = options.others === true && can(membership, "manage_connectors");
   return db
     .select()
     .from(connectorConnections)
@@ -351,17 +486,19 @@ export async function listConnections(db: Database, actorId: string, orgId: stri
         isNull(connectorConnections.revokedAt),
         // Custom servers have their own endpoints (`…/connectors/custom`).
         sql`${connectorConnections.connector} not like 'custom:%'`,
+        others ? undefined : seenBy(actorId),
       ),
     )
     .orderBy(asc(connectorConnections.createdAt));
 }
 
 /**
- * Renames a connection, any kind (admins): it's how people and agents tell two accounts of a service apart. Its tools
- * keep their names (`tool_prefix`), so grants and denials of single tools keep applying.
+ * Renames a connection, any kind (the team's by who manages connectors, a personal one by its person): it's how people
+ * and agents tell two accounts of a service apart. Its tools keep their names (`tool_prefix`), so grants and denials
+ * of single tools keep applying.
  */
 export async function renameConnection(db: Database, actorId: string, orgId: string, id: string, label: string) {
-  await requirePermission(db, actorId, orgId, "manage_connectors");
+  await connectionFor(db, actorId, orgId, id, "change");
   const row = await db.transaction(async (tx) => {
     const [c] = await tx
       .select()
@@ -369,7 +506,7 @@ export async function renameConnection(db: Database, actorId: string, orgId: str
       .where(and(eq(connectorConnections.id, id), activeOf(orgId)));
     if (!c) throw new NotFoundError("Connection not found");
     if (label.trim() === c.label) return c;
-    const name = await checkLabel(tx, orgId, label, c.id);
+    const name = await checkLabel(tx, orgId, label, c);
     const [row] = await tx
       .update(connectorConnections)
       .set({ label: name, updatedAt: new Date() })
@@ -381,11 +518,60 @@ export async function renameConnection(db: Database, actorId: string, orgId: str
       actor: { type: "person", id: actorId },
       action: "connector.renamed",
       target: { type: "connector_connection", id: c.id },
-      details: { from: c.label, to: name, label: name },
+      details: {
+        from: auditLabel(c),
+        to: auditLabel(row),
+        label: auditLabel(row),
+        ...(c.ownerUserId ? { personalOf: c.ownerUserId } : {}),
+      },
     });
     return row;
   });
   caches.connections.delete(`${orgId}:active`);
+  return row;
+}
+
+/**
+ * Moves a person's own connection to the team (its person, when they also manage connectors): its grants and rules
+ * stay, and it becomes every member's to see. A catalog connector the team already has stays personal (409).
+ */
+export async function moveConnectionToTeam(db: Database, actorId: string, orgId: string, id: string) {
+  const c = await connectionFor(db, actorId, orgId, id, "move");
+  if (!c.ownerUserId) return c;
+  // A one-click account was made under its person's own user at the hosted adapter, which refuses it under any other.
+  if (c.composioAccountId) {
+    throw new ConflictError(
+      "A one-click connection can't move to the team. Connect it again for the team.",
+      "connector.move_one_click",
+    );
+  }
+  const row = await db.transaction(async (tx) => {
+    if (!isCustom(c)) {
+      const [team] = await tx
+        .select({ id: connectorConnections.id })
+        .from(connectorConnections)
+        .where(and(activeOf(orgId), eq(connectorConnections.connector, c.connector), connectionsOf(null)));
+      if (team) throw new ConflictError("The team already has this connector. Remove it first.");
+    }
+    // Its name may be one the team already uses: it takes the next free one there.
+    const label = await freeLabel(tx, orgId, c.label, null);
+    const [row] = await tx
+      .update(connectorConnections)
+      .set({ ownerUserId: null, label, updatedAt: new Date() })
+      .where(eq(connectorConnections.id, c.id))
+      .returning();
+    if (!row) throw new Error("connection update returned nothing");
+    await recordAudit(tx, {
+      orgId,
+      actor: { type: "person", id: actorId },
+      action: "connector.moved",
+      target: { type: "connector_connection", id: c.id },
+      details: { label: c.label, to: "team" },
+    });
+    return row;
+  });
+  caches.connections.delete(`${orgId}:active`);
+  caches.scopes.deletePrefix(`${orgId}:`);
   return row;
 }
 
@@ -399,6 +585,15 @@ export async function revokeAtProvider(deps: ConnectorDeps, orgId: string, conne
     .select()
     .from(connectorConnections)
     .where(and(eq(connectorConnections.id, connectionId), eq(connectorConnections.orgId, orgId)));
+  const service = c ? nativeServiceOf(c.connector) : undefined;
+  if (c && !c.revokedAt && service?.revoke) {
+    const secret = await openConnectionSecret(deps.keyWrappers, c).catch(() => null);
+    if (!secret) return false;
+    return service
+      .revoke(secret, nativeHttp(deps), deps.oauthApps?.[c.connector])
+      .then(() => true)
+      .catch(() => false);
+  }
   if (!c || c.revokedAt || c.connector !== "github" || c.authType !== "oauth") return false;
   const app = deps.oauthApps?.github;
   const secret = await openConnectionSecret(deps.keyWrappers, c).catch(() => null);
@@ -431,7 +626,7 @@ export async function revokeConnection(
   connectionId: string,
   composio?: Pick<ComposioConnectors, "client"> | null,
 ) {
-  await requirePermission(db, actorId, orgId, "manage_connectors");
+  await connectionFor(db, actorId, orgId, connectionId, "remove");
   const actor = { type: "person" as const, id: actorId };
   const { gone, unbound } = await db.transaction(async (tx) => {
     const [current] = await tx
@@ -479,6 +674,32 @@ export async function revokeConnection(
   if (gone?.composioAccountId && composio) await forgetComposioAccount(composio.client, gone.composioAccountId);
 }
 
+/** Job: the hosted adapter forgets one-click accounts whose connections went with a transaction (`accountIds`). */
+export const CONNECTOR_FORGET_JOB = "connector.forget_accounts";
+
+/**
+ * `userId` left the workspace or deleted their account: their personal connections go with them (the Vault's rule,
+ * ADR 0144 §2), in the caller's transaction. Agents lose their scopes and rules; nothing of the team's changes. Their
+ * one-click accounts are forgotten at the hosted adapter once it commits (`CONNECTOR_FORGET_JOB`). The caller clears
+ * the connection caches after the commit, so a reload in between can't keep the old rows.
+ */
+export async function dropPersonalConnections(tx: Executor, orgId: string, userId: string, actorId: string) {
+  const theirs = await tx
+    .select()
+    .from(connectorConnections)
+    .where(and(activeOf(orgId), eq(connectorConnections.ownerUserId, userId)));
+  for (const row of theirs) await dropConnection(tx, orgId, row, { type: "person", id: actorId });
+  const accountIds = theirs.flatMap((r) => (r.composioAccountId ? [r.composioAccountId] : []));
+  if (accountIds.length > 0) await enqueue(tx, { orgId, kind: CONNECTOR_FORGET_JOB, payload: { accountIds } });
+  return theirs;
+}
+
+/** Clears what a process keeps of a workspace's connections and grants (after the commit that changed them). */
+export function forgetConnectionCaches(orgId: string) {
+  caches.connections.delete(`${orgId}:active`);
+  caches.scopes.deletePrefix(`${orgId}:`);
+}
+
 /** Revokes a live connection in the caller's transaction: agents lose its scopes and its "Aprovar sempre" rules. */
 async function dropConnection(tx: Executor, orgId: string, row: ConnectorConnection, actor: AuditEntry["actor"]) {
   await tx.update(connectorConnections).set({ revokedAt: new Date() }).where(eq(connectorConnections.id, row.id));
@@ -489,7 +710,7 @@ async function dropConnection(tx: Executor, orgId: string, row: ConnectorConnect
     actor,
     action: "connector.disconnected",
     target: { type: "connector", id: row.id },
-    details: { connector: row.connector, label: row.label },
+    details: { connector: row.connector, label: auditLabel(row) },
   });
   return row;
 }
@@ -555,7 +776,7 @@ export async function syncGitHubAppConnection(
       .values({
         orgId,
         connector: def.id,
-        label: await freeLabel(tx, orgId, def.label),
+        label: await freeLabel(tx, orgId, def.label, null),
         toolPrefix: await freeToolPrefix(tx, orgId, def.id, oauthApps, def.id),
         serverUrl: def.serverUrl,
         authType: GITHUB_APP_AUTH,
@@ -618,9 +839,10 @@ export async function startOAuth(
   actorId: string,
   orgId: string,
   connector: string,
-  options: { returnTo?: string } = {},
+  options: { returnTo?: string; personal?: boolean } = {},
 ): Promise<{ authorizeUrl: string; state: string }> {
-  await requirePermission(deps.db, actorId, orgId, "manage_connectors");
+  const personal = options.personal === true;
+  await requireConnect(deps.db, actorId, orgId, personal, connector);
   const def = connectorDefinition(connector);
   const app = deps.oauthApps?.[connector];
   const serverUrl = checkServerUrl(def.serverUrl);
@@ -628,7 +850,7 @@ export async function startOAuth(
     // A catalog entry without a fixed OAuth app uses the server's own MCP OAuth (discovery + registration).
     const native =
       def.auth.includes("oauth") && !def.oauth
-        ? await nativeAuthorizeUrl(deps, actorId, orgId, connector, serverUrl, options.returnTo)
+        ? await nativeAuthorizeUrl(deps, actorId, orgId, connector, serverUrl, options.returnTo, personal)
         : null;
     if (native) return { authorizeUrl: native, state: "" };
     throw new ValidationError(`OAuth for ${def.label} is not configured on this server`);
@@ -652,16 +874,22 @@ export async function startOAuth(
     kekId: sealed.kekId,
     serverUrl,
     returnTo,
+    personal,
     expiresAt: new Date((deps.now?.() ?? new Date()).getTime() + OAUTH_STATE_TTL_MS),
   });
   const url = new URL(def.oauth.authorizeUrl);
-  url.searchParams.set("client_id", app.clientId);
+  url.searchParams.set(def.oauth.clientIdParam ?? "client_id", app.clientId);
   url.searchParams.set("redirect_uri", oauthRedirectUri(deps.publicUrl));
   url.searchParams.set("response_type", "code");
-  url.searchParams.set("scope", def.oauth.scopes.join(def.oauth.scopeSeparator ?? " "));
+  if (app.configId) {
+    url.searchParams.set("config_id", app.configId);
+    url.searchParams.set("override_default_response_type", "true");
+  } else url.searchParams.set("scope", def.oauth.scopes.join(def.oauth.scopeSeparator ?? " "));
   url.searchParams.set("state", state);
-  url.searchParams.set("code_challenge", challenge);
-  url.searchParams.set("code_challenge_method", "S256");
+  if (def.oauth.pkce !== false) {
+    url.searchParams.set("code_challenge", challenge);
+    url.searchParams.set("code_challenge_method", "S256");
+  }
   return { authorizeUrl: url.toString(), state };
 }
 
@@ -722,6 +950,24 @@ async function tokenRequest(
     throw res.status < 500 && res.status !== 429 ? new TokenRefused(said) : new ValidationError(said);
   }
   return body;
+}
+
+/**
+ * How this server's own OAuth app shows itself at a vendor's token endpoint: in the form (`client_id`, or the vendor's
+ * name for it, and `client_secret`), or in HTTP Basic where the vendor takes it only there (X).
+ */
+function ownClient(
+  def: ConnectorDefinition,
+  app: { clientId: string; clientSecret: string },
+): { form: Record<string, string>; headers: Record<string, string> } {
+  if (def.oauth?.clientAuth === "basic") {
+    const basic = Buffer.from(`${encodeURIComponent(app.clientId)}:${encodeURIComponent(app.clientSecret)}`);
+    return { form: {}, headers: { authorization: `Basic ${basic.toString("base64")}` } };
+  }
+  return {
+    form: { [def.oauth?.clientIdParam ?? "client_id"]: app.clientId, client_secret: app.clientSecret },
+    headers: {},
+  };
 }
 
 /** The provider answered a token request with no: the sign-in it was made with no longer works. */
@@ -809,8 +1055,9 @@ export async function completeOAuth(
     .where(and(eq(oauthStates.id, row.id), isNull(oauthStates.usedAt)))
     .returning({ id: oauthStates.id });
   if (claimed.length === 0) throw new ConflictError("This authorization link was already used", "oauth.link_used");
-  // Still an admin, in a workspace not being deleted? Both can change during the round trip.
-  await requireChangePermission(deps.db, user.id, row.orgId, "manage_connectors");
+  // Still an admin (a member, for their own connection), in a workspace not being deleted? Both can change during the
+  // round trip.
+  await requireChangePermission(deps.db, user.id, row.orgId, row.personal ? "read" : "manage_connectors");
 
   if (row.composioAccountId) return completeComposioOAuth(deps, user, row, input.code);
   if (row.oauthClientId) return completeMcpOAuth(deps, user, row, input.code, at);
@@ -818,6 +1065,7 @@ export async function completeOAuth(
   const app = deps.oauthApps?.[row.connector];
   if (!def.oauth || !app) throw new ValidationError(`OAuth for ${def.label} is not configured on this server`);
   const verifier = await stateVerifier(deps, row);
+  const client = ownClient(def, app);
   const token = await tokenRequest(
     deps,
     def.oauth.tokenUrl,
@@ -825,25 +1073,38 @@ export async function completeOAuth(
       grant_type: "authorization_code",
       code: input.code,
       redirect_uri: oauthRedirectUri(deps.publicUrl),
-      client_id: app.clientId,
-      client_secret: app.clientSecret,
-      code_verifier: verifier,
+      ...client.form,
+      ...(def.oauth.pkce === false ? {} : { code_verifier: verifier }),
     },
-    {},
+    client.headers,
     def,
   );
+  const service = nativeServiceOf(row.connector);
+  if (service?.exchange && token.access_token) {
+    const long = await service.exchange(
+      { accessToken: token.access_token, ...(token.expires_in ? { expiresIn: token.expires_in } : {}) },
+      app,
+      nativeHttp(deps),
+    );
+    token.access_token = long.accessToken;
+    token.expires_in = long.expiresIn;
+  }
+  const signedIn: ConnectionSecret = { accessToken: token.access_token, refreshToken: token.refresh_token };
+  const account = await nativeAccount(deps, row.connector, signedIn);
   const stored = await storeConnection(deps, {
     orgId: row.orgId,
     actorId: user.id,
     connector: row.connector,
     authType: "oauth",
     serverUrl: checkServerUrl(row.serverUrl ?? def.serverUrl),
-    secret: { accessToken: token.access_token, refreshToken: token.refresh_token },
+    secret: signedIn,
+    ...(account ? { accountLabel: account.label, accountId: account.id } : {}),
     tokenExpiresAt: token.expires_in ? new Date(at.getTime() + token.expires_in * 1000) : null,
     // An empty `scope` (a GitHub App's client, which has no scopes) is unknown, never "none granted".
     oauthScopes:
       (typeof token.scope === "string" ? token.scope.split(/[\s,]+/) : def.oauth.scopes).filter(Boolean).join(" ") ||
       null,
+    owner: row.personal ? user.id : null,
   });
   return { ...stored, returnTo: row.returnTo };
 }
@@ -856,10 +1117,16 @@ const refreshing = new Map<string, Promise<ConnectionSecret | null>>();
  * that expires within a minute. Returns the HTTP headers to send.
  */
 export async function connectionHeaders(deps: ConnectorDeps, c: ConnectorConnection): Promise<Record<string, string>> {
+  const secret = await connectionSecret(deps, c);
+  return secret ? secretHeaders(secret, c.serverUrl) : {};
+}
+
+/** A connection's secret, its OAuth token refreshed first when it expires within a minute. Backend only. */
+export async function connectionSecret(deps: ConnectorDeps, c: ConnectorConnection): Promise<ConnectionSecret | null> {
   const secret = await openConnectionSecret(deps.keyWrappers, c);
-  if (!secret) return {};
+  if (!secret) return null;
   const at = deps.now?.() ?? new Date();
-  if (!expiring(c, secret, at)) return secretHeaders(secret, c.serverUrl);
+  if (!expiring(c, secret, at)) return secret;
   let pending = refreshing.get(c.id);
   if (!pending) {
     pending = refreshOnce(deps, c.id, at).finally(() => refreshing.delete(c.id));
@@ -867,11 +1134,20 @@ export async function connectionHeaders(deps: ConnectorDeps, c: ConnectorConnect
   }
   const fresh = await pending;
   caches.connections.delete(`${c.orgId}:active`);
-  return fresh ? secretHeaders(fresh, c.serverUrl) : {};
+  return fresh;
 }
 
-const expiring = (c: ConnectorConnection, secret: ConnectionSecret, at: Date) =>
-  Boolean(secret.refreshToken && c.tokenExpiresAt && c.tokenExpiresAt.getTime() - at.getTime() < 60_000);
+/** A connector of our own (ADR 0170), by its catalog id. */
+const nativeServiceOf = (connector: string) =>
+  CONNECTOR_CATALOG[connector]?.native ? NATIVE_SERVICES[connector] : undefined;
+
+function expiring(c: ConnectorConnection, secret: ConnectionSecret, at: Date) {
+  const left = c.tokenExpiresAt ? c.tokenExpiresAt.getTime() - at.getTime() : null;
+  if (left === null) return false;
+  const service = nativeServiceOf(c.connector);
+  if (service?.refresh) return Boolean(secret.accessToken) && left < (service.refreshBefore ?? 60_000);
+  return Boolean(secret.refreshToken) && left < 60_000;
+}
 
 /**
  * One refresh at a time per connection, across processes: many servers rotate the refresh token, so a second
@@ -945,15 +1221,26 @@ async function refreshTokens(
       undefined,
       namedTokenFetch(deps),
     );
+  } else if (nativeServiceOf(c.connector)?.refresh) {
+    try {
+      const fresh = await nativeServiceOf(c.connector)?.refresh?.(
+        secret,
+        deps.oauthApps?.[c.connector],
+        nativeHttp(deps),
+      );
+      if (!fresh) return null;
+      token = { access_token: fresh.accessToken, ...(fresh.expiresIn ? { expires_in: fresh.expiresIn } : {}) };
+    } catch (error) {
+      if (error instanceof NativeError && error.code === "connector.needs_reconnect")
+        throw new TokenRefused(error.message);
+      throw error;
+    }
   } else {
     const def = c.connector.startsWith("custom:") ? null : connectorDefinition(c.connector);
     const app = deps.oauthApps?.[c.connector];
     if (!def?.oauth || !app) return null;
-    token = await tokenRequest(deps, def.oauth.tokenUrl, {
-      ...refresh,
-      client_id: app.clientId,
-      client_secret: app.clientSecret,
-    });
+    const own = ownClient(def, app);
+    token = await tokenRequest(deps, def.oauth.tokenUrl, { ...refresh, ...own.form }, own.headers);
   }
   const next: ConnectionSecret = {
     ...secret,
@@ -1027,6 +1314,7 @@ async function nativeAuthorizeUrl(
   connector: string,
   serverUrl: string,
   returnTo?: string,
+  personal = false,
 ) {
   const probe = await probeMcpServer(deps, serverUrl).catch(() => null);
   if (probe?.kind !== "oauth") return null;
@@ -1037,6 +1325,7 @@ async function nativeAuthorizeUrl(
     issuer: probe.issuer,
     scopes: probe.scopes,
     returnTo,
+    personal,
   });
   return started.status === "oauth" ? started.authorizeUrl : null;
 }
@@ -1083,6 +1372,7 @@ async function completeMcpOAuth(
       oauthClientId: client.id,
       resource: row.resource,
       connectionId: row.connectionId,
+      owner: row.personal ? user.id : null,
     });
     return { ...stored, returnTo: row.returnTo };
   }
@@ -1096,6 +1386,60 @@ async function completeMcpOAuth(
     tokenExpiresAt,
     oauthClientId: client.id,
     resource: row.resource,
+    owner: row.personal ? user.id : null,
   });
   return { ...stored, returnTo: row.returnTo };
+}
+
+/**
+ * Tokens of our own connectors that renew by a call of their own (Threads' 60 days) and no call renewed in time: each
+ * renewed now, on the worker loop (`connectorTokens`). A refusal marks the connection to reconnect.
+ */
+export async function refreshNativeTokens(deps: ConnectorDeps, at = new Date()): Promise<number> {
+  const due = Object.entries(NATIVE_SERVICES).filter(([, s]) => s.refresh);
+  let renewed = 0;
+  for (const [connector, service] of due) {
+    const rows = await deps.db
+      .select()
+      .from(connectorConnections)
+      .where(
+        and(
+          eq(connectorConnections.connector, connector),
+          isNull(connectorConnections.revokedAt),
+          eq(connectorConnections.status, "active"),
+          lt(connectorConnections.tokenExpiresAt, new Date(at.getTime() + (service.refreshBefore ?? 60_000))),
+        ),
+      );
+    for (const row of rows) {
+      if (await connectionSecret({ ...deps, now: () => at }, row).catch(() => null)) renewed++;
+    }
+  }
+  return renewed;
+}
+
+/**
+ * A vendor says an account removed this server's app on its side (Meta's deauthorize and data deletion callbacks):
+ * every live connection of those connectors to that account goes, with its grants and rules, as Desconectar does.
+ */
+export async function dropVendorAccount(db: Database, connectors: string[], accountId: string) {
+  const gone = await db.transaction(async (tx) => {
+    const rows = await tx
+      .select()
+      .from(connectorConnections)
+      .where(
+        and(
+          inArray(connectorConnections.connector, connectors),
+          eq(connectorConnections.accountId, accountId),
+          isNull(connectorConnections.revokedAt),
+        ),
+      )
+      .for("update");
+    for (const row of rows) await dropConnection(tx, row.orgId, row, { type: "system", id: null });
+    return rows;
+  });
+  for (const row of gone) {
+    caches.connections.delete(`${row.orgId}:active`);
+    caches.scopes.deletePrefix(`${row.orgId}:`);
+  }
+  return gone.length;
 }

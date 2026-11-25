@@ -516,6 +516,7 @@ test("a system-mode runner (root) without workers does no agent work; machine-le
     "phone.pair.cancel",
     // Pausing is the whole computer's, set by whoever runs it, not by one agent.
     "pause.set",
+    "limits.set",
     "phone.look",
     // The Mac's pick of iPhones on its Wi-Fi, kept beside the phones' locks.
     "phone.wifi",
@@ -530,6 +531,10 @@ test("a system-mode runner (root) without workers does no agent work; machine-le
     "cli.install",
     // Opening Xcode on the Mac, beside its fix (listed in `MACHINE_OPS` order).
     "xcode.open",
+    // Repairing an iPhone's test helper is the phones' process's, beside their locks.
+    "phone.repair",
+    // A problem report reads the runner's own log and state: root's.
+    "report.collect",
   ]);
   const install = { op: "cli.install", action: "start", tool: "claude" } as unknown as MachineRequest;
   const installer = { ...ctx, cliInstall: () => ({ install: { tool: "claude" as const, state: "running" as const } }) };

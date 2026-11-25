@@ -13,16 +13,15 @@ import { useDirectory, useOrgId } from "../shared/hooks";
 import { successHaptic } from "../shared/parts";
 import { TextArea } from "../shared/TextArea";
 
-/** Opens "Apagar" for an agent; with `proposal`, Apagar accepts that removal card's row instead (applied as you). */
-export const openAgentDelete = (id: string, proposal?: string) =>
-  router.push({ pathname: "/agent-delete", params: proposal ? { id, proposal } : { id } });
+/** Opens "Delete" for an agent. */
+export const openAgentDelete = (id: string) => router.push({ pathname: "/agent-delete", params: { id } });
 
 /**
  * Deleting an agent for good (ADR 0082), as the web's Configurações › Zona de perigo: what goes and what stays, its
  * name typed to confirm, then the row that deletes it. Admins reach it from "Editar agente", and an archived agent's
  * (it has no profile) from Agentes › Arquivados.
  */
-export function DeleteAgentScreen({ id, proposal }: { id: string; proposal?: string }) {
+export function DeleteAgentScreen({ id }: { id: string }) {
   const { t } = useTranslation();
   const api = useApi();
   const qc = useQueryClient();
@@ -31,16 +30,11 @@ export function DeleteAgentScreen({ id, proposal }: { id: string; proposal?: str
   const found = useDirectory().anyAgent(id);
   const agent = found?.former === "deleted" ? undefined : found;
   const [typed, setTyped] = useState("");
-  const purge = useMutation({
-    mutationFn: async () => {
-      if (proposal) await api.proposals.accept(orgId, proposal);
-      else await api.agents.purge(orgId, id);
-    },
-  });
+  const purge = useMutation({ mutationFn: () => api.agents.purge(orgId, id) });
 
   if (!agent) {
     return (
-      <SettingsPage title={t("agent.edit")}>
+      <SettingsPage title={t("agentPage.delete.button")}>
         <EmptyState icon="agent" title={t("mobile.agentEdit.missing")} />
       </SettingsPage>
     );
@@ -54,10 +48,7 @@ export function DeleteAgentScreen({ id, proposal }: { id: string; proposal?: str
         successHaptic();
         toast({ title: t("agentPage.delete.done", g), icon: "check" });
         void qc.invalidateQueries({ queryKey: keys.agents(orgId) });
-        if (proposal) {
-          void qc.invalidateQueries({ queryKey: keys.proposals(orgId) });
-          router.back();
-        } else router.dismissTo("/agents");
+        router.dismissTo("/agents");
       },
     });
   };
@@ -69,22 +60,26 @@ export function DeleteAgentScreen({ id, proposal }: { id: string; proposal?: str
         <GroupedRow icon="chat" label={t("agentPage.delete.stays")} labelLines={4} />
       </GroupedList>
       <Gap />
-      <TextArea
-        value={typed}
-        onChangeText={(v) => {
-          setTyped(v);
-          purge.reset();
-        }}
-        placeholder={t("agentPage.delete.typeName", g)}
-        multiline={false}
-        minHeight={50}
-        maxLength={64}
-        autoCapitalize="none"
-        autoCorrect={false}
-        returnKeyType="done"
-        onSubmitEditing={confirm}
-        accessibilityLabel={t("agentPage.delete.typeName", g)}
-      />
+      {/* A field row of the page, the list its surface, as every field of the agent's pages. */}
+      <GroupedList>
+        <TextArea
+          value={typed}
+          onChangeText={(v) => {
+            setTyped(v);
+            purge.reset();
+          }}
+          placeholder={t("agentPage.delete.typeName", g)}
+          multiline={false}
+          minHeight={50}
+          maxLength={64}
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="done"
+          onSubmitEditing={confirm}
+          accessibilityLabel={t("agentPage.delete.typeName", g)}
+          style={styles.bare}
+        />
+      </GroupedList>
       {purge.error ? (
         <Text variant="footnote" tone="danger" style={styles.error} accessibilityLiveRegion="polite">
           {errorText(t, purge.error)}
@@ -100,4 +95,5 @@ export function DeleteAgentScreen({ id, proposal }: { id: string; proposal?: str
 
 const styles = StyleSheet.create({
   error: { paddingHorizontal: 16, paddingTop: 8 },
+  bare: { borderWidth: 0, borderRadius: 0, backgroundColor: "transparent" },
 });

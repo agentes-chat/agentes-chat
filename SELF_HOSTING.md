@@ -15,7 +15,10 @@ own machine). The setup writes it for you. Sign-in cookies, the only browser ori
 anything, and every link the app sends come from it. Opened at any other address, sign-in fails with
 "Invalid origin" and saving fails with `bad_origin`. To reach the same instance at more than one
 address (the machine's LAN IP and a tunnel hostname, say), list the others in
-`EXTRA_TRUSTED_ORIGINS`, comma-separated; `PUBLIC_URL` stays trusted either way.
+`EXTRA_TRUSTED_ORIGINS`, comma-separated; `PUBLIC_URL` stays trusted either way. With the operator
+API on (below), a browser that opens the app at a hostname that is neither of these nor a host registered
+through that API sees only an "address isn't set up yet" page, so a proxy in front must pass the
+browser's `Host` through unchanged.
 
 The server needs no model key of its own. Each organization adds its own keys (Claude, OpenAI,
 Gemini, DeepSeek, Kimi, Z.ai, MiniMax, Command Code or OpenRouter) in **Settings → AI and usage**. Keys are stored encrypted with a key derived from `AGENTES_SECRET` and are
@@ -469,11 +472,14 @@ Then add to the `server` block:
     }
 ```
 
-Sign-in rate limits count per client address, read from `X-Forwarded-For`. A single value, as above,
-is trusted as is, and the client can't forge it (nginx replaces whatever the client sent). With
-another proxy or a CDN in front of nginx, send the chain instead (`$proxy_add_x_forwarded_for`) and
-list those proxies' addresses or ranges in `TRUSTED_PROXIES`, comma-separated: the chain is read from
-the right past every trusted hop, and the first other address is the client.
+Sign-in rate limits count per client address, read from `X-Forwarded-For`; wrong passwords also count
+per account (10 in 15 minutes from one address, 50 from all), each count kept in one server process's
+memory, so a restart starts them again and with several processes behind a load balancer each allows
+that many. A single value, as above, is trusted as is, and the client can't
+forge it (nginx replaces whatever the client sent). With another proxy or a CDN in front of nginx,
+send the chain instead (`$proxy_add_x_forwarded_for`) and list those proxies' addresses or ranges in
+`TRUSTED_PROXIES`, comma-separated: the chain is read from the right past every trusted hop, and the
+first other address is the client.
 
 </details>
 
@@ -751,6 +757,11 @@ internet instead, and need it public:
   panel in **Settings → Connectors** checks the installations with GitHub when it opens.
 - Composio's events (`/api/webhooks/composio`, with `COMPOSIO_API_KEY`): new mail for routines, and connector
   accounts that expired.
+- A Telegram bot's messages arrive at `/api/webhooks/telegram/…` when the internet reaches the instance; otherwise the
+  server asks Telegram for them every 30 seconds, which works on a private network too.
+- Threads' pictures and videos: Meta fetches them from a link of this server (`/api/connector-media/…`, good for an
+  hour). On a private network Threads posts text only. Meta's deauthorize and data deletion callbacks
+  (`/api/webhooks/meta/…`) need it too.
 - AI apps that call from their own servers (Apps de IA, below): claude.ai, the Claude apps and ChatGPT reach
   `/mcp` from the internet. Claude Code, Cursor and VS Code on a computer that reaches the server don't need it.
 
@@ -789,7 +800,7 @@ ones a self-hosted instance usually touches:
 | `POSTGRES_PASSWORD` | required | Database password. Read by the compose file only. |
 | `AGENTES_IMAGE` | `ghcr.io/agentes-chat/agentes:latest` | The image to run. A version tag or a digest holds a version. |
 | `BIND_ADDRESS`, `HOST_PORT` | `127.0.0.1`, `3000` | Where the compose file publishes the app. |
-| `AGENTES_MEMORY` | `8g` | The most memory the app's container may take, swap included. Over it, the kernel stops the app alone and Docker restarts it, instead of the machine swapping until something else is killed. On a machine with less than 10 GiB of memory, the setup writes three quarters of it here instead: a limit above the machine's memory never fires. The speech server's is `SPEECH_MEMORY` (Voice messages). |
+| `AGENTES_MEMORY` | `8g` | The most memory the app's container may take, swap included. Over it, the kernel stops the app alone and Docker restarts it, instead of the machine swapping until something else is killed. Before that the app brakes on its own: past 70% of it its job slots stop growing, past 85% it sheds long jobs. On a machine with less than 10 GiB of memory, the setup writes three quarters of it here instead: a limit above the machine's memory never fires. With worker processes taking the runs, `4g` (More at once: worker processes). The speech server's is `SPEECH_MEMORY` (Voice messages). |
 | `COMPOSE_PROFILES` | | How people reach it: `tailscale` (the setup's default), `https` (Caddy for `DOMAIN`), or neither (this machine only). Comma-separated, with other optional services: `backup` (Backups and restore), `speech` (Voice messages), `embeddings` (Search across languages). |
 | `DOMAIN` | | The public domain Caddy gets a certificate for. |
 | `TS_AUTHKEY` | | The auth key or OAuth client secret the server joins your tailnet with, read only until it has joined. The setup empties it then. |
@@ -808,11 +819,12 @@ ones a self-hosted instance usually touches:
 | `EMAIL_FROM`, `EMAIL_REPLY_TO` | `agentes.chat <ping@HOST>`, HOST being the host of `PUBLIC_URL` | Sender of the app's emails. Its domain must be verified with your email provider. |
 | `EMAIL_ART` | `auto` | Where emails get their pictures (the logo, agents' faces): from this server's `/email/` when its address is public, else attached to each message. `attach` always attaches them, for a public address people outside still can't open (an access proxy, a VPN, an IP allowlist). |
 | `FILES_DIR` | `/data/files`, set by the compose file | Folder for uploaded files, on the `files` volume. |
-| `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | | Files in an S3-compatible bucket instead, when all four are set. `S3_REGION` (default `auto`); `S3_PATH_STYLE=true` for MinIO and Garage. |
+| `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | | Files in an S3-compatible bucket instead, when all four are set. `S3_REGION` (default `auto`); `S3_PATH_STYLE=true` for MinIO and Garage. Videos and downloads then come straight from the bucket by short-lived signed links (an `https` endpoint only; an `http` one always goes through the server): set `S3_PRESIGNED_URLS=false` when browsers can't reach `S3_ENDPOINT` (a bucket on a private network), and the server sends every file itself. |
 | `RUN_MIGRATIONS_ON_BOOT` | `true` | `false` only if you run `docker compose run --rm agentes migrate` yourself before each start. |
 | `LOG_LEVEL` | `info` | `debug`, `info`, `warn` or `error`. |
 | `LOG_FORMAT` | `json` | `gcp` for Google Cloud Logging (`severity` and `message`). |
 | `TELEMETRY` | `on` | `off` stops the anonymous usage report (Optional services and what they receive). |
+| `PROBLEM_REPORT_URL` | `https://telemetry.agentes.chat/v1/problem-report` | Where **Send a report** sends a report someone chose to send. `off`: it only copies it (Optional services and what they receive). |
 | `FEEDBACK_RELAY` | `true` | The apps' feedback form sends what a person writes to the agentes.chat team. `false`: no form (Optional services and what they receive). |
 | `TYPESAFE_API_KEY` | | Your TypeSafe key for Jev, or an OpenRouter key (`sk-or-…`) to call the same Jev through OpenRouter (AI: plans and keys). Wins over the key added in Settings → AI and usage. |
 | `COMPOSIO_API_KEY`, `COMPOSIO_WEBHOOK_SECRET` | | Your Composio project: Gmail and Outlook mailboxes and the services connected through Composio (below). |
@@ -828,6 +840,25 @@ fetch or type its models and, if you like, their prices: each model gets one tes
 tools. A model without prices costs nothing in budgets (its tokens are still counted). Private addresses and
 `http://` are allowed on a self-hosted server, unless `ALLOW_SIGNUP=true` lets anyone in; set
 `MODEL_ENDPOINTS_PRIVATE` to choose (`false` allows only public https ones, what agentes.chat Cloud does).
+
+**Servers on your private network.** Other addresses a workspace types (a custom MCP server and its sign-in,
+its own bucket, a database, a mail server, a password manager, the pages its agents read) must be public,
+whatever the switch above says, until you name the private ones they may reach. For a custom MCP server
+on a Tailscale tailnet or a LAN:
+
+```bash
+# Tailscale's ranges, or your LAN's (192.168.1.0/24)
+OUTBOUND_ALLOW_CIDRS=100.64.0.0/10,fd7a:115c:a1e0::/48
+# Optional: names allowed whatever they resolve to, such as your tailnet's (needed for *.local and *.internal names)
+OUTBOUND_ALLOW_HOSTS=*.tail1234.ts.net
+```
+
+Restart the server after changing them. Name the narrowest range and suffix you can: anyone who can make a name
+under an allowed suffix can point it at your network. Every request is checked again when it connects, so a name
+that changes after it was saved can't move it onto an address you didn't allow. Loopback (`127.0.0.1`, `::1`,
+`localhost`), link-local and cloud metadata addresses (`169.254.169.254`, `fd00:ec2::254`, `100.100.100.200`) stay
+refused whatever you set. An address refused for this shows in the server's log as
+`outbound address refused: private network`, with its host. agentes.chat Cloud ignores both settings.
 
 **Sign-up.** The first account is allowed unless an owner link or the desktop app's owner key holds
 it (below). After it, with `ALLOW_SIGNUP=false` (the default), only invited people get in: invited by
@@ -893,10 +924,15 @@ volume. With all four `S3_*` variables set they go to that bucket instead, and w
 Postgres. Choose before the first upload: a file stays in the store it was written to. An
 organization can also keep its files in a bucket of its own (**Settings → Storage**).
 
+**Social and ads connectors of our own (optional).** Telegram needs nothing from you: each workspace makes a bot with
+@BotFather and pastes its token in **Add connector → Telegram**. X, Threads, Meta Ads and TikTok each need a developer
+app you register with the vendor, their variables set as `docs/social-apps-checklist.md` says, step by step; without
+them the service doesn't show as connectable.
+
 **Services through Composio (optional).** Google Drive, Google Calendar, Sheets and Docs, Slack,
 Microsoft Teams, OneDrive, HubSpot, Salesforce, Zendesk, Instagram, Facebook Pages, LinkedIn, YouTube,
 Pinterest, Reddit and WhatsApp Business have no server that connects to us directly;
-Asana, Figma, Intercom, Dropbox and Square have one that doesn't let us in yet. With `COMPOSIO_API_KEY`
+Asana, Figma, Canva, Intercom, Dropbox and Square have one that doesn't let us in yet. With `COMPOSIO_API_KEY`
 set to the key of a project of yours at https://composio.dev, they connect through it: people sign in on
 Composio's page with Composio's own app (in English, and the service's consent screen says "Composio"),
 with no key to paste. Without it they don't show in **Add connector**, and the ones waiting on their
@@ -927,6 +963,9 @@ carries, in the request's `params._meta["chat.agentes/caller"]`, a JWT signed wi
 | `org`, `agent`, `conn` | The ids of the workspace, the agent and the connection |
 | `run` | The run's id (absent for the rare call made outside a run) |
 | `user` | The id of the person the run acts for; absent when nobody is behind it, as in a routine's run |
+| `brain` | What thinks for the run: `model` for a model this server calls, else the kind of the program on a computer (`claude_code`, `codex`, …) |
+| `provider` | With `brain: "model"`, the provider that model is at (`anthropic`, `openai`, …; `custom` for a workspace's own endpoint) |
+| `channel`, `thread` | The ids of the conversation the run answers in and of the root message of its thread |
 | `iat`, `exp`, `jti` | When it was made, 60 seconds later, and an id that is new for every call |
 
 In your server: check the signature with the algorithm pinned to HS256, that `aud` is your host and `iss`
@@ -936,6 +975,19 @@ needing to be reconnected. Listing the tools carries no statement, since no agen
 the tools' names and descriptions free of anything private. A host that isn't listed gets nothing, and
 neither does a server over http or on a port other than 443. [ADR 0181](docs/adr/0181-mcp-caller-identity.md)
 has the rest.
+
+**A listed server can mark an answer as confidential (optional).** When a tool of such a server answers
+with somebody's private text (a secret, a person's record), it can add
+`"_meta": { "chat.agentes/confidential": true }` to that result. The run that read it goes on reading and
+answers in a thread under the message that asked it, and sends nothing elsewhere: no message, mail or
+post in another place, no file, task or memory, no command, browser or web. Outside that thread no agent
+is given the thread's text, and neither is a person's connected AI app or a review through the operator
+API. It is in no search, summary or notification, and it is removed 60 days later.
+A program on a computer (Claude Code, Codex) can't be held to that, so it gets a placeholder in place of
+the answer: check `brain` in the statement above before you hand such text out. The thread's text also
+stays with the `provider` that first read it: an agent named there that thinks with another one stops
+before it reads anything, and says so. A routine's own run that read such an answer delivers no report.
+The same key from a server you did not list changes nothing. [ADR 0190](docs/adr/0190-confidential-results.md) has the rest.
 
 **Deleting workspaces and accounts.** An owner deletes a workspace in **Settings → General**, with a
 code emailed to them (with no email set up, their password instead): it turns read-only for everyone at
@@ -999,12 +1051,61 @@ by day, workspace and agent, in counts the server always keeps: never what a too
 `GET /analytics/work` and `GET /analytics/work/orgs/{orgId}` say how much the agents work and spend:
 turns by who started them and how they ended, waits for room on a computer, reply times, and tokens by
 type and who pays, with what they would cost through the API, per workspace or per agent, never what anyone wrote.
+`GET /analytics/run-timings` says where the runs' time went in a window of up to 2 days (31 for one workspace):
+each stage's median, p90, p99 and slowest, how turns on a computer started and how long runs waited for one, by
+what the agents think with.
 `MACHINE_PROVISIONING=external` (with the token) is for giving every workspace a computer of its own
 from a provisioner you run: it lists the workspaces still waiting (`GET /machine-requests`), says how
 far each one is, and asks for a single-use code that the computer connects with
 (`POST /orgs/{orgId}/machines`): write it to a file only the runner's user can read and run
 `agentes-runner pair --server <url> --enroll-file <file>` there (or pass `--enroll-file` to the installer),
 which removes the file as soon as it is read. Leave it `off` and people connect their own computers.
+
+**Reading what a workspace wrote (optional, off).** The operator API never returns what anyone wrote,
+with one exception you have to switch on: `OPERATOR_API_REVEAL_TOKEN` (a third value, different from
+the other two). Leave it unset unless a tool of yours needs it. Set, `POST /reveal/orgs/{orgId}` reads
+one field of one record at a time (a message, a step of a run, an agent's instructions, a routine, a
+task, a connection's error, what a member wrote to you), at most 2,000 characters a call, with a
+reason in one line, for one of three purposes. Two the server checks for itself. For a member who
+asked for help (`member_request` with the id of their support request, 30 days at most): only what
+that member reads in the app. To diagnose a run that failed or got stuck (`fault` with the run's id,
+14 days at most): only what hangs on that run. Never a file or a credential, and of a direct
+conversation only for a member who is in it. The third, `trust_safety`, is for investigating
+suspected abuse. The server has no record that could prove it, so it names no request and no run,
+never opens a support request's words or what people said to each other in a direct conversation,
+and is capped at 150 reads a day for the whole server. Every read is recorded before any text
+leaves, in the events feed with your reason. Requests and faults show in each workspace's own audit
+log at once (**Settings → Audit log**: who read what, at whose request or for which failed run,
+never your reason). A read to investigate abuse shows there when you disclose it, which you owe
+within 7 days and as soon as your review ends: `POST /orgs/{orgId}/content-reads/disclosure` with
+your full token and `{ from, to, count }` writes one entry that says you reviewed that many items
+for safety in that period. Credentials are masked, and the door takes 30 calls a minute and 100
+reads of one workspace a day. `GET /orgs/{orgId}/support-requests` lists who
+asked for help and when, and `POST` there records a request that reached you another way (a mail, a
+call), which the audit log then shows as recorded by you. `POST /reveal/orgs/{orgId}/replies` answers
+a member's support request by email, at the address of their account and in their language, never
+at one you name: one of the server's four sentences (`template`) or your own words as plain text
+(`text`, 2,000 characters at most, in which nothing becomes a link). It needs email set up, takes 3
+replies a request and 60 a day, and is recorded in the events feed and in that workspace's audit log
+(that you answered, whose request, and whether an AI assistant wrote the answer), never with its
+words, which the server forgets once the email is sent or given up. Write in a reply only what that
+member could read in the app. To investigate a problem in a workspace, the same token also reads more
+than one field at a time, each call with a reason in one line and, if you like, your own case id
+(`caseRef`): `POST /reveal/orgs/{orgId}/conversations/{channelId}/messages` (a window of up to 48
+hours, 200 messages a page), `POST /reveal/orgs/{orgId}/runs/{runId}/transcript` (what the agent's
+model wrote, each tool call's input and result, 200 steps a page) and
+`POST /reveal/orgs/{orgId}/agents/{agentId}/settings` (an agent's instructions and settings). Each
+read is recorded first, in the events feed with your reason and in the workspace's audit log without
+it, and counts toward the door's limits. Credentials are masked, each message or step is cut at
+4,000 characters, and what a confidential thread holds or two people said to each other in a direct
+conversation is never returned. Setting the token makes you a reader of your workspaces' content: tell
+them before the first read what you may read it for, and say whether an AI assistant reads with you
+(`assistedByAi`). It also
+makes the server keep what members write in the feedback form, and what the thing they reported
+says, for 90 days beside their request. Unset, every path under
+`/reveal` answers 403 and the server keeps neither: of a member's feedback it keeps only that they
+asked (who, when, and which message), for a year. If you set the token and later take it away, the
+door closes at once and no new words are kept; the ones already kept stay until their 90 days are up.
 
 **Stall-and-noise report (optional).** With `OPS_REPORT_EMAIL` set (one address, or several separated by
 commas) and email set up, the server emails the previous UTC day's report every day at about 01:00 UTC: for
@@ -1022,8 +1123,8 @@ for another day, `--org <workspace id>` for one workspace).
 <summary><b>Optional services and what they receive</b></summary>
 
 **The usage report.** The instance sends agentes.chat anonymous usage statistics: counts such as people,
-agents, machine sizes, AI tokens used and how much data the agents' browsers send and receive, never
-messages, files, names or sites. The first goes about an hour after the server first starts, then one a
+agents, machine sizes, AI tokens used, how much data the agents' browsers send and receive, and how fast
+the apps open and run, never messages, files, names or sites. The first goes about an hour after the server first starts, then one a
 day at that time, restarts or not (one that came due while the server was off goes about 10 minutes
 after it starts again), as JSON in a POST to `TELEMETRY_URL` (`https://telemetry.agentes.chat/v1/report`).
 It passes through Cloudflare, which sits in front of agentes.chat and decrypts it on the way.
@@ -1035,7 +1136,7 @@ report replaces it. These are all its fields:
 | `report` | The report's format: `1`. |
 | `instance` | A random id made at the server's first start. Nothing else in the report identifies the server. |
 | `version`, `edition`, `install` | The server's version, as `/api/health` gives it (`0.0.0` while releases aren't numbered yet); `selfhost`; `docker`, `native` or `desktop`. |
-| `os`, `arch`, `uptimeHours` | The server's system (`linux`, `darwin`), processor (`x64`, `arm64`) and hours since it started. |
+| `os`, `osVersion`, `arch`, `uptimeHours` | The server's system (`linux`, `darwin`), its version as numbers alone (a Linux or Darwin kernel's, `6.8.0`, a Windows build, `10.0.19045`; `other` when there are none), processor (`x64`, `arm64`) and hours since it started. |
 | `host.size` | The machine the server runs on: its logical CPUs (`cpus`) and memory (`memoryGb`, to 0.5 GB), the disk holding the server's files (`diskGb`, to 1 GB: `FILES_DIR`, the data volume with Docker, else its working folder), and `limit` (`cpus`, `memoryGb`) when a container lets the server use less of the machine. |
 | `host.container` | Whether the server runs in a container. |
 | `host.load` | How busy that whole machine got over the last day, sampled every 5 minutes: the average and highest load per CPU (`loadAvg`, `loadPeak`: the 5-minute load average divided by the machine's CPUs, 1 is every CPU busy), the average and highest share of its memory in use (`memoryAvg`, `memoryPeak`, from 0 to 1), and the hours the samples cover (`hours`); `null` with no sample from the last day. |
@@ -1046,6 +1147,7 @@ report replaces it. These are all its fields:
 | `lastDay.runs`, `lastDay.toolCalls` | Agent runs started, and tool calls they made, in the last 24 hours. |
 | `lastDay.desktopMinutes`, `lastDay.terminalMinutes` | Minutes people watched or controlled agents' desktops, and had terminals open, in the last 24 hours. |
 | `lastDay.models` | For each AI provider and model used in the last 24 hours (the 50 most used): `provider`, `model`, `calls`, `inputTokens` (cached ones included) and `outputTokens`. A model that isn't in agentes.chat's model list (a name someone typed, a deployment, a fine-tune) goes as `other`. |
+| `lastDay.clientVitals` | How fast the apps ran since the last report, for each platform that said: the phone apps (`ios`, `android`), browsers (`web`) and the desktop app on each system (`macos`, `windows`, `linux`). How many speed reports came (`reports`), and for each measure how many values (`n`) with their median (`p50`) and 95th percentile (`p95`): the opening, to the first screen (`coldStartMs`: the desktop app from its start) and to the first rows (`firstRowsMs`), how late the app's JavaScript ran (`jsLagP95Ms`, `jsLagMaxMs`), its JavaScript heap (`heapBytes`), the memory behind the desktop app's window (`webviewBytes`), the reads after each return to the app (`getsPerReturn`) and the realtime connection's reconnects (`reconnects`). The apps send these numbers to their own server, about once at each start and each return to them, with nobody's id; the server keeps a sample of a few hundred of each until the report goes (none with `TELEMETRY=off`). |
 
 It never holds messages, files, names, emails, hostnames, paths, prompts, IP addresses, the sites agents'
 browsers visit, or ids of workspaces, people or computers (the request itself comes from your server's
@@ -1058,6 +1160,27 @@ either way:
   Docker, in `~/.agentes/.env`, then start it again. This wins over the switch below.
 - The switch in **Settings → General → Usage statistics**. Only the installation's first account (the
   person who set it up) sees it.
+
+**Send a report.** Where something fails (an agent's browser that doesn't open, a computer that stopped
+answering, an agent's run that failed, the desktop app's server that won't start) and in **Settings → General**,
+**Send a report** shows a report in full, then sends it to the agentes.chat team only when someone presses **Send**,
+so it goes even with `TELEMETRY=off`. The server posts it as JSON to `PROBLEM_REPORT_URL`
+(`https://telemetry.agentes.chat/v1/problem-report`); the desktop app posts its own (its cover and Preferences →
+Activity) when the server is down or out of reach. Set `PROBLEM_REPORT_URL=off` and the button only copies the
+report. A report holds:
+
+| Field | What it is |
+| --- | --- |
+| `format`, `source`, `place` | `1`; `server` or `desktop`; where it was sent from (`browser`, `computer`, `run`, `desktop_server`, `settings`). |
+| `instance` | The usage report's random id (`null` from the desktop app). |
+| `code`, `step`, `happenedAt`, `timings` | What failed and at which step, as codes (`browser.no_answer`, a run's error code), when, and counts or durations the screen measured (`attempts`; from the desktop app, `opening`: how long this opening took, from the app's start to the site's first screen). |
+| `versions` | The server's, the runner's (and its protocol), the desktop app's and the phone app's versions, the server's system and processor, and the browser's family and major version (`chrome 142`), never the whole User-Agent. From the desktop app, its computer's system version too, as numbers alone (`osVersion`: macOS's, Windows' build, Linux's kernel). |
+| `install`, `locale` | `docker`, `native` or `desktop`; the app's language. |
+| `facts` | Which settings differ from their defaults, as `config.<NAME>: "set"`, never their values (`TELEMETRY`, `INSTALL_MODE`, `NODE_ENV`, `LOG_LEVEL` and `MACHINE_PROVISIONING` by value, and `config.publicUrl` as `https`, `http` or `loopback`, never the address); how many workspaces, agents and computers; hours since the server started; migrations applied; for the computer involved, its system, processor, runner version, connection, last sign of life, pause, its coding CLIs' versions and which of its tools are on; for a run, its status, brain, turns and hop; from the desktop app, its computer's CPUs, memory and the memory behind its window (`desktop.cpus`, `desktop.memoryGb`, `desktop.webviewMb`). |
+| `logs` | The last lines of the computer's `runner.log` (up to 300, from its app when it answers within 5 seconds), and the server's own last log lines from the last 30 minutes (only when the installation's owner sends it); the desktop app's server log and setup steps. Every line is scrubbed first: emails, IP addresses, keys, tokens and cookie headers masked, links cut to their origin (with any user and password in them), home folders as `~`, and the names of the server, its workspaces, computers, agents and the sender replaced by `[server]`, `[workspace]`, `[computer]`, `[agent]`, `[person]`. Lines over 1,000 characters are cut. |
+| `note`, `replyTo` | What the person wrote (credentials masked) and an email for a reply, both optional and empty unless filled in. |
+
+Never messages, prompts, tool calls, pages or files. Each person can send 5 reports an hour, and the server 20.
 
 **Feedback.** The apps have a feedback form (**Send feedback**, at the bottom of the sidebar), and an
 agent can send one when a person asks it to or agrees to its offer. Each one
@@ -1105,10 +1228,10 @@ party only when you turn that service on:
 | Another provider (OpenAI- or Anthropic-compatible) | An organization's endpoint (Settings → AI and usage → Other provider) | What the other model providers receive, sent to the address the organization typed. When it is saved, the server also reads that address's model list and makes one small test call per model. |
 | OpenRouter | An organization's key | What the other model providers receive, passed on by OpenRouter to the model's own provider (the organization's OpenRouter privacy settings decide which may keep it). While a workspace has an OpenRouter key, the server also reads OpenRouter's public model list, with no key: about once an hour, and up to once a minute while agents' runs ask for a model the list lacks. |
 | OpenCode | Always on | Nothing of yours: the server reads OpenCode Go's public model list, with no key, at boot and about once an hour, so that plan's model picker stays current. If the list is out of reach, the picker uses the list built into this version. |
-| TypeSafe Jev | `TYPESAFE_API_KEY`, or the key the owner adds in **Settings → AI and usage** (the variable wins). Either way it is your own key, so TypeSafe bills your account; with an OpenRouter key (`sk-or-…`) the same requests go through OpenRouter, which passes them on to TypeSafe and bills your OpenRouter account. | To pick which agent answers a message nobody @mentioned: the channel's name and topic, the message (up to 4,000 characters), recent messages (up to 800 each), and the name, role, description and tools of the channel's agents. To pick an agent's model or the tools it loads: its name, role and instructions (up to 1,500 characters), the message (up to 2,000) and recent messages (up to 400 each). Also the messages and memory items it is asked to judge (a request to stop, a hand-off, a permission change, whether to archive a memory), a long run's task and latest words with the tool calls and the start of the results it may set aside, a mission's commands it is asked to rate with the mission's goal and current step, the names and descriptions of a connector's tools, and, when a message meets no AI connected, that message (up to 4,000 characters), to tell whether it asks to connect one. On agents' computers, what is on the screen it is asked to look at: the page's address, its text and a screenshot. Without it, a small model on one of the organization's API keys picks and judges instead, each person's own plan picks for their own messages, and simple rules do the rest. Some memory and tool decisions go back to what they did before Jev, nothing guesses what to connect, and nothing is read from images. |
+| TypeSafe Jev | `TYPESAFE_API_KEY`, or the key the owner adds in **Settings → AI and usage** (the variable wins). Either way it is your own key, so TypeSafe bills your account; with an OpenRouter key (`sk-or-…`) the same requests go through OpenRouter, which passes them on to TypeSafe and bills your OpenRouter account. | To pick which agent answers a message nobody @mentioned: the channel's name and topic, the message (up to 4,000 characters), recent messages (up to 800 each), and the name, role, description and tools of the channel's agents. To pick an agent's model or the tools it loads: its name, role and instructions (up to 1,500 characters), the message (up to 2,000) and recent messages (up to 400 each). Also the messages and memory items it is asked to judge (a request to stop, a hand-off, a permission change, whether to archive a memory), a long run's task and latest words with the tool calls and the start of the results it may set aside, a mission's commands it is asked to rate with the mission's goal and current step, the names and descriptions of a connector's tools, and, when a message meets no AI connected, that message (up to 4,000 characters), to tell whether it asks to connect one. On agents' computers, what is on the screen it is asked to look at: the page's address, its text and a screenshot. Without it, a small model on one of the organization's API keys picks and judges instead, each person's own plan picks for their own messages on a server that had a workspace before 2026-11-18, and simple rules do the rest. Some memory and tool decisions go back to what they did before Jev, nothing guesses what to connect, and nothing is read from images. |
 | Voyage AI, DeepInfra, OpenAI or another embeddings server | `EMBEDDINGS_PROVIDER=voyage` with `VOYAGE_API_KEY`, or `EMBEDDINGS_PROVIDER=openai` with `EMBEDDINGS_URL` | The text of what `EMBEDDINGS_KINDS` lists (memory items by default) as it is indexed, up to 8,000 characters each, and search queries. The `embeddings` profile keeps them on this machine. Without one, search is full-text only. |
 | Web search for agents | Always on: DuckDuckGo's HTML page with no key, unless `BRAVE_SEARCH_API_KEY` (Brave Search) or `SEARXNG_URL` (your own SearXNG) is set; an agent with a browser on its computer searches there instead (Google, then Bing or DuckDuckGo) | The words an agent searches for (`web_search`). `web_fetch` opens the public pages an agent asks for, from this server: never an internal or private address. |
-| Composio | `COMPOSIO_API_KEY` | Gmail and Outlook mailboxes for agents, and the services connected through it (Google Drive, Calendar, Sheets and Docs, Slack, Microsoft Teams, OneDrive, HubSpot, Salesforce, Zendesk, Asana, Figma, Intercom, Dropbox, Square, Instagram, Facebook, LinkedIn, YouTube, Pinterest, Reddit and WhatsApp Business): Composio holds those connections, and what agents read or write there passes through it, files included. IMAP mailboxes and the other connectors connect directly. |
+| Composio | `COMPOSIO_API_KEY` | Gmail and Outlook mailboxes for agents, and the services connected through it (Google Drive, Calendar, Sheets and Docs, Slack, Microsoft Teams, OneDrive, HubSpot, Salesforce, Zendesk, Asana, Figma, Canva, Intercom, Dropbox, Square, Instagram, Facebook, LinkedIn, YouTube, Pinterest, Reddit and WhatsApp Business): Composio holds those connections, and what agents read or write there passes through it, files included. IMAP mailboxes and the other connectors connect directly. |
 | MillionSend or Resend | `MILLIONSEND_API_KEY` | Each email the app sends: recipients, subject and body, links included. `SMTP_URL` uses your own mail server instead. |
 | agentes.chat push relay | A phone signed in to the instance: an Android phone unless `FIREBASE_SERVICE_ACCOUNT` is set, an iPhone unless `APNS_KEY` is, neither when `PUSH_SENDER` is `direct` or `off` | Once, to register the instance: its version. Then, for each push to that phone: its push token (FCM's or Apple's; for an iPhone also the app's bundle id), a title (up to 80 characters), a line of text (up to 180) and what the notification opens (ids of the workspace, conversation or request), which the relay passes to Firebase Cloud Messaging or to Apple without keeping them. |
 | Firebase Cloud Messaging (Google) | An Android phone signed in to the instance (through the relay above, or directly with `FIREBASE_SERVICE_ACCOUNT`) | For each push to that phone: its FCM token, the title, the line of text and what the notification opens. Directly, also a request signed with the service account's key, for an access token. |
@@ -1174,9 +1297,9 @@ There are two ways to set the app up:
     installation** on.
   - Webhook URL `{PUBLIC_URL}/api/github-app/webhook`, optional: without it, agents don't hear what happens on
     GitHub, and the GitHub panel checks the installations with GitHub when it opens. Subscribe it to Issues, Issue
-    comment, Pull request, Pull request review, Pull request review comment, Pull request review thread, Discussion
-    and Discussion comment (an app made from Settings has them; one made before shows its owner which to tick, with
-    its page on GitHub).
+    comment, Pull request, Pull request review, Pull request review comment, Pull request review thread, Discussion,
+    Discussion comment and Check run (an app made from Settings has them; one made before shows its owner which to
+    tick, with its page on GitHub).
   - Repository permissions, read and write: Actions, Administration, Attestations, Checks, Code scanning alerts, Commit
     statuses, Contents, Custom properties, Dependabot alerts, Dependabot secrets, Deployments, Discussions,
     Environments, Issues, Merge queues, Packages, Pages, Projects (classic), Pull requests, Repository security
@@ -1242,14 +1365,14 @@ Chrome, which must be installed there: get it from google.com/chrome; it keeps i
 each agent uses a profile of its own, never yours), and Claude Code, Codex, Cursor's, OpenCode's, xAI's Grok
 Build or Google's Antigravity CLI when an agent thinks with a subscription signed in there (OpenCode's free models need no sign-in at all).
 Install the ones you want on that computer, as the user that runs the runner: Cursor's with
-`curl https://cursor.com/install -fsS | bash` (it lands in `~/.local/bin`, which the runner's PATH must
-include), OpenCode's with `npm install -g opencode-ai@1.19.5`, Grok Build with
+`curl https://cursor.com/install -fsS | bash` (it lands in `~/.local/bin`, which the runner looks in
+even when its service's PATH lacks it), OpenCode's with `npm install -g opencode-ai@1.19.5`, Grok Build with
 `curl -fsSL https://x.ai/cli/install.sh | bash` (it puts `grok` in `~/.local/bin` too; agents think with it only
 through a Grok account added in Settings, AI and usage, never the computer's own sign-in. On Linux its sandbox needs
 bubblewrap, `sudo apt install -y bubblewrap`, or Grok Build refuses to start and every turn fails), Google's
 Antigravity CLI with
 `curl -fsSL https://antigravity.google/cli/install.sh | bash` (`agy` in `~/.local/bin`; Gemini accounts sign in on Linux
-computers only, each in a folder of its own, and a personal Google plan used this way is against Google's terms for
+and macOS computers, not Windows yet, each in a folder of its own (on a Mac, with a keychain of its own there), and a personal Google plan used this way is against Google's terms for
 consumer plans: Gemini Enterprise or an API key avoids that). A runner in system mode (each agent
 its own system user) needs the CLI where every agent's user can run it, not in one user's home: install it
 under a shared folder and link it into `/usr/local/bin`, for example
@@ -1262,6 +1385,9 @@ extracted to `/usr/local/bin/opencode`; Grok Build with
 also makes `~/.local/bin/agent`, Cursor's name: where both are installed, link Cursor's `agent` last. The Antigravity
 CLI the same way: `sudo env HOME=/opt/agy sh -c 'curl -fsSL https://antigravity.google/cli/install.sh | bash -s -- --skip-path'`,
 then `sudo chmod -R a+rX /opt/agy` and `sudo ln -sf /opt/agy/.local/bin/agy /usr/local/bin/agy`.
+One installed in root's own `~/.local/bin` there is out of the agents' reach, and the apps say so with the line
+that installs it for all of them. Agents never use a sign-in made in a terminal: Gemini, Grok and the other plans
+sign in from the apps (Settings, AI and usage), once for all of their owner's agents.
 Commands run as the user that runs the runner, so give it a dedicated user or a VM.
 `agentes-runner tools disable commands` (or `claude`, `codex`, `cursor`, `opencode`, `grok` or `antigravity`) turns a capability off on that
 computer, and `agentes-runner folders allow <path>` shares a folder besides the agents' own.
@@ -1359,17 +1485,37 @@ Chrome is missing. Since its agents run as the
 person who connected it, a computer leaves the organization with them when they leave, are removed or
 delete their account; one installed with `--system` is the team's and stays.
 
-**Lodi's computer.** Lodi, the built-in agent every member talks to, works on the workspace's own computer (the
-server's own, set up with `--system`), where each person gets a place of their own: a separate user with its
-own files, browser, desktop and sign-ins, which only that person can watch or take control of, from Lodi's
-page. A computer that runs every agent as one user (the simple mode, a Mac, a computer a person connected)
-can't keep people's places apart, so Lodi has no computer there, and its page says so. Turn its commands,
-browser or desktop off for everyone on its page, under what it can use. The computer's shared folder is
-still shared: every agent and every person's Lodi reads and writes it. Lodi's browser needs that setup
-(This server as the agents' computer, below): without it, Lodi has no browser, and its page links here.
+**Agent isolation: which one a computer has.**
+
+| How its runner runs | Agents work as | One agent can read |
+| --- | --- | --- |
+| `--system` (Linux, as root, systemd with `BPF_FRAMEWORK`) | each its own user, `ag-<8 characters of its id>`, home `/home/ag-…` (mode 700) | its own home and the shared folder, nothing of the other agents' |
+| Simple mode (the setup's choice where systemd lacks `BPF_FRAMEWORK`, as on Ubuntu) | one user, `agentes`, for all of them | every other agent's folders, but not yours or the server's |
+| The command above without `--system`, a Mac, Windows | the user that runs the runner: on your own computer, you | every other agent's folders, and whatever that user can |
+
+To check one: its page in **Settings › Devices** says "Each agent works as its own user, in its own folder."
+under **Details** only with `--system`. On the computer, `getent passwd | grep '^ag-'` lists one user per agent
+that has worked there (each is made at that agent's first request); in simple mode there is only `agentes`.
+
+With `--system`, what an agent clones or builds stays in its own home, which no other agent can open, so a
+path handed from one agent to another leads nowhere. Hand work over as a git branch or pull request (each agent
+clones the repository itself), or put it in the shared folder (`~/shared`, below). Agents there are told so.
+
+**Lodi's computer.** Lodi, the built-in agent every member talks to, works on the workspace's own computer (this
+server's own, This server as the agents' computer, below), where each person gets a place of their own. With
+`--system` that place is a separate user with its own files, browser, desktop and sign-ins, which only that
+person can watch or take control of, from Lodi's page. On a computer that runs every agent as one user (the
+simple mode, a Mac) each place is a folder and a browser profile of that one user, as every agent's there is:
+Lodi keeps each person's work in their own place and is told never to look outside it, but other agents'
+commands there can read it, and only the person who connected the computer takes control of its desktop or
+opens its terminal. Lodi's page says which of the two a place is. For places nobody else can read, set the
+server up with `--system`. A computer a person connected is never Lodi's. Turn its commands, browser or desktop
+off for everyone on its page, under what it can use. The computer's shared folder is still shared: every agent
+and every person's Lodi reads and writes it. Without a computer of the workspace's own, Lodi has no computer,
+and its page links here.
 
 Where others read what Lodi does (a channel, a dashboard widget, a routine that reports to a channel) it works in
-one more place, shared by the whole workspace: one more user on that computer, "Lodi (shared)". Nothing of a
+one more place, shared by the whole workspace: "Lodi (shared)" on that computer (a user of its own with `--system`). Nothing of a
 person's own place reaches it. A person's own place is used only for what that person asks Lodi in their own
 conversation with it: a routine that reports there, or anything else nobody asked for there, has no computer.
 Whoever may open any agent's computer (the admins of computers) opens it from the computer's page in Settings,
@@ -1450,6 +1596,15 @@ up the same way. Containers stop when the computer restarts and come back, those
 agent's next request. Agents on Codex, Cursor, Grok or Antigravity get none: their CLI's own sandbox is what holds
 them, and the containers service runs outside it. [ADR 0169](docs/adr/0169-agents-containers.md) has the rest.
 
+**Docker and KVM (`--system`).** With Docker's rootless install there too (Docker's apt repository: `docker-ce
+docker-ce-cli containerd.io docker-ce-rootless-extras docker-buildx-plugin docker-compose-plugin`, in place of
+`podman-docker` and `docker-compose`), each agent gets Docker's own daemon, rootless under its user, started by its
+first `docker` command (ADR 0209): `docker`, `docker compose` and `docker buildx` are Docker's, `podman` stays Podman.
+The package starts a root daemon of its own, which no agent reaches (nobody joins `docker`); stop it if you don't use
+it: `systemctl disable --now docker.service docker.socket containerd.service`. Where the computer has `/dev/kvm` (bare
+metal, or a VM with nested virtualization), each agent joins its group, so Android's emulator and QEMU run with KVM as
+the agent; every agent's VMs are its own. Restart the runner after either.
+
 **The shared folder.** Every computer has one folder all of its agents read and write, so what one of
 them downloads, clones or installs, the others use instead of fetching it again. With `--system` it is
 `/srv/agentes/shared`, owned by root and the group `agentes-shared`, which the runner makes and adds
@@ -1469,6 +1624,23 @@ free space on the disk, and the workspace's admins get a notification when that 
 Mac and Windows computers get no agents' desktops: the agent's browser runs headless, and its card
 shows it live. A Mac connected with the command above opens terminals
 (`agentes-runner tools enable terminal`); the desktop app doesn't have them yet.
+
+**Codex on Windows.** Codex runs on Windows itself, on a PC connected with the desktop app's **Use this PC**:
+no WSL. Install it as the Windows user that runs the app, with `npm install -g @openai/codex` (or OpenAI's
+installer), so `codex` is on that user's PATH; the app looks at the PATH again each time, so it needs no
+restart. The app can install Claude Code there for you, but not Codex. Then sign in to ChatGPT in
+**Settings → AI and usage**. What differs from Linux and macOS:
+
+- Every turn that can run commands runs inside Windows' own isolation (Microsoft Execution Containers),
+  which needs **Windows 11 24H2 or newer** (`winver` shows yours). On an older Windows those turns fail with
+  "This Windows computer can't isolate Codex's commands": update Windows, give that agent Claude or an API
+  key, or move it to a Linux computer. Lodi's turns run no commands, so they work on any Windows.
+- Nothing asks for approval there: what the isolation refuses stays refused, and it has no network, so
+  `git push` or a package install doesn't run from Codex's own commands.
+- No background Codex tasks, and Codex doesn't do a mission's items there (Claude Code or the agent does).
+- No plan on Windows, Codex's or Claude's, picks who answers a message (Plans, below).
+- The isolation leaves the computer's own loopback open: a command can reach a service listening on
+  `127.0.0.1` there.
 
 Use HTTPS with a certificate from a public authority (Tailscale and the Caddy profile get one). Over
 plain http the computer's token travels unencrypted, and the runner's background service doesn't
@@ -1597,8 +1769,10 @@ name, email, plan, status and usage (how much of each limit is used, and when it
 there says it). The code pasted when signing in from a browser is encrypted there to a
 key made on the computer and relayed without being stored, so the server can't read it. A personal
 plan is meant for its owner: answering other people with it may go against the provider's terms.
-With no Jev and no API key that has a small model, a plan also picks who answers its owner's own
-messages that mention nobody: Claude Code or Codex reads the message and the few before it on that
+A plan never picks who answers a message on a server installed from 2026-11-18 on: without Jev or an
+API key that has a small model, simple rules pick. On a server that already had a workspace before that
+version, with no Jev and no API key that has a small model, a plan still picks who answers its owner's
+own messages that mention nobody: Claude Code or Codex reads the message and the few before it on that
 computer, with every tool off, in a few seconds, and only while nothing else runs on that sign-in. It
 never picks for other people's messages, a sign-in made with an API key never picks, and a Windows
 computer doesn't pick yet.
@@ -1631,6 +1805,24 @@ that think with it; any other account folder belongs to the user of the agent th
 only while it does. Taking control of an agent's desktop or opening its terminal is a shell as that
 user: in the default install only the person who paired the computer can, and with `--system` admins
 and the agent's owner can, but only its owner while the agent thinks with their plan.
+
+**Several workspaces on one server, each with its own AI accounts.** One server holds any number of
+workspaces: a person you invite (Sign-up, under Configuration) can make one of their own.
+
+- **API keys are per workspace**: each adds its own in **Settings → AI and usage**. The server's own keys
+  (`PLATFORM_ANTHROPIC_API_KEY` and the other `PLATFORM_*_API_KEY`) serve every workspace that has none of its
+  own: leave them empty to keep the workspaces' bills apart.
+- **A plan sign-in** (Claude, ChatGPT…) is made on a computer, from one workspace, and belongs to the person
+  who made it. Only that workspace's agents think with it, and it stays on that computer.
+- **This server's own computer serves only the workspaces the installation's first account made** and is
+  an owner or admin of. A workspace someone else made gets no agents on it, even if they make you an admin
+  there: connect a computer from that workspace (**Settings › Devices**), such as their own PC with the
+  desktop app, or a server or VM of theirs.
+- **`--system` isolates agents from each other on one computer.** It doesn't separate subscriptions, and
+  workspaces on computers of their own don't need it. Without it, every agent on a computer runs as one user,
+  whichever workspace it is in, and can reach every sign-in there (Who can reach an account, above).
+- Whoever has root on the server can read everything, encrypted keys included (`AGENTES_SECRET` is in
+  `.env`): this keeps accounts apart, not people who don't trust the server's owner.
 
 **Backups.** Leave `<runner home>/accounts`, and the CLIs' own `~/.claude` and `~/.codex`, out of the
 computer's backups: they hold sign-ins. The server's database never has them.
@@ -1725,9 +1917,13 @@ The app runs its jobs (agents' runs, routines, messages' routing, notifications,
 process: 48 at once to start with, 12 of them kept for the quick ones. While jobs wait for a slot, it
 gives itself more, every 30 seconds: agents' runs as far as half of its memory holds them, about 4 MB
 each while they wait on their model or their computer, and quick jobs up to 4 per database connection
-(`DATABASE_POOL_MAX`), never while its processor, its database or its memory is what jobs wait on. Its
-memory is its container's limit when it has one; beside Postgres and the speech server on one computer,
-it counts only what it holds and what was free there when it started.
+(`DATABASE_POOL_MAX`), never while its processor, its database or its memory is what jobs wait on, and
+never past 8 jobs per database connection in all (`OUTBOX_MAX_IN_FLIGHT_CEILING` sets another ceiling).
+Its memory is its container's limit when it has one; beside Postgres and the speech server on one
+computer, it counts only what it holds and what was free there when it started. After a restart, the
+runs left waiting start over its first minute, not all at once. Give it at least one database
+connection per 4 job slots (the default 20 is enough for the default 48): it warns as it starts when
+`DATABASE_POOL_MAX` is lower.
 Workspaces take turns, so one workspace's burst of routines makes only that workspace wait. When jobs
 keep waiting anyway, the log says so, with `add a worker process`, and so do the error reports when
 they are on (`SENTRY_DSN`).
@@ -1755,6 +1951,8 @@ app is up:
         condition: service_healthy
     networks: [default, speech]
     restart: unless-stopped
+    mem_limit: "${AGENTES_WORKER_MEMORY:-8g}"
+    memswap_limit: "${AGENTES_WORKER_MEMORY:-8g}"
     stop_grace_period: 40s
     init: true
     security_opt:
@@ -1775,6 +1973,22 @@ written for), so each worker adds as many jobs at once as the app runs. Each pro
 where it can reach them (`S3_*`, or Postgres without `FILES_DIR`), and one on the app's computer
 outside Docker a `PORT` of its own. The built-in database (on this computer, without Docker) belongs
 to one process and takes no worker.
+
+Each process brakes before the kernel stops it: its job slots stop growing past 70% of its container's
+memory limit and its long jobs shed past 85%, so the limit is what decides when. Once workers take
+the runs, the app mostly holds the open apps' connections: give it `AGENTES_MEMORY=4g` and
+`OUTBOX_MAX_IN_FLIGHT_CEILING=32`, and each worker its own `AGENTES_WORKER_MEMORY` (`8g`, as above).
+A process that still grew past its limit is stopped alone and restarts, and every app on it
+reconnects to the others, instead of the whole machine swapping.
+
+When a process is overloaded (its event loop late by over `LOAD_SHED_EVENT_LOOP_MS`, or a database
+connection slower than `LOAD_SHED_DB_WAIT_MS` to come), it turns new connections and the apps' reads
+away with a 503 and a `Retry-After` of 5 to 15 seconds, and the apps try again then; writes and open
+connections carry on. With `LOAD_SHED_MAX_SOCKETS` apps connected, it turns only new connections away.
+Either way its `/api/health` says `overloaded`
+(still with a 200) meanwhile, and `/api/health?load=1` answers 503: point the active health check of a
+reverse proxy in front of several app processes at that one (Caddy: `health_uri /api/health?load=1`),
+so it sends new requests to the others. Never on a single process's check: it would take out the only one.
 
 </details>
 

@@ -1,7 +1,9 @@
 <!doctype html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="light" translate="no">
   <head>
     <meta charset="UTF-8" />
+    <!-- No browser translation anywhere: it rewrites the text React keeps track of (the next update throws) and the app already speaks the person's language. -->
+    <meta name="google" content="notranslate" />
     <!-- Drawn pixel by pixel at 16 and 32 (packages/ui/scripts/app-icons.mjs); a person's pick swaps it (lib/app-icon.ts). -->
     <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -154,6 +156,8 @@
       @keyframes boot-in { to { opacity: 1; } }
       @keyframes boot-breathe { 50% { transform: translateY(-3px); } }
       @media (prefers-reduced-motion: reduce) { .boot { animation-duration: 0s; } .boot img { animation: none; } }
+      /* A registered host (ADR 0194; the server sets data-host): not the product's mark before the app knows the host. */
+      [data-host] .boot img { display: none; }
       /* A boot that failed (the script above): white on the sky, the primary button in white. */
       .boot__box { display: flex; flex-direction: column; align-items: center; gap: 12px; max-width: 420px;
         padding: 0 24px; color: #fff; text-align: center; font: 15px/1.5 Onest, "Segoe UI", system-ui, sans-serif; }

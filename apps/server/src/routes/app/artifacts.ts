@@ -1,3 +1,4 @@
+import { and, eq, schema } from "@agenteschat/db";
 import {
   ARTIFACT_LIMITS,
   ARTIFACT_PAGE_MAX,
@@ -13,8 +14,10 @@ import {
   countArtifacts,
   createArtifact,
   createFileArtifact,
+  createFolder,
   DRAW_OPTIONS,
   deleteArtifact,
+  deleteFolder,
   drawBlock,
   getArtifact,
   getBlockState,
@@ -24,20 +27,31 @@ import {
   listArtifacts,
   listArtifactVersions,
   listDeletedArtifacts,
+  listFolders,
   MAX_MESSAGE_LENGTH,
+  moveArtifacts,
+  openFileConversation,
   purgeArtifactNow,
+  renameArtifact,
   replyToBlock,
+  requireLiveFile,
   restoreArtifact,
+  type StoredDownload,
   setBlockState,
+  setFileAccess,
   setFileSharing,
+  setFileWave,
+  storedArtifactFile,
   updateArtifact,
+  updateFolder,
   ValidationError,
   votePoll,
   withPersonFacts,
 } from "@agenteschat/engine";
 import { createRoute, z } from "@hono/zod-openapi";
+import type { Context } from "hono";
 import { bodyLimit } from "hono/body-limit";
-import { rangedResponse } from "../../http/byte-range";
+import { etagMatches, rangedResponse, storedResponse } from "../../http/byte-range";
 import { apiError, errorResponse } from "../../http/errors";
 import {
   type AppDeps,
@@ -51,9 +65,23 @@ import {
   requireSession,
   security,
 } from "./context";
+import { exportLive, exportsLive } from "./live-engine";
 
 const tags = ["Drive"];
-const Kind = z.enum(["document", "table", "diff", "html", "diagram", "file", "block", "poll", "choices"]);
+const Kind = z.enum([
+  "document",
+  "table",
+  "diff",
+  "html",
+  "diagram",
+  "file",
+  "block",
+  "poll",
+  "choices",
+  "spreadsheet",
+  "slides",
+  "canvas",
+]);
 const Author = z.object({ type: z.enum(["agent", "person"]), id: z.string() });
 
 /** A comma-separated list in a query string, each item read by `item` (at most 50). */
@@ -78,6 +106,7 @@ const AuthorKey = z
     return { type, id };
   });
 
+/** What people send as a file's content; the document stays first (`Content` returns it as a live file's). */
 const textContents = [
   z.object({ kind: z.literal("document"), markdown: z.string() }),
   z.object({ kind: z.literal("table"), columns: z.array(z.string()), rows: z.array(z.array(z.string())) }),
@@ -99,14 +128,29 @@ const FileContent = z
     text: z.string().optional().openapi({ description: "Small UTF-8 text files only (≤ 40k characters)." }),
     width: z.number().int().optional().openapi({ description: "A picture's width in pixels, when known." }),
     height: z.number().int().optional().openapi({ description: "A picture's height in pixels, when known." }),
+    wave: z
+      .object({ peaks: z.array(z.number()), durationMs: z.number().int() })
+      .optional()
+      .openapi({ description: "An audio file's wave (0–1) and length, once an app measured it." }),
   })
   .openapi("ArtifactFileContent", {
     description: "An uploaded file as is: metadata only; the bytes come from the download link.",
   });
 
+/** A live file's preview (`@agenteschat/live`'s, typed there): what the apps draw on its card. */
+function livePreview(what: string) {
+  return z.any().openapi({ type: "object", description: `What its card draws: ${what}.` });
+}
+
 const Content = z
   .discriminatedUnion("kind", [
-    ...textContents,
+    // A document is a live file (ADR 0200): its card's preview, and its Markdown for the apps that show it read-only.
+    z.object({
+      kind: z.literal("document"),
+      markdown: z.string(),
+      preview: livePreview("its first blocks, how many it has and where it came from"),
+    }),
+    ...textContents.slice(1),
     FileContent,
     z.object({
       kind: z.literal("block"),
@@ -136,6 +180,10 @@ const Content = z
         }),
       ),
     }),
+    // Live files (ADR 0196 §7): a small preview for cards and the Drive, never the whole document (`…/live`).
+    z.object({ kind: z.literal("spreadsheet"), preview: livePreview("the top-left cells of its first sheet") }),
+    z.object({ kind: z.literal("slides"), preview: livePreview("its theme, how many slides and the first one") }),
+    z.object({ kind: z.literal("canvas"), preview: livePreview("its bounds and its first shapes") }),
   ])
   .openapi("ArtifactContent");
 
@@ -178,10 +226,50 @@ const Sharing = z
   })
   .openapi("ArtifactSharing", {
     description:
-      "Who sees it on top of its conversation (ADR 0157): nobody more, the people and roles listed (and administrators), or the whole workspace.",
+      "Who sees it on top of its conversation (ADR 0157): nobody more, the people and roles listed (and administrators), or the whole workspace. A file of the Drive itself lives with its maker: `conversation` is its maker alone (and administrators).",
   });
 
-const Artifact = z
+const Level = z.enum(["none", "view", "edit"]);
+const AccessRow = z.object({ id: z.string(), level: z.enum(["view", "edit"]) });
+const AccessShape = {
+  place: z.enum(["view", "edit"]).openapi({
+    description:
+      "Who reads it where it lives: a conversation's readers. A file of the Drive itself has its maker there, who always edits.",
+  }),
+  workspace: Level.openapi({ description: "Everyone in the workspace." }),
+  users: z.array(AccessRow).max(200),
+  roles: z.array(AccessRow).max(200),
+  agents: Level.openapi({
+    description: "Every agent (a file of the Drive) or the agents where it lives (a file in a conversation).",
+  }),
+  agentRows: z.array(AccessRow).max(200),
+};
+const Access = z
+  .object({
+    ...AccessShape,
+    limited: z.boolean().openapi({ description: "Someone who sees it only reads it." }),
+  })
+  .openapi("ArtifactAccess", {
+    description:
+      "Who sees and who edits a file (ADR 0202), row by row as Compartilhar shows it. Administrators always see and edit; the agent that made a file always edits it.",
+  });
+
+/** Where a live file's conversation lives (ADR 0199): the chat's routes read and post to this thread. */
+const FileConversationRef = z
+  .object({
+    channelId: z.uuid().openapi({ description: "The conversation's own channel (kind `file`): the chat's routes." }),
+    rootId: z.uuid().openapi({ description: "The thread's root: replies go to it (`threadId`)." }),
+  })
+  .openapi("FileConversationRef");
+
+const FileConversation = FileConversationRef.extend({
+  count: z.number().int().openapi({ description: "Messages in it." }),
+  lastAt: z.string().nullable(),
+  participants: z.array(Author).openapi({ description: "The first ones to write, oldest first (at most 5)." }),
+  working: z.boolean().openapi({ description: "An agent's turn is live in it." }),
+}).openapi("FileConversation");
+
+export const Artifact = z
   .object({
     id: z.uuid(),
     kind: Kind,
@@ -202,13 +290,36 @@ const Artifact = z
     canDelete: z.boolean().openapi({ description: "I may move it to the trash (and restore it)." }),
     audience: Audience,
     sharing: Sharing,
-    canShare: z.boolean().openapi({
-      description: "I may change its sharing: it lives in a conversation not everyone reads, and I read it there.",
+    access: Access,
+    myAccess: z.enum(["view", "edit"]).openapi({
+      description: "What its access lets me do: `view` is read only (with Pedir para editar).",
     }),
+    canShare: z.boolean().openapi({
+      description:
+        "I may change its sharing: it lives in a conversation not everyone reads, and I read it there; or it is a file of the Drive itself, and I made it or I'm an administrator.",
+    }),
+    conversation: FileConversation.nullable().optional().openapi({
+      description:
+        "A live file's conversation (ADR 0199), once someone opened or wrote in it; null until then and for other kinds.",
+    }),
+    folderId: z.uuid().nullable().openapi({ description: "The Drive folder it is in; null = the top level." }),
   })
   .openapi("Artifact");
 
-const Poll = z
+const Folder = z
+  .object({
+    id: z.uuid(),
+    name: z.string(),
+    parentId: z.uuid().nullable(),
+    createdBy: Author,
+    createdAt: z.string(),
+    updatedAt: z.string(),
+  })
+  .openapi("DriveFolder");
+const FolderParams = OrgParams.extend({ folderId: z.uuid() });
+const FolderName = z.string().trim().min(1).max(120);
+
+export const Poll = z
   .object({
     id: z.string(),
     closesAt: z.string(),
@@ -218,7 +329,7 @@ const Poll = z
   })
   .openapi("Poll");
 
-const BlockState = z
+export const BlockState = z
   .object({
     id: z.string(),
     version: z.number(),
@@ -236,7 +347,7 @@ const BlockState = z
   })
   .openapi("BlockState");
 
-const Choices = z
+export const Choices = z
   .object({
     id: z.string(),
     answer: z
@@ -257,7 +368,7 @@ const Choices = z
   })
   .openapi("Choices");
 
-const ArtifactDetail = Artifact.extend({
+export const ArtifactDetail = Artifact.extend({
   shownVersion: z.number(),
   content: Content,
   versioned: z.boolean().openapi({
@@ -267,6 +378,62 @@ const ArtifactDetail = Artifact.extend({
 
 const ArtifactParams = OrgParams.extend({ artifactId: z.uuid() });
 const VersionQuery = z.object({ version: z.coerce.number().int().min(1).optional() });
+
+/**
+ * What a download may be turned into: a table's CSV, a diff's patch, a document's PDF, Word or Markdown file (ADR
+ * 0200), and a live file's Office file, CSV, PDF or (a canvas) JSON (ADR 0198).
+ */
+const FILE_FORMATS = ["csv", "patch", "pdf", "docx", "xlsx", "pptx", "json", "md"] as const;
+/** What a live file downloads as when no format is asked: what other apps open (ADR 0198); a canvas, its JSON. */
+const LIVE_DOWNLOAD: Partial<Record<string, "xlsx" | "pptx">> = { spreadsheet: "xlsx", slides: "pptx" };
+/** What `exportLive` writes of a live file as it stands now (ADR 0198). */
+const LIVE_EXPORTS = ["xlsx", "csv", "pptx", "pdf"] as const;
+/** How long the bucket's link a redirect sends to lives: a video keeps reading from it while its page stays open. */
+const FILE_LINK_TTL_SECONDS = 3600;
+
+/** A download's headers: always an attachment, never sniffed as another type, never run as a page. */
+const attachmentHeaders = (file: { contentType: string; filename: string }) => ({
+  "content-type": file.contentType,
+  "content-disposition": attachmentDisposition(file.filename),
+  "x-content-type-options": "nosniff",
+  "content-security-policy": "sandbox",
+});
+
+/**
+ * A version's stored bytes. What a browser loads for an element or a page (a video, a download), which follows a
+ * redirect to another origin without CORS, goes to the bucket's signed link. A script's fetch (the previews: the
+ * bucket may allow no CORS) and apps that send no fetch metadata get the bytes from us, read in parts as they go. An
+ * asked version never changes, so it is cached for good; the newest is checked again each time.
+ */
+async function storedFile(c: Context, file: StoredDownload, versioned: boolean) {
+  const mode = c.req.header("sec-fetch-mode");
+  if (mode === "navigate" || mode === "no-cors") {
+    const url = await file.store.signedUrl(file.key, {
+      expiresInSeconds: FILE_LINK_TTL_SECONDS,
+      filename: file.filename,
+      contentType: file.contentType,
+    });
+    if (url) {
+      return new Response(null, { status: 302, headers: { location: url, "cache-control": "private, no-store" } });
+    }
+  }
+  const etag = `"${file.sha256}"`;
+  const headers = {
+    ...attachmentHeaders(file),
+    // no-transform: no proxy rewrites the bytes (Cloudflare's email obfuscation edits text/html).
+    "cache-control": versioned
+      ? "private, max-age=31536000, immutable, no-transform"
+      : "private, no-cache, no-transform",
+    etag,
+    // A video's own load is sent to the bucket: bytes cached for a load under CORS (a fetch, the comment stage's
+    // video) must never answer it, since Chrome fails a video whose first bytes came from here and the next from there.
+    vary: "sec-fetch-mode",
+  };
+  if (etagMatches(c.req.header("if-none-match"), etag)) return new Response(null, { status: 304, headers });
+  // A part of another version than the one the client holds (`If-Range`) would mix two files: the whole one instead.
+  const ifRange = c.req.header("if-range");
+  return storedResponse(file, ifRange && ifRange !== etag ? undefined : c.req.header("range"), headers);
+}
 
 /**
  * The Drive: files people and agents make (documents, tables, diffs, HTML
@@ -303,6 +470,11 @@ export function artifactRoutes(deps: AppDeps) {
     if (!a) throw new Error("artifacts are not configured on this server");
     return a;
   };
+  const liveDeps = () => {
+    const a = deps.extras?.liveDeps;
+    if (!a) throw new Error("live files are not configured on this server");
+    return a;
+  };
   const person = (userId: string) => ({ type: "person" as const, userId });
   /** One file with what the viewer may do with it and who can see it. */
   const withFacts = async <T extends ArtifactView>(userId: string, orgId: string, a: T) => {
@@ -336,6 +508,10 @@ export function artifactRoutes(deps: AppDeps) {
           ),
           who: z.enum(["agents", "people"]).optional().openapi({ description: "Made by an agent or by a person." }),
           sort: z.enum(["recent", "name", "kind"]).optional(),
+          folder: z
+            .union([z.literal("root"), z.uuid()])
+            .optional()
+            .openapi({ description: "In this Drive folder, or `root` for the top level. Absent: anywhere." }),
           cursor: z
             .string()
             .regex(/^\d{1,7}$/)
@@ -371,6 +547,7 @@ export function artifactRoutes(deps: AppDeps) {
         channelIds: query.channelIds,
         authors: query.authors,
         who: query.who,
+        ...(query.folder ? { folderId: query.folder === "root" ? null : query.folder } : {}),
         ...(query.changed ? { changedBy: author } : { author }),
       };
       const limit = query.limit ?? 100;
@@ -406,6 +583,7 @@ export function artifactRoutes(deps: AppDeps) {
           z.object({
             title: z.string().min(1).max(200),
             channelId: z.uuid().nullable().optional(),
+            folderId: z.uuid().nullable().optional(),
             content: ContentInput,
           }),
         ),
@@ -435,6 +613,7 @@ export function artifactRoutes(deps: AppDeps) {
             title: z.string().max(200).optional().openapi({ description: "Default: the file name." }),
             channelId: z.uuid().optional(),
             threadId: z.uuid().optional(),
+            folderId: z.uuid().optional().openapi({ description: "A Drive folder to put it in." }),
           }),
         ),
       },
@@ -450,6 +629,7 @@ export function artifactRoutes(deps: AppDeps) {
         title: form.title?.trim() || file.name,
         channelId: form.channelId ?? null,
         threadId: form.threadId ?? null,
+        folderId: form.folderId ?? null,
       });
       return c.json(await withFacts(userId, orgId, created), 201);
     },
@@ -499,6 +679,25 @@ export function artifactRoutes(deps: AppDeps) {
         await withFacts(userId, orgId, await getArtifact(artifacts(), person(userId), orgId, artifactId, version)),
         200,
       );
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/artifacts/{artifactId}/conversation",
+      tags,
+      security,
+      summary:
+        "Open a live file's conversation (made on first use): its channel and thread root, for the chat's routes",
+      description:
+        "Whoever reads the file reads and writes there (ADR 0199). 404 for a file you don't read or in the trash, 400 `artifact.no_conversation` for a kind without one.",
+      request: { params: ArtifactParams },
+      responses: { 200: json(FileConversationRef), ...errors },
+    }),
+    async (c) => {
+      const { orgId, artifactId } = c.req.valid("param");
+      return c.json(await openFileConversation(artifacts(), c.get("user").id, orgId, artifactId), 200);
     },
   );
 
@@ -573,21 +772,45 @@ export function artifactRoutes(deps: AppDeps) {
     },
   );
 
-  // The bytes, always as an attachment (HTML and uploaded files are never rendered on our origin).
+  /**
+   * A live file (ADR 0196) as it stands now, as an Office file, a CSV or a PDF (`exportLive`, ADR 0198): the format
+   * asked, else its kind's own. Null for any other file, a canvas's own JSON and a version, which `artifactFile`
+   * writes (as it does every export where the engine writes none itself). Who doesn't read the file gets "not found"
+   * here too.
+   */
+  const liveExport = async (userId: string, orgId: string, artifactId: string, asked: string | undefined) => {
+    if (asked === "patch" || asked === "docx" || asked === "json" || !exportsLive()) return null;
+    if (!z.uuid().safeParse(orgId).success || !z.uuid().safeParse(artifactId).success) return null;
+    const [row] = await db
+      .select({ kind: schema.artifacts.kind })
+      .from(schema.artifacts)
+      .where(and(eq(schema.artifacts.id, artifactId), eq(schema.artifacts.orgId, orgId)));
+    const kind = row?.kind as string | undefined;
+    if (kind !== "spreadsheet" && kind !== "slides" && kind !== "canvas") return null;
+    const format = LIVE_EXPORTS.find((f) => f === asked) ?? LIVE_DOWNLOAD[kind];
+    if (!format) return null;
+    await requireLiveFile(artifacts(), person(userId), orgId, artifactId);
+    return exportLive(liveDeps(), userId, orgId, artifactId, format);
+  };
+
+  // The bytes, always as an attachment (HTML and uploaded files are never rendered on our origin): a version's stored
+  // bytes (`storedFile`), or what is made of it. A live file downloads as an Office file, a CSV or a PDF of how it
+  // stands now (ADR 0198).
   app.get("/organizations/:orgId/artifacts/:artifactId/file", async (c) => {
     const version = c.req.query("version");
-    const format = c.req.query("format");
-    const file = await artifactFile(artifacts(), c.get("user").id, c.req.param("orgId"), c.req.param("artifactId"), {
-      version: version ? Number(version) : undefined,
-      format: format === "csv" || format === "patch" || format === "pdf" || format === "docx" ? format : undefined,
-    });
+    const asked = FILE_FORMATS.find((f) => f === c.req.query("format"));
+    const userId = c.get("user").id;
+    const orgId = c.req.param("orgId");
+    const artifactId = c.req.param("artifactId");
+    const exported = version ? null : await liveExport(userId, orgId, artifactId, asked);
+    const at = version ? Number(version) : undefined;
+    const stored = exported || asked ? null : await storedArtifactFile(artifacts(), userId, orgId, artifactId, at);
+    if (stored) return storedFile(c, stored, at !== undefined);
+    const file =
+      exported ?? (await artifactFile(artifacts(), userId, orgId, artifactId, { version: at, format: asked }));
     // In parts when asked (a video starts at once and jumps without the whole file first).
     return rangedResponse(file.body, c.req.header("range"), {
-      "content-type": file.contentType,
-      "content-disposition": attachmentDisposition(file.filename),
-      "x-content-type-options": "nosniff",
-      "content-security-policy": "sandbox",
-      // no-transform: no proxy rewrites the bytes (Cloudflare's email obfuscation edits text/html).
+      ...attachmentHeaders(file),
       "cache-control": "private, no-store, no-transform",
     });
   });
@@ -598,7 +821,8 @@ export function artifactRoutes(deps: AppDeps) {
       path: "/organizations/{orgId}/artifacts/{artifactId}/sharing",
       tags,
       security,
-      summary: "Who sees a file on top of its conversation (Compartilhar); whoever reads it there may change it",
+      summary:
+        "Who sees a file on top of its conversation (Compartilhar); whoever reads it there may change it, a Drive file's maker and administrators",
       request: {
         params: ArtifactParams,
         body: body(
@@ -615,6 +839,25 @@ export function artifactRoutes(deps: AppDeps) {
       const { orgId, artifactId } = c.req.valid("param");
       const userId = c.get("user").id;
       const saved = await setFileSharing(artifacts(), userId, orgId, artifactId, c.req.valid("json"));
+      return c.json(await withFacts(userId, orgId, saved), 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "put",
+      path: "/organizations/{orgId}/artifacts/{artifactId}/access",
+      tags,
+      security,
+      summary:
+        "Who sees and who edits a file, people, roles and agents (Compartilhar with levels); whoever may share it and edits it may change it",
+      request: { params: ArtifactParams, body: body(z.object(AccessShape)) },
+      responses: { 200: json(Artifact), ...errors },
+    }),
+    async (c) => {
+      const { orgId, artifactId } = c.req.valid("param");
+      const userId = c.get("user").id;
+      const saved = await setFileAccess(artifacts(), userId, orgId, artifactId, c.req.valid("json"));
       return c.json(await withFacts(userId, orgId, saved), 200);
     },
   );
@@ -678,6 +921,43 @@ export function artifactRoutes(deps: AppDeps) {
       );
       deps.wakeWorkers?.();
       return c.json({ id: message.id }, 201);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "put",
+      path: "/organizations/{orgId}/artifacts/{artifactId}/wave",
+      tags,
+      security,
+      summary: "Keep an audio file's wave and length, measured by the first app that played it (kept once)",
+      request: {
+        params: ArtifactParams,
+        query: z.object({ version: z.coerce.number().int().min(1) }),
+        body: body(
+          z.object({
+            peaks: z.array(z.number().min(0).max(1)).max(200),
+            durationMs: z.number().int().positive(),
+          }),
+        ),
+      },
+      responses: {
+        200: json(z.object({ peaks: z.array(z.number()), durationMs: z.number().int() })),
+        ...errors,
+      },
+    }),
+    async (c) => {
+      const { orgId, artifactId } = c.req.valid("param");
+      const { version } = c.req.valid("query");
+      const wave = await setFileWave(
+        artifacts(),
+        person(c.get("user").id),
+        orgId,
+        artifactId,
+        version,
+        c.req.valid("json"),
+      );
+      return c.json(wave, 200);
     },
   );
 
@@ -941,6 +1221,124 @@ export function artifactRoutes(deps: AppDeps) {
       const { orgId, artifactId } = c.req.valid("param");
       await purgeArtifactNow(artifacts(), c.get("user").id, orgId, artifactId);
       return c.body(null, 204);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "patch",
+      path: "/organizations/{orgId}/artifacts/{artifactId}",
+      tags,
+      security,
+      summary: "Rename a Drive file (no new version)",
+      request: { params: ArtifactParams, body: body(z.object({ title: z.string().trim().min(1).max(200) })) },
+      responses: { 200: json(Artifact), ...errors },
+    }),
+    async (c) => {
+      const { orgId, artifactId } = c.req.valid("param");
+      const userId = c.get("user").id;
+      const saved = await renameArtifact(artifacts(), person(userId), orgId, artifactId, c.req.valid("json").title);
+      return c.json(await withFacts(userId, orgId, saved), 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/artifacts/move",
+      tags,
+      security,
+      summary: "Put Drive files in a folder (null: the top level). Who sees them doesn't change",
+      request: {
+        params: OrgParams,
+        body: body(z.object({ ids: z.array(z.uuid()).min(1).max(ARTIFACT_PAGE_MAX), folderId: z.uuid().nullable() })),
+      },
+      responses: { 200: json(z.object({ moved: z.number().int() })), ...errors },
+    }),
+    async (c) => {
+      const { orgId } = c.req.valid("param");
+      const { ids, folderId } = c.req.valid("json");
+      const moved = await moveArtifacts(artifacts(), person(c.get("user").id), orgId, ids, folderId);
+      return c.json({ moved }, 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "get",
+      path: "/organizations/{orgId}/drive-folders",
+      tags,
+      security,
+      summary: "Every Drive folder of the workspace (the shared Drive's structure)",
+      request: { params: OrgParams },
+      responses: { 200: json(z.object({ folders: z.array(Folder) })), ...errors },
+    }),
+    async (c) => {
+      const { orgId } = c.req.valid("param");
+      return c.json({ folders: await listFolders(db, person(c.get("user").id), orgId) }, 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/drive-folders",
+      tags,
+      security,
+      summary: "Create a Drive folder (at the top level, or inside `parentId`)",
+      request: {
+        params: OrgParams,
+        body: body(z.object({ name: FolderName, parentId: z.uuid().nullable().optional() })),
+      },
+      responses: { 201: json(Folder, "Created"), ...errors },
+    }),
+    async (c) => {
+      const { orgId } = c.req.valid("param");
+      return c.json(await createFolder(artifacts(), person(c.get("user").id), orgId, c.req.valid("json")), 201);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "patch",
+      path: "/organizations/{orgId}/drive-folders/{folderId}",
+      tags,
+      security,
+      summary: "Rename a Drive folder, or move it (`parentId`, null: the top level)",
+      request: {
+        params: FolderParams,
+        body: body(z.object({ name: FolderName.optional(), parentId: z.uuid().nullable().optional() })),
+      },
+      responses: { 200: json(Folder), ...errors },
+    }),
+    async (c) => {
+      const { orgId, folderId } = c.req.valid("param");
+      return c.json(await updateFolder(artifacts(), c.get("user").id, orgId, folderId, c.req.valid("json")), 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "delete",
+      path: "/organizations/{orgId}/drive-folders/{folderId}",
+      tags,
+      security,
+      summary:
+        "Delete a folder with what is inside: its folders, and the files I may delete (to the trash). The rest move up",
+      request: { params: FolderParams },
+      responses: {
+        200: json(
+          z.object({
+            trashed: z.number().int(),
+            kept: z.number().int().openapi({ description: "Files I may not delete: moved to where the folder was." }),
+          }),
+        ),
+        ...errors,
+      },
+    }),
+    async (c) => {
+      const { orgId, folderId } = c.req.valid("param");
+      return c.json(await deleteFolder(artifacts(), c.get("user").id, orgId, folderId), 200);
     },
   );
 

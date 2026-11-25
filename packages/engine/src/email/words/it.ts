@@ -233,6 +233,11 @@ export const words: EmailWords = {
     preheader: "Approva o rifiuta in Membri. Non succede nulla finché non rispondi.",
     headline: "C’è una richiesta di accesso in attesa",
     body: (org) => ["Una persona ha aperto il link di invito di ", { b: org }, " e ha chiesto di entrare."],
+    outside: (by) => [
+      "Questa persona lavora per ",
+      { b: by },
+      " e chiede di entrare come collaboratore esterno. Non occupa un posto nel tuo piano, e puoi rimuoverla in qualsiasi momento.",
+    ],
     note: "Approva solo le persone che aspetti. Entrano come membro, a meno che tu non scelga un altro ruolo nella pagina.",
     approve: "Approva",
     deny: "Rifiuta",
@@ -299,6 +304,13 @@ export const words: EmailWords = {
   deletionCode: {
     subjectWorkspace: (code) => `${code} è il tuo codice per eliminare uno spazio di lavoro`,
     subjectAccount: (code) => `${code} è il tuo codice per eliminare tutto il tuo account`,
+    subjectReset: (code) => `${code} è il tuo codice per reimpostare uno spazio di lavoro`,
+    reset: (org) => [
+      "Inserisci questo codice per reimpostare lo spazio di lavoro ",
+      { b: org },
+      ". I suoi agenti, conversazioni, file e memoria vengono cancellati subito e per sempre, e riparte da zero come uno nuovo.",
+    ],
+    whyReset: (org) => `Ricevi questa email perché il tuo account ha chiesto di reimpostare ${org} su agentes.chat.`,
     preheader: "Inseriscilo in agentes.chat per confermare. Vale per 10 minuti.",
     headline: "Il tuo codice",
     workspace: (org) => [
@@ -482,6 +494,36 @@ export const words: EmailWords = {
     table: (day) => `La tabella completa: bun run report:autonomy --day ${day}`,
     why: "Ricevi questa email perché questo indirizzo è in OPS_REPORT_EMAIL su questo server. Parte una volta al giorno.",
   },
+  accountOpened: {
+    subject: (plan) => `Più persone possono usare il tuo account ${plan}`,
+    preheader: (plan) => `Quello che ci fanno usa il tuo piano ${plan} e i suoi limiti.`,
+    headline: "Qualcuno ha cambiato chi può usare il tuo account di IA",
+    body: (by, account, plan) => [
+      { b: by },
+      ` ha cambiato chi può usare il tuo account ${plan} `,
+      { b: account },
+      `. Quello che ci fanno usa il tuo piano e i suoi limiti.`,
+    ],
+    account: "Account",
+    by: "Modificato da",
+    setting: "Permesso",
+    use: "Usare negli agenti",
+    reply: "Rispondere a tutti",
+    was: "Prima",
+    now: "Ora",
+    everyone: "Tutti nel workspace",
+    admins: "Tu e gli amministratori",
+    onlyYou: "Solo tu",
+    agentOwner: "Solo il proprietario dell'agente",
+    note: "Per annullare, apri l'account in IA e utilizzo e cambia i suoi permessi.",
+    button: "Apri gli account di IA",
+    why: (org) =>
+      `Ricevi questa email perché hai collegato questo account di IA in ${org} e qualcun altro ha cambiato chi può usarlo.`,
+    personal: {
+      why: () =>
+        "Ricevi questa email perché hai collegato questo account di IA e qualcun altro ha cambiato chi può usarlo.",
+    },
+  },
   planOpened: {
     subject: (plan) => `Più persone possono parlare con il tuo agente con il tuo piano ${plan}`,
     preheader: (plan) => `Le loro conversazioni usano il tuo piano ${plan} e i suoi limiti.`,
@@ -554,5 +596,72 @@ export const words: EmailWords = {
       why: () =>
         "Hai ricevuto questa email perché questo spazio di lavoro su agentes.chat è tuo. Inviamo solo due avvisi come questo.",
     },
+  },
+  surface: {
+    linked: {
+      subject: (surface) => `${surface} è stato collegato al tuo account agentes.chat`,
+      preheader: "Il tuo assistente ora ti risponde lì. Se non sei stato tu, scollegalo.",
+      headline: (surface) => `${surface} è stato collegato`,
+      body: (surface, display, org) => [
+        { b: display },
+        ` su ${surface} ora parla con il tuo assistente in `,
+        { b: org },
+        ".",
+      ],
+      notYou: "Non sei stato tu? Scollegalo. I messaggi da lì smettono subito di arrivare al tuo account.",
+      button: "Scollega",
+      small: "Se sei stato tu, non devi fare nulla. Puoi scollegarlo quando vuoi nelle Impostazioni.",
+      why: (surface) => `Ricevi questa email perché ${surface} è stato collegato al tuo account agentes.chat.`,
+      picture: "Il tuo assistente, ora anche sul tuo telefono",
+    },
+    unlinked: {
+      subject: (surface) => `${surface} è stato scollegato dal tuo account agentes.chat`,
+      preheader: "La sua identità è cambiata. Collegalo di nuovo nelle Impostazioni se sei stato tu.",
+      headline: (surface) => `${surface} è stato scollegato`,
+      body: (surface, display) => [
+        { b: display },
+        ` su ${surface} è stato scollegato perché la sua identità è cambiata.`,
+      ],
+      small: "Collegalo di nuovo nelle Impostazioni se sei stato tu.",
+      why: (surface) => `Ricevi questa email perché ${surface} era collegato al tuo account agentes.chat.`,
+      picture: "Il tuo assistente, non più sul tuo telefono",
+    },
+    pinReset: {
+      subject: (surface) => `Scegli il PIN di ${surface}`,
+      preheader: "Scegli il PIN che approva le azioni dalla tua app di chat.",
+      headline: (surface) => `Scegli il PIN di ${surface}`,
+      body: (surface) =>
+        `Qualcuno ha chiesto un link per scegliere il PIN che usi per approvare le azioni da ${surface}. Se sei stato tu, sceglilo nella pagina che apre questo pulsante.`,
+      button: "Scegli il mio PIN",
+      small: "Il link funziona una volta, per un'ora. Se non sei stato tu, ignora questa email. Non cambia nulla.",
+      why: (surface) => `Ricevi questa email perché ${surface} è collegato al tuo account agentes.chat.`,
+    },
+    pinLocked: {
+      subject: (surface) => `Il PIN di ${surface} è bloccato`,
+      preheader: "Tre PIN sbagliati di fila. Approvare dalla tua app di chat è in pausa per ora.",
+      headline: (surface) => `Il PIN di ${surface} è bloccato`,
+      body: (surface, time) =>
+        `Qualcuno ha digitato un PIN sbagliato tre volte di fila per approvare un'azione da ${surface}. Approvare da ${surface} è in pausa per ${time}.`,
+      lockedFor: ["15 minuti", "1 ora", "24 ore"],
+      small: (surface) =>
+        `Se sei stato tu, riprova più tardi. Altrimenti scollega ${surface} nelle impostazioni delle notifiche, così nessuno può approvare da lì.`,
+      button: "Apri le impostazioni delle notifiche",
+    },
+  },
+  supportReply: {
+    subject: "Una risposta alla tua richiesta di aiuto",
+    preheader: "Sull’aiuto che hai chiesto su agentes.chat.",
+    headline: "Una risposta alla tua richiesta di aiuto",
+    answers: {
+      received: "Abbiamo ricevuto la tua richiesta e la stiamo esaminando.",
+      need_more: "Ci servono più dettagli per aiutarti: cosa stavi facendo, cosa ti aspettavi e cosa è successo.",
+      resolved: "Quello che hai segnalato è stato risolto.",
+      handed_over: "Ora una persona ha la tua richiesta e ti risponderà.",
+    },
+    from: (host) =>
+      host ? atHost("Risposta di chi gestisce il server agentes.chat", "su", host) : "Risposta di agentes.chat.",
+    ai: "Un assistente IA ha scritto questa risposta.",
+    reply: (address) => ["Per rispondere, scrivi a ", { mail: address }, "."],
+    why: "Ricevi questa email perché hai chiesto aiuto su agentes.chat.",
   },
 };

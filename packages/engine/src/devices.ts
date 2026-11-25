@@ -11,6 +11,9 @@ import {
   type RunnerPhone,
   STREAM_CLOSE,
   STREAM_LIMITS,
+  TASK_LIMIT_PROTOCOL,
+  TASK_ROOM_PROTOCOL,
+  type TaskRoomReport,
 } from "@agenteschat/adapters";
 import { and, type Database, type Executor, eq, gt, inArray, isNull, lt, schema, sql } from "@agenteschat/db";
 import { AUDIENCE_MODES, type AudienceMode } from "./audience";
@@ -25,7 +28,11 @@ import {
   type MachineRow,
   machineOnline,
   machinePause,
+  type OfflineCause,
+  offlineCause,
   publishMachineUpdated,
+  shownOnline,
+  withTaskLimit,
 } from "./machines";
 import { can, getMembership, type Membership, requirePermission } from "./organizations";
 import { closedRefusal, OrgDeletingError, orgStanding } from "./standing";
@@ -63,12 +70,13 @@ export type DeviceStatus =
       since: string;
     }
   /** A computer running background tasks: `running` of `max`. */
-  | { kind: "busy"; running: number; max: number }
+  /** `max` null: tasks start on room there (`taskRoom`), no count. */
+  | { kind: "busy"; running: number; max: number | null }
   | { kind: "needs_you"; reason: PhoneReason | string }
   | { kind: "preparing"; reason: PhoneReason | string }
   | { kind: "paused"; until: string | null }
-  /** `withHost`: a phone whose host is offline. */
-  | { kind: "offline"; lastSeenAt: string | null; withHost?: boolean }
+  /** `withHost`: a phone whose host is offline. `cause`: a computer's, as `offlineCause` reads it. */
+  | { kind: "offline"; lastSeenAt: string | null; withHost?: boolean; cause?: OfflineCause }
   | { kind: "unsupported"; reason: PhoneReason | string };
 
 export interface PhoneDevice {
@@ -110,8 +118,13 @@ export interface ComputerDevice {
   systemMode: boolean;
   audience: DeviceAudience;
   status: DeviceStatus;
-  /** Background tasks it runs at once. */
+  /** Background tasks it runs at once, as its runner says (`TASK_LIMIT_PROTOCOL`); null: an older one, which runs 3. */
   maxTasks: number | null;
+  /**
+   * `TASK_ROOM_PROTOCOL`: tasks start on room, not on `maxTasks`: about how many more fit now, the free memory, and
+   * the owner's Push harder. Null: the count decides (an older app, or memory it can't read).
+   */
+  taskRoom: TaskRoomReport | null;
   toolchains: Record<string, string>;
   /** A Mac whose app opens Xcode and looks at its iPhone again for the iPhone guide (`IPHONE_DEV_MODE_PROTOCOL`). */
   opensXcode: boolean;
@@ -265,7 +278,7 @@ export interface DevicesList {
   requests: JoinRequest[];
 }
 
-/** Background tasks a computer runs at once; its runner doesn't report its own limit, so the runner's default. */
+/** Background tasks a computer runs at once when its runner doesn't say (before `TASK_LIMIT_PROTOCOL`): its default. */
 export const DEFAULT_MAX_TASKS = 3;
 
 /** `devices.changed` to every member: a phone, a holder or a join request changed; the apps read `GET …/devices` again. */
@@ -296,10 +309,14 @@ export const personalComputer = (m: Pick<MachineRow, "kind" | "pairedByUserId" |
   m.kind === "connected" && m.pairedByUserId !== null && m.executors?.mode !== "system" && !m.belongsToWorkspace;
 
 function computerStatus(m: MachineRow, running: number, now: Date): DeviceStatus {
-  if (!machineOnline(m, now)) return { kind: "offline", lastSeenAt: iso(m.lastSeenAt) };
+  // Asleep in standby and waking as it should, it reads ready (ADR 0161).
+  if (!shownOnline(m, now)) {
+    const cause = offlineCause(m, false);
+    return { kind: "offline", lastSeenAt: iso(m.lastSeenAt), ...(cause ? { cause } : {}) };
+  }
   const pause = machinePause(m, now);
   if (pause) return { kind: "paused", until: pause.until };
-  if (running > 0) return { kind: "busy", running, max: DEFAULT_MAX_TASKS };
+  if (running > 0) return { kind: "busy", running, max: m.size?.room ? null : (m.size?.maxTasks ?? DEFAULT_MAX_TASKS) };
   return { kind: "ready" };
 }
 
@@ -435,7 +452,8 @@ export async function listDevices(
       systemMode: m.executors?.mode === "system",
       audience: rule.audience,
       status: computerStatus(m, busy.get(m.id) ?? 0, now),
-      maxTasks: null,
+      maxTasks: m.size?.maxTasks ?? null,
+      taskRoom: m.size?.room ?? null,
       toolchains: m.executors?.toolchains ?? {},
       opensXcode: !managed && m.os === "darwin" && m.protocol >= IPHONE_DEV_MODE_PROTOCOL,
       lastSeenAt: iso(m.lastSeenAt),
@@ -545,15 +563,20 @@ export interface ComputerDeviceInput {
   audience?: DeviceAudience;
   belongsToWorkspace?: boolean;
   spill?: { own?: boolean; others?: boolean };
+  /** Background tasks at once (`TASK_LIMIT_BOUNDS`): the computer applies it, so it must be online. */
+  maxTasks?: number;
+  /** `TASK_ROOM_PROTOCOL`: tasks may fill memory down to 0.5 GB free, whatever the processor. Online, its owner's. */
+  pushHarder?: boolean;
 }
 
 /**
  * `PATCH …/devices/computers/{machineId}`: its owner changes anything; an admin renames it, marks it the workspace's,
  * and narrows its rule (widens it only on the workspace's own devices). Never the workspace's computer. Spill-over is
  * its owner's to turn on (other people's agents would think on their plan's computer); an admin only turns it off.
+ * How many tasks it runs at once is its owner's too (their computer's memory), an admin's only on one nobody connected.
  */
 export async function updateComputerDevice(
-  deps: { db: Database; pubsub?: PubSub },
+  deps: { db: Database; pubsub?: PubSub; hub?: Pick<MachineCaller, "call" | "status"> },
   actorId: string,
   orgId: string,
   machineId: string,
@@ -589,6 +612,49 @@ export async function updateComputerDevice(
     if (on === undefined) continue;
     if (on && !owner) throw new ForbiddenError("Only the device's owner can turn this on", "device.spill_owner_only");
     set[column] = on;
+  }
+  if (input.maxTasks !== undefined || input.pushHarder !== undefined) {
+    if (!owner && machine.pairedByUserId !== null) {
+      throw new ForbiddenError(
+        "Only the person who connected this computer can change how many tasks it runs at once",
+        "device.tasks_owner_only",
+      );
+    }
+    const needs = input.pushHarder !== undefined ? TASK_ROOM_PROTOCOL : TASK_LIMIT_PROTOCOL;
+    // Push harder is a person's own computer's: the Cloud sizes its computers itself.
+    if (input.pushHarder !== undefined && machine.kind !== "connected") {
+      throw new ForbiddenError("This computer's room is set by the Cloud, not here", "device.tasks_cloud");
+    }
+    if (machine.protocol < needs) {
+      throw new ValidationError(
+        "This computer's app is too old to change this from here. Update it.",
+        "machine.outdated",
+      );
+    }
+    if (!deps.hub || !(await deps.hub.status(machine.id))?.online) {
+      throw new MachineOfflineError(machine.name, machine.kind);
+    }
+    const { maxTasks, room } = await deps.hub.call(machine.id, {
+      op: "limits.set",
+      ...(input.maxTasks !== undefined ? { maxTasks: input.maxTasks } : {}),
+      ...(input.pushHarder !== undefined ? { pushHarder: input.pushHarder } : {}),
+    });
+    // Its `runner.state` says the same soon after; the answer below reads the new one already.
+    await deps.db
+      .update(machines)
+      .set({ size: withTaskLimit(maxTasks, room), updatedAt: new Date() })
+      .where(eq(machines.id, machine.id));
+    await recordAudit(deps.db, {
+      orgId,
+      actor: { type: "person", id: actorId },
+      action: "device.updated",
+      target: { type: "machine", id: machine.id },
+      details: {
+        ...(input.maxTasks !== undefined ? { maxTasks } : {}),
+        ...(room ? { pushHarder: room.pushHarder } : {}),
+      },
+    });
+    await publishDevicesChanged(deps.pubsub, orgId);
   }
   if (Object.keys(set).length > 0) {
     await deps.db

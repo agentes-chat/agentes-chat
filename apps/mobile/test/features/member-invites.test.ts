@@ -122,9 +122,10 @@ describe("Membros e convites (ADR 0090)", () => {
     expect(sentWords(false).copied).toBe("copiedNoEmail");
   });
 
-  test("a person's menu: a message to anyone but oneself, removing or leaving only when allowed, none when empty", () => {
-    expect(memberActions(false, true)).toEqual(["dm", "remove"]);
-    expect(memberActions(false, false)).toEqual(["dm"]);
+  test("a person's menu: only cargos and removing (or leaving), so a plain member's rows have none", () => {
+    expect(memberActions(false, true)).toEqual(["remove"]);
+    expect(memberActions(false, false)).toEqual([]);
+    expect(memberActions(false, true, true)).toEqual(["roles", "remove"]);
     expect(memberActions(true, true)).toEqual(["leave"]);
     expect(memberActions(true, false)).toEqual([]);
   });
@@ -264,7 +265,14 @@ describe("Invite people in a personal workspace (ADR 0159 §4)", () => {
 
   test("it asks first who they are: family goes on, work switches it on the mode screen, locked for the rest", () => {
     const invite = src("InvitePeople.tsx");
-    expect(invite).toContain("if (personal && !family) return <WhoQuestion onFamily={() => setFamily(true)} />;");
+    // The question and the form are a step each: family pushes the form over the question, the system's back
+    // returns to it, and sending leaves both.
+    expect(invite).toContain("if (personal && !family)");
+    expect(invite).toContain(
+      'onFamily={() => router.push({ pathname: "/invite-people", params: { ...forwarded(params), family: "1" } })}',
+    );
+    expect(invite).not.toContain("setFamily");
+    expect(invite).toContain("if (family && router.canDismiss()) router.dismiss(2);");
     expect(invite).toContain('router.push("/settings/mode")');
     expect(invite).toContain('t(switches ? "personalMode.invite.workText" : "personalMode.invite.workLocked")');
     // Its Cargo field is "Pode", in the plain words.

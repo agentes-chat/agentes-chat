@@ -1,10 +1,11 @@
 import { execFile } from "node:child_process";
 import { accessSync, constants, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
-import { delimiter, join, win32 } from "node:path";
+import { delimiter, isAbsolute, join, win32 } from "node:path";
 import {
   CLI_ERROR_MAX,
   CLI_GIT_MISSING,
+  CLI_HOME_ONLY,
   type CursorModelInfo,
   parseExecutors,
   type RunnerExecutorInfo,
@@ -12,6 +13,7 @@ import {
 } from "@agenteschat/adapters/machine-protocol";
 import { isOpencodeFreeModel, OPENCODE_FREE_MODELS } from "@agenteschat/providers/plans";
 import { readSmallJson, writeJson } from "./json-file";
+import { usualDirs } from "./login-path";
 import { SHARED_BIN_ENV } from "./shared-folder";
 
 /**
@@ -67,13 +69,46 @@ export function resolveCommand(
   sharedBin = process.env[SHARED_BIN_ENV],
 ): string {
   if (process.platform === "win32" || command.includes("/")) return command;
+  const picked = command === "codex" ? pickedCodex() : command === "agy" ? pickedAgy() : undefined;
+  if (picked) return picked;
   const dirs = pathList.split(delimiter).filter((dir) => dir && dir !== sharedBin);
-  for (const dir of dirs) {
-    const full = join(dir, command);
-    if (isExecutable(full)) return full;
-  }
+  const found = onPath(command, dirs);
+  if (found) return found;
   // A bare name would be looked up on the PATH again, shared `bin/` included: a path that isn't there fails the same.
   return sharedBin && dirs[0] ? join(dirs[0], command) : command;
+}
+
+const onPath = (command: string, dirs: readonly string[]) =>
+  dirs.map((dir) => join(dir, command)).find((full) => isExecutable(full));
+
+/** `command` on the PATH as the person has it, never a copy the runner picked in its place; null: not there. */
+export function ownCommand(
+  command: string,
+  pathList = process.env.PATH ?? "",
+  sharedBin = process.env[SHARED_BIN_ENV],
+): string | null {
+  if (process.platform === "win32") return null;
+  return (
+    onPath(
+      command,
+      pathList.split(delimiter).filter((dir) => dir && dir !== sharedBin),
+    ) ?? null
+  );
+}
+
+/**
+ * The Antigravity CLI the runner brought (`AgyCopy`, ADR 0143), where the person's own is older or missing:
+ * `resolveCommand` starts this one for every `agy`, so its looks, sign-ins and turns all run the version reported.
+ */
+let agyPick: string | undefined;
+
+export function setAgyPick(file: string | undefined) {
+  agyPick = file;
+}
+
+/** The runner's own `agy`, while it is the one to run and still there. */
+export function pickedAgy(): string | undefined {
+  return agyPick && isExecutable(agyPick) ? agyPick : undefined;
 }
 
 /**
@@ -506,6 +541,67 @@ const versionFailed = (r: RunResult): Probe =>
 
 const firstLine = (r: RunResult) => r.stdout.trim().split("\n")[0]?.trim().slice(0, 80) ?? "";
 
+/** A version anywhere in a `--version` output: a warning may come first, or the CLI may write it to stderr. */
+const VERSION = /\d+\.\d+\.\d+[\w.+-]*/;
+
+/** The `--version` line that holds a version, else its first line; "unknown" when it printed nothing. */
+export function versionLine(r: Pick<RunResult, "stdout" | "stderr">): string {
+  const lines = `${r.stdout}\n${r.stderr ?? ""}`
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  return (lines.find((l) => VERSION.test(l)) ?? lines[0] ?? "unknown").slice(0, 80);
+}
+
+/** `a` is a newer version than `b`; a line with no version in it is older than any. */
+export function newerVersion(a: string, b: string): boolean {
+  const parts = (s: string) => VERSION.exec(s)?.[0].split(/\D+/).slice(0, 3).map(Number) ?? [-1];
+  const x = parts(a);
+  const y = parts(b);
+  for (let i = 0; i < 3; i++) if ((x[i] ?? 0) !== (y[i] ?? 0)) return (x[i] ?? 0) > (y[i] ?? 0);
+  return false;
+}
+
+/**
+ * Every `codex` this runner could start, each once: the PATH in order, then the usual install folders. Never one in
+ * the shared `bin/` (the agents write there) or in a folder that isn't a full path.
+ */
+export function codexCandidates(
+  pathList = process.env.PATH ?? "",
+  platform: NodeJS.Platform = process.platform,
+  sharedBin = process.env[SHARED_BIN_ENV],
+): string[] {
+  if (platform === "win32") return [];
+  const dirs = [...pathList.split(delimiter), ...usualDirs()].filter((d) => isAbsolute(d) && d !== sharedBin);
+  return [...new Set(dirs.map((d) => join(d, "codex")))].filter((f) => isFile(f) && isExecutable(f));
+}
+
+/**
+ * The `codex` the last look chose (`detectCodex`): `resolveCommand` starts this one, so a turn runs the Codex whose
+ * version was reported, never an older copy earlier on the PATH.
+ */
+let codexPick: string | undefined;
+
+/** The `codex` the last look chose, while it is still there. */
+export function pickedCodex(): string | undefined {
+  return codexPick && isExecutable(codexPick) ? codexPick : undefined;
+}
+
+/** Each copy's `--version`; the newest that answers wins (the first on the PATH among equals), with its path. */
+async function detectCodex(run: Run, bins: string[]): Promise<Probe> {
+  const looks = await Promise.all(bins.map(async (path) => ({ path, r: await run(path, ["--version"]) })));
+  const ok = looks
+    .filter(({ r }) => !r.error && r.status === 0)
+    .map(({ path, r }) => ({ path, version: versionLine(r) }));
+  const best = ok.reduce<(typeof ok)[number] | undefined>(
+    (a, b) => (!a || newerVersion(b.version, a.version) ? b : a),
+    undefined,
+  );
+  codexPick = best?.path;
+  if (best) return { entry: best };
+  return looks[0] ? versionFailed(looks[0].r) : detectVersion(run, "codex");
+}
+
 /** `<bin> --version` checked against `shape`, then `<bin> models` (none when signed out or offline). */
 async function detectWithModels(
   run: Run,
@@ -529,11 +625,23 @@ async function detectWithModels(
 async function detectVersion(run: Run, name: "claude" | "codex"): Promise<Probe> {
   const r = await run(name, ["--version"]);
   if (r.error || r.status !== 0) return versionFailed(r);
-  const version = firstLine(r);
-  if (!version) return {};
+  const version = versionLine(r);
   if (name !== "claude") return { entry: { version } };
   const auth = await claudeAuth(run);
   return auth ? { entry: { version, ...auth } } : { entry: { version }, unsure: true };
+}
+
+/** The CLIs whose installers put them in the home's `~/.local/bin`, by their command. */
+const HOME_INSTALLED = { cursor: CURSOR_BIN, grok: GROK_BIN, antigravity: AGY_BIN } as const;
+
+/** `bin` in the install folders under `home` (`~/.local/bin`…), which other users can't reach; null: none there. */
+export function inHomeDirs(bin: string, home = homedir(), isExe: (file: string) => boolean = isExecutable) {
+  return (
+    usualDirs(home)
+      .filter((dir) => dir.startsWith(`${home}/`))
+      .map((dir) => join(dir, bin))
+      .find(isExe) ?? null
+  );
 }
 
 /**
@@ -541,19 +649,22 @@ async function detectVersion(run: Run, name: "claude" | "codex"): Promise<Probe>
  * whole look is `unsure`, so it is retried soon instead of cached. `strikes` counts each CLI's failing exits in a
  * row across looks (the caller keeps it). A CLI whose `--version` fails with no good look to keep, or past its
  * strikes, is `broken` with its error line: it is there and can't start, which is not missing. Claude Code on Windows
- * says why only through `gitMissing`: without Git for Windows it can't start at all.
+ * says why only through `gitMissing`: without Git for Windows it can't start at all. `homeOnly`: a CLI of
+ * `HOME_INSTALLED` not found is in the runner's own home only (system mode), `CLI_HOME_ONLY`.
  */
 export async function detectExecutors(
   run: Run = defaultRun,
   prev: Executors = {},
   strikes: Partial<Record<string, number>> = {},
   gitMissing: () => boolean = () => false,
+  codexBins: () => string[] = run === defaultRun ? codexCandidates : () => [],
+  homeOnly: (bin: string) => boolean = () => false,
 ): Promise<{ found: Executors; unsure: boolean }> {
   const safe = (p: () => Promise<Probe>) => p().catch((): Probe => ({ unsure: true }));
   const names = ["claude", "codex", "cursor", "opencode", "grok", "antigravity"] as const;
   const probes = await Promise.all([
     safe(() => detectVersion(run, "claude")),
-    safe(() => detectVersion(run, "codex")),
+    safe(() => detectCodex(run, codexBins())),
     safe(() => detectCursor(run)),
     safe(() => detectOpencode(run)),
     safe(() => detectGrok(run)),
@@ -572,6 +683,9 @@ export async function detectExecutors(
     if (entry) found[name] = entry;
     if (p.unsure) unsure = true;
   });
+  for (const [name, bin] of Object.entries(HOME_INSTALLED) as [keyof typeof HOME_INSTALLED, string][]) {
+    if (!found[name] && !broken[name] && homeOnly(bin)) broken[name] = CLI_HOME_ONLY;
+  }
   if (Object.keys(broken).length) found.broken = broken;
   return { found, unsure };
 }
@@ -609,6 +723,8 @@ export function cachedExecutors(
     /** Before each look (Windows: the PATH read again, so a CLI installed since is found). */
     before?: () => void;
     gitMissing?: () => boolean;
+    /** System mode: a CLI found only in root's own install folders (`CLI_HOME_ONLY`). */
+    homeOnly?: (bin: string) => boolean;
   } = {},
 ): ExecutorsCache {
   const now = opts.now ?? Date.now;
@@ -624,7 +740,7 @@ export function cachedExecutors(
     (running ??= Promise.resolve()
       .then(() => opts.before?.())
       .catch(() => undefined)
-      .then(() => detectExecutors(opts.run, value, strikes, opts.gitMissing))
+      .then(() => detectExecutors(opts.run, value, strikes, opts.gitMissing, undefined, opts.homeOnly))
       .then(({ found, unsure }) => {
         at = now();
         retry = unsure ? Math.min(retry ? retry * 2 : EXECUTORS_RETRY_MS, EXECUTORS_TTL_MS) : 0;
@@ -662,11 +778,15 @@ export function cachedExecutors(
  * `codex --version` alone, for a Codex turn: a good answer is kept for the TTL; null when it couldn't tell (timed
  * out, failed), never cached.
  */
-export function cachedCodexVersion(run: Run = defaultRun, now: () => number = Date.now) {
+export function cachedCodexVersion(
+  run: Run = defaultRun,
+  now: () => number = Date.now,
+  codexBins: () => string[] = run === defaultRun ? codexCandidates : () => [],
+) {
   let kept: { version?: string; at: number } | undefined;
   return async (): Promise<string | undefined | null> => {
     if (kept && now() - kept.at < EXECUTORS_TTL_MS) return kept.version;
-    const p = await detectVersion(run, "codex").catch((): Probe => ({ unsure: true }));
+    const p = await detectCodex(run, codexBins()).catch((): Probe => ({ unsure: true }));
     if (p.unsure) return null;
     kept = { ...(p.entry ? { version: p.entry.version } : {}), at: now() };
     return kept.version;

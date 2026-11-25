@@ -1,4 +1,13 @@
-import { ApiError, type OrgSummary, useApi, useAuthConfig, useDeleteWorkspace, useMe } from "@agenteschat/client";
+import {
+  ApiError,
+  type OrgSummary,
+  useApi,
+  useAuthConfig,
+  useDeleteWorkspace,
+  useMe,
+  usePlanMove,
+  useResetWorkspace,
+} from "@agenteschat/client";
 import { formatTimeLeft } from "@agenteschat/client/lib/actions";
 import { computerEdition } from "@agenteschat/client/lib/computer";
 import { deletionDueFrom, deletionProof, proofToSend } from "@agenteschat/client/lib/deletion";
@@ -24,6 +33,7 @@ import { useRouter } from "@tanstack/react-router";
 import { type ReactNode, useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { AddPasswordDialog } from "@/components/AddPassword";
+import { PlanMoveLine } from "@/components/PlanMove";
 import { useLocalServerHere } from "@/components/ThisMac";
 import { useNow } from "@/hooks/useNow";
 import { thisMac } from "@/lib/desktop";
@@ -56,6 +66,7 @@ export function DeleteWorkspaceDialog({
   const api = useApi();
   const config = useAuthConfig().data;
   const del = useDeleteWorkspace(org.id);
+  const plan = usePlanMove(org.id);
   const proof = useDeletionProof(open, org.id, del.error);
   const pending = del.isPending || proof.thisMac.pending;
   const [name, setName] = useState("");
@@ -109,7 +120,12 @@ export function DeleteWorkspaceDialog({
                   </InfoHint>
                 </span>
               </DeletionLine>
-              {config?.billingUrl && <DeletionLine icon="coin">{t("deleteOrg.plan")}</DeletionLine>}
+              {config?.billingUrl &&
+                (plan.targets.length > 0 ? (
+                  <PlanMoveLine plan={plan} />
+                ) : (
+                  <DeletionLine icon="coin">{t("deleteOrg.plan")}</DeletionLine>
+                ))}
             </ul>
             <p className="small muted deletion-export">
               <Trans
@@ -134,6 +150,72 @@ export function DeleteWorkspaceDialog({
           </Button>
           <ProofButton proof={proof} enabled={named} busy={del.isPending}>
             {t("deleteOrg.submit")}
+          </ProofButton>
+        </DialogFooter>
+      </form>
+    </Dialog>
+  );
+}
+
+/**
+ * Resetting a workspace (owners): its name typed to confirm, then the same proof as deleting it, with a code of its
+ * own. What goes and what stays is on the row that opens it. It happens at once: `onStarted` follows, and the
+ * workspace's apps start over when the server says it is done (`org.reset`).
+ */
+export function ResetWorkspaceDialog({
+  org,
+  open,
+  onClose,
+  onStarted,
+}: {
+  org: Pick<OrgSummary, "id" | "name">;
+  open: boolean;
+  onClose: () => void;
+  onStarted: () => void;
+}) {
+  const { t } = useTranslation();
+  const reset = useResetWorkspace(org.id);
+  const proof = useDeletionProof(open, org.id, reset.error, true);
+  const pending = reset.isPending || proof.thisMac.pending;
+  const [name, setName] = useState("");
+  const { reset: clear } = reset;
+  useEffect(() => {
+    if (!open) return;
+    setName("");
+    clear();
+  }, [open, clear]);
+  const named = matchesName(name, org.name);
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(o) => !o && !pending && onClose()}
+      title={t("resetOrg.title", { name: org.name })}
+      description={t("resetOrg.now")}
+      closeLabel={t("common.close")}
+      width={520}
+    >
+      <form
+        style={{ display: "contents" }}
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (named && proof.ready && !reset.isPending) reset.mutate(proof.input, { onSuccess: onStarted });
+        }}
+      >
+        <Locked when={pending}>
+          <DialogBody>
+            <Field label={t("deleteOrg.type", { name: org.name })}>
+              <Input value={name} onChange={(e) => setName(e.target.value)} autoComplete="off" spellCheck={false} />
+            </Field>
+            <DeletionProofField proof={proof} />
+            {proof.alert && <Alert>{errorText(t, reset.error)}</Alert>}
+          </DialogBody>
+        </Locked>
+        <DialogFooter>
+          <Button type="button" onClick={onClose} disabled={pending}>
+            {t("common.cancel")}
+          </Button>
+          <ProofButton proof={proof} enabled={named} busy={reset.isPending}>
+            {t("resetOrg.submit")}
           </ProofButton>
         </DialogFooter>
       </form>
@@ -166,9 +248,9 @@ const PROOF_REFUSALS = new Set([
  * the workspace `orgId` (their account when null), or where the server sends no email their password, which an
  * account without one adds first. The desktop app's owner on its own server, in the app: a sign-in in the last 10
  * minutes through it, or `signIn` for another, which comes back to this page. `refused`: the deletion's error. `input`
- * is what the deletion sends, once `ready`.
+ * is what the deletion sends, once `ready`. `forReset`: the proof resets the workspace instead, with a code of its own.
  */
-export function useDeletionProof(open: boolean, orgId: string | null, refused: unknown) {
+export function useDeletionProof(open: boolean, orgId: string | null, refused: unknown, forReset = false) {
   const api = useApi();
   const config = useAuthConfig().data;
   const me = useMe().data;
@@ -184,7 +266,8 @@ export function useDeletionProof(open: boolean, orgId: string | null, refused: u
   const [signInFailed, setSignInFailed] = useState(false);
   const codeOut = (email: string, resendIn: number) => setSent({ email, resendAt: Date.now() + resendIn * 1000 });
   const send = useMutation({
-    mutationFn: () => (orgId ? api.orgs.deletionCode(orgId) : api.account.deletionCode()),
+    mutationFn: () =>
+      orgId ? (forReset ? api.orgs.resetCode(orgId) : api.orgs.deletionCode(orgId)) : api.account.deletionCode(),
     meta: { silent: true },
     onSuccess: (r) => {
       codeOut(r.email, r.resendIn);

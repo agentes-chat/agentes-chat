@@ -29,7 +29,7 @@ export interface AgentComputerFacts {
   /** The workspace's own computer (the Cloud's), else null. */
   setup: SetupView | null;
   /** The computer the agent works on, from the computers list; null: none. */
-  machine: Pick<Machine, "name" | "online" | "standby" | "lastSeenAt" | "paused" | "desktopUse"> | null;
+  machine: Pick<Machine, "name" | "online" | "standby" | "lastSeenAt" | "paused" | "desktopUse" | "mode"> | null;
   /** Its screen as `GET …/desktop` says it; null while unknown. */
   desktop:
     | (Pick<DesktopStatus, "available" | "reason"> & Partial<Pick<DesktopStatus, "canControl" | "handoff">>)
@@ -120,7 +120,7 @@ export function entryState(f: AgentComputerFacts, nowMs = Date.now()): EntryStat
     if (f.setup.phase === "problem") return { kind: "problem" };
     return { kind: "preparing", eta: setupEta(f.setup, nowMs) };
   }
-  const asleep = f.machine !== null && !f.machine.online && f.machine.standby === true;
+  const asleep = f.machine?.standby === true;
   if (f.machine && !f.machine.online && !asleep) return { kind: "offline" };
   if (f.edition === "selfhost" && f.machine && isPaused(f.machine, nowMs)) {
     return { kind: "paused", until: f.machine.paused?.until ?? null };
@@ -319,7 +319,7 @@ export function surfaceOf(f: AgentComputerFacts): ComputerSurface {
   if (waitsForWorkspace(f)) return "preparing";
   const h = f.handoff;
   if (h?.status === "active" && h.controllerUserId === f.userId && !drivesOnDesktop(h, f.desktop)) return "page";
-  if (f.machine && !f.machine.online) return "cover";
+  if (f.machine && (!f.machine.online || f.machine.standby)) return "cover";
   if (f.desktop?.available) return "screen";
   if (f.browser) return "page";
   return "cover";

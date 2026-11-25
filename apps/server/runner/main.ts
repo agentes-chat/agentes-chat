@@ -63,7 +63,13 @@ import { runControl } from "./control";
 import { configFromGrant, deviceInfo, prepareWorkspace, previousMachineFor, RunnerDaemon } from "./daemon";
 import { DesktopManager } from "./desktop";
 import { runDesktopBrowser } from "./desktop-browser";
-import { DesktopSessions, type DesktopSessionsOptions, runnerUser, systemDesktopUser } from "./desktop-session";
+import {
+  DesktopSessions,
+  type DesktopSessionsOptions,
+  runnerUser,
+  systemDesktopUser,
+  taskRoomNow,
+} from "./desktop-session";
 import { localSources, runDoctor } from "./doctor";
 import { RUNNER_VERSION } from "./errors";
 import { defaultHostState, HostComputer, readTokenFile, runnerChild } from "./host";
@@ -71,9 +77,10 @@ import { writeJson } from "./json-file";
 import { hasBunTerminal, runningCompiled, thisRunner } from "./launch";
 import { acquireLock, lockedMessage, pidAlive, readLock } from "./lock";
 import { RotatingFile } from "./logfile";
-import { adoptLoginPath } from "./login-path";
+import { addUsualDirs, adoptLoginPath } from "./login-path";
 import { LoopbackGuard, loopbackEndpoints, runnerEndpoints } from "./loopback-guard";
 import { MCP_TOKEN_FILE, mcpSocketPath, runMcpRelay, runMcpServer } from "./mcp";
+import { runMigrate } from "./migrate";
 import {
   type DeviceGrant,
   devicePair,
@@ -133,6 +140,9 @@ Usage:
       --rotate   asks for a new token for that organization's connection (the server refused its own)
   agentes-runner service install --host --server <url> --token-file <path> [--state <dir>] [--no-exec] [--no-start]
       Runs host as this computer's service: the root unit from boot on Linux, at login on macOS.
+  agentes-runner migrate [--from <app>] [--out <folder>] [--json] [--no-files]
+      Reads the agents another app keeps on this computer (openbot, openmausbot, hermes, openclaw,
+      paperclip) and writes one .zip to drop on the import screen. It only reads, and sends nothing.
   agentes-runner update
       Downloads the latest runner from the server and restarts the service (keeps the pairing).
   agentes-runner standby [--minutes <n>]
@@ -180,9 +190,10 @@ Usage:
 Every command takes --home <dir> (default $AGENTES_RUNNER_HOME or ~/.agentes-runner).
 On the server's own computer each organization has its own connection in <home>/orgs: folders and tools
 take --org <id | name> to pick one when it serves several.
-Config: <home>/config.json, mode 600. For background tasks, optional "maxConcurrentTasks" (default 3)
-and "taskMaxSeconds" (default 14400). For agents thinking with Claude Code, optional "brainIdleMinutes"
-(default 20 on Linux, 3 elsewhere) and "brainMaxProcesses" (default 2 on Linux, 1 elsewhere). Changes apply while it runs.
+Config: <home>/config.json, mode 600. For background tasks, optional "maxConcurrentTasks" (default: one
+per 1.5 GiB of memory past 4 GiB, at least 3, at most 20; also in the app's computer page) and "taskMaxSeconds"
+(default 14400). For agents thinking with Claude Code, optional "brainIdleMinutes" (default 20 on Linux,
+3 elsewhere) and "brainMaxProcesses" (default 2 on Linux, 1 elsewhere). Changes apply while it runs.
 Background tasks keep running when the runner restarts. Their logs are in tasks/.
 Commands run as the user that runs the runner. Consider a dedicated OS user.`;
 
@@ -198,6 +209,10 @@ interface Parsed {
 
 const VALUE_FLAGS = new Set([
   "server",
+  "from",
+  "out",
+  "data",
+  "company",
   "dir",
   "name",
   "task",
@@ -457,7 +472,16 @@ async function start(): Promise<number> {
     console.error(lockedMessage(home, lock.holder));
     return serviceSafe(4);
   }
-  const daemon = new RunnerDaemon({ home, mode: "start", log, print: (line) => console.log(line) });
+  // Before anything starts a CLI: a service's PATH is the installing shell's (the daemon adds them again per look).
+  if (process.platform !== "win32" && config.mode !== "system") addUsualDirs();
+  const daemon = new RunnerDaemon({
+    home,
+    mode: "start",
+    log,
+    print: (line) => console.log(line),
+    agyCopy: true,
+    taskRoom: taskRoomNow,
+  });
   const stop = () => void daemon.stop();
   process.once("SIGINT", stop);
   process.once("SIGTERM", stop);
@@ -534,7 +558,7 @@ async function app(): Promise<number> {
       input: process.stdin,
       output: process.stdout,
       locked: lock.ok ? null : lock.holder,
-      daemon: { log: write, logFile, refreshPath: () => adoptLoginPath() },
+      daemon: { log: write, logFile, refreshPath: () => adoptLoginPath(), taskRoom: taskRoomNow },
       signal: ac.signal,
     });
   } finally {
@@ -1549,6 +1573,16 @@ async function main(argv: string[]): Promise<number> {
       runTaskWrapper(path.resolve(sub));
       return new Promise<number>(() => {});
     }
+    case "migrate":
+      // Reads another app's agents on this computer into a file for the import page; it needs no connection.
+      return runMigrate({
+        from: flagString(p, "from"),
+        out: flagString(p, "out"),
+        data: flagString(p, "data"),
+        company: flagString(p, "company"),
+        json: p.flags.has("json"),
+        noFiles: p.flags.has("no-files"),
+      });
     case "update":
       return update();
     case "standby":

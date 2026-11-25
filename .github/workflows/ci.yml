@@ -136,7 +136,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # A tag publishes exactly the version /api/health reports; a tag that disagrees with
@@ -174,6 +174,9 @@ jobs:
       - name: Geometry check's own test
         if: success() || failure()
         run: bun test scripts/geometry/check.test.ts
+      - name: Bundle budget's own test
+        if: success() || failure()
+        run: bun test scripts/bundle-budget.test.ts
       - name: Dependency licenses (no GPL, AGPL, source-available or unlicensed packages)
         if: success() || failure()
         run: |
@@ -203,6 +206,10 @@ jobs:
         id: build
         if: success() || failure()
         run: bun run build
+      # What the web app downloads before its first screen, against its budget (scripts/bundle-budget.ts).
+      - name: Web first-load budget
+        if: (success() || failure()) && steps.build.outcome == 'success'
+        run: bun scripts/bundle-budget.ts apps/web/dist
       # Mermaid's bundle and mermaid-frame.js are files of their own, which only the sandboxed frame loads
       # (apps/web/src/lib/mermaid.ts): the app's chunks name both, and none of mermaid's code is in them.
       # Only those two files are left out of that check, not every name starting with mermaid: a chunk
@@ -217,6 +224,13 @@ jobs:
           test "$(wc -l <<<"$refs")" -eq 2
           for f in $refs; do test -f "$f"; done
           if grep -l mermaidAPI $(ls assets/*.js | grep -vxF "$refs"); then exit 1; fi
+      # Opens a channel, its thread, a DM and older messages in Chrome, against a local server (PGlite, the fakes) and the
+      # build above, at a desktop and a phone size, and fails when anything on screen moves by itself: a placeholder of
+      # the wrong size, a card growing when its data comes, a thread jumping to its end (scripts/geometry/shifts.ts).
+      - name: Layout shifts (conversations opening, cards loading)
+        if: (success() || failure()) && steps.build.outcome == 'success'
+        timeout-minutes: 8
+        run: bun run check:shifts --report shifts-report.md --shots shifts-shots
       # A schema change without its migration fails here (drizzle-kit only diffs, no database). The
       # timeout covers drizzle-kit asking whether a column was renamed, which it can't in CI.
       - name: Migrations are up to date with the schema
@@ -254,6 +268,8 @@ jobs:
           path: |
             typecheck.log
             typecheck-times.log
+            shifts-report.md
+            shifts-shots
           if-no-files-found: ignore
           retention-days: 7
 
@@ -275,7 +291,7 @@ jobs:
       # The engine's own folder only: the suites in its subfolders are not part of this job.
       PATHS: >-
         packages/engine/test/*.test.ts packages/adapters packages/config packages/db packages/modules
-        packages/providers packages/client packages/i18n packages/tokens packages/setup apps/server
+        packages/providers packages/client packages/i18n packages/tokens packages/setup packages/live apps/server
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - *setup-bun
@@ -326,8 +342,9 @@ jobs:
       # About 3 minutes on a runner (2026-10-20).
       - name: Test (web and design system)
         if: env.SHARED == 'true' || env.WEB == 'true'
-        # The whole suite takes about 10 minutes on one runner now (3320 tests, 612 s on 2026-11-06).
-        timeout-minutes: 15
+        # The whole suite takes 10 to 14 minutes on one runner now (measured on main, 2026-11-18), by the runner it
+        # gets. The limit is there to end a hang, not to fail a slow runner.
+        timeout-minutes: 25
         # The preload saves every screen the tests reach, for the geometry check below. It costs a few percent.
         env:
           GEOMETRY_OUT: ${{ runner.temp }}/geometry
@@ -428,12 +445,14 @@ jobs:
       # Bun first: the boundaries check below still runs when the scan fails.
       - *setup-bun
       # main and a release tag scan the whole history (about five minutes); a branch or a pull request scans the
-      # commits it adds to main, which main's own runs have already scanned up to there.
+      # commits it adds to main, which main's own runs have already scanned up to there. HEAD is named because
+      # gitleaks' default is every ref, and the full checkout fetches every branch: an unmerged branch's
+      # made-up test token would turn main red, while that branch's own run is where it belongs.
       - name: Secret scan
         env:
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
-          range=()
+          range=(--log-opts=HEAD)
           if [ "$GITHUB_REF_TYPE" = branch ] && [ "$GITHUB_REF_NAME" != "$DEFAULT_BRANCH" ] &&
             git rev-parse --verify --quiet "origin/$DEFAULT_BRANCH" > /dev/null; then
             range=(--log-opts="origin/$DEFAULT_BRANCH..HEAD")

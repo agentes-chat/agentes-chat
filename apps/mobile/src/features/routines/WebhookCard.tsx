@@ -10,14 +10,24 @@ import {
 import { formatBytes } from "@agenteschat/client/lib/files";
 import { whenAt } from "@agenteschat/client/lib/format";
 import { runMessageLink } from "@agenteschat/client/lib/routine-view";
-import { hookCurl, isRefusedHookCall } from "@agenteschat/client/lib/routines";
+import { GROUP_BY_EXAMPLE, hookCurl, isRefusedHookCall } from "@agenteschat/client/lib/routines";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
-import { GroupedFooter, GroupedHeader, GroupedList, GroupedRow, Text, useToast } from "@/ui";
+import { StyleSheet, TextInput, View } from "react-native";
+import {
+  fieldText,
+  GROUPED_ROW,
+  GroupedFooter,
+  GroupedHeader,
+  GroupedList,
+  GroupedRow,
+  SkeletonList,
+  useToast,
+} from "@/ui";
 import { router } from "@/ui/navigation";
 import { chatHref } from "../links/logic";
 import { CommandBlock, confirmAction } from "../settings/parts";
+import { LoadFailed } from "../shared/FirstUse";
 import { useColors, useOrgId } from "../shared/hooks";
 import { useFailed } from "./hooks";
 
@@ -47,7 +57,6 @@ const QUESTIONS = {
  */
 export function WebhookCard({ routine: r, runs }: { routine: Routine; runs: RoutineRun[] }) {
   const { t, i18n } = useTranslation();
-  const c = useColors();
   const orgId = useOrgId();
   const toast = useToast();
   const failed = useFailed();
@@ -56,19 +65,13 @@ export function WebhookCard({ routine: r, runs }: { routine: Routine; runs: Rout
   const save = useRoutineAction(orgId);
   const [secret, setSecret] = useState<string | null>(null);
   const data = hook.data;
+  // While the address loads, its rows' shape; if it can't, why, with Retry.
   if (!data) {
     return (
-      <GroupedList>
-        <View style={styles.block}>
-          {hook.isError ? (
-            <Text variant="footnote" tone="muted">
-              {t("mobile.app.failed")}
-            </Text>
-          ) : (
-            <ActivityIndicator color={c.muted} />
-          )}
-        </View>
-      </GroupedList>
+      <>
+        <GroupedHeader>{t("routines.webhook.address")}</GroupedHeader>
+        {hook.isError ? <LoadFailed onRetry={() => void hook.refetch()} /> : <SkeletonList rows={2} />}
+      </>
     );
   }
   const run = (what: "address" | "secret" | "unsign" | "test" | "onAndTest") =>
@@ -165,6 +168,8 @@ export function WebhookCard({ routine: r, runs }: { routine: Routine; runs: Rout
         ))}
       </GroupedList>
 
+      <GroupBy routine={r} groupBy={data.groupBy} />
+
       <GroupedHeader>{t("routines.webhook.example")}</GroupedHeader>
       <CommandBlock
         command={hookCurl(
@@ -186,18 +191,70 @@ export function WebhookCard({ routine: r, runs }: { routine: Routine; runs: Rout
 
       <GroupedHeader>{t("routines.webhook.calls")}</GroupedHeader>
       <GroupedList>
-        {data.calls.length === 0 ? (
-          <View style={styles.block}>
-            <Text variant="footnote" tone="muted">
-              {t("routines.webhook.noCalls")}
-            </Text>
-          </View>
-        ) : (
-          data.calls.map((call) => (
-            <CallRow key={call.id} call={call} run={runs.find((x) => x.id === call.runId)} locale={i18n.language} />
-          ))
-        )}
+        {data.calls.map((call) => (
+          <CallRow key={call.id} call={call} run={runs.find((x) => x.id === call.runId)} locale={i18n.language} />
+        ))}
       </GroupedList>
+      {data.calls.length === 0 ? <GroupedFooter>{t("routines.webhook.noCalls")}</GroupedFooter> : null}
+    </>
+  );
+}
+
+/**
+ * "Group calls by", the web's field for the phone: a path into each call's data, saved when typing ends. Calls with
+ * the same value run in order, others side by side; emptied, every call waits in one line.
+ */
+function GroupBy({ routine: r, groupBy }: { routine: Routine; groupBy: string | null }) {
+  const { t } = useTranslation();
+  const c = useColors();
+  const orgId = useOrgId();
+  const toast = useToast();
+  const failed = useFailed();
+  const save = useRoutineAction(orgId);
+  const [path, setPath] = useState(groupBy ?? "");
+  const submit = () => {
+    if (path.trim() === (groupBy ?? "") || save.isPending) return;
+    save.mutate(
+      { type: "update", id: r.id, patch: { trigger: { type: "webhook", groupBy: path.trim() || null } } },
+      {
+        onSuccess: () => toast({ title: t("routines.webhook.groupBySaved"), icon: "check" }),
+        onError: (error) => {
+          setPath(groupBy ?? "");
+          failed(error);
+        },
+      },
+    );
+  };
+  return (
+    <>
+      <GroupedHeader
+        hint={{
+          name: t("common.about", { label: t("routines.webhook.groupBy") }),
+          text: t("routines.webhook.groupByHelp"),
+        }}
+      >
+        {t("routines.webhook.groupBy")}
+      </GroupedHeader>
+      <GroupedList>
+        <TextInput
+          value={path}
+          onChangeText={setPath}
+          onEndEditing={submit}
+          onSubmitEditing={submit}
+          placeholder={GROUP_BY_EXAMPLE}
+          placeholderTextColor={c.faint}
+          autoCapitalize="none"
+          autoCorrect={false}
+          maxLength={200}
+          returnKeyType="done"
+          editable={!save.isPending}
+          accessibilityLabel={t("routines.webhook.groupBy")}
+          style={[fieldText("callout"), styles.input, { color: c.ink }]}
+        />
+      </GroupedList>
+      <GroupedFooter>
+        {groupBy ? t("routines.webhook.groupByOn", { path: groupBy }) : t("routines.webhook.groupByOff")}
+      </GroupedFooter>
     </>
   );
 }
@@ -225,6 +282,6 @@ function CallRow({ call, run, locale }: { call: RoutineHookCall; run: RoutineRun
 }
 
 const styles = StyleSheet.create({
-  block: { paddingHorizontal: 14, paddingVertical: 12 },
   gap: { height: 10 },
+  input: { minHeight: GROUPED_ROW.minHeight, paddingHorizontal: GROUPED_ROW.padX, paddingVertical: GROUPED_ROW.padY },
 });

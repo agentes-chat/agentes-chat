@@ -3,12 +3,12 @@ import {
   ASK_WITH_WRITE_FILE,
   allowedBy,
   approvalMessage,
+  badActorReason,
+  badActorRefusal,
   type CommandScope,
   commandKind,
   commandOf,
   deniedMessage,
-  forbiddenCode,
-  forbiddenHint,
   forbiddenReason,
   inlineCodeCall,
   NO_TERMINAL_COMMANDS,
@@ -103,6 +103,7 @@ function scopeOf(value: unknown): CommandScope | null {
     folders: folders.length ? folders : [v.cwd],
     ...(abs(v.home) ? { home: v.home } : {}),
     ...(abs(v.runnerHome) ? { runnerHome: v.runnerHome } : {}),
+    ...(v.rootlessContainers === true ? { rootlessContainers: true } : {}),
   };
 }
 const NO_SCOPE: CommandScope = { cwd: "/nonexistent", folders: [] };
@@ -296,6 +297,22 @@ const allow = () => JSON.stringify({ behavior: "allow" });
 const deny = (message: string, code: string) => JSON.stringify({ behavior: "deny", message, code });
 
 /**
+ * A call the runner's command policy already refused (`refused`: `localVerdict`'s code and words), told only so the
+ * run keeps its step: answered with that refusal as it was, never judged, asked or shown as a card.
+ */
+function refusedOnComputer(args: Record<string, unknown>): string | null {
+  const r = args.refused;
+  if (!r || typeof r !== "object" || Array.isArray(r)) return null;
+  const { code, message } = r as Record<string, unknown>;
+  return JSON.stringify({
+    behavior: "deny",
+    message: cutText(str(message), 500) || "Refused on the computer.",
+    code: str(code).slice(0, 40) || "policy",
+    refusal: "policy",
+  });
+}
+
+/**
  * `permission_prompt` from the runner: a new prompt (`tool_name`, `input`),
  * or the state of one it made (`request_id`). Answers JSON: `{behavior}`
  * when decided, `{status: "pending", request_id}` while it waits.
@@ -313,6 +330,8 @@ export async function handlePermissionPrompt(
   task: PromptAsker,
   args: Record<string, unknown>,
 ): Promise<string> {
+  const refused = refusedOnComputer(args);
+  if (refused) return refused;
   const requestId = str(args.request_id);
   if (requestId) {
     const [p] = await readPrompts(deps.db, mission.id, requestId);
@@ -452,7 +471,7 @@ export async function decideCommand(
     // Only who decides the agent's approvals keeps something for it everywhere (its owner, `approve_actions`).
     const agent = p.agentKind ? await getAgent(deps.db, orgId, mission.agentId) : null;
     if (!agent) throw new ConflictError("This command can't be approved for good", "approval.always_unavailable");
-    if (!(await decidesAgentApprovals(deps.db, orgId, userId, agent.ownerUserId))) {
+    if (!(await decidesAgentApprovals(deps.db, orgId, userId, agent))) {
       throw new ForbiddenError("Only the agent's owner or an admin can approve this for good");
     }
   }
@@ -585,12 +604,13 @@ export async function setCommandApproval(
  * A computer-brain run outside a mission (ADR 0032): Claude Code's
  * permission prompt, or one of Codex's approvals (ADR 0053 §3), with no
  * mission to post a card in. The deny list and secrets are refused; plain
- * reads are allowed; anything else is allowed only when the agent may run
- * commands on its computer (`canRun`: the sandbox scope) and code allows it
- * (`forbiddenReason`: no sudo, no deletes or writes outside its folder, no
- * uploads, remote shells, global installs or inline code). The rest is denied
- * with what to do instead (nothing waits for a person here). For an agent that
- * always asks, what code would allow is denied too, with how to ask a person.
+ * reads are allowed; anything else is allowed when the agent may run commands
+ * on its computer (`canRun`: the sandbox scope) unless it is obvious harm
+ * (`badActorReason`, ADR 0053 §3 addendum 2026-11-19): HTTP calls of any kind,
+ * ssh, pushes, heredocs, `bash -c`, inline code and installs into its own user
+ * are ordinary work. A refusal says why and that the rest of the work goes on
+ * (nothing waits for a person here). For an agent that always asks, what would
+ * run is denied too, with how to ask a person.
  */
 export function runPermissionPrompt(
   args: Record<string, unknown>,
@@ -600,6 +620,8 @@ export function runPermissionPrompt(
     asksFirst?: boolean;
   },
 ): string {
+  const refused = refusedOnComputer(args);
+  if (refused) return refused;
   if (str(args.request_id)) return deny("That request is unknown.", "unknown");
   const tool = str(args.tool_name).slice(0, 64);
   const input =
@@ -621,7 +643,7 @@ export function runPermissionPrompt(
       "off",
     );
   }
-  const reason = forbiddenReason(tool, input, scope ?? NO_SCOPE);
+  const reason = badActorReason(tool, input, scope ?? NO_SCOPE);
   if (reason === null) {
     return opts.asksFirst
       ? deny(
@@ -633,9 +655,6 @@ export function runPermissionPrompt(
         )
       : allow();
   }
-  const hint = forbiddenHint(reason);
-  return deny(
-    `This command was refused because ${reason}.${hint ? ` ${hint}` : ""} Agents may not use sudo, delete or write outside their folder, upload, open remote shells or install globally. Do it another way; if there is none, tell the person in plain words what you couldn't do. ${NO_TERMINAL_COMMANDS}`,
-    forbiddenCode(reason),
-  );
+  const refusal = badActorRefusal(reason);
+  return deny(refusal.message, refusal.code);
 }

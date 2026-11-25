@@ -16,7 +16,6 @@ import {
   inviteRefusalText,
   inviteStart,
 } from "@agenteschat/client/lib/invite-start";
-import { can } from "@agenteschat/client/lib/permissions";
 import { personalHelperRole } from "@agenteschat/client/lib/personal-view";
 import { isRightHand } from "@agenteschat/client/lib/right-hand";
 import { everyoneOf, isEveryone, sortRoles } from "@agenteschat/client/lib/roles";
@@ -170,7 +169,9 @@ export function RoleField({ choices, id }: { choices: InviteChoices; id: string 
                   </span>
                 ))
               ) : (
-                <span className="invite-role__item ac-iconline">
+                // `.ac-iconline` moves its first child onto the words' capitals: only with a mark to move, never the
+                // words themselves.
+                <span className={everyone ? "invite-role__item ac-iconline" : "invite-role__item"}>
                   {everyone && <RoleMark color={everyone.color} icon={everyone.icon} size={18} />}
                   <span>{t("roles.member")}</span>
                 </span>
@@ -368,7 +369,8 @@ export function AgentsField({
   const { org, me } = useOrg();
   const api = useApi();
   const dir = useDirectory(org.id);
-  const viewer = { userId: me.user.id, managesAgents: can(org, "manage_agents") };
+  // Who may open an agent to them: its owner, or who manages that agent (`inviteAgentCase` reads it from the agent).
+  const viewer = { userId: me.user.id };
   const right = dir.agents.find(isRightHand);
   const listed = dir.agents.filter((a) => !isRightHand(a) && listsAgent(org, a));
   const cargoAgents = choices.own.agentIds;

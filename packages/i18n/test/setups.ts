@@ -101,6 +101,9 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
   selfhost: [
     // A server that sends no e-mail can't confirm a new address: only there (`email.no_mail`).
     "shell.email.noMail",
+    // Who read a piece of the workspace: off agentes.chat's own servers, whoever runs this one (`details.cloud`).
+    "audit.operatorRead.who.server",
+    "audit.operatorRead.request.operator",
     "auth.owner.",
     "auth.flow.ownerWaits",
     "auth.flow.ownerWaitsLead",
@@ -113,6 +116,8 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     // The way out for the right hand's plan on a computer that is away: Cloud's own computer is always on.
     "rightHand.unusable.connect",
     "aiAccounts.connect.noComputer",
+    // A connector of ours whose developer app this server lacks: the listing marks it off the Cloud only (`needsApp`).
+    "connectors.needsApp",
     "brain.reasons.no_computer",
     "browser.inCard.noComputer",
     "browser.live.noComputer",
@@ -125,6 +130,8 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     "feedback.goesServer",
     "feedback.offer.goesServer",
     "feedback.offer.sentServer",
+    // Only a server that set PROBLEM_REPORT_URL=off, which the Cloud never does.
+    "problemReport.off",
     "machines.download.title",
     "machines.host.",
     "members.requests.copyText",
@@ -190,6 +197,9 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     // the admins' line about it only where `ownerCreates` (false on agentes.chat, ADR 0156).
     "githubApp.server.",
     "githubApp.ownerHint",
+    // The same app as a line of Settings › Connectors: listed only where `setup` is there (its owner, off agentes.chat).
+    "connectors.store.appMissing",
+    "connectors.store.appLine",
   ],
   email: [
     // Said once the link to a new address went out, which only a server that sends e-mail does.
@@ -210,8 +220,16 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     "errors.reauth.code",
     // An address held for an account that just left it (`changeAccountEmail`): only a server that sends e-mail holds it.
     "auth.flow.emailHeld",
+    // An address never confirmed holds anything back only where the server sends e-mail (`emailConfirmation`).
+    "auth.confirm.",
+    "errors.org.createUnconfirmed",
+    // A link to choose the PIN is emailed only where the server sends email (ADR 0226).
+    "surface.page.emailed",
+    "surface.page.emailMe",
+    "surface.page.setFirstLeadEmail",
+    "errors.surface.emailUnverified",
   ],
-  apiKey: ["agentPage.work.brain.fallbackTitle"],
+  apiKey: [],
   // A message nobody mentions still gets an agent: routing.mine (the chip and its help line), routing.by (Settings),
   // or the receipt of a message a rule sent to its one candidate.
   routing: ["channelMembers.replyAloneHelp", "routing.by.jev", "routing.by.model", "receipts.by.only_agent"],

@@ -1,7 +1,6 @@
 import type { Credential, OrgSettings } from "@agenteschat/client";
 import {
   useAddCredential,
-  useAiAccounts,
   useAuthConfig,
   useComposioUsage,
   useComputerSetup,
@@ -53,7 +52,6 @@ import {
   Dialog,
   DialogBody,
   DialogFooter,
-  EmptyState,
   Field,
   Icon,
   InfoHint,
@@ -83,9 +81,10 @@ import { WorkspaceApprovalsRow } from "@/components/ApprovalsLevelDialog";
 import { AppsDownloadSection } from "@/components/AppsDownload";
 import { AuditSection } from "@/components/Audit";
 import { AutoModelsRow } from "@/components/AutoModels";
-import { usePlanHold } from "@/components/ai/ConnectAiSteps";
+import { AiAccountsTab } from "@/components/ai/AiHub";
 import { EndpointForm } from "@/components/ai/EndpointForm";
 import { WhoPicksSection } from "@/components/ai/Jev";
+import { usePlanHold } from "@/components/ai/plan-hold";
 import { BillingLinkButton } from "@/components/BillingLinkButton";
 import { ConnectorsSection } from "@/components/Connectors";
 import { DeleteWorkspaceDialog } from "@/components/DeleteWorkspace";
@@ -102,6 +101,7 @@ import { UsageTabs } from "@/components/PeopleUsage";
 import { ApiCard, PlanUsageCards } from "@/components/PlanUsage";
 import { MyFace, OrgLogoDialog, OrgMark } from "@/components/ProfilePhoto";
 import { KeyMismatch, KeyRefused, KeySite, ProviderKeySelect } from "@/components/ProviderKey";
+import { ReportProblem, useProblemReports } from "@/components/ReportProblem";
 import { RolesSection } from "@/components/roles/RolesSection";
 import { SkillsSection } from "@/components/Skills";
 import { StorageSection } from "@/components/StorageSettings";
@@ -109,11 +109,11 @@ import { TeamMemoryCard } from "@/components/TeamMemory";
 import { OpenPrefsButton, useLocalServerHere } from "@/components/ThisMac";
 import { VoiceSettingsSection } from "@/components/VoiceSettings";
 import { VaultSection } from "@/components/vault/VaultSection";
+import { AccentRow } from "@/components/WorkspaceAccent";
 import { WorkspaceModeDialog } from "@/components/WorkspaceModeDialog";
 import { ZoneSelect } from "@/components/ZoneSelect";
 import { useCentreCurrent } from "@/hooks/useCentreCurrent";
 import { usePersonalView } from "@/hooks/usePersonalView";
-import { useRightHandLook } from "@/hooks/useRightHandLook";
 import { useTextLimit } from "@/hooks/useTextLimit";
 import { useOpenParam } from "@/lib/open-param";
 import { useToast } from "@/lib/toast";
@@ -152,6 +152,7 @@ function Settings({
   role,
   tab,
   create,
+  service,
 }: {
   /** The section a link names; none (`/settings`): Geral for who opens it, else their first one. */
   section?: SettingsSection;
@@ -179,6 +180,8 @@ function Settings({
   tab?: RoleTab;
   /** Cargos, with Criar cargo open (⌘K's "Criar cargo"). */
   create?: boolean;
+  /** Conectores: the service whose page is open. */
+  service?: string;
 }) {
   const { t } = useTranslation();
   const { org } = useOrg();
@@ -280,14 +283,30 @@ function Settings({
       {current === "voice" && <VoiceSettingsSection />}
       {current === "access" && <AccessMatrixSection />}
       {current === "connectors" && (
-        <ConnectorsSection connected={connected} outcome={outcome} review={review} mail={mail} account={account} />
+        <ConnectorsSection
+          connected={connected}
+          outcome={outcome}
+          review={review}
+          mail={mail}
+          account={account}
+          service={service}
+        />
       )}
       {current === "skills" && <SkillsSection install={install} connected={connected} skill={skill} agent={agent} />}
       {current === "storage" && <StorageSection />}
       {current === "devices" && (device ? <DevicePage path={device} /> : <DevicesSection start={connect} />)}
       {current === "usage" && (
         <>
-          <UsageTabs person={person} summary={<UsageSection />} />
+          <UsageTabs
+            person={person}
+            accounts={
+              <>
+                <AiAccountsTab keys={<KeysGroup />} />
+                <WhoPicksSection />
+              </>
+            }
+            summary={<UsageSection />}
+          />
           {opens("billing") && (
             <SettingsPart id="billing">
               <BillingSection />
@@ -312,17 +331,20 @@ function Settings({
   return (
     <div className="settings page-split">
       <nav className="settings__nav" data-scroll-restoration-id="settings-nav" aria-label={t("settings.nav")}>
-        <div className="settings__head">
-          <h1 className="settings__title">{t("settings.title")}</h1>
-          {/* Whose settings: the workspace's, by its mark and name; a personal workspace's are the person's own and
-              name no workspace (ADR 0159). */}
-          {!personal && (
-            <span className="settings__org ac-iconline">
-              <OrgMark logo={org.logo} size={18} />
-              <span>{org.name}</span>
-            </span>
-          )}
-        </div>
+        {/* The pages' own header, as the inbox's list has. Whose settings: the workspace's, by its mark and name; a
+            personal workspace's are the person's own and name no workspace (ADR 0159). */}
+        <PageHeader
+          className="settings__head"
+          title={t("settings.title")}
+          meta={
+            personal ? undefined : (
+              <span className="settings__org ac-iconline">
+                <OrgMark logo={org.logo} size={18} />
+                <span>{org.name}</span>
+              </span>
+            )
+          }
+        />
         <div className="settings__groups" ref={strip}>
           <div className="settings__group">
             <ul>{nav.main.map(link)}</ul>
@@ -601,6 +623,7 @@ function GeneralSection() {
     <Card aria-label={t(modeKey(org, "settings.orgTitle"))}>
       <div className="settings-rows">
         {personal ? zoneRow : logoRow}
+        {!personal && <AccentRow />}
         {nameRow}
         {!personal && zoneRow}
         {checkRow}
@@ -672,6 +695,7 @@ function GeneralSection() {
       <TeamMemoryCard />
 
       <UsageStatisticsCard />
+      <ProblemReportCard />
       {org.role === "owner" && !org.deletion && <DeleteWorkspaceCard />}
       <OrgLogoDialog open={logo} onClose={() => setLogo(false)} />
       <WorkspaceModeDialog
@@ -799,7 +823,33 @@ function UsageStatisticsCard() {
   );
 }
 
-function KeysSection() {
+/** "Send a report" for anything not tied to one screen: self-hosted servers only. */
+function ProblemReportCard() {
+  const { t } = useTranslation();
+  if (!useProblemReports()) return null;
+  return (
+    <Card aria-labelledby="sec-problem-report">
+      <CardHeader id="sec-problem-report" icon="alert" title={t("problemReport.settingsTitle")} />
+      <div className="settings-rows">
+        <div className="settings-row ac-actrow">
+          <div className="settings-row__text ac-actrow__text">
+            <span className="settings-row__label">{t("problemReport.settingsText")}</span>
+          </div>
+          <div className="settings-row__control">
+            <ReportProblem place="settings" />
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+/**
+ * The workspace's API keys, as the last group of "Contas de IA" (the account picker's "Chaves de API"): each key with
+ * its default, its models (an endpoint's) and ⋯ (rotate, remove its copies, remove); "Adicionar chave" on the group's
+ * line. With no key yet the group isn't there: the first one comes with "Adicionar conta", like a plan.
+ */
+function KeysGroup() {
   const { t, i18n } = useTranslation();
   const { org } = useOrg();
   const allowed = can(org, "manage_credentials");
@@ -818,49 +868,29 @@ function KeysSection() {
     | { type: "copies"; cred: Credential }
     | { type: "models"; cred: Credential }
   >(null);
-  const look = useRightHandLook();
   const hold = usePlanHold();
-  const plans = useAiAccounts(org.id).data?.accounts.length ?? 0;
   if (!allowed) return null;
   const all = (credentials.data ?? []).filter((c) => !c.revokedAt);
   const live = shownKeys(credentials.data ?? []);
-  const noKeys = credentials.isSuccess && live.length === 0;
-  // On plans alone the screen is the accounts: the first key is added from "Conectar uma IA", and this card comes
-  // with it.
-  if (live.length === 0 && plans > 0) return null;
+  if (live.length === 0) return null;
+  const label = t("aiHub.choice.groups.keys");
   return (
-    <Card aria-labelledby="sec-keys">
-      <CardHeader
-        id="sec-keys"
-        icon="key"
-        title={t("settings.keysTitle")}
-        hint={{ name: t("common.about", { label: t("settings.keysTitle") }), text: t("settings.keysSubtitle") }}
-        action={
-          !noKeys &&
-          !hold && (
-            <Button size="sm" icon="plus" onClick={() => setDialog({ type: "add" })}>
-              {t("settings.addKey")}
-            </Button>
-          )
-        }
-      />
+    <section className="aa-keys" aria-label={label}>
+      <div className="aa-group__head">
+        <p className="aa-group__label">
+          <span className="ac-hintline">
+            {label}
+            <InfoHint name={t("common.about", { label })}>{t("settings.keysSubtitle")}</InfoHint>
+          </span>
+        </p>
+        {!hold && (
+          <Button size="sm" variant="ghost" icon="plus" onClick={() => setDialog({ type: "add" })}>
+            {t("settings.addKey")}
+          </Button>
+        )}
+      </div>
       {platform.data && <p className="small muted">{t("settings.platformAvailable")}</p>}
-      {credentials.isLoading && <LoadingList count={2} avatar={false} trailing />}
       {hold && <SettingNote icon="alert">{t("connectAi.key.closed")}</SettingNote>}
-      {noKeys && !hold && (
-        <EmptyState
-          size="panel"
-          agent={look}
-          title={t("settings.noKeysTitle")}
-          actions={
-            <Button variant="primary" icon="plus" onClick={() => setDialog({ type: "add" })}>
-              {t("settings.addKey")}
-            </Button>
-          }
-        >
-          {t("settings.noKeys")}
-        </EmptyState>
-      )}
       {live.length > 0 && (
         <List className="key-list">
           {live.map((c) => {
@@ -1014,7 +1044,7 @@ function KeysSection() {
           </Button>
         </DialogFooter>
       </Dialog>
-    </Card>
+    </section>
   );
 }
 
@@ -1218,13 +1248,9 @@ export function KeyDialog({
 }
 
 /**
- * Uso (ADR 0063): the plan accounts by computer and the API per agent for everyone (money only for
- * admins), then the API's spend by kind and the default budget (admins).
- */
-/**
- * IA e uso › Resumo: the workspace's AI accounts, then its provider keys (on plans alone, once it has one). What bills per use
- * (the API per agent, its spend by kind, the default budget) shows only once the workspace uses the API
- * (`workspaceUsesApi`): on plans alone there is no budget to show.
+ * IA e uso › Uso: how much each plan account is used, by whom and for what. What bills per use (the API per agent, its
+ * spend by kind, the default budget) shows only once the workspace uses the API (`workspaceUsesApi`): on plans alone
+ * there is no budget to show. The accounts themselves, their permissions and order are "Contas de IA".
  */
 function UsageSection() {
   const { t, i18n } = useTranslation();
@@ -1242,7 +1268,6 @@ function UsageSection() {
           <span className="small">{composioUsageText(t, i18n.language, composio.data)}</span>
         </Card>
       )}
-      <KeysSection />
       {usesApi && <ApiCard />}
       {allowed && (
         <Card aria-labelledby="sec-usage">
@@ -1273,7 +1298,6 @@ function UsageSection() {
         </Card>
       )}
       {allowed && <DefaultBudgetCard />}
-      <WhoPicksSection />
     </>
   );
 }

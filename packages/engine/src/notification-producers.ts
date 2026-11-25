@@ -2,11 +2,15 @@ import { and, asc, eq, inArray, isNotNull, isNull, rowsOf, schema, sql } from "@
 import { appLocale } from "@agenteschat/i18n/locale";
 import type { PlanModel } from "@agenteschat/providers/plans";
 import { approvalCardThreads, approvalOriginOf, notifiedIds } from "./approvals";
+import { agentManagerIds, agentOwnerIds, OWNER_COLUMNS } from "./audience";
 import { accountablePerson, runAuthorityById } from "./authority";
 import { autonomyNoteFor, proposalCardOf } from "./brakes";
 import { readableChannelIds } from "./channels";
+import { codeSessionOfChannel } from "./code-sessions";
+import { confidentialThreadSql, isConfidential } from "./confidential";
 import { threadFollowChoices } from "./follows";
 import { type Assignee, assigneesOfIssue } from "./issue-assignees";
+import { fileOfConversation } from "./live/conversation";
 import { type TaskEnd, taskEndLine } from "./machine-task-text";
 import { isMediaAfterReply } from "./media";
 import { type PreviewMeta, previewMediaKind, previewMeta, readableBody } from "./message-preview";
@@ -25,9 +29,10 @@ import {
   unaskedGroup,
 } from "./notifications";
 import { maySql, type RolePermission } from "./permissions";
+import { replyThreadOf } from "./runs";
 import { secretLabelOf } from "./secrets";
 import { stretchCardOf } from "./stretch";
-import { adminChannelSql, taskReadersAmong } from "./task-access";
+import { adminChannelSql, fileConversationReaderSql, taskReadersAmong } from "./task-access";
 
 /**
  * Where notifications come from: each flow calls one of these after
@@ -75,10 +80,12 @@ function handlesIn(text: string): string[] {
 async function inChannel(deps: NotificationDeps, channelId: string, userIds: string[]) {
   const ids = [...new Set(userIds.filter(Boolean))];
   if (ids.length === 0) return [];
+  // A live file's conversation (ADR 0199) has no people in it: whoever reads the file is there.
   const rows = rowsOf<{ id: string }>(
     await deps.db.execute(sql`select u.id from ${schema.users} u join ${channels} on ${channels.id} = ${channelId}::uuid
       where u.id = any(${`{${ids.join(",")}}`}::text[]) and (exists (select 1 from ${channelMembers} m
-        where m.channel_id = ${channels.id} and m.user_id = u.id) or ${adminChannelSql(sql`${channels.orgId}`, sql`u.id`)})`),
+        where m.channel_id = ${channels.id} and m.user_id = u.id) or ${adminChannelSql(sql`${channels.orgId}`, sql`u.id`)}
+        or (${channels.kind} = 'file' and ${fileConversationReaderSql(sql`${channelId}::uuid`, sql`u.id`)}))`),
   );
   return rows.map((r) => r.id);
 }
@@ -113,9 +120,16 @@ async function isOrgMember(deps: Pick<NotificationDeps, "db">, orgId: string, us
   return Boolean(row);
 }
 
-async function agentOwner(deps: Pick<NotificationDeps, "db">, agentId: string) {
-  const [a] = await deps.db.select({ owner: agents.ownerUserId }).from(agents).where(eq(agents.id, agentId));
-  return a?.owner ?? null;
+/**
+ * Who answers for the agent now (`agentOwnerIds`): its owner, or everyone holding its owner role (ADR 0085, addendum
+ * of 2026-11-21). Empty with neither.
+ */
+async function agentOwners(deps: Pick<NotificationDeps, "db">, agentId: string): Promise<string[]> {
+  const [a] = await deps.db
+    .select({ orgId: agents.orgId, ...OWNER_COLUMNS })
+    .from(agents)
+    .where(eq(agents.id, agentId));
+  return a ? agentOwnerIds(deps.db, a.orgId, a) : [];
 }
 
 // ── Chat: mentions, thread replies, DMs ───────────────────────────────────────
@@ -126,6 +140,15 @@ async function agentOwner(deps: Pick<NotificationDeps, "db">, agentId: string) {
  */
 export const agentReplyGroup = (channelId: string, threadId: string | null) =>
   `agent_reply:${channelId}:${threadId ?? "top"}`;
+
+/**
+ * Never news for a person: a notice only for its agent or never news (a follow-up's lines, whose reply notifies
+ * instead; a stopped task's receipt; a mention its message's own line explains), a long work's progress line
+ * (ADR 0121), unread only for who follows its thread, or the line an agent says before slow work (`say_now`,
+ * ADR 0207), whose reply notifies. Outside chat surfaces skip the same messages (ADR 0187).
+ */
+export const quietForPeople = (meta: Record<string, unknown>) =>
+  isQuietNotice(meta) || Boolean(meta.workUpdate) || Boolean(meta.sayNow);
 
 /**
  * Job `notifications.message` (enqueued in the message's own statement):
@@ -146,11 +169,7 @@ export async function notifyMessage(deps: NotificationDeps, orgId: string, messa
   if (meta.questionId || meta.approvalId || meta.secretRequestId) return;
   // An agent's sticker or GIF after its own reply (ADR 0091) is silent: the reply already told whoever it was for.
   if (isMediaAfterReply(meta)) return;
-  // Only for its agent, or never news (a follow-up's lines: the reply it brings notifies instead; a stopped task's
-  // receipt; a mention its message's own line explains).
-  if (isQuietNotice(meta)) return;
-  // A long work's progress line (ADR 0121) never pushes: it counts as unread only for who follows its thread.
-  if (meta.workUpdate) return;
+  if (quietForPeople(meta)) return;
   const [channel] = await db
     .select({ kind: channels.kind, name: channels.name, visibility: channels.visibility })
     .from(channels)
@@ -162,22 +181,31 @@ export async function notifyMessage(deps: NotificationDeps, orgId: string, messa
   const authorUser = message.authorUserId;
   // A reminder's own words, without the English prefix the chat replaces with its own label.
   const said = typeof meta.reminderText === "string" ? meta.reminderText : await quotedBody(deps, orgId, message);
-  const text = notificationSnippet(readableBody(said, meta));
+  // A message of a confidential thread (ADR 0190) is told with no word of it: the inbox, the push and a mail that
+  // quote this say only that there is something to open.
+  const text = isConfidential(meta) ? "" : notificationSnippet(readableBody(said, meta));
   // Only a GIF or a sticker (ADR 0091): the apps and the push say which, in the person's language.
   const media = previewMediaKind(message.body, meta);
   // A body the server wrote: the apps say it in the reader's language, as the conversation lists do.
-  const written = previewMeta(meta);
+  const written = isConfidential(meta) ? null : previewMeta(meta);
   // What the right hand posts by itself with a ring (`postFromLodi`) names its person on the message. Nobody asked,
   // so it is no reply: it rings as a message it sent them. Its stored text is already in their language, so the
   // inbox and the push quote it as it is.
   const unasked = message.authorType === "agent" && !message.agentRunId && typeof meta.forUserId === "string";
   const latest = { text, ...(media ? { media } : {}), ...(written && !unasked ? { meta: written } : {}) };
-  const label = channel.kind === "channel" ? channel.name : undefined;
+  // A live file's conversation (ADR 0199): named by its file, and the apps open the file with it at this message.
+  const file = channel.kind === "file" ? await fileOfConversation(db, orgId, message.channelId) : null;
+  if (channel.kind === "file" && !file) return;
+  // A code session's conversation (ADR 0215): named by the session, and the apps open it on the Code page.
+  const codeSession = channel.kind === "code" ? await codeSessionOfChannel(db, orgId, message.channelId) : null;
+  const label = channel.kind === "channel" ? channel.name : (file?.title ?? codeSession?.title);
   const where: NotificationSource = {
     channelId: message.channelId,
     ...(message.threadId ? { threadId: message.threadId } : {}),
     messageId: message.id,
     ...(channel.kind === "dm" ? { dmId: message.channelId } : {}),
+    ...(file ? { artifactId: file.id } : {}),
+    ...(codeSession ? { codeSessionId: codeSession.id } : {}),
   };
   const done = new Set<string>(authorUser ? [authorUser] : []);
 
@@ -193,26 +221,31 @@ export async function notifyMessage(deps: NotificationDeps, orgId: string, messa
   // hear it in any public channel of the workspace, joined or not, since they answer for their agent's work there.
   const card = message.authorType === "agent" ? stretchCardOf(meta) : null;
   const stoppedAt = card?.agentIds.at(-1);
-  const owner = !behind && !card?.forUserId && stoppedAt ? await agentOwner(deps, stoppedAt) : null;
-  // The autonomy brakes' proposal card, digest and loop stop (ADR 0131) are for the person they name.
-  const asker = unasked
-    ? null
-    : (behind ?? card?.forUserId ?? proposalCardOf(meta)?.forUserId ?? autonomyNoteFor(meta) ?? owner);
-  const ownerSees =
-    asker !== null &&
-    asker === owner &&
-    channel.kind === "channel" &&
-    channel.visibility === "public" &&
-    (await isOrgMember(deps, orgId, asker));
-  if (
-    asker &&
-    !message.mentionedUserIds.includes(asker) &&
-    // A work the person stopped themselves tells them nothing new.
-    (meta.workEnd as { byUserId?: unknown } | undefined)?.byUserId !== asker &&
-    (ownerSees || (await inChannel(deps, message.channelId, [asker])).length > 0)
-  ) {
-    // A long work's report (ADR 0121) is news of its own, never merged into the conversation's open reply.
-    const workEnd = (meta.workEnd as { id?: unknown } | undefined)?.id;
+  // Its owner, or everyone holding its owner role (ADR 0085, addendum of 2026-11-21).
+  const owners = !behind && !card?.forUserId && stoppedAt ? await agentOwners(deps, stoppedAt) : [];
+  // The autonomy brakes' proposal card, digest and loop stop (ADR 0131) are for the person they name. One that names
+  // nobody because a role answers for its agent is for whoever holds that role now.
+  const named = behind ?? card?.forUserId ?? proposalCardOf(meta)?.forUserId ?? autonomyNoteFor(meta);
+  const braked =
+    !named && owners.length === 0 && message.authorAgentId && (proposalCardOf(meta) || meta.autonomyNote)
+      ? await agentOwners(deps, message.authorAgentId)
+      : [];
+  const askers = unasked ? [] : named ? [named] : owners.length > 0 ? owners : braked;
+  // A long work's report (ADR 0121) is news of its own, never merged into the conversation's open reply.
+  const workEnd = (meta.workEnd as { id?: unknown } | undefined)?.id;
+  for (const asker of askers) {
+    const ownerSees =
+      owners.includes(asker) &&
+      channel.kind === "channel" &&
+      channel.visibility === "public" &&
+      (await isOrgMember(deps, orgId, asker));
+    if (
+      message.mentionedUserIds.includes(asker) ||
+      // A work the person stopped themselves tells them nothing new.
+      (meta.workEnd as { byUserId?: unknown } | undefined)?.byUserId === asker ||
+      !(ownerSees || (await inChannel(deps, message.channelId, [asker])).length > 0)
+    )
+      continue;
     await notify(deps, {
       orgId,
       userIds: [asker],
@@ -254,7 +287,7 @@ export async function notifyMessage(deps: NotificationDeps, orgId: string, messa
     message.mentionedUserIds.filter((u) => !done.has(u)),
   );
   let threadLabel: string | undefined;
-  if (message.threadId) threadLabel = await threadTitle(deps, orgId, message.threadId);
+  if (message.threadId && !file) threadLabel = await threadTitle(deps, orgId, message.threadId);
   if (mentioned.length > 0) {
     await notify(deps, {
       orgId,
@@ -335,7 +368,9 @@ async function threadTitle(deps: NotificationDeps, orgId: string, rootId: string
     .select({ body: messages.body, meta: messages.meta })
     .from(messages)
     .where(and(eq(messages.orgId, orgId), eq(messages.id, rootId)));
-  return root ? notificationSnippet(readableBody(root.body, root.meta), 80) || undefined : undefined;
+  return root && !isConfidential(root.meta)
+    ? notificationSnippet(readableBody(root.body, root.meta), 80) || undefined
+    : undefined;
 }
 
 const REACTION_EMOJI: Record<string, string> = { "+1": "👍", "-1": "👎" };
@@ -384,7 +419,10 @@ export async function notifyReaction(
       ...(channel?.kind === "dm" ? { dmId: message.channelId } : {}),
       ...(channel?.kind === "channel" ? { label: channel.name } : {}),
     },
-    latest: { emojis, quote: notificationSnippet(readableBody(message.body, message.meta), 140) },
+    latest: {
+      emojis,
+      quote: isConfidential(message.meta) ? "" : notificationSnippet(readableBody(message.body, message.meta), 140),
+    },
   });
 }
 
@@ -392,16 +430,16 @@ export async function notifyReaction(
 
 /** An agent asked (`ask_user`) and waits: the person it is for, else the person behind the run, else the agent's owner. */
 export async function notifyQuestion(deps: NotificationDeps, q: QuestionRow) {
-  const to =
-    q.requestedForUserId ?? (await requesterOfRun(deps, q.orgId, q.runId)) ?? (await agentOwner(deps, q.agentId));
-  if (!to) return;
+  const asked = q.requestedForUserId ?? (await requesterOfRun(deps, q.orgId, q.runId));
+  const to = asked ? [asked] : await agentOwners(deps, q.agentId);
+  if (to.length === 0) return;
   const [channel] = await deps.db
     .select({ kind: channels.kind, name: channels.name })
     .from(channels)
     .where(eq(channels.id, q.channelId));
   await notify(deps, {
     orgId: q.orgId,
-    userIds: [to],
+    userIds: to,
     kind: "agent_question",
     groupKey: `agent_question:${q.id}`,
     waiting: true,
@@ -414,8 +452,30 @@ export async function notifyQuestion(deps: NotificationDeps, q: QuestionRow) {
       ...(channel?.kind === "channel" ? { label: channel.name } : {}),
       questionId: q.id,
     },
-    latest: { text: notificationSnippet(q.text), suggestions: q.choices ?? undefined },
+    // Asked in a confidential thread (ADR 0190): what the agent typed stays on its card there.
+    latest: (await sealedPlace(deps, q.orgId, q.threadId ?? q.messageId, q.runId))
+      ? { text: "" }
+      : { text: notificationSnippet(q.text), suggestions: q.choices ?? undefined },
   });
+}
+
+/**
+ * Whether a card was asked from a confidential thread: its place (its thread's root, or itself in the main timeline)
+ * is one, or the run that asked answers in one, wherever its card was posted.
+ */
+async function sealedPlace(
+  deps: Pick<NotificationDeps, "db">,
+  orgId: string,
+  rootId: string | null,
+  runId: string | null,
+) {
+  const org = sql`${orgId}::uuid`;
+  const [row] = rowsOf<{ sealed: boolean }>(
+    await deps.db.execute(sql`select (${confidentialThreadSql(org, sql`${rootId}::uuid`)}
+      or exists (select 1 from ${schema.agentRuns} r where r.id = ${runId}::uuid and r.org_id = ${org}
+        and ${confidentialThreadSql(org, sql`r.thread_root_id`)})) as sealed`),
+  );
+  return row?.sealed === true;
 }
 
 /** Answered (by anyone) or expired: out of everyone's inbox. */
@@ -511,13 +571,14 @@ export async function notifyApproval(deps: NotificationDeps, approval: ApprovalR
       ...(approval.missionId ? { missionId: approval.missionId } : {}),
       ...(channel?.kind === "channel" ? { label: channel.name } : {}),
     },
-    latest: approvalLatest(approval),
+    latest: approvalLatest(approval, await sealedPlace(deps, approval.orgId, approval.threadRootId, approval.runId)),
   });
 }
 
-const approvalLatest = (approval: ApprovalRow) => ({
-  title: notificationSnippet(approval.title, 200),
-  text: notificationSnippet(approval.why, 200),
+/** `sealed`: asked in a confidential thread (ADR 0190), so neither its title nor its why leaves its card. */
+const approvalLatest = (approval: ApprovalRow, sealed: boolean) => ({
+  title: sealed ? "" : notificationSnippet(approval.title, 200),
+  text: sealed ? "" : notificationSnippet(approval.why, 200),
   origin: approvalOriginOf(approval.origin) ?? undefined,
   expiresAt: approval.expiresAt.toISOString(),
 });
@@ -546,9 +607,11 @@ export async function resolveApprovalNotifications(
     .orderBy(asc(approvals.createdAt));
   if (waiting.length === 0) return resolveNotifications(deps, approval.orgId, { groupKey });
   const told = await Promise.all(waiting.map(async (a) => new Set(await notifiedIds(deps.db, a))));
+  // The requests of one card share its thread.
+  const sealed = await sealedPlace(deps, approval.orgId, waiting[0]?.threadRootId ?? null, waiting[0]?.runId ?? null);
   await retargetNotifications(deps, approval.orgId, groupKey, (userId) => {
     const next = waiting.find((_, i) => told[i]?.has(userId));
-    return next ? { source: { approvalId: next.id }, latest: approvalLatest(next) } : null;
+    return next ? { source: { approvalId: next.id }, latest: approvalLatest(next, sealed) } : null;
   });
 }
 
@@ -566,6 +629,25 @@ export async function rerouteApprovals(deps: NotificationDeps, orgId: string, us
         eq(approvals.status, "pending"),
         sql`(${approvals.ownerUserId} = ${userId} or ${approvals.approvers} -> 'userIds' @> to_jsonb(${userId}::text))`,
       ),
+    );
+  for (const row of rows) {
+    await resolveApprovalNotifications(deps, row);
+    await notifyNewcomers(deps, row);
+  }
+}
+
+/**
+ * Who holds these roles changed (`setMemberRoles`), or one of them is gone (`deleteRole`): the approvals waiting whose
+ * agent such a role answered for when it asked (`approvals.owner_role_id`, ADR 0085, addendum of 2026-11-21) reach
+ * whoever is asked now, and leave whoever isn't any more. A deleted role matches nobody, so its admins are asked.
+ */
+export async function rerouteRoleApprovals(deps: NotificationDeps, orgId: string, roleIds: readonly string[]) {
+  if (roleIds.length === 0) return;
+  const rows = await deps.db
+    .select()
+    .from(approvals)
+    .where(
+      and(eq(approvals.orgId, orgId), eq(approvals.status, "pending"), inArray(approvals.ownerRoleId, [...roleIds])),
     );
   for (const row of rows) {
     await resolveApprovalNotifications(deps, row);
@@ -747,8 +829,10 @@ async function notifyTaskMessage(deps: NotificationDeps, message: typeof message
   const author =
     message.authorType === "person" ? message.authorUserId : message.authorAgentId ? message.authorAgentId : null;
   if (!issue || !author) return;
-  const text = readableBody(message.body, message.meta);
-  if (!text.trim()) return;
+  // A message of a confidential thread (ADR 0190) is told with no word of it.
+  const sealed = isConfidential(message.meta);
+  const text = sealed ? "" : readableBody(message.body, message.meta);
+  if (!text.trim() && !sealed) return;
   await notifyIssueComment(deps, { type: message.authorType, id: author }, issue.id, message.id, text, {
     messageId: message.id,
   });
@@ -809,7 +893,7 @@ async function routineAudience(deps: Pick<NotificationDeps, "db">, orgId: string
     .from(routines)
     .where(and(eq(routines.id, routineId), eq(routines.orgId, orgId)));
   if (!r) return null;
-  return { ...r, owner: await agentOwner(deps, r.agentId) };
+  return { ...r, owners: await agentOwners(deps, r.agentId) };
 }
 
 /**
@@ -825,7 +909,7 @@ export async function notifyRoutineFailed(
   if (!r) return;
   await notify(deps, {
     orgId: input.orgId,
-    userIds: [r.creator ?? r.owner],
+    userIds: r.creator ? [r.creator] : r.owners,
     kind: "routine_failed",
     groupKey: `routine_failed:${input.routineId}:${input.streakKey}`,
     actor: agent(r.agentId),
@@ -836,9 +920,9 @@ export async function notifyRoutineFailed(
 
 /**
  * A routine couldn't call an agent its creator can't talk to (`reach.ts`, and its own tell_agent or
- * ask_agent, `consultations.ts`): the agent's owner hears it once per routine and agent, or who manages agents when
- * it has none. It opens the agent's page (who talks to it), the place they may not otherwise reach being private;
- * `source.userId` is the routine's creator, whom its one-click action lets talk to the agent.
+ * ask_agent, `consultations.ts`): the agent's owner hears it once per routine and agent, or who manages it
+ * (`agentManagerIds`) when it has none. It opens the agent's page (who talks to it), the place they may not otherwise
+ * reach being private; `source.userId` is the routine's creator, whom its one-click action lets talk to the agent.
  */
 export async function notifyAgentUnreached(
   deps: NotificationDeps,
@@ -853,10 +937,10 @@ export async function notifyAgentUnreached(
     messageId?: string;
   },
 ) {
-  const owner = await agentOwner(deps, input.agentId);
+  const owners = await agentOwners(deps, input.agentId);
   await notify(deps, {
     orgId: input.orgId,
-    userIds: owner ? [owner] : await adminsOf(deps, input.orgId, "manage_agents"),
+    userIds: owners.length > 0 ? owners : await agentManagerIds(deps.db, input.orgId, input.agentId),
     kind: "agent_unreached",
     groupKey: `agent_unreached:${input.routineId}:${input.agentId}`,
     actor: agent(input.agentId),
@@ -898,7 +982,7 @@ export async function notifyRoutinePaused(
   if (r?.type === "widget") return;
   await notify(deps, {
     orgId: input.orgId,
-    userIds: [input.creatorUserId, await agentOwner(deps, input.agentId)],
+    userIds: [input.creatorUserId, ...(await agentOwners(deps, input.agentId))],
     kind: "routine_paused",
     groupKey: `routine_paused:${input.routineId}:${input.key}`,
     actor: agent(input.agentId),
@@ -920,7 +1004,7 @@ export async function notifyRoutineStalled(
   if (!r || r.draft) return;
   await notify(deps, {
     orgId: input.orgId,
-    userIds: [r.creator, r.owner],
+    userIds: [r.creator, ...r.owners],
     kind: "routine_stalled",
     groupKey: `routine_stalled:${input.routineId}:${input.machineId}:${input.outageKey}`,
     actor: agent(r.agentId),
@@ -941,7 +1025,7 @@ export async function notifyRoutineWaitingPlan(
   if (!r || r.draft) return;
   await notify(deps, {
     orgId: input.orgId,
-    userIds: [r.creator, r.owner],
+    userIds: [r.creator, ...r.owners],
     kind: "routine_waiting_plan",
     groupKey: `routine_waiting_plan:${input.routineId}:${input.outageKey}`,
     actor: agent(r.agentId),
@@ -969,7 +1053,7 @@ export async function notifyPlanResetUnknown(
 ) {
   await notify(deps, {
     orgId: input.orgId,
-    userIds: [await agentOwner(deps, input.agentId)],
+    userIds: await agentOwners(deps, input.agentId),
     kind: "plan_reset_unknown",
     groupKey: `plan_reset_unknown:${input.waitKey}`,
     actor: agent(input.agentId),
@@ -995,7 +1079,7 @@ export async function notifyPlanModelDropped(
 ) {
   await notify(deps, {
     orgId: input.orgId,
-    userIds: [await agentOwner(deps, input.agentId)],
+    userIds: await agentOwners(deps, input.agentId),
     kind: "plan_model_dropped",
     groupKey: planModelDroppedGroup(input.agentId, input.model.id),
     actor: agent(input.agentId),
@@ -1022,12 +1106,16 @@ export async function notifyCatchUpClosed(
     askers?: string[];
   },
 ) {
-  const owner = await agentOwner(deps, input.agentId);
-  if (!owner || input.askers?.includes(owner)) return;
-  if (!(await readableChannelIds(deps.db, input.orgId, owner, [input.channelId])).has(input.channelId)) return;
+  const owners: string[] = [];
+  for (const owner of await agentOwners(deps, input.agentId)) {
+    if (input.askers?.includes(owner)) continue;
+    if ((await readableChannelIds(deps.db, input.orgId, owner, [input.channelId])).has(input.channelId))
+      owners.push(owner);
+  }
+  if (owners.length === 0) return;
   await notify(deps, {
     orgId: input.orgId,
-    userIds: [owner],
+    userIds: owners,
     kind: "catch_up_closed",
     groupKey: `catch_up_closed:${input.agentId}:${input.waitKey}`,
     actor: agent(input.agentId),
@@ -1125,38 +1213,47 @@ const runFailedGroup = (run: { agentId: string; channelId: string; threadRootId:
  */
 export async function notifyRunFailed(
   deps: NotificationDeps,
-  run: { orgId: string; agentId: string; channelId: string; threadRootId: string; triggerMessageId: string },
+  run: {
+    orgId: string;
+    agentId: string;
+    channelId: string;
+    threadRootId: string;
+    triggerMessageId: string;
+    replyInThread: boolean;
+  },
   userId: string | null,
   reason: string,
   cause?: { code?: string; plan?: string },
 ) {
-  const to = userId ?? (await agentOwner(deps, run.agentId));
-  if (!to) return;
+  const told = userId ? [userId] : await agentOwners(deps, run.agentId);
+  if (told.length === 0) return;
   const [channel] = await deps.db.select({ name: channels.name }).from(channels).where(eq(channels.id, run.channelId));
   const groupKey = runFailedGroup(run);
   const source = {
     channelId: run.channelId,
-    ...(run.threadRootId !== run.triggerMessageId ? { threadId: run.threadRootId } : {}),
+    ...(replyThreadOf(run) ? { threadId: run.threadRootId } : {}),
     messageId: run.triggerMessageId,
     agentId: run.agentId,
     ...(channel?.name ? { label: channel.name } : {}),
   };
   const said = { reason: cause?.code ?? reason.split(":")[0] ?? reason, ...(cause?.plan ? { plan: cause.plan } : {}) };
   // One at a time per person, so a burst of failures finds the row the first one made.
-  await deps.db.transaction(async (tx) => {
-    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`run-failed:${run.orgId}:${to}`}))`);
-    const d = { ...deps, db: tx };
-    if (await joinRunFailure(d, run.orgId, to, { key: groupKey, ...source }, said)) return;
-    await notify(d, {
-      orgId: run.orgId,
-      userIds: [to],
-      kind: "run_failed",
-      groupKey,
-      actor: agent(run.agentId),
-      source,
-      latest: { ...said, failures: [{ key: groupKey, ...source }] },
+  for (const to of told) {
+    await deps.db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`run-failed:${run.orgId}:${to}`}))`);
+      const d = { ...deps, db: tx };
+      if (await joinRunFailure(d, run.orgId, to, { key: groupKey, ...source }, said)) return;
+      await notify(d, {
+        orgId: run.orgId,
+        userIds: [to],
+        kind: "run_failed",
+        groupKey,
+        actor: agent(run.agentId),
+        source,
+        latest: { ...said, failures: [{ key: groupKey, ...source }] },
+      });
     });
-  });
+  }
 }
 
 /** The agent's run in that conversation ended well: its failure there is done (it leaves a shared row). */
@@ -1442,11 +1539,12 @@ export async function notifyComputerNoChrome(
  */
 export async function notifyDesktopTaken(
   deps: NotificationDeps,
-  input: { orgId: string; agentId: string; agentName: string; ownerUserId: string; actorId: string; at: Date },
+  /** `ownerIds`: who answers for the agent (`agentOwnerIds`), its owner role's holders too. */
+  input: { orgId: string; agentId: string; agentName: string; ownerIds: string[]; actorId: string; at: Date },
 ) {
   await notify(deps, {
     orgId: input.orgId,
-    userIds: [input.ownerUserId],
+    userIds: input.ownerIds,
     kind: "desktop_taken",
     groupKey: `desktop_taken:${input.agentId}:${input.at.toISOString().slice(0, 10)}`,
     actor: { type: "user", id: input.actorId },
@@ -1599,9 +1697,10 @@ export async function notifyOrgStanding(
 const agentHoldGroup = (agentId: string) => `org_standing:agent:${agentId}:`;
 
 /**
- * An agent was held on agentes.chat Cloud (ADR 0056 §9): its responsible person and the workspace's owners and admins
- * hear it, with the hold's kind (`latest.holdKind`), never its reason. One row each time they are told (`at`): when
- * it is held, and when it is held again for another kind.
+ * An agent was held on agentes.chat Cloud (ADR 0056 §9): its responsible person and who manages it (the workspace's
+ * owners and administrators, and who else reaches it with "Editar qualquer agente": `agentManagerIds`, ADR 0085
+ * addendum of 2026-11-17) hear it, with the hold's kind (`latest.holdKind`), never its reason. One row each time they
+ * are told (`at`): when it is held, and when it is held again for another kind.
  */
 export async function notifyAgentHold(
   deps: NotificationDeps,
@@ -1609,7 +1708,10 @@ export async function notifyAgentHold(
 ) {
   await notify(deps, {
     orgId: hold.orgId,
-    userIds: [await agentOwner(deps, hold.agentId), ...(await adminsOf(deps, hold.orgId, "manage_agents"))],
+    userIds: [
+      ...(await agentOwners(deps, hold.agentId)),
+      ...(await agentManagerIds(deps.db, hold.orgId, hold.agentId)),
+    ],
     kind: "org_standing",
     groupKey: `${agentHoldGroup(hold.agentId)}${hold.at.getTime()}:${hold.kind}`,
     source: { agentId: hold.agentId, label: hold.name },
@@ -1633,7 +1735,7 @@ export async function browserHandoffRecipient(
   runId: string | null,
   agentId: string,
 ) {
-  const asked = [await requesterOfRun(deps, orgId, runId), await agentOwner(deps, agentId)];
+  const asked = [await requesterOfRun(deps, orgId, runId), ...(await agentOwners(deps, agentId))];
   const may = await mayOf(deps, orgId, asked, "own_browsers");
   return asked.find((id) => id && may.includes(id)) ?? null;
 }
@@ -1677,7 +1779,8 @@ export async function notifyBrowserHandoff(
   // give them the agents' browsers.
   const userIds = [
     ...new Set(
-      to ?? (await mayOf(deps, h.orgId, [h.requestedForUserId, await agentOwner(deps, h.agentId)], "own_browsers")),
+      to ??
+        (await mayOf(deps, h.orgId, [h.requestedForUserId, ...(await agentOwners(deps, h.agentId))], "own_browsers")),
     ),
   ];
   if (userIds.length === 0) return;

@@ -4,6 +4,8 @@ import {
   deferrableGroups,
   directoryRole,
   isCore,
+  LIVE_FILE_TOOLS,
+  LIVE_FILES_GROUP,
   ON_DEMAND_FIND,
   ON_DEMAND_USE,
   turnMeans,
@@ -29,9 +31,12 @@ const GROUPS: Record<string, string> = {
   github: "GitHub",
   sentry: "Sentry",
   linear: "Linear",
+  // Live files' tools (ADR 0196 §6): under the Drive's scopes, named apart (`LIVE_FILE_TOOLS`).
+  [LIVE_FILES_GROUP]: "Spreadsheets, presentations and canvases",
 };
 
-const groupOf = (tool: Pick<ToolDefinition, "scope">) => {
+const groupOf = (tool: Pick<ToolDefinition, "scope"> & { name?: string; connectionId?: string | null }) => {
+  if (tool.name && LIVE_FILE_TOOLS.has(tool.name) && !tool.connectionId) return GROUPS[LIVE_FILES_GROUP] as string;
   const prefix = tool.scope.split(":")[0] ?? "";
   if (prefix in GROUPS) return GROUPS[prefix] as string;
   if (prefix.startsWith("custom")) return "Organization tools";
@@ -221,6 +226,11 @@ export function describeCapabilities(
     if (loaded.has("share_artifact")) {
       lines.push(
         "- A request for a file you already made (here, in a DM or in another channel): find it with `list_artifacts` and bring it with `share_artifact` instead of creating it again.",
+      );
+    }
+    if (loaded.has("show_image")) {
+      lines.push(
+        "- A picture you are talking about whose address you have (a photo, a product, a cover): `show_image` puts it on your reply for people to see. Never leave it as a bare link, and never write Markdown image syntax: it isn't drawn.",
       );
     }
     const undoable = tools.filter((t) => UNDOABLE_TOOLS.has(t.name) && !isSensitive(t)).map((t) => `\`${t.name}\``);

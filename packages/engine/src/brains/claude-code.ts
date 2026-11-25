@@ -5,6 +5,7 @@ import {
   ASKS_PROTOCOL,
   BRAIN_PROFILES_PROTOCOL,
   BRAIN_PROTOCOL,
+  BRAIN_WARM_PROTOCOL,
   type BrainTurnRequest,
   brainTopic,
   CLI_GIT_MISSING,
@@ -57,8 +58,8 @@ import {
  * - Before sending anything the machine is checked: offline, commands off,
  *   an older runner, no Claude Code, or not logged in (the agent's account,
  *   ADR 0041, when it has one) end the turn at once
- *   with an `error` whose `retryable: true` tells the engine it may fall back
- *   to the model brain (ADR 0032 §5).
+ *   with an `error` whose `retryable: true` tells the engine the run may wait
+ *   for the computer (ADR 0032 §5).
  *
  * - Live steering (runner protocol 15): once the turn is sent, the brain
  *   hands the engine `steer` (`BrainIO.steerable`): a person's messages go to
@@ -103,6 +104,9 @@ export interface ClaudeCodeBrainDeps {
   /** How long a `brain.steer` may take (default `STEER_CALL_MS`). */
   steerTimeoutMs?: number;
 }
+
+/** A `brain.warm` answers once the CLI started, or a cold worker came up first; past this nobody waits on it. */
+export const WARM_CALL_MS = 30_000;
 
 /** A `brain.steer` answers at once (it only writes to the CLI's stdin): longer means the computer is in trouble. */
 export const STEER_CALL_MS = 2000;
@@ -169,7 +173,7 @@ const err = (code: string, message: string, retryable: boolean): BrainEvent => (
 /**
  * Why the agent's account can't take the turn (ADR 0041; null: it can): a
  * runner older than accounts, or an account its CLI signed out. It never
- * falls back to another account (the model fallback still may answer).
+ * falls back to another account.
  */
 export function accountUnavailable(
   status: { name?: string; protocol?: number; kind?: string; executors?: { mode?: string } } | null,
@@ -381,6 +385,43 @@ class Queue {
 export function createClaudeCodeBrain(deps: ClaudeCodeBrainDeps): Brain {
   return {
     kind: "claude_code",
+    // The launch the turn below sends (its folder before `prepare` moves it to a checkout), without its words.
+    async warm(turn: BrainTurn) {
+      const session = turn.session;
+      if (!session || deps.keepAlive === false) return;
+      const status = await deps.hub.status(session.machineId).catch(() => null);
+      if (!status || status.protocol < BRAIN_WARM_PROTOCOL || claudeCodeAvailability(status, turn.account)) return;
+      try {
+        const [agent, personalMcp, asked] = await Promise.all([
+          deps.agentScope(turn),
+          Promise.resolve(deps.personalMcp?.(turn) ?? false),
+          deps.permissions?.(turn),
+        ]);
+        const permissions = askingPermissions(asked, true);
+        if (permissions?.mode === "chat") return;
+        await deps.hub.call<"brain.warm">(
+          session.machineId,
+          {
+            op: "brain.warm",
+            kind: "claude_code",
+            session: { id: session.id, resume: session.resume },
+            cwd: session.cwd,
+            ...(turn.model ? { model: turn.model } : {}),
+            personalMcp,
+            // A code session's turn starts with its own tools (ADR 0215 §6): the warm process the same, or it isn't
+            // the one the turn takes.
+            ...(session.codeSession ? { codeSession: true } : {}),
+            ...(permissions ? { permissions } : {}),
+            ...accountFields(status.protocol, turn),
+            ...contextFields(status.protocol, turn, "claude_code"),
+            agent,
+          },
+          { timeoutMs: WARM_CALL_MS },
+        );
+      } catch {
+        // the turn starts its CLI itself
+      }
+    },
     async *run(turn: BrainTurn, io: BrainIO): AsyncIterable<BrainEvent> {
       const session = turn.session;
       if (!session) {
@@ -446,10 +487,13 @@ export function createClaudeCodeBrain(deps: ClaudeCodeBrainDeps): Brain {
           mcp: { token: deps.mcpToken?.(turn) ?? randomBytes(24).toString("base64url") },
           keepAlive: deps.keepAlive !== false,
           personalMcp: personalMcp && !chat,
+          ...(session.codeSession && !chat ? { codeSession: true } : {}),
           ...(permissions ? { permissions } : {}),
           ...accountFields(status?.protocol, turn),
           ...contextFields(status?.protocol, turn, "claude_code"),
           ...(turn.personWaiting ? { personWaiting: true } : {}),
+          // Each answer the turn finishes before it goes on is its own message (ADR 0112).
+          answers: "each",
         };
         deps.hub
           .call<"brain.turn">(

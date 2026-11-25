@@ -6,7 +6,6 @@ import { errorText } from "@agenteschat/client/lib/errors";
 import { formatLineTime } from "@agenteschat/client/lib/format";
 import {
   type AgentTasks,
-  activityLine,
   agentCardLine,
   agentSummary,
   causeWords,
@@ -19,6 +18,7 @@ import {
   groupTasks,
   helpersOf,
   hiddenCount,
+  opensInChat,
   returnCanceledText,
   returnPlace,
   shownCauses,
@@ -34,11 +34,11 @@ import {
 } from "@agenteschat/client/lib/task-manager";
 import { formatDuration } from "@agenteschat/client/lib/work";
 import {
-  type AgentColor,
   Button,
   Carousel,
   Chip,
   CountChip,
+  cx,
   EmptyState,
   GroupHeading,
   Icon,
@@ -53,24 +53,21 @@ import {
   Tip,
 } from "@agenteschat/ui";
 import { useNavigate } from "@tanstack/react-router";
-import { type CSSProperties, Fragment, type ReactNode, useEffect, useMemo, useState } from "react";
+import { type CSSProperties, Fragment, type ReactNode, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
-import { Sparkline } from "@/components/ChartBlock";
 import { QueueDialog } from "@/components/ComputerQueue";
 import { ErrorState, LoadingList } from "@/components/Loading";
 import { OpensAgent } from "@/components/OpensAgent";
 import { useOrg } from "@/components/org-context";
 import { WaitMark } from "@/components/RequestCard";
-import { colorOf } from "@/components/Sky";
 import {
   heatOf,
   ProgramStack,
   RowName,
   rowTip,
   StopAllConfirm,
-  StopTaskButton,
   TaskMark,
   TaskStateChip,
   TaskWaitLines,
@@ -90,30 +87,16 @@ import { useToast } from "@/lib/toast";
 import "./task-manager.css";
 
 /*
- * The task manager (ADR 0128), one page: the agents as cards with their last half hour (one chosen shows only its
- * tasks), the tasks now (asked by people, grouped by agent and folded until opened, then the routines' background
- * runs, then the returns agents set, ADR 0037) with their state, what each uses, its time and Parar, and what ended
+ * The task manager (ADR 0128), one page: what holds the work (only while something waits), the agents as filter
+ * chips (one chosen shows only its tasks), the tasks now (asked by people, grouped by agent and folded until opened, then the routines' background
+ * runs, then the returns agents set, ADR 0037) with their state, what each uses, its time and ⋯, and what ended
  * today at the end. Every row is one line
  * that ends in "…" when it doesn't fit, its words whole in its tip. No cost anywhere: here people stop work. A row or
  * an agent's card chosen gives the toolbar "Ver passos" and "Parar tarefa" / "Parar tudo de Dev".
  */
 
-/** Points on a card's line: the last half hour, one per minute. */
-const LINE_POINTS = 30;
-
-/** A row's stop that asks first: the square alone, its words on hover and for screen readers (`what`: whose). */
-const stopSquare = (words: string, what?: string) => (
-  <Button
-    size="sm"
-    variant="ghost"
-    iconOnly
-    className="tm-stop"
-    aria-label={what ? `${words}: ${what}` : words}
-    title={words}
-  >
-    <PixelStop size={12} />
-  </Button>
-);
+/** The stop in a row's ⋯: its words, and, for one that asks first, its card under the ⋯ (`StopAllConfirm`). */
+type RowStop = { label: string; onSelect: () => void; confirm?: (trigger: ReactNode) => ReactNode };
 
 /**
  * `agent`: that agent's card chosen as the page opens (`?agent=`, from its tasks' panel in a DM); `task`: that task's
@@ -133,7 +116,7 @@ export function TaskManagerPage({
   const { org, me } = useOrg();
   const dir = useDirectory(org.id);
   const look = useRightHandLook();
-  const view = useTaskManager(org.id, { since: todayStart(), doneToday: true });
+  const view = useTaskManager(org.id, { since: todayStart() });
   const now = useNow(1_000);
   const programText = useProgramText();
   const { stop, stopping, said } = useTaskStop();
@@ -167,7 +150,8 @@ export function TaskManagerPage({
   // The computers with turns running or waiting for room (ADR 0128).
   const computers = view.data?.computers ?? [];
   const causes = shownCauses(all);
-  const listed = computersBesides(computers, causes);
+  // A computer with a line holds work too (each turn waits its place): a row of the same block, with Ver fila.
+  const lined = computersBesides(computers, causes).filter((c) => c.inLine > 0);
   const nameOf = (id: string) => dir.anyAgent(id)?.name ?? t("channel.unknownAgent");
   const query = q.trim().toLocaleLowerCase();
   const matches = (task: ManagedTask) => {
@@ -185,12 +169,6 @@ export function TaskManagerPage({
   const hidden = view.data?.hidden;
 
   // The cards: who has tasks, in the table's order, then who worked in the last hour; the chosen one stays.
-  const lines = useMemo(() => {
-    const out = new Map<string | null, number[]>([[null, activityLine(activity ?? {}, null, LINE_POINTS)]]);
-    for (const id of Object.keys(activity ?? {})) out.set(id, activityLine(activity ?? {}, id, LINE_POINTS));
-    return out;
-  }, [activity]);
-  const quiet = useMemo(() => Array.from({ length: LINE_POINTS }, () => 0), []);
   const cardIds: string[] = [];
   const addCard = (id: string) => {
     if (!cardIds.includes(id) && listsAgent(org, dir.anyAgent(id))) cardIds.push(id);
@@ -228,8 +206,9 @@ export function TaskManagerPage({
     });
   const stopOne = (task: ManagedTask) => stop([task.runId]);
   /** The stop of a task that asked other agents: it and they, after a confirmation. */
-  const stopChain = (task: ManagedTask, trigger: ReactNode) => (
+  const stopChain = (task: ManagedTask, trigger: ReactNode, anchor = false) => (
     <StopAllConfirm
+      anchor={anchor}
       agentId={task.agentId}
       runIds={[task.runId]}
       helpers={task.helpers}
@@ -251,14 +230,19 @@ export function TaskManagerPage({
       chain={delegationText(t, task, (id) => dir.anyAgent(id)?.name, me.user.id)}
       helping={task.delegation?.from ? taskHelping(t, task, (id) => dir.anyAgent(id)?.name) : null}
       stopAll={
-        task.helpers && !stopping.has(task.runId)
-          ? stopChain(task, stopSquare(t("taskManager.actions.stopAll"), taskTitle(t, task)))
+        task.helpers
+          ? {
+              label: t("taskManager.actions.stopAll"),
+              onSelect: () => setConfirm(`chain:${task.runId}`),
+              confirm: (trigger) => stopChain(task, trigger, true),
+            }
           : null
       }
       selected={selected === task.runId}
       stopping={stopping.has(task.runId)}
       onSelect={() => pick(task.runId)}
       onSteps={() => setPanel(task.runId)}
+      onOpen={() => openTask(task)}
       onStop={() => stopOne(task)}
     />
   );
@@ -380,7 +364,6 @@ export function TaskManagerPage({
     <div className="page page--list tm">
       <PageHeader
         title={t("taskManager.title")}
-        meta={t("taskManager.subtitle")}
         count={
           (working > 0 || summary.waiting > 0) && (
             <span className="tm-sum">
@@ -413,15 +396,7 @@ export function TaskManagerPage({
         }
       />
 
-      {view.data && (
-        <CapacityStrip
-          tasks={all}
-          done={view.data.doneToday ?? view.data.ended.filter((e) => e.status === "done").length}
-          causes={causes}
-          computers={computers}
-          onQueue={setQueueOf}
-        />
-      )}
+      {view.data && <CapacityStrip causes={causes} lined={lined} computers={computers} onQueue={setQueueOf} />}
 
       {view.isLoading && <LoadingList count={4} avatar={false} />}
       {view.isError && !view.data && <ErrorState error={view.error} onRetry={() => void view.refetch()} />}
@@ -438,9 +413,6 @@ export function TaskManagerPage({
             name={t("taskManager.all")}
             tasks={all}
             hidden={hiddenCount(hidden, null)}
-            line={lines.get(null) ?? quiet}
-            color="graphite"
-            lineLabel={t("taskManager.activityAll")}
             pressed={card === null}
             onPress={() => {
               setCard(null);
@@ -455,9 +427,6 @@ export function TaskManagerPage({
               name={nameOf(id)}
               tasks={tasksOf(all, id)}
               hidden={hiddenCount(hidden, id)}
-              line={lines.get(id) ?? quiet}
-              color={colorOf(dir.anyAgent(id))}
-              lineLabel={t("taskManager.activityOf", { name: nameOf(id) })}
               pressed={card === id}
               onPress={() => {
                 setCard((c) => (c === id ? null : id));
@@ -467,37 +436,6 @@ export function TaskManagerPage({
             />
           ))}
         </Carousel>
-      )}
-
-      {listed.length > 0 && (
-        <section className="tm-computers" aria-label={t("taskManager.queue.computers")}>
-          <GroupHeading title={t("taskManager.queue.computers")} count={listed.length} />
-          <ul className="tm-computers__list ac-card">
-            {listed.map((c) => (
-              <li key={c.id} className="tm-computer">
-                <span className="tm-computer__icon" aria-hidden="true">
-                  <Icon name="computer" size={18} />
-                </span>
-                <Tip
-                  className="tm-computer__text"
-                  tip={rowTip(c.name, [computerRoomText(t, c)])}
-                  look="ac-msg__tip tm-tip"
-                >
-                  <b>{c.name}</b>
-                  <small>{computerRoomText(t, c)}</small>
-                </Tip>
-                {/* The keys' focus and a long press open the words' tip from here: the words take no focus. */}
-                {(c.inLine > 0 || c.working > 0) && (
-                  <Tip button look="ac-msg__tip tm-tip" tip={rowTip(c.name, [computerRoomText(t, c)])}>
-                    <Button variant="link" aria-label={`${t("queue.see")}: ${c.name}`} onClick={() => setQueueOf(c.id)}>
-                      {t("queue.see")}
-                    </Button>
-                  </Tip>
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
       )}
 
       {view.data && all.length === 0 && !hidden?.total && (
@@ -564,17 +502,24 @@ export function TaskManagerPage({
                         open={isOpen(g.agentId)}
                         onToggle={() => toggle(g.agentId)}
                         stopAll={
-                          g.stoppable.length > 0 ? (
-                            <StopAllConfirm
-                              agentId={g.agentId}
-                              runIds={g.stoppable}
-                              helpers={g.helpers}
-                              open={confirm === `row:${g.agentId}`}
-                              onOpenChange={(open) => setConfirm(open ? `row:${g.agentId}` : null)}
-                              onStop={(runIds, reason) => stop(runIds, reason, g.helpers > 0)}
-                              trigger={stopSquare(t("taskManager.actions.stopAllOf", { name: nameOf(g.agentId) }))}
-                            />
-                          ) : null
+                          g.stoppable.length > 0
+                            ? {
+                                label: t("taskManager.actions.stopAllOf", { name: nameOf(g.agentId) }),
+                                onSelect: () => setConfirm(`row:${g.agentId}`),
+                                confirm: (trigger) => (
+                                  <StopAllConfirm
+                                    anchor
+                                    agentId={g.agentId}
+                                    runIds={g.stoppable}
+                                    helpers={g.helpers}
+                                    open={confirm === `row:${g.agentId}`}
+                                    onOpenChange={(open) => setConfirm(open ? `row:${g.agentId}` : null)}
+                                    onStop={(runIds, reason) => stop(runIds, reason, g.helpers > 0)}
+                                    trigger={trigger}
+                                  />
+                                ),
+                              }
+                            : null
                         }
                       />
                       {isOpen(g.agentId) && g.tasks.map((task) => row(task, "grouped"))}
@@ -597,16 +542,23 @@ export function TaskManagerPage({
                         open={isOpen(`by:${g.agentId}`)}
                         onToggle={() => toggle(`by:${g.agentId}`)}
                         stopAll={
-                          g.stoppable.length > 0 ? (
-                            <StopAllConfirm
-                              agentId={g.agentId}
-                              runIds={g.stoppable}
-                              open={confirm === `by:${g.agentId}`}
-                              onOpenChange={(open) => setConfirm(open ? `by:${g.agentId}` : null)}
-                              onStop={(runIds, reason) => stop(runIds, reason, true)}
-                              trigger={stopSquare(t("taskManager.actions.stopAllOf", { name: nameOf(g.agentId) }))}
-                            />
-                          ) : null
+                          g.stoppable.length > 0
+                            ? {
+                                label: t("taskManager.actions.stopAllOf", { name: nameOf(g.agentId) }),
+                                onSelect: () => setConfirm(`by:${g.agentId}`),
+                                confirm: (trigger) => (
+                                  <StopAllConfirm
+                                    anchor
+                                    agentId={g.agentId}
+                                    runIds={g.stoppable}
+                                    open={confirm === `by:${g.agentId}`}
+                                    onOpenChange={(open) => setConfirm(open ? `by:${g.agentId}` : null)}
+                                    onStop={(runIds, reason) => stop(runIds, reason, true)}
+                                    trigger={trigger}
+                                  />
+                                ),
+                              }
+                            : null
                         }
                       />
                       {isOpen(`by:${g.agentId}`) && g.tasks.map((task) => row(task, "flat"))}
@@ -646,7 +598,7 @@ export function TaskManagerPage({
       )}
 
       {/* Hung from the shell, like a thread's panel beside its channel: inside the page it would scroll away with the
-          list (the page's entrance animation keeps the page a containing block). */}
+          list (the page is a containing block, layout.css `.shell__main`). */}
       {panel &&
         createPortal(
           <TaskPanel
@@ -683,15 +635,14 @@ export function TaskManagerPage({
  * (`causeWords`) with its count and its one way out. Hidden when nothing waits.
  */
 function CapacityStrip({
-  tasks,
-  done,
   causes,
+  lined,
   computers,
   onQueue,
 }: {
-  tasks: ManagedTask[];
-  done: number;
   causes: WaitCause[];
+  /** Computers with a line that aren't a cause already. */
+  lined: ComputerSummary[];
   computers: ComputerSummary[];
   onQueue: (machineId: string) => void;
 }) {
@@ -699,8 +650,7 @@ function CapacityStrip({
   const { org } = useOrg();
   const navigate = useNavigate();
   const openTask = useOpenTask();
-  if (causes.length === 0) return null;
-  const waiting = tasks.filter((task) => taskState(task) === "waiting").length;
+  if (causes.length + lined.length === 0) return null;
   const row = (cause: WaitCause) => {
     const first = cause.tasks[0] as ManagedTask;
     const words = causeWords(t, i18n.language, cause, computers);
@@ -718,25 +668,29 @@ function CapacityStrip({
       return {
         ...words,
         lead: <Icon name="computer" size={18} />,
-        act: cause.busy ? t("queue.see") : t("taskManager.capacity.computers"),
-        onAct: cause.busy
-          ? () => onQueue(cause.machineId)
-          : () =>
-              void navigate({
-                to: "/org/$orgId/settings/$section",
-                params: { orgId: org.id, section: "computers" },
-              }),
+        act: t("taskManager.capacity.computers"),
+        onAct: () =>
+          void navigate({ to: "/org/$orgId/settings/$section", params: { orgId: org.id, section: "computers" } }),
       };
     return { ...words, lead: <WaitMark />, act: t("taskManager.actions.open"), onAct: () => openTask(first) };
   };
   return (
     <section className="tm-causes" aria-label={t("taskManager.capacity.label")}>
-      <p className="tm-causes__today">{t("taskManager.capacity.today", { count: done, waiting })}</p>
+      <GroupHeading title={t("taskManager.capacity.label")} count={causes.length + lined.length} />
       <ul className="tm-computers__list ac-card">
-        {causes.map((cause) => {
-          const r = row(cause);
+        {[
+          ...causes.map((cause) => ({ key: cause.key, ...row(cause) })),
+          ...lined.map((c) => ({
+            key: c.id,
+            name: c.name,
+            fact: computerRoomText(t, c),
+            lead: <Icon name="computer" size={18} />,
+            act: t("queue.see"),
+            onAct: () => onQueue(c.id),
+          })),
+        ].map((r) => {
           return (
-            <li key={cause.key} className="tm-computer tm-cause">
+            <li key={r.key} className="tm-computer tm-cause">
               <span className="tm-computer__icon" aria-hidden="true">
                 {r.lead}
               </span>
@@ -799,10 +753,10 @@ function TaskSection({
 
 /**
  * One task, one line: what it is (the whole row picks it) and what it is about, its state, what it uses now, its time
- * (shaded as it grows, but not on a wait with a known reason: that isn't stuck) and Parar. What comes next of a wait
- * and what it does in its program are in its tip. `grouped` sits under its agent's row; `flat` (a routine's
- * background run, work agents asked) shows its agent's face, and its state as a mark when the columns don't fit;
- * `agent` is the list of one agent's tasks (its card chosen).
+ * (shaded as it grows, but not on a wait with a known reason: that isn't stuck), and ⋯ with Abrir na conversa, Ver
+ * passos and Parar tarefa. What comes next of a wait and what it does in its program are in its tip. `grouped` sits under its agent's
+ * row; `flat` (a routine's background run, work agents asked) shows its agent's face, and its state as a mark when the
+ * columns don't fit; `agent` is the list of one agent's tasks (its card chosen).
  */
 function TaskRow({
   task,
@@ -817,6 +771,7 @@ function TaskRow({
   stopping,
   onSelect,
   onSteps,
+  onOpen,
   onStop,
 }: {
   task: ManagedTask;
@@ -829,12 +784,14 @@ function TaskRow({
   /** Work another agent handed it, where the reader sees where: "ajudando a Ada". */
   helping: string | null;
   /** A task that asked other agents stops with them: this stop, in place of its own. */
-  stopAll: ReactNode;
+  stopAll: RowStop | null;
   selected: boolean;
   stopping: boolean;
   onSelect: () => void;
   /** "Ver passos": its panel. */
   onSteps: () => void;
+  /** "Abrir na conversa", where it has one. */
+  onOpen: () => void;
   onStop: () => void;
 }) {
   const { t } = useTranslation();
@@ -884,29 +841,65 @@ function TaskRow({
       </span>
       <TaskTime task={task} now={now} />
       <span className="tm-cell tm-cell--act">
-        <Button
-          size="sm"
-          variant="ghost"
-          iconOnly
-          icon="list"
-          className="tm-steps"
-          aria-label={`${t("taskManager.actions.steps")}: ${title}`}
-          title={t("taskManager.actions.steps")}
-          onClick={onSteps}
-        />
-        {task.canStop &&
-          (stopAll ?? (
-            <StopTaskButton
-              label={t("taskManager.actions.stop")}
-              title={title}
-              stopping={stopping}
-              onClick={onStop}
-              compact
-            />
-          ))}
+        <RowMenu
+          label={title}
+          stop={
+            task.canStop && !stopping
+              ? (stopAll ?? { label: t("taskManager.actions.stopTask"), onSelect: onStop })
+              : null
+          }
+        >
+          {opensInChat(task) && (
+            <MenuItem icon="message" onSelect={onOpen}>
+              {t("taskManager.actions.open")}
+            </MenuItem>
+          )}
+          <MenuItem icon="list" onSelect={onSteps}>
+            {t("taskManager.actions.steps")}
+          </MenuItem>
+        </RowMenu>
       </span>
     </li>
   );
+}
+
+/**
+ * A row's ⋯: its actions as a menu, named for screen readers by the row (`label`), its stop last in the danger tint.
+ * A stop that asks first opens its card under the ⋯ once the menu has closed, so the focus lands in the card.
+ */
+function RowMenu({ label, stop, children }: { label: string; stop?: RowStop | null; children?: ReactNode }) {
+  const { t } = useTranslation();
+  const after = useRef<(() => void) | null>(null);
+  const more = t("taskManager.actions.more");
+  const menu = (
+    <Menu
+      align="end"
+      label={label}
+      onClosed={() => {
+        after.current?.();
+        after.current = null;
+      }}
+      trigger={<Button size="sm" variant="ghost" iconOnly icon="more" aria-label={`${more}: ${label}`} title={more} />}
+    >
+      {children}
+      {stop && (
+        <MenuItem
+          icon="stop"
+          danger
+          onSelect={
+            stop.confirm
+              ? () => {
+                  after.current = stop.onSelect;
+                }
+              : stop.onSelect
+          }
+        >
+          {stop.label}
+        </MenuItem>
+      )}
+    </Menu>
+  );
+  return stop?.confirm ? stop.confirm(menu) : menu;
 }
 
 /** "Tempo": the task's time (`taskTime`), warming as its work goes on; a wait never warms, it isn't stuck. */
@@ -924,7 +917,8 @@ function TaskTime({ task, now }: { task: ManagedTask; now: number }) {
 
 /**
  * An agent's row over its tasks, one line, folded until opened (the whole row opens it): its face and count, how it
- * stands, the apps it uses now, the time of the task its state is about (`groupLead`), and its stop for all of them.
+ * stands, the apps it uses now, the time of the task its state is about (`groupLead`), and ⋯ with its stop for all of
+ * them.
  * With no room for the columns, how it stands is that task's mark.
  */
 function AgentRow({
@@ -940,7 +934,7 @@ function AgentRow({
   now: number;
   open: boolean;
   onToggle: () => void;
-  stopAll: ReactNode;
+  stopAll: RowStop | null;
 }) {
   const { t } = useTranslation();
   const status = useTaskStatus();
@@ -988,7 +982,7 @@ function AgentRow({
         <ProgramStack tasks={group.tasks} />
       </span>
       <TaskTime task={lead} now={now} />
-      <span className="tm-cell tm-cell--act">{stopAll}</span>
+      <span className="tm-cell tm-cell--act">{stopAll && <RowMenu label={name} stop={stopAll} />}</span>
     </li>
   );
 }
@@ -999,9 +993,6 @@ function AgentCard({
   name,
   tasks,
   hidden,
-  line,
-  color,
-  lineLabel,
   pressed,
   onPress,
 }: {
@@ -1011,49 +1002,36 @@ function AgentCard({
   tasks: ManagedTask[];
   /** Its tasks the viewer may not see. */
   hidden: number;
-  line: number[];
-  color: AgentColor;
-  lineLabel: string;
   pressed: boolean;
   onPress: () => void;
 }) {
   const { t } = useTranslation();
   const { waiting } = agentSummary(tasks);
+  const count = tasks.length + hidden;
+  const label = [
+    name,
+    agentCardLine(t, tasks.length, hidden),
+    waiting > 0 ? t("taskManager.waiting", { count: waiting }) : "",
+  ]
+    .filter(Boolean)
+    .join(", ");
+  // A filter chip: the face, the name and how many tasks, the waiting mark when one waits on a person.
   return (
-    <div className="tm-card ac-card ac-card--interactive" data-pressed={pressed || undefined}>
-      <span className="tm-card__head">
-        {agentId ? (
-          <OpensAgent agentId={agentId}>
-            <AgentAvatar agentId={agentId} name={name} size="sm" />
-          </OpensAgent>
-        ) : (
-          <span className="tm-card__n ac-num" aria-hidden="true">
-            {tasks.length + hidden}
-          </span>
-        )}
-        <button
-          type="button"
-          className="tm-card__text"
-          aria-pressed={pressed}
-          title={waiting > 0 ? t("taskManager.waiting", { count: waiting }) : undefined}
-          onClick={onPress}
-        >
-          <b>{name}</b>
-          <small>{agentCardLine(t, tasks.length, hidden)}</small>
-        </button>
-        {waiting > 0 && (
-          <Chip
-            tone="waiting"
-            lead={<WaitMark />}
-            className="tm-card__wait"
-            aria-label={t("taskManager.waiting", { count: waiting })}
-          >
-            {waiting}
-          </Chip>
-        )}
-      </span>
-      <Sparkline values={line} color={color} label={lineLabel} />
-    </div>
+    <span className={cx("ac-filter tm-chip", pressed && "ac-filter--active")}>
+      <button
+        type="button"
+        className="ac-filter__trigger"
+        aria-pressed={pressed}
+        aria-label={label}
+        title={name}
+        onClick={onPress}
+      >
+        {agentId && <AgentAvatar agentId={agentId} name={name} size="xs" />}
+        <span className="ac-filter__text">{name}</span>
+        <span className="tm-chip__n ac-num">{count}</span>
+        {waiting > 0 && <WaitMark />}
+      </button>
+    </span>
   );
 }
 
@@ -1169,8 +1147,8 @@ function ReturnRow({
               iconOnly
               icon="more"
               loading={canceling}
-              aria-label={`${t("taskManager.sections.returns")}: ${item.about}`}
-              title={t("taskManager.sections.returns")}
+              aria-label={`${t("taskManager.actions.more")}: ${item.about}`}
+              title={t("taskManager.actions.more")}
             />
           }
         >

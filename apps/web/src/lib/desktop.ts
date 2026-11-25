@@ -187,7 +187,8 @@ export const browserSignInUrl = (provider: SignInProvider, requestId: string, ac
  * What the site may ask of this computer (ADR 0036, `this_mac` in main_window.rs): which of this server's
  * organizations it works for, pairing it with one (the app asks the person in its own dialog first; the site
  * then confirms the runner's code with its own session), reconnecting it, the app's Preferences on a tab, its
- * access requests, the badge, notifications and the app's icon (ADR 0179). Nothing else reaches the computer.
+ * access requests, the badge, notifications, the app's icon (ADR 0179) and the app's own speed numbers. Nothing else
+ * reaches the computer.
  */
 export interface ThisMacStatus {
   orgs: { orgId: string; machineId: string | null; connection: string }[];
@@ -195,6 +196,16 @@ export interface ThisMacStatus {
   agentsHere?: boolean;
   /** This server runs inside the app on this computer: the app signs its owner in ("Continue on this Mac"). */
   local?: boolean;
+}
+
+/**
+ * What the app measures of itself for the site's speed reports (`vitals` in main_window.rs): its opening, from the
+ * app's start to the site's first screen, told once (never for a reload of the page or a start at login), and the
+ * memory of the processes behind this window's web view.
+ */
+export interface DesktopVitals {
+  coldStartMs?: number;
+  webviewBytes?: number;
 }
 
 type Invoke = (cmd: string, args: Record<string, unknown>) => Promise<unknown>;
@@ -205,18 +216,14 @@ const invoke = <T>(request: Record<string, unknown>): Promise<T> => {
 };
 
 /**
- * The site painted its first screen: the app's cover over the window goes (apps/desktop cover.rs). Older apps
- * don't have it; nothing happens there.
+ * The site painted its first screen: the app's cover over the window goes and the app's opening ends (apps/desktop
+ * cover.rs). The pages in the site's place (`unavailable.html`, the boot's fallback) say it without `site`: they lift
+ * the cover and end no opening. Older apps don't have it; nothing happens there.
  */
 export function pageReady() {
   const tauri = (window as { __TAURI_INTERNALS__?: { invoke?: Invoke } }).__TAURI_INTERNALS__;
   if (!inDesktopApp() || typeof tauri?.invoke !== "function") return;
-  void tauri.invoke("page_ready", {}).catch(() => {});
-}
-
-/** `pageReady` once the screen just rendered is on the glass (two frames on): a first screen's mount effect. */
-export function pageReadyAfterPaint() {
-  if (inDesktopApp()) requestAnimationFrame(() => requestAnimationFrame(pageReady));
+  void tauri.invoke("page_ready", { site: true }).catch(() => {});
 }
 
 /**
@@ -307,6 +314,8 @@ export const thisMac = {
    */
   openWorkspace: (server: string, orgId: string, account?: string) =>
     invoke<unknown>({ kind: "openWorkspace", server, orgId, ...(account ? { account } : {}) }),
+  /** The app's own speed numbers (`DesktopVitals`); an older app refuses. */
+  vitals: () => invoke<DesktopVitals>({ kind: "vitals" }),
   /** The app's own window to add a workspace: a new one on agentes.chat, or the team's server. */
   addWorkspace: () => invoke<unknown>({ kind: "addWorkspace" }),
   /**

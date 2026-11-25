@@ -20,11 +20,21 @@ import { getAgent } from "./agents";
 import { type AiStatusDeps, rightHandWorkAi } from "./ai-status";
 import { decidesAgentApprovals, MAX_OWN_ACTIONS, OWN_ACTION_NAME } from "./approval-rules";
 import { cancelRoutineAhead, type RoutineAheadView, routinesAhead } from "./approvals";
-import { audienceError, audienceSql, canTalkTo, speakerFor, speakerOf } from "./audience";
+import {
+  type AgentOwnerFields,
+  audienceError,
+  audienceSql,
+  canTalkTo,
+  managesRoutinesOf,
+  managesRoutinesSql,
+  speakerFor,
+  speakerOf,
+} from "./audience";
 import { recordAudit } from "./audit";
 import { UUID } from "./authority";
 import { brainOf } from "./brain-settings";
 import { BRAIN_PLAN_NAMES, type BrainKind, isComputerBrain } from "./brains/types";
+import { caches, type TtlCache } from "./cache";
 import { canceledBy } from "./cancel";
 import { requireChannelAccess } from "./channels";
 import {
@@ -33,6 +43,7 @@ import {
   type ConnectorTriggerFilter,
   type ConnectorTriggerSource,
   checkConnectorTrigger,
+  connectorNotYours,
   isConnectorEvent,
   normalizeConnectorFilter,
   syncConnectorTrigger,
@@ -77,6 +88,7 @@ import {
   type HookMethod,
   liveHookUrl,
   type RoutineHookConfig,
+  releaseHookCalls,
   routineHookKeys,
   WEBHOOK_EVENT,
 } from "./routine-hooks";
@@ -92,6 +104,7 @@ import {
   ruleToCron,
   type ScheduleRule,
 } from "./rrule";
+import { runState } from "./run-state";
 import { providerFailure } from "./runs";
 import { describeWhen, parseSchedule, readSchedule, type ScheduleParse } from "./schedule";
 import { assertCanWork, closedRefusal, deletionPending, orgStanding, standingRefusal } from "./standing";
@@ -122,6 +135,7 @@ const {
   webhookEndpoints,
   dashboards,
   dashboardWidgets,
+  connectorConnections,
 } = schema;
 
 export type RoutineTarget =
@@ -148,6 +162,8 @@ export const ROUTINE_EVENTS = [
   "email.received",
   /** A call to the routine's own address (only through a `webhook` trigger: ADR 0106). */
   "webhook.received",
+  /** A message to the workspace's Telegram bot: a private chat with it, or one that mentions or answers it (ADR 0170). */
+  "telegram.message",
 ] as const;
 export type RoutineEvent = (typeof ROUTINE_EVENTS)[number];
 /**
@@ -217,7 +233,7 @@ export type RoutineTrigger =
    * A call to its own address (ADR 0106), stored as the event `webhook.received` plus a `routine_hooks` row. `url`
    * only for who may manage it (null for everyone else and for agents); `signed`: calls must carry a signature.
    */
-  | { type: "webhook"; url: string | null; signed: boolean; methods: HookMethod[] }
+  | { type: "webhook"; url: string | null; signed: boolean; methods: HookMethod[]; groupBy: string | null }
   /**
    * A connector's event (ADR 0130): stored as a webhook routine whose address the provider was given through the
    * connection (`routine_hooks.source`). `status` `error`: the provider refused it (`lastError`).
@@ -311,9 +327,9 @@ export interface RoutineView {
   waitingFor: { machineId: string; machineName: string; since: string } | null;
   /**
    * Its run waits on its plan or budget (`usage_paused`): paused near the limit (ADR 0118) or stopped at it (`limit`).
-   * It picks up at `resetsAt` (null: not known yet). `extraOff`: a plan pause whose window is used up, on an agent whose switch keeps long work
-   * off paid extra usage, so Continuar agora is refused (`pauseContinuesPastPlan`); `extraUsedUp`: the same with the
-   * switch on but no extra usage left. Who may press it: `canManage`.
+   * It picks up at `resetsAt` (null: not known yet). `extraOff`: a plan pause whose window is used up, on an agent
+   * whose long work never uses paid extra usage (`paysExtraUsage`), so Continuar agora is refused
+   * (`pauseContinuesPastPlan`); `extraUsedUp`: the same with no extra usage left. Who may press it: `canManage`.
    */
   usagePause: {
     source: "plan" | "budget";
@@ -332,9 +348,12 @@ export interface RoutineView {
    * the run strip; `total`: their sum, without the runs a person stopped).
    */
   health: { ok: number; silent: number; failed: number; skipped: number; missed: number; total: number };
-  /** The viewer reads its records and reports (its creator, admins, the agent's owner, its conversation). */
+  /** The viewer reads its records and reports (its creator, who manages the agent's routines, its conversation). */
   canSeeDetails: boolean;
-  /** The viewer may change, pause, stop or delete it (its creator, admins, the agent's owner). */
+  /**
+   * The viewer may change, pause, stop or delete it: its creator, and who manages the agent's routines
+   * (`managesRoutinesOf`: who edits the agent, "Criar rotinas" where it reaches).
+   */
   canManage: boolean;
   /** Whose reach it has (ADR 0053 §2): its creator, kept on edit; null once they left. */
   createdByUserId: string | null;
@@ -382,9 +401,10 @@ export type RoutineTriggerInput =
   | { type: "email"; accountId: string; folder?: string; filter?: MailFilter }
   /**
    * A call to an address of its own (made with it, kept while its trigger changes). `methods`: the HTTP methods it
-   * answers (default POST; left out on a change, what it had).
+   * answers (default POST; left out on a change, what it had). `groupBy`: a dot path into a call's data; calls with
+   * the same value run in order, different ones side by side (null: one line; left out on a change, what it had).
    */
-  | { type: "webhook"; methods?: string[] }
+  | { type: "webhook"; methods?: string[]; groupBy?: string | null }
   /** A connector's event (ADR 0130), from a connection the routine's agent may read. */
   | {
       type: "connector";
@@ -453,7 +473,13 @@ export function routineSlots(r: Pick<RoutineRow, "rule" | "cron" | "timezone">, 
 function triggerOf(
   r: RoutineRow,
   watch?: MailWatchRow,
-  hook?: { url: string | null; signed: boolean; methods: HookMethod[]; source?: ConnectorTriggerSource | null },
+  hook?: {
+    url: string | null;
+    signed: boolean;
+    methods: HookMethod[];
+    groupBy?: string | null;
+    source?: ConnectorTriggerSource | null;
+  },
 ): RoutineTrigger {
   if (r.triggerType === "event" && r.event === WEBHOOK_EVENT && hook?.source) {
     const s = hook.source;
@@ -473,6 +499,7 @@ function triggerOf(
       url: hook?.url ?? null,
       signed: hook?.signed ?? false,
       methods: hook?.methods ?? [...DEFAULT_HOOK_METHODS],
+      groupBy: hook?.groupBy ?? null,
     };
   }
   if (r.triggerType === "event" && r.event === "email.received" && watch) {
@@ -570,6 +597,8 @@ interface RunDetails {
   names: Map<string, string>;
 }
 
+type RoutineWeekUsage = { routineId: string; tokens: string; cost: string; plan: boolean; api: boolean };
+
 /** Every token a call used (as the usage page counts them). */
 const TOKENS = sql`${usageRecords.inputTokens} + ${usageRecords.outputTokens}
   + ${usageRecords.cacheReadTokens} + ${usageRecords.cacheWriteTokens}`;
@@ -590,15 +619,30 @@ async function runDetails(db: Database, orgId: string, runs: RunRow[]): Promise<
           status: agentRuns.status,
           error: agentRuns.error,
           waitingMachineId: agentRuns.waitingMachineId,
-          waitingCode: sql<string | null>`${agentRuns.transcript}->'waitingForBrain'->>'code'`,
-          waitSource: sql<string | null>`${agentRuns.transcript}->'waitingForBrain'->>'source'`,
-          resetsAt: sql<string | null>`${agentRuns.transcript}->'waitingForBrain'->>'resetsAt'`,
-          plan: sql<string | null>`${agentRuns.transcript}->'waitingForBrain'->>'plan'`,
-          continued: sql<boolean>`(${agentRuns.transcript}->'usagePause'->'override') is not null`,
+          // The transcript is a large TOASTed jsonb: only a waiting_input run's wait is read from it (all that the
+          // views use it for), as one value, so other rows never detoast it.
+          wait: sql<{ wait: Record<string, unknown> | null; continued: boolean } | null>`case
+            when ${agentRuns.status} = 'waiting_input' then jsonb_build_object(
+              'wait', ${runState}->'waitingForBrain',
+              'continued', (${runState}->'usagePause'->'override') is not null) end`,
           updatedAt: agentRuns.updatedAt,
         })
         .from(agentRuns)
-        .where(and(eq(agentRuns.orgId, orgId), inArray(agentRuns.id, ids))),
+        .where(and(eq(agentRuns.orgId, orgId), inArray(agentRuns.id, ids)))
+        .then((rows) =>
+          rows.map(({ wait, ...row }): AgentRunInfo => {
+            const w = wait?.wait;
+            const text = (key: string) => (typeof w?.[key] === "string" ? (w[key] as string) : null);
+            return {
+              ...row,
+              waitingCode: text("code"),
+              waitSource: text("source"),
+              resetsAt: text("resetsAt"),
+              plan: text("plan"),
+              continued: wait?.continued === true,
+            };
+          }),
+        ),
     ),
     lookup(ids, () =>
       db
@@ -712,14 +756,19 @@ const conversationOf = (t: RoutineTarget) => (t.type === "channel" || t.type ===
 
 /** What a viewer may see of each routine (ADR 0053 §9). */
 interface ViewerRights {
-  /** Reads its prompt, records and reports: its creator, admins, the agent's owner, its conversation's members. */
+  /** Reads its prompt, records and reports: who manages it, its conversation's members. */
   reads: boolean;
-  /** Changes, pauses, stops or deletes it: its creator, admins, the agent's owner. */
+  /**
+   * Changes, pauses, stops or deletes it: its creator, and who manages the agent's routines (`managesRoutinesOf`, ADR
+   * 0085 addendum of 2026-11-17: who edits the agent, and "Criar rotinas" only where it reaches).
+   */
   manages: boolean;
   /** Its prompt is shown even to who doesn't read it (a public channel's). */
   publicPrompt: boolean;
   /** Withdraws what was approved ahead for its runs: who manages it, and who may approve the agent's actions. */
   cancelsAhead: boolean;
+  /** Reads the service of someone else's own connection, as Conectores lists it to them: who manages connectors. */
+  readsServices: boolean;
 }
 
 /**
@@ -734,20 +783,22 @@ async function viewerRights(
 ): Promise<Map<string, ViewerRights>> {
   const channelIds = [...new Set(rows.flatMap((r) => conversationOf(targetOf(r)) ?? []))];
   const agentIds = [...new Set(rows.map((r) => r.agentId))];
-  const [member, owners, channelRows, joined] = await Promise.all([
+  const [member, perAgent, channelRows, joined] = await Promise.all([
     lookup(viewerId ? [viewerId] : [], () =>
       db
         .select({
-          may: maySql(orgId, viewerId ?? "", "manage_routines"),
           approves: maySql(orgId, viewerId ?? "", "approve_actions"),
+          connectors: maySql(orgId, viewerId ?? "", "manage_connectors"),
         })
         .from(organizationMembers)
         .where(and(eq(organizationMembers.orgId, orgId), eq(organizationMembers.userId, viewerId ?? ""))),
     ),
-    db
-      .select({ id: agents.id, ownerUserId: agents.ownerUserId })
-      .from(agents)
-      .where(and(eq(agents.orgId, orgId), inArray(agents.id, agentIds))),
+    lookup(viewerId ? agentIds : [], () =>
+      db
+        .select({ id: agents.id, routines: managesRoutinesSql("agents", sql`${viewerId ?? ""}::text`) })
+        .from(agents)
+        .where(and(eq(agents.orgId, orgId), inArray(agents.id, agentIds))),
+    ),
     lookup(channelIds, () =>
       db
         .select({ id: channels.id, kind: channels.kind, visibility: channels.visibility })
@@ -768,8 +819,7 @@ async function viewerRights(
     ),
   ]);
   const [me] = member;
-  const admin = me?.may === true;
-  const ownerOf = new Map(owners.map((a) => [a.id, a.ownerUserId]));
+  const managesRoutinesOfAgent = new Set(perAgent.filter((a) => a.routines === true).map((a) => a.id));
   const publicChannels = new Set(
     channelRows.filter((c) => c.kind === "channel" && c.visibility === "public").map((c) => c.id),
   );
@@ -778,12 +828,13 @@ async function viewerRights(
   for (const r of rows) {
     const target = targetOf(r);
     const channelId = conversationOf(target);
-    const manages = !!viewerId && (admin || r.createdByUserId === viewerId || ownerOf.get(r.agentId) === viewerId);
+    const manages = !!viewerId && (r.createdByUserId === viewerId || managesRoutinesOfAgent.has(r.agentId));
     out.set(r.id, {
       manages,
       reads: !viewerId || manages || (!!channelId && inChannel.has(channelId)),
       publicPrompt: !!channelId && publicChannels.has(channelId),
       cancelsAhead: manages || me?.approves === true,
+      readsServices: me?.connectors === true,
     });
   }
   return out;
@@ -806,7 +857,8 @@ function billedTo(
 /**
  * Routines as `viewerId` sees them (see `viewerRights`), with their state, last week's health and usage; a webhook
  * routine's address only for who manages it, and only with `hooks`. In a workspace closed to work (suspended, or
- * being deleted) none has a next run: its slots pass.
+ * being deleted) none has a next run: its slots pass. `model`: read by the model of a run `viewerId` is behind, which
+ * may say it where others read: someone else's own connection's service is not given to it.
  */
 async function views(
   db: Database,
@@ -814,6 +866,7 @@ async function views(
   viewerId: string | null,
   hooks?: RoutineHookConfig,
   now = new Date(),
+  model = false,
 ): Promise<RoutineView[]> {
   const first = rows[0];
   if (!first) return [];
@@ -860,18 +913,24 @@ async function views(
       .from(routineRuns)
       .where(inWeek)
       .groupBy(routineRuns.routineId, routineRuns.status),
-    db
-      .select({
-        routineId: routineRuns.routineId,
-        tokens: sql<string>`coalesce(sum(${TOKENS}), 0)`,
-        cost: sql<string>`coalesce(sum(${usageRecords.costNanoUsd}), 0)`,
-        plan: sql<boolean>`coalesce(bool_or(${usageRecords.billedTo} = 'plan'), false)`,
-        api: sql<boolean>`coalesce(bool_or(${usageRecords.billedTo} <> 'plan'), false)`,
-      })
-      .from(routineRuns)
-      .innerJoin(usageRecords, eq(usageRecords.runId, routineRuns.agentRunId))
-      .where(inWeek)
-      .groupBy(routineRuns.routineId),
+    // Every usage row of a week of runs: the list's heaviest read, asked again on each run event by every open app.
+    // A minute-old sum is fine for "this week".
+    (caches.routineWeekUsage as TtlCache<RoutineWeekUsage[]>).getOrLoad(
+      `${orgId}:${[...ids].sort().join(",")}`,
+      async () =>
+        db
+          .select({
+            routineId: routineRuns.routineId,
+            tokens: sql<string>`coalesce(sum(${TOKENS}), 0)`,
+            cost: sql<string>`coalesce(sum(${usageRecords.costNanoUsd}), 0)`,
+            plan: sql<boolean>`coalesce(bool_or(${usageRecords.billedTo} = 'plan'), false)`,
+            api: sql<boolean>`coalesce(bool_or(${usageRecords.billedTo} <> 'plan'), false)`,
+          })
+          .from(routineRuns)
+          .innerJoin(usageRecords, eq(usageRecords.runId, routineRuns.agentRunId))
+          .where(inWeek)
+          .groupBy(routineRuns.routineId),
+    ),
     db
       .select({
         id: agents.id,
@@ -925,6 +984,17 @@ async function views(
     week.set(w.routineId, [...(week.get(w.routineId) ?? []), entry]);
   }
   const usageOf = new Map(usageRows.map((u) => [u.routineId, u]));
+  const personalIds = [...new Set([...hookKeys.values()].flatMap((h) => h.source?.connectionId ?? []))];
+  const personalOf = new Map(
+    (
+      await lookup(personalIds, () =>
+        db
+          .select({ id: connectorConnections.id, owner: connectorConnections.ownerUserId })
+          .from(connectorConnections)
+          .where(and(eq(connectorConnections.orgId, orgId), inArray(connectorConnections.id, personalIds))),
+      )
+    ).flatMap((c) => (c.owner ? [[c.id, c.owner] as const] : [])),
+  );
   const hookUrls = new Map<string, string>();
   if (hooks) {
     for (const [routineId, hook] of hookKeys) {
@@ -1015,6 +1085,13 @@ async function views(
     };
     const used = usageOf.get(r.id);
     const hookKey = hookKeys.get(r.id);
+    const source = hookKey?.source;
+    // A person's own connection's (ADR 0099 addendum): what it gives (filter, inbox, the provider's refusal) is its
+    // person's alone, and its service only theirs and who manages connectors; anyone else reads a plain webhook's.
+    const personal = source ? personalOf.get(source.connectionId) : undefined;
+    const theirs = !personal || personal === viewerId;
+    const blank = source && !(personal ? theirs : right.reads);
+    const hidden = source && !theirs && (model || !right.readsServices);
     return {
       id: r.id,
       name: r.name,
@@ -1025,10 +1102,16 @@ async function views(
         r,
         watches.get(r.id),
         hookKey && {
-          url: hookUrls.get(r.id) ?? null,
+          url: hidden ? null : (hookUrls.get(r.id) ?? null),
           signed: hookKey.signed,
           methods: hookKey.methods,
-          source: hookKey.source,
+          groupBy: hookKey.groupBy,
+          // What its creator typed (filter, inbox) and the provider's refusal go, as its prompt does, to readers only.
+          source: hidden
+            ? null
+            : source && blank
+              ? { ...source, inboxId: undefined, filter: {}, lastError: null }
+              : source,
         },
       ),
       active: r.active,
@@ -1214,12 +1297,16 @@ async function resolveTrigger(
   return { ...none, triggerType: "event", event: trigger.event as string | null, nextRunAt: null as Date | null };
 }
 
-/** Admins, or the agent's owner. */
+/**
+ * Who manages the agent's routines (`managesRoutinesOf`, ADR 0085 addendum of 2026-11-17): who edits the agent (its
+ * owner, who manages it, its "Quem pode editar") and "Criar rotinas" where it reaches, never a private agent's.
+ */
 async function requireRoutineManager(db: Database, actorId: string, orgId: string, agentId: string) {
   const membership = await requirePermission(db, actorId, orgId, "read");
-  if (can(membership, "manage_routines")) return;
   const agent = await getAgent(db, orgId, agentId);
-  if (agent?.ownerUserId !== actorId) throw new ForbiddenError("Only an admin or the agent's owner can do this");
+  if (!agent) throw new NotFoundError("Agent not found");
+  if (!managesRoutinesOf(agent, actorId, membership))
+    throw new ForbiddenError("Only an admin or the agent's owner can do this");
 }
 
 /**
@@ -1340,8 +1427,8 @@ export function ownActionsOf(list: readonly string[]): string[] {
 }
 
 /** A routine acts on its own only by the word of someone who could approve those actions themselves. */
-async function requireActionApprover(db: Database, actorId: string, orgId: string, ownerUserId: string | null) {
-  if (await decidesAgentApprovals(db, orgId, actorId, ownerUserId)) return;
+async function requireActionApprover(db: Database, actorId: string, orgId: string, owner: AgentOwnerFields) {
+  if (await decidesAgentApprovals(db, orgId, actorId, owner)) return;
   throw new ForbiddenError(
     "Only the agent's owner or someone who approves its actions can let a routine act on its own",
     "routine.actions_need_approver",
@@ -1373,10 +1460,10 @@ export async function createRoutine(
   checkFrequency(trigger, input.target);
   if (!input.paused && startsRuns(trigger.triggerType, input.target)) await checkRoutineCap(db, orgId, agent.id);
   if (input.trigger.type === "email") await checkWatchable(db, orgId, agent.id, input.trigger.accountId, actorId);
-  if (input.trigger.type === "connector") await checkConnectorTrigger(db, orgId, agent.id, input.trigger);
+  if (input.trigger.type === "connector") await checkConnectorTrigger(db, orgId, agent.id, input.trigger, actorId);
   const hooks = input.trigger.type === "webhook" || input.trigger.type === "connector" ? hooksOf(deps) : null;
   const ownActions = ownActionsOf(input.ownActions ?? []);
-  if (ownActions.length > 0) await requireActionApprover(db, actorId, orgId, agent.ownerUserId);
+  if (ownActions.length > 0) await requireActionApprover(db, actorId, orgId, agent);
   const name = input.name?.trim().slice(0, 120) || prompt.split("\n")[0]?.slice(0, 60) || "Routine";
   const [row] = await db
     .insert(routines)
@@ -1402,7 +1489,9 @@ export async function createRoutine(
       db,
       hooks,
       row,
-      input.trigger.type === "webhook" ? input.trigger.methods : DEFAULT_HOOK_METHODS,
+      input.trigger.type === "webhook"
+        ? { methods: input.trigger.methods, groupBy: input.trigger.groupBy }
+        : { methods: DEFAULT_HOOK_METHODS },
     );
   if (input.trigger.type === "connector") await syncConnector(deps, row, connectorSource(input.trigger));
   await recordAudit(db, {
@@ -1447,7 +1536,22 @@ async function syncConnector(
   const hook = (await routineHookKeys(deps.db, [row.id])).get(row.id);
   if (!hook) return;
   const url = deps.hooks ? await liveHookUrl(deps.db, deps.hooks, hook) : null;
-  await syncConnectorTrigger(deps.db, deps.connectors, row, url, next);
+  // Registering is an action in the connection's account: never for a routine its person didn't make.
+  const registers = row.active && next && (await connectorRefusal(deps.db, row, next.connectionId)) === null;
+  await syncConnectorTrigger(deps.db, deps.connectors, { ...row, active: Boolean(registers) }, url, next);
+}
+
+/** Why `row`'s creator may not wait on the connection's events (`connectorNotYours`); null: they may. */
+async function connectorRefusal(
+  db: Database,
+  row: Pick<RoutineRow, "orgId" | "createdByUserId">,
+  connectionId: string,
+) {
+  const [connection] = await db
+    .select({ ownerUserId: schema.connectorConnections.ownerUserId })
+    .from(schema.connectorConnections)
+    .where(and(eq(schema.connectorConnections.id, connectionId), eq(schema.connectorConnections.orgId, row.orgId)));
+  return connection ? connectorNotYours(db, row.orgId, connection, row.createdByUserId) : null;
 }
 
 /** The addresses' config, which a webhook routine can't be made without (the server always passes it). */
@@ -1485,9 +1589,10 @@ export async function listRoutines(db: Database, actorId: string, orgId: string,
 }
 
 /**
- * Whether `viewerId` sees a routine at all (its name, schedule, runs): who manages it (its creator, admins, the
- * agent's owner), who manages agents, or who the agent answers. The agents list's own rule (`listsAgent` in the
- * apps), so an agent hidden from someone doesn't show through its routines on Início, Rotinas or the calendar.
+ * Whether `viewerId` sees a routine at all (its name, schedule, runs): its creator, who manages the agent's routines
+ * (`managesRoutinesOf`: who edits the agent, "Criar rotinas" where it reaches) or who the agent answers. A private
+ * agent's routines stay hidden from who merely holds "Criar rotinas" or "Editar qualquer agente" (ADR 0085 addendum
+ * of 2026-11-17), so an agent hidden from someone doesn't show through its routines on Início, Rotinas or the calendar.
  */
 export async function routineSeer(
   db: Database,
@@ -1496,24 +1601,34 @@ export async function routineSeer(
 ): Promise<(r: Pick<RoutineRow, "agentId" | "createdByUserId">) => boolean> {
   const [membership, agentRows] = await Promise.all([
     getMembership(db, viewerId, orgId),
-    db
-      .select({
-        id: agents.id,
-        ownerUserId: agents.ownerUserId,
-        audienceMode: agents.audienceMode,
-        audienceUserIds: agents.audienceUserIds,
-        audienceRoleIds: agents.audienceRoleIds,
-        consultable: agents.consultable,
-        brain: agents.brain,
-      })
-      .from(agents)
-      .where(eq(agents.orgId, orgId)),
+    // The same rows for every viewer, kept a moment (`caches.orgReads`): any change to an agent forgets them.
+    caches.orgReads.getOrLoad(`${orgId}:seer`, () => seerRows(db, orgId)) as ReturnType<typeof seerRows>,
   ]);
-  if (can(membership, "manage_routines") || can(membership, "manage_agents")) return () => true;
   const talks = speakerOf(membership);
-  const listed = new Set(agentRows.filter((a) => canTalkTo(a, viewerId, talks)).map((a) => a.id));
+  const listed = new Set(
+    agentRows
+      .filter((a) => canTalkTo(a, viewerId, talks) || managesRoutinesOf(a, viewerId, membership))
+      .map((a) => a.id),
+  );
   return (r) => r.createdByUserId === viewerId || listed.has(r.agentId);
 }
+
+const seerRows = (db: Database, orgId: string) =>
+  db
+    .select({
+      id: agents.id,
+      ownerUserId: agents.ownerUserId,
+      ownerRoleId: agents.ownerRoleId,
+      audienceMode: agents.audienceMode,
+      audienceUserIds: agents.audienceUserIds,
+      audienceRoleIds: agents.audienceRoleIds,
+      consultable: agents.consultable,
+      brain: agents.brain,
+      editorUserIds: agents.editorUserIds,
+      editorRoleIds: agents.editorRoleIds,
+    })
+    .from(agents)
+    .where(eq(agents.orgId, orgId));
 
 /**
  * The org's routines for an agent's read tool (`list_routines` with `agent`):
@@ -1537,7 +1652,7 @@ export async function listOrgRoutines(
       ),
     )
     .orderBy(routines.createdAt);
-  return views(db, rows, options.viewerId ?? null);
+  return views(db, rows, options.viewerId ?? null, undefined, undefined, true);
 }
 
 async function loadRoutine(db: Database, orgId: string, id: string, options: { deleted?: boolean } = {}) {
@@ -1549,12 +1664,12 @@ async function loadRoutine(db: Database, orgId: string, id: string, options: { d
   return row;
 }
 
-/** Edit: its creator, admins, or the agent's owner. */
+/** Edit: its creator, or who manages the agent's routines (`managesRoutinesOf`, ADR 0085 addendum of 2026-11-17). */
 async function requireRoutineEditor(db: Database, actorId: string, orgId: string, routine: RoutineRow) {
   const membership = await requirePermission(db, actorId, orgId, "read");
-  if (routine.createdByUserId === actorId || can(membership, "manage_routines")) return;
+  if (routine.createdByUserId === actorId) return;
   const agent = await getAgent(db, orgId, routine.agentId);
-  if (agent?.ownerUserId !== actorId) {
+  if (!agent || !managesRoutinesOf(agent, actorId, membership)) {
     throw new ForbiddenError(
       "Only who created the routine, the agent's owner or an admin can change it",
       "routine.editor_only",
@@ -1572,6 +1687,10 @@ export async function managedWebhookRoutine(db: Database, actorId: string, orgId
   if (routine.event !== WEBHOOK_EVENT) {
     throw new NotFoundError("This routine isn't started by a webhook", "routine.no_webhook");
   }
+  // A person's own connection's address fires that person's routine: theirs alone, as its trigger is (`views`).
+  const source = await connectorOf(db, routine.id);
+  const refusal = source && (await connectorRefusal(db, { orgId, createdByUserId: actorId }, source.connectionId));
+  if (refusal) throw refusal;
   return routine;
 }
 
@@ -1662,7 +1781,7 @@ export async function updateRoutine(
             "routine.act_take_over",
           );
         }
-        await requireActionApprover(db, actorId, orgId, agent.ownerUserId);
+        await requireActionApprover(db, actorId, orgId, agent);
       }
       set.ownActions = ownActions;
     }
@@ -1698,7 +1817,19 @@ export async function updateRoutine(
         ? hadConnector
         : null;
   if (connectorTrigger && (patch.trigger?.type === "connector" || set.agentId)) {
-    await checkConnectorTrigger(db, orgId, agentId, connectorTrigger);
+    await checkConnectorTrigger(db, orgId, agentId, connectorTrigger, current.createdByUserId);
+  }
+  // Only its person reads what such a trigger asks (`views`), so only they change it: anyone else would save it blank.
+  if (patch.trigger !== undefined) {
+    for (const c of [hadConnector, patch.trigger.type === "connector" ? connectorTrigger : null]) {
+      const refusal = c && (await connectorRefusal(db, { orgId, createdByUserId: actorId }, c.connectionId));
+      if (refusal) throw refusal;
+    }
+  }
+  // A routine waiting on a person's own connection stays off unless it is theirs (`syncConnector` won't register it).
+  if (patch.active === true && connectorTrigger) {
+    const refusal = await connectorRefusal(db, current, connectorTrigger.connectionId);
+    if (refusal) throw refusal;
   }
   const active = patch.active ?? current.active;
   if (patch.active !== undefined) set.active = active;
@@ -1750,7 +1881,9 @@ export async function updateRoutine(
       db,
       hooks,
       row,
-      patch.trigger?.type === "webhook" ? patch.trigger.methods : DEFAULT_HOOK_METHODS,
+      patch.trigger?.type === "webhook"
+        ? { methods: patch.trigger.methods, groupBy: patch.trigger.groupBy }
+        : { methods: DEFAULT_HOOK_METHODS },
     );
   if (connectorTrigger || hadConnector) await syncConnector(deps, row, connectorTrigger);
   // Pausing also stops its work in progress (§6.7); resuming clears why it paused itself.
@@ -1900,6 +2033,10 @@ export async function setRoutineActive(
 ): Promise<RoutineView> {
   const current = await loadRoutine(deps.db, orgId, id);
   await requireRoutineManager(deps.db, actorId, orgId, current.agentId);
+  // A routine waiting on a person's own connection stays off unless it is theirs.
+  const waitsOn = active ? await connectorOf(deps.db, current.id) : null;
+  const refusal = waitsOn ? await connectorRefusal(deps.db, current, waitsOn.connectionId) : null;
+  if (refusal) throw refusal;
   const nextRunAt = active && current.triggerType === "schedule" ? nextRoutineTime(current, new Date()) : null;
   const [row] = await deps.db
     .update(routines)
@@ -2045,11 +2182,23 @@ export async function listRoutineRuns(
 }
 
 /**
- * When a due routine fires: its slot plus a stable offset into that minute, from its id (0 to 59 s), so the
- * routines of one minute fire as a ramp instead of all at once. Its slot stays what it shows and records
- * (`next_run_at`, the run's `at`): the minute is right.
+ * How far past its slot a routine may fire, in seconds, by its cron's shape. Interval routines all share the top of
+ * the hour, so they spread over minutes (always under their interval, so no slot is skipped); a routine at a set
+ * hour keeps to its minute.
  */
-const firesAt = sql`${routines.nextRunAt} + ((hashtext(${routines.id}::text) & 2147483647) % 60) * interval '1 second'`;
+const fireSpread = sql`case
+  when split_part(${routines.cron}, ' ', 1) = '*/15' then 180
+  when split_part(${routines.cron}, ' ', 1) = '*/30' then 300
+  when split_part(${routines.cron}, ' ', 1) ~ '^[0-9]+$'
+    and (split_part(${routines.cron}, ' ', 2) = '*' or split_part(${routines.cron}, ' ', 2) like '*/%') then 600
+  else 60 end`;
+
+/**
+ * When a due routine fires: its slot plus a stable offset from its id (under `fireSpread`), so the routines of one
+ * slot fire as a ramp instead of all at once. Its slot stays what it shows and records (`next_run_at`, the run's
+ * `at`).
+ */
+const firesAt = sql`${routines.nextRunAt} + ((hashtext(${routines.id}::text) & 2147483647) % ${fireSpread}) * interval '1 second'`;
 
 /**
  * Worker tick: fires every scheduled routine whose slot has come (`firesAt`). Each
@@ -2187,8 +2336,9 @@ async function fireClaimedRun(deps: RoutineDeps, run: RunRow) {
   const { db } = deps;
   const skip = async (code: string) => {
     const skipped = await skipRoutineRun(db, run.id, code);
-    // The emails it carried wait for the next run (§6.8).
+    // The emails it carried wait for the next run (§6.8), its webhook calls for their group's next call.
     if (skipped && run.event?.type === "email.received") await releaseRoutineEmails(deps, run.id);
+    if (skipped && run.event?.type === WEBHOOK_EVENT) await releaseHookCalls(deps, run.id, skipped);
     return skipped;
   };
   const [routine] = await db.select().from(routines).where(eq(routines.id, run.routineId));
@@ -2400,9 +2550,9 @@ export async function continueRoutineUsagePause(
   const [paused] = await db
     .select({
       runId: agentRuns.id,
-      waitId: sql<string | null>`${agentRuns.transcript}->'waitingForBrain'->>'waitId'`,
-      source: sql<string | null>`${agentRuns.transcript}->'waitingForBrain'->>'source'`,
-      resetsAt: sql<string | null>`${agentRuns.transcript}->'waitingForBrain'->>'resetsAt'`,
+      waitId: sql<string | null>`${runState}->'waitingForBrain'->>'waitId'`,
+      source: sql<string | null>`${runState}->'waitingForBrain'->>'source'`,
+      resetsAt: sql<string | null>`${runState}->'waitingForBrain'->>'resetsAt'`,
     })
     .from(routineRuns)
     .innerJoin(agentRuns, eq(agentRuns.id, routineRuns.agentRunId))
@@ -2411,7 +2561,7 @@ export async function continueRoutineUsagePause(
         eq(routineRuns.orgId, orgId),
         eq(routineRuns.routineId, routine.id),
         eq(agentRuns.status, "waiting_input"),
-        sql`${agentRuns.transcript}->'waitingForBrain'->>'code' = 'usage_pause'`,
+        sql`${runState}->'waitingForBrain'->>'code' = 'usage_pause'`,
       ),
     )
     .orderBy(desc(routineRuns.createdAt))

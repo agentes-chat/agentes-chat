@@ -12,7 +12,18 @@ export const SOUND_STYLES = ["tactile", "sky", "pixel"] as const;
 export type SoundStyle = (typeof SOUND_STYLES)[number];
 export const DEFAULT_SOUND_STYLE: SoundStyle = "tactile";
 
-export const SOUNDS = ["send", "reply", "done", "attention", "approved", "error", "stop", "mention"] as const;
+export const SOUNDS = [
+  "send",
+  "reply",
+  "done",
+  "attention",
+  "approved",
+  "error",
+  "stop",
+  "mention",
+  "discard",
+  "record",
+] as const;
 export type SoundName = (typeof SOUNDS)[number];
 
 export const isSoundStyle = (v: unknown): v is SoundStyle => (SOUND_STYLES as readonly unknown[]).includes(v);
@@ -270,6 +281,13 @@ const POST: Record<SoundStyle, (x: Float32Array) => Float32Array> = {
   pixel: (x) => biquad(x, "lp", 3600),
 };
 
+/** Played right before a recording starts (`record`): no room, whose tail the microphone would take into the take. */
+const DRY: ReadonlySet<SoundName> = new Set(["record"]);
+const POST_DRY: Record<SoundStyle, (x: Float32Array) => Float32Array> = {
+  ...POST,
+  sky: (x) => biquad(x, "lp", 9000),
+};
+
 type Score = (out: Float32Array, v: Voice, style: SoundStyle) => void;
 
 /** Each sound: its peak (how loud it is next to the others) and its notes; clicks differ per style. */
@@ -355,6 +373,43 @@ const SCORE: Record<SoundName, [peak: number, score: Score]> = {
       if (s === "pixel") v(o, grace * 3, "E7", { d: 0.2, g: 0.2 });
     },
   ],
+  // A recording thrown away (the voice take's trash, or slid off): what the person did, never an error, so quieter and
+  // shorter than `error`, falling where `send` rises.
+  discard: [
+    0.5,
+    (o, v, s) => {
+      if (s === "tactile") {
+        noise(o, { d: 0.04, g: 0.45, type: "bp", fc: 900, q: 2, from: 2.2, glide: 0.035 });
+        v(o, 0.008, "B4", { d: 0.07, g: 0.5 });
+        v(o, 0.05, "E4", { d: 0.1, g: 0.42 });
+      } else if (s === "sky") {
+        noise(o, { d: 0.09, g: 0.16, type: "bp", fc: 2200, q: 0.8, from: 2.1, glide: 0.07 });
+        v(o, 0.02, "B5", { d: 0.15, g: 0.35, from: 1.12, glide: 0.06 });
+      } else {
+        v(o, 0, "E5", { d: 0.04, g: 0.6 });
+        v(o, 0.03, "B4", { d: 0.04, g: 0.6 });
+        v(o, 0.06, "E4", { d: 0.09, g: 0.6 });
+      }
+    },
+  ],
+  // A voice message starts recording (the phone's hold on the microphone): a short pick-up rising where `discard`
+  // falls, quiet, and over in under 0.1 s, since the recorder starts once it has rung (ADR 0100).
+  record: [
+    0.5,
+    (o, v, s) => {
+      if (s === "tactile") {
+        noise(o, { d: 0.012, g: 0.4, type: "bp", fc: 2400, q: 2.5 });
+        v(o, 0.002, "B5", { d: 0.08, g: 0.45 });
+        v(o, 0.03, "E6", { d: 0.1, g: 0.5 });
+      } else if (s === "sky") {
+        v(o, 0, "B5", { d: 0.05, g: 0.4, from: 0.9, glide: 0.03 });
+        v(o, 0.03, "E6", { d: 0.06, g: 0.45 });
+      } else {
+        v(o, 0, "B5", { d: 0.06, g: 0.6 });
+        v(o, 0.03, "E6", { d: 0.08, g: 0.6 });
+      }
+    },
+  ],
 };
 
 /** One sound's samples (mono, `SAMPLE_RATE`, peak under 0.9). */
@@ -362,7 +417,7 @@ export function renderSound(style: SoundStyle, name: SoundName): Float32Array {
   const [peak, score] = SCORE[name];
   const out = new Float32Array(Math.ceil(1.8 * SR));
   score(out, VOICE[style], style);
-  return finish(POST[style](out), peak);
+  return finish((DRY.has(name) ? POST_DRY : POST)[style](out), peak);
 }
 
 /** Samples as a 16-bit mono WAV file. */
