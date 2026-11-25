@@ -429,6 +429,11 @@ export const organizationSettings = pgTable("organization_settings", {
    * own choice (`agents.approvals_level_own`) uses. A workspace with no row here is at `risky`.
    */
   approvalsLevel: text().$type<"always" | "risky" | "never">().notNull().default("risky"),
+  /**
+   * People's computers may help when the workspace's computer is full or away, each as its owner allows
+   * (`machines.spill_own`, ADR 0233). An admin turns it off for everyone; on without a row.
+   */
+  devicesHelp: boolean().notNull().default(true),
   updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
 });
 

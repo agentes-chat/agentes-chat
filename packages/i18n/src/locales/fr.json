@@ -719,6 +719,8 @@
       "confirmNo": "Ce n'était pas moi",
       "done": "Tout est prêt.",
       "doneLead": "Vous êtes connecté à l'app agentes. Vous pouvez fermer cet onglet.",
+      "back": "Retour à l'app.",
+      "openApp": "Ouvrir l'app",
       "expired": "Cette demande a expiré.",
       "expiredLead": "Retournez dans l'app et choisissez de nouveau {{provider}}.",
       "handover": "Connexion avec votre compte depuis l'autre appareil…",
@@ -1257,7 +1259,7 @@
         "fileLead": "Le fichier de n'importe quelle app que nous connaissons. Il est reconnu tout seul.",
         "paths": {
           "lead": "Choisissez comment les importer. Vous vérifiez tout avant que rien ne soit créé.",
-          "best": "le plus complet",
+          "best": "Le plus complet",
           "safe": "Les clés, mots de passe et sessions de {{app}} ne viennent jamais, quel que soit le chemin.",
           "command": {
             "title": "Avec une commande",
@@ -4515,6 +4517,7 @@
     "available": "Disponible",
     "working": "Au travail",
     "waiting": "Vous attend",
+    "idle": "Inactif",
     "lower": {
       "online": "en ligne",
       "away": "absent",
@@ -4667,7 +4670,8 @@
   "accountSwitch": {
     "limit": "A continué avec le compte <to/> car le compte <from/> a atteint sa limite",
     "line": "A continué avec le compte <to/> car le compte <from/> approche de sa limite",
-    "extra": "A continué avec le compte <to/> car le compte <from/> passerait en usage supplémentaire payant"
+    "extra": "A continué avec le compte <to/> car le compte <from/> passerait en usage supplémentaire payant",
+    "busy": "A continué avec le compte <to/> car le compte <from/> répondait déjà à autant de conversations qu'il peut à la fois"
   },
   "channelRefs": {
     "list": "Canaux",
@@ -6743,7 +6747,7 @@
         "cli_sandbox": "Le programme {{brain}} ne peut pas démarrer sa sandbox sur cet ordinateur. Choisissez une autre IA dans les paramètres de l'agent.",
         "cli_system": "Le programme {{brain}} ne fonctionne pas encore sur le système de cet ordinateur. Choisissez une autre IA dans les paramètres de l'agent.",
         "account_missing": "Le compte choisi pour cet agent n'est plus sur son ordinateur. Choisissez-en un autre dans les paramètres de l'agent, ou ajoutez-le à nouveau.",
-        "windows_sandbox": "Cet ordinateur Windows ne peut pas isoler les commandes de Codex : il lui faut Windows 11 24H2 ou une version plus récente. Mettez Windows à jour, choisissez Claude ou une clé API pour cet agent, ou déplacez-le sur un ordinateur Linux.",
+        "windows_sandbox": "Codex n'a pu démarrer aucune isolation pour ses commandes sur cet ordinateur Windows. Choisissez Claude ou une clé API pour cet agent, ou mettez l'ordinateur à jour vers Windows 11 24H2 ou plus récent, avec ses dernières mises à jour.",
         "our_error": "Un problème est survenu de notre côté et la tâche s'est arrêtée. Redemandez dans un moment.",
         "unknown": "Échec."
       }
@@ -12956,8 +12960,10 @@
       "home_only": "{{program}} est installé uniquement pour root sur {{computer}}, où les agents n'ont pas accès.",
       "not_reported": "{{computer}} vérifie encore quels programmes il a. Ceci change tout seul une fois terminé.",
       "system": "{{program}} ne fonctionne pas encore sur le système de {{computer}}.",
+      "windows_sandbox": "Le Windows de {{computer}} ne peut pas isoler les commandes de {{program}}. Choisissez plutôt Claude ou une clé API, ou mettez cet ordinateur à jour vers Windows 11 24H2 ou plus récent, avec ses dernières mises à jour.",
       "no_computerCloud": "Prêt dès que {{computer}} l'est."
     },
+    "sandboxPartial": "Sur ce Windows, les commandes de Codex n'écrivent que dans les dossiers des agents, mais internet ne leur est bloqué qu'en partie. Windows 11 24H2 ou plus récent, avec ses dernières mises à jour, le bloque entièrement.",
     "notAvailableNow": "Choisi, mais indisponible pour le moment.",
     "offline": "{{computer}} est hors ligne pour le moment.",
     "modelLabel": "Modèle",
@@ -13033,7 +13039,7 @@
     "rule": "Un nouveau travail démarre quand l'ordinateur a de la mémoire libre. Les personnes passent en premier. Les agents mentionnés ensemble démarrent un par un.",
     "spill": {
       "title": "Vos ordinateurs",
-      "text": "Quand cet ordinateur est plein, les réponses pour vous peuvent démarrer sur l'un des vôtres. Les travaux longs et les fichiers des agents restent ici.",
+      "text": "Quand cet ordinateur est plein ou absent, tes agents peuvent démarrer sur l'un des tiens. Les missions, les sessions de code et les agents avec des dépôts restent ici.",
       "plan": "ton forfait {{plan}}"
     },
     "youFirst": "Vous passez en premier",
@@ -16663,7 +16669,7 @@
     "device": {
       "notLinkMaker": "Seule la personne qui a créé le lien peut laisser cet ordinateur rejoindre.",
       "widenForbidden": "Les admins peuvent seulement restreindre qui utilise l'appareil personnel de quelqu'un.",
-      "spillOwnerOnly": "Seule la personne qui a connecté cet ordinateur peut y laisser penser les réponses. Toi, tu peux le désactiver.",
+      "spillOwnerOnly": "Seule la personne qui a connecté cet ordinateur peut activer son aide. Tu peux la désactiver.",
       "tasksOwnerOnly": "Seule la personne qui a connecté cet ordinateur peut changer le nombre de tâches qu'il exécute en même temps.",
       "tasksCloud": "Le Cloud dimensionne lui-même la place de cet ordinateur pour les tâches.",
       "notHome": "Les agents vivent sur l'ordinateur du workspace et utilisent celui-ci quand ils le nomment."
@@ -16818,6 +16824,11 @@
       "line": "IP de sortie {{ip}}",
       "hint": "L’adresse que voient les sites quand les agents naviguent. Elle change quand le réseau de l’ordinateur change.",
       "waiting": "Les agents se reconnectent à internet. Leurs connexions attendent son retour."
+    },
+    "moving": {
+      "short": "Changement de serveur",
+      "line": "Passe sur un nouveau serveur… de retour dans quelques minutes",
+      "named": "{{computer}} passe sur un nouveau serveur… de retour dans quelques minutes"
     },
     "online": "En ligne",
     "offline": "Hors ligne",
@@ -17093,10 +17104,12 @@
     "pushHarderHint": "Plus de tâches à la fois : seuls 0,5 Go de mémoire restent libres et un processeur occupé ne les retient pas. Vos propres apps peuvent ralentir.",
     "belongs": "Appartient à l'espace de travail",
     "belongsHint": "Il reste quand la personne qui l'a connecté part, et tout le monde peut l'utiliser tant que personne n'en est propriétaire.",
-    "spillOwn": "Vos réponses peuvent réfléchir ici",
-    "spillOwnHint": "Quand l'ordinateur d'un agent est plein, ses réponses pour vous démarrent ici.",
-    "spillOthers": "Les agents des autres peuvent réfléchir ici",
-    "spillOthersHint": "Quand l'ordinateur d'un agent est plein, ses réponses pour d'autres personnes peuvent aussi démarrer ici.",
+    "spillOwn": "Aider quand l'ordinateur de l'équipe est plein ou absent",
+    "spillOwnHint": "Quand l'ordinateur de tes agents est plein ou absent, leurs réponses, demandes et routines peuvent réfléchir ici avec ta connexion.",
+    "spillTeamHint": "Quand l'ordinateur d'un agent est plein ou absent, ses réponses, demandes et routines peuvent réfléchir ici avec la connexion de son propriétaire sur cet ordinateur.",
+    "spillWorkspaceOff": "Un admin a désactivé ceci pour le workspace.",
+    "helpWorkspace": "Les ordinateurs aident quand celui de l'équipe est plein ou absent",
+    "helpWorkspaceHint": "Chaque ordinateur n'aide que si son propriétaire le permet. Désactivé : aucun n'aide, quel que soit le choix de son propriétaire.",
     "connectedBy": "Connecté par {{name}}",
     "downloadFor": "Télécharger pour {{system}}",
     "downloadApp": "Télécharger l'app",
@@ -19081,6 +19094,11 @@
       "cant": "Répondu avec {{via}} : {{plan}} ne peut pas penser pour l'instant.",
       "change": "Changer"
     },
+    "spilled": {
+      "full": "A réfléchi sur {{to}} : {{from}} était plein.",
+      "away": "A réfléchi sur {{to}} : {{from}} était absent.",
+      "itsComputer": "son ordinateur"
+    },
     "modelStandIn": {
       "text": "{{plan}} a refusé {{from}} avec cette clé. J'ai répondu avec {{to}}, qui fonctionne avec elle.",
       "useAll": "Utiliser {{model}} pour tous",
@@ -19099,6 +19117,12 @@
       "thinking": "Réflexion…",
       "held": "En attente d'approbation…",
       "said": "« {{text}} »"
+    },
+    "trail": {
+      "label": "Ce que {{name}} a fait jusqu’ici",
+      "earlier_one": "{{count}} étape précédente",
+      "earlier_many": "{{count}} étapes précédentes",
+      "earlier_other": "{{count}} étapes précédentes"
     },
     "consult": {
       "asking": "{{from}} interroge {{to}}",
@@ -21126,6 +21150,7 @@
       "offline": "{{computer}} est hors ligne",
       "offlineHelpPlain": "{{name}} attend le retour de l'ordinateur.",
       "offlineHelpPlain_female": "{{name}} attend le retour de l'ordinateur.",
+      "helping": "En attendant, le nouveau travail peut réfléchir sur {{names}}.",
       "noRoom": "{{computer}} affiche déjà autant d'écrans que possible. Réessayez dans un instant.",
       "unavailable": "L'écran de {{name}} ne peut pas être affiché pour le moment",
       "unavailable_female": "L'écran de {{name}} ne peut pas être affiché pour le moment",

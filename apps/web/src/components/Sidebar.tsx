@@ -891,7 +891,7 @@ export function Sidebar() {
         <WorkspaceSky part="side" rail={rail} />
         {personal ? (
           // A personal workspace (ADR 0159): the person on top (their account, settings and workspaces in one menu),
-          // Agora, the bell and the collapse beside them. The desktop app's title bar has its own Agora and collapse
+          // Agora, the bell and the collapse beside them. The desktop app's title bar has its own collapse
           // (desktop.css).
           <div className="sidebar__org sidebar__org--person">
             <AccountMenu personal />

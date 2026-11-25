@@ -8,6 +8,7 @@
 //! web view.
 
 mod app_icon;
+mod bench;
 mod cookies;
 mod cover;
 mod deep_link;
@@ -784,7 +785,8 @@ pub fn run() {
                 let _ = present(&handle, "welcome");
             } else if !at_login {
                 vitals::window_at_launch();
-                let _ = main_window::open(&handle, resume.as_ref().and_then(|r| r.page.clone()));
+                let page = bench::url().or_else(|| resume.as_ref().and_then(|r| r.page.clone()));
+                let _ = main_window::open(&handle, page);
             }
             if let Some(resume) = resume {
                 let _ = present(&handle, resume.window);
@@ -796,6 +798,7 @@ pub fn run() {
             }
             // The app icon picked on this computer (ADR 0179).
             app_icon::show(&handle);
+            bench::setup_done(&handle);
             Ok(())
         });
     // After long in the background macOS may end a window's page to free memory, which leaves it blank:

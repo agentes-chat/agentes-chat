@@ -11,6 +11,7 @@ import {
   ASK_IN_CHAT,
   type CommandProfile,
   type CommandScope,
+  commandCall,
   INLINE_CODE_DENY_RULES,
   localVerdict,
   MISSION_DENY_RULES,
@@ -1028,14 +1029,16 @@ export async function permissionPrompt(
     return { behavior: "deny", message };
   }
   if (verdict?.behavior === "allow") return { behavior: "allow", updatedInput: input };
-  if (toolName === "Bash" && typeof input.command === "string") {
+  // Pushes, by any tool that runs a command (PowerShell's too).
+  const command = commandCall(toolName, input)?.command;
+  if (command !== undefined) {
     const own = opts.branches ?? [];
     const cwd = opts.scope?.cwd ?? null;
-    const held = await commandApproval(input.command, { cwd, own, how, script: true });
+    const held = await commandApproval(command, { cwd, own, how, script: true });
     if (held) return { behavior: "deny", message: held.never ? held.message : said(held.message) };
     // A push alone to its own branches, or through our git proxy (which decides someone else's branch with a
     // person's grant, so no card here asks first). An agent that always asks is asked for these too.
-    const push = lonePush(input.command);
+    const push = lonePush(command);
     const alone = opts.local || opts.asks !== "always";
     if (push && alone && (opts.local || pushesOwnBranches(push, own) || (await pushThroughProxy(push, cwd)))) {
       return { behavior: "allow", updatedInput: input };

@@ -510,7 +510,8 @@ function presenceWords(s: AgentStatusView) {
   const what = {
     online: "online",
     busy: "busy, on heavy work",
-    away: "away",
+    // Idle a while (10 minutes): "away" alone reads to a model as unreachable, and a mention wakes it at once.
+    away: "idle, answers when called",
     out: "out of office",
     offline: "paused",
   }[s.presence];

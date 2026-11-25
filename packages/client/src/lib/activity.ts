@@ -695,22 +695,6 @@ export function barElapsed(t: TFunction, entries: ActivityEntry[], runs: LiveRun
   return run ? runElapsed(t, run, now) : null;
 }
 
-/**
- * The entries the bar still tells once the agents whose live rows are on screen say it there (their step, time and
- * stop at the end of the row): saying it twice was noise. A question out keeps its own phrase, and people typing stay.
- */
-export function entriesOffScreen(
-  entries: ActivityEntry[],
-  runs: LiveRun[],
-  rowInView: (run: LiveRun) => boolean,
-): ActivityEntry[] {
-  return entries.filter((e) => {
-    if (e.type !== "agent" || e.consult) return true;
-    const run = runs.find((r) => r.agentId === e.id && BAR_STATUSES.has(r.status));
-    return !run || !rowInView(run);
-  });
-}
-
 /** "trabalhando", "consultando o GitHub". */
 export const activityVerb = (t: TFunction, a: Activity) => t(`chat.activity.${a.kind}`, { app: appLabel(a) });
 

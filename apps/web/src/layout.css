@@ -7586,9 +7586,114 @@ html:not([data-pointer]) .run-continue:focus-visible {
 .ac-typing[data-active="true"]:has(> .ac-typing__avatars):not(:has(> .ac-typing__dots, > .ac-pixspin)) {
   padding-left: 7px;
 }
-/* An agent in its browser: the whole pill opens the live view; the globe says so. */
-.ac-typing[data-browser="true"] {
+/*
+ * The conversation's last row while someone works here (`WorkingTail`), as a reply on its way: the agent at work in a
+ * face's column with its rings, a message's padding and gap, then its line in the message's text size and what it did
+ * so far under it. One line beside the face centres on it; with the trail under it, its capitals start at the face's
+ * top (`.ac-captop`), as a name does in a message.
+ */
+.working-tail {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--msg-block) var(--space-4);
+  /* The rings' box reaches past the row: as the conversation's end, it would scroll the list by it. */
+  overflow: clip;
+}
+/* An agent in its browser: the whole row opens the live view; the globe says so. */
+.working-tail[data-browser="true"] {
   cursor: pointer;
+}
+.working-tail__face {
+  display: flex;
+  flex: 0 0 var(--name-face);
+  align-items: center;
+  justify-content: center;
+  width: var(--name-face);
+  height: var(--name-face);
+}
+.working-tail__face .ac-avatar:not(.ac-avatar--xs) {
+  width: var(--name-face);
+  height: var(--name-face);
+}
+.working-tail__body {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-self: center;
+  min-width: 0;
+}
+.working-tail__body:has(> .working-tail__trail) {
+  align-self: flex-start;
+}
+/* Over the bar's own box (its height cap, its padding, its faces' inset): this line is a row's, not the bar's. */
+.working-tail > .working-tail__body > .working-tail__line.ac-typing[data-active] {
+  min-height: 0;
+  max-height: none;
+  margin-inline: 0;
+  margin-block-end: 0;
+  padding: 0;
+  font-size: var(--msg-text);
+  line-height: var(--msg-line);
+}
+/*
+ * Short of room, its pieces wrap whole (who types beside it to a line of its own), and its words wrap rather than end
+ * in "…": the row has the room a bar above the composer had not. Its globe and "Ver" stay at the line's end, outside
+ * the pieces that wrap.
+ */
+.working-tail__words {
+  display: flex;
+  flex: 1 1 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: inherit;
+  min-width: 0;
+}
+.working-tail > .working-tail__body > .working-tail__line.ac-typing[data-active] .ac-typing__text {
+  flex-wrap: wrap;
+  overflow: visible;
+  white-space: normal;
+}
+.working-tail__line
+  :is(.ac-typing__agents, .ac-typing__people, .ac-typing__group, .ac-typing__typers, .ac-typing__also) {
+  flex-wrap: wrap;
+  overflow: visible;
+  white-space: normal;
+}
+/* What it did so far: the newest last, older ones as "+N". Each line wraps, never cut. */
+.working-tail__trail {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: var(--space-1) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: max(12px, calc(var(--msg-text) - 2px));
+  line-height: 1.45;
+  color: var(--muted);
+}
+.working-tail__trail > li {
+  overflow-wrap: anywhere;
+}
+/* Its time as quiet as its step: the seconds never the loudest thing on the line. */
+.working-tail .run-tail__clock {
+  color: var(--faint);
+  font-weight: 400;
+}
+.working-tail__more {
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .working-tail__trail > li {
+    animation: working-tail-line 200ms ease-out both;
+  }
+}
+@keyframes working-tail-line {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
 }
 /* The line's buttons are round and fit it; the last one sits 2px from its end. */
 .ac-typing__browser.ac-btn,
@@ -9249,6 +9354,7 @@ html:not([data-pointer]) .machine-connect__toggle:focus-visible {
   font-size: 40px;
   line-height: 1;
   letter-spacing: 0.08em;
+  white-space: nowrap;
   text-align: center;
 }
 .connect-page__computer {
@@ -10906,6 +11012,7 @@ html:not([data-pointer]) .agp-cell:focus-visible {
   font-size: 24px;
   font-weight: 650;
   letter-spacing: 0.08em;
+  white-space: nowrap;
   user-select: all;
 }
 /* A sign-in's button and "Copy link" beside it, wrapping under it when the column is narrow. */

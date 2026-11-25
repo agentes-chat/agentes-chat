@@ -213,6 +213,8 @@ export type LiveWork =
       requestId?: string;
       /** A rule ("Aprovar sempre") let it run without asking: whose person, a reads one or not. */
       autoApproved?: { by: string | null; reads: boolean };
+      /** What it wrote before this call (`agent.tool`'s `said`): the live trail quotes it above the call's line. */
+      said?: string;
       /** A call of the computer brain's own in a code session (`agent.step`, ADR 0215): its line, as in a terminal. */
       cli?: CliLine;
       /**
@@ -596,6 +598,7 @@ function applyEvent(state: StreamsState, event: StreamEvent): StreamsState {
             since: Date.now(),
             id: event.toolUseId ?? `call-${work.length}`,
             tool: event.tool ?? "",
+            ...(event.said ? { said: event.said } : {}),
             connector: event.connector ?? null,
             ...(event.service ? { service: event.service } : {}),
             ...(event.serviceIcon ? { serviceIcon: event.serviceIcon } : {}),
@@ -666,6 +669,7 @@ function applyEvent(state: StreamsState, event: StreamEvent): StreamsState {
         running: !event.ended,
         ...(event.ended ? {} : { since: Date.now() }),
         ...(event.failed ? { failed: true } : {}),
+        ...(event.said ? { said: event.said } : {}),
         cli,
       };
       return upsert(state, event, { step, work: [...work, line] });

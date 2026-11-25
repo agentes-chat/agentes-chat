@@ -54,6 +54,7 @@ const {
   connectorConnections,
   channels,
   messages,
+  messageReactions,
   users,
   routingDecisions,
   organizationSettings,
@@ -334,6 +335,10 @@ const bareEmoji = (e: string) => e.trim().replace(/\uFE0F/g, "");
 /** One of `SOCIAL_REACTIONS`, however the variation selector was written ("❤" is "❤️"), else null. */
 export const socialChoice = (emoji: string) =>
   Object.keys(SOCIAL_REACTIONS).find((e) => bareEmoji(e) === bareEmoji(emoji)) ?? null;
+/** The social reactions as stored (`normalizeReaction`), with and without the variation selector. */
+const SOCIAL_REACTION_VALUES = [
+  ...new Set(Object.keys(SOCIAL_REACTIONS).flatMap((e) => [normalizeReaction(e), bareEmoji(e)])),
+];
 
 /** Who a message speaks to, in every step's words (Jev's questions and `ROUTER_SYSTEM`). */
 export const SPOKEN_TO =
@@ -1375,12 +1380,34 @@ export async function routeMessage(
   };
   // A social message nobody answers (a greeting, goodnight, thanks, an ok) gets one agent's reaction, the emoji the
   // step chose (`social`), else `socialReaction`'s. Who reacts: the agent it speaks to, else the one that just answered
-  // this person here, else, for a greeting or a congratulation to the room, the agent they talk with, else the best
-  // placed agent; thanks, an ok or affection are always for someone, so nobody then. Never between people, never on an
-  // agent's message.
+  // this person here, else, for a congratulation to the room, the agent they talk with, else the best placed agent. A
+  // greeting to the room gets none, and thanks, an ok or affection are always for someone, so nobody then. Only one
+  // every `SOCIAL_REACTION_WINDOW_MS` per person here, besides a thanks, an ok or a congratulation for one agent. Never
+  // between people, never on an agent's message.
   const socialOf = (decided: RoutingResult | null) => {
     const emoji = decided?.social ? (decided.social.react ? decided.social.emoji : "") : socialReaction(saidText);
     return emoji ? normalizeReaction(emoji) : "";
+  };
+  // An agent's social reaction on this person's messages here lately: one is warm, one on every message is noise.
+  const reactedLately = async () => {
+    const since = new Date(Date.now() - SOCIAL_REACTION_WINDOW_MS);
+    const [row] = await db
+      .select({ one: sql<number>`1` })
+      .from(messageReactions)
+      .innerJoin(messages, and(eq(messages.orgId, messageReactions.orgId), eq(messages.id, messageReactions.messageId)))
+      .where(
+        and(
+          eq(messageReactions.orgId, message.orgId),
+          sql`${messageReactions.agentId} is not null`,
+          gt(messageReactions.createdAt, since),
+          inArray(messageReactions.reaction, SOCIAL_REACTION_VALUES),
+          eq(messages.channelId, message.channelId),
+          eq(messages.authorUserId, message.authorUserId ?? ""),
+          gt(messages.createdAt, since),
+        ),
+      )
+      .limit(1);
+    return row !== undefined;
   };
   const reactToSocial = async (
     decided: RoutingResult | null,
@@ -1391,12 +1418,14 @@ export async function routeMessage(
     const reaction = socialOf(decided);
     if (!isValidReaction(reaction)) return undefined;
     const named = address.filter((n) => n.agent && candidateIds.has(n.id));
-    const toRoom = !FOR_SOMEONE.has(reaction);
-    const agentId =
+    const toRoom = !FOR_SOMEONE.has(reaction) && !GREETINGS.has(bareEmoji(reaction));
+    const forOne =
       (decided?.addressee && candidateIds.has(decided.addressee) ? decided.addressee : null) ??
       (named.length === 1 ? named[0]?.id : null) ??
       thankedAgent() ??
-      heldFor ??
+      heldFor;
+    const agentId =
+      forOne ??
       (toRoom
         ? ((talkingWith && candidateIds.has(talkingWith) ? talkingWith : null) ??
           bestPlaced(
@@ -1405,6 +1434,7 @@ export async function routeMessage(
           ))
         : null);
     if (!agentId) return undefined;
+    if (!(forOne && MEANINGFUL.has(bareEmoji(reaction))) && (await reactedLately())) return undefined;
     // Cosmetic: a reaction that fails never fails the routing.
     return addAgentReaction(
       db,
@@ -1865,6 +1895,12 @@ export const SYSTEM_LINE_META = [
 
 /** The social reactions that answer someone (thanks, an ok, affection), never the room. */
 const FOR_SOMEONE: ReadonlySet<string> = new Set(["+1", "🙏", "❤️", "❤"]);
+/** A hello, good morning or good night: to the room it gets no reaction, only when it speaks to an agent. */
+const GREETINGS: ReadonlySet<string> = new Set(["👋", "☀", "🌙"]);
+/** A thanks, an ok or a congratulation for one agent says something: the window below never holds it back. */
+const MEANINGFUL: ReadonlySet<string> = new Set(["🙏", "+1", "🎉"]);
+/** At most one agent's social reaction per person and conversation in this long (the agents' own `react` aside). */
+export const SOCIAL_REACTION_WINDOW_MS = 12 * 3600_000;
 
 /** From this need-any-agent score, a person's message the policy gave nobody is for the agents (R5): half the pick bar. */
 export const DEFAULT_NEED = 0.25;

@@ -576,10 +576,12 @@ describe("working line", () => {
     const atlas = run({ runId: "s", agentId: "atlas" });
     expect(barWords(en, workingEntries([ada], [], name), markName)[0]).toBe(markName("Ada"));
     expect(barWords(en, workingEntries([ada, atlas], [], name))[0]).toBe("Ada and Atlas are working…");
-    // The agents at work lead it with their faces (no orbit).
+    // The agent at work leads it with its face and its rings (`OrbitFace`, not the pixel orbit); the stack's small faces
+    // are the others.
     const lines = await source("features/chat/LiveRows.tsx");
     const line = lines.slice(lines.indexOf("export function WorkingLine("), lines.indexOf("type LinePiece"));
-    expect(line).toContain("const faces = barFaces(entries);");
+    expect(line).toContain("const faces = barFaces(entries).filter((e) => e !== orbiting);");
+    expect(line).toContain("<OrbitFace ");
     expect(line).not.toContain("PixelOrbit");
   });
 

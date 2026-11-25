@@ -19,6 +19,9 @@ export interface ErrorSdk {
 /** The short id the error screen shows, also a tag of its report so support can look it up. */
 export const shortErrorId = (eventId: string) => eventId.slice(0, 8);
 
+/** Where the app's own files are served: `/assets/` on the page's origin. */
+export const appFiles = () => `${location.origin}/assets/`;
+
 /**
  * Whether a report's stack runs only through code this app doesn't serve: it has frames, and none in the app's own
  * files (`/assets/` on the page's origin). A browser extension's scripts run in the page and fail into its handlers
@@ -31,7 +34,7 @@ export function foreignStack(
   event: { exception?: { values?: { stacktrace?: { frames?: { filename?: string }[] } }[] } },
   sdk?: string,
 ): boolean {
-  const own = `${location.origin}/assets/`;
+  const own = appFiles();
   const files = (event.exception?.values ?? []).flatMap((value) =>
     (value.stacktrace?.frames ?? []).flatMap(({ filename }) =>
       filename && filename !== "<anonymous>" && filename !== "[native code]" && filename !== sdk ? [filename] : [],

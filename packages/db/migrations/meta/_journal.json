@@ -2381,6 +2381,20 @@
       "when": 1795568902756,
       "tag": "0344_live_asset_fonts",
       "breakpoints": true
+    },
+    {
+      "idx": 342,
+      "version": "7",
+      "when": 1795580284460,
+      "tag": "0345_machine_moving",
+      "breakpoints": true
+    },
+    {
+      "idx": 343,
+      "version": "7",
+      "when": 1795583938565,
+      "tag": "0346_devices_help",
+      "breakpoints": true
     }
   ]
 }

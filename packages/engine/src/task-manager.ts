@@ -18,6 +18,7 @@ import { computerQueue as lineOfComputer, seesRunSql } from "./computer-queue";
 import { isAgentOnlyDm } from "./dms";
 import { NotFoundError } from "./errors";
 import { type CanceledReturn, canceledReturns, type PendingReturn, pendingReturns } from "./follow-through";
+import { MOVING_SHOWN_MS } from "./machines";
 import { replyExcerpt } from "./messages";
 import { requireActiveMembership } from "./organizations";
 import { pendingIds } from "./recovery";
@@ -89,6 +90,8 @@ export interface TaskWait {
   since: string | null;
   /** The caller may press Continuar agora (`mayContinuePause`; the server checks again). */
   canContinue: boolean;
+  /** Its computer is away moving to another server: it comes back by itself. */
+  moving?: boolean;
 }
 
 /** Work one agent asked of another, in their private conversation (`ask_agent`, `tell_agent`, ADR 0034, ADR 0095). */
@@ -278,6 +281,8 @@ type Row = {
   owner_role_id: string | null;
   machine_id: string | null;
   machine_name: string | null;
+  /** Its computer still moving now (`moving_at` within `MOVING_SHOWN_MS`): a wait that began moving says so only then. */
+  machine_moving: boolean | string | null;
   requester_id: string | null;
   requester_name: string | null;
   asker_agent_id: string | null;
@@ -316,6 +321,7 @@ interface StoredWait {
   waitKey?: string;
   /** Ms. */
   since?: number;
+  moving?: boolean;
 }
 
 /** Who answers for the row's agent: a person or a role (ADR 0085, addendum of 2026-11-21). */
@@ -390,6 +396,7 @@ async function visibleRuns(
         r.started_at, r.created_at, r.finished_at, r.error, c.kind, c.name, c.dm_key, t.title,
         array_to_json(r.pending_message_ids || r.after_message_ids) as pending, r.background, r.brain,
         a.owner_user_id, a.owner_role_id, a.machine_id, mc.name as machine_name,
+        (mc.moving_at is not null and mc.moving_at > ${new Date(Date.now() - MOVING_SHOWN_MS).toISOString()}::timestamptz) as machine_moving,
         trig.author_user_id as requester_id, ru.name as requester_name, trig.author_agent_id as asker_agent_id,
         ${which.active ? sql`consult.question` : sql`null`} as question,
         rt.id as routine_id, rt.name as routine_name, w.title as work_title, w.plan as work_plan,
@@ -659,6 +666,7 @@ function waitOf(r: Row): TaskWait | null {
     resetsAt: str(wait.resetsAt),
     since: typeof wait.since === "number" ? new Date(wait.since).toISOString() : null,
     canContinue: false,
+    ...(wait.moving && truthy(r.machine_moving ?? false) ? { moving: true } : {}),
   };
 }
 

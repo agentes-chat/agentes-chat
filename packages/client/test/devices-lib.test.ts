@@ -16,6 +16,7 @@ import {
   deviceWaitOf,
   failedOnLocalNetwork,
   fixText,
+  helpingDevices,
   IPHONE_RESTART_MS,
   type IphoneRestartMemo,
   type IphoneSeen,
@@ -35,6 +36,7 @@ import {
   phoneScreenUrl,
   reasonText,
   screenGesture,
+  spilledText,
   statusDetail,
   statusPill,
   statusSentence,
@@ -89,7 +91,7 @@ const computer = (c: Partial<ComputerDevice>): ComputerDevice => ({
   memoryGb: 36,
   ownerUserId: "u-sam",
   belongsToWorkspace: false,
-  spill: { own: true, others: false },
+  spill: { own: true },
   systemMode: false,
   audience: owner,
   status: { kind: "ready" },
@@ -100,6 +102,35 @@ const computer = (c: Partial<ComputerDevice>): ComputerDevice => ({
   mayManage: true,
   phones: [],
   ...c,
+});
+
+describe("devices as extra capacity", () => {
+  test("the line under a reply that thought elsewhere says where and why; any other reply has none", () => {
+    const org = { name: "Acme", mode: "team" as const };
+    expect(spilledText(t, { spilled: { to: "Bruno's MacBook", from: "Studio Mac", cause: "full" } }, org)).toBe(
+      "Thought on Bruno's MacBook: Studio Mac was full.",
+    );
+    // The workspace's own computer, named in its first owner's language, reads in the reader's.
+    expect(spilledText(t, { spilled: { to: "Bruno's MacBook", from: "Computador da Acme", cause: "full" } }, org)).toBe(
+      `Thought on Bruno's MacBook: ${t("computerSetup.title", { org: "Acme" })} was full.`,
+    );
+    expect(spilledText(t, { spilled: { to: "Bruno's MacBook", from: null, cause: "away" } }, org)).toBe(
+      "Thought on Bruno's MacBook: its computer was away.",
+    );
+    expect(spilledText(t, { speedFallback: true }, org)).toBeNull();
+  });
+
+  test("the computers that help an agent: online, its owner's own or the workspace's, while the workspace lets them", () => {
+    const mine = computer({ id: "mine", ownerUserId: "u-ana" });
+    const theirs = computer({ id: "theirs", ownerUserId: "u-sam" });
+    const team = computer({ id: "team", ownerUserId: "u-sam", belongsToWorkspace: true });
+    const off = computer({ id: "off", ownerUserId: "u-ana", spill: { own: false } });
+    const away = computer({ id: "away", ownerUserId: "u-ana", status: { kind: "offline", lastSeenAt: null } });
+    const devices = [mine, theirs, team, off, away];
+    expect(helpingDevices({ devices }, "u-ana", "home").map((d) => d.id)).toEqual(["mine", "team"]);
+    expect(helpingDevices({ devices }, "u-ana", "mine").map((d) => d.id)).toEqual(["team"]);
+    expect(helpingDevices({ devices, devicesHelp: false }, "u-ana", "home")).toEqual([]);
+  });
 });
 
 describe("tasks at once", () => {

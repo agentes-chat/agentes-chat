@@ -213,7 +213,7 @@ export const WORK_IN_BACKGROUND_LINE =
  * `say_now` listed. The result still goes in the reply; a quick answer gets no line first.
  */
 export const SAY_NOW_LINE =
-  "- Before work that takes more than a few seconds, make say_now your very first call: one short line on what you'll do, in the same response as your first work call, then work: your final message brings the result. Once per request, and once when they correct or add to it mid-work; never for a quick answer, nor with work_in_background (its `say` is that line).";
+  "- Before work that takes more than a few seconds, make say_now your very first call: one short line on what you'll do, in the same response as your first work call, then work: your final message brings the result. Once per request, once when they correct or add to it mid-work, and per new phase of long work; never for a quick answer, nor with work_in_background (its `say` is that line).";
 
 /**
  * A code session suggested in the chat (ADR 0215 §11): the line of "How you work" for an agent that programs on a

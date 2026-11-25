@@ -563,6 +563,15 @@ export function newerVersion(a: string, b: string): boolean {
 }
 
 /**
+ * The line of a Codex that refused its command line (a flag or subcommand it doesn't have yet, in clap's words), as it
+ * said it; null for any other failure.
+ */
+export function codexRefusal(stderr: string): string | null {
+  const line = /^error: (?:unexpected argument|unrecognized subcommand|invalid value)\b.*$/m.exec(stderr)?.[0];
+  return line ? line.trim().slice(0, 300) : null;
+}
+
+/**
  * Every `codex` this runner could start, each once: the PATH in order, then the usual install folders. Never one in
  * the shared `bin/` (the agents write there) or in a folder that isn't a full path.
  */

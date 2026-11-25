@@ -327,6 +327,13 @@ export async function buildProblemReport(
           ? Math.max(0, Math.round((now.getTime() - Date.parse(status.lastSeenAt)) / 1000))
           : null,
         "machine.paused": machine.paused,
+        // Windows: its build, and what holds Codex's commands there (`mxc`, `unelevated`, `none`), once its runner said.
+        ...(machine.os === "windows"
+          ? {
+              "machine.windowsBuild": machine.executors?.windowsBuild ?? null,
+              "machine.codexSandbox": machine.executors?.codex?.sandbox ?? null,
+            }
+          : {}),
       });
       versions.runner = okVersion(machine.runnerVersion);
       versions.runnerProtocol = status?.protocol ?? machine.protocol;

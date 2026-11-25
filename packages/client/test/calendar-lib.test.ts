@@ -3,12 +3,14 @@ import {
   type CalItem,
   collapseRoutines,
   dayEntries,
+  dayItemsKey,
   dayRuns,
   dragRange,
   grownHeights,
   HOUR_PX,
   initialScrollMinutes,
   itemOwners,
+  keptHeights,
   layoutBars,
   layoutDay,
   onDay,
@@ -156,6 +158,42 @@ describe("calendar layout", () => {
     };
     expect(renders((_, drawn) => drawn)).toEqual([2, 1, 2, 1, 2, 1]);
     expect(renders(grownHeights)).toEqual([2, 1, 1, 1, 1, 1]);
+  });
+
+  test("a change on a day measures again the clusters it was in and lands in, and only those", () => {
+    // Two runs in one stack (drawn 44px: an hour), a meeting with the one that starts inside it, one in the evening.
+    const items = [
+      run("a", at(7)),
+      run("b", at(7, 40)),
+      item("planning", at(14), at(16)),
+      item("coffee", at(15), at(15, 30)),
+      item("late", at(18), at(19)),
+    ];
+    const heights = new Map([
+      ["runs-a", 44],
+      ["planning", 86],
+      ["coffee", 60],
+      ["late", 42],
+    ]);
+    const was = dayItemsKey(items, day);
+    const after = (key: string, change: Partial<CalItem>) => {
+      const changed = items.map((it) => (it.key === key ? { ...it, ...change } : it));
+      return keptHeights(heights, was, dayItemsKey(changed, day));
+    };
+    expect(keptHeights(heights, was, was)).toBe(heights);
+    // An hour shorter: the meeting, and the one beside it, which may now go under it.
+    expect([...after("planning", { end: at(15) })]).toEqual([
+      ["runs-a", 44],
+      ["late", 42],
+    ]);
+    // A routine renamed: its run's stack.
+    expect([...after("b", { title: "Resumo do dia" })]).toEqual([
+      ["planning", 86],
+      ["coffee", 60],
+      ["late", 42],
+    ]);
+    // Moved to the evening: where it was, and the meeting it lands beside.
+    expect([...after("coffee", { start: at(18, 30), end: at(19) })]).toEqual([["runs-a", 44]]);
   });
 
   test("a day's rows for the month and the agenda: all day first, then by time, a frequent routine once", () => {

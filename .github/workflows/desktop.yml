@@ -17,7 +17,8 @@ name: Desktop
 # on this computer" (ADR 0066; tauri.native.conf.json adds them to the resources). `none` only builds the
 # current version as artifacts. `platforms` can leave systems out, also from a release: the server gives each
 # system the newest release that has its download. macOS runners cost about 10x
-# Linux minutes: this runs only by hand, never per PR; pushing a tag starts nothing.
+# Linux minutes: this runs only by hand, never per PR; pushing a tag starts nothing. The Desktop bench
+# (desktop-bench.yml) builds through here too, with release = none.
 on:
   workflow_dispatch:
     inputs:
@@ -39,9 +40,24 @@ on:
         description: "macOS build to profile a freeze: Rust symbols kept, the web inspector on (release = none only)"
         type: boolean
         default: false
+  workflow_call:
+    inputs:
+      release:
+        type: string
+        default: none
+      notes:
+        type: string
+        required: false
+      platforms:
+        type: string
+        default: all
+      profiling:
+        type: boolean
+        default: false
 
+# Called by another workflow, `github.workflow` is the caller's: the bench's builds never cancel a release's.
 concurrency:
-  group: desktop-${{ github.ref }}
+  group: desktop-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:

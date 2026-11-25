@@ -404,6 +404,12 @@ export const envVars = {
       "Unused: new agents start on Automático (`auto`, each run picks the model and effort), whatever this says. Still checked when set; to be removed.",
     section: "Agents",
   },
+  MODEL_PROGRESS_NOTES: {
+    schema: z.stringbool().default(true),
+    description:
+      "Ask the models that keep their notes between tool calls apart from the reply (Claude's progress updates, OpenAI's reasoning summaries) to send them, so the conversation shows what an agent is doing while it works. Their reasoning stays hidden either way. Off = only the words a model writes as text.",
+    section: "Agents",
+  },
   ROUTER_ENABLED: {
     schema: z.stringbool().default(true),
     description:

@@ -18,6 +18,7 @@
       "default": "./src/agent/engine.js"
     },
     "./agent/look": "./src/components/AgentLook.ts",
+    "./agent/orbit": "./src/agent/orbit-rings.ts",
     "./agent/stickers": "./src/agent/stickers.ts",
     "./brain/portrait": {
       "types": "./src/brain/portrait.d.ts",

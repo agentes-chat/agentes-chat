@@ -386,6 +386,7 @@ async function boot(
     createModelProviders({
       endpointFetch: allowsPrivateEndpoints(config) ? undefined : publicHttpsFetch(),
       version: release,
+      progressNotes: config.MODEL_PROGRESS_NOTES,
     }),
   );
   if (overridden.length > 0) log.info("adapters overridden by modules", { overridden });

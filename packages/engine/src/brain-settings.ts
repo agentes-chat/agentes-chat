@@ -406,7 +406,9 @@ export type BrainUnavailable =
   /** It is there and can't start (`executors.broken`, with its own error): not missing, so installing it won't help. */
   | "cant_start"
   /** Its runner doesn't run this CLI on the computer's system (`brainRunsOn`): Cursor on Windows, for one. */
-  | "system";
+  | "system"
+  /** Codex on a Windows computer where no sandbox could hold its commands (`executors.codex.sandbox` is `none`). */
+  | "windows_sandbox";
 
 export interface BrainOption {
   kind: BrainKind;
@@ -414,6 +416,11 @@ export interface BrainOption {
   reason?: BrainUnavailable;
   models: BrainModelOption[];
   defaultModel: string | null;
+  /**
+   * `partial`: Codex on a Windows computer without MXC, in Codex's own `unelevated` sandbox: its commands write only in
+   * the agent's folders, but the internet is kept from them only in part (ADR 0053's addendum of 2026-11-24).
+   */
+  sandbox?: "partial";
   /**
    * Antigravity: the newest Gemini (`ANTIGRAVITY_NEON`) isn't among its models, and why: the computer's agentes.chat
    * is too old to bring a CLI that runs it (`app_old`), its CLI predates it where the computer's setup installs it
@@ -457,12 +464,16 @@ const missingCli = (
  * computer brain needs the runner's `brain.turn` (`BRAIN_PROTOCOL`, the same
  * check the engine makes per run): an older runner is `runner_old`.
  * (Missions' legacy executor tasks keep their own check, `machineExecutors`.)
+ * `chat`: for turns that run no commands (the team's right hand, `RIGHT_HAND_TURN`), which no sandbox has to hold.
  */
-export function brainOptions(machine: MachineLike | null): BrainOption[] {
+export function brainOptions(machine: MachineLike | null, { chat = false } = {}): BrainOption[] {
   // Only which CLIs are installed: `machineExecutors` lists none with commands off, but commands are judged below.
   const found = machine ? machineExecutors({ ...machine, execAllowed: true }) : null;
   const computer = (kind: "claude_code" | "codex", executor: "claude" | "codex"): BrainOption => {
     let reason: BrainUnavailable | undefined;
+    // What holds Codex's commands on Windows, once its runner checked (`CODEX_UNELEVATED_PROTOCOL`).
+    const sandbox =
+      !chat && executor === "codex" && machine?.os === "windows" ? machine.executors?.codex?.sandbox : undefined;
     // A runner that reports its tools (protocol 10) runs a coding CLI by that CLI's own switch, commands off or not
     // (`toolOff` in brains/claude-code.ts, `toolOn` on the runner); only an older one follows commands (`exec`).
     if (!machine) reason = "no_computer";
@@ -472,10 +483,12 @@ export function brainOptions(machine: MachineLike | null): BrainOption[] {
       reason = "runner_old";
     else if (!found?.available.includes(executor)) reason = missingCli(machine, executor);
     else if (machine.access?.tools && machine.access.tools[executor] !== true) reason = "tool_off";
+    else if (sandbox === "none") reason = "windows_sandbox";
     return {
       kind,
       available: !reason,
       ...(reason ? { reason } : {}),
+      ...(!reason && sandbox === "unelevated" ? { sandbox: "partial" as const } : {}),
       models: brainModelOptions(kind),
       defaultModel: defaultBrainModel(kind),
     };
@@ -785,7 +798,7 @@ function view(
     fallback: false,
     extraUsage: paysExtraUsage(agent),
     computer: machine ? { machineId: machine.id, name: machine.name, online: shownOnline(machine) } : null,
-    options: brainOptions(machine),
+    options: brainOptions(machine, { chat: isRightHand(agent) }),
     machines,
     canEdit: true,
     account: agent.brainAccountId,
@@ -989,7 +1002,7 @@ async function setPersonalBrain(
   let moved: { id: string } | undefined;
   if (changed) {
     const machine = await agentMachine(db, orgId, account.machineId);
-    const option = brainOptions(machine).find((o) => o.kind === brain);
+    const option = brainOptions(machine, { chat: true }).find((o) => o.kind === brain);
     if (!machine || !option?.available) {
       throw new ConflictError(
         machine ? `${BRAIN_NAMES[brain]} isn't available on ${machine.name}` : "The plan's computer is gone",
@@ -1116,7 +1129,7 @@ async function setPersonalSignIn(
       "account.not_owner",
     );
   }
-  const options = (m: MachineRow) => brainOptions(m).find((o) => o.kind === brain);
+  const options = (m: MachineRow) => brainOptions(m, { chat: true }).find((o) => o.kind === brain);
   const machine = theirs.find((m) => options(m)?.available) ?? (theirs[0] as MachineRow);
   const option = options(machine);
   if (!option?.available) {
@@ -1303,7 +1316,7 @@ export async function setAgentBrain(
     candidateMachines(deps.db, userId, orgId, admin, agent.machineId),
   ]);
   if (changed && isComputerBrain(brain)) {
-    const option = brainOptions(machine).find((o) => o.kind === brain);
+    const option = brainOptions(machine, { chat: rightHand }).find((o) => o.kind === brain);
     if (!option?.available) {
       throw new ConflictError(
         machine
@@ -2133,7 +2146,9 @@ export async function listAiAccounts(deps: BrainDeps, userId: string, orgId: str
   return {
     accounts: accounts.flat(),
     computers: rows.map((m) => {
-      const options = brainOptions(m);
+      // A sign-in there thinks for the team's right hand too, whose turns no sandbox has to hold: what holds Codex's
+      // commands on Windows gates an agent's own choice of it, never the sign-in.
+      const options = brainOptions(m, { chat: true });
       const can = (kind: BrainKind) => options.some((o) => o.kind === kind && o.available);
       return {
         machineId: m.id,

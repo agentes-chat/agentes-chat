@@ -352,7 +352,7 @@ export function runErrorDetail(error: string | null | undefined): {
     COMPUTER_BUSY,
     STUCK_ERROR,
     DISK_FULL,
-    // A Codex turn on a Windows computer where MXC can't hold its commands (the runner's own words say what to do).
+    // A Codex turn on a Windows computer where no sandbox holds its commands (the runner's own words say what to do).
     "windows_sandbox",
     // A code session's worktree isn't there for its agent's computer brain (ADR 0215): still being prepared, gone, or
     // on a computer the agent no longer uses.

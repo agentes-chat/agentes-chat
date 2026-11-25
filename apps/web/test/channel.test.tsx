@@ -95,7 +95,7 @@ describe("Canal", () => {
     expect((box as HTMLTextAreaElement).value).toBe("");
   });
 
-  test("an agent at work: the bar and the running ring say it, none of its words; then its final message, whole", async () => {
+  test("an agent at work: the last row and its rings say it, none of its words; then its final message, whole", async () => {
     const withDm = seedState();
     seedDm(withDm, { type: "agent", id: ATLAS_ID });
     const { socket } = await open(withDm);
@@ -109,10 +109,11 @@ describe("Canal", () => {
     await settle();
     expect(document.querySelector(".ac-msg--streaming")).toBeNull();
     expect(document.body.textContent).not.toContain("Os 401 no Sentry caíram de 312 para");
-    const bar = document.querySelector('.ac-typing[data-active="true"]') as HTMLElement;
-    expect(bar.textContent).toContain("Atlas");
-    expect(bar.textContent).toContain("escrevendo…");
-    expect(bar.querySelector(".ac-avatar--running")).not.toBeNull();
+    // The conversation's last row says it: its face with its rings, its name and what it does.
+    const tail = document.querySelector(".working-tail") as HTMLElement;
+    expect(tail.textContent).toContain("Atlas");
+    expect(tail.textContent).toContain("escrevendo…");
+    expect(tail.querySelector(".ac-orbit .ac-avatar--running")).not.toBeNull();
     // Its DM in the sidebar shows the ring too.
     const nav = screen().getByRole("navigation", { name: "Navegação do workspace" });
     expect(nav.querySelector(".ac-avatar--running")).not.toBeNull();

@@ -179,6 +179,10 @@ export const Machine = z
       description:
         "The coding CLIs there that can't start (`claude`, `codex`…), each with its own last error line; `git_missing`: Claude Code on Windows without Git for Windows. Null unless admin or the person who paired it.",
     }),
+    codexSandbox: z.enum(["mxc", "unelevated", "none"]).nullable().openapi({
+      description:
+        "Windows: what holds Codex's commands there (`mxc`; `unelevated`, Codex's own sandbox where MXC is missing; `none`, nothing could). Null elsewhere, or until its runner knows.",
+    }),
     remotePause: z.boolean().openapi({
       description:
         "Its app takes a pause from here (`POST …/pause`); `false`: update the app on it. Never the workspace's own computer.",
@@ -230,6 +234,10 @@ export const Machine = z
       .nullable()
       .optional(),
     egress: z.object({ ip: z.string(), country: z.string().optional(), at: z.string() }).nullable().optional(),
+    moving: z.boolean().optional().openapi({
+      description:
+        "The workspace's own computer is away moving to another server: it comes back by itself in a few minutes. A change comes as `machine.updated`.",
+    }),
     egressWaiting: z.boolean().optional().openapi({
       description:
         "The workspace's own computer, online, has its agents waiting for their way out: its network sends them only through a proxy and none works now, so their connections are refused for a while. A change comes as `machine.updated`.",
@@ -359,6 +367,9 @@ const MachineOutage = z
       .boolean()
       .openapi({ description: "The workspace's own computer (ADR 0056 §10): its platform is `other`." }),
     offlineSince: z.string().openapi({ description: "ISO time of its last sign of life." }),
+    moving: z.boolean().openapi({
+      description: "The workspace's own computer is away moving to another server: it comes back by itself.",
+    }),
     agents: z.array(
       z.object({
         agentId: z.uuid(),
@@ -418,6 +429,9 @@ const ComputerQueue = z
   .object({
     machineId: z.uuid(),
     name: z.string(),
+    moving: z.boolean().optional().openapi({
+      description: "It is away moving to another server: the line waits for it, back in a few minutes.",
+    }),
     working: z.array(
       z.object({
         runId: z.uuid(),

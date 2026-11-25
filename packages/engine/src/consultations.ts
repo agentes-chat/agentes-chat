@@ -2293,13 +2293,20 @@ export async function consultationConversation(
       expiresAt: agentConsultations.expiresAt,
     })
     .from(agentConsultations)
-    .innerJoin(agentRuns, eq(agentRuns.id, agentConsultations.askerRunId))
     .where(
       and(
         eq(agentConsultations.orgId, orgId),
         eq(agentConsultations.id, consultationId),
-        eq(agentRuns.orgId, orgId),
-        eq(agentRuns.channelId, channelId),
+        // Asked from here, or answered here: an asker that ran elsewhere (a routine's room) and ended before the
+        // answer gets it as a `consult_reply` notice in the conversation that woke it, which links to this.
+        or(
+          sql`exists (select 1 from ${agentRuns} r where r.id = ${agentConsultations.askerRunId}
+            and r.org_id = ${orgId}::uuid and r.channel_id = ${channelId}::uuid)`,
+          sql`exists (select 1 from ${messages} m where m.org_id = ${orgId}::uuid and m.channel_id = ${channelId}::uuid
+            and m.created_at >= ${agentConsultations.createdAt} and m.deleted_at is null
+            and m.meta->'notice'->>'kind' = 'consult_reply'
+            and m.meta->'notice'->'refs'->>'consultationId' = ${agentConsultations.id}::text)`,
+        ),
       ),
     );
   if (!row) return null;

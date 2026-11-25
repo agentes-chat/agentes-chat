@@ -17,7 +17,7 @@ import type { BrainPlan } from "./brains/select";
 import { TtlCache } from "./cache";
 import { NotFoundError } from "./errors";
 import { publishOrgEvent } from "./events";
-import { getMachine } from "./machines";
+import { getMachine, shownMoving } from "./machines";
 import { requirePermission } from "./organizations";
 import { enqueue } from "./outbox";
 import { runState } from "./run-state";
@@ -99,8 +99,32 @@ export function signInSlotOf(plan: Pick<BrainPlan, "kind" | "account">, cap: num
 /** A computer's own sign-in is that computer's; an account is the workspace's, whichever computer its runs think on. */
 const ownSignIn = (key: string) => key === "own";
 
-/** The sign-in a run in line waits on (`signInWait`): only runs waiting for that same sign-in hold it back. */
+/**
+ * The sign-in a run in line waits to think with (`signInWait`), whatever held it (its cap, the line, the spacing):
+ * only runs on that same sign-in hold it back. A run without one (the computer's memory, or no plan sign-in) holds
+ * back the whole line.
+ */
 const signInWaitSql = sql<string | null>`${runState}->'signInWait'->>'key'`;
+
+/** A run working on a sign-in now, holding one of its slots: one whose worker died stops counting once its heartbeat is stale. */
+const holdsSlot = (orgId: string, now: number) =>
+  and(
+    eq(agentRuns.orgId, orgId),
+    eq(agentRuns.status, "running"),
+    sql`${agentRuns.heartbeatAt} > ${new Date(now - RUN_STALE_MS).toISOString()}::timestamptz`,
+  );
+
+/** The workspace's accounts with every slot taken now, so a run at its own sign-in's cap goes on with another one. */
+export async function fullSignIns(db: Executor, orgId: string, cap: number): Promise<Set<string>> {
+  const key = sql<string>`${runState}->'roomAsk'->>'signIn'`;
+  const rows = await db
+    .select({ key })
+    .from(agentRuns)
+    .where(and(holdsSlot(orgId, Date.now()), sql`${key} is not null`, sql`${key} <> 'own'`))
+    .groupBy(key)
+    .having(sql`count(*) >= ${cap}`);
+  return new Set(rows.map((r) => r.key));
+}
 
 /** The run first in line for room on this computer, with the wait its job must carry. */
 export async function roomHead(
@@ -214,18 +238,15 @@ export async function roomGate(
     if (signIn) {
       if (!ownSignIn(signIn.key))
         await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`sign-in:${signIn.key}`}))`);
-      // Its slots: runs working on this sign-in now. One whose worker died stops counting once its heartbeat is stale.
       const [taken] = await tx
         .select({ n: sql<number>`count(*)::int` })
         .from(agentRuns)
         .where(
           and(
-            eq(agentRuns.orgId, run.orgId),
-            eq(agentRuns.status, "running"),
+            holdsSlot(run.orgId, now),
             sql`${agentRuns.id} <> ${run.id}`,
             ownSignIn(signIn.key) ? sql`${runState}->'roomAsk'->>'machineId' = ${machineId}` : undefined,
             sql`${runState}->'roomAsk'->>'signIn' = ${signIn.key}`,
-            sql`${agentRuns.heartbeatAt} > ${new Date(now - RUN_STALE_MS).toISOString()}::timestamptz`,
           ),
         );
       if (Number(taken?.n ?? 0) >= signIn.cap)
@@ -325,6 +346,8 @@ export interface QueueWaiting extends QueueAccess {
 export interface ComputerQueue {
   machineId: string;
   name: string;
+  /** It is away moving to another server: the line waits for it, and its dialog says so. */
+  moving: boolean;
   working: QueueWorking[];
   waiting: QueueWaiting[];
 }
@@ -572,6 +595,7 @@ export async function computerQueue(
   return {
     machineId,
     name: machine.name,
+    moving: shownMoving(machine),
     working: working.map((r, i) => ({
       runId: r.runId,
       agentId: r.agentId,

@@ -42,7 +42,7 @@ import {
 import { recordAudit } from "./audit";
 import { fedByRoutine, runAuthorityById } from "./authority";
 import { sniffModelImage } from "./avatars";
-import { deviceRoster, devicesForRequester, rosterFacts, secretsMayGo } from "./device-resolve";
+import { autoComputer, deviceRoster, devicesForRequester, rosterFacts, secretsMayGo } from "./device-resolve";
 import { ToolOffError } from "./errors";
 import { publishChannelEvent } from "./events";
 import { copyToComputer } from "./file-pulls";
@@ -1661,7 +1661,16 @@ export function createSandboxToolSource(
             description:
               'Only when the person\'s own message you are answering asks for it ("run all 12 at once", "use the whole machine"): this task may start with less memory kept free for their own apps. Before starting several tasks at once, run agentes-runner computer and size the plan to what is free.',
           },
-          ...computerProp(devices),
+          ...(devices
+            ? {
+                computer: {
+                  type: "string",
+                  maxLength: 120,
+                  description:
+                    'Another device to run it on, by its name as computer_status lists it, or "auto": your own computer while it has room, else one that is free to help. Leave it out for your own computer.',
+                },
+              }
+            : {}),
           ...whyAsks(requireApproval),
         },
         required: ["title"],
@@ -1701,8 +1710,11 @@ export function createSandboxToolSource(
             };
           }
           const hub = hubOf();
+          // "auto": its own computer while it has room, else one free to help (ADR 0233).
+          const named = str(input.computer).trim();
+          const computerName = devices && named.toLowerCase() === "auto" ? await autoComputer(ctx) : named;
           // On another device (`computer`), a full one keeps the task in its line instead of refusing it.
-          const elsewhere = str(input.computer).trim() !== "";
+          const elsewhere = computerName !== "";
           // A code session's task works on the session's own branch, in its worktree (ADR 0215).
           if (ctx.codeSession?.place && !elsewhere && str(input.branch).trim())
             return {
@@ -1759,7 +1771,7 @@ export function createSandboxToolSource(
                 elsewhere ? { requeue: true } : {},
               );
             },
-            { computer: input.computer, label: str(input.title) },
+            { computer: computerName, label: str(input.title) },
           );
           await recordAudit(deps.db, {
             orgId: ctx.orgId,

@@ -944,6 +944,30 @@ describe("the computer page: pause, folders and tools (ADR 0036)", () => {
     );
   });
 
+  test("a Windows computer: what holds Codex there joins its ⓘ when it is less than MXC, never as a line", async () => {
+    const codexHint = async (codexSandbox: Machine["codexSandbox"]) => {
+      cleanup();
+      await open({
+        name: "Estudio-PC",
+        os: "windows",
+        codexSandbox,
+        access: { folders: [], tools: { claude: true, codex: true, commands: true } },
+      });
+      const tools = screen().getByRole("region", { name: "Ferramentas" });
+      return { text: hintOf("Codex", tools).text, shown: shownText(tools) };
+    };
+    const plain = "Como o Claude Code, com uma conta do ChatGPT. Só nas pastas liberadas.";
+    for (const sandbox of ["mxc", null] as const) expect((await codexHint(sandbox)).text).toBe(plain);
+    const partial = await codexHint("unelevated");
+    expect(partial.text).toBe(
+      `${plain} Neste Windows, os comandos do Codex só escrevem nas pastas dos agentes, mas a internet fica bloqueada só em parte para eles. O Windows\u00a011\u00a024H2 ou mais novo, com as atualizações em dia, bloqueia por completo.`,
+    );
+    expect(partial.shown).not.toContain("Neste Windows");
+    expect((await codexHint("none")).text).toBe(
+      `${plain} O Windows do Estudio-PC não consegue isolar os comandos do Codex. Escolha o Claude ou uma chave de API, ou atualize esse computador para o Windows\u00a011\u00a024H2 ou mais novo, com as atualizações em dia.`,
+    );
+  });
+
   test("the browser off on an app too old to switch from here: update it there, on Linux the command too", async () => {
     const card = () => document.querySelector('[aria-labelledby="sec-machine-browser"]') as HTMLElement;
     await open();

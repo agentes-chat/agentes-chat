@@ -334,3 +334,37 @@ test("tasks on room over HTTP: the computer says what fits, its owner turns Push
   expect(((await outdated.json()) as { error: { code: string } }).error.code).toBe("machine.outdated");
   expect(asked).toHaveLength(1);
 });
+
+test("help when the team's computer is full or away over HTTP: its owner turns it on and its CLIs start installing; an admin's workspace switch", async () => {
+  const { owner, rui, agentId } = await start();
+  await t.db.update(schema.agents).set({ brain: "claude_code" }).where(eq(schema.agents.id, agentId));
+  const runner = { ...RUNNER, protocol: MACHINE_PROTOCOL_VERSION, exec: true };
+  const paired = await pairComputer(t, owner, runner, { name: "MacBook" });
+  const hub = t.engine.machineHub;
+  const asked: unknown[] = [];
+  const conn = hub.open({
+    send(text: string) {
+      const frame = JSON.parse(text) as ServerFrame;
+      if (frame.type !== "request" || frame.op !== "cli.install") return;
+      asked.push({ action: frame.action, tool: frame.tool });
+      const data = { install: { tool: frame.tool, state: "running" } };
+      setTimeout(() => void hub.message(conn, JSON.stringify({ type: "result", id: frame.id, ok: true, data })), 1);
+    },
+    close() {},
+  });
+  await hub.message(conn, JSON.stringify({ type: "hello", token: paired.token, ...runner }));
+
+  const path = `/devices/computers/${paired.machineId}`;
+  expect((await owner(path, { method: "PATCH", json: { spill: { own: false } } })).status).toBe(200);
+  expect((await rui(path, { method: "PATCH", json: { spill: { own: true } } })).status).toBe(403);
+  const on = await owner(path, { method: "PATCH", json: { spill: { own: true } } });
+  expect(on.status).toBe(200);
+  expect(await on.json()).toMatchObject({ spill: { own: true } });
+  expect(asked).toEqual([{ action: "start", tool: "claude" }]);
+
+  const list = async () => ((await (await owner("/devices")).json()) as { devicesHelp: boolean }).devicesHelp;
+  expect(await list()).toBe(true);
+  expect((await rui("/devices/help", { method: "PUT", json: { on: false } })).status).toBe(403);
+  expect(await (await owner("/devices/help", { method: "PUT", json: { on: false } })).json()).toEqual({ on: false });
+  expect(await list()).toBe(false);
+});

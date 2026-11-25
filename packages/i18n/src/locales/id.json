@@ -689,6 +689,8 @@
       "confirmNo": "Ini bukan aku",
       "done": "Beres.",
       "doneLead": "Kamu sudah masuk di aplikasi agentes. Kamu bisa menutup tab ini.",
+      "back": "Kembali ke aplikasi.",
+      "openApp": "Buka aplikasi",
       "expired": "Permintaan ini sudah kedaluwarsa.",
       "expiredLead": "Kembali ke aplikasi lalu pilih {{provider}} lagi.",
       "handover": "Masuk dengan akunmu dari perangkat lain…",
@@ -1201,7 +1203,7 @@
         "fileLead": "File dari aplikasi apa pun yang kami kenal. File itu dikenali dengan sendirinya.",
         "paths": {
           "lead": "Pilih cara membawanya. Kamu memeriksa semuanya sebelum apa pun dibuat.",
-          "best": "paling lengkap",
+          "best": "Paling lengkap",
           "safe": "Kunci, kata sandi, dan sesi {{app}} tidak pernah ikut, lewat cara apa pun.",
           "command": {
             "title": "Dengan perintah",
@@ -4212,6 +4214,7 @@
     "available": "Tersedia",
     "working": "Sedang bekerja",
     "waiting": "Menunggumu",
+    "idle": "Tidak aktif",
     "lower": {
       "online": "online",
       "away": "sedang pergi",
@@ -4364,7 +4367,8 @@
   "accountSwitch": {
     "limit": "Lanjut dengan akun <to/> karena akun <from/> mencapai batasnya",
     "line": "Lanjut dengan akun <to/> karena akun <from/> hampir mencapai batasnya",
-    "extra": "Lanjut dengan akun <to/> karena akun <from/> akan masuk ke penggunaan tambahan berbayar"
+    "extra": "Lanjut dengan akun <to/> karena akun <from/> akan masuk ke penggunaan tambahan berbayar",
+    "busy": "Lanjut dengan akun <to/> karena akun <from/> sudah menjawab percakapan sebanyak yang bisa ditanganinya sekaligus"
   },
   "channelRefs": {
     "list": "Kanal",
@@ -6265,7 +6269,7 @@
         "cli_sandbox": "Program {{brain}} tidak bisa menjalankan sandbox-nya di komputer ini. Pilih AI lain di pengaturan agen.",
         "cli_system": "Program {{brain}} belum berjalan di sistem komputer ini. Pilih AI lain di pengaturan agen.",
         "account_missing": "Akun yang dipilih untuk agen ini sudah tidak ada di komputernya. Pilih akun lain di pengaturan agen, atau tambahkan lagi.",
-        "windows_sandbox": "Komputer Windows ini tidak dapat mengisolasi perintah Codex: perlu Windows 11 24H2 atau yang lebih baru. Perbarui Windows, pilih Claude atau kunci API untuk agen ini, atau pindahkan ke komputer Linux.",
+        "windows_sandbox": "Codex tidak dapat memulai isolasi apa pun untuk perintahnya di komputer Windows ini. Pilih Claude atau kunci API untuk agen ini, atau perbarui komputer ke Windows 11 24H2 atau yang lebih baru, dengan pembaruan terbarunya.",
         "our_error": "Ada yang salah di pihak kami dan tugasnya berhenti. Minta lagi sebentar lagi.",
         "unknown": "Gagal."
       }
@@ -12050,8 +12054,10 @@
       "home_only": "{{program}} hanya terpasang untuk root di {{computer}}, yang tidak bisa dijangkau para agen.",
       "not_reported": "{{computer}} masih memeriksa program apa saja yang dimilikinya. Ini berubah sendiri setelah selesai.",
       "system": "{{program}} belum berjalan di sistem {{computer}}.",
+      "windows_sandbox": "Windows di {{computer}} tidak dapat mengisolasi perintah {{program}}. Pilih Claude atau kunci API sebagai gantinya, atau perbarui komputer itu ke Windows 11 24H2 atau yang lebih baru, dengan pembaruan terbarunya.",
       "no_computerCloud": "Siap begitu {{computer}} siap."
     },
+    "sandboxPartial": "Di Windows ini, perintah Codex hanya bisa menulis di folder para agen, tetapi internet hanya diblokir sebagian untuknya. Windows 11 24H2 atau yang lebih baru, dengan pembaruan terbarunya, memblokirnya sepenuhnya.",
     "notAvailableNow": "Dipilih, tapi sedang tidak tersedia.",
     "offline": "{{computer}} sedang offline.",
     "modelLabel": "Model",
@@ -12126,7 +12132,7 @@
     "rule": "Kerja baru mulai saat komputer punya memori kosong. Orang didahulukan. Agen yang disebut bersamaan mulai satu per satu.",
     "spill": {
       "title": "Komputermu",
-      "text": "Saat komputer ini penuh, balasan untukmu bisa mulai di salah satu komputermu. Kerja panjang dan file para agen tetap di sini.",
+      "text": "Saat komputer ini penuh atau tidak ada, agenmu bisa mulai di salah satu komputermu. Misi, sesi kode, dan agen dengan repositori tetap di sini.",
       "plan": "paket {{plan}} kamu"
     },
     "youFirst": "Kamu duluan",
@@ -15597,7 +15603,7 @@
     "device": {
       "notLinkMaker": "Hanya orang yang membuat tautan ini yang bisa mengizinkan komputer ini bergabung.",
       "widenForbidden": "Admin hanya bisa mempersempit siapa yang boleh memakai perangkat milik seseorang.",
-      "spillOwnerOnly": "Hanya orang yang menghubungkan komputer ini yang bisa membiarkan balasan berpikir di sini. Kamu bisa mematikannya.",
+      "spillOwnerOnly": "Hanya orang yang menghubungkan komputer ini yang bisa menyalakan bantuannya. Kamu bisa mematikannya.",
       "tasksOwnerOnly": "Hanya orang yang menghubungkan komputer ini yang bisa mengubah berapa tugas yang dijalankannya sekaligus.",
       "tasksCloud": "Cloud menentukan sendiri ruang komputer ini untuk tugas.",
       "notHome": "Agen tinggal di komputer workspace dan memakai komputer ini saat menyebut namanya."
@@ -15750,6 +15756,11 @@
       "line": "IP keluar {{ip}}",
       "hint": "Alamat yang dilihat situs saat agen menjelajah. Alamat ini ikut berubah saat jaringan komputer berubah.",
       "waiting": "Menyambungkan ulang internet agen. Koneksi mereka menunggu sampai kembali."
+    },
+    "moving": {
+      "short": "Pindah server",
+      "line": "Pindah ke server baru… kembali dalam beberapa menit",
+      "named": "{{computer}} sedang pindah ke server baru… kembali dalam beberapa menit"
     },
     "online": "Online",
     "offline": "Offline",
@@ -16023,10 +16034,12 @@
     "pushHarderHint": "Lebih banyak tugas sekaligus: hanya 0,5 GB memori yang tetap bebas dan prosesor yang sibuk tidak menahannya. Aplikasimu sendiri bisa melambat.",
     "belongs": "Milik ruang kerja",
     "belongsHint": "Perangkat ini tetap ada saat orang yang menghubungkannya keluar, dan semua orang bisa memakainya selama tidak ada pemiliknya.",
-    "spillOwn": "Balasan untukmu bisa berpikir di sini",
-    "spillOwnHint": "Saat komputer agen penuh, balasannya untukmu mulai di sini.",
-    "spillOthers": "Agen orang lain bisa berpikir di sini",
-    "spillOthersHint": "Saat komputer agen penuh, balasannya untuk orang lain juga bisa mulai di sini.",
+    "spillOwn": "Bantu saat komputer tim penuh atau tidak ada",
+    "spillOwnHint": "Saat komputer agenmu penuh atau tidak ada, balasan, permintaan, dan rutinitas mereka bisa berpikir di sini dengan login-mu.",
+    "spillTeamHint": "Saat komputer sebuah agen penuh atau tidak ada, balasan, permintaan, dan rutinitasnya bisa berpikir di sini dengan login pemiliknya di komputer ini.",
+    "spillWorkspaceOff": "Admin mematikan ini untuk workspace.",
+    "helpWorkspace": "Komputer membantu saat komputer tim penuh atau tidak ada",
+    "helpWorkspaceHint": "Setiap komputer hanya membantu jika pemiliknya mengizinkan. Mati: tidak ada yang membantu, apa pun pilihan pemiliknya.",
     "connectedBy": "Dihubungkan oleh {{name}}",
     "downloadFor": "Unduh untuk {{system}}",
     "downloadApp": "Unduh aplikasinya",
@@ -17943,6 +17956,11 @@
       "cant": "Dijawab dengan {{via}}: {{plan}} tidak bisa berpikir sekarang.",
       "change": "Ubah"
     },
+    "spilled": {
+      "full": "Berpikir di {{to}}: {{from}} sedang penuh.",
+      "away": "Berpikir di {{to}}: {{from}} sedang tidak ada.",
+      "itsComputer": "komputernya"
+    },
     "modelStandIn": {
       "text": "{{plan}} menolak {{from}} dengan kunci ini. Aku menjawab dengan {{to}}, yang berfungsi dengannya.",
       "useAll": "Gunakan {{model}} untuk semua",
@@ -17959,6 +17977,10 @@
       "thinking": "Berpikir…",
       "held": "Menunggu persetujuan…",
       "said": "“{{text}}”"
+    },
+    "trail": {
+      "label": "Yang sudah dikerjakan {{name}}",
+      "earlier_other": "{{count}} langkah sebelumnya"
     },
     "consult": {
       "asking": "{{from}} sedang bertanya ke {{to}}",
@@ -19875,6 +19897,7 @@
       "notAnsweringHelp": "Biasanya kembali dalam beberapa menit. Kami sedang menanganinya.",
       "offline": "{{computer}} sedang offline",
       "offlineHelpPlain": "{{name}} menunggu komputernya kembali.",
+      "helping": "Sementara itu, pekerjaan baru bisa berpikir di {{names}}.",
       "noRoom": "{{computer}} sudah menampilkan layar sebanyak yang ia bisa. Coba lagi sebentar lagi.",
       "unavailable": "Layar {{name}} tidak bisa ditampilkan sekarang",
       "unavailableHelp": "Coba lagi sebentar lagi.",

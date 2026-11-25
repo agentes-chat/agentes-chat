@@ -1013,6 +1013,25 @@ describe("the agent's AI", () => {
     expect(t("aiAccounts.page.newKey")).toBe("Trocar a chave");
   });
 
+  test("Codex on a Windows computer without MXC: an ⓘ by Conta in every picker and by Codex on the computer's screen, never a line", async () => {
+    const read = (file: string) =>
+      Bun.file(new URL(`../../src/features/${file}`, import.meta.url).pathname)
+        .text()
+        .then((text) => text.replace(/\s+/g, " "));
+    const [choice, computer] = await Promise.all([read("ai/AiChoice.tsx"), read("settings/MachineScreen.tsx")]);
+    // As the web's Conta, in the choice every picker shares (an agent's, a new agent's, a mission's, Lodi's): its ⓘ,
+    // from the row picked. Never Lodi's, whose turns run no commands (`sandboxPartial`).
+    expect(choice).toContain(
+      'active && state.sandboxPartial(active) ? { name: t("common.about", { label: t("mobile.aiHub.choice.account") }), text: t("brain.sandboxPartial") } : null;',
+    );
+    expect(choice).toContain(
+      'label={t("mobile.aiHub.choice.account")} value={extraOn?.option.label ?? account?.label ?? ""} {...(partial ? { hint: partial } : {})}',
+    );
+    // The computer's Codex row: the same words as the web's ⓘ (`codexSandboxNote`), behind an ⓘ of its own.
+    expect(computer).toContain('const note = tool === "codex" ? codexSandboxNote(t, m) : null;');
+    expect(computer).toContain('{...(note ? { hint: { name: t("common.about", { label }), text: note } } : {})}');
+  });
+
   test("the agent's AI opens its model on a page of its own, pushed over it", async () => {
     // The screens are components the tests can't render: what they wire in, as text.
     const screen = await Bun.file(new URL("../../src/features/ai/AgentAiScreen.tsx", import.meta.url).pathname).text();

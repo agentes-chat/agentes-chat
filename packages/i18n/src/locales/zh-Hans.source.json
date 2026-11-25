@@ -1706,6 +1706,12 @@
   "auth.desktop.doneLead": {
     "value": "You're signed in to the agentes app. You can close this tab."
   },
+  "auth.desktop.back": {
+    "value": "Going back to the app."
+  },
+  "auth.desktop.openApp": {
+    "value": "Open the app"
+  },
   "auth.desktop.expired": {
     "value": "This request expired."
   },
@@ -3021,7 +3027,7 @@
     "value": "Choose how to bring them. You check everything before anything is made."
   },
   "onboarding.import.sheet.paths.best": {
-    "value": "the most complete"
+    "value": "The most complete"
   },
   "onboarding.import.sheet.paths.safe": {
     "value": "{{app}}'s keys, passwords and sessions never come, whichever way you pick."
@@ -10696,6 +10702,9 @@
   "presence.waiting": {
     "value": "Waiting for you"
   },
+  "presence.idle": {
+    "value": "Idle"
+  },
   "presence.lower.online": {
     "value": "online"
   },
@@ -11064,6 +11073,9 @@
   },
   "accountSwitch.extra": {
     "value": "Went on with the <to/> account because the <from/> account would go into paid extra usage"
+  },
+  "accountSwitch.busy": {
+    "value": "Went on with the <to/> account because the <from/> account was already answering as many conversations as it can at once"
   },
   "channelRefs.list": {
     "value": "Channels"
@@ -16057,7 +16069,7 @@
     "value": "The account chosen for this agent isn't on its computer anymore. Choose another one in the agent's settings, or add it again."
   },
   "agentPage.activity.errors.windows_sandbox": {
-    "value": "This Windows computer can't isolate Codex's commands: it needs Windows 11 24H2 or newer. Update Windows, choose Claude or an API key for this agent, or move it to a Linux computer."
+    "value": "Codex couldn't start any isolation for its commands on this Windows computer. Choose Claude or an API key for this agent, or update the computer to Windows 11 24H2 or newer, with its latest updates."
   },
   "agentPage.activity.errors.our_error": {
     "value": "Something went wrong on our side and it stopped. Ask again in a little while."
@@ -30450,8 +30462,14 @@
   "brain.reasons.system": {
     "value": "{{program}} doesn't run on {{computer}}'s system yet."
   },
+  "brain.reasons.windows_sandbox": {
+    "value": "{{computer}}'s Windows can't isolate {{program}}'s commands. Choose Claude or an API key instead, or update that computer to Windows 11 24H2 or newer, with its latest updates."
+  },
   "brain.reasons.no_computerCloud": {
     "value": "Ready as soon as {{computer}} is."
+  },
+  "brain.sandboxPartial": {
+    "value": "On this Windows, Codex's commands write only in the agents' folders, but the internet is only partly blocked for them. Windows 11 24H2 or newer, with its latest updates, blocks it fully."
   },
   "brain.notAvailableNow": {
     "value": "Chosen, but unavailable right now."
@@ -30619,7 +30637,7 @@
     "value": "Your computers"
   },
   "queue.spill.text": {
-    "value": "When this computer is full, replies to you can start on one of yours. Long work and the agents' files stay here."
+    "value": "When this computer is full or away, your agents can start on one of yours. Missions, code sessions and agents with repositories stay here."
   },
   "queue.spill.plan": {
     "value": "your {{plan}} plan"
@@ -39521,7 +39539,7 @@
     "value": "Admins can only narrow who can use someone's own device."
   },
   "errors.device.spillOwnerOnly": {
-    "value": "Only the person who connected this computer can let replies think on it. You can turn it off."
+    "value": "Only the person who connected this computer can turn its help on. You can turn it off."
   },
   "errors.device.tasksOwnerOnly": {
     "value": "Only the person who connected this computer can change how many tasks it runs at once."
@@ -39891,6 +39909,15 @@
   },
   "machines.egress.waiting": {
     "value": "Reconnecting the agents’ internet. Their connections wait until it’s back."
+  },
+  "machines.moving.short": {
+    "value": "Moving servers"
+  },
+  "machines.moving.line": {
+    "value": "Moving to a new server… back in a few minutes"
+  },
+  "machines.moving.named": {
+    "value": "{{computer}} is moving to a new server… back in a few minutes"
   },
   "machines.online": {
     "value": "Online"
@@ -40600,16 +40627,22 @@
     "value": "It stays when the person who connected it leaves, and everyone can use it while nobody owns it."
   },
   "devices.spillOwn": {
-    "value": "Your replies can think here"
+    "value": "Help when the team's computer is full or away"
   },
   "devices.spillOwnHint": {
-    "value": "When an agent's computer is full, its replies to you start here."
+    "value": "When your agents' computer is full or away, their replies, asks and routines can think here with your sign-in."
   },
-  "devices.spillOthers": {
-    "value": "Other people's agents can think here"
+  "devices.spillTeamHint": {
+    "value": "When an agent's computer is full or away, its replies, asks and routines can think here with its owner's sign-in on this computer."
   },
-  "devices.spillOthersHint": {
-    "value": "When an agent's computer is full, its replies to other people can start here too."
+  "devices.spillWorkspaceOff": {
+    "value": "An admin turned this off for the workspace."
+  },
+  "devices.helpWorkspace": {
+    "value": "Computers help when the team's is full or away"
+  },
+  "devices.helpWorkspaceHint": {
+    "value": "Each computer helps only if its owner allows it. Off: none helps, whatever its owner chose."
   },
   "devices.connectedBy": {
     "value": "Connected by {{name}}"
@@ -45441,6 +45474,15 @@
   "chat.standIn.change": {
     "value": "Change"
   },
+  "chat.spilled.full": {
+    "value": "Thought on {{to}}: {{from}} was full."
+  },
+  "chat.spilled.away": {
+    "value": "Thought on {{to}}: {{from}} was away."
+  },
+  "chat.spilled.itsComputer": {
+    "value": "its computer"
+  },
   "chat.modelStandIn.text": {
     "value": "{{plan}} refused {{from}} with this key. I answered with {{to}}, which works with it."
   },
@@ -45476,6 +45518,15 @@
   },
   "chat.wait.said": {
     "value": "“{{text}}”"
+  },
+  "chat.trail.label": {
+    "value": "What {{name}} did so far"
+  },
+  "chat.trail.earlier": {
+    "value": {
+      "one": "{{count}} earlier step",
+      "other": "{{count}} earlier steps"
+    }
   },
   "chat.consult.asking": {
     "value": "{{from}} is asking {{to}}"
@@ -49905,6 +49956,9 @@
   },
   "agentComputer.state.offlineHelpPlain": {
     "value": "{{name}} waits for the computer to come back."
+  },
+  "agentComputer.state.helping": {
+    "value": "Meanwhile, its new work can think on {{names}}."
   },
   "agentComputer.state.noRoom": {
     "value": "{{computer}} is showing as many screens as it can. Try again in a moment."

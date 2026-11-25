@@ -122,7 +122,7 @@ describe("an agent's face", () => {
     activeAt: null,
     ...over,
   });
-  test("never red Ocupado or amber Ausente: working, waiting on you, available", () => {
+  test("never red Ocupado or a person's Ausente: working, waiting on you, available, idle", () => {
     expect(agentPresenceShown(status({ presence: "busy", working: true }), true)).toBe("working");
     // Busy with nothing at work (long work waiting on someone, a routine's run in line): free, as its line says.
     expect(
@@ -133,7 +133,15 @@ describe("an agent's face", () => {
     ).toBe("online");
     // An older server sends no `working`: its busy still reads at work.
     expect(agentPresenceShown(status({ presence: "busy" }), true)).toBe("working");
-    expect(agentPresenceShown(status({ presence: "away" }), true)).toBe("online");
+    // Idle a while: its own word, never a person's "Ausente"; work and waiting on you still come first.
+    expect(agentPresenceShown(status({ presence: "away" }), true)).toBe("away");
+    expect(agentFaceWord(t, "away")).toBe("Inativo");
+    expect(agentFaceWord(en, "away")).toBe("Idle");
+    expect(agentPresenceShown(status({ presence: "away" }), true, true)).toBe("working");
+    expect(agentPresenceShown(status({ presence: "away", work: work({ state: "you", ask: "answer" }) }), true)).toBe(
+      "waiting",
+    );
+    expect(agentPresenceShown(undefined, true)).toBe("online");
     expect(agentPresenceShown(status({ work: work({ state: "you", ask: "approval" }) }), true)).toBe("waiting");
     expect(agentPresenceShown(status({ presence: "out" }), true)).toBe("out");
     expect(agentPresenceShown(status({ presence: "away" }), false)).toBe("offline");

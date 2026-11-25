@@ -157,6 +157,7 @@ import {
 import { type CodeSessionContext, codeSessionContext, loseCodeWorktree } from "./code-sessions";
 import { type CodeSuggestion, codeSuggestionApplies, SUGGEST_CODE_SESSION_TOOL } from "./code-suggestions";
 import {
+  fullSignIns,
   kickRoomQueue,
   publishQueueChanged,
   type RoomWaitCause,
@@ -412,6 +413,8 @@ import {
   movedAccountPlan,
   type NextAccount,
   nextAccountPlan,
+  SPILL_AFTER_MS,
+  type SpillCause,
   type SpillRecord,
   spillMayHelp,
   spillPlan,
@@ -816,6 +819,8 @@ export interface Transcript {
     reading?: PlanReadingRef;
     /** Its computer is just gone (within the outage grace): it waits without a word, and no outage shows yet. */
     quiet?: boolean;
+    /** Its computer is away moving to another server (`shownMoving`): the apps say so, not that it is offline. */
+    moving?: boolean;
     /** A plan wait with every account of the order at its limit: how many (`resetsAt` is the first of them to reset). */
     chain?: number;
   };
@@ -864,10 +869,18 @@ export interface Transcript {
    * plan sign-in whose slot it holds while it works (`signInSlotOf`).
    */
   roomAsk?: { machineId: string; at: number; signIn?: string };
-  /** In its computer's line because this plan sign-in has all the runs it takes at once (`SignInSlot`). */
+  /**
+   * The plan sign-in it waits in its computer's line to think with (`SignInSlot`): only runs on that same sign-in hold
+   * it back. Kept whatever held it but the computer's memory, which holds back the whole line.
+   */
   signInWait?: { key: string };
-  /** Its agent's computer was full: it thinks on another computer of the workspace, in a session of its own there. */
+  /** Its agent's computer was full or away: it thinks on another computer of the workspace, in a session of its own. */
   spill?: SpillRecord;
+  /**
+   * When it last looked for another computer and found none: a run behind others claims to look only once per
+   * `SPILL_AFTER_MS`, not on every retry of its line.
+   */
+  spillLookedAt?: number;
   /** Its plan's limit moved it to the next account in the workspace's order (ADR 0041 §6), in a session of its own there. */
   accountMove?: AccountMove;
   /**
@@ -1326,6 +1339,8 @@ async function executeRunInner(
         code: sql<string | null>`${runState}->'waitingForBrain'->>'code'`,
         people: sql<boolean | null>`(${runState}->>'roomPeople')::boolean`,
         spilled: sql<boolean>`${runState} ? 'spill'`,
+        roomSince: sql<string | null>`${runState}->>'roomWaitSince'`,
+        spillLooked: sql<string | null>`${runState}->>'spillLookedAt'`,
         source: sql<string | null>`${runState}->'waitingForBrain'->>'source'`,
         // Read by a usage wait alone, and the one read here that opens the transcript.
         cut: sql<string | null>`case when ${runState}->'waitingForBrain'->>'code' in (${sql.join(
@@ -1411,12 +1426,14 @@ async function executeRunInner(
     // claiming.
     if (askingForRoom && row.machineId) {
       const head = await roomHead(db, row.machineId);
-      // A person's turn behind others looks for another computer itself (spill-over) when one may take it.
+      // A turn behind others looks for another computer itself (spill-over) when one may take it: a person's at once,
+      // any other once it waited `SPILL_AFTER_MS`, and then once per `SPILL_AFTER_MS` (`spillLookedAt`): most can't
+      // move or find no computer, and each look claims the run.
       const spill =
-        row.people === true &&
+        (row.people === true ||
+          (Date.now() - Number(row.roomSince ?? Date.now()) >= SPILL_AFTER_MS &&
+            Date.now() - Number(row.spillLooked ?? 0) >= SPILL_AFTER_MS)) &&
         !row.spilled &&
-        !row.workId &&
-        !row.background &&
         (await spillMayHelp(db, row.orgId, row.machineId).catch(() => false));
       if (head && head.id !== runId && !spill) {
         const at = Date.now() + COMPUTER_BUSY_RETRY_MS;
@@ -3953,7 +3970,7 @@ async function executeRunInner(
    * What `nextAccountPlan` found; null where no move is looked for.
    */
   const moveToNextAccount = async (
-    cause: "limit" | "line" | "extra",
+    cause: AccountSwitch["cause"],
     room?: (usage: PlanUsage | null, accountId: string) => boolean,
   ): Promise<NextAccount | null> => {
     const t = transcript as Transcript;
@@ -4019,6 +4036,51 @@ async function executeRunInner(
     delete t.accountMove;
     t.freshSession = Bun.randomUUIDv7();
     await db.update(agentRuns).set({ brainSessionId: t.freshSession }).where(eq(agentRuns.id, run.id));
+  };
+
+  /**
+   * Devices as extra capacity (ADR 0233): the run's fresh turn thinks on another computer that helps, while its own is
+   * full (`cause` "full") or away ("away"). Replies, agents' asks, routines and long work at its start; never a
+   * mission's or a code session's (its worktree is on its own computer), an agent with repositories (it works in its
+   * checkouts there), the right hand, or a turn only its own computer may finish. True: `plan` thinks there now.
+   */
+  const spillOver = async (cause: SpillCause): Promise<boolean> => {
+    transcript.spillLookedAt = Date.now();
+    const home = plan.kind !== "model" ? (plan.session?.machineId ?? agent.machineId ?? null) : null;
+    if (
+      !home ||
+      run.turns !== 0 ||
+      computerTurns !== 0 ||
+      plan.missionId ||
+      plan.session?.codeSession ||
+      isRightHand(agent) ||
+      transcript.spill ||
+      turnStaysOnItsComputer(transcript.interruptedTurn?.executed.length ?? 0, transcript.interruptedTurn?.cause)
+    )
+      return false;
+    if ((await agentRepositoryList(db, run.orgId, agent.id)).length > 0) return false;
+    const personId = accountablePerson(
+      await runAuthority(db, { ...run, transcript: transcript as unknown as Record<string, unknown> }),
+    );
+    const session = { id: Bun.randomUUIDv7() };
+    const found = await spillTarget(deps, agent, plan, personId, session);
+    if (!found) return false;
+    delete transcript.spillLookedAt;
+    await db.update(agentRuns).set({ brainSessionId: session.id }).where(eq(agentRuns.id, run.id));
+    plan = found.plan;
+    transcript.spill = {
+      from: home,
+      to: found.machineId,
+      cause,
+      toName: found.name,
+      ...(found.homeName ? { fromName: found.homeName } : {}),
+    };
+    // There it thinks on its owner's sign-in, not the account it moved to.
+    delete transcript.accountMove;
+    // Its place in its own computer's line is free: the next one there asks now.
+    await kickRoomQueue(db, home).catch(() => {});
+    later(() => addRunStep(db, run, "context", { spill: transcript.spill }));
+    return true;
   };
 
   /**
@@ -4173,8 +4235,10 @@ async function executeRunInner(
     // Asleep in standby, waking: without a word too, for one grace from its first such wait (ADR 0161); one that
     // never wakes is down, and says so.
     let quietUntil: number | null = null;
+    let moving = false;
     if (u.code === "machine_offline") {
       const status = await deps.machines?.status(machineId).catch(() => null);
+      moving = status?.online === false && status.moving === true;
       const seen = status?.lastSeenAt ? Date.parse(status.lastSeenAt) : Number.NaN;
       if (status && !status.online && status.standby) {
         t.standbyWaitSince ??= Date.now();
@@ -4183,6 +4247,14 @@ async function executeRunInner(
       } else if (status && !status.online && Date.now() - seen < TASK_OFFLINE_GRACE_MS)
         quietUntil = seen + TASK_OFFLINE_GRACE_MS;
     }
+    // Away for real at the run's start (past a blip, never one waking from standby) or paused by its owner: a device
+    // that helps takes the turn (ADR 0233).
+    if (
+      look &&
+      (u.code === "machine_paused" || (u.code === "machine_offline" && quietUntil === null)) &&
+      (await spillOver("away"))
+    )
+      return "moved";
     // Only a blip keeps its place in the line: after a real outage the wait for room starts over, or its clock
     // (the 10-minute note, its place in line) would count the time the computer was gone as time it was busy.
     if (!busy && quietUntil === null) {
@@ -4240,6 +4312,7 @@ async function executeRunInner(
       waitId: Bun.randomUUIDv7(),
       at: Date.now(),
       ...(quietUntil !== null ? { quiet: true } : {}),
+      ...(moving ? { moving: true } : {}),
     };
     if (!stillBusy)
       await addRunStep(db, run, "error", {
@@ -5279,17 +5352,6 @@ async function executeRunInner(
         transcript.roomAsked ??=
           !personWaiting && (run.background || (await personAskedLately(db, run.orgId, runStretchOf(run))));
         if (options.lineSince) transcript.roomOrderSince ??= options.lineSince;
-        const spillOver = async () => {
-          const personId = accountablePerson(
-            await runAuthority(db, { ...run, transcript: transcript as unknown as Record<string, unknown> }),
-          );
-          // An agent with repositories works in its checkouts, on its own computer.
-          if (!personId || (await agentRepositoryList(db, run.orgId, agent.id)).length > 0) return null;
-          const session = { id: Bun.randomUUIDv7() };
-          const found = await spillTarget(deps, agent, plan, personId, session);
-          if (found) await db.update(agentRuns).set({ brainSessionId: session.id }).where(eq(agentRuns.id, run.id));
-          return found;
-        };
         const place = {
           rank: personWaiting ? 0 : transcript.roomAsked ? 1 : 2,
           since: transcript.roomOrderSince ?? transcript.roomWaitSince ?? Date.now(),
@@ -5299,36 +5361,31 @@ async function executeRunInner(
         const slotOf = (p: BrainPlan) => signInSlotOf(p, deps.signInConcurrency ?? SIGN_IN_CONCURRENCY);
         let behind = isRightHand(agent) ? null : await roomGate(db, run, roomMachine, place, slotOf(plan));
         let askOn = roomMachine;
-        // Spill-over: behind others, or refused for room before, a person's first turn may think on another computer.
-        // Never a mission's or a code session's (ADR 0215): its worktree is on this one.
-        const to =
+        // Behind others, or refused for room before: a person's reply looks for another computer at once, any other
+        // fresh turn once it waited `SPILL_AFTER_MS`, then once per `SPILL_AFTER_MS` (`spillOver`).
+        const waited = Date.now() - (transcript.roomWaitSince ?? Date.now());
+        const looked = Date.now() - (transcript.spillLookedAt ?? 0);
+        if (
           (behind || transcript.roomWaitSince !== undefined) &&
-          personWaiting &&
-          run.turns === 0 &&
-          !run.workId &&
-          !run.background &&
-          !plan.missionId &&
-          !plan.session?.codeSession &&
-          !isRightHand(agent) &&
-          !transcript.spill
-            ? await spillOver()
-            : null;
-        if (to) {
-          plan = to.plan;
-          askOn = to.machineId;
-          transcript.spill = { from: roomMachine, to: to.machineId };
-          // There it thinks on its owner's sign-in, not the account it moved to.
-          delete transcript.accountMove;
-          behind = await roomGate(db, run, to.machineId, place, slotOf(plan));
-          // Its place in its own computer's line is free: the next one there asks now.
-          await kickRoomQueue(db, roomMachine).catch(() => {});
-          later(() => addRunStep(db, run, "context", { spill: transcript.spill }));
+          (personWaiting || (waited >= SPILL_AFTER_MS && looked >= SPILL_AFTER_MS)) &&
+          (await spillOver("full"))
+        ) {
+          askOn = plan.session?.machineId ?? roomMachine;
+          behind = await roomGate(db, run, askOn, place, slotOf(plan));
+        }
+        // Its sign-in thinks for all it takes at once: a fresh run goes on with another shared sign-in of the same
+        // kind that has a free slot, before it waits. Only one under the pause line: never into someone's paid extra
+        // usage, nor onto a plan near its limit, to save a short wait.
+        if (behind?.cause === "sign_in" && run.turns === 0 && !transcript.spill) {
+          const full = await fullSignIns(db, run.orgId, deps.signInConcurrency ?? SIGN_IN_CONCURRENCY);
+          const next = await moveToNextAccount("busy", (usage, id) => !full.has(id) && underTheLine(usage));
+          if (next?.plan) behind = await roomGate(db, run, askOn, place, slotOf(plan));
         }
         const slot = slotOf(plan);
         if (behind) {
           // Not working on the computer: no slot of a sign-in is its (`kickSignInLine` reads it as it leaves).
           delete transcript.roomAsk;
-          if (behind.cause === "sign_in" && slot) transcript.signInWait = { key: slot.key };
+          if (slot) transcript.signInWait = { key: slot.key };
           else delete transcript.signInWait;
           const handled = await brainUnavailable({
             code: "busy",
@@ -5525,6 +5582,7 @@ async function executeRunInner(
           io,
           deltas.push,
           {
+            onNote: deltas.note,
             // Plan usage of a computer brain: tokens on the run, cost zero (the person's plan).
             onUsage: (u) =>
               turnPlan.kind !== "model" &&
@@ -6016,10 +6074,12 @@ async function executeRunInner(
       const turnText = dropSquashedEcho(textOf(result.content).trim());
       // Text it wrote before its calls, without the line it said on the way in the same response (`say_now`).
       const lines = result.toolCalls.filter((c) => isSayNow(c.name));
+      // Notes its API kept apart (Claude's progress updates, a reasoning summary) narrate the same work.
+      const worded = turnText || deltas.notes();
       const narration =
-        result.stopReason === "tool_use" && turnText
+        result.stopReason === "tool_use" && worded
           ? withoutSaidNow(
-              turnText,
+              worded,
               lines.map((c) => ({ text: sayNowText((c.input as { text?: unknown }).text) })),
             )
           : "";
@@ -6078,7 +6138,7 @@ async function executeRunInner(
         /** Mission tools' own waits (a blocking decision, a review): their ids. */
         const waits: string[] = [];
         // What it wrote before these calls is the first one's step line (`takeStepWords`), never posted.
-        if (!run.background) holdStepWords(run.id, isRightHand(agent) ? scrubSignIns(turnText, "••••").text : turnText);
+        if (!run.background) holdStepWords(run.id, isRightHand(agent) ? scrubSignIns(worded, "••••").text : worded);
         // Its line on the way (`say_now`, ADR 0207) goes out before the work it announces, whatever order it wrote them in.
         const saidBefore = transcript.saidNow?.length ?? 0;
         const callingAt = transcript.messages.length - 1;
@@ -7089,6 +7149,8 @@ async function thinkOnce(
     onStarted?(call: { id: string; name: string; input?: unknown }): void;
     /** A subagent or a workflow of its own while it works (`tool_progress`, ADR 0215). */
     onProgress?(progress: Extract<BrainEvent, { type: "tool_progress" }>): void;
+    /** A note it wrote between its calls, apart from its text (`note`). */
+    onNote?(text: string): void;
     /** A file a tool of the brain's own made in the agent's folder (`file`). */
     onFile?(path: string): void;
     /** Messages handed to the turn mid-turn that it read (live steering). */
@@ -7151,6 +7213,7 @@ async function thinkOnce(
     if (event.type === "text_delta") onDelta(event.text);
     else if (event.type === "tool_started") hooks.onStarted?.(event);
     else if (event.type === "tool_progress") hooks.onProgress?.(event);
+    else if (event.type === "note") hooks.onNote?.(event.text);
     else if (event.type === "stalled") hooks.onStalled?.(event);
     else if (event.type === "tool_call") {
       // Executed elsewhere (a computer brain through the runner bridge, which recorded its steps): shown only.
@@ -7507,7 +7570,16 @@ function createTurnText(
     return out;
   };
   let pending: Promise<void> = Promise.resolve();
+  /** The notes its API kept apart from its text this turn (`note`): narration, as text before a call is. */
+  const notes: string[] = [];
   return {
+    /** A note it wrote between its calls (`BrainEvent` `note`): the next call's step line, never the reply. */
+    note(text: string) {
+      notes.push(text);
+      if (!first.quiet) holdStepWords(run.id, scrubbed(text.slice(0, STEP_HELD_MAX)));
+    },
+    /** This turn's notes, as one stretch of narration. */
+    notes: () => notes.join("\n\n"),
     push(text: string) {
       if (text && !started) {
         started = true;
@@ -7677,16 +7749,22 @@ const withCode = (meta: Record<string, unknown> | undefined, code: ReturnType<ty
 
 /**
  * The quiet notes on a reply: Fast was refused and it came at standard speed (`meta.speedFallback`, the apps say so
- * under the reply), or the plan refused the model "Automático" picked (`meta.modelStandIn`).
+ * under the reply), the plan refused the model "Automático" picked (`meta.modelStandIn`), or it thought on another
+ * computer because its own was full or away (`meta.spilled`, ADR 0233).
  */
-const withFallback = (t: Transcript, meta: Record<string, unknown> | undefined) =>
-  t.speedFallback || t.modelStandIn
+const withFallback = (t: Transcript, meta: Record<string, unknown> | undefined) => {
+  const spilled = t.spill?.toName
+    ? { to: t.spill.toName, from: t.spill.fromName ?? null, cause: t.spill.cause ?? "full" }
+    : null;
+  return t.speedFallback || t.modelStandIn || spilled
     ? {
         ...(meta ?? {}),
         ...(t.speedFallback ? { speedFallback: true } : {}),
         ...(t.modelStandIn ? { modelStandIn: t.modelStandIn } : {}),
+        ...(spilled ? { spilled } : {}),
       }
     : meta;
+};
 
 /**
  * The conversation a "Continuar" run starts from: the stopped run's messages (what it wrote

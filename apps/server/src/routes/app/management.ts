@@ -443,12 +443,12 @@ const Run = z
       .object({
         from: z.object({ id: z.uuid(), name: z.string() }),
         to: z.object({ id: z.uuid(), name: z.string() }),
-        cause: z.enum(["limit", "line", "extra"]),
+        cause: z.enum(["limit", "line", "extra", "busy"]),
       })
       .nullable()
       .openapi({
         description:
-          "It went on with another account than its agent's own: the first it left, the last it moved to, and why (its plan's limit, the pause line of long work, or the paid extra usage it would go into). Said in its details, never in the chat.",
+          "It went on with another account than its agent's own: the first it left, the last it moved to, and why (its plan's limit, the pause line of long work, the paid extra usage it would go into, or every run the account takes at once already thinking on it). Said in its details, never in the chat.",
       }),
   })
   .openapi("Run");
@@ -566,6 +566,10 @@ const ManagedTask = z
         resetsAt: z.string().nullable(),
         since: z.string().nullable(),
         canContinue: z.boolean(),
+        moving: z
+          .boolean()
+          .optional()
+          .openapi({ description: "Its computer is away moving to another server: it comes back by itself." }),
       })
       .nullable()
       .openapi({

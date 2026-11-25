@@ -76,6 +76,7 @@ import {
   resetAccountFailures,
   resolveBrain,
   resumeRunsWaitingForMachine,
+  roomGate,
   roomHead,
   runWhere,
   SESSION_IDLE_MS,
@@ -1829,6 +1830,29 @@ test("a run waiting for commands turned off on its computer goes on when they ar
   expect(done?.status).toBe("done");
   expect(seen).toHaveLength(1);
   expect(f.provider.calls).toHaveLength(0);
+});
+
+test("its computer moving to another server: the run's wait says so, for the apps to say moving and not offline", async () => {
+  f = await setup();
+  const machineId = await computerAgent(f);
+  const { brain, seen } = scriptedComputerBrain(() => [{ type: "done", text: "Pronto." }]);
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id, { online: false, moving: true }) },
+  });
+  await post(f, "@dev oi");
+  await drainOutbox(f.db, handlers);
+  const [run] = await f.db.select().from(schema.agentRuns);
+  expect(run?.status).toBe("waiting_input");
+  expect(seen).toHaveLength(0);
+  expect(run?.transcript).toMatchObject({ waitingForBrain: { code: "machine_offline", moving: true } });
+  // The Task Manager says moving only while the computer still is: a move called off leaves it plainly offline.
+  const waitOfTask = async () => (await taskManager(f.db, f.owner.id, f.org.id)).tasks[0]?.wait;
+  await f.db.update(schema.machines).set({ movingAt: new Date() }).where(eq(schema.machines.id, machineId));
+  expect((await waitOfTask())?.moving).toBe(true);
+  await f.db.update(schema.machines).set({ movingAt: null }).where(eq(schema.machines.id, machineId));
+  expect((await waitOfTask())?.moving).toBeUndefined();
 });
 
 test("an offline computer, though the workspace has a key: the agent says so once and the run waits until it is back", async () => {
@@ -4418,6 +4442,68 @@ test("a Claude plan sign-in at its cap: the next run waits in line like any othe
   expect((await runById(f, run?.id ?? ""))?.status).toBe("done");
   expect(seen).toHaveLength(1);
   expect((await timeline(f)).some((m) => m.body === "Pronto.")).toBe(true);
+});
+
+test("a run held in line behind its own sign-in's wait holds back only that sign-in's runs, never another's", async () => {
+  f = await setup({ reply: () => ({ chunks: ["Pela API."] }) });
+  const machineId = await computerAgent(f);
+  const { brain, seen } = scriptedComputerBrain(() => [{ type: "done", text: "Pronto." }]);
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    signInConcurrency: 1,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id) },
+  });
+  const ops = await createAgent(
+    f.db,
+    f.owner.id,
+    f.org.id,
+    { name: "Ops", handle: "ops", role: "Infra", instructions: "", credentialId: f.credential.id },
+    { model: "claude-sonnet-5-5" },
+  );
+  const insert = async (values: Partial<typeof schema.agentRuns.$inferInsert>) => {
+    const id = Bun.randomUUIDv7();
+    await f.db.insert(schema.agentRuns).values({
+      id,
+      orgId: f.org.id,
+      agentId: ops.id,
+      channelId: f.general.id,
+      threadRootId: id,
+      triggerMessageId: id,
+      trigger: "mention",
+      hop: 2,
+      ...values,
+    });
+    return id;
+  };
+  // The computer's own sign-in thinks for another run, and a person's run waits for it, ahead in line.
+  await insert({
+    status: "running",
+    heartbeatAt: new Date(),
+    transcript: { roomAsk: { machineId, at: Date.now() - 60_000, signIn: "own" } },
+  });
+  await insert({
+    status: "waiting_input",
+    waitingMachineId: machineId,
+    transcript: {
+      waitingForBrain: { kind: "claude_code", machineId, code: "busy", waitId: Bun.randomUUIDv7() },
+      roomWaitSince: Date.now() - 60_000,
+      roomPeople: true,
+      signInWait: { key: "own" },
+    },
+  });
+  const message = await post(f, "@dev oi");
+  await drainOutbox(f.db, handlers);
+  const run = (await f.db.select().from(schema.agentRuns)).find((r) => r.triggerMessageId === message.id);
+  expect(run?.status).toBe("waiting_input");
+  // Held by the line, not its cap: it still waits for that sign-in alone.
+  expect(run?.transcript).toMatchObject({ waitingForBrain: { code: "busy" }, signInWait: { key: "own" } });
+  expect(seen).toHaveLength(0);
+  // A turn on another sign-in with a free slot goes on at once.
+  const other = { key: "0193f1c2-0000-7000-8000-00000000a002", cap: 6 };
+  expect(
+    await roomGate(f.db, { id: Bun.randomUUIDv7(), orgId: f.org.id }, machineId, { rank: 2, since: Date.now() }, other),
+  ).toBeNull();
 });
 
 test("agents' turns on one computer start apart, parked in line (never handed to the API); a person's goes at once", async () => {

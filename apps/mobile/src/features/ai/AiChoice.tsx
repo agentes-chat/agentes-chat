@@ -156,11 +156,17 @@ export function AiChoiceFields({
 
   const account = selected ? choiceText(t, selected, i18n.language) : null;
   const autoModel = !model || isAuto(model.value);
+  // Codex on a Windows computer without MXC: what its own sandbox holds there, behind Conta's ⓘ.
+  const partial =
+    active && state.sandboxPartial(active)
+      ? { name: t("common.about", { label: t("mobile.aiHub.choice.account") }), text: t("brain.sandboxPartial") }
+      : null;
   return (
     <GroupedList>
       <GroupedRow
         label={t("mobile.aiHub.choice.account")}
         value={extraOn?.option.label ?? account?.label ?? ""}
+        {...(partial ? { hint: partial } : {})}
         {...(account?.mark ? { valueLeading: <ProviderLogo id={account.mark} size="xs" /> } : {})}
         menu={!lockAccount}
         disabled={locked || lockAccount || state.loading}

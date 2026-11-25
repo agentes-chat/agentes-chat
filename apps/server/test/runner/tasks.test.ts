@@ -18,11 +18,13 @@ import { agentWorkspace } from "../../runner/paths";
 import {
   claudeSessionFile,
   executorCommand,
+  itemFolder,
   parseOutputLine,
   roomNews,
   TASK_ROOM_QUIET_MS,
   TaskManager,
   type TaskManagerOptions,
+  WRONG_SESSION_FLAG,
 } from "../../runner/tasks";
 import { errorCode, gitRepo, hasGit, removeDirs, tempDir, waitFor, withContainersClient } from "./helpers";
 
@@ -136,6 +138,30 @@ test("executor commands: Claude Code with stream-json and its session; prompts n
   expect(claudeSessionFile("/h/.claude", "/Users/me/agentes/dev-0193aaaa", "abc")).toBe(
     "/h/.claude/projects/-Users-me-agentes-dev-0193aaaa/abc.jsonl",
   );
+});
+
+test("a long line of `session ` is read in time for Claude Code's wrong-flag answer, which reads as before", () => {
+  // It took seconds when every `session ` of the line read on to its end.
+  const line = "session ".repeat(40_000);
+  const started = performance.now();
+  expect(WRONG_SESSION_FLAG.test(line)).toBe(false);
+  expect(WRONG_SESSION_FLAG.test(`${line}x not found`)).toBe(true);
+  expect(performance.now() - started).toBeLessThan(1000);
+  // One space is never both the end of `session ` and the start of ` not found`.
+  expect(WRONG_SESSION_FLAG.test("Error: session not found")).toBe(false);
+  expect(WRONG_SESSION_FLAG.test("Error: session 0193aaaa not found")).toBe(true);
+  // A line of ten million characters is read whole (a loop over it gives up in Bun and runs out of stack in Node).
+  expect(WRONG_SESSION_FLAG.test(`${"x".repeat(10_000_000)}session 0193aaaa not found`)).toBe(true);
+});
+
+test("a mission item's branch with a long run of dashes is read in time, its folder named as before", () => {
+  // It took seconds when every `-` of the run read on to its end.
+  const repo = tempDir("items-");
+  dirs.push(repo);
+  const started = performance.now();
+  expect(path.basename(itemFolder(repo, `a${"-".repeat(100_000)}b`, id(1)))).toBe(`a${"-".repeat(59)}`);
+  expect(path.basename(itemFolder(repo, `c${"-".repeat(100_000)}`, id(2)))).toBe("c");
+  expect(performance.now() - started).toBeLessThan(1000);
 });
 
 test("Claude Code's stream-json becomes a human line, edited files and the final result", () => {

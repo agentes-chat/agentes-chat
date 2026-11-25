@@ -17,6 +17,7 @@ import {
   cliInstallCommand,
   cliInstallFailure,
   cliOneClick,
+  codexSandboxNote,
   commandInReason,
   computerKind,
   computerState,
@@ -635,6 +636,41 @@ describe("one click where a tool is off (ADR 0036 §8)", () => {
       'connectAi.cli.failed {"computer":"PC","message":"curl: (6)"}',
     );
     expect(installableCli("cursor")).toBeNull();
+  });
+
+  test("Codex on Windows: its own sandbox where MXC is missing, or nothing at all, in words for the computer's ⓘ", async () => {
+    const { resources } = await import("@agenteschat/i18n");
+    const i18next = (await import("i18next")).default;
+    const instance = i18next.createInstance();
+    void instance.init({ lng: "pt-BR", fallbackLng: "en", resources, initAsync: false });
+    const t = instance.t;
+    const desk = { name: "Estudio-PC" };
+    for (const codexSandbox of ["mxc", null, undefined] as const)
+      expect(codexSandboxNote(t, { ...desk, codexSandbox })).toBeNull();
+    expect(codexSandboxNote(t, { ...desk, codexSandbox: "unelevated" })).toBe(t("brain.sandboxPartial"));
+    const none = t("brain.reasons.windows_sandbox", { computer: "Estudio-PC", program: "Codex" });
+    expect(codexSandboxNote(t, { ...desk, codexSandbox: "none" })).toBe(none);
+    expect(none).toBe(
+      "O Windows do Estudio-PC não consegue isolar os comandos do Codex. Escolha o Claude ou uma chave de API, ou atualize esse computador para o Windows\u00a011\u00a024H2 ou mais novo, com as atualizações em dia.",
+    );
+    // The same words where a person picks Codex for an agent there, on the web and the phone (`gateLine`).
+    expect(
+      gateLine(t, {
+        gate: { state: "unsupported", reason: "windows_sandbox" },
+        edition: "selfhost",
+        kind: "codex",
+        computer: "Estudio-PC",
+      })?.text,
+    ).toBe(none);
+    // On the Cloud's own computers (Linux) it never happens: its line is the "on our side" one.
+    expect(
+      gateLine(t, {
+        gate: { state: "unsupported", reason: "windows_sandbox" },
+        edition: "cloud",
+        kind: "codex",
+        computer: "Computador da Acme",
+      })?.text,
+    ).toBe(t("aiAccounts.connect.needsCloud.stuck", { computer: "Computador da Acme", program: "Codex" }));
   });
 
   test("a CLI the apps don't install: the line to run there, for every agent's user in system mode", async () => {

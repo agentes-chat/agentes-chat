@@ -783,9 +783,9 @@ export function RenameAiAccountScreen({ machineId, accountId }: { machineId: str
       for (const key of [keys.aiAccounts(orgId), keys.planUsage(orgId), ["org", orgId, "agent"]])
         void qc.invalidateQueries({ queryKey: key });
       goBack();
-    } catch {
+    } catch (e) {
       errorHaptic();
-      toast({ title: t("agentPage.work.failed"), icon: "x" });
+      toast({ title: errorText(t, e), icon: "x" });
     } finally {
       setBusy(false);
     }

@@ -263,6 +263,20 @@ describe("the working line", () => {
     expect(pop).toContain("initialValues: { opacity: 0, transform: [{ scale: 0.9 }] },");
   });
 
+  test("the agent at work leads with its rings (the web's), what it did so far under the words, paced", () => {
+    // Its face orbited, never the plain working face; the stack's small faces are the others.
+    expect(lines).toContain("<OrbitFace color={agentLook(dir.agentById.get(orbiting.id)).color} size={ORBIT_FACE}>");
+    expect(lines).toContain("const faces = barFaces(entries).filter((e) => e !== orbiting);");
+    expect(lines).toContain("usePacedTrail(trailRun ? workTrail(t, trailRun, i18n.language) : NO_TRAIL)");
+    const orbit = src("agent/OrbitFace.tsx");
+    // The web's rings and colours, turning on the UI thread by transforms alone, still with Reduce Motion and paused
+    // on a screen that isn't showing.
+    expect(orbit).toContain('import { ORBIT_RINGS, ORBIT_SPAN, orbitColors } from "@agenteschat/ui/agent/orbit";');
+    expect(orbit).toContain("const turning = !reduced;");
+    expect(orbit).toContain('loopStyle(ring.back ? UNTURN : TURN, turn, "linear", delay, paused)');
+    expect(orbit).not.toMatch(/useFrameCallback|requestAnimationFrame|setInterval/);
+  });
+
   test('"View" reaches 44 points', () => {
     expect(lines).toContain(
       "hitSlop={{ top: (TOUCH - SEE_LINE) / 2, bottom: (TOUCH - SEE_LINE) / 2, left: 12, right: 12 }}",

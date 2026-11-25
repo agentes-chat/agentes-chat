@@ -103,7 +103,15 @@ import { type ReactNode, useCallback, useEffect, useId, useRef, useState } from 
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
-import { ConnectHave, type HaveItem, HaveRow, haveId, renameOf, sortHave } from "@/components/arrival/ConnectHave";
+import {
+  ConnectHave,
+  type HaveItem,
+  HaveRow,
+  haveId,
+  haveMark,
+  renameOf,
+  sortHave,
+} from "@/components/arrival/ConnectHave";
 import { ToolOffWayOut } from "@/components/devices/ToolOneClick";
 import { useOrg } from "@/components/org-context";
 import { KeyMismatch, KeyRefused, ProviderSelect } from "@/components/ProviderKey";
@@ -1377,7 +1385,7 @@ function PlanSteps({
       ),
       whose: t("connectAi.chat.yours"),
       group: { key: "mine", label: t("connectAi.chat.mine") },
-      mark: <ProviderLogo id={a.provider ?? a.kind} size="xs" />,
+      mark: haveMark(a.provider ?? a.kind),
       usage: a.usage,
       rename: renameOf(t, a, view?.computer?.machineId, rename),
     })),

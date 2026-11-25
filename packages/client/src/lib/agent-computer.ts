@@ -29,7 +29,10 @@ export interface AgentComputerFacts {
   /** The workspace's own computer (the Cloud's), else null. */
   setup: SetupView | null;
   /** The computer the agent works on, from the computers list; null: none. */
-  machine: Pick<Machine, "name" | "online" | "standby" | "lastSeenAt" | "paused" | "desktopUse" | "mode"> | null;
+  machine: Pick<
+    Machine,
+    "name" | "online" | "standby" | "moving" | "lastSeenAt" | "paused" | "desktopUse" | "mode"
+  > | null;
   /** Its screen as `GET …/desktop` says it; null while unknown. */
   desktop:
     | (Pick<DesktopStatus, "available" | "reason"> & Partial<Pick<DesktopStatus, "canControl" | "handoff">>)
@@ -54,6 +57,8 @@ export type EntryState =
   | { kind: "preparing"; eta: EtaView | null }
   | { kind: "waiting" }
   | { kind: "problem" }
+  /** The workspace's own computer, away while it moves to another server: never "offline". */
+  | { kind: "moving" }
   | { kind: "offline" }
   | { kind: "paused"; until: string | null }
   | { kind: "needsYou"; handoff: BrowserHandoff }
@@ -121,6 +126,7 @@ export function entryState(f: AgentComputerFacts, nowMs = Date.now()): EntryStat
     return { kind: "preparing", eta: setupEta(f.setup, nowMs) };
   }
   const asleep = f.machine?.standby === true;
+  if (f.machine && !f.machine.online && f.machine.moving) return { kind: "moving" };
   if (f.machine && !f.machine.online && !asleep) return { kind: "offline" };
   if (f.edition === "selfhost" && f.machine && isPaused(f.machine, nowMs)) {
     return { kind: "paused", until: f.machine.paused?.until ?? null };
@@ -162,7 +168,7 @@ export function entryPortrait(s: EntryState, setup: SetupView | null): ComputerS
     return setup ? setupPortrait(setup, false) : "paused";
   }
   if (s.kind === "offline") return "offline";
-  return s.kind === "paused" || s.kind === "held" ? "paused" : "online";
+  return s.kind === "paused" || s.kind === "held" || s.kind === "moving" ? "paused" : "online";
 }
 
 /** What the entry's words need from the platform. */
@@ -204,6 +210,8 @@ export function entryLine(t: TFunction, s: EntryState, w: EntryWords): string {
         : t("computerSetup.status.capacity");
     case "problem":
       return t("agentComputer.status.problem");
+    case "moving":
+      return t("machines.moving.line");
     case "offline":
       if (w.edition === "cloud") return t("agentComputer.status.notAnswering");
       return w.lastSeenAt

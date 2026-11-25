@@ -1254,6 +1254,8 @@ export interface ApiClient {
   devices: {
     list(orgId: string): Promise<DevicesList>;
     updateComputer(orgId: string, machineId: string, input: ComputerDeviceInput): Promise<ComputerDevice>;
+    /** Admins: people's computers may help when the workspace's is full or away, or none may. */
+    setHelp(orgId: string, on: boolean): Promise<{ on: boolean }>;
     removeComputer(orgId: string, machineId: string): Promise<void>;
     updatePhone(orgId: string, phoneId: string, input: PhoneDeviceInput): Promise<PhoneDevice>;
     /** Forgets it; it comes back if its host sees it again. */

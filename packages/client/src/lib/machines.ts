@@ -167,6 +167,18 @@ export function cliCommandWayOut(
   return { text, command };
 }
 
+/**
+ * What holds Codex's commands on a Windows computer, when that says something (`Machine.codexSandbox`): Codex's own
+ * sandbox where MXC is missing (writes held, the internet only partly blocked), or nothing at all. Null with MXC, on
+ * another system, or while unknown.
+ */
+export function codexSandboxNote(t: TFunction, m: Pick<Machine, "name" | "codexSandbox">): string | null {
+  if (m.codexSandbox === "unelevated") return t("brain.sandboxPartial");
+  if (m.codexSandbox === "none")
+    return t("brain.reasons.windows_sandbox", { computer: m.name, program: t("brain.card.codex") });
+  return null;
+}
+
 /** Where Git for Windows is downloaded, which Claude Code needs on Windows. */
 export const GIT_FOR_WINDOWS_URL = "https://git-scm.com/downloads/win";
 

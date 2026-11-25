@@ -12,7 +12,8 @@ run by hand), so check it locally (`cargo check` in `src-tauri`) before a pull r
 
 ## When the app freezes
 
-Measure before changing anything bigger than a small fix.
+Measure before changing anything bigger than a small fix (and see what a change does to the whole app on every system
+with the bench, below).
 
 1. **Read `window.log`** (macOS `~/Library/Logs/chat.agentes.desktop/`, Windows `%LOCALAPPDATA%\chat.agentes.desktop\logs\`,
    Linux `~/.local/share/chat.agentes.desktop/logs/`; the cover's Copy details ends with it). The app writes there:
@@ -43,3 +44,31 @@ Measure before changing anything bigger than a small fix.
 
 Done when `window.log` shows no stall over a second for a week, the WebContent process's memory stays flat over 8 hours
 with the window hidden, and no new freeze is reported.
+
+## The bench: opening, memory and idle CPU on each system
+
+The **Desktop bench** workflow (`.github/workflows/desktop-bench.yml`) measures the app on GitHub's macOS, Windows and
+Ubuntu runners, every Monday and by hand (Actions › Desktop bench › Run workflow). It builds the app as the Desktop
+workflow does, seeds a workspace once (`apps/server/scripts/perf`: 40 channels, 12 agents, about 12,000 messages,
+#general with 2,400 of them and its pictures and clips), starts the server each app carries on it, and opens the app on
+that channel: once on a new profile (signing in through a one-time link on the way), then five times signed in, then
+once on a blank page of its own instead of the site: the floor, the shell and its web view alone. The app measures itself
+there (`src-tauri/src/bench.rs`, only with `AGENTES_BENCH_OUT` set, never a setting) and quits; the bench
+(`scripts/bench.ts`) puts each system's table in its job's summary and every opening in `bench.json` (the
+`bench-<system>` artifact).
+
+- **Opening**: from the top of the app's `run` to the site's first screen painted (`page_ready`, the same opening the
+  site's speed report sends), with the setup done, the main window built and the cover gone on the way. The first row,
+  from the bench starting the process, is the system's share.
+- **Memory**: the app's own process and its web view's, 50 s after the site painted with the window shown, then after
+  60 s with it hidden. macOS: footprint, the web view being WebKit's processes working for the app (its web content,
+  GPU and network processes). Windows: private bytes of everything under the app (WebView2's). Linux: anonymous
+  resident memory of everything under the app (WebKitGTK's). On Linux closing the window minimizes it, which the
+  runner's virtual screen can't do (it has no window manager), so there the hidden rows stand in for minimized.
+- **Idle CPU**: the CPU time the app and its web view used over 30 idle seconds, shown and hidden, in % of one core.
+- **Floor**, beside each: what the site adds is the difference.
+
+Shared runners vary from run to run, so nothing fails on a number: compare with the week's own run, or measure the same
+builds again with `builds` (an earlier run's id, started from the same commit). On a computer of your own, `bun apps/desktop/scripts/bench.ts` (its
+header says what it takes) runs only where the app never opened, as another user for instance: its first opening needs
+a new profile, and it replaces the app's list of servers.

@@ -1115,6 +1115,7 @@ export const BrainUnavailable = z.enum([
   "not_reported",
   "system",
   "cant_start",
+  "windows_sandbox",
 ]);
 
 export const BrainOption = z
@@ -1122,6 +1123,10 @@ export const BrainOption = z
     kind: BrainKind,
     available: z.boolean(),
     reason: BrainUnavailable.optional().openapi({ description: "Why it can't be chosen now (computer brains)." }),
+    sandbox: z.enum(["partial"]).optional().openapi({
+      description:
+        "`partial`: Codex on a Windows computer without MXC, in Codex's own `unelevated` sandbox (writes held to the agent's folders, the internet only partly blocked).",
+    }),
     models: z.array(
       z.object({
         value: z.string().openapi({ description: "What is stored and passed to the CLI (`opus`, `gpt-…`)." }),

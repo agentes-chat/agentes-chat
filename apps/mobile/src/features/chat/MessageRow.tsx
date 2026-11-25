@@ -28,6 +28,7 @@ import { channelRefsOf } from "@agenteschat/client/lib/channel-refs";
 import { type RunPosition, runAround } from "@agenteschat/client/lib/chat";
 import { mineOnRight } from "@agenteschat/client/lib/chat-look";
 import { choiceReplyLine } from "@agenteschat/client/lib/choices";
+import { spilledText } from "@agenteschat/client/lib/devices";
 import { agentsByAnyHandle } from "@agenteschat/client/lib/directory";
 import {
   CONTINUE_ERRORS,
@@ -178,7 +179,7 @@ import {
   useRowRoles,
 } from "./row-data";
 import { SecretCard } from "./SecretCard";
-import { ModelStandInLine, SpeedFallbackLine, StopPill } from "./StoppedLine";
+import { ModelStandInLine, SpeedFallbackLine, SpilledLine, StopPill } from "./StoppedLine";
 import { useStopMovedOn, useStoppedRun } from "./stopped-runs";
 import { SwipeSlide, SwipeTime, useGiveWay, useSwipeSlide } from "./swipe-time";
 import { TeamChecks } from "./TeamChecks";
@@ -303,6 +304,7 @@ function RowBody({
   const qc = useQueryClient();
   const orgId = useOrgId();
   const { org } = useOrg();
+  const spilled = isAgent ? spilledText(t, meta, org) : null;
   const shows = useShowsWork(org);
   // Found again only when the cached lists it reads change, not on every draw of the row.
   const noticeId = routine?.noticeId;
@@ -1075,6 +1077,7 @@ function RowBody({
             {voiceOf(meta) ? <VoiceMessage message={m} /> : null}
             {isAgent && meta?.speedFallback === true ? <SpeedFallbackLine message={m} /> : null}
             {isAgent && standIn ? <ModelStandInLine message={m} text={standIn} /> : null}
+            {spilled ? <SpilledLine text={spilled} /> : null}
             {(stopped || atLimit || providerCut) && m.agentRunId ? (
               <StoppedLine
                 message={m}

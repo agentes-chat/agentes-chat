@@ -734,6 +734,8 @@
       "confirmNo": "To nie ja",
       "done": "Wszystko gotowe.",
       "doneLead": "Zalogowano w aplikacji agentes. Możesz zamknąć tę kartę.",
+      "back": "Wracamy do aplikacji.",
+      "openApp": "Otwórz aplikację",
       "expired": "Ta prośba wygasła.",
       "expiredLead": "Wróć do aplikacji i ponownie wybierz {{provider}}.",
       "handover": "Logowanie twoim kontem z drugiego urządzenia…",
@@ -1285,7 +1287,7 @@
         "fileLead": "Plik z dowolnej znanej nam aplikacji. Zostanie rozpoznany automatycznie.",
         "paths": {
           "lead": "Wybierz, jak je przenieść. Sprawdzisz wszystko, zanim cokolwiek powstanie.",
-          "best": "najpełniejszy",
+          "best": "Najpełniejszy",
           "safe": "Klucze, hasła i sesje z {{app}} nigdy nie są przenoszone, żadną drogą.",
           "command": {
             "title": "Poleceniem",
@@ -4665,6 +4667,7 @@
     "available": "Dostępny",
     "working": "W pracy",
     "waiting": "Czeka na ciebie",
+    "idle": "Nieaktywny",
     "lower": {
       "online": "online",
       "away": "zaraz wracam",
@@ -4817,7 +4820,8 @@
   "accountSwitch": {
     "limit": "Kontynuował na koncie <to/>, bo konto <from/> osiągnęło limit",
     "line": "Kontynuował na koncie <to/>, bo konto <from/> jest blisko limitu",
-    "extra": "Kontynuował na koncie <to/>, bo konto <from/> weszłoby w płatne dodatkowe użycie"
+    "extra": "Kontynuował na koncie <to/>, bo konto <from/> weszłoby w płatne dodatkowe użycie",
+    "busy": "Kontynuowano na koncie <to/>, bo konto <from/> odpowiadało już na tyle rozmów naraz, ile może"
   },
   "channelRefs": {
     "list": "Kanały",
@@ -6992,7 +6996,7 @@
         "cli_sandbox": "Program {{brain}} nie może uruchomić swojego sandboxa na tym komputerze. Wybierz inną AI w ustawieniach agenta.",
         "cli_system": "Program {{brain}} nie działa jeszcze w systemie tego komputera. Wybierz inną AI w ustawieniach agenta.",
         "account_missing": "Konta wybranego dla tego agenta nie ma już na jego komputerze. Wybierz inne w ustawieniach agenta albo dodaj je ponownie.",
-        "windows_sandbox": "Ten komputer z Windows nie może odizolować poleceń Codex: potrzebuje Windows 11 24H2 lub nowszego. Zaktualizuj Windows, wybierz Claude albo klucz API dla tego agenta lub przenieś go na komputer z Linuksem.",
+        "windows_sandbox": "Codex nie mógł uruchomić żadnej izolacji dla swoich poleceń na tym komputerze z Windows. Wybierz Claude albo klucz API dla tego agenta lub zaktualizuj komputer do Windows 11 24H2 lub nowszego, z najnowszymi aktualizacjami.",
         "our_error": "Coś poszło nie tak po naszej stronie i zadanie się zatrzymało. Poproś ponownie za chwilę.",
         "unknown": "Błąd."
       }
@@ -13424,8 +13428,10 @@
       "home_only": "{{program}} jest zainstalowany na {{computer}} tylko dla roota, do którego agenci nie mają dostępu.",
       "not_reported": "{{computer}} wciąż sprawdza, jakie ma programy. To zmieni się samo, gdy skończy.",
       "system": "{{program}} nie działa jeszcze w systemie komputera {{computer}}.",
+      "windows_sandbox": "Windows na komputerze {{computer}} nie może odizolować poleceń {{program}}. Wybierz zamiast tego Claude albo klucz API lub zaktualizuj ten komputer do Windows 11 24H2 lub nowszego, z najnowszymi aktualizacjami.",
       "no_computerCloud": "Gotowe, gdy tylko {{computer}} będzie gotowy."
     },
+    "sandboxPartial": "W tym Windows polecenia Codex zapisują tylko w folderach agentów, ale internet jest dla nich zablokowany tylko częściowo. Windows 11 24H2 lub nowszy, z najnowszymi aktualizacjami, blokuje go całkowicie.",
     "notAvailableNow": "Wybrane, ale teraz niedostępne.",
     "offline": "{{computer}} jest teraz offline.",
     "modelLabel": "Model",
@@ -13502,7 +13508,7 @@
     "rule": "Nowa praca zaczyna się, gdy komputer ma wolną pamięć. Ludzie mają pierwszeństwo. Agenci wspomniani razem zaczynają po kolei.",
     "spill": {
       "title": "Twoje komputery",
-      "text": "Gdy ten komputer jest pełny, odpowiedzi dla ciebie mogą zacząć się na jednym z twoich. Długie prace i pliki agentów zostają tutaj.",
+      "text": "Gdy ten komputer jest pełny lub niedostępny, twoi agenci mogą zacząć na jednym z twoich komputerów. Misje, sesje kodu i agenci z repozytoriami zostają tutaj.",
       "plan": "twój plan {{plan}}"
     },
     "youFirst": "Jesteś pierwszy",
@@ -17218,7 +17224,7 @@
     "device": {
       "notLinkMaker": "Tylko osoba, która utworzyła link, może wpuścić ten komputer.",
       "widenForbidden": "Administratorzy mogą tylko zawęzić, kto korzysta z czyjegoś własnego urządzenia.",
-      "spillOwnerOnly": "Tylko osoba, która podłączyła ten komputer, może pozwolić odpowiedziom myśleć na nim. Ty możesz to wyłączyć.",
+      "spillOwnerOnly": "Tylko osoba, która połączyła ten komputer, może włączyć jego pomoc. Ty możesz ją wyłączyć.",
       "tasksOwnerOnly": "Tylko osoba, która podłączyła ten komputer, może zmienić, ile zadań wykonuje naraz.",
       "tasksCloud": "Cloud sam ustala, ile miejsca na zadania ma ten komputer.",
       "notHome": "Agenci działają na komputerze workspace i używają tego, gdy podadzą jego nazwę."
@@ -17374,6 +17380,11 @@
       "line": "IP wyjściowe {{ip}}",
       "hint": "Adres, który widzą strony, gdy agenci przeglądają sieć. Zmienia się razem z siecią komputera.",
       "waiting": "Ponownie łączymy agentów z internetem. Ich połączenia czekają, aż wróci."
+    },
+    "moving": {
+      "short": "Zmiana serwera",
+      "line": "Przenosi się na nowy serwer… wróci za kilka minut",
+      "named": "{{computer}} przenosi się na nowy serwer… wróci za kilka minut"
     },
     "online": "Online",
     "offline": "Offline",
@@ -17650,10 +17661,12 @@
     "pushHarderHint": "Więcej zadań naraz: wolne zostaje tylko 0,5 GB pamięci, a zajęty procesor ich nie wstrzymuje. Twoje własne aplikacje mogą zwolnić.",
     "belongs": "Należy do przestrzeni roboczej",
     "belongsHint": "Zostaje, gdy osoba, która je podłączyła, odchodzi, a dopóki nie ma właściciela, każdy może go używać.",
-    "spillOwn": "Twoje odpowiedzi mogą myśleć tutaj",
-    "spillOwnHint": "Gdy komputer agenta jest pełny, jego odpowiedzi dla ciebie zaczynają się tutaj.",
-    "spillOthers": "Agenci innych osób mogą myśleć tutaj",
-    "spillOthersHint": "Gdy komputer agenta jest pełny, jego odpowiedzi dla innych osób też mogą zacząć się tutaj.",
+    "spillOwn": "Pomagaj, gdy komputer zespołu jest pełny lub niedostępny",
+    "spillOwnHint": "Gdy komputer twoich agentów jest pełny lub niedostępny, ich odpowiedzi, prośby i rutyny mogą myśleć tutaj z twoim logowaniem.",
+    "spillTeamHint": "Gdy komputer agenta jest pełny lub niedostępny, jego odpowiedzi, prośby i rutyny mogą myśleć tutaj z logowaniem jego właściciela na tym komputerze.",
+    "spillWorkspaceOff": "Admin wyłączył to dla workspace'u.",
+    "helpWorkspace": "Komputery pomagają, gdy komputer zespołu jest pełny lub niedostępny",
+    "helpWorkspaceHint": "Każdy komputer pomaga tylko wtedy, gdy pozwoli na to jego właściciel. Wyłączone: żaden nie pomaga, niezależnie od wyboru właściciela.",
     "connectedBy": "Podłączone przez: {{name}}",
     "downloadFor": "Pobierz na {{system}}",
     "downloadApp": "Pobierz aplikację",
@@ -19667,6 +19680,11 @@
       "cant": "Odpowiedziałem przez {{via}}: {{plan}} nie może teraz myśleć.",
       "change": "Zmień"
     },
+    "spilled": {
+      "full": "Myślał na {{to}}: {{from}} był pełny.",
+      "away": "Myślał na {{to}}: {{from}} był niedostępny.",
+      "itsComputer": "jego komputer"
+    },
     "modelStandIn": {
       "text": "{{plan}} odrzucił {{from}} z tym kluczem. Odpowiedziałem przez {{to}}, który z nim działa.",
       "useAll": "Użyj {{model}} dla wszystkich",
@@ -19686,6 +19704,14 @@
       "thinking": "Myśli…",
       "held": "Czeka na zatwierdzenie…",
       "said": "„{{text}}”"
+    },
+    "trail": {
+      "label": "Co {{name}} zrobił do tej pory",
+      "label_female": "Co {{name}} zrobiła do tej pory",
+      "earlier_one": "{{count}} wcześniejszy krok",
+      "earlier_few": "{{count}} wcześniejsze kroki",
+      "earlier_many": "{{count}} wcześniejszych kroków",
+      "earlier_other": "{{count}} wcześniejszego kroku"
     },
     "consult": {
       "asking": "{{from}} pyta: {{to}}",
@@ -21693,6 +21719,7 @@
       "offline": "{{computer}} jest offline",
       "offlineHelpPlain": "{{name}} czeka, aż komputer wróci.",
       "offlineHelpPlain_female": "{{name}} czeka, aż komputer wróci.",
+      "helping": "W międzyczasie nowa praca może myśleć na {{names}}.",
       "noRoom": "{{computer}} pokazuje już tyle ekranów, ile może. Spróbuj ponownie za chwilę.",
       "unavailable": "Nie można teraz pokazać ekranu agenta {{name}}",
       "unavailable_female": "Nie można teraz pokazać ekranu agentki {{name}}",

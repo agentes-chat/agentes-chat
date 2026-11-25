@@ -205,6 +205,11 @@ export interface BrainIO {
 
 export type BrainEvent =
   | { type: "text_delta"; text: string }
+  /**
+   * A note the model wrote between its calls that its API keeps apart from the reply's text (Claude's progress update,
+   * a reasoning summary): the work's narration, never the reply. An older server drops it.
+   */
+  | { type: "note"; text: string }
   /** `executed` present = already executed elsewhere (computer brains via the MCP bridge): the engine only records/displays it. */
   | { type: "tool_call"; id: string; name: string; input: unknown; executed?: ToolResult }
   | {

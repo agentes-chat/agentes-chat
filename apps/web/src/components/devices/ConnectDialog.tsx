@@ -11,6 +11,8 @@ import {
   GroupHeading,
   Icon,
   InfoHint,
+  type OptionLinkItem,
+  OptionLinks,
   PixelSpinner,
   ProviderLogo,
   Segmented,
@@ -131,38 +133,13 @@ function Chooser({ onPick, onClose }: { onPick: (step: ConnectStep) => void; onC
   const { org } = useOrg();
   const platform = platformOf(navigator.userAgent);
   const agentsHere = useAgentsHere();
-  const option = (step: ConnectStep, mark: ReactNode, title: string, line: ReactNode, how?: ReactNode) =>
-    how ? (
-      // A link can't sit inside a button: the title is the button, stretched over the row, and the link sits above it.
-      <div className="dv-option dv-option--stretch">
-        {mark}
-        <span className="dv-option__text">
-          <button
-            type="button"
-            className="dv-option__title dv-option__hit ac-captop"
-            aria-describedby={`dv-line-${step}`}
-            onClick={() => onPick(step)}
-          >
-            {title}
-          </button>
-          <span className="dv-option__line" id={`dv-line-${step}`}>
-            <span>
-              {line} {how}
-            </span>
-          </span>
-        </span>
-        <Icon name="chevronRight" size={16} className="dv-option__arrow" />
-      </div>
-    ) : (
-      <button type="button" className="dv-option" onClick={() => onPick(step)}>
-        {mark}
-        <span className="dv-option__text">
-          <span className="dv-option__title ac-captop">{title}</span>
-          <span className="dv-option__line">{line}</span>
-        </span>
-        <Icon name="chevronRight" size={16} className="dv-option__arrow" />
-      </button>
-    );
+  const option = (step: ConnectStep, mark: ReactNode, title: string, line: ReactNode): OptionLinkItem => ({
+    value: step,
+    leading: mark,
+    title,
+    description: line,
+    onSelect: () => onPick(step),
+  });
   const thisMark = <ProviderLogo id={systemMark(platform)} size="sm" className="dv-tile" />;
   // Inside the desktop app that may host agents, one click (below). In a browser, the app on this computer through
   // a link, where the app takes one; a phone's browser has no computer to connect. Elsewhere (an app that runs this
@@ -179,76 +156,88 @@ function Chooser({ onPick, onClose }: { onPick: (step: ConnectStep) => void; onC
       <DialogBody>
         <section aria-labelledby="dv-ch-computers">
           <GroupHeading level={3} id="dv-ch-computers" title={t("devices.choose.computers")} />
-          <div className="dv-options">
-            {inDesktopApp() && agentsHere ? (
-              <div className="dv-option dv-wide">
-                {thisMark}
-                <span className="dv-option__text">
-                  <span className="dv-option__title ac-captop">{t(thisLabel(platform))}</span>
-                  <span className="dv-option__line">{t("devices.choose.thisLine")}</span>
+          <div className="ac-optlist">
+            {inDesktopApp() && agentsHere && (
+              <div className="ac-optrow ac-optrow--lead dv-wide">
+                <span className="ac-optrow__lead">{thisMark}</span>
+                <span className="ac-optrow__text">
+                  <span className="ac-optrow__title">{t(thisLabel(platform))}</span>
+                  <span className="ac-optrow__desc">{t("devices.choose.thisLine")}</span>
                 </span>
-                <span className="dv-option__acts">
-                  <ThisMacButton orgId={org.id} canPair={can(org, "pair_computers")} />
-                </span>
+                <ThisMacButton orgId={org.id} canPair={can(org, "pair_computers")} />
               </div>
-            ) : thisStep === "link" && plainHttpServer(window.location.origin) ? (
-              option(
-                thisStep,
-                thisMark,
-                t(thisLabel(platform)),
-                t("devices.choose.httpLine"),
-                <HelpLink slug="install-on-a-server" section="reach">
-                  {t("devices.choose.httpHow")}
-                </HelpLink>,
-              )
-            ) : (
-              thisStep &&
-              option(
-                thisStep,
-                thisMark,
-                t(thisLabel(platform)),
-                t(thisStep === "this" ? "devices.choose.thisLine" : "devices.choose.serverLine"),
-              )
             )}
-            {option(
-              "computer",
-              <span className="ac-brand ac-brand--sm ac-brand--mono" aria-hidden="true">
-                <Icon name="computer" size={16} />
-              </span>,
-              t("devices.choose.other"),
-              <>
-                <span className="dv-option__logos" aria-hidden="true">
-                  <ProviderLogo id="apple" size="xs" />
-                  <ProviderLogo id="windows" size="xs" />
-                  <ProviderLogo id="linux" size="xs" />
-                </span>
-                {t("devices.choose.otherLine")}
-              </>,
-            )}
-            {option(
-              "server",
-              <ProviderLogo id="linux" size="sm" className="dv-tile" />,
-              t("devices.choose.server"),
-              t("devices.choose.serverLine"),
-            )}
+            <OptionLinks
+              options={[
+                ...(inDesktopApp() && agentsHere
+                  ? []
+                  : thisStep === "link" && plainHttpServer(window.location.origin)
+                    ? [
+                        option(
+                          thisStep,
+                          thisMark,
+                          t(thisLabel(platform)),
+                          <>
+                            {t("devices.choose.httpLine")}{" "}
+                            <HelpLink slug="install-on-a-server" section="reach">
+                              {t("devices.choose.httpHow")}
+                            </HelpLink>
+                          </>,
+                        ),
+                      ]
+                    : thisStep
+                      ? [
+                          option(
+                            thisStep,
+                            thisMark,
+                            t(thisLabel(platform)),
+                            t(thisStep === "this" ? "devices.choose.thisLine" : "devices.choose.serverLine"),
+                          ),
+                        ]
+                      : []),
+                option(
+                  "computer",
+                  <span className="ac-brand ac-brand--sm ac-brand--mono" aria-hidden="true">
+                    <Icon name="computer" size={16} />
+                  </span>,
+                  t("devices.choose.other"),
+                  <>
+                    <span className="dv-option__logos" aria-hidden="true">
+                      <ProviderLogo id="apple" size="xs" />
+                      <ProviderLogo id="windows" size="xs" />
+                      <ProviderLogo id="linux" size="xs" />
+                    </span>{" "}
+                    {t("devices.choose.otherLine")}
+                  </>,
+                ),
+                option(
+                  "server",
+                  <ProviderLogo id="linux" size="sm" className="dv-tile" />,
+                  t("devices.choose.server"),
+                  t("devices.choose.serverLine"),
+                ),
+              ]}
+            />
           </div>
         </section>
         <section aria-labelledby="dv-ch-phones">
           <GroupHeading level={3} id="dv-ch-phones" title={t("devices.choose.phones")} />
-          <div className="dv-options">
-            {option(
-              "android",
-              <ProviderLogo id="android" size="sm" className="dv-tile" />,
-              t("devices.choose.android"),
-              t("devices.choose.androidLine"),
-            )}
-            {option(
-              "iphone",
-              <ProviderLogo id="apple" size="sm" className="dv-tile" />,
-              t("devices.choose.iphone"),
-              t("devices.choose.iphoneLine"),
-            )}
-          </div>
+          <OptionLinks
+            options={[
+              option(
+                "android",
+                <ProviderLogo id="android" size="sm" className="dv-tile" />,
+                t("devices.choose.android"),
+                t("devices.choose.androidLine"),
+              ),
+              option(
+                "iphone",
+                <ProviderLogo id="apple" size="sm" className="dv-tile" />,
+                t("devices.choose.iphone"),
+                t("devices.choose.iphoneLine"),
+              ),
+            ]}
+          />
         </section>
       </DialogBody>
       <DialogFooter note={<HelpLink slug="computers">{t("devices.how")}</HelpLink>}>

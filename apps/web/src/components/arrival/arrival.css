@@ -489,10 +489,6 @@
   margin-inline-start: auto;
   font-size: 13.5px;
 }
-/* A plan that asks for one login per agent there: said at its card's end, quietly. */
-.arrival-opts__tag--quiet {
-  color: var(--ink-muted);
-}
 /* Whom of them: one row each, a long name whole (it wraps, never cut; ADR 0160 addendum) with the box and the face on
    its first line. No box of its own: the dialog's body scrolls it, only when the window can't hold it, the foot in
    sight. */
@@ -632,7 +628,7 @@
 .arrival-have__row {
   position: relative;
   display: grid;
-  grid-template-columns: 20px minmax(0, 1fr) auto;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
   column-gap: 12px;
   align-items: start;
   padding: 12px 14px;
@@ -707,22 +703,34 @@ html:not([data-pointer]) button.arrival-have__row:focus-visible {
 html:not([data-pointer]) button.arrival-have__row[data-state="checked"]:focus-visible {
   box-shadow: var(--have-chosen), var(--field-ring);
 }
-.arrival-have__row > .ac-brand,
-.arrival-have__mark {
-  width: 20px;
-  height: 20px;
-}
-/* A key's glyph drawn 16px inside the marks' 20px box: its icon is sized 20 (`ConnectHave`), the padding takes 2. */
-.arrival-have__mark {
-  padding: 2px;
-  box-sizing: border-box;
-  color: var(--ink);
-}
 .arrival-have__text {
   display: flex;
   flex-direction: column;
   gap: 1px;
   min-width: 0;
+}
+/* Beside its maker's tile only the name's line (centred on it, with how full the plan is); the lines under it take
+   the row's whole width, so the tile never owns a column beside three lines. */
+.arrival-have__row:has(> .ac-brand) {
+  align-items: center;
+  row-gap: 2px;
+}
+.arrival-have__row:has(> .ac-brand) > .arrival-have__text {
+  display: contents;
+}
+.arrival-have__row:has(> .ac-brand) > .ac-brand,
+.arrival-have__row:has(> .ac-brand) .arrival-have__head {
+  grid-row: 1;
+}
+.arrival-have__row:has(> .ac-brand) .arrival-have__head {
+  grid-column: 2;
+}
+.arrival-have__row:has(> .ac-brand) :is(.arrival-have__line, .arrival-have__why) {
+  grid-column: 1 / -1;
+}
+.arrival-have__row:has(> .ac-brand) > .arrival-have__room {
+  grid-row: 1;
+  grid-column: 3;
 }
 /* What tells one account from the next (its name, its email, whose it is) wraps whole, never cut. */
 .arrival-have__title,
@@ -739,12 +747,14 @@ html:not([data-pointer]) button.arrival-have__row[data-state="checked"]:focus-vi
   font-size: 13px;
   line-height: 18px;
 }
-/* The title and, after it, the pencil that names the account (ADR 0059 §4): one line. */
+/* The title and, after it, the pencil that names the account (ADR 0059 §4): one line, in the title's size. */
 .arrival-have__head {
   display: flex;
   align-items: center;
   gap: 4px;
   min-width: 0;
+  font-size: 15px;
+  line-height: 20px;
 }
 /* "Unnamed account": quieter than a name or an email, until its owner names it. */
 .arrival-have__title[data-unnamed] {
@@ -772,19 +782,9 @@ html:not([data-pointer]) .arrival-have__edit:focus-visible {
   outline: none;
   box-shadow: var(--field-ring);
 }
-/* The row while its name changes: the field and Save where the title stood. */
+/* The row while its name changes: the name itself is the field (the kit's InlineName), nothing else moves. */
 .arrival-have__row[data-renaming] {
   cursor: default;
-}
-.arrival-have__rename {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
-}
-.arrival-have__rename > :first-child {
-  flex: 1;
-  min-width: 0;
 }
 /* The state is the words; the colour only follows them. */
 .arrival-have__line[data-plan="almost"] {
@@ -939,41 +939,6 @@ html:not([data-pointer]) .arrival-have__link:focus-visible {
   font-size: 17px;
   font-weight: 600;
   line-height: 24px;
-}
-/*
- * A tile beside a title and its one line: the two lines as a block on the tile's middle, and what ends the card (the
- * chevron, "No subscription") on the same middle, so the three share one centre. Each card holds only these, never a
- * list ("Another plan" opens into cards of their own).
- */
-.arrival-opts .ac-option {
-  align-items: center;
-  width: 100%;
-}
-.arrival-opts .ac-option > .ac-option__text {
-  flex: 1;
-}
-/* One line under each title, so every card is the same height: a long list of plans ends in an ellipsis. */
-.arrival-opts .ac-option__text {
-  min-width: 0;
-}
-.arrival-opts .ac-option__desc {
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-/* What ends a card stays on its middle, beside both lines. */
-.arrival-opts__end {
-  flex: none;
-  align-self: center;
-  color: var(--faint);
-}
-.arrival-opts__tag {
-  flex: none;
-  align-self: center;
-  color: var(--ok);
-  font-size: 12.5px;
-  font-weight: 600;
-  white-space: nowrap;
 }
 .arrival-opts__tile {
   display: grid;

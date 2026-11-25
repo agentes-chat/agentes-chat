@@ -704,6 +704,8 @@
       "confirmNo": "Dit was ik niet",
       "done": "Helemaal klaar.",
       "doneLead": "Je bent ingelogd in de agentes-app. Je kunt dit tabblad sluiten.",
+      "back": "Terug naar de app.",
+      "openApp": "App openen",
       "expired": "Dit verzoek is verlopen.",
       "expiredLead": "Ga terug naar de app en kies opnieuw {{provider}}.",
       "handover": "Inloggen met je account van het andere apparaat…",
@@ -1228,7 +1230,7 @@
         "fileLead": "Het bestand uit elke app die we kennen. Het wordt vanzelf herkend.",
         "paths": {
           "lead": "Kies hoe je ze ophaalt. Je controleert alles voordat er iets wordt aangemaakt.",
-          "best": "het meest volledig",
+          "best": "Het meest volledig",
           "safe": "Sleutels, wachtwoorden en sessies uit {{app}} komen nooit mee, welke weg je ook kiest.",
           "command": {
             "title": "Met een opdracht",
@@ -4366,6 +4368,7 @@
     "available": "Beschikbaar",
     "working": "Bezig",
     "waiting": "Wacht op jou",
+    "idle": "Inactief",
     "lower": {
       "online": "online",
       "away": "afwezig",
@@ -4518,7 +4521,8 @@
   "accountSwitch": {
     "limit": "Ging verder met het account <to/> omdat het account <from/> zijn limiet bereikte",
     "line": "Ging verder met het account <to/> omdat het account <from/> bijna aan zijn limiet zit",
-    "extra": "Ging verder met het account <to/> omdat het account <from/> in betaald extra gebruik zou gaan"
+    "extra": "Ging verder met het account <to/> omdat het account <from/> in betaald extra gebruik zou gaan",
+    "busy": "Ging verder met het account <to/> omdat het account <from/> al zoveel gesprekken tegelijk beantwoordde als het kan"
   },
   "channelRefs": {
     "list": "Kanalen",
@@ -6531,7 +6535,7 @@
         "cli_sandbox": "Het programma {{brain}} kan zijn sandbox niet starten op deze computer. Kies een andere AI in de instellingen van de agent.",
         "cli_system": "Het programma {{brain}} werkt nog niet op het systeem van deze computer. Kies een andere AI in de instellingen van de agent.",
         "account_missing": "Het account dat voor deze agent gekozen is staat niet meer op zijn computer. Kies een ander in de instellingen van de agent of voeg het opnieuw toe.",
-        "windows_sandbox": "Deze Windows-computer kan de opdrachten van Codex niet isoleren: hij heeft Windows 11 24H2 of nieuwer nodig. Werk Windows bij, kies Claude of een API-sleutel voor deze agent, of verplaats hem naar een Linux-computer.",
+        "windows_sandbox": "Codex kon op deze Windows-computer geen isolatie voor zijn opdrachten starten. Kies Claude of een API-sleutel voor deze agent, of werk de computer bij naar Windows 11 24H2 of nieuwer, met de nieuwste updates.",
         "our_error": "Er ging iets mis aan onze kant en de taak is gestopt. Vraag het over een poosje opnieuw.",
         "unknown": "Mislukt."
       }
@@ -12564,8 +12568,10 @@
       "home_only": "{{program}} is op {{computer}} alleen voor root geïnstalleerd, waar de agents niet bij kunnen.",
       "not_reported": "{{computer}} controleert nog welke programma's erop staan. Dit verandert vanzelf als het klaar is.",
       "system": "{{program}} werkt nog niet op het systeem van {{computer}}.",
+      "windows_sandbox": "Windows op {{computer}} kan de opdrachten van {{program}} niet isoleren. Kies in plaats daarvan Claude of een API-sleutel, of werk die computer bij naar Windows 11 24H2 of nieuwer, met de nieuwste updates.",
       "no_computerCloud": "Klaar zodra {{computer}} klaar is."
     },
+    "sandboxPartial": "Op deze Windows schrijven de opdrachten van Codex alleen in de mappen van de agents, maar internet is maar deels voor ze geblokkeerd. Windows 11 24H2 of nieuwer, met de nieuwste updates, blokkeert het helemaal.",
     "notAvailableNow": "Gekozen, maar nu niet beschikbaar.",
     "offline": "{{computer}} is nu offline.",
     "modelLabel": "Model",
@@ -12641,7 +12647,7 @@
     "rule": "Nieuw werk start als de computer vrij geheugen heeft. Mensen gaan voor. Samen genoemde agenten starten een voor een.",
     "spill": {
       "title": "Je computers",
-      "text": "Als deze computer vol is, kunnen antwoorden voor jou op een van jouw computers starten. Lange taken en de bestanden van de agenten blijven hier.",
+      "text": "Als deze computer vol of weg is, kunnen je agents op een van jouw computers beginnen. Missies, codesessies en agents met repository's blijven hier.",
       "plan": "je {{plan}}-abonnement"
     },
     "youFirst": "Jij bent eerst",
@@ -16191,7 +16197,7 @@
     "device": {
       "notLinkMaker": "Alleen wie de link heeft gemaakt, kan deze computer laten deelnemen.",
       "widenForbidden": "Admins kunnen alleen beperken wie iemands eigen apparaat mag gebruiken.",
-      "spillOwnerOnly": "Alleen wie deze computer heeft gekoppeld, kan antwoorden hier laten denken. Uitzetten kan wel.",
+      "spillOwnerOnly": "Alleen wie deze computer heeft gekoppeld kan zijn hulp aanzetten. Jij kunt hem uitzetten.",
       "tasksOwnerOnly": "Alleen wie deze computer heeft gekoppeld, kan wijzigen hoeveel taken hij tegelijk uitvoert.",
       "tasksCloud": "De Cloud bepaalt zelf hoeveel ruimte deze computer heeft voor taken.",
       "notHome": "Agents wonen op de computer van de workspace en gebruiken deze als ze hem bij naam noemen."
@@ -16345,6 +16351,11 @@
       "line": "Uitgaand IP {{ip}}",
       "hint": "Het adres dat websites zien als de agents browsen. Het verandert mee met het netwerk van de computer.",
       "waiting": "Het internet van de agents wordt opnieuw verbonden. Hun verbindingen wachten tot het terug is."
+    },
+    "moving": {
+      "short": "Verhuist van server",
+      "line": "Verhuist naar een nieuwe server… over een paar minuten terug",
+      "named": "{{computer}} verhuist naar een nieuwe server… over een paar minuten terug"
     },
     "online": "Online",
     "offline": "Offline",
@@ -16619,10 +16630,12 @@
     "pushHarderHint": "Meer taken tegelijk: er blijft maar 0,5 GB geheugen vrij en een drukke processor houdt ze niet tegen. Je eigen apps kunnen trager worden.",
     "belongs": "Hoort bij de werkruimte",
     "belongsHint": "Het blijft als de persoon die het koppelde vertrekt, en iedereen kan het gebruiken zolang niemand de eigenaar is.",
-    "spillOwn": "Jouw antwoorden kunnen hier denken",
-    "spillOwnHint": "Als de computer van een agent vol is, starten zijn antwoorden voor jou hier.",
-    "spillOthers": "Agenten van anderen kunnen hier denken",
-    "spillOthersHint": "Als de computer van een agent vol is, kunnen zijn antwoorden voor andere mensen ook hier starten.",
+    "spillOwn": "Helpen als de computer van het team vol of weg is",
+    "spillOwnHint": "Als de computer van je agents vol of weg is, kunnen hun antwoorden, vragen en routines hier denken met jouw aanmelding.",
+    "spillTeamHint": "Als de computer van een agent vol of weg is, kunnen zijn antwoorden, vragen en routines hier denken met de aanmelding van zijn eigenaar op deze computer.",
+    "spillWorkspaceOff": "Een admin heeft dit voor de workspace uitgezet.",
+    "helpWorkspace": "Computers helpen als die van het team vol of weg is",
+    "helpWorkspaceHint": "Elke computer helpt alleen als zijn eigenaar het toestaat. Uit: geen enkele helpt, wat de eigenaar ook koos.",
     "connectedBy": "Gekoppeld door {{name}}",
     "downloadFor": "Downloaden voor {{system}}",
     "downloadApp": "De app downloaden",
@@ -18567,6 +18580,11 @@
       "cant": "Beantwoord met {{via}}: {{plan}} kan nu niet denken.",
       "change": "Wijzigen"
     },
+    "spilled": {
+      "full": "Dacht op {{to}}: {{from}} was vol.",
+      "away": "Dacht op {{to}}: {{from}} was weg.",
+      "itsComputer": "zijn computer"
+    },
     "modelStandIn": {
       "text": "{{plan}} heeft {{from}} met deze sleutel geweigerd. Ik heb geantwoord met {{to}}, dat er wel mee werkt.",
       "useAll": "{{model}} voor iedereen gebruiken",
@@ -18584,6 +18602,11 @@
       "thinking": "Denkt na…",
       "held": "Wacht op goedkeuring…",
       "said": "‘{{text}}’"
+    },
+    "trail": {
+      "label": "Wat {{name}} tot nu toe deed",
+      "earlier_one": "{{count}} eerdere stap",
+      "earlier_other": "{{count}} eerdere stappen"
     },
     "consult": {
       "asking": "{{from}} vraagt {{to}} iets",
@@ -20589,6 +20612,7 @@
       "offline": "{{computer}} is offline",
       "offlineHelpPlain": "{{name}} wacht tot de computer terug is.",
       "offlineHelpPlain_female": "{{name}} wacht tot de computer terug is.",
+      "helping": "Ondertussen kan nieuw werk op {{names}} denken.",
       "noRoom": "{{computer}} toont al zoveel schermen als hij kan. Probeer het zo opnieuw.",
       "unavailable": "Het scherm van {{name}} kan nu niet getoond worden",
       "unavailable_female": "Het scherm van {{name}} kan nu niet getoond worden",

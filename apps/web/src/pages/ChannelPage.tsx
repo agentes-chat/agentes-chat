@@ -86,11 +86,10 @@ import {
 import { actionCardOf } from "@agenteschat/client/lib/action-cards";
 import {
   barConsultTime,
-  barElapsed,
   barEntries,
+  barFaces,
   bothAtIt,
   consultDetails,
-  entriesOffScreen,
   lineStep,
   runElapsed,
   someoneTypes,
@@ -121,7 +120,7 @@ import { choiceReplyLine } from "@agenteschat/client/lib/choices";
 import { draftKeyOf } from "@agenteschat/client/lib/composer-drafts";
 import { type ConsultPairItem, consultsForLine } from "@agenteschat/client/lib/consult-group";
 import { consultationsOf } from "@agenteschat/client/lib/consultations";
-import { deviceWaitOf } from "@agenteschat/client/lib/devices";
+import { deviceWaitOf, spilledText } from "@agenteschat/client/lib/devices";
 import { clearDraft, peekDraft } from "@agenteschat/client/lib/drafts";
 import { ErrorBoundary } from "@agenteschat/client/lib/error-boundary";
 import {
@@ -174,6 +173,7 @@ import { seenMessageId } from "@agenteschat/client/lib/seen";
 import { hiddenCount, tasksOf, todayStart } from "@agenteschat/client/lib/task-manager";
 import { contextMarks, hiddenByThreads, rangeCandidates, threadStartOf } from "@agenteschat/client/lib/threads";
 import { buildTimeline, lastPostedId, mergeTimeline, type TimelineItem } from "@agenteschat/client/lib/timeline";
+import { type TrailLine, usePacedTrail, workTrail } from "@agenteschat/client/lib/trail";
 import { usageWaitOf } from "@agenteschat/client/lib/usage-pause";
 import { appVia, surfaceVia } from "@agenteschat/client/lib/via";
 import { listedText, voiceOf } from "@agenteschat/client/lib/voice";
@@ -218,6 +218,7 @@ import {
   MessageText,
   mayTakeFocus,
   OPEN_LAYER,
+  OrbitGlyph,
   PixelSpinner,
   pastedFiles,
   SavedNote,
@@ -300,6 +301,7 @@ import {
   RoutineReport,
   RoutineTag,
   SpeedFallbackLine,
+  SpilledLine,
   StopPill,
   StopsProvider,
   SurfaceViaMark,
@@ -1987,13 +1989,6 @@ function ChannelView({
     () => (tasksAgentId ? tasksOf(taskView.data?.tasks ?? [], tasksAgentId) : []),
     [taskView.data, tasksAgentId],
   );
-  /** "Ver" on that line: back to the agent's block. */
-  const seeRun = (runId: string) => {
-    const row = Array.from(scroller.current?.querySelectorAll<HTMLElement>("[data-run-id]") ?? []).find(
-      (el) => el.dataset.runId === runId,
-    );
-    row?.scrollIntoView?.({ block: "end", behavior: reducedMotion ? "auto" : "smooth" });
-  };
 
   // Dev only: "click → first paint of messages".
   const fromCache = useRef(messages.data !== undefined);
@@ -3044,6 +3039,17 @@ function ChannelView({
                             )}
                             <LiveMemoryCards channelId={channel.id} />
                             <LiveNotices channelId={channel.id} />
+                            {!adjustThreadId && (
+                              <WorkingTail
+                                channelId={channel.id}
+                                threadId={thread?.id ?? null}
+                                visible={runVisible}
+                                pendingAsks={pendingAsks}
+                                onSeeAsk={seeAsk}
+                                consultBlocks={consultGroups.nearEnd}
+                                handoffsInView={handoffsInView}
+                              />
+                            )}
                           </section>
                         </RowsProvider>
                         <ToLatest
@@ -3078,7 +3084,6 @@ function ChannelView({
                             threadId={thread?.id ?? null}
                             visible={runVisible}
                             outOfView={outOfView}
-                            onSee={seeRun}
                             asks={asksOut}
                             pendingAsks={pendingAsks}
                             onSeeAsk={seeAsk}
@@ -4197,60 +4202,29 @@ function useAsksOutOfView(scroller: { current: HTMLElement | null }, registry: A
   return out;
 }
 
-/**
- * The bar right above the composer, one for everyone at work here and always one width: a bare line on the
- * conversation's ground (no glass, no band behind it), their small faces (the typing dots first when only people
- * type) and one line that says it all. An agent whose live row is on screen is left out: the row says its step, its
- * time and its stop. Its row out of view, or no words of its own yet (there is no thinking row in the conversation),
- * the bar speaks for it: its face, its step, its time and "Ver" once its row is there. Stopping it is the composer's
- * button (and Esc), never a second one here.
- */
-function ActivityBar({
-  channelId,
-  threadId,
-  visible,
-  outOfView,
-  onSee,
-  asks,
-  pendingAsks,
-  onSeeAsk,
-  waiting,
-  onSeeWaiting,
-  consultBlocks,
-  handoffsInView,
-  member,
-}: {
+/** Where the people and agents at work here are read from: the conversation's view, for the tail and the bar alike. */
+interface WorkHere {
   channelId: string;
   /** A thread view: who types there (null: who types in the conversation itself). */
   threadId: string | null;
   /** Which runs belong here (a thread view shows only its own). */
   visible?: { current: (r: { threadId: string | null; provisional?: boolean }) => boolean };
-  /** The run's block is not on screen ("Ver" brings it back). */
-  outOfView: (runId: string) => boolean;
-  /** "Ver": back to that block. */
-  onSee: (runId: string) => void;
-  /** Requests waiting for the viewer out of view: the bar says the first one instead of who works. */
-  asks: PendingAsk[];
   /** Every request waiting for the viewer here, in view or not: a hand-off whose agent asks them says so. */
   pendingAsks: readonly PendingAsk[];
-  /** "Ver" on a request: scrolls to it and lights it up. */
-  onSeeAsk: (id: string) => void;
-  /** What waits on the viewer here with no card loaded, oldest first: counted when no request above speaks. */
-  waiting: WaitingItem[];
-  /** "Ver" on that count: goes to the oldest one. */
-  onSeeWaiting: (item: WaitingItem) => void;
   /** Runs whose questions a block near the end shows (`ConsultGroup`): the line doesn't say them again. */
   consultBlocks: ReadonlySet<string>;
   /** Hand-offs whose line under the reply that handed them is on screen: it says them, with its own Ver. */
   handoffsInView: ReadonlySet<string>;
-  /** The reader is in this conversation (may answer here). */
-  member: boolean;
-}) {
-  const { t, i18n } = useTranslation();
+}
+
+/**
+ * Who is at work here, in the order the working line says it (`barEntries`): agents asking another one, agents at work,
+ * then people typing or recording. Ticks each second while someone is.
+ */
+function useWorkHere({ channelId, threadId, visible, pendingAsks, consultBlocks, handoffsInView }: WorkHere) {
+  const { t } = useTranslation();
   const { org, me } = useOrg();
   const dir = useDirectory(org.id);
-  // The returns agents set here (a thread's own, else the main timeline's): the bar holds them while nobody works.
-  const returns = returnsHere(useFollowUps(org.id, channelId).data, threadId);
   const all = useStreams((s) => runsInChannel(s, channelId).filter((r) => visible?.current(r) ?? true), sameRuns);
   const runs = all.filter((r) => r.status !== "failed");
   const typing = useLive((s) => s.typing[channelId]);
@@ -4287,65 +4261,62 @@ function ActivityBar({
     .filter((c) => !(c.kind === "note" && !c.yours && c.id && handoffsInView.has(c.id)));
   asking.current = consults.length > 0;
   const ids = typingIn({ [channelId]: typing ?? {} }, channelId, now, me.user.id, threadId);
-  // At work, its row shows only what it has to show meanwhile (its browser card): the bar says what it does, for how
-  // long, and stops it. A row that says all that (none at work now) leaves the agent out while it is in view.
-  const rowInView = (r: LiveRun) => !waitsForWords(r) && !outOfView(r.runId);
-  const entries = entriesOffScreen(
-    barEntries(
-      runs,
-      ids,
-      (id) => dir.agentById.get(id)?.name ?? t("channel.unknownAgent"),
-      (id) => dir.memberById.get(id)?.name,
-      consults,
-    ),
+  const entries = barEntries(
     runs,
-    rowInView,
+    ids,
+    (id) => dir.agentById.get(id)?.name ?? t("channel.unknownAgent"),
+    (id) => dir.memberById.get(id)?.name,
+    consults,
   );
-  const active = entries.length > 0;
-  const agents = entries.filter((e) => e.type === "agent");
-  const firstAgent = agents[0];
-  // The time and "Ver" are one agent's: with several, the line can't say whose.
-  const soloRun = agents.length === 1 && firstAgent ? runs.find((r) => r.agentId === firstAgent.id) : undefined;
-  // Only while its row is out of view (a question it asks keeps its phrase here, its row in view or not).
-  const soloAway = soloRun && !rowInView(soloRun) ? soloRun : undefined;
-  const took = soloAway ? barElapsed(t, entries, runs, now) : null;
-  // The row's own words for what it does now, after its name; a question out keeps its own phrase.
-  const step = soloAway && firstAgent && !firstAgent.consult ? barStep(t, soloAway, i18n.language, now) : null;
+  return { runs, entries, now };
+}
+
+/**
+ * The bar right above the composer: what waits on the reader (a request out of view, what waits on them here with no
+ * card loaded) and, while nobody works, the soonest return (ADR 0037 addendum). Who works and what they do is the
+ * conversation's last row (`WorkingTail`), as a reply on its way; agents running code keep "Ver código" here.
+ */
+function ActivityBar({
+  outOfView,
+  asks,
+  onSeeAsk,
+  waiting,
+  onSeeWaiting,
+  member,
+  ...here
+}: WorkHere & {
+  /** The run's block is not on screen. */
+  outOfView: (runId: string) => boolean;
+  /** Requests waiting for the viewer out of view: the bar says the first one. */
+  asks: PendingAsk[];
+  /** "Ver" on a request: scrolls to it and lights it up. */
+  onSeeAsk: (id: string) => void;
+  /** What waits on the viewer here with no card loaded, oldest first: counted when no request above speaks. */
+  waiting: WaitingItem[];
+  /** "Ver" on that count: goes to the oldest one. */
+  onSeeWaiting: (item: WaitingItem) => void;
+  /** The reader is in this conversation (may answer here). */
+  member: boolean;
+}) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const dir = useDirectory(org.id);
+  const { channelId, threadId } = here;
+  // The returns agents set here (a thread's own, else the main timeline's): the bar holds them while nobody works.
+  const returns = returnsHere(useFollowUps(org.id, channelId).data, threadId);
+  const { runs, entries } = useWorkHere(here);
   // Agents running code: "Ver código" with the live code and output.
   const coding = runs.filter(
-    (r) => !rowInView(r) && r.code && (r.work ?? []).some((w) => w.kind === "call" && w.running),
+    (r) =>
+      (waitsForWords(r) || outOfView(r.runId)) && r.code && (r.work ?? []).some((w) => w.kind === "call" && w.running),
   );
-  // An agent working in its browser: the bar says so, and a click opens its browser card in the conversation.
-  // Its row in view draws its browser card itself.
-  const browsing = runs.find((r) => usesBrowser(r) && !rowInView(r));
-  const openBrowser = browsing ? () => requestBrowserCard({ agentId: browsing.agentId }) : undefined;
   // A request waiting for you, out of view: the bar says that instead (waiting beats working).
   const ask = asks[0];
   const askName = ask ? (dir.anyAgent(ask.agentId)?.name ?? t("channel.unknownAgent")) : "";
   const away = ask ? undefined : waiting[0];
   const awayAgent = away?.asker?.type === "agent" ? dir.anyAgent(away.asker.id) : undefined;
-  const pill = !ask && !away && active;
   // Nobody at work and nothing waiting on the reader: the soonest return rests in the same box (ADR 0037 addendum).
-  const rest = !ask && !away && !active && returns.length > 0;
-  // One agent's question or hand-off still out (ADR 0095 addendum): the consulted agent's state, its sky, its time, and
-  // "Ver", which opens their talk (or, when its card waits on me, goes to the card). No stop: that is theirs.
-  const consult = agents.length === 1 && firstAgent?.consult?.status === "asking" ? firstAgent.consult : undefined;
-  const consultAsk = consult?.yours ? askOf(pendingAsks, consult.to, consult.toRun) : null;
-  const consultTime = barConsultTime(i18n.language, consult, now);
-  const openTalk = useChannelActions()?.openConsultation;
-  const seeConsult = consultAsk
-    ? () => onSeeAsk(consultAsk.ask.id)
-    : consult?.id && openTalk
-      ? () => openTalk(consult.id as string)
-      : undefined;
-  const consultTip =
-    consult?.kind === "note" && firstAgent
-      ? t("chat.consult.handedOff", {
-          to: consult.toName,
-          from: firstAgent.name,
-          context: agentGrammar(firstAgent.name).context,
-        })
-      : undefined;
+  const rest = !ask && !away && entries.length === 0 && returns.length > 0;
   return (
     <>
       {coding.map((r) =>
@@ -4358,25 +4329,12 @@ function ActivityBar({
           />
         ) : null,
       )}
-      {/* biome-ignore lint/a11y/noStaticElementInteractions: the "No navegador" button inside is the keyboard way; the pill is a bigger target */}
-      {/* biome-ignore lint/a11y/useKeyWithClickEvents: same */}
       <div
         className="ac-typing"
         aria-live="polite"
-        data-active={active || Boolean(ask) || Boolean(away)}
+        data-active={Boolean(ask) || Boolean(away)}
         data-rest={rest || undefined}
         data-ask={ask || away ? true : undefined}
-        data-consult={pill && consult ? (consult.yours ? "you" : consult.wait ? "wait" : "work") : undefined}
-        data-browser={pill && openBrowser ? true : undefined}
-        onClick={
-          pill && openBrowser
-            ? (e) => {
-                // Its own buttons (Ver) keep their job.
-                if ((e.target as HTMLElement).closest("button, [role=dialog]")) return;
-                openBrowser();
-              }
-            : undefined
-        }
       >
         {ask && (
           <>
@@ -4423,60 +4381,146 @@ function ActivityBar({
             </button>
           </>
         )}
-        {pill && (
-          <>
-            {/* Agents at work: their faces open the pill (their rows are out of view); people only typing: the dots
-                first. Who records has a mark of their own by their words, and so has who types beside them. */}
-            {!firstAgent && someoneTypes(entries) && !bothAtIt(entries) && <TypingMark />}
-            <WorkingStack entries={entries} />
-            {/* The phrase turns: the old one leaves upward, the new one comes from below. Names in ink. */}
-            <span className="ac-typing__text" title={consultTip}>
-              {step !== null && firstAgent ? (
-                <BarStep name={firstAgent.name} step={step} />
-              ) : (
-                <BarPhrase entries={entries} />
-              )}
-            </span>
-            <ConsultClock entries={entries} now={now} />
-            {took && <span className="ac-typing__elapsed ac-num">{took}</span>}
-            {consultTime && <span className="ac-typing__elapsed ac-num">{consultTime}</span>}
-            {step !== null && <BarAlsoTyping entries={entries} />}
-            {openBrowser && (
-              <Button
-                size="sm"
-                variant="ghost"
-                icon="globe"
-                iconOnly
-                className="ac-typing__browser"
-                aria-label={t("browser.watch.title")}
-                title={t("browser.watch.open")}
-                onClick={openBrowser}
-              />
-            )}
-            {seeConsult && (
-              <>
-                <span className="ac-typing__sep" aria-hidden="true" />
-                <button type="button" className="ac-typing__see" onClick={seeConsult}>
-                  {t("run.strip.see")}
-                </button>
-              </>
-            )}
-            {/* "Ver" once its row is in the conversation (before that, there is nothing to go back to). */}
-            {!seeConsult && soloAway && rowShows(soloAway) && (
-              <>
-                <span className="ac-typing__sep" aria-hidden="true" />
-                <button type="button" className="ac-typing__see" onClick={() => onSee(soloAway.runId)}>
-                  {t("run.strip.see")}
-                </button>
-              </>
-            )}
-          </>
-        )}
         {rest && <ReturnLine returns={returns} channelId={channelId} canAnswer={member} />}
       </div>
     </>
   );
 }
+
+/**
+ * The conversation's last row while someone works here, as a reply on its way (the phone's working line is the same):
+ * the agent at work in its face's column, its rings orbiting it, then one line that says it all ("Nina consultando o
+ * Email · 12 s", its stop) and under it what it did so far (`workTrail`), a few lines at most. With several at work the
+ * line says them all; people only typing get their dots. When its reply posts, the row goes and the reply shows the
+ * same work in its block, in the same order. A question or hand-off out keeps its own phrase, time and "Ver".
+ */
+function WorkingTail({ onSeeAsk, ...here }: WorkHere & { onSeeAsk: (id: string) => void }) {
+  const { t, i18n } = useTranslation();
+  const { org } = useOrg();
+  const dir = useDirectory(org.id);
+  const { runs, entries, now } = useWorkHere(here);
+  const agents = entries.filter((e) => e.type === "agent");
+  const lead = agents[0];
+  // The time, the step, the stop and the trail are one agent's: with several, the line can't say whose.
+  const solo = agents.length === 1 && lead ? runs.find((r) => r.agentId === lead.id) : undefined;
+  const step = solo && lead && !lead.consult ? barStep(t, solo, i18n.language, now) : null;
+  const trail = usePacedTrail(solo && step !== null ? workTrail(t, solo, i18n.language) : NO_TRAIL);
+  // One agent's question or hand-off still out (ADR 0095 addendum): the consulted agent's state, its time, and "Ver",
+  // which opens their talk (or, when its card waits on me, goes to the card). No stop: that is theirs.
+  const consult = agents.length === 1 && lead?.consult?.status === "asking" ? lead.consult : undefined;
+  const consultAsk = consult?.yours ? askOf(here.pendingAsks, consult.to, consult.toRun) : null;
+  const consultTime = barConsultTime(i18n.language, consult, now);
+  const openTalk = useChannelActions()?.openConsultation;
+  const seeConsult = consultAsk
+    ? () => onSeeAsk(consultAsk.ask.id)
+    : consult?.id && openTalk
+      ? () => openTalk(consult.id as string)
+      : undefined;
+  const consultTip =
+    consult?.kind === "note" && lead
+      ? t("chat.consult.handedOff", { to: consult.toName, from: lead.name, context: agentGrammar(lead.name).context })
+      : undefined;
+  // An agent working in its browser: the row says so, and a click opens its browser card in the conversation.
+  const browsing = runs.find((r) => usesBrowser(r) && waitsForWords(r));
+  const openBrowser = browsing ? () => requestBrowserCard({ agentId: browsing.agentId }) : undefined;
+  if (entries.length === 0) return null;
+  // The agent at work leads in the face's column, with its rings; the line's small faces are the others.
+  const orbiting = lead && !lead.consult ? lead : undefined;
+  const faces = barFaces(entries).filter((e) => e !== orbiting);
+  const agent = orbiting ? dir.agentById.get(orbiting.id) : undefined;
+  return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: the globe button inside is the keyboard way; the row is a bigger target
+    // biome-ignore lint/a11y/useKeyWithClickEvents: same
+    <div
+      className="working-tail"
+      data-browser={openBrowser ? true : undefined}
+      onClick={
+        openBrowser
+          ? (e) => {
+              // Its own buttons keep their job.
+              if ((e.target as HTMLElement).closest("button, [role=dialog]")) return;
+              openBrowser();
+            }
+          : undefined
+      }
+    >
+      <div className="working-tail__face" aria-hidden="true">
+        {orbiting ? (
+          <OrbitGlyph appearance={lookOf(agent)}>
+            <AgentAvatar agentId={orbiting.id} name={orbiting.name} state="writing" />
+          </OrbitGlyph>
+        ) : lead ? (
+          <AgentAvatar agentId={lead.id} name={lead.name} state="idle" />
+        ) : someoneTypes(entries) && !bothAtIt(entries) ? (
+          <TypingMark />
+        ) : null}
+      </div>
+      <div className="working-tail__body">
+        <div
+          className={cx("ac-typing working-tail__line", trail.lines.length > 0 && "ac-captop")}
+          aria-live="polite"
+          data-active="true"
+          data-consult={consult ? (consult.yours ? "you" : consult.wait ? "wait" : "work") : undefined}
+        >
+          {/* What it says, wrapping whole pieces when short of room; its globe and "Ver" end the line, never wrapped
+              away alone. */}
+          <span className="working-tail__words">
+            <WorkingStack entries={entries} faces={faces} />
+            {/* The phrase turns: the old one leaves upward, the new one comes from below. Names in ink. */}
+            <span className="ac-typing__text" title={consultTip}>
+              {step !== null && lead ? <BarStep name={lead.name} step={step} /> : <BarPhrase entries={entries} />}
+            </span>
+            {/* Its time and its stop right after its words; who types beside it after them. */}
+            {solo && step !== null && <RunTail run={solo} />}
+            <ConsultClock entries={entries} now={now} />
+            {consultTime && <span className="ac-typing__elapsed ac-num">{consultTime}</span>}
+            {step !== null && <BarAlsoTyping entries={entries} />}
+          </span>
+          {openBrowser && (
+            <Button
+              size="sm"
+              variant="ghost"
+              icon="globe"
+              iconOnly
+              className="ac-typing__browser"
+              aria-label={t("browser.watch.title")}
+              title={t("browser.watch.open")}
+              onClick={openBrowser}
+            />
+          )}
+          {seeConsult && (
+            <>
+              <span className="ac-typing__sep" aria-hidden="true" />
+              <button type="button" className="ac-typing__see" onClick={seeConsult}>
+                {t("run.strip.see")}
+              </button>
+            </>
+          )}
+        </div>
+        {trail.lines.length > 0 && (
+          <ol
+            className="working-tail__trail"
+            aria-label={t("chat.trail.label", {
+              name: lead?.name ?? "",
+              context: agentGrammar(lead?.name ?? "").context,
+            })}
+          >
+            {trail.earlier > 0 && (
+              <li className="working-tail__more" aria-label={t("chat.trail.earlier", { count: trail.earlier })}>
+                +{trail.earlier}
+              </li>
+            )}
+            {trail.lines.map((l) => (
+              <li key={l.key}>{l.text}</li>
+            ))}
+          </ol>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const NO_TRAIL: TrailLine[] = [];
 
 /**
  * One row; agent replies get feedback actions, people's messages get receipts. With `live`, the agent's
@@ -4638,6 +4682,7 @@ export const TimelineMessage = memo(function TimelineMessage({
   };
   const meta = m.meta ?? {};
   const standIn = modelStandInText(t, meta);
+  const spilled = m.author.type === "agent" ? spilledText(t, meta, org) : null;
   const approvalId = typeof meta.approvalId === "string" ? meta.approvalId : null;
   const proposalId = typeof meta.proposalId === "string" ? meta.proposalId : null;
   const memoryUpdates = Array.isArray(meta.memoryUpdates)
@@ -5026,6 +5071,7 @@ export const TimelineMessage = memo(function TimelineMessage({
             {voice && <ChatVoice message={m} voice={voice} />}
             {m.author.type === "agent" && meta.speedFallback === true && <SpeedFallbackLine agent={agent} />}
             {m.author.type === "agent" && standIn && <ModelStandInLine text={standIn} agent={agent} meta={meta} />}
+            {spilled && <SpilledLine text={spilled} />}
             {(stopped.canceled || atLimit || providerCut) && (
               <StoppedLine
                 runId={m.agentRunId}

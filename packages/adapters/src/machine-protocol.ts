@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 79;
+export const MACHINE_PROTOCOL_VERSION = 80;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -643,6 +643,17 @@ export const SHARED_GEMINI_PROTOCOL = 58;
  * A Windows runner before it refuses every Codex turn, so the server reads it as too old for Codex there.
  */
 export const CODEX_WINDOWS_PROTOCOL = 60;
+/**
+ * Codex where Windows has no MXC (ADR 0053's addendum of 2026-11-24): a `plan` or `work` turn runs in Codex's own
+ * `unelevated` sandbox there instead of failing with `windows_sandbox`. `hello.windowsBuild` says a Windows computer's
+ * build, and `executors.codex.sandbox` what holds Codex's commands there once the runner has checked (in the
+ * background, after start). An older runner says neither, and runs Codex on Windows only inside MXC.
+ */
+export const CODEX_UNELEVATED_PROTOCOL = 80;
+/** What holds Codex's commands on a Windows computer (`executors.codex.sandbox`): `none`, nothing it could start. */
+export const CODEX_SANDBOXES = ["mxc", "unelevated", "none"] as const;
+export type CodexSandbox = (typeof CODEX_SANDBOXES)[number];
+export const isCodexSandbox = (v: unknown): v is CodexSandbox => (CODEX_SANDBOXES as readonly unknown[]).includes(v);
 /**
  * `keep_running` (ADR 0176): `keep.start` and `keep.end` take and end an agent's hold, the computer's standard "don't go
  * idle" lock, bound to one of its programs, its browser or a time; `hello.holds` says which live and which ended since,
@@ -2124,6 +2135,8 @@ export interface RunnerExecutorInfo {
   version: string;
   /** `codex` only: the copy the runner starts, the newest of those it found. */
   path?: string;
+  /** `CODEX_UNELEVATED_PROTOCOL`, `codex` on Windows: what holds its commands there; absent until the runner knows. */
+  sandbox?: CodexSandbox;
   /** Protocol 8, `claude` only: `claude auth status` says it is logged in (absent: unknown). */
   loggedIn?: boolean;
   /** Protocol 8, `claude` only: how it is logged in (`claude.ai`, `api_key`…) and the plan (`pro`, `max`, `ultra`…). */
@@ -2210,6 +2223,8 @@ export const BRAIN_TURN_MEASURES = [
  */
 export type WireBrainEvent =
   | { type: "text_delta"; text: string }
+  /** A note the model wrote between its calls, apart from its text (Codex's reasoning summary). An older server drops it. */
+  | { type: "note"; text: string }
   | {
       type: "tool_call";
       id: string;
@@ -2756,6 +2771,8 @@ export interface RunnerInfo {
   protocol: number;
   os: MachineOs;
   arch: string;
+  /** `CODEX_UNELEVATED_PROTOCOL`, Windows only: its build (`os.release()`, `10.0.19045`). */
+  windowsBuild?: string;
   hostname: string;
   /** Absolute path of the workspace on the machine (shown to admins only). */
   workspace: string;
@@ -3772,7 +3789,8 @@ export function parseCursorModels(v: unknown): CursorModelInfo[] {
 
 /**
  * `hello.executors`: only `claude`, `codex`, `cursor`, `opencode`, `grok` and `antigravity`, each with a short version
- * line (and Claude Code's login), and `broken`: the error line of each of them that is there and can't start.
+ * line (and Claude Code's login, Codex's sandbox on Windows), and `broken`: the error line of each of them that is there
+ * and can't start.
  */
 export function parseExecutors(v: Record<string, unknown>): NonNullable<RunnerInfo["executors"]> {
   const out: NonNullable<RunnerInfo["executors"]> = {};
@@ -3786,6 +3804,7 @@ export function parseExecutors(v: Record<string, unknown>): NonNullable<RunnerIn
     out[name] = {
       version: e.version.replace(/\s+/g, " ").trim().slice(0, 80),
       ...(path ? { path } : {}),
+      ...(name === "codex" && isCodexSandbox(e.sandbox) ? { sandbox: e.sandbox } : {}),
       ...(typeof e.loggedIn === "boolean" ? { loggedIn: e.loggedIn } : {}),
       ...(authMethod ? { authMethod } : {}),
       ...(plan ? { plan } : {}),
@@ -3910,6 +3929,10 @@ export function parseBrainEvent(v: unknown): WireBrainEvent | null {
   switch (v.type) {
     case "text_delta":
       return isString(v.text) ? { type: "text_delta", text: v.text.slice(0, BRAIN_LIMITS.delta) } : null;
+    case "note":
+      return isString(v.text) && v.text.trim()
+        ? { type: "note", text: v.text.trim().slice(0, BRAIN_LIMITS.delta) }
+        : null;
     case "tool_call": {
       if (!isString(v.id) || !isString(v.name)) return null;
       const ex = isObject(v.executed) && isString(v.executed.content) ? v.executed : null;
@@ -4100,6 +4123,9 @@ export function parseRunnerFrame(raw: string): RunnerFrame | null {
         protocol: f.protocol,
         os: (["linux", "darwin", "windows"] as const).find((o) => o === f.os) ?? "other",
         arch: isString(f.arch) ? f.arch.slice(0, 40) : "",
+        ...(isString(f.windowsBuild) && /^\d{1,3}\.\d{1,3}\.\d{1,6}$/.test(f.windowsBuild)
+          ? { windowsBuild: f.windowsBuild }
+          : {}),
         hostname: isString(f.hostname) ? f.hostname.slice(0, 200) : "",
         workspace: isString(f.workspace) ? f.workspace.slice(0, 500) : "",
         exec: f.exec !== false,
@@ -4633,13 +4659,16 @@ export function commandParts(command: string): string[] {
     .filter(Boolean);
 }
 
+/** The most of a call `commandOf` keeps: all of a command a permission rule reads. */
+export const COMMAND_OF_MAX = 1000;
+
 /** What a tool call does, as one line for people (`git init`, `WebFetch https://…`). */
 export function commandOf(toolName: string, input: Record<string, unknown> | null | undefined): string {
   const i = input ?? {};
   const s = (k: string) => (typeof i[k] === "string" ? (i[k] as string) : "");
-  if (toolName === "Bash") return s("command").trim().replace(/\s+/g, " ").slice(0, 1000);
+  if (toolName === "Bash") return s("command").trim().replace(/\s+/g, " ").slice(0, COMMAND_OF_MAX);
   const what = s("url") || s("file_path") || s("path") || s("query") || s("pattern");
-  return `${toolName}${what ? ` ${what}` : ""}`.slice(0, 1000);
+  return `${toolName}${what ? ` ${what}` : ""}`.slice(0, COMMAND_OF_MAX);
 }
 
 const globRe = (pattern: string) =>
@@ -4651,12 +4680,16 @@ const globRe = (pattern: string) =>
   );
 
 /** The `Bash(...)` pattern of a rule, or null for another tool's rule. */
-const bashPattern = (rule: string) => /^Bash\((.*)\)$/s.exec(rule.trim())?.[1] ?? null;
+export const bashPattern = (rule: string) => /^Bash\((.*)\)$/s.exec(rule.trim())?.[1] ?? null;
 
-/** One part of a command against one `Bash(...)` pattern (Claude Code's `*` matches anything; `x *` also matches `x`). */
-function partMatches(pattern: string, part: string) {
-  if (globRe(pattern).test(part)) return true;
-  return pattern.endsWith(" *") && part === pattern.slice(0, -2);
+/**
+ * One `Bash(...)` pattern as a test of one part of a command, built once for all the parts it reads (Claude Code's
+ * `*` matches anything; `x *` also matches `x`).
+ */
+export function partTest(pattern: string): (part: string) => boolean {
+  const re = globRe(pattern);
+  const bare = pattern.endsWith(" *") ? pattern.slice(0, -2) : null;
+  return (part) => re.test(part) || part === bare;
 }
 
 /**
@@ -4669,7 +4702,7 @@ export function ruleMatches(rule: string, toolName: string, input: Record<string
   const pattern = bashPattern(rule);
   if (pattern !== null) {
     if (toolName !== "Bash") return false;
-    return commandParts(commandOf("Bash", input)).some((part) => partMatches(pattern, part));
+    return commandParts(commandOf("Bash", input)).some(partTest(pattern));
   }
   const r = rule.trim();
   if (r === toolName) return true;
@@ -4696,7 +4729,7 @@ export function allowedBy(
   return parts.every((part) =>
     rules.some((r) => {
       const pattern = bashPattern(r);
-      return pattern !== null && partMatches(pattern, part);
+      return pattern !== null && partTest(pattern)(part);
     }),
   );
 }

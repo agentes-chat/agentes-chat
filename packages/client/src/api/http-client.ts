@@ -1342,6 +1342,7 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       list: (orgId) => request<DevicesList>(`${org(orgId)}/devices`),
       updateComputer: (orgId, machineId, input) =>
         request<ComputerDevice>(`${org(orgId)}/devices/computers/${enc(machineId)}`, { method: "PATCH", json: input }),
+      setHelp: (orgId, on) => request<{ on: boolean }>(`${org(orgId)}/devices/help`, { method: "PUT", json: { on } }),
       removeComputer: (orgId, machineId) =>
         request<void>(`${org(orgId)}/devices/computers/${enc(machineId)}`, { method: "DELETE" }),
       updatePhone: (orgId, phoneId, input) =>

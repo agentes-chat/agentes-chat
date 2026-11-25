@@ -69,7 +69,10 @@ const KEY_FORMATS = [
   /\bxox[abprs]-[a-z0-9-]{10,}/i, // Slack tokens
   /-----BEGIN [A-Z ]*PRIVATE KEY-----/,
   /\b(bearer)\s+[a-z0-9._-]{20,}/i,
-  /\beyJ[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}/, // JWTs
+  // JWTs. The first part runs to the end of its run of letters, digits, `_` and `-`, so a JWT starts only at the first
+  // `eyJ` starting a word in that run: the lazy lookbehind skips a later one, which would read the run to its end
+  // again (the square of its length on a long run of `eyJ-`).
+  /\beyJ(?<!\beyJ[a-zA-Z0-9_-]*?eyJ)[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}/,
 ];
 const SECRET_PATTERNS = [...KEY_FORMATS, /\b(password|senha|passwd|secret|api[_ -]?key|token)\s*[:=]\s*\S{6,}/i];
 

@@ -37,6 +37,9 @@ describe("/conectar: confirm a computer's code", () => {
   test("shows the code, the computer and the warning; Conectar joins the chosen organization", async () => {
     const { state, router } = await open();
     expect(document.querySelector(".connect-page__code")?.textContent).toBe("K7Q·4ZP");
+    // The code never breaks across lines on a narrow screen.
+    const css = await Bun.file(new URL("../src/layout.css", import.meta.url).pathname).text();
+    expect(css.split("\n.connect-page__code {")[1]?.split("}")[0]).toContain("white-space: nowrap;");
     const page = document.querySelector(".connect-page") as HTMLElement;
     expect(page.textContent).toContain("MacBook do Walter");
     expect(page.textContent).toContain("macOS · walter-mbp");
@@ -58,15 +61,17 @@ describe("/conectar: confirm a computer's code", () => {
     expect(router.state.location.pathname).toMatch(new RegExp(`^/org/${ORG_ID}/settings/devices/.+`));
   });
 
-  test("other people's agents think on it only when the person turns that on here", async () => {
+  test("it helps when the team's computer is full or away unless the person turns that off here", async () => {
     const { state } = await open();
     const page = document.querySelector(".connect-page") as HTMLElement;
-    const others = within(page).getByRole("switch", { name: "Agentes de outras pessoas podem pensar aqui" });
-    expect(others.getAttribute("aria-checked")).toBe("false");
-    await click(others);
+    const help = within(page).getByRole("switch", {
+      name: "Ajudar quando o computador da equipe estiver cheio ou fora",
+    });
+    expect(help.getAttribute("aria-checked")).toBe("true");
+    await click(help);
     await click(within(page).getByRole("button", { name: "Conectar" }));
     await settle(6);
-    expect(calls(state, "devices.updateComputer").map((a) => a.at(-1))).toEqual([{ spill: { others: true } }]);
+    expect(calls(state, "devices.updateComputer").map((a) => a.at(-1))).toEqual([{ spill: { own: false } }]);
   });
 
   test("Não fui eu: the computer isn't connected", async () => {

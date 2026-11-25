@@ -4,7 +4,7 @@ import { setupDom } from "@agenteschat/ui/testing/dom";
 setupDom();
 
 import { cleanup } from "@testing-library/react";
-import { openWaitingPopup, sendPopup } from "@/lib/popup";
+import { openWaitingTab, sendSignInTab } from "@/lib/sign-in-tab";
 import { createFakeApi, seedState } from "./fake-api";
 import { renderApp, screen, settle } from "./render";
 
@@ -18,19 +18,23 @@ afterEach(() => {
   delete (window as { __agentesDesktop?: unknown }).__agentesDesktop;
 });
 
-describe("a sign-in's popup", () => {
-  test("opens on our page, never about:blank, and goes on to the provider in place of it", () => {
+describe("a sign-in's tab", () => {
+  test("a normal tab on our page, never about:blank or a popup window, and goes on to the provider in place of it", () => {
     const urls: string[] = [];
+    const features: (string | undefined)[] = [];
     const replaced: string[] = [];
     const popup = { closed: false, opener: {}, location: { replace: (u: string) => replaced.push(u) } };
-    window.open = ((url: string) => {
+    window.open = ((url: string, _target?: string, feature?: string) => {
       urls.push(url);
+      features.push(feature);
       return popup;
     }) as never;
-    const w = openWaitingPopup("claude_code");
+    const w = openWaitingTab("claude_code");
     expect(urls).toEqual(["/conectando?kind=claude_code"]);
+    // No window features: a popup window without the browser's toolbars is what providers' bot checks refuse.
+    expect(features).toEqual([undefined]);
     expect(popup.opener).toBeNull();
-    sendPopup(w, "https://claude.ai/oauth");
+    sendSignInTab(w, "https://claude.ai/oauth");
     expect(replaced).toEqual(["https://claude.ai/oauth"]);
   });
 
@@ -39,7 +43,7 @@ describe("a sign-in's popup", () => {
     window.open = (() => {
       throw new Error("opened");
     }) as never;
-    expect(openWaitingPopup("claude_code")).toBeNull();
+    expect(openWaitingTab("claude_code")).toBeNull();
   });
 
   test("the page says what is happening, for whom, with a way out, with no session", async () => {

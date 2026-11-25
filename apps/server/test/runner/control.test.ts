@@ -8,6 +8,7 @@ import {
   type ServerFrame,
 } from "@agenteschat/adapters/machine-protocol";
 import { CONTROL_PROTOCOL_VERSION, type ControlEvent, type ControlOut } from "@agenteschat/adapters/runner-control";
+import { windowsCodexSandbox } from "../../runner/codex-windows";
 import { configPath, readStoredConfig, type StoredConfig, writeConfig } from "../../runner/config";
 import type { Dial, Socket, SocketHandlers } from "../../runner/connection";
 import { EXIT_LOCKED, type RunControlOptions, runControl } from "../../runner/control";
@@ -359,6 +360,41 @@ test("hello never waits on the CLIs' looks; what a look finds later reaches the 
   expect(JSON.parse(readFileSync(path.join(home, "executors.json"), "utf8"))).toMatchObject({
     claude: { version: "2.1.300 (Claude Code)" },
   });
+});
+
+test("a Windows computer: hello says its build, and the server hears what holds Codex there where Codex may run", async () => {
+  const windowsRunner = async (codex: boolean, version: string) => {
+    const { home } = pairedHome({ access: { folders: [], tools: { claude: false, codex, commands: false } } });
+    const asked: string[] = [];
+    const c = control(home, {
+      executors: () => ({ codex: { version } }),
+      windows: {
+        build: "10.0.19045",
+        // No MXC there; Codex's own sandbox runs a command.
+        chooseCodexSandbox: (v) => {
+          asked.push(v);
+          const check = async (sandbox: string) => sandbox === "unelevated";
+          return windowsCodexSandbox({ runnerHome: home, version: v, check, wait: true });
+        },
+      },
+    });
+    const s = await c.connect();
+    // Codex as the server last heard it: `hello`, then each `executors.changed`.
+    const told = () =>
+      ([...s.of("hello"), ...s.of("executors.changed")].at(-1)?.executors as Record<string, unknown> | undefined)
+        ?.codex;
+    return { s, asked, told };
+  };
+  const on = await windowsRunner(true, "codex-cli 0.172.0-on");
+  expect(on.s.of("hello")[0]).toMatchObject({ windowsBuild: "10.0.19045" });
+  await waitFor(() => JSON.stringify(on.told()).includes("unelevated"));
+  expect(on.told()).toEqual({ version: "codex-cli 0.172.0-on", sandbox: "unelevated" });
+  expect(on.asked).toEqual(["codex-cli 0.172.0-on"]);
+  // Codex switched off there: its sandbox isn't checked, and nothing is said of it.
+  const off = await windowsRunner(false, "codex-cli 0.172.0-off");
+  expect(off.s.of("hello")[0]).toMatchObject({ windowsBuild: "10.0.19045" });
+  expect(off.told()).toEqual({ version: "codex-cli 0.172.0-off" });
+  expect(off.asked).toEqual([]);
 });
 
 test("Grok Build's models are the ones a signed-in account listed, not the computer's own signed-out list", async () => {

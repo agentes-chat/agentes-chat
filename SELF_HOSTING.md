@@ -1631,12 +1631,25 @@ installer), so `codex` is on that user's PATH; the app looks at the PATH again e
 restart. The app can install Claude Code there for you, but not Codex. Then sign in to ChatGPT in
 **Settings → AI and usage**. What differs from Linux and macOS:
 
-- Every turn that can run commands runs inside Windows' own isolation (Microsoft Execution Containers),
-  which needs **Windows 11 24H2 or newer** (`winver` shows yours). On an older Windows those turns fail with
-  "This Windows computer can't isolate Codex's commands": update Windows, give that agent Claude or an API
-  key, or move it to a Linux computer. Lodi's turns run no commands, so they work on any Windows.
-- Nothing asks for approval there: what the isolation refuses stays refused, and it has no network, so
-  `git push` or a package install doesn't run from Codex's own commands.
+- Every turn that can run commands runs isolated, and how well depends on the Windows:
+  - **Windows 11 24H2 with the August 2026 update** (build 26100.9278 or newer, `winver` shows yours) runs
+    them inside Windows' own isolation (Microsoft Execution Containers): writes only in the agent's folders,
+    no network.
+  - **Older Windows** (Windows 10, Windows 11 without that update) runs them in Codex's own sandbox: writes
+    still only in the agent's folders, but the network is blocked only through proxy settings (a program
+    that ignores them still gets out), and commands can read anything the Windows user can. The AI choice
+    and the computer's page say so behind an ⓘ.
+  - **When neither starts** (Codex's own sandbox fails to set up on some Windows 10 computers), Codex isn't
+    offered for agents on that computer and says why: give that agent Claude or an API key, update to
+    Windows 11 24H2 or newer with its latest updates, or move it to a Linux computer.
+
+  The computer checks which one works by itself, shortly after it starts, and while it runs on Codex's own
+  sandbox it looks for Windows' own isolation again every 10 minutes. Lodi's turns run no commands, so they
+  work on any Windows, ChatGPT included.
+- Nothing asks for approval there: what the isolation refuses stays refused. Windows' own isolation has no
+  network, so `git push` or a package install doesn't run from Codex's own commands. Codex's own sandbox
+  blocks only what honours the proxy settings: a program that ignores them (an SSH `git push`, for one) can
+  still reach the network.
 - No background Codex tasks, and Codex doesn't do a mission's items there (Claude Code or the agent does).
 - No plan on Windows, Codex's or Claude's, picks who answers a message (Plans, below).
 - The isolation leaves the computer's own loopback open: a command can reach a service listening on

@@ -31,6 +31,8 @@ export interface OutageLike {
   /** The workspace's own computer (ADR 0056 §10). */
   managed?: boolean;
   offlineSince: string;
+  /** Away moving to another server: it comes back by itself. */
+  moving?: boolean;
   agents: readonly OutageAgentLike[];
   waitingRuns: number;
 }
@@ -335,7 +337,7 @@ export const waitsForComputer = (info: Pick<BrainUnavailableInfo, "machineId" | 
  * Unknown when the outages aren't loaded or the message doesn't say which computer.
  */
 export type WaitCardState =
-  | { kind: "waiting"; machineId: string; computer: string; waiting: OutageAgentLike | null }
+  | { kind: "waiting"; machineId: string; computer: string; waiting: OutageAgentLike | null; moving: boolean }
   | { kind: "moved"; machineId: string; computer: string }
   | { kind: "back"; machineId: string }
   | { kind: "unknown" };
@@ -351,7 +353,7 @@ export function waitCardState(
   const agentId = info.agentId ?? authorId;
   const agent = agentId ? (o.agents.find((a) => a.agentId === agentId) ?? null) : null;
   if (agentId && !agent) return { kind: "moved", machineId: o.machineId, computer: o.name };
-  return { kind: "waiting", machineId: o.machineId, computer: o.name, waiting: agent };
+  return { kind: "waiting", machineId: o.machineId, computer: o.name, waiting: agent, moving: o.moving === true };
 }
 
 /**

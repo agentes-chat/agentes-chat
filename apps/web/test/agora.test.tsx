@@ -496,14 +496,17 @@ describe("the list", () => {
 });
 
 describe("the rail and the Mac app", () => {
-  test("its box is the collapse's: 32 beside ⌘K, the rail's 40px tile, 40 under a finger; the title bar keeps ⌘K centred", () => {
+  test("its box is the collapse's: 32 beside ⌘K, the rail's 40px tile, 40 under a finger; the Mac app hides only the collapse", () => {
     const css = readFileSync(join(import.meta.dir, "../src/layout.css"), "utf8");
     expect(css).toContain(":is(.sidebar__collapse, .sidebar__agora).ac-btn {");
     expect(css).toContain('.sidebar[data-rail="true"] :is(.sidebar__collapse, .sidebar__agora).ac-btn {');
     expect(css).toContain('.sidebar:not([data-rail="true"]) :is(.sidebar__collapse, .sidebar__agora).ac-btn {');
     const desktop = readFileSync(join(import.meta.dir, "../src/desktop.css"), "utf8");
-    expect(desktop).toContain("--titlebar-end: calc(var(--control-h-sm) + 12px);");
-    expect(desktop).toContain(".sidebar__org--person .sidebar__agora");
+    expect(desktop).toContain(
+      "html[data-desktop] :is(.sidebar__collapse, .sidebar__head-collapse) {\n  display: none;",
+    );
+    expect(desktop).not.toContain(".sidebar__jump-row");
+    expect(desktop).not.toContain(".sidebar__agora");
   });
 
   test("the rail: Agora is a tile under ⌘K, the toggle under it", async () => {
@@ -522,14 +525,21 @@ describe("the rail and the Mac app", () => {
     }
   });
 
-  test("in the Mac app, Agora sits at the title bar's end", async () => {
+  test("in the Mac app, ⌘K and Agora stay in the sidebar: the title bar holds the toggle, back and forward alone", async () => {
     const w = window as { __agentesDesktop?: unknown; __TAURI_INTERNALS__?: unknown };
     w.__agentesDesktop = { version: "0.6.0" };
     w.__TAURI_INTERNALS__ = { invoke: async (cmd: string) => (cmd === "this_mac" ? { orgs: [] } : {}) };
     try {
       await go(seedState());
       const bar = document.querySelector("header.titlebar") as HTMLElement;
-      expect(bar.lastElementChild?.getAttribute("aria-label")).toBe("Agora");
+      expect([...bar.querySelectorAll("button")].map((b) => b.getAttribute("aria-label"))).toEqual([
+        "Minimizar barra lateral",
+        "Voltar",
+        "Avançar",
+      ]);
+      const row = nav().querySelector(".sidebar__jump-row") as HTMLElement;
+      expect(row.querySelector(".sidebar__jump")).toBeTruthy();
+      expect(within(row).getByRole("button", { name: "Agora" })).toBeTruthy();
     } finally {
       delete w.__agentesDesktop;
       delete w.__TAURI_INTERNALS__;

@@ -209,6 +209,11 @@ export interface StreamOptions {
   session?: string;
   /** Called with each text fragment as it is generated. */
   onDelta(text: string): void;
+  /**
+   * A progress note the model wrote between its calls that the API returns apart from the reply's text (Claude's
+   * progress updates, OpenAI's reasoning summaries), whole, as each one ends. Never part of `text`.
+   */
+  onNote?(text: string): void;
 }
 
 /**

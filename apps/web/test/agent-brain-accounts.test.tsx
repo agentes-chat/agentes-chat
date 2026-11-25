@@ -144,6 +144,7 @@ describe("Quem pensa: the account on the computer and the effort (ADR 0041)", ()
     expect(notes(d)).toContain("A Ada agora pensa com Pessoal.");
     expect(within(d).getByRole("button", { name: "Desfazer" })).toBeTruthy();
   });
+
   test("her own login signed out, an account another agent uses: a new login of that account, never hers again", async () => {
     const theo: MachineAccount = {
       ...work,

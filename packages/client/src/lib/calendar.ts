@@ -358,6 +358,65 @@ export function grownHeights(
   return grown ?? heights;
 }
 
+/** An item as `dayItemsKey` holds it. */
+type HeldItem = [key: string, start: number, end: number, title: string];
+
+/**
+ * What a day's column holds, as far as its measured heights go: each timed item's key, times and title
+ * (`keptHeights`). From what is shown alone, never from what is measured: a key that followed the layout would measure
+ * again on every render, and a layout that changes how tall it is drawn would flip forever (`grownHeights`).
+ */
+export const dayItemsKey = (items: CalItem[], day: Date) =>
+  JSON.stringify(
+    items
+      .filter((it) => !isBarItem(it) && onDay(it, day))
+      .map((it): HeldItem => [it.key, it.start.getTime(), it.end.getTime(), it.title]),
+  );
+
+/**
+ * A day's measured heights once what it holds went from `was` to `now` (`dayItemsKey`). Heights that only grow would
+ * keep an item made shorter or renamed as tall as it was, and what it pushed aside beside it, so each cluster with an
+ * item that came, went, or has other times or another title, as the day was and as it is, is measured again from
+ * nothing. A cluster as `layoutDay` makes one: what starts before the end of what came before, by its times or by how
+ * tall it was drawn. Every other item keeps its height, and so its place and its elements: details open on a run
+ * elsewhere on the day stay open.
+ */
+export function keptHeights(
+  heights: ReadonlyMap<string, number>,
+  was: string,
+  now: string,
+): ReadonlyMap<string, number> {
+  if (was === now) return heights;
+  const before = JSON.parse(was) as HeldItem[];
+  const after = JSON.parse(now) as HeldItem[];
+  const wasIds = new Set(before.map((it) => JSON.stringify(it)));
+  const nowIds = new Set(after.map((it) => JSON.stringify(it)));
+  // Each item as it was and as it is: the same span twice when it didn't change.
+  const spans = [...before, ...after]
+    .map((it) => {
+      const [key, start, end] = it;
+      const id = JSON.stringify(it);
+      // A stack of runs is measured by its first run's key (`runStacks`). Half an hour at the least, as a reminder.
+      const drawn = Math.max(toMinutes(Math.max(heights.get(key) ?? 0, heights.get(`runs-${key}`) ?? 0)), 30);
+      return { key, start, reach: Math.max(end, start + drawn * 60_000), changed: !wasIds.has(id) || !nowIds.has(id) };
+    })
+    .sort((a, b) => a.start - b.start);
+  const dropped = new Set<string>();
+  let cluster: typeof spans = [];
+  let reach = Number.NEGATIVE_INFINITY;
+  const flush = () => {
+    if (cluster.some((span) => span.changed)) for (const { key } of cluster) dropped.add(key).add(`runs-${key}`);
+    cluster = [];
+  };
+  for (const span of spans) {
+    if (span.start >= reach) flush();
+    cluster.push(span);
+    reach = Math.max(reach, span.reach);
+  }
+  flush();
+  return new Map([...heights].filter(([key]) => !dropped.has(key)));
+}
+
 /**
  * Timed items of one day, and its stacks of routine runs, laid out side by
  * side when they overlap: each cluster of overlapping items splits the width
