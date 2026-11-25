@@ -5,8 +5,9 @@
 - Builds on: ADR 0035 (the phone app), ADR 0036 (the desktop app), ADR 0071 (browser push, which left "a manifest so
   the site installs" for later), ADR 0179 (app icons drawn from the agent engine)
 - Code: `apps/web/public/manifest.webmanifest`, `apps/web/index.html`; icons `apps/web/public/icon-192.png`,
-  `icon-512.png`, `icon-maskable-512.png`, written by `packages/ui/scripts/app-icons.mjs` (`maskable`); tests
-  `apps/web/test/web-app-manifest.test.ts`, `packages/ui/test/app-icons.test.ts`
+  `icon-512.png`, `icon-maskable-512.png`, written by `packages/ui/scripts/app-icons.mjs` (`maskable`); server
+  `apps/server/src/app.ts` (no link on a registered host); tests `apps/web/test/web-app-manifest.test.ts`,
+  `packages/ui/test/app-icons.test.ts`, `apps/server/test/hosts.test.ts`
 
 ## Context
 
@@ -43,7 +44,10 @@ icon per device; in a browser that pick is the tab's icon.
    zone (a circle 80% of the width) is the 72 dp Android shows of the 108 dp layers: under a round mask it looks like
    the native app's round icon, and larger masks show more of the sky around the agent. It is opaque (RGB, no
    alpha), so no mask shows through.
-3. **No server change.** Hono's `serveStatic` already sends `.webmanifest` as `application/manifest+json`.
+3. **Only the server's own names offer it.** Hono's `serveStatic` already sends `.webmanifest` as
+   `application/manifest+json`. On a registered host (ADR 0194), which wears its own name and icon, the server leaves
+   the manifest's link out of the page (`apps/server/src/app.ts`, with the `data-host` mark), so it never installs as
+   "agentes.chat" there.
 4. **No `related_applications`.** The browser offers this web app as it is; the native apps keep the download page.
 5. **The service worker stays as it is**, push only (ADR 0071 §2). Chrome's install criteria
    ([web.dev](https://web.dev/articles/install-criteria), checked 2026-11-11) ask for the manifest's name, a 192 and
@@ -70,8 +74,8 @@ icon per device; in a browser that pick is the tab's icon.
   stays the shipped one. Following the pick would need a manifest written per person, and an installed app takes a
   new icon only when the browser updates it in its own time; that is accepted.
 - A link to another site (`target="_blank"`, outside `scope`) still opens outside the app, in the browser.
-- Every server, self-hosted or not, installs as "agentes.chat" with this icon: the manifest is a static file of the
-  build. A name per server would need the server to write the manifest, which nothing asks for yet.
+- Every server, self-hosted or not, installs on its own names as "agentes.chat" with this icon: the manifest is a
+  static file of the build. A name per server would need the server to write the manifest, which nothing asks for yet.
 - The icons change only through the generator: a new shipped scene gives the manifest's icons with the rest when the
   script runs again (ADR 0179 §1).
 
