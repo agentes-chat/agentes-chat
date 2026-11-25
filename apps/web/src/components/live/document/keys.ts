@@ -8,6 +8,7 @@ import {
   goToCell,
   leaveCodeOnEmptyLines,
   liftDocParagraph,
+  openDocLink,
   paragraphAfterNode,
   setDocStyle,
   shiftDocLevel,
@@ -18,9 +19,9 @@ import {
 
 /**
  * The document's keys (ADR 0200), before ProseMirror's own: marks (⌘B ⌘I ⌘U, ⌘⇧X strikethrough, ⌘E code), styles
- * (⌘⌥0 text, ⌘⌥1–3 headings), lists (⌘⇧8 bullets, ⌘⇧7 numbers), ⌘K link, Enter that keeps a list going and leaves
- * code after two empty lines, Shift-Enter a line break, Tab and Shift-Tab between a table's cells or a list's levels,
- * and the arrows out past a table or a picture at either end.
+ * (⌘⌥0 text, ⌘⌥1–3 headings), lists (⌘⇧8 bullets, ⌘⇧7 numbers), ⌘K link, ⌥↵ (Alt+Enter) to open the link the caret
+ * is in, Enter that keeps a list going and leaves code after two empty lines, Shift-Enter a line break, Tab and
+ * Shift-Tab between a table's cells or a list's levels, and the arrows out past a table or a picture at either end.
  */
 
 export interface DocKeyOptions {
@@ -58,6 +59,7 @@ export function docKeymap(options: DocKeyOptions): Plugin[] {
     Enter: chainCommands(paragraphAfterNode, fenceToCode, leaveCodeOnEmptyLines, splitDocParagraph),
     "Shift-Enter": docLineBreak,
     "Mod-Enter": chainCommands(exitCode, docLineBreak),
+    "Alt-Enter": openDocLink,
     Backspace: liftDocParagraph,
     Tab: chainCommands(goToCell(1), indentCode, always(shiftDocLevel(1))),
     "Shift-Tab": chainCommands(goToCell(-1), always(shiftDocLevel(-1))),

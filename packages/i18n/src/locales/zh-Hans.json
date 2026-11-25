@@ -21597,7 +21597,8 @@
         "address": "链接地址",
         "placeholder": "粘贴或输入地址",
         "apply": "应用",
-        "remove": "移除链接"
+        "remove": "移除链接",
+        "open": "打开链接"
       },
       "image": {
         "add": "图片",
@@ -21641,6 +21642,7 @@
         "bulletList": "项目符号列表",
         "numberedList": "编号列表",
         "link": "链接",
+        "openLink": "打开光标处的链接",
         "lineBreak": "换行",
         "nextCell": "表格的下一个单元格"
       }

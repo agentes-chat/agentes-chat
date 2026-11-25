@@ -21413,7 +21413,8 @@
         "address": "リンクのアドレス",
         "placeholder": "アドレスを貼り付けるか入力",
         "apply": "適用",
-        "remove": "リンクを削除"
+        "remove": "リンクを削除",
+        "open": "リンクを開く"
       },
       "image": {
         "add": "画像",
@@ -21457,6 +21458,7 @@
         "bulletList": "箇条書き",
         "numberedList": "番号付きリスト",
         "link": "リンク",
+        "openLink": "カーソル位置のリンクを開く",
         "lineBreak": "改行",
         "nextCell": "表の次のセル"
       }

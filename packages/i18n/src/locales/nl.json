@@ -22271,7 +22271,8 @@
         "address": "Linkadres",
         "placeholder": "Plak of typ een adres",
         "apply": "Toepassen",
-        "remove": "Link verwijderen"
+        "remove": "Link verwijderen",
+        "open": "Link openen"
       },
       "image": {
         "add": "Afbeelding",
@@ -22316,6 +22317,7 @@
         "bulletList": "Opsommingslijst",
         "numberedList": "Genummerde lijst",
         "link": "Link",
+        "openLink": "Link bij de cursor openen",
         "lineBreak": "Regeleinde",
         "nextCell": "Volgende cel van een tabel"
       }

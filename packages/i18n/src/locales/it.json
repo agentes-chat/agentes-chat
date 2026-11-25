@@ -22853,7 +22853,8 @@
         "address": "Indirizzo del link",
         "placeholder": "Incolla o digita un indirizzo",
         "apply": "Applica",
-        "remove": "Rimuovi link"
+        "remove": "Rimuovi link",
+        "open": "Apri link"
       },
       "image": {
         "add": "Immagine",
@@ -22899,6 +22900,7 @@
         "bulletList": "Elenco puntato",
         "numberedList": "Elenco numerato",
         "link": "Inserisci link",
+        "openLink": "Apri il link al cursore",
         "lineBreak": "A capo",
         "nextCell": "Cella successiva di una tabella"
       }

@@ -1,4 +1,4 @@
-import { RICH_MAX_LEVEL, type RichAlign, type RichList } from "@agenteschat/live/rich";
+import { isRichHref, RICH_MAX_LEVEL, type RichAlign, type RichList } from "@agenteschat/live/rich";
 import { lift, toggleMark, wrapIn } from "prosemirror-commands";
 import type { Attrs, MarkType, NodeType, Node as PMNode, ResolvedPos } from "prosemirror-model";
 import { type Command, type EditorState, NodeSelection, Selection, TextSelection } from "prosemirror-state";
@@ -314,6 +314,32 @@ export function shiftDocLevel(delta: 1 | -1): Command {
     return next === level ? null : { level: next };
   });
 }
+
+/**
+ * The link the caret is in (or a selection inside one link): its whole words and its address. Null elsewhere, and for
+ * an address the schema doesn't draw as a link (only https, http and mailto open).
+ */
+export function docLinkAt(state: EditorState): { from: number; to: number; href: string } | null {
+  const href = linkAt(state);
+  if (!isRichHref(href)) return null;
+  const range = markRange(state, M.link);
+  return range?.href === href ? { from: range.from, to: range.to, href } : null;
+}
+
+/** Opens a link of the document in a new tab, as the links of a read-only document open (`target="_blank"`). */
+export function openDocHref(href: string): boolean {
+  if (!isRichHref(href)) return false;
+  window.open(href, "_blank", "noopener,noreferrer");
+  return true;
+}
+
+/** ⌥↵ / Alt+Enter: opens the link the caret is in. Nothing (and Alt+Enter as it was) outside a link. */
+export const openDocLink: Command = (state, dispatch) => {
+  const link = docLinkAt(state);
+  if (!link) return false;
+  if (dispatch) openDocHref(link.href);
+  return true;
+};
 
 /**
  * Links the selection to `href` (https, http or mailto; a bare address gets https), or unlinks it with null. With an

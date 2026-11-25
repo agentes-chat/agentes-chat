@@ -22012,7 +22012,8 @@
         "address": "Bağlantı adresi",
         "placeholder": "Bir adres yapıştırın veya yazın",
         "apply": "Uygula",
-        "remove": "Bağlantıyı kaldır"
+        "remove": "Bağlantıyı kaldır",
+        "open": "Bağlantıyı aç"
       },
       "image": {
         "add": "Görsel",
@@ -22057,6 +22058,7 @@
         "bulletList": "Madde işaretli liste",
         "numberedList": "Numaralı liste",
         "link": "Bağlantı",
+        "openLink": "İmleçteki bağlantıyı aç",
         "lineBreak": "Satır sonu",
         "nextCell": "Tablonun sonraki hücresi"
       }

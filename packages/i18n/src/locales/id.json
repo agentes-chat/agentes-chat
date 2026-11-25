@@ -21520,7 +21520,8 @@
         "address": "Alamat tautan",
         "placeholder": "Tempel atau ketik alamat",
         "apply": "Terapkan",
-        "remove": "Hapus tautan"
+        "remove": "Hapus tautan",
+        "open": "Buka tautan"
       },
       "image": {
         "add": "Gambar",
@@ -21564,6 +21565,7 @@
         "bulletList": "Daftar berpoin",
         "numberedList": "Daftar bernomor",
         "link": "Tautan",
+        "openLink": "Buka tautan di kursor",
         "lineBreak": "Baris baru",
         "nextCell": "Sel berikutnya di tabel"
       }

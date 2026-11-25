@@ -22088,7 +22088,8 @@
         "address": "Linkadresse",
         "placeholder": "Adresse einfügen oder eingeben",
         "apply": "Übernehmen",
-        "remove": "Link entfernen"
+        "remove": "Link entfernen",
+        "open": "Link öffnen"
       },
       "image": {
         "add": "Bild",
@@ -22133,6 +22134,7 @@
         "bulletList": "Aufzählung",
         "numberedList": "Nummerierte Liste",
         "link": "Link einfügen",
+        "openLink": "Link am Cursor öffnen",
         "lineBreak": "Zeilenumbruch",
         "nextCell": "Nächste Zelle einer Tabelle"
       }
