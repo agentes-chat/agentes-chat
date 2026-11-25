@@ -141,6 +141,20 @@ export const isValidTimeZone = (tz: string) => {
   }
 };
 
+/**
+ * The zone of the device someone joined from becomes theirs in the workspace while they have none of their own, so
+ * agents keep their clock rather than the workspace's. A zone they set stays.
+ */
+export async function adoptDeviceZone(db: Database, orgId: string, userId: string, zone: string | undefined) {
+  if (!zone || !isValidTimeZone(zone)) return;
+  const m = schema.organizationMembers;
+  await db
+    .update(m)
+    .set({ timezone: zone })
+    .where(and(eq(m.orgId, orgId), eq(m.userId, userId), isNull(m.timezone)));
+  caches.zones.delete(`${orgId}:${userId}`);
+}
+
 /** Updates name, context (goes into every agent's prompt) and settings. Admins (`configure`). */
 export async function updateOrgSettings(
   db: Database,

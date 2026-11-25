@@ -4,6 +4,7 @@ import type { ChatPrefs } from "../lib/chat-look";
 import { humanCheckHeaders } from "../lib/human-check";
 import type { OnboardingStepId } from "../lib/onboarding";
 import { type LodiPrefs, lodiPrefsOf } from "../lib/right-hand-prefs";
+import { browserTimezone } from "../lib/routines";
 import { CLOUD_SERVER, withoutTrailingSlashes } from "../lib/server";
 import { createLiveApi } from "../live/api";
 import { consultSeeds } from "../realtime/consults";
@@ -790,7 +791,7 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       acceptInvitation: (token, mail) =>
         request<{ orgId: string }>(
           `/api/app/invitations/${enc(token)}/accept${mail ? `?${new URLSearchParams({ mail })}` : ""}`,
-          { json: {} },
+          { json: { timeZone: browserTimezone() ?? undefined } },
         ),
       settings: (orgId) => request<OrgSettings>(`${org(orgId)}/settings`),
       updateSettings: (orgId, input) =>

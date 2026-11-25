@@ -5,6 +5,7 @@ import {
   acceptInvitation,
   accountDeletionPlan,
   addHostComputer,
+  adoptDeviceZone,
   announceMembers,
   announceProfile,
   avatarFile,
@@ -2079,6 +2080,24 @@ export function accountRoutes(deps: AppDeps) {
                 "as confirmed. A copied link has none.",
             }),
         }),
+        body: {
+          required: false,
+          content: {
+            "application/json": {
+              schema: z.object({
+                timeZone: z
+                  .string()
+                  .max(64)
+                  .optional()
+                  .openapi({
+                    description:
+                      "The IANA zone of the device accepting: the person's zone in the workspace while they have none " +
+                      "of their own. An unknown one is ignored.",
+                  }),
+              }),
+            },
+          },
+        },
       },
       responses: { 200: json(z.object({ orgId: z.uuid() })), ...errors },
     }),
@@ -2086,6 +2105,7 @@ export function accountRoutes(deps: AppDeps) {
       const user = c.get("user");
       const mail = { secret: config.AGENTES_SECRET, proof: c.req.valid("query").mail };
       const joined = await acceptInvitation(db, user, c.req.valid("param").token, new Date(), mail);
+      await adoptDeviceZone(db, joined.orgId, user.id, c.req.valid("json")?.timeZone);
       await announceMembers(deps.adapters.pubsub, joined.orgId, joined.agents);
       // A request to join they had waiting closed as they joined: the admins' notice goes with the last one.
       await settleJoinRequests({ db, pubsub: deps.adapters.pubsub }, joined.orgId);
