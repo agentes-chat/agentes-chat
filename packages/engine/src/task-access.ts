@@ -240,3 +240,30 @@ export function fileSeenSql(userId: SQL, depth = FILE_CONVERSATION_DEPTH) {
     or exists (select 1 from ${channels} pc where pc.id = ${c("channel_id")} and pc.kind = 'channel'
       and pc.visibility = 'public'))`;
 }
+
+/**
+ * Whether the task `issueId` may be named where people follow a hand-off (`channelId`: the conversation that asked):
+ * the person behind it (`personId`, null for none) sees the task, and so does everyone who reads that conversation. A
+ * public channel is read by anyone who joins it, so there the task must be one the whole workspace sees. Otherwise its
+ * number and title would reach readers the task isn't for.
+ */
+export async function taskShownIn(
+  db: Executor,
+  input: { orgId: string; issueId: string; channelId: string; personId: string | null },
+): Promise<boolean> {
+  const { orgId, issueId, channelId, personId } = input;
+  const [row] = rowsOf<{ shown: boolean }>(
+    await db.execute(sql`select (
+        (${personId}::text is null or ${taskSeenSql("t", sql`${personId}::text`)})
+        and case when ch.kind = 'channel' and ch.visibility = 'public'
+          then not t.restricted and (t.channel_id is null or exists (select 1 from ${channels} tc
+            where tc.id = t.channel_id and tc.kind = 'channel' and tc.visibility = 'public'))
+          else not exists (select 1 from ${channelReadersSql(sql`${orgId}::uuid`, sql`ch.id`)} r(user_id)
+            where not ${taskSeenSql("t", sql`r.user_id`)})
+        end) as shown
+      from ${issues} t, ${channels} ch
+      where t.id = ${issueId}::uuid and t.org_id = ${orgId}::uuid and ch.id = ${channelId}::uuid
+        and ch.org_id = ${orgId}::uuid`),
+  );
+  return row?.shown === true;
+}

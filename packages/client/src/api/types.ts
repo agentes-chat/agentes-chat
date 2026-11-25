@@ -1870,6 +1870,10 @@ export interface RunConsultation {
   answer: string | null;
   /** Open: what the consulted agent posted in the agents' DM so far (ADR 0097). Older servers send none. */
   progress?: { posts: number; latest: string; at: string } | null;
+  /** A hand-off's short action title, when its sender gave one. Older servers send none. */
+  title?: string | null;
+  /** The existing task a hand-off is about, while everyone who reads here can see it. Older servers send none. */
+  task?: { id: string; number: number; title: string } | null;
   createdAt: string;
   answeredAt: string | null;
   expiresAt: string;

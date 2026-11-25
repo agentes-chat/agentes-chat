@@ -51,6 +51,7 @@ import { tellAgentStopped } from "./run-stopped";
 import { type AgentRun, continuableEnd, isTerminal, outageParkedSql, type RunStatus, replyThreadOf } from "./runs";
 import { AgentHeldError, OrgDeletingError, OrgPausedError } from "./standing";
 import { MAX_HANDOFF_LINKS, refusedAtLimit, runStretchOf, stretchStop } from "./stretch";
+import { taskShownIn } from "./task-access";
 import { noAgentText } from "./team";
 import type { ToolContext, ToolDefinition, ToolOutput, ToolSource } from "./tools/types";
 import { untrustedBlock } from "./untrusted";
@@ -65,6 +66,7 @@ const {
   agents,
   channelMembers,
   channels,
+  issues,
   machines,
   messages,
   outbox,
@@ -345,7 +347,7 @@ function createTellAgentTool(deps: { pubsub?: PubSub; ai?: AiCheck; judge?: Judg
   return {
     name: TELL_AGENT_TOOL,
     description:
-      "Hand another agent of the organization work to do, e.g. @sales to hand its client notes to @support, or @infra that a deploy finished so it watches the metrics. It works on it privately, with its own tools and permissions, for the same person you are helping, and the people here see it's on it. It returns at once; carry on. What comes of it reaches you here by itself, even after your turn ends, with everything else you handed off this turn: don't check on it, send it again or set a follow_up for it. Give the whole job to the one agent that owns it, with everything it needs; it brings in the others. News with nothing to do goes with `heads_up: true`: no work starts and no reply comes. Tell an agent only what changes its work. Write the note so it stands alone: the agent doesn't see this conversation. For an answer you need for the task, use ask_agent. Asked only a question? Answer it and offer the hand-off in one line instead.",
+      "Hand another agent of the organization work to do, e.g. @sales to hand its client notes to @support, or @infra that a deploy finished so it watches the metrics. It works on it privately, with its own tools and permissions, for the same person you are helping, and the people here see it's on it. It returns at once; carry on. What comes of it reaches you here by itself, even after your turn ends, with everything else you handed off this turn: don't check on it, send it again or set a follow_up for it. Give the whole job to the one agent that owns it, with everything it needs; it brings in the others. News with nothing to do goes with `heads_up: true`: no work starts and no reply comes. Tell an agent only what changes its work. Write the note so it stands alone: the agent doesn't see this conversation. Work on an existing task (a note on it, closing it): pass its number as `task`, so the people here see that task and no new card is made; the agent still changes the task with the task's own tools. Otherwise give a short action `title` for its card. For an answer you need for the task, use ask_agent. Asked only a question? Answer it and offer the hand-off in one line instead.",
     scope: "",
     inputSchema: {
       type: "object",
@@ -353,6 +355,18 @@ function createTellAgentTool(deps: { pubsub?: PubSub; ai?: AiCheck; judge?: Judg
         agent: { type: "string", minLength: 2, maxLength: 33, description: "The agent's handle, e.g. @infra." },
         message: { type: "string", minLength: 1, maxLength: 4000 },
         heads_up: { type: "boolean" },
+        task: {
+          type: "integer",
+          minimum: 1,
+          description:
+            "The number of the existing task this work is about (42 for #42). Shown with the hand-off where the people asked; its work makes no new card and never moves the task by itself.",
+        },
+        title: {
+          type: "string",
+          maxLength: 80,
+          description:
+            "A short action title for this work and its card, e.g. 'Add the discovery closing note'. No links: they go in the message.",
+        },
       },
       required: ["agent", "message"],
       additionalProperties: false,
@@ -388,6 +402,8 @@ function createTellAgentTool(deps: { pubsub?: PubSub; ai?: AiCheck; judge?: Judg
       if (same) return same;
       const atLimit = await refusedAtLimit(db, reached.run, target.id);
       if (atLimit) return atLimit;
+      const about = input.task === undefined ? null : await handOffTask(ctx, reached.run, here, Number(input.task));
+      if (about?.refused) return about.refused;
       let waitsForRoom = false;
       // The words this run already handed another agent: one agent does a job, the copies only tell the others.
       const copy = input.heads_up !== true && (await handedThisRun(db, ctx, body, target.id));
@@ -404,6 +420,8 @@ function createTellAgentTool(deps: { pubsub?: PubSub; ai?: AiCheck; judge?: Judg
         chain,
         deferStart: braked,
         headsUp,
+        issueId: about?.issueId ?? null,
+        title: typeof input.title === "string" ? input.title.trim() || null : null,
       });
       if (!sent) {
         return {
@@ -463,16 +481,47 @@ function createTellAgentTool(deps: { pubsub?: PubSub; ai?: AiCheck; judge?: Judg
           : handedWork
             ? `Handed to @${handle}; it's on it. The people here follow its progress, its questions and its result from @${handle} itself, under your reply: you are not woken to relay what comes of it, only when a step of your own waits on it (checking or approving it, passing it on to another agent, publishing). Tell the people in a line who has it, without promising a time or to report back, and don't offer a check or a step they didn't ask for; then do your own part or end your turn.`
             : `Handed to @${handle}; it's on it, and the people here can see that. What comes of it reaches you here by itself once everything you handed off this turn is back. Tell the people in a line who has it, without promising a time, then do your own part or end your turn.`;
+      // The task it is about shows with it; whether the task closes is the task's own update, not the hand-off's end.
+      const task = about ? ` It shows here as task #${Number(input.task)}, and no new card was made.` : "";
       return {
         content: waitsForRoom
-          ? `${handed} @${handle} hasn't started yet: its computer is full, so your note waits and starts once there's room. It isn't lost: don't send it again.`
-          : handed,
+          ? `${handed}${task} @${handle} hasn't started yet: its computer is full, so your note waits and starts once there's room. It isn't lost: don't send it again.`
+          : `${handed}${task}`,
         data: {
           agentNote: { messageId: sent.message.id, agentId: target.id },
           consultation: { id: sent.consultationId, agentId: target.id },
         },
       };
     },
+  };
+}
+
+/**
+ * The existing task a hand-off names (`tell_agent`'s `task`): only one the person behind the run and everyone where
+ * people follow it (`peopleSee`) can see, so the hand-off never shows a task's number or title to someone it isn't
+ * for. A task that doesn't exist and one they can't see get the same refusal.
+ */
+async function handOffTask(
+  ctx: ToolContext,
+  run: AgentRun,
+  here: { kind: string; dmKey: string | null } | undefined,
+  number: number,
+): Promise<{ issueId: string; refused?: undefined } | { refused: ToolOutput }> {
+  const { db, orgId } = ctx;
+  const [task] = Number.isInteger(number)
+    ? await db
+        .select({ id: issues.id })
+        .from(issues)
+        .where(and(eq(issues.orgId, orgId), eq(issues.number, number)))
+    : [];
+  const where = await peopleSee(db, run, here);
+  const personId = (await runAuthorityById(db, orgId, ctx.runId)).personId;
+  if (task && (await taskShownIn(db, { orgId, issueId: task.id, channelId: where.channelId, personId })))
+    return { issueId: task.id };
+  return {
+    refused: refuse(
+      `There's no task #${number} that everyone following this hand-off can see, so it can't go with it. Hand the work over without \`task\` and write what to do in the message, or tell the person you can't reach that task from here.`,
+    ),
   };
 }
 
@@ -540,6 +589,9 @@ export async function sendNote(
     deferStart?: boolean;
     /** News only: no run starts and nothing comes back; the agent reads it at its next turn for that person. */
     headsUp?: boolean;
+    /** The existing task it is about, already checked (`handOffTaskRefusal`), and its short action title. */
+    issueId?: string | null;
+    title?: string | null;
   },
 ) {
   const consultationId = Bun.randomUUIDv7();
@@ -603,6 +655,8 @@ export async function sendNote(
       expiresAt: new Date(Date.now() + CONSULTATION_TTL_MS),
       forUserId: (await runAuthorityById(tx, input.orgId, input.runId)).personId,
       askerReadOutside: relays,
+      issueId: input.issueId ?? null,
+      title: input.title ?? null,
     });
     return { message, consultationId };
   });
@@ -2103,6 +2157,10 @@ export interface RunConsultation {
    * it moving: how many messages, the start of the latest, and when. Null when it posted nothing yet.
    */
   progress: { posts: number; latest: string; at: Date } | null;
+  /** A hand-off's short action title (`tell_agent`'s `title`), when its sender gave one. */
+  title: string | null;
+  /** The existing task a hand-off is about (`tell_agent`'s `task`), while everyone who reads here can see it. */
+  task: { id: string; number: number; title: string } | null;
   createdAt: Date;
   answeredAt: Date | null;
   expiresAt: Date;
@@ -2134,6 +2192,8 @@ export async function consultationsIn(db: Executor, orgId: string, channelId: st
       answeredAt: agentConsultations.answeredAt,
       expiresAt: agentConsultations.expiresAt,
       dmId: agentConsultations.channelId,
+      issueId: agentConsultations.issueId,
+      title: agentConsultations.title,
     })
     .from(agentConsultations)
     .innerJoin(agentRuns, eq(agentRuns.id, agentConsultations.askerRunId))
@@ -2172,10 +2232,11 @@ export async function consultationsIn(db: Executor, orgId: string, channelId: st
       )
     ).flat(),
   );
+  const tasks = await tasksShown(db, orgId, channelId, rows);
   return rows.map((r) => {
     const kept = !!r.targetRunId && hidden.has(r.targetRunId);
     return {
-      ...consultationView(r, waitOf, kept),
+      ...consultationView(r, waitOf, kept, tasks),
       progress: r.status === "open" && r.targetRunId && !kept ? (progressOf.get(r.targetRunId) ?? null) : null,
     };
   });
@@ -2212,8 +2273,42 @@ async function progressIn(db: Executor, orgId: string, targets: { runId: string;
 
 type ConsultationRow = Pick<
   AgentConsultationRow,
-  "id" | "kind" | "targetRunId" | "status" | "question" | "answer" | "createdAt" | "answeredAt" | "expiresAt"
+  | "id"
+  | "kind"
+  | "targetRunId"
+  | "status"
+  | "question"
+  | "answer"
+  | "createdAt"
+  | "answeredAt"
+  | "expiresAt"
+  | "issueId"
+  | "title"
 > & { runId: string; agentId: string; consultedAgentId: string };
+
+type ShownTasks = Map<string, NonNullable<RunConsultation["task"]>>;
+
+/**
+ * The tasks these hand-offs are about that everyone who reads `channelId` sees now (`taskShownIn`): checked again on
+ * every read, so a task limited since, or a conversation opened to more people, never shows one it isn't for.
+ */
+async function tasksShown(
+  db: Executor,
+  orgId: string,
+  channelId: string,
+  rows: Pick<ConsultationRow, "issueId">[],
+): Promise<ShownTasks> {
+  const ids = [...new Set(rows.flatMap((r) => (r.issueId ? [r.issueId] : [])))];
+  if (ids.length === 0) return new Map();
+  const found = await db
+    .select({ id: issues.id, number: issues.number, title: issues.title })
+    .from(issues)
+    .where(and(eq(issues.orgId, orgId), inArray(issues.id, ids)));
+  const shown = await Promise.all(
+    found.map(async (t) => ((await taskShownIn(db, { orgId, issueId: t.id, channelId, personId: null })) ? [t] : [])),
+  );
+  return new Map(shown.flat().map((t) => [t.id, t]));
+}
 
 /** What a consulted run is held on, and since when (`waitSinceSql`, ms); null while it works. */
 const heldOn = (run: Parameters<typeof consultationWait>[0] & { since: string | number }) => {
@@ -2226,6 +2321,7 @@ function consultationView(
   r: ConsultationRow,
   waitOf: Map<string, ReturnType<typeof heldOn>>,
   hidden = false,
+  tasks: ShownTasks = new Map(),
 ): RunConsultation {
   const status = r.status as RunConsultation["status"];
   const open = status === "open";
@@ -2247,6 +2343,8 @@ function consultationView(
         ? null
         : cutText(answerForPeople(r.answer), NOTICE_ANSWER_MAX) || null,
     progress: null,
+    title: r.title,
+    task: (r.issueId && tasks.get(r.issueId)) || null,
     createdAt: r.createdAt,
     answeredAt: r.answeredAt,
     expiresAt: r.expiresAt,
@@ -2291,6 +2389,8 @@ export async function consultationConversation(
       createdAt: agentConsultations.createdAt,
       answeredAt: agentConsultations.answeredAt,
       expiresAt: agentConsultations.expiresAt,
+      issueId: agentConsultations.issueId,
+      title: agentConsultations.title,
     })
     .from(agentConsultations)
     .where(
@@ -2328,10 +2428,11 @@ export async function consultationConversation(
   const waitOf = new Map<string, ReturnType<typeof heldOn>>();
   if (target && run && row.status === "open") waitOf.set(target, heldOn(run));
   // It answers the agent that asked, never the people here: they see where it stands, not its words.
+  const tasks = await tasksShown(db, orgId, channelId, [row]);
   if (target && (await answersAgentsOnly(db, orgId, target))) {
-    return { consultation: consultationView(row, waitOf, true), messages: [] };
+    return { consultation: consultationView(row, waitOf, true, tasks), messages: [] };
   }
-  const consultation = consultationView(row, waitOf);
+  const consultation = consultationView(row, waitOf, false, tasks);
   // Its words in the DM belong to this conversation only while every question the run answers was asked here.
   const ownRun =
     target && run && !(await answersElsewhere(db, orgId, row, target, run.createdAt, channelId)) ? target : null;

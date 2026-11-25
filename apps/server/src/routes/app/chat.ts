@@ -75,6 +75,14 @@ const Consultation = z.object({
     description:
       "Open: what the consulted agent posted in the agents' DM so far (how many messages, the start of the latest, when). Null when nothing yet.",
   }),
+  title: z
+    .string()
+    .nullable()
+    .openapi({ description: "A hand-off's short action title (`tell_agent`'s `title`), when its sender gave one." }),
+  task: z.object({ id: z.uuid(), number: z.number().int(), title: z.string() }).nullable().openapi({
+    description:
+      "The existing task a hand-off is about (`tell_agent`'s `task`), while everyone who reads this conversation can see it; null otherwise.",
+  }),
   createdAt: z.string(),
   answeredAt: z.string().nullable(),
   expiresAt: z.string(),

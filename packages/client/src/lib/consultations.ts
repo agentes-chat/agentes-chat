@@ -1,10 +1,21 @@
-import { withoutRelayLine } from "@agenteschat/ui/agent-talk";
+import { CONSULT_SUBJECT_CHARS, consultSubject, withoutRelayLine } from "@agenteschat/ui/agent-talk";
+import { clipText } from "@agenteschat/ui/widgets/spec";
 import type { TFunction } from "i18next";
-import type { ConsultationStatus, MessageConsultation } from "../api/types";
+import type { ConsultationStatus, MessageConsultation, RunConsultation } from "../api/types";
 import { plainLine } from "./markdown";
 import { formatLineTime } from "./work";
 
 export { CONSULT_SUBJECT_CHARS, consultSubject, withoutRelayLine } from "@agenteschat/ui/agent-talk";
+
+/**
+ * What a pair row says a question or hand-off is about: the existing task it is about ("#42 Discovery"), else its
+ * short action title, else the start of what was asked (`consultSubject`). The whole request stays in its dialog.
+ */
+export function handOffSubject(c: Pick<RunConsultation, "question" | "title" | "task"> | undefined): string {
+  if (c?.task) return clipText(`#${c.task.number} ${c.task.title}`, CONSULT_SUBJECT_CHARS);
+  const title = c?.title?.trim();
+  return title ? clipText(title, CONSULT_SUBJECT_CHARS) : consultSubject(c?.question);
+}
 
 /** How long an agent waits for another one's answer (the server's `CONSULTATION_TTL_MS`). */
 export const CONSULTATION_MINUTES = 15;

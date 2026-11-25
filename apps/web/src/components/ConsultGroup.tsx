@@ -22,7 +22,7 @@ import {
   openableConsultation,
   pairItemOf,
 } from "@agenteschat/client/lib/consult-group";
-import { consultSubject, consultTimeText, previewOf, withoutRelayLine } from "@agenteschat/client/lib/consultations";
+import { consultTimeText, handOffSubject, previewOf, withoutRelayLine } from "@agenteschat/client/lib/consultations";
 import { joinNames, namesText } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { cx, Icon, Tip } from "@agenteschat/ui";
@@ -195,7 +195,7 @@ export function ConsultPairRow({ askerId, items }: { askerId: string; items: rea
   const names = pair.faces.map((f) => nameOf(f.agentId));
   // The subject comes from the question a click opens, so a folded row of several is called by the one it shows.
   const opened = items.find((c) => c.id === pair.opens) ?? items[0];
-  const subject = consultSubject(opened?.question);
+  const subject = handOffSubject(opened);
   // The whole question, which the row's one line cuts: in its tip and, for screen readers, its description.
   const question = previewOf(opened?.question ?? "");
   const title =

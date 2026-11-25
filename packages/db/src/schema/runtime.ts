@@ -1062,6 +1062,14 @@ export const agentConsultations = pgTable(
      * is the server's and carries none.
      */
     askerReadOutside: boolean().notNull().default(false),
+    /**
+     * A hand-off about an existing task (`tell_agent`'s `task`): the task, checked when it was sent against the person
+     * behind it and everyone who reads the conversation that asked. Its work links it without moving it: the task's
+     * own status changes only through the task's tools.
+     */
+    issueId: uuid().references(() => issues.id, { onDelete: "set null" }),
+    /** The hand-off's short action title (`tell_agent`'s `title`): its work's and its card's name. */
+    title: text(),
   },
   (t) => [
     foreignKey({ columns: [t.orgId, t.askerAgentId], foreignColumns: [agents.orgId, agents.id] }).onDelete("cascade"),
