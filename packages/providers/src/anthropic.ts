@@ -6,7 +6,7 @@ import type {
   BetaTextBlockParam,
   BetaTool,
 } from "@anthropic-ai/sdk/resources/beta/messages/messages";
-import { effortWithin, MODEL_CATALOG } from "./catalog";
+import { effortWithin, MODEL_CATALOG, modelReadsImages } from "./catalog";
 import {
   type ContentBlock,
   deniedError,
@@ -140,7 +140,7 @@ export function createAnthropicProvider(
         outputTokens: null,
         outputChars: 0,
       };
-      const textOnly = Boolean(compat && !compat.images);
+      const textOnly = Boolean(compat && !(compat.images ?? modelReadsImages(request.model)));
       const leftOut = textOnly && hasToolImages(request.messages);
       const updates = !compat && !thinkingOff && options.progressNotes !== false && info?.thinkingUpdates === true;
       const params = (withThinking: boolean) => {
@@ -155,7 +155,8 @@ export function createAnthropicProvider(
           model: request.model,
           max_tokens: request.maxTokens,
           system: toSystem(request, compat ? undefined : room(request)),
-          // Another company's endpoint (DeepSeek, Kimi, Z.ai, MiniMax) isn't trusted to take images, unless it says it does.
+          // Another company's endpoint (DeepSeek, Kimi, Z.ai, MiniMax) isn't trusted to take images, unless it says
+          // it does; where it doesn't say (the catalog's providers), the model's own row (`images`) can.
           messages: toMessageParams(
             textOnly ? withoutImages(request.messages, request.model) : request.messages,
             id,
