@@ -27,6 +27,7 @@ const SHARED: Record<AppLocale, () => LocaleStrings> = {
   tr: () => require("@agenteschat/i18n/locales/tr.json"),
   pl: () => require("@agenteschat/i18n/locales/pl.json"),
   ru: () => require("@agenteschat/i18n/locales/ru.json"),
+  vi: () => require("@agenteschat/i18n/locales/vi.json"),
 };
 
 const bundle = (code: AppLocale) =>

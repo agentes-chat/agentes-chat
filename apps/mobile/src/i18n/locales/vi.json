@@ -1,0 +1,159 @@
+{
+  "common": {
+    "back": "Quay lại",
+    "cancel": "Hủy",
+    "close": "Đóng",
+    "continue": "Tiếp tục",
+    "done": "Xong",
+    "retry": "Thử lại",
+    "openSettings": "Mở Cài đặt",
+    "loading": "Đang tải",
+    "or": "hoặc"
+  },
+  "auth": {
+    "skyLabel": "Bầu trời với các agent",
+    "social": {
+      "failed": "Chưa đăng nhập được ngay lúc này. Thử lại nhé.",
+      "unfinished": "Đăng nhập chưa hoàn tất. Thử lại hoặc dùng email của bạn."
+    },
+    "errors": {
+      "network": "Không có kết nối. Kiểm tra internet rồi thử lại.",
+      "generic": "Đã có lỗi xảy ra. Thử lại nhé.",
+      "offlineRetry": "Hiện không có internet. Tôi sẽ tiếp tục ngay khi có lại."
+    },
+    "flow": {
+      "email": "Email của bạn là gì?",
+      "emailLead": "Để đăng nhập hoặc tạo tài khoản của bạn.",
+      "signUp": "Rất vui được gặp bạn. Nhóm gọi bạn là gì?"
+    },
+    "server": {
+      "line": "Máy chủ: {{host}} ·",
+      "change": "Thay đổi",
+      "title": "agentes.chat của bạn ở đâu?",
+      "subtitle": "Địa chỉ mà nhóm của bạn mở trong trình duyệt.",
+      "label": "Địa chỉ máy chủ",
+      "placeholder": "agentes.yourteam.ts.net",
+      "use": "Dùng máy chủ này",
+      "checking": "Đang kiểm tra…",
+      "scan": "Quét mã QR",
+      "backTo": "Quay lại {{host}}",
+      "footChange": "Thay đổi",
+      "footChoose": "Máy chủ và ngôn ngữ",
+      "footServer": "Máy chủ khác",
+      "footLanguage": "Ngôn ngữ",
+      "footCloud": "Đang đăng nhập vào agentes.chat Cloud",
+      "footOn": "Đang đăng nhập trên {{host}}",
+      "footSwitch": "Thay đổi",
+      "now": "Hiện đang ở {{host}}",
+      "invalid": "Kiểm tra lại địa chỉ, dạng như agentes.yourteam.ts.net.",
+      "unreachable": "Không kết nối được tới {{host}}. Kiểm tra lại địa chỉ và kết nối của bạn rồi thử lại.",
+      "unreachableTailscale": "Không kết nối được tới {{host}}. Máy chủ này nằm trên Tailscale: mở ứng dụng Tailscale, kết nối rồi thử lại. Đã kết nối rồi? Máy tính chạy máy chủ có thể đang ngủ hoặc ứng dụng của nó đã đóng.",
+      "certificate": "Chứng chỉ của {{host}} không hợp lệ. Hãy liên hệ người quản lý máy chủ.",
+      "notAgentes": "{{host}} không phải máy chủ agentes.chat. Kiểm tra lại địa chỉ.",
+      "serverTooOld": "{{host}} cần được cập nhật để dùng được với ứng dụng này.",
+      "appTooOld": "Cập nhật ứng dụng agentes để dùng {{host}}.",
+      "down": {
+        "line": "{{host}} không phản hồi.",
+        "text": "Máy chủ có thể đang ngừng hoạt động hoặc nằm ngoài mạng của bạn. Ứng dụng sẽ tự mở lại khi máy chủ hoạt động trở lại.",
+        "tryNow": "Thử ngay",
+        "switchServer": "Đổi máy chủ",
+        "retryIn_other": "thử lại sau {{count}} s"
+      }
+    },
+    "connect": {
+      "title": "Kết nối tới máy chủ này?",
+      "titleSignIn": "Đăng nhập bằng tài khoản của máy tính?",
+      "on": "Máy chủ: {{host}}",
+      "leave": "Bạn sẽ bị đăng xuất khỏi tài khoản hiện tại trên điện thoại này.",
+      "confirm": "Kết nối",
+      "notNow": "Để sau",
+      "checking": "Đang kiểm tra máy chủ…",
+      "notALink": "Liên kết này không phải từ máy chủ agentes.chat.",
+      "tokenFailed": "Mã đã hết hạn hoặc đã được dùng. Đăng nhập bằng email của bạn hoặc hiển thị mã mới trên máy tính.",
+      "signInSlow": "Đăng nhập đang lâu hơn bình thường. Đăng nhập bằng email của bạn hoặc hiển thị mã mới trên máy tính."
+    },
+    "scan": {
+      "hint": "Hướng camera vào mã QR trên máy tính",
+      "typeAddress": "Nhập địa chỉ",
+      "notOurs": "Mã QR này không phải từ máy chủ agentes.chat.",
+      "cameraTitle": "Dùng camera",
+      "cameraText": "Camera chỉ dùng để đọc mã QR.",
+      "allow": "Cho phép dùng camera",
+      "settings": "Mở Cài đặt"
+    }
+  },
+  "org": {
+    "noneTitle": "Bạn chưa ở trong không gian làm việc nào",
+    "noneSubtitle": "Hãy nhờ một người trong nhóm gửi lời mời cho bạn, hoặc tạo không gian làm việc trên trang web.",
+    "openSite": "Mở trang web",
+    "signOut": "Đăng xuất"
+  },
+  "account": {
+    "deleteFailed": "Chưa xóa được tài khoản của bạn ngay lúc này. Thử lại nhé.",
+    "deleted": "Tài khoản của bạn sẽ bị xóa vĩnh viễn vào {{date}}. Đăng nhập trước thời điểm đó để khôi phục.",
+    "signedOut": "Bạn đã đăng xuất."
+  },
+  "theme": {
+    "system": "Giống điện thoại",
+    "light": "Sáng",
+    "dark": "Tối"
+  },
+  "push": {
+    "channel": "Cảnh báo",
+    "channelDescription": "Những gì đang chờ bạn, lượt nhắc đến và các cuộc trò chuyện.",
+    "offer": {
+      "line": "Bạn có muốn biết khi {{name}} hoàn thành không?",
+      "action": "Thông báo cho tôi"
+    },
+    "ask": {
+      "title": "Biết khi nào agent cần bạn",
+      "text": "Các agent làm việc trong lúc bạn làm việc khác. Chúng tôi sẽ báo cho bạn khi agent cần bạn đồng ý, hoàn thành việc bạn yêu cầu hoặc gọi bạn.",
+      "on": "Bật thông báo",
+      "later": "Để sau",
+      "done": "Đã bật thông báo",
+      "failed": "Không bật được thông báo trên điện thoại này.",
+      "someone": "Một agent",
+      "examples": "Ví dụ về thông báo",
+      "now": "bây giờ",
+      "minutes": "{{n}} phút",
+      "approval": {
+        "title": "{{name}} cần bạn đồng ý",
+        "body": "Tôi tiếp tục việc bạn yêu cầu được không?"
+      },
+      "finished": {
+        "title": "{{name}} đã hoàn thành",
+        "body": "Việc bạn yêu cầu đã sẵn sàng."
+      },
+      "mention": {
+        "title": "{{name}} đã gọi bạn",
+        "body": "Khi nào rảnh bạn xem giúp được không?"
+      }
+    }
+  },
+  "a11y": {
+    "agent": "{{name}}, agent",
+    "agentWorking": "{{name}}, agent, đang làm việc",
+    "agentPlain": "Agent",
+    "person": "{{name}}",
+    "loading": "Đang tải",
+    "grabber": "Kéo xuống để đóng",
+    "closeSheet": "Đóng",
+    "send": "Gửi",
+    "attach": "Đính kèm và thêm",
+    "hold": "Nhấn giữ để xác nhận",
+    "clearSearch": "Xóa tìm kiếm"
+  },
+  "composer": {
+    "placeholder": "Viết tin nhắn",
+    "join": "Thêm vào tác vụ đang thực hiện",
+    "now": "Dừng và gửi",
+    "choice": "Cách gửi trong lúc agent đang làm việc",
+    "holdToStop": "Nhấn giữ để dừng và gửi"
+  },
+  "search": {
+    "placeholder": "Tìm kiếm"
+  },
+  "picker": {
+    "none": "Không có kết quả nào khớp với “{{text}}”."
+  }
+}

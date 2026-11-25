@@ -190,6 +190,7 @@ const RELATIVE_DAYS: Record<AppLocale, readonly [string, string, string]> = {
   tr: ["dün", "bugün", "yarın"],
   pl: ["wczoraj", "dzisiaj", "jutro"],
   ru: ["вчера", "сегодня", "завтра"],
+  vi: ["Hôm qua", "Hôm nay", "Ngày mai"],
 };
 
 const relativeFormats = new Map<string, Intl.RelativeTimeFormat>();
@@ -207,11 +208,11 @@ export function relativeDay(locale: string, offset: -1 | 0 | 1): string {
   return RELATIVE_DAYS[appLocale([locale], true) ?? "en"][offset + 1] as string;
 }
 
-/** The ordinal plural form of `n` ("one" for 1st, "few" for 3rd), with English's and French's rules where Intl.PluralRules is missing (Hermes). */
+/** The ordinal plural form of `n` ("one" for 1st, "few" for 3rd), with English's, French's and Vietnamese's rules where Intl.PluralRules is missing (Hermes). */
 export function ordinalForm(locale: string, n: number): Intl.LDMLPluralRule {
   if (typeof Intl.PluralRules === "function") return new Intl.PluralRules(locale, { type: "ordinal" }).select(n);
   const code = appLocale([locale], true);
-  if (code === "fr") return n === 1 ? "one" : "other";
+  if (code === "fr" || code === "vi") return n === 1 ? "one" : "other";
   if (code !== "en" || (n % 100 >= 11 && n % 100 <= 13)) return "other";
   return (["other", "one", "two", "few"] as const)[n % 10] ?? "other";
 }

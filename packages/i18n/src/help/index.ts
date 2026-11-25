@@ -18,6 +18,7 @@ import { helpPl } from "./pages.pl";
 import { helpPtBR } from "./pages.pt-BR";
 import { helpRu } from "./pages.ru";
 import { helpTr } from "./pages.tr";
+import { helpVi } from "./pages.vi";
 import { helpZhHans } from "./pages.zh-Hans";
 import type { HelpDocument } from "./types";
 
@@ -66,6 +67,7 @@ export const HELP: Record<AppLocale, Partial<Record<HelpSlug, HelpDocument>>> = 
   tr: helpTr,
   pl: helpPl,
   ru: helpRu,
+  vi: helpVi,
 };
 
 /** The page in `locale` ("pt-PT" reads pt-BR), or in English where that language has none. */

@@ -115,6 +115,13 @@ export const START_WORDS: Record<AppLocale, StartWords> = {
     hint: "Адрес, который видят сайты",
     tip: "Введите адрес в строке выше",
   },
+  vi: {
+    title: "Tab mới",
+    eyebrow: "MÁY TÍNH CỦA AGENT",
+    exitIp: "IP thoát",
+    hint: "Địa chỉ các trang web nhìn thấy",
+    tip: "Nhập địa chỉ vào thanh phía trên",
+  },
 };
 
 export interface CrashWords {
@@ -190,6 +197,11 @@ export const CRASH_WORDS: Record<AppLocale, CrashWords> = {
     memory: "Странице не хватило памяти",
     told: "Агенту сообщат.",
   },
+  vi: {
+    stopped: "Trang đã ngừng hoạt động",
+    memory: "Trang đã hết bộ nhớ",
+    told: "Agent sẽ được thông báo.",
+  },
 };
 
 /** The line macOS's password window shows when the Mac sets up Xcode for an iPhone. */
@@ -208,4 +220,5 @@ export const XCODE_PROMPT: Record<AppLocale, string> = {
   tr: "agentes.chat, iPhone'ları bağlamak için Xcode'u kullanmak istiyor.",
   pl: "agentes.chat chce użyć Xcode, aby połączyć iPhone'y.",
   ru: "agentes.chat хочет использовать Xcode, чтобы подключать iPhone.",
+  vi: "agentes.chat muốn dùng Xcode để kết nối iPhone.",
 };

@@ -1,0 +1,5 @@
+"NSMicrophoneUsageDescription" = "agentes.chat dùng micrô để ghi tin nhắn thoại.";
+"NSDesktopFolderUsageDescription" = "Cho phép các agent làm việc trên máy Mac này mở tệp trên Màn hình nền của bạn.";
+"NSDocumentsFolderUsageDescription" = "Cho phép các agent làm việc trên máy Mac này mở tệp trong thư mục Tài liệu của bạn.";
+"NSDownloadsFolderUsageDescription" = "Cho phép các agent làm việc trên máy Mac này mở tệp trong thư mục Tải về của bạn.";
+"NSLocalNetworkUsageDescription" = "Cho phép các agent làm việc trên máy Mac này tìm và kết nối với điện thoại Android trên Wi-Fi của bạn.";

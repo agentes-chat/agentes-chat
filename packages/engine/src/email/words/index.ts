@@ -13,6 +13,7 @@ import { words as pl } from "./pl";
 import { ptBR } from "./pt-BR";
 import { words as ru } from "./ru";
 import { words as tr } from "./tr";
+import { words as vi } from "./vi";
 import { words as zhHans } from "./zh-Hans";
 
 export type { Words };
@@ -37,6 +38,7 @@ export const WORDS: Record<AppLocale, EmailWords> = {
   tr,
   pl,
   ru,
+  vi,
 };
 
 /** The emails' words in `locale`, English where it has none. */

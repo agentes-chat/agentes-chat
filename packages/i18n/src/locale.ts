@@ -43,6 +43,15 @@ export const LOCALES = [
   { code: "tr", native: "Türkçe", english: "Turkish", intl: "tr-TR", weekStart: 1, script: "latin", ready: true },
   { code: "pl", native: "Polski", english: "Polish", intl: "pl-PL", weekStart: 1, script: "latin", ready: true },
   { code: "ru", native: "Русский", english: "Russian", intl: "ru-RU", weekStart: 1, script: "cyrillic", ready: true },
+  {
+    code: "vi",
+    native: "Tiếng Việt",
+    english: "Vietnamese",
+    intl: "vi-VN",
+    weekStart: 1,
+    script: "latin",
+    ready: true,
+  },
 ] as const satisfies readonly {
   code: string;
   native: string;

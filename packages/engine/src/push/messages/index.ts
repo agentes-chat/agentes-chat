@@ -12,6 +12,7 @@ import { strings as pl } from "./pl";
 import { ptBR } from "./pt-BR";
 import { strings as ru } from "./ru";
 import { strings as tr } from "./tr";
+import { strings as vi } from "./vi";
 import { strings as zhHans } from "./zh-Hans";
 
 export type { PushStrings };
@@ -32,6 +33,7 @@ export const PUSH: Record<AppLocale, Partial<PushStrings>> = {
   tr,
   pl,
   ru,
+  vi,
 };
 
 /** A language's push words, English where it has none. */

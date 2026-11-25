@@ -21,7 +21,8 @@
         "Resources/id.lproj/InfoPlist.strings": "locales/id.lproj/InfoPlist.strings",
         "Resources/tr.lproj/InfoPlist.strings": "locales/tr.lproj/InfoPlist.strings",
         "Resources/pl.lproj/InfoPlist.strings": "locales/pl.lproj/InfoPlist.strings",
-        "Resources/ru.lproj/InfoPlist.strings": "locales/ru.lproj/InfoPlist.strings"
+        "Resources/ru.lproj/InfoPlist.strings": "locales/ru.lproj/InfoPlist.strings",
+        "Resources/vi.lproj/InfoPlist.strings": "locales/vi.lproj/InfoPlist.strings"
       }
     }
   }
