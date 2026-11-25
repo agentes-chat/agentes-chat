@@ -138,6 +138,21 @@ html:not([data-pointer]) .thread-marker__open:focus-visible {
   margin: 0;
   padding: 8px;
 }
+/* "Nova thread" under the head, on the rows' edge; open, the subject's field and its two buttons in its place. */
+.thread-pop__new {
+  padding: 0 var(--space-2) var(--space-2);
+}
+.thread-new {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 0 var(--space-2) var(--space-2);
+}
+.thread-new__acts {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
 /* The popover takes the window's height (`.ac-popover`): the list gives way under the head and scrolls past it. */
 .thread-pop__list {
   min-height: 0;

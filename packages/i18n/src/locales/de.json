@@ -10140,6 +10140,16 @@
       "empty": "Keine Threads in diesem Kanal.",
       "seeAll": "Alle unter Threads ansehen"
     },
+    "new": {
+      "open": "Neuer Thread",
+      "title": "Neuer Thread",
+      "text": "Die erste Nachricht geht in den Kanal, das Gespräch geht in ihrem Thread weiter.",
+      "channel": "Kanal",
+      "subject": "Thema",
+      "placeholder": "Worum geht es in diesem Gespräch?",
+      "start": "Thread starten",
+      "failed": "Der Thread konnte nicht gestartet werden. Versuche es erneut."
+    },
     "side": {
       "label": "Thread",
       "expand": "Im Vollbild öffnen",

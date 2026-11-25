@@ -10535,6 +10535,16 @@
       "empty": "Nessun thread in questo canale.",
       "seeAll": "Vedi tutti in Thread"
     },
+    "new": {
+      "open": "Nuovo thread",
+      "title": "Nuovo thread",
+      "text": "Il primo messaggio va nel canale e la conversazione continua nel suo thread.",
+      "channel": "Canale",
+      "subject": "Argomento",
+      "placeholder": "Di cosa parla questa conversazione?",
+      "start": "Apri thread",
+      "failed": "Impossibile aprire il thread. Riprova."
+    },
     "side": {
       "label": "Thread",
       "expand": "Apri a schermo intero",

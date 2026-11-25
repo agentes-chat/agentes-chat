@@ -342,7 +342,7 @@ describe("the members column", () => {
     expect(document.querySelector(".members-side")).toBeNull();
   });
 
-  test("on a phone: a sheet with the threads, pins and settings buttons, and a field that finds members", async () => {
+  test("on a phone: a sheet with the pins and settings buttons (Threads stay in the header), and a field that finds members", async () => {
     widthIs(COMPACT_QUERY);
     await open(withRightHand(seedState()));
     expect(column()).toBeNull();
@@ -353,7 +353,7 @@ describe("the members column", () => {
     expect(panel.getAttribute("aria-modal")).toBe("true");
     expect(within(panel).getByRole("button", { name: "Configurações do canal" })).toBeTruthy();
     expect(within(panel).getByRole("button", { name: "Mensagens fixadas" })).toBeTruthy();
-    expect(within(panel).getByRole("button", { name: /^Threads/ })).toBeTruthy();
+    expect(within(panel).queryByRole("button", { name: /^Threads/ })).toBeNull();
     expect(row(panel, "Lodi")).toBeNull();
     await act(async () =>
       fireEvent.change(within(panel).getByRole("searchbox", { name: "Buscar pessoas e agentes" }), {

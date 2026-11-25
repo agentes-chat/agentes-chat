@@ -127,6 +127,30 @@ html:not([data-pointer]) .channel__icon.ac-btn:focus-visible {
 .members-sheet .channel__icon-count.ac-count {
   box-shadow: 0 0 0 2px var(--side);
 }
+/* Threads, with their word and count: the one header control that names itself, since it is the way into the
+   channel's side conversations and an icon alone hid it. A 32 control, no plate, the color says hover as the glyphs'. */
+.channel__threads.ac-btn {
+  gap: var(--space-1);
+  padding-inline: var(--space-2);
+  color: var(--muted);
+}
+.channel__threads.ac-btn,
+.channel__threads.ac-btn:hover,
+.channel__threads.ac-btn[aria-expanded="true"] {
+  background: none;
+  box-shadow: none;
+}
+.channel__threads.ac-btn:hover,
+.channel__threads.ac-btn[aria-expanded="true"] {
+  color: var(--ink);
+}
+html:not([data-pointer]) .channel__threads.ac-btn:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+.channel__threads-count {
+  font-variant-numeric: tabular-nums;
+  color: var(--faint);
+}
 /* The header's search field, opened in place of its icon: a soft plate with no line at rest, narrow, the field's own
    look and wider while used. It grows out of the icon's box. */
 .channel__search.search-box {
@@ -217,9 +241,8 @@ html:not([data-pointer]) .channel__icon.ac-btn:focus-visible {
     width: 18px;
     height: 18px;
   }
-  /* Threads, pins and the settings move to the members sheet's head (the cog stays when there's no sheet to open); the
-     search takes the whole screen, from its icon, a DM's too. */
-  .channel__acts > .channel__threads,
+  /* Pins and the settings move to the members sheet's head (the cog stays when there's no sheet to open); Threads stay,
+     with their word, since a sheet hid them; the search takes the whole screen, from its icon, a DM's too. */
   .channel__acts > .channel__pin,
   .channel__acts > .channel__search {
     display: none;
