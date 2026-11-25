@@ -139,7 +139,7 @@ describe("work handed to another agent reports where the person asked (F1)", () 
       consultationId: c?.id,
       anchorMessageId: c?.messageId,
       requestedByUserId: f.owner.id,
-      title: "Build the October sales report.",
+      title: "Build the October sales report",
       status: "live",
     });
     expect(run.workId).toBe(w?.id ?? "");

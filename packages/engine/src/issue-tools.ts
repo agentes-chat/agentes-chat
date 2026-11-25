@@ -125,7 +125,7 @@ async function handOverLine(deps: IssueDeps, ctx: ToolContext, i: IssueView, add
   if (others.length === 0) return "";
   const names = await assigneeNames(deps, ctx, [i]);
   const name = others.map((a) => names.get(a.id) ?? "that agent").join(", ");
-  return `\nAssigning doesn't tell ${name} or start its work: to have it work on #${i.number} now, hand it the job with tell_agent (say it's task #${i.number}); otherwise say the task waits in its list.`;
+  return `\nAssigning doesn't tell ${name} or start its work: to have it work on #${i.number} now, hand it the job with tell_agent and \`task: ${i.number}\` (its work shows that task and makes no new card); otherwise say the task waits in its list.`;
 }
 
 async function describeIssue(deps: IssueDeps, ctx: ToolContext, i: IssueView) {

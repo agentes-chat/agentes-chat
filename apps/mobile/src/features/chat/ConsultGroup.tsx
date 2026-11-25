@@ -15,7 +15,7 @@ import {
   openableConsultation,
   pairItemOf,
 } from "@agenteschat/client/lib/consult-group";
-import { consultSubject, consultTimeText, withoutRelayLine } from "@agenteschat/client/lib/consultations";
+import { consultTimeText, handOffSubject, withoutRelayLine } from "@agenteschat/client/lib/consultations";
 import { namesText } from "@agenteschat/client/lib/format";
 import type { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { useQueryClient } from "@tanstack/react-query";
@@ -146,7 +146,7 @@ export function ConsultQuote({
   const names = pair.faces.map((f) => nameOf(f.agentId));
   const to = names.length === 1 ? (names[0] ?? "") : namesText(t, names, 1);
   const opened = items.find((x) => x.id === pair.opens) ?? items[0];
-  const subject = consultSubject(opened?.question);
+  const subject = handOffSubject(opened);
   const question = withoutRelayLine(opened?.question ?? "").trim();
   const opens = openableConsultation(pair.opens);
   const ids = items.map((x) => x.id);

@@ -265,17 +265,6 @@ export async function workViews(db: Executor, orgId: string, ids: string[]): Pro
         )
         .orderBy(asc(agentWorks.createdAt), asc(agentWorks.id))
     : [];
-  const issueIds = rows.flatMap((r) => (r.issueId ? [r.issueId] : []));
-  const numbers = issueIds.length
-    ? new Map(
-        (
-          await db
-            .select({ id: schema.issues.id, number: schema.issues.number })
-            .from(schema.issues)
-            .where(inArray(schema.issues.id, issueIds))
-        ).map((i) => [i.id, i.number]),
-      )
-    : new Map<string, number>();
   // A run that ended `done` with a work that didn't finish (out of steps, stuck, cut off) says why on its report.
   const reportIds = rows.flatMap((r) => (r.status === "failed" && r.resultMessageId ? [r.resultMessageId] : []));
   const reportCodes = reportIds.length
@@ -297,12 +286,30 @@ export async function workViews(db: Executor, orgId: string, ids: string[]): Pro
               id: agentConsultations.id,
               agentId: agentConsultations.askerAgentId,
               runId: agentConsultations.askerRunId,
+              issueId: agentConsultations.issueId,
             })
             .from(agentConsultations)
             .where(and(eq(agentConsultations.orgId, orgId), inArray(agentConsultations.id, handedIds)))
         ).map((c) => [c.id, c]),
       )
-    : new Map<string, { id: string; agentId: string; runId: string }>();
+    : new Map<string, { id: string; agentId: string; runId: string; issueId: string | null }>();
+  // Its card, or the existing task its hand-off is about (`tell_agent`'s `task`), which it shows and never moves.
+  const issueOf = (w: WorkRow) =>
+    w.issueId ?? (w.consultationId ? (handOffs.get(w.consultationId)?.issueId ?? null) : null);
+  const issueIds = rows.flatMap((r) => {
+    const id = issueOf(r);
+    return id ? [id] : [];
+  });
+  const numbers = issueIds.length
+    ? new Map(
+        (
+          await db
+            .select({ id: schema.issues.id, number: schema.issues.number })
+            .from(schema.issues)
+            .where(and(eq(schema.issues.orgId, orgId), inArray(schema.issues.id, issueIds)))
+        ).map((i) => [i.id, i.number]),
+      )
+    : new Map<string, number>();
   const doneIds = rows.flatMap((r) => (r.status === "done" && r.resultMessageId ? [r.resultMessageId] : []));
   const results = doneIds.length
     ? new Map(
@@ -368,7 +375,7 @@ export async function workViews(db: Executor, orgId: string, ids: string[]): Pro
           }
         : null,
       plan: w.plan,
-      issue: w.issueId && numbers.has(w.issueId) ? { id: w.issueId, number: numbers.get(w.issueId) as number } : null,
+      issue: issueView(issueOf(w), numbers),
       resultMessageId: w.resultMessageId,
       queuePosition: state === "queued" ? Math.max(1, mine.findIndex((l) => l.id === w.id) + 1) : null,
       pausedUntil: state === "paused" ? (run?.until ?? null) : null,
@@ -383,6 +390,11 @@ export async function workViews(db: Executor, orgId: string, ids: string[]): Pro
   }
   return out;
 }
+
+const issueView = (id: string | null, numbers: Map<string, number>) => {
+  const number = id ? numbers.get(id) : undefined;
+  return id && number !== undefined ? { id, number } : null;
+};
 
 export async function workView(db: Executor, orgId: string, id: string) {
   return (await workViews(db, orgId, [id])).get(id) ?? null;
@@ -652,8 +664,12 @@ export async function handOverWork(
   if (!target || target.workId || isTerminal(target.status) || target.triggerMessageId !== c.messageId) return null;
   const home = await handedHome(db, target);
   if (!home) return null;
+  // The sender's short action title, else one made from the note: the request itself, links included, stays the
+  // hand-off's (and its card's description). A note that is only a link gets its name at the card (`ensureWorkCard`).
   const title =
-    plainText(input.title, WORK_LIMITS.titleMax) || plainText(c.question.split("\n")[0], WORK_LIMITS.titleMax);
+    plainText(input.title, WORK_LIMITS.titleMax) ||
+    plainText(c.title, WORK_LIMITS.titleMax) ||
+    plainText(handOffTitle(c.question), WORK_LIMITS.titleMax);
   const work = await db.transaction(async (tx) => {
     const [run] = await tx.select().from(agentRuns).where(eq(agentRuns.id, target.id)).for("update");
     if (!run || run.workId || isTerminal(run.status)) return null;
@@ -699,7 +715,8 @@ export async function handOverWork(
   });
   if (!work) return null;
   localMoves.add(target.id);
-  // Its card from the start (the task it was handed, or a new one): it moves with the work from here on.
+  // Its card from the start (the task it was handed, or a new one): it moves with the work from here on. A hand-off
+  // about an existing task (`tell_agent`'s `task`) shows that task instead and makes none (`ensureWorkCard`).
   await ensureWorkCard(deps, work.id, {}).catch(() => null);
   if (deps.pubsub)
     await deps.pubsub
@@ -1770,6 +1787,16 @@ export async function ensureWorkCard(
 ) {
   let [work] = await deps.db.select().from(agentWorks).where(eq(agentWorks.id, workId));
   if (!work || work.issueId) return work?.issueId ?? null;
+  // Handed about an existing task: that task is what people see (`workViews`), never a second card, and the work
+  // never moves it nor writes on it: closing it is the task's own update, and the hand-off's words stay where it was
+  // asked.
+  if (work.consultationId) {
+    const [about] = await deps.db
+      .select({ issueId: agentConsultations.issueId })
+      .from(agentConsultations)
+      .where(eq(agentConsultations.id, work.consultationId));
+    if (about?.issueId) return null;
+  }
   const [run] = await deps.db
     .select(runColumns)
     .from(agentRuns)
@@ -1790,9 +1817,36 @@ export async function ensureWorkCard(
       .select({ body: messages.body })
       .from(messages)
       .where(and(eq(messages.orgId, run.orgId), eq(messages.id, run.triggerMessageId)));
-    description = ask ? replyExcerpt(ask.body, 500) : "";
+    // A hand-off's card keeps its whole note (its links too): the title is only the action.
+    description = ask ? (work.how === "handed" ? cutText(ask.body.trim(), 4000) : replyExcerpt(ask.body, 500)) : "";
   }
   return linkIssueToWork(deps, work, run, { number: input.number, description });
+}
+
+/**
+ * A hand-off's name when its sender gave none: the note's first sentence as a short action, without links or markup.
+ * The whole note stays the hand-off's, and its card's description.
+ */
+export function handOffTitle(note: string): string {
+  const lines = note
+    // A Markdown link keeps its words; a bare address goes.
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/<?(?:https?:\/\/|www\.)[^\s<>()]*>?/gi, " ")
+    .replace(/\(\s*\)|\[\s*\]/g, " ")
+    .replace(/[*_`~]/g, "")
+    .split("\n")
+    // A heading, a quote or a list's mark is not part of the action.
+    .map((l) => l.replace(/^\s*(?:[#>*•-]+|\d+[.)])\s*/, "").trim());
+  const first = lines.find((l) => /[\p{L}\p{N}]/u.test(l)) ?? "";
+  const line = first.replace(/\s+([,.;:!?])/g, "$1").replace(/\s+/g, " ");
+  const sentence = (line.split(/(?<=[.!?])\s|\s[–—-]\s/)[0] ?? line)
+    .replace(/[\s,;:([–—-]+$/, "")
+    .replace(/[.]+$/, "")
+    .trim();
+  if (sentence.length <= WORK_LIMITS.titleMax) return sentence;
+  const cut = sentence.slice(0, WORK_LIMITS.titleMax - 1);
+  const space = cut.lastIndexOf(" ");
+  return `${(space > WORK_LIMITS.titleMax / 2 ? cut.slice(0, space) : cut).replace(/[\s,;:([–—-]+$/, "")}…`;
 }
 
 /** Continuar on a work's end (§7): the new run carries the same work, line and card, live again. */
