@@ -146,6 +146,14 @@ const hashedRamStep = (tmpOnDisk: boolean) =>
   ].join("\n");
 
 /**
+ * systemd-tmpfiles' lines (`--clean`) for agents with nothing running (ADR 0243): what their work left in /tmp and
+ * /dev/shm and nobody touched for 6 hours goes, long before the 10 days of `AGENT_TMP_CLEANUP`, which an agent at work
+ * keeps. tmpfiles never follows a link an agent put there, nor removes a socket in use.
+ */
+export const idleTmpLines = (uids: readonly number[]) =>
+  uids.flatMap((uid) => ["tmp", "shm"].map((f) => `e ${AGENT_RAM_ROOT}/${uid}/${f} - - - 6h\n`)).join("");
+
+/**
  * Runs as root in the agent's new mount namespace, before it becomes the agent (`$1` its uid): its own temporary
  * folders over the shared ones, so nothing another agent leaves there (a Postgres socket on trust, a name it
  * squats) is in its reach. They live under folders only root reaches, so no agent can swap them; in the agent's

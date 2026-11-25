@@ -31,6 +31,7 @@ import {
   denySchedulers,
   ensureContainers,
   ensureSubids,
+  idleTmpLines,
   joinKvm,
   keepContainers,
   readAccountUsers,
@@ -984,6 +985,19 @@ test("ensureContainers: an upgrade that changes only the step making the agent's
     if (before === undefined) delete process.env.AGENTES_RUNNER_HOME;
     else process.env.AGENTES_RUNNER_HOME = before;
   }
+});
+
+test("agents with nothing running: their /tmp and /dev/shm, what nobody touched for 6 hours, for systemd-tmpfiles", () => {
+  expect(idleTmpLines([21003, 21007])).toBe(
+    [
+      "e /run/agentes-runner-tmp/21003/tmp - - - 6h",
+      "e /run/agentes-runner-tmp/21003/shm - - - 6h",
+      "e /run/agentes-runner-tmp/21007/tmp - - - 6h",
+      "e /run/agentes-runner-tmp/21007/shm - - - 6h",
+      "",
+    ].join("\n"),
+  );
+  expect(idleTmpLines([])).toBe("");
 });
 
 test("ensureContainers: one its start limit stopped stays down for the same command, with the reason its journal has", () => {

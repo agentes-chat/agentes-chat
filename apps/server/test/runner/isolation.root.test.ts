@@ -20,6 +20,7 @@ import {
   adbServerPort,
   agentGid,
   agentSubids,
+  idleTmpLines,
   readAgentUsers,
   systemLauncher,
 } from "../../runner/agent-users";
@@ -838,6 +839,26 @@ describe.if(ROOT)("the agents' isolation on this computer, as root", () => {
     writeFileSync(AGENT_DISK_TMP_ROOT, "");
     expect(sh(agent, true, `${fsOf}; echo ran`)).toEqual([own, "ran"]);
     rmSync(AGENT_DISK_TMP_ROOT, { force: true });
+  });
+
+  test("systemd-tmpfiles takes the lines for agents with nothing running from its standard input: only their folders", () => {
+    if (!E) throw new Error("no agent E");
+    const left = path.join(agentTmp(E.uid), "agentes-isolation-left");
+    const other = path.join(agentTmp(A.uid), "agentes-isolation-other");
+    writeFileSync(left, "");
+    writeFileSync(other, "");
+    const clean = (lines: string) =>
+      spawnSync("systemd-tmpfiles", ["--clean", "-"], { input: lines, encoding: "utf8" });
+    // Fresh: kept.
+    const kept = clean(idleTmpLines([E.uid]));
+    expect(`${kept.stdout}${kept.stderr}`).not.toMatch(/fail|invalid|unknown/i);
+    expect(kept.status).toBe(0);
+    expect(existsSync(left)).toBe(true);
+    // The same lines at age 0 empty E's folders, and nobody else's.
+    expect(clean(idleTmpLines([E.uid]).replaceAll(" 6h", " 0")).status).toBe(0);
+    expect(existsSync(left)).toBe(false);
+    expect(existsSync(other)).toBe(true);
+    rmSync(other, { force: true });
   });
 
   test.if(has(ADB))("adb: each agent its own server, at once", () => {
