@@ -141,6 +141,14 @@ const str = (v: unknown) => (typeof v === "string" ? v : "");
 /** The tool that reopens what a history shows cut short (token-trim B9, `cutOldToolSteps`). */
 export const EXPAND_TOOL = "expand";
 
+/**
+ * What `expand` answers for an id it can't open: the ids it takes, so a model stops retrying one (a bare
+ * "Not found." read as a passing miss), without saying whether the id exists elsewhere (an item or message the
+ * run may not read reads the same as none).
+ */
+export const EXPAND_NOT_FOUND =
+  "Not found. expand opens the id of a context item (from search_context or your memory), of a message of this conversation, or of a tool call in this run's history (or an earlier run of the same computer session). Tool call ids from other runs don't open, and retrying the same id won't change that: look for what you need with search_context, or make the call again.";
+
 /** A call of the run whole, as `expand` returns it: its name, arguments and result (null: no such call). */
 function toolCallText(messages: ModelMessage[], id: string): string | null {
   let call: Extract<ContentBlock, { type: "tool_use" }> | undefined;
@@ -435,7 +443,7 @@ export function createContextToolSource(deps: ContextDeps): ToolSource {
     {
       name: EXPAND_TOOL,
       description:
-        "Open a context item by id: its full content and the sources it came from (also archived items). Also a message of the conversation, or a tool call or result of this run, shown cut short, by the id its cut names.",
+        "Open a context item by id: its full content and the sources it came from (also archived items). Also a message of the conversation, or a tool call or result of this run, shown cut short, by the id its cut names. Tool call ids from other runs don't open (but an earlier run's of the same computer session do), and an id that doesn't open won't on a retry.",
       scope: "context:read",
       inputSchema: {
         type: "object",
@@ -471,7 +479,7 @@ export function createContextToolSource(deps: ContextDeps): ToolSource {
           if (text !== null) return { content: text };
         }
         const { channels: allowed, asker } = await recallScope(ctx);
-        if (!/^[0-9a-f-]{36}$/i.test(id)) return { content: "Not found.", isError: true };
+        if (!/^[0-9a-f-]{36}$/i.test(id)) return { content: EXPAND_NOT_FOUND, isError: true };
         const from = (channelIds: string[]) =>
           asker && channelIds.includes(asker.channelId) ? `From ${privateFrom(asker.name)}:\n` : "";
         const [item] = await getContextItems(ctx.db, ctx.orgId, [id]);
@@ -487,7 +495,7 @@ export function createContextToolSource(deps: ContextDeps): ToolSource {
             !allowed.includes(message.channelId) ||
             (dm && message.channelId === dm.channelId && !(await dm.ofMessages([id])))
           ) {
-            return { content: "Not found.", isError: true };
+            return { content: EXPAND_NOT_FOUND, isError: true };
           }
           return {
             content: `${from([message.channelId])}${message.meta?.readOutside === true ? neutralizeUntrusted(message.body) : message.body}`,
@@ -499,7 +507,7 @@ export function createContextToolSource(deps: ContextDeps): ToolSource {
           !personMayRead(item, person, ctx.agentId) ||
           (dm && !(await dm.item(item)))
         ) {
-          return { content: "Not found.", isError: true };
+          return { content: EXPAND_NOT_FOUND, isError: true };
         }
         // Opened is used (ADR 0167): it counts, like an item that matched the request.
         if (UUID.test(ctx.runId)) await recordContextUse(ctx.db, ctx.orgId, ctx.runId, [item.id]).catch(() => {});

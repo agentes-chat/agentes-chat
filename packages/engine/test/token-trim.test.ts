@@ -15,6 +15,7 @@ import {
   createWorkToolSource,
   drainOutbox,
   EVERY_TOOL,
+  EXPAND_NOT_FOUND,
   flattenContent,
   grantScopes,
   historyStart,
@@ -503,7 +504,7 @@ test("B12: expand reopens a cut call from an earlier run of the same computer se
   expect((await expand(later))?.content).toBe(
     `Tool call read_log {"note":"xxxxxxxxxx","page":4}\n\nResult:\n${"linha 4 ".repeat(400)}`,
   );
-  expect(await expand(other)).toMatchObject({ isError: true, content: "Not found." });
+  expect(await expand(other)).toMatchObject({ isError: true, content: EXPAND_NOT_FOUND });
 });
 
 test("B10: while the person is still typing, the first call's prompt is pre-warmed: the same request with no output", async () => {
