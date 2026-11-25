@@ -190,6 +190,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     tr: "./assets/locales/tr.json",
     pl: "./assets/locales/pl.json",
     ru: "./assets/locales/ru.json",
+    vi: "./assets/locales/vi.json",
   },
   plugins: [
     ["expo-router", { redirects: LEGACY_REDIRECTS }],
@@ -199,7 +200,23 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       "expo-localization",
       {
-        supportedLocales: ["en", "pt-BR", "es", "fr", "de", "it", "nl", "ja", "ko", "zh-Hans", "id", "tr", "pl", "ru"],
+        supportedLocales: [
+          "en",
+          "pt-BR",
+          "es",
+          "fr",
+          "de",
+          "it",
+          "nl",
+          "ja",
+          "ko",
+          "zh-Hans",
+          "id",
+          "tr",
+          "pl",
+          "ru",
+          "vi",
+        ],
       },
     ],
     "expo-web-browser",

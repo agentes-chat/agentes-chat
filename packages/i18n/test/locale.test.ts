@@ -35,7 +35,7 @@ describe("appLocale", () => {
 });
 
 describe("the registry", () => {
-  test("14 languages, English first, codes unique", () => {
+  test("15 languages, English first, codes unique", () => {
     expect(LOCALE_CODES).toEqual([
       "en",
       "pt-BR",
@@ -51,6 +51,7 @@ describe("the registry", () => {
       "tr",
       "pl",
       "ru",
+      "vi",
     ]);
     expect(isAppLocale("ja")).toBe(true);
     expect(isAppLocale("xx")).toBe(false);

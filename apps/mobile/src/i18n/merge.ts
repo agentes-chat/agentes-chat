@@ -50,6 +50,9 @@ export const MOBILE: Record<AppLocale, LocaleStrings> = {
   get ru() {
     return require("./locales/ru.json");
   },
+  get vi() {
+    return require("./locales/vi.json");
+  },
 };
 
 type Strings = Record<string, unknown>;

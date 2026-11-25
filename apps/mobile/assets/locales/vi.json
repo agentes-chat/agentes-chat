@@ -1,0 +1,8 @@
+{
+  "ios": {
+    "NSPhotoLibraryUsageDescription": "Để gửi ảnh trong các cuộc trò chuyện của bạn.",
+    "NSCameraUsageDescription": "Để chụp ảnh cho các cuộc trò chuyện của bạn và quét mã QR.",
+    "NSPhotoLibraryAddUsageDescription": "Để lưu ảnh từ các cuộc trò chuyện của bạn vào Ảnh.",
+    "NSMicrophoneUsageDescription": "Để ghi tin nhắn thoại trong các cuộc trò chuyện của bạn."
+  }
+}

@@ -117,6 +117,7 @@ describe("Claude and ChatGPT, not their makers, in what a person reads", () => {
     tr: "Claude'u geliştiren Anthropic",
     pl: "Anthropic, twórca Claude",
     ru: "Anthropic, создатель Claude",
+    vi: "Anthropic, công ty tạo ra Claude",
   } as const;
   const inCopy = new RegExp(MAKER_WORDS.source, "i");
 

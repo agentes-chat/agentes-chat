@@ -26,6 +26,7 @@ import nl from "./locales/nl.json";
 import pl from "./locales/pl.json";
 import ru from "./locales/ru.json";
 import tr from "./locales/tr.json";
+import vi from "./locales/vi.json";
 import zhHans from "./locales/zh-Hans.json";
 
 export type { AppLocale };
@@ -48,6 +49,7 @@ export const DESKTOP_STRINGS: Record<AppLocale, LocaleStrings> = {
   tr,
   pl,
   ru,
+  vi,
 };
 
 /** A language's desktop strings with English under every key it lacks (the cover page reads them without i18next). */

@@ -22,6 +22,7 @@
     <string>tr</string>
     <string>pl</string>
     <string>ru</string>
+    <string>vi</string>
   </array>
   <key>CFBundleAllowMixedLocalizations</key>
   <true/>

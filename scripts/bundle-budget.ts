@@ -29,7 +29,7 @@ export function weigh(dist: string) {
   const styles = [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="\/(assets\/[^"]+\.css)"/g)];
   const all = readdirSync(join(dist, "assets")).filter((f) => f.endsWith(".js"));
   const sizes = new Map(all.map((f) => [f, gzip(join(dist, "assets", f))]));
-  const locale = /^(en|pt-BR|es|fr|de|it|nl|ja|ko|zh-Hans|id|tr|pl|ru)-[\w-]+\.js$/;
+  const locale = /^(en|pt-BR|es|fr|de|it|nl|ja|ko|zh-Hans|id|tr|pl|ru|vi)-[\w-]+\.js$/;
   const biggest = (filter: (f: string) => boolean) =>
     [...sizes].filter(([f]) => filter(f)).reduce((a, b) => (b[1] > a[1] ? b : a), ["", 0] as [string, number]);
   return {

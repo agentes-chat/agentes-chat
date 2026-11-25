@@ -301,6 +301,7 @@ export const GIVEN_COMPUTER_NAMES = {
     "{{org}} bilgisayarı",
     "Komputer przestrzeni {{org}}",
     "Компьютер {{org}}",
+    "Máy tính của {{org}}",
   ],
   personal: [
     "Your agents' computer",
@@ -317,6 +318,7 @@ export const GIVEN_COMPUTER_NAMES = {
     "Ajanlarınızın bilgisayarı",
     "Komputer twoich agentów",
     "Компьютер ваших агентов",
+    "Máy tính của các agent của bạn",
   ],
 } as const;
 

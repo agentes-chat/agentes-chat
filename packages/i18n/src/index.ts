@@ -17,6 +17,7 @@ import nl from "./locales/nl.json";
 import pl from "./locales/pl.json";
 import ru from "./locales/ru.json";
 import tr from "./locales/tr.json";
+import vi from "./locales/vi.json";
 import zhHans from "./locales/zh-Hans.json";
 import { fillPluralGaps, type LocaleStrings } from "./plurals";
 import { ptBR } from "./pt-BR";
@@ -41,6 +42,7 @@ export const STRINGS: Record<AppLocale, LocaleStrings> = {
   tr,
   pl,
   ru,
+  vi,
 };
 
 /** i18next resources for every language at once, one namespace (`translation`), plural gaps filled. */

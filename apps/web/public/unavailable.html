@@ -60,7 +60,7 @@ html[data-desktop=mac] .strip{display:block}
     if (theme !== "light" && theme !== "dark") theme = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     html.dataset.theme = theme;
   } catch {}
-  const CODES = ["en", "pt-BR", "es", "fr", "de", "it", "nl", "ja", "ko", "zh-Hans", "id", "tr", "pl", "ru"];
+  const CODES = ["en", "pt-BR", "es", "fr", "de", "it", "nl", "ja", "ko", "zh-Hans", "id", "tr", "pl", "ru", "vi"];
   const known = (tag) => {
     const base = String(tag || "").toLowerCase().replace(/_/g, "-").split("-")[0];
     const code = base === "pt" ? "pt-BR" : base === "zh" ? "zh-Hans" : base === "in" ? "id" : base;
@@ -113,6 +113,7 @@ html[data-desktop=mac] .strip{display:block}
     tr: ["agentes.chat birazdan geri dönecek", "Sunucu şu anda yanıt vermiyor. Bu sayfa, sunucu geri döner dönmez kendiliğinden açılır.", "Ödemeyi az önce yaptıysanız tekrar ödemenize gerek yok.", "Şimdi dene"],
     pl: ["agentes.chat zaraz wróci", "Serwer teraz nie odpowiada. Ta strona otworzy się sama, gdy tylko wróci.", "Jeśli płatność właśnie została zrealizowana, nie trzeba płacić ponownie.", "Spróbuj teraz"],
     ru: ["agentes.chat скоро вернётся", "Сервер сейчас не отвечает. Эта страница откроется сама, как только он вернётся.", "Если вы только что оплатили, платить ещё раз не нужно.", "Попробовать сейчас"],
+    vi: ["agentes.chat sắp trở lại", "Máy chủ hiện không phản hồi. Trang này sẽ tự mở ngay khi máy chủ trở lại.", "Nếu bạn vừa thanh toán, bạn không cần thanh toán lại.", "Thử ngay"],
   };
   const MISS = [502, 503, 504, 520, 521, 522, 523, 524, 525, 526, 527, 530];
   const byId = (id) => document.getElementById(id);

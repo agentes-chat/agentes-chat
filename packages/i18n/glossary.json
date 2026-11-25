@@ -32,7 +32,8 @@
     "id": "kamu",
     "tr": "siz",
     "pl": "ty",
-    "ru": "вы, lowercase"
+    "ru": "вы, lowercase",
+    "vi": "bạn"
   },
   "terms": [
     {
@@ -50,7 +51,8 @@
       "id": "agen",
       "tr": "ajan",
       "pl": "agent",
-      "ru": "агент"
+      "ru": "агент",
+      "vi": "agent"
     },
     {
       "en": "people",
@@ -67,7 +69,8 @@
       "id": "orang",
       "tr": "kişiler",
       "pl": "osoby",
-      "ru": "люди"
+      "ru": "люди",
+      "vi": "mọi người"
     },
     {
       "en": "workspace",
@@ -83,7 +86,8 @@
       "id": "ruang kerja",
       "tr": "çalışma alanı",
       "pl": "przestrzeń robocza",
-      "ru": "рабочее пространство"
+      "ru": "рабочее пространство",
+      "vi": "không gian làm việc"
     },
     {
       "en": "team",
@@ -99,7 +103,8 @@
       "id": "tim",
       "tr": "ekip",
       "pl": "zespół",
-      "ru": "команда"
+      "ru": "команда",
+      "vi": "nhóm"
     },
     {
       "en": "member",
@@ -115,7 +120,8 @@
       "id": "anggota",
       "tr": "üye",
       "pl": "członek",
-      "ru": "участник"
+      "ru": "участник",
+      "vi": "thành viên"
     },
     {
       "en": "Owner (role)",
@@ -132,7 +138,8 @@
       "id": "Pemilik",
       "tr": "Sahip",
       "pl": "Właściciel",
-      "ru": "Владелец"
+      "ru": "Владелец",
+      "vi": "Chủ sở hữu"
     },
     {
       "en": "Admin (role)",
@@ -149,7 +156,8 @@
       "id": "Admin",
       "tr": "Yönetici",
       "pl": "Administrator",
-      "ru": "Администратор"
+      "ru": "Администратор",
+      "vi": "Quản trị viên"
     },
     {
       "en": "role (workspace)",
@@ -166,7 +174,8 @@
       "id": "peran",
       "tr": "rol",
       "pl": "rola",
-      "ru": "роль"
+      "ru": "роль",
+      "vi": "vai trò"
     },
     {
       "en": "role (agent's job)",
@@ -183,7 +192,8 @@
       "id": "peran",
       "tr": "rol",
       "pl": "rola",
-      "ru": "роль"
+      "ru": "роль",
+      "vi": "vai trò"
     },
     {
       "en": "channel",
@@ -199,7 +209,8 @@
       "id": "kanal",
       "tr": "kanal",
       "pl": "kanał",
-      "ru": "канал"
+      "ru": "канал",
+      "vi": "kênh"
     },
     {
       "en": "direct message",
@@ -215,7 +226,8 @@
       "id": "pesan langsung",
       "tr": "doğrudan mesaj",
       "pl": "wiadomość bezpośrednia",
-      "ru": "личное сообщение"
+      "ru": "личное сообщение",
+      "vi": "tin nhắn riêng"
     },
     {
       "en": "thread",
@@ -232,7 +244,8 @@
       "id": "utas",
       "tr": "ileti dizisi",
       "pl": "wątek",
-      "ru": "ветка"
+      "ru": "ветка",
+      "vi": "thread"
     },
     {
       "en": "mention",
@@ -248,7 +261,8 @@
       "id": "sebutan",
       "tr": "bahsetme",
       "pl": "wzmianka",
-      "ru": "упоминание"
+      "ru": "упоминание",
+      "vi": "nhắc đến"
     },
     {
       "en": "task",
@@ -264,7 +278,8 @@
       "id": "tugas",
       "tr": "görev",
       "pl": "zadanie",
-      "ru": "задача"
+      "ru": "задача",
+      "vi": "tác vụ"
     },
     {
       "en": "mission",
@@ -281,7 +296,8 @@
       "id": "misi",
       "tr": "misyon",
       "pl": "misja",
-      "ru": "миссия"
+      "ru": "миссия",
+      "vi": "nhiệm vụ"
     },
     {
       "en": "routine",
@@ -298,7 +314,8 @@
       "id": "rutinitas",
       "tr": "rutin",
       "pl": "rutyna",
-      "ru": "регулярная задача"
+      "ru": "регулярная задача",
+      "vi": "quy trình định kỳ"
     },
     {
       "en": "approval",
@@ -314,7 +331,8 @@
       "id": "persetujuan",
       "tr": "onay",
       "pl": "zatwierdzenie",
-      "ru": "одобрение"
+      "ru": "одобрение",
+      "vi": "phê duyệt"
     },
     {
       "en": "approve / deny",
@@ -330,7 +348,8 @@
       "id": "setujui / tolak",
       "tr": "onayla / reddet",
       "pl": "zatwierdź / odrzuć",
-      "ru": "одобрить / отклонить"
+      "ru": "одобрить / отклонить",
+      "vi": "phê duyệt / từ chối"
     },
     {
       "en": "Waiting for you",
@@ -346,7 +365,8 @@
       "id": "Menunggumu",
       "tr": "Sizi bekliyor",
       "pl": "Czeka na ciebie",
-      "ru": "Ждёт вас"
+      "ru": "Ждёт вас",
+      "vi": "Đang chờ bạn"
     },
     {
       "en": "connector",
@@ -362,7 +382,8 @@
       "id": "konektor",
       "tr": "bağlayıcı",
       "pl": "konektor",
-      "ru": "коннектор"
+      "ru": "коннектор",
+      "vi": "trình kết nối"
     },
     {
       "en": "skill",
@@ -379,7 +400,8 @@
       "id": "skill",
       "tr": "beceri",
       "pl": "umiejętność",
-      "ru": "навык"
+      "ru": "навык",
+      "vi": "skill"
     },
     {
       "en": "memory",
@@ -395,7 +417,8 @@
       "id": "memori",
       "tr": "bellek",
       "pl": "pamięć",
-      "ru": "память"
+      "ru": "память",
+      "vi": "bộ nhớ"
     },
     {
       "en": "instructions",
@@ -411,7 +434,8 @@
       "id": "instruksi",
       "tr": "talimatlar",
       "pl": "instrukcje",
-      "ru": "инструкции"
+      "ru": "инструкции",
+      "vi": "chỉ dẫn"
     },
     {
       "en": "budget",
@@ -427,7 +451,8 @@
       "id": "anggaran",
       "tr": "bütçe",
       "pl": "budżet",
-      "ru": "бюджет"
+      "ru": "бюджет",
+      "vi": "ngân sách"
     },
     {
       "en": "computer (agent's)",
@@ -444,7 +469,8 @@
       "id": "komputer",
       "tr": "bilgisayar",
       "pl": "komputer",
-      "ru": "компьютер"
+      "ru": "компьютер",
+      "vi": "máy tính"
     },
     {
       "en": "AI account",
@@ -460,7 +486,8 @@
       "id": "akun AI",
       "tr": "yapay zeka hesabı",
       "pl": "konto AI",
-      "ru": "аккаунт ИИ"
+      "ru": "аккаунт ИИ",
+      "vi": "tài khoản AI"
     },
     {
       "en": "API key",
@@ -476,7 +503,8 @@
       "id": "kunci API",
       "tr": "API anahtarı",
       "pl": "klucz API",
-      "ru": "API-ключ"
+      "ru": "API-ключ",
+      "vi": "khóa API"
     },
     {
       "en": "improvement proposal",
@@ -492,7 +520,8 @@
       "id": "usulan perbaikan",
       "tr": "iyileştirme önerisi",
       "pl": "propozycja ulepszenia",
-      "ru": "предложение по улучшению"
+      "ru": "предложение по улучшению",
+      "vi": "đề xuất cải tiến"
     },
     {
       "en": "Continue (a paused run)",
@@ -509,7 +538,8 @@
       "id": "Lanjutkan",
       "tr": "Devam et",
       "pl": "Kontynuuj",
-      "ru": "Продолжить"
+      "ru": "Продолжить",
+      "vi": "Tiếp tục"
     },
     {
       "en": "notification",
@@ -525,7 +555,8 @@
       "id": "notifikasi",
       "tr": "bildirim",
       "pl": "powiadomienie",
-      "ru": "уведомление"
+      "ru": "уведомление",
+      "vi": "thông báo"
     },
     {
       "en": "Sign in / Sign out",
@@ -541,7 +572,8 @@
       "id": "Masuk / Keluar",
       "tr": "Giriş yap / Çıkış yap",
       "pl": "Zaloguj się / Wyloguj się",
-      "ru": "Войти / Выйти"
+      "ru": "Войти / Выйти",
+      "vi": "Đăng nhập / Đăng xuất"
     },
     {
       "en": "Settings",
@@ -557,7 +589,8 @@
       "id": "Pengaturan",
       "tr": "Ayarlar",
       "pl": "Ustawienia",
-      "ru": "Настройки"
+      "ru": "Настройки",
+      "vi": "Cài đặt"
     },
     {
       "en": "Language",
@@ -573,7 +606,8 @@
       "id": "Bahasa",
       "tr": "Dil",
       "pl": "Język",
-      "ru": "Язык"
+      "ru": "Язык",
+      "vi": "Ngôn ngữ"
     },
     {
       "en": "Automatic (language)",
@@ -590,7 +624,8 @@
       "id": "Otomatis",
       "tr": "Otomatik",
       "pl": "Automatycznie",
-      "ru": "Автоматически"
+      "ru": "Автоматически",
+      "vi": "Tự động"
     }
   ]
 }

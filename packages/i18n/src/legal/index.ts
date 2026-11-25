@@ -19,6 +19,7 @@ import { termsEn } from "./terms.en";
 import { termsPtBR } from "./terms.pt-BR";
 import { legalTr } from "./tr";
 import type { LegalDocument, LegalKind } from "./types";
+import { legalVi } from "./vi";
 import { legalZhHans } from "./zh-Hans";
 
 export type { LegalBlock, LegalDocument, LegalKind, LegalSection } from "./types";
@@ -38,6 +39,7 @@ const BY_LOCALE: Record<AppLocale, Partial<Record<LegalKind, LegalDocument>>> = 
   tr: legalTr,
   pl: legalPl,
   ru: legalRu,
+  vi: legalVi,
 };
 
 /** Each page in every language that has it (English always). */

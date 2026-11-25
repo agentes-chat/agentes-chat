@@ -46,4 +46,7 @@ export const FEATURES: Record<AppLocale, LocaleStrings> = {
   get ru() {
     return require("./locales/ru.json");
   },
+  get vi() {
+    return require("./locales/vi.json");
+  },
 };
