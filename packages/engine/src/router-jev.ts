@@ -66,6 +66,10 @@ const NONE = "none";
 const whoFor = () =>
   `People are written by name, agents as @handle, and \`names\` lists who a message names, by @ or by name. \`latest_message\` may hold a few messages the same person sent in a row, one per line: they are one message. Messages a person sends in a row continue the same address: after "boa tarde walter", "como está hoje" is still for Walter. A message to a person, by @ or by name, is for that person, not for an agent. Greetings and small talk between people get no agent. When \`alone_with\` names an agent, the author is the only person in the channel with it: what they write to the room is for it. ${SPOKEN_TO}`;
 
+/** How each candidate's "should `agent` reply?" is judged, once in the state (`reply_rules`). */
+const agentReplyRules = () =>
+  `${whoFor()} Yes when the message speaks to \`agent\`, even when what it asks needs another agent: it can ask that one. When it speaks to no agent in particular, yes when it asks \`agent\` or anyone something its role and what it \`can\` do cover, or follows up on a conversation \`agent\` was just part of (see \`agent_just_talking\`). Also yes when it speaks to all the agents or the whole room ("everyone", "all of you", "gente", "vocês", "agentes") and each one has its own answer about itself (its name, its own usage limit, its status): then every agent should reply. No when it speaks to another agent, even when it names this one as someone to ask, involve or hand over to; when it is for a person; when it is a greeting or small talk not to \`agent\`; and when it speaks to no agent in particular and \`agent\` can't actually help with it, or it is about an app or tool (Sentry, GitHub, the Drive…) that is not in its \`can\`: it has no access to it.`;
+
 /** Who talks to whom (ADR 0159): in a personal workspace the person mostly talks to their agents. */
 const TEAM_CHAT = "People in a team chat mostly talk among themselves";
 const PERSONAL_CHAT =
@@ -111,6 +115,8 @@ export function createJevRouterStrategy(options: {
           about: c.about || null,
           can: c.can ?? null,
         })),
+        // Every candidate's question reads these once here, not once per agent.
+        ...(input.candidates.length > 0 ? { reply_rules: agentReplyRules() } : {}),
       };
       const questions: Record<string, unknown> = {
         needs_agent: {
@@ -133,7 +139,7 @@ export function createJevRouterStrategy(options: {
               about: c.about || null,
               can: c.can ?? null,
             },
-            question: `Should \`agent\` reply to \`latest_message\`? ${whoFor()} Yes when the message speaks to this agent, even when what it asks needs another agent: it can ask that one. When it speaks to no agent in particular, yes when it asks this agent or anyone something its role and what it \`can\` do cover, or follows up on a conversation this agent was just part of (see \`agent_just_talking\`). Also yes when it speaks to all the agents or the whole room ("everyone", "all of you", "gente", "vocês", "agentes") and each one has its own answer about itself (its name, its own usage limit, its status): then every agent should reply. No when it speaks to another agent, even when it names this one as someone to ask, involve or hand over to; when it is for a person; when it is a greeting or small talk not to this agent; and when it speaks to no agent in particular and this agent can't actually help with it, or it is about an app or tool (Sentry, GitHub, the Drive…) that is not in its \`can\`: it has no access to it.`,
+            question: "Should `agent` reply to `latest_message`, by `reply_rules`?",
           },
           criteria: {
             true: "This agent should answer (alone, or along with the others when the message is for all of them).",

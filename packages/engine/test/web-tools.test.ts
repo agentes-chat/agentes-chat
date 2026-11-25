@@ -272,7 +272,7 @@ describe("the controller's untried verdict", () => {
     // The judge reads that a caveat beside the answer is no give-up.
     const verdict = asked[0]?.questions.verdict as { criteria: Record<string, string> } | undefined;
     const criteria = verdict?.criteria ?? {};
-    expect(criteria.done).toContain("also when it adds a caveat");
+    expect(criteria.done).toContain("also with a caveat");
     expect(criteria.untried).toStartWith("What `request` asked for is still missing");
   });
 
@@ -296,13 +296,20 @@ describe("the controller's untried verdict", () => {
       runKind: "conversation",
     });
     const criteria = (asked?.questions.verdict as { criteria: Record<string, string> } | undefined)?.criteria ?? {};
-    expect(criteria.done).toContain("So is a plain 'I can't, because…' whose because is a rule or a refusal");
-    expect(criteria.done).toContain("Going around a rule is not resourcefulness.");
-    expect(criteria.done).toContain("A question back that only the person can answer");
-    expect(criteria.untried).toContain("Nor a plain 'I can't, because…' on a rule or a refusal (see done).");
+    expect(criteria.done).toContain("a plain 'I can't, because…' on a rule or a refusal, not a missing way");
+    expect(criteria.done).toContain("going around a rule is not resourcefulness");
+    expect(criteria.done).toContain("a question back only the person can answer");
+    expect(criteria.untried).toContain("a plain 'I can't, because…' on a rule or a refusal (see done)");
     // What needs the person is still no wall, and a question for what its means could find is still untried.
     expect(criteria.untried).toContain("a step that needs the person is never a blocker");
     expect(criteria.untried).toContain("asked a person for information its means could find");
+    // Every other condition stays when the wording is shortened.
+    expect(criteria.done).toContain("only when asked as one direct question");
+    expect(criteria.done).toContain("none, after looking, when the request allows none");
+    expect(criteria.done).toContain("a blocker `previous_record` already reported, unchanged now");
+    expect(criteria.untried).toContain("a call [refused for safety], final for that data");
+    expect(criteria.ask).toContain("Not when it says it needs nothing from them");
+    expect(criteria.unbacked).toContain("Its own Agent, Task or Workflow call in `tried` backs it");
   });
 
   test("a call as the judge reads it", () => {
