@@ -129,7 +129,7 @@ describe("MillionSend sender", () => {
     expect((refused as EmailError).retryable).toBe(false);
   });
 
-  test("saveContact with a null only patches (it removes the key); a contact it doesn't find is fine", async () => {
+  test("saveContact with a null patches (it removes the key); a contact it doesn't find is created with the rest", async () => {
     const calls: { method?: string; body: unknown }[] = [];
     let status = 200;
     const sender = createMillionSendSender({
@@ -137,15 +137,21 @@ describe("MillionSend sender", () => {
       from: "f@x.y",
       fetch: (async (_url: string, init: RequestInit) => {
         calls.push({ method: init.method, body: JSON.parse(String(init.body)) });
-        return Response.json({}, { status });
+        return Response.json({}, { status: init.method === "PATCH" ? status : 200 });
       }) as unknown as typeof fetch,
     });
     await sender.saveContact?.({ email: "ana@example.com", properties: { account_created_at: null } });
     status = 404;
     await sender.saveContact?.({ email: "ana@example.com", properties: { account_created_at: null } });
+    await sender.saveContact?.({
+      email: "ana@example.com",
+      properties: { account_created_at: "2026-01-02", plan: null },
+    });
     expect(calls).toEqual([
       { method: "PATCH", body: { properties: { account_created_at: null } } },
       { method: "PATCH", body: { properties: { account_created_at: null } } },
+      { method: "PATCH", body: { properties: { account_created_at: "2026-01-02", plan: null } } },
+      { method: "POST", body: { email: "ana@example.com", properties: { account_created_at: "2026-01-02" } } },
     ]);
   });
 

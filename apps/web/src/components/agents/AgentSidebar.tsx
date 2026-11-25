@@ -56,7 +56,7 @@ import { useNow } from "@/hooks/useNow";
 import { agentLine, useAgentPresence } from "@/hooks/usePresence";
 import { useWindowActive } from "@/hooks/useWindowActive";
 import { useToast } from "@/lib/toast";
-import { hasFired, routineTitle, useRoutineControls, useWhen } from "@/pages/RoutinesPage";
+import { hasFired, isDoneOnce, routineTitle, useRoutineControls, useWhen } from "@/pages/RoutinesPage";
 import { useStreams } from "@/realtime/context";
 import "./agent-sidebar.css";
 
@@ -387,7 +387,8 @@ function RoutinesSection({ agent }: { agent: Agent }) {
   const { t } = useTranslation();
   const { org } = useOrg();
   const routines = useRoutines(org.id);
-  const mine = (routines.data ?? []).filter((r) => r.agentId === agent.id);
+  // A one-off that already fired and finished is past: it stays in Routines, under its done ones, not here.
+  const mine = (routines.data ?? []).filter((r) => r.agentId === agent.id && !isDoneOnce(r));
   if (mine.length === 0) return null;
   return (
     <Section

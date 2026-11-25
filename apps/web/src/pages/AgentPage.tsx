@@ -87,7 +87,6 @@ import {
   PERSONAL_AGENT_TABS,
   revertKey,
   type Saved,
-  SKILLS_AREA,
   shownAgentTab,
   thisMonth,
   type Viewer,
@@ -379,8 +378,8 @@ function AgentProfile({
       // The right hand's page has no Advanced: all of what it may use is on one tab.
       !rightHand &&
       (field === "skills" || (field === "levels" && resourceById.get(resource ?? "")?.kind !== "connector"));
-    // The level of the skills' own area is on the Skills tab, with the skills.
-    const onSkills = field === "skills" || (field === "levels" && resource === SKILLS_AREA);
+    // What it knows is on the Skills tab; the skills' own level is with the other areas.
+    const onSkills = field === "skills";
     const base = {
       key,
       field,

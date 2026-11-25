@@ -1098,6 +1098,8 @@ export interface AgentSetupChecklist {
   starter?: string;
   /** The apps it was made to use (catalog connector ids) at their levels (ADR 0164): its checklist suggests them. */
   apps?: Record<string, "read" | "write">;
+  /** Closed on its page (its ×): the page shows it no more, whatever is left; its chat keeps its own. */
+  closed?: true;
 }
 
 /** A costly step unrequested work needs a person's go for (ADR 0131 §3). */
@@ -5135,11 +5137,78 @@ export interface Skill {
     agentId?: string | null;
     /** A person chose this update while it waited: Desfazer makes it wait again. */
     waited?: boolean;
+    /** A change a person asked for in words: who asked. */
+    byUserId?: string | null;
   } | null;
   /** "Agentes melhoram as skills sozinhos" set for this skill; null: the workspace's setting. */
   agentsImprove?: boolean | null;
+  /** Its name for people, written when installed or made; null until then (older servers leave it out): show `name`. */
+  title?: string | null;
+  /** When to use it, one line for people; null until written. */
+  summary?: string | null;
+  /** One of the app's icons that fits it. */
+  icon?: string | null;
+  /** A person named it. */
+  titleByPerson?: boolean;
+  /** The library's list: the active agents with it on, by name. */
+  agentIds?: string[];
+  /** The library's list: how many times agents loaded it in the last 7 days. */
+  weekUses?: number;
   createdAt: string;
   updatedAt: string;
+}
+
+/** One time a skill was used: where (null where the viewer isn't in that conversation), by which agent and when. */
+export interface SkillUse {
+  at: string;
+  agentId: string;
+  channelId: string | null;
+  channelKind: string | null;
+  channelName: string | null;
+  threadId: string | null;
+  messageId: string | null;
+  excerpt: string | null;
+}
+
+/** A line of a skill's history, newest first. */
+export interface SkillEvent {
+  id: string;
+  at: string;
+  kind: "created" | "installed" | "edited" | "rewritten" | "link" | "agent" | "restored" | "undone";
+  by: { type: "person" | "agent"; id: string } | null;
+  words: string | null;
+  before: string | null;
+  after: string | null;
+  /** The newest change still in place: `undoUpdate` takes it back. */
+  undoable: boolean;
+  undone: boolean;
+}
+
+/** A skill written from a person's words, to read before saving it. */
+export interface SkillDraft {
+  name: string;
+  title: string;
+  summary: string;
+  icon: string;
+  description: string;
+  body: string;
+  /** The workspace's apps it uses, and which of the chosen agents don't use each yet. */
+  apps: { id: string; label: string; missing: string[] }[];
+}
+
+export interface SkillDraftInput {
+  words: string;
+  agentIds?: string[];
+  personal?: boolean;
+  /** With `change`: the draft to change. */
+  draft?: Pick<SkillDraft, "name" | "description" | "body">;
+  change?: string;
+}
+
+/** A library skill that would help an agent, and why. */
+export interface SkillSuggestion {
+  skillId: string;
+  why: string;
 }
 
 /**
@@ -5195,6 +5264,9 @@ export interface SkillDetail extends Skill {
   pending?: SkillPending | null;
   /** The agents' changes to its text, the last 20 (older servers leave it out). */
   changes?: SkillAgentChange[];
+  /** Its page: its last uses and what changed (older servers leave them out). */
+  uses?: SkillUse[];
+  history?: SkillEvent[];
 }
 
 /** A skill a GitHub link holds, offered to pick when it holds several. */
@@ -5205,6 +5277,8 @@ export interface SkillChoice {
   description: string;
   /** A skill of this name is installed (it becomes a new version of it) or was removed (it comes back, on for nobody). */
   replaces?: "installed" | "removed";
+  /** Another skill the link holds has this name: only one of them may be picked. */
+  sameName?: true;
 }
 
 /** A skill a GitHub link holds that can't be installed: its folder and the server's refusal. */
@@ -5230,6 +5304,9 @@ export type SkillVia = "github_app" | "github";
 /** `GET …/agents/{id}/skills`: every skill of the library, with whether this agent has it. */
 export interface AgentSkill extends Skill {
   enabled: boolean;
+  /** How many times this agent loaded it in the last 7 days (older servers leave it out). */
+  agentWeekUses?: number;
+  agentLastUsedAt?: string | null;
 }
 
 /** "Escrever": a skill made here. */
@@ -5253,6 +5330,8 @@ export interface SkillPatch {
   autoUpdate?: boolean;
   /** Agents improve it by themselves; null follows the workspace. */
   agentsImprove?: boolean | null;
+  /** Its name for people; empty gives it back to the summary model. */
+  title?: string;
 }
 
 /** The workspace's skill settings: "Agentes melhoram as skills sozinhos" (on by default). */
@@ -6630,6 +6709,11 @@ export interface AgentBrain {
   autonomy?: CommandApproval;
   /** The workspace's live API keys, id and provider only: what its owner may move it onto (absent: an older server). */
   keys?: { id: string; provider: string }[];
+  /**
+   * On the API: the workspace's key its calls take now (its own, else its provider's), the one the picker shows chosen
+   * even when it isn't the default; null with none or on a plan (absent: an older server).
+   */
+  keyId?: string | null;
 }
 
 /** The team's right hand's AIs: the viewer's own, or the workspace's (admins). */
@@ -7838,6 +7922,7 @@ export type SidebarItem =
   | "routines"
   | "calendar"
   | "team"
+  | "skills"
   | "dashboards"
   | "taskManager"
   | "code";

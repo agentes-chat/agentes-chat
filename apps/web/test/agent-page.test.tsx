@@ -581,9 +581,7 @@ describe("agent page: inline editing and the save bar", () => {
     const row = github.closest("li") as HTMLElement;
     expect(row.textContent).toContain("Alterado");
     expect(row.textContent).toContain("Antes: Sem acesso");
-    // The skills' own level is on the Skills tab, with the skills.
-    expect(screen().queryByRole("radiogroup", { name: "Nível em Skills" })).toBeNull();
-    await openTab(/^Skills/);
+    // The skills' own level is here with every other area; the Skills tab holds the skills.
     const skills = screen().getByRole("radiogroup", { name: "Nível em Skills" });
     const other = within(skills)
       .getAllByRole("radio")
@@ -897,7 +895,7 @@ describe("agent page: memory and proposals", () => {
     expect(state.memories.find((m) => m.id === mine.id)?.archived).toBe(true);
   });
 
-  test("Dar a outros agentes opens that skill in Skills, only for who may open Skills", async () => {
+  test("the skills it made are on its Skills tab, with the rest it knows: one line there", async () => {
     const made: LearnedSkill = {
       id: "sk-made",
       name: "relatorio-semanal",
@@ -929,13 +927,10 @@ describe("agent page: memory and proposals", () => {
       );
     };
     await open(seedState());
-    expect(screen().getByRole("link", { name: "Dar a outros agentes" }).getAttribute("href")).toBe(
-      `/org/${ORG_ID}/settings/skills?skill=sk-made`,
+    expect(screen().getByText(/criou fica na aba Skills/)).toBeTruthy();
+    expect(screen().getByRole("link", { name: "Ver skills" }).getAttribute("href")).toBe(
+      `/org/${ORG_ID}/agents/${ADA_ID}?tab=skills`,
     );
-    cleanup();
-    // Ada's owner, a member: Travar is theirs, but Skills is for who manages agents.
-    await open(asOwner());
-    expect(screen().getByRole("button", { name: "Travar" })).toBeTruthy();
     expect(screen().queryByRole("link", { name: "Dar a outros agentes" })).toBeNull();
   });
 

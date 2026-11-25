@@ -3377,7 +3377,8 @@
       "workspaceSub": "Chiave API del workspace",
       "key": "Chiave API",
       "keyDefault": "predefinita del workspace",
-      "api": "API"
+      "api": "API",
+      "asksMove": "{{agent}} smette di usarlo."
     },
     "missionAi": "IA",
     "missionLocked": "Chi fa il lavoro si sceglie prima di Avvia. Il modello si può cambiare in qualsiasi momento."

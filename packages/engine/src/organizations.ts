@@ -1351,6 +1351,7 @@ async function takeOut(
       await tx
         .delete(organizationMembers)
         .where(and(eq(organizationMembers.orgId, orgId), eq(organizationMembers.userId, targetUserId)));
+      await enqueueAccountContact(tx, targetUserId);
       // Leaving the organization also leaves its channels.
       await tx
         .delete(channelMembers)
@@ -2534,6 +2535,7 @@ export async function joinOrganization(
   await addMemberRolesInTx(tx, orgId, userId, roleIds);
   // The right hand greets who is new here, once: its job's key is spent for good, so a rejoin gets none.
   if (!member) await queueWelcome(tx, orgId, userId);
+  if (!member) await enqueueAccountContact(tx, userId);
   // Nothing a closed request kept stays (ADR 0090): the password it chose goes, and the page's key is spent, so that
   // page reads it closed and signs in no one.
   const closing = await tx

@@ -1053,7 +1053,12 @@ function InstallSkill({
       action.mutate(
         { type: "import", input: { zipBase64, ...mine }, upload: { signal: stopper.signal, onProgress: setSending } },
         {
-          onSuccess: done,
+          // A .zip of several skills answers with them to pick: picked on the web's dialog, for now.
+          onSuccess: (result) => {
+            const found = skillPickOf(result);
+            if (!found) return done(result);
+            setError(t("skills.zipManyHere", { count: found.choices.length }));
+          },
           onError: (e) => {
             if (!stopper.signal.aborted) setError(errorText(t, e, i18n.language, { maxMb: SKILL_ZIP_MB }));
           },

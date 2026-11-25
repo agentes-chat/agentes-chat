@@ -333,6 +333,62 @@ export async function settleProposals(
 }
 
 /**
+ * A skill a person asked an agent to make (`create_skill`) after the run read outside content (ADR 0219 for a new
+ * skill): the same review, told it is a new skill, what the person wrote and the skill's whole text. `apply` when the
+ * skill is what the person asked for and carries nothing the content slipped in. Null when it can't be reviewed now
+ * (no model, or the call failed): then the skill isn't made.
+ */
+export async function reviewAskedSkill(
+  deps: ContextDeps,
+  input: { orgId: string; agentId: string; name: string; description: string; body: string; words: string | null },
+): Promise<{ apply: boolean; why: string } | null> {
+  let model: string;
+  try {
+    model = await resolveSummaryModel(deps, input.orgId);
+  } catch {
+    return null;
+  }
+  const [agent] = await deps.db
+    .select({ name: agents.name, handle: agents.handle, role: agents.role })
+    .from(agents)
+    .where(and(eq(agents.id, input.agentId), eq(agents.orgId, input.orgId)));
+  const added = [`When to use: ${input.description}`, ...input.body.split("\n")]
+    .filter((l) => l.trim())
+    .map((l) => `+ ${l}`)
+    .join("\n");
+  const block = [
+    `<change id="c1">`,
+    "Kind: new skill (a written method the agent loads and follows as trusted instructions)",
+    agent ? `Agent: ${agent.name} (@${agent.handle}), role: ${agent.role || "none"}` : "",
+    "Origin: outside",
+    input.words ? `What the person wrote: """${cutText(input.words, WORDS_CHARS)}"""` : "",
+    `Skill: ${input.name}`,
+    "Change (- removed, + added):",
+    cutText(added, INPUT_CHARS / 2),
+    "</change>",
+  ]
+    .filter(Boolean)
+    .join("\n");
+  try {
+    const result = await deps.gateway.complete({
+      orgId: input.orgId,
+      agentId: input.agentId,
+      kind: "summary",
+      model,
+      system: (await isPersonalWorkspace(deps.db, input.orgId)) ? REVIEW_SYSTEM_PERSONAL : REVIEW_SYSTEM,
+      messages: [{ role: "user", content: block }],
+      maxTokens: 400,
+      effort: "low",
+      outputSchema: REVIEW_SCHEMA,
+    });
+    const verdict = parseVerdicts(result.text).get("c1");
+    return verdict ? { apply: verdict.apply, why: verdict.why } : { apply: false, why: "" };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * A memory lesson as the rule the review wrote: the row now holds that rule (in place of the old line it names, else
  * at the end), checked as any text a person would accept. Null when there is no usable rule.
  */

@@ -49,7 +49,7 @@ export const CRM = ["hubspot", "salesforce", "attio", "close"];
 export const HELP_DESK = ["zendesk", "intercom", "intercom-eu"];
 export const PAYMENTS = ["stripe", "mercadopago", "paypal", "square", "abacatepay", "paddle"];
 export const TASKS = ["linear", "atlassian", "asana", "clickup", "monday", "todoist"];
-const ANALYTICS = ["posthog", "mixpanel", "amplitude"];
+export const ANALYTICS = ["posthog", "mixpanel", "amplitude", "himetrica"];
 const SHEETS = ["google-sheets", "airtable"];
 
 export type RoutineTemplate = {

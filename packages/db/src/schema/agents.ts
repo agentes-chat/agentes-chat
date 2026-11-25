@@ -193,6 +193,8 @@ export const agents = pgTable(
       hello?: string;
       starter?: string;
       apps?: Record<string, "read" | "write">;
+      /** Closed on its page (its ×): the page shows it no more; its chat's stays. */
+      closed?: boolean;
     }>(),
     /**
      * Its computer (ADR 0025): the connected machine it works on; null = none yet (the workspace's own computer
@@ -216,6 +218,16 @@ export const agents = pgTable(
      * `approvals_level` alone.
      */
     approvalsLevelOwn: boolean().notNull().default(false),
+    /**
+     * "Learns on its own": it turns what it does the same way again and again into a skill of its own and fixes the
+     * skills it uses (`promoteHowTos`, `changeSkillAsAgent`). Off: skills change only when a person asks it.
+     */
+    learnsSkills: boolean().notNull().default(true),
+    /**
+     * The library's skills that would help it, from its last week of work (`agentSkillSuggestions`): each with why, in
+     * the language of who looked, and when they were picked. Picked again once a day at most.
+     */
+    skillSuggestions: jsonb().$type<{ at: string; items: { skillId: string; why: string }[] }>(),
     /**
      * Who thinks for it (ADR 0032): `model` (the API, default), `claude_code`
      * or `codex` on its computer; validated in code (`brain-settings.ts`).

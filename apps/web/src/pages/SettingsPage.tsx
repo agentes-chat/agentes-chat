@@ -103,7 +103,6 @@ import { MyFace, OrgLogoDialog, OrgMark } from "@/components/ProfilePhoto";
 import { KeyMismatch, KeyRefused, KeySite, ProviderKeySelect } from "@/components/ProviderKey";
 import { ReportProblem, useProblemReports } from "@/components/ReportProblem";
 import { RolesSection } from "@/components/roles/RolesSection";
-import { SkillsSection } from "@/components/Skills";
 import { StorageSection } from "@/components/StorageSettings";
 import { TeamMemoryCard } from "@/components/TeamMemory";
 import { OpenPrefsButton, useLocalServerHere } from "@/components/ThisMac";
@@ -145,8 +144,6 @@ function Settings({
   account,
   device,
   connect,
-  install,
-  skill,
   agent,
   person,
   role,
@@ -163,15 +160,11 @@ function Settings({
   /** Back from Gmail/Outlook: `connected` or `failed`, and the mailbox (`account`). */
   mail?: string;
   account?: string;
-  /** Skills, back from connecting GitHub in Instalar skill: the link to read again. */
-  install?: string;
-  /** Skills: the skill to open (a notice of its update). */
-  skill?: string;
   /** Devices → one device: a computer's id, or `phones/<id>` (`/settings/devices/{path}`). */
   device?: string;
   /** Devices, with the connect dialog open on this flow (the phone guide's link opens the Android one). */
   connect?: ConnectStart;
-  /** Auditoria: the agent it opens filtered to. Skills, with `install`: the agent whose card opened that install. */
+  /** Auditoria: the agent it opens filtered to. */
   agent?: string;
   /** Orçamento e uso › Pessoas: the person whose month opens (a limit's notice). */
   person?: string;
@@ -292,7 +285,6 @@ function Settings({
           service={service}
         />
       )}
-      {current === "skills" && <SkillsSection install={install} connected={connected} skill={skill} agent={agent} />}
       {current === "storage" && <StorageSection />}
       {current === "devices" && (device ? <DevicePage path={device} /> : <DevicesSection start={connect} />)}
       {current === "usage" && (

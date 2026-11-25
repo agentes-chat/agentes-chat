@@ -5309,7 +5309,8 @@ html:not([data-pointer]) .ac-switch:focus-visible {
 /*
  * Motion (2026-10): enters and exits, 120–200 ms (`--dur-fast`, `--dur-base`; a side panel's slide `--dur-panel`), ease-out,
  * exits faster than entrances, opacity and transform only (no layout shift). Nothing moves with
- * prefers-reduced-motion. What people do by keyboard many times a day (⌘K) has none.
+ * prefers-reduced-motion: what arrives only fades in (120ms). What people do by keyboard many times a day (⌘K) has
+ * none. A size change in place is `useMorph` and `MorphRoom` (motion.tsx).
  */
 @media (prefers-reduced-motion: no-preference) {
   .ac-dialog__scrim[data-state="open"] {
@@ -5406,6 +5407,79 @@ html:not([data-pointer]) .ac-switch:focus-visible {
   .ac-hint__bubble[data-state="open"][data-side="right"] {
     animation-name: ac-pop-right;
   }
+}
+/*
+ * What arrives after a click (the team's first tasks, its waving faces): fades and rises 6px as a 2px blur clears, in
+ * turn (`--arrive-delay`), and takes no click until it is in, so a quick second click lands on nothing. Under reduced
+ * motion it only fades in (120ms).
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .ac-arrive {
+    animation: ac-arrive var(--dur-base) var(--out) var(--arrive-delay, 0ms) backwards;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ac-arrive {
+    animation: ac-fade-in 120ms ease-out;
+  }
+}
+@keyframes ac-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+    filter: blur(2px);
+    pointer-events: none;
+  }
+  99% {
+    pointer-events: none;
+  }
+}
+/*
+ * A row that arrives after its list first painted (`data-arriving`: the sidebar's new channels and agents) opens its
+ * room first, so what's under it slides down instead of jumping, then fades in. `--arrive-delay` staggers a team's
+ * rows. Where height can't grow to `auto` (WebKit, the desktop app) it only fades. Reduced motion: a 200ms fade.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  [data-arriving] {
+    transition: opacity var(--dur-base) var(--out) calc(var(--arrive-delay, 0ms) + var(--dur-fast));
+  }
+  @starting-style {
+    [data-arriving] {
+      opacity: 0;
+    }
+  }
+  @supports (interpolate-size: allow-keywords) {
+    [data-arriving] {
+      interpolate-size: allow-keywords;
+      transition:
+        height var(--dur-fast) var(--move) var(--arrive-delay, 0ms),
+        opacity var(--dur-base) var(--out) calc(var(--arrive-delay, 0ms) + var(--dur-fast));
+    }
+    @starting-style {
+      [data-arriving] {
+        height: 0;
+        opacity: 0;
+      }
+    }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-arriving] {
+    transition: opacity 200ms ease-out;
+  }
+  @starting-style {
+    [data-arriving] {
+      opacity: 0;
+    }
+  }
+}
+/* `MorphRoom`: its inner box holds its parts' margins (what is measured is what it takes); empty, it takes no room once
+   its room has closed (`data-closing` while it glides shut). */
+.ac-morph__in {
+  display: flow-root;
+}
+.ac-morph:not([data-closing]):has(> .ac-morph__in:empty) {
+  display: none;
 }
 @keyframes ac-dialog-out {
   to {

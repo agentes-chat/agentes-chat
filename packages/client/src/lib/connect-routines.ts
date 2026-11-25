@@ -2,6 +2,7 @@ import type { TFunction } from "i18next";
 import type { Agent, ApiRule, Routine, RoutineInput } from "../api/types";
 import { createsRoutinesFor } from "./audience";
 import {
+  ANALYTICS,
   CRM,
   everyDay,
   HELP_DESK,
@@ -26,7 +27,7 @@ type ScheduleTemplate = Extract<RoutineTemplateItem, { kind: "schedule" }>;
 /** The templates apps bring, each with its line in `connectFlow.routine`. */
 export type ConnectRoutineKey = Extract<
   ScheduleTemplate["key"],
-  "inbox" | "dayPlan" | "failed" | "leads" | "tickets" | "late" | "openPrs" | "errors"
+  "inbox" | "dayPlan" | "failed" | "leads" | "tickets" | "late" | "traffic" | "openPrs" | "errors"
 >;
 
 export interface ConnectRoutine {
@@ -44,6 +45,8 @@ export const CONNECT_ROUTINES: readonly ConnectRoutine[] = [
   { template: "leads", apps: CRM },
   { template: "tickets", apps: HELP_DESK },
   { template: "late", apps: TASKS },
+  // An analytics app: the week's numbers against the week before, every Monday.
+  { template: "traffic", apps: ANALYTICS },
   // GitHub's and Sentry's events need a webhook connecting doesn't set up: a check on a schedule works at once.
   { template: "openPrs", apps: ["github"] },
   { template: "errors", apps: ["sentry"], rule: weekdays("09:00", "14:00") },

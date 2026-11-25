@@ -6,6 +6,9 @@ import { readsOrMayJoin } from "./channels";
 import { cardPlace } from "./consultations";
 import { learnTrust, ownWords } from "./context/learn";
 import { changeSkillAsAgent, createSkillAsAgent } from "./context/learned-skills";
+import { reviewAskedSkill } from "./context/proposal-review";
+import { askedWords } from "./context/proposals";
+import type { ContextDeps } from "./context/summaries";
 import { memoryResult } from "./context/tools";
 import { publishMessageCreated } from "./events";
 import { copyToComputer, type StoredFile } from "./file-pulls";
@@ -17,6 +20,7 @@ import { personBehindCall } from "./requester";
 import { bodyCode } from "./run-tools";
 import { type SandboxDeps, withSandbox } from "./sandbox";
 import { cardsLeft, hopOf, NOBODY_READS, REQUEST_SETTINGS_TOOL, whoActs } from "./setup-tools";
+import { recordSkillUse } from "./skill-library";
 import { updateSkillFromSource } from "./skill-updates";
 import {
   agentSkillByName,
@@ -138,7 +142,7 @@ function skillFileList(files: Awaited<ReturnType<typeof skillFilesOf>>) {
  * `computer`: reaching the agent's computer (none: files that aren't text are described only).
  */
 export function createSkillToolSource(
-  deps: SkillDeps & { pubsub?: PubSub; judge?: Judge; computer?: SandboxDeps },
+  deps: SkillDeps & { pubsub?: PubSub; judge?: Judge; computer?: SandboxDeps; context?: ContextDeps },
 ): ToolSource {
   /** Saves a skill's file on the agent's computer: its path there, or why it couldn't be. */
   const saveOnComputer = async (ctx: ToolContext, path: string, file: StoredFile) => {
@@ -194,11 +198,13 @@ export function createSkillToolSource(
               data: { skill: { id: skill.id, name: skill.name, version: skill.version } },
             };
           }
-          // Use keeps an agent-made skill from being archived for disuse (ADR 0120).
+          // Use keeps an agent-made skill from being archived for disuse (ADR 0120), and shows in Skills: how often
+          // and where it was used.
           await ctx.db
             .update(schema.skills)
             .set({ useCount: sql`${schema.skills.useCount} + 1`, lastUsedAt: new Date() })
             .where(eq(schema.skills.id, skill.id));
+          await recordSkillUse(ctx.db, ctx, skill.id);
           return {
             content: `Skill "${skill.name}" (v${skill.version}) loaded.\n\n${skill.body}\n\nFiles (read with read_skill_file):\n${list}`,
             data: { skill: { id: skill.id, name: skill.name, version: skill.version } },
@@ -383,13 +389,33 @@ export function createSkillToolSource(
               isError: true,
             };
           }
+          // After outside content (the web, mail, a connected app, or a conversation that relays them) the skill is
+          // made only when the review reads it as the person's own request (ADR 0219): a skill loads as trusted
+          // instructions, so nothing the content slipped in may ride along.
           if (trust === "low") {
-            return {
-              content:
-                "This turn read outside content (the web, mail or a connected app), so it can't make a skill: a skill loads as trusted instructions. Show the person the skill's text so they add it in Settings › Skills, or ask them to ask again in a new message.",
-              isError: true,
-              data: { code: "skill.outside_content" },
-            };
+            const verdict = deps.context
+              ? await reviewAskedSkill(deps.context, {
+                  orgId: ctx.orgId,
+                  agentId: ctx.agentId,
+                  name: str(input.name),
+                  description: str(input.description),
+                  body: str(input.body),
+                  words: await askedWords(ctx.db, ctx, person),
+                })
+              : null;
+            if (!verdict)
+              return {
+                content:
+                  "This turn read outside content, and the check that lets a skill through after it can't run now. Don't try again in this turn: tell the person it couldn't be made now and offer to try in a few minutes.",
+                isError: true,
+                data: { code: "skill.outside_content" },
+              };
+            if (!verdict.apply)
+              return {
+                content: `Not made: the check after outside content left it out${verdict.why ? ` (${verdict.why})` : ""}. Don't call create_skill again with the same text: tell the person what was left out and why, and make only what they asked for.`,
+                isError: true,
+                data: { code: "skill.left_out" },
+              };
           }
           const skill = await createSkillAsAgent({ db: ctx.db, judge: deps.judge }, ctx, {
             name: str(input.name),

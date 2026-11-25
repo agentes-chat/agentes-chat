@@ -3342,6 +3342,8 @@ export const featureKeysPtBR = {
       key: "Chave de API",
       keyDefault: "padrão do workspace",
       api: "API",
+      /** Before a pick takes a login another agent thinks with: `agent` is that agent. */
+      asksMove: "{{agent}} deixa de usar esta conta.",
     },
     missionAi: "IA",
     missionLocked: "Quem faz o trabalho é escolhido antes de Iniciar. O modelo muda a qualquer hora.",

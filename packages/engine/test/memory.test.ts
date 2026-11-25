@@ -1471,7 +1471,7 @@ describe("proposals for teammates (one card, a row per agent and kind of change)
     f = await setup();
     const ada = await teammate("ada");
     const lia = await teammate("lia");
-    const atlas = await teammate("atlas", { instructions: "Seja breve.\n\n## Learned\n- Outra." });
+    const atlas = await teammate("atlas", { instructions: "Seja breve.\n\n## Tom\n- Outra." });
     const { proposals } = await proposeFor({
       target: "agent_instructions",
       agentIds: [ada.id, lia.id, atlas.id],

@@ -15,11 +15,12 @@ import {
 import {
   APPROVAL_REASON_MAX,
   approvalLines,
+  approvalPhase,
   approveAllByAgent,
   approveAllScope,
   byAsked,
   type LinePlace,
-  RUNNING_FOR_MS,
+  PHASE_STATUS,
 } from "@agenteschat/client/lib/approval-card";
 import { aheadPhase, approveAlwaysOffered } from "@agenteschat/client/lib/approval-kind";
 import { approvalWords } from "@agenteschat/client/lib/approval-origin";
@@ -110,38 +111,6 @@ import "./approvals.css";
 
 const TTL_MS = 24 * 3_600_000;
 const URGENT_MS = 3_600_000;
-
-/**
- * Where an approval goes on this screen. `queued`: approved, its turn not come yet (a request the agent asked before
- * it on its card still waits or runs); `notRun`: approved, but one asked before it was refused or expired after that.
- */
-export type ApprovalPhase =
-  | "waiting"
-  | "queued"
-  | "running"
-  | "scheduled"
-  | "done"
-  | "failed"
-  | "notRun"
-  | "refused"
-  | "expired"
-  | "canceled";
-
-/** `place`: where it stands on its card (`approvalLine`); without it, an approved one runs from its decision. */
-export function approvalPhase(a: Approval, now = Date.now(), place?: LinePlace): ApprovalPhase {
-  if (a.status === "pending") return "waiting";
-  if (a.status === "approved") {
-    if (a.result?.notRunAfter) return "notRun";
-    if (a.result) return a.result.ok ? "done" : "failed";
-    if (a.executedAt) return "done";
-    // Approved ahead: it waits for its time, when its routine's run does it.
-    if (aheadPhase(a) === "scheduled") return "scheduled";
-    if (place?.waitsOn) return "queued";
-    const since = place?.freeSince ?? a.decidedAt;
-    return now - (since ? new Date(since).getTime() : 0) < RUNNING_FOR_MS ? "running" : "done";
-  }
-  return a.status;
-}
 
 /** Each request's place on its card (`approvalLine`), for the rows and the review under them. */
 const LinesContext = createContext<ReadonlyMap<string, LinePlace>>(new Map());
@@ -1060,22 +1029,6 @@ function ReviewBody({ approval: a, channel }: { approval: Approval; channel: str
     </div>
   );
 }
-
-/** The `approvals.status.*` word of each phase. */
-const PHASE_STATUS: Record<
-  Exclude<ApprovalPhase, "waiting">,
-  "approved" | "failed" | "refused" | "expired" | "running" | "canceled" | "scheduled" | "queued" | "notRun"
-> = {
-  queued: "queued",
-  notRun: "notRun",
-  running: "running",
-  scheduled: "scheduled",
-  done: "approved",
-  failed: "failed",
-  refused: "refused",
-  expired: "expired",
-  canceled: "canceled",
-};
 
 /**
  * The decision, in one bar of buttons: Refuse and Approve ("Aprovar sempre" before them where its kind offers it), what

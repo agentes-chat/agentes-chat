@@ -1,5 +1,5 @@
 import type { Approval } from "../api/types";
-import { approveAlwaysOffered } from "./approval-kind";
+import { aheadPhase, approveAlwaysOffered } from "./approval-kind";
 import { approvalOriginShort, approvalWhy } from "./approval-origin";
 
 /** The longest reason a person gives with a decision. Mirror: `APPROVAL_REASON_MAX` in packages/engine approvals.ts. */
@@ -280,3 +280,52 @@ export function digestRows(
   const shown = all || !folds ? rows : rows.slice(0, DIGEST_ROWS);
   return { rows: shown, hidden: rows.slice(shown.length).reduce((n, r) => n + r.count, 0), folds };
 }
+
+/**
+ * Where a request stands, for its review on the web and the phone. `queued`: approved, its turn not come yet (a
+ * request the agent asked before it on its card still waits or runs); `notRun`: approved, but one asked before it was
+ * refused or expired after that.
+ */
+export type ApprovalPhase =
+  | "waiting"
+  | "queued"
+  | "running"
+  | "scheduled"
+  | "done"
+  | "failed"
+  | "notRun"
+  | "refused"
+  | "expired"
+  | "canceled";
+
+/** `place`: where it stands on its card (`approvalLine`); without it, an approved one runs from its decision. */
+export function approvalPhase(a: Approval, now = Date.now(), place?: LinePlace): ApprovalPhase {
+  if (a.status === "pending") return "waiting";
+  if (a.status === "approved") {
+    if (a.result?.notRunAfter) return "notRun";
+    if (a.result) return a.result.ok ? "done" : "failed";
+    if (a.executedAt) return "done";
+    // Approved ahead: it waits for its time, when its routine's run does it.
+    if (aheadPhase(a) === "scheduled") return "scheduled";
+    if (place?.waitsOn) return "queued";
+    const since = place?.freeSince ?? a.decidedAt;
+    return now - (since ? new Date(since).getTime() : 0) < RUNNING_FOR_MS ? "running" : "done";
+  }
+  return a.status;
+}
+
+/** The `approvals.status.*` word of each phase. */
+export const PHASE_STATUS: Record<
+  Exclude<ApprovalPhase, "waiting">,
+  "approved" | "failed" | "refused" | "expired" | "running" | "canceled" | "scheduled" | "queued" | "notRun"
+> = {
+  queued: "queued",
+  notRun: "notRun",
+  running: "running",
+  scheduled: "scheduled",
+  done: "approved",
+  failed: "failed",
+  refused: "refused",
+  expired: "expired",
+  canceled: "canceled",
+};

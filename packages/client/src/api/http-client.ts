@@ -237,9 +237,11 @@ import type {
   SignInOptions,
   Skill,
   SkillDetail,
+  SkillDraft,
   SkillPick,
   SkillSettings,
   SkillSourceUpdate,
+  SkillSuggestion,
   SpeechKey,
   StartChoice,
   StorageConfig,
@@ -953,6 +955,8 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         request<Agent>(`${org(orgId)}/agents/${enc(agentId)}`, { method: "PATCH", json: input }),
       confirmSetup: (orgId, agentId, step) =>
         request<Agent>(`${org(orgId)}/agents/${enc(agentId)}/setup/${enc(step)}`, { json: {} }),
+      closeSetup: (orgId, agentId) =>
+        request<Agent>(`${org(orgId)}/agents/${enc(agentId)}/setup`, { method: "PATCH", json: { closed: true } }),
       mailLoss: async (orgId, agentId, audience) =>
         (
           await request<{ mailboxes: ForeignMailbox[] }>(`${org(orgId)}/agents/${enc(agentId)}/audience/mail-loss`, {
@@ -1514,6 +1518,14 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
             json: { url, paths, ...(forAgentId ? { forAgentId } : {}), ...(personal ? { personal } : {}) },
           })
         ).skills,
+      importPickedZip: async (orgId, zipBase64, paths, personal, upload) =>
+        (
+          await request<{ skills: SkillDetail[] }>(`${org(orgId)}/skills/import`, {
+            json: { zipBase64, paths, ...(personal ? { personal } : {}) },
+            signal: upload?.signal,
+            onUploadProgress: upload?.onProgress,
+          })
+        ).skills,
       update: (orgId, id, patch) =>
         request<SkillDetail>(`${org(orgId)}/skills/${enc(id)}`, { method: "PATCH", json: patch }),
       reimport: (orgId, id) => request<SkillDetail>(`${org(orgId)}/skills/${enc(id)}/reimport`, { json: {} }),
@@ -1542,6 +1554,18 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       settings: (orgId) => request<SkillSettings>(`${org(orgId)}/skill-settings`),
       saveSettings: (orgId, input) =>
         request<SkillSettings>(`${org(orgId)}/skill-settings`, { method: "PUT", json: input }),
+      draft: (orgId, input) => request<SkillDraft>(`${org(orgId)}/skills/draft`, { json: input }),
+      saveDraft: (orgId, input) => request<SkillDetail>(`${org(orgId)}/skills/drafted`, { json: input }),
+      rewrite: (orgId, id, words) =>
+        request<SkillDetail>(`${org(orgId)}/skills/${enc(id)}/rewrite`, { json: { words } }),
+      suggestions: async (orgId, agentId) =>
+        (await request<{ suggestions: SkillSuggestion[] }>(`${org(orgId)}/agents/${enc(agentId)}/skill-suggestions`))
+          .suggestions,
+      learns: async (orgId, agentId) =>
+        (await request<{ learnsSkills?: boolean }>(`${org(orgId)}/agents/${enc(agentId)}/skills`)).learnsSkills ?? true,
+      setLearns: (orgId, agentId, on) =>
+        request<void>(`${org(orgId)}/agents/${enc(agentId)}/learns-skills`, { method: "PUT", json: { on } }),
+      zipUrl: (orgId, id) => `${base}${org(orgId)}/skills/${enc(id)}/download`,
     },
     access: {
       get: (orgId, agentId, options) =>

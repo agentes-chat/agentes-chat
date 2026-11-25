@@ -325,11 +325,14 @@ import type {
   SignInOptions,
   Skill,
   SkillDetail,
+  SkillDraft,
+  SkillDraftInput,
   SkillInput,
   SkillPatch,
   SkillPick,
   SkillSettings,
   SkillSourceUpdate,
+  SkillSuggestion,
   SpeechKey,
   SpeechKeyInput,
   StartChoice,
@@ -883,6 +886,8 @@ export interface ApiClient {
     update(orgId: string, agentId: string, input: Partial<AgentInput>): Promise<Agent>;
     /** Confirms a step of a new agent's setup checklist (ADR 0155 §2): its owner or whoever manages agents. */
     confirmSetup(orgId: string, agentId: string, step: SetupStep): Promise<Agent>;
+    /** Closes its setup checklist on its page (its ×), whatever is left; its chat keeps its own. */
+    closeSetup(orgId: string, agentId: string): Promise<Agent>;
     /** The mailboxes saving `audience` would take from it (others gave them), taking nothing: ask before widening. */
     mailLoss(orgId: string, agentId: string, audience: AgentAudience): Promise<ForeignMailbox[]>;
     archive(orgId: string, agentId: string): Promise<void>;
@@ -1416,8 +1421,8 @@ export interface ApiClient {
     create(orgId: string, input: SkillInput): Promise<SkillDetail>;
     /**
      * A GitHub link (a skill's folder or a file in it) or the folder as a zip in base64 (writes are JSON only). A link
-     * holding several skills (or any, with `list`) installs nothing and answers with them to pick from
-     * (`importPicked`), those that can't be installed apart. A private repository is read through the workspace's
+     * or a zip holding several skills (a link: or any, with `list`) installs nothing and answers with them to pick from
+     * (`importPicked`, `importPickedZip`), those that can't be installed apart. A private repository is read through the workspace's
      * GitHub, on the server. `forAgentId`: the agent whose card opened the install, which gets what installs turned on
      * when the installer may change its skills. `personal`: the person's own skill, which any member installs (from a
      * public repository unless they manage agents). `upload`: a zip's Cancel and how much of it has been sent.
@@ -1434,6 +1439,14 @@ export interface ApiClient {
       paths: string[],
       forAgentId?: string,
       personal?: boolean,
+    ): Promise<SkillDetail[]>;
+    /** Installs the skills picked among a .zip's choices (their `path`): the .zip is sent again, as `import` sent it. */
+    importPickedZip(
+      orgId: string,
+      zipBase64: string,
+      paths: string[],
+      personal?: boolean,
+      upload?: UploadOptions,
     ): Promise<SkillDetail[]>;
     update(orgId: string, id: string, patch: SkillPatch): Promise<SkillDetail>;
     /** Fetch the link again (`url` skills). */
@@ -1461,6 +1474,22 @@ export interface ApiClient {
     /** The workspace's skill settings (older servers: absent). */
     settings?(orgId: string): Promise<SkillSettings>;
     saveSettings?(orgId: string, input: SkillSettings): Promise<SkillSettings>;
+    /** A skill written from a person's words (nothing saved), or that draft with a change. */
+    draft?(orgId: string, input: SkillDraftInput): Promise<SkillDraft>;
+    /** Saves a written skill and turns it on for the agents chosen. */
+    saveDraft?(
+      orgId: string,
+      input: Omit<SkillDraft, "apps"> & { agentIds: string[]; personal?: boolean; defaultForNewAgents?: boolean },
+    ): Promise<SkillDetail>;
+    /** A change asked in words: a new version, with undo. */
+    rewrite?(orgId: string, id: string, words: string): Promise<SkillDetail>;
+    /** The library's skills that would help an agent, from its last week. */
+    suggestions?(orgId: string, agentId: string): Promise<SkillSuggestion[]>;
+    /** Whether the agent learns skills on its own. */
+    learns?(orgId: string, agentId: string): Promise<boolean>;
+    setLearns?(orgId: string, agentId: string, on: boolean): Promise<void>;
+    /** Where the browser downloads the skill's folder as a .zip. */
+    zipUrl?(orgId: string, id: string): string;
   };
   access: {
     /**

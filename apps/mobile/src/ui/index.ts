@@ -40,6 +40,7 @@ export {
   EventPillText,
 } from "./EventPill";
 export { CLICK_IN, FADE_IN, FADE_OUT, RISE_IN } from "./entrances";
+export { type Fact, FactStrip } from "./FactStrip";
 export { type FilterItem, Filters, type FiltersProps } from "./Filters";
 export {
   besideFold,

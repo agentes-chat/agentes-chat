@@ -248,6 +248,7 @@ test("the tools' order: each person's own, per workspace, every tool once, besid
     "routines",
     "calendar",
     "team",
+    "skills",
     "dashboards",
     "code",
     "taskManager",

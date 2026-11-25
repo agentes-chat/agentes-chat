@@ -3,6 +3,7 @@ import {
   type Message,
   type MessageConsultation,
   type RunConsultation,
+  useChannelName,
   useConsultationConversation,
 } from "@agenteschat/client";
 import { handoffAsk } from "@agenteschat/client/lib/agent-work";
@@ -17,7 +18,7 @@ import {
 } from "@agenteschat/client/lib/consult-group";
 import { consultSubject, consultTimeText, withoutRelayLine } from "@agenteschat/client/lib/consultations";
 import { namesText } from "@agenteschat/client/lib/format";
-import type { agentGrammar } from "@agenteschat/client/lib/grammar";
+import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
 import { useMemo } from "react";
@@ -113,18 +114,23 @@ export function useConsultById(channelId: string, id: string | undefined): RunCo
  * colored bar at its left edge); a tap opens the two agents' conversation,
  * read only (`ConsultationScreen`). Several asked: the first agent's color and face, "Atlas e mais 2". `alone`: with no
  * reply to sit in (an answer farther up, a hand-off on a reach line), the quote stands on its own and says who asked
- * ("Theo perguntou").
+ * ("Theo perguntou"). `handed`: another agent's request in the DM of the agent it went to (`handOffOf`), alone, with
+ * "Atlas pediu à Ada" in place of ⇄, nothing about its state until it ends, and where the person asked ("em #eng").
  */
 export function ConsultQuote({
   askerId,
   channelId,
   items,
   alone = false,
+  handed = false,
+  askedIn = null,
 }: {
   askerId: string;
   channelId: string;
   items: readonly ConsultPairItem[];
   alone?: boolean;
+  handed?: boolean;
+  askedIn?: string | null;
 }) {
   const { t, i18n } = useTranslation();
   const dir = useRowDirectory();
@@ -133,10 +139,12 @@ export function ConsultQuote({
   const live = items.some((x) => x.status === "open");
   const now = useNow(live ? OPEN_TICK_MS : STILL_TICK_MS);
   const presence = usePresenceOf();
+  const where = useChannelName(useOrgId(), askedIn);
   const only = items.length === 1 && items[0]?.status === "open" ? items[0] : undefined;
   const mine = only ? handoffAsk(presence.agent(only.consultedAgentId)?.work, only.consultedRunId) : null;
-  const pair = consultPair(items, now, askerId, mine);
-  if (!pair) return null;
+  const found = consultPair(items, now, askerId, handed ? null : mine);
+  if (!found) return null;
+  const pair = handed && live ? { ...found, word: null, seconds: null, tone: null } : found;
   const tone =
     pair.tone === "live" ? c.agent : pair.tone === "bad" ? c.warn : pair.tone === "you" ? c.amberInk : c.faint;
   const nameOf = (id: string) => dir.agentById.get(id)?.name ?? t("mobile.chat.someone");
@@ -146,7 +154,12 @@ export function ConsultQuote({
   const names = pair.faces.map((f) => nameOf(f.agentId));
   const to = names.length === 1 ? (names[0] ?? "") : namesText(t, names, 1);
   const opened = items.find((x) => x.id === pair.opens) ?? items[0];
-  const subject = consultSubject(opened?.question);
+  const subject = [
+    consultSubject(opened?.question),
+    handed && where ? t("chat.consultPair.askedIn", { channel: `#${where}` }) : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
   const question = withoutRelayLine(opened?.question ?? "").trim();
   const opens = openableConsultation(pair.opens);
   const ids = items.map((x) => x.id);
@@ -164,7 +177,16 @@ export function ConsultQuote({
       }}
       disabled={!opens}
       accessibilityRole="button"
-      accessibilityLabel={[alone ? t("mobile.chat.pairAsked", { from: nameOf(askerId) }) : null, to, how, subject]
+      accessibilityLabel={[
+        handed
+          ? `${nameOf(askerId)} ${t("chat.consultPair.askedHere", { context: agentGrammar(to).context })} ${to} ${t("chat.consultPair.forYou")}`
+          : alone
+            ? t("mobile.chat.pairAsked", { from: nameOf(askerId) })
+            : null,
+        handed ? null : to,
+        how,
+        subject,
+      ]
         .filter(Boolean)
         .join(", ")}
       accessibilityHint={question || undefined}
@@ -181,7 +203,11 @@ export function ConsultQuote({
               <Text variant="small" tone="ink2" numberOfLines={1} style={quote.asker}>
                 {nameOf(askerId)}
               </Text>
-              {pair.tone === "you" ? (
+              {handed ? (
+                <Text variant="small" tone="faint">
+                  {t("chat.consultPair.askedHere", { context: agentGrammar(to).context })}
+                </Text>
+              ) : pair.tone === "you" ? (
                 <WaitMark size={8} />
               ) : (
                 <Icon name="swap" size={12} color={pair.tone === "live" ? c.agent : c.faint} />

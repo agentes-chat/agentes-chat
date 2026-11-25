@@ -346,7 +346,10 @@
       "codeTerminal.label",
       "codeSessions.tabs.terminalN",
       "live.type.trackings.normal",
-      "live.type.glyph"
+      "live.type.glyph",
+      "shell.skills",
+      "skills.page.colSkill",
+      "skills.page.inRepo"
     ],
     "es": [
       "surface.nudge.hours",
@@ -1179,6 +1182,7 @@
     ],
     "de": [
       "agentPage.facts.budget",
+      "chat.consultPair.askedIn",
       "aiHub.detail.limits",
       "live.sheet.args.k",
       "live.sheet.args.x",
@@ -1680,10 +1684,15 @@
       "live.type.body",
       "live.type.trackings.normal",
       "live.type.highlights.orange",
-      "live.type.glyph"
+      "live.type.glyph",
+      "shell.skills",
+      "skills.page.colSkill",
+      "skills.one.name",
+      "skills.one.inChannel"
     ],
     "it": [
       "agentPage.facts.budget",
+      "chat.consultPair.askedIn",
       "surface.nudge.hours",
       "live.sheet.args.a1",
       "live.sheet.args.k",
@@ -2086,10 +2095,14 @@
       "codeSessions.files.count",
       "cliTools.files",
       "connectors.store.account",
-      "live.type.glyph"
+      "live.type.glyph",
+      "skills.page.colSkill",
+      "skills.one.inChannel",
+      "skills.page.inRepo"
     ],
     "nl": [
       "agentPage.facts.budget",
+      "chat.consultPair.askedIn",
       "aiHub.accounts",
       "usage.kinds.routines",
       "calendar.moreRuns",
@@ -2773,7 +2786,11 @@
       "connectors.store.account",
       "live.type.weights.w500",
       "live.type.gradients.violet",
-      "live.type.glyph"
+      "live.type.glyph",
+      "shell.skills",
+      "skills.page.colSkill",
+      "skills.one.inChannel",
+      "skills.page.inRepo"
     ],
     "ja": [
       "live.sheet.args.k",
@@ -3642,7 +3659,8 @@
       "live.type.groups.sans",
       "live.type.groups.serif",
       "live.type.trackings.normal",
-      "live.type.glyph"
+      "live.type.glyph",
+      "skills.page.colSkill"
     ],
     "tr": [
       "live.canvas.inspector.model",

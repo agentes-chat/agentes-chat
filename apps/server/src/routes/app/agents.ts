@@ -19,6 +19,7 @@ import {
   canViewCost,
   checkCredential,
   checkEndpoint,
+  closeSetup,
   confirmSetupStep,
   createAgent,
   createAgentFromProposal,
@@ -1649,25 +1650,49 @@ export function agentRoutes(deps: AppDeps) {
       const { orgId, agentId, step } = c.req.valid("param");
       const actor = c.get("user").id;
       await confirmSetupStep(db, actor, orgId, agentId, step);
-      // Another device of theirs, or another admin, ticks the row at once.
-      await publishAgentsChanged(adapters.pubsub, orgId);
-      const agent = await getAgent(db, orgId, agentId);
-      if (!agent) throw new NotFoundError("Agent not found");
-      const [seesCost, brains, viewer, old] = await Promise.all([
-        canViewCost(db, actor, orgId),
-        agentBrainLines(db, actor, orgId, [agent]),
-        getMembership(db, actor, orgId),
-        oldHandlesByAgent(db, orgId),
-      ]);
-      return c.json(
-        {
-          ...toAgent(agent, actor, seesCost, undefined, brains.get(agent.id), viewer),
-          previousHandles: old.get(agent.id) ?? [],
-        },
-        200,
-      );
+      return c.json(await afterSetupChange(actor, orgId, agentId), 200);
     },
   );
+
+  app.openapi(
+    createRoute({
+      method: "patch",
+      path: "/organizations/{orgId}/agents/{agentId}/setup",
+      tags,
+      security,
+      summary: "Close a new agent's setup checklist on its page",
+      description:
+        "Its owner or whoever manages agents closed the checklist on its page (ADR 0155 §2): the page shows it no more, whatever is left, while its chat keeps its own. Closing twice changes nothing; an agent with no checklist keeps none.",
+      request: {
+        params: AgentParams,
+        body: body(z.object({ closed: z.literal(true) })),
+      },
+      responses: { 200: json(Agent), ...errors },
+    }),
+    async (c) => {
+      const { orgId, agentId } = c.req.valid("param");
+      const actor = c.get("user").id;
+      await closeSetup(db, actor, orgId, agentId);
+      return c.json(await afterSetupChange(actor, orgId, agentId), 200);
+    },
+  );
+
+  /** After its checklist changed: tells the other devices and admins at once, and answers with the agent as it is now. */
+  async function afterSetupChange(actor: string, orgId: string, agentId: string) {
+    await publishAgentsChanged(adapters.pubsub, orgId);
+    const agent = await getAgent(db, orgId, agentId);
+    if (!agent) throw new NotFoundError("Agent not found");
+    const [seesCost, brains, viewer, old] = await Promise.all([
+      canViewCost(db, actor, orgId),
+      agentBrainLines(db, actor, orgId, [agent]),
+      getMembership(db, actor, orgId),
+      oldHandlesByAgent(db, orgId),
+    ]);
+    return {
+      ...toAgent(agent, actor, seesCost, undefined, brains.get(agent.id), viewer),
+      previousHandles: old.get(agent.id) ?? [],
+    };
+  }
 
   app.openapi(
     createRoute({

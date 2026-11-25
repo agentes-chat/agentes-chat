@@ -2871,6 +2871,13 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         }
         return { ...agent };
       },
+      closeSetup: async (orgId, agentId) => {
+        log("agents.closeSetup", orgId, agentId);
+        const agent = state.agents.find((a) => a.id === agentId);
+        if (!agent) throw new ApiError(404, "not_found", "Agent not found");
+        if (agent.setup) agent.setup = { ...agent.setup, closed: true };
+        return { ...agent };
+      },
       mailLoss: async (orgId, agentId, audience) => {
         log("agents.mailLoss", orgId, agentId, audience);
         return state.mailLoss?.[agentId] ?? [];

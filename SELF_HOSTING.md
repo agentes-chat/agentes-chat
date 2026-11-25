@@ -1573,7 +1573,9 @@ have no owner, so a program an agent runs that listens on one without checking w
 the other agents, and an agent can take a name another agent's program wants. An X display's name taken
 before a desktop starts sends that desktop to another display, but an agent holding all 50 stops every new
 or restarted desktop on the computer, and on this server's own computer the names span its
-organizations.
+organizations. A root-owned `networkLauncher` helper that gives each agent its own network namespace
+closes the second ([ADR 0030](docs/adr/0030-runner-isolation.md), [ADR 0096](docs/adr/0096-agents-own-local-ports.md));
+agentes.chat Cloud's computers run one, and none is installed by default.
 
 **Memory and CPUs.** With `--system` the agents share the computer: none has memory or CPUs of its own,
 so one agent's build may use every CPU and all the memory the agents have; when several want the CPUs,

@@ -44,6 +44,8 @@ describe("the routine each app brings", () => {
     expect(connectRoutineOf("intercom-eu")?.template).toBe("tickets");
     expect(connectRoutineOf("linear")?.template).toBe("late");
     expect(connectRoutineOf("google-calendar")?.template).toBe("dayPlan");
+    expect(connectRoutineOf("himetrica")?.template).toBe("traffic");
+    expect(connectRoutineOf("posthog")?.template).toBe("traffic");
     expect(connectRoutineOf("notion")).toBeNull();
     expect(connectRoutineOf(null)).toBeNull();
   });

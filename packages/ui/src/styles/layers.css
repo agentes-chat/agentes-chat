@@ -18,4 +18,6 @@
   --z-dialog: 50;
   --z-floating: 50;
   --z-toast: 60;
+  /* An agent's pointer over the whole window (Lodi's cursor): over the page, under dialogs and toasts. */
+  --z-cursor: 49;
 }

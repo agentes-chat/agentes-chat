@@ -62,6 +62,8 @@ import { Route as OrgOrgIdDriveFileIdRouteImport } from './routes/org.$orgId.dri
 import { Route as OrgOrgIdIssuesIndexRouteImport } from './routes/org.$orgId.issues.index'
 import { Route as OrgOrgIdIssuesNumberRouteImport } from './routes/org.$orgId.issues.$number'
 import { Route as OrgOrgIdSettingsSectionRouteImport } from './routes/org.$orgId.settings_.$section'
+import { Route as OrgOrgIdSkillsIndexRouteImport } from './routes/org.$orgId.skills.index'
+import { Route as OrgOrgIdSkillsSkillIdRouteImport } from './routes/org.$orgId.skills.$skillId'
 import { Route as OrgOrgIdThreadsIndexRouteImport } from './routes/org.$orgId.threads.index'
 import { Route as OrgOrgIdThreadsThreadIdRouteImport } from './routes/org.$orgId.threads.$threadId'
 import { Route as OrgOrgIdWikiSlugRouteImport } from './routes/org.$orgId.wiki_.$slug'
@@ -342,6 +344,16 @@ const OrgOrgIdSettingsSectionRoute = OrgOrgIdSettingsSectionRouteImport.update({
   path: '/settings/$section',
   getParentRoute: () => OrgOrgIdRoute,
 } as any)
+const OrgOrgIdSkillsIndexRoute = OrgOrgIdSkillsIndexRouteImport.update({
+  id: '/skills/',
+  path: '/skills/',
+  getParentRoute: () => OrgOrgIdRoute,
+} as any)
+const OrgOrgIdSkillsSkillIdRoute = OrgOrgIdSkillsSkillIdRouteImport.update({
+  id: '/skills/$skillId',
+  path: '/skills/$skillId',
+  getParentRoute: () => OrgOrgIdRoute,
+} as any)
 const OrgOrgIdThreadsIndexRoute = OrgOrgIdThreadsIndexRouteImport.update({
   id: '/threads/',
   path: '/threads/',
@@ -467,11 +479,13 @@ export interface FileRoutesByFullPath {
   '/org/$orgId/drive/$fileId': typeof OrgOrgIdDriveFileIdRoute
   '/org/$orgId/issues/$number': typeof OrgOrgIdIssuesNumberRoute
   '/org/$orgId/settings/$section': typeof OrgOrgIdSettingsSectionRoute
+  '/org/$orgId/skills/$skillId': typeof OrgOrgIdSkillsSkillIdRoute
   '/org/$orgId/threads/$threadId': typeof OrgOrgIdThreadsThreadIdRoute
   '/org/$orgId/wiki/$slug': typeof OrgOrgIdWikiSlugRoute
   '/org/$orgId/code/': typeof OrgOrgIdCodeIndexRoute
   '/org/$orgId/dashboards/': typeof OrgOrgIdDashboardsIndexRoute
   '/org/$orgId/issues/': typeof OrgOrgIdIssuesIndexRoute
+  '/org/$orgId/skills/': typeof OrgOrgIdSkillsIndexRoute
   '/org/$orgId/threads/': typeof OrgOrgIdThreadsIndexRoute
   '/org/$orgId/agents/$agentId/memory': typeof OrgOrgIdAgentsAgentIdMemoryRoute
   '/org/$orgId/dm/agent/$agentId': typeof OrgOrgIdDmAgentAgentIdRoute
@@ -534,11 +548,13 @@ export interface FileRoutesByTo {
   '/org/$orgId/drive/$fileId': typeof OrgOrgIdDriveFileIdRoute
   '/org/$orgId/issues/$number': typeof OrgOrgIdIssuesNumberRoute
   '/org/$orgId/settings/$section': typeof OrgOrgIdSettingsSectionRoute
+  '/org/$orgId/skills/$skillId': typeof OrgOrgIdSkillsSkillIdRoute
   '/org/$orgId/threads/$threadId': typeof OrgOrgIdThreadsThreadIdRoute
   '/org/$orgId/wiki/$slug': typeof OrgOrgIdWikiSlugRoute
   '/org/$orgId/code': typeof OrgOrgIdCodeIndexRoute
   '/org/$orgId/dashboards': typeof OrgOrgIdDashboardsIndexRoute
   '/org/$orgId/issues': typeof OrgOrgIdIssuesIndexRoute
+  '/org/$orgId/skills': typeof OrgOrgIdSkillsIndexRoute
   '/org/$orgId/threads': typeof OrgOrgIdThreadsIndexRoute
   '/org/$orgId/agents/$agentId/memory': typeof OrgOrgIdAgentsAgentIdMemoryRoute
   '/org/$orgId/dm/agent/$agentId': typeof OrgOrgIdDmAgentAgentIdRoute
@@ -603,11 +619,13 @@ export interface FileRoutesById {
   '/org/$orgId/drive_/$fileId': typeof OrgOrgIdDriveFileIdRoute
   '/org/$orgId/issues/$number': typeof OrgOrgIdIssuesNumberRoute
   '/org/$orgId/settings_/$section': typeof OrgOrgIdSettingsSectionRoute
+  '/org/$orgId/skills/$skillId': typeof OrgOrgIdSkillsSkillIdRoute
   '/org/$orgId/threads/$threadId': typeof OrgOrgIdThreadsThreadIdRoute
   '/org/$orgId/wiki_/$slug': typeof OrgOrgIdWikiSlugRoute
   '/org/$orgId/code/': typeof OrgOrgIdCodeIndexRoute
   '/org/$orgId/dashboards/': typeof OrgOrgIdDashboardsIndexRoute
   '/org/$orgId/issues/': typeof OrgOrgIdIssuesIndexRoute
+  '/org/$orgId/skills/': typeof OrgOrgIdSkillsIndexRoute
   '/org/$orgId/threads/': typeof OrgOrgIdThreadsIndexRoute
   '/org/$orgId/agents/$agentId/memory': typeof OrgOrgIdAgentsAgentIdMemoryRoute
   '/org/$orgId/dm/agent/$agentId': typeof OrgOrgIdDmAgentAgentIdRoute
@@ -673,11 +691,13 @@ export interface FileRouteTypes {
     | '/org/$orgId/drive/$fileId'
     | '/org/$orgId/issues/$number'
     | '/org/$orgId/settings/$section'
+    | '/org/$orgId/skills/$skillId'
     | '/org/$orgId/threads/$threadId'
     | '/org/$orgId/wiki/$slug'
     | '/org/$orgId/code/'
     | '/org/$orgId/dashboards/'
     | '/org/$orgId/issues/'
+    | '/org/$orgId/skills/'
     | '/org/$orgId/threads/'
     | '/org/$orgId/agents/$agentId/memory'
     | '/org/$orgId/dm/agent/$agentId'
@@ -740,11 +760,13 @@ export interface FileRouteTypes {
     | '/org/$orgId/drive/$fileId'
     | '/org/$orgId/issues/$number'
     | '/org/$orgId/settings/$section'
+    | '/org/$orgId/skills/$skillId'
     | '/org/$orgId/threads/$threadId'
     | '/org/$orgId/wiki/$slug'
     | '/org/$orgId/code'
     | '/org/$orgId/dashboards'
     | '/org/$orgId/issues'
+    | '/org/$orgId/skills'
     | '/org/$orgId/threads'
     | '/org/$orgId/agents/$agentId/memory'
     | '/org/$orgId/dm/agent/$agentId'
@@ -808,11 +830,13 @@ export interface FileRouteTypes {
     | '/org/$orgId/drive_/$fileId'
     | '/org/$orgId/issues/$number'
     | '/org/$orgId/settings_/$section'
+    | '/org/$orgId/skills/$skillId'
     | '/org/$orgId/threads/$threadId'
     | '/org/$orgId/wiki_/$slug'
     | '/org/$orgId/code/'
     | '/org/$orgId/dashboards/'
     | '/org/$orgId/issues/'
+    | '/org/$orgId/skills/'
     | '/org/$orgId/threads/'
     | '/org/$orgId/agents/$agentId/memory'
     | '/org/$orgId/dm/agent/$agentId'
@@ -1228,6 +1252,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrgOrgIdSettingsSectionRouteImport
       parentRoute: typeof OrgOrgIdRoute
     }
+    '/org/$orgId/skills/': {
+      id: '/org/$orgId/skills/'
+      path: '/skills'
+      fullPath: '/org/$orgId/skills/'
+      preLoaderRoute: typeof OrgOrgIdSkillsIndexRouteImport
+      parentRoute: typeof OrgOrgIdRoute
+    }
+    '/org/$orgId/skills/$skillId': {
+      id: '/org/$orgId/skills/$skillId'
+      path: '/skills/$skillId'
+      fullPath: '/org/$orgId/skills/$skillId'
+      preLoaderRoute: typeof OrgOrgIdSkillsSkillIdRouteImport
+      parentRoute: typeof OrgOrgIdRoute
+    }
     '/org/$orgId/threads/': {
       id: '/org/$orgId/threads/'
       path: '/threads'
@@ -1347,11 +1385,13 @@ interface OrgOrgIdRouteChildren {
   OrgOrgIdDriveFileIdRoute: typeof OrgOrgIdDriveFileIdRoute
   OrgOrgIdIssuesNumberRoute: typeof OrgOrgIdIssuesNumberRoute
   OrgOrgIdSettingsSectionRoute: typeof OrgOrgIdSettingsSectionRoute
+  OrgOrgIdSkillsSkillIdRoute: typeof OrgOrgIdSkillsSkillIdRoute
   OrgOrgIdThreadsThreadIdRoute: typeof OrgOrgIdThreadsThreadIdRoute
   OrgOrgIdWikiSlugRoute: typeof OrgOrgIdWikiSlugRoute
   OrgOrgIdCodeIndexRoute: typeof OrgOrgIdCodeIndexRoute
   OrgOrgIdDashboardsIndexRoute: typeof OrgOrgIdDashboardsIndexRoute
   OrgOrgIdIssuesIndexRoute: typeof OrgOrgIdIssuesIndexRoute
+  OrgOrgIdSkillsIndexRoute: typeof OrgOrgIdSkillsIndexRoute
   OrgOrgIdThreadsIndexRoute: typeof OrgOrgIdThreadsIndexRoute
   OrgOrgIdAgentsAgentIdMemoryRoute: typeof OrgOrgIdAgentsAgentIdMemoryRoute
   OrgOrgIdDmAgentAgentIdRoute: typeof OrgOrgIdDmAgentAgentIdRoute
@@ -1390,11 +1430,13 @@ const OrgOrgIdRouteChildren: OrgOrgIdRouteChildren = {
   OrgOrgIdDriveFileIdRoute: OrgOrgIdDriveFileIdRoute,
   OrgOrgIdIssuesNumberRoute: OrgOrgIdIssuesNumberRoute,
   OrgOrgIdSettingsSectionRoute: OrgOrgIdSettingsSectionRoute,
+  OrgOrgIdSkillsSkillIdRoute: OrgOrgIdSkillsSkillIdRoute,
   OrgOrgIdThreadsThreadIdRoute: OrgOrgIdThreadsThreadIdRoute,
   OrgOrgIdWikiSlugRoute: OrgOrgIdWikiSlugRoute,
   OrgOrgIdCodeIndexRoute: OrgOrgIdCodeIndexRoute,
   OrgOrgIdDashboardsIndexRoute: OrgOrgIdDashboardsIndexRoute,
   OrgOrgIdIssuesIndexRoute: OrgOrgIdIssuesIndexRoute,
+  OrgOrgIdSkillsIndexRoute: OrgOrgIdSkillsIndexRoute,
   OrgOrgIdThreadsIndexRoute: OrgOrgIdThreadsIndexRoute,
   OrgOrgIdAgentsAgentIdMemoryRoute: OrgOrgIdAgentsAgentIdMemoryRoute,
   OrgOrgIdDmAgentAgentIdRoute: OrgOrgIdDmAgentAgentIdRoute,

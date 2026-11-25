@@ -527,6 +527,7 @@ export function buildEngine(o: EngineOptions) {
         ...skillDeps,
         judge: context.judge,
         computer: sandbox,
+        context,
       }),
       createCalendarToolSource({ db, pubsub: adapters.pubsub, publicUrl: config.PUBLIC_URL }),
       createScheduleToolSource({

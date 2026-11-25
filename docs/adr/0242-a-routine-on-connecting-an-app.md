@@ -22,8 +22,8 @@ the rest.
 
 1. **One routine per app, fixed.** `CONNECT_ROUTINES` maps the app to a template of New routine: a mailbox (Gmail,
    Outlook, IMAP) to "Emails that need a reply", Google Calendar to the day's plan, payment apps to failed payments,
-   CRMs to new leads, help desks to tickets waiting, task apps to overdue tasks, GitHub to PRs waiting for review, Sentry
-   to new errors. An app with none (a server by address, a rare app) shows nothing.
+   CRMs to new leads, help desks to tickets waiting, task apps to overdue tasks, analytics apps to the week's numbers
+   against the week before, GitHub to PRs waiting for review, Sentry to new errors. An app with none (a server by address, a rare app) shows nothing.
 2. **On the screen that already ends connecting, on by default.** No new step: the confirmation ("Stripe connected")
    shows the routine under what it said, as a line with its switch on, what it does with the agent's name in it, and
    who does it and when as the selects of Routines (the phone: a grouped row with its switch, then Who does it and

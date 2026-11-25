@@ -18,9 +18,10 @@ import { isBrainEffortSetting, normalizeBrainModel, setAgentBrain } from "./brai
 import { isComputerBrain } from "./brains/types";
 import { invalidateOrg } from "./cache";
 import { addChannelMember, removeChannelMember, setChannelAgentAutoReply } from "./channels";
+import { moveLearnedSections, splitLearned } from "./context/learned-sections";
 import { sha256 } from "./crypto";
 import { ForbiddenError, NotFoundError, ValidationError } from "./errors";
-import { publishAgentsChanged } from "./events";
+import { publishAgentsChanged, publishListChanged } from "./events";
 import { setAgentComputerTarget } from "./machines";
 import { can, getMembership, requirePermission } from "./organizations";
 import { reportsToRefusal, setReportsTo } from "./reporting";
@@ -101,6 +102,10 @@ const ORDER: SettingField[] = [
 ];
 
 const same = (a: unknown, b: unknown) => canonicalJson(a ?? null) === canonicalJson(b ?? null);
+
+/** Instructions as Undo compares them: without a "## Learned" section, which every write moves to memory. */
+const held = (field: ReceiptLine["field"], value: unknown) =>
+  field === "instructions" ? splitLearned(String(value ?? "")).instructions : value;
 
 /** What `from` and `to` hold for an AI account: the brain it thinks with and the account (null: the API). */
 interface AccountValue {
@@ -220,7 +225,11 @@ async function setValue(
         .update(agents)
         .set({ instructions: String(value), updatedAt: new Date() })
         .where(eq(agents.id, agentId));
-      return invalidateOrg(orgId);
+      invalidateOrg(orgId);
+      // Text put back with a "## Learned" section moves it to memory again, as a save does.
+      if ((await moveLearnedSections(db, orgId, { agentId, actorId })) > 0)
+        await publishListChanged(pubsub, orgId, "memory");
+      return;
     }
     case "role":
       return void (await updateAgent(db, actorId, orgId, agentId, { role: String(value) }, { pubsub }));
@@ -669,7 +678,8 @@ export async function revertSettings(
   const agent = await getAgent(deps.db, a.orgId, a.targetId);
   if (!agent) throw new NotFoundError("The agent is gone", "action.target_gone");
   for (const l of steps)
-    if (!same(await valueNow(deps.db, agent, l), direction === "undo" ? l.to : l.from)) throw changedSince();
+    if (!same(held(l.field, await valueNow(deps.db, agent, l)), held(l.field, direction === "undo" ? l.to : l.from)))
+      throw changedSince();
   for (const l of steps) await setValue(deps, userId, a.orgId, agent.id, l, direction === "undo" ? l.from : l.to);
   // Who it answers and its AI have no event of their own.
   await publishAgentsChanged(deps.pubsub, a.orgId);

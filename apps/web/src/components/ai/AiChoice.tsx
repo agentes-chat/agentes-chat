@@ -8,6 +8,7 @@ import {
   type AiChoiceTarget,
   accountShortName,
   aiChoiceOf,
+  keyChosen,
   reasonText,
 } from "@agenteschat/client/lib/ai-choice";
 import { type EffortLevel, effortOf } from "@agenteschat/client/lib/brain-advanced";
@@ -52,7 +53,7 @@ export function rowOfChoice(rows: readonly AiChoiceRow[], c: AiChoice | null | u
   return rows.find((r) => {
     if (r.type === "plan")
       return c.brain !== "model" && !!c.account && (r.account?.id === c.account || r.account?.sameAs === c.account);
-    if (r.type === "key") return c.brain === "model" && (c.key ? r.apiKey?.id === c.key : r.apiKey?.isDefault === true);
+    if (r.type === "key") return c.brain === "model" && !!r.apiKey && keyChosen(c, r.apiKey);
     if (r.type === "workspace") return c.brain === "model";
     return r.brain === c.brain;
   });
@@ -351,7 +352,7 @@ export function AiChoiceFields({
     commit({ ...shown, model: v, ...(effort !== undefined ? { effort } : {}) }, row);
   };
 
-  const levels = row ? state.efforts(row) : [];
+  const levels = row ? state.efforts(row, isAuto(model) ? null : (shown?.model ?? null)) : [];
   const autoModel = isAuto(model);
   const effort = row ? effortOf(row.brain, shown?.effort) : null;
   const effortOptions: SelectOption<string>[] = autoModel

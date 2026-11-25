@@ -95,6 +95,13 @@ until a positive outcome verifies it (ADR 0120 §5), as before. Use alone never 
 repeated by agents raises its recurrence, and verifying on that would let agents echo each other into the
 instructions.
 
+*Addendum 2026-11-25 (a skill an agent makes when asked):* `create_skill` after the run read outside content used to be
+refused outright, and the refusal held for the whole conversation (its last 30 messages), so a person asking "turn what
+you just did into a skill" after real work never got one. It now goes through this review as a new skill
+(`reviewAskedSkill`: origin `outside`, the person's own message, the skill's whole text): made when the review reads it
+as the person's request and nothing planted, refused with the review's line otherwise, and refused when no review can
+run (no model, or the call failed).
+
 ## Consequences
 
 - Improvements take effect within seconds of being proposed, with nobody asked; people correct after the fact with

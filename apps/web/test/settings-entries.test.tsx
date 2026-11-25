@@ -64,7 +64,7 @@ describe("the list", () => {
     if (state.me?.organizations[0]) state.me.organizations[0].role = "member";
     await go("settings/connectors", state);
     expect(rows()).toEqual(["Sua conta", "Pessoas", "IA e uso", "Conectores", "Dispositivos"]);
-    expect(tabs()).toEqual(["Conectores e MCPs", "Skills", "Cofre"]);
+    expect(tabs()).toEqual(["Conectores e MCPs", "Cofre"]);
   });
 
   test("the tile grid is gone from Geral", async () => {
@@ -88,7 +88,6 @@ describe("every old address opens its new home", () => {
     ["roles", "Cargos", undefined],
     ["usage", "IA e uso", undefined],
     ["connectors", "Conectores", "Conectores e MCPs"],
-    ["skills", "Conectores", "Skills"],
     ["vault", "Conectores", "Cofre"],
     ["access", "Conectores", "Agentes e acesso"],
     ["devices", "Dispositivos", undefined],

@@ -49,9 +49,10 @@ import { type AutonomySettings, autonomySettings, chosenAutonomy } from "./auton
 import { isComputerBrain } from "./brains/types";
 import { resolveBudgetPaused } from "./budget-paused-rows";
 import { caches } from "./cache";
+import { hasLearnedSection, moveLearnedSections } from "./context/learned-sections";
 import { modelInfoFor, usableCredentialRow } from "./credentials";
 import { ConflictError, ForbiddenError, isUniqueViolation, NotFoundError, ValidationError } from "./errors";
-import { publishAgentsChanged } from "./events";
+import { publishAgentsChanged, publishListChanged } from "./events";
 import type { CommandApproval } from "./missions";
 import { recordOperatorEvent } from "./operator-events";
 import { can, getMembership, type Membership, requireActiveMembership, requirePermission } from "./organizations";
@@ -503,8 +504,21 @@ export async function createAgent(
     throw error;
   }
   caches.agents.delete(`${orgId}:team`);
+  agent = await moveOwnLearned(db, actorId, agent, options.pubsub);
   await publishAgentsChanged(options.pubsub, orgId);
   return agent;
+}
+
+/**
+ * A "## Learned" section an agent was created, copied, imported or saved with becomes its memory at once (ADR 0017
+ * §6), as the person's lessons; the agent comes back without it.
+ */
+async function moveOwnLearned(db: Database, actorId: string, agent: Agent, pubsub?: PubSub): Promise<Agent> {
+  if (!hasLearnedSection(agent.instructions)) return agent;
+  if ((await moveLearnedSections(db, agent.orgId, { agentId: agent.id, actorId })) > 0)
+    await publishListChanged(pubsub, agent.orgId, "memory");
+  const [row] = await db.select().from(agents).where(eq(agents.id, agent.id));
+  return row ?? agent;
 }
 
 /** Whose plan the agent's computer brain thinks with: its account's owner, else whoever connected its computer. */
@@ -712,6 +726,7 @@ export async function updateAgent(
     throw error;
   }
   if (!agent) throw new NotFoundError("Agent not found");
+  if (input.instructions !== undefined) agent = await moveOwnLearned(db, actorId, agent, options.pubsub);
   caches.agents.delete(`${orgId}:${agentId}`);
   caches.agents.delete(`${orgId}:team`);
   if (before && (before.ownerUserId !== agent.ownerUserId || before.ownerRoleId !== agent.ownerRoleId)) {

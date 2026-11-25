@@ -180,8 +180,14 @@ describe("reduced motion", () => {
     const start = css.indexOf("Loading: skeletons");
     expect(start).toBeGreaterThan(-1);
     const section = css.slice(start);
-    // Strip the allowed blocks; no `animation:` may remain outside them.
-    const outside = section.replace(/@media \(prefers-reduced-motion: no-preference\) \{[\s\S]*?\n\}/g, "");
+    // Strip the allowed blocks; no `animation:` may remain outside them. Under reduced motion only a 120ms fade.
+    const calm = /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\n\}/g;
+    for (const [block] of section.matchAll(calm))
+      for (const a of block.matchAll(/\banimation:\s*([^;]+);/g))
+        expect(a[1]?.trim()).toBe("ac-fade-in 120ms ease-out");
+    const outside = section
+      .replace(/@media \(prefers-reduced-motion: no-preference\) \{[\s\S]*?\n\}/g, "")
+      .replace(calm, "");
     expect(outside).not.toMatch(/\banimation:/);
   });
 });

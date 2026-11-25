@@ -91,6 +91,7 @@ export function useSetKeyFallback(orgId: string) {
 
 /** What `useAiChoice` gives a picker. */
 export interface AiChoiceState {
+  target: AiChoiceTarget;
   /** The "Conta" select's options, grouped (`AiChoiceRow.group`) and in order; dimmed ones say why. */
   rows: AiChoiceRow[];
   /** What the target thinks with now; null: nothing yet (a new agent, several agents). */
@@ -99,8 +100,8 @@ export interface AiChoiceState {
   selected: AiChoiceRow | null;
   /** The "Modelo" select for a row, worded with the app's `t`. */
   models: (row: AiChoiceRow, t: TFunction) => ModelRow[];
-  /** The "Esforço" select for a row. */
-  efforts: (row: AiChoiceRow) => readonly EffortLevel[];
+  /** The "Esforço" select for a row on `model` (as the choice stores it). */
+  efforts: (row: AiChoiceRow, model: string | null | undefined) => readonly EffortLevel[];
   /** The choice a row makes (its model and effort kept while the brain stays). */
   choose: (row: AiChoiceRow) => AiChoice;
   /**
@@ -233,11 +234,12 @@ export function useAiChoice(orgId: string, target: AiChoiceTarget): AiChoiceStat
   });
 
   return {
+    target,
     rows,
     current,
     selected: rows.find((r) => r.selected) ?? null,
     models: (row, t) => aiChoiceModels(t, row, { current, options: optionsFor(row), models: catalog }),
-    efforts: aiChoiceEfforts,
+    efforts: (row, model) => aiChoiceEfforts(row, model, optionsFor(row)),
     choose: (row) => aiChoiceOf(row, current),
     save: (choice, options) => mutation.mutateAsync({ choice, ...(options?.preview ? { preview: true } : {}) }),
     saving: mutation.isPending,
@@ -263,6 +265,7 @@ export function currentOf(
       model: string | null;
       effort: AiChoice["effort"];
       computer: { machineId: string } | null;
+      keyId?: string | null;
     };
     newSetup?: {
       brain: AiChoice["brain"];
@@ -287,6 +290,7 @@ export function currentOf(
         machineId: b.computer?.machineId ?? null,
         model: b.model,
         effort: b.effort,
+        ...(b.brain === "model" && b.keyId ? { usesKey: b.keyId } : {}),
       };
     }
     case "newAgent": {

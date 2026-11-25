@@ -217,6 +217,7 @@ export const RESET_ERASES = [
   "search_documents",
   "secret_requests",
   "skill_files",
+  "skill_uses",
   "skills",
   "surface_deliveries",
   "surface_page_links",
