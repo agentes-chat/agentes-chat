@@ -329,6 +329,11 @@ export interface MachineLoad {
   diskFreeGb?: number;
   diskUse?: number;
   sharedGb?: number;
+  /**
+   * What the agents' temporary folders hold in memory now (GB), ADR 0243: system mode on Linux. Absent from an older
+   * runner: no protocol number, as `oomKills`.
+   */
+  agentTmpRamGb?: number;
 }
 
 /** How often a computer's load is sampled (protocol 22). */
@@ -5038,6 +5043,7 @@ export function parseMachineLoad(v: unknown): MachineLoad | null {
     ...(between(v.diskFreeGb, 0, 1e6) ? { diskFreeGb: v.diskFreeGb } : {}),
     ...(between(v.diskUse, 0, 1) ? { diskUse: v.diskUse } : {}),
     ...(between(v.sharedGb, 0, 1e6) ? { sharedGb: v.sharedGb } : {}),
+    ...(between(v.agentTmpRamGb, 0, 1e6) ? { agentTmpRamGb: v.agentTmpRamGb } : {}),
   };
 }
 

@@ -20,6 +20,7 @@ import {
   adbServerPort,
   agentGid,
   agentSubids,
+  agentTmpMemoryBytes,
   idleTmpLines,
   readAgentUsers,
   systemLauncher,
@@ -829,8 +830,9 @@ describe.if(ROOT)("the agents' isolation on this computer, as root", () => {
     const size = Number(must("findmnt", ["-bno", "SIZE", AGENT_TMP_POOL]));
     expect(Math.abs(size - ram * 0.2)).toBeLessThan(ram * 0.01);
     expect(must("stat", ["-c", "%U %a", AGENT_TMP_POOL])).toBe("root 700");
-    // Out of B's reach.
+    // Out of B's reach, and what it holds is in the computer's figure.
     expect(sh(B, false, "ls /tmp")).not.toContain("eight");
+    expect(agentTmpMemoryBytes()).toBeGreaterThanOrEqual(8 * 2 ** 20);
     sh(agent, false, "rm /tmp/eight");
     // Its next boot with its /tmp on disk where that filesystem can't be made: the pool, and the launch runs.
     must("umount", ["-l", path.join(AGENT_RAM_ROOT, String(agent.uid))]);

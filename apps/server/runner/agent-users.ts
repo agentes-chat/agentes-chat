@@ -7,6 +7,7 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
+  statfsSync,
   statSync,
   writeFileSync,
 } from "node:fs";
@@ -144,6 +145,44 @@ const hashedRamStep = (tmpOnDisk: boolean) =>
       : `flock "$r/.lock" sh -c 'mountpoint -q "$1" || ${TMPFS}' sh "$d"`,
     'exec "$@"',
   ].join("\n");
+
+/**
+ * What the agents' temporary folders hold in memory (bytes): the pool and each agent's own tmpfs (its /tmp too, for
+ * one mounted before the pool), each filesystem once. A folder that isn't a mount point is its parent's filesystem,
+ * never counted. 0 where there are none.
+ */
+export function agentTmpMemoryBytes(
+  root = AGENT_RAM_ROOT,
+  pool = AGENT_TMP_POOL,
+  fs: {
+    stat: (p: string) => { dev: number };
+    statfs: (p: string) => { blocks: number; bfree: number; bsize: number };
+  } = {
+    stat: statSync,
+    statfs: statfsSync,
+  },
+): number {
+  let names: string[] = [];
+  try {
+    names = readdirSync(root).filter((n) => /^\d+$/.test(n));
+  } catch {
+    // no agent launched since the boot
+  }
+  const seen = new Set<number>();
+  let total = 0;
+  for (const dir of [pool, ...names.map((n) => path.join(root, n))]) {
+    try {
+      const { dev } = fs.stat(dir);
+      if (dev === fs.stat(path.dirname(dir)).dev || seen.has(dev)) continue;
+      seen.add(dev);
+      const s = fs.statfs(dir);
+      total += (s.blocks - s.bfree) * s.bsize;
+    } catch {
+      // gone meanwhile
+    }
+  }
+  return total;
+}
 
 /**
  * systemd-tmpfiles' lines (`--clean`) for agents with nothing running (ADR 0243): what their work left in /tmp and

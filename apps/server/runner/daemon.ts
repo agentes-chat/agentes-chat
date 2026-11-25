@@ -77,6 +77,7 @@ import {
   type AgentUser,
   AgentUsers,
   agentGid,
+  agentTmpMemoryBytes,
   authEgressPrefix,
   denySchedulers,
   ensureGitCacheUser,
@@ -931,6 +932,9 @@ export class RunnerDaemon implements RequestObserver {
             this.load.add(l && oomKills !== undefined ? { ...l, oomKills } : l, undefined, {
               ...diskFigures(d),
               ...(this.sharedGb === undefined ? {} : { sharedGb: this.sharedGb }),
+              ...(this.stored?.mode === "system" && process.platform === "linux"
+                ? { agentTmpRamGb: Math.round((agentTmpMemoryBytes() / 2 ** 30) * 10) / 10 }
+                : {}),
             }),
           );
         })

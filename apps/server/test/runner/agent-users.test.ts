@@ -25,6 +25,7 @@ import {
   adbServerPort,
   agentGid,
   agentSubids,
+  agentTmpMemoryBytes,
   agentUserName,
   authEgressPrefix,
   containersCommand,
@@ -985,6 +986,38 @@ test("ensureContainers: an upgrade that changes only the step making the agent's
     if (before === undefined) delete process.env.AGENTES_RUNNER_HOME;
     else process.env.AGENTES_RUNNER_HOME = before;
   }
+});
+
+test("what the agents' temporary folders hold in memory: the pool and each agent's own tmpfs, each filesystem once", () => {
+  // dev 1 is /run; the pool (2) and agent 21001's tmpfs (3) are mounted, 21002's folder isn't (its parent's), and
+  // 21003's is a second mount of 21001's filesystem.
+  const devs: Record<string, number> = {
+    "/run": 1,
+    "/run/agentes-runner-tmp": 1,
+    "/run/agentes-runner-tmp-pool": 2,
+    "/run/agentes-runner-tmp/21001": 3,
+    "/run/agentes-runner-tmp/21002": 1,
+    "/run/agentes-runner-tmp/21003": 3,
+  };
+  const used: Record<number, number> = { 1: 900, 2: 300, 3: 50 };
+  const root = tempDir("ram-root-");
+  dirs.push(root);
+  for (const n of ["21001", "21002", "21003", "lock-file", ".lock"]) mkdirSync(path.join(root, n));
+  const fs = {
+    stat: (p: string) => {
+      const key = p.replace(root, "/run/agentes-runner-tmp");
+      const dev = devs[key];
+      if (dev === undefined) throw new Error(`no ${key}`);
+      return { dev };
+    },
+    statfs: (p: string) => {
+      const dev = fs.stat(p).dev;
+      return { blocks: 1000, bfree: 1000 - (used[dev] ?? 0), bsize: 4096 };
+    },
+  };
+  expect(agentTmpMemoryBytes(root, "/run/agentes-runner-tmp-pool", fs)).toBe((300 + 50) * 4096);
+  // Before any agent launched: nothing.
+  expect(agentTmpMemoryBytes(path.join(root, "none"), "/nowhere", fs)).toBe(0);
 });
 
 test("agents with nothing running: their /tmp and /dev/shm, what nobody touched for 6 hours, for systemd-tmpfiles", () => {

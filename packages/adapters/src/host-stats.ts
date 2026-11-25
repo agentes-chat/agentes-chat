@@ -139,7 +139,7 @@ export async function sampleLoad(): Promise<Omit<LoadSample, "at"> | null> {
   return { load: fiveMinutes / machineCpus(), memory: await memoryInUse() };
 }
 
-type DiskFigures = Pick<MachineLoad, "diskFreeGb" | "diskUse" | "sharedGb">;
+type DiskFigures = Pick<MachineLoad, "diskFreeGb" | "diskUse" | "sharedGb" | "agentTmpRamGb">;
 
 /** `diskSpace`'s bytes as `pong.load` carries them: free GB (one decimal) and the share in use. */
 export const diskFigures = (d: { sizeBytes: number; freeBytes: number } | null): DiskFigures =>
@@ -163,7 +163,7 @@ export class LoadWindow {
     return this.kept;
   }
 
-  /** `disk`: the disk's latest figures (ADR 0115), carried as they are, never averaged. */
+  /** `disk`: the latest figures (the disk's, ADR 0115; the agents' temp in memory, ADR 0243), never averaged. */
   add(sample: Omit<LoadSample, "at"> | null, at = Date.now(), disk: DiskFigures = {}) {
     if (!sample) return;
     this.kept = [...this.kept, { at, ...sample }].filter((s) => s.at > at - DAY_MS);
