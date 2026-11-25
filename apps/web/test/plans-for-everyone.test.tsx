@@ -73,9 +73,11 @@ describe("IA e uso › Contas de IA: who may use each account", () => {
     await settle(6);
     const plans = screen().getByRole("region", { name: "Contas" });
     const rows = [...plans.querySelectorAll(".plan-row")] as HTMLElement[];
-    // The viewer's own, with the automatic name and no email: unnamed. Someone else's keeps its name.
-    const mine = rows.find((r) => r.textContent?.includes("Conta sem nome")) as HTMLElement;
+    // The viewer's own, with the automatic name and no email: its maker ("Claude"). Someone else's keeps its name.
     const joao = rows.find((r) => r.textContent?.includes("Claude 2")) as HTMLElement;
+    const mine = rows.find((r) => r !== joao) as HTMLElement;
+    expect(mine.querySelector(".plan-row__title")?.textContent?.trim()).toBe("Claude");
+    expect(screen().queryByText("Conta sem nome")).toBeNull();
     expect(joao.querySelector(".aa-state")?.textContent).toBe("Só João usa");
     expect(mine.querySelector(".aa-state")).toBeNull();
     // João's, opened: its permissions in sight, none to change.
@@ -84,7 +86,7 @@ describe("IA e uso › Contas de IA: who may use each account", () => {
     expect(within(his).getByRole("combobox", { name: "Usar em agentes" }).hasAttribute("disabled")).toBe(true);
     await click(within(his).getByRole("button", { name: "Fechar" }));
     await click(mine.querySelector(".plan-row__head") as HTMLElement);
-    const own = screen().getByRole("dialog", { name: "Conta sem nome" });
+    const own = screen().getByRole("dialog", { name: "Claude" });
     const use = within(own).getByRole("combobox", { name: "Usar em agentes" });
     expect(use.textContent).toBe("Todos");
     expect(within(own).getByRole("button", { name: "Sobre Usar em agentes" })).toBeTruthy();
