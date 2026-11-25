@@ -111,10 +111,13 @@ export function CollapsibleSection({
   collapsed,
   onToggle,
   menu,
+  mark,
   children,
 }: {
   title: string;
   count?: number;
+  /** Before the title: a sector's mark (`RoleMark`), in Conversas' Setores. */
+  mark?: ReactNode;
   collapsed: boolean;
   onToggle: () => void;
   /**
@@ -151,6 +154,7 @@ export function CollapsibleSection({
         accessibilityState={{ expanded: !collapsed }}
         style={({ pressed }) => [styles.head, pressed && styles.pressed]}
       >
+        {mark}
         <Text variant="small" tone="ink" style={styles.title} accessibilityRole="header" numberOfLines={1}>
           {title}
         </Text>

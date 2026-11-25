@@ -1,26 +1,28 @@
 import type { LearnedSkill, Memory, Proposal } from "@agenteschat/client";
 import {
-  ApiError,
-  useDecideProposal,
+  useForgetRightHandLearned,
   useLearnedSkills,
   useMemory,
   useMemoryAction,
   useProposals,
+  useSetTeamWeekPrefs,
+  useSettings,
   useSkillAction,
+  useTeamWeekPrefs,
+  useUpdateSettings,
 } from "@agenteschat/client";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { FIELD_LIMITS } from "@agenteschat/client/lib/field-limits";
 import { formatShortDate } from "@agenteschat/client/lib/format";
-import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { can } from "@agenteschat/client/lib/permissions";
 import { memoryLine, pendingOnAgent, proposalTitle, proposalWhy } from "@agenteschat/client/lib/proposals";
-import { isRightHand } from "@agenteschat/client/lib/right-hand";
+import { isRightHand, memoryAudienceGroups } from "@agenteschat/client/lib/right-hand";
 import {
-  Alert,
   Button,
   Card,
   CardHeader,
-  Chip,
+  Dialog,
+  DialogFooter,
   Diff,
   diffLines,
   EmptyState,
@@ -33,6 +35,7 @@ import {
   overLimit,
   SearchField,
   Segmented,
+  Switch,
   Textarea,
   Toolbar,
 } from "@agenteschat/ui";
@@ -42,6 +45,7 @@ import { useTranslation } from "react-i18next";
 import { AskAgentButton } from "@/components/AskAgentButton";
 import { HelpLink } from "@/components/HelpLink";
 import { ErrorState, LoadingLine } from "@/components/Loading";
+import { PrefRow } from "@/components/NoticePrefs";
 import { useOrg } from "@/components/org-context";
 import { useTextLimit } from "@/hooks/useTextLimit";
 import { useLandOn } from "@/lib/land-on";
@@ -58,102 +62,31 @@ import {
 } from "@/pages/MemoryPage";
 import { CardHead, useAgentEdit } from "./context";
 
-/** A proposal to change this agent's instructions: why, the diff, and Aceitar / Editar antes / Recusar. */
+/**
+ * A change to this agent's instructions (or a skill) the agent's review is weighing (ADR 0219): why and the diff, and
+ * "Reviewing…" in its head. Nobody decides it: it is applied or left out in a moment, and then it leaves this list.
+ */
 function ProposalCard({ proposal }: { proposal: Proposal }) {
   const { t } = useTranslation();
   const { org } = useOrg();
-  const toast = useToast();
   const { agent } = useAgentEdit();
-  const decide = useDecideProposal(org.id);
-  const [editing, setEditing] = useState(false);
-  const [text, setText] = useState(proposal.after);
-  const [stale, setStale] = useState(false);
-  const g = agentGrammar(agent.name);
-  const onError = (error: unknown) => {
-    if (error instanceof ApiError && error.status === 409) setStale(true);
-    else toast.show(errorText(t, error), "error");
-  };
-  const accept = () =>
-    decide.mutate(
-      { id: proposal.id, decision: "accept", text: editing && text !== proposal.after ? text : undefined },
-      { onSuccess: () => toast.show(t("agentPage.memory.accepted")), onError },
-    );
-  const refuse = () =>
-    decide.mutate(
-      { id: proposal.id, decision: "refuse" },
-      { onSuccess: () => toast.show(t("agentPage.memory.refused", g)), onError },
-    );
-  const canDecide = proposal.canDecide && !proposal.stale;
   return (
     <Card as="article" className="agp-card agp-prop" aria-labelledby={`prop-${proposal.id}`}>
       <CardHeader
         id={`prop-${proposal.id}`}
         icon="document"
         title={proposalTitle(t, proposal, org, () => agent.name)}
-        action={
-          proposal.stale ? (
-            <Chip icon="close">{t("proposals.stale")}</Chip>
-          ) : (
-            <Chip icon="waiting" tone="waiting">
-              {proposal.canDecide
-                ? t("approval.waitingYou")
-                : proposal.decider.type === "user"
-                  ? t("proposals.waitingFor", { name: proposal.decider.name })
-                  : t("proposals.waitingAdmin")}
-            </Chip>
-          )
-        }
+        action={<State icon="waiting">{t("proposals.reviewing")}</State>}
       />
       <p className="agp-why">
         <b>{t("proposals.why")}:</b> {proposalWhy(t, proposal)}
       </p>
-      {editing ? (
-        <Locked when={decide.isPending || stale || proposal.stale}>
-          <Field label={t("proposals.finalText")} id={`prop-edit-${proposal.id}`}>
-            <Textarea rows={8} value={text} onChange={(e) => setText(e.target.value)} />
-          </Field>
-        </Locked>
-      ) : (
-        <Diff
-          aria-label={t("proposals.changeLabel")}
-          addedLabel={t("proposals.added")}
-          removedLabel={t("proposals.removed")}
-          lines={diffLines(proposal.before.split("\n"), proposal.after.split("\n"))}
-        />
-      )}
-      {(stale || proposal.stale) && <Alert>{t("proposals.staleNote")}</Alert>}
-      {canDecide && !stale ? (
-        <>
-          <div className="agp-row">
-            <Button
-              size="sm"
-              variant="primary"
-              icon="check"
-              disabled={decide.isPending || !text.trim()}
-              onClick={accept}
-            >
-              {editing ? t("proposals.acceptEdited") : t("proposals.accept")}
-            </Button>
-            {proposal.target.type !== "skill" && (
-              <Button size="sm" icon="edit" disabled={decide.isPending} onClick={() => setEditing((v) => !v)}>
-                {editing ? t("proposals.viewDiff") : t("proposals.editFirst")}
-              </Button>
-            )}
-            <Button size="sm" variant="ghost" disabled={decide.isPending} onClick={refuse}>
-              {t("proposals.refuse")}
-            </Button>
-          </div>
-          <span className="small muted">{t("proposals.refuseNote", g)}</span>
-        </>
-      ) : (
-        !proposal.canDecide && (
-          <span className="small muted">
-            {proposal.decider.type === "user"
-              ? t("agentPage.memory.decides", { who: proposal.decider.name })
-              : t("agentPage.memory.adminDecides")}
-          </span>
-        )
-      )}
+      <Diff
+        aria-label={t("proposals.changeLabel")}
+        addedLabel={t("proposals.added")}
+        removedLabel={t("proposals.removed")}
+        lines={diffLines(proposal.before.split("\n"), proposal.after.split("\n"))}
+      />
     </Card>
   );
 }
@@ -247,18 +180,6 @@ function LearnedRow({ m }: { m: Memory }) {
       <span className="agp-row">
         {draft === null ? (
           <>
-            {(m.lowTrust || !m.verified) && (
-              <Button
-                variant="link"
-                title={t("memory.confirmTitle")}
-                disabled={act.isPending}
-                onClick={() =>
-                  act.mutate({ type: "confirm", id: m.id }, { onSuccess: () => toast.show(t("memory.confirmed")) })
-                }
-              >
-                {t("memory.confirm")}
-              </Button>
-            )}
             {/* Tornar do time (ADR 0167): who reviews memory makes it every agent's, its copies archived. */}
             {can(org, "review_memory") && !m.howTo && !m.playbook && m.kind !== "lesson" && (
               <Button
@@ -427,6 +348,134 @@ function RulesCard({ rules }: { rules: Memory[] }) {
 }
 
 /**
+ * The right hand's learning, on top of its Memory tab: the person's own switch, Forget all (only their own), and for
+ * who configures the workspace, the workspace's switch. Nobody reads anyone else's memories, admins included.
+ */
+function RightHandLearningCard() {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const { agent } = useAgentEdit();
+  const toast = useToast();
+  const prefs = useTeamWeekPrefs(org.id).data;
+  const setPrefs = useSetTeamWeekPrefs(org.id);
+  const settings = useSettings(org.id).data;
+  const setSettings = useUpdateSettings(org.id);
+  const forget = useForgetRightHandLearned(org.id, agent.id);
+  const [asking, setAsking] = useState(false);
+  const failed = (e: unknown) => toast.show(errorText(t, e), "error");
+  const workspaceOn = settings?.rightHandLearns !== false;
+  return (
+    <Card as="section" className="agp-card" aria-labelledby="mem-learning">
+      <CardHead id="mem-learning" icon="bulb" title={t("agentPage.memory.learning.title")} />
+      <div className="settings-rows">
+        <PrefRow
+          id="mem-learn-mine"
+          icon="person"
+          label={t("agentPage.memory.learning.fromYou")}
+          hint={t("agentPage.memory.learning.fromYouHint")}
+          status={!workspaceOn ? t("agentPage.memory.learning.workspaceOff") : undefined}
+          control={
+            <Switch
+              aria-label={t("agentPage.memory.learning.fromYou")}
+              checked={workspaceOn && !prefs?.learnOff}
+              disabled={!prefs || !workspaceOn}
+              onCheckedChange={(on) => setPrefs.mutate({ learnOff: !on }, { onError: failed })}
+            />
+          }
+        />
+        <PrefRow
+          id="mem-learn-forget"
+          icon="trash"
+          label={t("agentPage.memory.learning.forgetAll")}
+          hint={t("agentPage.memory.learning.forgetAllHint")}
+          control={
+            <Button size="sm" variant="danger" onClick={() => setAsking(true)}>
+              {t("agentPage.memory.forget")}
+            </Button>
+          }
+        />
+        {can(org, "configure") && settings && (
+          <PrefRow
+            id="mem-learn-workspace"
+            icon="audienceEveryone"
+            label={t("agentPage.memory.learning.workspace")}
+            hint={t("agentPage.memory.learning.workspaceHint")}
+            value={t("rightHand.settings.groupWorkspace")}
+            control={
+              <Switch
+                aria-label={t("agentPage.memory.learning.workspace")}
+                checked={workspaceOn}
+                disabled={setSettings.isPending}
+                onCheckedChange={(on) => setSettings.mutate({ rightHandLearns: on }, { onError: failed })}
+              />
+            }
+          />
+        )}
+      </div>
+      <Dialog
+        open={asking}
+        onOpenChange={(o) => !o && setAsking(false)}
+        title={t("agentPage.memory.learning.forgetTitle")}
+        description={t("agentPage.memory.learning.forgetText")}
+        closeLabel={t("common.close")}
+        width={460}
+      >
+        <DialogFooter>
+          <Button disabled={forget.isPending} onClick={() => setAsking(false)}>
+            {t("common.cancel")}
+          </Button>
+          <Button
+            variant="danger"
+            loading={forget.isPending}
+            disabled={forget.isPending}
+            onClick={() =>
+              forget.mutate(undefined, {
+                onSuccess: () => {
+                  toast.show(t("agentPage.memory.learning.forgotten"));
+                  setAsking(false);
+                },
+                onError: failed,
+              })
+            }
+          >
+            {t("agentPage.memory.learning.forgetAll")}
+          </Button>
+        </DialogFooter>
+      </Dialog>
+    </Card>
+  );
+}
+
+/**
+ * The right hand's list in its groups ("Only you", "Everyone in #eng"); any other agent's as one list.
+ */
+function AudienceGroups({ list, row }: { list: Memory[]; row: (m: Memory) => ReactNode }) {
+  const { t } = useTranslation();
+  const { agent } = useAgentEdit();
+  if (!isRightHand(agent)) return <ul className="agp-list agp-mems">{list.map(row)}</ul>;
+  return (
+    <div className="ac-groups">
+      {memoryAudienceGroups(list).map((group) => {
+        const title =
+          group.key === "you"
+            ? t("agentPage.memory.learning.onlyYou")
+            : group.channel
+              ? t("agentPage.memory.learning.everyoneIn", { channel: group.channel })
+              : t("agentPage.memory.learning.everyone");
+        return (
+          <div key={group.key}>
+            <GroupHeading level={3} title={title} />
+            <ul className="agp-list agp-mems" aria-label={title}>
+              {group.items.map(row)}
+            </ul>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
  * What the agent learned on its own, newest first: what matters to people (preferences, facts, decisions), then how
  * it works (its playbook: how-tos, lessons and notes it keeps for itself, none of them in the chat) and the skills it
  * made.
@@ -452,13 +501,7 @@ function LearnedList({ list }: { list: Memory[] }) {
   const how = t("agentPage.memory.playbook", g);
   return (
     <div className="ac-groups">
-      {people.length > 0 && (
-        <ul className="agp-list agp-mems">
-          {people.map((m) => (
-            <LearnedRow key={m.id} m={m} />
-          ))}
-        </ul>
-      )}
+      {people.length > 0 && <AudienceGroups list={people} row={(m) => <LearnedRow key={m.id} m={m} />} />}
       {playbook.length > 0 && (
         <div>
           <GroupHeading
@@ -492,8 +535,8 @@ function LearnedList({ list }: { list: Memory[] }) {
 }
 
 /**
- * Memória: proposals waiting, then what the agent knows (facts and decisions, lessons, archived) with search. `item`:
- * the memory or skill a link opened it at.
+ * Memory: changes the agent's review is weighing, then what the agent knows (facts and decisions, lessons, archived)
+ * with search. `item`: the memory or skill a link opened it at.
  */
 export function MemoryTab({ item }: { item?: string }) {
   const { t, i18n } = useTranslation();
@@ -514,6 +557,8 @@ export function MemoryTab({ item }: { item?: string }) {
   const cols = useRef<HTMLDivElement>(null);
   useLandOn(cols, item, Boolean(linked) || linkedSkill);
   const pending = pendingOnAgent(proposals.data ?? [], agent.id);
+  // What the agents (or people) applied to it (ADR 0219), in Agent improvements.
+  const applied = (proposals.data ?? []).filter((p) => p.agentId === agent.id && p.status === "accepted" && !p.stale);
   const learned = list
     .filter(
       (m) =>
@@ -543,9 +588,9 @@ export function MemoryTab({ item }: { item?: string }) {
             sub: t(isRightHand(agent) ? "agentPage.memory.fromTeamRightHand" : "agentPage.memory.fromTeam"),
           },
           {
-            label: t("agentPage.memory.proposals"),
-            value: pending.length,
-            sub: pending.length ? t("agentPage.memory.waiting") : t("agentPage.memory.noneWaiting"),
+            label: t("agentPage.memory.improvements"),
+            value: applied.length,
+            sub: t("agentPage.memory.improvementsApplied"),
           },
         ].map((stat) => (
           <p key={stat.label} className="agp-memstat">
@@ -560,6 +605,7 @@ export function MemoryTab({ item }: { item?: string }) {
           {pending.map((p) => (
             <ProposalCard key={p.id} proposal={p} />
           ))}
+          {isRightHand(agent) && <RightHandLearningCard />}
           {rules.length > 0 && <RulesCard rules={rules} />}
           <Card as="section" className="agp-card" aria-labelledby="mem-known">
             <CardHead
@@ -619,8 +665,9 @@ export function MemoryTab({ item }: { item?: string }) {
             ) : shown.length === 0 ? (
               <NoMemories agent={agent} q={q} none={list.length === 0} onClear={() => setQ("")} />
             ) : (
-              <ul className="agp-list agp-mems">
-                {shown.map((m) => (
+              <AudienceGroups
+                list={shown}
+                row={(m) => (
                   <li key={m.id} className="agp-mem" data-item-id={m.id}>
                     <span>{memoryLine(t, m)}</span>
                     <span className="agp-mem__meta">
@@ -632,8 +679,8 @@ export function MemoryTab({ item }: { item?: string }) {
                       </span>
                     </span>
                   </li>
-                ))}
-              </ul>
+                )}
+              />
             )}
           </Card>
           <p className="page__note">

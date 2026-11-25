@@ -15,6 +15,7 @@ import { enqueue } from "./outbox";
 import { personCanPost } from "./routine-state";
 import { ACTIVE_RUN_STATUSES, takeInbox } from "./run-inbox";
 import { placeAfter } from "./run-scope";
+import { runState } from "./run-state";
 import { continuableEnd, replyThreadOf } from "./runs";
 import { announceWork, reopenWork, updatesThreadOf } from "./works";
 
@@ -183,7 +184,7 @@ export async function continueRun(
       await tx
         .update(agentRuns)
         .set({
-          transcript: sql`jsonb_set(${agentRuns.transcript}, '{catchUpTriage}', (${agentRuns.transcript}->'catchUpTriage')
+          transcript: sql`jsonb_set(${agentRuns.transcript}, '{catchUpTriage}', (${runState}->'catchUpTriage')
             || jsonb_build_object('overruledBy', ${userId}::text, 'overruledAt', ${new Date().toISOString()}::text))`,
         })
         .where(eq(agentRuns.id, stopped.id));

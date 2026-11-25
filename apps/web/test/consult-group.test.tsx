@@ -197,7 +197,7 @@ describe("the pair row before the reply that asked (ConsultPairRow)", () => {
     expect(asked().classList.contains("ac-msg--grouped")).toBe(false);
   });
 
-  test("its subject sits between the names and how it went, and stays in the dialog's header", async () => {
+  test("its subject sits between the names and how it went; the dialog's header leaves it to the first message", async () => {
     const c = consultation({ question: "Investigue as notificações duplicadas. Depois diga quem as recebe." });
     await open(withTalk(withAsk([c]), c));
     const r = row() as HTMLElement;
@@ -212,9 +212,15 @@ describe("the pair row before the reply that asked (ConsultPairRow)", () => {
     await act(async () => fireEvent.click(rowButton()));
     await settle(3);
     const side = panel() as HTMLElement;
-    expect(side.querySelector(".thread-head__subject")?.textContent).toBe(subject);
-    // Its own line, which wraps: the meta under it never does.
-    expect(side.querySelector(".thread-head__meta .thread-head__subject")).toBeNull();
+    // The question is the conversation's first message: the header doesn't say its first sentence again.
+    expect(side.querySelector(".thread-head__subject")).toBeNull();
+    expect(side.querySelector(".ac-dialog__sub, .thread-head__meta")?.textContent).not.toContain(subject);
+    // One "·" between the meta line's parts, and the place's own "·" drawn as one too (`MetaLine`), at the same gap.
+    const where = side.querySelector(".thread-head__meta > .thread-head__where");
+    expect(where?.querySelector(".thread-head__dot")?.textContent).toBe("·");
+    expect([...(where?.childNodes ?? [])].map((n) => n.textContent)).toEqual(["#eng", "·", "conversa entre agentes"]);
+    expect(where?.nextElementSibling?.getAttribute("aria-hidden")).toBe("true");
+    expect(where?.nextElementSibling?.nextElementSibling?.textContent).toMatch(/mensage/);
     // The participants and the kind stay, after it.
     expect(side.querySelector(".consult-title")?.textContent).toContain("Ada");
     expect(side.textContent).toContain("entre agentes");
@@ -340,7 +346,8 @@ describe("the pair row before the reply that asked (ConsultPairRow)", () => {
     await act(async () => fireEvent.click(rowButton()));
     await settle(3);
     const side = panel() as HTMLElement;
-    expect(side.textContent).toContain("Ada fez um pedido para Atlas em #eng");
+    // The request is the first message: no line over the conversation says it again.
+    expect(side.textContent).not.toContain("fez um pedido");
     expect(side.textContent).toContain("O Atlas passou uma parte adiante e espera o retorno");
   });
 

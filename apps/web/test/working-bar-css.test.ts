@@ -92,3 +92,47 @@ test("what ships draws who records a voice message: three still bars at every wi
     last('.ac-typing[data-active="true"] .ac-typing__text:has(>.ac-typing__group+.ac-typing__group)', "flex-wrap"),
   ).toBe("wrap");
 });
+
+test("what ships draws the working row's rings with transforms only, still with reduced motion, paused off screen", async () => {
+  const all = await builtCss();
+  const css = topLevel(all);
+  const last = (selector: string, property: string) =>
+    declarations(css, selector)
+      .filter(([p]) => p === property)
+      .at(-1)?.[1];
+  // Still everywhere: each dot at its own place on its ring, turned by a transform alone.
+  expect(last(".ac-orbit__spin", "animation")).toBeUndefined();
+  expect(last(".ac-orbit__spin", "transform")).toBe("rotate(var(--start))");
+  // The rings take no room: they reach into the row's gap, behind and in front of the face.
+  expect(last(".ac-orbit>.ac-orbit__front", "position")).toBe("absolute");
+  expect(last(".ac-orbit>.ac-orbit__back", "position")).toBe("absolute");
+  expect(last(".ac-orbit>.ac-orbit__back", "z-index")).toBe("var(--z-under)");
+  // Their box reaches past the row: the row clips it, or the conversation would scroll by it.
+  expect(last(".working-tail", "overflow")).toBe("clip");
+  // Turning only where motion is welcome, and paused off screen.
+  const moving = atRule(all, "@media (prefers-reduced-motion: no-preference)");
+  expect(declarations(moving, ".ac-orbit__spin").find(([p]) => p === "animation")?.[1]).toContain("ac-orbit-turn");
+  expect(
+    declarations(moving, ".ac-orbit[data-paused=true] :is(.ac-orbit__spin,.ac-orbit__unspin)").find(
+      ([p]) => p === "animation-play-state",
+    )?.[1],
+  ).toBe("paused");
+  // Its keyframes move only transforms (the compositor's), never layout or paint.
+  const frames = all.match(/@keyframes ac-orbit-turn\{[^}]*\{[^}]*\}[^}]*\{[^}]*\}\}/)?.[0] ?? "";
+  expect(frames).toContain("transform:");
+  expect(frames.replace(/transform:[^;}]*/g, "")).not.toMatch(/[a-z-]+:/);
+  // The row's line is a row's, not the bar's: no height cap, the message's size.
+  const line = ".working-tail>.working-tail__body>.working-tail__line.ac-typing[data-active]";
+  expect(last(line, "max-height")).toBe("none");
+  expect(last(line, "font-size")).toBe("var(--msg-text)");
+  // Its pieces wrap whole inside the line; its globe and "Ver" stay outside them, at its end.
+  expect(last(".working-tail__words", "flex-wrap")).toBe("wrap");
+  // Its words, and what it did so far, wrap: never cut.
+  expect(
+    last(
+      ".working-tail>.working-tail__body>.working-tail__line.ac-typing[data-active] .ac-typing__text",
+      "white-space",
+    ),
+  ).toBe("normal");
+  expect(last(".working-tail__trail>li", "overflow-wrap")).toBe("anywhere");
+});

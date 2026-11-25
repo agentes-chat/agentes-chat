@@ -658,8 +658,9 @@ function agentEnv(u: AgentUser, containers: boolean): Record<string, string> {
     LOGNAME: u.user,
     SHELL: AGENT_SHELL,
     // The shared `bin/` is never on it: every agent can write there, and a tool found by name would run as
-    // whichever agent called it, with that agent's files and sign-ins. Agents reach it by full path.
-    PATH: AGENT_PATH,
+    // whichever agent called it, with that agent's files and sign-ins. Agents reach it by full path. Its own
+    // ~/.local/bin is (only it writes there), last: what it installs for itself its subagents find by name too.
+    PATH: `${AGENT_PATH}:${home}/.local/bin`,
     [SHARED_BIN_ENV]: `${home}/${SHARED_LINK}/bin`,
     LANG: "C.UTF-8",
     ANDROID_ADB_SERVER_PORT: String(adbServerPort(u.uid)),

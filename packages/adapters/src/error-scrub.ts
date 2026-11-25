@@ -1,8 +1,17 @@
 import type { Breadcrumb, Event } from "@sentry/core";
 import { redactCommon } from "./redact";
 
-const EMAIL = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g;
-const JWT = /\beyJ[\w-]{6,}\.[\w-]{6,}\.[\w-]*/g;
+/**
+ * An email (the first group); where none starts, the rest of its run of `[\w.+-]`, passed whole: from anywhere in the
+ * run the part before `@` reads to the run's end, so a later start in it finds none either, and reading on from each
+ * would take the square of the run's length (one long word).
+ */
+const EMAIL = /([\w.+-]+@[\w-]+(?:\.[\w-]+)+)|[\w.+-]+/g;
+/**
+ * A JWT's first part runs to the end of its run of `[\w-]`, so one starts only at the first `eyJ` starting a word in
+ * that run: the lazy lookbehind skips a later one, which would read the run to its end again.
+ */
+const JWT = /\beyJ(?<!\beyJ[\w-]*?eyJ)[\w-]{6,}\.[\w-]{6,}\.[\w-]*/g;
 const IPV4 = /\b\d{1,3}(?:\.\d{1,3}){3}\b/g;
 /** What may be an IPv6 address (`isIPv6` decides), compressed (`2001:db8::1`) and with a zone (`fe80::1%en0`). */
 const IPV6 = /(?<![\w:.])((?:[0-9a-f]{0,4}:){2,7}[0-9a-f]{0,4})(%[\w.-]+)?(?![\w:])/gi;
@@ -29,7 +38,7 @@ function isIPv6(address: string) {
 export function scrubText(text: string): string {
   return redactCommon(text.replace(QUERY_PARAMS, "\nparams: [removed]"))
     .replace(JWT, "[jwt]")
-    .replace(EMAIL, "[email]")
+    .replace(EMAIL, (run, email?: string) => (email ? "[email]" : run))
     .replace(IPV4, "[ip]")
     .replace(IPV6, (match, address: string) => (isIPv6(address) ? "[ip]" : match))
     .replace(TOKEN, (match, before: string, token: string) => (UUID.test(token) ? match : `${before}[token]`));
@@ -72,11 +81,20 @@ export function urlOrigin(url: string): string | null {
   }
 }
 
-/** A bracketed IPv6 host (`http://[::1]:3000/…`) is part of the URL, so its path is cut too. */
-const URL_IN_TEXT = /\b[a-z][a-z0-9+.-]*:\/\/(?:[^\s"'<>()[\]{}@/]*@)?(?:\[[\w:.%-]*\])?[^\s"'<>()[\]{}]*/gi;
+/**
+ * A bracketed IPv6 host (`http://[::1]:3000/…`) is part of the URL, so its path is cut too. A scheme runs to the end of
+ * its run of `[a-z0-9+.-]`, so a URL starts only at the first letter starting a word in that run: the lazy lookbehind
+ * skips a later one, which would read the run to its end again.
+ */
+const URL_IN_TEXT =
+  /\b[a-z](?<!\b[a-z][a-z0-9+.-]*?[a-z])[a-z0-9+.-]*:\/\/(?:[^\s"'<>()[\]{}@/]*@)?(?:\[[\w:.%-]*\])?[^\s"'<>()[\]{}]*/gi;
 const URL_HEAD = /^[a-z][a-z0-9+.-]*:\/\/(?:[^/?#@]*@)?(?:\[[^\]]*\]|[^/?#:]*)(?::\d+)?/i;
-/** Hosts named only on a local network (`someones-laptop.local`): a person's or a computer's name. */
-const LOCAL_HOST = /\b[\w-]+(?:\.[\w-]+)*\.(?:local|lan|internal|home\.arpa)\b/gi;
+/**
+ * Hosts named only on a local network (`someones-laptop.local`), as the first group: a person's or a computer's name.
+ * Where none starts, the rest of the dotted name, passed whole: a later start in it has only endings this one had, so
+ * it finds none either, and reading on from each would take the square of the name's length.
+ */
+const LOCAL_HOST = /(\b[\w-]+(?:\.[\w-]+)*\.(?:local|lan|internal|home\.arpa)\b)|\b[\w-]+(?:\.[\w-]+)*/gi;
 /**
  * Home folders on macOS, Linux and Windows (both slashes), and Windows' variable for one. A Windows account name may
  * hold spaces (`C:\\Users\\Jane Doe\\…`): taken whole when a separator follows it.
@@ -118,7 +136,7 @@ export function scrubLogLine(line: string, known: ReadonlyArray<readonly [value:
           return url.length > origin.length && url.slice(origin.length) !== "/" ? `${origin}/…` : origin;
         }),
     )
-      .replace(LOCAL_HOST, "[host]")
+      .replace(LOCAL_HOST, (name, host?: string) => (host ? "[host]" : name))
       .replace(HOME_PATHS, "~"),
     values,
   );

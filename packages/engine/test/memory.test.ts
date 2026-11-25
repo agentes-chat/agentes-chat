@@ -51,7 +51,7 @@ import {
   updateAgent,
   ValidationError,
 } from "../src";
-import { addMember, setup as baseSetup, type Fixture } from "./fixtures";
+import { addMember, setup as baseSetup, type Fixture, queuedReviews } from "./fixtures";
 
 /** The fake judge hears these two lines (and only them) as trying to change permissions. */
 const BENDS_PERMISSIONS = ["sem aprovação", "without approval"];
@@ -126,6 +126,19 @@ describe("guardrails", () => {
     ]) {
       expect([text, file(text)]).toEqual([text, false]);
     }
+  });
+
+  test("a long run of JWT starts is read in time, and a JWT it runs into or follows is still found", () => {
+    // Each took seconds when every `eyJ` after a `-` in a long run read the run to its end.
+    const run = "eyJ-".repeat(50_000);
+    const jwt = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.c2lnbmF0dXJl";
+    const file = (text: string) => holdsSecret(new TextEncoder().encode(text));
+    const started = performance.now();
+    expect(looksLikeSecret(run)).toBe(false);
+    expect(file(run)).toBe(false);
+    expect(looksLikeSecret(`${run} ${jwt}`)).toBe(true);
+    expect(file(`${run}${jwt}`)).toBe(true);
+    expect(performance.now() - started).toBeLessThan(1000);
   });
 
   test("permission-bending text is the judge's call (any language); a failing judge never blocks memory", async () => {
@@ -1328,7 +1341,7 @@ describe("proposals for teammates (one card, a row per agent and kind of change)
     expect(await rows()).toHaveLength(1);
   });
 
-  test("the tool tells the agent who decides the rows the person who asked can't", async () => {
+  test("rows the person who asked can't make go to the review, and the tool says they are being applied", async () => {
     f = await setup();
     const bia = await addMember(f.db, f.org.id, "member", "bia");
     await teammate("ada");
@@ -1338,9 +1351,12 @@ describe("proposals for teammates (one card, a row per agent and kind of change)
       change: "Responder em português.",
       roles: [{ agent: "@ada", role: "Revisora" }],
     });
-    expect(out.content).toContain(
-      "they wait for someone who edits the agent or reviews memory (instructions), and someone who edits the agent (a role).",
-    );
+    expect(out.content).toContain("2 changes go through a quick review that applies each one that makes sense");
+    expect(out.content).toContain("Say it is being applied, not that it waits for anyone.");
+    const [review, ...more] = await queuedReviews(f);
+    expect(more).toEqual([]);
+    expect(review?.origin).toBe("asked_other");
+    expect([...(review?.ids ?? [])].sort()).toEqual((await rows()).map((r) => r.id).sort());
   });
 
   test("an agent named by the handle it had before a rename gets the change", async () => {

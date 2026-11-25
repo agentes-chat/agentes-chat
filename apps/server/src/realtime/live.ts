@@ -1,5 +1,6 @@
 import {
   channelTopic,
+  fullResync,
   listenResumedTopic,
   orgTopic,
   type PubSub,
@@ -194,8 +195,9 @@ export function createLiveSockets(deps: LiveSocketDeps) {
   let stopping = false;
   // Pub/sub was deaf for a while (ADR 0010): an event that changed someone's access may have been missed, so every
   // socket reads its access again now instead of at its next period. The documents catch up on their own (`LiveDocs`).
-  const resumed = deps.pubsub.subscribe(listenResumedTopic, () => {
-    for (const ws of sockets) soon(ws);
+  // Within a minute of that (`fullResync`), the period (`accessRecheckMs`) is soon enough.
+  const resumed = deps.pubsub.subscribe(listenResumedTopic, (event) => {
+    if (fullResync(event)) for (const ws of sockets) soon(ws);
   });
 
   /** Closes the socket (once): nothing more is read or sent; `close` cleans up. */

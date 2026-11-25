@@ -77,6 +77,7 @@ import {
 } from "@agenteschat/client/lib/routine-view";
 import {
   browserTimezone,
+  GROUP_BY_EXAMPLE,
   hookCurl,
   isRefusedHookCall,
   onceParts,
@@ -103,6 +104,7 @@ import {
   Icon,
   type IconName,
   InfoHint,
+  InlineName,
   Input,
   LimitLine,
   Locked,
@@ -1638,49 +1640,36 @@ function RoutineName({ routine: r, onSaved }: { routine: Routine; onSaved: () =>
   const { org } = useOrg();
   const toast = useToast();
   const action = useRoutineAction(org.id);
-  const [draft, setDraft] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
   const sent = useSent<string>(r.name);
   const name = sent.pending ?? r.name;
-  const ref = useFocusAtEnd<HTMLInputElement>(draft !== null);
   const shown = (isWidgetRoutine(r) && r.widget?.title) || routineTitle({ name, prompt: r.prompt });
   if (!r.canManage || isWidgetRoutine(r)) return <h1 className="issue-details__title">{shown}</h1>;
-  const save = () => {
-    if (draft === null) return;
-    const next = draft.trim();
-    setDraft(null);
-    if (!next || next === name) return;
-    sent.send(next);
-    action.mutate(
-      { type: "update", id: r.id, patch: { name: next } },
-      {
-        onSuccess: onSaved,
-        onError: (error) => {
-          sent.clear();
-          toast.show(errorText(t, error), "error");
-        },
-      },
-    );
-  };
-  if (draft !== null)
+  if (editing)
     return (
-      <input
-        ref={ref}
+      <InlineName
         className="issue-inplace__title"
-        value={draft}
+        value={name}
         maxLength={120}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={save}
-        onKeyDown={(e) => {
-          if (e.key !== "Enter" && e.key !== "Escape") return;
-          e.preventDefault();
-          e.currentTarget.blur();
-        }}
         aria-label={t("routines.panel.nameLabel")}
-        data-inplace=""
+        onSave={(next) => {
+          sent.send(next);
+          action.mutate(
+            { type: "update", id: r.id, patch: { name: next } },
+            {
+              onSuccess: onSaved,
+              onError: (error) => {
+                sent.clear();
+                toast.show(errorText(t, error), "error");
+              },
+            },
+          );
+        }}
+        onDone={() => setEditing(false)}
       />
     );
   return (
-    <EditInPlace label={t("routines.panel.editName")} onEdit={() => setDraft(name)}>
+    <EditInPlace label={t("routines.panel.editName")} onEdit={() => setEditing(true)}>
       <h1 className="issue-details__title">{shown}</h1>
     </EditInPlace>
   );
@@ -2255,6 +2244,7 @@ function WebhookPanel({ routine: r, runs }: { routine: Routine; runs: RoutineRun
         )}
       </div>
       <HookMethods routine={r} methods={data.methods} />
+      <HookGroupBy routine={r} groupBy={data.groupBy} />
       <div className="routine-hook__part">
         <span className="ac-field__label">{t("routines.webhook.example")}</span>
         <CommandBlock
@@ -2329,6 +2319,68 @@ function HookMethods({ routine: r, methods }: { routine: Routine; methods: Routi
           </CheckboxPill>
         ))}
       </div>
+    </div>
+  );
+}
+
+/**
+ * "Group calls by": a path into each call's data. Calls with the same value there run in order, others side by side.
+ * Saved with its button (or Enter); emptied, every call waits in one line.
+ */
+function HookGroupBy({ routine: r, groupBy }: { routine: Routine; groupBy: string | null }) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const toast = useToast();
+  const save = useRoutineAction(org.id);
+  const [path, setPath] = useState(groupBy ?? "");
+  const changed = path.trim() !== (groupBy ?? "");
+  const submit = () => {
+    if (!changed || save.isPending) return;
+    save.mutate(
+      { type: "update", id: r.id, patch: { trigger: { type: "webhook", groupBy: path.trim() || null } } },
+      {
+        onSuccess: () => toast.show(t("routines.webhook.groupBySaved")),
+        onError: (error) => toast.show(errorText(t, error), "error"),
+      },
+    );
+  };
+  return (
+    <div className="routine-hook__part">
+      <span className="ac-hintline">
+        <label className="ac-field__label" htmlFor={`hook-group-${r.id}`}>
+          {t("routines.webhook.groupBy")}
+        </label>
+        <InfoHint name={t("common.about", { label: t("routines.webhook.groupBy") })}>
+          {t("routines.webhook.groupByHelp")}
+        </InfoHint>
+      </span>
+      <form
+        className="routine-hook__group"
+        onSubmit={(e) => {
+          e.preventDefault();
+          submit();
+        }}
+      >
+        <Input
+          id={`hook-group-${r.id}`}
+          value={path}
+          placeholder={GROUP_BY_EXAMPLE}
+          maxLength={200}
+          spellCheck={false}
+          autoCapitalize="off"
+          autoComplete="off"
+          disabled={save.isPending}
+          onChange={(e) => setPath(e.target.value)}
+        />
+        {changed && (
+          <Button type="submit" loading={save.isPending}>
+            {t("common.save")}
+          </Button>
+        )}
+      </form>
+      <p className="small muted">
+        {groupBy ? t("routines.webhook.groupByOn", { path: groupBy }) : t("routines.webhook.groupByOff")}
+      </p>
     </div>
   );
 }

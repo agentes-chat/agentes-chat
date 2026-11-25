@@ -30,7 +30,7 @@ import { platformOf } from "../control/platform";
 import { SITE_URL } from "../control/version";
 import { desktopStrings, systemLocale } from "../i18n";
 import { mountReportPanel } from "../report/panel";
-import { type CoverParts, coverReport, knownServers } from "../report/report";
+import { type CoverParts, coverReport, knownServers, type ReportFacts } from "../report/report";
 import { elapsedClock, fillIn } from "../ui/time";
 import { stuckAction } from "./stuck";
 
@@ -226,13 +226,19 @@ function sendReport() {
     unmount();
     host.remove();
   };
-  void Promise.all([invoke<CoverParts>("problem_report_parts"), localStatus(), currentServer()]).then(
-    ([parts, status, server]) => {
+  void Promise.all([
+    invoke<CoverParts>("problem_report_parts"),
+    // An app whose Rust is older than its page answers nothing: the report goes without this computer.
+    invoke<ReportFacts>("problem_report_facts").catch(() => null),
+    localStatus(),
+    currentServer(),
+  ]).then(
+    ([parts, about, status, server]) => {
       const known = knownServers([server, status?.url, status?.publicUrl]);
       unmount = mountReportPanel(host, {
         words: strings.report,
         lead: strings.report.coverLead,
-        report: coverReport(parts, known, systemLocale()),
+        report: coverReport(parts, about, known, systemLocale()),
         onClose: close,
       });
     },

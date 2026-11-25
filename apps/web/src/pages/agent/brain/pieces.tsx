@@ -4,6 +4,7 @@ import { autoContextLine, type ContextLimit, contextSize } from "@agenteschat/cl
 import { planMeterText } from "@agenteschat/client/lib/plan-usage";
 import { AUTO } from "@agenteschat/client/lib/providers";
 import {
+  cx,
   Icon,
   InfoHint,
   planLevel,
@@ -79,11 +80,14 @@ export function PlanWindows({ usage, provider }: { usage: PlanUsage; provider?: 
 }
 
 /**
- * A setting on one line: its name, its value, and the way in (a chevron to its screen, or down for what opens under
- * it). Without `onOpen` it only says the value.
+ * A setting on one line, as a settings list draws it: its name at the start, its value at the end before the way in (a
+ * chevron to its screen, or down for what opens under it). Without `onOpen` it only says the value; without a value it
+ * is a way on (another AI, back to the workspace's), in the same row and on the same edges.
  */
 export function BrainLine({
   label,
+  mark,
+  inner = false,
   value,
   lead,
   onOpen,
@@ -91,9 +95,15 @@ export function BrainLine({
   opensDialog = false,
   open = false,
   controls,
+  disabled = false,
 }: {
   label: string;
-  value: ReactNode;
+  /** Before the name: what the line stands for (an AI's mark in "Add account"). */
+  mark?: ReactNode;
+  /** Under a line that folds open: its name starts past that line's mark. */
+  inner?: boolean;
+  /** Said at the line's end, before its chevron; none for a line that only leads somewhere. */
+  value?: ReactNode;
   lead?: ReactNode;
   onOpen?: () => void;
   /** It opens under itself (`Fold`), not a screen of its own. */
@@ -103,10 +113,21 @@ export function BrainLine({
   open?: boolean;
   /** The fold it opens. */
   controls?: string;
+  /** Out of reach while something it changes is being saved. */
+  disabled?: boolean;
 }) {
   const body = (
     <>
-      <span className="bd-line__k">{label}</span>
+      {mark ? (
+        <span className="bd-line__k bd-line__k--mark">
+          <span className="bd-line__mark" aria-hidden="true">
+            {mark}
+          </span>
+          <span>{label}</span>
+        </span>
+      ) : (
+        <span className="bd-line__k">{label}</span>
+      )}
       <span className="bd-line__v">
         {lead}
         <span className="bd-line__text">{value}</span>
@@ -117,7 +138,8 @@ export function BrainLine({
   return (
     <button
       type="button"
-      className="bd-line"
+      className={cx("bd-line", inner && "bd-line--inner")}
+      disabled={disabled}
       onClick={onOpen}
       {...(folds
         ? { "aria-expanded": open, "aria-controls": controls }

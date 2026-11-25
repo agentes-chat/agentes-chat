@@ -396,9 +396,20 @@ test("a provider refused this server's own OAuth app: what's wrong and who fixes
  * hit goes in `KNOWN` instead.
  */
 const PLAIN_LINE = new Set([
+  // A code session (ADR 0215): the apps start one only with words in the field and rename one only to a name, build
+  // its git and file requests themselves, never offer removing who must stay, and retry only a failed worktree.
+  "code_session.empty",
+  "code_session.empty_title",
+  "code_session.commit_sha",
+  "code_session.file_path",
+  "code_session.member_stays",
+  "code_session.not_failed",
   // A file's conversation (ADR 0199): the apps start one only on a live file, never offer a task's or a file's
   // conversation to join, leave or rename, and build a message's `liveRef` from the selection themselves.
   "artifact.no_conversation",
+  // An audio file's wave: kept by the apps on their own after measuring it, silently, and only for an audio file.
+  "artifact.not_audio",
+  "artifact.wave_invalid",
   "channel.file_conversation",
   "channel.task_conversation",
   "message.live_ref",
@@ -408,6 +419,9 @@ const PLAIN_LINE = new Set([
   "message.not_comment",
   // Only an agent writes an SVG picture (ADR 0196 §8): the refusal goes back to its tool call, never to a person.
   "live.svg_invalid",
+  // Only an agent writes the markup `add_html` lays out (ADR 0220 §4): the refusal goes back to its tool call.
+  "live.html_invalid",
+  "live.html_too_large",
   // Only the outside chat surface's service meets these, on its own bridge routes (ADR 0187).
   "surface.busy",
   "surface.claim_limit",
@@ -447,6 +461,10 @@ const PLAIN_LINE = new Set([
   "account.invalid_serves",
   // An order's place comes from a drag or Move up and Move down, never typed: a bad one is a client fault.
   "account.invalid_order",
+  // A permission comes from its select (Só você … Todos, the roles and people offered): another value is a client fault.
+  "account.invalid_permission",
+  // The API-key switch sends on or off only.
+  "ai.invalid_key_fallback",
   // A workspace change's card offers Apply, Dismiss and Send on only to whom may (`mayApplyCard`).
   "action_card.not_allowed",
   "action_card.not_requester",

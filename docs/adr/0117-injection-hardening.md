@@ -65,7 +65,10 @@ Four ways out stayed open after ADR 0109:
    - `outbound.private_text`: 24 characters in a row of the decoded query or fragment (whitespace collapsed, case
      folded) found in any tool result of this run except `web_search` and `web_fetch`. The gateway hands the check
      each tool's whole output (`recordRead`, per process); run steps keep only the first 4000 characters, which is
-     all a run resumed on another replica checks.
+     all a run resumed on another replica checks. The run keeps fingerprints of what it read, not the text
+     (`TextPrints`: winnowed 20-character grams in Bloom filters, at most `RUN_BYTES` a run, `CACHED_BYTES` across
+     runs): every 24 characters in a row are still caught, a shared 20 or a filter's false match at times too, and a
+     run that read past its bound refuses more, never less.
    - Each refusal says how to finish the job (search, or open the link as it appeared) and comes back as a tool
      error with `data.code`. The run's reads are cached per run and read again only past the last step seen.
    - Where: `web_fetch` before its GET; the browser's `open` steps (`browser_open`, `browser_do`) and

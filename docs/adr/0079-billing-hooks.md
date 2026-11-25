@@ -38,7 +38,7 @@ ADR 0056 already gives every hook but one: a hold stops a workspace's agents and
 
 ### 4. Four limits, null meaning none
 
-`PUT /api/operator/v1/orgs/{orgId}/limits` sets `{ members, membersMax, payerUserId, storageBytes, uploadBytesPerDay, platformUsdPerMonth }`, each a number or null (no limit; `membersMax` and `payerUserId` may be left out, as null); `GET /orgs/{orgId}` answers them with `updatedAt`, and the meters. A change (never the same limits set again) sends the workspace's apps `org.limits`, with no payload, and they read their limits again, so a new plan shows within seconds. A self-hosted server never sets any, so nothing is enforced there.
+`PUT /api/operator/v1/orgs/{orgId}/limits` sets `{ members, membersMax, payerUserId, storageBytes, uploadBytesPerDay, platformUsdPerMonth, connectorUsdPerMonth }`, each a number or null (no limit; `membersMax`, `payerUserId` and `connectorUsdPerMonth` may be left out, as null); `GET /orgs/{orgId}` answers them with `updatedAt`, and the meters. A change (never the same limits set again) sends the workspace's apps `org.limits`, with no payload, and they read their limits again, so a new plan shows within seconds. A self-hosted server never sets any, so nothing is enforced there.
 
 | Limit | Counts | Enforced |
 | --- | --- | --- |
@@ -48,6 +48,7 @@ ADR 0056 already gives every hook but one: a hold stops a workspace's agents and
 | `storageBytes` | the bytes of the files a workspace keeps on this server's storage, files in the trash left out | before any file is written (chat and Drive uploads, a computer's uploads, mail attachments, every version, skill files), as `used + incoming > limit` (`storage.full`, 409); skipped for a workspace on its own bucket. Also before a file comes back from the trash and before files are copied back from the workspace's own bucket, which would otherwise bring back more than the limit |
 | `uploadBytesPerDay` | the bytes written to that storage in the last 24 hours, rolling | where files are written (`storage.daily_full`, 409); never for files that come back, which keep the day they were first written |
 | `platformUsdPerMonth` | usage billed to the platform this UTC calendar month | §5 |
+| `connectorUsdPerMonth` | what vendors that bill this server per call (X, ADR 0170) charged for the workspace's connector calls this UTC calendar month, estimated from their price lists when each call answers (`connector_usage_days.cost_nano_usd`, from the tool's `costNanoUsd`); a failed call adds nothing. The operator reads it as `meters.connectorUsdThisMonth`, the app as `connectors` on its limits, and Plan and billing shows it as a share alone ("X this month: 30% used") once the month has any | before each priced call, as `spent + the most the call may cost > limit` (`connector.capped`: "X budget for this month used: …", nothing done, until the 1st UTC), with no lock: calls at the same moment may pass it by their own prices |
 
 Bytes count in GiB (1024³), the unit the apps print. The storage check takes no lock: uploads at the same moment may pass the line by at most their own sizes, where a lock would serialize every upload of a workspace. The refusals tell agents in plain English what happened and what a person can do.
 

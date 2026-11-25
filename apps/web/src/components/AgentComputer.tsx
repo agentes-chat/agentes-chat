@@ -53,7 +53,8 @@ function MachineTargetView({ target }: { target: Extract<ComputerTarget, { kind:
   // In agentes for Mac, offline on this very Mac: reconnect from here (ADR 0036).
   const here = useIsThisMac(org.id, target.machineId);
   // The workspace's own computer: nobody connected it, nobody turns it on or off.
-  const managed = useMachines(org.id).data?.find((m) => m.id === target.machineId)?.kind === "managed";
+  const row = useMachines(org.id).data?.find((m) => m.id === target.machineId);
+  const managed = row?.kind === "managed";
   return (
     <span className="stack-4" style={{ gap: 4 }}>
       <span className="row" style={{ gap: 8, alignItems: "center" }}>
@@ -63,7 +64,7 @@ function MachineTargetView({ target }: { target: Extract<ComputerTarget, { kind:
             {managed ? t("computerSetup.managedHint") : t("computer.machineHint")}
           </InfoHint>
         </span>
-        <MachineChip online={target.online} />
+        <MachineChip online={target.online} moving={row?.moving} />
       </span>
       {!managed && !target.online && (
         <span className="small muted">{here ? t("machines.thisMac.offline") : t("computer.machineOffline")}</span>

@@ -31,16 +31,12 @@ import {
   aboutWords,
   askText,
   commentSelection,
-  containRect,
   DRAFT_PIN,
   draftPin,
   fileAgentId,
-  fileTalkHref,
   fileUnder,
-  frameTap,
   lastWords,
   mediaPins,
-  momentPins,
   oneLine,
   pagePins,
   picturePins,
@@ -48,12 +44,9 @@ import {
   pinUnder,
   pointMark,
   sheetParts,
-  TALK_SHEET_DETENTS,
-  TALK_SHEET_DIMMED,
   talkKindOf,
   talkLine,
   talkPins,
-  talkSheetReserve,
   withSending,
 } from "../../src/features/live-files/talk/logic";
 
@@ -190,6 +183,11 @@ describe("comment pins and the way back to the file", () => {
     expect(fileUnder(undefined, "f1")).toBe(false);
     // A PDF's screen under its conversation (ADR 0208) is gone back to as well.
     expect(fileUnder([{ name: "file/[id]", params: { id: "p1" } }, { name: "chat/[channelId]" }], "p1")).toBe(true);
+    // The picture viewer, when the page it is on is that file.
+    const viewer = (at: string) => [{ name: "images", params: { files: "i1@2,i2", at } }, { name: "chat/[channelId]" }];
+    expect(fileUnder(viewer("1"), "i2")).toBe(true);
+    expect(fileUnder(viewer("0"), "i2")).toBe(false);
+    expect(fileUnder(viewer("0"), "i1")).toBe(true);
   });
 });
 
@@ -312,7 +310,7 @@ describe("a picture's, a video's and a PDF's conversation (ADR 0208)", () => {
     expect(draftPin(null, "f1", me)).toBeNull();
   });
 
-  test("a PDF's page shows its own pins; a video's frame those made near the moment it is at", () => {
+  test("a PDF's page shows its own pins", () => {
     const at = (messageId: string, selection: LiveRef["selection"]) => ({
       id: messageId,
       author: { type: "user", id: "u1" },
@@ -332,22 +330,9 @@ describe("a picture's, a video's and a PDF's conversation (ADR 0208)", () => {
     );
     expect(pagePins(pins, 1).map((p) => p.messageId)).toEqual(["p1"]);
     expect(pagePins(pins, 2).map((p) => p.messageId)).toEqual(["p2"]);
-    expect(momentPins(pins, 7).map((p) => p.messageId)).toEqual(["v2"]);
-    expect(momentPins(pins, 4.9).map((p) => p.messageId)).toEqual(["v1"]);
-    expect(momentPins(pins, 20)).toEqual([]);
   });
 
-  test("a tap on a video's frame lands on the picture it shows, not on the black around it", () => {
-    // A 16:9 video in a frame taller than it: bands above and under.
-    const frame = { width: 400, height: 400 };
-    const video = { width: 1600, height: 900 };
-    expect(containRect(frame, video)).toEqual({ left: 0, top: 87.5, width: 400, height: 225 });
-    expect(frameTap({ x: 200, y: 200 }, frame, video)).toEqual({ x: 0.5, y: 0.5, width: 400, height: 225 });
-    expect(pointMark(frameTap({ x: 200, y: 40 }, frame, video))).toBeNull();
-    // Its size not known yet: the frame is the picture.
-    expect(frameTap({ x: 100, y: 300 }, frame, null)).toEqual({ x: 0.25, y: 0.75, width: 400, height: 400 });
-  });
-  test("a tap finds the pin under it at any zoom, the newest on top; with the sheet up, a point on the picture", () => {
+  test("a tap finds the pin under it at any zoom, the newest on top; a held touch, a point on the picture", () => {
     const pin = (messageId: string, mark: { x: number; y: number; w?: number; h?: number }) => ({
       messageId,
       author: { type: "person", id: "p1" },
@@ -394,34 +379,43 @@ describe("a picture's, a video's and a PDF's conversation (ADR 0208)", () => {
     expect(tapOnPlaced({ x: 200, y: 400 }, picture, screen, { scale: 2, x: -120, y: 0 }).x).toBeCloseTo(0.7);
   });
 
-  test("the viewer and the PDF's screen carry the conversation in its sheet; a link to one of its messages opens it", () => {
+  test("a pin's corners follow its face, the corner on its spot cut sharp", () => {
+    const pins = src("features/live-files/talk/PicturePins.tsx");
+    expect(pins).toContain("borderRadius: 8,");
+    expect(pins).toContain("borderBottomLeftRadius: 3,");
+    expect(pins).not.toContain("MEDIA_PIN_H / 2");
+    // The canvas's pins, the same shape.
+    const plane = src("features/live-files/canvas/CanvasPlane.tsx");
+    expect(plane).toContain("borderRadius: 8,");
+    expect(plane).not.toContain("PIN_H / 2");
+  });
+
+  test("the viewer and the PDF's screen push the conversation; a held touch marks a point; a link opens it", () => {
     const viewer = src("features/files/ImageViewer.tsx");
-    // One way in, the line; no Comment at the top.
-    expect(viewer).toContain("{talkFile ? <FileTalkLine file={talkFile} bare /> : null}");
+    // One way in, the line; no Comment at the top. A played video's line opens it about that moment.
+    expect(viewer).toContain("{talkFile ? <FileTalkLine file={talkFile} bare onOpen={openLine} /> : null}");
     expect(viewer).not.toContain('icon="comment"');
-    expect(viewer).not.toContain("commenting");
-    // With the sheet up: the picture stays the whole screen's under it (never laid out again as the sheet moves), the
-    // line and the actions aside, a tap marks, the draft's pin on it.
-    expect(viewer).toMatch(/<ZoomPicture\s+source=\{link\.data\}\s+cacheKey=\{key\}\s+screen=\{screen\}/);
-    expect(viewer).not.toContain("screen={stage}");
-    expect(viewer).not.toContain("paddingTop: bars.top");
-    expect(viewer).toContain("visible={chrome && !shownSheet}");
+    expect(viewer).toContain("if (talkFile && time > PLAYED_S) openTalk({ selection: commentSelection(pins, { time }");
+    // A touch held on the picture marks the point and opens the conversation about it; the draft's pin stays on it.
+    expect(viewer).toContain("onLongPress={active ? held : undefined}");
+    expect(viewer).toContain("openTalk({ selection: commentSelection(pins, where, talkFile.shownVersion) });");
     expect(viewer).toContain("<PicturePins pins={shownPins} zoom={zoom} draft={draft} />");
-    expect(viewer).toContain('t(media === "video" ? "mobile.files.talk.hint.video" : "mobile.files.talk.hint.image")');
-    // A video pauses with the sheet up and a tap on its frame marks that moment and that point.
-    expect(viewer).toContain("active={active && !marking && !held}");
-    expect(viewer).toContain("if (mark) onMark({ mark, time: now.time });");
-    // Closing with the sheet up: the sheet goes first, then the viewer.
-    expect(viewer).toContain("void afterTalkSheet().then(() => goBack());");
+    expect(viewer).toContain('const about = useTalkAbout(talkFile?.conversation?.channelId ?? "");');
+    expect(viewer).toMatch(/<ZoomPicture\s+source=\{link\.data\}\s+cacheKey=\{key\}\s+screen=\{screen\}/);
+    // The held touch races the pull and the taps: a finger that moves first is the pull.
+    const zoom = src("features/files/ZoomPicture.tsx");
+    expect(zoom).toContain("const gesture = useCompetingGestures(hold, taps);");
+    expect(zoom).toContain("const gesture = useCompetingGestures(hold, rest);");
     const document = src("features/files/DocumentViewer.tsx");
     expect(document).toContain("useTalkFocus(pdfTalk, focusId);");
-    expect(document).toContain("{pdfTalk ? <FileTalkLine file={pdfTalk} keepPlace /> : null}");
+    expect(document).toContain("{pdfTalk ? <FileTalkLine file={pdfTalk} /> : null}");
     expect(document).toContain("router.replace({ ...route, params: { ...route.params, m: focusId } });");
-    // A PDF drawn by the system's renderer on both platforms, a tap with the sheet up marking its page and point.
+    // A PDF drawn by the system's renderer on both platforms, a held touch marking its page and point.
     expect(document).toContain('const pdf = info?.view === "pdf";');
     const pdf = src("features/files/PdfPages.tsx");
     expect(pdf).toContain('from "react-native-pdf-light"');
-    expect(pdf).toContain("openTalk({ selection: commentSelection(pins, { mark, page }, detail.shownVersion) })");
+    expect(pdf).toContain("onLongPress={(e) => hold(e.nativeEvent.locationX, e.nativeEvent.locationY)}");
+    expect(pdf).toContain("openTalk({ selection: commentSelection(pins, { mark, page }, detail.shownVersion) });");
   });
 
   test("Resolve and Reopen are in a comment's menu, and a resolved comment's pin and line follow the server", () => {
@@ -443,57 +437,23 @@ describe("a picture's, a video's and a PDF's conversation (ADR 0208)", () => {
   });
 });
 
-describe("the conversation's sheet over the file (ADR 0208)", () => {
-  test("half the screen at first and undimmed, the whole screen dimmed; its route names the file", () => {
-    expect(TALK_SHEET_DETENTS).toEqual([0.5, 1]);
-    expect(TALK_SHEET_DIMMED).toBe(1);
-    expect(fileTalkHref("c1", "r1", "f1")).toBe("/file-talk/c1?thread=r1&file=f1");
-    expect(fileTalkHref("c1", "r1", "f1", "m1")).toBe("/file-talk/c1?thread=r1&file=f1&m=m1");
-  });
-
-  test("the file keeps the sheet's room clear: where its top stands, else half the screen and the home's room", () => {
-    expect(talkSheetReserve(852, 390)).toBe(462);
-    // Not placed yet (or off the screen while it comes up): the first height's share and the bottom's room.
-    expect(talkSheetReserve(852, null, 34)).toBe(460);
-    expect(talkSheetReserve(852, 852, 34)).toBe(460);
-    expect(talkSheetReserve(852, Number.NaN)).toBe(426);
-  });
-
-  test("every file opens its conversation in the same sheet, which the file behind follows", () => {
+describe("the conversation pushed over the file (ADR 0208)", () => {
+  test("every file pushes its conversation, its back coming back to the file; no sheet over it", () => {
     const hooks = src("features/live-files/talk/hooks.ts");
-    expect(hooks).toContain(
-      "else router.push(fileTalkHref(at.channelId, at.rootId, file.id, open.messageId ?? null));",
-    );
-    expect(hooks).not.toContain("chatHref");
+    expect(hooks).toContain("router.push(chatHref(at.channelId, at.rootId, open.messageId ?? null));");
+    expect(hooks).not.toContain("TalkSheet");
     const layout = readFileSync(join(import.meta.dir, "../../app/(app)/_layout.tsx"), "utf8");
-    expect(layout).toContain('<Sheet.Screen name="file-talk/[channelId]" options={o.fileTalk} />');
-    expect(layout).toContain("fileTalk: { ...sheet(TALK_SHEET_DETENTS), dimmedDetentIndex: TALK_SHEET_DIMMED },");
-    // The conversation itself, in its sheet mode: the sheet's bar. The keyboard alone raises the sheet (one motion, on
-    // its own curve): the field never sends it to the full height as well.
-    const sheet = src("features/live-files/talk/TalkSheet.tsx");
-    expect(sheet).toContain("<SheetSurface>");
-    expect(sheet).not.toContain("navigation.resize(1)");
-    expect(sheet).toContain("const mode = useMemo<ChatSheetMode>(() => ({ onClose: close, seek }), [close, seek]);");
-    const chat = src("features/chat/ChatScreen.tsx");
-    expect(chat).toContain("<ChatSheetBar title={title} onClose={inSheet.onClose} />");
-    expect(src("features/chat/screen/parts.tsx")).not.toContain("onFocusChange");
-    // The line steps aside while the sheet is up, its room held in a column; under a PDF it keeps its place unseen and
-    // the pages run on past their end by the sheet's room: nothing in sight lays out again as the sheet comes and goes.
-    const line = src("features/live-files/talk/TalkLine.tsx");
-    expect(line).toContain("const unseen = keepPlace && sheet !== null;");
-    expect(line).toContain("<View style={{ height: sheet.reserve, backgroundColor: c.bg }} />");
-    expect(line).toMatch(/if \(keyboardUp && !unseen\) return null;/);
-    expect(src("features/files/DocumentViewer.tsx")).toContain("<FileTalkLine file={pdfTalk} keepPlace />");
-    expect(src("features/files/PdfPages.tsx")).toContain(
-      "ListFooterComponent={sheet ? <View style={{ height: sheet.reserve }} /> : undefined}",
-    );
+    expect(layout).not.toContain("file-talk");
+    // The viewer is a screen of the stack, so the conversation pushed from it shows over it, not hidden under it.
+    const main = readFileSync(join(import.meta.dir, "../../app/(app)/(main)/_layout.tsx"), "utf8");
+    expect(main).not.toContain('presentation: "transparentModal"');
+    expect(src("features/files/ImageViewer.tsx")).toContain("navigation.setParams({ at: String(index) } as never);");
+    // The conversation is the one every other is: no sheet mode, its bar the stack's.
+    expect(src("features/chat/ChatScreen.tsx")).not.toContain("ChatSheet");
+    expect(src("features/live-files/talk/TalkLine.tsx")).not.toContain("sheet");
   });
 
-  test("the sheet opens on the conversation the file's line already read, still, and a sent comment's pin stays", () => {
-    // In the sheet the list shows the moment it is placed: no skeleton before it, no fade, no rise of what arrives.
-    const list = src("features/chat/screen/ChatList.tsx");
-    expect(list).toContain("listShown.value = inSheet ? 1 : withTiming(1, { duration: 120 });");
-    expect(src("features/chat/ChatScreen.tsx")).toContain("{loading || (showList && !placed && !inSheet) ? (");
+  test("a sent comment's pin stays while it is on its way", () => {
     // A comment on its way keeps its pin: its local copy counts until the server's copy (same clientId) takes its place.
     const a = { id: "m1", clientId: null };
     const echoed = { id: "m2", clientId: "c2" };

@@ -33,6 +33,7 @@ const link = (over: Partial<SurfaceLink> = {}): SurfaceLink => ({
   createdAt: new Date(NOW - 60_000).toISOString(),
   confirmedAt: null,
   expiresAt: new Date(NOW + 9 * 60_000).toISOString(),
+  pinSet: false,
   ...over,
 });
 const links = (list: SurfaceLink[], over: Partial<SurfaceLinks> = {}): SurfaceLinks => ({

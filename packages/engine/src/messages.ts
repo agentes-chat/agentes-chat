@@ -22,9 +22,10 @@ import { CHANNEL_REF } from "@agenteschat/ui/channel-refs";
 import { plainLine } from "@agenteschat/ui/markdown";
 import { type AgentActionView, actionsFor } from "./agent-actions";
 import { currentHandles } from "./agents";
-import { withDeletedArtifacts } from "./artifacts";
+import { fileFacts, withDeletedArtifacts } from "./artifacts";
 import { audienceSql, notifyBlocked } from "./audience";
 import { postRefusal, requireChannelAccess } from "./channels";
+import { admitCodeMembers, codeAgentSql } from "./code-sessions";
 import { CONFIDENTIAL_STUB, confidentialThreadSql, threadIsConfidential, unsealed } from "./confidential";
 import { ConflictError, NotFoundError, ValidationError } from "./errors";
 import {
@@ -43,7 +44,7 @@ import { admitFileAgents, type LiveAskSelection, type LiveRef, liveRefFor, liveR
 import { isMediaAfterReply, isStickerMood, type MessageMedia, mediaOf, mediaSettings, type StickerMood } from "./media";
 import { type MessageMemory, memoriesFor } from "./message-memories";
 import { readableBody, voiceOf } from "./message-preview";
-import { quietNoticeSql } from "./notices";
+import { agentOnlyNoticeSql, quietNoticeSql } from "./notices";
 import { can } from "./organizations";
 import { maySql } from "./permissions";
 import { afterReplyAnswered } from "./questions";
@@ -786,7 +787,8 @@ export async function insertMessageWithRuns(
   /**
    * SQL: a reply in a thread joins run `r` only when the person talks to its agent there: not for another agent, and
    * it quotes that agent, the run answers this person, or that agent spoke last in the thread. A run another agent
-   * started by naming it is not who the person talks to while the agent that named it spoke last.
+   * started by naming it is not who the person talks to while the agent that named it spoke last, and a notice only
+   * its agent reads is nobody speaking.
    */
   const talkingTo = (r: SQL) => sql`(not ${forAnother(sql`${r}.agent_id`)} and (
     ${r}.agent_id = ${quotedAgentId}::uuid
@@ -795,6 +797,7 @@ export async function insertMessageWithRuns(
     or ${r}.agent_id = coalesce(
       (select lm.author_agent_id from ${messages} lm where lm.org_id = ${input.orgId}::uuid
         and lm.channel_id = ${input.channelId}::uuid and lm.thread_id = ${threadId}::uuid and lm.author_type = 'agent'
+        and not ${agentOnlyNoticeSql(sql`lm.meta`)}
         order by lm.created_at desc limit 1),
       (select rm.author_agent_id from ${messages} rm where rm.org_id = ${input.orgId}::uuid
         and rm.id = ${threadId}::uuid))))`;
@@ -935,11 +938,14 @@ export async function insertMessageWithRuns(
         -- A task's conversation is a DM with the task's agent: what names nobody there is for it, an ok or a status
         -- line too ("feito", "pago"), never the router's to drop. Naming a person or quoting another agent goes to
         -- the router.
-        select t.agent_id from (select ${taskAgentSql(sql`${input.channelId}::uuid`)} as agent_id) t
+        -- A code session's conversation (ADR 0215) is the same with the session's agent, once its worktree is ready
+        -- (codeAgentSql); before that what names nobody waits for it (prepareCodeSession hands it over).
+        select t.agent_id from (select coalesce(${taskAgentSql(sql`${input.channelId}::uuid`)},
+          ${codeAgentSql(sql`${input.channelId}::uuid`)}) as agent_id) t
         where ${startRuns}::boolean and not exists (select 1 from mentioned)
           and not exists (select 1 from mentioned_people) and not exists (select 1 from task_readers_named)
           and (${quotedAgentId}::uuid is null or t.agent_id = ${quotedAgentId}::uuid)
-          and exists (select 1 from ${channels} tc where tc.id = ${input.channelId}::uuid and tc.kind = 'task')
+          and exists (select 1 from ${channels} tc where tc.id = ${input.channelId}::uuid and tc.kind in ('task', 'code'))
       ), addressed as (
         select a.id as agent_id,
           case when exists (select 1 from mentioned) or a.id in (select agent_id from work_thread) then 'mention'
@@ -1347,6 +1353,15 @@ export async function postPersonMessage(
       taskAgent: true,
     });
   }
+  // A code session's conversation (ADR 0215): who is named there (an agent, a person of the workspace) joins it.
+  if (channel.kind === "code") {
+    await admitCodeMembers(
+      deps.db,
+      orgId,
+      channelId,
+      await currentHandles(deps.db, orgId, parseMentionHandles(input.body)),
+    );
+  }
   // A live file's conversation (ADR 0199): an agent mentioned there joins it when it may work on the file.
   if (channel.kind === "file") {
     await admitFileAgents(deps.db, orgId, channelId, {
@@ -1505,6 +1520,19 @@ export async function postPersonMessage(
       ...(wontAnswer.length > 0 ? { blocked: wontAnswer } : {}),
       ...(referenced.length > 0 ? { referenced } : {}),
       strategy: channel.kind === "dm" && message.mentionedAgentIds.length === 0 ? "dm" : "mention",
+    });
+  } else if (channel.kind === "code") {
+    // A code session's conversation is never the router's (ADR 0215), so no decision follows this one: with nobody to
+    // answer (its agent doesn't answer this person, its worktree isn't ready yet, the message is for a person), the
+    // receipt is settled here and no app keeps "Picking who answers".
+    await publishChannelEvent(deps.pubsub, {
+      type: "message.routed",
+      channelId,
+      messageId: message.id,
+      seenBy: [],
+      pickedBy: [],
+      runs: [],
+      strategy: "none",
     });
   }
   // The runs answer where the message is, or under it when its channel replies in threads (ADR 0214).
@@ -1706,8 +1734,14 @@ export async function classifyEveryone(
         limit 1`),
     ).length > 0;
   const ids = targets.map((t) => t.id);
+  // One answer for everyone comes from the channel's responsible agent when it is one of them (ADR 0095).
+  const [here] = await db
+    .select({ leadAgentId: channels.leadAgentId })
+    .from(channels)
+    .where(and(eq(channels.orgId, input.orgId), eq(channels.id, input.channelId)));
+  const lead = here?.leadAgentId && ids.includes(here.leadAgentId) ? here.leadAgentId : null;
   const decide = (answer: EveryoneAnswer, best: string, error?: string) => {
-    const by = answer === "one" && !named ? best : null;
+    const by = answer === "one" && !named ? (lead ?? best) : null;
     const runs = answer === "each" ? ids : by ? [by] : [];
     return {
       strategy: `everyone-${judge.name}`,
@@ -1850,7 +1884,17 @@ export async function attachmentRefsFor(db: Database, userId: string, orgId: str
   const a = schema.artifacts;
   const v = schema.artifactVersions;
   const rows = await db
-    .select({ id: a.id, title: a.title, version: a.currentVersion, width: v.width, height: v.height })
+    .select({
+      id: a.id,
+      kind: a.kind,
+      title: a.title,
+      version: a.currentVersion,
+      fileName: v.fileName,
+      contentType: v.contentType,
+      size: v.size,
+      width: v.width,
+      height: v.height,
+    })
     .from(a)
     .leftJoin(v, and(eq(v.artifactId, a.id), eq(v.version, a.currentVersion)))
     .where(
@@ -1867,8 +1911,13 @@ export async function attachmentRefsFor(db: Database, userId: string, orgId: str
   const byId = new Map(rows.map((r) => [r.id, r]));
   return wanted.map((id) => {
     const r = byId.get(id) as (typeof rows)[number];
-    // A picture's size: its card has its box before it loads.
-    return { id: r.id, version: r.version, title: r.title, ...pictureSize(r) };
+    const { contentType, size } = r;
+    // An uploaded file's card draws from its facts; anything else's, a picture's size at most.
+    const facts =
+      r.kind === "file" && contentType !== null && size !== null
+        ? fileFacts({ fileName: r.fileName, contentType, size, width: r.width, height: r.height })
+        : pictureSize(r);
+    return { id: r.id, version: r.version, title: r.title, ...facts };
   });
 }
 

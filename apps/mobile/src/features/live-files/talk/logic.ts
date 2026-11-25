@@ -9,7 +9,7 @@ import {
   type TalkKind,
 } from "@agenteschat/client";
 import { mediaKindOfArtifact } from "@agenteschat/client/lib/files";
-import { videoClock } from "../../files/logic";
+import { decodeFileList, videoClock } from "../../files/logic";
 
 /**
  * A live file's own conversation on the phone (ADR 0199), the pure part: the line under the file (who took part, an
@@ -366,89 +366,12 @@ export function draftPin(about: LiveRef | null | undefined, fileId: string, me: 
 export const pagePins = (pins: readonly MediaPin[], page: number) =>
   pins.filter((p) => p.selection.page === page && p.selection.mark && !p.resolved);
 
-/** How near a video's moment a comment's pin shows on its frame, in seconds either way. */
-export const MOMENT_NEAR = 1;
-
-/** The pins on a video's frame at `time`: its open comments with a mark, made within `MOMENT_NEAR` of it. */
-export const momentPins = (pins: readonly MediaPin[], time: number) =>
-  pins.filter(
-    (p) =>
-      p.selection.mark !== undefined &&
-      !p.resolved &&
-      p.selection.time !== undefined &&
-      Math.abs(p.selection.time - time) <= MOMENT_NEAR,
-  );
-
-/**
- * Where a video shows in its frame: whole and centered (`contain`), black bands on the sides it doesn't fill.
- * `video`: its own size, unknown until it loads (the whole frame then).
- */
-export function containRect(
-  frame: { width: number; height: number },
-  video: { width: number; height: number } | null | undefined,
-): { left: number; top: number; width: number; height: number } {
-  const aspect = video && video.width > 0 && video.height > 0 ? video.width / video.height : null;
-  const shown =
-    !aspect || frame.height <= 0
-      ? frame
-      : aspect > frame.width / frame.height
-        ? { width: frame.width, height: frame.width / aspect }
-        : { width: frame.height * aspect, height: frame.height };
-  return {
-    left: (frame.width - shown.width) / 2,
-    top: (frame.height - shown.height) / 2,
-    width: shown.width,
-    height: shown.height,
-  };
-}
-
-/** A tap on a video's frame (`at`, from the frame's corner), in fractions of the picture it shows (`containRect`). */
-export function frameTap(
-  at: { x: number; y: number },
-  frame: { width: number; height: number },
-  video: { width: number; height: number } | null | undefined,
-): { x: number; y: number; width: number; height: number } {
-  const shown = containRect(frame, video);
-  return {
-    x: shown.width > 0 ? (at.x - shown.left) / shown.width : -1,
-    y: shown.height > 0 ? (at.y - shown.top) / shown.height : -1,
-    width: shown.width,
-    height: shown.height,
-  };
-}
-
-// ── The conversation's sheet over the file ───────────────────────────────────────────────────────────────────────
-
-/**
- * The sheet a file's conversation opens in over the file (ADR 0208): its channel and root, the file it is about, and
- * the message to open at (`m`, a pin or a notice).
- */
-export function fileTalkHref(channelId: string, rootId: string, fileId: string, messageId?: string | null): string {
-  const params = [`thread=${rootId}`, `file=${fileId}`, messageId ? `m=${messageId}` : null].filter(Boolean);
-  return `/file-talk/${channelId}?${params.join("&")}`;
-}
-
-/** The sheet's heights (ADR 0208): half the screen at first, the file in sight and in reach above it; then all of it. */
-export const TALK_SHEET_DETENTS = [0.5, 1];
-/** At its first height nothing behind it dims (the file stays usable); pulled to the full height, it dims. */
-export const TALK_SHEET_DIMMED = 1;
-
-/**
- * How much of the screen's bottom the sheet takes at its first height, which the file behind keeps clear (a picture
- * laid out above it, a page scrolling up past it): from where the sheet's top stands (`top`, from the screen's top, as
- * the sheet tells it), else the first height's share of the screen and the home indicator's room the sheet adds to it.
- */
-export function talkSheetReserve(screenHeight: number, top: number | null | undefined, bottomInset = 0): number {
-  if (top !== null && top !== undefined && Number.isFinite(top) && top > 0 && top < screenHeight)
-    return Math.round(screenHeight - top);
-  return Math.round(screenHeight * (TALK_SHEET_DETENTS[0] ?? 0.5) + Math.max(0, bottomInset));
-}
-
 // ── Where the conversation opens ─────────────────────────────────────────────────────────────────────────────────
 
 /**
  * Whether the screen under the conversation is this file's own (the stack's route before the conversation's): then
- * going back to it is going back, never a second copy pushed over the conversation.
+ * going back to it is going back, never a second copy pushed over the conversation. The picture viewer counts when
+ * the page it is on is this file (`at`, which it keeps as the person turns the pages).
  */
 export function fileUnder(
   routes: readonly { name: string; params?: object | undefined }[] | undefined,
@@ -456,15 +379,24 @@ export function fileUnder(
 ): boolean {
   if (!routes || routes.length < 2) return false;
   const under = routes[routes.length - 2];
-  if (!under || !LIVE_ROUTE_NAMES.has(under.name)) return false;
+  if (!under) return false;
+  if (under.name === VIEWER_ROUTE) {
+    const params = under.params as { files?: string | string[]; at?: string } | undefined;
+    const files = decodeFileList(params?.files);
+    return files[Math.max(0, Number(params?.at) || 0)]?.id === fileId;
+  }
+  if (!LIVE_ROUTE_NAMES.has(under.name)) return false;
   return (under.params as { id?: unknown } | undefined)?.id === fileId;
 }
+
+/** The picture viewer's route (`/images`). */
+const VIEWER_ROUTE = "images";
 
 const LIVE_ROUTE_NAMES: ReadonlySet<string> = new Set([
   "spreadsheet/[id]",
   "slides/[id]",
   "canvas/[id]",
   "document/[id]",
-  // A PDF's screen (ADR 0208); pictures and videos open in the viewer, which is never under a conversation.
+  // A PDF's screen (ADR 0208); pictures and videos open in the viewer (`VIEWER_ROUTE`).
   "file/[id]",
 ]);

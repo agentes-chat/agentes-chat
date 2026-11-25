@@ -56,32 +56,24 @@ export const budgetPercent = (spentNanoUsd: number, budgetNanoUsd: number) =>
  * This month's spend and effective budget of every active agent, in
  * nano-USD, keyed by agent id. The workspace's 100% is the sum of the budgets.
  * Only the agent's own calls count: the router's and Jev's, recorded with its
- * id, are not billed to its budget.
+ * id, are not billed to its budget. The spend is the gateway's counter (one row
+ * per agent and month), which every billed call adds to, never a sum of the
+ * month's usage rows; a plan's turns cost nothing there, as in the rows.
  */
 export async function agentBudgetsThisMonth(db: Database, orgId: string, now = new Date()) {
   const fallback = await orgDefaultAgentBudget(db, orgId);
   const rows = await db
-    .select({
-      agentId: agents.id,
-      budget: agents.monthlyBudgetNanoUsd,
-      spent: sql<string>`coalesce(sum(${usageRecords.costNanoUsd}), 0)`,
-    })
+    .select({ agentId: agents.id, budget: agents.monthlyBudgetNanoUsd, spent: agentBudgetPeriods.spentNanoUsd })
     .from(agents)
     .leftJoin(
-      usageRecords,
-      and(
-        eq(usageRecords.orgId, orgId),
-        eq(usageRecords.agentId, agents.id),
-        inArray(usageRecords.kind, BUDGET_KINDS),
-        gte(usageRecords.createdAt, monthStartUtc(now)),
-      ),
+      agentBudgetPeriods,
+      and(eq(agentBudgetPeriods.agentId, agents.id), eq(agentBudgetPeriods.periodStart, budgetPeriodOf(now))),
     )
-    .where(and(eq(agents.orgId, orgId), isNull(agents.archivedAt)))
-    .groupBy(agents.id, agents.monthlyBudgetNanoUsd);
+    .where(and(eq(agents.orgId, orgId), isNull(agents.archivedAt)));
   return new Map(
     rows.map((r) => [
       r.agentId,
-      { spentNanoUsd: Number(r.spent), budgetNanoUsd: r.budget ?? fallback, isDefault: r.budget === null },
+      { spentNanoUsd: Number(r.spent ?? 0), budgetNanoUsd: r.budget ?? fallback, isDefault: r.budget === null },
     ]),
   );
 }

@@ -8,6 +8,7 @@ import {
   type ServerFrame,
 } from "@agenteschat/adapters/machine-protocol";
 import { CONTROL_PROTOCOL_VERSION, type ControlEvent, type ControlOut } from "@agenteschat/adapters/runner-control";
+import { windowsCodexSandbox } from "../../runner/codex-windows";
 import { configPath, readStoredConfig, type StoredConfig, writeConfig } from "../../runner/config";
 import type { Dial, Socket, SocketHandlers } from "../../runner/connection";
 import { EXIT_LOCKED, type RunControlOptions, runControl } from "../../runner/control";
@@ -359,6 +360,41 @@ test("hello never waits on the CLIs' looks; what a look finds later reaches the 
   expect(JSON.parse(readFileSync(path.join(home, "executors.json"), "utf8"))).toMatchObject({
     claude: { version: "2.1.300 (Claude Code)" },
   });
+});
+
+test("a Windows computer: hello says its build, and the server hears what holds Codex there where Codex may run", async () => {
+  const windowsRunner = async (codex: boolean, version: string) => {
+    const { home } = pairedHome({ access: { folders: [], tools: { claude: false, codex, commands: false } } });
+    const asked: string[] = [];
+    const c = control(home, {
+      executors: () => ({ codex: { version } }),
+      windows: {
+        build: "10.0.19045",
+        // No MXC there; Codex's own sandbox runs a command.
+        chooseCodexSandbox: (v) => {
+          asked.push(v);
+          const check = async (sandbox: string) => sandbox === "unelevated";
+          return windowsCodexSandbox({ runnerHome: home, version: v, check, wait: true });
+        },
+      },
+    });
+    const s = await c.connect();
+    // Codex as the server last heard it: `hello`, then each `executors.changed`.
+    const told = () =>
+      ([...s.of("hello"), ...s.of("executors.changed")].at(-1)?.executors as Record<string, unknown> | undefined)
+        ?.codex;
+    return { s, asked, told };
+  };
+  const on = await windowsRunner(true, "codex-cli 0.172.0-on");
+  expect(on.s.of("hello")[0]).toMatchObject({ windowsBuild: "10.0.19045" });
+  await waitFor(() => JSON.stringify(on.told()).includes("unelevated"));
+  expect(on.told()).toEqual({ version: "codex-cli 0.172.0-on", sandbox: "unelevated" });
+  expect(on.asked).toEqual(["codex-cli 0.172.0-on"]);
+  // Codex switched off there: its sandbox isn't checked, and nothing is said of it.
+  const off = await windowsRunner(false, "codex-cli 0.172.0-off");
+  expect(off.s.of("hello")[0]).toMatchObject({ windowsBuild: "10.0.19045" });
+  expect(off.told()).toEqual({ version: "codex-cli 0.172.0-off" });
+  expect(off.asked).toEqual([]);
 });
 
 test("Grok Build's models are the ones a signed-in account listed, not the computer's own signed-out list", async () => {
@@ -781,14 +817,16 @@ test("folders, tools and settings from the app: system folders refused, everythi
   expect(diag.text).not.toContain(TOKEN);
 });
 
-test("the task limit is sized to the computer: one per 2 CPUs and 2 GiB past 4, at least 3, at most 20", () => {
-  expect(sizedTaskLimit({ cpus: 4, memoryGb: 8 })).toBe(3);
-  expect(sizedTaskLimit({ cpus: 10, memoryGb: 16 })).toBe(5);
-  expect(sizedTaskLimit({ cpus: 16, memoryGb: 16 })).toBe(6);
-  expect(sizedTaskLimit({ cpus: 12, memoryGb: 64 })).toBe(6);
-  expect(sizedTaskLimit({ cpus: 128, memoryGb: 512 })).toBe(20);
+test("the task limit is sized to the memory: one per 1.5 GiB past 4, at least 3, at most 20, whatever the CPUs", () => {
+  for (const cpus of [2, 4, 8]) {
+    const sizes = [4, 8, 12, 16, 32].map((memoryGb) => ({ cpus, memoryGb }));
+    expect(sizes.map(sizedTaskLimit)).toEqual([3, 3, 5, 8, 18]);
+  }
+  // A 12 GB computer reads a little less than 12 GiB.
+  expect(sizedTaskLimit({ memoryGb: 11.5 })).toBe(5);
+  expect(sizedTaskLimit({ memoryGb: 512 })).toBe(20);
   // A container's limit, not the host's.
-  expect(sizedTaskLimit({ cpus: 64, memoryGb: 256, limit: { cpus: 4, memoryGb: 8 } })).toBe(3);
+  expect(sizedTaskLimit({ memoryGb: 256, limit: { cpus: 4, memoryGb: 8 } })).toBe(3);
   expect(DEFAULT_LIMITS.maxConcurrentTasks).toBeGreaterThanOrEqual(3);
 });
 

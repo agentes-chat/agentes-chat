@@ -5,6 +5,7 @@ import { delimiter, isAbsolute, join, win32 } from "node:path";
 import {
   CLI_ERROR_MAX,
   CLI_GIT_MISSING,
+  CLI_HOME_ONLY,
   type CursorModelInfo,
   parseExecutors,
   type RunnerExecutorInfo,
@@ -29,7 +30,7 @@ export const EXECUTORS_RETRY_MS = 30_000;
 export const EXECUTORS_EXIT_STRIKES = 3;
 
 type Executors = NonNullable<RunnerInfo["executors"]>;
-type RunResult = { status: number | null; stdout: string; stderr?: string; error?: unknown };
+export type RunResult = { status: number | null; stdout: string; stderr?: string; error?: unknown };
 export type ExecutorRun = (command: string, args: string[]) => RunResult | Promise<RunResult>;
 type Run = ExecutorRun;
 
@@ -291,19 +292,22 @@ const defaultRun: Run = (command, args) =>
         env: run.env ? { ...process.env, ...run.env } : process.env,
         windowsVerbatimArguments: run.windowsVerbatimArguments,
       },
-      (err, stdout, stderr) => {
-        const code = (err as { code?: unknown } | null)?.code;
-        const out = `${stdout ?? ""}`;
-        resolve(
-          typeof code === "number"
-            ? { status: code, stdout: out, stderr: `${stderr ?? ""}` }
-            : err
-              ? { status: null, stdout: out, error: err }
-              : { status: 0, stdout: out },
-        );
-      },
+      (err, stdout, stderr) => resolve(execResult(err, stdout, stderr)),
     );
   });
+
+/**
+ * `execFile`'s answer as a look reads it. One killed past its time limit couldn't tell: on Windows the runtime reports
+ * the killed process's exit code (1, from `TerminateProcess`) where elsewhere there is none, which read as a CLI that
+ * can't start, when it was only slow (a large binary's first start under the antivirus' scan).
+ */
+export function execResult(err: unknown, stdout: unknown, stderr: unknown): RunResult {
+  const e = err as { code?: unknown; killed?: unknown } | null;
+  const out = `${stdout ?? ""}`;
+  if (e && typeof e.code === "number" && e.killed !== true)
+    return { status: e.code, stdout: out, stderr: `${stderr ?? ""}` };
+  return e ? { status: null, stdout: out, error: e } : { status: 0, stdout: out };
+}
 
 const word = (v: unknown) => (typeof v === "string" && /^[\w.-]{1,40}$/.test(v) ? v : undefined);
 
@@ -562,6 +566,15 @@ export function newerVersion(a: string, b: string): boolean {
 }
 
 /**
+ * The line of a Codex that refused its command line (a flag or subcommand it doesn't have yet, in clap's words), as it
+ * said it; null for any other failure.
+ */
+export function codexRefusal(stderr: string): string | null {
+  const line = /^error: (?:unexpected argument|unrecognized subcommand|invalid value)\b.*$/m.exec(stderr)?.[0];
+  return line ? line.trim().slice(0, 300) : null;
+}
+
+/**
  * Every `codex` this runner could start, each once: the PATH in order, then the usual install folders. Never one in
  * the shared `bin/` (the agents write there) or in a folder that isn't a full path.
  */
@@ -630,12 +643,26 @@ async function detectVersion(run: Run, name: "claude" | "codex"): Promise<Probe>
   return auth ? { entry: { version, ...auth } } : { entry: { version }, unsure: true };
 }
 
+/** The CLIs whose installers put them in the home's `~/.local/bin`, by their command. */
+const HOME_INSTALLED = { cursor: CURSOR_BIN, grok: GROK_BIN, antigravity: AGY_BIN } as const;
+
+/** `bin` in the install folders under `home` (`~/.local/bin`…), which other users can't reach; null: none there. */
+export function inHomeDirs(bin: string, home = homedir(), isExe: (file: string) => boolean = isExecutable) {
+  return (
+    usualDirs(home)
+      .filter((dir) => dir.startsWith(`${home}/`))
+      .map((dir) => join(dir, bin))
+      .find(isExe) ?? null
+  );
+}
+
 /**
  * Every CLI looked up at once. One that couldn't tell keeps its entry from `prev` (the last good look), and the
  * whole look is `unsure`, so it is retried soon instead of cached. `strikes` counts each CLI's failing exits in a
  * row across looks (the caller keeps it). A CLI whose `--version` fails with no good look to keep, or past its
  * strikes, is `broken` with its error line: it is there and can't start, which is not missing. Claude Code on Windows
- * says why only through `gitMissing`: without Git for Windows it can't start at all.
+ * says why only through `gitMissing`: without Git for Windows it can't start at all. `homeOnly`: a CLI of
+ * `HOME_INSTALLED` not found is in the runner's own home only (system mode), `CLI_HOME_ONLY`.
  */
 export async function detectExecutors(
   run: Run = defaultRun,
@@ -643,6 +670,7 @@ export async function detectExecutors(
   strikes: Partial<Record<string, number>> = {},
   gitMissing: () => boolean = () => false,
   codexBins: () => string[] = run === defaultRun ? codexCandidates : () => [],
+  homeOnly: (bin: string) => boolean = () => false,
 ): Promise<{ found: Executors; unsure: boolean }> {
   const safe = (p: () => Promise<Probe>) => p().catch((): Probe => ({ unsure: true }));
   const names = ["claude", "codex", "cursor", "opencode", "grok", "antigravity"] as const;
@@ -667,6 +695,9 @@ export async function detectExecutors(
     if (entry) found[name] = entry;
     if (p.unsure) unsure = true;
   });
+  for (const [name, bin] of Object.entries(HOME_INSTALLED) as [keyof typeof HOME_INSTALLED, string][]) {
+    if (!found[name] && !broken[name] && homeOnly(bin)) broken[name] = CLI_HOME_ONLY;
+  }
   if (Object.keys(broken).length) found.broken = broken;
   return { found, unsure };
 }
@@ -704,6 +735,8 @@ export function cachedExecutors(
     /** Before each look (Windows: the PATH read again, so a CLI installed since is found). */
     before?: () => void;
     gitMissing?: () => boolean;
+    /** System mode: a CLI found only in root's own install folders (`CLI_HOME_ONLY`). */
+    homeOnly?: (bin: string) => boolean;
   } = {},
 ): ExecutorsCache {
   const now = opts.now ?? Date.now;
@@ -719,7 +752,7 @@ export function cachedExecutors(
     (running ??= Promise.resolve()
       .then(() => opts.before?.())
       .catch(() => undefined)
-      .then(() => detectExecutors(opts.run, value, strikes, opts.gitMissing))
+      .then(() => detectExecutors(opts.run, value, strikes, opts.gitMissing, undefined, opts.homeOnly))
       .then(({ found, unsure }) => {
         at = now();
         retry = unsure ? Math.min(retry ? retry * 2 : EXECUTORS_RETRY_MS, EXECUTORS_TTL_MS) : 0;

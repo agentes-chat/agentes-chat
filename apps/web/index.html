@@ -1,7 +1,9 @@
 <!doctype html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="light" translate="no">
   <head>
     <meta charset="UTF-8" />
+    <!-- No browser translation anywhere: it rewrites the text React keeps track of (the next update throws) and the app already speaks the person's language. -->
+    <meta name="google" content="notranslate" />
     <!-- Drawn pixel by pixel at 16 and 32 (packages/ui/scripts/app-icons.mjs); a person's pick swaps it (lib/app-icon.ts). -->
     <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />

@@ -7,7 +7,6 @@ import {
   barElapsed,
   barEntries,
   barPhrase,
-  entriesOffScreen,
   runElapsed,
   toolActivity,
   waitsForWords,
@@ -123,31 +122,6 @@ describe("the card's phrase and the waiting row's step line", () => {
     expect(shortTarget("a long line about the quarterly numbers of the north team")).toBe(
       "a long line about the quarterly numbers",
     );
-  });
-
-  test("an agent whose row is on screen leaves the bar; a question out and people typing stay", () => {
-    const theo = { ...base, status: "running" as const };
-    const iris = { ...base, runId: "r2", agentId: "iris", status: "running" as const };
-    const names = (id: string) => (id === "theo" ? "Theo" : "Iris");
-    const entries = barEntries([theo, iris], [{ id: "u-marina", kind: "typing" }], names, () => "Marina");
-    const shown = (inView: string[]) =>
-      entriesOffScreen(entries, [theo, iris], (r) => inView.includes(r.runId)).map((e) => e.name);
-    expect(shown([])).toEqual(["Theo", "Iris", "Marina"]);
-    expect(shown(["r1"])).toEqual(["Iris", "Marina"]);
-    expect(shown(["r1", "r2"])).toEqual(["Marina"]);
-    const asking = barEntries([theo], [], names, () => undefined, [
-      {
-        runId: "r1",
-        agentId: "theo",
-        consultedAgentId: "iris",
-        channelId: "c1",
-        threadId: "m1",
-        status: "asking",
-        since: 0,
-        at: 0,
-      },
-    ]);
-    expect(entriesOffScreen(asking, [theo], () => true)).toEqual(asking);
   });
 
   test("the bar takes the step after the name, its start in lower case; 'escrevendo…' as it writes", () => {

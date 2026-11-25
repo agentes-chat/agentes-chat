@@ -26,23 +26,13 @@ import {
   GROUP_LABEL,
   PERSONAL_ICON,
   personalSections,
+  SECTION_SHORT,
   SETTINGS_GROUPS,
   type SettingsEntry,
   type SettingsGroup,
-  type SettingsSection,
   visibleSections,
 } from "./logic";
 import { confirmAction, Gap, SettingsPage } from "./parts";
-
-/** The rows whose group already says the rest get a shorter name (`mobile.settings.section.*`). */
-const SHORT: Partial<Record<SettingsSection, string>> = {
-  computers: "mobile.devices.title",
-  members: "mobile.settings.section.members",
-  invites: "settings.section.invites",
-  roles: "mobile.settings.section.roles",
-  access: "mobile.settings.section.access",
-  connectors: "mobile.settings.section.connectors",
-};
 
 /**
  * The workspace's settings, a screen pushed from Você on the grouped gray, as the phone's own settings: the web's
@@ -173,7 +163,7 @@ export function SectionGroups({
                   <GroupedRow
                     key={s.id}
                     icon={s.icon}
-                    label={t(SHORT[s.id] ?? `settings.section.${s.id}`)}
+                    label={t(SECTION_SHORT[s.id] ?? `settings.section.${s.id}`)}
                     {...(values[s.id] ? { value: values[s.id] } : {})}
                     {...lit(s.href)}
                     chevron

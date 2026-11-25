@@ -272,7 +272,7 @@ describe("Configurações → Armazenamento", () => {
     await go();
     await openConnect();
     const list = dialog("Onde fica o seu armazenamento?");
-    expect([...list.querySelectorAll(".storage-pick__name")].map((n) => n.textContent)).toEqual([
+    expect([...list.querySelectorAll(".storage-pick .ac-optrow__hit")].map((n) => n.textContent)).toEqual([
       "Cloudflare R2",
       "Amazon S3",
       "Backblaze B2",

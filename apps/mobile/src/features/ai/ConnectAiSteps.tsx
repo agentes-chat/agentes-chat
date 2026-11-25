@@ -31,6 +31,7 @@ import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import {
   brainTool,
   CLI_GIT_MISSING,
+  cliCommandWayOut,
   cliInstallFailure,
   cliOneClick,
   GIT_FOR_WINDOWS_URL,
@@ -98,6 +99,7 @@ import { goBack, router } from "@/ui/navigation";
 import { SetupWait } from "../computer/SetupWait";
 import { closeAgentPick, openAgentPick } from "../dashboards/agent-pick";
 import { ToolOffWayOut } from "../devices/ToolOneClick";
+import { CommandBlock } from "../settings/parts";
 import { AgentFace } from "../shared/Face";
 import { useMeId } from "../shared/hooks";
 import { PickList } from "../shared/PickList";
@@ -872,6 +874,77 @@ function CliMissingCard({
   );
 }
 
+/** A CLI the apps don't install, missing on a computer someone connected: why, the line to run there, and Check again. */
+function CliCommandCard({
+  machine,
+  kind,
+  computer,
+  reason,
+}: {
+  machine: Machine;
+  kind: MachineAccountKind;
+  computer: string;
+  reason: "not_installed" | "cant_start";
+}) {
+  const { t } = useTranslation();
+  const { orgId } = useAiOrg();
+  const toast = useToast();
+  const check = useCheckMachineClis(orgId);
+  const [checked, setChecked] = useState(false);
+  const way = cliCommandWayOut(t, kind, machine, reason, computer);
+  if (!way) return null;
+  const text =
+    checked && reason === "not_installed"
+      ? t("connectAi.cli.checked", { program: t(`brain.card.${kind}`), computer })
+      : way.text;
+  return (
+    <View style={styles.gap}>
+      <InfoCard
+        icon="laptop"
+        live
+        action={
+          machine.cliInstall ? (
+            <Button
+              size="sm"
+              variant="secondary"
+              label={t("connectAi.cli.check")}
+              disabled={check.isPending || !machine.online}
+              loading={check.isPending}
+              onPress={() =>
+                check.mutate(machine.id, {
+                  onSuccess: () => setChecked(true),
+                  onError: (err) => toast({ title: errorText(t, err), icon: "x" }),
+                })
+              }
+            />
+          ) : undefined
+        }
+      >
+        {text}
+      </InfoCard>
+      <CommandBlock command={way.command} />
+    </View>
+  );
+}
+
+/** Looks for the computer's programs again, once one that wouldn't start was fixed there by hand. */
+function CliCheckAgain({ machine }: { machine: Machine }) {
+  const { t } = useTranslation();
+  const { orgId } = useAiOrg();
+  const toast = useToast();
+  const check = useCheckMachineClis(orgId);
+  return (
+    <Button
+      size="sm"
+      variant="secondary"
+      label={t("connectAi.cli.check")}
+      disabled={check.isPending || !machine.online}
+      loading={check.isPending}
+      onPress={() => check.mutate(machine.id, { onError: (err) => toast({ title: errorText(t, err), icon: "x" }) })}
+    />
+  );
+}
+
 /** A line in a white card (why the steps wait), with its action. `live`: announced when it comes. */
 function InfoCard({
   icon,
@@ -1486,8 +1559,30 @@ function GateWait({
     row.kind !== "managed"
   ) {
     wait = <CliMissingCard machine={row} kind={kind} computer={computer} reason={gate.reason} />;
+  } else if (
+    gate.state === "unsupported" &&
+    (gate.reason === "not_installed" || gate.reason === "cant_start") &&
+    !hold &&
+    row &&
+    cliCommandWayOut(t, kind, row, gate.reason, computer)
+  ) {
+    wait = <CliCommandCard machine={row} kind={kind} computer={computer} reason={gate.reason} />;
   } else if (why && !(gate.state === "offline" && signingIn)) {
-    wait = <InfoCard icon={why.rechecks ? "clock" : "laptop"}>{why.text}</InfoCard>;
+    // A program there that won't start, on a computer someone connected: its own words, then a look once it's fixed.
+    const recheck =
+      gate.state === "unsupported" &&
+      gate.reason === "cant_start" &&
+      !hold &&
+      row?.kind !== "managed" &&
+      row?.cliInstall;
+    wait = (
+      <InfoCard
+        icon={why.rechecks ? "clock" : "laptop"}
+        action={recheck && row ? <CliCheckAgain machine={row} /> : undefined}
+      >
+        {why.text}
+      </InfoCard>
+    );
   } else if (gate.state === "missing") {
     wait = (
       <>

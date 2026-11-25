@@ -587,6 +587,34 @@ describe("boxes as tall as their text", () => {
       expect((body().getByRole("textbox", { name: "Fixa" }) as HTMLTextAreaElement).style.height).toBe("");
     }));
 
+  test("typing never rewrites a box's own text node: the page around it isn't restyled per key", async () => {
+    function Chat() {
+      const [value, setValue] = useState("");
+      return (
+        <>
+          <Composer
+            value={value}
+            onChange={setValue}
+            onSend={() => {}}
+            label="Mensagem"
+            sendLabel="Enviar"
+            attachLabel="Anexar"
+          />
+          <Textarea aria-label="Nota" value={value} onChange={(e) => setValue(e.target.value)} />
+        </>
+      );
+    }
+    render(<Chat />);
+    const boxes = [body().getByRole("textbox", { name: "Mensagem" }), body().getByRole("textbox", { name: "Nota" })];
+    const changes: MutationRecord[] = [];
+    const watch = new MutationObserver((records) => changes.push(...records));
+    for (const box of boxes) watch.observe(box, { childList: true, characterData: true, subtree: true });
+    for (const text of ["o", "oi", "oi tudo", ""]) await type(boxes[0] as HTMLElement, text);
+    watch.disconnect();
+    expect(changes).toHaveLength(0);
+    expect((boxes[1] as HTMLTextAreaElement).value).toBe("");
+  });
+
   test("the composer grows the same way", () =>
     measured(async () => {
       function Chat() {
@@ -607,6 +635,29 @@ describe("boxes as tall as their text", () => {
       expect(box.style.height).toBe("44px");
       await type(box, "um\ndois");
       expect(box.style.height).toBe("66px");
+    }));
+
+  test("typing at the end never lets the box go to auto: the page around it isn't laid out twice per key", () =>
+    measured(async () => {
+      function Box() {
+        const [value, setValue] = useState("");
+        return <Textarea autoGrow aria-label="Texto" value={value} onChange={(e) => setValue(e.target.value)} />;
+      }
+      render(<Box />);
+      const box = body().getByRole("textbox", { name: "Texto" }) as HTMLTextAreaElement;
+      // Each style write, by the value it replaced (the last one is the box's own).
+      const replaced: string[] = [];
+      const watch = new MutationObserver((records) => {
+        for (const r of records) replaced.push(r.oldValue ?? "");
+      });
+      watch.observe(box, { attributes: true, attributeFilter: ["style"], attributeOldValue: true });
+      for (const text of ["o", "oi", "oi\n", "oi\nt", "oi\ntudo"]) await type(box, text);
+      expect(replaced.filter((v) => v.includes("auto"))).toEqual([]);
+      expect(box.style.height).toBe("66px");
+      await type(box, "oi");
+      watch.disconnect();
+      expect(replaced.some((v) => v.includes("auto"))).toBe(true);
+      expect(box.style.height).toBe("44px");
     }));
 });
 
@@ -1264,6 +1315,11 @@ describe("Message aside and foot", () => {
     expect(css).not.toContain("ac-msg__aside--floating");
     expect(value(".ac-msg__gutter--aside", "justify-content")).toBe("flex-end");
     expect(value(".ac-msg__gutter--aside > .ac-msg__aside", "visibility")).toBeUndefined();
+    // It shows with the row's time, on hover or the row's focus (by opacity, so the keys still reach it).
+    const groupedCheck = ".ac-msg__gutter--aside > .ac-msg__aside";
+    expect(value(`.ac-msg--grouped:not([data-look="compact"]) ${groupedCheck}`, "opacity")).toBe("0");
+    expect(value(`.ac-msg--grouped:hover ${groupedCheck}`, "opacity")).toBe("1");
+    expect(value(`html:not([data-pointer]) .ac-msg--grouped:focus-within ${groupedCheck}`, "opacity")).toBe("1");
     expect(value(".ac-msg__gutter--aside > .ac-msg__gutter-time", "font-size")).toBe(
       "min(12px, max(11px, calc(var(--msg-text) - 3px)))",
     );

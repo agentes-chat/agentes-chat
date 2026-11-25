@@ -419,7 +419,9 @@ const KEY_FORMATS: [RegExp, string][] = [
   [/\bAKIA[0-9A-Z]{16}\b/g, REDACTED],
   [/\bxox[abprs]-[A-Za-z0-9-]{10,}/gi, REDACTED],
   [/\bAIza[0-9A-Za-z_-]{30,}/g, REDACTED],
-  [/\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/g, REDACTED],
+  // A JWT's first part runs to the end of its run of letters, digits, `_` and `-`, so one starts only at the first
+  // `eyJ` starting a word in that run: the lazy lookbehind skips a later one, which would read on to the run's end.
+  [/\beyJ(?<!\beyJ[A-Za-z0-9_-]*?eyJ)[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/g, REDACTED],
   [/\b(bearer)\s+[A-Za-z0-9._~+/=-]{20,}/gi, `$1 ${REDACTED}`],
 ];
 const SECRET_PATTERNS: [RegExp, string][] = [

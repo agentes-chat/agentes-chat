@@ -46,7 +46,7 @@ describe("Você in two panes (ADR 0212)", () => {
     expect(me).toContain(
       '<GroupedRow icon="smile" label={label} {...lit("/me/status")} chevron onPress={() => open("/me/status")} />',
     );
-    expect(me).toContain('action={{ label: t("mobile.me.edit"), onPress: () => open("/me/account") }}');
+    expect(me).toContain('action={{ label: t("mobile.me.edit"), onPress: () => open("/me/account"), opens: true }}');
     // An agent of yours is pushed, never a page of Você's.
     // biome-ignore lint/suspicious/noTemplateCurlyInString: the screen's source
     expect(me).toContain("onPress={() => pushScreen(`/agent/${agentId}`)}");

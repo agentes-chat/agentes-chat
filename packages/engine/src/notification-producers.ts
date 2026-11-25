@@ -6,6 +6,7 @@ import { agentManagerIds, agentOwnerIds, OWNER_COLUMNS } from "./audience";
 import { accountablePerson, runAuthorityById } from "./authority";
 import { autonomyNoteFor, proposalCardOf } from "./brakes";
 import { readableChannelIds } from "./channels";
+import { codeSessionOfChannel } from "./code-sessions";
 import { confidentialThreadSql, isConfidential } from "./confidential";
 import { threadFollowChoices } from "./follows";
 import { type Assignee, assigneesOfIssue } from "./issue-assignees";
@@ -195,13 +196,16 @@ export async function notifyMessage(deps: NotificationDeps, orgId: string, messa
   // A live file's conversation (ADR 0199): named by its file, and the apps open the file with it at this message.
   const file = channel.kind === "file" ? await fileOfConversation(db, orgId, message.channelId) : null;
   if (channel.kind === "file" && !file) return;
-  const label = channel.kind === "channel" ? channel.name : file?.title;
+  // A code session's conversation (ADR 0215): named by the session, and the apps open it on the Code page.
+  const codeSession = channel.kind === "code" ? await codeSessionOfChannel(db, orgId, message.channelId) : null;
+  const label = channel.kind === "channel" ? channel.name : (file?.title ?? codeSession?.title);
   const where: NotificationSource = {
     channelId: message.channelId,
     ...(message.threadId ? { threadId: message.threadId } : {}),
     messageId: message.id,
     ...(channel.kind === "dm" ? { dmId: message.channelId } : {}),
     ...(file ? { artifactId: file.id } : {}),
+    ...(codeSession ? { codeSessionId: codeSession.id } : {}),
   };
   const done = new Set<string>(authorUser ? [authorUser] : []);
 

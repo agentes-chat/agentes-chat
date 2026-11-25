@@ -16,6 +16,7 @@ import {
   deviceWaitOf,
   failedOnLocalNetwork,
   fixText,
+  helpingDevices,
   IPHONE_RESTART_MS,
   type IphoneRestartMemo,
   type IphoneSeen,
@@ -35,11 +36,13 @@ import {
   phoneScreenUrl,
   reasonText,
   screenGesture,
+  spilledText,
   statusDetail,
   statusPill,
   statusSentence,
   taskChoices,
   taskLimitLine,
+  tasksAutoText,
   waitEndedText,
   waitText,
   wifiHosts,
@@ -88,7 +91,7 @@ const computer = (c: Partial<ComputerDevice>): ComputerDevice => ({
   memoryGb: 36,
   ownerUserId: "u-sam",
   belongsToWorkspace: false,
-  spill: { own: true, others: false },
+  spill: { own: true },
   systemMode: false,
   audience: owner,
   status: { kind: "ready" },
@@ -101,7 +104,57 @@ const computer = (c: Partial<ComputerDevice>): ComputerDevice => ({
   ...c,
 });
 
+describe("devices as extra capacity", () => {
+  test("the line under a reply that thought elsewhere says where and why; any other reply has none", () => {
+    const org = { name: "Acme", mode: "team" as const };
+    expect(spilledText(t, { spilled: { to: "Bruno's MacBook", from: "Studio Mac", cause: "full" } }, org)).toBe(
+      "Thought on Bruno's MacBook: Studio Mac was full.",
+    );
+    // The workspace's own computer, named in its first owner's language, reads in the reader's.
+    expect(spilledText(t, { spilled: { to: "Bruno's MacBook", from: "Computador da Acme", cause: "full" } }, org)).toBe(
+      `Thought on Bruno's MacBook: ${t("computerSetup.title", { org: "Acme" })} was full.`,
+    );
+    expect(spilledText(t, { spilled: { to: "Bruno's MacBook", from: null, cause: "away" } }, org)).toBe(
+      "Thought on Bruno's MacBook: its computer was away.",
+    );
+    expect(spilledText(t, { speedFallback: true }, org)).toBeNull();
+  });
+
+  test("the computers that help an agent: online, its owner's own or the workspace's, while the workspace lets them", () => {
+    const mine = computer({ id: "mine", ownerUserId: "u-ana" });
+    const theirs = computer({ id: "theirs", ownerUserId: "u-sam" });
+    const team = computer({ id: "team", ownerUserId: "u-sam", belongsToWorkspace: true });
+    const off = computer({ id: "off", ownerUserId: "u-ana", spill: { own: false } });
+    const away = computer({ id: "away", ownerUserId: "u-ana", status: { kind: "offline", lastSeenAt: null } });
+    const devices = [mine, theirs, team, off, away];
+    expect(helpingDevices({ devices }, "u-ana", "home").map((d) => d.id)).toEqual(["mine", "team"]);
+    expect(helpingDevices({ devices }, "u-ana", "mine").map((d) => d.id)).toEqual(["team"]);
+    expect(helpingDevices({ devices, devicesHelp: false }, "u-ana", "home")).toEqual([]);
+  });
+});
+
 describe("tasks at once", () => {
+  test("where tasks start on room: no count in the pill, what still fits in the row, why none does under the pill", () => {
+    const room = { more: 8, freeGb: 6.4, cpuBusy: false, pushHarder: false };
+    const busy = computer({ status: { kind: "busy", running: 3, max: null }, maxTasks: 5, taskRoom: room });
+    expect(statusPill(t, busy.status)).toBe("Busy · 3 running");
+    expect(tasksAutoText(t, busy)).toBe("Automatic · 3 running · room for about 8 more");
+    expect(taskLimitLine(t, busy, true)).toBeNull();
+    const full = { ...busy, taskRoom: { ...room, more: 0, freeGb: 1.4 } };
+    expect(tasksAutoText(t, full)).toBe("Automatic · 3 running · full for now");
+    expect(taskLimitLine(t, full, true)).toBe(
+      "No room for another task right now: 1.4 GB of memory free. The next one starts when one ends.",
+    );
+    expect(taskLimitLine(t, { ...full, taskRoom: { ...full.taskRoom, cpuBusy: true } }, true)).toContain(
+      "the processor is nearly full",
+    );
+    expect(taskLimitLine(t, { ...full, taskRoom: { ...full.taskRoom, freeGb: 0.6, pushHarder: true } }, false)).toBe(
+      "Pushing harder: 0.6 GB of memory free. Your own apps may slow down.",
+    );
+    expect(tasksAutoText(t, computer({ taskRoom: room }))).toBe("Automatic · 0 running · room for about 8 more");
+    expect(tasksAutoText(t, computer({}))).toBeNull();
+  });
+
   test("a busy computer says its limit and where it changes; its owner changes it, an admin only on nobody's", () => {
     const busy = computer({ status: { kind: "busy", running: 5, max: 5 }, maxTasks: 5 });
     expect(taskLimitLine(t, busy, true)).toBe("Tasks at once here: 5. Change it below.");

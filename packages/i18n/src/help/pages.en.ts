@@ -411,7 +411,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         id: "proposals",
         heading: "Proposed changes",
         blocks: [
-          "When a lesson repeats, the agent may propose changing its own instructions or the workspace's context. Nothing changes until someone accepts, and the text can be adjusted first. The previous version stays in the history. A refused proposal is kept as a lesson, so it isn't proposed again.",
+          "When a lesson repeats, the agent may propose changing its own instructions or the workspace's context. The agent's review applies it if it makes sense, written as one short rule, or leaves it out and says why. Every change shows in Agent improvements, where you can undo it. An undone change is kept as a lesson, so the agent doesn't make it again.",
         ],
       },
     ],
@@ -836,7 +836,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         id: "data",
         heading: "What it sends",
         blocks: [
-          "Once a day the server sends agentes.chat anonymous usage statistics: counts such as people, agents, machine sizes, AI tokens used and how much data the agents' browsers send and receive. Never messages, files, names or sites. `docker compose run --rm agentes telemetry` prints exactly what it would send. The owner turns it off in **Settings\u00a0›\u00a0General**, or with `TELEMETRY=off` in `.env`.",
+          "Once a day the server sends agentes.chat anonymous usage statistics: counts such as people, agents, machine sizes, AI tokens used, how much data the agents' browsers send and receive, and how fast the apps open and run. Never messages, files, names or sites. `docker compose run --rm agentes telemetry` prints exactly what it would send. The owner turns it off in **Settings\u00a0›\u00a0General**, or with `TELEMETRY=off` in `.env`.",
           "Error reports go nowhere unless you set `SENTRY_DSN` to a Sentry-compatible server you choose. A report holds the error and where it happened, never messages, emails, IP addresses, cookies or tokens.",
         ],
       },

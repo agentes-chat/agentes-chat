@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { MACHINE_PROTOCOL_VERSION, type ServerFrame } from "@agenteschat/adapters/machine-protocol";
+import { MACHINE_PROTOCOL_VERSION, type ServerFrame, TASK_ROOM_PROTOCOL } from "@agenteschat/adapters/machine-protocol";
 import { eq, schema } from "@agenteschat/db";
 import { syncMachinePhones } from "@agenteschat/engine";
 import { browser, createTestServer, joinByInvitation, pairComputer, seedOrg, signUp, type TestServer } from "./harness";
@@ -234,7 +234,7 @@ test("tasks at once over HTTP: the computer says its limit, its owner changes it
     send(text: string) {
       const frame = JSON.parse(text) as ServerFrame;
       if (frame.type !== "request" || frame.op !== "limits.set") return;
-      sent.push(frame.maxTasks);
+      sent.push(frame.maxTasks ?? 0);
       const result = JSON.stringify({ type: "result", id: frame.id, ok: true, data: { maxTasks: frame.maxTasks } });
       setTimeout(() => void hub.message(conn, result), 1);
     },
@@ -273,4 +273,98 @@ test("tasks at once over HTTP: the computer says its limit, its owner changes it
   expect(outdated.status).toBe(400);
   expect(((await outdated.json()) as { error: { code: string } }).error.code).toBe("machine.outdated");
   expect(sent).toEqual([8]);
+});
+
+test("tasks on room over HTTP: the computer says what fits, its owner turns Push harder on there, an older app can't", async () => {
+  const { owner, rui } = await start();
+  const runner = { ...RUNNER, protocol: MACHINE_PROTOCOL_VERSION, exec: true };
+  const paired = await pairComputer(t, owner, runner, { name: "MacBook" });
+  const hub = t.engine.machineHub;
+  const asked: unknown[] = [];
+  let room = { more: 6, freeGb: 5.2, cpuBusy: false, pushHarder: false };
+  const conn = hub.open({
+    send(text: string) {
+      const frame = JSON.parse(text) as ServerFrame;
+      if (frame.type !== "request" || frame.op !== "limits.set") return;
+      asked.push({ maxTasks: frame.maxTasks, pushHarder: frame.pushHarder });
+      room = { ...room, pushHarder: frame.pushHarder === true };
+      const result = JSON.stringify({ type: "result", id: frame.id, ok: true, data: { maxTasks: 5, room } });
+      setTimeout(() => void hub.message(conn, result), 1);
+    },
+    close() {},
+  });
+  await hub.message(
+    conn,
+    JSON.stringify({
+      type: "hello",
+      token: paired.token,
+      ...runner,
+      size: { cpus: 10, memoryGb: 16, diskGb: 500, maxTasks: 5, room },
+    }),
+  );
+  const device = async () =>
+    ((await (await owner("/devices")).json()) as { devices: { id: string; taskRoom: unknown }[] }).devices.find(
+      (d) => d.id === paired.machineId,
+    );
+  expect((await device())?.taskRoom).toEqual({ more: 6, freeGb: 5.2, cpuBusy: false, pushHarder: false });
+
+  const path = `/devices/computers/${paired.machineId}`;
+  expect((await rui(path, { method: "PATCH", json: { pushHarder: true } })).status).toBe(403);
+  const on = await owner(path, { method: "PATCH", json: { pushHarder: true } });
+  expect(on.status).toBe(200);
+  expect(await on.json()).toMatchObject({ taskRoom: { pushHarder: true } });
+  expect(asked).toEqual([{ maxTasks: undefined, pushHarder: true }]);
+
+  // Filled up on the computer: the list follows its next reading.
+  await hub.message(
+    conn,
+    JSON.stringify({
+      type: "runner.state",
+      paused: { paused: false },
+      maxTasks: 5,
+      room: { more: 0, freeGb: 0.6, cpuBusy: false, pushHarder: true },
+    }),
+  );
+  expect((await device())?.taskRoom).toEqual({ more: 0, freeGb: 0.6, cpuBusy: false, pushHarder: true });
+
+  // An app before tasks on room keeps its count, and can't take Push harder.
+  const old = await pairComputer(t, owner, { ...runner, protocol: TASK_ROOM_PROTOCOL - 1 }, { name: "Old box" });
+  const outdated = await owner(`/devices/computers/${old.machineId}`, { method: "PATCH", json: { pushHarder: true } });
+  expect(outdated.status).toBe(400);
+  expect(((await outdated.json()) as { error: { code: string } }).error.code).toBe("machine.outdated");
+  expect(asked).toHaveLength(1);
+});
+
+test("help when the team's computer is full or away over HTTP: its owner turns it on and its CLIs start installing; an admin's workspace switch", async () => {
+  const { owner, rui, agentId } = await start();
+  await t.db.update(schema.agents).set({ brain: "claude_code" }).where(eq(schema.agents.id, agentId));
+  const runner = { ...RUNNER, protocol: MACHINE_PROTOCOL_VERSION, exec: true };
+  const paired = await pairComputer(t, owner, runner, { name: "MacBook" });
+  const hub = t.engine.machineHub;
+  const asked: unknown[] = [];
+  const conn = hub.open({
+    send(text: string) {
+      const frame = JSON.parse(text) as ServerFrame;
+      if (frame.type !== "request" || frame.op !== "cli.install") return;
+      asked.push({ action: frame.action, tool: frame.tool });
+      const data = { install: { tool: frame.tool, state: "running" } };
+      setTimeout(() => void hub.message(conn, JSON.stringify({ type: "result", id: frame.id, ok: true, data })), 1);
+    },
+    close() {},
+  });
+  await hub.message(conn, JSON.stringify({ type: "hello", token: paired.token, ...runner }));
+
+  const path = `/devices/computers/${paired.machineId}`;
+  expect((await owner(path, { method: "PATCH", json: { spill: { own: false } } })).status).toBe(200);
+  expect((await rui(path, { method: "PATCH", json: { spill: { own: true } } })).status).toBe(403);
+  const on = await owner(path, { method: "PATCH", json: { spill: { own: true } } });
+  expect(on.status).toBe(200);
+  expect(await on.json()).toMatchObject({ spill: { own: true } });
+  expect(asked).toEqual([{ action: "start", tool: "claude" }]);
+
+  const list = async () => ((await (await owner("/devices")).json()) as { devicesHelp: boolean }).devicesHelp;
+  expect(await list()).toBe(true);
+  expect((await rui("/devices/help", { method: "PUT", json: { on: false } })).status).toBe(403);
+  expect(await (await owner("/devices/help", { method: "PUT", json: { on: false } })).json()).toEqual({ on: false });
+  expect(await list()).toBe(false);
 });

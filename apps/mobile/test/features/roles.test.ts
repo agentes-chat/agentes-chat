@@ -667,9 +667,9 @@ describe("The order (Cargos' Ordenar), people and new cargos", () => {
   });
 
   test("Membros: a person's sheet offers Cargos; Convidar com este cargo gives every address the cargo", () => {
-    expect(memberActions(false, true, true)).toEqual(["dm", "roles", "remove"]);
+    expect(memberActions(false, true, true)).toEqual(["roles", "remove"]);
     expect(memberActions(true, true, true)).toEqual(["roles", "leave"]);
-    expect(memberActions(false, false)).toEqual(["dm"]);
+    expect(memberActions(false, false)).toEqual([]);
     expect(withAddresses([], "ana@example.com")).toEqual([{ email: "ana@example.com", valid: true }]);
     expect(read("features/members/MembersPage.tsx")).toContain("roles: () => router.push(rolesHref.person(m.userId))");
     expect(read("features/roles/RoleScreen.tsx")).toContain("params: { role: role.id }");

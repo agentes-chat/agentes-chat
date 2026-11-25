@@ -52,6 +52,7 @@ export const BUILTIN_TOOLS: Record<string, string[]> = {
     "web_search",
     "web_fetch",
     "image_search",
+    "show_image",
   ],
   "context:read": ["search_context", "get_summary", "expand"],
   "memory:write": ["remember", "update_memory", "forget", "save_how_to", "propose_instruction_change"],
@@ -441,7 +442,7 @@ export async function orgToolCatalog(db: Database, orgId: string, options: { vie
       continue;
     }
     if (isCustom(c)) {
-      const tools = await classifiedTools(db, c.id);
+      const tools = await classifiedTools(db, c);
       const byScope = new Map<string, CatalogTool[]>();
       for (const t of tools) {
         const scope = customScope(c.id, t.access as ToolAccess);

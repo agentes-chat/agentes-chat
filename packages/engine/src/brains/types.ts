@@ -1,10 +1,12 @@
 import type {
   BrainEffort,
+  BrainProgressKind,
   BrainSpeed,
   BrainStallPhase,
   BrainTurnRequest,
   BrainTurnTimings,
   ProviderFailureCause,
+  WireWorkflowAgent,
 } from "@agenteschat/adapters";
 import type { ToolImage } from "@agenteschat/providers";
 import { planOf } from "@agenteschat/providers/plans";
@@ -114,6 +116,8 @@ export interface BrainSession {
   cwd: string;
   /** Start in the agent's own folder, never one of its checkouts: the folder of its session before was gone. */
   ownFolder?: boolean;
+  /** A code session's turn (ADR 0215): `cwd` is its worktree. */
+  codeSession?: boolean;
 }
 
 export interface BrainTurn {
@@ -201,6 +205,11 @@ export interface BrainIO {
 
 export type BrainEvent =
   | { type: "text_delta"; text: string }
+  /**
+   * A note the model wrote between its calls that its API keeps apart from the reply's text (Claude's progress update,
+   * a reasoning summary): the work's narration, never the reply. An older server drops it.
+   */
+  | { type: "note"; text: string }
   /** `executed` present = already executed elsewhere (computer brains via the MCP bridge): the engine only records/displays it. */
   | { type: "tool_call"; id: string; name: string; input: unknown; executed?: ToolResult }
   | {
@@ -245,15 +254,31 @@ export type BrainEvent =
   | { type: "answer"; text: string }
   /** Fast failed (`message`: the provider's words) and this turn answered at standard speed. */
   | { type: "speed_fallback"; message: string }
-  /** A computer brain started a call of its own: shown only, its `tool_call` with `executed` follows. */
-  | { type: "tool_started"; id: string; name: string }
+  /**
+   * A computer brain started a call of its own: shown only, its `tool_call` with `executed` follows. `input`: what it
+   * was given, from a newer runner (a code session shows its line while it runs, ADR 0215).
+   */
+  | { type: "tool_started"; id: string; name: string; input?: unknown }
   /** A file a tool of the brain's own made, in the agent's folder (Codex's image generation): shown with the reply. */
   | { type: "file"; path: string }
   /**
    * The computer stopped the brain's CLI for its silence (where it was, the tool that ran and on what, how long): the
    * turn goes on in a resumed session (`resumed`), or ends (`brain_stalled`). Kept on the run's trail.
    */
-  | { type: "stalled"; phase: BrainStallPhase; tool?: string; label?: string; silentMs: number; resumed: boolean };
+  | { type: "stalled"; phase: BrainStallPhase; tool?: string; label?: string; silentMs: number; resumed: boolean }
+  /**
+   * A call of the brain's own that runs subagents (Claude Code's `Agent`, `Workflow`, ADR 0215) while they work: the
+   * subagent's latest call, how many it made, a workflow's agents, `ended` once over. Shown live only.
+   */
+  | {
+      type: "tool_progress";
+      id: string;
+      kind: BrainProgressKind;
+      step?: { name: string; input?: unknown };
+      calls?: number;
+      agents?: WireWorkflowAgent[];
+      ended?: { failed?: boolean };
+    };
 
 export interface Brain {
   kind: BrainKind;

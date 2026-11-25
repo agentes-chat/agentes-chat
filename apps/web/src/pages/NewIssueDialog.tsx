@@ -25,6 +25,7 @@ import {
   MenuSeparator,
   modKey,
   overLimit,
+  pastedFiles,
   Spinner,
   Switch,
   useAutoGrow,
@@ -214,7 +215,7 @@ export function NewIssueDialog({
   };
   // A print pasted anywhere in the form (title, text, criteria) becomes an attachment.
   const onPaste = (e: ClipboardEvent) => {
-    const pasted = Array.from(e.clipboardData?.files ?? []);
+    const pasted = pastedFiles(e.clipboardData);
     if (pasted.length === 0) return;
     e.preventDefault();
     files.onFiles(pasted);

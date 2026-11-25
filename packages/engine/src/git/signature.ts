@@ -61,7 +61,7 @@ export function creditedMessage(message: string, ...trailers: string[]) {
 }
 
 /** A name in a trailer: one line, nothing that ends it early (`<`, `>`) or breaks it (control characters). */
-const trailerName = (name: string) =>
+export const trailerName = (name: string) =>
   // biome-ignore lint/suspicious/noControlCharactersInRegex: control characters would break the trailer
   name.replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029<>]/g, "").trim();
 

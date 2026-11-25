@@ -159,7 +159,7 @@ export function NoticeLine({ message }: { message: Message }) {
     <EventLine
       message={message}
       mark={
-        notice.kind === "github_event" ? (
+        notice.kind === "github_event" || notice.kind === "github_check" ? (
           <ProviderLogo id="github" size="xs" />
         ) : (
           <Icon name={NOTICE_ICON[notice.kind] ?? "info"} size={14} />
@@ -188,6 +188,15 @@ export function SpeedFallbackLine({ agent }: { agent: Agent | undefined }) {
       }
     >
       {t("chat.speedFallback.text")}
+    </EventPill>
+  );
+}
+
+/** Under a reply that thought on another computer because the agent's own was full or away (`meta.spilled`). */
+export function SpilledLine({ text }: { text: string }) {
+  return (
+    <EventPill className="cn-pill cn-pill--part" mark={<Icon name="computer" size={14} />}>
+      {text}
     </EventPill>
   );
 }

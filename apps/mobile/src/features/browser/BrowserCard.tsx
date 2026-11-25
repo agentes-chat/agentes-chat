@@ -31,7 +31,7 @@ import { memo, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, Pressable, ScrollView, type StyleProp, StyleSheet, View, type ViewStyle } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
-import { useAppActive } from "@/lib/useAppActive";
+import { INACTIVE_GRACE_MS, useAppActive } from "@/lib/useAppActive";
 import { Sky } from "@/sky/Sky";
 import {
   Button,
@@ -168,7 +168,7 @@ export const BrowserCard = memo(function BrowserCard({
   const watching = inView || holding;
   // Its browser on the agent's screen, which this person may watch: the card shows that whole screen instead of the
   // browser's frames (ADR 0058 §7), only while in view with the app in front, and lingering a little after.
-  const active = useAppActive();
+  const active = useAppActive(INACTIVE_GRACE_MS);
   const shown = inView && active;
   const screen = useBrowserScreen(orgId, agentId, {
     enabled: !surface && !profile,
@@ -201,8 +201,13 @@ export const BrowserCard = memo(function BrowserCard({
   // A profile whose browser is off on its computer: the switch in the page's place (ADR 0036 §8).
   const offHere = Boolean(profile) && live.unavailable === "unavailable" && browserOffMessage(live.message);
   const noAnswer = Boolean(profile) && live.unavailable === "unavailable" && browserNoAnswerMessage(live.message);
-  const machines = useMachines(orgId, offHere);
+  const away = live.unavailable === "offline";
+  const machines = useMachines(orgId, offHere || away);
   const profileMachine = offHere ? machines.data?.find((m) => m.id === profile?.machineId) : undefined;
+  // Its computer away moving to another server: said so, never that it isn't answering.
+  const moving = away
+    ? machines.data?.find((m) => (profile ? m.id === profile.machineId : m.agents.some((a) => a.id === agentId)))
+    : undefined;
   const controller =
     live.handoff?.controllerUserId ??
     live.controllerUserId ??
@@ -337,7 +342,9 @@ export const BrowserCard = memo(function BrowserCard({
       : note.say === "hidden"
         ? // The card's top (or the full view's head) says who is in control; the page only why it hides.
           t("browser.inCard.hiddenHelp", grammar)
-        : t(pageGapKey(note.say, g, cloud), { name });
+        : note.say === "offline" && moving?.moving
+          ? t("machines.moving.named", { computer: moving.name })
+          : t(pageGapKey(note.say, g, cloud), { name });
   const coverHelp =
     note.say === "starting"
       ? t("browser.inCard.openingHelp")

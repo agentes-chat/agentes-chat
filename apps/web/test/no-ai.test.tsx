@@ -271,7 +271,7 @@ describe("no AI connected: above the composer", () => {
     // Settings › AI accounts, where the person was told to go.
     await renderApp(`/org/${ORG_ID}/settings/keys`, { api });
     await settle(5);
-    await click(screen().getByRole("button", { name: "Conectar uma IA" }), 6);
+    await click(screen().getByRole("button", { name: "Adicionar conta" }), 6);
     const box = dialog("Conectar uma IA") as HTMLElement;
     expect(aiSelect(box).textContent).toBe("Claude");
     const panel = within(box).getByRole("region", { name: "Seu plano do Claude" });
@@ -306,7 +306,7 @@ describe("no AI connected: above the composer", () => {
     machines.setAiAccounts(ai(machines));
     await renderApp(`/org/${ORG_ID}/settings/keys`, { api });
     await settle(5);
-    await click(screen().getByRole("button", { name: "Conectar uma IA" }), 6);
+    await click(screen().getByRole("button", { name: "Adicionar conta" }), 6);
     return { state, machines, box: dialog("Conectar uma IA") as HTMLElement };
   };
   const CLAUDE_OF_MINE: Parameters<Machines["setAiAccounts"]>[0]["accounts"][number] = {
@@ -445,7 +445,7 @@ describe("no AI connected: above the composer", () => {
     expect(banner()).toBeNull();
   });
 
-  test("Connect from an agent's DM: for every agent of the viewer's with no AI, or for that one alone", async () => {
+  test("Connect from an agent's DM for every agent of the viewer's with no AI; that one alone opens its own Quem pensa", async () => {
     const both = () => walters(seedState({ aiStatus: aiStatus(false, ADA_ID, ATLAS_ID) }), ADA_ID, ATLAS_ID);
     await open(both(), `dm/agent/${ADA_ID}`);
     await click(within(banner() as HTMLElement).getByRole("button", { name: "Conectar" }), 6);
@@ -467,11 +467,11 @@ describe("no AI connected: above the composer", () => {
     for (const name of ["Claude", "ChatGPT", "Outro plano", "Começar grátis"])
       expect(within(team).getByRole("button", { name: new RegExp(`^${name}`) })).toBeTruthy();
     cleanup();
-    // Only Ada has none: the dialog is hers, and there is nobody else to choose.
+    // Only Ada has none: her own "Quem pensa", beside the conversation, its account list open.
     await open(walters(seedState({ aiStatus: aiStatus(true, ADA_ID) }), ADA_ID, ATLAS_ID), `dm/agent/${ADA_ID}`);
-    await click(within(banner() as HTMLElement).getByRole("button", { name: "Conectar" }), 6);
-    const hers = dialog("Conectar uma IA para a Ada") as HTMLElement;
-    expect(within(hers).queryByRole("group", { name: "Agentes que usam este plano" })).toBeNull();
+    await click(within(banner() as HTMLElement).getByRole("button", { name: "Conectar" }), 8);
+    expect(dialog("Conectar uma IA para a Ada")).toBeNull();
+    expect(screen().getByRole("dialog", { name: "Quem pensa pela Ada" })).toBeTruthy();
     cleanup();
     // Opened from anywhere else, it is for the whole team: both on one line, and the way to pick among them.
     await open(both());

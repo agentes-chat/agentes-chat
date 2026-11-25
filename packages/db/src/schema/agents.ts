@@ -224,16 +224,6 @@ export const agents = pgTable(
     /** The computer brain's model (`opus`, `sonnet`, `haiku`, a Codex model); null = the brain's default. */
     brainModel: text(),
     /**
-     * Unused (ADR 0032's 2026-11-15 addendum: the API never stands in for a computer brain). Kept while the previous
-     * release still reads it during a deploy and on rollback; a migration of a later release drops it.
-     */
-    brainFallback: boolean().notNull().default(true),
-    /**
-     * Never read (ADR 0118's 2026-11-15 addendum: paid extra usage follows the plan, `paysExtraUsage`). Kept and dropped
-     * as `brainFallback` is; until then written `false` where the previous release wrote it, which still reads it.
-     */
-    brainExtraUsage: boolean().notNull().default(true),
-    /**
      * The account its computer brain runs with (ADR 0041), on its machine and
      * of its brain's kind (checked in code); null = the computer's own sign-in.
      * Cleared when the agent changes computer or brain kind, or the account goes.
@@ -308,11 +298,6 @@ export const agents = pgTable(
      */
     planForOthers: boolean().notNull().default(false),
     /**
-     * Retired with ADR 0093 (superseded by ADR 0137): nothing reads or writes it. Kept, with its index, while a
-     * running version still selects it (`check:migrations`); dropped by a migration in a later release.
-     */
-    coordinator: boolean().notNull().default(false),
-    /**
      * What it says it is doing (`set_status`, ADR 0084): a line, an optional emoji, and whether it asks not
      * to be interrupted. Tied to the run that wrote it (gone once that run ends) unless it set an end time.
      */
@@ -342,7 +327,6 @@ export const agents = pgTable(
   (t) => [
     unique().on(t.orgId, t.handle),
     unique().on(t.orgId, t.id),
-    uniqueIndex("agents_one_coordinator").on(t.orgId).where(sql`${t.coordinator} and ${t.archivedAt} is null`),
     uniqueIndex("agents_one_right_hand").on(t.orgId).where(sql`${t.builtin} = 'right_hand'`),
     check("agents_one_owner", sql`${t.ownerUserId} is null or ${t.ownerRoleId} is null`),
     // Machines are only soft-deleted (and `deleteMachine` clears this column first).
@@ -398,6 +382,8 @@ export const organizationSettings = pgTable("organization_settings", {
    * (`{ openrouter: { small, medium, large } }`); a tier left out is the provider's default (ADR 0087).
    */
   autoModels: jsonb().$type<Partial<Record<string, Partial<Record<string, string>>>>>().notNull().default({}),
+  /** With every plan account of a run's order at its limit, the run goes on with the workspace's API key (off by default). */
+  planKeyFallback: boolean().notNull().default(false),
   /** People can send GIFs in chat (ADR 0091): needs the server's `GIPHY_API_KEY` too. */
   gifs: boolean().notNull().default(true),
   /** The most a GIF may be rated: `g` (any age) or `pg` (ADR 0091). */
@@ -434,10 +420,20 @@ export const organizationSettings = pgTable("organization_settings", {
   /** "Dar boas-vindas a quem entra": the right hand greets each person who joins, once. On without a row too. */
   welcomePeople: boolean().notNull().default(true),
   /**
+   * The right hand learns from conversations on its own, as every other agent does (each person can also turn it off
+   * for themselves, `organization_members.right_hand_learns`). Off: only what people ask it to remember. On without a row.
+   */
+  rightHandLearns: boolean().notNull().default(true),
+  /**
    * How much the workspace's agents ask before acting (ADR 0173 addendum 2026-11-15): what every agent without its
    * own choice (`agents.approvals_level_own`) uses. A workspace with no row here is at `risky`.
    */
   approvalsLevel: text().$type<"always" | "risky" | "never">().notNull().default("risky"),
+  /**
+   * People's computers may help when the workspace's computer is full or away, each as its owner allows
+   * (`machines.spill_own`, ADR 0233). An admin turns it off for everyone; on without a row.
+   */
+  devicesHelp: boolean().notNull().default(true),
   updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
 });
 

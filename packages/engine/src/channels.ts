@@ -23,7 +23,13 @@ import { ConflictError, ForbiddenError, isUniqueViolation, NotFoundError, Valida
 import { publishChannelEvent, publishChannelsChanged, publishOrgEvent, publishUserEvent } from "./events";
 import { followsThreadSql, threadReadAtSql } from "./follows";
 import { landedAfterSql } from "./message-place";
-import { type PreviewMeta, previewMediaKind, previewMeta, readableBody } from "./message-preview";
+import {
+  CHANNEL_PREVIEW_LENGTH,
+  type PreviewMeta,
+  previewMediaKind,
+  previewMeta,
+  readableBody,
+} from "./message-preview";
 import { quietNoticeSql } from "./notices";
 import { clearChannelNotifications, notificationSnippet } from "./notifications";
 import {
@@ -228,8 +234,6 @@ export async function createChannel(
 
 /** The most unread messages counted per channel (clients show "99+"). */
 export const MAX_CHANNEL_UNREAD = 100;
-/** Length of a channel's last-message preview (plain text). */
-export const CHANNEL_PREVIEW_LENGTH = 140;
 
 export interface ChannelLastMessage {
   id: string;
@@ -262,6 +266,8 @@ export interface ChannelListItem {
   position: number;
   /** Agents asked in its main timeline answer in the thread under that message (ADR 0214). */
   replyInThreads: boolean;
+  /** The agent responsible for the channel (ADR 0095, addendum of 2026-11-23); null: none. */
+  leadAgentId: string | null;
   isMember: boolean;
   /** Listed only because I'm an administrator (ADR 0151): the apps keep it off the sidebar until opened or joined. */
   seenAsAdmin: boolean;
@@ -301,6 +307,7 @@ interface ChannelListRow {
   category_id: string | null;
   position: number | string;
   reply_in_threads: boolean | string;
+  lead_agent_id: string | null;
   is_member: boolean;
   seen_as_admin: boolean;
   unread_count: number | string | null;
@@ -346,7 +353,7 @@ export async function listChannels(db: Database, userId: string, orgId: string):
     and u.meta->>'mediaAfter' is null`;
   const rows = rowsOf<ChannelListRow>(
     await db.execute(sql`select c.id, c.org_id, c.name, c.topic, c.visibility, c.audience_role_ids, c.created_by_user_id, c.created_at,
-        c.category_id, c.position, c.reply_in_threads,
+        c.category_id, c.position, c.reply_in_threads, c.lead_agent_id,
         (cm.id is not null) as is_member,
         (cm.id is null and c.visibility <> 'public' and not ${channelAudienceSql("c", sql`${userId}`)}) as seen_as_admin,
         coalesce(un.n, 0) as unread_count, coalesce(un.m, 0) as mention_count,
@@ -402,6 +409,7 @@ export async function listChannels(db: Database, userId: string, orgId: string):
       categoryId: r.category_id,
       position: Number(r.position),
       replyInThreads: r.reply_in_threads === true || r.reply_in_threads === "t",
+      leadAgentId: r.lead_agent_id,
       isMember: r.is_member === true,
       seenAsAdmin: r.seen_as_admin === true,
       unreadCount: Number(r.unread_count ?? 0),
@@ -934,8 +942,10 @@ export async function listChannelMembers(db: Database, actorId: string, orgId: s
 /**
  * Removes a person or an agent from a channel. Allowed for yourself (leave),
  * the channel's creator, and admins; an agent also for whoever may put it
- * there (`requirePlacesAgent`). Publishes `membership.revoked` so open
- * WebSocket subscriptions of that person end immediately.
+ * there (`requirePlacesAgent`). A code session's conversation (ADR 0215) can be
+ * left too, and keeps its own agent and whoever opened it. Publishes
+ * `membership.revoked` so open WebSocket subscriptions of that person end
+ * immediately.
  */
 export async function removeChannelMember(
   db: Database,
@@ -952,7 +962,9 @@ export async function removeChannelMember(
     .where(and(eq(channels.id, channelId), eq(channels.orgId, orgId)));
   if (!channel) throw new NotFoundError("Channel not found");
   const self = "userId" in member && member.userId === actorId;
-  if (self && channel.kind !== "channel") throw new ValidationError("Only a channel can be left", "channel.leave_kind");
+  if (self && channel.kind !== "channel" && channel.kind !== "code")
+    throw new ValidationError("Only a channel can be left", "channel.leave_kind");
+  if (channel.kind === "code") await keepCodeSessionCore(db, channelId, member);
   // Every person joins #general with the workspace: it is how they all hear the same thing.
   if (self && channel.name === "general")
     throw new ValidationError("Everyone stays in #general", "channel.general_stays");
@@ -975,6 +987,15 @@ export async function removeChannelMember(
     )
     .returning({ channelId: channelMembers.channelId });
   caches.channelMembers.delete(`${orgId}:${channelId}`);
+  // Out of the channel, an agent is no longer responsible for it. The column is read by the update itself, never from
+  // the row above: a lead saved while the agent was leaving goes too (`updateChannel` locks its member row).
+  if ("agentId" in member) {
+    await db
+      .update(channels)
+      .set({ leadAgentId: null })
+      .where(and(eq(channels.orgId, orgId), eq(channels.id, channelId), eq(channels.leadAgentId, member.agentId)));
+    caches.channels.delete(`${orgId}:${channelId}`);
+  }
   // The last person out of a private channel: nobody could reach it again, so it closes (its messages are kept).
   if (self && gone.length > 0 && channel.visibility === "private" && !channel.archivedAt) {
     const [stays] = await db
@@ -995,6 +1016,18 @@ export async function removeChannelMember(
     member: { type: "agent", id: member.agentId },
   });
   await publishChannelsChanged(options.pubsub, orgId);
+}
+
+/** A code session (ADR 0215) keeps its own agent and whoever opened it: they are the session. */
+async function keepCodeSessionCore(db: Database, channelId: string, member: { userId: string } | { agentId: string }) {
+  const [session] = await db
+    .select({ agentId: schema.codeSessions.agentId, createdBy: schema.codeSessions.createdBy })
+    .from(schema.codeSessions)
+    .where(eq(schema.codeSessions.channelId, channelId))
+    .limit(1);
+  if (!session) return;
+  if ("agentId" in member ? member.agentId === session.agentId : member.userId === session.createdBy)
+    throw new ValidationError("A code session keeps its own agent and whoever opened it", "code_session.member_stays");
 }
 
 /** The channel, when `actorId` may archive it or bring it back: its creator or an admin. */

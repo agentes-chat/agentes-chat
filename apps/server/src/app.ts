@@ -18,11 +18,13 @@ import installScript from "../../../install.sh" with { type: "text" };
 import { registerAppLinks } from "./app-links";
 import { authHandler, signInPageUrl } from "./auth";
 import { apiBodyLimit } from "./http/body-limit";
-import { errorPages } from "./http/error-page";
+import { errorPages, isPageRequest } from "./http/error-page";
 import { apiError, domainErrorResponse, routeOf, validationHook } from "./http/errors";
+import { busyResponse } from "./load-shed";
 import { createLogger, type Logger, loggedPath } from "./logger";
 import { ownHosts } from "./operator/hosts";
 import { directPushSenders, relayServeSender } from "./push-senders";
+import { timeRoutes } from "./route-times";
 import { accessRoutes } from "./routes/app/access";
 import { accountRoutes } from "./routes/app/account";
 import { actionRoutes } from "./routes/app/actions";
@@ -38,6 +40,7 @@ import { browserProfileRoutes } from "./routes/app/browser-profiles";
 import { calendarRoutes } from "./routes/app/calendar";
 import { channelRoutes } from "./routes/app/channels";
 import { chatRoutes } from "./routes/app/chat";
+import { codeSessionRoutes } from "./routes/app/code-sessions";
 import { connectorRoutes } from "./routes/app/connectors";
 import { customConnectorRoutes } from "./routes/app/connectors-custom";
 import { type AppDeps, agentDetailsGate, readOnlyWhileDeleting } from "./routes/app/context";
@@ -77,6 +80,7 @@ import { surfaceRoutes } from "./routes/app/surfaces";
 import { teamWeekRoutes } from "./routes/app/team-week";
 import { telemetryRoutes } from "./routes/app/telemetry";
 import { threadRoutes } from "./routes/app/threads";
+import { thumbRoutes } from "./routes/app/thumbs";
 import { vaultRoutes } from "./routes/app/vault";
 import { speechKeyRoutes, voiceRoutes } from "./routes/app/voice";
 import { waitingRoutes } from "./routes/app/waiting";
@@ -88,6 +92,7 @@ import {
   registerNativeRoutes,
 } from "./routes/desktop";
 import { deviceAppRoutes, registerConnectLinkInfo, registerConnectScripts } from "./routes/devices";
+import { registerFonts } from "./routes/fonts";
 import { registerGitProxy } from "./routes/git";
 import { githubAppRoutes, registerGitHubAppWebhook } from "./routes/github-app";
 import { registerHealth } from "./routes/health";
@@ -106,6 +111,8 @@ export interface AppOptions {
   pingDatabase: () => Promise<void>;
   /** True once the server is shutting down: `/api/health` answers 503. */
   draining?: () => boolean;
+  /** Why this process is overloaded now (`watchLoad`), or null: the apps' reads (and `/api/health?load=1`) answer 503. */
+  overloaded?: () => string | null;
   /** Needed when modules register routes. */
   moduleContext?: ModuleContext;
   /** Database, auth and adapters. Without them only system routes are mounted (some tests). */
@@ -124,6 +131,7 @@ export interface AppOptions {
  *
  * Layout:
  * - `/api/health`         health probe
+ * - `/api/fonts/*`        public: the fonts live files use, their `@font-face` CSS and files (ADR 0220)
  * - `/api/instance`       public: what this server is, for the phone and desktop apps choosing a server
  * - `/api/auth/*`         Better Auth (sign-up, sign-in, sessions, OAuth callbacks)
  * - `/api/app/*`          private API of the web and phone apps (cookie session + CSRF, ADR 0035)
@@ -163,6 +171,7 @@ export function createApp(options: AppOptions) {
     description: "Session cookie set by `/api/auth/sign-in/*`.",
   });
 
+  registerFonts(api);
   registerHealth(api, {
     version,
     // agentes.chat itself runs the self-host image: its apps must still hide what only a self-hosted server has.
@@ -170,6 +179,7 @@ export function createApp(options: AppOptions) {
     modules: options.modules.map((m) => m.name),
     pingDatabase: options.pingDatabase,
     draining: options.draining,
+    overloaded: options.overloaded,
   });
 
   if (options.services) {
@@ -224,12 +234,15 @@ export function createApp(options: AppOptions) {
     api.route("/app", billingRoutes(deps));
     api.route("/app", referralRoutes(deps));
     api.route("/app", artifactRoutes(deps));
+    api.route("/app", thumbRoutes(deps));
     api.route("/app", liveRoutes(deps));
     // Pictures on canvases (ADR 0197): the image models, requests and Try again.
     api.route("/app", imageRoutes(deps));
     api.route("/app", issueRoutes(deps));
     api.route("/app", threadRoutes(deps));
     api.route("/app", missionRoutes(deps));
+    // Code sessions (ADR 0215): a request in its own worktree on the agent's computer, with its conversation.
+    api.route("/app", codeSessionRoutes(deps));
     api.route("/app", wikiRoutes(deps));
     api.route("/app", routineRoutes(deps));
     api.route("/app", calendarRoutes(deps));
@@ -351,6 +364,8 @@ export function createApp(options: AppOptions) {
   });
   // Ties a request's failure in the log to its report, and to what the client saw (`X-Request-Id`).
   app.use("/api/*", requestId());
+  // Each route's p95 over the minute, on the operator's `GET /vitals` (`route-times.ts`, `process-health.ts`).
+  app.use("/api/*", timeRoutes);
   app.use("/api/*", apiBodyLimit);
   // Security headers on every response: the app may not be framed (clickjacking of approval, merge and deploy
   // cards), <base> is pinned to our own origin, and HSTS is sent where the instance is served over TLS. `frame-src`
@@ -373,6 +388,17 @@ export function createApp(options: AppOptions) {
   });
   // A link a person opens in a browser that the API refuses: our page, never the JSON on screen (ADR 0157).
   app.use("/api/*", errorPages(options.services?.config.PUBLIC_URL));
+  // A late event loop or slow database: the apps' reads wait for a calmer moment (or, behind a proxy, another
+  // process); writes carry on. A full socket count turns new sockets away only.
+  const overloaded = options.overloaded;
+  if (overloaded) {
+    app.use("/api/app/*", async (c, next) => {
+      // A link a person opened (a provider's OAuth return with its one-time code, a download, an invite) is no read.
+      const read = c.req.method === "GET" && !isPageRequest(c.req.raw.headers, "GET");
+      const why = read ? overloaded() : null;
+      return why && why !== "sockets" ? busyResponse() : next();
+    });
+  }
   app.route("/api", api);
   if (options.services) {
     registerConnectScripts(app, { log, ...options.services });
@@ -403,7 +429,9 @@ export function createApp(options: AppOptions) {
   );
 
   if (options.webDir) {
-    const assets = serveStatic({ root: options.webDir });
+    // The build writes each script and stylesheet compressed beside it (apps/web/scripts/compress-dist.ts): a server
+    // with nothing in front of it sends 1/4 of the bytes. Pages stay plain (their HTML is rewritten for a host).
+    const assets = serveStatic({ root: options.webDir, precompressed: true });
     // Client-side routing: unknown non-API paths render the web app.
     const spa = serveStatic({ root: options.webDir, path: "index.html" });
     const isApi = (path: string) => path.startsWith("/api/");

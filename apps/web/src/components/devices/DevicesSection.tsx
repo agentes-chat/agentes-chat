@@ -19,6 +19,7 @@ import { computerKind } from "@agenteschat/client/lib/machines";
 import { can } from "@agenteschat/client/lib/permissions";
 import {
   Button,
+  Card,
   ComputerPortrait,
   EmptyState,
   List,
@@ -27,6 +28,7 @@ import {
   MenuSeparator,
   SearchField,
   Segmented,
+  Switch,
   Tip,
   Toolbar,
 } from "@agenteschat/ui";
@@ -37,6 +39,7 @@ import { AgentComputersCard } from "@/components/AgentComputer";
 import { HelpLink } from "@/components/HelpLink";
 import { ErrorState, LoadingList } from "@/components/Loading";
 import { HostComputerCard } from "@/components/Machines";
+import { PrefRow } from "@/components/NoticePrefs";
 import { useOrg } from "@/components/org-context";
 import { useComputerEdition, WorkspaceComputerCard } from "@/components/WorkspaceComputer";
 import { useToast } from "@/lib/toast";
@@ -48,6 +51,7 @@ import {
   useDevices,
   useForgetPhone,
   useRemoveComputer,
+  useSetDevicesHelp,
   useStopPhone,
   useUpdateComputer,
   useUpdatePhone,
@@ -74,6 +78,9 @@ export function DevicesSection({ start }: { start?: ConnectStart | null }) {
   const [renaming, setRenaming] = useState<Target | null>(null);
   const [removing, setRemoving] = useState<Target | null>(null);
   const canConnect = can(org, "pair_computers");
+  const admin = can(org, "configure");
+  const help = useSetDevicesHelp(org.id);
+  const toast = useToast();
   const list = devices.data?.devices ?? [];
   const counts = deviceCounts(list);
   const rows = deviceRows(list, filter, query);
@@ -164,6 +171,28 @@ export function DevicesSection({ start }: { start?: ConnectStart | null }) {
             )}
           </EmptyState>
         ))}
+      {/* The workspace's switch over every computer's help: an admin's. */}
+      {admin && devices.isSuccess && (
+        <Card aria-label={t("devices.helpWorkspace")}>
+          <div className="settings-rows">
+            <PrefRow
+              id="dv-help"
+              icon="bolt"
+              label={t("devices.helpWorkspace")}
+              hint={t("devices.helpWorkspaceHint")}
+              control={
+                <Switch
+                  id="dv-help-switch"
+                  checked={devices.data.devicesHelp !== false}
+                  onCheckedChange={(on) =>
+                    help.mutate(on, { onError: (err) => toast.show(errorText(t, err), "error") })
+                  }
+                />
+              }
+            />
+          </div>
+        </Card>
+      )}
       {edition === "selfhost" && (
         <>
           <HostComputerCard onlyOff />

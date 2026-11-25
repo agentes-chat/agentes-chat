@@ -8,7 +8,9 @@ const src = (file: string) => readFileSync(join(import.meta.dir, "../../src", fi
 describe("long messages on the phone", () => {
   test("a tall message clips by the rule the web uses, and Ver mais opens it in place for good, kept by the screen", () => {
     const clip = src("features/chat/ClippedMessage.tsx");
-    expect(clip).toContain('import { clippedHeight, LONG_MESSAGE } from "@agenteschat/client/lib/message-length"');
+    expect(clip).toContain(
+      'import { clippedHeight, LONG_MESSAGE, shownWhole } from "@agenteschat/client/lib/message-length"',
+    );
     expect(clip).toContain("const cut = clippedHeight(height);");
     // In place: no sheet, no copy of its own (Copiar stays in the message's menu), and nothing folds it back.
     expect(clip).not.toContain("useSheetIfAny");
@@ -16,13 +18,15 @@ describe("long messages on the phone", () => {
     expect(clip).not.toMatch(/setTapped\((false|!)/);
     expect(src("features/chat/sheets.tsx")).toContain('label: t("mobile.chat.copy")');
     // The screen keeps which are open (its list unmounts rows off screen), and opening one stops it following the end.
-    expect(clip).toContain("const open = fullMessages || tapped || Boolean(screen?.has(id));");
+    expect(clip).toContain("const open = fullMessages || tapped || Boolean(screen?.has(id)) || shownWhole.has(id);");
     expect(clip).toContain("screen?.open(id);");
     const screen = chatScreenSource();
     expect(screen).toContain("<OpenedMessagesContext.Provider value={openedMessages}>");
+    // Kept for the session too, the web's set: a screen opened again starts with them.
     expect(screen).toMatch(
-      /open: \(id\) => \{\s*setOpened\(\(s\) => new Set\(s\)\.add\(id\)\);\s*if \(atEndRef\.current\) setReadHold\(true\);/,
+      /open: \(id\) => \{\s*shownWhole\.add\(id\);\s*setOpened\(\(s\) => new Set\(s\)\.add\(id\)\);\s*if \(atEndRef\.current\) setReadHold\(true\);/,
     );
+    expect(screen).toContain("useState<ReadonlySet<string>>(() => new Set(shownWhole))");
     // It opens at once, never with a layout transition: inside the list an animated height left the words' frame at
     // the fold under a bubble already as tall as the whole words. The reader's screen reader goes to the words.
     expect(clip).not.toContain("layout=");
@@ -40,6 +44,15 @@ describe("long messages on the phone", () => {
     expect(row).toContain("const opened = useContext(OpenedMessagesContext)?.has(props.message.id) === true;");
     expect(row).toContain('<LayoutAnimationConfig key={opened ? "opened" : "row"} skipEntering>');
     expect(clip).toContain("focusOnOpen = id;");
+  });
+
+  test("the newest message, the answer to the reader's latest and a mention of them show whole, as on the web", () => {
+    const clip = src("features/chat/ClippedMessage.tsx");
+    const screen = chatScreenSource();
+    expect(screen).toContain("const ids = answerIds(messages);");
+    expect(screen).toContain("for (const r of scrollRows) if (r.mentionsMe && r.id) ids.add(r.id);");
+    // Shown whole once, it stays whole as newer messages arrive; an agent's message folded to its lead is not one.
+    expect(clip).toContain("if (lead == null && screen?.answer(id)) shownWhole.add(id);");
   });
 
   test("an agent's long message to another agent opens in place too: no push to its thread", () => {

@@ -27,6 +27,7 @@
     "libpg-query": "17",
     "y-protocols": "1.0.7",
     "yjs": "13.6.33",
+    "yoga-layout": "3.2.1",
     "zod": "^4.6.5"
   },
   "devDependencies": {

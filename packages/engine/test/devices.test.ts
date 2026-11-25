@@ -34,6 +34,7 @@ import {
   repairIphone,
   requestTimeoutMs,
   setAgentComputerTarget,
+  setDevicesHelp,
   setWorkspaceComputers,
   startWifiPairing,
   stopPhone,
@@ -290,25 +291,30 @@ test("who can use it: the owner sets it; an admin renames, marks it the workspac
   ).rejects.toMatchObject({ code: "machine.managed" });
 });
 
-test("spill-over: on for its owner's replies by default; only the owner turns it on, an admin only off", async () => {
+test("help when the team's computer is full or away: on by default; only the owner turns it on, an admin only off", async () => {
   f = await setup();
   const sam = await addMember(f.db, f.org.id, "admin", "sam");
   const rui = await addMember(f.db, f.org.id, "member", "rui");
   const laptop = await pair(rui.id, "Rui's laptop");
-  expect((await updateComputerDevice(deps(), rui.id, f.org.id, laptop, {})).spill).toEqual({
-    own: true,
-    others: false,
+  expect((await updateComputerDevice(deps(), rui.id, f.org.id, laptop, {})).spill).toEqual({ own: true });
+  expect((await updateComputerDevice(deps(), sam.id, f.org.id, laptop, { spill: { own: false } })).spill).toEqual({
+    own: false,
   });
-  await expect(
-    updateComputerDevice(deps(), sam.id, f.org.id, laptop, { spill: { others: true } }),
-  ).rejects.toMatchObject({ code: "device.spill_owner_only" });
-  expect((await updateComputerDevice(deps(), rui.id, f.org.id, laptop, { spill: { others: true } })).spill).toEqual({
-    own: true,
-    others: true,
+  await expect(updateComputerDevice(deps(), sam.id, f.org.id, laptop, { spill: { own: true } })).rejects.toMatchObject({
+    code: "device.spill_owner_only",
   });
-  expect(
-    (await updateComputerDevice(deps(), sam.id, f.org.id, laptop, { spill: { own: false, others: false } })).spill,
-  ).toEqual({ own: false, others: false });
+  expect((await updateComputerDevice(deps(), rui.id, f.org.id, laptop, { spill: { own: true } })).spill).toEqual({
+    own: true,
+  });
+});
+
+test("the workspace's switch: on without a row, only an admin turns it off, and the list says so", async () => {
+  f = await setup();
+  const rui = await addMember(f.db, f.org.id, "member", "rui");
+  expect((await listDevices(f.db, f.org.id, rui.id)).devicesHelp).toBe(true);
+  await expect(setDevicesHelp(deps(), rui.id, f.org.id, false)).rejects.toMatchObject({ code: "forbidden" });
+  expect(await setDevicesHelp(deps(), f.owner.id, f.org.id, false)).toBe(false);
+  expect((await listDevices(f.db, f.org.id, rui.id)).devicesHelp).toBe(false);
 });
 
 test("where workspaces have their own computer, a brought one is a target, never an agent's home", async () => {

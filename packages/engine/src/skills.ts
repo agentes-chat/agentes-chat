@@ -6,6 +6,7 @@ import { editsAgent } from "./audience";
 import { recordAudit } from "./audit";
 import { mapInBatches } from "./batches";
 import { activeConnections, type ConnectorDeps } from "./connectors/connections";
+import { teamGitHub } from "./connectors/own-github";
 import { type ErrorParams, ForbiddenError, NotFoundError, TooManyError, ValidationError } from "./errors";
 import { publishAgentsChanged } from "./events";
 import { formatBytes } from "./format";
@@ -1205,7 +1206,7 @@ async function workspaceRepository<R>(
 ) {
   const repo = `${target.owner}/${target.repo}`;
   const github = deps.github;
-  const connection = github && (await activeConnections(deps.db, orgId)).find((c) => c.connector === "github");
+  const connection = github && teamGitHub(await activeConnections(deps.db, orgId));
   let state: GithubConnectionState = connection ? "ok" : "none";
   let unanswered = false;
   let tried = false;

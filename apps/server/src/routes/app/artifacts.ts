@@ -36,9 +36,12 @@ import {
   replyToBlock,
   requireLiveFile,
   restoreArtifact,
+  type StoredDownload,
   setBlockState,
   setFileAccess,
   setFileSharing,
+  setFileWave,
+  storedArtifactFile,
   updateArtifact,
   updateFolder,
   ValidationError,
@@ -46,8 +49,9 @@ import {
   withPersonFacts,
 } from "@agenteschat/engine";
 import { createRoute, z } from "@hono/zod-openapi";
+import type { Context } from "hono";
 import { bodyLimit } from "hono/body-limit";
-import { rangedResponse } from "../../http/byte-range";
+import { etagMatches, rangedResponse, storedResponse } from "../../http/byte-range";
 import { apiError, errorResponse } from "../../http/errors";
 import {
   type AppDeps,
@@ -124,6 +128,10 @@ const FileContent = z
     text: z.string().optional().openapi({ description: "Small UTF-8 text files only (≤ 40k characters)." }),
     width: z.number().int().optional().openapi({ description: "A picture's width in pixels, when known." }),
     height: z.number().int().optional().openapi({ description: "A picture's height in pixels, when known." }),
+    wave: z
+      .object({ peaks: z.array(z.number()), durationMs: z.number().int() })
+      .optional()
+      .openapi({ description: "An audio file's wave (0–1) and length, once an app measured it." }),
   })
   .openapi("ArtifactFileContent", {
     description: "An uploaded file as is: metadata only; the bytes come from the download link.",
@@ -311,7 +319,7 @@ const Folder = z
 const FolderParams = OrgParams.extend({ folderId: z.uuid() });
 const FolderName = z.string().trim().min(1).max(120);
 
-const Poll = z
+export const Poll = z
   .object({
     id: z.string(),
     closesAt: z.string(),
@@ -321,7 +329,7 @@ const Poll = z
   })
   .openapi("Poll");
 
-const BlockState = z
+export const BlockState = z
   .object({
     id: z.string(),
     version: z.number(),
@@ -339,7 +347,7 @@ const BlockState = z
   })
   .openapi("BlockState");
 
-const Choices = z
+export const Choices = z
   .object({
     id: z.string(),
     answer: z
@@ -360,7 +368,7 @@ const Choices = z
   })
   .openapi("Choices");
 
-const ArtifactDetail = Artifact.extend({
+export const ArtifactDetail = Artifact.extend({
   shownVersion: z.number(),
   content: Content,
   versioned: z.boolean().openapi({
@@ -380,6 +388,52 @@ const FILE_FORMATS = ["csv", "patch", "pdf", "docx", "xlsx", "pptx", "json", "md
 const LIVE_DOWNLOAD: Partial<Record<string, "xlsx" | "pptx">> = { spreadsheet: "xlsx", slides: "pptx" };
 /** What `exportLive` writes of a live file as it stands now (ADR 0198). */
 const LIVE_EXPORTS = ["xlsx", "csv", "pptx", "pdf"] as const;
+/** How long the bucket's link a redirect sends to lives: a video keeps reading from it while its page stays open. */
+const FILE_LINK_TTL_SECONDS = 3600;
+
+/** A download's headers: always an attachment, never sniffed as another type, never run as a page. */
+const attachmentHeaders = (file: { contentType: string; filename: string }) => ({
+  "content-type": file.contentType,
+  "content-disposition": attachmentDisposition(file.filename),
+  "x-content-type-options": "nosniff",
+  "content-security-policy": "sandbox",
+});
+
+/**
+ * A version's stored bytes. What a browser loads for an element or a page (a video, a download), which follows a
+ * redirect to another origin without CORS, goes to the bucket's signed link. A script's fetch (the previews: the
+ * bucket may allow no CORS) and apps that send no fetch metadata get the bytes from us, read in parts as they go. An
+ * asked version never changes, so it is cached for good; the newest is checked again each time.
+ */
+async function storedFile(c: Context, file: StoredDownload, versioned: boolean) {
+  const mode = c.req.header("sec-fetch-mode");
+  if (mode === "navigate" || mode === "no-cors") {
+    const url = await file.store.signedUrl(file.key, {
+      expiresInSeconds: FILE_LINK_TTL_SECONDS,
+      filename: file.filename,
+      contentType: file.contentType,
+    });
+    if (url) {
+      return new Response(null, { status: 302, headers: { location: url, "cache-control": "private, no-store" } });
+    }
+  }
+  const etag = `"${file.sha256}"`;
+  const headers = {
+    ...attachmentHeaders(file),
+    // no-transform: no proxy rewrites the bytes (Cloudflare's email obfuscation edits text/html).
+    "cache-control": versioned
+      ? "private, max-age=31536000, immutable, no-transform"
+      : "private, no-cache, no-transform",
+    etag,
+    // A video's own load is sent to the bucket: bytes cached for a load under CORS (a fetch, the comment stage's
+    // video) must never answer it, since Chrome fails a video whose first bytes came from here and the next from there.
+    vary: "sec-fetch-mode",
+  };
+  if (etagMatches(c.req.header("if-none-match"), etag)) return new Response(null, { status: 304, headers });
+  // A part of another version than the one the client holds (`If-Range`) would mix two files: the whole one instead.
+  const ifRange = c.req.header("if-range");
+  return storedResponse(file, ifRange && ifRange !== etag ? undefined : c.req.header("range"), headers);
+}
 
 /**
  * The Drive: files people and agents make (documents, tables, diffs, HTML
@@ -739,8 +793,9 @@ export function artifactRoutes(deps: AppDeps) {
     return exportLive(liveDeps(), userId, orgId, artifactId, format);
   };
 
-  // The bytes, always as an attachment (HTML and uploaded files are never rendered on our origin). A live file
-  // downloads as an Office file, a CSV or a PDF of how it stands now (ADR 0198).
+  // The bytes, always as an attachment (HTML and uploaded files are never rendered on our origin): a version's stored
+  // bytes (`storedFile`), or what is made of it. A live file downloads as an Office file, a CSV or a PDF of how it
+  // stands now (ADR 0198).
   app.get("/organizations/:orgId/artifacts/:artifactId/file", async (c) => {
     const version = c.req.query("version");
     const asked = FILE_FORMATS.find((f) => f === c.req.query("format"));
@@ -748,19 +803,14 @@ export function artifactRoutes(deps: AppDeps) {
     const orgId = c.req.param("orgId");
     const artifactId = c.req.param("artifactId");
     const exported = version ? null : await liveExport(userId, orgId, artifactId, asked);
+    const at = version ? Number(version) : undefined;
+    const stored = exported || asked ? null : await storedArtifactFile(artifacts(), userId, orgId, artifactId, at);
+    if (stored) return storedFile(c, stored, at !== undefined);
     const file =
-      exported ??
-      (await artifactFile(artifacts(), userId, orgId, artifactId, {
-        version: version ? Number(version) : undefined,
-        format: asked,
-      }));
+      exported ?? (await artifactFile(artifacts(), userId, orgId, artifactId, { version: at, format: asked }));
     // In parts when asked (a video starts at once and jumps without the whole file first).
     return rangedResponse(file.body, c.req.header("range"), {
-      "content-type": file.contentType,
-      "content-disposition": attachmentDisposition(file.filename),
-      "x-content-type-options": "nosniff",
-      "content-security-policy": "sandbox",
-      // no-transform: no proxy rewrites the bytes (Cloudflare's email obfuscation edits text/html).
+      ...attachmentHeaders(file),
       "cache-control": "private, no-store, no-transform",
     });
   });
@@ -871,6 +921,43 @@ export function artifactRoutes(deps: AppDeps) {
       );
       deps.wakeWorkers?.();
       return c.json({ id: message.id }, 201);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "put",
+      path: "/organizations/{orgId}/artifacts/{artifactId}/wave",
+      tags,
+      security,
+      summary: "Keep an audio file's wave and length, measured by the first app that played it (kept once)",
+      request: {
+        params: ArtifactParams,
+        query: z.object({ version: z.coerce.number().int().min(1) }),
+        body: body(
+          z.object({
+            peaks: z.array(z.number().min(0).max(1)).max(200),
+            durationMs: z.number().int().positive(),
+          }),
+        ),
+      },
+      responses: {
+        200: json(z.object({ peaks: z.array(z.number()), durationMs: z.number().int() })),
+        ...errors,
+      },
+    }),
+    async (c) => {
+      const { orgId, artifactId } = c.req.valid("param");
+      const { version } = c.req.valid("query");
+      const wave = await setFileWave(
+        artifacts(),
+        person(c.get("user").id),
+        orgId,
+        artifactId,
+        version,
+        c.req.valid("json"),
+      );
+      return c.json(wave, 200);
     },
   );
 

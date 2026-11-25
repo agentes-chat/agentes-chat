@@ -154,7 +154,8 @@ export async function pauseStretch(tx: Executor, orgId: string, hold: StretchHol
     kind: STRETCH_JOB,
     payload: { ...hold },
     dedupeKey: `${STRETCH_JOB}:${hold.stretchId}:${hold.messageId ?? hold.runId}:${hold.agentId}`,
-    maxAttempts: 4,
+    // The card is the only sign the work stopped: it keeps trying for hours, past a database outage, before giving up.
+    maxAttempts: 8,
   });
 }
 
@@ -250,7 +251,7 @@ export async function refusedAtLimit(db: Database, run: ToolRun, wakes: string):
     // Continuar wakes it again where it answered; a routine's run, where the routine reports.
     ...(report ? {} : { after: { threadRootId: at.threadRootId, replyInThread: at.replyInThread } }),
   });
-  return { content: STRETCH_REFUSAL, isError: true };
+  return { content: STRETCH_REFUSAL, isError: true, data: { code: "stretch.limit" } };
 }
 
 /**
@@ -393,9 +394,11 @@ export async function postStretchCard(deps: { db: Database; pubsub?: PubSub }, o
         and(
           eq(messages.orgId, orgId),
           hold.messageId
-            ? sql`(${messages.channelId} = ${hold.channelId}::uuid or ${messages.channelId} in (
-            select distinct ${agentRuns.channelId} from ${agentRuns}
-            where ${agentRuns.orgId} = ${orgId}::uuid and ${agentRuns.stretchId} = ${hold.stretchId}::uuid))`
+            ? // One list of channels, not `channel = x or channel in (…)`: the planner can't take an OR into the
+              // channel index, and read every message of the week instead.
+              sql`${messages.channelId} in (select ${hold.channelId}::uuid union
+            select ${agentRuns.channelId} from ${agentRuns}
+            where ${agentRuns.orgId} = ${orgId}::uuid and ${agentRuns.stretchId} = ${hold.stretchId}::uuid)`
             : eq(messages.channelId, hold.channelId),
           gt(messages.createdAt, new Date(Date.now() - 7 * 86_400_000)),
           isNull(messages.deletedAt),

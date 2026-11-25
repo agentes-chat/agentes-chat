@@ -63,3 +63,15 @@ export function surfaceMarkUrl(name: string): string | null {
   const url = `/connectors/${name.trim().toLowerCase()}.svg`;
   return CONNECTOR_MARK.test(url) ? url : null;
 }
+
+/** A PIN as the server takes it (ADR 0226): six digits. */
+export const PIN_SHAPE = /^\d{6}$/;
+
+/** What a PIN field keeps of what's typed or pasted: its first six digits. */
+export const pinDigits = (typed: string) => typed.replace(/\D/g, "").slice(0, 6);
+
+/** A PIN being chosen is ready: six digits, typed the same twice. */
+export const pinChosen = (pin: string, again: string) => PIN_SHAPE.test(pin) && again === pin;
+
+/** The second PIN, fully typed, differs from the first. */
+export const pinMismatch = (pin: string, again: string) => again.length === 6 && again !== pin;

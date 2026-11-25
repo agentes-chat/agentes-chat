@@ -168,16 +168,40 @@ export const envVars = {
       "Directory containing the built web app (single-page app). Served by this server when it exists; otherwise only the API runs.",
     section: "Server",
   },
+  FONTS_DIR: {
+    schema: z.string().optional(),
+    description:
+      "Directory of the fonts live files use (ADR 0220): the catalog built by `scripts/fonts/build.py` (the image sets it). Served at `/api/fonts/*`, read to measure text, draw pictures and embed fonts in PDFs. Unset: the catalog is still offered, and every app and export falls back to system fonts.",
+    section: "Server",
+  },
   SHUTDOWN_DELAY_MS: {
     schema: z.coerce.number().int().min(0).max(5_000).default(0),
     description:
       "On SIGTERM, how long the server keeps serving while `/api/health` answers 503, before it stops taking requests. Behind a reverse proxy with an active health check (and a retry window), set it above the check's interval so the proxy stops sending requests here first and holds them for the next instance instead of failing them (2000 for a check every second). 0 (default): stop taking requests at once.",
     section: "Server",
   },
+  LOAD_SHED_EVENT_LOOP_MS: {
+    schema: z.coerce.number().int().min(0).default(500),
+    description:
+      "Load shedding: while the event loop's p99 delay over the last 5 seconds is above this, the process is overloaded. It then answers new WebSocket connections and the apps' reads (`GET /api/app/*`, not links a person opens) with 503 and a `Retry-After` of 5 to 15 seconds instead of queueing everyone. `/api/health` says `overloaded`, still with 200; `/api/health?load=1` answers 503 then, for a proxy's active health check across several app processes (never a single process's: it would take out the only one). Writes, sign-in and open sockets carry on. 0: off.",
+    section: "Server",
+  },
+  LOAD_SHED_DB_WAIT_MS: {
+    schema: z.coerce.number().int().min(0).default(2_000),
+    description:
+      "Load shedding: while a `select 1` (waiting for one of the `DATABASE_POOL_MAX` connections included) takes longer than this, the process is overloaded (see `LOAD_SHED_EVENT_LOOP_MS`). 0: off.",
+    section: "Server",
+  },
+  LOAD_SHED_MAX_SOCKETS: {
+    schema: z.coerce.number().int().min(0).default(4_000),
+    description:
+      "Load shedding: at this many of the apps' open sockets in one process, it is overloaded (see `LOAD_SHED_EVENT_LOOP_MS`): a new one is turned away until some close, and behind a proxy goes to another process. Each person has at most 50 per process. 0: no cap.",
+    section: "Server",
+  },
   OUTBOX_MAX_IN_FLIGHT: {
     schema: z.coerce.number().int().min(1).default(48),
     description:
-      "How many jobs one server process runs at once besides its requests: agents' runs, routines, a message's routing, notifications, emails. Agents' runs spend most of their time waiting for their model or their computer, so this can be far above the number of CPUs. A job holds a database connection only while it reads or writes (`DATABASE_POOL_MAX`).",
+      "How many jobs one server process runs at once besides its requests: agents' runs, routines, a message's routing, notifications, emails. Agents' runs spend most of their time waiting for their model or their computer, so this can be far above the number of CPUs. A job holds a database connection only while it reads or writes (`DATABASE_POOL_MAX`). Native mode (`agentes-server`, with the database built in: one process, one connection) defaults to 16, 4 of them quick (`OUTBOX_QUICK_SLOTS`).",
     section: "Server",
   },
   OUTBOX_QUICK_SLOTS: {
@@ -189,7 +213,7 @@ export const envVars = {
   OUTBOX_MAX_IN_FLIGHT_CEILING: {
     schema: z.coerce.number().int().min(1).optional(),
     description:
-      "At most this many jobs at once in one process, however far the slots could grow. While jobs wait for a slot (a burst of routines, a busy hour), the slots double every 30 seconds from `OUTBOX_MAX_IN_FLIGHT`: agents' runs as far as half the process's memory holds them (about 4 MB each while they wait), quick jobs to 4 per database connection (`DATABASE_POOL_MAX`); they shrink back once nothing waits. Unset (default): only those limits. Set it to `OUTBOX_MAX_IN_FLIGHT` to keep the slots fixed. With the built-in database they never grow.",
+      "At most this many jobs at once in one process, however far the slots could grow. While jobs wait for a slot (a burst of routines, a busy hour), the slots double every 30 seconds from `OUTBOX_MAX_IN_FLIGHT`: agents' runs as far as half the process's memory holds them (about 4 MB each while they wait), quick jobs to 4 per database connection (`DATABASE_POOL_MAX`); they shrink back once nothing waits. After a restart, agents' runs already waiting start as a ramp over the first minute, not all at once. Unset (default): 8 jobs per database connection (160 with 20). Set it to `OUTBOX_MAX_IN_FLIGHT` to keep the slots fixed. With the built-in database they never grow.",
     section: "Server",
   },
   SERVER_ROLE: {
@@ -214,7 +238,7 @@ export const envVars = {
   DATABASE_POOL_MAX: {
     schema: z.coerce.number().int().min(1).default(20),
     description:
-      "Maximum number of open connections per agentes.chat process, shared by its HTTP requests and its jobs (`OUTBOX_MAX_IN_FLIGHT`). Keep it, times the number of processes, under the database's `max_connections`.",
+      "Maximum number of open connections per agentes.chat process, shared by its HTTP requests and its jobs (`OUTBOX_MAX_IN_FLIGHT`). Give it at least one per 4 job slots (12 for the default 48): below that the server warns as it starts. Keep it, times the number of processes, under the database's `max_connections`.",
     section: "Database",
   },
   RUN_MIGRATIONS_ON_BOOT: {
@@ -380,6 +404,12 @@ export const envVars = {
       "Unused: new agents start on Automático (`auto`, each run picks the model and effort), whatever this says. Still checked when set; to be removed.",
     section: "Agents",
   },
+  MODEL_PROGRESS_NOTES: {
+    schema: z.stringbool().default(true),
+    description:
+      "Ask the models that keep their notes between tool calls apart from the reply (Claude's progress updates, OpenAI's reasoning summaries) to send them, so the conversation shows what an agent is doing while it works. Their reasoning stays hidden either way. Off = only the words a model writes as text.",
+    section: "Agents",
+  },
   ROUTER_ENABLED: {
     schema: z.stringbool().default(true),
     description:
@@ -466,7 +496,7 @@ export const envVars = {
     section: "Agents",
   },
   CLAUDE_PLAN_CONCURRENCY: {
-    schema: z.coerce.number().int().min(0).max(50).default(6),
+    schema: z.coerce.number().int().min(0).max(50).default(12),
     description:
       "How many agent runs one Claude plan sign-in (a subscription, never an API key) works on at once. Past it, the next run waits in line like any other and starts as soon as one ends. 0 turns the limit off.",
     section: "Agents",
@@ -841,6 +871,90 @@ export const envVars = {
     section: "Connectors",
     secret: true,
   },
+  CONNECTOR_GITLAB_CLIENT_ID: {
+    schema: z.string().optional(),
+    description:
+      "Application ID of this server's GitLab application (gitlab.com › Preferences › Applications, confidential, scopes `api` and `write_repository`), so people connect GitLab by signing in (ADR 0227). Set together with `CONNECTOR_GITLAB_CLIENT_SECRET`. Redirect URI: `{PUBLIC_URL}/api/app/connectors/oauth/callback`. Without it, GitLab connects with an access token, as a GitLab of one's own always does.",
+    section: "Connectors",
+  },
+  CONNECTOR_GITLAB_CLIENT_SECRET: {
+    schema: z.string().optional(),
+    description: "Secret of the GitLab application for the GitLab connector.",
+    section: "Connectors",
+    secret: true,
+  },
+  CONNECTOR_BITBUCKET_CLIENT_ID: {
+    schema: z.string().optional(),
+    description:
+      "Key of this server's Bitbucket OAuth consumer (a workspace's settings › OAuth consumers; permissions: Account read, Repositories write, Pull requests write), so people connect Bitbucket by signing in (ADR 0227). Set together with `CONNECTOR_BITBUCKET_CLIENT_SECRET`. Callback URL: `{PUBLIC_URL}/api/app/connectors/oauth/callback`. Without it, Bitbucket connects with an access token.",
+    section: "Connectors",
+  },
+  CONNECTOR_BITBUCKET_CLIENT_SECRET: {
+    schema: z.string().optional(),
+    description: "Secret of the Bitbucket OAuth consumer for the Bitbucket connector.",
+    section: "Connectors",
+    secret: true,
+  },
+  CONNECTOR_X_CLIENT_ID: {
+    schema: z.string().optional(),
+    description:
+      "OAuth 2.0 client id of this server's X app (console.x.com, type Web App, Automated App or Bot; Read and write), for the X connector (ADR 0170). Set together with `CONNECTOR_X_CLIENT_SECRET`. Callback URL: `{PUBLIC_URL}/api/app/connectors/oauth/callback`. Without it, X isn't offered. Steps: docs/social-apps-checklist.md.",
+    section: "Connectors",
+  },
+  CONNECTOR_X_CLIENT_SECRET: {
+    schema: z.string().optional(),
+    description: "OAuth 2.0 client secret of this server's X app (not its API key).",
+    section: "Connectors",
+    secret: true,
+  },
+  CONNECTOR_X_CALLS_PER_MONTH: {
+    schema: z.coerce.number().int().min(0).default(0),
+    description:
+      "X calls a workspace may make per calendar month (UTC): X bills this server's app per post written and read. At the cap its X tools stop until the next month. 0: no cap.",
+    section: "Connectors",
+  },
+  CONNECTOR_THREADS_APP_ID: {
+    schema: z.string().optional(),
+    description:
+      "Threads app id of this server's Meta app with the Threads use case (its own id, not the main app's), for the Threads connector (ADR 0170). Set together with `CONNECTOR_THREADS_APP_SECRET`. Redirect URI: `{PUBLIC_URL}/api/app/connectors/oauth/callback`; uninstall and delete callbacks: `{PUBLIC_URL}/api/webhooks/meta/deauthorize` and `/api/webhooks/meta/data-deletion`. Without it, Threads isn't offered. Steps: docs/social-apps-checklist.md.",
+    section: "Connectors",
+  },
+  CONNECTOR_THREADS_APP_SECRET: {
+    schema: z.string().optional(),
+    description: "Threads app secret of this server's Meta app for Threads.",
+    section: "Connectors",
+    secret: true,
+  },
+  CONNECTOR_META_ADS_APP_ID: {
+    schema: z.string().optional(),
+    description:
+      "App id of this server's Meta business app (Marketing API), for the Meta Ads connector (ADR 0170). Set together with `CONNECTOR_META_ADS_APP_SECRET` and `CONNECTOR_META_ADS_CONFIG_ID`. Valid OAuth redirect URI: `{PUBLIC_URL}/api/app/connectors/oauth/callback`; deauthorize and data deletion callbacks as for Threads. Without them, Meta Ads isn't offered.",
+    section: "Connectors",
+  },
+  CONNECTOR_META_ADS_APP_SECRET: {
+    schema: z.string().optional(),
+    description: "App secret of this server's Meta business app for Meta Ads.",
+    section: "Connectors",
+    secret: true,
+  },
+  CONNECTOR_META_ADS_CONFIG_ID: {
+    schema: z.string().optional(),
+    description:
+      "Configuration ID of the app's Facebook Login for Business configuration (a system-user token that doesn't expire; ad accounts and Pages).",
+    section: "Connectors",
+  },
+  CONNECTOR_TIKTOK_CLIENT_KEY: {
+    schema: z.string().optional(),
+    description:
+      "Client key of this server's TikTok for Developers app (Login Kit for Web and the Content Posting API), for the TikTok connector (ADR 0170). Set together with `CONNECTOR_TIKTOK_CLIENT_SECRET`. Redirect URI: `{PUBLIC_URL}/api/app/connectors/oauth/callback`. Without it, TikTok isn't offered.",
+    section: "Connectors",
+  },
+  CONNECTOR_TIKTOK_CLIENT_SECRET: {
+    schema: z.string().optional(),
+    description: "Client secret of this server's TikTok app.",
+    section: "Connectors",
+    secret: true,
+  },
   MCP_CALLER_IDENTITY: {
     schema: z
       .string()
@@ -1134,6 +1248,12 @@ export const envVars = {
       "Path-style bucket URLs (`https://endpoint/bucket/key`), for MinIO, Garage and similar stores. Off: virtual-hosted URLs (`https://bucket.endpoint/key`), as R2 and AWS expect.",
     section: "Storage",
   },
+  S3_PRESIGNED_URLS: {
+    schema: z.stringbool().default(true),
+    description:
+      "Browsers and the apps download files of the platform bucket straight from it, by short-lived presigned links the server hands out after its own checks (videos and downloads; previews still come through the server). Only for an `https` `S3_ENDPOINT`: an `http` one is never linked to. Set to `false` when browsers can't reach `S3_ENDPOINT` (a bucket on a private network): the server then sends every file itself.",
+    section: "Storage",
+  },
   HOST_COMPUTER_TOKEN: {
     schema: z
       .string()
@@ -1351,7 +1471,7 @@ export const envVars = {
       .transform((on) => (on ? "on" : "off") as "on" | "off")
       .default("on"),
     description:
-      "Send anonymous usage statistics to agentes.chat once a day: counts such as people, agents, machine sizes, AI tokens used and how much data the agents' browsers send and receive. Never messages, files, names or sites. `off` stops it, whatever the switch in Settings → General says (the installation's owner can turn it off there too). `docker compose run --rm agentes telemetry` prints exactly what would be sent (https://agentes.chat/docs/install-on-a-server#data).",
+      "Send anonymous usage statistics to agentes.chat once a day: counts such as people, agents, machine sizes, AI tokens used, how much data the agents' browsers send and receive, and how fast the apps open and run. Never messages, files, names or sites. `off` stops it, whatever the switch in Settings → General says (the installation's owner can turn it off there too). `docker compose run --rm agentes telemetry` prints exactly what would be sent (https://agentes.chat/docs/install-on-a-server#data).",
     section: "Usage report",
   },
   TELEMETRY_URL: {
@@ -1408,6 +1528,23 @@ export const envVars = {
     schema: z.string().min(1).max(64).default("production"),
     description: "The environment error reports are filed under (`production`, `staging`).",
     section: "Observability",
+  },
+  HEAP_SNAPSHOT_MB: {
+    schema: z.coerce.number().int().min(64).optional(),
+    description:
+      "Once a process's JavaScript heap passes this many MiB, it writes one heap snapshot to `HEAP_SNAPSHOT_DIR` (once per process start), to find what holds the memory. Writing it pauses the process for seconds to minutes and takes about as much memory again as the heap, so set it well under the process's memory limit. The file holds everything in the process's memory in clear (decrypted keys, sessions, messages), readable by the server's user alone: delete it once read. No process writes one while the folder holds 3. Unset (default): never.",
+    section: "Observability",
+    example: "3072",
+  },
+  HEAP_SNAPSHOT_DIR: {
+    schema: z
+      .string()
+      .regex(/^(\/|[A-Za-z]:[\\/]|\\\\)/, "must be an absolute path")
+      .optional(),
+    description:
+      "Absolute path of the folder `HEAP_SNAPSHOT_MB` writes its snapshot to; in a container, a mounted volume, or it is gone with the container. Unset: the system's temporary folder.",
+    section: "Observability",
+    example: "/data/heap",
   },
 } satisfies Record<string, EnvVarDefinition>;
 

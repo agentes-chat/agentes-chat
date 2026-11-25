@@ -1,6 +1,6 @@
 import { type ComposerDraft, readDraftBook, withDraft } from "@agenteschat/client/lib/composer-drafts";
 import { type ComposerQuotes, inlineQuoteRanges } from "@agenteschat/ui";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { AuthClient } from "@/auth/client";
 import { STORAGE_KEYS, storage } from "@/lib/storage";
 
@@ -43,19 +43,26 @@ export function withComposerDraftsSignOut(auth: AuthClient): AuthClient {
   };
 }
 
+/** A composer's text as a store: the box reads it (`useDraftText`), what sends it reads it at that moment (`get`). */
+export interface DraftStore {
+  get(): string;
+  /** The quote markers' Markdown by token: kept after a marker is deleted, so native undo brings it back whole. */
+  quotes(): ComposerQuotes;
+  set(next: string | ((old: string) => string), quote?: { token: string; markdown: string }): void;
+  subscribe(listener: () => void): () => void;
+}
+
 /**
  * A composer's text that survives switching conversations and reloading: it starts from `handed` (text another
  * screen gave it, like ⌘K "Pedir a um agente") or what was left unsent here, and every change is written down
  * shortly after typing settles, at once when the conversation closes or the page goes away. Sending clears it the
- * same way, with the text set to "".
+ * same way, with the text set to "". A store, not state: a key typed draws the box (`useDraftText`), never the
+ * conversation that holds it.
  */
-export function useComposerDraft(userId: string, key: string, handed?: string) {
-  const [draft, setDraft] = useState(() => {
-    const saved = handed === undefined ? readComposerDraft(userId, key) : undefined;
-    return { text: handed ?? saved?.text ?? "", quotes: saved?.inlineQuotes ?? {} };
-  });
-  const latest = useRef(draft);
-  const pending = useRef<typeof draft | null>(handed === undefined ? null : { text: handed, quotes: {} });
+export function useComposerDraft(userId: string, key: string, handed?: string): DraftStore {
+  const pending = useRef<{ text: string; quotes: ComposerQuotes } | null>(
+    handed === undefined ? null : { text: handed, quotes: {} },
+  );
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const flush = useCallback(() => {
@@ -68,21 +75,35 @@ export function useComposerDraft(userId: string, key: string, handed?: string) {
     writeComposerDraft(userId, key, text, Object.keys(active).length ? active : undefined);
     pending.current = null;
   }, [userId, key]);
+  const flushNow = useRef(flush);
+  flushNow.current = flush;
 
-  const set = useCallback(
-    (next: string | ((old: string) => string), quote?: { token: string; markdown: string }) => {
-      const old = latest.current;
-      const text = typeof next === "function" ? next(old.text) : next;
-      const quotes = quote ? { ...old.quotes, [quote.token]: quote.markdown } : old.quotes;
-      const value = { text, quotes };
-      pending.current = value;
-      latest.current = value;
-      setDraft(value);
-      if (timer.current) clearTimeout(timer.current);
-      timer.current = setTimeout(flush, SAVE_DELAY_MS);
-    },
-    [flush],
-  );
+  const [store] = useState(() => {
+    const saved = handed === undefined ? readComposerDraft(userId, key) : undefined;
+    let text = handed ?? saved?.text ?? "";
+    let quotes: ComposerQuotes = saved?.inlineQuotes ?? {};
+    const listeners = new Set<() => void>();
+    return {
+      get: () => text,
+      quotes: () => quotes,
+      set(next: string | ((old: string) => string), quote?: { token: string; markdown: string }) {
+        const value = typeof next === "function" ? next(text) : next;
+        if (value === text && !quote) return;
+        text = value;
+        if (quote) quotes = { ...quotes, [quote.token]: quote.markdown };
+        pending.current = { text, quotes };
+        if (timer.current) clearTimeout(timer.current);
+        timer.current = setTimeout(() => flushNow.current(), SAVE_DELAY_MS);
+        for (const l of listeners) l();
+      },
+      subscribe(listener: () => void) {
+        listeners.add(listener);
+        return () => {
+          listeners.delete(listener);
+        };
+      },
+    };
+  });
 
   // Handed text replaces what was left here: written down at once, like any change.
   useEffect(() => {
@@ -97,5 +118,8 @@ export function useComposerDraft(userId: string, key: string, handed?: string) {
     };
   }, [flush]);
 
-  return [draft.text, set, draft.quotes] as const;
+  return store;
 }
+
+/** The text in a draft, for what draws it: a change draws only the caller. */
+export const useDraftText = (draft: DraftStore) => useSyncExternalStore(draft.subscribe, draft.get, draft.get);

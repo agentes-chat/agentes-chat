@@ -19,6 +19,10 @@
   flex-direction: column;
   gap: 20px;
 }
+/* Its members still loading (MembersColumn.tsx): unseen until they are in, then shown whole. */
+.members-side__groups[data-pending] {
+  visibility: hidden;
+}
 .members-side__group {
   display: flex;
   flex-direction: column;

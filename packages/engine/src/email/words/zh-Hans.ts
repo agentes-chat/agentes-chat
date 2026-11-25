@@ -425,6 +425,34 @@ export const words: EmailWords = {
     table: (day) => `完整表格：bun run report:autonomy --day ${day}`,
     why: "你收到这封邮件，是因为这个地址配置在这台服务器的 OPS_REPORT_EMAIL 中。每天发送一次。",
   },
+  accountOpened: {
+    subject: (plan) => `更多人可以使用你的 ${plan} 账号`,
+    preheader: (plan) => `他们的使用会消耗你的 ${plan} 套餐及其额度。`,
+    headline: "有人修改了谁可以使用你的 AI 账号",
+    body: (by, account, plan) => [
+      { b: by },
+      ` 修改了谁可以使用你的 ${plan} 账号 `,
+      { b: account },
+      `。他们的使用会消耗你的套餐及其额度。`,
+    ],
+    account: "账号",
+    by: "修改人",
+    setting: "权限",
+    use: "在智能体中使用",
+    reply: "回复所有人",
+    was: "之前",
+    now: "现在",
+    everyone: "工作区里的所有人",
+    admins: "你和管理员",
+    onlyYou: "只有你",
+    agentOwner: "只有智能体的所有者",
+    note: "要撤销，请在“AI 与用量”中打开该账号并修改它的权限。",
+    button: "打开 AI 账号",
+    why: (org) => `你收到这封邮件，是因为你在 ${org} 连接了这个 AI 账号，而其他人修改了谁可以使用它。`,
+    personal: {
+      why: () => "你收到这封邮件，是因为你连接了这个 AI 账号，而其他人修改了谁可以使用它。",
+    },
+  },
   planOpened: {
     subject: (plan) => `更多人可以通过你的 ${plan} 套餐和你的智能体对话`,
     preheader: (plan) => `他们的对话会使用你的 ${plan} 套餐及其额度。`,
@@ -514,6 +542,27 @@ export const words: EmailWords = {
       small: "如果是你，请在设置中重新关联。",
       why: (surface) => `你收到这封邮件，是因为 ${surface} 曾关联到你的 agentes.chat 账号。`,
       picture: "你的助手，已不在你的手机上",
+    },
+    pinReset: {
+      subject: (surface) => `设置你的 ${surface} PIN`,
+      preheader: "设置用于在聊天应用中批准操作的 PIN。",
+      headline: (surface) => `设置你的 ${surface} PIN`,
+      body: (surface) =>
+        `有人请求了一个链接，用于设置你在 ${surface} 上批准操作时使用的 PIN。如果是你本人，请在此按钮打开的页面上设置。`,
+      button: "设置我的 PIN",
+      small: "此链接一小时内只能使用一次。如果不是你本人操作，请忽略这封邮件。什么都不会改变。",
+      why: (surface) => `你收到这封邮件，是因为 ${surface} 已关联到你的 agentes.chat 账号。`,
+    },
+    pinLocked: {
+      subject: (surface) => `你的 ${surface} PIN 已锁定`,
+      preheader: "连续三次输入了错误的 PIN。通过聊天应用批准已暂停。",
+      headline: (surface) => `你的 ${surface} PIN 已锁定`,
+      body: (surface, time) =>
+        `有人为了在 ${surface} 上批准一项操作，连续三次输入了错误的 PIN。通过 ${surface} 批准已暂停 ${time}。`,
+      lockedFor: ["15 分钟", "1 小时", "24 小时"],
+      small: (surface) =>
+        `如果是你本人，请稍后再试。如果不是，请在通知设置中取消关联 ${surface}，这样就没有人能通过它批准操作。`,
+      button: "打开通知设置",
     },
   },
   supportReply: {

@@ -255,7 +255,8 @@ describe("git on a connected machine through the proxy (ADR 0024 addendum)", () 
     const ctx = await runCtx();
     const tools = await source.tools(ctx);
     // GitHub's own tools count as GitHub the native way, beside its MCP server's (ADR 0103).
-    expect(tools.map((t) => t.connector)).toEqual(
+    // (The first, `list_repositories`, is every host's and counts as no connector's.)
+    expect(tools.slice(1).map((t) => t.connector)).toEqual(
       ["git_clone", "open_pull_request", "delete_branches", "request_branch_push"].map((tool) => ({
         key: "github",
         via: "native",

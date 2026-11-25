@@ -19,7 +19,7 @@
   gap: 2px;
   padding: 2px 6px 2px 2px;
   border: 0;
-  border-radius: 14px 14px 14px 3px;
+  border-radius: 8px 8px 8px 3px;
   background: var(--raised);
   box-shadow:
     var(--e2),
@@ -48,6 +48,15 @@ html:not([data-pointer]) .mf-pin:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
 }
+/* The face keeps its own shape, so the pin's corners follow it (the face's radius plus the 2px around it), and the
+   face's corner at the tail is as sharp as the tail. */
+.mf-pin .ac-avatar {
+  border-bottom-left-radius: 1px;
+}
+.mf-pin[data-flip] .ac-avatar {
+  border-bottom-left-radius: 30%;
+  border-bottom-right-radius: 1px;
+}
 .mf-pin__n {
   padding: 0 2px;
 }
@@ -68,7 +77,7 @@ html:not([data-pointer]) .mf-pin:focus-visible {
 .mf-pin[data-flip] {
   flex-direction: row-reverse;
   padding: 2px 2px 2px 6px;
-  border-radius: 14px 14px 3px 14px;
+  border-radius: 8px 8px 3px 8px;
   transform: translate(-100%, -100%);
 }
 

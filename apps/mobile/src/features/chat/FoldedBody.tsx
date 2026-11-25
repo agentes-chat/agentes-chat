@@ -51,7 +51,7 @@ export function FoldedBody({ body, muted = false }: { body: string; muted?: bool
           }}
           style={({ pressed }) => [styles.more, pressed && styles.pressed]}
         >
-          <Text variant="footnote" tone="ink2">
+          <Text variant="label" tone="ink2">
             {t("channel.long.more")}
           </Text>
           <Icon name="chev" size={14} color={colors.ink2} />

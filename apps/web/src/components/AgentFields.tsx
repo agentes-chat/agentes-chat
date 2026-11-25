@@ -53,7 +53,7 @@ import { QUICK_BUDGETS, ROLE_IDS, ROLE_PRESETS, readBudget } from "@/lib/new-age
  */
 
 /**
- * Select value for "No owner" (the API takes `ownerUserId: null` and `ownerRoleId: null`). A person's value is their
+ * Select value for "Admins", an agent with no owner (the API takes `ownerUserId: null` and `ownerRoleId: null`). A person's value is their
  * id, a role's `role:<id>` (`roleOwnerValue`, ADR 0085, addendum of 2026-11-21).
  */
 export const NO_OWNER = "__none__";
@@ -435,8 +435,8 @@ export function LookRows({
 }
 
 /**
- * "Owner": a role (whoever holds it at the time, ADR 0085, addendum of 2026-11-21), a member (you marked) or "No
- * owner". The roles come first under "Roles", the people under "People"; with no role to offer (`ownerRoles`: the
+ * "Owner": a role (whoever holds it at the time, ADR 0085, addendum of 2026-11-21), a member (you marked) or
+ * "Admins" (no owner: the admins answer for it). The roles come first under "Roles", the people under "People"; with no role to offer (`ownerRoles`: the
  * workspace's own, none holding `administrator`) the list has no headings, as before. Each person with their role
  * under the name, which a personal workspace leaves out (ADR 0159): a family knows who is who.
  */
@@ -503,7 +503,7 @@ export function OwnerSelect({
 
 /**
  * "Owner" where it can't be changed: the person and their role (a team's workspace), the role that answers for it and
- * how many hold it (ADR 0085, addendum of 2026-11-21), or "No owner".
+ * how many hold it (ADR 0085, addendum of 2026-11-21), or "Admins" (no owner).
  */
 export function OwnerValue({ member, meId, role }: { member: Member | undefined; meId: string; role?: OrgRole }) {
   const { t } = useTranslation();

@@ -59,6 +59,15 @@ describe("a workspace's limits (ADR 0079)", () => {
     expect(card.textContent).toContain("Arquivos40 GB de 50 GB");
     expect(within(card).getAllByRole("meter")).toHaveLength(2);
     cleanup();
+    // X's month once it was used, as a share alone; nothing before.
+    await go("settings/billing", { connectors: { usedUsd: 1.3, limitUsd: 4.35 } });
+    const x = screen().getByLabelText("Plano e cobrança");
+    expect(x.textContent).toContain("X neste mês30% usado");
+    expect(x.textContent).not.toContain("US$");
+    cleanup();
+    await go("settings/billing", { connectors: { usedUsd: 0, limitUsd: 4.35 } });
+    expect(screen().getByLabelText("Plano e cobrança").textContent).not.toContain("X neste mês");
+    cleanup();
     await go("settings/billing", { storage: { usedBytes: GB, limitBytes: 50 * GB, ownStorage: true } });
     const own = screen().getByLabelText("Plano e cobrança");
     expect(own.textContent).toContain("PessoasSem limite");
