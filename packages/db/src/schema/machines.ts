@@ -358,6 +358,8 @@ export const machineAccounts = pgTable(
     kind: text().notNull(),
     /** What people call it ("Trabalho"); "Claude 2" when nobody named it (ADR 0059 §4). */
     label: text().notNull(),
+    /** Whether its owner explicitly named it (even to the provider's own name like "Claude" or "Gemini"). */
+    named: boolean().notNull().default(false),
     email: text(),
     /** `pro`, `max`, `ultra`, `team`, `enterprise`… from what the CLI says. */
     plan: text(),

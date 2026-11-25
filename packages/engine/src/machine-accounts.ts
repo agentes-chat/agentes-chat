@@ -289,7 +289,7 @@ function accountView(
     id: row.id,
     kind: kindOf(row),
     label: row.label,
-    named: !isDefaultAccountLabel(kindOf(row), row.label, row.provider),
+    named: row.named || !isDefaultAccountLabel(kindOf(row), row.label, row.provider),
     email: mine ? row.email : null,
     plan: row.plan,
     status: statusOf(row.status),
@@ -846,6 +846,9 @@ async function settleAccount(
     const label =
       sibling?.label ??
       defaultAccountLabel(kindOf(row), await takenLabels(db, orgId, row.createdBy, row.id), row.provider);
+    const named = sibling
+      ? sibling.named || !isDefaultAccountLabel(kindOf(sibling), sibling.label, sibling.provider)
+      : false;
     const [done] = await db
       .update(machineAccounts)
       .set({
@@ -854,6 +857,7 @@ async function settleAccount(
         keyHint,
         ...state,
         label,
+        named,
         ...(sibling ? loginPermissions(sibling) : {}),
         shared,
         ...usage,
@@ -1006,11 +1010,14 @@ export async function syncMachineAccounts(
           remove.push({ kind: a.kind, id: a.id });
           continue;
         }
+        const label = same?.label ?? defaultAccountLabel(a.kind, await takenLabels(tx, orgId, owner, a.id), provider);
+        const named = same ? same.named || !isDefaultAccountLabel(a.kind, same.label, provider) : false;
         const inserted = await tx
           .insert(machineAccounts)
           .values({
             ...candidate,
-            label: same?.label ?? defaultAccountLabel(a.kind, await takenLabels(tx, orgId, owner, a.id), provider),
+            label,
+            named,
             ...(same ? loginPermissions(same) : {}),
             email: a.email ?? null,
             plan: a.plan ?? null,
@@ -1878,11 +1885,11 @@ export async function renameMachineAccount(
     throw new ForbiddenError("Only whoever manages this account can rename it", "account.not_owner");
   }
   const logins = await sameLogins(deps.db, account);
-  const renamed = logins.filter((r) => r.label !== label);
+  const renamed = logins.filter((r) => r.label !== label || !r.named);
   if (renamed.length === 0) return accountViewOf(deps.db, orgId, account, userId);
   await deps.db
     .update(machineAccounts)
-    .set({ label, updatedAt: new Date() })
+    .set({ label, named: true, updatedAt: new Date() })
     .where(
       and(
         eq(machineAccounts.orgId, orgId),
@@ -1902,7 +1909,7 @@ export async function renameMachineAccount(
     });
   }
   await publishAccountsChanged(deps.pubsub, orgId, machine.id);
-  return accountViewOf(deps.db, orgId, { ...account, label }, userId);
+  return accountViewOf(deps.db, orgId, { ...account, label, named: true }, userId);
 }
 
 /**

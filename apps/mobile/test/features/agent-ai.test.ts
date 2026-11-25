@@ -720,6 +720,7 @@ describe("the agent's AI", () => {
     const pt = await translator("pt-BR");
     expect(accountTitle(pt, account("Claude 2", { email: "ana@acme.com" }))).toBe("ana@acme.com");
     expect(accountTitle(pt, account("Trabalho", { named: true, email: "ana@acme.com" }))).toBe("Trabalho");
+    expect(accountTitle(pt, account("Claude", { named: true, email: "ana@acme.com" }))).toBe("Claude");
     expect(accountTitle(pt, account("Claude"))).toBe("Conta sem nome");
     expect(accountTitle(pt, account("GLM Coding", { plan: null, provider: "zai", keyHint: "MnOp" }))).toBe(
       "GLM Coding",

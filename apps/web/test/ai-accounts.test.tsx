@@ -275,6 +275,35 @@ describe("IA e uso: the viewer's own accounts", () => {
       "MiniMax do Walt",
     ]);
   });
+
+  test("renaming an account to its provider's own name shows that name instead of its email", async () => {
+    const claudeAuto: AiAccounts["accounts"][number] = {
+      ...base,
+      id: "acct_claude",
+      kind: "claude_code",
+      label: "Claude",
+      email: "walt@acme.com",
+      plan: "ultra",
+      shared: true,
+      serves: "everyone",
+      usedBy: [],
+    };
+    const { state } = await page([claudeAuto]);
+    expect(rows()[0]?.querySelector(".plan-row__title")?.textContent?.trim()).toBe("walt@acme.com");
+
+    await click(await action(await opened(rows()[0]), "Renomear"));
+    const rename = screen().getAllByRole("dialog", { name: "Renomear walt@acme.com" }).at(-1) as HTMLElement;
+    await act(async () => fireEvent.change(within(rename).getByLabelText("Nome"), { target: { value: "Claude" } }));
+    await click(within(rename).getByRole("button", { name: "Salvar" }));
+    await settle(4);
+    expect(state.calls.find((c) => c.method === "machines.renameAccount")?.args).toEqual([
+      ORG_ID,
+      "machine_1",
+      "acct_claude",
+      "Claude",
+    ]);
+    expect(rows()[0]?.querySelector(".plan-row__title")?.textContent?.trim()).toBe("Claude");
+  });
 });
 
 describe("IA e uso: the same account signed in again and again", () => {

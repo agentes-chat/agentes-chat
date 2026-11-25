@@ -102,7 +102,8 @@ function orderGroups(ai: AiAccounts): AccountOrderGroup[] {
       groups.push(g);
     }
     // An admin may move anyone's: a fixture says so with its own `canMove`.
-    g.accounts.push({ ...withNamed(a), movable: movable(a), canMove: (a as { canMove?: boolean }).canMove ?? a.mine });
+    const named = withNamed(a);
+    g.accounts.push({ ...named, movable: movable(named), canMove: (a as { canMove?: boolean }).canMove ?? a.mine });
   }
   return groups;
 }

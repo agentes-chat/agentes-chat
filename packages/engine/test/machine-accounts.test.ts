@@ -47,6 +47,7 @@ import {
   type MachineStatus,
   NotFoundError,
   noteModelLimit,
+  orgPlanUsage,
   refreshAiAccounts,
   removeMachineAccount,
   removeMember,
@@ -113,7 +114,12 @@ async function sharedMachine() {
   return paired;
 }
 
-async function addAccount(machineId: string, id: string, kind: "claude_code" | "codex" | "opencode", over = {}) {
+async function addAccount(
+  machineId: string,
+  id: string,
+  kind: "claude_code" | "codex" | "opencode" | "antigravity",
+  over = {},
+) {
   await f.db.insert(schema.machineAccounts).values({
     id,
     orgId: f.org.id,
@@ -2389,4 +2395,115 @@ test("a name is the automatic one only as the server gives it; any other is its 
   expect(isDefaultAccountLabel("claude_code", "Claude pessoal")).toBe(false);
   expect(isDefaultAccountLabel("claude_code", "Claudette")).toBe(false);
   expect(isDefaultAccountLabel("claude_code", "ana@acme.com")).toBe(false);
+});
+
+test("renaming an account to its provider name persists machine_accounts.named across logins, plan usage, and audit cleanup", async () => {
+  f = await setup();
+  const { machineId } = await ownedMachine();
+  await addAccount(machineId, CLAUDE_ID, "claude_code", { label: "Claude", email: "ana@example.com", shared: true });
+  const online = fakeHub(machineId, () => ({}));
+
+  const before = (await listMachineAccounts({ db: f.db }, f.org.id, machineId, f.owner.id))[0];
+  expect(before).toMatchObject({ id: CLAUDE_ID, label: "Claude", named: false });
+
+  const chosen = await renameMachineAccount(online.deps, f.owner.id, f.org.id, machineId, CLAUDE_ID, "Claude");
+  expect(chosen).toMatchObject({ id: CLAUDE_ID, label: "Claude", named: true });
+  expect((await listMachineAccounts({ db: f.db }, f.org.id, machineId, f.owner.id))[0]).toMatchObject({
+    id: CLAUDE_ID,
+    label: "Claude",
+    named: true,
+  });
+  const usage = await orgPlanUsage(f.db, f.owner.id, f.org.id);
+  expect(usage.accounts.find((a) => a.accountId === CLAUDE_ID)).toMatchObject({
+    accountId: CLAUDE_ID,
+    label: "Claude",
+    named: true,
+  });
+  const audits = (await f.db.select().from(schema.auditLog)).filter((a) => a.action === "account.renamed");
+  expect(audits).toHaveLength(1);
+
+  // Repeating the same name once already owner-named is a no-op; renaming from a custom name back to "Gemini" stays owner-named.
+  const again = await renameMachineAccount(online.deps, f.owner.id, f.org.id, machineId, CLAUDE_ID, "Claude");
+  expect(again).toMatchObject({ id: CLAUDE_ID, label: "Claude", named: true });
+  expect((await f.db.select().from(schema.auditLog)).filter((a) => a.action === "account.renamed")).toHaveLength(1);
+
+  await addAccount(machineId, CODEX_ID, "antigravity", { label: "Trabalho", email: null, shared: true });
+  const gemini = await renameMachineAccount(online.deps, f.owner.id, f.org.id, machineId, CODEX_ID, "Gemini");
+  expect(gemini).toMatchObject({ id: CODEX_ID, label: "Gemini", named: true });
+
+  // Multi-login account: a new login inherits named=true, survives removing the original login, and does not depend on audit_log.
+  const siblingId = "00000000-0000-4000-8000-000000000088";
+  await syncMachineAccounts({ db: f.db, pubsub: f.pubsub }, f.org.id, machineId, [
+    { id: CLAUDE_ID, kind: "claude_code", email: "ana@example.com", loggedIn: true, shared: false },
+    { id: siblingId, kind: "claude_code", email: "ana@example.com", loggedIn: true, shared: false },
+    { id: CODEX_ID, kind: "antigravity", loggedIn: true, shared: true },
+  ]);
+  await removeMachineAccount(online.deps, f.owner.id, f.org.id, machineId, CLAUDE_ID);
+  await f.db.delete(schema.auditLog);
+  const afterRemove = await listMachineAccounts({ db: f.db }, f.org.id, machineId, f.owner.id);
+  expect(afterRemove.find((a) => a.id === siblingId)).toMatchObject({ id: siblingId, label: "Claude", named: true });
+  const usageAfterRemove = await orgPlanUsage(f.db, f.owner.id, f.org.id);
+  expect(usageAfterRemove.accounts.find((a) => a.accountId === siblingId)).toMatchObject({
+    accountId: siblingId,
+    label: "Claude",
+    named: true,
+  });
+});
+
+test("migration 0347 backfill sets named=true only for accounts their owner renamed, per the audit log", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { sql } = await import("@agenteschat/db");
+  f = await setup();
+  const { machineId } = await ownedMachine();
+  const member = await addMember(f.db, f.org.id, "member", "caio");
+
+  const customId = "00000000-0000-4000-8000-000000000101";
+  const defaultId = "00000000-0000-4000-8000-000000000102";
+  const auditedOwnerId = "00000000-0000-4000-8000-000000000105";
+  const auditedNonOwnerId = "00000000-0000-4000-8000-000000000106";
+
+  await addAccount(machineId, customId, "claude_code", { label: "Trabalho", named: false });
+  await addAccount(machineId, defaultId, "claude_code", { label: "Claude 2", named: false });
+  await addAccount(machineId, auditedOwnerId, "antigravity", { label: "Gemini", email: null, named: false });
+  await addAccount(machineId, auditedNonOwnerId, "claude_code", {
+    label: "Claude",
+    createdBy: member.id,
+    named: false,
+  });
+
+  await f.db.insert(schema.auditLog).values([
+    {
+      orgId: f.org.id,
+      actorType: "person",
+      actorId: f.owner.id,
+      action: "account.renamed",
+      targetType: "machine_account",
+      targetId: auditedOwnerId,
+      details: { machineId, from: "Gemini", to: "Gemini" },
+    },
+    {
+      orgId: f.org.id,
+      actorType: "person",
+      actorId: f.owner.id,
+      action: "account.renamed",
+      targetType: "machine_account",
+      targetId: auditedNonOwnerId,
+      details: { machineId, from: "Claude", to: "Claude" },
+    },
+  ]);
+
+  const migrationSql = readFileSync(
+    new URL("../../db/migrations/0347_machine_account_named.sql", import.meta.url),
+    "utf8",
+  );
+  const updateStmt = migrationSql.split("--> statement-breakpoint").slice(1).join("\n").trim();
+  await f.db.execute(sql.raw(updateStmt));
+
+  const rows = await f.db.select().from(schema.machineAccounts);
+  const byId = new Map(rows.map((r) => [r.id, r.named]));
+  // A custom label stays unflagged: it reads as named from its label alone (`accountView`).
+  expect(byId.get(customId)).toBe(false);
+  expect(byId.get(defaultId)).toBe(false);
+  expect(byId.get(auditedOwnerId)).toBe(true);
+  expect(byId.get(auditedNonOwnerId)).toBe(false);
 });

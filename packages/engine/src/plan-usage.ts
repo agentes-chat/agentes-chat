@@ -394,7 +394,7 @@ function accountOf(ctx: Context, key: string, viewerId: string | null): FoundAcc
       kind,
       accountId: row.id,
       label: row.label,
-      named: !isDefaultAccountLabel(kind, row.label, row.provider),
+      named: row.named || !isDefaultAccountLabel(kind, row.label, row.provider),
       plan: row.plan,
       provider: row.provider,
       ownerName,

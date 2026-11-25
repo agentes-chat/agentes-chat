@@ -71,7 +71,7 @@ export function AccountMenu({
   if (!account || !a) return null;
   const names = (list: string[]) => joinNames(list, t);
   const refetch = () => {
-    for (const key of [keys.aiAccounts(org.id), keys.planUsage(org.id), keys.agents(org.id)])
+    for (const key of [keys.aiAccounts(org.id), keys.planUsage(org.id), keys.accountOrder(org.id), keys.agents(org.id)])
       void qc.invalidateQueries({ queryKey: key });
   };
   const computer = computerNameOf(t, org.name, a.computer, isPersonal(org));

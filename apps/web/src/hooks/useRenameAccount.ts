@@ -23,7 +23,12 @@ export function useRenameAccount() {
       throw e;
     }
     // Every agent's brain lists its accounts: the prefix of `keys.agentBrain` reads them all again.
-    for (const key of [keys.aiAccounts(org.id), keys.planUsage(org.id), ["org", org.id, "agent"]])
+    for (const key of [
+      keys.aiAccounts(org.id),
+      keys.planUsage(org.id),
+      keys.accountOrder(org.id),
+      ["org", org.id, "agent"],
+    ])
       void qc.invalidateQueries({ queryKey: key });
   };
 }
