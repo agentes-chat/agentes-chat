@@ -1,3 +1,12 @@
+export {
+  type ComposerQuotes,
+  expandInlineQuotes,
+  inlineQuotePad,
+  inlineQuoteRanges,
+  inlineQuoteSelection,
+  inlineQuoteToken,
+  quotePreview,
+} from "./composer-quotes";
 /**
  * @agenteschat/ui — the agentes design system in React.
  * Visuals come from `styles.css` (tokens + `ac-*` classes, ported from

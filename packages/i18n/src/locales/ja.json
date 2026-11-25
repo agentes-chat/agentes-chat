@@ -2669,6 +2669,7 @@
     "copyLink": "リンクをコピー",
     "linkCopied": "リンクをコピーしました。",
     "reply": "返信",
+    "quote": "引用",
     "quoteOf": "{{name}}への返信: {{excerpt}}。メッセージを見る",
     "quoteGone": "元のメッセージは削除されました",
     "quoteNoWords": "テキストなしのメッセージ",

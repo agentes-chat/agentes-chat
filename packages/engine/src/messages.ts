@@ -17,7 +17,7 @@ import {
   schema,
   sql,
 } from "@agenteschat/db";
-import { mentionsEveryone } from "@agenteschat/i18n/everyone";
+import { mentionsEveryone, unquoted } from "@agenteschat/i18n/everyone";
 import { CHANNEL_REF } from "@agenteschat/ui/channel-refs";
 import { plainLine } from "@agenteschat/ui/markdown";
 import { type AgentActionView, actionsFor } from "./agent-actions";
@@ -377,10 +377,10 @@ function decisionOf(strategy: string | undefined, authorUserId: string | null): 
   return decidedBy ? { decidedBy } : {};
 }
 
-/** `@handle` tokens in a message, lower-cased and de-duplicated. Emails (`a@b.c`) are not mentions. */
+/** `@handle` tokens in a message, lower-cased and de-duplicated. Emails (`a@b.c`) and quoted lines (`> …`) are not mentions. */
 export function parseMentionHandles(body: string): string[] {
   const found = new Set<string>();
-  for (const match of body.matchAll(/(^|[^\w@.])@([a-zA-Z0-9][a-zA-Z0-9_-]{1,31})(?![\w@-])/g)) {
+  for (const match of unquoted(body).matchAll(/(^|[^\w@.])@([a-zA-Z0-9][a-zA-Z0-9_-]{1,31})(?![\w@-])/g)) {
     if (match[2]) found.add(match[2].toLowerCase());
   }
   return [...found];

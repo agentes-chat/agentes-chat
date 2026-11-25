@@ -2965,6 +2965,7 @@
     "copyLink": "Kopiuj link",
     "linkCopied": "Skopiowano link.",
     "reply": "Odpowiedz",
+    "quote": "Cytuj",
     "quoteOf": "Odpowiedź do {{name}}: {{excerpt}}. Zobacz wiadomość",
     "quoteGone": "Pierwotna wiadomość została usunięta",
     "quoteNoWords": "Wiadomość bez tekstu",

@@ -75,6 +75,25 @@ describe("@todos (a mention of everyone)", () => {
       expect(mentionsEveryone(body)).toBe(false);
   });
 
+  test("a quoted line (`> …`) mentions nobody, typed by hand or with Quote; the reply under it still does", async () => {
+    expect(mentionsEveryone("> @todos reunião às 15h")).toBe(false);
+    expect(mentionsEveryone("  > oi @everyone\n@todos")).toBe(true);
+    const { bia } = await world();
+    const quoted = await postPersonMessage(deps(), f.owner.id, f.org.id, f.general.id, {
+      body: "> @todos @dev @bia reunião às 15h\n> \n> ok",
+    });
+    expect(quoted.meta.mentionsEveryone).toBeUndefined();
+    expect(quoted.mentionedUserIds).toEqual([]);
+    expect(quoted.mentionedAgentIds).toEqual([]);
+    expect(await runsOf(quoted.id)).toEqual([]);
+    const reply = await postPersonMessage(deps(), f.owner.id, f.org.id, f.general.id, {
+      body: "> @todos reunião às 15h\n@dev @bia vejam isso",
+    });
+    expect(reply.meta.mentionsEveryone).toBeUndefined();
+    expect(reply.mentionedUserIds).toEqual([bia.id]);
+    expect(reply.mentionedAgentIds).toEqual([f.agent.id]);
+  });
+
   test("an owner's @todos mentions every person and wakes every agent that answers them here, never Lodi", async () => {
     const { bia, caio, ops, fora, lodi } = await world();
     const m = await postPersonMessage(deps(), f.owner.id, f.org.id, f.general.id, { body: "@todos reunião às 15h" });

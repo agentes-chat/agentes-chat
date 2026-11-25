@@ -1323,8 +1323,11 @@ html:not([data-pointer]) .ac-face-edit:focus-visible {
 .ac-msg__gutter,
 .ac-msg__reply,
 .ac-msg__head,
+.ac-msg__bubble-head,
+.ac-msg__stamp,
 .ac-msg__aside,
 .ac-msg__foot,
+.ac-msg__own-foot,
 .ac-msg__actions,
 .ac-msg .ac-visually-hidden,
 .ac-msg .ac-reacts,
@@ -7444,6 +7447,8 @@ html:not([data-pointer]) .ac-react:focus-visible {
   line-height: var(--composer-line);
   min-height: var(--composer-row);
   padding: calc((var(--composer-row) - var(--composer-line)) / 2) var(--space-2);
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 /* The placeholder is always one line (Composer drops its tip when the box is narrow): what's still too long ends in
    "…" instead of wrapping into a second line that makes the empty box taller. */
@@ -7628,6 +7633,102 @@ html:not([data-pointer]) .ac-composer__send:focus-visible {
   flex: 1;
   flex-direction: column;
   min-width: 0;
+}
+.ac-composer__text > textarea {
+  position: relative;
+}
+/* Mirror backdrop behind the composer textarea when draft has `> ` quote lines: matches textarea typography/padding
+   1:1 so caret and selection stay native while quoted lines render as compact rounded pills with a quote icon. */
+.ac-composer__backdrop {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  box-sizing: border-box;
+  border: 0;
+  margin: 0;
+  font: inherit;
+  font-size: var(--msg-text);
+  line-height: var(--composer-line);
+  padding: calc((var(--composer-row) - var(--composer-line)) / 2) var(--space-2);
+  color: transparent;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  --quote-pill-bg: color-mix(in srgb, var(--ink) 7%, transparent);
+}
+[data-theme="dark"] .ac-composer__backdrop {
+  --quote-pill-bg: color-mix(in srgb, var(--ink) 11%, transparent);
+}
+.ac-composer__text[data-quote-pills="true"] .ac-composer__backdrop {
+  color: var(--ink);
+}
+.ac-composer__text[data-quote-pills="true"] > textarea {
+  color: transparent;
+  caret-color: var(--ink);
+}
+.ac-composer__text[data-quote-pills="true"] > textarea::selection {
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+  color: transparent;
+}
+.ac-composer__quote-pill {
+  background: var(--quote-pill-bg);
+  border-radius: 6px;
+  box-shadow:
+    0 0 0 2px var(--quote-pill-bg),
+    5px 0 0 2px var(--quote-pill-bg),
+    -5px 0 0 2px var(--quote-pill-bg);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+.ac-composer__text[data-quote-pills="true"] .ac-composer__quote-pill {
+  color: var(--ink2);
+}
+.ac-composer__quote-slot {
+  position: relative;
+}
+.ac-composer__quote-pill--inline {
+  position: absolute;
+  inset-inline: 0 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding-inline: 4px;
+  box-shadow: none;
+  white-space: nowrap;
+  height: 20px;
+  font-size: 13px;
+}
+.ac-composer__quote-pill--inline > svg {
+  flex: none;
+  color: var(--muted);
+}
+.ac-composer__quote-pill--inline > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ac-composer__quote-prefix {
+  position: relative;
+  display: inline;
+}
+.ac-composer__quote-glyph {
+  color: transparent;
+}
+.ac-composer__quote-icon {
+  position: absolute;
+  inset-inline-start: -2px;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  transform: translateY(-50%);
+  color: var(--muted);
+  opacity: 0;
+}
+.ac-composer__text[data-quote-pills="true"] .ac-composer__quote-icon {
+  opacity: 0.9;
 }
 /* Voice messages (ADR 0100). The take is a row of its own above the files, the whole strip wide: the text, its tools
    and the files stay usable under it. */

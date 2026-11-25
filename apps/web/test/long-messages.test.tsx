@@ -96,6 +96,17 @@ describe("a tall message in the conversation", () => {
     expect(row("p1").textContent).toContain("Linha 80 com números.");
   });
 
+  test("Ver mais reveals the last paragraph of a long quoted selection", async () => {
+    const quoted = `> ${TALL}\n> \n${Array.from({ length: 80 }, (_, i) => `> Linha ${i + 1}`).join("\n")}`;
+    await open(seedState({ messages: [said("p1", "u-joao", `${quoted}\nMinha resposta.`, 2), later] }));
+    const message = row("p1");
+    await act(async () => fireEvent.click(within(message).getByRole("button", { name: "Ver mais" })));
+    expect(message.querySelector(".msg-clip--cut")).toBeNull();
+    expect(message.querySelector("blockquote")?.textContent).toContain("\n\nLinha 1");
+    expect(message.querySelector("blockquote")?.textContent).toContain("Linha 80");
+    expect(message.querySelector("blockquote + p")?.textContent).toBe("Minha resposta.");
+  });
+
   test("full messages shows both people and agents without a cut or See more", async () => {
     await open(
       withChatPrefs(

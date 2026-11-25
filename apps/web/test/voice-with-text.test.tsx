@@ -4,8 +4,11 @@ import { setupDom } from "@agenteschat/ui/testing/dom";
 setupDom();
 
 import { type ApiClient, ApiError } from "@agenteschat/client";
+import { MAX_MESSAGE_LENGTH } from "@agenteschat/client/lib/message-length";
+import { inlineQuoteToken } from "@agenteschat/ui";
 import { fakeMicrophone } from "@agenteschat/ui/testing";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
+import { writeComposerDraft } from "../src/hooks/useComposerDraft";
 import { createFakeApi, ENG_ID, ORG_ID, seedState } from "./fake-api";
 import { renderApp, screen, settle } from "./render";
 
@@ -26,8 +29,12 @@ beforeAll(() => {
 
 type VoiceInput = Parameters<ApiClient["voice"]["send"]>[2];
 
-const open = async (state = seedState({ media: { voiceAvailable: true } }), api = createFakeApi(state)) => {
-  const r = await renderApp(`/org/${ORG_ID}/c/${ENG_ID}`, { api });
+const open = async (
+  state = seedState({ media: { voiceAvailable: true } }),
+  api = createFakeApi(state),
+  reload = false,
+) => {
+  const r = await renderApp(`/org/${ORG_ID}/c/${ENG_ID}`, { api, reload });
   await settle(6);
   const socket = r.sockets.last();
   await act(async () => socket.open());
@@ -93,6 +100,34 @@ describe("a voice note with typed text and files", () => {
     await settle(6);
     expect(composer().value).toBe("olha as notas");
     expect(document.querySelector(".ac-composer__file")?.textContent).toContain("notas.txt");
+  });
+
+  test("releasing a held take keeps an oversized quoted draft and sends the audio alone", async () => {
+    restore = fakeMicrophone();
+    const state = seedState({ media: { voiceAvailable: true } });
+    const api = createFakeApi(state);
+    const sent: VoiceInput[] = [];
+    api.voice.send = async (_org, _channel, input) => {
+      sent.push(input);
+      return { clipId: "clip-1" };
+    };
+    const marker = inlineQuoteToken("", {}) ?? "";
+    writeComposerDraft("u-walter", `channel:${ENG_ID}`, marker, { [marker]: `> ${"x".repeat(MAX_MESSAGE_LENGTH)}` });
+    try {
+      await open(state, api, true);
+      await act(async () =>
+        fireEvent.pointerDown(screen().getByRole("button", { name: "Gravar áudio" }), { button: 0 }),
+      );
+      await act(() => Bun.sleep(1250));
+      await act(async () => fireEvent.pointerUp(window));
+      await settle(8);
+      expect(sent).toHaveLength(1);
+      expect(sent[0]?.text).toBeUndefined();
+      expect(composer().value).toBe(marker);
+      expect(screen().getByRole("button", { name: "Enviar como arquivo" })).toBeTruthy();
+    } finally {
+      writeComposerDraft("u-walter", `channel:${ENG_ID}`, "");
+    }
   });
 
   test("a take with nothing typed or attached goes as before: no text, no files", async () => {

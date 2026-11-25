@@ -2766,6 +2766,7 @@
     "copyLink": "Link kopiëren",
     "linkCopied": "Link gekopieerd.",
     "reply": "Beantwoorden",
+    "quote": "Citeren",
     "quoteOf": "Antwoord op {{name}}: {{excerpt}}. Bekijk het bericht",
     "quoteGone": "Oorspronkelijk bericht verwijderd",
     "quoteNoWords": "Bericht zonder tekst",

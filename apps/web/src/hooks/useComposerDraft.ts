@@ -1,4 +1,5 @@
 import { type ComposerDraft, readDraftBook, withDraft } from "@agenteschat/client/lib/composer-drafts";
+import { type ComposerQuotes, inlineQuoteRanges } from "@agenteschat/ui";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { AuthClient } from "@/auth/client";
 import { STORAGE_KEYS, storage } from "@/lib/storage";
@@ -14,9 +15,9 @@ export function readComposerDraft(userId: string, key: string): ComposerDraft | 
 }
 
 /** Writes (or, blank, removes) one entry of this person's book of unsent texts. */
-export function writeComposerDraft(userId: string, key: string, text: string) {
+export function writeComposerDraft(userId: string, key: string, text: string, inlineQuotes?: ComposerQuotes) {
   const name = bookKey(userId);
-  const next = withDraft(readDraftBook(storage.get(name), Date.now()), key, text, Date.now());
+  const next = withDraft(readDraftBook(storage.get(name), Date.now()), key, text, Date.now(), inlineQuotes);
   if (Object.keys(next).length === 0) storage.remove(name);
   else storage.set(name, JSON.stringify(next));
 }
@@ -45,7 +46,9 @@ export function withComposerDraftsSignOut(auth: AuthClient): AuthClient {
 /** A composer's text as a store: the box reads it (`useDraftText`), what sends it reads it at that moment (`get`). */
 export interface DraftStore {
   get(): string;
-  set(next: string | ((old: string) => string)): void;
+  /** The quote markers' Markdown by token: kept after a marker is deleted, so native undo brings it back whole. */
+  quotes(): ComposerQuotes;
+  set(next: string | ((old: string) => string), quote?: { token: string; markdown: string }): void;
   subscribe(listener: () => void): () => void;
 }
 
@@ -57,29 +60,38 @@ export interface DraftStore {
  * conversation that holds it.
  */
 export function useComposerDraft(userId: string, key: string, handed?: string): DraftStore {
-  const pending = useRef<string | null>(handed ?? null);
+  const pending = useRef<{ text: string; quotes: ComposerQuotes } | null>(
+    handed === undefined ? null : { text: handed, quotes: {} },
+  );
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const flush = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
     timer.current = null;
     if (pending.current === null) return;
-    writeComposerDraft(userId, key, pending.current);
+    const { text, quotes } = pending.current;
+    // Keep removed quotes in memory for native undo, but only save quotes in the current draft.
+    const active = Object.fromEntries(inlineQuoteRanges(text, quotes).map(({ token, markdown }) => [token, markdown]));
+    writeComposerDraft(userId, key, text, Object.keys(active).length ? active : undefined);
     pending.current = null;
   }, [userId, key]);
   const flushNow = useRef(flush);
   flushNow.current = flush;
 
   const [store] = useState(() => {
-    let text = handed ?? readComposerDraft(userId, key)?.text ?? "";
+    const saved = handed === undefined ? readComposerDraft(userId, key) : undefined;
+    let text = handed ?? saved?.text ?? "";
+    let quotes: ComposerQuotes = saved?.inlineQuotes ?? {};
     const listeners = new Set<() => void>();
     return {
       get: () => text,
-      set(next: string | ((old: string) => string)) {
+      quotes: () => quotes,
+      set(next: string | ((old: string) => string), quote?: { token: string; markdown: string }) {
         const value = typeof next === "function" ? next(text) : next;
-        if (value === text) return;
+        if (value === text && !quote) return;
         text = value;
-        pending.current = value;
+        if (quote) quotes = { ...quotes, [quote.token]: quote.markdown };
+        pending.current = { text, quotes };
         if (timer.current) clearTimeout(timer.current);
         timer.current = setTimeout(() => flushNow.current(), SAVE_DELAY_MS);
         for (const l of listeners) l();

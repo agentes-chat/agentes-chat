@@ -2766,6 +2766,7 @@
     "copyLink": "Link kopieren",
     "linkCopied": "Link kopiert.",
     "reply": "Antworten",
+    "quote": "Zitieren",
     "quoteOf": "Antwort an {{name}}: {{excerpt}}. Nachricht ansehen",
     "quoteGone": "Ursprüngliche Nachricht gelöscht",
     "quoteNoWords": "Nachricht ohne Text",

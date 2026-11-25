@@ -35,5 +35,8 @@ export const isEveryoneWord = (word: string): boolean => EVERYONE_WORDS.includes
  */
 const EVERYONE_MENTION = new RegExp(`(^|[^\\p{L}\\p{N}_@.])@(${EVERYONE_WORDS.join("|")})(?![\\p{L}\\p{N}_@-])`, "iu");
 
-/** Whether a text mentions everyone in some language. */
-export const mentionsEveryone = (text: string): boolean => EVERYONE_MENTION.test(text);
+/** A text without its quoted lines (`> …`): what someone quotes mentions nobody, typed by hand or with Quote. */
+export const unquoted = (text: string): string => text.replace(/^[ \t]*>.*$/gm, "");
+
+/** Whether a text mentions everyone in some language, outside quoted lines. */
+export const mentionsEveryone = (text: string): boolean => EVERYONE_MENTION.test(unquoted(text));

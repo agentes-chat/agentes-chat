@@ -6845,6 +6845,9 @@
   "channel.reply": {
     "value": "Reply"
   },
+  "channel.quote": {
+    "value": "Quote"
+  },
   "channel.quoteOf": {
     "value": "Reply to {{name}}: {{excerpt}}. See the message"
   },

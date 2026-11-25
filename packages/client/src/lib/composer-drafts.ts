@@ -6,6 +6,7 @@
  */
 export interface ComposerDraft {
   text: string;
+  inlineQuotes?: Readonly<Record<string, string>>;
   /** When it was last typed (ms). */
   at: number;
 }
@@ -32,18 +33,28 @@ export function readDraftBook(raw: string | null, now: number): DraftBook {
   const book: DraftBook = {};
   for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
     if (!value || typeof value !== "object") continue;
-    const { text, at } = value as { text?: unknown; at?: unknown };
+    const { text, at, inlineQuotes } = value as { text?: unknown; at?: unknown; inlineQuotes?: unknown };
     if (typeof text !== "string" || typeof at !== "number" || !text.trim()) continue;
     if (now - at > DRAFT_TTL_MS) continue;
-    book[key] = { text, at };
+    const quotes =
+      inlineQuotes && typeof inlineQuotes === "object" && !Array.isArray(inlineQuotes)
+        ? Object.fromEntries(Object.entries(inlineQuotes).filter(([, quote]) => typeof quote === "string"))
+        : {};
+    book[key] = Object.keys(quotes).length ? { text, at, inlineQuotes: quotes } : { text, at };
   }
   return book;
 }
 
 /** The book with `key`'s text set (or removed when blank), trimmed to the most recent `MAX_DRAFTS`. */
-export function withDraft(book: DraftBook, key: string, text: string, now: number): DraftBook {
+export function withDraft(
+  book: DraftBook,
+  key: string,
+  text: string,
+  now: number,
+  inlineQuotes?: ComposerDraft["inlineQuotes"],
+): DraftBook {
   const next: DraftBook = { ...book };
-  if (text.trim()) next[key] = { text, at: now };
+  if (text.trim()) next[key] = inlineQuotes ? { text, at: now, inlineQuotes } : { text, at: now };
   else delete next[key];
   const keys = Object.keys(next);
   if (keys.length <= MAX_DRAFTS) return next;

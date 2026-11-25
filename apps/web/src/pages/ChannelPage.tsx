@@ -144,7 +144,7 @@ import { supersededBrainNotices } from "@agenteschat/client/lib/machine-outages"
 import { hasWideBlock } from "@agenteschat/client/lib/markdown";
 import { isMediaAfterReply, isMediaAlone, messageMediaOf, quoteText } from "@agenteschat/client/lib/media";
 import { serverBody } from "@agenteschat/client/lib/message-body";
-import { answerIds, joinDrafts, tooLongToSend } from "@agenteschat/client/lib/message-length";
+import { answerIds, joinDrafts, tooLongText, tooLongToSend } from "@agenteschat/client/lib/message-length";
 import {
   isOpenMission,
   missionCommandOf,
@@ -197,6 +197,7 @@ import {
   DialogSearchList,
   EmptyState,
   EventPillAction,
+  expandInlineQuotes,
   Field,
   FORMAT_KINDS,
   type FormatKind,
@@ -204,6 +205,9 @@ import {
   Icon,
   type IconName,
   Input,
+  inlineQuotePad,
+  inlineQuoteSelection,
+  inlineQuoteToken,
   isIdHandle,
   Locked,
   Mention,
@@ -393,6 +397,7 @@ import {
   WaitMark,
 } from "@/components/RequestCard";
 import { ReturnLine } from "@/components/ReturnLine";
+import { formatMarkdownQuote, insertIntoTextarea, SelectionQuote } from "@/components/SelectionQuote";
 import { SidePanel } from "@/components/SidePanel";
 import { ChannelWelcome, colorOf } from "@/components/Sky";
 import { isStoppable, StopButton, useContinueRun, useStopRun, useWasContinued } from "@/components/StopRun";
@@ -619,19 +624,23 @@ function DraftComposer({
   onTyped: (text: string) => void;
 }) {
   const text = useDraftText(draft);
+  const inlineQuotes = draft.quotes();
+  // Quote markers go out as their Markdown: the length limit is the sent text's.
+  const expanded = expandInlineQuotes(text, inlineQuotes);
   const finishing = handed !== undefined && /:\s*$/.test(handed) && text === handed;
-  const tooLong = tooLongToSend(text);
+  const tooLong = tooLongToSend(expanded);
   return (
     <Composer
       {...props}
       header={header || (finishing ? finishingHint : undefined)}
       value={text}
+      inlineQuotes={inlineQuotes}
       onChange={(v) => {
         draft.set(v);
         onTyped(v);
       }}
       sendBlocked={uploading || tooLong}
-      notice={tooLong ? longNotice(text) : undefined}
+      notice={tooLong ? longNotice(expanded) : undefined}
     />
   );
 }
@@ -669,6 +678,7 @@ function QuotedMessage({ reply }: { reply: ReplyRef }) {
     <button
       type="button"
       className="msg-quote"
+      title={excerpt}
       aria-label={t("channel.quoteOf", { name, excerpt })}
       onClick={() => {
         // In the channel's timeline a thread's reply isn't a row: it is in its thread. A thread view has no panel.
@@ -992,8 +1002,42 @@ function ChannelView({
   });
   // The thread open in the panel beside the channel ("Responder", a thread's line); `reply`: to its composer.
   const [panel, setPanel] = useThreadPanel(!thread);
-  // "Responder" in a thread view: the next message from here answers this one (`meta.replyTo`).
+  // Quote reply (`meta.replyTo`): from "Responder" in a thread view.
   const [quote, setQuote] = useState<MessageType | null>(null);
+  // Last user-placed caret in this conversation's composer; scoped to conversationKey so untouched drafts append at end.
+  const conversationKey = draftKeyOf(channel.id, thread?.id);
+  const composerCaret = useRef<{ key: string; start: number; end: number } | null>(null);
+  const canQuoteInline = Boolean(
+    !adjustThreadId &&
+      !org.deletion &&
+      !chrome?.composerReplacement &&
+      !chrome?.locked &&
+      isMember &&
+      channel.can?.post !== false,
+  );
+  useEffect(() => {
+    if (!canQuoteInline) return;
+    const el = composer.current;
+    if (!el) return;
+    const rememberCaret = () => {
+      if (document.activeElement !== el) return;
+      composerCaret.current = {
+        key: conversationKey,
+        start: el.selectionStart ?? el.value.length,
+        end: el.selectionEnd ?? el.value.length,
+      };
+    };
+    el.addEventListener("focus", rememberCaret);
+    el.addEventListener("select", rememberCaret);
+    el.addEventListener("keyup", rememberCaret);
+    el.addEventListener("mouseup", rememberCaret);
+    return () => {
+      el.removeEventListener("focus", rememberCaret);
+      el.removeEventListener("select", rememberCaret);
+      el.removeEventListener("keyup", rememberCaret);
+      el.removeEventListener("mouseup", rememberCaret);
+    };
+  }, [conversationKey, canQuoteInline]);
   // Before the panel's Esc, whose close the bar holds back (`data-esc-layer`), and before the composer's, which stops
   // an agent: spent here, they see it taken.
   useEffect(() => {
@@ -2307,7 +2351,11 @@ function ChannelView({
   }, [canAttach]);
   // A draft past the length limit goes as a text file instead, which agents open like any other.
   const draftAsFile = () => {
-    addFiles([new File([draft.get()], t("channel.tooLong.fileName"), { type: "text/plain" })]);
+    addFiles([
+      new File([expandInlineQuotes(draft.get(), draft.quotes())], t("channel.tooLong.fileName"), {
+        type: "text/plain",
+      }),
+    ]);
     setDraft("");
   };
   const attached = files.flatMap((f) => (f.status === "done" && f.ref ? [f.ref] : []));
@@ -2316,7 +2364,12 @@ function ChannelView({
   // A key pasted in the message: nothing goes out until the person chooses (`KeyGuardDialog`).
   const [keyAsk, setKeyAsk] = useState<{ text: string; found: FoundKey; interrupt?: boolean } | null>(null);
   const onSend = (text: string, opts?: { interrupt?: boolean; keyChecked?: boolean }) => {
+    text = opts?.keyChecked ? text : expandInlineQuotes(text, draft.quotes()).trim();
     if (uploading || (!text && attached.length === 0)) return;
+    if (tooLongToSend(text)) {
+      toast.show(tooLongText(t, i18n.language, text.length), "error");
+      return;
+    }
     const found = opts?.keyChecked ? null : looksLikeApiKey(text);
     if (found) {
       setKeyAsk({ text, found, interrupt: opts?.interrupt });
@@ -2341,6 +2394,7 @@ function ChannelView({
     }
     toBottom(true);
     setDraft("");
+    composerCaret.current = null;
     const meta = localMeta(quote, quote ? dir.authorName(quote.author) : "", attached);
     setQuote(null);
     // About what is selected in the file beside it (ADR 0199): the message carries it, then the quote goes. A comment
@@ -2367,7 +2421,10 @@ function ChannelView({
   const sendMediaNow = useRef<(media: MessageMedia) => void>(() => {});
   sendMediaNow.current = (media) => {
     toBottom(true);
-    const meta: Record<string, unknown> = { ...localMeta(quote, quote ? dir.authorName(quote.author) : "", []), media };
+    const meta: Record<string, unknown> = {
+      ...localMeta(quote, quote ? dir.authorName(quote.author) : "", []),
+      media,
+    };
     setQuote(null);
     if (thread && chrome?.openThread) meta[OPEN_THREAD] = true;
     send("", thread ? thread.id : null, meta);
@@ -2392,9 +2449,11 @@ function ChannelView({
           // message comes); the throttle makes it one frame every 3 s, and holds the upload's while they write.
           onRecording: () => sendTyping(undefined, "voice"),
           onTake: ({ blob, durationMs, peaks }) => {
-            const typed = draft.get().trim();
-            const found = looksLikeApiKey(typed);
-            const text = found ? "" : typed;
+            const typed = expandInlineQuotes(draft.get(), draft.quotes()).trim();
+            const tooLong = tooLongToSend(typed);
+            if (tooLong) toast.show(tooLongText(t, i18n.language, typed.length), "error");
+            const found = tooLong ? null : looksLikeApiKey(typed);
+            const text = found || tooLong ? "" : typed;
             toBottom(true);
             setQuote(null);
             if (found) setKeyAsk({ text: typed, found });
@@ -3021,6 +3080,45 @@ function ChannelView({
                               />
                             )}
                           </section>
+                          <SelectionQuote
+                            container={scroller}
+                            enabled={canQuoteInline}
+                            canQuote={(id) =>
+                              timeline.some(
+                                (item) => item.kind === "message" && !item.message.local && item.message.id === id,
+                              )
+                            }
+                            onQuote={(_id, selected) => {
+                              const el = composer.current;
+                              const current = el ? el.value : draft.get();
+                              const savedCaret =
+                                composerCaret.current?.key === conversationKey ? composerCaret.current : null;
+                              const pos =
+                                el && document.activeElement === el
+                                  ? {
+                                      start: el.selectionStart ?? current.length,
+                                      end: el.selectionEnd ?? current.length,
+                                    }
+                                  : (savedCaret ?? { start: current.length, end: current.length });
+                              const markdown = formatMarkdownQuote(selected);
+                              const token = inlineQuoteToken(current, draft.quotes(), inlineQuotePad(el, markdown));
+                              if (!markdown || !token) return;
+                              const { start, end } = inlineQuoteSelection(current, draft.quotes(), pos.start, pos.end);
+                              const quote = { token, markdown };
+                              const change = (next: string) => {
+                                setDraft(next, quote);
+                                sendTyping(next);
+                              };
+                              if (el) {
+                                const { caret } = insertIntoTextarea(el, start, end, token, change);
+                                composerCaret.current = { key: conversationKey, start: caret, end: caret };
+                              } else {
+                                const caret = start + token.length;
+                                change(current.slice(0, start) + token + current.slice(end));
+                                composerCaret.current = { key: conversationKey, start: caret, end: caret };
+                              }
+                            }}
+                          />
                         </RowsProvider>
                         <ToLatest
                           shown={!adjustThreadId && (far || pillOn || gap)}
@@ -3116,6 +3214,14 @@ function ChannelView({
                                   />
                                 )}
                                 onTyped={(v) => {
+                                  const el = composer.current;
+                                  if (el && document.activeElement === el) {
+                                    composerCaret.current = {
+                                      key: conversationKey,
+                                      start: el.selectionStart ?? v.length,
+                                      end: el.selectionEnd ?? v.length,
+                                    };
+                                  }
                                   if (v.trim()) sendTyping(v);
                                 }}
                                 header={

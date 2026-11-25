@@ -7368,6 +7368,40 @@ html:not([data-pointer]) .composer-reply__close:focus-visible {
   font-weight: 600;
   color: var(--ink2);
 }
+/* Floating "Quote" pill near text selected inside a message. */
+.selection-quote {
+  position: fixed;
+  z-index: var(--z-floating);
+  display: inline-flex;
+  align-items: center;
+  padding: 3px;
+  border-radius: var(--radius-full);
+  background: var(--raised);
+  box-shadow: var(--e2), var(--top);
+}
+.selection-quote__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--icon-gap-sm);
+  height: 28px;
+  padding: 0 11px 0 9px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--ink);
+  cursor: pointer;
+}
+.selection-quote__btn:hover {
+  background: var(--plate);
+}
+html:not([data-pointer]) .selection-quote__btn:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
 /* The line above a reply (`.ac-msg__reply`): face, @name and one line of what it answers; opens the original. */
 .msg-quote {
   display: flex;
