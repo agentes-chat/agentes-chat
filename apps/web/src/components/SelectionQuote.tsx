@@ -72,23 +72,13 @@ function normalizeQuoteSelection(raw: string): string {
   return lines.slice(start, end);
 }
 
-/**
- * Neutralizes `@handle`, `@everyone`/`@todos`, and `@Full Name` mention tokens inside quoted lines by inserting a
- * zero-width space after `@` (matching `parseMentionHandles`'s `[^\w@.]` boundary so paths like `/@dev` and accented
- * prefixes like `olá@dev` are covered while ASCII emails like `user@example.com` stay intact), so quoting an agent's
- * message never wakes mentioned agents or notifies the channel on send.
- */
-function neutralizeQuotedMentions(line: string): string {
-  return line.replace(/(^|[^\w@.])@(?=[\p{L}\p{N}])/gu, "$1@\u200B");
-}
-
-/** Format every selected line, including quoted paragraph breaks. */
+/** Format every selected line, including quoted paragraph breaks. Mentions stay as written: the server ignores `>` lines. */
 export function formatMarkdownQuote(raw: string): string {
   const text = normalizeQuoteSelection(raw);
   if (!text.trim()) return "";
   return text
     .split("\n")
-    .map((line) => `> ${neutralizeQuotedMentions(line.replace(/^(\s*)(`{3,}|~{3,})/, "$1\\$2"))}`)
+    .map((line) => `> ${line.replace(/^(\s*)(`{3,}|~{3,})/, "$1\\$2")}`)
     .join("\n");
 }
 

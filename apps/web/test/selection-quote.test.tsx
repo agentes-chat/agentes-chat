@@ -92,34 +92,16 @@ describe("inline quote formatting and insertion helpers", () => {
     const long = "😀".repeat(500);
     expect(formatMarkdownQuote(`primeira linha\r\n\r\n${long}\n`)).toBe(`> primeira linha\n> \n> ${long}`);
     expect(formatMarkdownQuote("```ts\nconst x = 1\n```\n  ~~~")).toBe("> \\```ts\n> const x = 1\n> \\```\n>   \\~~~");
-    expect(formatMarkdownQuote("oi @dev\n@todos")).toBe("> oi @\u200Bdev\n> @\u200Btodos");
+    expect(formatMarkdownQuote("oi @dev\n@todos")).toBe("> oi @dev\n> @todos");
   });
 
-  test("neutralizes @handle, @todos/@everyone, and @Full Name inside quotes while preserving ASCII emails", () => {
-    // Exact regex from `parseMentionHandles` (`packages/engine/src/messages.ts:374`); `mentionsEveryone` is imported
-    // directly from `@agenteschat/i18n/everyone` (`packages/i18n/src/everyone.ts:36`) to respect package boundaries.
-    const parseMentionHandlesRe = /(^|[^\w@.])@([a-zA-Z0-9][a-zA-Z0-9_-]{1,31})(?![\w@-])/g;
-    const cases = [
-      "https://x.com/@dev",
-      "veja /@dev e A/@todos",
-      "olá@dev",
-      "@dev",
-      "(@dev)",
-      "@todos",
-      "@everyone",
-      "@João Silva",
-      "user@example.com",
-      "josé@example.com",
-    ];
-    for (const input of cases) {
+  test("keeps quoted mentions as written; quoted lines mention nobody", () => {
+    for (const input of ["@todos", "@everyone", "oi @todos", "https://x.com/@dev", "user@example.com"]) {
       const quoted = formatMarkdownQuote(input);
-      expect([...quoted.matchAll(parseMentionHandlesRe)]).toEqual([]);
+      expect(quoted).toBe(`> ${input}`);
       expect(mentionsEveryone(quoted)).toBe(false);
     }
-    expect(formatMarkdownQuote("user@example.com")).toBe("> user@example.com");
-    expect(formatMarkdownQuote("https://x.com/@dev")).toBe("> https://x.com/@\u200Bdev");
-    expect(formatMarkdownQuote("veja /@dev e A/@todos")).toBe("> veja /@\u200Bdev e A/@\u200Btodos");
-    expect(formatMarkdownQuote("olá@dev")).toBe("> olá@\u200Bdev");
+    expect(mentionsEveryone(`${formatMarkdownQuote("@todos")}\n@todos`)).toBe(true);
   });
 
   test("expands inline markers at their positions without empty gap lines", () => {

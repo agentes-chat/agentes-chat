@@ -115,7 +115,7 @@ test("inline quote pills size to field width, open @mentions right after a pill,
   const longMd = `> ${"A busca devolveu resultados completos sobre o assunto. ".repeat(400)}`;
   expect(quotePreview(longMd).length).toBeLessThanOrEqual(161);
   expect(quotePreview(longMd).endsWith("…")).toBe(true);
-  expect(quotePreview("> \\```ts\n> @\u200Bdev")).toBe("```ts @dev");
+  expect(quotePreview("> \\```ts\n> @dev")).toBe("```ts @dev");
 
   const desktop = sized(700);
   const ta = document.createElement("textarea");

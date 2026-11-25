@@ -27,7 +27,6 @@ export function quotePreview(markdown: string): string {
   const text = raw
     .replace(/^> /gm, "")
     .replace(/(^|\n)([ \t]*)\\(?=`{3,}|~{3,})/g, "$1$2")
-    .replace(/\u200B/g, "")
     .replace(/\s+/g, " ")
     .trim();
   if (text.length <= PREVIEW_MAX) {
