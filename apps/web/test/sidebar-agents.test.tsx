@@ -40,6 +40,25 @@ const go = async (state: State = seedState()) => {
   return { ...r, state };
 };
 const nav = () => screen().getByRole("navigation", { name: "Navegação do workspace" });
+
+test("number shortcuts follow the sidebar order and leave text inputs alone", async () => {
+  const { router } = await go(withGroups());
+  const rows = [...nav().querySelectorAll<HTMLElement>("[data-agent-row]")];
+  expect(rows.map((row) => row.dataset.agentRow)).toEqual([ADA_ID, ATLAS_ID]);
+  const key = { key: "2", code: "Digit2", altKey: true };
+  const input = document.createElement("input");
+  document.body.appendChild(input);
+  try {
+    await act(async () => fireEvent.keyDown(input, key));
+    expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/c/${GENERAL_ID}`);
+  } finally {
+    input.remove();
+  }
+  await act(async () => fireEvent.keyDown(document.body, key));
+  await settle(6);
+  expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/dm/agent/${ATLAS_ID}`);
+});
+
 const head = (name: string) =>
   within(nav()).getByRole("button", { name }).closest(".sidebar__section-head") as HTMLElement;
 const section = (name: string) => head(name).closest(".sidebar__section") as HTMLElement;
