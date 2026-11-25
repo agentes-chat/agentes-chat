@@ -1,4 +1,4 @@
-import { Icon } from "@agenteschat/ui";
+import { Icon, isApple } from "@agenteschat/ui";
 import { type RefObject, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
@@ -71,6 +71,9 @@ function normalizeQuoteSelection(raw: string): string {
   while (end > start && lines[end - 1] === "\n") end--;
   return lines.slice(start, end);
 }
+
+/** Alt+Q (⌥Q on a Mac, by the key's place: Option changes the letter). */
+const quotesKey = (e: KeyboardEvent) => e.code === "KeyQ" && e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey;
 
 /** Format every selected line, including quoted paragraph breaks. Mentions stay as written: the server ignores `>` lines. */
 export function formatMarkdownQuote(raw: string): string {
@@ -645,18 +648,30 @@ export function SelectionQuote({
     };
   }, [container, enabled, evaluate]);
 
-  // Escape closes the floating pill before reaching the composer or side panel.
+  const quote = useCallback((picked: { messageId: string; text: string }) => {
+    setActive(null);
+    window.getSelection()?.removeAllRanges();
+    onQuoteRef.current(picked.messageId, picked.text);
+  }, []);
+
+  // Escape closes the floating pill before reaching the composer or side panel; Alt+Q (⌥Q) quotes, the keyboard's way
+  // to the pill, which sits outside the Tab order.
   useEffect(() => {
     if (!active) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape" || e.defaultPrevented) return;
-      e.preventDefault();
-      window.getSelection()?.removeAllRanges();
-      setActive(null);
+      if (e.defaultPrevented) return;
+      if (e.key === "Escape") {
+        e.preventDefault();
+        window.getSelection()?.removeAllRanges();
+        setActive(null);
+      } else if (quotesKey(e)) {
+        e.preventDefault();
+        quote(active);
+      }
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [active]);
+  }, [active, quote]);
 
   if (!active) return null;
 
@@ -691,12 +706,9 @@ export function SelectionQuote({
         type="button"
         className="selection-quote__btn"
         onMouseDown={(e) => e.preventDefault()}
-        onClick={() => {
-          const picked = active;
-          setActive(null);
-          window.getSelection()?.removeAllRanges();
-          onQuoteRef.current(picked.messageId, picked.text);
-        }}
+        aria-keyshortcuts="Alt+Q"
+        title={`${label} (${isApple() ? "⌥Q" : "Alt+Q"})`}
+        onClick={() => quote(active)}
       >
         <Icon name="quote" size={14} />
         <span>{label}</span>

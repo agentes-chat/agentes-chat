@@ -633,6 +633,13 @@ describe("text-selection inline quote pill", () => {
     await settle(1);
     await selectTextIn(textEl, sample);
     expect(screen().getByRole("toolbar", { name: "Citar" })).toBeTruthy();
+
+    // Alt+Q (⌥Q, by the key's place) quotes from the keyboard, the pill being outside the Tab order.
+    await act(async () => fireEvent.keyDown(window, { key: "œ", code: "KeyQ", altKey: true }));
+    await settle(2);
+    expect(screen().queryByRole("toolbar", { name: "Citar" })).toBeNull();
+    const box = screen().getByRole("combobox", { name: /Mensagem para/ }) as HTMLTextAreaElement;
+    expect(quotePreviews(box)).toHaveLength(1);
   });
 
   test("excludes code-card chrome (.code-card__top, buttons, hidden Copiado), preserves author-inclusive copy and backwards direction, and guards quote pills", async () => {
