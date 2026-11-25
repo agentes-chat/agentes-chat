@@ -6439,6 +6439,12 @@ async function executeRunInner(
             Boolean(routineBriefOf(triggerMessage?.meta)?.widget) &&
             (routineRun?.status === "starting" || routineRun?.status === "started") &&
             routineRun.code !== WIDGET_FAILURES.agentReported,
+          reportOwed:
+            routineBriefOf(triggerMessage?.meta)?.report === "always" &&
+            !routineBriefOf(triggerMessage?.meta)?.widget &&
+            (routineRun?.status === "starting" || routineRun?.status === "started") &&
+            !record &&
+            !transcript.routineRecord,
           quiet: !record,
           decided: null,
           unanswered: false,

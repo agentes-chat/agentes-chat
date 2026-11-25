@@ -306,6 +306,7 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
     });
     let tail = "";
     let streamed = false;
+    let streamedText = "";
     let worked = false;
     const flush = (text: string, whole: boolean) => {
       const out = clean(tail + text);
@@ -313,6 +314,7 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
       tail = out.slice(at);
       if (at > 0) {
         streamed = true;
+        streamedText += out.slice(0, at);
         opts.emit({ type: "text_delta", text: out.slice(0, at) });
       }
     };
@@ -441,7 +443,9 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
     }
     const response = typeof r.response === "string" ? r.response : "";
     if (r.status === "SUCCESS" && exit.code === 0) {
-      const text = clean(response.trimEnd());
+      // agent_response.text_delta is incremental (including across steps); keep the same redacted
+      // text already emitted when a successful result omits its aggregate response.
+      const text = response.trim() ? clean(response.trimEnd()) : streamedText.trimEnd();
       if (text && !streamed) opts.emit({ type: "text_delta", text });
       opts.emit({ type: "done", text, session: { id: input.sessionId } });
       return;

@@ -5,6 +5,7 @@ import { addChannelMember, createAgent, drainOutbox, openDm, runRoutineNow } fro
 import { runAuthorityById } from "../src/authority";
 import { reachNote, reachOf } from "../src/reach";
 import { routineCreatorOf } from "../src/requester";
+import { closeRoutineRun } from "../src/routine-ledger";
 import { addMember, type Fixture, setup } from "./fixtures";
 import { channelRoutine, messagesIn, notificationsOf, routineDeps } from "./routine-fixtures";
 
@@ -282,3 +283,88 @@ test("an always routine that ends without hand_off never posts its record as-is:
   const general = await messagesIn(f, f.general.id);
   expect(general.filter((m) => !m.meta.notice).map((m) => m.body)).toEqual(["Bom dia! Que a sua segunda comece leve."]);
 });
+
+test("an always routine recovers an empty final answer once and delivers its report", async () => {
+  let routineTurns = 0;
+  f = await setup({
+    handOff: true,
+    reply: (req) => {
+      if (!isRoutine(req)) return { chunks: ["Nenhuma novidade encontrada."] };
+      routineTurns++;
+      return { chunks: routineTurns === 1 ? [] : ["Checado: nenhuma novidade encontrada."] };
+    },
+  });
+  const routine = await channelRoutine(f, { report: "always" });
+  await runRoutineNow(routineDeps(f), f.owner.id, f.org.id, routine.id);
+  await drainOutbox(f.db, f.handlers);
+  expect(routineTurns).toBe(2);
+  expect((await f.db.select().from(schema.routineRuns))[0]).toMatchObject({ status: "reported", code: "auto_report" });
+  expect((await messagesIn(f, f.general.id)).filter((m) => !m.meta.notice).map((m) => m.body)).toEqual([
+    "Nenhuma novidade encontrada.",
+  ]);
+});
+
+test("an always routine that already handed off can end silently without recovery or a second message", async () => {
+  let calls = 0;
+  f = await setup({
+    handOff: true,
+    reply: () => {
+      calls++;
+      return calls === 1
+        ? { chunks: [], toolUses: [{ name: "hand_off", input: { message: "Checado: nenhum item novo." } }] }
+        : { chunks: [] };
+    },
+  });
+  const routine = await channelRoutine(f, { report: "always" });
+  await runRoutineNow(routineDeps(f), f.owner.id, f.org.id, routine.id);
+  await drainOutbox(f.db, f.handlers);
+  expect(calls).toBe(2);
+  expect((await f.db.select().from(schema.routineRuns))[0]?.status).toBe("reported");
+  expect((await messagesIn(f, f.general.id)).map((m) => m.body)).toEqual(["Checado: nenhum item novo."]);
+});
+
+test("a conditional routine with an empty answer stays silent without recovery", async () => {
+  let calls = 0;
+  f = await setup({
+    handOff: true,
+    reply: () => {
+      calls++;
+      return { chunks: [] };
+    },
+  });
+  const routine = await channelRoutine(f, { report: "when_new" });
+  await runRoutineNow(routineDeps(f), f.owner.id, f.org.id, routine.id);
+  await drainOutbox(f.db, f.handlers);
+  expect(calls).toBe(1);
+  expect((await f.db.select().from(schema.routineRuns))[0]?.status).toBe("silent");
+  expect(await messagesIn(f, f.general.id)).toEqual([]);
+});
+
+for (const empty of ["", "NO_REPLY"]) {
+  test(`an always routine that stays silent (${JSON.stringify(empty)}) fails and tells its destination exactly once`, async () => {
+    let calls = 0;
+    f = await setup({
+      handOff: true,
+      reply: () => {
+        calls++;
+        return { chunks: [empty] };
+      },
+    });
+    const routine = await channelRoutine(f, { report: "always" });
+    await runRoutineNow(routineDeps(f), f.owner.id, f.org.id, routine.id);
+    await drainOutbox(f.db, f.handlers);
+    expect(calls).toBe(2);
+    const [rr] = await f.db.select().from(schema.routineRuns);
+    expect(rr).toMatchObject({ status: "failed", code: "no_report" });
+    const [run] = await f.db.select().from(schema.agentRuns);
+    if (!run || !rr) throw new Error("no run");
+    expect(await closeRoutineRun(routineDeps(f), run, { status: "done", text: "" })).toBeNull();
+    const messages = await messagesIn(f, f.general.id);
+    expect(messages).toHaveLength(1);
+    expect(messages[0]?.body).toContain(rr.id);
+    expect(messages[0]?.meta.routine).toMatchObject({ runId: rr.id });
+    expect(rr.messageId).toBe(messages[0]?.id ?? null);
+    expect(await f.db.select().from(schema.agentRuns)).toHaveLength(1);
+    expect((await f.db.select().from(schema.routines))[0]?.failuresInRow).toBe(1);
+  });
+}
