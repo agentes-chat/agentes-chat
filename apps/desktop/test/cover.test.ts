@@ -33,6 +33,9 @@ test("Tailscale off over the server here: the Mac's app, Windows' icon by the cl
   expect(coverTailnet("mac", { state: "off", app: false })).toBe("tailnetUp");
   // Not read: its app.
   expect(coverTailnet("mac", null)).toBe("openTailscale");
+  // Connected, yet its address doesn't answer: its name, never "connect Tailscale".
+  for (const platform of ["mac", "windows", "linux"] as const)
+    expect(coverTailnet(platform, { state: "on", device: "mac" })).toBe("tailnetDns");
   // What follows "Connect Tailscale on this PC to open agentes.chat.": no sudo on Windows, the command elsewhere.
   for (const { cover } of [desktopEn, desktopPtBR]) {
     expect(cover.openTailscale).toBeTruthy();
