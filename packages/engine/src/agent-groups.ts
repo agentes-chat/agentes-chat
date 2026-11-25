@@ -61,6 +61,38 @@ const groupRows = (db: Executor, orgId: string) =>
     .where(eq(agentGroups.orgId, orgId))
     .orderBy(asc(agentGroups.position), asc(agentGroups.createdAt));
 
+/**
+ * The groups a name means for the right hand's cards. Prefer the exact spelling unless applying a stored name
+ * (`exact`), where a differently spelled group cannot stand in for a deleted one.
+ */
+export async function agentGroupsNamed(
+  db: Executor,
+  orgId: string,
+  name: string,
+  match: "preferExact" | "exact" = "preferExact",
+) {
+  const wanted = name.trim();
+  const found = await db
+    .select({ id: agentGroups.id, name: agentGroups.name })
+    .from(agentGroups)
+    .where(
+      and(
+        eq(agentGroups.orgId, orgId),
+        match === "exact" ? eq(agentGroups.name, wanted) : sql`lower(${agentGroups.name}) = lower(${wanted})`,
+      ),
+    );
+  if (match === "exact") return found;
+  const exact = found.filter((g) => g.name === wanted);
+  return exact.length ? exact : found;
+}
+
+/**
+ * Serializes this workspace's department cards until commit. Take it before any agent row locks, since a move
+ * writes positions of other agents in the department as well as the one on the card.
+ */
+export const lockAgentGroupNames = (tx: Executor, orgId: string) =>
+  tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`agent-group-names:${orgId}`}))`);
+
 /** The workspace's groups with their agents (archived ones left out). No permission check. */
 export async function agentGroupViews(db: Executor, orgId: string): Promise<AgentGroupView[]> {
   const groups = await groupRows(db, orgId);

@@ -27,6 +27,7 @@ import {
 } from "../access";
 import { recordAgentActions, UNDO_WINDOW_MS } from "../agent-actions";
 import { type AgentDeletionDeps, deleteAgent } from "../agent-deletion";
+import { lockAgentGroupNames } from "../agent-groups";
 import { type Agent, getAgent, updateAgent } from "../agents";
 import {
   agentEditorIds,
@@ -682,6 +683,8 @@ export async function decideProposal(
       if (!org || sha256(org.context) !== p.baseHash) status = "stale";
       else await tx.update(organizations).set({ context: finalText }).where(eq(organizations.id, orgId));
     } else if (decision === "accept") {
+      // Group moves also write other agents' positions. Take the workspace lock before any of their rows.
+      if (p.settings?.some((line) => line.field === "group")) await lockAgentGroupNames(tx, orgId);
       const [agent] = p.agentId
         ? await tx
             .select()
@@ -722,6 +725,7 @@ export async function decideProposal(
         review: review?.why ?? null,
         decidedAt: new Date(),
         ...(status === "accepted" ? { proposedText: finalText } : {}),
+        ...(status === "accepted" && p.settings?.some((line) => line.appliedGroupId) ? { settings: p.settings } : {}),
       })
       .where(and(eq(contextProposals.id, proposalId), eq(contextProposals.status, "pending")))
       .returning();
@@ -1736,6 +1740,15 @@ export async function undoProposal(
       await tx.update(organizations).set({ context: before }).where(eq(organizations.id, orgId));
     } else if (p.target === "skill") {
       if (!(await revertedSkill({ db: as, blobs: deps.blobs }, p, before))) throw changed();
+    } else if (p.target === "agent_settings") {
+      if (!p.agentId) throw new NotFoundError("The agent is gone", "action.target_gone");
+      await revertSettings(
+        { db: as, pubsub: events.pubsub },
+        { orgId, targetId: p.agentId, before: { lines: p.settings ?? [] }, params: {} },
+        actorId,
+        "undo",
+        changed,
+      );
     } else {
       const [agent] = await tx
         .select()
@@ -1758,16 +1771,6 @@ export async function undoProposal(
           lines.map((l) => ({ ...l, on: !l.on })),
         );
         await setAgentAccess(as, actorId, orgId, agent.id, accessInputOf(back));
-      } else {
-        // A settings row: each line back to its `from`, as its receipt's Desfazer does.
-        const receipt = { orgId, targetId: agent.id, before: { lines: p.settings ?? [] }, params: {} };
-        await revertSettings(
-          { db: as, pubsub: events.pubsub },
-          receipt as unknown as typeof schema.agentActions.$inferSelect,
-          actorId,
-          "undo",
-          changed,
-        );
       }
     }
     const [row] = await tx

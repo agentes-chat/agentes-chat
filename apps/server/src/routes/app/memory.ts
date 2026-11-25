@@ -159,12 +159,13 @@ const Proposal = z
           channelId: z.string().optional(),
           skillId: z.string().optional(),
           label: z.object({ from: z.string().optional(), to: z.string().optional() }).optional(),
+          newGroup: z.boolean().optional(),
         }),
       )
       .nullable()
       .openapi({
         description:
-          "`agent_settings`: each setting then (`from`) and proposed (`to`): `model` a model id; `ai_account` `{ brain, accountId }`; `budget` nano-USD a month or null (the workspace's default); `owner` a user id; `audience` `{ mode, userIds, roleIds }`; `channel_add` / `channel_remove` / `reply_mode` its seat in `channelId` (null: not in it, else whether it answers without a mention); `skill` whether it has the skill in `skillId` on; `archive` / `delete` true (deleting is for good, ADR 0082). `label`: names for ids.",
+          "`agent_settings`: each setting then (`from`) and proposed (`to`): `model` a model id; `ai_account` `{ brain, accountId }`; `budget` nano-USD a month or null (the workspace's default); `owner` a user id; `audience` `{ mode, userIds, roleIds }`; `channel_add` / `channel_remove` / `reply_mode` its seat in `channelId` (null: not in it, else whether it answers without a mention); `skill` whether it has the skill in `skillId` on; `group` a department's name or null (`newGroup`: none has that name, applying creates it, ADR 0083); `archive` / `delete` true (deleting is for good, ADR 0082). `label`: names for ids.",
       }),
     requestedBy: z
       .object({ userId: z.string(), name: z.string() })
@@ -489,7 +490,7 @@ async function proposalViews(db: Database, rows: (ProposalRow & { canDecide: boo
             ? { type: r.target, agentId: r.agentId }
             : { type: "org_context" as const },
       access: r.target === "agent_access" ? (r.access ?? []) : null,
-      settings: r.target === "agent_settings" ? (r.settings ?? []) : null,
+      settings: r.target === "agent_settings" ? (r.settings ?? []).map(({ appliedGroupId: _, ...line }) => line) : null,
       requestedBy: r.requestedByUserId
         ? { userId: r.requestedByUserId, name: users.get(r.requestedByUserId) ?? "" }
         : null,

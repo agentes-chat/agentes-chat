@@ -285,9 +285,10 @@ export function settingLineText(
         return lookWords(t, v);
       case "reports_to":
         return typeof v === "string" ? (label ?? t("rightHand.value.anAgent")) : t("rightHand.value.none");
-      // The server stores its department's name: the card shows it as it is.
+      // The server stores its department's name: the card shows it as it is, and says when applying it creates it.
       case "group":
-        return typeof v === "string" ? v : t("rightHand.value.none");
+        if (typeof v !== "string") return t("rightHand.value.none");
+        return side === "to" && line.newGroup ? t("rightHand.value.newGroup", { name: v }) : v;
       case "archive":
         return v === true ? t("rightHand.value.archived") : t("rightHand.value.active");
       case "delete":

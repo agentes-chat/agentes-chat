@@ -3165,7 +3165,8 @@
       "withoutMention": "Uit zichzelf",
       "mentionOnly": "Alleen bij vermelding",
       "skillOn": "Aan",
-      "skillOff": "Uit"
+      "skillOff": "Uit",
+      "newGroup": "{{name}} (nieuwe afdeling)"
     },
     "remove": {
       "archiveTitle_one": "{{count}} agent archiveren?",

@@ -1,7 +1,7 @@
 import type { PubSub } from "@agenteschat/adapters";
 import { and, type Database, type Executor, eq, isNull, schema } from "@agenteschat/db";
 import { accessInputOf, replaceableGrants, setAgentAccess } from "./access";
-import { moveAgentToGroup } from "./agent-groups";
+import { agentGroupsNamed, createAgentGroup, lockAgentGroupNames, moveAgentToGroup } from "./agent-groups";
 import { type Agent, archiveAgent, getAgent, unarchiveAgent, updateAgent, validateAgentFields } from "./agents";
 import { setAgentAppearance, validateAppearance } from "./appearance";
 import {
@@ -169,15 +169,6 @@ async function departmentOf(db: Executor, agent: Agent) {
   return row?.name ?? null;
 }
 
-/** Department names aren't unique: a name two of them share is refused, never resolved to one of them. */
-function departmentsNamed(db: Executor, orgId: string, name: string) {
-  return db
-    .select({ id: agentGroups.id })
-    .from(agentGroups)
-    .where(and(eq(agentGroups.orgId, orgId), eq(agentGroups.name, name)))
-    .limit(2);
-}
-
 async function skillOn(db: Executor, agent: Agent, skillId: string) {
   if (!skillId) return null;
   const [row] = await db
@@ -202,7 +193,7 @@ async function setValue(
   actorId: string,
   orgId: string,
   agentId: string,
-  line: Pick<ReceiptLine, "field" | "channelId" | "skillId">,
+  line: Pick<ReceiptLine, "field" | "channelId" | "skillId" | "to" | "newGroup" | "appliedGroupId">,
   value: unknown,
 ) {
   const { db, pubsub } = deps;
@@ -247,15 +238,39 @@ async function setValue(
       return void (await setReportsTo(deps, actorId, orgId, [
         { agentId, reportsToAgentId: typeof value === "string" ? value : null },
       ]));
-    // A department: the editor resolves the name the card holds, and checks who may move an agent (ADR 0083).
+    // A department: the editors resolve the name the card holds, and check who may create one and move the agent, as
+    // on the team screen (ADR 0083). A name two departments share is refused, never resolved to one of them.
     case "group": {
       const name = typeof value === "string" && value.trim() ? value.trim() : null;
-      const named = name ? await departmentsNamed(db, orgId, name) : [];
-      if (name && named.length === 0) throw new NotFoundError("That department is gone", "agent_group.not_found");
+      if (!name) return void (await moveAgentToGroup(deps, actorId, orgId, agentId, { groupId: null }));
+      // Only a line that said so creates it, and only going to it (apply, Redo): Undo never makes a department.
+      const creates = line.newGroup === true && value === line.to;
+      // Redo returns to the group it actually used, even if someone later made a group with a similar name.
+      const pinned =
+        creates && line.appliedGroupId
+          ? await db
+              .select({ id: agentGroups.id })
+              .from(agentGroups)
+              .where(and(eq(agentGroups.orgId, orgId), eq(agentGroups.id, line.appliedGroupId)))
+          : [];
+      const named = pinned.length ? pinned : await agentGroupsNamed(db, orgId, name, creates ? "preferExact" : "exact");
       if (named.length > 1)
-        throw new ValidationError(`Two departments are called ${name}`, "agent_group.ambiguous", { name: name ?? "" });
+        throw new ValidationError(`Two departments are called ${name}`, "agent_group.ambiguous", { name });
       const [group] = named;
-      return void (await moveAgentToGroup(deps, actorId, orgId, agentId, { groupId: group?.id ?? null }));
+      if (group) {
+        await moveAgentToGroup(deps, actorId, orgId, agentId, { groupId: group.id });
+        if (creates) line.appliedGroupId = group.id;
+        return;
+      }
+      if (!creates) throw new NotFoundError("That department is gone", "agent_group.not_found");
+      await createAgentGroup(deps, actorId, orgId, { name, agentIds: [agentId] });
+      const [placed] = await db
+        .select({ groupId: agents.groupId })
+        .from(agents)
+        .where(and(eq(agents.orgId, orgId), eq(agents.id, agentId)));
+      if (!placed?.groupId) throw new NotFoundError("That department is gone", "agent_group.not_found");
+      line.appliedGroupId = placed.groupId;
+      return;
     }
     case "model": {
       const agent = await getAgent(db, orgId, agentId);
@@ -406,7 +421,7 @@ const RIGHT_HAND_SETTINGS: ReadonlySet<SettingField> = new Set([
 ]);
 
 /** What a target's lines ask for, before `from` is read: `to`, and the channel for a channel line. */
-export type WantedLine = Omit<SettingLine, "from">;
+export type WantedLine = Omit<SettingLine, "from" | "newGroup" | "appliedGroupId">;
 
 /**
  * Checks each wanted line against the agent as it is now and fills in `from`. A line that changes nothing or can't be
@@ -437,14 +452,23 @@ export async function settingLines(
       skipped.push(`${who}: ${why}`);
       continue;
     }
-    const from = await valueNow(db, agent, w);
     // As it is stored, so Undo finds what it left.
-    const to =
-      w.field === "look"
-        ? validateAppearance(w.to as Parameters<typeof validateAppearance>[0])
-        : w.field === "model" && isComputerBrain(agent.brain)
-          ? normalizeBrainModel(agent.brain, w.to, agent.brainModel)
-          : w.to;
+    let to = w.to;
+    let newGroup = false;
+    if (w.field === "group" && typeof to === "string") {
+      const name = to.trim();
+      const named = await agentGroupsNamed(db, orgId, name);
+      if (named.length > 1) {
+        skipped.push(`${who}: two departments are called "${name}": ask the person to rename one of them first.`);
+        continue;
+      }
+      to = named[0]?.name ?? name;
+      // A department no one has made yet: the card says applying it creates it (ADR 0083).
+      newGroup = named.length === 0;
+    } else if (w.field === "look") to = validateAppearance(w.to as Parameters<typeof validateAppearance>[0]);
+    else if (w.field === "model" && isComputerBrain(agent.brain))
+      to = normalizeBrainModel(agent.brain, w.to, agent.brainModel);
+    const from = await valueNow(db, agent, w);
     if (same(from, to)) {
       skipped.push(
         w.field === "skill"
@@ -462,7 +486,14 @@ export async function settingLines(
         : w.label;
     const { pausesNow: _, ...asked } = w;
     const pausesNow = w.field === "budget" && (await spentPast(db, agent, to)) !== null;
-    lines.push({ ...asked, to, from, ...(label ? { label } : {}), ...(pausesNow ? { pausesNow } : {}) });
+    lines.push({
+      ...asked,
+      to,
+      from,
+      ...(label ? { label } : {}),
+      ...(pausesNow ? { pausesNow } : {}),
+      ...(newGroup ? { newGroup } : {}),
+    });
   }
   return { lines, skipped };
 }
@@ -530,14 +561,8 @@ async function refusal(db: Database, orgId: string, requesterId: string, agent: 
     case "reports_to":
       if (w.to !== null && typeof w.to !== "string") return "say which agent, or none.";
       return reportsToRefusal(db, orgId, agent.id, w.to);
-    case "group": {
-      if (w.to === null) return null;
-      if (typeof w.to !== "string" || !w.to.trim()) return "say which department, or none.";
-      const name = w.to.trim();
-      const named = await departmentsNamed(db, orgId, name);
-      if (named.length > 1) return `two departments are called "${name}": ask the person to rename one of them first.`;
-      return named.length ? null : `there is no department called "${name}" here.`;
-    }
+    case "group":
+      return w.to === null || (typeof w.to === "string" && w.to.trim()) ? null : "say which department, or none.";
     default: {
       const [channel] = await db
         .select()
@@ -602,8 +627,8 @@ export function settingsRows(lines: SettingLine[]) {
 }
 
 /**
- * Applies an accepted row as `actorId` (its agent locked by the caller): false when a setting moved since it was
- * proposed (stale). Each line through the page's own editor, so it never does more than they could there.
+ * Applies an accepted row as `actorId`, or returns false if stale. The caller locks the agent, after taking the
+ * group lock for a department row. Each line uses its editor and a `newGroup` line records the id it moved into.
  */
 export async function applySettings(
   deps: { db: Database; pubsub?: PubSub },
@@ -632,6 +657,8 @@ export async function recordSettingsReceipt(
   // A deleted agent can't come back: no Undo.
   if (!p.proposedByAgentId || deletes(p)) return;
   const now = new Date();
+  const settings = p.settings ?? [];
+  const appliedGroupId = settings.find((l) => l.field === "group")?.appliedGroupId;
   await db.insert(agentActions).values({
     orgId: p.orgId,
     runId: card.runId,
@@ -646,31 +673,55 @@ export async function recordSettingsReceipt(
     params: {
       proposalId: p.id,
       agentName,
-      fields: (p.settings ?? []).map((l) => l.field),
-      lines: (p.settings ?? []) as unknown as Record<string, unknown>[],
+      fields: settings.map((l) => l.field),
+      lines: appliedGroupId ? settings.map(({ appliedGroupId: _, ...line }) => line) : settings,
     },
+    ...(appliedGroupId ? { state: { appliedGroupId } } : {}),
     createdAt: now,
     undoableUntil: new Date(now.getTime() + undoWindowMs),
   });
 }
 
-/** Undo (back to each `from`, last line first) or Redo, as `userId`; refused when a setting moved since. */
+/** Undo (last line first) or Redo inside its caller's transaction, refused when a setting moved since. */
 export async function revertSettings(
   deps: { db: Database; pubsub?: PubSub },
-  a: typeof agentActions.$inferSelect,
+  a: Pick<typeof agentActions.$inferSelect, "before" | "params" | "orgId" | "targetId"> & {
+    state?: Record<string, unknown>;
+  },
   userId: string,
   direction: "undo" | "redo",
   changedSince: () => Error,
 ) {
   // An instructions, role or apps row keeps its texts off the receipt everyone in the conversation reads.
-  const kept = (a.before as { lines?: ReceiptLine[] } | null)?.lines;
-  const lines = (kept ?? (a.params as { lines?: ReceiptLine[] }).lines ?? []).slice();
+  const kept = a.before as { lines?: ReceiptLine[] } | null;
+  // `recordSettingsReceipt` writes these public settings lines, separately from the private receipt lines.
+  const stored = a.params as { lines?: SettingLine[] };
+  const settings = stored.lines ?? [];
+  const lines = (kept?.lines ?? settings).slice();
   const steps = direction === "undo" ? lines.reverse() : lines;
-  const agent = await getAgent(deps.db, a.orgId, a.targetId);
+  const { db } = deps;
+  // A group move writes other members' positions, so group cards take this before locking any agent.
+  const group = steps.find((l) => l.field === "group");
+  if (group) {
+    await lockAgentGroupNames(db, a.orgId);
+    if (group.newGroup && typeof a.state?.appliedGroupId === "string") group.appliedGroupId = a.state.appliedGroupId;
+  }
+  const appliedGroupId = group?.appliedGroupId;
+  const [agent] = await db
+    .select()
+    .from(agents)
+    .where(and(eq(agents.id, a.targetId), eq(agents.orgId, a.orgId), isNull(agents.deletedAt)))
+    .for("update");
   if (!agent) throw new NotFoundError("The agent is gone", "action.target_gone");
-  for (const l of steps)
-    if (!same(await valueNow(deps.db, agent, l), direction === "undo" ? l.to : l.from)) throw changedSince();
+  for (const l of steps) {
+    if (direction === "undo" && l.field === "group" && l.newGroup) {
+      if (!l.appliedGroupId || l.appliedGroupId !== agent.groupId) throw changedSince();
+    } else if (!same(await valueNow(deps.db, agent, l), direction === "undo" ? l.to : l.from)) throw changedSince();
+  }
   for (const l of steps) await setValue(deps, userId, a.orgId, agent.id, l, direction === "undo" ? l.from : l.to);
   // Who it answers and its AI have no event of their own.
   await publishAgentsChanged(deps.pubsub, a.orgId);
+  return group?.appliedGroupId && group.appliedGroupId !== appliedGroupId
+    ? { appliedGroupId: group.appliedGroupId, settings }
+    : undefined;
 }

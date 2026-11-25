@@ -3281,7 +3281,8 @@
       "withoutMention": "In autonomia",
       "mentionOnly": "Solo quando menzionato",
       "skillOn": "Attiva",
-      "skillOff": "Disattiva"
+      "skillOff": "Disattiva",
+      "newGroup": "{{name}} (nuovo reparto)"
     },
     "remove": {
       "archiveTitle_one": "Archiviare {{count}} agente?",

@@ -3166,7 +3166,8 @@
       "withoutMention": "Von selbst",
       "mentionOnly": "Nur bei Erwähnung",
       "skillOn": "An",
-      "skillOff": "Aus"
+      "skillOff": "Aus",
+      "newGroup": "{{name}} (neue Abteilung)"
     },
     "remove": {
       "archiveTitle_one": "{{count}} Agent archivieren?",

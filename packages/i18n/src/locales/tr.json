@@ -3162,7 +3162,8 @@
       "withoutMention": "Kendiliğinden",
       "mentionOnly": "Yalnızca bahsedilince",
       "skillOn": "Açık",
-      "skillOff": "Kapalı"
+      "skillOff": "Kapalı",
+      "newGroup": "{{name}} (yeni departman)"
     },
     "remove": {
       "archiveTitle_one": "{{count}} ajan arşivlensin mi?",

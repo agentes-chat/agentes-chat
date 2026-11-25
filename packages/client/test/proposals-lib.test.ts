@@ -147,6 +147,10 @@ describe("a name and a look on a settings card", () => {
       to: "rightHand.value.none",
     });
   });
+  test("a department no one has made yet says the card creates it", () => {
+    const line = { field: "group" as const, from: "Vendas", to: "Arquimedium", newGroup: true };
+    expect(settingLineText(t, "pt-BR", line, names).to).toBe('rightHand.value.newGroup {"name":"Arquimedium"}');
+  });
 });
 
 describe("a skill line on a settings card", () => {

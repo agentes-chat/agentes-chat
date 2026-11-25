@@ -1,4 +1,4 @@
-import type { PubSub } from "@agenteschat/adapters";
+import { holdEvents, type PubSub } from "@agenteschat/adapters";
 import { and, type Database, desc, eq, gt, gte, isNull, ne, or, schema, sql } from "@agenteschat/db";
 import { actionsFor, actionView, describeAction, publishMessageActions, UNDO_WINDOW_MS } from "./agent-actions";
 import { getAgent } from "./agents";
@@ -16,6 +16,7 @@ import { enqueueIndex } from "./search";
 import { revertSettings } from "./settings-proposals";
 import { restoreSkillSnapshot, type SkillSnapshot } from "./skill-updates";
 import { writeSkillBody } from "./skills";
+import { forgetTeam } from "./team";
 import { closeThread, getThread, reopenThread, updateThread } from "./threads";
 import { canonicalJson } from "./tools/json-schema";
 import { deleteWikiPage, getWikiPage, getWikiVersion, restoreWikiPage, updateWikiPage } from "./wiki";
@@ -24,6 +25,7 @@ import { revertWorkspaceAction } from "./workspace-actions";
 const {
   agentActions,
   contextItems,
+  contextProposals,
   routines,
   routineHooks,
   channels,
@@ -567,8 +569,16 @@ handlers["skill.updated"] = async (deps, a, _userId, direction) => {
 };
 
 handlers["agent.settings_changed"] = async (deps, a, userId, direction) => {
-  await revertSettings(deps, a, userId, direction, changedSince);
-  return undefined;
+  const redo = await revertSettings(deps, a, userId, direction, changedSince);
+  if (!redo) return undefined;
+  // Redo may have made the department again. Both Undo paths must compare against its new identity.
+  const proposalId = a.params.proposalId;
+  if (typeof proposalId === "string")
+    await deps.db
+      .update(contextProposals)
+      .set({ settings: redo.settings })
+      .where(and(eq(contextProposals.orgId, a.orgId), eq(contextProposals.id, proposalId)));
+  return { appliedGroupId: redo.appliedGroupId };
 };
 
 handlers["workspace.changed"] = (deps, a, userId, direction) =>
@@ -641,9 +651,41 @@ async function toggle(deps: AgentUndoDeps, userId: string, orgId: string, id: st
   }
   const handler = handlers[a.kind];
   if (!handler) throw new ConflictError("This can't be undone", "action.not_undoable");
+  if (a.kind === "agent.settings_changed") {
+    // Unlike other receipts, all settings editors use this database. A late refusal rolls back earlier lines too.
+    const events = holdEvents(deps.pubsub);
+    await deps.db.transaction((tx) =>
+      changeAction(
+        { ...deps, db: tx as unknown as Database, pubsub: events.pubsub },
+        a,
+        userId,
+        direction,
+        now,
+        handler,
+      ),
+    );
+    const fields = a.params.fields;
+    if (Array.isArray(fields) && fields.includes("group")) forgetTeam(orgId);
+    await events.flush();
+  } else {
+    await changeAction(deps, a, userId, direction, now, handler);
+  }
+  await noteOnMessage(deps.db, a, userId, direction).catch(() => {});
+  if (a.messageId) await publishMessageActions(deps, orgId, a.messageId).catch(() => {});
+  return actionView(await loadAction(deps.db, orgId, a.id));
+}
+
+async function changeAction(
+  deps: AgentUndoDeps,
+  a: Row,
+  userId: string,
+  direction: Direction,
+  now: Date,
+  handler: Handler,
+) {
   // Claim first: two clicks never invert twice.
   const until = new Date(now.getTime() + UNDO_WINDOW_MS);
-  const claimed = await deps.db
+  const [claimed] = await deps.db
     .update(agentActions)
     .set(
       direction === "undo"
@@ -657,17 +699,20 @@ async function toggle(deps: AgentUndoDeps, userId: string, orgId: string, id: st
         gt(agentActions.undoableUntil, now),
       ),
     )
-    .returning({ id: agentActions.id });
-  if (claimed.length === 0) {
+    .returning({ state: agentActions.state });
+  if (!claimed) {
     throw new ConflictError(
       "Someone did this already",
       direction === "undo" ? "action.already_undone" : "action.not_undone",
     );
   }
+  // A settings receipt may have been undone and redone again while this click waited to claim it.
+  const current = a.kind === "agent.settings_changed" ? { ...a, state: claimed.state } : a;
   let state: Record<string, unknown> | undefined;
   try {
-    state = await handler(deps, a, userId, direction);
+    state = await handler(deps, current, userId, direction);
   } catch (error) {
+    if (a.kind === "agent.settings_changed") throw error; // The transaction rolls back the claim as well.
     await deps.db
       .update(agentActions)
       .set({
@@ -682,18 +727,15 @@ async function toggle(deps: AgentUndoDeps, userId: string, orgId: string, id: st
   // `checkpoint`: changes before it are this flow's own (the next undo compares from there).
   await deps.db
     .update(agentActions)
-    .set({ state: { ...obj(a.state), ...state, checkpoint: new Date().toISOString() } })
+    .set({ state: { ...obj(current.state), ...state, checkpoint: new Date().toISOString() } })
     .where(eq(agentActions.id, a.id));
   await recordAudit(deps.db, {
-    orgId,
+    orgId: a.orgId,
     actor: { type: "person", id: userId },
     action: direction === "undo" ? "agent_action.undone" : "agent_action.redone",
     target: { type: "agent_action", id: a.id },
     details: { kind: a.kind, targetType: a.targetType, targetId: a.targetId, agentId: a.agentId },
   });
-  await noteOnMessage(deps.db, a, userId, direction).catch(() => {});
-  if (a.messageId) await publishMessageActions(deps, orgId, a.messageId).catch(() => {});
-  return actionView(await loadAction(deps.db, orgId, a.id));
 }
 
 /** Desfazer: applies the inverse, if nobody changed the target since and the window is open. */
