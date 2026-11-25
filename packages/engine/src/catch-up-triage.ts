@@ -5,6 +5,7 @@ import type { Judge, JudgeAnswer, JudgeQuestion } from "./judge";
 import { landedAfterSql } from "./message-place";
 import { stripSentinel } from "./reply-policy";
 import { inChannelRun } from "./run-scope";
+import { runState } from "./run-state";
 import { type AgentRun, replyThreadOf } from "./runs";
 import { neutralizeUntrusted } from "./untrusted";
 
@@ -649,14 +650,14 @@ export const triageRecordOf = (
 export async function catchUpBar(db: Executor, orgId: string, now = Date.now()): Promise<number> {
   // ponytail: scans the workspace's done runs of the last 30 days on each check; a closes table if that grows slow.
   const rows = await db
-    .select({ overruled: sql<boolean>`${agentRuns.transcript}->'catchUpTriage' ? 'overruledAt'` })
+    .select({ overruled: sql<boolean>`${runState}->'catchUpTriage' ? 'overruledAt'` })
     .from(agentRuns)
     .where(
       and(
         eq(agentRuns.orgId, orgId),
         eq(agentRuns.status, "done"),
         gt(agentRuns.finishedAt, new Date(now - RECENT_CLOSES_MS)),
-        sql`${agentRuns.transcript}->'catchUpTriage'->>'outcome' = 'closed'`,
+        sql`${runState}->'catchUpTriage'->>'outcome' = 'closed'`,
       ),
     )
     .orderBy(desc(agentRuns.finishedAt))
@@ -684,7 +685,7 @@ export async function overruledHere(
         gt(agentRuns.finishedAt, new Date(now - OVERRULE_HOLD_MS - ANSWER_ANYWAY_MS)),
         // The same conversation: its thread, or the main timeline.
         threadId ? eq(agentRuns.threadRootId, threadId) : inChannelRun(sql`${agentRuns}`),
-        sql`(${agentRuns.transcript}->'catchUpTriage'->>'overruledAt')::timestamptz > ${new Date(now - OVERRULE_HOLD_MS).toISOString()}::timestamptz`,
+        sql`(${runState}->'catchUpTriage'->>'overruledAt')::timestamptz > ${new Date(now - OVERRULE_HOLD_MS).toISOString()}::timestamptz`,
       ),
     )
     .limit(1);

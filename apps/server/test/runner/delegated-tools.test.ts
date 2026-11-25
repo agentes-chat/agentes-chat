@@ -645,6 +645,23 @@ test("Read turns a PDF's pages into images", async () => {
   expect(textOf(await call("Read", { file_path: file, pages: "1-21" }))).toStartWith("Too many pages");
 });
 
+test("a pages parameter with a long run of spaces is read in time, and spaces around a range still count", async () => {
+  // It took seconds when the spaces after the number could go to either of two runs, every way, before failing.
+  const bin = temp("bin-");
+  const tool = path.join(bin, "pdftoppm");
+  writeFileSync(tool, `#!/bin/sh\necho "$5 $7" > "$(dirname "$0")/args"\nprintf one > "$9-1.png"\n`);
+  chmodSync(tool, 0o755);
+  const { call, folder } = setup({}, { pdftoppm: tool });
+  const file = path.join(folder, "a.pdf");
+  writeFileSync(file, "%PDF-1.7");
+  const spaces = " ".repeat(100_000);
+  const started = performance.now();
+  expect(textOf(await call("Read", { file_path: file, pages: `1${spaces}x` }))).toStartWith("Invalid pages parameter");
+  expect(performance.now() - started).toBeLessThan(1000);
+  await call("Read", { file_path: file, pages: ` 2 - 3${spaces}` });
+  expect(readFileSync(path.join(bin, "args"), "utf8").trim()).toBe("2 3");
+});
+
 test("a computer without pdftoppm says so", async () => {
   const { call, folder } = setup({}, { pdftoppm: "/nowhere/pdftoppm" });
   writeFileSync(path.join(folder, "a.pdf"), "%PDF-1.7");
@@ -986,6 +1003,20 @@ test("Grep lists files, the newest first, the secrets' files out of the search, 
   expect(args).toContain("!**/.agentes/browser/**");
   expect(args).toContain("!keys/ada.pem");
   expect(args).toContain("!.git/");
+});
+
+test("a glob of many unclosed braces is read in time, and they still split it as before", async () => {
+  // It took seconds when each `{` with no `}` after it read the glob to its end.
+  const fake = fakeRg("");
+  const { call } = setup({}, { rg: fake.rg });
+  // A session's first call pays its start-up: made first, so only the long glob is timed.
+  await call("Grep", { pattern: "x", glob: "*.md" });
+  const started = performance.now();
+  await call("Grep", { pattern: "x", glob: `${"{ ".repeat(100_000)}*.md{a` });
+  expect(performance.now() - started).toBeLessThan(1000);
+  const args = fake.args();
+  expect(args[args.indexOf("*.md") - 1]).toBe("--glob");
+  expect(args[args.indexOf("a") - 1]).toBe("--glob");
 });
 
 test("Grep shows matching lines with Claude Code's options, redacted and paged", async () => {

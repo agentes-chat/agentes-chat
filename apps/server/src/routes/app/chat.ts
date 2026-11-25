@@ -17,15 +17,18 @@ import {
   MEDIA_REFUSALS,
   type MessageView,
   messageCard,
+  messageCards,
   openConsultationsIn,
   pendingReturns,
   postPersonMessage,
   requireChannelAccess,
   STICKER_MOODS,
   ValidationError,
+  withPersonFacts,
 } from "@agenteschat/engine";
 import { createRoute, z } from "@hono/zod-openapi";
 import { apiError, errorResponse } from "../../http/errors";
+import { ArtifactDetail, BlockState, Choices, Poll } from "./artifacts";
 import {
   type AppDeps,
   aiStatusDeps,
@@ -111,6 +114,7 @@ export function chatRoutes(deps: AppDeps) {
             categoryId: r.categoryId,
             position: r.position,
             replyInThreads: r.replyInThreads,
+            leadAgentId: r.leadAgentId,
             unreadCount: r.unreadCount,
             mentionCount: r.mentionCount,
             lastReadAt: iso(r.lastReadAt),
@@ -231,6 +235,7 @@ export function chatRoutes(deps: AppDeps) {
           categoryId: r.categoryId,
           position: r.position,
           replyInThreads: r.replyInThreads,
+          leadAgentId: r.leadAgentId,
         },
         201,
       );
@@ -588,26 +593,53 @@ export function chatRoutes(deps: AppDeps) {
               "The page with this top-level message in its middle (404 when it is deleted or not in this channel).",
           }),
           limit: z.coerce.number().int().min(1).max(200).optional(),
-          include: z
-            .string()
-            .optional()
-            .openapi({ description: "`replies`: add reply count, last activity and the latest replies per thread." }),
+          include: z.string().optional().openapi({
+            description:
+              "`replies`: add reply count, last activity and the latest replies per thread. `cards`: add `cards`, what the messages' live blocks, votes and question cards show, so they draw whole at once.",
+          }),
         }),
       },
-      responses: { 200: json(z.object({ messages: z.array(Message) })), ...errors },
+      responses: {
+        200: json(
+          z.object({
+            messages: z.array(Message),
+            cards: z
+              .object({
+                artifacts: z.array(ArtifactDetail),
+                polls: z.array(Poll),
+                choices: z.array(Choices),
+                blocks: z.array(BlockState),
+              })
+              .optional()
+              .openapi({
+                description:
+                  "With `include=cards`: each card on these messages at the version it shows, with its state (cards the reader can't see are left out).",
+              }),
+          }),
+        ),
+        ...errors,
+      },
     }),
     async (c) => {
       const { orgId, channelId } = c.req.valid("param");
       const q = c.req.valid("query");
-      const messages = await listMessages(db, c.get("user").id, orgId, channelId, {
+      const userId = c.get("user").id;
+      const include = q.include?.split(",") ?? [];
+      const messages = await listMessages(db, userId, orgId, channelId, {
         threadId: q.threadId,
         before: q.before ? new Date(q.before) : undefined,
         after: q.after ? new Date(q.after) : undefined,
         around: q.around,
         limit: q.limit,
-        includeReplies: q.include?.split(",").includes("replies") ?? false,
+        includeReplies: include.includes("replies"),
       });
-      return c.json({ messages }, 200);
+      const artifacts = deps.extras?.artifacts;
+      if (!include.includes("cards") || !artifacts) return c.json({ messages }, 200);
+      const cards = await messageCards(artifacts, userId, orgId, messages);
+      return c.json(
+        { messages, cards: { ...cards, artifacts: await withPersonFacts(db, userId, orgId, cards.artifacts) } },
+        200,
+      );
     },
   );
 

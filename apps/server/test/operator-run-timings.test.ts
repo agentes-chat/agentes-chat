@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { rowsOf, schema, sql } from "@agenteschat/db";
 import { conditionWords, issuedBy } from "@agenteschat/db/testing";
-import { operatorRunTimings } from "@agenteschat/engine";
+import { operatorRunTimings, recordRunBrain } from "@agenteschat/engine";
 import { createLogger } from "../src/logger";
 import { createOperatorApp } from "../src/operator/app";
 import { createTestServer, type TestServer } from "./harness";
@@ -960,4 +960,51 @@ test("reply times: the window and the bucket are checked, and the token is neede
   expect(await refusal(await get(q({ from, to: plus(DAY), bucket: "week" })))).toEqual([400, "invalid_request"]);
   const issued = await issuedBy(() => replyTimes(windowOf(29)));
   expect(issued.filter((statement) => statement === "set local jit = off").length).toBe(3);
+});
+
+test("CLI runs: each run stamped with its computer's CLI version, counted by build with its failures, the window checked", async () => {
+  const at = (ms: number) => new Date(day(30) + ms);
+  await t.db
+    .update(schema.machines)
+    .set({
+      executors: {
+        claude: { version: "2.1.308 (Claude Code)" },
+        codex: { version: "codex-cli 0.171.0" },
+        grok: { version: "a line of its own words" },
+      },
+    })
+    .where(sql`${schema.machines.id} = ${adaBox}`);
+  const stamped = async (kind: "claude_code" | "codex" | "grok" | "model", status: "done" | "failed" | "running") => {
+    const made = await run({ createdAt: at(1000), status });
+    await recordRunBrain(t.db, made.id, kind, kind === "model" ? undefined : adaBox);
+    return made.id;
+  };
+  const first = await stamped("claude_code", "done");
+  await stamped("claude_code", "done");
+  await stamped("claude_code", "failed");
+  await stamped("codex", "failed");
+  // Still running, on the model brain, and a version line with no version in it: none is counted.
+  await stamped("claude_code", "running");
+  await stamped("model", "failed");
+  await stamped("grok", "failed");
+  const [row] = await t.db
+    .select({ cli: schema.agentRuns.cli })
+    .from(schema.agentRuns)
+    .where(sql`${schema.agentRuns.id} = ${first}`);
+  // The version alone, never the computer's line.
+  expect(row?.cli).toBe("claude 2.1.308");
+
+  const read = await ok<{ clis: unknown[] }>(await get(`/cli-runs?${windowOf(30)}`));
+  expect(read.clis).toEqual([
+    { cli: "claude", version: "2.1.308", runs: 3, failed: 1 },
+    { cli: "codex", version: "0.171.0", runs: 1, failed: 1 },
+  ]);
+  const from = new Date(day(30)).toISOString();
+  for (const to of [from, new Date(day(30) + 7 * DAY + 1).toISOString(), "soon"]) {
+    expect(await refusal(await get(`/cli-runs?from=${from}&to=${encodeURIComponent(to)}`))).toEqual([
+      400,
+      "analytics.range",
+    ]);
+  }
+  expect((await get(`/cli-runs?${windowOf(30)}`, null)).status).toBe(401);
 });

@@ -118,6 +118,19 @@ export const SETTINGS_SECTIONS: readonly SettingsEntry[] = [
 
 export const SETTINGS_GROUPS: readonly SettingsGroup[] = ["org", "people", "ai", "connectors", "advanced"];
 
+/**
+ * A team's rows whose group already says the rest get a shorter name (`mobile.settings.section.*`): the list and the
+ * settings' search name them the same.
+ */
+export const SECTION_SHORT: Partial<Record<SettingsSection, string>> = {
+  computers: "mobile.devices.title",
+  members: "mobile.settings.section.members",
+  invites: "settings.section.invites",
+  roles: "mobile.settings.section.roles",
+  access: "mobile.settings.section.access",
+  connectors: "mobile.settings.section.connectors",
+};
+
 /** The sections this membership opens, in order. */
 export const visibleSections = (org: OrgSummary | null | undefined) => SETTINGS_SECTIONS.filter((s) => s.allowed(org));
 

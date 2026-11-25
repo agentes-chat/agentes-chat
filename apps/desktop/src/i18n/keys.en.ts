@@ -252,7 +252,7 @@ export const desktopEn = {
     getTailscale: "Get Tailscale",
     usage: "Send anonymous usage statistics to agentes.chat",
     usageText:
-      "Counts such as people, agents, machine sizes, AI tokens used and how much data the agents' browsers send and receive. Never messages, files, names or sites.",
+      "Counts such as people, agents, machine sizes, AI tokens used, how much data the agents' browsers send and receive, and how fast the apps open and run. Never messages, files, names or sites.",
     start: "Start",
     setting: "Getting everything ready",
     /** Under the form, beside a sleeping agent: what closing the app does. */
@@ -509,6 +509,10 @@ export const desktopEn = {
     linkBody: "If you didn't ask for this, choose Not now.",
     waiting: "Waiting for {{by}} to let it in…",
     done: "Connected to {{org}}",
+    /** Once it's in: one switch, off, that lets the whole workspace use it (Preferences › This Mac holds the rest). */
+    share: "Let the whole workspace use it",
+    shareOff: "Only you for now",
+    shareHint: "Everyone's agents in {{org}} can run tasks on it, as your user.",
     addFolders: "Add folders",
     expired: "This link expired. Make a new one in Devices.",
     openDevices: "Open Devices",

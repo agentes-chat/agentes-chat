@@ -47,6 +47,9 @@ test("a failed run's one fix: a key for a missing, revoked or wrong one, another
   for (const code of ["rate_limit", "down", "timeout", "unreachable", "said"])
     expect(failedRunFix(`run.provider_${code}`, everyone)).toBeNull();
   expect(failedRunFix("run.model_unlisted", everyone)).toBe("changeModel");
+  // A model that wrote no words even when asked: another model, as its line says.
+  for (const code of ["run.empty_reply", "run.empty_reply_limit"])
+    expect(failedRunFix(code, everyone)).toBe("changeModel");
   expect(failedRunFix("run.computer_failed", everyone)).toBeNull();
   expect(failedRunFix(undefined, everyone)).toBeNull();
   // Only for who can do it: a key is who manages them, a model the agent's owner or who manages agents.

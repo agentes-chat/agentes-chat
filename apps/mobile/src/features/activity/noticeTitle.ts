@@ -16,6 +16,13 @@ import { runFailedLines, whoOf } from "./logic";
 const NAMES = "⁣names⁣";
 
 /**
+ * What agents applied today (ADR 0219), by who applied it: one agent ("Ada applied 2 improvements"), several (the
+ * verb agrees with them), or none (a workspace-wide lesson, applied automatically).
+ */
+const proposalAppliedKind = (who: { first: string; second: string | null }) =>
+  !who.first ? "proposal_applied_auto" : who.second ? "proposal_applied_agents" : "proposal_applied";
+
+/**
  * Who did what, as Atividade and the island (ADR 0071 §9) say it: the sentence's pieces around the names (drawn
  * bold between them), the names, and the whole sentence (for VoiceOver). With a restriction on agentes.chat Cloud
  * or several agents' failures of one cause, what goes under it too.
@@ -46,7 +53,9 @@ export function useNoticeTitle(n: AppNotification) {
             ? `approval_cover_${n.latest.statusTo}`
             : n.kind === "admin_ask"
               ? `admin_ask_${n.latest.reason ?? "create_agents"}`
-              : n.kind;
+              : n.kind === "proposal_applied"
+                ? proposalAppliedKind(who)
+                : n.kind;
   const device = deviceNoticeOf(n);
   const person = useNoticePerson(n);
   const orgName = useOrg().org?.name ?? "";
@@ -73,8 +82,8 @@ export function useNoticeTitle(n: AppNotification) {
               ? t(workspaceHeadline(n) ?? "skills.notice.updated", { name: n.source.label ?? "" })
               : t(`mobile.activity.kind.${kind}`, {
                   names: NAMES,
-                  // `catch_up_closed`: the conversations it skipped.
-                  count: n.kind === "catch_up_closed" ? n.count : who.total,
+                  // `catch_up_closed`: the conversations it skipped; `proposal_applied`: the changes applied.
+                  count: n.kind === "catch_up_closed" || n.kind === "proposal_applied" ? n.count : who.total,
                   // `plan_reset_unknown`: the plan's name (`plan_lent`, `plan_model_dropped`: in `plan`).
                   plan:
                     (n.kind === "plan_lent" || n.kind === "plan_serves" || n.kind === "plan_model_dropped"

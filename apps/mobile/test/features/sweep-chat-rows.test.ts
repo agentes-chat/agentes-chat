@@ -41,7 +41,13 @@ describe("two agents' conversation", () => {
     // At the sides every screen and sheet keeps.
     expect(screen).toContain("pad: { paddingHorizontal: SCREEN_X },");
     expect(screen).toMatch(/foot: \{[^}]*paddingHorizontal: SCREEN_X,/);
-    expect(screen).toMatch(/head: \{ paddingHorizontal: SHEET_X, paddingTop: 24,/);
+    // The two agents' names are the sheet's own header, outside the list: a drag on them always moves the sheet.
+    // No close plate there and nothing pinned inside the list.
+    expect(screen).toContain("useRouteSheetHeader(head);");
+    expect(screen).not.toContain("stickyHeaderIndices");
+    expect(screen).not.toContain("SheetBar");
+    expect(src("ui/Sheet.tsx")).toContain("export function useRouteSheetHeader(header: ReactNode) {");
+    expect(screen).not.toContain("SheetTitle");
   });
 });
 

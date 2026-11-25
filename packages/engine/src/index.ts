@@ -14,6 +14,7 @@ export * from "./agent-style";
 export * from "./agent-undo";
 export * from "./agent-work";
 export * from "./agents";
+export * from "./ai-accounts";
 export * from "./ai-accounts-analytics";
 export * from "./ai-intent";
 export * from "./ai-status";
@@ -59,11 +60,14 @@ export * from "./catch-up";
 export * from "./catch-up-triage";
 export * from "./channel-categories";
 export * from "./channel-deletion";
+export * from "./channel-lead";
 export * from "./channel-permissions";
 export * from "./channels";
 export * from "./chat-prefs";
 export * from "./chat-tools";
 export * from "./claude-auth-policy";
+export * from "./code-sessions";
+export * from "./code-suggestions";
 export * from "./codes";
 export * from "./computer-queue";
 export * from "./confidential";
@@ -78,9 +82,11 @@ export * from "./connectors/custom";
 export * from "./connectors/listing";
 export * from "./connectors/mcp";
 export * from "./connectors/native";
+export * from "./connectors/native/media";
 export { purgeTelegramUpdates, telegramWebhookPath } from "./connectors/native/telegram";
 export * from "./connectors/oauth-mcp";
 export * from "./connectors/oauth-return";
+export * from "./connectors/own-client";
 export * from "./connectors/personal";
 export * from "./connectors/pins";
 export * from "./connectors/presets";
@@ -142,6 +148,18 @@ export * from "./file-pulls";
 export * from "./file-reader";
 export * from "./follow-through";
 export * from "./follows";
+export {
+  catalogFilePath,
+  catalogStaticFiles,
+  catalogWebFaces,
+  fontsVersion,
+  hasFontFiles,
+  setFontsDir,
+  TextMeasurer,
+  type WebFace,
+} from "./fonts/library";
+export { FONT_MAX_BYTES, FontError, fontMediaType, readFont, sniffFont } from "./fonts/sfnt";
+export { percentile } from "./format";
 export * from "./gateway";
 export * from "./gif-key";
 export * from "./git/branches";
@@ -274,6 +292,7 @@ export * from "./plan-models";
 export * from "./plan-move";
 export * from "./plan-usage";
 export * from "./problem-report";
+export * from "./process-vitals";
 export * from "./profile";
 export * from "./push";
 export * from "./push-messages";
@@ -320,6 +339,7 @@ export * from "./schedule-tools";
 export * from "./screen";
 export * from "./search";
 export * from "./secrets";
+export * from "./server-tasks";
 export * from "./session-screening";
 export * from "./settings-proposals";
 export * from "./setup-checklist";
@@ -339,6 +359,7 @@ export * from "./surfaces/config";
 export * from "./surfaces/deliveries";
 export * from "./surfaces/inbound";
 export * from "./surfaces/links";
+export * from "./surfaces/pages";
 export * from "./surfaces/turn";
 export * from "./talker";
 export * from "./task-access";

@@ -469,7 +469,7 @@ export function crashPage(memory: boolean, tag?: string | null): string {
   const words = CRASH_WORDS[locale];
   const title = memory ? words.memory : words.stopped;
   const html =
-    `<!doctype html><html lang="${locale}"><head><meta charset="utf-8"><title>${title}</title>` +
+    `<!doctype html><html lang="${locale}" translate="no"><head><meta charset="utf-8"><meta name="google" content="notranslate"><title>${title}</title>` +
     `<style>${CRASH_STYLE}</style></head><body><main><h1>${title}</h1><p>${words.told}</p></main></body></html>`;
   return `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
 }

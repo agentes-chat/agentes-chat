@@ -17,12 +17,14 @@ import {
   mayBeHome,
   type PlanDropped,
   setAgentComputerTarget,
+  shownMoving,
   shownOnline,
 } from "./machines";
 import { missionTurnFor } from "./missions-engine";
 import { requirePermission } from "./organizations";
 import { enqueue } from "./outbox";
 import { missStaleRoutineRun } from "./routine-firing";
+import { runState } from "./run-state";
 
 const { machines, agents, agentRuns, routineRuns } = schema;
 
@@ -50,6 +52,8 @@ export interface MachineOutage {
   managed: boolean;
   /** ISO: the last sign of life. */
   offlineSince: string;
+  /** The workspace's own computer is away moving to another server (`shownMoving`): it comes back by itself. */
+  moving: boolean;
   agents: OutageAgent[];
   /** Runs of these agents waiting for this computer. */
   waitingRuns: number;
@@ -98,11 +102,11 @@ async function waitingRunsFor(db: Database, orgId: string, machineIds: string[],
       threadRootId: agentRuns.threadRootId,
       triggerMessageId: agentRuns.triggerMessageId,
       machineId: agentRuns.waitingMachineId,
-      kind: sql<string | null>`${agentRuns.transcript}->'waitingForBrain'->>'kind'`,
+      kind: sql<string | null>`${runState}->'waitingForBrain'->>'kind'`,
       /** `machine_dropped`: its turn was cut and it waits quietly for a short while. */
-      code: sql<string | null>`${agentRuns.transcript}->'waitingForBrain'->>'code'`,
+      code: sql<string | null>`${runState}->'waitingForBrain'->>'code'`,
       /** Its computer just went (within the grace): it waits without a word. */
-      quiet: sql<boolean>`coalesce((${agentRuns.transcript}->'waitingForBrain'->>'quiet')::boolean, false)`,
+      quiet: sql<boolean>`coalesce((${runState}->'waitingForBrain'->>'quiet')::boolean, false)`,
       executed: sql<number>`coalesce(jsonb_array_length(${agentRuns.transcript}->'interruptedTurn'->'executed'), 0)`,
       routineRunId: routineRuns.id,
     })
@@ -216,6 +220,7 @@ export async function listMachineOutages(
       platform: machinePlatform(m.os, m.kind),
       managed: m.kind === "managed",
       offlineSince: (m.lastSeenAt ?? m.updatedAt).toISOString(),
+      moving: shownMoving(m, now),
       agents: [...list.values()].sort((a, b) => order(a.agentId) - order(b.agentId)),
       waitingRuns,
     });

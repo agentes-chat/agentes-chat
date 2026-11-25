@@ -7,6 +7,7 @@ import {
   useConfirmSurfaceLink,
   useMintSurfaceCode,
   useRemoveSurfaceLink,
+  useSetSurfacePin,
   useSurfaceLinks,
 } from "@agenteschat/client";
 import { errorCode, errorText } from "@agenteschat/client/lib/errors";
@@ -15,6 +16,9 @@ import {
   codeDeadline,
   LINK_POLL_MS,
   newlyLinked,
+  pinChosen,
+  pinDigits,
+  pinMismatch,
   type SurfaceRow,
   surfaceMarkUrl,
   surfaceRowOf,
@@ -22,7 +26,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, Linking, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Linking, StyleSheet, TextInput, View } from "react-native";
 import { serverUrl } from "@/lib/server";
 import { useAppActive } from "@/lib/useAppActive";
 import { useOrg } from "@/providers/org";
@@ -43,7 +47,8 @@ import {
 
 /**
  * The outside chat surface's row in Notificações (ADR 0187), only where this account may link it: none opens the
- * sheet, pending opens it at the confirm, active shows the sender with Unlink.
+ * sheet, pending opens it at the confirm, active shows the sender with Unlink, and a row under it to choose the PIN
+ * (ADR 0226), which only the signed-in app can do.
  */
 export function SurfaceLinkRow() {
   const { t } = useTranslation();
@@ -53,6 +58,7 @@ export function SurfaceLinkRow() {
   const agents = useAgents(orgId);
   const remove = useRemoveSurfaceLink();
   const [open, setOpen] = useState(false);
+  const [pinOpen, setPinOpen] = useState(false);
   // The server sends no event when a pending link runs out, so the clock drops it, quickly while the sheet is open.
   const now = useNow(open ? 5_000 : 60_000);
   const row = surfaceRowOf(links.data, now);
@@ -89,9 +95,108 @@ export function SurfaceLinkRow() {
             ? { remove: { label: t("surface.row.unlink"), onPress: () => unlink(row.link) } }
             : { chevron: true, onPress: () => setOpen(true) })}
         />
+        {row.kind === "active" ? (
+          <GroupedRow
+            icon="lock"
+            label={row.link.pinSet ? t("surface.pin.change") : t("surface.pin.set")}
+            chevron
+            onPress={() => setPinOpen(true)}
+          />
+        ) : null}
       </GroupedList>
       <SurfaceLinkSheet open={open} onClose={() => setOpen(false)} row={row} />
+      <SurfacePinSheet
+        open={pinOpen}
+        onClose={() => setPinOpen(false)}
+        linkId={row.kind === "active" ? row.link.id : null}
+        surface={row.surface}
+      />
     </>
+  );
+}
+
+/** Choosing the PIN, typed twice: the signed-in app is what lets it be chosen; a link from the chat never can. */
+function SurfacePinSheet({
+  open,
+  onClose,
+  linkId,
+  surface,
+}: {
+  open: boolean;
+  onClose: () => void;
+  linkId: string | null;
+  surface: string;
+}) {
+  const { t } = useTranslation();
+  const c = useColors();
+  const toast = useToast();
+  const save = useSetSurfacePin();
+  const [pin, setPin] = useState("");
+  const [again, setAgain] = useState("");
+  const error = pinMismatch(pin, again) ? t("surface.page.mismatch") : save.isError ? errorText(t, save.error) : null;
+  const field = (value: string, set: (v: string) => void, label: string) => (
+    <View style={[styles.pin, { backgroundColor: c.sunken, borderColor: c.line }]}>
+      <TextInput
+        value={value}
+        onChangeText={(v) => set(pinDigits(v))}
+        placeholder={label}
+        placeholderTextColor={c.faint}
+        accessibilityLabel={label}
+        keyboardType="number-pad"
+        secureTextEntry
+        textContentType="none"
+        autoComplete="off"
+        maxLength={6}
+        editable={!save.isPending}
+        style={[styles.pinInput, { color: c.ink }]}
+      />
+    </View>
+  );
+  return (
+    <Sheet
+      open={open}
+      onClose={onClose}
+      onGone={() => {
+        setPin("");
+        setAgain("");
+        save.reset();
+      }}
+    >
+      <View style={styles.col}>
+        <Text variant="title">{t("surface.pin.title", { surface })}</Text>
+        <Text variant="body" tone="muted">
+          {t("surface.pin.text", { surface })}
+        </Text>
+        {field(pin, setPin, t("surface.page.choosePin"))}
+        {field(again, setAgain, t("surface.page.repeatPin"))}
+        {error ? (
+          <Text variant="small" tone="danger" accessibilityLiveRegion="polite">
+            {error}
+          </Text>
+        ) : null}
+        <Button
+          variant="primary"
+          wide
+          label={t("surface.pin.save")}
+          loading={save.isPending}
+          disabled={!linkId || !pinChosen(pin, again)}
+          onPress={() =>
+            linkId &&
+            save.mutate(
+              { linkId, pin },
+              {
+                onSuccess: () => {
+                  haptics.success();
+                  toast({ title: t("surface.pinReset.done"), icon: "check" });
+                  onClose();
+                },
+                onError: () => haptics.warning(),
+              },
+            )
+          }
+        />
+      </View>
+    </Sheet>
   );
 }
 
@@ -401,4 +506,6 @@ const styles = StyleSheet.create({
   making: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, minHeight: 48 },
   sender: { borderRadius: 14, padding: 16, gap: 4 },
   strong: { fontWeight: "600" },
+  pin: { borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 14 },
+  pinInput: { fontSize: 22, letterSpacing: 6, minHeight: 48 },
 });

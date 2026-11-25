@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { channelTopic } from "@agenteschat/adapters";
 import { eq, schema } from "@agenteschat/db";
 import { fakeImagePng } from "@agenteschat/providers/testing";
 import {
@@ -438,6 +439,28 @@ describe("comments on a picture, a video or a PDF (ADR 0208)", () => {
       `about what they selected in the image \\"Logo\\" (artifact ${logo.id}): a point of the picture at 25% across and 50% down, on version 1)`,
     );
     expect(request).toContain(`call look_at_comment with comment \\"${crop}\\"`);
+  });
+
+  test("a comment tells the conversation the file was posted in, so its card there counts it", async () => {
+    f = await setup();
+    const deps = { db: f.db, pubsub: f.pubsub };
+    const logo = await upload("logo.png", PNG, { title: "Logo" });
+    const at = await openFileConversation(f.artifactDeps, f.owner.id, f.org.id, logo.id);
+    const heard: unknown[] = [];
+    f.pubsub.subscribe(channelTopic(f.general.id), (event) => {
+      heard.push(event);
+    });
+
+    await postPersonMessage(deps, f.owner.id, f.org.id, at.channelId, { body: "Looks good.", threadId: at.rootId });
+    await drainOutbox(f.db, f.handlers);
+
+    const updates = typesOf(heard, "artifact.updated") as { artifact: { id: string } }[];
+    expect(updates.map((e) => e.artifact.id)).toEqual([logo.id]);
+    // A message anywhere else announces no file.
+    heard.length = 0;
+    await postPersonMessage(deps, f.owner.id, f.org.id, f.general.id, { body: "Good morning." });
+    await drainOutbox(f.db, f.handlers);
+    expect(typesOf(heard, "artifact.updated")).toEqual([]);
   });
 
   test("a comment with a pin is resolved by who writes there, once, and opened again; nothing else is", async () => {

@@ -1,4 +1,4 @@
-import { clippedHeight, LONG_MESSAGE } from "@agenteschat/client/lib/message-length";
+import { clippedHeight, LONG_MESSAGE, shownWhole } from "@agenteschat/client/lib/message-length";
 import { File, Paths } from "expo-file-system";
 import { LinearGradient } from "expo-linear-gradient";
 import { type ComponentRef, createContext, type ReactNode, useContext, useEffect, useRef, useState } from "react";
@@ -63,6 +63,8 @@ export const REVEAL = LinearTransition.duration(motion.base).easing(Easing.bezie
 export interface OpenedMessages {
   has: (id: string) => boolean;
   open: (id: string) => void;
+  /** The newest message, the reader's answer (`answerIds`) and the ones that mention them: whole however long. */
+  answer: (id: string) => boolean;
 }
 export const OpenedMessagesContext = createContext<OpenedMessages | null>(null);
 
@@ -70,9 +72,9 @@ export const OpenedMessagesContext = createContext<OpenedMessages | null>(null);
 let focusOnOpen: string | null = null;
 
 /**
- * A message's words in a conversation (the web's `ClippedBody`, the same heights): one taller than the shared rule
- * shows its start, fading into what is behind it, with "Ver mais", and so does an agent's long message to another
- * agent, folded to its `lead` (ADR 0034). "Ver mais" opens the words in place, at once and for good.
+ * A message's words in a conversation (the web's `ClippedBody`, the same heights and answers): one taller than the
+ * shared rule shows its start, fading into what is behind it, with "Ver mais", and so does an agent's long message to
+ * another agent, folded to its `lead` (ADR 0034). "Ver mais" opens the words in place, at once and for good.
  * `behind`: the colours painted behind the words, bottom layer first (a tint over the screen's colour is two), so the
  * fade ends on exactly what is there.
  */
@@ -99,10 +101,13 @@ export function ClippedMessage({
   const { colors } = useTheme();
   const screen = useContext(OpenedMessagesContext);
   readSavedHeights(i18n.language);
-  // Opened from this row, or one the screen kept open coming back: open, whole.
+  // Opened from this row, or one the screen kept open coming back, or shown whole before this session (an answer,
+  // never cut under the reader as newer messages arrive): open, whole. An agent's message to another folded to its
+  // lead is not the reader's answer: only "Ver mais" opens it.
   const [tapped, setTapped] = useState(false);
   const fullMessages = useOrg().org?.chatPrefs?.fullMessages === true;
-  const open = fullMessages || tapped || Boolean(screen?.has(id));
+  if (lead == null && screen?.answer(id)) shownWhole.add(id);
+  const open = fullMessages || tapped || Boolean(screen?.has(id)) || shownWhole.has(id);
   // How tall the words are whole, kept across the list's unmounts (`kept-sizes.ts`): a row coming back is cut from its
   // first frame. Never measured yet, they show no taller than a whole message may, a point past it (`PAST_RULE`: a long
   // paragraph under the cap reads the cap): a long one drew whole for a frame and then shrank, moving every row under
@@ -177,10 +182,10 @@ export function ClippedMessage({
           }}
           style={({ pressed }) => [styles.more, shows !== null && styles.overFade, pressed && styles.pressed]}
         >
-          <Text variant="subhead" style={[styles.moreText, ink ? { color: ink } : undefined]}>
+          <Text variant="label" tone="ink2" style={ink ? { color: ink } : undefined}>
             {t("channel.long.more")}
           </Text>
-          <Icon name="chev" size={16} color={ink ?? colors.ink} />
+          <Icon name="chev" size={14} color={ink ?? colors.ink2} />
         </Pressable>
       ) : null}
     </View>
@@ -193,6 +198,5 @@ const styles = StyleSheet.create({
   fade: { position: "absolute", left: 0, right: 0, bottom: 0, height: FADE },
   more: { alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4 },
   overFade: { marginTop: -CLEAR },
-  moreText: { fontWeight: "600" },
   pressed: { opacity: 0.6 },
 });

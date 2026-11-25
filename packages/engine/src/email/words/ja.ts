@@ -485,6 +485,36 @@ export const words: EmailWords = {
     table: (day) => `表全体: bun run report:autonomy --day ${day}`,
     why: "このアドレスがこのサーバーの OPS_REPORT_EMAIL に設定されているため、このメールをお送りしています。1日に1回送信されます。",
   },
+  accountOpened: {
+    subject: (plan) => `あなたの ${plan} アカウントを使える人が増えました`,
+    preheader: (plan) => `その利用にはあなたの ${plan} プランとその上限が使われます。`,
+    headline: "あなたの AI アカウントを使える人が変更されました",
+    body: (by, account, plan) => [
+      { b: by },
+      ` さんが、あなたの ${plan} アカウント `,
+      { b: account },
+      ` を使える人を変更しました。その利用にはあなたのプランとその上限が使われます。`,
+    ],
+    account: "アカウント",
+    by: "変更した人",
+    setting: "権限",
+    use: "エージェントで使う",
+    reply: "全員に応答",
+    was: "変更前",
+    now: "変更後",
+    everyone: "ワークスペースの全員",
+    admins: "あなたと管理者",
+    onlyYou: "あなただけ",
+    agentOwner: "エージェントの所有者だけ",
+    note: "元に戻すには、「AI と利用状況」でアカウントを開き、権限を変更してください。",
+    button: "AI アカウントを開く",
+    why: (org) =>
+      `${org} でこの AI アカウントを接続したのがあなたで、ほかの人がそれを使える人を変更したため、このメールをお送りしています。`,
+    personal: {
+      why: () =>
+        "この AI アカウントを接続したのがあなたで、ほかの人がそれを使える人を変更したため、このメールをお送りしています。",
+    },
+  },
   planOpened: {
     subject: (plan) => `あなたの ${plan} プランで、より多くの人があなたのエージェントと話せるようになりました`,
     preheader: (plan) => `その会話にはあなたの ${plan} プランとその上限が使われます。`,
@@ -584,6 +614,28 @@ export const words: EmailWords = {
       small: "ご自身なら設定からもう一度連携してください。",
       why: (surface) => `${surface} が agentes.chat アカウントに連携されていたため、このメールをお送りしています。`,
       picture: "スマートフォンからは外れたアシスタント",
+    },
+    pinReset: {
+      subject: (surface) => `${surface} の PIN を設定`,
+      preheader: "チャットアプリから操作を承認するための PIN を設定してください。",
+      headline: (surface) => `${surface} の PIN を設定`,
+      body: (surface) =>
+        `${surface} から操作を承認するときに使う PIN を設定するためのリンクが依頼されました。ご本人の場合は、このボタンで開くページで設定してください。`,
+      button: "PIN を設定",
+      small:
+        "このリンクは 1 時間以内に 1 回だけ使えます。心当たりがなければ、このメールは無視してください。何も変わりません。",
+      why: (surface) => `${surface} が agentes.chat アカウントに連携されているため、このメールをお送りしています。`,
+    },
+    pinLocked: {
+      subject: (surface) => `${surface} の PIN がロックされました`,
+      preheader: "PIN が 3 回続けて間違っていました。チャットアプリからの承認は一時停止中です。",
+      headline: (surface) => `${surface} の PIN がロックされました`,
+      body: (surface, time) =>
+        `${surface} から操作を承認しようとして、間違った PIN が 3 回続けて入力されました。${surface} からの承認は ${time}の間、停止されます。`,
+      lockedFor: ["15 分", "1 時間", "24 時間"],
+      small: (surface) =>
+        `ご本人の場合は、しばらくしてからもう一度お試しください。心当たりがない場合は、通知設定で ${surface} の連携を解除してください。そこから誰も承認できなくなります。`,
+      button: "通知設定を開く",
     },
   },
   supportReply: {

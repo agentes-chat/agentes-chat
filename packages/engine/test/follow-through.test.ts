@@ -180,16 +180,16 @@ test("the prompt asks to finish what it starts, and names follow_up only when th
   await ask(f, "@dev oi");
   await drainOutbox(f.db, f.handlers);
   const withTool = systemText(f.provider.calls[0]?.request.system ?? []);
-  expect(withTool).toContain("Finish what you start.");
-  expect(withTool).toContain("set a follow_up to come back to it");
-  expect(withTool).toContain("After a person approves or answers what you waited on, go on with the task at once");
+  expect(withTool).toContain("Before you end your turn, reread your reply.");
+  expect(withTool).toContain("set a follow_up and say when");
+  expect(withTool).toContain("After a person approves or answers what you waited on, go on at once");
   await f.close();
 
   f = await setup({ react: true, reply: () => ({ chunks: ["ok"] }) });
   await ask(f, "@dev oi");
   await drainOutbox(f.db, f.handlers);
   const without = systemText(f.provider.calls[0]?.request.system ?? []);
-  expect(without).toContain("Finish what you start.");
+  expect(without).toContain("Before you end your turn, reread your reply.");
   expect(without).not.toContain("follow_up");
 });
 

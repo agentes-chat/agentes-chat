@@ -1,4 +1,8 @@
-import { NEXT_ACCOUNT_KINDS } from "@agenteschat/providers/plans";
+import { compareInOrder, NEXT_ACCOUNT_KINDS } from "@agenteschat/providers/plans";
+
+/** The one order of use (`@agenteschat/providers/plans`), for apps that read it through the client. */
+export { compareInOrder };
+
 import type { TFunction } from "i18next";
 import type {
   AccountOrderGroup,
@@ -258,26 +262,25 @@ export const labelTitle = (a: Pick<MachineAccount, "label" | "plan">) =>
     ? `${a.label} · ${planName(a.plan)}`
     : a.label;
 
-type TitledAccount = Pick<MachineAccount, "label" | "plan" | "email" | "mine" | "named" | "keyHint" | "provider"> &
-  Partial<Pick<MachineAccount, "kind">>;
+type TitledAccount = Pick<MachineAccount, "label" | "plan" | "email" | "mine" | "named" | "keyHint" | "provider">;
 
 /** Read by its name (`labelTitle`), not its email: someone else's (whose email the viewer never gets), or a key account (its key's end tells it apart). */
 const byLabel = (a: Pick<TitledAccount, "mine" | "keyHint" | "provider">) =>
   !a.mine || a.keyHint != null || isPlanId(a.provider);
 
 /**
- * An account as every app titles it (web, desktop, phone): the name its owner gave it, else its email, else its maker
- * ("Gemini", "Claude") where its sign-in says no email, never the automatic "Claude 2". Someone else's account and a
- * key account keep their name with the plan (`labelTitle`).
+ * An account as every app titles it (web, desktop, phone): the name its owner gave it, else its email, else "Unnamed
+ * account" where its sign-in says no email (Claude's token for all agents, ADR 0059 §2), never the automatic
+ * "Claude 2". Someone else's account and a key account keep their name with the plan (`labelTitle`).
  */
 export function accountTitle(t: TFunction, a: TitledAccount): string {
   if (byLabel(a)) return labelTitle(a);
   if (a.named === true) return a.label;
-  return a.email ?? (a.kind ? t(`aiAccounts.connect.${a.kind}`) : t("aiAccounts.unnamed"));
+  return a.email ?? t("aiAccounts.unnamed");
 }
 
-/** Whether the title falls back to "Unnamed account": the viewer's own account with no name, no email, and no known maker. */
-export const unnamedAccount = (a: TitledAccount) => !byLabel(a) && a.named !== true && !a.email && !a.kind;
+/** Whether the title is "Unnamed account": the viewer's own account with no name of theirs and no email. */
+export const unnamedAccount = (a: TitledAccount) => !byLabel(a) && a.named !== true && !a.email;
 
 /**
  * An account inside a sentence ("Ada agora pensa com …", "Você já tem … aqui"): its title, or for an unnamed one its
@@ -583,8 +586,8 @@ export function keyRemovalText(
 /**
  * The accounts a run of an agent goes through at its plan's limit (ADR 0041 §6, the server's `nextAccountPlan`): its
  * own account, then the others of its kind with the CLI's own sign-in (never a key, `movable`) that are signed in and shared
- * between agents (a login made for one agent is lent to that agent only), its owner's first and then those that serve
- * everyone, each by `useOrder` (the unplaced after, in the order given: oldest first). Only its own account when it is
+ * between agents (a login made for one agent is lent to that agent only) that serve its owner, in the one order of use
+ * (`compareInOrder`: its owner's first, then by `useOrder`, the unplaced after in the order given: oldest first). Only its own account when it is
  * pinned ("Só esta conta"), a key's, or of a kind that never moves (Gemini, Grok, Cursor, OpenCode). The right hand's
  * `scope`: its person's own AI goes on only with that person's accounts (`mine`), and never on a plan someone else
  * gave it, the workspace's included.
@@ -598,12 +601,12 @@ export function accountChain<A extends MachineAccount>(
   const lent = agent.scope === "workspace" || (agent.scope === "mine" && !own.mine);
   if (agent.pinned || lent || own.provider || !NEXT_ACCOUNT_KINDS.includes(own.kind)) return [own];
   const mine = (a: A) => (agent.scope === "mine" ? a.mine : agent.ownerId !== null && a.ownerId === agent.ownerId);
-  const serves = (a: A) => mine(a) || (agent.scope !== "mine" && (a.serves ?? "everyone") === "everyone");
-  const place = (a: A) => a.useOrder ?? Number.POSITIVE_INFINITY;
+  // The server says whether each serves the agent's owner (`usable`); an older one only says `serves`.
+  const serves = (a: A) => mine(a) || (agent.scope !== "mine" && (a.usable ?? (a.serves ?? "everyone") === "everyone"));
+  const person = agent.scope === "mine" ? (accounts.find((a) => a.mine)?.ownerId ?? null) : agent.ownerId;
   const next = accounts
-    .map((a, i) => ({ a, i }))
     .filter(
-      ({ a }) =>
+      (a) =>
         a.id !== own.id &&
         a.kind === own.kind &&
         a.provider === null &&
@@ -612,8 +615,8 @@ export function accountChain<A extends MachineAccount>(
         runMayMoveTo(a) &&
         serves(a),
     )
-    .sort((x, y) => Number(mine(y.a)) - Number(mine(x.a)) || place(x.a) - place(y.a) || x.i - y.i);
-  return [own, ...next.map(({ a }) => a)];
+    .sort(compareInOrder(person));
+  return [own, ...next];
 }
 
 /**

@@ -41,6 +41,7 @@ import { Link, useMatchRoute } from "@tanstack/react-router";
 import { type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
+import { MachineChip } from "@/components/machine-bits";
 import { useOrg } from "@/components/org-context";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { STORAGE_KEYS, storage } from "@/lib/storage";
@@ -261,12 +262,7 @@ export function SetupWait({ view, reader, said }: { view: SetupView; reader: Wai
 function SetupChip({ view, machine }: { view: SetupView; machine: Machine | undefined }) {
   const { t } = useTranslation();
   if (view.phase !== "ready") return <Chip icon={PHASE_ICON[view.phase]}>{t(view.chipKey)}</Chip>;
-  const online = machine?.online ?? false;
-  return (
-    <Chip icon={online ? "check" : "dash"} className="machine-chip">
-      {online ? t("machines.online") : t("machines.offline")}
-    </Chip>
-  );
+  return <MachineChip online={machine?.online ?? false} moving={machine?.moving} />;
 }
 
 /** The workspace's computer row of the list, once the provisioner made it. */

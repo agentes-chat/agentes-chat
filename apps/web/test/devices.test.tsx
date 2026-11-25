@@ -196,6 +196,29 @@ describe("Settings › Devices", () => {
     expect(screen().getByRole("combobox", { name: "Tasks at once" })).toBeTruthy();
   });
 
+  test("a computer whose tasks start on room: Automatic with what fits, why it's full, and its owner's Push harder", async () => {
+    const room = { more: 0, freeGb: 1.4, cpuBusy: false, pushHarder: false };
+    const { state } = await open(`/org/${ORG_ID}/settings/devices/${MAC}`, (devices) => {
+      const list = acmeDevices();
+      devices.set({
+        ...list,
+        devices: list.devices.map((d) =>
+          d.id === MAC ? { ...d, status: { kind: "busy", running: 9, max: null }, taskRoom: room } : d,
+        ),
+      });
+    });
+    expect(screen().getByText("Busy · 9 running")).toBeTruthy();
+    expect(
+      screen().getByText(
+        "No room for another task right now: 1.4 GB of memory free. The next one starts when one ends.",
+      ),
+    ).toBeTruthy();
+    expect(screen().getByText("Automatic · 9 running · full for now")).toBeTruthy();
+    expect(screen().queryByRole("combobox", { name: "Tasks at once" })).toBeNull();
+    await click(screen().getByRole("switch", { name: "Push harder" }));
+    expect(calls(state, "devices.updateComputer")[0]?.args.slice(1)).toEqual([MAC, { pushHarder: true }]);
+  });
+
   test("a computer's phones: each state a pill alone, its detail in its tip; one that needs me opens its fix", async () => {
     await open(`/org/${ORG_ID}/settings/devices/${MAC}`);
     const list = screen().getByRole("list", { name: "Phones on this computer" });
@@ -215,17 +238,32 @@ describe("Settings › Devices", () => {
     expect(screen().getByRole("dialog", { name: "Connect an iPhone" })).toBeTruthy();
   });
 
-  test("Let it join, from the list: name and who can use it, then the server lets it in", async () => {
+  test("Let it join, from the list: only its name before, then connected with the switch that shares it", async () => {
     const { state } = await open(`/org/${ORG_ID}/settings/devices`);
     const ask = screen().getByRole("list", { name: "Asking to join" });
     await click(within(ask).getByRole("button", { name: "Let it join" }));
     const dialog = screen().getByRole("dialog", { name: "ci-runner wants to join Acme" });
     expect(dialog.textContent).toContain("203.0.113.7");
+    // Who can use it is asked once it's in, not before.
+    expect(within(dialog).queryByRole("combobox")).toBeNull();
+    expect(within(dialog).queryByRole("switch")).toBeNull();
     await click(within(dialog).getByRole("button", { name: "Let it join" }));
     expect(calls(state, "devices.approveRequest")[0]?.args.slice(1)).toEqual([
       "r-ci",
       { name: "ci-runner", audience: { mode: "owner", userIds: [], roleIds: [] } },
     ]);
+    const joined = screen().getByRole("dialog", { name: "ci-runner is connected" });
+    const share = within(joined).getByRole("switch", { name: "Let the whole workspace use it" });
+    expect(share.getAttribute("aria-checked")).toBe("false");
+    expect(joined.textContent).toContain("Only you for now");
+    await click(share);
+    expect(calls(state, "devices.updateComputer").at(-1)?.args).toEqual([
+      ORG_ID,
+      "m-r-ci",
+      { audience: { mode: "everyone", userIds: [], roleIds: [] } },
+    ]);
+    expect(share.getAttribute("aria-checked")).toBe("true");
+    expect(joined.textContent).toContain("Everyone in Acme");
   });
 });
 
@@ -245,20 +283,25 @@ describe("Connect a device", () => {
     devices.setLink({ status: "asking", request: acmeDevices().requests[0] });
     await refetch(services);
     const asking = screen().getByRole("dialog", { name: "ci-runner wants to join Acme" });
+    expect(within(asking).queryByRole("combobox")).toBeNull();
     await click(within(asking).getByRole("button", { name: "Let it join" }));
     // A server is everyone's by default.
     expect(calls(state, "devices.approveRequest")[0]?.args[2]).toEqual({
       name: "ci-runner",
       audience: { mode: "everyone", userIds: [], roleIds: [] },
     });
-    expect(screen().getByRole("dialog", { name: "ci-runner is connected" })).toBeTruthy();
+    const joined = screen().getByRole("dialog", { name: "ci-runner is connected" });
+    expect(
+      within(joined).getByRole("switch", { name: "Let the whole workspace use it" }).getAttribute("aria-checked"),
+    ).toBe("true");
+    expect(joined.textContent).toContain("Everyone in Acme");
   });
 
   test("the computers: this one, another one, a server or VPS", async () => {
     await open(`/org/${ORG_ID}/settings/devices`);
     await click(screen().getByRole("button", { name: "Connect a device" }));
     const computers = screen().getByRole("region", { name: "Computers" });
-    expect([...computers.querySelectorAll(".dv-option__title")].map((n) => n.textContent)).toEqual([
+    expect([...computers.querySelectorAll(".ac-optrow__hit")].map((n) => n.textContent)).toEqual([
       "This computer",
       "Another computer",
       "A server or VPS",
@@ -310,7 +353,7 @@ describe("Connect a device", () => {
   });
 
   test("another computer: the app on it, signed in as me, then Connected once a computer of mine shows up", async () => {
-    const { devices, services } = await open(`/org/${ORG_ID}/settings/devices`);
+    const { devices, services, state } = await open(`/org/${ORG_ID}/settings/devices`);
     await click(screen().getByRole("button", { name: "Connect a device" }));
     await click(screen().getByRole("button", { name: /Another computer/ }));
     const dialog = screen().getByRole("dialog", { name: "Connect another computer" });
@@ -338,6 +381,15 @@ describe("Connect a device", () => {
       `/org/${ORG_ID}/settings/devices/m-sam-new`,
     );
     expect(within(dialog).getByRole("button", { name: "Done" })).toBeTruthy();
+    // Private as it joined, and one switch away from the whole workspace.
+    const share = within(dialog).getByRole("switch", { name: "Let the whole workspace use it" });
+    expect(share.getAttribute("aria-checked")).toBe("false");
+    await click(share);
+    expect(calls(state, "devices.updateComputer").at(-1)?.args).toEqual([
+      ORG_ID,
+      "m-sam-new",
+      { audience: { mode: "everyone", userIds: [], roleIds: [] } },
+    ]);
     await click(within(dialog).getByRole("button", { name: "Can't install the app on it? Use a terminal line" }));
     expect(screen().getByRole("dialog", { name: "Connect a computer" })).toBeTruthy();
   });
@@ -393,7 +445,18 @@ describe("Connect a device", () => {
     if (added) added.status = { kind: "ready" };
     devices.set(list);
     await refetch(services);
-    expect(screen().getByRole("dialog", { name: "Galaxy S24 is connected" })).toBeTruthy();
+    const connected = screen().getByRole("dialog", { name: "Galaxy S24 is connected" });
+    // No select on the last step: the switch, saved at once.
+    expect(within(connected).queryByRole("combobox")).toBeNull();
+    const share = within(connected).getByRole("switch", { name: "Let the whole workspace use it" });
+    expect(share.getAttribute("aria-checked")).toBe("true");
+    await click(share);
+    expect(calls(state, "devices.updatePhone").at(-1)?.args).toEqual([
+      ORG_ID,
+      "p-new",
+      { audience: { mode: "owner", userIds: [], roleIds: [] } },
+    ]);
+    expect(connected.textContent).toContain("Only you for now");
   });
 
   test("Android by cable: the phone already plugged in shows up asking, and every step before Allow is done", async () => {
@@ -1089,6 +1152,21 @@ describe("A device's page", () => {
     (globalThis as { geometrySnapshot?: () => void }).geometrySnapshot?.();
   });
 
+  test("a computer moving to another server: moving on its pill and its line, never offline", async () => {
+    await open(`/org/${ORG_ID}/settings/devices/${IMAC}`, (devices) => {
+      const list = acmeDevices();
+      const imac = list.devices.find((d) => d.id === IMAC);
+      if (!imac) throw new Error("fixture");
+      imac.status = { kind: "moving", since: new Date(Date.now() - 5 * 60_000).toISOString() };
+      devices.set(list);
+    });
+    const line = document.querySelector(".dv-statusline__text");
+    expect(line?.textContent).toContain("Moving to a new server… back in a few minutes");
+    expect(document.body.textContent).toContain("Moving servers");
+    expect(line?.textContent).not.toContain("offline");
+    (globalThis as { geometrySnapshot?: () => void }).geometrySnapshot?.();
+  });
+
   test("a computer's typed name in the line stays as typed: its backticks and asterisks mark nothing", async () => {
     const name = "Ana's `iMac` **<b>2</b>**";
     await open(`/org/${ORG_ID}/settings/devices/phones/p-ana-iphone`, (devices) => {
@@ -1103,15 +1181,24 @@ describe("A device's page", () => {
     expect(line?.querySelector("code, b")).toBeNull();
   });
 
-  test("spill-over on someone's computer: an admin may turn it off, never on", async () => {
+  test("help on someone's computer: one switch an admin may turn off, never on, and the workspace's switch wins", async () => {
     const { state } = await open(`/org/${ORG_ID}/settings/devices/${IMAC}`);
-    const own = screen().getByRole("switch", { name: "Your replies can think here" });
-    const others = screen().getByRole("switch", { name: "Other people's agents can think here" });
-    expect([own.getAttribute("aria-checked"), others.getAttribute("aria-checked")]).toEqual(["true", "false"]);
-    expect(others.hasAttribute("disabled")).toBe(true);
-    await click(own);
+    const help = screen().getByRole("switch", { name: "Help when the team's computer is full or away" });
+    expect(help.getAttribute("aria-checked")).toBe("true");
+    expect(screen().queryByRole("switch", { name: "Other people's agents can think here" })).toBeNull();
+    await click(help);
     await settle(4);
     expect(calls(state, "devices.updateComputer").map((c) => c.args.at(-1))).toEqual([{ spill: { own: false } }]);
+  });
+
+  test("an admin turns every computer's help off for the workspace from the devices list", async () => {
+    const { state } = await open(`/org/${ORG_ID}/settings/devices`);
+    const all = screen().getByRole("switch", { name: "Computers help when the team's is full or away" });
+    expect(all.getAttribute("aria-checked")).toBe("true");
+    await click(all);
+    await settle(4);
+    expect(calls(state, "devices.setHelp").map((c) => c.args.at(-1))).toEqual([false]);
+    expect(all.getAttribute("aria-checked")).toBe("false");
   });
 
   test("Only some people or roles: the picker opens with nobody yet, and the first pick is what saves", async () => {
@@ -1222,7 +1309,10 @@ describe("In the chat and the inbox", () => {
     const row = document.querySelector('[data-n="n-dev"]') as HTMLElement;
     expect(row.textContent).toContain("Lia (for Rui) asks to use Sam's iPhone 16");
     expect(row.textContent).toContain("Devices");
-    await click(within(row).getByRole("button", { name: "Allow once" }));
+    // The answer is in the open item, beside the list (ADR 0218).
+    await click(row);
+    const read = document.querySelector(".ib-read") as HTMLElement;
+    await click(within(read).getByRole("button", { name: "Allow once" }));
     expect(calls(state, "devices.decideAccess")[0]?.args).toEqual([ORG_ID, "ar-1", "once"]);
   });
 });

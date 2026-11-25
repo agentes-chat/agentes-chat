@@ -182,10 +182,9 @@ describe("a screen of rows", () => {
     expect(src("chats/useRows.ts")).toContain("const now = useNow(WORK_TICK_MS);");
   });
 
-  test("past the moving rows an orbit holds still, as the faces do", () => {
-    expect(src("chats/ConversationRowView.tsx")).toContain(
-      "<PixelOrbit color={facts.orbit} size={ORBIT} still={!live} />",
-    );
+  test("an orbit turns on every row at work, past the rows whose faces move too", () => {
+    expect(src("chats/ConversationRowView.tsx")).toContain("<PixelOrbit color={facts.orbit} size={ORBIT} />");
+    expect(src("chats/PinnedStrip.tsx")).toContain("<PixelOrbit color={facts.orbit} size={MARK} />");
   });
 
   test("a scroll that drifts sideways stays a scroll: a row slides only once the drag is clearly sideways", () => {
@@ -231,7 +230,9 @@ describe("a screen of rows", () => {
     expect(ui("RowPressable.tsx")).toContain("onPressIn?.(e);");
   });
 
-  test("the home's sky comes up within 300 ms of the splash leaving", () => {
-    expect(src("chats/ChatsScreen.tsx")).toContain("const SKY_ARRIVE_MS = 300;");
+  test("the home's sky is already there under the splash: the splash's ring opens on it, nothing fades in", () => {
+    const home = src("chats/ChatsScreen.tsx");
+    expect(home).toContain("<GreetingSky />");
+    expect(home).not.toContain("SKY_ARRIVE_MS");
   });
 });

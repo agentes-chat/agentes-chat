@@ -24,7 +24,7 @@ import { type AgentStyle, isAgentStyle, saveAgentStyle } from "./agent-style";
 import { dropAgentRules } from "./approval-rules";
 import { revokeMemberApps } from "./apps/revoke";
 import { recordAudit } from "./audit";
-import { caches } from "./cache";
+import { caches, cachesEnabled } from "./cache";
 import { memberCardVia } from "./card-via";
 import {
   assertOwnWallpaper,
@@ -992,6 +992,16 @@ export function requestLocale(acceptLanguage: string | null | undefined): UserLo
 export async function isEmailVerified(db: Database, userId: string): Promise<boolean | null> {
   const [row] = await db.select({ verified: users.emailVerified }).from(users).where(eq(users.id, userId));
   return row ? row.verified === true : null;
+}
+
+/**
+ * What an address never confirmed holds back (ADR 0006, addendum 2026-11-22), on a server that sends email: an account
+ * in no workspace yet makes none until its link is opened (`required`). One already in a workspace keeps working, with
+ * a reminder: some of those pay, and a mistyped address may never get the link. Null when there is nothing to ask.
+ */
+export function emailConfirmation(input: { emailDelivers: boolean; verified: boolean; workspaces: number }) {
+  if (!input.emailDelivers || input.verified) return null;
+  return input.workspaces === 0 ? ("required" as const) : ("reminder" as const);
 }
 
 async function ownerCount(db: Pick<Database, "select">, orgId: string) {
@@ -2556,7 +2566,18 @@ export async function joinOrganization(
 
 /** Marks a person as seen now in an organization (WebSocket connect/disconnect). */
 /** Not while the person is hidden: a "last seen" that keeps moving would give them away. */
+/** A person's "last seen" is written at most this often per workspace and process: every socket opens and closes it. */
+export const LAST_SEEN_EVERY_MS = 5 * 60_000;
+const lastSeenWritten = new Map<string, number>();
+
 export async function touchLastSeen(db: Database, orgId: string, userId: string, at = new Date()) {
+  if (cachesEnabled()) {
+    const key = `${orgId}:${userId}`;
+    if (at.getTime() - (lastSeenWritten.get(key) ?? Number.NEGATIVE_INFINITY) < LAST_SEEN_EVERY_MS) return;
+    // ponytail: forgets everyone at 50,000 people; each is written once more then.
+    if (lastSeenWritten.size >= 50_000) lastSeenWritten.clear();
+    lastSeenWritten.set(key, at.getTime());
+  }
   await db
     .update(organizationMembers)
     .set({ lastSeenAt: at })

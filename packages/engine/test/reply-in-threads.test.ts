@@ -1,5 +1,6 @@
 import { afterEach, expect, setDefaultTimeout, test } from "bun:test";
 import { eq, schema, sql } from "@agenteschat/db";
+import { runMigration } from "@agenteschat/db/testing";
 import { type ModelRequest, ProviderError } from "@agenteschat/providers";
 import {
   activeRunsIn,
@@ -128,7 +129,7 @@ test("asked in the main timeline: the reply goes under the message, which stays 
   expect(view).toMatchObject({ replyCount: 1, openedByReplyAt: reply?.createdAt.toISOString() });
 });
 
-test("off, as by default: the reply stays in the main timeline and no thread opens", async () => {
+test("off: the reply stays in the main timeline and no thread opens", async () => {
   f = await setup({ reply: () => ({ chunks: ["Conferi."] }) });
   const asking = await say("@dev confere as lojas");
   await drainOutbox(f.db, f.handlers);
@@ -138,6 +139,30 @@ test("off, as by default: the reply stays in the main timeline and no thread ope
   const [reply] = await postsOf();
   expect(reply?.threadId).toBeNull();
   expect(await threadRow(asking.id)).toBeUndefined();
+});
+
+test("on by default: existing and new channels reply in threads, a DM never does", async () => {
+  f = await setup({ reply: () => ({ chunks: ["Conferi."] }) });
+  const dmBefore = await openDm(f.db, f.owner.id, f.org.id, { agentId: f.agent.id });
+  // Test databases keep the old default (packages/db/test/pglite.ts); the migration sets production's.
+  await runMigration(f.db, "channels_reply_in_threads_by_default");
+  const row = async (id: string) => (await f.db.select().from(schema.channels).where(eq(schema.channels.id, id)))[0];
+  expect((await row(f.general.id))?.replyInThreads).toBe(true);
+  expect((await row(dmBefore.id))?.replyInThreads).toBe(false);
+
+  const vendas = await createChannel(f.db, f.owner.id, f.org.id, { name: "vendas" });
+  expect(vendas.replyInThreads).toBe(true);
+  await addChannelMember(f.db, f.owner.id, f.org.id, vendas.id, { agentId: f.agent.id });
+  const asking = await say("@dev confere as lojas", { channelId: vendas.id });
+  await drainOutbox(f.db, f.handlers);
+  expect((await postsOf()).at(-1)).toMatchObject({ channelId: vendas.id, threadId: asking.id });
+
+  await threadsOn(false, vendas.id);
+  expect((await row(vendas.id))?.replyInThreads).toBe(false);
+
+  await say("oi", { channelId: dmBefore.id });
+  await drainOutbox(f.db, f.handlers);
+  expect((await postsOf()).at(-1)).toMatchObject({ channelId: dmBefore.id, threadId: null });
 });
 
 test("its cards, files, question cards and live events land in the thread too", async () => {

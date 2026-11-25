@@ -1,6 +1,7 @@
 import type { PubSub } from "@agenteschat/adapters";
 import { and, type Database, eq, inArray, isNull, schema, sql } from "@agenteschat/db";
 import { type AgentWork, agentWorkFor, bareWork } from "./agent-work";
+import { caches, forgetOrgReads } from "./cache";
 import { publishOrgEvent } from "./events";
 import { type PendingReturn, pendingReturns } from "./follow-through";
 import { cutText } from "./format";
@@ -10,6 +11,7 @@ import { requirePermission } from "./organizations";
 import { type OutOfOffice, outOfOffice } from "./out-of-office";
 import { rightHandId } from "./right-hand";
 import { routineSeer } from "./routines";
+import { runState } from "./run-state";
 import { outageParkedSql } from "./runs";
 import { toolGroupKey } from "./tools/directory";
 import type { ToolContext, ToolDefinition, ToolSource } from "./tools/types";
@@ -98,8 +100,8 @@ export interface AgentStatusView {
 
 /** A run going this long is heavy work: the agent reads as busy. */
 export const AGENT_HEAVY_AFTER_MS = 2 * 60_000;
-/** No run for this long: away. */
-export const AGENT_AWAY_AFTER_MS = 30 * 60_000;
+/** Nothing done for this long (no run, or one only waiting since its last change): away. */
+export const AGENT_AWAY_AFTER_MS = 10 * 60_000;
 /** A running run counts only with a heartbeat this recent: a dead worker's run stops counting at once (§11). */
 export const AGENT_HEARTBEAT_FRESH_MS = 90_000;
 /** A run waiting longer than this keeps the agent online but loses its line (§11). */
@@ -133,10 +135,12 @@ export async function agentStatuses(
 ): Promise<(AgentStatusView & { work: AgentWork | null })[]> {
   await requirePermission(db, actorId, orgId, "read");
   const [list, sees, work, rightHand, returns] = await Promise.all([
-    loadAgentStatuses(db, orgId, now),
+    caches.orgReads.getOrLoad(`${orgId}:statuses`, () => loadAgentStatuses(db, orgId, now)) as Promise<
+      AgentStatusView[]
+    >,
     routineSeer(db, orgId, actorId),
     agentWorkFor(db, actorId, orgId, new Date(now.getTime() - AGENT_HEARTBEAT_FRESH_MS)),
-    rightHandId(db, orgId),
+    caches.orgReads.getOrLoad(`${orgId}:right-hand`, () => rightHandId(db, orgId)) as Promise<string | null>,
     pendingReturns(db, actorId, orgId),
   ]);
   const later = laterWork(returns);
@@ -252,14 +256,14 @@ export async function loadAgentStatuses(
         waitingMachineId: agentRuns.waitingMachineId,
         outage: outageParkedSql,
         // A long-work pause (ADR 0118) reads as the wait on what it paused on.
-        waitCode: sql<string | null>`case when ${agentRuns.transcript}->'waitingForBrain'->>'code' = 'usage_pause'
-          then (case when ${agentRuns.transcript}->'waitingForBrain'->>'source' = 'budget' then 'budget' else 'plan_limit' end)
-          else ${agentRuns.transcript}->'waitingForBrain'->>'code' end`,
+        waitCode: sql<string | null>`case when ${runState}->'waitingForBrain'->>'code' = 'usage_pause'
+          then (case when ${runState}->'waitingForBrain'->>'source' = 'budget' then 'budget' else 'plan_limit' end)
+          else ${runState}->'waitingForBrain'->>'code' end`,
         /** A conversation's catch-up: waiting on its plan or budget itself (not long work paused near one). */
         catchUp: sql<"plan_limit" | "budget" | null>`case when ${agentRuns.status} = 'waiting_input'
-          and ${agentRuns.transcript}->'waitingForBrain'->>'code' in ('plan_limit', 'budget')
-          then ${agentRuns.transcript}->'waitingForBrain'->>'code' end`,
-        resetsAt: sql<string | null>`${agentRuns.transcript}->'waitingForBrain'->>'resetsAt'`,
+          and ${runState}->'waitingForBrain'->>'code' in ('plan_limit', 'budget')
+          then ${runState}->'waitingForBrain'->>'code' end`,
+        resetsAt: sql<string | null>`${runState}->'waitingForBrain'->>'resetsAt'`,
       })
       .from(agentRuns)
       .where(and(eq(agentRuns.orgId, orgId), inArray(agentRuns.status, [...ACTIVE, ...WAITING]), ...ofRuns)),
@@ -323,16 +327,19 @@ export async function loadAgentStatuses(
       mine.some((w) => w.status === "live" && (w.state === null || w.state === "working"));
     const outNow = out && !thinking;
     if (outNow && stored?.line.by !== "self") status = outLine(out, catchUps.length);
-    // Away is for an agent idle a while since it last worked: one just made counts from its making, and the right hand,
-    // where the workspace's people come to talk, never idles away.
-    const fresh = activeAt ?? new Date(a.createdAt);
+    // Away is for an agent idle a while since it last worked: one just made counts from its making. A run parked on an
+    // approval or an answer counts only from its last change, so days of waiting don't keep it online.
+    const lastMove = Math.max(
+      new Date(a.lastRunAt ?? a.createdAt).getTime(),
+      ...runs.map((r) => r.updatedAt.getTime()),
+    );
     const presence: AgentPresence = a.heldAt
       ? "offline"
       : outNow
         ? "out"
         : heavy
           ? "busy"
-          : runs.length > 0 || a.builtin === "right_hand" || ms - fresh.getTime() < AGENT_AWAY_AFTER_MS
+          : working.length > 0 || mine.length > 0 || ms - lastMove < AGENT_AWAY_AFTER_MS
             ? "online"
             : "away";
     const budgetPaused =
@@ -518,8 +525,12 @@ export function lineInEnglish(line: AgentStatusLine): string | null {
   return line.kind ? words[line.kind] : null;
 }
 
-/** Tells the apps an agent's presence or line moved (a run started or ended, a line changed): ids only. */
+/**
+ * Tells the apps an agent's presence or line moved (a run started or ended, a line changed): ids only. The workspace's
+ * kept statuses and work go first (`forgetOrgReads`), so the reads this event sets off see the change.
+ */
 export async function announceAgentStatus(pubsub: PubSub | undefined, orgId: string, agentId: string) {
+  await forgetOrgReads(pubsub, orgId);
   await publishOrgEvent(pubsub, { type: "org.broadcast", orgId, event: { type: "agent.status", orgId, agentId } });
 }
 

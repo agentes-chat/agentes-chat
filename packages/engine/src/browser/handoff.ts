@@ -55,7 +55,7 @@ import { enqueue } from "../outbox";
 import { isRightHand, isRightHandId } from "../right-hand";
 import {
   machineScope,
-  noSeatMessage,
+  NO_SEAT_MESSAGE,
   SHARED_SEAT,
   screenPersonOf,
   seatUserOf,
@@ -982,7 +982,7 @@ export function createBrowserHandoffToolSource(
     const person = await screenPersonOf(ctx.db, ctx);
     /** The person whose own seat it is: only they are asked onto it. Null for an agent's screen and the shared seat's. */
     const own = seatUserOf(person);
-    if (person === false) return { content: noSeatMessage(ctx), isError: true };
+    if (person === false) return { content: NO_SEAT_MESSAGE, isError: true };
     if (person && screen === "browser") {
       return {
         content: `Nothing was asked: your browser here shows on your desktop, so ask there with ${DESKTOP_ASK_PERSON_TOOL}.`,

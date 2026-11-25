@@ -250,7 +250,7 @@ function Deleting({ org, deletion }: { org: OrgSummary; deletion: OrgDeletion })
  * behind an ⓘ), then the screen's buttons at the column's width, and `foot` apart under them. Signed in: no language
  * to pick there.
  */
-function ClosedScreen({
+export function ClosedScreen({
   title,
   lead,
   hint,
@@ -361,7 +361,7 @@ export function AccountDeletingScreen({ dueAt }: { dueAt: string | null }) {
 }
 
 /** Sair, from a screen in place of the app: out of the account, to the sign-in. Working while it runs. */
-function SignOutButton({ leave, disabled }: { leave: ReturnType<typeof useSignOut>; disabled?: boolean }) {
+export function SignOutButton({ leave, disabled }: { leave: ReturnType<typeof useSignOut>; disabled?: boolean }) {
   const { t } = useTranslation();
   return (
     <Button size="lg" block loading={leave.pending} disabled={disabled} onClick={() => void leave.signOut()}>

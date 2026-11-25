@@ -111,7 +111,17 @@ export { ROW_CARD_INSET, RowAction } from "./RowAction";
 export { CheckMark, Disclosure, MenuMark, ROW_MARK } from "./RowMarks";
 export { ROW_OUT_MS, RowPressable, type RowPressableProps } from "./RowPressable";
 export { type Corners, corners, insetCorners, RADIUS } from "./radius";
-export { CARD_PAD, GROUPED_ROW, SCREEN_X, SHEET_BAR, SHEET_GAP, SHEET_X, TOOL_H, TOUCH } from "./rhythm";
+export {
+  CARD_PAD,
+  GROUPED_ROW,
+  MESSAGE_CARD_X,
+  SCREEN_X,
+  SHEET_BAR,
+  SHEET_GAP,
+  SHEET_X,
+  TOOL_H,
+  TOUCH,
+} from "./rhythm";
 export { roleMarkFit, roleMarkIcon } from "./role-mark";
 export { SearchField, type SearchFieldProps } from "./SearchField";
 export { Section, type SectionProps } from "./Section";
@@ -121,6 +131,7 @@ export {
   Sheet,
   SheetContent,
   type SheetProps,
+  useRouteSheetHeader,
   useRouteSheetOptions,
   useRouteSheetScrollable,
   useSheetBody,
@@ -129,9 +140,11 @@ export {
 export { SheetBar, type SheetBarProps } from "./SheetBar";
 export { SheetScreen, type SheetScreenProps } from "./SheetScreen";
 export { SheetSurface } from "./SheetSurface";
+export { SideScroll, type SideScrollProps } from "./SideScroll";
 export { SkeletonList, SkeletonOver, SkeletonRow, useFirstLoad, usePulse } from "./Skeleton";
 export { type SwipeAction, SwipeRow } from "./SwipeRow";
 export { searchCancelVisible, searchShowsResults } from "./searchMode";
+export { Tag } from "./Tag";
 export {
   fieldText,
   systemText,

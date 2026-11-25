@@ -840,7 +840,7 @@ export const helpPl: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "data",
         heading: "Co wysyła",
         blocks: [
-          "Raz dziennie serwer wysyła do agentes.chat anonimowe statystyki użycia: liczby takie jak osoby, agenci, rozmiary maszyn, zużyte tokeny AI i ile danych wysyłają i odbierają przeglądarki agentów. Nigdy wiadomości, pliki, nazwy ani strony. `docker compose run --rm agentes telemetry` pokazuje dokładnie, co zostałoby wysłane. Właściciel wyłącza to w **Ustawienia\u00a0›\u00a0Ogólne** albo przez `TELEMETRY=off` w `.env`.",
+          "Raz dziennie serwer wysyła do agentes.chat anonimowe statystyki użycia: liczby takie jak osoby, agenci, rozmiary maszyn, zużyte tokeny AI, ile danych wysyłają i odbierają przeglądarki agentów oraz jak szybko aplikacje się otwierają i działają. Nigdy wiadomości, pliki, nazwy ani strony. `docker compose run --rm agentes telemetry` pokazuje dokładnie, co zostałoby wysłane. Właściciel wyłącza to w **Ustawienia\u00a0›\u00a0Ogólne** albo przez `TELEMETRY=off` w `.env`.",
           "Raporty błędów nigdzie nie trafiają, chyba że ustawisz `SENTRY_DSN` na wybrany przez siebie serwer zgodny z Sentry. Raport zawiera błąd i miejsce, w którym wystąpił, nigdy wiadomości, e-maile, adresy IP, ciasteczka ani tokeny.",
         ],
       },

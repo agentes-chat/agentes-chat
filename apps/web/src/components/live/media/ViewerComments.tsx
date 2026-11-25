@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import { FileView, usePreviewUrl } from "@/components/artifacts/FileView";
 import { ImageZoom } from "@/components/artifacts/ImageZoom";
 import { useOrg } from "@/components/org-context";
+import { STORAGE_KEYS, storage } from "@/lib/storage";
 import { ChannelSkeleton } from "@/pages/ChannelPage";
 import { ThreadPage } from "@/pages/ThreadPage";
 import type { LiveAskRequest } from "../editor";
@@ -25,7 +26,8 @@ import "./media.css";
  * A picture's, a video's or a PDF's comments in the viewer (ADR 0208): its pins over the file, and "Comments" opens
  * the file's conversation (ADR 0199) as the viewer's right column. With it open, a press on the file marks it (a
  * point, or an area when dragged; a video at that moment, a PDF on that page) and the conversation's composer gets
- * "About area 4 of the image" with the app's picture of the place, which goes up only with the message.
+ * "About area 4 of the image" with the app's picture of the place, which goes up only with the message. "Mark" on the
+ * file's bar turns that off and on (kept per person): off, a press zooms, plays or scrolls as with the comments closed.
  */
 
 type FileContent = Extract<ArtifactDetail["content"], { kind: "file" }>;
@@ -100,6 +102,8 @@ export function ViewerComments({
   const pins = useMemo(() => mediaPinsOf(messages.data ?? [], fileId, version), [messages.data, fileId, version]);
 
   const [showResolved, setShowResolved] = useState(false);
+  const [markOn, setMarkOn] = useState(() => storage.get(STORAGE_KEYS.fileMarking) !== "0");
+  const marking = open && markOn;
   const [focusId, setFocusId] = useState<string | null>(at ?? null);
   // The message the conversation scrolls to (set again to scroll there again).
   const [jump, setJump] = useState<string | undefined>(at);
@@ -267,7 +271,7 @@ export function ViewerComments({
       ? { mark: draft.selection.mark, n: Number(draft.selection.label) || pins.length + 1 }
       : null,
     draftPage,
-    tool: open ? "comment" : "move",
+    tool: marking ? "comment" : "move",
     onOpenPin: openPin,
   };
   const resolvedCount = pins.filter((p) => p.resolved).length;
@@ -284,7 +288,29 @@ export function ViewerComments({
         {t("files.comments.resolvedCount", { count: resolvedCount })}
       </Button>
     ) : null;
-  const hint = open ? t(`files.comments.hint.${media}` as "files.comments.hint.image") : null;
+  const markTool = open ? (
+    <Button
+      size="sm"
+      variant="ghost"
+      icon="comment"
+      aria-pressed={markOn}
+      title={t(markOn ? "files.comments.markOff" : "files.comments.markOn")}
+      onClick={() => {
+        storage.set(STORAGE_KEYS.fileMarking, markOn ? "0" : "1");
+        setMarkOn(!markOn);
+      }}
+    >
+      {t("files.comments.mark")}
+    </Button>
+  ) : null;
+  const tools =
+    markTool || resolved ? (
+      <>
+        {markTool}
+        {resolved}
+      </>
+    ) : null;
+  const hint = marking ? t(`files.comments.hint.${media}` as "files.comments.hint.image") : null;
   const fileUrl = api.artifacts.fileUrl(org.id, fileId, { version });
 
   let stage: ReactNode = null;
@@ -295,7 +321,7 @@ export function ViewerComments({
         content={content}
         marks={marks}
         hint={hint}
-        tools={resolved}
+        tools={tools}
         dragging={dragging}
         onDraft={setDragging}
         onSwipe={onSwipe}
@@ -303,11 +329,12 @@ export function ViewerComments({
       />
     );
   } else if (content && media === "video") {
-    const bar = Boolean(hint || resolved);
+    const bar = Boolean(hint || tools);
     stage = (
       <div className="file-view file-view--image mf-viewstage">
         <VideoStage
           src={fileUrl}
+          handoff={fileId}
           name={content.name}
           marks={marks}
           pad={bar ? VIDEO_PAD_BAR : VIDEO_PAD}
@@ -320,7 +347,7 @@ export function ViewerComments({
             )
           }
         />
-        {bar && <StageBar hint={hint} tools={resolved} top />}
+        {bar && <StageBar hint={hint} tools={tools} top />}
       </div>
     );
   } else if (content) {
@@ -345,7 +372,7 @@ export function ViewerComments({
           hint={hint}
           tools={
             <>
-              {resolved}
+              {tools}
               {pageCount > 0 && (
                 <span className="mf-pages-now tabular">
                   {t("files.comments.pageOf", { page: pageNow, count: pageCount })}

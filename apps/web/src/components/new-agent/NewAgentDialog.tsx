@@ -14,7 +14,8 @@ import {
   useSkills,
 } from "@agenteschat/client";
 import { type Level, saveLevels } from "@agenteschat/client/lib/access-levels";
-import { personalAllowed } from "@agenteschat/client/lib/connected";
+import type { AiChoice } from "@agenteschat/client/lib/ai-choice";
+import { personalServesAgents } from "@agenteschat/client/lib/connected";
 import { setDraftFor } from "@agenteschat/client/lib/drafts";
 import { errorText as failureText } from "@agenteschat/client/lib/errors";
 import { FIELD_LIMITS } from "@agenteschat/client/lib/field-limits";
@@ -67,6 +68,7 @@ import { useApi } from "@/api/context";
 import { useConnectedById } from "@/components/AccessLevels";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { LookPicker } from "@/components/AgentFields";
+import { AiChoicePicker } from "@/components/ai/AiChoice";
 import { ConnectFlow, type FlowState } from "@/components/ConnectFlow";
 import { ConnectorIcon } from "@/components/ConnectorIcon";
 import { useConnectAi } from "@/components/connect-ai-context";
@@ -97,6 +99,10 @@ import { useToast } from "@/lib/toast";
 import { AppsPickerDialog } from "./AppsPicker";
 import { ChannelDialog, type ProposalChange, type ProposalLater, ProposalSide, RoutineDialog } from "./ProposalReview";
 import { useNewAgentBrain } from "./useNewAgentBrain";
+
+/** The one picker's target here: nothing is saved before the agent exists. */
+const NEW_AGENT = { kind: "newAgent" } as const;
+
 import "../team-plan.css";
 import "./new-agent-card.css";
 import { type Flight, forgetReturn, type NewAgentRequest, RESUME_PARAM, saveForReturn } from "./new-agent-context";
@@ -247,8 +253,10 @@ export function NewAgentDialog({
   const live = useAgentProposal(org.id, review?.messageId ?? null);
   const deny = useDenyAgentProposal(org.id);
   const mailboxes = useMailAccounts(org.id);
+  const [aiPick, setAiPick] = useState<AiChoice | null>(null);
   const brain = useNewAgentBrain(
     request.accountId ?? (proposed?.ai.kind === "account" ? proposed.ai.accountId : undefined),
+    aiPick,
   );
   const connectAi = useConnectAi();
   const qc = useQueryClient();
@@ -1162,6 +1170,22 @@ export function NewAgentDialog({
                           </button>
                         </span>
                       )}
+                      {brain.hasAi && brain.choice && (
+                        <section className="nac__sec" aria-label={t("aiHub.whoThinks")}>
+                          <span className="nac__head">
+                            <span className="nac__label">{t("aiHub.whoThinks")}</span>
+                          </span>
+                          <AiChoicePicker
+                            orgId={org.id}
+                            target={NEW_AGENT}
+                            value={brain.choice}
+                            onChange={setAiPick}
+                            disabled={busy}
+                            // Connect over this form: a plan connected there thinks for the agents the person creates.
+                            {...(connectAi ? { onAdd: () => connectAi.open({ forNewAgent: true }) } : {})}
+                          />
+                        </section>
+                      )}
                       <section className="nac__sec" aria-label={t("newAgentCard.uses")}>
                         <span className="nac__head">
                           <span className="nac__label">{t("newAgentCard.uses")}</span>
@@ -1500,7 +1524,7 @@ export function NewAgentDialog({
           }
           connected={new Set(connectedApps.keys())}
           onCard={new Set(appIds)}
-          canConnect={(d) => can(org, "manage_connectors") || personalAllowed(d.id)}
+          canConnect={(d) => can(org, "manage_connectors") || personalServesAgents(d.id)}
           onUse={(d) => takeApp(d.id)}
           onConnect={connectApp}
           onClose={() => setPicking(false)}

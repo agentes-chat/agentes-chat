@@ -291,13 +291,17 @@ html:not([data-pointer]) .auth__quiet:focus-visible {
   text-align: center;
   text-wrap: balance;
 }
-/* The sign-in code the person matches between the app window and the browser. */
+/* The sign-in code the person matches between the app window and the browser: the code on its own line, never broken,
+   its explanation centred under it. */
 .auth__code {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
   padding: 10px 0 2px;
 }
 .auth__codeValue {
+  white-space: nowrap;
   font-family: var(--font-mono);
   font-size: 28px;
   font-weight: 700;

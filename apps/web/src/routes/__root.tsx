@@ -10,8 +10,9 @@ import { ErrorScreen } from "@/components/ErrorScreen";
 import { AccountDeletingScreen } from "@/components/Standing";
 import { useBackCloses } from "@/hooks/useBackCloses";
 import { switchAccount } from "@/lib/accounts";
-import { askForPhone, asksForPhone, inDesktopApp, pageReadyAfterPaint, routeNewWindowLinks } from "@/lib/desktop";
+import { askForPhone, asksForPhone, inDesktopApp, routeNewWindowLinks } from "@/lib/desktop";
 import { dispatchPushOpen } from "@/lib/push-open";
+import { firstScreenPainted } from "@/lib/vitals";
 import { listenForPushOpens } from "@/lib/web-push";
 
 export const Route = createRootRouteWithContext<RouterContext>()({
@@ -29,8 +30,8 @@ function Root() {
   const api = useApi();
   const myId = me?.user.id ?? null;
   useBackCloses();
-  // In the app: once this first screen is on the glass, the app's cover over the window goes.
-  useEffect(pageReadyAfterPaint, []);
+  // Once this first screen is on the glass: the opening's time, and in the app, the cover over the window goes.
+  useEffect(firstScreenPainted, []);
   // In the app: a link to another site opens in the browser, one to this server in the window (main_window.rs).
   useEffect(() => (inDesktopApp() ? routeNewWindowLinks() : undefined), []);
   // The app opens a page of the site that is already open (the tray, a notification, ⌘-click) without

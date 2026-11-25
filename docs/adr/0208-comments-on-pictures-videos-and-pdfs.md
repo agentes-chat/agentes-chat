@@ -102,11 +102,16 @@ pin opens it at that comment. A video plays in our player with its comments as m
 pauses it at that moment (and a point or an area of the frame). A PDF is drawn by pdf.js (Apache-2.0, loaded only
 when one opens), a page read and drawn as it comes near and let go when it goes far, the viewer as tall as a
 picture's; a comment marks a page and a point or an area of it, and the versions give way to the conversation while
-it is open. Narrow, the conversation takes the whole viewer and "Comments" goes back to the file.
+it is open. Narrow, the conversation takes the whole viewer and "Comments" goes back to the file. A file that already
+has comments opens with them beside it, as it stood when it opened: one arriving later never moves the file under
+whoever is looking at it, and closing them is the person's.
 
 Under a file with comments the chat shows their line (who, how many, when), the thread line's look; it opens the
 viewer with the comments open, as does a link to one (the Drive's `?artifact=…&m=…`; the file's page address of a
-live file, `/drive/<id>?m=…`, sends a picture, a video or a PDF there).
+live file, `/drive/<id>?m=…`, sends a picture, a video or a PDF there). The phone's chat shows the same line under
+the file; a tap opens the file, its conversation's line under it. The line counts a new comment at once for everyone
+there: after a message in a file's conversation, the conversation the file was posted in hears `artifact.updated`
+(`announceFileConversation`, with the task's in the `notifications.message` job), and its card reads the file again.
 
 The phone opens a file's conversation the same way for every file, a picture, a video, a PDF and a live file alike:
 the file's talk line is the one way in, and the conversation comes up in the system's sheet over the file (a route
@@ -138,3 +143,15 @@ menu.
 - Phone comments carry no pictures and no areas; their agents read the file itself.
 - The phone gains `react-native-pdf-light` (MIT, native renderers, no web view) for PDFs; there is no pinch zoom on a
   PDF's pages, so its pins stand where the page is laid out.
+
+## Addendum (2026-11-22): the phone pushes the conversation
+
+The sheet over the file loaded heavily and moved as it came up, the keyboard and the file behind each moving with it.
+The phone now pushes a file's conversation as a screen of the stack, the conversation as every other one is (the
+thread at its root, the stack's bar and back), for every kind of file; the route sheet, its store and the chat's sheet
+mode are gone. The picture viewer is a screen of the stack too (faded in, black), not a modal: what is pushed from it
+shows over it, and its back comes back to the picture (a message's line about the picture, tapped in the
+conversation, goes back to the viewer on that page rather than opening a second one). With no sheet to tap through, a
+touch held on a picture or a PDF's page marks the point and pushes the conversation about it, the person's pin left on
+the spot while the comment is unsent; a video's frame stays the system player's, and a video that has played opens its
+conversation about the moment it is at. A video's frame no longer shows the pins made near its moment.

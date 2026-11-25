@@ -166,7 +166,10 @@ describe("a link to a message far back", () => {
     await renderApp(`/org/${ORG_ID}/c/${GENERAL_ID}?m=far-2`, { api: createFakeApi(state) });
     await settle(10);
     expect(row("far-2")?.classList.contains("ac-msg--focus")).toBe(true);
-    expect(state.calls.find((c) => c.method === "chat.messages")?.args[1]).toEqual({ around: "far-2", limit: 200 });
+    expect(state.calls.find((c) => c.method === "chat.messages")?.args[1]).toMatchObject({
+      around: "far-2",
+      limit: 200,
+    });
     // Only the page around it: the latest messages wait below the gap.
     expect(row("far-5999")).toBeNull();
     expect(document.body.textContent).not.toContain("Essa mensagem não está disponível.");

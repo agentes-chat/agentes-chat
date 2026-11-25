@@ -721,7 +721,8 @@ describe("who sees every agent in Equipe's lists (view_all_agents)", () => {
     await everyoneWithout(f.db, f.org.id, "view_all_agents");
     expect(await listing(walt.id)).toEqual({ team: ["Dev"], groups: ["Time:1"], count: all.count - 2 });
     expect(await listing(f.owner.id)).toEqual(all);
-    // A cargo that holds the key, or manages agents, lists every agent again but the private one.
+    // A cargo that holds the key, or manages agents, lists every agent again but the private one. Who manages agents
+    // also finds it on Equipe by its facts alone (ADR 0085, addendum of 2026-11-24); its setor and the counts don't.
     for (const permissions of [["view_all_agents"], ["manage_agents"]] as const) {
       const role = await createRole(f.db, f.owner.id, f.org.id, {
         name: permissions[0],
@@ -729,7 +730,9 @@ describe("who sees every agent in Equipe's lists (view_all_agents)", () => {
       });
       const lia = await addMember(f.db, f.org.id, "member", `lia-${permissions[0]}`);
       await setMemberRoles(f.db, f.owner.id, f.org.id, lia.id, [role.id]);
-      expect(await listing(lia.id)).toEqual(viewsAll);
+      expect(await listing(lia.id)).toEqual(
+        permissions[0] === "manage_agents" ? { ...viewsAll, team: ["Bento", "Cora", "Dev"] } : viewsAll,
+      );
     }
     // It narrows lists only: Bento's public card still reaches the member, to draw its messages.
     expect((await listAgents(f.db, walt.id, f.org.id)).map((a) => a.id)).toContain(bento.id);
@@ -760,8 +763,9 @@ describe("who sees every agent in Equipe's lists (view_all_agents)", () => {
     await setMemberRoles(f.db, f.owner.id, f.org.id, gil.id, [keys.id]);
     await setAgentEditors(f.db, duda.id, f.org.id, bento.id, { userIds: [edna.id], roleIds: [review.id] });
 
+    // Listed whole: a row on Equipe that isn't its facts alone.
     const lists = async (userId: string) => {
-      const team = (await getTeam(f.db, userId, f.org.id)).agents.some((a) => a.id === bento.id);
+      const team = (await getTeam(f.db, userId, f.org.id)).agents.some((a) => a.id === bento.id && !a.factsOnly);
       const membership = await getMembership(f.db, userId, f.org.id);
       const [row] = await f.db
         .select({ id: schema.agents.id })
@@ -776,6 +780,12 @@ describe("who sees every agent in Equipe's lists (view_all_agents)", () => {
     for (const who of [duda, f.owner, caio, edna, fabi]) expect(await lists(who.id)).toBe(true);
     // A plain member who sees every agent, and who holds "Editar qualquer agente" without its audience.
     for (const who of [walt, gil]) expect(await lists(who.id)).toBe(false);
+    // The latter finds it on Equipe by its facts alone; the former not at all.
+    const facts = async (userId: string) =>
+      (await getTeam(f.db, userId, f.org.id)).agents.find((a) => a.id === bento.id)?.factsOnly;
+    expect(await facts(gil.id)).toBe(true);
+    expect(await facts(walt.id)).toBeUndefined();
+    expect(await facts(edna.id)).toBe(false);
 
     // Answering someone else, it is listed again to who sees every agent.
     await setAgentAudience(f.db, duda.id, f.org.id, bento.id, { mode: "people", userIds: [duda.id], roleIds: [] });

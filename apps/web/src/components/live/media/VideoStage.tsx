@@ -32,6 +32,7 @@ export interface VideoHandle {
  */
 export function VideoStage({
   src,
+  handoff,
   name,
   marks,
   pad,
@@ -39,6 +40,8 @@ export function VideoStage({
   onHandle,
 }: {
   src: string;
+  /** The file, to go on from its chat tile's moment (`VideoPlayer`'s `handoff`). */
+  handoff?: string;
   name: string;
   marks: StageMarks;
   pad: StagePad;
@@ -180,12 +183,15 @@ export function VideoStage({
       >
         <VideoPlayer
           src={src}
+          handoff={handoff}
           name={name}
           variant="viewer"
           labels={labels}
           onTime={onTime}
           onVideo={onVideo}
           marks={markers}
+          // A comment's pictures are this video's frame: drawn from another origin, they couldn't be read back.
+          crossOrigin="anonymous"
         >
           {/* biome-ignore lint/a11y/noStaticElementInteractions: Comment's marking surface; the keys stay the player's */}
           <div

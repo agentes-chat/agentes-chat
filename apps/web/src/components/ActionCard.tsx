@@ -37,7 +37,7 @@ import {
 } from "@agenteschat/client/lib/action-cards";
 import { delegateUndoLine } from "@agenteschat/client/lib/approval-words";
 import { createsRoutinesFor } from "@agenteschat/client/lib/audience";
-import { connectedItems, itemName, personalAllowed } from "@agenteschat/client/lib/connected";
+import { connectedItems, itemName, personalServesAgents } from "@agenteschat/client/lib/connected";
 import { setDraftFor } from "@agenteschat/client/lib/drafts";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { joinNames, whenAt } from "@agenteschat/client/lib/format";
@@ -221,7 +221,7 @@ function ConnectAppCardView({ card }: { card: ConnectAppCard }) {
     );
   }
   const admin = can(org, "manage_connectors");
-  const may = admin || personalAllowed(card.connector);
+  const may = admin || personalServesAgents(card.connector);
   return (
     <>
       <RequestOpen

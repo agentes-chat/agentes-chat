@@ -138,6 +138,8 @@ export interface GatewayCall {
   /** The agent's conversation, the same on each of its calls (`StreamOptions.session`). */
   session?: string;
   onDelta(text: string): void;
+  /** A note the model wrote between its calls, apart from its text (`StreamOptions.onNote`). */
+  onNote?(text: string): void;
   signal?: AbortSignal;
 }
 
@@ -886,6 +888,7 @@ export function createModelGateway(deps: ModelGatewayDeps) {
           endpoint: key.endpoint,
           ...(call.session ? { session: call.session } : {}),
           onDelta: call.onDelta,
+          ...(call.onNote ? { onNote: call.onNote } : {}),
         });
       } catch (error) {
         const usage = error instanceof ProviderError ? await partialUsage(error, provider, request, key) : null;

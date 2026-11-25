@@ -163,7 +163,10 @@ describe("Connecting on the phone: Para quem and the closing line", () => {
     expect(sheet).toContain("const forWhom = !item && !teamOnly && members > 1;");
     expect(sheet).toContain("disabled: !admin },");
     expect(sheet).toContain('t("connectors.personal.teamLocked")');
-    expect(sheet).toContain('t("connectors.personal.done")');
+    // A git host of one's own closes with what it does: the work of their code sessions goes out in their name.
+    expect(sheet).toContain(
+      't(isGitHostConnector(def?.id) ? "connectors.personal.githubDone" : "connectors.personal.done")',
+    );
     // A connection already there is looked up in the sheet's own tab, never the other's.
     expect(sheet).toContain("connectionOf(def, mine ? owned.mine : owned.team)");
   });
@@ -186,9 +189,9 @@ describe("Connecting on the phone: Para quem and the closing line", () => {
 
   test("a chat's card to connect opens for every member, GitHub only for who manages connectors", () => {
     const card = src("features/ai/OfferCard.tsx");
-    expect(card).toContain('can(org, "manage_connectors") || personalAllowed(card.connector)');
+    expect(card).toContain('can(org, "manage_connectors") || personalServesAgents(card.connector)');
     const screen = src("features/connectors/ConnectorsScreen.tsx");
-    expect(screen).toContain("if (!manages && !personalAllowed(connect)) return;");
+    expect(screen).toContain("if (!manages && !personalServesAgents(connect)) return;");
   });
 });
 

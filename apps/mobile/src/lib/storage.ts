@@ -64,6 +64,10 @@ export const STORED = {
   arrivalClosed: "arrival-closed",
   /** Conversas' sections the person collapsed (JSON list). */
   homeCollapsed: "home-collapsed",
+  /** How Conversas lists a team's conversations: "recent" (by latest activity) or "sectors" (by the agents' sectors). */
+  homeView: "home-view",
+  /** Conversas' sector sections the person collapsed, in Setores (JSON list of section keys). */
+  homeSectorsCollapsed: "home-sectors-collapsed",
   /** The Threads tab's sections the person collapsed (JSON list). */
   threadsCollapsed: "threads-collapsed",
   /** Agentes' groups the person collapsed, in every workspace (JSON list of group ids). */

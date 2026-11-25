@@ -99,6 +99,7 @@ describe("a routine's runs", () => {
     expect(say(run({ status: "canceled", code: "creator_left" })).key).toBe("routines.code.creator_left");
     for (const code of [
       "empty_reply",
+      "empty_reply_limit",
       "model_refused",
       "credential_wrong_provider",
       "model_unlisted",

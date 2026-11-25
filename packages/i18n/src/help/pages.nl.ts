@@ -843,7 +843,7 @@ export const helpNl: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "data",
         heading: "Wat het verstuurt",
         blocks: [
-          "Eén keer per dag stuurt de server agentes.chat anonieme gebruiksstatistieken: aantallen zoals mensen, agents, grootte van de machines, gebruikte AI-tokens en hoeveel data de browsers van de agents versturen en ontvangen. Nooit berichten, bestanden, namen of sites. `docker compose run --rm agentes telemetry` toont precies wat er verstuurd zou worden. De eigenaar zet het uit in **Instellingen\u00a0›\u00a0Algemeen**, of met `TELEMETRY=off` in `.env`.",
+          "Eén keer per dag stuurt de server agentes.chat anonieme gebruiksstatistieken: aantallen zoals mensen, agents, grootte van de machines, gebruikte AI-tokens, hoeveel data de browsers van de agents versturen en ontvangen en hoe snel de apps openen en reageren. Nooit berichten, bestanden, namen of sites. `docker compose run --rm agentes telemetry` toont precies wat er verstuurd zou worden. De eigenaar zet het uit in **Instellingen\u00a0›\u00a0Algemeen**, of met `TELEMETRY=off` in `.env`.",
           "Foutrapporten gaan nergens heen, tenzij je `SENTRY_DSN` instelt op een Sentry-compatibele server die je zelf kiest. Een rapport bevat de fout en waar die gebeurde, nooit berichten, e-mails, IP-adressen, cookies of tokens.",
         ],
       },

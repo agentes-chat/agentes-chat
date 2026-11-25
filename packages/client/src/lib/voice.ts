@@ -124,3 +124,21 @@ export async function voiceAudioGone(url: string, request: typeof fetch = fetch)
     stop.abort();
   }
 }
+
+/**
+ * A sound's wave as a voice message draws it: the loudness (RMS) of `bars` equal slices of its samples, the loudest one
+ * at 1, so a quiet file still shows its shape.
+ */
+export function wavePeaks(samples: ArrayLike<number>, bars = VOICE_PEAKS): number[] {
+  const n = Math.min(bars, samples.length);
+  if (n === 0) return [];
+  const rms = Array.from({ length: n }, (_, i) => {
+    const from = Math.floor((i * samples.length) / n);
+    const to = Math.floor(((i + 1) * samples.length) / n);
+    let sum = 0;
+    for (let j = from; j < to; j++) sum += (samples[j] ?? 0) ** 2;
+    return Math.sqrt(sum / Math.max(1, to - from));
+  });
+  const top = Math.max(...rms);
+  return rms.map((r) => (top > 0 ? Math.round((r / top) * 1000) / 1000 : 0));
+}

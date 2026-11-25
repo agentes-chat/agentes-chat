@@ -43,6 +43,7 @@ import type { ThisMacRequest } from "../control/this-mac";
 import type { TrayState } from "../control/tray";
 import { acmeSeed, FAKE_LINKS, FAKE_SERVER, FakeRunner, horizonteSeed } from "../dev/fake-runner";
 import { createFakeSite, type FakeSite } from "../dev/fake-site";
+import type { ReportFacts } from "../report/report";
 import type { AppInfo, CompatMode, Host, RunnerInfo, RunnerStateChange, WindowName } from "./types";
 
 export type Scenario = "first" | "windows" | "linux" | "cloud" | "selfhost" | "link" | "here";
@@ -444,6 +445,13 @@ export function createFakeHost(
         platform === "linux"
           ? `agentes.chat ${version} · Linux · Ubuntu 26.04 LTS · wayland (GNOME) · WebKitGTK 2.50.4 · Intel (i915) · CPU (chosen) · AppImage`
           : `agentes.chat ${version} · ${platform === "mac" ? "macOS 15.5" : "Windows"}`,
+    }),
+    reportFacts: async (): Promise<ReportFacts> => ({
+      osVersion: platform === "mac" ? "15.5" : platform === "windows" ? "10.0.19045" : "6.8.0-45-generic",
+      cpus: 8,
+      memoryBytes: 16 * 2 ** 30,
+      webviewBytes: 240_000_000,
+      openingMs: 2300,
     }),
     compatMode: async () => {
       const now = { ...host.compat };

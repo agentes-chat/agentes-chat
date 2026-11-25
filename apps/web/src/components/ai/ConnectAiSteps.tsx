@@ -33,7 +33,7 @@ import { CUSTOM_PROVIDER } from "@agenteschat/client/lib/endpoints";
 import { errorText, holdText, keyRefusal } from "@agenteschat/client/lib/errors";
 import { NAMES_SHOWN, namesText } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
-import { brainTool, installableCli } from "@agenteschat/client/lib/machines";
+import { brainTool, cliCommandWayOut, installableCli } from "@agenteschat/client/lib/machines";
 import {
   type AiChoice,
   ALL_AGENTS,
@@ -103,7 +103,15 @@ import { type ReactNode, useCallback, useEffect, useId, useRef, useState } from 
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
-import { ConnectHave, type HaveItem, HaveRow, haveId, renameOf, sortHave } from "@/components/arrival/ConnectHave";
+import {
+  ConnectHave,
+  type HaveItem,
+  HaveRow,
+  haveId,
+  haveMark,
+  renameOf,
+  sortHave,
+} from "@/components/arrival/ConnectHave";
 import { ToolOffWayOut } from "@/components/devices/ToolOneClick";
 import { useOrg } from "@/components/org-context";
 import { KeyMismatch, KeyRefused, ProviderSelect } from "@/components/ProviderKey";
@@ -112,7 +120,7 @@ import { useDirectory } from "@/hooks/useDirectory";
 import { useRenameAccount } from "@/hooks/useRenameAccount";
 import { useToast } from "@/lib/toast";
 import { AddAccount, OpenPage, Step, StepTitle } from "./AddAccountFlow";
-import { CliMissing } from "./CliMissing";
+import { CliCheckAgain, CliMissing } from "./CliMissing";
 import { EndpointForm } from "./EndpointForm";
 import { PlanReplies, usePlanRepliesShown } from "./PlanReplies";
 import { PlanHold, usePlanHold } from "./plan-hold";
@@ -1377,7 +1385,7 @@ function PlanSteps({
       ),
       whose: t("connectAi.chat.yours"),
       group: { key: "mine", label: t("connectAi.chat.mine") },
-      mark: <ProviderLogo id={a.provider ?? a.kind} size="xs" />,
+      mark: haveMark(a.provider ?? a.kind),
       usage: a.usage,
       rename: renameOf(t, a, view?.computer?.machineId, rename),
     })),
@@ -1736,19 +1744,34 @@ function GateWait({
     gate.state === "unsupported" &&
     (gate.reason === "not_installed" || gate.reason === "cant_start") &&
     !hold &&
-    installableCli(kind) &&
     row &&
-    row.kind !== "managed"
+    row.kind !== "managed" &&
+    (installableCli(kind) || cliCommandWayOut(t, kind, row, gate.reason, computer))
   ) {
-    // A computer someone connected that hasn't the program, or has it and it won't start: install it from here.
+    // A computer someone connected that hasn't the program, or has it and it won't start: install it from here, or
+    // the line to run there.
     wait = <CliMissing machine={row} kind={kind} computer={computer} reason={gate.reason} useKey={keyButton} />;
   } else if (why && !(gate.state === "offline" && signingIn)) {
+    // A program there that won't start, on a computer someone connected: its own words, then a look once it's fixed.
+    const recheck =
+      gate.state === "unsupported" &&
+      gate.reason === "cant_start" &&
+      !hold &&
+      row?.kind !== "managed" &&
+      row?.cliInstall;
     wait = (
       <>
         <SettingNote icon={why.rechecks ? "clock" : "alert"} live={why.rechecks}>
           {why.text}
         </SettingNote>
-        {!hold && useKey}
+        {recheck && row ? (
+          <div className="ac-acts">
+            <CliCheckAgain machine={row} />
+            {useKey}
+          </div>
+        ) : (
+          !hold && useKey
+        )}
       </>
     );
   } else if (gate.state === "missing") {

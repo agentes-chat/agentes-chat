@@ -28,6 +28,8 @@ export interface LodiPrefs {
   digestOff: boolean;
   /** Reminders of what they and the right hand agreed on. */
   remindOff: boolean;
+  /** "Learns from your conversations": off, it learns nothing from them on its own (`rightHandLearnsFrom`). */
+  learnOff: boolean;
   /**
    * Suggestions this person put away for good, by key (`unanswered:<channelId>`); the newest `MUTED_MAX`. In a patch:
    * the keys to add.
@@ -43,6 +45,7 @@ export const LODI_PREFS_DEFAULTS: LodiPrefs = {
   dayHour: 9,
   digestOff: false,
   remindOff: false,
+  learnOff: false,
   muted: [],
 };
 
@@ -83,6 +86,7 @@ export function lodiPrefsOf(raw: unknown): LodiPrefs {
     dayHour: whole(r.dayHour, 23) ?? (daily ? (hour ?? LEGACY_HOUR) : LODI_PREFS_DEFAULTS.dayHour),
     digestOff: flag(r.digestOff) ?? off,
     remindOff: flag(r.remindOff) ?? off,
+    learnOff: flag(r.learnOff) ?? false,
     muted: stringsOf(r.muted).slice(-MUTED_MAX),
   };
 }
@@ -144,6 +148,7 @@ export const lodiPrefsSql = {
   remindOff: sql.raw(
     `(case when ${isFlag("remindOff")} then ${isTrue("remindOff")} else ${isTrue("off")} end)`,
   ) as SQL<boolean>,
+  learnOff: sql.raw(`(${isTrue("learnOff")})`) as SQL<boolean>,
   day: sql.raw(`coalesce(${wholeSql("day", 6)}, ${LODI_PREFS_DEFAULTS.day})`) as SQL<number>,
   weekHour: sql.raw(`coalesce(${wholeSql("weekHour", 23)},
     case when ${isTrue("daily")} then null else ${wholeSql("hour", 23)} end, ${LODI_PREFS_DEFAULTS.weekHour})`) as SQL<number>,
@@ -152,12 +157,35 @@ export const lodiPrefsSql = {
 };
 
 /**
- * For a statement that turns stored time zones into local time: `with ${knownZonesSql} …`, then `zoneSql(zone,
- * fallback)` is the zone when Postgres knows it and the fallback otherwise. A zone is checked against the server's
- * own list when it is saved, which may be newer than the database's: unguarded, one such row would fail the whole
- * statement, for every workspace.
+ * For a statement that turns stored time zones into local time: `with ${knownZonesSql(await knownZoneNames(db))} …`,
+ * then `zoneSql(zone, fallback)` is the zone when Postgres knows it and the fallback otherwise. A zone is checked
+ * against the server's own list when it is saved, which may be newer than the database's: unguarded, one such row
+ * would fail the whole statement, for every workspace.
  */
-export const knownZonesSql = sql`zones as materialized (select lower(name) as name from pg_timezone_names)`;
+export const knownZonesSql = (names: readonly string[]) =>
+  sql`zones as materialized (select jsonb_array_elements_text(${JSON.stringify(names)}::jsonb) as name)`;
+
+let zoneNames: Promise<string[]> | null = null;
+/** Tests: the next `knownZoneNames` reads the list again. */
+export const forgetKnownZones = () => {
+  zoneNames = null;
+};
+
+/**
+ * The time zones Postgres knows, lowercased (`knownZonesSql`), read once per process: `pg_timezone_names` reads the
+ * database server's zone files at every query, hundreds of ms, for a list that changes only with its software. A read
+ * that failed is tried again by the next caller.
+ */
+export function knownZoneNames(db: Executor): Promise<string[]> {
+  zoneNames ??= (async () =>
+    rowsOf<{ name: string }>(await db.execute(sql`select lower(name) as name from pg_timezone_names`)).map(
+      (r) => r.name,
+    ))().catch((error: unknown) => {
+    zoneNames = null;
+    throw error;
+  });
+  return zoneNames;
+}
 export const zoneSql = (zone: SQL, fallback: SQL) =>
   sql`(case when lower(${zone}) in (select name from zones) then ${zone} else ${fallback} end)`;
 

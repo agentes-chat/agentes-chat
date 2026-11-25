@@ -103,11 +103,7 @@ function orderGroups(ai: AiAccounts): AccountOrderGroup[] {
     }
     // An admin may move anyone's: a fixture says so with its own `canMove`.
     const named = withNamed(a);
-    g.accounts.push({
-      ...named,
-      movable: movable(named),
-      canMove: (named as { canMove?: boolean }).canMove ?? named.mine,
-    });
+    g.accounts.push({ ...named, movable: movable(named), canMove: (a as { canMove?: boolean }).canMove ?? a.mine });
   }
   return groups;
 }
@@ -180,6 +176,7 @@ export function createFakeMachines(ctx: MockContext, log: (method: string, ...ar
   let setup: ComputerSetup = PAIR;
   type Login = { loginId: string; kind: MachineAccountKind; box: SecretBox | null; cancelled: boolean };
   let ai: AiAccounts = { accounts: [], computers: [] };
+  let keyFallback = false;
   const logins: Login[] = [];
   const installs = new Map<string, CliInstall | null>();
   const loginStatus = new Map<string, AccountLoginStatus>();
@@ -405,7 +402,24 @@ export function createFakeMachines(ctx: MockContext, log: (method: string, ...ar
         return { serves, agentIds: [] };
       },
       // Read whenever an order renders: not logged.
-      accountOrder: async () => ({ groups: clone(orderGroups(ai)) }),
+      accountOrder: async () => ({ groups: clone(orderGroups(ai)), keyFallback, canConfigure: true }),
+      setAccountPermissions: async (orgId, accountId, input) => {
+        log("machines.setAccountPermissions", orgId, accountId, input);
+        const nobody = { mode: "owner" as const, userIds: [], roleIds: [] };
+        return {
+          permissions: {
+            manage: input.manage ?? { ...nobody, mode: "admins" },
+            use: input.use ?? { ...nobody, mode: "everyone" },
+            reply: input.reply ?? nobody,
+          },
+          agentIds: [],
+        };
+      },
+      setKeyFallback: async (orgId, on) => {
+        log("machines.setKeyFallback", orgId, on);
+        keyFallback = on;
+        return { on };
+      },
       moveAccountInOrder: async (orgId, accountId, index) => {
         log("machines.moveAccountInOrder", orgId, accountId, index);
         const group = orderGroups(ai).find((g) => g.accounts.some((a) => a.id === accountId && a.movable));

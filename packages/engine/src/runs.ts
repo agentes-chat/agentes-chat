@@ -5,6 +5,7 @@ import { BRAIN_NAMES, type ComputerBrainKind, planName, SYSTEM_REFUSED } from ".
 import { kickSignInLine } from "./computer-queue";
 import { cutText, pgSafeJson } from "./format";
 import { recordRunFinished } from "./operator-events";
+import { runState } from "./run-state";
 import { standingErrorDetail } from "./standing";
 import { cliErrorWords, redactCredentials } from "./tool-detail";
 import type { ToolContext } from "./tools/types";
@@ -23,8 +24,8 @@ export type RunStatus = AgentRun["status"];
  * stays until a turn answers, so a run that waits on its computer or its plan since (`waitingMachineId`,
  * `waitingForBrain`) reads as that wait, never as the provider being down.
  */
-export const outageParkedSql = sql<boolean>`(${agentRuns.status} = 'waiting_input' and ${agentRuns.transcript} -> 'outage' is not null
-  and ${agentRuns.waitingMachineId} is null and ${agentRuns.transcript} -> 'waitingForBrain' is null)`;
+export const outageParkedSql = sql<boolean>`(${agentRuns.status} = 'waiting_input' and ${runState} -> 'outage' is not null
+  and ${agentRuns.waitingMachineId} is null and ${runState} -> 'waitingForBrain' is null)`;
 
 /** `outageParkedSql` for a loaded run. */
 export function outageParkedOf(run: Pick<AgentRun, "status" | "waitingMachineId" | "transcript">): boolean {
@@ -48,10 +49,10 @@ export const passedSql = sql<boolean>`((${agentRuns.status} = 'done' and ${agent
  * or long work waiting in the agent's line of work (`line`, ADR 0121): nobody is asked anything.
  */
 export const computerWaitSql = sql<"queued" | "away" | "line" | null>`(case when ${agentRuns.status} = 'waiting_input'
-  and ${agentRuns.waitingMachineId} is not null then (case when ${agentRuns.transcript}->'waitingForBrain'->>'code' = 'busy'
+  and ${agentRuns.waitingMachineId} is not null then (case when ${runState}->'waitingForBrain'->>'code' = 'busy'
   then 'queued' else 'away' end)
   when ${agentRuns.status} = 'running' and ${agentRuns.waitingMachineId} is not null then 'queued'
-  when ${agentRuns.status} = 'waiting_input' and ${agentRuns.transcript}->'waitingForBrain'->>'code' = 'work_queue' then 'line' end)`;
+  when ${agentRuns.status} = 'waiting_input' and ${runState}->'waitingForBrain'->>'code' = 'work_queue' then 'line' end)`;
 
 /**
  * `computerWaitSql` for a loaded run, for its computer only. The head of a computer's line asks for room by claiming
@@ -75,9 +76,9 @@ export const shownStatusSql = sql`(case when r.status = 'running' and r.waiting_
  * one too (`usage_pause`, by its `source`): it answers when that renews, nobody is asked.
  */
 export const usageWaitSql = sql<"plan" | "budget" | null>`(case when ${agentRuns.status} = 'waiting_input'
-  and ${agentRuns.waitingMachineId} is null then (case ${agentRuns.transcript}->'waitingForBrain'->>'code'
+  and ${agentRuns.waitingMachineId} is null then (case ${runState}->'waitingForBrain'->>'code'
   when 'plan_limit' then 'plan' when 'budget' then 'budget'
-  when 'usage_pause' then coalesce(${agentRuns.transcript}->'waitingForBrain'->>'source', 'plan') end) end)`;
+  when 'usage_pause' then coalesce(${runState}->'waitingForBrain'->>'source', 'plan') end) end)`;
 
 /** `usageWaitSql` for a loaded run. */
 export function usageWaitOf(run: Pick<AgentRun, "status" | "waitingMachineId" | "transcript">) {
@@ -343,6 +344,7 @@ export function runErrorDetail(error: string | null | undefined): {
     "budget_exceeded",
     "too_many_tool_calls",
     "empty_reply",
+    "empty_reply_limit",
     "model_refused",
     "agent_archived",
     NO_AI,
@@ -350,8 +352,11 @@ export function runErrorDetail(error: string | null | undefined): {
     COMPUTER_BUSY,
     STUCK_ERROR,
     DISK_FULL,
-    // A Codex turn on a Windows computer where MXC can't hold its commands (the runner's own words say what to do).
+    // A Codex turn on a Windows computer where no sandbox holds its commands (the runner's own words say what to do).
     "windows_sandbox",
+    // A code session's worktree isn't there for its agent's computer brain (ADR 0215): still being prepared, gone, or
+    // on a computer the agent no longer uses.
+    "code_session_unavailable",
   ];
   if (simple.includes(error)) return { errorCode: `run.${error}` };
   if (error === "timeout") return { errorCode: "run.computer_timeout", errorParams: { code: error } };
@@ -645,6 +650,8 @@ const TALK_TOOLS = [
   "ask_user",
   "ask_choices",
   "say_now",
+  // A suggested code session (ADR 0215 §11) waits for the person: the run hasn't started the change.
+  "suggest_code_session",
   "post_update",
   "steer_work",
   "stop_work",

@@ -38,6 +38,7 @@ import {
   List,
   Locked,
   Meter,
+  OptionLinks,
   RadioCard,
   RadioGroup,
   Select,
@@ -94,7 +95,7 @@ function PathCode({ path }: { path: string }) {
  * A service's mark in its color, at an icon's size on the name's line (no tile: a tile beside a name and a line that
  * wraps would own a column); "Other" our database icon.
  */
-function ProviderMark({ provider, size = 20 }: { provider: StorageProvider; size?: 14 | 20 }) {
+function ProviderMark({ provider, size = 20 }: { provider: StorageProvider; size?: 14 | 16 | 20 }) {
   if (provider === "other") return <Icon name="database" size={size} className="storage-mark" />;
   const mark = MARKS[provider];
   return (
@@ -370,20 +371,20 @@ function ConnectDialog({
         width={560}
       >
         <DialogBody>
-          <List className="storage-pick">
-            {STORAGE_PROVIDERS.map((p) => (
-              <button key={p} type="button" className="ac-list__row storage-pick__row" onClick={() => setProvider(p)}>
-                <span className="ac-iconline storage-pick__main">
-                  <ProviderMark provider={p} />
-                  <span className="list-col">
-                    <span className="storage-pick__name">{t(`storage.connect.provider.${p}`)}</span>
-                    <span className="small muted">{t(`storage.connect.providerText.${p}`)}</span>
-                  </span>
+          <OptionLinks
+            className="storage-pick"
+            options={STORAGE_PROVIDERS.map((p) => ({
+              value: p,
+              leading: (
+                <span className="ac-brand ac-brand--sm ac-brand--mono" aria-hidden="true">
+                  <ProviderMark provider={p} size={16} />
                 </span>
-                <Icon name="chevronRight" size={16} className="storage-pick__go" />
-              </button>
-            ))}
-          </List>
+              ),
+              title: t(`storage.connect.provider.${p}`),
+              description: t(`storage.connect.providerText.${p}`),
+              onSelect: () => setProvider(p),
+            }))}
+          />
         </DialogBody>
         <DialogFooter>
           <Button onClick={() => onOpenChange(false)}>{t("common.cancel")}</Button>

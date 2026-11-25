@@ -124,7 +124,9 @@ for (const c of CASES) {
 
 describe("a step that needs the person is never a blocker", () => {
   test("the prompt carries the rule and the consent of a person's own request", () => {
-    expect(HOW_YOU_WORK).toContain(`- ${HAND_OVER_STEP} If nothing you have can hand it over`);
+    expect(HOW_YOU_WORK).toContain(
+      `- ${HAND_OVER_STEP} Never end on a list of what's missing. If nothing you have can hand it over`,
+    );
     expect(HOW_YOU_WORK).toContain("consents to the access it needs: don't ask again or warn about privacy");
     expect(HOW_YOU_WORK).toContain("Someone else's account is not consent; passwords never come through the chat");
     expect(HOW_YOU_WORK).not.toContain("A real blocker is only");

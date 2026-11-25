@@ -9,12 +9,11 @@ import { statfs } from "node:fs/promises";
 import os from "node:os";
 import { dirname, resolve } from "node:path";
 import { promisify } from "node:util";
-import { type BrowserTraffic, LOAD_SAMPLE_MS, type MachineLoad, type MachineSize } from "./machine-protocol";
+import { type BrowserTraffic, halfGb, LOAD_SAMPLE_MS, type MachineLoad, type MachineSize } from "./machine-protocol";
 
 const GIB = 2 ** 30;
 const DAY_MS = 24 * 3600_000;
 const round2 = (n: number) => Math.round(n * 100) / 100;
-const halfGb = (bytes: number) => Math.round((bytes / GIB) * 2) / 2;
 const round1 = (n: number) => Math.round(n * 10) / 10;
 /** The hours `n` samples cover, at most a day. */
 const hoursOf = (n: number) => Math.min(24, round1((n * LOAD_SAMPLE_MS) / 3600_000));

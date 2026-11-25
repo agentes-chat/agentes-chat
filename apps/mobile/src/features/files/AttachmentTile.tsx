@@ -4,7 +4,6 @@ import { formatBytes } from "@agenteschat/client/lib/files";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import type { TFunction } from "i18next";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Text as RNText, StyleSheet, View } from "react-native";
 import { Icon, type IconName, LineIcon, PressScale, Text } from "@/ui";
@@ -16,7 +15,7 @@ import { MONO } from "../shared/parts";
 import { extensionOf, type FileInfo, type FileRef, fileInfo, isCodeName } from "./logic";
 import { openFile } from "./open";
 import { PdfCover } from "./pdf-preview";
-import { pictureDrawn, pictureFade, useRemoteFile } from "./source";
+import { pictureDrawn, pictureFade, usePicture } from "./source";
 
 /**
  * An attachment as a tile (as on the web): what it holds drawn small on top (its cover: a document's start, a table's
@@ -325,24 +324,24 @@ function FilesCover({ files }: { files: { path: string; patch: string }[] }) {
 function PictureCover({ fileId, version }: { fileId: string; version: number }) {
   const orgId = useOrgId();
   const c = useColors();
-  const link = useRemoteFile(orgId, fileId, version);
-  const [failed, setFailed] = useState(false);
+  const picture = usePicture(orgId, fileId, version);
+  const { key, source, failed } = picture;
   return (
     <View style={[StyleSheet.absoluteFill, { backgroundColor: c.sunken }]}>
-      {link.data && !failed ? (
+      {source && !failed ? (
         <Image
-          source={{ uri: link.data.uri, headers: link.data.headers, cacheKey: `${fileId}@${version}` }}
-          recyclingKey={`${fileId}@${version}`}
+          source={source}
+          recyclingKey={key}
           cachePolicy="memory-disk"
           contentFit="cover"
-          transition={pictureFade(`${fileId}@${version}`)}
-          onLoad={() => pictureDrawn(`${fileId}@${version}`)}
+          transition={pictureFade(key)}
+          onLoad={() => pictureDrawn(key)}
           style={StyleSheet.absoluteFill}
-          onError={() => setFailed(true)}
+          onError={picture.onError}
           accessible={false}
         />
       ) : null}
-      {failed || link.isError ? <TypeCover icon="image" label="" /> : null}
+      {failed ? <TypeCover icon="image" label="" /> : null}
     </View>
   );
 }

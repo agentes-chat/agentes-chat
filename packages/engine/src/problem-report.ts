@@ -69,6 +69,8 @@ export const problemReportSchema = z.object({
       runnerProtocol: z.number().int().optional(),
       web: version,
       mobile: version,
+      /** The system's own version where the sender reads it: macOS's (`15.1`), Windows' build, Linux's kernel. */
+      osVersion: version,
       os: z
         .string()
         .max(80)
@@ -325,6 +327,13 @@ export async function buildProblemReport(
           ? Math.max(0, Math.round((now.getTime() - Date.parse(status.lastSeenAt)) / 1000))
           : null,
         "machine.paused": machine.paused,
+        // Windows: its build, and what holds Codex's commands there (`mxc`, `unelevated`, `none`), once its runner said.
+        ...(machine.os === "windows"
+          ? {
+              "machine.windowsBuild": machine.executors?.windowsBuild ?? null,
+              "machine.codexSandbox": machine.executors?.codex?.sandbox ?? null,
+            }
+          : {}),
       });
       versions.runner = okVersion(machine.runnerVersion);
       versions.runnerProtocol = status?.protocol ?? machine.protocol;

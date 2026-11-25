@@ -576,10 +576,12 @@ describe("working line", () => {
     const atlas = run({ runId: "s", agentId: "atlas" });
     expect(barWords(en, workingEntries([ada], [], name), markName)[0]).toBe(markName("Ada"));
     expect(barWords(en, workingEntries([ada, atlas], [], name))[0]).toBe("Ada and Atlas are working…");
-    // The agents at work lead it with their faces (no orbit).
+    // The agent at work leads it with its face and its rings (`OrbitFace`, not the pixel orbit); the stack's small faces
+    // are the others.
     const lines = await source("features/chat/LiveRows.tsx");
     const line = lines.slice(lines.indexOf("export function WorkingLine("), lines.indexOf("type LinePiece"));
-    expect(line).toContain("const faces = barFaces(entries);");
+    expect(line).toContain("const faces = barFaces(entries).filter((e) => e !== orbiting);");
+    expect(line).toContain("<OrbitFace ");
     expect(line).not.toContain("PixelOrbit");
   });
 
@@ -1509,10 +1511,12 @@ describe("reading a conversation", () => {
     // Both are among what the effect runs again on: back on the screen, or back in the app, it reads.
     const again = reading.slice(reading.lastIndexOf("}, ["));
     expect(again).toContain("focused, inFront,");
-    // In front means the app's state is "active", and it follows every change of it.
+    // In front means the app's state is "active", and it follows every change of it: a glance away (the notification
+    // shade) marks nothing either, unlike the socket that stays through it (test/app-active.test.ts).
     const active = await source("lib/useAppActive.ts");
     expect(active).toContain('useState(AppState.currentState === "active")');
-    expect(active).toContain('AppState.addEventListener("change", (s) => setActive(s === "active"))');
+    expect(active).toContain("export function useAppActive(inactiveGraceMs = 0)");
+    expect(active).toContain('else listener(s === "active");');
   });
 
   test("a reply in one of the conversation's threads marks it read again", async () => {

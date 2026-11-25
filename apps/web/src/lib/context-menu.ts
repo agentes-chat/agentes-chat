@@ -208,3 +208,32 @@ export async function copyText(text: string, done: () => void) {
     // Clipboard refused: nothing copied, nothing said.
   }
 }
+
+/** A picture as PNG (what the clipboard takes everywhere). */
+export async function asPng(blob: Blob): Promise<Blob> {
+  if (blob.type === "image/png") return blob;
+  const bitmap = await createImageBitmap(blob);
+  const canvas = document.createElement("canvas");
+  canvas.width = bitmap.width;
+  canvas.height = bitmap.height;
+  canvas.getContext("2d")?.drawImage(bitmap, 0, 0);
+  bitmap.close();
+  return new Promise((resolve, reject) =>
+    canvas.toBlob((png) => (png ? resolve(png) : reject(new Error("png"))), "image/png"),
+  );
+}
+
+/** This browser can put a picture on the clipboard. */
+export const canCopyImage = () => typeof ClipboardItem !== "undefined" && Boolean(navigator.clipboard?.write);
+
+/**
+ * Puts a picture on the clipboard. `picture` is started in the click and handed over as a promise, so the browser
+ * still counts the press as what asked to copy while the picture loads.
+ */
+export function copyImage(picture: Promise<Blob>, done: () => void, failed: () => void) {
+  try {
+    navigator.clipboard.write([new ClipboardItem({ "image/png": picture.then(asPng) })]).then(done, failed);
+  } catch {
+    failed();
+  }
+}

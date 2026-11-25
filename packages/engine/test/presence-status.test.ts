@@ -419,7 +419,21 @@ test("an agent idle for weeks reads as idle since then; only one with no finishe
   expect((await presenceOf(f))?.presence).toBe("away");
 });
 
-test("the right hand never idles away: it is where the workspace's people come to talk to it", async () => {
+test("a run parked on an approval keeps the agent online only for a while after its last change", async () => {
+  f = await setup();
+  const run = await runOf(f, { status: "waiting_approval" });
+  expect((await presenceOf(f))?.presence).toBe("online");
+  expect(AGENT_AWAY_AFTER_MS).toBe(10 * 60_000);
+  const later = new Date(Date.now() + AGENT_AWAY_AFTER_MS + 1000);
+  expect((await presenceOf(f, later))?.presence).toBe("away");
+  // Its line still says what it waits on.
+  expect((await presenceOf(f, later))?.status).toMatchObject({ by: "wait", kind: "waiting_approval" });
+  // A change to the run (an answer came, it asked again) counts as activity.
+  await f.db.update(schema.agentRuns).set({ updatedAt: later }).where(eq(schema.agentRuns.id, run.id));
+  expect((await presenceOf(f, later))?.presence).toBe("online");
+});
+
+test("the right hand idles away like any agent", async () => {
   f = await setup({ rightHand: true });
   const [lodi] = await f.db
     .select({ id: schema.agents.id })
@@ -427,7 +441,7 @@ test("the right hand never idles away: it is where the workspace's people come t
     .where(eq(schema.agents.builtin, "right_hand"));
   const later = new Date(Date.now() + 5 * AGENT_AWAY_AFTER_MS);
   const all = await loadAgentStatuses(f.db, f.org.id, later);
-  expect(all.find((s) => s.agentId === lodi?.id)?.presence).toBe("online");
+  expect(all.find((s) => s.agentId === lodi?.id)?.presence).toBe("away");
   expect(all.find((s) => s.agentId === f.agent.id)?.presence).toBe("away");
   // Held by the operators, it is offline as any agent.
   await f.db

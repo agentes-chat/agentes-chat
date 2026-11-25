@@ -20,7 +20,7 @@ export interface MediaPin {
   old: boolean;
 }
 
-/** With the comments open, a press on the file marks it; else it plays, zooms or scrolls as the viewer does. */
+/** With the comments open and "Mark" on, a press on the file marks it; else it plays, zooms or scrolls as the viewer does. */
 export type MediaTool = "move" | "comment";
 
 /** What every stage shows over its picture: the comments, the one being written, and what the person does. */

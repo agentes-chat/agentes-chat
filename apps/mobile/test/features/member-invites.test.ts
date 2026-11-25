@@ -122,9 +122,10 @@ describe("Membros e convites (ADR 0090)", () => {
     expect(sentWords(false).copied).toBe("copiedNoEmail");
   });
 
-  test("a person's menu: a message to anyone but oneself, removing or leaving only when allowed, none when empty", () => {
-    expect(memberActions(false, true)).toEqual(["dm", "remove"]);
-    expect(memberActions(false, false)).toEqual(["dm"]);
+  test("a person's menu: only cargos and removing (or leaving), so a plain member's rows have none", () => {
+    expect(memberActions(false, true)).toEqual(["remove"]);
+    expect(memberActions(false, false)).toEqual([]);
+    expect(memberActions(false, true, true)).toEqual(["roles", "remove"]);
     expect(memberActions(true, true)).toEqual(["leave"]);
     expect(memberActions(true, false)).toEqual([]);
   });

@@ -13,11 +13,11 @@ import {
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { View } from "react-native";
+import Animated from "react-native-reanimated";
 import { Entering } from "@/features/auth/Entering";
 import { forgetInvite, loadPendingInvite, waitingAsk } from "@/features/auth/invite";
 import { resumesAsk } from "@/features/auth/invite-steps";
-import { LaunchSplash } from "@/features/launch/LaunchSplash";
+import { LaunchSplash, useLaunchSettle } from "@/features/launch/LaunchSplash";
 import { markLaunched } from "@/features/launch/launched";
 import { isStill, stillHref } from "@/features/links/landing";
 import { takeLink } from "@/features/links/pending";
@@ -214,6 +214,7 @@ function Gate() {
   );
   const suspendedShown = suspended !== null && !deletingAccount;
   const covered = suspendedShown || down !== null || !!accountDeletion;
+  const settleStyle = useLaunchSettle();
 
   // The navigator is always mounted (so links and pushes can navigate); the splash covers it until ready.
   return (
@@ -221,8 +222,9 @@ function Gate() {
     <NavigationThemeProvider value={navigationTheme}>
       <StatusBar style={scheme === "dark" ? "light" : "dark"} />
       {/* Under the suspended screen or the waiting splash the app stays mounted, out of screen readers' reach. */}
-      <View
-        style={{ flex: 1 }}
+      {/* It settles from a little larger as the launch splash's ring opens on it (`useLaunchSettle`). */}
+      <Animated.View
+        style={[{ flex: 1 }, settleStyle]}
         accessibilityElementsHidden={covered}
         importantForAccessibility={covered ? "no-hide-descendants" : "auto"}
       >
@@ -243,7 +245,7 @@ function Gate() {
           <Stack.Screen name="reset-password" options={linkOptions} />
           <Stack.Screen name="connect" options={linkOptions} />
         </Stack>
-      </View>
+      </Animated.View>
       {entering ? <Entering org={org.state?.org?.name ?? null} /> : null}
       {org.state && suspended && suspendedShown ? <SuspendedWorkspace state={org.state} suspended={suspended} /> : null}
       {accountDeletion ? <DeletingAccount dueAt={accountDeletion.dueAt} /> : null}

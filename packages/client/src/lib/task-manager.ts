@@ -108,6 +108,7 @@ export function taskWaitWords(
         return { state: s("taskManager.wait.workLine"), next: s("taskManager.wait.workLineNext") };
       if (w && !COMPUTER_GONE.has(w.code))
         return { state: s("taskManager.wait.computerWait"), next: s("taskManager.wait.computerWaitNext") };
+      if (w?.moving) return { state: s("taskManager.wait.computerWait"), next: s("machines.moving.line") };
       return { state: s(waitKey(reason)), next: s("taskManager.wait.computerOfflineNext") };
     case "budget": {
       if (!paused && w?.code !== "budget") return { state: s(waitKey(reason)), next: null };
@@ -353,6 +354,7 @@ function programOf(now: TaskNow | null): TaskProgram | null {
     case "runningSkillScript":
     case "runningSkillScriptAny":
     case "cloningRepo":
+    case "listingRepos":
     case "pcFiles":
       return { kind: "terminal", activity, detail };
     case "consulting":
@@ -429,6 +431,14 @@ export function taskWhere(
   if (task.channelKind === "dm") return t("taskManager.where.dm");
   return `#${task.channelName ?? ""}`;
 }
+
+/**
+ * Whether "Abrir na conversa" has a conversation to open: not a routine's background run, and work between agents only
+ * where it was handed off from.
+ */
+export const opensInChat = (
+  task: Pick<ManagedTask, "background" | "betweenAgents"> & { delegation?: ManagedTask["delegation"] },
+) => !task.background && (!task.betweenAgents || Boolean(task.delegation?.from));
 
 /** "ajudando a Ada": work another agent handed it, by that agent's name. */
 export function taskHelping(

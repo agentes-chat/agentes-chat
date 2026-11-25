@@ -1,7 +1,8 @@
 import type { PubSub } from "@agenteschat/adapters";
 import { getAgentCached } from "../agents";
+import { recordCodeSessionPr } from "../code-sessions";
 import { connectorScope } from "../connectors/catalog";
-import { activeConnections, type ConnectorDeps } from "../connectors/connections";
+import { activeConnections, type ConnectorConnection, type ConnectorDeps } from "../connectors/connections";
 import { publishChannelEvent } from "../events";
 import { computerPreparing } from "../machine-provisioning";
 import { missionOfRun } from "../mission-context";
@@ -10,24 +11,38 @@ import { machineScope, NO_HOME_MESSAGE, toolMachineId } from "../right-hand-seat
 import { replyThreadOf } from "../runs";
 import { NO_COMPUTER_MESSAGE, PREPARING_COMPUTER_MESSAGE, type SandboxDeps } from "../sandbox";
 import { APPROVAL_DETAIL_CHARS } from "../tools/gateway";
+import { grantedScopeKeys } from "../tools/scopes";
 import type { CallCheck, ToolContext, ToolDefinition, ToolOutput, ToolSource } from "../tools/types";
 import {
-  BRANCH_PUSH_TOOL,
   type BranchBlock,
   branchBlock,
-  branchFacts,
-  branchPath,
-  DELETE_BRANCHES_TOOL,
-  githubHeaders,
   githubToken,
+  hostConnectionToken,
   pushGrantKeyOf,
   validBranch,
 } from "./branches";
 import type { GitHubAppConfig } from "./github-app";
 import { noTokenMessage } from "./github-call";
 import { recordGitHubItem } from "./github-events";
+import {
+  checkoutDirOf,
+  GIT_TOOL_SCOPES,
+  type GitHost,
+  type GitVerb,
+  gitToolName,
+  type HostAt,
+  parseRepoRef,
+  refInList,
+  repoRefAt,
+  repoRefName,
+  teamGitConnections,
+} from "./hosts";
+import { hostAt } from "./hosts/reach";
 import { cloneOnMachine } from "./machine";
-import { parseRepo } from "./repos";
+import { onSessionRepo, personAccountOfRun } from "./person-account";
+import { gitAccess } from "./proxy";
+import { orgRepositories } from "./repo-listing";
+import { agentRepositoryList } from "./repos";
 import { signatureLine, signedBody } from "./signature";
 
 const str = (v: unknown) => (typeof v === "string" ? v : "");
@@ -43,7 +58,7 @@ export interface GitToolDeps {
   app?: GitHubAppConfig | null;
   /** GitHub's REST API (tests: a fake). */
   github?: { apiUrl: string; fetch: typeof fetch };
-  /** Live clone progress on a connected machine (`agent.tool.output`). */
+  /** Live clone progress on a connected machine (`agent.tool.output`), and a code session's new pull request. */
   pubsub?: PubSub;
 }
 
@@ -79,12 +94,9 @@ function progressPublisher(pubsub: PubSub | undefined, c: ToolContext) {
   };
 }
 
-/** A branch GitHub keeps agents off, in the words a refusal names it with. */
-const BLOCKED: Record<BranchBlock, string> = {
-  missing: "not on GitHub",
-  default: "the default branch",
-  protected: "protected",
-};
+/** A branch its host keeps agents off, in the words a refusal names it with. */
+const blocked = (block: BranchBlock, host: GitHost) =>
+  block === "missing" ? `not on ${host.label}` : block === "default" ? "the default branch" : "protected";
 
 /**
  * Git in the agent's computer (ADR 0024), through our proxy:
@@ -95,31 +107,127 @@ const BLOCKED: Record<BranchBlock, string> = {
  *   with the org's GitHub credential (server side). Merging stays approval-gated;
  * - `delete_branches` and `request_branch_push` (`github:git.write`, sensitive): what a person approves for
  *   branches that aren't the agent's own (`branches.ts`). The default branch and protected ones are never offered.
- * Offered only when GitHub is connected in the organization.
+ * One set per git host the organization connected (ADR 0227): GitHub's under these names, another host's with the
+ * host first (`gitlab_git_clone`), each on its own connection and scopes, all through the same code and the same
+ * rules. A host that has no call for something (a git server by address opens no pull request) offers no such tool.
  */
 export function createGitToolSource(deps: GitToolDeps): ToolSource {
   const github = deps.github ?? { apiUrl: "https://api.github.com", fetch };
   return {
     name: "git",
     async tools(ctx: ToolContext): Promise<ToolDefinition[]> {
-      const connection = (await activeConnections(ctx.db, ctx.orgId)).find((c) => c.connector === "github");
-      if (!connection) return [];
-      const repoInput = { type: "string", minLength: 3, maxLength: 200, description: "owner/name" };
+      const connected = teamGitConnections(await activeConnections(ctx.db, ctx.orgId));
+      if (connected.length === 0) return [];
+      return [listTool(), ...connected.flatMap(({ host, connection }) => toolsOn(host, connection))];
+    },
+  };
+
+  /**
+   * One list for every git host the workspace connected: the repositories the agent can work in, each by the name
+   * the git tools take. A tool of ours with no connection of its own: it shows a host's repositories only to an
+   * agent that may read git there, and only the ones in the agent's own list.
+   */
+  function listTool(): ToolDefinition {
+    return {
+      name: "list_repositories",
+      description:
+        "List the repositories you can work in, on every git host this workspace connected (GitHub, GitLab, Bitbucket), most recently active first, each by the name the git tools take (repo). Use it before asking a person for a repository's name or path. `query` keeps the ones whose name has that text.",
+      scope: "",
+      inputSchema: {
+        type: "object",
+        properties: { query: { type: "string", maxLength: 100, description: "Part of a name or path" } },
+        additionalProperties: false,
+      },
+      async execute(input, c) {
+        try {
+          const connections = await activeConnections(c.db, c.orgId);
+          const keys = await grantedScopeKeys(c.db, c.orgId, c.agentId);
+          const reads = new Set<string>(
+            teamGitConnections(connections)
+              .filter(({ host, connection }) => gitAccess(keys, connection.id, host.id).read)
+              .map(({ host }) => host.id),
+          );
+          if (reads.size === 0) {
+            return { content: "You have no git access here. Tell the person: whoever can edit you can give it." };
+          }
+          const listing = await orgRepositories(
+            { db: c.db, connectors: deps.connectors, app: deps.app ?? null, github },
+            c.orgId,
+          );
+          const mine = await agentRepositoryList(c.db, c.orgId, c.agentId);
+          const query = str(input.query).trim().toLowerCase();
+          const all = [...listing.accounts, ...listing.elsewhere]
+            .filter((a) => reads.has(a.host))
+            .flatMap((a) => a.repositories.map((r) => ({ ...r, hostLabel: a.hostLabel })))
+            .filter((r) => refInList(mine, r.fullName) && (!query || r.fullName.toLowerCase().includes(query)))
+            .sort((a, b) => (b.updatedAt ?? "").localeCompare(a.updatedAt ?? ""));
+          const shown = all.slice(0, 100);
+          if (shown.length === 0) {
+            return {
+              content: query
+                ? `No repository of yours has "${query}" in its name.`
+                : "The workspace's git connections reach no repository you may use. Tell the person: the connection may lack access to it, or your repositories list leaves it out.",
+            };
+          }
+          const lines = shown.map(
+            (r) =>
+              `${r.fullName} (${r.hostLabel}, ${r.private ? "private" : "public"}${r.updatedAt ? `, active ${r.updatedAt.slice(0, 10)}` : ""})`,
+          );
+          const more = all.length > shown.length || listing.truncated ? "\nThere are more: narrow it with query." : "";
+          return { content: `${lines.join("\n")}${more}`, data: { repositories: shown.map((r) => r.fullName) } };
+        } catch (error) {
+          return failed(error);
+        }
+      },
+    };
+  }
+
+  function toolsOn(host: GitHost, connection: ConnectorConnection): ToolDefinition[] {
+    {
+      const named = (verb: GitVerb) => gitToolName(host.id, verb);
+      const scopeOf = (verb: GitVerb) => connectorScope(host.id, GIT_TOOL_SCOPES[verb]);
+      const example = repoRefName({ host: host.id, path: host.id === "gitlab" ? "group/project" : "owner/name" });
+      const repoInput = { type: "string", minLength: 3, maxLength: 300, description: example };
       const branchInput = { type: "string", minLength: 1, maxLength: 200, description: "A branch name, not refs/…" };
-      const tokenFor = (c: ToolContext, repo: { owner: string; repo: string }, access: "read" | "write") =>
-        githubToken(deps, github, { db: c.db, orgId: c.orgId }, connection, repo, { contents: access });
-      /** GitHub's answers on these branches, or why they couldn't be read. */
-      const factsOf = async (c: ToolContext, repo: { owner: string; repo: string }, branches: string[]) => {
-        const token = await tokenFor(c, repo, "read");
-        if (!token) return noTokenMessage(connection, `${repo.owner}/${repo.repo}`);
+      const at: HostAt =
+        host.id === "github"
+          ? { fetch: github.fetch, api: github.apiUrl, git: "https://github.com", site: "github.com" }
+          : hostAt(host, connection.serverUrl, { http: deps.github?.fetch, resolveHost: deps.connectors.resolveHost });
+      /** The repository a call names, when it is one of this host's: its path there. */
+      const repoOf = (input: unknown) => {
+        const given = str(input).trim();
+        // A bare path is this host's (`group/project` on GitLab's tool); an address of a server of one's own too.
+        const ref =
+          parseRepoRef(host.id === "github" || /^[a-z]+:/.test(given) ? given : `${host.id}:${given}`) ??
+          repoRefAt(host.id, connection.serverUrl, given);
+        return ref?.host === host.id ? { ...ref, name: repoRefName(ref) } : null;
+      };
+      const badRepo = `repo must be ${example}`;
+      const tokenFor = async (
+        c: ToolContext,
+        path: string,
+        permissions: Parameters<typeof githubToken>[5] = { contents: "read" },
+      ) => {
+        if (host.id !== "github") return hostConnectionToken(deps.connectors, connection).catch(() => null);
+        const [owner = "", repo = ""] = path.split("/");
+        return githubToken(deps, github, { db: c.db, orgId: c.orgId }, connection, { owner, repo }, permissions);
+      };
+      const noToken = (name: string) =>
+        host.id === "github"
+          ? noTokenMessage(connection, name)
+          : `${host.label} has no usable sign-in here. Tell the person: whoever manages connectors can connect it again.`;
+      /** The host's answers on these branches, or why they couldn't be read. */
+      const factsOf = async (c: ToolContext, repo: { path: string; name: string }, branches: string[]) => {
+        const token = await tokenFor(c, repo.path);
+        if (!token) return noToken(repo.name);
         return (
-          (await branchFacts(github, token, repo, branches)) ??
-          `GitHub didn't answer about ${repo.owner}/${repo.repo}'s branches. Nothing was asked: try again in a moment.`
+          (await host.branchFacts(at, token, repo.path, branches)) ??
+          `${host.label} didn't answer about ${repo.name}'s branches. Nothing was asked: try again in a moment.`
         );
       };
       const deleteCheck = async (input: Record<string, unknown>, c: ToolContext): Promise<CallCheck> => {
-        const repo = parseRepo(str(input.repo));
-        if (!repo) return { ok: false, message: "repo must be owner/name" };
+        const repo = repoOf(input.repo);
+        if (!repo) return { ok: false, message: badRepo };
         const branches = strings(input.branches);
         const invalid = branches.filter((b) => !validBranch(b));
         if (invalid.length > 0) {
@@ -137,21 +245,21 @@ export function createGitToolSource(deps: GitToolDeps): ToolSource {
         }
         const facts = await factsOf(c, repo, branches);
         if (typeof facts === "string") return { ok: false, message: facts };
-        const blocked = branches.flatMap((b) => {
+        const refused = branches.flatMap((b) => {
           const block = branchBlock(facts, b, true);
-          return block ? [`${b} (${BLOCKED[block]})`] : [];
+          return block ? [`${b} (${blocked(block, host)})`] : [];
         });
-        if (blocked.length > 0) {
+        if (refused.length > 0) {
           return {
             ok: false,
-            message: `Refused, nothing was asked or deleted: ${blocked.join(", ")}. The default branch and protected branches are never deleted. Ask again without them.`,
+            message: `Refused, nothing was asked or deleted: ${refused.join(", ")}. The default branch and protected branches are never deleted. Ask again without them.`,
           };
         }
         return { ok: true };
       };
       const pushCheck = async (input: Record<string, unknown>, c: ToolContext): Promise<CallCheck> => {
-        const repo = parseRepo(str(input.repo));
-        if (!repo) return { ok: false, message: "repo must be owner/name" };
+        const repo = repoOf(input.repo);
+        if (!repo) return { ok: false, message: badRepo };
         const branch = str(input.branch);
         if (!validBranch(branch)) {
           return {
@@ -170,27 +278,26 @@ export function createGitToolSource(deps: GitToolDeps): ToolSource {
         if (block === "missing") {
           return {
             ok: false,
-            message: `${branch} isn't on GitHub, and an approval only covers updating an existing branch, never creating one. Push to agentes/${handle}/<topic> and open a pull request.`,
+            message: `${branch} isn't on ${host.label}, and an approval only covers updating an existing branch, never creating one. Push to agentes/${handle}/<topic> and open a ${host.request}.`,
           };
         }
         if (block) {
           return {
             ok: false,
-            message: `${branch} is ${BLOCKED[block]}: push to agentes/${handle}/<topic> and open a pull request; merging is a separate step.`,
+            message: `${branch} is ${blocked(block, host)}: push to agentes/${handle}/<topic> and open a ${host.request}; merging is a separate step.`,
           };
         }
         return { ok: true };
       };
       const all: ToolDefinition[] = [
         {
-          name: "git_clone",
-          description:
-            "Clone a GitHub repository into your folder on your computer (repos/<owner>/<name>; already there: it is updated). No approval needed. Real git through our proxy: commit and push from there to branches agentes/<your handle>/…, then open_pull_request. Delete branches with delete_branches; to push to someone else's branch, ask with request_branch_push first.",
-          scope: connectorScope("github", "git.read"),
+          name: named("git_clone"),
+          description: `Clone a ${host.label} repository into your folder on your computer (${checkoutDirOf({ host: host.id, path: host.id === "gitlab" ? "<group>/<project>" : "<owner>/<name>" })}; already there: it is updated); list_repositories lists the ones you can use. No approval needed. Real git through our proxy: commit and push from there to branches agentes/<your handle>/…${host.openPullRequest ? `, then ${named("open_pull_request")}` : `, then give the person the link the server prints to open a ${host.request}`}. ${host.deleteBranch ? `Delete branches with ${named("delete_branches")}; to` : "To"} push to someone else's branch, ask with ${named("request_branch_push")} first.`,
+          scope: scopeOf("git_clone"),
           connectionId: connection.id,
-          connector: { key: "github", via: "native", tool: "git_clone" },
+          connector: { key: host.id, via: "native", tool: named("git_clone") },
           connectorLabel: connection.label,
-          service: "github",
+          service: host.id,
           inputSchema: {
             type: "object",
             properties: {
@@ -206,8 +313,8 @@ export function createGitToolSource(deps: GitToolDeps): ToolSource {
           },
           async execute(input, c) {
             try {
-              const repo = parseRepo(str(input.repo));
-              if (!repo) return { content: "repo must be owner/name", isError: true };
+              const repo = repoOf(input.repo);
+              if (!repo) return { content: badRepo, isError: true };
               const given = str(input.dir).trim();
               if (given.startsWith("/") || given.split(/[\\/]/).includes("..") || /^[A-Za-z]:/.test(given))
                 return { content: "dir must stay in the workspace", isError: true };
@@ -230,7 +337,7 @@ export function createGitToolSource(deps: GitToolDeps): ToolSource {
                   },
                   { orgId: c.orgId, agentId: c.agentId, machineId, scope },
                   {
-                    repo: `${repo.owner}/${repo.repo}`,
+                    repo: repo.name,
                     ...(given ? { dir: given } : {}),
                     ...(c.signal ? { signal: c.signal } : {}),
                     onOutput: progressPublisher(deps.pubsub, c),
@@ -253,7 +360,7 @@ export function createGitToolSource(deps: GitToolDeps): ToolSource {
                       ? `${r.repo} is already at ${where}, but it couldn't be updated (${r.message ?? "unknown error"})`
                       : `${r.repo} was already at ${where}; updated it`;
                 return {
-                  content: `${what} (branch ${r.branch ?? "?"}${r.head ? ` at ${r.head}` : ""}${r.message && r.status !== "failed" ? `; ${r.message}` : ""}).\nWork there (cd ${where}); create a branch agentes/${agent.handle}/<topic> to push, then open_pull_request.`,
+                  content: `${what} (branch ${r.branch ?? "?"}${r.head ? ` at ${r.head}` : ""}${r.message && r.status !== "failed" ? `; ${r.message}` : ""}).\nWork there (cd ${where}); create a branch agentes/${agent.handle}/<topic> to push${host.openPullRequest ? `, then ${named("open_pull_request")}` : ""}.`,
                   data: { repo: r.repo, dir: r.dir, machineId, status: r.status },
                 };
               }
@@ -274,14 +381,13 @@ export function createGitToolSource(deps: GitToolDeps): ToolSource {
           },
         },
         {
-          name: "open_pull_request",
-          description:
-            "Open a pull request on GitHub from a branch you pushed (agentes/<your handle>/…). Merging is a separate step.",
-          scope: connectorScope("github", "pr.write"),
+          name: named("open_pull_request"),
+          description: `Open a ${host.request} on ${host.label} from a branch you pushed (agentes/<your handle>/…). Merging is a separate step.`,
+          scope: scopeOf("open_pull_request"),
           connectionId: connection.id,
-          connector: { key: "github", via: "native", tool: "open_pull_request" },
+          connector: { key: host.id, via: "native", tool: named("open_pull_request") },
           connectorLabel: connection.label,
-          service: "github",
+          service: host.id,
           inputSchema: {
             type: "object",
             properties: {
@@ -295,54 +401,49 @@ export function createGitToolSource(deps: GitToolDeps): ToolSource {
             required: ["repo", "branch", "title"],
             additionalProperties: false,
           },
-          describe: (input) => ({ title: `Open a pull request in ${str(input.repo)}: ${str(input.title)}` }),
+          describe: (input) => ({ title: `Open a ${host.request} in ${str(input.repo)}: ${str(input.title)}` }),
           async execute(input, c) {
             try {
-              const repo = parseRepo(str(input.repo));
-              if (!repo) return { content: "repo must be owner/name", isError: true };
-              const token = await githubToken(deps, github, { db: c.db, orgId: c.orgId }, connection, repo, {
-                pull_requests: "write",
-                contents: "read",
-              });
-              if (!token) return { content: noTokenMessage(connection, `${repo.owner}/${repo.repo}`), isError: true };
-              const headers = { ...githubHeaders(token), "content-type": "application/json" };
-              let base = str(input.base);
-              if (!base) {
-                const info = await github.fetch(`${github.apiUrl}/repos/${repo.owner}/${repo.repo}`, { headers });
-                if (!info.ok)
-                  return { content: `GitHub answered ${info.status} for ${repo.owner}/${repo.repo}`, isError: true };
-                base = ((await info.json()) as { default_branch?: string }).default_branch ?? "main";
-              }
-              const res = await github.fetch(`${github.apiUrl}/repos/${repo.owner}/${repo.repo}/pulls`, {
-                method: "POST",
-                headers,
-                body: JSON.stringify({
-                  title: str(input.title),
-                  head: str(input.branch),
-                  base,
-                  body: signedBody(str(input.body), await signatureLine(c.db, c)),
-                  draft: input.draft === true,
-                }),
-              });
-              const body = (await res.json().catch(() => ({}))) as {
-                html_url?: string;
-                number?: number;
-                message?: string;
-                errors?: { message?: string }[];
+              const repo = repoOf(input.repo);
+              const open = host.openPullRequest;
+              if (!repo || !open) return { content: badRepo, isError: true };
+              const token = await tokenFor(c, repo.path, { pull_requests: "write", contents: "read" });
+              if (!token) return { content: noToken(repo.name), isError: true };
+              const request = {
+                head: str(input.branch),
+                base: str(input.base),
+                title: str(input.title),
+                body: signedBody(str(input.body), await signatureLine(c.db, c)),
+                draft: input.draft === true,
               };
-              if (!res.ok) {
-                const why = [body.message, ...(body.errors ?? []).map((e) => e.message)].filter(Boolean).join("; ");
-                return { content: `GitHub refused the pull request (${res.status}): ${why}`, isError: true };
+              // In a code session, on its repository, it is opened as the person who asked, by the account they
+              // connected as their own (ADR 0215 §13); the host refusing their token opens it as the workspace.
+              const person = await personAccountOfRun(c.db, c.orgId, c.runId).catch(() => null);
+              const own =
+                person?.host === host.id && onSessionRepo(person, repo.name)
+                  ? await hostConnectionToken(deps.connectors, person.connection).catch(() => null)
+                  : null;
+              let res = own ? await open(at, own, repo.path, request) : null;
+              if (!res || (!res.ok && [401, 403, 404].includes(res.status))) {
+                res = await open(at, token, repo.path, request);
               }
-              if (typeof body.number === "number")
-                await recordGitHubItem(c, {
-                  repo: `${repo.owner}/${repo.repo}`,
-                  number: body.number,
-                  authored: true,
-                }).catch(() => {});
+              if (!res.ok) {
+                return {
+                  content: `${host.label} refused the ${host.request} (${res.status}): ${res.message}`,
+                  isError: true,
+                };
+              }
+              if (host.id === "github") {
+                await recordGitHubItem(c, { repo: repo.name, number: res.number, authored: true }).catch(() => {});
+              }
+              // From a code session's branch: the session keeps its pull request (ADR 0215).
+              await recordCodeSessionPr({ db: c.db, pubsub: deps.pubsub }, c.orgId, repo.name, str(input.branch), {
+                number: res.number,
+                url: res.url,
+              }).catch(() => {});
               return {
-                content: `Opened PR #${body.number}: ${body.html_url}`,
-                data: { pullRequest: { number: body.number, url: body.html_url, repo: `${repo.owner}/${repo.repo}` } },
+                content: `Opened ${host.id === "gitlab" ? "MR !" : "PR #"}${res.number}: ${res.url}`,
+                data: { pullRequest: { number: res.number, url: res.url, repo: repo.name } },
               };
             } catch (error) {
               return failed(error);
@@ -350,12 +451,11 @@ export function createGitToolSource(deps: GitToolDeps): ToolSource {
           },
         },
         {
-          name: DELETE_BRANCHES_TOOL,
-          description:
-            "Delete branches on GitHub, your own included: the only way agents delete branches (git push --delete is refused). The whole list goes to a person on one card, unless you never ask, then they're deleted. Never tags, the default branch or a protected branch.",
-          scope: connectorScope("github", "git.write"),
+          name: named("delete_branches"),
+          description: `Delete branches on ${host.label}, your own included: the only way agents delete branches (git push --delete is refused). The whole list goes to a person on one card, unless you never ask, then they're deleted. Never tags, the default branch or a protected branch.`,
+          scope: scopeOf("delete_branches"),
           connectionId: connection.id,
-          connector: { key: "github", via: "native", tool: DELETE_BRANCHES_TOOL },
+          connector: { key: host.id, via: "native", tool: named("delete_branches") },
           connectorLabel: connection.label,
           sensitive: true,
           inputSchema: {
@@ -377,31 +477,27 @@ export function createGitToolSource(deps: GitToolDeps): ToolSource {
           checkCall: deleteCheck,
           async execute(input, c) {
             try {
-              const repo = parseRepo(str(input.repo));
-              if (!repo) return { content: "repo must be owner/name", isError: true };
-              const token = await tokenFor(c, repo, "write");
-              if (!token) return { content: noTokenMessage(connection, `${repo.owner}/${repo.repo}`), isError: true };
+              const repo = repoOf(input.repo);
+              const remove = host.deleteBranch;
+              if (!repo || !remove) return { content: badRepo, isError: true };
+              const token = await tokenFor(c, repo.path, { contents: "write" });
+              if (!token) return { content: noToken(repo.name), isError: true };
               const deleted: string[] = [];
               const missed: string[] = [];
-              // One at a time: parallel ref updates in one repository may conflict on GitHub.
+              // One at a time: parallel ref updates in one repository may conflict on the host.
               for (const branch of strings(input.branches)) {
-                const res = await github
-                  .fetch(`${github.apiUrl}/repos/${repo.owner}/${repo.repo}/git/refs/heads/${branchPath(branch)}`, {
-                    method: "DELETE",
-                    headers: githubHeaders(token),
-                  })
-                  .catch(() => null);
-                if (res?.status === 204) deleted.push(branch);
-                else missed.push(`${branch} (${res ? `GitHub answered ${res.status}` : "no answer"})`);
+                const status = await remove(at, token, repo.path, branch);
+                if (status !== null && status >= 200 && status < 300) deleted.push(branch);
+                else missed.push(`${branch} (${status ? `${host.label} answered ${status}` : "no answer"})`);
               }
               const lines = [
-                ...(deleted.length > 0 ? [`Deleted on GitHub: ${deleted.join(", ")}.`] : []),
+                ...(deleted.length > 0 ? [`Deleted on ${host.label}: ${deleted.join(", ")}.`] : []),
                 ...(missed.length > 0 ? [`Not deleted: ${missed.join(", ")}.`] : []),
               ];
               return {
                 content: lines.join("\n"),
                 ...(missed.length > 0 ? { isError: true } : {}),
-                data: { repo: `${repo.owner}/${repo.repo}`, deleted, failed: missed },
+                data: { repo: repo.name, deleted, failed: missed },
               };
             } catch (error) {
               return failed(error);
@@ -409,12 +505,11 @@ export function createGitToolSource(deps: GitToolDeps): ToolSource {
           },
         },
         {
-          name: BRANCH_PUSH_TOOL,
-          description:
-            "Ask a person to let you push to a GitHub branch that isn't yours (agentes/<your handle>/… needs no asking). Once they approve, push again with git: fast-forwards to that existing branch, for 24 h or for good if they choose. Never the default branch or a protected one, never a new branch, never a force push.",
-          scope: connectorScope("github", "git.write"),
+          name: named("request_branch_push"),
+          description: `Ask a person to let you push to a ${host.label} branch that isn't yours (agentes/<your handle>/… needs no asking). Once they approve, push again with git: fast-forwards to that existing branch, for 24 h or for good if they choose. Never the default branch or a protected one, never a new branch, never a force push.`,
+          scope: scopeOf("request_branch_push"),
           connectionId: connection.id,
-          connector: { key: "github", via: "native", tool: BRANCH_PUSH_TOOL },
+          connector: { key: host.id, via: "native", tool: named("request_branch_push") },
           connectorLabel: connection.label,
           sensitive: true,
           inputSchema: {
@@ -426,7 +521,8 @@ export function createGitToolSource(deps: GitToolDeps): ToolSource {
           describe: (input) => ({
             title: `Enviar para ${str(input.branch)} em ${str(input.repo)} (24 h, sem force push)`,
           }),
-          rememberTarget: pushGrantKeyOf,
+          // Kept by the repository's stored name, as the proxy reads it on the push.
+          rememberTarget: (input) => pushGrantKeyOf({ ...input, repo: repoOf(input.repo)?.name }),
           checkCall: pushCheck,
           // The grant is the approval itself (or the rule): the proxy reads it on the next push.
           execute: async (input) => ({
@@ -434,7 +530,12 @@ export function createGitToolSource(deps: GitToolDeps): ToolSource {
           }),
         },
       ];
-      return all;
-    },
-  };
+      // A host with no call for something offers no such tool.
+      return all.filter(
+        (tool) =>
+          (tool.name !== named("open_pull_request") || host.openPullRequest) &&
+          (tool.name !== named("delete_branches") || host.deleteBranch),
+      );
+    }
+  }
 }

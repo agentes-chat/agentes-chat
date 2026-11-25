@@ -8,11 +8,11 @@ import { localeInfo } from "@agenteschat/i18n/locale";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
 import { detectedLocale } from "@/i18n";
 import { setNavigateAway } from "@/lib/navigate";
-import { pick, rowMenu } from "./catalog";
+import { connectedNames, connectionLine, openConnection, openStore, pick, searchStore } from "./catalog";
 import { createFakeApi, OPENROUTER_KEY, OPENROUTER_MODELS, ORG_ID, seedState } from "./fake-api";
 import { shownText } from "./hint";
 import { pick as pickOption } from "./new-agent-flow";
-import { openDetails, shareRow } from "./plan-rows";
+import { openDetails, shareRow, usageTab } from "./plan-rows";
 import { renderApp, screen, settle, showIn } from "./render";
 
 afterEach(() => cleanup());
@@ -104,7 +104,7 @@ describe("Configurações do workspace", () => {
     expect(toggle.getAttribute("aria-checked")).toBe("true");
     // What is counted is the ⓘ's; no line under the switch while it can be changed.
     expect(describedBy(toggle)).toEqual([
-      "Contagens como pessoas, agentes, tamanho das máquinas, tokens de IA usados e o volume de dados que os navegadores dos agentes enviam e recebem. Nunca mensagens, arquivos, nomes ou sites.",
+      "Contagens como pessoas, agentes, tamanho das máquinas, tokens de IA usados, o volume de dados que os navegadores dos agentes enviam e recebem e com que rapidez os apps abrem e respondem. Nunca mensagens, arquivos, nomes ou sites.",
     ]);
     expect(card.querySelector(".settings-row__status")).toBeNull();
     await click(toggle);
@@ -127,7 +127,7 @@ describe("Configurações do workspace", () => {
       "Desligado nas configurações deste servidor (TELEMETRY=off).",
     );
     expect(describedBy(toggle)).toEqual([
-      "Contagens como pessoas, agentes, tamanho das máquinas, tokens de IA usados e o volume de dados que os navegadores dos agentes enviam e recebem. Nunca mensagens, arquivos, nomes ou sites.",
+      "Contagens como pessoas, agentes, tamanho das máquinas, tokens de IA usados, o volume de dados que os navegadores dos agentes enviam e recebem e com que rapidez os apps abrem e respondem. Nunca mensagens, arquivos, nomes ou sites.",
       "Desligado nas configurações deste servidor (TELEMETRY=off).",
     ]);
     cleanup();
@@ -188,11 +188,11 @@ describe("Configurações do workspace", () => {
       seedState({ githubApp: { installable: true, installations: [] } }),
       "settings/connectors",
     );
-    const section = screen().getByRole("region", { name: "Conectores" });
-    // The card's head is its title and Add; the GitHub app's purpose is its title's ⓘ.
-    expect(section.querySelector("#sec-conn")?.closest(".ac-card__head")?.textContent).toBe(
-      "ConectoresAdicionar conector",
-    );
+    const section = document.querySelector(".store") as HTMLElement;
+    // Over the list, the way to the store: a few services and Browse connectors.
+    expect(
+      within(section.querySelector(".store-band") as HTMLElement).getByRole("button", { name: "Ver conectores" }),
+    ).toBeTruthy();
     const github = screen().getByRole("region", { name: "Repositórios do GitHub" });
     expect(hintOf("Repositórios do GitHub", github).text).toBe(
       "Onde o app agentes.chat está instalado, os agentes abrem pull requests, issues, comentários e commits como o app, com o nome do agente e de quem pediu.",
@@ -202,52 +202,42 @@ describe("Configurações do workspace", () => {
         .getAllByText(/^Onde o app agentes.chat está instalado/)
         .map((el) => el.hidden),
     ).toEqual([true]);
-    // A connected service is one line (its name, its pill, who uses it) that opens to its details and actions.
-    const line = within(section).getByRole("button", { name: /^GitHub/ });
-    expect(line.getAttribute("aria-expanded")).toBe("false");
-    expect(line.querySelector(".list-title")?.textContent).toBe("GitHubAtivo");
-    expect(line.querySelector(".connected-row__who")?.textContent).toBe("Nenhum agente ainda");
+    // A connected service is one line (its name, under it the account and its tools, who uses it) that opens its page.
+    expect(connectedNames()).toEqual(["GitHub"]);
+    const line = connectionLine("GitHub");
+    // Nothing needs the person: no state on the line, who uses it instead of a button.
+    expect(line.querySelector(".store-state")).toBeNull();
+    expect(line.querySelector(".store-who")?.textContent).toBe("Nenhum agente ainda");
     expect(line.textContent).not.toContain("Conectado como");
     expect(within(section).queryByRole("button", { name: "Quem usa GitHub" })).toBeNull();
-    await click(line);
-    expect(line.getAttribute("aria-expanded")).toBe("true");
-    const more = document.getElementById(line.getAttribute("aria-controls") ?? "") as HTMLElement;
-    expect(more.inert).toBe(false);
-    expect(more.textContent).toContain("Conectado como acme");
-    // Its actions are one row of bare words, the ⋯ last.
-    expect([...more.querySelectorAll(".ac-acts > button")].map((b) => b.className)).toEqual([
-      "ac-link ac-link--action",
-      "ac-link ac-link--action",
-      "ac-btn ac-btn--ghost ac-btn--sm ac-btn--icon",
-    ]);
-    expect(within(more).getByRole("button", { name: "Quem usa GitHub" }).textContent).toBe("Quem usa");
-    await click(line);
-    expect(line.getAttribute("aria-expanded")).toBe("false");
-    expect(more.inert).toBe(true);
-    expect(within(section).queryByRole("button", { name: "Quem usa GitHub" })).toBeNull();
-    expect(section.textContent).toContain("GitHub");
-    expect(section.textContent).toContain("Ativo");
-    expect(section.textContent).toContain("Conectado como acme");
-    expect(section.textContent).toContain("3 ferramentas");
-    expect(section.textContent).toContain("Nenhum agente ainda");
-    await click(within(await rowMenu("GitHub")).getByRole("menuitem", { name: "Desconectar" }));
+    const page = await openConnection("GitHub");
+    expect(page.querySelector(".store-page__title p")?.textContent).toContain("Conectado");
+    expect(page.textContent).toContain("Conectado como acme");
+    expect(page.textContent).toContain("3 ferramentas");
+    expect(page.textContent).toContain("Nenhum agente ainda");
+    // Each line says what is set and has its own button.
+    expect(within(page).getByRole("button", { name: "Quem usa GitHub" }).textContent).toBe("Alterar");
+    expect(within(page).getByRole("button", { name: "Ferramentas de GitHub" }).textContent).toBe("Ver");
+    expect(within(page).getByRole("button", { name: "Reconectar GitHub" }).textContent).toBe("Reconectar");
+    await click(within(page).getByRole("button", { name: "Desconectar GitHub" }));
+    await settle(2);
     const dialog = screen().getByRole("dialog", { name: "Desconectar GitHub?" });
     expect(dialog.textContent).toContain("Nenhum agente usa agora.");
     await click(within(dialog).getByRole("button", { name: "Desconectar" }));
     await settle(4);
     expect(state.calls.find((c) => c.method === "connectors.disconnect")?.args).toEqual([ORG_ID, "conn-gh"]);
-    expect(screen().getByRole("region", { name: "Conectores" }).textContent).toContain("Conecte os apps do seu time");
+    // Its page went with it: back on the list, which has nothing now.
+    expect((document.querySelector(".store") as HTMLElement).textContent).toContain("Conecte os apps do seu time");
   });
 
-  test("add a connector from the searchable catalog with an API key, then review what it does", async () => {
+  test("add a connector from the searchable store with an API key, then review what it does", async () => {
     const { state } = await go(seedState(), "settings/connectors");
-    await click(screen().getByRole("button", { name: "Adicionar conector" }));
-    const add = screen().getByRole("dialog", { name: "Adicionar conector" });
-    expect(add.textContent).toContain("Código, PRs, issues e Actions.");
-    await type(within(add).getByRole("searchbox", { name: "Buscar conector" }), "sentry");
-    // Sentry, and the card for any other MCP server.
-    expect(within(add).getAllByRole("listitem")).toHaveLength(2);
-    await pick(add, "Sentry");
+    const store = await openStore();
+    expect(within(store).getByRole("heading", { name: "Conectores" })).toBeTruthy();
+    await searchStore(store, "sentry");
+    // Only Sentry stays, with its own Connect.
+    expect(within(store).getAllByRole("listitem")).toHaveLength(1);
+    await pick(store, "Sentry");
     const connect = screen().getByRole("dialog", { name: "Conectar Sentry" });
     // Sentry has no OAuth app on this server: API key only.
     expect(within(connect).queryByRole("button", { name: "Continuar no Sentry" })).toBeNull();
@@ -261,7 +251,7 @@ describe("Configurações do workspace", () => {
       apiKey: "[redacted]",
       serverUrl: undefined,
     });
-    // Connecting ends on the confirmation; the tools are one step further, under Ajustar.
+    // Connecting ends on the confirmation; the tools are one step further, under Adjust.
     await click(
       within(screen().getByRole("dialog", { name: "Sentry conectado" })).getByRole("button", { name: "Ajustar" }),
     );
@@ -277,17 +267,19 @@ describe("Configurações do workspace", () => {
     expect(hit.textContent).toContain("search_issues");
     await click(within(tools).getByRole("button", { name: "Cancelar" }));
     await settle(2);
-    expect(screen().getByRole("region", { name: "Conectores" }).textContent).toContain("Sentry");
+    // In the store it now reads as connected; back in Settings it's on the list.
+    expect(within(document.querySelector(".store") as HTMLElement).getByText("Conectado")).toBeTruthy();
+    await click(screen().getByRole("link", { name: "Configurações" }));
+    await settle(6);
+    expect(connectedNames()).toContain("Sentry");
   });
 
   test("Google Drive connects through Composio: its page, no address or key of ours", async () => {
     const left: string[] = [];
     setNavigateAway((url) => left.push(url));
     const { state } = await go(seedState({ connections: [] }), "settings/connectors");
-    await click(screen().getByRole("button", { name: "Adicionar conector" }));
-    const add = screen().getByRole("dialog", { name: "Adicionar conector" });
-    await type(within(add).getByRole("searchbox", { name: "Buscar conector" }), "drive");
-    await pick(add, "Google Drive");
+    const store = await openStore();
+    await pick(store, "Google Drive");
     const connect = screen().getByRole("dialog", { name: "Conectar Google Drive" });
     expect(connect.textContent).toContain("Você entra na página da Composio, em inglês, e volta para cá.");
     expect(within(connect).queryByLabelText("Endereço do servidor MCP")).toBeNull();
@@ -302,9 +294,9 @@ describe("Configurações do workspace", () => {
 
   test("a key that isn't the chosen provider's: it asks whose it is (any sk- key could be several) and saves it there", async () => {
     const { state } = await go(seedState(), "settings/keys");
-    const keys = screen().getByRole("region", { name: "Chaves de provedor" });
+    const keys = screen().getByRole("region", { name: "Chaves de API" });
     // Where the keys are kept is the title's ⓘ, not a line under it.
-    expect(hintOf("Chaves de provedor", keys).text).toBe(
+    expect(hintOf("Chaves de API", keys).text).toBe(
       "Ficam cifradas no servidor e nunca aparecem no navegador. Os agentes usam a chave que você escolher.",
     );
     expect(
@@ -366,7 +358,7 @@ describe("Configurações do workspace", () => {
 
   test("a Gemini key pasted while Claude is chosen: only Gemini is offered; its line says where and to turn on billing", async () => {
     const { state } = await go(seedState(), "settings/keys");
-    const keys = screen().getByRole("region", { name: "Chaves de provedor" });
+    const keys = screen().getByRole("region", { name: "Chaves de API" });
     await click(within(keys).getByRole("button", { name: "Adicionar chave" }));
     const add = screen().getByRole("dialog", { name: "Adicionar chave de API" });
     const field = within(add).getByLabelText("Chave da API");
@@ -398,7 +390,7 @@ describe("Configurações do workspace", () => {
 
   test("an OpenRouter key: found by its shape, its line says where and who may keep what is sent; refused, it says so", async () => {
     const { state } = await go(seedState({ keyRefusal: "provider_key_invalid" }), "settings/keys");
-    const keys = screen().getByRole("region", { name: "Chaves de provedor" });
+    const keys = screen().getByRole("region", { name: "Chaves de API" });
     await click(within(keys).getByRole("button", { name: "Adicionar chave" }));
     const add = screen().getByRole("dialog", { name: "Adicionar chave de API" });
     const field = within(add).getByLabelText("Chave da API");
@@ -424,7 +416,7 @@ describe("Configurações do workspace", () => {
 
   test("a Command Code key: its line names Command Code as the one that passes what is sent on", async () => {
     await go(seedState(), "settings/keys");
-    const keys = screen().getByRole("region", { name: "Chaves de provedor" });
+    const keys = screen().getByRole("region", { name: "Chaves de API" });
     await click(within(keys).getByRole("button", { name: "Adicionar chave" }));
     const add = screen().getByRole("dialog", { name: "Adicionar chave de API" });
     // Joined at run time: a literal key shape reads as a real key to the secret scan.
@@ -444,7 +436,7 @@ describe("Configurações do workspace", () => {
       "settings/keys",
     );
     const before = state.credentials.length;
-    const keys = screen().getByRole("region", { name: "Chaves de provedor" });
+    const keys = screen().getByRole("region", { name: "Chaves de API" });
     await click(within(keys).getByRole("button", { name: "Adicionar chave" }));
     const add = screen().getByRole("dialog", { name: "Adicionar chave de API" });
     await type(within(add).getByLabelText("Chave da API"), "sk-proj-abcdefghijklmnop1234");
@@ -468,7 +460,7 @@ describe("Configurações do workspace", () => {
     });
     seeded.credentials.push(OPENROUTER_KEY);
     const { state } = await go(seeded, "settings/keys");
-    const keys = screen().getByRole("region", { name: "Chaves de provedor" });
+    const keys = screen().getByRole("region", { name: "Chaves de API" });
     expect(keys.textContent).toContain("Cada tarefa usa um destes, conforme a dificuldade.");
     await click(within(keys).getByRole("button", { name: "Escolher" }));
     const dialog = screen().getByRole("dialog", { name: "Modelos do Automático" });
@@ -495,7 +487,7 @@ describe("Configurações do workspace", () => {
 
   test("provider keys: default marked; rotate keeps the key; the default can't be deleted; usage by kind", async () => {
     const { state, router } = await go(seedState(), "settings/keys");
-    const keys = () => screen().getByRole("region", { name: "Chaves de provedor" });
+    const keys = () => screen().getByRole("region", { name: "Chaves de API" });
     expect(keys().textContent).toContain("Claude da Acme");
     expect(keys().textContent).toContain("Claude · Termina em 7f2a");
     expect(keys().textContent).toContain("Padrão do workspace");
@@ -556,8 +548,9 @@ describe("Configurações do workspace", () => {
       router.navigate({ to: "/org/$orgId/settings/$section", params: { orgId: ORG_ID, section: "usage" } }),
     );
     await settle(4);
-    // The plan accounts, each a row that opens to its windows with every agent's part, then the API per agent
+    // On Uso, the plan accounts, each a row that opens to its windows with every agent's part, then the API per agent
     // (ADR 0063).
+    await usageTab();
     const plans = screen().getByRole("region", { name: "Contas" });
     const head = within(plans).getByRole("button", { name: /^A conta que os seus agentes dividem/ });
     // Closed: its name, plan and owner, and one meter, the fullest window. One computer: it isn't named.
@@ -699,9 +692,11 @@ describe("Configurações do workspace", () => {
     cleanup();
     // IA e uso: the plans in percentages, never the workspace's keys, money or report.
     await go(state, "settings/usage");
+    expect(screen().queryByRole("region", { name: "Chaves de API" })).toBeNull();
+    await usageTab();
     const plans = screen().getByRole("region", { name: "Contas" });
     expect(within(plans).getByRole("meter", { name: "5 horas" }).getAttribute("aria-valuenow")).toBe("62");
-    expect(screen().queryByRole("region", { name: "Chaves de provedor" })).toBeNull();
+    expect(screen().queryByRole("region", { name: "Chaves de API" })).toBeNull();
     expect(screen().queryByRole("region", { name: "Gastos da API por tipo" })).toBeNull();
     expect(screen().queryByRole("region", { name: "Orçamento padrão dos agentes" })).toBeNull();
     expect(document.body.textContent).not.toContain("US$");
@@ -746,6 +741,7 @@ describe("Configurações do workspace", () => {
 
   test("AI and usage: the plans' estimate is their title's ⓘ, no card has a subtitle or footer; no plans, one line", async () => {
     await go(seedState(), "settings/usage");
+    await usageTab();
     const plans = screen().getByRole("region", { name: "Contas" });
     expect(hintOf("Contas", plans)).toMatchObject({
       text: "Os planos só dizem quanto a conta inteira usou. A parte de cada agente é uma estimativa, pelo que cada um gastou nela.",
@@ -759,6 +755,7 @@ describe("Configurações do workspace", () => {
     api.orgs.planUsage = async () => ({ month: "2026-10", money: true, accounts: [], api: [] });
     await renderApp(`/org/${ORG_ID}/settings/usage`, { api });
     await settle(5);
+    await usageTab();
     const empty = screen().getByRole("region", { name: "Contas" });
     expect(shownText(empty)).toBe(
       "ContasUse o plano de IA que você já pagaConecte um plano e acompanhe aqui o quanto cada agente usa dele.Conectar uma IA",
@@ -795,6 +792,7 @@ describe("a plan account's agents (IA e uso › Contas)", () => {
   test("the bar split in each agent's color, then one list biggest share first, then when it renews and the month", async () => {
     await renderApp(`/org/${ORG_ID}/settings/usage`, { api: crowded() });
     await settle(5);
+    await usageTab();
     const plans = screen().getByRole("region", { name: "Contas" });
     await click(within(plans).getByRole("button", { name: /^A conta que os seus agentes dividem/ }));
     await act(async () => openDetails(plans));
@@ -1014,7 +1012,7 @@ describe("the same key saved more than once", () => {
       key("cred-d", { copyOf: "cred-a" }),
     ];
     const { state } = await go(seedState({ credentials }), "settings/keys");
-    const keys = screen().getByRole("region", { name: "Chaves de provedor" });
+    const keys = screen().getByRole("region", { name: "Chaves de API" });
     expect(within(keys).getAllByText("Gateway")).toHaveLength(1);
     expect(keys.textContent).toContain("4 cópias iguais");
     await click(within(await keyMenu("Gateway")).getByRole("menuitem", { name: "Remover cópias" }));
@@ -1036,7 +1034,7 @@ describe("the same key saved more than once", () => {
   test("saving a key the workspace already has says it was updated, and adds no row", async () => {
     const claude = key("cred-a", { provider: "anthropic", label: "Claude", keyHint: "9999", endpoint: undefined });
     const { state } = await go(seedState({ credentials: [claude] }), "settings/keys");
-    const keys = screen().getByRole("region", { name: "Chaves de provedor" });
+    const keys = screen().getByRole("region", { name: "Chaves de API" });
     await click(within(keys).getByRole("button", { name: "Adicionar chave" }));
     const add = screen().getByRole("dialog", { name: "Adicionar chave de API" });
     await type(within(add).getByLabelText("Chave da API"), "sk-ant-api03-same-key-9999");

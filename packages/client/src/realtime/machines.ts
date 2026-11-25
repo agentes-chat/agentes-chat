@@ -1,4 +1,5 @@
 import type { InvalidateQueryFilters, QueryClient } from "@tanstack/react-query";
+import type { ApiClient } from "../api/client";
 import { keys } from "../api/keys";
 import type {
   Agent,
@@ -14,6 +15,7 @@ import type {
   OrgDeletion,
   OrgStanding,
 } from "../api/types";
+import { isCardKind } from "../lib/artifacts";
 import { pacer } from "../lib/pace";
 import { isWorkspaceMode } from "../lib/workspace-mode";
 
@@ -109,6 +111,7 @@ export function applyMachineEvent(qc: QueryClient, orgId: string, event: { type:
     egress?: unknown;
     networkTransition?: unknown;
     standby?: unknown;
+    moving?: unknown;
   };
   if (typeof e.machineId !== "string") return true;
   const machineId = e.machineId;
@@ -117,8 +120,10 @@ export function applyMachineEvent(qc: QueryClient, orgId: string, event: { type:
     return true;
   }
   const list = keys.machines(orgId);
-  // Who waits for an offline computer changes when one comes back, goes away or its agents move.
-  if (e.type === "machine.status" || e.type === "machine.deleted" || e.type === "machine.agents_moved") {
+  // Who waits for an offline computer changes when one comes back, goes away or its agents move; whether it is
+  // moving to another server (`moving`, the server's to say: only while it is away) changes their words.
+  const moving = e.type === "machine.updated" && typeof e.moving === "boolean";
+  if (e.type === "machine.status" || e.type === "machine.deleted" || e.type === "machine.agents_moved" || moving) {
     void qc.invalidateQueries({ queryKey: keys.machineOutages(orgId) });
   }
   // Whether agents can use their browser (ADR 0040) and what can think for them follow the computer: its
@@ -157,6 +162,8 @@ export function applyMachineEvent(qc: QueryClient, orgId: string, event: { type:
                 lastSeenAt: e.online === true ? now : m.lastSeenAt,
                 ...(online ? { offlineCause: null } : {}),
                 ...(e.online === true && m.standby ? { standby: false } : {}),
+                // Back on the new server: it moved.
+                ...(e.online === true && m.moving ? { moving: false } : {}),
               }
             : m,
         ),
@@ -359,9 +366,10 @@ export function applyMembershipEvent(qc: QueryClient, orgId: string, event: Chan
 /**
  * What the open conversation says about lists shown elsewhere too: a file saved, changed or deleted there (its cards,
  * the open viewer, the Drive; a deleted one's cards say so, from the conversation read again), and an agent changing its
- * memory there (its memory list). Returns whether the event was one of these.
+ * memory there (its memory list). A live block, vote or question card made there is read at once (`api`): its message
+ * lands after it, and the card draws whole then. Returns whether the event was one of these.
  */
-export function applyConversationEvent(qc: QueryClient, orgId: string, event: ChannelEvent): boolean {
+export function applyConversationEvent(qc: QueryClient, orgId: string, event: ChannelEvent, api?: ApiClient): boolean {
   const type: string = event.type;
   if (type === "artifact.created" || type === "artifact.updated" || type === "artifact.deleted") {
     const e = event as { artifact?: { id?: unknown }; artifactId?: unknown };
@@ -379,6 +387,7 @@ export function applyConversationEvent(qc: QueryClient, orgId: string, event: Ch
           }
         : { queryKey: keys.artifacts(orgId) },
     );
+    if (api && event.type === "artifact.created") prefetchCard(api, qc, orgId, event.artifact);
     const channelId = (event as { channelId?: unknown }).channelId;
     if (type === "artifact.deleted" && typeof channelId === "string")
       void qc.invalidateQueries({ queryKey: ["org", orgId, "channel", channelId] });
@@ -389,6 +398,29 @@ export function applyConversationEvent(qc: QueryClient, orgId: string, event: Ch
     return true;
   }
   return false;
+}
+
+/** What a card shows (the same caches its card reads), before its message lands. */
+function prefetchCard(
+  api: ApiClient,
+  qc: QueryClient,
+  orgId: string,
+  a: { id: string; kind: string; version: number },
+) {
+  if (!isCardKind(a.kind)) return;
+  void qc.prefetchQuery({
+    queryKey: keys.artifact(orgId, a.id, a.version),
+    queryFn: () => api.artifacts.get(orgId, a.id, a.version),
+  });
+  if (a.kind === "poll")
+    void qc.prefetchQuery({ queryKey: keys.poll(orgId, a.id), queryFn: () => api.artifacts.poll(orgId, a.id) });
+  if (a.kind === "choices")
+    void qc.prefetchQuery({ queryKey: keys.choices(orgId, a.id), queryFn: () => api.artifacts.choices(orgId, a.id) });
+  if (a.kind === "block")
+    void qc.prefetchQuery({
+      queryKey: keys.blockState(orgId, a.id, a.version),
+      queryFn: () => api.artifacts.blockState(orgId, a.id, a.version),
+    });
 }
 
 /**
@@ -414,6 +446,8 @@ export function applyWorkspaceEvent(qc: QueryClient, orgId: string, event: { typ
   if (event.type === "agents.changed") {
     // Under `agents`: the former ones. The DMs name each agent as the server knows it.
     readList(qc, `${orgId}:agents`, { queryKey: keys.agents(orgId) });
+    // A new agent's face: the statuses' own poll waits minutes while the socket is open.
+    readList(qc, `${orgId}:status:agents`, { queryKey: keys.agentStatus(orgId) });
     readList(qc, `${orgId}:dms`, { queryKey: keys.dms(orgId) });
     readList(qc, `${orgId}:team`, { queryKey: keys.team(orgId) });
     readList(qc, `${orgId}:overview`, { queryKey: keys.overview(orgId) });

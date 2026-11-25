@@ -707,9 +707,9 @@ describe("Instalar skill: private repositories", () => {
 });
 
 describe("agent skills", () => {
-  test("Ferramentas e acesso: the library as checkboxes; a change waits for Salvar and sends every skill", async () => {
+  test("the Skills tab: the library as checkboxes; a change waits for Salvar and sends every skill", async () => {
     const state = seedState();
-    await renderApp(`/org/${ORG_ID}/agents/${ADA_ID}?tab=access`, { api: createFakeApi(state) });
+    await renderApp(`/org/${ORG_ID}/agents/${ADA_ID}?tab=skills`, { api: createFakeApi(state) });
     await settle(8);
     const section = screen().getByRole("region", { name: "Skills" });
     expect(
@@ -741,9 +741,9 @@ describe("agent skills", () => {
     ).toBe("true");
   });
 
-  test("Ferramentas e acesso: past 6 skills a search that only hides pills; a skill switched on stays on", async () => {
+  test("the Skills tab: past 6 skills a search that only hides pills; a skill switched on stays on", async () => {
     const { state, api } = await withExtras(3);
-    const { services } = await renderApp(`/org/${ORG_ID}/agents/${ADA_ID}?tab=access`, { api });
+    const { services } = await renderApp(`/org/${ORG_ID}/agents/${ADA_ID}?tab=skills`, { api });
     await settle(8);
     const section = () => screen().getByRole("region", { name: "Skills" });
     const pills = () => [...section().querySelectorAll(".ac-pill")].map((p) => p.textContent);

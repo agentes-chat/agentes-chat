@@ -13,6 +13,7 @@ export const AGENT_TABS = [
   "overview",
   "instructions",
   "access",
+  "skills",
   "memory",
   "files",
   "usage",
@@ -38,8 +39,11 @@ export const AGENT_SECTIONS = [
 export type AgentSection = (typeof AGENT_SECTIONS)[number];
 export const isAgentSection = (v: unknown): v is AgentSection => AGENT_SECTIONS.includes(v as AgentSection);
 
-/** The screens "Quem pensa" can open on from a link, past its first one (ADR 0032 §5, addendum 2026-11-10). */
-export const BRAIN_SCREENS = ["model", "more", "switch"] as const;
+/**
+ * The screens "Quem pensa" can open on from a link (ADR 0032 §5, addendum 2026-11-10): `switch` is its first screen
+ * with the account list open, `add` its "Add account" screen (Back leads to the first one).
+ */
+export const BRAIN_SCREENS = ["model", "more", "switch", "add"] as const;
 export type BrainScreen = (typeof BRAIN_SCREENS)[number];
 export const isBrainScreen = (v: unknown): v is BrainScreen => BRAIN_SCREENS.includes(v as BrainScreen);
 
@@ -66,6 +70,8 @@ export const ADVANCED_SECTIONS: readonly AgentSection[] = [
 /** The tab that shows for an address: a personal workspace's advanced sections in Advanced; a team's has no Advanced. */
 export function shownAgentTab(tab: AgentTab, sec: AgentSection | undefined, personal: boolean): AgentTab {
   if (!personal) return tab === "advanced" ? "settings" : tab;
+  // A personal workspace keeps the skills in Advanced.
+  if (tab === "skills") return "advanced";
   return tab === "settings" && sec && ADVANCED_SECTIONS.includes(sec) ? "advanced" : tab;
 }
 

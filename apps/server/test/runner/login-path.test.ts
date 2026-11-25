@@ -57,5 +57,6 @@ test("Windows: what the app started with stays first, then the registry's Path a
     "C:\\Users\\ana\\.local\\bin",
     "C:\\Users\\ana\\AppData\\Roaming\\npm",
     "C:\\Users\\ana\\.bun\\bin",
+    "C:\\Users\\ana\\AppData\\Local\\agy\\bin",
   ]);
 });

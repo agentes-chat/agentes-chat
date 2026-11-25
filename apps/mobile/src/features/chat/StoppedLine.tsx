@@ -10,7 +10,7 @@ import { StyleSheet, View } from "react-native";
 import { useOrg } from "@/providers/org";
 import { Button, EventPill, EventPillAction, PixelStop, useToast } from "@/ui";
 import { openAgentAi } from "../ai/AgentAiScreen";
-import { openKeyForAll } from "../ai/KeyForAllScreen";
+import { openKeyForAll } from "../ai/AgentSetupScreen";
 import { useColors, useOrgId, useWhen } from "../shared/hooks";
 import { ReasonField } from "../task-manager/parts";
 import { useQuietInset } from "./look";
@@ -160,6 +160,11 @@ export function SpeedFallbackLine({ message }: { message: Message }) {
       {t("chat.speedFallback.text")}
     </EventPill>
   );
+}
+
+/** Under a reply that thought on another computer because the agent's own was full or away (`meta.spilled`). */
+export function SpilledLine({ text }: { text: string }) {
+  return <EventPill mark="laptop">{text}</EventPill>;
 }
 
 /**

@@ -96,7 +96,7 @@
     "chats": "Sohbetler",
     "threads": "İleti dizileri",
     "agents": "Ajanlar",
-    "activity": "Etkinlik",
+    "activity": "Gelen kutusu",
     "search": "Ara",
     "withCount": "{{label}}, {{count}}"
   },
@@ -189,6 +189,12 @@
     },
     "pinned": "Sabitlenenler",
     "recent": "Son sohbetler",
+    "view": {
+      "title": "Sohbetleri göster",
+      "sectors": "Bölümler",
+      "dms": "Doğrudan mesajlar",
+      "channels": "Kanallar"
+    },
     "seeAll": "Tüm sohbetleri gör",
     "splitEmpty": "Sohbetlerin burada açılır.",
     "wait": {
@@ -325,6 +331,9 @@
   },
   "chat": {
     "someone": "Biri",
+    "handedTo": "{{name}} adlı ajana devredildi",
+    "handedTo_female": "{{name}} adlı ajana devredildi",
+    "pairAsked": "{{from}} sordu",
     "messageTo": "{{name}} kişisine mesaj",
     "messageIn": "{{channel}} kanalına mesaj",
     "reply": "Yanıtla",
@@ -398,10 +407,6 @@
       "working": "{{names}} yazıyor",
       "mentionsYou": "sizden bahsedildi",
       "divider": "Yeni"
-    },
-    "connection": {
-      "down": "Bağlantı yok. Gönderdikleriniz bağlantı gelince kendiliğinden gider.",
-      "back": "Yeniden bağlandı"
     },
     "longPressHint": "Tepki vermek ve diğer işlemleri görmek için basılı tutun",
     "file": "Dosya",
@@ -562,6 +567,8 @@
     "camera": "Kamera",
     "photos": "Fotoğraflar",
     "file": "Dosya",
+    "paste": "Yapıştır",
+    "pasteGone": "Kopyalanan görsel okunamadı. Tekrar kopyalayın, sonra Yapıştır'a dokunun.",
     "media": "GIF'ler",
     "noCamera": "Kamera erişimi yok. Telefonun Ayarlar bölümünden izin verin.",
     "summary": "Sohbeti özetle",
@@ -863,7 +870,7 @@
     }
   },
   "activity": {
-    "title": "Etkinlik",
+    "title": "Gelen kutusu",
     "chooseModel": "Başka bir model seç",
     "filter": {
       "all": "Tümü",
@@ -883,6 +890,12 @@
     "kind": {
       "proposal_waiting_one": "{{names}} bir iyileştirme öneriyor",
       "proposal_waiting_other": "{{names}} iyileştirme öneriyor",
+      "proposal_applied_one": "{{names}} bir iyileştirme uyguladı",
+      "proposal_applied_other": "{{names}} {{count}} iyileştirme uyguladı",
+      "proposal_applied_agents_one": "{{names}} bir iyileştirme uyguladı",
+      "proposal_applied_agents_other": "{{names}} {{count}} iyileştirme uyguladı",
+      "proposal_applied_auto_one": "Bir iyileştirme otomatik olarak uygulandı",
+      "proposal_applied_auto_other": "{{count}} iyileştirme otomatik olarak uygulandı",
       "mention_one": "{{names}} sizden bahsetti",
       "mention_other": "{{names}} sizden bahsetti",
       "thread_reply_one": "{{names}} ileti dizisinde yanıtladı",
@@ -1038,6 +1051,46 @@
     "addA11y": "{{name}} kanala eklensin",
     "added": "{{name}} kanala katıldı"
   },
+  "settingsSearch": {
+    "open": "Ayarlarda ara",
+    "title": "Ara",
+    "placeholder": "Sen ve ayarlarda ara",
+    "workspace": "Workspace ayarları",
+    "words": {
+      "status": "uzakta, meşgul, durum, çevrimiçi",
+      "account": "ad, fotoğraf, e-posta, saat dilimi, şifre, kullanıcı adı",
+      "deleteAccount": "sil, kaldır, hesabı kapat",
+      "workspaces": "geçiş, sunucular, hesaplar",
+      "notifications": "uyarılar, push, rozetler",
+      "approvals": "onayla, devret",
+      "start": "aç, ana sayfa, ilk ekran",
+      "activity": "araçlar, ajanların yaptıkları",
+      "chatLook": "balonlar, mesajlar, sohbet",
+      "wallpaper": "arka plan, duvar kağıdı, fotoğraf",
+      "agentStyle": "teknik, basit, ton",
+      "sounds": "ses, sessiz, sessize al",
+      "appearance": "tema, koyu, açık, mod",
+      "appIcon": "simge",
+      "language": "dil, Türkçe, İngilizce",
+      "about": "sürüm, lisanslar",
+      "aiAccounts": "anahtar, API, sağlayıcı, plan, model",
+      "general": "ad, logo, saat dilimi, bağlam",
+      "media": "GIF'ler, çıkartmalar",
+      "members": "kişiler, ekip",
+      "invites": "davet et, davet, bağlantı",
+      "roles": "izinler, roller",
+      "usage": "maliyet, harcama, plan, token, bütçe",
+      "connectors": "entegrasyonlar, MCP, hizmetler",
+      "skills": "beceriler",
+      "vault": "şifreler, anahtarlar, girişler, sırlar",
+      "access": "izinler, ajan erişimi",
+      "apps": "yapay zekâ uygulamaları, MCP",
+      "computers": "cihazlar, makineler, bilgisayar, telefon",
+      "storage": "dosyalar, S3, depolama",
+      "import": "dışa aktar, içe aktar, taşı",
+      "audit": "kayıt, geçmiş"
+    }
+  },
   "me": {
     "title": "Siz",
     "role": {
@@ -1082,8 +1135,6 @@
     "issues": "Görevler",
     "issuesWithMe_one": "{{count}} tanesi sizde",
     "issuesWithMe_other": "{{count}} tanesi sizde",
-    "proposalsWaiting_one": "{{count}} bekliyor",
-    "proposalsWaiting_other": "{{count}} bekliyor",
     "drive": "Drive",
     "connectors": "Bağlayıcılar ve MCP'ler",
     "preferences": "Tercihler",
@@ -1239,11 +1290,8 @@
     },
     "talk": {
       "hint": {
-        "image": "Yorum yapmak istediğiniz yere dokunun",
-        "video": "Bu ana yorum yapmak için videoya dokunun",
-        "pdf": "Bir nokta işaretlemek için sayfaya dokunun"
+        "pdf": "Bir noktayı işaretlemek için sayfaya basılı tutun"
       },
-      "markVideo": "Videonun bu anına yorum yap",
       "pdfPage": "Sayfa {{page}} / {{count}}",
       "pdfFailed": "Bu PDF gösterilemedi."
     }
@@ -1297,6 +1345,7 @@
     "criteriaOf": "{{done}} / {{total}}",
     "linkMessage": "#{{channel}} kanalındaki mesaj",
     "linkMessagePlain": "Kaynak mesaj",
+    "removeFileText": "Dosya Drive'da kalır.",
     "subIssues": "Alt görevler",
     "talk": "Sohbet et",
     "finish": "Tamamlandı olarak işaretle",
@@ -1387,13 +1436,26 @@
     "uses_one": "{{count}} kez kullanıldı",
     "uses_other": "{{count}} kez kullanıldı",
     "confirmed": "Bir kişi tarafından onaylandı",
-    "confirm": "Onayla",
-    "confirmedToast": "Onaylandı",
     "details": "Teknik ayrıntılar",
     "before": "Önceki hali: {{text}}",
     "fix": "Düzelt",
     "forgetTitle": "Bu bellek kaydı unutulsun mu?",
     "forgetText": "{{name}} sonraki sohbetlerde bunu kullanmayı bırakır."
+  },
+  "proposals": {
+    "title": "Ajan iyileştirmeleri",
+    "emptyTitle": "Henüz hiçbir şey değişmedi",
+    "empty": "Bir ajan kendi talimatlarını veya bir ekip arkadaşınınkileri iyileştirdiğinde, değişiklik Geri al seçeneğiyle burada görünür.",
+    "more": "Daha fazla göster",
+    "reviewing": "İnceleniyor…",
+    "appliedBy": "{{name}} uyguladı",
+    "appliedBy_female": "{{name}} uyguladı",
+    "appliedAuto": "Otomatik olarak uygulandı",
+    "leftOutBy": "{{name}} uygulamadı",
+    "leftOutBy_female": "{{name}} uygulamadı",
+    "leftOut": "Uygulanmadı",
+    "undoneBy": "{{name}} tarafından geri alındı",
+    "undoneByYou": "Sizin tarafınızdan geri alındı"
   },
   "wiki": {
     "map": "Sayfa haritası",
@@ -1435,6 +1497,28 @@
       "day": "Gün",
       "monthDay": "Ayın {{day}}. günü",
       "lastDay": "Ayın son günü"
+    }
+  },
+  "coding": {
+    "pill": "{{who}}. Kodu gör",
+    "seeChanges": "Değişiklikleri gör",
+    "project": "Proje",
+    "whereSearch": "Arayın veya bir ad yazın",
+    "listed": "Ajanınkiler",
+    "commit": "Commit {{short}}",
+    "waiting": "Sizi bekleyenler",
+    "next": {
+      "pr": "Dal gönderildi, henüz pull request yok",
+      "mergeLocal": "{{base}} dalına birleştirmeye hazır"
+    },
+    "terminal": {
+      "keys": "Terminal tuşları",
+      "keyboard": "Klavye",
+      "pasteHint": "Kopyaladığınızı terminale yapıştırın",
+      "key": {
+        "CtrlC": "Control-C, kes",
+        "CtrlD": "Control-D, girdinin sonu"
+      }
     }
   },
   "taskManager": {
@@ -2040,20 +2124,16 @@
     "mcps": "MCP'ler",
     "mcpsNone": "Adresiyle bağladığınız MCP sunucuları burada görünür.",
     "addMcp": "MCP ekle",
-    "add": "Ekle",
-    "allServices": "Tüm hizmetler",
     "waitLine_one": "{{count}} araç sizi bekliyor",
     "waitLine_other": "{{count}} araç sizi bekliyor",
     "toolsWait_one": "{{count}} tanesi sizi bekliyor",
     "toolsWait_other": "{{count}} tanesi sizi bekliyor",
     "connectedState": "Bağlı",
     "connected": "Bağlı",
-    "suggested": "{{org}} için önerilenler",
-    "all": "Tümü",
+    "seeAll": "Tümünü gör",
     "noResults": "Bu adla bir hizmet yok. Adresini deneyin.",
     "soon": "Yakında",
     "loadFailed": "Bağlayıcılar yüklenemedi.",
-    "connectedCheck": "{{name}}, bağlı",
     "adminsOnly": "Hizmetleri yalnızca {{org}} yöneticileri bağlayabilir. Birinden isteyin.",
     "adminsOnlyPersonal": "Uygulamaları yalnızca bu çalışma alanını yöneten kişi bağlayabilir. Ondan isteyin.",
     "canTitle": "Ajanlar şunları yapabilecek",
@@ -2098,6 +2178,32 @@
     "disconnected": "{{name}} bağlantısı kesildi.",
     "usedBy_one": "{{names}} kullanıyor",
     "usedBy_other": "{{names}} kullanıyor",
+    "page": {
+      "missing": "Bu hizmet artık katalogda değil.",
+      "connected": "Bağlandı",
+      "open": "Bağlantıyı aç",
+      "category": "Kategori",
+      "tools": "Araçlar",
+      "toolsAsk_one": "{{count}} onay istiyor",
+      "toolsAsk_other": "{{count}} onay istiyor",
+      "toolsAskNone": "hiçbiri onay istemiyor",
+      "toolsLater": "bağlandıktan sonra",
+      "who": "Kim bağlar",
+      "whoAdmins": "{{org}} yöneticileri",
+      "whoRuns": "Workspace'i yöneten kişi",
+      "whoYou": "Sen, kendin için",
+      "signIn": "Giriş yöntemi",
+      "how": {
+        "signIn": "Hesabın",
+        "key": "Bir anahtar",
+        "either": "Hesap veya anahtar"
+      },
+      "canTitle": "Ajanlar bununla ne yapar",
+      "address": "Adres",
+      "addressNote": "Ajanlar bu adresi bağlı hesapla kullanır. Her biri yalnızca senin izin verdiğini alır.",
+      "host": "Bağlandığı adres",
+      "more": "{{category}} kategorisinde daha fazlası"
+    },
     "fromAgent": "Bir hizmet bağla",
     "githubApp": {
       "useApp": "agentes.chat uygulamasını kullan",
@@ -2766,6 +2872,10 @@
       "textPersonal": "Bir ajan için görev oluşturun ve sonuna kadar takip edin.",
       "viewerTitlePersonal": "Ajanlarınızın işini takip edin"
     },
+    "coding": {
+      "title": "Ajanlarınızla kod yazın",
+      "text": "Her oturum, kendi dalında ve kendi bilgisayarında çalışan bir ajanla yapılan bir konuşmadır."
+    },
     "routines": {
       "title": "Tekrarlayan işleri ajanlarınıza bırakın",
       "text": "Bir rutin belirli bir saatte veya bir şey olduğunda kendiliğinden çalışır.",
@@ -3096,6 +3206,61 @@
       "editHint": "Bu kısmı düzenler",
       "notHere": "Bu kısım bilgisayarda düzenlenir"
     }
+  },
+  "aiHub": {
+    "accounts": "Hesaplar",
+    "accountsHint": "Bu çalışma alanındaki tüm planlar ve API anahtarları, kim bağlamış olursa olsun. Sınırlarını ve kimin kullanabileceğini görmek için bir hesaba dokunun.",
+    "order": "Kullanım sırası",
+    "orderSub": "Sınıra gelince ajanlar sıradaki hesapla devam eder.",
+    "skipped": "atlandı",
+    "orderGroup": "{{plan}} · {{computer}}",
+    "noOrder": "Bir bilgisayarda aynı yapay zekanın iki hesabı olduğunda sıraları burada görünür.",
+    "keyFallback": "Tüm planlar sınırdayken API anahtarıyla devam et",
+    "keyFallbackHint": "Son hesaptan sonra ajanlar, kullanım başına ücretlendirilen çalışma alanı API anahtarıyla devam eder. Görevler hiçbir zaman anahtara geçmez.",
+    "keyFallbackLocked": "Bunu yalnızca bir yönetici değiştirir.",
+    "limits": "Sınırlar",
+    "permissions": "İzinler",
+    "manage": "Yönet",
+    "manageSub": "Yeniden adlandır, tekrar giriş yap, kaldır",
+    "manageHint": "Bu hesabı kimin yeniden adlandırabileceği, tekrar giriş yapabileceği ve kaldırabileceği. Bunu yalnızca hesabı bağlayan kişi değiştirir.",
+    "use": "Ajanlarda kullan",
+    "useSub": "Düşünen yapay zekada seç",
+    "useHint": "Kimin ajanlarının bu hesapla düşünebileceği ve kimin Lodi'sinin. Hesabı yöneten kişi değiştirir.",
+    "reply": "Herkese yanıt ver",
+    "replySub": "Ajanların kiminle konuştuğu",
+    "replyHint": "Bu hesaptaki bir ajanın kendi sahibi dışında kime yanıt verdiği. Claude'un koşulları, bir planın parasını ödeyen kişi tarafından kullanılmasını ister: herkese açmadan önce kontrol edin.",
+    "audience": {
+      "owner": "Yalnızca siz",
+      "ownerOf": "Yalnızca {{name}}",
+      "admins": "Siz ve yöneticiler",
+      "adminsOf": "{{name}} ve yöneticiler",
+      "roles": "Roller…",
+      "people": "Kişiler…",
+      "everyone": "Herkes",
+      "agentOwner": "Yalnızca ajanın sahibi",
+      "rolesCount_one": "{{count}} rol",
+      "rolesCount_other": "{{count}} rol",
+      "peopleCount_one": "{{count}} kişi",
+      "peopleCount_other": "{{count}} kişi"
+    },
+    "pickRoles": "Roller",
+    "pickPeople": "Kişiler",
+    "pickNone": "En az birini seçin.",
+    "choice": {
+      "account": "Hesap",
+      "model": "Model",
+      "effort": "Çaba",
+      "yours": "Sizin",
+      "others": "Ekibin",
+      "keys": "API anahtarları",
+      "workspace": "Çalışma alanınınki",
+      "workspaceSub": "Çalışma alanının API anahtarı",
+      "key": "API anahtarı",
+      "keyDefault": "çalışma alanı varsayılanı",
+      "api": "API"
+    },
+    "missionAi": "Yapay zeka",
+    "missionLocked": "İşi kimin yapacağı Başlat'tan önce seçilir. Model her zaman değiştirilebilir."
   },
   "surface": {
     "on": "Açık",

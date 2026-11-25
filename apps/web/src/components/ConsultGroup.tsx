@@ -214,7 +214,12 @@ export function ConsultPairRow({ askerId, items }: { askerId: string; items: rea
             : openConsultation
               ? {
                   "aria-pressed": items.some((c) => c.id === openId),
-                  onClick: () => openConsultation(pair.opens, items),
+                  // An answer's notice names no asker of its own: the row's tells the dialog who asked.
+                  onClick: () =>
+                    openConsultation(
+                      pair.opens,
+                      items.map((i) => ({ ...i, agentId: i.agentId ?? askerId })),
+                    ),
                 }
               : { "aria-expanded": open, onClick: () => setOpen((o) => !o) })}
         >

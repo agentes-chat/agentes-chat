@@ -321,6 +321,25 @@ describe("attachments", () => {
     expect(state.calls.some((call) => call.method === "chat.post")).toBe(false);
   });
 
+  test("a picture the engine lists only among the items joins the draft; cells from a sheet stay text", async () => {
+    const { state } = await open();
+    const uploads = () => state.calls.filter((call) => call.method === "artifacts.upload");
+    const shot = new File(["png"], "image.png", { type: "image/png" });
+    const items = [{ kind: "file", type: "image/png", getAsFile: () => shot }];
+    await act(async () => fireEvent.paste(composer(), { clipboardData: { files: [], items, getData: () => "" } }));
+    await settle(4);
+    expect(uploads()).toHaveLength(1);
+    const cells = {
+      files: [shot],
+      items: [],
+      getData: (kind: string) => (kind === "text/plain" ? "Q1\t120" : kind === "text/html" ? "<table></table>" : ""),
+    };
+    await act(async () => fireEvent.paste(document.body, { clipboardData: cells }));
+    await act(async () => fireEvent.paste(composer(), { clipboardData: cells }));
+    await settle(4);
+    expect(uploads()).toHaveLength(1);
+  });
+
   test("a picked file uploads to this channel, shows as a chip, and goes with the message", async () => {
     const { state } = await open();
     const input = document.querySelector('.channel__composer input[type="file"]') as HTMLInputElement;
