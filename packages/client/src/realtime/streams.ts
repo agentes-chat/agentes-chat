@@ -1,4 +1,5 @@
 import type { ActiveRun, BrowserProfileWait, ChannelEvent, Message, RunStatus } from "../api/types";
+import { PERMISSION_TOOL } from "../lib/activity";
 import { type CliLine, type CliProgress, cliLineOf, cliProgressOf, mergeCliProgress } from "../lib/cli-tools";
 import { isMediaAfterReply } from "../lib/media";
 import { NO_AI } from "../lib/no-ai";
@@ -628,8 +629,12 @@ function applyEvent(state: StreamsState, event: StreamEvent): StreamsState {
         serviceIcon: event.serviceIcon ?? null,
         toolDetail: event.detail ?? null,
         ...(newCall ? { code: event.code ?? null, output: [] } : {}),
-        // A new call is the step now: its own words, or none (the call's verb says it).
-        ...(newCall ? { step: event.said ? { said: event.said } : undefined } : {}),
+        // A new call is the step now: its own words, or none (the call's verb says it). The computer's permission
+        // check before a command is no step of its own: the command it lets through was told a moment before
+        // (`agent.step`) and stays the step while it runs, or the bar would say "thinking" for as long as it takes.
+        ...(newCall && !(event.tool === PERMISSION_TOOL && !event.said && current?.step)
+          ? { step: event.said ? { said: event.said } : undefined }
+          : {}),
       });
     }
     case "agent.step": {
@@ -846,12 +851,13 @@ const postedOnTheWay = (state: StreamsState, m: Pick<Message, "agentRunId" | "me
       ),
   );
 
-/** No event for this long: the row says "sem notícias há 3 min · Atualizar". */
-export const QUIET_AFTER_MS = 3 * 60_000;
+/** No event for this long: the app asks the server, unseen, whether the run still runs (`recheckRuns`). */
+export const QUIET_AFTER_MS = 90_000;
 
 /**
- * A live run that went silent (orphaned by a server restart, a lost socket…). One whose last call waits on a person
- * (a command's card, an approval) isn't: nothing happens until they answer, and the answer ends that call.
+ * A live run that went silent: its end may have been lost on the way (a server restart, a socket that stayed open while
+ * its events stopped). One whose last call waits on a person (a command's card, an approval) isn't: nothing happens
+ * until they answer, and the answer ends that call.
  */
 export const isQuiet = (r: LiveRun, now = Date.now()) =>
   !r.provisional &&
@@ -859,10 +865,37 @@ export const isQuiet = (r: LiveRun, now = Date.now()) =>
   (r.work ?? []).filter((w) => w.kind === "call").at(-1)?.held !== true &&
   now - (r.lastEventAt ?? r.startedAt ?? now) >= QUIET_AFTER_MS;
 
-/** "Atualizar" found the run still active: quiet again for another while. */
+/** The runs gone quiet at `at` by channel, leaving out `asking` (runs a check is already out for). */
+export function quietRunsByChannel(state: StreamsState, at: number, asking: ReadonlySet<string> = new Set()) {
+  const out = new Map<string, string[]>();
+  for (const r of Object.values(state.runs)) {
+    if (isQuiet(r, at) && !asking.has(r.runId)) out.set(r.channelId, [...(out.get(r.channelId) ?? []), r.runId]);
+  }
+  return out;
+}
+
+/** The server found the run still active: quiet again for another while. */
 export function touchRun(state: StreamsState, runId: string, now = Date.now()): StreamsState {
   const r = state.runs[runId];
   return r ? { ...state, runs: { ...state.runs, [runId]: { ...r, lastEventAt: now } } } : state;
+}
+
+/**
+ * The server's active runs, asked about `runIds` (runs gone quiet): those it no longer lists ended while their end never
+ * reached us and go (their message reads again); the rest are quiet again for another while. `active` undefined: the
+ * check failed (offline, no access any more, a server error), and they are asked about again after another while, not
+ * on every 5 s sweep.
+ */
+export function recheckRuns(
+  state: StreamsState,
+  runIds: readonly string[],
+  active: readonly ActiveRun[] | undefined,
+  now = Date.now(),
+) {
+  const known = new Set((active ?? []).map((a) => a.runId));
+  let s = state;
+  for (const id of runIds) s = !active || known.has(id) ? touchRun(s, id, now) : dismissRun(s, id);
+  return s;
 }
 
 const ACTIVE: ReadonlySet<string> = new Set(["queued", "running", "waiting_approval"]);

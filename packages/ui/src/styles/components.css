@@ -3111,6 +3111,34 @@ html:not([data-pointer]) .ac-tab:focus-visible {
 :is(.ac-dialog__head, .ac-details__head) .ac-btn--ghost.ac-btn--glyph:hover::before {
   background: transparent;
 }
+/* A cover over the head (a service's brand art), edge to edge under the dialog's top corners: the close sits on it, on
+   a round glass of its own so it reads over any art. */
+.ac-dialog__cover {
+  position: relative;
+  flex: none;
+  height: 132px;
+  overflow: hidden;
+  isolation: isolate;
+  border-start-start-radius: inherit;
+  border-start-end-radius: inherit;
+}
+.ac-dialog:has(> .ac-dialog__cover) .ac-dialog__close {
+  position: absolute;
+  z-index: var(--z-raised);
+  top: 12px;
+  inset-inline-end: 12px;
+}
+.ac-dialog:has(> .ac-dialog__cover) .ac-dialog__close > .ac-btn--glyph {
+  --glyph-air: 0px;
+  border-radius: 999px;
+  color: #fff;
+  background: rgb(0 0 0 / 0.32);
+  backdrop-filter: blur(6px);
+}
+.ac-dialog:has(> .ac-dialog__cover) .ac-dialog__close > .ac-btn--glyph:hover {
+  color: #fff;
+  background: rgb(0 0 0 / 0.48);
+}
 /* After the head's own actions the close is one more of them: a whole plate, 8 from the plate before it, as two icon
    buttons stand in a row. */
 .ac-actline:has(> .ac-dialog__acts) + .ac-dialog__close {
@@ -3216,9 +3244,9 @@ html:not([data-pointer]) .ac-tab:focus-visible {
   flex-wrap: wrap;
 }
 /* A note and its buttons are an action line: the buttons, one group 8 apart (`__foot-acts`), beside the note while it
-   keeps one line there (the note grows, so they end the line), else on a row of their own under it from the note's
-   edge, never floating at the other end. The note takes its content's width, so the wrap gives it the line before
-   the buttons could squeeze it word by word. */
+   keeps one line there (the note grows, so they end the line), else on a row of their own under it, at the same right
+   edge: whatever the note says, the buttons never change side. The note takes its content's width, so the wrap gives
+   it the line before the buttons could squeeze it word by word. */
 .ac-dialog__foot:has(> .ac-dialog__foot-acts) {
   column-gap: var(--space-4);
 }
@@ -3235,6 +3263,7 @@ html:not([data-pointer]) .ac-tab:focus-visible {
 .ac-dialog__foot-acts {
   display: flex;
   flex: none;
+  margin-inline-start: auto;
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
@@ -3243,6 +3272,16 @@ html:not([data-pointer]) .ac-tab:focus-visible {
 }
 .ac-dialog__foot-acts:empty {
   display: none;
+}
+/* The busy words over the note in one cell: the footer keeps the note's size while they change. */
+.ac-dialog__foot-swap {
+  display: grid;
+}
+.ac-dialog__foot-swap > * {
+  grid-area: 1 / 1;
+}
+.ac-dialog__foot-swap-off {
+  visibility: hidden;
 }
 /* A button is never wider than its dialog: a long name in its words (an account, an agent) ends in an ellipsis, the
    whole label still its name and, cut, its tip (title-tips.ts). */
@@ -5123,33 +5162,6 @@ html:not([data-pointer]) .ac-switch:focus-visible {
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   background: var(--surface-raised);
-}
-.ac-top-progress {
-  position: absolute;
-  inset: 0 0 auto;
-  height: 2px;
-  overflow: hidden;
-  z-index: var(--z-sticky);
-  pointer-events: none;
-}
-.ac-top-progress::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  width: 40%;
-  background: var(--ink-muted);
-  opacity: 0.6;
-}
-@media (prefers-reduced-motion: no-preference) {
-  .ac-top-progress::before {
-    animation: ac-top-progress 1.1s ease-in-out infinite;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .ac-top-progress::before {
-    width: 100%;
-    opacity: 0.35;
-  }
 }
 @keyframes ac-top-progress {
   from {
@@ -9574,6 +9586,14 @@ html:not([data-pointer]) .ac-recur__day:focus-visible {
   font-size: 13px;
   color: var(--muted);
 }
+/* SearchSelect's `footer`: under the list whatever is typed, past a menu's separator, its rows drawn as a menu's. */
+.ac-tz__foot {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 var(--menu-pad) var(--menu-pad);
+}
 .ac-tz__option[aria-disabled="true"] {
   color: var(--ink-muted);
   cursor: not-allowed;
@@ -9581,6 +9601,14 @@ html:not([data-pointer]) .ac-recur__day:focus-visible {
 /* SearchSelect's own rows: a mark, then the name over its description, as a menu draws them. */
 .ac-search__option {
   align-items: center;
+}
+/* One choice, so no check column (as `Select`): the chosen option sits on its plate, its name heavier. */
+.ac-search__list .ac-tz__option[aria-selected="true"] {
+  background: rgba(127, 127, 127, 0.14);
+  font-weight: 600;
+}
+.ac-search__list .ac-tz__option[data-active]:not([aria-selected="true"]) {
+  background: rgba(127, 127, 127, 0.07);
 }
 /* A searchable list with people, agents or roles in it is an OptionRow list: every row the faces' room around them (6,
    10 on touch), every face and mark the list's one size. */
@@ -9667,8 +9695,10 @@ html:not([data-pointer]) .ac-recur__day:focus-visible {
   justify-content: space-between;
   gap: 12px 16px;
 }
+/* As wide as the title on one line: when the buttons don't fit beside it, they go under it and the title stays whole. A
+   title wider than the page on its own wraps there. */
 .ac-pagehead__text {
-  flex: 1 1 280px;
+  flex: 1 1 auto;
   min-width: 0;
 }
 .ac-pagehead__titleline {
@@ -9689,7 +9719,9 @@ html:not([data-pointer]) .ac-recur__day:focus-visible {
   text-wrap: balance;
   overflow-wrap: anywhere;
 }
+/* Its words never widen the header: only the title decides when the buttons go under it. */
 .ac-pagehead__meta {
+  contain: inline-size;
   min-height: 20px;
   margin: -2px 0 0;
   font-size: 14px;
@@ -10343,12 +10375,14 @@ html:not([data-pointer]) .ac-filtertoggle:focus-visible {
 .ac-filter--active:hover {
   background: color-mix(in srgb, var(--ink) 88%, var(--bg));
 }
+/* On the filled chip the × is its words' color, quieter; its plate shows only under the pointer. */
 .ac-filter--active .ac-filter__clear {
-  background: color-mix(in srgb, var(--bg) 20%, transparent);
-  color: var(--bg);
+  background: transparent;
+  color: color-mix(in srgb, var(--bg) 70%, transparent);
 }
 .ac-filter--active .ac-filter__clear:hover {
-  background: color-mix(in srgb, var(--bg) 32%, transparent);
+  background: color-mix(in srgb, var(--bg) 20%, transparent);
+  color: var(--bg);
 }
 .ac-filter__trigger {
   display: inline-flex;
@@ -10398,9 +10432,12 @@ html:not([data-pointer]) .ac-filter__clear:focus-visible {
   margin-right: var(--in);
   border: 0;
   border-radius: calc(var(--tool-r, var(--control-r-sm)) - var(--in));
-  background: var(--sunken);
+  background: transparent;
   color: var(--ink2);
   cursor: pointer;
+  transition:
+    background-color 0.15s var(--out),
+    color 0.15s var(--out);
 }
 .ac-filter__clear:hover {
   background: var(--plate);
@@ -10924,6 +10961,16 @@ html:not([data-pointer]) .ac-filter__option:focus-visible {
 :is(.ac-menu--dropdown, .ac-menu--select) .ac-menu__item:not(:has(> .ac-menu__leading > .ac-avatar)) > .ac-menu__label {
   white-space: normal;
   overflow-wrap: anywhere;
+}
+/* In a list with faces every option is one size (OptionRow): a row led by a bare glyph there (a channel, a kind) keeps
+   its one line too, a name wider than the menu ending in "…", so its glyph stays beside it. */
+:is(.ac-menu, .ac-palette__list):has(.ac-menu__leading > .ac-avatar)
+  .ac-menu__item:not(:has(> .ac-menu__leading > .ac-avatar))
+  > .ac-menu__label:not(:has(> .ac-menu__desc)) {
+  display: block;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  text-overflow: ellipsis;
 }
 /* Its lead no taller than a line (an icon, a mark) keeps to the name's first line then, as an `.ac-iconline` lead. A list
    with faces centres every lead in its taller row instead. */

@@ -215,9 +215,9 @@ function MePage() {
   // The sky's band: from the screen's top (behind the status bar and the clear bar) to the photo's middle. It reaches
   // `PULL_ROOM` higher, out of sight, so a pull down shows more sky (it clips its foot, where the photo hangs).
   const band = insets.top + 62 + PHOTO_OVERLAP;
-  const issues = useIssues(org.orgId);
+  // Only the count of tasks with me: no 10 s look while agents work, which this tab, always mounted, kept going.
+  const issues = useIssues(org.orgId, "", "", { poll: false });
   const overview = useOverview(org.orgId).data;
-  const proposals = overview?.proposalsWaitingForMe ?? 0;
   const archived = useArchivedChannels(org.orgId).data?.length ?? 0;
   const push = usePushSwitch().on;
   const server = useAuthConfig().data;
@@ -275,12 +275,12 @@ function MePage() {
         onPress={() => open("/issues")}
       />
     ),
+    // What agents changed on their own (ADR 0219): a history, nothing waiting, so no count.
     proposals: (
       <GroupedRow
         key="proposals"
         icon="flag"
-        label={t("shell.proposals")}
-        {...(proposals > 0 ? { value: t("mobile.me.proposalsWaiting", { count: proposals }) } : {})}
+        label={t("mobile.proposals.title")}
         chevron
         onPress={() => open("/proposals")}
       />

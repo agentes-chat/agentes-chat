@@ -58,6 +58,7 @@ const SIDEWAYS: Record<string, "strip" | "content"> = {
   ".agp-subnav": "strip",
   ".ac-tabs": "strip",
   ".settings__groups": "strip",
+  ".store-cats": "strip",
   ".channel-settings__nav": "strip",
   ".onb__steps": "strip",
   ".newag .onb__steps": "strip",

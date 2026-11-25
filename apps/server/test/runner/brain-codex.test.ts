@@ -306,6 +306,13 @@ test("turn end: failed turns, usage limits, a stream error with a bad exit, last
   expect(failed.finish({ exitCode: 1, sessionId: SESSION })).toEqual([
     { type: "error", code: "codex_failed", message: "model overloaded" },
   ]);
+  // A failed turn with no message of its own: the error the CLI printed before it says why.
+  const bare = new CodexEventMapper();
+  bare.line('{"type":"error","message":"stream disconnected before completion"}');
+  bare.line('{"type":"turn.failed","error":{}}');
+  expect(bare.finish({ exitCode: 1, sessionId: SESSION })).toEqual([
+    { type: "error", code: "codex_failed", message: "stream disconnected before completion" },
+  ]);
   const limited = new CodexEventMapper();
   limited.line('{"type":"error","message":"Reconnecting... 1/5"}');
   limited.line('{"type":"turn.failed","error":{"message":"You’ve hit your usage limit. Try again later."}}');

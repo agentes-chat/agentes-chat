@@ -51,7 +51,9 @@ export function statusPill(t: TFunction, s: DeviceStatus): string {
       return name ? t("devices.status.inUseBy", { name }) : t("devices.status.inUse");
     }
     case "busy":
-      return t("devices.status.busy", { running: s.running, max: s.max });
+      return s.max === null
+        ? t("devices.status.busyRunning", { running: s.running })
+        : t("devices.status.busy", { running: s.running, max: s.max });
     case "needs_you":
       return t("devices.status.needs");
     case "preparing":
@@ -246,8 +248,23 @@ export const mayChangeTasks = (d: ComputerDevice, viewerId: string, admin: boole
  */
 export function taskLimitLine(t: TFunction, d: ComputerDevice, mayChange: boolean): string | null {
   if (d.status.kind !== "busy") return null;
+  const room = d.taskRoom;
+  if (room) {
+    if (room.pushHarder) return t("devices.line.tasksPushing", { gb: room.freeGb });
+    if (room.more > 0) return null;
+    return room.cpuBusy ? t("devices.line.tasksNoCpu") : t("devices.line.tasksNoMemory", { gb: room.freeGb });
+  }
   if (d.maxTasks === null) return t("devices.line.tasksUpdate", { max: d.status.max });
   return t(mayChange ? "devices.line.tasksChange" : "devices.line.tasksOwner", { max: d.maxTasks });
+}
+
+/** The Tasks at once row where tasks start on room: "Automatic · 3 running · room for about 8 more". */
+export function tasksAutoText(t: TFunction, d: ComputerDevice): string | null {
+  if (!d.taskRoom) return null;
+  const running = d.status.kind === "busy" ? d.status.running : 0;
+  return d.taskRoom.more > 0
+    ? t("devices.tasksAutoRoom", { running, more: d.taskRoom.more })
+    : t("devices.tasksAutoFull", { running });
 }
 
 /** A computer in the line's "More computers" list: "Online · macOS · 16 GB · your Claude Max plan" (`plan`: the viewer's there). */

@@ -169,16 +169,11 @@ export class AskStore {
 
 // ── What a message asks ──────────────────────────────────────────────────────
 
-/** The keys of `meta` a request comes in (what they hold is the probes' to read). */
-const ASK_KEYS = [
-  "approvalId",
-  "question",
-  "secretRequest",
-  "browserHandoff",
-  "actionCard",
-  "proposalId",
-  "memoryUpdates",
-] as const;
+/**
+ * The keys of `meta` a request comes in (what they hold is the probes' to read). A change an agent proposed
+ * (`memoryUpdates`, `proposalId`) asks nobody: its review applies it or leaves it out (ADR 0219).
+ */
+const ASK_KEYS = ["approvalId", "question", "secretRequest", "browserHandoff", "actionCard"] as const;
 
 /**
  * Whether a message may carry a request, by its keys alone: cheap enough to run over every loaded message whenever

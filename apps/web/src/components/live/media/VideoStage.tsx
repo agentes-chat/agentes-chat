@@ -190,6 +190,8 @@ export function VideoStage({
           onTime={onTime}
           onVideo={onVideo}
           marks={markers}
+          // A comment's pictures are this video's frame: drawn from another origin, they couldn't be read back.
+          crossOrigin="anonymous"
         >
           {/* biome-ignore lint/a11y/noStaticElementInteractions: Comment's marking surface; the keys stay the player's */}
           <div

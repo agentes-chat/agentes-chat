@@ -67,10 +67,14 @@ import {
   answersForEveryone,
   byAnotherAgent,
   byEveryone,
+  routedToLead,
   WHY_AN_AGENT_CALLED,
   WHY_ANSWER_FOR_EVERYONE,
   WHY_EVERYONE_CALLED,
+  WHY_GOING_ON,
+  WHY_LEAD_CALLED,
   WHY_YOU_WERE_CALLED,
+  wokenToGoOn,
 } from "./reply-policy";
 import { linePrompt } from "./reporting";
 import { wikiPersonOf } from "./requester";
@@ -209,7 +213,7 @@ export const WORK_IN_BACKGROUND_LINE =
  * `say_now` listed. The result still goes in the reply; a quick answer gets no line first.
  */
 export const SAY_NOW_LINE =
-  "- Before work that takes more than a few seconds, make say_now your very first call: one short line on what you'll do, in the same response as your first work call, then work: your final message brings the result. Once per request; never for a quick answer, nor with work_in_background (its `say` is that line).";
+  "- Before work that takes more than a few seconds, make say_now your very first call: one short line on what you'll do, in the same response as your first work call, then work: your final message brings the result. Once per request, and once when they correct or add to it mid-work; never for a quick answer, nor with work_in_background (its `say` is that line).";
 
 /**
  * A code session suggested in the chat (ADR 0215 §11): the line of "How you work" for an agent that programs on a
@@ -625,7 +629,8 @@ export interface RunContext {
 
 /**
  * When a live file fits better than a reply (ADR 0196 §6, documents ADR 0200), which picture to put in one (ADR 0196
- * §8: an SVG it writes, a picture from the web, a generated one), and where generated pictures go (ADR 0197): ours
+ * §8: an SVG it writes, a picture from the web, a generated one), a designed layout built natively (ADR 0220 §6), and
+ * where generated pictures go (ADR 0197): ours
  * posts them in the conversation (or on a canvas) and counts them in the budget, which a computer brain's own image
  * tool doesn't.
  */
@@ -633,6 +638,7 @@ export const liveFilesLine = (images: boolean) =>
   [
     "- Data people keep editing (a budget, a tracker, a list) goes in a spreadsheet (create_spreadsheet, formulas in English), not a Markdown table; slides in create_presentation; ideas and images side by side in create_canvas; documents (create_artifact kind document) are live: change them with edit_document. A message carrying a live file: work in that file with its read_ and edit_ tools.",
     ` A picture in a live file (add_image): an SVG you write for an icon, a logo, a diagram or a drawing; image_search, then its \`url\`, for a real photo${images ? "; generate_image for new artwork" : ""}.`,
+    " A designed slide or diagram (a brand's fonts and colors, cards, badges, icons): add_html, which makes pieces people edit; never a screenshot of a page in a live file.",
     images
       ? " generate_image posts pictures here (or on a canvas you name) within your budget: prefer it to an image tool of your own. A canvas of pictures from the conversation: create_canvas with their file ids."
       : "",
@@ -1084,7 +1090,7 @@ export async function buildRunContext(
   const [routed] =
     (run.trigger === "router" || run.trigger === "mention") && others.length > 0
       ? await db
-          .select({ selected: schema.routingDecisions.selectedAgentIds })
+          .select({ selected: schema.routingDecisions.selectedAgentIds, reason: schema.routingDecisions.reason })
           .from(schema.routingDecisions)
           .where(
             and(
@@ -1096,6 +1102,8 @@ export async function buildRunContext(
   const alsoAnswering = others
     .filter((m) => m.agentId && routed?.selected.includes(m.agentId))
     .map((m) => `@${m.agentHandle}`);
+  // What a person said to the room, given to this agent as the channel's responsible agent (ADR 0095).
+  const led = run.trigger === "router" && routedToLead(routed?.reason);
   // Agents the person only referenced (part of what this agent is asked): they got no request.
   const referencedIds = Array.isArray(trigger.meta?.referencedAgentIds) ? trigger.meta.referencedAgentIds : [];
   const referenced = others
@@ -1376,16 +1384,20 @@ export async function buildRunContext(
     ...(routine ? [{ turn: true, text: routine.timeLine }] : []),
     ...personLines.map((text) => ({ turn: true, text })),
     // Brought in without being named, by another agent or by a mention of everyone (reply-policy.ts): staying quiet
-    // is an answer.
+    // is an answer. Woken to go on with work that came back, or given the room as its responsible agent, it is told so.
     ...(options.mayPass
       ? [
           {
             turn: true,
-            text: byAnotherAgent(run, trigger)
-              ? WHY_AN_AGENT_CALLED
-              : byEveryone(run, trigger)
-                ? WHY_EVERYONE_CALLED
-                : WHY_YOU_WERE_CALLED,
+            text: wokenToGoOn(run, trigger)
+              ? WHY_GOING_ON
+              : led
+                ? WHY_LEAD_CALLED
+                : byAnotherAgent(run, trigger)
+                  ? WHY_AN_AGENT_CALLED
+                  : byEveryone(run, trigger)
+                    ? WHY_EVERYONE_CALLED
+                    : WHY_YOU_WERE_CALLED,
           },
         ]
       : []),
@@ -2467,12 +2479,20 @@ export function accessNotice(m: Pick<Message, "body" | "meta">, current = false)
   return parts.join("\n");
 }
 
-/** The text the model reads for a task-end notice (`meta.machineTask`), with its result; null for other messages. */
-export function taskNotice(m: Pick<Message, "body" | "meta">, current = false, personal = false): string | null {
+/**
+ * The text the model reads for a task-end notice (`meta.machineTask`), with its result; null for other messages.
+ * `atWork`: taken by a run already at work, mid-turn (`renderSteered`).
+ */
+export function taskNotice(
+  m: Pick<Message, "body" | "meta">,
+  current = false,
+  personal = false,
+  atWork = false,
+): string | null {
   const access = accessNotice(m, current);
   if (access) return access;
   // An event delivered to the agent (a routine's report, another agent's answer, a late wait result).
-  const notice = noticeText(m.meta, current, personal);
+  const notice = noticeText(m.meta, current, personal, atWork);
   if (notice) return notice;
   // A stretch's pause card (ADR 0089): the agents stopped for the people here; the run a person let go on reads it.
   const paused = stretchCardOf(m.meta);
@@ -2565,7 +2585,7 @@ async function surfaceTurnLine(
   const found = turn ? await turn : null;
   if (!found || !surface) return "";
   const who = names.get(found.userId) ?? "this person";
-  return `\n${who} reads this conversation on ${promptName(surface.name)} right now, not in agentes.chat. Keep it short. Plain text with bold, italics, lists and links; pictures and files go through. No cards, blocks, polls or choices: ask in words. Deleting, roles, budgets, money, merges, deploys and routines that post elsewhere are done in the app: say so in one line and give no other way.`;
+  return `\n${who} reads this conversation on ${promptName(surface.name)} right now, not in agentes.chat. Keep it short. Plain text with bold, italics, lists and links; pictures and files go through. No cards, blocks, polls or choices: ask in words. Deleting, sending, roles, budgets, money, merges and deploys wait for ${who} to confirm with their PIN on a page linked here: call the tool as usual and say in one line that they confirm it there. Routines that post elsewhere are done in the app: say so in one line and give no other way.`;
 }
 
 /** `meta.actionNotes` (undo/redo of the agent's changes) as one bracketed line each; "" when none. */

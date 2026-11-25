@@ -85,6 +85,11 @@ describe("agents it asked first: quoted at the top of the reply, as a reply quot
     expect(row).toContain("<ConsultQuote askerId={m.author.id} channelId={m.channelId} items={paired} alone />");
   });
 
+  test("a face inside a line of words stands in its sky tile, in its middle", () => {
+    const face = readFileSync(join(import.meta.dir, "../../src/features/shared/Face.tsx"), "utf8");
+    expect(face).toContain("<AgentFace agentId={agentId} size={size} live={false} framed />");
+  });
+
   test("live: the working line carries the pair, the one asking and the one asked, while the turn works", () => {
     const live = source("LiveRows.tsx");
     expect(live).not.toContain("useRunConsults");
@@ -92,8 +97,9 @@ describe("agents it asked first: quoted at the top of the reply, as a reply quot
       ascending(
         at(live, [
           "if (asking && e.consult === asking)",
-          '<AgentFace agentId={e.id} size={18} mode="idle" />',
-          '<AgentFace agentId={asking.to} size={18} mode={asking.yours || asking.wait ? "idle" : "think"} />',
+          '<AgentFace agentId={e.id} size={18} framed mode="idle" />',
+          "agentId={asking.to}",
+          'mode={asking.yours || asking.wait ? "idle" : "think"}',
         ]),
       ),
     ).toBe(true);

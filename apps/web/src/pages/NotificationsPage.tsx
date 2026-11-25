@@ -5,7 +5,6 @@ import type {
   Member,
   NotificationActor,
   NotificationFilter,
-  Proposal,
 } from "@agenteschat/client";
 import {
   dropNotification,
@@ -20,7 +19,6 @@ import {
   useNotificationCount,
   useNotificationReply,
   useNotifications,
-  useProposals,
   useTaskConversation,
   useThreadMessages,
 } from "@agenteschat/client";
@@ -57,7 +55,6 @@ import {
   workspaceHeadline,
 } from "@agenteschat/client/lib/notifications";
 import { usageLimitLine } from "@agenteschat/client/lib/person-usage";
-import { isOpen, proposalTitle, proposalWhy, proposerOf, sortProposals } from "@agenteschat/client/lib/proposals";
 import { routineNotificationWords } from "@agenteschat/client/lib/routine-view";
 import { secretNoticeLine } from "@agenteschat/client/lib/secret-requests";
 import {
@@ -88,7 +85,6 @@ import { useTranslation } from "react-i18next";
 import { AdminAskActions } from "@/components/AdminAsk";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { ApprovalAsk, ApprovalGroupAsk } from "@/components/ApprovalAsk";
-import { InlineProposal } from "@/components/ChatCards";
 import { useConnectAi } from "@/components/connect-ai-context";
 import { DeviceNoticeActions, deviceNoticeLine } from "@/components/devices/DeviceNotice";
 import { ErrorState, LoadingCards } from "@/components/Loading";
@@ -190,6 +186,8 @@ function sourceOf(t: TFunction, n: AppNotification, channelName: (id: string) =>
   else if (n.kind === "invitation_accepted") [icon, label] = ["members", t("notifications.source.members")];
   else if (n.kind === "composio_limit") [icon, label] = ["wallet", t("notifications.source.usage")];
   else if (n.kind === "skill_update") [icon, label] = ["book", t("skills.title")];
+  // What agents applied themselves (ADR 0219): their history is Agent improvements.
+  else if (n.kind === "proposal_applied") [icon, label] = ["bulb", t("shell.proposals")];
   else if (
     n.kind === "machine_connected" ||
     n.kind === "computer_ready" ||
@@ -583,11 +581,14 @@ function itemWords(t: TFunction, n: AppNotification, dir: Dir, channelName: (id:
         : // What the right hand found is the headline itself: nothing under it says it again.
           n.kind === "team_watch" || n.kind === "budget_paused"
           ? null
-          : why
-            ? sayWords(t, why, l.text ?? "")
-            : media === "voice"
-              ? mediaWord(t, media)
-              : latestText(t, l) || (media ? mediaWord(t, media) : l.text);
+          : // What an agent applied (ADR 0219): the newest change, in a line.
+            n.kind === "proposal_applied"
+            ? (l.title ?? null)
+            : why
+              ? sayWords(t, why, l.text ?? "")
+              : media === "voice"
+                ? mediaWord(t, media)
+                : latestText(t, l) || (media ? mediaWord(t, media) : l.text);
   const statusMove = n.kind === "issue_status" && (l.statusFrom || l.statusTo);
   // Where it happened and a task's move, in plain words.
   const where =
@@ -1104,78 +1105,6 @@ function InboxRead({
   );
 }
 
-/** A proposal's id as the list knows it: beside the notifications' own ids, never one of them. */
-const proposalKey = (id: string) => `proposal:${id}`;
-
-/** A proposal waiting on me, as a row of the inbox: who proposes, what changes, and when. */
-function ProposalRow({ p, on, onSelect }: { p: Proposal; on: boolean; onSelect: () => void }) {
-  const { t, i18n } = useTranslation();
-  const { org } = useOrg();
-  const dir = useDirectory(org.id);
-  const agentName = (id: string) => dir.anyAgent(id)?.name ?? t("channel.unknownAgent");
-  const name = agentName(proposerOf(p));
-  return (
-    <button
-      type="button"
-      className={cx("ib-row is-unread", on && "is-on")}
-      data-n={proposalKey(p.id)}
-      aria-current={on || undefined}
-      aria-label={`${name}: ${proposalTitle(t, p, org, agentName)}`}
-      onClick={onSelect}
-    >
-      <span className="ib-row__face">
-        <AgentAvatar agentId={proposerOf(p)} name={name} size="sm" state="waiting" className="nt-av24" />
-      </span>
-      <span className="ib-row__text">
-        <span className="ib-row__line nt-what">
-          <b>{name}</b> {t("notifications.proposes")}
-        </span>
-        <span className="ib-row__sub">{proposalTitle(t, p, org, agentName)}</span>
-      </span>
-      <span className="ib-row__end">{whenText(t, i18n.language, p.createdAt)}</span>
-    </button>
-  );
-}
-
-/** A proposal open beside the list: who proposes and why, then the change itself with its decision, as in the chat. */
-function ProposalRead({ p, dir, onBack }: { p: Proposal; dir: Dir; onBack: () => void }) {
-  const { t, i18n } = useTranslation();
-  const { org } = useOrg();
-  const agentName = (id: string) => dir.anyAgent(id)?.name ?? t("channel.unknownAgent");
-  const proposer = proposerOf(p);
-  const agent = dir.anyAgent(proposer);
-  const name = agentName(proposer);
-  return (
-    <section className="ib-read" data-scroll-restoration-id="inbox-item" aria-label={name}>
-      {agent && <CardSky color={colorOf(agent)} />}
-      <div className="ib-read__in">
-        <header className="ib-read__top">
-          <Button
-            variant="ghost"
-            size="sm"
-            iconOnly
-            icon="chevronLeft"
-            className="ib-read__back"
-            aria-label={t("common.back")}
-            onClick={onBack}
-          />
-          <span className="ib-read__face">
-            <AgentAvatar agentId={proposer} name={name} size="lg" framed={false} state="waiting" />
-          </span>
-        </header>
-        <div className="ib-item">
-          <p className="ib-read__who">
-            {[name, t("shell.proposals"), whenText(t, i18n.language, p.createdAt)].join(" · ")}
-          </p>
-          <h2 className="ib-read__title">{proposalTitle(t, p, org, agentName)}</h2>
-          <p className="ib-read__say">{proposalWhy(t, p)}</p>
-          <InlineProposal proposalId={p.id} />
-        </div>
-      </div>
-    </section>
-  );
-}
-
 /** A decided request, open beside the list: the same card, saying who decided and when. */
 function RequestRead({ approval, dir, onBack }: { approval: Approval; dir: Dir; onBack: () => void }) {
   const { t } = useTranslation();
@@ -1317,19 +1246,13 @@ export function NotificationsPage({
   const channelName = (id: string) => channels.data?.find((c) => c.id === id)?.name ?? "";
   // "Concluídas": by when each was marked done, waiting or not.
   const doneView = filter === "done";
-  // The proposals I may decide, one row each: they stand in for the one notice saying that proposals wait.
-  const proposals = useProposals(org.id);
-  const waitingProposals =
-    filter === "all" || filter === "waiting"
-      ? sortProposals((proposals.data ?? []).filter((p) => isOpen(p) && p.canDecide))
-      : [];
+  // An older notice that proposals wait on me: agents apply their improvements themselves now (ADR 0219).
   const waiting = doneView ? [] : sortWaiting(items.filter((n) => n.waiting && n.kind !== "proposal_waiting"));
   const rest = doneView ? items : items.filter((n) => !n.waiting);
   const days = groupByDay(rest, undefined, doneView ? (n) => n.doneAt ?? n.updatedAt : undefined);
   const unreadTotal = counts?.unread ?? badge.data?.unread ?? 0;
   const waitingTotal = useInboxWaiting(org.id);
-  const nothing =
-    list.isSuccess && (counts?.all ?? 0) === 0 && items.length === 0 && (proposals.data ?? []).every((p) => !isOpen(p));
+  const nothing = list.isSuccess && (counts?.all ?? 0) === 0 && items.length === 0;
 
   // The tab says how many are unread.
   useEffect(() => {
@@ -1342,10 +1265,8 @@ export function NotificationsPage({
 
   // The first item opens by itself beside the list: what waits on me first. Where the screen shows one of the two,
   // the list stays until the person picks.
-  const firstProposal = waitingProposals[0] ? proposalKey(waitingProposals[0].id) : null;
-  const firstId = waiting[0]?.id ?? firstProposal ?? days[0]?.[1][0]?.id ?? null;
-  const curShown =
-    cur !== null && (items.some((x) => x.id === cur) || waitingProposals.some((p) => proposalKey(p.id) === cur));
+  const firstId = waiting[0]?.id ?? days[0]?.[1][0]?.id ?? null;
+  const curShown = cur !== null && items.some((x) => x.id === cur);
   useEffect(() => {
     if (requestsView || curShown || !firstId || matchesNow(NARROW)) return;
     setCur(firstId);
@@ -1678,7 +1599,6 @@ export function NotificationsPage({
   // What the keys act on: the open item.
   const curItem = requestsView ? undefined : items.find((x) => x.id === cur);
   const curRequest = requestsView ? decided.find((a) => a.id === req) : undefined;
-  const curProposal = requestsView ? undefined : waitingProposals.find((p) => proposalKey(p.id) === cur);
   const filterWords = (f: InboxFilter) =>
     f === "requests" ? t("notifications.filter.requests") : t(`notifications.filter.${f}`);
   const summary = [
@@ -1704,7 +1624,7 @@ export function NotificationsPage({
     );
 
   return (
-    <div className={cx("nt ib", (curItem || curRequest || curProposal) && "ib--open")}>
+    <div className={cx("nt ib", (curItem || curRequest) && "ib--open")}>
       <aside className="ib-list" data-scroll-restoration-id="inbox-list" aria-label={title}>
         {/* The page's own header, as every page's; it stays while the list scrolls under it. */}
         <PageHeader
@@ -1712,76 +1632,92 @@ export function NotificationsPage({
           title={title}
           meta={summary || undefined}
           actions={
-            <Menu
-              align="end"
-              label={t("notifications.filters")}
-              onClosed={() => {
-                const moved = movedByMenu.current ? keyState.current.cur : null;
-                if (moved) element(moved)?.focus({ preventScroll: true });
-                movedByMenu.current = false;
-              }}
-              trigger={
-                <Button variant="ghost" size="sm" className="ib-filter" aria-label={t("notifications.filters")}>
-                  {filterWords(filter)}
-                  <Icon name="chevronDown" size={14} />
-                </Button>
-              }
-            >
-              <MenuRadioGroup
-                label={t("notifications.filters")}
-                value={filter}
-                onValueChange={(f) => {
-                  setFilter(f as InboxFilter);
-                  setCur(null);
-                  setReq(null);
-                }}
-                options={INBOX_FILTERS.map((f) => ({
-                  value: f,
-                  label:
-                    f !== "requests" && f !== "done" && counts?.[f] ? (
-                      <span className="ib-menu__opt">
-                        {filterWords(f)}
-                        <span className="ib-menu__n">{counts[f]}</span>
-                      </span>
-                    ) : (
-                      filterWords(f)
-                    ),
-                }))}
-              />
-              {!requestsView && (
-                <>
-                  <MenuSeparator />
-                  <MenuItem
-                    icon="check"
-                    disabled={doneView || !counts?.unread || action.isPending || bulk}
-                    onSelect={readAll}
-                  >
-                    {t("notifications.readAll")}
-                  </MenuItem>
-                  <MenuItem
-                    icon="archive"
-                    disabled={!canClearAll(listFilter, counts, items) || action.isPending || bulk}
-                    onSelect={doneAll}
-                  >
-                    {t("notifications.doneAll")}
-                  </MenuItem>
-                  <MenuSeparator />
-                  <MenuHeading>{t("notifications.keys.title")}</MenuHeading>
-                  <MenuItem hint="J · K" disabled={items.length === 0} onSelect={() => menuPress("j")}>
-                    {t("notifications.keys.move")}
-                  </MenuItem>
-                  <MenuItem hint="E" disabled={!curItem} onSelect={() => menuPress("e")}>
-                    {t("notifications.keys.done")}
-                  </MenuItem>
-                  <MenuItem hint="R" disabled={!curItem} onSelect={() => menuPress("r")}>
-                    {t("notifications.keys.reply")}
-                  </MenuItem>
-                  <MenuItem hint="↵" disabled={!curItem} onSelect={() => menuPress("enter")}>
-                    {t("notifications.keys.open")}
-                  </MenuItem>
-                </>
+            <>
+              {/* In sight while something is unread: the menu keeps it too, with the other whole-list actions. */}
+              {!requestsView && !doneView && Boolean(counts?.unread) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  iconOnly
+                  icon="checks"
+                  className="ib-readall"
+                  aria-label={t("notifications.readAll")}
+                  title={t("notifications.readAll")}
+                  disabled={action.isPending || bulk}
+                  onClick={readAll}
+                />
               )}
-            </Menu>
+              <Menu
+                align="end"
+                label={t("notifications.filters")}
+                onClosed={() => {
+                  const moved = movedByMenu.current ? keyState.current.cur : null;
+                  if (moved) element(moved)?.focus({ preventScroll: true });
+                  movedByMenu.current = false;
+                }}
+                trigger={
+                  <Button variant="ghost" size="sm" className="ib-filter" aria-label={t("notifications.filters")}>
+                    {filterWords(filter)}
+                    <Icon name="chevronDown" size={14} />
+                  </Button>
+                }
+              >
+                <MenuRadioGroup
+                  label={t("notifications.filters")}
+                  value={filter}
+                  onValueChange={(f) => {
+                    setFilter(f as InboxFilter);
+                    setCur(null);
+                    setReq(null);
+                  }}
+                  options={INBOX_FILTERS.map((f) => ({
+                    value: f,
+                    label:
+                      f !== "requests" && f !== "done" && counts?.[f] ? (
+                        <span className="ib-menu__opt">
+                          {filterWords(f)}
+                          <span className="ib-menu__n">{counts[f]}</span>
+                        </span>
+                      ) : (
+                        filterWords(f)
+                      ),
+                  }))}
+                />
+                {!requestsView && (
+                  <>
+                    <MenuSeparator />
+                    <MenuItem
+                      icon="check"
+                      disabled={doneView || !counts?.unread || action.isPending || bulk}
+                      onSelect={readAll}
+                    >
+                      {t("notifications.readAll")}
+                    </MenuItem>
+                    <MenuItem
+                      icon="archive"
+                      disabled={!canClearAll(listFilter, counts, items) || action.isPending || bulk}
+                      onSelect={doneAll}
+                    >
+                      {t("notifications.doneAll")}
+                    </MenuItem>
+                    <MenuSeparator />
+                    <MenuHeading>{t("notifications.keys.title")}</MenuHeading>
+                    <MenuItem hint="J · K" disabled={items.length === 0} onSelect={() => menuPress("j")}>
+                      {t("notifications.keys.move")}
+                    </MenuItem>
+                    <MenuItem hint="E" disabled={!curItem} onSelect={() => menuPress("e")}>
+                      {t("notifications.keys.done")}
+                    </MenuItem>
+                    <MenuItem hint="R" disabled={!curItem} onSelect={() => menuPress("r")}>
+                      {t("notifications.keys.reply")}
+                    </MenuItem>
+                    <MenuItem hint="↵" disabled={!curItem} onSelect={() => menuPress("enter")}>
+                      {t("notifications.keys.open")}
+                    </MenuItem>
+                  </>
+                )}
+              </Menu>
+            </>
           }
         />
 
@@ -1806,7 +1742,7 @@ export function NotificationsPage({
           <>
             {list.isPending && <LoadingCards count={3} />}
             {list.isError && !list.data && <ErrorState error={list.error} onRetry={() => void list.refetch()} />}
-            {list.isSuccess && items.length === 0 && waitingProposals.length === 0 && (
+            {list.isSuccess && items.length === 0 && (
               <EmptyState
                 size="panel"
                 // Nobody waiting and all read are wins: the others are only a filter with nothing in it.
@@ -1834,22 +1770,11 @@ export function NotificationsPage({
                       : t("notifications.noneHere")}
               </EmptyState>
             )}
-            {waiting.length + waitingProposals.length > 0 && (
+            {waiting.length > 0 && (
               <section className="ib-group nt-wait" aria-label={t("notifications.wait.title")}>
-                <GroupHeading title={t("notifications.wait.title")} count={waiting.length + waitingProposals.length} />
+                <GroupHeading title={t("notifications.wait.title")} count={waiting.length} />
                 {waiting.map((n) => (
                   <InboxRow key={n.id} n={n} s={stateOf(n)} h={handlers} dir={dir} channelName={channelName} />
-                ))}
-                {waitingProposals.map((p) => (
-                  <ProposalRow
-                    key={p.id}
-                    p={p}
-                    on={cur === proposalKey(p.id)}
-                    onSelect={() => {
-                      setReplying(null);
-                      setCur(proposalKey(p.id));
-                    }}
-                  />
                 ))}
               </section>
             )}
@@ -1895,8 +1820,6 @@ export function NotificationsPage({
           channelName={channelName}
           onBack={back}
         />
-      ) : curProposal ? (
-        <ProposalRead key={curProposal.id} p={curProposal} dir={dir} onBack={back} />
       ) : curRequest ? (
         <RequestRead key={curRequest.id} approval={curRequest} dir={dir} onBack={back} />
       ) : (

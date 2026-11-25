@@ -69,6 +69,8 @@ export const problemReportSchema = z.object({
       runnerProtocol: z.number().int().optional(),
       web: version,
       mobile: version,
+      /** The system's own version where the sender reads it: macOS's (`15.1`), Windows' build, Linux's kernel. */
+      osVersion: version,
       os: z
         .string()
         .max(80)

@@ -379,6 +379,17 @@ describe("a picture's, a video's and a PDF's conversation (ADR 0208)", () => {
     expect(tapOnPlaced({ x: 200, y: 400 }, picture, screen, { scale: 2, x: -120, y: 0 }).x).toBeCloseTo(0.7);
   });
 
+  test("a pin's corners follow its face, the corner on its spot cut sharp", () => {
+    const pins = src("features/live-files/talk/PicturePins.tsx");
+    expect(pins).toContain("borderRadius: 8,");
+    expect(pins).toContain("borderBottomLeftRadius: 3,");
+    expect(pins).not.toContain("MEDIA_PIN_H / 2");
+    // The canvas's pins, the same shape.
+    const plane = src("features/live-files/canvas/CanvasPlane.tsx");
+    expect(plane).toContain("borderRadius: 8,");
+    expect(plane).not.toContain("PIN_H / 2");
+  });
+
   test("the viewer and the PDF's screen push the conversation; a held touch marks a point; a link opens it", () => {
     const viewer = src("features/files/ImageViewer.tsx");
     // One way in, the line; no Comment at the top. A played video's line opens it about that moment.

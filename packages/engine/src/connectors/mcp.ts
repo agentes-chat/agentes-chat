@@ -495,7 +495,7 @@ export function createConnectorToolSource(
   ): Promise<ToolDefinition[]> {
     // A sign-in that stopped working (a Composio account too) has no tools until it is reconnected.
     if (connection.status === "needs_reconnect") return [];
-    let classified = await classifiedTools(deps.db, connection.id);
+    let classified = await classifiedTools(deps.db, connection);
     if (classified.length === 0) return [];
     const before = reclassified;
     let listed: McpTool[];
@@ -505,7 +505,7 @@ export function createConnectorToolSource(
       return [];
     }
     // The listing found changed tools: their levels are the ones worked out from the new version.
-    if (reclassified !== before) classified = await classifiedTools(deps.db, connection.id);
+    if (reclassified !== before) classified = await classifiedTools(deps.db, connection);
     const byName = new Map(listed.map((t) => [t.name, t]));
     const preset = presetForServer(connection.serverUrl)?.id;
     const composio = composioServiceOf(connection.serverUrl);

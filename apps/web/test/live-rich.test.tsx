@@ -77,7 +77,20 @@ function typeText(view: EditorView, text: string) {
 describe("the schema and numbering", () => {
   test("the schema has the stored nodes and marks", () => {
     expect(Object.keys(richSchema.nodes).sort()).toEqual(["doc", "hard_break", "paragraph", "text"]);
-    expect(Object.keys(richSchema.marks).sort()).toEqual(["bold", "color", "italic", "link", "strike", "underline"]);
+    expect(Object.keys(richSchema.marks).sort()).toEqual([
+      "bold",
+      "caps",
+      "color",
+      "font",
+      "highlight",
+      "italic",
+      "link",
+      "size",
+      "strike",
+      "tracking",
+      "underline",
+      "weight",
+    ]);
   });
 
   test("numbered items count per list and level; anything else at that level starts again", () => {
@@ -105,6 +118,36 @@ describe("the schema and numbering", () => {
 });
 
 describe("RichView", () => {
+  test("draws the type marks (ADR 0220): font, size, weight, highlight, letter spacing, capitals; never a bad value", () => {
+    const { container } = render(
+      <RichView
+        doc={[
+          {
+            lineHeight: 1.6,
+            spaceAfter: 12,
+            runs: [
+              { text: "Brand", font: "inter", size: 30, weight: 600, highlight: "#ffff00", tracking: 80, caps: true },
+              { text: " bad", font: "not-a-font", size: 9999 },
+            ],
+          },
+        ]}
+      />,
+    );
+    const spans = [...container.querySelectorAll("span[style]")] as HTMLElement[];
+    const css = spans.map((s) => s.getAttribute("style") ?? "").join(";");
+    expect(css).toContain("Inter");
+    expect(css).toContain("font-size: 30px");
+    expect(css).toContain("font-weight: 600");
+    expect(css).toContain("letter-spacing: 0.08em");
+    expect(css).toContain("text-transform: uppercase");
+    expect(css).toContain("background-color");
+    expect(css).not.toContain("not-a-font");
+    expect(css).not.toContain("9999");
+    const p = container.querySelector("p") as HTMLElement;
+    expect(p.style.lineHeight).toBe("1.6");
+    expect(p.style.marginBottom).toBe("12px");
+  });
+
   test("draws marks, lists, safe links and colors; never an unsafe one", () => {
     const { container } = render(
       <RichView

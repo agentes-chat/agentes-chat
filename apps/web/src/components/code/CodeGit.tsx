@@ -81,7 +81,7 @@ export function GitPane({ session, onOpen }: { session: CodeSession; onOpen: (op
           <code className="code-vcs__branch" title={session.branch ?? undefined}>
             {session.branch ?? base}
           </code>
-          <span className="code-vcs__base">
+          <span className="code-vcs__base" title={t("codeSessions.gitTab.from", { base })}>
             {t("codeSessions.gitTab.from", { base })}
             {ahead > 0 && ` · ${t("codeSessions.gitTab.ahead", { count: ahead, more: data?.more ? "+" : "" })}`}
           </span>

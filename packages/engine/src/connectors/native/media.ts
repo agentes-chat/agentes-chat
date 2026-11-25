@@ -1,6 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { reachableFromInternet } from "../../apps/urls";
-import { type ArtifactDeps, fileBytesById } from "../../artifacts";
+import { type ArtifactDeps, storedFileById } from "../../artifacts";
 import { connectorMediaSignature } from "../../crypto";
 import type { ResolveHost } from "../../net-guard";
 
@@ -38,5 +38,5 @@ export async function openConnectorMedia(deps: ArtifactDeps & { secret: string }
   }
   if (typeof claims.o !== "string" || typeof claims.a !== "string" || typeof claims.e !== "number") return null;
   if (claims.e * 1000 < now) return null;
-  return fileBytesById(deps, claims.o, claims.a);
+  return storedFileById(deps, claims.o, claims.a);
 }

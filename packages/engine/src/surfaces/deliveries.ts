@@ -30,6 +30,7 @@ import { RIGHT_HAND } from "../right-hand";
 import { lodiFor, postFromLodi } from "../right-hand-proactive";
 import { surfaceOn } from "./config";
 import { activeLinkOf } from "./links";
+import { confirmPageLink, prunePageLinks } from "./pages";
 
 /**
  * Replies of the right hand that go out on the outside chat surface (ADR 0187) instead of an in-app notification.
@@ -311,7 +312,7 @@ export async function listSurfaceDeliveries(deps: DeliveryDeps, limit: number): 
       createdAt: row.createdAt.toISOString(),
       inReplyTo: row.inReplyTo,
     };
-    out.push(message ? { ...base, ...(await contentOf(db, row.orgId, message)) } : { ...base, ...NO_CONTENT });
+    out.push(message ? { ...base, ...(await contentOf(db, row.orgId, message, link)) } : { ...base, ...NO_CONTENT });
   }
   return out;
 }
@@ -334,8 +335,12 @@ async function messageOf(db: Executor, orgId: string, id: string, createdAt: Dat
 
 type StoredMessage = NonNullable<Awaited<ReturnType<typeof messageOf>>>;
 
-/** A reply as the service sends it: its words, its files, its GIF or sticker, and where its card opens in the app. */
-async function contentOf(db: Executor, orgId: string, m: StoredMessage) {
+/**
+ * A reply as the service sends it: its words, its files, its GIF or sticker, and where its card opens in the app. An
+ * approval's card the person decides opens instead a page of its own, where they decide it with their PIN (ADR 0226):
+ * minted each time it is listed, so a delivery listed twice carries two links, each good for one browser.
+ */
+async function contentOf(db: Database, orgId: string, m: StoredMessage, link: { id: string; userId: string }) {
   const { artifacts, artifactVersions, agentQuestions } = schema;
   const ids = fileIdsOf(m.meta);
   const attached = ids.length
@@ -388,7 +393,21 @@ async function contentOf(db: Executor, orgId: string, m: StoredMessage) {
         ? { kind: "gif" as const, id: media.id, title: media.title }
         : { kind: "sticker" as const, mood: media.mood }
       : null,
-    card: cardKind ? { kind: cardKind, url: messageLink(orgId, m) } : null,
+    card: cardKind
+      ? {
+          kind: cardKind,
+          url:
+            (cardKind === "approval" &&
+              typeof meta.approvalId === "string" &&
+              (await confirmPageLink(db, {
+                orgId,
+                linkId: link.id,
+                userId: link.userId,
+                approvalId: meta.approvalId,
+              }))) ||
+            messageLink(orgId, m),
+        }
+      : null,
     choices: question?.choices?.length ? question.choices : null,
   };
 }
@@ -467,5 +486,5 @@ export async function pruneSurfaceRows(db: Executor): Promise<number> {
     .delete(surfaceCalls)
     .where(lt(surfaceCalls.at, new Date(now - SURFACE_CALL_KEEP_MS)))
     .returning({ id: surfaceCalls.id });
-  return deliveries.length + calls.length;
+  return deliveries.length + calls.length + (await prunePageLinks(db));
 }

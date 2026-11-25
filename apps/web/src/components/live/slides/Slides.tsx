@@ -34,6 +34,7 @@ import type * as Y from "yjs";
 import { type MenuEntry, openContextMenu, tidy } from "@/lib/context-menu";
 import { useToast } from "@/lib/toast";
 import type { LiveEditorProps } from "../editor";
+import { FontAssetUrl } from "../fonts";
 import { PeerFace, type PeerLook, peerWorking, usePeerLooks } from "../peers";
 import {
   colorWholeText,
@@ -80,7 +81,7 @@ import { useDeck } from "./deck";
 import { Notes } from "./Notes";
 import { Present } from "./Present";
 import { Rail } from "./Rail";
-import { SlideImages } from "./render";
+import { SlideFonts, SlideImages } from "./render";
 import { type EditTarget, NUDGE, Stage } from "./Stage";
 import { type ShapeTools, SlideToolbar, type TableOp, type TextTools } from "./Toolbar";
 import "./slides.css";
@@ -925,234 +926,242 @@ export function Slides(props: LiveEditorProps) {
 
   return (
     <SlideImages.Provider value={imageUrl}>
-      <div ref={root} className="sl-editor" data-readonly={readOnly ? "true" : undefined}>
-        {!readOnly && (
-          <SlideToolbar
-            theme={theme}
-            layout={slide?.layout ?? null}
-            canUndo={history.undo}
-            canRedo={history.redo}
-            selected={chosen.length}
-            text={textTools}
-            shape={shapeTools}
-            table={tableEl?.table ? { header: tableEl.table.header } : null}
-            chart={!!chartEl}
-            onUndo={undo}
-            onRedo={redo}
-            onNewSlide={(layout) => addSlideAfter(currentId, layout)}
-            onLayout={(layout) => currentId && refuse(changeLayout(room.doc, currentId, layout))}
-            onTheme={(id: ThemeId) => refuse(changeTheme(room.doc, id))}
-            onText={() => addElement({ type: "text", text: "" }, { edit: true })}
-            onUpload={() =>
-              pickPicture(chosen.length === 1 && chosen[0]?.type === "image" && !chosen[0].asset ? chosen[0].id : null)
-            }
-            onDrive={() => {
-              pictureFor.current =
-                chosen.length === 1 && chosen[0]?.type === "image" && !chosen[0].asset ? chosen[0].id : null;
-              setDriveOpen(true);
-            }}
-            onShape={addShape}
-            onChart={() => setChartDialog({ el: null })}
-            onEditChart={() => chartEl && setChartDialog({ el: chartEl })}
-            onTable={(rows, cols) =>
-              addElement(
-                {
-                  type: "table",
-                  table: { rows: Array.from({ length: rows }, () => Array(cols).fill("")), header: true },
-                },
-                { table: true },
-              )
-            }
-            onTableOp={tableOp}
-            onMark={mark}
-            onColor={color}
-            onAlign={align}
-            onList={list}
-            onLevel={level}
-            onSize={size}
-            onLink={link}
-            linkOpen={linkOpen}
-            onLinkOpenChange={setLinkOpen}
-            onFill={(value) => patchChosen(() => ({ style: { fill: value ?? "none" } }))}
-            onStroke={(value) =>
-              patchChosen((el) =>
-                el.type === "line"
-                  ? { style: { stroke: value } }
-                  : { style: value ? { stroke: value, strokeWidth: el.style?.strokeWidth ?? 4 } : { stroke: null } },
-              )
-            }
-            onArrow={() =>
-              patchChosen((el) => ({ style: { lineEnd: el.style?.lineEnd === "arrow" ? "none" : "arrow" } }))
-            }
-            onArrange={(how) => slide && refuse(restack(room.doc, slide.id, selected, how))}
-            onAlignElements={(how: AlignHow) =>
-              slide && refuse(patchElements(room.doc, slide.id, alignPatches(chosen, how, deck)))
-            }
-            onDelete={deleteChosen}
-            onDone={onDone}
-          />
-        )}
-        {presenter && presenterLook && !watching && !ownPresenting && (
-          <div className="sl-presenting" role="status">
-            <PeerFace
-              user={presenter.user}
-              name={presenterLook.name}
-              color={presenterLook.color}
-              size="xs"
-              working={peerWorking(presenter)}
-            />
-            <span className="sl-presenting__words">
-              {t("live.slides.presenting.who", { name: presenterLook.name })}
-            </span>
-            <Button variant="link" onClick={() => watch(presenter)}>
-              {t("live.slides.presenting.follow")}
-            </Button>
-          </div>
-        )}
-        <div className="sl-main" data-compact={compact ? "true" : undefined}>
-          <Rail
-            deck={deck}
-            theme={theme}
-            current={currentId}
-            readOnly={readOnly}
-            peersBySlide={peersBySlide}
-            looks={looks}
-            onPick={(id) => go(id, { user: true })}
-            onMove={(id, to) => refuse(placeSlide(room.doc, id, to))}
-            onNewAfter={(id) => addSlideAfter(id)}
-            onDuplicate={duplicateSlideOf}
-            onHide={(id, hidden) => refuse(hideSlide(room.doc, id, hidden))}
-            onDelete={deleteSlide}
-            onPresentFrom={presentFrom}
-          />
-          <div className="sl-center">
-            {slide ? (
-              <Stage
-                room={room}
-                deck={deck}
-                slide={slide}
+      <FontAssetUrl.Provider value={imageUrl}>
+        <SlideFonts.Provider value={deck.fonts}>
+          <div ref={root} className="sl-editor" data-readonly={readOnly ? "true" : undefined}>
+            {!readOnly && (
+              <SlideToolbar
                 theme={theme}
-                readOnly={readOnly}
-                selected={selected}
-                onSelect={(next) => {
-                  setSelected(next);
-                  if (next.length && following) onStopFollowing();
+                layout={slide?.layout ?? null}
+                canUndo={history.undo}
+                canRedo={history.redo}
+                selected={chosen.length}
+                text={textTools}
+                shape={shapeTools}
+                table={tableEl?.table ? { header: tableEl.table.header } : null}
+                chart={!!chartEl}
+                onUndo={undo}
+                onRedo={redo}
+                onNewSlide={(layout) => addSlideAfter(currentId, layout)}
+                onLayout={(layout) => currentId && refuse(changeLayout(room.doc, currentId, layout))}
+                onTheme={(id: ThemeId) => refuse(changeTheme(room.doc, id))}
+                onText={() => addElement({ type: "text", text: "" }, { edit: true })}
+                onUpload={() =>
+                  pickPicture(
+                    chosen.length === 1 && chosen[0]?.type === "image" && !chosen[0].asset ? chosen[0].id : null,
+                  )
+                }
+                onDrive={() => {
+                  pictureFor.current =
+                    chosen.length === 1 && chosen[0]?.type === "image" && !chosen[0].asset ? chosen[0].id : null;
+                  setDriveOpen(true);
                 }}
-                editing={readOnly ? null : editing}
-                onEdit={(target) => {
-                  setEditing(target);
-                  if (target) setSelected([target.id]);
-                  else focusStage();
-                }}
-                tableEdit={readOnly ? null : tableEdit}
-                onTableEdit={(id) => {
-                  setTableEdit(id);
-                  if (!id) focusStage();
-                }}
-                peers={peers}
-                looks={looks}
-                rich={rich}
-                onFormat={setCaret}
-                onLinkKey={() => setLinkOpen(true)}
-                onOpen={(el) => {
-                  if (el.type === "chart") setChartDialog({ el });
-                  else if (el.type === "image") pickPicture(el.id);
-                }}
-                onKeyDown={onStageKey}
-                onCopy={onCopy}
-                onCut={onCut}
-                onPaste={onPaste}
-                onContextMenu={onStageMenu}
-                onDropFiles={(files, at) => void upload(files, at)}
-                label={t("live.slides.stage.label", { n: currentIndex + 1, total: deck.slides.length })}
+                onShape={addShape}
+                onChart={() => setChartDialog({ el: null })}
+                onEditChart={() => chartEl && setChartDialog({ el: chartEl })}
+                onTable={(rows, cols) =>
+                  addElement(
+                    {
+                      type: "table",
+                      table: { rows: Array.from({ length: rows }, () => Array(cols).fill("")), header: true },
+                    },
+                    { table: true },
+                  )
+                }
+                onTableOp={tableOp}
+                onMark={mark}
+                onColor={color}
+                onAlign={align}
+                onList={list}
+                onLevel={level}
+                onSize={size}
+                onLink={link}
+                linkOpen={linkOpen}
+                onLinkOpenChange={setLinkOpen}
+                onFill={(value) => patchChosen(() => ({ style: { fill: value ?? "none" } }))}
+                onStroke={(value) =>
+                  patchChosen((el) =>
+                    el.type === "line"
+                      ? { style: { stroke: value } }
+                      : {
+                          style: value ? { stroke: value, strokeWidth: el.style?.strokeWidth ?? 4 } : { stroke: null },
+                        },
+                  )
+                }
+                onArrow={() =>
+                  patchChosen((el) => ({ style: { lineEnd: el.style?.lineEnd === "arrow" ? "none" : "arrow" } }))
+                }
+                onArrange={(how) => slide && refuse(restack(room.doc, slide.id, selected, how))}
+                onAlignElements={(how: AlignHow) =>
+                  slide && refuse(patchElements(room.doc, slide.id, alignPatches(chosen, how, deck)))
+                }
+                onDelete={deleteChosen}
+                onDone={onDone}
               />
-            ) : (
-              <div className="sl-empty">
-                <EmptyState
-                  size="panel"
-                  icon="slides"
-                  title={t("live.slides.empty.title")}
-                  actions={
-                    !readOnly && (
-                      <Button variant="primary" icon="plus" onClick={() => addSlideAfter(null, "title")}>
-                        {t("live.slides.empty.add")}
-                      </Button>
-                    )
-                  }
-                >
-                  {readOnly ? undefined : t("live.slides.empty.body")}
-                </EmptyState>
+            )}
+            {presenter && presenterLook && !watching && !ownPresenting && (
+              <div className="sl-presenting" role="status">
+                <PeerFace
+                  user={presenter.user}
+                  name={presenterLook.name}
+                  color={presenterLook.color}
+                  size="xs"
+                  working={peerWorking(presenter)}
+                />
+                <span className="sl-presenting__words">
+                  {t("live.slides.presenting.who", { name: presenterLook.name })}
+                </span>
+                <Button variant="link" onClick={() => watch(presenter)}>
+                  {t("live.slides.presenting.follow")}
+                </Button>
               </div>
             )}
-            {uploading > 0 && (
-              <p className="sl-uploading" role="status">
-                {t("live.slides.image.uploading", { count: uploading })}
-              </p>
-            )}
-            {slide && (
-              <Notes
-                key={slide.id}
-                room={room}
-                slideId={slide.id}
+            <div className="sl-main" data-compact={compact ? "true" : undefined}>
+              <Rail
+                deck={deck}
+                theme={theme}
+                current={currentId}
                 readOnly={readOnly}
-                open={notesOpen}
-                onOpenChange={setNotesOpen}
+                peersBySlide={peersBySlide}
+                looks={looks}
+                onPick={(id) => go(id, { user: true })}
+                onMove={(id, to) => refuse(placeSlide(room.doc, id, to))}
+                onNewAfter={(id) => addSlideAfter(id)}
+                onDuplicate={duplicateSlideOf}
+                onHide={(id, hidden) => refuse(hideSlide(room.doc, id, hidden))}
+                onDelete={deleteSlide}
+                onPresentFrom={presentFrom}
               />
-            )}
-          </div>
-        </div>
-        <input
-          ref={fileInput}
-          type="file"
-          accept="image/png,image/jpeg,image/webp,image/gif"
-          multiple
-          hidden
-          aria-hidden="true"
-          tabIndex={-1}
-          onChange={(e) => {
-            const files = [...(e.target.files ?? [])];
-            e.target.value = "";
-            if (files.length) void upload(files);
-          }}
-        />
-        {chartDialog && (
-          <ChartDialog
-            open
-            chart={chartDialog.el?.chart ?? null}
-            locale={locale}
-            onClose={() => setChartDialog(null)}
-            onSave={saveChart}
-          />
-        )}
-        <DrivePicker
-          orgId={orgId}
-          open={driveOpen}
-          onClose={() => setDriveOpen(false)}
-          onPick={(a) => void fromDrive(a)}
-        />
-        {watching?.state.presenting && watchingLook ? (
-          <Present
-            deck={deck}
-            slideId={watching.state.presenting.slide}
-            following={{ name: watchingLook.name }}
-            onExit={stopWatching}
-          />
-        ) : (
-          presenting &&
-          currentId && (
-            <Present
-              deck={deck}
-              slideId={currentId}
-              onSlide={(id) => setPicked(id)}
-              onExit={() => {
-                leaveScreen();
-                onSearch({ present: undefined });
-                focusStage();
+              <div className="sl-center">
+                {slide ? (
+                  <Stage
+                    room={room}
+                    deck={deck}
+                    slide={slide}
+                    theme={theme}
+                    readOnly={readOnly}
+                    selected={selected}
+                    onSelect={(next) => {
+                      setSelected(next);
+                      if (next.length && following) onStopFollowing();
+                    }}
+                    editing={readOnly ? null : editing}
+                    onEdit={(target) => {
+                      setEditing(target);
+                      if (target) setSelected([target.id]);
+                      else focusStage();
+                    }}
+                    tableEdit={readOnly ? null : tableEdit}
+                    onTableEdit={(id) => {
+                      setTableEdit(id);
+                      if (!id) focusStage();
+                    }}
+                    peers={peers}
+                    looks={looks}
+                    rich={rich}
+                    onFormat={setCaret}
+                    onLinkKey={() => setLinkOpen(true)}
+                    onOpen={(el) => {
+                      if (el.type === "chart") setChartDialog({ el });
+                      else if (el.type === "image") pickPicture(el.id);
+                    }}
+                    onKeyDown={onStageKey}
+                    onCopy={onCopy}
+                    onCut={onCut}
+                    onPaste={onPaste}
+                    onContextMenu={onStageMenu}
+                    onDropFiles={(files, at) => void upload(files, at)}
+                    label={t("live.slides.stage.label", { n: currentIndex + 1, total: deck.slides.length })}
+                  />
+                ) : (
+                  <div className="sl-empty">
+                    <EmptyState
+                      size="panel"
+                      icon="slides"
+                      title={t("live.slides.empty.title")}
+                      actions={
+                        !readOnly && (
+                          <Button variant="primary" icon="plus" onClick={() => addSlideAfter(null, "title")}>
+                            {t("live.slides.empty.add")}
+                          </Button>
+                        )
+                      }
+                    >
+                      {readOnly ? undefined : t("live.slides.empty.body")}
+                    </EmptyState>
+                  </div>
+                )}
+                {uploading > 0 && (
+                  <p className="sl-uploading" role="status">
+                    {t("live.slides.image.uploading", { count: uploading })}
+                  </p>
+                )}
+                {slide && (
+                  <Notes
+                    key={slide.id}
+                    room={room}
+                    slideId={slide.id}
+                    readOnly={readOnly}
+                    open={notesOpen}
+                    onOpenChange={setNotesOpen}
+                  />
+                )}
+              </div>
+            </div>
+            <input
+              ref={fileInput}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              multiple
+              hidden
+              aria-hidden="true"
+              tabIndex={-1}
+              onChange={(e) => {
+                const files = [...(e.target.files ?? [])];
+                e.target.value = "";
+                if (files.length) void upload(files);
               }}
             />
-          )
-        )}
-      </div>
+            {chartDialog && (
+              <ChartDialog
+                open
+                chart={chartDialog.el?.chart ?? null}
+                locale={locale}
+                onClose={() => setChartDialog(null)}
+                onSave={saveChart}
+              />
+            )}
+            <DrivePicker
+              orgId={orgId}
+              open={driveOpen}
+              onClose={() => setDriveOpen(false)}
+              onPick={(a) => void fromDrive(a)}
+            />
+            {watching?.state.presenting && watchingLook ? (
+              <Present
+                deck={deck}
+                slideId={watching.state.presenting.slide}
+                following={{ name: watchingLook.name }}
+                onExit={stopWatching}
+              />
+            ) : (
+              presenting &&
+              currentId && (
+                <Present
+                  deck={deck}
+                  slideId={currentId}
+                  onSlide={(id) => setPicked(id)}
+                  onExit={() => {
+                    leaveScreen();
+                    onSearch({ present: undefined });
+                    focusStage();
+                  }}
+                />
+              )
+            )}
+          </div>
+        </SlideFonts.Provider>
+      </FontAssetUrl.Provider>
     </SlideImages.Provider>
   );
 }

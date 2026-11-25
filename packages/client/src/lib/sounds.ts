@@ -47,6 +47,7 @@ const BY_KIND: Partial<Record<NotificationKind, SoundName>> = {
   invitation_accepted: "done",
   approval_cover: "done",
   right_hand_decided: "done",
+  proposal_applied: "done",
   right_hand_paused: "attention",
   app_created: "done",
   mention: "mention",

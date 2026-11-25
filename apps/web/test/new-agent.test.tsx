@@ -1675,7 +1675,7 @@ describe("Criar agente: nothing leaves the steps", () => {
     const owner = screen().getByRole("combobox", { name: "Responsável" });
     expect(owner.closest(".ac-card")).toBeNull();
     expect(owner.closest(".ac-select")?.className).toBe("ac-select");
-    // "Admins" explains itself right after its words: the ⓘ follows the label, the check ends the row.
+    // "Admins" explains itself right after its words: the ⓘ follows the label; a select has no check column.
     owner.focus();
     await act(async () => fireEvent.keyDown(owner, { key: "Enter" }));
     const none = screen().getByRole("option", { name: /^Administradores/ });
@@ -1683,7 +1683,6 @@ describe("Criar agente: nothing leaves the steps", () => {
       "ac-menu__leading",
       "ac-menu__label",
       "ac-hint ac-menu__hint",
-      "ac-menu__check",
     ]);
   });
 

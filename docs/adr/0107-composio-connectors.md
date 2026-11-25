@@ -18,7 +18,7 @@
 
 ### 1. One way per service, in a fixed order
 
-Each service appears once in "Adicionar conector", through the first way that works on this server (`connectorListing`, `presetWay`):
+Each service appears once in the connectors store (Browse connectors), through the first way that works on this server (`connectorListing`, `presetWay`):
 
 1. Our own connector, when this server is set up for it (GitHub, and Sentry or Linear with their OAuth apps).
 2. The vendor's MCP server, when it connects today (a preset not marked `soon`).

@@ -147,20 +147,12 @@ export const outsideLine = (t: TFunction, person: Pick<Person, "outsideOf">) =>
   person.outsideOf ? `${t("members.outside.chip")} · ${person.outsideOf}` : null;
 
 /**
- * What a person's row offers in its menu, in order: a message to anyone but oneself, their cargos when the viewer may
- * give one (P11, "Cargos de Carla"), then removing them (or leaving, on one's own row) when the viewer may. Empty: the
- * row has no menu.
+ * What a person's row offers in its menu, in order: their cargos when the viewer may give one (P11, "Cargos de
+ * Carla"), then removing them (or leaving, on one's own row) when the viewer may. The message is the row's own button,
+ * so a plain member's rows have no menu. Empty: the row has no menu.
  */
-export function memberActions(
-  mine: boolean,
-  removable: boolean,
-  cargos = false,
-): ("dm" | "roles" | "remove" | "leave")[] {
-  return [
-    ...(mine ? [] : (["dm"] as const)),
-    ...(cargos ? (["roles"] as const) : []),
-    ...(removable ? ([mine ? "leave" : "remove"] as const) : []),
-  ];
+export function memberActions(mine: boolean, removable: boolean, cargos = false): ("roles" | "remove" | "leave")[] {
+  return [...(cargos ? (["roles"] as const) : []), ...(removable ? ([mine ? "leave" : "remove"] as const) : [])];
 }
 
 /** The people who may invite here (ADR 0085): the owners, and whoever holds a role that gives it. */

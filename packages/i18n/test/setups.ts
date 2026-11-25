@@ -197,6 +197,9 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     // the admins' line about it only where `ownerCreates` (false on agentes.chat, ADR 0156).
     "githubApp.server.",
     "githubApp.ownerHint",
+    // The same app as a line of Settings › Connectors: listed only where `setup` is there (its owner, off agentes.chat).
+    "connectors.store.appMissing",
+    "connectors.store.appLine",
   ],
   email: [
     // Said once the link to a new address went out, which only a server that sends e-mail does.
@@ -220,6 +223,11 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     // An address never confirmed holds anything back only where the server sends e-mail (`emailConfirmation`).
     "auth.confirm.",
     "errors.org.createUnconfirmed",
+    // A link to choose the PIN is emailed only where the server sends email (ADR 0226).
+    "surface.page.emailed",
+    "surface.page.emailMe",
+    "surface.page.setFirstLeadEmail",
+    "errors.surface.emailUnverified",
   ],
   apiKey: [],
   // A message nobody mentions still gets an agent: routing.mine (the chip and its help line), routing.by (Settings),

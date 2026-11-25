@@ -82,7 +82,7 @@ describe("who can't act gets an honest line and no button that fails", () => {
   test("Conectores without manage_connectors: their own to add on Pessoal, the team's to look at", async () => {
     await go(fresh(["read"]), "settings/connectors");
     expect(title()).toBe("Conecte suas próprias contas");
-    expect(buttons().map((b) => b.textContent)).toEqual(["Adicionar conector"]);
+    expect(buttons().map((b) => b.textContent)).toEqual(["Ver conectores"]);
     await act(async () => fireEvent.click(screen().getByRole("radio", { name: /Equipe/ })));
     await settle(2);
     expect(title()).toBe("Veja o que os agentes podem usar");
@@ -292,7 +292,7 @@ describe("the right words for the right empty", () => {
     api.orgs.planUsage = async () => ({ month: "2026-10", money: false, accounts: [], api: [] });
     await renderApp(`/org/${ORG_ID}/settings/usage`, { api });
     await settle(8);
-    expect(within(empty()).getByRole("button", { name: "Conectar uma IA" })).toBeDefined();
+    expect(within(empty()).getByRole("button", { name: "Adicionar conta" })).toBeDefined();
   });
 
   test("a channel I only read: no greeting, no chips for a composer that isn't there", async () => {

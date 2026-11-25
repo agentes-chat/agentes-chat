@@ -85,10 +85,7 @@ const onNarrowScreen = async (run: () => Promise<void>) => {
 /** The inbox's own entry in the sidebar. */
 const sidebarEntry = () =>
   document.querySelector(`#app-nav a[href="/org/${ORG_ID}/notifications"]`) as HTMLAnchorElement;
-/**
- * The fake backend with these notifications and no proposals: the seed's proposals would be rows among what waits
- * (ADR 0218), and these cases are about the notifications.
- */
+/** The fake backend with these notifications and no proposals: these cases are about the notifications. */
 const seed = (notifications: AppNotification[], over: Partial<FakeState> = {}) =>
   seedState({ notifications, proposals: [], ...over });
 const yesterdayNoon = () => {
@@ -202,6 +199,17 @@ describe("Notificações", () => {
     const title = screen().getByRole("heading", { level: 1, name: "Caixa de entrada" });
     expect(title.nextElementSibling?.className).toBe("ac-pagehead__meta");
     expect(title.nextElementSibling?.textContent).toBe("2 não lidas");
+  });
+
+  test("the title never wraps to keep the filter beside it: the filter goes under it, on a phone too, at its own width", async () => {
+    const css = (await Bun.file(new URL("../src/pages/notifications.css", import.meta.url).pathname).text()).replace(
+      /\/\*[\s\S]*?\*\//g,
+      "",
+    );
+    // The header's row wraps as every page's does (the kit's rule), with nothing here holding it on one line.
+    expect(css).not.toMatch(/\.ib-head \.ac-pagehead__(row|text) \{/);
+    expect(css).not.toMatch(/\.nt \.ac-pagehead__actions \{/);
+    expect(css).toMatch(/\.ib-head \.ac-pagehead__actions \{[^}]*flex-basis: auto;/);
   });
 
   test("what waits on top with the first of it open beside the list, the rest by day, the sidebar's entry and the tab title", async () => {
@@ -860,12 +868,9 @@ describe("an agent's model left its plan's list", () => {
     await click(within(read()).getByRole("button", { name: "Escolher outro modelo" }));
     await settle(8);
     expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/agents/${ADA_ID}`);
-    // Straight on the model's screen, its models to pick from; back leads to the dialog's first screen.
-    const d = screen().getByRole("dialog", { name: "Modelo da Ada" });
-    expect(within(d).getByRole("radiogroup", { name: "Modelo da Ada" })).toBeTruthy();
-    await click(within(d).getByRole("button", { name: "Voltar" }));
-    await settle(4);
-    expect(screen().getByRole("dialog", { name: "Quem pensa pela Ada" })).toBe(d);
+    // On the dialog's first screen, where its Modelo is.
+    const d = screen().getByRole("dialog", { name: "Quem pensa pela Ada" });
+    expect(within(d).getByRole("combobox", { name: "Modelo" })).toBeTruthy();
   });
 });
 
@@ -939,6 +944,23 @@ describe("what the workspace itself tells: nobody's face, its own", () => {
     expect(row("n-hold").getAttribute("aria-label")).toBe("O workspace está em espera: os agentes estão pausados");
     // Open, the workspace's mark stands where a face would.
     expect((await open("n-hold")).querySelector(".ib-read__face .nt-sys svg")).toBeTruthy();
+  });
+
+  test("an unread row carries a dot under its time; Mark all as read is a button in the header while any is unread", async () => {
+    const css = await Bun.file(new URL("../src/pages/notifications.css", import.meta.url).pathname).text();
+    // The dot is drawn by the row's end (no element of its own).
+    expect(css).toMatch(
+      /\.ib-row\.is-unread \.ib-row__end::after \{[^}]*border-radius: 50%[^}]*background: var\(--danger\)/,
+    );
+    const { state } = await go();
+    const button = () => document.querySelector<HTMLButtonElement>(".ib-head .ib-readall");
+    expect(button()?.getAttribute("aria-label")).toBe("Marcar tudo como lido");
+    await click(button() as HTMLElement);
+    await settle(4);
+    expect(state.calls.find((c) => c.method === "notifications.readAll")?.args).toEqual([ORG_ID, "all"]);
+    // Nothing left unread: no row says so, and the button leaves.
+    expect(document.querySelector(".ib-list .ib-row.is-unread")).toBeNull();
+    expect(button()).toBeNull();
   });
 
   test("a headline with no name in it carries the unread weight whole, and loses it once read", async () => {
@@ -1577,7 +1599,7 @@ describe("one inbox (ADR 0218)", () => {
     expect(read()).toBeNull();
   });
 
-  test("a proposal I may decide is a row among what waits, in place of the notice that proposals wait, and opens with its change", async () => {
+  test("proposals are never rows, and an older notice that proposals wait is neither listed nor counted (ADR 0219)", async () => {
     const notice = notification({
       id: "n-proposals",
       kind: "proposal_waiting",
@@ -1585,54 +1607,45 @@ describe("one inbox (ADR 0218)", () => {
       actors: [{ type: "agent", id: ADA_ID }],
       latest: { title: "Manter PRs pequenos" },
     });
-    // The seed's two proposals: the first is mine to decide, the other not.
-    const state = seedState({ notifications: [notice] });
-    for (const p of state.proposals) p.canDecide = p.id === "prop-1";
+    // The seed's two proposals, their review still weighing them: nobody decides them.
+    const state = seedState({ notifications: [notice, ...inbox()] });
+    for (const p of state.proposals) p.canDecide = true;
     await go(state);
-    const waiting = screen().getByRole("region", { name: "Esperando você" });
-    expect(rowIds()).toEqual(["proposal:prop-1"]);
-    expect(waiting.querySelector(".ac-grouphead")?.textContent).toBe("Esperando você1");
-    // Counted once: the proposal, not the notice it stands for.
+    expect(rowIds().some((id) => id?.startsWith("proposal:"))).toBe(false);
+    expect(rowIds()).not.toContain("n-proposals");
+    // What waits is the question alone, counted once.
+    expect(screen().getByRole("region", { name: "Esperando você" }).querySelector(".ac-grouphead")?.textContent).toBe(
+      "Esperando você1",
+    );
     expect(document.querySelector(".ac-pagehead__meta")?.textContent).toContain("1 coisa esperando você");
     expect(sidebarEntry().querySelector(".ac-count")?.textContent).toBe("1");
-    const item = row("proposal:prop-1");
-    expect(waiting.contains(item)).toBe(true);
-    expect(item.querySelector(".ib-row__line")?.textContent).toBe("Ada propõe uma melhoria");
-    expect(item.querySelector(".ib-row__sub")?.textContent).toBe("Atualizar as instruções da Ada");
-    // The first of what waits: open by itself, with why and the change to accept or refuse.
-    expect(item.getAttribute("aria-current")).toBe("true");
-    expect(read().querySelector(".ib-read__who")?.textContent).toMatch(/^Ada · Propostas de melhoria · /);
-    expect(read().querySelector("h2.ib-read__title")?.textContent).toBe("Atualizar as instruções da Ada");
-    expect(read().querySelector(".ib-read__say")?.textContent).toBe(
-      "O João corrigiu a Ada três vezes pelo mesmo motivo.",
-    );
-    const card = openCard();
-    expect(card.getAttribute("data-ask-kind")).toBe("proposal");
-    expect(card.getAttribute("data-ask-id")).toBe("prop-1");
-    expect(card.querySelector(".rq__well")?.textContent).toContain("Abre PRs de até 300 linhas");
-    expect(within(card).getByRole("button", { name: "Recusar" })).toBeTruthy();
-    await click(within(card).getByRole("button", { name: "Aceitar mudança" }));
-    await settle(6);
-    expect(state.calls.find((c) => c.method === "proposals.accept")?.args.slice(0, 2)).toEqual([ORG_ID, "prop-1"]);
+    expect(row("n-q").getAttribute("aria-current")).toBe("true");
+    await pickFilter(/Esperando você/);
+    expect(rowIds()).toEqual(["n-q"]);
   });
 
-  test("a click on a proposal's row opens it in place of the item that was open; proposals stay out of the other filters", async () => {
-    const state = seedState({ notifications: inbox() });
-    await go(state);
-    // After what waits in the notifications, in the same group.
-    expect(rowIds().slice(0, 3)).toEqual(["n-q", "proposal:prop-1", "proposal:prop-2"]);
-    expect(screen().getByRole("region", { name: "Esperando você" }).querySelector(".ac-grouphead")?.textContent).toBe(
-      "Esperando você3",
+  test("what an agent applied itself is one row: who applied how many, the newest change; Abrir opens the history", async () => {
+    const applied = notification({
+      id: "n-applied",
+      kind: "proposal_applied",
+      actors: [{ type: "agent", id: ADA_ID }],
+      count: 2,
+      source: { agentId: ADA_ID, label: "Ada", proposalId: "prop-1" },
+      latest: { title: "Atualizar as instruções da Ada" },
+      updatedAt: ago(3),
+    });
+    const { router } = await go(seed([applied]));
+    expect(rowIds()).toEqual(["n-applied"]);
+    expect(row("n-applied").querySelector(".ib-row__line")?.textContent).toBe("Ada aplicou 2 melhorias");
+    expect(row("n-applied").querySelector(".ib-row__sub")?.textContent).toBe(
+      "Melhorias dos agentes · Atualizar as instruções da Ada",
     );
-    await open("proposal:prop-2");
-    expect(row("proposal:prop-2").getAttribute("aria-current")).toBe("true");
-    expect(row("n-q").getAttribute("aria-current")).toBeNull();
-    expect(openCard().getAttribute("data-ask-id")).toBe("prop-2");
-    expect(state.calls.some((c) => c.method === "notifications.read")).toBe(false);
-    await pickFilter(/Esperando você/);
-    expect(rowIds().sort()).toEqual(["n-q", "proposal:prop-1", "proposal:prop-2"]);
-    await pickFilter(/Não lidas/);
-    expect(rowIds().some((id) => id?.startsWith("proposal:"))).toBe(false);
+    // Nothing to decide: it opens beside the list with the newest change, and Open goes to Agent improvements.
+    expect(read().querySelector(".ib-read__say")?.textContent).toContain("Atualizar as instruções da Ada");
+    expect(within(read()).queryByRole("button", { name: /^Aceitar/ })).toBeNull();
+    await click(within(read()).getByRole("button", { name: "Abrir" }));
+    await settle(4);
+    expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/proposals`);
   });
 
   test("the old pages' addresses land on the inbox: what waits on its filter, a request open by its id", async () => {

@@ -824,6 +824,7 @@ export async function syncCustomTools(deps: CustomDeps, c: ConnectorConnection) 
     .set({ updatedAt: new Date(), ...(c.status === "needs_reconnect" ? {} : { lastError: null }) })
     .where(eq(connectorConnections.id, c.id));
   caches.connections.delete(`${c.orgId}:active`);
+  caches.connections.delete(toolsKey(c));
   await refreshServerIcon(deps, c, info).catch(() => {});
 }
 
@@ -1098,15 +1099,24 @@ export async function saveCustomTools(
     });
   });
   caches.connections.delete(`${orgId}:active`);
+  caches.connections.delete(toolsKey(c));
   caches.scopes.deletePrefix(`${orgId}:`);
   return serverView(deps.db, orgId, id);
 }
 
-/** Classified, still-listed tools of a custom connection (the tool source exposes only these). */
-export async function classifiedTools(db: Database, connectionId: string) {
-  const rows = await toolRows(db, [connectionId]);
+/**
+ * Classified, still-listed tools of a custom connection (the tool source exposes only these), read for every run's
+ * tool list: kept as `caches.connections`' `orgId:tools:id`, forgotten by a listing that stores new tools
+ * (`syncCustomTools`) and by an admin's classification (`saveCustomTools`).
+ */
+export async function classifiedTools(db: Database, connection: { id: string; orgId: string }) {
+  const rows = (await caches.connections.getOrLoad(toolsKey(connection), () =>
+    toolRows(db, [connection.id]),
+  )) as ToolRow[];
   return rows.filter((t) => ACCESS.includes(t.access as ToolAccess));
 }
+
+const toolsKey = (c: { id: string; orgId: string }) => `${c.orgId}:tools:${c.id}`;
 
 /**
  * Applies our suggestion to every tool not classified yet (admins), in one

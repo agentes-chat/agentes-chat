@@ -112,7 +112,7 @@ describe("a personal workspace's settings list", () => {
     await go(personal(), "settings/keys");
     expect(marked()).toBe("IA e uso");
     expect(screen().getByRole("region", { name: "Contas" })).toBeTruthy();
-    expect(screen().getByRole("region", { name: "Chaves de provedor" })).toBeTruthy();
+    expect(screen().getByRole("region", { name: "Chaves de API" })).toBeTruthy();
     // Connectors and Skills are sections of their own: not on this page.
     expect(screen().queryByRole("heading", { level: 2, name: "Conectores e MCPs" })).toBeNull();
     expect(screen().queryByRole("heading", { level: 2, name: "Skills" })).toBeNull();

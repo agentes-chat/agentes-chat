@@ -33,7 +33,7 @@ import { announceMessageMemories } from "../message-memories";
 import { quietNoticeSql } from "../notices";
 import { can, getMembership } from "../organizations";
 import { personWords, runReadOutsideById, UNASKED_DESTINATION, unaskedDestination } from "../outside";
-import { personBehindCall, wikiActorOfCall } from "../requester";
+import { personBehindCall, triggerPerson, wikiActorOfCall } from "../requester";
 import { isRightHandId, rightHandReader } from "../right-hand";
 import {
   agentSearchChannels,
@@ -78,7 +78,7 @@ import {
 } from "./items";
 import { kindFamily, overlap } from "./judgments";
 import { learnTrust, ownWords } from "./learn";
-import { CARD_MAX_AGENTS, ownerDecides, type Proposal, proposeChange } from "./proposals";
+import { askedWords, CARD_MAX_AGENTS, proposeChange } from "./proposals";
 import { type ContextDeps, ensureThreadSummary, judgeOf, memoryJudging } from "./summaries";
 
 const { agentRuns, contextItems, messages, outcomes } = schema;
@@ -902,7 +902,7 @@ export function createContextToolSource(deps: ContextDeps): ToolSource {
     {
       name: "propose_instruction_change",
       description:
-        "When a person asks to change how agents work, propose it: your instructions (my_instructions), other agents' (agents: with their handles, all on one card), or what every agent should know now and later (org_context). Add a rule with change. To change or remove existing text, put the exact text in replaces and the new text in change (empty removes it). To rewrite them whole when the person asks, give the full new text in instructions, for yourself or one agent (read it first: read_agent). With target agents you can also give an agent a new role (roles) and turn an app on or off for it (access: a connected app by its name, or a built-in area such as browser:use; your own apps go through request_permission). When the person who asked may make the change and this turn read nothing from outside, it applies at once with Undo; else a person who may accepts it. Instructions: the agent's owner or someone who reviews memory. A role or an app: an admin who manages agents, or the agent's owner for an app only turned off. The org context: someone who reviews memory. Never tell the person only they can make the change: propose it. Not for routines: a change to what a routine does ('a rotina', 'when a new error comes in…') is `update_routine`.",
+        "When a person asks to change how agents work, propose it: your instructions (my_instructions), other agents' (agents: with their handles, all on one card), or what every agent should know now and later (org_context). Add a rule with change. To change or remove existing text, put the exact text in replaces and the new text in change (empty removes it). To rewrite them whole when the person asks, give the full new text in instructions, for yourself or one agent (read it first: read_agent). With target agents you can also give an agent a new role (roles) and turn an app on or off for it (access: a connected app by its name, or a built-in area such as browser:use; your own apps go through request_permission). When the person who asked may make the change and this turn read nothing from outside, it applies at once with Undo; else a quick review applies it in a moment if it makes sense, or leaves it out with why on its card. Nobody has to accept it. Never tell the person only they can make the change: propose it. Not for routines: a change to what a routine does ('a rotina', 'when a new error comes in…') is `update_routine`.",
       scope: "memory:write",
       inputSchema: {
         type: "object",
@@ -1008,6 +1008,7 @@ export function createContextToolSource(deps: ContextDeps): ToolSource {
             rationale: str(input.reason),
             requesterId: requester,
             atOnce: (await ownWords(ctx)) === requester ? ctx : undefined,
+            words: await askedWords(ctx.db, ctx, requester),
           });
           const done = applied.length
             ? `Applied ${applied.length} of it at once: the person sees it with Undo under your reply, so say it is done. `
@@ -1017,18 +1018,14 @@ export function createContextToolSource(deps: ContextDeps): ToolSource {
           if (!first)
             return applied.length ? { content: `${done}${left}` } : fail(`Nothing to propose. ${skipped.join(" ")}`);
           const decides = proposals.filter((p) => p.canDecide).length;
+          // What wasn't applied at once goes through the review (ADR 0219): nobody is asked to accept it.
           const made =
             proposals.length === 1
-              ? `Proposal ${first.id} created`
-              : `${proposals.length} changes proposed on one card`;
-          const rest = [...new Set(proposals.filter((p) => !p.canDecide).map(decidedBy))].join(", and ");
+              ? "The change goes through a quick review that applies it in a moment if it makes sense"
+              : `${proposals.length} changes go through a quick review that applies each one that makes sense in a moment`;
           const who =
-            decides === proposals.length
-              ? `the person who asked can accept ${proposals.length === 1 ? "it" : "them"} right here.`
-              : decides === 0
-                ? `${proposals.length === 1 ? "it waits" : "they wait"} for ${rest}.`
-                : `the person who asked can accept some right here, the rest wait for ${rest}.`;
-          return memoryResult(ctx, `${done}${made}; ${who}${left}`, {
+            "; its card under your reply shows the outcome. Say it is being applied, not that it waits for anyone.";
+          return memoryResult(ctx, `${done}${made}${who}${left}`, {
             action: "proposed",
             itemId: first.id,
             text: proposalSummary(
@@ -1054,21 +1051,6 @@ export function createContextToolSource(deps: ContextDeps): ToolSource {
   // A personal workspace (ADR 0159): the same memory, about one person and their life rather than a company.
   return { name: "context", tools: async (ctx) => inWorkspaceWords(ctx.db, ctx.orgId, tools, personalWords(tools)) };
 }
-
-/**
- * Who accepts a row the person who asked can't, for the agent to tell them (`deciders` in proposals.ts). Who edits the
- * agent is its owner, who manages it and who its "Quem pode editar" names (ADR 0085 addendum of 2026-11-17).
- */
-const decidedBy = (p: Proposal) =>
-  p.target === "org_context"
-    ? "someone who reviews memory (the org context)"
-    : p.target === "agent_instructions"
-      ? "someone who edits the agent or reviews memory (instructions)"
-      : p.target === "agent_role"
-        ? "someone who edits the agent (a role)"
-        : ownerDecides(p)
-          ? "an admin who manages the agent or the agent's owner (apps turned off)"
-          : "an admin who manages the agent (apps)";
 
 /** Memory tools only act on a person's request in the current turn (never on tool, webhook or document text). */
 /** The person behind the run (`authority.ts`); null for a routine's work and unattended runs. */
@@ -1229,18 +1211,6 @@ const notRequested = {
   isError: true,
 };
 
-/**
- * Who wrote the message this run answers, when a person did in their own words: one sent through an AI app carries
- * `meta.readOutside` and counts as outside content (ADR 0119).
- */
-async function triggerPerson(ctx: ToolContext): Promise<{ id: string; body: string } | null> {
-  const [m] = await ctx.db
-    .select({ type: messages.authorType, userId: messages.authorUserId, meta: messages.meta, body: messages.body })
-    .from(messages)
-    .where(and(eq(messages.orgId, ctx.orgId), eq(messages.id, ctx.triggerMessageId)));
-  return m?.type === "person" && m.meta.readOutside !== true && m.userId ? { id: m.userId, body: m.body } : null;
-}
-
 /** A person's message as a memory's text (ADR 0167): their words as written, within an item's length. */
 const quoteOf = (body: string) => cutText(body.trim(), 2000);
 
@@ -1317,12 +1287,13 @@ async function saveForTeam(
       change: input.content,
       rationale: "Asked to keep it for the whole team.",
       requesterId: input.person,
+      words: input.words,
     });
     const [first] = proposals;
     if (!first) return { content: "Not proposed: the team already keeps this.", isError: true };
     return memoryResult(
       ctx,
-      `Proposed for the team on a card (${first.id}): once someone who reviews memory accepts it, every agent reads it. Say it waits for them; don't ask teammates to save copies.`,
+      "Sent for the team: a quick review adds it to what every agent reads in a moment if it makes sense, and its card shows the outcome. Say it is being added; don't ask teammates to save copies.",
       {
         action: "proposed",
         itemId: first.id,

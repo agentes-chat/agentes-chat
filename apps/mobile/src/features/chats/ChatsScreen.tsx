@@ -9,8 +9,10 @@ import { Stack, useIsFocused } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, View } from "react-native";
+import { markFirstRows } from "@/lib/perf";
 import { readValueSync, STORED, writeValue } from "@/lib/storage";
 import { useOrg } from "@/providers/org";
+import { useRealtime } from "@/providers/realtime";
 import {
   type HeaderAction,
   LargeTitleScreen,
@@ -75,6 +77,11 @@ import { useWaitingItems } from "./useWaitingItems";
 
 /** Faces of the home that move, the pinned ones at work first, then the first rows (a long list stays light). */
 const LIVE_ROWS = 6;
+/**
+ * A section of Setores up to this long glides its rows to their new places as they reorder; a longer one (a workspace
+ * with hundreds of channels) jumps, or each new message would start a native transition on every row.
+ */
+const MOVING_ROWS = 30;
 /**
  * The team peeking past the list's end (`TeamPeek`) where the list reports a pull there: iOS bounces past its end;
  * Android's list stops at it (as in a conversation, `ChatPeek`).
@@ -239,11 +246,14 @@ function Home() {
     [muteChannel],
   );
 
+  // Who is working: with the socket open, every run's start and end comes as `agent.status` and reads it again; the
+  // poll is for a socket that isn't there.
+  const socketOpen = useRealtime().status === "open";
   useEffect(() => {
-    if (!focused) return;
+    if (!focused || socketOpen) return;
     const timer = setInterval(() => void qc.invalidateQueries({ queryKey: keys.working(orgId) }), WORKING_POLL_MS);
     return () => clearInterval(timer);
-  }, [focused, qc, orgId]);
+  }, [focused, socketOpen, qc, orgId]);
 
   const outages = useMachineOutages();
   const offline = useMemo(() => waitingComputerByAgent(outages.outages), [outages.outages]);
@@ -309,6 +319,10 @@ function Home() {
   const empty = !list.loading && !failed && pinned.rows.length === 0 && !teamListed;
   // The first load: the rows arrive over the stand-ins (a refetch plays nothing).
   const load = useFirstLoad(list.loading);
+  const hasRows = list.rows.length > 0;
+  useEffect(() => {
+    if (hasRows) markFirstRows();
+  }, [hasRows]);
 
   // The first Conversas after the splash is already in place under it (the splash's ring opens on it): only the right
   // hand's face wakes, once it is in view.
@@ -429,7 +443,12 @@ function Home() {
                       onToggle={() => sectorsFold.toggle(section.key)}
                     >
                       {section.rows.map((r, i) => (
-                        <LandRow key={r.key} land={load.landing} index={2 + i} moves>
+                        <LandRow
+                          key={r.key}
+                          land={load.landing}
+                          index={2 + i}
+                          moves={section.rows.length <= MOVING_ROWS}
+                        >
                           <HomeRow
                             row={r}
                             facts={factsOf(r, agentStates.get(r.key))}

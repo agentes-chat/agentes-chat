@@ -105,7 +105,7 @@ async function withPopup(run: () => Promise<void>) {
 
 /**
  * Settings › AI accounts with Ada (Walter's) on the MacBook, a computer someone else connected for the workspace
- * (`brain`: Ada's view; `machine`: over its row), and "Conectar uma IA" opened. `setup`: the workspace gets its own
+ * (`brain`: Ada's view; `machine`: over its row), and "Add account" opened (Connect). `setup`: the workspace gets its own
  * computer, this far.
  */
 async function connect({
@@ -169,7 +169,7 @@ async function connect({
   api.agents.brain = async (orgId, agentId) => ({ ...(await viewOf(orgId, agentId)), ownSignIn: false, ...brain });
   const { router, services } = await renderApp(path, { api });
   await settle(6);
-  if (!path.includes("connect=ai")) await click(screen().getByRole("button", { name: "Conectar uma IA" }));
+  if (!path.includes("connect=ai")) await click(screen().getByRole("button", { name: "Adicionar conta" }));
   await settle(4);
   // For one agent the picker; for the team (`crew`) the narrow dialog under the sky, whose title follows its screen.
   const dialog = screen().getByRole("dialog");
@@ -1080,7 +1080,7 @@ describe("Conectar uma IA: one picker, plans first", () => {
     api.machines.computerSetup = () => new Promise(() => {});
     await renderApp(`/org/${ORG_ID}/settings/keys`, { api });
     await settle(6);
-    await click(screen().getByRole("button", { name: "Conectar uma IA" }));
+    await click(screen().getByRole("button", { name: "Adicionar conta" }));
     const dialog = screen().getByRole("dialog", { name: "Conectar uma IA" });
     expect(within(dialog).queryByRole("button", { name: "Conectar um computador" })).toBeNull();
     expect(dialog.textContent).not.toMatch(/Conecte um seu|computador conectado/);

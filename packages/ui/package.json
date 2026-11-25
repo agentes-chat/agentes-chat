@@ -28,6 +28,7 @@
       "default": "./src/computer/portrait.js"
     },
     "./brand/marks": "./src/brand/marks.ts",
+    "./icons/data": "./src/icons/data.ts",
     "./presence/badge": "./src/presence/badge.ts",
     "./sfx": "./src/sfx/synth.ts",
     "./sky/engine": "./src/sky/engine.ts",
@@ -41,6 +42,7 @@
     "./sky/workspace": "./src/sky/workspace.ts",
     "./sky/team": "./src/sky/team.ts",
     "./agent-talk": "./src/agent-talk.ts",
+    "./bounded-map": "./src/bounded-map.ts",
     "./channel-refs": "./src/channel-refs.ts",
     "./diff": "./src/diff.ts",
     "./format": "./src/format.ts",

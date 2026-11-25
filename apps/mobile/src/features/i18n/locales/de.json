@@ -890,6 +890,12 @@
     "kind": {
       "proposal_waiting_one": "{{names}} schlägt eine Verbesserung vor",
       "proposal_waiting_other": "{{names}} schlagen Verbesserungen vor",
+      "proposal_applied_one": "{{names}} hat eine Verbesserung angewendet",
+      "proposal_applied_other": "{{names}} hat {{count}} Verbesserungen angewendet",
+      "proposal_applied_agents_one": "{{names}} haben eine Verbesserung angewendet",
+      "proposal_applied_agents_other": "{{names}} haben {{count}} Verbesserungen angewendet",
+      "proposal_applied_auto_one": "Eine Verbesserung wurde automatisch angewendet",
+      "proposal_applied_auto_other": "{{count}} Verbesserungen wurden automatisch angewendet",
       "mention_one": "{{names}} hat dich erwähnt",
       "mention_other": "{{names}} haben dich erwähnt",
       "thread_reply_one": "{{names}} hat im Thread geantwortet",
@@ -1129,8 +1135,6 @@
     "issues": "Aufgaben",
     "issuesWithMe_one": "{{count}} bei dir",
     "issuesWithMe_other": "{{count}} bei dir",
-    "proposalsWaiting_one": "{{count}} wartet",
-    "proposalsWaiting_other": "{{count}} warten",
     "drive": "Drive",
     "connectors": "Konnektoren und MCP",
     "preferences": "Einstellungen",
@@ -1341,6 +1345,7 @@
     "criteriaOf": "{{done}} von {{total}}",
     "linkMessage": "Nachricht in #{{channel}}",
     "linkMessagePlain": "Die ursprüngliche Nachricht",
+    "removeFileText": "Die Datei bleibt im Drive.",
     "subIssues": "Unteraufgaben",
     "talk": "Chat",
     "finish": "Als erledigt markieren",
@@ -1431,13 +1436,26 @@
     "uses_one": "{{count}}-mal genutzt",
     "uses_other": "{{count}}-mal genutzt",
     "confirmed": "Von einer Person bestätigt",
-    "confirm": "Bestätigen",
-    "confirmedToast": "Bestätigt",
     "details": "Technische Details",
     "before": "Vorher stand hier: {{text}}",
     "fix": "Korrigieren",
     "forgetTitle": "Diese Erinnerung vergessen?",
     "forgetText": "{{name}} nutzt das in künftigen Unterhaltungen nicht mehr."
+  },
+  "proposals": {
+    "title": "Verbesserungen der Agenten",
+    "emptyTitle": "Noch nichts geändert",
+    "empty": "Wenn ein Agent seine Anweisungen oder die eines Teamkollegen verbessert, erscheint die Änderung hier, mit „Rückgängig“.",
+    "more": "Mehr zeigen",
+    "reviewing": "Wird geprüft…",
+    "appliedBy": "Angewendet von {{name}}",
+    "appliedBy_female": "Angewendet von {{name}}",
+    "appliedAuto": "Automatisch angewendet",
+    "leftOutBy": "Verworfen von {{name}}",
+    "leftOutBy_female": "Verworfen von {{name}}",
+    "leftOut": "Verworfen",
+    "undoneBy": "Von {{name}} rückgängig gemacht",
+    "undoneByYou": "Von dir rückgängig gemacht"
   },
   "wiki": {
     "map": "Seitenkarte",
@@ -1492,6 +1510,15 @@
     "next": {
       "pr": "Branch gepusht, noch kein Pull Request",
       "mergeLocal": "Bereit zum Mergen in {{base}}"
+    },
+    "terminal": {
+      "keys": "Terminaltasten",
+      "keyboard": "Tastatur",
+      "pasteHint": "Kopiertes ins Terminal einfügen",
+      "key": {
+        "CtrlC": "Strg-C, unterbrechen",
+        "CtrlD": "Strg-D, Ende der Eingabe"
+      }
     }
   },
   "taskManager": {
@@ -3179,6 +3206,61 @@
       "editHint": "Bearbeitet diesen Teil",
       "notHere": "Dieser Teil wird am Computer bearbeitet"
     }
+  },
+  "aiHub": {
+    "accounts": "Konten",
+    "accountsHint": "Jedes Abo und jeder API-Schlüssel dieses Workspaces, egal wer ihn verbunden hat. Tippe auf ein Konto für seine Limits und wer es nutzen darf.",
+    "order": "Nutzungsreihenfolge",
+    "orderSub": "Am Limit machen die Agenten mit dem nächsten Konto weiter.",
+    "skipped": "übersprungen",
+    "orderGroup": "{{plan}} · {{computer}}",
+    "noOrder": "Mit zwei Konten derselben KI auf einem Computer erscheint ihre Reihenfolge hier.",
+    "keyFallback": "Mit dem API-Schlüssel weitermachen, wenn alle Abos am Limit sind",
+    "keyFallbackHint": "Nach dem letzten Konto machen die Agenten mit dem API-Schlüssel des Workspaces weiter, der pro Nutzung abrechnet. Missionen wechseln nie zum Schlüssel.",
+    "keyFallbackLocked": "Nur ein Admin ändert das.",
+    "limits": "Limits",
+    "permissions": "Berechtigungen",
+    "manage": "Verwalten",
+    "manageSub": "Umbenennen, neu anmelden, entfernen",
+    "manageHint": "Wer dieses Konto umbenennen, sich neu anmelden und es entfernen darf. Nur wer es verbunden hat, ändert das.",
+    "use": "In Agenten nutzen",
+    "useSub": "In Wer denkt auswählen",
+    "useHint": "Wessen Agenten mit diesem Konto denken dürfen, und wessen Lodi. Wer es verwaltet, ändert das.",
+    "reply": "Allen antworten",
+    "replySub": "Mit wem die Agenten sprechen",
+    "replyHint": "Wem ein Agent auf diesem Konto neben seinem eigenen Besitzer antwortet. Die Bedingungen von Claude verlangen, dass ein Abo von der Person genutzt wird, die dafür zahlt: prüfe sie, bevor du es für alle öffnest.",
+    "audience": {
+      "owner": "Nur du",
+      "ownerOf": "Nur {{name}}",
+      "admins": "Du und Admins",
+      "adminsOf": "{{name}} und Admins",
+      "roles": "Rollen…",
+      "people": "Personen…",
+      "everyone": "Alle",
+      "agentOwner": "Nur der Besitzer des Agenten",
+      "rolesCount_one": "{{count}} Rolle",
+      "rolesCount_other": "{{count}} Rollen",
+      "peopleCount_one": "{{count}} Person",
+      "peopleCount_other": "{{count}} Personen"
+    },
+    "pickRoles": "Rollen",
+    "pickPeople": "Personen",
+    "pickNone": "Wähle mindestens eine Option.",
+    "choice": {
+      "account": "Konto",
+      "model": "Modell",
+      "effort": "Aufwand",
+      "yours": "Deine",
+      "others": "Vom Team",
+      "keys": "API-Schlüssel",
+      "workspace": "Die des Workspaces",
+      "workspaceSub": "API-Schlüssel des Workspaces",
+      "key": "API-Schlüssel",
+      "keyDefault": "Standard des Workspaces",
+      "api": "API"
+    },
+    "missionAi": "KI",
+    "missionLocked": "Wer die Arbeit macht, wird vor dem Start gewählt. Das Modell lässt sich jederzeit ändern."
   },
   "surface": {
     "on": "An",

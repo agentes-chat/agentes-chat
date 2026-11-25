@@ -131,6 +131,7 @@ export {
   Sheet,
   SheetContent,
   type SheetProps,
+  useRouteSheetHeader,
   useRouteSheetOptions,
   useRouteSheetScrollable,
   useSheetBody,

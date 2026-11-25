@@ -86,19 +86,22 @@ export function Advanced() {
 
       <CardTitle>{t("desktop.prefs.advanced.longJobs")}</CardTitle>
       <PrefCard>
-        <PrefRow
-          title={t("desktop.prefs.advanced.concurrent")}
-          hint={hintFor(t, t("desktop.prefs.advanced.concurrent"), t("desktop.prefs.advanced.concurrentDesc"))}
-          end={
-            <Stepper
-              label={t("desktop.prefs.advanced.concurrent")}
-              value={limits.maxConcurrentTasks}
-              min={TASK_LIMIT_BOUNDS[0]}
-              max={TASK_LIMIT_BOUNDS[1]}
-              onChange={(v) => void change({ maxConcurrentTasks: v })}
-            />
-          }
-        />
+        {/* Where tasks start on the computer's room, a count would be a setting that changes nothing. */}
+        {!config?.tasksOnRoom && (
+          <PrefRow
+            title={t("desktop.prefs.advanced.concurrent")}
+            hint={hintFor(t, t("desktop.prefs.advanced.concurrent"), t("desktop.prefs.advanced.concurrentDesc"))}
+            end={
+              <Stepper
+                label={t("desktop.prefs.advanced.concurrent")}
+                value={limits.maxConcurrentTasks}
+                min={TASK_LIMIT_BOUNDS[0]}
+                max={TASK_LIMIT_BOUNDS[1]}
+                onChange={(v) => void change({ maxConcurrentTasks: v })}
+              />
+            }
+          />
+        )}
         <PrefRow
           title={t("desktop.prefs.advanced.maxTime")}
           hint={hintFor(t, t("desktop.prefs.advanced.maxTime"), t("desktop.prefs.advanced.maxTimeDesc"))}

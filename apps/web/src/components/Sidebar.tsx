@@ -263,11 +263,10 @@ export function Sidebar() {
     window.addEventListener(NEW_CHANNEL_EVENT, open);
     return () => window.removeEventListener(NEW_CHANNEL_EVENT, open);
   }, []);
-  const proposalsWaiting = overview.data?.proposalsWaitingForMe ?? 0;
   // The inbox's row: bold while something in it is unread (live through `notification.counts`).
   const notificationCount = useNotificationCount(orgId).data;
   const unreadNotifications = notificationCount?.unread ?? 0;
-  // The inbox's count: everything that waits on me, proposals I may decide among it (ADR 0218).
+  // The inbox's count: everything that waits on me (ADR 0218).
   const waitingOnMe = useInboxWaiting(orgId);
   // Threads: how many open missions wait for me (the server counts: a decision, a review, a suggestion…).
   const missionList = useMissionList(orgId, MISSIONS_WAITING_COUNT);
@@ -279,10 +278,9 @@ export function Sidebar() {
   // The tools on top, each where I put it (the rest in More); one there "when there's something" while its count is.
   const sidebarItems = useSidebarItems(orgId).data;
   // An unread reply counts as "something" for a Threads set to show "when there's something": it comes into the list
-  // lit, and leaves once read, as Proposals does once nothing waits.
+  // lit, and leaves once read. Nothing waits in Agent improvements any more (ADR 0219): it has no count.
   const counts: Partial<Record<SidebarItem, number>> = {
     waiting: waitingOnMe,
-    proposals: proposalsWaiting,
     threads: missionsWaiting + unreadThreads,
   };
   // The mode's defaults and order (ADR 0159): in a personal workspace, Routines and Drive in sight, the rest in More.
@@ -295,8 +293,6 @@ export function Sidebar() {
       <CountBadge aria-label={t("notifications.summaryWaiting", { count: waitingOnMe })}>
         {badgeCount(waitingOnMe)}
       </CountBadge>
-    ) : id === "proposals" && proposalsWaiting > 0 ? (
-      <CountBadge aria-label={t("shell.pendingProposals", { count: proposalsWaiting })}>{proposalsWaiting}</CountBadge>
     ) : id === "threads" && missionsWaiting > 0 ? (
       // Missões is a tab of Threads: the missions waiting for me as a neutral count.
       <CountChip
@@ -929,6 +925,8 @@ export function Sidebar() {
       <div
         className="sidebar__scroll"
         ref={navRef}
+        // Its lists show together once the channels, the agents and the DMs are in: no section pushes the next down.
+        data-pending={channels.isLoading || dir.loading || dms.isLoading || undefined}
         onKeyDown={(e) => spaceEvent(e) && sidebarMenu.onKeyDown(e)}
         onContextMenu={(e) => spaceEvent(e) && sidebarMenu.onContextMenu(e)}
       >

@@ -469,7 +469,7 @@ export function ImapStep({
           )}
         </DialogBody>
       </Locked>
-      <DialogFooter bar note={testing ?? t("connectFlow.nothingYet")}>
+      <DialogFooter bar note={t("connectFlow.nothingYet")} busyNote={testing}>
         <Button type="button" onClick={onClose}>
           {t("common.cancel")}
         </Button>

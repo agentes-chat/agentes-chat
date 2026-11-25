@@ -1,4 +1,5 @@
 import { fullResync, listenResumedTopic, type PubSub } from "@agenteschat/adapters";
+import { inTransaction } from "@agenteschat/db";
 
 /**
  * Per-process caches for data read on every run but rarely changed (agent
@@ -23,6 +24,8 @@ export const cachesEnabled = () => enabled;
 
 export class TtlCache<V> {
   private readonly entries = new Map<string, { value: V; expires: number }>();
+  /** Loads under way by key: a miss while one runs waits for it instead of reading the database again. */
+  private readonly loading = new Map<string, { generation: number; value: Promise<V> }>();
   /** Bumped by every invalidation, so a load that began before one never stores what it read. */
   private generation = 0;
   constructor(
@@ -67,12 +70,16 @@ export class TtlCache<V> {
     this.onInvalidate?.("clear", "");
   }
 
+  /** Run with every invalidation applied here, this process's or another's: caches built from this one's rows forget too. */
+  readonly followers: ((op: CacheOp, key: string) => void)[] = [];
+
   /** An invalidation, here only: another process's, which it already told everyone. */
   apply(op: CacheOp, key: string) {
     this.generation++;
     if (op === "clear") this.entries.clear();
     else if (op === "delete") this.entries.delete(key);
     else for (const k of this.entries.keys()) if (k.startsWith(key)) this.entries.delete(k);
+    for (const follow of this.followers) follow(op, key);
   }
 
   /** Every entry expires within `ms`, each at a random point: their reloads spread out instead of all coming at once. */
@@ -84,16 +91,31 @@ export class TtlCache<V> {
   /**
    * Returns the cached value or loads, caches and returns it (`undefined`/null results are cached too, unless `keep`
    * refuses them). A load an invalidation overtook (here or from another process) is returned but not kept: its read
-   * may predate the write.
+   * may predate the write. Misses while a load of the key runs share it, unless an invalidation came after it began;
+   * a value `keep` refuses isn't shared either (each of them loads again), as it wouldn't be cached.
+   * Inside a transaction a miss loads on its own and shares nothing: the transaction holds a connection (the built-in
+   * database's only one) that a load outside it may be waiting for, and what it reads may never commit.
    */
   async getOrLoad(key: string, load: () => Promise<V>, keep?: (value: V) => boolean): Promise<V> {
     if (!enabled) return load();
     const hit = this.entries.get(key);
     if (hit && hit.expires >= Date.now()) return hit.value;
+    const shared = !inTransaction();
+    const running = shared ? this.loading.get(key) : undefined;
+    if (running && running.generation === this.generation) {
+      const value = await running.value;
+      return (keep?.(value) ?? true) ? value : load();
+    }
     const started = this.generation;
-    const value = await load();
-    if (this.generation === started && (keep?.(value) ?? true)) this.set(key, value);
-    return value;
+    const mine = { generation: started, value: load() };
+    if (shared) this.loading.set(key, mine);
+    try {
+      const value = await mine.value;
+      if (this.generation === started && (keep?.(value) ?? true)) this.set(key, value);
+      return value;
+    } finally {
+      if (this.loading.get(key) === mine) this.loading.delete(key);
+    }
   }
 }
 
@@ -119,6 +141,13 @@ export const caches = {
    * membership is kept, never its absence, so someone who just joined is let in at once.
    */
   membership: new TtlCache<unknown>(5_000),
+  /**
+   * A signed-in request's session and person, by its signed session cookie (the server's `sessionOf`): a tab's polls
+   * and lists read them once every few seconds instead of a session and a user row each. A session that ends or
+   * changes is forgotten here and in every process at once: by its token (`${token}.`) from Better Auth's hooks, all
+   * of them when the engine ends a person's sessions itself, or a person changes.
+   */
+  sessions: new TtlCache<unknown>(5_000, 50_000),
   /** An org's standing (`standing.ts`), read before every model and computer call: a hold bites within 5 s everywhere. */
   standing: new TtlCache<unknown>(5_000),
   /** Whether an org spent its platform AI for the month (`limits.ts`), read before every Jev call and route. */
@@ -147,7 +176,32 @@ export const caches = {
   intents: new TtlCache<unknown>(3600_000, 5000),
   /** Automático's choice for a routine's prompt (`orgId:agentId:routineId:hash`): the same work every firing. */
   routineAutoModel: new TtlCache<unknown>(24 * 3600_000, 5000),
+  /**
+   * The whole workspace's part of what its members poll (`orgId:what`): its agents' statuses and work, its returns
+   * still to come, the task manager's asks and computers. What each person may see of it is read apart, per request
+   * (`viewerFacts`). Forgotten when an agent's status is announced (`forgetOrgReads`) and with any change to an agent
+   * or a channel.
+   */
+  orgReads: new TtlCache<unknown>(3_000, 20_000),
 };
+
+const followOrgReads = (op: CacheOp, key: string) =>
+  caches.orgReads.apply(op === "clear" ? "clear" : "deletePrefix", key.slice(0, key.indexOf(":") + 1));
+caches.agents.followers.push(followOrgReads);
+caches.channels.followers.push(followOrgReads);
+
+/**
+ * Forgets an org's reads (`caches.orgReads`) here at once, and in every process through `pubsub` ahead of what is
+ * published after it: an app reading again on the event that follows never gets what was kept before the change. Sent
+ * through the caller's pubsub, so a transaction's held events carry it after their commit, not before.
+ */
+export async function forgetOrgReads(pubsub: Pick<PubSub, "publish"> | undefined, orgId: string) {
+  const key = `${orgId}:`;
+  caches.orgReads.apply("deletePrefix", key);
+  await pubsub
+    ?.publish(CACHE_TOPIC, { type: "cache.invalidate", cache: "orgReads", op: "deletePrefix", key })
+    .catch(() => {});
+}
 
 /** `caches.contextPresence`'s key for whether an agent holds a rule people gave (`rulesForRun`). */
 export const rulesPresenceKey = (orgId: string, agentId: string) => `${orgId}:rules:${agentId}`;

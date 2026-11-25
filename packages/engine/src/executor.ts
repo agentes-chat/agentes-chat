@@ -47,9 +47,12 @@ import { announceAgentStatus, askRunStatus, startRunStatus, statusCandidates } f
 import { TECHNICAL_STYLE_LINE } from "./agent-style";
 import { type Agent, getAgentCached } from "./agents";
 import { agentsDmReads, readerOfRun } from "./agents-dm-reads";
+import { planKeyFallbackOn } from "./ai-accounts/fallback";
+import { runAsker } from "./ai-accounts/reply";
 import { type AgentAi, agentAiState, noAiReasonOf, ownNotSignedIn } from "./ai-status";
 import { heldBehind, markNotRun, notRunAfter, notRunText, wakeLine } from "./approval-order";
 import { deciderName, publishApproval } from "./approvals";
+import { withFileFacts } from "./artifacts";
 import { accountablePerson, fedByRoutine, personOfMessage, runAuthority } from "./authority";
 import {
   type AutoChoice,
@@ -306,6 +309,7 @@ import {
   resolveRunFailed,
 } from "./notification-producers";
 import { openRequestNudge, openRequestsOf, WITHDRAW_REQUEST_TOOL } from "./open-requests";
+import { forgetRunReads, holdsRunReads } from "./outbound";
 import { enqueue, PermanentJobError } from "./outbox";
 import { type OutsideMemo, personWords, runReadOutside } from "./outside";
 import { assertPersonUnderLimit } from "./person-usage";
@@ -338,6 +342,7 @@ import { routineBriefOf } from "./routine-brief";
 import { missStaleRoutineRun, routineRunWaitingForComputer, routineRunWaitingForPlan } from "./routine-firing";
 import { closeRoutineRun, type RoutineRunEnd, recordRoutineReportMessage, routineFailureEnd } from "./routine-ledger";
 import {
+  ACTIVE_RUN_STATUSES,
   personAmong,
   type ReleaseReason,
   releaseHeldInbox,
@@ -348,6 +353,7 @@ import {
   whileHeld,
 } from "./run-inbox";
 import { deliverNoticeToRun } from "./run-resume";
+import { runState } from "./run-state";
 import { issueRunToolToken, revokeRunToolTokens } from "./run-tool-tokens";
 import {
   type ArtifactLink,
@@ -1264,6 +1270,14 @@ export async function executeRun(deps: EngineDeps, runId: string, options: RunJo
     steerGate.close();
     clearInterval(heartbeat);
     unregisterRunAbort(runId, abort);
+    if (holdsRunReads(runId)) {
+      const [row] = await deps.db
+        .select({ status: agentRuns.status })
+        .from(agentRuns)
+        .where(eq(agentRuns.id, runId))
+        .catch(() => []);
+      if (!row || !(ACTIVE_RUN_STATUSES as readonly string[]).includes(row.status)) forgetRunReads(runId);
+    }
     if (prof.stages.length > 0) {
       deps.onRunProfile?.({ runId, stages: prof.stages, total: prof.total() });
       // Kept with the run, so the operator's work analytics can say where time went (`work-analytics.ts`). In its own
@@ -1308,12 +1322,16 @@ async function executeRunInner(
         background: agentRuns.background,
         waitId: sql<
           string | null
-        >`coalesce(${agentRuns.transcript}->'waitingForBrain'->>'waitId', ${agentRuns.transcript}->'outage'->>'waitId')`,
-        code: sql<string | null>`${agentRuns.transcript}->'waitingForBrain'->>'code'`,
-        people: sql<boolean | null>`(${agentRuns.transcript}->>'roomPeople')::boolean`,
-        spilled: sql<boolean>`${agentRuns.transcript} ? 'spill'`,
-        source: sql<string | null>`${agentRuns.transcript}->'waitingForBrain'->>'source'`,
-        cut: sql<string | null>`${agentRuns.transcript}->'interruptedTurn'->>'cause'`,
+        >`coalesce(${runState}->'waitingForBrain'->>'waitId', ${runState}->'outage'->>'waitId')`,
+        code: sql<string | null>`${runState}->'waitingForBrain'->>'code'`,
+        people: sql<boolean | null>`(${runState}->>'roomPeople')::boolean`,
+        spilled: sql<boolean>`${runState} ? 'spill'`,
+        source: sql<string | null>`${runState}->'waitingForBrain'->>'source'`,
+        // Read by a usage wait alone, and the one read here that opens the transcript.
+        cut: sql<string | null>`case when ${runState}->'waitingForBrain'->>'code' in (${sql.join(
+          [...USAGE_WAIT_CODES].map((c) => sql`${c}`),
+          sql`, `,
+        )}) then ${agentRuns.transcript}->'interruptedTurn'->>'cause' end`,
         orgId: agentRuns.orgId,
         machineId: agentRuns.waitingMachineId,
         agentId: agentRuns.agentId,
@@ -1324,10 +1342,10 @@ async function executeRunInner(
         workId: agentRuns.workId,
         since: sql<
           string | null
-        >`coalesce(${agentRuns.transcript}->'waitingForBrain'->>'since', ${agentRuns.transcript}->'usageWait'->>'since')`,
-        busyRetries: sql<number | null>`(${agentRuns.transcript}->'catchUpTriage'->>'busyRetries')::int`,
-        keyLine: sql<string | null>`${agentRuns.transcript}->'outage'->>'line'`,
-        outageWait: sql<string | null>`${agentRuns.transcript}->'outage'->>'waitId'`,
+        >`coalesce(${runState}->'waitingForBrain'->>'since', ${runState}->'usageWait'->>'since')`,
+        busyRetries: sql<number | null>`(${runState}->'catchUpTriage'->>'busyRetries')::int`,
+        keyLine: sql<string | null>`${runState}->'outage'->>'line'`,
+        outageWait: sql<string | null>`${runState}->'outage'->>'waitId'`,
       })
       .from(agentRuns)
       .where(eq(agentRuns.id, runId));
@@ -1365,7 +1383,7 @@ async function executeRunInner(
       await db
         .update(agentRuns)
         .set({
-          transcript: sql`jsonb_set(${agentRuns.transcript}, '{catchUpTriage}', coalesce(${agentRuns.transcript}->'catchUpTriage', '{"calls":0}'::jsonb)
+          transcript: sql`jsonb_set(${agentRuns.transcript}, '{catchUpTriage}', coalesce(${runState}->'catchUpTriage', '{"calls":0}'::jsonb)
             || jsonb_build_object('busyRetries', ${busyTries + 1}::int, 'outcome', 'skipped_busy', 'at', ${Date.now()}::bigint))`,
         })
         .where(and(eq(agentRuns.id, runId), eq(agentRuns.status, "waiting_input")));
@@ -2508,6 +2526,10 @@ async function executeRunInner(
       note || !channelRow || isAgentOnlyDm(channelRow)
         ? []
         : await unreachedPeople(tx, { orgId: run.orgId, channelId: run.channelId, body: said });
+    // Its files' cards carry their facts: the apps draw a picture or a video without asking for its details first.
+    const files = Array.isArray(shown.artifacts)
+      ? await withFileFacts(tx, run.orgId, shown.artifacts as { id: string; version: number }[])
+      : null;
     const m = await postAgentMessage(
       tx,
       run,
@@ -2515,6 +2537,7 @@ async function executeRunInner(
       said,
       {
         ...shown,
+        ...(files ? { artifacts: files } : {}),
         ...runMeta,
         ...tagged,
         ...(readOutside && !note ? { readOutside: true } : {}),
@@ -3263,6 +3286,7 @@ async function executeRunInner(
     const rows = await renderSteered(db, run.orgId, ids, {
       beforeStart,
       workId: run.workId,
+      runId: run.id,
       ...(brainPlan?.kind === "model"
         ? { unseal: { threadRootId: run.threadRootId, thinksWith: ctx.thinksWith } }
         : {}),
@@ -3395,6 +3419,7 @@ async function executeRunInner(
             brainPlan,
             moved.to,
             isRightHand(agent) ? await rightHandPerson(db, agent, run) : null,
+            isRightHand(agent) ? null : await runAsker(db, agent, run),
           )
         : null;
     const cut = transcript.interruptedTurn;
@@ -3744,7 +3769,10 @@ async function executeRunInner(
   };
 
   /** Ends the run with a plain closing line that carries what it changed (its receipts). */
-  const endWithReceipts = () => closeWith(DONE_TEXT, "done", { receipts: true });
+  const endWithReceipts = () => {
+    const line = noReplyLine(undefined);
+    return closeWith(line.text, line.code, { receipts: true });
+  };
 
   /** Ends the run on the reply it held back (`held`), its own words, with what it changed and its cards. */
   const closeOnHeld = () => {
@@ -3940,6 +3968,7 @@ async function executeRunInner(
     const next = await nextAccountPlan(deps, await planAgent(), plan, tried, {
       ...(room ? { room } : {}),
       forPerson: person,
+      asker: isRightHand(agent) ? null : await runAsker(db, agent, run),
       own,
     });
     const to = next.plan?.account;
@@ -4042,6 +4071,16 @@ async function executeRunInner(
             () => null,
           )
         : null;
+    // "Continuar com a chave de API" (`planKeyFallback`, off by default): with every plan account of its order at its
+    // limit, any agent's turn goes on with the workspace's key, as the right hand's does.
+    const keyAfterPlans =
+      !isRightHand(agent) &&
+      u.code === "plan_limit" &&
+      !u.scope &&
+      !next?.plan &&
+      !onlyThisComputer &&
+      !plan.missionId &&
+      (await planKeyFallbackOn(db, run.orgId));
     if (isRightHand(agent) && u.code !== "busy" && !u.queued && !rightHandKey) {
       const ownModel = u.scope ? ownLimitsModel(plan.account?.provider, plan.model) : null;
       const line = rightHandNoAiReason(u.code, ownModel ? u.scope : undefined);
@@ -4055,8 +4094,9 @@ async function executeRunInner(
       await failNoAi(line, undefined, ownModel?.label, said || undefined);
       return "failed";
     }
-    // Only the right hand stands in on the key (the API never stands in for any other agent's computer brain).
-    if (rightHandKey && (await deps.gateway.hasModelCredential(thinker).catch(() => false))) {
+    // Only the right hand stands in on the key, and any agent once its whole order is at its limit while the workspace
+    // turned "Continuar com a chave de API" on.
+    if ((rightHandKey || keyAfterPlans) && (await deps.gateway.hasModelCredential(thinker).catch(() => false))) {
       await leaveLine();
       standIn = { plan, brain, toolGroups: t.toolGroups, loadedGroups: ctx.loadedGroups };
       t.fallback = {
@@ -4082,6 +4122,11 @@ async function executeRunInner(
       await addRunStep(db, run, "context", { brainFallback: { from, code: u.code, message: u.message } });
       standInUsed = rightHandKey;
       return "fallback";
+    }
+    // "Atender todos" keeps the person who asked out of the plan: nothing they wait for would change it.
+    if (u.code === "plan_not_shared" && !isRightHand(agent)) {
+      await fail(`brain_unavailable: ${u.message}`, { code: u.code, detail: u.message });
+      return "failed";
     }
     // Signed out, the command-line tool missing, no computer: nothing signals that it's fixed (only the
     // computer coming back online would), so a wait would never end.
@@ -6217,7 +6262,7 @@ async function executeRunInner(
       if (await workWaitsInLine()) return parkQueuedWork();
       if (run.workId) await dropWorkNotices(db, run.id);
       const updates = transcript.memoryUpdates ?? [];
-      const saved = (transcript.artifacts ?? []).length > 0 ? "File saved." : "";
+      const saved = (transcript.artifacts ?? []).length > 0;
       const anythingPosted = transcript.postedCount > 0;
       // The silence word (NO_REPLY) is never posted, on any run (reply-policy.ts): what it really wrote, without the line
       // it already said on the way (`say_now`) when it writes it again.
@@ -6369,27 +6414,17 @@ async function executeRunInner(
         ? said
         : (await heldWords(transcript.heldWording && transcript.reacted && restatesReaction(said) ? "" : said)) ||
           (transcript.heldWording ?? "");
-      // The message is the final answer only: the last model call's text. Without it, a short closing line.
-      const written = silent
-        ? ""
-        : words ||
-          (updates.length > 0 ? updates.map(describeUpdate).join("\n") : "") ||
-          saved ||
-          closingSummary(transcript, anythingPosted) ||
-          (result.executedCount > 0 && !anythingPosted ? DONE_TEXT : "");
-      // It changed something since its last message and wrote nothing more: its receipts still go out.
-      let text = written || (!silent && anythingPosted && (await hasUnpostedReceipts(db, run)) ? DONE_TEXT : "");
+      // The message is the final answer only: the model's own words, this call's or its last narration since its last post.
+      const written = silent ? "" : words || closingSummary(transcript);
+      // It changed something (receipts, memory, files) and wrote no words: never a stand-in reply. It is asked for
+      // its answer (`unanswered`). Still none, its changes go out on a line that says it wrote no reply, and why.
+      const noReply =
+        !silent && !written && (updates.length > 0 || saved || (await hasUnpostedReceipts(db, run)))
+          ? noReplyLine(result.stopReason)
+          : null;
+      let text = written || noReply?.text || "";
       // A line the server wrote (not the model): its code, so the app shows it in the person's language.
-      const code =
-        words || text === ""
-          ? undefined
-          : updates.length > 0
-            ? bodyCode("memory")
-            : text === saved
-              ? bodyCode("file_saved")
-              : text === DONE_TEXT
-                ? bodyCode("done")
-                : undefined;
+      const code = noReply && text === noReply.text ? bodyCode(noReply.code) : undefined;
       const t = transcript;
       // How the turn ends (ADR 0097): it goes on in this run (told why), it waits on something durable, it asks a
       // person with a card, or it is done. One choke point for every run kind but a routine's (above).
@@ -6474,7 +6509,7 @@ async function executeRunInner(
         plain &&
         plan.kind === "model" &&
         granted.some((g) => g.name === "upload_file") &&
-        !granted.some((g) => g.name === "git_clone")
+        !granted.some((g) => /(^|_)git_clone$/.test(g.name))
           ? localPathsCited(fresh, request, () =>
               computerWork(t.messages, new Set(listed.filter((x) => x.scope === SANDBOX_SCOPE).map((x) => x.name))),
             )
@@ -6500,8 +6535,9 @@ async function executeRunInner(
         executed: work,
         bound: t.stuck?.endAt !== undefined ? "stuck" : t.wrapUpNoted ? "step_limit" : null,
         quiet: silent && !judged,
-        decided: decided && !silent && !said && !capped && !closingSummary(t, true) ? decided : null,
-        unanswered: !silent && !viaRoutine && !words && (sentinelOnly || (!text && !anythingPosted)),
+        decided: decided && !silent && !said && !capped && !closingSummary(t) ? decided : null,
+        unanswered:
+          !silent && !viaRoutine && !words && (sentinelOnly || Boolean(noReply) || (!text && !anythingPosted)),
         unreached,
         judged: owesAnswer && !capped ? judged : "",
         mission: Boolean(plan.missionId),
@@ -6645,7 +6681,9 @@ async function executeRunInner(
         keep = decision.nudge;
         if (shown) addsTo = true;
       }
-      if (!text && !anythingPosted && !silent) return fail("empty_reply");
+      // No words after being asked for them: the run fails saying how the model's last call ended.
+      if (!text && !anythingPosted && !silent)
+        return fail(result.stopReason === "max_tokens" ? "empty_reply_limit" : "empty_reply");
       // Someone wrote while it answered: post this answer, then read the new message(s) and go on.
       const still = { pending: await unreadNow(db, run.id, { awaitTriage }) };
       // At the cap this answer ends the run instead: what came in gets a run of its own.
@@ -7334,13 +7372,11 @@ function heardSaidNow(t: Transcript, from: number, at?: number) {
 }
 
 /**
- * When the final model call wrote nothing: the agent's last narration since
- * the last post ("Installed Go and built it."), else a plain "Done." when it
- * used tools, else nothing (an empty reply fails the run).
+ * When the final model call wrote nothing: the agent's last narration since the last post ("Installed Go and built
+ * it."), else nothing.
  */
-function closingSummary(t: Transcript, anythingPosted: boolean): string {
-  // What it wrote up to its line on the way (`say_now`) was that line: never the reply. The work it called in that
-  // same response is work, though: a run that did it and wrote nothing after still closes with "Done.".
+function closingSummary(t: Transcript): string {
+  // What it wrote up to its line on the way (`say_now`) was that line: never the reply.
   const said = t.saidNow?.at(-1)?.at;
   const from = said === undefined ? t.postedUpTo : Math.max(t.postedUpTo, said + 1);
   const last = t.messages
@@ -7349,11 +7385,7 @@ function closingSummary(t: Transcript, anythingPosted: boolean): string {
     .map((m) => withoutSaidNow(stripSentinel(textOf(m.content)), t.saidNow))
     .filter(Boolean)
     .at(-1);
-  if (last) return last;
-  const usedTools = t.messages
-    .slice(t.postedUpTo)
-    .some((m) => typeof m.content !== "string" && m.content.some((b) => b.type === "tool_use" && !isSayNow(b.name)));
-  return usedTools && !anythingPosted ? DONE_TEXT : "";
+  return last ?? "";
 }
 
 /**
@@ -7624,15 +7656,21 @@ function takeMemoryUpdates(t: Transcript): Record<string, unknown> | undefined {
   return meta;
 }
 
-const describeUpdate = (u: MemoryUpdate) =>
-  u.action === "proposed"
-    ? `Proposal created: ${u.text}`
-    : u.action === "forgot"
-      ? `Memory updated: forgot "${u.text}".`
-      : `Memory updated: ${u.text}`;
-
-/** The closing line of a run that used tools and wrote nothing (the app shows it as `chat.body.done`). */
-const DONE_TEXT = "Done.";
+/**
+ * The line that carries what a run changed when the model wrote no reply (the app shows it as `chat.body.no_reply` or
+ * `chat.body.no_reply_limit`): how its last call ended, never a reply made up for it.
+ */
+function noReplyLine(stop: StopReason | undefined) {
+  return stop === "max_tokens"
+    ? {
+        code: "no_reply_limit",
+        text: "The AI hit its output limit before writing a reply. What it changed is below. Ask again for its answer.",
+      }
+    : {
+        code: "no_reply",
+        text: "The AI ended its turn without writing a reply. What it changed is below. Ask again for its answer.",
+      };
+}
 
 const withCode = (meta: Record<string, unknown> | undefined, code: ReturnType<typeof bodyCode> | undefined) =>
   code ? { ...(meta ?? {}), ...code } : meta;

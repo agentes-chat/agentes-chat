@@ -24,6 +24,7 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ReferRouteImport } from './routes/refer'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as SurfacePageRouteImport } from './routes/surface-page'
 import { Route as TermosRouteImport } from './routes/termos'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as DesktopConnectorRouteImport } from './routes/desktop.connector'
@@ -36,6 +37,7 @@ import { Route as OrgOrgIdRouteImport } from './routes/org.$orgId'
 import { Route as OrgOrgIdIndexRouteImport } from './routes/org.$orgId.index'
 import { Route as OrgOrgIdApprovalsRouteImport } from './routes/org.$orgId.approvals'
 import { Route as OrgOrgIdCalendarRouteImport } from './routes/org.$orgId.calendar'
+import { Route as OrgOrgIdConnectorsRouteImport } from './routes/org.$orgId.connectors'
 import { Route as OrgOrgIdDriveRouteImport } from './routes/org.$orgId.drive'
 import { Route as OrgOrgIdHomeRouteImport } from './routes/org.$orgId.home'
 import { Route as OrgOrgIdMembersRouteImport } from './routes/org.$orgId.members'
@@ -51,13 +53,13 @@ import { Route as OrgOrgIdWaitingRouteImport } from './routes/org.$orgId.waiting
 import { Route as OrgOrgIdWikiRouteImport } from './routes/org.$orgId.wiki'
 import { Route as OrgOrgIdAgentsNewRouteImport } from './routes/org.$orgId.agents.new'
 import { Route as OrgOrgIdCChannelIdRouteImport } from './routes/org.$orgId.c.$channelId'
+import { Route as OrgOrgIdCodeIndexRouteImport } from './routes/org.$orgId.code.index'
+import { Route as OrgOrgIdCodeSessionIdRouteImport } from './routes/org.$orgId.code.$sessionId'
 import { Route as OrgOrgIdDashboardsIndexRouteImport } from './routes/org.$orgId.dashboards.index'
 import { Route as OrgOrgIdDashboardsDashboardIdRouteImport } from './routes/org.$orgId.dashboards.$dashboardId'
 import { Route as OrgOrgIdDriveFileIdRouteImport } from './routes/org.$orgId.drive_.$fileId'
 import { Route as OrgOrgIdIssuesIndexRouteImport } from './routes/org.$orgId.issues.index'
 import { Route as OrgOrgIdIssuesNumberRouteImport } from './routes/org.$orgId.issues.$number'
-import { Route as OrgOrgIdCodeIndexRouteImport } from './routes/org.$orgId.code.index'
-import { Route as OrgOrgIdCodeSessionIdRouteImport } from './routes/org.$orgId.code.$sessionId'
 import { Route as OrgOrgIdSettingsSectionRouteImport } from './routes/org.$orgId.settings_.$section'
 import { Route as OrgOrgIdThreadsIndexRouteImport } from './routes/org.$orgId.threads.index'
 import { Route as OrgOrgIdThreadsThreadIdRouteImport } from './routes/org.$orgId.threads.$threadId'
@@ -148,6 +150,11 @@ const SignupRoute = SignupRouteImport.update({
   path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SurfacePageRoute = SurfacePageRouteImport.update({
+  id: '/surface-page',
+  path: '/surface-page',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TermosRoute = TermosRouteImport.update({
   id: '/termos',
   path: '/termos',
@@ -206,6 +213,11 @@ const OrgOrgIdApprovalsRoute = OrgOrgIdApprovalsRouteImport.update({
 const OrgOrgIdCalendarRoute = OrgOrgIdCalendarRouteImport.update({
   id: '/calendar',
   path: '/calendar',
+  getParentRoute: () => OrgOrgIdRoute,
+} as any)
+const OrgOrgIdConnectorsRoute = OrgOrgIdConnectorsRouteImport.update({
+  id: '/connectors',
+  path: '/connectors',
   getParentRoute: () => OrgOrgIdRoute,
 } as any)
 const OrgOrgIdDriveRoute = OrgOrgIdDriveRouteImport.update({
@@ -283,6 +295,16 @@ const OrgOrgIdCChannelIdRoute = OrgOrgIdCChannelIdRouteImport.update({
   path: '/c/$channelId',
   getParentRoute: () => OrgOrgIdRoute,
 } as any)
+const OrgOrgIdCodeIndexRoute = OrgOrgIdCodeIndexRouteImport.update({
+  id: '/code/',
+  path: '/code/',
+  getParentRoute: () => OrgOrgIdRoute,
+} as any)
+const OrgOrgIdCodeSessionIdRoute = OrgOrgIdCodeSessionIdRouteImport.update({
+  id: '/code/$sessionId',
+  path: '/code/$sessionId',
+  getParentRoute: () => OrgOrgIdRoute,
+} as any)
 const OrgOrgIdDashboardsIndexRoute = OrgOrgIdDashboardsIndexRouteImport.update({
   id: '/dashboards/',
   path: '/dashboards/',
@@ -307,16 +329,6 @@ const OrgOrgIdIssuesIndexRoute = OrgOrgIdIssuesIndexRouteImport.update({
 const OrgOrgIdIssuesNumberRoute = OrgOrgIdIssuesNumberRouteImport.update({
   id: '/issues/$number',
   path: '/issues/$number',
-  getParentRoute: () => OrgOrgIdRoute,
-} as any)
-const OrgOrgIdCodeIndexRoute = OrgOrgIdCodeIndexRouteImport.update({
-  id: '/code/',
-  path: '/code/',
-  getParentRoute: () => OrgOrgIdRoute,
-} as any)
-const OrgOrgIdCodeSessionIdRoute = OrgOrgIdCodeSessionIdRouteImport.update({
-  id: '/code/$sessionId',
-  path: '/code/$sessionId',
   getParentRoute: () => OrgOrgIdRoute,
 } as any)
 const OrgOrgIdSettingsSectionRoute = OrgOrgIdSettingsSectionRouteImport.update({
@@ -414,6 +426,7 @@ export interface FileRoutesByFullPath {
   '/refer': typeof ReferRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/surface-page': typeof SurfacePageRoute
   '/termos': typeof TermosRoute
   '/terms': typeof TermsRoute
   '/desktop/connector': typeof DesktopConnectorRoute
@@ -425,6 +438,7 @@ export interface FileRoutesByFullPath {
   '/org/$orgId': typeof OrgOrgIdRouteWithChildren
   '/org/$orgId/approvals': typeof OrgOrgIdApprovalsRoute
   '/org/$orgId/calendar': typeof OrgOrgIdCalendarRoute
+  '/org/$orgId/connectors': typeof OrgOrgIdConnectorsRoute
   '/org/$orgId/drive': typeof OrgOrgIdDriveRoute
   '/org/$orgId/home': typeof OrgOrgIdHomeRoute
   '/org/$orgId/members': typeof OrgOrgIdMembersRoute
@@ -441,16 +455,16 @@ export interface FileRoutesByFullPath {
   '/org/$orgId/': typeof OrgOrgIdIndexRoute
   '/org/$orgId/agents/new': typeof OrgOrgIdAgentsNewRoute
   '/org/$orgId/c/$channelId': typeof OrgOrgIdCChannelIdRoute
+  '/org/$orgId/code/$sessionId': typeof OrgOrgIdCodeSessionIdRoute
   '/org/$orgId/dashboards/$dashboardId': typeof OrgOrgIdDashboardsDashboardIdRoute
   '/org/$orgId/drive/$fileId': typeof OrgOrgIdDriveFileIdRoute
   '/org/$orgId/issues/$number': typeof OrgOrgIdIssuesNumberRoute
-  '/org/$orgId/code/$sessionId': typeof OrgOrgIdCodeSessionIdRoute
   '/org/$orgId/settings/$section': typeof OrgOrgIdSettingsSectionRoute
   '/org/$orgId/threads/$threadId': typeof OrgOrgIdThreadsThreadIdRoute
   '/org/$orgId/wiki/$slug': typeof OrgOrgIdWikiSlugRoute
+  '/org/$orgId/code/': typeof OrgOrgIdCodeIndexRoute
   '/org/$orgId/dashboards/': typeof OrgOrgIdDashboardsIndexRoute
   '/org/$orgId/issues/': typeof OrgOrgIdIssuesIndexRoute
-  '/org/$orgId/code/': typeof OrgOrgIdCodeIndexRoute
   '/org/$orgId/threads/': typeof OrgOrgIdThreadsIndexRoute
   '/org/$orgId/agents/$agentId/memory': typeof OrgOrgIdAgentsAgentIdMemoryRoute
   '/org/$orgId/dm/agent/$agentId': typeof OrgOrgIdDmAgentAgentIdRoute
@@ -479,6 +493,7 @@ export interface FileRoutesByTo {
   '/refer': typeof ReferRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/surface-page': typeof SurfacePageRoute
   '/termos': typeof TermosRoute
   '/terms': typeof TermsRoute
   '/desktop/connector': typeof DesktopConnectorRoute
@@ -489,6 +504,7 @@ export interface FileRoutesByTo {
   '/invite/$token': typeof InviteTokenRoute
   '/org/$orgId/approvals': typeof OrgOrgIdApprovalsRoute
   '/org/$orgId/calendar': typeof OrgOrgIdCalendarRoute
+  '/org/$orgId/connectors': typeof OrgOrgIdConnectorsRoute
   '/org/$orgId/drive': typeof OrgOrgIdDriveRoute
   '/org/$orgId/home': typeof OrgOrgIdHomeRoute
   '/org/$orgId/members': typeof OrgOrgIdMembersRoute
@@ -505,16 +521,16 @@ export interface FileRoutesByTo {
   '/org/$orgId': typeof OrgOrgIdIndexRoute
   '/org/$orgId/agents/new': typeof OrgOrgIdAgentsNewRoute
   '/org/$orgId/c/$channelId': typeof OrgOrgIdCChannelIdRoute
+  '/org/$orgId/code/$sessionId': typeof OrgOrgIdCodeSessionIdRoute
   '/org/$orgId/dashboards/$dashboardId': typeof OrgOrgIdDashboardsDashboardIdRoute
   '/org/$orgId/drive/$fileId': typeof OrgOrgIdDriveFileIdRoute
   '/org/$orgId/issues/$number': typeof OrgOrgIdIssuesNumberRoute
-  '/org/$orgId/code/$sessionId': typeof OrgOrgIdCodeSessionIdRoute
   '/org/$orgId/settings/$section': typeof OrgOrgIdSettingsSectionRoute
   '/org/$orgId/threads/$threadId': typeof OrgOrgIdThreadsThreadIdRoute
   '/org/$orgId/wiki/$slug': typeof OrgOrgIdWikiSlugRoute
+  '/org/$orgId/code': typeof OrgOrgIdCodeIndexRoute
   '/org/$orgId/dashboards': typeof OrgOrgIdDashboardsIndexRoute
   '/org/$orgId/issues': typeof OrgOrgIdIssuesIndexRoute
-  '/org/$orgId/code': typeof OrgOrgIdCodeIndexRoute
   '/org/$orgId/threads': typeof OrgOrgIdThreadsIndexRoute
   '/org/$orgId/agents/$agentId/memory': typeof OrgOrgIdAgentsAgentIdMemoryRoute
   '/org/$orgId/dm/agent/$agentId': typeof OrgOrgIdDmAgentAgentIdRoute
@@ -544,6 +560,7 @@ export interface FileRoutesById {
   '/refer': typeof ReferRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/surface-page': typeof SurfacePageRoute
   '/termos': typeof TermosRoute
   '/terms': typeof TermsRoute
   '/desktop/connector': typeof DesktopConnectorRoute
@@ -555,6 +572,7 @@ export interface FileRoutesById {
   '/org/$orgId': typeof OrgOrgIdRouteWithChildren
   '/org/$orgId/approvals': typeof OrgOrgIdApprovalsRoute
   '/org/$orgId/calendar': typeof OrgOrgIdCalendarRoute
+  '/org/$orgId/connectors': typeof OrgOrgIdConnectorsRoute
   '/org/$orgId/drive': typeof OrgOrgIdDriveRoute
   '/org/$orgId/home': typeof OrgOrgIdHomeRoute
   '/org/$orgId/members': typeof OrgOrgIdMembersRoute
@@ -571,16 +589,16 @@ export interface FileRoutesById {
   '/org/$orgId/': typeof OrgOrgIdIndexRoute
   '/org/$orgId/agents/new': typeof OrgOrgIdAgentsNewRoute
   '/org/$orgId/c/$channelId': typeof OrgOrgIdCChannelIdRoute
+  '/org/$orgId/code/$sessionId': typeof OrgOrgIdCodeSessionIdRoute
   '/org/$orgId/dashboards/$dashboardId': typeof OrgOrgIdDashboardsDashboardIdRoute
   '/org/$orgId/drive_/$fileId': typeof OrgOrgIdDriveFileIdRoute
   '/org/$orgId/issues/$number': typeof OrgOrgIdIssuesNumberRoute
-  '/org/$orgId/code/$sessionId': typeof OrgOrgIdCodeSessionIdRoute
   '/org/$orgId/settings_/$section': typeof OrgOrgIdSettingsSectionRoute
   '/org/$orgId/threads/$threadId': typeof OrgOrgIdThreadsThreadIdRoute
   '/org/$orgId/wiki_/$slug': typeof OrgOrgIdWikiSlugRoute
+  '/org/$orgId/code/': typeof OrgOrgIdCodeIndexRoute
   '/org/$orgId/dashboards/': typeof OrgOrgIdDashboardsIndexRoute
   '/org/$orgId/issues/': typeof OrgOrgIdIssuesIndexRoute
-  '/org/$orgId/code/': typeof OrgOrgIdCodeIndexRoute
   '/org/$orgId/threads/': typeof OrgOrgIdThreadsIndexRoute
   '/org/$orgId/agents/$agentId/memory': typeof OrgOrgIdAgentsAgentIdMemoryRoute
   '/org/$orgId/dm/agent/$agentId': typeof OrgOrgIdDmAgentAgentIdRoute
@@ -611,6 +629,7 @@ export interface FileRouteTypes {
     | '/refer'
     | '/reset-password'
     | '/signup'
+    | '/surface-page'
     | '/termos'
     | '/terms'
     | '/desktop/connector'
@@ -622,6 +641,7 @@ export interface FileRouteTypes {
     | '/org/$orgId'
     | '/org/$orgId/approvals'
     | '/org/$orgId/calendar'
+    | '/org/$orgId/connectors'
     | '/org/$orgId/drive'
     | '/org/$orgId/home'
     | '/org/$orgId/members'
@@ -638,16 +658,16 @@ export interface FileRouteTypes {
     | '/org/$orgId/'
     | '/org/$orgId/agents/new'
     | '/org/$orgId/c/$channelId'
+    | '/org/$orgId/code/$sessionId'
     | '/org/$orgId/dashboards/$dashboardId'
     | '/org/$orgId/drive/$fileId'
     | '/org/$orgId/issues/$number'
-    | '/org/$orgId/code/$sessionId'
     | '/org/$orgId/settings/$section'
     | '/org/$orgId/threads/$threadId'
     | '/org/$orgId/wiki/$slug'
+    | '/org/$orgId/code/'
     | '/org/$orgId/dashboards/'
     | '/org/$orgId/issues/'
-    | '/org/$orgId/code/'
     | '/org/$orgId/threads/'
     | '/org/$orgId/agents/$agentId/memory'
     | '/org/$orgId/dm/agent/$agentId'
@@ -676,6 +696,7 @@ export interface FileRouteTypes {
     | '/refer'
     | '/reset-password'
     | '/signup'
+    | '/surface-page'
     | '/termos'
     | '/terms'
     | '/desktop/connector'
@@ -686,6 +707,7 @@ export interface FileRouteTypes {
     | '/invite/$token'
     | '/org/$orgId/approvals'
     | '/org/$orgId/calendar'
+    | '/org/$orgId/connectors'
     | '/org/$orgId/drive'
     | '/org/$orgId/home'
     | '/org/$orgId/members'
@@ -702,16 +724,16 @@ export interface FileRouteTypes {
     | '/org/$orgId'
     | '/org/$orgId/agents/new'
     | '/org/$orgId/c/$channelId'
+    | '/org/$orgId/code/$sessionId'
     | '/org/$orgId/dashboards/$dashboardId'
     | '/org/$orgId/drive/$fileId'
     | '/org/$orgId/issues/$number'
-    | '/org/$orgId/code/$sessionId'
     | '/org/$orgId/settings/$section'
     | '/org/$orgId/threads/$threadId'
     | '/org/$orgId/wiki/$slug'
+    | '/org/$orgId/code'
     | '/org/$orgId/dashboards'
     | '/org/$orgId/issues'
-    | '/org/$orgId/code'
     | '/org/$orgId/threads'
     | '/org/$orgId/agents/$agentId/memory'
     | '/org/$orgId/dm/agent/$agentId'
@@ -740,6 +762,7 @@ export interface FileRouteTypes {
     | '/refer'
     | '/reset-password'
     | '/signup'
+    | '/surface-page'
     | '/termos'
     | '/terms'
     | '/desktop/connector'
@@ -751,6 +774,7 @@ export interface FileRouteTypes {
     | '/org/$orgId'
     | '/org/$orgId/approvals'
     | '/org/$orgId/calendar'
+    | '/org/$orgId/connectors'
     | '/org/$orgId/drive'
     | '/org/$orgId/home'
     | '/org/$orgId/members'
@@ -767,16 +791,16 @@ export interface FileRouteTypes {
     | '/org/$orgId/'
     | '/org/$orgId/agents/new'
     | '/org/$orgId/c/$channelId'
+    | '/org/$orgId/code/$sessionId'
     | '/org/$orgId/dashboards/$dashboardId'
     | '/org/$orgId/drive_/$fileId'
     | '/org/$orgId/issues/$number'
-    | '/org/$orgId/code/$sessionId'
     | '/org/$orgId/settings_/$section'
     | '/org/$orgId/threads/$threadId'
     | '/org/$orgId/wiki_/$slug'
+    | '/org/$orgId/code/'
     | '/org/$orgId/dashboards/'
     | '/org/$orgId/issues/'
-    | '/org/$orgId/code/'
     | '/org/$orgId/threads/'
     | '/org/$orgId/agents/$agentId/memory'
     | '/org/$orgId/dm/agent/$agentId'
@@ -806,6 +830,7 @@ export interface RootRouteChildren {
   ReferRoute: typeof ReferRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
+  SurfacePageRoute: typeof SurfacePageRoute
   TermosRoute: typeof TermosRoute
   TermsRoute: typeof TermsRoute
   DesktopConnectorRoute: typeof DesktopConnectorRoute
@@ -924,6 +949,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/surface-page': {
+      id: '/surface-page'
+      path: '/surface-page'
+      fullPath: '/surface-page'
+      preLoaderRoute: typeof SurfacePageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/termos': {
       id: '/termos'
       path: '/termos'
@@ -1006,6 +1038,13 @@ declare module '@tanstack/react-router' {
       path: '/calendar'
       fullPath: '/org/$orgId/calendar'
       preLoaderRoute: typeof OrgOrgIdCalendarRouteImport
+      parentRoute: typeof OrgOrgIdRoute
+    }
+    '/org/$orgId/connectors': {
+      id: '/org/$orgId/connectors'
+      path: '/connectors'
+      fullPath: '/org/$orgId/connectors'
+      preLoaderRoute: typeof OrgOrgIdConnectorsRouteImport
       parentRoute: typeof OrgOrgIdRoute
     }
     '/org/$orgId/drive': {
@@ -1113,6 +1152,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrgOrgIdCChannelIdRouteImport
       parentRoute: typeof OrgOrgIdRoute
     }
+    '/org/$orgId/code/': {
+      id: '/org/$orgId/code/'
+      path: '/code'
+      fullPath: '/org/$orgId/code/'
+      preLoaderRoute: typeof OrgOrgIdCodeIndexRouteImport
+      parentRoute: typeof OrgOrgIdRoute
+    }
+    '/org/$orgId/code/$sessionId': {
+      id: '/org/$orgId/code/$sessionId'
+      path: '/code/$sessionId'
+      fullPath: '/org/$orgId/code/$sessionId'
+      preLoaderRoute: typeof OrgOrgIdCodeSessionIdRouteImport
+      parentRoute: typeof OrgOrgIdRoute
+    }
     '/org/$orgId/dashboards/': {
       id: '/org/$orgId/dashboards/'
       path: '/dashboards'
@@ -1146,20 +1199,6 @@ declare module '@tanstack/react-router' {
       path: '/issues/$number'
       fullPath: '/org/$orgId/issues/$number'
       preLoaderRoute: typeof OrgOrgIdIssuesNumberRouteImport
-      parentRoute: typeof OrgOrgIdRoute
-    }
-    '/org/$orgId/code/': {
-      id: '/org/$orgId/code/'
-      path: '/code'
-      fullPath: '/org/$orgId/code/'
-      preLoaderRoute: typeof OrgOrgIdCodeIndexRouteImport
-      parentRoute: typeof OrgOrgIdRoute
-    }
-    '/org/$orgId/code/$sessionId': {
-      id: '/org/$orgId/code/$sessionId'
-      path: '/code/$sessionId'
-      fullPath: '/org/$orgId/code/$sessionId'
-      preLoaderRoute: typeof OrgOrgIdCodeSessionIdRouteImport
       parentRoute: typeof OrgOrgIdRoute
     }
     '/org/$orgId/settings_/$section': {
@@ -1266,6 +1305,7 @@ declare module '@tanstack/react-router' {
 interface OrgOrgIdRouteChildren {
   OrgOrgIdApprovalsRoute: typeof OrgOrgIdApprovalsRoute
   OrgOrgIdCalendarRoute: typeof OrgOrgIdCalendarRoute
+  OrgOrgIdConnectorsRoute: typeof OrgOrgIdConnectorsRoute
   OrgOrgIdDriveRoute: typeof OrgOrgIdDriveRoute
   OrgOrgIdHomeRoute: typeof OrgOrgIdHomeRoute
   OrgOrgIdMembersRoute: typeof OrgOrgIdMembersRoute
@@ -1282,14 +1322,14 @@ interface OrgOrgIdRouteChildren {
   OrgOrgIdIndexRoute: typeof OrgOrgIdIndexRoute
   OrgOrgIdAgentsNewRoute: typeof OrgOrgIdAgentsNewRoute
   OrgOrgIdCChannelIdRoute: typeof OrgOrgIdCChannelIdRoute
+  OrgOrgIdCodeSessionIdRoute: typeof OrgOrgIdCodeSessionIdRoute
   OrgOrgIdDashboardsDashboardIdRoute: typeof OrgOrgIdDashboardsDashboardIdRoute
   OrgOrgIdDriveFileIdRoute: typeof OrgOrgIdDriveFileIdRoute
   OrgOrgIdIssuesNumberRoute: typeof OrgOrgIdIssuesNumberRoute
-  OrgOrgIdCodeIndexRoute: typeof OrgOrgIdCodeIndexRoute
-  OrgOrgIdCodeSessionIdRoute: typeof OrgOrgIdCodeSessionIdRoute
   OrgOrgIdSettingsSectionRoute: typeof OrgOrgIdSettingsSectionRoute
   OrgOrgIdThreadsThreadIdRoute: typeof OrgOrgIdThreadsThreadIdRoute
   OrgOrgIdWikiSlugRoute: typeof OrgOrgIdWikiSlugRoute
+  OrgOrgIdCodeIndexRoute: typeof OrgOrgIdCodeIndexRoute
   OrgOrgIdDashboardsIndexRoute: typeof OrgOrgIdDashboardsIndexRoute
   OrgOrgIdIssuesIndexRoute: typeof OrgOrgIdIssuesIndexRoute
   OrgOrgIdThreadsIndexRoute: typeof OrgOrgIdThreadsIndexRoute
@@ -1308,6 +1348,7 @@ interface OrgOrgIdRouteChildren {
 const OrgOrgIdRouteChildren: OrgOrgIdRouteChildren = {
   OrgOrgIdApprovalsRoute: OrgOrgIdApprovalsRoute,
   OrgOrgIdCalendarRoute: OrgOrgIdCalendarRoute,
+  OrgOrgIdConnectorsRoute: OrgOrgIdConnectorsRoute,
   OrgOrgIdDriveRoute: OrgOrgIdDriveRoute,
   OrgOrgIdHomeRoute: OrgOrgIdHomeRoute,
   OrgOrgIdMembersRoute: OrgOrgIdMembersRoute,
@@ -1324,14 +1365,14 @@ const OrgOrgIdRouteChildren: OrgOrgIdRouteChildren = {
   OrgOrgIdIndexRoute: OrgOrgIdIndexRoute,
   OrgOrgIdAgentsNewRoute: OrgOrgIdAgentsNewRoute,
   OrgOrgIdCChannelIdRoute: OrgOrgIdCChannelIdRoute,
+  OrgOrgIdCodeSessionIdRoute: OrgOrgIdCodeSessionIdRoute,
   OrgOrgIdDashboardsDashboardIdRoute: OrgOrgIdDashboardsDashboardIdRoute,
   OrgOrgIdDriveFileIdRoute: OrgOrgIdDriveFileIdRoute,
   OrgOrgIdIssuesNumberRoute: OrgOrgIdIssuesNumberRoute,
-  OrgOrgIdCodeIndexRoute: OrgOrgIdCodeIndexRoute,
-  OrgOrgIdCodeSessionIdRoute: OrgOrgIdCodeSessionIdRoute,
   OrgOrgIdSettingsSectionRoute: OrgOrgIdSettingsSectionRoute,
   OrgOrgIdThreadsThreadIdRoute: OrgOrgIdThreadsThreadIdRoute,
   OrgOrgIdWikiSlugRoute: OrgOrgIdWikiSlugRoute,
+  OrgOrgIdCodeIndexRoute: OrgOrgIdCodeIndexRoute,
   OrgOrgIdDashboardsIndexRoute: OrgOrgIdDashboardsIndexRoute,
   OrgOrgIdIssuesIndexRoute: OrgOrgIdIssuesIndexRoute,
   OrgOrgIdThreadsIndexRoute: OrgOrgIdThreadsIndexRoute,
@@ -1371,6 +1412,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReferRoute: ReferRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,
+  SurfacePageRoute: SurfacePageRoute,
   TermosRoute: TermosRoute,
   TermsRoute: TermsRoute,
   DesktopConnectorRoute: DesktopConnectorRoute,

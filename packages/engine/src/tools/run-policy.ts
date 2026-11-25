@@ -1,5 +1,6 @@
 import { and, type Executor, eq, schema } from "@agenteschat/db";
 import { fedByRoutine, type RunAuthority } from "../authority";
+import { gitVerbOf } from "../git/hosts/refs";
 import { directoryRole } from "./directory";
 import type { JsonSchema } from "./json-schema";
 import type { ToolDefinition } from "./types";
@@ -258,6 +259,10 @@ const LOOKS_ONLY = new Set([
   "desktop_read",
   "desktop_screenshot",
   "git_clone",
+  "gitlab_git_clone",
+  "bitbucket_git_clone",
+  "gitserver_git_clone",
+  "list_repositories",
   "team_status",
   "offer_approvals",
   "offer_open_page",
@@ -315,8 +320,8 @@ export function toolKind(tool: PolicyTool): ToolKind {
   if (tool.name === "run_approved_action" && !tool.connectionId && tool.scope === "") return { kind: "directory" };
   // These Git tools carry a connection ID for credentials, but they are our own
   // workspace-changing actions. Their exact scopes distinguish them from MCP tools.
-  if (tool.name === "git_clone" && tool.scope === "github:git.read") return { kind: "internal", area: "code" };
-  if (tool.name === "open_pull_request" && tool.scope === "github:pr.write") return { kind: "internal", area: "code" };
+  const git = gitVerbOf(tool);
+  if (git === "git_clone" || git === "open_pull_request") return { kind: "internal", area: "code" };
   // Opening a pull request is the agent's own code work, like a push to its own branch, through any connected app:
   // nothing changes until someone merges it, and a merge is another tool.
   if (opensPullRequest(tool)) return { kind: "internal", area: "code" };

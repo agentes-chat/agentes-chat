@@ -16,13 +16,14 @@ test("the phone hears the team and the channels change, whatever screen is open"
   for (const key of lists) expect(qc.getQueryState(key)?.isInvalidated).toBe(true);
 });
 
-test("a reconnect reads everything again, and coming back to the app reads what went stale", () => {
+test("a reconnect reads everything again, as does the socket started again when the app comes back", () => {
   expect(src("providers/realtime.tsx").replace(/\s+/g, " ")).toContain(
-    '(full) => void (full ? queryClient.invalidateQueries() : queryClient.refetchQueries({ type: "active" }))',
+    "c.onCatchUp((full) => void catchUpQueries(queryClient, full))",
   );
-  const query = src("providers/query.ts");
-  expect(query).toContain("refetchOnWindowFocus: true");
-  expect(query).toContain('focusManager.setFocused(s === "active")');
+  const query = src("providers/query.ts").replace(/\s+/g, " ");
+  expect(query).toContain(
+    'full ? queryClient.invalidateQueries(undefined, options) : queryClient.refetchQueries({ type: "active" }, options)',
+  );
 });
 
 test("the channel's members screen and the mention picker read the shared roster", () => {

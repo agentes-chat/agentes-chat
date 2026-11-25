@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { type AppLocale, localeInfo } from "@agenteschat/i18n/locale";
 /**
  * At most `max` UTF-16 units of `text`, never half of a pair (an emoji) at the end: Postgres refuses jsonb that
@@ -173,6 +174,17 @@ export function dayAndTime(at: Date, timeZone: string, locale: AppLocale) {
 export function utcDayMs(day: string) {
   const ms = Date.parse(`${day}T00:00:00Z`);
   return /^2\d{3}-\d\d-\d\d$/.test(day) && !Number.isNaN(ms) && new Date(ms).toISOString().startsWith(day) ? ms : null;
+}
+
+/**
+ * The next time from `now` at `id`'s own moment of the UTC day (from a hash of it), and that day's date: daily work
+ * per workspace lands spread over the whole day, each at the same time every day, never all at once after a tick.
+ */
+export function dailySlot(id: string, now: Date): { at: Date; day: string } {
+  const day = 86_400_000;
+  const at = now.getTime() - (now.getTime() % day) + (createHash("sha256").update(id).digest().readUInt32BE(0) % day);
+  const slot = new Date(at < now.getTime() ? at + day : at);
+  return { at: slot, day: slot.toISOString().slice(0, 10) };
 }
 
 /** The value under `key`, made and kept the first time it is asked for. */

@@ -13,6 +13,7 @@ import {
   lt,
   ne,
   or,
+  rowsOf,
   type SQL,
   schema,
   sql,
@@ -192,14 +193,41 @@ const resultOf = (a: Approval): ApprovalView["result"] => {
     : { ok: r.isError !== true, text };
 };
 
-/** Batched: connections, the runs' narration up to each approval step, the runs' issues. */
-async function approvalContexts(db: Database, rows: Approval[]): Promise<Map<string, ApprovalContext>> {
+/** How many turns before an approval its details show (the latest), by their narration. */
+const TRAIL_TURNS = 12;
+
+/**
+ * The narration of the latest `TRAIL_TURNS` turns before each approval's own step (or its run's last turns, when it has
+ * none), oldest first. Read backwards from that step on the steps' `(run_id, seq)` key: never every step of a run.
+ */
+async function approvalTrails(db: Database, ids: string[]) {
+  const rows = rowsOf<{ approval_id: string; text: string; at: string | Date }>(
+    await db.execute(sql`select a.id as approval_id, t.text, t.at from ${approvals} a
+      cross join lateral (select s.data->>'narration' as text, s.created_at as at, s.seq from ${agentRunSteps} s
+        where s.run_id = a.run_id and s.kind = 'model_call' and coalesce(s.data->>'narration', '') <> ''
+          and s.seq < coalesce((select min(p.seq) from ${agentRunSteps} p where p.run_id = a.run_id
+            and p.kind = 'approval' and p.data->>'approvalId' = a.id::text), 2147483647)
+        order by s.seq desc limit ${TRAIL_TURNS}) t
+      where a.id = any(${`{${ids.join(",")}}`}::uuid[])
+      order by a.id, t.seq`),
+  );
+  const out = new Map<string, ApprovalContext["trail"]>();
+  for (const r of rows) {
+    const trail = out.get(r.approval_id) ?? [];
+    trail.push({ text: r.text, at: new Date(r.at).toISOString() });
+    out.set(r.approval_id, trail);
+  }
+  return out;
+}
+
+/** Batched: connections, the runs' issues, and with `trail` the narration up to each approval's step. */
+async function approvalContexts(db: Database, rows: Approval[], trail = false): Promise<Map<string, ApprovalContext>> {
   const out = new Map<string, ApprovalContext>();
   if (rows.length === 0) return out;
   // Mission approvals (ADR 0029) have no run.
   const runIds = [...new Set(rows.map((r) => r.runId).filter((id): id is string => !!id))];
   const connectionIds = [...new Set(rows.map((r) => r.connectionId).filter((id): id is string => !!id))];
-  const [connections, mailboxes, steps, runs] = await Promise.all([
+  const [connections, mailboxes, trails, runs] = await Promise.all([
     connectionIds.length
       ? db
           .select({
@@ -224,19 +252,12 @@ async function approvalContexts(db: Database, rows: Approval[]): Promise<Map<str
           .from(mailAccounts)
           .where(inArray(mailAccounts.id, connectionIds))
       : Promise.resolve([]),
-    runIds.length
-      ? db
-          .select({
-            runId: agentRunSteps.runId,
-            kind: agentRunSteps.kind,
-            narration: sql<string | null>`${agentRunSteps.data}->>'narration'`,
-            approvalId: sql<string | null>`${agentRunSteps.data}->>'approvalId'`,
-            createdAt: agentRunSteps.createdAt,
-          })
-          .from(agentRunSteps)
-          .where(and(inArray(agentRunSteps.runId, runIds), inArray(agentRunSteps.kind, ["model_call", "approval"])))
-          .orderBy(agentRunSteps.runId, agentRunSteps.seq)
-      : Promise.resolve([]),
+    trail && runIds.length
+      ? approvalTrails(
+          db,
+          rows.map((r) => r.id),
+        )
+      : Promise.resolve(new Map<string, ApprovalContext["trail"]>()),
     runIds.length
       ? db.select({ id: agentRuns.id, issueId: agentRuns.issueId }).from(agentRuns).where(inArray(agentRuns.id, runIds))
       : Promise.resolve([]),
@@ -261,13 +282,6 @@ async function approvalContexts(db: Database, rows: Approval[]): Promise<Map<str
   const mailboxOf = new Map(mailboxes.map((m) => [m.id, m]));
   const issueOfRun = new Map(runs.map((r) => [r.id, issueRows.find((i) => i.id === r.issueId) ?? null]));
   for (const row of rows) {
-    // The narration of every turn before this approval's step.
-    const trail: ApprovalContext["trail"] = [];
-    for (const s of steps) {
-      if (s.runId !== row.runId) continue;
-      if (s.kind === "approval" && s.approvalId === row.id) break;
-      if (s.kind === "model_call" && s.narration) trail.push({ text: s.narration, at: s.createdAt.toISOString() });
-    }
     const connection = row.connectionId ? connectionOf.get(row.connectionId) : undefined;
     const mailbox = row.connectionId ? mailboxOf.get(row.connectionId) : undefined;
     // A person's own connection: its tools named the card as others read it (`auditLabel`), and so does the card.
@@ -289,7 +303,7 @@ async function approvalContexts(db: Database, rows: Approval[]): Promise<Map<str
         : {}),
       email: mailbox ? approvalEmail(row, mailbox) : null,
       issue: row.runId ? (issueOfRun.get(row.runId) ?? null) : null,
-      trail: trail.slice(-12),
+      trail: trails.get(row.id) ?? [],
     });
   }
   return out;
@@ -473,7 +487,7 @@ async function viewsOf(
   viewer?: string,
 ) {
   const [contexts, cardThreads, routine] = await Promise.all([
-    approvalContexts(db, rows).catch(() => new Map<string, ApprovalContext>()),
+    approvalContexts(db, rows, trail).catch(() => new Map<string, ApprovalContext>()),
     approvalCardThreads(db, rows).catch(() => new Map<string, string | null>()),
     routineIds(db, rows).catch(() => new Set<string>()),
   ]);

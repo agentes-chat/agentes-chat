@@ -840,7 +840,7 @@ export const helpKo: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "data",
         heading: "보내는 정보",
         blocks: [
-          "서버는 하루에 한 번 agentes.chat에 익명 사용 통계를 보냅니다. 사람 수, 에이전트 수, 기기 크기, 사용한 AI 토큰, 에이전트의 브라우저가 주고받은 데이터 양 같은 숫자입니다. 메시지, 파일, 이름, 사이트는 보내지 않습니다. `docker compose run --rm agentes telemetry`는 보낼 내용을 그대로 보여 줍니다. 소유자는 **설정\u00a0›\u00a0일반**이나 `.env`의 `TELEMETRY=off`로 끌 수 있습니다.",
+          "서버는 하루에 한 번 agentes.chat에 익명 사용 통계를 보냅니다. 사람 수, 에이전트 수, 기기 크기, 사용한 AI 토큰, 에이전트의 브라우저가 주고받은 데이터 양, 앱이 열리고 동작하는 속도 같은 숫자입니다. 메시지, 파일, 이름, 사이트는 보내지 않습니다. `docker compose run --rm agentes telemetry`는 보낼 내용을 그대로 보여 줍니다. 소유자는 **설정\u00a0›\u00a0일반**이나 `.env`의 `TELEMETRY=off`로 끌 수 있습니다.",
           "오류 보고는 직접 고른 Sentry 호환 서버를 `SENTRY_DSN`에 설정하지 않는 한 어디에도 가지 않습니다. 보고에는 오류와 발생 위치가 들어가며, 메시지, 이메일, IP 주소, 쿠키, 토큰은 들어가지 않습니다.",
         ],
       },

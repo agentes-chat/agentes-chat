@@ -61,6 +61,7 @@ const COMMANDS: &[&str] = &[
     "problem_report_parts",
     "problem_report_on",
     "problem_report_send",
+    "problem_report_facts",
     "local_server_sync",
     "tailscale_status",
     "tailscale_open",

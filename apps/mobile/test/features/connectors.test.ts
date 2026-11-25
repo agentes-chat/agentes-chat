@@ -43,7 +43,6 @@ import {
   relatedServices,
   searchConnectors,
   serviceFacts,
-  serviceSkyTones,
   shelfColumns,
   shownMailboxes,
   stateOf,
@@ -116,11 +115,12 @@ describe("connectors gallery", () => {
     expect(items.filter((i) => !isMcpItem(i)).length).toBe(2);
   });
 
-  test("suggestions: the first three ready here and not connected, in our order", () => {
-    const catalog = ["github", "linear", "notion", "drive", "sentry"].map((id) => def(id));
+  test("suggestions: the first ready here and not connected, in our order (the web's)", () => {
+    const catalog = ["github", "linear", "notion", "drive", "sentry", "figma", "posthog"].map((id) => def(id));
     catalog[2] = def("notion", { available: false });
     const items = connectedItems([conn("github")], [], catalog);
-    expect(suggestionsOf(catalog, items).map((d) => d.id)).toEqual(["linear", "drive", "sentry"]);
+    expect(suggestionsOf(catalog, items).map((d) => d.id)).toEqual(["sentry", "linear", "figma"]);
+    expect(suggestionsOf(catalog, items, 6).map((d) => d.id)).toEqual(["sentry", "linear", "figma", "drive"]);
   });
 
   test("the catalog in shelves: each category in order, none empty", () => {
@@ -143,17 +143,17 @@ describe("connectors gallery", () => {
     const gallery = readFileSync(join(import.meta.dir, "../../src/features/connectors/ConnectorsScreen.tsx"), "utf8");
     expect(gallery).toMatch(/<GroupedHeader>\{`\$\{t\("mobile\.connectors\.connected"\)\} · \$\{connectedCount\}`\}/);
     expect(gallery).toContain("const shelves = useMemo(() => catalogShelves(offered), [offered]);");
-    // The suggested services are featured cards above what is connected: those that open here, three at most, each
+    // The suggested services are featured cards above what is connected: those that open here, six at most, each
     // opening its page (no button of their own).
     expect(gallery).toContain("return suggestionsOf(list, items, FEATURED * 2)");
     expect(gallery).toContain(".filter((d) => opens.has(d.id))");
     expect(gallery).toMatch(/<FeaturedCards\s+defs=\{featured\}[\s\S]*?onOpen=\{open\}/);
     const cards = readFileSync(join(import.meta.dir, "../../src/features/connectors/FeaturedCards.tsx"), "utf8");
     expect(cards).toContain("snapToInterval={card + GAP}");
-    expect(cards).toContain('kind="card"');
-    expect(cards).toContain("tones={serviceSkyTones(colors.raised, def.brandColor, dark)}");
+    // Each card on its brand's art, as the web's features: the brand's light, its mark huge behind.
+    expect(cards).toMatch(/<BrandArt\s+look=\{brandLook\(def\.iconUrl, def\.brandColor\)\}\s+template="glow"/);
     expect(cards).not.toContain("<Button");
-    // Its sky and words clipped to the card's corners, the card's shadow outside them.
+    // Its art and words clipped to the card's corners, the card's shadow outside them.
     expect(cards).toMatch(/clip: \{[^}]*borderRadius: 20,\s*borderBottomLeftRadius: 6,\s*overflow: "hidden",/);
     // A column at a time, snapped to the screen's side, the next one's edge in sight.
     expect(gallery).toContain("snapToInterval={column + SHELF_GAP}");
@@ -690,14 +690,10 @@ describe("a service's own page", () => {
     expect(relatedServices(def("b", { category: "docs" }), offered)).toEqual([]);
   });
 
-  test("its sky: the page's surface at the foot up to its color, softer in the dark; an untrusted color is the sky's", () => {
-    const light = serviceSkyTones("#f2f2f7", "#635bff", false);
-    expect(light).toHaveLength(7);
-    expect(light[0]).toBe("#f2f2f7");
-    const dark = serviceSkyTones("#000000", "#635bff", true);
-    expect(dark).toHaveLength(6);
-    expect(dark[0]).toBe("#000000");
-    expect(serviceSkyTones("#ffffff", "red", false)).toEqual(serviceSkyTones("#ffffff", null, false));
+  test("its page: the brand's art on top, its mark in tilted rows, as the web's service dialog", () => {
+    const page = readFileSync(join(import.meta.dir, "../../src/features/connectors/ServicePage.tsx"), "utf8");
+    expect(page).toMatch(/<BrandArt\s+look=\{brandLook\(def\.iconUrl, def\.brandColor\)\}\s+template="pattern"/);
+    expect(page).not.toContain("<Dither");
   });
 
   test("a catalog row pushes the page; the page connects straight, or says who does, and leads to the connection", () => {
@@ -714,7 +710,7 @@ describe("a service's own page", () => {
     );
     expect(page).toContain('t(modeKey(org, "mobile.connectors.adminsOnly"), { org: org?.name ?? "" })');
     expect(page).toContain("onPress={() => openConnection(existing.id)}");
-    expect(page).toContain('kind="card"');
+    expect(page).toContain('template="pattern"');
     // Nothing of ours in its bar: the system's back over a clear bar.
     expect(page).toContain('<PushedHeader title="" plate solid={false} grouped />');
     const layout = readFileSync(join(import.meta.dir, "../../app/(app)/(main)/_layout.tsx"), "utf8");
@@ -723,7 +719,7 @@ describe("a service's own page", () => {
 });
 
 describe("strips that scroll sideways say so", () => {
-  test("the kit's strip fades at the edge where more waits; the service page's sky moves as every cover", () => {
+  test("the kit's strip fades at the edge where more waits; the service page's art moves as every cover", () => {
     const strip = readFileSync(join(import.meta.dir, "../../src/ui/SideScroll.tsx"), "utf8");
     expect(strip).toContain("return { opacity: Math.min(1, Math.max(0, past / FADE)) };");
     expect(strip).toContain(

@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 77;
+export const MACHINE_PROTOCOL_VERSION = 79;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -290,9 +290,20 @@ export interface MachineSize {
   memoryGb: number;
   diskGb: number;
   limit?: { cpus: number; memoryGb: number };
-  /** `TASK_LIMIT_PROTOCOL`: the background tasks it runs at once. */
+  /** `TASK_LIMIT_PROTOCOL`: the background tasks it runs at once (where memory isn't read: `room` decides else). */
   maxTasks?: number;
+  /** `TASK_ROOM_PROTOCOL`: tasks start on room here. */
+  room?: TaskRoomReport;
 }
+
+/** A memory size as `MachineSize` says it: in GB (2^30 bytes), to 0.5. */
+export const halfGb = (bytes: number) => Math.round((bytes / 2 ** 30) * 2) / 2;
+
+/**
+ * A system's version as its numbers alone (`6.8.0-45-generic` → `6.8.0`): what a kernel's own name adds after them
+ * (a distribution's flavour, a custom build's name) stays home. Undefined when it doesn't start with a number.
+ */
+export const versionNumbers = (version: string) => /^\d{1,6}(?:\.\d{1,6}){0,3}/.exec(version)?.[0];
 
 /**
  * Protocol 22: how busy a computer got over the last day (`pong.load`): the 5-minute load average per
@@ -1843,6 +1854,18 @@ export const isGitRepoName = (v: unknown): v is string =>
   /^[A-Za-z0-9_.-]{1,100}\/[A-Za-z0-9_.-]{1,100}$/.test(v) &&
   v.split("/").every((part) => part !== "." && part !== "..");
 
+/**
+ * Protocol 79: `git.sync` takes a repository of any git host (ADR 0227), whose path may be deeper or shallower than
+ * GitHub's `owner/name` (`group/subgroup/project`, `project.git`); the proxy address it comes with says which host. An
+ * older runner refuses those, so the server asks it only for two-part paths.
+ */
+export const GIT_HOST_PATH_PROTOCOL = 79;
+/** A repository's path on its host: one to twenty-one parts, none of them `.` or `..`. */
+export const isGitRepoPath = (v: unknown): v is string =>
+  typeof v === "string" &&
+  /^[A-Za-z0-9_.-]{1,100}(\/[A-Za-z0-9_.-]{1,100}){0,20}$/.test(v) &&
+  v.split("/").every((part) => part !== "." && part !== "..");
+
 /** Largest pieces of a `git.sync`. */
 export const GIT_SYNC_LIMITS = {
   repos: 50,
@@ -2087,6 +2110,8 @@ export interface TaskStart {
    * that doesn't read it runs the plan's `sonnet`).
    */
   model?: string;
+  /** `TASK_ROOM_PROTOCOL`: a person asked, in their own message, to push this computer harder for this work. */
+  pushHarder?: boolean;
 }
 
 /** The coding CLIs `hello.executors` reports. */
@@ -2481,6 +2506,30 @@ export const TASK_LIMIT_PROTOCOL = 75;
  * app's version. An older runner runs whatever `agy` the person installed.
  */
 export const AGY_COPY_PROTOCOL = 76;
+
+/**
+ * Protocol 78: where the runner reads free memory, background tasks start on room, not on a count (`TaskRoomReport`
+ * in `hello.size.room` and `runner.state.room`), and `limits.set` `pushHarder` lowers the floor it keeps for the
+ * person's own apps; `task.start` `pushHarder` does that for one task, when a person asked in their own words.
+ * An older runner keeps its count and is never sent either.
+ */
+export const TASK_ROOM_PROTOCOL = 78;
+
+/** About how many more background tasks fit on the computer now, and what decides it. */
+export interface TaskRoomReport {
+  more: number;
+  /** Free memory now, in GB with one decimal. */
+  freeGb: number;
+  /** The processor has stayed over 90% busy for the last minute. */
+  cpuBusy: boolean;
+  /** The owner's Push harder switch. */
+  pushHarder: boolean;
+}
+
+export function parseTaskRoom(v: unknown): TaskRoomReport | null {
+  if (!isObject(v) || !inRange(v.more, [0, 1024]) || !between(v.freeGb, 0, 1 << 16)) return null;
+  return { more: v.more, freeGb: v.freeGb, cpuBusy: v.cpuBusy === true, pushHarder: v.pushHarder === true };
+}
 /** The tasks a computer may run at once (`maxConcurrentTasks` in the runner's config). */
 export const TASK_LIMIT_BOUNDS = [1, 20] as const;
 
@@ -2794,6 +2843,18 @@ export interface AgentScope {
    * lines its commits end with. The runner hands them to git in the agent's own processes alone (`co-authors.ts`).
    */
   coAuthors?: string[];
+  /**
+   * On a code session's work (`exec`, `brain.turn`): the person its commits are authored as, when they connected a
+   * GitHub account as their own (ADR 0215 §13). The runner hands it to git in the agent's own processes alone, never
+   * to a repository's config. A runner that doesn't know it leaves the checkout's author, the agent.
+   */
+  author?: CommitAuthor;
+}
+
+/** Who a commit is authored as: a name and an address, each one line. */
+export interface CommitAuthor {
+  name: string;
+  email: string;
 }
 
 /** What the server asks. Paths are always relative to the workspace (the agent's folder when `agent` is set). */
@@ -2986,7 +3047,7 @@ export type MachineRequest = (
   /** `REMOTE_PAUSE_PROTOCOL`: pause (until `until`, null: until resumed) or resume, for the person `by`. */
   | { op: "pause.set"; paused: boolean; until?: string | null; by: string }
   /** `TASK_LIMIT_PROTOCOL`: the background tasks it runs at once, from now on (stored in its config). */
-  | { op: "limits.set"; maxTasks: number }
+  | { op: "limits.set"; maxTasks?: number; pushHarder?: boolean }
   /**
    * A phone guide is open and waits for a phone: for the next minute, a Windows runner also looks for a plugged phone
    * Windows has no USB driver for (adb never lists one) and reports it as `no_driver`. From `IPHONE_DEV_MODE_PROTOCOL`
@@ -3266,7 +3327,7 @@ export interface MachineReplies {
   "phone.pair.status": PhonePairing;
   "phone.pair.cancel": { canceled: boolean };
   "pause.set": { paused: RunnerPause };
-  "limits.set": { maxTasks: number };
+  "limits.set": { maxTasks: number; room?: TaskRoomReport };
   "phone.look": { looking: boolean };
   "phone.wifi": { available: WifiIphone[] };
   "keep.start": { held: true };
@@ -3470,6 +3531,8 @@ export type RunnerFrame =
       paused: RunnerPause;
       /** `TASK_LIMIT_PROTOCOL`: the tasks it runs at once, sent when that changed on the computer. */
       maxTasks?: number;
+      /** `TASK_ROOM_PROTOCOL`: the room for tasks, sent when it changed. */
+      room?: TaskRoomReport;
     }
   /** Protocol 10: what the machine allows changed (the person granted, removed, or turned a tool on or off). */
   | { type: "access.changed"; access: RunnerAccess }
@@ -4124,7 +4187,13 @@ export function parseRunnerFrame(raw: string): RunnerFrame | null {
     case "runner.state": {
       const paused = parsePause(f.paused);
       if (!paused) return null;
-      return { type: "runner.state", paused, ...(taskLimit(f.maxTasks) ? { maxTasks: f.maxTasks } : {}) };
+      const room = parseTaskRoom(f.room);
+      return {
+        type: "runner.state",
+        paused,
+        ...(taskLimit(f.maxTasks) ? { maxTasks: f.maxTasks } : {}),
+        ...(room ? { room } : {}),
+      };
     }
     case "access.changed": {
       const access = parseAccess(f.access);
@@ -4791,12 +4860,14 @@ export function parseMachineSize(v: unknown): MachineSize | null {
     isObject(l) && inRange(l.cpus, [1, v.cpus]) && between(l.memoryGb, 0, v.memoryGb)
       ? { limit: { cpus: l.cpus, memoryGb: l.memoryGb } }
       : {};
+  const room = parseTaskRoom(v.room);
   return {
     cpus: v.cpus,
     memoryGb: v.memoryGb,
     diskGb: v.diskGb,
     ...limit,
     ...(taskLimit(v.maxTasks) ? { maxTasks: v.maxTasks } : {}),
+    ...(room ? { room } : {}),
   };
 }
 

@@ -32,6 +32,7 @@ import {
 } from "./questions";
 import { PASS_TOOL } from "./reply-policy";
 import { routineBriefOf } from "./routine-brief";
+import { type RunRow, runColumns } from "./run-state";
 import type { BridgeIdentity } from "./run-tool-tokens";
 import { type AgentRun, replyThreadOf } from "./runs";
 import { isSayNow, type SaidNow } from "./say-now";
@@ -361,7 +362,7 @@ const USAGE_GRANT = "usageGrant";
  */
 async function recordBridgeEffects(
   deps: RunToolsDeps,
-  run: AgentRun,
+  run: RunRow,
   where: RunWhere,
   call: { id: string; name: string; input: unknown },
   outcome: InvokeResult,
@@ -614,7 +615,7 @@ export async function invokeWithChip(
   );
 }
 
-type Located = { ctx: ToolContext; run: AgentRun | null };
+type Located = { ctx: ToolContext; run: RunRow | null };
 
 /**
  * The code session of a conversation, for a tool context (ADR 0215): read only in a session's conversation, the same
@@ -656,7 +657,7 @@ async function locate(db: Database, id: BridgeIdentity): Promise<Located> {
     };
   }
   const [run] = await db
-    .select()
+    .select(runColumns)
     .from(agentRuns)
     .where(and(eq(agentRuns.id, id.runId), eq(agentRuns.orgId, id.orgId), eq(agentRuns.agentId, id.agentId)));
   if (!run) throw new NotFoundError("Run not found");
@@ -676,15 +677,15 @@ async function locate(db: Database, id: BridgeIdentity): Promise<Located> {
       ...(id.machineId ? { bridge: { machineId: id.machineId } } : {}),
       ...(run.brain ? { thinksWith: run.brain } : {}),
       // Tools on demand (ADR 0043): the same list the run's turns see.
-      loadedGroups: loadedGroupsOf(run.transcript),
+      loadedGroups: loadedGroupsOf(run.state),
       ...(run.background ? { background: true } : {}),
     },
   };
 }
 
-/** The tool groups a run listed up front (`Transcript.toolGroups`, ADR 0043); null = every tool. */
-const loadedGroupsOf = (transcript: unknown): string[] | null => {
-  const groups = (transcript as { toolGroups?: unknown } | null)?.toolGroups;
+/** The tool groups a run listed up front (`Transcript.toolGroups`, ADR 0043, in its `state` copy); null = every tool. */
+const loadedGroupsOf = (state: unknown): string[] | null => {
+  const groups = (state as { toolGroups?: unknown } | null)?.toolGroups;
   return Array.isArray(groups) ? groups.filter((g): g is string => typeof g === "string") : null;
 };
 
@@ -748,7 +749,7 @@ export async function invokeToolForRun(
     : await tools.invoke(ctx, { toolUseId: call.id, name: call.name, input });
   if (run && where) await recordBridgeEffects(deps, run, where, use, outcome);
   const wait = outcome.type === "result" && !outcome.output.isError ? waitOf(outcome.output.data) : null;
-  const suspend = async (pause: RunPause, r: AgentRun): Promise<BridgeCallResult> => {
+  const suspend = async (pause: RunPause, r: RunRow): Promise<BridgeCallResult> => {
     const result = await suspendRunForTool(deps, r, { id: call.id, name: call.name }, pause);
     return result.isError ? { result, code: "bridge.run_not_running" } : { result };
   };
@@ -877,7 +878,7 @@ export function runMessageMeta(
  * whoever asked (ADR 0034), and its question and secret rows with them: answered from there, they resume it.
  * Runs inside the caller's transaction; nothing is published here (`publishPauseCards`).
  */
-export async function postPauseCards(tx: Executor, run: AgentRun, requests: PauseRequests): Promise<PostedPause> {
+export async function postPauseCards(tx: Executor, run: RunRow, requests: PauseRequests): Promise<PostedPause> {
   const out: PostedPause = {
     messages: [],
     approvals: [],
@@ -1037,7 +1038,7 @@ export async function postPauseCards(tx: Executor, run: AgentRun, requests: Paus
 }
 
 /** After the commit: the cards show up with their receipts, and who decides or answers hears them. */
-export async function publishPauseCards(deps: { db: Database; pubsub?: PubSub }, run: AgentRun, posted: PostedPause) {
+export async function publishPauseCards(deps: { db: Database; pubsub?: PubSub }, run: RunRow, posted: PostedPause) {
   const { db, pubsub } = deps;
   if (pubsub) {
     for (const m of await withWikiLinks(db, run.orgId, posted.messages.map(messageView))) {
@@ -1078,7 +1079,7 @@ export async function publishPauseCards(deps: { db: Database; pubsub?: PubSub },
  */
 export async function suspendRunForTool(
   deps: RunToolsDeps,
-  run: AgentRun,
+  run: RunRow,
   call: { id: string; name: string },
   gated: RunPause,
 ): Promise<ToolResult> {

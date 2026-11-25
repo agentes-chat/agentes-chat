@@ -12,6 +12,7 @@ import {
   type PubSub,
   REMOTE_PAUSE_PROTOCOL,
   RUNNER_STOPPED_CLOSE,
+  type TaskRoomReport,
 } from "@agenteschat/adapters";
 import {
   and,
@@ -678,9 +679,14 @@ export async function machineView(db: Database, actorId: string, orgId: string, 
   return view;
 }
 
-/** Its size as stored, with a new task limit (`TASK_LIMIT_PROTOCOL`); a row with no size yet keeps none. */
-export const withTaskLimit = (maxTasks: number) =>
-  sql`jsonb_set(${machines.size}, '{maxTasks}', to_jsonb(${maxTasks}::int))`;
+/**
+ * Its size as stored, with a new task limit (`TASK_LIMIT_PROTOCOL`) and room (`TASK_ROOM_PROTOCOL`); a row with no
+ * size yet keeps none.
+ */
+export const withTaskLimit = (maxTasks: number, room?: TaskRoomReport) => {
+  const limit = sql`jsonb_set(${machines.size}, '{maxTasks}', to_jsonb(${maxTasks}::int))`;
+  return room ? sql`jsonb_set(${limit}, '{room}', ${JSON.stringify(room)}::jsonb)` : limit;
+};
 
 /** `machine.updated` to every member: what changed (no access details: those are for admins and the pairer). */
 

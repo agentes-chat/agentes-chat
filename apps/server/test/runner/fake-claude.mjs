@@ -66,8 +66,11 @@ if (log) {
   const autoMemoryOff = process.env.CLAUDE_CODE_DISABLE_AUTO_MEMORY ?? null;
   const at = args.indexOf("--settings");
   let settingsEnv = null;
+  let cleanupDays = null;
   try {
-    settingsEnv = at >= 0 ? (JSON.parse(readFileSync(args[at + 1], "utf8")).env ?? null) : null;
+    const settings = at >= 0 ? JSON.parse(readFileSync(args[at + 1], "utf8")) : {};
+    settingsEnv = settings.env ?? null;
+    cleanupDays = settings.cleanupPeriodDays ?? null;
   } catch {}
   const sysAt = args.indexOf("--append-system-prompt-file");
   let system = null;
@@ -76,7 +79,7 @@ if (log) {
   } catch {}
   appendFileSync(
     log,
-    `${JSON.stringify({ pid: process.pid, args, configDir, cwd: process.cwd(), apiKey, authToken, oauthToken, oauthEnv, oauthFd, baseUrl, settingsEnv, compactWindow, autoMemoryOff, system })}\n`,
+    `${JSON.stringify({ pid: process.pid, args, configDir, cwd: process.cwd(), apiKey, authToken, oauthToken, oauthEnv, oauthFd, baseUrl, settingsEnv, cleanupDays, compactWindow, autoMemoryOff, system })}\n`,
   );
 }
 const flag = (name) => {

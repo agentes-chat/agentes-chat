@@ -263,7 +263,7 @@ export function grokChatBreach(ev: Record<string, unknown>, sawInit: boolean): s
 const GROK_LIMIT = /usage limit|rate.?limit|quota|weekly (?:limit|pool)|out of (?:credits|usage)|upgrade your plan/i;
 /** Grok can't authenticate (signed out, a refused token). */
 export const GROK_AUTH =
-  /not (?:authenticated|logged in|signed in)|grok login|unauthori[sz]ed|\b401\b|invalid (?:token|credentials)/i;
+  /not (?:authenticated|logged in|signed in)|grok login|unauthori[sz]ed|\b401\b|invalid (?:token|credentials)|\binvalid_grant\b/i;
 const SESSION_GONE = /session[^\n]*(?:not found|does not exist|no such)|no session/i;
 
 /** How a turn that went wrong ends: `limit` then `plan_limit`, `not_logged_in`, or `grok_failed`. */

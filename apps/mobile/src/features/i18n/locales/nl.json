@@ -890,6 +890,12 @@
     "kind": {
       "proposal_waiting_one": "{{names}} stelt een verbetering voor",
       "proposal_waiting_other": "{{names}} stellen verbeteringen voor",
+      "proposal_applied_one": "{{names}} heeft een verbetering toegepast",
+      "proposal_applied_other": "{{names}} heeft {{count}} verbeteringen toegepast",
+      "proposal_applied_agents_one": "{{names}} hebben een verbetering toegepast",
+      "proposal_applied_agents_other": "{{names}} hebben {{count}} verbeteringen toegepast",
+      "proposal_applied_auto_one": "Er is automatisch een verbetering toegepast",
+      "proposal_applied_auto_other": "Er zijn automatisch {{count}} verbeteringen toegepast",
       "mention_one": "{{names}} heeft je vermeld",
       "mention_other": "{{names}} hebben je vermeld",
       "thread_reply_one": "{{names}} heeft in de thread geantwoord",
@@ -1129,8 +1135,6 @@
     "issues": "Taken",
     "issuesWithMe_one": "{{count}} bij jou",
     "issuesWithMe_other": "{{count}} bij jou",
-    "proposalsWaiting_one": "{{count}} wacht",
-    "proposalsWaiting_other": "{{count}} wachten",
     "drive": "Drive",
     "connectors": "Connectors en MCP's",
     "preferences": "Voorkeuren",
@@ -1341,6 +1345,7 @@
     "criteriaOf": "{{done}} van {{total}}",
     "linkMessage": "Bericht in #{{channel}}",
     "linkMessagePlain": "Het oorspronkelijke bericht",
+    "removeFileText": "Het bestand blijft in de Drive.",
     "subIssues": "Subtaken",
     "talk": "Gesprek",
     "finish": "Afvinken",
@@ -1431,13 +1436,26 @@
     "uses_one": "{{count}} keer gebruikt",
     "uses_other": "{{count}} keer gebruikt",
     "confirmed": "Bevestigd door een persoon",
-    "confirm": "Bevestigen",
-    "confirmedToast": "Bevestigd",
     "details": "Technische details",
     "before": "Eerder stond er: {{text}}",
     "fix": "Corrigeren",
     "forgetTitle": "Deze herinnering vergeten?",
     "forgetText": "{{name}} gebruikt dit niet meer in toekomstige gesprekken."
+  },
+  "proposals": {
+    "title": "Verbeteringen van agents",
+    "emptyTitle": "Nog niets veranderd",
+    "empty": "Als een agent zijn instructies of die van een collega verbetert, verschijnt de wijziging hier, met Ongedaan maken.",
+    "more": "Meer tonen",
+    "reviewing": "Wordt beoordeeld…",
+    "appliedBy": "Toegepast door {{name}}",
+    "appliedBy_female": "Toegepast door {{name}}",
+    "appliedAuto": "Automatisch toegepast",
+    "leftOutBy": "Niet toegepast door {{name}}",
+    "leftOutBy_female": "Niet toegepast door {{name}}",
+    "leftOut": "Niet toegepast",
+    "undoneBy": "Door {{name}} ongedaan gemaakt",
+    "undoneByYou": "Door jou ongedaan gemaakt"
   },
   "wiki": {
     "map": "Paginakaart",
@@ -1492,6 +1510,15 @@
     "next": {
       "pr": "Branch gepusht, nog geen pull request",
       "mergeLocal": "Klaar om in {{base}} te mergen"
+    },
+    "terminal": {
+      "keys": "Terminaltoetsen",
+      "keyboard": "Toetsenbord",
+      "pasteHint": "Plak wat je hebt gekopieerd in de terminal",
+      "key": {
+        "CtrlC": "Control-C, onderbreken",
+        "CtrlD": "Control-D, einde van invoer"
+      }
     }
   },
   "taskManager": {
@@ -3179,6 +3206,61 @@
       "editHint": "Bewerkt dit deel",
       "notHere": "Dit deel bewerk je op de computer"
     }
+  },
+  "aiHub": {
+    "accounts": "Accounts",
+    "accountsHint": "Elk abonnement en elke API-sleutel van deze workspace, wie hem ook verbond. Tik op een account voor de limieten en wie het mag gebruiken.",
+    "order": "Gebruiksvolgorde",
+    "orderSub": "Bij een limiet gaan de agents verder met het volgende account.",
+    "skipped": "overgeslagen",
+    "orderGroup": "{{plan}} · {{computer}}",
+    "noOrder": "Met twee accounts van dezelfde AI op één computer verschijnt hun volgorde hier.",
+    "keyFallback": "Doorgaan met de API-sleutel als alle abonnementen hun limiet bereiken",
+    "keyFallbackHint": "Na het laatste account gaan de agents verder met de API-sleutel van de workspace, die per gebruik betaald wordt. Missies stappen nooit over op de sleutel.",
+    "keyFallbackLocked": "Alleen een admin wijzigt dit.",
+    "limits": "Limieten",
+    "permissions": "Rechten",
+    "manage": "Beheren",
+    "manageSub": "Hernoemen, opnieuw inloggen, verwijderen",
+    "manageHint": "Wie dit account mag hernoemen, er opnieuw op mag inloggen en het mag verwijderen. Alleen wie het verbond wijzigt dit.",
+    "use": "Gebruiken in agents",
+    "useSub": "Kiezen in Wie denkt",
+    "useHint": "Wiens agents met dit account mogen denken, en wiens Lodi. Wie het beheert wijzigt dit.",
+    "reply": "Iedereen helpen",
+    "replySub": "Met wie de agents praten",
+    "replyHint": "Wie een agent op dit account antwoordt naast zijn eigen eigenaar. De voorwaarden van Claude vragen dat een abonnement wordt gebruikt door wie ervoor betaalt: controleer ze voordat je het voor iedereen openzet.",
+    "audience": {
+      "owner": "Alleen jij",
+      "ownerOf": "Alleen {{name}}",
+      "admins": "Jij en admins",
+      "adminsOf": "{{name}} en admins",
+      "roles": "Rollen…",
+      "people": "Personen…",
+      "everyone": "Iedereen",
+      "agentOwner": "Alleen de eigenaar van de agent",
+      "rolesCount_one": "{{count}} rol",
+      "rolesCount_other": "{{count}} rollen",
+      "peopleCount_one": "{{count}} persoon",
+      "peopleCount_other": "{{count}} personen"
+    },
+    "pickRoles": "Rollen",
+    "pickPeople": "Personen",
+    "pickNone": "Kies er minstens één.",
+    "choice": {
+      "account": "Account",
+      "model": "Model",
+      "effort": "Inspanning",
+      "yours": "Van jou",
+      "others": "Van het team",
+      "keys": "API-sleutels",
+      "workspace": "Die van de workspace",
+      "workspaceSub": "API-sleutel van de workspace",
+      "key": "API-sleutel",
+      "keyDefault": "standaard van de workspace",
+      "api": "API"
+    },
+    "missionAi": "AI",
+    "missionLocked": "Wie het werk doet kies je vóór Start. Het model kan altijd veranderen."
   },
   "surface": {
     "on": "Aan",

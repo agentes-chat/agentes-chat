@@ -2,7 +2,7 @@ import type { ConnectorCategory, ConnectorDef, CustomConnectStart } from "@agent
 import { hiddenWithoutComposio } from "@agenteschat/client/lib/composio";
 import { CONNECTOR_MARK, type ConnectedItem, OWN_MARK, SERVER_ICON } from "@agenteschat/client/lib/connected";
 import { heldWhole, joinNames } from "@agenteschat/client/lib/format";
-import { gradientOf, mixHex } from "@agenteschat/ui/agent/engine";
+import { mixHex } from "@agenteschat/ui/agent/engine";
 import type { TFunction } from "i18next";
 
 export { type ConnectionTab, connectionTabs } from "@agenteschat/client/lib/connected";
@@ -12,8 +12,23 @@ export { type ConnectionTab, connectionTabs } from "@agenteschat/client/lib/conn
  * the tests share. No React Native imports.
  */
 
-/** Suggestions, in order (the web's list, catalog services only): the first three not connected yet. */
-export const SUGGESTED = ["github", "linear", "notion", "drive", "sentry", "stripe", "slack"];
+/**
+ * Suggestions, in order (the web's list, catalog services only): the tools a team reaches for every day, the first
+ * ready here and not connected yet featured, the rest standing in for those that aren't.
+ */
+export const SUGGESTED = [
+  "instagram",
+  "sentry",
+  "notion",
+  "linear",
+  "github",
+  "figma",
+  "canva",
+  "slack",
+  "hubspot",
+  "drive",
+  "stripe",
+];
 
 /** Categories in the order their shelves stand. */
 export const CATEGORIES: ConnectorCategory[] = [
@@ -284,26 +299,6 @@ export function isHttpsUrl(value: string): boolean {
 }
 
 // ── A service's own page ─────────────────────────────────────────────────────────────────────────────────────────
-
-/**
- * A service's sky on its page: the product's pixel dither in the service's own color, from the page's surface at
- * the foot up to the color at the top (the `card` drawing reads them low to high). Softer in the dark, where a full
- * brand color glares.
- */
-export function serviceSkyTones(surface: string, brand: string | null, dark: boolean): string[] {
-  const [top, bottom] = gradientOf(brandOf(brand) ?? "sky");
-  return dark
-    ? [0, 0.14, 0.26, 0.4, 0.56, 0.72].map((k) => (k === 0 ? surface : mixHex(surface, bottom, k)))
-    : [
-        surface,
-        mixHex(surface, top, 0.12),
-        mixHex(surface, top, 0.26),
-        mixHex(surface, top, 0.42),
-        mixHex(surface, top, 0.62),
-        top,
-        mixHex(top, bottom, 0.35),
-      ];
-}
 
 /** Each category's icon on a service's page (its facts' first column). */
 const CATEGORY_ICONS: Record<ConnectorCategory, string> = {

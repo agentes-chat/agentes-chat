@@ -449,7 +449,8 @@ export function openTarget(n: AppNotification): OpenTarget | null {
     return { to: "/org/$orgId/approvals", ...(s.approvalId ? { search: { open: s.approvalId } } : {}) };
   // A change someone sent to whoever decides (ADR 0137) is decided on its card in the row: the DM it came from is theirs.
   if (n.kind === "change_request") return null;
-  if (n.kind === "proposal_waiting") return { to: "/org/$orgId/proposals" };
+  // What agents applied themselves (ADR 0219) is in their history, with Undo.
+  if (n.kind === "proposal_waiting" || n.kind === "proposal_applied") return { to: "/org/$orgId/proposals" };
   // Who approves for whom (ADR 0139) is set, seen and declined in Configurações › Sua conta › Aprovações.
   if (n.kind === "approval_cover") return { to: "/org/$orgId/settings/$section", params: { section: "approvals" } };
   // What the right hand does without asking is on its own page, which its old settings address opens.

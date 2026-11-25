@@ -890,6 +890,12 @@
     "kind": {
       "proposal_waiting_one": "{{names}} bir iyileştirme öneriyor",
       "proposal_waiting_other": "{{names}} iyileştirme öneriyor",
+      "proposal_applied_one": "{{names}} bir iyileştirme uyguladı",
+      "proposal_applied_other": "{{names}} {{count}} iyileştirme uyguladı",
+      "proposal_applied_agents_one": "{{names}} bir iyileştirme uyguladı",
+      "proposal_applied_agents_other": "{{names}} {{count}} iyileştirme uyguladı",
+      "proposal_applied_auto_one": "Bir iyileştirme otomatik olarak uygulandı",
+      "proposal_applied_auto_other": "{{count}} iyileştirme otomatik olarak uygulandı",
       "mention_one": "{{names}} sizden bahsetti",
       "mention_other": "{{names}} sizden bahsetti",
       "thread_reply_one": "{{names}} ileti dizisinde yanıtladı",
@@ -1129,8 +1135,6 @@
     "issues": "Görevler",
     "issuesWithMe_one": "{{count}} tanesi sizde",
     "issuesWithMe_other": "{{count}} tanesi sizde",
-    "proposalsWaiting_one": "{{count}} bekliyor",
-    "proposalsWaiting_other": "{{count}} bekliyor",
     "drive": "Drive",
     "connectors": "Bağlayıcılar ve MCP'ler",
     "preferences": "Tercihler",
@@ -1341,6 +1345,7 @@
     "criteriaOf": "{{done}} / {{total}}",
     "linkMessage": "#{{channel}} kanalındaki mesaj",
     "linkMessagePlain": "Kaynak mesaj",
+    "removeFileText": "Dosya Drive'da kalır.",
     "subIssues": "Alt görevler",
     "talk": "Sohbet et",
     "finish": "Tamamlandı olarak işaretle",
@@ -1431,13 +1436,26 @@
     "uses_one": "{{count}} kez kullanıldı",
     "uses_other": "{{count}} kez kullanıldı",
     "confirmed": "Bir kişi tarafından onaylandı",
-    "confirm": "Onayla",
-    "confirmedToast": "Onaylandı",
     "details": "Teknik ayrıntılar",
     "before": "Önceki hali: {{text}}",
     "fix": "Düzelt",
     "forgetTitle": "Bu bellek kaydı unutulsun mu?",
     "forgetText": "{{name}} sonraki sohbetlerde bunu kullanmayı bırakır."
+  },
+  "proposals": {
+    "title": "Ajan iyileştirmeleri",
+    "emptyTitle": "Henüz hiçbir şey değişmedi",
+    "empty": "Bir ajan kendi talimatlarını veya bir ekip arkadaşınınkileri iyileştirdiğinde, değişiklik Geri al seçeneğiyle burada görünür.",
+    "more": "Daha fazla göster",
+    "reviewing": "İnceleniyor…",
+    "appliedBy": "{{name}} uyguladı",
+    "appliedBy_female": "{{name}} uyguladı",
+    "appliedAuto": "Otomatik olarak uygulandı",
+    "leftOutBy": "{{name}} uygulamadı",
+    "leftOutBy_female": "{{name}} uygulamadı",
+    "leftOut": "Uygulanmadı",
+    "undoneBy": "{{name}} tarafından geri alındı",
+    "undoneByYou": "Sizin tarafınızdan geri alındı"
   },
   "wiki": {
     "map": "Sayfa haritası",
@@ -1492,6 +1510,15 @@
     "next": {
       "pr": "Dal gönderildi, henüz pull request yok",
       "mergeLocal": "{{base}} dalına birleştirmeye hazır"
+    },
+    "terminal": {
+      "keys": "Terminal tuşları",
+      "keyboard": "Klavye",
+      "pasteHint": "Kopyaladığınızı terminale yapıştırın",
+      "key": {
+        "CtrlC": "Control-C, kes",
+        "CtrlD": "Control-D, girdinin sonu"
+      }
     }
   },
   "taskManager": {
@@ -3179,6 +3206,61 @@
       "editHint": "Bu kısmı düzenler",
       "notHere": "Bu kısım bilgisayarda düzenlenir"
     }
+  },
+  "aiHub": {
+    "accounts": "Hesaplar",
+    "accountsHint": "Bu çalışma alanındaki tüm planlar ve API anahtarları, kim bağlamış olursa olsun. Sınırlarını ve kimin kullanabileceğini görmek için bir hesaba dokunun.",
+    "order": "Kullanım sırası",
+    "orderSub": "Sınıra gelince ajanlar sıradaki hesapla devam eder.",
+    "skipped": "atlandı",
+    "orderGroup": "{{plan}} · {{computer}}",
+    "noOrder": "Bir bilgisayarda aynı yapay zekanın iki hesabı olduğunda sıraları burada görünür.",
+    "keyFallback": "Tüm planlar sınırdayken API anahtarıyla devam et",
+    "keyFallbackHint": "Son hesaptan sonra ajanlar, kullanım başına ücretlendirilen çalışma alanı API anahtarıyla devam eder. Görevler hiçbir zaman anahtara geçmez.",
+    "keyFallbackLocked": "Bunu yalnızca bir yönetici değiştirir.",
+    "limits": "Sınırlar",
+    "permissions": "İzinler",
+    "manage": "Yönet",
+    "manageSub": "Yeniden adlandır, tekrar giriş yap, kaldır",
+    "manageHint": "Bu hesabı kimin yeniden adlandırabileceği, tekrar giriş yapabileceği ve kaldırabileceği. Bunu yalnızca hesabı bağlayan kişi değiştirir.",
+    "use": "Ajanlarda kullan",
+    "useSub": "Düşünen yapay zekada seç",
+    "useHint": "Kimin ajanlarının bu hesapla düşünebileceği ve kimin Lodi'sinin. Hesabı yöneten kişi değiştirir.",
+    "reply": "Herkese yanıt ver",
+    "replySub": "Ajanların kiminle konuştuğu",
+    "replyHint": "Bu hesaptaki bir ajanın kendi sahibi dışında kime yanıt verdiği. Claude'un koşulları, bir planın parasını ödeyen kişi tarafından kullanılmasını ister: herkese açmadan önce kontrol edin.",
+    "audience": {
+      "owner": "Yalnızca siz",
+      "ownerOf": "Yalnızca {{name}}",
+      "admins": "Siz ve yöneticiler",
+      "adminsOf": "{{name}} ve yöneticiler",
+      "roles": "Roller…",
+      "people": "Kişiler…",
+      "everyone": "Herkes",
+      "agentOwner": "Yalnızca ajanın sahibi",
+      "rolesCount_one": "{{count}} rol",
+      "rolesCount_other": "{{count}} rol",
+      "peopleCount_one": "{{count}} kişi",
+      "peopleCount_other": "{{count}} kişi"
+    },
+    "pickRoles": "Roller",
+    "pickPeople": "Kişiler",
+    "pickNone": "En az birini seçin.",
+    "choice": {
+      "account": "Hesap",
+      "model": "Model",
+      "effort": "Çaba",
+      "yours": "Sizin",
+      "others": "Ekibin",
+      "keys": "API anahtarları",
+      "workspace": "Çalışma alanınınki",
+      "workspaceSub": "Çalışma alanının API anahtarı",
+      "key": "API anahtarı",
+      "keyDefault": "çalışma alanı varsayılanı",
+      "api": "API"
+    },
+    "missionAi": "Yapay zeka",
+    "missionLocked": "İşi kimin yapacağı Başlat'tan önce seçilir. Model her zaman değiştirilebilir."
   },
   "surface": {
     "on": "Açık",

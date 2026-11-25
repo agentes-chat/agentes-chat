@@ -51,7 +51,7 @@ export type SidebarPlace = (typeof SIDEBAR_PLACES)[number];
 export type SidebarItems = Partial<Record<SidebarItem, SidebarPlace>>;
 
 /** The items that show a count in the sidebar: only these can be `auto`. */
-export const SIDEBAR_COUNTED: readonly SidebarItem[] = ["waiting", "proposals", "threads"];
+export const SIDEBAR_COUNTED: readonly SidebarItem[] = ["waiting", "threads"];
 
 const isItem = (value: string): value is SidebarItem => (SIDEBAR_ITEMS as readonly string[]).includes(value);
 const isPlace = (value: unknown): value is SidebarPlace =>

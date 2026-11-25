@@ -1,14 +1,13 @@
 import type { ConnectorDef } from "@agenteschat/client";
+import { brandLook } from "@agenteschat/client/lib/brand-look";
 import { StyleSheet, useWindowDimensions, View } from "react-native";
-import { Dither } from "@/sky/Dither";
 import { PressScale, SideScroll, Text, useTheme } from "@/ui";
 import { useSurface } from "../shared/parts";
+import { BrandArt } from "./BrandArt";
 import { ConnectorIcon } from "./ConnectorIcon";
-import { serviceSkyTones } from "./logic";
 
-/** A card's height, and how much of it its sky colors from the top (`card` sky's `reach`). */
+/** A card's height. */
 const CARD_H = 196;
-const SKY_REACH = 0.62;
 /** Between two cards, and the next card's edge left in sight past the one in view. */
 const GAP = 10;
 const PEEK = 37;
@@ -20,8 +19,8 @@ const MARK = 52;
 
 /**
  * Conectores' featured services, above what is connected: one wide card at a time that pages sideways, the next one's
- * edge in sight. Each card is the service's own pixel sky (its brand color fading into the card, as its page's), its
- * mark on it, and under it its name and one line of what it is. No button of its own: the whole card opens the
+ * edge in sight. Each card is the service's brand art, as on the web (its colors as soft light, its mark huge and
+ * tilted behind), its mark on it, and under it its name and one line of what it is. No button of its own: the whole card opens the
  * service's page (`onOpen`), where it connects, as the catalog's rows do.
  */
 export function FeaturedCards({
@@ -81,15 +80,14 @@ function FeaturedCard({
       accessibilityLabel={`${name}. ${text}`}
       style={[styles.card, surface, { width }]}
     >
-      {/* The sky and the words clipped to the card's corners; the card's shadow stays outside, on the card. */}
+      {/* The art and the words clipped to the card's corners; the card's shadow stays outside, on the card. */}
       <View style={styles.clip}>
-        <Dither
-          kind="card"
-          tones={serviceSkyTones(colors.raised, def.brandColor, dark)}
-          pixel={6}
-          animated={false}
-          extra={{ reach: SKY_REACH }}
-          style={StyleSheet.absoluteFill}
+        <BrandArt
+          look={brandLook(def.iconUrl, def.brandColor)}
+          template="glow"
+          surface={colors.raised}
+          dark={dark}
+          words="bottom"
         />
         <View style={[styles.mark, { boxShadow: dark ? MARK_RING_DARK : MARK_RING }]}>
           <ConnectorIcon def={def} label={name} size={MARK} />
@@ -107,13 +105,13 @@ function FeaturedCard({
   );
 }
 
-/** The mark lifted off its sky: a light ring around it and a soft shadow under it (a fainter ring in the dark). */
+/** The mark lifted off its art: a light ring around it and a soft shadow under it (a fainter ring in the dark). */
 const MARK_RING = "0 0 0 1.5px rgba(255,255,255,0.9), 0 6px 16px -6px rgba(0,0,0,0.35)";
 const MARK_RING_DARK = "0 0 0 1.5px rgba(255,255,255,0.16), 0 6px 16px -6px rgba(0,0,0,0.6)";
 
 const styles = StyleSheet.create({
   strip: { gap: GAP, paddingHorizontal: SIDE, paddingTop: 8, paddingBottom: 4 },
-  // Radius 20 with the cut corner, as every card standing on the page; the sky stays inside it.
+  // Radius 20 with the cut corner, as every card standing on the page; the art stays inside it.
   card: { height: CARD_H, borderRadius: 20, borderBottomLeftRadius: 6 },
   clip: {
     position: "absolute",

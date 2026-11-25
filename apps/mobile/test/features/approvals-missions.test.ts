@@ -655,3 +655,25 @@ describe("a request's screen on the phone", () => {
     expect(details).toContain("<Spans inline={parseInline(r.value)} />");
   });
 });
+
+describe("hold to approve inside a message", () => {
+  const root = join(import.meta.dir, "../../../..");
+  const read = (path: string) => readFileSync(join(root, path), "utf8");
+
+  test("on iOS the message's menu doesn't start on a hold of its own, so the hold fills instead of opening the menu", () => {
+    const hold = read("apps/mobile/src/ui/HoldButton.tsx");
+    expect(hold).toContain('export const OWN_HOLD = "own-hold";');
+    expect(hold).toContain("testID={OWN_HOLD}");
+    // The menu's view returns no menu before it cancels the press's touches.
+    const patch = read("patches/expo-router@58.0.23.patch");
+    expect(patch).toContain('current.accessibilityIdentifier == "own-hold"');
+    expect(patch).toMatch(
+      /\+\s+if startsOnOwnHold\(interaction, at: location\) \{\n\+\s+return nil\n\+\s+\}\n\s+cancelReactNativeTouches\(\)/,
+    );
+    expect(JSON.parse(read("package.json")).patchedDependencies["expo-router@58.0.23"]).toBe(
+      "patches/expo-router@58.0.23.patch",
+    );
+    // The version patched is the one installed: a newer expo-router has to carry the patch over.
+    expect(read("bun.lock")).toContain('"expo-router": ["expo-router@58.0.23"');
+  });
+});

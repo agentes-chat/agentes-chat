@@ -137,6 +137,9 @@ const CatalogEntry = z
       description:
         "A connector of ours that signs in only through a developer app this self-hosted server hasn't registered (its `CONNECTOR_*` variables).",
     }),
+    address: z.enum(["optional", "required"]).optional().openapi({
+      description: "A git host at an address of one's own: the connect form asks for it or offers it",
+    }),
     via: z.literal("composio").optional().openapi({
       description:
         "Connects through Composio (ADR 0107): its page signs in. Unavailable when this server has no `COMPOSIO_API_KEY`.",
@@ -258,6 +261,11 @@ export function connectorRoutes(deps: AppDeps) {
             apiKey: z.string().min(8).max(2000).optional(),
             label: z.string().max(80).optional(),
             personal: Personal,
+            serverUrl: z
+              .string()
+              .max(300)
+              .optional()
+              .openapi({ description: "A git host of one's own (GitLab, a git server): its address" }),
           }),
         ),
       },

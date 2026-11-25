@@ -41,7 +41,7 @@ import {
   updateAgent,
 } from "../src";
 import { monthStartUtc } from "../src/usage";
-import { addMember, type Fixture, setup } from "./fixtures";
+import { addMember, type Fixture, queuedReviews, settleQueued, setup, withReview } from "./fixtures";
 import { pairMachine } from "./machine-fixtures";
 
 let f: Fixture;
@@ -60,7 +60,7 @@ const lodiOf = async (fx: Fixture) => {
 
 /**
  * A run of Lodi on what `userId` wrote in their DM with it: its tools act for that person. Their message relays outside
- * content, so what they may decide waits on the card; `ownWords`: nothing does, so it applies at once.
+ * content, so what they may decide goes to the review; `ownWords`: it doesn't, so it applies at once.
  */
 async function lodiRun(fx: Fixture, userId: string, body: string, ownWords = false): Promise<ToolContext> {
   const lodi = await lodiOf(fx);
@@ -242,8 +242,8 @@ describe("a change the person asked for and may make (ADR 0092 §5)", () => {
 });
 
 describe("a change of department", () => {
-  test("the right hand proposes it, only who manages agents applies it, and Undo puts the agent back", async () => {
-    f = await setup({ rightHand: true });
+  test("the right hand proposes it, the review applies it as who manages agents, and Undo puts the agent back", async () => {
+    f = await setup({ rightHand: true, reply: withReview({ apply: true, why: "O Dev atende vendas agora." }) });
     await createAgentGroup({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, { name: "Vendas" });
     const groups = await createAgentGroup({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, {
       name: "Operações",
@@ -254,17 +254,16 @@ describe("a change of department", () => {
     const ctx = await lodiRun(f, bia.id, "coloca o dev no setor de Vendas");
     // The sector's name however it was typed: the card keeps it as the workspace writes it.
     const out = await call(f, ctx, { changes: [{ agent: "@dev", group: "vendas" }], reason: "pediu" });
-    expect(out.content).toContain("can't apply it: the card lets them send it to whoever may");
+    expect(out.content).toContain("it goes through a quick review that applies each row in a moment if it makes sense");
     const [row] = (await cardRows(f, bia.id)).rows;
     expect(row).toMatchObject({ status: "pending", canDecide: false });
     // The card speaks the sectors' names, not their ids.
     expect(row?.settings).toEqual([{ field: "group", from: "Operações", to: "Vendas" }]);
-    // Who can't decide it doesn't apply it, before or after sending it to an admin.
-    await expect(decideProposal(f.db, bia.id, f.org.id, row?.id ?? "", "accept")).rejects.toThrow();
-    await askProposal({ db: f.db, pubsub: f.pubsub }, bia.id, f.org.id, row?.id ?? "");
+    // Who can't decide it doesn't apply it; the review weighs it as a change she can't make.
     await expect(decideProposal(f.db, bia.id, f.org.id, row?.id ?? "", "accept")).rejects.toThrow();
     expect((await getAgent(f.db, f.org.id, f.agent.id))?.groupId).toBe(idOf("Operações"));
-    await decideProposal(f.db, f.owner.id, f.org.id, row?.id ?? "", "accept", { pubsub: f.pubsub });
+    expect(await queuedReviews(f)).toEqual([{ ids: [row?.id ?? ""], origin: "asked_other" }]);
+    expect((await settleQueued(f)).applied).toEqual([row?.id ?? ""]);
     expect((await getAgent(f.db, f.org.id, f.agent.id))?.groupId).toBe(idOf("Vendas"));
     const { card } = await cardRows(f, f.owner.id);
     const [receipt] = (await actionsFor(f.db, f.org.id, [card.id])).get(card.id) ?? [];
@@ -346,10 +345,12 @@ describe("the settings card", () => {
       reason: "mais barato e com folga",
     });
     expect(out.isError).toBeFalsy();
-    expect(out.content).toContain("Nothing has changed yet");
+    // Outside content in the conversation: not applied at once, it goes to the review, which knows that.
+    expect(out.content).toContain("it goes through a quick review that applies each row in a moment if it makes sense");
     const { card, rows } = await cardRows(f, f.owner.id);
     expect(rows).toHaveLength(1);
     const [row] = rows;
+    expect(await queuedReviews(f)).toEqual([{ ids: [row?.id ?? ""], origin: "outside" }]);
     expect(row).toMatchObject({
       target: "agent_settings",
       agentId: f.agent.id,
@@ -408,15 +409,16 @@ describe("the settings card", () => {
     expect(undoAgentAction({ db: f.db }, f.owner.id, f.org.id, receipt?.id ?? "")).rejects.toThrow(/changed after/);
   });
 
-  test("a member's row waits for them to send it, then reaches only who manages agents; the click is read then", async () => {
+  test("a member's row goes to the review; sent on, it reaches only who manages agents; the click is read then", async () => {
     f = await setup({ rightHand: true });
     const bia = await addMember(f.db, f.org.id, "member", "Bia Rocha");
     const admin = await addMember(f.db, f.org.id, "admin", "Theo");
     const ctx = await lodiRun(f, bia.id, "troca o modelo do dev pra um melhor");
     const out = await call(f, ctx, { changes: [{ agent: "@dev", model: "claude-opus-5-5" }], reason: "melhor" });
-    expect(out.content).toContain("can't apply it: the card lets them send it to whoever may");
+    expect(out.content).toContain("it goes through a quick review that applies each row in a moment if it makes sense");
     const [row] = (await cardRows(f, bia.id)).rows;
     expect(row).toMatchObject({ canDecide: false, askedAt: null });
+    expect(await queuedReviews(f)).toEqual([{ ids: [row?.id ?? ""], origin: "asked_other" }]);
     expect(decideProposal(f.db, bia.id, f.org.id, row?.id ?? "", "accept")).rejects.toThrow();
     const inbox = async () =>
       (
@@ -577,7 +579,7 @@ describe("an agent's skills on the card, as on its page", () => {
     expect(await skillsOf(f)).toEqual(["pdf"]);
   });
 
-  test("who edits the agent decides it, as on its page: its owner applies it, anyone else sends the card to who edits it", async () => {
+  test("who edits the agent decides it, as on its page: its owner applies it, anyone else's row goes to the review or, sent on, to who edits it", async () => {
     f = await setup({ rightHand: true });
     await install(f, "excel");
     await install(f, "pdf");
@@ -592,9 +594,10 @@ describe("an agent's skills on the card, as on its page", () => {
     const caio = await addMember(f.db, f.org.id, "member", "Caio Mendes");
     const asked = await lodiRun(f, caio.id, "coloca a skill pdf no dev", true);
     const out = await call(f, asked, { changes: [{ agent: "@dev", add_skills: ["pdf"] }], reason: "pediu" });
-    expect(out.content).toContain("can't apply it: the card lets them send it to whoever may");
+    expect(out.content).toContain("it goes through a quick review that applies each row in a moment if it makes sense");
     const [row] = (await cardRows(f, caio.id)).rows;
     expect(row).toMatchObject({ status: "pending", canDecide: false });
+    expect(await queuedReviews(f)).toEqual([{ ids: [row?.id ?? ""], origin: "asked_other" }]);
     await expect(decideProposal(f.db, caio.id, f.org.id, row?.id ?? "", "accept")).rejects.toThrow();
     expect(await skillsOf(f)).toEqual(["excel"]);
     // Whom its "Who can edit" names decides it too, and is asked with its owner and the workspace's owner.
@@ -630,17 +633,19 @@ describe("an agent's skills on the card, as on its page", () => {
     expect(await skillsOf(f)).toEqual([]);
   });
 
-  test("the right hand's own skill is a row like any agent's own: it waits for a person's click", async () => {
-    f = await setup({ rightHand: true });
+  test("the right hand's own skill is a row like any agent's own: never applied at once, the review applies it", async () => {
+    f = await setup({ rightHand: true, reply: withReview({ apply: true, why: "Ele lê PDFs para a equipe." }) });
     const pdf = await install(f, "pdf");
-    const ctx = await lodiRun(f, f.owner.id, "liga a skill pdf pra você");
+    const ctx = await lodiRun(f, f.owner.id, "liga a skill pdf pra você", true);
     const own = await call(f, ctx, { changes: [{ agent: "@lodi", add_skills: ["pdf"] }], reason: "pediu" });
     expect(own.isError).toBeFalsy();
-    expect(own.content).toContain("Your own settings wait for that click");
+    expect(own.content).not.toContain("applied at once");
+    expect(own.content).toContain("it goes through a quick review that applies each row in a moment if it makes sense");
     const [row] = (await cardRows(f, f.owner.id)).rows;
     expect(row).toMatchObject({ status: "pending", agentId: ctx.agentId });
     expect(await enabledSkills(f.db, f.org.id, ctx.agentId)).toEqual([]);
-    await decideProposal(f.db, f.owner.id, f.org.id, row?.id ?? "", "accept", { pubsub: f.pubsub });
+    expect(await queuedReviews(f)).toEqual([{ ids: [row?.id ?? ""], origin: "asked" }]);
+    await settleQueued(f);
     expect((await enabledSkills(f.db, f.org.id, ctx.agentId)).map((k) => k.id)).toEqual([pdf.id]);
   });
 
@@ -743,7 +748,7 @@ describe("an agent asks for its own settings on the same card (request_settings_
     expect((await gatewayOf(f).granted(lodi)).map((t) => t.name)).not.toContain(REQUEST_SETTINGS_TOOL);
   });
 
-  test("it waits for a click even when an admin asked in their own words, and no other agent is a target", async () => {
+  test("it never applies at once, even when an admin asked in their own words: the review weighs it; no other agent is a target", async () => {
     f = await setup({ rightHand: true });
     const excel = await install(f, "excel");
     const ctx = await devRun(f, f.owner.id, "liga a skill excel pra você");
@@ -753,10 +758,12 @@ describe("an agent asks for its own settings on the same card (request_settings_
     expect(other).toMatchObject({ isError: true });
     expect(other.content).toContain("input.agent: not allowed");
     const out = await ask(f, ctx, { add_skills: ["excel"], reason: "Preciso dela para ler a planilha" });
-    expect(out.content).toContain("Posted the card for your settings; the person who asked applies it from the card.");
-    expect(out.content).toContain("Your own settings wait for that click");
-    expect(out.content).toContain("Nothing has changed yet");
+    expect(out.content).toContain(
+      "Posted the card for your settings; it goes through a quick review that applies each row in a moment if it makes sense",
+    );
+    expect(out.content).not.toContain("applied at once");
     const { card, rows } = await cardRows(f, f.owner.id);
+    expect((await queuedReviews(f)).map((r) => r.ids)).toEqual([rows.map((r) => r.id)]);
     expect(card.meta).toMatchObject({ bodyCode: SETTINGS_REQUEST_CARD, bodyParams: {} });
     expect(rows).toMatchObject([
       {
@@ -843,7 +850,7 @@ describe("an agent asks for its own settings on the same card (request_settings_
     expect(await skillsOf(f)).toEqual([]);
   });
 
-  test("a member who can't decide it sends it with Ask an admin; it reaches who edits the agent, its owner included", async () => {
+  test("a member who can't decide it: it goes to the review, and sent on it reaches who edits the agent, its owner included", async () => {
     f = await setup({ rightHand: true });
     await install(f, "excel");
     const bia = await addMember(f.db, f.org.id, "member", "Bia Rocha");
@@ -858,9 +865,10 @@ describe("an agent asks for its own settings on the same card (request_settings_
     await addChannelMember(f.db, f.owner.id, f.org.id, f.general.id, { userId: bia.id });
     const ctx = await devRun(f, bia.id, "liga a skill excel pra você");
     const out = await ask(f, ctx, { add_skills: ["excel"], reason: "pediu" });
-    expect(out.content).toContain("can't apply it: the card lets them send it to whoever may");
+    expect(out.content).toContain("it goes through a quick review that applies each row in a moment if it makes sense");
     const [row] = (await cardRows(f, bia.id)).rows;
     expect(row).toMatchObject({ status: "pending", canDecide: false, askedAt: null, requestedByUserId: bia.id });
+    expect((await queuedReviews(f)).map((r) => r.ids)).toEqual([[row?.id ?? ""]]);
     await expect(decideProposal(f.db, bia.id, f.org.id, row?.id ?? "", "accept")).rejects.toThrow();
     await askProposal({ db: f.db, pubsub: f.pubsub }, bia.id, f.org.id, row?.id ?? "");
     expect((await askedOf(f)).sort()).toEqual([f.owner.id, caio.id, bruno.id].sort());
@@ -868,7 +876,7 @@ describe("an agent asks for its own settings on the same card (request_settings_
     expect(await skillsOf(f)).toEqual(["excel"]);
   });
 
-  test("the right hand never looks at its card for the person, though it looks at the agent's card on a teammate", async () => {
+  test("the right hand doesn't look at settings cards for the person: the review settles them", async () => {
     f = await setup({ rightHand: true });
     await install(f, "excel");
     await setRightHandApprovals({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, { enabled: true });
@@ -881,9 +889,9 @@ describe("an agent asks for its own settings on the same card (request_settings_
       ).length;
     const ctx = await devRun(f, f.owner.id, "liga a skill excel pra você e sobe o limite do lodi", true);
     await ask(f, ctx, { add_skills: ["excel"], reason: "pediu" });
-    expect(await looks()).toBe(0);
     await call(f, ctx, { changes: [{ agent: "@lodi", budget_usd: 20 }], reason: "pediu" });
-    expect(await looks()).toBe(1);
+    expect(await looks()).toBe(0);
+    expect(await queuedReviews(f)).toHaveLength(2);
   });
 
   test("a skill on and off at once is refused, and a long list of skills is cut short", async () => {

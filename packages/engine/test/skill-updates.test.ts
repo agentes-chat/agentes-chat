@@ -27,6 +27,7 @@ import {
   updateSkillFromSource,
   zip,
 } from "../src";
+import { dailySlot } from "../src/format";
 import { addMember, type Fixture, setup } from "./fixtures";
 
 let f: Fixture;
@@ -184,10 +185,14 @@ describe("updating by itself, every day", () => {
     expect(await setSkillAutoUpdate(f.db, f.owner.id, f.org.id, skill.id, true)).toMatchObject({ autoUpdate: true });
     const now = new Date("2026-11-03T10:00:00Z");
     expect(await enqueueSkillUpdates(f.db, now)).toBe(1);
-    await enqueueSkillUpdates(f.db, new Date("2026-11-03T11:00:00Z"));
+    // A later tick before the workspace's time of day queues nothing new.
+    const slot = dailySlot(f.org.id, now);
+    await enqueueSkillUpdates(f.db, new Date(slot.at.getTime() - 1));
     const jobs = await f.db.select().from(schema.outbox).where(eq(schema.outbox.kind, SKILL_UPDATES_JOB));
-    expect(jobs).toHaveLength(1);
-    expect(jobs[0]?.nextAttemptAt.getTime()).toBeGreaterThanOrEqual(now.getTime());
+    expect(jobs.map((j) => [j.dedupeKey, j.nextAttemptAt])).toEqual([
+      [`${SKILL_UPDATES_JOB}:${f.org.id}:${slot.day}`, slot.at],
+    ]);
+    expect(slot.at.getTime()).toBeGreaterThanOrEqual(now.getTime());
 
     gh.state.files = { "deploy/SKILL.md": skillMd("# v2") };
     expect(await runSkillUpdates(deps, f.org.id)).toEqual({ updated: 1, waiting: 0, failed: 0 });

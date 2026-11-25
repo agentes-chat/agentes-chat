@@ -475,6 +475,36 @@ export const words: EmailWords = {
     table: (day) => `Tabel lengkapnya: bun run report:autonomy --day ${day}`,
     why: "Kamu menerima email ini karena alamat ini ada di OPS_REPORT_EMAIL di server ini. Email ini dikirim sekali sehari.",
   },
+  accountOpened: {
+    subject: (plan) => `Lebih banyak orang bisa memakai akun ${plan} kamu`,
+    preheader: (plan) => `Apa yang mereka lakukan dengannya memakai paket ${plan} kamu dan batasnya.`,
+    headline: "Seseorang mengubah siapa yang bisa memakai akun AI kamu",
+    body: (by, account, plan) => [
+      { b: by },
+      ` mengubah siapa yang bisa memakai akun ${plan} kamu `,
+      { b: account },
+      `. Apa yang mereka lakukan dengannya memakai paketmu dan batasnya.`,
+    ],
+    account: "Akun",
+    by: "Diubah oleh",
+    setting: "Izin",
+    use: "Pakai di agen",
+    reply: "Layani semua orang",
+    was: "Sebelumnya",
+    now: "Sekarang",
+    everyone: "Semua orang di workspace",
+    admins: "Kamu dan administrator",
+    onlyYou: "Hanya kamu",
+    agentOwner: "Hanya pemilik agen",
+    note: "Untuk membatalkannya, buka akun di AI dan pemakaian lalu ubah izinnya.",
+    button: "Buka akun AI",
+    why: (org) =>
+      `Kamu menerima email ini karena kamu menghubungkan akun AI ini di ${org} dan orang lain mengubah siapa yang bisa memakainya.`,
+    personal: {
+      why: () =>
+        "Kamu menerima email ini karena kamu menghubungkan akun AI ini dan orang lain mengubah siapa yang bisa memakainya.",
+    },
+  },
   planOpened: {
     subject: (plan) => `Lebih banyak orang bisa bicara dengan agenmu lewat paket ${plan} kamu`,
     preheader: (plan) => `Percakapan mereka memakai paket ${plan} kamu dan batasnya.`,
@@ -573,6 +603,27 @@ export const words: EmailWords = {
       small: "Tautkan lagi di Pengaturan kalau itu kamu.",
       why: (surface) => `Kamu menerima email ini karena ${surface} pernah ditautkan ke akun agentes.chat kamu.`,
       picture: "Asistenmu, tidak lagi di ponselmu",
+    },
+    pinReset: {
+      subject: (surface) => `Pilih PIN ${surface} kamu`,
+      preheader: "Pilih PIN yang menyetujui tindakan dari aplikasi chat kamu.",
+      headline: (surface) => `Pilih PIN ${surface} kamu`,
+      body: (surface) =>
+        `Ada yang meminta tautan untuk memilih PIN yang kamu pakai untuk menyetujui tindakan dari ${surface}. Kalau itu kamu, pilih PIN di halaman yang dibuka tombol ini.`,
+      button: "Pilih PIN saya",
+      small: "Tautan ini berlaku sekali, selama satu jam. Kalau bukan kamu, abaikan email ini. Tidak ada yang berubah.",
+      why: (surface) => `Kamu menerima email ini karena ${surface} ditautkan ke akun agentes.chat kamu.`,
+    },
+    pinLocked: {
+      subject: (surface) => `PIN ${surface} kamu terkunci`,
+      preheader: "Tiga kali PIN salah berturut-turut. Menyetujui dari aplikasi chat kamu dijeda untuk sementara.",
+      headline: (surface) => `PIN ${surface} kamu terkunci`,
+      body: (surface, time) =>
+        `Seseorang memasukkan PIN yang salah tiga kali berturut-turut untuk menyetujui tindakan dari ${surface}. Menyetujui dari ${surface} dijeda selama ${time}.`,
+      lockedFor: ["15 menit", "1 jam", "24 jam"],
+      small: (surface) =>
+        `Kalau itu kamu, coba lagi nanti. Kalau bukan, putuskan tautan ${surface} di pengaturan notifikasi kamu, supaya tidak ada yang bisa menyetujui dari sana.`,
+      button: "Buka pengaturan notifikasi",
     },
   },
   supportReply: {

@@ -1,6 +1,7 @@
 import type { Agent } from "@agenteschat/client";
 import { askKindWords } from "@agenteschat/client/lib/approval-words";
 import {
+  BoundedMap,
   cx,
   EventPill,
   EventPillMore,
@@ -177,7 +178,7 @@ export type RequestAnswer = {
  * How tall each waiting card last stood, by request: the card that takes its place once answered (often another
  * component instance, its caller's branches differ) grows or shrinks from there instead of jumping.
  */
-const waitingHeights = new Map<string, number>();
+const waitingHeights = new BoundedMap<string, number>(500);
 const SETTLE_MS = 220;
 
 /**

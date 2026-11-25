@@ -967,6 +967,8 @@ describe("the computer", () => {
     };
     const tools = await source.tools(ctx);
     expect(tools.map((t) => [t.name, t.scope, t.connectionId, t.sensitive === true])).toEqual([
+      // One list for every git host, with no connection of its own.
+      ["list_repositories", "", undefined, false],
       ["git_clone", "github:git.read", connection.id, false],
       ["open_pull_request", "github:pr.write", connection.id, false],
       ["delete_branches", "github:git.write", connection.id, true],

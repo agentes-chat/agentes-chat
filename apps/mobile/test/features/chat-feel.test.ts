@@ -163,7 +163,9 @@ describe("older pages", () => {
   });
 
   test("going to a message reads the page around it at any distance; a failed read says so, a 404 says it's gone", () => {
-    expect(chat).toContain(".messages(orgId, channelId, { around: seek, limit: SEEK_PAGE })");
+    expect(chat).toContain(
+      ".messages(orgId, channelId, { around: seek, limit: SEEK_PAGE, onCards: cardsInto(qc, orgId) })",
+    );
     expect(chat).toContain("const gone = error === undefined || (error instanceof ApiError && error.status === 404);");
     expect(chat).toContain('toast({ title: gone ? t("channel.jumpMissing") : t("common.loadFailed"), icon: "x" });');
     // Away from the latest page: newer pages as the person scrolls down, never pinned to that end.
@@ -363,7 +365,8 @@ describe("a voice message's row", () => {
     expect(row).toContain("const starting = useSyncExternalStore(subscribePlayback, startingId) === clipId;");
     expect(row).toContain('<ActivityIndicator size="small" color={c.bg} />');
     const toggle = between(row, "const toggle = () => {", "const seek =");
-    expect(toggle.indexOf("voiceAudioGone(")).toBeGreaterThan(toggle.indexOf("const failed = () => {"));
+    expect(toggle.indexOf("isGone?.()")).toBeGreaterThan(toggle.indexOf("const failed = () => {"));
+    expect(row).toContain("isGone={() => voiceAudioGone(url, authedFetch as typeof fetch)}");
     expect(toggle).toContain("onError: failed,");
     expect(toggle).toContain("}).catch(failed);");
     // Where it stands is the playback module's: a row drawn again mid-play shows it.

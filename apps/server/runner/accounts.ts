@@ -151,6 +151,11 @@ import type { TaskSecrets } from "./tasks";
 
 /** A fresh look at every account's status happens at most this often (each one runs the CLI). */
 export const ACCOUNTS_TTL_MS = 10 * 60_000;
+/**
+ * After an inconclusive status look (`statusUnknown`), the first retry runs after this, doubling while under
+ * `ACCOUNTS_TTL_MS`: past it, the next list looks again anyway.
+ */
+export const ACCOUNTS_RETRY_MS = 30_000;
 /** An account's usage is probed at most this often. */
 export const USAGE_TTL_MS = 5 * 60_000;
 /** A provider that answered 429 isn't asked again before this. */
@@ -588,6 +593,11 @@ const GROK_AUTH_FILE = "auth.json";
 const MAX_GROK_AUTH_CHARS = 64_000;
 /** How long an access token lasts (7 days, its docs say): a copy dated further ahead than this isn't one. */
 export const GROK_TOKEN_MAX_MS = 8 * 24 * 3600_000;
+/**
+ * Grok Build renews its OIDC token on startup when it is close to `expires_at` (`PreRequest`, a few minutes ahead):
+ * within this of `expires_at`, "not authenticated" may be that renewal still running. Its window with room to spare.
+ */
+const GROK_REFRESH_LEEWAY_MS = 15 * 60_000;
 
 export interface GrokAuth {
   /** The whole store, as JSON: another issuer's entry in it (a key's) stays. */
@@ -873,6 +883,14 @@ export const NETWORK_ENV = [
 
 /** Claude Code's switches to another company's cloud. */
 const CLOUD_ENV = ["CLAUDE_CODE_USE_BEDROCK", "CLAUDE_CODE_USE_VERTEX", "CLAUDE_CODE_USE_FOUNDRY"] as const;
+
+/**
+ * Claude Code's `cleanupPeriodDays` in the `--settings` of a sign-in the runner keeps (an account folder, or the one
+ * sign-in a system-mode computer lends to all its agents): transcripts of sessions idle this long go at the CLI's next
+ * start (its default is 30). Every agent on that sign-in writes there, so 30 days of 15-minute routines piled up. A
+ * session idle longer than this starts afresh. The computer owner's own sign-in keeps its own setting.
+ */
+export const ACCOUNT_TRANSCRIPT_DAYS = 14;
 
 /**
  * The `env` of a Claude Code turn's or task's own `--settings`, which outranks the project's settings (the agent
@@ -1240,13 +1258,28 @@ export function parseGrokLogin(output: string, final = false): { url: string; us
   return final || /[?&](?:user_)?code=/i.test(first.url) ? { url: first.url } : null;
 }
 
-/** `grok models`: signed in unless it says it isn't, with a sign-in file in the folder. */
+const GROK_SIGN_OUT_WORDS = /not (?:authenticated|logged in|signed in)/i;
+const GROK_REVOKED_WORDS = /\binvalid_grant\b/i;
+
+/**
+ * `grok models`: signed in when it exits 0 without saying it isn't, with a sign-in file in the folder. With a sign-in
+ * file there, a crash or timeout — or "not authenticated" while an expired OIDC session (`refreshDue`) is still kept on
+ * disk for self-healing after a transient refresh failure — says nothing for sure (`statusUnknown`). An explicit
+ * `invalid_grant` is always a conclusive sign-out even if `auth.json` is still on disk.
+ */
 export function parseGrokStatus(
   status: number | null,
   output: string,
   hasAuth: boolean,
+  refreshDue = false,
 ): Omit<RunnerAccountInfo, "id" | "kind"> {
-  return { loggedIn: hasAuth && status === 0 && !/not (?:authenticated|logged in|signed in)/i.test(stripAnsi(output)) };
+  if (!hasAuth) return { loggedIn: false };
+  const text = stripAnsi(output);
+  if (GROK_REVOKED_WORDS.test(text)) return { loggedIn: false };
+  const saidOut = GROK_SIGN_OUT_WORDS.test(text);
+  if (status === 0 && !saidOut) return { loggedIn: true };
+  if (saidOut && !refreshDue) return { loggedIn: false };
+  return { loggedIn: false, statusUnknown: true };
 }
 
 /**
@@ -1398,6 +1431,8 @@ export interface AccountManagerOptions {
   ttlMs?: number;
   finishedKeepMs?: number;
   listTtlMs?: number;
+  /** Tests: `ACCOUNTS_RETRY_MS`, the first wait before re-checking an inconclusive status look. */
+  statusRetryMs?: number;
   /** Tests: `USAGE_TTL_MS`, `USAGE_NOTIFY_MS`, how long a probe may take, and the HTTP client of the key probes. */
   usageTtlMs?: number;
   /** Tests: `TOKEN_RECHECK_MS`. */
@@ -1514,6 +1549,8 @@ export class AccountManager {
   private readonly probing = new Set<string>();
   private usageSent = 0;
   private usageTimer: ReturnType<typeof setTimeout> | null = null;
+  private retryWait = 0;
+  private retryTimer: ReturnType<typeof setTimeout> | null = null;
   /** ChatGPT sign-ins for all agents a turn is refreshing now (`codexGrant`). */
   private readonly refreshing = new Map<string, { at: number; done: Promise<void>; resolve: () => void }>();
 
@@ -2550,17 +2587,40 @@ export class AccountManager {
     // With the switch off or the self-check failing, no CLI runs on its store: it stays as last known.
     if (cliShared && !this.opts.sharedLogin?.ready())
       return { id, kind, loggedIn: false, statusUnknown: true, ...shared };
-    const r = await this.serial(
+    const { r, afterGrok } = await this.serial(
       id,
-      async () => {
+      async (): Promise<{ r: CliResult; afterGrok: GrokAuth | null }> => {
         const { command, env } = cliShared
           ? this.sharedCli(id)
           : { command: this.command(kind), env: this.env(kind, dir) };
-        return runCli(command, STATUS_ARGS[kind], env, this.opts.statusTimeoutMs ?? STATUS_TIMEOUT_MS);
+        const timeout = this.opts.statusTimeoutMs ?? STATUS_TIMEOUT_MS;
+        const beforeGrok = kind === "grok" ? readGrokAuth(dir) : null;
+        let res = await runCli(command, STATUS_ARGS[kind], env, timeout);
+        if (kind !== "grok") return { r: res, afterGrok: null };
+        let after = readGrokAuth(dir);
+        // Grok Build 1.0.73 prints "You are not authenticated." when `auth.json` starts expired, even as its own
+        // background OIDC refresh renews `auth.json` before `grok models` exits: one more look reads the fresh token
+        // and the account's full model list.
+        const refreshed =
+          after !== null &&
+          (beforeGrok === null ||
+            after.expiresAt > beforeGrok.expiresAt ||
+            after.refreshToken !== beforeGrok.refreshToken);
+        if (refreshed && !parseGrokStatus(res.status, `${res.stdout}\n${res.stderr}`, true).loggedIn) {
+          res = await runCli(command, STATUS_ARGS[kind], env, timeout);
+          after = readGrokAuth(dir);
+        }
+        return { r: res, afterGrok: after };
       },
       this.cliOps,
-    ).catch((err: unknown): CliResult => ({ status: null, stdout: "", stderr: String(err) }));
+    ).catch((err: unknown): { r: CliResult; afterGrok: GrokAuth | null } => ({
+      r: { status: null, stdout: "", stderr: String(err) },
+      afterGrok: null,
+    }));
     if (out) out.said = saidIn(withoutTokens(stripAnsi(`${r.stdout}\n${r.stderr}`)));
+    const now = (this.opts.now ?? Date.now)();
+    const refreshDue =
+      afterGrok !== null && afterGrok.expiresAt > 0 && afterGrok.expiresAt <= now + GROK_REFRESH_LEEWAY_MS;
     // Codex says it on stderr.
     const status =
       kind === "claude_code"
@@ -2568,13 +2628,18 @@ export class AccountManager {
         : kind === "cursor"
           ? parseCursorStatus(r.status, `${r.stdout}\n${r.stderr}`)
           : kind === "grok"
-            ? parseGrokStatus(r.status, `${r.stdout}\n${r.stderr}`, existsSync(path.join(dir, "auth.json")))
+            ? parseGrokStatus(
+                r.status,
+                `${r.stdout}\n${r.stderr}`,
+                existsSync(path.join(dir, GROK_AUTH_FILE)),
+                refreshDue,
+              )
             : kind === "antigravity"
               ? parseAgyStatus(r.status, `${r.stdout}\n${r.stderr}`, agyAuthOf(dir))
               : parseCodexStatus(r.status, `${r.stdout}\n${r.stderr}`);
     if (isListingKind(kind) && status.loggedIn) this.keepListed(kind, id, LISTED_BY[kind](r.stdout));
     // Timed out, or didn't start.
-    const unknown = r.status === null ? { statusUnknown: true as const } : {};
+    const unknown = r.status === null && kind !== "grok" ? { statusUnknown: true as const } : {};
     return { id, kind, ...status, ...unknown, ...shared };
   }
 
@@ -2679,11 +2744,31 @@ export class AccountManager {
   refresh(announce = false): Promise<RunnerAccountInfo[]> {
     if (announce) this.announce = true;
     if (this.listing) return this.listing;
+    if (this.retryTimer) {
+      clearTimeout(this.retryTimer);
+      this.retryTimer = null;
+    }
     const run = this.lookAll()
       .then((value) => {
         if (this.listing === run) {
           const changed = JSON.stringify(value) !== JSON.stringify(this.cache?.value ?? []);
           this.cache = { at: Date.now(), value };
+          const unsure = value.some(
+            (a) => a.statusUnknown && !(this.isCliShared(a.kind, a.id) && !this.opts.sharedLogin?.ready()),
+          );
+          const ttl = this.opts.listTtlMs ?? ACCOUNTS_TTL_MS;
+          const base = this.opts.statusRetryMs ?? ACCOUNTS_RETRY_MS;
+          const wait = unsure ? (this.retryWait ? this.retryWait * 2 : base) : 0;
+          this.retryWait = Math.min(wait, ttl);
+          // A wait as long as the list's TTL is no retry: the next `list` or `snapshot` looks again by itself, so an
+          // account that stays inconclusive (a CLI gone from the computer) never keeps a timer asking.
+          if (unsure && wait < ttl && !this.closed) {
+            this.retryTimer = setTimeout(() => {
+              this.retryTimer = null;
+              if (!this.closed) void this.refresh().catch(() => undefined);
+            }, wait);
+            this.retryTimer.unref?.();
+          }
           if (changed || this.announce) this.changed();
           this.announce = false;
         }
@@ -2710,6 +2795,11 @@ export class AccountManager {
    */
   invalidate() {
     if (this.cache) this.cache = { ...this.cache, at: 0 };
+    if (this.retryTimer) {
+      clearTimeout(this.retryTimer);
+      this.retryTimer = null;
+    }
+    this.retryWait = 0;
     this.listing = null;
   }
 
@@ -3171,6 +3261,8 @@ export class AccountManager {
   async close() {
     this.closed = true;
     if (this.usageTimer) clearTimeout(this.usageTimer);
+    if (this.retryTimer) clearTimeout(this.retryTimer);
+    this.retryTimer = null;
     this.probeQueue.length = 0;
     const waiting = [...this.logins.values()].filter((l) => l.state === "waiting");
     for (const l of waiting) this.settle(l, "failed", "The runner stopped");

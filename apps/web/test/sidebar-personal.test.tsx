@@ -120,7 +120,7 @@ describe("a personal workspace's sidebar", () => {
       .map((l) => l.querySelector(".ac-menu__label")?.firstChild?.textContent);
     expect(names).toEqual([
       "Início",
-      "Propostas de melhoria",
+      "Melhorias dos agentes",
       "Rotinas",
       "Drive",
       "Calendário",
@@ -138,14 +138,12 @@ describe("a personal workspace's sidebar", () => {
 
   test("a tool set to show when there's something comes into sight beside the inbox while something waits", async () => {
     const rows = () => [...nav().querySelectorAll(".sidebar__tools .sidebar__item-label")].map((l) => l.textContent);
-    await go({ ...personal(), sidebarItems: { proposals: "auto" } });
+    await go({ ...personal(), sidebarItems: { threads: "auto" } });
     expect(rows()).toEqual(["Caixa de entrada"]);
     cleanup();
-    const state = personal();
-    const first = state.proposals[0];
-    if (first) Object.assign(first, { status: "pending", canDecide: true });
-    await go({ ...state, sidebarItems: { proposals: "auto" } });
-    expect(rows()).toEqual(["Caixa de entrada", "Propostas de melhoria"]);
+    // A thread I follow has a reply I haven't read: Threads has something.
+    await go({ ...personal(), sidebarItems: { threads: "auto" }, unreadThreads: 1 });
+    expect(rows()).toEqual(["Caixa de entrada", "Threads"]);
   });
 
   test("the agents have no header; New agent sits right under them and opens the new agent's card (ADR 0164)", async () => {

@@ -1,5 +1,5 @@
 import { Popover as RPopover } from "radix-ui";
-import { type KeyboardEvent, type ReactNode, useEffect, useId, useMemo, useState } from "react";
+import { type KeyboardEvent, type ReactNode, useEffect, useId, useMemo, useRef, useState } from "react";
 import { cx } from "../cx";
 import { EDGE_ROOM } from "../floating";
 import { matchesWords } from "../search";
@@ -12,6 +12,8 @@ export interface SearchSelectLabels {
   search: string;
   searchPlaceholder: string;
   noResults: string;
+  /** With no option at all and nothing typed; default: `noResults`. */
+  empty?: string;
   /** Accessible name of the list ("Modelos"). */
   list: string;
 }
@@ -26,11 +28,18 @@ export interface SearchSelectProps<V extends string = string, O extends SelectOp
   groupLabel?: (group: string) => string;
   /** Whether an option is among what was typed; default: every word in its label, value or group. */
   matches?: (option: O, query: string) => boolean;
-  /** A row before its check; default: its leading mark, label and description, as `Select` draws them. */
+  /** A row; default: its leading mark, label and description, as `Select` draws them. */
   renderOption?: (option: O) => ReactNode;
   /** What the trigger shows; default: the chosen option's face or logo and its label, as `Select`'s, else `placeholder`. */
   renderValue?: (option: O | undefined) => ReactNode;
   placeholder?: string;
+  /**
+   * Under the list, always (also while searching, also with no option): what to do when what is sought isn't there
+   * ("Add account"). `close` shuts the list first.
+   */
+  footer?: (close: () => void) => ReactNode;
+  /** Opens with the list shown (a link that leads straight to the choice). */
+  defaultOpen?: boolean;
   id?: string;
   disabled?: boolean;
   "aria-label"?: string;
@@ -67,8 +76,8 @@ function groupsOf<O extends SelectOption>(options: O[]) {
 
 /**
  * One choice from a long list: our trigger, then a glass dropdown with a search over the options, in their groups,
- * the chosen one checked. Combobox semantics, arrows / Home / End / Page keys / Enter / Esc, `aria-activedescendant`.
- * A disabled option shows, but can't be picked.
+ * the chosen one on its plate, its name heavier. Combobox semantics, arrows / Home / End / Page keys / Enter / Esc, `aria-activedescendant`.
+ * A disabled option shows, but can't be picked. `footer` stays under the list whatever is typed.
  */
 export function SearchSelect<V extends string = string, O extends SelectOption<V> = SelectOption<V>>({
   value,
@@ -80,6 +89,8 @@ export function SearchSelect<V extends string = string, O extends SelectOption<V
   renderOption,
   renderValue,
   placeholder,
+  footer,
+  defaultOpen = false,
   id,
   disabled,
   className,
@@ -88,6 +99,13 @@ export function SearchSelect<V extends string = string, O extends SelectOption<V
   const wiring = useFieldControl({ id });
   const listId = useId();
   const [open, setOpen] = useState(false);
+  // Asked to open shown: once, as soon as it can be used (a list still loading starts disabled).
+  const shownOnce = useRef(false);
+  useEffect(() => {
+    if (!defaultOpen || disabled || shownOnce.current) return;
+    shownOnce.current = true;
+    setOpen(true);
+  }, [defaultOpen, disabled]);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const all = useMemo(() => (Array.isArray(options) ? options : open ? options() : []), [options, open]);
@@ -191,8 +209,10 @@ export function SearchSelect<V extends string = string, O extends SelectOption<V
                 onKeyDown={onKey}
               />
             </div>
-            <div className="ac-tz__list" role="listbox" id={listId} aria-label={labels.list}>
-              {flat.length === 0 && <p className="ac-tz__empty">{labels.noResults}</p>}
+            <div className="ac-tz__list ac-search__list" role="listbox" id={listId} aria-label={labels.list}>
+              {flat.length === 0 && (
+                <p className="ac-tz__empty">{query.trim() ? labels.noResults : (labels.empty ?? labels.noResults)}</p>
+              )}
               {groups.map(([group, list], g) => {
                 const rows = list.map((o) => {
                   index += 1;
@@ -212,13 +232,6 @@ export function SearchSelect<V extends string = string, O extends SelectOption<V
                       onClick={() => pick(o)}
                     >
                       {renderOption ? renderOption(o) : defaultRow(o)}
-                      <span className="ac-tz__check" aria-hidden="true">
-                        {o.value === value && (
-                          <svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true">
-                            <path d="m5.5 10.5 3 3 6-7" fill="none" stroke="currentColor" strokeWidth="2" />
-                          </svg>
-                        )}
-                      </span>
                     </div>
                   );
                 });
@@ -236,6 +249,13 @@ export function SearchSelect<V extends string = string, O extends SelectOption<V
                 );
               })}
             </div>
+            {footer && (
+              <div className="ac-tz__foot">
+                {/* biome-ignore lint/a11y/useSemanticElements: a menu's separator, drawn as every menu's */}
+                <div className="ac-menu__separator" role="separator" />
+                {footer(() => setOpen(false))}
+              </div>
+            )}
           </RPopover.Content>
         </RPopover.Portal>
       </RPopover.Root>

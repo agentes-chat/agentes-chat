@@ -24,7 +24,7 @@ import { type AgentStyle, isAgentStyle, saveAgentStyle } from "./agent-style";
 import { dropAgentRules } from "./approval-rules";
 import { revokeMemberApps } from "./apps/revoke";
 import { recordAudit } from "./audit";
-import { caches } from "./cache";
+import { caches, cachesEnabled } from "./cache";
 import { memberCardVia } from "./card-via";
 import {
   assertOwnWallpaper,
@@ -2566,7 +2566,18 @@ export async function joinOrganization(
 
 /** Marks a person as seen now in an organization (WebSocket connect/disconnect). */
 /** Not while the person is hidden: a "last seen" that keeps moving would give them away. */
+/** A person's "last seen" is written at most this often per workspace and process: every socket opens and closes it. */
+export const LAST_SEEN_EVERY_MS = 5 * 60_000;
+const lastSeenWritten = new Map<string, number>();
+
 export async function touchLastSeen(db: Database, orgId: string, userId: string, at = new Date()) {
+  if (cachesEnabled()) {
+    const key = `${orgId}:${userId}`;
+    if (at.getTime() - (lastSeenWritten.get(key) ?? Number.NEGATIVE_INFINITY) < LAST_SEEN_EVERY_MS) return;
+    // ponytail: forgets everyone at 50,000 people; each is written once more then.
+    if (lastSeenWritten.size >= 50_000) lastSeenWritten.clear();
+    lastSeenWritten.set(key, at.getTime());
+  }
   await db
     .update(organizationMembers)
     .set({ lastSeenAt: at })

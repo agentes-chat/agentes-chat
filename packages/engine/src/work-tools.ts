@@ -3,6 +3,7 @@ import { and, eq, schema } from "@agenteschat/db";
 import { runAuthority } from "./authority";
 import { cancelRun } from "./cancel";
 import { andList } from "./format";
+import { runColumns } from "./run-state";
 import { listsEveryTool } from "./tools/directory";
 import type { ToolContext, ToolDefinition, ToolOutput, ToolSource } from "./tools/types";
 import {
@@ -53,7 +54,7 @@ const planSchema = {
 async function runOf(ctx: ToolContext) {
   if (!ctx.runId || ctx.background || ctx.bridge?.taskId) return null;
   const [run] = await ctx.db
-    .select()
+    .select(runColumns)
     .from(agentRuns)
     .where(and(eq(agentRuns.id, ctx.runId), eq(agentRuns.orgId, ctx.orgId), eq(agentRuns.agentId, ctx.agentId)));
   return run && !run.background ? run : null;

@@ -231,11 +231,13 @@ describe("the right hand elsewhere", () => {
     await renderApp(`/org/${ORG_ID}/dm/agent/${LODI_ID}`, { api });
     await settle(8);
     const text = () => document.querySelector(".channel__messages")?.textContent;
-    expect(text()).toContain("Oi, eu sou o Lodi");
+    // The intro lands with the rows, never alone over their skeleton.
+    expect(text()).not.toContain("Oi, eu sou o Lodi");
     expect(text()).not.toContain("Como prefere que eu fale com você?");
     expect(screen().queryByRole("button", { name: "Montar o time" })).toBeNull();
     await act(async () => arrive());
     await settle(8);
+    expect(text()).toContain("Oi, eu sou o Lodi");
     expect(text()).toContain("Você acabou de entrar na Acme.");
     expect(text()).not.toContain("Como prefere que eu fale com você?");
   });

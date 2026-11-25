@@ -126,8 +126,8 @@ that is exactly the line isn't posted again) and sets `answerOwed` in the transc
   stay, and a reply is never emptied unless it is a whole line again. A stopped run's words, a computer turn cut after
   its tools and a run cut by a restart drop it too, reading the lines from the conversation (`linesSaid`), since a
   computer turn's lines reach the transcript only when the turn ends. `closingSummary` (the reply when the last model
-  call wrote nothing) reads only the words that came after the call, but the work called beside the line is work: a
-  run that did it and wrote nothing after closes with "Done." as any other.
+  call wrote nothing) reads only the words that came after the call. A run that wrote nothing after it is asked for its
+  answer, like any other; no closing line is made up for it.
 - **First in its step.** On the API model, `say_now` runs before the other calls of its step, whatever order the
   model wrote them in, so the line goes out before the work it announces; the results go back in the order of the
   calls. The step line shows no words for the call: they would be the line again.
@@ -204,3 +204,37 @@ whole reply. `say_now` can't come sooner than that first turn ends.
   the work, like the automatic status lines (ADR 0084), and it goes once the agent's own words come.
 - **`say_now` first.** `SAY_NOW_LINE` now asks for `say_now` as the very first call before slow work (9 characters
   more in the prompt).
+
+## Addendum 2026-11-24: a task's and a file's conversation, and one more line for a message taken in
+
+Two gaps left a person with nothing but the bar until the reply. In a task's or a file's conversation the tool refused
+the line, though the person who wrote there reads it as it goes. And a correction sent mid-task got no word from the
+agent: the run's one line was already spent, and the fast reply (`talker.ts`) can only say a message was noted.
+
+- **A task's and a file's conversation.** `sayNowApplies` takes them when a person wrote the message the run answers
+  (and a person is behind the run, outside a mission's thread). They were out only because their work never moves to
+  the background (`movableRun`), which says nothing of who reads them. Work an agent was handed there (its trigger is
+  an agent's message) still has no reader, and long work's updates (ADR 0121) stay as they were.
+- **One more line for a message taken in.** The triage of a message sent while the agent works (ADR 0112) is kept on
+  the run's trail: a `context` step with `steerTriage: { messageId, sure, line }` and the way as `reason`
+  (`noteTriage`, `steering.ts`; `steerJudgment` says whether the judge chose the way itself). `line` is true for a
+  correction or an addition (`interrupt`, `add`) the judge was sure of, in a running run where the line applies.
+  `say_now` then posts once more for the messages no line took yet (`linesOwed`), and the line keeps them
+  (`meta.sayNow.took`), so each message gets at most one line and a run's first line takes what came before it. Any
+  other call is answered `Already told them`, as before, and a message still unread refuses the line (§3). An `add`
+  that only stands for a judge that wasn't sure, a quick question (the fast reply's) and a separate request (a run of
+  its own) give no line. Without a judge there is no triage, so one line per run.
+- **Told with the message.** The tool's description alone didn't make agents use the second line: they went straight to
+  the reply. The message itself now reaches the agent with a word after it (`SAY_HOW_YOU_TAKE_IT`, `renderSteered`
+  with the run's id, live in a computer turn and at a model loop's next step): tell them in one short line how you take
+  this. Only where the triage opened a line, which in a model loop may come after the step that reads the message.
+- **One voice.** For a message the agent answers itself this way, the fast reply isn't asked (`TalkerSkip`
+  `own_line`): the agent knows how it takes the correction, the fast reply could only say it was noted.
+- **The prompt and the tool** say it: `SAY_NOW_LINE` ("once when they correct or add to it mid-work") and the tool's
+  description name the second case, about 115 characters more in every run that lists the tool.
+- **Why nothing was said can be told.** Every decision of the fast reply is a `context` step too (`talkerDecision`,
+  its outcome as `reason`), and the operator's trace gives both reasons. Neither step counts as the task moving
+  (`lastActivityAt`).
+- **The bar keeps the command.** A computer brain's own command is told as it starts (`agent.step`) and its permission
+  check a moment later (`agent.tool`), which cleared the step: the bar read "Thinking…" for as long as the command
+  ran. The check without words of its own now leaves the step it follows (`streams.ts`).

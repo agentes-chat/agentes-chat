@@ -707,7 +707,9 @@ export class CodexEventMapper {
         ];
       }
       case "turn.failed":
-        this.failed = this.clean(str((ev.error as { message?: unknown } | undefined)?.message) || "The turn failed");
+        this.failed = this.clean(
+          str((ev.error as { message?: unknown } | undefined)?.message) || this.lastError || "The turn failed",
+        );
         return [];
       case "error":
         this.lastError = this.clean(str(ev.message) || "error");

@@ -198,9 +198,9 @@ describe("the rows follow the same choice as the web", () => {
     expect(page).toContain("save(dm ? { dmStyle: s } : { channelStyle: s })");
   });
 
-  test("a conversation opens at the newest message until the person picks the last read, as on the web", async () => {
-    expect(openAtOf(undefined)).toBe("latest");
-    expect(openAtOf({ openAt: "read" })).toBe("read");
+  test("a conversation opens at the last read message until the person picks the newest, as on the web", async () => {
+    expect(openAtOf(undefined)).toBe("read");
+    expect(openAtOf({ openAt: "latest" })).toBe("latest");
     expect(await read("me/ChatLookPage.tsx")).toContain("const openAt = openAtOf(prefs);");
     expect(chatScreenSource()).toContain("opensAtLastRead(org?.chatPrefs");
   });

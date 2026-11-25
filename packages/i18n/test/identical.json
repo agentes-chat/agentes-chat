@@ -76,7 +76,6 @@
       "connectors.category.docs",
       "connectors.category.email",
       "connectors.category.marketing",
-      "connectors.mcp.title",
       "connectors.names.cloudflare_bindings",
       "connectors.names.cloudflare_observability",
       "database.provider.neon",
@@ -205,6 +204,7 @@
       "shell.soundPixel",
       "shell.threads",
       "skills.agentTitle",
+      "agentPage.tabs.skills",
       "skills.source.url",
       "skills.title",
       "skills.version",
@@ -346,6 +346,7 @@
       "codeSessions.tabs.terminalN"
     ],
     "es": [
+      "aiHub.modes.roles",
       "devices.iphone.path.general",
       "devices.cpus",
       "devices.memory",
@@ -637,6 +638,7 @@
       "codeSessions.tabs.terminalN"
     ],
     "fr": [
+      "agentPage.facts.budget",
       "usage.kinds.routines",
       "channel.tooLong.fileName",
       "calendar.moreRuns",
@@ -1160,9 +1162,12 @@
       "codeSessions.gitTab.commits",
       "codeTerminal.label",
       "codeSessions.tabs.talk",
-      "codeSessions.tabs.terminalN"
+      "codeSessions.tabs.terminalN",
+      "connectors.store.agents"
     ],
     "de": [
+      "agentPage.facts.budget",
+      "aiHub.detail.limits",
       "live.sheet.args.k",
       "live.sheet.args.x",
       "live.canvas.inks.orange",
@@ -1491,6 +1496,7 @@
       "shell.themeSystem",
       "shell.threads",
       "skills.agentTitle",
+      "agentPage.tabs.skills",
       "skills.name",
       "skills.source.url",
       "skills.title",
@@ -1662,6 +1668,7 @@
       "codeSessions.tabs.terminalN"
     ],
     "it": [
+      "agentPage.facts.budget",
       "live.sheet.args.a1",
       "live.sheet.args.k",
       "live.sheet.args.x",
@@ -2061,9 +2068,12 @@
       "codeSessions.home.was",
       "codeSessions.gitTab.label",
       "codeSessions.files.count",
-      "cliTools.files"
+      "cliTools.files",
+      "connectors.store.account"
     ],
     "nl": [
+      "agentPage.facts.budget",
+      "aiHub.accounts",
       "usage.kinds.routines",
       "calendar.moreRuns",
       "devices.iphone.steps.account",
@@ -2460,6 +2470,7 @@
       "shell.team",
       "shell.threads",
       "skills.agentTitle",
+      "agentPage.tabs.skills",
       "skills.source.url",
       "skills.title",
       "skills.version",
@@ -2740,7 +2751,9 @@
       "cliTools.progress.subagent",
       "cliTools.progress.agents",
       "codeTerminal.label",
-      "codeSessions.tabs.terminalN"
+      "codeSessions.tabs.terminalN",
+      "connectors.store.agents",
+      "connectors.store.account"
     ],
     "ja": [
       "live.sheet.args.k",
@@ -4158,7 +4171,8 @@
       "cliTools.progress.subagent",
       "cliTools.progress.agents",
       "codeTerminal.label",
-      "codeSessions.tabs.terminalN"
+      "codeSessions.tabs.terminalN",
+      "connectors.store.agents"
     ],
     "ru": [
       "live.canvas.sizes.short.s",
@@ -4396,7 +4410,9 @@
       "devices.connect.windows",
       "roles.icons.pullRequest",
       "live.card.slides",
-      "live.card.shapes"
+      "live.card.shapes",
+      "aiHub.orderGroup",
+      "aiHub.choice.api"
     ],
     "es": [
       "devices.os.android",
@@ -4432,7 +4448,12 @@
       "vault.field.websitePlaceholder",
       "vault.scope.personal",
       "vault.tab.personal",
-      "coding.commit"
+      "coding.commit",
+      "aiHub.orderGroup",
+      "aiHub.audience.roles",
+      "aiHub.pickRoles",
+      "aiHub.choice.api",
+      "aiHub.audience.rolesCount"
     ],
     "fr": [
       "devices.os.android",
@@ -4517,7 +4538,10 @@
       "live.slides.part.note",
       "live.slides.tools.photo",
       "live.text.noteTitle",
-      "coding.commit"
+      "coding.commit",
+      "aiHub.orderGroup",
+      "aiHub.choice.effort",
+      "aiHub.choice.api"
     ],
     "de": [
       "live.doc.styles.code",
@@ -4596,7 +4620,10 @@
       "settings.group.org",
       "threads.title",
       "roles.icons.person",
-      "coding.commit"
+      "coding.commit",
+      "aiHub.orderGroup",
+      "aiHub.limits",
+      "aiHub.choice.api"
     ],
     "it": [
       "devices.status.offline",
@@ -4651,7 +4678,10 @@
       "find.filterWord.in",
       "connectors.accountTitle",
       "roles.icons.mail",
-      "coding.commit"
+      "coding.commit",
+      "aiHub.orderGroup",
+      "aiHub.choice.account",
+      "aiHub.choice.api"
     ],
     "nl": [
       "devices.status.offline",
@@ -4741,7 +4771,13 @@
       "live.canvas.tools.pen",
       "live.doc.styles.code",
       "coding.project",
-      "coding.commit"
+      "coding.commit",
+      "aiHub.accounts",
+      "aiHub.orderGroup",
+      "aiHub.choice.account",
+      "aiHub.choice.model",
+      "aiHub.choice.api",
+      "aiHub.missionAi"
     ],
     "ja": [
       "devices.os.android",
@@ -4756,7 +4792,10 @@
       "me.account.save",
       "onb.emailsPlaceholder",
       "vault.field.keyNamePlaceholder",
-      "vault.field.websitePlaceholder"
+      "vault.field.websitePlaceholder",
+      "aiHub.orderGroup",
+      "aiHub.choice.api",
+      "aiHub.missionAi"
     ],
     "ko": [
       "devices.os.android",
@@ -4768,7 +4807,10 @@
       "files.type.pdf",
       "onb.emailsPlaceholder",
       "vault.field.keyNamePlaceholder",
-      "vault.field.websitePlaceholder"
+      "vault.field.websitePlaceholder",
+      "aiHub.orderGroup",
+      "aiHub.choice.api",
+      "aiHub.missionAi"
     ],
     "zh-Hans": [
       "devices.os.android",
@@ -4782,7 +4824,10 @@
       "files.type.pdf",
       "onb.emailsPlaceholder",
       "vault.field.keyNamePlaceholder",
-      "vault.field.websitePlaceholder"
+      "vault.field.websitePlaceholder",
+      "aiHub.orderGroup",
+      "aiHub.choice.api",
+      "aiHub.missionAi"
     ],
     "id": [
       "files.type.spreadsheet",
@@ -4817,7 +4862,11 @@
       "files.type.video",
       "me.status",
       "roles.icons.mail",
-      "coding.commit"
+      "coding.commit",
+      "aiHub.orderGroup",
+      "aiHub.choice.model",
+      "aiHub.choice.api",
+      "aiHub.missionAi"
     ],
     "tr": [
       "devices.os.android",
@@ -4836,7 +4885,10 @@
       "vault.field.keyNamePlaceholder",
       "vault.field.websitePlaceholder",
       "files.type.video",
-      "coding.commit"
+      "coding.commit",
+      "aiHub.orderGroup",
+      "aiHub.choice.model",
+      "aiHub.choice.api"
     ],
     "pl": [
       "devices.status.offline",
@@ -4870,7 +4922,11 @@
       "time.short.days",
       "me.status",
       "roles.reach.agents",
-      "coding.commit"
+      "coding.commit",
+      "aiHub.orderGroup",
+      "aiHub.choice.model",
+      "aiHub.choice.api",
+      "aiHub.missionAi"
     ],
     "ru": [
       "devices.os.android",
@@ -4882,7 +4938,9 @@
       "files.type.pdf",
       "onb.emailsPlaceholder",
       "vault.field.keyNamePlaceholder",
-      "vault.field.websitePlaceholder"
+      "vault.field.websitePlaceholder",
+      "aiHub.orderGroup",
+      "aiHub.choice.api"
     ]
   },
   "desktop": {

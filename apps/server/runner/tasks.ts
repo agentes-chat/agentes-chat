@@ -36,12 +36,14 @@ import {
   type TaskDenial,
   type TaskDone,
   type TaskExecutor,
+  type TaskRoomReport,
   type TaskStart,
 } from "@agenteschat/adapters/machine-protocol";
 import { claudeCodeModel, planForTurn, planOf } from "@agenteschat/providers/plans";
 import {
   ACCOUNT_MISSING_MESSAGE,
   ACCOUNT_SIGNED_OUT,
+  ACCOUNT_TRANSCRIPT_DAYS,
   type AccountFolders,
   type AccountGrant,
   accountEnv,
@@ -56,6 +58,8 @@ import {
 import { codexThreadKey, unwrapShell } from "./brain-codex";
 import { coAuthorLines } from "./co-authors";
 import { commandApproval, ownBranches } from "./command-gate";
+import { gb } from "./computer-now";
+import { MIN_FREE_BYTES } from "./desktop-session";
 import { RunnerError } from "./errors";
 import { shellCommand, windowsTaskkill } from "./exec";
 import { envValue, findOnWindowsPath, NO_CWD_LOOKUP, pickedCodex, winQuote } from "./executors";
@@ -116,6 +120,39 @@ export { excludeLocally };
  */
 
 export const DEFAULT_MAX_CONCURRENT_TASKS = 3;
+/**
+ * Where free memory is read, tasks start on room, not on a count (`TaskManager.noRoom`): what a task grows into (a
+ * coding CLI, as a turn), how long a started one takes to show in the reading, and the floor kept for the person's own
+ * apps (`MIN_FREE_BYTES`, as turns), lowered while the person pushes harder.
+ */
+export const TASK_BYTES = 0.6e9;
+export const TASK_SETTLE_MS = 30_000;
+export const PUSH_HARDER_FREE_BYTES = 0.5 * 1024 ** 3;
+/** Only against a runaway loop: never shown, never the room check. */
+export const TASK_CEILING = 64;
+/** How long a task without room waits while idle CLIs and browsers close for it, before `no_slot`. */
+export const TASK_RECLAIM_MS = 5_000;
+
+/** The room a task start reads: free memory now (null: unknown here) and whether the processor stays near full. */
+export interface TaskRoomReading {
+  free: number | null;
+  cpuBusy: boolean;
+}
+
+/** How long a room that changed only in its numbers waits before it is told again (`roomNews`). */
+export const TASK_ROOM_QUIET_MS = 120_000;
+
+/**
+ * Whether a new room is worth telling the server: on it every member's apps read the devices list again. At once when
+ * the computer fills or frees up, or the processor or Push harder flips; free memory moving a little waits.
+ */
+export function roomNews(said: TaskRoomReport | null, now: TaskRoomReport, sinceMs: number) {
+  if (!said) return true;
+  const turn = (r: TaskRoomReport) => `${r.more === 0}|${r.cpuBusy}|${r.pushHarder}`;
+  if (turn(said) !== turn(now)) return true;
+  return sinceMs >= TASK_ROOM_QUIET_MS && JSON.stringify(said) !== JSON.stringify(now);
+}
+
 export const DEFAULT_TASK_MAX_SECONDS = 4 * 3600;
 /** Hard cap on `maxSeconds` (a day). */
 export const TASK_MAX_SECONDS_CAP = 24 * 3600;
@@ -305,6 +342,12 @@ export interface TaskManagerOptions {
   /** System mode, in a worker: root stops the CLI of a task it hosts. */
   hostedStop?: (taskId: string) => void;
   now?: () => number;
+  /** Free memory and processor now; without it (or reading null) the count `maxConcurrent` decides. */
+  room?: () => TaskRoomReading;
+  /** Closes one idle CLI or browser for a task without room; false when none was left. */
+  reclaim?: () => Promise<boolean>;
+  /** The computer's owner turned Push harder on: the floor drops to `PUSH_HARDER_FREE_BYTES`, the processor is ignored. */
+  pushHarder?: boolean;
 }
 
 /**
@@ -852,6 +895,8 @@ export class TaskManager {
   private readonly launches = new Map<string, { env: NodeJS.ProcessEnv; token?: string }>();
   /** Tasks whose CLI root runs for this very process: one it doesn't know began before a restart and has ended. */
   private readonly hostedRuns = new Set<string>();
+  /** When tasks were admitted, over the last `TASK_SETTLE_MS`. */
+  private startedAt: number[] = [];
   private send: ((frame: RunnerFrame) => void) | null = null;
   private caffeinate: ChildProcess | null = null;
   private readonly log: (line: string) => void;
@@ -1006,9 +1051,66 @@ export class TaskManager {
   }
 
   /** New limits from the config (the app's Preferences, or an edit): they apply to the next start. */
-  setLimits(limits: { maxConcurrent?: number; defaultMaxSeconds?: number }) {
+  setLimits(limits: { maxConcurrent?: number; defaultMaxSeconds?: number; pushHarder?: boolean }) {
     if (limits.maxConcurrent !== undefined) this.opts.maxConcurrent = limits.maxConcurrent;
     if (limits.defaultMaxSeconds !== undefined) this.opts.defaultMaxSeconds = limits.defaultMaxSeconds;
+    if (limits.pushHarder !== undefined) this.opts.pushHarder = limits.pushHarder;
+  }
+
+  /** Tasks started in the last `TASK_SETTLE_MS`: not in the memory reading yet. */
+  private settling() {
+    const now = (this.opts.now ?? Date.now)();
+    this.startedAt = this.startedAt.filter((at) => now - at < TASK_SETTLE_MS);
+    return this.startedAt.length;
+  }
+
+  /** Why one more task can't start now, or null when it can. */
+  private noRoom(push: boolean): string | null {
+    const { free, cpuBusy } = this.opts.room?.() ?? { free: null, cpuBusy: false };
+    if (free === null) {
+      const max = this.opts.maxConcurrent ?? DEFAULT_MAX_CONCURRENT_TASKS;
+      return this.running >= max
+        ? `This computer already runs ${max} background tasks (its limit). Wait for one to finish or cancel one.`
+        : null;
+    }
+    if (this.running >= TASK_CEILING) {
+      return `This computer already runs ${TASK_CEILING} background tasks, the most at once. Wait for one to finish.`;
+    }
+    const floor = push ? PUSH_HARDER_FREE_BYTES : MIN_FREE_BYTES;
+    if (free - this.settling() * TASK_BYTES < floor) {
+      return `No room for another task right now: ${gb(free)} of memory free. The next one starts when one ends.`;
+    }
+    if (cpuBusy && !push) {
+      return "No room for another task right now: the processor has been over 90% busy for the last minute. The next one starts when it calms down.";
+    }
+    return null;
+  }
+
+  /** About how many more tasks fit now; null where memory isn't read (the count decides there). */
+  room(): TaskRoomReport | null {
+    const { free, cpuBusy } = this.opts.room?.() ?? { free: null, cpuBusy: false };
+    if (free === null) return null;
+    const pushHarder = this.opts.pushHarder === true;
+    const left = free - this.settling() * TASK_BYTES - (pushHarder ? PUSH_HARDER_FREE_BYTES : MIN_FREE_BYTES);
+    const fit = left < 0 || (cpuBusy && !pushHarder) ? 0 : Math.floor(left / TASK_BYTES) + 1;
+    return {
+      more: Math.min(fit, Math.max(0, TASK_CEILING - this.running)),
+      freeGb: Math.round((free / 1024 ** 3) * 10) / 10,
+      cpuBusy,
+      pushHarder,
+    };
+  }
+
+  /** Room for one more task, closing idle CLIs and browsers for it for up to `TASK_RECLAIM_MS`; else `no_slot`. */
+  private async admit(push: boolean) {
+    let why = this.noRoom(push);
+    const reclaim = this.opts.reclaim;
+    if (why && reclaim && this.opts.room?.().free != null) {
+      const until = Date.now() + TASK_RECLAIM_MS;
+      while (why && Date.now() < until && (await reclaim().catch(() => false))) why = this.noRoom(push);
+    }
+    if (why) throw new RunnerError("no_slot", why);
+    this.startedAt.push((this.opts.now ?? Date.now)());
   }
 
   /** Starts the wrapper for a task folder, detached (it outlives this runner); a token goes on its descriptor 3. */
@@ -1064,13 +1166,7 @@ export class TaskManager {
     const taskId = String(req.taskId ?? "");
     const dir = this.dirOf(taskId);
     if (this.journal.tasks.some((t) => t.taskId === taskId)) throw new RunnerError("bad_request", "Duplicate task id");
-    const max = this.opts.maxConcurrent ?? DEFAULT_MAX_CONCURRENT_TASKS;
-    if (this.running >= max) {
-      throw new RunnerError(
-        "no_slot",
-        `This computer already runs ${max} background tasks (its limit). Wait for one to finish or cancel one.`,
-      );
-    }
+    await this.admit(this.opts.pushHarder === true || req.pushHarder === true);
     const executor: TaskExecutor = req.executor === "claude" || req.executor === "codex" ? req.executor : "shell";
     // A Codex task is `codex exec` with the network for its work, on a line cmd.exe would read: none of the Windows
     // sandbox its turns run in (`codex-windows.ts`, ADR 0053 §3) holds it yet.
@@ -1186,7 +1282,10 @@ export class TaskManager {
     const input = where ? `${where}\n\n${prompt}` : prompt;
     // On an account, Claude Code's endpoint and proxies are pinned in its own `--settings`, as a turn's: a project's
     // settings never send its sign-in elsewhere.
-    const accountSettings = executor === "claude" && signIn ? { env: accountSettingsEnv(plan, planModel) } : {};
+    const accountSettings =
+      executor === "claude" && signIn
+        ? { cleanupPeriodDays: ACCOUNT_TRANSCRIPT_DAYS, env: accountSettingsEnv(plan, planModel) }
+        : {};
     if (hosted) {
       // Its CLI's files and tools are root's and this worker's bridge's.
     } else if (missionId && this.opts.mcp) {

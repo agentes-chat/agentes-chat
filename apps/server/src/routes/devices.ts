@@ -75,7 +75,7 @@ const Status = z
       label: z.string().optional(),
       since: z.string(),
     }),
-    z.object({ kind: z.literal("busy"), running: z.number().int(), max: z.number().int() }),
+    z.object({ kind: z.literal("busy"), running: z.number().int(), max: z.number().int().nullable() }),
     z.object({ kind: z.literal("needs_you"), reason: Reason }),
     z.object({ kind: z.literal("preparing"), reason: Reason }),
     z.object({ kind: z.literal("paused"), until: z.string().nullable() }),
@@ -130,6 +130,13 @@ const Computer = z
     audience: Audience,
     status: Status,
     maxTasks: z.number().int().nullable(),
+    taskRoom: z
+      .object({ more: z.number().int(), freeGb: z.number(), cpuBusy: z.boolean(), pushHarder: z.boolean() })
+      .nullable()
+      .openapi({
+        description:
+          "Tasks start on room there, not on `maxTasks`: about how many more fit now, the free memory in GB, whether the processor stays near full, and the owner's Push harder. Null: the count decides.",
+      }),
     toolchains: z.record(z.string(), z.string()),
     opensXcode: z.boolean().openapi({
       description: "A Mac whose agentes.chat opens Xcode and looks at its iPhone again for the iPhone guide.",
@@ -287,7 +294,7 @@ export function deviceAppRoutes(deps: AppDeps) {
       summary:
         "Rename a computer, change who can use it, mark it the workspace's, let replies spill over to it, set its tasks at once",
       description:
-        "Its owner: anything. An admin: rename, mark it the workspace's, and narrow who can use someone's own computer (`device.widen_forbidden` otherwise). Never the workspace's computer (`machine.managed`). Only its owner turns spill-over on (`device.spill_owner_only`) and changes its tasks at once (`device.tasks_owner_only`; an admin too on a computer nobody connected), which the computer applies: it must be online (`machine.offline`) with an app that can (`machine.outdated`).",
+        "Its owner: anything. An admin: rename, mark it the workspace's, and narrow who can use someone's own computer (`device.widen_forbidden` otherwise). Never the workspace's computer (`machine.managed`). Only its owner turns spill-over on (`device.spill_owner_only`) and changes its tasks at once or Push harder (`device.tasks_owner_only`; an admin too on a computer nobody connected; never on a Cloud computer, `device.tasks_cloud`), which the computer applies: it must be online (`machine.offline`) with an app that can (`machine.outdated`).",
       request: {
         params: MachineParams,
         body: body(
@@ -297,6 +304,7 @@ export function deviceAppRoutes(deps: AppDeps) {
             belongsToWorkspace: z.boolean().optional(),
             spill: z.object({ own: z.boolean().optional(), others: z.boolean().optional() }).optional(),
             maxTasks: z.number().int().min(TASK_LIMIT_BOUNDS[0]).max(TASK_LIMIT_BOUNDS[1]).optional(),
+            pushHarder: z.boolean().optional(),
           }),
         ),
       },

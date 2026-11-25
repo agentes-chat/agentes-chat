@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, setSystemTime, test } from "bun:test";
 import { setupDom } from "../testing/dom";
 
 setupDom();
@@ -77,6 +77,67 @@ describe("VideoPlayer", () => {
     if (!video) throw new Error("no video");
     fireEvent.error(video);
     expect(failed).toBe(1);
+  });
+
+  test("its link went stale while the page stayed open: it loads once more and goes on from there", async () => {
+    let failed = 0;
+    player({ onFailed: () => failed++ });
+    const [v] = videos() as [HTMLVideoElement];
+    const video = fake(v, { ready: true, time: 42, playing: true });
+    let ready = 1;
+    let loads = 0;
+    Object.defineProperties(v, {
+      error: { configurable: true, get: () => ({ code: 2 }) },
+      readyState: { configurable: true, get: () => ready },
+      load: {
+        configurable: true,
+        value: () => {
+          loads++;
+          ready = 0;
+          v.currentTime = 0;
+        },
+      },
+    });
+    fireEvent.error(v);
+    expect([loads, failed]).toEqual([1, 0]);
+    await act(async () => {
+      ready = 1;
+      fireEvent.loadedMetadata(v);
+    });
+    expect(v.currentTime).toBe(42);
+    expect(video.plays.count).toBe(1);
+    // A second failure right after is the caller's, who shows the file instead.
+    fireEvent.error(v);
+    expect([loads, failed]).toEqual([1, 1]);
+  });
+
+  test("a page left open for hours: each fresh link that expires in turn is asked for again", () => {
+    let failed = 0;
+    player({ onFailed: () => failed++ });
+    const [v] = videos() as [HTMLVideoElement];
+    fake(v, { ready: true, time: 42, playing: true });
+    let loads = 0;
+    Object.defineProperties(v, {
+      error: { configurable: true, get: () => ({ code: 2 }) },
+      load: { configurable: true, value: () => loads++ },
+    });
+    try {
+      for (const at of ["09:00", "10:10", "11:20"]) {
+        setSystemTime(new Date(`2026-01-05T${at}:00Z`));
+        fireEvent.error(v);
+      }
+      expect([loads, failed]).toEqual([3, 0]);
+      setSystemTime(new Date("2026-01-05T11:20:30Z"));
+      fireEvent.error(v);
+      expect([loads, failed]).toEqual([3, 1]);
+    } finally {
+      setSystemTime();
+    }
+  });
+
+  test("crossOrigin reaches the element, so its frames can be read back from a canvas", () => {
+    player({ crossOrigin: "anonymous" });
+    expect(document.querySelector("video")?.getAttribute("crossorigin")).toBe("anonymous");
   });
 
   test("speed goes 1×, 1.5×, 2× and back", () => {

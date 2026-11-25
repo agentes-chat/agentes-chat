@@ -168,7 +168,8 @@ export function parseAgyError(stderr: string): { message: string; limit: boolean
   }
   const str = (v: unknown) => (typeof v === "string" ? v : typeof v === "number" ? String(v) : "");
   const status = `${str(o.status)} ${str(o.canonical_status)} ${str(o.code)} ${str(o.http_status)}`;
-  const message = (str(o.message) || str(o.error) || status.trim() || "The model call failed").slice(0, 500);
+  const raw = line.slice("AGY_ERROR:".length).trim();
+  const message = (str(o.message) || str(o.error) || status.trim() || raw).slice(0, 500);
   return {
     message,
     limit: /RESOURCE_EXHAUSTED|\b429\b/i.test(status) || AGY_LIMIT.test(message),

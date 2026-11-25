@@ -61,6 +61,7 @@ export {
   stickerSeed,
   WAVE_SECONDS,
 } from "./agent/stickers";
+export { BoundedMap } from "./bounded-map";
 export {
   BRAIN_GRID,
   BRAIN_KINDS,
@@ -223,6 +224,7 @@ export {
   type FilterChipProps,
   type FilterOption,
 } from "./components/FilterChip";
+export { FilterMenu, type FilterMenuChip } from "./components/FilterMenu";
 export { FoldRow } from "./components/FoldRow";
 export { GroupHeading } from "./components/GroupHeading";
 export { type Hosting, HostingScene, type Place, PlaceScene } from "./components/HostingScene";
@@ -369,7 +371,6 @@ export {
   SkeletonRow,
   Spinner,
   skeletonOnScreen,
-  TopProgress,
   useDelayed,
 } from "./components/Skeleton";
 export { StepTrack, type StepTrackState, type StepTrackStep } from "./components/StepTrack";
@@ -526,6 +527,7 @@ export { ditherCells, ditherSvg, ditherTones, ditherUrl } from "./sky/dither";
 export {
   drawSprite,
   holdSkies,
+  holdSkiesWhileAway,
   prefersReducedMotion,
   redrawSkies,
   type SkyBlob,

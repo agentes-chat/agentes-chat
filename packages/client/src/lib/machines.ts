@@ -579,9 +579,9 @@ export const otherThanHint = (hint: string | null | undefined, account: Pick<Mac
 
 /**
  * How long a sign-in's status reads may keep failing before it fails: a server restart and the runner's reconnect.
- * After a drop the runner dials again 1, 2, 4, 8, 16, then 32 s apart (`backoffDelay` in the runner, ±20 %). A restart
- * of up to about 30 s (deploy/deploy.sh) can miss the fifth dial, at 25 to 37 s, and wait for the sixth, at up to
- * 76 s; this covers it and the next read.
+ * After a drop the runner dials again at a random point within 1, 2, 4, 8, 16, then 32 s (`reconnectDelay` in
+ * `lib/backoff.ts`). A restart of up to about 30 s (deploy/deploy.sh) can miss the fifth dial, at up to 31 s, and wait
+ * for the sixth, at up to 63 s; this covers it and the next read.
  */
 export const LOGIN_RECONNECT_MS = 90_000;
 

@@ -1,4 +1,5 @@
 import type { ConnectorDef } from "@agenteschat/client";
+import { brandLook } from "@agenteschat/client/lib/brand-look";
 import { personalAllowed } from "@agenteschat/client/lib/connected";
 import { connectorDescription, connectorName, scopeText } from "@agenteschat/client/lib/scopes";
 import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
@@ -6,7 +7,6 @@ import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Dither } from "@/sky/Dither";
 import {
   Button,
   EmptyState,
@@ -29,32 +29,24 @@ import { LoadFailed } from "../shared/FirstUse";
 import { useDirectory } from "../shared/hooks";
 import { PushedHeader } from "../shared/parts";
 import { SheetHostProvider } from "../shared/SheetHost";
+import { BrandArt } from "./BrandArt";
 import { openConnection } from "./ConnectionScreen";
 import { ConnectorIcon } from "./ConnectorIcon";
 import { openService, ShelfRow, useGallery } from "./ConnectorsScreen";
 import { ConnectSheet } from "./ConnectSheet";
-import {
-  capabilityLines,
-  categoryIcon,
-  connectionOf,
-  galleryTiles,
-  relatedServices,
-  serviceFacts,
-  serviceSkyTones,
-} from "./logic";
+import { capabilityLines, categoryIcon, connectionOf, galleryTiles, relatedServices, serviceFacts } from "./logic";
 
-/** The page's sky, behind the bar and the mark; its color reaches this share of it before the page's own. */
+/** The page's brand art, behind the bar and the mark, going into the page under it. */
 const SKY = 300;
-const SKY_REACH = 0.7;
-/** The service's mark over its sky. */
+/** The service's mark over its art. */
 const MARK = 100;
 /** One column of the facts that slide sideways. */
 const FACT = 108;
 
 /**
  * A service of the catalog on a page of its own, pushed from its row in Conectores (or a category's, a search's, its
- * page's "Mais em …"): its mark in the middle of its own pixel sky (the product's dither in the service's color), its
- * name and what it is, then Conectar across the page, which goes straight to connecting (the sheet's connecting step;
+ * page's "Mais em …"): its mark in the middle of its brand's art (its mark in tilted rows, a brand color each, as the
+ * web's service dialog), its name and what it is, then Conectar across the page, which goes straight to connecting (the sheet's connecting step;
  * the page already said what it does). Under it the facts that slide sideways (its category, how many tools and how
  * many ask for approval, who connects it, how one signs in), what agents do with it (what always asks marked), the
  * same facts as a grouped list, and the others of its category. Connected, the page says so, who uses it, and opens
@@ -134,13 +126,13 @@ function Page({ def, g }: { def: ConnectorDef; g: ReturnType<typeof useGallery> 
   const related = relatedServices(def, offered);
   const users = (existing?.agentIds ?? []).filter((a) => dir.agentById.has(a));
   const connect = () => sheet.open(<ConnectSheet def={def} personal={personal} fromPage />);
-  // The sky moves with the page as every cover does: slower as it scrolls up, stretched into a pull down (never a
+  // The art moves with the page as every cover does: slower as it scrolls up, stretched into a pull down (never a
   // still band that leaves the page's gray above it).
   const { y, onScroll } = useCoverScroll();
 
   return (
     <View style={[styles.fill, { backgroundColor: c.grouped }]}>
-      {/* The clear bar over the sky: the system's back alone (nothing of ours in it). */}
+      {/* The clear bar over the art: the system's back alone (nothing of ours in it). */}
       <PushedHeader title="" plate solid={false} grouped />
       <Animated.ScrollView
         style={styles.fill}
@@ -151,13 +143,12 @@ function Page({ def, g }: { def: ConnectorDef; g: ReturnType<typeof useGallery> 
       >
         <View>
           <CoverParallax y={y} style={styles.sky}>
-            <Dither
-              kind="card"
-              tones={serviceSkyTones(c.grouped, def.brandColor, scheme === "dark")}
-              pixel={6}
-              animated={false}
-              extra={{ reach: SKY_REACH }}
-              style={StyleSheet.absoluteFill}
+            <BrandArt
+              look={brandLook(def.iconUrl, def.brandColor)}
+              template="pattern"
+              surface={c.grouped}
+              dark={scheme === "dark"}
+              words="down"
             />
           </CoverParallax>
           <View style={[styles.hero, { paddingTop: insets.top + 58 }]}>
@@ -353,7 +344,7 @@ function Fact({
   );
 }
 
-/** The mark lifted off its sky: a hairline and a soft shadow under it. */
+/** The mark lifted off its art: a hairline and a soft shadow under it. */
 const MARK_SHADOW = "0 0 0 0.5px rgba(0,0,0,0.08), 0 8px 22px -10px rgba(0,0,0,0.4)";
 
 const styles = StyleSheet.create({

@@ -26,7 +26,13 @@ import { MCP_PRESETS, presetForServer } from "./connectors/presets";
 import { CONNECTOR_NAMES } from "./connectors/sites";
 import { cardPlace, NO_PERSON_READS } from "./consultations";
 import { ownWords } from "./context/learn";
-import { decideProposal, proposeSettings, type SettingsProposalCard } from "./context/proposals";
+import {
+  askedWords,
+  decideProposal,
+  proposeSettings,
+  queueSettle,
+  type SettingsProposalCard,
+} from "./context/proposals";
 import type { ContextDeps } from "./context/summaries";
 import { publishMessageCreated } from "./events";
 import { firstOf } from "./format";
@@ -243,7 +249,7 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * A catalog connector or one-click MCP server by its id or name ("GitHub", "google-drive"). With `server`, as this
- * server's "Adicionar conector" lists it, whether it connects here (`soon`: its vendor hasn't approved agentes.chat).
+ * server's connectors store lists it, whether it connects here (`soon`: its vendor hasn't approved agentes.chat).
  */
 export function catalogConnector(
   name: string,
@@ -261,7 +267,7 @@ export function catalogConnector(
   return hit ? { id: hit.id, label: hit.label, available: hit.available, soon: hit.soon } : null;
 }
 
-/** Names of what "Adicionar conector" connects outside the catalog list: a mailbox (Email) or a database. */
+/** Names of what the connectors store connects outside the catalog list: a mailbox (Email) or a database. */
 const MAILBOX_NAMES = new Set([
   "email",
   "mail",
@@ -812,13 +818,22 @@ export function createSetupToolSource(deps: {
             meta: { ...bodyCode(SETTINGS_PROPOSAL_CARD, { names: who }), actionCard: card },
           });
           if (deps.pubsub) await publishMessageCreated(deps.pubsub, messageView(message));
-          const decides = proposals.filter((p) => p.canDecide).length;
-          const whoDecides =
-            decides === proposals.length
-              ? "the person who asked applies it from the card."
-              : "the person who asked can't apply it all: the card lets them send it to an admin.";
+          // The review weighs it (ADR 0219): deleting only when the person asked for it in so many words, and never
+          // without a review when they can't make it themselves or the run read outside content.
+          const origin = proposals.some((p) => !p.canDecide)
+            ? "asked_other"
+            : (await ownWords(ctx)) === forUserId
+              ? "asked"
+              : "outside";
+          await queueSettle(
+            ctx.db,
+            ctx.orgId,
+            proposals.map((p) => p.id),
+            origin,
+            await askedWords(ctx.db, ctx, forUserId),
+          );
           return {
-            content: `Posted the card to ${field} ${who}; ${whoDecides} Nothing has changed yet.${[...left, ...skipped].length ? ` Left off: ${[...left, ...skipped].join("; ")}.` : ""} To ${(await isPersonalWorkspace(ctx.db, ctx.orgId)) ? "set up new agents" : "rebuild the team"}, propose the new agents now with propose_agent.`,
+            content: `Posted the card to ${field} ${who}; a quick review applies it in a moment if it makes sense; its card shows the outcome.${[...left, ...skipped].length ? ` Left off: ${[...left, ...skipped].join("; ")}.` : ""} To ${(await isPersonalWorkspace(ctx.db, ctx.orgId)) ? "set up new agents" : "rebuild the team"}, propose the new agents now with propose_agent.`,
             data: { actionCard: { messageId: message.id } },
           };
         } catch (error) {
@@ -878,7 +893,7 @@ export function createSetupToolSource(deps: {
             const where = MAILBOX_NAMES.has(slug(app)) ? "Email" : DATABASE_NAMES.has(slug(app)) ? "Database" : null;
             return {
               content: where
-                ? `This isn't connected with a card: a person who manages connectors does it in Settings › Connectors and MCPs › Add connector › ${where} (in Portuguese, Configurações › Conectores e MCPs › Adicionar conector › ${where === "Email" ? "Email" : "Banco de dados"}). Tell the person exactly this.`
+                ? `This isn't connected with a card: a person who manages connectors does it in Settings › Connectors and MCPs › Browse connectors › ${where} (in Portuguese, Configurações › Conectores e MCPs › Ver conectores › ${where === "Email" ? "Email" : "Banco de dados"}). Tell the person exactly this.`
                 : `"${app}" isn't in the catalog. Ask the person for its MCP server's https address and pass it as \`url\`.`,
               isError: true,
             };
@@ -1933,23 +1948,32 @@ function settingsTool(deps: { pubsub?: PubSub }, own = false): ToolDefinition {
         if (deps.pubsub) await publishMessageCreated(deps.pubsub, messageView(message));
         if (open.length < proposals.length)
           await publishMessageActions({ db: ctx.db, pubsub: deps.pubsub }, ctx.orgId, message.id);
-        if (open.length > 0 && !own) await queueRightHandLook(ctx.db, ctx.orgId, message.id, forUserId);
-        const decides = open.filter((p) => p.canDecide).length;
+        // What didn't apply at once goes through the review (ADR 0219): nobody is asked to click it.
+        const words = own ? (await ownWords(ctx)) === forUserId : atOnce;
+        const origin = own
+          ? words
+            ? "agent"
+            : "outside"
+          : open.some((p) => !p.canDecide)
+            ? "asked_other"
+            : words
+              ? "asked"
+              : "outside";
+        await queueSettle(
+          ctx.db,
+          ctx.orgId,
+          open.map((p) => p.id),
+          origin,
+          own ? null : await askedWords(ctx.db, ctx, forUserId),
+        );
         const applied = open.length < proposals.length;
-        const rest = applied ? "the rest" : "it";
-        const whoDecides =
+        const rest = applied ? "the rest goes" : "it goes";
+        const reviewed =
           open.length === 0
             ? ""
-            : decides === open.length
-              ? `the person who asked applies ${rest} from the card.`
-              : decides === 0
-                ? `the person who asked can't apply ${rest}: the card lets them send it to whoever may.`
-                : "the person who asked applies some rows; the card lets them send the rest to whoever may.";
-        const yours = open.some((p) => p.canDecide && p.agentId === ctx.agentId)
-          ? " Your own settings wait for that click even when they could change them: say it waits for it."
-          : "";
+            : `${rest} through a quick review that applies each row in a moment if it makes sense; its card shows the outcome.`;
         return {
-          content: `Posted the card for ${own ? "your settings" : who}; ${applied ? "applied at once, with Undo on the card, so say it is done. " : ""}${whoDecides}${yours}${applied ? "" : " Nothing has changed yet."}${skipped.length ? ` Left off the card: ${skipped.join(" ")}` : ""}`,
+          content: `Posted the card for ${own ? "your settings" : who}; ${applied ? "applied at once, with Undo on the card, so say it is done. " : ""}${reviewed}${skipped.length ? ` Left off the card: ${skipped.join(" ")}` : ""}`,
           data: { actionCard: { messageId: message.id } },
         };
       } catch (error) {

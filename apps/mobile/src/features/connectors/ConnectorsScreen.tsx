@@ -21,6 +21,7 @@ import {
   itemName,
   personalAllowed,
   personalOfText,
+  personalServesAgents,
 } from "@agenteschat/client/lib/connected";
 import { settingsFrozen } from "@agenteschat/client/lib/deletion";
 import { choiceOf, MAIL_BRANDS, mailboxName } from "@agenteschat/client/lib/mail";
@@ -86,7 +87,7 @@ const LOCKUP_GAP = 12;
 /** A connected row's mark, the grouped list's leading size. */
 const ROW_MARK = 30;
 /** The featured cards at the top: the suggested services that open here, not connected yet (`suggestionsOf`). */
-const FEATURED = 3;
+const FEATURED = 6;
 /** Between a shelf's columns, and how much of the next one shows past the screen's edge (the shelf slides on). */
 const SHELF_GAP = 16;
 const SHELF_PEEK = 78;
@@ -268,7 +269,7 @@ function Gallery() {
   useEffect(() => {
     if (offeredOnce.current || (connect === undefined && mcp === undefined) || !catalog.data || frozen) return;
     // Who may not add the team's connects it as their own, on Pessoal; GitHub stays with who manages connectors.
-    if (!manages && !personalAllowed(connect)) return;
+    if (!manages && !personalServesAgents(connect)) return;
     offeredOnce.current = true;
     const def = connect ? catalog.data.connectors.find((d) => d.id === connect) : undefined;
     const theirs = !manages || personal;

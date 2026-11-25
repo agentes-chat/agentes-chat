@@ -13,7 +13,7 @@ import {
 import { ACCESS_COLUMNS, managesAgentSql, ownsAgent, ownsAgentSql } from "./audience";
 import { runAuthorityById } from "./authority";
 import type { ModelScope } from "./brains/select";
-import { TtlCache } from "./cache";
+import { caches, TtlCache } from "./cache";
 import { computerQueue as lineOfComputer, seesRunSql } from "./computer-queue";
 import { isAgentOnlyDm } from "./dms";
 import { NotFoundError } from "./errors";
@@ -400,7 +400,7 @@ async function visibleRuns(
           // An ended run's wait is never read, and reading it would detoast every candidate's transcript (a large
           // jsonb) before the sort keeps the last few.
           which.active
-            ? sql`coalesce(r.transcript->'waitingForBrain', case when r.status = 'running' and r.waiting_machine_id is not null
+            ? sql`coalesce(coalesce(r.state, r.transcript)->'waitingForBrain', case when r.status = 'running' and r.waiting_machine_id is not null
           then '{"code":"busy"}'::jsonb end)`
             : sql`null`
         } as wait, pause.data as wait_pause, r.waiting_machine_id,
@@ -444,7 +444,7 @@ async function visibleRuns(
         select s.data->'pause' as data from ${agentRunSteps} s
         where s.run_id = r.id and s.kind = 'error' and s.data->>'reason' = 'usage_wait'
         order by s.seq desc limit 1
-      ) pause on ${which.active ? sql`r.transcript->'waitingForBrain'->>'code' = 'usage_pause'` : sql`false`}
+      ) pause on ${which.active ? sql`coalesce(r.state, r.transcript)->'waitingForBrain'->>'code' = 'usage_pause'` : sql`false`}
       where r.org_id = ${orgId}::uuid and ${status} and ${seesSql(userId, orgId)}
       order by ${which.active ? sql`r.created_at desc` : sql`r.finished_at desc`}, r.id desc
       limit ${limit}`),
@@ -564,13 +564,20 @@ async function handedFrom(db: Database, userId: string, orgId: string, runIds: s
 
 /**
  * The workspace's open asks as edges, by the run that asked: the run each waits on, or the ask itself while no run took
- * it yet (`waking`: its wake waits for room, or a stretch holds it). A stop takes those too.
+ * it yet (`waking`: its wake waits for room, or a stretch holds it). A stop takes those too. Kept a moment for every
+ * viewer (`caches.orgReads`).
  */
 async function openAsks(db: Database, orgId: string) {
-  const rows = await db
-    .select({ id: agentConsultations.id, asker: agentConsultations.askerRunId, target: agentConsultations.targetRunId })
-    .from(agentConsultations)
-    .where(and(eq(agentConsultations.orgId, orgId), eq(agentConsultations.status, "open")));
+  const rows = (await caches.orgReads.getOrLoad(`${orgId}:asks`, () =>
+    db
+      .select({
+        id: agentConsultations.id,
+        asker: agentConsultations.askerRunId,
+        target: agentConsultations.targetRunId,
+      })
+      .from(agentConsultations)
+      .where(and(eq(agentConsultations.orgId, orgId), eq(agentConsultations.status, "open"))),
+  )) as { id: string; asker: string; target: string | null }[];
   const edges = new Map<string, string[]>();
   for (const r of rows) edges.set(r.asker, [...(edges.get(r.asker) ?? []), r.target ?? r.id]);
   return { edges, waking: rows.flatMap((r) => (r.target ? [] : [r.id])) };
@@ -806,9 +813,9 @@ export async function taskManager(
 }
 
 const IN_LINE = sql`r.waiting_machine_id is not null and (r.status = 'running'
-  or (r.status = 'waiting_input' and r.transcript->'waitingForBrain'->>'code' = 'busy'))`;
+  or (r.status = 'waiting_input' and coalesce(r.state, r.transcript)->'waitingForBrain'->>'code' = 'busy'))`;
 /** The computer a running turn is on: the one it asked for room (`roomAsk`), as the line's view counts it. */
-const RUNS_ON = sql`r.transcript->'roomAsk'->>'machineId'`;
+const RUNS_ON = sql`coalesce(r.state, r.transcript)->'roomAsk'->>'machineId'`;
 
 /**
  * Each task's place in its computer's line, from the line's own view (`computerQueue` in computer-queue.ts, ADR 0032
@@ -832,8 +839,11 @@ async function computerLines(db: Database, userId: string, orgId: string, machin
   return places;
 }
 
-/** The workspace's computers with a turn running or waiting for room. */
-async function computerSummaries(db: Database, orgId: string): Promise<ComputerSummary[]> {
+/** The workspace's computers with a turn running or waiting for room, kept a moment for every viewer. */
+const computerSummaries = (db: Database, orgId: string) =>
+  caches.orgReads.getOrLoad(`${orgId}:computers`, () => loadComputerSummaries(db, orgId)) as Promise<ComputerSummary[]>;
+
+async function loadComputerSummaries(db: Database, orgId: string): Promise<ComputerSummary[]> {
   const rows = rowsOf<{ id: string; name: string; working: number | string; in_line: number | string }>(
     await db.execute(sql`select m.id, m.name,
         (select count(*) from ${agentRuns} r join ${agents} a on a.id = r.agent_id

@@ -1667,14 +1667,14 @@ test.if(posix)(
       // Our notice, in the app's look and in one language only: the person's, English when it isn't one of the app's.
       const notice = (memory: boolean, tag?: string) =>
         decodeURIComponent(crashPage(memory, tag).slice("data:text/html;charset=utf-8,".length));
-      expect(notice(true, "pt-BR")).toContain('<html lang="pt-BR">');
+      expect(notice(true, "pt-BR")).toContain('<html lang="pt-BR" translate="no">');
       expect(notice(true, "pt-BR")).toContain("<title>A página ficou sem memória</title>");
       expect(notice(true, "pt-BR")).not.toContain("The page");
       expect(notice(false, "de")).toContain(
         "<h1>Die Seite funktioniert nicht mehr</h1><p>Der Agent wird benachrichtigt.</p>",
       );
       expect(notice(false, "de")).not.toContain("The page");
-      expect(notice(true, "xx")).toContain('<html lang="en">');
+      expect(notice(true, "xx")).toContain('<html lang="en" translate="no">');
       expect(notice(true)).toContain("<title>The page ran out of memory</title>");
       expect(notice(true)).not.toContain("página");
       expect(notice(true)).toContain("background:#fbfbfa");

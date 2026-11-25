@@ -21,7 +21,6 @@ import {
   seatPlace,
   seatState,
   type ToolContext,
-  UNASKED_SEAT_MESSAGE,
   viewerScope,
 } from "../src";
 import { addMember, type Fixture, setup } from "./fixtures";
@@ -211,8 +210,8 @@ test("a background task runs in the asker's seat, and what follows it names that
   for (const r of requests().slice(before)) expect(r.agent?.id).not.toBe(lodi.id);
 });
 
-test("a channel mention works in the shared seat, and a routine in its creator's own DM has no seat", async () => {
-  const { lodi, ran, requests } = await home();
+test("a channel mention and a routine in its creator's own DM both work in the shared seat", async () => {
+  const { lodi, ran } = await home();
   const channel = await lodiRun(lodi.id, f.owner.id, { channelId: f.general.id });
   expect((await runCode(channel)).isError).toBeFalsy();
   expect(await seatState(f.db, { ...channel, id: channel.runId })).toBe("shared");
@@ -221,16 +220,12 @@ test("a channel mention works in the shared seat, and a routine in its creator's
   const shared = await seatId(SHARED_SEAT);
   expect(ran.map((r) => r.agent)).toEqual([shared]);
 
-  // A routine's run may carry what it read from outside: it gets neither its creator's seat nor the shared one.
+  // A routine's run may carry what it read from outside: it works in the shared seat, never its creator's.
   const routine = await lodiRun(lodi.id, f.owner.id, { routine: true });
-  const before = requests().length;
-  const said = await runCode(routine);
-  expect(said.isError).toBe(true);
-  expect(said.content).toContain(UNASKED_SEAT_MESSAGE);
-  expect(requests().length).toBe(before);
-  expect(await seatState(f.db, { ...routine, id: routine.runId })).toBe("none");
+  expect((await runCode(routine)).isError).toBeFalsy();
+  expect(await seatState(f.db, { ...routine, id: routine.runId })).toBe("shared");
   expect(await seatOf(f.db, f.org.id, f.owner.id, false)).toBeNull();
-  expect(ran.some((r) => r.agent === lodi.id)).toBe(false);
+  expect(ran.map((r) => r.agent)).toEqual([shared, shared]);
 });
 
 test("a computer that runs every agent as one user gives each person a place there, driven only by who connected it", async () => {
