@@ -251,7 +251,7 @@ describe("a new agent starts with the last setup", () => {
       input: { brain: "claude_code" as const, model: "sonnet", effort: "medium" as const },
     };
     // The model by the plan that pays for it, never the program it runs in.
-    const glmLine = 'brain.line.coding {"model":"GLM-5.3","plan":"GLM Coding"}';
+    const glmLine = 'brain.line.coding {"model":"GLM-5.4","plan":"GLM Coding"}';
     expect(say(glm, "zai")).toBe(glmLine);
     expect(say(glm)).toBe('brain.line.claude {"model":"sonnet","plan":"aiAccounts.connect.claude_code"}');
     // Then its Autonomia.

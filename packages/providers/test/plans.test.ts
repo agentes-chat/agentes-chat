@@ -41,8 +41,14 @@ describe("coding plans' models", () => {
   });
 
   test("each plan lists every model it runs through Claude Code; its aliases keep the documented defaults", () => {
-    expect(ids("zai")).toEqual(["glm-5.3[1m]", "glm-5.3-flash[1m]"]);
-    expect(aliases("zai")).toEqual({ opus: "glm-5.3[1m]", sonnet: "glm-5.3[1m]", haiku: "glm-5.3-flash[1m]" });
+    expect(ids("zai")).toEqual(["glm-5.4[1m]", "glm-5.3[1m]", "glm-5.3-flash[1m]"]);
+    expect(aliases("zai")).toEqual({ opus: "glm-5.4[1m]", sonnet: "glm-5.4[1m]", haiku: "glm-5.3-flash[1m]" });
+    // Z.ai's own guide: GLM-5.3 is text-only, Flash is multimodal (docs.z.ai/devpack/latest-model, read 2026-11-22).
+    expect(
+      models("zai")
+        .filter((m) => m.images === false)
+        .map((m) => m.id),
+    ).toEqual(["glm-5.3[1m]"]);
     expect(ids("kimi")).toEqual([
       "kimi-for-coding",
       "k3.1-pro",
@@ -90,7 +96,7 @@ describe("coding plans' models", () => {
         .filter((m) => m.tag === tag)
         .map((m) => m.id);
     // Flagship: the maker's own word for it (DeepSeek doesn't call V4 Pro that).
-    expect(tagged("zai", "smart")).toEqual(["glm-5.3[1m]"]);
+    expect(tagged("zai", "smart")).toEqual(["glm-5.4[1m]"]);
     expect(tagged("kimi", "smart")).toEqual(["k3.1-pro"]);
     expect(tagged("opencode", "smart")).toEqual(["glm-5.3", "kimi-k3.1-pro", "qwen3.8-max", "gemini-4-argon"]);
     // Kimi compares K3 256K's quota only with K3's: no model of its plan is the cheapest in its words.

@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { catalogModelOf, isKnownModel } from "../src/catalog";
+import { catalogModelOf, isKnownModel, modelReadsImages } from "../src/catalog";
 
 /*
  * `catalogModelOf` cuts a closing `[…]` by index instead of `/\[[^\]]*\]$/`, which backtracks on a long run of `[`
@@ -33,4 +33,16 @@ test("a long run of [ is read at once", () => {
   expect(catalogModelOf(`[${"[".repeat(100_000)}`)).toBeNull();
   expect(catalogModelOf(`claude-opus-5-5${"[".repeat(100_000)}]`)).toBe("claude-opus-5-5");
   expect(performance.now() - started).toBeLessThan(500);
+});
+
+test("the row says whether a model reads pictures through a compatible endpoint, whatever a CLI named it", () => {
+  expect(modelReadsImages("glm-5.3-flash")).toBe(true);
+  expect(modelReadsImages("glm-5.3-flash[1m]")).toBe(true);
+  expect(modelReadsImages("glm-5.3-flash-20261101")).toBe(true);
+  expect(modelReadsImages("glm-5.4")).toBe(true);
+  expect(modelReadsImages("glm-5.4[1m]")).toBe(true);
+  expect(modelReadsImages("glm-5.3")).toBe(false);
+  expect(modelReadsImages("deepseek-flash")).toBe(false);
+  expect(modelReadsImages("not-in-the-catalog")).toBe(false);
+  expect(modelReadsImages(null)).toBe(false);
 });

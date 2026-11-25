@@ -815,7 +815,7 @@ describe("the agent's AI", () => {
     expect(own.map((r) => r.label)).toEqual(["Automático", "Opus 5.5", "Sonnet 5.5", "Haiku 5.5"]);
     expect(own.find((r) => r.checked)?.label).toBe("Sonnet 5.5");
     // An alias the plan leaves out runs its main model.
-    expect(modelRows(t, view("opus"), planOf("zai")).find((r) => r.checked)?.label).toBe("GLM-5.3");
+    expect(modelRows(t, view("opus"), planOf("zai")).find((r) => r.checked)?.label).toBe("GLM-5.4");
     // OpenCode (ADR 0132): the models its CLI listed, the free ones marked Grátis.
     const opencode: AgentBrain["options"][number] = {
       kind: "opencode",
@@ -1112,7 +1112,7 @@ describe("the agent's AI", () => {
     );
     // On a coding plan, its own model; everything at its default says nothing more.
     const glm = { ...view, effectiveModel: "sonnet", accounts: [account("glm", { provider: "zai" })], account: "glm" };
-    expect(setupWords(t, "pt-BR", glm, { now: { ...now, effort: "medium" } })).toBe("GLM-5.3 pelo GLM Coding");
+    expect(setupWords(t, "pt-BR", glm, { now: { ...now, effort: "medium" } })).toBe("GLM-5.4 pelo GLM Coding");
     // Its Autonomia last, as on the web; one that changes only it can take it, and the toast says so.
     expect(setupWords(t, "pt-BR", { ...view, autonomy: "never" }, { now })).toBe(
       "Opus pelo plano do Claude · Esforço alto · Autonomia: Não pergunta",

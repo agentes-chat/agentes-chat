@@ -128,6 +128,12 @@ export interface ModelInfo {
   /** It can't follow an `outputSchema`: never a pick for routing, the judge or summaries. */
   structuredOutput?: false;
   /**
+   * Reads pictures even through another company's Anthropic-compatible endpoint (`ProviderInfo.compat`), which
+   * leaves them out unless the model's row says it takes them: Z.ai's GLM-5.3-Flash does ("GLM-5.3-FLASH is a
+   * multimodal model", docs.z.ai/devpack/latest-model, read 2026-11-22); GLM-5.3 is text-only.
+   */
+  images?: true;
+  /**
    * `false`: the pickers offer it only to a workspace with its provider's key (OpenRouter's long list, Command Code's).
    * `true`: a long list's good pick, shown first, greyed without a key. Absent: a catalog model.
    */
@@ -450,14 +456,25 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     contextWindow: 1_048_576,
     serverSideFallback: false,
   },
+  // GLM-5.4 (2026-11-23) reads pictures and takes GLM-5.3's place as Z.ai's flagship; GLM-5.3 stays choosable,
+  // never picked by "Automático". Z.ai has published no GLM-5.4 API prices yet (the coding plan launched
+  // first), so GLM-5.3's stand in until it lists them: usage history is never repriced.
+  "glm-5.4": {
+    provider: "zai",
+    label: "GLM-5.4",
+    prices: { input: 1400, output: 4400, cacheRead: 260, cacheWrite: 1400 },
+    contextWindow: 1_000_000,
+    serverSideFallback: false,
+    images: true,
+    recommended: true,
+    tier: "medium",
+  },
   "glm-5.3": {
     provider: "zai",
     label: "GLM-5.3",
     prices: { input: 1400, output: 4400, cacheRead: 260, cacheWrite: 1400 },
     contextWindow: 1_000_000,
     serverSideFallback: false,
-    recommended: true,
-    tier: "medium",
   },
   // Always thinks (Z.ai: it "cannot be disabled"), still the line's fastest for routing.
   "glm-5.3-flash": {
@@ -466,6 +483,7 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     prices: { input: 150, output: 500, cacheRead: 30, cacheWrite: 150 },
     contextWindow: 1_000_000,
     serverSideFallback: false,
+    images: true,
     cheap: true,
     router: true,
     tier: "small",
@@ -841,6 +859,16 @@ export function modelForTier(provider: string, tier: ModelTier): string | null {
 export const contextWindowOf = (model: string) => modelInfo(model)?.contextWindow ?? DEFAULT_CONTEXT_WINDOW;
 
 export const isKnownModel = (model: string) => modelInfo(model) !== undefined;
+
+/**
+ * Whether the model reads pictures even through another company's Anthropic-compatible endpoint: its catalog row
+ * says `images`, with the `[…]` a CLI named it with cut (`glm-5.3-flash[1m]` → `glm-5.3-flash`, so a plan's model
+ * counts). A model absent from the catalog says nothing: the endpoint stays fail-closed.
+ */
+export const modelReadsImages = (model: string | null | undefined): boolean => {
+  const id = catalogModelOf(model);
+  return id !== null && MODEL_CATALOG[id]?.images === true;
+};
 
 /**
  * `name` without a closing `[…]` (`claude-opus-5-5[1m]` → `claude-opus-5-5`), as `/\[[^\]]*\]$/` would cut it: from

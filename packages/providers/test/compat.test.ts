@@ -150,6 +150,84 @@ describe("Anthropic-compatible providers (scripted transport)", () => {
     }
   });
 
+  test("pictures: GLM-5.3 Flash takes them through Z.ai — a plan's `[1m]` name too; GLM-5.3 and DeepSeek keep the note", async () => {
+    const asked = (model: string): ModelRequest =>
+      request({
+        model,
+        messages: [
+          { role: "user", content: "leia o arquivo" },
+          { role: "assistant", content: [{ type: "tool_use", id: "t1", name: "read_artifact", input: {} }] },
+          {
+            role: "user",
+            content: [
+              {
+                type: "tool_result",
+                toolUseId: "t1",
+                content: "a/b.png",
+                images: [{ mediaType: "image/png", data: "UE5H" }],
+              },
+            ],
+          },
+        ],
+      });
+    for (const model of ["glm-5.3-flash", "glm-5.3-flash[1m]", "glm-5.4[1m]"]) {
+      const { provider, requests } = compat(
+        "zai",
+        sse([start(model), ...text(0, "um quadrado vermelho"), ...end("end_turn", { output_tokens: 3 })]),
+      );
+      const result = await provider.stream(asked(model), quiet);
+      expect(JSON.stringify(requests[0]?.body.messages)).toContain('"type":"image"');
+      expect(result.imagesLeftOut).toBeUndefined();
+    }
+    for (const [providerId, model] of [
+      ["zai", "glm-5.3"],
+      ["deepseek", "deepseek-flash"],
+    ] as const) {
+      const { provider, requests } = compat(
+        providerId,
+        sse([start(model), ...text(0, "só texto"), ...end("end_turn", { output_tokens: 3 })]),
+      );
+      const result = await provider.stream(asked(model), quiet);
+      expect(JSON.stringify(requests[0]?.body.messages)).not.toContain('"type":"image"');
+      expect(JSON.stringify(requests[0]?.body.messages)).toContain(`this agent's AI (${model})`);
+      expect(result.imagesLeftOut).toBe(true);
+    }
+  });
+
+  test("an endpoint's own word on pictures wins; unset defers to the model's row", async () => {
+    const asked = request({
+      model: "glm-5.3-flash",
+      messages: [
+        { role: "user", content: "leia o arquivo" },
+        { role: "assistant", content: [{ type: "tool_use", id: "t1", name: "read_artifact", input: {} }] },
+        {
+          role: "user",
+          content: [
+            {
+              type: "tool_result",
+              toolUseId: "t1",
+              content: "a/b.png",
+              images: [{ mediaType: "image/png", data: "UE5H" }],
+            },
+          ],
+        },
+      ],
+    });
+    const through = async (compat: { toolChoiceAny: boolean; images?: boolean }) => {
+      const { fetcher, requests } = scripted(
+        sse([start("glm-5.3-flash"), ...text(0, "ok"), ...end("end_turn", { output_tokens: 2 })]),
+      );
+      const result = await createAnthropicProvider({ fetch: fetcher, maxRetries: 0, compat }).stream(asked, quiet);
+      return { body: JSON.stringify(requests[0]?.body.messages), result };
+    };
+    const saidYes = await through({ toolChoiceAny: false, images: true });
+    expect(saidYes.body).toContain('"type":"image"');
+    expect(saidYes.result.imagesLeftOut).toBeUndefined();
+    const saidNo = await through({ toolChoiceAny: false, images: false });
+    expect(saidNo.body).not.toContain('"type":"image"');
+    expect(saidNo.result.imagesLeftOut).toBe(true);
+  });
+
   test("max goes as high to an endpoint whose models don't list it", async () => {
     const { provider, requests } = compat(
       "moonshot",
