@@ -1802,6 +1802,7 @@
     "lookOurs": "agentes.chat",
     "lookSystem": "Sistem",
     "markRead": "Tandai sudah dibaca",
+    "markUnread": "Tandai belum dibaca",
     "muteChannel": "Bisukan saluran",
     "unmuteChannel": "Bunyikan saluran",
     "mention": "Sebut",
@@ -15048,6 +15049,9 @@
     }
   },
   "errors": {
+    "markUnread": {
+      "nothing": "Belum ada orang lain yang menulis di sini, jadi tidak ada yang bisa ditandai belum dibaca."
+    },
     "planMove": {
       "notPayer": "Hanya orang yang membayar paket yang bisa memindahkannya.",
       "same": "Pilih ruang kerja lain untuk tujuan paket.",

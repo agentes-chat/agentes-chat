@@ -497,7 +497,7 @@ export async function markChannelUnread(
   pubsub?: PubSub,
 ) {
   const [member] = await db
-    .select({ id: channelMembers.id })
+    .select({ id: channelMembers.id, joinedAt: channelMembers.createdAt })
     .from(channelMembers)
     .where(
       and(eq(channelMembers.orgId, orgId), eq(channelMembers.channelId, channelId), eq(channelMembers.userId, actorId)),
@@ -530,9 +530,11 @@ export async function markChannelUnread(
   if (target.threadId)
     throw new ValidationError("A reply in a thread is read with its thread", "thread_reply_not_markable");
   const mark = unreadMarkBefore(target);
+  // Never read yet: the mark in force is my joining (listChannels' fallback), so the first row only moves back too.
+  const firstMark = member.joinedAt < mark ? member.joinedAt : mark;
   const [read] = await db
     .insert(channelReads)
-    .values({ orgId, channelId, userId: actorId, lastReadAt: mark })
+    .values({ orgId, channelId, userId: actorId, lastReadAt: firstMark })
     .onConflictDoUpdate({
       target: [channelReads.channelId, channelReads.userId],
       set: { lastReadAt: sql`least(${channelReads.lastReadAt}, ${mark.toISOString()}::timestamptz)` },

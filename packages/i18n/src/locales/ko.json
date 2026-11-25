@@ -1802,6 +1802,7 @@
     "lookOurs": "agentes.chat",
     "lookSystem": "시스템",
     "markRead": "읽음으로 표시",
+    "markUnread": "읽지 않음으로 표시",
     "muteChannel": "채널 알림 끄기",
     "unmuteChannel": "채널 알림 켜기",
     "mention": "멘션",
@@ -14983,6 +14984,9 @@
     }
   },
   "errors": {
+    "markUnread": {
+      "nothing": "아직 다른 사람이 여기에 글을 쓰지 않아 읽지 않음으로 표시할 것이 없습니다."
+    },
     "planMove": {
       "notPayer": "요금제를 결제하는 사람만 옮길 수 있어요.",
       "same": "요금제를 옮길 다른 워크스페이스를 골라 주세요.",

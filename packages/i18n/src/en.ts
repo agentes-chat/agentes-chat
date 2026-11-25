@@ -15908,6 +15908,10 @@ export const en = {
     },
   },
   errors: {
+    /** Marking a conversation unread when no one else has written in it. */
+    markUnread: {
+      nothing: "No one else has written here yet, so there's nothing to mark unread.",
+    },
     /** Moving a plan to another workspace (ADR 0079). */
     planMove: {
       notPayer: "Only the person who pays for the plan can move it.",

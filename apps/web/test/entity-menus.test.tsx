@@ -111,6 +111,7 @@ describe("a channel", () => {
     await go();
     await rightClick(screen().getByRole("heading", { level: 1, name: "eng" }));
     expect(items()).toEqual([
+      "Marcar como não lida",
       "Silenciar canal",
       "Editar canal",
       "Fixar no topo",
@@ -143,6 +144,7 @@ describe("an agent", () => {
       "Ver perfil",
       "Fixar no topo",
       "Copiar @ada",
+      "Marcar como não lida",
       "Novo setor com Ada",
       "Editar agente",
       "Copiar link",
@@ -169,7 +171,14 @@ describe("a person", () => {
     const row = nav().querySelector('a[href$="/dm/person/u-joao"]');
     if (!row) throw new Error("no row for João");
     await rightClick(row);
-    expect(items()).toEqual(["Mensagem direta", "Fixar no topo", "Copiar @joao", "Remover do workspace", "Copiar ID"]);
+    expect(items()).toEqual([
+      "Mensagem direta",
+      "Fixar no topo",
+      "Copiar @joao",
+      "Marcar como não lida",
+      "Remover do workspace",
+      "Copiar ID",
+    ]);
     await pick("Copiar ID");
     expect(copied.at(-1)).toBe("u-joao");
   });

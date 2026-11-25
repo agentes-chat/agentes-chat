@@ -1948,6 +1948,7 @@
     "lookOurs": "agentes.chat",
     "lookSystem": "Système",
     "markRead": "Marquer comme lu",
+    "markUnread": "Marquer comme non lu",
     "muteChannel": "Mettre le salon en sourdine",
     "unmuteChannel": "Réactiver le salon",
     "mention": "Mentionner",
@@ -16121,6 +16122,9 @@
     }
   },
   "errors": {
+    "markUnread": {
+      "nothing": "Personne d'autre n'a encore écrit ici, il n'y a donc rien à marquer comme non lu."
+    },
     "planMove": {
       "notPayer": "Seule la personne qui paie l'abonnement peut le déplacer.",
       "same": "Choisis un autre espace de travail où déplacer l'abonnement.",

@@ -97,6 +97,7 @@ describe("message action bars", () => {
       "Responder",
       "Copiar texto",
       "Copiar link da mensagem",
+      "Marcar como não lida",
       "Fixar mensagem",
       "Salvar na wiki",
     ]);
@@ -303,6 +304,7 @@ describe("message action bars", () => {
         "Responder",
         "Copiar texto",
         "Copiar link da mensagem",
+        "Marcar como não lida",
         "Fixar mensagem",
         "Salvar na wiki",
       ]);
@@ -320,6 +322,7 @@ describe("message action bars", () => {
       expect(items(screen().getByRole("menu", { name: "Ações da mensagem de João" }))).toEqual([
         "Responder",
         "Copiar link da mensagem",
+        "Marcar como não lida",
         "Fixar mensagem",
       ]);
       await act(async () => fireEvent.keyDown(screen().getByRole("menu"), { key: "Escape" }));
@@ -332,6 +335,7 @@ describe("message action bars", () => {
         "Corrigir resposta",
         "Copiar texto",
         "Copiar link da mensagem",
+        "Marcar como não lida",
         "Fixar mensagem",
         "Salvar na wiki",
       ]);

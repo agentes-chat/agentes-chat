@@ -1947,6 +1947,7 @@
     "lookOurs": "agentes.chat",
     "lookSystem": "Del sistema",
     "markRead": "Marcar como leído",
+    "markUnread": "Marcar como no leído",
     "muteChannel": "Silenciar canal",
     "unmuteChannel": "Reactivar canal",
     "mention": "Mencionar",
@@ -16046,6 +16047,9 @@
     }
   },
   "errors": {
+    "markUnread": {
+      "nothing": "Nadie más ha escrito aquí todavía, así que no hay nada que marcar como no leído."
+    },
     "planMove": {
       "notPayer": "Solo la persona que paga el plan puede moverlo.",
       "same": "Elige otro espacio de trabajo al que mover el plan.",

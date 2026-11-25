@@ -118,6 +118,7 @@ describe("right click on a message", () => {
       "Responder",
       "Copiar texto",
       "Copiar link da mensagem",
+      "Marcar como não lida",
       "Fixar mensagem",
       "Salvar na wiki",
     ]);

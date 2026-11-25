@@ -2021,6 +2021,7 @@
     "lookOurs": "agentes.chat",
     "lookSystem": "Systemowe",
     "markRead": "Oznacz jako przeczytane",
+    "markUnread": "Oznacz jako nieprzeczytane",
     "muteChannel": "Wycisz kanał",
     "unmuteChannel": "Wyłącz wyciszenie kanału",
     "mention": "Wspomnij",
@@ -16678,6 +16679,9 @@
     }
   },
   "errors": {
+    "markUnread": {
+      "nothing": "Nikt inny jeszcze tu nie pisał, więc nie ma czego oznaczyć jako nieprzeczytane."
+    },
     "planMove": {
       "notPayer": "Tylko osoba, która płaci za plan, może go przenieść.",
       "same": "Wybierz inną przestrzeń roboczą, do której przeniesiesz plan.",

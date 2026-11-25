@@ -1874,6 +1874,7 @@
     "lookOurs": "agentes.chat",
     "lookSystem": "Systeem",
     "markRead": "Markeren als gelezen",
+    "markUnread": "Markeren als ongelezen",
     "muteChannel": "Kanaal dempen",
     "unmuteChannel": "Kanaal niet meer dempen",
     "mention": "Vermelden",
@@ -15645,6 +15646,9 @@
     }
   },
   "errors": {
+    "markUnread": {
+      "nothing": "Niemand anders heeft hier nog geschreven, dus er is niets om als ongelezen te markeren."
+    },
     "planMove": {
       "notPayer": "Alleen wie het abonnement betaalt, kan het verplaatsen.",
       "same": "Kies een andere werkruimte om het abonnement naartoe te verplaatsen.",

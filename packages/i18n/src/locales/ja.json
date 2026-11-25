@@ -1802,6 +1802,7 @@
     "lookOurs": "agentes.chat",
     "lookSystem": "システム",
     "markRead": "既読にする",
+    "markUnread": "未読にする",
     "muteChannel": "チャンネルをミュート",
     "unmuteChannel": "ミュートを解除",
     "mention": "メンション",
@@ -14989,6 +14990,9 @@
     }
   },
   "errors": {
+    "markUnread": {
+      "nothing": "まだ他の人がここに書き込んでいないため、未読にできるものがありません。"
+    },
     "planMove": {
       "notPayer": "プランを移せるのは支払っている人だけです。",
       "same": "プランの移動先にほかのワークスペースを選んでください。",

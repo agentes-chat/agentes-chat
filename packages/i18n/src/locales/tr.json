@@ -1874,6 +1874,7 @@
     "lookOurs": "agentes.chat",
     "lookSystem": "Sistem",
     "markRead": "Okundu olarak işaretle",
+    "markUnread": "Okunmadı olarak işaretle",
     "muteChannel": "Kanalı sessize al",
     "unmuteChannel": "Kanalın sesini aç",
     "mention": "Bahset",
@@ -15506,6 +15507,9 @@
     }
   },
   "errors": {
+    "markUnread": {
+      "nothing": "Burada henüz başka kimse yazmadı, bu yüzden okunmadı olarak işaretlenecek bir şey yok."
+    },
     "planMove": {
       "notPayer": "Planı yalnızca planın ödemesini yapan kişi taşıyabilir.",
       "same": "Planı taşımak için başka bir çalışma alanı seç.",

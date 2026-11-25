@@ -51,6 +51,8 @@ const KNOWN = {
   "github_event.answered": "errors.githubEvent.answered",
   "github_event.not_found": "errors.said.gone",
   "github_event.agent_not_here": "errors.routine.agentNotInChannel",
+  // Marking a conversation unread from the sidebar when no one else has written in it.
+  nothing_to_mark_unread: "errors.markUnread.nothing",
   "channel.post_denied": "channel.perms.readOnlyComposer",
   "channel.permission_forbidden": "channel.perms.forbidden",
   "agent.handle_taken": "newAgent.errors.handleTaken",
