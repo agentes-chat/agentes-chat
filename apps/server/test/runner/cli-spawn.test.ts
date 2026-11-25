@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { brainProfileLaunch, claudeBrainArgs } from "../../runner/brain";
 import {
+  cliNotFound,
   cliSpawn,
   envValue,
   execResult,
@@ -237,4 +238,12 @@ test("a look killed past its time limit couldn't tell, even where the runtime re
     stderr: "Error: boom\n",
   });
   expect(execResult(null, "opencode 1.19.6\n", "")).toEqual({ status: 0, stdout: "opencode 1.19.6\n" });
+});
+
+test("a CLI cmd.exe couldn't find reads as missing, not as its last line", () => {
+  expect(
+    cliNotFound("'claude' is not recognized as an internal or external command,\r\noperable program or batch file.\r\n"),
+  ).toBe(true);
+  expect(cliNotFound("ENOENT spawn claude ENOENT\n")).toBe(true);
+  expect(cliNotFound("Error: prompt is too long\n")).toBe(false);
 });

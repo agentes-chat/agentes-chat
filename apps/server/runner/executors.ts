@@ -37,6 +37,9 @@ type Run = ExecutorRun;
 /** Shells' "command not found" (127), "not executable" (126) and cmd.exe's (9009). */
 const NOT_FOUND_EXITS = new Set([126, 127, 9009]);
 
+/** cmd.exe's words for a program it can't find (the CLI, or the `node` an npm launcher runs). */
+const CMD_NOT_FOUND = /is not recognized as an internal or external command/i;
+
 /**
  * Only a binary that isn't there is missing: not found, or a shell saying so (Windows runs CLIs through cmd.exe, an
  * npm shim whose `node` is gone exits 127). A timeout or a crash (a busy machine, a CLI mid-update) says nothing
@@ -45,9 +48,13 @@ const NOT_FOUND_EXITS = new Set([126, 127, 9009]);
 const missing = (r: RunResult) =>
   (r.error as { code?: unknown } | undefined)?.code === "ENOENT" ||
   (r.status !== null && NOT_FOUND_EXITS.has(r.status)) ||
-  (process.platform === "win32" &&
-    r.status !== 0 &&
-    /is not recognized as an internal or external command/i.test(r.stderr ?? ""));
+  (process.platform === "win32" && r.status !== 0 && CMD_NOT_FOUND.test(r.stderr ?? ""));
+
+/**
+ * Whether a CLI that ended said it isn't there: the spawn's `ENOENT` (the runner's own prefix) or, on Windows, cmd.exe's
+ * "is not recognized", whose last line alone ("operable program or batch file.") read as the CLI's error.
+ */
+export const cliNotFound = (stderr: string) => stderr.startsWith("ENOENT") || CMD_NOT_FOUND.test(stderr);
 
 export const isExecutable = (file: string) => {
   try {

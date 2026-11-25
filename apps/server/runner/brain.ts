@@ -87,7 +87,7 @@ import { DELEGATED_RESULT_CHARS, type DelegatedBridge } from "./delegated-tools"
 import { hostMemAvailable, MIN_FREE_BYTES } from "./desktop-session";
 import { RunnerError } from "./errors";
 import { descendantPids, killTree } from "./exec";
-import { cliSpawn } from "./executors";
+import { cliNotFound, cliSpawn, envValue } from "./executors";
 import { HARDENED_GIT_ARGS } from "./git-guard";
 import { readJson, writeJson } from "./json-file";
 import {
@@ -1364,7 +1364,7 @@ export class ClaudeProcess {
     // A full path: the compiled runner would look the bare name up on the PATH it started with. On Windows, found on
     // the PATH (never in the agent's folder), a launcher through cmd.exe with every argument quoted (an empty
     // `--setting-sources` stays one).
-    const run = cliSpawn(command.length ? command : ["claude"], args, env.PATH);
+    const run = cliSpawn(command.length ? command : ["claude"], args, envValue(env, "PATH"));
     const runEnv = run.env ? { ...env, ...run.env } : env;
     const timeouts = { ...runEnv, ...settingsEnv };
     const bashDefault = Number(timeouts.BASH_DEFAULT_TIMEOUT_MS);
@@ -2851,7 +2851,7 @@ export class BrainManager {
       this.log(
         `[${ctx.agent.handle}] brain process for ${session.slice(0, 8)} died mid-turn (${died}); resuming one-shot`,
       );
-      if (live.proc.stderr.startsWith("ENOENT")) return this.cliMissing();
+      if (cliNotFound(live.proc.stderr)) return this.cliMissing();
       const resume = this.resumeFor(cwd, session, req, ctx, true);
       return this.oneShot(key, session, cwd, req, ctx, sig, resume, true, line);
     }
@@ -3122,7 +3122,7 @@ export class BrainManager {
       this.logStall(ctx, session, out.stalled, "ending the turn (it stalled before too)");
       return errorEvent("brain_stalled", stalledAgainMessage(out.stalled), false);
     }
-    if (live.proc.stderr.startsWith("ENOENT")) return this.cliMissing();
+    if (cliNotFound(live.proc.stderr)) return this.cliMissing();
     const fast = Date.now() - live.proc.startedAt <= FAST_FAIL_MS;
     // Never into `--resume` on a delegated CLI: a transcript it doesn't own is what that answer may mean.
     if (mayRetryFlag && fast && WRONG_SESSION_FLAG.test(live.proc.stderr) && (resume || !ctx.delegated)) {
@@ -3234,8 +3234,12 @@ export class BrainManager {
     // The tools the agents installed in the shared folder, for every process of its own: its subagents never read
     // where that folder is (single-user mode only, `withSharedBin`).
     if (!launched) {
-      const withShared = withSharedBin(env.PATH, this.opts.sharedFolder?.());
-      if (withShared) env.PATH = withShared;
+      // Windows names it `Path` and a copy of `process.env` is no longer case-insensitive: writing `PATH` beside it
+      // left a second PATH holding the shared folder alone, so `claude` was looked for there only (cmd.exe: "is not
+      // recognized").
+      const pathKey = Object.keys(env).find((k) => k.toUpperCase() === "PATH") ?? "PATH";
+      const withShared = withSharedBin(env[pathKey], this.opts.sharedFolder?.());
+      if (withShared) env[pathKey] = withShared;
     }
     const keyPlan = ctx.planKey ? planOf(ctx.planKey.provider) : undefined;
     const plan = keyPlan && planForTurn(keyPlan, req.model);
