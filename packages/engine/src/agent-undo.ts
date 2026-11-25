@@ -655,7 +655,14 @@ async function toggle(deps: AgentUndoDeps, userId: string, orgId: string, id: st
     // Unlike other receipts, all settings editors use this database. A late refusal rolls back earlier lines too.
     const events = holdEvents(deps.pubsub);
     await deps.db.transaction((tx) =>
-      changeAction({ ...deps, db: tx as unknown as Database, pubsub: events.pubsub }, a, userId, direction, now, handler),
+      changeAction(
+        { ...deps, db: tx as unknown as Database, pubsub: events.pubsub },
+        a,
+        userId,
+        direction,
+        now,
+        handler,
+      ),
     );
     const fields = a.params.fields;
     if (Array.isArray(fields) && fields.includes("group")) forgetTeam(orgId);
