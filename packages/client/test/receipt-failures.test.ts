@@ -39,7 +39,12 @@ test("a run that failed for want of an AI, or didn't fail, keeps no reason", () 
 
 test("a failed run's one fix: a key for a missing, revoked or wrong one, another model or account for one gone, else none", () => {
   const everyone = { keys: true, admin: true, owner: true };
-  for (const code of ["run.missing_credential", "run.credential_revoked", "run.credential_wrong_provider"])
+  for (const code of [
+    "run.missing_credential",
+    "run.credential_revoked",
+    "run.credential_unreadable",
+    "run.credential_wrong_provider",
+  ])
     expect(failedRunFix(code, everyone)).toBe("useKey");
   for (const code of ["account", "no_credit", "invalid_key", "no_access"])
     expect(failedRunFix(`run.provider_${code}`, everyone)).toBe("useKey");

@@ -5749,7 +5749,8 @@
       "provider_unavailable": "il modello non ha risposto",
       "gave_up": "il modello non ha risposto dopo vari tentativi",
       "missing_credential": "manca una chiave API",
-      "credential_revoked": "la chiave API è stata revocata"
+      "credential_revoked": "la chiave API è stata revocata",
+      "credential_unreadable": "la chiave API salvata non si può aprire"
     },
     "youReplied": "Hai risposto: {{text}}",
     "actions": "Azioni",
@@ -6756,6 +6757,7 @@
         "interrupted": "Interrotta da un riavvio del server.",
         "missing_credential": "Lo spazio di lavoro non ha una chiave {{provider}}.",
         "credential_revoked": "La chiave di questo agente è stata revocata.",
+        "credential_unreadable": "Questo server non riesce ad aprire la chiave API salvata, di solito perché AGENTES_SECRET è cambiato dopo che è stata salvata. Incolla di nuovo la chiave in Chiavi IA.",
         "credential_wrong_provider": "Il modello è di {{modelProvider}}, ma la chiave è di {{keyProvider}}.",
         "model_unlisted": "OpenRouter non offre più {{model}}. Scegli un altro modello nelle impostazioni dell'agente.",
         "no_ai": "L'agente non aveva un'IA disponibile.",
@@ -9636,6 +9638,7 @@
       "stuck": "Fermata perché si era bloccata",
       "missing_credential": "Manca una chiave API",
       "credential_revoked": "La chiave API è stata revocata",
+      "credential_unreadable": "La chiave API salvata non si può aprire",
       "credential_wrong_provider": "La chiave API è di un altro provider",
       "model_unlisted": "OpenRouter non offre più il modello",
       "agent_archived": "L'agente è stato archiviato",

@@ -13594,6 +13594,9 @@
   "notifications.failedCause.credential_revoked": {
     "value": "the API key was revoked"
   },
+  "notifications.failedCause.credential_unreadable": {
+    "value": "the saved API key can't be opened"
+  },
   "notifications.youReplied": {
     "value": "You replied: {{text}}"
   },
@@ -16028,6 +16031,9 @@
   },
   "agentPage.activity.errors.credential_revoked": {
     "value": "This agent's key was revoked."
+  },
+  "agentPage.activity.errors.credential_unreadable": {
+    "value": "This server can't open the saved API key, usually because AGENTES_SECRET changed after it was saved. Paste the key again in AI keys."
   },
   "agentPage.activity.errors.credential_wrong_provider": {
     "value": "The model is from {{modelProvider}}, but the key is from {{keyProvider}}."
@@ -22475,6 +22481,9 @@
   },
   "routines.code.credential_revoked": {
     "value": "The API key was revoked"
+  },
+  "routines.code.credential_unreadable": {
+    "value": "The saved API key can't be opened"
   },
   "routines.code.credential_wrong_provider": {
     "value": "The API key is from another provider"

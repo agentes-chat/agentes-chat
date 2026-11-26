@@ -3,6 +3,7 @@ import { PROVIDERS, type ProviderCause, ProviderError, providerCause } from "@ag
 import { wakeLineOfRun } from "./approval-order";
 import { BRAIN_NAMES, type ComputerBrainKind, planName, SYSTEM_REFUSED } from "./brains/types";
 import { kickSignInLine } from "./computer-queue";
+import { UNREADABLE_KEY } from "./errors";
 import { cutText, pgSafeJson } from "./format";
 import { recordRunFinished } from "./operator-events";
 import { runState } from "./run-state";
@@ -431,6 +432,7 @@ export function runErrorDetail(error: string | null | undefined): {
     error.startsWith("A chave da API deste agente foi revogada")
   )
     return { errorCode: "run.credential_revoked" };
+  if (error === UNREADABLE_KEY) return { errorCode: "run.credential_unreadable" };
   const wrong =
     // A provider's name has no comma: one way to split the sentence, never a quadratic search for it.
     /^This agent's model is from ([^,]+), but the chosen key is from (.+)$/.exec(error) ??

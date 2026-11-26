@@ -5330,7 +5330,8 @@
       "provider_unavailable": "模型没有回应",
       "gave_up": "模型试了几次都没有回应",
       "missing_credential": "缺少 API 密钥",
-      "credential_revoked": "API 密钥已被撤销"
+      "credential_revoked": "API 密钥已被撤销",
+      "credential_unreadable": "无法打开已保存的 API 密钥"
     },
     "youReplied": "你回复了：{{text}}",
     "actions": "操作",
@@ -6276,6 +6277,7 @@
         "interrupted": "因服务器重启而中断。",
         "missing_credential": "工作区没有 {{provider}} 密钥。",
         "credential_revoked": "该智能体的密钥已被吊销。",
+        "credential_unreadable": "此服务器无法打开已保存的 API 密钥，通常是因为保存密钥后 AGENTES_SECRET 发生了变化。请在“AI 密钥”中重新粘贴密钥。",
         "credential_wrong_provider": "模型来自 {{modelProvider}}，但密钥来自 {{keyProvider}}。",
         "model_unlisted": "OpenRouter 不再提供 {{model}}。请在智能体设置中选择其他模型。",
         "no_ai": "智能体当时没有可用的 AI。",
@@ -9015,6 +9017,7 @@
       "stuck": "因卡住而停止",
       "missing_credential": "缺少 API 密钥",
       "credential_revoked": "API 密钥已被撤销",
+      "credential_unreadable": "无法打开已保存的 API 密钥",
       "credential_wrong_provider": "API 密钥属于另一个服务商",
       "model_unlisted": "OpenRouter 已不再提供此模型",
       "agent_archived": "智能体已归档",

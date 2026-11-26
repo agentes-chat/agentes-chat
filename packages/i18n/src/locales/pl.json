@@ -5962,7 +5962,8 @@
       "provider_unavailable": "model nie odpowiedział",
       "gave_up": "model nie odpowiedział po kilku próbach",
       "missing_credential": "brakuje klucza API",
-      "credential_revoked": "klucz API został unieważniony"
+      "credential_revoked": "klucz API został unieważniony",
+      "credential_unreadable": "nie da się otworzyć zapisanego klucza API"
     },
     "youReplied": "Twoja odpowiedź: {{text}}",
     "actions": "Akcje",
@@ -6997,6 +6998,7 @@
         "interrupted": "Przerwane przez restart serwera.",
         "missing_credential": "Przestrzeń robocza nie ma klucza {{provider}}.",
         "credential_revoked": "Klucz tego agenta został unieważniony.",
+        "credential_unreadable": "Ten serwer nie może otworzyć zapisanego klucza API, zwykle dlatego, że AGENTES_SECRET zmienił się po jego zapisaniu. Wklej klucz ponownie w Klucze AI.",
         "credential_wrong_provider": "Model jest od {{modelProvider}}, ale klucz od {{keyProvider}}.",
         "model_unlisted": "OpenRouter nie oferuje już {{model}}. Wybierz inny model w ustawieniach agenta.",
         "no_ai": "Agent nie miał dostępnej AI.",
@@ -9915,6 +9917,7 @@
       "stuck": "Zatrzymane, bo utknęło",
       "missing_credential": "Brakuje klucza API",
       "credential_revoked": "Klucz API został unieważniony",
+      "credential_unreadable": "Nie da się otworzyć zapisanego klucza API",
       "credential_wrong_provider": "Klucz API jest od innego dostawcy",
       "model_unlisted": "OpenRouter nie oferuje już tego modelu",
       "agent_archived": "Agent został zarchiwizowany",
