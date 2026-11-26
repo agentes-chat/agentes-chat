@@ -35,6 +35,19 @@ const MAIL_MARKS: Record<string, Pick<ConnectorDef, "iconUrl" | "brandColor">> =
 export const optionCount = (t: TFunction, count: number, noun: "tasks" | "ways") =>
   count === 2 ? t(`onboarding.pick.count.${noun}.two`) : t(`onboarding.pick.count.${noun}.three`);
 
+/**
+ * The proposal to pick from: a newer one the AI sent meanwhile (unpicked, with options) takes the place of the one on
+ * screen, here and on the page's sky (who stands there, what the right hand says).
+ */
+export const newerProposal = (current: FirstAgents, latest: FirstAgents | null): FirstAgents =>
+  latest &&
+  latest.id !== current.id &&
+  latest.picked === null &&
+  latest.options.length > 0 &&
+  Date.parse(latest.createdAt) > Date.parse(current.createdAt)
+    ? latest
+    : current;
+
 /** Where each card stands: the picked one in the middle, in front; the others behind it, one each side. */
 type Place = "center" | "left" | "right" | "side";
 
@@ -68,14 +81,7 @@ export function FirstAgentPick({
   const { t } = useTranslation();
   // A newer proposal the AI sent meanwhile takes this one's place.
   const latest = useFirstAgents(orgId, { poll: PROPOSALS_POLL_MS }).data ?? null;
-  const shown =
-    latest &&
-    latest.id !== proposal.id &&
-    latest.picked === null &&
-    latest.options.length > 0 &&
-    Date.parse(latest.createdAt) > Date.parse(proposal.createdAt)
-      ? latest
-      : proposal;
+  const shown = newerProposal(proposal, latest);
   const options = shown.options;
   const [chosen, setChosen] = useState(0);
   const cur = Math.min(chosen, Math.max(options.length - 1, 0));

@@ -64,7 +64,7 @@ import { AskYourAi } from "./onboarding/AskStep";
 import { TeamWelcome } from "./onboarding/CelebrateStep";
 import { HireTeam } from "./onboarding/HireStep";
 import { PeopleStep } from "./onboarding/PeopleStep";
-import { FirstAgentPick, optionCount } from "./onboarding/PickStep";
+import { FirstAgentPick, newerProposal, optionCount } from "./onboarding/PickStep";
 import { AppWall, Box, BoxNote, Pass, PickRows, type ShellFace, World } from "./onboarding/Shell";
 import { FirstWeek } from "./onboarding/WeekStep";
 import "./onboarding.css";
@@ -789,11 +789,13 @@ export function OnboardingPage() {
         };
       if (startView === "pick" && proposal) {
         const appName = askedOf?.name ?? null;
-        const count = proposal.options.length;
+        // A newer proposal the AI sent while picking stands on the sky too, never the one it replaced.
+        const shownProposal = newerProposal(proposal, latest);
+        const count = shownProposal.options.length;
         return {
           cast: [
             lodiFace,
-            ...proposal.options.map((o) => ({ id: o.handle, name: o.name, look: lookOf(o), asleep: true })),
+            ...shownProposal.options.map((o) => ({ id: o.handle, name: o.name, look: lookOf(o), asleep: true })),
           ],
           say: appName
             ? t("onboarding.pick.say", { app: appName, count, n: optionCount(t, count, "ways") })
@@ -803,7 +805,7 @@ export function OnboardingPage() {
           box: (
             <FirstAgentPick
               orgId={orgId}
-              proposal={proposal}
+              proposal={shownProposal}
               app={askedOf}
               eyebrow={
                 counted &&
