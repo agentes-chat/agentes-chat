@@ -15,7 +15,12 @@ const RUNNER = {
   workspace: "/Users/w/agentes",
   exec: true,
 };
-const CLAUDE = { claude: { version: "2.1.300", loggedIn: true }, detectedAt: new Date().toISOString() };
+// Claude Code installed; the runner fetches the Antigravity CLI itself when Gemini needs it (ADR 0228 §6).
+const CLAUDE = {
+  claude: { version: "2.1.300", loggedIn: true },
+  detectedAt: new Date().toISOString(),
+  copies: { fetchable: ["antigravity" as const] },
+};
 
 async function start() {
   t = await createTestServer({ env: { ALLOW_SIGNUP: "true" }, reply: () => ({ chunks: ["ok"] }) });
@@ -79,7 +84,7 @@ test("outages and move-agents over HTTP: the contract the apps read", async () =
       waitingRuns: 1,
     },
   ]);
-  // Both Macs' runners bring the Antigravity CLI themselves (protocol 76): Gemini thinks there once an account signs in.
+  // Both Macs' runners fetch the Antigravity CLI themselves: Gemini thinks there once an account signs in.
   expect(body.targets).toEqual([
     {
       kind: "machine",

@@ -43,6 +43,8 @@ const WAIT_CAUSES: Record<string, string> = {
   tool_off: "commands_off",
   runner_outdated: "outdated",
   codex_too_old: "outdated",
+  // Its CLI at a version agentes.chat holds back: "the program on my computer needs an update".
+  cli_outdated: "outdated",
   plan_not_owner: "plan_owner",
 };
 const waitCauseOf = (code: unknown) =>

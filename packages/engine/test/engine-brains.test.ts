@@ -243,7 +243,7 @@ test("availability: no computer, offline, old runner, not logged in, Codex missi
   notePlanLimit("m1", "claude_code", new Date(Date.now() + 3600_000).toISOString());
   expect(computerBrainUnavailable("claude_code", "m1", statusOf("m1"))?.code).toBe("plan_limit");
   expect(
-    computerBrainUnavailable("codex", "m1", statusOf("m1", { executors: { codex: { version: "0.163.0" } } })),
+    computerBrainUnavailable("codex", "m1", statusOf("m1", { executors: { codex: { version: "0.170.0" } } })),
   ).toBeNull();
   // On Windows a runner before CODEX_WINDOWS_PROTOCOL refuses every Codex turn: too old there, not elsewhere.
   const windows = (protocol: number) =>
@@ -5075,6 +5075,82 @@ test("a model Codex's sign-in refuses: the turn goes again with no model in a fr
   expect((await timeline(f)).at(-1)?.body).toBe("Feito.");
   const [run] = await f.db.select().from(schema.agentRuns);
   expect(run?.brainSessionId).toBe(seen[1]?.session?.id ?? "");
+});
+
+test("any CLI that refuses the agent's model: one more try on its default in a fresh session", async () => {
+  f = await setup({});
+  await computerAgent(f);
+  // Claude Code's own words; the runner calls it `model_unavailable` (an older one says nothing: the words decide).
+  const refusal =
+    "There's an issue with the selected model (claude-x). It may not exist or you may not have access to it.";
+  const { brain, seen } = scriptedComputerBrain((_n, turn) =>
+    turn.model
+      ? [{ type: "error", code: "claude_failed", message: refusal, retryable: false }]
+      : [{ type: "done", text: "Feito." }],
+  );
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id) },
+  });
+  await post(f, "@dev oi");
+  await drainOutbox(f.db, handlers);
+  expect(seen).toHaveLength(2);
+  expect(seen[0]?.model).toBe("sonnet");
+  expect(seen[1]?.model).toBeUndefined();
+  expect(seen[1]?.session?.id).not.toBe(seen[0]?.session?.id);
+  expect(seen[1]?.session?.resume).toBe(false);
+  expect((await timeline(f)).at(-1)?.body).toBe("Feito.");
+});
+
+test("a model refused on the CLI's default too: the run ends saying that model isn't available there", async () => {
+  f = await setup({});
+  await computerAgent(f);
+  const refusal = 'API Error: 404 {"type":"error","error":{"type":"not_found_error","message":"model: claude-x"}}';
+  const { brain, seen } = scriptedComputerBrain(() => [
+    { type: "error", code: "claude_failed", message: refusal, retryable: false, cause: "model_unavailable" },
+  ]);
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id) },
+  });
+  await post(f, "@dev oi");
+  await drainOutbox(f.db, handlers);
+  // Once on the agent's model, once on the default: never a third time, never on the API.
+  expect(seen).toHaveLength(2);
+  expect(f.provider.calls).toHaveLength(0);
+  const [run] = await f.db.select().from(schema.agentRuns);
+  expect(run?.status).toBe("failed");
+  expect(run?.error).toStartWith("provider_error: model_unavailable@");
+});
+
+test("a CLI below its floor: the turn isn't sent, the run waits for an update there", async () => {
+  f = await setup({});
+  await computerAgent(f);
+  const { brain, seen } = scriptedComputerBrain(() => [{ type: "done", text: "SENT" }]);
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: {
+      status: async (id) =>
+        statusOf(id, {
+          protocol: MACHINE_PROTOCOL_VERSION,
+          executors: { claude: { version: "2.1.100 (Claude Code)", loggedIn: true }, detectedAt: "x" },
+        }),
+    },
+  });
+  await post(f, "@dev oi");
+  await drainOutbox(f.db, handlers);
+  expect(seen).toHaveLength(0);
+  expect(f.provider.calls).toHaveLength(0);
+  const [run] = await f.db.select().from(schema.agentRuns);
+  expect(run?.status).toBe("waiting_input");
+  // Worded in the apps as "the program on my computer needs an update".
+  expect((await timeline(f)).at(-1)?.meta).toMatchObject({
+    bodyCode: "brain_unavailable",
+    brainUnavailable: { code: "cli_outdated" },
+  });
 });
 
 test("in a busy channel, its teammates now and why its session was lost reach the computer brain whole", async () => {
