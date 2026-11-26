@@ -3315,6 +3315,7 @@
       "cursor": "이 컴퓨터에서 Cursor에 로그인되어 있지 않아요. {{name}}의 페이지에서 Cursor 계정을 연결하세요.",
       "grok": "이 컴퓨터에서 Grok에 로그인되어 있지 않아요. {{name}}의 페이지에서 Grok 계정을 연결하세요.",
       "antigravity": "이 컴퓨터에서 Gemini에 로그인되어 있지 않아요. {{name}}의 페이지에서 Gemini 계정을 연결하세요.",
+      "devin": "이 컴퓨터에서 Devin에 로그인되어 있지 않아요. {{name}}의 페이지에서 Devin 계정을 연결하세요.",
       "opencode": "이 컴퓨터에서 OpenCode가 생각할 수 없어요. {{name}}의 페이지에서 OpenCode 키를 연결하세요."
     },
     "notSignedInOn": {
@@ -3323,6 +3324,7 @@
       "cursor": "{{computer}}에서 Cursor에 로그인되어 있지 않아요. {{name}}의 페이지에서 Cursor 계정을 연결하세요.",
       "grok": "{{computer}}에서 Grok에 로그인되어 있지 않아요. {{name}}의 페이지에서 Grok 계정을 연결하세요.",
       "antigravity": "{{computer}}에서 Gemini에 로그인되어 있지 않아요. {{name}}의 페이지에서 Gemini 계정을 연결하세요.",
+      "devin": "{{computer}}에서 Devin에 로그인되어 있지 않아요. {{name}}의 페이지에서 Devin 계정을 연결하세요.",
       "opencode": "{{computer}}에서 OpenCode가 생각할 수 없어요. {{name}}의 페이지에서 OpenCode 키를 연결하세요."
     },
     "card": {
@@ -3381,6 +3383,7 @@
       "cursor": "Cursor 요금제 연결",
       "grok": "Grok 요금제 연결",
       "gemini": "Gemini 요금제 연결",
+      "devin": "Devin 요금제 연결",
       "zen": "OpenCode 연결",
       "api_key": "API 키 추가"
     },
@@ -3521,6 +3524,10 @@
         "warning": "Google에 따르면 개인 Gemini 요금제를 다른 앱 안에서 사용하면 계정이 정지될 수 있어요. 이 위험을 피하려면 Gemini API 키나 Gemini Enterprise를 사용하세요.",
         "windowsOne": "Windows에서는 컴퓨터 한 대가 한 번에 Gemini 계정 하나만 써요."
       },
+      "devin": {
+        "title": "내 Devin 요금제",
+        "tiers": "Free, Pro, Max 또는 Teams"
+      },
       "zen": {
         "title": "OpenCode",
         "tiers": "무료 모델, 또는 내 OpenCode 키"
@@ -3626,6 +3633,7 @@
       "cursor": "Cursor에 {{account}}이(가) 아닌 {{email}}(으)로 로그인되어 있어요. Cursor 페이지에서 로그아웃하고 다시 시도하세요.",
       "grok": "Grok에 {{account}}이(가) 아닌 {{email}}(으)로 로그인되어 있어요. Grok 페이지에서 로그아웃하고 다시 시도하세요.",
       "antigravity": "Gemini에 {{account}}이(가) 아닌 {{email}}(으)로 로그인되어 있어요. Google 페이지에서 로그아웃하고 다시 시도하세요.",
+      "devin": "Devin에 {{account}}이(가) 아닌 {{email}}(으)로 로그인되어 있어요. Devin 페이지에서 로그아웃하고 다시 시도하세요.",
       "opencode": "OpenCode가 {{account}}이 아닌 {{email}}(으)로 로그인했어요. 올바른 키로 다시 시도하세요."
     },
     "useAnyway": "{{email}} 사용",
@@ -5826,6 +5834,7 @@
             "cursor": "Cursor 계정 추가",
             "grok": "Grok 계정 추가",
             "antigravity": "Gemini 계정 추가",
+            "devin": "Devin 계정 추가",
             "opencode": "OpenCode 키 추가"
           },
           "stepOne": {
@@ -5833,6 +5842,7 @@
             "codex": "요금제가 있는 계정",
             "cursor": "요금제가 있는 계정",
             "grok": "요금제가 있는 계정",
+            "devin": "요금제가 있는 계정",
             "antigravity": "요금제가 있는 Google 계정",
             "antigravityEnterprise": "내 Gemini Enterprise 계정"
           },
@@ -5842,7 +5852,8 @@
             "codex": "ChatGPT로 로그인",
             "cursor": "Cursor로 로그인",
             "grok": "Grok로 로그인",
-            "antigravity": "Google로 로그인"
+            "antigravity": "Google로 로그인",
+            "devin": "Devin로 로그인"
           },
           "opencodeFree": "OpenCode의 무료 모델은 키가 필요 없어요. OpenCode 콘솔의 키를 쓰면 유료 모델도 쓸 수 있어요.",
           "cursorFinish": "Cursor 페이지에서 로그인하면 {{computer}}에서 로그인이 자동으로 완료돼요.",
@@ -5857,6 +5868,9 @@
           "notCode": "Claude 코드가 아닌 것 같아요.",
           "stepTwoGoogle": "Google에 표시된 코드를 붙여넣으세요",
           "codeLabelGoogle": "Google 코드",
+          "stepTwoDevin": "Devin에 표시된 코드를 붙여넣으세요",
+          "codeHintDevin": "페이지 주소가 아니라 Devin 페이지에 표시된 코드를 붙여넣으세요.",
+          "codeLabelDevin": "Devin 코드",
           "codeHintGoogle": "페이지 주소가 아니라 Google 페이지에 표시된 코드를 붙여넣으세요.",
           "notCodeGoogle": "코드가 없는 주소예요. Google 페이지에 표시된 코드를 붙여넣으세요.",
           "send": "{{computer}}(으)로 보내기",
@@ -5890,6 +5904,7 @@
             "cursor": "Cursor가 이미 연결한 계정인 {{account}}(으)로 로그인했어요. 다른 계정을 쓰려면 Cursor 페이지에서 로그아웃하고 다시 시도하세요.",
             "grok": "Grok가 이미 연결한 계정인 {{account}}(으)로 로그인했어요. 다른 계정을 쓰려면 Grok 페이지에서 로그아웃하고 다시 시도하세요.",
             "antigravity": "Gemini가 이미 연결한 계정인 {{account}}(으)로 로그인했어요. 다른 계정을 쓰려면 Google 페이지에서 로그아웃하고 다시 시도하세요.",
+            "devin": "Devin가 이미 연결한 계정인 {{account}}(으)로 로그인했어요. 다른 계정을 쓰려면 Devin 페이지에서 로그아웃하고 다시 시도하세요.",
             "opencode": "이 OpenCode 키는 이미 {{account}}(으)로 연결되어 있어요."
           },
           "startFailed": "{{computer}}에서 응답이 없어요. 잠시 후 다시 시도하세요.",
@@ -10733,6 +10748,7 @@
       "cursor": "Cursor",
       "grok": "Grok",
       "antigravity": "Gemini",
+      "devin": "Devin",
       "opencode": "OpenCode",
       "needs": {
         "keys": "요금제 키를 사용하려면 컴퓨터에서 agentes를 업데이트하세요"
@@ -12158,6 +12174,7 @@
       "cursor": "Cursor 요금제의 {{model}}",
       "grok": "Grok 요금제의 {{model}}",
       "gemini": "Gemini 요금제의 {{model}}",
+      "devin": "Devin 요금제의 {{model}}",
       "zen": "OpenCode의 {{model}}",
       "coding": "{{plan}}의 {{model}}",
       "claudeOf": "{{model}} · {{owner}}님의 Claude 요금제",
@@ -12165,6 +12182,7 @@
       "cursorOf": "{{owner}}님의 Cursor 요금제의 {{model}}",
       "grokOf": "{{owner}}님의 Grok 요금제의 {{model}}",
       "geminiOf": "{{owner}}님의 Gemini 요금제의 {{model}}",
+      "devinOf": "{{owner}}님의 Devin 요금제의 {{model}}",
       "zenOf": "{{owner}}의 OpenCode에서 {{model}}",
       "codingOf": "{{owner}}님의 {{plan}}의 {{model}}",
       "claudeAuto": "Claude 요금제",
@@ -12172,6 +12190,7 @@
       "cursorAuto": "Cursor 요금제",
       "grokAuto": "Grok 요금제",
       "geminiAuto": "Gemini 요금제",
+      "devinAuto": "Devin 요금제",
       "zenAuto": "OpenCode",
       "codingAuto": "{{plan}}",
       "claudeAutoOf": "{{owner}}님의 Claude 요금제",
@@ -12179,6 +12198,7 @@
       "cursorAutoOf": "{{owner}}님의 Cursor 요금제",
       "grokAutoOf": "{{owner}}님의 Grok 요금제",
       "geminiAutoOf": "{{owner}}님의 Gemini 요금제",
+      "devinAutoOf": "{{owner}}님의 Devin 요금제",
       "zenAutoOf": "{{owner}}의 OpenCode",
       "codingAutoOf": "{{owner}}님의 {{plan}}",
       "on": "{{computer}}의 {{line}}"
@@ -12192,7 +12212,8 @@
       "cursor": "Cursor",
       "opencode": "OpenCode",
       "grok": "Grok Build",
-      "antigravity": "Antigravity CLI"
+      "antigravity": "Antigravity CLI",
+      "devin": "Devin CLI"
     },
     "foot": {
       "api": "API 사용",
@@ -12205,6 +12226,7 @@
     "cursorText": "컴퓨터를 연결한 사람의 Cursor 요금제를 사용해요.",
     "grokText": "컴퓨터를 연결한 사람의 Grok 요금제를 사용해요.",
     "antigravityText": "컴퓨터를 연결한 사람의 Gemini 요금제를 사용해요.",
+    "devinText": "컴퓨터를 연결한 사람의 Devin 요금제를 사용해요.",
     "opencodeText": "OpenCode의 무료 모델, 또는 컴퓨터를 연결한 사람의 OpenCode 키를 사용해요.",
     "cursorModel": {
       "inPlan": "내 Cursor 요금제에 포함",
@@ -12267,6 +12289,7 @@
       "cursor": "Cursor · {{model}}",
       "grok": "Grok Build · {{model}}",
       "antigravity": "Antigravity CLI · {{model}}",
+      "devin": "Devin CLI · {{model}}",
       "opencode": "OpenCode · {{model}}"
     },
     "mission": {
@@ -16027,6 +16050,7 @@
         "opencode": "OpenCode",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
+        "devin": "Devin CLI",
         "commands": "명령",
         "browser": "브라우저",
         "desktop": "화면",
@@ -16196,6 +16220,7 @@
         "cursor": "Cursor",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
+        "devin": "Devin CLI",
         "opencode": "OpenCode",
         "commands": "명령",
         "browser": "브라우저"
@@ -16206,6 +16231,7 @@
         "cursor": "Claude Code와 같지만 Cursor 계정을 사용해요. 허용된 폴더에서만 작동해요.",
         "grok": "Claude Code와 같지만 Grok 계정을 사용해요. 허용된 폴더에서만 작동해요.",
         "antigravity": "Claude Code와 같지만 Gemini 계정을 사용해요. 허용된 폴더에서만 작동해요.",
+        "devin": "Claude Code와 같지만 Devin 계정을 사용해요. 허용된 폴더에서만 작동해요.",
         "opencode": "Claude Code와 같지만 OpenCode의 무료 모델이나 OpenCode 키를 사용해요. 허용된 폴더에서만 작동해요.",
         "commands": "테스트나 빌드 같은 터미널 명령을 실행해요."
       },

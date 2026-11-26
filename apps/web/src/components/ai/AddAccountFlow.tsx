@@ -39,7 +39,8 @@ import { openSignInTab, openWaitingTab, sendSignInTab } from "@/lib/sign-in-tab"
  * itself; or, chosen under it, a Cursor API key, sent like a plan's key. Gemini (ADR 0143): Google's sign-in page,
  * then the code it shows, pasted like Claude's (its page's address, which carries no code, is never sent); a
  * personal Google account under the plain warning about Google's
- * terms, or (chosen under it) Gemini Enterprise. "Paste" shows only while the field is empty. Every start is a click,
+ * terms, or (chosen under it) Gemini Enterprise. Devin (ADR 0253): its sign-in page, then the code it shows, pasted the
+ * same way. "Paste" shows only while the field is empty. Every start is a click,
  * never the block showing. The page asks every 2 s; Back or closing stops
  * the sign-in on the computer. "Copy link" beside a sign-in's button copies
  * its link instead, to open in another browser or profile (it begins the
@@ -606,7 +607,7 @@ function AddAccountFlow({
             spellCheck={false}
             placeholder={placeholder}
             aria-label={label}
-            aria-describedby={plan || kind === "antigravity" ? keyHintId : undefined}
+            aria-describedby={plan || kind === "antigravity" || kind === "devin" ? keyHintId : undefined}
             onChange={(e) => take(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
@@ -898,6 +899,34 @@ function AddAccountFlow({
           <Button size="sm" variant="ghost" onClick={() => setEnterprise((on) => !on)}>
             {t(enterprise ? "agentPage.work.brain.add.geminiPersonal" : "agentPage.work.brain.add.geminiEnterprise")}
           </Button>
+        )}
+      </>
+    );
+  } else if (kind === "devin") {
+    // ADR 0253: Devin's page shows a code, pasted back here, as Gemini's.
+    steps = (
+      <>
+        {firstStep(
+          signInLabel ?? t("agentPage.work.brain.add.open.devin"),
+          <StepTitle title={t("agentPage.work.brain.add.stepOne.devin")} hint={signInHint} />,
+        )}
+        {login && opened && (
+          <Step side={busy && !reads.includes("reconnecting") ? undefined : waiting}>
+            <StepTitle
+              title={t("agentPage.work.brain.add.stepTwoDevin")}
+              hint={t("agentPage.work.brain.add.codeHintDevin")}
+              htmlFor={codeId}
+              hintId={keyHintId}
+            />
+            {busy
+              ? busyLine
+              : pasteRow(
+                  t("agentPage.work.brain.add.codeLabelDevin"),
+                  t("agentPage.work.brain.add.codeLabelDevin"),
+                  false,
+                  key.length > 0 && !/^https?:\/\//i.test(key.trim()),
+                )}
+          </Step>
         )}
       </>
     );

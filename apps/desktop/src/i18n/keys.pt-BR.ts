@@ -548,6 +548,8 @@ export const desktopPtBR = {
     grokDesc: "Escreve e muda código nas pastas liberadas, com a sua conta do Grok.",
     antigravityName: "Antigravity CLI",
     antigravityDesc: "Escreve e muda código nas pastas liberadas, com a sua conta do Gemini.",
+    devinName: "Devin CLI",
+    devinDesc: "Escreve e muda código nas pastas liberadas, com a sua conta do Devin.",
     found: "Encontrado",
     notFound: "Não encontrado",
     loggedOut: "Sem login",

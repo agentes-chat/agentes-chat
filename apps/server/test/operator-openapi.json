@@ -11933,7 +11933,7 @@
           {
             "schema": {
               "type": "string",
-              "enum": ["claude_code", "codex", "cursor", "opencode", "grok", "antigravity"]
+              "enum": ["claude_code", "codex", "cursor", "opencode", "grok", "antigravity", "devin"]
             },
             "required": false,
             "name": "kind",

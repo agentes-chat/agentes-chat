@@ -1385,6 +1385,12 @@
   "tools.antigravityDesc": {
     "value": "Writes and changes code in the allowed folders, with your Gemini account."
   },
+  "tools.devinName": {
+    "value": "Devin CLI"
+  },
+  "tools.devinDesc": {
+    "value": "Writes and changes code in the allowed folders, with your Devin account."
+  },
   "tools.found": {
     "value": "Found"
   },

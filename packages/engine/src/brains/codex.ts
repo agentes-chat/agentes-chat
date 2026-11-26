@@ -10,6 +10,7 @@ import {
   CODEX_FOLDER_PROTOCOL,
   CODEX_WINDOWS_PROTOCOL,
   CURSOR_PROTOCOL,
+  DEVIN_PROTOCOL,
   GROK_PROTOCOL,
   GROK_WINDOWS_PROTOCOL,
   LOCKED_BRAIN_PROTOCOL,
@@ -93,6 +94,7 @@ export interface ComputerBrainLink {
       opencode?: { version: string };
       grok?: { version: string };
       antigravity?: { version: string };
+      devin?: { version: string };
       /** Every agent as its own user (`runnerUpdateWay`). */
       mode?: "system";
     };
@@ -112,6 +114,7 @@ export interface ComputerBrainLink {
         opencode?: boolean;
         grok?: boolean;
         antigravity?: boolean;
+        devin?: boolean;
         commands: boolean;
       };
     } | null;
@@ -180,7 +183,7 @@ function channel<T>() {
  * protocol 36, no version gate, no live steering). Everything else, from the request to the events, is shared.
  */
 interface CliBrainSpec {
-  kind: "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+  kind: "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "devin";
   name: string;
   /** The runner protocol it needs. */
   protocol: number;
@@ -193,6 +196,7 @@ interface CliBrainSpec {
     opencode?: { version: string };
     grok?: { version: string };
     antigravity?: { version: string };
+    devin?: { version: string };
   }): BrainEvent | null;
 }
 
@@ -279,8 +283,22 @@ const ANTIGRAVITY_CLI: CliBrainSpec = {
         },
 };
 
+const DEVIN_CLI: CliBrainSpec = {
+  kind: "devin",
+  name: "Devin CLI",
+  protocol: DEVIN_PROTOCOL,
+  check: ({ devin }) =>
+    devin
+      ? null
+      : {
+          type: "error",
+          code: "devin_missing",
+          message: "The Devin CLI, Cognition's, is not installed on the computer.",
+          retryable: true,
+        },
+};
 export class CodexBrain implements Brain {
-  readonly kind: "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+  readonly kind: "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "devin";
 
   constructor(
     private readonly deps: CodexBrainDeps,
@@ -608,4 +626,15 @@ export function hubBrainLink(deps: {
       }
     },
   };
+}
+
+/**
+ * The Devin brain (ADR 0253): Cognition's Devin CLI (`devin acp`) on the agent's computer with a person's Devin plan,
+ * through the same `brain.turn` as Codex (`kind: "devin"`, runner protocol 89, `brain-devin.ts` there). A person's
+ * messages wait for the turn's end.
+ */
+export class DevinBrain extends CodexBrain {
+  constructor(deps: CodexBrainDeps) {
+    super(deps, DEVIN_CLI);
+  }
 }

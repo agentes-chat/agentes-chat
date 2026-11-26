@@ -663,8 +663,9 @@ export class RunnerDaemon implements RequestObserver {
         onChange: () => this.executorsChanged(),
         ...(windows.chooseCodexSandbox ? { choose: windows.chooseCodexSandbox } : {}),
       });
-    // Grok Build's, Antigravity's and Cursor's models as the accounts signed in here list them: the computer's own
-    // `grok models`, `agy models` and `agent models` are signed out.
+    // Grok Build's, Antigravity's, Cursor's and Devin's models as the accounts signed in here list them: the
+    // computer's own `grok models`, `agy models` and `agent models` are signed out, and the computer's own Devin
+    // thinks for no agent.
     this.executors = () => {
       const found: NonNullable<RunnerInfo["executors"]> = { ...exec() };
       for (const kind of ["grok", "antigravity", "cursor"] as const) {
@@ -672,6 +673,9 @@ export class RunnerDaemon implements RequestObserver {
         const entry = found[kind];
         if (entry && models) found[kind] = { ...entry, models };
       }
+      // Each family's variants stay here: the turns pick one (`devinTurnModel`).
+      const devin = this.accounts?.listedModels("devin")?.map(({ variants: _v, ...m }) => m);
+      if (found.devin && devin) found.devin = { ...found.devin, models: devin };
       if (found.codex && codexSandbox) found.codex = codexSandbox(found.codex, this.access().tools.codex);
       return found;
     };
@@ -1339,6 +1343,7 @@ export class RunnerDaemon implements RequestObserver {
       opencode: "OpenCode",
       grok: "Grok Build",
       antigravity: "Antigravity CLI",
+      devin: "Devin CLI",
       commands: "commands",
       browser: "the browser",
       desktop: "the agents' desktops",

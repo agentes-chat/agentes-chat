@@ -416,7 +416,16 @@ async function pair(p: Parsed): Promise<number> {
     grant,
     workspace: workspaceReal,
     ...(name ? { name } : {}),
-    tools: { claude: exec, codex: exec, cursor: exec, opencode: exec, grok: exec, antigravity: exec, commands: exec },
+    tools: {
+      claude: exec,
+      codex: exec,
+      cursor: exec,
+      opencode: exec,
+      grok: exec,
+      antigravity: exec,
+      devin: exec,
+      commands: exec,
+    },
     desktop: false,
   });
   writeConfig(next, home);

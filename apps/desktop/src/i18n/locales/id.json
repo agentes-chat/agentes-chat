@@ -502,6 +502,8 @@
     "grokDesc": "Menulis dan mengubah kode di folder yang diizinkan, dengan akun Grok-mu.",
     "antigravityName": "Antigravity CLI",
     "antigravityDesc": "Menulis dan mengubah kode di folder yang diizinkan, dengan akun Gemini-mu.",
+    "devinName": "Devin CLI",
+    "devinDesc": "Menulis dan mengubah kode di folder yang diizinkan, dengan akun Devin-mu.",
     "found": "Ditemukan",
     "notFound": "Tidak ditemukan",
     "loggedOut": "Belum masuk",

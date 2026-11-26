@@ -3316,6 +3316,7 @@
       "cursor": "这台电脑上的 Cursor 未登录。请在 {{name}} 的页面上连接 Cursor 账号。",
       "grok": "这台电脑上的 Grok 未登录。请在 {{name}} 的页面上连接 Grok 账号。",
       "antigravity": "这台电脑上的 Gemini 未登录。请在 {{name}} 的页面上连接 Gemini 账号。",
+      "devin": "这台电脑上的 Devin 未登录。请在 {{name}} 的页面上连接 Devin 账号。",
       "opencode": "OpenCode 无法在这台电脑上思考。请在 {{name}} 的页面连接一个 OpenCode 密钥。"
     },
     "notSignedInOn": {
@@ -3324,6 +3325,7 @@
       "cursor": "{{computer}}上的 Cursor 未登录。请在 {{name}} 的页面上连接 Cursor 账号。",
       "grok": "{{computer}}上的 Grok 未登录。请在 {{name}} 的页面上连接 Grok 账号。",
       "antigravity": "{{computer}}上的 Gemini 未登录。请在 {{name}} 的页面上连接 Gemini 账号。",
+      "devin": "{{computer}}上的 Devin 未登录。请在 {{name}} 的页面上连接 Devin 账号。",
       "opencode": "OpenCode 无法在{{computer}}上思考。请在 {{name}} 的页面连接一个 OpenCode 密钥。"
     },
     "card": {
@@ -3382,6 +3384,7 @@
       "cursor": "连接你的 Cursor 套餐",
       "grok": "连接你的 Grok 套餐",
       "gemini": "连接你的 Gemini 套餐",
+      "devin": "连接你的 Devin 套餐",
       "zen": "连接 OpenCode",
       "api_key": "添加 API 密钥"
     },
@@ -3523,6 +3526,10 @@
         "warning": "Google 表示，在其他应用中使用个人 Gemini 套餐可能导致账号被停用。为避免这一风险，请使用 Gemini API 密钥或 Gemini Enterprise。",
         "windowsOne": "在 Windows 上，一台电脑一次只能使用一个 Gemini 账号。"
       },
+      "devin": {
+        "title": "你的 Devin 套餐",
+        "tiers": "Free、Pro、Max 或 Teams"
+      },
       "zen": {
         "title": "OpenCode",
         "tiers": "免费模型，或你的 OpenCode 密钥"
@@ -3630,6 +3637,7 @@
       "cursor": "Cursor 登录的是 {{email}}，而不是 {{account}}。请在 Cursor 页面退出登录后重试。",
       "grok": "Grok 登录的是 {{email}}，而不是 {{account}}。请在 Grok 页面退出登录后重试。",
       "antigravity": "Gemini 登录的是 {{email}}，而不是 {{account}}。请在 Google 页面退出登录后重试。",
+      "devin": "Devin 登录的是 {{email}}，而不是 {{account}}。请在 Devin 页面退出登录后重试。",
       "opencode": "OpenCode 登录的是 {{email}}，不是 {{account}}。请用正确的密钥重试。"
     },
     "useAnyway": "使用 {{email}}",
@@ -5849,6 +5857,7 @@
             "cursor": "添加 Cursor 账号",
             "grok": "添加 Grok 账号",
             "antigravity": "添加 Gemini 账号",
+            "devin": "添加 Devin 账号",
             "opencode": "添加 OpenCode 密钥"
           },
           "stepOne": {
@@ -5856,6 +5865,7 @@
             "codex": "有你套餐的那个账号",
             "cursor": "有你套餐的那个账号",
             "grok": "有你套餐的那个账号",
+            "devin": "有你套餐的那个账号",
             "antigravity": "有你套餐的 Google 账号",
             "antigravityEnterprise": "你的 Gemini Enterprise 账号"
           },
@@ -5865,7 +5875,8 @@
             "codex": "使用 ChatGPT 登录",
             "cursor": "使用 Cursor 登录",
             "grok": "使用 Grok 登录",
-            "antigravity": "使用 Google 登录"
+            "antigravity": "使用 Google 登录",
+            "devin": "使用 Devin 登录"
           },
           "opencodeFree": "OpenCode 的免费模型无需密钥。用 OpenCode 控制台的密钥还能使用付费模型。",
           "cursorFinish": "在 Cursor 的页面上登录后，{{computer}} 上的登录会自动完成。",
@@ -5880,6 +5891,9 @@
           "notCode": "这看起来不像 Claude 的代码。",
           "stepTwoGoogle": "粘贴 Google 显示的代码",
           "codeLabelGoogle": "Google 代码",
+          "stepTwoDevin": "粘贴 Devin 显示的代码",
+          "codeHintDevin": "请粘贴 Devin 页面显示的代码，不要粘贴页面地址。",
+          "codeLabelDevin": "Devin 代码",
           "codeHintGoogle": "请粘贴 Google 页面显示的代码，不要粘贴页面地址。",
           "notCodeGoogle": "这是一个不含代码的地址。请粘贴 Google 页面显示的代码。",
           "send": "发送到 {{computer}}",
@@ -5913,6 +5927,7 @@
             "cursor": "Cursor 已登录为 {{account}}，这个账号你已经连接过了。要使用其他账号，请在 Cursor 的页面上退出登录后重试。",
             "grok": "Grok 已登录为 {{account}}，这个账号你已经连接过了。要使用其他账号，请在 Grok 的页面上退出登录后重试。",
             "antigravity": "Gemini 已登录为 {{account}}，这个账号你已经连接过了。要使用其他账号，请在 Google 的页面上退出登录后重试。",
+            "devin": "Devin 已登录为 {{account}}，这个账号你已经连接过了。要使用其他账号，请在 Devin 的页面上退出登录后重试。",
             "opencode": "这个 OpenCode 密钥已作为 {{account}} 连接。"
           },
           "startFailed": "{{computer}} 没有响应，请稍后重试。",
@@ -10790,6 +10805,7 @@
       "cursor": "Cursor",
       "grok": "Grok",
       "antigravity": "Gemini",
+      "devin": "Devin",
       "opencode": "OpenCode",
       "needs": {
         "keys": "在电脑上更新 agentes，即可使用套餐密钥"
@@ -12234,6 +12250,7 @@
       "cursor": "Cursor 套餐上的 {{model}}",
       "grok": "Grok 套餐上的 {{model}}",
       "gemini": "Gemini 套餐上的 {{model}}",
+      "devin": "Devin 套餐上的 {{model}}",
       "zen": "通过 OpenCode 使用 {{model}}",
       "coding": "{{plan}} 上的 {{model}}",
       "claudeOf": "{{owner}} 的 Claude 套餐上的 {{model}}",
@@ -12241,6 +12258,7 @@
       "cursorOf": "{{owner}} 的 Cursor 套餐上的 {{model}}",
       "grokOf": "{{owner}} 的 Grok 套餐上的 {{model}}",
       "geminiOf": "{{owner}} 的 Gemini 套餐上的 {{model}}",
+      "devinOf": "{{owner}} 的 Devin 套餐上的 {{model}}",
       "zenOf": "通过 {{owner}} 的 OpenCode 使用 {{model}}",
       "codingOf": "{{owner}} 的 {{plan}} 上的 {{model}}",
       "claudeAuto": "Claude 套餐",
@@ -12248,6 +12266,7 @@
       "cursorAuto": "Cursor 套餐",
       "grokAuto": "Grok 套餐",
       "geminiAuto": "Gemini 套餐",
+      "devinAuto": "Devin 套餐",
       "zenAuto": "OpenCode",
       "codingAuto": "{{plan}}",
       "claudeAutoOf": "{{owner}} 的 Claude 套餐",
@@ -12255,6 +12274,7 @@
       "cursorAutoOf": "{{owner}} 的 Cursor 套餐",
       "grokAutoOf": "{{owner}} 的 Grok 套餐",
       "geminiAutoOf": "{{owner}} 的 Gemini 套餐",
+      "devinAutoOf": "{{owner}} 的 Devin 套餐",
       "zenAutoOf": "{{owner}} 的 OpenCode",
       "codingAutoOf": "{{owner}} 的 {{plan}}",
       "on": "{{computer}} 上的{{line}}"
@@ -12269,7 +12289,8 @@
       "cursor": "Cursor",
       "opencode": "OpenCode",
       "grok": "Grok Build",
-      "antigravity": "Antigravity CLI"
+      "antigravity": "Antigravity CLI",
+      "devin": "Devin CLI"
     },
     "foot": {
       "api": "通过 API",
@@ -12282,6 +12303,7 @@
     "cursorText": "使用连接这台电脑的人的 Cursor 套餐。",
     "grokText": "使用连接这台电脑的人的 Grok 套餐。",
     "antigravityText": "使用连接这台电脑的人的 Gemini 套餐。",
+    "devinText": "使用连接这台电脑的人的 Devin 套餐。",
     "opencodeText": "使用 OpenCode 的免费模型，或连接这台电脑的人的 OpenCode 密钥。",
     "cursorModel": {
       "inPlan": "包含在你的 Cursor 套餐中",
@@ -12344,6 +12366,7 @@
       "cursor": "Cursor · {{model}}",
       "grok": "Grok Build · {{model}}",
       "antigravity": "Antigravity CLI · {{model}}",
+      "devin": "Devin CLI · {{model}}",
       "opencode": "OpenCode · {{model}}"
     },
     "mission": {
@@ -16101,6 +16124,7 @@
         "opencode": "OpenCode",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
+        "devin": "Devin CLI",
         "commands": "命令",
         "browser": "浏览器",
         "desktop": "屏幕",
@@ -16272,6 +16296,7 @@
         "cursor": "Cursor",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
+        "devin": "Devin CLI",
         "opencode": "OpenCode",
         "commands": "命令",
         "browser": "浏览器"
@@ -16282,6 +16307,7 @@
         "cursor": "类似 Claude Code，使用 Cursor 账号。仅限允许的文件夹。",
         "grok": "类似 Claude Code，使用 Grok 账号。仅限允许的文件夹。",
         "antigravity": "类似 Claude Code，使用 Gemini 账号。仅限允许的文件夹。",
+        "devin": "类似 Claude Code，使用 Devin 账号。仅限允许的文件夹。",
         "opencode": "类似 Claude Code，使用 OpenCode 的免费模型或 OpenCode 密钥。仅限允许的文件夹。",
         "commands": "运行终端命令，比如测试和构建。"
       },

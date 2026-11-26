@@ -506,6 +506,8 @@
     "grokDesc": "Schreibt und ändert Code in den erlaubten Ordnern, mit deinem Grok-Konto.",
     "antigravityName": "Antigravity CLI",
     "antigravityDesc": "Schreibt und ändert Code in den erlaubten Ordnern, mit deinem Gemini-Konto.",
+    "devinName": "Devin CLI",
+    "devinDesc": "Schreibt und ändert Code in den erlaubten Ordnern, mit deinem Devin-Konto.",
     "found": "Gefunden",
     "notFound": "Nicht gefunden",
     "loggedOut": "Nicht angemeldet",

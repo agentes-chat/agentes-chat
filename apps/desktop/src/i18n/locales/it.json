@@ -510,6 +510,8 @@
     "grokDesc": "Scrive e modifica il codice nelle cartelle consentite, con il tuo account Grok.",
     "antigravityName": "Antigravity CLI",
     "antigravityDesc": "Scrive e modifica il codice nelle cartelle consentite, con il tuo account Gemini.",
+    "devinName": "Devin CLI",
+    "devinDesc": "Scrive e modifica il codice nelle cartelle consentite, con il tuo account Devin.",
     "found": "Trovato",
     "notFound": "Non trovato",
     "loggedOut": "Accesso non eseguito",
