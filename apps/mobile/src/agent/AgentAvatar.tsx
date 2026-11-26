@@ -9,15 +9,18 @@ import {
 } from "@agenteschat/ui/agent/engine";
 import { avatarSkyCell, avatarSkyCells, avatarSkyTones } from "@agenteschat/ui/sky/avatar";
 import { Canvas, createPicture, Picture, type SkPicture } from "@shopify/react-native-skia";
-import { memo, useMemo } from "react";
+import { Image } from "expo-image";
+import { memo, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { StyleSheet, View } from "react-native";
+import { PixelRatio, StyleSheet, View } from "react-native";
 import { useReducedMotion, useTheme } from "@/ui/theme";
+import { kept, stillFaceKey, stillImageKey } from "./kept";
 import { useFrameTime } from "./live";
 import type { AgentLookInput } from "./looks";
 import { type AgentMode, agentLayout, framedByDefault, framedLayout, poseFor, STILL_T, seedOf } from "./poses";
 import { asCtx, compile, RecordingContext } from "./recorder";
 import { replay } from "./skia-ctx";
+import { stillImage } from "./still-image";
 
 export interface AgentAvatarProps {
   agent: AgentLookInput;
@@ -111,25 +114,47 @@ function drawSky(rec: RecordingContext, color: AgentLookInput["color"], size: nu
 }
 
 /**
- * Pictures kept across mounts, most recently used last: a face scrolled back into view, the same agent in many rows,
- * a sky under every frame of a living face. Recording one costs hundreds of rects and a path parse each.
+ * Pictures and images kept across mounts (`kept`): a sky under every frame of a living face, a still face recorded
+ * once, and that still face as an image (by its look and the screen's pixel ratio). Recording one costs hundreds of
+ * rects and a path parse each.
  */
-const KEPT = 400;
 const skies = new Map<string, SkPicture>();
 const stills = new Map<string, SkPicture>();
-function kept(map: Map<string, SkPicture>, key: string, make: () => SkPicture): SkPicture {
-  const hit = map.get(key);
-  if (hit) {
-    map.delete(key);
-    map.set(key, hit);
-    return hit;
-  }
-  const made = make();
-  map.set(key, made);
-  const oldest = map.size > KEPT ? map.keys().next().value : undefined;
-  if (oldest !== undefined) map.delete(oldest);
-  return made;
+const images = new Map<string, string | null>();
+
+/** Everything a face is drawn from, but the moment. */
+interface FaceLook {
+  look: AgentLookInput;
+  size: number;
+  mode: AgentMode;
+  seed: number;
+  reduced: boolean;
+  tile: boolean;
+  dark: boolean;
+  expression: Expression | undefined;
+  gaze: Gaze | undefined;
+  bodyless: boolean;
 }
+
+/** The face at `t`, without its sky (drawn once, under it). */
+function facePicture(f: FaceLook, t: number): SkPicture {
+  const frame = agentFrame(
+    f.look,
+    f.size,
+    f.mode,
+    t,
+    f.seed,
+    f.reduced,
+    f.tile ? { dark: f.dark } : undefined,
+    f.expression,
+    f.dark,
+    { gaze: f.gaze, bodyless: f.bodyless, sky: false },
+  );
+  return createPicture((canvas) => replay(canvas, frame), { width: f.size, height: f.size });
+}
+
+/** What is on screen: the still image or the canvas (each stays until the other has drawn, so a swap never blinks). */
+type Layer = "image" | "canvas";
 
 function AgentAvatarView({
   agent,
@@ -150,7 +175,19 @@ function AgentAvatarView({
   const { t: tr } = useTranslation();
   const { color, eyes, accessory, id } = agent;
   const seed = useMemo(() => seedOf(id ?? `${color}:${eyes}:${accessory ?? ""}`), [id, color, eyes, accessory]);
-  const t = useFrameTime(live && !reduced, STILL_T);
+  // A face that never moves here (a long list's, reduced motion) is a plain image; a living one keeps its canvas, also
+  // while the clock holds it still (a scroll, a slide), so holding never swaps one for the other.
+  const moving = live && !reduced;
+  const t = useFrameTime(moving, STILL_T);
+  const [layer, setLayer] = useState<Layer>(moving ? "canvas" : "image");
+  // Starting to move: the canvas draws the still frame over the image, which goes once the canvas has had a frame.
+  useEffect(() => {
+    if (!moving || layer === "canvas") return;
+    let id = requestAnimationFrame(() => {
+      id = requestAnimationFrame(() => setLayer("canvas"));
+    });
+    return () => cancelAnimationFrame(id);
+  }, [moving, layer]);
   // By the colors it resolves to: `sky` follows the workspace's accent.
   const drawn = drawnKey(color);
   // The sky never moves: drawn once per color, size and theme (`drawn`: what `color` draws as now), under every frame.
@@ -163,43 +200,63 @@ function AgentAvatarView({
       return createPicture((canvas) => replay(canvas, ops), { width: size, height: size });
     });
   }, [color, drawn, size, dark, tile]);
-  const picture = useMemo(() => {
-    const draw = () => {
-      const frame = agentFrame(
-        { color, eyes, accessory },
-        size,
-        mode,
-        t,
-        seed,
-        reduced,
-        tile ? { dark } : undefined,
-        expression,
-        dark,
-        { gaze, bodyless, sky: false },
-      );
-      return createPicture((canvas) => replay(canvas, frame), { width: size, height: size });
-    };
-    // A still face is the same picture wherever it shows: kept, never recorded again on the next mount.
-    if (t !== STILL_T) return draw();
-    const key = [
-      drawn,
-      eyes,
-      accessory ?? "",
+  const face = useMemo<FaceLook>(
+    () => ({
+      look: { color, eyes, accessory },
       size,
       mode,
       seed,
       reduced,
       tile,
       dark,
-      expression ?? "",
-      gaze ?? "",
+      expression,
+      gaze,
       bodyless,
-    ];
-    return kept(stills, key.join("|"), draw);
-  }, [color, drawn, eyes, accessory, size, mode, t, seed, reduced, tile, dark, expression, gaze, bodyless]);
+    }),
+    [color, eyes, accessory, size, mode, seed, reduced, tile, dark, expression, gaze, bodyless],
+  );
+  const key = useMemo(
+    () =>
+      stillFaceKey({
+        drawn,
+        eyes,
+        accessory,
+        size,
+        mode,
+        seed,
+        reduced,
+        tile,
+        dark,
+        expression,
+        gaze,
+        bodyless,
+      }),
+    [drawn, eyes, accessory, size, mode, seed, reduced, tile, dark, expression, gaze, bodyless],
+  );
+  const ratio = PixelRatio.get();
+  // A still face is the same image wherever it shows: drawn once per look and density, never per mount.
+  const showImage = !moving || layer === "image";
+  const image = useMemo(() => {
+    if (!showImage) return null;
+    return kept(images, stillImageKey(key, ratio), () => {
+      const still = kept(stills, key, () => facePicture(face, STILL_T));
+      return stillImage(sky ? [sky, still] : [still], size, ratio);
+    });
+  }, [showImage, key, ratio, face, sky, size]);
+  // No image (Skia couldn't make one): the canvas draws the still frame instead.
+  const showCanvas = moving || layer === "canvas" || !image;
+  // Over the image, the canvas shows the still frame, so the two never differ while both are up.
+  const at = moving && layer === "canvas" ? t : STILL_T;
+  const picture = useMemo(() => {
+    if (!showCanvas) return null;
+    // A still face is the same picture wherever it shows: kept, never recorded again on the next mount.
+    if (at === STILL_T) return kept(stills, key, () => facePicture(face, STILL_T));
+    return facePicture(face, at);
+  }, [showCanvas, at, key, face]);
   const label = name
     ? tr(mode === "run" ? "mobile.a11y.agentWorking" : "mobile.a11y.agent", { name })
     : tr("mobile.a11y.agentPlain");
+  const box = { position: "absolute", width: size, height: size } as const;
   return (
     <View
       accessible
@@ -215,18 +272,34 @@ function AgentAvatarView({
         },
       ]}
     >
-      <Canvas style={{ width: size, height: size }}>
-        {sky ? <Picture picture={sky} /> : null}
-        <Picture picture={picture} />
-      </Canvas>
+      {image && showImage ? (
+        <Image
+          source={{ uri: image }}
+          recyclingKey={image}
+          cachePolicy="memory"
+          transition={0}
+          contentFit="fill"
+          // Stopping: the canvas, already on the still frame, goes once the image is on screen.
+          onDisplay={moving ? undefined : () => setLayer("image")}
+          style={box}
+          accessibilityIgnoresInvertColors
+        />
+      ) : null}
+      {showCanvas && picture ? (
+        <Canvas style={box}>
+          {sky ? <Picture picture={sky} /> : null}
+          <Picture picture={picture} />
+        </Canvas>
+      ) : null}
     </View>
   );
 }
 
 /**
- * An agent, drawn by the shared engine (`@agenteschat/ui/agent/engine`) on a Skia canvas: never any
- * other way. Living agents share one ~25 fps clock; with reduced motion, `live={false}`, an off-screen
- * screen or the app in the background they hold a still frame.
+ * An agent, drawn by the shared engine (`@agenteschat/ui/agent/engine`) through Skia: never any other way. Living
+ * agents share one ~25 fps clock on a canvas; with reduced motion, an off-screen screen or the app in the background
+ * they hold a still frame. A face that doesn't move here (`live={false}`, reduced motion) is that still frame drawn once
+ * into an image, shared by every identical face, instead of a canvas of its own.
  */
 export const AgentAvatar = memo(
   AgentAvatarView,
