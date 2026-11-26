@@ -59,11 +59,16 @@ const makerOf = (mark: string | null) => (mark ? (MAKER[mark] ?? mark) : null);
  * The request the person pastes into a new conversation with their AI: the opening and what to read first in the
  * variant's words, the same interview and job descriptions for all, then how to send it: `propose_first_agents`, or,
  * with no connector (`json`), an opening that says none and a JSON answer to paste here, its example under the line.
+ * The JSON answer also gives each routine as a cron: the routines read one with no model, and a workspace still
+ * waiting for its plan has none to read the schedule's words (ADR 0250).
  */
 export function askPrompt(t: TFunction, variant: AskVariant, org: string, json = false): string {
   const open = json
     ? t(`onboarding.ask.prompt.json.${variant}`, { org })
     : t(`onboarding.ask.prompt.${variant}.open`, { org });
+  const design = json
+    ? `${t("onboarding.ask.prompt.design")} ${t("onboarding.ask.prompt.json.cron")}`
+    : t("onboarding.ask.prompt.design");
   const send = json
     ? `${t("onboarding.ask.prompt.json.send")}\n${t("onboarding.ask.prompt.json.example")}`
     : t(`onboarding.ask.prompt.${variant}.send`, { org });
@@ -71,7 +76,7 @@ export function askPrompt(t: TFunction, variant: AskVariant, org: string, json =
     open,
     t(`onboarding.ask.prompt.${variant}.know`, { org }),
     t("onboarding.ask.prompt.interview"),
-    t("onboarding.ask.prompt.design"),
+    design,
     send,
   ].join("\n\n");
 }

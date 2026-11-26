@@ -40,9 +40,10 @@ fits "show me three, I pick one, on the onboarding's own page".
 2. **One shape for both ways in.** `firstAgentsInput` (zod) is what the MCP tool and the paste route take: `about` (at
    most 600 characters) and 1 to 3 options, each `name` (1 to 30), optional `handle`, `role` (1 to 40), `why` (1 to 280),
    `tasks` (1 to 4, each up to 120), `apps` (names), an optional `routine` (`title`, `schedule` in words, `prompt`, and
-   an optional `cron`), `today` (up to 3) and `instructions` (up to 4,000). The routine's `cron` is optional and not
-   part of the pasted JSON's example: words like "toda segunda às 8:00" need the workspace's own model to read, which a
-   workspace waiting for its plan doesn't have, so the MCP tool asks for the cron of the same schedule too.
+   an optional `cron`), `today` (up to 3) and `instructions` (up to 4,000). The routine's `cron` is optional: words like
+   "toda segunda às 8:00" need the workspace's own model to read, which a workspace waiting for its plan doesn't have,
+   so the MCP tool asks for the cron of the same schedule too, and so does the request for a pasted answer (its third
+   item, and `"cron":"0 8 * * 1"` in its JSON example), in the person's time zone.
 
 3. **Kept per person, newest first.** `first_agent_proposals` (`org_id`, `user_id`, the connection that sent it or none,
    `source` `mcp` or `paste`, `about`, `options` jsonb, `picked`, `picked_at`, `agent_id`, `created_at`; erased by a

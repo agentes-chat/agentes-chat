@@ -1960,9 +1960,10 @@ export const ptBR = {
             "Acabei de entrar no workspace da {{org}} no agentes.chat e quero começar com um agente de IA que tire do meu dia um trabalho que se repete no meu papel no time.",
           personal:
             "Quero começar a usar o agentes.chat com um agente de IA que tire do meu dia um trabalho que se repete, no trabalho ou fora dele.",
+          cron: "Dê também o dia e a hora de cada rotina como um cron de 5 campos, no meu fuso horário.",
           send: "4. Responda só com um JSON neste formato, sem texto antes ou depois:",
           example:
-            '{"about":"…","options":[{"name":"…","role":"…","why":"…","tasks":["…","…","…"],"apps":["…"],"routine":{"title":"…","schedule":"toda segunda às 8:00","prompt":"…"},"today":["…","…"],"instructions":"…"}]}',
+            '{"about":"…","options":[{"name":"…","role":"…","why":"…","tasks":["…","…","…"],"apps":["…"],"routine":{"title":"…","schedule":"toda segunda às 8:00","cron":"0 8 * * 1","prompt":"…"},"today":["…","…"],"instructions":"…"}]}',
         },
       },
     },
