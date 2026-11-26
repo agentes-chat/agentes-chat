@@ -117,6 +117,7 @@ function ComputerStorage() {
   const { t, i18n } = useTranslation();
   const { orgId, org } = useOrg();
   const { scheme } = useTheme();
+  const { sunken } = useColors();
   const openDm = useOpenDm();
   const lodi = rightHandOf(useDirectory().agents);
   const storage = computerStorage(useMachines(orgId).data?.find((m) => m.kind === "managed")?.disk ?? null);
@@ -147,7 +148,12 @@ function ComputerStorage() {
           />
         ))}
         {storage.parts.length > 0 ? (
-          <GroupedRow label={t("storage.computer.part.free")} value={size(storage.freeGb)} />
+          // Free in the track's own color, so its label starts where the kinds' do.
+          <GroupedRow
+            leading={<View style={[styles.swatch, { backgroundColor: sunken }]} />}
+            label={t("storage.computer.part.free")}
+            value={size(storage.freeGb)}
+          />
         ) : null}
         {storage.full && lodi && mayAsk(org, lodi) ? (
           <GroupedRow
