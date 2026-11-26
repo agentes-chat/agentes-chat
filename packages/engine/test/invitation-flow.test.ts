@@ -41,6 +41,7 @@ import {
   spentClaimHash,
   suggestPerson,
   updateInvitation,
+  waitingInvitations,
 } from "../src";
 import { addMember, adminRoleId, type Fixture, SECRET, setup } from "./fixtures";
 
@@ -192,6 +193,39 @@ describe("asking through a link with a password (ADR 0090)", () => {
     });
   });
 
+  test("an unconfirmed account with the address: the page that asked opens the invitation the approval sent, once", async () => {
+    const { token } = await start();
+    await fx().db.insert(schema.users).values({ id: "u_lia", name: "Lia", email: "lia@example.com" });
+    const asked = await askWithPassword(token, "lia@example.com", "hash:lia", "lia-secret");
+    const id = "requestId" in asked ? (asked.requestId ?? "") : "";
+    const approval = await approveJoinRequest(
+      { ...deps(), secret: SECRET },
+      PUBLIC,
+      fx().owner.id,
+      fx().org.id,
+      id,
+      [],
+      NOW,
+    );
+    expect(approval.outcome).toBe("invited");
+    const lia = { id: "u_lia", email: "lia@example.com" };
+    const claimed = await claimJoinRequest(fx().db, token, `${id}.lia-secret`, NOW);
+    if (claimed.status !== "invited") throw new Error(`expected invited, got ${claimed.status}`);
+    expect(claimed.invitationId).toBe((await requestOf(id))?.invitationId ?? "");
+    const invitationLink = invitationToken(SECRET, claimed.invitationId);
+    expect(approval).toEqual({ outcome: "invited", url: `${PUBLIC}/invite/${invitationLink}` });
+    // Once: the key is spent, and nobody else signs in with it.
+    expect(await claimJoinRequest(fx().db, token, `${id}.lia-secret`, NOW)).toEqual({ status: "closed" });
+
+    // Signed in, the account finds it too: the invitation it joins instead of making a workspace.
+    expect(await waitingInvitations(fx().db, SECRET, lia, NOW)).toEqual([
+      { orgId: fx().org.id, orgName: fx().org.name, token: invitationLink },
+    ]);
+    expect(await waitingInvitations(fx().db, SECRET, lia, at(8))).toEqual([]);
+    await acceptInvitation(fx().db, lia, invitationLink, NOW);
+    expect(await waitingInvitations(fx().db, SECRET, lia, NOW)).toEqual([]);
+  });
+
   test("joining another way closes the request, its page told so; a key is good for a day", async () => {
     const { token } = await start();
     const asked = await askWithPassword(token, "gabi@example.com", "hash:gabi", "gabi-secret");
@@ -273,7 +307,8 @@ describe("asking through a link with a password (ADR 0090)", () => {
     expect(iris).toEqual([expect.objectContaining({ id: "u_iris", name: "Iris", emailVerified: false })]);
     expect(await fx().db.select().from(schema.accounts).where(eq(schema.accounts.userId, "u_iris"))).toEqual([]);
     expect(await requestOf(id)).toMatchObject({ status: "approved", passwordHash: null });
-    expect(await claimJoinRequest(fx().db, token, `${id}.iris-secret`, NOW)).toEqual({ status: "closed" });
+    // The page that asked opens that invitation, where the account signs in as it always does.
+    expect(await claimJoinRequest(fx().db, token, `${id}.iris-secret`, NOW)).toMatchObject({ status: "invited" });
   });
 });
 
