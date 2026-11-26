@@ -258,7 +258,7 @@ describe("calls", () => {
     expect(sent?.endpoint).toEqual({
       style: "openai",
       baseURL: "https://gw.example/v1",
-      imageInputModels: ["llama-4"],
+      modelInputs: [{ id: "llama-4", imageInput: true }],
     });
     expect(result.costNanoUsd).toBe(1000 * 1000 + 100 * 2000);
     const [record] = await f.db.select().from(schema.usageRecords).where(eq(schema.usageRecords.agentId, f.agent.id));
