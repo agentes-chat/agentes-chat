@@ -144,6 +144,8 @@ export const ACCESSORY_CHECK: Record<string, [string, string]>;
 export const ACCESSORIES: Record<AccessoryName, { ox: number; oy: number; rows: string[] }>;
 export const ACCESSORY_NAMES: ["none", ...AccessoryName[]];
 export const ACCESSORY_REACH: { top: number; left: number; right: number; bottom: number };
+/** How far one accessory reaches above the body, in body fractions (0 for none): room for what sits over it. */
+export function accessoryTop(name?: string): number;
 export function drawAccessory(
   ctx: Ctx2D,
   s: number,

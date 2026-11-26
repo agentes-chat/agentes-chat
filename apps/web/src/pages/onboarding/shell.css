@@ -174,10 +174,11 @@ html:not([data-pointer]) .onbw__me:focus-visible {
   flex-direction: column;
   min-width: 0;
 }
-/* What the right hand says, over its head, the cut corner pointing down at it. */
+/* What the right hand says, over its head and what it wears there (`--reach`, its face's), the cut corner pointing
+   down at it. */
 .onbw__say {
   position: absolute;
-  bottom: calc(100% + 6px);
+  bottom: calc(100% * (1 + var(--reach, 0)) + 6px);
   left: 58%;
   display: block;
   width: max-content;
@@ -409,7 +410,7 @@ html:not([data-pointer]) .onbx__back:focus-visible {
 }
 .onbw__say.onb-photo__say {
   left: 46%;
-  bottom: calc(100% + 8px);
+  bottom: calc(100% * (1 + var(--reach, 0)) + 8px);
   max-width: 240px;
   font-weight: 550;
   box-shadow: 0 10px 30px -10px rgb(0 20 60 / 0.45);
@@ -495,8 +496,9 @@ html:not([data-pointer]) .onbx__back:focus-visible {
     height: calc(52px + env(safe-area-inset-top, 0px));
     padding: env(safe-area-inset-top, 0px) 16px 0;
   }
+  /* The speaker's bubble over its 52px face and what it wears there (`--reach`) stays under the logo's row. */
   .onbw__stage {
-    padding: 72px 16px 32px;
+    padding: calc(72px + 52px * var(--reach, 0)) 16px 32px;
   }
   .onbw__stage:has(.onbx[data-cover]):not(:has(.onbw__ground)) {
     padding-top: 24px;

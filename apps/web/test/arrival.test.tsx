@@ -199,6 +199,28 @@ describe("the welcome wizard, right after the onboarding", () => {
     expect(words).not.toMatch(/cl[ií]nic|odonto|dental|pacient/i);
   });
 
+  test("no box between an agent in a picture and the picture's edge clips it: its cap reaches past its face", async () => {
+    // The pictures' rules that clip what overflows them, by the classes their selectors' last compound names.
+    const css = await Bun.file(new URL("../src/components/arrival/welcome-art.css", import.meta.url).pathname).text();
+    const last = (selector: string) => selector.match(/[^\s>+~]+\s*$/)?.[0] ?? "";
+    const clipping = new Set(
+      [...css.replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+        .filter((m) => /overflow(-[xy])?\s*:\s*(hidden|clip)|clip-path\s*:/.test(m[2] ?? ""))
+        .flatMap((m) => (m[1] ?? "").split(",").map(last))
+        .flatMap((compound) => [...compound.matchAll(/\.([\w-]+)/g)].map((m) => m[1])),
+    );
+    await open(withList(), "?arrival=beta");
+    for (let step = 1; step <= 7; step++) {
+      const art = wizard().querySelector(".wiz__art") as HTMLElement;
+      const faces = [...art.querySelectorAll(".ac-avatar--agent")];
+      expect(faces.length).toBeGreaterThan(0);
+      for (const face of faces)
+        for (let box = face.parentElement; box && box !== art; box = box.parentElement)
+          expect({ step, clips: [...box.classList].filter((c) => clipping.has(c)) }).toEqual({ step, clips: [] });
+      if (step < 7) await press(/^Próximo/);
+    }
+  });
+
   test("its pictures, with no agent of the person's own: the right hand's screen says Tarefas", async () => {
     await open(withList(), "?arrival=beta");
     await press(/^Próximo/);

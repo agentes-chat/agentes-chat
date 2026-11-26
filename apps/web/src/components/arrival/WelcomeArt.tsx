@@ -1,10 +1,19 @@
 import type { Agent } from "@agenteschat/client";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { RIGHT_HAND_DEFAULT } from "@agenteschat/client/lib/right-hand";
-import { type AgentState, Button, type Expression, Icon, PixelSky, teamSky } from "@agenteschat/ui";
+import {
+  type AgentAppearance,
+  type AgentState,
+  Button,
+  type Expression,
+  Icon,
+  PixelSky,
+  teamSky,
+} from "@agenteschat/ui";
 import { type CSSProperties, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { AgentAvatar, PersonAvatar } from "@/components/AgentAvatar";
+import { lookOf, reachOf } from "@/lib/look";
 import "./arrival.css";
 import "./welcome-art.css";
 
@@ -24,6 +33,8 @@ export type WelcomeStep = "hello" | "computer" | "channels" | "wiki" | "memory" 
 export interface Who {
   id: string | null;
   name: string;
+  /** Its look, for the room what it wears takes over its face (`reachOf`). */
+  look?: AgentAppearance;
 }
 
 /** Who and what the pictures show: the workspace's own agents, the person, and the words of its mode. */
@@ -43,7 +54,9 @@ export interface Scene {
 }
 
 export const whoOf = (a: Agent | undefined): Who =>
-  a ? { id: a.id, name: a.name } : { id: null, name: RIGHT_HAND_DEFAULT.name };
+  a
+    ? { id: a.id, name: a.name, look: lookOf(a) }
+    : { id: null, name: RIGHT_HAND_DEFAULT.name, look: RIGHT_HAND_DEFAULT.appearance };
 
 /** `t` for keys built from a picture's own parts (a sample row, a personal sibling), so read untyped. */
 function useLoose() {
@@ -116,7 +129,7 @@ function ArtHello({ s }: { s: Scene }) {
     <>
       <Sky />
       <div className="wiz-cast">
-        <span className="wiz-cast__one wiz-rise" data-lead="" style={order(0)}>
+        <span className="wiz-cast__one wiz-rise" data-lead="" style={{ ...order(0), ...reachOf(s.lead.look) }}>
           <Face who={s.lead} expression="happy" />
           <span className="wiz-say">
             {s.me.first
@@ -184,7 +197,7 @@ function ArtComputer({ s }: { s: Scene }) {
           </svg>
         </div>
       </div>
-      <span className="wiz-pc__who">
+      <span className="wiz-pc__who" style={reachOf(s.star.look)}>
         <Face who={s.star} state="writing" />
         <span className="wiz-say wiz-pc__say">{tx(`arrival.welcome.computer.say${m}`)}</span>
       </span>

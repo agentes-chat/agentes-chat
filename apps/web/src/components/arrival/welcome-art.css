@@ -11,9 +11,10 @@
   width: auto;
   height: auto;
 }
+/* Over the face and what it wears there (`--reach`, the face's), so a cap or a headset is never under it. */
 .wiz-say {
   position: absolute;
-  bottom: calc(100% + 8px);
+  bottom: calc(100% * (1 + var(--reach, 0)) + 8px);
   left: 40%;
   display: block;
   width: max-content;
@@ -205,7 +206,7 @@
 .wiz-say.wiz-pc__say {
   right: -10px;
   left: auto;
-  bottom: calc(100% + 10px);
+  bottom: calc(100% * (1 + var(--reach, 0)) + 10px);
   width: 172px;
   font-size: 13px;
 }
@@ -284,10 +285,14 @@
   font-size: 12.5px;
   font-weight: 650;
 }
-/* The agent typing shows only while it plays: still, its answer is already there. */
+/*
+ * The agent typing shows only while it plays: still, its answer is already there. Never clipped: a face's accessories
+ * reach past its box (ACCESSORY_REACH in the agent engine, room the avatar draws in and never lays out), so a clip at
+ * the row's edge cut a cap off. Its height opens while it fades in, and it is gone before its height closes
+ * (wiz-typing), so it never shows over the answer that takes its place.
+ */
 .wiz-typing {
   display: none;
-  overflow: hidden;
 }
 .wiz-dots {
   display: inline-flex;
@@ -787,6 +792,10 @@
     max-height: 40px;
     margin-bottom: 12px;
     opacity: 1;
+  }
+  /* Unclipped (see .wiz-typing): out of sight while it still closes over where the answer comes in. */
+  95% {
+    opacity: 0;
   }
   100% {
     max-height: 0;

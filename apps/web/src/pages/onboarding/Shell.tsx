@@ -20,6 +20,7 @@ import { useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { ConnectorIcon } from "@/components/ConnectorIcon";
 import { agentCoverOptions, facePool } from "@/components/Sky";
+import { reachOf } from "@/lib/look";
 import "@/components/arrival/arrival.css";
 import "./shell.css";
 
@@ -93,7 +94,8 @@ export function World({
         <span className="onbw__top-start">{start}</span>
         {end}
       </header>
-      <div className="onbw__stage">
+      {/* What the speaker wears over its face, for the room its bubble takes over the team (a phone's stage). */}
+      <div className="onbw__stage" style={reachOf(cast.find((a) => a.id === speaker)?.look)}>
         <div className="onbw__col" ref={col} data-wide={wide ? "" : undefined}>
           {(cast.length > 0 || marks) && (
             <div className="onbw__ground">
@@ -103,7 +105,7 @@ export function World({
                     key={a.id}
                     className="onbw__agent"
                     data-lead={i === 0 ? "" : undefined}
-                    style={{ "--i": i } as CSSProperties}
+                    style={{ "--i": i, ...reachOf(a.look) } as CSSProperties}
                   >
                     <AgentAvatar
                       name={a.name}
@@ -364,7 +366,7 @@ export function Photo({
       key={a.id}
       className="team-scene__agent"
       data-lead={i === 0 ? "" : undefined}
-      style={{ "--i": i } as CSSProperties}
+      style={{ "--i": i, ...reachOf(a.look) } as CSSProperties}
     >
       <AgentAvatar name={a.name} appearance={a.look} size="lg" framed={false} state="idle" expression="happy" />
       {i === 0 && say && <span className="onbw__say onb-photo__say">{say}</span>}

@@ -19,6 +19,7 @@ export {
   ACCESSORIES,
   ACCESSORY_REACH,
   AGENT_GRADIENTS,
+  accessoryTop,
   BODY_CUT,
   BODY_RADIUS,
   bodyPath,

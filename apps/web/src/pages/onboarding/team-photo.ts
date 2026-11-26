@@ -1,5 +1,5 @@
 import { initialsOf, personCropFor, recipeOfUrl, renderPerson, teamSky } from "@agenteschat/ui";
-import { drawAccessory, drawAgent } from "@agenteschat/ui/agent/engine";
+import { accessoryTop, drawAccessory, drawAgent } from "@agenteschat/ui/agent/engine";
 import { ditherIndex, pixelOf } from "@agenteschat/ui/sky/math";
 import { fileSaver } from "@/components/artifacts/fileSaver";
 import { confettiBits, type ShellFace } from "./Shell";
@@ -337,11 +337,13 @@ export async function drawTeamPhoto(input: TeamPhotoInput): Promise<Blob> {
   g.fillStyle = RAISED;
   g.fillRect(0, 0, W, H);
 
-  // The sky holds at least the team and the bubble over the right hand, 24 under the picture's top.
+  // The sky holds at least the team and the bubble over the right hand and what it wears on its head, 24 under the
+  // picture's top.
   const [lead, ...rest] = input.cast;
   const sizes = castSizes(rest.length, Boolean(lead));
   const say = lead && input.say ? sayBox(g, fonts, input.say) : null;
-  const least = Math.ceil((22 * K + (lead ? sizes.lead : sizes.me) + (say ? 8 * K + say.h : 0) + 24) / SKY_PX);
+  const worn = lead ? Math.round(sizes.lead * accessoryTop(lead.look?.accessory)) : 0;
+  const least = Math.ceil((22 * K + (lead ? sizes.lead + worn : sizes.me) + (say ? 8 * K + say.h : 0) + 24) / SKY_PX);
   // The words, measured: 64 under the sky, 48 over the product's name. Where even the least sky leaves them too
   // little room, the lead gives up a line; the sky takes what they leave, in whole sky pixels.
   const markTop = H - 56 - MARK;
@@ -396,7 +398,8 @@ export async function drawTeamPhoto(input: TeamPhotoInput): Promise<Blob> {
     drawFace(g, face, x, ground - sizes.agent, sizes.agent);
     x += sizes.agent + sizes.gap;
   }
-  if (leadAt && say) drawSay(g, fonts, say, leadAt.x, leadAt.y, leadAt.s);
+  // The bubble over what the right hand wears (a headset, a cap), never over its accessory.
+  if (leadAt && say) drawSay(g, fonts, say, leadAt.x, leadAt.y - worn, leadAt.s);
 
   // The words under it.
   let top = skyH + 64;
