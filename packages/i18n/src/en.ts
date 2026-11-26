@@ -20479,6 +20479,9 @@ export const en = {
       /** The right hand's greeting to someone who just joined the workspace, the first message of their DM with it. */
       welcome_member:
         "You just joined {{org}}. **What do you look after here?** Tell me and I set up your first agent with you.",
+      /** That greeting for someone who already picked their first agent on their own onboarding: nothing to build. */
+      welcome_member_agent:
+        "You just joined {{org}}, and your first agent is already on the team. Whenever you need me, just call.",
       action_open_page: "Open a screen",
       calendar_proposal: "Event proposal: {{title}}",
       action_workspace: "Proposed a change in the workspace",

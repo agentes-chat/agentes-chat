@@ -20264,6 +20264,8 @@ export const ptBR = {
       action_approvals: "Aprovações esperando você",
       welcome_member:
         "Você acabou de entrar na {{org}}. **Do que você cuida por aqui?** Me conta e eu monto seu primeiro agente com você.",
+      welcome_member_agent:
+        "Você acabou de entrar na {{org}}, e o seu primeiro agente já está no time. Quando precisar de mim, é só chamar.",
       action_open_page: "Abrir uma tela",
       calendar_proposal: "Proposta de evento: {{title}}",
       action_workspace: "Propôs uma mudança no workspace",

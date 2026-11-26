@@ -1,4 +1,4 @@
-import { and, type Database, type Executor, eq, gt, ne, schema, sql } from "@agenteschat/db";
+import { and, type Database, type Executor, eq, gt, isNotNull, ne, schema, sql } from "@agenteschat/db";
 import { serverText } from "@agenteschat/i18n";
 import { en } from "@agenteschat/i18n/en";
 import { ownsAgentSql } from "./audience";
@@ -28,12 +28,43 @@ import type { ReplyChips } from "./team-proposals";
  *   `update_workspace`. False keeps it off both.
  */
 
-const { agents, channels, messages, organizationMembers, organizationSettings, organizations, users } = schema;
+const {
+  agents,
+  channels,
+  firstAgentProposals,
+  messages,
+  organizationMembers,
+  organizationSettings,
+  organizations,
+  users,
+} = schema;
 
 export const WELCOME_JOB = "right_hand.welcome";
 
 /** The greeting's `meta.bodyCode`: the apps word it with `chat.body.welcome_member`. */
 export const WELCOME_BODY = "welcome_member";
+
+/**
+ * The greeting of someone who already picked their first agent on their own onboarding (ADR 0250): hello and the agent
+ * on the team, with nothing to build (`chat.body.welcome_member_agent`).
+ */
+export const WELCOME_AGENT_BODY = "welcome_member_agent";
+
+/** Whether this person made their first agent from what their own AI proposed here (`first_agent_proposals`). */
+async function pickedFirstAgent(db: Database, orgId: string, userId: string) {
+  const [row] = await db
+    .select({ id: firstAgentProposals.id })
+    .from(firstAgentProposals)
+    .where(
+      and(
+        eq(firstAgentProposals.orgId, orgId),
+        eq(firstAgentProposals.userId, userId),
+        isNotNull(firstAgentProposals.agentId),
+      ),
+    )
+    .limit(1);
+  return row !== undefined;
+}
 
 /** How long after joining a person with no agent of their own is still new to the right hand. */
 export const NEWCOMER_DAYS = 30;
@@ -71,6 +102,8 @@ export async function postWelcome(deps: JobDeps, orgId: string, payload: Record<
   if (person.role === "owner") return;
   const lodi = await lodiFor(db, orgId, userId);
   if (!lodi) return;
+  // Their first agent came from their own onboarding: the greeting says hello and asks nothing they already answered.
+  const picked = await pickedFirstAgent(db, orgId, userId);
   const locale = await personLocale(db, userId);
   const chips: ReplyChips = {
     choices: AREAS.map((id) => serverText(locale, `onboarding.flow.area.options.${id}`)),
@@ -79,10 +112,10 @@ export async function postWelcome(deps: JobDeps, orgId: string, payload: Record<
     of: 1,
   };
   await postFromLodi(deps, orgId, userId, {
-    bodyCode: WELCOME_BODY,
+    bodyCode: picked ? WELCOME_AGENT_BODY : WELCOME_BODY,
     bodyParams: { org: person.org },
-    // Someone whose area the onboarding already knows is not asked to tap it again.
-    ...(areaOf(person.workArea) ? {} : { meta: { replyChips: chips } }),
+    // Someone whose area the onboarding already knows, or who picked their agent there, is not asked to tap it.
+    ...(picked || areaOf(person.workArea) ? {} : { meta: { replyChips: chips } }),
     push: true,
     // Anything already in their conversation with it: they wrote first, or it was restored on a rejoin.
     posted: async (tx, lodiId) =>
@@ -100,8 +133,8 @@ export async function postWelcome(deps: JobDeps, orgId: string, payload: Record<
 
 /**
  * What the right hand keeps in mind with someone new: a member who is not an owner (an owner has the first-run
- * checklist), joined in the last `NEWCOMER_DAYS` days and has no agent of their own. Only this person's own data.
- * "" with the workspace's switch off.
+ * checklist), joined in the last `NEWCOMER_DAYS` days, has no agent of their own and made none from their own AI's
+ * proposal on their onboarding (ADR 0250). Only this person's own data. "" with the workspace's switch off.
  */
 export async function newcomerBlock(db: Database, ctx: LodiPromptContext): Promise<string> {
   const [person] = await db
@@ -119,6 +152,10 @@ export async function newcomerBlock(db: Database, ctx: LodiPromptContext): Promi
         // Their own: theirs by name or by a role they hold (ADR 0085, addendum of 2026-11-21).
         sql`not exists (select 1 from ${agents}
           where ${agents.orgId} = ${ctx.orgId} and ${ownsAgentSql("agents", sql`${ctx.personId}::text`)})`,
+        // Their first agent picked on their onboarding, even one since given to someone else: it isn't offered again.
+        sql`not exists (select 1 from ${firstAgentProposals}
+          where ${firstAgentProposals.orgId} = ${ctx.orgId} and ${firstAgentProposals.userId} = ${ctx.personId}
+          and ${firstAgentProposals.agentId} is not null)`,
       ),
     );
   if (!person) return "";
