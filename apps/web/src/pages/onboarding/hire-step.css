@@ -54,11 +54,6 @@
   padding-top: 18px;
   border-top: 1px solid var(--line);
 }
-/* The first agent's step starts on the offer: no rule over it. */
-.onbx__body > .onb-offer:first-child {
-  padding-top: 0;
-  border-top: 0;
-}
 .onb-offer__head {
   display: flex;
   align-items: flex-start;
