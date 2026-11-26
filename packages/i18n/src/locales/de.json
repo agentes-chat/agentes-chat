@@ -1862,8 +1862,8 @@
       "ctaPersonal": "Agenten einstellen"
     },
     "celebrate": {
-      "say": "Hallo, {{first}}! Wir fangen heute an.",
-      "sayAny": "Hallo! Wir fangen heute an.",
+      "say": "Hallo, {{first}}. Wir fangen heute an.",
+      "sayAny": "Hallo, wir fangen heute an.",
       "eyebrow": "Team von {{org}} · seit {{date}}",
       "eyebrowPersonal": "Deine Agenten · seit {{date}}",
       "title": "Willkommen im Team von {{org}}",
@@ -22209,8 +22209,8 @@
         "titleNoNamePersonal": "Willkommen",
         "text": "Hier arbeitet ihr und die Agenten zusammen, bei Tag und bei Nacht. In einer Minute das Wichtigste.",
         "textPersonal": "Hier arbeitest du mit deinen Agenten zusammen, bei Tag und bei Nacht. In einer Minute das Wichtigste.",
-        "say": "Hallo, {{first}}! Ich bin {{name}}, die HR der Agenten.",
-        "sayNoName": "Hallo! Ich bin {{name}}, die HR der Agenten."
+        "say": "Hallo, {{first}}. Ich bin {{name}}, die HR der Agenten.",
+        "sayNoName": "Hallo, ich bin {{name}}, die HR der Agenten."
       },
       "computer": {
         "title": "Jeder Agent hat seinen eigenen Computer",

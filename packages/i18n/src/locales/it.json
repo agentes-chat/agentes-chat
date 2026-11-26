@@ -1928,8 +1928,8 @@
       "ctaPersonal": "Assumi gli agenti"
     },
     "celebrate": {
-      "say": "Ciao, {{first}}! Iniziamo oggi.",
-      "sayAny": "Ciao! Iniziamo oggi.",
+      "say": "Ciao, {{first}}. Iniziamo oggi.",
+      "sayAny": "Ciao, iniziamo oggi.",
       "eyebrow": "Il team di {{org}} · dal {{date}}",
       "eyebrowPersonal": "I tuoi agenti · dal {{date}}",
       "title": "Ti diamo il benvenuto nel team di {{org}}",
@@ -22991,8 +22991,8 @@
         "titleNoNamePersonal": "Ti diamo il benvenuto",
         "text": "Qui voi e gli agenti lavorate insieme, di giorno e di notte. In un minuto, l'essenziale.",
         "textPersonal": "Qui tu e i tuoi agenti lavorate insieme, di giorno e di notte. In un minuto, l'essenziale.",
-        "say": "Ciao, {{first}}! Sono {{name}}, l'HR degli agenti.",
-        "sayNoName": "Ciao! Sono {{name}}, l'HR degli agenti."
+        "say": "Ciao, {{first}}. Sono {{name}}, l'HR degli agenti.",
+        "sayNoName": "Ciao, sono {{name}}, l'HR degli agenti."
       },
       "computer": {
         "title": "Ogni agente ha il suo computer",

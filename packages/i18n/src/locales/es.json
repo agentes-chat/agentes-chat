@@ -1928,8 +1928,8 @@
       "ctaPersonal": "Contratar a los agentes"
     },
     "celebrate": {
-      "say": "¡Hola, {{first}}! Empezamos hoy.",
-      "sayAny": "¡Hola! Empezamos hoy.",
+      "say": "Hola, {{first}}. Empezamos hoy.",
+      "sayAny": "Hola, empezamos hoy.",
       "eyebrow": "Equipo de {{org}} · desde {{date}}",
       "eyebrowPersonal": "Tus agentes · desde {{date}}",
       "title": "Te damos la bienvenida al equipo de {{org}}",
@@ -22828,8 +22828,8 @@
         "titleNoNamePersonal": "Te damos la bienvenida",
         "text": "Aquí ustedes y los agentes trabajan juntos, de día y de noche. En un minuto, lo esencial.",
         "textPersonal": "Aquí tú y tus agentes trabajan juntos, de día y de noche. En un minuto, lo esencial.",
-        "say": "¡Hola, {{first}}! Soy {{name}}, Recursos Humanos de los agentes.",
-        "sayNoName": "¡Hola! Soy {{name}}, Recursos Humanos de los agentes."
+        "say": "Hola, {{first}}. Soy {{name}}, Recursos Humanos de los agentes.",
+        "sayNoName": "Hola, soy {{name}}, Recursos Humanos de los agentes."
       },
       "computer": {
         "title": "Cada agente tiene su propia computadora",

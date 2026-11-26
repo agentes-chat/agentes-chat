@@ -1860,8 +1860,8 @@
       "ctaPersonal": "Ajanları işe al"
     },
     "celebrate": {
-      "say": "Merhaba {{first}}! Bugün başlıyoruz.",
-      "sayAny": "Merhaba! Bugün başlıyoruz.",
+      "say": "Merhaba {{first}}. Bugün başlıyoruz.",
+      "sayAny": "Merhaba, bugün başlıyoruz.",
       "eyebrow": "{{org}} ekibi · {{date}} tarihinden beri",
       "eyebrowPersonal": "Ajanlarınız · {{date}} tarihinden beri",
       "title": "{{org}} ekibine hoş geldiniz",
@@ -22131,8 +22131,8 @@
         "titleNoNamePersonal": "Hoş geldiniz",
         "text": "Burada siz ve ajanlar gece gündüz birlikte çalışırsınız. Bir dakikada en önemlileri.",
         "textPersonal": "Burada siz ve ajanlarınız gece gündüz birlikte çalışırsınız. Bir dakikada en önemlileri.",
-        "say": "Merhaba {{first}}! Ben {{name}}, ajanların İK'sıyım.",
-        "sayNoName": "Merhaba! Ben {{name}}, ajanların İK'sıyım."
+        "say": "Merhaba {{first}}. Ben {{name}}, ajanların İK'sıyım.",
+        "sayNoName": "Merhaba, ben {{name}}, ajanların İK'sıyım."
       },
       "computer": {
         "title": "Her ajanın kendi bilgisayarı var",

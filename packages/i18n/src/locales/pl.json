@@ -2006,8 +2006,8 @@
       "ctaPersonal": "Zatrudnij agentów"
     },
     "celebrate": {
-      "say": "Cześć, {{first}}! Zaczynamy dziś.",
-      "sayAny": "Cześć! Zaczynamy dziś.",
+      "say": "Cześć, {{first}}. Zaczynamy dziś.",
+      "sayAny": "Cześć, zaczynamy dziś.",
       "eyebrow": "Zespół {{org}} · od {{date}}",
       "eyebrowPersonal": "Twoi agenci · od {{date}}",
       "title": "Witaj w zespole {{org}}",
@@ -23623,8 +23623,8 @@
         "titleNoNamePersonal": "Witaj",
         "text": "Tutaj wy i agenci pracujecie razem, w dzień i w nocy. W minutę to, co najważniejsze.",
         "textPersonal": "Tutaj ty i twoi agenci pracujecie razem, w dzień i w nocy. W minutę to, co najważniejsze.",
-        "say": "Cześć, {{first}}! Tu {{name}}, HR agentów.",
-        "sayNoName": "Cześć! Tu {{name}}, HR agentów."
+        "say": "Cześć, {{first}}. Tu {{name}}, HR agentów.",
+        "sayNoName": "Cześć, tu {{name}}, HR agentów."
       },
       "computer": {
         "title": "Każdy agent ma własny komputer",

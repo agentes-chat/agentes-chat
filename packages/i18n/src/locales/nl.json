@@ -1860,8 +1860,8 @@
       "ctaPersonal": "Agents aannemen"
     },
     "celebrate": {
-      "say": "Hoi {{first}}! We beginnen vandaag.",
-      "sayAny": "Hoi! We beginnen vandaag.",
+      "say": "Hoi {{first}}. We beginnen vandaag.",
+      "sayAny": "Hoi, we beginnen vandaag.",
       "eyebrow": "Team van {{org}} · sinds {{date}}",
       "eyebrowPersonal": "Je agents · sinds {{date}}",
       "title": "Welkom in het team van {{org}}",
@@ -22389,8 +22389,8 @@
         "titleNoNamePersonal": "Welkom",
         "text": "Hier werken jullie en de agents samen, overdag en 's nachts. In een minuut het belangrijkste.",
         "textPersonal": "Hier werken jij en je agents samen, overdag en 's nachts. In een minuut het belangrijkste.",
-        "say": "Hoi {{first}}! Ik ben {{name}}, de HR van de agents.",
-        "sayNoName": "Hoi! Ik ben {{name}}, de HR van de agents."
+        "say": "Hoi {{first}}. Ik ben {{name}}, de HR van de agents.",
+        "sayNoName": "Hoi, ik ben {{name}}, de HR van de agents."
       },
       "computer": {
         "title": "Elke agent heeft een eigen computer",

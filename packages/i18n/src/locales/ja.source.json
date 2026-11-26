@@ -4539,10 +4539,10 @@
     "value": "Hire your agents"
   },
   "onboarding.celebrate.say": {
-    "value": "Hi, {{first}}! We start today."
+    "value": "Hi, {{first}}. We start today."
   },
   "onboarding.celebrate.sayAny": {
-    "value": "Hi! We start today."
+    "value": "Hi, we start today."
   },
   "onboarding.celebrate.eyebrow": {
     "value": "{{org}}'s team · since {{date}}"
@@ -54143,10 +54143,10 @@
     "value": "Here you and your agents work together, by day and by night. In a minute, the essentials."
   },
   "arrival.welcome.hello.say": {
-    "value": "Hi, {{first}}! I'm {{name}}, HR for the agents."
+    "value": "Hi, {{first}}. I'm {{name}}, HR for the agents."
   },
   "arrival.welcome.hello.sayNoName": {
-    "value": "Hi! I'm {{name}}, HR for the agents."
+    "value": "Hi, I'm {{name}}, HR for the agents."
   },
   "arrival.welcome.computer.title": {
     "value": "Every agent has its own computer"

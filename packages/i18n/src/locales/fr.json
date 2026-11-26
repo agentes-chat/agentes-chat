@@ -1928,8 +1928,8 @@
       "ctaPersonal": "Engager vos agents"
     },
     "celebrate": {
-      "say": "Bonjour {{first}} ! On commence aujourd'hui.",
-      "sayAny": "Bonjour ! On commence aujourd'hui.",
+      "say": "Bonjour {{first}}. On commence aujourd'hui.",
+      "sayAny": "Bonjour, on commence aujourd'hui.",
       "eyebrow": "L'équipe de {{org}} · depuis le {{date}}",
       "eyebrowPersonal": "Vos agents · depuis le {{date}}",
       "title": "Bienvenue dans l'équipe de {{org}}",
@@ -22974,8 +22974,8 @@
         "titleNoNamePersonal": "Bienvenue",
         "text": "Ici, vous et les agents travaillez ensemble, de jour comme de nuit. En une minute, l'essentiel.",
         "textPersonal": "Ici, vous et vos agents travaillez ensemble, de jour comme de nuit. En une minute, l'essentiel.",
-        "say": "Bonjour {{first}} ! Je suis {{name}}, les RH des agents.",
-        "sayNoName": "Bonjour ! Je suis {{name}}, les RH des agents."
+        "say": "Bonjour {{first}}. Je suis {{name}}, les RH des agents.",
+        "sayNoName": "Bonjour, je suis {{name}}, les RH des agents."
       },
       "computer": {
         "title": "Chaque agent a son propre ordinateur",

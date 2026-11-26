@@ -1787,8 +1787,8 @@
       "ctaPersonal": "Rekrut agen"
     },
     "celebrate": {
-      "say": "Hai, {{first}}! Kita mulai hari ini.",
-      "sayAny": "Hai! Kita mulai hari ini.",
+      "say": "Hai, {{first}}. Kita mulai hari ini.",
+      "sayAny": "Hai, kita mulai hari ini.",
       "eyebrow": "Tim {{org}} · sejak {{date}}",
       "eyebrowPersonal": "Agen-agenmu · sejak {{date}}",
       "title": "Selamat datang di tim {{org}}",
@@ -21603,8 +21603,8 @@
         "titleNoNamePersonal": "Selamat datang",
         "text": "Di sini kalian dan para agen bekerja bersama, siang dan malam. Dalam satu menit, hal-hal pentingnya.",
         "textPersonal": "Di sini kamu dan agen-agenmu bekerja bersama, siang dan malam. Dalam satu menit, hal-hal pentingnya.",
-        "say": "Hai, {{first}}! Aku {{name}}, HRD para agen.",
-        "sayNoName": "Hai! Aku {{name}}, HRD para agen."
+        "say": "Hai, {{first}}. Aku {{name}}, HRD para agen.",
+        "sayNoName": "Hai, aku {{name}}, HRD para agen."
       },
       "computer": {
         "title": "Setiap agen punya komputernya sendiri",

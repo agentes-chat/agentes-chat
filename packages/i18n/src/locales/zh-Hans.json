@@ -1787,8 +1787,8 @@
       "ctaPersonal": "聘用智能体"
     },
     "celebrate": {
-      "say": "你好，{{first}}！我们今天就开始。",
-      "sayAny": "你好！我们今天就开始。",
+      "say": "你好，{{first}}。我们今天就开始。",
+      "sayAny": "你好，我们今天就开始。",
       "eyebrow": "{{org}} 团队 · 自 {{date}} 起",
       "eyebrowPersonal": "你的智能体 · 自 {{date}} 起",
       "title": "欢迎加入 {{org}} 团队",
@@ -21680,8 +21680,8 @@
         "titleNoNamePersonal": "欢迎",
         "text": "在这里，你们和智能体日夜一起工作。用一分钟，了解要点。",
         "textPersonal": "在这里，你和你的智能体日夜一起工作。用一分钟，了解要点。",
-        "say": "你好，{{first}}！我是 {{name}}，智能体的人事。",
-        "sayNoName": "你好！我是 {{name}}，智能体的人事。"
+        "say": "你好，{{first}}。我是 {{name}}，智能体的人事。",
+        "sayNoName": "你好，我是 {{name}}，智能体的人事。"
       },
       "computer": {
         "title": "每个智能体都有自己的电脑",
