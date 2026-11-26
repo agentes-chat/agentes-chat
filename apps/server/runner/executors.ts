@@ -13,6 +13,7 @@ import {
 } from "@agenteschat/adapters/machine-protocol";
 import { isOpencodeFreeModel, OPENCODE_FREE_MODELS } from "@agenteschat/providers/plans";
 import { type CodexSignIn, codexLoginStatusOf } from "./codex-sign-in";
+import { consoleText } from "./console-text";
 import { readSmallJson, writeJson } from "./json-file";
 import { usualDirs } from "./login-path";
 import { SHARED_BIN_ENV } from "./shared-folder";
@@ -356,14 +357,14 @@ const defaultRun: Run = (command, args) =>
       run.file,
       run.args,
       {
-        encoding: "utf8",
+        encoding: "buffer",
         timeout: 8000,
         maxBuffer: 1024 * 1024,
         windowsHide: true,
         env: run.env ? { ...process.env, ...run.env } : process.env,
         windowsVerbatimArguments: run.windowsVerbatimArguments,
       },
-      (err, stdout, stderr) => resolve(execResult(err, stdout, stderr)),
+      (err, stdout, stderr) => resolve(execResult(err, consoleText(stdout), consoleText(stderr))),
     );
   });
 

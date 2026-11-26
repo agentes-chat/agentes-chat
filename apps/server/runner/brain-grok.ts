@@ -20,6 +20,7 @@ import {
 import { ClaudeStreamParser, LIMIT_TEXT } from "./brain";
 import { type CodexBrainEvent, CodexThreads, chatFolder, codexProfileOf, codexThreadKey } from "./brain-codex";
 import { cursorPrompt } from "./brain-cursor";
+import { ConsoleDecoder } from "./console-text";
 import { RunnerError } from "./errors";
 import { killTree } from "./exec";
 import { cliSpawn, GROK_BIN } from "./executors";
@@ -455,8 +456,9 @@ export async function runGrokTurn(input: GrokTurnInput, opts: GrokTurnOptions): 
       return fail("grok_failed", err instanceof Error ? err.message : String(err));
     }
     let stderr = "";
+    const stderrText = new ConsoleDecoder();
     child.stderr?.on("data", (c: Buffer) => {
-      stderr = (stderr + c.toString("utf8")).slice(-2000);
+      stderr = (stderr + stderrText.write(c)).slice(-2000);
     });
     let tail = "";
     let streamed = false;

@@ -8,6 +8,7 @@ import {
   type InstallableCli,
   isInstallableCli,
 } from "@agenteschat/adapters/machine-protocol";
+import { ConsoleDecoder } from "./console-text";
 import { killTree } from "./exec";
 import { envValue, findOnWindowsPath, isFile, pickedCli } from "./executors";
 import { CLAUDE_INSTALL_PS1_URL, CLAUDE_INSTALL_URL, CODEX_RELEASES } from "./install-script";
@@ -172,11 +173,11 @@ export class CliInstaller {
     }
     this.child = child;
     let said = "";
-    const keep = (chunk: Buffer) => {
-      said = `${said}${chunk.toString("utf8")}`.slice(-4000);
+    const keep = (decoder: ConsoleDecoder) => (chunk: Buffer) => {
+      said = `${said}${decoder.write(chunk)}`.slice(-4000);
     };
-    child.stdout?.on("data", keep);
-    child.stderr?.on("data", keep);
+    child.stdout?.on("data", keep(new ConsoleDecoder()));
+    child.stderr?.on("data", keep(new ConsoleDecoder()));
     this.timer = setTimeout(() => {
       if (this.child !== child) return;
       this.install = { tool, state: "failed", message: "It took too long" };
