@@ -528,63 +528,61 @@ function useOneLinePlaceholder(ref: RefObject<HTMLTextAreaElement | null>, place
   return fits ? placeholder : placeholder?.split(" · ")[0];
 }
 
-let measuring: CanvasRenderingContext2D | null | undefined;
-
-/** How wide a line of text is in a field's font (null where nothing can measure it). */
-function textWidth(field: HTMLElement, text: string): number | null {
-  if (measuring === undefined) measuring = document.createElement("canvas").getContext?.("2d") ?? null;
-  if (!measuring) return null;
-  measuring.font = getComputedStyle(field).font;
-  return measuring.measureText(text).width;
+/**
+ * Whether the box's text stays on one line (`oneLine`, its border-box height) at `width` px: the box itself is laid out
+ * at that width and put back. A canvas can't stand in for it: it knows neither the app's font-size-adjust nor its font
+ * features, so it measured the words narrower than the box draws them.
+ */
+function oneLineAt(el: HTMLTextAreaElement, width: number, oneLine: number): boolean {
+  const { width: w, height: h, boxSizing: b } = el.style;
+  el.style.boxSizing = "border-box";
+  el.style.width = `${width}px`;
+  el.style.height = "auto";
+  const fits = el.scrollHeight + el.offsetHeight - el.clientHeight <= oneLine;
+  el.style.boxSizing = b;
+  el.style.width = w;
+  el.style.height = h;
+  return fits;
 }
 
 /**
  * More than one line: the text takes the card's whole width and the tools a row of their own under it (`data-wide`).
- * It goes back to one row only once the words fit beside the tools again, measured at that narrower width, so a line
- * near the edge never flips the box back and forth.
+ * It goes back to one row only once the words fit beside the tools again, the box laid out at that narrower width, so
+ * a line near the edge never flips the box back and forth. The text that made it wide, and any that only adds to it,
+ * never sends it back: two answers that disagreed on one text would flip it on every render until React gave up.
  */
 function useWideText(ref: RefObject<HTMLTextAreaElement | null>, value: string): boolean {
   const [wide, setWide] = useState(false);
-  // The text the box last changed shape for (`reshape`).
-  const shapedFor = useRef<string | null>(null);
+  // The last text found not to fit beside the tools: added to (`fitText`'s `grows`), it can't fit either.
+  const tooLong = useRef<string | null>(null);
   useLayoutEffect(() => {
-    // Where the canvas and the box's own lines disagree (Windows' text, a zoom), each shape would ask for the other
-    // until React gives up (its error #185, the page's crash screen): one change per text, then the shape stays
-    // until the text changes.
-    const reshape = (to: boolean) => {
-      if (shapedFor.current === value) return;
-      shapedFor.current = value;
-      setWide(to);
-    };
     const el = ref.current;
     const row = el?.closest<HTMLElement>(".ac-composer__row");
     if (!el || !row || !value) {
-      shapedFor.current = null;
+      tooLong.current = null;
       setWide(false);
       return;
     }
     if (value.includes("\n")) {
-      shapedFor.current = null;
       setWide(true);
       return;
     }
-    const style = getComputedStyle(el);
+    // A line's border-box height, with the same 2px of slack on both ways.
+    const oneLine = (Number.parseFloat(getComputedStyle(el).minHeight) || 0) + 2;
     if (!wide) {
       // Wrapped: taller than its one line.
-      if (el.offsetHeight > (Number.parseFloat(style.minHeight) || 0) + 2) reshape(true);
+      if (el.offsetHeight > oneLine) {
+        tooLong.current = value;
+        setWide(true);
+      }
       return;
     }
+    if (tooLong.current !== null && value.startsWith(tooLong.current)) return;
+    // More than a line across the whole card can't be one beside the tools.
+    if (el.offsetHeight > oneLine) return;
     const tools = [...row.querySelectorAll<HTMLElement>(":scope > .ac-composer__tools")];
-    const rowStyle = getComputedStyle(row);
-    const room =
-      row.clientWidth -
-      (Number.parseFloat(rowStyle.paddingLeft) || 0) -
-      (Number.parseFloat(rowStyle.paddingRight) || 0) -
-      tools.reduce((sum, t) => sum + t.offsetWidth, 0) -
-      (Number.parseFloat(style.paddingLeft) || 0) -
-      (Number.parseFloat(style.paddingRight) || 0);
-    const width = textWidth(el, value);
-    if (width !== null && width < room - 2) reshape(false);
+    if (oneLineAt(el, el.offsetWidth - tools.reduce((sum, t) => sum + t.offsetWidth, 0), oneLine)) setWide(false);
+    else tooLong.current = value;
   }, [ref, value, wide]);
   return wide;
 }
