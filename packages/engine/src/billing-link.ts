@@ -239,15 +239,17 @@ const DEFAULT_LOOK = { color: "sky", eyes: "round" } as const;
 
 /**
  * The workspace's first `TEAM_SHOWN` agents, oldest first, as the billing service's price page names and draws them
- * ("Caio is ready…"): the team's own, not its right hand (ADR 0137), which every workspace has. A look the app no
- * longer draws reads as its default, as the app shows it (`normalizeAppearance`).
+ * ("Caio is ready…"): the team's own, not its right hand (ADR 0137), which every workspace has. Agents made at the same
+ * moment (a team made before each insert had its own time) come by name, as the agents' list orders them
+ * (`listAgents`), then by id, so every link names the same ones in the same order. A look the app no longer draws reads
+ * as its default, as the app shows it (`normalizeAppearance`).
  */
 async function teamOf(db: Database, orgId: string): Promise<BillingTeamAgent[]> {
   const rows = await db
     .select({ name: agents.name, role: agents.role, appearance: agents.appearance })
     .from(agents)
     .where(and(eq(agents.orgId, orgId), isNull(agents.archivedAt), isNull(agents.builtin)))
-    .orderBy(asc(agents.createdAt), asc(agents.id))
+    .orderBy(asc(agents.createdAt), asc(agents.name), asc(agents.id))
     .limit(TEAM_SHOWN);
   return rows.map(({ name, role, appearance }) => {
     const look = normalizeAppearance(appearance);

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { and, eq, rowsOf, schema, sql } from "@agenteschat/db";
+import { and, eq, inArray, rowsOf, schema, sql } from "@agenteschat/db";
 import {
   archiveChannel,
   BILLING_FROM,
@@ -363,6 +363,42 @@ describe("mintBillingLink", () => {
     } finally {
       await g.close();
     }
+  });
+
+  test("the team: agents made at the same moment come by name, then by id, on every link alike", async () => {
+    await f.db
+      .update(schema.agents)
+      .set({ createdAt: new Date("2026-10-01T10:00:00Z") })
+      .where(eq(schema.agents.id, f.agent.id));
+    const made: Awaited<ReturnType<typeof createAgent>>[] = [];
+    for (const [name, handle] of [
+      ["Nina", "nina"],
+      ["Caio", "caio"],
+      ["Iara", "iara"],
+      ["Caio", "caio-2"],
+    ] as const) {
+      made.push(
+        await createAgent(
+          f.db,
+          f.owner.id,
+          f.org.id,
+          { name, handle, role: handle, instructions: "Help.", credentialId: f.credential.id },
+          { model: "claude-sonnet-5-5" },
+        ),
+      );
+    }
+    // One moment for all four, as a team made before each insert had its own time.
+    const ids = made.map((a) => a.id);
+    await f.db
+      .update(schema.agents)
+      .set({ createdAt: new Date("2026-11-01T10:00:00Z") })
+      .where(inArray(schema.agents.id, ids));
+    const caios = made
+      .filter((a) => a.name === "Caio")
+      .sort((a, b) => (a.id < b.id ? -1 : 1))
+      .map((a) => a.role);
+    const team = claimsOf((await mint(f.owner.id)).url).usage.team.map((a) => `${a.name}/${a.role}`);
+    expect(team).toEqual(["Dev/Developer", ...caios.map((role) => `Caio/${role}`), "Iara/iara", "Nina/nina"]);
   });
 
   test("routines: the repeating ones that are on, as an agent's cap counts them", async () => {

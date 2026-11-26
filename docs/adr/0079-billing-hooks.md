@@ -140,8 +140,9 @@ The billing service's price page now speaks of the workspace's own agents ("Caio
 billing", or "Acme's 4 agents are ready to work") and its plan page shows the team's month. A link's `usage` gains
 three fields (`BillingTeamAgent`, `BillingMonth` in `packages/engine/src/billing-link.ts`):
 
-- **`team`**: the workspace's first 5 agents, oldest first, archived ones and its right hand left out (every workspace
-  has one, ADR 0137), each with `name` and `role` (cut to 80 UTF-16 units without splitting a character; an empty role
+- **`team`**: the workspace's first 5 agents, oldest first (agents made at the same moment by name, then by id, as the
+  agents' list orders them, so every link names the same ones in the same order), archived ones and its right hand left
+  out (every workspace has one, ADR 0137), each with `name` and `role` (cut to 80 UTF-16 units without splitting a character; an empty role
   is null) and `look`: `color`, `eyes` and `accessory` as the agent engine names them (a preset or `#rrggbb`; the app's
   default `sky` and `round` for an agent that never picked a look or kept a value the app no longer draws; `accessory`
   null for none). This lifts §3's "never a name" for agents only: their names and roles are the workspace's own words
