@@ -37,7 +37,7 @@ import { ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { publishOrgEvent } from "./events";
 import { can, requireActiveMembership, requirePermission } from "./organizations";
 import { maySql } from "./permissions";
-import { isRightHand, RIGHT_HAND, rightHandPermanent } from "./right-hand";
+import { isRightHand, RIGHT_HAND } from "./right-hand";
 import { liveSeats, oneUserComputer, removedSeatIds, removeSeat, SHARED_SEAT, seatName } from "./right-hand-seats";
 import { runnerUpdateOf } from "./runner-update";
 
@@ -1127,7 +1127,12 @@ export async function setAgentComputerTarget(
   const membership = await requirePermission(deps.db, actorId, orgId, "read");
   const agent = await getAgent(deps.db, orgId, agentId);
   if (!agent || agent.archivedAt) throw new NotFoundError("Agent not found");
-  if (machineId && isRightHand(agent)) throw rightHandPermanent("given a computer");
+  if (machineId && isRightHand(agent)) {
+    throw new ForbiddenError(
+      "The team's right hand always uses the workspace's own computer, so no other can be chosen for it.",
+      "agent.right_hand_computer",
+    );
+  }
   const admin = managesAgent(agent, actorId, membership);
   const machine = machineId ? await getMachine(deps.db, orgId, machineId) : null;
   if (machineId && !machine) throw new NotFoundError("Computer not found", "machine.not_found");

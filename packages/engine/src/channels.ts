@@ -374,7 +374,7 @@ export async function listChannels(db: Database, userId: string, orgId: string):
         coalesce(cr.muted, false) as muted, coalesce(cr.last_read_at, cm.created_at) as last_read_at,
         lm.id as last_id, lm.body as last_body, lm.meta as last_meta, lm.created_at as last_at, lm.author_type as last_author_type,
         lm.author_user_id as last_user_id, lm.author_agent_id as last_agent_id,
-        coalesce(lu.name, la.name) as last_author_name,
+        coalesce(lu.name, la.name, lm.meta -> 'app' ->> 'name') as last_author_name,
         ${channelCanSql(orgId, userId, "post")} as can_post,
         ${channelCanSql(orgId, userId, "talk_to_agents")} as can_call,
         (${maySql(sql`${orgId}::uuid`, sql`${userId}::text`, "manage_channels")} or (cm.id is not null

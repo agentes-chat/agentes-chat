@@ -4440,7 +4440,7 @@
     "computerAway": "{{agent}} 的电脑目前没有响应。此请求在 {{time}} 前保持开放。请稍后重试。",
     "computerPaused": "{{agent}} 的电脑已被所有者暂停。此请求在 {{time}} 前保持开放。",
     "insecureContext": "此页面不是通过 https 打开的,因此浏览器无法锁定密钥。请通过 https://(或 localhost)打开。",
-    "failed": "无法送达。智能体的电脑开着吗？",
+    "failed": "无法送达。请再发送一次。如果仍然失败，请让 {{agent}} 重新发起请求。",
     "changed": "你回复时此请求已更改。未发送任何内容。请重新发送。",
     "empty": "请输入值。",
     "tooLarge": "太大了（最多 16 KB）。"
@@ -4486,6 +4486,24 @@
       "agents_other": "{{count}} 个智能体",
       "used": "{{when}}使用过",
       "never": "从未使用"
+    },
+    "bulk": {
+      "select": "选择",
+      "selection": "已选项目",
+      "selected_other": "已选 {{count}} 项",
+      "selectAll_other": "全选 {{count}} 项",
+      "clear": "停止选择",
+      "access": "更改访问权限",
+      "accessTitle_other": "{{count}} 个项目的访问权限",
+      "accessText": "每个已选项目都会使用此访问权限。",
+      "accessGo_other": "应用到 {{count}} 个项目",
+      "accessDone_other": "已更改 {{count}} 个项目的访问权限",
+      "delete": "删除",
+      "deleteTitle_other": "删除 {{count}} 个项目？",
+      "deleteText": "你的智能体将无法再使用它们。此操作无法撤销。",
+      "deleteGo_other": "删除 {{count}} 个",
+      "deleted_other": "已从 Vault 删除 {{count}} 个项目",
+      "kept_other": "来自密码管理器的 {{count}} 个项目仍保留。请在那里移除。"
     },
     "kind": {
       "login": "登录信息",
@@ -4685,7 +4703,6 @@
       },
       "as": "保存为",
       "asPersonal": "只有你能看到它们。",
-      "asTeam": "工作区所有成员都能看到它们。之后再为每一项选择智能体。",
       "deleteFile": "之后请删除此文件：其中的密码没有加密。",
       "confirm_other": "导入 {{count}} 个",
       "done_other": "已导入 {{count}} 个登录信息",
@@ -6675,6 +6692,7 @@
         "desc": "所有智能体都会读到这个。你随时可以修改。",
         "line": "用一句话",
         "optional": "选填。不写的话，就用你选的类型。",
+        "otherNeeded": "选择“其他”时，请在这里写下你们做什么，才能继续。",
         "todoPersonal": "跟我说说你自己。",
         "todoDescPersonal": "你所有的智能体都会读到这个。",
         "donePersonal": "我对你有了一些了解",
@@ -10967,7 +10985,9 @@
       "some": "{{name}} 只回复部分成员。",
       "some_female": "{{name}} 只回复部分成员。",
       "nobody": "{{name}} 目前不回复任何人。",
-      "nobody_female": "{{name}} 目前不回复任何人。"
+      "nobody_female": "{{name}} 目前不回复任何人。",
+      "noTalk": "你的角色不包含“与智能体对话”。管理员可以把它加到你的某个角色中。",
+      "planOwnerOnly": "{{name}} 使用的套餐只回复其所有者。负责 {{name}} 的人可以在 {{name}} 的页面上打开“回复其他成员”。"
     }
   },
   "editors": {
@@ -13388,6 +13408,26 @@
         "1": "搜索日志和指标",
         "2": "查看监控和事件"
       },
+      "datadog_us3": {
+        "1": "搜索日志和指标",
+        "2": "查看监控和事件"
+      },
+      "datadog_us5": {
+        "1": "搜索日志和指标",
+        "2": "查看监控和事件"
+      },
+      "datadog_eu": {
+        "1": "搜索日志和指标",
+        "2": "查看监控和事件"
+      },
+      "datadog_ap1": {
+        "1": "搜索日志和指标",
+        "2": "查看监控和事件"
+      },
+      "datadog_ap2": {
+        "1": "搜索日志和指标",
+        "2": "查看监控和事件"
+      },
       "grafana": {
         "1": "查看仪表盘、指标和日志",
         "2": "创建仪表盘和告警"
@@ -13689,7 +13729,12 @@
       "cloudflare_bindings": "Cloudflare（Workers）",
       "cloudflare_observability": "Cloudflare（日志）",
       "supabase_readonly": "Supabase（只读）",
-      "intercom_eu": "Intercom（欧盟）"
+      "intercom_eu": "Intercom（欧盟）",
+      "datadog_us3": "Datadog (US3)",
+      "datadog_us5": "Datadog (US5)",
+      "datadog_eu": "Datadog (EU)",
+      "datadog_ap1": "Datadog (AP1)",
+      "datadog_ap2": "Datadog (AP2)"
     },
     "descriptions": {
       "github": "代码、PR、issue 和 Actions。",
@@ -13727,6 +13772,11 @@
       "vercel": "项目、部署和日志。",
       "railway": "项目、服务、部署和日志。",
       "datadog": "日志、指标、监控和事件（US1 站点）。",
+      "datadog_us3": "日志、指标、监控和事件（US3 站点，us3.datadoghq.com）。",
+      "datadog_us5": "日志、指标、监控和事件（US5 站点，us5.datadoghq.com）。",
+      "datadog_eu": "日志、指标、监控和事件（EU 站点，app.datadoghq.eu）。",
+      "datadog_ap1": "日志、指标、监控和事件（AP1 站点，ap1.datadoghq.com）。",
+      "datadog_ap2": "日志、指标、监控和事件（AP2 站点，ap2.datadoghq.com）。",
       "grafana": "Grafana Cloud 仪表盘、指标、日志和告警。",
       "postman": "工作区、集合和 API。",
       "jam": "bug 报告：录屏、控制台日志和网络请求。",
@@ -15930,6 +15980,7 @@
     },
     "rightHand": {
       "permanent": "得力助手属于整个工作区，不加入频道。在任何频道 @提及它即可叫到它。",
+      "computer": "得力助手始终使用工作区自己的电脑，因此无法为它选择其他电脑。要在这台电脑上工作，请创建一个智能体。",
       "updateApp": "此应用版本太旧，无法应用这张卡片。请更新应用，或在设置中进行更改。",
       "nobodyNew": "这张卡片上的人都已加入或已收到邀请。请放弃这张卡片，或在“成员和邀请”中重新发送邀请。"
     },
@@ -16988,6 +17039,62 @@
     "denied": "电脑没有连接。如果不是你打开的，也没有人获得访问权限。",
     "home": "前往 agentes"
   },
+  "integrations": {
+    "badge": "应用",
+    "unknownApp": "某个应用",
+    "appTip": "{{name}} 是连接到此工作区的应用。它以自己的身份发帖，从不以某个人的身份。",
+    "sender": "来自 {{sender}}",
+    "senderTip": "由 {{sender}} 在 agentes.chat 之外撰写，{{name}} 转发了它。",
+    "connect": "连接应用",
+    "emptyTitle": "还没有应用",
+    "empty": "客服机器人、表单或监控工具以自己的身份在这里发帖，使用自己的令牌。",
+    "api": "应用调用的地址",
+    "apiHelp": "API 和 MCP 地址，以应用的令牌作为 Bearer。",
+    "apiCopied": "地址已复制",
+    "help": "如何连接客服机器人",
+    "name": "名称",
+    "color": "颜色",
+    "colorOf": "颜色 {{color}}",
+    "channels": "频道",
+    "channelsHelp": "它会在自己发帖的频道里读取智能体的回复。",
+    "channelsEmpty": "工作区还没有频道。",
+    "access": {
+      "none": "无权限",
+      "read": "读取",
+      "post": "读取并发帖"
+    },
+    "webhook": "Webhook 地址",
+    "webhookHelp": "这里智能体的回复会签名后发送到此地址。留空：应用通过 API 读取。",
+    "save": "保存",
+    "create": "连接",
+    "edit": "编辑",
+    "actions": "{{name}} 的操作",
+    "newToken": "新令牌",
+    "revoke": "撤销令牌",
+    "newSecret": "新的 Webhook 密钥",
+    "remove": "移除",
+    "tokenTitle": "{{name}} 的令牌",
+    "secretTitle": "{{name}} 的 Webhook 密钥",
+    "secretUse": "用它校验每次投递的 webhook-signature 请求头（Standard Webhooks）。",
+    "secretCopied": "密钥已复制",
+    "tokenUse": "应用在每次调用时以 Authorization: Bearer 发送它。",
+    "revokeTitle": "撤销 {{name}} 的令牌？",
+    "revokeText": "它会立即停止发帖和读取，直到你创建新令牌。",
+    "newTokenTitle": "为 {{name}} 创建新令牌？",
+    "newTokenText": "当前令牌会立即失效。",
+    "newSecretTitle": "为 {{name}} 创建新的 Webhook 密钥？",
+    "newSecretText": "投递会立即改用新密钥签名。请在应用中填入新密钥，否则其签名校验会失败。",
+    "removeTitle": "移除 {{name}}？",
+    "removeText": "它的消息会保留。它将无法再发帖或读取。",
+    "removed": "已移除 {{name}}",
+    "revoked": "令牌已撤销",
+    "facts": {
+      "token": "以 {{hint}} 结尾的令牌",
+      "noToken": "无令牌",
+      "channels_other": "{{count}} 个频道",
+      "webhookFailed": "Webhook 失败（{{why}}）"
+    }
+  },
   "apps": {
     "connect": "连接应用",
     "server": "服务器地址",
@@ -17358,6 +17465,8 @@
         "item_created": "在 Vault 中保存了一个项目",
         "item_changed": "修改了一个 Vault 项目",
         "item_deleted": "删除了一个 Vault 项目",
+        "items_changed_other": "更改了 {{count}} 个 Vault 项目的访问权限",
+        "items_deleted_other": "删除了 {{count}} 个 Vault 项目",
         "item_moved": "在个人和团队之间移动了一个 Vault 项目",
         "item_used": "使用了一个 Vault 项目",
         "imported": "将密码导入了 Vault",
@@ -17507,6 +17616,7 @@
       "billing": "套餐和账单",
       "media": "GIF 和贴纸",
       "voice": "语音",
+      "integrations": "集成",
       "apps": "AI 应用",
       "approvals": "审批",
       "about": "关于 agentes.chat",
@@ -17538,6 +17648,7 @@
       "billing": "套餐、银行卡和账单都在应用外的我们的页面上。",
       "media": "对话中可以发送的内容，以及智能体的 GIF 和贴纸。",
       "voice": "对话中的语音消息，以及由谁把语音转成文字。",
+      "integrations": "像客服机器人一样，以自己的身份在频道里发帖的应用。",
       "apps": "从 Claude、Cursor 等应用给智能体分配任务。",
       "approvals": "当智能体请求你的批准时，替你做决定的人。",
       "about": "开发者、许可证以及源代码的位置。",
@@ -20653,7 +20764,8 @@
     },
     "add": {
       "label": "添加小组件",
-      "short": "小组件"
+      "short": "小组件",
+      "word": "添加"
     },
     "alert": {
       "label": "有异常时通知我",

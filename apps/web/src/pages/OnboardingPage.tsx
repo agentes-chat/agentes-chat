@@ -279,8 +279,8 @@ export function OnboardingPage() {
   }, [step]);
   // Before the workspace exists, what it is for comes first.
   const asking = orgId === null && !forTeam;
-  // Read from the first step, so the plan step has it when it opens: a personal workspace's, the plan for one person.
-  const plans = usePlanOffer(i18n.language, { personal: personalNow });
+  // Read from the first step, so the plan step has it when it opens.
+  const plans = usePlanOffer(i18n.language, { alone: personalNow });
   const offer = plans.offer;
   // What this tab came back from buying, by its name: on the photo's first row and over the AI step.
   const bought = usePaidPlan(orgId ?? "", mine?.standing);

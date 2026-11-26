@@ -177,6 +177,7 @@ const plans = (list: unknown | null) => {
 };
 const PLANS = {
   recommended: "team",
+  recommendedAlone: "personal",
   plans: [
     { key: "personal", name: "Pessoal", price: "$29", period: "month" },
     { key: "team", name: "Equipe", price: "$49", period: "month" },
@@ -336,8 +337,14 @@ describe("the steps", () => {
     expect(heading()).toBe("O que a Ateliê Couto faz?");
     await click(button("Outra coisa"), 4);
     expect((button("Continuar") as HTMLButtonElement).disabled).toBe(true);
+    // Why Continue waits, in sight under the field; no ⓘ with an empty bubble.
+    const needed = "Com Outra coisa, escreva aqui o que vocês fazem para continuar.";
+    const field = screen().getByLabelText("Em uma frase").closest(".ac-field") as HTMLElement;
+    expect(field.textContent).toContain(needed);
+    expect(field.querySelector(".ac-hintline")).toBeNull();
     await type("Em uma frase", "Roupas sob medida para noivas");
     expect((button("Continuar") as HTMLButtonElement).disabled).toBe(false);
+    expect(field.textContent).not.toContain(needed);
   });
 
   test("self-hosted (no plans), the server's AI there: Criar o time goes on to inviting people, never the AI step", async () => {
@@ -1327,8 +1334,11 @@ describe("for me (ADR 0159)", () => {
     // Its right hand alone, asleep until the plan, said as what it is (it has no role), and the button in its words.
     expect(planCard().querySelectorAll(".onb__plan-face")).toHaveLength(1);
     expect(planCard().querySelector(".onb__plan-week")?.textContent).toBe("Lodi · Seu braço direito");
-    expect(within(planCard()).getByRole("button", { name: "Ligar os agentes" })).toBeTruthy();
     expect(within(planCard()).queryByRole("button", { name: "Ligar o time" })).toBeNull();
+    // The plan for one person, never the team's, and its Checkout.
+    expect(planCard().textContent).toContain("Plano Pessoal · $29 por mês");
+    await click(within(planCard()).getByRole("button", { name: "Ligar os agentes" }), 6);
+    expect(calls(state, "orgs.billingLink").map((c) => c.args)).toEqual([[orgId, "onboarding", "personal"]]);
     await click(button("Ligar depois e só conhecer o workspace"), 16);
     expect(calls(state, "orgs.saveOnboarding").map((c) => c.args)).toEqual([
       [orgId, { step: "agents" }],

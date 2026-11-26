@@ -40,7 +40,7 @@ import { editDistance, firstOf } from "./format";
 import { insertMessage, messageView, parseMentionHandles } from "./messages";
 import { can, getMembership } from "./organizations";
 import type { RolePermission } from "./permissions";
-import { personBehindCall } from "./requester";
+import { personBehindCall, relayedRefusal, relayedRequest } from "./requester";
 import { isRightHand } from "./right-hand";
 import { queueRightHandLook } from "./right-hand-approvals";
 import { liveLodiSwitches } from "./right-hand-lane";
@@ -847,6 +847,7 @@ export function createSetupToolSource(deps: {
         try {
           const forUserId = await personBehindCall(ctx);
           if (!forUserId) return { content: "Only a person's request can propose removing agents.", isError: true };
+          if (await relayedRequest(ctx)) return relayedRefusal();
           // A model asked to take agents out of a channel reaches for this tool with `channel`: send it to the right one.
           if (input.channel !== undefined) return { content: CHANNEL_NOT_REMOVAL, isError: true };
           const reason = str(input.reason).trim();
@@ -1948,6 +1949,8 @@ function settingsTool(deps: { pubsub?: PubSub }, own = false): ToolDefinition {
       try {
         const forUserId = await personBehindCall(ctx);
         if (!forUserId) return { content: "Only a person's request can propose a change.", isError: true };
+        // Another agent's settings only on the person's typed words (ADR 0250); an agent's own needs still get a review.
+        if (!own && (await relayedRequest(ctx))) return relayedRefusal();
         const self = own ? await getAgentCached(ctx.db, ctx.orgId, ctx.agentId) : null;
         const other = self ? await teammateNamed(ctx, self, str(input.reason)) : null;
         if (other)

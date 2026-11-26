@@ -4592,7 +4592,7 @@
     "computerAway": "{{agent}} bilgisayarı şu anda yanıt vermiyor. Bu istek {{time}} saatine kadar açık kalır. Birazdan yeniden deneyin.",
     "computerPaused": "{{agent}} bilgisayarı sahibi tarafından duraklatıldı. Bu istek {{time}} saatine kadar açık kalır.",
     "insecureContext": "Bu sayfa https üzerinden açılmadı, bu yüzden tarayıcı anahtarı kilitlemiyor. Sayfayı https:// (veya localhost) adresinden açın.",
-    "failed": "İletilemedi. Ajanın bilgisayarı açık mı?",
+    "failed": "İletilemedi. Yeniden gönder. Yine olmazsa {{agent}} ajanından bunu yeniden istemesini iste.",
     "changed": "Bu istek sen yanıtlarken değişti. Hiçbir şey gönderilmedi. Yeniden gönder.",
     "empty": "Değeri yazın.",
     "tooLarge": "Çok büyük (en fazla 16 KB)."
@@ -4639,6 +4639,33 @@
       "agents_other": "{{count}} ajan",
       "used": "{{when}} kullanıldı",
       "never": "Hiç kullanılmadı"
+    },
+    "bulk": {
+      "select": "Seç",
+      "selection": "Seçili öğeler",
+      "selected_one": "{{count}} seçili",
+      "selected_other": "{{count}} seçili",
+      "selectAll_one": "{{count}} öğenin tümünü seç",
+      "selectAll_other": "{{count}} öğenin tümünü seç",
+      "clear": "Seçmeyi bırak",
+      "access": "Erişimi değiştir",
+      "accessTitle_one": "{{count}} öğenin erişimi",
+      "accessTitle_other": "{{count}} öğenin erişimi",
+      "accessText": "Seçili her öğe bu erişimi alır.",
+      "accessGo_one": "{{count}} öğeye uygula",
+      "accessGo_other": "{{count}} öğeye uygula",
+      "accessDone_one": "{{count}} öğenin erişimi değişti",
+      "accessDone_other": "{{count}} öğenin erişimi değişti",
+      "delete": "Sil",
+      "deleteTitle_one": "{{count}} öğe silinsin mi?",
+      "deleteTitle_other": "{{count}} öğe silinsin mi?",
+      "deleteText": "Ajanlarınız artık onları kullanamaz. Bu işlem geri alınamaz.",
+      "deleteGo_one": "{{count}} öğeyi sil",
+      "deleteGo_other": "{{count}} öğeyi sil",
+      "deleted_one": "{{count}} öğe Vault'tan silindi",
+      "deleted_other": "{{count}} öğe Vault'tan silindi",
+      "kept_one": "Şifre yöneticisinden {{count}} öğe kaldı. Onu orada kaldırın.",
+      "kept_other": "Şifre yöneticisinden {{count}} öğe kaldı. Onları orada kaldırın."
     },
     "kind": {
       "login": "Giriş bilgisi",
@@ -4849,7 +4876,6 @@
       },
       "as": "Şu şekilde kaydet",
       "asPersonal": "Yalnızca siz göreceksiniz.",
-      "asTeam": "Çalışma alanındaki herkes görür. Ardından her biri için ajanları seçin.",
       "deleteFile": "Sonra dosyayı silin: şifreleriniz içinde şifrelenmeden duruyor.",
       "confirm_one": "{{count}} tanesini içe aktar",
       "confirm_other": "{{count}} tanesini içe aktar",
@@ -6868,6 +6894,7 @@
         "desc": "Bunu tüm ajanlar okur. İstediğin zaman değiştirebilirsin.",
         "line": "Tek cümleyle",
         "optional": "İsteğe bağlı. Cümle yoksa seçtiğin tür geçerli.",
+        "otherNeeded": "Başka bir şey seçtiysen devam etmek için buraya ne yaptığınızı yaz.",
         "todoPersonal": "Bana biraz kendinden bahset.",
         "todoDescPersonal": "Bunu tüm ajanların okur.",
         "donePersonal": "Seni biraz tanıyorum",
@@ -11303,7 +11330,9 @@
     "notice": {
       "only": "{{name}} yalnızca şu kişilere yanıt verir: {{names}}.",
       "some": "{{name}} yalnızca bazı kişilere yanıt verir.",
-      "nobody": "{{name}} şu anda kimseye yanıt vermiyor."
+      "nobody": "{{name}} şu anda kimseye yanıt vermiyor.",
+      "noTalk": "Rollerin “Ajanlarla konuşma” iznini içermiyor. Bir yönetici bunu rollerinden birine ekleyebilir.",
+      "planOwnerOnly": "{{name}}, yalnızca sahibine yanıt veren bir planla düşünüyor. {{name}} ile ilgilenen kişi, {{name}} sayfasında “Başka kişilere de yanıt verir” seçeneğini açabilir."
     }
   },
   "editors": {
@@ -13805,6 +13834,26 @@
         "1": "Günlüklerde ve ölçümlerde arama yapar",
         "2": "İzleyicileri ve olayları görür"
       },
+      "datadog_us3": {
+        "1": "Günlüklerde ve ölçümlerde arama yapar",
+        "2": "İzleyicileri ve olayları görür"
+      },
+      "datadog_us5": {
+        "1": "Günlüklerde ve ölçümlerde arama yapar",
+        "2": "İzleyicileri ve olayları görür"
+      },
+      "datadog_eu": {
+        "1": "Günlüklerde ve ölçümlerde arama yapar",
+        "2": "İzleyicileri ve olayları görür"
+      },
+      "datadog_ap1": {
+        "1": "Günlüklerde ve ölçümlerde arama yapar",
+        "2": "İzleyicileri ve olayları görür"
+      },
+      "datadog_ap2": {
+        "1": "Günlüklerde ve ölçümlerde arama yapar",
+        "2": "İzleyicileri ve olayları görür"
+      },
       "grafana": {
         "1": "Panoları, ölçümleri ve günlükleri görür",
         "2": "Pano ve uyarı oluşturur"
@@ -14111,7 +14160,12 @@
       "cloudflare_bindings": "Cloudflare (Workers)",
       "cloudflare_observability": "Cloudflare (günlükler)",
       "supabase_readonly": "Supabase (salt okunur)",
-      "intercom_eu": "Intercom (AB)"
+      "intercom_eu": "Intercom (AB)",
+      "datadog_us3": "Datadog (US3)",
+      "datadog_us5": "Datadog (US5)",
+      "datadog_eu": "Datadog (EU)",
+      "datadog_ap1": "Datadog (AP1)",
+      "datadog_ap2": "Datadog (AP2)"
     },
     "descriptions": {
       "github": "Kod, çekme istekleri, sorun kayıtları ve Actions.",
@@ -14149,6 +14203,11 @@
       "vercel": "Projeler, dağıtımlar ve günlükler.",
       "railway": "Projeler, hizmetler, dağıtımlar ve günlükler.",
       "datadog": "Günlükler, ölçümler, izleyiciler ve olaylar (US1 sitesi).",
+      "datadog_us3": "Günlükler, ölçümler, izleyiciler ve olaylar (US3 sitesi, us3.datadoghq.com).",
+      "datadog_us5": "Günlükler, ölçümler, izleyiciler ve olaylar (US5 sitesi, us5.datadoghq.com).",
+      "datadog_eu": "Günlükler, ölçümler, izleyiciler ve olaylar (EU sitesi, app.datadoghq.eu).",
+      "datadog_ap1": "Günlükler, ölçümler, izleyiciler ve olaylar (AP1 sitesi, ap1.datadoghq.com).",
+      "datadog_ap2": "Günlükler, ölçümler, izleyiciler ve olaylar (AP2 sitesi, ap2.datadoghq.com).",
       "grafana": "Grafana Cloud panoları, ölçümleri, günlükleri ve uyarıları.",
       "postman": "Çalışma alanları, koleksiyonlar ve API'ler.",
       "jam": "Hata raporları: kayıtlar, konsol günlükleri ve ağ istekleri.",
@@ -16391,6 +16450,7 @@
     },
     "rightHand": {
       "permanent": "Sağ kol çalışma alanının bir parçasıdır ve kanalların dışında kalır. Bir @bahsetme onu herhangi bir kanalda çağırır.",
+      "computer": "Sağ kol her zaman çalışma alanının kendi bilgisayarını kullanır, bu yüzden onun için başka bir bilgisayar seçilemez. Bu bilgisayarda çalışmak için bir ajan oluştur.",
       "updateApp": "Bu uygulama bu kartı uygulamak için çok eski. Uygulamayı güncelleyin veya değişikliği Ayarlar'dan yapın.",
       "nobodyNew": "Bu karttaki herkes zaten burada ya da zaten davet edilmiş. Karttan vazgeçin veya Üyeler ve davetler bölümünden daveti yeniden gönderin."
     },
@@ -17464,6 +17524,63 @@
     "denied": "Bilgisayar bağlanmadı. Onu açan siz değilseniz kimse erişim almadı.",
     "home": "agentes'e git"
   },
+  "integrations": {
+    "badge": "Uygulama",
+    "unknownApp": "Bir uygulama",
+    "appTip": "{{name}}, bu çalışma alanına bağlı bir uygulamadır. Bir kişi olarak değil, kendisi olarak paylaşır.",
+    "sender": "Gönderen: {{sender}}",
+    "senderTip": "{{sender}} tarafından agentes.chat dışında yazıldı. {{name}} iletti.",
+    "connect": "Uygulama bağla",
+    "emptyTitle": "Henüz uygulama yok",
+    "empty": "Bir destek botu, bir form veya bir izleme aracı burada kendi tokeniyle, kendisi olarak paylaşır.",
+    "api": "Uygulamaların çağırdığı yer",
+    "apiHelp": "API ve MCP adresi, uygulamanın tokeni Bearer olarak.",
+    "apiCopied": "Adres kopyalandı",
+    "help": "Destek botu nasıl bağlanır",
+    "name": "Ad",
+    "color": "Renk",
+    "colorOf": "Renk {{color}}",
+    "channels": "Kanallar",
+    "channelsHelp": "Paylaştığı yerde ajanların yanıtlarını okur.",
+    "channelsEmpty": "Çalışma alanında henüz kanal yok.",
+    "access": {
+      "none": "Erişim yok",
+      "read": "Okur",
+      "post": "Okur ve paylaşır"
+    },
+    "webhook": "Webhook adresi",
+    "webhookHelp": "Buradaki ajan yanıtları imzalı olarak bu adrese gider. Boş: uygulama onları API üzerinden okur.",
+    "save": "Kaydet",
+    "create": "Bağla",
+    "edit": "Düzenle",
+    "actions": "{{name}} için işlemler",
+    "newToken": "Yeni token",
+    "revoke": "Tokeni iptal et",
+    "newSecret": "Yeni webhook sırrı",
+    "remove": "Kaldır",
+    "tokenTitle": "{{name}} tokeni",
+    "secretTitle": "{{name}} webhook sırrı",
+    "secretUse": "Her teslimatın webhook-signature başlığını bununla doğrulayın (Standard Webhooks).",
+    "secretCopied": "Sır kopyalandı",
+    "tokenUse": "Uygulama bunu her çağrıda Authorization: Bearer olarak gönderir.",
+    "revokeTitle": "{{name}} tokeni iptal edilsin mi?",
+    "revokeText": "Yeni bir token oluşturana kadar hemen paylaşmayı ve okumayı bırakır.",
+    "newTokenTitle": "{{name}} için yeni token oluşturulsun mu?",
+    "newTokenText": "Mevcut token hemen çalışmayı bırakır.",
+    "newSecretTitle": "{{name}} için yeni webhook sırrı oluşturulsun mu?",
+    "newSecretText": "Teslimatlar hemen yeni sırla imzalanır. Sırrı uygulamaya girin, yoksa imza doğrulaması başarısız olur.",
+    "removeTitle": "{{name}} kaldırılsın mı?",
+    "removeText": "Mesajları kalır. Artık paylaşamaz veya okuyamaz.",
+    "removed": "{{name}} kaldırıldı",
+    "revoked": "Token iptal edildi",
+    "facts": {
+      "token": "{{hint}} ile biten token",
+      "noToken": "Token yok",
+      "channels_one": "{{count}} kanal",
+      "channels_other": "{{count}} kanal",
+      "webhookFailed": "Webhook başarısız ({{why}})"
+    }
+  },
   "apps": {
     "connect": "Uygulama bağla",
     "server": "Sunucu adresi",
@@ -17840,6 +17957,10 @@
         "item_created": "Vault'a bir öğe kaydetti",
         "item_changed": "Bir Vault öğesini değiştirdi",
         "item_deleted": "Bir Vault öğesini sildi",
+        "items_changed_one": "{{count}} Vault öğesine kimin erişebileceğini değiştirdi",
+        "items_changed_other": "{{count}} Vault öğesine kimin erişebileceğini değiştirdi",
+        "items_deleted_one": "{{count}} Vault öğesini sildi",
+        "items_deleted_other": "{{count}} Vault öğesini sildi",
         "item_moved": "Bir Vault öğesini Kişisel ile Ekip arasında taşıdı",
         "item_used": "Bir Vault öğesini kullandı",
         "imported": "Vault'a şifre aktardı",
@@ -17989,6 +18110,7 @@
       "billing": "Plan ve faturalandırma",
       "media": "GIF'ler ve çıkartmalar",
       "voice": "Ses",
+      "integrations": "Entegrasyonlar",
       "apps": "Yapay zeka uygulamaları",
       "approvals": "Onaylar",
       "about": "agentes.chat hakkında",
@@ -18020,6 +18142,7 @@
       "billing": "Plan, kart ve faturalar, uygulama dışındaki sayfamızda.",
       "media": "Konuşmada neler gönderilebildiği ve ajanların GIF'leri ile çıkartmaları.",
       "voice": "Konuşmalardaki sesli mesajlar ve sesi metne kimin dönüştürdüğü.",
+      "integrations": "Destek botu gibi kanallarda kendisi olarak paylaşan uygulamalar.",
       "apps": "Claude, Cursor ve diğer uygulamalardan ajanlara görev verin.",
       "approvals": "Bir ajan onayınızı istediğinde sizin yerinize kimin karar verdiği.",
       "about": "Kimin yaptığı, lisansı ve kaynak kodunun yeri.",
@@ -21075,7 +21198,8 @@
     },
     "add": {
       "label": "Widget ekle",
-      "short": "Widget"
+      "short": "Widget",
+      "word": "Ekle"
     },
     "alert": {
       "label": "Bir şeyler ters gidince bana haber ver",

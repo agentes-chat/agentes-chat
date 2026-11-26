@@ -57,7 +57,8 @@ import { turnZoneEnv } from "./turn-zone";
  * - Live steering (OpenCode 2.x, `_session/steering`): `brain.steer` hands messages to the turn, read at its next model
  *   step (`steer_read`). 1.x takes nothing mid-turn (`unsupported`).
  * - Silence: OpenCode 1.x waits out a provider's limit by itself (a `retry-after` of hours) and says nothing over ACP;
- *   a turn that hears nothing for `OPENCODE_SILENCE_MS` with no tool running stops and says why.
+ *   a turn that hears nothing for `OPENCODE_SILENCE_MS` with no tool running stops as that limit (`plan_limit`), so
+ *   the run goes on with the next account of its order instead of retrying into the same silence.
  * - Windows: the CLI starts by its full path, npm's launcher skipped for the binary it runs (`cliSpawn`), in no new
  *   console; stopping it takes its whole tree (`killTree`).
  * - ADR 0041/0059: a turn with an `account` runs with that account's folder as OpenCode's XDG folders (`accountEnv`)
@@ -702,11 +703,13 @@ export async function runOpencodeTurn(input: OpencodeTurnInput, opts: OpencodeTu
     } else if (s.stopping === "silence") {
       const span =
         silenceMs >= 60_000 ? `${Math.round(silenceMs / 60_000)} minutes` : `${Math.round(silenceMs / 1000)} seconds`;
-      fail(
-        "opencode_failed",
-        `OpenCode said nothing for ${span} with no tool running (its provider may be refusing it, as at a usage limit), so the turn stopped.`,
-        true,
-      );
+      emit({ type: "limit" });
+      emit({
+        type: "error",
+        code: "plan_limit",
+        message: `OpenCode said nothing for ${span} with no tool running, as it does while its provider refuses it at a usage limit, so the turn stopped.`,
+        worked: reader.worked,
+      });
     }
     return s.stopping !== null;
   };

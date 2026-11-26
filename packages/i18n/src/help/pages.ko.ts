@@ -891,4 +891,54 @@ export const helpKo: Partial<Record<HelpSlug, HelpDocument>> = {
       },
     ],
   },
+  "integration-apps": {
+    title: "통합 앱",
+    summary: "지원 봇, 양식, 모니터링 도구를 연결해 사람이 아닌 앱 자신으로 채널에 게시하게 합니다.",
+    sections: [
+      {
+        id: "what",
+        heading: "작동 방식",
+        blocks: [
+          "통합 앱에는 자체 토큰이 있습니다. 지정한 채널에 자기 이름과 **앱** 태그를 달고 게시하며, 외부 사람의 이름을 함께 전달할 수 있습니다. 에이전트는 사람에게 하듯 답합니다. 앱이 멘션하거나 라우터가 선택할 때입니다.",
+          "외부 대화는 이렇게 가져오세요. 다른 사람의 개인 토큰은 쓰지 마세요. 그 사람의 메시지로 표시됩니다.",
+        ],
+      },
+      {
+        id: "connect",
+        heading: "지원 봇 연결하기",
+        blocks: [
+          {
+            list: [
+              "**설정 › 커넥터 › 통합**에서 **앱 연결**을 클릭하고 이름을 정한 뒤 채널을 고르세요.",
+              "원하면 Webhook 주소를 추가하세요. 그 채널의 에이전트 답장이 [Standard Webhooks](https://www.standardwebhooks.com)으로 서명되어 그곳으로 전송됩니다.",
+              "토큰과 Webhook 시크릿을 복사하세요. 한 번만 표시됩니다.",
+              "외부 대화의 첫 메시지는 `thread_id` 없이 게시하고, 나머지는 그 `id`를 `thread_id`로 게시하세요. 그 스레드의 답장을 상대에게 돌려보내세요.",
+            ],
+          },
+        ],
+      },
+      {
+        id: "api",
+        heading: "API",
+        blocks: [
+          "토큰은 `Authorization: Bearer agi_…`로 보냅니다.",
+          {
+            list: [
+              "`GET /api/v1/channels`: 앱의 채널.",
+              "`POST /api/v1/messages`: `channel_id`, `text`, 그리고 필요하면 `thread_id`, `sender`, `idempotency_key`.",
+              "`GET /api/v1/messages?after=<id>`: 그 이후에 작성된 내용이며, 에이전트 답장마다 `in_reply_to`가 붙습니다.",
+            ],
+          },
+          "같은 호출은 `/mcp`의 MCP 도구로도 쓸 수 있습니다. 전체 참조는 `/api/openapi.json`입니다.",
+        ],
+      },
+      {
+        id: "safety",
+        heading: "앱이 할 수 없는 일",
+        blocks: [
+          "앱은 멤버도 사람도 아닙니다. 에이전트는 앱이 게시한 내용에 답하지만, 그로부터 규칙, 메모리, 지침 변경, 루틴, 승인, 권한을 받지 않습니다. 토큰을 취소하면 즉시 멈춥니다. 앱에 답할 때 에이전트가 스스로 읽는 것은 그 대화와 웹뿐입니다. 워크스페이스의 다른 것은 사람의 승인을 기다립니다.",
+        ],
+      },
+    ],
+  },
 };

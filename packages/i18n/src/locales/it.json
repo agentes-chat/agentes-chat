@@ -4772,7 +4772,7 @@
     "computerAway": "Il computer di {{agent}} non risponde in questo momento. Questa richiesta resta aperta fino alle {{time}}. Riprova tra un attimo.",
     "computerPaused": "Il computer di {{agent}} è in pausa per scelta del proprietario. Questa richiesta resta aperta fino alle {{time}}.",
     "insecureContext": "Questa pagina non è aperta in https, quindi il browser non blocca la chiave. Aprila su https:// (o localhost).",
-    "failed": "Non è stato possibile consegnarlo. Il computer dell'agente è acceso?",
+    "failed": "Non è stato possibile consegnarlo. Invialo di nuovo. Se non va ancora, chiedi a {{agent}} di richiederlo.",
     "changed": "Questa richiesta è cambiata mentre rispondevi. Non è stato inviato nulla. Inviala di nuovo.",
     "empty": "Scrivi il valore.",
     "tooLarge": "Troppo grande (massimo 16 KB)."
@@ -4819,6 +4819,42 @@
       "agents_other": "{{count}} agenti",
       "used": "Usato {{when}}",
       "never": "Mai usato"
+    },
+    "bulk": {
+      "select": "Seleziona",
+      "selection": "Elementi selezionati",
+      "selected_one": "{{count}} selezionato",
+      "selected_many": "{{count}} selezionati",
+      "selected_other": "{{count}} selezionati",
+      "selectAll_one": "Seleziona tutti i {{count}}",
+      "selectAll_many": "Seleziona tutti i {{count}}",
+      "selectAll_other": "Seleziona tutti i {{count}}",
+      "clear": "Smetti di selezionare",
+      "access": "Cambia l'accesso",
+      "accessTitle_one": "Accesso a {{count}} elemento",
+      "accessTitle_many": "Accesso a {{count}} elementi",
+      "accessTitle_other": "Accesso a {{count}} elementi",
+      "accessText": "Ogni elemento selezionato riceve questo accesso.",
+      "accessGo_one": "Applica a {{count}} elemento",
+      "accessGo_many": "Applica a {{count}} elementi",
+      "accessGo_other": "Applica a {{count}} elementi",
+      "accessDone_one": "Accesso cambiato per {{count}} elemento",
+      "accessDone_many": "Accesso cambiato per {{count}} elementi",
+      "accessDone_other": "Accesso cambiato per {{count}} elementi",
+      "delete": "Elimina",
+      "deleteTitle_one": "Eliminare {{count}} elemento?",
+      "deleteTitle_many": "Eliminare {{count}} elementi?",
+      "deleteTitle_other": "Eliminare {{count}} elementi?",
+      "deleteText": "I tuoi agenti non potranno più usarli. Non si può annullare.",
+      "deleteGo_one": "Elimina {{count}}",
+      "deleteGo_many": "Elimina {{count}}",
+      "deleteGo_other": "Elimina {{count}}",
+      "deleted_one": "{{count}} elemento eliminato dal Vault",
+      "deleted_many": "{{count}} elementi eliminati dal Vault",
+      "deleted_other": "{{count}} elementi eliminati dal Vault",
+      "kept_one": "{{count}} da un gestore di password è rimasto. Rimuovilo lì.",
+      "kept_many": "{{count}} da un gestore di password sono rimasti. Rimuovili lì.",
+      "kept_other": "{{count}} da un gestore di password sono rimasti. Rimuovili lì."
     },
     "kind": {
       "login": "Login",
@@ -5029,7 +5065,6 @@
       },
       "as": "Salvali come",
       "asPersonal": "Li vedrai solo tu.",
-      "asTeam": "Tutti nello spazio di lavoro li vedono. Dopo scegli gli agenti per ciascuno.",
       "deleteFile": "Elimina il file dopo: contiene le tue password in chiaro.",
       "confirm_one": "Importa {{count}}",
       "confirm_other": "Importa {{count}}",
@@ -7170,6 +7205,7 @@
         "desc": "Tutti gli agenti lo leggono. Puoi cambiarlo quando vuoi.",
         "line": "In una frase",
         "optional": "Facoltativo. Senza frase vale il tipo che hai scelto.",
+        "otherNeeded": "Con Altro, scrivi qui di cosa vi occupate per continuare.",
         "todoPersonal": "Raccontami qualcosa di te.",
         "todoDescPersonal": "Tutti i tuoi agenti lo leggono.",
         "donePersonal": "So qualcosa di te",
@@ -11829,7 +11865,9 @@
       "some": "{{name}} risponde solo ad alcune persone.",
       "some_female": "{{name}} risponde solo ad alcune persone.",
       "nobody": "{{name}} non risponde a nessuno in questo momento.",
-      "nobody_female": "{{name}} non risponde a nessuno in questo momento."
+      "nobody_female": "{{name}} non risponde a nessuno in questo momento.",
+      "noTalk": "I tuoi ruoli non includono “Parlare con gli agenti”. Un amministratore può aggiungerlo a uno di essi.",
+      "planOwnerOnly": "{{name}} pensa con un piano che risponde solo al suo proprietario. Chi si occupa di {{name}} può attivare “Risponde ad altre persone” nella pagina di {{name}}."
     }
   },
   "editors": {
@@ -14409,6 +14447,26 @@
         "1": "Cercare log e metriche",
         "2": "Vedere monitor e incidenti"
       },
+      "datadog_us3": {
+        "1": "Cercare log e metriche",
+        "2": "Vedere monitor e incidenti"
+      },
+      "datadog_us5": {
+        "1": "Cercare log e metriche",
+        "2": "Vedere monitor e incidenti"
+      },
+      "datadog_eu": {
+        "1": "Cercare log e metriche",
+        "2": "Vedere monitor e incidenti"
+      },
+      "datadog_ap1": {
+        "1": "Cercare log e metriche",
+        "2": "Vedere monitor e incidenti"
+      },
+      "datadog_ap2": {
+        "1": "Cercare log e metriche",
+        "2": "Vedere monitor e incidenti"
+      },
       "grafana": {
         "1": "Vedere dashboard, metriche e log",
         "2": "Creare dashboard e avvisi"
@@ -14720,7 +14778,12 @@
       "cloudflare_bindings": "Cloudflare (Workers)",
       "cloudflare_observability": "Cloudflare (log)",
       "supabase_readonly": "Supabase (sola lettura)",
-      "intercom_eu": "Intercom (UE)"
+      "intercom_eu": "Intercom (UE)",
+      "datadog_us3": "Datadog (US3)",
+      "datadog_us5": "Datadog (US5)",
+      "datadog_eu": "Datadog (EU)",
+      "datadog_ap1": "Datadog (AP1)",
+      "datadog_ap2": "Datadog (AP2)"
     },
     "descriptions": {
       "github": "Codice, PR, issue e Actions.",
@@ -14758,6 +14821,11 @@
       "vercel": "Progetti, deploy e log.",
       "railway": "Progetti, servizi, deploy e log.",
       "datadog": "Log, metriche, monitor e incidenti (sito US1).",
+      "datadog_us3": "Log, metriche, monitor e incidenti (sito US3, us3.datadoghq.com).",
+      "datadog_us5": "Log, metriche, monitor e incidenti (sito US5, us5.datadoghq.com).",
+      "datadog_eu": "Log, metriche, monitor e incidenti (sito EU, app.datadoghq.eu).",
+      "datadog_ap1": "Log, metriche, monitor e incidenti (sito AP1, ap1.datadoghq.com).",
+      "datadog_ap2": "Log, metriche, monitor e incidenti (sito AP2, ap2.datadoghq.com).",
       "grafana": "Dashboard, metriche, log e avvisi di Grafana Cloud.",
       "postman": "Workspace, collection e API.",
       "jam": "Segnalazioni di bug: registrazioni, log della console e richieste di rete.",
@@ -17037,6 +17105,7 @@
     },
     "rightHand": {
       "permanent": "Il braccio destro fa parte dello spazio di lavoro e resta fuori dai canali. Una @menzione lo raggiunge in qualsiasi canale.",
+      "computer": "Il braccio destro usa sempre il computer proprio dello spazio di lavoro, quindi non se ne può scegliere un altro. Crea un agente per lavorare su questo.",
       "updateApp": "Questa app è troppo vecchia per applicare questa scheda. Aggiornala o fai la modifica nelle Impostazioni.",
       "nobodyNew": "Tutte le persone di questa scheda sono già qui o già invitate. Scarta la scheda o invia di nuovo un invito in Membri e inviti."
     },
@@ -18125,6 +18194,64 @@
     "denied": "Il computer non è stato collegato. Se non l'hai aperto tu, nessuno ha avuto accesso.",
     "home": "Vai ad agentes"
   },
+  "integrations": {
+    "badge": "App",
+    "unknownApp": "Un'app",
+    "appTip": "{{name}} è un'app collegata a questo spazio di lavoro. Pubblica come se stessa, mai come una persona.",
+    "sender": "da {{sender}}",
+    "senderTip": "Scritto da {{sender}} fuori da agentes.chat. {{name}} lo ha inoltrato.",
+    "connect": "Collega un'app",
+    "emptyTitle": "Ancora nessuna app",
+    "empty": "Un bot di assistenza, un modulo o un monitor pubblica qui come se stesso, con il proprio token.",
+    "api": "Dove chiamano le app",
+    "apiHelp": "L'API e l'indirizzo MCP, con il token dell'app come Bearer.",
+    "apiCopied": "Indirizzo copiato",
+    "help": "Come collegare un bot di assistenza",
+    "name": "Nome",
+    "color": "Colore",
+    "colorOf": "Colore {{color}}",
+    "channels": "Canali",
+    "channelsHelp": "Legge le risposte degli agenti dove pubblica.",
+    "channelsEmpty": "Lo spazio di lavoro non ha ancora canali.",
+    "access": {
+      "none": "Nessun accesso",
+      "read": "Legge",
+      "post": "Legge e pubblica"
+    },
+    "webhook": "Indirizzo del webhook",
+    "webhookHelp": "Le risposte degli agenti qui vanno a questo indirizzo, firmate. Vuoto: l'app le legge tramite l'API.",
+    "save": "Salva",
+    "create": "Collega",
+    "edit": "Modifica",
+    "actions": "Azioni per {{name}}",
+    "newToken": "Nuovo token",
+    "revoke": "Revoca token",
+    "newSecret": "Nuovo segreto del webhook",
+    "remove": "Rimuovi",
+    "tokenTitle": "Token di {{name}}",
+    "secretTitle": "Segreto del webhook di {{name}}",
+    "secretUse": "Usalo per verificare l'intestazione webhook-signature di ogni consegna (Standard Webhooks).",
+    "secretCopied": "Segreto copiato",
+    "tokenUse": "L'app lo invia come Authorization: Bearer a ogni chiamata.",
+    "revokeTitle": "Revocare il token di {{name}}?",
+    "revokeText": "Smette subito di pubblicare e leggere, finché non crei un nuovo token.",
+    "newTokenTitle": "Creare un nuovo token per {{name}}?",
+    "newTokenText": "Il token attuale smette subito di funzionare.",
+    "newSecretTitle": "Creare un nuovo segreto del webhook per {{name}}?",
+    "newSecretText": "Le consegne vengono firmate subito con il nuovo segreto. Inseriscilo nell'app, altrimenti la verifica della firma non riesce.",
+    "removeTitle": "Rimuovere {{name}}?",
+    "removeText": "I suoi messaggi restano. Non può più pubblicare né leggere.",
+    "removed": "{{name}} rimossa",
+    "revoked": "Token revocato",
+    "facts": {
+      "token": "Token che termina con {{hint}}",
+      "noToken": "Nessun token",
+      "channels_one": "{{count}} canale",
+      "channels_many": "{{count}} canali",
+      "channels_other": "{{count}} canali",
+      "webhookFailed": "Il webhook non riesce ({{why}})"
+    }
+  },
   "apps": {
     "connect": "Collega un'app",
     "server": "Indirizzo del server",
@@ -18507,6 +18634,12 @@
         "item_created": "Ha salvato un elemento nel Vault",
         "item_changed": "Ha modificato un elemento del Vault",
         "item_deleted": "Ha eliminato un elemento del Vault",
+        "items_changed_one": "Ha cambiato chi ha accesso a {{count}} elemento del Vault",
+        "items_changed_many": "Ha cambiato chi ha accesso a {{count}} elementi del Vault",
+        "items_changed_other": "Ha cambiato chi ha accesso a {{count}} elementi del Vault",
+        "items_deleted_one": "Ha eliminato {{count}} elemento del Vault",
+        "items_deleted_many": "Ha eliminato {{count}} elementi del Vault",
+        "items_deleted_other": "Ha eliminato {{count}} elementi del Vault",
         "item_moved": "Ha spostato un elemento del Vault tra Personale e Team",
         "item_used": "Ha usato un elemento del Vault",
         "imported": "Ha importato password nel Vault",
@@ -18656,6 +18789,7 @@
       "billing": "Piano e fatturazione",
       "media": "GIF e sticker",
       "voice": "Voce",
+      "integrations": "Integrazioni",
       "apps": "App IA",
       "approvals": "Approvazioni",
       "about": "Informazioni su agentes.chat",
@@ -18687,6 +18821,7 @@
       "billing": "Il piano, la carta e le fatture, su una nostra pagina fuori dall'app.",
       "media": "Cosa si può inviare in conversazione, e le GIF e gli sticker degli agenti.",
       "voice": "Messaggi vocali nelle conversazioni, e chi trasforma la voce in testo.",
+      "integrations": "App che pubblicano nei canali come se stesse, come un bot di assistenza.",
       "apps": "Chiedi compiti agli agenti da Claude, Cursor e altre app.",
       "approvals": "Chi decide per te quando un agente chiede la tua approvazione.",
       "about": "Chi lo fa, la sua licenza e dove si trova il codice sorgente.",
@@ -21924,7 +22059,8 @@
     },
     "add": {
       "label": "Aggiungi widget",
-      "short": "Widget"
+      "short": "Widget",
+      "word": "Aggiungi"
     },
     "alert": {
       "label": "Avvisami quando qualcosa non va",

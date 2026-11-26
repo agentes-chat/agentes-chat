@@ -54,7 +54,7 @@ import { type AgentAi, agentAiState, noAiReasonOf, ownNotSignedIn } from "./ai-s
 import { heldBehind, markNotRun, notRunAfter, notRunText, wakeLine } from "./approval-order";
 import { deciderName, publishApproval } from "./approvals";
 import { withFileFacts } from "./artifacts";
-import { accountablePerson, fedByRoutine, personOfMessage, runAuthority } from "./authority";
+import { accountablePerson, fedByRoutine, fromApp, personOfMessage, runAuthority } from "./authority";
 import {
   type AutoChoice,
   type AutoLine,
@@ -294,6 +294,7 @@ import { computerBackSoon, type MachineCaller } from "./machine-hub";
 import { TASK_OFFLINE_GRACE_MS } from "./machine-tasks";
 import { getMachine } from "./machines";
 import { MEDIA_TOOLS } from "./media";
+import { ownTypedSql } from "./message-origin";
 import { PLACE_KEPT_MS } from "./message-place";
 import {
   getMessage,
@@ -763,6 +764,8 @@ export interface Transcript {
    * behind it from then on (`authority.ts`, `steeredByOf`).
    */
   steeredBy?: string;
+  /** What `steeredBy` wrote wasn't typed in our apps (`ownTyped`, ADR 0250): they are behind it, relayed. */
+  steeredRelayed?: true;
   /**
    * Near its tool-call cap it was told once to wrap up (`WRAP_UP_NOTE`, `WRAP_UP_REPLY_NOTE`): its final
    * reply offers Continuar (`meta.stepLimit`).
@@ -2685,8 +2688,13 @@ async function executeRunInner(
     // The tools the context names are core ones: listed whatever groups the judge loads, so it needn't wait for it.
     // A connector's tool of the same name could come with a group: then it waits.
     if (judging && !granted.every((t) => isCore(t) || !CONTEXT_TOOLS.includes(t.name))) await judging;
+    let behind: ReturnType<typeof runAuthority> | undefined;
+    const authority = () => (behind ??= runAuthority(db, run));
+    // Someone outside reads what a run an app's message started replies (ADR 0252): nothing of memory or the wiki
+    // comes in by itself, found by their words; each read of them asks a person. A person's message roots in them.
+    const appRun = trigger?.authorType !== "person" && fromApp(await authority().catch(() => null));
     // A routine's instructions name what it checks; the wiki stays one `read_wiki_page` away.
-    const searchesWiki = tools.some((t) => t.name === "read_wiki_page") && !viaRoutine;
+    const searchesWiki = tools.some((t) => t.name === "read_wiki_page") && !viaRoutine && !appRun;
     // Only the kinds searched below: with vectors for the wiki alone, a run that doesn't search it pays for none.
     const queryEmbedding = contextDeps
       ? sharedQueryEmbedding(
@@ -2696,7 +2704,7 @@ async function executeRunInner(
           searchesWiki ? ["context_item", "wiki"] : ["context_item"],
         )
       : undefined;
-    const personBehind = () => runAuthority(db, run).then((a) => a.personId);
+    const personBehind = () => authority().then((a) => a.personId);
     const [pending, skillList, repositories, browsers, workApplies, choicesApply, sayNowHere, codeHere] =
       await Promise.all([
         deps.tools
@@ -2771,7 +2779,7 @@ async function executeRunInner(
         workspaceComputer: deps.workspaceComputer,
         unseal: brainOf(agent.brain) === "model",
       }),
-      contextDeps
+      contextDeps && !appRun
         ? // A person's own message already names who is behind the run: no read for it.
           (trigger?.authorUserId ? Promise.resolve(trigger.authorUserId) : personBehind().catch(() => null))
             .then((personId) =>
@@ -2801,7 +2809,7 @@ async function executeRunInner(
               reader: async () => ({
                 type: "agent",
                 agentId: agent.id,
-                requestedByUserId: wikiPersonOf(await runAuthority(db, run)),
+                requestedByUserId: wikiPersonOf(await authority()),
                 channelId: run.channelId,
               }),
             },
@@ -3356,7 +3364,10 @@ async function executeRunInner(
     if (t.stuck?.endAt === undefined) delete t.stuck;
     if (!run.background && !t.steeredBy) {
       const authority = await runAuthority(db, { ...run, transcript: t as unknown as Record<string, unknown> });
-      if (authority.kind === "unattended") t.steeredBy = person.userId;
+      if (authority.kind === "unattended") {
+        t.steeredBy = person.userId;
+        if (!person.typed) t.steeredRelayed = true;
+      }
     }
     // A person wrote to it: what it starts from here is a new stretch of theirs (ADR 0089).
     if (!run.background) await rerootRun(db, run, person.messageId);
@@ -4158,6 +4169,22 @@ async function executeRunInner(
     return true;
   };
 
+  /** How long an away computer is waited for without a word (`brainUnavailable`): null once it is down for real. */
+  const quietWait = async (machineId: string) => {
+    let quietUntil: number | null = null;
+    const status = await deps.machines?.status(machineId).catch(() => null);
+    const moving = status?.online === false && status.moving === true;
+    const seen = status?.lastSeenAt ? Date.parse(status.lastSeenAt) : Number.NaN;
+    if (status && !status.online && status.standby) {
+      const t = transcript as Transcript;
+      t.standbyWaitSince ??= Date.now();
+      const until = t.standbyWaitSince + TASK_OFFLINE_GRACE_MS;
+      if (Date.now() < until) quietUntil = until;
+    } else if (status && !status.online && Date.now() - seen < TASK_OFFLINE_GRACE_MS)
+      quietUntil = seen + TASK_OFFLINE_GRACE_MS;
+    return { quietUntil, moving };
+  };
+
   /**
    * The computer brain can't answer. At the run's start (`look`), a computer in standby is woken and waited for, and on
    * its first look one just gone too (`computerBackSoon`). Still away: the run waits for the computer (the API never
@@ -4218,7 +4245,15 @@ async function executeRunInner(
       !onlyThisComputer &&
       !plan.missionId &&
       (await planKeyFallbackOn(db, run.orgId));
-    if (isRightHand(agent) && u.code !== "busy" && !u.queued && !rightHandKey) {
+    // Just gone or waking from standby, the right hand waits without a word as any agent does: a standby the person
+    // never sees must not read as its computer away (ADR 0161).
+    if (
+      isRightHand(agent) &&
+      u.code !== "busy" &&
+      !u.queued &&
+      !rightHandKey &&
+      !(u.code === "machine_offline" && machineId && (await quietWait(machineId)).quietUntil !== null)
+    ) {
       const ownModel = u.scope ? ownLimitsModel(plan.account?.provider, plan.model) : null;
       const line = rightHandNoAiReason(u.code, ownModel ? u.scope : undefined);
       // What the plan's CLI or its computer said is kept in the run and reported, as any agent's CLI failure is, and the
@@ -4309,19 +4344,8 @@ async function executeRunInner(
     // Just gone (our own deploy, a runner dialing again): it waits without a word until the outage grace is over.
     // Asleep in standby, waking: without a word too, for one grace from its first such wait (ADR 0161); one that
     // never wakes is down, and says so.
-    let quietUntil: number | null = null;
-    let moving = false;
-    if (u.code === "machine_offline") {
-      const status = await deps.machines?.status(machineId).catch(() => null);
-      moving = status?.online === false && status.moving === true;
-      const seen = status?.lastSeenAt ? Date.parse(status.lastSeenAt) : Number.NaN;
-      if (status && !status.online && status.standby) {
-        t.standbyWaitSince ??= Date.now();
-        const until = t.standbyWaitSince + TASK_OFFLINE_GRACE_MS;
-        if (Date.now() < until) quietUntil = until;
-      } else if (status && !status.online && Date.now() - seen < TASK_OFFLINE_GRACE_MS)
-        quietUntil = seen + TASK_OFFLINE_GRACE_MS;
-    }
+    const { quietUntil, moving } =
+      u.code === "machine_offline" ? await quietWait(machineId) : { quietUntil: null, moving: false };
     // Away for real at the run's start (past a blip, never one waking from standby) or paused by its owner: a device
     // that helps takes the turn (ADR 0233).
     if (
@@ -7946,6 +7970,7 @@ export function continuedTranscript(stopped: Transcript, line: string): Transcri
     ...(stopped.promptKey ? { promptKey: stopped.promptKey } : {}),
     // The person who wrote into the stopped run is still behind the work it goes on with (`authority.ts`).
     ...(stopped.steeredBy ? { steeredBy: stopped.steeredBy } : {}),
+    ...(stopped.steeredRelayed ? { steeredRelayed: true } : {}),
   };
   const last = t.messages.at(-1);
   const unanswered =
@@ -8070,11 +8095,11 @@ async function lastPersonAmong(
   orgId: string,
   agentId: string,
   ids: string[],
-): Promise<{ userId: string; messageId: string } | null> {
+): Promise<{ userId: string; messageId: string; typed: boolean } | null> {
   if (ids.length === 0) return null;
   const quoted = sql`${messages.meta} #>> '{replyTo,author,type}'`;
   const [row] = await db
-    .select({ userId: messages.authorUserId, messageId: messages.id })
+    .select({ userId: messages.authorUserId, messageId: messages.id, typed: ownTypedSql() })
     .from(messages)
     .where(
       and(
@@ -8089,15 +8114,19 @@ async function lastPersonAmong(
     )
     .orderBy(desc(messages.createdAt))
     .limit(1);
-  return row?.userId ? { userId: row.userId, messageId: row.messageId } : null;
+  return row?.userId ? { userId: row.userId, messageId: row.messageId, typed: row.typed === true } : null;
 }
 
 /**
  * Writes that the run owes an answer (and who wrote into it) onto its row and nothing else: mid-turn a
  * computer brain's bridge writes the same transcript (its pending calls, its side effects).
  */
-async function markAnswerOwed(db: Executor, runId: string, t: Pick<Transcript, "steeredBy">) {
-  const patch = JSON.stringify({ answerOwed: true, ...(t.steeredBy ? { steeredBy: t.steeredBy } : {}) });
+async function markAnswerOwed(db: Executor, runId: string, t: Pick<Transcript, "steeredBy" | "steeredRelayed">) {
+  const patch = JSON.stringify({
+    answerOwed: true,
+    ...(t.steeredBy ? { steeredBy: t.steeredBy } : {}),
+    ...(t.steeredRelayed ? { steeredRelayed: true } : {}),
+  });
   await db
     .update(agentRuns)
     .set({ transcript: sql`coalesce(${agentRuns.transcript}, '{}'::jsonb) || ${patch}::jsonb` })

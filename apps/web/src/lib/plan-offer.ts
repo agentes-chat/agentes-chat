@@ -9,11 +9,11 @@ const PLANS_WAIT_MS = 4000;
  * The plan the onboarding offers (or the one `key` names, a paid return's), read by the browser from the billing service's public plan list in the person's
  * language: this server never names a plan nor a price (ADR 0079 §6). `offer` is null without a billing service, and
  * when the list can't be read in time: the onboarding then names no plan. `loading` while the list is on its way.
- * `personal`: a personal workspace's offer, the plan for one person when the list has one (`planOfferOf`).
+ * `alone`: a personal workspace, offered the plan for one person.
  */
 export function usePlanOffer(
   locale: string,
-  { key, enabled = true, personal = false }: { key?: string; enabled?: boolean; personal?: boolean } = {},
+  { key, alone = false, enabled = true }: { key?: string; alone?: boolean; enabled?: boolean } = {},
 ) {
   const billingUrl = useAuthConfig().data?.billingUrl ?? null;
   const plans = useQuery({
@@ -24,7 +24,7 @@ export function usePlanOffer(
       });
       return res.ok ? ((await res.json()) as unknown) : null;
     },
-    select: (json: unknown) => planOfferOf(json, key, { personal }),
+    select: (json: unknown) => planOfferOf(json, key, alone),
     enabled: billingUrl !== null && enabled,
     retry: 0,
     staleTime: 10 * 60_000,

@@ -4438,7 +4438,7 @@
     "computerAway": "{{agent}}의 컴퓨터가 지금 응답하지 않아요. 이 요청은 {{time}}까지 열려 있어요. 잠시 후 다시 시도하세요.",
     "computerPaused": "소유자가 {{agent}}의 컴퓨터를 일시 중지했어요. 이 요청은 {{time}}까지 열려 있어요.",
     "insecureContext": "이 페이지는 https로 열려 있지 않아 브라우저가 키를 잠그지 않습니다. https://(또는 localhost)로 여세요.",
-    "failed": "전달하지 못했어요. 에이전트의 컴퓨터가 켜져 있나요?",
+    "failed": "전달하지 못했어요. 다시 보내 주세요. 그래도 안 되면 {{agent}}에게 다시 요청해 달라고 하세요.",
     "changed": "답하는 동안 이 요청이 바뀌었어요. 아무것도 보내지 않았어요. 다시 보내 주세요.",
     "empty": "값을 입력하세요.",
     "tooLarge": "너무 커요(최대 16KB)."
@@ -4484,6 +4484,24 @@
       "agents_other": "에이전트 {{count}}개",
       "used": "{{when}} 사용",
       "never": "사용한 적 없음"
+    },
+    "bulk": {
+      "select": "선택",
+      "selection": "선택한 항목",
+      "selected_other": "{{count}}개 선택됨",
+      "selectAll_other": "{{count}}개 모두 선택",
+      "clear": "선택 그만하기",
+      "access": "접근 권한 변경",
+      "accessTitle_other": "항목 {{count}}개의 접근 권한",
+      "accessText": "선택한 항목 모두에 이 접근 권한이 적용돼요.",
+      "accessGo_other": "{{count}}개에 적용",
+      "accessDone_other": "항목 {{count}}개의 접근 권한을 바꿨어요",
+      "delete": "삭제",
+      "deleteTitle_other": "항목 {{count}}개를 삭제할까요?",
+      "deleteText": "에이전트가 더 이상 쓸 수 없어요. 되돌릴 수 없어요.",
+      "deleteGo_other": "{{count}}개 삭제",
+      "deleted_other": "항목 {{count}}개를 Vault에서 삭제했어요",
+      "kept_other": "비밀번호 관리자의 항목 {{count}}개는 남아 있어요. 그곳에서 삭제하세요."
     },
     "kind": {
       "login": "로그인",
@@ -4683,7 +4701,6 @@
       },
       "as": "저장 방식",
       "asPersonal": "나만 볼 수 있어요.",
-      "asTeam": "워크스페이스의 모든 사람이 볼 수 있어요. 나중에 항목마다 에이전트를 고르세요.",
       "deleteFile": "나중에 파일을 삭제하세요. 비밀번호가 암호화되지 않은 채 들어 있어요.",
       "confirm_other": "{{count}}개 가져오기",
       "done_other": "로그인 {{count}}개를 가져왔어요",
@@ -6636,6 +6653,7 @@
         "desc": "모든 에이전트가 이걸 읽어요. 언제든 바꿀 수 있어요.",
         "line": "한 문장으로",
         "optional": "선택 사항이에요. 문장이 없으면 고른 유형이 쓰여요.",
+        "otherNeeded": "기타를 골랐다면 여기에 무슨 일을 하는지 적어야 계속할 수 있어요.",
         "todoPersonal": "자신에 대해 조금 알려 주세요.",
         "todoDescPersonal": "모든 에이전트가 이걸 읽어요.",
         "donePersonal": "당신에 대해 조금 알아요",
@@ -10899,7 +10917,9 @@
     "notice": {
       "only": "{{name}}은(는) {{names}}에게만 답해요.",
       "some": "{{name}}은(는) 일부 사람에게만 답해요.",
-      "nobody": "{{name}}은(는) 지금 아무에게도 답하지 않아요."
+      "nobody": "{{name}}은(는) 지금 아무에게도 답하지 않아요.",
+      "noTalk": "내 역할에 “에이전트와 대화”가 없어요. 관리자가 역할 중 하나에 추가할 수 있어요.",
+      "planOwnerOnly": "{{name}}은(는) 소유자에게만 답하는 플랜으로 생각해요. {{name}}을(를) 관리하는 사람이 {{name}} 페이지에서 “다른 사람에게도 답해요”를 켤 수 있어요."
     }
   },
   "editors": {
@@ -13314,6 +13334,26 @@
         "1": "로그와 지표 검색",
         "2": "모니터와 인시던트 보기"
       },
+      "datadog_us3": {
+        "1": "로그와 지표 검색",
+        "2": "모니터와 인시던트 보기"
+      },
+      "datadog_us5": {
+        "1": "로그와 지표 검색",
+        "2": "모니터와 인시던트 보기"
+      },
+      "datadog_eu": {
+        "1": "로그와 지표 검색",
+        "2": "모니터와 인시던트 보기"
+      },
+      "datadog_ap1": {
+        "1": "로그와 지표 검색",
+        "2": "모니터와 인시던트 보기"
+      },
+      "datadog_ap2": {
+        "1": "로그와 지표 검색",
+        "2": "모니터와 인시던트 보기"
+      },
       "grafana": {
         "1": "대시보드, 지표, 로그 보기",
         "2": "대시보드와 알림 만들기"
@@ -13615,7 +13655,12 @@
       "cloudflare_bindings": "Cloudflare(Workers)",
       "cloudflare_observability": "Cloudflare(로그)",
       "supabase_readonly": "Supabase(읽기 전용)",
-      "intercom_eu": "Intercom(EU)"
+      "intercom_eu": "Intercom(EU)",
+      "datadog_us3": "Datadog (US3)",
+      "datadog_us5": "Datadog (US5)",
+      "datadog_eu": "Datadog (EU)",
+      "datadog_ap1": "Datadog (AP1)",
+      "datadog_ap2": "Datadog (AP2)"
     },
     "descriptions": {
       "github": "코드, PR, 이슈, Actions.",
@@ -13653,6 +13698,11 @@
       "vercel": "프로젝트, 배포, 로그.",
       "railway": "프로젝트, 서비스, 배포, 로그.",
       "datadog": "로그, 지표, 모니터, 인시던트(US1 사이트).",
+      "datadog_us3": "로그, 지표, 모니터, 인시던트(US3 사이트, us3.datadoghq.com).",
+      "datadog_us5": "로그, 지표, 모니터, 인시던트(US5 사이트, us5.datadoghq.com).",
+      "datadog_eu": "로그, 지표, 모니터, 인시던트(EU 사이트, app.datadoghq.eu).",
+      "datadog_ap1": "로그, 지표, 모니터, 인시던트(AP1 사이트, ap1.datadoghq.com).",
+      "datadog_ap2": "로그, 지표, 모니터, 인시던트(AP2 사이트, ap2.datadoghq.com).",
       "grafana": "Grafana Cloud 대시보드, 지표, 로그, 알림.",
       "postman": "워크스페이스, 컬렉션, API.",
       "jam": "버그 리포트: 녹화, 콘솔 로그, 네트워크 요청.",
@@ -15856,6 +15906,7 @@
     },
     "rightHand": {
       "permanent": "오른팔은 워크스페이스의 일부라 채널에 들어가지 않아요. @멘션하면 어느 채널에서든 부를 수 있어요.",
+      "computer": "오른팔은 항상 워크스페이스 자체 컴퓨터를 사용하므로 다른 컴퓨터를 고를 수 없어요. 이 컴퓨터에서 작업하려면 에이전트를 만드세요.",
       "updateApp": "이 앱은 너무 오래돼서 이 카드를 적용할 수 없어요. 앱을 업데이트하거나 설정에서 직접 변경하세요.",
       "nobodyNew": "이 카드의 모든 사람이 이미 참여 중이거나 이미 초대됐어요. 카드를 버리거나 멤버와 초대에서 초대를 다시 보내세요."
     },
@@ -16912,6 +16963,62 @@
     "denied": "컴퓨터를 연결하지 않았어요. 직접 연 게 아니라면 아무도 접근 권한을 얻지 못했어요.",
     "home": "agentes로 가기"
   },
+  "integrations": {
+    "badge": "앱",
+    "unknownApp": "앱",
+    "appTip": "{{name}}은(는) 이 워크스페이스에 연결된 앱입니다. 사람이 아닌 앱 자신으로 게시합니다.",
+    "sender": "{{sender}}님이 보냄",
+    "senderTip": "{{sender}}이(가) agentes.chat 밖에서 쓴 글을 {{name}}이(가) 전달했습니다.",
+    "connect": "앱 연결",
+    "emptyTitle": "아직 앱이 없습니다",
+    "empty": "지원 봇, 양식, 모니터링 도구가 자체 토큰으로 앱 자신으로서 여기에 게시합니다.",
+    "api": "앱이 호출하는 주소",
+    "apiHelp": "API와 MCP 주소이며, 앱의 토큰을 Bearer로 보냅니다.",
+    "apiCopied": "주소를 복사했습니다",
+    "help": "지원 봇 연결 방법",
+    "name": "이름",
+    "color": "색상",
+    "colorOf": "색상 {{color}}",
+    "channels": "채널",
+    "channelsHelp": "게시하는 채널에서 에이전트의 답장을 읽습니다.",
+    "channelsEmpty": "워크스페이스에 아직 채널이 없습니다.",
+    "access": {
+      "none": "접근 권한 없음",
+      "read": "읽기",
+      "post": "읽기 및 게시"
+    },
+    "webhook": "Webhook 주소",
+    "webhookHelp": "여기서 에이전트가 보낸 답장은 서명되어 이 주소로 전송됩니다. 비워 두면 앱이 API로 읽습니다.",
+    "save": "저장",
+    "create": "연결",
+    "edit": "편집",
+    "actions": "{{name}} 작업",
+    "newToken": "새 토큰",
+    "revoke": "토큰 취소",
+    "newSecret": "새 Webhook 시크릿",
+    "remove": "제거",
+    "tokenTitle": "{{name}}의 토큰",
+    "secretTitle": "{{name}}의 Webhook 시크릿",
+    "secretUse": "이것으로 각 전송의 webhook-signature 헤더를 확인하세요(Standard Webhooks).",
+    "secretCopied": "시크릿을 복사했습니다",
+    "tokenUse": "앱은 매번 호출할 때 Authorization: Bearer로 보냅니다.",
+    "revokeTitle": "{{name}}의 토큰을 취소할까요?",
+    "revokeText": "새 토큰을 만들 때까지 즉시 게시와 읽기가 중단됩니다.",
+    "newTokenTitle": "{{name}}의 새 토큰을 만들까요?",
+    "newTokenText": "현재 토큰은 즉시 작동을 멈춥니다.",
+    "newSecretTitle": "{{name}}의 새 Webhook 시크릿을 만들까요?",
+    "newSecretText": "전송은 즉시 새 시크릿으로 서명됩니다. 앱에도 넣지 않으면 서명 확인에 실패합니다.",
+    "removeTitle": "{{name}}을(를) 제거할까요?",
+    "removeText": "메시지는 남습니다. 더 이상 게시하거나 읽을 수 없습니다.",
+    "removed": "{{name}} 제거됨",
+    "revoked": "토큰을 취소했습니다",
+    "facts": {
+      "token": "{{hint}}(으)로 끝나는 토큰",
+      "noToken": "토큰 없음",
+      "channels_other": "채널 {{count}}개",
+      "webhookFailed": "Webhook 실패 중({{why}})"
+    }
+  },
   "apps": {
     "connect": "앱 연결",
     "server": "서버 주소",
@@ -17282,6 +17389,8 @@
         "item_created": "Vault에 항목을 저장했어요",
         "item_changed": "Vault 항목을 변경했어요",
         "item_deleted": "Vault 항목을 삭제했어요",
+        "items_changed_other": "Vault 항목 {{count}}개의 접근 권한을 변경했어요",
+        "items_deleted_other": "Vault 항목 {{count}}개를 삭제했어요",
         "item_moved": "Vault 항목을 개인과 팀 사이에서 옮겼어요",
         "item_used": "Vault 항목을 사용했어요",
         "imported": "Vault로 비밀번호를 가져왔어요",
@@ -17431,6 +17540,7 @@
       "billing": "요금제와 결제",
       "media": "GIF와 스티커",
       "voice": "음성",
+      "integrations": "통합",
       "apps": "AI 앱",
       "approvals": "승인",
       "about": "agentes.chat 정보",
@@ -17462,6 +17572,7 @@
       "billing": "요금제, 카드, 청구서는 앱 밖의 저희 페이지에 있어요.",
       "media": "대화에서 보낼 수 있는 것과 에이전트의 GIF, 스티커예요.",
       "voice": "대화의 음성 메시지와, 음성을 텍스트로 바꾸는 곳.",
+      "integrations": "지원 봇처럼 앱 자신으로 채널에 게시하는 앱.",
       "apps": "Claude, Cursor 같은 앱에서 에이전트에게 작업을 맡겨요.",
       "approvals": "에이전트가 승인을 요청할 때 대신 결정하는 사람이에요.",
       "about": "만든 곳, 라이선스, 소스 코드 위치.",
@@ -20462,7 +20573,8 @@
     },
     "add": {
       "label": "위젯 추가",
-      "short": "위젯"
+      "short": "위젯",
+      "word": "추가"
     },
     "alert": {
       "label": "뭔가 이상하면 알려 주세요",

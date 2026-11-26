@@ -201,19 +201,11 @@ export function SkillsScreen() {
         </View>
       ) : null}
       <GroupedFooter>{t("settings.sectionText.skills")}</GroupedFooter>
-      {scope === "personal" && list.length > 0 ? (
-        <View style={styles.note}>
-          <Note icon="lock">{t("skills.personal.note")}</Note>
-        </View>
-      ) : null}
+      {/* Why there is nothing to do here, in the footer's column under it (an icon's note started elsewhere). */}
       {!mayInstall && none ? (
-        <View style={styles.note}>
-          <Note icon="lock">{t("settings.readOnly")}</Note>
-        </View>
+        <GroupedFooter>{t("settings.readOnly")}</GroupedFooter>
       ) : unavailable ? (
-        <View style={styles.note}>
-          <Note icon="info">{t("skills.unavailable")}</Note>
-        </View>
+        <GroupedFooter>{t("skills.unavailable")}</GroupedFooter>
       ) : (
         <>
           {scope === "team" && settings.data ? (
@@ -276,6 +268,8 @@ export function SkillsScreen() {
               ))}
             </GroupedList>
           ) : null}
+          {/* Personal's rule under its skills, as a group's footer (Connectors says its own the same way). */}
+          {scope === "personal" && shown.length > 0 ? <GroupedFooter>{t("skills.personal.note")}</GroupedFooter> : null}
           {scope === "team" && others.length > 0 ? (
             <>
               <GroupedHeader>{`${t("skills.personal.others")} · ${others.length}`}</GroupedHeader>

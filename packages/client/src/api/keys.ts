@@ -164,6 +164,8 @@ export const keys = {
   machineDevice: (userCode: string) => ["machine-device", userCode] as const,
   /** Settings → AI apps: mine, or the whole workspace's (`all`), both under `apps`. */
   apps: (orgId: string, all = false) => ["org", orgId, "apps", all ? "all" : "mine"] as const,
+  /** Settings › Integrations (ADR 0251). */
+  integrationApps: (orgId: string) => ["org", orgId, "integration-apps"] as const,
   /** An app's consent (`/autorizar?req=`): not under an organization, it is picked on that page. */
   appConsent: (requestId: string) => ["app-consent", requestId] as const,
   desktopLatest: (target: string, arch: string) => ["desktop-latest", target, arch] as const,

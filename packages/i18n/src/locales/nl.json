@@ -4613,7 +4613,7 @@
     "computerAway": "De computer van {{agent}} antwoordt nu niet. Dit verzoek blijft open tot {{time}}. Probeer het zo opnieuw.",
     "computerPaused": "De computer van {{agent}} is door de eigenaar gepauzeerd. Dit verzoek blijft open tot {{time}}.",
     "insecureContext": "Deze pagina is niet via https geopend, dus de browser vergrendelt de sleutel niet. Open hem via https:// (of localhost).",
-    "failed": "Kon het niet leveren. Staat de computer van de agent aan?",
+    "failed": "Kon het niet leveren. Stuur het opnieuw. Lukt het weer niet, vraag {{agent}} dan om het opnieuw aan te vragen.",
     "changed": "Dit verzoek is gewijzigd terwijl je antwoordde. Er is niets verzonden. Stuur het opnieuw.",
     "empty": "Typ de waarde.",
     "tooLarge": "Te groot (maximaal 16 KB)."
@@ -4660,6 +4660,33 @@
       "agents_other": "{{count}} agenten",
       "used": "Gebruikt {{when}}",
       "never": "Nooit gebruikt"
+    },
+    "bulk": {
+      "select": "Selecteren",
+      "selection": "Geselecteerde items",
+      "selected_one": "{{count}} geselecteerd",
+      "selected_other": "{{count}} geselecteerd",
+      "selectAll_one": "Alle {{count}} selecteren",
+      "selectAll_other": "Alle {{count}} selecteren",
+      "clear": "Stoppen met selecteren",
+      "access": "Toegang wijzigen",
+      "accessTitle_one": "Toegang voor {{count}} item",
+      "accessTitle_other": "Toegang voor {{count}} items",
+      "accessText": "Elk geselecteerd item krijgt deze toegang.",
+      "accessGo_one": "Toepassen op {{count}} item",
+      "accessGo_other": "Toepassen op {{count}} items",
+      "accessDone_one": "Toegang gewijzigd voor {{count}} item",
+      "accessDone_other": "Toegang gewijzigd voor {{count}} items",
+      "delete": "Verwijderen",
+      "deleteTitle_one": "{{count}} item verwijderen?",
+      "deleteTitle_other": "{{count}} items verwijderen?",
+      "deleteText": "Je agenten kunnen ze niet meer gebruiken. Dit kan niet ongedaan worden gemaakt.",
+      "deleteGo_one": "{{count}} verwijderen",
+      "deleteGo_other": "{{count}} verwijderen",
+      "deleted_one": "{{count}} item verwijderd uit de Vault",
+      "deleted_other": "{{count}} items verwijderd uit de Vault",
+      "kept_one": "{{count}} uit een wachtwoordmanager is gebleven. Verwijder het daar.",
+      "kept_other": "{{count}} uit een wachtwoordmanager zijn gebleven. Verwijder ze daar."
     },
     "kind": {
       "login": "Login",
@@ -4870,7 +4897,6 @@
       },
       "as": "Opslaan als",
       "asPersonal": "Alleen jij ziet ze.",
-      "asTeam": "Iedereen in de werkruimte ziet ze. Kies daarna de agenten voor elk item.",
       "deleteFile": "Verwijder het bestand daarna: het bevat je wachtwoorden onversleuteld.",
       "confirm_one": "{{count}} importeren",
       "confirm_other": "{{count}} importeren",
@@ -6941,6 +6967,7 @@
         "desc": "Alle agenten lezen dit. Je wijzigt het wanneer je wilt.",
         "line": "In één zin",
         "optional": "Optioneel. Zonder zin telt het type dat je koos.",
+        "otherNeeded": "Bij Iets anders schrijf je hier wat jullie doen om verder te gaan.",
         "todoPersonal": "Vertel me iets over jezelf.",
         "todoDescPersonal": "Al je agents lezen dit.",
         "donePersonal": "Ik weet iets over je",
@@ -11427,7 +11454,9 @@
       "some": "{{name}} antwoordt alleen bepaalde mensen.",
       "some_female": "{{name}} antwoordt alleen bepaalde mensen.",
       "nobody": "{{name}} antwoordt nu niemand.",
-      "nobody_female": "{{name}} antwoordt nu niemand."
+      "nobody_female": "{{name}} antwoordt nu niemand.",
+      "noTalk": "Je rollen bevatten geen “Met agents praten”. Een beheerder kan het aan een ervan toevoegen.",
+      "planOwnerOnly": "{{name}} denkt met een abonnement dat alleen de eigenaar antwoordt. Wie voor {{name}} zorgt, kan “Antwoordt andere mensen” aanzetten op de pagina van {{name}}."
     }
   },
   "editors": {
@@ -13942,6 +13971,26 @@
         "1": "Logs en statistieken doorzoeken",
         "2": "Monitors en incidenten bekijken"
       },
+      "datadog_us3": {
+        "1": "Logs en statistieken doorzoeken",
+        "2": "Monitors en incidenten bekijken"
+      },
+      "datadog_us5": {
+        "1": "Logs en statistieken doorzoeken",
+        "2": "Monitors en incidenten bekijken"
+      },
+      "datadog_eu": {
+        "1": "Logs en statistieken doorzoeken",
+        "2": "Monitors en incidenten bekijken"
+      },
+      "datadog_ap1": {
+        "1": "Logs en statistieken doorzoeken",
+        "2": "Monitors en incidenten bekijken"
+      },
+      "datadog_ap2": {
+        "1": "Logs en statistieken doorzoeken",
+        "2": "Monitors en incidenten bekijken"
+      },
       "grafana": {
         "1": "Dashboards, statistieken en logs bekijken",
         "2": "Dashboards en meldingen maken"
@@ -14248,7 +14297,12 @@
       "cloudflare_bindings": "Cloudflare (Workers)",
       "cloudflare_observability": "Cloudflare (logs)",
       "supabase_readonly": "Supabase (alleen lezen)",
-      "intercom_eu": "Intercom (EU)"
+      "intercom_eu": "Intercom (EU)",
+      "datadog_us3": "Datadog (US3)",
+      "datadog_us5": "Datadog (US5)",
+      "datadog_eu": "Datadog (EU)",
+      "datadog_ap1": "Datadog (AP1)",
+      "datadog_ap2": "Datadog (AP2)"
     },
     "descriptions": {
       "github": "Code, PR's, issues en Actions.",
@@ -14286,6 +14340,11 @@
       "vercel": "Projecten, deployments en logs.",
       "railway": "Projecten, services, deploys en logs.",
       "datadog": "Logs, statistieken, monitors en incidenten (site US1).",
+      "datadog_us3": "Logs, statistieken, monitors en incidenten (site US3, us3.datadoghq.com).",
+      "datadog_us5": "Logs, statistieken, monitors en incidenten (site US5, us5.datadoghq.com).",
+      "datadog_eu": "Logs, statistieken, monitors en incidenten (site EU, app.datadoghq.eu).",
+      "datadog_ap1": "Logs, statistieken, monitors en incidenten (site AP1, ap1.datadoghq.com).",
+      "datadog_ap2": "Logs, statistieken, monitors en incidenten (site AP2, ap2.datadoghq.com).",
       "grafana": "Dashboards, statistieken, logs en meldingen in Grafana Cloud.",
       "postman": "Werkruimtes, collecties en API's.",
       "jam": "Bugrapporten: opnames, consolelogs en netwerkverzoeken.",
@@ -16528,6 +16587,7 @@
     },
     "rightHand": {
       "permanent": "De rechterhand hoort bij de werkruimte en blijft buiten de kanalen. Een @vermelding bereikt hem in elk kanaal.",
+      "computer": "De rechterhand gebruikt altijd de eigen computer van de werkruimte, dus je kunt er geen andere voor kiezen. Maak een agent om op deze te werken.",
       "updateApp": "Deze app is te oud om deze kaart toe te passen. Werk de app bij of maak de wijziging in Instellingen.",
       "nobodyNew": "Iedereen op deze kaart is er al of is al uitgenodigd. Negeer de kaart of stuur een uitnodiging opnieuw in Leden en uitnodigingen."
     },
@@ -17601,6 +17661,63 @@
     "denied": "De computer is niet gekoppeld. Als jij hem niet hebt geopend, heeft niemand toegang gekregen.",
     "home": "Naar agentes"
   },
+  "integrations": {
+    "badge": "App",
+    "unknownApp": "Een app",
+    "appTip": "{{name}} is een app die met deze werkruimte is verbonden. Hij post als zichzelf, nooit als een persoon.",
+    "sender": "van {{sender}}",
+    "senderTip": "Geschreven door {{sender}} buiten agentes.chat. {{name}} heeft het doorgegeven.",
+    "connect": "App verbinden",
+    "emptyTitle": "Nog geen apps",
+    "empty": "Een supportbot, een formulier of een monitor post hier als zichzelf, met een eigen token.",
+    "api": "Waar apps aanroepen",
+    "apiHelp": "De API en het MCP-adres, met het token van de app als Bearer.",
+    "apiCopied": "Adres gekopieerd",
+    "help": "Een supportbot verbinden",
+    "name": "Naam",
+    "color": "Kleur",
+    "colorOf": "Kleur {{color}}",
+    "channels": "Kanalen",
+    "channelsHelp": "Hij leest de antwoorden van agents waar hij post.",
+    "channelsEmpty": "De werkruimte heeft nog geen kanalen.",
+    "access": {
+      "none": "Geen toegang",
+      "read": "Leest",
+      "post": "Leest en post"
+    },
+    "webhook": "Webhookadres",
+    "webhookHelp": "Antwoorden van agents hier gaan ondertekend naar dit adres. Leeg: de app leest ze via de API.",
+    "save": "Opslaan",
+    "create": "Verbinden",
+    "edit": "Bewerken",
+    "actions": "Acties voor {{name}}",
+    "newToken": "Nieuw token",
+    "revoke": "Token intrekken",
+    "newSecret": "Nieuw webhookgeheim",
+    "remove": "Verwijderen",
+    "tokenTitle": "Token van {{name}}",
+    "secretTitle": "Webhookgeheim van {{name}}",
+    "secretUse": "Controleer er de header webhook-signature van elke levering mee (Standard Webhooks).",
+    "secretCopied": "Geheim gekopieerd",
+    "tokenUse": "De app stuurt het bij elke aanroep als Authorization: Bearer.",
+    "revokeTitle": "Token van {{name}} intrekken?",
+    "revokeText": "Hij stopt meteen met posten en lezen, tot je een nieuw token maakt.",
+    "newTokenTitle": "Nieuw token maken voor {{name}}?",
+    "newTokenText": "Het huidige token werkt meteen niet meer.",
+    "newSecretTitle": "Nieuw webhookgeheim maken voor {{name}}?",
+    "newSecretText": "Leveringen worden meteen met het nieuwe geheim ondertekend. Zet het in de app, anders mislukt de controle van de handtekening.",
+    "removeTitle": "{{name}} verwijderen?",
+    "removeText": "Zijn berichten blijven staan. Hij kan niet meer posten of lezen.",
+    "removed": "{{name}} verwijderd",
+    "revoked": "Token ingetrokken",
+    "facts": {
+      "token": "Token eindigt op {{hint}}",
+      "noToken": "Geen token",
+      "channels_one": "{{count}} kanaal",
+      "channels_other": "{{count}} kanalen",
+      "webhookFailed": "Webhook mislukt ({{why}})"
+    }
+  },
   "apps": {
     "connect": "App koppelen",
     "server": "Serveradres",
@@ -17977,6 +18094,10 @@
         "item_created": "Een item in de Vault opgeslagen",
         "item_changed": "Een Vault-item gewijzigd",
         "item_deleted": "Een Vault-item verwijderd",
+        "items_changed_one": "Gewijzigd wie toegang heeft tot {{count}} Vault-item",
+        "items_changed_other": "Gewijzigd wie toegang heeft tot {{count}} Vault-items",
+        "items_deleted_one": "{{count}} Vault-item verwijderd",
+        "items_deleted_other": "{{count}} Vault-items verwijderd",
         "item_moved": "Heeft een Vault-item verplaatst tussen Persoonlijk en Team",
         "item_used": "Een Vault-item gebruikt",
         "imported": "Wachtwoorden in de Vault geïmporteerd",
@@ -18126,6 +18247,7 @@
       "billing": "Abonnement en facturatie",
       "media": "GIF's en stickers",
       "voice": "Spraak",
+      "integrations": "Integraties",
       "apps": "AI-apps",
       "approvals": "Goedkeuringen",
       "about": "Over agentes.chat",
@@ -18157,6 +18279,7 @@
       "billing": "Het abonnement, de kaart en de facturen, op een pagina van ons buiten de app.",
       "media": "Wat je in een gesprek kunt sturen, en de gifs en stickers van de agents.",
       "voice": "Spraakberichten in gesprekken, en wie spraak omzet in tekst.",
+      "integrations": "Apps die als zichzelf in kanalen posten, zoals een supportbot.",
       "apps": "Geef de agents taken vanuit Claude, Cursor en andere apps.",
       "approvals": "Wie voor je beslist als een agent om je goedkeuring vraagt.",
       "about": "Wie het maakt, de licentie en waar de broncode staat.",
@@ -21333,7 +21456,8 @@
     },
     "add": {
       "label": "Widget toevoegen",
-      "short": "Widget"
+      "short": "Widget",
+      "word": "Toevoegen"
     },
     "alert": {
       "label": "Laat het me weten als er iets mis is",

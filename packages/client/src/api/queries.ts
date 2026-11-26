@@ -153,6 +153,7 @@ import type {
   GifCategory,
   GifKey,
   InstallableCli,
+  IntegrationAppInput,
   Invitation,
   InvitationWithStatus,
   InviteBatch,
@@ -9049,6 +9050,45 @@ export const useApps = (orgId: string, all = false, pollMs: number | false = fal
     refetchInterval: pollMs,
   });
 };
+
+/** Settings › Integrations (ADR 0251): the workspace's integration apps. */
+export const useIntegrationApps = (orgId: string, enabled = true) => {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.integrationApps(orgId),
+    queryFn: () => api.integrationApps.list(orgId),
+    enabled,
+  });
+};
+
+/** Make, change, rotate and remove integration apps; what shows once comes back in each answer. */
+export function useIntegrationAppActions(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  const done = () => void qc.invalidateQueries({ queryKey: keys.integrationApps(orgId) });
+  const silent = { meta: { silent: true }, onSuccess: done };
+  return {
+    create: useMutation({
+      mutationFn: (input: IntegrationAppInput) => api.integrationApps.create(orgId, input),
+      ...silent,
+    }),
+    update: useMutation({
+      mutationFn: (v: { appId: string; input: Partial<IntegrationAppInput> }) =>
+        api.integrationApps.update(orgId, v.appId, v.input),
+      ...silent,
+    }),
+    newToken: useMutation({ mutationFn: (appId: string) => api.integrationApps.newToken(orgId, appId), ...silent }),
+    revokeToken: useMutation({
+      mutationFn: (appId: string) => api.integrationApps.revokeToken(orgId, appId),
+      ...silent,
+    }),
+    newWebhookSecret: useMutation({
+      mutationFn: (appId: string) => api.integrationApps.newWebhookSecret(orgId, appId),
+      ...silent,
+    }),
+    remove: useMutation({ mutationFn: (appId: string) => api.integrationApps.remove(orgId, appId), ...silent }),
+  };
+}
 
 /** Desconectar an app, Revogar a token, Criar token: both lists refresh. */
 export function useAppActions(orgId: string) {

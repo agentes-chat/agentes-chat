@@ -4440,7 +4440,7 @@
     "computerAway": "{{agent}}のコンピューターが今は応答していません。このリクエストは{{time}}まで開いています。少ししてからもう一度お試しください。",
     "computerPaused": "{{agent}}のコンピューターは所有者が一時停止しています。このリクエストは{{time}}まで開いています。",
     "insecureContext": "このページは https で開かれていないため、ブラウザーはキーを保護できません。https://(または localhost)で開いてください。",
-    "failed": "送信できませんでした。エージェントのコンピューターの電源は入っていますか？",
+    "failed": "送信できませんでした。もう一度送信してください。それでも失敗する場合は、{{agent}}にもう一度依頼し直してもらってください。",
     "changed": "回答中にこのリクエストが変更されました。何も送信されていません。もう一度送信してください。",
     "empty": "値を入力してください。",
     "tooLarge": "大きすぎます（最大16 KB）。"
@@ -4486,6 +4486,24 @@
       "agents_other": "エージェント{{count}}体",
       "used": "{{when}}に使用",
       "never": "未使用"
+    },
+    "bulk": {
+      "select": "選択",
+      "selection": "選択した項目",
+      "selected_other": "{{count}}件を選択中",
+      "selectAll_other": "{{count}}件すべて選択",
+      "clear": "選択をやめる",
+      "access": "アクセスを変更",
+      "accessTitle_other": "{{count}}件のアクセス",
+      "accessText": "選択したすべての項目にこのアクセスを設定します。",
+      "accessGo_other": "{{count}}件に適用",
+      "accessDone_other": "{{count}}件のアクセスを変更しました",
+      "delete": "削除",
+      "deleteTitle_other": "{{count}}件を削除しますか？",
+      "deleteText": "エージェントはもう使えなくなります。元に戻せません。",
+      "deleteGo_other": "{{count}}件を削除",
+      "deleted_other": "{{count}}件をVaultから削除しました",
+      "kept_other": "パスワードマネージャーの{{count}}件は残っています。そちらで削除してください。"
     },
     "kind": {
       "login": "ログイン",
@@ -4685,7 +4703,6 @@
       },
       "as": "保存先",
       "asPersonal": "あなただけに表示されます。",
-      "asTeam": "ワークスペースの全員に表示されます。あとで項目ごとにエージェントを選んでください。",
       "deleteFile": "あとでファイルを削除してください。パスワードが暗号化されずに入っています。",
       "confirm_other": "{{count}}件をインポート",
       "done_other": "{{count}}件のログインをインポートしました",
@@ -6638,6 +6655,7 @@
         "desc": "すべてのエージェントがこれを読みます。いつでも変更できます。",
         "line": "一文で",
         "optional": "任意です。文がなければ選んだ種類が使われます。",
+        "otherNeeded": "「その他」のときは、ここに何をしているか書くと続けられます。",
         "todoPersonal": "あなたのことを少し教えてください。",
         "todoDescPersonal": "すべてのエージェントがこれを読みます。",
         "donePersonal": "あなたのことを少し知っています",
@@ -10905,7 +10923,9 @@
     "notice": {
       "only": "{{name}}は{{names}}にだけ返信します。",
       "some": "{{name}}は一部の人にだけ返信します。",
-      "nobody": "{{name}}は現在誰にも返信していません。"
+      "nobody": "{{name}}は現在誰にも返信していません。",
+      "noTalk": "あなたのロールには「エージェントと話す」が含まれていません。管理者がいずれかのロールに追加できます。",
+      "planOwnerOnly": "{{name}}は持ち主にしか応えないプランで考えています。{{name}}を管理している人が、{{name}}のページで「他の人にも返信する」をオンにできます。"
     }
   },
   "editors": {
@@ -13320,6 +13340,26 @@
         "1": "ログとメトリクスを検索する",
         "2": "モニターとインシデントを見る"
       },
+      "datadog_us3": {
+        "1": "ログとメトリクスを検索する",
+        "2": "モニターとインシデントを見る"
+      },
+      "datadog_us5": {
+        "1": "ログとメトリクスを検索する",
+        "2": "モニターとインシデントを見る"
+      },
+      "datadog_eu": {
+        "1": "ログとメトリクスを検索する",
+        "2": "モニターとインシデントを見る"
+      },
+      "datadog_ap1": {
+        "1": "ログとメトリクスを検索する",
+        "2": "モニターとインシデントを見る"
+      },
+      "datadog_ap2": {
+        "1": "ログとメトリクスを検索する",
+        "2": "モニターとインシデントを見る"
+      },
       "grafana": {
         "1": "ダッシュボード、メトリクス、ログを見る",
         "2": "ダッシュボードとアラートを作成する"
@@ -13621,7 +13661,12 @@
       "cloudflare_bindings": "Cloudflare（Workers）",
       "cloudflare_observability": "Cloudflare（ログ）",
       "supabase_readonly": "Supabase（読み取り専用）",
-      "intercom_eu": "Intercom（EU）"
+      "intercom_eu": "Intercom（EU）",
+      "datadog_us3": "Datadog (US3)",
+      "datadog_us5": "Datadog (US5)",
+      "datadog_eu": "Datadog (EU)",
+      "datadog_ap1": "Datadog (AP1)",
+      "datadog_ap2": "Datadog (AP2)"
     },
     "descriptions": {
       "github": "コード、PR、Issue、Actions。",
@@ -13659,6 +13704,11 @@
       "vercel": "プロジェクト、デプロイ、ログ。",
       "railway": "プロジェクト、サービス、デプロイ、ログ。",
       "datadog": "ログ、メトリクス、モニター、インシデント（US1サイト）。",
+      "datadog_us3": "ログ、メトリクス、モニター、インシデント（US3サイト、us3.datadoghq.com）。",
+      "datadog_us5": "ログ、メトリクス、モニター、インシデント（US5サイト、us5.datadoghq.com）。",
+      "datadog_eu": "ログ、メトリクス、モニター、インシデント（EUサイト、app.datadoghq.eu）。",
+      "datadog_ap1": "ログ、メトリクス、モニター、インシデント（AP1サイト、ap1.datadoghq.com）。",
+      "datadog_ap2": "ログ、メトリクス、モニター、インシデント（AP2サイト、ap2.datadoghq.com）。",
       "grafana": "Grafana Cloudのダッシュボード、メトリクス、ログ、アラート。",
       "postman": "ワークスペース、コレクション、API。",
       "jam": "バグレポート: 録画、コンソールログ、ネットワークリクエスト。",
@@ -15862,6 +15912,7 @@
     },
     "rightHand": {
       "permanent": "右腕はワークスペースの一部で、チャンネルには入りません。@メンションすれば、どのチャンネルでも呼べます。",
+      "computer": "右腕は常にワークスペース自身のコンピューターを使うため、別のコンピューターは選べません。このコンピューターで作業するにはエージェントを作成してください。",
       "updateApp": "このアプリは古いため、このカードを適用できません。アプリを更新するか、設定で変更してください。",
       "nobodyNew": "このカードの全員が、すでに参加しているか招待済みです。カードを破棄するか、「メンバーと招待」で招待を再送してください。"
     },
@@ -16920,6 +16971,62 @@
     "denied": "コンピューターは接続されませんでした。開いたのがあなたでなければ、誰もアクセスしていません。",
     "home": "agentesへ移動"
   },
+  "integrations": {
+    "badge": "アプリ",
+    "unknownApp": "アプリ",
+    "appTip": "{{name}} はこのワークスペースに接続されたアプリです。人としてではなく、アプリ自身として投稿します。",
+    "sender": "{{sender}} から",
+    "senderTip": "{{sender}} が agentes.chat の外で書いたものを {{name}} が転送しました。",
+    "connect": "アプリを接続",
+    "emptyTitle": "アプリはまだありません",
+    "empty": "サポートボット、フォーム、監視ツールなどが、専用のトークンでアプリ自身としてここに投稿します。",
+    "api": "アプリの呼び出し先",
+    "apiHelp": "API と MCP のアドレス。アプリのトークンを Bearer として送ります。",
+    "apiCopied": "アドレスをコピーしました",
+    "help": "サポートボットの接続方法",
+    "name": "名前",
+    "color": "色",
+    "colorOf": "色 {{color}}",
+    "channels": "チャンネル",
+    "channelsHelp": "投稿するチャンネルでエージェントの返信を読みます。",
+    "channelsEmpty": "ワークスペースにはまだチャンネルがありません。",
+    "access": {
+      "none": "アクセスなし",
+      "read": "読む",
+      "post": "読む・投稿する"
+    },
+    "webhook": "Webhook のアドレス",
+    "webhookHelp": "ここでのエージェントの返信は、署名付きでこのアドレスに送られます。空欄の場合、アプリは API で読み取ります。",
+    "save": "保存",
+    "create": "接続",
+    "edit": "編集",
+    "actions": "{{name}} の操作",
+    "newToken": "新しいトークン",
+    "revoke": "トークンを取り消す",
+    "newSecret": "新しい Webhook シークレット",
+    "remove": "削除",
+    "tokenTitle": "{{name}} のトークン",
+    "secretTitle": "{{name}} の Webhook シークレット",
+    "secretUse": "各配信の webhook-signature ヘッダーをこれで確認してください（Standard Webhooks）。",
+    "secretCopied": "シークレットをコピーしました",
+    "tokenUse": "アプリは毎回の呼び出しで Authorization: Bearer として送ります。",
+    "revokeTitle": "{{name}} のトークンを取り消しますか？",
+    "revokeText": "新しいトークンを作るまで、すぐに投稿も読み取りもできなくなります。",
+    "newTokenTitle": "{{name}} の新しいトークンを作りますか？",
+    "newTokenText": "今のトークンはすぐに使えなくなります。",
+    "newSecretTitle": "{{name}} の新しい Webhook シークレットを作りますか？",
+    "newSecretText": "配信はすぐに新しいシークレットで署名されます。アプリにも設定しないと、署名の確認に失敗します。",
+    "removeTitle": "{{name}} を削除しますか？",
+    "removeText": "メッセージは残ります。投稿も読み取りもできなくなります。",
+    "removed": "{{name}} を削除しました",
+    "revoked": "トークンを取り消しました",
+    "facts": {
+      "token": "末尾が {{hint}} のトークン",
+      "noToken": "トークンなし",
+      "channels_other": "{{count}} チャンネル",
+      "webhookFailed": "Webhook が失敗しています（{{why}}）"
+    }
+  },
   "apps": {
     "connect": "アプリを接続",
     "server": "サーバーアドレス",
@@ -17290,6 +17397,8 @@
         "item_created": "Vaultに項目を保存",
         "item_changed": "Vaultの項目を変更",
         "item_deleted": "Vaultの項目を削除",
+        "items_changed_other": "Vaultの{{count}}件にアクセスできる人を変更",
+        "items_deleted_other": "Vaultの{{count}}件を削除",
         "item_moved": "Vaultの項目を個人とチームの間で移動しました",
         "item_used": "Vaultの項目を使用",
         "imported": "Vaultにパスワードをインポート",
@@ -17439,6 +17548,7 @@
       "billing": "プランと請求",
       "media": "GIFとステッカー",
       "voice": "音声",
+      "integrations": "連携",
       "apps": "AIアプリ",
       "approvals": "承認",
       "about": "agentes.chat について",
@@ -17470,6 +17580,7 @@
       "billing": "プラン、カード、請求書は、アプリ外の当社ページにあります。",
       "media": "会話で送れるものと、エージェントのGIFやステッカー。",
       "voice": "会話でのボイスメッセージと、音声をテキストにするサービス。",
+      "integrations": "サポートボットのように、アプリ自身としてチャンネルに投稿するアプリ。",
       "apps": "Claude、Cursor などのアプリからエージェントにタスクを頼めます。",
       "approvals": "エージェントがあなたの承認を求めたとき、代わりに決める人。",
       "about": "開発元、ライセンス、ソースコードの場所。",
@@ -20470,7 +20581,8 @@
     },
     "add": {
       "label": "ウィジェットを追加",
-      "short": "ウィジェット"
+      "short": "ウィジェット",
+      "word": "追加"
     },
     "alert": {
       "label": "何かおかしいときに知らせる",

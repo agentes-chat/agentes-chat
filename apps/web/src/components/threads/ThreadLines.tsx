@@ -121,7 +121,7 @@ export function ThreadReplyLine({ thread, count }: { thread: ThreadInfo; count: 
     (s) => runsInChannel(s, thread.channelId).find((r) => r.threadId === thread.id && r.status !== "failed")?.agentId,
   );
   const state = thread.state === "open" ? threadWorkState(thread, Boolean(liveAgent)) : null;
-  const people = thread.participants.flatMap((p) => (p.id ? [{ type: p.type, id: p.id }] : []));
+  const people = thread.participants.flatMap((p) => (p.id && p.type !== "app" ? [{ type: p.type, id: p.id }] : []));
   const at = thread.lastMessage?.createdAt ?? thread.lastActivityAt;
   const replies = t("threads.line.replies", { count });
   const open = openId === thread.id;
@@ -298,7 +298,7 @@ export function ThreadStartLine({
           {t("threads.line.moved", { count, title })}
           <small>
             {t("threads.line.by", {
-              name: dir.authorName(message.author),
+              name: dir.authorName(message.author, message.meta),
               time: formatTime(i18n.language, message.createdAt),
             })}
           </small>

@@ -41,7 +41,8 @@ back.
 The team asleep on the agents' sky, what each one does (its first routine), the plan the billing service recommends
 with its price, "Ligar o time", "Ver todos os planos" and "Entrar no workspace sem ligar". The browser reads the plan
 from the billing service's public list (`GET {billingUrl}/plans.json?locale=`): this server still names no plan or
-price. Without that list the step names no plan and its button opens the billing page. The billing link may carry the
+price. A personal workspace is offered the list's plan for one person (`recommendedAlone`), the recommended one where
+the list names none. Without that list the step names no plan and its button opens the billing page. The billing link may carry the
 plan picked (`plan`, the billing service's own key), which this server passes on unread. Self-hosted servers have no
 plan step. The phone app shows the team asleep and where to turn it on, with no price and no link.
 
@@ -296,8 +297,8 @@ agent (ADR 0253), shows that agent's first week, and hires it with the plan. Ame
   first agent with its role and first task, the right hand as the agents' HR; the right hand alone from scratch); the
   recommended plan in two lines, its name and price with "See all plans", then what it includes. The people a plan
   includes are said only when the billing service's `plans.json` gives them (an optional `people` per plan, read by
-  `planOfferOf`); this server still names no plan or price. A personal workspace, its owner's alone, is offered the
-  plan for one person (`people: 1`) when the list has one, else the recommended one. "Not now" leaves the plan for
+  `planOfferOf`); this server still names no plan or price. A personal workspace is offered the list's plan for one
+  person (`recommendedAlone`, see above). "Not now" leaves the plan for
   later as before (the workspace opens in the right hand's DM); the button opens the plan's Checkout. The hint on why
   the Cloud is paid stays beside the plan's name.
 - **Back from Checkout, the team's photo.** In the plan step's place, once per payment (ADR 0079's moment): the team

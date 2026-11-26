@@ -145,7 +145,7 @@ export async function openDm(
     return found;
   }
   // A new DM with an agent this person can't talk to isn't started (unless they manage agents); an old one stays readable.
-  if (!found && blockedAgent) throw await audienceError(db, blockedAgent);
+  if (!found && blockedAgent) throw await audienceError(db, blockedAgent, actorId);
   if (found) await reopenDm(db, orgId, found);
   const created = found
     ? null

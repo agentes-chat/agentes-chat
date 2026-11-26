@@ -188,6 +188,7 @@ export * from "./host-computer";
 export * from "./hosts";
 export * from "./id-refs";
 export * from "./imports";
+export * from "./integrations";
 export * from "./intent-line";
 export * from "./invite-choices";
 export * from "./invite-requests";

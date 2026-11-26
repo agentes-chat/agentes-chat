@@ -427,26 +427,28 @@ export async function haltRoutineRuns(
 
 /**
  * A person left the organization (§6.2): their routines pause at once (`creator_left`, the agent's
- * owner hears it and can take them over) and their work in progress stops.
+ * owner hears it and can take them over) and their work in progress stops. An agent was archived: its
+ * routines pause the same way (`agent_archived`), so the list says it at once, not at their next slot.
  */
-export async function pauseRoutinesOfCreator(deps: FiringDeps, orgId: string, userId: string): Promise<number> {
+export async function pauseRoutinesOf(
+  deps: FiringDeps,
+  orgId: string,
+  of: { creatorUserId: string } | { agentId: string },
+): Promise<number> {
+  const [whose, reason] =
+    "agentId" in of
+      ? [eq(routines.agentId, of.agentId), "agent_archived" as const]
+      : [eq(routines.createdByUserId, of.creatorUserId), "creator_left" as const];
   const rows = await deps.db
     .select()
     .from(routines)
-    .where(
-      and(
-        eq(routines.orgId, orgId),
-        eq(routines.createdByUserId, userId),
-        eq(routines.active, true),
-        isNull(routines.deletedAt),
-      ),
-    );
+    .where(and(eq(routines.orgId, orgId), whose, eq(routines.active, true), isNull(routines.deletedAt)));
   for (const r of rows) {
-    await pauseRoutine(deps, r, "creator_left");
-    await haltRoutineRuns(deps, orgId, r.id, { code: "creator_left" });
+    await pauseRoutine(deps, r, reason);
+    await haltRoutineRuns(deps, orgId, r.id, { code: reason });
     // A widget's routine says it on its widget now, not at its next Resolve (ADR 0135 §6).
     if ((r.target as { type?: unknown } | null)?.type === "widget") {
-      await widgetRoutineHeld(deps, r, "creator_left").catch(() => {});
+      await widgetRoutineHeld(deps, r, reason).catch(() => {});
     }
   }
   return rows.length;

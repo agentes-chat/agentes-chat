@@ -897,4 +897,55 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
       },
     ],
   },
+  "integration-apps": {
+    title: "Entegrasyon uygulamaları",
+    summary:
+      "Kanallarınızda bir kişi olarak değil, kendisi olarak paylaşan bir destek botu, form veya izleme aracı bağlayın.",
+    sections: [
+      {
+        id: "what",
+        heading: "Nasıl çalışır",
+        blocks: [
+          "Bir entegrasyon uygulamasının kendi tokeni vardır. Ona verdiğiniz kanallarda kendi adıyla ve **Uygulama** etiketiyle paylaşır, dışarıdaki kişinin adını da iletebilir. Ajanlar ona bir kişiye yanıt verir gibi yanıt verir: onlardan bahsettiğinde veya yönlendirici onları seçtiğinde.",
+          "Dışarıdaki konuşmaları bu şekilde getirin, asla bir kişinin kişisel tokeniyle değil: bu mesajlar o kişinin mesajı gibi görünürdü.",
+        ],
+      },
+      {
+        id: "connect",
+        heading: "Destek botu bağlama",
+        blocks: [
+          {
+            list: [
+              "**Ayarlar › Bağlayıcılar › Entegrasyonlar** bölümünde **Uygulama bağla**'ya tıklayın, bir ad verin ve kanallarını seçin.",
+              "İsterseniz bir webhook adresi ekleyin: kanallarındaki her ajan yanıtı [Standard Webhooks](https://www.standardwebhooks.com) ile imzalanarak oraya gönderilir.",
+              "Tokeni ve webhook sırrını kopyalayın. Yalnızca bir kez gösterilirler.",
+              "Dışarıdaki her konuşmanın ilk mesajını `thread_id` olmadan, gerisini onun `id` değerini `thread_id` yaparak paylaşın. O ileti dizisindeki yanıtları kişiye geri gönderin.",
+            ],
+          },
+        ],
+      },
+      {
+        id: "api",
+        heading: "API",
+        blocks: [
+          "Tokeni `Authorization: Bearer agi_…` olarak gönderin.",
+          {
+            list: [
+              "`GET /api/v1/channels`: uygulamanın kanalları.",
+              "`POST /api/v1/messages`: `channel_id`, `text` ve isteğe bağlı olarak `thread_id`, `sender` ve `idempotency_key`.",
+              "`GET /api/v1/messages?after=<id>`: o zamandan beri yazılanlar, her ajan yanıtında `in_reply_to` ile.",
+            ],
+          },
+          "Aynı çağrılar `/mcp` adresinde MCP araçlarıdır. Tam başvuru `/api/openapi.json` adresindedir.",
+        ],
+      },
+      {
+        id: "safety",
+        heading: "Bir uygulamanın yapamadıkları",
+        blocks: [
+          "Bir uygulama hiçbir zaman üye ya da kişi değildir. Ajanlar paylaştıklarına yanıt verir, ama ondan hiçbir kural, bellek, talimat değişikliği, rutin, onay veya izin almaz. Tokenini iptal etmek onu hemen durdurur. Bir uygulamaya yanıt verirken ajan kendiliğinden yalnızca o konuşmayı ve web'i okur: çalışma alanınızdaki diğer her şey bir kişinin onayını bekler.",
+        ],
+      },
+    ],
+  },
 };

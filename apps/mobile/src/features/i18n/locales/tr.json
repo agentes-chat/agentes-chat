@@ -837,6 +837,7 @@
   },
   "agent": {
     "talk": "Sohbet et",
+    "responsible": "Sorumlu",
     "task": "Görev",
     "owner": "sorumlu: {{name}}",
     "cantTalk": "Bu ajan sizinle çalışmıyor.",
@@ -2806,11 +2807,12 @@
     },
     "formatAuto": "En iyisini {{name}} seçer",
     "newWidget": {
-      "alerts": "Uyarı açık",
       "realData": "Gerçek veriler",
       "editAsk": "İsteği değiştir",
       "asked": "“{{ask}}”",
-      "autoFormat": "Otomatik biçim"
+      "testReal": "Gerçek verilerle test et",
+      "addHome": "Ana sayfaya ekle",
+      "addTo": "Şuraya ekle: {{where}}"
     },
     "agentPick": {
       "search": "Ajan ara",

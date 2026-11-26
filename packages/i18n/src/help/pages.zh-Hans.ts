@@ -876,4 +876,54 @@ export const helpZhHans: Partial<Record<HelpSlug, HelpDocument>> = {
       },
     ],
   },
+  "integration-apps": {
+    title: "集成应用",
+    summary: "连接客服机器人、表单或监控工具，让它以自己的身份在你的频道里发帖，而不是以某个人的身份。",
+    sections: [
+      {
+        id: "what",
+        heading: "工作方式",
+        blocks: [
+          "集成应用有自己的令牌。它在你指定的频道里以自己的名字和 **应用** 标签发帖，还可以带上外部人员的名字。智能体像回复一个人一样回复它：在它提及智能体时，或在路由选中智能体时。",
+          "用这种方式引入外部对话，不要用某个人的个人令牌：那样这些消息会显示为那个人发的。",
+        ],
+      },
+      {
+        id: "connect",
+        heading: "连接客服机器人",
+        blocks: [
+          {
+            list: [
+              "在 **设置 › 连接器 › 集成** 中点击 **连接应用**，为它命名并选择频道。",
+              "如果需要，添加一个 Webhook 地址：它频道里智能体的每条回复都会发送到那里，并以 [Standard Webhooks](https://www.standardwebhooks.com) 签名。",
+              "复制令牌和 Webhook 密钥。它们只显示一次。",
+              "发送每段外部对话的第一条消息时不带 `thread_id`，其余消息以它的 `id` 作为 `thread_id`。把该话题里的回复发回给对方。",
+            ],
+          },
+        ],
+      },
+      {
+        id: "api",
+        heading: "API",
+        blocks: [
+          "以 `Authorization: Bearer agi_…` 发送令牌。",
+          {
+            list: [
+              "`GET /api/v1/channels`：应用的频道。",
+              "`POST /api/v1/messages`：`channel_id`、`text`，以及可选的 `thread_id`、`sender` 和 `idempotency_key`。",
+              "`GET /api/v1/messages?after=<id>`：此后写下的内容，每条智能体回复都带有 `in_reply_to`。",
+            ],
+          },
+          "同样的调用也是 `/mcp` 上的 MCP 工具。完整参考见 `/api/openapi.json`。",
+        ],
+      },
+      {
+        id: "safety",
+        heading: "应用不能做的事",
+        blocks: [
+          "应用从来不是成员，也不是人。智能体会回复它发的内容，但不会从中接受任何规则、记忆、指令修改、例行工作、审批或权限。撤销它的令牌会立即让它停下。回复应用时，智能体自己只读取那段对话和网络：工作区里的其他内容都要等一个人批准。",
+        ],
+      },
+    ],
+  },
 };

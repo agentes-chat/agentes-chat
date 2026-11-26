@@ -4613,7 +4613,7 @@
     "computerAway": "Der Computer von {{agent}} antwortet gerade nicht. Diese Anfrage bleibt bis {{time}} offen. Versuche es gleich noch einmal.",
     "computerPaused": "Der Computer von {{agent}} wurde von seinem Besitzer pausiert. Diese Anfrage bleibt bis {{time}} offen.",
     "insecureContext": "Diese Seite ist nicht über https geöffnet, daher verschließt der Browser den Schlüssel nicht. Öffne sie unter https:// (oder localhost).",
-    "failed": "Konnte es nicht übermitteln. Ist der Computer des Agenten eingeschaltet?",
+    "failed": "Konnte es nicht übermitteln. Sende es noch einmal. Klappt es wieder nicht, bitte {{agent}}, es neu anzufragen.",
     "changed": "Diese Anfrage hat sich geändert, während du geantwortet hast. Nichts wurde gesendet. Sende sie noch einmal.",
     "empty": "Gib den Wert ein.",
     "tooLarge": "Zu groß (höchstens 16 KB)."
@@ -4660,6 +4660,33 @@
       "agents_other": "{{count}} Agenten",
       "used": "Verwendet {{when}}",
       "never": "Nie verwendet"
+    },
+    "bulk": {
+      "select": "Auswählen",
+      "selection": "Ausgewählte Einträge",
+      "selected_one": "{{count}} ausgewählt",
+      "selected_other": "{{count}} ausgewählt",
+      "selectAll_one": "Alle {{count}} auswählen",
+      "selectAll_other": "Alle {{count}} auswählen",
+      "clear": "Auswahl beenden",
+      "access": "Zugriff ändern",
+      "accessTitle_one": "Zugriff für {{count}} Eintrag",
+      "accessTitle_other": "Zugriff für {{count}} Einträge",
+      "accessText": "Jeder ausgewählte Eintrag bekommt diesen Zugriff.",
+      "accessGo_one": "Auf {{count}} Eintrag anwenden",
+      "accessGo_other": "Auf {{count}} Einträge anwenden",
+      "accessDone_one": "Zugriff für {{count}} Eintrag geändert",
+      "accessDone_other": "Zugriff für {{count}} Einträge geändert",
+      "delete": "Löschen",
+      "deleteTitle_one": "{{count}} Eintrag löschen?",
+      "deleteTitle_other": "{{count}} Einträge löschen?",
+      "deleteText": "Deine Agenten können sie nicht mehr verwenden. Das lässt sich nicht rückgängig machen.",
+      "deleteGo_one": "{{count}} löschen",
+      "deleteGo_other": "{{count}} löschen",
+      "deleted_one": "{{count}} Eintrag aus dem Vault gelöscht",
+      "deleted_other": "{{count}} Einträge aus dem Vault gelöscht",
+      "kept_one": "{{count}} aus einem Passwort-Manager ist geblieben. Entferne ihn dort.",
+      "kept_other": "{{count}} aus einem Passwort-Manager sind geblieben. Entferne sie dort."
     },
     "kind": {
       "login": "Login",
@@ -4870,7 +4897,6 @@
       },
       "as": "Speichern als",
       "asPersonal": "Nur du wirst sie sehen.",
-      "asTeam": "Alle im Workspace sehen sie. Wähl danach die Agenten für jeden Eintrag.",
       "deleteFile": "Lösch die Datei danach: Sie enthält deine Passwörter unverschlüsselt.",
       "confirm_one": "{{count}} importieren",
       "confirm_other": "{{count}} importieren",
@@ -6903,6 +6929,7 @@
         "desc": "Alle Agenten lesen das. Du kannst es jederzeit ändern.",
         "line": "In einem Satz",
         "optional": "Optional. Ohne Satz zählt der Typ, den du gewählt hast.",
+        "otherNeeded": "Bei Etwas anderes schreib hier, was ihr macht, um fortzufahren.",
         "todoPersonal": "Erzähl mir ein bisschen von dir.",
         "todoDescPersonal": "Alle deine Agenten lesen das.",
         "donePersonal": "Ich weiß ein bisschen über dich",
@@ -11365,7 +11392,9 @@
     "notice": {
       "only": "{{name}} antwortet nur {{names}}.",
       "some": "{{name}} antwortet nur einigen Personen.",
-      "nobody": "{{name}} antwortet gerade niemandem."
+      "nobody": "{{name}} antwortet gerade niemandem.",
+      "noTalk": "Deine Rollen enthalten nicht „Mit Agenten sprechen“. Ein Admin kann es zu einer davon hinzufügen.",
+      "planOwnerOnly": "{{name}} denkt mit einem Abo, das nur dem Besitzer von {{name}} antwortet. Wer sich um {{name}} kümmert, kann auf der Seite von {{name}} „Antwortet anderen Personen“ einschalten."
     }
   },
   "editors": {
@@ -13875,6 +13904,26 @@
         "1": "Logs und Metriken durchsuchen",
         "2": "Monitore und Vorfälle ansehen"
       },
+      "datadog_us3": {
+        "1": "Logs und Metriken durchsuchen",
+        "2": "Monitore und Vorfälle ansehen"
+      },
+      "datadog_us5": {
+        "1": "Logs und Metriken durchsuchen",
+        "2": "Monitore und Vorfälle ansehen"
+      },
+      "datadog_eu": {
+        "1": "Logs und Metriken durchsuchen",
+        "2": "Monitore und Vorfälle ansehen"
+      },
+      "datadog_ap1": {
+        "1": "Logs und Metriken durchsuchen",
+        "2": "Monitore und Vorfälle ansehen"
+      },
+      "datadog_ap2": {
+        "1": "Logs und Metriken durchsuchen",
+        "2": "Monitore und Vorfälle ansehen"
+      },
       "grafana": {
         "1": "Dashboards, Metriken und Logs ansehen",
         "2": "Dashboards und Alerts erstellen"
@@ -14181,7 +14230,12 @@
       "cloudflare_bindings": "Cloudflare (Workers)",
       "cloudflare_observability": "Cloudflare (Logs)",
       "supabase_readonly": "Supabase (nur lesen)",
-      "intercom_eu": "Intercom (EU)"
+      "intercom_eu": "Intercom (EU)",
+      "datadog_us3": "Datadog (US3)",
+      "datadog_us5": "Datadog (US5)",
+      "datadog_eu": "Datadog (EU)",
+      "datadog_ap1": "Datadog (AP1)",
+      "datadog_ap2": "Datadog (AP2)"
     },
     "descriptions": {
       "github": "Code, PRs, Issues und Actions.",
@@ -14219,6 +14273,11 @@
       "vercel": "Projekte, Deployments und Logs.",
       "railway": "Projekte, Dienste, Deploys und Logs.",
       "datadog": "Logs, Metriken, Monitore und Vorfälle (Site US1).",
+      "datadog_us3": "Logs, Metriken, Monitore und Vorfälle (Site US3, us3.datadoghq.com).",
+      "datadog_us5": "Logs, Metriken, Monitore und Vorfälle (Site US5, us5.datadoghq.com).",
+      "datadog_eu": "Logs, Metriken, Monitore und Vorfälle (Site EU, app.datadoghq.eu).",
+      "datadog_ap1": "Logs, Metriken, Monitore und Vorfälle (Site AP1, ap1.datadoghq.com).",
+      "datadog_ap2": "Logs, Metriken, Monitore und Vorfälle (Site AP2, ap2.datadoghq.com).",
       "grafana": "Dashboards, Metriken, Logs und Alerts in Grafana Cloud.",
       "postman": "Workspaces, Collections und APIs.",
       "jam": "Bug-Reports: Aufnahmen, Konsolen-Logs und Netzwerkanfragen.",
@@ -16461,6 +16520,7 @@
     },
     "rightHand": {
       "permanent": "Die rechte Hand gehört zum Workspace und bleibt außerhalb der Kanäle. Eine @Erwähnung erreicht sie in jedem davon.",
+      "computer": "Die rechte Hand nutzt immer den eigenen Computer des Workspace, daher lässt sich kein anderer für sie wählen. Erstelle einen Agenten, um auf diesem zu arbeiten.",
       "updateApp": "Diese App ist zu alt, um diese Karte anzuwenden. Aktualisiere sie oder nimm die Änderung in den Einstellungen vor.",
       "nobodyNew": "Alle auf dieser Karte sind schon dabei oder schon eingeladen. Verwirf die Karte oder sende eine Einladung unter Mitglieder und Einladungen erneut."
     },
@@ -17534,6 +17594,63 @@
     "denied": "Der Computer wurde nicht verbunden. Falls du ihn nicht geöffnet hast, hat niemand Zugriff erhalten.",
     "home": "Zu agentes"
   },
+  "integrations": {
+    "badge": "App",
+    "unknownApp": "Eine App",
+    "appTip": "{{name}} ist eine mit diesem Workspace verbundene App. Sie postet als sie selbst, nie als eine Person.",
+    "sender": "von {{sender}}",
+    "senderTip": "Von {{sender}} außerhalb von agentes.chat geschrieben. {{name}} hat es weitergegeben.",
+    "connect": "App verbinden",
+    "emptyTitle": "Noch keine Apps",
+    "empty": "Ein Support-Bot, ein Formular oder ein Monitoring postet hier als es selbst, mit eigenem Token.",
+    "api": "Wo Apps aufrufen",
+    "apiHelp": "Die API und die MCP-Adresse, mit dem Token der App als Bearer.",
+    "apiCopied": "Adresse kopiert",
+    "help": "Einen Support-Bot verbinden",
+    "name": "Name",
+    "color": "Farbe",
+    "colorOf": "Farbe {{color}}",
+    "channels": "Kanäle",
+    "channelsHelp": "Sie liest die Antworten der Agenten dort, wo sie postet.",
+    "channelsEmpty": "Der Workspace hat noch keine Kanäle.",
+    "access": {
+      "none": "Kein Zugriff",
+      "read": "Liest",
+      "post": "Liest und postet"
+    },
+    "webhook": "Webhook-Adresse",
+    "webhookHelp": "Antworten der Agenten hier gehen signiert an diese Adresse. Leer: Die App liest sie über die API.",
+    "save": "Speichern",
+    "create": "Verbinden",
+    "edit": "Bearbeiten",
+    "actions": "Aktionen für {{name}}",
+    "newToken": "Neuer Token",
+    "revoke": "Token widerrufen",
+    "newSecret": "Neues Webhook-Secret",
+    "remove": "Entfernen",
+    "tokenTitle": "Token von {{name}}",
+    "secretTitle": "Webhook-Secret von {{name}}",
+    "secretUse": "Prüfe damit den Header webhook-signature jeder Zustellung (Standard Webhooks).",
+    "secretCopied": "Secret kopiert",
+    "tokenUse": "Die App sendet ihn bei jedem Aufruf als Authorization: Bearer.",
+    "revokeTitle": "Token von {{name}} widerrufen?",
+    "revokeText": "Sie hört sofort auf zu posten und zu lesen, bis du einen neuen Token erstellst.",
+    "newTokenTitle": "Neuen Token für {{name}} erstellen?",
+    "newTokenText": "Der aktuelle Token funktioniert sofort nicht mehr.",
+    "newSecretTitle": "Neues Webhook-Secret für {{name}} erstellen?",
+    "newSecretText": "Zustellungen werden sofort mit dem neuen Secret signiert. Hinterlege es in der App, sonst schlägt ihre Signaturprüfung fehl.",
+    "removeTitle": "{{name}} entfernen?",
+    "removeText": "Ihre Nachrichten bleiben. Sie kann nicht mehr posten oder lesen.",
+    "removed": "{{name}} entfernt",
+    "revoked": "Token widerrufen",
+    "facts": {
+      "token": "Token endet auf {{hint}}",
+      "noToken": "Kein Token",
+      "channels_one": "{{count}} Kanal",
+      "channels_other": "{{count}} Kanäle",
+      "webhookFailed": "Webhook schlägt fehl ({{why}})"
+    }
+  },
   "apps": {
     "connect": "App verbinden",
     "server": "Serveradresse",
@@ -17910,6 +18027,10 @@
         "item_created": "Hat einen Eintrag im Vault gespeichert",
         "item_changed": "Hat einen Vault-Eintrag geändert",
         "item_deleted": "Hat einen Vault-Eintrag gelöscht",
+        "items_changed_one": "Hat geändert, wer Zugriff auf {{count}} Vault-Eintrag hat",
+        "items_changed_other": "Hat geändert, wer Zugriff auf {{count}} Vault-Einträge hat",
+        "items_deleted_one": "Hat {{count}} Vault-Eintrag gelöscht",
+        "items_deleted_other": "Hat {{count}} Vault-Einträge gelöscht",
         "item_moved": "Hat einen Vault-Eintrag zwischen Persönlich und Team verschoben",
         "item_used": "Hat einen Vault-Eintrag verwendet",
         "imported": "Hat Passwörter in den Vault importiert",
@@ -18059,6 +18180,7 @@
       "billing": "Tarif und Abrechnung",
       "media": "GIFs und Sticker",
       "voice": "Sprachnachrichten",
+      "integrations": "Integrationen",
       "apps": "KI-Apps",
       "approvals": "Freigaben",
       "about": "Über agentes.chat",
@@ -18090,6 +18212,7 @@
       "billing": "Plan, Karte und Rechnungen, auf einer Seite von uns außerhalb der App.",
       "media": "Was man in Unterhaltungen senden kann, und die GIFs und Sticker der Agenten.",
       "voice": "Sprachnachrichten in Unterhaltungen und wer Sprache in Text umwandelt.",
+      "integrations": "Apps, die in Kanälen als sie selbst posten, etwa ein Support-Bot.",
       "apps": "Gib den Agenten Aufgaben aus Claude, Cursor und anderen Apps.",
       "approvals": "Wer für dich entscheidet, wenn ein Agent deine Freigabe braucht.",
       "about": "Wer es macht, seine Lizenz und wo sein Quellcode liegt.",
@@ -21151,7 +21274,8 @@
     },
     "add": {
       "label": "Widget hinzufügen",
-      "short": "Widget"
+      "short": "Widget",
+      "word": "Hinzufügen"
     },
     "alert": {
       "label": "Sag mir Bescheid, wenn etwas nicht stimmt",

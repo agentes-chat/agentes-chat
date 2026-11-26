@@ -203,10 +203,13 @@ export function Popover() {
     void host.installUpdate().catch(() => {});
   }, [now, update.state.available, jobs.length, host]);
 
+  // The menu's Quit asking here: the show it brings must not clear the question it shows for.
+  const quitOnShow = useRef(false);
   useOnShown("popover", () => {
     setPauseMenu(false);
     setPauseFor(null);
-    setConfirmQuit(false);
+    setConfirmQuit(quitOnShow.current);
+    quitOnShow.current = false;
     setNow(Date.now());
     readList();
   });
@@ -319,13 +322,27 @@ export function Popover() {
         } else if (action === "quit" && runningJobs.current === 0 && !localRuns.current) {
           // Nothing running on this Mac: quits at once, like any Mac app.
           void host.quit().catch(() => {});
+        } else if (action === "quit") {
+          // Agents working here: ask first. From the menu the popover isn't in front, and it hides as soon as another
+          // window takes focus (a window manager that focuses under the pointer hides it at once): the system's own
+          // dialog asks instead. The popover's question when the system can't ask.
+          void host
+            .askQuit({
+              title: t("desktop.tray.quitTitle"),
+              body: localRuns.current ? t("desktop.tray.quitHereBody") : t("desktop.tray.quitBody"),
+              quit: t("desktop.tray.quitConfirm"),
+              cancel: t("desktop.common.cancel"),
+            })
+            .catch(() => {
+              quitOnShow.current = true;
+              setConfirmQuit(true);
+              void host.showWindow("popover").catch(() => {});
+            });
         } else {
-          // Agents working here: ask first, as ⌘Q in the popover does.
-          if (action === "quit") setConfirmQuit(true);
           void host.showWindow("popover").catch(() => {});
         }
       }),
-    [host],
+    [host, t],
   );
 
   /** Asks first only while agents work here or agentes.chat runs here; otherwise quits at once, like any app. */

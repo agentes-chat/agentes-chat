@@ -153,23 +153,16 @@ const shortText = (v: unknown, max: number) =>
 /**
  * The recommended plan (or the one whose `key` is given) from the billing service's public plan list
  * (`GET {billingUrl}/plans.json`), or null when the list isn't one: the app then names no plan. The core server never names a plan nor a price (ADR 0079 §6).
- * A personal workspace is its owner's alone (ADR 0159): with no `key`, it is offered the plan for one person when the
- * list has one (`people: 1`), else the recommended one.
+ * `alone` (a personal workspace) takes the list's `recommendedAlone`, the plan for one person, where the list has one.
  */
-export function planOfferOf(
-  json: unknown,
-  key?: string,
-  { personal = false }: { personal?: boolean } = {},
-): PlanOffer | null {
+export function planOfferOf(json: unknown, key?: string, alone = false): PlanOffer | null {
   if (!json || typeof json !== "object") return null;
-  const { recommended, plans } = json as { recommended?: unknown; plans?: unknown };
-  const solo =
-    !key && personal && Array.isArray(plans)
-      ? (plans as ({ key?: unknown; people?: unknown } | null)[]).find(
-          (p) => p?.people === 1 && typeof p.key === "string",
-        )?.key
-      : undefined;
-  const wanted = key ?? solo ?? recommended;
+  const { recommended, recommendedAlone, plans } = json as {
+    recommended?: unknown;
+    recommendedAlone?: unknown;
+    plans?: unknown;
+  };
+  const wanted = key ?? (alone && typeof recommendedAlone === "string" ? recommendedAlone : recommended);
   if (typeof wanted !== "string" || !Array.isArray(plans)) return null;
   const plan = plans.find((p) => (p as { key?: unknown } | null)?.key === wanted) as
     | Record<string, unknown>

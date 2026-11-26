@@ -861,6 +861,7 @@
   },
   "agent": {
     "talk": "Chatta",
+    "responsible": "Responsabile",
     "task": "Attività",
     "owner": "proprietario: {{name}}",
     "cantTalk": "Questo agente non lavora con te.",
@@ -2915,11 +2916,12 @@
     },
     "formatAuto": "{{name}} sceglie il migliore",
     "newWidget": {
-      "alerts": "Avvisa",
       "realData": "Dati reali",
       "editAsk": "Cambia la richiesta",
       "asked": "“{{ask}}”",
-      "autoFormat": "Formato automatico"
+      "testReal": "Prova con dati reali",
+      "addHome": "Aggiungi alla Home",
+      "addTo": "Aggiungi a {{where}}"
     },
     "agentPick": {
       "search": "Cerca agenti",

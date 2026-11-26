@@ -1526,7 +1526,9 @@ simple mode, a Mac) each place is a folder and a browser profile of that one use
 Lodi keeps each person's work in their own place and is told never to look outside it, but other agents'
 commands there can read it, and only the person who connected the computer takes control of its desktop or
 opens its terminal. Lodi's page says which of the two a place is. For places nobody else can read, set the
-server up with `--system`. A computer a person connected is never Lodi's. Turn its commands, browser or desktop
+server up with `--system`. A computer a person connected becomes Lodi's only when the workspace has neither, an
+admin connected it, and it is marked the workspace's on its page ("Belongs to the workspace" on, open to everyone in the workspace): a
+VPS you paired works that way without this server's own runner. Turn its commands, browser or desktop
 off for everyone on its page, under what it can use. The computer's shared folder is still shared: every agent
 and every person's Lodi reads and writes it. Without a computer of the workspace's own, Lodi has no computer,
 and its page links here.

@@ -651,7 +651,7 @@ export async function createCodeSession(
   const agent = await getAgentCached(deps.db, orgId, input.agentId);
   if (!agent || agent.archivedAt) throw new NotFoundError("Agent not found");
   // A session is the agent's work for whoever opens it: only someone it answers opens one (`canTalkTo`).
-  if (!canTalkTo(agent, userId, speakerOf(membership))) throw await audienceError(deps.db, agent);
+  if (!canTalkTo(agent, userId, speakerOf(membership))) throw await audienceError(deps.db, agent, userId);
   if (!agent.machineId)
     throw new ValidationError("This agent has no computer", "code_session.no_computer", { agent: agent.name });
   if (!(await worksInSessions(deps.db, agent)))
@@ -1721,7 +1721,7 @@ export async function saveCodeSessionFile(
   // A save is a change the person could ask the agent for: someone it doesn't answer reads the session, no more.
   const writer = await getAgentCached(deps.db, row.orgId, row.agentId);
   if (writer && !canTalkTo(writer, userId, speakerOf(await getMembership(deps.db, userId, orgId))))
-    throw await audienceError(deps.db, writer);
+    throw await audienceError(deps.db, writer, userId);
   const { path, content } = input;
   if (!codeFilePathOk(path))
     throw new ValidationError("A path inside the worktree is needed", "code_session.file_path");

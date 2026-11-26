@@ -2,6 +2,7 @@ import type { TFunction } from "i18next";
 import { ApiError, NetworkError } from "../api/http";
 import type { AuthConfig, OrgStanding } from "../api/types";
 import { widgetWaitOf, widgetWaitText } from "../dashboards/lib";
+import { refusalText } from "./audience";
 import { billingHoldOf } from "./billing";
 import { MAX_UPLOAD_MB } from "./files";
 import { joinNames, lowerFirst } from "./format";
@@ -65,6 +66,7 @@ const KNOWN = {
   "channel.permission_forbidden": "channel.perms.forbidden",
   "agent.handle_taken": "newAgent.errors.handleTaken",
   "agent.right_hand_permanent": "errors.rightHand.permanent",
+  "agent.right_hand_computer": "errors.rightHand.computer",
   "agent.not_owner": "errors.agent.ownerOrAdmin",
   "usage_queue.cancel_forbidden": "errors.agent.ownerOrAdmin",
   "agent.details_hidden": "errors.agent.detailsHidden",
@@ -587,6 +589,12 @@ const KNOWN = {
   "mail.invalid_from": "errors.said.validEmail",
   "mail.invalid_rule": "errors.said.validEmail",
   "database.too_many": "errors.said.tooMany",
+  // Integration apps (ADR 0251): Settings › Integrations.
+  "integration.too_many": "errors.said.tooMany",
+  "integration.too_many_channels": "errors.said.tooMany",
+  "integration.name_required": "errors.said.fillIn",
+  "integration.not_found": "errors.said.gone",
+  "integration.channel": "errors.said.gone",
   "endpoint.too_many_models": "errors.said.tooMany",
   "mail.too_many_addresses": "errors.said.tooMany",
   "mail.too_many_aliases": "errors.said.tooMany",
@@ -911,6 +919,8 @@ export function knownErrorText(t: TFunction, error: unknown, locale = "en"): str
   if (restriction) return restriction;
   const limit = limitRefusalText(t, locale, error.code, error.params);
   if (limit) return limit;
+  const refused = refusalText(t, error.code, error.params);
+  if (refused) return refused;
   // An agent that doesn't answer this person (`audienceError`): whom it answers, by name.
   if (
     (error.code === "audience.only" || error.code === "audience.nobody") &&

@@ -4456,7 +4456,7 @@
     "computerAway": "Komputer {{agent}} tidak merespons saat ini. Permintaan ini tetap terbuka sampai {{time}}. Coba lagi sebentar lagi.",
     "computerPaused": "Komputer {{agent}} dijeda oleh pemiliknya. Permintaan ini tetap terbuka sampai {{time}}.",
     "insecureContext": "Halaman ini tidak dibuka lewat https, jadi browser tidak mengunci kuncinya. Buka di https:// (atau localhost).",
-    "failed": "Tidak bisa dikirim. Apakah komputer agen menyala?",
+    "failed": "Tidak bisa dikirim. Kirim lagi. Kalau masih gagal, minta {{agent}} memintanya lagi.",
     "changed": "Permintaan ini berubah saat kamu menjawab. Tidak ada yang terkirim. Kirim lagi.",
     "empty": "Ketik nilainya.",
     "tooLarge": "Terlalu besar (maks. 16 KB)."
@@ -4502,6 +4502,24 @@
       "agents_other": "{{count}} agen",
       "used": "Digunakan {{when}}",
       "never": "Belum pernah digunakan"
+    },
+    "bulk": {
+      "select": "Pilih",
+      "selection": "Item terpilih",
+      "selected_other": "{{count}} dipilih",
+      "selectAll_other": "Pilih semua {{count}}",
+      "clear": "Berhenti memilih",
+      "access": "Ubah akses",
+      "accessTitle_other": "Akses untuk {{count}} item",
+      "accessText": "Setiap item yang dipilih mendapat akses ini.",
+      "accessGo_other": "Terapkan ke {{count}} item",
+      "accessDone_other": "Akses diubah untuk {{count}} item",
+      "delete": "Hapus",
+      "deleteTitle_other": "Hapus {{count}} item?",
+      "deleteText": "Agenmu tidak bisa menggunakannya lagi. Ini tidak bisa diurungkan.",
+      "deleteGo_other": "Hapus {{count}}",
+      "deleted_other": "{{count}} item dihapus dari Vault",
+      "kept_other": "{{count}} dari pengelola kata sandi tetap ada. Hapus di sana."
     },
     "kind": {
       "login": "Login",
@@ -4701,7 +4719,6 @@
       },
       "as": "Simpan sebagai",
       "asPersonal": "Hanya kamu yang akan melihatnya.",
-      "asTeam": "Semua orang di ruang kerja melihatnya. Pilih agen untuk masing-masing setelah itu.",
       "deleteFile": "Hapus file setelahnya: file itu berisi kata sandimu tanpa enkripsi.",
       "confirm_other": "Impor {{count}}",
       "done_other": "{{count}} login diimpor",
@@ -6661,6 +6678,7 @@
         "desc": "Semua agen membaca ini. Kamu bisa mengubahnya kapan saja.",
         "line": "Dalam satu kalimat",
         "optional": "Opsional. Tanpa kalimat, jenis yang kamu pilih yang dipakai.",
+        "otherNeeded": "Dengan Lainnya, tulis di sini apa yang kalian kerjakan untuk melanjutkan.",
         "todoPersonal": "Ceritakan sedikit tentang dirimu.",
         "todoDescPersonal": "Semua agenmu membaca ini.",
         "donePersonal": "Saya sudah sedikit mengenalmu",
@@ -10959,7 +10977,9 @@
     "notice": {
       "only": "{{name}} hanya membalas {{names}}.",
       "some": "{{name}} hanya membalas beberapa orang.",
-      "nobody": "{{name}} sedang tidak membalas siapa pun."
+      "nobody": "{{name}} sedang tidak membalas siapa pun.",
+      "noTalk": "Peranmu tidak mencakup “Bicara dengan agen”. Admin bisa menambahkannya ke salah satu peranmu.",
+      "planOwnerOnly": "{{name}} berpikir dengan paket yang hanya menjawab pemiliknya. Orang yang mengurus {{name}} bisa menyalakan “Menjawab orang lain” di halaman {{name}}."
     }
   },
   "editors": {
@@ -13378,6 +13398,26 @@
         "1": "Mencari log dan metrik",
         "2": "Melihat monitor dan insiden"
       },
+      "datadog_us3": {
+        "1": "Mencari log dan metrik",
+        "2": "Melihat monitor dan insiden"
+      },
+      "datadog_us5": {
+        "1": "Mencari log dan metrik",
+        "2": "Melihat monitor dan insiden"
+      },
+      "datadog_eu": {
+        "1": "Mencari log dan metrik",
+        "2": "Melihat monitor dan insiden"
+      },
+      "datadog_ap1": {
+        "1": "Mencari log dan metrik",
+        "2": "Melihat monitor dan insiden"
+      },
+      "datadog_ap2": {
+        "1": "Mencari log dan metrik",
+        "2": "Melihat monitor dan insiden"
+      },
       "grafana": {
         "1": "Melihat dashboard, metrik, dan log",
         "2": "Membuat dashboard dan peringatan"
@@ -13679,7 +13719,12 @@
       "cloudflare_bindings": "Cloudflare (Workers)",
       "cloudflare_observability": "Cloudflare (log)",
       "supabase_readonly": "Supabase (hanya baca)",
-      "intercom_eu": "Intercom (UE)"
+      "intercom_eu": "Intercom (UE)",
+      "datadog_us3": "Datadog (US3)",
+      "datadog_us5": "Datadog (US5)",
+      "datadog_eu": "Datadog (EU)",
+      "datadog_ap1": "Datadog (AP1)",
+      "datadog_ap2": "Datadog (AP2)"
     },
     "descriptions": {
       "github": "Kode, PR, issue, dan Actions.",
@@ -13717,6 +13762,11 @@
       "vercel": "Proyek, deployment, dan log.",
       "railway": "Proyek, layanan, deploy, dan log.",
       "datadog": "Log, metrik, monitor, dan insiden (situs US1).",
+      "datadog_us3": "Log, metrik, monitor, dan insiden (situs US3, us3.datadoghq.com).",
+      "datadog_us5": "Log, metrik, monitor, dan insiden (situs US5, us5.datadoghq.com).",
+      "datadog_eu": "Log, metrik, monitor, dan insiden (situs EU, app.datadoghq.eu).",
+      "datadog_ap1": "Log, metrik, monitor, dan insiden (situs AP1, ap1.datadoghq.com).",
+      "datadog_ap2": "Log, metrik, monitor, dan insiden (situs AP2, ap2.datadoghq.com).",
       "grafana": "Dashboard, metrik, log, dan peringatan Grafana Cloud.",
       "postman": "Ruang kerja, koleksi, dan API.",
       "jam": "Laporan bug: rekaman, log console, dan request network.",
@@ -15920,6 +15970,7 @@
     },
     "rightHand": {
       "permanent": "Tangan kanan adalah bagian dari ruang kerja dan tetap di luar kanal. Sebuah @sebutan menjangkaunya di kanal mana pun.",
+      "computer": "Tangan kanan selalu memakai komputer milik ruang kerja sendiri, jadi komputer lain tidak bisa dipilih untuknya. Buat agen untuk bekerja di komputer ini.",
       "updateApp": "Aplikasi ini terlalu lama untuk menerapkan kartu ini. Perbarui aplikasinya atau lakukan perubahan di Pengaturan.",
       "nobodyNew": "Semua orang di kartu ini sudah ada di sini atau sudah diundang. Abaikan kartunya atau kirim ulang undangan di Anggota dan undangan."
     },
@@ -16978,6 +17029,62 @@
     "denied": "Komputer tidak dihubungkan. Kalau bukan kamu yang membukanya, tidak ada yang mendapat akses.",
     "home": "Ke agentes"
   },
+  "integrations": {
+    "badge": "App",
+    "unknownApp": "Sebuah app",
+    "appTip": "{{name}} adalah app yang terhubung ke ruang kerja ini. App ini memposting sebagai dirinya sendiri, tidak pernah sebagai orang.",
+    "sender": "dari {{sender}}",
+    "senderTip": "Ditulis oleh {{sender}} di luar agentes.chat. {{name}} meneruskannya.",
+    "connect": "Hubungkan app",
+    "emptyTitle": "Belum ada app",
+    "empty": "Bot dukungan, formulir, atau monitor memposting di sini sebagai dirinya sendiri, dengan token sendiri.",
+    "api": "Alamat yang dipanggil app",
+    "apiHelp": "API dan alamat MCP, dengan token app sebagai Bearer.",
+    "apiCopied": "Alamat disalin",
+    "help": "Cara menghubungkan bot dukungan",
+    "name": "Nama",
+    "color": "Warna",
+    "colorOf": "Warna {{color}}",
+    "channels": "Kanal",
+    "channelsHelp": "App membaca balasan agen di tempat ia memposting.",
+    "channelsEmpty": "Ruang kerja ini belum punya kanal.",
+    "access": {
+      "none": "Tanpa akses",
+      "read": "Membaca",
+      "post": "Membaca dan memposting"
+    },
+    "webhook": "Alamat webhook",
+    "webhookHelp": "Balasan agen di sini dikirim ke alamat ini, ditandatangani. Kosong: app membacanya lewat API.",
+    "save": "Simpan",
+    "create": "Hubungkan",
+    "edit": "Edit",
+    "actions": "Tindakan untuk {{name}}",
+    "newToken": "Token baru",
+    "revoke": "Cabut token",
+    "newSecret": "Rahasia webhook baru",
+    "remove": "Hapus",
+    "tokenTitle": "Token {{name}}",
+    "secretTitle": "Rahasia webhook {{name}}",
+    "secretUse": "Gunakan untuk memeriksa header webhook-signature setiap pengiriman (Standard Webhooks).",
+    "secretCopied": "Rahasia disalin",
+    "tokenUse": "App mengirimnya sebagai Authorization: Bearer di setiap panggilan.",
+    "revokeTitle": "Cabut token {{name}}?",
+    "revokeText": "App langsung berhenti memposting dan membaca, sampai kamu membuat token baru.",
+    "newTokenTitle": "Buat token baru untuk {{name}}?",
+    "newTokenText": "Token saat ini langsung tidak berlaku.",
+    "newSecretTitle": "Buat rahasia webhook baru untuk {{name}}?",
+    "newSecretText": "Pengiriman langsung ditandatangani dengan rahasia baru. Pasang di aplikasi, atau pemeriksaan tanda tangannya gagal.",
+    "removeTitle": "Hapus {{name}}?",
+    "removeText": "Pesannya tetap ada. App tidak bisa memposting atau membaca lagi.",
+    "removed": "{{name}} dihapus",
+    "revoked": "Token dicabut",
+    "facts": {
+      "token": "Token berakhiran {{hint}}",
+      "noToken": "Tanpa token",
+      "channels_other": "{{count}} kanal",
+      "webhookFailed": "Webhook gagal ({{why}})"
+    }
+  },
   "apps": {
     "connect": "Hubungkan aplikasi",
     "server": "Alamat server",
@@ -17348,6 +17455,8 @@
         "item_created": "Menyimpan item ke Vault",
         "item_changed": "Mengubah item Vault",
         "item_deleted": "Menghapus item Vault",
+        "items_changed_other": "Mengubah siapa yang punya akses ke {{count}} item Vault",
+        "items_deleted_other": "Menghapus {{count}} item Vault",
         "item_moved": "Memindahkan item Vault antara Pribadi dan Tim",
         "item_used": "Menggunakan item Vault",
         "imported": "Mengimpor kata sandi ke Vault",
@@ -17497,6 +17606,7 @@
       "billing": "Paket dan tagihan",
       "media": "GIF dan stiker",
       "voice": "Suara",
+      "integrations": "Integrasi",
       "apps": "Aplikasi AI",
       "approvals": "Persetujuan",
       "about": "Tentang agentes.chat",
@@ -17528,6 +17638,7 @@
       "billing": "Paket, kartu, dan tagihan, di halaman kami di luar aplikasi.",
       "media": "Apa yang bisa dikirim di percakapan, serta GIF dan stiker agen.",
       "voice": "Pesan suara di percakapan, dan siapa yang mengubah suara menjadi teks.",
+      "integrations": "App yang memposting di kanal sebagai dirinya sendiri, seperti bot dukungan.",
       "apps": "Minta tugas ke agen dari Claude, Cursor, dan aplikasi lain.",
       "approvals": "Siapa yang memutuskan untukmu saat agen meminta persetujuanmu.",
       "about": "Siapa pembuatnya, lisensinya, dan letak kode sumbernya.",
@@ -20576,7 +20687,8 @@
     },
     "add": {
       "label": "Tambah widget",
-      "short": "Widget"
+      "short": "Widget",
+      "word": "Tambah"
     },
     "alert": {
       "label": "Beri tahu saya kalau ada yang tidak beres",

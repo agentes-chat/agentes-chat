@@ -813,6 +813,7 @@
   },
   "agent": {
     "talk": "Obrolan",
+    "responsible": "Penanggung jawab",
     "task": "Tugas",
     "owner": "pemilik: {{name}}",
     "cantTalk": "Agen ini tidak bekerja denganmu.",
@@ -2684,11 +2685,12 @@
     },
     "formatAuto": "{{name}} memilih yang terbaik",
     "newWidget": {
-      "alerts": "Peringatan aktif",
       "realData": "Data sungguhan",
       "editAsk": "Ubah permintaan",
       "asked": "“{{ask}}”",
-      "autoFormat": "Bentuk otomatis"
+      "testReal": "Uji dengan data sungguhan",
+      "addHome": "Tambah ke Beranda",
+      "addTo": "Tambah ke {{where}}"
     },
     "agentPick": {
       "search": "Cari agen",

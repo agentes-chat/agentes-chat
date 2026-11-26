@@ -4918,7 +4918,7 @@
     "computerAway": "Komputer nie odpowiada teraz ({{agent}}). To żądanie pozostaje otwarte do {{time}}. Spróbuj ponownie za chwilę.",
     "computerPaused": "Właściciel wstrzymał komputer ({{agent}}). To żądanie pozostaje otwarte do {{time}}.",
     "insecureContext": "Ta strona nie jest otwarta przez https, więc przeglądarka nie zablokuje klucza. Otwórz ją pod adresem https:// (lub localhost).",
-    "failed": "Nie udało się dostarczyć. Czy komputer agenta jest włączony?",
+    "failed": "Nie udało się dostarczyć. Wyślij ponownie. Jeśli znowu się nie uda, poproś agenta {{agent}}, żeby poprosił o to jeszcze raz.",
     "changed": "Ta prośba zmieniła się w trakcie odpowiedzi. Nic nie wysłano. Wyślij ponownie.",
     "empty": "Wpisz wartość.",
     "tooLarge": "Za duże (maksymalnie 16 KB)."
@@ -4967,6 +4967,51 @@
       "agents_other": "{{count}} agenta",
       "used": "Użyto {{when}}",
       "never": "Nigdy nieużywany"
+    },
+    "bulk": {
+      "select": "Zaznacz",
+      "selection": "Zaznaczone elementy",
+      "selected_one": "Zaznaczono {{count}}",
+      "selected_few": "Zaznaczono {{count}}",
+      "selected_many": "Zaznaczono {{count}}",
+      "selected_other": "Zaznaczono {{count}}",
+      "selectAll_one": "Zaznacz wszystkie ({{count}})",
+      "selectAll_few": "Zaznacz wszystkie ({{count}})",
+      "selectAll_many": "Zaznacz wszystkie ({{count}})",
+      "selectAll_other": "Zaznacz wszystkie ({{count}})",
+      "clear": "Zakończ zaznaczanie",
+      "access": "Zmień dostęp",
+      "accessTitle_one": "Dostęp do {{count}} elementu",
+      "accessTitle_few": "Dostęp do {{count}} elementów",
+      "accessTitle_many": "Dostęp do {{count}} elementów",
+      "accessTitle_other": "Dostęp do {{count}} elementu",
+      "accessText": "Każdy zaznaczony element dostanie ten dostęp.",
+      "accessGo_one": "Zastosuj do {{count}} elementu",
+      "accessGo_few": "Zastosuj do {{count}} elementów",
+      "accessGo_many": "Zastosuj do {{count}} elementów",
+      "accessGo_other": "Zastosuj do {{count}} elementu",
+      "accessDone_one": "Zmieniono dostęp do {{count}} elementu",
+      "accessDone_few": "Zmieniono dostęp do {{count}} elementów",
+      "accessDone_many": "Zmieniono dostęp do {{count}} elementów",
+      "accessDone_other": "Zmieniono dostęp do {{count}} elementu",
+      "delete": "Usuń",
+      "deleteTitle_one": "Usunąć {{count}} element?",
+      "deleteTitle_few": "Usunąć {{count}} elementy?",
+      "deleteTitle_many": "Usunąć {{count}} elementów?",
+      "deleteTitle_other": "Usunąć {{count}} elementu?",
+      "deleteText": "Twoi agenci nie będą mogli ich już używać. Tego nie da się cofnąć.",
+      "deleteGo_one": "Usuń {{count}}",
+      "deleteGo_few": "Usuń {{count}}",
+      "deleteGo_many": "Usuń {{count}}",
+      "deleteGo_other": "Usuń {{count}}",
+      "deleted_one": "Usunięto {{count}} element z Vault",
+      "deleted_few": "Usunięto {{count}} elementy z Vault",
+      "deleted_many": "Usunięto {{count}} elementów z Vault",
+      "deleted_other": "Usunięto {{count}} elementu z Vault",
+      "kept_one": "{{count}} z menedżera haseł został. Usuń go tam.",
+      "kept_few": "{{count}} z menedżera haseł zostały. Usuń je tam.",
+      "kept_many": "{{count}} z menedżera haseł zostało. Usuń je tam.",
+      "kept_other": "{{count}} z menedżera haseł zostało. Usuń je tam."
     },
     "kind": {
       "login": "Login",
@@ -5199,7 +5244,6 @@
       },
       "as": "Zapisz je jako",
       "asPersonal": "Zobaczysz je tylko ty.",
-      "asTeam": "Widzą je wszyscy w przestrzeni roboczej. Potem wybierz agentów dla każdego z nich.",
       "deleteFile": "Potem usuń plik: zawiera twoje hasła bez szyfrowania.",
       "confirm_one": "Importuj {{count}}",
       "confirm_few": "Importuj {{count}}",
@@ -7410,6 +7454,7 @@
         "desc": "Wszyscy agenci to czytają. Zmienisz to, kiedy chcesz.",
         "line": "W jednym zdaniu",
         "optional": "Opcjonalne. Bez zdania liczy się typ, który zaznaczysz.",
+        "otherNeeded": "Przy opcji Coś innego napisz tutaj, czym się zajmujecie, aby kontynuować.",
         "todoPersonal": "Opowiedz mi trochę o sobie.",
         "todoDescPersonal": "Wszyscy twoi agenci to czytają.",
         "donePersonal": "Wiem już trochę o tobie",
@@ -12212,7 +12257,9 @@
       "some": "{{name}} odpowiada tylko niektórym osobom.",
       "some_female": "{{name}} odpowiada tylko niektórym osobom.",
       "nobody": "{{name}} nikomu teraz nie odpowiada.",
-      "nobody_female": "{{name}} nikomu teraz nie odpowiada."
+      "nobody_female": "{{name}} nikomu teraz nie odpowiada.",
+      "noTalk": "Twoje role nie obejmują „Rozmowa z agentami”. Administrator może dodać to do jednej z nich.",
+      "planOwnerOnly": "{{name}} myśli z planem, który odpowiada tylko właścicielowi. Osoba, która opiekuje się agentem {{name}}, może włączyć „Odpowiada innym osobom” na stronie agenta {{name}}."
     }
   },
   "editors": {
@@ -14909,6 +14956,26 @@
         "1": "Wyszukiwanie logów i metryk",
         "2": "Podgląd monitorów i incydentów"
       },
+      "datadog_us3": {
+        "1": "Wyszukiwanie logów i metryk",
+        "2": "Podgląd monitorów i incydentów"
+      },
+      "datadog_us5": {
+        "1": "Wyszukiwanie logów i metryk",
+        "2": "Podgląd monitorów i incydentów"
+      },
+      "datadog_eu": {
+        "1": "Wyszukiwanie logów i metryk",
+        "2": "Podgląd monitorów i incydentów"
+      },
+      "datadog_ap1": {
+        "1": "Wyszukiwanie logów i metryk",
+        "2": "Podgląd monitorów i incydentów"
+      },
+      "datadog_ap2": {
+        "1": "Wyszukiwanie logów i metryk",
+        "2": "Podgląd monitorów i incydentów"
+      },
       "grafana": {
         "1": "Podgląd dashboardów, metryk i logów",
         "2": "Tworzenie dashboardów i alertów"
@@ -15225,7 +15292,12 @@
       "cloudflare_bindings": "Cloudflare (Workers)",
       "cloudflare_observability": "Cloudflare (logi)",
       "supabase_readonly": "Supabase (tylko odczyt)",
-      "intercom_eu": "Intercom (UE)"
+      "intercom_eu": "Intercom (UE)",
+      "datadog_us3": "Datadog (US3)",
+      "datadog_us5": "Datadog (US5)",
+      "datadog_eu": "Datadog (EU)",
+      "datadog_ap1": "Datadog (AP1)",
+      "datadog_ap2": "Datadog (AP2)"
     },
     "descriptions": {
       "github": "Kod, PR-y, issues i Actions.",
@@ -15263,6 +15335,11 @@
       "vercel": "Projekty, wdrożenia i logi.",
       "railway": "Projekty, usługi, wdrożenia i logi.",
       "datadog": "Logi, metryki, monitory i incydenty (witryna US1).",
+      "datadog_us3": "Logi, metryki, monitory i incydenty (witryna US3, us3.datadoghq.com).",
+      "datadog_us5": "Logi, metryki, monitory i incydenty (witryna US5, us5.datadoghq.com).",
+      "datadog_eu": "Logi, metryki, monitory i incydenty (witryna EU, app.datadoghq.eu).",
+      "datadog_ap1": "Logi, metryki, monitory i incydenty (witryna AP1, ap1.datadoghq.com).",
+      "datadog_ap2": "Logi, metryki, monitory i incydenty (witryna AP2, ap2.datadoghq.com).",
       "grafana": "Dashboardy, metryki, logi i alerty w Grafana Cloud.",
       "postman": "Przestrzenie robocze, kolekcje i API.",
       "jam": "Zgłoszenia błędów: nagrania, logi konsoli i żądania sieciowe.",
@@ -17583,6 +17660,7 @@
     },
     "rightHand": {
       "permanent": "Prawa ręka jest częścią przestrzeni roboczej i nie dołącza do kanałów. @wzmianka przywoła ją w każdym z nich.",
+      "computer": "Prawa ręka zawsze korzysta z własnego komputera przestrzeni roboczej, więc nie można wybrać dla niej innego. Utwórz agenta, aby pracować na tym.",
       "updateApp": "Ta aplikacja jest zbyt stara, żeby zastosować tę kartę. Zaktualizuj ją albo wprowadź zmianę w Ustawieniach.",
       "nobodyNew": "Wszyscy z tej karty już tu są albo mają już zaproszenie. Odrzuć kartę albo wyślij zaproszenie ponownie w sekcji Członkowie i zaproszenia."
     },
@@ -18686,6 +18764,65 @@
     "denied": "Komputer nie został podłączony. Jeśli to nie ty, nikt nie uzyskał dostępu.",
     "home": "Przejdź do agentes"
   },
+  "integrations": {
+    "badge": "Aplikacja",
+    "unknownApp": "Aplikacja",
+    "appTip": "{{name}} to aplikacja połączona z tą przestrzenią roboczą. Publikuje jako ona sama, nigdy jako osoba.",
+    "sender": "od {{sender}}",
+    "senderTip": "Napisane przez {{sender}} poza agentes.chat. {{name}} to przekazała.",
+    "connect": "Połącz aplikację",
+    "emptyTitle": "Nie ma jeszcze aplikacji",
+    "empty": "Bot wsparcia, formularz lub monitoring publikuje tu jako on sam, z własnym tokenem.",
+    "api": "Dokąd dzwonią aplikacje",
+    "apiHelp": "API i adres MCP, z tokenem aplikacji jako Bearer.",
+    "apiCopied": "Adres skopiowany",
+    "help": "Jak połączyć bota wsparcia",
+    "name": "Nazwa",
+    "color": "Kolor",
+    "colorOf": "Kolor {{color}}",
+    "channels": "Kanały",
+    "channelsHelp": "Czyta odpowiedzi agentów tam, gdzie publikuje.",
+    "channelsEmpty": "Przestrzeń robocza nie ma jeszcze kanałów.",
+    "access": {
+      "none": "Brak dostępu",
+      "read": "Czyta",
+      "post": "Czyta i publikuje"
+    },
+    "webhook": "Adres webhooka",
+    "webhookHelp": "Odpowiedzi agentów stąd trafiają podpisane na ten adres. Puste: aplikacja czyta je przez API.",
+    "save": "Zapisz",
+    "create": "Połącz",
+    "edit": "Edytuj",
+    "actions": "Działania dla {{name}}",
+    "newToken": "Nowy token",
+    "revoke": "Unieważnij token",
+    "newSecret": "Nowy sekret webhooka",
+    "remove": "Usuń",
+    "tokenTitle": "Token aplikacji {{name}}",
+    "secretTitle": "Sekret webhooka aplikacji {{name}}",
+    "secretUse": "Sprawdzaj nim nagłówek webhook-signature każdej dostawy (Standard Webhooks).",
+    "secretCopied": "Sekret skopiowany",
+    "tokenUse": "Aplikacja wysyła go przy każdym wywołaniu jako Authorization: Bearer.",
+    "revokeTitle": "Unieważnić token aplikacji {{name}}?",
+    "revokeText": "Od razu przestaje publikować i czytać, dopóki nie utworzysz nowego tokenu.",
+    "newTokenTitle": "Utworzyć nowy token dla {{name}}?",
+    "newTokenText": "Obecny token od razu przestaje działać.",
+    "newSecretTitle": "Utworzyć nowy sekret webhooka dla {{name}}?",
+    "newSecretText": "Dostawy od razu są podpisywane nowym sekretem. Wpisz go w aplikacji, inaczej sprawdzenie podpisu się nie powiedzie.",
+    "removeTitle": "Usunąć {{name}}?",
+    "removeText": "Jej wiadomości zostają. Nie może już publikować ani czytać.",
+    "removed": "Usunięto {{name}}",
+    "revoked": "Token unieważniony",
+    "facts": {
+      "token": "Token kończący się na {{hint}}",
+      "noToken": "Brak tokenu",
+      "channels_one": "{{count}} kanał",
+      "channels_few": "{{count}} kanały",
+      "channels_many": "{{count}} kanałów",
+      "channels_other": "{{count}} kanału",
+      "webhookFailed": "Webhook nie działa ({{why}})"
+    }
+  },
   "apps": {
     "connect": "Połącz aplikację",
     "server": "Adres serwera",
@@ -19075,6 +19212,14 @@
         "item_created": "Zapisano element w Vault",
         "item_changed": "Zmieniono element w Vault",
         "item_deleted": "Usunięto element z Vault",
+        "items_changed_one": "Zmieniono, kto ma dostęp do {{count}} elementu w Vault",
+        "items_changed_few": "Zmieniono, kto ma dostęp do {{count}} elementów w Vault",
+        "items_changed_many": "Zmieniono, kto ma dostęp do {{count}} elementów w Vault",
+        "items_changed_other": "Zmieniono, kto ma dostęp do {{count}} elementu w Vault",
+        "items_deleted_one": "Usunięto {{count}} element z Vault",
+        "items_deleted_few": "Usunięto {{count}} elementy z Vault",
+        "items_deleted_many": "Usunięto {{count}} elementów z Vault",
+        "items_deleted_other": "Usunięto {{count}} elementu z Vault",
         "item_moved": "Przeniesiono element Vault między Osobiste a Zespół",
         "item_used": "Użyto elementu z Vault",
         "imported": "Zaimportowano hasła do Vault",
@@ -19224,6 +19369,7 @@
       "billing": "Plan i płatności",
       "media": "GIF-y i naklejki",
       "voice": "Głos",
+      "integrations": "Integracje",
       "apps": "Aplikacje AI",
       "approvals": "Zatwierdzenia",
       "about": "O agentes.chat",
@@ -19255,6 +19401,7 @@
       "billing": "Plan, karta i faktury, na naszej stronie poza aplikacją.",
       "media": "Co można wysłać w rozmowie, oraz GIF-y i naklejki agentów.",
       "voice": "Wiadomości głosowe w rozmowach i to, kto zamienia głos na tekst.",
+      "integrations": "Aplikacje, które publikują w kanałach jako one same, jak bot wsparcia.",
       "apps": "Zlecaj zadania agentom z Claude, Cursor i innych aplikacji.",
       "approvals": "Kto decyduje za ciebie, gdy agent prosi o twoją zgodę.",
       "about": "Kto go tworzy, jego licencja i gdzie jest kod źródłowy.",
@@ -22512,7 +22659,8 @@
     },
     "add": {
       "label": "Dodaj widżet",
-      "short": "Widżet"
+      "short": "Widżet",
+      "word": "Dodaj"
     },
     "alert": {
       "label": "Daj znać, gdy coś jest nie tak",
