@@ -135,6 +135,7 @@ export const desktopPtBR = {
     allowedOne: "{{folder}} liberada para {{agent}}",
     allowedAll: "{{folder}} liberada para todos os agentes",
     denied: "Recusado. {{agent}} avisa no chat.",
+    answerFailed: "Não deu para responder a este pedido: {{message}}",
     notifTitle: "{{agent}} quer usar a pasta {{folder}}",
     allowedTitle: "{{name}} ligou {{tool}} pelo agentes.chat",
     allowedBody: "Se não foi você, desfaça aqui.",

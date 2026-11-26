@@ -130,6 +130,7 @@
     "allowedOne": "{{folder}} für {{agent}} erlaubt",
     "allowedAll": "{{folder}} für alle Agenten erlaubt",
     "denied": "Abgelehnt. {{agent}} sagt im Chat Bescheid.",
+    "answerFailed": "Diese Anfrage konnte nicht beantwortet werden: {{message}}",
     "notifTitle": "{{agent}} möchte den Ordner {{folder}} nutzen",
     "allowedTitle": "{{name}} hat {{tool}} über agentes.chat eingeschaltet",
     "allowedBody": "Wenn du es nicht warst, mach es hier rückgängig.",

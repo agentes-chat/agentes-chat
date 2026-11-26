@@ -573,7 +573,7 @@
       "here": "在这台电脑上"
     },
     "whyPaid": "为什么要付费？",
-    "whyPaidText": "Cloud 包含始终开机的智能体电脑，以及有人为你维护服务器。在你自己的服务器上运行是免费的。"
+    "whyPaidText": "Cloud 包含始终开机的智能体电脑，以及有人为你维护服务器。把你自己的电脑连接到 Cloud 工作区并不能代替套餐。在你自己的服务器或电脑上运行 agentes.chat 是免费的。"
   },
   "auth": {
     "email": "邮箱",
@@ -2832,7 +2832,7 @@
     "passed_other": "没有人回答",
     "failed_other": "{{names}} 无法回答",
     "asking_other": "{{names}} 正在等待回答",
-    "outage_other": "{{names}}：AI 服务商出现故障 · 会自动重试",
+    "outage_other": "{{names}}：AI 没有响应 · 会自动重试",
     "queued_other": "{{names}} 正在排队",
     "away_other": "{{names}} 正在等待电脑",
     "plan_other": "{{names}} 正在等待套餐",
@@ -2846,7 +2846,7 @@
       "claimed": "正在回答",
       "waiting": "等待审批",
       "asking": "等待回答",
-      "outage": "AI 服务商出现故障 · 会自动重试",
+      "outage": "AI 没有响应 · 会自动重试",
       "queued": "排队中",
       "away": "等待电脑",
       "plan": "正在等待套餐",
@@ -3362,7 +3362,7 @@
         "ended": "工作区重新订阅 agentes.chat 后，我会在这里回复。"
       },
       "askAdmin": "管理员处理好 agentes.chat 套餐后，我会在这里回复。",
-      "plan": "套餐包含智能体的电脑。AI 用的是你已经付费的：Claude、ChatGPT 等，或 API 密钥。",
+      "plan": "套餐包含智能体的电脑。AI 用的是你已经付费的：Claude、ChatGPT 等，或 API 密钥。在这里连接你自己的电脑并不能代替套餐。在你自己的服务器或电脑上运行 agentes.chat 是免费的。",
       "activeTitle": "套餐已生效",
       "activeLine": "连接 AI 后，{{name}} 会在这里回复。",
       "receipt": "已保留",
@@ -4277,7 +4277,7 @@
       "queued_computer": "排队中",
       "waiting_plan": "正在等待套餐",
       "waiting_budget": "等待预算重置",
-      "provider_down": "AI 服务商出现故障 · 会自动重试",
+      "provider_down": "AI 没有响应 · 会自动重试",
       "out_of_plan": "套餐额度已用完",
       "out_of_budget": "本月预算已用完",
       "out_of_planShort": "额度已用完",
@@ -4440,7 +4440,7 @@
     "computerAway": "{{agent}} 的电脑目前没有响应。此请求在 {{time}} 前保持开放。请稍后重试。",
     "computerPaused": "{{agent}} 的电脑已被所有者暂停。此请求在 {{time}} 前保持开放。",
     "insecureContext": "此页面不是通过 https 打开的,因此浏览器无法锁定密钥。请通过 https://(或 localhost)打开。",
-    "failed": "无法送达。智能体的电脑开着吗？",
+    "failed": "无法送达。请再发送一次。如果仍然失败，请让 {{agent}} 重新发起请求。",
     "changed": "你回复时此请求已更改。未发送任何内容。请重新发送。",
     "empty": "请输入值。",
     "tooLarge": "太大了（最多 16 KB）。"
@@ -4486,6 +4486,24 @@
       "agents_other": "{{count}} 个智能体",
       "used": "{{when}}使用过",
       "never": "从未使用"
+    },
+    "bulk": {
+      "select": "选择",
+      "selection": "已选项目",
+      "selected_other": "已选 {{count}} 项",
+      "selectAll_other": "全选 {{count}} 项",
+      "clear": "停止选择",
+      "access": "更改访问权限",
+      "accessTitle_other": "{{count}} 个项目的访问权限",
+      "accessText": "每个已选项目都会使用此访问权限。",
+      "accessGo_other": "应用到 {{count}} 个项目",
+      "accessDone_other": "已更改 {{count}} 个项目的访问权限",
+      "delete": "删除",
+      "deleteTitle_other": "删除 {{count}} 个项目？",
+      "deleteText": "你的智能体将无法再使用它们。此操作无法撤销。",
+      "deleteGo_other": "删除 {{count}} 个",
+      "deleted_other": "已从 Vault 删除 {{count}} 个项目",
+      "kept_other": "来自密码管理器的 {{count}} 个项目仍保留。请在那里移除。"
     },
     "kind": {
       "login": "登录信息",
@@ -4685,7 +4703,6 @@
       },
       "as": "保存为",
       "asPersonal": "只有你能看到它们。",
-      "asTeam": "工作区所有成员都能看到它们。之后再为每一项选择智能体。",
       "deleteFile": "之后请删除此文件：其中的密码没有加密。",
       "confirm_other": "导入 {{count}} 个",
       "done_other": "已导入 {{count}} 个登录信息",
@@ -5342,7 +5359,8 @@
       "provider_unavailable": "模型没有回应",
       "gave_up": "模型试了几次都没有回应",
       "missing_credential": "缺少 API 密钥",
-      "credential_revoked": "API 密钥已被撤销"
+      "credential_revoked": "API 密钥已被撤销",
+      "credential_unreadable": "无法打开已保存的 API 密钥"
     },
     "youReplied": "你回复了：{{text}}",
     "actions": "操作",
@@ -6288,6 +6306,7 @@
         "interrupted": "因服务器重启而中断。",
         "missing_credential": "工作区没有 {{provider}} 密钥。",
         "credential_revoked": "该智能体的密钥已被吊销。",
+        "credential_unreadable": "无法打开已保存的 API 密钥，通常是因为保存密钥后服务器的加密密钥发生了变化。请在“AI 密钥”中重新粘贴密钥。",
         "credential_wrong_provider": "模型来自 {{modelProvider}}，但密钥来自 {{keyProvider}}。",
         "model_unlisted": "OpenRouter 不再提供 {{model}}。请在智能体设置中选择其他模型。",
         "no_ai": "智能体当时没有可用的 AI。",
@@ -6673,6 +6692,7 @@
         "desc": "所有智能体都会读到这个。你随时可以修改。",
         "line": "用一句话",
         "optional": "选填。不写的话，就用你选的类型。",
+        "otherNeeded": "选择“其他”时，请在这里写下你们做什么，才能继续。",
         "todoPersonal": "跟我说说你自己。",
         "todoDescPersonal": "你所有的智能体都会读到这个。",
         "donePersonal": "我对你有了一些了解",
@@ -7655,6 +7675,9 @@
     "link": "链接",
     "linkEmpty": "创建链接后即可复制",
     "linkFailed": "无法创建链接。{{cause}}",
+    "localOnly": "这台服务器只能在运行它的电脑上打开，所以你邀请的人打不开邀请。",
+    "localOnlyHow": "在那台电脑的 agentes.chat 应用中，打开偏好设置 › 服务器里的“从你的手机和队友那里访问”，或者把 agentes.chat 运行在他们能打开的服务器上。然后再邀请他们。",
+    "localOnlyHere": "打开“从你的手机和队友那里访问”，然后再邀请他们。",
     "never": "永不过期",
     "untilDate": "至 {{date}}",
     "validFor": "创建后 {{ttl}}内有效。",
@@ -9028,6 +9051,7 @@
       "stuck": "因卡住而停止",
       "missing_credential": "缺少 API 密钥",
       "credential_revoked": "API 密钥已被撤销",
+      "credential_unreadable": "无法打开已保存的 API 密钥",
       "credential_wrong_provider": "API 密钥属于另一个服务商",
       "model_unlisted": "OpenRouter 已不再提供此模型",
       "agent_archived": "智能体已归档",
@@ -11088,6 +11112,8 @@
       "on": "语音消息",
       "onHelp": "这个工作区的成员可以在对话中发送语音。",
       "noEngine": "这里还不能使用语音消息。",
+      "noEngineAsk": "语音消息还没有开启。管理这台服务器的人可以就在这个页面开启。",
+      "noEngineHere": "在下方选好把语音转成文字的服务后，语音消息就会开启。",
       "engineTitle": "把语音转成文字的服务",
       "own": "你自己的服务器",
       "ownHelp": "你机器上的 Whisper 或 Parakeet。语音留在那里。",
@@ -13380,6 +13406,26 @@
         "1": "搜索日志和指标",
         "2": "查看监控和事件"
       },
+      "datadog_us3": {
+        "1": "搜索日志和指标",
+        "2": "查看监控和事件"
+      },
+      "datadog_us5": {
+        "1": "搜索日志和指标",
+        "2": "查看监控和事件"
+      },
+      "datadog_eu": {
+        "1": "搜索日志和指标",
+        "2": "查看监控和事件"
+      },
+      "datadog_ap1": {
+        "1": "搜索日志和指标",
+        "2": "查看监控和事件"
+      },
+      "datadog_ap2": {
+        "1": "搜索日志和指标",
+        "2": "查看监控和事件"
+      },
       "grafana": {
         "1": "查看仪表盘、指标和日志",
         "2": "创建仪表盘和告警"
@@ -13681,7 +13727,12 @@
       "cloudflare_bindings": "Cloudflare（Workers）",
       "cloudflare_observability": "Cloudflare（日志）",
       "supabase_readonly": "Supabase（只读）",
-      "intercom_eu": "Intercom（欧盟）"
+      "intercom_eu": "Intercom（欧盟）",
+      "datadog_us3": "Datadog (US3)",
+      "datadog_us5": "Datadog (US5)",
+      "datadog_eu": "Datadog (EU)",
+      "datadog_ap1": "Datadog (AP1)",
+      "datadog_ap2": "Datadog (AP2)"
     },
     "descriptions": {
       "github": "代码、PR、issue 和 Actions。",
@@ -13719,6 +13770,11 @@
       "vercel": "项目、部署和日志。",
       "railway": "项目、服务、部署和日志。",
       "datadog": "日志、指标、监控和事件（US1 站点）。",
+      "datadog_us3": "日志、指标、监控和事件（US3 站点，us3.datadoghq.com）。",
+      "datadog_us5": "日志、指标、监控和事件（US5 站点，us5.datadoghq.com）。",
+      "datadog_eu": "日志、指标、监控和事件（EU 站点，app.datadoghq.eu）。",
+      "datadog_ap1": "日志、指标、监控和事件（AP1 站点，ap1.datadoghq.com）。",
+      "datadog_ap2": "日志、指标、监控和事件（AP2 站点，ap2.datadoghq.com）。",
       "grafana": "Grafana Cloud 仪表盘、指标、日志和告警。",
       "postman": "工作区、集合和 API。",
       "jam": "bug 报告：录屏、控制台日志和网络请求。",
@@ -16067,6 +16123,10 @@
       "paused": "{{name}} 已暂停",
       "resumed": "{{name}} 已恢复工作"
     },
+    "runnerBehind": {
+      "command": "{{computer}} 上的 agentes.chat 程序已经过时，所以那里有些功能用不了。要更新它，请在那台电脑上运行：",
+      "installer": "{{computer}} 上的 agentes.chat 程序已经过时，所以那里有些功能用不了。要更新它，请在那台电脑上以 root 身份重新运行安装命令。"
+    },
     "seenNow": "当前已连接",
     "seen": "上次在线 {{when}}",
     "neverSeen": "还没有连接过",
@@ -17346,6 +17406,8 @@
         "item_created": "在 Vault 中保存了一个项目",
         "item_changed": "修改了一个 Vault 项目",
         "item_deleted": "删除了一个 Vault 项目",
+        "items_changed_other": "更改了 {{count}} 个 Vault 项目的访问权限",
+        "items_deleted_other": "删除了 {{count}} 个 Vault 项目",
         "item_moved": "在个人和团队之间移动了一个 Vault 项目",
         "item_used": "使用了一个 Vault 项目",
         "imported": "将密码导入了 Vault",
@@ -18298,7 +18360,7 @@
       "waitingInput_female": "{{name}} 正在等待回答",
       "waitingComputer": "{{name}} 正在等待电脑",
       "waitingComputer_female": "{{name}} 正在等待电脑",
-      "waitingProvider": "{{name}}：AI 服务商暂时不可用 · 会自动重试",
+      "waitingProvider": "{{name}}：AI 没有响应 · 会自动重试",
       "waitingAgents": "{{name}} 把部分工作交了出去，正在等待回复",
       "waitingAgents_female": "{{name}} 把部分工作交了出去，正在等待回复",
       "queued": "{{name}} 正在排队"
@@ -18310,7 +18372,7 @@
       "waitingApproval": "等待批准",
       "waitingInput": "等待回答",
       "waitingComputer": "等待电脑",
-      "waitingProvider": "AI 提供方故障",
+      "waitingProvider": "AI 没有响应",
       "waitingYourApproval": "等你批准",
       "waitingYourAnswer": "等你回答",
       "queued": "排队中",
@@ -18752,6 +18814,7 @@
       "brain_unavailable_commands_off": "我的电脑上 {{brain}} 已关闭。负责这台电脑的人打开后我会回复。",
       "brain_unavailable_outdated": "我电脑上的程序需要更新，{{brain}} 才能回答。更新后我会立即回复。",
       "brain_unavailable_plan_owner": "{{brain}} 会使用不属于我主人的套餐来思考，所以我不使用它。请在我的页面上连接我主人的账号。",
+      "brain_unavailable_shared_login": "我的电脑现在无法使用面向所有智能体的 Claude 登录。能用时我会回复。如果一直失败，请在 AI 账号中重新连接 Claude。",
       "provider_unavailable": "我的 AI 服务商暂时没有响应。恢复后我会尽快回复。",
       "provider_wait_rate_limit": "{{provider}} 正在限制这个密钥的请求。一旦放开我会尽快回复。",
       "provider_wait_down": "{{provider}} 目前已中断或过载。恢复后我会尽快回复。",
@@ -20613,7 +20676,7 @@
       "budgetSoon": "正在短暂等待 {{name}} 的预算",
       "computer": "正在等待 {{name}} 的电脑",
       "busy": "正在等待 {{name}} 的电脑空出位置",
-      "provider": "正在等待 {{name}} 的 AI 服务商，将于 {{when}} 重试"
+      "provider": "正在等待 {{name}} 的 AI 响应，将于 {{when}} 重试"
     },
     "menu": {
       "label": "更多",
@@ -20640,7 +20703,8 @@
     },
     "add": {
       "label": "添加小组件",
-      "short": "小组件"
+      "short": "小组件",
+      "word": "添加"
     },
     "alert": {
       "label": "有异常时通知我",

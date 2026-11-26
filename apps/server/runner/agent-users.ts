@@ -219,7 +219,19 @@ const PRIVATE_TMP_STEPS = [
   "mkdir -m 1777 /tmp/.X11-unix 2>/dev/null || :",
   "mkdir -m 1777 /tmp/.ICE-unix 2>/dev/null || :",
 ];
-const PRIVATE_TMP = [...PRIVATE_TMP_STEPS, 'exec "$@"'].join("\n");
+
+/**
+ * Root, last in a launch's view: every mount under the agents' root-only temp roots taken out of its namespace, the
+ * agent's own /tmp included, which stays bound at /tmp alone. Codex's sandbox masks its daemon folder in /tmp at every
+ * place mountinfo shows the same filesystem folder, and bwrap, as the agent, can't make a mask under a root-only
+ * folder ("Can't mkdir parents for /run/agentes-runner-tmp/<uid>/tmp/codex-daemon-<uid>"). The binds made from them
+ * (/tmp, /dev/shm, the runtime dir) keep their filesystems.
+ */
+export const HIDE_TMP_SOURCES = [
+  "for p in $(cut -d ' ' -f 5 /proc/self/mountinfo); do",
+  `  case $p in ${AGENT_RAM_ROOT}/*|${AGENT_TMP_POOL}|${AGENT_DISK_TMP_ROOT}/*) umount -l "$p" 2>/dev/null || : ;; esac`,
+  "done",
+];
 
 /**
  * Rootless containers for the agents (ADR 0169): Podman, and the set-user-ID helpers that map an agent's own ids
@@ -673,7 +685,7 @@ export function ensureSubids(user: Pick<AgentUser, "user" | "uid">, etc = "/etc"
 /**
  * Runs a command as the agent's user inside its slice (whose limits then
  * hold), with its own temporary folders (`agentRam`, its /tmp on disk with
- * `tmpOnDisk`, and `PRIVATE_TMP`), or with `asAgent` alone where systemd isn't
+ * `tmpOnDisk`, `PRIVATE_TMP_STEPS` and `HIDE_TMP_SOURCES`), or with `asAgent` alone where systemd isn't
  * PID 1 (a container). Absolute paths: root never looks these up on a PATH.
  * `--collect`: a scope the OOM killer ended doesn't stay behind as a failed
  * unit. `OOMPolicy=continue` (`oomPolicy`): a process the kernel stops for
@@ -722,7 +734,7 @@ export function systemLauncher(
       "--",
       "/bin/sh",
       "-c",
-      agentView(u, containers ? RUNTIME_DIR : []),
+      agentView(u, containers ? RUNTIME_DIR : [], true),
       "sh",
       String(u.uid),
       ...command,
@@ -753,9 +765,12 @@ function agentEnv(u: AgentUser, containers: boolean): Record<string, string> {
   };
 }
 
-/** Root's steps in the agent's new mount namespace (`PRIVATE_TMP`, with `more` before it becomes the agent). */
-function agentView(u: AgentUser, more: string[]) {
-  const view = more.length > 0 ? [...PRIVATE_TMP_STEPS, ...more, 'exec "$@"'].join("\n") : PRIVATE_TMP;
+/**
+ * Root's steps in the agent's new mount namespace (`PRIVATE_TMP_STEPS`, then `more` before it becomes the agent, then
+ * `HIDE_TMP_SOURCES` with `hide`).
+ */
+function agentView(u: AgentUser, more: string[], hide = false) {
+  const view = [...PRIVATE_TMP_STEPS, ...more, ...(hide ? HIDE_TMP_SOURCES : []), 'exec "$@"'].join("\n");
   // A configured isolation policy gets a fresh private proc instance, never a host remount.
   return u.networkLauncher || u.networkMark || u.networkRevision
     ? `set -e\n/usr/bin/mount -t proc -o nosuid,nodev,noexec,hidepid=2 proc /proc\n${view}`
@@ -776,7 +791,9 @@ function agentView(u: AgentUser, more: string[]) {
  * only itself. A service's command line is its ExecStart=, unlike a scope's: systemd expands `$` in it, and writes it
  * to the unit's file under /run/systemd/transient with every `$` doubled, which is what runs after any daemon-reload.
  * So `--expand-environment=no` (`literal`, systemd 254 and later), which keeps it as it is in both; before 254 there is
- * no such switch, and every `$` goes doubled, which it reads as one.
+ * no such switch, and every `$` goes doubled, which it reads as one. Its view keeps the temp roots' mounts
+ * (`HIDE_TMP_SOURCES` is the launches'): `CGROUP_BACK` binds the kept cgroup2 from there after the hook, and a new
+ * command would restart every agent's containers.
  */
 export function containersCommand(
   u: AgentUser,
@@ -1072,7 +1089,7 @@ export const underMaskedRoot = (p: string) => ACCOUNT_MASKED_ROOTS.some((root) =
 
 /**
  * Runs as root in the CLI's new mount namespace (`$1` the sign-in, `$2` its room under `run/`, `$3` the path the CLI
- * should see as its cwd, empty for its room). The temporary folders are new and in memory: unlike `PRIVATE_TMP`'s,
+ * should see as its cwd, empty for its room). The temporary folders are new and in memory: unlike a launch's,
  * nothing an agent wrote is in them. The masks hide every agent's data; the sign-in's own folders come back through a
  * bind taken before its parent is masked. The cwd is a new path in a mask, so no link an agent planted is followed,
  * with this room's empty folder bound on it: nothing an agent can write lies above or below the CLI.

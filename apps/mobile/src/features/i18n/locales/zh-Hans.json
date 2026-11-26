@@ -813,6 +813,7 @@
   },
   "agent": {
     "talk": "聊天",
+    "responsible": "负责人",
     "task": "任务",
     "owner": "所有者：{{name}}",
     "cantTalk": "此智能体不和你一起工作。",
@@ -2684,11 +2685,12 @@
     },
     "formatAuto": "{{name}} 会选最合适的",
     "newWidget": {
-      "alerts": "提醒已开",
       "realData": "真实数据",
       "editAsk": "修改需求",
       "asked": "“{{ask}}”",
-      "autoFormat": "自动形式"
+      "testReal": "用真实数据测试",
+      "addHome": "添加到首页",
+      "addTo": "添加到{{where}}"
     },
     "agentPick": {
       "search": "搜索智能体",

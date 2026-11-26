@@ -39,6 +39,7 @@ import { can, requireActiveMembership, requirePermission } from "./organizations
 import { maySql } from "./permissions";
 import { isRightHand, RIGHT_HAND, rightHandPermanent } from "./right-hand";
 import { liveSeats, oneUserComputer, removedSeatIds, removeSeat, SHARED_SEAT, seatName } from "./right-hand-seats";
+import { runnerUpdateOf } from "./runner-update";
 
 const { machines, agents, users, organizationMembers } = schema;
 
@@ -620,6 +621,8 @@ async function machineViews(db: Database, actorId: string, orgId: string, only?:
       runnerVersion: m.runnerVersion,
       /** The runner's machine protocol (9+: pause; 10+: access on the machine). */
       protocol: m.protocol,
+      /** Its runner is behind this server and how its owner updates it (`runnerUpdateOf`); null: nothing to do. */
+      update: runnerUpdateOf(m),
       /** Its runner can hold browser profiles (ADR 0110); a system-mode computer has none at all (`mode`). */
       browserProfiles: m.protocol >= BROWSER_PROFILE_PROTOCOL,
       execAllowed: m.execAllowed,

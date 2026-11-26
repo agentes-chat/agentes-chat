@@ -176,3 +176,21 @@ test("a 401 naming protected-resource metadata that can't be read: discovery fai
     params: { host: "mcp.example.com" },
   });
 });
+
+test("an anonymous 200 with protected-resource metadata: an optional sign-in; with typed headers it is open", async () => {
+  const http = (async (input: string | URL, init?: RequestInit) => {
+    const url = String(input);
+    if (url === SERVER && init?.method === "POST") return Response.json({ jsonrpc: "2.0", id: 1, result: {} });
+    const a = adsLike(url, init?.method ?? "GET", { "user-agent": "test" });
+    return new Response(a.body ?? null, { status: a.status, headers: a.headers });
+  }) as unknown as typeof fetch;
+  const deps = { resolveHost, http } as never;
+  expect(await probeMcpServer(deps, SERVER)).toEqual({
+    kind: "oauth",
+    resource: SERVER,
+    issuer: ISSUER,
+    scopes: ["ads_read", "ads_management", "catalog_management", "pages_show_list"],
+    optional: true,
+  });
+  expect(await probeMcpServer(deps, SERVER, { "x-api-key": "fake-key-0000" })).toEqual({ kind: "open" });
+});

@@ -127,6 +127,7 @@
     "allowedOne": "{{agent}}에게 {{folder}}을(를) 허용했어요",
     "allowedAll": "모든 에이전트에게 {{folder}}을(를) 허용했어요",
     "denied": "거절했어요. {{agent}}이(가) 채팅에서 알려요.",
+    "answerFailed": "이 요청에 응답하지 못했습니다: {{message}}",
     "notifTitle": "{{agent}}이(가) {{folder}} 폴더를 사용하려고 해요",
     "allowedTitle": "{{name}}님이 agentes.chat에서 {{tool}}을(를) 켰습니다",
     "allowedBody": "본인이 아니라면 여기서 되돌리세요.",

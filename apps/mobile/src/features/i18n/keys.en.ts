@@ -907,6 +907,8 @@ export const featureKeysEn = {
   },
   agent: {
     talk: "Chat",
+    /** Who answers for it, a row of its profile's card. */
+    responsible: "Owner",
     task: "Task",
     owner: "owner: {{name}}",
     cantTalk: "This agent doesn't work with you.",
@@ -3037,11 +3039,12 @@ export const featureKeysEn = {
     formatAuto: "{{name}} picks the best one",
     /** New widget's card, which is the form. */
     newWidget: {
-      alerts: "Alerts",
       realData: "Real data",
       editAsk: "Change the ask",
       asked: "“{{ask}}”",
-      autoFormat: "Auto format",
+      testReal: "Test with real data",
+      addHome: "Add to Home",
+      addTo: "Add to {{where}}",
     },
     /** "Who looks after it", pushed from New widget's card. */
     agentPick: {

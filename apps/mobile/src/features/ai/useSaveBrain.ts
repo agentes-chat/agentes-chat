@@ -32,20 +32,23 @@ export function useSaveBrain(agentId: string, scope?: BrainScope) {
   };
   // Every field this change set is still the newest of its field.
   const newest = (input: AgentBrainInput) => fieldsOf(input).every((k) => live.current[k] === input[k]);
+  /**
+   * `done`: what the toast says once saved; null says nothing (the screen says it in place). `then` runs once the change
+   * is saved, before it is said (a Desfazer's `giveBack`). The saved view, or null.
+   */
   const save = async (
     input: AgentBrainInput,
-    done: string | ((saved: AgentBrain) => string),
+    done: string | ((saved: AgentBrain) => string) | null,
     undo?: AgentBrainInput,
     giveBack?: () => Promise<void>,
-    /** Runs once the change is saved, before it is said (a Desfazer's `giveBack`). */
     then?: () => Promise<void>,
-  ): Promise<void> => {
+  ): Promise<AgentBrain | null> => {
     put({ ...live.current, ...input });
     try {
       const saved = await api.agents.setBrain(orgId, agentId, { ...(scope ? { scope } : {}), ...input });
       qc.setQueryData(scope ? [...keys.agentBrain(orgId, agentId), scope] : keys.agentBrain(orgId, agentId), saved);
       await then?.();
-      if (newest(input))
+      if (newest(input) && done !== null)
         toast({
           title: typeof done === "string" ? done : done(saved),
           icon: "check",
@@ -58,8 +61,10 @@ export function useSaveBrain(agentId: string, scope?: BrainScope) {
               }
             : {}),
         });
+      return saved;
     } catch {
       if (newest(input)) toast({ title: t("agentPage.work.failed"), icon: "x" });
+      return null;
     } finally {
       // Its fields show what the server says now, unless a newer change of the same field is still on its way.
       put(

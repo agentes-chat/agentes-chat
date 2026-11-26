@@ -25,6 +25,7 @@ import {
   estimateTokens,
   hasToolImages,
   laidOut,
+  lostWithoutImages,
   type ModelProvider,
   type ModelRequest,
   type ModelResult,
@@ -724,7 +725,7 @@ export function createOpenRouterProvider(
                 cacheWriteTokens: 0,
               },
           ...(cost !== undefined ? { costNanoUsd: cost } : {}),
-          ...(hasToolImages(request.messages) ? { imagesLeftOut: true as const } : {}),
+          ...(hasToolImages(request.messages, lostWithoutImages()) ? { imagesLeftOut: true as const } : {}),
         };
       } catch (error) {
         const mapped = request.signal?.aborted

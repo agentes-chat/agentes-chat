@@ -44,7 +44,7 @@ import {
   typedPersonBehindCall,
   wikiActorOfCall,
 } from "../requester";
-import { isRightHandId, rightHandReader } from "../right-hand";
+import { isRightHandId, readsAlone, rightHandReader } from "../right-hand";
 import {
   agentSearchChannels,
   agentVisibleChannels,
@@ -1015,7 +1015,12 @@ export function createContextToolSource(deps: ContextDeps): ToolSource {
             ctx.db,
             ctx.orgId,
             access.map((a) => a.app),
+            requester,
           );
+          if (apps.personal.length > 0)
+            return fail(
+              `${apps.personal.join(", ")}: the person asking connected it as their own, and only they give it to an agent, on the Access tab of an agent they own or manage. For any other agent, someone who manages connectors connects it for the team. Apps you can name: ${apps.choices.join(", ")}.`,
+            );
           if (apps.unknown.length > 0)
             return fail(`Unknown app: ${apps.unknown.join(", ")}. Apps you can name: ${apps.choices.join(", ")}.`);
           const lines = access.map((a) => ({
@@ -1325,7 +1330,8 @@ async function triggerFromAgent(ctx: ToolContext) {
 async function rightHandKeeps(ctx: ToolContext): Promise<{ person: string | null } | { refused: string }> {
   if (!(await isRightHandId(ctx.db, ctx.orgId, ctx.agentId))) return { person: null };
   const person = await rightHandReader(ctx);
-  return person
+  // A routine of theirs reads for them too, from a room their DM's memory never reaches.
+  return person && (await readsAlone(ctx.db, ctx.channelId, person, ctx.agentId))
     ? { person }
     : { refused: "You keep memory only in a person's own private conversation with you: others read this one." };
 }

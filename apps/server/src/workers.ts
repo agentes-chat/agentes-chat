@@ -25,6 +25,7 @@ import {
   expireApprovals,
   expireBrowserHandoffs,
   expireConsultations,
+  expireFolderRequests,
   expireQuestions,
   expireSecretRequests,
   type FeedbackFileDeps,
@@ -482,6 +483,11 @@ export function startWorkers(deps: WorkerDeps) {
     if (expired > 0) log.info("agent consultations expired", { expired });
     const asks = await expireAgentProposalAsks({ db, pubsub: deps.pubsub });
     if (asks > 0) log.info("expired agent proposals left the inbox", { asks });
+  });
+
+  every("folderRequests", WORKER_INTERVALS_MS.approvals, async () => {
+    const expired = await expireFolderRequests({ db, pubsub: deps.pubsub });
+    if (expired > 0) log.info("folder requests expired", { expired });
   });
 
   every("secrets", WORKER_INTERVALS_MS.approvals, async () => {

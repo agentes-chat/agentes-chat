@@ -42,7 +42,7 @@ import { isAgentOnlyDm, openDm } from "./dms";
 import { markdownToDocx } from "./docx";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { publishChannelEvent, publishListChanged } from "./events";
-import { MODEL_FILE_READ_BYTES, type ModelFile, readForModel, tooBigToReadNote, transcriptKey } from "./file-reader";
+import { MODEL_FILE_READ_BYTES, type ModelFile, openForModel, tooBigToReadNote, transcriptKey } from "./file-reader";
 import { FontError, fontMediaType, readFont, sniffFont } from "./fonts/sfnt";
 import { formatBytes, tableToCsv } from "./format";
 import { imageSize, pictureSize } from "./image-size";
@@ -2157,7 +2157,7 @@ export async function fileForModel(
   const name = v.fileName ?? "file";
   if (v.size > MODEL_FILE_READ_BYTES) return { note: tooBigToReadNote(name, v.contentType, v.size) };
   const { body } = await readVersion(deps, a, v);
-  const read = readForModel({ name, contentType: v.contentType, bytes: body });
+  const read = await openForModel({ name, contentType: v.contentType, bytes: body });
   return read.audio ? audioForModel(deps, a, v, body) : read;
 }
 
