@@ -5566,7 +5566,8 @@
       "provider_unavailable": "das Modell hat nicht geantwortet",
       "gave_up": "das Modell hat nach mehreren Versuchen nicht geantwortet",
       "missing_credential": "ein API-Schlüssel fehlt",
-      "credential_revoked": "der API-Schlüssel wurde widerrufen"
+      "credential_revoked": "der API-Schlüssel wurde widerrufen",
+      "credential_unreadable": "der gespeicherte API-Schlüssel lässt sich nicht öffnen"
     },
     "youReplied": "Du hast geantwortet: {{text}}",
     "actions": "Aktionen",
@@ -6512,6 +6513,7 @@
         "interrupted": "Durch einen Neustart des Servers unterbrochen.",
         "missing_credential": "Der Workspace hat keinen Schlüssel für {{provider}}.",
         "credential_revoked": "Der Schlüssel dieses Agenten wurde widerrufen.",
+        "credential_unreadable": "Der gespeicherte API-Schlüssel lässt sich nicht öffnen, meist weil sich das Geheimnis des Servers geändert hat, nachdem der Schlüssel gespeichert wurde. Füge den Schlüssel unter KI-Schlüssel erneut ein.",
         "credential_wrong_provider": "Das Modell ist von {{modelProvider}}, der Schlüssel aber von {{keyProvider}}.",
         "model_unlisted": "OpenRouter bietet {{model}} nicht mehr an. Wähle in den Einstellungen des Agenten ein anderes Modell.",
         "no_ai": "Der Agent hatte keine KI verfügbar.",
@@ -9317,6 +9319,7 @@
       "stuck": "Gestoppt, weil er feststeckte",
       "missing_credential": "Ein API-Schlüssel fehlt",
       "credential_revoked": "Der API-Schlüssel wurde widerrufen",
+      "credential_unreadable": "Der gespeicherte API-Schlüssel lässt sich nicht öffnen",
       "credential_wrong_provider": "Der API-Schlüssel ist von einem anderen Anbieter",
       "model_unlisted": "OpenRouter bietet das Modell nicht mehr an",
       "agent_archived": "Der Agent wurde archiviert",
@@ -18904,7 +18907,8 @@
       "talk": "Mit {{name}} sprechen",
       "missing": "Diese Unterhaltung ist nicht mehr da.",
       "helping": "hilft {{name}}",
-      "see": "Unterhaltung ansehen"
+      "see": "Unterhaltung ansehen",
+      "relay": "Antwort von {{name}}: {{excerpt}}. Unterhaltung ansehen"
     },
     "unshown": "Diese Nachricht konnte nicht angezeigt werden",
     "unshownPart": "Ein Teil dieser Nachricht konnte nicht angezeigt werden",
