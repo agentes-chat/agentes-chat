@@ -4,8 +4,7 @@ import { type AgentWork, agentWorkFor, bareWork } from "./agent-work";
 import { caches, forgetOrgReads } from "./cache";
 import { publishOrgEvent } from "./events";
 import { type PendingReturn, pendingReturns } from "./follow-through";
-import { cutText } from "./format";
-import type { Judge, JudgeGroup } from "./judge";
+import { type Judge, type JudgeGroup, startJudgmentState } from "./judge";
 import { queueLiveActivityRun } from "./live-activity-queue";
 import { requirePermission } from "./organizations";
 import { type OutOfOffice, outOfOffice } from "./out-of-office";
@@ -759,11 +758,7 @@ export async function askRunStatus(
     kind: "agent_status",
     calibrated: true,
     ...(input.group ? { group: input.group } : {}),
-    state: {
-      agent: { name: input.agent.name, role: input.agent.role, instructions: cutText(input.agent.instructions, 1500) },
-      message: cutText(input.message, 2000),
-      recent: input.recent.map((m) => cutText(m, 400)).join("\n"),
-    },
+    state: startJudgmentState(input),
     questions: statusQuestions(input.candidates),
   });
   const line = answers.status_line?.choice;
