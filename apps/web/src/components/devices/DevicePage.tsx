@@ -11,6 +11,7 @@ import {
   personInControl,
   phoneLink,
   phoneSystem,
+  powerChoice,
   RUNNER_UPDATE_COMMAND,
   shareInternetText,
   statusLook,
@@ -54,7 +55,13 @@ import { OrgMark } from "@/components/ProfilePhoto";
 import { useToast } from "@/lib/toast";
 import { ConnectDialog, type ConnectStart } from "./ConnectDialog";
 import { WifiIphoneOffer } from "./ConnectPhone";
-import { DeviceRemoveDialog, DeviceRenameDialog, DeviceRowView, type DeviceTarget } from "./DevicesSection";
+import {
+  DeviceRemoveDialog,
+  DeviceRenameDialog,
+  DeviceRowView,
+  type DeviceTarget,
+  usePowerAction,
+} from "./DevicesSection";
 import { PhoneLive } from "./PhoneLive";
 import { DevicePortrait, Facts, StatusPill, useOwner } from "./parts";
 import { useDevices, useStopPhone, useUpdateComputer, useUpdatePhone } from "./queries";
@@ -651,6 +658,7 @@ function PhonePage({ phoneId }: { phoneId: string }) {
   const devices = useDevices(org.id);
   const update = useUpdatePhone(org.id);
   const stop = useStopPhone(org.id);
+  const power = usePowerAction();
   const back = useBackToList();
   const [renaming, setRenaming] = useState<DeviceTarget | null>(null);
   const [removing, setRemoving] = useState<DeviceTarget | null>(null);
@@ -663,6 +671,7 @@ function PhonePage({ phoneId }: { phoneId: string }) {
   const { phone: p, host } = found;
   const target: DeviceTarget = { kind: "phone", device: p };
   const owner = p.ownerUserId === me.user.id;
+  const powers = powerChoice(p);
   // A person in control gives it back on its screen instead.
   const canStop =
     p.status.kind === "in_use" &&
@@ -690,6 +699,16 @@ function PhonePage({ phoneId }: { phoneId: string }) {
         onClick={() => setConnect({ step: p.platform === "ios" ? "iphone" : "android", hostId: host.id })}
       >
         {t("devices.showMe")}
+      </Button>
+    ) : powers ? (
+      <Button
+        size="sm"
+        icon={powers === "start" ? "play" : "power"}
+        loading={power.pending}
+        disabled={power.pending}
+        onClick={() => power.run(p, powers === "start")}
+      >
+        {t(powers === "start" ? "devices.power.start" : "devices.power.stop")}
       </Button>
     ) : undefined;
   const link = phoneLink(t, p);

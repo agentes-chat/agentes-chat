@@ -567,7 +567,8 @@ function phoneLine(p: PhoneDevice, people: Map<string, string>) {
   const kind = p.phoneKind === "device" ? "" : ` ${p.phoneKind}`;
   const system = `${p.platform === "ios" ? "iOS" : "Android"}${p.osVersion ? ` ${p.osVersion}` : ""}`;
   const model = p.model && p.model !== p.name ? `${p.model}, ` : "";
-  return `"${p.name}" (${model}${system}${kind}): ${statusWords(p.status, people)}`;
+  const start = kind && p.status.kind === "offline" && !p.status.withHost ? "; simulator_start starts it" : "";
+  return `"${p.name}" (${model}${system}${kind}): ${statusWords(p.status, people)}${start}`;
 }
 
 /** The switches agents' tools need on a computer, as people call them. */

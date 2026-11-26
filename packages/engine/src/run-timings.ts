@@ -29,7 +29,7 @@ const QUERIES_MAX = 1_000_000_000;
 // A stage as the profiler names it: a word, then the turn it is of. Both sides read it, so one pattern for both.
 const STAGE = /^[a-z][a-z0-9_]{0,39}(#[0-9]{1,5})?$/;
 // `CODE` of `operator-paging.ts` spelled out for Postgres, whose `\w` also takes letters beyond ASCII.
-const MODEL_SQL = "^[A-Za-z][A-Za-z0-9_.:/-]{0,99}$";
+export const MODEL_SQL = "^[A-Za-z][A-Za-z0-9_.:/-]{0,99}$";
 const CAUSE_SQL = "^[a-z_:]{1,60}$";
 
 const msOf = (v: unknown) => wholeOrNull(numberIn(v, 0, TIMING_MAX_MS));
@@ -337,7 +337,7 @@ export const REPLY_WAIT_CAUSES = ["room", "offline", "other"] as const;
  * its limit or switched, a computer or provider not answering, the asker at their limit. None is a reply: within a
  * second, they'd pass for the quickest ones.
  */
-const NOT_A_REPLY = "^(no_ai|plan_limit|plan_account_moved|brain_unavailable|provider_|person_limit)";
+export const NOT_A_REPLY = "^(no_ai|plan_limit|plan_account_moved|brain_unavailable|provider_|person_limit)";
 
 export interface ReplyTimesQuery {
   /** ISO 8601 instants: runs created at or after `from` and before `to`. */
