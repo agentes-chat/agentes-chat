@@ -188,6 +188,35 @@ test("a chat turn's guard: init with our server's tools alone; a tool of its own
   const sub = { event: "step_update", step_update: { step_type: "agent_response", subagent_info: { subagents: [] } } };
   expect(antigravityChatBreach(sub, true)).toContain("another agent");
   expect(isOurAgyTool(`evil_${CODEX_MCP_SERVER}/x`)).toBe(false);
+  // Antigravity CLI 1.5.x lists static built-in tools in init even when --agent agenteschat-chat strips them,
+  // and calls MCP tools lazily via call_mcp_tool(ServerName: agenteschat_agentes).
+  expect(
+    antigravityChatBreach(
+      {
+        event: "init",
+        conversation_id: FIRST,
+        init: { agent: AGY_CHAT_AGENT, tools: ["run_command", "call_mcp_tool"] },
+      },
+      false,
+    ),
+  ).toBeNull();
+  expect(
+    antigravityChatBreach(
+      { event: "init", conversation_id: FIRST, init: { agent: "other", tools: ["run_command"] } },
+      false,
+    ),
+  ).toContain("run_command");
+  const lazyCall = (server: unknown) => ({
+    event: "step_update",
+    step_update: {
+      step_type: "tool",
+      tool_name: "call_mcp_tool",
+      tool_info: { name: "call_mcp_tool", parameters: server ? { ServerName: server, ToolName: "post_message" } : {} },
+    },
+  });
+  expect(antigravityChatBreach(lazyCall(CODEX_MCP_SERVER), true)).toBeNull();
+  expect(antigravityChatBreach(lazyCall("evil_server"), true)).toContain("call_mcp_tool");
+  expect(antigravityChatBreach(lazyCall(undefined), true)).toContain("call_mcp_tool");
 });
 
 test("a turn that went wrong: AGY_ERROR's quota is a plan limit with its reset, a refused sign-in, anything else", () => {
@@ -547,6 +576,37 @@ test.skipIf(!posix)(
     process.env.FAKE_AGY_TOOLS = `${CODEX_MCP_SERVER}/post_message,run_command`;
     const listed = await run(ctx, turn({ ...chat, runId: RUN.replace(/1$/, "8"), prompt: "BRIDGE_ONLY" }));
     expect(listed.at(-1)).toMatchObject({ code: "tools_not_locked", message: expect.stringContaining("run_command") });
+    delete process.env.FAKE_AGY_TOOLS;
+    // CLI 1.5.x chat turn: init confirms agenteschat-chat and MCP calls go through call_mcp_tool.
+    const lazyChat = await run(ctx, turn({ ...chat, runId: RUN.replace(/1$/, "9"), prompt: "BRIDGE_ONLY LAZY_MCP" }));
+    expect(lazyChat.at(-1)).toMatchObject({ type: "done" });
+    expect(lazyChat.filter((e) => e.type === "tool_call")).toEqual([]);
+    const lazyOther = await run(
+      ctx,
+      turn({ ...chat, runId: RUN.replace(/1$/, "a"), prompt: "BRIDGE_ONLY LAZY_MCP OTHER_MCP" }),
+    );
+    expect(lazyOther.at(-1)).toMatchObject({
+      type: "error",
+      code: "tools_not_locked",
+      message: expect.stringContaining("call_mcp_tool"),
+    });
+    // With the locked agent confirmed at init, a built-in tool or a subagent is still stopped at its step.
+    const lazyOwn = await run(ctx, turn({ ...chat, runId: RUN.replace(/1$/, "c"), prompt: "LAZY_MCP" }));
+    expect(lazyOwn.at(-1)).toMatchObject({ code: "tools_not_locked", message: expect.stringContaining("run_command") });
+    const lazySub = await run(
+      ctx,
+      turn({ ...chat, runId: RUN.replace(/1$/, "d"), prompt: "BRIDGE_ONLY LAZY_MCP SUBAGENT" }),
+    );
+    expect(lazySub.at(-1)).toMatchObject({
+      code: "tools_not_locked",
+      message: expect.stringContaining("another agent"),
+    });
+    // Work turn: our lazy MCP call is skipped as our bridge tool (not double-emitted as native tool_call).
+    const lazyWork = await run(ctx, turn({ runId: RUN.replace(/1$/, "b"), prompt: "LAZY_MCP" }));
+    expect(lazyWork.at(-1)).toMatchObject({ type: "done" });
+    expect(lazyWork.filter((e) => e.type === "tool_call").map((e) => (e as { name: string }).name)).toEqual([
+      "run_command",
+    ]);
   },
   20_000,
 );
