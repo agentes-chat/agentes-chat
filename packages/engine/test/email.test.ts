@@ -847,6 +847,13 @@ describe("outbox delivery", () => {
     await expect(deliverQueuedEmail(f.db, refusing, job, art, log)).rejects.toThrow("down");
   });
 
+  test("a job queued with a template since removed sends nothing", async () => {
+    const sender = createFakeEmailSender();
+    const template = { kind: "computer_down", locale: "en", name: "pc", url: "u" } as unknown as EmailTemplate;
+    await sendQueuedEmail(sender, { key: "k", to: ["a@b.c"], template }, art);
+    expect(sender.sent).toEqual([]);
+  });
+
   test("attached pictures go with the message as inline parts", async () => {
     const sender = createFakeEmailSender();
     const attached: EmailArt = await emailArtFor("http://localhost:3000", WEB_DIR, "attach");

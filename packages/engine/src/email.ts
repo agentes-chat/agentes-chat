@@ -1417,6 +1417,8 @@ export async function sendQueuedEmail(sender: EmailSender, payload: Record<strin
   const template = payload.template as EmailTemplate;
   // A reply whose words are gone was sent, or given up: its job run again (a lease lost after the send) sends nothing.
   if (template.kind === "support_reply" && !template.reply && template.text === undefined) return;
+  // A template since removed (the computer notices, ADR 0241): a job queued before that sends nothing.
+  if ((template.kind as string) === "computer_down") return;
   const { subject, html, text, inline } = renderEmail(template, art);
   await sender
     .send({
