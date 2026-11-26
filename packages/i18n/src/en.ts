@@ -2168,6 +2168,32 @@ export const en = {
       ctaOne: "Hire {{name}}",
       ctaPersonal: "Hire your agents",
     },
+    /**
+     * Back from a paid Checkout: the team's photo and what is left. `{{names}}`: "You", the right hand and the agents,
+     * each with its article (`hire.the`). `start`: the first agent's deliveries on its first day, when its AI said them.
+     */
+    celebrate: {
+      say: "Hi, {{first}}! We start today.",
+      sayAny: "Hi! We start today.",
+      eyebrow: "{{org}}'s team · since {{date}}",
+      eyebrowPersonal: "Your agents · since {{date}}",
+      title: "Welcome to the {{org}} team",
+      titlePersonal: "Welcome to your team",
+      you: "You",
+      lead: "{{names}}. From today on, working together, day and night.",
+      plan: "{{name}} plan on",
+      planAny: "Plan on",
+      ai: "Connect the AI you already pay for",
+      aiPersonal: "Connect the AI you already pay for",
+      people: "Invite the people you work with",
+      start_one: "And the team starts its first delivery",
+      start_other: "And the team starts its {{count}} deliveries",
+      startAny: "And the team gets to work",
+      startPersonal_one: "And your agents start their first delivery",
+      startPersonal_other: "And your agents start their {{count}} deliveries",
+      startAnyPersonal: "And your agents get to work",
+      connect: "Connect the AI",
+    },
   },
   // The desktop app's notifications while its window is in the background (lib/desktop.ts `desktopNotice`).
   desktopNotice: {

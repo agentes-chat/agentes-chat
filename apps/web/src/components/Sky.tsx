@@ -758,23 +758,6 @@ export function OnboardingProgress({ progress }: { progress: number }) {
   );
 }
 
-/** Behind the team asleep until its plan (the onboarding's last step): the agents' sky, rising from the card. */
-export function TeamAsleepSky() {
-  return (
-    <span className="onb__plan-sky" aria-hidden="true">
-      <PixelSky
-        options={{
-          pixel: 4,
-          surface: "--raised",
-          palette: (bg) => softTones("sky", bg),
-          light: 0,
-          base: (u, v, tt) => 0.18 + 0.62 * v + 0.04 * S(u * 5 + tt * 0.4),
-        }}
-      />
-    </span>
-  );
-}
-
 /* ---------- Criar agente ---------- */
 
 /** The live preview's cover: the draft agent's own sky, lighter right behind it so the body reads. */

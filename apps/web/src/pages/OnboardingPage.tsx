@@ -41,7 +41,6 @@ import { Fragment, lazy, type ReactNode, Suspense, useEffect, useRef, useState }
 import { useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
 import { useAuth } from "@/auth/context";
-import { usePaidFacts } from "@/components/arrival/PaidMoment";
 import { BillingLinkButton } from "@/components/BillingLinkButton";
 import { DeleteAccountDialog } from "@/components/DeleteAccount";
 import { DeleteWorkspaceDialog } from "@/components/DeleteWorkspace";
@@ -55,18 +54,18 @@ import { ARRIVAL_BETA_ONLY, ARRIVAL_PARAM } from "@/lib/arrival";
 import { sendNewLink } from "@/lib/email-confirmation";
 import { lookOf } from "@/lib/look";
 import { useOpenParam } from "@/lib/open-param";
-import { usePaidMoment, usePaidReturn } from "@/lib/paid-return";
+import { usePaidMoment, usePaidPlan, usePaidReturn } from "@/lib/paid-return";
 import { usePlanOffer } from "@/lib/plan-offer";
 import { returnPlace } from "@/lib/return-to";
 import { STORAGE_KEYS, sessionStore, storage } from "@/lib/storage";
 import { useToast } from "@/lib/toast";
 import { AiHost, AiStep } from "./onboarding/AiStep";
 import { AskYourAi } from "./onboarding/AskStep";
+import { TeamWelcome } from "./onboarding/CelebrateStep";
 import { HireTeam } from "./onboarding/HireStep";
 import { PeopleStep } from "./onboarding/PeopleStep";
 import { FirstAgentPick } from "./onboarding/PickStep";
 import { AppWall, Box, BoxNote, PickRows, type ShellFace, World } from "./onboarding/Shell";
-import { PlanStep } from "./onboarding/steps";
 import { FirstWeek } from "./onboarding/WeekStep";
 import "./onboarding.css";
 
@@ -196,8 +195,8 @@ export function OnboardingPage() {
   // Back from paying, until the billing service lifts the hold: `/me` again meanwhile, as the hold's banner does.
   const paid = usePaidReturn(orgId ?? "", held);
   useQuery({ ...meQuery(api), enabled: paid, refetchInterval: PAID_POLL_MS });
-  // Once the plan is on, the moment it turned on (ADR 0079): the page between the plan and the step that comes next,
-  // the team awake on it. Once per payment, never on a plain visit. A workspace `/me` doesn't list yet (one made in this
+  // Once the plan is on, the moment it turned on (ADR 0079): the team's photo between the plan and the step that comes
+  // next. Once per payment, never on a plain visit. A workspace `/me` doesn't list yet (one made in this
   // visit, before it is read again) counts as held: its standing is unknown, not in force.
   const paidMoment = usePaidMoment(orgId ?? "", mine ? mine.standing : { state: "hold", reason: null });
   const moment = paidMoment.moment;
@@ -267,7 +266,6 @@ export function OnboardingPage() {
   // the moment's one button (`at`). Never on a step the person went back to.
   const awake = moment !== null && hasPlanStep && picked === null;
   const step: RailStep = awake ? "plan" : railStep;
-  const paidFacts = usePaidFacts(orgId ?? "", awake ? moment : null, mine?.role === "owner");
   // A team's rail ends on inviting people (ADR 0162, amended 2026-11-11).
   const hasPeople = steps.includes("people");
   useEffect(() => {
@@ -284,17 +282,20 @@ export function OnboardingPage() {
   // Read from the first step, so the plan step has it when it opens.
   const plans = usePlanOffer(i18n.language);
   const offer = plans.offer;
+  // What this tab came back from buying, by its name: on the photo's first row and over the AI step.
+  const bought = usePaidPlan(orgId ?? "", mine?.standing);
+  const boughtPlan = usePlanOffer(i18n.language, { key: bought?.plan, enabled: Boolean(bought?.plan) });
   // How many apps the agents work in, for the start step's lead ("more than 70"): the catalog's, in tens.
   const catalog = useCatalog();
   // Read once is enough: a refetch that fails later keeps the step on screen with what it read. The plan step opens
   // whole, back from the billing page too: with its price, or with none once the list is late, never a line that changes.
   // A first visit that only the AI's answer can place (its step or opening) waits for it, as for the workspace's data.
-  // The moment waits for what it says (the plan's name, what it gives, the computer as it is).
+  // The team's photo waits for the plan's name, and the week for what the AI proposed.
   const known =
     loaded &&
     !(deciding && frozen === null) &&
     !(step === "plan" && plans.loading) &&
-    !(awake && paidFacts.loading) &&
+    !(awake && boughtPlan.loading) &&
     !(step === "week" && firstAgents.isLoading);
   const name = (mine?.name ?? org).trim();
   // Back on step 1, the workspace's own zone (saved on another visit, maybe another device), never this browser's.
@@ -917,70 +918,25 @@ export function OnboardingPage() {
         ),
       };
 
+    // Back from Checkout, once: the team's photo in the plan step's place, until its button leads to the step the data
+    // reached (ADR 0079).
     if (step === "plan" && orgId)
       return {
-        cast: [lodiFace],
-        say: awake
-          ? // Only what is true now: the computer is on, or getting ready (none of its own: not a word of it).
-            t(
-              paidFacts.computer === null
-                ? "paidMoment.say"
-                : paidFacts.computer.on
-                  ? "paidMoment.sayOn"
-                  : "paidMoment.sayStarting",
-            )
-          : t("onboarding.flow.lodi.planThen", lodiWords),
         box: (
-          <Box
-            eyebrow={stepLine}
-            title={
-              awake
-                ? paidFacts.title
-                : t(personalNow ? "onboarding.flow.plan.titlePersonal" : "onboarding.flow.plan.title")
-            }
-            lead={
-              awake
-                ? (paidFacts.room ?? "")
-                : t(
-                    personalNow
-                      ? "onboarding.flow.plan.leadPersonal"
-                      : alone
-                        ? "onboarding.flow.plan.leadAlone"
-                        : "onboarding.flow.plan.lead",
-                  )
-            }
-          >
-            <PlanStep
-              orgId={orgId}
-              // No agents yet (the start left with none): its right hand, asleep until the plan.
-              team={team.length > 0 ? team : lodi ? [lodi] : []}
-              offer={offer}
-              skipping={open.isPending}
-              onSkip={() => open.mutate("skipped")}
-              next={steps.includes("ai")}
-              confirming={paid}
-              personal={personalNow}
-              awake={
-                awake
-                  ? {
-                      name: me.data?.user.name,
-                      computer: paidFacts.computer,
-                      // The step the data reached: the one the button leads to.
-                      next: t(
-                        at === "ai"
-                          ? "paidMoment.next.ai"
-                          : at === "people"
-                            ? "paidMoment.next.people"
-                            : at === "open"
-                              ? "paidMoment.next.open"
-                              : "onboarding.actions.continue",
-                      ),
-                      onNext: paidMoment.done,
-                    }
-                  : null
-              }
-            />
-          </Box>
+          <TeamWelcome
+            org={name}
+            person={{ name: me.data?.user.name ?? "", image: me.data?.user.image ?? null }}
+            first={lodiWords.first}
+            lodi={lodiFace}
+            team={team.map((a) => ({ id: a.id, name: a.name, look: lookOf(a) }))}
+            plan={boughtPlan.offer?.name ?? null}
+            personal={personalNow}
+            aiDone={thinksNow}
+            toAi={at === "ai"}
+            people={hasPeople ? at === "open" : null}
+            deliveries={firstOption?.today.length ?? 0}
+            onNext={paidMoment.done}
+          />
         ),
       };
 
