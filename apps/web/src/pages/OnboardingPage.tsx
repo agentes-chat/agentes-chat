@@ -685,11 +685,7 @@ export function OnboardingPage() {
             // Where the person hesitates, beside Continue: the choice isn't final. Leaving for another workspace is the
             // top bar's.
             note={<BoxNote icon="swap">{t("onboarding.flow.switchNote")}</BoxNote>}
-            acts={continueButton(
-              answerPurpose,
-              inviteOnly || busy,
-              save.isPending || switchMode.isPending,
-            )}
+            acts={continueButton(answerPurpose, inviteOnly || busy, save.isPending || switchMode.isPending)}
           >
             <Locked when={busy}>
               <div className="onb__answer">
