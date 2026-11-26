@@ -36,6 +36,7 @@ import {
   pollDeviceToken,
   receiveMachineUpload,
   reduceMachineAccess,
+  refuseFolderRequest,
   renameMachine,
   restoreHostComputer,
   retryCliFetch,
@@ -167,6 +168,10 @@ export const Machine = z
     }),
     runnerVersion: z.string(),
     protocol: z.number().int().openapi({ description: "The runner's machine protocol (9+: pause; 10+: access)." }),
+    update: z.enum(["command", "installer"]).nullable().openapi({
+      description:
+        "Its runner is behind this server: `command`, its owner runs `agentes-runner update` there; `installer`, the install command again, as root (system mode). Null: nothing to update from here (current, the workspace's or this server's own computer, or run by the agentes.chat app, which updates itself).",
+    }),
     browserProfiles: z.boolean().openapi({
       description:
         "Its runner can hold browser profiles (protocol 34, ADR 0110); `false`: update the computer. A system-mode computer has none at all (`mode`): the apps hide them there.",
@@ -185,7 +190,7 @@ export const Machine = z
     }),
     cliFetchable: z.array(z.enum(FETCH_NAMES)).openapi({
       description:
-        "ADR 0228 §6: the coding CLIs its runner fetches by itself there (a pinned build, hash checked) when a turn or a sign-in needs one, and `git` on Windows (Git for Windows' portable build, Claude Code's shell there). None on the workspace's own computer, in system mode or from an older runner.",
+        "ADR 0228 §6: the coding CLIs its runner fetches by itself there (a pinned build, hash checked) when a turn or a sign-in needs one, and `git` on Windows (Git for Windows' portable build, Claude Code's shell there). In system mode (protocol 88 on) only for agents' users who reach no copy of it, where `cli-install` installs it for all of them. None on the workspace's own computer, in system mode before protocol 88 or from an older runner.",
     }),
     cliFetch: z
       .record(
@@ -730,6 +735,25 @@ export function machineAppRoutes(deps: AppDeps) {
         await askMachineTool({ db, pubsub }, c.get("user").id, orgId, machineId, c.req.valid("json").tool),
         200,
       );
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/machines/{machineId}/access/requests/{requestId}/refuse",
+      tags,
+      security,
+      summary:
+        "Say no to a folder an agent waits for on the computer (admins or the person who paired it), even while it is offline",
+      description:
+        "Never allows: a folder is allowed on the computer itself. The agent hears the no in its thread. An answer given first stands: `status` is the request's outcome either way.",
+      request: { params: MachineParams.extend({ requestId: z.uuid() }) },
+      responses: { 200: json(z.object({ status: z.string() })), ...errors },
+    }),
+    async (c) => {
+      const { orgId, machineId, requestId } = c.req.valid("param");
+      return c.json(await refuseFolderRequest({ db, pubsub }, c.get("user").id, orgId, machineId, requestId), 200);
     },
   );
 

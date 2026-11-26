@@ -843,6 +843,32 @@ describe.if(ROOT)("the agents' isolation on this computer, as root", () => {
     rmSync(AGENT_DISK_TMP_ROOT, { force: true });
   });
 
+  test("a launch's mountinfo shows the agent's /tmp at /tmp alone: Codex's sandbox masks every alias it lists, and bwrap can't under a root-only folder", () => {
+    if (!E) throw new Error("no agent E");
+    const l = systemLauncher(E, true, undefined, false, false);
+    const r = spawnSync(l.prefix[0] as string, [...l.prefix.slice(1), "/bin/sh", "-c", "cat /proc/self/mountinfo"], {
+      cwd: "/",
+      env: l.env,
+      encoding: "utf8",
+      timeout: 60_000,
+    });
+    const lines = (r.stdout ?? "").trim().split("\n");
+    const at = (target: string) => lines.filter((line) => line.split(" ")[4] === target);
+    const [tmp = ""] = at("/tmp");
+    expect(tmp).not.toBe("");
+    const dev = tmp.split(" ")[2];
+    expect(lines.filter((line) => line.split(" ")[2] === dev).map((line) => line.split(" ")[4])).toEqual(["/tmp"]);
+    const under = (root: string) => (line: string) => {
+      const target = line.split(" ")[4] ?? "";
+      return target === root || target.startsWith(`${root}/`);
+    };
+    expect(lines.filter(under(AGENT_RAM_ROOT))).toEqual([]);
+    expect(lines.filter(under(AGENT_TMP_POOL))).toEqual([]);
+    expect(lines.filter(under(AGENT_DISK_TMP_ROOT))).toEqual([]);
+    // The computer's own view keeps them.
+    expect(must("findmnt", ["-n", "-o", "FSTYPE", AGENT_TMP_POOL])).toBe("tmpfs");
+  });
+
   test("systemd-tmpfiles takes the lines for agents with nothing running from its standard input: only their folders", () => {
     if (!E) throw new Error("no agent E");
     const left = path.join(agentTmp(E.uid), "agentes-isolation-left");

@@ -33,6 +33,7 @@ import {
   WINDOWS_SANDBOX_MESSAGE,
   windowsCodexSandbox,
 } from "./codex-windows";
+import { ConsoleDecoder } from "./console-text";
 import { RunnerError } from "./errors";
 import { killTree } from "./exec";
 import { cachedCodexVersion, codexRefusal, envValue } from "./executors";
@@ -1006,9 +1007,11 @@ async function runCodexExec(input: CodexTurnInput, opts: CodexTurnOptions, versi
   }
 
   let stderr = "";
+
+  const stderrText = new ConsoleDecoder();
   child.stderr?.on("data", (c: Buffer) => {
     // Never a failure by itself (the person's own MCP servers log here); kept for a bad exit.
-    stderr = (stderr + c.toString("utf8")).slice(-2000);
+    stderr = (stderr + stderrText.write(c)).slice(-2000);
   });
   const lines = createInterface({ input: child.stdout as NonNullable<ChildProcess["stdout"]> });
   // A `chat` turn that used a tool of Codex's own ends there: nothing after it is passed on.

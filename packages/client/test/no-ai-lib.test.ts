@@ -25,6 +25,7 @@ import {
   CLOUD_AWAY_MS,
   CLOUD_INSTALL_WAIT_MS,
   catchUp,
+  connectsPlanFor,
   defaultChoice,
   defaultTarget,
   dimmedLine,
@@ -179,8 +180,15 @@ describe("planGate: what a plan's panel can do now", () => {
     expect(gate({ edition: null })).toEqual({ state: "loading" });
   });
 
-  test("an agent the viewer doesn't own, before anything about its computer", () => {
-    expect(gate({ brain: brain({ canUsePlans: false, computer: null }) })).toEqual({ state: "locked", who: "owner" });
+  test("an agent the viewer doesn't own and can't sign a plan in for, before anything about its computer", () => {
+    expect(gate({ brain: brain({ canUsePlans: false, canManageAccounts: false, computer: null }) })).toEqual({
+      state: "locked",
+      who: "owner",
+    });
+  });
+
+  test("someone else's agent that the viewer manages: a plan of their own signs in for it where they add accounts", () => {
+    expect(gate({ brain: brain({ canUsePlans: false }) })).toEqual({ state: "ready" });
   });
 
   test("self-host with no computer for the agent: missing", () => {
@@ -949,6 +957,19 @@ describe("a card says the real cause, not that the agent has no AI", () => {
   });
   const card = (reason: string, extra?: Record<string, unknown>) => noAiCardOf(meta(reason, extra));
 
+  test("Connect signs a plan in for the person's own agents, the right hand and the ones they manage; nobody else's", () => {
+    const joaos = { ownerUserId: "u-joao" };
+    expect(connectsPlanFor(joaos, "u-joao")).toBe(true);
+    // A workspace admin on João's agent: a plan of his own, lent to it, never "ask an admin".
+    expect(connectsPlanFor({ ...joaos, canManage: true }, "u-walter")).toBe(true);
+    // A plain member on João's agent: who connects it instead.
+    expect(connectsPlanFor({ ...joaos, canManage: false }, "u-bia")).toBe(false);
+    expect(connectsPlanFor(joaos, "u-bia")).toBe(false);
+    expect(connectsPlanFor({ ownerUserId: "u-joao", builtin: "right_hand" }, "u-bia")).toBe(true);
+    expect(connectsPlanFor(undefined, "u-bia")).toBe(false);
+    expect(connectsPlanFor(joaos, null)).toBe(false);
+  });
+
   test("Connect is for who can: the agent's owner, who manages it or keys, nobody else", () => {
     const agent = { ownerUserId: "u1" };
     expect(mayConnectAi(agent, "u1", { permissions: [] })).toBe(true);
@@ -1076,6 +1097,10 @@ describe("a card says the real cause, not that the agent has no AI", () => {
       );
     expect(serverBody(pt, "…", wait("plan_not_owner"))).toBe(
       "O Codex pensaria com um plano que não é do meu dono, então não uso. Conecte a conta do meu dono na minha página.",
+    );
+    // Its computer online, its shared Claude login refused there: what can't run, and the way out.
+    expect(serverBody(pt, "…", wait("shared_login_off"))).toBe(
+      "Meu computador não consegue usar o login do Claude para todos os agentes agora. Respondo assim que conseguir. Se continuar falhando, conecte o Claude de novo em Contas de IA.",
     );
     // Its computer gone still waits for it to come back.
     expect(serverBody(pt, "…", wait("machine_offline"))).toBe(

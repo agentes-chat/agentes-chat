@@ -13,6 +13,7 @@ import { schedulesOf } from "./context/summaries";
 import { ForbiddenError } from "./errors";
 import { cutText, stringsOf } from "./format";
 import { watchesFor } from "./mail/watches";
+import { relayedRefusal, relayedRequest } from "./requester";
 import { isRightHand } from "./right-hand";
 import { ROUTINE_REPORT, routineReportOf } from "./routine-brief";
 import { HOOK_METHODS, routineHookKeys } from "./routine-hooks";
@@ -691,6 +692,8 @@ export function createScheduleToolSource(deps: Omit<RoutineDeps, "db">): ToolSou
         try {
           const requester = await requesterOf(ctx);
           if (!requester) return noRequester;
+          // A routine is standing work, run again and again (ADR 0250): never set up from words relayed in.
+          if (await relayedRequest(ctx)) return relayedRefusal();
           const hasSchedule = Boolean(str(input.schedule).trim());
           const rawTrigger = input.trigger as Record<string, unknown> | undefined;
           if (hasSchedule === Boolean(rawTrigger)) {
@@ -887,6 +890,7 @@ export function createScheduleToolSource(deps: Omit<RoutineDeps, "db">): ToolSou
         try {
           const requester = await requesterOf(ctx);
           if (!requester) return noRequester;
+          if (await relayedRequest(ctx)) return relayedRefusal();
           const id = str(input.id);
           const own = await ownRoutine(ctx, id, true);
           if (!own.row) return { content: own.error, isError: true };

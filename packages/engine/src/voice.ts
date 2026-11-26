@@ -23,6 +23,7 @@ import { markChannelRead } from "./dms";
 import { ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { publishTyping, publishUserEvent } from "./events";
 import type { Judge } from "./judge";
+import { surfaceWordsMeta } from "./message-origin";
 import type { MessageVoice } from "./message-preview";
 import { attachmentRefsFor, MAX_MESSAGE_LENGTH, postPersonMessage } from "./messages";
 import { can } from "./organizations";
@@ -387,9 +388,11 @@ export async function transcribeVoiceClip(deps: VoiceDeps, clipId: string, optio
         attachments: clip.attachments ?? undefined,
         clientId: clip.clientId,
         replyTo: clip.replyTo,
+        // Only a surface hands a clip its `via` (ADR 0187): one recorded in our apps has none.
+        origin: clip.via ? "surface" : "app",
         meta: {
           voice,
-          ...(clip.via ? { via: clip.via, ...(clip.via.forwarded === true ? { readOutside: true } : {}) } : {}),
+          ...(clip.via ? { via: clip.via, ...surfaceWordsMeta(clip.via) } : {}),
         },
       },
     );

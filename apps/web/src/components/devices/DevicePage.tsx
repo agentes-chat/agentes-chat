@@ -11,6 +11,7 @@ import {
   personInControl,
   phoneLink,
   phoneSystem,
+  RUNNER_UPDATE_COMMAND,
   shareInternetText,
   statusLook,
   statusSentence,
@@ -46,6 +47,7 @@ import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ErrorState, LoadingList } from "@/components/Loading";
 import { MachineAccessCards, MachineAgents, MachineFactsExtra, MachinePage } from "@/components/Machines";
+import { CommandBlock } from "@/components/machine-bits";
 import { PrefRow } from "@/components/NoticePrefs";
 import { useOrg } from "@/components/org-context";
 import { OrgMark } from "@/components/ProfilePhoto";
@@ -406,6 +408,12 @@ function ComputerPage({ machineId }: { machineId: string }) {
           text={pausedFromApps ?? (status.kind === "busy" ? taskLimitLine(t, d, tasksEditable) : null)}
         />
         {pausable && !pausable.remotePause && <span className="small muted">{t("machines.remotePause.outdated")}</span>}
+        {machine?.canManage && machine.update && (
+          <>
+            <span className="small muted">{t(`machines.runnerBehind.${machine.update}`, { computer: d.name })}</span>
+            {machine.update === "command" && <CommandBlock command={RUNNER_UPDATE_COMMAND} />}
+          </>
+        )}
         <Facts facts={facts} />
         {status.kind === "paused" && !pausedFromApps && <span className="small muted">{t("machines.pausedHint")}</span>}
         {more.length > 0 || extra || d.systemMode ? (

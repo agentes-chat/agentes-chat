@@ -248,6 +248,8 @@ export interface AuthConfig {
   mobileErrorReports?: ErrorReportsConfig | null;
   /** An outside chat surface is bridged (ADR 0187); whether I may link it is `surfaces.list().allowed`. */
   surface?: boolean;
+  /** A computer's own install at an address only that computer opens: its invitation links work nowhere else. */
+  localOnly?: boolean;
   /**
    * This address is one the server's operator registered (ADR 0194): the pages before sign-in show its look, and sign-in
    * is by email alone. Null or absent on any other address.
@@ -1662,7 +1664,8 @@ export interface Message {
   id: string;
   channelId: string;
   threadId: string | null;
-  author: { type: AuthorType; id: string | null };
+  /** `app`: an integration app (ADR 0251); `appAuthor(meta)` reads its name, color and sender. */
+  author: { type: AuthorType | "app"; id: string | null };
   body: string;
   mentionedAgentIds: string[];
   agentRunId: string | null;
@@ -1728,7 +1731,7 @@ export interface MessageReceipts {
     /** `failed` for another reason: why, as a run's error is worded (`runErrorText`). */
     errorCode?: string;
     errorParams?: Record<string, string>;
-    /** `waiting_input` because its AI provider is down: it retries by itself. */
+    /** `waiting_input` because its AI isn't answering (its provider down, or its computer refusing while online): it retries by itself. */
     outage?: true;
     /** `waiting_input` for its computer: in line for room (`queued`) or for it to come back (`away`). */
     computer?: "queued" | "away" | "line";
@@ -3505,7 +3508,7 @@ export interface ReplyRef {
   messageId: string;
   /** Its thread (null = the main timeline). */
   threadId: string | null;
-  author: { type: AuthorType; id: string | null };
+  author: { type: AuthorType | "app"; id: string | null };
   authorName: string;
   excerpt: string;
   /** What it quotes was a GIF or a sticker (ADR 0091): the quote says so where its excerpt is empty. */
@@ -5458,6 +5461,11 @@ export interface Machine {
   /** `system`: each agent works as its own OS user, in its own folder (ADR 0057). Absent on older servers: `single`. */
   mode?: "system" | "single";
   runnerVersion: string;
+  /**
+   * Its runner is behind this server: `command`, its owner runs `agentes-runner update` there; `installer`, the
+   * install command again, as root. Null or absent (an older server): nothing to update from here.
+   */
+  update?: "command" | "installer" | null;
   /** ADR 0110: its runner can hold browser profiles; `false`: update the computer. */
   browserProfiles?: boolean;
   /** `false`: started with `--no-exec` (files and uploads only). */
@@ -6294,7 +6302,8 @@ export type ThreadChange =
 
 /** A person or an agent in a thread (`id` null: someone who left). */
 export interface ThreadActor {
-  type: AuthorType;
+  /** `app`: an integration app (ADR 0251). */
+  type: AuthorType | "app";
   id: string | null;
 }
 
@@ -6752,7 +6761,7 @@ export interface AgentBrain {
    * computador" isn't listed. A plan thinks only for its owner's agents (ADR 0059).
    */
   accounts: MachineAccount[];
-  /** The viewer may add an account there for this agent: its owner, on a computer where they add accounts. */
+  /** The viewer may add an account there for this agent: its owner or who manages it, on a computer where they add accounts. */
   canManageAccounts: boolean;
   /** False while the app on the computer is too old for accounts (nothing about them shows). */
   accountsSupported: boolean;
@@ -9276,4 +9285,36 @@ export interface ComputerDeviceInput {
 export interface PhoneDeviceInput {
   name?: string;
   audience?: DeviceAudience;
+}
+
+/** An integration app (ADR 0251) as Settings › Integrations lists it. Its token is never shown again. */
+export interface IntegrationApp {
+  id: string;
+  name: string;
+  color: string;
+  channels: { channelId: string; canPost: boolean }[];
+  /** The live token's last four characters; null once revoked. */
+  tokenHint: string | null;
+  tokenCreatedAt: string | null;
+  webhookUrl: string | null;
+  webhookLastAt: string | null;
+  /** `http_<status>`, `network` or `address_refused`; null when the last delivery went through. */
+  webhookLastError: string | null;
+  createdByUserId: string | null;
+  createdAt: string;
+  lastUsedAt: string | null;
+}
+
+export interface IntegrationAppInput {
+  name: string;
+  color?: string;
+  channels: { channelId: string; canPost: boolean }[];
+  webhookUrl?: string | null;
+}
+
+/** What a change shows once: a new token, a new webhook signing secret. */
+export interface IntegrationAppSecrets {
+  app: IntegrationApp;
+  token?: string;
+  webhookSecret?: string | null;
 }

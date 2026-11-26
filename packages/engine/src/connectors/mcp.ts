@@ -1,4 +1,5 @@
 import { type ComposioClient, composioFile, FileTooLargeError } from "@agenteschat/adapters";
+import type { ToolImage } from "@agenteschat/providers";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type { FetchLike, Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
@@ -6,10 +7,11 @@ import type { jsonSchemaValidator } from "@modelcontextprotocol/sdk/validation/t
 import { ARTIFACT_LIMITS, type ArtifactDeps, createFileArtifact, fileBytesOf, fileReach } from "../artifacts";
 import { recordAudit } from "../audit";
 import { runAuthorityById } from "../authority";
+import { MODEL_IMAGE_BYTES, sniffModelImage } from "../avatars";
 import { CONFIDENTIAL_META_KEY } from "../confidential";
 import { connectorKeyOf } from "../connector-usage";
 import { signJwtHs256 } from "../crypto";
-import { cutText } from "../format";
+import { cutText, formatBytes } from "../format";
 import { type GitHubAppAccess, githubCallAuth, githubListingHeaders } from "../git/github-call";
 import { githubItemOfCall, recordGitHubItem } from "../git/github-events";
 import { creditedMessage, runCoAuthors, signatureLine, signedBody } from "../git/signature";
@@ -64,6 +66,8 @@ export interface McpTool {
 export interface McpCallResult {
   content: string;
   isError: boolean;
+  /** The result's `image` blocks the model is shown (`mcpPictures`). */
+  images?: ToolImage[];
   /** A Composio action's answer as Composio gave it (files and all), for `keepComposioFiles`. */
   data?: unknown;
   /** The result's own `_meta`, as the server sent it: what it says of its answer beside the content. */
@@ -107,6 +111,42 @@ const NO_OUTPUT_VALIDATION: jsonSchemaValidator = {
   getValidator: () => (input) => ({ valid: true, data: input as never, errorMessage: undefined }),
 };
 
+type McpContent = { type: string; text?: string; data?: unknown; mimeType?: unknown; resource?: { text?: unknown } };
+
+/**
+ * A result's `image` blocks as pictures for the model, up to `MODEL_IMAGE_BYTES` in all, each typed by its own bytes
+ * (the APIs refuse one sent under another type), and the words standing in each block's place, by its index.
+ */
+function mcpPictures(content: McpContent[]): { images: ToolImage[]; notes: Map<number, string> } {
+  const images: ToolImage[] = [];
+  const notes = new Map<number, string>();
+  let total = 0;
+  content.forEach((c, i) => {
+    if (c.type !== "image" || typeof c.data !== "string") return;
+    const bytes = Buffer.from(c.data, "base64");
+    const type = sniffModelImage(bytes);
+    if (!type) {
+      notes.set(
+        i,
+        `[image${typeof c.mimeType === "string" ? ` (${c.mimeType})` : ""}: not a PNG, JPEG, GIF or WebP, so not shown to you]`,
+      );
+      return;
+    }
+    if (total + bytes.byteLength > MODEL_IMAGE_BYTES) {
+      notes.set(
+        i,
+        `[image of ${formatBytes(bytes.byteLength)}: past the ${formatBytes(MODEL_IMAGE_BYTES)} of pictures an AI is shown at once, so not shown to you]`,
+      );
+      return;
+    }
+    total += bytes.byteLength;
+    // Encoded again: a server may wrap its base64 in lines, which an API refuses.
+    images.push({ mediaType: type, data: bytes.toString("base64") });
+    notes.set(i, "[image: shown to you with this result]");
+  });
+  return { images, notes };
+}
+
 /** Wraps an official MCP SDK client over any transport. */
 export async function mcpSessionOver(transport: Transport): Promise<McpSession> {
   const client = new Client({ name: "agentes.chat", version: "1" }, { jsonSchemaValidator: NO_OUTPUT_VALIDATION });
@@ -133,21 +173,27 @@ export async function mcpSessionOver(transport: Transport): Promise<McpSession> 
     },
     async callTool(name, args, meta) {
       const res = (await client.callTool({ name, arguments: args, ...(meta ? { _meta: meta } : {}) })) as {
-        content?: { type: string; text?: string; resource?: { text?: unknown } }[];
+        content?: McpContent[];
         isError?: boolean;
         structuredContent?: unknown;
         _meta?: Record<string, unknown>;
       };
+      const pictures = mcpPictures(res.content ?? []);
       // GitHub's `get_file_contents` sends the file itself as an embedded resource next to a one-line text block.
-      const parts = (res.content ?? []).map((c) =>
+      const parts = (res.content ?? []).map((c, i) =>
         c.type === "text"
           ? (c.text ?? "")
           : c.type === "resource" && typeof c.resource?.text === "string"
             ? c.resource.text
-            : `[${c.type}]`,
+            : (pictures.notes.get(i) ?? `[${c.type}]`),
       );
       if (parts.length === 0 && res.structuredContent !== undefined) parts.push(JSON.stringify(res.structuredContent));
-      return { content: parts.join("\n"), isError: res.isError === true, ...(res._meta ? { meta: res._meta } : {}) };
+      return {
+        content: parts.join("\n"),
+        isError: res.isError === true,
+        ...(pictures.images.length > 0 ? { images: pictures.images } : {}),
+        ...(res._meta ? { meta: res._meta } : {}),
+      };
     },
     serverInfo: () => (client.getServerVersion() as McpServerInfo | undefined) ?? null,
     instructions: () => client.getInstructions() ?? null,
@@ -664,6 +710,7 @@ export function createConnectorToolSource(
           return {
             content: result.content,
             isError: result.isError,
+            ...(result.images ? { images: result.images } : {}),
             data: { connector: "custom", serverId: connection.id, tool: tool.name, isError: result.isError },
             // Only a listed server's word counts: any other could lock a run by saying so.
             ...(vouched && result.meta?.[CONFIDENTIAL_META_KEY] === true ? { confidential: true as const } : {}),
@@ -753,6 +800,7 @@ export function createConnectorToolSource(
           return {
             content: result.content,
             isError: result.isError,
+            ...(result.images ? { images: result.images } : {}),
             data: { connector: def.id, tool: tool.name, isError: result.isError },
             ...(mapped.onSuccess && !result.isError
               ? {

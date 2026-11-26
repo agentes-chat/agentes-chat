@@ -16,6 +16,7 @@ import { cutMarked, cutText } from "./format";
 import { linkIssueToWork, setWorkIssueState } from "./issues";
 import { deliverLive, renderSteered } from "./live-steer";
 import { messageLink } from "./message-links";
+import { ownTyped } from "./message-origin";
 import { insertMessage, type Message, messageView, replyExcerpt } from "./messages";
 import { missionOfThread } from "./missions";
 import { enqueue } from "./outbox";
@@ -1304,9 +1305,12 @@ export async function followUpWork(
     const asks = await tx
       .select({
         id: messages.id,
+        authorType: messages.authorType,
         userId: messages.authorUserId,
         channelId: messages.channelId,
         threadId: messages.threadId,
+        origin: messages.origin,
+        meta: messages.meta,
       })
       .from(messages)
       .where(
@@ -1374,6 +1378,8 @@ export async function followUpWork(
               ...(work.title ? { title: work.title } : {}),
               ...(input.stopped ? { stopped: "1" } : {}),
               ...(home ? {} : { away: "1" }),
+              // Not all typed in our apps (ADR 0250): the run it wakes answers them, never learns from them as theirs.
+              ...(theirs.every(ownTyped) ? {} : { relayed: "1" }),
             },
           },
           trigger: run.trigger === "dm" ? "dm" : "mention",

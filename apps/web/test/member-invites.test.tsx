@@ -186,6 +186,28 @@ const link = (over: Partial<InviteLink> & Pick<InviteLink, "id">): InviteLink =>
 });
 
 describe("the invite dialog, one screen", () => {
+  test("a server only its own computer opens: Membros, Convites and the dialog say its invitations open for nobody else, and the way out", async () => {
+    const NOTE =
+      "Este servidor só abre no computador onde ele roda, então quem você convidar não consegue abrir o convite.";
+    const state = withSupport();
+    state.authConfig = { ...state.authConfig, localOnly: true };
+    await members(state);
+    expect(screen().getByRole("alert").textContent).toBe(NOTE);
+    const invite = await openInvite();
+    expect(within(invite).getByRole("alert").textContent).toBe(NOTE);
+    expect(invite.textContent).toContain(
+      "ligue Acessar pelo celular e pela equipe em Preferências\u00a0›\u00a0Servidores",
+    );
+    cleanup();
+    await members(state, "invites");
+    expect(screen().getByRole("alert").textContent).toBe(NOTE);
+    cleanup();
+    // Any other server: not a word of it.
+    await members(withSupport());
+    expect(document.body.textContent).not.toContain(NOTE);
+    expect((await openInvite()).textContent).not.toContain(NOTE);
+  });
+
   test("E-mail or Link on top, then Para, Cargo, Canais and Agentes: each label and its ⓘ over its field", async () => {
     await members(withSupport());
     const invite = await openInvite();

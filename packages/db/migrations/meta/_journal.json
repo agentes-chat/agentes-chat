@@ -2458,6 +2458,27 @@
       "when": 1795650395102,
       "tag": "0355_undelivered_emails",
       "breakpoints": true
+    },
+    {
+      "idx": 353,
+      "version": "7",
+      "when": 1795656752404,
+      "tag": "0356_message_origin",
+      "breakpoints": true
+    },
+    {
+      "idx": 354,
+      "version": "7",
+      "when": 1795664645136,
+      "tag": "0357_integration_apps",
+      "breakpoints": true
+    },
+    {
+      "idx": 355,
+      "version": "7",
+      "when": 1795664646136,
+      "tag": "0358_message_app_author",
+      "breakpoints": true
     }
   ]
 }

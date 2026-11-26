@@ -704,7 +704,7 @@ describe("the bar above the composer speaks for a hand-off (ADR 0095 addendum)",
     const { socket } = await open(withTalk(withAsk([c]), c));
     await push(socket, { ...asking, kind: "note" });
     await settle(2);
-    expect(bar()).toBe("Atlas está trabalhando…");
+    expect(bar()).toBe("Atlas ajudando a Ada…");
     expect(typingBar().getAttribute("data-consult")).toBe("work");
     // Its time is the lists' clock, never a question's "0:41".
     expect(typingBar().querySelector(".ac-typing__clock")).toBeNull();
@@ -748,7 +748,7 @@ describe("the bar above the composer speaks for a hand-off (ADR 0095 addendum)",
     await push(socket, { ...asking, kind: "note" });
     await settle(2);
     expect(document.querySelector(".handed-line")).not.toBeNull();
-    expect(bar()).toBe("Atlas está trabalhando…");
+    expect(bar()).toBe("Atlas ajudando a Ada…");
   });
 
   test("waiting on someone else's approval: quiet, with the wait's own clock", async () => {

@@ -612,11 +612,12 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
     // time once its worktree was ready (`codeAgentSql`) or gets it when the worktree becomes ready; never the router's.
     if (where?.kind === "code") return;
     if (!routing) return routed("none", [], []);
-    // In a mission's thread only its owner and deciders make the agent work (the router included).
-    if (message.threadId && message.authorUserId) {
+    // In a mission's thread only its owner and deciders make the agent work (the router included); an integration
+    // app is neither (ADR 0251).
+    if (message.threadId && (message.authorUserId || message.authorType === "app")) {
       const mission = await missionOfThread(deps.db, message.orgId, message.threadId);
       if (mission && ["proposed", "active", "paused", "awaiting_close"].includes(mission.status)) {
-        const role = await missionRole(deps.db, mission, message.authorUserId);
+        const role = message.authorUserId ? await missionRole(deps.db, mission, message.authorUserId) : "none";
         if (role !== "owner" && role !== "decide") return routed("none", [], [], "mission_read_only");
       }
     }
@@ -701,7 +702,8 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
           if (role === "owner" || role === "decide") await reactivateMission(missions, waiting, "message");
         }
       }
-      if (message.authorType !== "person") {
+      // A person's message and an integration app's (ADR 0251) go on below; this is an agent's.
+      if (message.authorType === "agent") {
         // Between agents only (`ask_agent`, ADR 0034): the consultation runs are started by the tool.
         if (where && isAgentOnlyDm(where)) return;
         // A notice is for its own agent (`deliverNotice` starts or joins its run), a no-AI card says why
@@ -1223,11 +1225,8 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
     },
     // A computer still away a while after its socket closed: who configures the workspace hears it (ADR 0241).
     [COMPUTER_DOWN_JOB]: async (job) => {
-      await noticeComputerDown(
-        { db: deps.db, pubsub: deps.pubsub, home: deps.email ? (deps.emailArt?.home ?? null) : null },
-        String(job.payload.machineId),
-        job.payload.stage === "email" ? "email" : "down",
-      );
+      // A job queued with `stage: "email"` before computer notices stopped mailing is one more "down" check.
+      await noticeComputerDown({ db: deps.db, pubsub: deps.pubsub }, String(job.payload.machineId));
     },
     // A computer in standby wanted awake a grace ago: still asleep, people see it down (ADR 0161).
     [WAKE_OVERDUE_JOB]: async (job) => {

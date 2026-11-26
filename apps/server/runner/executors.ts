@@ -13,6 +13,7 @@ import {
 } from "@agenteschat/adapters/machine-protocol";
 import { isOpencodeFreeModel, OPENCODE_FREE_MODELS } from "@agenteschat/providers/plans";
 import { type CodexSignIn, codexLoginStatusOf } from "./codex-sign-in";
+import { consoleText } from "./console-text";
 import { readSmallJson, writeJson } from "./json-file";
 import { usualDirs } from "./login-path";
 import { SHARED_BIN_ENV } from "./shared-folder";
@@ -77,9 +78,7 @@ export function resolveCommand(
   sharedBin = process.env[SHARED_BIN_ENV],
   platform: NodeJS.Platform = process.platform,
 ): string {
-  const picked = command.includes("/")
-    ? undefined
-    : (pickedCli(command) ?? (command === "codex" ? pickedCodex() : undefined));
+  const picked = pickedCommand(command);
   if (picked) return picked;
   // On Windows a program by its full path, so a spawn never looks in the current folder first (`findOnWindowsPath`);
   // a launcher (`.cmd`) stays a bare name for `cliSpawn`'s cmd.exe.
@@ -128,6 +127,10 @@ export function setCliPick(command: string, file: string | undefined, launch: re
   if (file && launch.length) cliLaunch.set(command, [...launch]);
   else cliLaunch.delete(command);
 }
+
+/** The file the runner starts for a bare `command` whatever the PATH: its own copy, or the `codex` its look chose. */
+export const pickedCommand = (command: string): string | undefined =>
+  command.includes("/") ? undefined : (pickedCli(command) ?? (command === "codex" ? pickedCodex() : undefined));
 
 /** The runner's own copy of `command`, while it is the one to run and still there. */
 export function pickedCli(command: string): string | undefined {
@@ -241,13 +244,7 @@ export function windowsShellLine(
  */
 export function npmNativeLauncher(
   launcher: string,
-  read: (file: string) => string | null = (file) => {
-    try {
-      return statSync(file).size < 4096 ? readFileSync(file, "utf8") : null;
-    } catch {
-      return null;
-    }
-  },
+  read: (file: string) => string | null = readLauncher,
   exists: (file: string) => boolean = isFile,
 ): string | null {
   if (win32.extname(launcher).toLowerCase() !== ".cmd") return null;
@@ -262,6 +259,42 @@ export function npmNativeLauncher(
   const exe = win32.join(win32.dirname(launcher), target);
   return exists(exe) ? exe : null;
 }
+
+/** A launcher's text, when it is small enough to be one; null otherwise or unreadable. */
+function readLauncher(file: string): string | null {
+  try {
+    return statSync(file).size < 4096 ? readFileSync(file, "utf8") : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * A Node script's launcher (npm's and pnpm's `claude.cmd`) runs the `node.exe` in its own folder, else a bare `node`
+ * from the PATH: true when it names that `node.exe` and neither is there.
+ */
+export function launcherNodeMissing(
+  launcher: string,
+  pathList: string,
+  pathExt: string | undefined,
+  read: (file: string) => string | null = readLauncher,
+  exists: (file: string) => boolean = isFile,
+): boolean {
+  if (!/%~?dp0%?\\node\.exe/i.test(read(launcher) ?? "")) return false;
+  return (
+    !exists(win32.join(win32.dirname(launcher), "node.exe")) && !findOnWindowsPath("node", pathList, pathExt, exists)
+  );
+}
+
+/**
+ * cmd.exe ending at once with its own code for a program it can't find (9009), and no words: its "not recognized"
+ * is in the system's language and comes with exit 1, so only this code reads as not installed everywhere.
+ */
+const notFoundRun = (): CliRun => ({
+  file: windowsShell(),
+  args: ["/d", "/c", "exit", "9009"],
+  env: { ...NO_CWD_LOOKUP },
+});
 
 /** How a CLI starts: the file, its argv, and what to add to its env (Windows: `windowsShellLine`'s). */
 export interface CliRun {
@@ -278,7 +311,8 @@ export interface CliRun {
  * `.cmd` launcher (npm's `claude.cmd`) through cmd.exe with every argument quoted (`windowsShellLine`), since Node's own
  * `shell: true` joins them as they are, so an empty one (`--setting-sources ""`) vanished and the next flag became its
  * value, and a path with a space split in two; unless the launcher only starts a native binary (`npmNativeLauncher`),
- * which then starts as an `.exe`. One not found still goes to cmd.exe, which says it isn't there (exit 9009).
+ * which then starts as an `.exe`. One not found, or a Node script's launcher with no `node` to run
+ * (`launcherNodeMissing`), ends as cmd.exe's not found (`notFoundRun`).
  * Elsewhere, and for a launcher: the file and its argv, no shell.
  */
 export function cliSpawn(
@@ -303,19 +337,17 @@ export function cliSpawn(
       : { file: own, args: [...launch, ...args] };
   }
   if (platform === "win32" && command.length === 1) {
-    const found = findOnWindowsPath(
-      file,
-      pathList ?? envValue(process.env, "PATH", platform) ?? "",
-      lookup.pathExt ?? envValue(process.env, "PATHEXT", platform),
-      lookup.exists,
-    );
+    const path = pathList ?? envValue(process.env, "PATH", platform) ?? "";
+    const pathExt = lookup.pathExt ?? envValue(process.env, "PATHEXT", platform);
+    const found = findOnWindowsPath(file, path, pathExt, lookup.exists);
     const exe = !found
       ? null
       : /\.(?:exe|com)$/i.test(found)
         ? found
         : npmNativeLauncher(found, lookup.read, lookup.exists);
     if (exe) return { file: exe, args: [...args], env: { ...NO_CWD_LOOKUP } };
-    return windowsShellLine(found ?? file, args);
+    if (!found || launcherNodeMissing(found, path, pathExt, lookup.read, lookup.exists)) return notFoundRun();
+    return windowsShellLine(found, args);
   }
   return { file: resolveCommand(file, pathList), args: [...pre, ...args] };
 }
@@ -327,14 +359,14 @@ const defaultRun: Run = (command, args) =>
       run.file,
       run.args,
       {
-        encoding: "utf8",
+        encoding: "buffer",
         timeout: 8000,
         maxBuffer: 1024 * 1024,
         windowsHide: true,
         env: run.env ? { ...process.env, ...run.env } : process.env,
         windowsVerbatimArguments: run.windowsVerbatimArguments,
       },
-      (err, stdout, stderr) => resolve(execResult(err, stdout, stderr)),
+      (err, stdout, stderr) => resolve(execResult(err, consoleText(stdout), consoleText(stderr))),
     );
   });
 
@@ -624,14 +656,26 @@ export function codexCandidates(
   pathList = process.env.PATH ?? "",
   platform: NodeJS.Platform = process.platform,
   sharedBin = process.env[SHARED_BIN_ENV],
+  ownHome: string | null = codexForAgents ? homedir() : null,
 ): string[] {
   if (platform === "win32") return [];
-  const dirs = [...pathList.split(delimiter), ...usualDirs()].filter((d) => isAbsolute(d) && d !== sharedBin);
+  const dirs = [...pathList.split(delimiter), ...usualDirs()].filter(
+    (d) => isAbsolute(d) && d !== sharedBin && !(ownHome && d.startsWith(`${ownHome}/`)),
+  );
   // The runner's own copy (`setCliPick`) too: it is there because the person's is older, so the newest wins it.
   const copy = cliPicks.get("codex");
   return [...new Set([...dirs.map((d) => join(d, "codex")), ...(copy ? [copy] : [])])].filter(
     (f) => isFile(f) && isExecutable(f),
   );
+}
+
+/**
+ * System mode: agents' users start the `codex` the look chooses (`resolveCommand`), so one in the runner's own home,
+ * which they can't enter, is never a candidate; it is `CLI_HOME_ONLY` instead.
+ */
+let codexForAgents = false;
+export function setCodexForAgents(system: boolean) {
+  codexForAgents = system;
 }
 
 /**
@@ -723,8 +767,15 @@ async function detectVersion(run: Run, name: "claude" | "codex"): Promise<Probe>
   return auth ? { entry: { version, ...auth } } : { entry: { version }, unsure: true };
 }
 
-/** The CLIs whose installers put them in the home's `~/.local/bin`, by their command. */
-const HOME_INSTALLED = { cursor: CURSOR_BIN, grok: GROK_BIN, antigravity: AGY_BIN } as const;
+/** Each CLI by its command: any of them may be in the home's own install folders (`~/.local/bin`…) only. */
+const HOME_INSTALLED = {
+  claude: "claude",
+  codex: "codex",
+  cursor: CURSOR_BIN,
+  opencode: OPENCODE_BIN,
+  grok: GROK_BIN,
+  antigravity: AGY_BIN,
+} as const;
 
 /** `bin` in the install folders under `home` (`~/.local/bin`…), which other users can't reach; null: none there. */
 export function inHomeDirs(bin: string, home = homedir(), isExe: (file: string) => boolean = isExecutable) {
@@ -825,6 +876,8 @@ export function cachedExecutors(
     homeOnly?: (bin: string) => boolean;
     /** How the computer's own Codex is signed in (`readCodexAccount`); left out, only its version. */
     codexSignIn?: CodexSignInProbe;
+    /** System mode: each look as the agents reach it (`agentsReach`), never what root alone can start. */
+    reach?: (found: Executors) => Promise<Executors>;
   } = {},
 ): ExecutorsCache {
   const now = opts.now ?? Date.now;
@@ -843,6 +896,7 @@ export function cachedExecutors(
       .then(() =>
         detectExecutors(opts.run, value, strikes, opts.gitMissing, undefined, opts.homeOnly, opts.codexSignIn),
       )
+      .then(async (look) => (opts.reach ? { ...look, found: await opts.reach(look.found) } : look))
       .then(({ found, unsure }) => {
         at = now();
         retry = unsure ? Math.min(retry ? retry * 2 : EXECUTORS_RETRY_MS, EXECUTORS_TTL_MS) : 0;

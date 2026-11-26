@@ -573,7 +573,7 @@
       "here": "Di komputer ini"
     },
     "whyPaid": "Kenapa berbayar?",
-    "whyPaidText": "Cloud mencakup komputer agen yang selalu menyala dan pihak yang merawat servernya. Menjalankan di server sendiri gratis."
+    "whyPaidText": "Cloud mencakup komputer agen yang selalu menyala dan pihak yang merawat servernya. Komputermu sendiri yang terhubung ke workspace Cloud tidak menggantikan paket. Menjalankan agentes.chat di server atau komputermu sendiri gratis."
   },
   "auth": {
     "email": "Email",
@@ -2080,7 +2080,7 @@
       },
       "computers": {
         "title": "Komputer",
-        "help": "Komputer bergabung, siap, atau berhenti merespons"
+        "help": "Komputer bergabung atau siap"
       },
       "reactions": {
         "title": "Reaksi",
@@ -2829,7 +2829,7 @@
     "passed_other": "Tidak ada yang menjawab",
     "failed_other": "{{names}} tidak bisa menjawab",
     "asking_other": "{{names}} menunggu jawaban",
-    "outage_other": "{{names}}: penyedia AI sedang gangguan · mencoba lagi sendiri",
+    "outage_other": "{{names}}: AI tidak menjawab · mencoba lagi sendiri",
     "queued_other": "{{names}} dalam antrean",
     "away_other": "{{names}} menunggu komputer",
     "plan_other": "{{names}} sedang menunggu paket",
@@ -2843,7 +2843,7 @@
       "claimed": "Sedang menjawab",
       "waiting": "Menunggu persetujuan",
       "asking": "Menunggu jawaban",
-      "outage": "Penyedia AI sedang gangguan · mencoba lagi sendiri",
+      "outage": "AI tidak menjawab · mencoba lagi sendiri",
       "queued": "Dalam antrean",
       "away": "Menunggu komputer",
       "plan": "Menunggu paket",
@@ -3375,7 +3375,7 @@
         "ended": "Saya akan menjawab di sini setelah workspace berlangganan agentes.chat lagi."
       },
       "askAdmin": "Saya akan menjawab di sini setelah admin membereskan paket agentes.chat.",
-      "plan": "Paket ini membawa komputer agen. AI-nya yang sudah kamu bayar: Claude, ChatGPT dan lainnya, atau kunci API.",
+      "plan": "Paket ini membawa komputer agen. AI-nya yang sudah kamu bayar: Claude, ChatGPT dan lainnya, atau kunci API. Komputermu sendiri yang terhubung di sini tidak menggantikan paket. Menjalankan agentes.chat di server atau komputermu sendiri gratis.",
       "activeTitle": "Paket aktif",
       "activeLine": "Hubungkan AI dan {{name}} menjawab di sini.",
       "receipt": "Disimpan",
@@ -4293,7 +4293,7 @@
       "queued_computer": "Dalam antrean",
       "waiting_plan": "Menunggu paket",
       "waiting_budget": "Menunggu anggaran diatur ulang",
-      "provider_down": "Penyedia AI sedang gangguan · mencoba lagi sendiri",
+      "provider_down": "AI tidak menjawab · mencoba lagi sendiri",
       "out_of_plan": "Batas paket habis",
       "out_of_budget": "Anggaran bulan ini habis",
       "out_of_planShort": "Batas habis",
@@ -4456,7 +4456,7 @@
     "computerAway": "Komputer {{agent}} tidak merespons saat ini. Permintaan ini tetap terbuka sampai {{time}}. Coba lagi sebentar lagi.",
     "computerPaused": "Komputer {{agent}} dijeda oleh pemiliknya. Permintaan ini tetap terbuka sampai {{time}}.",
     "insecureContext": "Halaman ini tidak dibuka lewat https, jadi browser tidak mengunci kuncinya. Buka di https:// (atau localhost).",
-    "failed": "Tidak bisa dikirim. Apakah komputer agen menyala?",
+    "failed": "Tidak bisa dikirim. Kirim lagi. Kalau masih gagal, minta {{agent}} memintanya lagi.",
     "changed": "Permintaan ini berubah saat kamu menjawab. Tidak ada yang terkirim. Kirim lagi.",
     "empty": "Ketik nilainya.",
     "tooLarge": "Terlalu besar (maks. 16 KB)."
@@ -4502,6 +4502,24 @@
       "agents_other": "{{count}} agen",
       "used": "Digunakan {{when}}",
       "never": "Belum pernah digunakan"
+    },
+    "bulk": {
+      "select": "Pilih",
+      "selection": "Item terpilih",
+      "selected_other": "{{count}} dipilih",
+      "selectAll_other": "Pilih semua {{count}}",
+      "clear": "Berhenti memilih",
+      "access": "Ubah akses",
+      "accessTitle_other": "Akses untuk {{count}} item",
+      "accessText": "Setiap item yang dipilih mendapat akses ini.",
+      "accessGo_other": "Terapkan ke {{count}} item",
+      "accessDone_other": "Akses diubah untuk {{count}} item",
+      "delete": "Hapus",
+      "deleteTitle_other": "Hapus {{count}} item?",
+      "deleteText": "Agenmu tidak bisa menggunakannya lagi. Ini tidak bisa diurungkan.",
+      "deleteGo_other": "Hapus {{count}}",
+      "deleted_other": "{{count}} item dihapus dari Vault",
+      "kept_other": "{{count}} dari pengelola kata sandi tetap ada. Hapus di sana."
     },
     "kind": {
       "login": "Login",
@@ -4701,7 +4719,6 @@
       },
       "as": "Simpan sebagai",
       "asPersonal": "Hanya kamu yang akan melihatnya.",
-      "asTeam": "Semua orang di ruang kerja melihatnya. Pilih agen untuk masing-masing setelah itu.",
       "deleteFile": "Hapus file setelahnya: file itu berisi kata sandimu tanpa enkripsi.",
       "confirm_other": "Impor {{count}}",
       "done_other": "{{count}} login diimpor",
@@ -5359,7 +5376,8 @@
       "provider_unavailable": "model tidak menjawab",
       "gave_up": "model tidak menjawab setelah beberapa kali dicoba",
       "missing_credential": "kunci API tidak ada",
-      "credential_revoked": "kunci API dicabut"
+      "credential_revoked": "kunci API dicabut",
+      "credential_unreadable": "kunci API yang disimpan tidak bisa dibuka"
     },
     "youReplied": "Kamu membalas: {{text}}",
     "actions": "Tindakan",
@@ -6276,6 +6294,7 @@
         "interrupted": "Terputus karena server dimulai ulang.",
         "missing_credential": "Ruang kerja tidak punya kunci {{provider}}.",
         "credential_revoked": "Kunci agen ini sudah dicabut.",
+        "credential_unreadable": "Kunci API yang disimpan tidak bisa dibuka, biasanya karena rahasia server berubah setelah kunci itu disimpan. Tempel lagi kuncinya di Kunci AI.",
         "credential_wrong_provider": "Modelnya dari {{modelProvider}}, tapi kuncinya dari {{keyProvider}}.",
         "model_unlisted": "OpenRouter tidak lagi menyediakan {{model}}. Pilih model lain di pengaturan agen.",
         "no_ai": "Agen ini tidak punya AI yang tersedia.",
@@ -6659,6 +6678,7 @@
         "desc": "Semua agen membaca ini. Kamu bisa mengubahnya kapan saja.",
         "line": "Dalam satu kalimat",
         "optional": "Opsional. Tanpa kalimat, jenis yang kamu pilih yang dipakai.",
+        "otherNeeded": "Dengan Lainnya, tulis di sini apa yang kalian kerjakan untuk melanjutkan.",
         "todoPersonal": "Ceritakan sedikit tentang dirimu.",
         "todoDescPersonal": "Semua agenmu membaca ini.",
         "donePersonal": "Saya sudah sedikit mengenalmu",
@@ -7651,6 +7671,9 @@
     "link": "Tautan",
     "linkEmpty": "Buat tautan untuk menyalinnya",
     "linkFailed": "Tautan tidak bisa dibuat. {{cause}}",
+    "localOnly": "Server ini hanya terbuka di komputer tempat ia berjalan, jadi orang yang kamu undang tidak bisa membuka undangannya.",
+    "localOnlyHow": "Di aplikasi agentes.chat pada komputer itu, nyalakan Akses dari ponselmu dan rekan tim di Preferensi › Server, atau jalankan agentes.chat di server yang bisa mereka buka. Lalu undang mereka.",
+    "localOnlyHere": "Nyalakan Akses dari ponselmu dan rekan tim. Lalu undang mereka.",
     "never": "Tidak kedaluwarsa",
     "untilDate": "Sampai {{date}}",
     "validFor": "Berlaku {{ttl}} sejak dibuat.",
@@ -7729,11 +7752,12 @@
     "noOrgBack": "Kembali ke ruang kerjamu",
     "crashTitle": "Ada yang salah",
     "crashText": "Muat ulang halaman untuk melanjutkan.",
-    "crashCode": "Kalau kamu minta bantuan, sebutkan kode {{id}}.",
+    "supportCode": "Kode untuk dukungan",
     "unreachableTitle": "agentes.chat tidak bisa dijangkau",
     "unreachableText": "Mungkin sedang dimulai ulang. Halaman ini terbuka sendiri begitu kembali normal.",
     "offlineTitle": "Kamu sedang offline",
     "offlineText": "Halaman ini terbuka sendiri saat kamu kembali online.",
+    "waitingConnection": "Menunggu koneksi kembali",
     "unknownHostTitle": "Alamat ini belum disiapkan",
     "unknownHostText": "Kalau baru saja dihubungkan, coba lagi dalam beberapa menit.",
     "unknownHostTab": "Alamat belum disiapkan · agentes.chat"
@@ -9027,6 +9051,7 @@
       "stuck": "Dihentikan karena macet",
       "missing_credential": "Kunci API tidak ada",
       "credential_revoked": "Kunci API dicabut",
+      "credential_unreadable": "Kunci API yang disimpan tidak bisa dibuka",
       "credential_wrong_provider": "Kunci API berasal dari penyedia lain",
       "model_unlisted": "OpenRouter sudah tidak menyediakan model ini",
       "agent_archived": "Agennya diarsipkan",
@@ -10953,7 +10978,9 @@
     "notice": {
       "only": "{{name}} hanya membalas {{names}}.",
       "some": "{{name}} hanya membalas beberapa orang.",
-      "nobody": "{{name}} sedang tidak membalas siapa pun."
+      "nobody": "{{name}} sedang tidak membalas siapa pun.",
+      "noTalk": "Peranmu tidak mencakup “Bicara dengan agen”. Admin bisa menambahkannya ke salah satu peranmu.",
+      "planOwnerOnly": "{{name}} berpikir dengan paket yang hanya menjawab pemiliknya. Orang yang mengurus {{name}} bisa menyalakan “Menjawab orang lain” di halaman {{name}}."
     }
   },
   "editors": {
@@ -11073,6 +11100,8 @@
       "on": "Pesan suara",
       "onHelp": "Orang di ruang kerja ini bisa mengirim audio di percakapan.",
       "noEngine": "Pesan suara belum tersedia di sini.",
+      "noEngineAsk": "Pesan suara belum menyala. Yang mengelola server ini menyalakannya, di halaman ini juga.",
+      "noEngineHere": "Pesan suara menyala setelah kamu memilih di bawah apa yang mengubah suara menjadi teks.",
       "engineTitle": "Yang mengubah suara menjadi teks",
       "own": "Server milikmu sendiri",
       "ownHelp": "Whisper atau Parakeet di mesinmu. Audionya tetap di sana.",
@@ -13370,6 +13399,26 @@
         "1": "Mencari log dan metrik",
         "2": "Melihat monitor dan insiden"
       },
+      "datadog_us3": {
+        "1": "Mencari log dan metrik",
+        "2": "Melihat monitor dan insiden"
+      },
+      "datadog_us5": {
+        "1": "Mencari log dan metrik",
+        "2": "Melihat monitor dan insiden"
+      },
+      "datadog_eu": {
+        "1": "Mencari log dan metrik",
+        "2": "Melihat monitor dan insiden"
+      },
+      "datadog_ap1": {
+        "1": "Mencari log dan metrik",
+        "2": "Melihat monitor dan insiden"
+      },
+      "datadog_ap2": {
+        "1": "Mencari log dan metrik",
+        "2": "Melihat monitor dan insiden"
+      },
       "grafana": {
         "1": "Melihat dashboard, metrik, dan log",
         "2": "Membuat dashboard dan peringatan"
@@ -13671,7 +13720,12 @@
       "cloudflare_bindings": "Cloudflare (Workers)",
       "cloudflare_observability": "Cloudflare (log)",
       "supabase_readonly": "Supabase (hanya baca)",
-      "intercom_eu": "Intercom (UE)"
+      "intercom_eu": "Intercom (UE)",
+      "datadog_us3": "Datadog (US3)",
+      "datadog_us5": "Datadog (US5)",
+      "datadog_eu": "Datadog (EU)",
+      "datadog_ap1": "Datadog (AP1)",
+      "datadog_ap2": "Datadog (AP2)"
     },
     "descriptions": {
       "github": "Kode, PR, issue, dan Actions.",
@@ -13709,6 +13763,11 @@
       "vercel": "Proyek, deployment, dan log.",
       "railway": "Proyek, layanan, deploy, dan log.",
       "datadog": "Log, metrik, monitor, dan insiden (situs US1).",
+      "datadog_us3": "Log, metrik, monitor, dan insiden (situs US3, us3.datadoghq.com).",
+      "datadog_us5": "Log, metrik, monitor, dan insiden (situs US5, us5.datadoghq.com).",
+      "datadog_eu": "Log, metrik, monitor, dan insiden (situs EU, app.datadoghq.eu).",
+      "datadog_ap1": "Log, metrik, monitor, dan insiden (situs AP1, ap1.datadoghq.com).",
+      "datadog_ap2": "Log, metrik, monitor, dan insiden (situs AP2, ap2.datadoghq.com).",
       "grafana": "Dashboard, metrik, log, dan peringatan Grafana Cloud.",
       "postman": "Ruang kerja, koleksi, dan API.",
       "jam": "Laporan bug: rekaman, log console, dan request network.",
@@ -15881,6 +15940,7 @@
       "noSkillMd": "Tidak ada SKILL.md di {{path}} atau folder di dalamnya.",
       "tooManySkills": "Tautan ini memuat lebih dari {{max}} skill. Tautkan salah satu foldernya.",
       "zipTooManySkills": "File .zip ini memuat lebih dari {{max}} skill. Kirim dalam beberapa bagian.",
+      "zipTooBig": "File .zip ini lebih dari {{maxMb}} MB, batas untuk memasang satu skill.",
       "invalidName": "Nama harus memakai huruf kecil, angka, dan tanda hubung, maksimal {{max}} karakter.",
       "invalidDescription": "Deskripsi harus terdiri dari 1 sampai {{max}} karakter.",
       "tooLarge": "Skill ini punya {{size}} MB teks dan skrip, dan batasnya {{max}} MB.",
@@ -15912,6 +15972,7 @@
     },
     "rightHand": {
       "permanent": "Tangan kanan adalah bagian dari ruang kerja dan tetap di luar kanal. Sebuah @sebutan menjangkaunya di kanal mana pun.",
+      "computer": "Tangan kanan selalu memakai komputer milik ruang kerja sendiri, jadi komputer lain tidak bisa dipilih untuknya. Buat agen untuk bekerja di komputer ini.",
       "updateApp": "Aplikasi ini terlalu lama untuk menerapkan kartu ini. Perbarui aplikasinya atau lakukan perubahan di Pengaturan.",
       "nobodyNew": "Semua orang di kartu ini sudah ada di sini atau sudah diundang. Abaikan kartunya atau kirim ulang undangan di Anggota dan undangan."
     },
@@ -16056,6 +16117,10 @@
       "outdated": "Perbarui aplikasi agentes.chat di komputer ini untuk menjedanya dari sini.",
       "paused": "{{name}} dijeda",
       "resumed": "{{name}} kembali bekerja"
+    },
+    "runnerBehind": {
+      "command": "Program agentes.chat di {{computer}} sudah usang, jadi beberapa hal tidak berfungsi di sana. Untuk memperbaruinya, jalankan ini di sana:",
+      "installer": "Program agentes.chat di {{computer}} sudah usang, jadi beberapa hal tidak berfungsi di sana. Untuk memperbaruinya, jalankan lagi perintah instalasi di sana, sebagai root."
     },
     "seenNow": "terhubung sekarang",
     "seen": "terlihat {{when}}",
@@ -16966,6 +17031,62 @@
     "denied": "Komputer tidak dihubungkan. Kalau bukan kamu yang membukanya, tidak ada yang mendapat akses.",
     "home": "Ke agentes"
   },
+  "integrations": {
+    "badge": "App",
+    "unknownApp": "Sebuah app",
+    "appTip": "{{name}} adalah app yang terhubung ke ruang kerja ini. App ini memposting sebagai dirinya sendiri, tidak pernah sebagai orang.",
+    "sender": "dari {{sender}}",
+    "senderTip": "Ditulis oleh {{sender}} di luar agentes.chat. {{name}} meneruskannya.",
+    "connect": "Hubungkan app",
+    "emptyTitle": "Belum ada app",
+    "empty": "Bot dukungan, formulir, atau monitor memposting di sini sebagai dirinya sendiri, dengan token sendiri.",
+    "api": "Alamat yang dipanggil app",
+    "apiHelp": "API dan alamat MCP, dengan token app sebagai Bearer.",
+    "apiCopied": "Alamat disalin",
+    "help": "Cara menghubungkan bot dukungan",
+    "name": "Nama",
+    "color": "Warna",
+    "colorOf": "Warna {{color}}",
+    "channels": "Kanal",
+    "channelsHelp": "App membaca balasan agen di tempat ia memposting.",
+    "channelsEmpty": "Ruang kerja ini belum punya kanal.",
+    "access": {
+      "none": "Tanpa akses",
+      "read": "Membaca",
+      "post": "Membaca dan memposting"
+    },
+    "webhook": "Alamat webhook",
+    "webhookHelp": "Balasan agen di sini dikirim ke alamat ini, ditandatangani. Kosong: app membacanya lewat API.",
+    "save": "Simpan",
+    "create": "Hubungkan",
+    "edit": "Edit",
+    "actions": "Tindakan untuk {{name}}",
+    "newToken": "Token baru",
+    "revoke": "Cabut token",
+    "newSecret": "Rahasia webhook baru",
+    "remove": "Hapus",
+    "tokenTitle": "Token {{name}}",
+    "secretTitle": "Rahasia webhook {{name}}",
+    "secretUse": "Gunakan untuk memeriksa header webhook-signature setiap pengiriman (Standard Webhooks).",
+    "secretCopied": "Rahasia disalin",
+    "tokenUse": "App mengirimnya sebagai Authorization: Bearer di setiap panggilan.",
+    "revokeTitle": "Cabut token {{name}}?",
+    "revokeText": "App langsung berhenti memposting dan membaca, sampai kamu membuat token baru.",
+    "newTokenTitle": "Buat token baru untuk {{name}}?",
+    "newTokenText": "Token saat ini langsung tidak berlaku.",
+    "newSecretTitle": "Buat rahasia webhook baru untuk {{name}}?",
+    "newSecretText": "Pengiriman langsung ditandatangani dengan rahasia baru. Pasang di aplikasi, atau pemeriksaan tanda tangannya gagal.",
+    "removeTitle": "Hapus {{name}}?",
+    "removeText": "Pesannya tetap ada. App tidak bisa memposting atau membaca lagi.",
+    "removed": "{{name}} dihapus",
+    "revoked": "Token dicabut",
+    "facts": {
+      "token": "Token berakhiran {{hint}}",
+      "noToken": "Tanpa token",
+      "channels_other": "{{count}} kanal",
+      "webhookFailed": "Webhook gagal ({{why}})"
+    }
+  },
   "apps": {
     "connect": "Hubungkan aplikasi",
     "server": "Alamat server",
@@ -17336,6 +17457,8 @@
         "item_created": "Menyimpan item ke Vault",
         "item_changed": "Mengubah item Vault",
         "item_deleted": "Menghapus item Vault",
+        "items_changed_other": "Mengubah siapa yang punya akses ke {{count}} item Vault",
+        "items_deleted_other": "Menghapus {{count}} item Vault",
         "item_moved": "Memindahkan item Vault antara Pribadi dan Tim",
         "item_used": "Menggunakan item Vault",
         "imported": "Mengimpor kata sandi ke Vault",
@@ -17485,6 +17608,7 @@
       "billing": "Paket dan tagihan",
       "media": "GIF dan stiker",
       "voice": "Suara",
+      "integrations": "Integrasi",
       "apps": "Aplikasi AI",
       "approvals": "Persetujuan",
       "about": "Tentang agentes.chat",
@@ -17516,6 +17640,7 @@
       "billing": "Paket, kartu, dan tagihan, di halaman kami di luar aplikasi.",
       "media": "Apa yang bisa dikirim di percakapan, serta GIF dan stiker agen.",
       "voice": "Pesan suara di percakapan, dan siapa yang mengubah suara menjadi teks.",
+      "integrations": "App yang memposting di kanal sebagai dirinya sendiri, seperti bot dukungan.",
       "apps": "Minta tugas ke agen dari Claude, Cursor, dan aplikasi lain.",
       "approvals": "Siapa yang memutuskan untukmu saat agen meminta persetujuanmu.",
       "about": "Siapa pembuatnya, lisensinya, dan letak kode sumbernya.",
@@ -18127,9 +18252,9 @@
   },
   "work": {
     "handed": {
-      "lead": "Diserahkan ke <0/>{{name}}",
-      "working": "sedang dikerjakan",
-      "done": "selesai dalam {{duration}}",
+      "lead": "Diserahkan ke <0>{{name}}</0>",
+      "working": "sedang bekerja",
+      "ready": "selesai",
       "waitingYou": "menunggu jawabanmu",
       "waiting": "menunggu jawaban",
       "waitingApprovalYou": "menunggu persetujuanmu",
@@ -18267,6 +18392,7 @@
       "doing": "{{name}} {{doing}}",
       "yourApproval": "{{name}} menunggu persetujuanmu",
       "yourAnswer": "{{name}} menunggu jawabanmu",
+      "helping": "{{to}} membantu {{from}}",
       "done": "{{to}} sudah selesai. {{from}} sedang menulis",
       "notDone": "{{to}} tidak selesai. {{from}} sedang menulis",
       "handedOff": "{{to}} mengerjakan yang diserahkan {{from}}"
@@ -18287,7 +18413,7 @@
       "waitingApproval": "{{name}} sedang menunggu persetujuan",
       "waitingInput": "{{name}} sedang menunggu jawaban",
       "waitingComputer": "{{name}} sedang menunggu komputernya",
-      "waitingProvider": "{{name}}: penyedia AI sedang down · mencoba lagi sendiri",
+      "waitingProvider": "{{name}}: AI tidak menjawab · mencoba lagi sendiri",
       "waitingAgents": "{{name}} menyerahkan sebagian dan sedang menunggu kabar",
       "queued": "{{name}} dalam antrean"
     },
@@ -18298,7 +18424,7 @@
       "waitingApproval": "menunggu persetujuan",
       "waitingInput": "menunggu jawaban",
       "waitingComputer": "menunggu komputernya",
-      "waitingProvider": "penyedia AI sedang gangguan",
+      "waitingProvider": "AI tidak menjawab",
       "waitingYourApproval": "menunggu persetujuanmu",
       "waitingYourAnswer": "menunggu jawabanmu",
       "queued": "dalam antrean",
@@ -18736,6 +18862,7 @@
       "brain_unavailable_commands_off": "{{brain}} dimatikan di komputerku. Aku akan menjawab setelah orang yang mengurusnya menyalakannya.",
       "brain_unavailable_outdated": "Program di komputerku perlu diperbarui agar {{brain}} bisa menjawab. Aku akan menjawab begitu sudah diperbarui.",
       "brain_unavailable_plan_owner": "{{brain}} akan berpikir dengan paket yang bukan milik pemilikku, jadi tidak kupakai. Hubungkan akun pemilikku di halamanku.",
+      "brain_unavailable_shared_login": "Komputerku belum bisa memakai login Claude untuk semua agen sekarang. Aku akan menjawab begitu bisa. Kalau terus gagal, hubungkan Claude lagi di Akun AI.",
       "provider_unavailable": "Penyedia AI-ku sedang tidak merespons. Aku akan menjawab begitu ia kembali.",
       "provider_wait_rate_limit": "{{provider}} sedang membatasi permintaan dari kunci ini. Aku akan menjawab begitu diizinkan.",
       "provider_wait_down": "{{provider}} sedang mati atau kelebihan beban. Aku akan menjawab begitu ia kembali.",
@@ -19072,7 +19199,7 @@
     },
     "offer_install_skill": {
       "label": "Tawarkan memasang skill",
-      "description": "Memposting kartu yang tombolnya membuka pemasangan dengan tautan skill sudah terisi."
+      "description": "Memposting kartu yang tombolnya membuka pemasangan dengan skill yang sudah dibaca dari tautan atau .zip-nya."
     },
     "update_skill_from_source": {
       "label": "Perbarui skill dari tautannya",
@@ -20536,7 +20663,7 @@
       "budgetSoon": "Menunggu sebentar anggaran {{name}}",
       "computer": "Menunggu komputer {{name}}",
       "busy": "Menunggu tempat di komputer {{name}}",
-      "provider": "Menunggu penyedia AI {{name}}, percobaan berikutnya {{when}}"
+      "provider": "Menunggu AI {{name}} menjawab, percobaan berikutnya {{when}}"
     },
     "menu": {
       "label": "Lainnya",
@@ -20563,7 +20690,8 @@
     },
     "add": {
       "label": "Tambah widget",
-      "short": "Widget"
+      "short": "Widget",
+      "word": "Tambah"
     },
     "alert": {
       "label": "Beri tahu saya kalau ada yang tidak beres",

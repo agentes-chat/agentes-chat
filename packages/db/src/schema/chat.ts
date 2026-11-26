@@ -203,7 +203,17 @@ export const channelPermissionOverrides = pgTable(
   ],
 );
 
-export const authorTypeEnum = pgEnum("author_type", ["person", "agent"]);
+/** `app`: an integration app (ADR 0251), never a person; which one is in the server-set `meta.app`. */
+export const authorTypeEnum = pgEnum("author_type", ["person", "agent", "app"]);
+
+/**
+ * How a message reached the server (ADR 0250). Only `app` (typed in our own web, desktop or phone app through a
+ * signed-in session) is a person's own words: `mcp` (an AI app or a script with a personal token) and `surface` (an
+ * outside chat bridged in, ADR 0187) may carry anyone's text under the person's name. `system`: written by the server
+ * (a routine's brief, a notice, a root). `integration`: posted by an integration app as itself (ADR 0251). `unknown`:
+ * written before origins were recorded, never trusted as anyone's.
+ */
+export type MessageOrigin = "app" | "mcp" | "surface" | "agent" | "system" | "integration" | "unknown";
 
 /**
  * Chat messages. Partitioned by month on `created_at` (see migration 0000 and
@@ -211,7 +221,8 @@ export const authorTypeEnum = pgEnum("author_type", ["person", "agent"]);
  * `created_at` and no table can hold a foreign key to a message: references
  * such as `thread_id` and `agent_runs.trigger_message_id` are plain uuids.
  *
- * Author is polymorphic: a person (`author_user_id`) or an agent (`author_agent_id`).
+ * Author is polymorphic: a person (`author_user_id`), an agent (`author_agent_id`) or an integration app (neither;
+ * `meta.app` names it).
  */
 export const messages = pgTable(
   "messages",
@@ -248,6 +259,8 @@ export const messages = pgTable(
     agentRunId: uuid(),
     /** Structured attachments, e.g. `{ "approvalId": "…" }` for an approval card. */
     meta: jsonb().$type<Record<string, unknown>>().notNull().default({}),
+    /** How it reached the server (`MessageOrigin`); set by the server, never by a client. */
+    origin: text().$type<MessageOrigin>().notNull().default("unknown"),
     editedAt: timestamp({ withTimezone: true }),
     deletedAt: timestamp({ withTimezone: true }),
   },
@@ -265,7 +278,7 @@ export const messages = pgTable(
     index().on(t.agentRunId).where(sql`${t.agentRunId} is not null`),
     check(
       "messages_author",
-      sql`(${t.authorType} = 'person' and ${t.authorAgentId} is null) or (${t.authorType} = 'agent' and ${t.authorUserId} is null)`,
+      sql`(${t.authorType} = 'person' and ${t.authorAgentId} is null) or (${t.authorType} = 'agent' and ${t.authorUserId} is null) or (${t.authorType} = 'app' and ${t.authorUserId} is null and ${t.authorAgentId} is null)`,
     ),
   ],
 );

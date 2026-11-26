@@ -59,6 +59,7 @@ import { codexThreadKey, unwrapShell } from "./brain-codex";
 import { coAuthorLines } from "./co-authors";
 import { commandApproval, ownBranches } from "./command-gate";
 import { gb } from "./computer-now";
+import { consoleText } from "./console-text";
 import { MIN_FREE_BYTES } from "./desktop-session";
 import { RunnerError } from "./errors";
 import { shellCommand, windowsTaskkill } from "./exec";
@@ -838,7 +839,7 @@ function readTail(file: string, max: number): { text: string; truncated: boolean
     const buf = Buffer.alloc(size - start);
     fd = openSync(file, "r");
     const n = readSync(fd, buf, 0, buf.length, start);
-    let text = buf.subarray(0, n).toString("utf8");
+    let text = consoleText(buf.subarray(0, n), { cut: start > 0 });
     // Cut where a line was split by the window.
     if (start > 0) text = text.slice(text.indexOf("\n") + 1);
     return { text, truncated: start > 0 };
@@ -859,7 +860,7 @@ function readFrom(file: string, offset: number): { text: string; next: number } 
     const buf = Buffer.alloc(length);
     fd = openSync(file, "r");
     const n = readSync(fd, buf, 0, length, offset);
-    return { text: buf.subarray(0, n).toString("utf8"), next: offset + n };
+    return { text: consoleText(buf.subarray(0, n), { cut: true }), next: offset + n };
   } catch {
     return { text: "", next: offset };
   } finally {

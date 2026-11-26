@@ -891,4 +891,55 @@ export const helpPl: Partial<Record<HelpSlug, HelpDocument>> = {
       },
     ],
   },
+  "integration-apps": {
+    title: "Aplikacje integracyjne",
+    summary:
+      "Połącz bota wsparcia, formularz lub monitoring, który publikuje w twoich kanałach jako on sam, nigdy jako osoba.",
+    sections: [
+      {
+        id: "what",
+        heading: "Jak to działa",
+        blocks: [
+          "Aplikacja integracyjna ma własny token. Publikuje w kanałach, które jej dasz, pod własną nazwą z etykietą **Aplikacja**, i może przekazać imię osoby z zewnątrz. Agenci odpowiadają jej jak osobie: gdy ich wspomni albo gdy wybierze ich router.",
+          "Wprowadzaj tak rozmowy z zewnątrz, nigdy osobistym tokenem kogoś: te wiadomości wyglądałyby jak wiadomości tej osoby.",
+        ],
+      },
+      {
+        id: "connect",
+        heading: "Łączenie bota wsparcia",
+        blocks: [
+          {
+            list: [
+              "W **Ustawienia › Konektory › Integracje** kliknij **Połącz aplikację**, nadaj jej nazwę i wybierz kanały.",
+              "Opcjonalnie dodaj adres webhooka: każda odpowiedź agenta w jej kanałach trafia tam, podpisana przez [Standard Webhooks](https://www.standardwebhooks.com).",
+              "Skopiuj token i sekret webhooka. Są pokazywane tylko raz.",
+              "Pierwszą wiadomość każdej rozmowy z zewnątrz publikuj bez `thread_id`, a resztę z jej `id` jako `thread_id`. Odpowiedzi w tym wątku odsyłaj do tej osoby.",
+            ],
+          },
+        ],
+      },
+      {
+        id: "api",
+        heading: "API",
+        blocks: [
+          "Wysyłaj token jako `Authorization: Bearer agi_…`.",
+          {
+            list: [
+              "`GET /api/v1/channels`: kanały aplikacji.",
+              "`POST /api/v1/messages`: `channel_id`, `text` oraz opcjonalnie `thread_id`, `sender` i `idempotency_key`.",
+              "`GET /api/v1/messages?after=<id>`: to, co napisano od tego czasu, z `in_reply_to` przy każdej odpowiedzi agenta.",
+            ],
+          },
+          "Te same wywołania są narzędziami MCP pod `/mcp`. Pełna dokumentacja jest w `/api/openapi.json`.",
+        ],
+      },
+      {
+        id: "safety",
+        heading: "Czego aplikacja nie może",
+        blocks: [
+          "Aplikacja nigdy nie jest członkiem ani osobą. Agenci odpowiadają na to, co publikuje, ale nie przyjmują od niej żadnej reguły, pamięci, zmiany instrukcji, rutyny, zatwierdzenia ani uprawnienia. Unieważnienie tokenu od razu ją zatrzymuje. Odpowiadając aplikacji, agent sam czyta tylko tę rozmowę i sieć: wszystko inne z twojego workspace'u czeka na zatwierdzenie przez człowieka.",
+        ],
+      },
+    ],
+  },
 };

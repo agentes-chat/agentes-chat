@@ -23,7 +23,11 @@ afterEach(() => cleanup());
 
 const CONFIG = { dsn: "https://public@example.invalid/2", environment: "production", release: "2026.10.31.4" };
 const TEXT = "Recarregue a página para continuar.";
-const withCode = (id: string | undefined) => `${TEXT} Se pedir ajuda, informe o código ${id?.slice(0, 8)}.`;
+/** The report's code on its line under Recarregar, or null when the screen gives none. */
+const shownCode = () => {
+  const line = screen().queryByText("Código para o suporte");
+  return line ? (line.querySelector("b")?.textContent ?? "") : null;
+};
 
 type Load = NonNullable<Parameters<typeof startErrorReports>[1]>;
 
@@ -72,13 +76,39 @@ describe("the error screen (ADR 0104)", () => {
     expect(sent).toHaveLength(1);
     expect(sent[0]?.error).toBe(error);
     expect(sent[0]?.id).toMatch(/^[0-9a-f]{32}$/);
-    expect(screen().getByText(withCode(sent[0]?.id))).toBeTruthy();
+    expect(screen().getByText(TEXT)).toBeTruthy();
+    expect(shownCode()).toBe(sent[0]?.id.slice(0, 8) ?? "");
     expect(document.body.textContent).not.toContain("destructure");
     // The same error again (another boundary, a second render) is the same report.
     expect(reportError(error)).toBe(sent[0]?.id ?? "");
     expect(sent).toHaveLength(1);
     // Every page that breaks gets it: the root route's boundary catches what its pages throw.
     expect(RootRoute.options.errorComponent).toBe(ErrorScreen);
+  });
+
+  test("in the sign-in's look: the agent dizzy, and Copiar puts the code on the clipboard", async () => {
+    const { sent, load } = fakeSdk();
+    await startErrorReports(CONFIG, load);
+    const copied: string[] = [];
+    const own = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: async (text: string) => void copied.push(text) },
+    });
+    try {
+      await renderPage(broken(new Error("broke")), { api: createFakeApi() });
+      // The frame of the screens outside a workspace (AuthFrame), never the workspace's page with an empty box.
+      expect(document.querySelector(".auth .auth__notice")).not.toBeNull();
+      expect(document.querySelector(".ac-empty")).toBeNull();
+      expect(document.querySelector('.auth__face [data-mood="dizzy"]')).not.toBeNull();
+      const code = sent[0]?.id.slice(0, 8) ?? "";
+      await act(async () => fireEvent.click(screen().getByRole("button", { name: "Copiar" })));
+      expect(copied).toEqual([code]);
+      expect(screen().getByRole("button", { name: "Copiado" })).toBeTruthy();
+    } finally {
+      if (own) Object.defineProperty(navigator, "clipboard", own);
+      else delete (navigator as { clipboard?: unknown }).clipboard;
+    }
   });
 
   test("errors before the server says where reports go wait for it, and the screen gives its code once it is sent", async () => {
@@ -92,12 +122,13 @@ describe("the error screen (ADR 0104)", () => {
     expect(sent).toEqual([]);
     // No code for a report that may never go.
     expect(screen().getByText(TEXT)).toBeTruthy();
+    expect(shownCode()).toBeNull();
     await later.answer();
     expect(sent).toEqual([
       { error: early, id: reportError(early) ?? "" },
       { error: stray, id: expect.stringMatching(/^[0-9a-f]{32}$/) },
     ]);
-    expect(screen().getByText(withCode(sent[0]?.id))).toBeTruthy();
+    expect(shownCode()).toBe(sent[0]?.id.slice(0, 8) ?? "");
   });
 
   test("a report that never goes (the SDK didn't load, or dropped it as a repeat) shows no code", async () => {
@@ -107,6 +138,7 @@ describe("the error screen (ADR 0104)", () => {
     await renderPage(broken(new Error("broke while waiting")), { api: createFakeApi() });
     await later.answer();
     expect(screen().getByText(TEXT)).toBeTruthy();
+    expect(shownCode()).toBeNull();
     cleanup();
 
     // An SDK that takes nothing (its dedupe dropped the event): the code would lead nowhere.
@@ -114,6 +146,7 @@ describe("the error screen (ADR 0104)", () => {
     await startErrorReports(CONFIG, silent);
     await renderPage(broken(new Error("broke again")), { api: createFakeApi() });
     expect(screen().getByText(TEXT)).toBeTruthy();
+    expect(shownCode()).toBeNull();
   });
 
   test("without a DSN the SDK never loads and the screen has no code", async () => {
@@ -127,6 +160,7 @@ describe("the error screen (ADR 0104)", () => {
     await renderPage(broken(new Error("broke")), { api: createFakeApi() });
     expect(screen().getByRole("heading", { name: "Algo deu errado" })).toBeTruthy();
     expect(screen().getByText(TEXT)).toBeTruthy();
+    expect(shownCode()).toBeNull();
   });
 
   test("a page's file from before a deploy: the boot sky while the new version loads, and no report", async () => {
@@ -216,6 +250,9 @@ describe("a request that got no answer, or only the proxy's", () => {
       expect(screen().getByRole("heading", { name: "Sem conexão com o agentes.chat" })).toBeTruthy();
       expect(screen().getByText(UNREACHABLE)).toBeTruthy();
       expect(screen().getByRole("button", { name: "Tentar de novo" })).toBeTruthy();
+      // It opens again by itself, and says it is waiting; the agent sleeps while the server restarts.
+      expect(screen().getByRole("status").textContent).toBe("Esperando a conexão voltar");
+      expect(document.querySelector('.auth__face [data-state="sleeping"]')).not.toBeNull();
       expect(document.body.textContent).not.toMatch(/código|Bad Gateway|Failed to fetch|Service Unavailable/);
       cleanup();
     }
@@ -236,6 +273,8 @@ describe("a request that got no answer, or only the proxy's", () => {
       expect(screen().getByRole("heading", { name: "Você está sem internet" })).toBeTruthy();
       expect(screen().getByText("Esta página abre sozinha quando a internet voltar.")).toBeTruthy();
       expect(screen().getByRole("button", { name: "Tentar de novo" })).toBeTruthy();
+      expect(screen().getByRole("status").textContent).toBe("Esperando a conexão voltar");
+      expect(document.querySelector('.auth__face [data-state="thinking"]')).not.toBeNull();
       online = true;
       await act(async () => window.dispatchEvent(new Event("online")));
       expect(screen().getByRole("heading", { name: "Sem conexão com o agentes.chat" })).toBeTruthy();

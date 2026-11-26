@@ -49,3 +49,13 @@ the same way.
 
 - When the server itself is down nobody can be told: that is the host's monitoring, not this.
 - A computer whose closes rotated out of its last ten (`MACHINE_DISCONNECTS_KEPT`) may start a new outage early.
+
+## Addendum (2026-11-26): inbox only
+
+Both notices are inbox rows only: no email, no push, no desktop banner. Mail and pushes go out when a person has to act,
+and nobody has to act on a computer that is away and comes back by itself; an email about it also reads as the
+computer sleeping, which the app never shows (ADR 0161). §1's 30-minute email and §3's "back" email are gone with
+their template (`computer_down` in `email.ts` and `email/words/*`), the two kinds left the `computers` notice category
+(`notice-prefs.ts`, so ADR 0071 §8 lists them no more) and their push words (`push/messages/*`). A socket close queues
+one check, at 10 minutes; a job queued earlier with `stage: "email"` runs as that check again, which changes nothing.
+The computer's own page and the runs that wait for it still say it is away, as before.

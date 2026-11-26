@@ -13,6 +13,7 @@ import {
   setLodiPrefs,
   updateOrgSettings,
 } from "../src";
+import { addRunStep } from "../src/runs";
 import { addMember, setup as baseSetup, type Fixture } from "./fixtures";
 
 /**
@@ -80,15 +81,22 @@ const fact = (content: string) => ({
   content,
   refs: ["m1"],
 });
+/** `outside`: the run read a web page while it worked. */
 const learn = async (
   userId: string,
   channelId: string,
   body: string,
   items: unknown[],
   meta?: Record<string, unknown>,
+  outside = false,
 ) => {
   learnOutput = { items, skill_fixes: [] };
   const run = await lodiRun(userId, channelId, body, meta);
+  if (outside) {
+    const toolUseId = `tu_${crypto.randomUUID()}`;
+    await addRunStep(f.db, run, "tool_call", { toolUseId, name: "web_fetch", input: {} });
+    await addRunStep(f.db, run, "tool_result", { toolUseId, name: "web_fetch", content: "a page", isError: false });
+  }
   return learnRun(f.context, { orgId: f.org.id, runId: run.id });
 };
 const seen = async (userId: string) =>
@@ -219,7 +227,8 @@ describe("the right hand learns on its own (Q22)", () => {
           refs: ["m1"],
         },
       ],
-      { readOutside: true },
+      undefined,
+      true,
     );
     expect(out.saved.map((s) => s.scopeType)).toEqual(["person"]);
     expect(await seen(joao.id)).toEqual([]);

@@ -103,6 +103,18 @@ describe("the plan the onboarding offers (the billing service's plan list)", () 
     expect(planOfferOf(list([{ key: "team", name: "x".repeat(41) }]))).toBeNull();
   });
 
+  test("a personal workspace's: the list's plan for one person, or its recommended one where the list names none", () => {
+    const plans = [
+      { key: "personal", name: "Pessoal", price: "$29" },
+      { key: "team", name: "Equipe", price: "$49" },
+    ];
+    const json = { recommended: "team", recommendedAlone: "personal", plans };
+    expect(planOfferOf(json, undefined, true)).toEqual({ key: "personal", name: "Pessoal", price: "$29" });
+    expect(planOfferOf(json)).toEqual({ key: "team", name: "Equipe", price: "$49" });
+    expect(planOfferOf(list(plans), undefined, true)).toEqual({ key: "team", name: "Equipe", price: "$49" });
+    expect(planOfferOf(json, "team", true)).toEqual({ key: "team", name: "Equipe", price: "$49" });
+  });
+
   test("any plan of the list by its key, a paid return's", () => {
     const json = list([
       { key: "personal", name: "Pessoal", price: "$29" },

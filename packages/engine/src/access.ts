@@ -1,4 +1,4 @@
-import { and, asc, type Database, type Executor, eq, inArray, isNull, schema } from "@agenteschat/db";
+import { and, asc, type Database, type Executor, eq, inArray, isNull, or, schema } from "@agenteschat/db";
 import { getAgent } from "./agents";
 import { managesAgent, ownsAgent, REACH_COLUMNS } from "./audience";
 import { recordAudit } from "./audit";
@@ -254,7 +254,7 @@ export const BUILTIN_TOOL_INFO: Record<string, { label: string; description: str
   },
   offer_install_skill: {
     label: "Offer to install a skill",
-    description: "Posts a card whose button opens the install dialog with the skill's link filled in.",
+    description: "Posts a card whose button opens the install dialog with the skill read from its link or its .zip.",
   },
   update_skill_from_source: {
     label: "Update skills from their links",
@@ -873,20 +873,24 @@ export function appHeldBy(grants: ScopeGrant[], id: string): string | null {
  * of the organization's connections by `connector:<id>`, its name or its catalog id (mailboxes and databases have
  * their own screens). `choices` lists them all.
  */
-export async function resolveApps(db: Executor, orgId: string, names: string[]) {
+export async function resolveApps(db: Executor, orgId: string, names: string[], personId?: string | null) {
   // The team's alone: a person's own connection is given to agents by that person only, never through a card.
+  // `personId`'s own are read only to say which unknown names are theirs (`personal`); nobody else's is ever named.
   const active = await db
     .select({
       id: connectorConnections.id,
       label: connectorConnections.label,
       connector: connectorConnections.connector,
+      ownerUserId: connectorConnections.ownerUserId,
     })
     .from(connectorConnections)
     .where(
       and(
         eq(connectorConnections.orgId, orgId),
         isNull(connectorConnections.revokedAt),
-        isNull(connectorConnections.ownerUserId),
+        personId
+          ? or(isNull(connectorConnections.ownerUserId), eq(connectorConnections.ownerUserId, personId))
+          : isNull(connectorConnections.ownerUserId),
       ),
     )
     .orderBy(asc(connectorConnections.createdAt));
@@ -895,9 +899,12 @@ export async function resolveApps(db: Executor, orgId: string, names: string[]) 
     orgId,
     active.map((c) => c.id),
   );
-  const connections = active.filter((c) => !own.has(c.id));
+  const apps = active.filter((c) => !own.has(c.id));
+  const connections = apps.filter((c) => !c.ownerUserId);
+  const theirs = apps.filter((c) => c.ownerUserId);
   const found = new Map<string, { id: string; label: string }>();
   const unknown: string[] = [];
+  const personal: string[] = [];
   for (const name of new Set(names)) {
     const key = name.trim();
     const builtin = isBuiltinScope(key) ? BUILTIN_SCOPES[key] : undefined;
@@ -907,18 +914,21 @@ export async function resolveApps(db: Executor, orgId: string, names: string[]) 
     }
     const lower = key.toLowerCase();
     const byId = lineConnection(lower);
-    const matches = connections.filter((c) =>
-      byId ? c.id === byId : c.label.toLowerCase() === lower || c.connector === lower,
-    );
+    const named = (c: { id: string; label: string; connector: string }) =>
+      byId ? c.id === byId : c.label.toLowerCase() === lower || c.connector === lower;
+    const matches = connections.filter(named);
     const [only] = matches;
     if (only && matches.length === 1) found.set(name, { id: `${CONNECTOR_LINE}${only.id}`, label: only.label });
-    else unknown.push(name);
+    else {
+      unknown.push(name);
+      if (matches.length === 0 && theirs.some(named)) personal.push(name);
+    }
   }
   const choices = [
     ...connections.map((c) => `${CONNECTOR_LINE}${c.id} (${c.label})`),
     ...Object.entries(BUILTIN_SCOPES).map(([scope, info]) => `${scope} (${info.label})`),
   ];
-  return { found, unknown, choices };
+  return { found, unknown, personal, choices };
 }
 
 /**

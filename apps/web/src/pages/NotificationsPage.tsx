@@ -393,7 +393,7 @@ function ThreadReplies({
             <Face actor={actor} dir={dir} size="sm" className="nt-av22" />
             <div>
               <div className="nt-rep__head">
-                <b>{dir.authorName(m.author)}</b>
+                <b>{dir.authorName(m.author, m.meta)}</b>
                 <small>{whenText(t, i18n.language, m.createdAt)}</small>
               </div>
               <p>

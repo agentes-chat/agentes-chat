@@ -147,11 +147,13 @@ people than asked.
     widget, from anywhere, asks first: its routine stops and its history goes. Charts in messages get "Pin".
 15. **On the phone.** Dashboards open from the home screen: at the top of Chats, what Início shows (My Home, or the
     board chosen for it, §18) heads a strip of its widgets, small and side by side, that scrolls sideways (with none
-    yet, one card asks for a widget), and "See all" at its end pushes the list, `/dashboards`. The tab bar is unchanged (Chats, Threads,
+    yet, one card asks for a widget), and at its end "Add" (for who edits that board) beside "See all", which pushes the list, `/dashboards`. The tab bar is unchanged (Chats, Threads,
     Agents, Activity and Search): a sixth tab would push search out of Android's bar, which holds five at most. The
     list shows "My Home" first, then the same groups. Everything is a pushed screen with a back button, never a sheet:
     the list, a board (two columns, a 2-wide widget across the row), a widget (big, how it updates, history, remove,
-    ask for a change), a new widget (preview on top, text and suggestions, agent, format, schedule, alert, board),
+    ask for a change), a new widget (the card on top holds only its title and the ask with its suggestions; agent,
+    format, size, schedule, alert and board are rows under it, each a finger's target, and Test, then Add, sit at the
+    screen's foot over the keyboard: a form squeezed inside the card left 24-point controls on a phone),
     share and a new board.
 16. **Test before creating.** "+ Widget" asks the agent first and creates after: "Test" makes a draft
     (`dashboard_widgets.draft`) that its agent builds at once with real data, through the same refresh run as any

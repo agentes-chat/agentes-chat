@@ -338,7 +338,12 @@ export function brainModelId(kind: BrainKind, model: string | null | undefined):
 const FREE_MODEL = /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,79}$/;
 
 /** The one maker whose models a CLI runs (the catalog's `provider`); Cursor and OpenCode run many makers' models. */
-const ONE_MAKER: Partial<Record<BrainKind, string>> = { codex: "openai", antigravity: "gemini", grok: "xai" };
+const ONE_MAKER: Partial<Record<BrainKind, string>> = {
+  claude_code: "anthropic",
+  codex: "openai",
+  antigravity: "gemini",
+  grok: "xai",
+};
 /** The plan a maker's models think on, for the refusal's words. */
 const PLAN_OF_MAKER: Record<string, string> = { anthropic: "Claude", openai: "ChatGPT", gemini: "Gemini", xai: "Grok" };
 
@@ -376,11 +381,8 @@ export function normalizeBrainModel(kind: BrainKind, value: unknown, stored?: st
     const alias = CLAUDE_CODE_MODELS.find((o) => o.value === v.toLowerCase() || o.modelId === v);
     if (alias) return alias.value;
     if (/^claude-[a-z0-9.-]{1,60}$/.test(v) || isPlanModelId(v)) return v;
-    throw new ValidationError("Choose Fable, Opus, Sonnet, Haiku or one of the plan's models", "brain.invalid_model", {
-      brain: kind,
-    });
-  }
-  if (!FREE_MODEL.test(v)) throw new ValidationError("That isn't a model name", "brain.invalid_model", { brain: kind });
+  } else if (!FREE_MODEL.test(v))
+    throw new ValidationError("That isn't a model name", "brain.invalid_model", { brain: kind });
   const maker = makerOfModel(v);
   const runs = ONE_MAKER[kind];
   if (runs && maker && maker !== runs) {
@@ -390,6 +392,11 @@ export function normalizeBrainModel(kind: BrainKind, value: unknown, stored?: st
       "brain.invalid_model",
       { brain: kind, model: v, maker },
     );
+  }
+  if (kind === "claude_code") {
+    throw new ValidationError("Choose Fable, Opus, Sonnet, Haiku or one of the plan's models", "brain.invalid_model", {
+      brain: kind,
+    });
   }
   // OpenCode runs `--model provider/model` (its runner refuses anything else).
   if (kind === "opencode" && !/^[\w.-]{1,40}\/[\w.:-]{1,79}$/.test(v)) {
@@ -650,7 +657,10 @@ export interface AgentBrainView {
    * serves the whole workspace (ADR 0059 §3), and the one it thinks with; emails only of the caller's own.
    */
   accounts: MachineAccountView[];
-  /** The caller may add an account there for this agent: its owner, on a computer where they add accounts. */
+  /**
+   * The caller may add an account there for this agent: its owner or who manages it (their own plan, lent to it), on a
+   * computer where they add accounts.
+   */
   canManageAccounts: boolean;
   /** The computer's runner knows accounts (protocol 13). */
   accountsSupported: boolean;
@@ -697,7 +707,7 @@ const NO_ACCOUNTS: BrainAccounts = { accounts: [], canManageAccounts: false, acc
 
 /**
  * The accounts on the agent's computer it may think with: its owner's, every one that serves the whole workspace
- * (ADR 0059 §3), and the one it uses; and whether the caller adds one there for it.
+ * (ADR 0059 §3), and the one it uses; and whether the caller adds one there for it (`manages`: who manages the agent).
  */
 async function brainAccounts(
   db: Database,
@@ -705,6 +715,7 @@ async function brainAccounts(
   orgId: string,
   agent: Pick<Agent, "ownerUserId" | "brainAccountId" | "builtin">,
   machine: Pick<MachineRow, "id" | "protocol" | "pairedByUserId" | "kind"> | null,
+  manages = false,
 ): Promise<BrainAccounts> {
   if (!machine) return NO_ACCOUNTS;
   const supported = machine.protocol >= ACCOUNTS_PROTOCOL;
@@ -728,7 +739,7 @@ async function brainAccounts(
     accounts: accounts
       .filter((a) => serving.has(a.id) || a.id === agent.brainAccountId)
       .map((a) => ({ ...a, usable: serving.has(a.id) })),
-    canManageAccounts: supported && agent.ownerUserId === userId && mayAddAccounts(machine, userId),
+    canManageAccounts: supported && (manages || agent.ownerUserId === userId) && mayAddAccounts(machine, userId),
     accountsSupported: supported,
   };
 }
@@ -1006,7 +1017,15 @@ async function setPersonalBrain(
       target: { type: "agent", id: agent.id },
       details: { scope: "mine", from, to },
     });
-  const signIn = input.account === null && typeof input.brain === "string" && isComputerBrain(input.brain as BrainKind);
+  // A model or effort alone on the computer's own sign-in stays on it: that row has no account to keep.
+  const onSignIn =
+    input.account === undefined &&
+    current &&
+    !current.brainAccountId &&
+    (input.brain ?? current.brain) === current.brain;
+  const signIn =
+    onSignIn ||
+    (input.account === null && typeof input.brain === "string" && isComputerBrain(input.brain as BrainKind));
   if (input.brain === "model" || (input.account === null && !signIn)) {
     if (current) {
       await db
@@ -1016,8 +1035,10 @@ async function setPersonalBrain(
     }
     return personalView(db, userId, orgId, agent);
   }
-  if (signIn)
-    return setPersonalSignIn(deps, userId, orgId, agent, input.brain as ComputerBrainKind, input, current, audit);
+  if (signIn) {
+    const brain = (input.brain ?? current?.brain) as ComputerBrainKind;
+    return setPersonalSignIn(deps, userId, orgId, agent, brain, input, current, audit);
+  }
   const accountId = typeof input.account === "string" && input.account ? input.account : current?.brainAccountId;
   if (!accountId) {
     throw new ValidationError(
@@ -1235,7 +1256,7 @@ export async function getAgentBrain(
   const [machine, machines, accounts, keys, inUse] = await Promise.all([
     machineLook,
     candidateMachines(deps.db, userId, orgId, admin, agent.machineId),
-    machineLook.then((m) => brainAccounts(deps.db, userId, orgId, agent, m)),
+    machineLook.then((m) => brainAccounts(deps.db, userId, orgId, agent, m, admin)),
     deps.db
       .select({ id: providerCredentials.id, provider: providerCredentials.provider })
       .from(providerCredentials)
@@ -1454,7 +1475,7 @@ export async function setAgentBrain(
         ),
       );
   }
-  const accounts = await brainAccounts(deps.db, userId, orgId, agent, machine);
+  const accounts = await brainAccounts(deps.db, userId, orgId, agent, machine, admin);
   const thinks =
     changed ||
     model !== agent.brainModel ||
@@ -1629,7 +1650,7 @@ export async function setAgentBrain(
   const shownMachine = shown.machineId === machine?.id ? machine : await agentMachine(deps.db, orgId, shown.machineId);
   const fresh =
     account !== agent.brainAccountId || shownMachine !== machine
-      ? await brainAccounts(deps.db, userId, orgId, shown, shownMachine)
+      ? await brainAccounts(deps.db, userId, orgId, shown, shownMachine, admin)
       : accounts;
   return view(shown, shownMachine, machines, fresh, userId);
 }

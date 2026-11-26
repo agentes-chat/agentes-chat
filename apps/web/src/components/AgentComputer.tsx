@@ -20,6 +20,7 @@ import {
   machineTitle,
 } from "@agenteschat/client/lib/machines";
 import { can } from "@agenteschat/client/lib/permissions";
+import { isRightHand } from "@agenteschat/client/lib/right-hand";
 import { modeKey } from "@agenteschat/client/lib/workspace-mode";
 import {
   Card,
@@ -288,7 +289,8 @@ function AgentComputerRow({
   const value = current?.id ?? NO_COMPUTER;
   const none = noComputer.choice(value === NO_COMPUTER);
   const choices = machines.filter((m) => admin || m.pairedBy?.id === me.user.id || m.id === value);
-  const canPick = (admin || ownsAgentAs(agent, me.user.id, myRoleIds)) && choices.length > 0;
+  // The right hand always uses the workspace's own computer (ADR 0175): its row only says which.
+  const canPick = !isRightHand(agent) && (admin || ownsAgentAs(agent, me.user.id, myRoleIds)) && choices.length > 0;
   const iconOf = (id: string) =>
     id === NO_COMPUTER && none ? (
       <NoComputerIcon choice={none} />

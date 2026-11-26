@@ -31,6 +31,7 @@ import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import {
   brainTool,
   CLI_GIT_MISSING,
+  CLI_HOME_ONLY,
   cliCommandWayOut,
   cliInstallFailure,
   cliOneClick,
@@ -792,7 +793,10 @@ function CliMissingCard({
   const install = run.install;
   const running = install?.state === "running";
   const pending = run.start.isPending || run.cancel.isPending || run.ask.isPending || check.isPending;
-  const broken = reason === "cant_start" ? (machine.cliErrors?.[cli] ?? "") : null;
+  const said = reason === "cant_start" ? (machine.cliErrors?.[cli] ?? "") : null;
+  // Only root starts it (system mode): to the agents it isn't there, so its install is the way on, not its error.
+  const homeOnly = said === CLI_HOME_ONLY;
+  const broken = homeOnly ? null : said;
   const gitMissing =
     (install?.state === "failed" && install.cause === "git_missing") ||
     (broken === CLI_GIT_MISSING && install?.state !== "failed");
@@ -806,16 +810,18 @@ function CliMissingCard({
           ? broken
             ? t("connectAi.cli.cantStart", { ...words, message: broken })
             : t("brain.reasons.cant_start", words)
-          : reason === "cli_outdated"
-            ? t("brain.reasons.cli_outdated", words)
-            : checked
-              ? t("connectAi.cli.checked", words)
-              : oneClick?.kind === "outdated"
-                ? t("common.joinSentences", {
-                    a: t("connectAi.cli.missing", words),
-                    b: t("connectAi.cli.outdated", { computer }),
-                  })
-                : t("connectAi.cli.missing", words)));
+          : homeOnly
+            ? t("brain.reasons.home_only", words)
+            : reason === "cli_outdated"
+              ? t("brain.reasons.cli_outdated", words)
+              : checked
+                ? t("connectAi.cli.checked", words)
+                : oneClick?.kind === "outdated"
+                  ? t("common.joinSentences", {
+                      a: t("connectAi.cli.missing", words),
+                      b: t("connectAi.cli.outdated", { computer }),
+                    })
+                  : t("connectAi.cli.missing", words)));
   const failedBefore = install?.state === "failed" || install?.state === "canceled";
   const actions = running ? (
     <Button

@@ -12,6 +12,7 @@ import {
   deniedError,
   hasToolImages,
   laidOut,
+  lostWithoutImages,
   type ModelMessage,
   type ModelProvider,
   type ModelRequest,
@@ -74,7 +75,7 @@ const INTERRUPTED_NOTE = "This part of the response was interrupted before it fi
  * `structured_output` tool, forced where `tool_choice: any` is honored, and
  * its input comes back as the reply's JSON text. Medium effort is sent as
  * `high`: Kimi and GLM take only low, high and max. Tool results' images are left out too, unless `compat.images`
- * says the model reads them (Claude served by Amazon Bedrock).
+ * says the model reads them (Claude served by Amazon Bedrock), or pictures alone where the model's row says `images`.
  */
 export function createAnthropicProvider(
   options: {
@@ -141,7 +142,8 @@ export function createAnthropicProvider(
         outputChars: 0,
       };
       const textOnly = Boolean(compat && !compat.images);
-      const leftOut = textOnly && hasToolImages(request.messages);
+      const pictures = textOnly && info?.images === true;
+      const leftOut = textOnly && hasToolImages(request.messages, lostWithoutImages(pictures));
       const updates = !compat && !thinkingOff && options.progressNotes !== false && info?.thinkingUpdates === true;
       const params = (withThinking: boolean) => {
         // `block_binding` is taken only with thinking on; the call made without thinking goes plain.
@@ -155,9 +157,10 @@ export function createAnthropicProvider(
           model: request.model,
           max_tokens: request.maxTokens,
           system: toSystem(request, compat ? undefined : room(request)),
-          // Another company's endpoint (DeepSeek, Kimi, Z.ai, MiniMax) isn't trusted to take images, unless it says it does.
+          // Another company's endpoint (DeepSeek, Kimi, Z.ai, MiniMax) isn't trusted to take images, unless it or the
+          // model's row (`images`) says it does.
           messages: toMessageParams(
-            textOnly ? withoutImages(request.messages, request.model) : request.messages,
+            textOnly ? withoutImages(request.messages, request.model, pictures) : request.messages,
             id,
             withThinking,
             // Anthropic behind a compatible endpoint refuses a 1-hour breakpoint after the system's 5-minute ones.

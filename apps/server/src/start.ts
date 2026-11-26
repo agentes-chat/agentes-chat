@@ -106,6 +106,7 @@ import { clientVitals } from "./client-vitals";
 import { buildEngine } from "./engine";
 import { watchEventLoopLag } from "./event-loop-lag";
 import { startFreezeWatch } from "./freeze-watch";
+import { trustPeer } from "./http/client-ip";
 import { checkHumanCheckAtBoot, createHumanCheck } from "./http/human-check";
 import { watchLoad } from "./load-shed";
 import { createLogger, type Logger } from "./logger";
@@ -732,7 +733,10 @@ async function boot(
         // Bun's default (10 s) cuts a request still waiting on its answer: opening a site in an agent's
         // browser waits for the page, and a closed browser starts first (up to 90 s on the computer).
         idleTimeout: 120,
-        fetch: (req, srv) => ownHostAnswer(req) ?? realtime.fetch(req, srv, (r) => app.fetch(r)),
+        fetch: (req, srv) => {
+          trustPeer(req.headers, srv.requestIP(req)?.address, config.TRUSTED_PROXIES);
+          return ownHostAnswer(req) ?? realtime.fetch(req, srv, (r) => app.fetch(r));
+        },
         websocket: realtime.websocket,
         // What the HTTP app doesn't answer itself: a WebSocket upgrade that failed before the socket opened.
         error(error) {

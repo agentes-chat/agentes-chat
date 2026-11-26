@@ -400,6 +400,8 @@ export type ChannelEvent =
       computer?: "queued" | "away" | "line";
       /** Into a run waiting on its plan's limit or its budget. */
       usage?: "plan" | "budget";
+      /** Into a run parked on an outage (`outageParkedSql`): it retries by itself. */
+      outage?: true;
     }
   /** The run read these messages sent while it worked (they are in its conversation now): "Ada leu". */
   | {
@@ -807,7 +809,7 @@ export interface ActivityLine {
   counts: boolean;
   /** Its line, when it may be the last one: a channel's top-level message, any of a DM's. Absent: a routine's call. */
   last?: {
-    authorType: "person" | "agent";
+    authorType: "person" | "agent" | "app";
     authorId: string | null;
     /** As a channel's row has it, at most `CHANNEL_PREVIEW_LENGTH` chars. */
     preview: string;

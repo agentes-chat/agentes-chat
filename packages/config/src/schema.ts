@@ -304,7 +304,7 @@ export const envVars = {
           .filter(Boolean),
       ),
     description:
-      "Comma-separated IPs/CIDRs of your reverse proxies (load balancer, Cloudflare…). Used to find the real client IP for every rate limit. Leave empty if agentes.chat is reached directly.",
+      "Comma-separated IPs/CIDRs of public proxies in front of agentes.chat (a load balancer, Cloudflare…). Every rate limit reads the client's address from X-Forwarded-For only when the connection comes from loopback, a private network or one of these; from anyone else, the connection's own address counts. CF-Connecting-IP is never read. Leave empty behind the bundled Caddy or Tailscale, a proxy on the same machine or private network, or with nothing in front.",
     section: "Sign-in",
     example: "10.0.0.0/8,172.16.0.0/12",
   },
@@ -1424,7 +1424,7 @@ export const envVars = {
       .min(32, "must be at least 32 characters; generate one with `openssl rand -base64 48`")
       .optional(),
     description:
-      "Signs the link to the billing service (HMAC-SHA256, 5 minutes). The billing service holds the same value. Generate with `openssl rand -base64 48`.",
+      "Seals the link to the billing service (AES-256-GCM under a key derived from it, 5 minutes). The billing service holds the same value. Generate with `openssl rand -base64 48`.",
     section: "Operator",
     example: "<output of openssl rand -base64 48>",
     secret: true,
@@ -1432,7 +1432,7 @@ export const envVars = {
   REFERRALS_URL: {
     schema: z.url({ protocol: /^https$/ }).optional(),
     description:
-      "Your referral service's address (ADR 0192). Signed-in people get Refer and earn in their menu, and `/refer`, which open it signed in as them. Needs `REFERRALS_LINK_SECRET`, or `BILLING_LINK_SECRET` when this server also has a billing service, to sign the link. Unset (default): no referrals anywhere.",
+      "Your referral service's address (ADR 0192). Signed-in people get Refer and earn in their menu, and `/refer`, which open it signed in as them. Needs `REFERRALS_LINK_SECRET`, or `BILLING_LINK_SECRET` when this server also has a billing service, to seal the link. Unset (default): no referrals anywhere.",
     section: "Operator",
     example: "https://refer.example.com",
   },
@@ -1442,7 +1442,7 @@ export const envVars = {
       .min(32, "must be at least 32 characters; generate one with `openssl rand -base64 48`")
       .optional(),
     description:
-      "Signs the link to the referral service (HMAC-SHA256, 5 minutes). The referral service holds the same value. Unset (default): `BILLING_LINK_SECRET` signs it. Generate with `openssl rand -base64 48`.",
+      "Seals the link to the referral service (AES-256-GCM under a key derived from it, 5 minutes). The referral service holds the same value. Unset (default): `BILLING_LINK_SECRET` seals it. Generate with `openssl rand -base64 48`.",
     section: "Operator",
     example: "<output of openssl rand -base64 48>",
     secret: true,

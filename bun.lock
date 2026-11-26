@@ -12,7 +12,7 @@
     },
     "apps/desktop": {
       "name": "@agenteschat/desktop",
-      "version": "0.8.14",
+      "version": "0.8.17",
       "dependencies": {
         "@agenteschat/adapters": "workspace:*",
         "@agenteschat/client": "workspace:*",
@@ -117,7 +117,7 @@
     },
     "apps/server": {
       "name": "@agenteschat/server",
-      "version": "0.1.10",
+      "version": "0.1.14",
       "dependencies": {
         "@agenteschat/adapters": "workspace:*",
         "@agenteschat/client": "workspace:*",
@@ -293,6 +293,7 @@
         "@xmldom/xmldom": "0.9.12",
         "lib0": "0.2.120",
         "libpg-query": "17",
+        "pdfjs-dist": "6.5.438",
         "y-protocols": "1.0.7",
         "yjs": "13.6.33",
         "yoga-layout": "3.2.1",
@@ -385,8 +386,8 @@
   "patchedDependencies": {
     "react-native-screens@4.30.0": "patches/react-native-screens@4.30.0.patch",
     "@legendapp/list@3.7.3": "patches/@legendapp%2Flist@3.7.3.patch",
-    "react-native-pdf-light@3.2.1": "patches/react-native-pdf-light@3.2.1.patch",
     "expo-router@58.0.23": "patches/expo-router@58.0.23.patch",
+    "react-native-pdf-light@3.2.1": "patches/react-native-pdf-light@3.2.1.patch",
   },
   "packages": {
     "2g": ["2g@1.0.1", "", { "peerDependencies": { "typescript": ">=5.8.0" }, "optionalPeers": ["typescript"], "bin": { "2g": "bin/cli.js" } }, "sha512-+uViadKOS/wwR4pFu5g8TPn3QHpKqoX19JHCnp8k/3cLpImdcXozwvZA6Q/5PeW3AcU8neL8faaMidBcv7o8CA=="],

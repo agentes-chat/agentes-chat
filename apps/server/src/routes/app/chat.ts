@@ -745,7 +745,7 @@ export function chatRoutes(deps: AppDeps) {
           user.id,
           orgId,
           channelId,
-          c.req.valid("json"),
+          { ...c.req.valid("json"), origin: "app" },
         );
       } catch (error) {
         // A GIF or sticker that can't go (ADR 0091): the request was fine, what it names can't be sent.

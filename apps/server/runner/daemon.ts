@@ -52,6 +52,7 @@ import {
   type ControlReplies,
   type ControlStatus,
 } from "@agenteschat/adapters/runner-control";
+import type { PinCli } from "@agenteschat/providers/cli-pins";
 import {
   AccessRequests,
   addFolder,
@@ -72,6 +73,7 @@ import { AccountBrains } from "./account-brains";
 import { accountSelfCheck, SELF_CHECK_DEFERRED, SELF_CHECK_EVERY_MS, SELF_CHECK_RETRY_MS } from "./account-check";
 import { AccountManager, grokSandboxFails, lchownTree, SYSTEM_ACCOUNTS_ROOT } from "./accounts";
 import { ActivityLog } from "./activity";
+import { agentsCopy, agentsReach, type RunAs } from "./agent-reach";
 import {
   AccountUsers,
   type AgentUser,
@@ -96,7 +98,14 @@ import { CodexAppServers } from "./brain-codex-app";
 import { BrowserManager } from "./browser";
 import { ensureBrowserBindPolicy, prepareAgents } from "./browser-bind-policy";
 import { BrowserViews } from "./browser-views";
-import { CLI_OF_BRAIN, CliCopies, type CliCopiesOptions, holdCliSelfUpdates, isPinCli } from "./cli-copies";
+import {
+  CLI_COMMAND,
+  CLI_OF_BRAIN,
+  CliCopies,
+  type CliCopiesOptions,
+  holdCliSelfUpdates,
+  isPinCli,
+} from "./cli-copies";
 import { CliInstaller, type CliInstallerOptions, gitBashPath } from "./cli-install";
 import { readCodexAccount } from "./codex-account";
 import { codexSandboxReport } from "./codex-windows";
@@ -124,10 +133,11 @@ import { EgressObservation, probeEgress } from "./egress";
 import { EGRESS_RELAY_SOCKET, startEgressRelay } from "./egress-relay";
 import { EGRESS_SHARE_FILE, EgressShare } from "./egress-share";
 import { NetworkChangingError, RUNNER_VERSION, RunnerError } from "./errors";
-import { cachedExecutors, EXECUTORS_TTL_MS, type ExecutorRun, inHomeDirs } from "./executors";
+import { cachedExecutors, EXECUTORS_TTL_MS, type ExecutorRun, inHomeDirs, setCodexForAgents } from "./executors";
 import { systemGitCache } from "./git";
 import { closeIdleUnderPressure, type HandlerContext, type RequestObserver, type RequestOutcome } from "./handlers";
 import { Holds } from "./holds";
+import { SYSTEM_LAUNCHER, SYSTEM_RUNNER_DIR } from "./install-script";
 import { IphoneSetup, type IphoneSetupOptions } from "./iphone-setup";
 import { currentProcess, isCompiled, selfCommand } from "./launch";
 import { tailLines } from "./logfile";
@@ -419,6 +429,8 @@ export interface DaemonOptions {
   refreshPath?: () => void;
   /** Tests: how the coding CLIs' looks run (the background cache stays real). */
   executorRun?: ExecutorRun;
+  /** Tests (system mode): how a CLI's `--version` runs as the agents (`agentsReach`). */
+  agentsRun?: RunAs;
   /** How the accounts' CLIs start (default `claude` / `codex`). */
   accountCommands?: Partial<Record<AccountKind, string[]>>;
   now?: () => number;
@@ -616,6 +628,7 @@ export class RunnerDaemon implements RequestObserver {
     } catch {
       // an unreadable config starts unpaired
     }
+    setCodexForAgents(system);
     const exec =
       opts.executors ??
       cachedExecutors({
@@ -628,7 +641,16 @@ export class RunnerDaemon implements RequestObserver {
         ...(process.platform === "win32"
           ? { before: () => this.refreshPath?.(), gitMissing: () => gitBashPath() === null }
           : system
-            ? { homeOnly: (bin: string) => inHomeDirs(bin) !== null }
+            ? {
+                homeOnly: (bin: string) => inHomeDirs(bin) !== null,
+                // A fake look (tests) is checked as the agents only with a fake of that too.
+                ...(opts.executorRun && !opts.agentsRun
+                  ? {}
+                  : {
+                      reach: (found: NonNullable<RunnerInfo["executors"]>) =>
+                        agentsReach(found, opts.home, opts.agentsRun),
+                    }),
+              }
             : { before: () => addUsualDirs() }),
       });
     const windows =
@@ -665,22 +687,31 @@ export class RunnerDaemon implements RequestObserver {
       : null;
     // Every CLI the runner starts, the person's own or its copy, stays the version it was checked at (ADR 0228 §6).
     holdCliSelfUpdates();
-    // Outside system mode, where the person's own CLI runs: the root's are the computer's setup's (the Cloud's image).
-    this.copies =
-      opts.cliCopies && !system
-        ? new CliCopies({
-            home: opts.home,
-            log: opts.log,
-            // Git for Windows is wanted where Claude Code is, on Windows: its bash is Claude Code's shell there.
-            inUse: (cli) =>
-              this.accounts.snapshot()?.some((a) => CLI_OF_BRAIN[a.kind] === (cli === "git" ? "claude" : cli)) ?? false,
-            onChange: () => {
-              void this.clisLook().then(() => this.accounts.refresh(true).catch(() => undefined));
-            },
-            onFetch: (cli, fetch) => this.send({ type: "cli.fetch", cli, fetch }),
-            ...(typeof opts.cliCopies === "object" ? opts.cliCopies : {}),
-          })
-        : null;
+    // In system mode only where the agents reach no copy at all, whatever its version: the computer's setup installs
+    // theirs (the Cloud's image), and those update themselves.
+    this.copies = opts.cliCopies
+      ? new CliCopies({
+          home: system ? SYSTEM_RUNNER_DIR : opts.home,
+          ...(system
+            ? {
+                shared: { bin: path.dirname(SYSTEM_LAUNCHER) },
+                own: async (cli: PinCli, pinned: string) =>
+                  (await agentsCopy(CLI_COMMAND[cli], opts.home, opts.agentsRun)) === null
+                    ? null
+                    : { file: CLI_COMMAND[cli], version: pinned },
+              }
+            : {}),
+          log: opts.log,
+          // Git for Windows is wanted where Claude Code is, on Windows: its bash is Claude Code's shell there.
+          inUse: (cli) =>
+            this.accounts.snapshot()?.some((a) => CLI_OF_BRAIN[a.kind] === (cli === "git" ? "claude" : cli)) ?? false,
+          onChange: () => {
+            void this.clisLook().then(() => this.accounts.refresh(true).catch(() => undefined));
+          },
+          onFetch: (cli, fetch) => this.send({ type: "cli.fetch", cli, fetch }),
+          ...(typeof opts.cliCopies === "object" ? opts.cliCopies : {}),
+        })
+      : null;
     const accountUsers = system ? (opts.accountUsers ?? new AccountUsers({ home: opts.home, log: opts.log })) : null;
     this.accountUsers = accountUsers;
     this.accounts = new AccountManager({
@@ -2275,6 +2306,7 @@ export class RunnerDaemon implements RequestObserver {
       size: { ...machineSize(workspaceReal), maxTasks: this.taskLimit(this.stored), ...this.taskRoom() },
       ...this.loginHello(),
       ...(this.accounts.authEgressGroup() ? { authEgressGroup: true as const } : {}),
+      ...(this.stored?.managedBy === "desktop" ? { app: true as const } : {}),
     };
   }
 
@@ -2509,8 +2541,11 @@ export class RunnerDaemon implements RequestObserver {
 
   /** Installing a coding CLI from the apps; once installed, looked up again at once, so the apps move on by themselves. */
   cliInstaller(): CliInstaller {
+    const copies = this.copies;
     this.installer ??= new CliInstaller({
       log: this.opts.log,
+      // System mode: never the vendor's installer as root, which would install for root alone.
+      ...(copies?.forAgents ? { fetch: (tool) => copies.ensure(tool) } : {}),
       onDone: async (tool) => {
         await this.clisLook();
         return Boolean(this.executors()[tool]);
@@ -2925,9 +2960,11 @@ export class RunnerDaemon implements RequestObserver {
     if (decision === "granted") {
       const real = checkFolder(r.path, this.checkOpts());
       const ids = all ? [...new Set([r.agent.id, ...this.agents.map((a) => a.id)])] : [r.agent.id];
-      // Taken out first: the access change that follows must not resolve it again as "agent".
+      // Built before the request is taken out: a folder that can't be added (the cap) leaves it pending, never "granted".
+      const next = addFolder(this.access(), real, ids);
+      // Taken out before the write: the access change that follows must not resolve it again as "agent".
       this.requests.resolve(r.requestId, "granted", all ? "all" : "agent");
-      this.writeAccess(addFolder(this.access(), real, ids));
+      this.writeAccess(next);
     } else {
       this.requests.resolve(r.requestId, "denied");
       this.record({

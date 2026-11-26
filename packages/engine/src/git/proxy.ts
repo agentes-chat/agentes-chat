@@ -397,8 +397,16 @@ async function proxyGit(
     return at.fetch(target, { method: req.method, headers, body, redirect: "manual" });
   };
   const relay = async (res: Response, max: number) => {
+    // The host saying no is a permission, not an outage: a 5xx sends the agent waiting for a fix that never comes.
     if (res.status === 401 || res.status === 403) {
-      return text(502, `agentes: ${host.label} refused the organization's credential for this repository`);
+      await res.body?.cancel().catch(() => undefined);
+      const why =
+        connection.authType === GITHUB_APP_AUTH
+          ? appMissMessage(repoName, "refused")
+          : write && res.status === 403
+            ? `${host.label} refused the workspace's credential for pushing to ${repoName}: the account connected in Settings › Connectors can't write there. Push the branch to a fork that account can write and open the ${host.request} from there.`
+            : `${host.label} refused the workspace's credential for ${repoName}: the account connected in Settings › Connectors can't reach it, or its sign-in ended. Tell the person: an admin reconnects ${host.label} there with an account that has access to ${repoName}.`;
+      return text(403, `agentes: ${why}`);
     }
     const headers: Record<string, string> = { "cache-control": "no-cache" };
     const type = res.headers.get("content-type");

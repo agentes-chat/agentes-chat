@@ -1439,7 +1439,7 @@ html:not([data-pointer]) .brw-trail__ext:focus-visible {
 /* Full screen (the browser's own, or the card filling the window): the page takes all the room left. */
 .brw-ac.is-full {
   position: fixed;
-  inset: 0;
+  inset: var(--window-top) 0 0;
   z-index: var(--z-dialog);
   display: flex;
   flex-direction: column;

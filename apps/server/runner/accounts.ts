@@ -40,6 +40,7 @@ import {
   providerOrgIdOf,
   providerOrgNameOf,
   type RunnerAccountInfo,
+  SHARED_LOGIN_REFUSED,
   TOKEN_RECHECK_MS,
   type WireSecretBox,
 } from "@agenteschat/adapters/machine-protocol";
@@ -70,6 +71,7 @@ import {
 } from "./agy-home";
 import { withGitBash } from "./cli-install";
 import { codexLoginStatusOf } from "./codex-sign-in";
+import { ConsoleDecoder } from "./console-text";
 import { errnoCode, RunnerError } from "./errors";
 import { killTree } from "./exec";
 import {
@@ -1429,13 +1431,13 @@ function runCli(command: string[], args: string[], env: NodeJS.ProcessEnv, timeo
     }
     let stdout = "";
     let stderr = "";
-    child.stdout?.setEncoding("utf8");
-    child.stderr?.setEncoding("utf8");
-    child.stdout?.on("data", (c: string) => {
-      stdout = (stdout + c).slice(-OUTPUT_KEEP);
+    const stdoutText = new ConsoleDecoder();
+    const stderrText = new ConsoleDecoder();
+    child.stdout?.on("data", (c: Buffer) => {
+      stdout = (stdout + stdoutText.write(c)).slice(-OUTPUT_KEEP);
     });
-    child.stderr?.on("data", (c: string) => {
-      stderr = (stderr + c).slice(-OUTPUT_KEEP);
+    child.stderr?.on("data", (c: Buffer) => {
+      stderr = (stderr + stderrText.write(c)).slice(-OUTPUT_KEEP);
     });
     let settled = false;
     const finish = (status: number | null) => {
@@ -1776,7 +1778,7 @@ export class AccountManager {
   /** The Claude CLI as the sign-in's own user, with the runner's proxies as root's own CLIs have them. */
   private sharedCli(id: string): { command: string[]; env: NodeJS.ProcessEnv; cwd: string } {
     const l = this.opts.sharedLogin?.launcher(id);
-    if (!l) throw new RunnerError("unsupported", "This computer can't run this Claude sign-in");
+    if (!l) throw new RunnerError("unsupported", SHARED_LOGIN_REFUSED);
     const env: NodeJS.ProcessEnv = { ...l.env };
     for (const k of NETWORK_ENV) if (process.env[k]) env[k] = process.env[k];
     return { command: this.sharedCommand(l.prefix), env, cwd: l.home };
@@ -2078,14 +2080,12 @@ export class AccountManager {
       windowsVerbatimArguments: run.windowsVerbatimArguments,
     });
     login.child = child;
-    const onData = (chunk: string) => {
-      login.output = (login.output + chunk).slice(-OUTPUT_KEEP);
+    const onData = (decoder: ConsoleDecoder) => (chunk: Buffer) => {
+      login.output = (login.output + decoder.write(chunk)).slice(-OUTPUT_KEEP);
       login.watch?.();
     };
-    child.stdout?.setEncoding("utf8");
-    child.stderr?.setEncoding("utf8");
-    child.stdout?.on("data", onData);
-    child.stderr?.on("data", onData);
+    child.stdout?.on("data", onData(new ConsoleDecoder()));
+    child.stderr?.on("data", onData(new ConsoleDecoder()));
     child.stdin?.on("error", () => {});
     const events = child as unknown as EventEmitter;
     events.on("error", (err: Error) => {

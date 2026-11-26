@@ -28,6 +28,7 @@ import {
   shellScript,
 } from "./brain-codex";
 import { type CodexWindowsSandbox, codexLaunch, codexWindowsConfig } from "./codex-windows";
+import { ConsoleDecoder } from "./console-text";
 import { killTree } from "./exec";
 import { envValue } from "./executors";
 import {
@@ -289,9 +290,9 @@ export class CodexAppClient {
     });
     events.on("exit", () => this.markExit());
     this.child.stdin?.on("error", () => {});
-    this.child.stderr?.setEncoding("utf8");
-    this.child.stderr?.on("data", (chunk: string) => {
-      this.stderr = (this.stderr + chunk).slice(-STDERR_KEEP);
+    const decoder = new ConsoleDecoder();
+    this.child.stderr?.on("data", (chunk: Buffer) => {
+      this.stderr = (this.stderr + decoder.write(chunk)).slice(-STDERR_KEEP);
     });
     if (this.child.stdout) {
       const rl = createInterface({ input: this.child.stdout, crlfDelay: Number.POSITIVE_INFINITY });

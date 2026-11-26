@@ -58,7 +58,7 @@ import { replyOf } from "@agenteschat/client/lib/reply";
 import { isReminderMessage, reminderBody, routineReplyOf } from "@agenteschat/client/lib/routines";
 import { replyChipsOf } from "@agenteschat/client/lib/team-plan";
 import { usagePauseCardOf, usageWaitOf } from "@agenteschat/client/lib/usage-pause";
-import { appVia } from "@agenteschat/client/lib/via";
+import { appAuthor, appVia } from "@agenteschat/client/lib/via";
 import { listedText, voiceOf } from "@agenteschat/client/lib/voice";
 import { type ReplyStop, splitCanceled } from "@agenteschat/client/lib/work";
 import { useShowsWork } from "@agenteschat/client/lib/work-context";
@@ -96,6 +96,7 @@ import {
   useTheme,
   useToast,
 } from "@/ui";
+import { AppMark } from "@/ui/AppMark";
 import { Shake } from "@/ui/auth/Shake";
 import { router } from "@/ui/navigation";
 import { RADIUS } from "@/ui/radius";
@@ -305,8 +306,10 @@ function RowBody({
   const agent = isAgent && m.author.id ? dir.agentById.get(m.author.id) : undefined;
   const accent = agent ? agentLook(agent).color : undefined;
   const color = agentLook(agent).color;
-  const name = dir.nameOf(m.author) || t("mobile.chat.someone");
   const meta = m.meta;
+  // An integration app's message (ADR 0251): its mark, its name and an "App" tag, never a person's face or profile.
+  const app = m.author.type === "app" ? appAuthor(meta) : null;
+  const name = app?.name ?? (dir.nameOf(m.author) || t("mobile.chat.someone"));
   const standIn = modelStandInText(t, meta);
   // What a routine found, told by its agent (as on the web): a small tag, and the report it answers on demand
   // (that report's own line folds into this message). Unfolded, it comes back unfolded with its row (`keptOpen`).
@@ -811,6 +814,14 @@ function RowBody({
           {name}
         </Text>
       ) : null}
+      {app ? <Tag icon="bolt" label={t("integrations.badge")} hint={t("integrations.appTip", { name })} /> : null}
+      {app?.sender ? (
+        <Tag
+          icon="person"
+          label={t("integrations.sender", { sender: app.sender })}
+          hint={t("integrations.senderTip", { sender: app.sender, name })}
+        />
+      ) : null}
       {reminder ? <Tag icon="bell" label={t("channel.reminder")} /> : null}
       {via ? (
         <Tag
@@ -948,7 +959,7 @@ function RowBody({
   ) : null;
   // The bubble holds its words, the tags of its name line and, at its end, the time; a row with none keeps its line.
   const inBubble = bubbled && Boolean(body) && !brainWait && !deviceWait && !choiceReply;
-  const tagged = Boolean(reminder || via || surfaceTag || routine || talker || helping || m.pinned);
+  const tagged = Boolean(app || reminder || via || surfaceTag || routine || talker || helping || m.pinned);
   const opener = opened?.said ? <MessageText body={opened.said} selectable={false} accent={accent} /> : null;
   // Outside a bubble the line it opened with is a part of its own, as the web's second text.
   const openerPart = opener && words ? <View style={{ marginBottom: rhythm.part }}>{opener}</View> : opener;
@@ -1040,6 +1051,8 @@ function RowBody({
                   <ReceiptMark message={m} mine={mine} receipt={receipt} seenBy={seenBy} />
                 </View>
               ) : null
+            ) : app ? (
+              <AppMark color={app.color} name={app.name} size={compact ? 18 : bubbled ? 30 : 34} />
             ) : (
               <Face who={m.author} size={compact ? 18 : bubbled ? 30 : 34} live={false} />
             )}
@@ -1430,7 +1443,7 @@ function Tag({
   hint,
   wrap,
 }: {
-  icon: "bell" | "chat" | "clock" | "sparkle";
+  icon: "bell" | "chat" | "clock" | "sparkle" | "bolt" | "person";
   /** In place of the icon (an app's mark). */
   lead?: ReactNode;
   label: string;

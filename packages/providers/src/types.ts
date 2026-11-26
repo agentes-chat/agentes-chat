@@ -40,6 +40,11 @@ export interface ToolImage {
   pages?: number;
   /** A PDF: its file name (OpenAI asks for one). */
   name?: string;
+  /**
+   * A PDF: its own text, read out of it and already marked as untrusted data: what a connection that takes no PDFs
+   * gets in its place (`withoutImages`).
+   */
+  text?: string;
 }
 
 export const PDF_MEDIA_TYPE = "application/pdf" as const;
@@ -53,18 +58,30 @@ export const PDF_PAGE_CHARS = 8000;
 export const toolImageChars = (i: ToolImage) =>
   i.mediaType === PDF_MEDIA_TYPE ? Math.max(1, i.pages ?? 1) * PDF_PAGE_CHARS : IMAGE_CHARS;
 
-/** Whether a tool result carries a picture or a PDF. */
-export const hasToolImages = (messages: ModelMessage[]) =>
+/** Whether a tool result carries a picture or a PDF (`which`: only one it matches). */
+export const hasToolImages = (messages: ModelMessage[], which: (image: ToolImage) => boolean = () => true) =>
   messages.some(
-    (m) => typeof m.content !== "string" && m.content.some((b) => b.type === "tool_result" && b.images?.length),
+    (m) => typeof m.content !== "string" && m.content.some((b) => b.type === "tool_result" && b.images?.some(which)),
   );
 
+export const isPdfImage = (image: ToolImage) => image.mediaType === PDF_MEDIA_TYPE;
+
 /**
- * The messages with tool results' pictures and PDFs left out, a note in their place: for endpoints that take text
- * only (another company's Anthropic-compatible API, OpenRouter), where one would fail the whole request. The note
- * names the AI (`model`) and the way out, so the agent tells the person the real cause.
+ * Whether `withoutImages` leaves this one out with nothing read in its place: a picture, unless the endpoint reads
+ * pictures, or a PDF no text was read out of (a scan).
  */
-export const withoutImages = (messages: ModelMessage[], model?: string): ModelMessage[] =>
+export const lostWithoutImages =
+  (pictures = false) =>
+  (image: ToolImage) =>
+    isPdfImage(image) ? !image.text : !pictures;
+
+/**
+ * The messages with tool results' pictures and PDFs left out: for endpoints that take text only (another company's
+ * Anthropic-compatible API, OpenRouter), where one would fail the whole request. A PDF with text of its own goes as
+ * that text; for the rest a note names the AI (`model`) and the way out, so the agent tells the person the real cause.
+ * `pictures`: the endpoint reads pictures but no PDFs, so only the PDFs are left out.
+ */
+export const withoutImages = (messages: ModelMessage[], model?: string, pictures = false): ModelMessage[] =>
   messages.map((m) =>
     typeof m.content === "string"
       ? m
@@ -73,14 +90,30 @@ export const withoutImages = (messages: ModelMessage[], model?: string): ModelMe
           content: m.content.map((b) => {
             if (b.type !== "tool_result" || !b.images?.length) return b;
             const { images, ...rest } = b;
-            const pdf = images.some((i) => i.mediaType === PDF_MEDIA_TYPE);
-            const picture = images.some((i) => i.mediaType !== PDF_MEDIA_TYPE);
-            const what = pdf && picture ? "picture and the PDF" : pdf ? "PDF" : "picture";
+            const kept = pictures ? images.filter((i) => !isPdfImage(i)) : [];
+            if (kept.length === images.length) return b;
             const ai = model ? `this agent's AI (${model})` : "this agent's AI";
-            return {
-              ...rest,
-              content: `${b.content}\n[The ${what} is not shown to you: ${ai} reads text only through this connection. Tell the person exactly that, and that an AI that reads ${pdf ? "pictures and PDFs" : "pictures"} (Claude, GPT or Gemini), picked in this agent's settings, would see it. Never say the file came empty.]`,
-            };
+            const reads = pictures
+              ? "reads pictures through this connection, not PDFs"
+              : "reads text only through this connection";
+            const lines = [b.content];
+            for (const i of images) {
+              if (!isPdfImage(i) || !i.text) continue;
+              lines.push(
+                `[The PDF${i.name ? ` ${i.name}` : ""} is not shown to you as pages: ${ai} ${reads}, so its text, read out of it, follows; its pictures, scanned pages and layout aren't in it. If the answer hangs on those, tell the person exactly that, and that an AI that reads PDFs (Claude, GPT or Gemini), picked in this agent's settings, would see them.]`,
+                i.text,
+              );
+            }
+            const lost = images.filter(lostWithoutImages(pictures));
+            const pdf = lost.some(isPdfImage);
+            const picture = lost.some((i) => !isPdfImage(i));
+            if (pdf || picture) {
+              const what = pdf && picture ? "picture and the PDF" : pdf ? "PDF" : "picture";
+              lines.push(
+                `[The ${what} is not shown to you: ${ai} ${reads}.${pdf ? " No text could be read out of the PDF either (a scan has none)." : ""} Tell the person exactly that, and that an AI that reads ${pdf ? "pictures and PDFs" : "pictures"} (Claude, GPT or Gemini), picked in this agent's settings, would see it. Never say the file came empty.]`,
+              );
+            }
+            return { ...rest, ...(kept.length > 0 ? { images: kept } : {}), content: lines.join("\n") };
           }),
         },
   );
