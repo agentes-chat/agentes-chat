@@ -562,8 +562,11 @@ export const SHARED_SIGN_INS: Readonly<Record<"claude_code" | "codex" | "antigra
   key: true,
 };
 
-/** Computer brains whose CLI never thinks with the computer's own sign-in, only a connected account (ADR 0142, ADR 0143 §3). */
-export const ACCOUNT_ONLY_BRAINS = ["antigravity", "grok"] as const;
+/**
+ * Computer brains whose CLI never thinks with the computer's own sign-in, only a connected account (ADR 0142, ADR 0143
+ * §3, ADR 0253 §3).
+ */
+export const ACCOUNT_ONLY_BRAINS = ["antigravity", "grok", "devin"] as const;
 export const accountOnlyBrain = (kind: string) => (ACCOUNT_ONLY_BRAINS as readonly string[]).includes(kind);
 
 /**

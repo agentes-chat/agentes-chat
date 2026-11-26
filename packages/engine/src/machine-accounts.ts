@@ -549,7 +549,7 @@ export async function releaseAgents(
       .delete(rightHandBrains)
       .where(and(eq(rightHandBrains.orgId, orgId), inArray(rightHandBrains.brainAccountId, accountIds)));
   }
-  // Gemini and Grok never think with the computer's own sign-in (`accountOnlyBrain`): without an account, the API.
+  // Gemini, Grok and Devin never think with the computer's own sign-in (`accountOnlyBrain`): without an account, the API.
   const ownSignIn = sql`(exists (select 1 from ${machines} m where m.id = "agents"."machine_id"
     and m.paired_by_user_id = "agents"."owner_user_id")
     and "agents"."brain" not in (${sql.join(
