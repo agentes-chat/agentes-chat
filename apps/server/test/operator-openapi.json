@@ -3161,7 +3161,7 @@
               "properties": {
                 "cli": {
                   "type": "string",
-                  "description": "The coding CLI's name: `claude`, `codex`, `cursor`, `opencode`, `grok`, `antigravity`."
+                  "description": "The coding CLI's name: `claude`, `codex`, `cursor`, `opencode`, `grok`, `antigravity`, `devin`."
                 },
                 "version": {
                   "type": "string",
@@ -3209,7 +3209,7 @@
                 },
                 "brain": {
                   "type": "string",
-                  "description": "The brain by its name (`model`, `claude_code`, `codex`, `cursor`, `opencode`, `grok`, `antigravity`, `other`; `model` is a provider's API, `other` no turn yet). `all`: every brain."
+                  "description": "The brain by its name (`model`, `claude_code`, `codex`, `cursor`, `opencode`, `grok`, `antigravity`, `devin`, `other`; `model` is a provider's API, `other` no turn yet). `all`: every brain."
                 },
                 "trigger": {
                   "type": "string",
@@ -3457,7 +3457,7 @@
                 },
                 "runtime": {
                   "type": "string",
-                  "description": "`claude_code`, `codex`, `grok`, `antigravity`, `cursor`, `opencode`, or `api` (an API key)."
+                  "description": "`claude_code`, `codex`, `grok`, `antigravity`, `cursor`, `opencode`, `devin`, or `api` (an API key)."
                 },
                 "authMethod": {
                   "$ref": "#/components/schemas/OperatorAiAuthMethod"

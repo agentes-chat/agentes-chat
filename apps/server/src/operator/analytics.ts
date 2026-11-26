@@ -413,7 +413,8 @@ const CliRuns = z
       .array(
         z.object({
           cli: z.string().openapi({
-            description: "The coding CLI's name: `claude`, `codex`, `cursor`, `opencode`, `grok`, `antigravity`.",
+            description:
+              "The coding CLI's name: `claude`, `codex`, `cursor`, `opencode`, `grok`, `antigravity`, `devin`.",
           }),
           version: z.string().openapi({
             description: "Its version, as its `--version` gave it on the run's computer.",
@@ -651,7 +652,8 @@ const AiAccounts = z
               "`anthropic`, `openai`, `xai`, `google`, `cursor`, `opencode`, a coding plan's id, or an API key's provider.",
           }),
           runtime: z.string().openapi({
-            description: "`claude_code`, `codex`, `grok`, `antigravity`, `cursor`, `opencode`, or `api` (an API key).",
+            description:
+              "`claude_code`, `codex`, `grok`, `antigravity`, `cursor`, `opencode`, `devin`, or `api` (an API key).",
           }),
           authMethod: AuthMethodOrUnknown,
           billing: z.enum(["subscription", "coding_plan", "metered_api", "unknown"]).openapi({

@@ -10,6 +10,7 @@ import {
   CODEX_UNELEVATED_PROTOCOL,
   CODEX_WINDOWS_PROTOCOL,
   CONTEXT_LIMIT_PROTOCOL,
+  DEVIN_PROTOCOL,
   GROK_WINDOWS_PROTOCOL,
   MISSION_PROTOCOL,
   OPENCODE_ACP_PROTOCOL,
@@ -256,7 +257,12 @@ describe("brain settings", () => {
       opencode: null,
       grok: null,
       antigravity: null,
+      devin: "runner_old",
     });
+    // The Devin CLI's pin has no Windows build: there it doesn't run, installed or not (ADR 0253).
+    const withDevin = { ...executors, devin: { version: "devin 3000.15.14 (abc)" } };
+    expect(reasons(mac({ os: "windows", protocol: DEVIN_PROTOCOL, executors: withDevin })).devin).toBe("system");
+    expect(reasons(mac({ os: "linux", protocol: DEVIN_PROTOCOL, executors: withDevin })).devin).toBeNull();
     expect(reasons(mac({ os: "windows", protocol: CLI_COPIES_PROTOCOL - 1, executors })).cursor).toBe("runner_old");
     expect(reasons(mac({ os: "windows", protocol: OPENCODE_ACP_PROTOCOL, executors })).opencode).toBeNull();
     expect(reasons(mac({ os: "windows", protocol: GROK_WINDOWS_PROTOCOL - 1, executors })).grok).toBe("runner_old");
