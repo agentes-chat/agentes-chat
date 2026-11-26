@@ -19444,6 +19444,8 @@ export const ptBR = {
       helping: "ajudando o {{name}}",
       helping_female: "ajudando a {{name}}",
       see: "Ver conversa",
+      /** The quote of another agent's answer at the top of the message that passes it on; opens the conversation. */
+      relay: "Resposta de {{name}}: {{excerpt}}. Ver a conversa",
     },
     /** In place of a row of the conversation that failed to draw (the rest keeps working). */
     unshown: "Esta mensagem não pôde ser exibida",
