@@ -134,6 +134,11 @@ export interface MachineExecutors {
   authEgressGroup?: true;
   /** `hello.app` (protocol 87): the agentes.chat app runs its runner; absent: from the terminal, or an older runner. */
   app?: true;
+  /**
+   * `hello.permissions` and `permissions.changed`: the OS permissions its agents' work waits on there (macOS's Full
+   * Disk Access, Screen Recording…), one each, with what asked and when; absent: none reported.
+   */
+  permissions?: { permission: string; trigger: string; agentId?: string; since: string }[];
   /** `hello.toolchains` (bring your own devices): what it can build and drive phones with, by tool, its version. */
   toolchains?: Record<string, string>;
   /** The usage of the computer's own sign-ins (protocol 19), by brain; kept across reconnects. */

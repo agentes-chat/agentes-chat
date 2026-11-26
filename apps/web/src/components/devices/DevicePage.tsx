@@ -1,4 +1,4 @@
-import type { ComputerDevice, DeviceAudience, Machine, PhoneDevice } from "@agenteschat/client";
+import type { ComputerDevice, DeviceAudience, Machine, PermissionNeed, PhoneDevice } from "@agenteschat/client";
 import { useMachinePause, useMachines } from "@agenteschat/client";
 import {
   deviceName,
@@ -8,6 +8,7 @@ import {
   lendingDevice,
   mayChangeTasks,
   osName,
+  permissionWaitLines,
   personInControl,
   phoneLink,
   phoneSystem,
@@ -25,6 +26,7 @@ import { isPaused, PAUSE_CHOICES, pauseChoiceText, pausedByText, pauseUntil } fr
 import { can } from "@agenteschat/client/lib/permissions";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import {
+  Alert,
   Avatar,
   Button,
   Card,
@@ -51,6 +53,7 @@ import { CommandBlock } from "@/components/machine-bits";
 import { PrefRow } from "@/components/NoticePrefs";
 import { useOrg } from "@/components/org-context";
 import { OrgMark } from "@/components/ProfilePhoto";
+import { useDirectory } from "@/hooks/useDirectory";
 import { useToast } from "@/lib/toast";
 import { ConnectDialog, type ConnectStart } from "./ConnectDialog";
 import { WifiIphoneOffer } from "./ConnectPhone";
@@ -286,6 +289,24 @@ function Toolchains({ tools }: { tools: Record<string, string> }) {
 }
 
 /**
+ * An OS permission the computer waits on: what and where, that it is allowed in the agentes.chat app there (the only
+ * place it can be), and which agent asked it for what.
+ */
+function PermissionWait({ need, computer }: { need: PermissionNeed; computer: string }) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const agents = useDirectory(org.id).agentById;
+  const words = permissionWaitLines(t, need, computer, need.agentId ? agents.get(need.agentId)?.name : undefined);
+  return (
+    <Alert tone="neutral" icon="lock" className="dv-permission">
+      <strong className="dv-permission__title">{words.title}</strong>
+      {words.next}
+      {words.asked && <small className="dv-permission__asked">{words.asked}</small>}
+    </Alert>
+  );
+}
+
+/**
  * A computer someone connected: its state and one action, facts and toolchains; who can use it, how many tasks at once
  * and whether it belongs to the workspace; the phones it reaches; then its folders and tools; Remove. The workspace
  * computer keeps its own page.
@@ -407,6 +428,9 @@ function ComputerPage({ machineId }: { machineId: string }) {
           status={status}
           text={pausedFromApps ?? (status.kind === "busy" ? taskLimitLine(t, d, tasksEditable) : null)}
         />
+        {(d.permissions ?? []).map((need) => (
+          <PermissionWait key={need.permission} need={need} computer={d.name} />
+        ))}
         {pausable && !pausable.remotePause && <span className="small muted">{t("machines.remotePause.outdated")}</span>}
         {machine?.canManage && machine.update && (
           <>

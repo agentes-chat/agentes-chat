@@ -1,12 +1,14 @@
 import {
   IPHONE_DEV_MODE_PROTOCOL,
   IPHONE_WIFI_PROTOCOL,
+  type PermissionNeed,
   PHONE_SCREEN_PROTOCOL,
   type PhoneHolder,
   type PhonePlatform,
   type PhoneReason,
   type PhoneTarget,
   type PubSub,
+  parsePermissionNeeds,
   type RateLimiter,
   type RunnerPhone,
   STREAM_CLOSE,
@@ -143,6 +145,8 @@ export interface ComputerDevice {
    */
   taskRoom: TaskRoomReport | null;
   toolchains: Record<string, string>;
+  /** The OS permissions its agents' work waits on there, each asked in its agentes.chat app (`OS_PERMISSIONS_PROTOCOL`). */
+  permissions: PermissionNeed[];
   /** A Mac whose app opens Xcode and looks at its iPhone again for the iPhone guide (`IPHONE_DEV_MODE_PROTOCOL`). */
   opensXcode: boolean;
   lastSeenAt: string | null;
@@ -481,6 +485,7 @@ export async function listDevices(
       maxTasks: m.size?.maxTasks ?? null,
       taskRoom: m.size?.room ?? null,
       toolchains: m.executors?.toolchains ?? {},
+      permissions: parsePermissionNeeds(m.executors?.permissions),
       opensXcode: !managed && m.os === "darwin" && m.protocol >= IPHONE_DEV_MODE_PROTOCOL,
       lastSeenAt: iso(m.lastSeenAt),
       mayUse,

@@ -9,6 +9,7 @@ import type {
   MachineOfflineCause,
   MachineTool,
   OrgSummary,
+  PermissionNeed,
   PhoneDevice,
   WifiPairing,
 } from "../api/types";
@@ -271,6 +272,25 @@ export function tasksAutoText(t: TFunction, d: ComputerDevice): string | null {
   return d.taskRoom.more > 0
     ? t("devices.tasksAutoRoom", { running, more: d.taskRoom.more })
     : t("devices.tasksAutoFull", { running });
+}
+
+/**
+ * A permission a computer waits on, as the web and the phone say it: what and where, the next step (it is allowed in
+ * the agentes.chat app on that computer, nowhere else), and who asked it for what (null: nothing said what).
+ * `agent`: the asking agent's name.
+ */
+export function permissionWaitLines(t: TFunction, need: PermissionNeed, computer: string, agent?: string) {
+  const permission = say(t, `devices.permission.names.${need.permission}`);
+  const trigger = need.trigger;
+  return {
+    title: t("devices.permission.title", { permission, computer }),
+    next: t("devices.permission.next"),
+    asked: !trigger
+      ? null
+      : agent
+        ? t("devices.permission.askedBy", { agent, trigger })
+        : t("devices.permission.asked", { trigger }),
+  };
 }
 
 /** How a computer helps its owner's agents: never, while their own computer is full or away, or first for their work. */

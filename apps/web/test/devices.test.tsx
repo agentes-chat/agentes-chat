@@ -179,6 +179,24 @@ describe("Settings › Devices", () => {
     ]);
   });
 
+  test("a computer waiting on an OS permission: what, where, the one place it is allowed, and who asked for what", async () => {
+    await open(`/org/${ORG_ID}/settings/devices/${MAC}`, (devices) => {
+      const list = acmeDevices();
+      const mac = list.devices.find((d) => d.id === MAC) as ComputerDevice | undefined;
+      if (!mac) throw new Error("fixture");
+      mac.permissions = [
+        { permission: "disk", trigger: "ls ~/Desktop", agentId: LIA, since: "2026-11-26T18:00:00.000Z" },
+        { permission: "screen", trigger: "screencapture -x screen.png", since: "2026-11-26T18:01:00.000Z" },
+      ];
+      devices.set(list);
+    });
+    const card = screen().getByRole("heading", { name: "Sam's MacBook Pro" }).closest(".ac-card") as HTMLElement;
+    expect([...card.querySelectorAll(".dv-permission")].map((a) => a.textContent)).toEqual([
+      "Waiting for Full Disk Access on Sam's MacBook ProAllow it in the agentes.chat app there.Asked by Lia to run ls ~/Desktop",
+      "Waiting for Screen Recording on Sam's MacBook ProAllow it in the agentes.chat app there.Needed to run screencapture -x screen.png",
+    ]);
+  });
+
   test("a computer whose runner is behind this server: its owner sees why and how to update it, no one else", async () => {
     const page = async (update: "command" | "installer" | null, canManage = true) => {
       cleanup();

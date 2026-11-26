@@ -18093,6 +18093,22 @@
         "always": "{{deviceName}} ora è condiviso con loro.",
         "no": "Hai detto di no."
       }
+    },
+    "permission": {
+      "title": "In attesa di {{permission}} su {{computer}}",
+      "next": "Consentilo nell’app agentes.chat su quel computer.",
+      "askedBy": "Richiesto da {{agent}} per eseguire {{trigger}}",
+      "asked": "Serve per eseguire {{trigger}}",
+      "names": {
+        "app_management": "Gestione app",
+        "screen": "Registrazione schermo",
+        "accessibility": "Accessibilità",
+        "disk": "Accesso completo al disco",
+        "network": "Rete locale",
+        "camera": "Fotocamera",
+        "microphone": "Microfono",
+        "automation": "Automazione"
+      }
     }
   },
   "computers": {

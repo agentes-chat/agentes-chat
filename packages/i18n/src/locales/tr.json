@@ -17430,6 +17430,22 @@
         "always": "{{deviceName}} artık onlarla paylaşılıyor.",
         "no": "Hayır dediniz."
       }
+    },
+    "permission": {
+      "title": "{{computer}} üzerinde {{permission}} izni bekleniyor",
+      "next": "O bilgisayardaki agentes.chat uygulamasında izin verin.",
+      "askedBy": "{{agent}}, {{trigger}} komutunu çalıştırmak için istedi",
+      "asked": "{{trigger}} komutunu çalıştırmak için gerekli",
+      "names": {
+        "app_management": "Uygulama Yönetimi",
+        "screen": "Ekran Kaydı",
+        "accessibility": "Erişilebilirlik",
+        "disk": "Tam Disk Erişimi",
+        "network": "Yerel Ağ",
+        "camera": "Kamera",
+        "microphone": "Mikrofon",
+        "automation": "Otomasyon"
+      }
     }
   },
   "computers": {

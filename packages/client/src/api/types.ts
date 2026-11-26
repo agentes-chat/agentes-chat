@@ -9131,6 +9131,22 @@ export interface PhoneDevice {
   mayManage: boolean;
 }
 
+/** An OS permission a computer waits on (macOS's Full Disk Access, Screen Recording…): what asked, which agent, since. */
+export interface PermissionNeed {
+  permission:
+    | "app_management"
+    | "screen"
+    | "accessibility"
+    | "disk"
+    | "network"
+    | "camera"
+    | "microphone"
+    | "automation";
+  trigger: string;
+  agentId?: string;
+  since: string;
+}
+
 export interface ComputerDevice {
   id: string;
   machineKind: "connected" | "host" | "managed";
@@ -9161,6 +9177,8 @@ export interface ComputerDevice {
   /** Tasks start on room, not on `maxTasks`; null: the count decides (an older app). Absent from an older server. */
   taskRoom?: { more: number; freeGb: number; cpuBusy: boolean; pushHarder: boolean } | null;
   toolchains: Record<string, string>;
+  /** The OS permissions its agents' work waits on there, asked in its agentes.chat app; absent from an older server. */
+  permissions?: PermissionNeed[];
   /** A Mac whose app opens Xcode and looks at its iPhone again for the iPhone guide; absent from an older server. */
   opensXcode?: boolean;
   lastSeenAt: string | null;

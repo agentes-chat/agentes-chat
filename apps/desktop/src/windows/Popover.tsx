@@ -38,7 +38,7 @@ import { NOTCH_PREF } from "../control/notch";
 import { SITE_NOTIFY_PREF } from "../control/notify";
 import { nextOffer, PAIR_OFFER_PREF, PAIR_OFFERED_PREF, targetKey } from "../control/pair";
 import { combinedPause, extendPause, type PauseChoice, pauseUntil } from "../control/pause";
-import { PREPARE_PREF } from "../control/permissions";
+import { askKey, PERMISSION_ASK_PREF, PREPARE_PREF, permissionAsks } from "../control/permissions";
 import { homeServer, type ServerList, type ServerWorkspaces, serverName } from "../control/server";
 import { type Home, isIncompatible, isRefusedHome, orgName, pairedHomes } from "../control/store";
 import { answerThisMac, type PrefsTab, whenHostHomeReady } from "../control/this-mac";
@@ -184,6 +184,24 @@ export function Popover() {
       void host.notify(t("desktop.tray.browser.notifTitle", { agent: agent.name }), body).catch(() => {});
     }
   }, [helpKeys]);
+
+  // An OS permission an agent's work waits on here: the welcome window asks for it, once per new wait.
+  const asks = permissionAsks(homes);
+  const askKeys = asks.map(askKey).sort().join("|");
+  const asked = useRef(new Set<string>());
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs when the set of waits changes
+  useEffect(() => {
+    const now = new Set(asks.map(askKey));
+    const fresh = [...now].some((k) => !asked.current.has(k));
+    asked.current = now;
+    if (!fresh) return;
+    writePref(PERMISSION_ASK_PREF, true);
+    void host.showWindow("welcome").catch(() => {});
+  }, [askKeys]);
+  const openAsk = () => {
+    writePref(PERMISSION_ASK_PREF, true);
+    void host.showWindow("welcome").catch(() => {});
+  };
 
   // "há 2 min" stays true.
   useEffect(() => {
@@ -739,6 +757,23 @@ export function Popover() {
           )}
 
           {homes.map((h) => h.allowed && <AllowedBanner key={h.homeId} home={h} />)}
+
+          {asks.map((a) => (
+            <Banner
+              key={askKey(a)}
+              icon="lock"
+              title={t("desktop.permissionAsk.trayTitle", {
+                permission: t(`devices.permission.names.${a.need.permission}`),
+              })}
+              actions={
+                <Button size="sm" variant="primary" onClick={openAsk}>
+                  {t("desktop.pair.allow")}
+                </Button>
+              }
+            >
+              {t(`desktop.permissionAsk.why.${a.need.permission}`)}
+            </Banner>
+          ))}
 
           {requests.length > 0 && (
             <section className="dk-psec">

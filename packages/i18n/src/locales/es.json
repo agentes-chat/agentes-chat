@@ -17994,6 +17994,22 @@
         "always": "{{deviceName}} ya se comparte con ellos.",
         "no": "Dijiste que no."
       }
+    },
+    "permission": {
+      "title": "Esperando {{permission}} en {{computer}}",
+      "next": "Permítelo en la app agentes.chat de ese equipo.",
+      "askedBy": "Lo pidió {{agent}} para ejecutar {{trigger}}",
+      "asked": "Hace falta para ejecutar {{trigger}}",
+      "names": {
+        "app_management": "Gestión de apps",
+        "screen": "Grabación de pantalla",
+        "accessibility": "Accesibilidad",
+        "disk": "Acceso total al disco",
+        "network": "Red local",
+        "camera": "Cámara",
+        "microphone": "Micrófono",
+        "automation": "Automatización"
+      }
     }
   },
   "computers": {

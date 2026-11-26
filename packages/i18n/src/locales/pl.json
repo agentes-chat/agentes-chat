@@ -18652,6 +18652,22 @@
         "always": "Urządzenie {{deviceName}} jest im teraz udostępnione.",
         "no": "Odmówiono."
       }
+    },
+    "permission": {
+      "title": "Czeka na uprawnienie {{permission}} na {{computer}}",
+      "next": "Zezwól na to w aplikacji agentes.chat na tym komputerze.",
+      "askedBy": "{{agent}} potrzebuje go do uruchomienia {{trigger}}",
+      "asked": "Potrzebne do uruchomienia {{trigger}}",
+      "names": {
+        "app_management": "Zarządzanie aplikacjami",
+        "screen": "Nagrywanie ekranu",
+        "accessibility": "Dostępność",
+        "disk": "Pełny dostęp do dysku",
+        "network": "Sieć lokalna",
+        "camera": "Kamera",
+        "microphone": "Mikrofon",
+        "automation": "Automatyzacja"
+      }
     }
   },
   "computers": {

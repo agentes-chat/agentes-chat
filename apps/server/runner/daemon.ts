@@ -20,6 +20,7 @@ import {
   ALL_AGENTS,
   isAccountId,
   isAccountKind,
+  isOsPermission,
   LOAD_SAMPLE_MS,
   MACHINE_PROTOCOL_VERSION,
   type MachineAgent,
@@ -159,6 +160,7 @@ import {
   writeNetworkState,
 } from "./network-state";
 import { type CachedLogo, logoDataUrl, readCachedLogo, removeCachedLogo, syncOrgLogo } from "./org-logo";
+import { PermissionNeeds } from "./os-permissions";
 import { type DeviceGrant, devicePair, type FetchFn, LINK_CODE, PairingError, uniqueWorkspace } from "./pairing";
 import { ackPark, takePark } from "./park";
 import { agentId8, agentWorkspace } from "./paths";
@@ -459,6 +461,8 @@ export interface DaemonOptions {
   selfCheckRetryMs?: number;
   /** Tests: what `hello.toolchains` says instead of a look at the computer's tools. */
   toolchains?: () => RunnerToolchains | undefined;
+  /** Tests: the system whose refusals a failed command's output is read for (`permissionOfOutput`). */
+  platform?: string;
   /** Tests: the phones' tools and folders, or `false` for none (a single-user runner looks for phones). */
   phones?: Partial<PhoneManagerOptions> | false;
   /** Tests: the iPhone setup's tools and folders. */
@@ -590,6 +594,11 @@ export class RunnerDaemon implements RequestObserver {
   private toolchains: { get(): RunnerToolchains | undefined; stop(): void; lookApple?(): Promise<void> } | null = null;
   /** The Mac's side of an iPhone's setup (the desktop app asks), made on its first request. */
   private iphone: IphoneSetup | null = null;
+  /** The OS permissions agents' work waits on here: the app asks the person, the server shows the wait. */
+  private readonly permissionNeeds = new PermissionNeeds((permissions) => {
+    this.send({ type: "permissions.changed", permissions });
+    this.queueStatus();
+  });
   /** System mode under systemd: the agents' holds (ADR 0176), which outlive sessions and this process. */
   private holds: Holds | null = null;
   /** An operator's standby is in force (ADR 0176): no link to the server, everything else runs. */
@@ -1776,6 +1785,7 @@ export class RunnerDaemon implements RequestObserver {
     }
     const context: HandlerContext = {
       workspaceReal,
+      ...(this.opts.platform ? { platform: this.opts.platform } : {}),
       get exec() {
         return daemon.access().tools.commands;
       },
@@ -1862,6 +1872,7 @@ export class RunnerDaemon implements RequestObserver {
         return {
           ...(phones ? { phones } : {}),
           ...(toolchains ? { toolchains } : {}),
+          permissions: this.permissionNeeds.list(),
           ...this.info(workspaceReal),
           browser: browser.info(),
           desktop: this.desktops.info(),
@@ -2585,6 +2596,7 @@ export class RunnerDaemon implements RequestObserver {
       access: this.access(),
       browsers,
       ...(this.phones ? { phones: this.phones.list() } : {}),
+      permissions: this.permissionNeeds.list(),
       // In system mode each agent runs as a user of its own, not as the runner's.
       ...(OS_USER && c?.mode !== "system" && s?.mode !== "system" ? { user: OS_USER } : {}),
       seq: ++this.statusSeq,
@@ -2622,6 +2634,12 @@ export class RunnerDaemon implements RequestObserver {
     this.opts.log("reconnect asked by the app");
     s.connection.reconnect();
     return { reconnecting: true };
+  }
+
+  /** The app's dialog: the person allowed `permission` (or it was on already), so nothing waits on it. */
+  permissionClear(permission: unknown): { cleared: boolean } {
+    if (!isOsPermission(permission)) throw new ControlError("bad_request", "Unknown permission");
+    return { cleared: this.permissionNeeds.clear(permission) };
   }
 
   /**
@@ -3201,11 +3219,16 @@ export class RunnerDaemon implements RequestObserver {
     const d = this.describe(req);
     if (!d) return;
     const agent = this.agentRef(req.agent);
+    const permission =
+      outcome.ok && req.op === "exec" ? (outcome.data as MachineReplies["exec"]).permission : undefined;
     this.queue(async () => {
       const job = this.jobs.get(id);
       this.jobs.delete(id);
       if (job) this.emit({ kind: "job.finished", jobId: id, result });
       const redact = d.command ? await this.redactor(req.agent) : undefined;
+      if (permission) {
+        this.permissionNeeds.add(permission, redactCommon(redact ? redact(d.summary) : d.summary), agent?.id);
+      }
       const kind = d.kind === "exec" ? "command" : d.kind === "brain" ? "brain" : "file";
       this.record(
         {
