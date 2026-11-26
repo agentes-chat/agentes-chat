@@ -133,6 +133,7 @@
     "allowedOne": "{{folder}} consentita per {{agent}}",
     "allowedAll": "{{folder}} consentita per tutti gli agenti",
     "denied": "Rifiutato. {{agent}} lo farà sapere in chat.",
+    "answerFailed": "Impossibile rispondere a questa richiesta: {{message}}",
     "notifTitle": "{{agent}} vuole usare la cartella {{folder}}",
     "allowedTitle": "{{name}} ha attivato {{tool}} da agentes.chat",
     "allowedBody": "Se non sei stato tu, annulla qui.",

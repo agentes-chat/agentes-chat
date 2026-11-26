@@ -1366,6 +1366,27 @@ describe("In the chat and the inbox", () => {
     expect(calls(state, "devices.decideAccess")[0]?.args).toEqual([ORG_ID, "ar-1", "once"]);
   });
 
+  test("an agent waits for a folder on my computer: No from the inbox, never a yes", async () => {
+    const state = acmeState();
+    state.notifications = [
+      notification({
+        id: "n-folder",
+        kind: "device.folder_request" as never,
+        waiting: true,
+        actors: [{ type: "agent", id: LIA }],
+        source: { machineId: MAC, label: "Sam's MacBook Pro", agentId: LIA, requestId: "fr-1" } as never,
+        latest: { title: "/Users/sam/Contracts", text: "read the contracts" },
+      }),
+    ];
+    await open(`/org/${ORG_ID}/notifications`, undefined, state);
+    await click(document.querySelector('[data-n="n-folder"]') as HTMLElement);
+    const read = document.querySelector(".ib-read") as HTMLElement;
+    expect(within(read).queryByRole("button", { name: /allow/i })).toBeNull();
+    await click(within(read).getByRole("button", { name: "No" }));
+    await settle(4);
+    expect(calls(state, "machines.refuseFolder").map((c) => c.args)).toEqual([[ORG_ID, MAC, "fr-1"]]);
+  });
+
   test("my computer paired before lends its internet now: the inbox says so plainly, with Turn off", async () => {
     const state = acmeState();
     state.notifications = [

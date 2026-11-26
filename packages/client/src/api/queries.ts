@@ -6844,6 +6844,18 @@ export function useReduceMachineAccess(orgId: string) {
   });
 }
 
+/** No to a folder an agent waits for on a computer (`device.folder_request`): the inbox row it waited in is done. */
+export function useRefuseFolderRequest(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ machineId, requestId }: { machineId: string; requestId: string }) =>
+      api.machines.refuseFolder(orgId, machineId, requestId),
+    meta: { silent: true },
+    onSuccess: () => void qc.invalidateQueries({ queryKey: keys.notifications(orgId) }),
+  });
+}
+
 /**
  * One click where a tool is off on a computer: its owner turns it on (`allow`), anyone else asks them (`ask`). The
  * machines and devices lists refetch so every screen that waited on it moves on.
