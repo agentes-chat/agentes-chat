@@ -490,7 +490,9 @@ export function createApp(options: AppOptions) {
             ? "data-unknown-host"
             : null;
         if (mark) {
-          const page = (await c.res.text()).replace("<html", `<html ${mark}`);
+          let page = (await c.res.text()).replace("<html", `<html ${mark}`);
+          // The web app manifest (ADR 0249) installs the product's name and icon; a registered host wears its own.
+          if (mark === "data-host") page = page.replace(/<link rel="manifest"[^>]*>\s*/, "");
           c.res.headers.delete("content-length");
           // The address may be registered a moment later: nothing keeps this answer.
           if (mark === "data-unknown-host") c.res.headers.set("cache-control", "no-store");

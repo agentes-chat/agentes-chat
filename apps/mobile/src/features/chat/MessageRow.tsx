@@ -28,6 +28,7 @@ import { channelRefsOf } from "@agenteschat/client/lib/channel-refs";
 import { type RunPosition, runAround } from "@agenteschat/client/lib/chat";
 import { mineOnRight } from "@agenteschat/client/lib/chat-look";
 import { choiceReplyLine } from "@agenteschat/client/lib/choices";
+import type { RelayedAnswer } from "@agenteschat/client/lib/consult-group";
 import { spilledText } from "@agenteschat/client/lib/devices";
 import { agentsByAnyHandle } from "@agenteschat/client/lib/directory";
 import {
@@ -170,6 +171,7 @@ import { MessageText } from "./MessageText";
 import { aboveInset, QuoteAbove, QuotePlate } from "./QuoteLine";
 import { ReachLines } from "./ReachLines";
 import { Receipts } from "./Receipts";
+import { RelayQuote } from "./RelayQuote";
 import {
   useRowConsultsPart,
   useRowDirectory,
@@ -233,6 +235,8 @@ interface RowProps {
   /** The message it groups under, and whether that one shows its thread's link: what hangs under it ends the run. */
   above?: Message;
   aboveThread?: boolean;
+  /** Another agent's words it passes on (`relayedAnswers`): quoted at the top of its words. */
+  relay?: RelayedAnswer<Message> | undefined;
   meId: string | null;
   /** Its thread, when it is the root of one the conversation shows as a link. */
   thread?: ThreadInfo;
@@ -270,6 +274,7 @@ function RowBody({
   run: runAt = "solo",
   above,
   aboveThread = false,
+  relay,
 }: RowProps) {
   const { t, i18n } = useTranslation();
   // Mine and not sent for lack of a connection: it waits and goes by itself when the connection is back.
@@ -378,11 +383,24 @@ function RowBody({
     reached,
   );
   // Work it handed over that reports here: its line under this reply says what the pair row would.
-  const paired = consults.filter((c) => !m.handedWorks?.some((w) => w.handedBy?.consultationId === c.id));
-  const consultQuote =
+  // The question whose answer it passes on is quoted with those words (`relay`), not in the pair's quote too.
+  const paired = consults.filter(
+    (c) => !m.handedWorks?.some((w) => w.handedBy?.consultationId === c.id) && c.id !== relay?.consultation.id,
+  );
+  const relayQuote = relay && !readOnly ? <RelayQuote relay={relay} channelId={m.channelId} /> : null;
+  const pairQuote =
     isAgent && m.author.id && paired.length > 0 ? (
       <ConsultQuote askerId={m.author.id} channelId={m.channelId} items={paired} />
     ) : null;
+  const consultQuote =
+    relayQuote && pairQuote ? (
+      <>
+        {relayQuote}
+        {pairQuote}
+      </>
+    ) : (
+      (relayQuote ?? pairQuote)
+    );
   const quoteAlone = consultQuote !== null && (!body || Boolean(choiceReply));
   const quoteInWords = quoteAlone ? null : consultQuote;
   const grouped = groupedIn && !quoteAlone;

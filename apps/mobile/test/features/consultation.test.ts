@@ -65,3 +65,16 @@ test("the composer names whom it writes to in its placeholder only: no face in a
   const agentScreen = readFileSync(join(import.meta.dir, "../../src/features/computer/AgentScreen.tsx"), "utf8");
   for (const screen of [chatScreenSource(), agentScreen]) expect(screen).not.toMatch(/\bface[=:]\s*[{<]<?AgentFace/);
 });
+
+test("an agent's reply that passes on another agent's words quotes them, and their bubble folds away", () => {
+  const relay = readFileSync(join(import.meta.dir, "../../src/features/chat/RelayQuote.tsx"), "utf8");
+  // The same plate as the pair's quote, opening the two agents' conversation.
+  expect(relay).toContain("style={({ pressed }) => [quote.box,");
+  expect(relay).toContain("router.push(consultationHref(consultation.id, channelId))");
+  const rows = readFileSync(join(import.meta.dir, "../../src/features/chat/screen/useChatRows.ts"), "utf8");
+  expect(rows).toContain("relayedAnswers(");
+  expect(rows).toContain("relays.relayed.has(m.id)");
+  const row = readFileSync(join(import.meta.dir, "../../src/features/chat/MessageRow.tsx"), "utf8");
+  expect(row).toContain("<RelayQuote relay={relay} channelId={m.channelId} />");
+  expect(row).toContain("c.id !== relay?.consultation.id");
+});

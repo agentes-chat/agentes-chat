@@ -898,6 +898,35 @@ export function missingLibrariesText(missing: string[]): string {
 }
 
 /**
+ * The uids listening on `port` where Chrome's 127.0.0.1 would be, from `ss -Htln -e` (ss leaves root's uid out, read
+ * as 0). ss prints a dual-stack IPv6 wildcard as `*`, which holds 127.0.0.1, and a v6-only one as `[::]`, which doesn't.
+ */
+export function listenerUidsIn(ssOutput: string, port: number): number[] {
+  return ssOutput
+    .split("\n")
+    .filter((line) => {
+      const cols = line.trim().split(/\s+/);
+      const local = cols[3] ?? "";
+      return (
+        cols[0] === "LISTEN" &&
+        /^(127\.0\.0\.1|0\.0\.0\.0|\*):\d+$/.test(local) &&
+        Number(local.slice(local.lastIndexOf(":") + 1)) === port
+      );
+    })
+    .map((line) => Number(/\buid:(\d+)\b/.exec(line)?.[1] ?? 0));
+}
+
+/** `listenerUidsIn` on this computer now, or null when ss can't say. */
+function listenerUids(port: number): number[] | null {
+  const result = spawnSync("ss", ["-Htln", "-e"], { encoding: "utf8", timeout: 1000 });
+  return result.status === 0 ? listenerUidsIn(result.stdout ?? "", port) : null;
+}
+
+/** Another program holds an agent's fixed debugging port (system mode): what follows `CHROME_FAILURES.start`. */
+export const portTakenText = (port: number) =>
+  `Another program on this computer listens on port ${port}, which this agent's browser needs. Move that program to another port or stop it (sudo ss -tlnp 'sport = :${port}' shows which), then try again.`;
+
+/**
  * Starts Chrome and waits for its debugging port (Chrome writes it to
  * `<profile>/DevToolsActivePort` with `--remote-debugging-port=0`, its
  * browser endpoint on the next line).
@@ -908,27 +937,27 @@ export async function launchChrome(
   profile: string,
   env?: Record<string, string>,
   start: Spawn = spawn,
-  ownsPort: (port: number) => boolean = (port) => {
-    const uid = process.getuid?.();
-    if (uid === undefined) return false;
-    const result = spawnSync("ss", ["-Htln", "-e"], { encoding: "utf8", timeout: 1000 });
-    if (result.status !== 0) return false;
-    const rows = (result.stdout ?? "").split("\n").filter((line) => {
-      const cols = line.trim().split(/\s+/);
-      const local = cols[3] ?? "";
-      return (
-        cols[0] === "LISTEN" &&
-        (local.startsWith("127.0.0.1:") || local.startsWith("0.0.0.0:")) &&
-        Number(local.slice(local.lastIndexOf(":") + 1)) === port
-      );
-    });
-    return rows.length > 0 && rows.every((line) => Number(/\buid:(\d+)\b/.exec(line)?.[1]) === uid);
-  },
+  portListeners: (port: number) => number[] | null = listenerUids,
+  uid = process.getuid?.(),
 ): Promise<OwnChrome> {
   const portFile = path.join(profile, "DevToolsActivePort");
   const fixedPort = Number(args.find((arg) => arg.startsWith("--remote-debugging-port="))?.split("=")[1] ?? 0);
   if (!Number.isInteger(fixedPort) || fixedPort < 0 || fixedPort > 65_535) {
     throw new ChromeStartError("Invalid Chrome debugging port", "");
+  }
+  const ownsPort = (port: number) => {
+    const uids = portListeners(port);
+    return uid !== undefined && !!uids?.length && uids.every((u) => u === uid);
+  };
+  const holders = fixedPort ? (portListeners(fixedPort) ?? []).filter((u) => u !== uid) : [];
+  if (holders.length) {
+    throw new ChromeStartError(
+      `Chrome's debugging port ${fixedPort} is taken by uid ${holders.join(", ")}`,
+      "",
+      [],
+      false,
+      portTakenText(fixedPort),
+    );
   }
   await rm(portFile, { force: true });
   const child = start(exe, args, { stdio: ["ignore", "ignore", "pipe"], windowsHide: true, ...(env ? { env } : {}) });
