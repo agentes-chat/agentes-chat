@@ -6573,6 +6573,16 @@ html:not([data-pointer]) .tr-ok:focus-visible {
   contain-intrinsic-size: auto 56px;
 }
 /*
+ * With no scroll anchoring (`data-manual-anchor`: Safari, the desktop app on macOS, iPhones), a row is drawn whole until
+ * it was laid out once (`data-sized`, set by the list's ResizeObserver): skipped from then on, it keeps the height it
+ * remembers. Such a browser draws a skipped row only once it reaches the screen: one never drawn would come in at the
+ * 56px placeholder and grow as it crosses the list's top edge, pushing what the person reads down by hundreds of pixels
+ * on every long message scrolled into view from above.
+ */
+.channel__messages[data-manual-anchor] .ac-msg:not([data-sized]) {
+  content-visibility: visible;
+}
+/*
  * The newest rows are never skipped either (the last three): a row that just came in starts skipped, at the 56px
  * placeholder, until the next frame finds it on screen. The glide down to a message I sent reads the list's end in
  * that state, stops short of the row's real height (a bubble and its time: ~72px), and the end is caught up with a

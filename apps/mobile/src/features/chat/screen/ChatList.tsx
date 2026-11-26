@@ -1,4 +1,4 @@
-import type { MessagePin } from "@agenteschat/client";
+import { type MessagePin, PAGE_AHEAD_SCREENS } from "@agenteschat/client";
 import { screenAboveEnd } from "@agenteschat/client/lib/chat";
 import { firstUnreadId, opensAtLastRead, unreadThreadRootId } from "@agenteschat/client/lib/chat-look";
 import { issueTakenOf } from "@agenteschat/client/lib/issues";
@@ -912,7 +912,8 @@ export function ChatList({
                             onScrollEndDrag={onScrollSettled}
                             onMomentumScrollBegin={onGlide}
                             onMomentumScrollEnd={onScrollSettled}
-                            onStartReachedThreshold={0.5}
+                            onStartReachedThreshold={PAGE_AHEAD_SCREENS}
+                            onEndReachedThreshold={PAGE_AHEAD_SCREENS}
                             keyboardDismissMode="interactive"
                             keyboardShouldPersistTaps="handled"
                             keyboardOffset={lift}

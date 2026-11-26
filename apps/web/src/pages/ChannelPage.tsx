@@ -38,6 +38,7 @@ import {
   MESSAGES_PAGE,
   messageLiveRef,
   OPEN_THREAD,
+  PAGE_AHEAD_SCREENS,
   runsInChannel,
   type StreamsState,
   sendHelpers,
@@ -252,7 +253,7 @@ import {
 } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
-import { anchorShift, anchorsScroll, type RowResize } from "@/chat/anchor";
+import { anchorShift, anchorsScroll, type RowResize, topInList } from "@/chat/anchor";
 import { tokenizeBody } from "@/chat/body";
 import { ChatMedia } from "@/chat/ChatMedia";
 import { ChatVoice } from "@/chat/ChatVoice";
@@ -1358,7 +1359,7 @@ function ChannelView({
   // pages come as the person scrolls down, until they reach it.
   const [gap, setGap] = useState(false);
   const [newerLoading, setNewerLoading] = useState(false);
-  const anchor = useRef<{ height: number; top: number } | null>(null);
+  const anchor = useRef<{ row: HTMLElement; top: number } | null>(null);
   const loadOlder = (limit = OLDER_PAGE) => {
     // A thread view loads its whole conversation at once.
     if (thread || olderState !== "idle" || !messages.data) return;
@@ -1371,16 +1372,20 @@ function ChannelView({
     api.chat
       .messages(org.id, channel.id, { before: oldest.createdAt, limit, onCards: cardsInto(qc, org.id) })
       .then((page) => {
-        // Keep what's on screen where it is: remember the distance from the bottom.
+        // Keep what's on screen where it is: the list moves down by what lands above the oldest row it holds.
         const el = scroller.current;
-        if (el) anchor.current = { height: el.scrollHeight, top: el.scrollTop };
-        setOlder((prev) => {
-          const known = new Set(prev.map((m) => m.id));
-          const next = [...page.filter((m) => !known.has(m.id)), ...prev];
-          if (!gap) qc.setQueryData<OlderPages>(olderKey, { pages: next, done: page.length < limit });
-          return next;
+        const row = el?.querySelector<HTMLElement>(".ac-msg");
+        if (el && row) anchor.current = { row, top: topInList(el, row) };
+        // Drawn in slices: fifty rows in one task would hold the page still while the person scrolls on.
+        startTransition(() => {
+          setOlder((prev) => {
+            const known = new Set(prev.map((m) => m.id));
+            const next = [...page.filter((m) => !known.has(m.id)), ...prev];
+            if (!gap) qc.setQueryData<OlderPages>(olderKey, { pages: next, done: page.length < limit });
+            return next;
+          });
+          setOlderState(page.length < limit ? "done" : "idle");
         });
-        setOlderState(page.length < limit ? "done" : "idle");
       })
       .catch(() => setOlderState("idle"));
   };
@@ -1420,7 +1425,10 @@ function ChannelView({
     const a = anchor.current;
     if (!el || !a) return;
     anchor.current = null;
-    el.scrollTop = el.scrollHeight - a.height + a.top;
+    // Scroll anchoring already moved a list that isn't at its very top (Chromium, measured: also when only read here).
+    if (anchorsScroll() && el.scrollTop > 0) return;
+    // By what came above, not back to where the list was: the person may have scrolled on since the page was asked for.
+    if (a.row.isConnected) el.scrollTop += topInList(el, a.row) - a.top;
   }, [older]);
 
   // Every thread with replies is one line under its root; its replies live in the panel.
@@ -1818,6 +1826,8 @@ function ChannelView({
         const before = heights.get(target);
         const after = target.offsetHeight;
         heights.set(target, after);
+        // Laid out whole once: it may be skipped now, at the height it remembers (layout.css).
+        if (before === undefined) target.dataset.sized = "";
         if (before !== undefined && before !== after)
           resized.push({ top: target.getBoundingClientRect().top - listTop, before, after });
       }
@@ -2850,6 +2860,7 @@ function ChannelView({
                             data-look={look.style}
                             data-faces={look.faces ? undefined : "false"}
                             data-wallpaper={wallpaper?.wallpaper.kind}
+                            data-manual-anchor={anchorsScroll() ? undefined : ""}
                             aria-label={t("channel.messages")}
                             aria-live="polite"
                             aria-relevant="additions"
@@ -2878,7 +2889,8 @@ function ChannelView({
                                 Date.now() - lastUpGesture.current < GESTURE_MS ||
                                 (byPerson && selectingIn(e.currentTarget));
                               if (byPerson) datePill.current?.poke();
-                              if (byPerson && e.currentTarget.scrollTop < 240) loadOlder();
+                              const ahead = e.currentTarget.clientHeight * PAGE_AHEAD_SCREENS;
+                              if (byPerson && e.currentTarget.scrollTop <= ahead) loadOlder();
                               if (upByPerson && previousTop !== null && e.currentTarget.scrollTop < previousTop) {
                                 letGo();
                                 return;
@@ -2886,7 +2898,7 @@ function ChannelView({
                               // Away from the latest page, its end is not the conversation's: newer pages, never pinned.
                               if (gap) {
                                 const below = e.currentTarget.scrollHeight - e.currentTarget.scrollTop;
-                                if (byPerson && below - e.currentTarget.clientHeight < 240) loadNewer();
+                                if (byPerson && below - e.currentTarget.clientHeight <= ahead) loadNewer();
                                 return;
                               }
                               const near = nearBottom(e.currentTarget);

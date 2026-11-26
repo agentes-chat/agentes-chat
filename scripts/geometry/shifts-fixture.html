@@ -14,6 +14,12 @@
     frame its rows first show, Chromium lays them out twice (placeholders, then real sizes) and reports them moved from
     where the first pass put them, though that pass was never painted.
   - bad-shift--fresh: the same list scrolled to its end a frame late: its rows were painted, then moved.
+  Read by `SCROLL` (scrolled up a wheel's worth a frame), as a browser with no scroll anchoring:
+  - bad-scroll--edge: a list whose tall rows stand at a placeholder's height until they reach the screen, as Safari
+    draws skipped rows: each grows as it crosses the top edge and pushes what is on screen down.
+  - good-scroll--edge: the same rows at their height from the start.
+  - bad-scroll--wall: older rows come only once the list reached its top, a moment later: it waits there.
+  - good-scroll--wall: they come three screens before the top, and the list keeps its place.
 -->
 <html lang="pt-BR">
   <head>
@@ -76,6 +82,46 @@
           pin();
           new ResizeObserver(() => (twin.startsWith("good-") ? pin() : requestAnimationFrame(pin))).observe(intro);
         });
+      } else if (twin?.includes("-scroll--")) {
+        const list = document.createElement("section");
+        list.className = "channel__messages";
+        list.style.overflowAnchor = "none";
+        const row = (i) => {
+          const el = document.createElement("div");
+          el.className = "row ac-msg";
+          el.textContent = `Mensagem ${i}`;
+          return el;
+        };
+        for (let i = 0; i < 40; i++) {
+          const el = row(i);
+          if (twin.endsWith("--edge") && i % 3 === 0) {
+            el.style.height = twin === "good-scroll--edge" ? "300px" : "56px";
+            if (twin === "bad-scroll--edge")
+              new IntersectionObserver(([e]) => e.isIntersecting && (el.style.height = "300px"), { root: list }).observe(el);
+          }
+          list.append(el);
+        }
+        screen.append(list);
+        list.scrollTop = list.scrollHeight;
+        if (twin.endsWith("--wall")) {
+          let asked = false;
+          const prepend = () => {
+            const first = list.firstElementChild;
+            const top = first.offsetTop;
+            for (let i = 20; i > 0; i--) list.prepend(row(-i));
+            list.scrollTop += first.offsetTop - top;
+          };
+          list.addEventListener("scroll", () => {
+            if (asked) return;
+            if (twin === "good-scroll--wall" && list.scrollTop < list.clientHeight * 3) {
+              asked = true;
+              prepend();
+            } else if (twin === "bad-scroll--wall" && list.scrollTop === 0) {
+              asked = true;
+              setTimeout(prepend, 300);
+            }
+          });
+        }
       } else {
         const list = document.createElement("section");
         list.className = "channel__messages";

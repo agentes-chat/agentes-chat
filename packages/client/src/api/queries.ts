@@ -1716,6 +1716,11 @@ export const useChannelMembers = (orgId: string, channelId: string, enabled = tr
 
 /** Messages per page: the latest page, then older pages on scroll-up. */
 export const MESSAGES_PAGE = 100;
+/**
+ * A conversation's next page loads while this many screens are still left to scroll, web and phone: asked for only at
+ * its edge, a quick scroll stopped there and waited for it.
+ */
+export const PAGE_AHEAD_SCREENS = 3;
 /** A thread's root and replies, in one read. */
 export const THREAD_PAGE = 200;
 
