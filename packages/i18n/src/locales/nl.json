@@ -6939,6 +6939,7 @@
         "desc": "Alle agenten lezen dit. Je wijzigt het wanneer je wilt.",
         "line": "In één zin",
         "optional": "Optioneel. Zonder zin telt het type dat je koos.",
+        "otherNeeded": "Bij Iets anders schrijf je hier wat jullie doen om verder te gaan.",
         "todoPersonal": "Vertel me iets over jezelf.",
         "todoDescPersonal": "Al je agents lezen dit.",
         "donePersonal": "Ik weet iets over je",

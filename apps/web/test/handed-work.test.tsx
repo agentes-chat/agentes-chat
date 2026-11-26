@@ -4,7 +4,7 @@ import { setupDom } from "@agenteschat/ui/testing/dom";
 setupDom();
 
 import type { Issue, Message, WorkView } from "@agenteschat/client";
-import { cleanup } from "@testing-library/react";
+import { act, cleanup } from "@testing-library/react";
 import { ADA_ID, ATLAS_ID, createFakeApi, ENG_ID, ORG_ID, seedState } from "./fake-api";
 import { renderApp, settle, showIn } from "./render";
 
@@ -58,7 +58,7 @@ const message = (id: string, body: string, over: Partial<Message> = {}): Message
     ...over,
   }) as Message;
 
-async function chat(view: WorkView) {
+async function chat(view: WorkView, more: Message[] = []) {
   const state = seedState();
   state.messages = state.messages.filter((m) => m.channelId !== ENG_ID);
   state.messages.push(
@@ -68,12 +68,14 @@ async function chat(view: WorkView) {
       createdAt: ago(4),
     }),
   );
-  state.messages.push(message("reply", "I've handed this to Atlas.", { handedWorks: [view] }));
+  state.messages.push(message("reply", "I've handed this to Atlas.", { handedWorks: [view] }), ...more);
   const r = await renderApp(`/org/${ORG_ID}/c/${ENG_ID}`, { api: createFakeApi(state) });
   await settle(8);
   await showIn(r.services, "en");
+  chatRouter = r.router;
   return document.querySelector(".handed-line") as HTMLElement | null;
 }
+let chatRouter: Awaited<ReturnType<typeof renderApp>>["router"] | null = null;
 
 describe("the handed line under the reply that handed it (F1)", () => {
   test("working: handed to Atlas, the state in the agent's colour, its step and its time, and Stop", async () => {
@@ -108,6 +110,29 @@ describe("the handed line under the reply that handed it (F1)", () => {
       "See the result",
     ]);
   });
+});
+
+test("handed from a thread: See the result opens that thread at the report's copy, never a jump that can't find it", async () => {
+  const done = work({
+    status: "done",
+    state: null,
+    finishedAt: ago(0),
+    resultMessageId: "r-1",
+    threadId: "ask",
+    homeThreadId: "ask",
+  });
+  const copy = message("r-1", "October sales are up 12%.", {
+    author: { type: "agent", id: ATLAS_ID },
+    threadId: "ask",
+  });
+  const line = await chat(done, [copy]);
+  const see = [...(line?.querySelectorAll<HTMLElement>(".ac-workline__action") ?? [])].find(
+    (b) => b.textContent === "See the result",
+  );
+  await act(async () => see?.click());
+  await settle(6);
+  expect(chatRouter?.state.location.search).toMatchObject({ thread: "ask", tm: "r-1" });
+  expect(document.body.textContent).not.toContain("That message isn't available");
 });
 
 describe("handed tasks on the board (F2)", () => {

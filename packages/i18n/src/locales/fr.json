@@ -7162,6 +7162,7 @@
         "desc": "Tous les agents lisent ceci. Vous le changez quand vous voulez.",
         "line": "En une phrase",
         "optional": "Facultatif. Sans phrase, c'est le type coché qui compte.",
+        "otherNeeded": "Avec Autre chose, écrivez ici ce que vous faites pour continuer.",
         "todoPersonal": "Parlez-moi un peu de vous.",
         "todoDescPersonal": "Tous vos agents lisent ceci.",
         "donePersonal": "Je vous connais un peu",

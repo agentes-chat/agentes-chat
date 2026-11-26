@@ -246,6 +246,51 @@ describe("the menu's banners say only what matters there", () => {
   });
 });
 
+describe("Quit from the menu while agents work here", () => {
+  /** The fake host with the menu's choices sent by hand, and what the system's dialog was asked. */
+  const menuHost = (answer: (words: { title: string; body: string }) => Promise<boolean>) => {
+    const host = createFakeHost("popover", "here");
+    const menu: ((action: string) => void)[] = [];
+    host.onMenuAction = (cb) => {
+      menu.push(cb as (action: string) => void);
+      return () => {};
+    };
+    host.askQuit = answer;
+    return { host, choose: (action: string) => act(async () => menu.at(-1)?.(action)) };
+  };
+
+  test("the system's own dialog asks, never the popover that hides when another window takes focus", async () => {
+    const asked: { title: string; body: string }[] = [];
+    const { host, choose } = menuHost(async (words) => {
+      asked.push(words);
+      return false;
+    });
+    await withMenu(async (el) => {
+      await choose("quit");
+      expect(asked).toEqual([
+        {
+          title: "Quit agentes.chat?",
+          body: "agentes.chat stops on this Mac: nobody can use it, here, on your phone or your teammates', until you open the app again.",
+          quit: "Quit",
+          cancel: "Cancel",
+        } as never,
+      ]);
+      expect(el.querySelector(".dk-confirm")).toBeNull();
+    }, host);
+  });
+
+  test("when the system can't ask, the popover does", async () => {
+    const { host, choose } = menuHost(async () => {
+      throw new Error("no dialog");
+    });
+    await withMenu(async (el) => {
+      await choose("quit");
+      await until(() => el.querySelector(".dk-confirm"));
+      expect(el.querySelector(".dk-confirm h2")?.textContent).toBe("Quit agentes.chat?");
+    }, host);
+  });
+});
+
 describe("the server here's Stop (ADR 0158)", () => {
   test("in its ··· menu, with how long and what it cuts off; an hour says when it's back", () =>
     withMenu(async (el) => {

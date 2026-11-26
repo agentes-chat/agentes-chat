@@ -185,3 +185,22 @@ describe("lines that look like a block's start but open none", () => {
     }
   });
 });
+
+describe("numbered lists", () => {
+  test("blank lines between items keep one list, so its numbers go on", () => {
+    expect(parseMarkdown("1. a\n\n2. b\n\n3. c")).toEqual([{ type: "list", ordered: true, items: ["a", "b", "c"] }]);
+    expect(parseMarkdown("1. **a**\n\n   detail\n\n2. b")).toEqual([
+      { type: "list", ordered: true, items: ["**a** detail", "b"] },
+    ]);
+    // Another kind of list or prose after the blank still ends it.
+    expect(parseMarkdown("1. a\n\n- b").map((b) => b.type === "list" && b.ordered)).toEqual([true, false]);
+    expect(parseMarkdown("1. a\n\nfim").map((b) => b.type)).toEqual(["list", "paragraph"]);
+  });
+
+  test("a list that starts past 1 keeps its first number", () => {
+    expect(parseMarkdown("intro\n3. c\n4. d")).toEqual([
+      { type: "paragraph", text: "intro" },
+      { type: "list", ordered: true, start: 3, items: ["c", "d"] },
+    ]);
+  });
+});

@@ -6901,6 +6901,7 @@
         "desc": "Alle Agenten lesen das. Du kannst es jederzeit ändern.",
         "line": "In einem Satz",
         "optional": "Optional. Ohne Satz zählt der Typ, den du gewählt hast.",
+        "otherNeeded": "Bei Etwas anderes schreib hier, was ihr macht, um fortzufahren.",
         "todoPersonal": "Erzähl mir ein bisschen von dir.",
         "todoDescPersonal": "Alle deine Agenten lesen das.",
         "donePersonal": "Ich weiß ein bisschen über dich",

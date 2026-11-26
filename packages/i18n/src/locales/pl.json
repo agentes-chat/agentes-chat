@@ -7408,6 +7408,7 @@
         "desc": "Wszyscy agenci to czytają. Zmienisz to, kiedy chcesz.",
         "line": "W jednym zdaniu",
         "optional": "Opcjonalne. Bez zdania liczy się typ, który zaznaczysz.",
+        "otherNeeded": "Przy opcji Coś innego napisz tutaj, czym się zajmujecie, aby kontynuować.",
         "todoPersonal": "Opowiedz mi trochę o sobie.",
         "todoDescPersonal": "Wszyscy twoi agenci to czytają.",
         "donePersonal": "Wiem już trochę o tobie",

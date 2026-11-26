@@ -7168,6 +7168,7 @@
         "desc": "Tutti gli agenti lo leggono. Puoi cambiarlo quando vuoi.",
         "line": "In una frase",
         "optional": "Facoltativo. Senza frase vale il tipo che hai scelto.",
+        "otherNeeded": "Con Altro, scrivi qui di cosa vi occupate per continuare.",
         "todoPersonal": "Raccontami qualcosa di te.",
         "todoDescPersonal": "Tutti i tuoi agenti lo leggono.",
         "donePersonal": "So qualcosa di te",

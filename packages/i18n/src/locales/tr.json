@@ -6866,6 +6866,7 @@
         "desc": "Bunu tüm ajanlar okur. İstediğin zaman değiştirebilirsin.",
         "line": "Tek cümleyle",
         "optional": "İsteğe bağlı. Cümle yoksa seçtiğin tür geçerli.",
+        "otherNeeded": "Başka bir şey seçtiysen devam etmek için buraya ne yaptığınızı yaz.",
         "todoPersonal": "Bana biraz kendinden bahset.",
         "todoDescPersonal": "Bunu tüm ajanların okur.",
         "donePersonal": "Seni biraz tanıyorum",

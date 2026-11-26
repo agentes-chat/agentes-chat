@@ -16980,6 +16980,9 @@
   "agentSetup.firstRun.about.optional": {
     "value": "Optional. Without one, the type you picked counts."
   },
+  "agentSetup.firstRun.about.otherNeeded": {
+    "value": "With Something else, write what you do here to continue."
+  },
   "agentSetup.firstRun.about.todoPersonal": {
     "value": "Tell me a bit about yourself."
   },

@@ -336,8 +336,14 @@ describe("the steps", () => {
     expect(heading()).toBe("O que a Ateliê Couto faz?");
     await click(button("Outra coisa"), 4);
     expect((button("Continuar") as HTMLButtonElement).disabled).toBe(true);
+    // Why Continue waits, in sight under the field; no ⓘ with an empty bubble.
+    const needed = "Com Outra coisa, escreva aqui o que vocês fazem para continuar.";
+    const field = screen().getByLabelText("Em uma frase").closest(".ac-field") as HTMLElement;
+    expect(field.textContent).toContain(needed);
+    expect(field.querySelector(".ac-hintline")).toBeNull();
     await type("Em uma frase", "Roupas sob medida para noivas");
     expect((button("Continuar") as HTMLButtonElement).disabled).toBe(false);
+    expect(field.textContent).not.toContain(needed);
   });
 
   test("self-hosted (no plans), the server's AI there: Criar o time goes on to inviting people, never the AI step", async () => {

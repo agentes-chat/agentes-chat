@@ -6659,6 +6659,7 @@
         "desc": "Semua agen membaca ini. Kamu bisa mengubahnya kapan saja.",
         "line": "Dalam satu kalimat",
         "optional": "Opsional. Tanpa kalimat, jenis yang kamu pilih yang dipakai.",
+        "otherNeeded": "Dengan Lainnya, tulis di sini apa yang kalian kerjakan untuk melanjutkan.",
         "todoPersonal": "Ceritakan sedikit tentang dirimu.",
         "todoDescPersonal": "Semua agenmu membaca ini.",
         "donePersonal": "Saya sudah sedikit mengenalmu",

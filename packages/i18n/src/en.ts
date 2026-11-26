@@ -7466,6 +7466,8 @@ export const en = {
         desc: "Every agent reads this. You can change it anytime.",
         line: "In one sentence",
         optional: "Optional. Without one, the type you picked counts.",
+        /** Under the sentence while "Something else" is picked and it is empty: why Continue waits. */
+        otherNeeded: "With Something else, write what you do here to continue.",
         todoPersonal: "Tell me a bit about yourself.",
         todoDescPersonal: "All your agents read this.",
         donePersonal: "I know a bit about you",

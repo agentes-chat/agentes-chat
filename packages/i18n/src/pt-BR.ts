@@ -7382,6 +7382,7 @@ export const ptBR = {
         desc: "Todos os agentes leem isso. Você muda quando quiser.",
         line: "Em uma frase",
         optional: "Opcional. Sem frase, vale o tipo que você marcou.",
+        otherNeeded: "Com Outra coisa, escreva aqui o que vocês fazem para continuar.",
         todoPersonal: "Me conte um pouco sobre você.",
         todoDescPersonal: "Todos os seus agentes leem isso.",
         donePersonal: "Já sei um pouco sobre você",

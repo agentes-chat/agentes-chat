@@ -7112,6 +7112,7 @@
         "desc": "Todos los agentes leen esto. Lo cambias cuando quieras.",
         "line": "En una frase",
         "optional": "Opcional. Sin frase, vale el tipo que marcaste.",
+        "otherNeeded": "Con Otra cosa, escribe aquí a qué se dedican para continuar.",
         "todoPersonal": "Cuéntame un poco sobre ti.",
         "todoDescPersonal": "Todos tus agentes leen esto.",
         "donePersonal": "Ya sé un poco sobre ti",
