@@ -201,6 +201,19 @@ test("two syncs of one checkout at once both go through; a config lock a dead gi
   expect(existsSync(lock)).toBe(true);
 });
 
+test("git.sync writes every checkout's GitHub token before it fetches the first", async () => {
+  const { ctx } = setup();
+  const token = `ghs_${"t".repeat(36)}`;
+  // The first checkout's request is refused before anything is fetched: the second's token is on disk already, so
+  // the agent's own git there doesn't wait for the checkouts ahead of it.
+  const request = sync([
+    { repo: "acme/app", dir: ".", clone: false, github: token },
+    { repo: "acme/web", clone: false, github: token },
+  ] as never);
+  await expect(handleRequest(ctx, request, scope())).rejects.toThrow();
+  expect(readFileSync(path.join(ctx.gitDir as string, "github", AGENT.id, "acme", "web.token"), "utf8")).toBe(token);
+});
+
 test("git.sync: not cloned and not asked, refused by the remote, outside the folder, bad requests", async () => {
   const { ctx } = setup();
   const r = (await handleRequest(

@@ -688,6 +688,64 @@ describe("a turn starts at once; its checkouts sync beside it", () => {
     expect(w.asked().at(-1)).toContain("acme/new");
     expect(out.out?.prompt).toContain(`acme/new is checked out at ${FOLDER}/repos/acme/new`);
   });
+
+  test("a repository no sync can answer (past the request's limit) doesn't make every turn sync again", async () => {
+    const w = await synced();
+    const many = Array.from({ length: 51 }, (_, i) => `acme/r${i}`);
+    await setAgentRepositories(f.db, f.owner.id, f.org.id, f.agent.id, many);
+    await w.timed("oi");
+    await settleCheckoutSyncs();
+    const syncs = w.runner.syncs().length;
+    w.clock.at += 60_000;
+    await w.timed("oi");
+    await settleCheckoutSyncs();
+    expect(w.runner.syncs()).toHaveLength(syncs);
+  });
+
+  test("a first sync the computer didn't answer offers no clone of checkouts that may well be there", async () => {
+    const w = await world();
+    await setAgentRepositories(f.db, f.owner.id, f.org.id, f.agent.id, ["acme/app"]);
+    w.answers.fn = () => {
+      throw new Error("boom");
+    };
+    const out = await prepareAgentCode(w.machineDeps, {
+      orgId: f.org.id,
+      agentId: f.agent.id,
+      threadRootId: null,
+      trigger: "oi",
+      messages: [],
+      session: { machineId: w.paired.machineId, cwd: "" },
+    });
+    expect(out?.prompt ?? "").not.toContain("Not cloned yet");
+  });
+
+  test("a git_clone between syncs: the next turn knows the checkout without waiting for one", async () => {
+    const w = await world();
+    await setAgentRepositories(f.db, f.owner.id, f.org.id, f.agent.id, ["acme/app"]);
+    const turn = {
+      orgId: f.org.id,
+      agentId: f.agent.id,
+      threadRootId: null,
+      trigger: "oi",
+      messages: [],
+      session: { machineId: w.paired.machineId, cwd: "" },
+    };
+    expect((await prepareAgentCode(w.machineDeps, turn))?.prompt).toContain("Not cloned yet: acme/app");
+    await settleCheckoutSyncs();
+    const source = createGitToolSource({
+      sandbox: { db: f.db, machines: { hub: w.hub }, git: w.git } as never,
+      connectors: w.connectors,
+      pubsub: f.pubsub,
+    });
+    const ctx = await runCtx();
+    const clone = (await source.tools(ctx)).find((t) => t.name === "git_clone");
+    expect((await clone?.execute({ repo: "acme/app" }, ctx))?.isError).toBeFalsy();
+    const syncs = w.runner.syncs().length;
+    const next = await prepareAgentCode(w.machineDeps, turn);
+    expect(next?.cwd).toBe("repos/acme/app");
+    expect(next?.prompt).toContain(`acme/app is checked out at ${FOLDER}/repos/acme/app`);
+    expect(w.runner.syncs()).toHaveLength(syncs);
+  });
 });
 
 const APP: GitHubAppConfig = {

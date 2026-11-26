@@ -271,7 +271,25 @@ export async function cloneOnMachine(
   const result = reply.repos[0];
   if (!result) throw new Error("The computer answered without the repository.");
   // The computer knows the repository by its path on the host; everything above it by its stored name.
-  return { ...result, repo: repoRefName(ref) };
+  const cloned: GitSyncRepo = { ...result, repo: repoRefName(ref) };
+  // The next turn starts from what the last sync knew, which may be minutes old: it learns of this clone now.
+  if (cloned.status !== "failed") {
+    const where = checkoutKey(target);
+    const [row] = await deps.db
+      .select({ repos: schema.agentCheckouts.repos })
+      .from(schema.agentCheckouts)
+      .where(where)
+      .catch(() => []);
+    if (row) {
+      const repos = [...row.repos.filter((r) => !sameRepo(r.repo, cloned.repo)), cloned];
+      await deps.db
+        .update(schema.agentCheckouts)
+        .set({ repos })
+        .where(where)
+        .catch(() => undefined);
+    }
+  }
+  return cloned;
 }
 
 /** The repository the conversation names (newest text first), among `repos` (`owner/name`); null when none. */
@@ -522,8 +540,20 @@ export async function prepareAgentCode(deps: MachineGitDeps, turn: CodeTurn): Pr
         : [];
     });
     const known = row?.syncedAt ? row.repos : null;
-    const unknown =
-      !known || [...explicit, ...otherRefs.map(repoRefName)].some((r) => !known.some((k) => sameRepo(k.repo, r)));
+    // Only what a sync can answer counts: a repository of a host with no git setup here (or past the request's
+    // limit) is never answered, and would otherwise make every turn sync and wait.
+    const answerable = [
+      ...(github ? explicit.slice(0, GIT_SYNC_LIMITS.repos) : []),
+      ...setups.flatMap(({ host }) =>
+        host === "github"
+          ? []
+          : otherRefs
+              .filter((ref) => ref.host === host)
+              .slice(0, GIT_SYNC_LIMITS.repos)
+              .map(repoRefName),
+      ),
+    ];
+    const unknown = !known || answerable.some((r) => !known.some((k) => sameRepo(k.repo, r)));
     const key = `${turn.agentId}\0${machineId}`;
     let running = syncing.get(key);
     if (!running && (await claimCheckoutSync(deps.db, at, now, unknown ? 0 : CHECKOUT_SYNC_EVERY_MS))) {
@@ -632,8 +662,11 @@ function codeSetupOf(
   const downloading = known.filter((r) => r.status === "cloning" && refInList(every, r.repo)).map((r) => r.repo);
   const lower = new Set(present.map((r) => r.repo.toLowerCase()));
   const coming = new Set(downloading.map((r) => r.toLowerCase()));
+  // A failed update is of a checkout that is there (a missing one answers `missing`), even when the failure left
+  // no HEAD to tell (the computer didn't answer, the bound ran out): it isn't offered to clone again.
+  const failed = new Set(known.filter((r) => r.status === "failed").map((r) => r.repo.toLowerCase()));
   const notCloned = [...input.explicit, ...input.others].filter(
-    (r) => !lower.has(r.toLowerCase()) && !coming.has(r.toLowerCase()),
+    (r) => !lower.has(r.toLowerCase()) && !coming.has(r.toLowerCase()) && !failed.has(r.toLowerCase()),
   );
   if (present.length === 0 && notCloned.length === 0 && downloading.length === 0) {
     return credit ? { cwd: "", prompt: "", start: credit, pick: { present: [], credit } } : null;

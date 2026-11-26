@@ -735,6 +735,10 @@ export async function gitSync(ctx: GitContext, req: GitSyncRequest): Promise<Mac
       if (!seen.has(dir.toLowerCase())) wanted.push({ repo, dir, clone: false });
     }
   }
+  const githubTokenPath = (repo: string) => path.join(ctx.gitDir, "github", agentId, `${repo}.token`);
+  // Every fresh token before the first fetch, not as each checkout's turn comes: the agent's own git in a checkout
+  // reads its file while this sync is still fetching the others, and a clone still going gets it too.
+  for (const w of wanted) if (w.github) writeSecret(githubTokenPath(w.repo), w.github);
   const seconds = Math.max(1, Math.min(GIT_SYNC_LIMITS.maxSeconds, Math.floor(Number(req.timeoutSeconds) || 60)));
   const deadline = Date.now() + seconds * 1000;
   const out: GitSyncRepo[] = [];
@@ -747,9 +751,8 @@ export async function gitSync(ctx: GitContext, req: GitSyncRequest): Promise<Mac
       if (target.rel === "") throw new RunnerError("bad_request", "dir can't be your folder itself");
       base.dir = target.rel;
       base.path = target.abs;
-      // A fresh token also reaches a clone still going (git reads the file when it authenticates).
-      const githubPath = path.join(ctx.gitDir, "github", agentId, `${w.repo}.token`);
-      const githubFile = w.github ? writeSecret(githubPath, w.github) : undefined;
+      const githubPath = githubTokenPath(w.repo);
+      const githubFile = w.github ? githubPath : undefined;
       const remote = remoteFor(proxy, w.repo, tokenFile, githubFile);
       const key = `${agentId}\0${target.abs}`;
       const running = clones.get(key);
