@@ -1,5 +1,6 @@
 import { BRAIN_COLD_CAUSES, BRAIN_TURN_MEASURES } from "@agenteschat/adapters";
 import { type Database, rowsOf, type SQL, type schema, sql } from "@agenteschat/db";
+import { UUID } from "./authority";
 import { BRAIN_KINDS } from "./brain-settings";
 import { ValidationError } from "./errors";
 import { isJsonObject, numberIn, wholeOrNull } from "./format";
@@ -65,6 +66,16 @@ function stageOf(s: unknown, deep: boolean): ClaimStage[] {
       ...(parts.length > 0 ? { parts: parts.slice(0, RUN_CLAIM_STAGES_MAX) } : {}),
     },
   ];
+}
+
+/** The computer a run's latest claim with a computer turn thought on (`profiles` as stored, which may hold anything). */
+export function lastRunComputer(profiles: unknown): string | undefined {
+  if (!Array.isArray(profiles)) return undefined;
+  for (const claim of [...profiles].reverse()) {
+    if (isJsonObject(claim) && typeof claim.machineId === "string" && UUID.test(claim.machineId))
+      return claim.machineId;
+  }
+  return undefined;
 }
 
 /** A run's kept claims as its trace gives them, oldest first: `profiles` as stored, which may hold anything. */

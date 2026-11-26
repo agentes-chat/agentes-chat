@@ -127,6 +127,7 @@
     "allowedOne": "{{folder}}を{{agent}}に許可しました",
     "allowedAll": "{{folder}}をすべてのエージェントに許可しました",
     "denied": "却下しました。{{agent}}がチャットで伝えます。",
+    "answerFailed": "このリクエストに応答できませんでした: {{message}}",
     "notifTitle": "{{agent}}がフォルダ{{folder}}を使いたがっています",
     "allowedTitle": "{{name}} が agentes.chat から{{tool}}をオンにしました",
     "allowedBody": "心当たりがなければ、ここで元に戻してください。",

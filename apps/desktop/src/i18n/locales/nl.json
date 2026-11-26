@@ -130,6 +130,7 @@
     "allowedOne": "{{folder}} toegestaan voor {{agent}}",
     "allowedAll": "{{folder}} toegestaan voor alle agents",
     "denied": "Geweigerd. {{agent}} laat het in het gesprek weten.",
+    "answerFailed": "Kon niet op dit verzoek reageren: {{message}}",
     "notifTitle": "{{agent}} wil de map {{folder}} gebruiken",
     "allowedTitle": "{{name}} heeft {{tool}} aangezet via agentes.chat",
     "allowedBody": "Was jij het niet? Maak het hier ongedaan.",

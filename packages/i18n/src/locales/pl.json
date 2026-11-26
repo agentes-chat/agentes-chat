@@ -612,7 +612,7 @@
       "here": "Na tym komputerze"
     },
     "whyPaid": "Za co płacę?",
-    "whyPaidText": "Cloud obejmuje zawsze włączony komputer agentów i kogoś, kto utrzymuje serwer. Uruchomienie na własnym serwerze jest darmowe."
+    "whyPaidText": "Cloud obejmuje zawsze włączony komputer agentów i kogoś, kto utrzymuje serwer. Twój komputer połączony z workspace'em w Cloud nie zastępuje planu. Uruchomienie agentes.chat na własnym serwerze lub komputerze jest darmowe."
   },
   "auth": {
     "email": "E-mail",
@@ -3164,10 +3164,10 @@
     "asking_few": "{{names}} czekają na odpowiedź",
     "asking_many": "{{names}} czekają na odpowiedź",
     "asking_other": "{{names}} czekają na odpowiedź",
-    "outage_one": "{{names}}: dostawca AI nie działa · ponowi sam",
-    "outage_few": "{{names}}: dostawca AI nie działa · ponowią sami",
-    "outage_many": "{{names}}: dostawca AI nie działa · ponowią sami",
-    "outage_other": "{{names}}: dostawca AI nie działa · ponowią sami",
+    "outage_one": "{{names}}: AI nie odpowiada · ponowi sam",
+    "outage_few": "{{names}}: AI nie odpowiada · ponowią sami",
+    "outage_many": "{{names}}: AI nie odpowiada · ponowią sami",
+    "outage_other": "{{names}}: AI nie odpowiada · ponowią sami",
     "queued_one": "{{names}} czeka w kolejce",
     "queued_few": "{{names}} czekają w kolejce",
     "queued_many": "{{names}} czekają w kolejce",
@@ -3199,7 +3199,7 @@
       "claimed": "Odpowiada",
       "waiting": "Czeka na zatwierdzenie",
       "asking": "Czeka na odpowiedź",
-      "outage": "Dostawca AI nie działa · ponowi sam",
+      "outage": "AI nie odpowiada · ponowi sama",
       "queued": "W kolejce",
       "away": "Czeka na komputer",
       "plan": "Czeka na plan",
@@ -3784,7 +3784,7 @@
         "ended": "Odpowiem tutaj, gdy workspace znów zasubskrybuje agentes.chat."
       },
       "askAdmin": "Odpowiem tutaj, gdy administrator załatwi plan agentes.chat.",
-      "plan": "Plan daje komputer agentów. AI to to, za które już płacisz: Claude, ChatGPT i inne albo klucz API.",
+      "plan": "Plan daje komputer agentów. AI to to, za które już płacisz: Claude, ChatGPT i inne albo klucz API. Twój komputer połączony tutaj nie zastępuje planu. Uruchomienie agentes.chat na własnym serwerze lub komputerze jest darmowe.",
       "activeTitle": "Plan aktywny",
       "activeLine": "Podłącz AI, a {{name}} odpowie tutaj.",
       "receipt": "Zachowano",
@@ -4749,7 +4749,7 @@
       "queued_computer": "W kolejce",
       "waiting_plan": "Czeka na plan",
       "waiting_budget": "Czeka na odnowienie budżetu",
-      "provider_down": "Dostawca AI nie działa · ponowi sam",
+      "provider_down": "AI nie odpowiada · ponowi sama",
       "out_of_plan": "Limit planu wyczerpany",
       "out_of_budget": "Budżet na ten miesiąc wyczerpany",
       "out_of_planShort": "Limit wyczerpany",
@@ -4918,7 +4918,7 @@
     "computerAway": "Komputer nie odpowiada teraz ({{agent}}). To żądanie pozostaje otwarte do {{time}}. Spróbuj ponownie za chwilę.",
     "computerPaused": "Właściciel wstrzymał komputer ({{agent}}). To żądanie pozostaje otwarte do {{time}}.",
     "insecureContext": "Ta strona nie jest otwarta przez https, więc przeglądarka nie zablokuje klucza. Otwórz ją pod adresem https:// (lub localhost).",
-    "failed": "Nie udało się dostarczyć. Czy komputer agenta jest włączony?",
+    "failed": "Nie udało się dostarczyć. Wyślij ponownie. Jeśli znowu się nie uda, poproś agenta {{agent}}, żeby poprosił o to jeszcze raz.",
     "changed": "Ta prośba zmieniła się w trakcie odpowiedzi. Nic nie wysłano. Wyślij ponownie.",
     "empty": "Wpisz wartość.",
     "tooLarge": "Za duże (maksymalnie 16 KB)."
@@ -5974,7 +5974,8 @@
       "provider_unavailable": "model nie odpowiedział",
       "gave_up": "model nie odpowiedział po kilku próbach",
       "missing_credential": "brakuje klucza API",
-      "credential_revoked": "klucz API został unieważniony"
+      "credential_revoked": "klucz API został unieważniony",
+      "credential_unreadable": "nie da się otworzyć zapisanego klucza API"
     },
     "youReplied": "Twoja odpowiedź: {{text}}",
     "actions": "Akcje",
@@ -7009,6 +7010,7 @@
         "interrupted": "Przerwane przez restart serwera.",
         "missing_credential": "Przestrzeń robocza nie ma klucza {{provider}}.",
         "credential_revoked": "Klucz tego agenta został unieważniony.",
+        "credential_unreadable": "Nie da się otworzyć zapisanego klucza API, zwykle dlatego, że sekret serwera zmienił się po jego zapisaniu. Wklej klucz ponownie w Klucze AI.",
         "credential_wrong_provider": "Model jest od {{modelProvider}}, ale klucz od {{keyProvider}}.",
         "model_unlisted": "OpenRouter nie oferuje już {{model}}. Wybierz inny model w ustawieniach agenta.",
         "no_ai": "Agent nie miał dostępnej AI.",
@@ -7408,6 +7410,7 @@
         "desc": "Wszyscy agenci to czytają. Zmienisz to, kiedy chcesz.",
         "line": "W jednym zdaniu",
         "optional": "Opcjonalne. Bez zdania liczy się typ, który zaznaczysz.",
+        "otherNeeded": "Przy opcji Coś innego napisz tutaj, czym się zajmujecie, aby kontynuować.",
         "todoPersonal": "Opowiedz mi trochę o sobie.",
         "todoDescPersonal": "Wszyscy twoi agenci to czytają.",
         "donePersonal": "Wiem już trochę o tobie",
@@ -8469,6 +8472,9 @@
     "link": "Link",
     "linkEmpty": "Utwórz link, aby go skopiować",
     "linkFailed": "Nie udało się utworzyć linku. {{cause}}",
+    "localOnly": "Ten serwer otwiera się tylko na komputerze, na którym działa, więc zaproszone osoby nie otworzą zaproszenia.",
+    "localOnlyHow": "W aplikacji agentes.chat na tamtym komputerze włącz Dostęp z telefonu i dla zespołu w Preferencje › Serwery albo uruchom agentes.chat na serwerze, który te osoby mogą otworzyć. Potem je zaproś.",
+    "localOnlyHere": "Włącz Dostęp z telefonu i dla zespołu. Potem zaproś te osoby.",
     "never": "Nie wygasa",
     "untilDate": "Do {{date}}",
     "validFor": "Działa {{ttl}} od utworzenia.",
@@ -9928,6 +9934,7 @@
       "stuck": "Zatrzymane, bo utknęło",
       "missing_credential": "Brakuje klucza API",
       "credential_revoked": "Klucz API został unieważniony",
+      "credential_unreadable": "Nie da się otworzyć zapisanego klucza API",
       "credential_wrong_provider": "Klucz API jest od innego dostawcy",
       "model_unlisted": "OpenRouter nie oferuje już tego modelu",
       "agent_archived": "Agent został zarchiwizowany",
@@ -12331,6 +12338,8 @@
       "on": "Wiadomości głosowe",
       "onHelp": "Osoby w tej przestrzeni roboczej mogą wysyłać nagrania w rozmowach.",
       "noEngine": "Wiadomości głosowe nie są tu jeszcze dostępne.",
+      "noEngineAsk": "Wiadomości głosowe nie są jeszcze włączone. Osoba, która prowadzi ten serwer, włącza je na tej samej stronie.",
+      "noEngineHere": "Wiadomości głosowe włączą się, gdy wybierzesz poniżej, co zamienia głos na tekst.",
       "engineTitle": "Co zamienia głos na tekst",
       "own": "Twój własny serwer",
       "ownHelp": "Whisper lub Parakeet na twoim komputerze. Dźwięk tam zostaje.",
@@ -17720,6 +17729,10 @@
       "paused": "{{name}} jest wstrzymany",
       "resumed": "{{name}} znów pracuje"
     },
+    "runnerBehind": {
+      "command": "Program agentes.chat na {{computer}} jest nieaktualny, więc niektóre rzeczy tam nie działają. Aby go zaktualizować, uruchom tam to:",
+      "installer": "Program agentes.chat na {{computer}} jest nieaktualny, więc niektóre rzeczy tam nie działają. Aby go zaktualizować, uruchom tam ponownie polecenie instalacji jako root."
+    },
     "seenNow": "połączony teraz",
     "seen": "widziany {{when}}",
     "neverSeen": "jeszcze się nie połączył",
@@ -20070,7 +20083,7 @@
       "waitingInput_female": "{{name}} czeka na odpowiedź",
       "waitingComputer": "{{name}} czeka na komputer",
       "waitingComputer_female": "{{name}} czeka na komputer",
-      "waitingProvider": "{{name}}: dostawca AI nie działa · ponowi próbę sam",
+      "waitingProvider": "{{name}}: AI nie odpowiada · ponowi próbę sama",
       "waitingAgents": "{{name}} przekazał część dalej i czeka na odpowiedź",
       "waitingAgents_female": "{{name}} przekazała część dalej i czeka na odpowiedź",
       "queued": "{{name}} jest w kolejce"
@@ -20082,7 +20095,7 @@
       "waitingApproval": "czeka na zgodę",
       "waitingInput": "czeka na odpowiedź",
       "waitingComputer": "czeka na komputer",
-      "waitingProvider": "dostawca AI nie działa",
+      "waitingProvider": "AI nie odpowiada",
       "waitingYourApproval": "czeka na twoje zatwierdzenie",
       "waitingYourAnswer": "czeka na twoją odpowiedź",
       "queued": "w kolejce",
@@ -20113,7 +20126,8 @@
       "missing": "Tej rozmowy już tu nie ma.",
       "helping": "pomaga agentowi {{name}}",
       "helping_female": "pomaga agentce {{name}}",
-      "see": "Zobacz rozmowę"
+      "see": "Zobacz rozmowę",
+      "relay": "Odpowiedź od {{name}}: {{excerpt}}. Zobacz rozmowę"
     },
     "unshown": "Nie udało się wyświetlić tej wiadomości",
     "unshownPart": "Nie udało się wyświetlić części tej wiadomości",
@@ -20541,6 +20555,7 @@
       "brain_unavailable_commands_off": "{{brain}} jest wyłączony na moim komputerze. Odpowiem, gdy osoba, która się nim opiekuje, go włączy.",
       "brain_unavailable_outdated": "Program na moim komputerze wymaga aktualizacji, zanim {{brain}} będzie mógł odpowiedzieć. Odpowiem, gdy tylko zostanie zaktualizowany.",
       "brain_unavailable_plan_owner": "{{brain}} myślałby z planem, który nie należy do mojego właściciela, więc go nie używam. Podłącz konto mojego właściciela na mojej stronie.",
+      "brain_unavailable_shared_login": "Mój komputer nie może teraz użyć logowania Claude dla wszystkich agentów. Odpowiem, gdy tylko się da. Jeśli to dalej nie działa, połącz Claude ponownie w Kontach AI.",
       "provider_unavailable": "Mój dostawca AI teraz nie odpowiada. Odpowiem, gdy tylko wróci.",
       "provider_wait_rate_limit": "{{provider}} ogranicza teraz żądania z tego klucza. Odpowiem, gdy tylko będzie to możliwe.",
       "provider_wait_down": "{{provider}} teraz nie działa lub jest przeciążony. Odpowiem, gdy tylko wróci.",
@@ -22471,7 +22486,7 @@
       "budgetSoon": "Czeka chwilę na budżet agenta {{name}}",
       "computer": "Czeka na komputer agenta {{name}}",
       "busy": "Czeka na miejsce na komputerze agenta {{name}}",
-      "provider": "Czeka na dostawcę AI agenta {{name}}, następna próba {{when}}"
+      "provider": "Czeka na odpowiedź AI agenta {{name}}, następna próba {{when}}"
     },
     "menu": {
       "label": "Więcej",
@@ -22498,7 +22513,8 @@
     },
     "add": {
       "label": "Dodaj widżet",
-      "short": "Widżet"
+      "short": "Widżet",
+      "word": "Dodaj"
     },
     "alert": {
       "label": "Daj znać, gdy coś jest nie tak",

@@ -400,6 +400,8 @@ export type ChannelEvent =
       computer?: "queued" | "away" | "line";
       /** Into a run waiting on its plan's limit or its budget. */
       usage?: "plan" | "budget";
+      /** Into a run parked on an outage (`outageParkedSql`): it retries by itself. */
+      outage?: true;
     }
   /** The run read these messages sent while it worked (they are in its conversation now): "Ada leu". */
   | {

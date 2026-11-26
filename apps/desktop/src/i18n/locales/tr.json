@@ -130,6 +130,7 @@
     "allowedOne": "{{folder}} için {{agent}} ajanına izin verildi",
     "allowedAll": "{{folder}} için tüm ajanlara izin verildi",
     "denied": "Reddedildi. {{agent}} bunu sohbette bildirecek.",
+    "answerFailed": "Bu isteğe yanıt verilemedi: {{message}}",
     "notifTitle": "{{agent}}, {{folder}} klasörünü kullanmak istiyor",
     "allowedTitle": "{{name}}, agentes.chat üzerinden {{tool}} açtı",
     "allowedBody": "Siz değilseniz burada geri alın.",

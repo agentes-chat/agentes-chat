@@ -152,17 +152,28 @@ export async function usageWaitPlace(
 }
 
 /**
- * The line pauses together: the waits of `runIds` (in line order) are timed `at(i)`, in one statement. Every pending
- * job of a wait moves (its own timer, a plan-back wake), so none of them asks the plan early.
+ * The line pauses together: the waits of `runIds` (in line order) are timed `at(i)` for the head's `resetsAt` (none: an
+ * unknown reset). Every pending job of a wait moves (its own timer, a plan-back wake), so none of them asks the plan
+ * early, and so do the wait's `until` and `resetsAt`: the wakes skip a wait whose `until` is near, taking its own timer
+ * to be about to fire (`wakePlanWaits`, `lineHeadLooks`), and `lineHeadLooks` one with a reset, as having its own.
  */
-export async function retimeLine(db: Executor, runIds: string[], at: (i: number) => Date) {
+export async function retimeLine(db: Executor, runIds: string[], at: (i: number) => Date, resetsAt?: string) {
   if (runIds.length === 0) return;
-  const { outbox } = schema;
+  const { agentRuns, outbox } = schema;
   const times = runIds.map((_, i) => at(i).toISOString());
-  await db.execute(sql`update ${outbox} o set next_attempt_at = v.at
-    from unnest(${`{${runIds.join(",")}}`}::text[], ${`{${times.join(",")}}`}::timestamptz[]) as v(run_id, at)
+  const line = sql`unnest(${`{${runIds.join(",")}}`}::text[], ${`{${times.join(",")}}`}::text[]) as v(run_id, at)`;
+  await db.execute(sql`update ${outbox} o set next_attempt_at = v.at::timestamptz
+    from ${line}
     where o.kind = 'agent_run.execute' and o.status = 'pending' and o.payload ? 'wait'
       and o.payload->>'runId' = v.run_id`);
+  await db.execute(sql`update ${agentRuns} r
+    set transcript = ${
+      resetsAt
+        ? sql`jsonb_set(jsonb_set(r.transcript, '{waitingForBrain,until}', to_jsonb(v.at)), '{waitingForBrain,resetsAt}', to_jsonb(${resetsAt}::text))`
+        : sql`jsonb_set(r.transcript, '{waitingForBrain,until}', to_jsonb(v.at)) #- '{waitingForBrain,resetsAt}'`
+    }
+    from ${line}
+    where r.id = v.run_id::uuid and r.status = 'waiting_input' and r.transcript ? 'waitingForBrain'`);
 }
 
 /** With an unknown reset only the head re-checks the plan; the others wait this long at most, woken by the head. */

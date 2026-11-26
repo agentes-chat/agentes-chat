@@ -248,6 +248,8 @@ export interface AuthConfig {
   mobileErrorReports?: ErrorReportsConfig | null;
   /** An outside chat surface is bridged (ADR 0187); whether I may link it is `surfaces.list().allowed`. */
   surface?: boolean;
+  /** A computer's own install at an address only that computer opens: its invitation links work nowhere else. */
+  localOnly?: boolean;
   /**
    * This address is one the server's operator registered (ADR 0194): the pages before sign-in show its look, and sign-in
    * is by email alone. Null or absent on any other address.
@@ -1728,7 +1730,7 @@ export interface MessageReceipts {
     /** `failed` for another reason: why, as a run's error is worded (`runErrorText`). */
     errorCode?: string;
     errorParams?: Record<string, string>;
-    /** `waiting_input` because its AI provider is down: it retries by itself. */
+    /** `waiting_input` because its AI isn't answering (its provider down, or its computer refusing while online): it retries by itself. */
     outage?: true;
     /** `waiting_input` for its computer: in line for room (`queued`) or for it to come back (`away`). */
     computer?: "queued" | "away" | "line";
@@ -5458,6 +5460,11 @@ export interface Machine {
   /** `system`: each agent works as its own OS user, in its own folder (ADR 0057). Absent on older servers: `single`. */
   mode?: "system" | "single";
   runnerVersion: string;
+  /**
+   * Its runner is behind this server: `command`, its owner runs `agentes-runner update` there; `installer`, the
+   * install command again, as root. Null or absent (an older server): nothing to update from here.
+   */
+  update?: "command" | "installer" | null;
   /** ADR 0110: its runner can hold browser profiles; `false`: update the computer. */
   browserProfiles?: boolean;
   /** `false`: started with `--no-exec` (files and uploads only). */

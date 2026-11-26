@@ -20,6 +20,7 @@ const COMMANDS: &[&str] = &[
     "show_window",
     "hide_window",
     "quit_app",
+    "quit_ask",
     "app_info",
     "app_reopen",
     "compat_get",

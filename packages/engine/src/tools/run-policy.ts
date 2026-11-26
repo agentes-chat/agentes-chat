@@ -210,6 +210,7 @@ const READS = new Set([
   "web_fetch",
   "image_search",
   "list_dashboards",
+  "team_status",
   "phone_screenshot",
   "phone_logs",
 ]);

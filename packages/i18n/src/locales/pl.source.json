@@ -1386,7 +1386,7 @@
     "value": "Why pay?"
   },
   "hosting.whyPaidText": {
-    "value": "Cloud includes the agents' always-on computer and someone who keeps the server running. Running it on your own server is free."
+    "value": "Cloud includes the agents' always-on computer and someone who keeps the server running. A computer of yours connected to a Cloud workspace doesn't replace the plan. Running agentes.chat on your own server or computer is free."
   },
   "auth.email": {
     "value": "Email"
@@ -7321,8 +7321,8 @@
   },
   "receipts.outage": {
     "value": {
-      "one": "{{names}}: the AI provider is down · retries by itself",
-      "other": "{{names}}: the AI provider is down · retries by itself"
+      "one": "{{names}}: the AI isn't answering · retries by itself",
+      "other": "{{names}}: the AI isn't answering · retries by itself"
     }
   },
   "receipts.queued": {
@@ -7380,7 +7380,7 @@
     "value": "Waiting for an answer"
   },
   "receipts.status.outage": {
-    "value": "The AI provider is down · retries by itself"
+    "value": "The AI isn't answering · retries by itself"
   },
   "receipts.status.queued": {
     "value": "In line"
@@ -8681,7 +8681,7 @@
     "value": "I'll answer here once an admin sorts out the agentes.chat plan."
   },
   "noAi.kept.plan": {
-    "value": "The plan brings the agents' computer. The AI is the one you already pay for: Claude, ChatGPT and more, or an API key."
+    "value": "The plan brings the agents' computer. The AI is the one you already pay for: Claude, ChatGPT and more, or an API key. A computer of yours connected here doesn't replace the plan. Running agentes.chat on your own server or computer is free."
   },
   "noAi.kept.activeTitle": {
     "value": "Plan active"
@@ -10886,7 +10886,7 @@
     "value": "Waiting for the budget to reset"
   },
   "presence.agent.provider_down": {
-    "value": "The AI provider is down · retries by itself"
+    "value": "The AI isn't answering · retries by itself"
   },
   "presence.agent.out_of_plan": {
     "value": "Out of plan limit"
@@ -11288,7 +11288,7 @@
     "value": "This page isn't open over https, so the browser won't lock the key. Open it at https:// (or localhost)."
   },
   "secret.failed": {
-    "value": "Couldn't deliver it. Is the agent's computer on?"
+    "value": "Couldn't deliver it. Send it again. If it still fails, ask {{agent}} to request it again."
   },
   "secret.changed": {
     "value": "This request changed while you answered. Nothing was sent. Send it again."
@@ -13617,6 +13617,9 @@
   },
   "notifications.failedCause.credential_revoked": {
     "value": "the API key was revoked"
+  },
+  "notifications.failedCause.credential_unreadable": {
+    "value": "the saved API key can't be opened"
   },
   "notifications.youReplied": {
     "value": "You replied: {{text}}"
@@ -16053,6 +16056,9 @@
   "agentPage.activity.errors.credential_revoked": {
     "value": "This agent's key was revoked."
   },
+  "agentPage.activity.errors.credential_unreadable": {
+    "value": "The saved API key can't be opened, usually because the server's secret changed after the key was saved. Paste the key again in AI keys."
+  },
   "agentPage.activity.errors.credential_wrong_provider": {
     "value": "The model is from {{modelProvider}}, but the key is from {{keyProvider}}."
   },
@@ -16979,6 +16985,9 @@
   },
   "agentSetup.firstRun.about.optional": {
     "value": "Optional. Without one, the type you picked counts."
+  },
+  "agentSetup.firstRun.about.otherNeeded": {
+    "value": "With Something else, write what you do here to continue."
   },
   "agentSetup.firstRun.about.todoPersonal": {
     "value": "Tell me a bit about yourself."
@@ -19348,6 +19357,15 @@
   },
   "invites.linkFailed": {
     "value": "Couldn't make the link. {{cause}}"
+  },
+  "invites.localOnly": {
+    "value": "This server only opens on the computer it runs on, so the people you invite can't open their invitation."
+  },
+  "invites.localOnlyHow": {
+    "value": "In the agentes.chat app on that computer, turn on Reach it from your phone and teammates in Preferences › Servers, or run agentes.chat on a server they can open. Then invite them."
+  },
+  "invites.localOnlyHere": {
+    "value": "Turn on Reach it from your phone and teammates. Then invite them."
   },
   "invites.never": {
     "value": "Never expires"
@@ -22502,6 +22520,9 @@
   },
   "routines.code.credential_revoked": {
     "value": "The API key was revoked"
+  },
+  "routines.code.credential_unreadable": {
+    "value": "The saved API key can't be opened"
   },
   "routines.code.credential_wrong_provider": {
     "value": "The API key is from another provider"
@@ -27849,6 +27870,12 @@
   },
   "voice.settings.noEngine": {
     "value": "Voice messages aren't available here yet."
+  },
+  "voice.settings.noEngineAsk": {
+    "value": "Voice messages aren't on yet. Whoever runs this server turns them on, on this same page."
+  },
+  "voice.settings.noEngineHere": {
+    "value": "Voice messages turn on once you choose below what turns voice into text."
   },
   "voice.settings.engineTitle": {
     "value": "What turns voice into text"
@@ -40672,6 +40699,12 @@
   "machines.remotePause.resumed": {
     "value": "{{name}} is back to work"
   },
+  "machines.runnerBehind.command": {
+    "value": "The agentes.chat program on {{computer}} is out of date, so some things don't work there. To update it, run this there:"
+  },
+  "machines.runnerBehind.installer": {
+    "value": "The agentes.chat program on {{computer}} is out of date, so some things don't work there. To update it, run the install command there again, as root."
+  },
   "machines.seenNow": {
     "value": "connected now"
   },
@@ -46315,7 +46348,7 @@
     "value": "{{name}} is waiting for the computer"
   },
   "chat.consultGroup.waitingProvider": {
-    "value": "{{name}}: the AI provider is down · retries by itself"
+    "value": "{{name}}: the AI isn't answering · retries by itself"
   },
   "chat.consultGroup.waitingAgents": {
     "value": "{{name}} handed part of it on and is waiting to hear back"
@@ -46342,7 +46375,7 @@
     "value": "waiting for its computer"
   },
   "chat.consultPair.waitingProvider": {
-    "value": "AI provider down"
+    "value": "AI not answering"
   },
   "chat.consultPair.waitingYourApproval": {
     "value": "waiting for your approval"
@@ -46415,6 +46448,9 @@
   },
   "chat.consultPanel.see": {
     "value": "See conversation"
+  },
+  "chat.consultPanel.relay": {
+    "value": "{{name}}'s answer: {{excerpt}}. See the conversation"
   },
   "chat.unshown": {
     "value": "This message couldn't be shown"
@@ -47593,6 +47629,9 @@
   },
   "chat.body.brain_unavailable_plan_owner": {
     "value": "{{brain}} would think with a plan that isn't my owner's, so I won't use it. Connect my owner's account on my page."
+  },
+  "chat.body.brain_unavailable_shared_login": {
+    "value": "My computer can't run Claude's sign-in for all agents right now. I'll answer once it can. If it keeps failing, connect Claude again in AI accounts."
   },
   "chat.body.provider_unavailable": {
     "value": "My AI provider isn't answering right now. I'll answer as soon as it's back."
@@ -51587,7 +51626,7 @@
     "value": "Waiting for room on {{name}}'s computer"
   },
   "widgets.wait.provider": {
-    "value": "Waiting for {{name}}'s AI provider, next try {{when}}"
+    "value": "Waiting for {{name}}'s AI to answer, next try {{when}}"
   },
   "widgets.menu.label": {
     "value": "More"
@@ -51651,6 +51690,9 @@
   },
   "widgets.add.short": {
     "value": "Widget"
+  },
+  "widgets.add.word": {
+    "value": "Add"
   },
   "widgets.alert.label": {
     "value": "Tell me when something is off"

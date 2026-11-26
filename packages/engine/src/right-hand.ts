@@ -14,6 +14,7 @@ import type { ModelGateway } from "./gateway";
 import type { MachineStatus } from "./machine-hub";
 import type { NoAiCardReason } from "./no-ai";
 import { personBehindCall } from "./requester";
+import type { RoutineBrief } from "./routine-brief";
 import { runnerUpdateWay } from "./runner-update";
 import { type AgentRun, isCliFailure } from "./runs";
 import { scrubSignIns } from "./tool-detail";
@@ -274,17 +275,38 @@ export async function scrubRightHandReply(
 
 /**
  * Who a run of the right hand reads for (ADR 0137 §13): the person behind it, in their own DM with it. A routine's own
- * run there reads for its creator: only they set what it does (`updateRoutine`), and only they read what it says.
- * Null anywhere else, since others read a reply in a channel, and for any other agent.
+ * run reads for its creator where only they read what it says (`readByCreatorAlone`): only they set what it does
+ * (`updateRoutine`). Null anywhere else, since others read a reply in a channel, and for any other agent.
  */
 export async function rightHandReader(
   ctx: Pick<ToolContext, "orgId" | "agentId" | "channelId" | "runId" | "triggerMessageId"> & { db: Executor },
 ): Promise<string | null> {
   if (!(await isRightHandId(ctx.db, ctx.orgId, ctx.agentId))) return null;
-  const person =
-    (await personBehindCall(ctx)) ??
-    (ctx.runId ? accountablePerson(await runAuthorityById(ctx.db, ctx.orgId, ctx.runId)) : null);
-  return person && (await readsAlone(ctx.db, ctx.channelId, person, ctx.agentId)) ? person : null;
+  const behind = await personBehindCall(ctx);
+  if (behind) return (await readsAlone(ctx.db, ctx.channelId, behind, ctx.agentId)) ? behind : null;
+  const authority = ctx.runId ? await runAuthorityById(ctx.db, ctx.orgId, ctx.runId) : null;
+  const creator = authority ? accountablePerson(authority) : null;
+  if (!creator) return null;
+  if (await readsAlone(ctx.db, ctx.channelId, creator, ctx.agentId)) return creator;
+  const brief = authority?.kind === "routine" ? authority.brief : null;
+  return brief && (await readByCreatorAlone(ctx.db, ctx.orgId, ctx.agentId, brief, creator)) ? creator : null;
+}
+
+/**
+ * Whether only `creator` reads what a routine's run says: its run works in an agent-only room (ADR 0053 §4), so the
+ * room says nothing of that. A widget's refresh (a draft's test too) is read on its board: the creator's Home or a
+ * private board of theirs (ADR 0135 §8). Any other routine's, where it reports: their own DM with the right hand.
+ */
+async function readByCreatorAlone(db: Executor, orgId: string, agentId: string, brief: RoutineBrief, creator: string) {
+  if (!brief.widget) return !brief.toDrive && readsAlone(db, brief.deliverTo.channelId, creator, agentId);
+  const [row] = await db
+    .select({ widget: schema.dashboardWidgets, board: schema.dashboards })
+    .from(schema.dashboardWidgets)
+    .innerJoin(schema.dashboards, eq(schema.dashboards.id, schema.dashboardWidgets.dashboardId))
+    .where(and(eq(schema.dashboardWidgets.orgId, orgId), eq(schema.dashboardWidgets.id, brief.widget.widgetId)));
+  if (!row || row.board.deletedAt) return false;
+  // A draft keeps its tested data once confirmed (ADR 0135 §16), so it reads only as its board would.
+  return row.board.ownerUserId === creator && (row.board.kind === "home" || row.board.audience === "private");
 }
 
 /**

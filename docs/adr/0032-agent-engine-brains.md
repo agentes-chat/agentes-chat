@@ -302,4 +302,11 @@ Adding, switching and signing in to an AI account again were three different pat
 - **Settings › AI accounts is the same list** (`AiAccountsTab`): the viewer's accounts, the team's, then the workspace's keys in one card, each account with the agents that think with it; "Adicionar conta" is the card's main action (Connect). The keys keep their own actions and a quiet "Adicionar chave" on their group's line.
 - **The no-AI notice.** An agent's DM and its setup card open its "Quem pensa" on the account list when it is the one of the person's agents with no AI; with others waiting too, Connect signs in once for all of them. The workspace's banner and the onboarding keep Connect.
 - **Links:** `?sec=brain&brain=switch` opens the first screen with the list open, `brain=add` "Adicionar conta".
-- The phone is unchanged for now.
+- The phone (2026-11-25) follows: its account list (the app's picker sheet, no ×: a pull down or a tap outside closes
+  it) ends with "Add account" and "Manage accounts" for whoever may use plans or add the workspace's keys, also when
+  the agent's computer is someone else's (Connect then signs in elsewhere or takes a key); "Add account" is a pushed
+  screen with the same lines (`AgentAddAccountScreen`), each opening that AI's sign-in in Connect for the agent.
+  Picking switches at once, never asked in an alert (someone else's plan, another agent's login or one at its limit
+  ask first in the line under the list); what changed is said under the account in rows of their own, the agents on
+  top, the sentence, then the button: "Undo" (which also gives a taken login back), and "Switch them too" for the
+  owner's other agents on the account it left (`AgentAiScreen`).

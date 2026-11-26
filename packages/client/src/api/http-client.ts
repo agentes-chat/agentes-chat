@@ -1413,6 +1413,11 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       askTool: async (orgId, machineId, tool) => {
         await request<unknown>(`${org(orgId)}/machines/${enc(machineId)}/access/ask`, { json: { tool } });
       },
+      refuseFolder: (orgId, machineId, requestId) =>
+        request<{ status: string }>(
+          `${org(orgId)}/machines/${enc(machineId)}/access/requests/${enc(requestId)}/refuse`,
+          { json: {} },
+        ),
       checkClis: async (orgId, machineId) => {
         await request<unknown>(`${org(orgId)}/machines/${enc(machineId)}/clis/check`, { json: {} });
       },

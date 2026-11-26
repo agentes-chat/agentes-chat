@@ -599,7 +599,7 @@
       "here": "En esta computadora"
     },
     "whyPaid": "¿Por qué pago?",
-    "whyPaidText": "Cloud incluye la computadora de los agentes siempre encendida y alguien que mantiene el servidor. Ejecutarlo en tu propio servidor es gratis."
+    "whyPaidText": "Cloud incluye la computadora de los agentes siempre encendida y alguien que mantiene el servidor. Una computadora tuya conectada a un workspace de Cloud no reemplaza el plan. Ejecutar agentes.chat en tu propio servidor o computadora es gratis."
   },
   "auth": {
     "email": "Correo",
@@ -3048,9 +3048,9 @@
     "asking_one": "{{names}} está esperando una respuesta",
     "asking_many": "{{names}} están esperando una respuesta",
     "asking_other": "{{names}} están esperando una respuesta",
-    "outage_one": "{{names}}: el proveedor de IA no responde · reintenta solo",
-    "outage_many": "{{names}}: el proveedor de IA no responde · reintentan solos",
-    "outage_other": "{{names}}: el proveedor de IA no responde · reintentan solos",
+    "outage_one": "{{names}}: la IA no responde · reintenta solo",
+    "outage_many": "{{names}}: la IA no responde · reintentan solos",
+    "outage_other": "{{names}}: la IA no responde · reintentan solos",
     "queued_one": "{{names}} está en la cola",
     "queued_many": "{{names}} están en la cola",
     "queued_other": "{{names}} están en la cola",
@@ -3075,7 +3075,7 @@
       "claimed": "Respondiendo",
       "waiting": "Esperando aprobación",
       "asking": "Esperando una respuesta",
-      "outage": "El proveedor de IA no responde · reintenta solo",
+      "outage": "La IA no responde · reintenta sola",
       "queued": "En la cola",
       "away": "Esperando la computadora",
       "plan": "Esperando el plan",
@@ -3641,7 +3641,7 @@
         "ended": "Responderé aquí cuando el workspace vuelva a suscribirse a agentes.chat."
       },
       "askAdmin": "Responderé aquí cuando un admin resuelva el plan de agentes.chat.",
-      "plan": "El plan trae el ordenador de los agentes. La IA es la que ya pagas: Claude, ChatGPT y otras, o una clave de API.",
+      "plan": "El plan trae el ordenador de los agentes. La IA es la que ya pagas: Claude, ChatGPT y otras, o una clave de API. Una computadora tuya conectada aquí no reemplaza el plan. Ejecutar agentes.chat en tu propio servidor o computadora es gratis.",
       "activeTitle": "Plan activo",
       "activeLine": "Conecta una IA y {{name}} responde aquí.",
       "receipt": "Guardado",
@@ -4593,7 +4593,7 @@
       "queued_computer": "En la cola",
       "waiting_plan": "Esperando el plan",
       "waiting_budget": "Esperando a que el presupuesto se renueve",
-      "provider_down": "El proveedor de IA no responde · reintenta solo",
+      "provider_down": "La IA no responde · reintenta sola",
       "out_of_plan": "Sin límite en el plan",
       "out_of_budget": "Presupuesto del mes agotado",
       "out_of_planShort": "Sin límite",
@@ -4760,7 +4760,7 @@
     "computerAway": "La computadora de {{agent}} no responde ahora. Esta solicitud sigue abierta hasta las {{time}}. Inténtalo de nuevo en un momento.",
     "computerPaused": "Su dueño pausó la computadora de {{agent}}. Esta solicitud sigue abierta hasta las {{time}}.",
     "insecureContext": "Esta página no está abierta por https, así que el navegador no cifra la clave. Ábrela en https:// (o localhost).",
-    "failed": "No se pudo entregar. ¿La computadora del agente está encendida?",
+    "failed": "No se pudo entregar. Envíalo de nuevo. Si vuelve a fallar, pide a {{agent}} que lo solicite otra vez.",
     "changed": "Esta solicitud cambió mientras respondías. No se envió nada. Envíala de nuevo.",
     "empty": "Escribe el valor.",
     "tooLarge": "Demasiado grande (16 KB como máximo)."
@@ -5748,7 +5748,8 @@
       "provider_unavailable": "el modelo no respondió",
       "gave_up": "el modelo no respondió tras varios intentos",
       "missing_credential": "falta una clave de API",
-      "credential_revoked": "la clave de API fue revocada"
+      "credential_revoked": "la clave de API fue revocada",
+      "credential_unreadable": "la clave de API guardada no se puede abrir"
     },
     "youReplied": "Respondiste: {{text}}",
     "actions": "Acciones",
@@ -6722,6 +6723,7 @@
         "interrupted": "Interrumpida por un reinicio del servidor.",
         "missing_credential": "El espacio de trabajo no tiene clave de {{provider}}.",
         "credential_revoked": "La clave de este agente fue revocada.",
+        "credential_unreadable": "La clave de API guardada no se puede abrir, normalmente porque el secreto del servidor cambió después de guardarla. Vuelve a pegar la clave en Claves de IA.",
         "credential_wrong_provider": "El modelo es de {{modelProvider}}, pero la clave es de {{keyProvider}}.",
         "model_unlisted": "OpenRouter ya no ofrece {{model}}. Elige otro modelo en la configuración del agente.",
         "no_ai": "El agente no tenía una IA disponible.",
@@ -7112,6 +7114,7 @@
         "desc": "Todos los agentes leen esto. Lo cambias cuando quieras.",
         "line": "En una frase",
         "optional": "Opcional. Sin frase, vale el tipo que marcaste.",
+        "otherNeeded": "Con Otra cosa, escribe aquí a qué se dedican para continuar.",
         "todoPersonal": "Cuéntame un poco sobre ti.",
         "todoDescPersonal": "Todos tus agentes leen esto.",
         "donePersonal": "Ya sé un poco sobre ti",
@@ -8147,6 +8150,9 @@
     "link": "Enlace",
     "linkEmpty": "Crea el enlace para copiarlo",
     "linkFailed": "No se pudo crear el enlace. {{cause}}",
+    "localOnly": "Este servidor solo se abre en la computadora donde se ejecuta, así que las personas que invites no pueden abrir su invitación.",
+    "localOnlyHow": "En la app de agentes.chat de esa computadora, activa Accede desde tu teléfono y tu equipo en Preferencias › Servidores, o ejecuta agentes.chat en un servidor que puedan abrir. Luego invítalas.",
+    "localOnlyHere": "Activa Accede desde tu teléfono y tu equipo. Luego invítalas.",
     "never": "No vence",
     "untilDate": "Hasta el {{date}}",
     "validFor": "Vale {{ttl}} desde que se crea.",
@@ -9585,6 +9591,7 @@
       "stuck": "Se detuvo porque se trabó",
       "missing_credential": "Falta una clave de API",
       "credential_revoked": "La clave de API se revocó",
+      "credential_unreadable": "La clave de API guardada no se puede abrir",
       "credential_wrong_provider": "La clave de API es de otro proveedor",
       "model_unlisted": "OpenRouter ya no ofrece el modelo",
       "agent_archived": "El agente se archivó",
@@ -11850,6 +11857,8 @@
       "on": "Mensajes de voz",
       "onHelp": "Las personas de este espacio de trabajo pueden enviar audios en las conversaciones.",
       "noEngine": "Los mensajes de voz todavía no están disponibles aquí.",
+      "noEngineAsk": "Los mensajes de voz todavía no están activados. Quien administra este servidor los activa en esta misma página.",
+      "noEngineHere": "Los mensajes de voz se activan en cuanto elijas abajo qué convierte la voz en texto.",
       "engineTitle": "Qué convierte la voz en texto",
       "own": "Tu propio servidor",
       "ownHelp": "Whisper o Parakeet en tu máquina. El audio se queda ahí.",
@@ -17077,6 +17086,10 @@
       "paused": "{{name}} está en pausa",
       "resumed": "{{name}} vuelve a trabajar"
     },
+    "runnerBehind": {
+      "command": "El programa de agentes.chat en {{computer}} está desactualizado, así que algunas cosas no funcionan allí. Para actualizarlo, ejecuta esto allí:",
+      "installer": "El programa de agentes.chat en {{computer}} está desactualizado, así que algunas cosas no funcionan allí. Para actualizarlo, vuelve a ejecutar allí el comando de instalación, como root."
+    },
     "seenNow": "conectada ahora",
     "seen": "vista {{when}}",
     "neverSeen": "aún no se conectó",
@@ -19385,7 +19398,7 @@
       "waitingApproval": "{{name}} está esperando una aprobación",
       "waitingInput": "{{name}} está esperando una respuesta",
       "waitingComputer": "{{name}} está esperando a la computadora",
-      "waitingProvider": "{{name}}: el proveedor de IA está caído · reintenta solo",
+      "waitingProvider": "{{name}}: la IA no responde · reintenta solo",
       "waitingAgents": "{{name}} pasó parte del trabajo y espera noticias",
       "queued": "{{name}} está en la fila"
     },
@@ -19396,7 +19409,7 @@
       "waitingApproval": "esperando aprobación",
       "waitingInput": "esperando una respuesta",
       "waitingComputer": "esperando su computadora",
-      "waitingProvider": "proveedor de IA caído",
+      "waitingProvider": "la IA no responde",
       "waitingYourApproval": "esperando tu aprobación",
       "waitingYourAnswer": "esperando tu respuesta",
       "queued": "en la fila",
@@ -19423,7 +19436,8 @@
       "talk": "Hablar con {{name}}",
       "missing": "Esta conversación ya no está aquí.",
       "helping": "ayudando a {{name}}",
-      "see": "Ver conversación"
+      "see": "Ver conversación",
+      "relay": "Respuesta de {{name}}: {{excerpt}}. Ver la conversación"
     },
     "unshown": "Este mensaje no se pudo mostrar",
     "unshownPart": "Parte de este mensaje no se pudo mostrar",
@@ -19845,6 +19859,7 @@
       "brain_unavailable_commands_off": "{{brain}} está apagado en mi computadora. Responderé cuando quien la cuida lo encienda.",
       "brain_unavailable_outdated": "El programa de mi computadora necesita una actualización para que {{brain}} pueda responder. Responderé en cuanto se actualice.",
       "brain_unavailable_plan_owner": "{{brain}} pensaría con un plan que no es de mi dueño, así que no lo uso. Conecta la cuenta de mi dueño en mi página.",
+      "brain_unavailable_shared_login": "Mi computadora no puede usar el inicio de sesión de Claude para todos los agentes ahora. Responderé en cuanto pueda. Si sigue fallando, vuelve a conectar Claude en Cuentas de IA.",
       "provider_unavailable": "Mi proveedor de IA no responde ahora. Responderé en cuanto vuelva.",
       "provider_wait_rate_limit": "{{provider}} está limitando las solicitudes de esta clave ahora. Responderé en cuanto lo permita.",
       "provider_wait_down": "{{provider}} está caído o sobrecargado ahora. Responderé en cuanto vuelva.",
@@ -21719,7 +21734,7 @@
       "budgetSoon": "Esperando un momento el presupuesto de {{name}}",
       "computer": "Esperando la computadora de {{name}}",
       "busy": "Esperando lugar en la computadora de {{name}}",
-      "provider": "Esperando al proveedor de IA de {{name}}, próximo intento {{when}}"
+      "provider": "Esperando a que la IA de {{name}} responda, próximo intento {{when}}"
     },
     "menu": {
       "label": "Más",
@@ -21746,7 +21761,8 @@
     },
     "add": {
       "label": "Agregar widget",
-      "short": "Widget"
+      "short": "Widget",
+      "word": "Agregar"
     },
     "alert": {
       "label": "Avísame cuando algo ande mal",

@@ -586,7 +586,7 @@
       "here": "Auf diesem Computer"
     },
     "whyPaid": "Wofür bezahle ich?",
-    "whyPaidText": "Cloud enthält den immer eingeschalteten Computer der Agenten und jemanden, der den Server betreibt. Auf deinem eigenen Server ist es kostenlos."
+    "whyPaidText": "Cloud enthält den immer eingeschalteten Computer der Agenten und jemanden, der den Server betreibt. Ein eigener Computer, der mit einem Cloud-Workspace verbunden ist, ersetzt den Tarif nicht. agentes.chat auf deinem eigenen Server oder Computer zu betreiben ist kostenlos."
   },
   "auth": {
     "email": "E-Mail",
@@ -2938,8 +2938,8 @@
     "failed_other": "{{names}} konnten nicht antworten",
     "asking_one": "{{names}} wartet auf eine Antwort",
     "asking_other": "{{names}} warten auf eine Antwort",
-    "outage_one": "{{names}}: Der KI-Anbieter ist ausgefallen · versucht es von selbst erneut",
-    "outage_other": "{{names}}: Der KI-Anbieter ist ausgefallen · versucht es von selbst erneut",
+    "outage_one": "{{names}}: Die KI antwortet nicht · versucht es von selbst erneut",
+    "outage_other": "{{names}}: Die KI antwortet nicht · versucht es von selbst erneut",
     "queued_one": "{{names}} steht in der Warteschlange",
     "queued_other": "{{names}} stehen in der Warteschlange",
     "away_one": "{{names}} wartet auf den Computer",
@@ -2959,7 +2959,7 @@
       "claimed": "Antwortet",
       "waiting": "Wartet auf Freigabe",
       "asking": "Wartet auf eine Antwort",
-      "outage": "Der KI-Anbieter ist ausgefallen · versucht es von selbst erneut",
+      "outage": "Die KI antwortet nicht · versucht es von selbst erneut",
       "queued": "In der Warteschlange",
       "away": "Wartet auf den Computer",
       "plan": "Wartet auf das Abo",
@@ -3514,7 +3514,7 @@
         "ended": "Ich antworte hier, sobald der Workspace agentes.chat wieder abonniert."
       },
       "askAdmin": "Ich antworte hier, sobald ein Admin den agentes.chat-Tarif geklärt hat.",
-      "plan": "Der Tarif bringt den Computer der Agenten. Die KI ist die, für die du schon zahlst: Claude, ChatGPT und andere oder ein API-Schlüssel.",
+      "plan": "Der Tarif bringt den Computer der Agenten. Die KI ist die, für die du schon zahlst: Claude, ChatGPT und andere oder ein API-Schlüssel. Ein eigener Computer, der hier verbunden ist, ersetzt den Tarif nicht. agentes.chat auf deinem eigenen Server oder Computer zu betreiben ist kostenlos.",
       "activeTitle": "Tarif aktiv",
       "activeLine": "Verbinde eine KI und {{name}} antwortet hier.",
       "receipt": "Aufgehoben",
@@ -4448,7 +4448,7 @@
       "queued_computer": "In der Warteschlange",
       "waiting_plan": "Wartet auf das Abo",
       "waiting_budget": "Wartet, bis sich das Budget zurücksetzt",
-      "provider_down": "Der KI-Anbieter ist ausgefallen · versucht es von selbst erneut",
+      "provider_down": "Die KI antwortet nicht · versucht es von selbst erneut",
       "out_of_plan": "Planlimit erreicht",
       "out_of_budget": "Monatsbudget aufgebraucht",
       "out_of_planShort": "Limit erreicht",
@@ -4613,7 +4613,7 @@
     "computerAway": "Der Computer von {{agent}} antwortet gerade nicht. Diese Anfrage bleibt bis {{time}} offen. Versuche es gleich noch einmal.",
     "computerPaused": "Der Computer von {{agent}} wurde von seinem Besitzer pausiert. Diese Anfrage bleibt bis {{time}} offen.",
     "insecureContext": "Diese Seite ist nicht über https geöffnet, daher verschließt der Browser den Schlüssel nicht. Öffne sie unter https:// (oder localhost).",
-    "failed": "Konnte es nicht übermitteln. Ist der Computer des Agenten eingeschaltet?",
+    "failed": "Konnte es nicht übermitteln. Sende es noch einmal. Klappt es wieder nicht, bitte {{agent}}, es neu anzufragen.",
     "changed": "Diese Anfrage hat sich geändert, während du geantwortet hast. Nichts wurde gesendet. Sende sie noch einmal.",
     "empty": "Gib den Wert ein.",
     "tooLarge": "Zu groß (höchstens 16 KB)."
@@ -5566,7 +5566,8 @@
       "provider_unavailable": "das Modell hat nicht geantwortet",
       "gave_up": "das Modell hat nach mehreren Versuchen nicht geantwortet",
       "missing_credential": "ein API-Schlüssel fehlt",
-      "credential_revoked": "der API-Schlüssel wurde widerrufen"
+      "credential_revoked": "der API-Schlüssel wurde widerrufen",
+      "credential_unreadable": "der gespeicherte API-Schlüssel lässt sich nicht öffnen"
     },
     "youReplied": "Du hast geantwortet: {{text}}",
     "actions": "Aktionen",
@@ -6512,6 +6513,7 @@
         "interrupted": "Durch einen Neustart des Servers unterbrochen.",
         "missing_credential": "Der Workspace hat keinen Schlüssel für {{provider}}.",
         "credential_revoked": "Der Schlüssel dieses Agenten wurde widerrufen.",
+        "credential_unreadable": "Der gespeicherte API-Schlüssel lässt sich nicht öffnen, meist weil sich das Geheimnis des Servers geändert hat, nachdem der Schlüssel gespeichert wurde. Füge den Schlüssel unter KI-Schlüssel erneut ein.",
         "credential_wrong_provider": "Das Modell ist von {{modelProvider}}, der Schlüssel aber von {{keyProvider}}.",
         "model_unlisted": "OpenRouter bietet {{model}} nicht mehr an. Wähle in den Einstellungen des Agenten ein anderes Modell.",
         "no_ai": "Der Agent hatte keine KI verfügbar.",
@@ -6901,6 +6903,7 @@
         "desc": "Alle Agenten lesen das. Du kannst es jederzeit ändern.",
         "line": "In einem Satz",
         "optional": "Optional. Ohne Satz zählt der Typ, den du gewählt hast.",
+        "otherNeeded": "Bei Etwas anderes schreib hier, was ihr macht, um fortzufahren.",
         "todoPersonal": "Erzähl mir ein bisschen von dir.",
         "todoDescPersonal": "Alle deine Agenten lesen das.",
         "donePersonal": "Ich weiß ein bisschen über dich",
@@ -7919,6 +7922,9 @@
     "link": "Link",
     "linkEmpty": "Erstelle den Link, um ihn zu kopieren",
     "linkFailed": "Der Link konnte nicht erstellt werden. {{cause}}",
+    "localOnly": "Dieser Server öffnet sich nur auf dem Computer, auf dem er läuft, deshalb können die Eingeladenen ihre Einladung nicht öffnen.",
+    "localOnlyHow": "Schalte in der agentes.chat-App auf diesem Computer unter Einstellungen › Server die Option Von deinem Handy und deinem Team erreichbar ein, oder betreibe agentes.chat auf einem Server, den sie öffnen können. Lade sie dann ein.",
+    "localOnlyHere": "Schalte Von deinem Handy und deinem Team erreichbar ein. Lade sie dann ein.",
     "never": "Läuft nie ab",
     "untilDate": "Bis {{date}}",
     "validFor": "Gilt {{ttl}} ab dem Erstellen.",
@@ -9317,6 +9323,7 @@
       "stuck": "Gestoppt, weil er feststeckte",
       "missing_credential": "Ein API-Schlüssel fehlt",
       "credential_revoked": "Der API-Schlüssel wurde widerrufen",
+      "credential_unreadable": "Der gespeicherte API-Schlüssel lässt sich nicht öffnen",
       "credential_wrong_provider": "Der API-Schlüssel ist von einem anderen Anbieter",
       "model_unlisted": "OpenRouter bietet das Modell nicht mehr an",
       "agent_archived": "Der Agent wurde archiviert",
@@ -11478,6 +11485,8 @@
       "on": "Sprachnachrichten",
       "onHelp": "Personen in diesem Workspace können in Unterhaltungen Audio senden.",
       "noEngine": "Sprachnachrichten sind hier noch nicht verfügbar.",
+      "noEngineAsk": "Sprachnachrichten sind noch nicht eingeschaltet. Wer diesen Server betreibt, schaltet sie auf dieser Seite ein.",
+      "noEngineHere": "Sprachnachrichten werden eingeschaltet, sobald du unten wählst, was Sprache in Text umwandelt.",
       "engineTitle": "Was Sprache in Text umwandelt",
       "own": "Dein eigener Server",
       "ownHelp": "Whisper oder Parakeet auf deinem Rechner. Das Audio bleibt dort.",
@@ -16598,6 +16607,10 @@
       "paused": "{{name}} ist pausiert",
       "resumed": "{{name}} arbeitet wieder"
     },
+    "runnerBehind": {
+      "command": "Das agentes.chat-Programm auf {{computer}} ist veraltet, daher funktioniert dort einiges nicht. Zum Aktualisieren führe dort Folgendes aus:",
+      "installer": "Das agentes.chat-Programm auf {{computer}} ist veraltet, daher funktioniert dort einiges nicht. Zum Aktualisieren führe dort den Installationsbefehl erneut als root aus."
+    },
     "seenNow": "gerade verbunden",
     "seen": "zuletzt gesehen {{when}}",
     "neverSeen": "hat sich noch nicht verbunden",
@@ -18867,7 +18880,7 @@
       "waitingApproval": "{{name}} wartet auf eine Freigabe",
       "waitingInput": "{{name}} wartet auf eine Antwort",
       "waitingComputer": "{{name}} wartet auf den Computer",
-      "waitingProvider": "{{name}}: Der KI-Anbieter ist ausgefallen · versucht es von selbst erneut",
+      "waitingProvider": "{{name}}: Die KI antwortet nicht · versucht es von selbst erneut",
       "waitingAgents": "{{name}} hat einen Teil weitergegeben und wartet auf Rückmeldung",
       "queued": "{{name}} ist in der Warteschlange"
     },
@@ -18878,7 +18891,7 @@
       "waitingApproval": "wartet auf Freigabe",
       "waitingInput": "wartet auf eine Antwort",
       "waitingComputer": "wartet auf den Computer",
-      "waitingProvider": "KI-Anbieter gestört",
+      "waitingProvider": "KI antwortet nicht",
       "waitingYourApproval": "wartet auf deine Freigabe",
       "waitingYourAnswer": "wartet auf deine Antwort",
       "queued": "in der Warteschlange",
@@ -18904,7 +18917,8 @@
       "talk": "Mit {{name}} sprechen",
       "missing": "Diese Unterhaltung ist nicht mehr da.",
       "helping": "hilft {{name}}",
-      "see": "Unterhaltung ansehen"
+      "see": "Unterhaltung ansehen",
+      "relay": "Antwort von {{name}}: {{excerpt}}. Unterhaltung ansehen"
     },
     "unshown": "Diese Nachricht konnte nicht angezeigt werden",
     "unshownPart": "Ein Teil dieser Nachricht konnte nicht angezeigt werden",
@@ -19321,6 +19335,7 @@
       "brain_unavailable_commands_off": "{{brain}} ist auf meinem Computer ausgeschaltet. Ich antworte, sobald die Person, die ihn betreut, es einschaltet.",
       "brain_unavailable_outdated": "Das Programm auf meinem Computer braucht ein Update, bevor {{brain}} antworten kann. Ich antworte, sobald es aktualisiert ist.",
       "brain_unavailable_plan_owner": "{{brain}} würde mit einem Abo denken, das nicht meinem Besitzer gehört, deshalb nutze ich es nicht. Verbinde das Konto meines Besitzers auf meiner Seite.",
+      "brain_unavailable_shared_login": "Mein Computer kann Claudes Anmeldung für alle Agenten gerade nicht nutzen. Ich antworte, sobald es geht. Wenn es weiter fehlschlägt, verbinde Claude in KI-Konten neu.",
       "provider_unavailable": "Mein KI-Anbieter antwortet gerade nicht. Ich antworte, sobald er wieder da ist.",
       "provider_wait_rate_limit": "{{provider}} begrenzt gerade die Anfragen dieses Schlüssels. Ich antworte, sobald es wieder geht.",
       "provider_wait_down": "{{provider}} ist gerade ausgefallen oder überlastet. Ich antworte, sobald es wieder da ist.",
@@ -21110,7 +21125,7 @@
       "budgetSoon": "Wartet kurz auf das Budget von {{name}}",
       "computer": "Wartet auf den Computer von {{name}}",
       "busy": "Wartet auf Platz am Computer von {{name}}",
-      "provider": "Wartet auf den KI-Anbieter von {{name}}, nächster Versuch {{when}}"
+      "provider": "Wartet auf eine Antwort der KI von {{name}}, nächster Versuch {{when}}"
     },
     "menu": {
       "label": "Mehr",
@@ -21137,7 +21152,8 @@
     },
     "add": {
       "label": "Widget hinzufügen",
-      "short": "Widget"
+      "short": "Widget",
+      "word": "Hinzufügen"
     },
     "alert": {
       "label": "Sag mir Bescheid, wenn etwas nicht stimmt",

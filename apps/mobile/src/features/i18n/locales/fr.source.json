@@ -1987,6 +1987,9 @@
   "agent.talk": {
     "value": "Chat"
   },
+  "agent.responsible": {
+    "value": "Owner"
+  },
   "agent.task": {
     "value": "Task"
   },
@@ -6877,9 +6880,6 @@
   "dashboards.formatAuto": {
     "value": "{{name}} picks the best one"
   },
-  "dashboards.newWidget.alerts": {
-    "value": "Alerts"
-  },
   "dashboards.newWidget.realData": {
     "value": "Real data"
   },
@@ -6889,8 +6889,14 @@
   "dashboards.newWidget.asked": {
     "value": "“{{ask}}”"
   },
-  "dashboards.newWidget.autoFormat": {
-    "value": "Auto format"
+  "dashboards.newWidget.testReal": {
+    "value": "Test with real data"
+  },
+  "dashboards.newWidget.addHome": {
+    "value": "Add to Home"
+  },
+  "dashboards.newWidget.addTo": {
+    "value": "Add to {{where}}"
   },
   "dashboards.agentPick.search": {
     "value": "Search agents"

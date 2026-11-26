@@ -6,6 +6,7 @@ import {
   type ProviderFailureCause,
   type PubSub,
   saysDiskFull,
+  sharedLoginRefused,
 } from "@agenteschat/adapters";
 import {
   and,
@@ -848,9 +849,11 @@ export interface Transcript {
   /**
    * The provider failed every attempt with a retryable error (I5): the run is parked on `OUTAGE_PARK`'s ladder
    * (`waitId`: the job that resumes it, at `at`) since `since` (ms), `n` times so far. Cleared by the next model call
-   * that answers. On a rate limit it also waits in its key's line (`key-line.ts`).
+   * that answers. On a rate limit it also waits in its key's line (`key-line.ts`). `machineId`: the computer whose own
+   * failure it is (`computersOwn`), online when it refused: its reconnecting resumes the run too
+   * (`resumeRunsWaitingForMachine`), and no app reads it as waiting for that computer.
    */
-  outage?: { since: number; n: number; waitId: string; noteId?: string } & KeyLinePlace;
+  outage?: { since: number; n: number; waitId: string; noteId?: string; machineId?: string } & KeyLinePlace;
   /**
    * Tries in a row that failed with a retryable error since its last turn that answered (`OUTAGE_PARK.tries`). Counted
    * on the run, not the job: a wait for room between two tries hands the run a new job whose attempts start over.
@@ -1159,6 +1162,9 @@ const PERSON_LIMIT_TEXT = "The person who asked reached their usage limit for th
 
 /** The note a run parked on a provider outage posts once; the apps word it by its cause (`outageNote`). */
 const PROVIDER_UNAVAILABLE_TEXT = "My AI provider isn't answering right now. I'll answer as soon as it's back.";
+/** The note of a run its computer's shared Claude login refused (`brainUnavailable.code` `shared_login_off`). */
+const SHARED_LOGIN_WAIT_TEXT =
+  "My computer can't run Claude's sign-in for all agents right now. I'll answer once it can. If it keeps failing, connect Claude again in AI accounts.";
 /** That note once the provider answers again (`bodyCode` `provider_back`): it no longer says a wait is on. */
 const PROVIDER_BACK_TEXT = "My AI is back.";
 
@@ -2983,9 +2989,12 @@ async function executeRunInner(
     if (Date.now() - since >= OUTAGE_PARK.maxMs) return false;
     const waitId = Bun.randomUUIDv7();
     const people = Boolean(t.roomPeople) || (!run.background && run.hop <= 1 && viaRoutine === null);
+    // Woken before its resume (a person's message, its computer reconnecting) and refused again: that resume keeps its
+    // time and the ladder its rung. Only the resume itself climbs, or a few messages would put the next try an hour off.
+    const early = t.outage !== undefined && options.wait !== t.outage.waitId && (t.outage.at ?? 0) > Date.now();
     const step = OUTAGE_PARK.ladderMinutes[Math.min(n, OUTAGE_PARK.ladderMinutes.length - 1)] ?? 60;
     const minutes = line && people ? Math.min(step, KEY_LINE_PERSON_MINUTES) : step;
-    const at = Date.now() + minutes * 60_000;
+    const at = early ? (t.outage?.at ?? 0) : Date.now() + minutes * 60_000;
     const noteId = t.outage?.noteId;
     // Woken before its resume (its computer back, a person's message): that resume is replaced, never one more.
     const before = t.outage?.waitId;
@@ -2994,15 +3003,28 @@ async function executeRunInner(
         .delete(outbox)
         .where(and(eq(outbox.dedupeKey, outageJobKey(run.id, before)), eq(outbox.status, "pending")));
     }
-    t.outage = { since, n: n + 1, waitId, at, ...(noteId ? { noteId } : {}), ...(line ? { line, people } : {}) };
-    // The computer failing on its own waits on the same ladder as a wait for that computer: the apps say it waits for
-    // its computer, and the computer coming back resumes it (`resumeRunsWaitingForMachine`).
-    const own = error instanceof BrainFailure && computersOwn(error, plan.account) ? error.code : null;
+    // The computer failing on its own was online to refuse: the apps say its AI isn't answering, never that it waits
+    // for its computer, and that computer reconnecting resumes it too (`resumeRunsWaitingForMachine`).
+    const own =
+      error instanceof BrainFailure && computersOwn(error, plan.account)
+        ? sharedLoginRefused(error.code, error.message)
+          ? "shared_login_off"
+          : error.code
+        : null;
     const machineId = own ? (plan.session?.machineId ?? agent.machineId ?? null) : null;
+    t.outage = {
+      since,
+      n: early ? n : n + 1,
+      waitId,
+      at,
+      ...(noteId ? { noteId } : {}),
+      ...(machineId ? { machineId } : {}),
+      ...(line ? { line, people } : {}),
+    };
     const brain = isComputerBrain(plan.kind) ? plan.kind : "claude_code";
     const words = outageNote(error, plan.account, BRAIN_NAMES[brain]);
     await deferred;
-    await addRunStep(db, run, "error", { reason: "provider_outage", message, parked: n + 1 });
+    await addRunStep(db, run, "error", { reason: "provider_outage", message, parked: t.outage.n });
     // Said once where it answers, so the wait reads as the provider's or the computer's, not as a question to a person.
     // The computer's own names its code and no computer: the apps keep it a plain note, never the card that waits for
     // a computer to come back, which an online one would close at once as back.
@@ -3015,7 +3037,9 @@ async function executeRunInner(
               own
                 ? words.bodyCode === "provider_wait_said"
                   ? `${words.bodyParams.provider} answered with an error (${words.bodyParams.detail}). I'll try again and answer as soon as it works.`
-                  : `${words.bodyParams.brain} can't answer right now. I'll answer when it's back.`
+                  : own === "shared_login_off"
+                    ? SHARED_LOGIN_WAIT_TEXT
+                    : `${words.bodyParams.brain} can't answer right now. I'll answer when it's back.`
                 : PROVIDER_UNAVAILABLE_TEXT,
               own ? { ...words, brainUnavailable: { brain, code: own } } : words,
               undefined,
@@ -3039,14 +3063,11 @@ async function executeRunInner(
       runAt: new Date(at),
       maxAttempts: 4,
     });
-    const waiting = { transcript: storedTranscript(t), ...(machineId ? { waitingMachineId: machineId } : {}) };
-    if (!(await transitionRun(db, run.id, "running", "waiting_input", waiting)))
+    if (!(await transitionRun(db, run.id, "running", "waiting_input", { transcript: storedTranscript(t) })))
       throw new PermanentJobError("run changed state while executing");
-    const outage = machineId ? undefined : true;
-    const computer = machineId ? "away" : undefined;
-    await publishChannelEvent(deps.pubsub, event("waiting_input", undefined, outage, computer));
+    await publishChannelEvent(deps.pubsub, event("waiting_input", undefined, true));
     await widgetRunWaitChanged({ db, pubsub: deps.pubsub }, run).catch(() => {});
-    await finished("waiting_input", undefined, outage, computer);
+    await finished("waiting_input", undefined, true);
     return true;
   };
 
@@ -4137,6 +4158,22 @@ async function executeRunInner(
     return true;
   };
 
+  /** How long an away computer is waited for without a word (`brainUnavailable`): null once it is down for real. */
+  const quietWait = async (machineId: string) => {
+    let quietUntil: number | null = null;
+    const status = await deps.machines?.status(machineId).catch(() => null);
+    const moving = status?.online === false && status.moving === true;
+    const seen = status?.lastSeenAt ? Date.parse(status.lastSeenAt) : Number.NaN;
+    if (status && !status.online && status.standby) {
+      const t = transcript as Transcript;
+      t.standbyWaitSince ??= Date.now();
+      const until = t.standbyWaitSince + TASK_OFFLINE_GRACE_MS;
+      if (Date.now() < until) quietUntil = until;
+    } else if (status && !status.online && Date.now() - seen < TASK_OFFLINE_GRACE_MS)
+      quietUntil = seen + TASK_OFFLINE_GRACE_MS;
+    return { quietUntil, moving };
+  };
+
   /**
    * The computer brain can't answer. At the run's start (`look`), a computer in standby is woken and waited for, and on
    * its first look one just gone too (`computerBackSoon`). Still away: the run waits for the computer (the API never
@@ -4197,7 +4234,15 @@ async function executeRunInner(
       !onlyThisComputer &&
       !plan.missionId &&
       (await planKeyFallbackOn(db, run.orgId));
-    if (isRightHand(agent) && u.code !== "busy" && !u.queued && !rightHandKey) {
+    // Just gone or waking from standby, the right hand waits without a word as any agent does: a standby the person
+    // never sees must not read as its computer away (ADR 0161).
+    if (
+      isRightHand(agent) &&
+      u.code !== "busy" &&
+      !u.queued &&
+      !rightHandKey &&
+      !(u.code === "machine_offline" && machineId && (await quietWait(machineId)).quietUntil !== null)
+    ) {
       const ownModel = u.scope ? ownLimitsModel(plan.account?.provider, plan.model) : null;
       const line = rightHandNoAiReason(u.code, ownModel ? u.scope : undefined);
       // What the plan's CLI or its computer said is kept in the run and reported, as any agent's CLI failure is, and the
@@ -4288,19 +4333,8 @@ async function executeRunInner(
     // Just gone (our own deploy, a runner dialing again): it waits without a word until the outage grace is over.
     // Asleep in standby, waking: without a word too, for one grace from its first such wait (ADR 0161); one that
     // never wakes is down, and says so.
-    let quietUntil: number | null = null;
-    let moving = false;
-    if (u.code === "machine_offline") {
-      const status = await deps.machines?.status(machineId).catch(() => null);
-      moving = status?.online === false && status.moving === true;
-      const seen = status?.lastSeenAt ? Date.parse(status.lastSeenAt) : Number.NaN;
-      if (status && !status.online && status.standby) {
-        t.standbyWaitSince ??= Date.now();
-        const until = t.standbyWaitSince + TASK_OFFLINE_GRACE_MS;
-        if (Date.now() < until) quietUntil = until;
-      } else if (status && !status.online && Date.now() - seen < TASK_OFFLINE_GRACE_MS)
-        quietUntil = seen + TASK_OFFLINE_GRACE_MS;
-    }
+    const { quietUntil, moving } =
+      u.code === "machine_offline" ? await quietWait(machineId) : { quietUntil: null, moving: false };
     // Away for real at the run's start (past a blip, never one waking from standby) or paused by its owner: a device
     // that helps takes the turn (ADR 0233).
     if (
@@ -5008,7 +5042,12 @@ async function executeRunInner(
     // unknown reset, on the safety timer until the head gets through).
     if (!u.soon) {
       const base = known ? at : now + LINE_SAFETY_MS;
-      await retimeLine(db, line.behind, (i) => new Date(base + RESUME_AFTER_MS + RESUME_GAP_MS * (line.place + 1 + i)));
+      await retimeLine(
+        db,
+        line.behind,
+        (i) => new Date(base + RESUME_AFTER_MS + RESUME_GAP_MS * (line.place + 1 + i)),
+        resetsAt,
+      );
     }
     const moved = await transitionRun(db, run.id, "running", "waiting_input", {
       transcript: storedTranscript(t),
