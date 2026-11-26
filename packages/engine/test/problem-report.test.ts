@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { capProblemReport, PROBLEM_REPORT_TARGET_BYTES } from "@agenteschat/adapters";
+import { capProblemReport, PROBLEM_REPORT_TARGET_BYTES, RUNNER_STOPPED_CLOSE } from "@agenteschat/adapters";
 import { eq, schema } from "@agenteschat/db";
 import { createChannel } from "../src/channels";
 import { postPersonMessage } from "../src/messages";
@@ -251,6 +251,47 @@ describe("problem report", () => {
     );
     expect(linux.report.facts).not.toHaveProperty("machine.windowsBuild");
     expect(linux.report.facts).not.toHaveProperty("machine.codexSandbox");
+  });
+
+  test("an offline computer's report says why, from its runner's last close, never the close's text", async () => {
+    const fx = await setup();
+    f = fx;
+    const now = Date.now();
+    const iso = (agoS: number) => new Date(now - agoS * 1000).toISOString();
+    const [machine] = await fx.db
+      .insert(schema.machines)
+      .values({
+        orgId: fx.org.id,
+        name: "Box",
+        os: "linux",
+        lastSeenAt: new Date(now - 3600_000),
+        disconnects: [{ connectedAt: iso(7200), at: iso(3590), code: RUNNER_STOPPED_CLOSE, reason: "secret words" }],
+      })
+      .returning();
+    const machineId = machine?.id ?? "";
+    const build = () =>
+      buildProblemReport(
+        fx.db,
+        { orgId: fx.org.id, userId: fx.owner.id, place: "computer", context: { machineId } },
+        { ...SOURCES, serverLines: () => [] },
+      );
+    const stopped = await build();
+    expect(stopped.report.facts).toMatchObject({
+      "machine.connection": "offline",
+      "machine.offlineCause": "stopped",
+      "machine.lastCloseCode": RUNNER_STOPPED_CLOSE,
+    });
+    expect(stopped.report.facts?.["machine.lastCloseS"]).toBeWithin(3589, 3600);
+    expect(stopped.report.facts?.["machine.lastConnectedS"]).toBeWithin(7199, 7210);
+    expect(JSON.stringify(stopped.report)).not.toContain("secret words");
+
+    // No close recorded: said so, not left out.
+    await fx.db.update(schema.machines).set({ disconnects: [] }).where(eq(schema.machines.id, machineId));
+    expect((await build()).report.facts).toMatchObject({
+      "machine.offlineCause": null,
+      "machine.lastCloseCode": null,
+      "machine.lastCloseS": null,
+    });
   });
 
   test("too many or too long facts are cut to the contract, never fail the report", async () => {
