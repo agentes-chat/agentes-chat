@@ -18976,7 +18976,8 @@
       "missing": "Dit gesprek is er niet meer.",
       "helping": "helpt {{name}}",
       "helping_female": "helpt {{name}}",
-      "see": "Gesprek bekijken"
+      "see": "Gesprek bekijken",
+      "relay": "Antwoord van {{name}}: {{excerpt}}. Gesprek bekijken"
     },
     "unshown": "Dit bericht kon niet getoond worden",
     "unshownPart": "Een deel van dit bericht kon niet getoond worden",
