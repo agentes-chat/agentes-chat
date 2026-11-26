@@ -5338,7 +5338,8 @@
       "provider_unavailable": "모델이 응답하지 않았어요",
       "gave_up": "여러 번 시도했지만 모델이 응답하지 않았어요",
       "missing_credential": "API 키가 없어요",
-      "credential_revoked": "API 키가 취소됐어요"
+      "credential_revoked": "API 키가 취소됐어요",
+      "credential_unreadable": "저장된 API 키를 열 수 없어요"
     },
     "youReplied": "내 답장: {{text}}",
     "actions": "작업",
@@ -6254,6 +6255,7 @@
         "interrupted": "서버 재시작으로 중단됐어요.",
         "missing_credential": "워크스페이스에 {{provider}} 키가 없어요.",
         "credential_revoked": "이 에이전트의 키가 해지됐어요.",
+        "credential_unreadable": "저장된 API 키를 열 수 없어요. 대개 키를 저장한 뒤 서버의 시크릿이 바뀌어서 그래요. AI 키에서 키를 다시 붙여 넣어 주세요.",
         "credential_wrong_provider": "모델은 {{modelProvider}} 것인데 키는 {{keyProvider}} 것이에요.",
         "model_unlisted": "OpenRouter에서 더 이상 {{model}}을(를) 제공하지 않아요. 에이전트 설정에서 다른 모델을 고르세요.",
         "no_ai": "에이전트에 쓸 수 있는 AI가 없었어요.",
@@ -8983,6 +8985,7 @@
       "stuck": "막혀서 중지됐어요",
       "missing_credential": "API 키가 없어요",
       "credential_revoked": "API 키가 취소됐어요",
+      "credential_unreadable": "저장된 API 키를 열 수 없어요",
       "credential_wrong_provider": "다른 제공업체의 API 키예요",
       "model_unlisted": "OpenRouter에서 더 이상 이 모델을 제공하지 않아요",
       "agent_archived": "에이전트가 보관됐어요",

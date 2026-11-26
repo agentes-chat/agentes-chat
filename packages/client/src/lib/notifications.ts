@@ -334,6 +334,7 @@ const FAILED_CAUSES = new Set([
   "gave_up",
   "missing_credential",
   "credential_revoked",
+  "credential_unreadable",
 ]);
 const PLAN_CAUSES = new Set(["not_logged_in", "plan_limit"]);
 
