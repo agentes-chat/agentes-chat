@@ -1985,7 +1985,6 @@ export const ptBR = {
       say_other: "O {{app}} achou {{count}} jeitos de começar.",
       sayAny_one: "A sua IA achou um jeito de começar.",
       sayAny_other: "A sua IA achou {{count}} jeitos de começar.",
-      needsAdmin: "Criar agentes aqui precisa de um admin. Peça a quem administra o workspace.",
     },
     week: {
       title: "A primeira semana do {{name}}",

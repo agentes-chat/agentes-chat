@@ -212,12 +212,6 @@ html:not([data-pointer]) .onb-card:focus-visible {
   color: var(--ink);
   font-weight: 600;
 }
-.onb-hand__refused {
-  margin: 12px 0 0;
-  color: var(--danger);
-  font-size: 13px;
-  text-align: center;
-}
 
 /* A phone: the picked card in the middle, the others peeking at the screen's edges. */
 @media (max-width: 560px) {

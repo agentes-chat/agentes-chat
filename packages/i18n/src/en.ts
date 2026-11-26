@@ -2094,7 +2094,6 @@ export const en = {
       say_other: "{{app}} found {{count}} ways to start.",
       sayAny_one: "Your AI found one way to start.",
       sayAny_other: "Your AI found {{count}} ways to start.",
-      needsAdmin: "Creating agents here needs an admin. Ask whoever manages the workspace.",
     },
     /** The picked agent's first week, before the plan. */
     week: {

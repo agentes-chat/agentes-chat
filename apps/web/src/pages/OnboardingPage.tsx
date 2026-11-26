@@ -766,7 +766,7 @@ export function OnboardingPage() {
         return {
           cast: [
             lodiFace,
-            ...proposal.options.map((o) => ({ id: o.handle, name: o.name, look: o.appearance, asleep: true })),
+            ...proposal.options.map((o) => ({ id: o.handle, name: o.name, look: lookOf(o), asleep: true })),
           ],
           say: appName ? t("onboarding.pick.say", { app: appName, count }) : t("onboarding.pick.sayAny", { count }),
           marks: askedOf?.mark ? { ids: [askedOf.mark], state: "done" } : null,
@@ -1140,7 +1140,7 @@ function wallFaces(t: TFunction, lodi: ShellFace): ShellFace[] {
 
 /** An unpicked proposal from an earlier visit (a reload while picking): the start opens on its pick. */
 function ResumeProposal({ orgId, onFound }: { orgId: string; onFound: (proposal: FirstAgents) => void }) {
-  const latest = useFirstAgents(orgId).data?.proposal ?? null;
+  const latest = useFirstAgents(orgId).data ?? null;
   const found = latest && latest.picked === null && latest.options.length > 0 ? latest : null;
   const report = useRef(onFound);
   report.current = onFound;

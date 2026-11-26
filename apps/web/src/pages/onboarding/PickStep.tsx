@@ -1,12 +1,12 @@
-import type { ConnectorDef, FirstAgentOption, FirstAgents } from "@agenteschat/client";
+import type { ConnectorDef, FirstAgentOption, FirstAgentPicked, FirstAgents } from "@agenteschat/client";
 import { useCatalog, useFirstAgents, usePickFirstAgent } from "@agenteschat/client";
 import type { AppClient } from "@agenteschat/client/lib/app-clients";
-import { errorCode } from "@agenteschat/client/lib/errors";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { Avatar, Button, dotTone, Icon, PixelSky, ProviderLogo, teamSky } from "@agenteschat/ui";
 import { type CSSProperties, type ReactNode, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ConnectorIcon } from "@/components/ConnectorIcon";
+import { lookOf } from "@/lib/look";
 import { Box, BoxNote } from "./Shell";
 import "./pick-step.css";
 
@@ -46,7 +46,7 @@ export function FirstAgentPick({
 }: {
   orgId: string;
   proposal: FirstAgents;
-  onPicked: (made: { agentId: string; handle: string; channelId: string | null }) => void;
+  onPicked: (made: FirstAgentPicked) => void;
   app?: Pick<AppClient, "name" | "mark"> | null;
   eyebrow?: ReactNode;
   /** In place of "Pick your first agent" (a member's first agent). */
@@ -56,7 +56,7 @@ export function FirstAgentPick({
 }) {
   const { t } = useTranslation();
   // A newer proposal the AI sent meanwhile takes this one's place.
-  const latest = useFirstAgents(orgId, { poll: PROPOSALS_POLL_MS }).data?.proposal ?? null;
+  const latest = useFirstAgents(orgId, { poll: PROPOSALS_POLL_MS }).data ?? null;
   const shown =
     latest &&
     latest.id !== proposal.id &&
@@ -72,7 +72,6 @@ export function FirstAgentPick({
   const create = usePickFirstAgent(orgId);
   // Created: the button stays busy until the page moves on, so it is never pressed twice.
   const [made, setMade] = useState(false);
-  const [refused, setRefused] = useState(false);
   const catalog = useCatalog().data?.connectors;
   const appName = app?.name ?? null;
 
@@ -105,14 +104,14 @@ export function FirstAgentPick({
           data-enter=""
           loading={create.isPending || made}
           onClick={() =>
+            // A refusal (no permission to create agents) is said by the error's toast, in the person's words.
             create.mutate(
-              { id: shown.id, index: cur },
+              { proposalId: shown.id, index: cur },
               {
                 onSuccess: (res) => {
                   setMade(true);
                   onPicked(res);
                 },
-                onError: (e) => setRefused(errorCode(e) === "create_agents_required"),
               },
             )
           }
@@ -131,11 +130,8 @@ export function FirstAgentPick({
             data-pos={placeOf(i)}
             data-on={i === cur ? "" : undefined}
             aria-pressed={i === cur}
-            style={{ "--c": dotTone(o.appearance.color ?? "sky") } as CSSProperties}
-            onClick={() => {
-              setChosen(i);
-              setRefused(false);
-            }}
+            style={{ "--c": dotTone(lookOf(o)?.color ?? "sky") } as CSSProperties}
+            onClick={() => setChosen(i)}
           >
             <CardSky option={o} />
             <span className="onb-card__body">
@@ -179,11 +175,6 @@ export function FirstAgentPick({
           <b>{t("onboarding.pick.why", grammar)}</b> {pick.why}
         </span>
       </p>
-      {refused && (
-        <p className="onb-hand__refused" role="alert">
-          {t("onboarding.pick.needsAdmin")}
-        </p>
-      )}
     </Box>
   );
 }
@@ -201,7 +192,7 @@ function CardSky({ option }: { option: FirstAgentOption }) {
               <Avatar
                 kind="agent"
                 name={option.name}
-                appearance={option.appearance}
+                appearance={lookOf(option)}
                 size="lg"
                 framed={false}
                 expression="happy"

@@ -1,7 +1,7 @@
-import type { FirstAgents } from "@agenteschat/client";
+import type { FirstAgents, FirstAgentsInput } from "@agenteschat/client";
 import { useAgents, useApps, useFirstAgents, useMe, usePasteFirstAgents } from "@agenteschat/client";
 import { APP_CLIENTS, type AppClient } from "@agenteschat/client/lib/app-clients";
-import { appMark, onboardingAsk } from "@agenteschat/client/lib/apps";
+import { aiAppAsk, appMark } from "@agenteschat/client/lib/apps";
 import { RIGHT_HAND_DEFAULT, rightHandOf } from "@agenteschat/client/lib/right-hand";
 import { Avatar, Button, Icon, ProviderLogo, Skeleton, SwapLabel, Textarea } from "@agenteschat/ui";
 import type { TFunction } from "i18next";
@@ -117,7 +117,7 @@ export function AskYourAi({
   const { t } = useTranslation();
   const apps = useApps(orgId, false, APPS_POLL_MS);
   const standing = useMe().data?.organizations.find((o) => o.id === orgId)?.standing;
-  const mcp = onboardingAsk(t, apps.data, standing);
+  const mcp = aiAppAsk(t, apps.data, standing);
   const lodi = rightHandOf(useAgents(orgId).data ?? []);
   const mine = apps.data?.apps ?? [];
 
@@ -149,7 +149,7 @@ export function AskYourAi({
 
   // A proposal that arrives after the step opened (the one there before is not this request's answer).
   const proposals = useFirstAgents(orgId, { poll: PROPOSALS_POLL_MS });
-  const latest = proposals.data?.proposal ?? null;
+  const latest = proposals.data ?? null;
   const seen = useRef<string | null | undefined>(undefined);
   const arrived = useRef(onProposal);
   arrived.current = onProposal;
@@ -350,7 +350,7 @@ function PasteAnswer({ orgId, app, onRead }: { orgId: string; app: string; onRea
     const body = pastedProposal(text);
     if (!body) return setBad(true);
     setBad(false);
-    paste.mutate(body as Parameters<typeof paste.mutate>[0], { onSuccess: (res) => onRead(res.proposal) });
+    paste.mutate(body as FirstAgentsInput, { onSuccess: onRead });
   };
   return (
     <div className="onb-ask__step">
