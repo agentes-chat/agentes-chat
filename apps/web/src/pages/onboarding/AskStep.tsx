@@ -13,7 +13,7 @@ import { Box } from "./Shell";
 import "./ask-step.css";
 
 /*
- * "Peça o seu primeiro agente" (ADR 0119, the onboarding's first agent): the person's own AI, connected to this server
+ * "Ask for your first agent" (ADR 0119, the onboarding's first agent): the person's own AI, connected to this server
  * by MCP, reads what it already knows of them, finds the tasks that take most of their time and sends up to three
  * agents through `propose_first_agents`, which this step reads as they arrive. Without a connector, the same request
  * asks for a JSON answer to paste here. Nothing is created until the person picks one.
@@ -24,7 +24,7 @@ export type AskVariant = "team" | "member" | "personal";
 
 /** How often the step asks for the proposal: this page has no socket to say it arrived. */
 const PROPOSALS_POLL_MS = 4000;
-/** How often the person's apps are read while the step shows, so "Conectado" appears once the sign-in is done. */
+/** How often the person's apps are read while the step shows, so "Connected" appears once the sign-in is done. */
 const APPS_POLL_MS = 5000;
 /** After this long with nothing, what to check. */
 const STUCK_MS = 2 * 60_000;
@@ -35,7 +35,7 @@ const rank = (id: string) => {
   const i = FIRST.indexOf(id);
   return i < 0 ? FIRST.length : i;
 };
-/** "Outro app" asks for a token, which the onboarding has no place for: other agent apps go through the import. */
+/** "Other app" asks for a token, which the onboarding has no place for: other agent apps go through the import. */
 export const ASK_CLIENTS: readonly AppClient[] = APP_CLIENTS.filter((c) => c.id !== "other").sort(
   (a, b) => rank(a.id) - rank(b.id),
 );
@@ -81,12 +81,12 @@ export function pastedProposal(text: string): unknown {
 }
 
 /**
- * The step: a row of assistants that scrolls sideways (the most used first, "Outro app de agentes" last when
- * `onOther` opens the import), then (1) connecting agentes.chat in that app (its own guide, "Conectado" once the person
+ * The step: a row of assistants that scrolls sideways (the most used first, "Another agent app" last when
+ * `onOther` opens the import), then (1) connecting agentes.chat in that app (its own guide, "Connected" once the person
  * has an app connected here) and (2) the request to paste in a new conversation, its start in view. Under them, the
  * wait for the proposal, and the way without a connector: the JSON request and a field for the answer. `onProposal`:
- * a proposal that arrived after the step opened, or the one pasted, with the app picked in the row. `onSkip`: "Agora
- * não". `org`: the workspace's name, said in the request.
+ * a proposal that arrived after the step opened, or the one pasted, with the app picked in the row. `onSkip`: "Not
+ * now". `org`: the workspace's name, said in the request.
  */
 export function AskYourAi({
   orgId,
@@ -107,11 +107,11 @@ export function AskYourAi({
   org?: string;
   eyebrow?: ReactNode;
   onBack?: (() => void) | null;
-  /** "Outro app de agentes": the import of other agent apps, a file or a link. */
+  /** "Another agent app": the import of other agent apps, a file or a link. */
   onOther?: () => void;
   /** The assistant picked in the row (the page draws its mark on the sky). */
   onClient?: (client: AppClient) => void;
-  /** "Agora não" is saving. */
+  /** "Not now" is saving. */
   skipping?: boolean;
 }) {
   const { t } = useTranslation();
@@ -283,7 +283,7 @@ export function AskYourAi({
 /** The assistant's own steps to connect this server (ADR 0119): each step's words, then its button or what to copy. */
 function ConnectGuide({ client, url }: { client: AppClient; url: string }) {
   const guide = client.guide(url);
-  // A personal token is for apps that sign in no other way: "Outro app" only, which the row leaves out.
+  // A personal token is for apps that sign in no other way: "Other app" only, which the row leaves out.
   const steps = guide.steps.filter((s) => !s.install && !s.token);
   return (
     <>

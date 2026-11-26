@@ -322,7 +322,7 @@ export function OnboardingPage() {
     mutationFn: (id: string) => api.orgs.saveOnboarding(id, { step: "computer" }),
     onSuccess: (saved, id) => remember(id, saved),
   });
-  // "Começar do zero" (the start left with the right hand alone) and the picked agent's week seen: both kept as
+  // "Start from scratch" (the start left with the right hand alone) and the picked agent's week seen: both kept as
   // "agents", which answers the start and the week.
   const startDone = useMutation({
     mutationFn: (id: string) => api.orgs.saveOnboarding(id, { step: "agents" }),
@@ -531,7 +531,7 @@ export function OnboardingPage() {
   // that isn't there.
   const alone = team.length === 0;
   const aiLabel = aiNamed && aiNamed !== "key" ? planLabel(t, aiNamed) : null;
-  // "Passo N de M" up to the plan; none on the first question, the paid moment or past the plan.
+  // "Step N of M" up to the plan; none on the first question, the paid moment or past the plan.
   const counted = asking || awake ? null : stepCount(steps, step);
   const stepLine = counted ? t("onboarding.flow.stepOf", counted) : undefined;
   const toStart = (view: StartView) => {

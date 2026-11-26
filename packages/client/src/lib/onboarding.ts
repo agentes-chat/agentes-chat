@@ -169,7 +169,7 @@ export function railState(f: {
 }
 
 /**
- * "Passo N de M" for a step: the steps up to the plan count (the name, how to start with its proposal and pick, the
+ * "Step N of M" for a step: the steps up to the plan count (the name, how to start with its proposal and pick, the
  * week, the plan); what comes after the plan (the AI, the people) is past the count. Null for a step it doesn't count.
  */
 export function stepCount(steps: readonly RailStep[], step: RailStep): { n: number; total: number } | null {

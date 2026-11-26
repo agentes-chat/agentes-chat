@@ -144,7 +144,7 @@ export function World({
 /**
  * The box: an optional header of its own (`cover`), the step's count or another line over the title (`eyebrow`), the
  * title (focused when the step changes, so it is read out), the lead, the answer, then the footer: `note` (else the
- * way back, `onBack`, labelled `backLabel` or "Voltar") and the step's buttons (`acts`). A step that draws its own
+ * way back, `onBack`, labelled `backLabel` or "Back") and the step's buttons (`acts`). A step that draws its own
  * buttons passes neither: no footer.
  */
 export function Box({

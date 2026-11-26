@@ -11,7 +11,7 @@ import { Box, BoxNote } from "./Shell";
 import "./pick-step.css";
 
 /*
- * "Escolha o seu primeiro agente": what the person's AI proposed (`propose_first_agents`, or the answer pasted), up to
+ * "Pick your first agent": what the person's AI proposed (`propose_first_agents`, or the answer pasted), up to
  * three agents, each as a job description, the task that repeats the most first. Nothing is created until one is
  * picked; the pick creates that agent with its routine and its place (the server's `pickFirstAgent`).
  */
@@ -31,7 +31,7 @@ const MAIL_MARKS: Record<string, Pick<ConnectorDef, "iconUrl" | "brandColor">> =
 type Place = "center" | "left" | "right" | "side";
 
 /**
- * The cards and the reason under them, then "Criar o <nome>". Three are stacked (click one behind to bring it to the
+ * The cards and the reason under them, then "Create <name>". Three are stacked (click one behind to bring it to the
  * middle), two stand side by side, one alone. `app`: the assistant the request was sent to, whose mark and name say
  * where the proposal came from. `onPicked`: the agent was created (the page moves on once its agents list has it).
  */
@@ -49,9 +49,9 @@ export function FirstAgentPick({
   onPicked: (made: { agentId: string; handle: string; channelId: string | null }) => void;
   app?: Pick<AppClient, "name" | "mark"> | null;
   eyebrow?: ReactNode;
-  /** In place of "Escolha o seu primeiro agente" (a member's first agent). */
+  /** In place of "Pick your first agent" (a member's first agent). */
   title?: string;
-  /** In place of "Nada é criado até você escolher.". */
+  /** In place of "Nothing is created until you pick.". */
   note?: string;
 }) {
   const { t } = useTranslation();
