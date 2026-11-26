@@ -2077,8 +2077,8 @@ export const ptBR = {
       ctaPersonal: "Contratar os agentes",
     },
     celebrate: {
-      say: "Oi, {{first}}! A gente começa hoje.",
-      sayAny: "Oi! A gente começa hoje.",
+      say: "Oi, {{first}}. A gente começa hoje.",
+      sayAny: "Oi, a gente começa hoje.",
       eyebrow: "Time da {{org}} · desde {{date}}",
       eyebrowPersonal: "Seus agentes · desde {{date}}",
       title: "Boas-vindas ao time da {{org}}",
@@ -23212,10 +23212,10 @@ export const ptBR = {
         text: "Aqui vocês e os agentes trabalham juntos, de dia e de noite. Em um minuto, o essencial.",
         textPersonal: "Aqui você e os seus agentes trabalham juntos, de dia e de noite. Em um minuto, o essencial.",
         /** "o RH dos agentes" stays masculine: it is the department, not the agent. */
-        say: "Oi, {{first}}! Eu sou o {{name}}, o RH dos agentes.",
-        say_female: "Oi, {{first}}! Eu sou a {{name}}, o RH dos agentes.",
-        sayNoName: "Oi! Eu sou o {{name}}, o RH dos agentes.",
-        sayNoName_female: "Oi! Eu sou a {{name}}, o RH dos agentes.",
+        say: "Oi, {{first}}. Eu sou o {{name}}, o RH dos agentes.",
+        say_female: "Oi, {{first}}. Eu sou a {{name}}, o RH dos agentes.",
+        sayNoName: "Oi, eu sou o {{name}}, o RH dos agentes.",
+        sayNoName_female: "Oi, eu sou a {{name}}, o RH dos agentes.",
       },
       computer: {
         title: "Cada agente tem o seu computador",

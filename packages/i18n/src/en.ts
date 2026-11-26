@@ -2189,8 +2189,8 @@ export const en = {
      * each with its article (`hire.the`). `start`: the first agent's deliveries on its first day, when its AI said them.
      */
     celebrate: {
-      say: "Hi, {{first}}! We start today.",
-      sayAny: "Hi! We start today.",
+      say: "Hi, {{first}}. We start today.",
+      sayAny: "Hi, we start today.",
       eyebrow: "{{org}}'s team · since {{date}}",
       eyebrowPersonal: "Your agents · since {{date}}",
       title: "Welcome to the {{org}} team",
@@ -23411,8 +23411,8 @@ export const en = {
         text: "Here you and the agents work together, by day and by night. In a minute, the essentials.",
         textPersonal: "Here you and your agents work together, by day and by night. In a minute, the essentials.",
         /** The right hand's line, in a bubble over it, as the team rises. `{{name}}`: its name. */
-        say: "Hi, {{first}}! I'm {{name}}, HR for the agents.",
-        sayNoName: "Hi! I'm {{name}}, HR for the agents.",
+        say: "Hi, {{first}}. I'm {{name}}, HR for the agents.",
+        sayNoName: "Hi, I'm {{name}}, HR for the agents.",
       },
       computer: {
         title: "Every agent has its own computer",

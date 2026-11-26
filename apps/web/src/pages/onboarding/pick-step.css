@@ -98,8 +98,9 @@ html:not([data-pointer]) .onb-card:focus-visible {
 .onb-card__sky .team-scene__row {
   bottom: 10px;
 }
-.onb-card__sky .team-scene__agent .ac-avatar,
-.onb-card__sky .team-scene__agent[data-lead] .ac-avatar {
+/* One class over the arrival's own sizes for a team on its sky (arrival.css), whatever order the sheets load in. */
+.onb-card__sky.team-scene .team-scene__agent .ac-avatar,
+.onb-card__sky.team-scene .team-scene__agent[data-lead] .ac-avatar {
   width: 52px;
   height: 52px;
 }
@@ -191,7 +192,7 @@ html:not([data-pointer]) .onb-card:focus-visible {
   justify-content: center;
   gap: 8px;
   max-width: 560px;
-  margin: 8px auto 0;
+  margin: 0 auto;
   color: var(--muted);
   font-size: 14px;
   line-height: 20px;
@@ -211,6 +212,11 @@ html:not([data-pointer]) .onb-card:focus-visible {
 .onb-hand__why b {
   color: var(--ink);
   font-weight: 600;
+}
+
+/* The cards, then the reason: the box's own rhythm between them. */
+.onbx__body:has(> .onb-hand) {
+  row-gap: 24px;
 }
 
 /* A phone: the picked card in the middle, the others peeking at the screen's edges. */

@@ -152,7 +152,6 @@
   gap: 4px;
 }
 .onb-week__about[data-after] {
-  margin-top: 18px;
   padding-top: 14px;
   border-top: 1px solid var(--line);
 }
@@ -177,6 +176,11 @@
   line-height: 20px;
   text-wrap: pretty;
   overflow-wrap: anywhere;
+}
+
+/* The planner, then what the AI said under a hairline: the box's own rhythm between them. */
+.onbx__body:has(> .onb-week) {
+  row-gap: 34px;
 }
 
 /* A phone: the time column narrower, so the blocks keep their width. */

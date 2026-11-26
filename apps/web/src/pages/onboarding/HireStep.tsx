@@ -124,7 +124,7 @@ export function HireTeam({
       note={
         confirming ? (
           // Back from paying: the billing service lifts the hold on its next pass, and the next step opens then.
-          <span className="onbx__note" role="status">
+          <span className="onbx__note ac-iconline" role="status">
             <Spinner size={14} />
             <span>{t("standing.billing.paid")}</span>
           </span>
@@ -161,16 +161,17 @@ export function HireTeam({
             const who = a ? { id: a.id, name: a.name, look: lookOf(a) } : lodi;
             const job = a ? (a.id === first.id && option ? option.role : a.role) : t("onboarding.hire.rightHand");
             const line = a ? lineOf(a) : t("onboarding.hire.rightHandLine");
+            // A MediaRow: the face on the name's line, what it does under them at the row's full width.
             return (
-              <li key={who.id}>
-                <Avatar kind="agent" name={who.name} appearance={who.look} size="sm" framed={false} />
-                <span>
-                  <b>
-                    {who.name}
-                    {job && <span>{job}</span>}
-                  </b>
-                  {line && <span>{line}</span>}
+              <li key={who.id} className="ac-mediarow">
+                <span className="ac-mediarow__face">
+                  <Avatar kind="agent" name={who.name} appearance={who.look} size="sm" framed={false} />
                 </span>
+                <span className="ac-mediarow__head">
+                  <b>{who.name}</b>
+                  {job && <span className="ac-mediarow__meta">{job}</span>}
+                </span>
+                {line && <span className="ac-mediarow__body">{line}</span>}
               </li>
             );
           })}

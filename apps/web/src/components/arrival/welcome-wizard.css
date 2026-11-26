@@ -19,11 +19,13 @@
   min-height: 0;
   overflow-y: auto;
 }
+/* A few px of the foot's room under the words: a last line's letters reach a pixel past its line box, which would
+   make the words scroll by that pixel. */
 .wiz__body {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 22px 28px 0;
+  padding: 22px 28px 4px;
 }
 .wiz__dots {
   display: flex;
@@ -64,7 +66,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 24px 28px;
+  padding: 20px 28px 24px;
 }
 /* Skip's words line up with the text above them: a ghost's plate around them, as in a row of actions. */
 .wiz__skip.ac-btn {
@@ -84,14 +86,14 @@
     height: 212px;
   }
   .wiz__body {
-    padding: 18px var(--dialog-pad) 0;
+    padding: 18px var(--dialog-pad) 4px;
   }
   .wiz__title {
     font-size: 21px;
     line-height: 27px;
   }
   .wiz__foot {
-    padding: 20px var(--dialog-pad);
+    padding: 16px var(--dialog-pad) 20px;
   }
 }
 

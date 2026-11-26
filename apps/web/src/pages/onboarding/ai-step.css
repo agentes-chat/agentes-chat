@@ -10,3 +10,17 @@
 .onb-ai__connected:active {
   transform: none;
 }
+/* A phone: "Connected" under the name and its line, where the text starts (the tile and its gap before it), as a row's
+   end that went under it: the line keeps the row's width instead of a word a line. */
+@media (max-width: 560px) {
+  .onb-ai__connected {
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+  .onb-ai__connected > .ac-optrow__text {
+    flex-basis: calc(100% - 60px);
+  }
+  .onb-ai__connected > .ac-chip {
+    margin-inline-start: 60px;
+  }
+}

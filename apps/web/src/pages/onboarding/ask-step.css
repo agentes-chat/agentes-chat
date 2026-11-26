@@ -73,18 +73,14 @@ html:not([data-pointer]) .onb-ask__ai:focus-visible {
 }
 
 /* The two parts, numbered: connect, then the request. */
+/* Each part a MediaRow (`.ac-mediarow--row`): its number on its title's line, what to do under them. */
 .onb-ask__steps {
   display: flex;
   flex-direction: column;
   gap: 18px;
-  margin: 20px 0 0;
+  margin: 0;
   padding: 0;
   list-style: none;
-}
-.onb-ask__steps > li {
-  display: grid;
-  grid-template-columns: 24px minmax(0, 1fr);
-  gap: 12px;
 }
 .onb-ask__n {
   display: grid;
@@ -104,11 +100,7 @@ html:not([data-pointer]) .onb-ask__ai:focus-visible {
   min-width: 0;
 }
 .onb-ask__title {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 2px 0 0;
+  margin: 0;
   font-size: 15px;
   line-height: 20px;
   font-weight: 600;
@@ -166,8 +158,9 @@ html:not([data-pointer]) .onb-ask__ai:focus-visible {
   gap: 8px;
   max-height: 148px;
   overflow: auto;
-  -webkit-mask-image: linear-gradient(180deg, #000 70%, transparent);
-  mask-image: linear-gradient(180deg, #000 70%, transparent);
+  /* The fade spares our scrollbar: the kit's strip, as wide as it, stays whole. */
+  -webkit-mask-image: linear-gradient(180deg, #000 70%, transparent), var(--scroll-strip);
+  mask-image: linear-gradient(180deg, #000 70%, transparent), var(--scroll-strip);
 }
 .onb-ask__text p {
   margin: 0;
@@ -201,13 +194,13 @@ html:not([data-pointer]) .onb-ask__ai:focus-visible {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px 12px;
-  margin: 20px 0 0;
+  margin: 0;
   padding-top: 16px;
   border-top: 1px solid var(--line);
 }
+/* With `.ac-iconline`: the face on the first line when the words wrap. */
 .onb-ask__line {
   display: flex;
-  align-items: center;
   gap: 8px;
   flex: 1 1 auto;
   min-width: 0;
@@ -225,8 +218,14 @@ html:not([data-pointer]) .onb-ask__ai:focus-visible {
   font-size: 14px;
 }
 .onb-ask__stuck {
-  margin: 8px 0 0;
+  flex-basis: 100%;
+  margin: 0;
   color: var(--faint);
   font-size: 13px;
   line-height: 18px;
+}
+
+/* The assistants, the parts and the wait: the box's own rhythm between them. */
+.onbx__body:has(> .onb-ask__steps) {
+  row-gap: 36px;
 }

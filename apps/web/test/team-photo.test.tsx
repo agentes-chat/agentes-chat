@@ -90,7 +90,7 @@ describe("the team's photo to download", () => {
     const [input] = drawing.asked;
     expect(input?.cast.map((a) => a.id)).toEqual(["lodi", "caio"]);
     expect(input?.person).toEqual({ name: "Ana Souza", image: null });
-    expect(input?.say).toBe("Oi, Ana! A gente começa hoje.");
+    expect(input?.say).toBe("Oi, Ana. A gente começa hoje.");
     expect(input?.eyebrow.startsWith("Time da Acme Saúde · desde ")).toBe(true);
     expect(input?.title).toBe("Boas-vindas ao time da Acme Saúde");
     // The picture names the person, where the page says "Você".
