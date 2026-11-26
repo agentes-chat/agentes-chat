@@ -4765,7 +4765,7 @@
     "computerAway": "L'ordinateur de {{agent}} ne répond pas pour le moment. Cette demande reste ouverte jusqu'à {{time}}. Réessayez dans un instant.",
     "computerPaused": "L'ordinateur de {{agent}} est mis en pause par son propriétaire. Cette demande reste ouverte jusqu'à {{time}}.",
     "insecureContext": "Cette page n'est pas ouverte en https, le navigateur ne verrouille donc pas la clé. Ouvrez-la en https:// (ou localhost).",
-    "failed": "Impossible de le transmettre. L'ordinateur de l'agent est-il allumé ?",
+    "failed": "Impossible de le transmettre. Renvoyez-le. Si ça échoue encore, demandez à {{agent}} de refaire la demande.",
     "changed": "Cette demande a changé pendant que vous répondiez. Rien n'a été envoyé. Renvoyez-la.",
     "empty": "Saisissez la valeur.",
     "tooLarge": "Trop volumineux (16 Ko maximum)."

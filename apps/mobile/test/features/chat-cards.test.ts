@@ -452,7 +452,7 @@ describe("the secret card on the phone", () => {
     expect(failed.indexOf("secretRefusalKey(err)")).toBeLessThan(failed.indexOf("api.secrets.get(orgId, r.id)"));
     expect(failed).toContain("secretClosedBy(err, r, fresh)");
     expect(failed).toContain("done(closed)");
-    expect(failed).toContain('t(fresh ? "secret.changed" : "secret.failed")');
+    expect(failed).toContain('t(fresh ? "secret.changed" : "secret.failed", { agent: agentName })');
     expect(card).toContain('if (!pending) setValue("");');
     expect(card).toContain('t("secret.seeNewer")');
   });

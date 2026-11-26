@@ -5044,7 +5044,7 @@ export const en = {
     /** Sealing a secret or a sign-in code needs the browser's crypto, which a plain-http address doesn't get. */
     insecureContext:
       "This page isn't open over https, so the browser won't lock the key. Open it at https:// (or localhost).",
-    failed: "Couldn't deliver it. Is the agent's computer on?",
+    failed: "Couldn't deliver it. Send it again. If it still fails, ask {{agent}} to request it again.",
     changed: "This request changed while you answered. Nothing was sent. Send it again.",
     empty: "Type the value.",
     tooLarge: "Too large (16 KB at most).",

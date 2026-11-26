@@ -4772,7 +4772,7 @@
     "computerAway": "Il computer di {{agent}} non risponde in questo momento. Questa richiesta resta aperta fino alle {{time}}. Riprova tra un attimo.",
     "computerPaused": "Il computer di {{agent}} è in pausa per scelta del proprietario. Questa richiesta resta aperta fino alle {{time}}.",
     "insecureContext": "Questa pagina non è aperta in https, quindi il browser non blocca la chiave. Aprila su https:// (o localhost).",
-    "failed": "Non è stato possibile consegnarlo. Il computer dell'agente è acceso?",
+    "failed": "Non è stato possibile consegnarlo. Invialo di nuovo. Se non va ancora, chiedi a {{agent}} di richiederlo.",
     "changed": "Questa richiesta è cambiata mentre rispondevi. Non è stato inviato nulla. Inviala di nuovo.",
     "empty": "Scrivi il valore.",
     "tooLarge": "Troppo grande (massimo 16 KB)."

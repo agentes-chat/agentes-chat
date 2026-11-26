@@ -4440,7 +4440,7 @@
     "computerAway": "{{agent}} 的电脑目前没有响应。此请求在 {{time}} 前保持开放。请稍后重试。",
     "computerPaused": "{{agent}} 的电脑已被所有者暂停。此请求在 {{time}} 前保持开放。",
     "insecureContext": "此页面不是通过 https 打开的,因此浏览器无法锁定密钥。请通过 https://(或 localhost)打开。",
-    "failed": "无法送达。智能体的电脑开着吗？",
+    "failed": "无法送达。请再发送一次。如果仍然失败，请让 {{agent}} 重新发起请求。",
     "changed": "你回复时此请求已更改。未发送任何内容。请重新发送。",
     "empty": "请输入值。",
     "tooLarge": "太大了（最多 16 KB）。"

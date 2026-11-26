@@ -4137,6 +4137,22 @@ async function executeRunInner(
     return true;
   };
 
+  /** How long an away computer is waited for without a word (`brainUnavailable`): null once it is down for real. */
+  const quietWait = async (machineId: string) => {
+    let quietUntil: number | null = null;
+    const status = await deps.machines?.status(machineId).catch(() => null);
+    const moving = status?.online === false && status.moving === true;
+    const seen = status?.lastSeenAt ? Date.parse(status.lastSeenAt) : Number.NaN;
+    if (status && !status.online && status.standby) {
+      const t = transcript as Transcript;
+      t.standbyWaitSince ??= Date.now();
+      const until = t.standbyWaitSince + TASK_OFFLINE_GRACE_MS;
+      if (Date.now() < until) quietUntil = until;
+    } else if (status && !status.online && Date.now() - seen < TASK_OFFLINE_GRACE_MS)
+      quietUntil = seen + TASK_OFFLINE_GRACE_MS;
+    return { quietUntil, moving };
+  };
+
   /**
    * The computer brain can't answer. At the run's start (`look`), a computer in standby is woken and waited for, and on
    * its first look one just gone too (`computerBackSoon`). Still away: the run waits for the computer (the API never
@@ -4197,7 +4213,15 @@ async function executeRunInner(
       !onlyThisComputer &&
       !plan.missionId &&
       (await planKeyFallbackOn(db, run.orgId));
-    if (isRightHand(agent) && u.code !== "busy" && !u.queued && !rightHandKey) {
+    // Just gone or waking from standby, the right hand waits without a word as any agent does: a standby the person
+    // never sees must not read as its computer away (ADR 0161).
+    if (
+      isRightHand(agent) &&
+      u.code !== "busy" &&
+      !u.queued &&
+      !rightHandKey &&
+      !(u.code === "machine_offline" && machineId && (await quietWait(machineId)).quietUntil !== null)
+    ) {
       const ownModel = u.scope ? ownLimitsModel(plan.account?.provider, plan.model) : null;
       const line = rightHandNoAiReason(u.code, ownModel ? u.scope : undefined);
       // What the plan's CLI or its computer said is kept in the run and reported, as any agent's CLI failure is, and the
@@ -4288,19 +4312,8 @@ async function executeRunInner(
     // Just gone (our own deploy, a runner dialing again): it waits without a word until the outage grace is over.
     // Asleep in standby, waking: without a word too, for one grace from its first such wait (ADR 0161); one that
     // never wakes is down, and says so.
-    let quietUntil: number | null = null;
-    let moving = false;
-    if (u.code === "machine_offline") {
-      const status = await deps.machines?.status(machineId).catch(() => null);
-      moving = status?.online === false && status.moving === true;
-      const seen = status?.lastSeenAt ? Date.parse(status.lastSeenAt) : Number.NaN;
-      if (status && !status.online && status.standby) {
-        t.standbyWaitSince ??= Date.now();
-        const until = t.standbyWaitSince + TASK_OFFLINE_GRACE_MS;
-        if (Date.now() < until) quietUntil = until;
-      } else if (status && !status.online && Date.now() - seen < TASK_OFFLINE_GRACE_MS)
-        quietUntil = seen + TASK_OFFLINE_GRACE_MS;
-    }
+    const { quietUntil, moving } =
+      u.code === "machine_offline" ? await quietWait(machineId) : { quietUntil: null, moving: false };
     // Away for real at the run's start (past a blip, never one waking from standby) or paused by its owner: a device
     // that helps takes the turn (ADR 0233).
     if (

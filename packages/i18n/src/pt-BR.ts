@@ -4899,7 +4899,7 @@ export const ptBR = {
     computerPaused: "O dono pausou o computador de {{agent}}. O pedido continua aberto até {{time}}.",
     insecureContext:
       "Esta página não está aberta em https, então o navegador não tranca a chave. Abra pelo endereço https:// (ou localhost).",
-    failed: "Não deu para entregar. O computador do agente está ligado?",
+    failed: "Não deu para entregar. Envie de novo. Se falhar outra vez, peça de novo a {{agent}}.",
     changed: "Este pedido mudou enquanto você respondia. Nada foi enviado. Envie de novo.",
     empty: "Digite o valor.",
     tooLarge: "Grande demais (máximo de 16 KB).",

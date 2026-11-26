@@ -9,6 +9,7 @@ import {
   inArray,
   isNotNull,
   isNull,
+  or,
   rowsOf,
   schema,
   sql,
@@ -264,7 +265,11 @@ export function setupOfAgent(a: Agent): schema.AgentSetup {
   };
 }
 
-/** The workspace's own computer (managed, else the server's own) once it has connected (ADR 0056 §10), else null. */
+/**
+ * The workspace's own computer once it has connected (ADR 0056 §10), else null: managed, else the server's own, else
+ * a connected one an admin marked the workspace's and opened to everyone (a self-hosted server's VPS, ADR 0175 §3).
+ * Open to everyone, every member's agents already run there, so a seat of the right hand gives nobody more.
+ */
 export async function workspaceHomeId(db: Executor, orgId: string): Promise<string | null> {
   const [home] = await db
     .select({ id: machines.id })
@@ -272,12 +277,19 @@ export async function workspaceHomeId(db: Executor, orgId: string): Promise<stri
     .where(
       and(
         eq(machines.orgId, orgId),
-        inArray(machines.kind, ["managed", "host"]),
+        or(
+          inArray(machines.kind, ["managed", "host"]),
+          and(
+            eq(machines.kind, "connected"),
+            eq(machines.belongsToWorkspace, true),
+            eq(machines.audienceMode, "everyone"),
+          ),
+        ),
         isNotNull(machines.tokenHash),
         isNull(machines.deletedAt),
       ),
     )
-    .orderBy(sql`${machines.kind} = 'managed' desc`, asc(machines.createdAt))
+    .orderBy(sql`case ${machines.kind} when 'managed' then 0 when 'host' then 1 else 2 end`, asc(machines.createdAt))
     .limit(1);
   return home?.id ?? null;
 }

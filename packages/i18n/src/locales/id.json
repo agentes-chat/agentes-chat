@@ -4456,7 +4456,7 @@
     "computerAway": "Komputer {{agent}} tidak merespons saat ini. Permintaan ini tetap terbuka sampai {{time}}. Coba lagi sebentar lagi.",
     "computerPaused": "Komputer {{agent}} dijeda oleh pemiliknya. Permintaan ini tetap terbuka sampai {{time}}.",
     "insecureContext": "Halaman ini tidak dibuka lewat https, jadi browser tidak mengunci kuncinya. Buka di https:// (atau localhost).",
-    "failed": "Tidak bisa dikirim. Apakah komputer agen menyala?",
+    "failed": "Tidak bisa dikirim. Kirim lagi. Kalau masih gagal, minta {{agent}} memintanya lagi.",
     "changed": "Permintaan ini berubah saat kamu menjawab. Tidak ada yang terkirim. Kirim lagi.",
     "empty": "Ketik nilainya.",
     "tooLarge": "Terlalu besar (maks. 16 KB)."

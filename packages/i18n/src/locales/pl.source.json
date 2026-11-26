@@ -11288,7 +11288,7 @@
     "value": "This page isn't open over https, so the browser won't lock the key. Open it at https:// (or localhost)."
   },
   "secret.failed": {
-    "value": "Couldn't deliver it. Is the agent's computer on?"
+    "value": "Couldn't deliver it. Send it again. If it still fails, ask {{agent}} to request it again."
   },
   "secret.changed": {
     "value": "This request changed while you answered. Nothing was sent. Send it again."
