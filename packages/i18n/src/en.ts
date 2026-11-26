@@ -2244,9 +2244,9 @@ export const en = {
       /** Picking from what the AI proposed. `{{app}}`: the assistant asked, "Claude". */
       pickTitle: "Pick your agent",
       found_one: "Your {{app}} found the task that takes most of your time.",
-      found_other: "Your {{app}} found the {{count}} tasks that take most of your time.",
+      found_other: "Your {{app}} found the {{n}} tasks that take most of your time.",
       foundAny_one: "Your AI found the task that takes most of your time.",
-      foundAny_other: "Your AI found the {{count}} tasks that take most of your time.",
+      foundAny_other: "Your AI found the {{n}} tasks that take most of your time.",
       /** `{{names}}`: the agents already there, the right hand last, as `hire.the` says each one. */
       joins_one: "Start with it: the agent joins the {{org}} team, with {{names}}.",
       joins_other: "Start with one: the agent joins the {{org}} team, with {{names}}.",

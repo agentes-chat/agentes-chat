@@ -19,7 +19,7 @@ import { ARRIVAL_BETA_ONLY, ARRIVAL_PARAM } from "@/lib/arrival";
 import { lookOf } from "@/lib/look";
 import { AskYourAi } from "./onboarding/AskStep";
 import { roleWord } from "./onboarding/HireStep";
-import { FirstAgentPick, optionCount } from "./onboarding/PickStep";
+import { FirstAgentPick, newerProposal, optionCount } from "./onboarding/PickStep";
 import { Box, BoxNote, Pass, PickRows, type ShellFace, World } from "./onboarding/Shell";
 
 /** A member's onboarding: the hello, asking their own AI, picking from what it proposed. */
@@ -156,14 +156,16 @@ export function MemberOnboardingPage({ orgId }: { orgId: string }) {
 
     if (view === "pick" && proposal) {
       const appName = askedOf?.name ?? null;
-      const count = proposal.options.length;
+      // A newer proposal the AI sent while picking stands on the sky too, never the one it replaced.
+      const shownProposal = newerProposal(proposal, firstAgents.data ?? null);
+      const count = shownProposal.options.length;
       // The agents already there, the right hand last: the new one joins them.
       const names = namesText(t, [...team.map((a) => the(a.name)), the(lodiName)], NAMES_SHOWN);
       return {
         cast: [
           lodiFace,
           ...teamFaces.slice(0, FACES_SHOWN),
-          ...proposal.options.map((o) => ({ id: o.handle, name: o.name, look: lookOf(o), asleep: true })),
+          ...shownProposal.options.map((o) => ({ id: o.handle, name: o.name, look: lookOf(o), asleep: true })),
         ],
         say: appName
           ? t("onboarding.pick.say", { app: appName, count, n: optionCount(t, count, "ways") })
@@ -173,7 +175,7 @@ export function MemberOnboardingPage({ orgId }: { orgId: string }) {
         box: (
           <FirstAgentPick
             orgId={orgId}
-            proposal={proposal}
+            proposal={shownProposal}
             app={askedOf}
             eyebrow={
               appName
@@ -184,8 +186,8 @@ export function MemberOnboardingPage({ orgId }: { orgId: string }) {
             lead={(n) =>
               t("common.joinSentences", {
                 a: appName
-                  ? t("onboarding.member.found", { app: appName, count: n })
-                  : t("onboarding.member.foundAny", { count: n }),
+                  ? t("onboarding.member.found", { app: appName, count: n, n: optionCount(t, n, "tasks") })
+                  : t("onboarding.member.foundAny", { count: n, n: optionCount(t, n, "tasks") }),
                 b: t(personal ? "onboarding.member.joinsPersonal" : "onboarding.member.joins", {
                   org: org.name,
                   names,
