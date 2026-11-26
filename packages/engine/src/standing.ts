@@ -263,7 +263,7 @@ export const waitsForPlan = (s: WorkspaceStanding) => isBillingHold(s) && s.reas
 
 /**
  * `workRefusal`, sparing a workspace that only waits for its first plan: its onboarding connects the person's own AI
- * app and takes the first agents it proposes before Checkout (ADR 0119 addendum of 2026-11-26, ADR 0250). Every other
+ * app and takes the first agents it proposes before Checkout (ADR 0119 addendum of 2026-11-26, ADR 0253). Every other
  * refusal stands: a suspension, a deletion, an unpaid or ended plan, any hold that isn't billing's.
  */
 export function workRefusalBeforePlan(

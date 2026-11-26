@@ -16952,7 +16952,7 @@ export const en = {
       undoExpired:
         "It is more than a day since this team was created, so it can't be undone here. Archive its agents on their pages.",
     },
-    /** The first agents a person's own AI proposed (ADR 0250). */
+    /** The first agents a person's own AI proposed (ADR 0253). */
     firstAgents: {
       needsAdmin: "Creating agents in this workspace needs an admin. Ask one to create it for you.",
       invalid: "This answer isn't in the format we asked for. Copy the request again and paste your AI's whole answer.",

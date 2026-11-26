@@ -1275,7 +1275,7 @@ export function useApplyTeamTemplate(orgId: string) {
 }
 
 /**
- * My newest first-agent proposal (ADR 0250), null while none came. `poll`: read again every that many ms while the
+ * My newest first-agent proposal (ADR 0253), null while none came. `poll`: read again every that many ms while the
  * onboarding waits for the AI's answer (it has no socket); off by default.
  */
 export function useFirstAgents(orgId: string, opts: { poll?: number | false } = {}) {

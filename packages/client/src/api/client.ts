@@ -1035,7 +1035,7 @@ export interface ApiClient {
     exportUrl(orgId: string): string;
   };
   /**
-   * The first agents my own AI proposed (ADR 0250): sent through `propose_first_agents` or pasted, one picked into an
+   * The first agents my own AI proposed (ADR 0253): sent through `propose_first_agents` or pasted, one picked into an
    * agent. All of it works while the workspace waits for its first plan.
    */
   firstAgents: {

@@ -6,7 +6,7 @@ import { users } from "./auth";
 import { organizations } from "./tenancy";
 
 /**
- * A person's first agents as their own AI proposed them (ADR 0250): up to three options, one picked. Sent by the MCP
+ * A person's first agents as their own AI proposed them (ADR 0253): up to three options, one picked. Sent by the MCP
  * tool `propose_first_agents` (`mcp`, with the connection that sent it) or pasted on the onboarding (`paste`). Each
  * person reads only their own; nothing is created until they pick one, and the agent made from it is `agent_id`.
  */

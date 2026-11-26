@@ -171,7 +171,7 @@ export function OnboardingPage() {
     enabled: orgId !== null,
     refetchOnWindowFocus: "always",
   });
-  // The person's newest first-agent proposal (ADR 0250): the agent picked from it says its week, the plan's lines and
+  // The person's newest first-agent proposal (ADR 0253): the agent picked from it says its week, the plan's lines and
   // the photo's in its AI's words.
   const firstAgents = useFirstAgents(orgId ?? "");
   const agents = useQuery({

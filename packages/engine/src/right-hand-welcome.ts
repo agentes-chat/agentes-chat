@@ -45,7 +45,7 @@ export const WELCOME_JOB = "right_hand.welcome";
 export const WELCOME_BODY = "welcome_member";
 
 /**
- * The greeting of someone who already picked their first agent on their own onboarding (ADR 0250): hello and the agent
+ * The greeting of someone who already picked their first agent on their own onboarding (ADR 0253): hello and the agent
  * on the team, with nothing to build (`chat.body.welcome_member_agent`).
  */
 export const WELCOME_AGENT_BODY = "welcome_member_agent";
@@ -68,7 +68,7 @@ async function pickedFirstAgent(db: Database, orgId: string, userId: string) {
 
 /**
  * Their first agent was picked after the greeting went out (it is posted as they join, while they are still on their
- * own onboarding): the greeting stops asking for an agent and its area chips go (ADR 0250). Nothing when there is no
+ * own onboarding): the greeting stops asking for an agent and its area chips go (ADR 0253). Nothing when there is no
  * such greeting.
  */
 export async function settleWelcome(db: Database, orgId: string, userId: string): Promise<void> {
@@ -165,7 +165,7 @@ export async function postWelcome(deps: JobDeps, orgId: string, payload: Record<
 /**
  * What the right hand keeps in mind with someone new: a member who is not an owner (an owner has the first-run
  * checklist), joined in the last `NEWCOMER_DAYS` days, has no agent of their own and made none from their own AI's
- * proposal on their onboarding (ADR 0250). Only this person's own data. "" with the workspace's switch off.
+ * proposal on their onboarding (ADR 0253). Only this person's own data. "" with the workspace's switch off.
  */
 export async function newcomerBlock(db: Database, ctx: LodiPromptContext): Promise<string> {
   const [person] = await db

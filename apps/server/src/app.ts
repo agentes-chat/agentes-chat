@@ -257,7 +257,7 @@ export function createApp(options: AppOptions) {
     api.route("/app", planUsageRoutes(deps));
     api.route("/app", personUsageRoutes(deps));
     api.route("/app", teamWeekRoutes(deps));
-    // The first agents a person's own AI proposes on the onboarding (ADR 0250).
+    // The first agents a person's own AI proposes on the onboarding (ADR 0253).
     api.route("/app", firstAgentRoutes(deps));
     api.route("/app", dashboardRoutes(deps));
     api.route("/app", telemetryRoutes(deps));

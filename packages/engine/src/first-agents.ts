@@ -26,7 +26,7 @@ import { isPersonalWorkspace } from "./workspace-mode";
 const { agents, channelMembers, channels, connectorConnections, firstAgentProposals, organizations } = schema;
 
 /**
- * A person's first agents, proposed by their own AI (ADR 0250): the onboarding asks Claude, ChatGPT or the AI they use
+ * A person's first agents, proposed by their own AI (ADR 0253): the onboarding asks Claude, ChatGPT or the AI they use
  * for the three repetitive tasks that take most of their time, each as an agent. The AI sends them through the MCP
  * tool `propose_first_agents` (ADR 0119 addendum of 2026-11-26), or the person pastes its answer. Nothing is created
  * until the person picks one: then one agent, through the same team card the templates make (`createTeamNow`), so its

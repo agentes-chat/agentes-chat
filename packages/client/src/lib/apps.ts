@@ -100,7 +100,7 @@ export function aiAppImport(
 }
 
 /**
- * The onboarding's ask for the first agents (ADR 0250): the address the person connects their own AI to, or
+ * The onboarding's ask for the first agents (ADR 0253): the address the person connects their own AI to, or
  * unavailable with the line saying why. Unlike `aiAppImport`, a workspace waiting for its first plan is open: the ask
  * comes before Checkout, and the server takes that connection and its `propose_first_agents` (ADR 0119 addendum of
  * 2026-11-26). Any other hold or a suspension still refuses. Null while loading.

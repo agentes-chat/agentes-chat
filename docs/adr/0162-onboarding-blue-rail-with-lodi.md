@@ -264,7 +264,7 @@ and the wide window's stage.
 
 People reached a workspace with a team they had not chosen (a template) or with none, and the rail asked about the
 business and the person before anything useful happened. The web onboarding now asks the person's own AI for a first
-agent (ADR 0250), shows that agent's first week, and hires it with the plan. Amends §1 to §3 and the amendments of
+agent (ADR 0253), shows that agent's first week, and hires it with the plan. Amends §1 to §3 and the amendments of
 2026-11-10 to 2026-11-21 on the rail, the team step, the person's own step, the plan step and the AI step.
 
 - **The frame.** The blue rail, its progress strip and the preview are gone from the web onboarding. One box stands in
@@ -276,13 +276,13 @@ agent (ADR 0250), shows that agent's first week, and hires it with the plan. Ame
 - **The steps.** A team's: what it is for, its name (1), how to start (2), the first agent's week (3), the plan (4),
   then connecting the AI and inviting people, past the count. Started from scratch there is no week: name, start, plan
   (3). "What you do" and "About you" are gone; the workspace's context comes from what the AI said when an agent is
-  picked (ADR 0250). `RailStep` is `name | start | week | plan | ai | people`. No new stored step: `agents` answers both
+  picked (ADR 0253). `RailStep` is `name | start | week | plan | ai | people`. No new stored step: `agents` answers both
   the start left with no agent and the week seen, so the week is on the rail unless the start was left with none.
 - **How to start.** The box's header is a wall of the catalog's own app marks with a few agents among them, its lead the
   catalog's count in tens ("more than 70"). Two rows: ask your AI (Claude, ChatGPT, Gemini or another finds the tasks
   that take most of the person's time and proposes an agent for each) or start from scratch (the right hand, the agents'
   HR, builds each agent with the person later). The ready-made team templates are gone from the onboarding.
-- **Asking the AI and picking** (ADR 0250). The assistants in a row, most used first, then "Another agent app", which
+- **Asking the AI and picking** (ADR 0253). The assistants in a row, most used first, then "Another agent app", which
   opens the import (ADR 0055). Connecting agentes.chat by MCP and the request to paste, numbered; the proposal is read
   every 4 s while the step is open; with no connector, the same request asking for a JSON answer and a field to paste
   it. The options stand as stacked job descriptions (rank, name and role, responsibilities, the apps they need) with the

@@ -106,7 +106,7 @@ export interface TeamAgent {
   firstTask: string | null;
   /**
    * Catalog apps its job needs that the workspace hasn't connected (preset ids): its chat's checklist asks to connect
-   * them once it exists (ADR 0164). Only a first agent picked on the onboarding names them (ADR 0250).
+   * them once it exists (ADR 0164). Only a first agent picked on the onboarding names them (ADR 0253).
    */
   later?: string[];
 }

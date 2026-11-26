@@ -1448,7 +1448,7 @@ export interface FirstAgentRoutine {
   timezone: string | null;
 }
 
-/** One option for the person's first agent, proposed by their own AI like a job opening (ADR 0250). */
+/** One option for the person's first agent, proposed by their own AI like a job opening (ADR 0253). */
 export interface FirstAgentOption {
   name: string;
   /** Free when proposed; the server takes a free one again when it is picked. */
@@ -2419,7 +2419,7 @@ export type IssueActivityEvent = {
 /** You followed or unfollowed a thread (on any of your devices). */
 export type ThreadFollowEvent = { type: "thread.follow" } & ThreadFollow;
 
-/** A first-agent proposal arrived for me (ADR 0250): `GET …/first-agents` has it. */
+/** A first-agent proposal arrived for me (ADR 0253): `GET …/first-agents` has it. */
 export interface FirstAgentsEvent {
   type: "first_agents.received";
   id: string;

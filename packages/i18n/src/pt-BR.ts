@@ -16870,7 +16870,7 @@ export const ptBR = {
       undoExpired:
         "Já passou um dia desde que este time foi criado, então não dá para desfazer aqui. Arquive os agentes nas páginas deles.",
     },
-    /** The first agents a person's own AI proposed (ADR 0250). */
+    /** The first agents a person's own AI proposed (ADR 0253). */
     firstAgents: {
       needsAdmin: "Criar agentes neste workspace precisa de um admin. Peça a um admin para criar por você.",
       invalid: "Essa resposta não está no formato pedido. Copie o pedido de novo e cole a resposta inteira da sua IA.",
