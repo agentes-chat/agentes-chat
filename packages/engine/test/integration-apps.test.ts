@@ -14,9 +14,11 @@ import {
   messageRoot,
   PermanentJobError,
   postAsApp,
+  type RouterStrategy,
   readAsApp,
   revokeIntegrationToken,
   rotateIntegrationToken,
+  routeMessage,
   runAuthorityById,
   sha256,
   type ToolContext,
@@ -299,6 +301,26 @@ describe("what an app posts is its own, answered, never obeyed", () => {
       .from(schema.outbox)
       .where(eq(schema.outbox.dedupeKey, `message.posted:${posted.message.id}`));
     expect(jobs).toEqual([{ kind: "message.posted" }]);
+  });
+
+  test("one naming no agent goes to the router, which picks an agent that answers everyone", async () => {
+    f = await setup();
+    const { principal } = await bot();
+    const posted = await postAsApp(traffic(), principal, { channelId: f.general.id, text: "Where is my order?" });
+    const strategy: RouterStrategy = {
+      name: "fixed",
+      decide: async (input) => ({
+        agents: input.candidates.map((c) => ({ agentId: c.agentId, score: 0.9 })),
+        reason: "test",
+      }),
+    };
+    const policy = { minScore: 0.5, maxAgents: 2, maxHops: 3 };
+    const routed = await routeMessage(
+      { db: f.db, strategy, policy },
+      { orgId: f.org.id, messageId: posted.message.id },
+    );
+    expect(routed.skipped).toBeUndefined();
+    expect(routed.runs.map((r) => r.agentId)).toEqual([f.agent.id]);
   });
 
   test("the same idempotency key posts once", async () => {

@@ -1193,7 +1193,7 @@ export async function insertMessageWithRuns(
           'message.posted:' || m.id, 8 from m
           -- An agent's message without a mention goes to the router too: another agent may chime in (ADR 0034).
           -- A GIF or a sticker alone goes to nobody, an agent's silent one after its reply included (ADR 0091).
-          where not ${mediaOnly}::boolean and (m.author_type in ('person', 'app') or cardinality(m.mentioned_agent_ids) > 0
+          where not ${mediaOnly}::boolean and (m.author_type = 'person' or cardinality(m.mentioned_agent_ids) > 0
             or m.hop < ${AGENT_CHIME_IN_MAX_HOP})
         union all
         -- In-app notifications: people mentioned, a reply in a thread, a person's DM, an agent's answer to whoever

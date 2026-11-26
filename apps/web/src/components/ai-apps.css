@@ -32,6 +32,8 @@
 .apps-server__address {
   grid-column: 1 / -1;
   min-width: 0;
+  display: grid;
+  gap: var(--space-2);
 }
 @media (max-width: 560px) {
   .ac-card.apps-server {
@@ -253,4 +255,9 @@ html:not([data-pointer]) .apps-client:focus-visible {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
+}
+.integration-channel__name {
+  min-width: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
 }

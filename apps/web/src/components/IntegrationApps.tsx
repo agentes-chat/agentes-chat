@@ -93,31 +93,29 @@ export function IntegrationAppsSection() {
           {t("integrations.empty")}
         </EmptyState>
       ) : (
-        <Card aria-label={t("settings.section.integrations")}>
-          <List aria-label={t("settings.section.integrations")}>
-            {apps.map((app) => (
-              <div key={app.id} className="ac-list__row app-row ac-mediarow ac-mediarow--row">
-                <span className="ac-mediarow__face">
-                  <AppMark color={app.color} name={app.name} size={24} />
+        <List aria-label={t("settings.section.integrations")}>
+          {apps.map((app) => (
+            <div key={app.id} className="ac-list__row app-row ac-mediarow ac-mediarow--row">
+              <span className="ac-mediarow__face">
+                <AppMark color={app.color} name={app.name} size={24} />
+              </span>
+              <span className="ac-mediarow__head">
+                <span className="list-title">
+                  <span className="app-row__name">{app.name}</span>
                 </span>
-                <span className="ac-mediarow__head">
-                  <span className="list-title">
-                    <span className="app-row__name">{app.name}</span>
-                  </span>
-                </span>
-                <span className="ac-mediarow__end">
-                  <RowMenu
-                    app={app}
-                    onEdit={() => setEditing(app)}
-                    onConfirm={(kind) => setConfirm({ kind, app })}
-                    onShown={show}
-                  />
-                </span>
-                <span className="ac-mediarow__body small muted">{integrationFacts(t, i18n.language, app)}</span>
-              </div>
-            ))}
-          </List>
-        </Card>
+              </span>
+              <span className="ac-mediarow__end">
+                <RowMenu
+                  app={app}
+                  onEdit={() => setEditing(app)}
+                  onConfirm={(kind) => setConfirm({ kind, app })}
+                  onShown={show}
+                />
+              </span>
+              <span className="ac-mediarow__body small muted">{integrationFacts(t, i18n.language, app)}</span>
+            </div>
+          ))}
+        </List>
       )}
       <p className="page__note">
         <HelpLink slug="integration-apps">{t("integrations.help")}</HelpLink>
@@ -283,7 +281,7 @@ function AppDialog({
                 <List aria-label={t("integrations.channels")}>
                   {channels.map((c) => (
                     <div key={c.id} className="ac-list__row integration-channel">
-                      <span className="list-title">#{c.name}</span>
+                      <span className="integration-channel__name">#{c.name}</span>
                       <Select<Access>
                         size="sm"
                         align="end"
