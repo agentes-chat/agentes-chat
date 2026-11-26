@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { ACCOUNTS_PROTOCOL } from "@agenteschat/adapters";
 import { and, eq, schema } from "@agenteschat/db";
 import {
   actionsFor,
@@ -30,6 +31,7 @@ import {
   redoAgentAction,
   SETTINGS_REQUEST_CARD,
   saveSkill,
+  setAgentBrain,
   setAgentEditors,
   setAgentScopes,
   setAgentSkills,
@@ -187,6 +189,72 @@ describe("a change the person asked for and may make (ADR 0092 §5)", () => {
       expect(out.content).toContain("doesn't run on Codex: it needs an AI account of Claude first");
     }
     expect((await getAgent(f.db, f.org.id, f.agent.id))?.brainModel).toBeNull();
+  });
+
+  test("another maker's model on Claude Code names that maker, and the workspace's key for it when there is one", async () => {
+    f = await setup({ rightHand: true });
+    const { machineId } = await pairMachine({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, {
+      name: "MacBook",
+      exec: true,
+    });
+    await f.db.update(schema.agents).set({ brain: "claude_code", machineId }).where(eq(schema.agents.id, f.agent.id));
+    const ctx = await lodiRun(f, f.owner.id, "coloca o dev no gemini", true);
+    const ask = () => call(f, ctx, { changes: [{ agent: "@dev", model: "gemini-4-neon" }], reason: "pediu" });
+    const bare = await ask();
+    expect(bare).toMatchObject({ isError: true });
+    expect(bare.content).toContain("Gemini 4 Neon doesn't run on Claude Code: it needs an AI account of Gemini first");
+    expect(bare.content).not.toContain("API key");
+    const [key] = await f.db
+      .select()
+      .from(schema.providerCredentials)
+      .where(eq(schema.providerCredentials.orgId, f.org.id));
+    if (!key) throw new Error("fixture key");
+    await f.db.insert(schema.providerCredentials).values({ ...key, id: crypto.randomUUID(), provider: "gemini" });
+    const keyed = await ask();
+    expect(keyed.content).toContain("or the workspace's gemini API key, which only its page moves it to");
+    expect((await getAgent(f.db, f.org.id, f.agent.id))?.brainModel).toBeNull();
+  });
+
+  test("the right hand's model for a person with their own AI changes theirs, never the workspace's: theirs to apply and undo", async () => {
+    f = await setup({ rightHand: true });
+    const bia = await addMember(f.db, f.org.id, "member", "Bia");
+    const { machineId } = await pairMachine({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, {
+      name: "MacBook",
+      protocol: ACCOUNTS_PROTOCOL,
+      exec: true,
+    });
+    await f.db
+      .update(schema.machines)
+      .set({
+        pairedByUserId: bia.id,
+        executors: { claude: { version: "2.1.318", loggedIn: true }, detectedAt: new Date().toISOString() },
+      })
+      .where(eq(schema.machines.id, machineId));
+    const lodi = await lodiOf(f);
+    // Her own DM thinks with her computer's own sign-in: a row with no account.
+    await setAgentBrain({ db: f.db }, bia.id, f.org.id, lodi.id, {
+      scope: "mine",
+      brain: "claude_code",
+      account: null,
+    });
+    const ctx = await lodiRun(f, bia.id, "muda seu modelo pro opus", true);
+    await call(f, ctx, { changes: [{ agent: "@lodi", model: "opus" }], reason: "pediu" });
+    const { card, rows } = await cardRows(f, bia.id);
+    const [row] = rows;
+    expect(row?.settings).toEqual([{ field: "model", from: null, to: "opus", person: bia.id }]);
+    // Her own AI is hers alone: an admin doesn't decide it for her.
+    await expect(decideProposal(f.db, f.owner.id, f.org.id, row?.id ?? "", "accept")).rejects.toThrow();
+    await decideProposal(f.db, bia.id, f.org.id, row?.id ?? "", "accept", { pubsub: f.pubsub });
+    const own = async () =>
+      (await f.db.select().from(schema.rightHandBrains).where(eq(schema.rightHandBrains.userId, bia.id)))[0];
+    expect(await own()).toMatchObject({ brain: "claude_code", brainModel: "opus", brainAccountId: null, machineId });
+    expect((await lodiOf(f)).brainModel).toBe(lodi.brainModel);
+    const [receipt] = (await actionsFor(f.db, f.org.id, [card.id])).get(card.id) ?? [];
+    await expect(
+      undoAgentAction({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, receipt?.id ?? ""),
+    ).rejects.toThrow();
+    await undoAgentAction({ db: f.db, pubsub: f.pubsub }, bia.id, f.org.id, receipt?.id ?? "");
+    expect((await own())?.brainModel).toBeNull();
   });
 
   test("the effort is a row of its own, for any agent and the right hand, with Undo", async () => {

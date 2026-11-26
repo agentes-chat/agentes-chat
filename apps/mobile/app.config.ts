@@ -130,7 +130,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       dark: `${ICONS}/peekNight/ios-dark.png`,
       tinted: `${ICONS}/peekNight/ios-tinted.png`,
     },
-    supportsTablet: false,
+    // On iPad too, as a tablet app: every orientation and Split View (no full-screen requirement), the large-screen
+    // layout of ADR 0212 (two panes from 600 points, `homeOrientation` free there); also what lets it resize on a Mac.
+    supportsTablet: true,
     usesAppleSignIn: true,
     associatedDomains: [`applinks:${linkHost}`],
     config: { usesNonExemptEncryption: false },

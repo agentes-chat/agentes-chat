@@ -86,7 +86,7 @@ describe("a teammate's private agent, by its facts alone", () => {
     expect(list).toContain('t("agentPage.facts.private")');
     const profile = source("AgentProfileScreen.tsx");
     expect(profile).toContain("const facts = seesFactsOnly(agent);");
-    expect(profile).toMatch(/facts && agent \? \(\s*<View style=\{styles\.page\}>\s*<AgentFacts/);
+    expect(profile).toMatch(/facts && agent \? \(\s*<View style=\{\[styles\.page, sides\]\}>\s*<AgentFacts/);
     // A plain member reaching its link (a pushed /agent/<id>) finds nothing, as on the web: no public card.
     expect(profile).toMatch(/if \(hidesAgentPage\(agent\)\) \{[\s\S]{0,240}t\("agent\.notFound"\)/);
   });

@@ -50,6 +50,9 @@ afterEach(async () => {
 
 const SERVER = "https://tickets.example.com/mcp";
 
+/** The screenshot `list_tickets` sends beside its words: a PNG's first bytes, base64. */
+const TICKET_SCREENSHOT = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).toString("base64");
+
 /** An in-process MCP server with a read-only tool and a write tool; `extra` adds one on demand. */
 function ticketsMcp() {
   const state = { extra: false, calls: [] as string[], headers: [] as Record<string, string>[] };
@@ -60,7 +63,12 @@ function ticketsMcp() {
       { description: "List open tickets", inputSchema: {}, annotations: { readOnlyHint: true } },
       async () => {
         state.calls.push("list_tickets");
-        return { content: [{ type: "text", text: "#1 login broken" }] };
+        return {
+          content: [
+            { type: "text", text: "#1 login broken" },
+            { type: "image", data: TICKET_SCREENSHOT, mimeType: "image/png" },
+          ],
+        };
       },
     );
     server.registerTool(
@@ -495,7 +503,10 @@ describe("custom MCP servers", () => {
     const read = await gateway.invoke(ctx, { toolUseId: "t1", name: "tickets_list_tickets", input: {} });
     expect(read).toMatchObject({
       type: "result",
-      output: { content: wrapExternal("tickets_list_tickets", "#1 login broken") },
+      output: {
+        content: wrapExternal("tickets_list_tickets", "#1 login broken\n[image: shown to you with this result]"),
+        images: [{ mediaType: "image/png", data: TICKET_SCREENSHOT }],
+      },
     });
     const write = await gateway.invoke(ctx, {
       toolUseId: "t2",

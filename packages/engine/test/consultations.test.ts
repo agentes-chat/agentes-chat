@@ -1116,7 +1116,7 @@ describe("ask_agent", () => {
       .set({ updatedAt: new Date(sweep.getTime() - 60_000) })
       .where(eq(schema.agentRuns.id, target.id));
     expect(await expireConsultations({ db: f.db }, sweep)).toBe(1);
-    expect((await consultations())[0]?.answer).toContain("its AI provider stayed down");
+    expect((await consultations())[0]?.answer).toContain("its AI stayed unavailable");
   });
 
   test("a colleague waiting on a person has no such limit: its card has its own deadline", async () => {

@@ -9,6 +9,7 @@ import {
   inArray,
   isNotNull,
   isNull,
+  or,
   rowsOf,
   schema,
   sql,
@@ -264,22 +265,38 @@ export function setupOfAgent(a: Agent): schema.AgentSetup {
   };
 }
 
-/** The workspace's own computer (managed, else the server's own) once it has connected (ADR 0056 §10), else null. */
+/**
+ * The workspace's own computer once it has connected (ADR 0056 §10), else null: managed, else the server's own, else
+ * a connected one marked the workspace's and opened to everyone (a self-hosted server's VPS, ADR 0175 §3) whose
+ * pairer is still an admin. Every member's right hand keeps its sign-ins and files there, and whoever runs a
+ * connected computer reads all of it: only someone already trusted with the whole workspace may be that person.
+ */
 export async function workspaceHomeId(db: Executor, orgId: string): Promise<string | null> {
-  const [home] = await db
-    .select({ id: machines.id })
+  const rows = await db
+    .select({ id: machines.id, kind: machines.kind, pairedBy: machines.pairedByUserId })
     .from(machines)
     .where(
       and(
         eq(machines.orgId, orgId),
-        inArray(machines.kind, ["managed", "host"]),
+        or(
+          inArray(machines.kind, ["managed", "host"]),
+          and(
+            eq(machines.kind, "connected"),
+            eq(machines.belongsToWorkspace, true),
+            eq(machines.audienceMode, "everyone"),
+            isNotNull(machines.pairedByUserId),
+          ),
+        ),
         isNotNull(machines.tokenHash),
         isNull(machines.deletedAt),
       ),
     )
-    .orderBy(sql`${machines.kind} = 'managed' desc`, asc(machines.createdAt))
-    .limit(1);
-  return home?.id ?? null;
+    .orderBy(sql`case ${machines.kind} when 'managed' then 0 when 'host' then 1 else 2 end`, asc(machines.createdAt));
+  for (const m of rows) {
+    if (m.kind !== "connected") return m.id;
+    if (m.pairedBy && can(await getMembership(db, m.pairedBy, orgId), "configure")) return m.id;
+  }
+  return null;
 }
 
 /**
@@ -908,6 +925,9 @@ export async function archiveAgent(
     // It leaves every task it was on (ADR 0188): an archived agent answers no task's conversation and starts no work.
     const { unassignGone } = await import("./issues");
     await unassignGone({ db, pubsub }, orgId, { type: "agent", id: agentId }).catch(() => null);
+    // Its routines can't run: they read as paused now, and a person may still pause, edit or delete them.
+    const { pauseRoutinesOf } = await import("./routine-firing");
+    await pauseRoutinesOf({ db, pubsub }, orgId, { agentId }).catch(() => 0);
   }
   // Its channel memberships stay: what runs read of a channel's members leaves it out from now on.
   forgetAgentCaches(orgId, agentId);
@@ -940,6 +960,9 @@ export async function unarchiveAgent(
     details: { name: back.name, handle: back.handle },
   });
   forgetAgentCaches(orgId, agentId);
+  // Its archive paused its routines: they come back with it. Loaded here: routines builds on this module.
+  const { resumeArchivedAgentRoutines } = await import("./routines");
+  await resumeArchivedAgentRoutines({ db, pubsub: options.pubsub }, orgId, agentId, actorId).catch(() => 0);
   await publishAgentsChanged(options.pubsub, orgId);
 }
 

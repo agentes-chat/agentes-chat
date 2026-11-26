@@ -36,7 +36,7 @@ import { quietNoticeSql } from "../notices";
 import { can, getMembership } from "../organizations";
 import { personWords, runReadOutsideById, UNASKED_DESTINATION, unaskedDestination } from "../outside";
 import { personBehindCall, triggerPerson, wikiActorOfCall } from "../requester";
-import { isRightHandId, rightHandReader } from "../right-hand";
+import { isRightHandId, readsAlone, rightHandReader } from "../right-hand";
 import {
   agentSearchChannels,
   agentVisibleChannels,
@@ -1314,7 +1314,8 @@ async function triggerFromAgent(ctx: ToolContext) {
 async function rightHandKeeps(ctx: ToolContext): Promise<{ person: string | null } | { refused: string }> {
   if (!(await isRightHandId(ctx.db, ctx.orgId, ctx.agentId))) return { person: null };
   const person = await rightHandReader(ctx);
-  return person
+  // A routine of theirs reads for them too, from a room their DM's memory never reaches.
+  return person && (await readsAlone(ctx.db, ctx.channelId, person, ctx.agentId))
     ? { person }
     : { refused: "You keep memory only in a person's own private conversation with you: others read this one." };
 }

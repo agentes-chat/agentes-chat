@@ -159,6 +159,14 @@ const INVITE_LOGO_PER_IP = { limit: 60, windowMs: 60_000 };
 const Name = z.string().trim().min(1).max(100);
 const Context = z.string().max(20_000).openapi({ description: "Shared with every agent of the organization." });
 
+/**
+ * A computer's own install (the desktop app's server, or one from the terminal) at an address only that computer
+ * answers: no link it hands out (a phone's code, an invitation) opens anywhere else. Development servers keep theirs.
+ */
+const localOnly = (config: AppDeps["config"]) =>
+  isLoopback(new URL(config.PUBLIC_URL).origin) &&
+  (config.INSTALL_MODE === "desktop" || config.INSTALL_MODE === "native");
+
 /** `GET /me`: the signed-in person and their workspaces, also in the answers that finish a workspace's onboarding. */
 const Me = z
   .object({
@@ -433,6 +441,10 @@ export function accountRoutes(deps: AppDeps) {
                 description:
                   "The same for the phone app (`SENTRY_MOBILE_DSN`, else `SENTRY_WEB_DSN`); `release` is the server's, the app files its reports under its own.",
               }),
+            localOnly: z.boolean().openapi({
+              description:
+                "A computer's own install (`INSTALL_MODE` desktop or native) whose `PUBLIC_URL` only that computer answers: invitation links and other links it hands out open nowhere else, so the apps say so where people invite.",
+            }),
             surface: z.boolean().openapi({
               description:
                 "An outside chat surface is bridged (`SURFACE_BRIDGE_TOKEN`, ADR 0187). Whether this account may link it is `GET /api/app/me/surface-links`'s `allowed`.",
@@ -478,6 +490,7 @@ export function accountRoutes(deps: AppDeps) {
           errorReports: reportsTo(config.SENTRY_WEB_DSN),
           mobileErrorReports: reportsTo(config.SENTRY_MOBILE_DSN ?? config.SENTRY_WEB_DSN),
           surface: surfaceOn() !== null,
+          localOnly: localOnly(config),
           host: look && {
             name: look.name,
             accent: look.accent,
@@ -967,9 +980,7 @@ export function accountRoutes(deps: AppDeps) {
     }),
     async (c) => {
       const server = new URL(config.PUBLIC_URL).origin;
-      // A computer's own install (the desktop app's server, or one from the terminal) at an address only that computer
-      // answers: a code would open nothing on the phone. Development servers keep theirs (a simulator reaches them).
-      if (isLoopback(server) && (config.INSTALL_MODE === "desktop" || config.INSTALL_MODE === "native")) {
+      if (localOnly(config)) {
         return apiError(c, 409, "phone.local_only", "This server answers only on its own computer");
       }
       const current = await sessionOf(deps.auth, c.req.raw.headers);

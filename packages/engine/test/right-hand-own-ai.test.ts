@@ -821,3 +821,22 @@ test("a person's own Lodi thinks with the plan their own computer is signed in t
   await setAgentBrain(deps, bia.id, fx.org.id, lodi.id, { scope: "mine", account: null });
   expect((await runIn(bia.id)).kind).toBe("model");
 });
+
+test("a model or effort alone keeps a person's own Lodi on their computer's own sign-in", async () => {
+  const { fx, deps, machineId, bia, lodi, runIn } = await world();
+  await fx.db.update(schema.machines).set({ pairedByUserId: bia.id }).where(eq(schema.machines.id, machineId));
+  await setAgentBrain(deps, bia.id, fx.org.id, lodi.id, { scope: "mine", brain: "claude_code", account: null });
+  // As older apps save a pick: the model, or the effort, and nothing else.
+  expect(await setAgentBrain(deps, bia.id, fx.org.id, lodi.id, { scope: "mine", model: "opus" })).toMatchObject({
+    brain: "claude_code",
+    model: "opus",
+    account: null,
+    computer: { machineId },
+  });
+  expect(await setAgentBrain(deps, bia.id, fx.org.id, lodi.id, { scope: "mine", effort: "high" })).toMatchObject({
+    model: "opus",
+    effort: "high",
+    account: null,
+  });
+  expect(await runIn(bia.id)).toMatchObject({ kind: "claude_code", session: { machineId } });
+});

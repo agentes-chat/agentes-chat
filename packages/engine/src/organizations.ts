@@ -1541,8 +1541,8 @@ async function takeOut(
   }
   // Their routines pause at once and their work stops; the agents' owners hear it (ADR 0053 §6.2).
   // Loaded here: the routine engine builds on this module.
-  const { pauseRoutinesOfCreator } = await import("./routine-firing");
-  await pauseRoutinesOfCreator({ db, pubsub: options.pubsub }, orgId, targetUserId).catch(() => 0);
+  const { pauseRoutinesOf } = await import("./routine-firing");
+  await pauseRoutinesOf({ db, pubsub: options.pubsub }, orgId, { creatorUserId: targetUserId }).catch(() => 0);
 }
 
 /** A deleted workspace's files leave platform storage (`purgeOrgFiles`). */

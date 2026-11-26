@@ -573,7 +573,7 @@
       "here": "Di komputer ini"
     },
     "whyPaid": "Kenapa berbayar?",
-    "whyPaidText": "Cloud mencakup komputer agen yang selalu menyala dan pihak yang merawat servernya. Menjalankan di server sendiri gratis."
+    "whyPaidText": "Cloud mencakup komputer agen yang selalu menyala dan pihak yang merawat servernya. Komputermu sendiri yang terhubung ke workspace Cloud tidak menggantikan paket. Menjalankan agentes.chat di server atau komputermu sendiri gratis."
   },
   "auth": {
     "email": "Email",
@@ -2829,7 +2829,7 @@
     "passed_other": "Tidak ada yang menjawab",
     "failed_other": "{{names}} tidak bisa menjawab",
     "asking_other": "{{names}} menunggu jawaban",
-    "outage_other": "{{names}}: penyedia AI sedang gangguan · mencoba lagi sendiri",
+    "outage_other": "{{names}}: AI tidak menjawab · mencoba lagi sendiri",
     "queued_other": "{{names}} dalam antrean",
     "away_other": "{{names}} menunggu komputer",
     "plan_other": "{{names}} sedang menunggu paket",
@@ -2843,7 +2843,7 @@
       "claimed": "Sedang menjawab",
       "waiting": "Menunggu persetujuan",
       "asking": "Menunggu jawaban",
-      "outage": "Penyedia AI sedang gangguan · mencoba lagi sendiri",
+      "outage": "AI tidak menjawab · mencoba lagi sendiri",
       "queued": "Dalam antrean",
       "away": "Menunggu komputer",
       "plan": "Menunggu paket",
@@ -3375,7 +3375,7 @@
         "ended": "Saya akan menjawab di sini setelah workspace berlangganan agentes.chat lagi."
       },
       "askAdmin": "Saya akan menjawab di sini setelah admin membereskan paket agentes.chat.",
-      "plan": "Paket ini membawa komputer agen. AI-nya yang sudah kamu bayar: Claude, ChatGPT dan lainnya, atau kunci API.",
+      "plan": "Paket ini membawa komputer agen. AI-nya yang sudah kamu bayar: Claude, ChatGPT dan lainnya, atau kunci API. Komputermu sendiri yang terhubung di sini tidak menggantikan paket. Menjalankan agentes.chat di server atau komputermu sendiri gratis.",
       "activeTitle": "Paket aktif",
       "activeLine": "Hubungkan AI dan {{name}} menjawab di sini.",
       "receipt": "Disimpan",
@@ -4293,7 +4293,7 @@
       "queued_computer": "Dalam antrean",
       "waiting_plan": "Menunggu paket",
       "waiting_budget": "Menunggu anggaran diatur ulang",
-      "provider_down": "Penyedia AI sedang gangguan · mencoba lagi sendiri",
+      "provider_down": "AI tidak menjawab · mencoba lagi sendiri",
       "out_of_plan": "Batas paket habis",
       "out_of_budget": "Anggaran bulan ini habis",
       "out_of_planShort": "Batas habis",
@@ -4456,7 +4456,7 @@
     "computerAway": "Komputer {{agent}} tidak merespons saat ini. Permintaan ini tetap terbuka sampai {{time}}. Coba lagi sebentar lagi.",
     "computerPaused": "Komputer {{agent}} dijeda oleh pemiliknya. Permintaan ini tetap terbuka sampai {{time}}.",
     "insecureContext": "Halaman ini tidak dibuka lewat https, jadi browser tidak mengunci kuncinya. Buka di https:// (atau localhost).",
-    "failed": "Tidak bisa dikirim. Apakah komputer agen menyala?",
+    "failed": "Tidak bisa dikirim. Kirim lagi. Kalau masih gagal, minta {{agent}} memintanya lagi.",
     "changed": "Permintaan ini berubah saat kamu menjawab. Tidak ada yang terkirim. Kirim lagi.",
     "empty": "Ketik nilainya.",
     "tooLarge": "Terlalu besar (maks. 16 KB)."
@@ -4502,6 +4502,24 @@
       "agents_other": "{{count}} agen",
       "used": "Digunakan {{when}}",
       "never": "Belum pernah digunakan"
+    },
+    "bulk": {
+      "select": "Pilih",
+      "selection": "Item terpilih",
+      "selected_other": "{{count}} dipilih",
+      "selectAll_other": "Pilih semua {{count}}",
+      "clear": "Berhenti memilih",
+      "access": "Ubah akses",
+      "accessTitle_other": "Akses untuk {{count}} item",
+      "accessText": "Setiap item yang dipilih mendapat akses ini.",
+      "accessGo_other": "Terapkan ke {{count}} item",
+      "accessDone_other": "Akses diubah untuk {{count}} item",
+      "delete": "Hapus",
+      "deleteTitle_other": "Hapus {{count}} item?",
+      "deleteText": "Agenmu tidak bisa menggunakannya lagi. Ini tidak bisa diurungkan.",
+      "deleteGo_other": "Hapus {{count}}",
+      "deleted_other": "{{count}} item dihapus dari Vault",
+      "kept_other": "{{count}} dari pengelola kata sandi tetap ada. Hapus di sana."
     },
     "kind": {
       "login": "Login",
@@ -4701,7 +4719,6 @@
       },
       "as": "Simpan sebagai",
       "asPersonal": "Hanya kamu yang akan melihatnya.",
-      "asTeam": "Semua orang di ruang kerja melihatnya. Pilih agen untuk masing-masing setelah itu.",
       "deleteFile": "Hapus file setelahnya: file itu berisi kata sandimu tanpa enkripsi.",
       "confirm_other": "Impor {{count}}",
       "done_other": "{{count}} login diimpor",
@@ -6661,6 +6678,7 @@
         "desc": "Semua agen membaca ini. Kamu bisa mengubahnya kapan saja.",
         "line": "Dalam satu kalimat",
         "optional": "Opsional. Tanpa kalimat, jenis yang kamu pilih yang dipakai.",
+        "otherNeeded": "Dengan Lainnya, tulis di sini apa yang kalian kerjakan untuk melanjutkan.",
         "todoPersonal": "Ceritakan sedikit tentang dirimu.",
         "todoDescPersonal": "Semua agenmu membaca ini.",
         "donePersonal": "Saya sudah sedikit mengenalmu",
@@ -7653,6 +7671,9 @@
     "link": "Tautan",
     "linkEmpty": "Buat tautan untuk menyalinnya",
     "linkFailed": "Tautan tidak bisa dibuat. {{cause}}",
+    "localOnly": "Server ini hanya terbuka di komputer tempat ia berjalan, jadi orang yang kamu undang tidak bisa membuka undangannya.",
+    "localOnlyHow": "Di aplikasi agentes.chat pada komputer itu, nyalakan Akses dari ponselmu dan rekan tim di Preferensi › Server, atau jalankan agentes.chat di server yang bisa mereka buka. Lalu undang mereka.",
+    "localOnlyHere": "Nyalakan Akses dari ponselmu dan rekan tim. Lalu undang mereka.",
     "never": "Tidak kedaluwarsa",
     "untilDate": "Sampai {{date}}",
     "validFor": "Berlaku {{ttl}} sejak dibuat.",
@@ -11076,6 +11097,8 @@
       "on": "Pesan suara",
       "onHelp": "Orang di ruang kerja ini bisa mengirim audio di percakapan.",
       "noEngine": "Pesan suara belum tersedia di sini.",
+      "noEngineAsk": "Pesan suara belum menyala. Yang mengelola server ini menyalakannya, di halaman ini juga.",
+      "noEngineHere": "Pesan suara menyala setelah kamu memilih di bawah apa yang mengubah suara menjadi teks.",
       "engineTitle": "Yang mengubah suara menjadi teks",
       "own": "Server milikmu sendiri",
       "ownHelp": "Whisper atau Parakeet di mesinmu. Audionya tetap di sana.",
@@ -16090,6 +16113,10 @@
       "paused": "{{name}} dijeda",
       "resumed": "{{name}} kembali bekerja"
     },
+    "runnerBehind": {
+      "command": "Program agentes.chat di {{computer}} sudah usang, jadi beberapa hal tidak berfungsi di sana. Untuk memperbaruinya, jalankan ini di sana:",
+      "installer": "Program agentes.chat di {{computer}} sudah usang, jadi beberapa hal tidak berfungsi di sana. Untuk memperbaruinya, jalankan lagi perintah instalasi di sana, sebagai root."
+    },
     "seenNow": "terhubung sekarang",
     "seen": "terlihat {{when}}",
     "neverSeen": "belum pernah terhubung",
@@ -17369,6 +17396,8 @@
         "item_created": "Menyimpan item ke Vault",
         "item_changed": "Mengubah item Vault",
         "item_deleted": "Menghapus item Vault",
+        "items_changed_other": "Mengubah siapa yang punya akses ke {{count}} item Vault",
+        "items_deleted_other": "Menghapus {{count}} item Vault",
         "item_moved": "Memindahkan item Vault antara Pribadi dan Tim",
         "item_used": "Menggunakan item Vault",
         "imported": "Mengimpor kata sandi ke Vault",
@@ -18320,7 +18349,7 @@
       "waitingApproval": "{{name}} sedang menunggu persetujuan",
       "waitingInput": "{{name}} sedang menunggu jawaban",
       "waitingComputer": "{{name}} sedang menunggu komputernya",
-      "waitingProvider": "{{name}}: penyedia AI sedang down · mencoba lagi sendiri",
+      "waitingProvider": "{{name}}: AI tidak menjawab · mencoba lagi sendiri",
       "waitingAgents": "{{name}} menyerahkan sebagian dan sedang menunggu kabar",
       "queued": "{{name}} dalam antrean"
     },
@@ -18331,7 +18360,7 @@
       "waitingApproval": "menunggu persetujuan",
       "waitingInput": "menunggu jawaban",
       "waitingComputer": "menunggu komputernya",
-      "waitingProvider": "penyedia AI sedang gangguan",
+      "waitingProvider": "AI tidak menjawab",
       "waitingYourApproval": "menunggu persetujuanmu",
       "waitingYourAnswer": "menunggu jawabanmu",
       "queued": "dalam antrean",
@@ -18769,6 +18798,7 @@
       "brain_unavailable_commands_off": "{{brain}} dimatikan di komputerku. Aku akan menjawab setelah orang yang mengurusnya menyalakannya.",
       "brain_unavailable_outdated": "Program di komputerku perlu diperbarui agar {{brain}} bisa menjawab. Aku akan menjawab begitu sudah diperbarui.",
       "brain_unavailable_plan_owner": "{{brain}} akan berpikir dengan paket yang bukan milik pemilikku, jadi tidak kupakai. Hubungkan akun pemilikku di halamanku.",
+      "brain_unavailable_shared_login": "Komputerku belum bisa memakai login Claude untuk semua agen sekarang. Aku akan menjawab begitu bisa. Kalau terus gagal, hubungkan Claude lagi di Akun AI.",
       "provider_unavailable": "Penyedia AI-ku sedang tidak merespons. Aku akan menjawab begitu ia kembali.",
       "provider_wait_rate_limit": "{{provider}} sedang membatasi permintaan dari kunci ini. Aku akan menjawab begitu diizinkan.",
       "provider_wait_down": "{{provider}} sedang mati atau kelebihan beban. Aku akan menjawab begitu ia kembali.",
@@ -20569,7 +20599,7 @@
       "budgetSoon": "Menunggu sebentar anggaran {{name}}",
       "computer": "Menunggu komputer {{name}}",
       "busy": "Menunggu tempat di komputer {{name}}",
-      "provider": "Menunggu penyedia AI {{name}}, percobaan berikutnya {{when}}"
+      "provider": "Menunggu AI {{name}} menjawab, percobaan berikutnya {{when}}"
     },
     "menu": {
       "label": "Lainnya",
@@ -20596,7 +20626,8 @@
     },
     "add": {
       "label": "Tambah widget",
-      "short": "Widget"
+      "short": "Widget",
+      "word": "Tambah"
     },
     "alert": {
       "label": "Beri tahu saya kalau ada yang tidak beres",

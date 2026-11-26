@@ -608,7 +608,7 @@ export interface ComputerDeviceInput {
  * How many tasks it runs at once is its owner's too (their computer's memory), an admin's only on one nobody connected.
  */
 export async function updateComputerDevice(
-  deps: { db: Database; pubsub?: PubSub; hub?: Pick<MachineCaller, "call" | "status"> },
+  deps: { db: Database; pubsub?: PubSub; hub?: Pick<MachineCaller, "call" | "status" | "agentsChanged"> },
   actorId: string,
   orgId: string,
   machineId: string,
@@ -713,6 +713,9 @@ export async function updateComputerDevice(
       details: { ...set },
     });
     if (set.name) await publishMachineUpdated(deps.pubsub, orgId, machine.id, { name: set.name });
+    // Marked the workspace's and open to everyone, it may now be the right hand's computer (`workspaceHomeId`).
+    if (set.belongsToWorkspace !== undefined || set.audienceMode !== undefined)
+      await deps.hub?.agentsChanged?.(orgId).catch(() => undefined);
     await publishDevicesChanged(deps.pubsub, orgId);
   }
   if (input.shareInternet === false)

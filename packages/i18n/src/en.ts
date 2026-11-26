@@ -617,7 +617,7 @@ export const en = {
     },
     whyPaid: "Why pay?",
     whyPaidText:
-      "Cloud includes the agents' always-on computer and someone who keeps the server running. Running it on your own server is free.",
+      "Cloud includes the agents' always-on computer and someone who keeps the server running. A computer of yours connected to a Cloud workspace doesn't replace the plan. Running agentes.chat on your own server or computer is free.",
   },
   auth: {
     email: "Email",
@@ -3155,8 +3155,9 @@ export const en = {
     failed_other: "{{names}} couldn't answer",
     asking_one: "{{names}} is waiting for an answer",
     asking_other: "{{names}} are waiting for an answer",
-    outage_one: "{{names}}: the AI provider is down · retries by itself",
-    outage_other: "{{names}}: the AI provider is down · retries by itself",
+    /** Parked on an outage: its provider down, or its computer's AI refusing while the computer is online. */
+    outage_one: "{{names}}: the AI isn't answering · retries by itself",
+    outage_other: "{{names}}: the AI isn't answering · retries by itself",
     queued_one: "{{names}} is in line",
     queued_other: "{{names}} are in line",
     away_one: "{{names}} is waiting for the computer",
@@ -3178,7 +3179,7 @@ export const en = {
       claimed: "Answering",
       waiting: "Waiting for approval",
       asking: "Waiting for an answer",
-      outage: "The AI provider is down · retries by itself",
+      outage: "The AI isn't answering · retries by itself",
       queued: "In line",
       away: "Waiting for the computer",
       plan: "Waiting on the plan",
@@ -3826,7 +3827,7 @@ export const en = {
       /** The same for whoever can't pay. */
       askAdmin: "I'll answer here once an admin sorts out the agentes.chat plan.",
       /** Behind the card's ⓘ on a first plan. */
-      plan: "The plan brings the agents' computer. The AI is the one you already pay for: Claude, ChatGPT and more, or an API key.",
+      plan: "The plan brings the agents' computer. The AI is the one you already pay for: Claude, ChatGPT and more, or an API key. A computer of yours connected here doesn't replace the plan. Running agentes.chat on your own server or computer is free.",
       /** The hold lifted: the plan is paid, an AI is what's left. */
       activeTitle: "Plan active",
       activeLine: "Connect an AI and {{name}} answers here.",
@@ -4851,7 +4852,7 @@ export const en = {
       queued_computer: "In line",
       waiting_plan: "Waiting on the plan",
       waiting_budget: "Waiting for the budget to reset",
-      provider_down: "The AI provider is down · retries by itself",
+      provider_down: "The AI isn't answering · retries by itself",
       out_of_plan: "Out of plan limit",
       out_of_budget: "Monthly budget spent",
       /** The members column's one line ("Out of limit · back at 1:00 AM"). */
@@ -5044,7 +5045,7 @@ export const en = {
     /** Sealing a secret or a sign-in code needs the browser's crypto, which a plain-http address doesn't get. */
     insecureContext:
       "This page isn't open over https, so the browser won't lock the key. Open it at https:// (or localhost).",
-    failed: "Couldn't deliver it. Is the agent's computer on?",
+    failed: "Couldn't deliver it. Send it again. If it still fails, ask {{agent}} to request it again.",
     changed: "This request changed while you answered. Nothing was sent. Send it again.",
     empty: "Type the value.",
     tooLarge: "Too large (16 KB at most).",
@@ -5092,6 +5093,35 @@ export const en = {
       agents_other: "{{count}} agents",
       used: "Used {{when}}",
       never: "Never used",
+    },
+    /** Many items chosen at once (a passwords import, say): who has access to them, or deleting them. */
+    bulk: {
+      select: "Select",
+      selection: "Selected items",
+      selected_one: "{{count}} selected",
+      selected_other: "{{count}} selected",
+      selectAll_one: "Select all {{count}}",
+      selectAll_other: "Select all {{count}}",
+      clear: "Stop selecting",
+      access: "Change access",
+      accessTitle_one: "Access for {{count}} item",
+      accessTitle_other: "Access for {{count}} items",
+      accessText: "Each selected item gets this access.",
+      accessGo_one: "Apply to {{count}} item",
+      accessGo_other: "Apply to {{count}} items",
+      accessDone_one: "Access changed for {{count}} item",
+      accessDone_other: "Access changed for {{count}} items",
+      delete: "Delete",
+      deleteTitle_one: "Delete {{count}} item?",
+      deleteTitle_other: "Delete {{count}} items?",
+      deleteText: "Your agents can no longer use them. This can't be undone.",
+      deleteGo_one: "Delete {{count}}",
+      deleteGo_other: "Delete {{count}}",
+      deleted_one: "{{count}} item deleted from the Vault",
+      deleted_other: "{{count}} items deleted from the Vault",
+      /** Chosen items a password manager still holds: they stay until removed there. */
+      kept_one: "{{count}} from a password manager stayed. Remove it there.",
+      kept_other: "{{count}} from a password manager stayed. Remove them there.",
     },
     kind: {
       login: "Login",
@@ -5310,7 +5340,6 @@ export const en = {
       },
       as: "Save them as",
       asPersonal: "Only you will see them.",
-      asTeam: "Everyone in the workspace sees them. Choose agents for each one afterwards.",
       deleteFile: "Delete the file afterwards: it holds your passwords unencrypted.",
       confirm_one: "Import {{count}}",
       confirm_other: "Import {{count}}",
@@ -7470,6 +7499,8 @@ export const en = {
         desc: "Every agent reads this. You can change it anytime.",
         line: "In one sentence",
         optional: "Optional. Without one, the type you picked counts.",
+        /** Under the sentence while "Something else" is picked and it is empty: why Continue waits. */
+        otherNeeded: "With Something else, write what you do here to continue.",
         todoPersonal: "Tell me a bit about yourself.",
         todoDescPersonal: "All your agents read this.",
         donePersonal: "I know a bit about you",
@@ -8526,6 +8557,12 @@ export const en = {
     link: "Link",
     linkEmpty: "Make the link to copy it",
     linkFailed: "Couldn't make the link. {{cause}}",
+    /** A computer's own server at an address only it opens (`auth-config.localOnly`), where people invite. */
+    localOnly:
+      "This server only opens on the computer it runs on, so the people you invite can't open their invitation.",
+    localOnlyHow:
+      "In the agentes.chat app on that computer, turn on Reach it from your phone and teammates in Preferences › Servers, or run agentes.chat on a server they can open. Then invite them.",
+    localOnlyHere: "Turn on Reach it from your phone and teammates. Then invite them.",
     never: "Never expires",
     untilDate: "Until {{date}}",
     validFor: "Works for {{ttl}} once made.",
@@ -12013,6 +12050,10 @@ export const en = {
       on: "Voice messages",
       onHelp: "People in this workspace can send audio in conversations.",
       noEngine: "Voice messages aren't available here yet.",
+      /** No engine, for everyone but the installation's owner, who alone sees the picker on this page. */
+      noEngineAsk: "Voice messages aren't on yet. Whoever runs this server turns them on, on this same page.",
+      /** No engine, for the installation's owner, with the picker under it. */
+      noEngineHere: "Voice messages turn on once you choose below what turns voice into text.",
       engineTitle: "What turns voice into text",
       own: "Your own server",
       ownHelp: "Whisper or Parakeet on your machine. The audio stays there.",
@@ -17120,6 +17161,12 @@ export const en = {
       paused: "{{name}} is paused",
       resumed: "{{name}} is back to work",
     },
+    runnerBehind: {
+      command:
+        "The agentes.chat program on {{computer}} is out of date, so some things don't work there. To update it, run this there:",
+      installer:
+        "The agentes.chat program on {{computer}} is out of date, so some things don't work there. To update it, run the install command there again, as root.",
+    },
     seenNow: "connected now",
     seen: "seen {{when}}",
     neverSeen: "hasn't connected yet",
@@ -18556,6 +18603,10 @@ export const en = {
         item_created: "Saved an item to the Vault",
         item_changed: "Changed a Vault item",
         item_deleted: "Deleted a Vault item",
+        items_changed_one: "Changed who has access to {{count}} Vault item",
+        items_changed_other: "Changed who has access to {{count}} Vault items",
+        items_deleted_one: "Deleted {{count}} Vault item",
+        items_deleted_other: "Deleted {{count}} Vault items",
         item_moved: "Moved a Vault item between Personal and Team",
         item_used: "Used a Vault item",
         imported: "Imported passwords into the Vault",
@@ -19565,8 +19616,8 @@ export const en = {
       waitingInput: "{{name}} is waiting for an answer",
       /** The consulted agent's computer is away: paused, not on a person (as the computer screen says it). */
       waitingComputer: "{{name}} is waiting for the computer",
-      /** The consulted agent's AI provider is down: its run is parked and retries by itself. */
-      waitingProvider: "{{name}}: the AI provider is down · retries by itself",
+      /** The consulted agent's AI isn't answering (its provider down, or its computer refusing while online): its run is parked and retries by itself. */
+      waitingProvider: "{{name}}: the AI isn't answering · retries by itself",
       /** Its part done, the agent waits on what it handed to other agents. */
       waitingAgents: "{{name}} handed part of it on and is waiting to hear back",
       queued: "{{name}} is in line",
@@ -19584,7 +19635,7 @@ export const en = {
       waitingApproval: "waiting for approval",
       waitingInput: "waiting for an answer",
       waitingComputer: "waiting for its computer",
-      waitingProvider: "AI provider down",
+      waitingProvider: "AI not answering",
       /** What it waits on is yours to give: the row turns amber. */
       waitingYourApproval: "waiting for your approval",
       waitingYourAnswer: "waiting for your answer",
@@ -20082,6 +20133,9 @@ export const en = {
         "The program on my computer needs an update before {{brain}} can answer. I'll answer once it's updated.",
       brain_unavailable_plan_owner:
         "{{brain}} would think with a plan that isn't my owner's, so I won't use it. Connect my owner's account on my page.",
+      /** The computer is online, but Claude's sign-in for all agents can't run there (its switch off, its self-check failing). */
+      brain_unavailable_shared_login:
+        "My computer can't run Claude's sign-in for all agents right now. I'll answer once it can. If it keeps failing, connect Claude again in AI accounts.",
       provider_unavailable: "My AI provider isn't answering right now. I'll answer as soon as it's back.",
       provider_wait_rate_limit:
         "{{provider}} is limiting requests on this key right now. I'll answer as soon as it lets me.",
@@ -22059,8 +22113,8 @@ export const en = {
       computer: "Waiting for {{name}}'s computer",
       /** In line behind other work on the computer, for 10 minutes or more. */
       busy: "Waiting for room on {{name}}'s computer",
-      /** Its AI provider is down or limits the key ({{when}}: when it tries again). */
-      provider: "Waiting for {{name}}'s AI provider, next try {{when}}",
+      /** Its AI isn't answering: its provider down or limiting the key, or its computer refusing ({{when}}: when it tries again). */
+      provider: "Waiting for {{name}}'s AI to answer, next try {{when}}",
     },
     menu: {
       label: "More",
@@ -22085,7 +22139,7 @@ export const en = {
       dropped: "You dropped “{{title}}” at position {{position}} of {{total}}.",
       canceled: "“{{title}}” went back to its place.",
     },
-    add: { label: "Add widget", short: "Widget" },
+    add: { label: "Add widget", short: "Widget", word: "Add" },
     alert: {
       label: "Tell me when something is off",
       hint: "The alert goes to Waiting on you, with what changed.",

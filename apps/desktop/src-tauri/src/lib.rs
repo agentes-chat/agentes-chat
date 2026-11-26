@@ -40,7 +40,7 @@ use std::time::{Duration, Instant};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, RunEvent, Url, WindowEvent};
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt as _};
-use tauri_plugin_dialog::DialogExt;
+use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 use tauri_plugin_notification::NotificationExt;
 use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_positioner::{Position, WindowExt};
@@ -495,6 +495,42 @@ fn quit_app(app: AppHandle) {
     begin_quit(app);
 }
 
+/// Quit from the menu while agents work here: the system's own dialog asks, a window of its own that stays up while
+/// another window takes focus (the popover hides on any focus loss, and has the main window's title). The words come
+/// from the popover in the app's language; true when the person chose to quit.
+#[tauri::command]
+async fn quit_ask(
+    app: AppHandle,
+    window: tauri::Window,
+    title: String,
+    body: String,
+    quit: String,
+    cancel: String,
+) -> Result<bool, String> {
+    if window.label() != "popover" {
+        return Err("only the popover asks this".into());
+    }
+    if [&title, &body, &quit, &cancel].iter().any(|s| s.is_empty() || s.chars().count() > 400) {
+        return Err("bad words".into());
+    }
+    let asker = app.clone();
+    let yes = tauri::async_runtime::spawn_blocking(move || {
+        asker
+            .dialog()
+            .message(body)
+            .title(title)
+            .kind(MessageDialogKind::Warning)
+            .buttons(MessageDialogButtons::OkCancelCustom(quit, cancel))
+            .blocking_show()
+    })
+    .await
+    .map_err(|e| e.to_string())?;
+    if yes {
+        begin_quit(app);
+    }
+    Ok(yes)
+}
+
 /// Async, as every command that reads files (Linux's graphics cards and system name here): a sync command runs on
 /// the main thread, and the windows stand still while it waits.
 #[tauri::command]
@@ -735,6 +771,7 @@ pub fn run() {
             show_window,
             hide_window,
             quit_app,
+            quit_ask,
             app_info,
             app_reopen,
             graphics::compat_get,

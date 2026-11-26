@@ -225,7 +225,7 @@ const PUSHED: { kind: AppNotification["kind"]; n: Partial<AppNotification>; to: 
   {
     kind: "agent_reply",
     n: { actors: [{ type: "agent", id: "ag1" }], source: { channelId: "d1", dmId: "d1", messageId: "m1" } },
-    to: "/org/$orgId/dm/agent/$agentId",
+    to: "/org/$orgId/c/$channelId",
   },
   {
     kind: "agent_reply",
@@ -264,7 +264,7 @@ describe("every pushed kind opens a real page", () => {
     const target = openTarget(
       notification({ id: ID, kind: "dm", actors: [{ type: "agent", id: "ag1" }], source: { dmId: "d1" } }),
     );
-    expect(target).toEqual({ to: "/org/$orgId/dm/agent/$agentId", params: { agentId: "ag1" } });
+    expect(target).toEqual({ to: "/org/$orgId/c/$channelId", params: { channelId: "d1" } });
   });
 
   test("a stopped mission without its thread opens the missions tab", () => {

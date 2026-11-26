@@ -837,6 +837,7 @@
   },
   "agent": {
     "talk": "Gesprek",
+    "responsible": "Verantwoordelijke",
     "task": "Taak",
     "owner": "eigenaar: {{name}}",
     "cantTalk": "Deze agent werkt niet met jou.",
@@ -2806,11 +2807,12 @@
     },
     "formatAuto": "{{name}} kiest de beste",
     "newWidget": {
-      "alerts": "Melding aan",
       "realData": "Echte gegevens",
       "editAsk": "Vraag wijzigen",
       "asked": "“{{ask}}”",
-      "autoFormat": "Automatische vorm"
+      "testReal": "Testen met echte gegevens",
+      "addHome": "Toevoegen aan Start",
+      "addTo": "Toevoegen aan {{where}}"
     },
     "agentPick": {
       "search": "Agents zoeken",
