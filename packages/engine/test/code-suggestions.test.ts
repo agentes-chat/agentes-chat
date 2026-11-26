@@ -13,6 +13,7 @@ import {
   getMessage,
   insertMessage,
   keepCodeSuggestionHere,
+  moveToBackground,
   openCodeSuggestion,
   SUGGEST_CODE_SESSION_TOOL,
   type ToolContext,
@@ -206,6 +207,24 @@ describe("suggest_code_session", () => {
     expect((await suggest(ctxOf(inMission.run), { project: "tarefas", title: "X" })).isError).toBe(true);
     // The same request in the channel, outside the mission: suggested.
     expect(await codeSuggestionApplies(f.db, (await runOver(f.general.id)).run)).toBe(true);
+  });
+
+  test("still suggested after the run moved itself to the background: the person's request is what it answers", async () => {
+    f = await setup();
+    await programmer();
+    const { run, trigger } = await runOver(f.general.id);
+    const moved = await moveToBackground({ db: f.db, pubsub: f.pubsub }, run.id, {
+      how: "agent",
+      title: "Concluir com o filtro",
+      say: "Vou cuidar disso em segundo plano.",
+    });
+    if (!moved) throw new Error("not moved");
+    const out = await suggest(ctxOf(run), { project: "tarefas", title: "Concluir com o filtro" });
+    expect(out.isError).toBeFalsy();
+    expect(codeSuggestionOf({ codeSuggestion: out.data?.codeSuggestion })).toMatchObject({
+      requestMessageId: trigger.id,
+      askerId: f.owner.id,
+    });
   });
 });
 

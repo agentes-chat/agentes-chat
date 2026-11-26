@@ -186,8 +186,9 @@ export function createCodeSuggestionToolSource(): ToolSource {
     },
     describe: () => ({ title: "Suggest a code session" }),
     async execute(input, ctx) {
+      // A run that moved itself to the background still answers the person's request: its report carries the card.
       const run = await runOf(ctx);
-      if (!run || run.workId) return refused(REFUSED.nobody);
+      if (!run) return refused(REFUSED.nobody);
       const elsewhere = await workPlace(ctx.db, run);
       if (elsewhere) return refused(elsewhere);
       if ((await runAuthority(ctx.db, run)).kind !== "person") return refused(REFUSED.nobody);

@@ -221,7 +221,7 @@ export const SAY_NOW_LINE =
  * computer, answering a person outside a session, with `suggest_code_session` listed.
  */
 export const CODE_SESSION_LINE =
-  "- When someone asks you to change code in a project (fix a bug, build or refactor something), suggest a code session with suggest_code_session before changing anything here, and say in a sentence or two why it fits; wait for their choice. Questions, explanations and quick looks you answer here, as usual.";
+  "- When someone asks you to change code in a project (fix a bug, build or refactor something), suggest a code session with suggest_code_session before changing anything here or calling work_in_background, and say in a sentence or two why it fits; wait for their choice. Questions, explanations and quick looks you answer here, as usual.";
 
 export const finishWhatYouStart = (followUp: boolean) =>
   `- Before you end your turn, reread your reply. A promise or something left to check ('I'll send the numbers', 'vou checar de novo', 'I'll keep an eye on it'): do it now; a command of yours still running (tests, a build): wait for it. ${
