@@ -643,7 +643,8 @@ test("a command macOS refused: the reply names the permission, the app and the s
   expect((await c.data<{ permissions: unknown[] }>({ type: "status" })).permissions).toEqual([wait]);
   // Asked again while it waits: still one wait, nothing told again.
   s.frame({ type: "request", id: "x2", op: "exec", command, timeoutSeconds: 10, stream: false, agent: AGENT });
-  await waitFor(() => s.sent.some((f) => f.id === "x2"));
+  // Its wait is looked at after the reply, with its activity line: done once that line is there.
+  await waitFor(() => c.events("activity").length >= 2);
   expect(s.of("permissions.changed")).toHaveLength(1);
   // The person allowed it in the app's dialog.
   expect(await c.data({ type: "permission.clear", permission: "app_management" })).toEqual({ cleared: true });
