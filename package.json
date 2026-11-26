@@ -37,6 +37,7 @@
     "eval:catchup": "bun --env-file=.env packages/engine/eval/catch-up.ts",
     "eval:router": "bun --env-file=.env packages/engine/eval/router.ts",
     "eval:steer": "bun --env-file=.env packages/engine/eval/steer-triage.ts",
+    "eval:ask-kinds": "bun --env-file=.env packages/engine/eval/ask-kinds.ts",
     "eval:turns": "bun --env-file=.env packages/engine/eval/turns-real.ts",
     "eval:conversation": "bun --env-file=.env packages/engine/eval/conversation.ts",
     "eval:browser": "bun --env-file=.env packages/engine/eval/browser/ab.ts",

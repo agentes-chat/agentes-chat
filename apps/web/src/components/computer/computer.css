@@ -329,6 +329,13 @@
   padding: 20px;
   overflow-y: auto;
 }
+/*
+ * With no sky strip under the head (a browser profile's window), the head's own 16 px are the room over the address
+ * bar: the body's padding on top of it would leave twice that.
+ */
+.ac-dialog__head + .cmp-body {
+  padding-top: 0;
+}
 /* The page in the dialog is the stage itself, not a card in a message. */
 .brw-ac.is-surface {
   max-width: none;

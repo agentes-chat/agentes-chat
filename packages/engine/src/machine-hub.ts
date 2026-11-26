@@ -408,6 +408,8 @@ export function requestTimeoutMs(request: MachineRequest) {
   if (request.op === "phone.flow") return (Math.min(Math.max(1, request.timeoutSeconds), 600) + 120) * 1000;
   if (request.op === "phone.record") return (Math.min(Math.max(1, request.seconds), 170) + 90) * 1000;
   if (request.op === "phone.install") return 300_000;
+  // A simulator's first boot after an Xcode update migrates its data.
+  if (request.op === "phone.power") return 180_000;
   if (request.op.startsWith("phone.")) return 60_000;
   return 120_000;
 }
@@ -468,6 +470,8 @@ export function isNewWork(request: MachineRequest) {
     case "xcode.open":
     // Repairing an iPhone's test helper (its owner from the apps; an agent's call is refused paused before it's sent).
     case "phone.repair":
+    // Starting or shutting down a simulator (a person from the apps; an agent's call is refused paused before it's sent).
+    case "phone.power":
     // Its owner looking for, or installing, a coding CLI there.
     case "clis.check":
     case "cli.install":
@@ -1256,6 +1260,8 @@ export function createMachineHub(deps: MachineHubDeps) {
             diskUse: prev.diskUse,
             ...(prev.diskFreeGb === undefined ? {} : { diskFreeGb: prev.diskFreeGb }),
             ...(prev.sharedGb === undefined ? {} : { sharedGb: prev.sharedGb }),
+            ...(prev.diskGb === undefined ? {} : { diskGb: prev.diskGb }),
+            ...(prev.diskParts === undefined ? {} : { diskParts: prev.diskParts }),
           }
         : load;
     const wasWarned = prev?.diskWarned === true;

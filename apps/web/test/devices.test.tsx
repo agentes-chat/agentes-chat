@@ -3,7 +3,7 @@ import { domWindow, setupDom } from "@agenteschat/ui/testing/dom";
 
 setupDom();
 
-import type { ComputerDevice, PhoneDevice } from "@agenteschat/client";
+import { ApiError, type ComputerDevice, type PhoneDevice } from "@agenteschat/client";
 import {
   ANDROID_SLOW_MS,
   ANDROID_USB_DRIVERS,
@@ -162,6 +162,51 @@ describe("Settings › Devices", () => {
     expect(within(menu).getAllByRole("menuitem")[0]?.textContent).toBe("Settings");
     await click(within(menu).getByRole("menuitem", { name: "Settings" }));
     expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/settings/devices/phones/${PIXEL}`);
+  });
+
+  test("a simulator's menu: Start when it's off, Shut down once it runs, and the Mac's refusal in words", async () => {
+    const sim: PhoneDevice = {
+      id: "p-sim",
+      platform: "ios",
+      phoneKind: "simulator",
+      name: "iPhone 17 Pro",
+      model: "iPhone 17 Pro",
+      osVersion: "26.2",
+      hostMachineId: MAC,
+      ownerUserId: "u-sam",
+      audience: null,
+      status: { kind: "offline", lastSeenAt: "2026-11-09T12:00:00.000Z" },
+      transport: "local",
+      lastSeenAt: "2026-11-09T12:00:00.000Z",
+      mayUse: true,
+      mayManage: false,
+    };
+    const { state, devices } = await open(`/org/${ORG_ID}/settings/devices`, (d) => {
+      const list = acmeDevices();
+      list.devices.find((c) => c.id === MAC)?.phones.push(sim);
+      d.set(list);
+    });
+    let menu = await openMenu(screen().getByRole("button", { name: "iPhone 17 Pro actions" }));
+    expect(
+      within(menu)
+        .getAllByRole("menuitem")
+        .map((i) => i.textContent),
+    ).toEqual(["Settings", "Start"]);
+    await click(within(menu).getByRole("menuitem", { name: "Start" }));
+    expect(calls(state, "devices.powerPhone").map((c) => c.args)).toEqual([[ORG_ID, "p-sim", true]]);
+    expect(screen().getByText("iPhone 17 Pro is starting. It's ready in a moment.")).toBeTruthy();
+    menu = await openMenu(screen().getByRole("button", { name: "iPhone 17 Pro actions" }));
+    expect(within(menu).getByRole("menuitem", { name: "Shut down" })).toBeTruthy();
+    // The Mac without Xcode: why, and the one way out.
+    devices.client.powerPhone = async () => {
+      throw new ApiError(409, "device.power_tool_missing", "", { platform: "ios", computer: "Sam's MacBook Pro" });
+    };
+    await click(within(menu).getByRole("menuitem", { name: "Shut down" }));
+    expect(
+      screen().getByText(
+        "Sam's MacBook Pro needs Xcode to run simulators. Install Xcode from the App Store on that Mac.",
+      ),
+    ).toBeTruthy();
   });
 
   test("a computer's page: its system at a glance; its size and toolchains behind Details, closed", async () => {
@@ -1212,19 +1257,29 @@ describe("A device's page", () => {
     expect(calls(state, "devices.updateComputer").map((c) => c.args.at(-1))).toEqual([{ spill: { own: false } }]);
   });
 
-  test("its owner may use their own computer for their agents' work; someone else's computer has no such switch", async () => {
+  test("its owner makes one choice for its help: never, only as backup, or first for their own agents' work", async () => {
     const { state } = await open(`/org/${ORG_ID}/settings/devices/${MAC}`);
-    const first = screen().getByRole("switch", { name: "Use this computer for my agents' work" });
-    expect(first.getAttribute("aria-checked")).toBe("false");
-    await click(first);
+    expect(screen().queryByRole("switch", { name: "Help when the team's computer is full or away" })).toBeNull();
+    const use = screen().getByRole("combobox", { name: "How it helps your agents" });
+    expect(use.textContent).toBe("Only as backup");
+    use.focus();
+    await act(async () => fireEvent.keyDown(use, { key: "Enter" }));
+    expect(
+      screen()
+        .getAllByRole("option")
+        .map((o) => o.textContent),
+    ).toEqual(["Doesn't help", "Only as backup", "First for my agents"]);
+    await click(screen().getByRole("option", { name: "First for my agents" }));
     await settle(4);
-    expect(calls(state, "devices.updateComputer").map((c) => c.args.at(-1))).toEqual([{ spill: { first: true } }]);
+    expect(calls(state, "devices.updateComputer").map((c) => c.args.at(-1))).toEqual([
+      { spill: { own: true, first: true } },
+    ]);
     (globalThis as { geometrySnapshot?: () => void }).geometrySnapshot?.();
   });
 
-  test("someone else's computer: no switch to use it for the viewer's agents' work", async () => {
+  test("someone else's computer: no choice to use it for the viewer's agents' work", async () => {
     await open(`/org/${ORG_ID}/settings/devices/${IMAC}`);
-    expect(screen().queryByRole("switch", { name: "Use this computer for my agents' work" })).toBeNull();
+    expect(screen().queryByRole("combobox", { name: "How it helps your agents" })).toBeNull();
   });
 
   test("agents use this computer's internet: on, says which computer they use now, picks this one, turns off", async () => {
@@ -1423,7 +1478,8 @@ describe("In the chat and the inbox", () => {
     expect(row.textContent).toContain("Agents now open websites through the internet of Sam's MacBook Pro");
     await click(row);
     const read = document.querySelector(".ib-read") as HTMLElement;
-    expect(read.textContent).toContain("only websites, up to 5 GB a day");
+    expect(read.textContent).toContain("only websites, never anything on its own network");
+    expect(read.textContent).not.toContain("GB");
     await click(within(read).getByRole("button", { name: "Turn off" }));
     await settle(4);
     expect(calls(state, "devices.updateComputer").map((c) => c.args)).toEqual([

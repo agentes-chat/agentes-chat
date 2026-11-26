@@ -32628,6 +32628,45 @@
   "storage.current": {
     "value": "In use"
   },
+  "storage.computer.title": {
+    "value": "Workspace computer"
+  },
+  "storage.computer.used": {
+    "value": "{{used}} of {{size}} in use"
+  },
+  "storage.computer.bar": {
+    "value": "The workspace computer's disk"
+  },
+  "storage.computer.measuring": {
+    "value": "Measuring what takes the space."
+  },
+  "storage.computer.part.projects": {
+    "value": "Projects and code"
+  },
+  "storage.computer.part.apps": {
+    "value": "Apps and tools"
+  },
+  "storage.computer.part.agents": {
+    "value": "Agents' files"
+  },
+  "storage.computer.part.caches": {
+    "value": "Caches and temporary files"
+  },
+  "storage.computer.part.system": {
+    "value": "System"
+  },
+  "storage.computer.part.other": {
+    "value": "Other"
+  },
+  "storage.computer.part.free": {
+    "value": "Free"
+  },
+  "storage.computer.full": {
+    "value": "Almost full, {{free}} left. An agent can clear caches and temporary files and remove what nobody uses anymore."
+  },
+  "storage.computer.ask": {
+    "value": "Free up space on the workspace computer: clear caches and temporary files (package managers, browsers, build tools), then tell me what else takes the most room."
+  },
   "storage.usage.files": {
     "value": "{{size}} of files"
   },
@@ -41541,6 +41580,39 @@
   "devices.stopped": {
     "value": "Stopped. {{name}} is free."
   },
+  "devices.power.start": {
+    "value": "Start"
+  },
+  "devices.power.stop": {
+    "value": "Shut down"
+  },
+  "devices.power.starting": {
+    "value": "{{name}} is starting. It's ready in a moment."
+  },
+  "devices.power.stopped": {
+    "value": "{{name}} is shut down."
+  },
+  "devices.power.toolMissingIos": {
+    "value": "{{computer}} needs Xcode to run simulators. Install Xcode from the App Store on that Mac."
+  },
+  "devices.power.toolMissingAndroid": {
+    "value": "{{computer}} doesn't have the Android Emulator. Install it in Android Studio › SDK Manager › SDK Tools on that computer."
+  },
+  "devices.power.gone": {
+    "value": "{{name}} isn't on {{computer}} anymore: it was deleted there. Forget it here, or make it again there."
+  },
+  "devices.power.busy": {
+    "value": "{{name}} is in use right now. Stop what uses it first, or try again when it's free."
+  },
+  "devices.power.startFailed": {
+    "value": "{{name}} didn't start. {{computer}} said: {{why}}"
+  },
+  "devices.power.stopFailed": {
+    "value": "{{name}} didn't shut down. {{computer}} said: {{why}}"
+  },
+  "devices.power.notSimulator": {
+    "value": "Only a simulator or an emulator starts and shuts down from here."
+  },
   "devices.showMe": {
     "value": "Show me how"
   },
@@ -41587,19 +41659,31 @@
     "value": "Help when the team's computer is full or away"
   },
   "devices.spillOwnHint": {
-    "value": "When your agents' computer is full or away, their replies, asks and routines can think here with your sign-in."
+    "value": "When the team's computer is full or away, your agents' replies, asks and routines can think here, using the AI accounts signed in on this computer."
   },
   "devices.spillTeamHint": {
-    "value": "When an agent's computer is full or away, its replies, asks and routines can think here with its owner's sign-in on this computer."
+    "value": "When an agent's computer is full or away, its replies, asks and routines can think here, using the AI account its owner signed in on this computer."
   },
   "devices.spillWorkspaceOff": {
     "value": "An admin turned this off for the workspace."
   },
-  "devices.spillFirst": {
-    "value": "Use this computer for my agents' work"
+  "devices.helpUse": {
+    "value": "How it helps your agents"
   },
-  "devices.spillFirstHint": {
-    "value": "Your agents' asks, routines and long work start here whenever it is free, with the AI you connected here. Replies to people start here only when the team's computer is full or away."
+  "devices.helpUses.off": {
+    "value": "Doesn't help"
+  },
+  "devices.helpUses.help": {
+    "value": "Only as backup"
+  },
+  "devices.helpUses.first": {
+    "value": "First for my agents"
+  },
+  "devices.helpUseHint": {
+    "value": "Only as backup: your agents come here when the team's computer is full or away. First for my agents: their asks, routines and long work start here whenever it is free, and replies to people only when the team's computer is full or away. Both use the AI accounts signed in on this computer."
+  },
+  "devices.helpUseTeamHint": {
+    "value": "Only as backup: anyone's agents come here when their computer is full or away, using the AI account their owner signed in on this computer. First for my agents: your agents' asks, routines and long work start here whenever it is free."
   },
   "devices.helpWorkspace": {
     "value": "Computers help when the team's is full or away"
@@ -41611,7 +41695,7 @@
     "value": "Agents use this computer's internet"
   },
   "devices.shareInternetHint": {
-    "value": "Websites the agents open go out through this computer's connection, so they see your location. Only websites, up to 5 GB a day, and never anything on your own network. While this computer is offline, the agents use their usual connection."
+    "value": "Websites the agents open go out through this computer's connection, so they see your location. Only websites and never anything on your own network. While this computer is offline, the agents use their usual connection."
   },
   "devices.shareInternetInUse": {
     "value": "In use now"
@@ -43009,7 +43093,7 @@
     "value": "Agents now open websites through the internet of <b>{{deviceName}}</b>"
   },
   "devices.notice.internetSharedLine": {
-    "value": "Only this workspace's agents, only websites, up to 5 GB a day, never anything on its own network. While it's offline, they use their usual connection."
+    "value": "Only this workspace's agents, only websites, never anything on its own network. While it's offline, they use their usual connection."
   },
   "devices.notice.internetOff": {
     "value": "Turn off"

@@ -237,6 +237,28 @@ describe("finding the settings", () => {
     expect(screen().getByText("Perfil salvo.")).toBeTruthy();
   });
 
+  test("Usar o fuso do workspace: the locked selector shows the workspace's zone, not my own, and saving clears mine", async () => {
+    const state = seedState();
+    const me = state.members.find((m) => m.userId === state.me?.user.id);
+    if (me) me.timezone = "Europe/Lisbon";
+    await go("settings/account", state);
+    await click(screen().getByRole("button", { name: /^Perfil/ }));
+    await settle(2);
+    const dialog = screen().getByRole("dialog", { name: "Seu perfil neste workspace" });
+    const zone = () => within(dialog).getByRole("combobox", { name: "Fuso horário" });
+    const useOrg = () => within(dialog).getByRole("checkbox", { name: "Usar o fuso do workspace" });
+    expect(zone().textContent).toContain("Lisboa");
+    await click(useOrg());
+    expect(zone().textContent).toContain("Horário de Brasília");
+    await click(useOrg());
+    expect(zone().textContent).toContain("Lisboa");
+    await click(useOrg());
+    await click(within(dialog).getByRole("button", { name: "Salvar" }));
+    await settle(4);
+    expect(state.calls.find((c) => c.method === "orgs.updateMe")?.args.at(-1)).toMatchObject({ timezone: null });
+    (globalThis as { geometrySnapshot?: () => void }).geometrySnapshot?.();
+  });
+
   test("Fuso horário in Sua conta says my zone in words under its name, as the selector does, never its id", async () => {
     for (const [zone, words] of [
       ["Europe/Lisbon", "Lisboa"],
