@@ -117,6 +117,8 @@ import type {
   FeedbackOffer,
   FileConversationRef,
   FileWave,
+  FirstAgentPicked,
+  FirstAgents,
   ForeignMailbox,
   FormerAgent,
   GifKey,
@@ -1095,6 +1097,13 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         return files.upload<ImportedFile>(`${org(orgId)}/imports/files`, form);
       },
       exportUrl: (orgId) => `${base}${org(orgId)}/export`,
+    },
+    firstAgents: {
+      latest: async (orgId) => (await request<{ proposal: FirstAgents | null }>(`${org(orgId)}/first-agents`)).proposal,
+      paste: async (orgId, input) =>
+        (await request<{ proposal: FirstAgents }>(`${org(orgId)}/first-agents`, { json: input })).proposal,
+      pick: (orgId, proposalId, index) =>
+        request<FirstAgentPicked>(`${org(orgId)}/first-agents/${enc(proposalId)}/pick`, { json: { index } }),
     },
     voice: {
       allowed: (orgId) => request<{ allowed: boolean }>(`${org(orgId)}/voice/allowed`),

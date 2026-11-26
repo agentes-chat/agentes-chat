@@ -463,7 +463,7 @@ async function homeOf(db: Database, orgId: string, userId: string, agentId: stri
     .select({ id: agents.id, handle: agents.handle })
     .from(agents)
     .where(and(eq(agents.orgId, orgId), eq(agents.id, agentId)));
-  if (!agent) throw new NotFoundError("Agent not found", "agent.not_found");
+  if (!agent) throw new NotFoundError("Agent not found");
   const [home] = await db
     .select({ id: channels.id })
     .from(channelMembers)

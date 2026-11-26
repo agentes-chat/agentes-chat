@@ -1432,6 +1432,78 @@ export interface TeamTemplate {
   team: TeamPlan;
 }
 
+/** An app a first agent needs: `key` names its mark (a connector's brand, a mailbox's provider) when known. */
+export interface FirstAgentApp {
+  key: string | null;
+  label: string;
+}
+
+/** The routine of a first agent: `cron` read by the server in the person's time zone, null when it couldn't be. */
+export interface FirstAgentRoutine {
+  title: string;
+  /** As the AI wrote it ("toda segunda às 8:00"). */
+  schedule: string;
+  prompt: string;
+  cron: string | null;
+  timezone: string | null;
+}
+
+/** One option for the person's first agent, proposed by their own AI like a job opening (ADR 0250). */
+export interface FirstAgentOption {
+  name: string;
+  /** Free when proposed; the server takes a free one again when it is picked. */
+  handle: string;
+  role: string;
+  why: string;
+  /** Its responsibilities, 1 to 4. */
+  tasks: string[];
+  apps: FirstAgentApp[];
+  routine: FirstAgentRoutine | null;
+  /** What it delivers on its first day, up to 3. */
+  today: string[];
+  instructions: string;
+  /** Picked by the server: a different color for each option. */
+  appearance: Required<AgentLookInput>;
+}
+
+/** The person's newest first-agent proposal (`GET …/first-agents`): sent through `propose_first_agents` or pasted. */
+export interface FirstAgents {
+  id: string;
+  /** What the AI said the workspace (or the person) does. */
+  about: string | null;
+  source: "mcp" | "paste";
+  /** 1 to 3, the task that takes the most time first. */
+  options: FirstAgentOption[];
+  /** The option picked, from when the pick starts. */
+  picked: number | null;
+  /** The agent made from it, once made. */
+  agentId: string | null;
+  createdAt: string;
+}
+
+/** What an AI with no connector answers, pasted (`POST …/first-agents`): the shape `propose_first_agents` takes. */
+export interface FirstAgentsInput {
+  about?: string;
+  options: {
+    name: string;
+    handle?: string;
+    role: string;
+    why: string;
+    tasks: string[];
+    apps?: string[];
+    routine?: { title: string; schedule: string; prompt: string; cron?: string };
+    today?: string[];
+    instructions?: string;
+  }[];
+}
+
+/** The agent an option became (`POST …/first-agents/{id}/pick`): its channel in a team's workspace, else my DM. */
+export interface FirstAgentPicked {
+  agentId: string;
+  handle: string;
+  channelId: string;
+}
+
 /** `meta.replyChips` of a right hand's question: answers to tap, each sent as the person's own message. */
 export interface ReplyChips {
   choices: string[];
@@ -2347,6 +2419,12 @@ export type IssueActivityEvent = {
 /** You followed or unfollowed a thread (on any of your devices). */
 export type ThreadFollowEvent = { type: "thread.follow" } & ThreadFollow;
 
+/** A first-agent proposal arrived for me (ADR 0250): `GET …/first-agents` has it. */
+export interface FirstAgentsEvent {
+  type: "first_agents.received";
+  id: string;
+}
+
 /** Events for one person (`{ type: "event", scope: "user" }` frames), e.g. approvals they can decide. */
 export type UserEvent =
   | { type: "approval.created" | "approval.decided"; approval: Approval }
@@ -2354,6 +2432,7 @@ export type UserEvent =
   | NotificationEvent
   | ThreadFollowEvent
   | VoiceDroppedEvent
+  | FirstAgentsEvent
   | { type: string };
 
 // ── Approvals, connectors, scopes ─────────────────────────────────────────────
