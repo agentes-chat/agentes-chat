@@ -33,7 +33,7 @@ const FAILURE_OF: Record<string, Failure> = {
   "run.org_deleting": "paused",
   "run.budget_exceeded": "paused",
 };
-const failureOf = (error: string | null): Failure =>
+export const failureOf = (error: string | null): Failure =>
   FAILURE_OF[runErrorDetail(error)?.errorCode ?? ""] ?? "failedOther";
 
 const zeroTurns = () => ({

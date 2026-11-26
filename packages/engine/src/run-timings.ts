@@ -337,7 +337,7 @@ export const REPLY_WAIT_CAUSES = ["room", "offline", "other"] as const;
  * its limit or switched, a computer or provider not answering, the asker at their limit. None is a reply: within a
  * second, they'd pass for the quickest ones.
  */
-const NOT_A_REPLY = "^(no_ai|plan_limit|plan_account_moved|brain_unavailable|provider_|person_limit)";
+export const NOT_A_REPLY = "^(no_ai|plan_limit|plan_account_moved|brain_unavailable|provider_|person_limit)";
 
 export interface ReplyTimesQuery {
   /** ISO 8601 instants: runs created at or after `from` and before `to`. */
