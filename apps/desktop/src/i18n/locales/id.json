@@ -460,7 +460,7 @@
     "internet": "Agen memakai internet komputer ini",
     "internetOn": "Situs yang dibuka agen melihat lokasimu",
     "internetOff": "Mati: agen memakai koneksi biasa mereka",
-    "internetHint": "Agen di workspace membuka situs lewat koneksi komputer ini. Hanya situs web, sampai 5 GB per hari, dan tidak pernah apa pun di jaringanmu sendiri. Selama komputer ini offline, mereka memakai koneksi biasa.",
+    "internetHint": "Agen di workspace membuka situs lewat koneksi komputer ini. Hanya situs web dan tidak pernah apa pun di jaringanmu sendiri. Selama komputer ini offline, mereka memakai koneksi biasa.",
     "shareOff": "Hanya kamu untuk saat ini",
     "shareHint": "Agen semua orang di {{org}} bisa menjalankan tugas di sana sebagai penggunamu.",
     "addFolders": "Tambahkan folder",

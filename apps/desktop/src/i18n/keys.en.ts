@@ -523,7 +523,7 @@ export const desktopEn = {
     internetOn: "Websites the agents open see your location",
     internetOff: "Off: agents use their usual connection",
     internetHint:
-      "The workspace's agents open websites through this computer's connection. Only websites, up to 5 GB a day, and never anything on your own network. While this computer is offline, they use their usual connection.",
+      "The workspace's agents open websites through this computer's connection. Only websites and never anything on your own network. While this computer is offline, they use their usual connection.",
     shareOff: "Only you for now",
     shareHint: "Everyone's agents in {{org}} can run tasks on it, as your user.",
     addFolders: "Add folders",

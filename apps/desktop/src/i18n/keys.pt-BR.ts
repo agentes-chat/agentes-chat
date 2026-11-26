@@ -504,7 +504,7 @@ export const desktopPtBR = {
     internetOn: "Os sites que os agentes abrem veem a sua localização",
     internetOff: "Desligado: os agentes usam a conexão de sempre",
     internetHint:
-      "Os agentes do workspace abrem sites pela conexão deste computador. Só sites, até 5 GB por dia, e nunca nada da sua própria rede. Enquanto este computador estiver offline, eles usam a conexão de sempre.",
+      "Os agentes do workspace abrem sites pela conexão deste computador. Só sites e nunca nada da sua própria rede. Enquanto este computador estiver offline, eles usam a conexão de sempre.",
     shareOff: "Só você por enquanto",
     shareHint: "Os agentes de todos em {{org}} podem rodar tarefas nele, com o seu usuário.",
     addFolders: "Adicionar pastas",

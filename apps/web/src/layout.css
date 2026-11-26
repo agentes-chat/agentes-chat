@@ -4520,6 +4520,10 @@ html:not([data-pointer]) .sidebar__org-button:focus-visible {
 .settings__head {
   padding: 0 10px;
 }
+/* The workspace's name stands apart from the big title over it, not tucked under it as a page's meta line is. */
+.settings__head .ac-pagehead__meta {
+  margin-top: var(--space-1);
+}
 /* The workspace's name wraps under the mark, which stays on its first line: a long one never widens the nav. */
 .settings__org {
   min-width: 0;

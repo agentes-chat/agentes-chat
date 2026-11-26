@@ -464,7 +464,7 @@
     "internet": "Agents gebruiken het internet van deze computer",
     "internetOn": "Websites die de agents openen, zien jouw locatie",
     "internetOff": "Uit: agents gebruiken hun gewone verbinding",
-    "internetHint": "De agents van de workspace openen websites via de verbinding van deze computer. Alleen websites, tot 5 GB per dag, en nooit iets op je eigen netwerk. Zolang deze computer offline is, gebruiken ze hun gewone verbinding.",
+    "internetHint": "De agents van de workspace openen websites via de verbinding van deze computer. Alleen websites en nooit iets op je eigen netwerk. Zolang deze computer offline is, gebruiken ze hun gewone verbinding.",
     "shareOff": "Voorlopig alleen jij",
     "shareHint": "De agents van iedereen in {{org}} kunnen er taken op draaien, als jouw gebruiker.",
     "addFolders": "Mappen toevoegen",

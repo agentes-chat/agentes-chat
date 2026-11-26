@@ -464,7 +464,7 @@
     "internet": "Agenten nutzen die Internetverbindung dieses Computers",
     "internetOn": "Websites, die die Agenten öffnen, sehen deinen Standort",
     "internetOff": "Aus: Agenten nutzen ihre übliche Verbindung",
-    "internetHint": "Die Agenten des Workspace öffnen Websites über die Verbindung dieses Computers. Nur Websites, bis zu 5 GB am Tag, und nie etwas in deinem eigenen Netzwerk. Solange dieser Computer offline ist, nutzen sie ihre übliche Verbindung.",
+    "internetHint": "Die Agenten des Workspace öffnen Websites über die Verbindung dieses Computers. Nur Websites und nie etwas in deinem eigenen Netzwerk. Solange dieser Computer offline ist, nutzen sie ihre übliche Verbindung.",
     "shareOff": "Vorerst nur du",
     "shareHint": "Die Agenten aller in {{org}} können dort Aufgaben ausführen, als dein Benutzer.",
     "addFolders": "Ordner hinzufügen",

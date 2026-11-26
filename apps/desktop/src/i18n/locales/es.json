@@ -468,7 +468,7 @@
     "internet": "Los agentes usan el internet de esta computadora",
     "internetOn": "Los sitios que abren los agentes ven tu ubicación",
     "internetOff": "Desactivado: los agentes usan su conexión de siempre",
-    "internetHint": "Los agentes del workspace abren sitios por la conexión de esta computadora. Solo sitios web, hasta 5 GB al día, y nunca nada de tu propia red. Mientras esta computadora esté sin conexión, usan su conexión de siempre.",
+    "internetHint": "Los agentes del workspace abren sitios por la conexión de esta computadora. Solo sitios web y nunca nada de tu propia red. Mientras esta computadora esté sin conexión, usan su conexión de siempre.",
     "shareOff": "Solo tú por ahora",
     "shareHint": "Los agentes de todos en {{org}} pueden ejecutar tareas ahí, con tu usuario.",
     "addFolders": "Agregar carpetas",

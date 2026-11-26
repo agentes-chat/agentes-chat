@@ -686,6 +686,8 @@ async function machineViews(db: Database, actorId: string, orgId: string, only?:
               freeGb: m.load.diskFreeGb,
               use: m.load.diskUse ?? null,
               sharedGb: m.load.sharedGb ?? null,
+              sizeGb: m.load.diskGb ?? null,
+              parts: m.load.diskParts ?? null,
             }
           : null,
       /** Whether the agent browser can run there (protocol 12, ADR 0040); null when its runner doesn't say. */

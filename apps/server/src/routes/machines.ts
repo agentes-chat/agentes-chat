@@ -299,6 +299,20 @@ export const Machine = z
         freeGb: z.number().openapi({ description: "Free GB on the workspace's disk." }),
         use: z.number().nullable().openapi({ description: "Share of that disk in use, 0 to 1." }),
         sharedGb: z.number().nullable().openapi({ description: "The shared folder's size in GB (measured hourly)." }),
+        sizeGb: z.number().nullable().openapi({ description: "The disk's size in GB; null from an older runner." }),
+        parts: z
+          .object({
+            projects: z.number(),
+            apps: z.number(),
+            agents: z.number(),
+            caches: z.number(),
+            system: z.number(),
+          })
+          .nullable()
+          .openapi({
+            description:
+              "What takes the disk by kind, in GB (projects and code, apps and tools, the agents' files, caches and temporary files, the system), measured every few hours on the workspace's own computer; the rest in use is everything else. Null elsewhere, or before the first measure.",
+          }),
       })
       .nullable()
       .openapi({

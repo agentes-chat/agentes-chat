@@ -1272,7 +1272,7 @@
     "value": "Off: agents use their usual connection"
   },
   "pair.internetHint": {
-    "value": "The workspace's agents open websites through this computer's connection. Only websites, up to 5 GB a day, and never anything on your own network. While this computer is offline, they use their usual connection."
+    "value": "The workspace's agents open websites through this computer's connection. Only websites and never anything on your own network. While this computer is offline, they use their usual connection."
   },
   "pair.shareOff": {
     "value": "Only you for now"
