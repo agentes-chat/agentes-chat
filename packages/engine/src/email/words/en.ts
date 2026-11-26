@@ -70,6 +70,9 @@ export const en = {
     /** The last place of a list cut short: how many more it holds (always 2 or more). */
     more: (n: number) => `${n} more`,
     what: "agentes.chat is where people and AI agents work together.",
+    /** A team's invitation only: what joining starts with (the member's own onboarding, ADR 0250). */
+    arrive:
+      "When you join, you create your own agent: your AI finds the task that takes most of your time and proposes an agent for it.",
     noteFrom: (inviter: string, note: string): Text => [{ b: inviter ? `${inviter}: ` : "Their note: " }, `“${note}”`],
     button: "Accept invitation",
     small: "The invitation works for 7 days. Accept it with this email address.",

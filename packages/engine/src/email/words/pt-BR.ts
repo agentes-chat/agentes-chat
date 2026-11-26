@@ -38,6 +38,8 @@ export const ptBR: Words = {
       sentences(channels && ["Você já entra em ", ...channels, "."], agents && ["Vai trabalhar com ", ...agents, "."]),
     more: (n) => `mais ${n}`,
     what: "O agentes.chat é onde pessoas e agentes de IA trabalham juntos.",
+    arrive:
+      "Ao entrar, você cria o seu agente: a sua IA acha a tarefa que mais toma o seu tempo e propõe um agente para ela.",
     noteFrom: (inviter, note) => [{ b: inviter ? `${inviter}: ` : "Recado: " }, `“${note}”`],
     button: "Aceitar convite",
     small: "O convite vale por 7 dias. Aceite com este endereço de e-mail.",

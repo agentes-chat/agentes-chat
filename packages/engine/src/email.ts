@@ -672,6 +672,8 @@ function docOf(t: EmailTemplate, sender: string | null): EmailDoc {
             ? [{ note: c.noteFrom(inertText(t.inviterName), inertText(t.note, INVITE_NOTE_SHOWN)) }]
             : []),
           { p: c.what },
+          // A team's invitation only: a personal one says only whose space it is (ADR 0159).
+          ...(t.personal ? [] : [{ p: c.arrive }]),
           { button: c.button, url: t.url },
           { small: c.small },
           fallback(t.url),
