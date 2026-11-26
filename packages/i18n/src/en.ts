@@ -6077,6 +6077,7 @@ export const en = {
       gave_up: "the model didn't answer after several tries",
       missing_credential: "an API key is missing",
       credential_revoked: "the API key was revoked",
+      credential_unreadable: "the saved API key can't be opened",
     },
     youReplied: "You replied: {{text}}",
     actions: "Actions",
@@ -7101,6 +7102,9 @@ export const en = {
         interrupted: "Interrupted by a server restart.",
         missing_credential: "The workspace has no {{provider}} key.",
         credential_revoked: "This agent's key was revoked.",
+        /** A saved key the server can't decrypt: its secret (AGENTES_SECRET on a self-hosted server) changed since. */
+        credential_unreadable:
+          "The saved API key can't be opened, usually because the server's secret changed after the key was saved. Paste the key again in AI keys.",
         credential_wrong_provider: "The model is from {{modelProvider}}, but the key is from {{keyProvider}}.",
         model_unlisted: "OpenRouter no longer offers {{model}}. Pick another model in the agent's settings.",
         no_ai: "The agent had no AI available.",
@@ -9914,6 +9918,7 @@ export const en = {
       stuck: "Stopped because it got stuck",
       missing_credential: "An API key is missing",
       credential_revoked: "The API key was revoked",
+      credential_unreadable: "The saved API key can't be opened",
       credential_wrong_provider: "The API key is from another provider",
       model_unlisted: "OpenRouter no longer offers the model",
       agent_archived: "The agent was archived",
@@ -19635,6 +19640,8 @@ export const en = {
       /** On a card the consulted agent posted where the person asked. */
       helping: "helping {{name}}",
       see: "See conversation",
+      /** The quote of another agent's answer at the top of the message that passes it on; opens the conversation. */
+      relay: "{{name}}'s answer: {{excerpt}}. See the conversation",
     },
     unshown: "This message couldn't be shown",
     unshownPart: "Part of this message couldn't be shown",

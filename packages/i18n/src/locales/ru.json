@@ -6018,7 +6018,8 @@
       "provider_unavailable": "модель не ответила",
       "gave_up": "модель не ответила после нескольких попыток",
       "missing_credential": "нет ключа API",
-      "credential_revoked": "ключ API отозван"
+      "credential_revoked": "ключ API отозван",
+      "credential_unreadable": "сохранённый ключ API не открывается"
     },
     "youReplied": "Вы ответили: {{text}}",
     "actions": "Действия",
@@ -7021,6 +7022,7 @@
         "interrupted": "Прервано перезапуском сервера.",
         "missing_credential": "В рабочем пространстве нет ключа {{provider}}.",
         "credential_revoked": "Ключ этого агента отозван.",
+        "credential_unreadable": "Сохранённый ключ API не открывается — обычно потому, что секрет сервера изменился после сохранения ключа. Вставьте ключ заново в разделе «Ключи ИИ».",
         "credential_wrong_provider": "Модель от {{modelProvider}}, а ключ от {{keyProvider}}.",
         "model_unlisted": "OpenRouter больше не предлагает {{model}}. Выберите другую модель в настройках агента.",
         "no_ai": "У агента не было доступного ИИ.",
@@ -9940,6 +9942,7 @@
       "stuck": "Остановлен, потому что застрял",
       "missing_credential": "Не хватает API-ключа",
       "credential_revoked": "API-ключ отозван",
+      "credential_unreadable": "Сохранённый ключ API не открывается",
       "credential_wrong_provider": "API-ключ от другого провайдера",
       "model_unlisted": "OpenRouter больше не предлагает эту модель",
       "agent_archived": "Агент архивирован",
@@ -20098,7 +20101,8 @@
       "talk": "Написать {{name}}",
       "missing": "Этого разговора здесь больше нет.",
       "helping": "помогает {{name}}",
-      "see": "Показать разговор"
+      "see": "Показать разговор",
+      "relay": "Ответ от {{name}}: {{excerpt}}. Открыть разговор"
     },
     "unshown": "Это сообщение не удалось показать",
     "unshownPart": "Часть этого сообщения не удалось показать",

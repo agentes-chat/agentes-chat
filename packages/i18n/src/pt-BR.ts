@@ -5925,6 +5925,7 @@ export const ptBR = {
       gave_up: "o modelo não respondeu depois de várias tentativas",
       missing_credential: "falta uma chave de API",
       credential_revoked: "a chave de API foi revogada",
+      credential_unreadable: "a chave de API salva não abre",
     },
     youReplied: "Você respondeu: {{text}}",
     actions: "Ações",
@@ -6990,6 +6991,8 @@ export const ptBR = {
         interrupted: "Interrompida porque o servidor reiniciou.",
         missing_credential: "Falta uma chave {{provider}} no workspace.",
         credential_revoked: "A chave deste agente foi revogada.",
+        credential_unreadable:
+          "A chave de API salva não abre, geralmente porque o segredo do servidor mudou depois que ela foi salva. Cole a chave de novo em Chaves de IA.",
         credential_wrong_provider: "O modelo usa {{modelProvider}}, mas a chave é para {{keyProvider}}.",
         model_unlisted: "A OpenRouter não oferece mais {{model}}. Escolha outro modelo nas configurações do agente.",
         no_ai: "O agente estava sem uma IA disponível.",
@@ -9865,6 +9868,7 @@ export const ptBR = {
       stuck: "Parou porque travou",
       missing_credential: "Falta uma chave de API",
       credential_revoked: "A chave de API foi revogada",
+      credential_unreadable: "A chave de API salva não abre",
       credential_wrong_provider: "A chave de API é de outro provedor",
       model_unlisted: "A OpenRouter não oferece mais o modelo",
       agent_archived: "O agente foi arquivado",
@@ -19474,6 +19478,8 @@ export const ptBR = {
       helping: "ajudando o {{name}}",
       helping_female: "ajudando a {{name}}",
       see: "Ver conversa",
+      /** The quote of another agent's answer at the top of the message that passes it on; opens the conversation. */
+      relay: "Resposta de {{name}}: {{excerpt}}. Ver a conversa",
     },
     /** In place of a row of the conversation that failed to draw (the rest keeps working). */
     unshown: "Esta mensagem não pôde ser exibida",

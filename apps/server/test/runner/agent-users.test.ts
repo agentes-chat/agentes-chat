@@ -32,6 +32,7 @@ import {
   denySchedulers,
   ensureContainers,
   ensureSubids,
+  HIDE_TMP_SOURCES,
   idleTmpLines,
   joinKvm,
   keepContainers,
@@ -418,6 +419,7 @@ test("the launcher: the agent's slice, its own temporary folders, its user, abso
     'if [ "$(stat -c %a /run/lock 2>/dev/null)" = 1777 ]; then mount --bind "$m/lock" /run/lock; fi',
     "mkdir -m 1777 /tmp/.X11-unix 2>/dev/null || :",
     "mkdir -m 1777 /tmp/.ICE-unix 2>/dev/null || :",
+    ...HIDE_TMP_SOURCES,
     'exec "$@"',
   ]);
   // systemd 253 and later: a process the kernel stops for memory takes only itself, not the rest of the scope.
@@ -431,6 +433,48 @@ test("the launcher: the agent's slice, its own temporary folders, its user, abso
     home: "/home/ag-a1b2c3d4",
   });
 });
+
+test.if(process.platform !== "win32")(
+  "a launch's view keeps only /tmp of the agent's temp filesystem: Codex's sandbox masks every alias mountinfo shows",
+  () => {
+    const dir = tempDir("hide-tmp-");
+    dirs.push(dir);
+    const info = path.join(dir, "mountinfo");
+    const log = path.join(dir, "umount.log");
+    writeFileSync(
+      info,
+      [
+        "21 1 0:20 / /run rw - tmpfs tmpfs rw",
+        "30 21 0:31 / /run/agentes-runner-tmp-pool rw - tmpfs agentes-runner-tmp rw",
+        "31 21 0:32 / /run/agentes-runner-tmp/21003 rw - tmpfs agentes-runner-tmp rw",
+        "32 31 0:31 /21003 /run/agentes-runner-tmp/21003/tmp rw - tmpfs agentes-runner-tmp rw",
+        "33 21 0:33 / /run/agentes-runner-tmp/21004 rw - tmpfs agentes-runner-tmp rw",
+        "34 1 7:0 / /var/cache/agentes-runner-tmp/fs rw - ext4 /dev/loop0 rw",
+        "35 1 0:31 /21003 /tmp rw - tmpfs agentes-runner-tmp rw",
+        "36 1 0:32 /shm /dev/shm rw - tmpfs agentes-runner-tmp rw",
+        "37 21 0:32 /run /run/user/21003 rw - tmpfs agentes-runner-tmp rw",
+        "38 21 0:40 / /run/agentes-runner-tmp-poolside rw - tmpfs other rw",
+        "",
+      ].join("\n"),
+    );
+    writeFileSync(path.join(dir, "umount"), `#!/bin/sh\necho "$*" >> ${log}\n`, { mode: 0o755 });
+    const script = HIDE_TMP_SOURCES.join("\n").replace("/proc/self/mountinfo", info);
+    const r = spawnSync("/bin/sh", ["-ec", script], { env: { PATH: `${dir}:/usr/bin:/bin` }, encoding: "utf8" });
+    expect(r.status).toBe(0);
+    // The pool, every agent's tmpfs with what is bound in it, and the disk's filesystem leave the view; /tmp, /dev/shm
+    // and the runtime dir stay, so Codex finds its daemon folder at /tmp alone.
+    expect(readFileSync(log, "utf8").trim().split("\n")).toEqual([
+      "-l /run/agentes-runner-tmp-pool",
+      "-l /run/agentes-runner-tmp/21003",
+      "-l /run/agentes-runner-tmp/21003/tmp",
+      "-l /run/agentes-runner-tmp/21004",
+      "-l /var/cache/agentes-runner-tmp/fs",
+    ]);
+    // The containers service keeps them: its kept cgroup2 is bound back from there after its network hook.
+    const service = containersCommand({ id: ANA.id, user: "ag-a1b2c3d4", uid: 21003 }, true, undefined, false);
+    expect(service.join("\n")).not.toContain(HIDE_TMP_SOURCES[1] ?? "");
+  },
+);
 
 test("where an agent's /tmp goes is the runner's config: in memory unless `agentTmpOnDisk`, for every launch and its containers service", () => {
   const home = tempDir("tmp-switch-");
@@ -775,12 +819,13 @@ test("every launch with containers: its runtime dir bound in its view, Podman's 
   expect(l.env).toMatchObject({ XDG_RUNTIME_DIR: "/run/user/21003", CONTAINER_HOST: socket, DOCKER_HOST: socket });
   const view = (l.prefix[18] ?? "").split("\n");
   expect(view[1]).toBe("/usr/bin/mount -t proc -o nosuid,nodev,noexec,hidepid=2 proc /proc");
-  expect(view.slice(-5)).toEqual([
+  expect(view.slice(-8)).toEqual([
     // biome-ignore lint/suspicious/noTemplateCurlyInString: the shell's own expansion, not JavaScript's.
     "u=${m##*/}",
     'install -d -m 0700 -o "$u" "$m/run"',
     'mkdir -p "/run/user/$u"',
     'mount --bind "$m/run" "/run/user/$u"',
+    ...HIDE_TMP_SOURCES,
     'exec "$@"',
   ]);
   // Only the containers service goes without it.
