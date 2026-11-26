@@ -131,7 +131,7 @@ import { DesktopManager } from "./desktop";
 import { DesktopSessions, type DesktopUser, runnerUser, systemDesktopUser } from "./desktop-session";
 import { EgressObservation, probeEgress } from "./egress";
 import { EGRESS_RELAY_SOCKET, startEgressRelay } from "./egress-relay";
-import { EGRESS_SHARE_FILE, EgressShare } from "./egress-share";
+import { EgressShare } from "./egress-share";
 import { NetworkChangingError, RUNNER_VERSION, RunnerError } from "./errors";
 import { cachedExecutors, EXECUTORS_TTL_MS, type ExecutorRun, inHomeDirs, setCodexForAgents } from "./executors";
 import { systemGitCache } from "./git";
@@ -1564,7 +1564,7 @@ export class RunnerDaemon implements RequestObserver {
       numbered: this.desktopRefsGiven,
       log,
     });
-    this.egressShare ??= new EgressShare({ file: path.join(home, EGRESS_SHARE_FILE) });
+    this.egressShare ??= new EgressShare();
     const streams = new DataSockets({
       url: connectUrl(config.server, "stream"),
       token: config.token,

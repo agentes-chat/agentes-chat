@@ -15,7 +15,9 @@ import {
   normalizeUserCode,
   openConnectLink,
   openXcode,
+  PHONE_POWER_LIMIT,
   pickIphoneOverWifi,
+  powerPhone,
   repairIphone,
   setDevicesHelp,
   startWifiPairing,
@@ -440,6 +442,28 @@ export function deviceAppRoutes(deps: AppDeps) {
     async (c) => {
       const { orgId, phoneId } = c.req.valid("param");
       await stopPhone({ db, pubsub, hub: hub() }, c.get("user").id, orgId, phoneId);
+      return c.body(null, 204);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/devices/phones/{phoneId}/power",
+      tags,
+      security,
+      summary: "Start or shut down a simulator or an emulator (who may use it or change it)",
+      description:
+        "Its computer boots the iOS simulator (and shows it in Simulator) or starts the Android emulator, or shuts it down; the devices list then shows it starting, ready or offline. A real phone is refused (`device.not_simulator`); the computer's own refusals come back as `device.power_*` with its words in `why`.",
+      request: { params: PhoneParams, body: body(z.object({ on: z.boolean() }).strict()) },
+      responses: { 204: noContent[204], 429: errorResponse("Too many starts"), ...errors },
+    }),
+    async (c) => {
+      const { orgId, phoneId } = c.req.valid("param");
+      const userId = c.get("user").id;
+      const limit = await deps.adapters.rateLimiter.consume(`phone-power:user:${userId}`, PHONE_POWER_LIMIT);
+      if (!limit.allowed) return apiError(c, 429, "rate_limited", "Too many tries. Try again in a few minutes.");
+      await powerPhone({ db, pubsub, hub: hub() }, userId, orgId, phoneId, c.req.valid("json").on);
       return c.body(null, 204);
     },
   );

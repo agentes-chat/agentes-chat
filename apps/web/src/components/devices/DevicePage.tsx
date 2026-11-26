@@ -11,8 +11,12 @@ import {
   personInControl,
   phoneLink,
   phoneSystem,
+  powerChoice,
   RUNNER_UPDATE_COMMAND,
+  SPILL_USES,
   shareInternetText,
+  spillOfUse,
+  spillUseOf,
   statusLook,
   statusSentence,
   taskChoices,
@@ -54,7 +58,13 @@ import { OrgMark } from "@/components/ProfilePhoto";
 import { useToast } from "@/lib/toast";
 import { ConnectDialog, type ConnectStart } from "./ConnectDialog";
 import { WifiIphoneOffer } from "./ConnectPhone";
-import { DeviceRemoveDialog, DeviceRenameDialog, DeviceRowView, type DeviceTarget } from "./DevicesSection";
+import {
+  DeviceRemoveDialog,
+  DeviceRenameDialog,
+  DeviceRowView,
+  type DeviceTarget,
+  usePowerAction,
+} from "./DevicesSection";
 import { PhoneLive } from "./PhoneLive";
 import { DevicePortrait, Facts, StatusPill, useOwner } from "./parts";
 import { useDevices, useStopPhone, useUpdateComputer, useUpdatePhone } from "./queries";
@@ -493,9 +503,30 @@ function ComputerPage({ machineId }: { machineId: string }) {
               }
             />
           )}
-          {/* Its help: its owner turns it on, an admin only off, and the workspace's switch off wins. Never a server
-              install's. */}
-          {d.mayManage && d.machineKind === "connected" && !d.systemMode && (
+          {/* Its help, its owner's one choice: never, only as backup, or first for their own agents' work. The workspace's
+              switch off wins. Never a server install's. */}
+          {owner && d.machineKind === "connected" && !d.systemMode && (
+            <PrefRow
+              id="dv-pc-spill"
+              icon="bolt"
+              label={t("devices.helpUse")}
+              hint={t(d.belongsToWorkspace ? "devices.helpUseTeamHint" : "devices.helpUseHint")}
+              status={helpOff ? t("devices.spillWorkspaceOff") : undefined}
+              control={
+                <Select
+                  size="sm"
+                  align="end"
+                  aria-label={t("devices.helpUse")}
+                  disabled={helpOff}
+                  value={helpOff ? "off" : spillUseOf(d)}
+                  onValueChange={(use) => save({ id: d.id, spill: spillOfUse(use) })}
+                  options={SPILL_USES.map((use) => ({ value: use, label: t(`devices.helpUses.${use}`) }))}
+                />
+              }
+            />
+          )}
+          {/* Someone else's computer: an admin may only turn its help off. */}
+          {!owner && d.mayManage && d.machineKind === "connected" && !d.systemMode && (
             <PrefRow
               id="dv-pc-spill"
               icon="bolt"
@@ -506,26 +537,8 @@ function ComputerPage({ machineId }: { machineId: string }) {
                 <Switch
                   id="dv-pc-spill-switch"
                   checked={d.spill.own && !helpOff}
-                  disabled={helpOff || (!owner && !d.spill.own)}
+                  disabled={helpOff || !d.spill.own}
                   onCheckedChange={(own) => save({ id: d.id, spill: { own } })}
-                />
-              }
-            />
-          )}
-          {/* Its owner's agents' work starts here first: only its owner chooses it, and only for their own agents. */}
-          {owner && d.machineKind === "connected" && !d.systemMode && (
-            <PrefRow
-              id="dv-pc-first"
-              icon="move"
-              label={t("devices.spillFirst")}
-              hint={t("devices.spillFirstHint")}
-              status={helpOff ? t("devices.spillWorkspaceOff") : undefined}
-              control={
-                <Switch
-                  id="dv-pc-first-switch"
-                  checked={(d.spill.first ?? false) && !helpOff}
-                  disabled={helpOff}
-                  onCheckedChange={(first) => save({ id: d.id, spill: { first } })}
                 />
               }
             />
@@ -651,6 +664,7 @@ function PhonePage({ phoneId }: { phoneId: string }) {
   const devices = useDevices(org.id);
   const update = useUpdatePhone(org.id);
   const stop = useStopPhone(org.id);
+  const power = usePowerAction();
   const back = useBackToList();
   const [renaming, setRenaming] = useState<DeviceTarget | null>(null);
   const [removing, setRemoving] = useState<DeviceTarget | null>(null);
@@ -663,6 +677,7 @@ function PhonePage({ phoneId }: { phoneId: string }) {
   const { phone: p, host } = found;
   const target: DeviceTarget = { kind: "phone", device: p };
   const owner = p.ownerUserId === me.user.id;
+  const powers = powerChoice(p);
   // A person in control gives it back on its screen instead.
   const canStop =
     p.status.kind === "in_use" &&
@@ -690,6 +705,16 @@ function PhonePage({ phoneId }: { phoneId: string }) {
         onClick={() => setConnect({ step: p.platform === "ios" ? "iphone" : "android", hostId: host.id })}
       >
         {t("devices.showMe")}
+      </Button>
+    ) : powers ? (
+      <Button
+        size="sm"
+        icon={powers === "start" ? "play" : "power"}
+        loading={power.pending}
+        disabled={power.pending}
+        onClick={() => power.run(p, powers === "start")}
+      >
+        {t(powers === "start" ? "devices.power.start" : "devices.power.stop")}
       </Button>
     ) : undefined;
   const link = phoneLink(t, p);

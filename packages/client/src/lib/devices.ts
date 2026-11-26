@@ -86,6 +86,16 @@ export const isIphoneWifiReason = (reason: string | null | undefined): reason is
 export const iphoneOverWifi = (p: { platform: string; transport: string | null }) =>
   p.platform === "ios" && p.transport === "wifi";
 
+/**
+ * Ligar or Desligar on a simulator or an emulator, for who may use or change it: start one that is offline while its
+ * computer is online, shut down one that runs and nobody holds. Null for a real phone, or nothing to do.
+ */
+export function powerChoice(p: Pick<PhoneDevice, "phoneKind" | "status" | "mayUse" | "mayManage">) {
+  if (p.phoneKind === "device" || !(p.mayUse || p.mayManage)) return null;
+  if (p.status.kind === "offline") return p.status.withHost ? null : "start";
+  return p.status.kind === "in_use" ? null : "stop";
+}
+
 /** A reason code the apps word (`devices.reason.<code>`); a code they don't know reads as a generic line. */
 const REASONS = new Set([
   "locked",

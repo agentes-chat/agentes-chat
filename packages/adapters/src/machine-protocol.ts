@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 89;
+export const MACHINE_PROTOCOL_VERSION = 90;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -758,6 +758,12 @@ export const TERMINAL_KEEP_PROTOCOL = 77;
  * accounts list, and `access.tools.devin` turns it on or off. The server never sends any of these to an older runner.
  */
 export const DEVIN_PROTOCOL = 89;
+/**
+ * `phone.power`: an iOS simulator or an Android emulator this computer runs started (`on`) or shut down, from the
+ * apps or by an agent. A Mac boots a simulator with `simctl` and shows it in Simulator; an emulator starts detached
+ * from the Android SDK's `emulator`, its AVD found by the model it showed (`model`). The server asks no older runner.
+ */
+export const SIMULATOR_POWER_PROTOCOL = 90;
 /** A kept terminal's name: the server puts the person's id in front of the app's, so each person reaches only theirs. */
 export const isTerminalKeep = (v: unknown): v is string => typeof v === "string" && /^[A-Za-z0-9_.-]{8,128}$/.test(v);
 /**
@@ -2656,8 +2662,6 @@ export const EGRESS_SHARE_PROTOCOL = 81;
 export const EGRESS_SHARE = {
   /** The web only: anything else leaves the workspace's computer its usual way. */
   ports: [80, 443] as readonly number[],
-  /** Bytes both ways a day (UTC) the lending computer carries before it refuses new connections until the next. */
-  dailyBytes: 5 * 1024 ** 3,
   /** Connections open at once through one lending computer. */
   open: 256,
   /** How long the lending computer waits to reach the destination. */
@@ -3313,6 +3317,8 @@ export type MachineRequest = (
   | { op: "xcode.open" }
   /** `PHONE_REPAIR_PROTOCOL`: repair the test helper of the iPhone `serial`; answers once its rebuild started. */
   | { op: "phone.repair"; serial: string }
+  /** `SIMULATOR_POWER_PROTOCOL`: start or shut down a simulator or emulator; answers once it is starting or off. */
+  | { op: "phone.power"; platform: PhonePlatform; serial: string; model: string; on: boolean }
   /** `PROBLEM_REPORT_PROTOCOL`: facts and the scrubbed log tail for a problem report. */
   | { op: "report.collect" }
   /** `EGRESS_SHARE_PROTOCOL`: one connection to `host`:`port`, its bytes on the data socket `streamId`. */
@@ -3401,6 +3407,7 @@ export const MACHINE_OPS: readonly MachineOp[] = [
   "cli.fetch",
   "xcode.open",
   "phone.repair",
+  "phone.power",
   "report.collect",
   "egress.dial",
 ];
@@ -3579,6 +3586,7 @@ export interface MachineReplies {
   "cli.fetch": { fetch: CliFetchState | null };
   "xcode.open": { opened: boolean };
   "phone.repair": { repairing: boolean };
+  "phone.power": { on: boolean };
   "report.collect": RunnerReportParts;
   "egress.dial": { connected: true };
 }
