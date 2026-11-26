@@ -255,7 +255,7 @@ export async function buildProblemReport(
     (await db.select({ n: sql<number>`count(*)::int` }).from(table))[0]?.n ?? 0;
 
   const facts: Facts = {
-    // Room for the rest under the contract's 120: at most 50 settings, 5 here, 10 from the screen, 8 of a run, 9 of a
+    // Room for the rest under the contract's 120: at most 50 settings, 5 here, 10 from the screen, 8 of a run, 14 of a
     // computer, 23 of its runner and 2 notes on what's missing.
     ...Object.fromEntries(Object.entries(sources.config).slice(0, 50)),
     "counts.orgs": await count(organizations),
