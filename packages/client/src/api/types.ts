@@ -2873,6 +2873,11 @@ export interface OrgSettings {
   mode?: WorkspaceMode;
   /** What agents without their own choice ask before acting (ADR 0173); absent from an older server. */
   approvalsLevel?: ApprovalsLevel;
+  /**
+   * In a sector, its channels, a hairline, then its agents (ADR 0240 amendment of 2026-11-26). Absent from an older
+   * server: off, agents first.
+   */
+  sectorChannelsFirst?: boolean;
 }
 
 /** `OrgSettings` the server works out itself, or sets through its own call: never in a PATCH. */

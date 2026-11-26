@@ -361,6 +361,8 @@ export interface FakeState {
   audit?: AuditRow[];
   /** The workspace switch "Agentes conferem o que o time já fez" (on when unset). */
   actionCheck?: boolean;
+  /** In a sector, its channels before its agents (ADR 0240 amendment of 2026-11-26). */
+  sectorChannelsFirst?: boolean;
   /** Automático's models per provider and tier (Settings › Chaves); none when unset. */
   autoModels?: OrgSettings["autoModels"];
   /**
@@ -2228,6 +2230,7 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         summaryModel: null,
         timezone: "America/Sao_Paulo",
         actionCheck: state.actionCheck ?? true,
+        sectorChannelsFirst: state.sectorChannelsFirst ?? false,
         autoModels: state.autoModels ?? {},
         teamWatch: state.lodiSwitches?.teamWatch ?? true,
         welcomePeople: state.lodiSwitches?.welcomePeople ?? true,
@@ -2261,6 +2264,7 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         if (input.defaultCredentialId !== undefined) state.defaultCredentialId = input.defaultCredentialId;
         if (input.defaultAgentBudgetUsd !== undefined) state.defaultAgentBudgetUsd = input.defaultAgentBudgetUsd;
         if (input.actionCheck !== undefined) state.actionCheck = input.actionCheck;
+        if (input.sectorChannelsFirst !== undefined) state.sectorChannelsFirst = input.sectorChannelsFirst;
         if (input.teamWatch !== undefined || input.welcomePeople !== undefined)
           state.lodiSwitches = {
             ...state.lodiSwitches,
@@ -2291,6 +2295,7 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
           summaryModel: null,
           timezone: input.timezone ?? "America/Sao_Paulo",
           actionCheck: state.actionCheck ?? true,
+          sectorChannelsFirst: state.sectorChannelsFirst ?? false,
           autoModels: state.autoModels ?? {},
           teamWatch: state.lodiSwitches?.teamWatch ?? true,
           welcomePeople: state.lodiSwitches?.welcomePeople ?? true,

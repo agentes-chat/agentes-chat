@@ -446,6 +446,11 @@ export const organizationSettings = pgTable("organization_settings", {
    * (`machines.spill_own`, ADR 0233). An admin turns it off for everyone; on without a row.
    */
   devicesHelp: boolean().notNull().default(true),
+  /**
+   * Inside a sector the sidebar and the phone's Setores list its channels, the hairline, then its agents (ADR 0240
+   * amendment of 2026-11-26). Off: agents first, as without a row.
+   */
+  sectorChannelsFirst: boolean().notNull().default(false),
   updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
 });
 

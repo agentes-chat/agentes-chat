@@ -53,6 +53,7 @@ import {
   orgOverview,
   pickerEndpoint,
   pickerModels,
+  publishSectorOrder,
   publishWorkspaceMode,
   queueInvitationEmail,
   requirePermission,
@@ -252,6 +253,10 @@ const Settings = z
     approvalsLevel: ApprovalsLevel.openapi({
       description:
         "What every agent without its own choice asks before acting (ADR 0173). `risky` by default. Set with `PUT …/approvals-level`.",
+    }),
+    sectorChannelsFirst: z.boolean().openapi({
+      description:
+        "In a sector, the sidebar and the phone's Setores list its channels, a hairline, then its agents (ADR 0240 amendment of 2026-11-26). Off by default: agents first. A change is audited (`organization.sector_order_changed`) and reaches every member's apps (`sectors.order`).",
     }),
     voiceAvailable: z.boolean().openapi({
       description: "Read only: this server has a speech engine now, from its environment or from its owner's Settings.",
@@ -726,6 +731,10 @@ export function managementRoutes(deps: AppDeps) {
             teamWatch: z.boolean().optional(),
             welcomePeople: z.boolean().optional(),
             rightHandLearns: z.boolean().optional(),
+            sectorChannelsFirst: z
+              .boolean()
+              .optional()
+              .openapi({ description: "In a sector, its channels before its agents (ADR 0240)." }),
           }),
         ),
       },
@@ -743,6 +752,9 @@ export function managementRoutes(deps: AppDeps) {
       });
       // Every member's apps reshape at once (ADR 0159): the mode is in `GET /me`, which they read again.
       if (input.mode !== undefined) await publishWorkspaceMode(adapters.pubsub, orgId, settings.mode);
+      // Every member's sidebar and Setores follow at once (ADR 0240 amendment of 2026-11-26).
+      if (input.sectorChannelsFirst !== undefined)
+        await publishSectorOrder(adapters.pubsub, orgId, settings.sectorChannelsFirst);
       const seesCost = await canViewCost(db, actor, orgId);
       // Only who configures the workspace gets here (`updateOrgSettings`).
       return c.json({ ...settingsFor(settings, seesCost, true), ...(await mediaAvailable()) }, 200);

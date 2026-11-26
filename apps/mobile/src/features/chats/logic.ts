@@ -531,21 +531,26 @@ export interface HomeSectorSection {
   kind: "sector" | "agents" | "dms" | "channels";
   /** The sector's own (its name, color and icon); null for the other three. */
   group: { id: string; name: string; color?: string | undefined; icon?: string | null | undefined } | null;
-  /** A sector's agents first, then its channels (from `channelsFrom`). */
+  /** A sector's agents, then its channels, or its channels first when the workspace says so; split at `lineAt`. */
   rows: ConversationRow[];
-  /** Where a sector's channels start in `rows`, after a hairline (ADR 0240); `rows.length` when it has none. */
-  channelsFrom: number;
+  /**
+   * Where a sector's second part starts in `rows`, after a hairline (ADR 0240): its channels, or its agents with
+   * channels first. `rows.length` (or 0) when it has one part only.
+   */
+  lineAt: number;
 }
 
 /**
  * Setores, as the web's sidebar (ADR 0083, ADR 0240): each sector with its agents' conversations, then its channels, in
  * the workspace's order of sectors; then the agents in no sector, the direct messages with people and the channels in
  * no sector. Threads and missions stay in Recentes and Threads. Each part is by latest activity (`recentRows`); an
- * empty section is left out.
+ * empty section is left out. With `channelsFirst` (`OrgSettings.sectorChannelsFirst`, ADR 0240 amendment of
+ * 2026-11-26) a sector lists its channels, then its agents.
  */
 export function sectorSections(
   rows: readonly ConversationRow[],
   groups: readonly { id: string; name: string; agentIds: readonly string[]; color?: string; icon?: string | null }[],
+  channelsFirst = false,
 ): HomeSectorSection[] {
   const ordered = recentRows([...rows]);
   const agentRows = ordered.filter((r) => r.kind === "dm" && r.with.type === "agent");
@@ -563,8 +568,8 @@ export function sectorSections(
       key: `sector:${g.id}`,
       kind: "sector",
       group: { id: g.id, name: g.name, color: g.color, icon: g.icon ?? null },
-      rows: [...mine, ...channels],
-      channelsFrom: mine.length,
+      rows: channelsFirst ? [...channels, ...mine] : [...mine, ...channels],
+      lineAt: channelsFirst ? channels.length : mine.length,
     };
   });
   const rest = (kind: "agents" | "dms" | "channels", list: ConversationRow[]): HomeSectorSection => ({
@@ -572,7 +577,7 @@ export function sectorSections(
     kind,
     group: null,
     rows: list,
-    channelsFrom: kind === "channels" ? 0 : list.length,
+    lineAt: kind === "channels" ? 0 : list.length,
   });
   sections.push(
     rest(

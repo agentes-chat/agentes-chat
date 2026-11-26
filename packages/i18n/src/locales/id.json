@@ -17788,6 +17788,8 @@
     "actionCheckPersonal": "Agen memeriksa apa yang sudah dilakukan",
     "actionCheckHelp": "Sebelum mengirim email, pesan, atau pull request, agen memeriksa apakah ada anggota tim yang sudah melakukannya ke orang atau tempat yang sama dalam 30 hari terakhir, dan tidak mengulanginya.",
     "actionCheckHelpPersonal": "Sebelum mengirim email atau pesan, agen memeriksa apakah kamu atau agen lain sudah melakukannya ke orang atau tempat yang sama dalam 30 hari terakhir, dan tidak mengulanginya.",
+    "sectorChannelsFirst": "Kanal sebelum agen di departemen",
+    "sectorChannelsFirstHelp": "Di setiap departemen, bilah samping dan ponsel menampilkan kanalnya dulu, lalu agennya, untuk semua orang di workspace.",
     "mode": {
       "label": "Mode ruang kerja",
       "team": "Tim",

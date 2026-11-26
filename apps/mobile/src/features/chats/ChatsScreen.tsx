@@ -1,4 +1,4 @@
-import { keys, useAgentGroups, useChannels, useMuteChannel } from "@agenteschat/client";
+import { keys, useAgentGroups, useChannels, useMuteChannel, useSettings } from "@agenteschat/client";
 import { canTalk, listsAgent } from "@agenteschat/client/lib/audience";
 import { waitingComputerByAgent } from "@agenteschat/client/lib/machine-outages";
 import { isRightHand, rightHandOf } from "@agenteschat/client/lib/right-hand";
@@ -241,6 +241,8 @@ function Home() {
   // Setores' sections collapse on their own (keyed by sector), remembered apart from the home's.
   const sectorsFold = useCollapsedSections<string>(STORED.homeSectorsCollapsed, null);
   const groups = useAgentGroups(orgId).data;
+  // The workspace's order inside a sector, as the web's sidebar (ADR 0240 amendment of 2026-11-26).
+  const channelsFirst = useSettings(orgId).data?.sectorChannelsFirst === true;
   // The widgets' section is memoized: its toggle stays one function.
   const toggleWidgets = useCallback(() => toggle("widgets"), [toggle]);
   // An administrator reads every channel (ADR 0151): the ones they aren't in wait at the end of the home.
@@ -303,13 +305,11 @@ function Home() {
   const recent = recentRows(withoutQuietGeneral(pinned.rows, hideGeneral));
   // Setores: the same conversations by the agents' sectors, each sector's agents never talked to as well (the web's
   // sidebar lists every agent of a sector).
-  const sectors = useMemo(
-    () =>
-      view === "sectors"
-        ? sectorSections([...withoutQuietGeneral(pinned.rows, hideGeneral), ...starters], groups ?? [])
-        : [],
-    [view, pinned.rows, hideGeneral, starters, groups],
-  );
+  const sectors = useMemo(() => {
+    if (view !== "sectors") return [];
+    const visible = [...withoutQuietGeneral(pinned.rows, hideGeneral), ...starters];
+    return sectorSections(visible, groups ?? [], channelsFirst);
+  }, [view, pinned.rows, hideGeneral, starters, groups, channelsFirst]);
   // In the split with nothing open yet, the most recent conversation opens beside the list (the right hand's after
   // every row of Recentes: it is never one of them).
   const first = opener ? firstChatOf(pinned.pin ? [...recent, pinned.pin] : recent) : null;
@@ -447,12 +447,12 @@ function Home() {
                         index={2 + i}
                         moves={section.rows.length <= MOVING_ROWS}
                       >
-                        {/* A sector's channels follow its agents under a hairline from edge to edge (ADR 0240). */}
-                        {!kept && i > 0 && i === section.channelsFrom ? <SectorLine /> : null}
+                        {/* A hairline from edge to edge between a sector's agents and its channels (ADR 0240). */}
+                        {!kept && i > 0 && i === section.lineAt ? <SectorLine /> : null}
                         <HomeRow
                           row={r}
                           facts={factsOf(r, agentStates.get(r.key))}
-                          divider={!kept && i > 0 && i !== section.channelsFrom}
+                          divider={!kept && i > 0 && i !== section.lineAt}
                           live={!closed && live++ < LIVE_ROWS}
                           pinLabel={menus.pinLabelOf(r)}
                           onHold={menus.openRowMenu}

@@ -18292,6 +18292,8 @@
     "actionCheckPersonal": "Ajanlar zaten yapılanları kontrol eder",
     "actionCheckHelp": "Bir e-posta, mesaj ya da pull request'ten önce ajan, son 30 günde ekipten birinin aynı kişiye ya da yere bunu zaten yapıp yapmadığını kontrol eder ve tekrarlamaz.",
     "actionCheckHelpPersonal": "Bir e-posta ya da mesajdan önce ajan, son 30 günde sizin ya da başka bir ajanın aynı kişiye veya yere bunu zaten yapıp yapmadığını kontrol eder ve tekrarlamaz.",
+    "sectorChannelsFirst": "Departmanlarda kanallar ajanlardan önce",
+    "sectorChannelsFirstHelp": "Her departmanda kenar çubuğu ve telefon önce kanalları, sonra ajanları gösterir. Bu, workspace'teki herkes için geçerlidir.",
     "mode": {
       "label": "Çalışma alanı modu",
       "team": "Ekip",

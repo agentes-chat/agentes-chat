@@ -18362,6 +18362,8 @@
     "actionCheckPersonal": "Agenten prüfen, was schon erledigt wurde",
     "actionCheckHelp": "Vor einer E-Mail, einer Nachricht oder einem Pull Request prüft der Agent, ob jemand im Team das in den letzten 30 Tagen schon bei derselben Person oder am selben Ort getan hat, und wiederholt es nicht.",
     "actionCheckHelpPersonal": "Vor einer E-Mail oder Nachricht prüft der Agent, ob du oder ein anderer Agent das in den letzten 30 Tagen schon bei derselben Person oder am selben Ort getan hat, und wiederholt es nicht.",
+    "sectorChannelsFirst": "Kanäle vor Agenten in Abteilungen",
+    "sectorChannelsFirstHelp": "In jeder Abteilung zeigen die Seitenleiste und das Handy zuerst ihre Kanäle, dann ihre Agenten, für alle im Workspace.",
     "mode": {
       "label": "Workspace-Modus",
       "team": "Team",

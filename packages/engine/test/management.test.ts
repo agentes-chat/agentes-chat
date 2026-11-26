@@ -16,6 +16,7 @@ import {
   deleteCredential,
   drainOutbox,
   ForbiddenError,
+  getOrgSettings,
   inviteMany,
   joinChannel,
   listAgentChannels,
@@ -66,6 +67,26 @@ describe("organization settings", () => {
     await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, { body: "@dev hi" });
     await drainOutbox(f.db, f.handlers);
     expect(JSON.stringify(f.provider.calls[0]?.request.system)).toContain("We deploy on Fridays never.");
+  });
+
+  test("channels before agents in sectors: off by default, who configures turns it on, audited once", async () => {
+    f = await setup();
+    const member = await addMember(f.db, f.org.id, "member");
+    // Every member reads it: their sidebar follows it (ADR 0240 amendment of 2026-11-26).
+    expect((await getOrgSettings(f.db, member.id, f.org.id)).sectorChannelsFirst).toBe(false);
+    await expect(updateOrgSettings(f.db, member.id, f.org.id, { sectorChannelsFirst: true })).rejects.toBeInstanceOf(
+      ForbiddenError,
+    );
+    const on = await updateOrgSettings(f.db, f.owner.id, f.org.id, { sectorChannelsFirst: true });
+    expect(on.sectorChannelsFirst).toBe(true);
+    expect((await getOrgSettings(f.db, member.id, f.org.id)).sectorChannelsFirst).toBe(true);
+    // Saving the same value again records nothing new.
+    await updateOrgSettings(f.db, f.owner.id, f.org.id, { sectorChannelsFirst: true });
+    const rows = await f.db
+      .select()
+      .from(schema.auditLog)
+      .where(and(eq(schema.auditLog.orgId, f.org.id), eq(schema.auditLog.action, "organization.sector_order_changed")));
+    expect(rows.map((r) => [r.actorId, r.details])).toEqual([[f.owner.id, { channelsFirst: true }]]);
   });
 });
 

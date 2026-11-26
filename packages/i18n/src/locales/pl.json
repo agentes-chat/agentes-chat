@@ -19551,6 +19551,8 @@
     "actionCheckPersonal": "Agenci sprawdzają, co już zostało zrobione",
     "actionCheckHelp": "Przed e-mailem, wiadomością lub pull requestem agent sprawdza, czy ktoś z zespołu nie zrobił już tego samego wobec tej samej osoby lub miejsca w ciągu ostatnich 30 dni, i tego nie powtarza.",
     "actionCheckHelpPersonal": "Przed e-mailem lub wiadomością agent sprawdza, czy ty lub inny agent nie zrobiliście już tego wobec tej samej osoby lub miejsca w ciągu ostatnich 30 dni, i tego nie powtarza.",
+    "sectorChannelsFirst": "Kanały przed agentami w działach",
+    "sectorChannelsFirstHelp": "W każdym dziale pasek boczny i telefon pokazują najpierw kanały, a potem agentów, dla wszystkich w workspace.",
     "mode": {
       "label": "Tryb przestrzeni roboczej",
       "team": "Zespół",

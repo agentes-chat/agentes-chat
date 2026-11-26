@@ -45150,6 +45150,12 @@
   "settings.actionCheckHelpPersonal": {
     "value": "Before an email or a message, the agent checks whether you or another agent already did it to the same person or place in the last 30 days, and doesn't repeat it."
   },
+  "settings.sectorChannelsFirst": {
+    "value": "Channels before agents in departments"
+  },
+  "settings.sectorChannelsFirstHelp": {
+    "value": "In each department, the sidebar and the phone list its channels first, then its agents, for everyone in the workspace."
+  },
   "settings.mode.label": {
     "value": "Workspace mode"
   },

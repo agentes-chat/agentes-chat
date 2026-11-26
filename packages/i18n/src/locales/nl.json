@@ -18429,6 +18429,8 @@
     "actionCheckPersonal": "Agents checken wat al gedaan is",
     "actionCheckHelp": "Voor een e-mail, bericht of pull request checkt de agent of iemand in het team dat in de afgelopen 30 dagen al bij dezelfde persoon of plek deed, en herhaalt het niet.",
     "actionCheckHelpPersonal": "Voor een e-mail of een bericht checkt de agent of jij of een andere agent dat de afgelopen 30 dagen al bij dezelfde persoon of plek deed, en doet het niet nog eens.",
+    "sectorChannelsFirst": "Kanalen vóór agents in afdelingen",
+    "sectorChannelsFirstHelp": "In elke afdeling tonen de zijbalk en de telefoon eerst de kanalen en dan de agents, voor iedereen in de workspace.",
     "mode": {
       "label": "Modus van de werkruimte",
       "team": "Team",

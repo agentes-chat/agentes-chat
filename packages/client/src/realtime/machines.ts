@@ -14,6 +14,7 @@ import type {
   Me,
   Member,
   OrgDeletion,
+  OrgSettings,
   OrgStanding,
 } from "../api/types";
 import { isCardKind } from "../lib/artifacts";
@@ -462,7 +463,8 @@ function prefetchCard(
  * computer, and one active again waits for one. `org.deleting` (an owner deleted it) sets its deletion there, so the
  * line on top shows at once and the workspace turns read-only. `org.limits` (a new plan, ADR 0079) asks for the
  * limits again, so a full workspace's invitations open by themselves. `agent.groups` (ADR 0083) says the groups of
- * agents changed, and `channels.layout` that a channel moved between sectors (ADR 0240): both lists are read again.
+ * agents changed, and `channels.layout` that a channel moved between sectors (ADR 0240): both lists are read again;
+ * `sectors.order` that a sector's channels now come before its agents, or after (its 2026-11-26 amendment).
  * `member.status` and `agent.status` (ADR 0084) refetch the people and the agents' presence. `org.members` (someone
  * joined or left, a role changed, ADR 0085, or a person's name, handle or photo) refetches the people, Members, each
  * channel's roster, the roles, `me`, the agents, the
@@ -528,6 +530,19 @@ export function applyWorkspaceEvent(qc: QueryClient, orgId: string, event: { typ
   if (event.type === "agent.groups" || event.type === "channels.layout") {
     void qc.invalidateQueries({ queryKey: keys.agentGroups(orgId) });
     void qc.invalidateQueries({ queryKey: keys.channels(orgId) });
+    return true;
+  }
+  // A sector's channels before or after its agents (ADR 0240 amendment of 2026-11-26): the sectors redraw at once.
+  if (event.type === "sectors.order") {
+    const e = event as { orgId?: unknown; channelsFirst?: unknown };
+    const target = typeof e.orgId === "string" ? e.orgId : orgId;
+    if (typeof e.channelsFirst === "boolean") {
+      const channelsFirst = e.channelsFirst;
+      qc.setQueryData<OrgSettings>(keys.settings(target), (s) =>
+        s ? { ...s, sectorChannelsFirst: channelsFirst } : s,
+      );
+    }
+    void qc.invalidateQueries({ queryKey: keys.settings(target) });
     return true;
   }
   if (event.type === "machine.provisioning") {

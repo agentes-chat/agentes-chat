@@ -101,6 +101,8 @@ export interface OrgSettings extends MediaSettings {
   rightHandLearns: boolean;
   /** What agents without their own choice ask before acting (ADR 0173). Set with `setWorkspaceApprovalsLevel`. */
   approvalsLevel: ApprovalsLevel;
+  /** In a sector, its channels before its agents (ADR 0240 amendment of 2026-11-26). Off by default. */
+  sectorChannelsFirst: boolean;
 }
 
 export const TEAM_SIZES = ["solo", "small", "medium", "large"] as const;
@@ -129,6 +131,7 @@ export async function getOrgSettings(db: Database, actorId: string, orgId: strin
     welcomePeople: s?.welcomePeople ?? true,
     rightHandLearns: s?.rightHandLearns ?? true,
     approvalsLevel: s?.approvalsLevel ?? DEFAULT_APPROVALS_LEVEL,
+    sectorChannelsFirst: s?.sectorChannelsFirst ?? false,
     ...mediaSettingsFrom(s),
   };
 }
@@ -227,6 +230,15 @@ export async function updateOrgSettings(
   }
   await db.transaction(async (tx) => {
     // The mode before this change, read in the transaction: a switch is audited with where it came from.
+    const channelsFirstBefore =
+      input.sectorChannelsFirst === undefined
+        ? undefined
+        : ((
+            await tx
+              .select({ on: organizationSettings.sectorChannelsFirst })
+              .from(organizationSettings)
+              .where(eq(organizationSettings.orgId, orgId))
+          )[0]?.on ?? false);
     const modeBefore =
       input.mode === undefined
         ? undefined
@@ -278,6 +290,7 @@ export async function updateOrgSettings(
       ...(input.teamWatch !== undefined ? { teamWatch: input.teamWatch } : {}),
       ...(input.welcomePeople !== undefined ? { welcomePeople: input.welcomePeople } : {}),
       ...(input.rightHandLearns !== undefined ? { rightHandLearns: input.rightHandLearns } : {}),
+      ...(input.sectorChannelsFirst !== undefined ? { sectorChannelsFirst: input.sectorChannelsFirst } : {}),
       ...(input.autoModels !== undefined
         ? { autoModels: mergeAutoModels(await storedAutoModels(), input.autoModels) }
         : {}),
@@ -295,6 +308,15 @@ export async function updateOrgSettings(
         action: "organization.mode_changed",
         target: { type: "organization", id: orgId },
         details: { from: modeBefore, to: input.mode },
+      });
+    }
+    if (input.sectorChannelsFirst !== undefined && channelsFirstBefore !== input.sectorChannelsFirst) {
+      await recordAudit(tx, {
+        orgId,
+        actor: { type: "person", id: actorId },
+        action: "organization.sector_order_changed",
+        target: { type: "organization", id: orgId },
+        details: { channelsFirst: input.sectorChannelsFirst },
       });
     }
   });

@@ -29,6 +29,7 @@ import {
   usePlaceChannel,
   usePrefetchMessages,
   usePrefetchRecent,
+  useSettings,
   useSidebarItems,
   useSkills,
   useTasksUnread,
@@ -402,6 +403,8 @@ export function Sidebar() {
   const shownAgents = team.filter((a) => canTalk(a) || (manages && view.showAllAgents && opensDm(a)));
   const groupsQuery = useAgentGroups(orgId);
   const groups = groupsQuery.data ?? [];
+  // The workspace's order inside a sector (ADR 0240 amendment of 2026-11-26): agents first unless it put channels first.
+  const channelsFirst = useSettings(orgId).data?.sectorChannelsFirst === true;
   const byGroup = agentSections(shownAgents, groups, (a) => a.id);
   const ordered = (items: Agent[]) => {
     const { top, rest } = splitPinned(items, pins.agents, (a) => a.id);
@@ -760,6 +763,20 @@ export function Sidebar() {
           const unread = list.reduce((n, a) => n + (dmOf.get(a.id)?.unread ?? 0), 0);
           const closedCount = sections.isOpen(id, groupsOpen) ? 0 : unread + here.unread;
           const agentZone = organize ? drag.zone(group.id) : undefined;
+          const agentPart = (
+            <>
+              {list.map((a, i) => (
+                <Fragment key={a.id}>
+                  {i > 0 && i === top.length && <hr className="sidebar__pins-end" />}
+                  {lineAt === others.indexOf(a) && line}
+                  {agentRow(a)}
+                </Fragment>
+              ))}
+              {lineAt !== null && lineAt >= others.length && line}
+            </>
+          );
+          // Between the agents and the channels, in whichever order the workspace keeps (ADR 0240).
+          const sectorLine = list.length > 0 && here.rows.length > 0 && <hr className="sidebar__sector-line" />;
           return (
             <SidebarSection
               key={group.id}
@@ -805,16 +822,19 @@ export function Sidebar() {
                 },
               }}
             >
-              {list.map((a, i) => (
-                <Fragment key={a.id}>
-                  {i > 0 && i === top.length && <hr className="sidebar__pins-end" />}
-                  {lineAt === others.indexOf(a) && line}
-                  {agentRow(a)}
-                </Fragment>
-              ))}
-              {lineAt !== null && lineAt >= others.length && line}
-              {list.length > 0 && here.rows.length > 0 && <hr className="sidebar__sector-line" />}
-              {here.rows}
+              {channelsFirst ? (
+                <>
+                  {here.rows}
+                  {sectorLine}
+                  {agentPart}
+                </>
+              ) : (
+                <>
+                  {agentPart}
+                  {sectorLine}
+                  {here.rows}
+                </>
+              )}
               {arranges && group.agentIds.length === 0 && here.rows.length === 0 && (
                 <span className="sidebar__drop-hint">{t("agentGroups.dropHereAll")}</span>
               )}

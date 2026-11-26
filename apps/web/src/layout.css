@@ -13636,7 +13636,7 @@ html:not([data-pointer]) .channel-perms__target:focus-visible {
 .sidebar:not([data-rail="true"]) .sidebar__section--group .sidebar__section-chevron {
   margin: 0 0 0 4px;
 }
-/* A setor's channels follow its agents under a hairline (ADR 0240), from the faces' column to the row's end. */
+/* A hairline between a setor's agents and its channels, in either order (ADR 0240), from the faces' column to the row's end. */
 .sidebar__sector-line {
   flex: none;
   margin: 4px 8px;

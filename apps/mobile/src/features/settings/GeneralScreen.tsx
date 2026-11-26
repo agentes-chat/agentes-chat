@@ -326,6 +326,8 @@ export function GeneralScreen() {
     </GroupedField>
   );
   const actionCheck = t(modeKey(org, "settings.actionCheck"));
+  // The order inside each sector, the same for everyone in the workspace (ADR 0240 amendment of 2026-11-26).
+  const sectorOrder = t("settings.sectorChannelsFirst");
   const checks = (
     <GroupedList>
       <GroupedRow
@@ -335,6 +337,14 @@ export function GeneralScreen() {
         toggle={settings.data?.actionCheck ?? true}
         disabled={!editable || !settings.data}
         onPress={() => save({ actionCheck: !(settings.data?.actionCheck ?? true) })}
+      />
+      <GroupedRow
+        label={sectorOrder}
+        labelLines={2}
+        hint={{ name: t("common.about", { label: sectorOrder }), text: t("settings.sectorChannelsFirstHelp") }}
+        toggle={settings.data?.sectorChannelsFirst ?? false}
+        disabled={!editable || !settings.data}
+        onPress={() => save({ sectorChannelsFirst: !(settings.data?.sectorChannelsFirst ?? false) })}
       />
     </GroupedList>
   );

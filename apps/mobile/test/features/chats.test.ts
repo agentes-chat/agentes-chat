@@ -792,9 +792,14 @@ describe("Conversas by sector (a team's Setores)", () => {
     ];
     const groups = [{ id: "sup", name: "Suporte", agentIds: ["ada", "bento", "clara"] }];
     const sections = sectorSections(rows, groups);
-    expect(sections.map((s) => [s.key, s.rows.map((r) => r.key), s.channelsFrom])).toEqual([
+    expect(sections.map((s) => [s.key, s.rows.map((r) => r.key), s.lineAt])).toEqual([
       ["sector:sup", ["dm:ada", "dm:bento", "dm:clara", "ch:suporte-n1", "ch:bugs"], 3],
       // A channel whose sector isn't listed shows with the ones in none.
+      ["channels", ["ch:geral", "ch:old"], 0],
+    ]);
+    // The workspace's Canais antes dos agentes (ADR 0240 amendment of 2026-11-26): the channels, the line, the agents.
+    expect(sectorSections(rows, groups, true).map((s) => [s.key, s.rows.map((r) => r.key), s.lineAt])).toEqual([
+      ["sector:sup", ["ch:suporte-n1", "ch:bugs", "dm:ada", "dm:bento", "dm:clara"], 2],
       ["channels", ["ch:geral", "ch:old"], 0],
     ]);
     // Closed: one line that keeps who wrote to me, who works and the unread channels, and one count for them all.

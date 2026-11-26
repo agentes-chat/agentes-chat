@@ -17,6 +17,19 @@ async function layoutChanged(orgId: string, options: Options) {
 }
 
 /**
+ * A sector's channels came before its agents, or after (`organization_settings.sector_channels_first`, ADR 0240
+ * amendment of 2026-11-26): every member's open apps redraw their sectors in the new order.
+ */
+export type SectorOrderEvent = { type: "sectors.order"; orgId: string; channelsFirst: boolean };
+
+export const publishSectorOrder = (pubsub: PubSub | undefined, orgId: string, channelsFirst: boolean) =>
+  publishOrgEvent(pubsub, {
+    type: "org.broadcast",
+    orgId,
+    event: { type: "sectors.order", orgId, channelsFirst } satisfies SectorOrderEvent,
+  });
+
+/**
  * The channels of one sector (null: those in none), in sidebar order. Only named channels that aren't archived: DMs
  * never sit in a sector.
  */

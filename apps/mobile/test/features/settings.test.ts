@@ -266,6 +266,15 @@ describe("a personal workspace's settings on the phone (ADR 0159 §3): one short
     );
   });
 
+  test("General has the switch for channels before agents in sectors, for who configures the workspace (ADR 0240)", () => {
+    const general = src("settings/GeneralScreen.tsx");
+    expect(general).toContain('const sectorOrder = t("settings.sectorChannelsFirst");');
+    expect(general).toContain("toggle={settings.data?.sectorChannelsFirst ?? false}");
+    expect(general).toContain(
+      "onPress={() => save({ sectorChannelsFirst: !(settings.data?.sectorChannelsFirst ?? false) })}",
+    );
+  });
+
   test("alone, what has nobody else to be for waits until someone joins, unless it was set", () => {
     // Who approves for you: only the right hand's part while alone with no cover set.
     expect(src("me/ApprovalsPage.tsx")).toContain("{solo && !cover ? null : (");

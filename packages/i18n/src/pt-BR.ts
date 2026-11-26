@@ -18856,6 +18856,9 @@ export const ptBR = {
       "Antes de mandar e-mail, mensagem ou abrir PR, o agente vê se alguém do time já fez isso com a mesma pessoa ou lugar nos últimos 30 dias, e não repete.",
     actionCheckHelpPersonal:
       "Antes de mandar e-mail ou mensagem, o agente vê se você ou outro agente já fez isso com a mesma pessoa ou lugar nos últimos 30 dias, e não repete.",
+    sectorChannelsFirst: "Canais antes dos agentes nos setores",
+    sectorChannelsFirstHelp:
+      "Em cada setor, a barra lateral e o celular mostram primeiro os canais e depois os agentes, para todos do workspace.",
     mode: {
       label: "Modo do workspace",
       team: "Time",

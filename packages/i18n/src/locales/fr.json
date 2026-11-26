@@ -18948,6 +18948,8 @@
     "actionCheckPersonal": "Les agents vérifient ce qui a déjà été fait",
     "actionCheckHelp": "Avant un e-mail, un message ou une pull request, l'agent vérifie si quelqu'un de l'équipe l'a déjà fait pour la même personne ou au même endroit dans les 30 derniers jours, et ne le refait pas.",
     "actionCheckHelpPersonal": "Avant un e-mail ou un message, l'agent vérifie si vous ou un autre agent l'avez déjà fait auprès de la même personne ou au même endroit ces 30 derniers jours, et ne le refait pas.",
+    "sectorChannelsFirst": "Canaux avant les agents dans les services",
+    "sectorChannelsFirstHelp": "Dans chaque service, la barre latérale et le téléphone affichent d'abord ses canaux, puis ses agents, pour tout le monde dans le workspace.",
     "mode": {
       "label": "Mode de l'espace de travail",
       "team": "Équipe",

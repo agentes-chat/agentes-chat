@@ -18971,6 +18971,8 @@
     "actionCheckPersonal": "Gli agenti controllano cosa è già stato fatto",
     "actionCheckHelp": "Prima di un'email, un messaggio o una pull request, l'agente controlla se qualcuno del team l'ha già fatto alla stessa persona o nello stesso posto negli ultimi 30 giorni, e non lo ripete.",
     "actionCheckHelpPersonal": "Prima di un'email o di un messaggio, l'agente controlla se tu o un altro agente l'avete già fatto con la stessa persona o nello stesso posto negli ultimi 30 giorni, e non lo ripete.",
+    "sectorChannelsFirst": "Canali prima degli agenti nei reparti",
+    "sectorChannelsFirstHelp": "In ogni reparto, la barra laterale e il telefono mostrano prima i canali e poi gli agenti, per tutti nel workspace.",
     "mode": {
       "label": "Modalità dello spazio di lavoro",
       "team": "Team",

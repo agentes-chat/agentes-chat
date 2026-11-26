@@ -17798,6 +17798,8 @@
     "actionCheckPersonal": "智能体会检查已经做过的事",
     "actionCheckHelp": "在发送邮件、消息或 Pull Request 之前，智能体会检查过去 30 天内团队中是否已有人对同一个人或同一个地方做过同样的事，避免重复。",
     "actionCheckHelpPersonal": "在发送邮件或消息之前，智能体会检查过去 30 天内你或其他智能体是否已经对同一个人或地方做过，避免重复。",
+    "sectorChannelsFirst": "部门中频道排在智能体前面",
+    "sectorChannelsFirstHelp": "在每个部门中，侧边栏和手机先显示频道，再显示智能体，对工作区中的所有人生效。",
     "mode": {
       "label": "工作区模式",
       "team": "团队",
