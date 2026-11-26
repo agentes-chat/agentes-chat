@@ -2129,6 +2129,11 @@ async function executeRunInner(
       .catch(() => {});
     return rows;
   };
+  // The run's context is kept by identity (its authority, its loaded groups): the hook goes on it, not on a copy.
+  ctx.slowSource = (source, ms) => {
+    prof.slowSources.push({ source, ms });
+    deps.onTiming?.("tool_source_ms", ms, { source, runId: run.id, orgId: run.orgId });
+  };
   // Independent reads together: the trigger, the tools it may use, and whether a new run's agent can think.
   const [triggerRows, granted, ai] = await Promise.all([
     !needsContext
@@ -2140,18 +2145,7 @@ async function executeRunInner(
             .from(schema.messages)
             .where(and(eq(schema.messages.orgId, run.orgId), eq(schema.messages.id, run.triggerMessageId)))
             .then(embedEarly),
-    deps.tools
-      ? deps.tools.granted(
-          {
-            ...ctx,
-            slowSource: (source, ms) => {
-              prof.slowSources.push({ source, ms });
-              deps.onTiming?.("tool_source_ms", ms, { source, runId: run.id, orgId: run.orgId });
-            },
-          },
-          heldBack,
-        )
-      : Promise.resolve([]),
+    deps.tools ? deps.tools.granted(ctx, heldBack) : Promise.resolve([]),
     needsContext && agent && !agent.archivedAt
       ? agentAiState({ db, gateway: deps.gateway, machines: deps.machines }, agent, run)
       : null,
