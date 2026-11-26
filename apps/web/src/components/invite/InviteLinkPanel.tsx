@@ -22,7 +22,6 @@ export function InviteLinkPanel() {
   const current = (links.data ?? []).find((l) => l.url !== null && l.plain !== false);
   return (
     <div className="invite-link">
-      <LocalOnlyInvites />
       {links.isPending ? (
         <LoadingLine width={320} />
       ) : current?.url ? (

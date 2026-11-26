@@ -1193,6 +1193,21 @@ describe("inviting people, a team's last step (ADR 0162, amended 2026-11-11)", (
     expect(landed.at(-1)?.arrival).toBe("1");
   });
 
+  test("a server only its own computer opens: said once over the addresses, before any e-mail goes", async () => {
+    const state = settingUp({ context: "Loja online", team: true });
+    state.authConfig = { ...state.authConfig, localOnly: true };
+    await renderApp("/onboarding", { api: createFakeApi(state) });
+    await settle(16);
+    expect(heading()).toBe(PEOPLE);
+    expect(
+      screen()
+        .getAllByRole("alert")
+        .map((a) => a.textContent),
+    ).toEqual([
+      "Este servidor só abre no computador onde ele roda, então quem você convidar não consegue abrir o convite.",
+    ]);
+  });
+
   test("Convidar depois opens the workspace with no invitation; an address already in is said and left out", async () => {
     const state = settingUp({ context: "Loja online", team: true });
     const { router } = await renderApp("/onboarding", { api: createFakeApi(state) });
