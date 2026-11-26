@@ -397,6 +397,7 @@ export function createSkillToolSource(
               ? await reviewAskedSkill(deps.context, {
                   orgId: ctx.orgId,
                   agentId: ctx.agentId,
+                  runId: ctx.runId,
                   name: str(input.name),
                   description: str(input.description),
                   body: str(input.body),
@@ -406,7 +407,7 @@ export function createSkillToolSource(
             if (!verdict)
               return {
                 content:
-                  "This turn read outside content, and the check that lets a skill through after it can't run now. Don't try again in this turn: tell the person it couldn't be made now and offer to try in a few minutes.",
+                  "This turn read outside content, and the check that lets a skill through after it couldn't run (no AI account with an API key for it, and Jev didn't answer). Don't try again in this turn: tell the person it wasn't made for that reason, and that an admin can add an AI account with an API key in Settings › AI accounts, or they can write the skill themselves in Settings › Skills.",
                 isError: true,
                 data: { code: "skill.outside_content" },
               };
