@@ -586,7 +586,7 @@
       "here": "Op deze computer"
     },
     "whyPaid": "Waarom betalen?",
-    "whyPaidText": "Cloud omvat de altijd aanstaande computer van de agents en iemand die de server onderhoudt. Op je eigen server draaien is gratis."
+    "whyPaidText": "Cloud omvat de altijd aanstaande computer van de agents en iemand die de server onderhoudt. Een eigen computer die met een Cloud-workspace verbonden is, vervangt het abonnement niet. agentes.chat op je eigen server of computer draaien is gratis."
   },
   "auth": {
     "email": "E-mail",
@@ -3513,7 +3513,7 @@
         "ended": "Ik antwoord hier zodra de workspace zich opnieuw op agentes.chat abonneert."
       },
       "askAdmin": "Ik antwoord hier zodra een beheerder het agentes.chat-abonnement heeft geregeld.",
-      "plan": "Het abonnement brengt de computer van de agents. De AI is die waarvoor je al betaalt: Claude, ChatGPT en andere, of een API-sleutel.",
+      "plan": "Het abonnement brengt de computer van de agents. De AI is die waarvoor je al betaalt: Claude, ChatGPT en andere, of een API-sleutel. Een eigen computer die hier verbonden is, vervangt het abonnement niet. agentes.chat op je eigen server of computer draaien is gratis.",
       "activeTitle": "Abonnement actief",
       "activeLine": "Koppel een AI en {{name}} antwoordt hier.",
       "receipt": "Bewaard",
@@ -7957,6 +7957,9 @@
     "link": "Link",
     "linkEmpty": "Maak de link om hem te kopiëren",
     "linkFailed": "De link kon niet worden gemaakt. {{cause}}",
+    "localOnly": "Deze server opent alleen op de computer waarop hij draait, dus de mensen die je uitnodigt kunnen hun uitnodiging niet openen.",
+    "localOnlyHow": "Zet in de agentes.chat-app op die computer Bereik het vanaf je telefoon en je teamgenoten aan bij Voorkeuren › Servers, of draai agentes.chat op een server die zij kunnen openen. Nodig ze daarna uit.",
+    "localOnlyHere": "Zet Bereik het vanaf je telefoon en je teamgenoten aan. Nodig ze daarna uit.",
     "never": "Verloopt nooit",
     "untilDate": "Tot {{date}}",
     "validFor": "Werkt {{ttl}} na het maken.",
@@ -11548,6 +11551,8 @@
       "on": "Spraakberichten",
       "onHelp": "Mensen in deze werkruimte kunnen audio sturen in gesprekken.",
       "noEngine": "Spraakberichten zijn hier nog niet beschikbaar.",
+      "noEngineAsk": "Spraakberichten staan nog niet aan. Wie deze server beheert, zet ze aan op deze pagina.",
+      "noEngineHere": "Spraakberichten gaan aan zodra je hieronder kiest wat spraak omzet in tekst.",
       "engineTitle": "Wat spraak omzet in tekst",
       "own": "Je eigen server",
       "ownHelp": "Whisper of Parakeet op je eigen machine. De audio blijft daar.",

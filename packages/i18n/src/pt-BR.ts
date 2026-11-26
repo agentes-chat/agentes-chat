@@ -610,7 +610,7 @@ export const ptBR = {
     },
     whyPaid: "Por que pago?",
     whyPaidText:
-      "O Cloud inclui o computador dos agentes sempre ligado e quem mantém o servidor. Rodar no seu servidor é grátis.",
+      "O Cloud inclui o computador dos agentes sempre ligado e quem mantém o servidor. Um computador seu conectado a um workspace do Cloud não substitui o plano. Rodar o agentes.chat no seu próprio servidor ou computador é grátis.",
   },
   auth: {
     email: "E-mail",
@@ -3702,7 +3702,7 @@ export const ptBR = {
         ended: "Respondo aqui quando o workspace assinar o agentes.chat de novo.",
       },
       askAdmin: "Respondo aqui quando um admin resolver o plano do agentes.chat.",
-      plan: "O plano traz o computador dos agentes. A IA é a que você já paga: Claude, ChatGPT e outras, ou uma chave de API.",
+      plan: "O plano traz o computador dos agentes. A IA é a que você já paga: Claude, ChatGPT e outras, ou uma chave de API. Um computador seu conectado aqui não substitui o plano. Rodar o agentes.chat no seu próprio servidor ou computador é grátis.",
       activeTitle: "Plano ativo",
       activeLine: "Conecte uma IA e {{name}} responde aqui.",
       receipt: "Guardada",
@@ -8475,6 +8475,11 @@ export const ptBR = {
     link: "Link",
     linkEmpty: "Crie o link para copiar",
     linkFailed: "Não deu para criar o link. {{cause}}",
+    localOnly:
+      "Este servidor só abre no computador onde ele roda, então quem você convidar não consegue abrir o convite.",
+    localOnlyHow:
+      "No app do agentes.chat desse computador, ligue Acessar pelo celular e pela equipe em Preferências › Servidores, ou rode o agentes.chat num servidor que essas pessoas consigam abrir. Depois convide.",
+    localOnlyHere: "Ligue Acessar pelo celular e pela equipe. Depois convide.",
     never: "Não expira",
     untilDate: "Até {{date}}",
     validFor: "Vale {{ttl}} depois de criado.",
@@ -12024,6 +12029,8 @@ export const ptBR = {
       on: "Mensagens de voz",
       onHelp: "Quem está no workspace pode mandar áudio nas conversas.",
       noEngine: "As mensagens de voz ainda não estão disponíveis aqui.",
+      noEngineAsk: "As mensagens de voz ainda não estão ligadas. Quem cuida deste servidor liga, nesta mesma página.",
+      noEngineHere: "As mensagens de voz ligam quando você escolher abaixo quem transforma a voz em texto.",
       engineTitle: "Quem transforma a voz em texto",
       own: "Servidor próprio",
       ownHelp: "Whisper ou Parakeet na sua máquina. O áudio não sai dela.",

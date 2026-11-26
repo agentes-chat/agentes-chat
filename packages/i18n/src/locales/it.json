@@ -599,7 +599,7 @@
       "here": "Su questo computer"
     },
     "whyPaid": "Perché pago?",
-    "whyPaidText": "Cloud include il computer degli agenti sempre acceso e qualcuno che mantiene il server. Eseguirlo sul tuo server è gratis."
+    "whyPaidText": "Cloud include il computer degli agenti sempre acceso e qualcuno che mantiene il server. Un tuo computer collegato a un workspace Cloud non sostituisce il piano. Far girare agentes.chat sul tuo server o computer è gratis."
   },
   "auth": {
     "email": "Email",
@@ -3653,7 +3653,7 @@
         "ended": "Risponderò qui quando il workspace si abbonerà di nuovo ad agentes.chat."
       },
       "askAdmin": "Risponderò qui quando un admin avrà sistemato il piano agentes.chat.",
-      "plan": "Il piano porta il computer degli agenti. L'IA è quella che paghi già: Claude, ChatGPT e altre, o una chiave API.",
+      "plan": "Il piano porta il computer degli agenti. L'IA è quella che paghi già: Claude, ChatGPT e altre, o una chiave API. Un tuo computer collegato qui non sostituisce il piano. Far girare agentes.chat sul tuo server o computer è gratis.",
       "activeTitle": "Piano attivo",
       "activeLine": "Collega un'IA e {{name}} risponde qui.",
       "receipt": "Conservato",
@@ -8214,6 +8214,9 @@
     "link": "Link",
     "linkEmpty": "Crea il link per copiarlo",
     "linkFailed": "Non è stato possibile creare il link. {{cause}}",
+    "localOnly": "Questo server si apre solo sul computer dove gira, quindi le persone che inviti non riescono ad aprire l'invito.",
+    "localOnlyHow": "Nell'app agentes.chat di quel computer, attiva Raggiungilo dal telefono e dai colleghi in Preferenze › Server, oppure fai girare agentes.chat su un server che possano aprire. Poi invitale.",
+    "localOnlyHere": "Attiva Raggiungilo dal telefono e dai colleghi. Poi invitale.",
     "never": "Non scade",
     "untilDate": "Fino al {{date}}",
     "validFor": "Vale {{ttl}} dalla creazione.",
@@ -11950,6 +11953,8 @@
       "on": "Messaggi vocali",
       "onHelp": "Le persone di questo spazio di lavoro possono inviare audio nelle conversazioni.",
       "noEngine": "I messaggi vocali non sono ancora disponibili qui.",
+      "noEngineAsk": "I messaggi vocali non sono ancora attivi. Chi gestisce questo server li attiva, in questa stessa pagina.",
+      "noEngineHere": "I messaggi vocali si attivano appena scegli qui sotto cosa trasforma la voce in testo.",
       "engineTitle": "Cosa trasforma la voce in testo",
       "own": "Il tuo server",
       "ownHelp": "Whisper o Parakeet sulla tua macchina. L'audio resta lì.",

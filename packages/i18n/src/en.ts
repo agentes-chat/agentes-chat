@@ -617,7 +617,7 @@ export const en = {
     },
     whyPaid: "Why pay?",
     whyPaidText:
-      "Cloud includes the agents' always-on computer and someone who keeps the server running. Running it on your own server is free.",
+      "Cloud includes the agents' always-on computer and someone who keeps the server running. A computer of yours connected to a Cloud workspace doesn't replace the plan. Running agentes.chat on your own server or computer is free.",
   },
   auth: {
     email: "Email",
@@ -3826,7 +3826,7 @@ export const en = {
       /** The same for whoever can't pay. */
       askAdmin: "I'll answer here once an admin sorts out the agentes.chat plan.",
       /** Behind the card's ⓘ on a first plan. */
-      plan: "The plan brings the agents' computer. The AI is the one you already pay for: Claude, ChatGPT and more, or an API key.",
+      plan: "The plan brings the agents' computer. The AI is the one you already pay for: Claude, ChatGPT and more, or an API key. A computer of yours connected here doesn't replace the plan. Running agentes.chat on your own server or computer is free.",
       /** The hold lifted: the plan is paid, an AI is what's left. */
       activeTitle: "Plan active",
       activeLine: "Connect an AI and {{name}} answers here.",
@@ -8522,6 +8522,12 @@ export const en = {
     link: "Link",
     linkEmpty: "Make the link to copy it",
     linkFailed: "Couldn't make the link. {{cause}}",
+    /** A computer's own server at an address only it opens (`auth-config.localOnly`), where people invite. */
+    localOnly:
+      "This server only opens on the computer it runs on, so the people you invite can't open their invitation.",
+    localOnlyHow:
+      "In the agentes.chat app on that computer, turn on Reach it from your phone and teammates in Preferences › Servers, or run agentes.chat on a server they can open. Then invite them.",
+    localOnlyHere: "Turn on Reach it from your phone and teammates. Then invite them.",
     never: "Never expires",
     untilDate: "Until {{date}}",
     validFor: "Works for {{ttl}} once made.",
@@ -12008,6 +12014,10 @@ export const en = {
       on: "Voice messages",
       onHelp: "People in this workspace can send audio in conversations.",
       noEngine: "Voice messages aren't available here yet.",
+      /** No engine, for everyone but the installation's owner, who alone sees the picker on this page. */
+      noEngineAsk: "Voice messages aren't on yet. Whoever runs this server turns them on, on this same page.",
+      /** No engine, for the installation's owner, with the picker under it. */
+      noEngineHere: "Voice messages turn on once you choose below what turns voice into text.",
       engineTitle: "What turns voice into text",
       own: "Your own server",
       ownHelp: "Whisper or Parakeet on your machine. The audio stays there.",

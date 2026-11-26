@@ -573,7 +573,7 @@
       "here": "Di komputer ini"
     },
     "whyPaid": "Kenapa berbayar?",
-    "whyPaidText": "Cloud mencakup komputer agen yang selalu menyala dan pihak yang merawat servernya. Menjalankan di server sendiri gratis."
+    "whyPaidText": "Cloud mencakup komputer agen yang selalu menyala dan pihak yang merawat servernya. Komputermu sendiri yang terhubung ke workspace Cloud tidak menggantikan paket. Menjalankan agentes.chat di server atau komputermu sendiri gratis."
   },
   "auth": {
     "email": "Email",
@@ -3375,7 +3375,7 @@
         "ended": "Saya akan menjawab di sini setelah workspace berlangganan agentes.chat lagi."
       },
       "askAdmin": "Saya akan menjawab di sini setelah admin membereskan paket agentes.chat.",
-      "plan": "Paket ini membawa komputer agen. AI-nya yang sudah kamu bayar: Claude, ChatGPT dan lainnya, atau kunci API.",
+      "plan": "Paket ini membawa komputer agen. AI-nya yang sudah kamu bayar: Claude, ChatGPT dan lainnya, atau kunci API. Komputermu sendiri yang terhubung di sini tidak menggantikan paket. Menjalankan agentes.chat di server atau komputermu sendiri gratis.",
       "activeTitle": "Paket aktif",
       "activeLine": "Hubungkan AI dan {{name}} menjawab di sini.",
       "receipt": "Disimpan",
@@ -7651,6 +7651,9 @@
     "link": "Tautan",
     "linkEmpty": "Buat tautan untuk menyalinnya",
     "linkFailed": "Tautan tidak bisa dibuat. {{cause}}",
+    "localOnly": "Server ini hanya terbuka di komputer tempat ia berjalan, jadi orang yang kamu undang tidak bisa membuka undangannya.",
+    "localOnlyHow": "Di aplikasi agentes.chat pada komputer itu, nyalakan Akses dari ponselmu dan rekan tim di Preferensi › Server, atau jalankan agentes.chat di server yang bisa mereka buka. Lalu undang mereka.",
+    "localOnlyHere": "Nyalakan Akses dari ponselmu dan rekan tim. Lalu undang mereka.",
     "never": "Tidak kedaluwarsa",
     "untilDate": "Sampai {{date}}",
     "validFor": "Berlaku {{ttl}} sejak dibuat.",
@@ -11073,6 +11076,8 @@
       "on": "Pesan suara",
       "onHelp": "Orang di ruang kerja ini bisa mengirim audio di percakapan.",
       "noEngine": "Pesan suara belum tersedia di sini.",
+      "noEngineAsk": "Pesan suara belum menyala. Yang mengelola server ini menyalakannya, di halaman ini juga.",
+      "noEngineHere": "Pesan suara menyala setelah kamu memilih di bawah apa yang mengubah suara menjadi teks.",
       "engineTitle": "Yang mengubah suara menjadi teks",
       "own": "Server milikmu sendiri",
       "ownHelp": "Whisper atau Parakeet di mesinmu. Audionya tetap di sana.",

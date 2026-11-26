@@ -1386,7 +1386,7 @@
     "value": "Why pay?"
   },
   "hosting.whyPaidText": {
-    "value": "Cloud includes the agents' always-on computer and someone who keeps the server running. Running it on your own server is free."
+    "value": "Cloud includes the agents' always-on computer and someone who keeps the server running. A computer of yours connected to a Cloud workspace doesn't replace the plan. Running agentes.chat on your own server or computer is free."
   },
   "auth.email": {
     "value": "Email"
@@ -8681,7 +8681,7 @@
     "value": "I'll answer here once an admin sorts out the agentes.chat plan."
   },
   "noAi.kept.plan": {
-    "value": "The plan brings the agents' computer. The AI is the one you already pay for: Claude, ChatGPT and more, or an API key."
+    "value": "The plan brings the agents' computer. The AI is the one you already pay for: Claude, ChatGPT and more, or an API key. A computer of yours connected here doesn't replace the plan. Running agentes.chat on your own server or computer is free."
   },
   "noAi.kept.activeTitle": {
     "value": "Plan active"
@@ -19349,6 +19349,15 @@
   "invites.linkFailed": {
     "value": "Couldn't make the link. {{cause}}"
   },
+  "invites.localOnly": {
+    "value": "This server only opens on the computer it runs on, so the people you invite can't open their invitation."
+  },
+  "invites.localOnlyHow": {
+    "value": "In the agentes.chat app on that computer, turn on Reach it from your phone and teammates in Preferences › Servers, or run agentes.chat on a server they can open. Then invite them."
+  },
+  "invites.localOnlyHere": {
+    "value": "Turn on Reach it from your phone and teammates. Then invite them."
+  },
   "invites.never": {
     "value": "Never expires"
   },
@@ -27849,6 +27858,12 @@
   },
   "voice.settings.noEngine": {
     "value": "Voice messages aren't available here yet."
+  },
+  "voice.settings.noEngineAsk": {
+    "value": "Voice messages aren't on yet. Whoever runs this server turns them on, on this same page."
+  },
+  "voice.settings.noEngineHere": {
+    "value": "Voice messages turn on once you choose below what turns voice into text."
   },
   "voice.settings.engineTitle": {
     "value": "What turns voice into text"

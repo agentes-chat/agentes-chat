@@ -586,7 +586,7 @@
       "here": "Bu bilgisayarda"
     },
     "whyPaid": "Neden ödüyorum?",
-    "whyPaidText": "Cloud, ajanların her zaman açık bilgisayarını ve sunucuyu ayakta tutan birini içerir. Kendi sunucunuzda çalıştırmak ücretsiz."
+    "whyPaidText": "Cloud, ajanların her zaman açık bilgisayarını ve sunucuyu ayakta tutan birini içerir. Bir Cloud workspace'ine bağladığınız kendi bilgisayarınız planın yerini tutmaz. agentes.chat'i kendi sunucunuzda veya bilgisayarınızda çalıştırmak ücretsiz."
   },
   "auth": {
     "email": "E-posta",
@@ -3498,7 +3498,7 @@
         "ended": "Çalışma alanı agentes.chat'e yeniden abone olunca burada yanıtlayacağım."
       },
       "askAdmin": "Bir yönetici agentes.chat planını çözünce burada yanıtlayacağım.",
-      "plan": "Plan, ajanların bilgisayarını getirir. Yapay zeka zaten ödediğindir: Claude, ChatGPT ve diğerleri ya da bir API anahtarı.",
+      "plan": "Plan, ajanların bilgisayarını getirir. Yapay zeka zaten ödediğindir: Claude, ChatGPT ve diğerleri ya da bir API anahtarı. Buraya bağladığınız kendi bilgisayarınız planın yerini tutmaz. agentes.chat'i kendi sunucunuzda veya bilgisayarınızda çalıştırmak ücretsiz.",
       "activeTitle": "Plan etkin",
       "activeLine": "Bir yapay zeka bağla, {{name}} burada yanıtlasın.",
       "receipt": "Saklandı",
@@ -7873,6 +7873,9 @@
     "link": "Bağlantı",
     "linkEmpty": "Kopyalamak için bağlantıyı oluşturun",
     "linkFailed": "Bağlantı oluşturulamadı. {{cause}}",
+    "localOnly": "Bu sunucu yalnızca çalıştığı bilgisayarda açılıyor, bu yüzden davet ettiğiniz kişiler davetlerini açamıyor.",
+    "localOnlyHow": "O bilgisayardaki agentes.chat uygulamasında Tercihler › Sunucular bölümünden Telefonunuzdan ve ekip arkadaşlarınızdan erişin seçeneğini açın ya da agentes.chat'i onların açabileceği bir sunucuda çalıştırın. Sonra onları davet edin.",
+    "localOnlyHere": "Telefonunuzdan ve ekip arkadaşlarınızdan erişin seçeneğini açın. Sonra onları davet edin.",
     "never": "Süresi dolmaz",
     "untilDate": "{{date}} tarihine kadar",
     "validFor": "Oluşturulduktan sonra {{ttl}} geçerli.",
@@ -11415,6 +11418,8 @@
       "on": "Sesli mesajlar",
       "onHelp": "Bu çalışma alanındaki kişiler konuşmalarda ses gönderebilir.",
       "noEngine": "Sesli mesajlar burada henüz kullanılamıyor.",
+      "noEngineAsk": "Sesli mesajlar henüz açık değil. Bu sunucuyu yöneten kişi onları bu sayfada açar.",
+      "noEngineHere": "Aşağıda sesi metne dönüştüreni seçtiğinizde sesli mesajlar açılır.",
       "engineTitle": "Sesi metne dönüştüren",
       "own": "Kendi sunucunuz",
       "ownHelp": "Makinenizdeki Whisper veya Parakeet. Ses orada kalır.",

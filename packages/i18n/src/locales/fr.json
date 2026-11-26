@@ -599,7 +599,7 @@
       "here": "Sur cet ordinateur"
     },
     "whyPaid": "Pourquoi payer ?",
-    "whyPaidText": "Cloud inclut l'ordinateur des agents toujours allumé et quelqu'un qui maintient le serveur. L'exécuter sur votre propre serveur est gratuit."
+    "whyPaidText": "Cloud inclut l'ordinateur des agents toujours allumé et quelqu'un qui maintient le serveur. Un ordinateur à vous connecté à un workspace Cloud ne remplace pas l'abonnement. Faire tourner agentes.chat sur votre propre serveur ou ordinateur est gratuit."
   },
   "auth": {
     "email": "E-mail",
@@ -3646,7 +3646,7 @@
         "ended": "Je répondrai ici dès que le workspace se réabonnera à agentes.chat."
       },
       "askAdmin": "Je répondrai ici dès qu'un admin aura réglé l'abonnement agentes.chat.",
-      "plan": "L'abonnement apporte l'ordinateur des agents. L'IA est celle que vous payez déjà : Claude, ChatGPT et d'autres, ou une clé API.",
+      "plan": "L'abonnement apporte l'ordinateur des agents. L'IA est celle que vous payez déjà : Claude, ChatGPT et d'autres, ou une clé API. Un ordinateur à vous connecté ici ne remplace pas l'abonnement. Faire tourner agentes.chat sur votre propre serveur ou ordinateur est gratuit.",
       "activeTitle": "Abonnement actif",
       "activeLine": "Connectez une IA et {{name}} répond ici.",
       "receipt": "Gardé",
@@ -8196,6 +8196,9 @@
     "link": "Lien",
     "linkEmpty": "Créez le lien pour le copier",
     "linkFailed": "Impossible de créer le lien. {{cause}}",
+    "localOnly": "Ce serveur ne s'ouvre que sur l'ordinateur où il tourne, donc les personnes que vous invitez ne peuvent pas ouvrir leur invitation.",
+    "localOnlyHow": "Dans l'app agentes.chat de cet ordinateur, activez Y accéder depuis votre téléphone et vos collègues dans Préférences › Serveurs, ou faites tourner agentes.chat sur un serveur qu'elles peuvent ouvrir. Puis invitez-les.",
+    "localOnlyHere": "Activez Y accéder depuis votre téléphone et vos collègues. Puis invitez-les.",
     "never": "N'expire jamais",
     "untilDate": "Jusqu'au {{date}}",
     "validFor": "Valable {{ttl}} après sa création.",
@@ -11922,6 +11925,8 @@
       "on": "Messages vocaux",
       "onHelp": "Les personnes de cet espace de travail peuvent envoyer des audios dans les conversations.",
       "noEngine": "Les messages vocaux ne sont pas encore disponibles ici.",
+      "noEngineAsk": "Les messages vocaux ne sont pas encore activés. La personne qui gère ce serveur les active, sur cette même page.",
+      "noEngineHere": "Les messages vocaux s'activent dès que vous choisissez ci-dessous ce qui transforme la voix en texte.",
       "engineTitle": "Ce qui transforme la voix en texte",
       "own": "Votre propre serveur",
       "ownHelp": "Whisper ou Parakeet sur votre machine. L'audio y reste.",

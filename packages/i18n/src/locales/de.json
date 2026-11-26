@@ -586,7 +586,7 @@
       "here": "Auf diesem Computer"
     },
     "whyPaid": "Wofür bezahle ich?",
-    "whyPaidText": "Cloud enthält den immer eingeschalteten Computer der Agenten und jemanden, der den Server betreibt. Auf deinem eigenen Server ist es kostenlos."
+    "whyPaidText": "Cloud enthält den immer eingeschalteten Computer der Agenten und jemanden, der den Server betreibt. Ein eigener Computer, der mit einem Cloud-Workspace verbunden ist, ersetzt den Tarif nicht. agentes.chat auf deinem eigenen Server oder Computer zu betreiben ist kostenlos."
   },
   "auth": {
     "email": "E-Mail",
@@ -3514,7 +3514,7 @@
         "ended": "Ich antworte hier, sobald der Workspace agentes.chat wieder abonniert."
       },
       "askAdmin": "Ich antworte hier, sobald ein Admin den agentes.chat-Tarif geklärt hat.",
-      "plan": "Der Tarif bringt den Computer der Agenten. Die KI ist die, für die du schon zahlst: Claude, ChatGPT und andere oder ein API-Schlüssel.",
+      "plan": "Der Tarif bringt den Computer der Agenten. Die KI ist die, für die du schon zahlst: Claude, ChatGPT und andere oder ein API-Schlüssel. Ein eigener Computer, der hier verbunden ist, ersetzt den Tarif nicht. agentes.chat auf deinem eigenen Server oder Computer zu betreiben ist kostenlos.",
       "activeTitle": "Tarif aktiv",
       "activeLine": "Verbinde eine KI und {{name}} antwortet hier.",
       "receipt": "Aufgehoben",
@@ -7919,6 +7919,9 @@
     "link": "Link",
     "linkEmpty": "Erstelle den Link, um ihn zu kopieren",
     "linkFailed": "Der Link konnte nicht erstellt werden. {{cause}}",
+    "localOnly": "Dieser Server öffnet sich nur auf dem Computer, auf dem er läuft, deshalb können die Eingeladenen ihre Einladung nicht öffnen.",
+    "localOnlyHow": "Schalte in der agentes.chat-App auf diesem Computer unter Einstellungen › Server die Option Von deinem Handy und deinem Team erreichbar ein, oder betreibe agentes.chat auf einem Server, den sie öffnen können. Lade sie dann ein.",
+    "localOnlyHere": "Schalte Von deinem Handy und deinem Team erreichbar ein. Lade sie dann ein.",
     "never": "Läuft nie ab",
     "untilDate": "Bis {{date}}",
     "validFor": "Gilt {{ttl}} ab dem Erstellen.",
@@ -11478,6 +11481,8 @@
       "on": "Sprachnachrichten",
       "onHelp": "Personen in diesem Workspace können in Unterhaltungen Audio senden.",
       "noEngine": "Sprachnachrichten sind hier noch nicht verfügbar.",
+      "noEngineAsk": "Sprachnachrichten sind noch nicht eingeschaltet. Wer diesen Server betreibt, schaltet sie auf dieser Seite ein.",
+      "noEngineHere": "Sprachnachrichten werden eingeschaltet, sobald du unten wählst, was Sprache in Text umwandelt.",
       "engineTitle": "Was Sprache in Text umwandelt",
       "own": "Dein eigener Server",
       "ownHelp": "Whisper oder Parakeet auf deinem Rechner. Das Audio bleibt dort.",

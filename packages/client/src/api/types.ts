@@ -248,6 +248,8 @@ export interface AuthConfig {
   mobileErrorReports?: ErrorReportsConfig | null;
   /** An outside chat surface is bridged (ADR 0187); whether I may link it is `surfaces.list().allowed`. */
   surface?: boolean;
+  /** A computer's own install at an address only that computer opens: its invitation links work nowhere else. */
+  localOnly?: boolean;
   /**
    * This address is one the server's operator registered (ADR 0194): the pages before sign-in show its look, and sign-in
    * is by email alone. Null or absent on any other address.

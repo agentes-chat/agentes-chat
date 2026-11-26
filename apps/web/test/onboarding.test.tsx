@@ -580,7 +580,7 @@ describe("the plan step (agentes.chat Cloud)", () => {
       name: "Por que pago?",
     });
     expect(document.getElementById(why.getAttribute("aria-describedby") ?? "")?.textContent).toContain(
-      "Rodar no seu servidor é grátis.",
+      "Rodar o agentes.chat no seu próprio servidor ou computador é grátis.",
     );
   });
 

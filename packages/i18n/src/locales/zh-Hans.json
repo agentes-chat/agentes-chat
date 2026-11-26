@@ -573,7 +573,7 @@
       "here": "在这台电脑上"
     },
     "whyPaid": "为什么要付费？",
-    "whyPaidText": "Cloud 包含始终开机的智能体电脑，以及有人为你维护服务器。在你自己的服务器上运行是免费的。"
+    "whyPaidText": "Cloud 包含始终开机的智能体电脑，以及有人为你维护服务器。把你自己的电脑连接到 Cloud 工作区并不能代替套餐。在你自己的服务器或电脑上运行 agentes.chat 是免费的。"
   },
   "auth": {
     "email": "邮箱",
@@ -3362,7 +3362,7 @@
         "ended": "工作区重新订阅 agentes.chat 后，我会在这里回复。"
       },
       "askAdmin": "管理员处理好 agentes.chat 套餐后，我会在这里回复。",
-      "plan": "套餐包含智能体的电脑。AI 用的是你已经付费的：Claude、ChatGPT 等，或 API 密钥。",
+      "plan": "套餐包含智能体的电脑。AI 用的是你已经付费的：Claude、ChatGPT 等，或 API 密钥。在这里连接你自己的电脑并不能代替套餐。在你自己的服务器或电脑上运行 agentes.chat 是免费的。",
       "activeTitle": "套餐已生效",
       "activeLine": "连接 AI 后，{{name}} 会在这里回复。",
       "receipt": "已保留",
@@ -7655,6 +7655,9 @@
     "link": "链接",
     "linkEmpty": "创建链接后即可复制",
     "linkFailed": "无法创建链接。{{cause}}",
+    "localOnly": "这台服务器只能在运行它的电脑上打开，所以你邀请的人打不开邀请。",
+    "localOnlyHow": "在那台电脑的 agentes.chat 应用中，打开偏好设置 › 服务器里的“从你的手机和队友那里访问”，或者把 agentes.chat 运行在他们能打开的服务器上。然后再邀请他们。",
+    "localOnlyHere": "打开“从你的手机和队友那里访问”，然后再邀请他们。",
     "never": "永不过期",
     "untilDate": "至 {{date}}",
     "validFor": "创建后 {{ttl}}内有效。",
@@ -11088,6 +11091,8 @@
       "on": "语音消息",
       "onHelp": "这个工作区的成员可以在对话中发送语音。",
       "noEngine": "这里还不能使用语音消息。",
+      "noEngineAsk": "语音消息还没有开启。管理这台服务器的人可以就在这个页面开启。",
+      "noEngineHere": "在下方选好把语音转成文字的服务后，语音消息就会开启。",
       "engineTitle": "把语音转成文字的服务",
       "own": "你自己的服务器",
       "ownHelp": "你机器上的 Whisper 或 Parakeet。语音留在那里。",
