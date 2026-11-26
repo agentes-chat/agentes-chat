@@ -776,13 +776,22 @@ describe("a workspace being set up resumes from its data", () => {
     }
   });
 
-  test("a resumed proposal's pick goes back to how to start, never to it again by itself", async () => {
+  test("a proposal resumed from an earlier visit: its pick, from an AI it can't name, and its agent made", async () => {
     const state = settingUp({ proposal: proposal() });
     await renderApp("/onboarding", { api: createFakeApi(state) });
     await settle(14);
     expect(heading()).toBe(PICK);
-    // The pick has no Back of its own: the way back is the ask's, which the resumed pick skipped.
+    // This visit doesn't know which assistant it was asked of: the AI in general words.
     expect(eyebrow()).toBe("Proposta da sua IA · passo 2 de 3");
+    expect(says()).toBe("A sua IA achou três jeitos de começar.");
+    expect(lead()).toBe(
+      "A sua IA achou as três tarefas que mais tomam o seu tempo. Comece por uma: as outras ficam para depois.",
+    );
+    await click(button(/^Criar o Caio/), 20);
+    expect(calls(state, "firstAgents.pick").map((c) => c.args)).toEqual([[ORG_ID, "fa-1", 0]]);
+    expect(heading()).toBe(WEEK);
+    // Its week in the same general words.
+    expect(document.querySelector(".onb-week__from")?.textContent).toBe("O que a sua IA contou");
   });
 
   test("picked in another tab meanwhile: this one moves on to the week when it comes back", async () => {
