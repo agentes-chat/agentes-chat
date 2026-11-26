@@ -219,7 +219,8 @@ export function AiAccountScreen({ accountId }: { accountId: string }) {
           },
         ]
       : []),
-    ...(plan && a.rights.canUse && a.status === "active"
+    // Any account the viewer may use, a sign-in as a key: the preview says which agents can take it (ADR 0094).
+    ...(a.rights.canUse && a.status === "active"
       ? [
           {
             label: t("aiAccounts.page.useAll"),

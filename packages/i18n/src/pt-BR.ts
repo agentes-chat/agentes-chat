@@ -11772,7 +11772,7 @@ export const ptBR = {
       useFor: "Usar também para o {{name}}",
       useFor_female: "Usar também para a {{name}}",
       useForMenu: "Usar para…",
-      /** "Usar em todos os agentes" on a coding plan key's row: one model of the key for every agent that may take it. */
+      /** "Usar em todos os agentes" on an account's row: the account, and a model of it, for every agent that may take it. */
       useAll: "Usar em todos os agentes",
       useAllTitle: "Usar o {{plan}} em todos os agentes",
       useAllSub: "Escolha o modelo que eles vão usar com esta chave.",

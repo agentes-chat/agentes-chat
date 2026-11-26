@@ -316,7 +316,8 @@ describe("IA e uso: the same account signed in again and again", () => {
     await page([copy("gpt_1")]);
     const one = await opened(rows()[0]);
     expect(one.textContent).not.toContain("desta conta, sem nenhum agente");
-    expect(await actions(one)).toEqual(["Renomear", "Desconectar"]);
+    // A sign-in, not only a key, goes on every agent that can take it ("Usar em outros agentes", ADR 0094).
+    expect(await actions(one)).toEqual(["Renomear", "Usar em todos os agentes", "Desconectar"]);
   });
 });
 

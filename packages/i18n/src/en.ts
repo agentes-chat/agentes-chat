@@ -11785,7 +11785,7 @@ export const en = {
       disconnected: "{{label}} disconnected.",
       useFor: "Use for {{name}} too",
       useForMenu: "Use for…",
-      /** "Usar em todos os agentes" on a coding plan key's row: one model of the key for every agent that may take it. */
+      /** "Usar em todos os agentes" on an account's row: the account, and a model of it, for every agent that may take it. */
       useAll: "Use on every agent",
       useAllTitle: "Use {{plan}} on every agent",
       useAllSub: "Choose the model they'll use with this key.",

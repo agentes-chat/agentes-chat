@@ -44,7 +44,7 @@ import { setupWords } from "./logic";
 /** Opens "Usar em outros agentes" for an agent's saved setup. */
 export const openAgentSetup = (agentId: string) => router.push(`/agent-setup/${agentId}` as never);
 
-/** Opens "Usar em outros agentes" on a plan account (`model`: one it may run), every agent that can take it picked. */
+/** Opens "Usar em outros agentes" on an account (`model`: one it may run), every agent that can take it picked. */
 export const openKeyForAll = (machineId: string, accountId: string, model?: string) =>
   router.push(
     `/key-for-all/${accountId}?machineId=${encodeURIComponent(machineId)}${model ? `&model=${encodeURIComponent(model)}` : ""}` as never,
