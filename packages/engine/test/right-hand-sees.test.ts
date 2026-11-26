@@ -856,7 +856,7 @@ describe("a routine or widget of a person's reads for them where only they read 
     expect((await use([createTeamStatusToolSource()], ctx, "team_status")).isError).toBeUndefined();
   });
 
-  test("a private board of theirs and their draft read for them; a board others see, or another's, doesn't", async () => {
+  test("a private board of theirs reads for them, a draft's test too; a board others see, or another's, doesn't", async () => {
     f = await setup({ rightHand: true });
     const bia = await addMember(f.db, f.org.id, "member", "Bia");
     const board = (audience: "private" | "workspace", owner = f.owner.id) =>
@@ -867,8 +867,10 @@ describe("a routine or widget of a person's reads for them where only they read 
     const reader = async (boardId: string, draft = false) =>
       rightHandReader(await routineRun(f.owner.id, await widgetOn(boardId, f.owner.id, draft)));
     expect(await reader(mine.id)).toBe(f.owner.id);
-    expect(await reader(shared.id, true)).toBe(f.owner.id);
+    expect(await reader(mine.id, true)).toBe(f.owner.id);
     expect(await reader(shared.id)).toBeNull();
+    // Confirmed onto that board, a draft keeps what its test showed.
+    expect(await reader(shared.id, true)).toBeNull();
     expect(await reader(hers.id)).toBeNull();
     const out = await use(
       issueTools(),

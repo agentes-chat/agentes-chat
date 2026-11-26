@@ -294,8 +294,8 @@ export async function rightHandReader(
 
 /**
  * Whether only `creator` reads what a routine's run says: its run works in an agent-only room (ADR 0053 §4), so the
- * room says nothing of that. A widget's refresh is read on its board: the creator's Home, a private board of theirs,
- * or their draft (ADR 0135 §8, §16). Any other routine's, where it reports: their own DM with the right hand.
+ * room says nothing of that. A widget's refresh (a draft's test too) is read on its board: the creator's Home or a
+ * private board of theirs (ADR 0135 §8). Any other routine's, where it reports: their own DM with the right hand.
  */
 async function readByCreatorAlone(db: Executor, orgId: string, agentId: string, brief: RoutineBrief, creator: string) {
   if (!brief.widget) return !brief.toDrive && readsAlone(db, brief.deliverTo.channelId, creator, agentId);
@@ -305,7 +305,7 @@ async function readByCreatorAlone(db: Executor, orgId: string, agentId: string, 
     .innerJoin(schema.dashboards, eq(schema.dashboards.id, schema.dashboardWidgets.dashboardId))
     .where(and(eq(schema.dashboardWidgets.orgId, orgId), eq(schema.dashboardWidgets.id, brief.widget.widgetId)));
   if (!row || row.board.deletedAt) return false;
-  if (row.widget.draft) return row.widget.createdByUserId === creator;
+  // A draft keeps its tested data once confirmed (ADR 0135 §16), so it reads only as its board would.
   return row.board.ownerUserId === creator && (row.board.kind === "home" || row.board.audience === "private");
 }
 

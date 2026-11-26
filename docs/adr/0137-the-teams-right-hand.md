@@ -470,8 +470,8 @@ threw its rows away. The owner decided it has every tool an agent can have, by d
   has one person and no agent but the right hand. A routine's own run counts as its creator where only they read what
   it says: only a routine's creator sets what it does. It works in its agent-only room (ADR 0053 §4), so what counts
   is where it speaks: a report to the creator's own DM with the right hand (not to the Drive), or a widget on the
-  creator's Home, on a private board of theirs, or their draft (ADR 0135 §8, §16). A widget on a board others see
-  reads as nobody. Memory is still kept only from the DM itself. A run a routine's report or work woke counts as
+  creator's Home or on a private board of theirs (ADR 0135 §8). A widget on a board others see reads as nobody, its
+  draft's test too, since a confirmed draft keeps its tested data (ADR 0135 §16). Memory is still kept only from the DM itself. A run a routine's report or work woke counts as
   nobody.
   - **The Vault** (`vaultPersonOfRun`): a personal item for its owner, a team item for its audience, only in that DM.
     Called in a channel, or by a routine that reports anywhere else, it reaches only team items open to everyone and
