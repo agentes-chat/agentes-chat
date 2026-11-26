@@ -11,7 +11,8 @@
   (`propose_first_agents`); `packages/engine/src/standing.ts` (`workRefusalBeforePlan`); routes
   `apps/server/src/routes/app/first-agents.ts`; client `packages/client/src/api/*` (`api.firstAgents`,
   `useFirstAgents`, `usePasteFirstAgents`, `usePickFirstAgent`, the user event `first_agents.received`) and
-  `packages/client/src/lib/apps.ts` (`aiAppAsk`)
+  `packages/client/src/lib/apps.ts` (`aiAppAsk`); the plan-waiting emails `packages/engine/src/email.ts`
+  (`sendPlanWaitingEmail`, `PlanWaitingPick`) and `email/words/*.ts` (`planWaiting.picked`)
 
 ## Context
 
@@ -40,9 +41,10 @@ fits "show me three, I pick one, on the onboarding's own page".
 2. **One shape for both ways in.** `firstAgentsInput` (zod) is what the MCP tool and the paste route take: `about` (at
    most 600 characters) and 1 to 3 options, each `name` (1 to 30), optional `handle`, `role` (1 to 40), `why` (1 to 280),
    `tasks` (1 to 4, each up to 120), `apps` (names), an optional `routine` (`title`, `schedule` in words, `prompt`, and
-   an optional `cron`), `today` (up to 3) and `instructions` (up to 4,000). The routine's `cron` is optional and not
-   part of the pasted JSON's example: words like "toda segunda às 8:00" need the workspace's own model to read, which a
-   workspace waiting for its plan doesn't have, so the MCP tool asks for the cron of the same schedule too.
+   an optional `cron`), `today` (up to 3) and `instructions` (up to 4,000). The routine's `cron` is optional: words like
+   "toda segunda às 8:00" need the workspace's own model to read, which a workspace waiting for its plan doesn't have,
+   so the MCP tool asks for the cron of the same schedule too, and so does the request for a pasted answer (its third
+   item, and `"cron":"0 8 * * 1"` in its JSON example), in the person's time zone.
 
 3. **Kept per person, newest first.** `first_agent_proposals` (`org_id`, `user_id`, the connection that sent it or none,
    `source` `mcp` or `paste`, `about`, `options` jsonb, `picked`, `picked_at`, `agent_id`, `created_at`; erased by a
@@ -51,9 +53,10 @@ fits "show me three, I pick one, on the onboarding's own page".
    mailbox's provider, else null), the routine's schedule read with the routines' own reader in the person's time zone
    (`cron` and `timezone`, null when neither the cron nor the words read), and a look with a different color for each
    option, one no agent there wears when there is one. It is audited (`first_agents.proposed`, with the source and the
-   app), limited to 10 an hour per person and workspace, and the person's apps hear `first_agents.received`. The
-   onboarding has no socket (it is outside the workspace's realtime provider), so it also reads the newest proposal
-   every few seconds while it waits. `GET …/first-agents` answers only the caller's own newest one.
+   app), limited to 10 an hour per person and workspace, and the person's apps hear `first_agents.received`: inside the
+   workspace, its realtime provider reads the newest proposal again. The onboarding has no socket (it is outside that
+   provider), so it also reads the newest proposal every few seconds while it waits. `GET …/first-agents` answers only
+   the caller's own newest one.
 
 4. **Picking makes one agent through the team card.** `pickFirstAgent` needs `create_agents` (members have it by
    default; without it, `create_agents_required`). It builds a one-agent team from the option and makes it through
@@ -78,6 +81,14 @@ fits "show me three, I pick one, on the onboarding's own page".
 7. **Open while the workspace waits for its first plan.** The onboarding runs before Checkout, so the app's sign-in,
    personal tokens, the tool and these routes all work on the `payment` hold (`workRefusalBeforePlan`; ADR 0119
    addendum of 2026-11-26). Every other refusal stands.
+
+8. **The plan-waiting emails speak of the picked agent.** When the workspace's first agent came from a pick, the two
+   reminders of ADR 0079 §6 speak of it instead of the counts: its name, role and first day as the option has them,
+   and the AI that proposed it when its app has a verified mark (Claude, ChatGPT). An hour after, that it is ready and
+   only the hiring is missing; on the third day, its first day's deliveries as a list and that hired today, it starts
+   today. Both lead to the billing page ("Hire the team"). The names stay in the body, made inert, and the subjects
+   say "your first agent" and how many deliveries wait (ADR 0069 §5). A workspace whose first agent came another way
+   keeps the counts.
 
 ## Consequences
 

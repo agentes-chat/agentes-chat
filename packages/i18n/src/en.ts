@@ -2065,9 +2065,10 @@ export const en = {
             "I just joined the {{org}} workspace on agentes.chat and I want to start with an AI agent that takes a repetitive piece of my role on the team off my day.",
           personal:
             "I want to start using agentes.chat with an AI agent that takes a repetitive piece of work off my day, at work or outside it.",
+          cron: "Also give each routine's day and time as a 5-field cron, in my time zone.",
           send: "4. Answer only with a JSON in this format, with no text before or after it:",
           example:
-            '{"about":"…","options":[{"name":"…","role":"…","why":"…","tasks":["…","…","…"],"apps":["…"],"routine":{"title":"…","schedule":"every Monday at 8:00","prompt":"…"},"today":["…","…"],"instructions":"…"}]}',
+            '{"about":"…","options":[{"name":"…","role":"…","why":"…","tasks":["…","…","…"],"apps":["…"],"routine":{"title":"…","schedule":"every Monday at 8:00","cron":"0 8 * * 1","prompt":"…"},"today":["…","…"],"instructions":"…"}]}',
         },
       },
     },
