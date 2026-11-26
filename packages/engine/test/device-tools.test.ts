@@ -562,6 +562,66 @@ describe("phone tools", () => {
     expect(android).toMatchObject({ isError: true, data: { code: "device.unsupported" } });
   });
 
+  test("simulator_start and simulator_stop: its computer boots or shuts it down, logged; a real phone isn't", async () => {
+    const w = await world();
+    await f.db.update(schema.machines).set({ audienceMode: "everyone" }).where(eq(schema.machines.id, w.mac.machineId));
+    await f.db
+      .update(schema.machinePhones)
+      .set({ audienceMode: "everyone" })
+      .where(eq(schema.machinePhones.id, w.phone.id));
+    const [sim] = await f.db
+      .insert(schema.machinePhones)
+      .values({
+        orgId: f.org.id,
+        machineId: w.mac.machineId,
+        platform: "ios",
+        kind: "simulator",
+        serial: "D54B1757-01C6-48BB-87F2-E6109AECE89A",
+        name: "iPhone 17 Pro",
+        model: "iPhone 17 Pro",
+        osVersion: "26.2",
+        ownerUserId: w.sam.id,
+        followsHost: true,
+        state: "offline",
+      })
+      .returning();
+    let refuse: MachineRequestError | null = null;
+    w.answer((req) => {
+      if (refuse) throw refuse;
+      return req.op === "phone.power" ? { on: req.on } : {};
+    });
+    const ctx = await runCtx();
+    const started = await call(ctx, "simulator_start", { phone: "iPhone 17 Pro" });
+    expect(started.isError).toBeFalsy();
+    expect(started.content).toStartWith("Sam's MacBook is starting iPhone 17 Pro.");
+    expect(w.asked.at(-1)).toEqual({
+      op: "phone.power",
+      platform: "ios",
+      serial: "D54B1757-01C6-48BB-87F2-E6109AECE89A",
+      model: "iPhone 17 Pro",
+      on: true,
+    });
+    const stopped = await call(ctx, "simulator_stop", { phone: "iPhone 17 Pro" });
+    expect(stopped.content).toBe("Sam's MacBook shut down iPhone 17 Pro.");
+    const audit = await f.db
+      .select()
+      .from(schema.auditLog)
+      .where(eq(schema.auditLog.targetId, sim?.id ?? ""));
+    expect(audit.map((a) => [a.action, a.actorType, a.runId])).toEqual([
+      ["device.phone_started", "agent", ctx.runId],
+      ["device.phone_shut_down", "agent", ctx.runId],
+    ]);
+    // The Mac without Xcode: the cause and the way out, in words.
+    refuse = new MachineRequestError("tool_missing", "Simulators need Xcode on this Mac.");
+    const noXcode = await call(ctx, "simulator_start", { phone: "iPhone 17 Pro" });
+    expect(noXcode).toMatchObject({ isError: true, data: { code: "device.power_tool_missing" } });
+    expect(noXcode.content).toBe(
+      "Sam's MacBook needs Xcode to run simulators. Install Xcode from the App Store there.",
+    );
+    const real = await call(ctx, "simulator_start", { phone: "Pixel 8" });
+    expect(real).toMatchObject({ isError: true, data: { code: "device.not_simulator" } });
+  });
+
   test("a phone stopped by its owner for this run stays stopped", async () => {
     const w = await world();
     await f.db

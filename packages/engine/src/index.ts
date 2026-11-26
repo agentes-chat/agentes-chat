@@ -128,6 +128,7 @@ export * from "./desktop";
 export * from "./desktop/pointer";
 export * from "./desktop/tools";
 export * from "./device-links";
+export * from "./device-power";
 export * from "./device-resolve";
 export * from "./device-tools";
 export * from "./device-waits";
