@@ -1191,6 +1191,11 @@ export const en = {
       },
       /** The rail's last step (ADR 0162): the AI the team thinks with, then the workspace. */
       ai: {
+        /** The step's heading, right after the plan (`titleNowPersonal`: a personal workspace's), and its lead. */
+        titleNow: "Now, the AI you already pay for",
+        titleNowPersonal: "Now, the AI you already pay for",
+        leadNow: "With it, the team starts today. The agents use your account, at no extra cost here.",
+        leadNowPersonal: "With it, your agents start today. They use your account, at no extra cost here.",
         /** A personal workspace's heading for the step (a team's is `arrival.connect.title`). */
         titlePersonal: "Connect an AI for your agents to think",
         /** A team's heading for it with no agents but its right hand: `{{name}}`, the right hand ("Lodi"). */
@@ -1224,6 +1229,10 @@ export const en = {
       people: {
         title: "Who works with you?",
         lead: "Invite your teammates. Each one gets an email to join.",
+        /** Right after the plan, while the team gets ready (`titleWhile`, `leadWhile`); `leadJoin` with no plan. */
+        titleWhile: "Meanwhile, invite the people you work with",
+        leadWhile: "It takes a few minutes. Each person you invite creates, on joining, the agent for their own work.",
+        leadJoin: "Each person you invite creates, on joining, the agent for their own work.",
         /** The button while no address is typed yet. */
         send: "Send invitations",
         /** The quiet link under the button: the workspace opens with no invitations. */

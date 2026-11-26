@@ -251,9 +251,20 @@ export function PickRows<V extends string>({
 
 /**
  * The team's sky as a box's header: at night and asleep beside their computer until the plan, in daylight, awake and
- * with the computer on once paid. Only the drawing: the words stay under it, where they read.
+ * with the computer on once paid. Only the drawing: the words stay under it, where they read. `computer`: false where
+ * the page can't say how the computer is (it would draw it on when it may still be getting ready).
  */
-export function Pass({ day, awake, cast }: { day: number; awake: boolean; cast: readonly ShellFace[] }) {
+export function Pass({
+  day,
+  awake,
+  cast,
+  computer = true,
+}: {
+  day: number;
+  awake: boolean;
+  cast: readonly ShellFace[];
+  computer?: boolean;
+}) {
   const options = useMemo(() => teamSky(day, 0), [day]);
   return (
     <div className="onb-pass" data-awake={awake ? "" : undefined} aria-hidden="true">
@@ -280,7 +291,7 @@ export function Pass({ day, awake, cast }: { day: number; awake: boolean; cast: 
               </span>
             ))}
           </div>
-          <ComputerPortrait kind={WORKSPACE_COMPUTER_KIND} state={awake ? "online" : "offline"} />
+          {computer && <ComputerPortrait kind={WORKSPACE_COMPUTER_KIND} state={awake ? "online" : "offline"} />}
         </div>
       </div>
     </div>

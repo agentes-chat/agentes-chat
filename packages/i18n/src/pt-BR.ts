@@ -1129,6 +1129,10 @@ export const ptBR = {
         ctaPersonal: "Ligar os agentes",
       },
       ai: {
+        titleNow: "Agora, a IA que vocês já assinam",
+        titleNowPersonal: "Agora, a IA que você já assina",
+        leadNow: "Com ela, o time começa hoje. Os agentes usam a conta de vocês, sem custo a mais aqui.",
+        leadNowPersonal: "Com ela, os seus agentes começam hoje. Eles usam a sua conta, sem custo a mais aqui.",
         titlePersonal: "Conecte uma IA para os seus agentes pensarem",
         titleAlone: "Conecte uma IA para o {{name}} pensar",
         titleAlone_female: "Conecte uma IA para a {{name}} pensar",
@@ -1154,6 +1158,9 @@ export const ptBR = {
       people: {
         title: "Quem trabalha com você?",
         lead: "Convide as pessoas do time. Cada uma recebe um e-mail para entrar.",
+        titleWhile: "Enquanto isso, chame quem trabalha com você",
+        leadWhile: "Leva alguns minutos. Cada pessoa que você chamar cria, ao entrar, o agente para o trabalho dela.",
+        leadJoin: "Cada pessoa que você chamar cria, ao entrar, o agente para o trabalho dela.",
         send: "Enviar convites",
         later: "Convidar depois",
       },

@@ -2,7 +2,7 @@ import { type Agent, type Me, type OrgSummary, useComputerSetup } from "@agentes
 import { type AiChoice, gateDims, planLabel, planMark, planOffSystem } from "@agenteschat/client/lib/no-ai";
 import { can } from "@agenteschat/client/lib/permissions";
 import { isRightHand } from "@agenteschat/client/lib/right-hand";
-import { Button, Chip, Icon, ProviderLogo } from "@agenteschat/ui";
+import { Chip, Icon, ProviderLogo } from "@agenteschat/ui";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { usePlanGates } from "@/components/ai/ConnectAiSteps";
@@ -12,10 +12,10 @@ import { OrgProvider, useOrg } from "@/components/org-context";
 import "./ai-step.css";
 
 /*
- * The onboarding's Connect an AI step (ADR 0162, amended), the last but a team's people: the arrival's choices as cards
- * (ADR 0160), each opening the same Connect dialog as anywhere in the app for the right hand and the whole team. The
- * step is answered by the data (every agent ready or waiting), never by the dialog closing, so a connect made in
- * another tab moves it on too.
+ * The onboarding's Connect an AI step (ADR 0162, amended), right after the plan and the last but a team's people: the
+ * arrival's choices as cards (ADR 0160), each opening the same Connect dialog as anywhere in the app for the right hand
+ * and the whole team. The step is answered by the data (every agent ready or waiting), never by the dialog closing, so
+ * a connect made in another tab moves it on too.
  */
 
 /** Asked again this often while the choices show: this page opens no socket, so no event says a plan can sign in. */
@@ -49,39 +49,28 @@ export function connectRequest(choice: AiChoice, agentIds: readonly string[]): C
 }
 
 /**
- * The step's body: the choices, with what not connecting means and Connect later beside it; once every agent thinks,
- * the AI picked here (when one was) and Go to the workspace, or Continue where a step comes after it (`next`: a team's
- * people, ADR 0162 amended 2026-11-11). `agents`: the right hand first, then the team.
+ * The step's body: the choices; once every agent thinks, the AI picked here (when one was). Its ways out (what not
+ * connecting means with "Connect later", and Continue or "Go to the workspace" once connected) are the box's footer,
+ * the page's. `agents`: the right hand first, then the team.
  */
 export function AiStep({
   orgId,
   agents,
   done,
-  leaving,
   picked,
-  next = false,
   onConnected,
-  onLater,
-  onEnter,
 }: {
   orgId: string;
   agents: readonly Agent[];
   /** Every agent thinks: the connected screen. */
   done: boolean;
-  /** The workspace is opening: both ways out wait. */
-  leaving: boolean;
   /** What was connected, as the page names it (the connected screen's tile), when it can. */
   picked: AiChoice | null;
-  /** A step comes after this one: the connected screen goes on to it instead of into the workspace. */
-  next?: boolean;
   /**
-   * What the dialog connected ("Claude"): the page names it on the rail and in the heading. Not the card picked, since
-   * the dialog's Back leads to every other choice.
+   * What the dialog connected ("Claude"): the page names it in the heading. Not the card picked, since the dialog's
+   * Back leads to every other choice.
    */
   onConnected?: (choice: AiChoice) => void;
-  /** Connect later: on to the next step, else the onboarding finishes as it is. */
-  onLater: () => void;
-  onEnter: () => void;
 }) {
   const { t } = useTranslation();
   const { org } = useOrg();
@@ -97,66 +86,39 @@ export function AiStep({
   useComputerSetup(orgId, true, poll);
   if (done)
     return (
-      <>
-        {picked && (
-          <div className="ac-optlist">
-            <div className="ac-optrow ac-optrow--lead onb-ai__connected">
-              <span className="ac-optrow__lead">
-                {picked === "key" ? (
-                  <span className="arrival-opts__tile" aria-hidden="true">
-                    <Icon name="key" />
-                  </span>
-                ) : (
-                  <ProviderLogo id={planMark(picked)} size="tile" />
-                )}
-              </span>
-              <span className="ac-optrow__text">
-                <span className="ac-optrow__title">
-                  {picked === "key" ? t("connectAi.key.title") : planLabel(t, picked)}
+      picked && (
+        <div className="ac-optlist">
+          <div className="ac-optrow ac-optrow--lead onb-ai__connected">
+            <span className="ac-optrow__lead">
+              {picked === "key" ? (
+                <span className="arrival-opts__tile" aria-hidden="true">
+                  <Icon name="key" />
                 </span>
-                <span className="ac-optrow__desc">
-                  {picked === "key" ? t("connectAi.key.sub") : t(`connectAi.plan.${picked}.tiers`)}
-                </span>
+              ) : (
+                <ProviderLogo id={planMark(picked)} size="tile" />
+              )}
+            </span>
+            <span className="ac-optrow__text">
+              <span className="ac-optrow__title">
+                {picked === "key" ? t("connectAi.key.title") : planLabel(t, picked)}
               </span>
-              <Chip tone="done" icon="check">
-                {t("onboarding.flow.ai.connected")}
-              </Chip>
-            </div>
+              <span className="ac-optrow__desc">
+                {picked === "key" ? t("connectAi.key.sub") : t(`connectAi.plan.${picked}.tiers`)}
+              </span>
+            </span>
+            <Chip tone="done" icon="check">
+              {t("onboarding.flow.ai.connected")}
+            </Chip>
           </div>
-        )}
-        <div className="onb__actions">
-          <Button
-            variant="primary"
-            block
-            kbd={["↵"]}
-            data-enter=""
-            onClick={onEnter}
-            disabled={leaving}
-            loading={leaving}
-          >
-            {t(next ? "onboarding.actions.continue" : "onboarding.flow.ai.enter")}
-          </Button>
         </div>
-      </>
+      )
     );
   return (
-    <>
-      <div className="onb__answer">
-        <ConnectChoices
-          mayAddKey={can(org, "manage_credentials")}
-          dims={(c) => reader !== undefined && gateDims(gates.gateOf(c))}
-          offSystem={(c) => (reader !== undefined ? planOffSystem(t, gates.gateOf(c)) : null)}
-          onPick={(choice) =>
-            connect?.open({ ...connectRequest(choice, ids), ...(onConnected ? { onConnected } : {}) })
-          }
-        />
-      </div>
-      <p className="onb__skip">
-        <span className="muted">{t("arrival.connect.without")}</span>
-        <button type="button" className="ac-link" disabled={leaving} onClick={onLater}>
-          {t("onboarding.flow.ai.later")}
-        </button>
-      </p>
-    </>
+    <ConnectChoices
+      mayAddKey={can(org, "manage_credentials")}
+      dims={(c) => reader !== undefined && gateDims(gates.gateOf(c))}
+      offSystem={(c) => (reader !== undefined ? planOffSystem(t, gates.gateOf(c)) : null)}
+      onPick={(choice) => connect?.open({ ...connectRequest(choice, ids), ...(onConnected ? { onConnected } : {}) })}
+    />
   );
 }

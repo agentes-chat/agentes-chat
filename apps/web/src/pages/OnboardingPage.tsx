@@ -65,7 +65,7 @@ import { TeamWelcome } from "./onboarding/CelebrateStep";
 import { HireTeam } from "./onboarding/HireStep";
 import { PeopleStep } from "./onboarding/PeopleStep";
 import { FirstAgentPick } from "./onboarding/PickStep";
-import { AppWall, Box, BoxNote, PickRows, type ShellFace, World } from "./onboarding/Shell";
+import { AppWall, Box, BoxNote, Pass, PickRows, type ShellFace, World } from "./onboarding/Shell";
 import { FirstWeek } from "./onboarding/WeekStep";
 import "./onboarding.css";
 
@@ -392,9 +392,9 @@ export function OnboardingPage() {
       if (done.me) qc.setQueryData(keys.me, done.me);
       else await qc.invalidateQueries({ queryKey: keys.me });
       const params = { orgId: target.orgId };
-      // Wherever it opens, on its arrival (ADR 0160): the beta notice, then Connect an AI; the notice alone once the
-      // onboarding offered the AI (in this visit, or left for later in an earlier one), or when the plan was left for
-      // later (the right hand's card leads with the plan).
+      // Wherever it opens, on its arrival (ADR 0160): the welcome wizard, once, then Connect an AI; the wizard alone
+      // once the onboarding offered the AI (in this visit, or left for later in an earlier one), or when the plan was
+      // left for later (the right hand's card leads with the plan).
       const offered = aiSeen || aiLaterSaved || how === "skipped";
       const search = { [ARRIVAL_PARAM]: offered ? ARRIVAL_BETA_ONLY : 1 } as never;
       if (landingOf(how === "skipped" ? "skipped" : "done", personalNow) === "rightHand" && done.agentId)
@@ -543,6 +543,8 @@ export function OnboardingPage() {
   // The first agent, and the option it was picked from when the newest proposal made it (null for one brought from
   // another app): its week, its line on the plan and the photo's count say what its AI proposed.
   const firstAgent = team[0];
+  // The team awake, as the photo, the AI step's sky and the people step show it.
+  const teamFaces: ShellFace[] = team.map((a) => ({ id: a.id, name: a.name, look: lookOf(a) }));
   const latest = firstAgents.data ?? null;
   const madeFrom = latest && firstAgent && latest.agentId === firstAgent.id ? latest : null;
   const firstOption = madeFrom && madeFrom.picked !== null ? (madeFrom.options[madeFrom.picked] ?? null) : null;
@@ -928,7 +930,7 @@ export function OnboardingPage() {
             person={{ name: me.data?.user.name ?? "", image: me.data?.user.image ?? null }}
             first={lodiWords.first}
             lodi={lodiFace}
-            team={team.map((a) => ({ id: a.id, name: a.name, look: lookOf(a) }))}
+            team={teamFaces}
             plan={boughtPlan.offer?.name ?? null}
             personal={personalNow}
             aiDone={thinksNow}
@@ -942,13 +944,18 @@ export function OnboardingPage() {
 
     if (step === "people" && orgId)
       return {
-        cast: [lodiFace],
+        cast: [lodiFace, ...teamFaces],
         say: t(emails ? "onboarding.flow.lodi.people" : "onboarding.flow.lodi.peopleLink", lodiWords),
         box: (
           <Box
-            title={t("onboarding.flow.people.title")}
+            // Right after the plan, while the team's computer gets ready: the wait goes to the people.
+            title={t(hasPlanStep ? "onboarding.flow.people.titleWhile" : "onboarding.flow.people.title")}
             // A server that sends no email invites through its link only (ADR 0090).
-            lead={t(emails ? "onboarding.flow.people.lead" : "members.dialog.linkStep.lead")}
+            lead={
+              emails
+                ? t(hasPlanStep ? "onboarding.flow.people.leadWhile" : "onboarding.flow.people.leadJoin")
+                : t("members.dialog.linkStep.lead")
+            }
           >
             <PeopleStep
               orgId={orgId}
@@ -963,54 +970,69 @@ export function OnboardingPage() {
         ),
       };
 
-    // Connecting an AI.
+    // Connecting the AI they already pay for: the team on its daylight sky over the choices, the way out in the footer.
     const crew = lodi ? [lodi, ...team] : team;
+    const leavingAi = open.isPending || aiLater.isPending;
     return {
-      cast: [lodiFace],
-      say: aiDone
-        ? t(hasPeople ? "onboarding.flow.lodi.connectedThen" : "onboarding.flow.lodi.connected", lodiWords)
-        : hasPeople
-          ? // Not the last step: the people come after it.
-            t(alone ? "onboarding.flow.lodi.aiThenAlone" : "onboarding.flow.lodi.aiThen", lodiWords)
-          : t(personalNow || alone ? "onboarding.flow.lodi.aiPersonal" : "onboarding.flow.lodi.ai", lodiWords),
       box: orgId && (
         <Box
+          // No computer on it: whether it is on yet is the plan's moment's to say, not this step's.
+          cover={<Pass day={1} awake cast={[lodiFace, ...teamFaces].slice(0, 4)} computer={false} />}
+          // The plan bought in this tab, by its name, over the question it leads to.
+          eyebrow={boughtPlan.offer ? t("onboarding.celebrate.plan", { name: boughtPlan.offer.name }) : undefined}
           title={
             aiDone
               ? personalNow || alone
                 ? t("onboarding.flow.ai.doneTitlePersonal", agentGrammar(lodiName))
                 : t("onboarding.flow.ai.doneTitle", { org: name })
-              : personalNow
-                ? t("onboarding.flow.ai.titlePersonal")
-                : alone
-                  ? // The right hand alone (the start left with no agent): by its name.
-                    t("onboarding.flow.ai.titleAlone", agentGrammar(lodiName))
-                  : t("arrival.connect.title")
+              : t(personalNow ? "onboarding.flow.ai.titleNowPersonal" : "onboarding.flow.ai.titleNow")
           }
           lead={
             aiDone
               ? aiLabel
                 ? t("onboarding.flow.ai.doneLead", { label: aiLabel })
                 : t("onboarding.flow.ai.doneLeadAny")
-              : t("arrival.connect.text")
+              : t(personalNow ? "onboarding.flow.ai.leadNowPersonal" : "onboarding.flow.ai.leadNow")
+          }
+          note={aiDone ? undefined : <BoxNote>{t("arrival.connect.without")}</BoxNote>}
+          acts={
+            aiDone ? (
+              <Button
+                variant="primary"
+                kbd={["↵"]}
+                data-enter=""
+                loading={leavingAi}
+                disabled={leavingAi}
+                onClick={() => {
+                  // A team's goes on to inviting people; a personal workspace's opens.
+                  if (!hasPeople) return open.mutate("later");
+                  setAiLeft(true);
+                  setPicked(null);
+                }}
+              >
+                {t(hasPeople ? "onboarding.actions.continue" : "onboarding.flow.ai.enter")}
+              </Button>
+            ) : (
+              <Button
+                loading={leavingAi}
+                disabled={leavingAi}
+                // A team's goes on to inviting people; a personal workspace's finishes it.
+                onClick={() => (hasPeople ? aiLater.mutate(orgId) : open.mutate("later"))}
+              >
+                {t("onboarding.flow.ai.later")}
+              </Button>
+            )
           }
         >
-          <AiStep
-            orgId={orgId}
-            agents={crew}
-            done={aiDone}
-            leaving={open.isPending || aiLater.isPending}
-            picked={aiNamed}
-            next={hasPeople}
-            onConnected={(choice) => setAiPick({ choice, key: keyNow })}
-            // A team's goes on to inviting people; a personal workspace's finishes it.
-            onLater={() => (hasPeople ? aiLater.mutate(orgId) : open.mutate("later"))}
-            onEnter={() => {
-              if (!hasPeople) return open.mutate("later");
-              setAiLeft(true);
-              setPicked(null);
-            }}
-          />
+          {(!aiDone || aiNamed) && (
+            <AiStep
+              orgId={orgId}
+              agents={crew}
+              done={aiDone}
+              picked={aiNamed}
+              onConnected={(choice) => setAiPick({ choice, key: keyNow })}
+            />
+          )}
         </Box>
       ),
     };
