@@ -460,7 +460,7 @@
     "internet": "Ajanlar bu bilgisayarın internetini kullanır",
     "internetOn": "Ajanların açtığı siteler konumunu görür",
     "internetOff": "Kapalı: ajanlar her zamanki bağlantılarını kullanır",
-    "internetHint": "Çalışma alanının ajanları siteleri bu bilgisayarın bağlantısıyla açar. Yalnızca web siteleri, günde en fazla 5 GB, ve kendi ağındaki hiçbir şey asla. Bu bilgisayar çevrimdışıyken her zamanki bağlantılarını kullanırlar.",
+    "internetHint": "Çalışma alanının ajanları siteleri bu bilgisayarın bağlantısıyla açar. Yalnızca web siteleri açılır, kendi ağındaki hiçbir şeye asla erişilmez. Bu bilgisayar çevrimdışıyken her zamanki bağlantılarını kullanırlar.",
     "shareOff": "Şimdilik yalnızca siz",
     "shareHint": "{{org}} içindeki herkesin ajanları üzerinde sizin kullanıcınız olarak görev çalıştırabilir.",
     "addFolders": "Klasör ekle",

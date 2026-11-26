@@ -1277,6 +1277,8 @@ export interface ApiClient {
     forgetPhone(orgId: string, phoneId: string): Promise<void>;
     /** Takes the phone back from the agent using it. */
     stopPhone(orgId: string, phoneId: string): Promise<void>;
+    /** Starts (`on`) or shuts down a simulator or an emulator on its computer. */
+    powerPhone(orgId: string, phoneId: string, on: boolean): Promise<void>;
     createLink(orgId: string, kind: "server" | "computer"): Promise<ConnectLink>;
     link(orgId: string, linkId: string): Promise<ConnectLinkState>;
     approveRequest(

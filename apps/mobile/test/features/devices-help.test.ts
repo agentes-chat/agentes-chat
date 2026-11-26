@@ -6,19 +6,23 @@ const flat = (file: string) => readFileSync(join(import.meta.dir, "../../src", f
 
 /* Devices as extra capacity (ADR 0233) on the phone, as on the web. */
 describe("computers that help when the team's is full or away", () => {
-  test("a computer's page has one switch, its owner's to turn on, which the workspace's switch off overrides", () => {
+  test("someone else's computer has one switch, which an admin may only turn off and the workspace's switch overrides", () => {
     const page = flat("features/devices/ComputerSection.tsx");
     expect(page).toContain('label={t("devices.spillOwn")}');
     expect(page).not.toContain("devices.spillOthers");
+    expect(page).toContain("{brought && !mine && d.mayManage && !d.systemMode ? (");
     expect(page).toContain("toggle={spillOn && !helpOff}");
+    expect(page).toContain("disabled={helpOff || !spillOn}");
     expect(page).toContain('sub: t("devices.spillWorkspaceOff")');
   });
 
-  test("its owner alone may use it for their agents' work, a second switch; the line offers the three choices", () => {
+  test("its owner makes one choice of three (never, only as backup, first for their agents), as the line offers", () => {
     const page = flat("features/devices/ComputerSection.tsx");
-    expect(page).toContain('label={t("devices.spillFirst")}');
-    expect(page).toContain("{brought && d.ownerUserId === meId && !d.systemMode ? (");
-    expect(page).toContain("first.mutate(!firstOn");
+    expect(page).toContain('label={t("devices.helpUse")}');
+    expect(page).toContain("{brought && mine && !d.systemMode ? (");
+    expect(page).toContain("SPILL_USES.map((next) => ({");
+    expect(page).toContain("spill: spillOfUse(next)");
+    expect(page).not.toContain("devices.spillFirst");
     const line = flat("features/queue/QueueSheet.tsx");
     expect(line).toContain("SPILL_USES.map((use) => ({");
     expect(line).toContain("checked: use === spillUseOf(d),");
