@@ -14588,6 +14588,12 @@
         "2": "Crear plantillas de mensajes",
         "ask": "Enviar mensajes siempre pide tu aprobación"
       },
+      "trypost": {
+        "1": "Ver publicaciones y colas de cada red",
+        "2": "Ver estadísticas de todas las redes o de una sola",
+        "3": "Guardar ideas, etiquetas y firmas",
+        "ask": "Crear, publicar, cambiar y eliminar publicaciones siempre pide tu aprobación"
+      },
       "database": {
         "1": "Ver las tablas",
         "2": "Consultar los datos para responder",
@@ -14775,6 +14781,7 @@
       "pinterest": "Pines, tableros y estadísticas de Pinterest.",
       "reddit": "Publicaciones, comentarios y comunidades de Reddit.",
       "whatsapp": "Mensajes y plantillas de WhatsApp Business.",
+      "trypost": "Automatización de publicaciones en redes sociales.",
       "telegram": "Un bot tuyo de Telegram: sus chats, grupos y canales.",
       "x": "Publicaciones en tu cuenta de X: escribir, leer menciones y buscar.",
       "threads": "Publicaciones y respuestas en tu cuenta de Threads.",
@@ -15753,6 +15760,7 @@
       "unknown": "el nombre no lo dice",
       "read_only_hint": "el propio servicio dice que solo mira",
       "destructive_hint": "el propio servicio avisa que puede borrar o cambiar mucho",
+      "write_hint": "el propio servicio dice que crea o edita sin eliminar",
       "verb_read": "por su nombre, solo mira",
       "verb_write": "por su nombre, crea o edita",
       "verb_sensitive": "por su nombre, borra, envía o gasta",

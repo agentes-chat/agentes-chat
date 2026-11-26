@@ -14569,6 +14569,12 @@ export const en = {
         "2": "Create message templates",
         ask: "Sending messages always asks for your approval",
       },
+      trypost: {
+        "1": "See posts and queues on every network",
+        "2": "See analytics for every network or just one",
+        "3": "Save ideas, labels and signatures",
+        ask: "Creating, publishing, changing and deleting posts always ask for your approval",
+      },
       database: { "1": "See the tables", "2": "Query the data to answer", "3": "Never changes anything" },
       telegram: {
         "1": "Read what people write to the bot",
@@ -14754,6 +14760,7 @@ export const en = {
       pinterest: "Pinterest pins, boards and analytics.",
       reddit: "Reddit posts, comments and communities.",
       whatsapp: "WhatsApp Business messages and templates.",
+      trypost: "Social media post automation.",
       telegram: "A Telegram bot of yours: its chats, groups and channels.",
       x: "Posts on your X account: write, read mentions and search.",
       threads: "Posts and replies on your Threads account.",
@@ -15734,6 +15741,7 @@ export const en = {
       unknown: "the name doesn't tell",
       read_only_hint: "the service itself says it only looks",
       destructive_hint: "the service itself warns it can delete or change a lot",
+      write_hint: "the service itself says it creates or edits without deleting",
       verb_read: "by its name, it only looks",
       verb_write: "by its name, it creates or edits",
       verb_sensitive: "by its name, it deletes, sends or spends",

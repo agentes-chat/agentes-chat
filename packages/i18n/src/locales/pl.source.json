@@ -34231,6 +34231,18 @@
   "connectors.can.whatsapp.ask": {
     "value": "Sending messages always asks for your approval"
   },
+  "connectors.can.trypost.1": {
+    "value": "See posts and queues on every network"
+  },
+  "connectors.can.trypost.2": {
+    "value": "See analytics for every network or just one"
+  },
+  "connectors.can.trypost.3": {
+    "value": "Save ideas, labels and signatures"
+  },
+  "connectors.can.trypost.ask": {
+    "value": "Creating, publishing, changing and deleting posts always ask for your approval"
+  },
   "connectors.can.database.1": {
     "value": "See the tables"
   },
@@ -34716,6 +34728,9 @@
   },
   "connectors.descriptions.whatsapp": {
     "value": "WhatsApp Business messages and templates."
+  },
+  "connectors.descriptions.trypost": {
+    "value": "Social media post automation."
   },
   "connectors.descriptions.telegram": {
     "value": "A Telegram bot of yours: its chats, groups and channels."
@@ -37536,6 +37551,9 @@
   },
   "toolReview.reason.destructive_hint": {
     "value": "the service itself warns it can delete or change a lot"
+  },
+  "toolReview.reason.write_hint": {
+    "value": "the service itself says it creates or edits without deleting"
   },
   "toolReview.reason.verb_read": {
     "value": "by its name, it only looks"

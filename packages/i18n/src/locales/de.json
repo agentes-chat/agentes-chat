@@ -14142,6 +14142,12 @@
         "2": "Nachrichtenvorlagen erstellen",
         "ask": "Nachrichten senden fragt immer nach deiner Freigabe"
       },
+      "trypost": {
+        "1": "Beiträge und Warteschlangen jedes Netzwerks ansehen",
+        "2": "Statistiken für alle Netzwerke oder nur eins ansehen",
+        "3": "Ideen, Labels und Signaturen speichern",
+        "ask": "Beiträge erstellen, veröffentlichen, ändern und löschen fragt immer nach deiner Freigabe"
+      },
       "database": {
         "1": "Tabellen ansehen",
         "2": "Daten abfragen, um zu antworten",
@@ -14324,6 +14330,7 @@
       "pinterest": "Pins, Pinnwände und Statistiken auf Pinterest.",
       "reddit": "Beiträge, Kommentare und Communitys auf Reddit.",
       "whatsapp": "Nachrichten und Vorlagen von WhatsApp Business.",
+      "trypost": "Automatisierung von Social-Media-Beiträgen.",
       "telegram": "Ein eigener Telegram-Bot: seine Chats, Gruppen und Kanäle.",
       "x": "Beiträge auf deinem X-Konto: schreiben, Erwähnungen lesen und suchen.",
       "threads": "Beiträge und Antworten auf deinem Threads-Konto.",
@@ -15288,6 +15295,7 @@
       "unknown": "der Name verrät es nicht",
       "read_only_hint": "der Dienst selbst sagt, dass es nur schaut",
       "destructive_hint": "der Dienst selbst warnt, dass es viel löschen oder ändern kann",
+      "write_hint": "der Dienst selbst sagt, dass es erstellt oder bearbeitet, ohne zu löschen",
       "verb_read": "laut Name schaut es nur",
       "verb_write": "laut Name erstellt oder bearbeitet es",
       "verb_sensitive": "laut Name löscht, sendet oder bezahlt es",

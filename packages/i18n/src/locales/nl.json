@@ -14209,6 +14209,12 @@
         "2": "Berichtsjablonen maken",
         "ask": "Berichten versturen vraagt altijd om jouw goedkeuring"
       },
+      "trypost": {
+        "1": "Berichten en wachtrijen van elk netwerk bekijken",
+        "2": "Statistieken van alle netwerken of van één bekijken",
+        "3": "Ideeën, labels en handtekeningen bewaren",
+        "ask": "Berichten maken, publiceren, wijzigen en verwijderen vraagt altijd om jouw goedkeuring"
+      },
       "database": {
         "1": "De tabellen bekijken",
         "2": "De data bevragen om te antwoorden",
@@ -14391,6 +14397,7 @@
       "pinterest": "Pins, borden en statistieken op Pinterest.",
       "reddit": "Posts, reacties en community's op Reddit.",
       "whatsapp": "Berichten en sjablonen van WhatsApp Business.",
+      "trypost": "Automatisering van berichten op sociale media.",
       "telegram": "Een eigen Telegram-bot: zijn chats, groepen en kanalen.",
       "x": "Posts op je X-account: schrijven, vermeldingen lezen en zoeken.",
       "threads": "Posts en reacties op je Threads-account.",
@@ -15355,6 +15362,7 @@
       "unknown": "de naam zegt het niet",
       "read_only_hint": "de dienst zelf zegt dat hij alleen kijkt",
       "destructive_hint": "de dienst zelf waarschuwt dat hij veel kan verwijderen of wijzigen",
+      "write_hint": "de dienst zelf zegt dat hij maakt of bewerkt zonder te verwijderen",
       "verb_read": "aan zijn naam te zien kijkt hij alleen",
       "verb_write": "aan zijn naam te zien maakt of bewerkt hij",
       "verb_sensitive": "aan zijn naam te zien verwijdert, verstuurt of besteedt hij",

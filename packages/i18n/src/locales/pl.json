@@ -15194,6 +15194,12 @@
         "2": "Tworzenie szablonów wiadomości",
         "ask": "Wysyłanie wiadomości zawsze prosi o twoje zatwierdzenie"
       },
+      "trypost": {
+        "1": "Podgląd postów i kolejek w każdej sieci",
+        "2": "Podgląd statystyk wszystkich sieci lub jednej",
+        "3": "Zapisywanie pomysłów, etykiet i podpisów",
+        "ask": "Tworzenie, publikowanie, zmiana i usuwanie postów zawsze prosi o twoje zatwierdzenie"
+      },
       "database": {
         "1": "Podgląd tabel",
         "2": "Zapytania do danych, żeby odpowiedzieć",
@@ -15386,6 +15392,7 @@
       "pinterest": "Piny, tablice i statystyki na Pintereście.",
       "reddit": "Posty, komentarze i społeczności na Reddicie.",
       "whatsapp": "Wiadomości i szablony WhatsApp Business.",
+      "trypost": "Automatyzacja postów w mediach społecznościowych.",
       "telegram": "Twój bot w Telegramie: jego czaty, grupy i kanały.",
       "x": "Posty na Twoim koncie X: pisanie, czytanie wzmianek i wyszukiwanie.",
       "threads": "Posty i odpowiedzi na Twoim koncie Threads.",
@@ -16378,6 +16385,7 @@
       "unknown": "nazwa tego nie mówi",
       "read_only_hint": "sama usługa mówi, że tylko patrzy",
       "destructive_hint": "sama usługa ostrzega, że może dużo usunąć lub zmienić",
+      "write_hint": "sama usługa mówi, że tworzy lub edytuje bez usuwania",
       "verb_read": "sądząc po nazwie, tylko patrzy",
       "verb_write": "sądząc po nazwie, tworzy lub edytuje",
       "verb_sensitive": "sądząc po nazwie, usuwa, wysyła lub wydaje pieniądze",

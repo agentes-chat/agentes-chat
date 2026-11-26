@@ -13636,6 +13636,12 @@
         "2": "Membuat template pesan",
         "ask": "Mengirim pesan selalu meminta persetujuanmu"
       },
+      "trypost": {
+        "1": "Melihat postingan dan antrean di setiap jaringan",
+        "2": "Melihat analitik semua jaringan atau satu saja",
+        "3": "Menyimpan ide, label, dan tanda tangan",
+        "ask": "Membuat, menerbitkan, mengubah, dan menghapus postingan selalu meminta persetujuanmu"
+      },
       "database": {
         "1": "Melihat tabel",
         "2": "Menjalankan query ke data untuk menjawab",
@@ -13813,6 +13819,7 @@
       "pinterest": "Pin, papan, dan analitik Pinterest.",
       "reddit": "Postingan, komentar, dan komunitas Reddit.",
       "whatsapp": "Pesan dan template WhatsApp Business.",
+      "trypost": "Otomatisasi postingan media sosial.",
       "telegram": "Bot Telegram milik Anda: obrolan, grup, dan kanalnya.",
       "x": "Postingan di akun X Anda: menulis, membaca sebutan, dan mencari.",
       "threads": "Postingan dan balasan di akun Threads Anda.",
@@ -14763,6 +14770,7 @@
       "unknown": "namanya tidak menjelaskan",
       "read_only_hint": "layanannya sendiri bilang ini hanya melihat",
       "destructive_hint": "layanannya sendiri memperingatkan ini bisa menghapus atau mengubah banyak hal",
+      "write_hint": "layanannya sendiri bilang ini membuat atau mengedit tanpa menghapus",
       "verb_read": "dari namanya, ini hanya melihat",
       "verb_write": "dari namanya, ini membuat atau mengedit",
       "verb_sensitive": "dari namanya, ini menghapus, mengirim, atau mengeluarkan uang",

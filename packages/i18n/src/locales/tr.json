@@ -14072,6 +14072,12 @@
         "2": "Mesaj şablonları oluşturur",
         "ask": "Mesaj göndermek her zaman onayınızı ister"
       },
+      "trypost": {
+        "1": "Her ağdaki gönderileri ve kuyrukları görür",
+        "2": "Tüm ağların ya da tek bir ağın analizlerini görür",
+        "3": "Fikirleri, etiketleri ve imzaları kaydeder",
+        "ask": "Gönderi oluşturmak, yayınlamak, değiştirmek ve silmek her zaman onayınızı ister"
+      },
       "database": {
         "1": "Tabloları görür",
         "2": "Yanıt vermek için verileri sorgular",
@@ -14254,6 +14260,7 @@
       "pinterest": "Pinterest pinleri, panoları ve analizleri.",
       "reddit": "Reddit gönderileri, yorumları ve toplulukları.",
       "whatsapp": "WhatsApp Business mesajları ve şablonları.",
+      "trypost": "Sosyal medya gönderisi otomasyonu.",
       "telegram": "Size ait bir Telegram botu: sohbetleri, grupları ve kanalları.",
       "x": "X hesabınızdaki gönderiler: yazma, bahsetmeleri okuma ve arama.",
       "threads": "Threads hesabınızdaki gönderiler ve yanıtlar.",
@@ -15218,6 +15225,7 @@
       "unknown": "adı bir şey söylemiyor",
       "read_only_hint": "hizmetin kendisi yalnızca baktığını söylüyor",
       "destructive_hint": "hizmetin kendisi çok şeyi silebileceği ya da değiştirebileceği konusunda uyarıyor",
+      "write_hint": "hizmetin kendisi silmeden oluşturduğunu ya da düzenlediğini söylüyor",
       "verb_read": "adına bakılırsa yalnızca bakar",
       "verb_write": "adına bakılırsa oluşturur ya da düzenler",
       "verb_sensitive": "adına bakılırsa siler, gönderir ya da para harcar",

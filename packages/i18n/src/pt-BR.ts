@@ -14578,6 +14578,12 @@ export const ptBR = {
         "2": "Criar modelos de mensagem",
         ask: "Enviar mensagens sempre pede sua aprovação",
       },
+      trypost: {
+        "1": "Ver posts e filas de cada rede",
+        "2": "Ver métricas de todas as redes ou de uma só",
+        "3": "Guardar ideias, etiquetas e assinaturas",
+        ask: "Criar, publicar, mudar e apagar posts sempre pede sua aprovação",
+      },
       database: { "1": "Ver as tabelas", "2": "Consultar os dados para responder", "3": "Nunca altera nada" },
       telegram: {
         "1": "Ler o que as pessoas escrevem para o bot",
@@ -14759,6 +14765,7 @@ export const ptBR = {
       pinterest: "Pins, pastas e métricas do Pinterest.",
       reddit: "Posts, comentários e comunidades do Reddit.",
       whatsapp: "Mensagens e modelos do WhatsApp Business.",
+      trypost: "Automação de posts em redes sociais.",
       telegram: "Um bot seu do Telegram: suas conversas, grupos e canais.",
       x: "Posts na sua conta do X: escrever, ler menções e buscar.",
       threads: "Posts e respostas na sua conta do Threads.",
@@ -15709,6 +15716,7 @@ export const ptBR = {
       unknown: "não deu para saber pelo nome",
       read_only_hint: "o próprio serviço diz que só consulta",
       destructive_hint: "o próprio serviço avisa que pode apagar ou mudar muito",
+      write_hint: "o próprio serviço diz que cria ou edita sem apagar",
       verb_read: "pelo nome, só consulta",
       verb_write: "pelo nome, cria ou altera",
       verb_sensitive: "pelo nome, apaga, envia ou gasta",
