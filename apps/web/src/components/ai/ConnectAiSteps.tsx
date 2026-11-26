@@ -103,7 +103,15 @@ import { type ReactNode, useCallback, useEffect, useId, useRef, useState } from 
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
-import { ConnectHave, type HaveItem, HaveRow, haveId, renameOf, sortHave } from "@/components/arrival/ConnectHave";
+import {
+  ConnectHave,
+  type HaveItem,
+  HaveRow,
+  haveId,
+  haveMark,
+  renameOf,
+  sortHave,
+} from "@/components/arrival/ConnectHave";
 import { ToolOffWayOut } from "@/components/devices/ToolOneClick";
 import { useOrg } from "@/components/org-context";
 import { KeyMismatch, KeyRefused, ProviderSelect } from "@/components/ProviderKey";
@@ -112,7 +120,7 @@ import { useDirectory } from "@/hooks/useDirectory";
 import { useRenameAccount } from "@/hooks/useRenameAccount";
 import { useToast } from "@/lib/toast";
 import { AddAccount, OpenPage, Step, StepTitle } from "./AddAccountFlow";
-import { CliMissing } from "./CliMissing";
+import { CliCheckAgain, CliMissing } from "./CliMissing";
 import { EndpointForm } from "./EndpointForm";
 import { PlanReplies, usePlanRepliesShown } from "./PlanReplies";
 import { PlanHold, usePlanHold } from "./plan-hold";
@@ -206,6 +214,7 @@ export function AiPicker({
   choice,
   onPick,
   dims,
+  offSystem,
   panel,
   have,
   keySelect,
@@ -214,6 +223,8 @@ export function AiPicker({
   choice: AiChoice | null;
   onPick: (choice: AiChoice) => void;
   dims?: (choice: PlanChoice) => boolean;
+  /** The computer's system where a plan doesn't run there (`planOffSystem`): its row says so before it is picked. */
+  offSystem?: (choice: PlanChoice) => string | null;
   panel: ReactNode;
   have?: (panel: ReactNode) => ReactNode;
   keySelect?: ReactNode;
@@ -248,11 +259,19 @@ export function AiPicker({
           value={choice ?? undefined}
           onValueChange={onPick}
           matches={(o, q) => matchesWords(planPickText(t, o.value), q)}
-          options={PLAN_CHOICES.map((c) => ({
-            value: c,
-            label: planLabel(t, c),
-            leading: <ProviderLogo id={planMark(c)} size="xs" off={dims?.(c)} />,
-          }))}
+          // Plans that don't run on the computer's system go last, under a heading that says so: every row stays
+          // one line tall.
+          options={[...PLAN_CHOICES.filter((c) => !offSystem?.(c)), ...PLAN_CHOICES.filter((c) => offSystem?.(c))].map(
+            (c) => {
+              const off = offSystem?.(c);
+              return {
+                value: c,
+                label: planLabel(t, c),
+                leading: <ProviderLogo id={planMark(c)} size="xs" off={dims?.(c)} />,
+                ...(off ? { group: t("connectAi.offSystemGroup", { system: off }) } : {}),
+              };
+            },
+          )}
         />
       )}
       {choice !== null && panel}
@@ -292,7 +311,7 @@ export function useExistingAi({
   agent: PlanAgent;
   credentials: readonly Credential[];
   toEveryone?: boolean;
-  /** The account the agent is set to think with is listed too: it has no AI, so that sign-in ended or never began. */
+  /** The account the agent is set to think with is listed too while signed out: that sign-in ended or never began. */
   withOwn?: boolean;
   onUsed: (agentId: string, used: ExistingUsed) => void;
 }) {
@@ -306,7 +325,12 @@ export function useExistingAi({
   const [busy, setBusy] = useState(false);
   const [refused, setRefused] = useState<ReturnType<typeof keyRefusal>>(null);
   const view = gates.view?.agentId === agent.id ? gates.view : undefined;
-  const rows = view ? existingAi(withOwn ? { ...view, account: null } : view, credentials) : null;
+  // Its own account only while signed out (signing in again is the way out): one still signed in is already what it
+  // thinks with, so picking it again changes nothing.
+  const own = view?.accounts.find((a) => a.id === view.account);
+  const rows = view
+    ? existingAi(withOwn && own?.status !== "active" ? { ...view, account: null } : view, credentials)
+    : null;
   const save = async (run: () => Promise<ExistingUsed>) => {
     setBusy(true);
     setRefused(null);
@@ -1377,7 +1401,7 @@ function PlanSteps({
       ),
       whose: t("connectAi.chat.yours"),
       group: { key: "mine", label: t("connectAi.chat.mine") },
-      mark: <ProviderLogo id={a.provider ?? a.kind} size="xs" />,
+      mark: haveMark(a.provider ?? a.kind),
       usage: a.usage,
       rename: renameOf(t, a, view?.computer?.machineId, rename),
     })),
@@ -1734,7 +1758,7 @@ function GateWait({
     );
   } else if (
     gate.state === "unsupported" &&
-    (gate.reason === "not_installed" || gate.reason === "cant_start") &&
+    (gate.reason === "not_installed" || gate.reason === "cant_start" || gate.reason === "cli_outdated") &&
     !hold &&
     row &&
     row.kind !== "managed" &&
@@ -1744,12 +1768,26 @@ function GateWait({
     // the line to run there.
     wait = <CliMissing machine={row} kind={kind} computer={computer} reason={gate.reason} useKey={keyButton} />;
   } else if (why && !(gate.state === "offline" && signingIn)) {
+    // A program there that won't start, on a computer someone connected: its own words, then a look once it's fixed.
+    const recheck =
+      gate.state === "unsupported" &&
+      gate.reason === "cant_start" &&
+      !hold &&
+      row?.kind !== "managed" &&
+      row?.cliInstall;
     wait = (
       <>
         <SettingNote icon={why.rechecks ? "clock" : "alert"} live={why.rechecks}>
           {why.text}
         </SettingNote>
-        {!hold && useKey}
+        {recheck && row ? (
+          <div className="ac-acts">
+            <CliCheckAgain machine={row} />
+            {useKey}
+          </div>
+        ) : (
+          !hold && useKey
+        )}
       </>
     );
   } else if (gate.state === "missing") {

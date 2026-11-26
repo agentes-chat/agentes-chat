@@ -1,6 +1,7 @@
 import { and, type Executor, eq, notInArray, type SQL, schema, sql } from "@agenteschat/db";
 import { PROVIDERS, type ProviderCause, ProviderError, providerCause } from "@agenteschat/providers";
 import { wakeLineOfRun } from "./approval-order";
+import { emptyAnswer } from "./brains/failure-causes";
 import { BRAIN_NAMES, type ComputerBrainKind, planName, SYSTEM_REFUSED } from "./brains/types";
 import { kickSignInLine } from "./computer-queue";
 import { cutText, pgSafeJson } from "./format";
@@ -161,16 +162,26 @@ const CLI_CODES: Readonly<Record<string, ComputerBrainKind>> = {
   grok_failed: "grok",
   antigravity_failed: "antigravity",
 };
-/** The runner's causes that are the provider's answer (runner protocol 50), never the CLI's or the computer's. */
+/**
+ * The runner's causes that are the provider's answer (runner protocol 50), never the CLI's or the computer's. A model
+ * the sign-in or its endpoint doesn't serve (`model_unavailable`, also read from the CLI's words by
+ * `withFailureCause`) reads as a key's would: "this model isn't available there, choose another".
+ */
 const PROVIDER_CAUSES: ReadonlySet<string> = new Set([
   "quota",
   "billing",
   "provider_transient",
   "auth_rejected",
   "account_disabled",
+  "model_unavailable",
 ]);
 /** The status a provider's cause stands for when the CLI gave none, so it reads as a key's would. */
-const CAUSE_STATUS: Readonly<Record<string, number>> = { quota: 429, billing: 402, provider_transient: 503 };
+const CAUSE_STATUS: Readonly<Record<string, number>> = {
+  quota: 429,
+  billing: 402,
+  provider_transient: 503,
+  model_unavailable: 404,
+};
 /** "API Error: 529 {…}": a provider's answer, as Claude Code words it. */
 const API_ERROR = /\bAPI Error:? (\d{3})\b/;
 /**
@@ -254,8 +265,8 @@ export function cliWords(failure: CliFailure): string {
 /**
  * A CLI's failure as its run stores it (`runErrorDetail` reads it back): the provider's as a key's
  * (`provider_error: cause@Claude: …`, `gave_up: …` after the outage's waits), else `cli_failed: Claude Code: what it
- * said`, `cli_sandbox: Grok Build` when its sandbox didn't start, or `cli_closed: Claude Code: exit 1` when it ended
- * without a word. Null for any other code.
+ * said`, `cli_sandbox: Grok Build` when its sandbox didn't start, `cli_empty: Codex` when it ended its turn with nothing
+ * in it, or `cli_closed: Claude Code: exit 1` when it ended without a word. Null for any other code.
  */
 export function cliFailureText(
   failure: CliFailure,
@@ -266,6 +277,8 @@ export function cliFailureText(
   if (!of) return null;
   if ("provider" in of) return providerFailureText(kind, of.provider);
   if (SANDBOX_FAILED.test(failure.message)) return `cli_sandbox: ${of.brain}`;
+  // It ended its turn with nothing in it: a CLI that answers nothing says why nowhere, so the line says what to do.
+  if (emptyAnswer({ message: failure.message, cause: failure.provider?.cause })) return `cli_empty: ${of.brain}`;
   if (of.words) return `cli_failed: ${of.brain}: ${of.words}`;
   return of.ended ? `cli_closed: ${of.brain}: ${of.ended}` : `cli_failed: ${of.brain}`;
 }
@@ -285,7 +298,7 @@ export function brainFailureText(failure: CliFailure, kind: ComputerBrainKind): 
 }
 
 /** `cli_failed: Claude Code: what it said` (`cliFailureText`); `cli_closed` when it ended without a word. */
-const CLI_FAILURE = /^cli_(failed|closed|sandbox|system): ([^:]+?)(?:: ([\s\S]*))?$/;
+const CLI_FAILURE = /^cli_(failed|closed|sandbox|system|empty): ([^:]+?)(?:: ([\s\S]*))?$/;
 
 /** A run that stopped on an error of ours that kept repeating (`gave up` in the executor): its stored text's start. */
 export const OUR_ERROR = "Stopped after an error";
@@ -330,6 +343,19 @@ export function providerFailureText(kind: "provider_error" | "gave_up", error: P
 
 /** Older stored errors name Claude's provider by the company, "Anthropic": they read with today's label. */
 const providerNow = (label: string) => (label === "Anthropic" ? PROVIDERS.anthropic.label : label);
+
+/**
+ * With `no_ai`: why (`NoAiCardReason`, kept in its `error` step by `failNoAi`) and the model a model's own limit names,
+ * so the receipt under the message says the real cause ("a IA do plano parou com um erro"), not "no AI" for all of them.
+ */
+export const noAiDetail = (why: string | null | undefined, model?: string | null) =>
+  why ? { errorCode: why, ...(model ? { errorParams: { model } } : {}) } : undefined;
+
+/** For a select over `agent_runs`: a `no_ai` run's `error` step (`noAiDetail` reads it), else null. */
+export const noAiWhySql = sql<{ code?: string; model?: string } | null>`(case when ${agentRuns.error} = 'no_ai' then
+  (select ${agentRunSteps.data} from ${agentRunSteps} where ${agentRunSteps.runId} = agent_runs.id
+  and ${agentRunSteps.kind} = 'error' and ${agentRunSteps.data}->>'reason' = 'no_ai'
+  order by ${agentRunSteps.seq} desc limit 1) end)`;
 
 /**
  * The stable code (and params) of a run's stored `error`, for the app to
@@ -477,6 +503,7 @@ export const SYSTEM_STOP_REASONS = [
   "agent_archived",
   "channel_deleted",
   "consultation_expired",
+  "rerouted",
   "mission_stopped",
   "mission_closed",
   "mission_executor_changed",

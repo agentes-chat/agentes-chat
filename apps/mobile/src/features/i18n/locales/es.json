@@ -4,23 +4,12 @@
     "send": "Enviar"
   },
   "categories": {
-    "title": "Categorías",
     "where": "Dónde aparece #{{channel}}",
     "whereHelp": "Cambia para todos. Quién participa en el canal no cambia.",
-    "create": "Crear",
-    "endOfList": "Va al final de la lista para todos.",
-    "channelCount_one": "{{count}} canal",
-    "channelCount_many": "{{count}} canales",
-    "channelCount_other": "{{count}} canales",
-    "none": "Todavía no hay categorías.",
-    "manageHint": "Orden, nombres y eliminar",
-    "deleteTitle": "¿Eliminar {{name}}?",
     "order": "Lugar en la lista",
     "up": "Subir",
     "down": "Bajar",
-    "position": "{{at}} de {{count}}.",
-    "channelPosition": "{{at}} de {{count}}.",
-    "itsChannels": "Canales"
+    "channelPosition": "{{at}} de {{count}}."
   },
   "blocks": {
     "send": "Enviar",
@@ -1070,6 +1059,12 @@
       "computer_no_chrome_one": "Una computadora necesita Google Chrome. Descárgalo en google.com/chrome",
       "computer_no_chrome_many": "Computadoras necesitan Google Chrome. Descárgalo en google.com/chrome",
       "computer_no_chrome_other": "Computadoras necesitan Google Chrome. Descárgalo en google.com/chrome",
+      "computer_down_one": "Una computadora no responde",
+      "computer_down_many": "Una computadora no responde",
+      "computer_down_other": "Una computadora no responde",
+      "computer_back_one": "Una computadora volvió",
+      "computer_back_many": "Una computadora volvió",
+      "computer_back_other": "Una computadora volvió",
       "app_created_one": "Una app de IA creó cosas para ti",
       "app_created_many": "Una app de IA creó cosas para ti",
       "app_created_other": "Una app de IA creó cosas para ti"
@@ -2198,6 +2193,7 @@
       "tool_request": "{{names}} te pide activar {{tool}} en tu {{device}}",
       "cli_request": "{{names}} te pide instalar {{tool}} en tu {{device}}",
       "folder_request": "{{names}} te pide la carpeta {{path}} en tu {{device}}",
+      "internet_shared": "Los agentes ahora abren sitios web a través del internet de {{device}}",
       "allowOnce": "Permitir una vez",
       "always": "Permitir siempre a {{name}}",
       "no": "No",
@@ -3381,7 +3377,8 @@
       "workspaceSub": "Clave de API del workspace",
       "key": "Clave de API",
       "keyDefault": "predeterminada del workspace",
-      "api": "API"
+      "api": "API",
+      "asksMove": "{{agent}} deja de usarla."
     },
     "missionAi": "IA",
     "missionLocked": "Quién hace el trabajo se elige antes de Iniciar. El modelo se puede cambiar en cualquier momento."

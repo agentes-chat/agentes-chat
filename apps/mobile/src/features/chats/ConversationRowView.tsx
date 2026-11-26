@@ -7,7 +7,7 @@ import { TAB_BADGE } from "@/lib/nav";
 import { Count, LIST_AVATAR, LIST_PREVIEW, LineIcon, ListRow, PixelOrbit, Tag, Text } from "@/ui";
 import { router } from "@/ui/navigation";
 import { withAlpha } from "@/ui/palette";
-import type { RowAction } from "../categories/menus";
+import type { RowAction } from "../channel-sectors/menus";
 import { WaitMark } from "../chat/WaitMark";
 import { chatHref } from "../links/logic";
 import { AgentFace, Face } from "../shared/Face";

@@ -4,24 +4,12 @@
     "send": "Отправить"
   },
   "categories": {
-    "title": "Категории",
     "where": "Где показывается #{{channel}}",
     "whereHelp": "Изменится для всех. Участники канала останутся прежними.",
-    "create": "Создать",
-    "endOfList": "Окажется в конце списка у всех.",
-    "channelCount_one": "{{count}} канал",
-    "channelCount_few": "{{count}} канала",
-    "channelCount_many": "{{count}} каналов",
-    "channelCount_other": "{{count}} канала",
-    "none": "Категорий пока нет.",
-    "manageHint": "Порядок, названия и удаление",
-    "deleteTitle": "Удалить {{name}}?",
     "order": "Место в списке",
     "up": "Выше",
     "down": "Ниже",
-    "position": "{{at}} из {{count}}.",
-    "channelPosition": "{{at}} из {{count}}.",
-    "itsChannels": "Каналы"
+    "channelPosition": "{{at}} из {{count}}."
   },
   "blocks": {
     "send": "Отправить",
@@ -1145,6 +1133,14 @@
       "computer_no_chrome_few": "Компьютерам нужен Google Chrome. Скачайте его на google.com/chrome",
       "computer_no_chrome_many": "Компьютерам нужен Google Chrome. Скачайте его на google.com/chrome",
       "computer_no_chrome_other": "Компьютерам нужен Google Chrome. Скачайте его на google.com/chrome",
+      "computer_down_one": "Компьютер не отвечает",
+      "computer_down_few": "Компьютер не отвечает",
+      "computer_down_many": "Компьютер не отвечает",
+      "computer_down_other": "Компьютер не отвечает",
+      "computer_back_one": "Компьютер снова на связи",
+      "computer_back_few": "Компьютер снова на связи",
+      "computer_back_many": "Компьютер снова на связи",
+      "computer_back_other": "Компьютер снова на связи",
       "app_created_one": "Приложение ИИ кое-что создало для вас",
       "app_created_few": "Приложение ИИ кое-что создало для вас",
       "app_created_many": "Приложение ИИ кое-что создало для вас",
@@ -2305,6 +2301,7 @@
       "tool_request": "{{names}} просит вас включить {{tool}} на вашем {{device}}",
       "cli_request": "{{names}} просит установить {{tool}} на вашем {{device}}",
       "folder_request": "{{names}} просит папку {{path}} на вашем {{device}}",
+      "internet_shared": "Теперь агенты открывают сайты через интернет компьютера {{device}}",
       "allowOnce": "Разрешить один раз",
       "always": "Всегда разрешать {{name}}",
       "no": "Нет",
@@ -3531,7 +3528,8 @@
       "workspaceSub": "Ключ API пространства",
       "key": "Ключ API",
       "keyDefault": "по умолчанию в пространстве",
-      "api": "API"
+      "api": "API",
+      "asksMove": "{{agent}} перестаёт его использовать."
     },
     "missionAi": "ИИ",
     "missionLocked": "Кто выполняет работу, выбирается до запуска. Модель можно поменять в любой момент."

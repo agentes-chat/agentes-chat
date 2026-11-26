@@ -9,6 +9,7 @@ import {
   gte,
   inArray,
   isNull,
+  lt,
   ne,
   or,
   schema,
@@ -362,6 +363,53 @@ export async function passedOnTo(db: Executor, orgId: string, workId: string, id
   return rows.map((m) => m.id);
 }
 
+/** The requests `heldHere` tells a run about: another run's of the agent in its conversation, not settled yet. */
+const heldHereWhere = (
+  run: Pick<AgentRun, "id" | "orgId" | "agentId" | "channelId" | "threadRootId" | "triggerMessageId" | "replyInThread">,
+) =>
+  and(
+    eq(approvals.orgId, run.orgId),
+    eq(approvals.agentId, run.agentId),
+    eq(approvals.channelId, run.channelId),
+    // Waiting for a person, or approved and waiting its turn behind a request asked before it (ADR 0182).
+    or(
+      eq(approvals.status, "pending"),
+      and(eq(approvals.status, "approved"), isNull(approvals.result), isNull(approvals.runAt)),
+    ),
+    ne(agentRuns.id, run.id),
+    inArray(agentRuns.status, ["waiting_approval", "waiting_input"]),
+    or(eq(agentRuns.threadRootId, run.threadRootId), replyThreadOf(run) ? undefined : inChannelRun(sql`${agentRuns}`)),
+  );
+
+/**
+ * What a run's new requests wait for once approved (`approvals.after_ids`, ADR 0182 addendum of 2026-11-24): the
+ * requests `heldHere` tells it about that were asked before it started. A background run is told none.
+ */
+export async function heldHereIds(
+  db: Executor,
+  run: Pick<
+    AgentRun,
+    | "id"
+    | "orgId"
+    | "agentId"
+    | "channelId"
+    | "threadRootId"
+    | "triggerMessageId"
+    | "replyInThread"
+    | "background"
+    | "createdAt"
+  >,
+): Promise<string[]> {
+  if (run.background) return [];
+  const rows = await db
+    .select({ id: approvals.id })
+    .from(approvals)
+    .innerJoin(agentRuns, eq(agentRuns.id, approvals.runId))
+    .where(and(heldHereWhere(run), lt(approvals.createdAt, run.createdAt)))
+    .limit(50);
+  return rows.map((r) => r.id);
+}
+
 /**
  * What this agent's other runs in the same conversation still wait on (a person's approval). A run waiting
  * on a decision takes no new message (`holdsMessages`: the decision may take hours), so a message sent
@@ -378,24 +426,7 @@ export async function heldHere(
     .select({ title: approvals.title, params: approvals.params, status: approvals.status })
     .from(approvals)
     .innerJoin(agentRuns, eq(agentRuns.id, approvals.runId))
-    .where(
-      and(
-        eq(approvals.orgId, run.orgId),
-        eq(approvals.agentId, run.agentId),
-        eq(approvals.channelId, run.channelId),
-        // Waiting for a person, or approved and waiting its turn behind a request asked before it (ADR 0182).
-        or(
-          eq(approvals.status, "pending"),
-          and(eq(approvals.status, "approved"), isNull(approvals.result), isNull(approvals.runAt)),
-        ),
-        ne(agentRuns.id, run.id),
-        inArray(agentRuns.status, ["waiting_approval", "waiting_input"]),
-        or(
-          eq(agentRuns.threadRootId, run.threadRootId),
-          replyThreadOf(run) ? undefined : inChannelRun(sql`${agentRuns}`),
-        ),
-      ),
-    )
+    .where(heldHereWhere(run))
     .orderBy(asc(approvals.createdAt))
     .limit(10);
   if (rows.length === 0) return null;

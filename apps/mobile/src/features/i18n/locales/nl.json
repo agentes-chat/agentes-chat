@@ -4,22 +4,12 @@
     "send": "Versturen"
   },
   "categories": {
-    "title": "Categorieën",
     "where": "Waar #{{channel}} staat",
     "whereHelp": "Verandert voor iedereen. Wie er in het kanaal meedoet, blijft hetzelfde.",
-    "create": "Aanmaken",
-    "endOfList": "Komt voor iedereen onderaan de lijst.",
-    "channelCount_one": "{{count}} kanaal",
-    "channelCount_other": "{{count}} kanalen",
-    "none": "Nog geen categorieën.",
-    "manageHint": "Volgorde, namen en verwijderen",
-    "deleteTitle": "{{name}} verwijderen?",
     "order": "Plek in de lijst",
     "up": "Omhoog",
     "down": "Omlaag",
-    "position": "{{at}} van {{count}}.",
-    "channelPosition": "{{at}} van {{count}}.",
-    "itsChannels": "Kanalen"
+    "channelPosition": "{{at}} van {{count}}."
   },
   "blocks": {
     "send": "Versturen",
@@ -995,6 +985,10 @@
       "computer_disk_full_other": "Schijven van computers zijn bijna vol",
       "computer_no_chrome_one": "Een computer heeft Google Chrome nodig. Download het op google.com/chrome",
       "computer_no_chrome_other": "Computers hebben Google Chrome nodig. Download het op google.com/chrome",
+      "computer_down_one": "Een computer reageert niet",
+      "computer_down_other": "Een computer reageert niet",
+      "computer_back_one": "Een computer is terug",
+      "computer_back_other": "Een computer is terug",
       "app_created_one": "Een AI-app heeft dingen voor je aangemaakt",
       "app_created_other": "AI-apps hebben dingen voor je aangemaakt"
     },
@@ -2101,6 +2095,7 @@
       "tool_request": "{{names}} vraagt je {{tool}} aan te zetten op je {{device}}",
       "cli_request": "{{names}} vraagt je {{tool}} te installeren op je {{device}}",
       "folder_request": "{{names}} vraagt je om de map {{path}} op je {{device}}",
+      "internet_shared": "Agents openen websites nu via het internet van {{device}}",
       "allowOnce": "Eén keer toestaan",
       "always": "{{name}} altijd toestaan",
       "no": "Nee",
@@ -3257,7 +3252,8 @@
       "workspaceSub": "API-sleutel van de workspace",
       "key": "API-sleutel",
       "keyDefault": "standaard van de workspace",
-      "api": "API"
+      "api": "API",
+      "asksMove": "{{agent}} gebruikt het dan niet meer."
     },
     "missionAi": "AI",
     "missionLocked": "Wie het werk doet kies je vóór Start. Het model kan altijd veranderen."

@@ -229,6 +229,7 @@ export { FoldRow } from "./components/FoldRow";
 export { GroupHeading } from "./components/GroupHeading";
 export { type Hosting, HostingScene, type Place, PlaceScene } from "./components/HostingScene";
 export { HintLine, type HintLineProps, InfoHint, type InfoHintProps } from "./components/InfoHint";
+export { InlineName, type InlineNameProps } from "./components/InlineName";
 export { type Journey, JourneyScene } from "./components/JourneyScene";
 export { isApple, Kbd, modKey, shortcut } from "./components/Kbd";
 export { Logo, LogoMark, type LogoProps } from "./components/Logo";
@@ -271,7 +272,14 @@ export {
   MessageText,
 } from "./components/Message";
 export { stopPlayback } from "./components/media-playback";
-export { OptionList, type OptionListItem, type OptionListProps } from "./components/OptionList";
+export {
+  type OptionLinkItem,
+  OptionLinks,
+  OptionList,
+  type OptionListItem,
+  type OptionListProps,
+} from "./components/OptionList";
+export { OrbitGlyph } from "./components/OrbitGlyph";
 export { PageHeader, type PageHeaderProps } from "./components/PageHeader";
 export {
   PixelDone,
@@ -487,6 +495,7 @@ export { HOVERLESS, matchesNow, TOUCH, useMatchMedia } from "./hooks/useMatchMed
 export { useNow } from "./hooks/useNow";
 export { type ScrollSides, useScrollSides } from "./hooks/useScrollSides";
 export { Icon, type IconName, type IconProps, iconNames, icons } from "./icons/Icon";
+export { arriveAfter, crossFade, glideHeight, MorphRoom, useMorph } from "./motion";
 export { driveFolder, initialsOf, isIdHandle } from "./names";
 export {
   BGS as PERSON_BACKGROUNDS,
@@ -521,13 +530,13 @@ export {
   zonedInstant,
 } from "./recurrence";
 export { fold, matchesWords } from "./search";
+export { IDLE_MS, onSight, type Sight, sight, watchSight } from "./sight";
 export { workspaceSky } from "./sky/accent";
-export { pixelBurst, pixelConfetti } from "./sky/burst";
+export { pixelBurst, pixelConfetti, pixelVeil } from "./sky/burst";
 export { ditherCells, ditherSvg, ditherTones, ditherUrl } from "./sky/dither";
 export {
   drawSprite,
   holdSkies,
-  holdSkiesWhileAway,
   prefersReducedMotion,
   redrawSkies,
   type SkyBlob,

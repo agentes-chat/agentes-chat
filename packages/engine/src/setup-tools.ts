@@ -1,6 +1,7 @@
 import { holdEvents, type PubSub } from "@agenteschat/adapters";
 import { and, count, eq, inArray, isNull, or, schema, sql } from "@agenteschat/db";
 import { isKnownProvider, PROVIDERS } from "@agenteschat/providers";
+import { ROUTINE_PROMPT_MAX } from "@agenteschat/tokens/routines";
 import { actWithUndo, publishMessageActions } from "./agent-actions";
 import {
   AGENT_PROPOSAL_CARD,
@@ -18,7 +19,7 @@ import { agentsByHandle, getAgentCached } from "./agents";
 import type { AiStatusDeps } from "./ai-status";
 import { AGENT_LOOK } from "./appearance";
 import { listApprovals } from "./approvals";
-import { addChannelMember, createChannel, listChannels } from "./channels";
+import { createChannel, listChannels } from "./channels";
 import { findMember } from "./chat-tools";
 import { CONNECTOR_CATALOG } from "./connectors/catalog";
 import { connectorListing, type ServerCatalog } from "./connectors/listing";
@@ -35,7 +36,7 @@ import {
 } from "./context/proposals";
 import type { ContextDeps } from "./context/summaries";
 import { publishMessageCreated } from "./events";
-import { firstOf } from "./format";
+import { editDistance, firstOf } from "./format";
 import { insertMessage, messageView, parseMentionHandles } from "./messages";
 import { can, getMembership } from "./organizations";
 import type { RolePermission } from "./permissions";
@@ -248,23 +249,80 @@ const slug = (v: string) => v.toLowerCase().replace(/[^a-z0-9]+/g, "");
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
- * A catalog connector or one-click MCP server by its id or name ("GitHub", "google-drive"). With `server`, as this
- * server's connectors store lists it, whether it connects here (`soon`: its vendor hasn't approved agentes.chat).
+ * Words people and models put around a service's name when they mean its MCP server ("Sentry MCP", "o MCP do
+ * Sentry", "Vercel's official MCP server"): never part of a name in the catalog.
  */
-export function catalogConnector(
-  name: string,
-  server?: ServerCatalog,
-): { id: string; label: string; available: boolean; soon: boolean } | null {
-  const key = slug(name);
-  if (!key) return null;
-  const all = server
+const AROUND_A_NAME = new Set(
+  "a an app conector connector da das de do dos mcp o official oficial remote remoto server servidor the".split(" "),
+);
+
+/** A name as the catalog is searched by: no accents or case, without the words around it (`AROUND_A_NAME`). */
+function nameKey(name: string) {
+  return name
+    .normalize("NFD")
+    .replace(/\p{M}+/gu, "")
+    .toLowerCase()
+    .replace(/['’]s\b/g, "")
+    .split(/[^a-z0-9]+/)
+    .filter((w) => w && !AROUND_A_NAME.has(w))
+    .join("");
+}
+
+/** A label without what its variant is ("Cloudflare (logs)" → "cloudflare"): the brand people name it by. */
+const brandKey = (label: string) => slug(label.replace(/\s*\(.*\)\s*$/, ""));
+
+interface CatalogEntry {
+  id: string;
+  label: string;
+  available: boolean;
+  soon: boolean;
+}
+
+/** Every entry of the catalog: as this server's connectors store lists it with `server`, else all of them. */
+const catalogEntries = (server?: ServerCatalog): CatalogEntry[] =>
+  server
     ? connectorListing(server)
     : [...Object.values(CONNECTOR_CATALOG), ...MCP_PRESETS].map((c) => ({ ...c, available: true, soon: false }));
-  const hit =
-    all.find((c) => slug(c.id) === key) ??
-    all.find((c) => slug(c.label) === key) ??
-    all.find((c) => CONNECTOR_NAMES[c.id]?.some((n) => slug(n) === key));
+
+/**
+ * A catalog connector or one-click MCP server by its id or name ("GitHub", "google-drive", "MCP do Sentry"), or by its
+ * brand when only one entry has it ("Cloudflare" has two: `catalogNear` names them). With `server`, as this server's
+ * connectors store lists it, whether it connects here (`soon`: its vendor hasn't approved agentes.chat).
+ */
+export function catalogConnector(name: string, server?: ServerCatalog): CatalogEntry | null {
+  const all = catalogEntries(server);
+  const by = (key: string) =>
+    key
+      ? (all.find((c) => slug(c.id) === key) ??
+        all.find((c) => slug(c.label) === key) ??
+        all.find((c) => CONNECTOR_NAMES[c.id]?.some((n) => slug(n) === key)))
+      : undefined;
+  const key = nameKey(name);
+  const brand = key ? all.filter((c) => brandKey(c.label) === key) : [];
+  const hit = by(slug(name)) ?? by(key) ?? (brand.length === 1 ? brand[0] : undefined);
   return hit ? { id: hit.id, label: hit.label, available: hit.available, soon: hit.soon } : null;
+}
+
+/** At most this many entries close to a name the catalog doesn't have. */
+const NEAR_NAMES = 5;
+
+/**
+ * The catalog's entries close to a name it doesn't have, for the agent to pick from: its brand's variants, names it
+ * starts or that start it, and one or two letters off (a typo). Their labels, in the catalog's order.
+ */
+export function catalogNear(name: string, server?: ServerCatalog): string[] {
+  const key = nameKey(name);
+  if (key.length < 3) return [];
+  const near = (k: string) =>
+    k === key ||
+    k.startsWith(key) ||
+    (k.length >= 4 && key.startsWith(k)) ||
+    (key.length >= 4 && editDistance(k, key) <= (key.length >= 7 ? 2 : 1));
+  return catalogEntries(server)
+    .filter((c) => [brandKey(c.label), slug(c.id), ...(CONNECTOR_NAMES[c.id] ?? []).map(slug)].some(near))
+    .map((c) => c.label)
+    .filter((label, i, labels) => labels.indexOf(label) === i)
+    .slice(0, NEAR_NAMES);
 }
 
 /** Names of what the connectors store connects outside the catalog list: a mailbox (Email) or a database. */
@@ -532,22 +590,23 @@ export function createSetupToolSource(deps: {
           const channel = await actWithUndo(
             ctx,
             async (db) => {
-              const created = await createChannel(
+              // Agents first: only they can be refused (their owner or an admin adds them), and a refusal
+              // undoes the whole channel before anyone was told they're in it. The people it starts with decide
+              // whether its agents answer in threads (ADR 0214).
+              return await createChannel(
                 db,
                 requester,
                 ctx.orgId,
-                { name: str(input.name).trim().replace(/^#/, ""), topic: str(input.topic).trim() },
+                {
+                  name: str(input.name).trim().replace(/^#/, ""),
+                  topic: str(input.topic).trim(),
+                  members: [
+                    ...agents.rows.map((a) => ({ agentId: a.id })),
+                    ...[...people.keys()].map((userId) => ({ userId })),
+                  ],
+                },
                 events,
               );
-              // Agents first: only they can be refused (their owner or an admin adds them), and a refusal
-              // undoes the whole channel before anyone was told they're in it.
-              for (const a of agents.rows) {
-                await addChannelMember(db, requester, ctx.orgId, created.id, { agentId: a.id }, events);
-              }
-              for (const userId of people.keys()) {
-                await addChannelMember(db, requester, ctx.orgId, created.id, { userId }, events);
-              }
-              return created;
             },
             (created) => ({
               kind: "channel.created",
@@ -641,7 +700,7 @@ export function createSetupToolSource(deps: {
               prompt: {
                 type: "string",
                 minLength: 1,
-                maxLength: 10_000,
+                maxLength: ROUTINE_PROMPT_MAX,
                 description: "What each run does, in the person's language.",
               },
               title: { type: "string", maxLength: 120 },
@@ -844,7 +903,7 @@ export function createSetupToolSource(deps: {
     {
       name: OFFER_CONNECT_APP_TOOL,
       description:
-        "Offer to connect an app or an MCP server with a card in this conversation: its button opens the app's own connect dialog (sign-in or key, then its tools and which agents use it). Use it when a person asks to connect a service ('conecta o Linear', 'connect https://mcp.acme.com/mcp', 'add an MCP', 'adicionar MCP'). Pass `app` for a service by name, or `url` for an MCP server's address. When they want an MCP server and gave no address, ask for it in one short line first, or post the card without one and its dialog asks. Never ask for keys, tokens or passwords in the chat: the person types them in the dialog.",
+        "Offer to connect an app or an MCP server with a card in this conversation: its button opens the app's own connect dialog (sign-in or key, then its tools and which agents use it). Use it when a person asks to connect a service or its MCP ('conecta o Linear', 'adiciona o MCP do Sentry', 'connect https://mcp.acme.com/mcp', 'adicionar MCP'). Pass `app` with the service's name: the catalog has the apps and the official MCP servers of most services (Sentry, Vercel, Supabase, Stripe, Figma…), connected in one click, so never ask for the address of one of those. Pass `url` only for a server the catalog doesn't have (the result says so, with its closest names). When they want such a server and gave no address, ask for it in one short line first, or post the card without one and its dialog asks. Never ask for keys, tokens or passwords in the chat: the person types them in the dialog.",
       scope: SETUP_SCOPE,
       inputSchema: {
         type: "object",
@@ -853,13 +912,14 @@ export function createSetupToolSource(deps: {
             type: "string",
             minLength: 1,
             maxLength: 80,
-            description: "A service by name or id (GitHub, Linear, Notion…).",
+            description:
+              "A service by name or id (GitHub, Linear, Sentry…): its app or its MCP server, as the catalog has it.",
           },
           url: {
             type: "string",
             minLength: 9,
             maxLength: 2000,
-            description: "An MCP server's https address, as the person gave it.",
+            description: "An MCP server's https address, as the person gave it: only for one the catalog doesn't have.",
           },
           why: {
             type: "string",
@@ -890,11 +950,15 @@ export function createSetupToolSource(deps: {
           const listed = app && !url ? catalogConnector(app, deps.catalog) : null;
           const known = preset ? { id: preset.id, label: preset.label } : listed;
           if (app && !url && !listed) {
-            const where = MAILBOX_NAMES.has(slug(app)) ? "Email" : DATABASE_NAMES.has(slug(app)) ? "Database" : null;
+            const named = (names: Set<string>) => names.has(slug(app)) || names.has(nameKey(app));
+            const where = named(MAILBOX_NAMES) ? "Email" : named(DATABASE_NAMES) ? "Database" : null;
+            const near = where ? [] : catalogNear(app, deps.catalog);
             return {
               content: where
                 ? `This isn't connected with a card: a person who manages connectors does it in Settings › Connectors and MCPs › Browse connectors › ${where} (in Portuguese, Configurações › Conectores e MCPs › Ver conectores › ${where === "Email" ? "Email" : "Banco de dados"}). Tell the person exactly this.`
-                : `"${app}" isn't in the catalog. Ask the person for its MCP server's https address and pass it as \`url\`.`,
+                : near.length
+                  ? `"${app}" isn't in the catalog by that name. Closest: ${near.join(", ")}. If the person meant one of them, call again with it as \`app\` (when more than one could be it, ask which in one short line). Otherwise ask for its MCP server's https address and pass it as \`url\`.`
+                  : `"${app}" isn't in the catalog. Ask the person for its MCP server's https address and pass it as \`url\`.`,
               isError: true,
             };
           }

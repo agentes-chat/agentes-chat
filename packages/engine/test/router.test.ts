@@ -31,7 +31,6 @@ import {
   WHY_LEAD_CALLED,
   WHY_YOU_WERE_CALLED,
 } from "../src";
-import { TYPING_GRACE_MS, typingLogFor } from "../src/burst";
 import { addMember, type Fixture, setup } from "./fixtures";
 
 let f: Fixture;
@@ -1043,28 +1042,62 @@ describe("what the router reads, and a person's messages in a row", () => {
     expect(thread.reduce((n, l) => n + l.body.length, 0)).toBeLessThanOrEqual(ROUTER_SLICE.chars);
   });
 
-  test("two messages within 2 s get one decision, on both, once the person stops", async () => {
-    f = await setup();
-    const { strategy, inputs } = judge();
+  test("'o build quebrou' then 'de novo' a moment later: decided at once, one run and one answer that read both", async () => {
+    let release = () => {};
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let called = () => {};
+    const firstCall = new Promise<void>((resolve) => {
+      called = resolve;
+    });
+    const requests: string[] = [];
+    f = await setup({
+      reply: (req, call) => {
+        requests.push(JSON.stringify(req.messages));
+        if (call > 1) return { chunks: ["Rodei de novo: o build passou."] };
+        called();
+        return { chunks: ["Oi! Em que posso ajudar?"], hold: released };
+      },
+    });
+    const inputs: RoutingInput[] = [];
+    const strategy: RouterStrategy = {
+      name: "sure",
+      async decide(input) {
+        inputs.push(input);
+        return { agents: [{ agentId: f.agent.id, score: 0.95 }], needsAgent: 0.95 };
+      },
+    };
     const handlers = createJobHandlers({
       ...f.jobDeps,
-      router: { enabled: true, model: "claude-haiku-5-5", strategy, quietMs: 600 },
+      router: { enabled: true, model: "claude-haiku-5-5", strategy, quietMs: ROUTER_QUIET_MS },
     });
     const events = f.listen(f.general.id);
-    await post("o build quebrou");
+    const first = await post("o build quebrou");
     const draining = drainOutbox(f.db, handlers);
-    await Bun.sleep(150);
+    // Routed and thinking before the person's next message: nothing waited for it.
+    const late = Bun.sleep(1000).then(() => Promise.reject(new Error("the first model call waited")));
+    await Promise.race([firstCall, late]);
     const second = await post("de novo");
+    release();
     await draining;
     await drainOutbox(f.db, handlers);
-    expect(inputs.map((i) => i.message.body)).toEqual(["o build quebrou\nde novo"]);
-    // Ana is alone here with Dev: what she writes to the room is for it.
-    expect(inputs[0]?.aloneWith).toBe("dev");
+    expect(inputs.map((i) => i.message.body)).toEqual(["o build quebrou"]);
     const decisions = await f.db.select().from(schema.routingDecisions);
-    expect(decisions.map((d) => d.messageId)).toEqual([second.id]);
-    // The receipt is under the last message only.
-    const routed = events.filter((e) => e.type === "message.routed") as unknown as { messageId: string }[];
-    expect(routed.map((e) => e.messageId)).toEqual([second.id]);
+    expect(decisions.map((d) => d.messageId)).toEqual([first.id]);
+    // The follow-up joined the run (the floor), which read it before answering once.
+    const runs = await f.db.select().from(schema.agentRuns);
+    expect(runs.map((r) => [r.agentId, r.trigger, r.triggerMessageId, r.status])).toEqual([
+      [f.agent.id, "router", first.id, "done"],
+    ]);
+    expect(runs[0]?.pendingMessageIds).toEqual([]);
+    expect(requests.at(-1)).toContain("de novo");
+    const read = events.filter((e) => e.type === "agent.run.read") as unknown as { messageIds: string[] }[];
+    expect(read.flatMap((e) => e.messageIds)).toContain(second.id);
+    const said = (await listMessages(f.db, f.owner.id, f.org.id, f.general.id)).filter(
+      (m) => m.author.type === "agent",
+    );
+    expect(said.map((m) => m.body)).toEqual(["Rodei de novo: o build passou."]);
   });
 
   test("long messages, then a question right after them: every step reads the question", async () => {
@@ -1350,13 +1383,16 @@ describe("named agents, a lone agent's follow-ups and system lines", () => {
     return ada;
   }
 
-  test("naming exactly one agent, with no typing since, skips the quiet wait; anything else waits it", async () => {
+  test("a person's message is decided at once, typing or not; their next message already here decides for both", async () => {
     f = await setup();
-    await withAda();
-    const log = typingLogFor(f.pubsub);
-    expect(log).toBeDefined();
-    const timed = async (body: string, typing = false) => {
-      const m = await say(body);
+    const ada = await withAda();
+    const sure = quiet({ agents: [{ agentId: ada.id, score: 0.95 }], needsAgent: 0.95 }).strategy;
+    const handlers = createJobHandlers({
+      ...f.jobDeps,
+      router: { enabled: true, model: "claude-haiku-5-5", strategy: sure, quietMs: ROUTER_QUIET_MS },
+    });
+    const decided = async (body: string, typing = false) => {
+      const m = await post(body);
       if (typing)
         await f.pubsub.publish(typingTopic, {
           type: "user.typing",
@@ -1365,26 +1401,23 @@ describe("named agents, a lone agent's follow-ups and system lines", () => {
           userId: f.owner.id,
           ttlMs: 6000,
         });
-      await route(quiet().strategy, m.id, { quietMs: ROUTER_QUIET_MS, quietByTyping: true, pubsub: f.pubsub });
-      // From the message's own time, which the router's wait counts from: on a slow machine the insert before the
-      // call takes tens of milliseconds, which a clock started after it would take off the wait.
-      return Date.now() - m.createdAt.getTime();
+      await drainOutbox(f.db, handlers, { skipKinds: ["agent_run.execute"] });
+      // Its run done, the next message is the router's again (not the floor's).
+      await f.db.update(schema.agentRuns).set({ status: "done" });
+      return Date.now() - new Date(m.createdAt).getTime();
     };
-    expect(await timed("ada, como vai a campanha")).toBeLessThan(TYPING_GRACE_MS - 200);
-    expect(await timed("alguém viu a campanha")).toBeGreaterThanOrEqual(TYPING_GRACE_MS - 50);
-    expect(await timed("ada e dev, a campanha")).toBeGreaterThanOrEqual(TYPING_GRACE_MS - 50);
-    // Still typing after it: more is on its way, so the whole window.
-    expect(await timed("ada, olha isso", true)).toBeGreaterThanOrEqual(ROUTER_QUIET_MS - 300);
+    // From the message's own time: what the router took, the insert's jobs and its own reads included.
+    expect(await decided("alguém viu a campanha")).toBeLessThan(400);
+    expect(await decided("ada, olha isso", true)).toBeLessThan(400);
+    const execute = await f.db.select().from(schema.outbox).where(eq(schema.outbox.kind, "agent_run.execute"));
+    expect(execute).toHaveLength(2);
+    for (const job of execute) expect(Number(job.payload.routerMs)).toBeLessThan(400);
     // Not waited for, the person's next message already here still decides for both.
     const first = await say("ada, olha isso", 1);
     await say("o relatório de ontem");
-    const res = await route(quiet().strategy, first.id, {
-      quietMs: ROUTER_QUIET_MS,
-      quietByTyping: true,
-      pubsub: f.pubsub,
-    });
+    const res = await route(quiet().strategy, first.id, { quietMs: ROUTER_QUIET_MS });
     expect(res.skipped).toBe("continued");
-  }, 20_000);
+  });
 
   test("a message naming several agents and no person goes to each of them, unless it speaks to one", async () => {
     f = await setup();

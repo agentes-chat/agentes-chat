@@ -4,21 +4,12 @@
     "send": "Kirim"
   },
   "categories": {
-    "title": "Kategori",
     "where": "Tempat #{{channel}} muncul",
     "whereHelp": "Berubah untuk semua orang. Siapa yang ikut di kanal tetap sama.",
-    "create": "Buat",
-    "endOfList": "Masuk ke akhir daftar untuk semua orang.",
-    "channelCount_other": "{{count}} kanal",
-    "none": "Belum ada kategori.",
-    "manageHint": "Urutan, nama, dan hapus",
-    "deleteTitle": "Hapus {{name}}?",
     "order": "Posisi di daftar",
     "up": "Naikkan",
     "down": "Turunkan",
-    "position": "{{at}} dari {{count}}.",
-    "channelPosition": "{{at}} dari {{count}}.",
-    "itsChannels": "Kanal"
+    "channelPosition": "{{at}} dari {{count}}."
   },
   "blocks": {
     "send": "Kirim",
@@ -920,6 +911,8 @@
       "plan_model_dropped_other": "{{model}} keluar dari {{plan}}. {{names}} memakai {{runs}} untuk sementara",
       "computer_disk_full_other": "Disk komputer hampir penuh",
       "computer_no_chrome_other": "Komputer memerlukan Google Chrome. Unduh di google.com/chrome",
+      "computer_down_other": "Sebuah komputer tidak merespons",
+      "computer_back_other": "Sebuah komputer sudah kembali",
       "app_created_other": "Aplikasi AI membuat sesuatu untukmu"
     },
     "markRead": "Tandai sudah dibaca",
@@ -1999,6 +1992,7 @@
       "tool_request": "{{names}} memintamu menyalakan {{tool}} di {{device}} milikmu",
       "cli_request": "{{names}} meminta kamu memasang {{tool}} di {{device}} kamu",
       "folder_request": "{{names}} memintamu membuka folder {{path}} di {{device}} milikmu",
+      "internet_shared": "Agen kini membuka situs web lewat internet {{device}}",
       "allowOnce": "Izinkan sekali",
       "always": "Selalu izinkan {{name}}",
       "no": "Tidak",
@@ -3120,7 +3114,8 @@
       "workspaceSub": "Kunci API workspace",
       "key": "Kunci API",
       "keyDefault": "default workspace",
-      "api": "API"
+      "api": "API",
+      "asksMove": "{{agent}} berhenti memakainya."
     },
     "missionAi": "AI",
     "missionLocked": "Siapa yang mengerjakan dipilih sebelum Mulai. Modelnya bisa diubah kapan saja."

@@ -106,12 +106,12 @@ import type {
   CalendarRange,
   Channel,
   ChannelCard,
-  ChannelCategory,
   ChannelInput,
   ChannelMember,
   ChannelOverride,
   Choices,
   ClientVitalsReport,
+  CliFetch,
   CliInstall,
   CodeSent,
   CommandApproval,
@@ -299,6 +299,7 @@ import type {
   RoutineInput,
   RoutinePatch,
   RoutineRun,
+  RoutineRunCall,
   RowHolders,
   RuleInfo,
   Run,
@@ -326,11 +327,14 @@ import type {
   SignInOptions,
   Skill,
   SkillDetail,
+  SkillDraft,
+  SkillDraftInput,
   SkillInput,
   SkillPatch,
   SkillPick,
   SkillSettings,
   SkillSourceUpdate,
+  SkillSuggestion,
   SpeechKey,
   SpeechKeyInput,
   StartChoice,
@@ -343,6 +347,7 @@ import type {
   SurfaceLink,
   SurfaceLinkCode,
   SurfaceLinks,
+  SurfaceNudge,
   SurfacePage,
   TaskManagerView,
   TaskOutput,
@@ -548,6 +553,8 @@ export interface ApiClient {
     confirm(linkId: string): Promise<SurfaceLink>;
     /** Cancels a pending link or unlinks an active one. `surface.link_gone` (404). */
     remove(linkId: string): Promise<void>;
+    /** My unread nudge on an active link. `surface.link_gone` (404). */
+    setNudge(linkId: string, input: Partial<SurfaceNudge>): Promise<SurfaceNudge>;
     /** Chooses my PIN (ADR 0226), replacing any. `surface.pin_shape` (400), `surface.link_gone` (404), `rate_limited`. */
     setPin(linkId: string, pin: string): Promise<void>;
     /** "Not you? Unlink it" from the "linked" email: no session needed. `surface.undo_gone` (404), `rate_limited` (429). */
@@ -803,10 +810,10 @@ export interface ApiClient {
   /** Groups of agents (ADR 0083): everyone reads them, owners and admins change them; each change answers with all. */
   agentGroups: {
     list(orgId: string): Promise<AgentGroup[]>;
-    /** After the other groups, with `agentIds` in it in that order (out of any group they were in). */
+    /** After the other groups, with `agentIds` in it in that order (out of any group they were in), and `channelIds`. */
     create(
       orgId: string,
-      input: { name: string; agentIds?: string[]; color?: string; icon?: string },
+      input: { name: string; agentIds?: string[]; channelIds?: string[]; color?: string; icon?: string },
     ): Promise<AgentGroup[]>;
     /** Renames it, or moves it among the groups (`index`). */
     update(orgId: string, groupId: string, patch: AgentGroupPatch): Promise<AgentGroup[]>;
@@ -881,6 +888,8 @@ export interface ApiClient {
     update(orgId: string, agentId: string, input: Partial<AgentInput>): Promise<Agent>;
     /** Confirms a step of a new agent's setup checklist (ADR 0155 §2): its owner or whoever manages agents. */
     confirmSetup(orgId: string, agentId: string, step: SetupStep): Promise<Agent>;
+    /** Closes its setup checklist on its page (its ×), whatever is left; its chat keeps its own. */
+    closeSetup(orgId: string, agentId: string): Promise<Agent>;
     /** The mailboxes saving `audience` would take from it (others gave them), taking nothing: ask before widening. */
     mailLoss(orgId: string, agentId: string, audience: AgentAudience): Promise<ForeignMailbox[]>;
     archive(orgId: string, agentId: string): Promise<void>;
@@ -1024,21 +1033,20 @@ export interface ApiClient {
   };
   chat: {
     channels(orgId: string): Promise<Channel[]>;
-    createChannel(orgId: string, input: ChannelInput & { name: string; categoryId?: string | null }): Promise<Channel>;
-    /** The sidebar's categories, in order (ADR 0080). */
-    categories(orgId: string): Promise<ChannelCategory[]>;
-    /** Admins: a category at the end, optionally taking `channelIds` along. */
-    createCategory(orgId: string, input: { name: string; channelIds?: string[] }): Promise<ChannelCategory>;
-    renameCategory(orgId: string, categoryId: string, name: string): Promise<ChannelCategory>;
-    /** Its channels go on top, with no category. */
-    deleteCategory(orgId: string, categoryId: string): Promise<void>;
-    /** Before `beforeCategoryId`, or to the end (null). */
-    placeCategory(orgId: string, categoryId: string, beforeCategoryId: string | null): Promise<void>;
-    /** Into `categoryId` (null: none), before `beforeChannelId` or at the end. */
+    /** `members` join right after you; another person among them has its agents answer in threads (ADR 0214). */
+    createChannel(
+      orgId: string,
+      input: ChannelInput & {
+        name: string;
+        groupId?: string | null;
+        members?: ({ userId: string } | { agentId: string })[];
+      },
+    ): Promise<Channel>;
+    /** Into sector `groupId` (null: none, ADR 0240), before `beforeChannelId` or at the end. */
     place(
       orgId: string,
       channelId: string,
-      input: { categoryId: string | null; beforeChannelId?: string | null },
+      input: { groupId: string | null; beforeChannelId?: string | null },
     ): Promise<void>;
     join(orgId: string, channelId: string): Promise<void>;
     /** Out of a channel I'm in. The last person out of a private channel archives it. Never #general. */
@@ -1146,6 +1154,8 @@ export interface ApiClient {
     refuse(orgId: string, approvalId: string, reason?: string, via?: string): Promise<Approval>;
     /** Withdraws an action approved ahead before its time: its routine's run won't do it. */
     cancel(orgId: string, approvalId: string): Promise<Approval>;
+    /** "Rodar este agora": an approved action waiting for other runs' requests runs at once. */
+    runNow(orgId: string, approvalId: string): Promise<Approval>;
     /**
      * A card's "Aprovar tudo" / "Agora não para todos": exactly these ids; `skipped` the ones not decided. With
      * `only: "routine"` the server decides the ones it calls routine (`Approval.routine`) and skips the rest.
@@ -1254,6 +1264,8 @@ export interface ApiClient {
   devices: {
     list(orgId: string): Promise<DevicesList>;
     updateComputer(orgId: string, machineId: string, input: ComputerDeviceInput): Promise<ComputerDevice>;
+    /** Admins: people's computers may help when the workspace's is full or away, or none may. */
+    setHelp(orgId: string, on: boolean): Promise<{ on: boolean }>;
     removeComputer(orgId: string, machineId: string): Promise<void>;
     updatePhone(orgId: string, phoneId: string, input: PhoneDeviceInput): Promise<PhoneDevice>;
     /** Forgets it; it comes back if its host sees it again. */
@@ -1325,6 +1337,8 @@ export interface ApiClient {
     askTool(orgId: string, machineId: string, tool: MachineTool): Promise<void>;
     /** Its PATH read again and its coding CLIs looked for now ("Já instalei, verificar de novo"). */
     checkClis(orgId: string, machineId: string): Promise<void>;
+    /** ADR 0228 §6: "Try again" on a CLI's fetch; where it stands now. */
+    fetchCli(orgId: string, machineId: string, cli: string): Promise<{ fetch: CliFetch | null }>;
     /** Only the person who paired it: installs `tool` there, or where that install stands, or stops it. */
     cliInstall(
       orgId: string,
@@ -1411,8 +1425,8 @@ export interface ApiClient {
     create(orgId: string, input: SkillInput): Promise<SkillDetail>;
     /**
      * A GitHub link (a skill's folder or a file in it) or the folder as a zip in base64 (writes are JSON only). A link
-     * holding several skills (or any, with `list`) installs nothing and answers with them to pick from
-     * (`importPicked`), those that can't be installed apart. A private repository is read through the workspace's
+     * or a zip holding several skills (a link: or any, with `list`) installs nothing and answers with them to pick from
+     * (`importPicked`, `importPickedZip`), those that can't be installed apart. A private repository is read through the workspace's
      * GitHub, on the server. `forAgentId`: the agent whose card opened the install, which gets what installs turned on
      * when the installer may change its skills. `personal`: the person's own skill, which any member installs (from a
      * public repository unless they manage agents). `upload`: a zip's Cancel and how much of it has been sent.
@@ -1429,6 +1443,14 @@ export interface ApiClient {
       paths: string[],
       forAgentId?: string,
       personal?: boolean,
+    ): Promise<SkillDetail[]>;
+    /** Installs the skills picked among a .zip's choices (their `path`): the .zip is sent again, as `import` sent it. */
+    importPickedZip(
+      orgId: string,
+      zipBase64: string,
+      paths: string[],
+      personal?: boolean,
+      upload?: UploadOptions,
     ): Promise<SkillDetail[]>;
     update(orgId: string, id: string, patch: SkillPatch): Promise<SkillDetail>;
     /** Fetch the link again (`url` skills). */
@@ -1456,6 +1478,22 @@ export interface ApiClient {
     /** The workspace's skill settings (older servers: absent). */
     settings?(orgId: string): Promise<SkillSettings>;
     saveSettings?(orgId: string, input: SkillSettings): Promise<SkillSettings>;
+    /** A skill written from a person's words (nothing saved), or that draft with a change. */
+    draft?(orgId: string, input: SkillDraftInput): Promise<SkillDraft>;
+    /** Saves a written skill and turns it on for the agents chosen. */
+    saveDraft?(
+      orgId: string,
+      input: Omit<SkillDraft, "apps"> & { agentIds: string[]; personal?: boolean; defaultForNewAgents?: boolean },
+    ): Promise<SkillDetail>;
+    /** A change asked in words: a new version, with undo. */
+    rewrite?(orgId: string, id: string, words: string): Promise<SkillDetail>;
+    /** The library's skills that would help an agent, from its last week. */
+    suggestions?(orgId: string, agentId: string): Promise<SkillSuggestion[]>;
+    /** Whether the agent learns skills on its own. */
+    learns?(orgId: string, agentId: string): Promise<boolean>;
+    setLearns?(orgId: string, agentId: string, on: boolean): Promise<void>;
+    /** Where the browser downloads the skill's folder as a .zip. */
+    zipUrl?(orgId: string, id: string): string;
   };
   access: {
     /**
@@ -1535,16 +1573,24 @@ export interface ApiClient {
     ): Promise<CustomConnectStart>;
     /** Lists the server's tools again; new ones come back unclassified. */
     refresh(orgId: string, serverId: string): Promise<CustomServer>;
-    /** Saves the classification; only classified tools become available to agents. */
+    /**
+     * Saves the classification; only classified tools become available to agents. `useInstructions`, when given:
+     * whether agents get the server's own instructions.
+     */
     saveTools(
       orgId: string,
       serverId: string,
-      input: { label: string; tools: { name: string; access: ToolDecision; label: string; confirmed?: boolean }[] },
+      input: {
+        label: string;
+        tools: { name: string; access: ToolDecision; label: string; confirmed?: boolean }[];
+        useInstructions?: boolean;
+      },
     ): Promise<CustomServer>;
     disconnect(orgId: string, serverId: string): Promise<void>;
     /**
      * The workspace's own OAuth client for the server at this address, and the redirect URI to register (who manages
-     * connectors). A 400 `connector.no_oauth` when the server doesn't sign in with OAuth.
+     * connectors). A 400 `connector.no_oauth` when the server doesn't sign in with OAuth, `connector.oauth_discovery`
+     * when its OAuth details can't be read.
      */
     ownClient(orgId: string, serverUrl: string): Promise<OwnOAuthClient>;
     /**
@@ -1808,6 +1854,8 @@ export interface ApiClient {
     /** Continuar agora on a run paused near its plan's or budget's limit (`usagePause`): it goes on now. */
     continueUsage(orgId: string, id: string): Promise<Routine>;
     runs(orgId: string, id: string): Promise<RoutineRun[]>;
+    /** The calls a webhook routine's run carried, as kept (who manages it). */
+    runCalls(orgId: string, id: string, runId: string): Promise<RoutineRunCall[]>;
     /** A phrase → rule, its description, cron and next 5 runs. */
     parseRule(orgId: string, phrase: string, timezone?: string): Promise<RuleInfo>;
     /** A rule → its description, cron and next 5 runs (the picker's sentence). */
@@ -1822,8 +1870,8 @@ export interface ApiClient {
     hook(orgId: string, id: string): Promise<RoutineHook>;
     /** A new address: the old one stops at once. */
     newHookAddress(orgId: string, id: string): Promise<RoutineHook>;
-    /** A new signing secret, shown this once. */
-    newHookSecret(orgId: string, id: string): Promise<{ secret: string; hook: RoutineHook }>;
+    /** A new signing secret, shown this once; `pasted`: the service's own (Linear's) instead. */
+    newHookSecret(orgId: string, id: string, pasted?: string): Promise<{ secret: string; hook: RoutineHook }>;
     removeHookSecret(orgId: string, id: string): Promise<RoutineHook>;
     /** "Testar": a sample call; the agent is told it is a test. */
     testHook(orgId: string, id: string): Promise<{ runId: string | null; hook: RoutineHook }>;

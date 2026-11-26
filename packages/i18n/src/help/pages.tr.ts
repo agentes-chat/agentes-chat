@@ -443,6 +443,44 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
         ],
       },
       {
+        id: "tool-levels",
+        heading: "Bağlı bir uygulamanın her aracı",
+        blocks: [
+          "Adresiyle bağlanan bir uygulamanın her aracının kendi seviyesi vardır. Bunu **Ayarlar\u00a0›\u00a0Bağlayıcılar** içinde, o bağlantının araçlarında seçersiniz. Ajanın sayfasında **Araçlar ve erişim**, hangi uygulamaları ve araçları kullanabileceğini gösterir.",
+          {
+            list: [
+              "**Yalnızca bakar**: okur ve hiçbir şeyi değiştirmez. Hiç sormaz.",
+              "**Bir şeyleri değiştirir**: sormadan oluşturur ve düzenler. **Her zaman sor** seviyesindeki bir ajan yine de sorar.",
+              "**Onayınızı ister**: her kullanımdan önce konuşmada sorar.",
+              "**Kapalı**: ajanlar onu almaz.",
+            ],
+          },
+          "Ajanın sayfasındaki **Hiç sorma** bunların hepsinden önce gelir: bu seviyedeki bir ajan, **Onayınızı ister** seviyesindeki bir araçta bile hiçbir şey sormaz. İstekler beklerken bir seviye değişirse, artık sormayacak olanlar iptal edilir ve ajan bunları kart olmadan yeniden yapar.",
+        ],
+      },
+      {
+        id: "sensitive",
+        heading: "Hassas araçlar",
+        blocks: [
+          "Uygulamanın sunucusunun silen, gönderen ya da ödeme yapan olarak işaretlediği bir araç yalnızca **Onayınızı ister** ya da **Kapalı** olabilir.",
+        ],
+      },
+      {
+        id: "order",
+        heading: "Onaylanan eylemler hangi sırayla çalışır",
+        blocks: [
+          "Bir ajan, tek bir turda eylemlerini, onları hangi sırayla onaylarsanız onaylayın, istediği sırayla yapar. Ajan beklerken gönderilen bir mesaj yeni bir tur başlatır ve o turun eylemleri, ajanın zaten beklediğini bildiği isteklerden sonra çalışır. Farklı konuşmalardaki istekler birbirini hiç beklemez.",
+          "Bir kişiyi 30 dakikadan uzun süredir bekleyen bir istek hiçbir şeyi durdurmaz. Bekleyen onaylı bir eylem neyi beklediğini söyler, o istek için **Onayla** ve **Reddet** ile onsuz devam etmek için **Bunu şimdi çalıştır** düğmeleriyle.",
+        ],
+      },
+      {
+        id: "many",
+        heading: "Birkaçı birden",
+        blocks: [
+          "İsteklerin sizi beklediği yerde, web'de ve telefonda, **Tümünü onayla** ve **Tümünü reddet** bir ajanın tüm isteklerine tek seferde karar verir.",
+        ],
+      },
+      {
         id: "who",
         heading: "Kim onaylar",
         blocks: [

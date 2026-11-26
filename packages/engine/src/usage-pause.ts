@@ -353,11 +353,11 @@ export async function resumeBudgetWaits(
 }
 
 /**
- * Long work (ADR 0118): what pauses near a limit, while replies to people go on. A routine's run (not Rodar agora, nor
- * a widget's refresh) and a mission's are long by kind; any other once it grew in this claim of the run (a person
- * acting on it starts a new claim, so a fresh allowance): `LONG_WORK.modelCalls` model calls, a computer brain's third
- * turn, or `LONG_WORK.ms` of work with a call made. A run paused once stays long; Continuar agora's override never
- * pauses.
+ * Long work (ADR 0118): what pauses near a limit, while replies to people go on. A widget's refresh never is (the
+ * executor asks before this). A routine's run (not Rodar agora) and a mission's are long by kind; any other once it
+ * grew in this claim of the run (a person acting on it starts a new claim, so a fresh allowance):
+ * `LONG_WORK.modelCalls` model calls, a computer brain's third turn, or `LONG_WORK.ms` of work with a call made. A run
+ * paused once stays long; Continuar agora's override never pauses.
  */
 export const LONG_WORK = { modelCalls: 8, computerTurns: 2, ms: 10 * 60_000 } as const;
 

@@ -460,6 +460,10 @@
     "waiting": "En attente que {{by}} le laisse entrer…",
     "done": "Connecté à {{org}}",
     "share": "Laisser tout l'espace de travail l'utiliser",
+    "internet": "Les agents utilisent la connexion internet de cet ordinateur",
+    "internetOn": "Les sites que les agents ouvrent voient votre emplacement",
+    "internetOff": "Coupé : les agents utilisent leur connexion habituelle",
+    "internetHint": "Les agents du workspace ouvrent des sites via la connexion de cet ordinateur. Uniquement des sites web, jusqu’à 5 Go par jour, et jamais rien sur votre propre réseau. Tant que cet ordinateur est hors ligne, ils utilisent leur connexion habituelle.",
     "shareOff": "Vous seul pour l'instant",
     "shareHint": "Les agents de tout le monde dans {{org}} peuvent y lancer des tâches, avec votre utilisateur.",
     "addFolders": "Ajouter des dossiers",
@@ -796,6 +800,7 @@
       "brainMax": "Conversations ouvertes",
       "brainMaxDesc": "Combien restent ouvertes dans chaque espace de travail. Plus il y en a, plus elles répondent vite, mais elles utilisent plus de mémoire.",
       "brainIdle": "Fermer une conversation inactive après",
+      "mixed": "Pas pareil partout : {{values}}. Une modification ici s'applique à tous.",
       "folder": "Dossier des agents",
       "folderDesc": "Un dossier par espace de travail, avec un dossier pour chaque agent."
     }

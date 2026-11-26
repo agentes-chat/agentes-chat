@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 import { TAB_BADGE } from "@/lib/nav";
 import { Count, LineIcon, PixelOrbit, PressScale, SCREEN_X, SideScroll, Text, weights } from "@/ui";
-import type { RowAction } from "../categories/menus";
+import type { RowAction } from "../channel-sectors/menus";
 import { WaitMark } from "../chat/WaitMark";
 import { AgentFace, Face } from "../shared/Face";
 import { useColors } from "../shared/hooks";

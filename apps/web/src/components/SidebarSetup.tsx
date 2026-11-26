@@ -55,6 +55,7 @@ export const SIDEBAR_TOOLS = {
   routines: { to: "/org/$orgId/routines", icon: "routines" },
   calendar: { to: "/org/$orgId/calendar", icon: "calendar" },
   team: { to: "/org/$orgId/team", icon: "agent" },
+  skills: { to: "/org/$orgId/skills", icon: "bolt" },
   dashboards: { to: "/org/$orgId/dashboards", icon: "chart" },
   taskManager: { to: "/org/$orgId/task-manager", icon: "stageProgress" },
   code: { to: "/org/$orgId/code", icon: "code" },

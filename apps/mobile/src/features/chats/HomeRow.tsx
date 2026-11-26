@@ -2,7 +2,7 @@ import { memo, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import { type SwipeAction, SwipeRow } from "@/ui";
-import type { RowAction } from "../categories/menus";
+import type { RowAction } from "../channel-sectors/menus";
 import { useColors } from "../shared/hooks";
 import { ConversationItem } from "./ConversationRowView";
 import type { ConversationRow } from "./logic";

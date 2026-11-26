@@ -198,6 +198,24 @@ describe("a file's comments on the player (ADR 0208)", () => {
   });
 });
 
+describe("a slider's knob", () => {
+  test("travels inside its track, and the volume's box that slides open has room for it at both ends", () => {
+    player();
+    const knobs = Array.from(document.querySelectorAll<HTMLElement>(".ac-video__knob"));
+    expect(knobs.length).toBe(2);
+    // The volume starts full: at its end, never `left: 100%`, which put half the knob past the track.
+    for (const k of knobs) expect(k.style.left).toBe("");
+    expect(knobs[1]?.style.getPropertyValue("--at")).toBe("1");
+    expect(rule(".ac-video__knob")).toContain("left: calc(var(--knob) / 2 + var(--at, 0) * (100% - var(--knob)));");
+    // On hover the knob grows by a quarter and keeps a 2px ring: 9.5px from its centre, which sits 6px inside the
+    // track's end, so the rail keeps at least 3.5px of the clipping box on each side.
+    const side = Number(/margin: 0 (\d+)px;/.exec(rule(".ac-video__volume .ac-video__rail"))?.[1] ?? 0);
+    expect(side).toBeGreaterThanOrEqual(4);
+    const open = Number(/width: (\d+)px;/.exec(rule(".ac-video__sound:focus-within .ac-video__volume"))?.[1]);
+    expect(open).toBe(56 + 2 * side);
+  });
+});
+
 describe("full screen", () => {
   const setFull = (el: Element | null) => {
     Object.defineProperty(document, "fullscreenElement", { configurable: true, value: el });

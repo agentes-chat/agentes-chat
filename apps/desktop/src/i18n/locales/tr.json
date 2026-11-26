@@ -456,6 +456,10 @@
     "waiting": "{{by}} kişisinin içeri almasını bekliyor…",
     "done": "{{org}} ile bağlandı",
     "share": "Tüm çalışma alanı kullansın",
+    "internet": "Ajanlar bu bilgisayarın internetini kullanır",
+    "internetOn": "Ajanların açtığı siteler konumunu görür",
+    "internetOff": "Kapalı: ajanlar her zamanki bağlantılarını kullanır",
+    "internetHint": "Çalışma alanının ajanları siteleri bu bilgisayarın bağlantısıyla açar. Yalnızca web siteleri, günde en fazla 5 GB, ve kendi ağındaki hiçbir şey asla. Bu bilgisayar çevrimdışıyken her zamanki bağlantılarını kullanırlar.",
     "shareOff": "Şimdilik yalnızca siz",
     "shareHint": "{{org}} içindeki herkesin ajanları üzerinde sizin kullanıcınız olarak görev çalıştırabilir.",
     "addFolders": "Klasör ekle",
@@ -791,6 +795,7 @@
       "brainMax": "Açık sohbetler",
       "brainMaxDesc": "Her çalışma alanında kaç tanesinin açık kalacağı. Daha fazlası daha hızlı yanıt verir ama daha çok bellek kullanır.",
       "brainIdle": "Boştaki sohbeti şu süreden sonra kapat",
+      "mixed": "Her yerde aynı değil: {{values}}. Buradaki değişiklik hepsine uygulanır.",
       "folder": "Ajanların klasörü",
       "folderDesc": "Her çalışma alanı için bir klasör, içinde her ajan için bir klasör."
     }

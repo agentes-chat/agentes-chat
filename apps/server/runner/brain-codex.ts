@@ -40,6 +40,7 @@ import { CODEX_MCP_ENV, CODEX_MCP_SERVER, codexWritableRoots } from "./mcp";
 import { isInside, resolveForAgent } from "./paths";
 import type { Spawn } from "./scope-gate";
 import { agentSecrets } from "./secrets";
+import { turnZoneEnv } from "./turn-zone";
 
 /**
  * The Codex branch of `brain.turn` (ADR 0032, ADR 0029 "Codex"): one agent
@@ -95,6 +96,8 @@ const CODEX_LOGIN_STATUS_MS = 5000;
 /** The engine's `BrainEvent` (ADR 0032 contract), as the runner sends it in `brain.event`. */
 export type CodexBrainEvent =
   | { type: "text_delta"; text: string }
+  /** Its reasoning summary: what it is working on, the work's narration (never the reply). */
+  | { type: "note"; text: string }
   /** Grok Build, read with Claude Code's parser: a call of its own as it starts. */
   | { type: "tool_started"; id: string; name: string }
   | {
@@ -133,6 +136,8 @@ export type CodexBrainEvent =
 export interface CodexBrainTurnRequest {
   runId: string;
   kind: "codex";
+  /** The zone of the turn's "Now" (`turnZoneEnv`). */
+  timeZone?: string;
   session: { id: string; resume: boolean };
   /** Relative to the agent's folder. */
   cwd?: string;
@@ -338,6 +343,18 @@ const ownChatGptSignIn = (opts: Pick<CodexTurnOptions, "bin" | "env" | "platform
 /** The agent's context limit as Codex's own: it compacts the conversation there instead of at its window. */
 export const codexContextOverride = (tokens: unknown): string[] =>
   isContextTokens(tokens) ? ["-c", `model_auto_compact_token_limit=${tokens}`] : [];
+
+/**
+ * A reasoning item's summary parts as notes (`note`), masked and trimmed, empty ones left out: exec's `text`, the
+ * app-server's `summary` (strings, or `{ text }` parts).
+ */
+export function reasoningNotes(parts: unknown[], clean: (text: string) => string): CodexBrainEvent[] {
+  return parts.flatMap((p) => {
+    const raw = typeof p === "string" ? p : p && typeof p === "object" ? (p as { text?: unknown }).text : "";
+    const text = clean(typeof raw === "string" ? raw : "");
+    return text.trim() ? [{ type: "note" as const, text: text.trim() }] : [];
+  });
+}
 
 /** Codex's `model_reasoning_effort` for a brain effort (it has no `xhigh` or `max`). */
 export function codexEffort(effort: BrainEffort): "low" | "medium" | "high" {
@@ -731,6 +748,8 @@ export class CodexEventMapper {
             if (t.trim()) this.answer = this.clean(t);
             return [];
           }
+          case "reasoning":
+            return reasoningNotes([item.text], (t) => this.clean(t));
           case "command_execution":
             return [
               codexCommandCall(
@@ -1198,7 +1217,8 @@ export async function handleCodexBrainTurn(
         signal: scope.signal,
         runnerHome: ctx.runnerHome,
         ...(ctx.mcp ? { mcpCommand: ctx.mcp.command, socketPath: ctx.mcp.socketPath } : {}),
-        ...(secrets ? { env: secrets.env, redact: secrets.redact, redactHold: secrets.hold } : {}),
+        env: { ...secrets?.env, ...turnZoneEnv(req.timeZone) },
+        ...(secrets ? { redact: secrets.redact, redactHold: secrets.hold } : {}),
         ...(ctx.codexVersion ? { codexVersion: ctx.codexVersion } : {}),
         ...(ctx.bin ? { bin: ctx.bin } : {}),
         ...(ctx.app ? { app: ctx.app } : {}),

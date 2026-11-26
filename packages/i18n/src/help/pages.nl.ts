@@ -441,6 +441,44 @@ export const helpNl: Partial<Record<HelpSlug, HelpDocument>> = {
         ],
       },
       {
+        id: "tool-levels",
+        heading: "Elke tool van een gekoppelde app",
+        blocks: [
+          "Elke tool van een app die via zijn adres is gekoppeld, heeft een eigen niveau, dat je kiest in **Instellingen\u00a0›\u00a0Connectors**, bij de tools van die koppeling. Op de pagina van de agent laat **Tools en toegang** zien welke apps en tools hij mag gebruiken.",
+          {
+            list: [
+              "**Kijkt alleen**: leest en verandert niets. Vraagt nooit.",
+              "**Wijzigt dingen**: maakt en wijzigt zonder te vragen. Een agent op **Altijd vragen** vraagt toch.",
+              "**Vraagt je goedkeuring**: vraagt in het gesprek voor elk gebruik.",
+              "**Uit**: agents krijgen hem niet.",
+            ],
+          },
+          "**Nooit vragen** op de pagina van de agent gaat voor dit alles: een agent op dat niveau vraagt niets, ook niet bij een tool op **Vraagt je goedkeuring**. Verandert een niveau terwijl er verzoeken wachten, dan worden de verzoeken die niet meer zouden vragen geannuleerd, en doet de agent ze opnieuw zonder kaart.",
+        ],
+      },
+      {
+        id: "sensitive",
+        heading: "Gevoelige tools",
+        blocks: [
+          "Een tool die de server van de app markeert als een die verwijdert, verstuurt of betaalt, kan alleen op **Vraagt je goedkeuring** of **Uit** staan.",
+        ],
+      },
+      {
+        id: "order",
+        heading: "In welke volgorde goedgekeurde acties lopen",
+        blocks: [
+          "In één beurt doet een agent zijn acties in de volgorde waarin hij erom vroeg, in welke volgorde je ze ook goedkeurt. Een bericht dat je stuurt terwijl de agent wacht, start een nieuwe beurt, en de acties daarvan lopen na de verzoeken waarvan de agent wist dat ze al wachtten. Verzoeken uit verschillende gesprekken wachten nooit op elkaar.",
+          "Een verzoek dat langer dan 30 minuten op iemand wacht, houdt niets tegen. Een goedgekeurde actie die wacht, zegt waarop, met **Goedkeuren** en **Weigeren** voor dat verzoek en **Nu uitvoeren** om zonder verder te gaan.",
+        ],
+      },
+      {
+        id: "many",
+        heading: "Meerdere tegelijk",
+        blocks: [
+          "Waar verzoeken op je wachten, op het web en op de telefoon, beslissen **Alles goedkeuren** en **Alles weigeren** in één keer over alle verzoeken van één agent.",
+        ],
+      },
+      {
         id: "who",
         heading: "Wie goedkeurt",
         blocks: [

@@ -731,6 +731,7 @@ test("brain.warm: the turn's launch without its words, sent only to a runner tha
   const [call] = await warmWith({});
   expect(call?.request).toEqual({
     op: "brain.warm",
+    runId: RUN,
     kind: "claude_code",
     session: { id: SESSION, resume: false },
     cwd: "",

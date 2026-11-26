@@ -395,6 +395,48 @@ export const ptBR: Words = {
       why: () => "Você recebeu este e-mail porque está neste workspace no agentes.chat.",
     },
   },
+  computerDown: {
+    subject: "Um computador não está respondendo",
+    preheader: "O trabalho dos seus agentes nele está esperando.",
+    headline: "Um computador não está respondendo",
+    body: (name, org, away) => [
+      { b: name },
+      " na ",
+      { b: org },
+      ` não responde há ${away}. O trabalho que precisa dele espera e continua quando ele voltar.`,
+    ],
+    runs: "Pedidos a agentes esperando",
+    calls: "Chamadas de webhook esperando",
+    note: "Para continuar agora, mova os agentes dele para outro computador na página dele.",
+    button: "Abrir o computador",
+    why: (org) => `Você recebeu este e-mail porque gerencia os computadores da ${org} no agentes.chat.`,
+    back: {
+      subject: "Um computador voltou",
+      preheader: "O trabalho que esperava por ele continua agora.",
+      headline: "O computador voltou",
+      runs: "Pedidos a agentes que esperaram",
+      calls: "Chamadas de webhook que esperaram",
+      body: (name, org, away) => [
+        { b: name },
+        " na ",
+        { b: org },
+        ` voltou depois de ${away}. O trabalho que esperava por ele continua agora.`,
+      ],
+    },
+    personal: {
+      body: (name, _org, away) => [
+        { b: name },
+        ` não responde há ${away}. O trabalho que precisa dele espera e continua quando ele voltar.`,
+      ],
+      why: () => "Você recebeu este e-mail porque gerencia os computadores do seu workspace pessoal no agentes.chat.",
+      back: {
+        body: (name, _org, away) => [
+          { b: name },
+          ` voltou depois de ${away}. O trabalho que esperava por ele continua agora.`,
+        ],
+      },
+    },
+  },
   appConnected: {
     subject: "Um app foi conectado à sua conta do agentes.chat",
     preheader: "Ele pode ler e mandar tarefas aos agentes em seu nome em um workspace.",

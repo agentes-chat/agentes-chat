@@ -443,6 +443,44 @@ export const helpDe: Partial<Record<HelpSlug, HelpDocument>> = {
         ],
       },
       {
+        id: "tool-levels",
+        heading: "Jedes Tool einer verbundenen App",
+        blocks: [
+          "Jedes Tool einer per Adresse verbundenen App hat eine eigene Stufe, die du in **Einstellungen\u00a0›\u00a0Konnektoren** bei den Tools dieser Verbindung wählst. Auf der Seite des Agenten zeigt **Tools und Zugriff**, welche Apps und Tools er nutzen darf.",
+          {
+            list: [
+              "**Schaut nur**: liest und ändert nichts. Fragt nie.",
+              "**Ändert Dinge**: erstellt und ändert, ohne zu fragen. Ein Agent auf **Immer fragen** fragt trotzdem.",
+              "**Fragt nach deiner Freigabe**: fragt in der Unterhaltung vor jedem Aufruf.",
+              "**Aus**: Agenten bekommen es nicht.",
+            ],
+          },
+          "**Nie fragen** auf der Seite des Agenten geht all dem vor: Ein Agent auf dieser Stufe fragt nichts, auch nicht bei einem Tool auf **Fragt nach deiner Freigabe**. Ändert sich eine Stufe, während Anfragen warten, werden die abgebrochen, die nicht mehr fragen würden, und der Agent führt sie ohne Karte erneut aus.",
+        ],
+      },
+      {
+        id: "sensitive",
+        heading: "Heikle Tools",
+        blocks: [
+          "Ein Tool, das der Server der App als löschend, sendend oder zahlend markiert, kann nur auf **Fragt nach deiner Freigabe** oder **Aus** stehen.",
+        ],
+      },
+      {
+        id: "order",
+        heading: "In welcher Reihenfolge freigegebene Aktionen laufen",
+        blocks: [
+          "In einem Durchgang führt ein Agent seine Aktionen in der Reihenfolge aus, in der er gefragt hat, egal in welcher Reihenfolge du sie freigibst. Eine Nachricht, die du schickst, während der Agent wartet, startet einen neuen Durchgang, und dessen Aktionen laufen nach den Anfragen, von denen der Agent wusste, dass sie schon warten. Anfragen aus verschiedenen Unterhaltungen warten nie aufeinander.",
+          "Eine Anfrage, die seit mehr als 30 Minuten auf einen Menschen wartet, hält nichts auf. Eine freigegebene Aktion, die wartet, sagt worauf, mit **Freigeben** und **Ablehnen** für diese Anfrage und **Jetzt ausführen**, um ohne sie weiterzumachen.",
+        ],
+      },
+      {
+        id: "many",
+        heading: "Mehrere auf einmal",
+        blocks: [
+          "Wo Anfragen auf dich warten, im Web und auf dem Handy, entscheiden **Alle freigeben** und **Alle ablehnen** alle Anfragen eines Agenten auf einmal.",
+        ],
+      },
+      {
         id: "who",
         heading: "Wer freigibt",
         blocks: [

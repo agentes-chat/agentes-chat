@@ -1247,6 +1247,18 @@
   "pair.share": {
     "value": "Let the whole workspace use it"
   },
+  "pair.internet": {
+    "value": "Agents use this computer's internet"
+  },
+  "pair.internetOn": {
+    "value": "Websites the agents open see your location"
+  },
+  "pair.internetOff": {
+    "value": "Off: agents use their usual connection"
+  },
+  "pair.internetHint": {
+    "value": "The workspace's agents open websites through this computer's connection. Only websites, up to 5 GB a day, and never anything on your own network. While this computer is offline, they use their usual connection."
+  },
   "pair.shareOff": {
     "value": "Only you for now"
   },
@@ -2158,6 +2170,9 @@
   },
   "prefs.advanced.brainIdle": {
     "value": "Close an idle conversation after"
+  },
+  "prefs.advanced.mixed": {
+    "value": "Not the same everywhere: {{values}}. A change here sets all of them."
   },
   "prefs.advanced.folder": {
     "value": "Agents' folder"

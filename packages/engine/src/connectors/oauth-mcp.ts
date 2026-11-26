@@ -116,6 +116,8 @@ export async function probeMcpServer(
   }
   const header = res.headers.get("www-authenticate") ?? "";
   const fromHeader = /resource_metadata="([^"]+)"/.exec(header)?.[1];
+  // The scopes this request needs (MCP authorization spec): asked for ahead of the metadata's `scopes_supported`.
+  const hinted = (/\bscope="([^"]*)"/.exec(header)?.[1] ?? "").split(/\s+/).filter(Boolean);
   const base = new URL(serverUrl);
   const path = base.pathname.replace(/\/$/, "");
   const root = `${base.origin}/.well-known/oauth-protected-resource`;
@@ -124,7 +126,7 @@ export async function probeMcpServer(
     const meta = await getJson(deps, url).catch(() => null);
     const servers = meta?.authorization_servers;
     if (Array.isArray(servers) && typeof servers[0] === "string") {
-      let scopes = scopesOf(meta);
+      let scopes = hinted.length > 0 ? hinted : scopesOf(meta);
       // Square lists its scopes only at the root, and refuses an authorization that asks for none.
       if (scopes.length === 0 && url !== root) {
         const top = await getJson(deps, root).catch(() => null);
@@ -141,22 +143,34 @@ export async function probeMcpServer(
   if (/^bearer\b/i.test(header)) {
     const meta = await authServerMetadata(deps, base.origin).catch(() => null);
     if (meta?.registration_endpoint) {
-      return { kind: "oauth", resource: canonicalResource(serverUrl), issuer: base.origin, scopes: [] };
+      return { kind: "oauth", resource: canonicalResource(serverUrl), issuer: base.origin, scopes: hinted };
     }
   }
+  // It named where its OAuth is described, and none of it could be read: discovery failed, not "no OAuth".
+  if (fromHeader) throw discoveryFailed(fromHeader);
   return { kind: "needs_key" };
 }
 
-/** Authorization server metadata: RFC 8414 (with path insertion), then OpenID discovery. */
+/** The server signs in with OAuth, but where that sign-in is described couldn't be read (`url`: the first such place). */
+export const discoveryFailed = (url: string) =>
+  new ValidationError(`Couldn't read the OAuth details at ${url}`, "connector.oauth_discovery", {
+    host: new URL(url).host,
+  });
+
+/**
+ * Authorization server metadata, in the MCP authorization spec's order: RFC 8414 and OpenID discovery with the
+ * issuer's path inserted after `/.well-known/…`, OpenID discovery appended to the issuer, then the origin's own.
+ */
 export async function authServerMetadata(deps: McpOAuthDeps, issuer: string): Promise<AuthServerMetadata | null> {
   const u = new URL(issuer);
   const path = u.pathname.replace(/\/$/, "");
-  const candidates = [
+  const candidates = new Set([
     `${u.origin}/.well-known/oauth-authorization-server${path}`,
-    ...(path ? [`${u.origin}${path}/.well-known/openid-configuration`] : []),
     `${u.origin}/.well-known/openid-configuration${path}`,
+    `${u.origin}${path}/.well-known/openid-configuration`,
     `${u.origin}/.well-known/oauth-authorization-server`,
-  ];
+    `${u.origin}/.well-known/openid-configuration`,
+  ]);
   for (const url of candidates) {
     const meta = await getJson(deps, url).catch(() => null);
     if (meta && typeof meta.authorization_endpoint === "string" && typeof meta.token_endpoint === "string") {

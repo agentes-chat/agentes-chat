@@ -7,6 +7,7 @@ import {
   consultationConversation,
   consultationsIn,
   createChannel,
+  handedConversation,
   idRef,
   joinChannel,
   listChannelMembers,
@@ -111,7 +112,7 @@ export function chatRoutes(deps: AppDeps) {
             seenAsAdmin: r.seenAsAdmin,
             createdByUserId: r.createdByUserId,
             createdAt: r.createdAt.toISOString(),
-            categoryId: r.categoryId,
+            groupId: r.groupId,
             position: r.position,
             replyInThreads: r.replyInThreads,
             leadAgentId: r.leadAgentId,
@@ -212,7 +213,15 @@ export function chatRoutes(deps: AppDeps) {
               description:
                 "Private only: people holding one of these roles (departments) also see it and may join (ADR 0125); empty: invite only.",
             }),
-            categoryId: z.uuid().nullable().optional().openapi({ description: "Put it in this sidebar category." }),
+            groupId: z.uuid().nullable().optional().openapi({ description: "Put it in this sector (`agent-groups`)." }),
+            members: z
+              .array(z.union([z.object({ userId: z.string() }), z.object({ agentId: z.uuid() })]))
+              .max(200)
+              .optional()
+              .openapi({
+                description:
+                  "Who joins it right after you, with the same checks as adding each one. Its agents answer in threads (ADR 0214) only when another person is among them, and never in a personal workspace.",
+              }),
           }),
         ),
       },
@@ -232,7 +241,7 @@ export function chatRoutes(deps: AppDeps) {
           isMember: true,
           createdByUserId: r.createdByUserId,
           createdAt: r.createdAt.toISOString(),
-          categoryId: r.categoryId,
+          groupId: r.groupId,
           position: r.position,
           replyInThreads: r.replyInThreads,
           leadAgentId: r.leadAgentId,
@@ -545,14 +554,18 @@ export function chatRoutes(deps: AppDeps) {
       security,
       summary: "One question asked from here, opened: what the two agents said for it (read only)",
       description:
-        "The question as it went into the agents' DM, the consulted agent's messages there and the cards it posted here (approvals, questions, secret requests), oldest first. Only this question's part of their DM. 404 when it wasn't asked from this conversation.",
+        "The question as it went into the agents' DM, the consulted agent's messages there and the cards it posted here (approvals, questions, secret requests), oldest first. Only this question's part of their DM. Also from the DM of the agent it was asked of, where it left its trace, for a person who reads where it was asked. 404 otherwise.",
       request: { params: ChannelParams.extend({ consultationId: z.uuid() }) },
       responses: { 200: json(z.object({ consultation: Consultation, messages: z.array(Message) })), ...errors },
     }),
     async (c) => {
       const { orgId, channelId, consultationId } = c.req.valid("param");
-      await requireChannelAccess(db, c.get("user").id, orgId, channelId);
-      const found = await consultationConversation(db, orgId, channelId, consultationId);
+      const userId = c.get("user").id;
+      await requireChannelAccess(db, userId, orgId, channelId);
+      // Asked from here, or handed to the agent of this DM for the person who reads it (its trace here).
+      const found =
+        (await consultationConversation(db, orgId, channelId, consultationId)) ??
+        (await handedConversation(db, orgId, channelId, consultationId, userId));
       if (!found) return apiError(c, 404, "not_found", "Question not found");
       const q = found.consultation;
       return c.json(

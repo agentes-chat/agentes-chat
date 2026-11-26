@@ -8,14 +8,17 @@ import type {
   DeviceStatus,
   MachineOfflineCause,
   MachineTool,
+  OrgSummary,
   PhoneDevice,
   WifiPairing,
 } from "../api/types";
 import { DESKTOP_CLOSE, type DesktopMode, type DesktopRetry } from "../desktop";
 import { type SocketBase, socketUrl } from "../realtime/connection";
-import { clockAt, firstName } from "./format";
-import { computerKind } from "./machines";
+import { computerNameOf } from "./computer";
+import { clockAt, firstName, joinNames } from "./format";
+import { computerKind, osName } from "./machines";
 import { norm as fold } from "./tool-review";
+import { isPersonal } from "./workspace-mode";
 
 /**
  * Bring your own devices: the words, pictures and order the web and phone apps give the devices list
@@ -36,11 +39,13 @@ export const statusLook = (s: DeviceStatus): StatusLook =>
     ? "inuse"
     : s.kind === "needs_you"
       ? "needs"
-      : s.kind === "busy" || s.kind === "preparing" || s.kind === "paused" || s.kind === "offline"
-        ? s.kind
-        : s.kind === "unsupported"
-          ? "unsupported"
-          : "ready";
+      : s.kind === "moving"
+        ? "preparing"
+        : s.kind === "busy" || s.kind === "preparing" || s.kind === "paused" || s.kind === "offline"
+          ? s.kind
+          : s.kind === "unsupported"
+            ? "unsupported"
+            : "ready";
 
 /** The pill's words: the state only ("In use by Lia", "Busy 1/1"); the rest goes beside it (`statusDetail`). */
 export function statusPill(t: TFunction, s: DeviceStatus): string {
@@ -60,6 +65,8 @@ export function statusPill(t: TFunction, s: DeviceStatus): string {
       return t("devices.status.preparing");
     case "paused":
       return t("devices.status.paused");
+    case "moving":
+      return t("machines.moving.short");
     case "offline":
       return t("devices.status.offline");
     case "unsupported":
@@ -181,6 +188,8 @@ export function statusSentence(
   switch (s.kind) {
     case "needs_you":
       return reasonText(t, s.reason, options.hostOs);
+    case "moving":
+      return t("machines.moving.line");
     case "offline":
       if (s.withHost && options.host) return t("devices.line.offlineWithHost", { host: options.host });
       if (s.cause && s.lastSeenAt) return offlineCauseText(t, s.cause, clockAt(locale, s.lastSeenAt, now), "line");
@@ -216,10 +225,7 @@ export function portraitOf(d: ComputerDevice | PhoneDevice): { kind: DevicePortr
 export const deviceName = (t: TFunction, d: { name: string; machineKind?: string; hostname?: string }) =>
   d.name || (d.machineKind === "host" ? t("machines.host.label") : (d.hostname ?? ""));
 
-const OS_CODES = new Set(["linux", "darwin", "windows", "other"]);
-
-/** "macOS", "Windows", or the server's own words when it sends a full name with a version ("Ubuntu 24.04"). */
-export const osName = (t: TFunction, os: string) => (OS_CODES.has(os) ? say(t, `machines.os.${os}`) : os);
+export { osName };
 
 /** "macOS 26.1 · 12 CPU · 36 GB"; the workspace computer says "Cloud" where a system would go. */
 export function computerLine(t: TFunction, d: ComputerDevice): string {
@@ -267,9 +273,88 @@ export function tasksAutoText(t: TFunction, d: ComputerDevice): string | null {
     : t("devices.tasksAutoFull", { running });
 }
 
+/** How a computer helps its owner's agents: never, while their own computer is full or away, or first for their work. */
+export const SPILL_USES = ["off", "help", "first"] as const;
+export type SpillUse = (typeof SPILL_USES)[number];
+export const spillUseOf = (d: Pick<ComputerDevice, "spill">): SpillUse =>
+  d.spill.first ? "first" : d.spill.own ? "help" : "off";
+export const spillOfUse = (use: SpillUse) => ({ own: use !== "off", first: use === "first" });
+
+/**
+ * ADR 0237, under "Agents use this computer's internet": in use now, or which computer the agents use instead (the
+ * computer that lends now, `lending`, from the same list). Null: nothing to say.
+ */
+export function shareInternetText(t: TFunction, d: ComputerDevice, lending: ComputerDevice | null): string | null {
+  if (!d.shareInternet?.on) return null;
+  if (d.shareInternet.inUse) return t("devices.shareInternetInUse");
+  return lending && lending.id !== d.id ? t("devices.shareInternetOther", { name: lending.name }) : null;
+}
+
+/** The computer of a devices list whose internet the workspace's computer uses now (ADR 0237), if any. */
+export const lendingDevice = (devices: readonly ComputerDevice[] | undefined) =>
+  devices?.find((x) => x.shareInternet?.inUse) ?? null;
+
 /** A computer in the line's "More computers" list: "Online · macOS · 16 GB · your Claude Max plan" (`plan`: the viewer's there). */
 export const spillDeviceText = (t: TFunction, d: ComputerDevice, plan: string | null) =>
   [statusPill(t, d.status), computerLine(t, d), plan && t("queue.spill.plan", { plan })].filter(Boolean).join(" · ");
+
+/**
+ * The line under a reply that thought on another computer because the agent's own was full or away (`meta.spilled`,
+ * ADR 0233): "Thought on Bruno's MacBook: Acme's computer was full." The workspace's own computer reads in the
+ * reader's words (`computerNameOf`). Null on any other reply.
+ */
+export function spilledText(
+  t: TFunction,
+  meta: Record<string, unknown> | null | undefined,
+  org: Pick<OrgSummary, "name" | "mode"> | null | undefined,
+): string | null {
+  const s = meta?.spilled as { to?: unknown; from?: unknown; cause?: unknown } | undefined;
+  if (!s || typeof s.to !== "string") return null;
+  // Its owner chose that computer for their agents' work (`spill.first`): nothing was wrong with its own.
+  if (s.cause === "chosen") return t("chat.spilled.chosen", { to: s.to });
+  const from =
+    typeof s.from === "string" && s.from
+      ? computerNameOf(t, org?.name ?? "", s.from, isPersonal(org))
+      : t("chat.spilled.itsComputer");
+  return t(s.cause === "away" ? "chat.spilled.away" : "chat.spilled.full", { to: s.to, from });
+}
+
+/**
+ * The computers that take an agent's new work while its own (`home`) is away (ADR 0233), as the server picks them
+ * (`spillTarget`): online and helping in a workspace that lets them, never a server install, and its owner's own or
+ * one marked the workspace's.
+ */
+export function helpingDevices(
+  list: { devices: ComputerDevice[]; devicesHelp?: boolean } | undefined,
+  agentOwner: string | null,
+  home: string | null,
+): ComputerDevice[] {
+  if (!list || list.devicesHelp === false) return [];
+  return list.devices.filter(
+    (d) =>
+      d.id !== home &&
+      d.machineKind === "connected" &&
+      !d.systemMode &&
+      d.spill.own &&
+      (d.status.kind === "ready" || d.status.kind === "busy") &&
+      (d.belongsToWorkspace || (agentOwner !== null && d.ownerUserId === agentOwner)),
+  );
+}
+
+/**
+ * Under the agent's computer while it is away, appended to what the cover says (`help`): "Meanwhile, its new work
+ * thinks on Bruno's MacBook." when computers help (`helpingDevices`), else `help` alone.
+ */
+export function withHelping(t: TFunction, help: string | undefined, helping: ComputerDevice[]): string | undefined {
+  if (helping.length === 0) return help;
+  const line = t("agentComputer.state.helping", {
+    names: joinNames(
+      helping.map((d) => d.name),
+      t,
+    ),
+  });
+  return help ? t("common.joinSentences", { a: help, b: line }) : line;
+}
 
 /** "Android 16" or "iOS 27.1". */
 export const phoneSystem = (t: TFunction, p: Pick<PhoneDevice, "platform" | "osVersion">) =>
@@ -1161,7 +1246,8 @@ export type DeviceNoticeKind =
   | "device.waiting"
   | "device.tool_request"
   | "device.cli_request"
-  | "device.folder_request";
+  | "device.folder_request"
+  | "device.internet_shared";
 const NOTICE_KINDS = new Set<string>([
   "device.join_request",
   "device.in_use",
@@ -1170,6 +1256,7 @@ const NOTICE_KINDS = new Set<string>([
   "device.tool_request",
   "device.cli_request",
   "device.folder_request",
+  "device.internet_shared",
 ]);
 
 /**
@@ -1222,8 +1309,8 @@ export function deviceNoticeOf(
     device: str(s.label) ?? str(l.title) ?? "",
     agentId: actor?.id ?? str(s.agentId),
     userId: str(s.userId),
-    // A folder request's `latest.title` is the folder itself, not a person: it reads in the line, not as a name.
-    forName: join || kind === "device.folder_request" ? null : str(l.title),
+    // A folder request's `latest.title` is the folder itself, and a lent internet's the computer: neither is a person.
+    forName: join || kind === "device.folder_request" || kind === "device.internet_shared" ? null : str(l.title),
     text: str(l.text),
     join: join
       ? {

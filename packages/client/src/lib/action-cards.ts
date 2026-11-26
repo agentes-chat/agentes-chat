@@ -777,6 +777,8 @@ export function actionCardDetail(card: WorkspaceActionCard, t: TFunction, locale
         text(input.topic),
         typeof input.private === "boolean" &&
           (t(input.private ? "channel.visibilityPrivate" : "channel.visibilityPublic") as string),
+        typeof input.reply_in_threads === "boolean" &&
+          (t(input.reply_in_threads ? "channel.replyInThreads" : "channel.replyInChannel") as string),
       );
     case "update_workspace":
       return parts(

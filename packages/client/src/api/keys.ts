@@ -48,7 +48,6 @@ export const keys = {
   channelCard: (orgId: string, channelId: string) => ["org", orgId, "channel", channelId, "card"] as const,
   messageCard: (orgId: string, messageId: string) => ["org", orgId, "message", messageId, "card"] as const,
   idRef: (orgId: string, id: string) => ["org", orgId, "ref", id] as const,
-  channelCategories: (orgId: string) => ["org", orgId, "channel-categories"] as const,
   channelMembers: (orgId: string, channelId: string) => ["org", orgId, "channel", channelId, "members"] as const,
   channelPermissions: (orgId: string, channelId: string) =>
     ["org", orgId, "channel", channelId, "permissions"] as const,
@@ -173,6 +172,8 @@ export const keys = {
   skillSettings: (orgId: string) => ["org", orgId, "skills", "settings"] as const,
   agentSkills: (orgId: string, agentId: string) => ["org", orgId, "skills", "agent", agentId] as const,
   learnedSkills: (orgId: string, agentId: string) => ["org", orgId, "skills", "learned", agentId] as const,
+  skillSuggestions: (orgId: string, agentId: string) => ["org", orgId, "skills", "suggest", agentId] as const,
+  agentLearnsSkills: (orgId: string, agentId: string) => ["org", orgId, "skills", "learns", agentId] as const,
   access: (orgId: string) => ["org", orgId, "access"] as const,
   agentAccess: (orgId: string, agentId: string) => ["org", orgId, "access", "agent", agentId] as const,
   issues: (orgId: string) => ["org", orgId, "issues"] as const,
@@ -207,6 +208,8 @@ export const keys = {
   routines: (orgId: string) => ["org", orgId, "routines"] as const,
   routineRuns: (orgId: string, id: string) => ["org", orgId, "routines", "runs", id] as const,
   routineHook: (orgId: string, id: string) => ["org", orgId, "routines", "hook", id] as const,
+  routineRunCalls: (orgId: string, id: string, runId: string) =>
+    ["org", orgId, "routines", "runs", id, "calls", runId] as const,
   webhookSetup: (orgId: string, provider: string) => ["org", orgId, "routines", "webhook", provider] as const,
   calendar: (orgId: string) => ["org", orgId, "calendar"] as const,
   calendarRange: (orgId: string, from: string) => ["org", orgId, "calendar", from] as const,

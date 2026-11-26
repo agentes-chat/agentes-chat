@@ -249,9 +249,14 @@ p {
   border-bottom: 1px solid var(--line);
   background: var(--surface-raised);
 }
+/* The notices on top of the work area (`MorphRoom`): their room glides, never shrinks. */
+.shell__notices {
+  flex: none;
+}
 /* On the paper above the work's sheet: each notice is its own rounded card, 8px clear of the sheet, never a square
    strip over the sheet's rounded corners. */
-.shell__work > .outages {
+.shell__work > .outages,
+.shell__notices > .ac-morph__in > .outages {
   margin-bottom: 8px;
   border-bottom: 0;
   border-radius: var(--radius-section) var(--radius-section) var(--radius-section) 4px;
@@ -423,7 +428,14 @@ p {
 }
 /* A phone's line has room for the names, the count and the time only: the subject would be a letter and its "…". */
 @container (max-width: 420px) {
-  .consult-pair__subject {
+  /* Except another agent's request in this agent's DM: nothing else there says what was asked. */
+  .consult-pair__row:not(.consult-pair__row--handed) .consult-pair__subject {
+    display: none;
+  }
+  /* There "por você" and the time give way instead. */
+  .consult-pair__row--handed .consult-pair__for,
+  .consult-pair__row--handed .consult-pair__how,
+  .consult-pair__row--handed .consult-pair__time {
     display: none;
   }
 }
@@ -475,6 +487,22 @@ html:not([data-pointer]) .consult-pair__row:focus-visible {
   height: 15px;
   margin-inline: 6px;
   vertical-align: calc(var(--cap-top) - var(--cap-mid) - 7.5px);
+}
+/* Another agent's request in this agent's DM: the words in the arrows' place ("Atlas pediu à Ada"), as quiet. */
+.consult-pair__asked {
+  margin-inline: 6px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.consult-pair__for {
+  margin-inline-start: 0.25em;
+  color: var(--muted);
+}
+/* Where it was asked stays whole beside the subject, which gives way first; only a very long channel name is cut. */
+.consult-pair__row > .consult-pair__where {
+  max-width: 16em;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 /* Cut out of what is under them: the open row's blue too (the page's ring drew gray circles on it in dark). */
 .consult-pair__faces > .ac-avatar {
@@ -735,12 +763,24 @@ html:not([data-pointer]) .consult-pair__row:focus-visible {
   width: 28px;
   height: 28px;
 }
-/* An uploaded workspace logo: cropped square, in the agent's shape (the cut corner). */
+/* A workspace logo, whole, in the agent's shape (the cut corner). It may arrive uncropped (a wordmark), so it is
+   contained, not covered. Its plate shows only where the surface would hide the ink (`logoPlate`,
+   @agenteschat/ui/org-logo, same colors): white behind dark ink on dark, dark behind light ink on light. A square
+   opaque logo hides the plate. */
 .org-mark {
   display: block;
   flex: none;
-  object-fit: cover;
+  object-fit: contain;
   border-radius: 30% 30% 30% 9%;
+}
+.org-mark[data-ink="light"] {
+  background: #1c1c1b;
+}
+[data-theme="dark"] .org-mark {
+  background: #ffffff;
+}
+[data-theme="dark"] .org-mark[data-ink="light"] {
+  background: none;
 }
 .sidebar__org-text {
   display: flex;
@@ -755,11 +795,6 @@ html:not([data-pointer]) .consult-pair__row:focus-visible {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-/* A personal workspace's top row is you: your name wraps whole there, as at a team's foot. */
-.sidebar__org-button--me .sidebar__org-name {
-  white-space: normal;
-  overflow-wrap: anywhere;
 }
 .sidebar__org-meta {
   font-size: 12px;
@@ -914,13 +949,16 @@ html:not([data-pointer]) .sidebar__user:focus-visible {
   display: flex;
   flex-direction: column;
 }
-/* A long name wraps whole: never cut to an ellipsis. */
+/* One line, cut to an ellipsis, as your line under it and a personal workspace's top row are: the face never stands
+   beside more than the name and your line. The button says the whole name (its label and title). */
 .sidebar__user-name {
   font-size: 14px;
   font-weight: 600;
   line-height: 22px;
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Page container */
@@ -3784,6 +3822,13 @@ html:not([data-pointer]) .channel-ref:focus-visible {
 .folded-body .md--message > * + * {
   margin-top: 0.6em;
 }
+/* Words as written: their spaces and breaks kept, a space a line ends on wrapping with it (break-spaces) rather than
+   standing past the fold's edge. */
+.folded-body__plain {
+  margin: 0;
+  white-space: break-spaces;
+  overflow-wrap: anywhere;
+}
 .folded-body__text[data-folded] {
   max-height: 9em;
   overflow: hidden;
@@ -5628,6 +5673,24 @@ html:not([data-pointer]) .cflow__more summary:focus-visible {
 .cflow__lead > .cflow__text {
   flex: 1 1 260px;
 }
+/* A server by address's own instructions under its tools: the setting, then the text as agents read it, as written, in
+   a well, folded as a long text on a page is (FoldedBody), "Ver mais" inside the well. Muted while agents don't get
+   it. */
+.cflow-notes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.cflow-notes .folded-body {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--sunken);
+  transition: color var(--dur-base) var(--out);
+}
+.cflow-notes[data-off] .folded-body {
+  color: var(--muted);
+}
 .cflow-tools {
   list-style: none;
   margin: 0;
@@ -5735,6 +5798,69 @@ html:not([data-pointer]) .cflow__more summary:focus-visible {
   flex: none;
   width: 15px;
   height: 15px;
+}
+/*
+ * The routine that comes on with a connection (ADR 0242): a line under what was said, no card. Its icon and switch
+ * sit on the title's line (22), never in the middle of a sentence that wraps; who and when line up with the words.
+ */
+.cflow-routine {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.cflow-routine__head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: 12px;
+  cursor: pointer;
+}
+.cflow-routine:has(.ac-switch:disabled) .cflow-routine__head {
+  cursor: default;
+}
+.cflow-routine__icon {
+  display: inline-grid;
+  place-items: center;
+  height: 22px;
+  color: var(--ink2);
+}
+.cflow-routine__words {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.cflow-routine__words b {
+  font-weight: 600;
+  line-height: 22px;
+}
+.cflow-routine__head .ac-switch {
+  margin-top: 1px;
+}
+.cflow-routine__props {
+  padding-left: 30px;
+}
+.cflow-routine[data-off] .cflow-routine__icon,
+.cflow-routine[data-off] .cflow-routine__words b {
+  color: var(--ink-muted);
+}
+/* Loading: the sentence's line and the two selects as their shapes, at their size. */
+.cflow-routine__wait {
+  display: flex;
+  align-items: center;
+  height: 20px;
+}
+.cflow-routine__select {
+  height: var(--control-h-sm);
+  border-radius: var(--control-r-sm);
+}
+/* Who and when land softly where their shapes were. */
+@media (prefers-reduced-motion: no-preference) {
+  .cflow-routine:not(.ac-skeleton-group) .cflow-routine__props {
+    animation: ac-fade-in var(--dur-fast) ease-out;
+  }
 }
 
 /* Email (ADR 0038): app password help, hosts under "Avançado", actions by level, address lists, the agent's rules. */
@@ -6533,15 +6659,17 @@ html:not([data-pointer]) .tr-ok:focus-visible {
   color: var(--ink);
   font-weight: 600;
 }
+/* The unread pill stands whole inside the sidebar, 4 in from its edge: flush with the edge it was cut in half by the
+   window, and the phone's drawer drew its frame through it. */
 .sidebar__item[data-kind="channel"][data-unread="true"]::before {
   content: "";
   position: absolute;
-  left: -12px;
+  left: -8px;
   top: 50%;
   width: 4px;
   height: 8px;
   margin-top: -4px;
-  border-radius: 0 4px 4px 0;
+  border-radius: 2px;
   background: var(--ink);
   pointer-events: none;
 }
@@ -6681,36 +6809,6 @@ html:not([data-pointer]) .sidebar__jump:focus-visible {
 }
 
 /* Live code (the agent's PC): mono only here, neutral tokens; stderr in the danger tone. */
-.live-code-toggle {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 6px;
-}
-.live-code-toggle__btn {
-  align-self: flex-start;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: var(--control-h-sm);
-  padding: 0 var(--control-px-sm);
-  border: 0;
-  border-radius: var(--control-r-sm);
-  background: var(--sunken);
-  color: var(--ink2);
-  font: inherit;
-  font-size: 12.5px;
-  font-weight: 600;
-  line-height: normal;
-  cursor: pointer;
-}
-.live-code-toggle__btn:hover {
-  background: var(--plate);
-}
-html:not([data-pointer]) .live-code-toggle__btn:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
-}
 .live-code {
   border-radius: var(--radius-lg);
   background: var(--raised);
@@ -7586,9 +7684,119 @@ html:not([data-pointer]) .run-continue:focus-visible {
 .ac-typing[data-active="true"]:has(> .ac-typing__avatars):not(:has(> .ac-typing__dots, > .ac-pixspin)) {
   padding-left: 7px;
 }
-/* An agent in its browser: the whole pill opens the live view; the globe says so. */
-.ac-typing[data-browser="true"] {
+/*
+ * The conversation's last row while someone works here (`WorkingTail`), as a reply on its way: the agent at work in a
+ * face's column with its rings, a message's padding and gap, then its line in the message's text size and what it did
+ * so far under it. One line beside the face centres on it; with the trail under it, its capitals start at the face's
+ * top (`.ac-captop`), as a name does in a message.
+ */
+.working-tail {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--msg-block) var(--space-4);
+  /* The rings' box reaches past the row: as the conversation's end, it would scroll the list by it. */
+  overflow: clip;
+}
+/* An agent in its browser: the whole row opens the live view; the globe says so. */
+.working-tail[data-browser="true"] {
   cursor: pointer;
+}
+.working-tail__face {
+  display: flex;
+  flex: 0 0 var(--name-face);
+  align-items: center;
+  justify-content: center;
+  width: var(--name-face);
+  height: var(--name-face);
+}
+.working-tail__face .ac-avatar:not(.ac-avatar--xs) {
+  width: var(--name-face);
+  height: var(--name-face);
+}
+.working-tail__body {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-self: center;
+  min-width: 0;
+}
+.working-tail__body:has(> .working-tail__trail) {
+  align-self: flex-start;
+}
+/* Over the bar's own box (its height cap, its padding, its faces' inset): this line is a row's, not the bar's. */
+.working-tail > .working-tail__body > .working-tail__line.ac-typing[data-active] {
+  min-height: 0;
+  max-height: none;
+  margin-inline: 0;
+  margin-block-end: 0;
+  padding: 0;
+  font-size: var(--msg-text);
+  line-height: var(--msg-line);
+}
+/*
+ * Short of room, its pieces wrap whole (who types beside it to a line of its own), and its words wrap rather than end
+ * in "…": the row has the room a bar above the composer had not. Its globe and "Ver" stay at the line's end, outside
+ * the pieces that wrap.
+ */
+.working-tail__words {
+  display: flex;
+  flex: 1 1 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: inherit;
+  min-width: 0;
+}
+.working-tail > .working-tail__body > .working-tail__line.ac-typing[data-active] .ac-typing__text {
+  flex-wrap: wrap;
+  overflow: visible;
+  white-space: normal;
+}
+.working-tail__line
+  :is(.ac-typing__agents, .ac-typing__people, .ac-typing__group, .ac-typing__typers, .ac-typing__also) {
+  flex-wrap: wrap;
+  overflow: visible;
+  white-space: normal;
+}
+/* What it did so far: the newest last, older ones as "+N". Each line wraps, never cut. */
+.working-tail__trail {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: var(--space-1) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: max(12px, calc(var(--msg-text) - 2px));
+  line-height: 1.45;
+  color: var(--muted);
+}
+.working-tail__trail > li {
+  overflow-wrap: anywhere;
+}
+/* Its time as quiet as its step: the seconds never the loudest thing on the line. */
+.working-tail .run-tail__clock {
+  color: var(--faint);
+  font-weight: 400;
+}
+.working-tail__more {
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+/* The code it runs, opened from "See code" on its line: as wide as a card in a message. */
+.working-tail__code {
+  max-width: var(--msg-card-w);
+  margin-top: var(--space-2);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .working-tail__trail > li {
+    animation: working-tail-line 200ms ease-out both;
+  }
+}
+@keyframes working-tail-line {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
 }
 /* The line's buttons are round and fit it; the last one sits 2px from its end. */
 .ac-typing__browser.ac-btn,
@@ -9249,6 +9457,7 @@ html:not([data-pointer]) .machine-connect__toggle:focus-visible {
   font-size: 40px;
   line-height: 1;
   letter-spacing: 0.08em;
+  white-space: nowrap;
   text-align: center;
 }
 .connect-page__computer {
@@ -9403,6 +9612,10 @@ html:not([data-pointer]) .onb__step:focus-visible {
   box-shadow: var(--card-key);
   color: var(--ok);
 }
+/* Passed but left for later: its dash in a neutral ink, never the done green. */
+.onb__steps li[data-later] .onb__n {
+  color: var(--faint);
+}
 .onb__step[aria-current="step"] .onb__n {
   background: var(--ink);
   color: var(--bg);
@@ -9509,7 +9722,7 @@ html:not([data-pointer]) .onb__step:focus-visible {
     min-height: 0;
     padding: 4px;
   }
-  /* The setup's seven steps beside the logo at 390px: 28px steps 3px apart, and 2px around them for the current
+  /* The setup's seven steps beside the logo's mark at 390px: 28px steps 3px apart, and 2px around them for the current
      one's ring, reaching past the strip's edges. Criar agente and the landing's card keep the shared strip. */
   .onb:not(.newag) .onb__steps {
     gap: 3px;
@@ -9529,8 +9742,8 @@ html:not([data-pointer]) .onb__step:focus-visible {
     white-space: nowrap;
   }
 }
-/* Narrower, they fit beside the logo's mark alone. */
-@media (max-width: 384px) {
+/* Seven steps and the whole logo need about 430px: narrower, the steps sit beside the logo's mark alone. */
+@media (max-width: 439px) {
   .onb__brand .ac-logo > :not(.ac-logo__mark) {
     display: none;
   }
@@ -10906,6 +11119,7 @@ html:not([data-pointer]) .agp-cell:focus-visible {
   font-size: 24px;
   font-weight: 650;
   letter-spacing: 0.08em;
+  white-space: nowrap;
   user-select: all;
 }
 /* A sign-in's button and "Copy link" beside it, wrapping under it when the column is narrow. */
@@ -11029,13 +11243,15 @@ html:not([data-pointer]) .agp-cell:focus-visible {
   min-width: 0;
 }
 /* 12px above and below, as the attention tiles (`.agp-attn`): a head with a button (a 32px row) reaches into the padding
-   as far as `--action-clear` lets it. The foot meets the card's edge, so it pulls 12px, not --card-pad. */
+   as far as `--action-clear` lets it, its title in the button's middle. A head with a quiet line under its title keeps
+   the 12px: that title sits at the head's top, so pulled up it would touch the card's edge. The foot meets the card's
+   edge, so it pulls 12px, not --card-pad. */
 .agp-card.ac-card {
   --agp-card-py: 12px;
   gap: 12px;
   padding-block: var(--agp-card-py);
 }
-.agp-card > .ac-card__head:first-child:has(.ac-card__action :is(.ac-btn, .ac-seg)) {
+.agp-card > .ac-card__head:first-child:not(:has(.ac-card__sub)):has(.ac-card__action :is(.ac-btn, .ac-seg)) {
   margin-block: calc(var(--action-clear) - var(--agp-card-py)) calc(-1 * var(--space-1));
 }
 .agp-card > .ac-card__foot {
@@ -12841,6 +13057,10 @@ html[data-menu-overlay] .shell {
 .sidebar__section-head:hover {
   background: var(--plate-soft);
 }
+/* A closed part's or sector's unread count ends on the rows' counts' edge (8 in from the row, the head's 2 plus 6). */
+.sidebar__section-head > .sidebar__unread {
+  margin-inline-end: calc(var(--space-2) - 2px);
+}
 /* A category's header is laid out as a row: its chevron centred in the icons' place, its name in the names' column. */
 .sidebar__section-toggle {
   flex: 1;
@@ -13373,13 +13593,16 @@ html:not([data-pointer]) .channel-perms__target:focus-visible {
 .sidebar__section--group[data-open="false"] .sidebar__section-body > [data-live="true"] {
   display: flex;
 }
-/* A group stands apart from the agents above it; its mark in gray, as quiet as its name. */
+/* A group stands apart from the agents above it. Its mark keeps the setor's own color, so setores tell apart. */
 .sidebar:not([data-rail="true"]) .sidebar__section--group {
   margin-top: 8px;
 }
-.sidebar__section--group .sidebar__section-toggle > .ac-rolemark {
-  filter: grayscale(1);
-  opacity: 0.6;
+/* A setor's channels follow its agents under a hairline (ADR 0240), from the faces' column to the row's end. */
+.sidebar__sector-line {
+  flex: none;
+  margin: 4px 8px;
+  border: 0;
+  border-top: 1px solid var(--line);
 }
 .sidebar__section-count {
   min-width: 24px;
@@ -13442,7 +13665,7 @@ html:not([data-pointer]) .channel-perms__target:focus-visible {
   line-height: 17px;
   color: var(--faint);
 }
-.sidebar[data-rail="true"] :is(.sidebar__see-all, .sidebar__pins-end, .sidebar__section-count) {
+.sidebar[data-rail="true"] :is(.sidebar__see-all, .sidebar__pins-end, .sidebar__sector-line, .sidebar__section-count) {
   display: none;
 }
 /* More: the other tools in a panel beside the sidebar, each with a line on what it is for. */
@@ -14121,31 +14344,24 @@ html:not([data-pointer]) .ac-typing__see:focus-visible {
 .ai-panel > .ac-setnote {
   margin: 0;
 }
-/* Under the key's steps a note keeps their columns: its icon centred in the numbers' 20px, its words on the text's. */
-.ai-panel > .agp-addacct__step ~ .ac-setnote {
-  gap: 12px;
-}
+/* Under the key's steps a note's icon sits centred in the numbers' 20px, its words the kit's gap after it. */
 .ai-panel > .agp-addacct__step ~ .ac-setnote > :first-child {
-  margin-inline: calc((20px - 14px) / 2);
+  margin-inline-start: calc((20px - 14px) / 2);
 }
 /*
  * A plan's panel: only its head reads in two columns (the mark's 30px, `.ac-brand--sm`, and the name's 12px after it).
  * Under the hairline the lines start at the panel's edge, as a step does outside the panel, with no empty column on
- * their left: what leads a line (an icon, a step's number) sits centred in the numbers' 20px at the edge, its words
- * 12px after it, where a numbered step's words are. A note inside a step's words is the step's, not the panel's: its
- * icon stays on the step's text.
+ * their left: what leads a line (an icon, a step's number) sits centred in the numbers' 20px at the edge. A step's
+ * words are 12px after its number, a note's the kit's 8px after its icon, as every icon line's. A note inside a step's
+ * words is the step's, not the panel's: its icon stays on the step's text.
  */
 .ai-panel--plan {
   --mark: 30px;
   --lead: 20px;
 }
-.ai-panel--plan > :is(.ac-setnote, .setup-line, .ac-card__foot).ac-iconline,
-.ai-panel--plan .ai-panel__row > .ac-setnote {
-  gap: 12px;
-}
 .ai-panel--plan > :is(.ac-setnote, .setup-line, .ac-card__foot).ac-iconline > :first-child,
 .ai-panel--plan .ai-panel__row > .ac-setnote > :first-child {
-  margin-inline: calc((var(--lead) - 14px) / 2);
+  margin-inline-start: calc((var(--lead) - 14px) / 2);
 }
 .ai-panel--plan .agp-addacct__step > i {
   margin-inline: calc((var(--lead) - 20px) / 2);
@@ -14380,12 +14596,12 @@ html:not([data-pointer]) .ac-typing__see:focus-visible {
 .agp-addacct > .ai-panel__row > :not(.ac-setnote) {
   margin-left: 22px;
 }
-/* In a plan's panel the row's action is its sign-in's state: under the note's words, as a numbered step's button. */
+/* In a plan's panel the row's action is its sign-in's state: under the note's words (its icon centred in the lead). */
 .ai-panel--plan .ai-panel__row > .ac-setnote {
   flex-basis: 100%;
 }
 .ai-panel--plan .ai-panel__row > :not(.ac-setnote) {
-  margin-left: calc(var(--lead) + 12px);
+  margin-left: calc((var(--lead) + 14px) / 2 + 8px);
 }
 .ai-panel__use {
   overflow: hidden;
@@ -14694,10 +14910,20 @@ html:not([data-pointer]) .ac-typing__see:focus-visible {
 .settings-row--acts {
   row-gap: var(--space-2);
 }
+/* Several controls in that group (a button beside its switch) keep a gap between them. */
+.settings-row--acts > .settings-row__end {
+  gap: var(--space-2);
+}
 .settings-row__lead {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-3);
+  gap: 2px var(--space-3);
+}
+/* Its status goes under the name, as a line's does; on a phone, under the icon too, from the row's edge. */
+.settings-row__lead > .settings-row__status {
+  flex-basis: 100%;
+  padding-left: calc(28px + var(--space-3));
 }
 /* Configurações › Aprovações (ADR 0139): a row whose box is the choice, centred on its label, on the label's first line
    when a line says under it why it is off. */
@@ -14935,6 +15161,12 @@ html:not([data-pointer]) .app-icons__agent:focus-visible {
   .settings-row--lead:not(.settings-row--open, :has(> .settings-row__end))
     > .settings-row__text:has(> .settings-row__status) {
     display: contents;
+  }
+  .settings-row__lead:has(> .settings-row__status) {
+    row-gap: var(--space-2);
+  }
+  .settings-row__lead > .settings-row__status {
+    padding-left: 0;
   }
   .settings-row--lead:has(> .settings-row__end > .ac-switch)
     > .settings-row__text:has(> .settings-row__status)

@@ -1,33 +1,14 @@
-import { afterEach, expect, jest, mock, test } from "bun:test";
+import { afterEach, expect, jest, test } from "bun:test";
 import type { ApiClient, ClientVitalsReport } from "@agenteschat/client";
 import { RETURN_WINDOW_MS } from "@agenteschat/client/lib/vitals";
 import { QueryClient } from "@tanstack/react-query";
-
-type Listener = (state: string) => void;
-const app = { state: "active", listeners: new Set<Listener>() };
-const to = (state: string) => {
-  app.state = state;
-  for (const l of [...app.listeners]) l(state);
-};
-mock.module("react-native", () => ({
-  Platform: { OS: "ios" },
-  AppState: {
-    get currentState() {
-      return app.state;
-    },
-    addEventListener: (_event: "change", listener: Listener) => {
-      app.listeners.add(listener);
-      return { remove: () => app.listeners.delete(listener) };
-    },
-  },
-}));
+import { app, resetAppState, to } from "./app-state";
 
 const { countReconnect, markFirstRows, markLaunchedAt, startPerfReports } = await import("../src/lib/perf");
 
 afterEach(() => {
   jest.useRealTimers();
-  app.state = "active";
-  app.listeners.clear();
+  resetAppState();
 });
 
 test("the phone reports as its system; the notification shade is no return to the app, the background is", async () => {

@@ -69,7 +69,10 @@ const KEY_FORMATS = [
   /\bxox[abprs]-[a-z0-9-]{10,}/i, // Slack tokens
   /-----BEGIN [A-Z ]*PRIVATE KEY-----/,
   /\b(bearer)\s+[a-z0-9._-]{20,}/i,
-  /\beyJ[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}/, // JWTs
+  // JWTs. The first part runs to the end of its run of letters, digits, `_` and `-`, so a JWT starts only at the first
+  // `eyJ` starting a word in that run: the lazy lookbehind skips a later one, which would read the run to its end
+  // again (the square of its length on a long run of `eyJ-`).
+  /\beyJ(?<!\beyJ[a-zA-Z0-9_-]*?eyJ)[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}/,
 ];
 const SECRET_PATTERNS = [...KEY_FORMATS, /\b(password|senha|passwd|secret|api[_ -]?key|token)\s*[:=]\s*\S{6,}/i];
 
@@ -234,12 +237,39 @@ export const howToSql = () =>
   sql`(${contextItems.kind} = 'note' and ${HOW_TO_WORD} = any(string_to_array(${contextItems.subjectKey}, ' ')))`;
 
 /** A text's words: lower case, accents and punctuation removed. */
-const wordList = (text: string) =>
+export const wordList = (text: string) =>
   text
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "")
     .toLowerCase()
     .match(/[\p{L}\p{N}]+/gu) ?? [];
+
+/** `text`'s words appear in `within` side by side, in order: case, accents, punctuation and markdown don't count. */
+export function saysWords(within: string, text: string) {
+  const words = wordList(text).join(" ");
+  return words.length > 0 && ` ${wordList(within).join(" ")} `.includes(` ${words} `);
+}
+
+/**
+ * `text` is whole sentences of `within` (`saysWords`, starting and ending where a sentence, a clause after a colon or
+ * a line does): a part of a sentence could leave out the words that change what it says ("não mande …").
+ */
+export function saysSentences(within: string, text: string) {
+  const words = wordList(text).join(" ");
+  if (!words) return false;
+  const parts = within
+    .split(/[.!?;:\n。！？；：]+/u)
+    .map((p) => wordList(p).join(" "))
+    .filter(Boolean);
+  return parts.some((_, i) => {
+    let run = "";
+    for (const part of parts.slice(i)) {
+      run = run ? `${run} ${part}` : part;
+      if (run.length >= words.length) return run === words;
+    }
+    return false;
+  });
+}
 
 /** Subject key: its words, once each, sorted. */
 export function normalizeSubject(subject: string) {

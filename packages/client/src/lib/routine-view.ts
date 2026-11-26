@@ -145,6 +145,9 @@ export function runOutcome(
     if (run.code === "waiting_budget") return { key: "routines.outcome.waitingBudget", values: {} };
     return { key: run.approvalId ? "routines.outcome.waitingApproval" : "routines.outcome.waiting", values: {} };
   }
+  // In line behind another routine of the same agent: which one it waits for.
+  if (run.status === "queued" && run.code === "waiting_routine" && run.codeParams?.routine)
+    return { key: "routines.outcome.queuedBehind", values: { name: run.codeParams.routine } };
   const fallback = `routines.outcome.${run.status}`;
   // A run that told people says so, whatever its code (`auto_report`: its final text became the report).
   if (!run.code || isRunAtWork(run.status) || run.status === "reported" || run.status === "silent")
@@ -160,6 +163,15 @@ export function runOutcome(
   if ((RUN_CODES as readonly string[]).includes(run.code))
     return { key: `routines.code.${run.code}`, values: { ...(run.codeParams ?? {}) }, fallback };
   return { key: fallback, values: {} };
+}
+
+/**
+ * What a routine at work says on its line: "Rodando agora", or, while its run waits in line behind another routine
+ * of the same agent, "Na fila: espera a rotina X terminar".
+ */
+export function atWorkWords(r: Pick<Routine, "recentRuns">): Words {
+  const behind = r.recentRuns.find((x) => x.status === "queued" && x.code === "waiting_routine");
+  return behind ? runOutcome(behind) : { key: "routines.runningNow", values: {} };
 }
 
 /** "Abrir na conversa": the agent's message for this run (a thread opens as a thread). */

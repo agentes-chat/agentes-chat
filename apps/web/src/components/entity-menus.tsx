@@ -161,7 +161,7 @@ function useMention() {
 
 /**
  * A channel (sidebar row, channel header): mark read, its details (edit for who manages it), `extra` (the sidebar's
- * Mover para… and Nova categoria), copy link, archive.
+ * Mudar de setor), copy link, archive.
  */
 export function useChannelMenu() {
   const { t } = useTranslation();

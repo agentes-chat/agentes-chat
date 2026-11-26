@@ -31,6 +31,11 @@ export interface PushStrings {
   machineConnectedTitle: string;
   computerReadyTitle: string;
   computerReadyBody: string;
+  /** A computer the agents work on is away (`name`: its name), and back after `away` ("42 min"). */
+  computerDownTitle: (name: string) => string;
+  computerDownBody: string;
+  computerBackTitle: (name: string) => string;
+  computerBackBody: (away: string) => string;
   browserHandoffTitle: (actor: string) => string;
   browserHandoffReminderTitle: (actor: string) => string;
   browserHandoffBody: string;
@@ -157,6 +162,10 @@ export const en: PushStrings = {
   machineConnectedTitle: "A new computer joined the workspace",
   computerReadyTitle: "Your workspace's computer is ready",
   computerReadyBody: "Open an agent's page to see it live.",
+  computerDownTitle: (n) => `${n} isn't answering`,
+  computerDownBody: "Your agents' work on it is waiting. Tap to see what to do.",
+  computerBackTitle: (n) => `${n} is back`,
+  computerBackBody: (away) => `It was away for ${away}. The work that waited goes on now.`,
   browserHandoffTitle: (a) => `${a} needs you in the browser`,
   browserHandoffReminderTitle: (a) => `${a} still needs you in the browser`,
   browserHandoffBody: "Tap to open the screen.",

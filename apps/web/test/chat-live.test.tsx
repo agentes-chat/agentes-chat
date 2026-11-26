@@ -151,16 +151,18 @@ const typingBar = () => document.querySelector(".ac-typing") as HTMLElement;
 const bar = () => ({ textContent: typingBar().querySelector(".ac-typing__text")?.textContent ?? "" });
 const lastPerson = (state: ReturnType<typeof seedState>) => state.messages[state.messages.length - 1];
 
-describe("typing bar above the composer", () => {
+/** The face's column of the conversation's last row while someone works here. */
+const tailFace = () => document.querySelector(".working-tail__face");
+
+describe("the working row at the conversation's end (the bar above the composer while nobody works)", () => {
   test("mention → the bar says 'Atlas pensando…', then 'escrevendo…'; none of its words in the conversation until its reply", async () => {
     const { socket } = await open();
     await sendText("@atlas olha o deploy");
     expect(bar().textContent).toBe("Atlas pensando…");
-    // Agents at work: their faces open the pill, no pixel orbit beside them (the dots are for people typing).
+    // An agent at work: its face leads the row with its rings, no pixel orbit and no dots (those are for people typing).
     expect(typingBar().querySelector(".ac-pixspin")).toBeNull();
-    expect(typingBar().querySelector(".ac-typing__dots")).toBeNull();
-    // Its row isn't in the conversation yet: the bar has its face.
-    expect(typingBar().querySelector(".ac-avatar--agent")).not.toBeNull();
+    expect(document.querySelector(".working-tail .ac-typing__dots")).toBeNull();
+    expect(tailFace()?.querySelector(".ac-orbit .ac-avatar--agent")).not.toBeNull();
     // The words are the bar's.
     expect(rowsWith("Atlas está")).toHaveLength(0);
     await settle(4);
@@ -174,7 +176,7 @@ describe("typing bar above the composer", () => {
     expect(document.querySelector(".ac-msg--streaming")).toBeNull();
     expect(rowsWith("Deploy ok")).toHaveLength(0);
     expect(bar().textContent).toBe("Atlas escrevendo…");
-    expect(typingBar().querySelector(".ac-avatar--agent")).not.toBeNull();
+    expect(tailFace()?.querySelector(".ac-orbit .ac-avatar--agent")).not.toBeNull();
     await push(socket, { type: "agent.idle", ...run });
     await settle();
     expect(bar().textContent).toBe("");
@@ -210,8 +212,10 @@ describe("typing bar above the composer", () => {
     await settle();
     expect(typingBar().dataset.active).toBe("true");
     expect(bar().textContent).toBe("João está digitando…");
-    // People only: the typing dots lead (the orbit is for agents), their face in the stack, no clock and no stop.
-    expect(typingBar().querySelector(".ac-typing__dots")).not.toBeNull();
+    // People only: the typing dots lead in the face's column (the rings are for agents), their face in the stack, no
+    // clock and no stop.
+    expect(tailFace()?.querySelector(".ac-typing__dots")).not.toBeNull();
+    expect(tailFace()?.querySelector(".ac-orbit")).toBeNull();
     expect(typingBar().querySelector(".ac-pixspin")).toBeNull();
     expect(typingBar().querySelectorAll(".ac-typing__tok .ac-avatar")).toHaveLength(1);
     expect(typingBar().querySelector(".ac-typing__elapsed, .stop-run")).toBeNull();
@@ -276,7 +280,7 @@ describe("typing bar above the composer", () => {
       type: "agent.run",
       ...a,
       status: "running",
-      startedAt: new Date(Date.now() - 13_000).toISOString(),
+      startedAt: new Date(Date.now() - 73_000).toISOString(),
     });
     await push(socket, { type: "agent.tool", ...a, tool: "github_list_prs" });
     await push(socket, { type: "agent.run", threadId: null, runId: "r-b", agentId: ATLAS_ID, status: "running" });
@@ -289,10 +293,12 @@ describe("typing bar above the composer", () => {
     const people = typingBar().querySelector(".ac-typing__people");
     expect(people?.textContent).toBe("João está digitando…");
     expect(people?.querySelector(".ac-typing__typers")?.textContent).toBe("João");
-    expect(typingBar().querySelectorAll(".ac-typing__tok")).toHaveLength(3);
+    // Three faces: the first agent's with its rings, leading the row, and two small ones on the line.
+    expect(tailFace()?.querySelector(".ac-orbit")).not.toBeNull();
+    expect(typingBar().querySelectorAll(".ac-typing__tok")).toHaveLength(2);
     expect(typingBar().querySelector(".ac-pixspin")).toBeNull();
     // The time, "Ver" and the stop are one agent's: with two at work the line shows none (the composer still stops).
-    expect(typingBar().querySelector(".ac-typing__elapsed")).toBeNull();
+    expect(typingBar().querySelector(".run-tail")).toBeNull();
     expect(within(typingBar()).queryByRole("button", { name: "Ver" })).toBeNull();
     expect(within(typingBar()).queryByRole("button", { name: "Parar" })).toBeNull();
     // One leaves: the other gets its own line back, with its time.
@@ -300,11 +306,11 @@ describe("typing bar above the composer", () => {
     await push(socket, { type: "run.finished", threadId: null, runId: "r-b", agentId: ATLAS_ID, status: "done" });
     await settle();
     expect(bar().textContent).toStartWith("Ada consultando o GitHub");
-    const took = typingBar().querySelector(".ac-typing__elapsed") as HTMLElement;
-    expect(took.textContent).toMatch(/^1\d s$/);
-    // Who is typing after its time; the time and the stop stay the agent's.
-    expect(took.nextElementSibling?.textContent).toBe("João digitando…");
-    // Tabular figures: the seconds tick without nudging what is beside them.
+    const took = typingBar().querySelector(".run-tail__clock") as HTMLElement;
+    expect(took.textContent).toBe("1 min");
+    // Who is typing after its time and its stop; the time and the stop stay the agent's.
+    expect(took.closest(".run-tail")?.nextElementSibling?.textContent).toBe("João digitando…");
+    // Tabular figures: the minutes turn without nudging what is beside them.
     expect(took.classList.contains("ac-num")).toBe(true);
   });
 });

@@ -9,6 +9,7 @@ import { recordAudit } from "./audit";
 import type { AutoModels } from "./auto-model";
 import { resolveDefaultBudgetPaused } from "./budget-paused-rows";
 import { caches } from "./cache";
+import { noteJoined, writeLeftLine } from "./channel-joins";
 import {
   announceChannelLeavers,
   CHANNEL_NAME_PATTERN,
@@ -140,6 +141,20 @@ export const isValidTimeZone = (tz: string) => {
     return false;
   }
 };
+
+/**
+ * The zone of the device someone joined from becomes theirs in the workspace while they have none of their own, so
+ * agents keep their clock rather than the workspace's. A zone they set stays.
+ */
+export async function adoptDeviceZone(db: Database, orgId: string, userId: string, zone: string | undefined) {
+  if (!zone || !isValidTimeZone(zone)) return;
+  const m = schema.organizationMembers;
+  await db
+    .update(m)
+    .set({ timezone: zone })
+    .where(and(eq(m.orgId, orgId), eq(m.userId, userId), isNull(m.timezone)));
+  caches.zones.delete(`${orgId}:${userId}`);
+}
 
 /** Updates name, context (goes into every agent's prompt) and settings. Admins (`configure`). */
 export async function updateOrgSettings(
@@ -568,10 +583,12 @@ export async function setAgentChannels(
         );
     }
     for (const c of adding) {
-      await tx
+      const fresh = await tx
         .insert(channelMembers)
         .values({ orgId, channelId: c.id, agentId, autoReply: wanted.get(c.id) ?? true })
-        .onConflictDoNothing();
+        .onConflictDoNothing()
+        .returning({ id: channelMembers.id });
+      if (fresh.length > 0 && c.kind === "channel") await noteJoined(tx, orgId, c.id, actorId);
     }
     for (const c of retuned) {
       await tx
@@ -596,8 +613,10 @@ export async function setAgentChannels(
       channelId: c.id,
       member: member(wanted.get(c.id) ?? true),
     });
-  for (const c of removing)
+  for (const c of removing) {
+    await writeLeftLine({ db, pubsub: options.pubsub }, orgId, c.id, { type: "agent", id: agentId });
     await publishChannelEvent(options.pubsub, { type: "channel.member_removed", channelId: c.id, member: member() });
+  }
   for (const c of retuned)
     await publishChannelEvent(options.pubsub, {
       type: "channel.member_updated",

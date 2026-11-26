@@ -352,8 +352,9 @@ describe("what fails in code the app doesn't serve", () => {
     expect(foreignStack(report([sdk]), sdk)).toBe(false);
   });
 
-  test("the SDK sends none of them, and gives the code only of what it sends", async () => {
-    let options: { beforeSend: (event: object) => object | null } | undefined;
+  let options: { beforeSend: (event: object) => object | null } | undefined;
+  /** The SDK started with its own `beforeSend`: what that gives back is sent, null is not. */
+  const startedSdk = async (taken: (id: string) => void = () => {}) => {
     mock.module("@sentry/browser", () => ({
       init: (given: typeof options) => {
         options = given;
@@ -363,12 +364,14 @@ describe("what fails in code the app doesn't serve", () => {
       setUser: () => {},
     }));
     const { startSdk } = await import("@/lib/error-sdk");
+    startSdk(CONFIG, taken);
+    return (event: object) => options?.beforeSend(event);
+  };
+
+  test("the SDK sends none of them, and gives the code only of what it sends", async () => {
     const taken: string[] = [];
-    startSdk(CONFIG, (id) => taken.push(id));
-    const send = (id: string, ...files: string[]) => {
-      const event = { event_id: id, ...report(files) };
-      return options?.beforeSend(event) === event;
-    };
+    const beforeSend = await startedSdk((id) => taken.push(id));
+    const send = (id: string, ...files: string[]) => beforeSend({ event_id: id, ...report(files) }) !== null;
     // The SDK's file: in a build, its chunk, among the app's files.
     const sdk = new URL("../src/lib/error-sdk.ts", import.meta.url).href;
     expect(send("1", `${EXTENSION}/inpage.js`)).toBe(false);
@@ -376,6 +379,41 @@ describe("what fails in code the app doesn't serve", () => {
     expect(send("3", sdk, app("main-AbC123.js"))).toBe(true);
     expect(send("4", sdk)).toBe(true);
     expect(taken).toEqual(["3", "4"]);
+  });
+
+  test("frames that name the app's pages (an inline or injected script's) go as their pattern, its files and others' as they are", async () => {
+    const beforeSend = await startedSdk();
+    const org = `${location.origin}/org/0b0e5b55-7e6c-4b51-9c3c-2f1d8f5a7c01`;
+    // As the SDK's dedupe keeps it, to drop a repeat: `beforeSend` gets a shallow copy, with the same exception.
+    const kept = {
+      exception: {
+        values: [
+          {
+            type: "Error",
+            value: "no access for someone@example.com",
+            stacktrace: {
+              frames: [
+                { filename: `${org}/wiki/plano-de-ferias`, abs_path: `${org}/wiki/plano-de-ferias` },
+                { filename: `${org}/dm/person/notarealuseridnotarealuserid0001` },
+                { filename: app("main-AbC123.js"), abs_path: app("main-AbC123.js") },
+                { filename: `${EXTENSION}/inpage.js` },
+              ],
+            },
+          },
+        ],
+      },
+    };
+    const asItCame = structuredClone(kept);
+    const sent = beforeSend({ ...kept }) as typeof kept;
+    expect(sent.exception.values[0]?.stacktrace.frames).toEqual([
+      { filename: `${location.origin}/org/:id/wiki/:id`, abs_path: `${location.origin}/org/:id/wiki/:id` },
+      { filename: `${location.origin}/org/:id/dm/person/:id` },
+      { filename: app("main-AbC123.js"), abs_path: app("main-AbC123.js") },
+      { filename: `${EXTENSION}/inpage.js` },
+    ]);
+    expect(sent.exception.values[0]?.value).toBe("no access for [email]");
+    // Scrubbed in place, a repeat of it would no longer match and be sent again.
+    expect(kept).toEqual(asItCame);
   });
 });
 

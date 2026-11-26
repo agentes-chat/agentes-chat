@@ -17,6 +17,8 @@ import { useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { AgentWorkLine } from "@/components/AgentWorkLine";
 import { ChannelPinsButton } from "@/components/ChannelPins";
+import { arrivalProps } from "@/components/lodi-cursor/arrivals";
+import { useRowsDrawIn } from "@/components/lodi-cursor/runner";
 import { useNow } from "@/components/missions/MissionBits";
 import { useOrg } from "@/components/org-context";
 import { StatusLine } from "@/components/Presence";
@@ -24,6 +26,7 @@ import { ProfileTrigger } from "@/components/ProfileCard";
 import { unshownRow } from "@/components/Sidebar";
 import { AgentTrail, colorOf } from "@/components/Sky";
 import { ChannelThreadsButton } from "@/components/threads/ThreadLines";
+import { useArrived } from "@/hooks/useArrived";
 import { useDirectory } from "@/hooks/useDirectory";
 import { useModalSheet } from "@/hooks/useModalSheet";
 import {
@@ -187,6 +190,13 @@ function MembersList({ channelId, people, agents, onAdd, pending }: Lists) {
   const heard = new Set(busyKey.split(" "));
   const busy = new Set([...heard, ...atWork]);
   const off = useAgentOff();
+  // Someone joining while the column shows: their row opens its room and draws itself in (an agent's face bursts).
+  const arrived = useArrived(
+    [...people.map((p) => p.userId), ...agents.map((a) => a.id)],
+    people.length + agents.length > 0,
+  );
+  const list = useRef<HTMLDivElement>(null);
+  useRowsDrawIn(list);
   const groups = memberGroups({
     people,
     agents,
@@ -212,7 +222,7 @@ function MembersList({ channelId, people, agents, onAdd, pending }: Lists) {
         : t(key === "online" ? "presence.online" : "presence.offline");
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: arrow keys between the row buttons
-    <div className="members-side__groups" data-pending={waiting || undefined} onKeyDown={onKey}>
+    <div ref={list} className="members-side__groups" data-pending={waiting || undefined} onKeyDown={onKey}>
       <h2 className="members-side__title">{t("members.title")}</h2>
       {groups.map((g) => {
         const label = g.role?.name ?? name(g.key);
@@ -235,11 +245,20 @@ function MembersList({ channelId, people, agents, onAdd, pending }: Lists) {
             {rows.map((r) =>
               r.kind === "person" ? (
                 <ErrorBoundary key={r.person.userId} resetKey={r.person} fallback={unshownRow}>
-                  <PersonRow member={r.person} you={r.person.userId === me.user.id} />
+                  <PersonRow
+                    member={r.person}
+                    you={r.person.userId === me.user.id}
+                    arrival={arrivalProps(arrived, r.person.userId)}
+                  />
                 </ErrorBoundary>
               ) : (
                 <ErrorBoundary key={r.agent.id} resetKey={r.agent} fallback={unshownRow}>
-                  <AgentRow agent={r.agent} channelId={channelId} busy={busy.has(r.agent.id)} />
+                  <AgentRow
+                    agent={r.agent}
+                    channelId={channelId}
+                    busy={busy.has(r.agent.id)}
+                    arrival={arrivalProps(arrived, r.agent.id)}
+                  />
                 </ErrorBoundary>
               ),
             )}
@@ -264,7 +283,16 @@ function MembersList({ channelId, people, agents, onAdd, pending }: Lists) {
 }
 
 /** A person: their face with the badge, the crown on an owner, and their line (or away/busy when they wrote none). */
-function PersonRow({ member: m, you }: { member: Member; you: boolean }) {
+function PersonRow({
+  member: m,
+  you,
+  arrival,
+}: {
+  member: Member;
+  you: boolean;
+  /** Its marks while it lands (`arrivalProps`). */
+  arrival?: ReturnType<typeof arrivalProps>;
+}) {
   const { t, i18n } = useTranslation();
   const shown = usePersonPresence(m.userId);
   // Yourself hidden: your badge says so, and the row reads offline as everyone else sees it.
@@ -286,6 +314,7 @@ function PersonRow({ member: m, you }: { member: Member; you: boolean }) {
       <span
         id={shows}
         className="members-side__inner"
+        {...arrival}
         data-presence={looks}
         title={seen ? `${word} · ${t("presence.seen", { when: relativeTime(t, i18n.language, seen) })}` : undefined}
       >
@@ -317,7 +346,18 @@ function PersonRow({ member: m, you }: { member: Member; you: boolean }) {
  * An agent: its face, what it is doing (its work first: for whom or where, "aqui" for this conversation, what it waits
  * on, how long; then its line, its role, its presence), the orbit and the trail while it works, anywhere.
  */
-function AgentRow({ agent, channelId, busy }: { agent: Agent; channelId: string; busy: boolean }) {
+function AgentRow({
+  agent,
+  channelId,
+  busy,
+  arrival,
+}: {
+  agent: Agent;
+  channelId: string;
+  busy: boolean;
+  /** Its marks while it lands (`arrivalProps`). */
+  arrival?: ReturnType<typeof arrivalProps>;
+}) {
   const { t, i18n } = useTranslation();
   const { org } = useOrg();
   const dir = useDirectory(org.id);
@@ -364,6 +404,8 @@ function AgentRow({ agent, channelId, busy }: { agent: Agent; channelId: string;
       <span
         id={shows}
         className="members-side__inner"
+        {...arrival}
+        data-arriving-agent={arrival && "data-arriving" in arrival ? agent.id : undefined}
         data-presence={shown?.presence}
         data-busy={busy || undefined}
         title={

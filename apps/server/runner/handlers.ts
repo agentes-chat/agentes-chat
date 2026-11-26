@@ -39,7 +39,8 @@ import { type BrowserManager, browserSetupText } from "./browser";
 import type { BrowserViews } from "./browser-views";
 import { allowedMerge, commandApproval, mergeOf, ownBranches } from "./command-gate";
 import type { DesktopManager } from "./desktop";
-import { type DesktopSessions, hostMemAvailable, MIN_FREE_BYTES } from "./desktop-session";
+import { type DesktopSessions, freeMemoryNow, hostMemAvailable, MIN_FREE_BYTES } from "./desktop-session";
+import type { EgressShare } from "./egress-share";
 import { RunnerError, toMachineError } from "./errors";
 import { runCommand } from "./exec";
 import { type CacheFill, type CloneSlots, gitSync } from "./git";
@@ -97,8 +98,8 @@ export const BRAIN_PRESSURE_USED = 0.65;
 export const PRESSURE_POLL_MS = 30_000;
 
 /**
- * Where memory is read (Linux): while more than `BRAIN_PRESSURE_USED` of it is in use, `close` closes one idle CLI
- * (the least recently used) every `PRESSURE_POLL_MS`. The interval, for the caller to clear.
+ * Where memory is read (`freeMemoryNow`: Linux, macOS, Windows): while more than `BRAIN_PRESSURE_USED` of it is in use,
+ * `close` closes one idle CLI (the least recently used) every `PRESSURE_POLL_MS`. The interval, for the caller to clear.
  */
 export function closeIdleUnderPressure(
   close: () => Promise<boolean>,
@@ -106,7 +107,7 @@ export function closeIdleUnderPressure(
 ) {
   let closing = false;
   const timer = setInterval(() => {
-    const free = (o.memAvailable ?? hostMemAvailable)();
+    const free = (o.memAvailable ?? freeMemoryNow)();
     if (closing || free === null || free >= (1 - BRAIN_PRESSURE_USED) * (o.totalBytes ?? os.totalmem())) return;
     closing = true;
     void close()
@@ -174,6 +175,7 @@ export const NEW_WORK_OPS: ReadonlySet<string> = new Set([
   "phone.record",
   "phone.screenshot",
   "phone.logs",
+  "egress.dial",
 ]);
 
 /**
@@ -269,8 +271,12 @@ export const OP_ROUTES: Readonly<Record<MachineOp, "machine" | "agent">> = {
   // Installed as the runner's own user. Root answers unsupported: the agents' users get their CLIs from the
   // computer's setup, never from an install run as root.
   "cli.install": "machine",
+  // The runner's own copies (ADR 0228 §6) live with the runner; a system-mode root has none and says so.
+  "cli.fetch": "machine",
   // Reads the runner's own log and state: root's.
   "report.collect": "machine",
+  // Root's: its data socket needs the machine token, and the connection is the computer's, not an agent's.
+  "egress.dial": "machine",
 };
 
 type AccessRequestOp = Extract<MachineRequest, { op: "access.request" }>;
@@ -385,6 +391,8 @@ export interface HandlerContext {
   desktopUse?: DesktopManager;
   /** A person takes control of the agent's desktop: what the agent's pointer and keys are doing stops. */
   desktopTaken?: (agentId: string) => void;
+  /** `DESKTOP_STARTING_PROTOCOL`: tells the server a stream's open starts the desktop first (`stream.starting`). */
+  streamStarting?: (streamId: string) => void;
   /** The phones this computer reaches (`PHONES_PROTOCOL`); without it every phone op answers `phone_missing`. */
   phones?: PhoneManager;
   /** `KEEP_RUNNING_PROTOCOL` (system mode under systemd): the agents' holds; without it `keep.*` is `unsupported`. */
@@ -397,10 +405,16 @@ export interface HandlerContext {
   /** `CLI_INSTALL_PROTOCOL`: the coding CLIs looked up now, and installed from the apps. */
   clisCheck?: () => Promise<MachineReplies["clis.check"]>;
   cliInstall?: (req: Extract<MachineRequest, { op: "cli.install" }>) => MachineReplies["cli.install"];
+  /** `CLI_COPIES_PROTOCOL`: the apps' "Try again" on a CLI's fetch. */
+  cliFetch?: (cli: Extract<MachineRequest, { op: "cli.fetch" }>["cli"]) => MachineReplies["cli.fetch"];
+  /** `CLI_COPIES_PROTOCOL`: a brain's CLI ready before its turn (the runner's own copy fetched if it must be). */
+  cliEnsure?: (kind: Extract<MachineRequest, { op: "brain.turn" }>["kind"]) => Promise<void>;
   /** `IPHONE_DEV_MODE_PROTOCOL`: opening Xcode on this Mac; without it the op answers `opened: false`. */
   xcodeOpen?: () => Promise<MachineReplies["xcode.open"]>;
   /** `PROBLEM_REPORT_PROTOCOL`: what a problem report adds from this computer. */
   reportParts?: () => MachineReplies["report.collect"];
+  /** `EGRESS_SHARE_PROTOCOL`: this computer's internet lent to its workspace's own computer (ADR 0237). */
+  egressShare?: EgressShare;
 }
 
 export interface RequestScope {
@@ -741,6 +755,7 @@ async function routeRequest(ctx: HandlerContext, req: MachineRequest, scope: Req
           agent,
           () => workers.run(req, scope),
           (final) => signedOut(ctx, req, final),
+          scope.signal,
         );
       }
     }
@@ -766,6 +781,11 @@ async function routeRequest(ctx: HandlerContext, req: MachineRequest, scope: Req
     return handleDesktop(ctx, req);
   }
   if (req.op === "stream.open") return handleStream(ctx, req, scope);
+  if (req.op === "egress.dial") {
+    const { egressShare, streams } = ctx;
+    if (!egressShare || !streams) throw new RunnerError("bad_request", "This runner lends no connection");
+    return egressShare.dial(req, (streamId) => streams.dial(streamId, "egress", scope.signal));
+  }
   if (req.op === "secret" && ctx.systemMode?.()) {
     if (!ctx.workers?.secret) throw new RunnerError("not_allowed", "The root secret broker is unavailable");
     return ctx.workers.secret(req, scope);
@@ -813,6 +833,10 @@ async function routeRequest(ctx: HandlerContext, req: MachineRequest, scope: Req
   if (req.op === "clis.check") {
     if (!ctx.clisCheck) throw new RunnerError("bad_request", "This runner doesn't look up its programs on request");
     return ctx.clisCheck();
+  }
+  if (req.op === "cli.fetch") {
+    if (ctx.systemMode?.() || !ctx.cliFetch) return { fetch: null };
+    return ctx.cliFetch(req.cli);
   }
   if (req.op === "cli.install") {
     return (
@@ -1056,6 +1080,7 @@ async function handleStream(
     // One that isn't running starts when the server says so, and stays on; never on a paused computer.
     if (req.start === true && !ctx.desktops.status(agent).running) {
       if (ctx.paused?.()) throw new RunnerError("paused", PAUSED);
+      ctx.streamStarting?.(streamId);
       await ctx.desktops.ensure(agent);
     }
     if (req.mode === "control") ctx.desktopTaken?.(agent.id);
@@ -1345,6 +1370,8 @@ async function doBrainTurn(
   requireTool(ctx, cli ?? "claude");
   if (!req.agent) throw new RunnerError("bad_request", "A brain turn belongs to an agent");
   const runId = requireString(req.runId, "runId");
+  // Its CLI where the person's own is too old or missing: the runner's copy, fetched now if it must be (ADR 0228 §6).
+  await ctx.cliEnsure?.(req.kind);
   // A locked-down turn (protocol 41) gets neither the agent's secrets nor its folders, and stops at the first tool
   // that isn't our bridge's.
   const chat = req.permissions?.mode === "chat";

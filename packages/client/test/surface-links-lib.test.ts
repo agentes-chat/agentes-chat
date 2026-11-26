@@ -23,6 +23,7 @@ import { appVia, surfaceVia } from "../src/lib/via";
 
 const NOW = Date.parse("2026-01-10T12:00:00Z");
 const link = (extra: Partial<SurfaceLink> = {}): SurfaceLink => ({
+  nudge: { on: true, afterHours: 4, quietFrom: 22, quietTo: 8 },
   id: "l1",
   status: "active",
   display: "+1 555 0100",

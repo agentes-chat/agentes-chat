@@ -1,5 +1,12 @@
 import { isIP } from "node:net";
-import { CLI_INSTALL_CAUSES, CLI_INSTALL_STATES, INSTALLABLE_CLIS, limitIp } from "@agenteschat/adapters";
+import {
+  CLI_FETCH_FAILURES,
+  CLI_INSTALL_CAUSES,
+  CLI_INSTALL_STATES,
+  FETCH_NAMES,
+  INSTALLABLE_CLIS,
+  limitIp,
+} from "@agenteschat/adapters";
 import {
   ARTIFACT_LIMITS,
   allowMachineTool,
@@ -31,6 +38,7 @@ import {
   reduceMachineAccess,
   renameMachine,
   restoreHostComputer,
+  retryCliFetch,
   safeEqual,
   setAgentComputerTarget,
   setMachinePause,
@@ -175,6 +183,26 @@ export const Machine = z
       description:
         "Its coding CLIs can be looked for again from here (`POST …/clis/check`) and installed by the person who paired it (`…/cli-install`); `false`: its app is too old, or it is the workspace's own computer.",
     }),
+    cliFetchable: z.array(z.enum(FETCH_NAMES)).openapi({
+      description:
+        "ADR 0228 §6: the coding CLIs its runner fetches by itself there (a pinned build, hash checked) when a turn or a sign-in needs one, and `git` on Windows (Git for Windows' portable build, Claude Code's shell there). None on the workspace's own computer, in system mode or from an older runner.",
+    }),
+    cliFetch: z
+      .record(
+        z.string(),
+        z.object({
+          state: z.enum(["fetching", "ready", "failed"]),
+          version: z.string(),
+          done: z.number().optional(),
+          total: z.number().nullable().optional(),
+          reason: z.enum(CLI_FETCH_FAILURES).optional(),
+        }),
+      )
+      .nullable()
+      .openapi({
+        description:
+          "Where each fetch of a coding CLI stands there, by CLI: `fetching` (bytes `done` of `total`, null while unknown), `ready`, or `failed` with `reason` (`offline`, `hash_mismatch`, `no_build`, `disk_full`, `failed`). Live as `machine.updated` with `cliFetch`.",
+      }),
     cliErrors: z.record(z.string(), z.string()).nullable().openapi({
       description:
         "The coding CLIs there that can't start (`claude`, `codex`…), each with its own last error line; `git_missing`: Claude Code on Windows without Git for Windows. Null unless admin or the person who paired it.",
@@ -234,6 +262,18 @@ export const Machine = z
       .nullable()
       .optional(),
     egress: z.object({ ip: z.string(), country: z.string().optional(), at: z.string() }).nullable().optional(),
+    egressVia: z
+      .object({ machineId: z.string(), name: z.string(), userName: z.string().nullable() })
+      .nullable()
+      .optional()
+      .openapi({
+        description:
+          "The workspace's own computer: the person's computer whose internet its agents' web traffic uses now (ADR 0237), and who connected it. Null: its usual way out.",
+      }),
+    moving: z.boolean().optional().openapi({
+      description:
+        "The workspace's own computer is away moving to another server: it comes back by itself in a few minutes. A change comes as `machine.updated`.",
+    }),
     egressWaiting: z.boolean().optional().openapi({
       description:
         "The workspace's own computer, online, has its agents waiting for their way out: its network sends them only through a proxy and none works now, so their connections are refused for a while. A change comes as `machine.updated`.",
@@ -363,6 +403,9 @@ const MachineOutage = z
       .boolean()
       .openapi({ description: "The workspace's own computer (ADR 0056 §10): its platform is `other`." }),
     offlineSince: z.string().openapi({ description: "ISO time of its last sign of life." }),
+    moving: z.boolean().openapi({
+      description: "The workspace's own computer is away moving to another server: it comes back by itself.",
+    }),
     agents: z.array(
       z.object({
         agentId: z.uuid(),
@@ -422,6 +465,9 @@ const ComputerQueue = z
   .object({
     machineId: z.uuid(),
     name: z.string(),
+    moving: z.boolean().optional().openapi({
+      description: "It is away moving to another server: the line waits for it, back in a few minutes.",
+    }),
     working: z.array(
       z.object({
         runId: z.uuid(),
@@ -733,6 +779,44 @@ export function machineAppRoutes(deps: AppDeps) {
       const limited = await cliLimited(c, userId, "check");
       if (limited) return limited;
       return c.json(await checkMachineClis({ db, pubsub, hub: hub() }, userId, orgId, machineId), 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/machines/{machineId}/clis/{cli}/fetch",
+      tags,
+      security,
+      summary: "Fetch a coding CLI's pinned build on the computer again now (the apps' Try again)",
+      description:
+        "Any member: it brings the version agentes.chat already chose, nothing else (ADR 0228 §6). Where it stands comes back at once and then as `machine.updated` with `cliFetch`. 400 `machine.cli_not_fetched` when that computer doesn't fetch it by itself.",
+      request: { params: MachineParams.extend({ cli: z.enum(FETCH_NAMES) }) },
+      responses: {
+        200: json(
+          z.object({
+            fetch: z
+              .object({
+                state: z.enum(["fetching", "ready", "failed"]),
+                version: z.string(),
+                done: z.number().optional(),
+                total: z.number().nullable().optional(),
+                reason: z.enum(CLI_FETCH_FAILURES).optional(),
+              })
+              .nullable(),
+          }),
+        ),
+        429: errorResponse("Too many tries"),
+        ...errors,
+        ...cliOffline,
+      },
+    }),
+    async (c) => {
+      const { orgId, machineId, cli } = c.req.valid("param");
+      const userId = c.get("user").id;
+      const limited = await cliLimited(c, userId, "fetch");
+      if (limited) return limited;
+      return c.json(await retryCliFetch({ db, pubsub, hub: hub() }, userId, orgId, machineId, cli), 200);
     },
   );
 
@@ -1379,7 +1463,8 @@ export function registerMachinePublicRoutes(api: OpenAPIHono, deps: AppDeps) {
     if (!machine) return apiError(c, 401, "machine.unauthorized", "This computer's token is not valid");
     const logo = await currentOrgLogo({ db, blobs: adapters.platformBlobs }, machine.orgId);
     if (!logo) return apiError(c, 404, "org.logo_not_found", "The organization has no logo");
-    const etag = `"${logo.file}"`;
+    // The light-ink mark rides in the ETag (the runner passes it on to the app's tile), so a mark that changes is news.
+    const etag = `"${logo.file}${logo.ink}"`;
     const headers = { etag, "cache-control": "private, max-age=300", "x-content-type-options": "nosniff" };
     const match = c.req.header("if-none-match") ?? "";
     if (match.split(",").some((tag) => tag.trim().replace(/^W\//, "") === etag)) {

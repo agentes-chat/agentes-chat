@@ -683,3 +683,36 @@ test("links and invitations carry cargos, channels and agents; a link has a life
   const asked = await ask(anon, chosenToken, { name: "Gus", email: "gus@example.com" });
   expect([asked.status, await errorCode(asked)]).toEqual([409, "join.link_full"]);
 });
+
+test("accepting an invitation, the device's zone is the person's in the workspace", async () => {
+  const { owner, orgId } = await start();
+  const zoneOf = async (email: string) => {
+    const [row] = await t.db
+      .select({ timezone: schema.organizationMembers.timezone })
+      .from(schema.organizationMembers)
+      .innerJoin(schema.users, eq(schema.users.id, schema.organizationMembers.userId))
+      .where(eq(schema.users.email, email));
+    return row?.timezone;
+  };
+  const invite = async (email: string) => {
+    const res = await owner(`/api/app/organizations/${orgId}/invitations`, { json: { email } });
+    return ((await res.json()) as { url: string }).url.split("/invite/")[1] ?? "";
+  };
+  const ruiToken = await invite("rui@example.com");
+  const rui = browser(t);
+  await signUp(rui, "rui@example.com");
+  expect(
+    (
+      await rui(`/api/app/invitations/${ruiToken}/accept`, {
+        json: { timeZone: "Europe/Lisbon" },
+      })
+    ).status,
+  ).toBe(200);
+  expect(await zoneOf("rui@example.com")).toBe("Europe/Lisbon");
+  // No zone, or one no clock knows: the workspace's.
+  const kaiToken = await invite("kai@example.com");
+  const kai = browser(t);
+  await signUp(kai, "kai@example.com");
+  await kai(`/api/app/invitations/${kaiToken}/accept`, { json: { timeZone: "Mars/Olympus" } });
+  expect(await zoneOf("kai@example.com")).toBeNull();
+});

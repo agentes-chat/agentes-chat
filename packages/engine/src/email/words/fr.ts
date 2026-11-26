@@ -436,6 +436,49 @@ export const words: EmailWords = {
       why: () => "Vous recevez cet e-mail car vous êtes membre de cet espace de travail sur agentes.chat.",
     },
   },
+  computerDown: {
+    subject: "Un ordinateur ne répond pas",
+    preheader: "Le travail de vos agents dessus est en attente.",
+    headline: "Un ordinateur ne répond pas",
+    body: (name, org, away) => [
+      { b: name },
+      " dans ",
+      { b: org },
+      ` ne répond plus depuis ${away}. Le travail qui en a besoin attend et reprendra à son retour.`,
+    ],
+    runs: "Demandes aux agents en attente",
+    calls: "Appels webhook en attente",
+    note: "Pour continuer maintenant, déplacez ses agents vers un autre ordinateur depuis sa page.",
+    button: "Ouvrir l’ordinateur",
+    why: (org) => `Vous recevez cet e-mail car vous gérez les ordinateurs de ${org} sur agentes.chat.`,
+    back: {
+      subject: "Un ordinateur est de retour",
+      preheader: "Le travail qui l’attendait reprend maintenant.",
+      headline: "L’ordinateur est de retour",
+      runs: "Demandes aux agents qui ont attendu",
+      calls: "Appels webhook qui ont attendu",
+      body: (name, org, away) => [
+        { b: name },
+        " dans ",
+        { b: org },
+        ` est de retour après ${away}. Le travail qui l’attendait reprend maintenant.`,
+      ],
+    },
+    personal: {
+      body: (name, _org, away) => [
+        { b: name },
+        ` ne répond plus depuis ${away}. Le travail qui en a besoin attend et reprendra à son retour.`,
+      ],
+      why: () =>
+        "Vous recevez cet e-mail car vous gérez les ordinateurs de votre espace de travail personnel sur agentes.chat.",
+      back: {
+        body: (name, _org, away) => [
+          { b: name },
+          ` est de retour après ${away}. Le travail qui l’attendait reprend maintenant.`,
+        ],
+      },
+    },
+  },
   appConnected: {
     subject: "Une app a été connectée à votre compte agentes.chat",
     preheader: "Elle peut lire et confier des tâches aux agents en votre nom, dans un espace de travail.",

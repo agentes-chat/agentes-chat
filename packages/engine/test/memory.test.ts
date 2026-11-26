@@ -128,6 +128,19 @@ describe("guardrails", () => {
     }
   });
 
+  test("a long run of JWT starts is read in time, and a JWT it runs into or follows is still found", () => {
+    // Each took seconds when every `eyJ` after a `-` in a long run read the run to its end.
+    const run = "eyJ-".repeat(50_000);
+    const jwt = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.c2lnbmF0dXJl";
+    const file = (text: string) => holdsSecret(new TextEncoder().encode(text));
+    const started = performance.now();
+    expect(looksLikeSecret(run)).toBe(false);
+    expect(file(run)).toBe(false);
+    expect(looksLikeSecret(`${run} ${jwt}`)).toBe(true);
+    expect(file(`${run}${jwt}`)).toBe(true);
+    expect(performance.now() - started).toBeLessThan(1000);
+  });
+
   test("permission-bending text is the judge's call (any language); a failing judge never blocks memory", async () => {
     const judge = createFakeJudge((kind, _id, state) =>
       kind === "permission_change" && JSON.stringify(state).includes("admin") ? 0.9 : 0.05,
@@ -1458,7 +1471,7 @@ describe("proposals for teammates (one card, a row per agent and kind of change)
     f = await setup();
     const ada = await teammate("ada");
     const lia = await teammate("lia");
-    const atlas = await teammate("atlas", { instructions: "Seja breve.\n\n## Learned\n- Outra." });
+    const atlas = await teammate("atlas", { instructions: "Seja breve.\n\n## Tom\n- Outra." });
     const { proposals } = await proposeFor({
       target: "agent_instructions",
       agentIds: [ada.id, lia.id, atlas.id],

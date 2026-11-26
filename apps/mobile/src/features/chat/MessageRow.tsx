@@ -28,6 +28,8 @@ import { channelRefsOf } from "@agenteschat/client/lib/channel-refs";
 import { type RunPosition, runAround } from "@agenteschat/client/lib/chat";
 import { mineOnRight } from "@agenteschat/client/lib/chat-look";
 import { choiceReplyLine } from "@agenteschat/client/lib/choices";
+import type { RelayedAnswer } from "@agenteschat/client/lib/consult-group";
+import { spilledText } from "@agenteschat/client/lib/devices";
 import { agentsByAnyHandle } from "@agenteschat/client/lib/directory";
 import {
   CONTINUE_ERRORS,
@@ -169,6 +171,7 @@ import { MessageText } from "./MessageText";
 import { aboveInset, QuoteAbove, QuotePlate } from "./QuoteLine";
 import { ReachLines } from "./ReachLines";
 import { Receipts } from "./Receipts";
+import { RelayQuote } from "./RelayQuote";
 import {
   useRowConsultsPart,
   useRowDirectory,
@@ -178,11 +181,12 @@ import {
   useRowRoles,
 } from "./row-data";
 import { SecretCard } from "./SecretCard";
-import { ModelStandInLine, SpeedFallbackLine, StopPill } from "./StoppedLine";
+import { ModelStandInLine, SpeedFallbackLine, SpilledLine, StopPill } from "./StoppedLine";
 import { useStopMovedOn, useStoppedRun } from "./stopped-runs";
 import { SwipeSlide, SwipeTime, useGiveWay, useSwipeSlide } from "./swipe-time";
 import { TeamChecks } from "./TeamChecks";
 import { SavedTools, TurnTools } from "./ToolCalls";
+import { ThreadRootMark, useLandingEntrance } from "./thread-open";
 import { keptTurn, stepLimitOf, stoppedOf, turnOpener } from "./turn";
 import { HandedWorkLines, MessageWorkLine } from "./WorkLine";
 
@@ -209,11 +213,16 @@ const TRAIL_RECENT_MS = 12 * 60 * 60_000;
  */
 export const MessageRow = memo(function MessageRow(props: RowProps) {
   const opened = useContext(OpenedMessagesContext)?.has(props.message.id) === true;
-  return (
+  const reduced = useReducedMotion();
+  const entering = useLandingEntrance(reduced);
+  const body = (
     <LayoutAnimationConfig key={opened ? "opened" : "row"} skipEntering>
       <RowBody {...props} />
     </LayoutAnimationConfig>
   );
+  const row = props.thread ? <ThreadRootMark threadId={props.thread.id}>{body}</ThreadRootMark> : body;
+  // A row of a thread's first load, as its screen opens: it fades in after the one above it.
+  return entering ? <Animated.View entering={entering}>{row}</Animated.View> : row;
 });
 
 interface RowProps {
@@ -226,6 +235,8 @@ interface RowProps {
   /** The message it groups under, and whether that one shows its thread's link: what hangs under it ends the run. */
   above?: Message;
   aboveThread?: boolean;
+  /** Another agent's words it passes on (`relayedAnswers`): quoted at the top of its words. */
+  relay?: RelayedAnswer<Message> | undefined;
   meId: string | null;
   /** Its thread, when it is the root of one the conversation shows as a link. */
   thread?: ThreadInfo;
@@ -263,6 +274,7 @@ function RowBody({
   run: runAt = "solo",
   above,
   aboveThread = false,
+  relay,
 }: RowProps) {
   const { t, i18n } = useTranslation();
   // Mine and not sent for lack of a connection: it waits and goes by itself when the connection is back.
@@ -303,6 +315,7 @@ function RowBody({
   const qc = useQueryClient();
   const orgId = useOrgId();
   const { org } = useOrg();
+  const spilled = isAgent ? spilledText(t, meta, org) : null;
   const shows = useShowsWork(org);
   // Found again only when the cached lists it reads change, not on every draw of the row.
   const noticeId = routine?.noticeId;
@@ -370,11 +383,24 @@ function RowBody({
     reached,
   );
   // Work it handed over that reports here: its line under this reply says what the pair row would.
-  const paired = consults.filter((c) => !m.handedWorks?.some((w) => w.handedBy?.consultationId === c.id));
-  const consultQuote =
+  // The question whose answer it passes on is quoted with those words (`relay`), not in the pair's quote too.
+  const paired = consults.filter(
+    (c) => !m.handedWorks?.some((w) => w.handedBy?.consultationId === c.id) && c.id !== relay?.consultation.id,
+  );
+  const relayQuote = relay && !readOnly ? <RelayQuote relay={relay} channelId={m.channelId} /> : null;
+  const pairQuote =
     isAgent && m.author.id && paired.length > 0 ? (
       <ConsultQuote askerId={m.author.id} channelId={m.channelId} items={paired} />
     ) : null;
+  const consultQuote =
+    relayQuote && pairQuote ? (
+      <>
+        {relayQuote}
+        {pairQuote}
+      </>
+    ) : (
+      (relayQuote ?? pairQuote)
+    );
   const quoteAlone = consultQuote !== null && (!body || Boolean(choiceReply));
   const quoteInWords = quoteAlone ? null : consultQuote;
   const grouped = groupedIn && !quoteAlone;
@@ -1075,6 +1101,7 @@ function RowBody({
             {voiceOf(meta) ? <VoiceMessage message={m} /> : null}
             {isAgent && meta?.speedFallback === true ? <SpeedFallbackLine message={m} /> : null}
             {isAgent && standIn ? <ModelStandInLine message={m} text={standIn} /> : null}
+            {spilled ? <SpilledLine text={spilled} /> : null}
             {(stopped || atLimit || providerCut) && m.agentRunId ? (
               <StoppedLine
                 message={m}

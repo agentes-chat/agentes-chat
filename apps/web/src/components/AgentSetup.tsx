@@ -8,6 +8,7 @@ import {
   useApi,
   useCatalog,
   useChannels,
+  useCloseSetup,
   useConfirmSetup,
   useCredentials,
   useDms,
@@ -78,6 +79,7 @@ import {
   Textarea,
   Token,
   TokenList,
+  useMorph,
 } from "@agenteschat/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
@@ -260,7 +262,7 @@ const roleWord = (name: string, locale: string) =>
 
 /**
  * The checklist card. `dm`: under the agent's greeting, in its voice ("Pra eu começar"); `profile`: on its page
- * ("Para o Leo começar"), gone once everything is done.
+ * ("Para o Leo começar"), gone once everything is done or closed with its ×.
  */
 export function AgentSetupCard({ agent, place }: { agent: Agent; place: "dm" | "profile" }) {
   const { t, i18n } = useTranslation();
@@ -282,8 +284,9 @@ export function AgentSetupCard({ agent, place }: { agent: Agent; place: "dm" | "
   const said = useDoneSay(ready, doneHere, steps.length, agent.appearance?.color, burstRef, (step) =>
     t(`agentSetup.say.${step}`, agentGrammar(agent.name)),
   );
+  const close = useCloseSetup(org.id, agent.id);
 
-  if (steps.length === 0 || (place === "profile" && all)) return null;
+  if (steps.length === 0 || (place === "profile" && (all || agent.setup?.closed))) return null;
 
   const names = (list: AccessResource[]) =>
     joinNames(
@@ -376,6 +379,8 @@ export function AgentSetupCard({ agent, place }: { agent: Agent; place: "dm" | "
       done={counted.filter((s) => done.has(s)).length}
       total={counted.length}
       place={place}
+      // On its page it may go before everything is done; in its chat it is the first message and stays.
+      {...(place === "profile" ? { onClose: () => close.mutate() } : {})}
       burstRef={burstRef}
       band={
         inChat && (
@@ -483,6 +488,7 @@ export function SetupCardView({
   rows,
   foot,
   band,
+  onClose,
   burstRef,
   children,
 }: {
@@ -492,19 +498,38 @@ export function SetupCardView({
   place: "dm" | "profile";
   rows: SetupCardRow[];
   foot?: ReactNode;
+  /** Its × after the count: the card goes, whatever is left. */
+  onClose?: () => void;
   /** On top of the card: a new agent's sky in its chat (`SetupBand`, ADR 0164). */
   band?: ReactNode;
   burstRef?: RefObject<HTMLCanvasElement | null>;
   children?: ReactNode;
 }) {
   const { t } = useTranslation();
+  // A row checked or a step added: the card glides to its new height.
+  const box = useRef<HTMLElement>(null);
+  useMorph(box);
   return (
-    <section className="setup-cl" aria-label={title} data-place={place}>
+    <section ref={box} className="setup-cl" aria-label={title} data-place={place}>
       <canvas ref={burstRef} className="setup-cl__burst" aria-hidden="true" tabIndex={-1} />
       {band}
       <div className="setup-cl__head">
         <b>{title}</b>
         <small>{t("agentSetup.count", { done, total })}</small>
+        {onClose && (
+          <span className="setup-cl__close ac-acts">
+            <Button
+              variant="ghost"
+              size="sm"
+              iconOnly
+              icon="close"
+              className="ac-btn--glyph"
+              aria-label={t("common.close")}
+              title={t("common.close")}
+              onClick={onClose}
+            />
+          </span>
+        )}
       </div>
       <div className="setup-cl__meter" aria-hidden="true">
         {rows

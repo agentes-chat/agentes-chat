@@ -58,7 +58,17 @@ import {
   workKeepsThread,
   workTakesPersonMessage,
 } from "./run-scope";
-import { computerWaitSql, KEPT_ON_HOLD, NO_AI, outageParkedSql, passedSql, runErrorDetail, usageWaitSql } from "./runs";
+import {
+  computerWaitSql,
+  KEPT_ON_HOLD,
+  NO_AI,
+  noAiDetail,
+  noAiWhySql,
+  outageParkedSql,
+  passedSql,
+  runErrorDetail,
+  usageWaitSql,
+} from "./runs";
 import { accountInUse, closedRefusal } from "./standing";
 import { afterSteered } from "./steering";
 import type { Talker } from "./talker";
@@ -225,7 +235,10 @@ export interface Receipts {
     status: "queued" | "running" | "waiting_approval" | "waiting_input" | "done" | "failed" | "canceled";
     /** `no_ai`: it failed for want of an AI to think with. */
     reason?: typeof NO_AI;
-    /** `failed` for another reason: why, for the app to word (`runErrorDetail`). */
+    /**
+     * `failed` for another reason: why, for the app to word (`runErrorDetail`). With `no_ai`: why it had nothing to
+     * think with (`noAiDetail`).
+     */
     errorCode?: string;
     errorParams?: Record<string, string>;
     /** `waiting_input` parked on a provider outage: it retries by itself. */
@@ -282,6 +295,7 @@ export async function receiptsFor(db: Database, orgId: string, list: Message[]):
     computer: computerWaitSql,
     usage: usageWaitSql,
     passed: passedSql,
+    noAiWhy: noAiWhySql,
   };
   const [decisions, runs, steeredRuns, answeredRuns] = await Promise.all([
     db
@@ -346,7 +360,7 @@ export async function receiptsFor(db: Database, orgId: string, list: Message[]):
         runId: r.id,
         // Asking its computer from the line it still waits, as `computer` says.
         status: r.computer === "queued" ? ("waiting_input" as const) : r.status,
-        ...(r.error === NO_AI ? { reason: NO_AI } : {}),
+        ...(r.error === NO_AI ? { reason: NO_AI, ...noAiDetail(r.noAiWhy?.code, r.noAiWhy?.model) } : {}),
         ...(r.status === "failed" && r.error !== NO_AI ? runErrorDetail(r.error) : {}),
         ...(r.outage ? { outage: true as const } : {}),
         ...(r.computer ? { computer: r.computer } : {}),
@@ -1376,33 +1390,17 @@ export async function postPersonMessage(
   // A resend found before the judge call (no cost again); a resend racing the first send is caught by the insert.
   const resent = clientId ? await sentWithClientId(deps.db, orgId, userId, clientId) : null;
   if (resent) return resendView(deps, orgId, resent);
-  // Quote, files and media: checked and resolved here, so the run's context reads them from the meta (no query there).
-  const [replyTo, files, media] = await Promise.all([
+  const judged = { orgId, channelId, userId, body: input.body, threadId: input.threadId };
+  const [replyTo, files, media, addressees, everyone] = await Promise.all([
+    // Quote, files and media: checked and resolved here, so the run's context reads them from the meta (no query there).
     input.replyTo ? replyRefFor(deps.db, orgId, channelId, input.replyTo, input.threadId) : null,
     input.attachments?.length ? attachmentRefsFor(deps.db, userId, orgId, channelId, input.attachments) : null,
     input.media ? resolveMedia(deps, orgId, input.media) : null,
+    // Several agents mentioned: who is asked to act now, who is only referenced (no run for those).
+    deps.judge ? classifyAddressees(deps.db, deps.judge, judged) : null,
+    // A mention of everyone: one answer for the room, one each, or none (`classifyEveryone`).
+    deps.judge && channel.kind !== "dm" ? classifyEveryone(deps.db, deps.judge, judged) : null,
   ]);
-  // Several agents mentioned: who is asked to act now, who is only referenced (no run for those).
-  const addressees = deps.judge
-    ? await classifyAddressees(deps.db, deps.judge, {
-        orgId,
-        channelId,
-        userId,
-        body: input.body,
-        threadId: input.threadId,
-      })
-    : null;
-  // A mention of everyone: one answer for the room, one each, or none (`classifyEveryone`).
-  const everyone =
-    deps.judge && channel.kind !== "dm"
-      ? await classifyEveryone(deps.db, deps.judge, {
-          orgId,
-          channelId,
-          userId,
-          body: input.body,
-          threadId: input.threadId,
-        })
-      : null;
   const referencedIds = [...new Set([...(addressees?.referenced ?? []), ...(everyone?.referenced ?? [])])];
   const meta =
     replyTo || files || media || referencedIds.length > 0 || everyone || liveRef

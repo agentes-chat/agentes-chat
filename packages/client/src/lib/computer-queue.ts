@@ -69,7 +69,8 @@ export const queueButtonText = (t: TFunction, queue: ComputerQueue | null | unde
   queue?.waiting.length ? t("queue.button", { count: queue.waiting.length }) : t("queue.buttonIdle");
 
 /** "In line · starts soon" whatever holds the line, or "Nobody in line". */
-export const queueStatusText = (t: TFunction, view: QueueView) => t(view.full ? "queue.waiting" : "queue.free");
+export const queueStatusText = (t: TFunction, view: QueueView, queue?: Pick<ComputerQueue, "moving">) =>
+  queue?.moving ? t("machines.moving.line") : t(view.full ? "queue.waiting" : "queue.free");
 
 /** "all started in ~6 min", or null with no basis or one in line (its row says it). */
 export const queueAllStartedText = (t: TFunction, view: QueueView, now: number) =>
@@ -140,6 +141,21 @@ export function queueStartText(
   if (w.estimatedStartAt) return t("queue.startsIn", { n: etaMinutes(w.estimatedStartAt, now) });
   const after = w.position === 1 && w.after[0] ? agentName(w.after[0]) : undefined;
   return after ? t("queue.startsAfter", { after: t("queue.who", agentGrammar(after)) }) : null;
+}
+
+/**
+ * A waiting turn's one line: "In line, after Ada" behind another agent's turn waiting just ahead of it, else (the head
+ * of the line, waiting for room) "In line · starts soon".
+ */
+export function queueWaitText(
+  t: TFunction,
+  queue: ComputerQueue | null | undefined,
+  w: QueueWaiting | null,
+  agentName: (id: string) => string | undefined,
+) {
+  const ahead = w && w.position > 1 ? queue?.waiting[w.position - 2]?.agentId : undefined;
+  const name = ahead && ahead !== w?.agentId ? agentName(ahead) : undefined;
+  return name ? t("queue.waitingAfter", agentGrammar(name)) : t("queue.waiting");
 }
 
 /**

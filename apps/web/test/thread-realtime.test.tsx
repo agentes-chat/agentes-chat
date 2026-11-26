@@ -117,7 +117,7 @@ describe.each(["panel", "page"] as const)("%s", (surface) => {
     });
     await event(socket, { type: "agent.tool.output", ...run, toolUseId: "t1", stream: "stdout", text: "saida\n" });
     await settle(2);
-    await act(async () => fireEvent.click(within(view).getByRole("button", { name: "Ver código da Ada" })));
+    await act(async () => fireEvent.click(within(view).getByRole("button", { name: "Ver código" })));
     const live = view.querySelector(".live-code") as HTMLElement;
     expect(within(live).getByLabelText("Saída").querySelector(".live-code__stdout")?.textContent).toBe("saida\n");
     await event(socket, { type: "agent.tool", ...run, tool: null, toolUseId: "t1" });

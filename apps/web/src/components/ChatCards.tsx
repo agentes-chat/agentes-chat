@@ -1,7 +1,7 @@
 import type { AgentQuestion, MemoryUpdate, Proposal, SecretRequest, SecretToVaultInput } from "@agenteschat/client";
 import { useCardProposals, useModelLabel, useSaveSecretToVault, useUndoProposal } from "@agenteschat/client";
 import { questionWaitsOn } from "@agenteschat/client/lib/agent-questions";
-import { formatTime, whenAt } from "@agenteschat/client/lib/format";
+import { formatTime, upperFirst, whenAt } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { MAX_MESSAGE_LENGTH } from "@agenteschat/client/lib/message-length";
 import { messagePath } from "@agenteschat/client/lib/message-links";
@@ -250,7 +250,8 @@ export function InlineProposal({ proposalId }: { proposalId: string }) {
   if (!p) return null;
   const agentName = (id: string) => dir.anyAgent(id)?.name ?? t("channel.unknownAgent");
   const name = agentName(proposerOf(p));
-  const target = proposalTarget(t, p, agentName, org);
+  // Written to follow "propõe ·", lowercase in most languages: a title starts with a capital.
+  const target = upperFirst(proposalTarget(t, p, agentName, org), i18n.language);
   const reviewing = isReviewing(p);
   const diff = (
     <ProseDiff label={t("proposals.changeLabel")} lines={diffLines(p.before.split("\n"), p.after.split("\n"))} />

@@ -53,6 +53,8 @@ export function createProfiler() {
     startedAt,
     stages,
     brain,
+    /** The computer its turns ran on (or were refused by): speed split by computer, and by host where it is known. */
+    machineId: undefined as string | undefined,
     /** The run it profiles, once claimed: its profile is kept with it. */
     run: undefined as { id: string; orgId: string; agentId: string } | undefined,
     total: () => ({

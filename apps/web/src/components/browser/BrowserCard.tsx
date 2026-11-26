@@ -874,7 +874,9 @@ export function BrowserCard({
   const blocker = shows
     ? null
     : unavailable?.reason === "offline"
-      ? t(cloud ? "browser.inCard.offlineCloud" : "browser.inCard.offline", g)
+      ? machine?.moving
+        ? t("machines.moving.named", { computer: machine.name })
+        : t(cloud ? "browser.inCard.offlineCloud" : "browser.inCard.offline", g)
       : unavailable?.reason === "no_computer"
         ? t(cloud ? "browser.inCard.noComputerCloud" : "browser.inCard.noComputer", g)
         : unavailable?.reason === "forbidden" || live.error === "forbidden" || live.error === "not_found"

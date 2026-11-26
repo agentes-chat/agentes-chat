@@ -23,7 +23,7 @@ const as = (role: "owner" | "member", state = seedState()) => {
   return state;
 };
 /**
- * Acme where Ada answers only João, her owner, and is Integrations' only agent; #eng sits in Engenharia, and
+ * Acme where Ada answers only João, her owner, and is Integrations' only agent; #eng sits in the sector Engenharia, and
  * Diretoria holds only private channels I'm not in (the server leaves them out of my list). I am Walter, with a DM
  * with each agent (Atlas's the latest).
  */
@@ -31,12 +31,12 @@ function acme(role: "owner" | "member") {
   const state = as(role);
   const ada = state.agents.find((a) => a.id === ADA_ID);
   if (ada) ada.audience = { mode: "owner", userIds: [] };
-  state.agentGroups = [{ id: INTEGRATIONS, name: "Integrations", agentIds: [ADA_ID] }];
-  state.channelCategories = [
-    { id: ENGINEERING, name: "Engenharia", position: 0 },
-    { id: BOARD, name: "Diretoria", position: 1 },
+  state.agentGroups = [
+    { id: INTEGRATIONS, name: "Integrations", agentIds: [ADA_ID] },
+    { id: ENGINEERING, name: "Engenharia", agentIds: [] },
+    { id: BOARD, name: "Diretoria", agentIds: [] },
   ];
-  for (const c of state.channels) if (c.id === ENG_ID) c.categoryId = ENGINEERING;
+  for (const c of state.channels) if (c.id === ENG_ID) c.groupId = ENGINEERING;
   seedDm(state, { type: "agent", id: ADA_ID }, { ago: 2 });
   seedDm(state, { type: "agent", id: ATLAS_ID }, { ago: 1 });
   return state;
@@ -64,9 +64,9 @@ describe("what a member's sidebar lists", () => {
     expect(within(nav()).getByRole("link", { name: "Equipe" })).toBeTruthy();
   });
 
-  test("no category whose channels are all private ones they're not in", async () => {
+  test("no sector whose channels are all private ones they're not in", async () => {
     await go(acme("member"));
-    expect(sections()).toEqual(["Canais", "Engenharia", "Agentes", "Mensagens diretas"]);
+    expect(sections()).toEqual(["Canais", "Agentes", "Engenharia", "Mensagens diretas"]);
   });
 
   test("@ offers only the agents that answer them", async () => {
@@ -146,15 +146,15 @@ describe("what a member's sidebar lists", () => {
     );
   });
 
-  test("owners and admins see every category, and the agents that talk to them until they show the rest", async () => {
+  test("owners and admins see every empty sector, and the agents that talk to them until they show the rest", async () => {
     await go(acme("owner"));
-    expect(sections()).toEqual(["Canais", "Engenharia", "Diretoria", "Agentes", "Mensagens diretas"]);
+    expect(sections()).toEqual(["Canais", "Agentes", "Engenharia", "Diretoria", "Mensagens diretas"]);
     expect(agentRows()).toEqual(["Atlas"]);
     cleanup();
     const state = acme("owner");
     state.sidebarView = { agentSort: "workspace", showAllAgents: true, pins: null };
     await go(state);
-    expect(sections()).toEqual(["Canais", "Engenharia", "Diretoria", "Agentes", "Integrations", "Mensagens diretas"]);
+    expect(sections()).toEqual(["Canais", "Agentes", "Integrations", "Engenharia", "Diretoria", "Mensagens diretas"]);
     expect(agentRows()).toEqual(["Atlas", "Ada"]);
     // The lock explains itself: the line under the name says who it talks to.
     const ada = within(nav()).getByRole("link", { name: /^Ada/ });

@@ -977,7 +977,43 @@ describe("the agent's screen in the computer dialog", () => {
     await settle(4);
     expect(still()).toBeNull();
     expect(screen().getByText("Abrindo o computador da Ada…")).toBeTruthy();
-    expect(screen().getByText("Tentando de novo…")).toBeTruthy();
+    expect(screen().getByText("O Servidor de casa não está respondendo.")).toBeTruthy();
+  });
+
+  test("a screen that doesn't open says why with Tentar de novo, and after 2 minutes stops trying by itself", async () => {
+    const t = await dialog({ ...RUNNING, running: false });
+    expect(screen().getByText("Abrindo o computador da Ada…")).toBeTruthy();
+    expect(view().queryByRole("button", { name: "Tentar de novo" })).toBeNull();
+    // The computer was late: still opening, now with the cause and a way to try at once.
+    await act(async () => t.sockets.desktops[0]?.serverClose(4408, "timeout"));
+    await settle(4);
+    expect(screen().getByText("Abrindo o computador da Ada…")).toBeTruthy();
+    expect(screen().getByText("O Servidor de casa demorou a responder.")).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(/acord|dormi|desperta|wak|sleep/i);
+    await act(async () => new Promise((r) => setTimeout(r, 1100)));
+    await settle(4);
+    expect(t.sockets.desktops).toHaveLength(2);
+    // Two minutes on, a try that fails again is the last one: no spinner over an endless wait.
+    try {
+      setSystemTime(new Date(Date.now() + 121_000));
+      await act(async () => t.sockets.desktops[1]?.serverClose(1006));
+      await settle(4);
+      expect(screen().getByText("Não deu para abrir a tela da Ada.")).toBeTruthy();
+      expect(screen().getByText("A conexão caiu.")).toBeTruthy();
+      expect(screen().queryByText("Abrindo o computador da Ada…")).toBeNull();
+    } finally {
+      setSystemTime();
+    }
+    await act(async () => new Promise((r) => setTimeout(r, 1100)));
+    await settle(2);
+    expect(t.sockets.desktops).toHaveLength(2);
+    // Tentar de novo opens it afresh, its cause gone until a try fails again.
+    await click(view().getByRole("button", { name: "Tentar de novo" }));
+    expect(t.sockets.desktops).toHaveLength(3);
+    expect(screen().getByText("Abrindo o computador da Ada…")).toBeTruthy();
+    expect(screen().queryByText("A conexão caiu.")).toBeNull();
+    await connected();
+    expect(sub()).toBe("Ao vivo · você está assistindo");
   });
 
   test("a hand back keeps the last picture dimmed under Devolvendo à Ada… until the watcher draws, never the cold cover", async () => {
@@ -1842,12 +1878,13 @@ describe("the dialog's size (computer.css)", () => {
     expect(desktop).toContain("--titlebar-h: calc(48px / var(--app-zoom, 1))");
   });
 
-  test("the desktop app: the ⌘K field stands midway between the window's edge and the work's sheet", async () => {
+  test("the desktop app: the bar's buttons stand midway between the window's edge and the work's sheet, no ⌘K field in it", async () => {
     const desktop = await Bun.file(new URL("../src/desktop.css", import.meta.url).pathname).text();
     const layout = await Bun.file(new URL("../src/layout.css", import.meta.url).pathname).text();
-    // A 32px field centred in the 48px bar: 8px over it and 8px under it, the sheet starting right under the bar.
+    // 32px buttons centred in the 48px bar: 8px over them and 8px under them, the sheet starting right under the bar.
+    // ⌘K stays in the sidebar, as on the web.
     expect(desktop).toContain("--titlebar-h: calc(48px / var(--app-zoom, 1))");
-    expect(desktop.split("\n.titlebar__search {")[1]?.split("}")[0]).toContain("height: var(--control-h-sm)");
+    expect(desktop).not.toContain(".titlebar__search");
     expect(layout.split("\n.shell__work {")[1]?.split("}")[0]).toContain("padding: 8px 8px 8px 0");
     const wide = desktop.split("@media (min-width: 761px) {\n  html[data-desktop] .titlebar {")[1]?.split("\n}\n")[0];
     expect(wide).toContain("html[data-desktop] .shell__work {\n    padding-top: 0;");

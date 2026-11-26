@@ -323,6 +323,16 @@ test("events: commands and edits are executed tool calls, our bridge's calls are
   ).toMatchObject([{ executed: { content: "Not allowed by Codex's sandbox.", isError: true } }]);
 });
 
+test("reasoning: its summary is a note (masked), the server keeps it; an empty one is nothing", () => {
+  const m = new CodexEventMapper({ cwd: "/w", redact: (s) => s.replaceAll("sk-fake-123", "[key]") });
+  const notes = m.line(
+    '{"type":"item.completed","item":{"id":"r1","type":"reasoning","text":"Reading the config with sk-fake-123 first."}}',
+  );
+  expect(notes).toEqual([{ type: "note", text: "Reading the config with [key] first." }]);
+  expect(notes.map((e) => parseBrainEvent(e))).toEqual(notes);
+  expect(m.line('{"type":"item.completed","item":{"id":"r2","type":"reasoning","text":"  "}}')).toEqual([]);
+});
+
 test("turn end: failed turns, usage limits, a stream error with a bad exit, last.txt as the fallback answer", () => {
   const failed = new CodexEventMapper();
   failed.line('{"type":"turn.failed","error":{"message":"model overloaded"}}');

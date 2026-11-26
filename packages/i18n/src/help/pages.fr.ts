@@ -443,6 +443,44 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
         ],
       },
       {
+        id: "tool-levels",
+        heading: "Chaque outil d'une app connectée",
+        blocks: [
+          "Chaque outil d'une app connectée par son adresse a son propre niveau, choisi dans **Paramètres\u00a0›\u00a0Connecteurs**, parmi les outils de cette connexion. Sur la page de l'agent, **Outils et accès** montre les apps et les outils qu'il peut utiliser.",
+          {
+            list: [
+              "**Regarde seulement** : lit et ne change rien. Ne demande jamais.",
+              "**Modifie des choses** : crée et modifie sans demander. Un agent sur **Toujours demander** demande quand même.",
+              "**Demande votre approbation** : demande dans la conversation avant chaque utilisation.",
+              "**Désactivé** : les agents ne l'ont pas.",
+            ],
+          },
+          "**Ne jamais demander**, sur la page de l'agent, passe avant tout cela : un agent à ce niveau ne demande rien, même pour un outil sur **Demande votre approbation**. Quand un niveau change alors que des demandes attendent, celles qui ne demanderaient plus sont annulées, et l'agent les refait sans carte.",
+        ],
+      },
+      {
+        id: "sensitive",
+        heading: "Outils sensibles",
+        blocks: [
+          "Un outil que le serveur de l'app marque comme supprimant, envoyant ou payant ne peut être que sur **Demande votre approbation** ou **Désactivé**.",
+        ],
+      },
+      {
+        id: "order",
+        heading: "Dans quel ordre les actions approuvées s'exécutent",
+        blocks: [
+          "Dans un même tour, l'agent fait ses actions dans l'ordre où il les a demandées, quel que soit l'ordre dans lequel vous les approuvez. Un message envoyé pendant que l'agent attend lance un nouveau tour, et ses actions s'exécutent après les demandes dont l'agent savait qu'elles attendaient déjà. Les demandes de conversations différentes ne s'attendent jamais.",
+          "Une demande qui attend une personne depuis plus de 30 minutes ne retient rien. Une action approuvée qui attend dit ce qu'elle attend, avec **Approuver** et **Refuser** pour cette demande et **Lancer celle-ci maintenant** pour continuer sans elle.",
+        ],
+      },
+      {
+        id: "many",
+        heading: "Plusieurs à la fois",
+        blocks: [
+          "Là où les demandes vous attendent, sur le web et sur le téléphone, **Tout approuver** et **Tout refuser** décident d'un coup toutes les demandes d'un agent.",
+        ],
+      },
+      {
         id: "who",
         heading: "Qui approuve",
         blocks: [

@@ -183,6 +183,15 @@ export function PrefRow({
       {lead ?? (icon && <Icon name={icon} size={16} />)}
     </span>
   );
+  const statusLine = status && (
+    <span
+      className="settings-row__status"
+      id={`${id}-status`}
+      title={onOpen && typeof status === "string" ? status : undefined}
+    >
+      {status}
+    </span>
+  );
   const words = (
     <span className={actions ? "settings-row__text" : "settings-row__text ac-actrow__text"}>
       {hint && !onOpen ? (
@@ -195,25 +204,18 @@ export function PrefRow({
       ) : (
         name
       )}
-      {status && (
-        <span
-          className="settings-row__status"
-          id={`${id}-status`}
-          title={onOpen && typeof status === "string" ? status : undefined}
-        >
-          {status}
-        </span>
-      )}
+      {!actions && statusLine}
     </span>
   );
-  // The icon and the words are the line's words: controls under them start from the row's edge, never leaving the
-  // icon a column beside three lines.
+  // The icon and the name share a line; the status goes under them and the controls under or beside the whole, both
+  // from the row's edge, never leaving the icon a column beside three lines.
   if (actions)
     return (
       <div className="settings-row settings-row--lead settings-row--acts ac-actline">
         <span className="settings-row__lead">
           {face}
           {words}
+          {statusLine}
         </span>
         <span className="settings-row__end">{actions}</span>
       </div>

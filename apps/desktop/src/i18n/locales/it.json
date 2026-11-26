@@ -460,6 +460,10 @@
     "waiting": "In attesa che {{by}} lo faccia entrare…",
     "done": "Connesso a {{org}}",
     "share": "Fallo usare a tutto lo spazio di lavoro",
+    "internet": "Gli agenti usano la connessione internet di questo computer",
+    "internetOn": "I siti che gli agenti aprono vedono la tua posizione",
+    "internetOff": "Disattivato: gli agenti usano la connessione abituale",
+    "internetHint": "Gli agenti del workspace aprono i siti tramite la connessione di questo computer. Solo siti web, fino a 5 GB al giorno, e mai nulla della tua rete. Finché questo computer è offline, usano la connessione abituale.",
     "shareOff": "Solo tu per ora",
     "shareHint": "Gli agenti di tutti in {{org}} possono eseguirci attività, con il tuo utente.",
     "addFolders": "Aggiungi cartelle",
@@ -796,6 +800,7 @@
       "brainMax": "Conversazioni aperte",
       "brainMaxDesc": "Quante ne restano aperte in ogni spazio di lavoro. Più sono, più rispondono in fretta, ma usano più memoria.",
       "brainIdle": "Chiudi una conversazione inattiva dopo",
+      "mixed": "Non è uguale ovunque: {{values}}. Una modifica qui vale per tutti.",
       "folder": "Cartella degli agenti",
       "folderDesc": "Una cartella per spazio di lavoro, con una cartella per ogni agente."
     }

@@ -4,23 +4,12 @@
     "send": "Envoyer"
   },
   "categories": {
-    "title": "Catégories",
     "where": "Où #{{channel}} apparaît",
     "whereHelp": "Change pour tout le monde. Les participants du canal restent les mêmes.",
-    "create": "Créer",
-    "endOfList": "Va à la fin de la liste pour tout le monde.",
-    "channelCount_one": "{{count}} canal",
-    "channelCount_many": "{{count}} canaux",
-    "channelCount_other": "{{count}} canaux",
-    "none": "Aucune catégorie pour l'instant.",
-    "manageHint": "Ordre, noms et suppression",
-    "deleteTitle": "Supprimer {{name}} ?",
     "order": "Place dans la liste",
     "up": "Monter",
     "down": "Descendre",
-    "position": "{{at}} sur {{count}}.",
-    "channelPosition": "{{at}} sur {{count}}.",
-    "itsChannels": "Canaux"
+    "channelPosition": "{{at}} sur {{count}}."
   },
   "blocks": {
     "send": "Envoyer",
@@ -1070,6 +1059,12 @@
       "computer_no_chrome_one": "Un ordinateur a besoin de Google Chrome. Téléchargez-le sur google.com/chrome",
       "computer_no_chrome_many": "Des ordinateurs ont besoin de Google Chrome. Téléchargez-le sur google.com/chrome",
       "computer_no_chrome_other": "Des ordinateurs ont besoin de Google Chrome. Téléchargez-le sur google.com/chrome",
+      "computer_down_one": "Un ordinateur ne répond pas",
+      "computer_down_many": "Un ordinateur ne répond pas",
+      "computer_down_other": "Un ordinateur ne répond pas",
+      "computer_back_one": "Un ordinateur est de retour",
+      "computer_back_many": "Un ordinateur est de retour",
+      "computer_back_other": "Un ordinateur est de retour",
       "app_created_one": "Une app d'IA a créé des choses pour vous",
       "app_created_many": "Une app d'IA a créé des choses pour vous",
       "app_created_other": "Une app d'IA a créé des choses pour vous"
@@ -2198,6 +2193,7 @@
       "tool_request": "{{names}} vous demande d'activer {{tool}} sur votre {{device}}",
       "cli_request": "{{names}} vous demande d'installer {{tool}} sur votre {{device}}",
       "folder_request": "{{names}} vous demande le dossier {{path}} sur votre {{device}}",
+      "internet_shared": "Les agents ouvrent désormais les sites web via la connexion internet de {{device}}",
       "allowOnce": "Autoriser une fois",
       "always": "Toujours autoriser {{name}}",
       "no": "Non",
@@ -3381,7 +3377,8 @@
       "workspaceSub": "Clé d'API du workspace",
       "key": "Clé d'API",
       "keyDefault": "par défaut du workspace",
-      "api": "API"
+      "api": "API",
+      "asksMove": "{{agent}} ne l'utilise plus."
     },
     "missionAi": "IA",
     "missionLocked": "Qui fait le travail se choisit avant le démarrage. Le modèle peut changer à tout moment."

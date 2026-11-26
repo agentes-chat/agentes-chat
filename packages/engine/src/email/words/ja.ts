@@ -409,6 +409,43 @@ export const words: EmailWords = {
       why: () => "agentes.chat のこのワークスペースに参加しているため、このメールをお送りしています。",
     },
   },
+  computerDown: {
+    subject: "コンピューターが応答していません",
+    preheader: "このコンピューターでのエージェントの作業が待機中です。",
+    headline: "コンピューターが応答していません",
+    body: (name, org, away) => [
+      { b: name },
+      " (",
+      { b: org },
+      `) が${away}応答していません。このコンピューターが必要な作業は待機し、復旧すると再開します。`,
+    ],
+    runs: "待機中のエージェントへのリクエスト",
+    calls: "待機中のWebhook呼び出し",
+    note: "すぐに続けるには、このコンピューターのページでエージェントを別のコンピューターに移してください。",
+    button: "コンピューターを開く",
+    why: (org) => `agentes.chat の ${org} のコンピューターを管理しているため、このメールをお送りしています。`,
+    back: {
+      subject: "コンピューターが復旧しました",
+      preheader: "待機していた作業を再開します。",
+      headline: "コンピューターが復旧しました",
+      runs: "待機していたエージェントへのリクエスト",
+      calls: "待機していたWebhook呼び出し",
+      body: (name, org, away) => [
+        { b: name },
+        " (",
+        { b: org },
+        `) が${away}後に復旧しました。待機していた作業を再開します。`,
+      ],
+    },
+    personal: {
+      body: (name, _org, away) => [
+        { b: name },
+        `が${away}応答していません。このコンピューターが必要な作業は待機し、復旧すると再開します。`,
+      ],
+      why: () => "agentes.chat の個人ワークスペースのコンピューターを管理しているため、このメールをお送りしています。",
+      back: { body: (name, _org, away) => [{ b: name }, `が${away}後に復旧しました。待機していた作業を再開します。`] },
+    },
+  },
   appConnected: {
     subject: "agentes.chat のアカウントにアプリが接続されました",
     preheader: "1つのワークスペースで、あなたとしてエージェントのタスクを閲覧・送信できます。",

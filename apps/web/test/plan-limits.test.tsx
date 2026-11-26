@@ -292,6 +292,11 @@ describe("the account card", () => {
     await go("settings", seedState());
     expect(account().classList.contains("ac-faceline")).toBe(true);
     expect(account().querySelector(".sidebar__user-name")?.classList.contains("ac-captop")).toBe(true);
+    // The name keeps one line, cut where it must: the button says it whole, as its label and its title.
+    const name = account().querySelector(".sidebar__user-name")?.textContent ?? "";
+    expect(name).not.toBe("");
+    expect(account().getAttribute("title")?.startsWith(`${name} · `)).toBe(true);
+    expect(account().getAttribute("aria-label")?.startsWith(`Conta: ${name} · `)).toBe(true);
     cleanup();
     // How you appear isn't known yet: no line under the name.
     const api = createFakeApi(seedState());

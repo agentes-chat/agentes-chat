@@ -553,11 +553,6 @@ export function RealtimeProvider({
       if (event.type.startsWith("mission.") && "missionId" in event && typeof event.missionId === "string") {
         refreshMission(qc, orgId, event.missionId);
       }
-      // Someone arranged the sidebar's channel categories (ADR 0080): channels and categories refetch.
-      if (event.type === "channels.layout") {
-        void qc.invalidateQueries({ queryKey: keys.channels(orgId) });
-        void qc.invalidateQueries({ queryKey: keys.channelCategories(orgId) });
-      }
       // A channel's exceptions changed (ADR 0134): what I may do there (`can`) and its open permissions page.
       if (event.type === "channel.permissions" && "channelId" in event && typeof event.channelId === "string") {
         void qc.invalidateQueries({ queryKey: keys.channels(orgId) });

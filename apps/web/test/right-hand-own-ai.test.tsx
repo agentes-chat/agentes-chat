@@ -299,12 +299,12 @@ test("Lodi's page has four tabs: its settings, what it may use on the agent page
   // No sky, tabs of an agent's own work or archive: it is part of the workspace.
   expect(document.querySelector(".agp-hero")).toBeNull();
   cleanup();
-  // Its skills, and whether it uses them, on the agent page's own Skills tab.
+  // Its skills on the agent page's own Skills tab; their level is with the other areas in Tools and access.
   await renderApp(`/org/${ORG_ID}/agents/${LODI_ID}?tab=skills`, { api: createFakeApi(state) });
   await settle(8);
   expect(tabs()[2]?.getAttribute("aria-selected")).toBe("true");
   expect(document.getElementById("ac-skills")).toBeTruthy();
-  expect(screen().getByRole("radiogroup", { name: "Nível em Skills" })).toBeTruthy();
+  expect(screen().queryByRole("radiogroup", { name: "Nível em Skills" })).toBeNull();
   cleanup();
   // What it keeps for the viewer, and the rules they gave it, on the agent page's own memory tab.
   await renderApp(`/org/${ORG_ID}/agents/${LODI_ID}?tab=memory`, { api: createFakeApi(state) });

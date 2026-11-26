@@ -115,6 +115,8 @@ export interface RealtimeDeps {
   sessionRecheckMs?: number;
   /** Why this process is overloaded now (`watchLoad`), or null: new sockets are turned away with a 503 meanwhile. */
   overloaded?: () => string | null;
+  /** A person's typing frame got through (`warmWhileTyping`): never awaited, its failure is nobody's. */
+  onTyping?: (where: { orgId: string; channelId: string; threadId: string | null; userId: string }) => Promise<void>;
 }
 
 /** A browser tab of the web app. */
@@ -1014,6 +1016,8 @@ export function createRealtime(deps: RealtimeDeps) {
             userId: ws.data.user.id,
             kind: frame.kind,
           });
+          const where = { orgId: ws.data.orgId, channelId, threadId: frame.threadId, userId: ws.data.user.id };
+          deps.onTyping?.(where).catch(() => {});
           return;
         }
         if (frame.type === "unsubscribe") {

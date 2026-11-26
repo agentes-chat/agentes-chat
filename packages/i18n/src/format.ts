@@ -42,6 +42,17 @@ export const formatDate = (locale: string, d: Date | string | number, opts: Intl
 export const formatTime = (locale: string, d: Date | string | number) =>
   formatDate(locale, d, { hour: "numeric", minute: "2-digit" });
 
+/** How long something lasted, to the minute: "42 min", "2 hr 5 min", "2 時間 5 分". */
+export function formatSpan(locale: string, ms: number): string {
+  const minutes = Math.max(1, Math.round(ms / 60_000));
+  const unit = (n: number, u: "hour" | "minute") =>
+    new Intl.NumberFormat(locale, { style: "unit", unit: u, unitDisplay: "short" }).format(n);
+  if (minutes < 60) return unit(minutes, "minute");
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return m === 0 ? unit(h, "hour") : `${unit(h, "hour")} ${unit(m, "minute")}`;
+}
+
 const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
   ["year", 365 * 86_400_000],
   ["month", 30 * 86_400_000],

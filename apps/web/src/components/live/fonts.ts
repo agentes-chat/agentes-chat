@@ -58,20 +58,23 @@ export function fontFamilyCss(ref: FontRef | undefined, category: FontCategory =
   return `${BUILT_IN[font.id] ?? `"${font.family}"`}, ${FONT_FALLBACK[font.category]}`;
 }
 
+/** Loads a font ref's faces now (a catalog font, or one of the file's own through `assetUrl`); roles load nothing. */
+export function loadFontRef(ref: FontRef | undefined, assetUrl: ((assetId: string) => string | null) | null): void {
+  if (!ref) return;
+  const asset = fontAssetOf(ref);
+  if (asset) {
+    const url = assetUrl?.(asset);
+    if (url) loadAsset(asset, url);
+  } else if (catalogFont(ref)) loadCatalog(ref);
+}
+
 /** Loads the fonts a drawn piece uses (catalog fonts and the file's own). */
 export function useLiveFonts(refs: readonly (FontRef | undefined)[]): void {
   const assetUrl = useContext(FontAssetUrl);
   const key = refs.filter(Boolean).join("|");
   // biome-ignore lint/correctness/useExhaustiveDependencies: `key` is `refs` as a value
   useEffect(() => {
-    for (const ref of refs) {
-      if (!ref) continue;
-      const asset = fontAssetOf(ref);
-      if (asset) {
-        const url = assetUrl?.(asset);
-        if (url) loadAsset(asset, url);
-      } else if (catalogFont(ref)) loadCatalog(ref);
-    }
+    for (const ref of refs) loadFontRef(ref, assetUrl);
   }, [key, assetUrl]);
 }
 

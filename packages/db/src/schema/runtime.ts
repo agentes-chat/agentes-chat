@@ -716,6 +716,11 @@ export const approvals = pgTable(
     decidedForUserId: text(),
     /** Canceled because the agent asked the same action again in a later turn: the newer request. */
     supersededById: uuid(),
+    /**
+     * The other runs' requests its run was told were already waiting in its conversation when it started (`heldHere`,
+     * ADR 0182 addendum of 2026-11-24): once approved, it runs only after these settle. Emptied by "Rodar este agora".
+     */
+    afterIds: uuid().array().notNull().default(sql`'{}'::uuid[]`),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

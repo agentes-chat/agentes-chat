@@ -898,6 +898,21 @@ test.skipIf(!posix)(
   20_000,
 );
 
+test("reasoning summaries: their deltas or the item's parts become notes when the item completes", () => {
+  const m = new CodexAppMapper({ cwd: "", redact: (s) => s.replaceAll("sk-fake-123", "[key]") });
+  m.summaryDelta({ itemId: "r1", summaryIndex: 0, delta: "Checking the " });
+  m.summaryDelta({ itemId: "r1", summaryIndex: 0, delta: "tests." });
+  m.summaryDelta({ itemId: "r1", summaryIndex: 1, delta: "Then the key sk-fake-123." });
+  expect(m.completed({ id: "r1", type: "reasoning", summary: [] }).events).toEqual([
+    { type: "note", text: "Checking the tests." },
+    { type: "note", text: "Then the key [key]." },
+  ]);
+  // The item's own parts win; a part with nothing in it is no note.
+  expect(m.completed({ id: "r2", type: "reasoning", summary: ["Opening the report.", " "] }).events).toEqual([
+    { type: "note", text: "Opening the report." },
+  ]);
+});
+
 test("a refusal known by its words after a command says the turn worked", () => {
   const m = new CodexAppMapper({ cwd: "" });
   m.completed({ id: "c", type: "commandExecution", command: "git push", aggregatedOutput: "", status: "completed" });

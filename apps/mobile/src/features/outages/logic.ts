@@ -38,6 +38,8 @@ export interface MachineOutage {
   /** The workspace's own computer (ADR 0056 §10). */
   managed?: boolean;
   offlineSince: string;
+  /** Away moving to another server: it comes back by itself. */
+  moving?: boolean;
   agents: MachineOutageAgent[];
   waitingRuns: number;
 }
@@ -92,17 +94,19 @@ export function noticeText(t: TFunction, o: OutageLike, cloud = false) {
       ? t("mobile.outage.whoOne", { name: names[0] })
       : t("mobile.outage.whoMany", { names: namesText(t, names) });
   const sub = [
-    cloud ? t("mobile.outage.cloudSub") : null,
+    cloud && !o.moving ? t("mobile.outage.cloudSub") : null,
     who,
     n.tasks > 0 ? t("mobile.outage.tasks", { count: n.tasks }) : null,
   ]
     .filter(Boolean)
     .join(" · ");
   return {
-    title: cloud
-      ? t("mobile.outage.titleCloud", { computer: n.computer })
-      : t("mobile.outage.title", { computer: n.computer }),
-    a11y: cloud ? t("mobile.outage.a11yCloud") : t("mobile.outage.a11y"),
+    title: o.moving
+      ? t("machines.moving.line")
+      : cloud
+        ? t("mobile.outage.titleCloud", { computer: n.computer })
+        : t("mobile.outage.title", { computer: n.computer }),
+    a11y: o.moving ? t("machines.moving.short") : cloud ? t("mobile.outage.a11yCloud") : t("mobile.outage.a11y"),
     sub,
   };
 }
@@ -205,7 +209,9 @@ export function waitCardText(
   const line = t("mobile.outage.card.body", { brain: BRAIN_NAME[brain] });
   const p = state.waiting ? agentWaitingPhrase(state.waiting) : null;
   return {
-    title: t("mobile.outage.card.waiting", { computer: state.computer }),
+    title: state.moving
+      ? t("machines.moving.named", { computer: state.computer })
+      : t("mobile.outage.card.waiting", { computer: state.computer }),
     body: p ? `${line} · ${t(`mobile.outage.waiting.${p.kind}`, { count: p.count })}` : `${line}.`,
     done: false,
   };

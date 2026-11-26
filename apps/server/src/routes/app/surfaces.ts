@@ -9,6 +9,7 @@ import {
   requireSurface,
   type SurfacePageView,
   setMySurfacePin,
+  setNudge,
   setPinFromEmail,
   sha256,
   surfaceAllowed,
@@ -90,6 +91,16 @@ const pageGone = errorResponse(
 /** The cookie that binds one page link to the browser that opened it first. */
 const pageCookie = (token: string) => `surface_page_${sha256(token).slice(0, 16)}`;
 
+const hour = z.number().int().min(0).max(23);
+const Nudge = z
+  .object({
+    on: z.boolean(),
+    afterHours: z.number().int().min(1).max(24).openapi({ description: "Hours something stays unread first." }),
+    quietFrom: hour.openapi({ description: "No nudge from this hour (the person's time zone)…" }),
+    quietTo: hour.openapi({ description: "…until this one. Equal: no quiet hours." }),
+  })
+  .openapi("SurfaceNudge");
+
 const SurfaceLink = z
   .object({
     id: z.uuid(),
@@ -105,6 +116,7 @@ const SurfaceLink = z
     confirmedAt: z.string().nullable(),
     expiresAt: z.string().nullable().openapi({ description: "Pending only: when it stops counting (10 minutes)." }),
     pinSet: z.boolean().openapi({ description: "A PIN confirms actions asked from the surface (ADR 0226)." }),
+    nudge: Nudge,
   })
   .openapi("SurfaceLink");
 
@@ -219,6 +231,29 @@ export function surfaceRoutes(deps: AppDeps) {
         return apiError(c, 403, "surface.not_allowed", "Linking isn't open to this account yet");
       }
       return c.json(await confirmLink(linkDeps, user.id, id), 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "patch",
+      path: "/me/surface-links/{id}/nudge",
+      tags,
+      security,
+      summary: "My unread nudge on the surface: on or off, its delay, its quiet hours",
+      description:
+        "ADR 0234. On an active link of mine. The nudge comes at most once a day, only when no phone of mine takes pushes and I wrote through the surface in the last 30 days.",
+      request: { params: LinkParams, body: body(Nudge.partial()) },
+      responses: {
+        200: json(Nudge),
+        401: errors[401],
+        404: errorResponse("Not mine or not active (`surface.link_gone`), or off (`surface.off`)"),
+      },
+    }),
+    async (c) => {
+      const { id } = c.req.valid("param");
+      requireSurface();
+      return c.json(await setNudge(db, c.get("user").id, id, c.req.valid("json")), 200);
     },
   );
 

@@ -255,7 +255,8 @@ html:not([data-pointer]) .brw-site button:focus-visible {
   gap: 10px;
   padding: 10px 16px;
   border-radius: 14px;
-  background: var(--glass);
+  /* Opaque: the sky's pixels and the picture under the cover never show through its words. */
+  background: var(--raised);
   box-shadow: var(--e2);
   font-weight: 600;
   font-size: 14px;

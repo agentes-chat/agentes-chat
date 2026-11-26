@@ -5,7 +5,6 @@ import type {
   ApiClient,
   Availability,
   Channel,
-  ChannelCategory,
   Member,
   SidebarSection as SectionKey,
   SidebarItem,
@@ -20,18 +19,14 @@ import {
   useAiAccounts,
   useArchivedChannels,
   useAuthConfig,
-  useChannelCategories,
   useChannels,
   useConnections,
-  useCreateChannelCategory,
-  useDeleteChannelCategory,
   useDms,
   useMachineOutages,
   useMissionList,
   useNotificationCount,
   useOverview,
   usePlaceChannel,
-  usePlaceChannelCategory,
   usePrefetchMessages,
   usePrefetchRecent,
   useSidebarItems,
@@ -125,6 +120,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
 import { useNewAgent } from "@/components/new-agent/new-agent-context";
+import { useArrived } from "@/hooks/useArrived";
 import { useDirectory } from "@/hooks/useDirectory";
 import { useEverTrue } from "@/hooks/useEverTrue";
 import { useInboxWaiting } from "@/hooks/useInboxWaiting";
@@ -165,10 +161,11 @@ import { AgentWorkLine } from "./AgentWorkLine";
 import { AgoraButton } from "./Agora";
 import { ArchivedChannelsDialog } from "./ArchivedChannelsDialog";
 import { FeedbackMark } from "./arrival/FeedbackDialog";
-import { MoveChannelDialog, NewCategoryDialog, RenameCategoryDialog } from "./ChannelCategoryDialogs";
 import { MenuEntries } from "./DesktopMenus";
 import { useAgentMenu, useChannelMenu, usePersonMenu } from "./entity-menus";
 import { useInviteDialog } from "./invite/InviteDialog";
+import { arrivalProps, useArrivals } from "./lodi-cursor/arrivals";
+import { useRowsDrawIn } from "./lodi-cursor/runner";
 import { useNow } from "./missions/MissionBits";
 import { COMPACT_QUERY, useMediaQuery, useNavDrawer } from "./NavDrawer";
 import { NewChannelDialog } from "./NewChannelDialog";
@@ -249,10 +246,7 @@ export function Sidebar() {
   const alone = !dir.members.some((m) => m.userId !== me.user.id);
   const channels = useChannels(orgId);
   const overview = useOverview(orgId);
-  // A new channel: `true` with no category, or the category whose + opened it.
-  const [creatingChannel, setCreatingChannel] = useState<boolean | string>(false);
-  // A new category: empty, or with the channel whose menu asked for it.
-  const [newCategory, setNewCategory] = useState<{ withChannel?: string } | null>(null);
+  const [creatingChannel, setCreatingChannel] = useState(false);
   // Archived channels this person may bring back: "Canais arquivados" in Canais' + while there are some.
   const archivedChannels = useArchivedChannels(orgId).data ?? [];
   const [showArchived, setShowArchived] = useState(false);
@@ -400,18 +394,49 @@ export function Sidebar() {
   // the key doesn't reach (ADR 0085 addendum of 2026-11-17), which Team still lists.
   const manages = can(org, "manage_agents");
   const team = dir.agents.filter((a) => !isRightHand(a));
+  const arrivedAgents = useArrived(
+    team.map((a) => a.id),
+    !dir.loading,
+  );
   const shownAgents = team.filter((a) => canTalk(a) || (manages && view.showAllAgents && opensDm(a)));
-  const groups = useAgentGroups(orgId).data ?? [];
+  const groupsQuery = useAgentGroups(orgId);
+  const groups = groupsQuery.data ?? [];
   const byGroup = agentSections(shownAgents, groups, (a) => a.id);
   const ordered = (items: Agent[]) => {
     const { top, rest } = splitPinned(items, pins.agents, (a) => a.id);
     return { top, rest: sortAgents(rest, view.agentSort, me.user.id, busy) };
   };
   const loose = ordered(byGroup.ungrouped);
-  // Members never see an empty group; who arranges the agents keeps them, to drop agents in.
-  const agentGroups = byGroup.groups.filter((g) => g.items.length > 0 || (manages && g.group.agentIds.length === 0));
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const quietGeneral = (c: Channel) =>
+    c.name === "general" && !looksUnread(c) && !c.mentionCount && !pathname.endsWith(`/c/${c.id}`);
+  // The channels the sidebar lists. A personal workspace (ADR 0159) leaves out #general while no one else is in it
+  // (unless it is open or something new waits there).
+  const listedChannels = (channels.data ?? []).filter(
+    (c) => !dmChannels.has(c.id) && !(personal && alone && quietGeneral(c)),
+  );
+  const channelRows = useSidebarChannels({
+    channels: listedChannels,
+    loading: channels.isLoading,
+    groups,
+    // Until the sectors load, a channel in one shows under Canais: none drags, or a drop would take it out.
+    groupsReady: groupsQuery.data !== undefined,
+    sections,
+    sectorsOpen: shownAgents.length <= 12,
+    pinned: pins.channels,
+    onPrefetch: prefetch,
+    onNewSector: (channelId) => setGroupDialog({ mode: "create", channelIds: [channelId] }),
+  });
+  // A sector shows while it holds an agent or a channel I see (ADR 0240); who arranges them keeps the empty ones, to
+  // drop agents or channels in.
+  const arranges = manages || can(org, "manage_channels");
+  const agentGroups = byGroup.groups.filter(
+    (g) =>
+      g.items.length > 0 || channelRows.inSector(g.group.id).length > 0 || (arranges && g.group.agentIds.length === 0),
+  );
   const groupIds = agentGroups.map((g) => `group:${g.group.id}` as SectionId);
-  // A long team starts with its groups closed. Closed, a group still shows who works, waits or wrote to me.
+  // A long team starts with its groups closed. Closed, a group still shows who works, waits or wrote to me, and its
+  // unread channels.
   const groupsOpen = shownAgents.length <= 12;
   const organize = manages && !rail;
   const drag = useAgentDrag(groups);
@@ -474,6 +499,7 @@ export function Sidebar() {
       >
         <AgentRow
           agent={a}
+          arrival={arrivalProps(arrivedAgents, a.id)}
           unread={unread}
           waitingFor={waitingFor.get(a.id)}
           live={busy.has(a.id) || waits.has(a.id) || waitingFor.has(a.id) || unread > 0}
@@ -489,7 +515,7 @@ export function Sidebar() {
   // Only the middle scrolls: the workspace card on top and the foot stay put. The active item
   // paints its own background (no sliding pill).
   const navRef = useRef<HTMLDivElement>(null);
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  useRowsDrawIn(navRef);
   // The list fades out at an edge only while there is more to scroll past it (no hard cut); re-checked as lists load.
   useScrollEdges(navRef, [channels.data, directs.length, shownAgents.length, groups.length, rail]);
 
@@ -555,9 +581,6 @@ export function Sidebar() {
   const newChannelItem = can(org, "create_channels")
     ? [item("new-channel", t(modeKey(org, "shell.sidebarMenu.newChannel")), "channel", () => setCreatingChannel(true))]
     : [];
-  const newCategoryItem = can(org, "manage_channels")
-    ? [item("new-category", t("channelCategories.newCategory"), "layers", () => setNewCategory({}))]
-    : [];
   const archivedItem =
     archivedChannels.length > 0
       ? [item("archived-channels", t("channel.archivedTitle"), "archive", () => setShowArchived(true))]
@@ -567,14 +590,8 @@ export function Sidebar() {
     ? [item("new-group", t("agentGroups.newGroup"), "layers", () => setGroupDialog({ mode: "create" }))]
     : [];
   const groupsClosed = groupIds.every((id) => !sections.isOpen(id, groupsOpen));
-  // The channels the sidebar lists. A personal workspace (ADR 0159) leaves out #general while no one else is in it
-  // (unless it is open or something new waits there). With none to list, its group conversations show only for who
-  // may create one: the section then holds a "New group conversation" row, the way to the first.
-  const quietGeneral = (c: Channel) =>
-    c.name === "general" && !looksUnread(c) && !c.mentionCount && !pathname.endsWith(`/c/${c.id}`);
-  const listedChannels = (channels.data ?? []).filter(
-    (c) => !dmChannels.has(c.id) && !(personal && alone && quietGeneral(c)),
-  );
+  // With no channel to list, a personal workspace's group conversations show only for who may create one: the section
+  // then holds a "New group conversation" row, the way to the first.
   const channelsShown = !personal || listedChannels.length > 0 || newChannelItem.length > 0;
   // A tool's link keeps the browser's menu, from the mouse and the keyboard alike.
   const spaceEvent = (e: { target: EventTarget }) => !(e.target instanceof Element && e.target.closest("a[href]"));
@@ -583,7 +600,6 @@ export function Sidebar() {
     item("customize", t("shell.customizeSidebar"), "settings", () => setCustomizing(true)),
     { kind: "separator" },
     ...newChannelItem,
-    ...newCategoryItem,
     { kind: "separator" },
     ...createAgentItem,
     ...newGroupItem,
@@ -632,19 +648,18 @@ export function Sidebar() {
     ),
     channels: channelsShown && (
       <SidebarChannels
-        channels={listedChannels}
+        rows={channelRows}
+        all={listedChannels}
         loading={channels.isLoading}
         sections={sections}
-        onNewChannel={(categoryId) => setCreatingChannel(categoryId ?? true)}
-        onNewCategory={(withChannel) => setNewCategory(withChannel ? { withChannel } : {})}
-        onPrefetch={prefetch}
+        onNewChannel={() => setCreatingChannel(true)}
         headProps={sectionMenu("channels")}
-        addEntries={[...newChannelItem, ...newCategoryItem, ...archivedItem]}
-        pinned={pins.channels}
+        addEntries={[...newChannelItem, ...archivedItem]}
       />
     ),
     agents: (dir.loading ||
       rightHand ||
+      agentGroups.length > 0 ||
       (team.length > 0 ? shownAgents.length > 0 || manages : createAgentItem.length > 0)) && (
       <>
         {personal ? (
@@ -737,20 +752,28 @@ export function Sidebar() {
           const lineAt = drag.over?.groupId === group.id ? drag.over.index : null;
           const line = <span className="sidebar__drop-line" aria-hidden="true" />;
           const workingHere = list.filter((a) => busy.has(a.id)).length;
+          const id = `group:${group.id}` as const;
+          const here = channelRows.sector(group.id);
+          // Closed, one count stands for the sector: its agents' DMs and its channels (ADR 0240), in place of how many
+          // agents it has.
+          const unread = list.reduce((n, a) => n + (dmOf.get(a.id)?.unread ?? 0), 0);
+          const closedCount = sections.isOpen(id, groupsOpen) ? 0 : unread + here.unread;
+          const agentZone = organize ? drag.zone(group.id) : undefined;
           return (
             <SidebarSection
               key={group.id}
-              id={`group:${group.id}`}
+              id={id}
               label={group.name}
               mark={<RoleMark color={group.color ?? "graphite"} icon={group.icon ?? "person"} size={16} />}
               sections={sections}
               defaultOpen={groupsOpen}
               className="sidebar__section--category sidebar__section--group"
-              headProps={
-                manages
+              headProps={{
+                ...here.head,
+                ...(manages
                   ? entityMenu(() => [{ kind: "header", label: group.name }, ...groupMenuEntries(groupChoices(group))])
-                  : undefined
-              }
+                  : {}),
+              }}
               summary={
                 workingHere > 0 && (
                   <span className="sidebar__section-working">{t("sidebarAgents.working", { count: workingHere })}</span>
@@ -759,12 +782,27 @@ export function Sidebar() {
               action={
                 <>
                   {manages && <GroupMenu {...groupChoices(group)} className="sidebar__section-add" />}
-                  <span className="sidebar__section-count" title={t("sidebarAgents.count", { count: list.length })}>
-                    {list.length}
-                  </span>
+                  {closedCount > 0 ? (
+                    <UnreadCount count={closedCount} quiet={unread === 0 && !here.mentions} />
+                  ) : (
+                    <span className="sidebar__section-count" title={t("sidebarAgents.count", { count: list.length })}>
+                      {list.length}
+                    </span>
+                  )}
                 </>
               }
-              drop={organize ? drag.zone(group.id) : undefined}
+              drop={{
+                "data-drop": agentZone?.["data-drop"],
+                onDragOver: (e) => {
+                  agentZone?.onDragOver(e);
+                  here.body.onDragOver(e);
+                },
+                onDragLeave: agentZone?.onDragLeave,
+                onDrop: (e) => {
+                  agentZone?.onDrop(e);
+                  here.body.onDrop(e);
+                },
+              }}
             >
               {list.map((a, i) => (
                 <Fragment key={a.id}>
@@ -774,8 +812,10 @@ export function Sidebar() {
                 </Fragment>
               ))}
               {lineAt !== null && lineAt >= others.length && line}
-              {manages && group.agentIds.length === 0 && (
-                <span className="sidebar__drop-hint">{t("agentGroups.dropHere")}</span>
+              {list.length > 0 && here.rows.length > 0 && <hr className="sidebar__sector-line" />}
+              {here.rows}
+              {arranges && group.agentIds.length === 0 && here.rows.length === 0 && (
+                <span className="sidebar__drop-hint">{t("agentGroups.dropHereAll")}</span>
               )}
             </SidebarSection>
           );
@@ -891,7 +931,7 @@ export function Sidebar() {
         <WorkspaceSky part="side" rail={rail} />
         {personal ? (
           // A personal workspace (ADR 0159): the person on top (their account, settings and workspaces in one menu),
-          // Agora, the bell and the collapse beside them. The desktop app's title bar has its own Agora and collapse
+          // Agora, the bell and the collapse beside them. The desktop app's title bar has its own collapse
           // (desktop.css).
           <div className="sidebar__org sidebar__org--person">
             <AccountMenu personal />
@@ -941,16 +981,7 @@ export function Sidebar() {
       )}
 
       <ArchivedChannelsDialog open={showArchived} onClose={() => setShowArchived(false)} />
-      <NewChannelDialog
-        open={creatingChannel !== false}
-        onOpenChange={(open) => setCreatingChannel(open)}
-        category={typeof creatingChannel === "string" ? creatingChannel : null}
-      />
-      <NewCategoryDialog
-        open={newCategory !== null}
-        onOpenChange={(open) => !open && setNewCategory(null)}
-        withChannel={newCategory?.withChannel}
-      />
+      <NewChannelDialog open={creatingChannel} onOpenChange={setCreatingChannel} />
       <SidebarSetupDialog open={customizing} onClose={() => setCustomizing(false)} />
       {groupDialog && <GroupNameDialog purpose={groupDialog} onClose={() => setGroupDialog(null)} />}
       {deletingGroup && <DeleteGroupDialog group={deletingGroup} onClose={() => setDeletingGroup(null)} />}
@@ -1001,8 +1032,8 @@ function CreateAgentTile({ onOpen }: { onOpen: () => void }) {
   );
 }
 
-/** The fixed sections, a channel category as `category:<id>` (ADR 0080) and a group of agents as `group:<id>` (ADR 0083). */
-type SectionId = "channels" | "agents" | "people" | `category:${string}` | `group:${string}`;
+/** The fixed sections and a sector as `group:<id>` (ADR 0083, its channels too since ADR 0240). */
+type SectionId = "channels" | "agents" | "people" | `group:${string}`;
 
 /**
  * Which sidebar categories are closed, remembered in this browser for each person in each workspace. One closed by
@@ -1146,98 +1177,79 @@ function RowAction({ icon, label, onClick }: { icon: IconName; label: string; on
   );
 }
 
-/** Where a dragged channel or category would land: the row or header it is over, and how. */
+/** Where a dragged channel would land: the row or sector it is over, and how. */
 type DropMark = { key: string; where: "before" | "after" | "into" } | null;
-type Dragging = { kind: "channel" | "category"; id: string };
-/** One thing a category's ⋯ (and its right click) can do. */
-interface CategoryAction {
-  id: string;
-  label: string;
-  icon: IconName;
-  run: () => void;
-  danger?: boolean;
-  description?: string;
-}
-const CATEGORY_KEY = "category:";
+/** Canais' own key among the drop marks: the channels in no sector. */
+const LOOSE = "loose";
+const SECTOR_KEY = "sector:";
 
 /**
- * The channels (ADR 0080): the "Canais" part, its channels with no category first, then one section per category
- * (closed, "Canais" hides them too, but the open channel's); closed, a category keeps the open channel and the unread
- * ones in sight (CSS). Who may manage channels arranges the categories; they and a channel's creator move it by
- * dragging, from its right click ("Mover para…") or in its details.
+ * The channels' rows (ADR 0080, ADR 0240): the ones in no sector for Canais, and each sector's for its section, after
+ * its agents. Who manages channels and a channel's creator move one by dragging it onto a row (before or after it),
+ * onto a sector's header or into its body (at its end), or from its right click ("Mudar de setor"), which also has
+ * "Novo setor com #canal" for who makes sectors.
  */
-function SidebarChannels({
+function useSidebarChannels({
   channels: all,
   loading,
+  groups,
+  groupsReady,
   sections,
-  onNewChannel,
-  onNewCategory,
-  onPrefetch,
-  headProps,
-  addEntries,
+  sectorsOpen,
   pinned,
+  onPrefetch,
+  onNewSector,
 }: {
   channels: Channel[];
   loading: boolean;
+  groups: AgentGroup[];
+  groupsReady: boolean;
   sections: ReturnType<typeof useSidebarSections>;
-  /** A category's + (its id), or a new channel with none (null). */
-  onNewChannel: (categoryId: string | null) => void;
-  /** A new category, with the channel whose menu asked for it. */
-  onNewCategory: (withChannel?: string) => void;
-  onPrefetch: (channelId: string) => void;
-  /** "Canais"' header: the section's own menu (its place in the sidebar). */
-  headProps?: HTMLAttributes<HTMLDivElement>;
-  /** What "Canais"' + creates. */
-  addEntries: MenuEntry[];
-  /** The channels pinned on top of "Canais" ("Fixar no topo"), in order. */
+  /** Whether a sector the person never opened or closed starts open (a long team's start closed). */
+  sectorsOpen: boolean;
+  /** The channels pinned on top of their section ("Fixar no topo"), in order. */
   pinned: readonly string[];
+  onPrefetch: (channelId: string) => void;
+  /** "Novo setor com #canal". */
+  onNewSector: (channelId: string) => void;
 }) {
   const { t } = useTranslation();
   const { org, me } = useOrg();
   const orgId = org.id;
   const toast = useToast();
   const navigate = useNavigate();
-  const categories = useChannelCategories(orgId);
   const place = usePlaceChannel(orgId);
-  const placeCategory = usePlaceChannelCategory(orgId);
-  const removeCategory = useDeleteChannelCategory(orgId);
-  const recreate = useCreateChannelCategory(orgId);
-  const manages = can(org, "manage_channels");
   // An administrator reads every channel (ADR 0151): the ones they aren't in wait under one row, not in the list.
   const path = useRouterState({ select: (s) => s.location.pathname });
   const channels = all.filter((c) => !c.seenAsAdmin || path.endsWith(`/c/${c.id}`));
-  const others = all.filter((c) => !channels.includes(c));
-  const mayCreate = can(org, "create_channels");
+  // New since the list loaded (a team's, someone else's): their rows open their room as they land.
+  const arrived = useArrived(
+    channels.map((c) => c.id),
+    !loading,
+  );
+  useArrivals();
   const mayChange = (c: Channel) => managesChannel(c, me.user.id, org);
-  const [renaming, setRenaming] = useState<ChannelCategory | null>(null);
-  const [moving, setMoving] = useState<Channel | null>(null);
-  const drag = useRef<Dragging | null>(null);
+  const drag = useRef<string | null>(null);
   const [mark, setMark] = useState<DropMark>(null);
   const failed = (e: unknown) => toast.show(errorText(t, e), "error");
 
-  const list = categories.data ?? [];
-  const known = new Set(list.map((c) => c.id));
-  // A channel whose category isn't loaded yet (or is gone) shows with the ones with none. So nothing drags until
-  // the categories load: a drop would take the channel out of its category.
-  const categoryOf = (c: Channel) => (c.categoryId && known.has(c.categoryId) ? c.categoryId : null);
-  const pinnedChannels = pinned.flatMap((id) => channels.filter((c) => c.id === id && c.isMember));
-  const unpinned = channels.filter((c) => !pinnedChannels.includes(c));
-  const loose = unpinned.filter((c) => categoryOf(c) === null);
-  const inCategory = (id: string) => unpinned.filter((c) => categoryOf(c) === id);
-  // A category shows while it holds a channel I can see; who manages channels keeps the empty ones to drop channels in.
-  const shown = manages ? list : list.filter((c) => inCategory(c.id).length > 0);
-  const categoryIds = shown.map((c) => `${CATEGORY_KEY}${c.id}` as SectionId);
+  const known = new Set(groups.map((g) => g.id));
+  // A channel whose sector isn't loaded yet (or is gone, or not shown to me) shows with the ones in none.
+  const sectorOf = (c: Channel) => (c.groupId && known.has(c.groupId) ? c.groupId : null);
+  const keyOf = (groupId: string | null) => (groupId ? `${SECTOR_KEY}${groupId}` : LOOSE);
+  const pins = pinned.filter((id) => channels.some((c) => c.id === id && c.isMember));
+  /** A section's channels, my pinned ones on top. */
+  const inSector = (groupId: string | null) =>
+    splitPinned(
+      channels.filter((c) => sectorOf(c) === groupId),
+      pins,
+      (c) => c.id,
+    );
 
-  // ── Dragging: a channel onto a channel (before/after) or a header (into); a header onto a header ──
+  // ── Dragging: a channel onto a channel (before/after), or into a sector or Canais ──
   const endDrag = () => {
     drag.current = null;
     setMark(null);
-  };
-  const startDrag = (e: DragEvent, what: Dragging) => {
-    drag.current = what;
-    e.dataTransfer.effectAllowed = "move";
-    // Firefox starts a drag only with some data set. Not text, or a text field it's dropped on types the id.
-    e.dataTransfer.setData(`application/x-agentes-${what.kind}`, what.id);
   };
   const half = (e: DragEvent) => {
     const r = e.currentTarget.getBoundingClientRect();
@@ -1249,165 +1261,115 @@ function SidebarChannels({
     e.dataTransfer.dropEffect = "move";
     if (mark?.key !== key || mark.where !== where) setMark({ key, where });
   };
-  const overChannel = (e: DragEvent, c: Channel) => {
-    const d = drag.current;
-    if (d?.kind !== "channel") return;
-    if (d.id !== c.id) return over(e, `channel:${c.id}`, half(e));
-    // Over its own row it lands nowhere: not at the end of the section around it.
+  const still = (e: DragEvent) => {
     e.stopPropagation();
     if (mark) setMark(null);
+  };
+  const overChannel = (e: DragEvent, c: Channel) => {
+    const id = drag.current;
+    if (!id) return;
+    // Over its own row it lands nowhere: not at the end of the section around it.
+    if (id === c.id) return still(e);
+    over(e, `channel:${c.id}`, half(e));
   };
   // "Into" the part the channel is already in lands nowhere: the server would move it to that part's end.
-  const intoPart = (e: DragEvent, key: string) => {
-    const d = drag.current;
-    if (d?.kind !== "channel") return;
-    const dragged = channels.find((c) => c.id === d.id);
-    const home = dragged && categoryOf(dragged);
-    if (home === undefined || key !== (home === null ? "loose" : `${CATEGORY_KEY}${home}`)) return over(e, key, "into");
-    e.stopPropagation();
-    if (mark) setMark(null);
+  const into = (e: DragEvent, groupId: string | null) => {
+    const dragged = channels.find((c) => c.id === drag.current);
+    if (!dragged) return;
+    if (sectorOf(dragged) === groupId) return still(e);
+    over(e, keyOf(groupId), "into");
   };
-  const overCategory = (e: DragEvent, category: ChannelCategory) => {
-    const d = drag.current;
-    if (d?.kind === "channel") intoPart(e, `${CATEGORY_KEY}${category.id}`);
-    else if (d?.kind === "category" && d.id !== category.id) over(e, `${CATEGORY_KEY}${category.id}`, half(e));
+  /** Moves a channel to another section's end, and says so with Desfazer, which puts it back where it was. */
+  const moveTo = (c: Channel, groupId: string | null) => {
+    const from = sectorOf(c);
+    if (from === groupId) return;
+    const before = inSector(from).rest;
+    const next = before[before.findIndex((x) => x.id === c.id) + 1]?.id ?? null;
+    const name = `#${c.name}`;
+    const to = groups.find((g) => g.id === groupId);
+    const fromName = groups.find((g) => g.id === from)?.name ?? "";
+    if (groupId && !sections.isOpen(`group:${groupId}`, sectorsOpen)) sections.toggle(`group:${groupId}`, sectorsOpen);
+    place.mutate(
+      { channelId: c.id, groupId },
+      {
+        onError: failed,
+        onSuccess: () =>
+          toast.show(
+            to
+              ? t("agentGroups.moved", { name, group: to.name })
+              : t("agentGroups.movedOut", { name, group: fromName }),
+            "info",
+            {
+              label: t("agentGroups.undo"),
+              run: () => place.mutate({ channelId: c.id, groupId: from, beforeChannelId: next }, { onError: failed }),
+            },
+          ),
+      },
+    );
   };
-  const overLoose = (e: DragEvent) => intoPart(e, "loose");
-  // Anywhere in a category but on a row (its empty end, a row's hover buttons): a channel goes in, at its end.
-  const overCategoryBody = (e: DragEvent, category: ChannelCategory) => intoPart(e, `${CATEGORY_KEY}${category.id}`);
   const drop = (e: DragEvent) => {
-    const d = drag.current;
+    const id = drag.current;
     const m = mark;
     endDrag();
-    if (!d || !m) return;
+    const dragged = channels.find((c) => c.id === id);
+    if (!dragged || !m) return;
     e.preventDefault();
     e.stopPropagation();
-    if (d.kind === "category") {
-      const target = m.key.slice(CATEGORY_KEY.length);
-      const i = list.findIndex((c) => c.id === target);
-      const before = m.where === "before" ? target : (list[i + 1]?.id ?? null);
-      if (before !== d.id) placeCategory.mutate({ categoryId: d.id, beforeCategoryId: before }, { onError: failed });
-      return;
-    }
-    if (m.key === "loose") return place.mutate({ channelId: d.id, categoryId: null }, { onError: failed });
-    if (m.key.startsWith(CATEGORY_KEY)) {
-      const categoryId = m.key.slice(CATEGORY_KEY.length);
-      if (!sections.isOpen(`${CATEGORY_KEY}${categoryId}` as SectionId))
-        sections.toggle(`${CATEGORY_KEY}${categoryId}` as SectionId);
-      return place.mutate({ channelId: d.id, categoryId }, { onError: failed });
-    }
+    if (m.key === LOOSE) return moveTo(dragged, null);
+    if (m.key.startsWith(SECTOR_KEY)) return moveTo(dragged, m.key.slice(SECTOR_KEY.length));
     const target = channels.find((c) => `channel:${c.id}` === m.key);
     if (!target) return;
-    const categoryId = categoryOf(target);
-    const siblings = categoryId ? inCategory(categoryId) : loose;
+    const groupId = sectorOf(target);
+    const siblings = inSector(groupId).rest;
     const i = siblings.findIndex((c) => c.id === target.id);
     const before = m.where === "before" ? target.id : (siblings[i + 1]?.id ?? null);
-    const from = siblings.findIndex((c) => c.id === d.id);
-    // Already there. The server would still renumber the group, and a group arranged by hand takes new
-    // channels at its end instead of by name (endOfCategory).
-    if (before === d.id || (from >= 0 && (siblings[from + 1]?.id ?? null) === before)) return;
-    place.mutate({ channelId: d.id, categoryId, beforeChannelId: before }, { onError: failed });
+    const from = siblings.findIndex((c) => c.id === dragged.id);
+    // Already there. The server would still renumber the list, and a list arranged by hand takes new channels at
+    // its end instead of by name (endOfSector).
+    if (before === dragged.id || (from >= 0 && (siblings[from + 1]?.id ?? null) === before)) return;
+    place.mutate({ channelId: dragged.id, groupId, beforeChannelId: before }, { onError: failed });
   };
   const dropMark = (key: string) => (mark?.key === key ? mark.where : undefined);
+  /** A sector's header or body, or Canais': a channel dropped there goes to its end. */
+  const zone = (groupId: string | null) => ({
+    "data-drop": dropMark(keyOf(groupId)),
+    onDragOver: (e: DragEvent<HTMLDivElement>) => into(e, groupId),
+    onDrop: (e: DragEvent<HTMLDivElement>) => drop(e),
+  });
 
-  // ── Menus: a channel's and a category's right click (lib/entity-menu.ts), and a category's ⋯ ──
+  // ── Menus: a channel's right click (lib/entity-menu.ts) with its "Mudar de setor", as an agent's has ──
   const channelEntries = useChannelMenu();
-  const channelMenu = (c: Channel) =>
-    entityMenu(() =>
-      channelEntries(c, [
-        ...(mayChange(c) && list.length > 0
-          ? ([
-              {
-                kind: "item",
-                id: "move",
-                label: t("channelCategories.move"),
-                icon: "move",
-                run: () => setMoving(c),
-              },
-            ] satisfies MenuEntry[])
-          : []),
-        ...(manages
-          ? ([
-              {
-                kind: "item",
-                id: "new-category",
-                label: t("channelCategories.newWithChannel"),
-                icon: "layers",
-                run: () => onNewCategory(c.id),
-              },
-            ] satisfies MenuEntry[])
-          : []),
-      ]),
-    );
-  const deleteCategory = (category: ChannelCategory) => {
-    const taken = inCategory(category.id).map((c) => c.id);
-    const next = list[list.findIndex((c) => c.id === category.id) + 1]?.id ?? null;
-    removeCategory.mutate(category.id, {
-      onError: failed,
-      onSuccess: () =>
-        toast.show(
-          taken.length
-            ? t("channelCategories.deleted", { name: category.name, count: taken.length })
-            : t("channelCategories.deletedEmpty", { name: category.name }),
-          "info",
-          {
-            label: t("channelCategories.undo"),
-            // Undo: the same name and channels, back in its place.
-            run: () =>
-              recreate.mutate(
-                { name: category.name, channelIds: taken },
-                {
-                  onError: failed,
-                  onSuccess: (again) => {
-                    if (next) placeCategory.mutate({ categoryId: again.id, beforeCategoryId: next });
-                  },
-                },
-              ),
-          },
-        ),
-    });
-  };
-  const allClosed = categoryIds.every((id) => !sections.isOpen(id));
-  const categoryActions = (category: ChannelCategory) => {
-    const actions: CategoryAction[] = [];
-    if (mayCreate)
-      actions.push({
-        id: "new-channel",
-        label: t("channelCategories.newChannelHere"),
-        icon: "plus",
-        run: () => onNewChannel(category.id),
-      });
-    if (manages)
-      actions.push({
-        id: "rename",
-        label: t("channelCategories.rename"),
-        icon: "edit",
-        run: () => setRenaming(category),
-      });
-    actions.push({
-      id: "fold",
-      label: allClosed ? t("channelCategories.expandAll") : t("channelCategories.collapseAll"),
-      icon: "list",
-      run: () => sections.setAll(categoryIds, allClosed),
-    });
-    if (manages)
-      actions.push(
-        {
-          id: "new-category",
-          label: t("channelCategories.newCategory"),
+  const sectorEntries = (c: Channel): MenuEntry[] => {
+    if (!mayChange(c) || !groupsReady) return [];
+    const makes = can(org, "manage_agents");
+    if (!groups.length && !makes) return [];
+    const current = sectorOf(c);
+    const choices = groups.length ? [{ id: null, name: t("agentGroups.none") }, ...groups] : [];
+    return [
+      { kind: "separator" },
+      ...(choices.length ? [{ kind: "header" as const, label: t("sidebarAgents.changeGroup") }] : []),
+      ...choices.map(
+        (g): MenuEntry => ({
+          kind: "item",
+          id: `group-${g.id ?? "none"}`,
+          label: g.name,
           icon: "layers",
-          run: () => onNewCategory(),
-        },
-        {
-          id: "delete",
-          label: t("channelCategories.delete"),
-          description: t("channelCategories.deleteDesc"),
-          icon: "trash",
-          danger: true,
-          run: () => deleteCategory(category),
-        },
-      );
-    return actions;
+          disabled: g.id === current,
+          run: () => moveTo(c, g.id),
+        }),
+      ),
+      ...(makes
+        ? ([
+            {
+              kind: "item",
+              id: "new-group",
+              label: t("sidebarAgents.newGroupWith", { name: `#${c.name}` }),
+              icon: "plus",
+              run: () => onNewSector(c.id),
+            },
+          ] satisfies MenuEntry[])
+        : []),
+    ];
   };
 
   // A pinned row stays put: it doesn't drag, and nothing drops on it.
@@ -1417,6 +1379,9 @@ function SidebarChannels({
     // mention still shows.
     const unread = looksUnread(c);
     const mentions = c.mentionCount ?? 0;
+    // The row's own marks go on what the list holds: the link, or the row around it with its buttons.
+    const outer = { "data-channel-row": c.id, ...arrivalProps(arrived, c.id) };
+    const plain = !mayChange(c);
     const link = (
       <Link
         key={c.id}
@@ -1424,6 +1389,7 @@ function SidebarChannels({
         params={{ orgId, channelId: c.id }}
         className="sidebar__item"
         title={`#${c.name}`}
+        {...(plain ? outer : {})}
         data-kind="channel"
         data-unread={unread}
         data-muted={c.muted || undefined}
@@ -1431,8 +1397,13 @@ function SidebarChannels({
           ? {}
           : {
               "data-drop": dropMark(`channel:${c.id}`),
-              draggable: categories.data !== undefined && mayChange(c),
-              onDragStart: (e: DragEvent) => startDrag(e, { kind: "channel", id: c.id }),
+              draggable: groupsReady && mayChange(c),
+              onDragStart: (e: DragEvent) => {
+                drag.current = c.id;
+                e.dataTransfer.effectAllowed = "move";
+                // Firefox starts a drag only with some data set. Not text, or a text field it's dropped on types the id.
+                e.dataTransfer.setData("application/x-agentes-channel", c.id);
+              },
               onDragEnd: endDrag,
               onDragOver: (e: DragEvent) => overChannel(e, c),
               onDrop: drop,
@@ -1440,7 +1411,7 @@ function SidebarChannels({
         onMouseEnter={() => onPrefetch(c.id)}
         onFocus={() => onPrefetch(c.id)}
         onClick={() => markOpen(c.id)}
-        {...channelMenu(c)}
+        {...entityMenu(() => channelEntries(c, sectorEntries(c)))}
       >
         <Icon name="channel" className="sidebar__channel-icon" />
         <span className="sidebar__channel-abbr" aria-hidden="true">
@@ -1457,13 +1428,13 @@ function SidebarChannels({
       </Link>
     );
     // On hover or focus, like Discord's invite and settings: who manages the channel adds members or opens its details.
-    if (!mayChange(c)) return link;
+    if (plain) return link;
     const open = (ask: "details" | "add") => () => {
       requestChannelDetails(c.id, ask);
       void navigate({ to: "/org/$orgId/c/$channelId", params: { orgId, channelId: c.id } });
     };
     return (
-      <div key={c.id} className="sidebar__row" data-unread={unread} data-acts={2}>
+      <div key={c.id} className="sidebar__row" data-unread={unread} data-acts={2} {...outer}>
         {link}
         <span className="sidebar__row-acts">
           <RowAction icon="personAdd" label={t("shell.sidebarMenu.addMembers")} onClick={open("add")} />
@@ -1472,144 +1443,121 @@ function SidebarChannels({
       </div>
     );
   };
-  const addButton = (categoryId: string | null, label: string) =>
-    mayCreate ? (
-      <Button
-        variant="ghost"
-        size="sm"
-        iconOnly
-        icon="plus"
-        className="sidebar__section-add"
-        aria-label={label}
-        title={label}
-        onClick={() => onNewChannel(categoryId)}
-      />
-    ) : null;
-  const dialogs = (
-    <>
-      <RenameCategoryDialog category={renaming} onOpenChange={(open) => !open && setRenaming(null)} />
-      <MoveChannelDialog channel={moving} onOpenChange={(open) => !open && setMoving(null)} canCreate={manages} />
-    </>
-  );
-  const mentions = channels.reduce((n, c) => n + (c.isMember ? (c.mentionCount ?? 0) : 0), 0);
+  /** A section's rows: the pinned ones, a thin line, the rest. */
+  const rows = (groupId: string | null) => {
+    const { top, rest } = inSector(groupId);
+    return [
+      ...top.map((c) => row(c, true)),
+      ...(top.length && rest.length ? [<hr key="pins-end" className="sidebar__pins-end" />] : []),
+      ...rest.map((c) => row(c)),
+    ];
+  };
+  /** Unread messages across a sector's channels, as its closed header counts them. */
+  const unreadIn = (list: Channel[]) =>
+    list.reduce((n, c) => n + (looksUnread(c) ? (c.unreadCount ?? 0) : (c.mentionCount ?? 0)), 0);
 
+  return {
+    channels,
+    others: all.filter((c) => !channels.includes(c)),
+    /** The channels of a sector, as listed (none: those in no sector). */
+    inSector: (groupId: string | null) => {
+      const { top, rest } = inSector(groupId);
+      return [...top, ...rest];
+    },
+    rows,
+    loose: zone(null),
+    /** What a sector's section needs: its channels' rows, their unread, its header's and body's drops. */
+    sector: (groupId: string) => {
+      const list = channels.filter((c) => sectorOf(c) === groupId);
+      return {
+        rows: rows(groupId),
+        unread: unreadIn(list),
+        mentions: list.some((c) => (c.mentionCount ?? 0) > 0),
+        head: zone(groupId) as HTMLAttributes<HTMLDivElement>,
+        body: zone(groupId),
+      };
+    },
+    hasSectors: groups.length > 0,
+  };
+}
+
+/**
+ * "Canais" (ADR 0080, ADR 0240): the channels in no sector, the pinned ones first; closed, it keeps the open channel
+ * and the unread ones in sight (CSS). The channels in a sector show in it, after its agents.
+ */
+function SidebarChannels({
+  rows,
+  all,
+  loading,
+  sections,
+  onNewChannel,
+  headProps,
+  addEntries,
+}: {
+  rows: ReturnType<typeof useSidebarChannels>;
+  all: Channel[];
+  loading: boolean;
+  sections: ReturnType<typeof useSidebarSections>;
+  onNewChannel: () => void;
+  /** "Canais"' header: the section's own menu (its place in the sidebar). */
+  headProps?: HTMLAttributes<HTMLDivElement>;
+  /** What "Canais"' + creates. */
+  addEntries: MenuEntry[];
+}) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const navigate = useNavigate();
+  const mayCreate = can(org, "create_channels");
+  const others = rows.others;
+  const mentions = rows.channels.reduce((n, c) => n + (c.isMember ? (c.mentionCount ?? 0) : 0), 0);
   return (
-    <>
-      <SidebarSection
-        id="channels"
-        // A personal workspace's are its group conversations (ADR 0159).
-        label={t(modeKey(org, "shell.channels"))}
-        sections={sections}
-        className="sidebar__section--part"
-        headProps={headProps}
-        summary={mentions > 0 && <UnreadCount count={mentions} mentions />}
-        action={<SectionAdd label={t(modeKey(org, "shell.sidebarMenu.addToChannels"))} entries={addEntries} />}
-        // The channels with no category take a channel dragged out of one.
-        drop={shown.length > 0 ? { "data-drop": dropMark("loose"), onDragOver: overLoose, onDrop: drop } : undefined}
-      >
-        {loading && <SidebarSkeleton count={3} label={t("common.loadingList")} />}
-        {pinnedChannels.map((c) => row(c, true))}
-        {pinnedChannels.length > 0 && (loose.length > 0 || shown.length > 0) && <hr className="sidebar__pins-end" />}
-        {loose.map((c) => row(c))}
-        {/* A personal workspace with no group conversation yet (ADR 0159): a row to create the first; after it, the
-            header's + does. */}
-        {isPersonal(org) && mayCreate && !loading && all.length === 0 && (
-          <button type="button" className="sidebar__item sidebar__new-channel" onClick={() => onNewChannel(null)}>
-            <Icon name="plus" className="sidebar__channel-icon" />
-            <span className="sidebar__item-label">{t("shell.sidebarMenu.newChannelPersonal")}</span>
-          </button>
-        )}
-        {others.length > 0 && (
-          <Menu
-            label={t(modeKey(org, "shell.otherChannels"))}
-            trigger={
-              <button type="button" className="sidebar__item" data-kind="channel">
-                <Icon name="lock" />
-                <span className="sidebar__item-label">{t(modeKey(org, "shell.otherChannels"))}</span>
-                <CountChip className="sidebar__count">{others.length}</CountChip>
-              </button>
-            }
-          >
-            {others.map((c) => (
-              <MenuItem
-                key={c.id}
-                icon="lock"
-                onSelect={() => void navigate({ to: "/org/$orgId/c/$channelId", params: { orgId, channelId: c.id } })}
-              >
-                {c.name}
-              </MenuItem>
-            ))}
-          </Menu>
-        )}
-      </SidebarSection>
-      {shown.map((category) => {
-        const actions = categoryActions(category);
-        return (
-          <SidebarSection
-            key={category.id}
-            id={`${CATEGORY_KEY}${category.id}`}
-            label={category.name}
-            sections={sections}
-            className="sidebar__section--category"
-            drop={{ onDragOver: (e) => overCategoryBody(e, category), onDrop: drop }}
-            headProps={
-              {
-                draggable: manages,
-                "data-drop": dropMark(`${CATEGORY_KEY}${category.id}`),
-                onDragStart: (e) => startDrag(e, { kind: "category", id: category.id }),
-                onDragEnd: endDrag,
-                onDragOver: (e) => overCategory(e, category),
-                onDrop: drop,
-                ...entityMenu(() => [
-                  { kind: "header", label: category.name },
-                  ...actions.map(
-                    (a): MenuEntry => ({
-                      kind: "item",
-                      id: a.id,
-                      label: a.label,
-                      icon: a.icon,
-                      danger: a.danger,
-                      run: a.run,
-                    }),
-                  ),
-                ]),
-              } as HTMLAttributes<HTMLDivElement>
-            }
-            action={
-              <>
-                {addButton(category.id, t("channelCategories.newChannelIn", { name: category.name }))}
-                <Menu
-                  align="start"
-                  label={t("channelCategories.options", { name: category.name })}
-                  trigger={
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      iconOnly
-                      icon="more"
-                      className="sidebar__section-add"
-                      aria-label={t("channelCategories.options", { name: category.name })}
-                    />
-                  }
-                >
-                  {actions.map((a) => (
-                    <Fragment key={a.id}>
-                      {a.id === "new-category" && <MenuSeparator />}
-                      <MenuItem icon={a.icon} danger={a.danger} description={a.description} onSelect={a.run}>
-                        {a.label}
-                      </MenuItem>
-                    </Fragment>
-                  ))}
-                </Menu>
-              </>
-            }
-          >
-            {inCategory(category.id).map((c) => row(c))}
-          </SidebarSection>
-        );
-      })}
-      {dialogs}
-    </>
+    <SidebarSection
+      id="channels"
+      // A personal workspace's are its group conversations (ADR 0159).
+      label={t(modeKey(org, "shell.channels"))}
+      sections={sections}
+      className="sidebar__section--part"
+      headProps={headProps}
+      summary={mentions > 0 && <UnreadCount count={mentions} mentions />}
+      action={<SectionAdd label={t(modeKey(org, "shell.sidebarMenu.addToChannels"))} entries={addEntries} />}
+      // The channels in no sector take a channel dragged out of one.
+      drop={rows.hasSectors ? rows.loose : undefined}
+    >
+      {loading && <SidebarSkeleton count={3} label={t("common.loadingList")} />}
+      {rows.rows(null)}
+      {/* A personal workspace with no group conversation yet (ADR 0159): a row to create the first; after it, the
+          header's + does. */}
+      {isPersonal(org) && mayCreate && !loading && all.length === 0 && (
+        <button type="button" className="sidebar__item sidebar__new-channel" onClick={onNewChannel}>
+          <Icon name="plus" className="sidebar__channel-icon" />
+          <span className="sidebar__item-label">{t("shell.sidebarMenu.newChannelPersonal")}</span>
+        </button>
+      )}
+      {others.length > 0 && (
+        <Menu
+          label={t(modeKey(org, "shell.otherChannels"))}
+          trigger={
+            <button type="button" className="sidebar__item" data-kind="channel">
+              <Icon name="lock" />
+              <span className="sidebar__item-label">{t(modeKey(org, "shell.otherChannels"))}</span>
+              <CountChip className="sidebar__count">{others.length}</CountChip>
+            </button>
+          }
+        >
+          {others.map((c) => (
+            <MenuItem
+              key={c.id}
+              icon="lock"
+              onSelect={() =>
+                void navigate({ to: "/org/$orgId/c/$channelId", params: { orgId: org.id, channelId: c.id } })
+              }
+            >
+              {c.name}
+            </MenuItem>
+          ))}
+        </Menu>
+      )}
+    </SidebarSection>
   );
 }
 
@@ -1747,6 +1695,7 @@ function PinnedMark() {
  */
 function AgentRow({
   agent: a,
+  arrival,
   unread,
   waitingFor,
   live,
@@ -1757,6 +1706,8 @@ function AgentRow({
   menuExtra,
 }: {
   agent: Agent;
+  /** Its marks while it lands in the sidebar (`arrivalProps`). */
+  arrival?: ReturnType<typeof arrivalProps>;
   unread: number;
   /** The offline computer it waits for (its brain runs there). */
   waitingFor?: string;
@@ -1838,7 +1789,13 @@ function AgentRow({
     : [a.name, a.role, now ?? word, line?.text].filter(Boolean).join(" · ");
   const roleTag = !locked && !out;
   return (
-    <div className="sidebar__row" data-agent-row={a.id} data-live={live || undefined} data-acts={edits ? 1 : undefined}>
+    <div
+      className="sidebar__row"
+      data-agent-row={a.id}
+      data-live={live || undefined}
+      data-acts={edits ? 1 : undefined}
+      {...arrival}
+    >
       <Link
         {...rowMenu}
         to="/org/$orgId/dm/agent/$agentId"

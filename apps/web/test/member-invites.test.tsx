@@ -735,6 +735,35 @@ describe("People › Convites", () => {
     expect(state.calls.filter((c) => c.method === "orgs.revokeInvitation").at(-1)?.args).toEqual([ORG_ID, "inv-old"]);
   });
 
+  test("an email that never arrived: the row says why, with Copiar link and Reenviar, even after a resend", async () => {
+    const state = withSupport();
+    state.invitations.push(
+      invitation({ id: "inv-ana", email: "ana@acme.com", undelivered: "suppressed" }),
+      invitation({ id: "inv-bia", email: "bia@acme.com", undelivered: "rejected" }),
+    );
+    await members(state, "invites");
+    const row = (email: string) =>
+      within(screen().getByRole("region", { name: "Convites por e-mail" })).getByRole("group", {
+        name: `Convite para ${email}`,
+      });
+    const said = (email: string) => row(email).querySelector(".members-row__state") as HTMLElement;
+    expect(said("ana@acme.com").textContent).toBe(
+      "Não chegou: o provedor de e-mail bloqueou este endereço depois de uma devolução. Confira se está certo e reenvie, ou copie o link.",
+    );
+    expect(said("ana@acme.com").getAttribute("data-tone")).toBe("soon");
+    expect(said("bia@acme.com").textContent).toBe(
+      "Não chegou: o endereço foi recusado. Confira se está certo, ou copie o link e mande de outro jeito.",
+    );
+    expect(within(row("ana@acme.com")).getByRole("button", { name: "Copiar link" })).toBeTruthy();
+    await click(within(row("ana@acme.com")).getByRole("button", { name: "Reenviar" }));
+    await settle(4);
+    // Still refused by the time the list comes back: it can be sent again.
+    expect(said("ana@acme.com").textContent).toStartWith("Não chegou:");
+    expect((within(row("ana@acme.com")).getByRole("button", { name: "Reenviar" }) as HTMLButtonElement).disabled).toBe(
+      false,
+    );
+  });
+
   test("pending: while a row's call runs its other actions wait; Desativar's dialog holds until the link is off", async () => {
     const state = withSupport();
     state.invitations.push(

@@ -217,6 +217,8 @@ export function workspaceHeadline(n: Pick<AppNotification, "kind" | "latest">) {
   if (n.kind === "composio_limit") return "connectors.composio.limitNotice" as const;
   if (n.kind === "computer_disk_full") return "machines.shared.diskFullNotice" as const;
   if (n.kind === "computer_no_chrome") return "machines.chromeMissingNotice" as const;
+  if (n.kind === "computer_down") return "machines.outage.down" as const;
+  if (n.kind === "computer_back") return "machines.outage.back" as const;
   if (n.kind === "skill_update") {
     const to = n.latest.statusTo;
     return to === "waiting"
@@ -535,7 +537,9 @@ export function openTarget(n: AppNotification): OpenTarget | null {
     n.kind === "machine_connected" ||
     n.kind === "computer_ready" ||
     n.kind === "computer_disk_full" ||
-    n.kind === "computer_no_chrome"
+    n.kind === "computer_no_chrome" ||
+    n.kind === "computer_down" ||
+    n.kind === "computer_back"
   )
     return s.machineId
       ? { to: "/org/$orgId/settings/computers/$machineId", params: { machineId: s.machineId } }

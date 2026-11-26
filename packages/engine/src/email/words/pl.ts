@@ -448,6 +448,49 @@ export const words: EmailWords = {
       why: () => "Otrzymujesz tę wiadomość, ponieważ jesteś w tej przestrzeni roboczej w agentes.chat.",
     },
   },
+  computerDown: {
+    subject: "Komputer nie odpowiada",
+    preheader: "Praca twoich agentów na nim czeka.",
+    headline: "Komputer nie odpowiada",
+    body: (name, org, away) => [
+      { b: name },
+      " w ",
+      { b: org },
+      ` nie odpowiada od ${away}. Praca, która go potrzebuje, czeka i ruszy dalej, gdy wróci.`,
+    ],
+    runs: "Czekające prośby do agentów",
+    calls: "Czekające wywołania webhooka",
+    note: "Aby działać dalej już teraz, przenieś jego agentów na inny komputer na jego stronie.",
+    button: "Otwórz komputer",
+    why: (org) => `Dostajesz ten e-mail, bo zarządzasz komputerami ${org} w agentes.chat.`,
+    back: {
+      subject: "Komputer znów działa",
+      preheader: "Praca, która na niego czekała, idzie teraz dalej.",
+      headline: "Komputer znów działa",
+      runs: "Prośby do agentów, które czekały",
+      calls: "Wywołania webhooka, które czekały",
+      body: (name, org, away) => [
+        { b: name },
+        " w ",
+        { b: org },
+        ` znów działa po ${away}. Praca, która na niego czekała, idzie teraz dalej.`,
+      ],
+    },
+    personal: {
+      body: (name, _org, away) => [
+        { b: name },
+        ` nie odpowiada od ${away}. Praca, która go potrzebuje, czeka i ruszy dalej, gdy wróci.`,
+      ],
+      why: () =>
+        "Dostajesz ten e-mail, bo zarządzasz komputerami swojej osobistej przestrzeni roboczej w agentes.chat.",
+      back: {
+        body: (name, _org, away) => [
+          { b: name },
+          ` znów działa po ${away}. Praca, która na niego czekała, idzie teraz dalej.`,
+        ],
+      },
+    },
+  },
   appConnected: {
     subject: "Do twojego konta agentes.chat podłączono aplikację",
     preheader: "Może czytać i wysyłać zadania agentom w twoim imieniu w jednej przestrzeni roboczej.",

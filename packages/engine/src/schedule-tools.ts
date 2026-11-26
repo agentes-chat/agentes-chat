@@ -1,4 +1,5 @@
 import { and, eq, inArray, isNull, or, schema, sql } from "@agenteschat/db";
+import { ROUTINE_PROMPT_MAX } from "@agenteschat/tokens/routines";
 import { type AgentActionParams, recordAgentActions } from "./agent-actions";
 import { routineRow, routineSnapshot } from "./agent-undo";
 import { agentsByHandle, currentHandles, getAgentCached } from "./agents";
@@ -605,7 +606,7 @@ export function createScheduleToolSource(deps: Omit<RoutineDeps, "db">): ToolSou
     {
       name: "schedule_reminder",
       description:
-        'Schedule a one-off reminder in this conversation: at that time you post "Reminder: …" mentioning the person (the app shows it as a reminder in their language). `when` is what the person said, in their words and language ("amanhã às 9h", "tomorrow at 9am", "in 2 hours"), read in their time zone, or ISO 8601. Write `message` in the person\'s language. Set ask_agent when, at that time, you should do something (not just remind); for a connected app\'s action then (a post, a message to send), use schedule_action instead, so the person approves it now and not at that time. If the time is ambiguous, ask with ask_user first.',
+        'Schedule a one-off reminder in this conversation: at that time you post "Reminder: …" mentioning the person (the app shows it as a reminder in their language). `when` is what the person said, in their words and language ("amanhã às 9h", "tomorrow at 9am", "in 2 hours"), read in their time zone, or ISO 8601. Write `message` in the person\'s language so it reads right on any day: it shows in Routines and in the calendar before that time, so name the day and date instead of words like today or tomorrow ("Friday, Mar 6: dentist at 3pm", not "Tomorrow: dentist"). Set ask_agent when, at that time, you should do something (not just remind); for a connected app\'s action then (a post, a message to send), use schedule_action instead, so the person approves it now and not at that time. If the time is ambiguous, ask with ask_user first.',
       scope: SCHEDULE_SCOPE,
       inputSchema: {
         type: "object",
@@ -670,7 +671,7 @@ export function createScheduleToolSource(deps: Omit<RoutineDeps, "db">): ToolSou
         properties: {
           schedule: SCHEDULE_INPUT,
           trigger: TRIGGER_SCHEMA,
-          prompt: { type: "string", minLength: 1, maxLength: 10_000 },
+          prompt: { type: "string", minLength: 1, maxLength: ROUTINE_PROMPT_MAX },
           title: { type: "string", maxLength: 120 },
           channel: { type: "string", maxLength: 100, description: "Report in this channel instead of here" },
           report: REPORT_SCHEMA,
@@ -869,7 +870,7 @@ export function createScheduleToolSource(deps: Omit<RoutineDeps, "db">): ToolSou
         properties: {
           id: { type: "string", minLength: 36, maxLength: 36 },
           channel: { type: "string", maxLength: 100 },
-          prompt: { type: "string", minLength: 1, maxLength: 10_000 },
+          prompt: { type: "string", minLength: 1, maxLength: ROUTINE_PROMPT_MAX },
           schedule: SCHEDULE_INPUT,
           trigger: TRIGGER_SCHEMA,
           title: { type: "string", minLength: 1, maxLength: 120 },

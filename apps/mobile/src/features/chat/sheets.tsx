@@ -13,8 +13,8 @@ import {
   type ReactionCount,
   resolvedOf,
   type ThreadInfo,
+  useAgentGroups,
   useApi,
-  useChannelCategories,
   useCloseMission,
   useFollowThread,
   useMissionControl,
@@ -41,8 +41,8 @@ import { serverUrl } from "@/lib/server";
 import { useOrg } from "@/providers/org";
 import { CHROME_MAX_SCALE, Count, GroupedList, GroupedRow, Icon, PressScale, SkeletonList, Text, useToast } from "@/ui";
 import { router } from "@/ui/navigation";
-import { useMovesChannel } from "../categories/CategoryScreens";
-import { categoryHrefs } from "../categories/logic";
+import { sectorHref } from "../channel-sectors/logic";
+import { useMovesChannel } from "../channel-sectors/PickSectorScreen";
 import { setPinDraft } from "../dashboards/logic";
 import { chatHref } from "../links/logic";
 import { AgentFace, Face } from "../shared/Face";
@@ -673,16 +673,13 @@ export function ChannelOptions({
   const sheet = useSheet();
   const pins = usePins(orgId, channelId);
   const count = pins.data?.length ?? 0;
-  // A channel's sidebar category (ADR 0080), for whoever may move it.
+  // A channel's sector (ADR 0240), for whoever may move it.
   const moves = useMovesChannel(channelId);
-  // Only what this sheet reads of the lists (its category, whether it is a DM): they are read again for any message.
+  // Only what this sheet reads of the lists (its sector, whether it is a DM): they are read again for any message.
   const api = useApi();
-  const categoryOf = useCallback(
-    (all: Channel[]) => all.find((c) => c.id === channelId)?.categoryId ?? null,
-    [channelId],
-  );
+  const sectorOf = useCallback((all: Channel[]) => all.find((c) => c.id === channelId)?.groupId ?? null, [channelId]);
   const isDm = useCallback((all: DirectMessage[]) => all.some((d) => d.channelId === channelId), [channelId]);
-  const categoryId = useQuery({ ...channelsQuery(api, orgId), select: categoryOf }).data;
+  const groupId = useQuery({ ...channelsQuery(api, orgId), select: sectorOf }).data;
   // "Agents reply in threads" (ADR 0214), for whoever may change the channel: undefined where it isn't a channel.
   const threadsOf = useCallback(
     (all: Channel[]) => {
@@ -699,8 +696,8 @@ export function ChannelOptions({
     onSettled: () => qc.invalidateQueries({ queryKey: keys.channels(orgId) }),
     onError: (e) => toast({ title: errorText(t, e, i18n.language), icon: "x" }),
   });
-  const categories = useChannelCategories(orgId);
-  const categoryName = categoryId ? categories.data?.find((c) => c.id === categoryId)?.name : undefined;
+  const sectors = useAgentGroups(orgId);
+  const sectorName = groupId ? sectors.data?.find((g) => g.id === groupId)?.name : undefined;
   // This conversation's own background, mine alone; none of its own: it follows the others.
   const { org } = useOrg();
   const dm = useQuery({ ...dmsQuery(api, orgId), select: isDm }).data === true;
@@ -729,13 +726,13 @@ export function ChannelOptions({
           ...(onMembers && moves
             ? [
                 {
-                  key: "category",
+                  key: "sector",
                   icon: "list" as const,
-                  label: t("channelCategories.category"),
-                  hint: categoryName ?? t("channelCategories.noCategory"),
+                  label: t("agentGroups.group"),
+                  hint: sectorName ?? t("agentGroups.none"),
                   onPress: () => {
                     sheet.close();
-                    router.push(categoryHrefs.pick(channelId));
+                    router.push(sectorHref(channelId));
                   },
                 },
               ]

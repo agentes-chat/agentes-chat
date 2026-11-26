@@ -24,6 +24,7 @@ import {
   codexProblem,
   codexSandbox,
   codexThreadKey,
+  reasoningNotes,
   shellScript,
 } from "./brain-codex";
 import { type CodexWindowsSandbox, codexLaunch, codexWindowsConfig } from "./codex-windows";
@@ -488,6 +489,8 @@ export class CodexAppMapper {
   private answer?: string;
   /** Agent messages already sent, streamed or whole (by item id): Codex may complete one twice. */
   private readonly sent = new Set<string>();
+  /** Reasoning summaries as their deltas came (`item/reasoning/summaryTextDelta`), by item and part. */
+  private readonly summaries = new Map<string, string[]>();
   private lastDeltaItem: string | null = null;
   private anyText = false;
   /** The thread's totals before this `brain.turn`, and now. */
@@ -539,6 +542,16 @@ export class CodexAppMapper {
     return this.textOf(itemId, delta);
   }
 
+  /** `item/reasoning/summaryTextDelta`: kept until its item completes, told then as notes. */
+  summaryDelta(params: Record<string, unknown>) {
+    const itemId = str(params.itemId);
+    if (!itemId) return;
+    const parts = this.summaries.get(itemId) ?? [];
+    const at = typeof params.summaryIndex === "number" ? params.summaryIndex : Math.max(0, parts.length - 1);
+    parts[at] = (parts[at] ?? "") + str(params.delta);
+    this.summaries.set(itemId, parts);
+  }
+
   /** `item/completed`: executed tool calls, the answer, and the text of a message that wasn't streamed. */
   completed(item: Record<string, unknown>): { events: CodexBrainEvent[]; text?: string } {
     const id = str(item.id) || `codex-${randomUUID()}`;
@@ -550,6 +563,13 @@ export class CodexAppMapper {
     )
       this.worked = true;
     switch (item.type) {
+      case "reasoning": {
+        // The parts as the item has them; else what their deltas said (`summaryDelta`).
+        const heard = this.summaries.get(id);
+        this.summaries.delete(id);
+        const parts = Array.isArray(item.summary) && item.summary.length > 0 ? item.summary : (heard ?? []);
+        return { events: reasoningNotes(parts, (t) => this.clean(t)) };
+      }
       case "agentMessage": {
         const t = str(item.text);
         if (!t.trim()) return { events: [] };
@@ -1028,13 +1048,11 @@ export class CodexAppServers implements CodexAppRunner {
           capabilities: {
             experimentalApi: false,
             requestAttestation: false,
-            // Never read here (each is one line per chunk of output).
+            // Never read here (each is one line per chunk of output). Its reasoning summary is (`reasoningNotes`).
             optOutNotificationMethods: [
               "item/commandExecution/outputDelta",
               "item/fileChange/outputDelta",
               "item/reasoning/textDelta",
-              "item/reasoning/summaryTextDelta",
-              "item/reasoning/summaryPartAdded",
               "item/plan/delta",
               "turn/diff/updated",
             ],
@@ -1364,6 +1382,9 @@ export class CodexAppServers implements CodexAppRunner {
           }
           case "item/agentMessage/delta":
             addText(mapper.delta(params));
+            return;
+          case "item/reasoning/summaryTextDelta":
+            mapper.summaryDelta(params);
             return;
           case "item/started":
           case "item/completed": {

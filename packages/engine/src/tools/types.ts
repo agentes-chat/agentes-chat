@@ -161,6 +161,11 @@ export interface ToolDefinition {
    */
   unasked?: boolean;
   /**
+   * Set by the gateway's listing, never by a source: a person kept "Aprovar sempre" for the whole tool, so a call opens
+   * no card (`coveringRules`, read again at the call).
+   */
+  alwaysApproved?: boolean;
+  /**
    * Set by the gateway for one call, never by a source: every action this call runs opens a pull request, so it is
    * judged as a connected app's own tool for that (`opensPullRequest`).
    */
@@ -203,6 +208,12 @@ export interface ToolDefinition {
    * `MCP_CALLER_IDENTITY`. Unset: anyone's (a custom server by address, a connections broker, a mailbox, a database).
    */
   server?: "catalog" | "vouched";
+  /**
+   * A server connected by address: what it said in `initialize` on how to use it (MCP's `instructions`), the same
+   * text on each of that connection's tools. Third-party text: a run granted any of them reads it once, in the
+   * outside envelope (`serverInstructionsPrompt`).
+   */
+  serverInstructions?: string;
   /** A mission's tool (agent mode, ADR 0029): its approvals are bound to that mission too. */
   missionId?: string;
   /**

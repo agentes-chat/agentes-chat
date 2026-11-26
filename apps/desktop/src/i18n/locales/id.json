@@ -452,6 +452,10 @@
     "waiting": "Menunggu {{by}} mengizinkannya masuk…",
     "done": "Terhubung ke {{org}}",
     "share": "Izinkan seluruh ruang kerja memakainya",
+    "internet": "Agen memakai internet komputer ini",
+    "internetOn": "Situs yang dibuka agen melihat lokasimu",
+    "internetOff": "Mati: agen memakai koneksi biasa mereka",
+    "internetHint": "Agen di workspace membuka situs lewat koneksi komputer ini. Hanya situs web, sampai 5 GB per hari, dan tidak pernah apa pun di jaringanmu sendiri. Selama komputer ini offline, mereka memakai koneksi biasa.",
     "shareOff": "Hanya kamu untuk saat ini",
     "shareHint": "Agen semua orang di {{org}} bisa menjalankan tugas di sana sebagai penggunamu.",
     "addFolders": "Tambahkan folder",
@@ -786,6 +790,7 @@
       "brainMax": "Percakapan terbuka",
       "brainMaxDesc": "Berapa banyak yang tetap terbuka di setiap ruang kerja. Makin banyak, makin cepat menjawab, tapi memakai lebih banyak memori.",
       "brainIdle": "Tutup percakapan yang menganggur setelah",
+      "mixed": "Tidak sama di semua tempat: {{values}}. Perubahan di sini berlaku untuk semuanya.",
       "folder": "Folder agen",
       "folderDesc": "Satu folder per ruang kerja, dengan satu folder untuk setiap agen."
     }

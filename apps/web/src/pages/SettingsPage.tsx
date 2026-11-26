@@ -103,7 +103,6 @@ import { MyFace, OrgLogoDialog, OrgMark } from "@/components/ProfilePhoto";
 import { KeyMismatch, KeyRefused, KeySite, ProviderKeySelect } from "@/components/ProviderKey";
 import { ReportProblem, useProblemReports } from "@/components/ReportProblem";
 import { RolesSection } from "@/components/roles/RolesSection";
-import { SkillsSection } from "@/components/Skills";
 import { StorageSection } from "@/components/StorageSettings";
 import { TeamMemoryCard } from "@/components/TeamMemory";
 import { OpenPrefsButton, useLocalServerHere } from "@/components/ThisMac";
@@ -145,8 +144,6 @@ function Settings({
   account,
   device,
   connect,
-  install,
-  skill,
   agent,
   person,
   role,
@@ -163,15 +160,11 @@ function Settings({
   /** Back from Gmail/Outlook: `connected` or `failed`, and the mailbox (`account`). */
   mail?: string;
   account?: string;
-  /** Skills, back from connecting GitHub in Instalar skill: the link to read again. */
-  install?: string;
-  /** Skills: the skill to open (a notice of its update). */
-  skill?: string;
   /** Devices → one device: a computer's id, or `phones/<id>` (`/settings/devices/{path}`). */
   device?: string;
   /** Devices, with the connect dialog open on this flow (the phone guide's link opens the Android one). */
   connect?: ConnectStart;
-  /** Auditoria: the agent it opens filtered to. Skills, with `install`: the agent whose card opened that install. */
+  /** Auditoria: the agent it opens filtered to. */
   agent?: string;
   /** Orçamento e uso › Pessoas: the person whose month opens (a limit's notice). */
   person?: string;
@@ -246,28 +239,27 @@ function Settings({
     </li>
   );
 
+  // Plan and billing stands on AI and usage's page: its own address opens that page at it, so the entry the list marks
+  // is the page shown.
+  const page = current === "billing" ? "usage" : current;
   const sections = (
     <>
-      {current !== "members" &&
-        current !== "invites" &&
-        current !== "general" &&
-        current !== "roles" &&
-        current !== "vault" && (
-          <PageHeader
-            level={2}
-            title={sectionName(current)}
-            meta={
-              current !== "devices" ? (
-                t(settingsSectionTextKey(org, current))
-              ) : edition ? (
-                t(edition === "cloud" ? "devices.leadCloud" : "devices.lead")
-              ) : setup.isError ? null : (
-                // Never one edition's words before the server says which this is (the section says if it couldn't).
-                <LoadingLine width={320} />
-              )
-            }
-          />
-        )}
+      {page !== "members" && page !== "invites" && page !== "general" && page !== "roles" && page !== "vault" && (
+        <PageHeader
+          level={2}
+          title={sectionName(page)}
+          meta={
+            page !== "devices" ? (
+              t(settingsSectionTextKey(org, page))
+            ) : edition ? (
+              t(edition === "cloud" ? "devices.leadCloud" : "devices.lead")
+            ) : setup.isError ? null : (
+              // Never one edition's words before the server says which this is (the section says if it couldn't).
+              <LoadingLine width={320} />
+            )
+          }
+        />
+      )}
       {current === "account" && <AccountSection />}
       {current === "notifications" && <NoticePrefsSection />}
       {current === "download" && <AppsDownloadSection />}
@@ -292,10 +284,9 @@ function Settings({
           service={service}
         />
       )}
-      {current === "skills" && <SkillsSection install={install} connected={connected} skill={skill} agent={agent} />}
       {current === "storage" && <StorageSection />}
       {current === "devices" && (device ? <DevicePage path={device} /> : <DevicesSection start={connect} />)}
-      {current === "usage" && (
+      {page === "usage" && (
         <>
           <UsageTabs
             person={person}
@@ -308,14 +299,13 @@ function Settings({
             summary={<UsageSection />}
           />
           {opens("billing") && (
-            <SettingsPart id="billing">
+            <SettingsPart id="billing" here={current === "billing"}>
               <BillingSection />
             </SettingsPart>
           )}
         </>
       )}
       {current === "import" && <ImportExportSection />}
-      {current === "billing" && <BillingSection />}
       {current === "about" && <AboutSection />}
     </>
   );
@@ -395,12 +385,22 @@ function Settings({
   );
 }
 
-/** A section that stands on another one's page under its own heading: Plan and billing on AI and usage. */
-function SettingsPart({ id, children }: { id: "billing"; children: ReactNode }) {
+/**
+ * A section that stands on another one's page under its own heading: Plan and billing on AI and usage. Opened by its
+ * own address (`here`), the page opens at it.
+ */
+function SettingsPart({ id, here, children }: { id: "billing"; here: boolean; children: ReactNode }) {
   const { t } = useTranslation();
   const { org } = useOrg();
+  const part = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!here) return;
+    // After the router has put the page's scroll where it keeps it.
+    const frame = requestAnimationFrame(() => part.current?.scrollIntoView?.({ block: "start" }));
+    return () => cancelAnimationFrame(frame);
+  }, [here]);
   return (
-    <section className="settings__section" aria-labelledby={`settings-part-${id}`}>
+    <section ref={part} className="settings__section" aria-labelledby={`settings-part-${id}`}>
       <PageHeader
         level={2}
         titleId={`settings-part-${id}`}

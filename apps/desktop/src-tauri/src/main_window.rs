@@ -235,7 +235,7 @@ pub fn open(app: &AppHandle, url: Option<Url>) -> Result<(), String> {
         // ADR 0154), that it takes the person's app icon (`appIcon`, ADR 0179) and how this computer draws
         // (`renderer`, and Linux's `system` facts: graphics.rs); nothing else.
         .initialization_script(format!(
-            "window.__agentesDesktop = Object.freeze({{ version: {version:?}, platform: {PLATFORM:?}, servers: true, files: true, connectorReturn: true, workspaces: true, appIcon: true, renderer: {renderer:?}, system: {system} }});",
+            "window.__agentesDesktop = Object.freeze({{ version: {version:?}, platform: {PLATFORM:?}, servers: true, files: true, connectorReturn: true, signedInLink: true, workspaces: true, appIcon: true, renderer: {renderer:?}, system: {system} }});",
             renderer = crate::graphics::renderer(),
             system = serde_json::to_string(&crate::graphics::system()).unwrap_or_else(|_| "null".into()),
         ))
@@ -304,12 +304,15 @@ pub fn open(app: &AppHandle, url: Option<Url>) -> Result<(), String> {
         (Some(x), Some(y)) => builder.position(x, y),
         _ => builder.center(),
     };
+    #[cfg(target_os = "windows")]
+    let builder = builder.zoom_hotkeys_enabled(true);
     #[cfg(target_os = "macos")]
     let builder = builder
         .title_bar_style(tauri::TitleBarStyle::Overlay)
         // The buttons are placed by `place_lights` (on every fit), not with `traffic_light_position`.
         .hidden_title(true);
     let built = builder.build().map_err(|e| e.to_string())?;
+    crate::bench::window_built();
     // Linux's side of lib.rs `on_web_content_process_terminate` (macOS only in Tauri): a web process that died
     // leaves the window blank, so the page loads again.
     #[cfg(target_os = "linux")]
@@ -323,6 +326,13 @@ pub fn open(app: &AppHandle, url: Option<Url>) -> Result<(), String> {
                 view.reload();
             });
         });
+    }
+    // Windows' side: WebView2 has no reload of its own when the page's renderer ends (a crash, the system out of
+    // memory), it shows its "This page is having a problem" page and keeps it until someone presses Refresh.
+    #[cfg(target_os = "windows")]
+    {
+        let app = app.clone();
+        let _ = built.with_webview(move |view| reload_when_renderer_ends(app, &view));
     }
     // A new window starts with the bundle's icon on Windows and Linux: the person's pick (ADR 0179).
     crate::app_icon::show(app);
@@ -339,6 +349,58 @@ pub fn open(app: &AppHandle, url: Option<Url>) -> Result<(), String> {
     follow_lights(app);
     fit_page(app);
     front(app)
+}
+
+/// The main frame's renderer ended: logged with its exit code (`0x80000003` is the `STATUS_BREAKPOINT` WebView2's page
+/// shows, a crash of the renderer itself), the cover over it and the page loaded again, as on macOS and Linux. Only the
+/// page's own renderer: an iframe's, or one that stopped answering and may come back, leave the page as it is, and
+/// WebView2's browser process ending takes the web view with it, which no reload brings back.
+#[cfg(target_os = "windows")]
+fn reload_when_renderer_ends(app: AppHandle, view: &tauri::webview::PlatformWebview) {
+    use webview2_com::Microsoft::Web::WebView2::Win32::{
+        ICoreWebView2ProcessFailedEventArgs2, COREWEBVIEW2_PROCESS_FAILED_KIND,
+        COREWEBVIEW2_PROCESS_FAILED_KIND_RENDER_PROCESS_EXITED,
+    };
+    use webview2_com::ProcessFailedEventHandler;
+    use windows::core::Interface;
+
+    // SAFETY: on the main thread (`with_webview`), the controller is this window's live one, and WebView2 calls the
+    // handler on that same thread.
+    unsafe {
+        let Ok(core) = view.controller().CoreWebView2() else { return };
+        let last_reload = std::cell::Cell::new(None::<Instant>);
+        let handler = ProcessFailedEventHandler::create(Box::new(move |sender, args| {
+            let (Some(sender), Some(args)) = (sender, args) else { return Ok(()) };
+            let mut kind = COREWEBVIEW2_PROCESS_FAILED_KIND::default();
+            args.ProcessFailedKind(&mut kind)?;
+            if kind != COREWEBVIEW2_PROCESS_FAILED_KIND_RENDER_PROCESS_EXITED {
+                return Ok(());
+            }
+            let mut code = 0i32;
+            if let Ok(args) = args.cast::<ICoreWebView2ProcessFailedEventArgs2>() {
+                let _ = args.ExitCode(&mut code);
+            }
+            // A renderer that ends again within a minute of the last reload would only crash again: WebView2's own
+            // page stays, with its Refresh button, instead of a reload loop. Unlike macOS and Linux, where the window
+            // would be left blank, Windows has that page to fall back on.
+            if last_reload.get().is_some_and(|at| at.elapsed() < Duration::from_secs(60)) {
+                crate::health::note(
+                    &app,
+                    &format!("the web process of {LABEL} ended again ({:#010x}): left as it is", code as u32),
+                );
+                return Ok(());
+            }
+            last_reload.set(Some(Instant::now()));
+            crate::health::note(
+                &app,
+                &format!("the web process of {LABEL} ended ({:#010x}): loading it again", code as u32),
+            );
+            crate::cover::show(&app);
+            sender.Reload()
+        }));
+        let mut token = 0i64;
+        let _ = core.add_ProcessFailed(&handler, &mut token);
+    }
 }
 
 /// The window's name for the page's title: the site's own long title (sign-in, the landing) is just the app's.

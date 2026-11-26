@@ -14,7 +14,6 @@ import {
   reconcileRuns,
   steerStore,
 } from "@agenteschat/client";
-import { elapsedParts } from "@agenteschat/client/lib/activity";
 import { act, cleanup, within } from "@testing-library/react";
 import { blockRowByRun, nextSlots, rowShows, SLOT_HOLD_MS, sameSlots, waitingLast } from "@/chat/run-slots";
 import { createStreamsStore, reconcileChannelRuns } from "@/realtime/context";
@@ -137,12 +136,6 @@ describe("one block per answer (run-slots)", () => {
     expect(rowShows({ ...fresh, lastEventAt: 10_000 - QUIET_AFTER_MS })).toBe(false);
     // Ended badly: its row says why.
     expect(rowShows({ ...fresh, status: "failed" })).toBe(true);
-  });
-
-  test("the elapsed time", () => {
-    expect(elapsedParts(1_500)).toBeNull();
-    expect(elapsedParts(4_200)).toEqual({ m: 0, s: 4 });
-    expect(elapsedParts(75_000)).toEqual({ m: 1, s: 15 });
   });
 });
 
@@ -268,19 +261,19 @@ describe("live row in the timeline", () => {
   const bar = () => document.querySelector(".ac-typing") as HTMLElement;
   const shownText = (el: Element) => [...el.querySelectorAll(".ac-turn__in")].map((e) => e.textContent).join("|");
 
-  test("while it works only the bar speaks, writing too: no row, no words; its reply shows whole once, after what came meanwhile", async () => {
+  test("while it works only the last row speaks, writing too: no row of its own, no words; its reply shows whole once, after what came meanwhile", async () => {
     const { ev } = await open();
     await ev({ type: "agent.run", ...ids, status: "running" });
     await settle(2);
     expect(row()).toBeNull();
-    expect(bar().querySelector(".ac-typing__avatars")).not.toBeNull();
+    expect(document.querySelector(".working-tail__face .ac-orbit")).not.toBeNull();
     await act(() => new Promise((r) => setTimeout(r, 2100)));
-    // Still no row, no pixels, no step line in the conversation: only the bar.
+    // Still no row of its own, no pixels, no step line in the conversation: only the last row.
     expect(row()).toBeNull();
     expect(document.querySelector(".ac-msg--waiting, .ac-wait")).toBeNull();
     expect(bar().querySelector(".ac-typing__text")?.textContent).toBe("Ada pensando…");
-    // The composer stops it; the bar has no stop of its own.
-    expect(within(bar()).queryByRole("button", { name: "Parar" })).toBeNull();
+    // Its row stops it, and so does the composer.
+    expect(within(bar()).getByRole("button", { name: "Parar" })).toBeTruthy();
     expect(screen().getByRole("button", { name: "Parar a Ada" })).toBeTruthy();
     // The step follows the run there.
     await ev({

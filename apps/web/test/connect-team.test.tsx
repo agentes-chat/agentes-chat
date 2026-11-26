@@ -354,9 +354,11 @@ describe("the team dialog's styles", () => {
   });
 
   test("a choice's title and its line sit as one block on the tile's middle, with what ends the card", async () => {
-    const css = await stylesheet("../src/components/arrival/arrival.css");
-    const rule = css.split(/\n\.arrival-opts \.ac-option \{/)[1]?.split("}")[0] ?? "";
+    // The choices are the kit's rows (OptionLinks): the row centres the tile, the text and the chevron.
+    const kit = await stylesheet("../../../packages/ui/src/styles/components.css");
+    const rule = kit.split(/\n\.ac-optrow \{/)[1]?.split("}")[0] ?? "";
     expect(rule).toContain("align-items: center");
+    const css = await stylesheet("../src/components/arrival/arrival.css");
     // No nudge pulling the title up to the tile's top any more.
     expect(css).not.toContain(
       ".arrival-opts .ac-option > :is(.ac-brand, .arrival-opts__tile):first-child + .ac-option__text > .ac-option__title {",

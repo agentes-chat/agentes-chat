@@ -439,6 +439,44 @@ export const helpPl: Partial<Record<HelpSlug, HelpDocument>> = {
         ],
       },
       {
+        id: "tool-levels",
+        heading: "Każde narzędzie podłączonej aplikacji",
+        blocks: [
+          "Każde narzędzie aplikacji podłączonej przez adres ma własny poziom, który wybierasz w **Ustawienia\u00a0›\u00a0Konektory**, przy narzędziach tego połączenia. Na stronie agenta **Narzędzia i dostęp** pokazuje, z jakich aplikacji i narzędzi może korzystać.",
+          {
+            list: [
+              "**Tylko patrzy**: czyta i niczego nie zmienia. Nigdy nie pyta.",
+              "**Zmienia rzeczy**: tworzy i edytuje bez pytania. Agent na poziomie **Zawsze pytaj** i tak pyta.",
+              "**Prosi o twoje zatwierdzenie**: pyta w rozmowie przed każdym użyciem.",
+              "**Wyłączone**: agenci go nie dostają.",
+            ],
+          },
+          "**Nigdy nie pytaj** na stronie agenta stoi ponad tym wszystkim: agent na tym poziomie o nic nie prosi, także przy narzędziu na **Prosi o twoje zatwierdzenie**. Gdy poziom zmieni się, kiedy prośby czekają, te, które już by nie pytały, zostają anulowane, a agent wykonuje je ponownie bez karty.",
+        ],
+      },
+      {
+        id: "sensitive",
+        heading: "Narzędzia wrażliwe",
+        blocks: [
+          "Narzędzie, które serwer aplikacji oznacza jako usuwające, wysyłające lub płacące, może być tylko na **Prosi o twoje zatwierdzenie** albo **Wyłączone**.",
+        ],
+      },
+      {
+        id: "order",
+        heading: "W jakiej kolejności działają zatwierdzone akcje",
+        blocks: [
+          "W jednej turze agent wykonuje akcje w kolejności, w jakiej o nie prosił, bez względu na to, w jakiej kolejności je zatwierdzasz. Wiadomość wysłana, gdy agent czeka, zaczyna nową turę, a jej akcje działają po prośbach, o których agent wiedział, że już czekają. Prośby z różnych rozmów nigdy nie czekają na siebie nawzajem.",
+          "Prośba, która czeka na człowieka dłużej niż 30 minut, niczego nie wstrzymuje. Zatwierdzona akcja, która czeka, mówi, na co, z przyciskami **Zatwierdź** i **Odrzuć** dla tamtej prośby oraz **Uruchom teraz**, by pójść dalej bez niej.",
+        ],
+      },
+      {
+        id: "many",
+        heading: "Wiele naraz",
+        blocks: [
+          "Tam, gdzie prośby czekają na ciebie, w przeglądarce i w telefonie, **Zatwierdź wszystkie** i **Odrzuć wszystkie** rozstrzygają naraz wszystkie prośby jednego agenta.",
+        ],
+      },
+      {
         id: "who",
         heading: "Kto zatwierdza",
         blocks: [

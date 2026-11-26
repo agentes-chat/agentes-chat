@@ -436,6 +436,44 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         ],
       },
       {
+        id: "tool-levels",
+        heading: "Each tool of a connected app",
+        blocks: [
+          "Each tool of an app connected by its address has its own level, chosen in **Settings\u00a0›\u00a0Connectors**, on that connection's tools. On the agent's page, **Tools and access** shows which apps and tools it may use.",
+          {
+            list: [
+              "**Only looks**: reads and changes nothing. It never asks.",
+              "**Changes things**: creates and edits without asking. An agent at **Always ask** still asks.",
+              "**Asks your approval**: asks in the conversation before every call.",
+              "**Off**: agents don't get it.",
+            ],
+          },
+          "**Never ask** on the agent's page comes before all of these: an agent at that level asks for nothing, a tool at **Asks your approval** included. When a level changes while requests wait, the ones that would no longer ask are canceled, and the agent does them again without a card.",
+        ],
+      },
+      {
+        id: "sensitive",
+        heading: "Sensitive tools",
+        blocks: [
+          "A tool its app's server marks as one that deletes, sends or pays can only be at **Asks your approval** or **Off**.",
+        ],
+      },
+      {
+        id: "order",
+        heading: "In what order approved actions run",
+        blocks: [
+          "In one turn, an agent does its actions in the order it asked for them, whatever order you approve them in. A message sent while the agent waits starts a new turn, and its actions run after the requests the agent was told were already waiting. Requests from different conversations never wait for each other.",
+          "A request waiting for a person for more than 30 minutes holds nothing back. An approved action that waits says what for, with **Approve** and **Refuse** for that request and **Run this now** to go ahead without it.",
+        ],
+      },
+      {
+        id: "many",
+        heading: "Many at once",
+        blocks: [
+          "Where requests wait for you, on the web and on the phone, **Approve all** and **Refuse all** decide every request of one agent at once.",
+        ],
+      },
+      {
         id: "who",
         heading: "Who approves",
         blocks: [

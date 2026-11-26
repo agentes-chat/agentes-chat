@@ -500,8 +500,13 @@ export function claudeSessionExists(claudeHome: string, cwd: string, session: st
   return false;
 }
 
-/** Claude Code's answer when the session flag was the wrong one (exits at once). */
-export const WRONG_SESSION_FLAG = /already in use|no conversation found|session .* not found/i;
+/**
+ * Claude Code's answer when the session flag was the wrong one (exits at once). A line is read on from its first
+ * `session ` alone: a later one finds no ` not found` the first doesn't, and a line of many is read once, not once from
+ * each. The first is told by looking back to the one before: a loop over the line up to it runs out of stack (Node) or
+ * gives up (Bun) on a line of millions of characters.
+ */
+export const WRONG_SESSION_FLAG = /already in use|no conversation found|session (?<!session .*?session ).* not found/i;
 /** A start that ends within this long with that answer is retried once with the other flag. */
 export const FAST_FAIL_SECONDS = 30;
 
@@ -2082,10 +2087,11 @@ export function isGitRepo(cwd: string): boolean {
  */
 export function itemFolder(repo: string, branch: string, taskId: string): string {
   const last = branch.trim().split("/").filter(Boolean).pop() ?? "";
+  // Trailing dashes from a run's first `-` only: without the lookbehind each `-` of a long run reads it to its end.
   const slug =
     last
       .replace(/[^A-Za-z0-9._-]+/g, "-")
-      .replace(/^[-.]+|-+$/g, "")
+      .replace(/^[-.]+|(?<!-)-+$/g, "")
       .slice(0, 60) || "item";
   let target = path.join(repo, "work", slug);
   if (existsSync(target)) target = path.join(repo, "work", `${slug}-${taskId.replace(/[^a-zA-Z0-9]/g, "").slice(-8)}`);

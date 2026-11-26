@@ -124,10 +124,12 @@ const size = (r: ModelRequest) =>
  * first call before slow work (ADR 0207 addendum of 2026-11-21) adds 9, and the end-of-turn check (reread the reply: a
  * promise, a running command, a rule to save), where a result no call of this turn made came from, no list of what's
  * missing and the other ways in after a closed one add 165 (50,741; 51,188 on the Cloud), and `say_now` once more for a
- * message that corrects or adds to the task (ADR 0207 addendum of 2026-11-24) adds 63 (50,804; 51,251 on the Cloud); the
- * ceiling leaves a little room above them.
+ * message that corrects or adds to the task (ADR 0207 addendum of 2026-11-24) adds 63 (50,804; 51,251 on the Cloud), and
+ * a progress line per new phase of long work (ADR 0207 addendum of 2026-11-24b) adds 42 (50,846; 51,293 on the Cloud),
+ * and work set out in steps being the agent's to finish (its line in "# How you work") adds 271 (51,564 on the Cloud);
+ * the ceiling leaves a little room above them.
  */
-const OI_CEILING_CHARS = 51_300;
+const OI_CEILING_CHARS = 51_620;
 
 test("a DM 'oi' stays under the size ceiling", async () => {
   const [request] = await play(TURNS.find((t) => t.id === "greet-dm") as ScriptedTurn);

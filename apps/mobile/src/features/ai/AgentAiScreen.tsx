@@ -1,15 +1,18 @@
 import type { AgentBrain, BrainScope, MachineAccount } from "@agenteschat/client";
 import { useAgentBrain, useAiAccounts, useApi, useMachines, useModels } from "@agenteschat/client";
+import { CLI_OF_BRAIN } from "@agenteschat/client/lib/activity";
 import {
   accountChoices,
+  accountInLine,
   offersSignInAgain,
   ownSignInListed,
   ownSignInName,
   signInOf,
 } from "@agenteschat/client/lib/ai-accounts";
+import { giveBackLogin, loginHolders } from "@agenteschat/client/lib/ai-choice";
 import { managesAgent } from "@agenteschat/client/lib/audience";
 import { brainLine, thinksWith } from "@agenteschat/client/lib/brain";
-import { advancedContents, viewSpeedFits } from "@agenteschat/client/lib/brain-advanced";
+import { advancedContents, effortLevelsFor, viewSpeedFits } from "@agenteschat/client/lib/brain-advanced";
 import { computerNameOf } from "@agenteschat/client/lib/computer";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { aiChoiceOf, planOfKind } from "@agenteschat/client/lib/no-ai";
@@ -27,7 +30,7 @@ import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import { limitOffers, planState } from "@agenteschat/ui/plan-state";
 import { Fragment, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useOrg } from "@/providers/org";
@@ -57,7 +60,8 @@ import { PushedHeader } from "../shared/parts";
 import { PlanMeter, PlanModels } from "../usage/parts";
 import { advancedOf, openAgentAdvanced } from "./AgentAdvancedScreen";
 import { openAgentSetup } from "./AgentSetupScreen";
-import { AiChoiceFields } from "./AiChoice";
+import { AiChoiceFields, AskLine } from "./AiChoice";
+import { CliFetchNote } from "./CliFetchNote";
 import { EffortRamp, useEffortChoice } from "./EffortRamp";
 import {
   accountInput,
@@ -149,18 +153,48 @@ export function AgentAiScreen({ agentId }: { agentId: string }) {
   const computer = computerNameOf(t, org?.name ?? "", view?.computer?.name ?? "", isPersonal(org));
   // The account picked while its save is on its way, else the saved one: its row is checked on the tap.
   const account = pending.account !== undefined ? pending.account : view?.account;
-  const choose = (a: MachineAccount | null) => {
-    if (!view || (a?.id ?? null) === account) return;
+  // Someone else's plan, or a login another agent thinks with: it asks first, in a line under the list.
+  const [asking, setAsking] = useState<MachineAccount | null>(null);
+  const lentTo = (a: MachineAccount) => !a.mine && a.ownerId !== agent?.ownerUserId;
+  // At its limit: the agent would wait there until the plan renews (the web's Quem pensa asks it too).
+  const full = (a: MachineAccount) => a.usage != null && planState(a.usage).state === "limited";
+  const choose = async (a: MachineAccount | null, asked = false) => {
+    if (!view || (a?.id ?? null) === account) return setAsking(null);
+    const others = a ? takenFrom(a, name) : [];
+    if (a && !asked && (others.length > 0 || lentTo(a) || full(a))) return setAsking(a);
+    setAsking(null);
     const input = accountInput(view, a);
     const done = (saved: AgentBrain) => accountSaved(t, i18n.language, name, a, input, saved);
-    const others = a ? takenFrom(a, name) : [];
-    if (!a || others.length === 0) return void save(input, done);
-    // A login made for one agent thinks for one: picking another agent's takes it from that one.
-    Alert.alert(a.label, t("agentPage.work.brain.accountMove", { agents: others.join(", ") }), [
-      { text: t("common.cancel"), style: "cancel" },
-      { text: t("mobile.ai.moveHere"), onPress: () => void save({ ...input, moveAccount: true }, done) },
-    ]);
+    // A login made for one agent thinks for one: picking another agent's takes it from that one, and Desfazer gives
+    // it back to them.
+    const giveBack =
+      a && others.length > 0 ? await giveBackLogin(api.agents, orgId, loginHolders(a, agentId)) : undefined;
+    void save(
+      others.length > 0 ? { ...input, moveAccount: true } : input,
+      done,
+      { account: view.account, ...("model" in input ? { model: view.model } : {}) },
+      giveBack,
+    );
   };
+  const asked = asking ? takenFrom(asking, name) : [];
+  const askLine = asking ? (
+    <AskLine
+      icon={lentTo(asking) ? "mail" : full(asking) ? "clock" : "info"}
+      text={[
+        lentTo(asking) ? t("connectAi.chat.told", { name: asking.ownerName?.split(" ")[0] ?? "" }) : null,
+        asked[0] ? t("mobile.aiHub.choice.asksMove", { agent: asked[0] }) : null,
+        full(asking) ? t("agentPage.work.brain.v2.fullWait", g) : null,
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      {...(full(asking)
+        ? { link: { label: t("agentPage.work.brain.v2.seeUsage"), onPress: () => router.push("/usage" as never) } }
+        : {})}
+      action={t("agentPage.work.brain.v2.switchTo", { label: accountInLine(t, asking) })}
+      disabled={pending.account !== undefined}
+      onPress={() => void choose(asking, true)}
+    />
+  ) : null;
 
   const usage = view && kind ? thinkingUsage(view, kind) : undefined;
   const limited = usage ? planState(usage).state === "limited" : false;
@@ -211,6 +245,9 @@ export function AgentAiScreen({ agentId }: { agentId: string }) {
           </Text>
         </View>
         {hold ? <PlanHoldNote org={org} inset /> : null}
+        {view?.computer?.machineId && view.brain !== "model" ? (
+          <CliFetchNote machineId={view.computer.machineId} cli={CLI_OF_BRAIN[view.brain]} />
+        ) : null}
         {!allowed ? (
           <Note icon="lock" inset>
             {t("agentPage.lock.admins")}
@@ -226,11 +263,12 @@ export function AgentAiScreen({ agentId }: { agentId: string }) {
             <AiChoiceFields
               target={{ kind: "agent", agentId }}
               disabled={pending.account !== undefined}
+              ask={askLine}
               onAccount={(r) => {
                 const id = r.account?.sameAs ?? r.account?.id;
                 const logins = view.accounts.filter((a) => (a.sameAs ?? a.id) === id);
                 const login = logins.find((a) => a.usedByIds?.includes(agentId)) ?? logins[0];
-                if (login) choose(login);
+                if (login) void choose(login);
               }}
               extras={[
                 ...(ownRow && kind
@@ -251,7 +289,7 @@ export function AgentAiScreen({ agentId }: { agentId: string }) {
                           usable: true,
                           selected: true,
                         },
-                        onPick: () => choose(null),
+                        onPick: () => void choose(null),
                       },
                     ]
                   : []),
@@ -313,7 +351,7 @@ export function AgentAiScreen({ agentId }: { agentId: string }) {
                           : t("aiAccounts.usage.offer.use", { label: a.label, pct: used })
                       }
                       checked={a.id === account}
-                      onPress={() => choose(a)}
+                      onPress={() => void choose(a)}
                     />
                   ))}
                   {waits && view.canUsePlans && view.canManageAccounts ? (
@@ -424,6 +462,16 @@ function EffortDock({
         <EffortRamp
           value={effort.value}
           onChange={effort.change}
+          levels={
+            view
+              ? effortLevelsFor(
+                  view.brain,
+                  view.brain === "model" ? dir.agentById.get(agentId)?.model : view.effectiveModel,
+                  view.options,
+                )
+              : []
+          }
+          kind={view?.brain}
           color={agentLook(dir.agentById.get(agentId)).color}
           disabled={view?.canEdit !== true}
         />

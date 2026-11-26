@@ -120,6 +120,23 @@ const Analytics = z
             description:
               "Composio connected accounts made this month (mailboxes), reconnects included: Composio bills each once past the free ones.",
           }),
+          orgs: z
+            .array(
+              z.object({
+                orgId: z.uuid(),
+                connectors: z
+                  .array(z.object({ connector: Key, label: Label }))
+                  .openapi({ description: "Its Composio connectors this month: called, billed or connected." }),
+                calls: Count.openapi({ description: "Its calls of Composio's tools." }),
+                errors: Count,
+                ...ComposioCounts,
+                connections: Count.openapi({ description: "Its connected accounts made this month." }),
+              }),
+            )
+            .openapi({
+              description: `Per workspace with a call or something billed this month, most executions first (then events, calls and connections), at most ${ANALYTICS_ROWS_MAX}.`,
+            }),
+          orgsMore: z.boolean().openapi({ description: "More workspaces than were listed." }),
         })
         .openapi({ description: "This month whatever the dates: Composio's free allowances are monthly." }),
     }),
@@ -545,9 +562,8 @@ const ReplyTimes = z
       .array(
         z.object({
           at: At,
-          brain: z.enum(["all", ...REPLY_BRAINS]).openapi({
-            description:
-              "`model` (a provider's API), `claude_code`, `codex`, `other` (another CLI, or no turn yet). `all`: every brain.",
+          brain: z.string().openapi({
+            description: `The brain by its name (${REPLY_BRAINS.map((b) => `\`${b}\``).join(", ")}; \`model\` is a provider's API, \`other\` no turn yet). \`all\`: every brain.`,
           }),
           trigger: z.enum(["all", ...schema.agentRunTriggerEnum.enumValues]).openapi({
             description: "`dm`, `mention` or `router` (nobody was named). `all`: every trigger.",

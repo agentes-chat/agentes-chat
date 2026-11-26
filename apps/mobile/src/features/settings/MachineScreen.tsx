@@ -30,6 +30,7 @@ import {
   commandInReason,
   computerKind,
   computerState,
+  egressViaText,
   folderName,
   hostDescKey,
   isPaused,
@@ -225,7 +226,9 @@ function MachinePage({ machineId }: { machineId: string }) {
       ? { icon: "pause", label: paused }
       : m.online
         ? { icon: "check", label: t("machines.online") }
-        : { icon: "circle", label: t("machines.offline") };
+        : m.moving
+          ? { icon: "swap", label: t("machines.moving.short") }
+          : { icon: "circle", label: t("machines.offline") };
   // One facts line, and why it's paused while it is.
   const facts = [
     managed
@@ -243,6 +246,7 @@ function MachinePage({ machineId }: { machineId: string }) {
     // System mode: each agent works in its own home, never in the folder the computer was connected from.
     m.mode === "system" && !managed && m.kind !== "host" ? t("machines.agentUsers") : null,
     managed && m.online && m.egressWaiting ? t("machines.egress.waiting") : null,
+    egressViaText(t, m),
     managed && m.networkTransition
       ? t(m.networkTransition.state === "draining" ? "machines.egress.draining" : "machines.egress.restart", {
           when: formatTime(i18n.language, m.networkTransition.deadline),

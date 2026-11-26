@@ -33,7 +33,9 @@ const ended = (toolUseId: string) => ({ type: "agent.tool", ...base, tool: null,
 
 test("its own words for the call show quoted, only once the turn has gone on for a while", () => {
   const events = [call("b1", "browser_open", "Vou abrir o Play Console")];
-  expect(stepAfter(events, 2000)).toBe("usando o navegador…");
+  expect(stepAfter(events, 1000)).toBe("usando o navegador…");
+  // A second and a half in: soon enough to tell what it does while the reply still feels quick.
+  expect(stepAfter(events, 1500)).toBe("“Vou abrir o Play Console”");
   expect(stepAfter(events, STEP_WORDS_AFTER_MS)).toBe("“Vou abrir o Play Console”");
   // Still what it is on after the call ended, while it thinks about what it found.
   expect(stepAfter([...events, ended("b1")], STEP_WORDS_AFTER_MS)).toBe("“Vou abrir o Play Console”");

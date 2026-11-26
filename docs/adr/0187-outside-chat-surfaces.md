@@ -135,7 +135,7 @@ not a member of in good standing; read anything but its own deliveries and their
 password or email change; decide an approval; write `meta` other than `via` and the forwarded mark.
 
 ### Later
-What a surface may send first, and a confirmation for sensitive acts, are later decisions, each with its own ADR. The confirmation is ADR 0226: §6's sensitive classes now wait for the person's PIN on a page linked from the surface.
+What a surface may send first, and a confirmation for sensitive acts, are later decisions, each with its own ADR. The confirmation is ADR 0226: §6's sensitive classes now wait for the person's PIN on a page linked from the surface. The first thing a surface sends first is the unread nudge, ADR 0234.
 
 ## Consequences
 

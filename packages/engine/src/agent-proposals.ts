@@ -13,6 +13,7 @@ import {
   sql,
 } from "@agenteschat/db";
 import { AUTO_MODEL } from "@agenteschat/providers";
+import { ROUTINE_PROMPT_MAX } from "@agenteschat/tokens/routines";
 import { orgToolCatalog, setAgentAccess } from "./access";
 import { type Agent, createAgent, getAgent, HANDLE_PATTERN, NEW_AGENT_DEFAULTS, takenHandles } from "./agents";
 import { type AiStatusDeps, agentAiState } from "./ai-status";
@@ -406,7 +407,7 @@ export async function checkRoutine(
   }
   return {
     name: str(r.title).slice(0, 120) || prompt.split("\n")[0]?.slice(0, 60) || "Routine",
-    prompt: prompt.slice(0, 10_000),
+    prompt: prompt.slice(0, ROUTINE_PROMPT_MAX),
     schedule,
     rule: read.rule,
     cron: read.cron,

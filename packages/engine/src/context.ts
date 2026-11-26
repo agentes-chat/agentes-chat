@@ -144,6 +144,7 @@ export const HOW_YOU_WORK = [
   "- Before a task, look for how it was done before: your memory (# What you know) and `search_context` for the same or a similar task. Reuse what worked (the method, the address, a script on your computer) instead of working it out again.",
   "- Asked whether a person told you something before, what was decided or what you said: search first (`search_context` with the subject's words, not the question's), which also reads your direct messages with whoever asked, then answer with where and when you found it.",
   "- Read whole files, not just search snippets, and keep going in the same turn until you can answer. Never stop to ask whether to keep looking.",
+  "- Work you set out in steps (a plan you listed, a setup, a 'go on' from the person) is yours to finish: after each step, start the next in the same turn. End only when all are done or the next needs what only a person can give, then ask for exactly that in one question.",
   "- Come back with what you found and one concrete next step: the exact change (file, line, what changes), or open it yourself (a draft PR, an issue). Choosing the fix is your job: recommend one instead of asking the person to pick among options, unless it is a product choice. A plan made without looking is not an answer.",
   "- A question asks for information, not action: answer it, offer the next step in one line when one fits ('Want me to have Theo make that page?') and end your turn. Don't start or hand off longer work for it (a PR, a build, a deploy, another agent set to work) unless the person asked for action, the work is already yours (your routine, an assigned task, your instructions) or it's a quick step you can undo that completes the answer. Work asked as a question ('can you…?') is a request: do it.",
   "- Internal changes you can undo need no permission: do them and say what you did. That is creating or updating issues (status, priority, assignee, labels, due date), assigning work, saving what you learned (a correction, a preference or rule someone gave, a fact about the company, how you got something working), creating or changing routines, adding an agent to a channel, writing the wiki when asked, renaming or closing a thread. The person sees each change under your reply with an Undo button. If work you were asked about has no owner, don't just say someone must take it: assign it (to the agent or person whose role fits, or yourself) or do it.",
@@ -213,7 +214,7 @@ export const WORK_IN_BACKGROUND_LINE =
  * `say_now` listed. The result still goes in the reply; a quick answer gets no line first.
  */
 export const SAY_NOW_LINE =
-  "- Before work that takes more than a few seconds, make say_now your very first call: one short line on what you'll do, in the same response as your first work call, then work: your final message brings the result. Once per request, and once when they correct or add to it mid-work; never for a quick answer, nor with work_in_background (its `say` is that line).";
+  "- Before work that takes more than a few seconds, make say_now your very first call: one short line on what you'll do, in the same response as your first work call, then work: your final message brings the result. Once per request, once when they correct or add to it mid-work, and per new phase of long work; never for a quick answer, nor with work_in_background (its `say` is that line).";
 
 /**
  * A code session suggested in the chat (ADR 0215 §11): the line of "How you work" for an agent that programs on a
@@ -439,7 +440,7 @@ export interface ContextBlock extends SystemBlock {
    */
   found?: boolean;
   /** The "# Now" block's inputs, so each turn renders the time it runs at (`gapMs`: since the message before). */
-  now?: { zone: string; who: string | null; gapMs: number | null };
+  now?: { zone: string; who: string | null; gapMs: number | null; elsewhere?: string[] };
   /** The agents "# Your teammates now" lists, so a run that resumes reads how they are then (`teammatesNowAgain`). */
   teammates?: { id: string; handle: string }[];
   /** Where the agent's plan stands from 90% (ADR 0118): replaced on every claim of the run. */
@@ -517,7 +518,13 @@ export function thisTurnParts(
   const parts = ordered.map((b) =>
     level(
       b.now
-        ? nowLine(b.now.zone, b.now.who, b.now.gapMs === null ? null : new Date(now.getTime() - b.now.gapMs), now)
+        ? nowLine(
+            b.now.zone,
+            b.now.who,
+            b.now.gapMs === null ? null : new Date(now.getTime() - b.now.gapMs),
+            now,
+            b.now.elsewhere,
+          )
         : b.text,
     ),
   );
@@ -917,6 +924,7 @@ export async function buildRunContext(
           userId: channelMembers.userId,
           userName: users.name,
           userHandle: schema.organizationMembers.handle,
+          userZone: schema.organizationMembers.timezone,
           agentId: agents.id,
           agentName: agents.name,
           agentHandle: agents.handle,
@@ -945,6 +953,7 @@ export async function buildRunContext(
         userId: string | null;
         userName: string | null;
         userHandle: string | null;
+        userZone: string | null;
         agentId: string | null;
         agentName: string | null;
         agentHandle: string | null;
@@ -1158,12 +1167,16 @@ export async function buildRunContext(
   // A routine's background run: its routine block, time line and where it reports (ADR 0053 §4).
   const routine = background ? await routineContext(db, run, agent, trigger, zone, personal) : null;
   const previous = history[history.findIndex((m) => m.id === trigger.id) - 1];
+  // The people here who live in another zone than the one "Now" is in (theirs, else the workspace's).
+  const orgZone = routine ? null : await zoneOf(db, run.orgId, null);
+  const elsewhere = orgZone ? zonesElsewhere(members, zone, orgZone, trigger.authorUserId) : [];
   const nowFor: NonNullable<ContextBlock["now"]> = routine
     ? { zone: routine.zone, who: null, gapMs: null }
     : {
         zone,
         who: trigger.authorUserId ? requesterName : null,
         gapMs: previous ? Math.max(0, Date.now() - previous.createdAt.getTime()) : null,
+        ...(elsewhere.length ? { elsewhere } : {}),
       };
 
   const capabilities = await options.capabilities;
@@ -1222,7 +1235,7 @@ export async function buildRunContext(
             ? "- When a request is still ambiguous after you have looked with your tools, or when the decision is really the person's (a product choice, a priority), ask one short clarifying question with `ask_user` (offer 2 to 4 choices when the answer is one of a few options) and wait: what you need answered before going on goes on that card, not in your text. Never for an approval an action's card asks, and never the question in your text too. Like an approval, it posts only the text of that same turn."
             : "",
           options.react
-            ? '- When the message only acknowledges or thanks and needs no answer ("thanks", "perfect", "ok, go ahead", "I\'ll wait"; in Portuguese "valeu", "perfeito", "ok, pode seguir", "aguardo"), don\'t reply: react with one fitting emoji using `react` and end your turn with an empty reply: no text at all, not even the emoji again. Never react and also reply, not even to say what you\'ll do next; if something new needs saying, just reply.'
+            ? '- When the message only acknowledges or thanks and needs no answer ("thanks", "perfect", "I\'ll wait"; in Portuguese "valeu", "perfeito", "aguardo"), don\'t reply: react with one fitting emoji using `react` and end your turn with an empty reply: no text at all, not even the emoji again. Never react and also reply, not even to say what you\'ll do next; if something new needs saying, just reply. A go-ahead ("ok, go ahead", "pode seguir") is not this: do the work.'
             : "",
           options.toolsAvailable
             ? "- Before saying something was done or how it stands, here or outside, check its current state with the matching tool or page (`list_issues`, `read_artifact`, `list_events`…), not `search_context`, and say the state it shows (a draft isn't live)."
@@ -1378,7 +1391,13 @@ export async function buildRunContext(
     // The local time (the person's, or the routine's zone).
     {
       turn: true,
-      text: nowLine(nowFor.zone, nowFor.who, nowFor.gapMs === null ? null : new Date(Date.now() - nowFor.gapMs)),
+      text: nowLine(
+        nowFor.zone,
+        nowFor.who,
+        nowFor.gapMs === null ? null : new Date(Date.now() - nowFor.gapMs),
+        new Date(),
+        nowFor.elsewhere,
+      ),
       now: nowFor,
     },
     ...(routine ? [{ turn: true, text: routine.timeLine }] : []),
@@ -1710,6 +1729,9 @@ async function routineContext(
       .join("\n");
   // Another agent's record is not this agent's memory of the routine: dropped when the agent changed.
   const record = last && (last.agentId === null || last.agentId === run.agentId) ? last : null;
+  // A person ran it now and it never ran before (one made on connecting an app starts so, ADR 0242): they wait to see
+  // what it does, so this run speaks even when nothing is news.
+  const speaks = brief.report === "always" || (brief.trigger === "manual" && !last);
   const lastAt = last ? (last.startedAt ?? last.at) : null;
   const event = current?.event && Object.keys(current.event).length > 0 ? current.event : null;
   const name = brief.name || row?.name || "routine";
@@ -1726,8 +1748,8 @@ async function routineContext(
       ? `Prepared for this run but not approved in time: do each with run_approved_action and its id. ${agent.approvalsLevel === "never" ? "It runs when you call it." : "It asks a person first if that change asks."}\n${listed("other")}`
       : "",
     `When it speaks: ${
-      brief.report === "always"
-        ? `every run. Call hand_off once with the message, even when nothing changed: then say so in a line. If you end without it, your final record is handed to you in ${place} instead, to tell the people from.`
+      speaks
+        ? `${brief.report === "always" ? "every run" : "this run"}. Call hand_off once with the message, even when nothing changed: then say so in a line. If you end without it, your final record is handed to you in ${place} instead, to tell the people from.`
         : "only when there is news. When there is something the people need to know or act on, call hand_off once with the message; when the instructions ask for a message every time (a greeting, a digest, a reminder), there always is one. Otherwise just finish: nothing is posted. Something you already reported or proposed (your last record, what was said there) is not news: don't hand it off again unless it changed."
     }`,
     `What hand_off posts: its message, as-is, as your own message in ${place}. Write the message itself, to the people, in their language: what its instructions ask them to be told (the greeting, the digest, the reminder, or what you found, why it matters and what you recommend or already did). Never talk about this routine or its runs (that it ran, that it is the first run, that there is nothing earlier to compare with) and never bring in matters from other conversations its instructions don't ask for. Set wake_me only when what you found needs you to act or decide in ${place} (its instructions say so, or there is work you can only do there): then your message is a note to yourself there, and you tell the people when you wake.`,
@@ -2015,8 +2037,39 @@ function safeZone(zone: string) {
   }
 }
 
-/** "# Now\nTue, Oct 21, 2026, 07:40 for Ana (America/Sao_Paulo); the previous message here was 14 h ago." */
-export function nowLine(zone: string, who: string | null, previousAt: Date | null, now = new Date()) {
+/** At most this many people of other zones are named in "# Now". */
+const ELSEWHERE_MAX = 5;
+
+/**
+ * The people in a conversation who live in another zone than `zone` ("Rui (Europe/Lisbon)"), each in theirs or the
+ * workspace's, the trigger's author left out; at most `ELSEWHERE_MAX`.
+ */
+export function zonesElsewhere(
+  members: readonly { userId: string | null; userName: string | null; userZone: string | null }[],
+  zone: string,
+  orgZone: string,
+  author: string | null,
+): string[] {
+  const out: string[] = [];
+  for (const m of members) {
+    if (!m.userId || m.userId === author || !m.userName) continue;
+    const theirs = safeZone(m.userZone ?? orgZone);
+    if (theirs !== safeZone(zone) && out.length < ELSEWHERE_MAX) out.push(`${m.userName} (${theirs})`);
+  }
+  return out;
+}
+
+/**
+ * "# Now\nTue, Oct 21, 2026, 07:40 for Ana (America/Sao_Paulo); the previous message here was 14 h ago." With people
+ * here in other zones (`elsewhere`), it names them and asks for the zone beside every time given.
+ */
+export function nowLine(
+  zone: string,
+  who: string | null,
+  previousAt: Date | null,
+  now = new Date(),
+  elsewhere: readonly string[] = [],
+) {
   const timeZone = safeZone(zone);
   // Date and time apart: how ICU joins them ("," or "at") changes between versions.
   const day = new Intl.DateTimeFormat("en-US", {
@@ -2029,7 +2082,10 @@ export function nowLine(zone: string, who: string | null, previousAt: Date | nul
   const time = new Intl.DateTimeFormat("en-US", { timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
   const when = `${day}, ${time.format(now)}`;
   const before = previousAt ? `; the previous message here was ${ago(previousAt, now.getTime())}` : "";
-  return `# Now\n${when}${who ? ` for ${who}` : ""} (${timeZone})${before}.`;
+  const zones = elsewhere.length
+    ? `\nOthers here live in other zones: ${elsewhere.join(", ")}. "Today" and any time you write are in ${timeZone}: name the zone beside them.`
+    : "";
+  return `# Now\n${when}${who ? ` for ${who}` : ""} (${timeZone})${before}.${zones}`;
 }
 
 /** Where `authorNames` keeps an agent's name alone, for its stickers (ADR 0091). */

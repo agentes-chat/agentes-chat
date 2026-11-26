@@ -82,6 +82,7 @@ import {
   checkPermissionText,
   consolidateItem,
   getContextItems,
+  isQuote,
   itemVisibleIn,
   itemWords,
   REFUSED_CHANGE,
@@ -207,6 +208,11 @@ export function isPromotable(item: ContextItem) {
   // Untrusted content and unverified lessons are never promoted (memory poisoning, echo chambers).
   if (item.trust !== "high" || !item.verified) return false;
   if (!["lesson", "preference", "decision", "fact"].includes(item.kind)) return false;
+  // A person's exact words (ADR 0167) are evidence for memory, never an instruction: pasted whole they'd be one long
+  // bullet of whatever they said.
+  if (isQuote(item)) return false;
+  // A fact about the work is what an agent remembers, not how it behaves: only the workspace's goes to its context.
+  if (item.kind === "fact" && item.agentId) return false;
   return (
     item.recurrence >= PROMOTION.minRecurrence ||
     (item.confidence >= PROMOTION.minConfidence && item.relevance >= PROMOTION.minRelevance)

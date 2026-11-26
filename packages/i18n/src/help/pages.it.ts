@@ -441,6 +441,44 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
         ],
       },
       {
+        id: "tool-levels",
+        heading: "Ogni strumento di un'app collegata",
+        blocks: [
+          "Ogni strumento di un'app collegata tramite il suo indirizzo ha un proprio livello, che scegli in **Impostazioni\u00a0›\u00a0Connettori**, tra gli strumenti di quella connessione. Nella pagina dell'agente, **Strumenti e accesso** mostra quali app e strumenti può usare.",
+          {
+            list: [
+              "**Solo lettura**: legge e non cambia niente. Non chiede mai.",
+              "**Fa modifiche**: crea e modifica senza chiedere. Un agente su **Chiedere sempre** chiede comunque.",
+              "**Chiede la tua approvazione**: chiede nella conversazione prima di ogni uso.",
+              "**Disattivato**: gli agenti non lo ricevono.",
+            ],
+          },
+          "**Non chiedere mai**, nella pagina dell'agente, viene prima di tutto questo: un agente a quel livello non chiede niente, neanche per uno strumento su **Chiede la tua approvazione**. Se un livello cambia mentre ci sono richieste in attesa, quelle che non chiederebbero più vengono annullate, e l'agente le rifà senza scheda.",
+        ],
+      },
+      {
+        id: "sensitive",
+        heading: "Strumenti sensibili",
+        blocks: [
+          "Uno strumento che il server dell'app segna come uno che elimina, invia o paga può stare solo su **Chiede la tua approvazione** o **Disattivato**.",
+        ],
+      },
+      {
+        id: "order",
+        heading: "In che ordine vengono eseguite le azioni approvate",
+        blocks: [
+          "In uno stesso turno, l'agente fa le sue azioni nell'ordine in cui le ha chieste, qualunque sia l'ordine in cui le approvi. Un messaggio inviato mentre l'agente aspetta avvia un nuovo turno, e le sue azioni vengono eseguite dopo le richieste che l'agente sapeva già in attesa. Le richieste di conversazioni diverse non si aspettano mai a vicenda.",
+          "Una richiesta che aspetta una persona da più di 30 minuti non trattiene niente. Un'azione approvata che aspetta dice che cosa aspetta, con **Approva** e **Rifiuta** per quella richiesta e **Esegui questa ora** per andare avanti senza.",
+        ],
+      },
+      {
+        id: "many",
+        heading: "Più di una alla volta",
+        blocks: [
+          "Dove le richieste aspettano te, sul web e sul telefono, **Approva tutte** e **Rifiuta tutte** decidono insieme tutte le richieste di un agente.",
+        ],
+      },
+      {
         id: "who",
         heading: "Chi approva",
         blocks: [

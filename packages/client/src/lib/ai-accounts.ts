@@ -1,4 +1,4 @@
-import { compareInOrder, NEXT_ACCOUNT_KINDS } from "@agenteschat/providers/plans";
+import { accountOnlyBrain, compareInOrder, NEXT_ACCOUNT_KINDS } from "@agenteschat/providers/plans";
 
 /** The one order of use (`@agenteschat/providers/plans`), for apps that read it through the client. */
 export { compareInOrder };
@@ -526,26 +526,30 @@ export const ownSignInReady = (
   row: (Pick<AiComputer, "own"> & Partial<Pick<AiComputer, "mine" | "brains" | "canAdd">>) | undefined,
   kind: MachineAccountKind,
 ) =>
-  kind === "opencode"
-    ? row?.brains?.opencode === true &&
-      row.canAdd === true &&
-      (brain?.ownSignIn === true || (brain !== undefined && row.mine === false))
-    : brain?.ownSignIn === true && row?.own?.[kind] !== undefined;
+  accountOnlyBrain(kind)
+    ? false
+    : kind === "opencode"
+      ? row?.brains?.opencode === true &&
+        row.canAdd === true &&
+        (brain?.ownSignIn === true || (brain !== undefined && row.mine === false))
+      : brain?.ownSignIn === true && row?.own?.[kind] !== undefined;
 
 /**
  * An agent's account choice lists the computer's own sign-in where it is ready (`ownSignInReady`), and while the
  * agent thinks with it: on a computer its owner connected, whatever that computer reported, and to an admin who
  * doesn't own the agent wherever it is (what it thinks with). To that admin also wherever its owner connected the
- * computer: only the person who connected it sees whether that CLI is signed in there.
+ * computer: only the person who connected it sees whether that CLI is signed in there. Never for account-only brains
+ * (`antigravity`, `grok`), which cannot run without a connected account.
  */
 export const ownSignInListed = (
   brain: Pick<AgentBrain, "ownSignIn" | "brain" | "account" | "canUsePlans">,
   row: Parameters<typeof ownSignInReady>[1],
   kind: MachineAccountKind,
 ) =>
-  ownSignInReady(brain, row, kind) ||
-  (brain.ownSignIn && !brain.canUsePlans) ||
-  (brain.brain === kind && brain.account === null && (brain.ownSignIn || !brain.canUsePlans));
+  !accountOnlyBrain(kind) &&
+  (ownSignInReady(brain, row, kind) ||
+    (brain.ownSignIn && !brain.canUsePlans) ||
+    (brain.brain === kind && brain.account === null && (brain.ownSignIn || !brain.canUsePlans)));
 
 /**
  * The plan an agent's sign-in is on, as the CLI said it (`team`, `max`…): its account's, or with none (`account`

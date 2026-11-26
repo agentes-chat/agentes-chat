@@ -3,6 +3,7 @@ import { brainProfileLaunch, claudeBrainArgs } from "../../runner/brain";
 import {
   cliSpawn,
   envValue,
+  execResult,
   findOnWindowsPath,
   npmNativeLauncher,
   windowsShell,
@@ -221,4 +222,19 @@ test("npm's launcher for a native binary starts that binary directly; a Node scr
     cliSpawn(["codex"], ["exec"], path, "win32", { exists: (f) => f === `${dir}\\codex.cmd`, read: () => nodeScript })
       .file,
   ).toBe(windowsShell());
+});
+
+test("a look killed past its time limit couldn't tell, even where the runtime reports an exit code (Windows)", () => {
+  // Bun on Windows: `TerminateProcess` leaves exit code 1 on the killed process, and `execFile` reports it.
+  const killed = execResult({ code: 1, killed: true, signal: null }, "", "");
+  expect(killed.status).toBeNull();
+  expect(killed.error).toBeDefined();
+  expect(execResult({ code: null, killed: true, signal: "SIGTERM" }, "", "").status).toBeNull();
+  // A CLI that ran and failed says so with its exit code and its words.
+  expect(execResult({ code: 1, killed: false }, "", "Error: boom\n")).toEqual({
+    status: 1,
+    stdout: "",
+    stderr: "Error: boom\n",
+  });
+  expect(execResult(null, "opencode 1.19.6\n", "")).toEqual({ status: 0, stdout: "opencode 1.19.6\n" });
 });

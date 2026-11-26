@@ -424,6 +424,49 @@ export const words: EmailWords = {
       why: () => "Du erhältst diese E-Mail, weil du in diesem Workspace auf agentes.chat bist.",
     },
   },
+  computerDown: {
+    subject: "Ein Computer antwortet nicht",
+    preheader: "Die Arbeit deiner Agenten auf diesem Computer wartet.",
+    headline: "Ein Computer antwortet nicht",
+    body: (name, org, away) => [
+      { b: name },
+      " in ",
+      { b: org },
+      ` antwortet seit ${away} nicht. Die Arbeit, die ihn braucht, wartet und läuft weiter, sobald er wieder da ist.`,
+    ],
+    runs: "Wartende Anfragen an Agenten",
+    calls: "Wartende Webhook-Aufrufe",
+    note: "Um jetzt weiterzumachen, verschiebe seine Agenten auf seiner Seite auf einen anderen Computer.",
+    button: "Computer öffnen",
+    why: (org) => `Du erhältst diese E-Mail, weil du die Computer von ${org} auf agentes.chat verwaltest.`,
+    back: {
+      subject: "Ein Computer ist wieder da",
+      preheader: "Die Arbeit, die auf ihn gewartet hat, läuft jetzt weiter.",
+      headline: "Der Computer ist wieder da",
+      runs: "Anfragen an Agenten, die gewartet haben",
+      calls: "Webhook-Aufrufe, die gewartet haben",
+      body: (name, org, away) => [
+        { b: name },
+        " in ",
+        { b: org },
+        ` ist nach ${away} wieder da. Die Arbeit, die auf ihn gewartet hat, läuft jetzt weiter.`,
+      ],
+    },
+    personal: {
+      body: (name, _org, away) => [
+        { b: name },
+        ` antwortet seit ${away} nicht. Die Arbeit, die ihn braucht, wartet und läuft weiter, sobald er wieder da ist.`,
+      ],
+      why: () =>
+        "Du erhältst diese E-Mail, weil du die Computer deines persönlichen Workspace auf agentes.chat verwaltest.",
+      back: {
+        body: (name, _org, away) => [
+          { b: name },
+          ` ist nach ${away} wieder da. Die Arbeit, die auf ihn gewartet hat, läuft jetzt weiter.`,
+        ],
+      },
+    },
+  },
   appConnected: {
     subject: "Eine App wurde mit deinem agentes.chat-Konto verbunden",
     preheader: "Sie kann in einem Workspace in deinem Namen lesen und Agenten Aufgaben schicken.",

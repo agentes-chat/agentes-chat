@@ -1,4 +1,4 @@
-import type { LearnedSkill, Memory, Proposal } from "@agenteschat/client";
+import type { Memory, Proposal } from "@agenteschat/client";
 import {
   useForgetRightHandLearned,
   useLearnedSkills,
@@ -7,7 +7,6 @@ import {
   useProposals,
   useSetTeamWeekPrefs,
   useSettings,
-  useSkillAction,
   useTeamWeekPrefs,
   useUpdateSettings,
 } from "@agenteschat/client";
@@ -39,8 +38,8 @@ import {
   Textarea,
   Toolbar,
 } from "@agenteschat/ui";
-import { Link } from "@tanstack/react-router";
-import { type ReactNode, useRef, useState } from "react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AskAgentButton } from "@/components/AskAgentButton";
 import { HelpLink } from "@/components/HelpLink";
@@ -222,74 +221,6 @@ function LearnedRow({ m }: { m: Memory }) {
             <Button size="sm" variant="ghost" onClick={() => setDraft(null)}>
               {t("agentPage.memory.cancel")}
             </Button>
-          </>
-        )}
-      </span>
-    </li>
-  );
-}
-
-/** A skill it made from its how-tos: Ver, Desfazer última mudança, Travar, Dar a outros agentes (Skills), Restaurar. */
-function LearnedSkillRow({ s }: { s: LearnedSkill }) {
-  const { t } = useTranslation();
-  const { org } = useOrg();
-  const toast = useToast();
-  const act = useSkillAction(org.id);
-  const [open, setOpen] = useState(false);
-  return (
-    <li className="agp-mem" data-item-id={s.id}>
-      <span>
-        <b>{s.name}</b> · {s.description}
-      </span>
-      <span className="agp-mem__meta">
-        {s.locked && <State icon="lock">{t("agentPage.memory.locked")}</State>}
-        {s.archived && <State icon="close">{t("agentPage.memory.archivedSkill")}</State>}
-        <span>
-          {t("agentPage.memory.howTo")} · {t("agentPage.memory.skillUses", { count: s.useCount ?? 0 })}
-        </span>
-      </span>
-      {open && <pre className="agp-skill-body">{s.body}</pre>}
-      <span className="agp-row">
-        <Button variant="link" onClick={() => setOpen((v) => !v)}>
-          {open ? t("agentPage.memory.hide") : t("agentPage.memory.view")}
-        </Button>
-        {!s.canChange ? null : s.archived ? (
-          <Button variant="link" disabled={act.isPending} onClick={() => act.mutate({ type: "restore", id: s.id })}>
-            {t("agentPage.memory.restore")}
-          </Button>
-        ) : (
-          <>
-            {s.canRevert && (
-              <Button
-                variant="link"
-                disabled={act.isPending}
-                onClick={() =>
-                  act.mutate(
-                    { type: "revert", id: s.id },
-                    { onSuccess: () => toast.show(t("agentPage.memory.undone")) },
-                  )
-                }
-              >
-                {t("agentPage.memory.undoChange")}
-              </Button>
-            )}
-            <Button
-              variant="link"
-              onClick={() => act.mutate({ type: "update", id: s.id, patch: { locked: !s.locked } })}
-            >
-              {s.locked ? t("agentPage.memory.unlock") : t("agentPage.memory.lock")}
-            </Button>
-            {/* Skills is for who manages agents: an owner without it turns the skill on in each agent's own page. */}
-            {can(org, "manage_agents") && (
-              <Link
-                className="agp-more"
-                to="/org/$orgId/settings/$section"
-                params={{ orgId: org.id, section: "skills" }}
-                search={{ skill: s.id }}
-              >
-                {t("agentPage.memory.share")}
-              </Link>
-            )}
           </>
         )}
       </span>
@@ -521,14 +452,18 @@ function LearnedList({ list }: { list: Memory[] }) {
         </div>
       )}
       {skills.length > 0 && (
-        <div>
-          <GroupHeading level={3} title={t("agentPage.memory.skills")} />
-          <ul className="agp-list agp-mems">
-            {skills.map((s) => (
-              <LearnedSkillRow key={s.id} s={s} />
-            ))}
-          </ul>
-        </div>
+        // The skills it made are on its Skills tab, with the rest of what it knows.
+        <p className="small muted">
+          {t("skills.agentTab.madeMoved", { count: skills.length, ...g })}{" "}
+          <Link
+            className="ac-link"
+            to="/org/$orgId/agents/$agentId"
+            params={{ orgId: org.id, agentId: agent.id }}
+            search={{ tab: "skills" }}
+          >
+            {t("skills.agentTab.seeSkills")}
+          </Link>
+        </p>
       )}
     </div>
   );
@@ -555,7 +490,12 @@ export function MemoryTab({ item }: { item?: string }) {
   const linkedKind = linked?.learned && !linked.archived ? "learned" : linked ? memoryTabOf(linked) : null;
   const kind = picked ?? linkedKind ?? (linkedSkill ? "learned" : "known");
   const cols = useRef<HTMLDivElement>(null);
-  useLandOn(cols, item, Boolean(linked) || linkedSkill);
+  useLandOn(cols, item, Boolean(linked));
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (linkedSkill && item)
+      void navigate({ to: "/org/$orgId/skills/$skillId", params: { orgId: org.id, skillId: item }, replace: true });
+  }, [linkedSkill, item, navigate, org.id]);
   const pending = pendingOnAgent(proposals.data ?? [], agent.id);
   // What the agents (or people) applied to it (ADR 0219), in Agent improvements.
   const applied = (proposals.data ?? []).filter((p) => p.agentId === agent.id && p.status === "accepted" && !p.stale);

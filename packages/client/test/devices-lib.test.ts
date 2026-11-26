@@ -16,6 +16,7 @@ import {
   deviceWaitOf,
   failedOnLocalNetwork,
   fixText,
+  helpingDevices,
   IPHONE_RESTART_MS,
   type IphoneRestartMemo,
   type IphoneSeen,
@@ -24,6 +25,7 @@ import {
   iphoneRestartNext,
   iphoneRestartOf,
   iphoneSteps,
+  lendingDevice,
   linkPhase,
   mayChangeTasks,
   mayTakePhone,
@@ -34,7 +36,12 @@ import {
   phoneScreenCover,
   phoneScreenUrl,
   reasonText,
+  SPILL_USES,
   screenGesture,
+  shareInternetText,
+  spilledText,
+  spillOfUse,
+  spillUseOf,
   statusDetail,
   statusPill,
   statusSentence,
@@ -89,7 +96,7 @@ const computer = (c: Partial<ComputerDevice>): ComputerDevice => ({
   memoryGb: 36,
   ownerUserId: "u-sam",
   belongsToWorkspace: false,
-  spill: { own: true, others: false },
+  spill: { own: true },
   systemMode: false,
   audience: owner,
   status: { kind: "ready" },
@@ -100,6 +107,50 @@ const computer = (c: Partial<ComputerDevice>): ComputerDevice => ({
   mayManage: true,
   phones: [],
   ...c,
+});
+
+describe("devices as extra capacity", () => {
+  test("the line under a reply that thought elsewhere says where and why; any other reply has none", () => {
+    const org = { name: "Acme", mode: "team" as const };
+    expect(spilledText(t, { spilled: { to: "Bruno's MacBook", from: "Studio Mac", cause: "full" } }, org)).toBe(
+      "Thought on Bruno's MacBook: Studio Mac was full.",
+    );
+    // The workspace's own computer, named in its first owner's language, reads in the reader's.
+    expect(spilledText(t, { spilled: { to: "Bruno's MacBook", from: "Computador da Acme", cause: "full" } }, org)).toBe(
+      `Thought on Bruno's MacBook: ${t("computerSetup.title", { org: "Acme" })} was full.`,
+    );
+    expect(spilledText(t, { spilled: { to: "Bruno's MacBook", from: null, cause: "away" } }, org)).toBe(
+      "Thought on Bruno's MacBook: its computer was away.",
+    );
+    expect(spilledText(t, { speedFallback: true }, org)).toBeNull();
+    // Its owner uses that computer for their agents' work: nothing was wrong with the agent's own.
+    expect(spilledText(t, { spilled: { to: "Bruno's PC", from: "Studio Mac", cause: "chosen" } }, org)).toBe(
+      "Thought on Bruno's PC, which its owner uses for their agents' work.",
+    );
+  });
+
+  test("how a computer helps its owner's agents: never, when theirs is full or away, or first for their work", () => {
+    expect(spillUseOf({ spill: { own: false } })).toBe("off");
+    expect(spillUseOf({ spill: { own: true } })).toBe("help");
+    expect(spillUseOf({ spill: { own: true, first: true } })).toBe("first");
+    expect(SPILL_USES.map(spillOfUse)).toEqual([
+      { own: false, first: false },
+      { own: true, first: false },
+      { own: true, first: true },
+    ]);
+  });
+
+  test("the computers that help an agent: online, its owner's own or the workspace's, while the workspace lets them", () => {
+    const mine = computer({ id: "mine", ownerUserId: "u-ana" });
+    const theirs = computer({ id: "theirs", ownerUserId: "u-sam" });
+    const team = computer({ id: "team", ownerUserId: "u-sam", belongsToWorkspace: true });
+    const off = computer({ id: "off", ownerUserId: "u-ana", spill: { own: false } });
+    const away = computer({ id: "away", ownerUserId: "u-ana", status: { kind: "offline", lastSeenAt: null } });
+    const devices = [mine, theirs, team, off, away];
+    expect(helpingDevices({ devices }, "u-ana", "home").map((d) => d.id)).toEqual(["mine", "team"]);
+    expect(helpingDevices({ devices }, "u-ana", "mine").map((d) => d.id)).toEqual(["team"]);
+    expect(helpingDevices({ devices, devicesHelp: false }, "u-ana", "home")).toEqual([]);
+  });
 });
 
 describe("tasks at once", () => {
@@ -628,6 +679,14 @@ describe("in the chat and the inbox", () => {
       askerId: "u-caio",
       agentId: null,
     });
+    // A computer paired before lends its internet now: the computer's name is never read as a person's.
+    expect(
+      deviceNoticeOf({
+        kind: "device.internet_shared",
+        source: { machineId: "m1", label: "Bia's Mac" },
+        latest: { title: "Bia's Mac" },
+      } as never),
+    ).toMatchObject({ kind: "device.internet_shared", machineId: "m1", device: "Bia's Mac", forName: null });
     // An agent waits for a folder: the folder in `latest.title` (never read as a person's name), the computer and the
     // agent in it.
     const folder = {
@@ -738,5 +797,19 @@ describe("a phone's screen", () => {
     });
     // Off the picture's edge: kept on it.
     expect(screenGesture({ x: 0.5, y: 0.5, at: 0 }, { x: 1.4, y: -0.2, at: 200 })).toMatchObject({ x2: 1, y2: 0 });
+  });
+});
+
+describe("agents use a person's computer's internet (ADR 0237)", () => {
+  test("in use now, or which computer the agents use instead; nothing while off or with nothing to lend to", () => {
+    const mine = computer({ id: "m-mine", shareInternet: { on: true, inUse: false } });
+    const ana = computer({ id: "m-ana", name: "Ana's iMac", shareInternet: { on: true, inUse: true } });
+    const lending = lendingDevice([mine, ana]);
+    expect(lending?.id).toBe("m-ana");
+    expect(shareInternetText(t, ana, lending)).toBe("In use now");
+    expect(shareInternetText(t, mine, lending)).toBe("Agents use Ana's iMac now");
+    expect(shareInternetText(t, computer({ shareInternet: { on: false, inUse: false } }), lending)).toBeNull();
+    expect(shareInternetText(t, computer({ shareInternet: null }), lending)).toBeNull();
+    expect(lendingDevice([mine])).toBeNull();
   });
 });

@@ -7,14 +7,17 @@ import {
   type AccountLoginState,
   ANTIGRAVITY_MAC_PROTOCOL,
   ANTIGRAVITY_PROTOCOL,
+  ANTIGRAVITY_WINDOWS_PROTOCOL,
   type AuthMethod,
   accountCodeAad,
   CLAUDE_AUTH_PROTOCOL,
+  CLI_COPIES_PROTOCOL,
   type ClaudeLoginMethod,
   CURSOR_KEY_PROVIDER,
   CURSOR_PROTOCOL,
   claudeLoginMethodsOf,
   GROK_PROTOCOL,
+  GROK_WINDOWS_PROTOCOL,
   isAccountId,
   isAccountKind,
   isAccountLoginFailure,
@@ -57,6 +60,7 @@ import {
   sql,
 } from "@agenteschat/db";
 import {
+  ACCOUNT_ONLY_BRAINS,
   GEMINI_ENTERPRISE_PROVIDER,
   isPlanId,
   loginPerAgent,
@@ -80,7 +84,7 @@ import {
 import { accountPersonOf, loginPermissions, managesAccount } from "./ai-accounts/serves";
 import { recordAudit } from "./audit";
 import { liveModelLimits } from "./brains/select";
-import { BRAIN_PLAN_NAMES } from "./brains/types";
+import { BRAIN_NAMES, BRAIN_PLAN_NAMES, brainRunsOn } from "./brains/types";
 import { caches } from "./cache";
 import { claudeAuthMethodFor, claudeAuthPolicy } from "./claude-auth-policy";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "./errors";
@@ -525,7 +529,7 @@ async function accountViewOf(db: Database, orgId: string, row: MachineAccountRow
 
 /**
  * Agents that used these accounts lose them: back to the computer's own
- * sign-in when that is their owner's, else to the API (a plan thinks only for
+ * sign-in when that is their owner's and can think for them, else to the API (a plan thinks only for
  * its owner's agents, ADR 0059 §3). Their cache goes with `forgetAgents`.
  */
 export async function releaseAgents(
@@ -544,8 +548,13 @@ export async function releaseAgents(
       .delete(rightHandBrains)
       .where(and(eq(rightHandBrains.orgId, orgId), inArray(rightHandBrains.brainAccountId, accountIds)));
   }
-  const ownSignIn = sql`exists (select 1 from ${machines} m where m.id = "agents"."machine_id"
-    and m.paired_by_user_id = "agents"."owner_user_id")`;
+  // Gemini and Grok never think with the computer's own sign-in (`accountOnlyBrain`): without an account, the API.
+  const ownSignIn = sql`(exists (select 1 from ${machines} m where m.id = "agents"."machine_id"
+    and m.paired_by_user_id = "agents"."owner_user_id")
+    and "agents"."brain" not in (${sql.join(
+      ACCOUNT_ONLY_BRAINS.map((k) => sql`${k}`),
+      sql`, `,
+    )}))`;
   const lent = sql`"agents"."brain_account_lent_by" is not null`;
   const rows = await db
     .update(agents)
@@ -838,8 +847,15 @@ async function settleAccount(
     const released = await releaseAgents(db, orgId, [row.id], now);
     return { row: gone ?? row, duplicate, released, changed: !signingIn };
   }
-  // The runner says it when it knows it; one that just started doesn't yet (the last stays).
-  const usage = info.usage ? { usage: accountReading(row.provider, row.usage, info.usage) } : {};
+  // The runner says it when it knows it; one that just started doesn't yet (the last stays). A reading belongs to the
+  // plan and key it was read on: another plan or key with no reading of its own starts with none, so long work never
+  // pauses on, nor a card quotes, a percentage the plan in force doesn't have.
+  const replaced = Boolean(row.usage) && !info.usage && (plan !== row.plan || keyHint !== row.keyHint);
+  const usage = info.usage
+    ? { usage: accountReading(row.provider, row.usage, info.usage) }
+    : replaced
+      ? { usage: null }
+      : {};
   if (signingIn) {
     // A login of an account its owner already has here (one per agent) takes that account's name and permissions.
     const sibling = await sameAccount(db, row, identity);
@@ -892,7 +908,9 @@ async function settleAccount(
     .returning();
   const released = await unshare(db, orgId, row, shared, now);
   const moved = usageMoved(row.usage, usage.usage);
-  if (moved && usage.usage) await wakeOnRoom(db, orgId, machine.id, kindOf(row), row.id, usage.usage, now.getTime());
+  // No reading is room: what paused on the old plan's reading goes on.
+  const room = usage.usage ?? (replaced ? { windows: [], source: "turn" as const, at: now.toISOString() } : null);
+  if (moved && room) await wakeOnRoom(db, orgId, machine.id, kindOf(row), row.id, room, now.getTime());
   return { row: fresh ?? row, released, changed: !same || moved };
 }
 
@@ -1549,6 +1567,13 @@ export async function beginAccountLogin(
   }
   const plan = planOf(provider);
   const { machine } = await memberMachine(deps.db, userId, orgId, machineId);
+  // A CLI its runner won't run on this system would sign in and fail every turn.
+  if (!brainRunsOn(kind, machine.os)) {
+    throw new ConflictError(`${BRAIN_NAMES[kind]} doesn't run on ${machine.name}'s system yet.`, "account.system", {
+      program: BRAIN_NAMES[kind],
+      computer: machine.name,
+    });
+  }
   let existing: MachineAccountRow | null = null;
   if (accountId !== undefined) {
     existing = await getListedAccount(deps.db, orgId, machine.id, accountId);
@@ -1565,19 +1590,48 @@ export async function beginAccountLogin(
     deps,
     machine,
     kind === "cursor"
-      ? CURSOR_PROTOCOL
+      ? machine.os === "windows"
+        ? CLI_COPIES_PROTOCOL
+        : CURSOR_PROTOCOL
       : kind === "antigravity"
         ? machine.os === "darwin"
           ? ANTIGRAVITY_MAC_PROTOCOL
-          : ANTIGRAVITY_PROTOCOL
+          : machine.os === "windows"
+            ? ANTIGRAVITY_WINDOWS_PROTOCOL
+            : ANTIGRAVITY_PROTOCOL
         : kind === "grok"
-          ? GROK_PROTOCOL
+          ? machine.os === "windows"
+            ? GROK_WINDOWS_PROTOCOL
+            : GROK_PROTOCOL
           : kind === "opencode"
             ? OPENCODE_PROTOCOL
             : plan
               ? PLAN_KEYS_PROTOCOL
               : ACCOUNTS_PROTOCOL,
   );
+  // On Windows the Antigravity CLI keeps its sign-in in the user's one Credential Manager (ADR 0143): a second
+  // account would take the first one's place.
+  if (kind === "antigravity" && machine.os === "windows" && accountId === undefined) {
+    const [other] = await deps.db
+      .select({ id: machineAccounts.id })
+      .from(machineAccounts)
+      .where(
+        and(
+          eq(machineAccounts.orgId, orgId),
+          eq(machineAccounts.machineId, machine.id),
+          eq(machineAccounts.kind, "antigravity"),
+          inArray(machineAccounts.status, LISTED_ACCOUNT_STATUSES),
+        ),
+      )
+      .limit(1);
+    if (other) {
+      throw new ConflictError(
+        "On Windows a computer uses one Gemini account at a time. Remove the other Gemini account from this computer first.",
+        "account.windows_one_gemini",
+        { name: machine.name },
+      );
+    }
+  }
   // Once for every agent of its owner there, where the runner can (protocol 29; ChatGPT's 38, Gemini's 58).
   const shared = protocol >= sharedSignInProtocol(kind) && sharedSignIn(kind, provider);
   const again = accountId !== undefined;
@@ -1599,12 +1653,25 @@ export async function beginAccountLogin(
         ? kept
         : undefined
       : claudeAuthMethodFor(await claudeAuthPolicy(deps.db), orgId, system);
-    if (!again && method === "cli_login" && !claudeLoginMethodsOf(said, system).includes("cli_login")) {
-      throw new ConflictError(
-        "This computer can't connect Claude this way yet. Update the agentes.chat program on it, or use an API key.",
-        "account.method_unsupported",
-        { name: machine.name },
-      );
+    const offered = claudeLoginMethodsOf(said, system);
+    if (!again && method === "cli_login" && !offered.includes("cli_login")) {
+      if (!offered.includes("setup_token")) {
+        throw new ConflictError(
+          "This computer can't connect Claude this way yet. Update the agentes.chat program on it, or use an API key.",
+          "account.method_unsupported",
+          { name: machine.name },
+        );
+      }
+      // Not ready for it here yet (a self-check pending or failing, a runner from before): this one sign-in takes the
+      // token its runner makes, kept on its row, rather than stopping the person. Reported, so a computer that stays
+      // that way is seen.
+      method = "setup_token";
+      deps.log?.error("Claude sign-in used a setup token: the computer doesn't offer Claude's own login yet", {
+        orgId,
+        machineId: machine.id,
+        protocol,
+        reason: machine.executors?.claudeLoginBlocked ?? "pending",
+      });
     }
   }
   // How it signs in, where nothing else can happen: a key, or a CLI's own sign-in.

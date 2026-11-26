@@ -179,9 +179,38 @@ export async function challengeOf(verifier: string) {
   return base64url(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier))));
 }
 
-/** `access`: an early-access link's token, for the sign-up the browser makes (DesktopSignInPage). */
+/**
+ * The app's link that only brings it forward (deep_link.rs), for the browser's page once a sign-in for it is done. Apps
+ * that take it say `signedInLink` in `window.__agentesDesktop`; older ones would show it as a link that isn't one.
+ */
+export const APP_FRONT_LINK = "agenteschat://desktop/signed-in";
+export const takesSignedInLink = () =>
+  (window as { __agentesDesktop?: { signedInLink?: unknown } }).__agentesDesktop?.signedInLink === true;
+
+/**
+ * The app's link a page's fragment carries (packages/engine oauth-return.ts `desktopBackPage`): only the desktop app's
+ * own `agenteschat://desktop/…`, null for any other.
+ */
+export function desktopLinkIn(hash: string): string | null {
+  try {
+    const link = decodeURIComponent(hash.replace(/^#/, ""));
+    return link.startsWith("agenteschat://desktop/") ? link : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * `access`: an early-access link's token, for the sign-up the browser makes (DesktopSignInPage). `back`: the app takes
+ * `APP_FRONT_LINK`, so the browser's page hands the person back to it once done.
+ */
 export const browserSignInUrl = (provider: SignInProvider, requestId: string, access?: string) =>
-  `${BROWSER_SIGN_IN_PATH}?${new URLSearchParams({ provider, request: requestId, ...(access ? { access } : {}) })}`;
+  `${BROWSER_SIGN_IN_PATH}?${new URLSearchParams({
+    provider,
+    request: requestId,
+    ...(access ? { access } : {}),
+    ...(takesSignedInLink() ? { back: "1" } : {}),
+  })}`;
 
 /**
  * What the site may ask of this computer (ADR 0036, `this_mac` in main_window.rs): which of this server's

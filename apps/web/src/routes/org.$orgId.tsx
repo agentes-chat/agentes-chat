@@ -1,6 +1,7 @@
 import { useMe } from "@agenteschat/client";
 import { membershipIn, settingUp } from "@agenteschat/client/lib/guards";
 import { can } from "@agenteschat/client/lib/permissions";
+import { MorphRoom } from "@agenteschat/ui";
 import { createFileRoute, Outlet, redirect, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 import { requireUserIn } from "@/app/guards";
@@ -19,6 +20,8 @@ import { DesktopTitleBar } from "@/components/DesktopTitleBar";
 import { DetailsHost } from "@/components/DetailsHost";
 import { InviteDialogProvider } from "@/components/invite/InviteDialog";
 import { LeaveChannelDialog } from "@/components/LeaveChannelDialog";
+import { useHoldBannerWaits } from "@/components/lodi-cursor/arrivals";
+import { LodiCursor } from "@/components/lodi-cursor/LodiCursor";
 import { OutageNotices } from "@/components/MachineOutages";
 import { NavDrawerProvider, NavScrim, ShellBar } from "@/components/NavDrawer";
 import { NoticeIsland } from "@/components/NoticeIsland";
@@ -79,6 +82,7 @@ function OrgLayout() {
   const focused =
     (/\/agents\/new\/?$/.test(path) && can(membership, "create_agents")) ||
     (LIVE_FILE_PATH.test(path) && PRESENTING.test(href));
+  const bannerWaits = useHoldBannerWaits();
   // Notifications in this browser (ADR 0071), when already on: the server hears of them again, quietly.
   useWebPushRefresh(me.user.id);
   useServerLocale(me.user);
@@ -152,6 +156,7 @@ function OrgLayout() {
                     <NewAgentProvider>
                       <div className="shell">
                         <CommandMenu />
+                        <LodiCursor />
                         <LeaveChannelDialog />
                         <ReconnectPill />
                         {!focused && (
@@ -166,13 +171,15 @@ function OrgLayout() {
                     says so (ADR 0088 §7), in the Criar agente flow too: its work stopped, nothing else is news. */}
                         <div className={focused ? "shell__work shell__work--bare" : "shell__work"}>
                           {membership.deletion && <DeletingBanner />}
+                          {/* Coming or going, the page glides under them: nothing pushes it in one frame. */}
                           {!focused && !membership.deletion && (
-                            <>
+                            <MorphRoom pace="panel" className="shell__notices">
                               <ConfirmEmailBanner />
-                              <HoldBanner />
+                              {/* Lodi's cursor shows a new team land first, then the page glides under the banner. */}
+                              {!bannerWaits && <HoldBanner />}
                               <ComputerSetupNotice />
                               <OutageNotices />
-                            </>
+                            </MorphRoom>
                           )}
                           <div className="shell__pages">
                             <ComputerDialogProvider>

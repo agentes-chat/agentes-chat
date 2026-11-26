@@ -17,6 +17,7 @@ import {
   mayBeHome,
   type PlanDropped,
   setAgentComputerTarget,
+  shownMoving,
   shownOnline,
 } from "./machines";
 import { missionTurnFor } from "./missions-engine";
@@ -51,6 +52,8 @@ export interface MachineOutage {
   managed: boolean;
   /** ISO: the last sign of life. */
   offlineSince: string;
+  /** The workspace's own computer is away moving to another server (`shownMoving`): it comes back by itself. */
+  moving: boolean;
   agents: OutageAgent[];
   /** Runs of these agents waiting for this computer. */
   waitingRuns: number;
@@ -217,6 +220,7 @@ export async function listMachineOutages(
       platform: machinePlatform(m.os, m.kind),
       managed: m.kind === "managed",
       offlineSince: (m.lastSeenAt ?? m.updatedAt).toISOString(),
+      moving: shownMoving(m, now),
       agents: [...list.values()].sort((a, b) => order(a.agentId) - order(b.agentId)),
       waitingRuns,
     });

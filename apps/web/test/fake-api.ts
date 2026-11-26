@@ -25,7 +25,6 @@ import type {
   Availability,
   BrainMachine,
   Channel,
-  ChannelCategory,
   ChannelMember,
   ChannelOverride,
   ComposioUsage,
@@ -259,8 +258,6 @@ export interface FakeState {
   /** The archived channels the viewer may bring back (`chat.archived`). */
   archivedChannels?: ArchivedChannel[];
   channels: Channel[];
-  /** Sidebar categories (ADR 0080); absent: none. */
-  channelCategories?: ChannelCategory[];
   channelMembers: Record<string, ChannelMember[]>;
   messages: Message[];
   invitations: InvitationWithStatus[];
@@ -1770,6 +1767,13 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         if (!sf?.links.some((l) => l.id === linkId)) throw new ApiError(404, "surface.link_gone", "This link is gone");
         sf.links = sf.links.filter((l) => l.id !== linkId);
       },
+      setNudge: async (linkId, input) => {
+        log("surfaces.setNudge", linkId, input);
+        const link = state.surface?.links.find((l) => l.id === linkId && l.status === "active");
+        if (!link) throw new ApiError(404, "surface.link_gone", "This link is gone");
+        link.nudge = { ...link.nudge, ...input };
+        return link.nudge;
+      },
       undo: async () => {
         log("surfaces.undo");
         const undo = state.surface?.undo;
@@ -2462,18 +2466,25 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
       list: async () => {
         const all = listsAllAgents(state.me ? withPermissions(state.me).organizations[0] : undefined);
         const ids = new Set(listed().map((a) => a.id));
-        return structuredClone(state.agentGroups ?? [])
-          .map((g) => ({ ...g, agentIds: g.agentIds.filter((id) => ids.has(id)), was: g.agentIds.length }))
-          .filter((g) => g.agentIds.length > 0 || (all && g.was === 0))
-          .map(({ was: _was, ...g }) => g);
+        return (
+          structuredClone(state.agentGroups ?? [])
+            .map((g) => ({ ...g, agentIds: g.agentIds.filter((id) => ids.has(id)), was: g.agentIds.length }))
+            // A sector holding a channel the person sees shows too (ADR 0240).
+            .filter(
+              (g) => g.agentIds.length > 0 || state.channels.some((c) => c.groupId === g.id) || (all && g.was === 0),
+            )
+            .map(({ was: _was, ...g }) => g)
+        );
       },
       create: async (orgId, input) => {
         state.calls.push({ method: "agentGroups.create", args: [orgId, input] });
         const ids = input.agentIds ?? [];
+        const made = crypto.randomUUID();
         state.agentGroups = [
           ...(state.agentGroups ?? []).map((g) => ({ ...g, agentIds: g.agentIds.filter((id) => !ids.includes(id)) })),
-          { id: crypto.randomUUID(), name: input.name, agentIds: ids },
+          { id: made, name: input.name, agentIds: ids, color: input.color, icon: input.icon },
         ];
+        for (const c of state.channels) if (input.channelIds?.includes(c.id)) c.groupId = made;
         return structuredClone(state.agentGroups);
       },
       update: async (orgId, groupId, patch) => {
@@ -2493,6 +2504,7 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
       remove: async (orgId, groupId) => {
         state.calls.push({ method: "agentGroups.remove", args: [orgId, groupId] });
         state.agentGroups = (state.agentGroups ?? []).filter((g) => g.id !== groupId);
+        for (const c of state.channels) if (c.groupId === groupId) c.groupId = null;
         return structuredClone(state.agentGroups);
       },
       move: async (orgId, agentId, input) => {
@@ -2857,6 +2869,13 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         if (agent.setup && !agent.setup.done.includes(step)) {
           agent.setup = { ...agent.setup, done: [...agent.setup.done, step] };
         }
+        return { ...agent };
+      },
+      closeSetup: async (orgId, agentId) => {
+        log("agents.closeSetup", orgId, agentId);
+        const agent = state.agents.find((a) => a.id === agentId);
+        if (!agent) throw new ApiError(404, "not_found", "Agent not found");
+        if (agent.setup) agent.setup = { ...agent.setup, closed: true };
         return { ...agent };
       },
       mailLoss: async (orgId, agentId, audience) => {
@@ -3369,47 +3388,17 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
           visibility: input.visibility ?? "public",
           isMember: true,
           createdAt: new Date().toISOString(),
-          categoryId: input.categoryId ?? null,
+          groupId: input.groupId ?? null,
         };
         state.channels.push(channel);
         state.channelMembers[channel.id] = [{ type: "person", id: state.me?.user.id ?? "" }];
         return channel;
       },
-      categories: async () => structuredClone(state.channelCategories ?? []),
-      createCategory: async (orgId, input) => {
-        log("chat.createCategory", orgId, input);
-        state.channelCategories ??= [];
-        const list = state.channelCategories;
-        if (list.some((c) => c.name.toLowerCase() === input.name.trim().toLowerCase()))
-          throw new ApiError(409, "conflict", `The category ${input.name} already exists`);
-        const category: ChannelCategory = { id: id("cat"), name: input.name.trim(), position: list.length };
-        list.push(category);
-        for (const channelId of input.channelIds ?? []) {
-          const c = state.channels.find((x) => x.id === channelId);
-          if (c) c.categoryId = category.id;
-        }
-        return { ...category };
-      },
-      renameCategory: async (orgId, categoryId, name) => {
-        log("chat.renameCategory", orgId, categoryId, name);
-        const c = state.channelCategories?.find((x) => x.id === categoryId);
-        if (!c) throw new ApiError(404, "not_found", "Category not found");
-        c.name = name.trim();
-        return { ...c };
-      },
-      deleteCategory: async (orgId, categoryId) => {
-        log("chat.deleteCategory", orgId, categoryId);
-        state.channelCategories = (state.channelCategories ?? []).filter((c) => c.id !== categoryId);
-        for (const c of state.channels) if (c.categoryId === categoryId) c.categoryId = null;
-      },
-      placeCategory: async (orgId, categoryId, beforeCategoryId) => {
-        log("chat.placeCategory", orgId, categoryId, beforeCategoryId);
-      },
       place: async (orgId, channelId, input) => {
         log("chat.place", orgId, channelId, input);
         const c = state.channels.find((x) => x.id === channelId);
         if (!c) throw new ApiError(404, "not_found", "Channel not found");
-        c.categoryId = input.categoryId;
+        c.groupId = input.groupId;
         // Like the server: before `beforeChannelId`, else at the end; the list comes back in that order.
         const rest = state.channels.filter((x) => x !== c);
         const at = rest.findIndex((x) => x.id === input.beforeChannelId);
@@ -3752,6 +3741,15 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
           canDecide: false,
           canCancel: false,
         });
+        return { ...a };
+      },
+      runNow: async (orgId, approvalId) => {
+        log("approvals.runNow", orgId, approvalId);
+        const a = state.approvals.find((x) => x.id === approvalId);
+        if (a?.status !== "approved" || a.executedAt || !a.afterIds?.length) {
+          throw new ApiError(409, "approval.not_waiting", "This request isn't waiting for another one");
+        }
+        Object.assign(a, { afterIds: [], canRunNow: false });
         return { ...a };
       },
       decideMany: async (orgId, input) => {

@@ -82,6 +82,7 @@ import {
   ApproveAlwaysInfo,
   approvalHeadline,
   approvalTitleText,
+  HeldLine,
   hasApprovalPreview,
   useApprovalSource,
   useApproveNow,
@@ -158,9 +159,12 @@ function useApprovalAnswer(a: Approval): AskAnswer | null {
   const dir = useRowDirectory();
   const when = useWhen();
   const cancelAhead = useCancelAhead();
+  const known = useApprovals(useOrgId()).data;
   // Approved by me a moment ago (the card answered on screen): the check bursts once in the agent's tones.
   const celebrate = useRef<string | null>(null);
   if (a.status === "pending") return null;
+  // Approved and waiting for a request asked before it: what for, and what moves it (`HeldLine`).
+  const waitsOn = approvalLine([a], known).get(a.id)?.waitsOn;
   celebrate.current ??= celebrationFor(a, meId, agentLook(dir.anyAgent(a.agentId)).color);
   const scheduled = aheadPhase(a) === "scheduled" && a.runAt;
   const lines = [
@@ -173,16 +177,17 @@ function useApprovalAnswer(a: Approval): AskAnswer | null {
     celebrate: celebrate.current,
     time: a.decidedAt ? when.short(a.decidedAt) : undefined,
     note: lines.join("\n") || null,
-    actions:
-      scheduled && a.canCancel ? (
-        <Button
-          variant="ghost"
-          size="card"
-          label={t("approval.ahead.cancel")}
-          loading={cancelAhead.pending}
-          onPress={() => cancelAhead.cancel(a.id)}
-        />
-      ) : null,
+    actions: waitsOn ? (
+      <HeldLine approval={a} waitsOn={waitsOn} />
+    ) : scheduled && a.canCancel ? (
+      <Button
+        variant="ghost"
+        size="card"
+        label={t("approval.ahead.cancel")}
+        loading={cancelAhead.pending}
+        onPress={() => cancelAhead.cancel(a.id)}
+      />
+    ) : null,
   };
 }
 
@@ -204,6 +209,7 @@ function ApprovalGroupAsk({ items }: { items: Approval[] }) {
   const asks = useAskStore();
   const one = useDecideApproval(orgId);
   const all = useDecideApprovals(orgId);
+  const known = useApprovals(orgId).data;
   // Which runs are unfolded, by `runKeys`: one stays open while its requests are decided, the card reshaping or not.
   const [opened, setOpened] = useState<ReadonlySet<string>>(new Set());
   const first = items[0];
@@ -221,7 +227,7 @@ function ApprovalGroupAsk({ items }: { items: Approval[] }) {
   const always = approveAlwaysOn(items);
   const runs = approvalRuns(items);
   const keys = runKeys(runs);
-  const line = approvalLine(items);
+  const line = approvalLine(items, known);
   const [only] = runs;
   const single = runs.length === 1 && only && only.length > 1 ? only : null;
   const busy = one.isPending || all.isPending;
@@ -594,16 +600,12 @@ function ApprovalGroupItem({
                 {[
                   decisionOutcome(t, a, meId, (id) => dir.memberById.get(id)?.name),
                   scheduled && t("approval.ahead.scheduled", { when: nextLabel(i18n.language, scheduled) }),
-                  place?.waitsOn
-                    ? t("approval.line.after", {
-                        // With its place on the card: two requests of one kind tell apart by it ("1 de 2").
-                        title: `${approvalTitleText(t, place.waitsOn)} (${t("approvals.position", { n: place.waitsOnAt, total: place.count })})`,
-                      })
-                    : a.result?.notRunAfter && t("approval.line.notRun"),
+                  !place?.waitsOn && a.result?.notRunAfter && t("approval.line.notRun"),
                 ]
                   .filter(Boolean)
                   .join(" · ")}
               </Text>
+              {place?.waitsOn ? <HeldLine approval={a} waitsOn={place.waitsOn} /> : null}
               {scheduled && a.canCancel ? (
                 <View style={styles.cancelAhead}>
                   <Button

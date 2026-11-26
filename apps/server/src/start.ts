@@ -386,6 +386,7 @@ async function boot(
     createModelProviders({
       endpointFetch: allowsPrivateEndpoints(config) ? undefined : publicHttpsFetch(),
       version: release,
+      progressNotes: config.MODEL_PROGRESS_NOTES,
     }),
   );
   if (overridden.length > 0) log.info("adapters overridden by modules", { overridden });
@@ -694,6 +695,7 @@ async function boot(
     overloaded,
     streams: createStreamSockets({ db: database.db, auth, config, broker: engine.streams }),
     live: liveSockets,
+    onTyping: engine.warmWhileTyping,
   });
   const publicUrl = new URL(config.PUBLIC_URL);
   const ownHosts = ownHostsOnly

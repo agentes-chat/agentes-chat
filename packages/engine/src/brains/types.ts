@@ -9,6 +9,7 @@ import type {
   WireWorkflowAgent,
 } from "@agenteschat/adapters";
 import type { ToolImage } from "@agenteschat/providers";
+import { CLI_PINS, type PinCli } from "@agenteschat/providers/cli-pins";
 import { planOf } from "@agenteschat/providers/plans";
 import type { CodeSetup } from "../git/machine";
 
@@ -27,15 +28,28 @@ export const BRAIN_NAMES: Readonly<Record<ComputerBrainKind, string>> = {
   antigravity: "Antigravity CLI",
 };
 
+/** The pin list's name for each computer brain's CLI (`CLI_PINS`). */
+const PIN_OF_BRAIN: Readonly<Record<ComputerBrainKind, PinCli>> = {
+  claude_code: "claude",
+  codex: "codex",
+  cursor: "cursor",
+  opencode: "opencode",
+  grok: "grok",
+  antigravity: "antigravity",
+};
+
+/** `hello.os` as the pin list names systems. */
+const PIN_SYSTEM: Readonly<Record<string, string>> = { darwin: "darwin-", linux: "linux-", windows: "win32-" };
+
 /**
- * Whether a computer brain runs on a computer's system (`hello.os`), as its runner allows: Cursor, Grok Build and the
- * Antigravity CLI not on Windows yet (ADR 0143: there it keeps its sign-in in the computer user's one Credential
- * Manager). A system nobody reported passes: the runner says.
+ * Whether a computer brain runs on a computer's system (`hello.os`): its vendor makes a build of its CLI for that
+ * system (`CLI_PINS`, ADR 0228 §6). All six do for macOS, Linux and Windows; on Windows each account's sign-in stays
+ * in its own folder (`accountEnv`). A system nobody reported, or one the list doesn't name, passes: the runner says.
  */
 export function brainRunsOn(kind: ComputerBrainKind, os: string | null | undefined): boolean {
-  if (!os) return true;
-  if (kind === "cursor" || kind === "grok" || kind === "antigravity") return os !== "windows";
-  return true;
+  const prefix = os ? PIN_SYSTEM[os] : undefined;
+  if (!prefix) return true;
+  return Object.keys(CLI_PINS[PIN_OF_BRAIN[kind]].builds).some((p) => p.startsWith(prefix));
 }
 
 /** A turn refused because its brain doesn't run on its computer's system (`brainRunsOn`): no runner asked, no retry. */
@@ -153,6 +167,11 @@ export interface BrainTurn {
   contextTokens?: number;
   /** Computer brains: a person waits on this turn (the line's first rank); the runner holds a slot for one. */
   personWaiting?: boolean;
+  /**
+   * Computer brains: the IANA zone of "Now" in the context (the person's, else the workspace's, a routine's own), which
+   * the CLI's clock reads too, so the date it sees is the one the person lives.
+   */
+  timeZone?: string;
   /** The text the person/system sent that starts this turn (also the last user message). */
   trigger: string;
   /**
@@ -205,6 +224,11 @@ export interface BrainIO {
 
 export type BrainEvent =
   | { type: "text_delta"; text: string }
+  /**
+   * A note the model wrote between its calls that its API keeps apart from the reply's text (Claude's progress update,
+   * a reasoning summary): the work's narration, never the reply. An older server drops it.
+   */
+  | { type: "note"; text: string }
   /** `executed` present = already executed elsewhere (computer brains via the MCP bridge): the engine only records/displays it. */
   | { type: "tool_call"; id: string; name: string; input: unknown; executed?: ToolResult }
   | {

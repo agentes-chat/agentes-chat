@@ -18,6 +18,7 @@
       "default": "./src/agent/engine.js"
     },
     "./agent/look": "./src/components/AgentLook.ts",
+    "./agent/orbit": "./src/agent/orbit-rings.ts",
     "./agent/stickers": "./src/agent/stickers.ts",
     "./brain/portrait": {
       "types": "./src/brain/portrait.d.ts",
@@ -49,6 +50,7 @@
     "./markdown": "./src/markdown.ts",
     "./media-grid": "./src/media-grid.ts",
     "./names": "./src/names.ts",
+    "./org-logo": "./src/org-logo.ts",
     "./plan-state": "./src/plan-state.ts",
     "./recurrence": "./src/recurrence.ts",
     "./search": "./src/search.ts",

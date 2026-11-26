@@ -47,11 +47,11 @@ export const RIGHT_HAND_DEFAULTS = {
   appearance: { color: "teal", eyes: "happy", accessory: "headset" },
 } as const;
 
-/** What "Automático" reads of it (`chooseAutoModel`): small work first, so it starts on the cheap tier. */
+/** What "Automático" reads of it (`chooseAutoModel`): the cheap tier only for a turn that only answers. */
 export const RIGHT_HAND_AUTO = {
   role: "Workspace assistant",
   instructions:
-    "Sets the team up with people through short questions and cards, and follows its work. A status, a greeting or a short question: the smallest tier and low effort. Handing work to an agent, following it up or reporting what came of it: the medium tier. More only when the person asks for something long or complex.",
+    "Sets the team up with people through short questions and cards, and follows its work. Only a greeting, a thanks or a plain status: the smallest tier. Setting something up or changing it, handing work to an agent, following it up, reporting what came of it or going on with steps already under way: at least the medium tier, never the smallest. More when the person asks for something long or complex.",
 } as const;
 
 /** How the router describes it among a channel's agents (`routeMessage`): what fits it, and what is theirs. */
@@ -731,7 +731,7 @@ export function rightHandNoAiReason(code: string, scope?: ModelScope): NoAiCardR
             : "plan_limit";
   if (code === "plan_not_shared" || code === "plan_not_owner") return "plan_not_shared";
   if (code === "plan_unattended") return "plan_unattended";
-  if (code === "runner_outdated" || code === "codex_too_old") return "runner_outdated";
+  if (code === "runner_outdated" || code === "codex_too_old" || code === "cli_outdated") return "runner_outdated";
   if (code === "exec_disabled" || code === "tool_off") return "commands_off";
   if (code === "tools_not_locked") return "plan_tools";
   if (code === "no_computer" || code === "no_session") return "no_computer";

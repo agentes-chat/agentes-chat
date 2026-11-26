@@ -65,7 +65,7 @@ export function usePickComputer(agentId: string): (() => void) | null {
       options: pick.choices.map((m) => ({
         key: m.id,
         label: machineTitle(m, host),
-        ...(m.online ? {} : { sub: t("machines.offline") }),
+        ...(m.online ? {} : { sub: t(m.moving ? "machines.moving.short" : "machines.offline") }),
         leading: { kind: "icon" as const, name: computerIcon(m.os) },
       })),
     }).then((key) => {

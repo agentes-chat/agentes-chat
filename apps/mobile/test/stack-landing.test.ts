@@ -65,7 +65,7 @@ describe("leaving for a tab never stacks a second copy of the tabs", () => {
       expect({ file, lands: read(file).includes("landOn(") }).toEqual({ file, lands: true });
     for (const file of [
       "app/(app)/(main)/conversations/[kind].tsx",
-      "app/(app)/(main)/channel-category.tsx",
+      "app/(app)/(main)/channel-sector.tsx",
       "app/signup.tsx",
     ])
       expect({ file, lands: read(file).includes("<LandOn href=") }).toEqual({ file, lands: true });

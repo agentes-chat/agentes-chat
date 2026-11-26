@@ -4,22 +4,12 @@
     "send": "Senden"
   },
   "categories": {
-    "title": "Kategorien",
     "where": "Wo #{{channel}} erscheint",
     "whereHelp": "Ändert sich für alle. Wer im Kanal mitmacht, bleibt gleich.",
-    "create": "Erstellen",
-    "endOfList": "Kommt für alle ans Ende der Liste.",
-    "channelCount_one": "{{count}} Kanal",
-    "channelCount_other": "{{count}} Kanäle",
-    "none": "Noch keine Kategorien.",
-    "manageHint": "Reihenfolge, Namen und Löschen",
-    "deleteTitle": "{{name}} löschen?",
     "order": "Platz in der Liste",
     "up": "Nach oben",
     "down": "Nach unten",
-    "position": "{{at}} von {{count}}.",
-    "channelPosition": "{{at}} von {{count}}.",
-    "itsChannels": "Kanäle"
+    "channelPosition": "{{at}} von {{count}}."
   },
   "blocks": {
     "send": "Senden",
@@ -995,6 +985,10 @@
       "computer_disk_full_other": "Festplatten von Computern sind fast voll",
       "computer_no_chrome_one": "Ein Computer braucht Google Chrome. Lade es unter google.com/chrome herunter",
       "computer_no_chrome_other": "Computer brauchen Google Chrome. Lade es unter google.com/chrome herunter",
+      "computer_down_one": "Ein Computer antwortet nicht",
+      "computer_down_other": "Ein Computer antwortet nicht",
+      "computer_back_one": "Ein Computer ist wieder da",
+      "computer_back_other": "Ein Computer ist wieder da",
       "app_created_one": "Eine KI-App hat etwas für dich erstellt",
       "app_created_other": "KI-Apps haben etwas für dich erstellt"
     },
@@ -2101,6 +2095,7 @@
       "tool_request": "{{names}} bittet dich, {{tool}} auf deinem {{device}} einzuschalten",
       "cli_request": "{{names}} bittet dich, {{tool}} auf deinem {{device}} zu installieren",
       "folder_request": "{{names}} bittet dich um den Ordner {{path}} auf deinem {{device}}",
+      "internet_shared": "Agenten öffnen Websites jetzt über die Internetverbindung von {{device}}",
       "allowOnce": "Einmal erlauben",
       "always": "{{name}} immer erlauben",
       "no": "Nein",
@@ -3257,7 +3252,8 @@
       "workspaceSub": "API-Schlüssel des Workspaces",
       "key": "API-Schlüssel",
       "keyDefault": "Standard des Workspaces",
-      "api": "API"
+      "api": "API",
+      "asksMove": "{{agent}} nutzt es dann nicht mehr."
     },
     "missionAi": "KI",
     "missionLocked": "Wer die Arbeit macht, wird vor dem Start gewählt. Das Modell lässt sich jederzeit ändern."

@@ -27,6 +27,7 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SurfacePageRouteImport } from './routes/surface-page'
 import { Route as TermosRouteImport } from './routes/termos'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as DesktopBackRouteImport } from './routes/desktop.back'
 import { Route as DesktopConnectorRouteImport } from './routes/desktop.connector'
 import { Route as DesktopHandoverRouteImport } from './routes/desktop.handover'
 import { Route as DesktopSignInRouteImport } from './routes/desktop.sign-in'
@@ -61,6 +62,8 @@ import { Route as OrgOrgIdDriveFileIdRouteImport } from './routes/org.$orgId.dri
 import { Route as OrgOrgIdIssuesIndexRouteImport } from './routes/org.$orgId.issues.index'
 import { Route as OrgOrgIdIssuesNumberRouteImport } from './routes/org.$orgId.issues.$number'
 import { Route as OrgOrgIdSettingsSectionRouteImport } from './routes/org.$orgId.settings_.$section'
+import { Route as OrgOrgIdSkillsIndexRouteImport } from './routes/org.$orgId.skills.index'
+import { Route as OrgOrgIdSkillsSkillIdRouteImport } from './routes/org.$orgId.skills.$skillId'
 import { Route as OrgOrgIdThreadsIndexRouteImport } from './routes/org.$orgId.threads.index'
 import { Route as OrgOrgIdThreadsThreadIdRouteImport } from './routes/org.$orgId.threads.$threadId'
 import { Route as OrgOrgIdWikiSlugRouteImport } from './routes/org.$orgId.wiki_.$slug'
@@ -163,6 +166,11 @@ const TermosRoute = TermosRouteImport.update({
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DesktopBackRoute = DesktopBackRouteImport.update({
+  id: '/desktop/back',
+  path: '/desktop/back',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DesktopConnectorRoute = DesktopConnectorRouteImport.update({
@@ -336,6 +344,16 @@ const OrgOrgIdSettingsSectionRoute = OrgOrgIdSettingsSectionRouteImport.update({
   path: '/settings/$section',
   getParentRoute: () => OrgOrgIdRoute,
 } as any)
+const OrgOrgIdSkillsIndexRoute = OrgOrgIdSkillsIndexRouteImport.update({
+  id: '/skills/',
+  path: '/skills/',
+  getParentRoute: () => OrgOrgIdRoute,
+} as any)
+const OrgOrgIdSkillsSkillIdRoute = OrgOrgIdSkillsSkillIdRouteImport.update({
+  id: '/skills/$skillId',
+  path: '/skills/$skillId',
+  getParentRoute: () => OrgOrgIdRoute,
+} as any)
 const OrgOrgIdThreadsIndexRoute = OrgOrgIdThreadsIndexRouteImport.update({
   id: '/threads/',
   path: '/threads/',
@@ -429,6 +447,7 @@ export interface FileRoutesByFullPath {
   '/surface-page': typeof SurfacePageRoute
   '/termos': typeof TermosRoute
   '/terms': typeof TermsRoute
+  '/desktop/back': typeof DesktopBackRoute
   '/desktop/connector': typeof DesktopConnectorRoute
   '/desktop/handover': typeof DesktopHandoverRoute
   '/desktop/sign-in': typeof DesktopSignInRoute
@@ -460,11 +479,13 @@ export interface FileRoutesByFullPath {
   '/org/$orgId/drive/$fileId': typeof OrgOrgIdDriveFileIdRoute
   '/org/$orgId/issues/$number': typeof OrgOrgIdIssuesNumberRoute
   '/org/$orgId/settings/$section': typeof OrgOrgIdSettingsSectionRoute
+  '/org/$orgId/skills/$skillId': typeof OrgOrgIdSkillsSkillIdRoute
   '/org/$orgId/threads/$threadId': typeof OrgOrgIdThreadsThreadIdRoute
   '/org/$orgId/wiki/$slug': typeof OrgOrgIdWikiSlugRoute
   '/org/$orgId/code/': typeof OrgOrgIdCodeIndexRoute
   '/org/$orgId/dashboards/': typeof OrgOrgIdDashboardsIndexRoute
   '/org/$orgId/issues/': typeof OrgOrgIdIssuesIndexRoute
+  '/org/$orgId/skills/': typeof OrgOrgIdSkillsIndexRoute
   '/org/$orgId/threads/': typeof OrgOrgIdThreadsIndexRoute
   '/org/$orgId/agents/$agentId/memory': typeof OrgOrgIdAgentsAgentIdMemoryRoute
   '/org/$orgId/dm/agent/$agentId': typeof OrgOrgIdDmAgentAgentIdRoute
@@ -496,6 +517,7 @@ export interface FileRoutesByTo {
   '/surface-page': typeof SurfacePageRoute
   '/termos': typeof TermosRoute
   '/terms': typeof TermsRoute
+  '/desktop/back': typeof DesktopBackRoute
   '/desktop/connector': typeof DesktopConnectorRoute
   '/desktop/handover': typeof DesktopHandoverRoute
   '/desktop/sign-in': typeof DesktopSignInRoute
@@ -526,11 +548,13 @@ export interface FileRoutesByTo {
   '/org/$orgId/drive/$fileId': typeof OrgOrgIdDriveFileIdRoute
   '/org/$orgId/issues/$number': typeof OrgOrgIdIssuesNumberRoute
   '/org/$orgId/settings/$section': typeof OrgOrgIdSettingsSectionRoute
+  '/org/$orgId/skills/$skillId': typeof OrgOrgIdSkillsSkillIdRoute
   '/org/$orgId/threads/$threadId': typeof OrgOrgIdThreadsThreadIdRoute
   '/org/$orgId/wiki/$slug': typeof OrgOrgIdWikiSlugRoute
   '/org/$orgId/code': typeof OrgOrgIdCodeIndexRoute
   '/org/$orgId/dashboards': typeof OrgOrgIdDashboardsIndexRoute
   '/org/$orgId/issues': typeof OrgOrgIdIssuesIndexRoute
+  '/org/$orgId/skills': typeof OrgOrgIdSkillsIndexRoute
   '/org/$orgId/threads': typeof OrgOrgIdThreadsIndexRoute
   '/org/$orgId/agents/$agentId/memory': typeof OrgOrgIdAgentsAgentIdMemoryRoute
   '/org/$orgId/dm/agent/$agentId': typeof OrgOrgIdDmAgentAgentIdRoute
@@ -563,6 +587,7 @@ export interface FileRoutesById {
   '/surface-page': typeof SurfacePageRoute
   '/termos': typeof TermosRoute
   '/terms': typeof TermsRoute
+  '/desktop/back': typeof DesktopBackRoute
   '/desktop/connector': typeof DesktopConnectorRoute
   '/desktop/handover': typeof DesktopHandoverRoute
   '/desktop/sign-in': typeof DesktopSignInRoute
@@ -594,11 +619,13 @@ export interface FileRoutesById {
   '/org/$orgId/drive_/$fileId': typeof OrgOrgIdDriveFileIdRoute
   '/org/$orgId/issues/$number': typeof OrgOrgIdIssuesNumberRoute
   '/org/$orgId/settings_/$section': typeof OrgOrgIdSettingsSectionRoute
+  '/org/$orgId/skills/$skillId': typeof OrgOrgIdSkillsSkillIdRoute
   '/org/$orgId/threads/$threadId': typeof OrgOrgIdThreadsThreadIdRoute
   '/org/$orgId/wiki_/$slug': typeof OrgOrgIdWikiSlugRoute
   '/org/$orgId/code/': typeof OrgOrgIdCodeIndexRoute
   '/org/$orgId/dashboards/': typeof OrgOrgIdDashboardsIndexRoute
   '/org/$orgId/issues/': typeof OrgOrgIdIssuesIndexRoute
+  '/org/$orgId/skills/': typeof OrgOrgIdSkillsIndexRoute
   '/org/$orgId/threads/': typeof OrgOrgIdThreadsIndexRoute
   '/org/$orgId/agents/$agentId/memory': typeof OrgOrgIdAgentsAgentIdMemoryRoute
   '/org/$orgId/dm/agent/$agentId': typeof OrgOrgIdDmAgentAgentIdRoute
@@ -632,6 +659,7 @@ export interface FileRouteTypes {
     | '/surface-page'
     | '/termos'
     | '/terms'
+    | '/desktop/back'
     | '/desktop/connector'
     | '/desktop/handover'
     | '/desktop/sign-in'
@@ -663,11 +691,13 @@ export interface FileRouteTypes {
     | '/org/$orgId/drive/$fileId'
     | '/org/$orgId/issues/$number'
     | '/org/$orgId/settings/$section'
+    | '/org/$orgId/skills/$skillId'
     | '/org/$orgId/threads/$threadId'
     | '/org/$orgId/wiki/$slug'
     | '/org/$orgId/code/'
     | '/org/$orgId/dashboards/'
     | '/org/$orgId/issues/'
+    | '/org/$orgId/skills/'
     | '/org/$orgId/threads/'
     | '/org/$orgId/agents/$agentId/memory'
     | '/org/$orgId/dm/agent/$agentId'
@@ -699,6 +729,7 @@ export interface FileRouteTypes {
     | '/surface-page'
     | '/termos'
     | '/terms'
+    | '/desktop/back'
     | '/desktop/connector'
     | '/desktop/handover'
     | '/desktop/sign-in'
@@ -729,11 +760,13 @@ export interface FileRouteTypes {
     | '/org/$orgId/drive/$fileId'
     | '/org/$orgId/issues/$number'
     | '/org/$orgId/settings/$section'
+    | '/org/$orgId/skills/$skillId'
     | '/org/$orgId/threads/$threadId'
     | '/org/$orgId/wiki/$slug'
     | '/org/$orgId/code'
     | '/org/$orgId/dashboards'
     | '/org/$orgId/issues'
+    | '/org/$orgId/skills'
     | '/org/$orgId/threads'
     | '/org/$orgId/agents/$agentId/memory'
     | '/org/$orgId/dm/agent/$agentId'
@@ -765,6 +798,7 @@ export interface FileRouteTypes {
     | '/surface-page'
     | '/termos'
     | '/terms'
+    | '/desktop/back'
     | '/desktop/connector'
     | '/desktop/handover'
     | '/desktop/sign-in'
@@ -796,11 +830,13 @@ export interface FileRouteTypes {
     | '/org/$orgId/drive_/$fileId'
     | '/org/$orgId/issues/$number'
     | '/org/$orgId/settings_/$section'
+    | '/org/$orgId/skills/$skillId'
     | '/org/$orgId/threads/$threadId'
     | '/org/$orgId/wiki_/$slug'
     | '/org/$orgId/code/'
     | '/org/$orgId/dashboards/'
     | '/org/$orgId/issues/'
+    | '/org/$orgId/skills/'
     | '/org/$orgId/threads/'
     | '/org/$orgId/agents/$agentId/memory'
     | '/org/$orgId/dm/agent/$agentId'
@@ -833,6 +869,7 @@ export interface RootRouteChildren {
   SurfacePageRoute: typeof SurfacePageRoute
   TermosRoute: typeof TermosRoute
   TermsRoute: typeof TermsRoute
+  DesktopBackRoute: typeof DesktopBackRoute
   DesktopConnectorRoute: typeof DesktopConnectorRoute
   DesktopHandoverRoute: typeof DesktopHandoverRoute
   DesktopSignInRoute: typeof DesktopSignInRoute
@@ -968,6 +1005,13 @@ declare module '@tanstack/react-router' {
       path: '/terms'
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/desktop/back': {
+      id: '/desktop/back'
+      path: '/desktop/back'
+      fullPath: '/desktop/back'
+      preLoaderRoute: typeof DesktopBackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/desktop/connector': {
@@ -1208,6 +1252,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrgOrgIdSettingsSectionRouteImport
       parentRoute: typeof OrgOrgIdRoute
     }
+    '/org/$orgId/skills/': {
+      id: '/org/$orgId/skills/'
+      path: '/skills'
+      fullPath: '/org/$orgId/skills/'
+      preLoaderRoute: typeof OrgOrgIdSkillsIndexRouteImport
+      parentRoute: typeof OrgOrgIdRoute
+    }
+    '/org/$orgId/skills/$skillId': {
+      id: '/org/$orgId/skills/$skillId'
+      path: '/skills/$skillId'
+      fullPath: '/org/$orgId/skills/$skillId'
+      preLoaderRoute: typeof OrgOrgIdSkillsSkillIdRouteImport
+      parentRoute: typeof OrgOrgIdRoute
+    }
     '/org/$orgId/threads/': {
       id: '/org/$orgId/threads/'
       path: '/threads'
@@ -1327,11 +1385,13 @@ interface OrgOrgIdRouteChildren {
   OrgOrgIdDriveFileIdRoute: typeof OrgOrgIdDriveFileIdRoute
   OrgOrgIdIssuesNumberRoute: typeof OrgOrgIdIssuesNumberRoute
   OrgOrgIdSettingsSectionRoute: typeof OrgOrgIdSettingsSectionRoute
+  OrgOrgIdSkillsSkillIdRoute: typeof OrgOrgIdSkillsSkillIdRoute
   OrgOrgIdThreadsThreadIdRoute: typeof OrgOrgIdThreadsThreadIdRoute
   OrgOrgIdWikiSlugRoute: typeof OrgOrgIdWikiSlugRoute
   OrgOrgIdCodeIndexRoute: typeof OrgOrgIdCodeIndexRoute
   OrgOrgIdDashboardsIndexRoute: typeof OrgOrgIdDashboardsIndexRoute
   OrgOrgIdIssuesIndexRoute: typeof OrgOrgIdIssuesIndexRoute
+  OrgOrgIdSkillsIndexRoute: typeof OrgOrgIdSkillsIndexRoute
   OrgOrgIdThreadsIndexRoute: typeof OrgOrgIdThreadsIndexRoute
   OrgOrgIdAgentsAgentIdMemoryRoute: typeof OrgOrgIdAgentsAgentIdMemoryRoute
   OrgOrgIdDmAgentAgentIdRoute: typeof OrgOrgIdDmAgentAgentIdRoute
@@ -1370,11 +1430,13 @@ const OrgOrgIdRouteChildren: OrgOrgIdRouteChildren = {
   OrgOrgIdDriveFileIdRoute: OrgOrgIdDriveFileIdRoute,
   OrgOrgIdIssuesNumberRoute: OrgOrgIdIssuesNumberRoute,
   OrgOrgIdSettingsSectionRoute: OrgOrgIdSettingsSectionRoute,
+  OrgOrgIdSkillsSkillIdRoute: OrgOrgIdSkillsSkillIdRoute,
   OrgOrgIdThreadsThreadIdRoute: OrgOrgIdThreadsThreadIdRoute,
   OrgOrgIdWikiSlugRoute: OrgOrgIdWikiSlugRoute,
   OrgOrgIdCodeIndexRoute: OrgOrgIdCodeIndexRoute,
   OrgOrgIdDashboardsIndexRoute: OrgOrgIdDashboardsIndexRoute,
   OrgOrgIdIssuesIndexRoute: OrgOrgIdIssuesIndexRoute,
+  OrgOrgIdSkillsIndexRoute: OrgOrgIdSkillsIndexRoute,
   OrgOrgIdThreadsIndexRoute: OrgOrgIdThreadsIndexRoute,
   OrgOrgIdAgentsAgentIdMemoryRoute: OrgOrgIdAgentsAgentIdMemoryRoute,
   OrgOrgIdDmAgentAgentIdRoute: OrgOrgIdDmAgentAgentIdRoute,
@@ -1415,6 +1477,7 @@ const rootRouteChildren: RootRouteChildren = {
   SurfacePageRoute: SurfacePageRoute,
   TermosRoute: TermosRoute,
   TermsRoute: TermsRoute,
+  DesktopBackRoute: DesktopBackRoute,
   DesktopConnectorRoute: DesktopConnectorRoute,
   DesktopHandoverRoute: DesktopHandoverRoute,
   DesktopSignInRoute: DesktopSignInRoute,

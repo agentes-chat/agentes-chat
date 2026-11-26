@@ -46,6 +46,7 @@ import {
   type WorkspaceActionCard,
 } from "../src";
 import { addMember, type Fixture, setup } from "./fixtures";
+import { pairMachine } from "./machine-fixtures";
 import { giveMail, gmailAccount, mailSetup } from "./mail-fixtures";
 
 let f: Fixture;
@@ -556,6 +557,45 @@ describe("the rest of the app through the right hand", () => {
     expect(await roles()).toEqual([]);
   });
 
+  test("one of their own computers used for their agents' work at once, with Desfazer; never someone else's", async () => {
+    f = await setup({ rightHand: true });
+    const bia = await addMember(f.db, f.org.id, "member", "Bia Teste");
+    const pc = async (userId: string, name: string) =>
+      (
+        await pairMachine({ db: f.db, pubsub: f.pubsub }, userId, f.org.id, {
+          name,
+          hostname: name,
+          os: "win32",
+          arch: "x64",
+          version: "0.8.0",
+          protocol: 1,
+          exec: true,
+        })
+      ).machineId;
+    const mine = await pc(bia.id, "Bia's PC");
+    await pc(f.owner.id, "Owner's PC");
+    const spillOf = async () =>
+      (
+        await f.db
+          .select({ own: schema.machines.spillOwn, first: schema.machines.spillFirst })
+          .from(schema.machines)
+          .where(eq(schema.machines.id, mine))
+      )[0];
+    const before = await spillOf();
+    const ctx = await lodiRun(f, bia.id, "usa meu PC para os trabalhos dos meus agentes");
+    // Someone else's computer isn't one of theirs.
+    const other = await act(f, ctx, { action: "set_computer_help", input: { computer: "Owner's PC", use: "first" } });
+    expect(other.isError).toBe(true);
+    expect(other.content).toContain("Bia's PC");
+    const out = await act(f, ctx, { action: "set_computer_help", input: { use: "first" } });
+    expect(out.content).toContain("Done at once");
+    expect(await spillOf()).toEqual({ own: true, first: true });
+    const [receipt] = await f.db.select().from(schema.agentActions).where(eq(schema.agentActions.runId, ctx.runId));
+    expect(receipt?.params).toMatchObject({ action: "set_computer_help", computer: "Bia's PC", variant: "first" });
+    await undoAgentAction({ db: f.db, pubsub: f.pubsub }, bia.id, f.org.id, receipt?.id ?? "");
+    expect(await spillOf()).toEqual(before);
+  });
+
   test("a channel renamed, its people changed and archived at once, all undone; its deletion is a card", async () => {
     f = await setup({ rightHand: true });
     const deps = { db: f.db, pubsub: f.pubsub };
@@ -855,6 +895,41 @@ describe("what Desfazer, the card and the people card keep to", () => {
       [],
     );
     expect(await row()).toMatchObject({ visibility: "private", audienceRoleIds: [sales.id] });
+  });
+
+  test("the right hand makes an agent in the channel responsible for it (ADR 0095); Desfazer takes it back", async () => {
+    f = await setup({ rightHand: true });
+    const row = async () => (await f.db.select().from(schema.channels).where(eq(schema.channels.id, f.general.id)))[0];
+    const ctx = await lodiRun(f, f.owner.id, "make dev responsible for general");
+    const unknown = await act(f, ctx, {
+      action: "update_channel",
+      input: { channel: "general", responsible: "@nobody" },
+    });
+    expect(unknown.content).toContain("No agent @nobody here");
+    const out = await act(f, ctx, { action: "update_channel", input: { channel: "general", responsible: "@dev" } });
+    expect(out.content).toContain("Done at once, with Undo");
+    expect((await row())?.leadAgentId).toBe(f.agent.id);
+    const messageId = await reply(f, ctx);
+    expect((await undoMessageActions({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, messageId)).failed).toEqual(
+      [],
+    );
+    expect((await row())?.leadAgentId).toBeNull();
+  });
+
+  test("the right hand has a channel's agents answer in threads (ADR 0214); Desfazer takes it back", async () => {
+    f = await setup({ rightHand: true });
+    const threads = async () =>
+      (await f.db.select().from(schema.channels).where(eq(schema.channels.id, f.general.id)))[0]?.replyInThreads;
+    expect(await threads()).toBe(false);
+    const ctx = await lodiRun(f, f.owner.id, "agentes respondem em threads no general");
+    const out = await act(f, ctx, { action: "update_channel", input: { channel: "general", reply_in_threads: true } });
+    expect(out.content).toContain("Done at once, with Undo");
+    expect(await threads()).toBe(true);
+    const messageId = await reply(f, ctx);
+    expect((await undoMessageActions({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, messageId)).failed).toEqual(
+      [],
+    );
+    expect(await threads()).toBe(false);
   });
 
   test("a new role's Desfazer waits while a channel's exception holds it; Desfazer tudo takes both back", async () => {

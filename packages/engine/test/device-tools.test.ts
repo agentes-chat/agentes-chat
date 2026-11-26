@@ -5,6 +5,7 @@ import { and, eq, schema } from "@agenteschat/db";
 import type { ModelRequest } from "@agenteschat/providers";
 import {
   afterDeviceAccessDecided,
+  autoComputer,
   createDeviceToolSource,
   type DeviceToolDeps,
   decideDeviceAccess,
@@ -272,6 +273,27 @@ describe("computer on someone else's device", () => {
     expect(one.content).toBe('- Phone "Pixel 8" (Android 15): ready, on "Sam\'s MacBook".\nYou may use it for ana.');
   });
 
+  test('computers free to help: listed by computer_status, and start_task\'s "auto" goes there only when its own has no room', async () => {
+    const w = await world();
+    const ctx = await runCtx();
+    const mac = eq(schema.machines.id, w.mac.machineId);
+    await f.db.update(schema.machines).set({ audienceMode: "everyone" }).where(mac);
+    // Sam's own computer: never for ana's agent, whatever it lets in.
+    expect((await call(ctx, "computer_status", {})).content).not.toContain("Free now to help");
+    await f.db.update(schema.machines).set({ belongsToWorkspace: true }).where(mac);
+    expect((await call(ctx, "computer_status", {})).content).toContain(
+      'Free now to help with long work: "Sam\'s MacBook". start_task with computer "auto"',
+    );
+    // Its own computer has room: "auto" stays there; paused, the free one takes it.
+    expect(await autoComputer(ctx)).toBe("");
+    const home = (await f.db.select().from(schema.agents).where(eq(schema.agents.id, f.agent.id)))[0]?.machineId ?? "";
+    await f.db.update(schema.machines).set({ paused: true }).where(eq(schema.machines.id, home));
+    expect(await autoComputer(ctx)).toBe("Sam's MacBook");
+    // Its owner's switch off, or the workspace's: nothing helps.
+    await f.db.update(schema.machines).set({ spillOwn: false }).where(mac);
+    expect(await autoComputer(ctx)).toBe("");
+  });
+
   test("computer_status says which switches are off on a shared computer and who turns them on", async () => {
     const w = await world();
     const ctx = await runCtx();
@@ -283,7 +305,7 @@ describe("computer on someone else's device", () => {
         os: "darwin",
         execAllowed: false,
         access: { folders: [], tools: { claude: false, codex: false, commands: false } },
-        executors: { claude: { version: "2.1.0" } },
+        executors: { claude: { version: "2.1.300" } },
       })
       .where(machine);
     const mac = await call(ctx, "computer_status", { computer: "Sam's MacBook" });

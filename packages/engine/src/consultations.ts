@@ -29,15 +29,15 @@ import { canceledBy, stopRun } from "./cancel";
 import { isConfidentialRun, threadIsConfidential } from "./confidential";
 import { deliverNotice, publishDelivery } from "./delivery";
 import { INBOX_JOB, startOrJoinRun } from "./dispatch";
-import { isAgentOnlyDm, openAgentDm } from "./dms";
-import { publishChannelEvent } from "./events";
+import { isAgentOnlyDm, openAgentDm, personAgentDmKey } from "./dms";
+import { publishChannelEvent, publishMessageCreated } from "./events";
 import { cutText } from "./format";
 import { JevOffError } from "./jev-key";
 import type { Judge } from "./judge";
 import { PLATFORM_CAP } from "./limits";
 import { machineOnline } from "./machines";
 import { messageLink } from "./message-links";
-import { getMessage, insertMessage, type Message, type MessageView, withMessageDetails } from "./messages";
+import { getMessage, insertMessage, type Message, type MessageView, messageView, withMessageDetails } from "./messages";
 import type { Notice } from "./notices";
 import { notifyAgentUnreached } from "./notification-producers";
 import { runReadOutsideById } from "./outside";
@@ -51,6 +51,7 @@ import { tellAgentStopped } from "./run-stopped";
 import { type AgentRun, continuableEnd, isTerminal, outageParkedSql, type RunStatus, replyThreadOf } from "./runs";
 import { AgentHeldError, OrgDeletingError, OrgPausedError } from "./standing";
 import { MAX_HANDOFF_LINKS, refusedAtLimit, runStretchOf, stretchStop } from "./stretch";
+import { channelReaderSql } from "./task-access";
 import { noAgentText } from "./team";
 import type { ToolContext, ToolDefinition, ToolOutput, ToolSource } from "./tools/types";
 import { untrustedBlock } from "./untrusted";
@@ -278,9 +279,11 @@ export function createAskAgentToolSource(
             askerReadOutside: relays,
           })
           .returning();
-        return row;
+        return row ? { row, trace: await traceHandOff(tx, row) } : null;
       });
       if (!created) return refuse(`Could not reach @${handle}. Go on without it.`);
+      if (created.trace && deps.pubsub)
+        await publishMessageCreated(deps.pubsub, messageView(created.trace)).catch(() => {});
       await publishChannelEvent(deps.pubsub, {
         type: "agent.consulting",
         channelId: ctx.channelId,
@@ -293,7 +296,7 @@ export function createAskAgentToolSource(
         content: between
           ? `Asked @${handle}. Your answer goes back once @${handle} has answered, together with it: do your own part now, then end your turn saying what you asked.`
           : `Asked @${handle}. Its answer will reach you as a message in this conversation, even after this turn ends. Meanwhile do what you can yourself and tell the person what you asked and what you found so far; if there's nothing else to do now, say so and end your turn.`,
-        data: { consultation: { id: created.id, agentId: target.id } },
+        data: { consultation: { id: created.row.id, agentId: target.id } },
       };
     },
   };
@@ -411,6 +414,7 @@ function createTellAgentTool(deps: { pubsub?: PubSub; ai?: AiCheck; judge?: Judg
           data: { agentNote: { duplicate: true, agentId: target.id } },
         };
       }
+      if (sent.trace && deps.pubsub) await publishMessageCreated(deps.pubsub, messageView(sent.trace)).catch(() => {});
       if (braked) {
         const { held } = await brakeWakes(
           { db, pubsub: deps.pubsub, judge: deps.judge ?? null },
@@ -422,10 +426,12 @@ function createTellAgentTool(deps: { pubsub?: PubSub; ai?: AiCheck; judge?: Judg
         waitsForRoom = outcome === "later";
         if (!outcome) await startNoteRun(db, sent.message, target.id);
         else if (outcome === "linked" || outcome === "loop") {
-          await db
+          const [closed] = await db
             .update(agentConsultations)
             .set({ status: "answered", answer: HELD_WORDS[outcome], answeredAt: new Date(), reportedAt: new Date() })
-            .where(eq(agentConsultations.id, sent.consultationId));
+            .where(eq(agentConsultations.id, sent.consultationId))
+            .returning();
+          if (closed) await settleHandOffTrace({ db, pubsub: deps.pubsub }, closed).catch(() => {});
           return {
             content: `@${handle} ${HELD_WORDS[outcome]} Carry on with your own part.`,
             data: { agentNote: { held: outcome, agentId: target.id } },
@@ -585,26 +591,30 @@ export async function sendNote(
         .limit(1);
       if (open) return { message, consultationId: open.id };
     }
-    await tx.insert(agentConsultations).values({
-      id: consultationId,
-      orgId: input.orgId,
-      kind: "note",
-      askerRunId: input.runId,
-      askerAgentId: input.agentId,
-      targetAgentId: input.targetAgentId,
-      channelId: channel.id,
-      messageId: message.id,
-      targetRunId: started ? ("created" in started ? started.created.id : started.joined) : null,
-      // A heads-up is delivered once written: nothing waits on it or reports it.
-      ...(input.headsUp ? { status: "answered" as const, answeredAt: new Date(), reportedAt: new Date() } : {}),
-      waitId: `${ASYNC_WAIT}${Bun.randomUUIDv7()}`,
-      question: input.body,
-      chain: input.chain,
-      expiresAt: new Date(Date.now() + CONSULTATION_TTL_MS),
-      forUserId: (await runAuthorityById(tx, input.orgId, input.runId)).personId,
-      askerReadOutside: relays,
-    });
-    return { message, consultationId };
+    const [row] = await tx
+      .insert(agentConsultations)
+      .values({
+        id: consultationId,
+        orgId: input.orgId,
+        kind: "note",
+        askerRunId: input.runId,
+        askerAgentId: input.agentId,
+        targetAgentId: input.targetAgentId,
+        channelId: channel.id,
+        messageId: message.id,
+        targetRunId: started ? ("created" in started ? started.created.id : started.joined) : null,
+        // A heads-up is delivered once written: nothing waits on it or reports it.
+        ...(input.headsUp ? { status: "answered" as const, answeredAt: new Date(), reportedAt: new Date() } : {}),
+        waitId: `${ASYNC_WAIT}${Bun.randomUUIDv7()}`,
+        question: input.body,
+        chain: input.chain,
+        expiresAt: new Date(Date.now() + CONSULTATION_TTL_MS),
+        forUserId: (await runAuthorityById(tx, input.orgId, input.runId)).personId,
+        askerReadOutside: relays,
+      })
+      .returning();
+    // A heads-up asks nothing: it leaves no trace.
+    return { message, consultationId, trace: row && !input.headsUp ? await traceHandOff(tx, row) : null };
   });
 }
 
@@ -1129,6 +1139,7 @@ async function closeConsultation(
   });
   if (!out) return null;
   const { closed, asker, handle } = out;
+  await settleHandOffTrace(deps, closed).catch(() => {});
   if (!asker) return closed;
   const hidden = await keptFromPeople(deps.db, closed);
   // Work handed off from a person's conversation: whether what came back woke the agent that handed it.
@@ -2293,13 +2304,20 @@ export async function consultationConversation(
       expiresAt: agentConsultations.expiresAt,
     })
     .from(agentConsultations)
-    .innerJoin(agentRuns, eq(agentRuns.id, agentConsultations.askerRunId))
     .where(
       and(
         eq(agentConsultations.orgId, orgId),
         eq(agentConsultations.id, consultationId),
-        eq(agentRuns.orgId, orgId),
-        eq(agentRuns.channelId, channelId),
+        // Asked from here, or answered here: an asker that ran elsewhere (a routine's room) and ended before the
+        // answer gets it as a `consult_reply` notice in the conversation that woke it, which links to this.
+        or(
+          sql`exists (select 1 from ${agentRuns} r where r.id = ${agentConsultations.askerRunId}
+            and r.org_id = ${orgId}::uuid and r.channel_id = ${channelId}::uuid)`,
+          sql`exists (select 1 from ${messages} m where m.org_id = ${orgId}::uuid and m.channel_id = ${channelId}::uuid
+            and m.created_at >= ${agentConsultations.createdAt} and m.deleted_at is null
+            and m.meta->'notice'->>'kind' = 'consult_reply'
+            and m.meta->'notice'->'refs'->>'consultationId' = ${agentConsultations.id}::text)`,
+        ),
       ),
     );
   if (!row) return null;
@@ -2999,4 +3017,231 @@ function handedWorkState(
     };
   const words = report && !String(report.meta.bodyCode ?? "").startsWith("work_end_") ? report.body : null;
   return { status: "answered", words, relayed: report?.meta.readOutside === true };
+}
+
+/** How much of the question the trace keeps (`NOTICE_QUESTION_MAX`, as the asker's notice). */
+const TRACE_QUESTION_MAX = NOTICE_QUESTION_MAX;
+/** How far back a run's earlier trace is looked for: longer than any one run. */
+const TRACE_FOLD_MS = 24 * 60 * 60_000;
+
+/**
+ * Where the person behind a hand-off asked: the asking run's conversation, or up its chain from where a run answers
+ * hand-offs (`answersHandOffs`), as handed work reports there (`consultationOrigin`).
+ */
+async function handOffAskedIn(db: Executor, orgId: string, askerRunId: string) {
+  const [asker] = await db
+    .select({ channelId: agentRuns.channelId, kind: channels.kind, dmKey: channels.dmKey })
+    .from(agentRuns)
+    .innerJoin(channels, eq(channels.id, agentRuns.channelId))
+    .where(and(eq(agentRuns.orgId, orgId), eq(agentRuns.id, askerRunId)));
+  if (!asker) return null;
+  return answersHandOffs(asker)
+    ? ((await consultationOrigin(db, orgId, askerRunId))?.channelId ?? null)
+    : asker.channelId;
+}
+
+/**
+ * Where a hand-off leaves its trace: the DM between the agent that got it and the person behind the run that asked,
+ * when that person may talk to that agent (one it answers agents only for never hears of it). Null for nobody's work,
+ * a routine's (no person is behind it), that DM not being theirs to read, or that DM being where they asked: there
+ * the hand-off already shows (its pair row, or the handed work's line and messages).
+ */
+async function traceDm(tx: Executor, c: Pick<AgentConsultationRow, "orgId" | "askerRunId" | "targetAgentId">) {
+  const person = (await runAuthorityById(tx, c.orgId, c.askerRunId)).personId;
+  if (!person) return null;
+  const [target] = await tx
+    .select()
+    .from(agents)
+    .where(and(eq(agents.orgId, c.orgId), eq(agents.id, c.targetAgentId)));
+  if (!target || !canTalkTo(target, person, await speakerFor(tx, c.orgId, person))) return null;
+  const asked = await handOffAskedIn(tx, c.orgId, c.askerRunId);
+  const [there] = asked
+    ? await tx
+        .select({ dmKey: channels.dmKey, kind: channels.kind })
+        .from(channels)
+        .where(and(eq(channels.orgId, c.orgId), eq(channels.id, asked)))
+    : [];
+  if (there?.dmKey === personAgentDmKey(person, target.id)) return null;
+  // The row names where they asked only when it is a channel ("em #eng").
+  return { person, target, askedIn: asked && there?.kind === "channel" ? asked : null };
+}
+
+/**
+ * The quiet row a hand-off leaves in the DM of the agent that got it with the person behind it (`hand_off`, a quiet
+ * notice: no unread, no notification), so that DM shows the request and opens the exchange. Written once, as it is
+ * asked; its state changes in place as it closes (`settleHandOffTrace`). Marked `readOutside` like the note it copies.
+ * Returns the message to publish after the commit, or null when no person would read it there (`traceDm`) or they
+ * have no DM with that agent.
+ */
+export async function traceHandOff(
+  tx: Executor,
+  c: Pick<
+    AgentConsultationRow,
+    "id" | "orgId" | "kind" | "askerRunId" | "askerAgentId" | "targetAgentId" | "question" | "createdAt"
+  >,
+) {
+  const to = await traceDm(tx, c);
+  if (!to) return null;
+  // Only a DM the person already has: opening one would put an empty conversation at the top of their lists.
+  const [dm] = await tx
+    .select({ id: channels.id })
+    .from(channels)
+    .where(
+      and(
+        eq(channels.orgId, c.orgId),
+        eq(channels.dmKey, personAgentDmKey(to.person, c.targetAgentId)),
+        isNull(channels.archivedAt),
+      ),
+    );
+  if (!dm) return null;
+  // One line per piece of work: the run's later asks of the same agent fold into its first.
+  const [folded] = await tx
+    .select({ id: messages.id })
+    .from(messages)
+    .where(
+      and(
+        eq(messages.orgId, c.orgId),
+        eq(messages.channelId, dm.id),
+        gte(messages.createdAt, new Date(c.createdAt.getTime() - TRACE_FOLD_MS)),
+        sql`${messages.meta}->'notice'->>'kind' = 'hand_off'`,
+        sql`${messages.meta}->'notice'->'refs'->>'askerRunId' = ${c.askerRunId}`,
+      ),
+    )
+    .limit(1);
+  if (folded) return null;
+  const notice: Notice = {
+    kind: "hand_off",
+    text: `"${cutText(c.question, 300)}"`,
+    from: `@${await handleOf(tx, c.orgId, c.askerAgentId)}`,
+    refs: {
+      consultationId: c.id,
+      askerAgentId: c.askerAgentId,
+      askerRunId: c.askerRunId,
+      agentId: c.targetAgentId,
+      ...(to.askedIn ? { askedIn: to.askedIn } : {}),
+      status: "open",
+      question: cutText(c.question, TRACE_QUESTION_MAX),
+      createdAt: c.createdAt.toISOString(),
+      ...(c.kind === "note" ? { kind: "note" } : {}),
+    },
+  };
+  const { message } = await deliverNotice(tx, {
+    orgId: c.orgId,
+    agentId: c.targetAgentId,
+    channelId: dm.id,
+    threadId: null,
+    hop: 0,
+    stretchId: null,
+    notice,
+    wake: false,
+    readOutside: await runReadOutsideById(tx, c.orgId, c.askerRunId),
+  });
+  return message;
+}
+
+/**
+ * A hand-off's trace (`traceHandOff`) says how it ended and when, in place: found in that one DM from the hand-off's
+ * time on, never by scanning messages. Published so the row changes live. When its run became handed work
+ * (`handOverWork`) the row follows that work, not the note: Continuar reopens a work whose note already closed.
+ */
+export async function settleHandOffTrace(
+  deps: { db: Executor; pubsub?: PubSub },
+  c: Pick<
+    AgentConsultationRow,
+    "id" | "orgId" | "askerRunId" | "targetAgentId" | "targetRunId" | "status" | "answeredAt" | "createdAt"
+  >,
+) {
+  const to = await traceDm(deps.db, c);
+  if (!to) return;
+  const [work] = c.targetRunId
+    ? await deps.db
+        .select({ status: agentWorks.status, finishedAt: agentWorks.finishedAt })
+        .from(agentRuns)
+        .innerJoin(agentWorks, and(eq(agentWorks.id, agentRuns.workId), eq(agentWorks.how, "handed")))
+        .where(and(eq(agentRuns.orgId, c.orgId), eq(agentRuns.id, c.targetRunId)))
+    : [];
+  const refs = !work
+    ? { status: c.status, answeredAt: (c.answeredAt ?? new Date()).toISOString() }
+    : work.finishedAt
+      ? { status: work.status === "done" ? "answered" : "failed", answeredAt: work.finishedAt.toISOString() }
+      : { status: "open" };
+  const [updated] = await deps.db
+    .update(messages)
+    .set({
+      meta: sql`jsonb_set(${messages.meta}, '{notice,refs}', ((${messages.meta}->'notice'->'refs') - 'answeredAt') || ${JSON.stringify(refs)}::jsonb)`,
+    })
+    .where(
+      and(
+        eq(messages.orgId, c.orgId),
+        sql`${messages.channelId} = (select ${channels.id} from ${channels} where ${channels.orgId} = ${c.orgId}
+          and ${channels.dmKey} = ${personAgentDmKey(to.person, c.targetAgentId)})`,
+        gte(messages.createdAt, new Date(c.createdAt.getTime() - 60_000)),
+        sql`${messages.meta}->'notice'->>'kind' = 'hand_off'`,
+        sql`${messages.meta}->'notice'->'refs'->>'consultationId' = ${c.id}`,
+      ),
+    )
+    .returning();
+  if (updated && deps.pubsub) await publishMessageCreated(deps.pubsub, messageView(updated)).catch(() => {});
+}
+
+/** A handed work ended, or Continuar reopened it: the trace of the hand-off that started it follows. */
+export async function settleHandedWorkTrace(
+  deps: { db: Executor; pubsub?: PubSub },
+  work: { orgId: string; how: string; consultationId: string | null },
+) {
+  if (work.how !== "handed" || !work.consultationId) return;
+  const [c] = await deps.db
+    .select()
+    .from(agentConsultations)
+    .where(and(eq(agentConsultations.orgId, work.orgId), eq(agentConsultations.id, work.consultationId)));
+  if (c) await settleHandOffTrace(deps, c);
+}
+
+/**
+ * The exchange a hand-off's trace in this DM opens (`traceHandOff`), read only: what a reader of the asking agent's
+ * conversation sees of it (`consultationConversation`). Only for a viewer who reads where the work was handed off, the
+ * first conversation up its chain outside two agents' DM (the place the agents' work view gives it, `agent-work.ts`):
+ * reading the DM alone is not enough. Null otherwise.
+ */
+export async function handedConversation(
+  db: Database,
+  orgId: string,
+  channelId: string,
+  consultationId: string,
+  viewerId: string,
+): Promise<ConsultationConversation | null> {
+  const [c] = await db
+    .select({
+      createdAt: agentConsultations.createdAt,
+      askerRunId: agentConsultations.askerRunId,
+      askerChannelId: agentRuns.channelId,
+    })
+    .from(agentConsultations)
+    .innerJoin(agentRuns, eq(agentRuns.id, agentConsultations.askerRunId))
+    .where(and(eq(agentConsultations.orgId, orgId), eq(agentConsultations.id, consultationId)));
+  if (!c) return null;
+  const [trace] = await db
+    .select({ id: messages.id })
+    .from(messages)
+    .where(
+      and(
+        eq(messages.orgId, orgId),
+        eq(messages.channelId, channelId),
+        gte(messages.createdAt, new Date(c.createdAt.getTime() - 60_000)),
+        isNull(messages.deletedAt),
+        sql`${messages.meta}->'notice'->>'kind' = 'hand_off'`,
+        sql`${messages.meta}->'notice'->'refs'->>'consultationId' = ${consultationId}`,
+      ),
+    )
+    .limit(1);
+  if (!trace) return null;
+  const anchor = await handOffAskedIn(db, orgId, c.askerRunId);
+  if (!anchor) return null;
+  const [reads] = rowsOf<{ ok: boolean | string }>(
+    await db.execute(sql`select (c.archived_at is null and not ${agentsOnlyIn("c")}
+        and ${channelReaderSql(sql`c.id`, sql`${viewerId}::text`)}) as ok
+      from ${channels} c where c.org_id = ${orgId}::uuid and c.id = ${anchor}::uuid`),
+  );
+  if (reads?.ok !== true && reads?.ok !== "t") return null;
+  return consultationConversation(db, orgId, c.askerChannelId, consultationId);
 }

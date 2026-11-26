@@ -438,6 +438,44 @@ export const helpPtBR: Record<HelpSlug, HelpDocument> = {
         ],
       },
       {
+        id: "tool-levels",
+        heading: "Cada ferramenta de um app conectado",
+        blocks: [
+          "Cada ferramenta de um app conectado pelo endereço tem um nível próprio, escolhido em **Configurações\u00a0›\u00a0Conectores**, nas ferramentas daquela conexão. Na página do agente, **Ferramentas e acesso** mostra quais apps e ferramentas ele pode usar.",
+          {
+            list: [
+              "**Só consulta**: lê e não muda nada. Nunca pergunta.",
+              "**Muda coisas**: cria e altera sem perguntar. Um agente em **Sempre perguntar** ainda pergunta.",
+              "**Pede sua aprovação**: pergunta na conversa antes de cada uso.",
+              "**Desligada**: os agentes não recebem.",
+            ],
+          },
+          "**Nunca perguntar**, na página do agente, vem antes de tudo isso: um agente nesse nível não pede nada, nem numa ferramenta em **Pede sua aprovação**. Quando um nível muda com pedidos esperando, os que não perguntariam mais são cancelados, e o agente faz de novo, sem cartão.",
+        ],
+      },
+      {
+        id: "sensitive",
+        heading: "Ferramentas sensíveis",
+        blocks: [
+          "Uma ferramenta que o servidor do app marca como de apagar, enviar ou pagar só pode ficar em **Pede sua aprovação** ou **Desligada**.",
+        ],
+      },
+      {
+        id: "order",
+        heading: "Em que ordem as ações aprovadas rodam",
+        blocks: [
+          "Numa mesma vez, o agente faz as ações na ordem em que pediu, seja qual for a ordem em que você aprova. Uma mensagem enviada enquanto o agente espera começa uma nova vez, e as ações dela rodam depois dos pedidos que o agente soube que já esperavam. Pedidos de conversas diferentes nunca esperam um pelo outro.",
+          "Um pedido esperando uma pessoa há mais de 30 minutos não segura nada. Uma ação aprovada que espera diz pelo quê, com **Aprovar** e **Recusar** para aquele pedido e **Rodar este agora** para seguir sem ele.",
+        ],
+      },
+      {
+        id: "many",
+        heading: "Vários de uma vez",
+        blocks: [
+          "Onde os pedidos esperam você, na web e no celular, **Aprovar todos** e **Recusar todos** decidem de uma vez todos os pedidos de um agente.",
+        ],
+      },
+      {
         id: "who",
         heading: "Quem aprova",
         blocks: [

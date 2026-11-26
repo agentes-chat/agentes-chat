@@ -63,6 +63,8 @@ if (log) {
   const oauthEnv = process.env.CLAUDE_CODE_OAUTH_TOKEN ?? null;
   const baseUrl = process.env.ANTHROPIC_BASE_URL ?? null;
   const compactWindow = process.env.CLAUDE_CODE_AUTO_COMPACT_WINDOW ?? null;
+  const tz = process.env.TZ ?? null;
+  const tmpdir = process.env.TMPDIR ?? null;
   const autoMemoryOff = process.env.CLAUDE_CODE_DISABLE_AUTO_MEMORY ?? null;
   const at = args.indexOf("--settings");
   let settingsEnv = null;
@@ -79,7 +81,7 @@ if (log) {
   } catch {}
   appendFileSync(
     log,
-    `${JSON.stringify({ pid: process.pid, args, configDir, cwd: process.cwd(), apiKey, authToken, oauthToken, oauthEnv, oauthFd, baseUrl, settingsEnv, cleanupDays, compactWindow, autoMemoryOff, system })}\n`,
+    `${JSON.stringify({ pid: process.pid, args, configDir, cwd: process.cwd(), apiKey, authToken, oauthToken, oauthEnv, oauthFd, baseUrl, settingsEnv, cleanupDays, compactWindow, tz, tmpdir, autoMemoryOff, system })}\n`,
   );
 }
 const flag = (name) => {

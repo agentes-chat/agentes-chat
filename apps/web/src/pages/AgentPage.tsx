@@ -87,13 +87,12 @@ import {
   PERSONAL_AGENT_TABS,
   revertKey,
   type Saved,
-  SKILLS_AREA,
   shownAgentTab,
   thisMonth,
   type Viewer,
 } from "@/lib/agent-edit";
 import { fullLook, lookOf } from "@/lib/look";
-import { handleAfterRename, handleProblemText, readBudget, takenHandles } from "@/lib/new-agent";
+import { handleAfterRename, handleProblemText, readBudget, takenHandles, workspaceBudgetText } from "@/lib/new-agent";
 import { agentPanelSearch } from "@/lib/open-param";
 import { useToast } from "@/lib/toast";
 import { AccessTab } from "./agent/AccessTab";
@@ -354,9 +353,7 @@ function AgentProfile({
     );
   const budgetText = (amount: number | null) =>
     amount === null
-      ? settings.data?.defaultAgentBudgetUsd === undefined
-        ? t("agentPage.budgetDefault")
-        : t("agentPage.budgetDefaultAmount", { amount: usd(t, i18n.language, settings.data.defaultAgentBudgetUsd) })
+      ? workspaceBudgetText(t, i18n.language, settings.data?.defaultAgentBudgetUsd)
       : t("agentPage.perMonth", { amount: usd(t, i18n.language, amount) });
   const keyText = (k: string) =>
     keyOptions(t, credentials.data ?? [], settings.data?.defaultCredentialId ?? null).find((o) => o.value === k)
@@ -379,8 +376,8 @@ function AgentProfile({
       // The right hand's page has no Advanced: all of what it may use is on one tab.
       !rightHand &&
       (field === "skills" || (field === "levels" && resourceById.get(resource ?? "")?.kind !== "connector"));
-    // The level of the skills' own area is on the Skills tab, with the skills.
-    const onSkills = field === "skills" || (field === "levels" && resource === SKILLS_AREA);
+    // What it knows is on the Skills tab; the skills' own level is with the other areas.
+    const onSkills = field === "skills";
     const base = {
       key,
       field,

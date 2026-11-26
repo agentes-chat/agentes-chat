@@ -64,8 +64,9 @@ describe("a personal workspace's sidebar", () => {
     await go(personal());
     const me = within(top()).getByRole("button", { name: /^Conta: / });
     expect(me.textContent).toContain("Walter");
-    // My row, not the workspace's: my name wraps whole there, never cut.
+    // My row, not the workspace's: my name on one line beside my face, the button saying it whole as its title.
     expect(me.classList.contains("sidebar__org-button--me")).toBe(true);
+    expect(me.getAttribute("title")).toContain(me.querySelector(".sidebar__org-name")?.textContent ?? "-");
     expect(within(top()).queryAllByRole("link")).toHaveLength(0);
     expect(within(nav()).getByRole("link", { name: "Caixa de entrada" }).getAttribute("href")).toBe(
       `/org/${ORG_ID}/notifications`,
@@ -127,6 +128,7 @@ describe("a personal workspace's sidebar", () => {
       "Tarefas",
       "Threads",
       "Equipe",
+      "Skills",
       "Wiki",
       "Painéis",
       "Gerenciador de tarefas",
@@ -427,7 +429,11 @@ describe("a personal workspace's sidebar", () => {
     await go(state, `dm/agent/${ADA_ID}`);
     expect(blocks()).toEqual(["tools", "agents", "channels"]);
     expect(channelRows()).toEqual([]);
-    await click(within(nav()).getByRole("button", { name: "Nova conversa em grupo" }));
+    // The header's + carries the same name; it opens a menu, the row the dialog.
+    const row = within(nav())
+      .getAllByRole("button", { name: "Nova conversa em grupo" })
+      .find((b) => b.classList.contains("sidebar__new-channel"));
+    await click(row as Element);
     expect(screen().getByRole("dialog", { name: "Nova conversa em grupo" })).toBeTruthy();
   });
 

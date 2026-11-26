@@ -128,8 +128,8 @@ each verb is a group with its own mark and faces ("Marina está digitando · Rui
 the second takes a line of its own when the line is short: names give way, verbs never. Copy:
 `chat.activity.recordingVoice`.
 
-**Agents wait for it.** The quiet window counts a voice frame like typing (ADR 0112): a run started on a person's
-message waits its whole window while they record a follow-up.
+**Agents wait for it.** A voice frame counts like typing (ADR 0112): a run started on a person's message holds its
+first model call while they record a follow-up.
 
 ## Addendum (2026-11-15): typed text and files in the same message
 

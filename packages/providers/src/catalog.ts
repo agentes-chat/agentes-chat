@@ -107,6 +107,11 @@ export interface ModelInfo {
    * a little (it can't be turned off). Absent: `none` goes as `low`.
    */
   leastThinking?: "off" | "minimal";
+  /**
+   * Returns the notes it writes between tool calls as progress-update thinking blocks, empty unless asked for with
+   * `thinking.display: "updates"` (Anthropic beta `thinking-display-updates-2026-08-18`).
+   */
+  thinkingUpdates?: true;
   /** Suggested for new agents of that provider. */
   recommended?: boolean;
   /** Its size in the provider's line, for "Automático": each run picks a tier, mapped back to a model. */
@@ -193,6 +198,7 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     maxOutputTokens: 128_000,
     efforts: CLAUDE_EFFORTS,
     serverSideFallback: true,
+    thinkingUpdates: true,
   },
   // Its 1M-token window from platform.claude.com/docs/en/about-claude/models/overview, all of it at these prices
   // (2026-11-09). No tier and no pick for routing or system tasks: "Automático" never chooses it, people do.
@@ -204,6 +210,7 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     maxOutputTokens: 128_000,
     efforts: CLAUDE_EFFORTS,
     serverSideFallback: true,
+    thinkingUpdates: true,
   },
   "claude-opus-5-5": {
     provider: "anthropic",
@@ -213,6 +220,7 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     maxOutputTokens: 128_000,
     efforts: CLAUDE_EFFORTS,
     serverSideFallback: true,
+    thinkingUpdates: true,
     tier: "large",
   },
   "claude-sonnet-5-5": {
@@ -223,6 +231,7 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     maxOutputTokens: 128_000,
     efforts: CLAUDE_EFFORTS,
     serverSideFallback: true,
+    thinkingUpdates: true,
     recommended: true,
     tier: "medium",
   },

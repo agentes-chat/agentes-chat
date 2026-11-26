@@ -443,6 +443,44 @@ export const helpEs: Partial<Record<HelpSlug, HelpDocument>> = {
         ],
       },
       {
+        id: "tool-levels",
+        heading: "Cada herramienta de una app conectada",
+        blocks: [
+          "Cada herramienta de una app conectada por su dirección tiene su propio nivel, que eliges en **Configuración\u00a0›\u00a0Conectores**, en las herramientas de esa conexión. En la página del agente, **Herramientas y acceso** muestra qué apps y herramientas puede usar.",
+          {
+            list: [
+              "**Solo mira**: lee y no cambia nada. Nunca pregunta.",
+              "**Cambia cosas**: crea y edita sin preguntar. Un agente en **Preguntar siempre** igual pregunta.",
+              "**Pide tu aprobación**: pregunta en la conversación antes de cada uso.",
+              "**Desactivada**: los agentes no la reciben.",
+            ],
+          },
+          "**No preguntar nunca**, en la página del agente, va antes que todo esto: un agente en ese nivel no pide nada, tampoco con una herramienta en **Pide tu aprobación**. Si un nivel cambia mientras hay pedidos esperando, los que ya no preguntarían se cancelan, y el agente los vuelve a hacer sin tarjeta.",
+        ],
+      },
+      {
+        id: "sensitive",
+        heading: "Herramientas sensibles",
+        blocks: [
+          "Una herramienta que el servidor de la app marca como de borrar, enviar o pagar solo puede estar en **Pide tu aprobación** o **Desactivada**.",
+        ],
+      },
+      {
+        id: "order",
+        heading: "En qué orden se ejecutan las acciones aprobadas",
+        blocks: [
+          "En un mismo turno, el agente hace sus acciones en el orden en que las pidió, sin importar en qué orden las apruebes. Un mensaje enviado mientras el agente espera empieza un turno nuevo, y sus acciones se ejecutan después de los pedidos que el agente supo que ya esperaban. Los pedidos de conversaciones distintas nunca se esperan entre sí.",
+          "Un pedido que espera a una persona hace más de 30 minutos no retiene nada. Una acción aprobada que espera dice por qué, con **Aprobar** y **Rechazar** para ese pedido y **Ejecutar esta ahora** para seguir sin él.",
+        ],
+      },
+      {
+        id: "many",
+        heading: "Varios a la vez",
+        blocks: [
+          "Donde los pedidos te esperan, en la web y en el teléfono, **Aprobar todos** y **Rechazar todos** deciden a la vez todos los pedidos de un agente.",
+        ],
+      },
+      {
         id: "who",
         heading: "Quién aprueba",
         blocks: [

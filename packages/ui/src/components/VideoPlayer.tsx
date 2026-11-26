@@ -1,4 +1,5 @@
 import {
+  type CSSProperties,
   type KeyboardEvent,
   type PointerEvent,
   type ReactNode,
@@ -170,7 +171,7 @@ function Rail({
       <span className="ac-video__line">
         {buffered !== undefined && <span className="ac-video__buffered" style={{ width: `${buffered * 100}%` }} />}
         <span className="ac-video__filled" style={{ width: `${value * 100}%` }} />
-        <span className="ac-video__knob" style={{ left: `${value * 100}%` }} />
+        <span className="ac-video__knob" style={{ "--at": value } as CSSProperties} />
       </span>
       {tip && shown !== null && (
         <span className="ac-video__tip" style={{ left: `${shown * 100}%` }} aria-hidden="true">

@@ -4,22 +4,12 @@
     "send": "Gönder"
   },
   "categories": {
-    "title": "Kategoriler",
     "where": "#{{channel}} kanalının göründüğü yer",
     "whereHelp": "Herkes için değişir. Kanala kimlerin katıldığı aynı kalır.",
-    "create": "Oluştur",
-    "endOfList": "Herkes için listenin sonuna eklenir.",
-    "channelCount_one": "{{count}} kanal",
-    "channelCount_other": "{{count}} kanal",
-    "none": "Henüz kategori yok.",
-    "manageHint": "Sıra, adlar ve silme",
-    "deleteTitle": "{{name}} silinsin mi?",
     "order": "Listedeki yeri",
     "up": "Yukarı taşı",
     "down": "Aşağı taşı",
-    "position": "{{at}} / {{count}}.",
-    "channelPosition": "{{at}} / {{count}}.",
-    "itsChannels": "Kanallar"
+    "channelPosition": "{{at}} / {{count}}."
   },
   "blocks": {
     "send": "Gönder",
@@ -995,6 +985,10 @@
       "computer_disk_full_other": "Bir bilgisayarın diski neredeyse dolu",
       "computer_no_chrome_one": "Bir bilgisayarın Google Chrome'a ihtiyacı var. google.com/chrome adresinden indirin",
       "computer_no_chrome_other": "Bilgisayarların Google Chrome'a ihtiyacı var. google.com/chrome adresinden indirin",
+      "computer_down_one": "Bir bilgisayar yanıt vermiyor",
+      "computer_down_other": "Bir bilgisayar yanıt vermiyor",
+      "computer_back_one": "Bir bilgisayar geri geldi",
+      "computer_back_other": "Bir bilgisayar geri geldi",
       "app_created_one": "Bir yapay zeka uygulaması sizin için bir şeyler oluşturdu",
       "app_created_other": "Bir yapay zeka uygulaması sizin için bir şeyler oluşturdu"
     },
@@ -2101,6 +2095,7 @@
       "tool_request": "{{names}}, {{device}} cihazınızda {{tool}} açmanızı istiyor",
       "cli_request": "{{names}}, {{device}} cihazınıza {{tool}} kurmanızı istiyor",
       "folder_request": "{{names}}, {{device}} cihazınızda {{path}} klasörünü istiyor",
+      "internet_shared": "Ajanlar artık web sitelerini {{device}} bilgisayarının internetiyle açıyor",
       "allowOnce": "Bir kez izin ver",
       "always": "{{name}} için her zaman izin ver",
       "no": "Hayır",
@@ -3257,7 +3252,8 @@
       "workspaceSub": "Çalışma alanının API anahtarı",
       "key": "API anahtarı",
       "keyDefault": "çalışma alanı varsayılanı",
-      "api": "API"
+      "api": "API",
+      "asksMove": "{{agent}} artık bunu kullanmaz."
     },
     "missionAi": "Yapay zeka",
     "missionLocked": "İşi kimin yapacağı Başlat'tan önce seçilir. Model her zaman değiştirilebilir."

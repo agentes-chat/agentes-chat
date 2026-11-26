@@ -58,6 +58,7 @@ import {
   purgeDeletedWikiPages,
   purgeTelegramUpdates,
   queueApprovalDigests,
+  queueSurfaceNudges,
   reapRoutineRuns,
   recheckStuckPlans,
   reconcileComposioAccounts,
@@ -265,6 +266,8 @@ export const WORKER_INTERVALS_MS = {
   opsReport: 3600_000,
   /** AI apps' expired requests, tokens and unused registrations (ADR 0119). */
   apps: 3600_000,
+  /** People due a nudge on the outside chat surface (ADR 0234): their delay is in whole hours. */
+  surfaceNudges: 15 * 60_000,
   /** Alerts the autonomy brakes held as noise, posted as one digest per agent and conversation (ADR 0131 §5). */
   autonomyDigest: 10 * 60_000,
   /** Widget tests nobody confirmed within a day go, with their routines (ADR 0135 §16). */
@@ -412,6 +415,16 @@ export function startWorkers(deps: WorkerDeps) {
   every("vaultSyncs", WORKER_INTERVALS_MS.vaultSyncs, async () => {
     if ((await enqueueVaultSyncs(db)) > 0) void ticks.get("outbox")?.();
   });
+  every(
+    "surfaceNudges",
+    WORKER_INTERVALS_MS.surfaceNudges,
+    async () => {
+      if (!(await sweepsHere(db, deps.role))) return;
+      const queued = await queueSurfaceNudges(db);
+      if (queued > 0) log.info("queued surface nudges", { queued });
+    },
+    bootDelay,
+  );
   // Next months' message partitions (the boot made this one), and what the server keeps only a while.
   daily("partitions", async () => {
     const created = await ensureMessagePartitions(db);

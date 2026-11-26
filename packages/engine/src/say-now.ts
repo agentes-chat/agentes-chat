@@ -114,10 +114,16 @@ type LinesRun = Pick<AgentRun, "id" | "orgId" | "channelId" | "agentId" | "creat
 /**
  * The lines this run posted on the way (`meta.sayNow.runId`), oldest first: the conversation's record, for the paths
  * that post what a run wrote before its transcript took in a computer turn's lines (a stop, a cut turn, a restart).
+ * The default reads past every line a run may post (its first, `PROGRESS_MAX` progress lines, one per message taken
+ * in), so a reply that repeats its newest line still has it left out.
  */
-export async function linesSaid(db: Executor, run: LinesRun, limit = 5): Promise<{ text: string; took: string[] }[]> {
+export async function linesSaid(
+  db: Executor,
+  run: LinesRun,
+  limit = 20,
+): Promise<{ text: string; took: string[]; at: Date; progress: boolean }[]> {
   const rows = await db
-    .select({ body: messages.body, meta: messages.meta })
+    .select({ body: messages.body, meta: messages.meta, createdAt: messages.createdAt })
     .from(messages)
     .where(
       and(
@@ -132,9 +138,40 @@ export async function linesSaid(db: Executor, run: LinesRun, limit = 5): Promise
     .orderBy(messages.createdAt)
     .limit(limit);
   return rows.map((r) => {
-    const took = (r.meta.sayNow as { took?: unknown } | undefined)?.took;
-    return { text: r.body, took: Array.isArray(took) ? took.filter((id): id is string => typeof id === "string") : [] };
+    const line = r.meta.sayNow as { took?: unknown; progress?: unknown } | undefined;
+    const took = line?.took;
+    return {
+      text: r.body,
+      took: Array.isArray(took) ? took.filter((id): id is string => typeof id === "string") : [],
+      at: r.createdAt,
+      progress: line?.progress === true,
+    };
   });
+}
+
+/** Long work only: a progress line once the run has worked this long (addendum of 2026-11-24b). */
+export const PROGRESS_AFTER_MS = 60_000;
+/** At most one line in this long, whichever line came before. */
+export const PROGRESS_GAP_MS = 75_000;
+/** At most this many progress lines in a run, besides its first line and the ones for messages taken in. */
+export const PROGRESS_MAX = 3;
+
+/**
+ * Whether a line now is a progress line the run may still post: it has worked `PROGRESS_AFTER_MS` in this stretch,
+ * its last line went out `PROGRESS_GAP_MS` ago or more, and it posted fewer than `PROGRESS_MAX` of them.
+ */
+export function progressDue(
+  run: Pick<AgentRun, "createdAt" | "startedAt" | "workingSince">,
+  said: readonly { at: Date; progress: boolean }[],
+  now: number,
+): boolean {
+  const since = (run.workingSince ?? run.startedAt ?? run.createdAt).getTime();
+  const last = said.at(-1);
+  return (
+    now - since >= PROGRESS_AFTER_MS &&
+    (!last || now - last.at.getTime() >= PROGRESS_GAP_MS) &&
+    said.filter((line) => line.progress).length < PROGRESS_MAX
+  );
 }
 
 /**
@@ -200,7 +237,9 @@ export function createSayNowToolSource(deps: { pubsub?: PubSub }): ToolSource {
         // Messages they sent meanwhile that it takes in with this line (one more line for them, then none).
         const took = await linesOwed(tx, locked, said);
         const before = said.at(-1);
-        if (before && took.length === 0) return { kind: "already", body: before.text } as const;
+        // Long work may say how it goes, now and then (`progressDue`); otherwise the first line stands.
+        const progress = Boolean(before) && took.length === 0 && progressDue(locked, said, Date.now());
+        if (before && took.length === 0 && !progress) return { kind: "already", body: before.text } as const;
         // A person wrote since the run last read: the line would answer a conversation that has moved on.
         if (await personAmong(tx, locked.orgId, locked.pendingMessageIds)) return { kind: "wroteAgain" } as const;
         const message = await insertMessage(tx, {
@@ -218,7 +257,7 @@ export function createSayNowToolSource(deps: { pubsub?: PubSub }): ToolSource {
           body: text,
           // A run that read outside content passes the mark on (ADR 0117): the next agent reads the line as relayed.
           meta: {
-            sayNow: { runId: locked.id, ...(took.length > 0 ? { took } : {}) },
+            sayNow: { runId: locked.id, ...(took.length > 0 ? { took } : {}), ...(progress ? { progress: true } : {}) },
             ...((await runReadOutside(tx, locked)) ? { readOutside: true } : {}),
           },
         });
@@ -233,7 +272,7 @@ export function createSayNowToolSource(deps: { pubsub?: PubSub }): ToolSource {
       if (outcome.kind === "wroteAgain") return refused(REFUSED.wroteAgain, false);
       if (outcome.kind === "already")
         return {
-          content: `Already told them: "${outcome.body}". Do the work now; your final message brings the result.`,
+          content: `Already told them: "${outcome.body}". Do the work now; your final message brings the result. On long work, an update fits once a minute or so has passed.`,
         };
       const [view] = await withWikiLinks(ctx.db, run.orgId, [messageView(outcome.message)]);
       if (view && deps.pubsub) await publishMessageCreated(deps.pubsub, view);

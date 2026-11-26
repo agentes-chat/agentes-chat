@@ -1,5 +1,11 @@
 import { type ComputerDevice, useWifiIphones } from "@agenteschat/client";
-import { mayChangeTasks, taskChoices, tasksAutoText } from "@agenteschat/client/lib/devices";
+import {
+  lendingDevice,
+  mayChangeTasks,
+  shareInternetText,
+  taskChoices,
+  tasksAutoText,
+} from "@agenteschat/client/lib/devices";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { computerKind } from "@agenteschat/client/lib/machines";
 import { can } from "@agenteschat/client/lib/permissions";
@@ -11,7 +17,7 @@ import { chooseAction, Gap } from "../settings/parts";
 import { useMeId, useOrgId } from "../shared/hooks";
 import { openPhone } from "./DevicesScreen";
 import { DevicePortrait, StatusLine, useAudienceText } from "./parts";
-import { useDeviceMutation } from "./queries";
+import { useDeviceMutation, useDevices } from "./queries";
 
 /**
  * On a computer's page, what bringing devices adds: who can use it (its owner changes it, an admin narrows it), the
@@ -27,15 +33,23 @@ export function ComputerSection({ device: d, name }: { device: ComputerDevice; n
   const mark = useDeviceMutation((api, orgId, on: boolean) =>
     api.devices.updateComputer(orgId, d.id, { belongsToWorkspace: on }),
   );
-  const spill = useDeviceMutation((api, orgId, input: { own?: boolean; others?: boolean }) =>
-    api.devices.updateComputer(orgId, d.id, { spill: input }),
+  const spill = useDeviceMutation((api, orgId, own: boolean) =>
+    api.devices.updateComputer(orgId, d.id, { spill: { own } }),
   );
+  const first = useDeviceMutation((api, orgId, on: boolean) =>
+    api.devices.updateComputer(orgId, d.id, { spill: { first: on } }),
+  );
+  const helpOff = useDevices().data?.devicesHelp === false;
   const tasks = useDeviceMutation((api, orgId, maxTasks: number) =>
     api.devices.updateComputer(orgId, d.id, { maxTasks }),
   );
   const push = useDeviceMutation((api, orgId, on: boolean) =>
     api.devices.updateComputer(orgId, d.id, { pushHarder: on }),
   );
+  const share = useDeviceMutation((api, orgId, on: boolean) =>
+    api.devices.updateComputer(orgId, d.id, { shareInternet: on }),
+  );
+  const lending = lendingDevice(useDevices().data?.devices);
   const brought = d.machineKind === "connected";
   const admin = can(org, "configure");
   const maxTasks = (tasks.isPending ? tasks.variables : undefined) ?? d.maxTasks;
@@ -53,9 +67,15 @@ export function ComputerSection({ device: d, name }: { device: ComputerDevice; n
     );
   // What is being saved shows at once: a switch moves as it is tapped. Each change stays pending until the computers
   // are read again (`useDeviceMutation`), so the saved value takes over with no flicker.
-  const spillOn = (key: "own" | "others") => (spill.isPending ? spill.variables?.[key] : undefined) ?? d.spill[key];
+  const spillOn = (spill.isPending ? spill.variables : undefined) ?? d.spill.own;
+  const firstOn = (first.isPending ? first.variables : undefined) ?? d.spill.first ?? false;
   const belongs = (mark.isPending ? mark.variables : undefined) ?? d.belongsToWorkspace;
   const pushing = (push.isPending ? push.variables : undefined) ?? d.taskRoom?.pushHarder ?? false;
+  const sharing = (share.isPending ? share.variables : undefined) ?? d.shareInternet?.on ?? false;
+  const mine = d.ownerUserId === meId;
+  // Someone else's lends now: its owner may pick this one instead (on again moves it first).
+  const mayPick = sharing && !share.isPending && !d.shareInternet?.inUse && lending !== null && mine;
+  const shareFailed = (err: unknown) => toast({ title: errorText(t, err), icon: "x" });
   const tasksEditable = mayChangeTasks(d, meId ?? "", admin);
   const wifi = useWifiIphones(
     useOrgId(),
@@ -118,32 +138,67 @@ export function ComputerSection({ device: d, name }: { device: ComputerDevice; n
                   : {})}
               />
             ) : null}
-            {/* Spill-over: its owner turns these on; an admin may only turn them off. */}
-            {brought && d.mayManage && !d.systemMode
-              ? (["own", "others"] as const).map((key) => {
-                  const label = t(key === "own" ? "devices.spillOwn" : "devices.spillOthers");
-                  const on = spillOn(key);
-                  return (
-                    <GroupedRow
-                      key={key}
-                      label={label}
-                      labelLines={2}
-                      hint={{
-                        name: t("common.about", { label }),
-                        text: t(key === "own" ? "devices.spillOwnHint" : "devices.spillOthersHint"),
-                      }}
-                      toggle={on}
-                      disabled={d.ownerUserId !== meId && !on}
-                      onPress={() =>
-                        spill.mutate(
-                          { [key]: !on },
-                          { onError: (err) => toast({ title: errorText(t, err), icon: "x" }) },
-                        )
-                      }
-                    />
-                  );
-                })
-              : null}
+            {/* Its help: its owner turns it on, an admin only off, and the workspace's switch off wins. */}
+            {brought && d.mayManage && !d.systemMode ? (
+              <GroupedRow
+                label={t("devices.spillOwn")}
+                labelLines={2}
+                hint={{
+                  name: t("common.about", { label: t("devices.spillOwn") }),
+                  text: t(d.belongsToWorkspace ? "devices.spillTeamHint" : "devices.spillOwnHint"),
+                }}
+                {...(helpOff ? { sub: t("devices.spillWorkspaceOff"), subLines: 0 } : {})}
+                toggle={spillOn && !helpOff}
+                disabled={helpOff || (d.ownerUserId !== meId && !spillOn)}
+                onPress={() =>
+                  spill.mutate(!spillOn, { onError: (err) => toast({ title: errorText(t, err), icon: "x" }) })
+                }
+              />
+            ) : null}
+            {/* Its owner's agents' work starts here first: only its owner chooses it, for their own agents. */}
+            {brought && d.ownerUserId === meId && !d.systemMode ? (
+              <GroupedRow
+                label={t("devices.spillFirst")}
+                labelLines={2}
+                hint={{
+                  name: t("common.about", { label: t("devices.spillFirst") }),
+                  text: t("devices.spillFirstHint"),
+                }}
+                {...(helpOff ? { sub: t("devices.spillWorkspaceOff"), subLines: 0 } : {})}
+                toggle={firstOn && !helpOff}
+                disabled={helpOff}
+                onPress={() =>
+                  first.mutate(!firstOn, { onError: (err) => toast({ title: errorText(t, err), icon: "x" }) })
+                }
+              />
+            ) : null}
+            {/* Its owner lends its internet to the workspace's computer; an admin may only stop it (ADR 0237). */}
+            {d.shareInternet && (d.mayManage || sharing) ? (
+              <GroupedRow
+                label={t("devices.shareInternet")}
+                labelLines={2}
+                hint={{
+                  name: t("common.about", { label: t("devices.shareInternet") }),
+                  text: t("devices.shareInternetHint"),
+                }}
+                sub={shareInternetText(t, d, lending) ?? undefined}
+                toggle={sharing}
+                disabled={!d.mayManage || (!mine && !sharing)}
+                onPress={() => share.mutate(!sharing, { onError: shareFailed })}
+                {...(mayPick
+                  ? {
+                      below: (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          label={t("devices.shareInternetPick")}
+                          onPress={() => share.mutate(true, { onError: shareFailed })}
+                        />
+                      ),
+                    }
+                  : {})}
+              />
+            ) : null}
             {brought && admin ? (
               <GroupedRow
                 label={t("mobile.devices.page.belongs")}

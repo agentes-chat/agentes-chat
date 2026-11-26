@@ -53,7 +53,7 @@ const deviceOf = (m: Machine): ComputerDevice => ({
   memoryGb: null,
   ownerUserId: m.pairedBy?.id ?? null,
   belongsToWorkspace: m.kind === "managed" || m.kind === "host",
-  spill: { own: true, others: false },
+  spill: { own: true },
   systemMode: m.mode === "system",
   audience: { mode: "owner", userIds: [], roleIds: [] },
   status: m.online ? { kind: "ready" } : { kind: "offline", lastSeenAt: m.lastSeenAt },
@@ -77,6 +77,8 @@ export function createFakeDevices(
 ): FakeDevices {
   let own: DevicesList | null = null;
   const current = (): DevicesList => own ?? { devices: machines().map(deviceOf), requests: [] };
+  /** The workspace's switch over every computer's help (`devicesHelp`). */
+  let help = true;
   let link: ConnectLinkState = { status: "waiting" };
   let links = 0;
   let pairing: WifiPairing | null = null;
@@ -100,14 +102,24 @@ export function createFakeDevices(
   const client: ApiClient["devices"] = {
     list: async (orgId) => {
       record("devices.list", orgId);
-      return clone(current());
+      return clone({ ...current(), devicesHelp: help });
     },
     updateComputer: async (orgId, id, input) => {
       record("devices.updateComputer", orgId, id, input);
-      const { spill, ...rest } = input;
+      const { spill, shareInternet, ...rest } = input;
       const c = computer(id);
       Object.assign(c, rest, spill ? { spill: { ...c.spill, ...spill } } : {});
+      // As the server: on again picks this one, so it is the one in use while the workspace's computer goes out.
+      if (shareInternet !== undefined && c.shareInternet) {
+        if (shareInternet) for (const d of current().devices) if (d.shareInternet) d.shareInternet.inUse = false;
+        c.shareInternet = { on: shareInternet, inUse: shareInternet };
+      }
       return clone(c);
+    },
+    setHelp: async (orgId, on) => {
+      record("devices.setHelp", orgId, on);
+      help = on;
+      return { on };
     },
     removeComputer: async (orgId, id) => {
       record("devices.removeComputer", orgId, id);

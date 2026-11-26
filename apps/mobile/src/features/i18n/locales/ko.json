@@ -4,21 +4,12 @@
     "send": "보내기"
   },
   "categories": {
-    "title": "카테고리",
     "where": "#{{channel}}이(가) 표시되는 곳",
     "whereHelp": "모두에게 바뀌어요. 채널에 참여하는 사람은 그대로예요.",
-    "create": "만들기",
-    "endOfList": "모두의 목록 맨 끝으로 가요.",
-    "channelCount_other": "채널 {{count}}개",
-    "none": "아직 카테고리가 없어요.",
-    "manageHint": "순서, 이름, 삭제",
-    "deleteTitle": "{{name}}을(를) 삭제할까요?",
     "order": "목록에서의 위치",
     "up": "위로 이동",
     "down": "아래로 이동",
-    "position": "{{count}}개 중 {{at}}번째.",
-    "channelPosition": "{{count}}개 중 {{at}}번째.",
-    "itsChannels": "채널"
+    "channelPosition": "{{count}}개 중 {{at}}번째."
   },
   "blocks": {
     "send": "보내기",
@@ -920,6 +911,8 @@
       "plan_model_dropped_other": "{{model}} 모델이 {{plan}}에서 빠졌어요. {{names}}은(는) 당분간 {{runs}}을(를) 써요",
       "computer_disk_full_other": "컴퓨터 디스크가 거의 찼어요",
       "computer_no_chrome_other": "컴퓨터에 Google Chrome이 필요해요. google.com/chrome에서 받으세요",
+      "computer_down_other": "컴퓨터가 응답하지 않아요",
+      "computer_back_other": "컴퓨터가 다시 연결됐어요",
       "app_created_other": "AI 앱이 나를 위해 항목을 만들었어요"
     },
     "markRead": "읽음으로 표시",
@@ -1999,6 +1992,7 @@
       "tool_request": "{{names}}님이 회원님의 {{device}}에서 {{tool}}을(를) 켜 달라고 요청합니다",
       "cli_request": "{{names}} 님이 {{device}}에 {{tool}}을(를) 설치해 달라고 요청합니다",
       "folder_request": "{{names}}님이 회원님의 {{device}}에서 {{path}} 폴더를 요청합니다",
+      "internet_shared": "이제 에이전트가 {{device}}의 인터넷으로 웹사이트를 열어요",
       "allowOnce": "한 번 허용",
       "always": "{{name}} 항상 허용",
       "no": "아니요",
@@ -3120,7 +3114,8 @@
       "workspaceSub": "워크스페이스 API 키",
       "key": "API 키",
       "keyDefault": "워크스페이스 기본값",
-      "api": "API"
+      "api": "API",
+      "asksMove": "{{agent}}은(는) 이 계정을 더 이상 쓰지 않아요."
     },
     "missionAi": "AI",
     "missionLocked": "작업할 주체는 시작 전에 고릅니다. 모델은 언제든 바꿀 수 있어요."

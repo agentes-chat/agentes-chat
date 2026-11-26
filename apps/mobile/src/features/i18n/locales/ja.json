@@ -4,21 +4,12 @@
     "send": "送信"
   },
   "categories": {
-    "title": "カテゴリ",
     "where": "#{{channel}}を表示する場所",
     "whereHelp": "全員に反映されます。チャンネルの参加者は変わりません。",
-    "create": "作成",
-    "endOfList": "全員のリストの最後に移動します。",
-    "channelCount_other": "{{count}}個のチャンネル",
-    "none": "カテゴリはまだありません。",
-    "manageHint": "並び順、名前、削除",
-    "deleteTitle": "{{name}}を削除しますか？",
     "order": "リスト内の位置",
     "up": "上へ移動",
     "down": "下へ移動",
-    "position": "{{count}}中{{at}}番目。",
-    "channelPosition": "{{count}}中{{at}}番目。",
-    "itsChannels": "チャンネル"
+    "channelPosition": "{{count}}中{{at}}番目。"
   },
   "blocks": {
     "send": "送信",
@@ -920,6 +911,8 @@
       "plan_model_dropped_other": "{{model}}が{{plan}}から外れました。{{names}}は当面{{runs}}を使います",
       "computer_disk_full_other": "コンピューターのディスクがほぼいっぱいです",
       "computer_no_chrome_other": "コンピューターにGoogle Chromeが必要です。google.com/chromeからダウンロードしてください",
+      "computer_down_other": "コンピューターが応答していません",
+      "computer_back_other": "コンピューターが復旧しました",
       "app_created_other": "AIアプリがあなたのために作成しました"
     },
     "markRead": "既読にする",
@@ -1999,6 +1992,7 @@
       "tool_request": "{{names}} があなたの {{device}} で{{tool}}をオンにするよう頼んでいます",
       "cli_request": "{{names}} が {{device}} に {{tool}} をインストールするよう求めています",
       "folder_request": "{{names}} があなたの {{device}} でフォルダ {{path}} を求めています",
+      "internet_shared": "エージェントは今後 {{device}} のインターネットを通じてウェブサイトを開きます",
       "allowOnce": "今回のみ許可",
       "always": "{{name}}を常に許可",
       "no": "許可しない",
@@ -3120,7 +3114,8 @@
       "workspaceSub": "ワークスペースのAPIキー",
       "key": "APIキー",
       "keyDefault": "ワークスペースの既定",
-      "api": "API"
+      "api": "API",
+      "asksMove": "{{agent}} はこのアカウントを使わなくなります。"
     },
     "missionAi": "AI",
     "missionLocked": "作業する人は開始前に選びます。モデルはいつでも変更できます。"

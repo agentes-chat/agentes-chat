@@ -164,3 +164,9 @@ test("Answer now that fails says why when the person pressed it", () => {
   expect(card).toContain('if (code !== "ai.still_missing") failed(error);');
   expect(card).toContain("if (tapped) failed(error);");
 });
+
+test("the plans' list says which plans don't run on the computer's system, before one is picked", () => {
+  const steps = source("ai/ConnectAiSteps.tsx");
+  expect(steps).toContain("offSystem={(choice) => planOffSystem(t, gateAt(choice))}");
+  expect(steps).toContain('? t("connectAi.offSystem", { system: offSystem(c) })');
+});

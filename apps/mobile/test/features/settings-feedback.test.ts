@@ -34,7 +34,7 @@ describe("a switch moves as it is tapped", () => {
       }).toEqual({ row, waits: false });
     }
     const computer = flat("features/devices/ComputerSection.tsx");
-    expect(computer).toContain("(spill.isPending ? spill.variables?.[key] : undefined) ?? d.spill[key]");
+    expect(computer).toContain("const spillOn = (spill.isPending ? spill.variables : undefined) ?? d.spill.own;");
     expect(computer).toContain(
       "const belongs = (mark.isPending ? mark.variables : undefined) ?? d.belongsToWorkspace;",
     );

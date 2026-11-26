@@ -15,6 +15,8 @@ import {
   peopleGroups,
   someoneTypes,
 } from "@agenteschat/client/lib/activity";
+import { agentGrammar } from "@agenteschat/client/lib/grammar";
+import { type TrailLine, usePacedTrail, workTrail } from "@agenteschat/client/lib/trail";
 import { barStep } from "@agenteschat/client/lib/work";
 import { type AgentColorName, gradientOf } from "@agenteschat/ui/agent/engine";
 import { type ReactNode, useEffect, useState } from "react";
@@ -43,6 +45,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { useLivePaused } from "@/agent/live";
 import { loopStyle } from "@/agent/loop";
+import { OrbitFace } from "@/agent/OrbitFace";
 import { CHROME_MAX_SCALE, haptics, Icon, PixelStop, Text, TOUCH, useReducedMotion, useTheme } from "@/ui";
 import { AgentFace, AgentWho, Face } from "../shared/Face";
 import { useNow } from "../shared/hooks";
@@ -132,6 +135,10 @@ export function WorkingLine({
   // phrase turning, an event) reads the same second, so both step evenly; narrowing to one agent changes the pace, and a
   // new pace reads the clock afresh (`useNow`).
   const now = useNow(asking || solo ? 1000 : 60_000);
+  // What it did so far, under the line (`workTrail`): the same lines its reply's work block shows once posted. One
+  // agent's, at work (a question it asks keeps its own phrase).
+  const trailRun = solo && !solo.consult ? runs.find((r) => r.agentId === solo.id) : undefined;
+  const trail = usePacedTrail(trailRun ? workTrail(t, trailRun, i18n.language) : NO_TRAIL);
   if (entries.length === 0) return rest;
   // The one agent it speaks for; a question it asks keeps its own phrase.
   const away = awayRun(entries, runs);
@@ -190,7 +197,8 @@ export function WorkingLine({
   const plate = [styles.tok, { backgroundColor: c.bg }];
   // The agents at work open the pill with their faces. Who records shows after the words with their mark, and so does
   // who types beside them: their faces come and go with the phrase as it turns, so they don't pop in again at each turn.
-  const faces = barFaces(entries);
+  const orbiting = lead && !lead.consult ? lead : undefined;
+  const faces = barFaces(entries).filter((e) => e !== orbiting);
   const groupFaces = (kind: "typing" | "recordingVoice") => {
     const who = facesOf(entries, kind);
     return who.length > 0 ? (
@@ -217,6 +225,15 @@ export function WorkingLine({
         accessibilityLiveRegion="polite"
       >
         {lead || !someoneTypes(entries) || bothAtIt(entries) ? null : <TypingDots color={c.muted} />}
+        {/* The agent at work leads, a little larger, its rings orbiting it (`OrbitFace`); the stack's faces are the
+            others. */}
+        {orbiting ? (
+          <Animated.View key={`o:${orbiting.id}`} entering={pop} style={styles.orbit}>
+            <OrbitFace color={agentLook(dir.agentById.get(orbiting.id)).color} size={ORBIT_FACE}>
+              <AgentFace agentId={orbiting.id} size={ORBIT_FACE} framed mode="run" />
+            </OrbitFace>
+          </Animated.View>
+        ) : null}
         {faces.length > 0 ? (
           <View style={styles.stack} importantForAccessibility="no-hide-descendants">
             {/* Agents in their sky tile, standing in its middle: bare, a body sits at its box's foot under the room kept
@@ -331,9 +348,38 @@ export function WorkingLine({
             while it shows; the composer keeps only its send). */}
         {stop && stopHere.length > 0 ? <LineStop runs={stopHere} onStop={stop.onStop} place="word" /> : null}
       </Animated.View>
+      {trail.lines.length > 0 ? (
+        <View
+          style={[styles.trail, orbiting ? styles.trailUnderWords : undefined]}
+          accessibilityLabel={t("chat.trail.label", agentGrammar(lead?.name ?? ""))}
+        >
+          {trail.earlier > 0 ? (
+            <Text
+              variant="caption"
+              tone="faint"
+              maxFontSizeMultiplier={CHROME_MAX_SCALE}
+              accessibilityLabel={t("chat.trail.earlier", { count: trail.earlier })}
+              style={styles.took}
+            >
+              +{trail.earlier}
+            </Text>
+          ) : null}
+          {trail.lines.map((l) => (
+            <Animated.View key={l.key} entering={reduced ? undefined : LINE_IN}>
+              <Text variant="caption" tone="muted" maxFontSizeMultiplier={CHROME_MAX_SCALE}>
+                {l.text}
+              </Text>
+            </Animated.View>
+          ))}
+        </View>
+      ) : null}
     </View>
   );
 }
+
+/** The agent at work's face on the line, in points: a little larger than the stack's, its rings around it. */
+const ORBIT_FACE = 24;
+const NO_TRAIL: TrailLine[] = [];
 
 const LINE_EASE = Easing.bezier(0.23, 1, 0.32, 1);
 const LINE_IN = FadeIn.duration(160).easing(LINE_EASE);
@@ -707,6 +753,12 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   stack: { flexDirection: "row", alignItems: "center", flexShrink: 0 },
+  // The rings reach past the face into the gap on each side.
+  orbit: { marginHorizontal: 6, flexShrink: 0 },
+  // What it did so far, under the line's words: the newest last.
+  trail: { gap: 2, paddingHorizontal: 8, paddingTop: 2 },
+  // Under the words when the orbiting face leads the line: its padding, the face, its margins and the line's gap.
+  trailUnderWords: { paddingLeft: 8 + 6 + ORBIT_FACE + 6 + 6 },
   tok: { padding: 1.5, borderRadius: 7 },
   pair: { flexDirection: "row", alignItems: "center", gap: 1 },
   overlap: { marginLeft: -6 },

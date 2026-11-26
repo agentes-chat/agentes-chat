@@ -88,7 +88,7 @@ describe("Agentes and its groups", () => {
     expect(rowsIn(section("Integrations"))).toEqual(["Atlas"]);
     expect(head("Integrations").querySelector(".sidebar__section-count")?.textContent).toBe("1");
     // An empty group is for who arranges the agents: it says where they go.
-    expect(section("Diretoria").textContent).toContain("Arraste agentes para cá");
+    expect(section("Diretoria").textContent).toContain("Arraste agentes ou canais para cá");
     // Every agent is listed: no row under them says so again.
     expect(nav().querySelector(".sidebar__see-all")).toBeNull();
   });

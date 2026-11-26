@@ -42,6 +42,7 @@ import {
   taskModeOf,
   taskScope,
   taskSeconds,
+  waitsInQueue,
 } from "./machine-tasks";
 import { MachineOfflineError, type MachineRow, shownOnline } from "./machines";
 import { insertMessage, type Message, messageView } from "./messages";
@@ -1778,7 +1779,7 @@ async function cancelMissionTasks(deps: MissionDeps, mission: MissionRow, actorI
     try {
       // Waiting in our queue: the runner never had it.
       reply =
-        deps.hub && !row.startRequest
+        deps.hub && !waitsInQueue(row)
           ? await deps.hub.call<"task.cancel">(row.machineId, {
               agent: { id: mission.agentId, handle: agent?.handle ?? "agent" },
               op: "task.cancel",

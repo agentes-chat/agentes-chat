@@ -39,7 +39,7 @@ import { type APP_MANAGE_TOOL_NAMES, registerManageTools } from "./manage-tools"
 import { type AppScope, appsUrls } from "./urls";
 import { type APP_WIKI_TOOL_NAMES, registerWikiTools } from "./wiki-tools";
 
-const { agentRuns, appSends, approvals, messages, users, agents, channels } = schema;
+const { agentGroups, agentRuns, appSends, approvals, messages, users, agents, channels } = schema;
 
 /**
  * The tools an AI app gets on `/mcp` (ADR 0119 §3). They act as the person, through the same engine calls the web
@@ -746,7 +746,7 @@ export function buildAppsMcpServer(deps: AppsToolDeps, p: AppPrincipal, version:
     {
       scope: "read",
       title: "List agents",
-      description: `Lists the agents in this workspace that ${person} can see, with whether ${person} can message each one.`,
+      description: `Lists the agents in this workspace that ${person} can see, with whether ${person} can message each one, its department (null when it is in none) and its look (color, eyes and accessory, or null).`,
       input: listAgentsInput,
       readOnly: true,
       destructive: false,
@@ -760,6 +760,16 @@ export function buildAppsMcpServer(deps: AppsToolDeps, p: AppPrincipal, version:
         (a) => listsAgentTo(a, p.userId, membership) && matches(args.query, a.name, a.handle, a.role),
       );
       const { slice, next_cursor } = page(all, args.cursor, args.limit, `agents:${args.query ?? ""}`);
+      // Only the departments of the agents listed: a group name reaches the app through an agent it may see.
+      const groupIds = [...new Set(slice.flatMap((a) => (a.groupId ? [a.groupId] : [])))];
+      const groups =
+        groupIds.length === 0
+          ? []
+          : await deps.db
+              .select({ id: agentGroups.id, name: agentGroups.name })
+              .from(agentGroups)
+              .where(and(eq(agentGroups.orgId, p.orgId), inArray(agentGroups.id, groupIds)));
+      const department = new Map(groups.map((g) => [g.id, g.name]));
       return {
         agents: slice.map((a) => ({
           id: a.id,
@@ -767,6 +777,10 @@ export function buildAppsMcpServer(deps: AppsToolDeps, p: AppPrincipal, version:
           handle: a.handle,
           role: a.role,
           can_message: canTalkTo(a, p.userId, talks),
+          department: (a.groupId && department.get(a.groupId)) ?? null,
+          appearance: a.appearance
+            ? { color: a.appearance.color, eyes: a.appearance.eyes, accessory: a.appearance.accessory }
+            : null,
         })),
         next_cursor,
       };

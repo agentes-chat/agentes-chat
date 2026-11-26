@@ -110,7 +110,13 @@ test("no key: the run fails with no_ai before any judge or model call, and one c
   });
   expect(events).toContainEqual(expect.objectContaining({ type: "message.created", messageId: card?.id }));
   expect(events).toContainEqual(
-    expect.objectContaining({ type: "message.handled", messageId: asked.id, status: "failed", reason: "no_ai" }),
+    expect.objectContaining({
+      type: "message.handled",
+      messageId: asked.id,
+      status: "failed",
+      reason: "no_ai",
+      errorCode: "no_key",
+    }),
   );
   expect(events).toContainEqual(
     expect.objectContaining({ type: "agent.run", status: "failed", error: "no_ai", errorCode: "run.no_ai" }),
@@ -119,7 +125,7 @@ test("no key: the run fails with no_ai before any judge or model call, and one c
   // The list's receipts say why (a reload shows the same row as the live event).
   const listed = (await listMessages(f.db, f.owner.id, f.org.id, f.general.id)).find((m) => m.id === asked.id);
   expect(listed?.receipts?.handled).toEqual([
-    { agentId: f.agent.id, runId: run?.id ?? "", status: "failed", reason: "no_ai" },
+    { agentId: f.agent.id, runId: run?.id ?? "", status: "failed", reason: "no_ai", errorCode: "no_key" },
   ]);
   // The card routes nobody (like a notice).
   const decided = await f.db
@@ -240,7 +246,7 @@ test("Codex saved on the workspace's computer's own sign-in: the run fails at on
     execAllowed: true,
     os: "linux",
     protocol: 26,
-    executors: { codex: { version: "codex-cli 0.163.0" }, detectedAt: new Date().toISOString() },
+    executors: { codex: { version: "codex-cli 0.170.0" }, detectedAt: new Date().toISOString() },
   };
   const handlers = createJobHandlers({ ...f.jobDeps, machines: { status: async () => status } });
   await post("@dev oi");

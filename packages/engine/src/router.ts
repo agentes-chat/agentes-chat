@@ -25,7 +25,6 @@ import {
   routerModelOf,
 } from "@agenteschat/providers";
 import { audienceSql } from "./audience";
-import { TYPING_GRACE_MS, typesInApp, typingLogFor } from "./burst";
 import { caches } from "./cache";
 import { summarizeGrants } from "./capabilities";
 import { isConfidential } from "./confidential";
@@ -54,6 +53,7 @@ const {
   connectorConnections,
   channels,
   messages,
+  messageReactions,
   users,
   routingDecisions,
   organizationSettings,
@@ -334,6 +334,10 @@ const bareEmoji = (e: string) => e.trim().replace(/\uFE0F/g, "");
 /** One of `SOCIAL_REACTIONS`, however the variation selector was written ("❤" is "❤️"), else null. */
 export const socialChoice = (emoji: string) =>
   Object.keys(SOCIAL_REACTIONS).find((e) => bareEmoji(e) === bareEmoji(emoji)) ?? null;
+/** The social reactions as stored (`normalizeReaction`), with and without the variation selector. */
+const SOCIAL_REACTION_VALUES = [
+  ...new Set(Object.keys(SOCIAL_REACTIONS).flatMap((e) => [normalizeReaction(e), bareEmoji(e)])),
+];
 
 /** Who a message speaks to, in every step's words (Jev's questions and `ROUTER_SYSTEM`). */
 export const SPOKEN_TO =
@@ -692,14 +696,12 @@ export interface RouterDeps {
    */
   outOfOffice?(orgId: string, agentIds: string[]): Promise<Set<string>>;
   /**
-   * How long a person's message waits for their next one before the router decides (`ROUTER_QUIET_MS` on a
-   * server). Absent or 0: no wait, and each message is decided alone.
+   * How close a person's messages are to be one request (`ROUTER_QUIET_MS` on a server): their next one already here
+   * decides for both, and one decided reads those right before it. Never a wait. Absent or 0: each is decided alone.
    */
   quietMs?: number;
   /** Where an agent's reaction to a person's social message shows live (`RoutingResult.social`). */
   pubsub?: PubSub;
-  /** The quiet window ends early when the person isn't typing (`typingLogFor` on `pubsub`, token-trim B11). */
-  quietByTyping?: boolean;
 }
 
 /**
@@ -713,8 +715,8 @@ export const ROUTER_SLICE = { messages: 12, maxAgeMs: 30 * 60_000, charsPerMessa
 export const ROUTER_MESSAGE_CHARS = 4000;
 
 /**
- * How long the router waits for a person's next message (`RouterDeps.quietMs`): one thing said in a few
- * messages ("boa tarde walter", "como esta hoje") gets one decision, on the last of them.
+ * A person's messages this close are one thing said in a few ("boa tarde walter", "como esta hoje"), read together
+ * (`RouterDeps.quietMs`). Nothing waits for it.
  */
 export const ROUTER_QUIET_MS = 2500;
 
@@ -780,9 +782,9 @@ export { AGENT_CHIME_IN_MAX_HOP };
  * (ADR 0034): the author is never a candidate, at most one agent is picked,
  * only a clear pick (`AGENT_CHIME_IN_SCORE`), and never from an answer to an
  * answer (`AGENT_CHIME_IN_MAX_HOP`). One decision per message (unique),
- * stored with every score. A person's message first waits `quietMs` for
- * their next one; when it comes and the router decides on it too
- * (`routable`), that one decides for both (`continued`). The agent a
+ * stored with every score. A person's message is decided at once; when their
+ * next one, within `quietMs`, is already here and the router decides on it
+ * too (`routable`), that one decides for both (`continued`). The agent a
  * person's message speaks to (`addressee`) answers it, addressed, over who
  * spoke last, and over the agent replied to once the router picks it. One
  * that speaks to no agent in particular goes to the agent the person last
@@ -941,35 +943,9 @@ export async function routeMessage(
   )
     return unrouted(PLATFORM_CAP);
   const quietMs = byAgent ? 0 : (deps.quietMs ?? 0);
-  if (quietMs > 0) {
-    const end = message.createdAt.getTime() + quietMs;
-    // Token-trim B11: past a short grace, the rest of the window only while the person is typing here.
-    const log =
-      deps.quietByTyping && deps.pubsub && message.authorUserId && typesInApp(message)
-        ? typingLogFor(deps.pubsub)
-        : null;
-    const from = message.createdAt.getTime();
-    const typed = () =>
-      (log?.lastTyped({
-        channelId: message.channelId,
-        threadId: message.threadId ?? null,
-        userId: message.authorUserId as string,
-      }) ?? Number.NEGATIVE_INFINITY) >= from;
-    // Naming exactly one agent, with no typing since: the person said who it is for and nothing more is coming.
-    const namesOneAgent =
-      log !== null && namesIn(message.body, candidates.map(agentNameable), message.authorUserId).length === 1;
-    if (!namesOneAgent || typed()) {
-      const grace = from + Math.min(TYPING_GRACE_MS, quietMs);
-      // ponytail: the wait holds a worker slot; a delayed job of its own if routing ever runs short of slots.
-      if (log && grace > Date.now()) await Bun.sleep(grace - Date.now());
-      if (!log || typed()) {
-        const wait = end - Date.now();
-        if (wait > 0) await Bun.sleep(wait);
-      }
-    }
-    // Not waited for, a next message already here (a busy queue) still decides for both.
-    if (await continuedSoon(db, message, quietMs)) return { runs: [], skipped: "continued" };
-  }
+  // Decided at once, never waited on (ADR 0112): what the person adds next joins the run this starts. Only their next
+  // message already here (a busy queue) decides for both.
+  if (quietMs > 0 && (await continuedSoon(db, message, quietMs))) return { runs: [], skipped: "continued" };
   // What each one can reach, by name ("Sentry"): a question about an app goes to who has it. A person's own
   // connection is never named: the router's reason is read by the whole conversation.
   const [granted, connections] = await Promise.all([
@@ -1252,7 +1228,7 @@ export async function routeMessage(
         answeredBy = m.authorAgentId;
       }
       if (m.authorUserId !== message.authorUserId) continue;
-      // `continuedSoon`'s test: the next message here is theirs, one the router decides on, within the quiet wait.
+      // `continuedSoon`'s test: the next message here is theirs, one the router decides on, within `quietMs`.
       const continued =
         m.routable &&
         after?.authorUserId === m.authorUserId &&
@@ -1375,12 +1351,34 @@ export async function routeMessage(
   };
   // A social message nobody answers (a greeting, goodnight, thanks, an ok) gets one agent's reaction, the emoji the
   // step chose (`social`), else `socialReaction`'s. Who reacts: the agent it speaks to, else the one that just answered
-  // this person here, else, for a greeting or a congratulation to the room, the agent they talk with, else the best
-  // placed agent; thanks, an ok or affection are always for someone, so nobody then. Never between people, never on an
-  // agent's message.
+  // this person here, else, for a congratulation to the room, the agent they talk with, else the best placed agent. A
+  // greeting to the room gets none, and thanks, an ok or affection are always for someone, so nobody then. Only one
+  // every `SOCIAL_REACTION_WINDOW_MS` per person here, besides a thanks, an ok or a congratulation for one agent. Never
+  // between people, never on an agent's message.
   const socialOf = (decided: RoutingResult | null) => {
     const emoji = decided?.social ? (decided.social.react ? decided.social.emoji : "") : socialReaction(saidText);
     return emoji ? normalizeReaction(emoji) : "";
+  };
+  // An agent's social reaction on this person's messages here lately: one is warm, one on every message is noise.
+  const reactedLately = async () => {
+    const since = new Date(Date.now() - SOCIAL_REACTION_WINDOW_MS);
+    const [row] = await db
+      .select({ one: sql<number>`1` })
+      .from(messageReactions)
+      .innerJoin(messages, and(eq(messages.orgId, messageReactions.orgId), eq(messages.id, messageReactions.messageId)))
+      .where(
+        and(
+          eq(messageReactions.orgId, message.orgId),
+          sql`${messageReactions.agentId} is not null`,
+          gt(messageReactions.createdAt, since),
+          inArray(messageReactions.reaction, SOCIAL_REACTION_VALUES),
+          eq(messages.channelId, message.channelId),
+          eq(messages.authorUserId, message.authorUserId ?? ""),
+          gt(messages.createdAt, since),
+        ),
+      )
+      .limit(1);
+    return row !== undefined;
   };
   const reactToSocial = async (
     decided: RoutingResult | null,
@@ -1391,12 +1389,14 @@ export async function routeMessage(
     const reaction = socialOf(decided);
     if (!isValidReaction(reaction)) return undefined;
     const named = address.filter((n) => n.agent && candidateIds.has(n.id));
-    const toRoom = !FOR_SOMEONE.has(reaction);
-    const agentId =
+    const toRoom = !FOR_SOMEONE.has(reaction) && !GREETINGS.has(bareEmoji(reaction));
+    const forOne =
       (decided?.addressee && candidateIds.has(decided.addressee) ? decided.addressee : null) ??
       (named.length === 1 ? named[0]?.id : null) ??
       thankedAgent() ??
-      heldFor ??
+      heldFor;
+    const agentId =
+      forOne ??
       (toRoom
         ? ((talkingWith && candidateIds.has(talkingWith) ? talkingWith : null) ??
           bestPlaced(
@@ -1405,6 +1405,7 @@ export async function routeMessage(
           ))
         : null);
     if (!agentId) return undefined;
+    if (!(forOne && MEANINGFUL.has(bareEmoji(reaction))) && (await reactedLately())) return undefined;
     // Cosmetic: a reaction that fails never fails the routing.
     return addAgentReaction(
       db,
@@ -1865,6 +1866,12 @@ export const SYSTEM_LINE_META = [
 
 /** The social reactions that answer someone (thanks, an ok, affection), never the room. */
 const FOR_SOMEONE: ReadonlySet<string> = new Set(["+1", "🙏", "❤️", "❤"]);
+/** A hello, good morning or good night: to the room it gets no reaction, only when it speaks to an agent. */
+const GREETINGS: ReadonlySet<string> = new Set(["👋", "☀", "🌙"]);
+/** A thanks, an ok or a congratulation for one agent says something: the window below never holds it back. */
+const MEANINGFUL: ReadonlySet<string> = new Set(["🙏", "+1", "🎉"]);
+/** At most one agent's social reaction per person and conversation in this long (the agents' own `react` aside). */
+export const SOCIAL_REACTION_WINDOW_MS = 12 * 3600_000;
 
 /** From this need-any-agent score, a person's message the policy gave nobody is for the agents (R5): half the pick bar. */
 export const DEFAULT_NEED = 0.25;

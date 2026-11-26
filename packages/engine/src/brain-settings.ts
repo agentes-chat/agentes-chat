@@ -4,12 +4,15 @@ import {
   AGY_COPY_PROTOCOL,
   ANTIGRAVITY_MAC_PROTOCOL,
   ANTIGRAVITY_PROTOCOL,
+  ANTIGRAVITY_WINDOWS_PROTOCOL,
   BRAIN_PROTOCOL,
   type BrainEffort,
   type BrainSpeed,
+  CLI_COPIES_PROTOCOL,
   CODEX_WINDOWS_PROTOCOL,
   CURSOR_PROTOCOL,
   GROK_PROTOCOL,
+  GROK_WINDOWS_PROTOCOL,
   isBrainEffort,
   isBrainSpeed,
   OPENCODE_ACP_PROTOCOL,
@@ -43,11 +46,13 @@ import {
   modelProvider,
   parseCustomModel,
 } from "@agenteschat/providers";
+import { CLI_UPDATE_COMMAND, cliVersionProblem, type FloorCli } from "@agenteschat/providers/cli-floors";
 import {
   ANTIGRAVITY_MODELS,
   ANTIGRAVITY_NEON_CLI,
   ANTIGRAVITY_NEW_MODEL,
   ANTIGRAVITY_PAID_MODEL,
+  accountOnlyBrain,
   antigravityBaseModel,
   claudeCodeModel,
   cliVersionAtLeast,
@@ -76,6 +81,7 @@ import {
 import { recordAudit } from "./audit";
 import { BRAIN_NAMES, type BrainKind, brainRunsOn, type ComputerBrainKind, isComputerBrain } from "./brains/types";
 import { caches } from "./cache";
+import { fetchesCli } from "./cli-fetch";
 import { defaultCredentials, providerKeyOf } from "./credentials";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import {
@@ -405,8 +411,10 @@ export type BrainUnavailable =
   | "not_reported"
   /** It is there and can't start (`executors.broken`, with its own error): not missing, so installing it won't help. */
   | "cant_start"
-  /** Its runner doesn't run this CLI on the computer's system (`brainRunsOn`): Cursor on Windows, for one. */
+  /** No build of its CLI for the computer's system (`brainRunsOn`, the pin list). */
   | "system"
+  /** It is there at a version agentes.chat holds back (`CLI_FLOORS`): too old, or a blocked one. Updating it helps. */
+  | "cli_outdated"
   /** Codex on a Windows computer where no sandbox could hold its commands (`executors.codex.sandbox` is `none`). */
   | "windows_sandbox";
 
@@ -427,6 +435,11 @@ export interface BrainOption {
    * (`cli_old`, system mode), or no account signed in there has a plan that includes it (`plan`).
    */
   missing?: { modelId: string; label: string; why: "app_old" | "cli_old" | "plan" };
+  /**
+   * With `cli_outdated`: the version it reported, the floor it is under (none: a blocked version), and the command that
+   * updates it where its own updater is the way (`CLI_UPDATE_COMMAND`).
+   */
+  outdated?: { version: string; min?: string; command?: string };
 }
 
 type MachineLike = Parameters<typeof machineExecutors>[0] & {
@@ -459,6 +472,18 @@ const missingCli = (
 ): BrainUnavailable =>
   machine.executors?.broken?.[cli] ? "cant_start" : machine.executors?.detectedAt ? "not_installed" : "not_reported";
 
+/** A CLI the computer reports at a version agentes.chat holds back (`CLI_FLOORS`), with how to update it; else null. */
+function outdatedCli(machine: MachineLike, cli: FloorCli): NonNullable<BrainOption["outdated"]> | null {
+  const problem = cliVersionProblem(cli, machine.executors?.[cli]?.version);
+  if (!problem) return null;
+  const command = CLI_UPDATE_COMMAND[cli];
+  return {
+    version: problem.version,
+    ...(problem.kind === "too_old" ? { min: problem.min } : {}),
+    ...(command ? { command } : {}),
+  };
+}
+
 /**
  * What the agent's computer can think with; the model brain always. A
  * computer brain needs the runner's `brain.turn` (`BRAIN_PROTOCOL`, the same
@@ -481,13 +506,18 @@ export function brainOptions(machine: MachineLike | null, { chat = false } = {})
     else if (machine.protocol < BRAIN_PROTOCOL) reason = "runner_old";
     else if (executor === "codex" && machine.os === "windows" && machine.protocol < CODEX_WINDOWS_PROTOCOL)
       reason = "runner_old";
-    else if (!found?.available.includes(executor)) reason = missingCli(machine, executor);
+    // Its runner fetches the pinned CLI itself (ADR 0228 §6): missing, too old or broken there is no reason.
+    else if (!found?.available.includes(executor) && !fetchesCli(machine, executor))
+      reason = missingCli(machine, executor);
+    else if (outdatedCli(machine, executor) && !fetchesCli(machine, executor)) reason = "cli_outdated";
     else if (machine.access?.tools && machine.access.tools[executor] !== true) reason = "tool_off";
     else if (sandbox === "none") reason = "windows_sandbox";
+    const outdated = reason === "cli_outdated" && machine ? outdatedCli(machine, executor) : null;
     return {
       kind,
       available: !reason,
       ...(reason ? { reason } : {}),
+      ...(outdated ? { outdated } : {}),
       ...(!reason && sandbox === "unelevated" ? { sandbox: "partial" as const } : {}),
       models: brainModelOptions(kind),
       defaultModel: defaultBrainModel(kind),
@@ -529,38 +559,33 @@ function cliOption(machine: MachineLike | null, kind: "cursor" | "opencode" | "g
   // On a Mac a runner before `ANTIGRAVITY_MAC_PROTOCOL` refuses every Gemini sign-in and turn.
   else if (kind === "antigravity" && machine.os === "darwin" && machine.protocol < ANTIGRAVITY_MAC_PROTOCOL)
     reason = "runner_old";
+  // On Windows a runner before the CLI's `WINDOWS_FROM` refuses every sign-in and turn of it (ADR 0228 §7).
+  else if (isWindowsLate(kind, machine)) reason = "runner_old";
   else if (!brainRunsOn(kind, machine.os)) reason = "system";
-  else if (!machine.executors?.[kind] && !(kind === "antigravity" && bringsAgy(machine)))
-    reason = missingCli(machine, kind);
+  else if (!machine.executors?.[kind] && !fetchesCli(machine, kind)) reason = missingCli(machine, kind);
+  else if (outdatedCli(machine, kind) && !fetchesCli(machine, kind)) reason = "cli_outdated";
   else if (tools && (tools[kind] ?? tools.codex) !== true) reason = "tool_off";
   const models = brainModelOptions(kind, machine);
   const missing = kind === "antigravity" ? antigravityMissing(models, machine) : undefined;
+  const outdated = reason === "cli_outdated" && machine ? outdatedCli(machine, kind) : null;
   return {
     kind,
     available: !reason,
     ...(reason ? { reason } : {}),
+    ...(outdated ? { outdated } : {}),
     models,
     defaultModel: null,
     ...(missing ? { missing } : {}),
   };
 }
 
-/**
- * A computer whose runner brings its own Antigravity CLI (`AGY_COPY_PROTOCOL`, ADR 0143): outside system mode, on macOS
- * and Linux, never the workspace's own (its image brings it). There Gemini can be connected with no CLI installed: the
- * runner downloads it as the first sign-in starts.
- */
-const bringsAgy = (machine: MachineLike) =>
-  machine.protocol >= AGY_COPY_PROTOCOL &&
-  machine.kind !== "managed" &&
-  machine.executors?.mode !== "system" &&
-  (machine.os === "darwin" || machine.os === "linux");
-
 /** "Usar um computador": the agent's machine as the brain section shows it. */
 export interface BrainComputer {
   machineId: string;
   name: string;
   online: boolean;
+  /** Its system (`machines.os`): the apps name it where a plan doesn't run there (`brainRunsOn`). */
+  os: string;
 }
 
 /** A computer the caller may give the agent, with what it offers (the page moves the agent to one that has a brain). */
@@ -652,6 +677,11 @@ export interface AgentBrainView {
    * onto in the model picker, since only admins list the keys themselves.
    */
   keys?: { id: string; provider: string }[];
+  /**
+   * On the API: the workspace's key its calls take now (`keyInUse`: its own, else its provider's), so the picker shows
+   * it chosen even when it isn't the default; null with none (the server's own key may serve) or on a plan.
+   */
+  keyId?: string | null;
 }
 
 /** The account part of the brain view. */
@@ -772,7 +802,7 @@ async function candidateMachines(
         (admin || m.kind !== "connected" || m.pairedByUserId === userId || m.id === current) &&
         (mayBeHome(m) || m.id === current),
     )
-    .map((m) => ({ machineId: m.id, name: m.name, online: shownOnline(m), options: brainOptions(m) }));
+    .map((m) => ({ machineId: m.id, name: m.name, online: shownOnline(m), os: m.os, options: brainOptions(m) }));
 }
 
 async function agentMachine(db: Database, orgId: string, machineId: string | null) {
@@ -797,7 +827,9 @@ function view(
     effectiveModel: brain === "model" ? null : (agent.brainModel ?? defaultBrainModel(brain)),
     fallback: false,
     extraUsage: paysExtraUsage(agent),
-    computer: machine ? { machineId: machine.id, name: machine.name, online: shownOnline(machine) } : null,
+    computer: machine
+      ? { machineId: machine.id, name: machine.name, online: shownOnline(machine), os: machine.os }
+      : null,
     options: brainOptions(machine, { chat: isRightHand(agent) }),
     machines,
     canEdit: true,
@@ -889,6 +921,15 @@ async function personalAgent(db: Database, agent: Agent, userId: string, account
 
 /** The workspace's key the right hand's model thinks with, in the order its calls take: null where they'd find none. */
 async function workspaceKey(db: Database, agent: Agent) {
+  const key = await keyInUse(db, agent);
+  return key ? { provider: key.provider, label: key.label } : null;
+}
+
+/**
+ * The workspace's key an agent's model calls take: its own (a key it was given, a custom model's), else its
+ * provider's default, else that provider's newest key (`providerKeyOf`); null where they'd find none.
+ */
+async function keyInUse(db: Database, agent: Agent) {
   const pinned = parseCustomModel(agent.model)?.credentialId ?? agent.credentialId;
   const [provider, defaults, rows] = await Promise.all([
     isAutoModel(agent.model) ? orgModelProvider(db, agent.orgId) : modelProvider(agent.model),
@@ -904,8 +945,7 @@ async function workspaceKey(db: Database, agent: Agent) {
       .where(eq(schema.providerCredentials.orgId, agent.orgId))
       .orderBy(asc(schema.providerCredentials.createdAt)),
   ]);
-  const key = pinned ? rows.find((r) => r.id === pinned && !r.revokedAt) : providerKeyOf(rows, defaults, provider);
-  return key ? { provider: key.provider, label: key.label } : null;
+  return (pinned ? rows.find((r) => r.id === pinned && !r.revokedAt) : providerKeyOf(rows, defaults, provider)) ?? null;
 }
 
 /** What everyone's DM with the right hand thinks with while they have no AI of their own (its `agents` row). */
@@ -1107,6 +1147,9 @@ async function setPersonalSignIn(
   current: Awaited<ReturnType<typeof personalBrain>>,
   audit: (to: unknown) => Promise<unknown>,
 ): Promise<AgentBrainView> {
+  if (accountOnlyBrain(brain)) {
+    throw new ValidationError("Choose an account of this brain", "account.invalid", { brain });
+  }
   const { db } = deps;
   // The computers they paired, the one it already uses first: the first where this plan is available.
   const theirs = await db
@@ -1189,7 +1232,7 @@ export async function getAgentBrain(
   const agent = await settingsAgent(deps.db, access.agent, userId);
   const machineLook = agentMachine(deps.db, orgId, agent.machineId);
   const { providerCredentials } = schema;
-  const [machine, machines, accounts, keys] = await Promise.all([
+  const [machine, machines, accounts, keys, inUse] = await Promise.all([
     machineLook,
     candidateMachines(deps.db, userId, orgId, admin, agent.machineId),
     machineLook.then((m) => brainAccounts(deps.db, userId, orgId, agent, m)),
@@ -1197,10 +1240,12 @@ export async function getAgentBrain(
       .select({ id: providerCredentials.id, provider: providerCredentials.provider })
       .from(providerCredentials)
       .where(and(eq(providerCredentials.orgId, orgId), isNull(providerCredentials.revokedAt))),
+    brainOf(agent.brain) === "model" ? keyInUse(deps.db, agent) : null,
   ]);
   return {
     ...view(agent, machine, machines, accounts, userId),
     keys,
+    keyId: inUse?.id ?? null,
     ...(access.scope ? { workspaceAi: await workspaceAi(deps.db, access.agent, userId) } : {}),
   };
 }
@@ -1609,11 +1654,23 @@ async function nextBrainAccount(
   options: { move: boolean; admin: boolean },
 ): Promise<{ id: string | null; lent?: boolean; from?: { accountId: string; agentId: string } }> {
   const kept = changed ? null : agent.brainAccountId;
-  if (input === undefined) return { id: kept };
+  if (input === undefined) {
+    if (kept === null && accountOnlyBrain(brain)) {
+      throw new ValidationError("Choose an account of this brain on the agent's computer", "account.invalid", {
+        brain,
+      });
+    }
+    return { id: kept };
+  }
   if (input !== null && typeof input !== "string") {
     throw new ValidationError("Choose an account on the agent's computer", "account.invalid");
   }
   const wanted = input || null;
+  if (wanted === null && accountOnlyBrain(brain)) {
+    throw new ValidationError("Choose an account of this brain on the agent's computer", "account.invalid", {
+      brain,
+    });
+  }
   if (wanted === kept) return { id: kept };
   const owner = agent.ownerUserId;
   const chooses = options.admin || owner === userId;
@@ -2075,6 +2132,8 @@ export interface AiComputer {
   machineId: string;
   name: string;
   online: boolean;
+  /** Its system (`machines.os`), as `BrainComputer.os`. */
+  os: string;
   /** The caller connected it. */
   mine: boolean;
   /** The caller adds accounts there (they connected it, or nobody did), on a runner that knows accounts. */
@@ -2154,6 +2213,7 @@ export async function listAiAccounts(deps: BrainDeps, userId: string, orgId: str
         machineId: m.id,
         name: m.name,
         online: shownOnline(m),
+        os: m.os,
         mine: m.pairedByUserId === userId,
         canAdd: mayAddAccounts(m, userId) && m.protocol >= ACCOUNTS_PROTOCOL,
         keys: m.protocol >= PLAN_KEYS_PROTOCOL,
@@ -2196,6 +2256,30 @@ function ownSignIns(
       ...(claude?.plan ? { plan: claude.plan } : {}),
       ...(usage.claude_code ? { usage: usage.claude_code } : {}),
     };
-  if (can("codex") && usage.codex) out.codex = { usage: usage.codex };
+  // Codex's own sign-in as its runner reads it (its app-server's `account/read`: a ChatGPT plan, an API key or a model
+  // provider of the computer's own config), or its usage reading from before runners said it.
+  const codex = executors?.codex;
+  if (can("codex") && (codex?.loggedIn === true || (codex?.loggedIn !== false && usage.codex)))
+    out.codex = {
+      ...(codex?.plan ? { plan: codex.plan } : {}),
+      ...(usage.codex ? { usage: usage.codex } : {}),
+    };
   return out;
+}
+
+/**
+ * The runner each CLI thinks on Windows from: Cursor's keeps each account's sign-in in its folder there (ADR 0228 §7),
+ * Grok Build's keeps a turn to Grok's own rules (ADR 0142 §10), the Antigravity CLI's has one Gemini account a computer
+ * (ADR 0143 §3). Claude Code, Codex and OpenCode have their own checks.
+ */
+const WINDOWS_FROM: Readonly<Record<string, number>> = {
+  cursor: CLI_COPIES_PROTOCOL,
+  grok: GROK_WINDOWS_PROTOCOL,
+  antigravity: ANTIGRAVITY_WINDOWS_PROTOCOL,
+};
+
+/** A Windows runner too old for `kind` there (`WINDOWS_FROM`). */
+export function isWindowsLate(kind: string, machine: { os?: string | null; protocol?: number | null }): boolean {
+  const from = WINDOWS_FROM[kind];
+  return from !== undefined && machine.os === "windows" && (machine.protocol ?? 0) < from;
 }

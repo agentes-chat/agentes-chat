@@ -295,6 +295,10 @@ export function createFakeMachines(ctx: MockContext, log: (method: string, ...ar
       askTool: async (orgId, machineId, tool) => {
         log("machines.askTool", orgId, machineId, tool);
       },
+      fetchCli: async (orgId, machineId, cli) => {
+        log("machines.fetchCli", orgId, machineId, cli);
+        return { fetch: { state: "fetching", version: "1.0.0", done: 0, total: null } };
+      },
       checkClis: async (orgId, machineId) => {
         log("machines.checkClis", orgId, machineId);
         find(machineId);

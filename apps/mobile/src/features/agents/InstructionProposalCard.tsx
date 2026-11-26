@@ -1,4 +1,5 @@
 import { keys, type Message, type Proposal, useCardProposals, useUndoProposal } from "@agenteschat/client";
+import { upperFirst } from "@agenteschat/client/lib/format";
 import {
   appLabel,
   type ChangedLine,
@@ -49,7 +50,7 @@ export function InstructionProposalCard({ ids }: { ids: string[] }) {
 
 /** The card for rows already read (the history of agents' improvements reads them all at once, not one per card). */
 export function ProposalRowsCard({ id, rows }: { id: string; rows: Proposal[] }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { org } = useOrg();
   const dir = useDirectory();
   const when = useWhen();
@@ -135,7 +136,8 @@ export function ProposalRowsCard({ id, rows }: { id: string; rows: Proposal[] })
         only
           ? {
               tile: <IconTile name={only.target.type === "agent_access" ? "bolt" : "file"} size={20} bare />,
-              title: proposalTarget(t, only, agentName, org ?? orgName),
+              // Written to follow "propõe ·", lowercase in most languages: a title starts with a capital.
+              title: upperFirst(proposalTarget(t, only, agentName, org ?? orgName), i18n.language),
               detail:
                 only.target.type === "agent_role"
                   ? t("proposals.roleLine", { from: only.before, to: only.after })

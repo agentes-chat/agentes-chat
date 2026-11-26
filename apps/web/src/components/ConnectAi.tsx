@@ -35,6 +35,7 @@ import {
   planLabel,
   planMark,
   planOfAccount,
+  planOffSystem,
   planTitle,
   signsInOnce,
   signsInPerAgent,
@@ -496,6 +497,7 @@ export function ConnectAiDialog({
   const bareGates = useGatesWithoutAgent(org.id, bare);
   const gateOf = (c: PlanChoice): PlanGate =>
     agents.length > 0 ? gates.gateOf(c) : bare ? bareGates.at(c).gate : { state: "loading" };
+  const offSystem = (c: PlanChoice) => planOffSystem(t, gateOf(c));
   const [used, setUsed] = useState<ExistingUsed | null>(null);
   const [login, setLogin] = useState<ExistingSignIn | null>(null);
   // Where a plain plan panel is (its list of the person's accounts, or another sign-in): the title asks it.
@@ -1132,7 +1134,13 @@ export function ConnectAiDialog({
                 )}
               </>
             ) : (
-              <ConnectChoices mayAddKey={mayAddKey} dims={dims} perAgent={perAgent} onPick={(next) => pick(next)} />
+              <ConnectChoices
+                mayAddKey={mayAddKey}
+                dims={dims}
+                offSystem={offSystem}
+                perAgent={perAgent}
+                onPick={(next) => pick(next)}
+              />
             )}
           </div>
         )}
@@ -1342,7 +1350,7 @@ export function ConnectAiDialog({
                 )}
               </>
             ) : (
-              <ConnectChoices mayAddKey={mayAddKey} dims={dims} onPick={(next) => pick(next)} />
+              <ConnectChoices mayAddKey={mayAddKey} dims={dims} offSystem={offSystem} onPick={(next) => pick(next)} />
             )}
           </div>
         )}
@@ -1445,6 +1453,7 @@ export function ConnectAiDialog({
               <ConnectChoices
                 mayAddKey={mayAddKey}
                 dims={(c) => (agents.length > 0 || bare) && gateDims(gateOf(c))}
+                offSystem={offSystem}
                 onPick={(next) => {
                   setPicked(next);
                   setLogin(null);
@@ -1532,6 +1541,7 @@ export function ConnectAiDialog({
                 setPickedTarget(defaultTarget({ agents: planAgents, hasAi, set: setOf(next) }));
             }}
             dims={(c) => (agents.length > 0 || bare) && gateDims(gateOf(c))}
+            offSystem={offSystem}
             busy={add.isPending}
             keySelect={keySelect}
             panel={panel}

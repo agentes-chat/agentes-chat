@@ -13,9 +13,11 @@ import {
   CONSULTATION_TTL_MS,
   cancelRun,
   consultationConversation,
+  consultationNotice,
   consultationsIn,
   createAgent,
   createAgentRuns,
+  createChannel,
   createIssue,
   decideApproval,
   deleteAgent,
@@ -668,6 +670,30 @@ describe("ask_agent", () => {
     expect(shared[0]?.body).toBe("How is staging deployed?");
     expect(shared.some((m) => m.body === "Checking the deploy logs first.")).toBe(false);
     expect(shared.some((m) => m.channelId === f.general.id && typeof m.meta.approvalId === "string")).toBe(true);
+
+    // An asker that ended before the answer hears it as a notice where it was woken: opened from there too.
+    const shop = await createChannel(f.db, f.owner.id, f.org.id, { name: "shop" });
+    const notice = consultationNotice(row, "infra");
+    const fromShop = () => consultationConversation(f.db, f.org.id, shop.id, row.id);
+    // Another kind of notice naming the question opens nothing.
+    await insertMessage(f.db, {
+      orgId: f.org.id,
+      channelId: shop.id,
+      author: { type: "agent", agentId: f.agent.id, runId: null, hop: 0, stretchId: null },
+      body: notice.text,
+      meta: { notice: { ...notice, kind: "agent_note" } },
+    });
+    expect(await fromShop()).toBeNull();
+    await insertMessage(f.db, {
+      orgId: f.org.id,
+      channelId: shop.id,
+      author: { type: "agent", agentId: f.agent.id, runId: null, hop: 0, stretchId: null },
+      body: notice.text,
+      meta: { notice },
+    });
+    expect((await fromShop())?.messages[0]?.body).toBe("How is staging deployed?");
+    // Never a question whose reply landed somewhere else.
+    expect(await consultationConversation(f.db, f.org.id, shop.id, otherId)).toBeNull();
   });
 
   test("no cycles: the consulted agent can't ask back the one asking it", async () => {
