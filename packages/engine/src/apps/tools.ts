@@ -663,7 +663,7 @@ export function buildAppsMcpServer(deps: AppsToolDeps, p: AppPrincipal, version:
       }
       const agent = await resolveAgent(deps, p, args.agent);
       const membership = await getMembership(deps.db, p.userId, p.orgId);
-      if (!canTalkTo(agent, p.userId, speakerOf(membership))) throw await audienceError(deps.db, agent);
+      if (!canTalkTo(agent, p.userId, speakerOf(membership))) throw await audienceError(deps.db, agent, p.userId);
       let channelId: string;
       let body = args.message;
       if (args.channel_id) {

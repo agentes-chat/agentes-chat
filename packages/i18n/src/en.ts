@@ -11867,6 +11867,11 @@ export const en = {
       only: "{{name}} only replies to {{names}}.",
       some: "{{name}} only replies to some people.",
       nobody: "{{name}} isn't replying to anyone right now.",
+      /** In its audience, but none of my roles holds "Talk to agents" (`audience.no_talk`). */
+      noTalk: "Your roles don't include “Talk to agents”. An admin can add it to one of them.",
+      /** In its audience, but the plan it thinks with has "Answers other people" off (`audience.plan_owner_only`). */
+      planOwnerOnly:
+        "{{name}} thinks with a plan that answers only its owner. Whoever looks after {{name}} can turn on “Answers other people” on its page.",
     },
   },
   /**

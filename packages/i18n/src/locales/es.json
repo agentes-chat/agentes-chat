@@ -11716,7 +11716,9 @@
     "notice": {
       "only": "{{name}} solo responde a {{names}}.",
       "some": "{{name}} solo responde a algunas personas.",
-      "nobody": "{{name}} no le responde a nadie ahora."
+      "nobody": "{{name}} no le responde a nadie ahora.",
+      "noTalk": "Tus cargos no incluyen “Hablar con agentes”. Un administrador puede agregarlo a uno de ellos.",
+      "planOwnerOnly": "{{name}} piensa con un plan que solo atiende a su dueño. Quien se encarga de {{name}} puede activar “Responde a otras personas” en la página de {{name}}."
     }
   },
   "editors": {

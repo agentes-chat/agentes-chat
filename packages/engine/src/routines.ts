@@ -1479,7 +1479,7 @@ export async function createRoutine(
   const agent = await getAgent(db, orgId, input.agentId);
   if (!agent || agent.archivedAt) throw new NotFoundError("Agent not found");
   // A routine asks the agent on its creator's behalf: only people who can talk to it create one.
-  if (!canTalkTo(agent, actorId, await speakerFor(db, orgId, actorId))) throw await audienceError(db, agent);
+  if (!canTalkTo(agent, actorId, await speakerFor(db, orgId, actorId))) throw await audienceError(db, agent, actorId);
   const prompt = input.prompt.trim().slice(0, ROUTINE_PROMPT_MAX);
   if (!prompt) throw new ValidationError("Say what the agent should do", "routine.prompt_required");
   await checkTarget(db, orgId, agent.id, input.target, actorId);
@@ -1779,7 +1779,7 @@ export async function updateRoutine(
   const agent = await getAgent(db, orgId, agentId);
   if (!agent || agent.archivedAt) throw new NotFoundError("Agent not found");
   if (set.agentId && !canTalkTo(agent, actorId, await speakerFor(db, orgId, actorId)))
-    throw await audienceError(db, agent);
+    throw await audienceError(db, agent, actorId);
   if (patch.name !== undefined) {
     const name = patch.name.trim().slice(0, 120);
     if (!name) throw new ValidationError("Give the routine a name", "routine.name_required");
@@ -2009,7 +2009,7 @@ export async function duplicateRoutine(
   if (targetOf(current).type === "widget") throw new ForbiddenError(WIDGET_ROUTINE_FIXED, "routine.widget_fixed");
   const agent = await getAgent(db, orgId, current.agentId);
   if (!agent || agent.archivedAt) throw new NotFoundError("Agent not found");
-  if (!canTalkTo(agent, actorId, await speakerFor(db, orgId, actorId))) throw await audienceError(db, agent);
+  if (!canTalkTo(agent, actorId, await speakerFor(db, orgId, actorId))) throw await audienceError(db, agent, actorId);
   // Whoever copies it becomes its creator: they must be able to post where it reports.
   await checkTarget(db, orgId, agent.id, targetOf(current), actorId);
   const { id: _id, createdAt: _c, updatedAt: _u, lastRunAt: _l, deletedAt: _d, ...copy } = current;
@@ -2632,7 +2632,7 @@ export async function takeOverRoutine(
   await requireRoutineManager(db, actorId, orgId, current.agentId);
   const agent = await getAgent(db, orgId, current.agentId);
   if (!agent || agent.archivedAt) throw new NotFoundError("Agent not found");
-  if (!canTalkTo(agent, actorId, await speakerFor(db, orgId, actorId))) throw await audienceError(db, agent);
+  if (!canTalkTo(agent, actorId, await speakerFor(db, orgId, actorId))) throw await audienceError(db, agent, actorId);
   const target = targetOf(current);
   if (
     (target.type === "channel" || target.type === "conversation") &&
@@ -2718,7 +2718,7 @@ export async function createReminder(
   const membership = await requirePermission(db, requesterId, orgId, "post");
   const agent = await getAgent(db, orgId, input.agentId);
   if (!agent || agent.archivedAt) throw new NotFoundError("Agent not found");
-  if (!canTalkTo(agent, requesterId, speakerOf(membership))) throw await audienceError(db, agent);
+  if (!canTalkTo(agent, requesterId, speakerOf(membership))) throw await audienceError(db, agent, requesterId);
   const message = input.message.trim().slice(0, 2000);
   if (!message) throw new ValidationError("Say what to remind", "reminder.text_required");
   if (input.forUserId && input.forUserId !== requesterId) {

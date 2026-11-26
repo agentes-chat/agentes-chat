@@ -1028,10 +1028,10 @@ export const Message = MessageBase.extend({
       z.object({
         agentId: z.uuid(),
         text: z.string(),
-        code: z
-          .string()
-          .optional()
-          .openapi({ description: "`audience.only` / `audience.nobody`: translate with `params`." }),
+        code: z.string().optional().openapi({
+          description:
+            "`audience.only` / `audience.nobody` (whom it answers), `audience.no_talk` (the person's roles lack `talk_to_agents`), `audience.plan_owner_only` (its plan answers only its owner), `channel.agents_denied`: translate with `params`.",
+        }),
         params: z.record(z.string(), z.unknown()).optional(),
       }),
     )

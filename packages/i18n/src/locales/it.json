@@ -11810,7 +11810,9 @@
       "some": "{{name}} risponde solo ad alcune persone.",
       "some_female": "{{name}} risponde solo ad alcune persone.",
       "nobody": "{{name}} non risponde a nessuno in questo momento.",
-      "nobody_female": "{{name}} non risponde a nessuno in questo momento."
+      "nobody_female": "{{name}} non risponde a nessuno in questo momento.",
+      "noTalk": "I tuoi ruoli non includono “Parlare con gli agenti”. Un amministratore può aggiungerlo a uno di essi.",
+      "planOwnerOnly": "{{name}} pensa con un piano che risponde solo al suo proprietario. Chi si occupa di {{name}} può attivare “Risponde ad altre persone” nella pagina di {{name}}."
     }
   },
   "editors": {

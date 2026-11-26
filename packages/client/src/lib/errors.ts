@@ -2,6 +2,7 @@ import type { TFunction } from "i18next";
 import { ApiError, NetworkError } from "../api/http";
 import type { AuthConfig, OrgStanding } from "../api/types";
 import { widgetWaitOf, widgetWaitText } from "../dashboards/lib";
+import { refusalText } from "./audience";
 import { billingHoldOf } from "./billing";
 import { MAX_UPLOAD_MB } from "./files";
 import { joinNames, lowerFirst } from "./format";
@@ -901,6 +902,8 @@ export function knownErrorText(t: TFunction, error: unknown, locale = "en"): str
   if (restriction) return restriction;
   const limit = limitRefusalText(t, locale, error.code, error.params);
   if (limit) return limit;
+  const refused = refusalText(t, error.code, error.params);
+  if (refused) return refused;
   // An agent that doesn't answer this person (`audienceError`): whom it answers, by name.
   if (
     (error.code === "audience.only" || error.code === "audience.nobody") &&

@@ -12193,7 +12193,9 @@
       "some": "{{name}} odpowiada tylko niektórym osobom.",
       "some_female": "{{name}} odpowiada tylko niektórym osobom.",
       "nobody": "{{name}} nikomu teraz nie odpowiada.",
-      "nobody_female": "{{name}} nikomu teraz nie odpowiada."
+      "nobody_female": "{{name}} nikomu teraz nie odpowiada.",
+      "noTalk": "Twoje role nie obejmują „Rozmowa z agentami”. Administrator może dodać to do jednej z nich.",
+      "planOwnerOnly": "{{name}} myśli z planem, który odpowiada tylko właścicielowi. Osoba, która opiekuje się agentem {{name}}, może włączyć „Odpowiada innym osobom” na stronie agenta {{name}}."
     }
   },
   "editors": {

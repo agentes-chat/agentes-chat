@@ -27535,6 +27535,12 @@
   "audience.notice.nobody": {
     "value": "{{name}} isn't replying to anyone right now."
   },
+  "audience.notice.noTalk": {
+    "value": "Your roles don't include “Talk to agents”. An admin can add it to one of them."
+  },
+  "audience.notice.planOwnerOnly": {
+    "value": "{{name}} thinks with a plan that answers only its owner. Whoever looks after {{name}} can turn on “Answers other people” on its page."
+  },
   "editors.section": {
     "value": "Who can edit"
   },

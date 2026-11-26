@@ -10948,7 +10948,9 @@
       "some": "{{name}} 只回复部分成员。",
       "some_female": "{{name}} 只回复部分成员。",
       "nobody": "{{name}} 目前不回复任何人。",
-      "nobody_female": "{{name}} 目前不回复任何人。"
+      "nobody_female": "{{name}} 目前不回复任何人。",
+      "noTalk": "你的角色不包含“与智能体对话”。管理员可以把它加到你的某个角色中。",
+      "planOwnerOnly": "{{name}} 使用的套餐只回复其所有者。负责 {{name}} 的人可以在 {{name}} 的页面上打开“回复其他成员”。"
     }
   },
   "editors": {

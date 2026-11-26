@@ -11346,7 +11346,9 @@
     "notice": {
       "only": "{{name}} antwortet nur {{names}}.",
       "some": "{{name}} antwortet nur einigen Personen.",
-      "nobody": "{{name}} antwortet gerade niemandem."
+      "nobody": "{{name}} antwortet gerade niemandem.",
+      "noTalk": "Deine Rollen enthalten nicht „Mit Agenten sprechen“. Ein Admin kann es zu einer davon hinzufügen.",
+      "planOwnerOnly": "{{name}} denkt mit einem Abo, das nur dem Besitzer von {{name}} antwortet. Wer sich um {{name}} kümmert, kann auf der Seite von {{name}} „Antwortet anderen Personen“ einschalten."
     }
   },
   "editors": {

@@ -508,7 +508,7 @@ export async function answerNow(
       canTalkTo(r.agent, r.requester, talks.get(r.requester) ?? { talks: false, roleIds: [] }),
     );
     const [first] = ready;
-    if (heard.length === 0 && first) throw await audienceError(deps.db, first.agent);
+    if (heard.length === 0 && first) throw await audienceError(deps.db, first.agent, first.requester);
     const runs: Answering = [];
     let worked = false;
     for (const r of heard) {

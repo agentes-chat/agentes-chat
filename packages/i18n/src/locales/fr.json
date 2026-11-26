@@ -11782,7 +11782,9 @@
       "some": "{{name}} ne répond qu'à certaines personnes.",
       "some_female": "{{name}} ne répond qu'à certaines personnes.",
       "nobody": "{{name}} ne répond à personne pour le moment.",
-      "nobody_female": "{{name}} ne répond à personne pour le moment."
+      "nobody_female": "{{name}} ne répond à personne pour le moment.",
+      "noTalk": "Vos rôles n'incluent pas « Parler aux agents ». Un administrateur peut l'ajouter à l'un d'eux.",
+      "planOwnerOnly": "{{name}} pense avec un forfait qui ne répond qu'à son propriétaire. La personne qui s'occupe de {{name}} peut activer « Répond aux autres personnes » sur la page de {{name}}."
     }
   },
   "editors": {

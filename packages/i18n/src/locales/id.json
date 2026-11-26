@@ -10940,7 +10940,9 @@
     "notice": {
       "only": "{{name}} hanya membalas {{names}}.",
       "some": "{{name}} hanya membalas beberapa orang.",
-      "nobody": "{{name}} sedang tidak membalas siapa pun."
+      "nobody": "{{name}} sedang tidak membalas siapa pun.",
+      "noTalk": "Peranmu tidak mencakup “Bicara dengan agen”. Admin bisa menambahkannya ke salah satu peranmu.",
+      "planOwnerOnly": "{{name}} berpikir dengan paket yang hanya menjawab pemiliknya. Orang yang mengurus {{name}} bisa menyalakan “Menjawab orang lain” di halaman {{name}}."
     }
   },
   "editors": {

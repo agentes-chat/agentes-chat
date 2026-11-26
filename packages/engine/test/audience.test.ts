@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { BRAIN_PROTOCOL, createFakeEmailSender, userTopic } from "@agenteschat/adapters";
+import { ACCOUNTS_PROTOCOL, BRAIN_PROTOCOL, createFakeEmailSender, userTopic } from "@agenteschat/adapters";
 import { and, eq, rowsOf, schema, sql } from "@agenteschat/db";
 import {
   acceptInvitation,
@@ -299,6 +299,45 @@ describe("who can talk to the agent", () => {
     const mine = await postPersonMessage(deps(), f.owner.id, f.org.id, f.general.id, { body: "@dev faz o relatório" });
     expect(await runsOf(mine.id)).toHaveLength(1);
     expect(mine.notices).toBeUndefined();
+  });
+
+  test("someone its audience takes hears the check that turned them down: their roles, or its plan's switch", async () => {
+    const { bia } = await world();
+    await setAgentAudience(f.db, f.owner.id, f.org.id, f.agent.id, { mode: "everyone", userIds: [] });
+    const mention = async () =>
+      (await postPersonMessage(deps(), bia.id, f.org.id, f.general.id, { body: "@dev faz o relatório" })).notices;
+    const { machineId } = await pairMachine(deps(), f.owner.id, f.org.id, { protocol: ACCOUNTS_PROTOCOL });
+    const plan = "0193abab-0000-4000-8000-0000000000b1";
+    await f.db.insert(schema.machineAccounts).values({
+      id: plan,
+      orgId: f.org.id,
+      machineId,
+      kind: "claude_code",
+      label: "Conta",
+      status: "active",
+      createdBy: f.owner.id,
+      shared: true,
+    });
+    await f.db
+      .update(schema.agents)
+      .set({ brain: "claude_code", brainAccountId: plan })
+      .where(eq(schema.agents.id, f.agent.id));
+    // A new account's "Atende outras pessoas" is off: the agent answers only its owner.
+    expect(await mention()).toMatchObject([
+      {
+        code: "audience.plan_owner_only",
+        params: { agentId: f.agent.id, agentName: "Dev" },
+        text: "Dev thinks with a plan that answers only its owner. Whoever looks after Dev can turn on “Answers other people” on its page.",
+      },
+    ]);
+    await everyoneWithout(f.db, f.org.id, "talk_to_agents");
+    expect(await mention()).toMatchObject([{ code: "audience.no_talk", params: { agentName: "Dev" } }]);
+    await expect(openDm(f.db, bia.id, f.org.id, { agentId: f.agent.id })).rejects.toMatchObject({
+      code: "audience.no_talk",
+    });
+    expect(
+      await runsOf((await postPersonMessage(deps(), bia.id, f.org.id, f.general.id, { body: "@dev" })).id),
+    ).toEqual([]);
   });
 
   test("an agent nobody may talk to (no owner, only its owner) still tells whoever mentions it", async () => {

@@ -1721,7 +1721,7 @@ export async function askAgentToImplement(
   const issue = await findVisible(db, actor, orgId, { id: issueId });
   const agent = await getAgent(db, orgId, agentId);
   if (!agent || agent.archivedAt) throw new NotFoundError("Agent not found");
-  if (!canTalkTo(agent, userId, await speakerFor(db, orgId, userId))) throw await audienceError(db, agent);
+  if (!canTalkTo(agent, userId, await speakerFor(db, orgId, userId))) throw await audienceError(db, agent, userId);
   // It goes first among whoever has the task, everyone else staying: the first agent is the one the task's
   // conversation answers with (ADR 0188).
   const had = await assigneesOfIssue(db, issue.id);

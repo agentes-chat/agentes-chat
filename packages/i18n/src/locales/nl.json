@@ -11408,7 +11408,9 @@
       "some": "{{name}} antwoordt alleen bepaalde mensen.",
       "some_female": "{{name}} antwoordt alleen bepaalde mensen.",
       "nobody": "{{name}} antwoordt nu niemand.",
-      "nobody_female": "{{name}} antwoordt nu niemand."
+      "nobody_female": "{{name}} antwoordt nu niemand.",
+      "noTalk": "Je rollen bevatten geen “Met agents praten”. Een beheerder kan het aan een ervan toevoegen.",
+      "planOwnerOnly": "{{name}} denkt met een abonnement dat alleen de eigenaar antwoordt. Wie voor {{name}} zorgt, kan “Antwoordt andere mensen” aanzetten op de pagina van {{name}}."
     }
   },
   "editors": {

@@ -11284,7 +11284,9 @@
     "notice": {
       "only": "{{name}} yalnızca şu kişilere yanıt verir: {{names}}.",
       "some": "{{name}} yalnızca bazı kişilere yanıt verir.",
-      "nobody": "{{name}} şu anda kimseye yanıt vermiyor."
+      "nobody": "{{name}} şu anda kimseye yanıt vermiyor.",
+      "noTalk": "Rollerin “Ajanlarla konuşma” iznini içermiyor. Bir yönetici bunu rollerinden birine ekleyebilir.",
+      "planOwnerOnly": "{{name}}, yalnızca sahibine yanıt veren bir planla düşünüyor. {{name}} ile ilgilenen kişi, {{name}} sayfasında “Başka kişilere de yanıt verir” seçeneğini açabilir."
     }
   },
   "editors": {

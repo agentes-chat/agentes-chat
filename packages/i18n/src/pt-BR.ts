@@ -11873,6 +11873,13 @@ export const ptBR = {
       some_female: "A {{name}} só responde a algumas pessoas.",
       nobody: "O {{name}} não está respondendo a ninguém agora.",
       nobody_female: "A {{name}} não está respondendo a ninguém agora.",
+      /** Na audiência, mas nenhum dos meus cargos tem "Conversar com agentes" (`audience.no_talk`). */
+      noTalk: "Seus cargos não incluem “Conversar com agentes”. Um administrador pode incluir em um deles.",
+      /** Na audiência, mas o plano com que ele pensa está com "Atende outras pessoas" desligado (`audience.plan_owner_only`). */
+      planOwnerOnly:
+        "O {{name}} pensa com um plano que só atende o próprio dono. Quem cuida do {{name}} pode ligar “Atende outras pessoas” na página dele.",
+      planOwnerOnly_female:
+        "A {{name}} pensa com um plano que só atende o próprio dono. Quem cuida da {{name}} pode ligar “Atende outras pessoas” na página dela.",
     },
   },
   /** "Quem pode editar" (ADR 0085 addendum of 2026-11-17): who else changes how an agent works. */
