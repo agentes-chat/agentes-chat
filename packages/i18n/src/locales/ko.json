@@ -15977,6 +15977,10 @@
       "paused": "{{name}} 일시 중지됨",
       "resumed": "{{name}} 다시 작업 중"
     },
+    "runnerBehind": {
+      "command": "{{computer}}의 agentes.chat 프로그램이 이 서버보다 오래되어 일부 기능이 작동하지 않습니다. 업데이트하려면 그 컴퓨터에서 다음을 실행하세요:",
+      "installer": "{{computer}}의 agentes.chat 프로그램이 이 서버보다 오래되어 일부 기능이 작동하지 않습니다. 업데이트하려면 그 컴퓨터에서 설치 명령을 root로 다시 실행하세요."
+    },
     "seenNow": "지금 연결됨",
     "seen": "{{when}} 확인됨",
     "neverSeen": "아직 연결된 적 없음",

@@ -40636,6 +40636,12 @@
   "machines.remotePause.resumed": {
     "value": "{{name}} is back to work"
   },
+  "machines.runnerBehind.command": {
+    "value": "The agentes.chat program on {{computer}} is older than this server, so some things don't work there. To update it, run this there:"
+  },
+  "machines.runnerBehind.installer": {
+    "value": "The agentes.chat program on {{computer}} is older than this server, so some things don't work there. To update it, run the install command there again, as root."
+  },
   "machines.seenNow": {
     "value": "connected now"
   },

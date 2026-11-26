@@ -17704,6 +17704,10 @@
       "paused": "{{name}} jest wstrzymany",
       "resumed": "{{name}} znów pracuje"
     },
+    "runnerBehind": {
+      "command": "Program agentes.chat na {{computer}} jest starszy niż ten serwer, więc niektóre rzeczy tam nie działają. Aby go zaktualizować, uruchom tam to:",
+      "installer": "Program agentes.chat na {{computer}} jest starszy niż ten serwer, więc niektóre rzeczy tam nie działają. Aby go zaktualizować, uruchom tam ponownie polecenie instalacji jako root."
+    },
     "seenNow": "połączony teraz",
     "seen": "widziany {{when}}",
     "neverSeen": "jeszcze się nie połączył",

@@ -17158,6 +17158,10 @@
       "paused": "{{name}} è in pausa",
       "resumed": "{{name}} è di nuovo al lavoro"
     },
+    "runnerBehind": {
+      "command": "Il programma agentes.chat su {{computer}} è più vecchio di questo server, quindi lì alcune cose non funzionano. Per aggiornarlo, esegui questo lì:",
+      "installer": "Il programma agentes.chat su {{computer}} è più vecchio di questo server, quindi lì alcune cose non funzionano. Per aggiornarlo, esegui di nuovo lì il comando di installazione, come root."
+    },
     "seenNow": "connesso ora",
     "seen": "visto {{when}}",
     "neverSeen": "non si è ancora connesso",

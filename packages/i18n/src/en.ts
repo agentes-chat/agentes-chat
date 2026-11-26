@@ -17077,6 +17077,12 @@ export const en = {
       paused: "{{name}} is paused",
       resumed: "{{name}} is back to work",
     },
+    runnerBehind: {
+      command:
+        "The agentes.chat program on {{computer}} is older than this server, so some things don't work there. To update it, run this there:",
+      installer:
+        "The agentes.chat program on {{computer}} is older than this server, so some things don't work there. To update it, run the install command there again, as root.",
+    },
     seenNow: "connected now",
     seen: "seen {{when}}",
     neverSeen: "hasn't connected yet",

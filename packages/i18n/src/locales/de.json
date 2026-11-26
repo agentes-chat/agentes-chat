@@ -16582,6 +16582,10 @@
       "paused": "{{name}} ist pausiert",
       "resumed": "{{name}} arbeitet wieder"
     },
+    "runnerBehind": {
+      "command": "Das agentes.chat-Programm auf {{computer}} ist älter als dieser Server, daher funktioniert dort einiges nicht. Zum Aktualisieren führe dort Folgendes aus:",
+      "installer": "Das agentes.chat-Programm auf {{computer}} ist älter als dieser Server, daher funktioniert dort einiges nicht. Zum Aktualisieren führe dort den Installationsbefehl erneut als root aus."
+    },
     "seenNow": "gerade verbunden",
     "seen": "zuletzt gesehen {{when}}",
     "neverSeen": "hat sich noch nicht verbunden",

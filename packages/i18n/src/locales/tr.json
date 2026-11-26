@@ -16512,6 +16512,10 @@
       "paused": "{{name}} duraklatıldı",
       "resumed": "{{name}} yeniden çalışıyor"
     },
+    "runnerBehind": {
+      "command": "{{computer}} üzerindeki agentes.chat programı bu sunucudan eski, bu yüzden orada bazı şeyler çalışmıyor. Güncellemek için orada şunu çalıştır:",
+      "installer": "{{computer}} üzerindeki agentes.chat programı bu sunucudan eski, bu yüzden orada bazı şeyler çalışmıyor. Güncellemek için kurulum komutunu orada root olarak yeniden çalıştır."
+    },
     "seenNow": "şu an bağlı",
     "seen": "son görülme {{when}}",
     "neverSeen": "henüz bağlanmadı",

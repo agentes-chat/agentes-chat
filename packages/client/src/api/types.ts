@@ -5458,6 +5458,11 @@ export interface Machine {
   /** `system`: each agent works as its own OS user, in its own folder (ADR 0057). Absent on older servers: `single`. */
   mode?: "system" | "single";
   runnerVersion: string;
+  /**
+   * Its runner is behind this server: `command`, its owner runs `agentes-runner update` there; `installer`, the
+   * install command again, as root. Null or absent (an older server): nothing to update from here.
+   */
+  update?: "command" | "installer" | null;
   /** ADR 0110: its runner can hold browser profiles; `false`: update the computer. */
   browserProfiles?: boolean;
   /** `false`: started with `--no-exec` (files and uploads only). */

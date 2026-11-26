@@ -89,6 +89,8 @@ export interface MachineExecutors {
   claudeLoginBlocked?: string;
   /** `hello.authEgressGroup` (protocol 50): root's Claude sign-in CLIs there run in the `agentes-auth` group. */
   authEgressGroup?: true;
+  /** `hello.app` (protocol 86): the agentes.chat app runs its runner; absent: from the terminal, or an older runner. */
+  app?: true;
   /** `hello.toolchains` (bring your own devices): what it can build and drive phones with, by tool, its version. */
   toolchains?: Record<string, string>;
   /** The usage of the computer's own sign-ins (protocol 19), by brain; kept across reconnects. */
