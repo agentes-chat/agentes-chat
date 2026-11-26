@@ -283,6 +283,12 @@ describe("the working line", () => {
     expect(orbit).toContain('} from "@agenteschat/ui/agent/orbit";');
     expect(orbit).toContain("const clock = useDrawingClock(!reduced && !paused);");
     expect(orbit).not.toMatch(/requestAnimationFrame|setInterval/);
+    // The rings themselves turn round the face on that clock (the web's `ac-orbit__roll`), their light riding them,
+    // resting at their tilt with Reduce Motion.
+    expect(orbit).toContain("{ rotate: ringAngle(ring, roll, clock.value) },");
+    expect(orbit).toContain("return ((ring.tilt + (360 * (ms / 1000 + roll)) / ring.spin) * Math.PI) / 180;");
+    expect(orbit).toContain("phases={reduced ? still : phases}");
+    expect(orbit).not.toContain("{ rotate: (ring.tilt * Math.PI) / 180 }");
   });
 
   test('"View" reaches 44 points', () => {

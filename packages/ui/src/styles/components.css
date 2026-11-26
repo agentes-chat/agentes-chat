@@ -9508,8 +9508,9 @@ html:not([data-pointer]) button.ac-tools__row:focus-visible {
  * An agent at work (`OrbitGlyph`): two rings around its glyph in its own colours (`orbitColors`), whole behind it, and
  * on each a light (a fading arc, a small dot at its head) that passes over the glyph on the near half and behind it on
  * the far one. The overlay is 2.2 glyphs wide and takes no room (it reaches into the row's gap), but its box counts as
- * overflow: the row holding it clips (`overflow: clip`), or a scrolling list would scroll by it. Only transforms move;
- * reduced motion draws them still, and off screen they pause.
+ * overflow: the row holding it clips (`overflow: clip`), or a scrolling list would scroll by it. Each ring also turns
+ * slowly round the glyph (`ac-orbit__roll`), its light riding it. Only transforms move; reduced motion draws them
+ * still, and off screen they pause.
  */
 .ac-orbit {
   --orbit-1: var(--orbit-l1);
@@ -9578,14 +9579,20 @@ html:not([data-pointer]) button.ac-tools__row:focus-visible {
   transform-origin: 0 0;
   transform: rotate(calc(-1 * var(--start)));
 }
+.ac-orbit__roll {
+  transform-origin: 0 0;
+}
 @media (prefers-reduced-motion: no-preference) {
+  .ac-orbit__roll {
+    animation: ac-orbit-roll var(--spin) linear infinite;
+  }
   .ac-orbit__spin {
     animation: ac-orbit-turn var(--turn) linear infinite;
   }
   .ac-orbit__unspin {
     animation: ac-orbit-unturn var(--turn) linear infinite;
   }
-  .ac-orbit[data-paused="true"] :is(.ac-orbit__spin, .ac-orbit__unspin) {
+  .ac-orbit[data-paused="true"] :is(.ac-orbit__spin, .ac-orbit__unspin, .ac-orbit__roll) {
     animation-play-state: paused;
   }
 }
@@ -9595,6 +9602,14 @@ html:not([data-pointer]) button.ac-tools__row:focus-visible {
   }
   to {
     transform: rotate(calc(var(--start) + 360deg));
+  }
+}
+@keyframes ac-orbit-roll {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
   }
 }
 @keyframes ac-orbit-unturn {
