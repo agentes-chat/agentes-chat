@@ -14,11 +14,17 @@ export interface TokenProps {
   size?: "sm";
   /**
    * `invalid`: it can't go as it is, in the danger tone; `soft`: it's fine but won't count (already in, already
-   * invited), quiet. `note` says which.
+   * invited), quiet; `done`: it went (an invitation just sent), its note in the ok tone after a check. `note` says
+   * which.
    */
-  state?: "invalid" | "soft";
-  /** A word or two after the label: why it's `invalid` or `soft` ("confira", "já convidado"). */
+  state?: "invalid" | "soft" | "done";
+  /** A word or two after the label: why it's `invalid` or `soft` ("confira", "já convidado"), or what became of it. */
   note?: ReactNode;
+  /**
+   * A choice of its own after the label (an address's role, a `Select size="sm"`): drawn as its words and chevron on
+   * the token's line, never as a box inside the token, which would read as a card in a card.
+   */
+  choice?: ReactNode;
   /** It stays whatever the person does: no ✕ (its `tip` says why). */
   fixed?: boolean;
   /** Where it comes from or why it stays, in a tip on the token, and for screen readers after its label. */
@@ -28,7 +34,19 @@ export interface TokenProps {
 }
 
 /** A picked item (a participant, a member) with a button to remove it (none without `onRemove`: it stays). */
-export function Token({ children, leading, removeLabel, onRemove, size, state, note, fixed, tip, fresh }: TokenProps) {
+export function Token({
+  children,
+  leading,
+  removeLabel,
+  onRemove,
+  size,
+  state,
+  note,
+  choice,
+  fixed,
+  tip,
+  fresh,
+}: TokenProps) {
   const token = (
     <span
       className={cx("ac-token", size && `ac-token--${size}`)}
@@ -38,7 +56,13 @@ export function Token({ children, leading, removeLabel, onRemove, size, state, n
     >
       {leading}
       <span className="ac-token__label">{children}</span>
-      {note && <span className="ac-token__note">{note}</span>}
+      {note && (
+        <span className="ac-token__note">
+          {state === "done" && <Icon name="check" size={14} />}
+          {note}
+        </span>
+      )}
+      {choice && <span className="ac-token__choice">{choice}</span>}
       {tip && <span className="ac-visually-hidden">{tip}</span>}
       {onRemove && !fixed && (
         <button type="button" className="ac-token__remove" aria-label={removeLabel} onClick={onRemove}>

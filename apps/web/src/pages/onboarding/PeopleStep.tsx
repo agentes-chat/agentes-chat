@@ -1,10 +1,10 @@
 import type { BatchInviteResult } from "@agenteschat/client";
 import { useAllInvitations, useInviteMany, useMembers, useRoles } from "@agenteschat/client";
 import { everyoneOf, isEveryone, roleSummary, sortRoles } from "@agenteschat/client/lib/roles";
-import { Button, Locked } from "@agenteschat/ui";
+import { Button, ChipField, Locked } from "@agenteschat/ui";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { type ChipAddress, ChipNote, ChipRole, chipsFrom, EmailChips } from "@/components/invite/EmailChips";
+import { addressToken, type ChipAddress, ChipRole, type ChipState, chipsFrom } from "@/components/invite/AddressTokens";
 import { InviteLinkPanel, LocalOnlyInvites } from "@/components/invite/InviteLinkPanel";
 import { useToast } from "@/lib/toast";
 import { Box } from "./Shell";
@@ -12,10 +12,11 @@ import "@/components/invite/invite.css";
 
 /*
  * The last step of a team's rail (ADR 0162, amended 2026-11-11): the people who work there, invited with the invite
- * dialog's own pieces (ADR 0090): the address chips, each with its role, and the workspace's link to copy (renewing or
- * turning it off belongs to Members, not to a workspace still being set up), a line away. Its box's footer holds the
- * way on, as every other step's: the button sends the invitations and finishes the onboarding; "Invite later"
- * finishes it with none. A server that sends no email invites through the link only, as the dialog does.
+ * dialog's own pieces (ADR 0090): its To (the kit's `ChipField`, the same address tokens), each address with its
+ * role on the token's line, and the workspace's link to copy (renewing or turning it off belongs to Members, not to a
+ * workspace still being set up), a line away. Its box's footer holds the way on, as every other step's: the button
+ * sends the invitations and finishes the onboarding; "Invite later" finishes it with none. A server that sends no
+ * email invites through the link only, as the dialog does.
  */
 
 /** The role picker's value for no role: a member (the invite dialog's). */
@@ -69,7 +70,7 @@ export function PeopleStep({
   // Who is in already, and who has an invitation waiting: said on their chip and left out of the send.
   const inAlready = new Set([email.toLowerCase(), ...members.map((m) => m.email.toLowerCase())]);
   const waiting = new Set(invitations.filter((i) => i.status === "pending").map((i) => i.email.toLowerCase()));
-  const stateOf = (c: ChipAddress) =>
+  const stateOf = (c: ChipAddress): ChipState =>
     sent.has(c.email)
       ? "sent"
       : !c.valid
@@ -206,33 +207,30 @@ export function PeopleStep({
           <label className="ac-visually-hidden" htmlFor="onb-people-emails">
             {t("members.dialog.emails")}
           </label>
-          <EmailChips
+          <ChipField
             id="onb-people-emails"
-            chips={chips}
+            tokens={chips.map((chip) =>
+              addressToken(t, chip, stateOf(chip), {
+                member: t("members.chips.member", { org }),
+                choice: (
+                  <ChipRole
+                    email={chip.email}
+                    value={roleOf(chip.email)}
+                    options={roleOptions}
+                    onChange={(v) => setRoles((prev) => ({ ...prev, [chip.email]: v }))}
+                  />
+                ),
+              }),
+            )}
+            inputMode="email"
             draft={draft}
             onDraftChange={setDraft}
-            onAdd={(text) => setChips((list) => [...list, ...chipsFrom(text, list)])}
-            onRemove={(chip) => setChips((list) => list.filter((c) => c.email !== chip.email))}
+            onCommit={(text) => setChips((list) => [...list, ...chipsFrom(text, list)])}
+            onRemove={(email) => setChips((list) => list.filter((c) => c.email !== email))}
             placeholder={t("members.emailsPlaceholder")}
             morePlaceholder={t("members.dialog.moreEmails")}
-            describedBy="onb-people-help"
+            aria-describedby="onb-people-help"
             onEnterEmpty={() => void send()}
-            removable={(chip) => stateOf(chip) !== "sent"}
-            soft={(chip) => stateOf(chip) === "member" || stateOf(chip) === "invited"}
-            aside={(chip) => {
-              const state = stateOf(chip);
-              if (state === "sent") return <ChipNote done>{t("members.chips.sent")}</ChipNote>;
-              if (state === "member") return <ChipNote>{t("members.chips.member", { org })}</ChipNote>;
-              if (state === "invited") return <ChipNote>{t("members.chips.invited")}</ChipNote>;
-              return (
-                <ChipRole
-                  email={chip.email}
-                  value={roleOf(chip.email)}
-                  options={roleOptions}
-                  onChange={(v) => setRoles((prev) => ({ ...prev, [chip.email]: v }))}
-                />
-              );
-            }}
           />
           <p id="onb-people-help" className="invite-help" data-bad={(!done && bad) || undefined}>
             {done

@@ -10,7 +10,7 @@
   row), `lib/push-offer.ts` (`pushAskAt`), `lib/billing.ts` (`planOfferOf`); engine `team-templates.ts`
   (`sayTeamHello`), `standing.ts` (`TEAM_HELLO_JOB` queued by `setBillingHold`), `billing-link.ts` (`plan`); web
   `pages/OnboardingPage.tsx`, `pages/onboarding/*` (`TeamSource.tsx`: `useTeamSource`, `TeamSource`; `TeamStart.tsx`; `AiStep.tsx`:
-  `AiHost`, `AiStep`, `AiStage`; `PeopleStep.tsx`), `components/invite/EmailChips.tsx` (`chipsFrom`),
+  `AiHost`, `AiStep`, `AiStage`; `PeopleStep.tsx`), `components/invite/AddressTokens.tsx` (`chipsFrom`, `addressToken`),
   `components/Sky.tsx` (`OnboardingProgress`, `TeamAsleepSky`), `lib/plan-offer.ts`,
   `lib/arrival.ts` (`ARRIVAL_BETA_ONLY`), `components/arrival/Arrival.tsx`, `components/FirstRun.tsx`,
   `components/Standing.tsx` (`HoldBanner`), `components/WebPush.tsx` (`PushAskInline`), `routes/onboarding.tsx`; phone
@@ -189,8 +189,9 @@ on where it opens.
   #general, or the right hand's DM when the plan was left for later. The phone (`funnel: null`) is unchanged.
 - **Inviting people, a team's last step.** A team's rail on the web ends on "Convidar pessoas", after the AI step, so
   reaching a connected AI takes no more steps than before: "Quem trabalha com você?", the addresses as chips with each
-  one's role, and the workspace's link a click away, with the invite dialog's own pieces (ADR 0090: `EmailChips`,
-  `ChipRole`, `InviteLinkPanel`, the batch invite) on the step rather than a form of its own. Its button sends the
+  one's role, and the workspace's link a click away, with the invite dialog's own pieces (ADR 0090: its To field, the
+  kit's `ChipField` of `addressToken`s, each with its `ChipRole` on the token's line; `InviteLinkPanel`, the batch
+  invite) on the step rather than a form of its own. Its button sends the
   invitations and finishes the onboarding; "Convidar depois" under it finishes it with none. A server that sends no
   email shows the link alone, with "Entrar no workspace". A personal workspace and the phone (`funnel: null`) have no
   such step.

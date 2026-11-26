@@ -219,4 +219,36 @@ describe("Token", () => {
     expect(body().queryByRole("button", { name: "Remover Lodi" })).toBeNull();
     expect(fresh?.hasAttribute("data-fresh")).toBe(true);
   });
+
+  test("a choice of its own after its label (an address's role); done: what became of it, after its check", () => {
+    render(
+      <>
+        <Token choice={<button type="button">Membro</button>} onRemove={() => {}} removeLabel="Remover ana@example.com">
+          ana@example.com
+        </Token>
+        <Token state="done" note="convidado" fixed>
+          bruno@example.com
+        </Token>
+      </>,
+    );
+    const [chosen, done] = [...document.querySelectorAll(".ac-token")] as HTMLElement[];
+    expect([...(chosen?.children ?? [])].map((c) => c.getAttribute("class"))).toEqual([
+      "ac-token__label",
+      "ac-token__choice",
+      "ac-token__remove",
+    ]);
+    expect(done?.getAttribute("data-state")).toBe("done");
+    expect(done?.querySelector(".ac-token__note > .ac-icon")).not.toBeNull();
+    expect(done?.querySelector(".ac-token__note")?.textContent).toBe("convidado");
+  });
+
+  test("a select inside a token draws no box of its own: its words and chevron, a plate only under the pointer", async () => {
+    const css = await Bun.file(new URL("../src/styles/components.css", import.meta.url).pathname).text();
+    const rule = (selector: string) =>
+      css.split(`\n${selector} {\n`)[1]?.split("\n}")[0]?.trim().split(/;\s*/).filter(Boolean) ?? [];
+    const trigger = rule(".ac-token__choice .ac-select__trigger");
+    expect(trigger).toContain("border: 0");
+    expect(trigger).toContain("background: transparent");
+    expect(trigger).toContain("box-shadow: none");
+  });
 });

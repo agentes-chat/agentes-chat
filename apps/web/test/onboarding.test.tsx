@@ -772,10 +772,12 @@ describe("Connect an AI, then the people", () => {
     expect(state.invitations.map((i) => i.email)).toContain("bruno@example.com");
     expect(button("Convite enviado")).toBeTruthy();
     expect(screen().queryByRole("button", { name: "Enviar convites" })).toBeNull();
-    const chip = box().querySelector(".email-chip") as HTMLElement;
-    expect(chip.querySelector(".email-chip__done")?.textContent).toBe("convidado");
+    // The invite dialog's token, with what became of it and no ✕: it stays as it went.
+    const chip = box().querySelector(".ac-chipfield .ac-token") as HTMLElement;
+    expect(chip.getAttribute("data-state")).toBe("done");
+    expect(chip.querySelector(".ac-token__note")?.textContent).toBe("convidado");
     expect(chip.textContent).not.toContain("já convidado");
-    expect(chip.hasAttribute("data-soft")).toBe(false);
+    expect(chip.querySelector(".ac-token__remove")).toBeNull();
     const help = box().querySelector("#onb-people-help") as HTMLElement;
     expect(help.textContent).toBe("Abrindo a Acme…");
     expect(help.hasAttribute("data-bad")).toBe(false);

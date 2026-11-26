@@ -4928,6 +4928,50 @@ html:not([data-pointer]) .ac-token__remove:focus-visible {
   border-color: var(--line2);
   color: var(--muted);
 }
+/* It went (an invitation just sent): its word in the ok tone, after its check. */
+.ac-token[data-state="done"] .ac-token__note {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--ok);
+}
+/*
+ * A choice of its own (an address's role): the select's words and chevron on the token's line, with no box of its own,
+ * since a bordered control inside a token reads as a card in a card. The ✕'s plate shows under the pointer and while
+ * its list is open, the focus ring from the keys. Its chevron and the ✕ keep the kit's smallest gap (`--space-1`) from
+ * what is beside them, the ✕ pulled in by its spare.
+ */
+.ac-token__choice {
+  flex: none;
+  display: inline-flex;
+  margin-inline-end: 2px;
+}
+.ac-token__choice .ac-select__trigger {
+  width: auto;
+  height: 22px;
+  gap: var(--space-1);
+  padding: 0 4px 0 7px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink2);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.ac-token__choice .ac-select__trigger:hover,
+.ac-token__choice .ac-select__trigger[aria-expanded="true"] {
+  background: var(--surface-raised);
+  box-shadow: none;
+  color: var(--ink);
+}
+html:not([data-pointer]) .ac-token__choice .ac-select__trigger:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+.ac-token__choice .ac-select__chev {
+  width: 14px;
+  height: 14px;
+}
 /* A token that stays (no ✕) keeps its tip's anchor as small as itself, so a long one still ends in "…". */
 .ac-token__tip {
   display: inline-flex;
