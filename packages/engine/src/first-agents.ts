@@ -16,6 +16,7 @@ import { publishUserEvent } from "./events";
 import { handleFromName } from "./imports";
 import { can, requireActiveMembership, updateOrganization } from "./organizations";
 import { personLocale } from "./requester";
+import { settleWelcome } from "./right-hand-welcome";
 import { SETUP_APPS_MAX } from "./setup-checklist";
 import { workRefusalBeforePlan } from "./standing";
 import { channelPlaces, checkTeam, rightHandDm, type TeamDeps, type TeamProposalCard } from "./team-proposals";
@@ -626,5 +627,7 @@ export async function pickFirstAgent(
       .where(eq(organizations.id, orgId));
     if (org && !org.context.trim()) await updateOrganization(db, userId, orgId, { context: row.about });
   }
+  // A member's greeting from the right hand went out as they joined and asks for a first agent: it stops asking.
+  if (membership.role !== "owner") await settleWelcome(db, orgId, userId).catch(() => undefined);
   return homeOf(db, orgId, userId, agentId);
 }

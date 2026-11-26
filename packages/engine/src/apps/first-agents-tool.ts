@@ -47,7 +47,12 @@ export function registerFirstAgentTools(deps: AppsToolDeps, p: AppPrincipal, too
       const onboarding = membership?.role === "owner" && org !== undefined && org.onboardedAt === null;
       return {
         received: saved.options.length,
-        pickIn: onboarding ? `${issuer}/onboarding` : `${issuer}/org/${p.orgId}`,
+        // An owner picks on their onboarding; anyone else on their own welcome page (ADR 0250).
+        pickIn: onboarding
+          ? `${issuer}/onboarding`
+          : membership?.role === "owner"
+            ? `${issuer}/org/${p.orgId}`
+            : `${issuer}/welcome/${p.orgId}`,
         options: saved.options.map((o) => ({
           name: o.name,
           handle: o.handle,

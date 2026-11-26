@@ -1,4 +1,4 @@
-import { and, type Database, type Executor, eq, gt, isNotNull, ne, schema, sql } from "@agenteschat/db";
+import { and, type Database, type Executor, eq, gt, inArray, isNotNull, ne, schema, sql } from "@agenteschat/db";
 import { serverText } from "@agenteschat/i18n";
 import { en } from "@agenteschat/i18n/en";
 import { ownsAgentSql } from "./audience";
@@ -64,6 +64,37 @@ async function pickedFirstAgent(db: Database, orgId: string, userId: string) {
     )
     .limit(1);
   return row !== undefined;
+}
+
+/**
+ * Their first agent was picked after the greeting went out (it is posted as they join, while they are still on their
+ * own onboarding): the greeting stops asking for an agent and its area chips go (ADR 0250). Nothing when there is no
+ * such greeting.
+ */
+export async function settleWelcome(db: Database, orgId: string, userId: string): Promise<void> {
+  const lodi = await lodiFor(db, orgId, userId);
+  if (!lodi) return;
+  const [org] = await db.select({ name: organizations.name }).from(organizations).where(eq(organizations.id, orgId));
+  if (!org) return;
+  const locale = await personLocale(db, userId);
+  const body = serverText(locale, `chat.body.${WELCOME_AGENT_BODY}`, { org: org.name });
+  const dm = db
+    .select({ id: channels.id })
+    .from(channels)
+    .where(and(eq(channels.orgId, orgId), eq(channels.dmKey, personAgentDmKey(userId, lodi.id))));
+  await db
+    .update(messages)
+    .set({
+      body,
+      meta: sql`(${messages.meta} - 'replyChips') || jsonb_build_object('bodyCode', ${WELCOME_AGENT_BODY}::text)`,
+    })
+    .where(
+      and(
+        eq(messages.orgId, orgId),
+        inArray(messages.channelId, dm),
+        sql`${messages.meta}->>'bodyCode' = ${WELCOME_BODY}`,
+      ),
+    );
 }
 
 /** How long after joining a person with no agent of their own is still new to the right hand. */
