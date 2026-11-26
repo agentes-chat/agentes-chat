@@ -27,13 +27,15 @@ const ROSTER_MAX = 4;
 /** An agent's name with the article its language gives it ("o Caio", "a Nina"; "Caio" in English). */
 const the = (t: TFunction, name: string) => t("onboarding.hire.the", agentGrammar(name));
 
-/** A role inside a sentence ("for billing"): lower case, unless it reads as a name or an acronym ("SEO", "Stripe"). */
+/**
+ * A role inside a sentence ("for billing", "para o seu dia"): lower case, unless it reads as an acronym ("SEO"), its
+ * second letter a capital too. A role that opens with a one-letter word ("O seu dia") is lowered as well.
+ */
 export function roleWord(role: string, locale: string) {
   const r = role.trim();
   const second = r.charAt(1);
-  return second && second === second.toLocaleLowerCase(locale) && second !== second.toLocaleUpperCase(locale)
-    ? r.charAt(0).toLocaleLowerCase(locale) + r.slice(1)
-    : r;
+  const acronym = second !== "" && second !== second.toLocaleLowerCase(locale);
+  return r === "" || acronym ? r : r.charAt(0).toLocaleLowerCase(locale) + r.slice(1);
 }
 
 export function HireTeam({
