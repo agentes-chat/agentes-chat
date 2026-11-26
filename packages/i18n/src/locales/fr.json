@@ -14378,6 +14378,26 @@
         "1": "Rechercher dans les logs et les métriques",
         "2": "Voir les moniteurs et les incidents"
       },
+      "datadog_us3": {
+        "1": "Rechercher dans les logs et les métriques",
+        "2": "Voir les moniteurs et les incidents"
+      },
+      "datadog_us5": {
+        "1": "Rechercher dans les logs et les métriques",
+        "2": "Voir les moniteurs et les incidents"
+      },
+      "datadog_eu": {
+        "1": "Rechercher dans les logs et les métriques",
+        "2": "Voir les moniteurs et les incidents"
+      },
+      "datadog_ap1": {
+        "1": "Rechercher dans les logs et les métriques",
+        "2": "Voir les moniteurs et les incidents"
+      },
+      "datadog_ap2": {
+        "1": "Rechercher dans les logs et les métriques",
+        "2": "Voir les moniteurs et les incidents"
+      },
       "grafana": {
         "1": "Voir les tableaux de bord, métriques et logs",
         "2": "Créer des tableaux de bord et des alertes"
@@ -14689,7 +14709,12 @@
       "cloudflare_bindings": "Cloudflare (Workers)",
       "cloudflare_observability": "Cloudflare (logs)",
       "supabase_readonly": "Supabase (lecture seule)",
-      "intercom_eu": "Intercom (UE)"
+      "intercom_eu": "Intercom (UE)",
+      "datadog_us3": "Datadog (US3)",
+      "datadog_us5": "Datadog (US5)",
+      "datadog_eu": "Datadog (EU)",
+      "datadog_ap1": "Datadog (AP1)",
+      "datadog_ap2": "Datadog (AP2)"
     },
     "descriptions": {
       "github": "Code, PR, issues et Actions.",
@@ -14727,6 +14752,11 @@
       "vercel": "Projets, déploiements et logs.",
       "railway": "Projets, services, déploiements et logs.",
       "datadog": "Logs, métriques, moniteurs et incidents (site US1).",
+      "datadog_us3": "Logs, métriques, moniteurs et incidents (site US3, us3.datadoghq.com).",
+      "datadog_us5": "Logs, métriques, moniteurs et incidents (site US5, us5.datadoghq.com).",
+      "datadog_eu": "Logs, métriques, moniteurs et incidents (site EU, app.datadoghq.eu).",
+      "datadog_ap1": "Logs, métriques, moniteurs et incidents (site AP1, ap1.datadoghq.com).",
+      "datadog_ap2": "Logs, métriques, moniteurs et incidents (site AP2, ap2.datadoghq.com).",
       "grafana": "Tableaux de bord, métriques, logs et alertes Grafana Cloud.",
       "postman": "Espaces de travail, collections et API.",
       "jam": "Rapports de bug : enregistrements, logs de la console et requêtes réseau.",

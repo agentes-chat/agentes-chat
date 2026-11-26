@@ -14401,6 +14401,26 @@
         "1": "Cercare log e metriche",
         "2": "Vedere monitor e incidenti"
       },
+      "datadog_us3": {
+        "1": "Cercare log e metriche",
+        "2": "Vedere monitor e incidenti"
+      },
+      "datadog_us5": {
+        "1": "Cercare log e metriche",
+        "2": "Vedere monitor e incidenti"
+      },
+      "datadog_eu": {
+        "1": "Cercare log e metriche",
+        "2": "Vedere monitor e incidenti"
+      },
+      "datadog_ap1": {
+        "1": "Cercare log e metriche",
+        "2": "Vedere monitor e incidenti"
+      },
+      "datadog_ap2": {
+        "1": "Cercare log e metriche",
+        "2": "Vedere monitor e incidenti"
+      },
       "grafana": {
         "1": "Vedere dashboard, metriche e log",
         "2": "Creare dashboard e avvisi"
@@ -14712,7 +14732,12 @@
       "cloudflare_bindings": "Cloudflare (Workers)",
       "cloudflare_observability": "Cloudflare (log)",
       "supabase_readonly": "Supabase (sola lettura)",
-      "intercom_eu": "Intercom (UE)"
+      "intercom_eu": "Intercom (UE)",
+      "datadog_us3": "Datadog (US3)",
+      "datadog_us5": "Datadog (US5)",
+      "datadog_eu": "Datadog (EU)",
+      "datadog_ap1": "Datadog (AP1)",
+      "datadog_ap2": "Datadog (AP2)"
     },
     "descriptions": {
       "github": "Codice, PR, issue e Actions.",
@@ -14750,6 +14775,11 @@
       "vercel": "Progetti, deploy e log.",
       "railway": "Progetti, servizi, deploy e log.",
       "datadog": "Log, metriche, monitor e incidenti (sito US1).",
+      "datadog_us3": "Log, metriche, monitor e incidenti (sito US3, us3.datadoghq.com).",
+      "datadog_us5": "Log, metriche, monitor e incidenti (sito US5, us5.datadoghq.com).",
+      "datadog_eu": "Log, metriche, monitor e incidenti (sito EU, app.datadoghq.eu).",
+      "datadog_ap1": "Log, metriche, monitor e incidenti (sito AP1, ap1.datadoghq.com).",
+      "datadog_ap2": "Log, metriche, monitor e incidenti (sito AP2, ap2.datadoghq.com).",
       "grafana": "Dashboard, metriche, log e avvisi di Grafana Cloud.",
       "postman": "Workspace, collection e API.",
       "jam": "Segnalazioni di bug: registrazioni, log della console e richieste di rete.",

@@ -33766,6 +33766,36 @@
   "connectors.can.datadog.2": {
     "value": "See monitors and incidents"
   },
+  "connectors.can.datadog_us3.1": {
+    "value": "Search logs and metrics"
+  },
+  "connectors.can.datadog_us3.2": {
+    "value": "See monitors and incidents"
+  },
+  "connectors.can.datadog_us5.1": {
+    "value": "Search logs and metrics"
+  },
+  "connectors.can.datadog_us5.2": {
+    "value": "See monitors and incidents"
+  },
+  "connectors.can.datadog_eu.1": {
+    "value": "Search logs and metrics"
+  },
+  "connectors.can.datadog_eu.2": {
+    "value": "See monitors and incidents"
+  },
+  "connectors.can.datadog_ap1.1": {
+    "value": "Search logs and metrics"
+  },
+  "connectors.can.datadog_ap1.2": {
+    "value": "See monitors and incidents"
+  },
+  "connectors.can.datadog_ap2.1": {
+    "value": "Search logs and metrics"
+  },
+  "connectors.can.datadog_ap2.2": {
+    "value": "See monitors and incidents"
+  },
   "connectors.can.grafana.1": {
     "value": "See dashboards, metrics and logs"
   },
@@ -34309,6 +34339,21 @@
   "connectors.names.intercom_eu": {
     "value": "Intercom (EU)"
   },
+  "connectors.names.datadog_us3": {
+    "value": "Datadog (US3)"
+  },
+  "connectors.names.datadog_us5": {
+    "value": "Datadog (US5)"
+  },
+  "connectors.names.datadog_eu": {
+    "value": "Datadog (EU)"
+  },
+  "connectors.names.datadog_ap1": {
+    "value": "Datadog (AP1)"
+  },
+  "connectors.names.datadog_ap2": {
+    "value": "Datadog (AP2)"
+  },
   "connectors.descriptions.github": {
     "value": "Code, PRs, issues and Actions."
   },
@@ -34413,6 +34458,21 @@
   },
   "connectors.descriptions.datadog": {
     "value": "Logs, metrics, monitors and incidents (US1 site)."
+  },
+  "connectors.descriptions.datadog_us3": {
+    "value": "Logs, metrics, monitors and incidents (US3 site, us3.datadoghq.com)."
+  },
+  "connectors.descriptions.datadog_us5": {
+    "value": "Logs, metrics, monitors and incidents (US5 site, us5.datadoghq.com)."
+  },
+  "connectors.descriptions.datadog_eu": {
+    "value": "Logs, metrics, monitors and incidents (EU site, app.datadoghq.eu)."
+  },
+  "connectors.descriptions.datadog_ap1": {
+    "value": "Logs, metrics, monitors and incidents (AP1 site, ap1.datadoghq.com)."
+  },
+  "connectors.descriptions.datadog_ap2": {
+    "value": "Logs, metrics, monitors and incidents (AP2 site, ap2.datadoghq.com)."
   },
   "connectors.descriptions.grafana": {
     "value": "Grafana Cloud dashboards, metrics, logs and alerts."

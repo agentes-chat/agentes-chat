@@ -1005,7 +1005,12 @@ export function createContextToolSource(deps: ContextDeps): ToolSource {
             ctx.db,
             ctx.orgId,
             access.map((a) => a.app),
+            requester,
           );
+          if (apps.personal.length > 0)
+            return fail(
+              `${apps.personal.join(", ")}: the person asking connected it as their own, and only they give it to an agent, on the Access tab of an agent they own or manage. For any other agent, someone who manages connectors connects it for the team. Apps you can name: ${apps.choices.join(", ")}.`,
+            );
           if (apps.unknown.length > 0)
             return fail(`Unknown app: ${apps.unknown.join(", ")}. Apps you can name: ${apps.choices.join(", ")}.`);
           const lines = access.map((a) => ({

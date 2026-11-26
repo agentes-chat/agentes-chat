@@ -13312,6 +13312,26 @@
         "1": "ログとメトリクスを検索する",
         "2": "モニターとインシデントを見る"
       },
+      "datadog_us3": {
+        "1": "ログとメトリクスを検索する",
+        "2": "モニターとインシデントを見る"
+      },
+      "datadog_us5": {
+        "1": "ログとメトリクスを検索する",
+        "2": "モニターとインシデントを見る"
+      },
+      "datadog_eu": {
+        "1": "ログとメトリクスを検索する",
+        "2": "モニターとインシデントを見る"
+      },
+      "datadog_ap1": {
+        "1": "ログとメトリクスを検索する",
+        "2": "モニターとインシデントを見る"
+      },
+      "datadog_ap2": {
+        "1": "ログとメトリクスを検索する",
+        "2": "モニターとインシデントを見る"
+      },
       "grafana": {
         "1": "ダッシュボード、メトリクス、ログを見る",
         "2": "ダッシュボードとアラートを作成する"
@@ -13613,7 +13633,12 @@
       "cloudflare_bindings": "Cloudflare（Workers）",
       "cloudflare_observability": "Cloudflare（ログ）",
       "supabase_readonly": "Supabase（読み取り専用）",
-      "intercom_eu": "Intercom（EU）"
+      "intercom_eu": "Intercom（EU）",
+      "datadog_us3": "Datadog (US3)",
+      "datadog_us5": "Datadog (US5)",
+      "datadog_eu": "Datadog (EU)",
+      "datadog_ap1": "Datadog (AP1)",
+      "datadog_ap2": "Datadog (AP2)"
     },
     "descriptions": {
       "github": "コード、PR、Issue、Actions。",
@@ -13651,6 +13676,11 @@
       "vercel": "プロジェクト、デプロイ、ログ。",
       "railway": "プロジェクト、サービス、デプロイ、ログ。",
       "datadog": "ログ、メトリクス、モニター、インシデント（US1サイト）。",
+      "datadog_us3": "ログ、メトリクス、モニター、インシデント（US3サイト、us3.datadoghq.com）。",
+      "datadog_us5": "ログ、メトリクス、モニター、インシデント（US5サイト、us5.datadoghq.com）。",
+      "datadog_eu": "ログ、メトリクス、モニター、インシデント（EUサイト、app.datadoghq.eu）。",
+      "datadog_ap1": "ログ、メトリクス、モニター、インシデント（AP1サイト、ap1.datadoghq.com）。",
+      "datadog_ap2": "ログ、メトリクス、モニター、インシデント（AP2サイト、ap2.datadoghq.com）。",
       "grafana": "Grafana Cloudのダッシュボード、メトリクス、ログ、アラート。",
       "postman": "ワークスペース、コレクション、API。",
       "jam": "バグレポート: 録画、コンソールログ、ネットワークリクエスト。",

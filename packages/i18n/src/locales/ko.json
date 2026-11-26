@@ -13306,6 +13306,26 @@
         "1": "로그와 지표 검색",
         "2": "모니터와 인시던트 보기"
       },
+      "datadog_us3": {
+        "1": "로그와 지표 검색",
+        "2": "모니터와 인시던트 보기"
+      },
+      "datadog_us5": {
+        "1": "로그와 지표 검색",
+        "2": "모니터와 인시던트 보기"
+      },
+      "datadog_eu": {
+        "1": "로그와 지표 검색",
+        "2": "모니터와 인시던트 보기"
+      },
+      "datadog_ap1": {
+        "1": "로그와 지표 검색",
+        "2": "모니터와 인시던트 보기"
+      },
+      "datadog_ap2": {
+        "1": "로그와 지표 검색",
+        "2": "모니터와 인시던트 보기"
+      },
       "grafana": {
         "1": "대시보드, 지표, 로그 보기",
         "2": "대시보드와 알림 만들기"
@@ -13607,7 +13627,12 @@
       "cloudflare_bindings": "Cloudflare(Workers)",
       "cloudflare_observability": "Cloudflare(로그)",
       "supabase_readonly": "Supabase(읽기 전용)",
-      "intercom_eu": "Intercom(EU)"
+      "intercom_eu": "Intercom(EU)",
+      "datadog_us3": "Datadog (US3)",
+      "datadog_us5": "Datadog (US5)",
+      "datadog_eu": "Datadog (EU)",
+      "datadog_ap1": "Datadog (AP1)",
+      "datadog_ap2": "Datadog (AP2)"
     },
     "descriptions": {
       "github": "코드, PR, 이슈, Actions.",
@@ -13645,6 +13670,11 @@
       "vercel": "프로젝트, 배포, 로그.",
       "railway": "프로젝트, 서비스, 배포, 로그.",
       "datadog": "로그, 지표, 모니터, 인시던트(US1 사이트).",
+      "datadog_us3": "로그, 지표, 모니터, 인시던트(US3 사이트, us3.datadoghq.com).",
+      "datadog_us5": "로그, 지표, 모니터, 인시던트(US5 사이트, us5.datadoghq.com).",
+      "datadog_eu": "로그, 지표, 모니터, 인시던트(EU 사이트, app.datadoghq.eu).",
+      "datadog_ap1": "로그, 지표, 모니터, 인시던트(AP1 사이트, ap1.datadoghq.com).",
+      "datadog_ap2": "로그, 지표, 모니터, 인시던트(AP2 사이트, ap2.datadoghq.com).",
       "grafana": "Grafana Cloud 대시보드, 지표, 로그, 알림.",
       "postman": "워크스페이스, 컬렉션, API.",
       "jam": "버그 리포트: 녹화, 콘솔 로그, 네트워크 요청.",

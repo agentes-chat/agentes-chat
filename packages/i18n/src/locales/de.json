@@ -13867,6 +13867,26 @@
         "1": "Logs und Metriken durchsuchen",
         "2": "Monitore und Vorfälle ansehen"
       },
+      "datadog_us3": {
+        "1": "Logs und Metriken durchsuchen",
+        "2": "Monitore und Vorfälle ansehen"
+      },
+      "datadog_us5": {
+        "1": "Logs und Metriken durchsuchen",
+        "2": "Monitore und Vorfälle ansehen"
+      },
+      "datadog_eu": {
+        "1": "Logs und Metriken durchsuchen",
+        "2": "Monitore und Vorfälle ansehen"
+      },
+      "datadog_ap1": {
+        "1": "Logs und Metriken durchsuchen",
+        "2": "Monitore und Vorfälle ansehen"
+      },
+      "datadog_ap2": {
+        "1": "Logs und Metriken durchsuchen",
+        "2": "Monitore und Vorfälle ansehen"
+      },
       "grafana": {
         "1": "Dashboards, Metriken und Logs ansehen",
         "2": "Dashboards und Alerts erstellen"
@@ -14173,7 +14193,12 @@
       "cloudflare_bindings": "Cloudflare (Workers)",
       "cloudflare_observability": "Cloudflare (Logs)",
       "supabase_readonly": "Supabase (nur lesen)",
-      "intercom_eu": "Intercom (EU)"
+      "intercom_eu": "Intercom (EU)",
+      "datadog_us3": "Datadog (US3)",
+      "datadog_us5": "Datadog (US5)",
+      "datadog_eu": "Datadog (EU)",
+      "datadog_ap1": "Datadog (AP1)",
+      "datadog_ap2": "Datadog (AP2)"
     },
     "descriptions": {
       "github": "Code, PRs, Issues und Actions.",
@@ -14211,6 +14236,11 @@
       "vercel": "Projekte, Deployments und Logs.",
       "railway": "Projekte, Dienste, Deploys und Logs.",
       "datadog": "Logs, Metriken, Monitore und Vorfälle (Site US1).",
+      "datadog_us3": "Logs, Metriken, Monitore und Vorfälle (Site US3, us3.datadoghq.com).",
+      "datadog_us5": "Logs, Metriken, Monitore und Vorfälle (Site US5, us5.datadoghq.com).",
+      "datadog_eu": "Logs, Metriken, Monitore und Vorfälle (Site EU, app.datadoghq.eu).",
+      "datadog_ap1": "Logs, Metriken, Monitore und Vorfälle (Site AP1, ap1.datadoghq.com).",
+      "datadog_ap2": "Logs, Metriken, Monitore und Vorfälle (Site AP2, ap2.datadoghq.com).",
       "grafana": "Dashboards, Metriken, Logs und Alerts in Grafana Cloud.",
       "postman": "Workspaces, Collections und APIs.",
       "jam": "Bug-Reports: Aufnahmen, Konsolen-Logs und Netzwerkanfragen.",

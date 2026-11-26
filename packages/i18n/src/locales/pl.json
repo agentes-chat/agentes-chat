@@ -14901,6 +14901,26 @@
         "1": "Wyszukiwanie logów i metryk",
         "2": "Podgląd monitorów i incydentów"
       },
+      "datadog_us3": {
+        "1": "Wyszukiwanie logów i metryk",
+        "2": "Podgląd monitorów i incydentów"
+      },
+      "datadog_us5": {
+        "1": "Wyszukiwanie logów i metryk",
+        "2": "Podgląd monitorów i incydentów"
+      },
+      "datadog_eu": {
+        "1": "Wyszukiwanie logów i metryk",
+        "2": "Podgląd monitorów i incydentów"
+      },
+      "datadog_ap1": {
+        "1": "Wyszukiwanie logów i metryk",
+        "2": "Podgląd monitorów i incydentów"
+      },
+      "datadog_ap2": {
+        "1": "Wyszukiwanie logów i metryk",
+        "2": "Podgląd monitorów i incydentów"
+      },
       "grafana": {
         "1": "Podgląd dashboardów, metryk i logów",
         "2": "Tworzenie dashboardów i alertów"
@@ -15217,7 +15237,12 @@
       "cloudflare_bindings": "Cloudflare (Workers)",
       "cloudflare_observability": "Cloudflare (logi)",
       "supabase_readonly": "Supabase (tylko odczyt)",
-      "intercom_eu": "Intercom (UE)"
+      "intercom_eu": "Intercom (UE)",
+      "datadog_us3": "Datadog (US3)",
+      "datadog_us5": "Datadog (US5)",
+      "datadog_eu": "Datadog (EU)",
+      "datadog_ap1": "Datadog (AP1)",
+      "datadog_ap2": "Datadog (AP2)"
     },
     "descriptions": {
       "github": "Kod, PR-y, issues i Actions.",
@@ -15255,6 +15280,11 @@
       "vercel": "Projekty, wdrożenia i logi.",
       "railway": "Projekty, usługi, wdrożenia i logi.",
       "datadog": "Logi, metryki, monitory i incydenty (witryna US1).",
+      "datadog_us3": "Logi, metryki, monitory i incydenty (witryna US3, us3.datadoghq.com).",
+      "datadog_us5": "Logi, metryki, monitory i incydenty (witryna US5, us5.datadoghq.com).",
+      "datadog_eu": "Logi, metryki, monitory i incydenty (witryna EU, app.datadoghq.eu).",
+      "datadog_ap1": "Logi, metryki, monitory i incydenty (witryna AP1, ap1.datadoghq.com).",
+      "datadog_ap2": "Logi, metryki, monitory i incydenty (witryna AP2, ap2.datadoghq.com).",
       "grafana": "Dashboardy, metryki, logi i alerty w Grafana Cloud.",
       "postman": "Przestrzenie robocze, kolekcje i API.",
       "jam": "Zgłoszenia błędów: nagrania, logi konsoli i żądania sieciowe.",

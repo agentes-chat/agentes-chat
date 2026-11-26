@@ -349,7 +349,12 @@
       "live.type.glyph",
       "shell.skills",
       "skills.page.colSkill",
-      "skills.page.inRepo"
+      "skills.page.inRepo",
+      "connectors.names.datadog_us3",
+      "connectors.names.datadog_us5",
+      "connectors.names.datadog_eu",
+      "connectors.names.datadog_ap1",
+      "connectors.names.datadog_ap2"
     ],
     "es": [
       "surface.nudge.hours",
@@ -645,7 +650,12 @@
       "codeSessions.tabs.terminalN",
       "live.type.trackings.normal",
       "live.type.glyph",
-      "billing.plan"
+      "billing.plan",
+      "connectors.names.datadog_us3",
+      "connectors.names.datadog_us5",
+      "connectors.names.datadog_eu",
+      "connectors.names.datadog_ap1",
+      "connectors.names.datadog_ap2"
     ],
     "fr": [
       "agentPage.facts.budget",
@@ -1179,7 +1189,12 @@
       "live.type.highlights.orange",
       "live.type.gradients.graphite",
       "live.type.gradients.violet",
-      "live.type.glyph"
+      "live.type.glyph",
+      "connectors.names.datadog_us3",
+      "connectors.names.datadog_us5",
+      "connectors.names.datadog_eu",
+      "connectors.names.datadog_ap1",
+      "connectors.names.datadog_ap2"
     ],
     "de": [
       "agentPage.facts.budget",
@@ -1326,6 +1341,11 @@
       "connectors.category.support",
       "connectors.names.cloudflare_bindings",
       "connectors.names.intercom_eu",
+      "connectors.names.datadog_us3",
+      "connectors.names.datadog_us5",
+      "connectors.names.datadog_eu",
+      "connectors.names.datadog_ap1",
+      "connectors.names.datadog_ap2",
       "connectors.tools",
       "contextMenu.lookSystem",
       "database.host",
@@ -2099,7 +2119,12 @@
       "live.type.glyph",
       "skills.page.colSkill",
       "skills.one.inChannel",
-      "skills.page.inRepo"
+      "skills.page.inRepo",
+      "connectors.names.datadog_us3",
+      "connectors.names.datadog_us5",
+      "connectors.names.datadog_eu",
+      "connectors.names.datadog_ap1",
+      "connectors.names.datadog_ap2"
     ],
     "nl": [
       "agentPage.facts.budget",
@@ -2278,6 +2303,11 @@
       "connectors.names.cloudflare_bindings",
       "connectors.names.cloudflare_observability",
       "connectors.names.intercom_eu",
+      "connectors.names.datadog_us3",
+      "connectors.names.datadog_us5",
+      "connectors.names.datadog_eu",
+      "connectors.names.datadog_ap1",
+      "connectors.names.datadog_ap2",
       "connectors.title",
       "connectors.tools",
       "connectors.toolsCount",
@@ -2974,7 +3004,12 @@
       "codeSessions.home.mode",
       "codeSessions.home.was",
       "codeSessions.gitTab.label",
-      "live.type.glyph"
+      "live.type.glyph",
+      "connectors.names.datadog_us3",
+      "connectors.names.datadog_us5",
+      "connectors.names.datadog_eu",
+      "connectors.names.datadog_ap1",
+      "connectors.names.datadog_ap2"
     ],
     "ko": [
       "live.sheet.args.k",
@@ -3150,7 +3185,12 @@
       "codeSessions.home.beta",
       "codeSessions.home.mode",
       "codeSessions.home.was",
-      "codeSessions.gitTab.label"
+      "codeSessions.gitTab.label",
+      "connectors.names.datadog_us3",
+      "connectors.names.datadog_us5",
+      "connectors.names.datadog_eu",
+      "connectors.names.datadog_ap1",
+      "connectors.names.datadog_ap2"
     ],
     "zh-Hans": [
       "channel.tooLong.fileName",
@@ -3315,7 +3355,12 @@
       "codeSessions.home.mode",
       "codeSessions.home.was",
       "codeSessions.gitTab.label",
-      "live.type.glyph"
+      "live.type.glyph",
+      "connectors.names.datadog_us3",
+      "connectors.names.datadog_us5",
+      "connectors.names.datadog_eu",
+      "connectors.names.datadog_ap1",
+      "connectors.names.datadog_ap2"
     ],
     "id": [
       "drive.folder",
@@ -3661,7 +3706,12 @@
       "live.type.groups.serif",
       "live.type.trackings.normal",
       "live.type.glyph",
-      "skills.page.colSkill"
+      "skills.page.colSkill",
+      "connectors.names.datadog_us3",
+      "connectors.names.datadog_us5",
+      "connectors.names.datadog_eu",
+      "connectors.names.datadog_ap1",
+      "connectors.names.datadog_ap2"
     ],
     "tr": [
       "live.canvas.inspector.model",
@@ -3882,7 +3932,12 @@
       "codeSessions.tabs.terminalN",
       "live.type.trackings.normal",
       "live.type.glyph",
-      "billing.plan"
+      "billing.plan",
+      "connectors.names.datadog_us3",
+      "connectors.names.datadog_us5",
+      "connectors.names.datadog_eu",
+      "connectors.names.datadog_ap1",
+      "connectors.names.datadog_ap2"
     ],
     "pl": [
       "drive.folder",
@@ -4225,7 +4280,12 @@
       "live.type.gradient",
       "live.type.gradients.ocean",
       "live.type.glyph",
-      "billing.plan"
+      "billing.plan",
+      "connectors.names.datadog_us3",
+      "connectors.names.datadog_us5",
+      "connectors.names.datadog_eu",
+      "connectors.names.datadog_ap1",
+      "connectors.names.datadog_ap2"
     ],
     "ru": [
       "live.canvas.sizes.short.s",
@@ -4404,7 +4464,12 @@
       "codeSessions.home.beta",
       "codeSessions.home.mode",
       "codeSessions.home.was",
-      "codeSessions.gitTab.label"
+      "codeSessions.gitTab.label",
+      "connectors.names.datadog_us3",
+      "connectors.names.datadog_us5",
+      "connectors.names.datadog_eu",
+      "connectors.names.datadog_ap1",
+      "connectors.names.datadog_ap2"
     ]
   },
   "mobile-base": {

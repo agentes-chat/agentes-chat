@@ -13797,6 +13797,26 @@
         "1": "Günlüklerde ve ölçümlerde arama yapar",
         "2": "İzleyicileri ve olayları görür"
       },
+      "datadog_us3": {
+        "1": "Günlüklerde ve ölçümlerde arama yapar",
+        "2": "İzleyicileri ve olayları görür"
+      },
+      "datadog_us5": {
+        "1": "Günlüklerde ve ölçümlerde arama yapar",
+        "2": "İzleyicileri ve olayları görür"
+      },
+      "datadog_eu": {
+        "1": "Günlüklerde ve ölçümlerde arama yapar",
+        "2": "İzleyicileri ve olayları görür"
+      },
+      "datadog_ap1": {
+        "1": "Günlüklerde ve ölçümlerde arama yapar",
+        "2": "İzleyicileri ve olayları görür"
+      },
+      "datadog_ap2": {
+        "1": "Günlüklerde ve ölçümlerde arama yapar",
+        "2": "İzleyicileri ve olayları görür"
+      },
       "grafana": {
         "1": "Panoları, ölçümleri ve günlükleri görür",
         "2": "Pano ve uyarı oluşturur"
@@ -14103,7 +14123,12 @@
       "cloudflare_bindings": "Cloudflare (Workers)",
       "cloudflare_observability": "Cloudflare (günlükler)",
       "supabase_readonly": "Supabase (salt okunur)",
-      "intercom_eu": "Intercom (AB)"
+      "intercom_eu": "Intercom (AB)",
+      "datadog_us3": "Datadog (US3)",
+      "datadog_us5": "Datadog (US5)",
+      "datadog_eu": "Datadog (EU)",
+      "datadog_ap1": "Datadog (AP1)",
+      "datadog_ap2": "Datadog (AP2)"
     },
     "descriptions": {
       "github": "Kod, çekme istekleri, sorun kayıtları ve Actions.",
@@ -14141,6 +14166,11 @@
       "vercel": "Projeler, dağıtımlar ve günlükler.",
       "railway": "Projeler, hizmetler, dağıtımlar ve günlükler.",
       "datadog": "Günlükler, ölçümler, izleyiciler ve olaylar (US1 sitesi).",
+      "datadog_us3": "Günlükler, ölçümler, izleyiciler ve olaylar (US3 sitesi, us3.datadoghq.com).",
+      "datadog_us5": "Günlükler, ölçümler, izleyiciler ve olaylar (US5 sitesi, us5.datadoghq.com).",
+      "datadog_eu": "Günlükler, ölçümler, izleyiciler ve olaylar (EU sitesi, app.datadoghq.eu).",
+      "datadog_ap1": "Günlükler, ölçümler, izleyiciler ve olaylar (AP1 sitesi, ap1.datadoghq.com).",
+      "datadog_ap2": "Günlükler, ölçümler, izleyiciler ve olaylar (AP2 sitesi, ap2.datadoghq.com).",
       "grafana": "Grafana Cloud panoları, ölçümleri, günlükleri ve uyarıları.",
       "postman": "Çalışma alanları, koleksiyonlar ve API'ler.",
       "jam": "Hata raporları: kayıtlar, konsol günlükleri ve ağ istekleri.",

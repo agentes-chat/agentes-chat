@@ -13934,6 +13934,26 @@
         "1": "Logs en statistieken doorzoeken",
         "2": "Monitors en incidenten bekijken"
       },
+      "datadog_us3": {
+        "1": "Logs en statistieken doorzoeken",
+        "2": "Monitors en incidenten bekijken"
+      },
+      "datadog_us5": {
+        "1": "Logs en statistieken doorzoeken",
+        "2": "Monitors en incidenten bekijken"
+      },
+      "datadog_eu": {
+        "1": "Logs en statistieken doorzoeken",
+        "2": "Monitors en incidenten bekijken"
+      },
+      "datadog_ap1": {
+        "1": "Logs en statistieken doorzoeken",
+        "2": "Monitors en incidenten bekijken"
+      },
+      "datadog_ap2": {
+        "1": "Logs en statistieken doorzoeken",
+        "2": "Monitors en incidenten bekijken"
+      },
       "grafana": {
         "1": "Dashboards, statistieken en logs bekijken",
         "2": "Dashboards en meldingen maken"
@@ -14240,7 +14260,12 @@
       "cloudflare_bindings": "Cloudflare (Workers)",
       "cloudflare_observability": "Cloudflare (logs)",
       "supabase_readonly": "Supabase (alleen lezen)",
-      "intercom_eu": "Intercom (EU)"
+      "intercom_eu": "Intercom (EU)",
+      "datadog_us3": "Datadog (US3)",
+      "datadog_us5": "Datadog (US5)",
+      "datadog_eu": "Datadog (EU)",
+      "datadog_ap1": "Datadog (AP1)",
+      "datadog_ap2": "Datadog (AP2)"
     },
     "descriptions": {
       "github": "Code, PR's, issues en Actions.",
@@ -14278,6 +14303,11 @@
       "vercel": "Projecten, deployments en logs.",
       "railway": "Projecten, services, deploys en logs.",
       "datadog": "Logs, statistieken, monitors en incidenten (site US1).",
+      "datadog_us3": "Logs, statistieken, monitors en incidenten (site US3, us3.datadoghq.com).",
+      "datadog_us5": "Logs, statistieken, monitors en incidenten (site US5, us5.datadoghq.com).",
+      "datadog_eu": "Logs, statistieken, monitors en incidenten (site EU, app.datadoghq.eu).",
+      "datadog_ap1": "Logs, statistieken, monitors en incidenten (site AP1, ap1.datadoghq.com).",
+      "datadog_ap2": "Logs, statistieken, monitors en incidenten (site AP2, ap2.datadoghq.com).",
       "grafana": "Dashboards, statistieken, logs en meldingen in Grafana Cloud.",
       "postman": "Werkruimtes, collecties en API's.",
       "jam": "Bugrapporten: opnames, consolelogs en netwerkverzoeken.",
