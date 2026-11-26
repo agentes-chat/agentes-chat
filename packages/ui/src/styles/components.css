@@ -5224,7 +5224,7 @@ html:not([data-pointer]) .ac-switch:focus-visible {
 .ac-refreshing__bar {
   position: absolute;
   inset: calc(-1 * var(--space-1)) 0 auto;
-  z-index: 1;
+  z-index: var(--z-raised);
   height: 2px;
   overflow: hidden;
   border-radius: var(--radius-full);
