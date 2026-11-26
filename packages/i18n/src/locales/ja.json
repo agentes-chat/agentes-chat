@@ -5340,7 +5340,8 @@
       "provider_unavailable": "モデルが応答しませんでした",
       "gave_up": "何度か試してもモデルが応答しませんでした",
       "missing_credential": "APIキーがありません",
-      "credential_revoked": "APIキーが取り消されました"
+      "credential_revoked": "APIキーが取り消されました",
+      "credential_unreadable": "保存されたAPIキーを開けません"
     },
     "youReplied": "あなたの返信: {{text}}",
     "actions": "操作",
@@ -6256,6 +6257,7 @@
         "interrupted": "サーバーの再起動で中断されました。",
         "missing_credential": "ワークスペースに{{provider}}のキーがありません。",
         "credential_revoked": "このエージェントのキーは無効化されています。",
+        "credential_unreadable": "保存されたAPIキーを開けません。多くの場合、キーの保存後にサーバーのシークレットが変わったことが原因です。AIキーでキーをもう一度貼り付けてください。",
         "credential_wrong_provider": "モデルは{{modelProvider}}のものですが、キーは{{keyProvider}}のものです。",
         "model_unlisted": "OpenRouterでは{{model}}が提供されなくなりました。エージェントの設定で別のモデルを選んでください。",
         "no_ai": "エージェントに使えるAIがありませんでした。",
@@ -8985,6 +8987,7 @@
       "stuck": "行き詰まったため停止しました",
       "missing_credential": "APIキーがありません",
       "credential_revoked": "APIキーが無効化されました",
+      "credential_unreadable": "保存されたAPIキーを開けません",
       "credential_wrong_provider": "APIキーが別のプロバイダーのものです",
       "model_unlisted": "OpenRouterでこのモデルが提供されなくなりました",
       "agent_archived": "エージェントがアーカイブされました",
@@ -18265,7 +18268,8 @@
       "talk": "{{name}}と話す",
       "missing": "この会話はもうありません。",
       "helping": "{{name}}を手伝っています",
-      "see": "会話を見る"
+      "see": "会話を見る",
+      "relay": "{{name}}の回答：{{excerpt}}。会話を見る"
     },
     "unshown": "このメッセージを表示できませんでした",
     "unshownPart": "このメッセージの一部を表示できませんでした",

@@ -103,6 +103,7 @@ describe("a routine's runs", () => {
       "empty_reply_limit",
       "model_refused",
       "credential_wrong_provider",
+      "credential_unreadable",
       "model_unlisted",
       "gave_up",
       "cli_failed",

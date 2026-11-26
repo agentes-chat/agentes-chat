@@ -117,7 +117,7 @@ import {
 import { firstUnreadId, opensAtLastRead, unreadThreadRootId } from "@agenteschat/client/lib/chat-look";
 import { choiceReplyLine } from "@agenteschat/client/lib/choices";
 import { draftKeyOf } from "@agenteschat/client/lib/composer-drafts";
-import { type ConsultPairItem, consultsForLine } from "@agenteschat/client/lib/consult-group";
+import { type ConsultPairItem, consultsForLine, type RelayedAnswer } from "@agenteschat/client/lib/consult-group";
 import { consultationsOf } from "@agenteschat/client/lib/consultations";
 import { deviceWaitOf, spilledText } from "@agenteschat/client/lib/devices";
 import { clearDraft, peekDraft } from "@agenteschat/client/lib/drafts";
@@ -317,6 +317,7 @@ import {
   ConsultGroupsProvider,
   ConsultHelpingTag,
   ConsultPairRow,
+  RelayQuote,
   useConsultGroups,
   useReplyConsults,
 } from "@/components/ConsultGroup";
@@ -3641,9 +3642,17 @@ const Timeline = memo(function Timeline({
       />
     );
   };
+  // A row after a consulted agent's words folded into its asker's quote doesn't group under them.
+  let afterRelayed = false;
   for (const [at, item] of items.entries()) {
     if (at < from) continue;
-    const grouped = item.kind === "message" && item.grouped && !afterUnshown();
+    // A consulted agent's words its asker passes on right below: they are the quote at the top of that message.
+    if (item.kind === "message" && consultGroups.relayed.has(item.message.id)) {
+      afterRelayed = true;
+      continue;
+    }
+    const grouped = item.kind === "message" && item.grouped && !afterUnshown() && !afterRelayed;
+    afterRelayed = false;
     const after = items[at + 1];
     // Where it sits in its author's run: my own rows' bubbles square the corners they share.
     const run = runPosition(grouped, after?.kind === "message" && after.grouped && !unshown.has(item.key));
@@ -3686,6 +3695,7 @@ const Timeline = memo(function Timeline({
           lastOfRun={lastByRun.get(m.agentRunId) === item.key}
           run={run}
           answer={answers.has(m.id)}
+          relay={consultGroups.relays.get(m.id)}
         />
       ) : (
         <TimelineMessage
@@ -3702,6 +3712,7 @@ const Timeline = memo(function Timeline({
           helping={m.agentRunId && !isMediaAfterReply(m.meta) ? consultGroups.helping.get(m.agentRunId) : undefined}
           run={run}
           answer={answers.has(m.id)}
+          relay={consultGroups.relays.get(m.id)}
         />
       ),
     );
@@ -3804,6 +3815,7 @@ function RunBlock({
   lastOfRun?: boolean;
   run?: RunPosition;
   answer?: boolean;
+  relay?: RelayedAnswer<MessageType>;
 }) {
   const run = useStreams((s) => (message ? undefined : s.runs[runId]));
   const last = useRef<LiveRun | undefined>(undefined);
@@ -4509,6 +4521,7 @@ export const TimelineMessage = memo(function TimelineMessage({
   readOnly = false,
   run = "solo",
   answer = false,
+  relay,
 }: {
   message: MessageType;
   grouped: boolean;
@@ -4536,6 +4549,8 @@ export const TimelineMessage = memo(function TimelineMessage({
   run?: RunPosition;
   /** The newest message, or one after my latest (`answerIds`): it shows whole however long. */
   answer?: boolean;
+  /** Another agent's words this agent passes on (`relayedAnswers`): quoted at its top, as a reply quotes. */
+  relay?: RelayedAnswer<MessageType>;
 }) {
   const { t, i18n } = useTranslation();
   const { org, me } = useOrg();
@@ -4722,7 +4737,10 @@ export const TimelineMessage = memo(function TimelineMessage({
   );
   // Work it handed over that reports here: its line under this reply says what the pair row would.
   const handedWorks = lastOfRun && !m.local ? (m.handedWorks ?? []) : [];
-  const paired = consults.filter((c) => !handedWorks.some((w) => w.handedBy?.consultationId === c.id));
+  // The question whose answer it quotes at its top (`relay`) isn't in the pair row too.
+  const paired = consults.filter(
+    (c) => !handedWorks.some((w) => w.handedBy?.consultationId === c.id) && c.id !== relay?.consultation.id,
+  );
   const pair =
     m.author.type === "agent" && m.author.id && paired.length > 0 ? (
       <ConsultPairRow askerId={m.author.id} items={paired} />
@@ -4828,9 +4846,10 @@ export const TimelineMessage = memo(function TimelineMessage({
         run={run}
         bare={waiting || !bodyShown}
         quote={
-          quoted || liveRef ? (
+          quoted || liveRef || relay ? (
             <>
               {quoted && <QuotedMessage reply={quoted} />}
+              {relay && <RelayQuote relay={relay} />}
               {liveRef && <LiveRefLine liveRef={liveRef} />}
             </>
           ) : undefined
