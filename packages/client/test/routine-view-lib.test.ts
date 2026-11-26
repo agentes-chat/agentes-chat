@@ -5,7 +5,9 @@ import { actionTextValues } from "../src/lib/actions";
 import { approvalOriginWords, approvalWhy, approvalWords } from "../src/lib/approval-origin";
 import { openTarget } from "../src/lib/notifications";
 import {
+  atWorkWords,
   busyOnComputer,
+  cronRule,
   healthWords,
   isStoppable,
   pausedFix,
@@ -98,8 +100,10 @@ describe("a routine's runs", () => {
     expect(say(run({ status: "canceled", code: "creator_left" })).key).toBe("routines.code.creator_left");
     for (const code of [
       "empty_reply",
+      "empty_reply_limit",
       "model_refused",
       "credential_wrong_provider",
+      "credential_unreadable",
       "model_unlisted",
       "gave_up",
       "cli_failed",
@@ -194,6 +198,16 @@ describe("a routine's state and its one-tap fix", () => {
     // Its run in the timeline: waiting on the plan, not "working now".
     expect(runOutcome(run({ status: "waiting", code: "waiting_plan" })).key).toBe("routines.outcome.waitingPlan");
     expect(runOutcome(run({ status: "waiting", code: "waiting_budget" })).key).toBe("routines.outcome.waitingBudget");
+  });
+
+  test("a run in line behind another routine of its agent says which; any other at work is running now", () => {
+    const behind = run({ status: "queued", code: "waiting_routine", codeParams: { routine: "Vendas" } });
+    expect(runOutcome(behind)).toEqual({ key: "routines.outcome.queuedBehind", values: { name: "Vendas" } });
+    expect(atWorkWords({ recentRuns: [behind] })).toEqual({
+      key: "routines.outcome.queuedBehind",
+      values: { name: "Vendas" },
+    });
+    expect(atWorkWords({ recentRuns: [run({ status: "running" })] }).key).toBe("routines.runningNow");
   });
 
   test("a run paused near its limit is stopped with Parar, and the list is read again at its reset", () => {
@@ -456,4 +470,19 @@ test("a routine that couldn't call an agent opens the agent's page, where who ta
       source: { routineId: "r1", agentId: "a1", userId: "u1", channelId: "c1", messageId: "m1" },
     } as AppNotification),
   ).toEqual({ to: "/org/$orgId/agents/$agentId", params: { agentId: "a1" } });
+});
+
+test("a simple cron reads as the rule the server would keep, to say it in words; another one doesn't", () => {
+  expect(cronRule("15 8 * * 1,2,3,4,5", "UTC")).toEqual({
+    freq: "weekly",
+    byWeekday: ["MO", "TU", "WE", "TH", "FR"],
+    times: ["08:15"],
+    timezone: "UTC",
+  });
+  expect(cronRule("0 9 * * *", "")).toEqual({ freq: "daily", times: ["09:00"], timezone: "" });
+  expect(cronRule("0 9 1,15 * *", "UTC")).toMatchObject({ freq: "monthly", byMonthDay: [1, 15], times: ["09:00"] });
+  expect(cronRule("30 */2 * * 1-5", "UTC")).toMatchObject({ freq: "hourly", interval: 2, times: ["00:30"] });
+  expect(cronRule("0 10 30 12 *", "UTC")).toMatchObject({ freq: "yearly", byMonth: [12], byMonthDay: [30] });
+  expect(cronRule("*/15 * * * *", "UTC")).toBeNull();
+  expect(cronRule("0 9 1 * 1", "UTC")).toBeNull();
 });

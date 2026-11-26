@@ -3,12 +3,13 @@ import { and, type Database, desc, eq, inArray, isNull, lt, ne, schema, sql } fr
 import { stopRun } from "./cancel";
 import { widgetRoutineHeld } from "./dashboards/refresh-ledger";
 import { notifyRoutineStalled, notifyRoutineWaitingPlan } from "./notification-producers";
+import { enqueue } from "./outbox";
 import { deferEventRun } from "./routine-events";
 import { endRoutineRun } from "./routine-ledger";
 import { endOpenRoutineRun, pauseRoutine, ROUTINE_CATCH_UP_MS, routineJobAlive } from "./routine-state";
 import type { AgentRun } from "./runs";
 
-const { routines, routineRuns, agentRuns, machines } = schema;
+const { routines, routineRuns, agentRuns, agentRunSteps, machines } = schema;
 
 type RoutineRow = typeof routines.$inferSelect;
 type RunRow = typeof routineRuns.$inferSelect;
@@ -21,6 +22,23 @@ type FiringDeps = { db: Database; pubsub?: PubSub };
  */
 
 const ACTIVE_RUN: AgentRunRow["status"][] = ["queued", "running", "waiting_approval", "waiting_input"];
+
+/**
+ * A routine run that has shown nothing for this long is let go (§6.3): its work stopped in a call that
+ * never came back, or it handed off and the turn left over it (its own record) never ended. It must stay above
+ * the hub's `BRAIN_IDLE_TIMEOUT_MS` (15 minutes): a computer's turn can be silent that long, and its events
+ * don't always write a step, so a live turn is never let go before the hub itself would fail it.
+ */
+export const ROUTINE_STALL_MS = 20 * 60_000;
+
+/** A working run's last sign of work: its row's change, or its newest step (a tool call, a turn's save). */
+const lastWork = sql`greatest(${agentRuns.updatedAt}, coalesce((select max(${agentRunSteps.createdAt}) from ${agentRunSteps} where ${agentRunSteps.runId} = ${agentRuns.id}), ${agentRuns.updatedAt}))`;
+
+/** Whether nothing moved in a run since `now` minus `ROUTINE_STALL_MS` (a timestamp, read as the driver gives it). */
+const goneQuiet = (work: unknown, now: Date) => {
+  const at = work instanceof Date ? work : typeof work === "string" ? new Date(work) : null;
+  return at !== null && !Number.isNaN(at.getTime()) && now.getTime() - at.getTime() >= ROUTINE_STALL_MS;
+};
 
 const waitingToStart = (event: unknown) => {
   const e = event as Record<string, unknown> | null;
@@ -36,7 +54,12 @@ const waitingToStart = (event: unknown) => {
 export async function claimRoutineRun(db: Database, routineRunId: string): Promise<RunRow | null> {
   const [row] = await db
     .update(routineRuns)
-    .set({ status: "starting" })
+    .set({
+      status: "starting",
+      // What it waited behind (`queueBehindAgentRoutine`) is no event: the run's context would show it as one.
+      event: sql`case when ${routineRuns.event}->>'waitingFor' is null then ${routineRuns.event}
+        else nullif(${routineRuns.event} - 'waitingFor', '{}'::jsonb) end`,
+    })
     .where(
       and(
         eq(routineRuns.id, routineRunId),
@@ -159,14 +182,24 @@ export async function routineRunWaitingForComputer(
  * - waiting for the agent's computer: it gives way (`superseded`, `waiting_computer`), the freshest
  *   slot is the one that runs when the computer is back, and the routine's people hear it once;
  * - waiting for a person (an approval, an answer) since before the previous slot: it gives way
- *   (`superseded`; its approvals expire); a newer wait keeps it and the slot is `previous_waiting`.
- * An event run never replaces another: it waits for the one working to end (gathered again).
+ *   (`superseded`; its approvals expire); a newer wait keeps it and the slot is `previous_waiting`;
+ * - handed off already: its report is out, so the turn left of it holds nothing, and neither does a
+ *   run that stopped moving (`ROUTINE_STALL_MS`: it is let go as `stalled`).
+ * An event run never replaces another: it waits for the one working to end (gathered again). It only
+ * waits on its own line (`event.line`, ADR 0106's grouped calls): other lines run beside it.
  * Returns null when the run may start, else the code it was skipped with (or `gathered`).
  */
-export async function makeWayForRun(deps: FiringDeps, routine: RoutineRow, run: RunRow): Promise<string | null> {
+export async function makeWayForRun(
+  deps: FiringDeps,
+  routine: RoutineRow,
+  run: RunRow,
+  now = new Date(),
+): Promise<string | null> {
   const { db } = deps;
+  const event = run.trigger === "event";
+  const line = typeof run.event?.line === "string" ? run.event.line : "";
   const earlier = await db
-    .select({ rr: routineRuns, ar: agentRuns, alive: routineJobAlive(routineRuns.id) })
+    .select({ rr: routineRuns, ar: agentRuns, alive: routineJobAlive(routineRuns.id), work: lastWork })
     .from(routineRuns)
     .leftJoin(agentRuns, eq(agentRuns.id, routineRuns.agentRunId))
     .where(
@@ -176,24 +209,32 @@ export async function makeWayForRun(deps: FiringDeps, routine: RoutineRow, run: 
         inArray(routineRuns.status, ["queued", "starting", "started", "reported"]),
         isNull(routineRuns.finishedAt),
         sql`(${routineRuns.createdAt}, ${routineRuns.id}) < (${run.createdAt.toISOString()}::timestamptz, ${run.id}::uuid)`,
+        event ? sql`coalesce(${routineRuns.event}->>'line', '') = ${line}` : undefined,
       ),
     )
     .orderBy(routineRuns.createdAt);
-  const event = run.trigger === "event";
   const blocked = async (code: string) => {
     if (!event) return code;
     await deferEventRun(deps, run);
     return "gathered";
   };
-  for (const { rr, ar, alive } of earlier) {
+  for (const { rr, ar, alive, work } of earlier) {
     if (rr.status === "queued") {
       // Waiting to start has no job on purpose; a queued run whose job died is the reaper's.
       if (!waitingToStart(rr.event) && alive) return blocked("previous_running");
       continue;
     }
     if (rr.status === "starting") return blocked("previous_running");
+    // It already handed off: its report is out, and the turn left of it (its own record) is not the
+    // routine's work. Holding the slot on it is how one stuck turn stopped a whole routine.
+    if (rr.status === "reported") continue;
     // Its agent run ended and the ledger lags behind: the reaper closes it; it holds nothing.
     if (!ar || !ACTIVE_RUN.includes(ar.status)) continue;
+    // Working, but nothing has moved in it for `ROUTINE_STALL_MS`: it is let go and this slot runs.
+    if (ar.status === "running" && goneQuiet(work, now)) {
+      await endWithRun(deps, rr, ar, { status: "canceled", code: "stalled" });
+      continue;
+    }
     if (ar.status === "queued" || ar.status === "running") return blocked("previous_running");
     if (event) return blocked("previous_running");
     // Waiting for its plan's limit or its budget: the freshest slot runs once there's room again.
@@ -231,6 +272,92 @@ export async function makeWayForRun(deps: FiringDeps, routine: RoutineRow, run: 
     return blocked("previous_waiting");
   }
   return null;
+}
+
+/** How long a scheduled run waits behind another routine of its agent before it starts anyway. */
+export const AGENT_QUEUE_MS = 30 * 60_000;
+/** How often a run waiting behind another routine of its agent looks again. */
+export const AGENT_QUEUE_POLL_MS = 60_000;
+
+/**
+ * One routine of an agent at a time on schedule: a scheduled run whose agent is working on another routine's run
+ * goes back in line (`queued`, `event.waitingFor` names that routine for Rotinas) and looks again every
+ * `AGENT_QUEUE_POLL_MS`, for at most `AGENT_QUEUE_MS` after its slot; then it starts beside it. Two runs of one
+ * agent at once shared its computer and its temp files. A manual or event run never waits here. Returns whether it
+ * went back in line.
+ */
+export async function queueBehindAgentRoutine(
+  deps: FiringDeps,
+  routine: Pick<RoutineRow, "id" | "orgId" | "agentId">,
+  run: Pick<RunRow, "id" | "orgId" | "trigger" | "at">,
+  now = new Date(),
+): Promise<boolean> {
+  if (run.trigger !== "schedule" || now.getTime() - run.at.getTime() >= AGENT_QUEUE_MS) return false;
+  const [busy] = await deps.db
+    .select({ name: routines.name })
+    .from(routineRuns)
+    .innerJoin(agentRuns, eq(agentRuns.id, routineRuns.agentRunId))
+    .innerJoin(routines, eq(routines.id, routineRuns.routineId))
+    .where(
+      and(
+        eq(routineRuns.orgId, run.orgId),
+        eq(routineRuns.status, "started"),
+        isNull(routineRuns.finishedAt),
+        ne(routineRuns.routineId, routine.id),
+        eq(agentRuns.agentId, routine.agentId),
+        inArray(agentRuns.status, ["queued", "running"]),
+      ),
+    )
+    .limit(1);
+  if (!busy) return false;
+  return deps.db.transaction(async (tx) => {
+    const [back] = await tx
+      .update(routineRuns)
+      .set({
+        status: "queued",
+        event: sql`coalesce(${routineRuns.event}, '{}'::jsonb) || jsonb_build_object('waitingFor', ${busy.name}::text)`,
+      })
+      .where(and(eq(routineRuns.id, run.id), eq(routineRuns.status, "starting"), isNull(routineRuns.agentRunId)))
+      .returning({ id: routineRuns.id });
+    if (!back) return false;
+    await enqueue(tx, {
+      orgId: run.orgId,
+      kind: "routine.run",
+      payload: { routineRunId: run.id },
+      dedupeKey: `routine.run:${run.id}:after:${now.getTime()}`,
+      runAt: new Date(now.getTime() + AGENT_QUEUE_POLL_MS),
+      maxAttempts: 3,
+    });
+    return true;
+  });
+}
+
+/**
+ * The sweep's side of the same rule (§6.3): a routine run left working with nothing moving is let go
+ * (`canceled`, `stalled`) even when no new slot wants its place, so its slot, the run strip and the
+ * routine's card end it instead of showing it running for a turn that never comes back. A run that
+ * already reported keeps that as its ending (the ledger keeps `reported` whatever ends it after).
+ * Returns how many it released.
+ */
+export async function releaseStalledRoutineRuns(deps: FiringDeps, now = new Date()): Promise<number> {
+  const before = new Date(now.getTime() - ROUTINE_STALL_MS);
+  const rows = await deps.db
+    .select({ rr: routineRuns, ar: agentRuns })
+    .from(routineRuns)
+    .innerJoin(agentRuns, eq(agentRuns.id, routineRuns.agentRunId))
+    .where(
+      and(
+        inArray(routineRuns.status, ["started", "reported"]),
+        isNull(routineRuns.finishedAt),
+        eq(agentRuns.status, "running"),
+        sql`${lastWork} < ${before.toISOString()}::timestamptz`,
+      ),
+    )
+    .limit(100);
+  for (const { rr, ar } of rows) {
+    await endWithRun(deps, rr, ar, { status: "canceled", code: "stalled" }).catch(() => {});
+  }
+  return rows.length;
 }
 
 /**
@@ -300,26 +427,28 @@ export async function haltRoutineRuns(
 
 /**
  * A person left the organization (§6.2): their routines pause at once (`creator_left`, the agent's
- * owner hears it and can take them over) and their work in progress stops.
+ * owner hears it and can take them over) and their work in progress stops. An agent was archived: its
+ * routines pause the same way (`agent_archived`), so the list says it at once, not at their next slot.
  */
-export async function pauseRoutinesOfCreator(deps: FiringDeps, orgId: string, userId: string): Promise<number> {
+export async function pauseRoutinesOf(
+  deps: FiringDeps,
+  orgId: string,
+  of: { creatorUserId: string } | { agentId: string },
+): Promise<number> {
+  const [whose, reason] =
+    "agentId" in of
+      ? [eq(routines.agentId, of.agentId), "agent_archived" as const]
+      : [eq(routines.createdByUserId, of.creatorUserId), "creator_left" as const];
   const rows = await deps.db
     .select()
     .from(routines)
-    .where(
-      and(
-        eq(routines.orgId, orgId),
-        eq(routines.createdByUserId, userId),
-        eq(routines.active, true),
-        isNull(routines.deletedAt),
-      ),
-    );
+    .where(and(eq(routines.orgId, orgId), whose, eq(routines.active, true), isNull(routines.deletedAt)));
   for (const r of rows) {
-    await pauseRoutine(deps, r, "creator_left");
-    await haltRoutineRuns(deps, orgId, r.id, { code: "creator_left" });
+    await pauseRoutine(deps, r, reason);
+    await haltRoutineRuns(deps, orgId, r.id, { code: reason });
     // A widget's routine says it on its widget now, not at its next Resolve (ADR 0135 §6).
     if ((r.target as { type?: unknown } | null)?.type === "widget") {
-      await widgetRoutineHeld(deps, r, "creator_left").catch(() => {});
+      await widgetRoutineHeld(deps, r, reason).catch(() => {});
     }
   }
   return rows.length;

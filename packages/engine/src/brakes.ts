@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type { PubSub } from "@agenteschat/adapters";
 import { PERMISSION_TOOL } from "@agenteschat/adapters";
 import { and, type Database, desc, type Executor, eq, gt, inArray, isNull, or, schema, sql } from "@agenteschat/db";
+import { managesAgent, ownsAgent, REACH_COLUMNS } from "./audience";
 import { accountablePerson, messageRoot, type RunAuthority } from "./authority";
 import {
   AUTONOMY_DEFAULTS,
@@ -20,7 +21,7 @@ import { publishMessageCreated } from "./events";
 import { cutText } from "./format";
 import type { Judge } from "./judge";
 import { insertMessage, type Message, messageView } from "./messages";
-import { can, requireActiveMembership } from "./organizations";
+import { requireActiveMembership } from "./organizations";
 import { enqueue } from "./outbox";
 import { ACTIVE_RUN_STATUSES } from "./run-inbox";
 import { deliverNoticeToRun } from "./run-resume";
@@ -197,6 +198,8 @@ export async function costlyGate(
     return null;
   }
   if (signals.some((s) => s.state === "open")) return waitingRefusal(cost);
+  // The card names one person: with a role answering for the agent it names nobody, and the role's holders hear it
+  // and decide it as its owners (`notifyMessage`, `decideCostlyProposal`; ADR 0085, addendum of 2026-11-21).
   await proposeCostly(
     deps,
     run,
@@ -313,7 +316,7 @@ export async function decideCostlyProposal(
     .where(and(eq(messages.orgId, orgId), eq(messages.id, signal.messageId)));
   const card = proposalCardOf(message?.meta);
   const [agent] = await db
-    .select({ ownerUserId: agents.ownerUserId, autonomy: agents.autonomyBrakes, handle: agents.handle })
+    .select({ autonomy: agents.autonomyBrakes, handle: agents.handle, ...REACH_COLUMNS })
     .from(agents)
     .where(and(eq(agents.orgId, orgId), eq(agents.id, signal.agentId)));
   const membership = await requireActiveMembership(db, actorId, orgId);
@@ -322,7 +325,9 @@ export async function decideCostlyProposal(
     .from(organizationMembers)
     .where(and(eq(organizationMembers.orgId, orgId), eq(organizationMembers.userId, actorId)));
   if (!card || !agent || !member) throw new NotFoundError("Proposal not found");
-  const manages = actorId === agent.ownerUserId || can(membership, "manage_agents");
+  // Its owner (or who holds its owner role, ADR 0085, addendum of 2026-11-21), or who manages it (`managesAgent`, ADR
+  // 0085 addendum of 2026-11-17).
+  const manages = ownsAgent(agent, actorId, membership.roleIds) || managesAgent(agent, actorId, membership);
   if (actorId !== card.forUserId && !manages) throw new NotFoundError("Proposal not found");
   // "Always" and "never" change the agent for everyone's work: only who may change the agent.
   if ((decision === "always" || decision === "never") && !manages)
@@ -503,14 +508,14 @@ export async function triageItem(judge: Judge, input: { orgId: string; agentId: 
  * agent's own work): per agent, open work on the same item takes it (`linked`, a note to that run), an item it already
  * tried `LOOP_MAX` times in a day stops (`loop`, one summary to a person), noise waits for the digest (`digest`), and
  * an agent at its cap of unrequested runs, or (for a routine's or a webhook's item) whose computer has turns waiting for
- * room, looks again later (`later`).
+ * room, looks again later (`later`). `triage: false`: work an agent handed on on purpose (`tell_agent`), never noise.
  * Returns the agents to wake now; every outcome is recorded (`autonomy_signals`).
  */
 export async function brakeWakes(
   deps: { db: Database; pubsub?: PubSub; judge?: Judge | null },
   message: Message,
   agentIds: string[],
-  options: { look?: number; reportIn?: BrakeReport } = {},
+  options: { look?: number; reportIn?: BrakeReport; triage?: boolean } = {},
 ): Promise<{ wake: string[]; held: Map<string, BrakeOutcome> }> {
   const held = new Map<string, BrakeOutcome>();
   if (agentIds.length === 0) return { wake: [], held };
@@ -534,11 +539,12 @@ export async function brakeWakes(
       crowded.has(agentId),
       async () => {
         if (triage === null)
-          triage = deps.judge
-            ? await triageItem(deps.judge, { orgId: message.orgId, agentId, body: message.body }).catch(
-                () => "work" as const,
-              )
-            : "work";
+          triage =
+            deps.judge && options.triage !== false
+              ? await triageItem(deps.judge, { orgId: message.orgId, agentId, body: message.body }).catch(
+                  () => "work" as const,
+                )
+              : "work";
         return triage;
       },
       options.look ?? 0,
@@ -687,7 +693,15 @@ async function brakeOne(
   return null;
 }
 
-/** Whether an agent already has as many unrequested runs going as its settings allow. */
+/** Unrequested runs an agent may hold open at once, parked ones included, per slot of its cap (`maxUnrequested`). */
+export const UNREQUESTED_OPEN_PER_SLOT = 5;
+
+/**
+ * Whether an agent already has as many unrequested runs going as its settings allow. The cap bounds runs at work
+ * (queued or running): one parked on a person, an approval, its plan or its computer doesn't block the next item. Parked
+ * ones still count toward a looser ceiling (`UNREQUESTED_OPEN_PER_SLOT`), so a burst of distinct items can't open a card
+ * for a person each. Separate items each root their own stretch, so the stretch limits don't bound this.
+ */
 async function unrequestedAtCap(db: Executor, orgId: string, agentId: string) {
   const [agent] = await db
     .select({ autonomy: agents.autonomyBrakes })
@@ -695,7 +709,10 @@ async function unrequestedAtCap(db: Executor, orgId: string, agentId: string) {
     .where(and(eq(agents.orgId, orgId), eq(agents.id, agentId)));
   const max = autonomySettings(agent?.autonomy).maxUnrequested;
   const [row] = await db
-    .select({ n: sql<number>`count(distinct ${agentRuns.id})::int` })
+    .select({
+      working: sql<number>`count(distinct ${agentRuns.id}) filter (where ${agentRuns.status} in ('queued', 'running'))::int`,
+      open: sql<number>`count(distinct ${agentRuns.id})::int`,
+    })
     .from(autonomySignals)
     .innerJoin(
       agentRuns,
@@ -709,10 +726,13 @@ async function unrequestedAtCap(db: Executor, orgId: string, agentId: string) {
         inArray(agentRuns.status, [...ACTIVE_RUN_STATUSES]),
       ),
     );
-  return Number(row?.n ?? 0) >= max;
+  return Number(row?.working ?? 0) >= max || Number(row?.open ?? 0) >= max * UNREQUESTED_OPEN_PER_SLOT;
 }
 
-/** The person who hears about an agent's unrequested work: its owner. */
+/**
+ * The person who hears about an agent's unrequested work: its owner. A role answering for it names nobody here, and
+ * its holders hear the note instead (`notifyMessage`, ADR 0085, addendum of 2026-11-21).
+ */
 async function ownerOfAgent(db: Executor, orgId: string, agentId: string) {
   const [a] = await db
     .select({ ownerUserId: agents.ownerUserId })
@@ -882,7 +902,7 @@ export type { AgentRun };
  */
 export async function askStillOpen(
   db: Executor,
-  run: Pick<AgentRun, "orgId" | "agentId" | "channelId" | "threadRootId" | "triggerMessageId">,
+  run: Pick<AgentRun, "orgId" | "agentId" | "channelId" | "threadRootId" | "triggerMessageId" | "replyInThread">,
 ) {
   const thread = replyThreadOf(run);
   const [last] = await db

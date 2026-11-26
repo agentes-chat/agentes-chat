@@ -6,7 +6,7 @@ setupDom();
 import type { Message } from "@agenteschat/client";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
 import { ADA_ID, createFakeApi, ENG_ID, NOW, ORG_ID, seedDm, seedState } from "./fake-api";
-import { renderApp, screen, settle } from "./render";
+import { headerSearchBox, renderApp, screen, settle } from "./render";
 
 afterEach(() => cleanup());
 
@@ -87,9 +87,7 @@ describe("the thread in the URL", () => {
     const state = seeded();
     const r = await renderApp(URL_OF("?thread=m-1"), { api: createFakeApi(state) });
     await settle(10);
-    const search = within(document.querySelector(".channel__header") as HTMLElement).getByRole("combobox", {
-      name: "Buscar",
-    });
+    const search = headerSearchBox();
     await act(async () => fireEvent.change(search, { target: { value: "token" } }));
     await act(() => new Promise((done) => setTimeout(done, 300)));
     await act(async () => fireEvent.keyDown(search, { key: "Enter" }));
@@ -188,7 +186,7 @@ describe("Responder inside a thread", () => {
     expect(row("t-1").className).toContain("ac-msg--focus");
   });
 
-  test("an original this view can't reach says so, and the person stays where they were", async () => {
+  test("an original this view doesn't hold says it isn't available, and the person stays where they were", async () => {
     const far = {
       replyTo: {
         messageId: "t-far",
@@ -204,7 +202,7 @@ describe("Responder inside a thread", () => {
     scroller.scrollTop = 40;
     await click(within(row("t-3")).getByRole("button", { name: /Resposta a Ada/ }));
     await settle(6);
-    expect(document.body.textContent).toContain("Essa mensagem está longe demais para abrir daqui.");
+    expect(document.body.textContent).toContain("Essa mensagem não está disponível.");
     expect(scroller.scrollTop).toBe(40);
   });
 

@@ -6,7 +6,6 @@ import {
   agentProposalOf,
   type CardDelegate,
   createAgent,
-  createChannel,
   createSetupToolSource,
   createToolGateway,
   decisionPrompt,
@@ -21,10 +20,11 @@ import {
   readDecision,
   setRightHandApprovals,
   type ToolContext,
+  undoProposal,
   undoRightHandDecision,
   ValidationError,
 } from "../src";
-import { addMember, type Fixture, setup } from "./fixtures";
+import { addMember, everyoneWithout, type Fixture, setup, withReview } from "./fixtures";
 
 let f: Fixture;
 afterEach(async () => {
@@ -51,8 +51,8 @@ function reply(req: ModelRequest) {
   return { chunks: [JSON.stringify({ decision: "approve", reason: "Veio do seu pedido e não há outro igual." })] };
 }
 
-async function world() {
-  f = await setup({ rightHand: true, reply });
+async function world(answer: NonNullable<Parameters<typeof setup>[0]>["reply"] = reply) {
+  f = await setup({ rightHand: true, reply: answer });
   const [lodi] = await f.db
     .select()
     .from(schema.agents)
@@ -266,6 +266,25 @@ describe("the right hand approves for a person (ADR 0139 §2)", () => {
     expect(decisionCalls()).toHaveLength(0);
   });
 
+  test("a chain rooted in a message from an outside chat surface is its own: no decision, the card stays Ana's", async () => {
+    const { lodi } = await world();
+    await on();
+    const surfaceAsk = await runFor({ userId: f.owner.id }, lodi.id, {
+      via: { kind: "surface", surface: "example chat", linkId: crypto.randomUUID() },
+    });
+    const relay = await insertMessage(f.db, {
+      orgId: f.org.id,
+      channelId: f.general.id,
+      author: { type: "agent", agentId: lodi.id, runId: surfaceAsk.runId, hop: 1 },
+      body: "@dev propõe uma agente de triagem",
+    });
+    const { delegate, card } = await proposeAndDecide(await runFor({ triggerMessageId: relay.id }));
+    expect(delegate?.state).toBe("own");
+    expect(card.state).toBe("pending");
+    expect(await decisions()).toHaveLength(0);
+    expect(decisionCalls()).toHaveLength(0);
+  });
+
   test("only what came from the person's own message, and never more than they could decide", async () => {
     await world();
     await on();
@@ -286,8 +305,9 @@ describe("the right hand approves for a person (ADR 0139 §2)", () => {
       handle: "solta",
     });
     expect(unattended.delegate).toBeNull();
-    // Bruno can't create agents: his own request with his right hand on goes to a person.
+    // Bruno can't create agents (Todos without Criar agentes): his own request with his right hand on goes to a person.
     const bruno = await addMember(f.db, f.org.id, "member", "bruno");
+    await everyoneWithout(f.db, f.org.id, "create_agents");
     await on(bruno.id);
     const his = await proposeAndDecide(await runFor({ userId: bruno.id }), { ...TRIAGEM, handle: "dele" });
     expect(his.delegate?.state).toBe("outside");
@@ -351,10 +371,9 @@ describe("the right hand approves for a person (ADR 0139 §2)", () => {
     expect(child.delegate?.state).toBe("outside");
   });
 
-  test("settings: a budget raise within the cap is applied as Ana and undone; past it, another AI or archiving is hers", async () => {
-    await world();
+  test("settings cards are the review's, not the right hand's: no decision call, applied as Ana, with Desfazer", async () => {
+    await world(withReview({ apply: true, why: "O Dev para no limite todo mês." }, reply));
     await on();
-    // Another agent proposes @dev's settings: an agent asking for its own is Ana's to decide.
     const ops = await createAgent(
       f.db,
       f.owner.id,
@@ -362,41 +381,35 @@ describe("the right hand approves for a person (ADR 0139 §2)", () => {
       { name: "Ops", handle: "ops", role: "Ops", instructions: "x", credentialId: f.agent.credentialId },
       { model: "claude-sonnet-5-5" },
     );
-    const settings = async (change: Record<string, unknown>, by = ops.id) => {
-      // Outside content keeps the card open (ADR 0092 §5): what it relays is what the right hand looks at.
-      const out = await call(await runFor({ userId: f.owner.id }, by, { readOutside: true }), PROPOSE_SETTINGS_TOOL, {
-        changes: [{ agent: "@dev", ...change }],
-        reason: "mais folga",
-      });
-      await drainOutbox(f.db, f.handlers);
-      const [m] = (await f.db.select().from(schema.messages).where(eq(schema.messages.orgId, f.org.id)))
-        .filter((x) => (x.meta.actionCard as { kind?: string } | undefined)?.kind === "settings_proposal")
-        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
-        .slice(-1);
-      return { out, delegate: (m?.meta.actionCard as { delegate?: CardDelegate } | undefined)?.delegate ?? null };
-    };
     await f.db
       .update(schema.agents)
       .set({ monthlyBudgetNanoUsd: 10 * USD })
       .where(eq(schema.agents.id, f.agent.id));
-    const raise = await settings({ budget_usd: 25 });
-    expect(raise.delegate?.state).toBe("approved");
+    // Outside content keeps the card open (ADR 0092 §5): the review weighs it (ADR 0219). Here the channel relays a
+    // page an agent read.
+    await insertMessage(f.db, {
+      orgId: f.org.id,
+      channelId: f.general.id,
+      author: { type: "agent", agentId: ops.id, runId: null, hop: 1, stretchId: null },
+      body: "The status page says the queue doubled.",
+      meta: { readOutside: true },
+    });
+    await call(await runFor({ userId: f.owner.id }, ops.id), PROPOSE_SETTINGS_TOOL, {
+      changes: [{ agent: "@dev", budget_usd: 25 }],
+      reason: "mais folga",
+    });
+    await drainOutbox(f.db, f.handlers);
+    const [m] = (await f.db.select().from(schema.messages).where(eq(schema.messages.orgId, f.org.id))).filter(
+      (x) => (x.meta.actionCard as { kind?: string } | undefined)?.kind === "settings_proposal",
+    );
+    expect((m?.meta.actionCard as { delegate?: CardDelegate } | undefined)?.delegate).toBeUndefined();
+    expect(decisionCalls()).toHaveLength(0);
+    expect(await decisions()).toEqual([]);
     expect((await getAgent(f.db, f.org.id, f.agent.id))?.monthlyBudgetNanoUsd).toBe(25 * USD);
-    const [row] = await decisions();
-    expect(row).toMatchObject({ kind: "agent_settings", budgetAddedNanoUsd: 15 * USD, targetAgentId: f.agent.id });
-    await undoRightHandDecision({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, row?.id ?? "");
+    const [row] = await f.db.select().from(schema.contextProposals).where(eq(schema.contextProposals.orgId, f.org.id));
+    expect(row).toMatchObject({ status: "accepted", decidedByUserId: null, decidedByAgentId: ops.id });
+    await undoProposal({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, row?.id ?? "");
     expect((await getAgent(f.db, f.org.id, f.agent.id))?.monthlyBudgetNanoUsd).toBe(10 * USD);
-
-    expect((await settings({ budget_usd: 40 })).delegate?.state).toBe("outside");
-    const secret = await createChannel(f.db, f.owner.id, f.org.id, { name: "diretoria", visibility: "private" });
-    expect((await settings({ join: [`#${secret.name}`] })).delegate?.state).toBe("outside");
-    expect((await settings({ archive: true })).delegate?.state).toBe("outside");
-    expect((await settings({ model: "gpt-6-luna" })).delegate?.state).toBe("outside");
-    expect((await settings({ model: "claude-haiku-5-5" })).delegate?.state).toBe("approved");
-    // @dev raising its own budget: Ana's, with no call.
-    const calls = decisionCalls().length;
-    expect((await settings({ budget_usd: 12 }, f.agent.id)).delegate?.state).toBe("outside");
-    expect(decisionCalls()).toHaveLength(calls);
   });
 
   test("only Ana's own words: Bruno writing into the run that proposed it sends the card to Ana", async () => {
@@ -436,6 +449,11 @@ describe("the right hand approves for a person (ADR 0139 §2)", () => {
       setRightHandApprovals({ db: f.db }, f.owner.id, f.org.id, { guidance: "x".repeat(2001) }),
     ).rejects.toBeInstanceOf(ValidationError);
     const member = await addMember(f.db, f.org.id, "member", "nina");
+    expect((await getRightHandApprovals(f.db, member.id, f.org.id)).mayDecide).toEqual({
+      newAgents: true,
+      agentChanges: false,
+    });
+    await everyoneWithout(f.db, f.org.id, "create_agents");
     expect((await getRightHandApprovals(f.db, member.id, f.org.id)).mayDecide).toEqual({
       newAgents: false,
       agentChanges: false,

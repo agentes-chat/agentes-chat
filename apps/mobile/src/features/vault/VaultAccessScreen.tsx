@@ -3,25 +3,52 @@ import {
   useUpdateVaultConnection,
   useUpdateVaultItem,
   useVault,
+  useVaultBulk,
   useVaultItem,
   type VaultAccess,
   type VaultScope,
 } from "@agenteschat/client";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { isEveryone, sortRoles } from "@agenteschat/client/lib/roles";
+import { Redirect } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
-import { GroupedFooter, useToast } from "@/ui";
+import { StyleSheet, View } from "react-native";
+import { GroupedFooter, RoleMark, SkeletonList, useToast } from "@/ui";
+import { router } from "@/ui/navigation";
 import { Note } from "../ai/parts";
-import { SettingsPage } from "../settings/parts";
+import { SettingsPage, useUnsavedGuard } from "../settings/parts";
 import { AccessList, type AccessListRow } from "../shared/AccessList";
-import { useColors, useDirectory, useOrgId } from "../shared/hooks";
+import { LoadFailed } from "../shared/FirstUse";
+import { useDirectory, useOrgId } from "../shared/hooks";
 import { goBack, successHaptic } from "../shared/parts";
-import { accessProblem, accessSentence, forScope, sameAccess } from "./logic";
+import { accessProblem, accessSentence, forScope, sameAccess, vaultHref } from "./logic";
 import { AgentRows, useVaultNames } from "./parts";
 
 type Level = "in" | "out";
+
+/** Many items chosen on the list: their ids, their tab and the access the form starts with (the first one's). */
+interface BulkAccess {
+  ids: string[];
+  scope: VaultScope;
+  access: VaultAccess;
+}
+
+// The chosen items reach the form here, never in the link: a link can't carry a thousand ids.
+let bulkDraft: BulkAccess | null = null;
+
+/** "Change access" for the items chosen on the list. */
+export function openBulkAccess(draft: BulkAccess) {
+  bulkDraft = draft;
+  router.push(vaultHref.bulkAccess as never);
+}
+
+/** The items chosen on the list, one access for all of them; back to the list when there are none (a stale link). */
+export function VaultBulkAccessScreen() {
+  const [draft] = useState(() => bulkDraft);
+  if (!draft) return <Redirect href={vaultHref.list as never} />;
+  return <AccessForm scope={draft.scope} initial={draft.access} bulkIds={draft.ids} />;
+}
 
 /**
  * Who has access to an item (`?id=`) or, by default, to a connection's items (`?connection=`), ADR 0144 §2: for the
@@ -30,22 +57,25 @@ type Level = "in" | "out";
  */
 export function VaultAccessScreen({ itemId, connectionId }: { itemId?: string; connectionId?: string }) {
   const { t } = useTranslation();
-  const c = useColors();
   const orgId = useOrgId();
   const item = useVaultItem(orgId, itemId ?? null);
   const vault = useVault(orgId, Boolean(connectionId));
   const connection = connectionId ? vault.data?.connections.find((x) => x.id === connectionId) : undefined;
   const target = itemId ? item.data : connection;
-  const failed = itemId ? item.isError : vault.isError || (vault.isSuccess && !connection);
+  const failed = itemId ? item.isError : vault.isError;
+  // The connection is gone (disconnected meanwhile): nothing to ask again for.
+  const gone = !itemId && vault.isSuccess && !connection;
   if (!target) {
     return (
       <SettingsPage title={t("mobile.vault.access.title")}>
-        {failed ? (
+        {gone ? (
           <View style={styles.note}>
-            <Note icon="x">{t("common.loadFailed")}</Note>
+            <Note icon="x">{t("mobile.vault.connection.gone")}</Note>
           </View>
+        ) : failed ? (
+          <LoadFailed onRetry={() => void (itemId ? item.refetch() : vault.refetch())} />
         ) : (
-          <ActivityIndicator color={c.muted} style={styles.loading} />
+          <SkeletonList rows={4} />
         )}
       </SettingsPage>
     );
@@ -66,11 +96,13 @@ function AccessForm({
   initial,
   itemId,
   connectionId,
+  bulkIds,
 }: {
   scope: VaultScope;
   initial: VaultAccess;
   itemId?: string;
   connectionId?: string;
+  bulkIds?: string[];
 }) {
   const { t, i18n } = useTranslation();
   const orgId = useOrgId();
@@ -80,24 +112,36 @@ function AccessForm({
   const roles = useRoles(orgId);
   const updateItem = useUpdateVaultItem(orgId);
   const updateConnection = useUpdateVaultConnection(orgId);
+  const bulk = useVaultBulk(orgId);
   const [draft, setDraft] = useState<VaultAccess>(initial);
   const changed = !sameAccess(forScope(draft, scope), forScope(initial, scope));
-  const busy = updateItem.isPending || updateConnection.isPending;
+  // Many items may each have had their own access: the one shown saves to all of them, changed or not.
+  const savable = changed || Boolean(bulkIds);
+  const busy = updateItem.isPending || updateConnection.isPending || bulk.isPending;
+  // Back with access changed and not saved asks first, as every form here does.
+  const leave = useUnsavedGuard(changed);
 
   const save = () => {
     const access = forScope(draft, scope);
     const problem = accessProblem(access);
     if (problem) return toast({ title: t(problem), icon: "x" });
+    const finish = (title: string) => {
+      successHaptic();
+      toast({ title });
+      leave();
+      goBack();
+    };
     const done = {
-      onSuccess: () => {
-        successHaptic();
-        toast({ title: t("mobile.vault.access.saved") });
-        goBack();
-      },
+      onSuccess: () => finish(t("mobile.vault.access.saved")),
       onError: (err: unknown) => toast({ title: errorText(t, err, i18n.language), icon: "x" }),
     };
     if (itemId) updateItem.mutate({ itemId, access }, done);
     else if (connectionId) updateConnection.mutate({ connectionId, access }, done);
+    else if (bulkIds)
+      bulk.mutate(
+        { type: "access", ids: bulkIds, access },
+        { ...done, onSuccess: (r) => finish(t("vault.bulk.accessDone", { count: r.count })) },
+      );
   };
 
   const levelName = (level: Level) =>
@@ -123,9 +167,15 @@ function AccessForm({
 
   return (
     <SettingsPage
-      title={connectionId ? t("mobile.vault.access.defaultTitle") : t("mobile.vault.access.title")}
+      title={
+        bulkIds
+          ? t("vault.bulk.accessTitle", { count: bulkIds.length })
+          : connectionId
+            ? t("mobile.vault.access.defaultTitle")
+            : t("mobile.vault.access.title")
+      }
       locked={busy}
-      action={{ label: t("common.save"), onPress: save, disabled: !changed || busy }}
+      action={{ label: t("common.save"), onPress: save, disabled: !savable || busy }}
     >
       <GroupedFooter>
         {connectionId
@@ -158,7 +208,10 @@ function AccessForm({
               <AccessList
                 title={t("mobile.vault.access.roles")}
                 levelName={levelName}
-                rows={roleList.map((r) => pick("roleIds", r.id))}
+                rows={roleList.map((r) => ({
+                  ...pick("roleIds", r.id),
+                  leading: <RoleMark color={r.color} icon={r.icon} size={24} />,
+                }))}
               />
               <AccessList
                 title={t("mobile.vault.access.persons")}
@@ -182,7 +235,6 @@ function AccessForm({
 
 const styles = StyleSheet.create({
   note: { paddingHorizontal: 4, paddingTop: 10 },
-  loading: { marginVertical: 16 },
   // The shared access list brings its own side margins; the settings page has them already.
   bleed: { marginHorizontal: -16 },
   inset: { paddingHorizontal: 16 },

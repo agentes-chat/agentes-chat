@@ -1,7 +1,17 @@
 import { isTerminalSize, STREAM_CLOSE, type StreamRequest } from "@agenteschat/adapters";
 import type { Config } from "@agenteschat/config";
 import type { Database } from "@agenteschat/db";
-import type { RunnerLink, Stream, StreamBroker, StreamInput, StreamSocket } from "@agenteschat/engine";
+import {
+  ForbiddenError,
+  NotFoundError,
+  type RunnerLink,
+  requireCodeSession,
+  SHARED_SEAT,
+  type Stream,
+  type StreamBroker,
+  type StreamInput,
+  type StreamSocket,
+} from "@agenteschat/engine";
 import type { Auth } from "../auth";
 import { allowedOrigins } from "../routes/app/context";
 import { personUpgrade, UUID } from "./ws";
@@ -15,10 +25,12 @@ import { personUpgrade, UUID } from "./ws";
  *   ADR 0058 §17; `preview=1`: a browser card's view, watch only, never
  *   switched, ADR 0058 §7) and
  *   `GET /api/terminal?orgId&agentId&cols&rows` (the shell's bytes; text
- *   frames: `resize` out, `exit` in) and
+ *   frames: `resize` out, `exit` in; `session`: a code session of that agent,
+ *   whose worktree it starts in, ADR 0215) and
  *   `GET /api/phone-screen?orgId&phoneId&mode=watch|control` (a phone's screen: its pictures, binary or with
  *   `text=1` base64 text for the phone app; text frames: `ack`, and in control `tap`, `swipe`, `text`, `key`)
- *   are a person's sockets, refused before
+ *   are a person's sockets (`seat=shared` on the first two: the right hand's shared place instead of the person's
+ *   own, ADR 0175), refused before
  *   the upgrade like `/api/ws` (401 without a session, 403 for a foreign
  *   Origin or a non-member, 400 for bad parameters). After it, a refusal is a
  *   close code the panel turns into a state (`STREAM_CLOSE`).
@@ -81,6 +93,28 @@ function viewerRequest(path: string, q: URLSearchParams): StreamRequest | null {
   const cols = Number(q.get("cols"));
   const rows = Number(q.get("rows"));
   return isTerminalSize(cols, rows) ? { kind: "terminal", cols, rows } : null;
+}
+
+/**
+ * A code session's terminal (ADR 0215, `session=`): the folder it starts in, the session's worktree relative to the
+ * agent's folder, for whoever reads the session, of that agent, once its worktree is ready; or why not, before the
+ * upgrade like the rest of the address. Who may open the terminal at all is the stream's own check after it.
+ */
+async function sessionFolder(db: Database, userId: string, orgId: string, agentId: string, sessionId: string) {
+  if (!UUID.test(sessionId)) return new Response("session is a code session's id", { status: 400 });
+  let row: Awaited<ReturnType<typeof requireCodeSession>>;
+  try {
+    row = await requireCodeSession(db, userId, orgId, sessionId);
+  } catch (error) {
+    if (error instanceof NotFoundError) return new Response("No such code session", { status: 404 });
+    if (error instanceof ForbiddenError) return new Response("You can't read this code session", { status: 403 });
+    throw error;
+  }
+  if (row.agentId !== agentId) return new Response("The code session is another agent's", { status: 400 });
+  if (row.worktreeState !== "ready" || !row.worktreePath) {
+    return new Response("The code session's worktree isn't ready", { status: 409 });
+  }
+  return row.worktreePath;
 }
 
 export function createStreamSockets(deps: { db: Database; auth: Auth; config: Config; broker: StreamBroker }) {
@@ -150,6 +184,20 @@ export function createStreamSockets(deps: { db: Database; auth: Auth; config: Co
           status: 400,
         });
       }
+      // A code session's terminal starts in the session's worktree (ADR 0215).
+      const session = q.get("session");
+      if (request.kind === "terminal" && session !== null) {
+        const cwd = await sessionFolder(deps.db, user.id, orgId, agentId, session);
+        if (cwd instanceof Response) return cwd;
+        request.cwd = cwd;
+      }
+      // A terminal the app named keeps its shell (`TERMINAL_KEEP_PROTOCOL`): the person's id in front, so a name
+      // reaches only that person's own.
+      const keep = q.get("keep");
+      if (request.kind === "terminal" && keep !== null) {
+        if (!/^[A-Za-z0-9_-]{8,64}$/.test(keep)) return new Response("keep is a terminal's name", { status: 400 });
+        request.keep = `${user.id}.${keep}`;
+      }
       // A browser card's view of the screen (ADR 0058 §7) only watches, so it never takes a mode change either.
       const preview = request.kind === "desktop" && q.get("preview") === "1";
       if (preview && request.mode !== "watch") return new Response("A preview only watches", { status: 400 });
@@ -165,6 +213,7 @@ export function createStreamSockets(deps: { db: Database; auth: Auth; config: Co
           ...(switches ? { switches } : {}),
           ...(preview ? { preview } : {}),
           ...(request.kind === "phone" && q.get("text") === "1" ? { text: true } : {}),
+          ...(request.kind !== "phone" && q.get("seat") === SHARED_SEAT ? { shared: true } : {}),
         },
         stream: null,
         sessionValidatedAt: 0,

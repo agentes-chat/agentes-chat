@@ -17,6 +17,7 @@ import {
   planState,
   planWindows,
 } from "../src";
+import { aroundOwnSignIn, planBinding } from "../src/plan-state";
 
 afterEach(() => cleanup());
 
@@ -42,7 +43,7 @@ const rows = (el: HTMLElement) =>
     li.querySelector(".ac-planmeter__reset")?.textContent ?? null,
   ]);
 
-test("a bar per window, tightest first, each with its percentage and reset; how old the numbers are", () => {
+test("a bar per window, tightest first, each with its percentage and reset; how old the numbers are, once 10 minutes", () => {
   const usage: PlanMeterUsage = {
     windows: [
       { kind: "seven_day", usedPercent: 35, resetsAt: at(48 * HOUR) },
@@ -67,7 +68,11 @@ test("a bar per window, tightest first, each with its percentage and reset; how 
     ["Semana", "35"],
     ["Fable", "35"],
   ]);
-  expect(el.querySelector(".ac-planmeter__at")?.textContent).toBe("Atualizado 11:55");
+  // Five minutes old: fresh numbers need no date.
+  expect(el.querySelector(".ac-planmeter__at")).toBeNull();
+  cleanup();
+  const old = render(<PlanMeter usage={{ ...usage, at: at(-15 * 60_000) }} text={text} now={NOW} />).container;
+  expect(old.querySelector(".ac-planmeter__at")?.textContent).toBe("Atualizado 11:45");
 });
 
 test("from 80% it says so; at 100% it is at the limit until every full window resets", () => {
@@ -245,12 +250,26 @@ test("compact says how old its numbers are from 10 minutes, and out of date past
   expect(old.dataset.stale).toBeUndefined();
   cleanup();
   const stale = read(7 * HOUR);
-  expect(stale.querySelector(".ac-planmeter__line")?.textContent).toBe("5h 30% · números antigos, de 05:00");
+  // Past 6 hours a number is no longer one to trust: only how old it is, and no bar.
+  expect(stale.querySelector(".ac-planmeter__line")?.textContent).toBe("5h atualizado 05:00");
   expect(stale.dataset.stale).toBe("true");
+  expect(stale.querySelector("[role=meter]")).toBeNull();
   expect(planLine({ windows: [{ kind: "five_hour", usedPercent: 30 }], at: at(-6 * HOUR) }, text, NOW)).toMatchObject({
     stale: false,
     age: "atualizado 06:00",
   });
+});
+
+test("at the limit the age always shows, from the last time the plan was asked again", () => {
+  const full: PlanMeterUsage = {
+    windows: [{ kind: "seven_day", usedPercent: 100, resetsAt: at(2 * 86_400_000) }],
+    at: at(-3 * HOUR),
+    checkedAt: at(-4 * 60_000),
+  };
+  expect(planLine(full, text, NOW)).toMatchObject({ state: "limited", stale: false, age: "atualizado 11:56" });
+  expect(planLine({ ...full, checkedAt: undefined, at: at(-60_000) }, text, NOW)?.age).toBe("atualizado 11:59");
+  // With room, a fresh reading says nothing of its age.
+  expect(planLine({ windows: [{ kind: "five_hour", usedPercent: 30 }], at: at(-60_000) }, text, NOW)?.age).toBeNull();
 });
 
 test("compact with no window known yet shows nothing, never 0%", () => {
@@ -266,14 +285,14 @@ test("compact: a plan that refused a request before any window was known says it
   const { container } = render(<PlanMeter usage={refused} text={text} now={NOW} compact label="Claude Max" />);
   const el = container.querySelector(".ac-planmeter--compact") as HTMLElement;
   expect(el.dataset.state).toBe("limited");
-  expect(el.querySelector(".ac-planmeter__line")?.textContent).toBe("Claude Max");
+  expect(el.querySelector(".ac-planmeter__line")?.textContent).toBe("Claude Max · atualizado 12:00");
   expect(el.querySelector(".ac-planmeter__state")?.textContent).toBe("No limite");
   expect(el.querySelector("[role=meter]")).toBeNull();
   cleanup();
-  // Without the account's name (Contas de IA): the state alone.
+  // Without the account's name (Contas de IA): the state, and when the plan was last read.
   const bare = render(<PlanMeter usage={refused} text={text} now={NOW} compact />).container;
-  expect(bare.querySelector(".ac-planmeter__line")).toBeNull();
-  expect(bare.textContent).toBe("No limite");
+  expect(bare.querySelector(".ac-planmeter__line")?.textContent).toBe("atualizado 12:00");
+  expect(bare.querySelector(".ac-planmeter__state")?.textContent).toBe("No limite");
 });
 
 test("a closed row's one word: nothing while fine, almost from 80 in its bar's level, at the limit with no time", () => {
@@ -348,4 +367,136 @@ test("at the limit, the owner's other free accounts of the same kind and maker, 
   // One made for all of the owner's agents there is offered though another agent thinks with it.
   const all = account("all", { usedBy: ["Infra"], usage: usage(1), shared: true });
   expect(limitOffers([...accounts, all], "claude_code", "now", NOW)[0]?.account.id).toBe("all");
+  // The order of use comes before room: a placed account first, the unplaced after it by room.
+  const placed = account("placed", { usage: usage(60), useOrder: 0 });
+  expect(limitOffers([...accounts, placed], "claude_code", "now", NOW).map((o) => o.account.id)).toEqual([
+    "placed",
+    "calm",
+    "busy",
+    "unknown",
+  ]);
+  // One account signed in once per agent: its other login shares the limit in use, and another account is offered once.
+  const team = [
+    account("t1", { usage: usage(100), usedBy: ["Dev"], sameAs: "t1" }),
+    account("t2", { sameAs: "t1" }),
+    account("m1", { usage: usage(20), sameAs: "m1" }),
+    account("m2", { usage: usage(30), sameAs: "m1" }),
+  ];
+  expect(limitOffers(team, "claude_code", "t1", NOW).map((o) => o.account.id)).toEqual(["m1"]);
+});
+
+test("OpenCode's free models sit after the accounts with room and before those at their limit; another kind's lead", () => {
+  const usage = (used: number): PlanMeterUsage => ({
+    windows: [{ kind: "five_hour", usedPercent: used, resetsAt: at(HOUR) }],
+    at: at(0),
+  });
+  const rows = [
+    { id: "full", usage: usage(100) },
+    { id: "room", usage: usage(20) },
+    { id: "unknown", usage: null },
+  ];
+  const ids = ([before, after]: [{ id: string }[], { id: string }[]]) => [
+    before.map((r) => r.id),
+    after.map((r) => r.id),
+  ];
+  expect(ids(aroundOwnSignIn("opencode", rows, NOW))).toEqual([["room", "unknown"], ["full"]]);
+  expect(ids(aroundOwnSignIn("claude_code", rows, NOW))).toEqual([[], ["full", "room", "unknown"]]);
+});
+
+test("a model group's own quota (Antigravity's Claude and GPT week at 0%) binds only its models, never the account", () => {
+  const usage: PlanMeterUsage & { at: string } = {
+    windows: [
+      { kind: "seven_day", usedPercent: 2, resetsAt: at(7 * 24 * HOUR) },
+      { kind: "five_hour", usedPercent: 3, resetsAt: at(5 * HOUR) },
+      { kind: "other", label: "Claude and GPT models · 7d", usedPercent: 100, resetsAt: at(60 * HOUR) },
+      { kind: "other", label: "Gemini 4 Argon · 7d", usedPercent: 1, resetsAt: at(7 * 24 * HOUR) },
+    ],
+    at: at(0),
+  };
+  // The account still has its Gemini quota: not at its limit, and its own windows lead the line.
+  expect(planState(usage, NOW)).toEqual({ state: "ok", until: null, used: 3 });
+  expect(planWindows(usage, NOW).map((w) => w.label ?? w.kind)).toEqual([
+    "five_hour",
+    "seven_day",
+    "Claude and GPT models · 7d",
+    "Gemini 4 Argon · 7d",
+  ]);
+  // Each group's quota counts for its own models.
+  expect(planBinding(usage, { model: "claude-opus-5-5-high", now: NOW })?.used).toBe(100);
+  expect(planBinding(usage, { model: "gpt-oss-120b-medium", now: NOW })?.used).toBe(100);
+  expect(planBinding(usage, { model: "gemini-4-argon-high", now: NOW })?.used).toBe(3);
+  expect(planBinding(usage, { model: "gemini-3.8-flash-low", now: NOW })?.used).toBe(3);
+  // A model's own week alone at its limit is still that model's, never the account's.
+  expect(planState({ windows: [{ kind: "other", label: "Fable", usedPercent: 100 }], at: at(0) }, NOW).state).toBe(
+    "ok",
+  );
+});
+
+test("full meter: a model group's quotas under its own heading, after the account's, each by its length", () => {
+  const usage: PlanMeterUsage = {
+    windows: [
+      { kind: "seven_day", usedPercent: 2, resetsAt: at(7 * 24 * HOUR) },
+      { kind: "five_hour", usedPercent: 3, resetsAt: at(5 * HOUR) },
+      { kind: "other", label: "Claude and GPT models · 7d", usedPercent: 100, resetsAt: at(60 * HOUR) },
+      { kind: "other", label: "Gemini 4 Argon · 7d", usedPercent: 1, resetsAt: at(7 * 24 * HOUR) },
+      { kind: "other", label: "Claude and GPT models · 5h", usedPercent: 0 },
+    ],
+    at: at(0),
+  };
+  const grouped = { ...text, group: (name: string | null) => (name === null ? "Todos os modelos" : `Só ${name}`) };
+  const { container } = render(<PlanMeter usage={usage} text={grouped} now={NOW} />);
+  const items = [...container.querySelectorAll(".ac-planmeter__window")].map((li) => [
+    li.querySelector(".ac-planmeter__group")?.textContent ?? null,
+    li.querySelector(".ac-planmeter__name")?.textContent,
+    li.querySelector(".ac-planmeter__pct")?.textContent,
+  ]);
+  expect(items).toEqual([
+    ["Todos os modelos", "5 horas", "3%"],
+    [null, "Semana", "2%"],
+    ["Só Claude and GPT", "Semana", "100%"],
+    [null, "5 horas", "0%"],
+    ["Só Gemini 4 Argon", "Semana", "1%"],
+  ]);
+  // The account isn't at its limit, and each bar says whose it is.
+  expect((container.firstChild as HTMLElement).dataset.state).toBe("ok");
+  expect(container.querySelectorAll("[role=meter]")[2]?.getAttribute("aria-label")).toBe("Só Claude and GPT · Semana");
+  cleanup();
+  // Without the words for a heading (or with no group's quota), one list as before.
+  const plain = render(<PlanMeter usage={usage} text={text} now={NOW} />).container;
+  expect(plain.querySelector(".ac-planmeter__group")).toBeNull();
+  expect(rows(plain)[2]?.[0]).toBe("Claude and GPT models · 7d");
+});
+
+test("a window whose own reading is out of date shows only its age, after the known ones, and never pauses work", () => {
+  // A turn a minute ago named the 5 hours only; the week is the one read 7 hours ago (a new week may have started).
+  const week = { kind: "seven_day", usedPercent: 73, resetsAt: at(48 * HOUR), at: at(-7 * HOUR) };
+  const usage: PlanMeterUsage = {
+    windows: [week, { kind: "five_hour", usedPercent: 12, resetsAt: at(2 * HOUR) }],
+    at: at(-60_000),
+  };
+  expect(planWindows(usage, NOW).map((w) => [w.kind, w.stale])).toEqual([
+    ["five_hour", false],
+    ["seven_day", true],
+  ]);
+  const line = planLine(usage, text, NOW);
+  expect(line).toMatchObject({ line: "5h 12% · semana atualizado 05:00", stale: true, age: null, state: "ok" });
+  expect(line?.top?.kind).toBe("five_hour");
+  expect(line?.title).toBe("5 horas 12% · renova 14:00\nSemana atualizado 05:00 · renova 12:00");
+  // The full meter: its age in place of the percentage, no bar, no reset it may no longer have.
+  const { container } = render(<PlanMeter usage={usage} text={text} now={NOW} />);
+  expect(rows(container)).toEqual([
+    ["5 horas", "12%", "renova 14:00"],
+    ["Semana", "atualizado 05:00", null],
+  ]);
+  expect([...container.querySelectorAll("[role=meter]")].map((m) => m.getAttribute("aria-label"))).toEqual(["5 horas"]);
+  // Long work pauses on what is known, never on an old number; read again, it binds.
+  expect(planBinding({ ...usage, windows: [{ ...week, usedPercent: 99 }] }, { now: NOW })).toBeNull();
+  expect(planBinding({ ...usage, windows: [{ ...week, usedPercent: 99, at: at(-HOUR) }] }, { now: NOW })?.used).toBe(
+    99,
+  );
+  // One that reset since is known: empty again.
+  expect(planWindows({ ...usage, windows: [{ ...week, resetsAt: at(-HOUR) }] }, NOW)[0]).toMatchObject({
+    used: 0,
+    stale: false,
+  });
 });

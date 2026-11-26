@@ -32,6 +32,20 @@ const answered = (runId: string) =>
 const apply = (events: Ev[]) => events.reduce<ConsultsState>((s, e) => applyConsultEvent(s, e, at), {});
 
 describe("live consultations", () => {
+  test("work handed off whose result woke nobody ends the line, or says who is still at it", () => {
+    const note = (extra: Record<string, unknown>) =>
+      ({ ...answered("r1"), kind: "note", goesOn: false, ...extra }) as unknown as Ev;
+    const handed = { ...asked("r1"), kind: "note" } as unknown as Ev;
+    // Its result is on screen and the agent that handed it isn't writing: no "está escrevendo".
+    expect(consultsIn(apply([handed, note({})]), "c1", at)).toEqual([]);
+    // Another colleague still works on that turn's other part: the line is about it.
+    const [still] = consultsIn(apply([handed, note({ stillOutAgentId: "rui" })]), "c1", at);
+    expect(still).toMatchObject({ consultedAgentId: "rui", kind: "note", status: "asking" });
+    // A result that woke the agent keeps the old line until it writes.
+    const [woke] = consultsIn(apply([handed, { ...answered("r1"), kind: "note" } as unknown as Ev]), "c1", at);
+    expect(woke).toMatchObject({ consultedAgentId: "ada", status: "answered" });
+  });
+
   test("the answer woke another run of the asker: that run writing ends the line", () => {
     const back = apply([asked("r1"), answered("r1")]);
     expect(consultsIn(back, "c1", at)).toHaveLength(1);
@@ -64,10 +78,12 @@ describe("live consultations", () => {
     expect(consultsIn(applyConsultEvent(back, delta, at), "c1", at)).toHaveLength(1);
   });
 
-  test("work handed off never takes the line: the reply that handed it shows where it is", () => {
+  test("work handed off takes the line too, for as long as it is out (ADR 0095 addendum)", () => {
     const note = (e: Ev) => ({ ...e, kind: "note" }) as Ev;
-    expect(apply([note(asked("r1"))])).toEqual({});
-    expect(apply([asked("r1"), note(answered("r1"))])).toEqual(apply([asked("r1")]));
+    expect(apply([note(asked("r1"))]).r1).toMatchObject({ kind: "note", status: "asking" });
+    expect(apply([note(asked("r1")), note(answered("r1"))]).r1).toMatchObject({ kind: "note", status: "answered" });
+    // A question stays a question.
+    expect(apply([asked("r1")]).r1?.kind).toBe("question");
   });
 
   test("a question whose colleague is still at it stays past the usual window: each word of it renews the line", () => {

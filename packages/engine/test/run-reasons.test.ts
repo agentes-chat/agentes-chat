@@ -1,8 +1,11 @@
 import { expect, test } from "bun:test";
 import { ProviderError } from "@agenteschat/providers";
+import { SYSTEM_REFUSED } from "../src/brains/types";
 import { routineFailureCode } from "../src/routine-ledger";
 import {
+  brainFailureText,
   cliFailureText,
+  cliRefusedStart,
   OUR_ERROR,
   providerFailure,
   providerFailureOf,
@@ -33,6 +36,9 @@ test("a failed run's reason: a CLI's failed turn is its CLI's, the computer's ow
   // A Codex turn on a Windows computer where MXC can't hold its commands: its own words, never the bare code.
   expect(runErrorDetail("windows_sandbox")).toEqual({ errorCode: "run.windows_sandbox" });
   expect(routineFailureCode("account_missing")).toBe("account_missing");
+  // A computer whose disk is full: its own words and way out, in a routine's ledger too.
+  expect(runErrorDetail("disk_full")).toEqual({ errorCode: "run.disk_full" });
+  expect(routineFailureCode("disk_full")).toBe("disk_full");
   for (const error of ["Stopped after an error: duplicate key value", "Stopped after an error that kept repeating."]) {
     expect(runErrorDetail(error)).toEqual({ errorCode: "run.our_error" });
     expect(routineFailureCode(error)).toBe("our_error");
@@ -191,8 +197,25 @@ test("a CLI's failure says who failed it: the provider as a key's failure reads,
     errorCode: "run.cli_closed",
     errorParams: { brain: "Grok Build" },
   });
-  expect(other("OpenCode ended without finishing the turn", "opencode_failed")).toBe("cli_failed: OpenCode");
+  // Ended its turn with nothing in it: said as that, so the line says what to do.
+  expect(other("OpenCode ended without finishing the turn", "opencode_failed")).toBe("cli_empty: OpenCode");
+  expect(other("OpenCode ended without an answer.", "opencode_failed")).toBe("cli_empty: OpenCode");
+  expect(runErrorDetail("cli_empty: OpenCode")).toEqual({
+    errorCode: "run.cli_empty",
+    errorParams: { brain: "OpenCode" },
+  });
+  expect(cliFailureText(cli("Codex stopped", { cause: "empty_answer" }, "codex_failed"))).toBe("cli_empty: Codex");
   expect(other("Claude Code ended with an error", "claude_failed")).toBe("cli_failed: Claude Code");
+  // A model the sign-in or its endpoint doesn't serve reads as a key's would: that model isn't available there.
+  const noModel = cliFailureText(
+    cli("There's an issue with the selected model (claude-x). It may not exist or you may not have access to it.", {
+      cause: "model_unavailable",
+    }),
+  );
+  expect(runErrorDetail(noModel)).toMatchObject({
+    errorCode: "run.provider_model_unavailable",
+    errorParams: { provider: "Claude" },
+  });
   // A Codex turn that failed in its own words, even ones that sound like the runner's.
   expect(other("stream disconnected before completion: idle timeout", "codex_failed")).toBe(
     "cli_failed: Codex: stream disconnected before completion: idle timeout",
@@ -234,4 +257,69 @@ test("what a CLI said is safe to show anyone: no secrets, no sign-ins, no folder
   for (const leak of ["hunter2", "FAKEFAKEFAKEFAKE1234", "ghp_", "eyJFAKE", "/home", "Users", "acme"])
     expect(more).not.toContain(leak);
   expect(more).toContain(".claude.json");
+});
+
+test("a computer brain's failure under a code the apps don't word reads as its program's error, never the bare code", () => {
+  const unsupported = { code: "unsupported", message: "The Cursor brain isn't supported on Windows yet." };
+  expect(brainFailureText(unsupported, "cursor")).toBe(
+    "cli_failed: Cursor: The Cursor brain isn't supported on Windows yet.",
+  );
+  expect(runErrorDetail(brainFailureText(unsupported, "cursor"))).toEqual({
+    errorCode: "run.cli_failed",
+    errorParams: { brain: "Cursor", detail: "The Cursor brain isn't supported on Windows yet." },
+  });
+  expect(brainFailureText({ code: "not_allowed", message: "" }, "opencode")).toBe("cli_failed: OpenCode");
+  // A code the apps word stays as it is.
+  expect(brainFailureText({ code: "windows_sandbox", message: "x" }, "codex")).toBeNull();
+  expect(brainFailureText({ code: "account_missing", message: "x" }, "opencode")).toBeNull();
+  expect(brainFailureText({ code: "model_refused", message: "x" }, "opencode")).toBeNull();
+});
+
+test("a key from another provider's model reads in linear time, whatever the stored text", () => {
+  expect(runErrorDetail("This agent's model is from Claude, but the chosen key is from OpenAI")).toEqual({
+    errorCode: "run.credential_wrong_provider",
+    errorParams: { modelProvider: "Claude", keyProvider: "OpenAI" },
+  });
+  expect(runErrorDetail("O modelo deste agente é da Claude, mas a chave escolhida é da OpenAI")).toMatchObject({
+    errorCode: "run.credential_wrong_provider",
+  });
+  const started = performance.now();
+  runErrorDetail(`This agent's model is from a${", but the chosen key is from a".repeat(20_000)}`);
+  runErrorDetail(`O modelo deste agente é da a${", mas a chave escolhida é da a".repeat(20_000)}`);
+  expect(performance.now() - started).toBeLessThan(1000);
+});
+
+test("a CLI whose sandbox can't start on its computer: said as that, never as its words or the provider's", () => {
+  const said =
+    "Grok Build exited with code 1: bwrap: Can't mkdir parents for /var/lib/agentes-runner-agents/accounts: Permission denied";
+  for (const code of ["grok_failed", "codex_failed", "claude_failed"]) {
+    expect(cliRefusedStart({ code, message: said })).toBe(true);
+  }
+  expect(cliFailureText({ code: "grok_failed", message: said })).toBe("cli_sandbox: Grok Build");
+  expect(runErrorDetail("cli_sandbox: Grok Build")).toEqual({
+    errorCode: "run.cli_sandbox",
+    errorParams: { brain: "Grok Build" },
+  });
+  // Another program's words that only name bubblewrap stay that program's.
+  const other = "Grok Build exited with code 1: error: bwrap exec failed: No such file or directory";
+  expect(cliFailureText({ code: "grok_failed", message: other })).toStartWith("cli_failed: Grok Build: ");
+});
+
+test("Grok Build's own sandbox that can't start (no Landlock or Seatbelt there) reads as its sandbox, at once", () => {
+  for (const said of [
+    "Grok Build exited with code 1: Error: Sandbox initialization failed: Landlock is not available",
+    "Grok Build exited with code 1: Error: Platform not supported: windows",
+  ]) {
+    expect(cliRefusedStart({ code: "grok_failed", message: said })).toBe(true);
+    expect(cliFailureText({ code: "grok_failed", message: said })).toBe("cli_sandbox: Grok Build");
+  }
+});
+
+test("a brain refused for its computer's system reads as that, in the person's words, never as not supported", () => {
+  const refused = { code: SYSTEM_REFUSED, message: "Grok Build doesn't run on this computer's system yet." };
+  expect(brainFailureText(refused, "grok")).toBe("cli_system: Grok Build");
+  expect(runErrorDetail("cli_system: Grok Build")).toEqual({
+    errorCode: "run.cli_system",
+    errorParams: { brain: "Grok Build" },
+  });
 });

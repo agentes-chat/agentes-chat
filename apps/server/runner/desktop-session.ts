@@ -1,5 +1,5 @@
-import { spawn } from "node:child_process";
-import { createCipheriv, randomBytes, randomInt } from "node:crypto";
+import { spawn, spawnSync } from "node:child_process";
+import { createCipheriv, createHash, randomBytes, randomInt } from "node:crypto";
 import type { EventEmitter } from "node:events";
 import {
   chmodSync,
@@ -23,6 +23,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 import {
   type AgentScope,
   DESKTOP_SIZE,
+  type DesktopStart,
   type MachineReplies,
   type RunnerDesktopInfo,
 } from "@agenteschat/adapters/machine-protocol";
@@ -74,9 +75,13 @@ import { KeyedQueue } from "./queue";
  *   most 3 times in 10 minutes) when it ends by itself. It stops when its
  *   agent leaves this computer, or its workspace is suspended.
  * - Parked only when room runs short (`makeRoom`, before a desktop or a
- *   headed Chrome starts): the least recently used ones nobody watches or
- *   uses, untouched for `PARK_AFTER_MS`, until `MIN_FREE_BYTES` are free and,
- *   for a new desktop, a display. One parked starts again like a first time.
+ *   headed Chrome starts, and at each sweep while memory is short): the least
+ *   recently used ones nobody watches or uses, untouched for `PARK_AFTER_MS`
+ *   (`STALE_WORK_MS` with work running on it), until `MIN_FREE_BYTES` are free
+ *   and, for a new desktop, a display. Or all such ones at once when the server
+ *   hosting the computer runs short (`parkIdle`, an operator's `park`). One
+ *   parked keeps what was open on it and opens it again at its next start;
+ *   its Terminals and other apps end with its session and screen server.
  * - Desktops outlive the runner (their own sessions; the service has
  *   `KillMode=process`): the next runner takes them back from
  *   `<runner home>/desktop/<id8>.json` once the pid there is still that
@@ -86,9 +91,10 @@ import { KeyedQueue } from "./queue";
  *   again at its next start (`reopen`, ADR 0168): its Terminals, as new shells
  *   in the folders theirs were in, each with a line saying why; its other
  *   apps, as the desktop's keeper listed their windows (`desktop-keeper.py`);
- *   and the agent's Chrome, when it showed there, which opens its last tabs.
- *   A desktop that ends while the runner runs (stopped, parked, crashed)
- *   forgets it; one that ends once the runner is stopping (a reboot stops both
+ *   and the agent's Chrome, when it showed there, which opens again the tabs
+ *   the runner kept of it (`recordTabs` in `browser.ts`: its web pages, each
+ *   once, 8 at most, never a popup or a tab a person opened).
+ *   A desktop that ends while the runner runs (stopped, crashed) forgets it; one that ends once the runner is stopping (a reboot stops both
  *   at once) keeps it.
  */
 
@@ -96,6 +102,11 @@ import { KeyedQueue } from "./queue";
 export const MIN_FREE_BYTES = 1.5 * 1024 ** 3;
 /** A desktop untouched this long, unwatched and unused, may be parked (an open request keeps it touched). */
 export const PARK_AFTER_MS = 60 * 60_000;
+/**
+ * One untouched this long may be parked when room runs short even with a command running in a Terminal or an app
+ * open (`holdsWork`): a dev server or a watcher nobody came back to for a day holds memory the computer needs.
+ */
+export const STALE_WORK_MS = 24 * 60 * 60_000;
 const SWEEP_MS = 60_000;
 /** Xvnc listens within a few hundred ms. */
 const XVNC_START_MS = 5000;
@@ -124,17 +135,21 @@ const KEEPER_STATE_BYTES = 64 * 1024;
 /** An app's command line kept to open it again: at most this many arguments, and characters in all. */
 const APP_ARGS_MAX = 64;
 const APP_CHARS_MAX = 4096;
+/** What a Terminal runs when it was started with no command: anything else it runs is work a park would end. */
+const SHELLS = new Set(["bash", "zsh", "sh", "dash", "fish", "ksh", "tcsh", "csh"]);
 /**
  * Each app opened again is the agent's own process changing into its folder (its home, where that is gone), so root
  * never enters a folder the agent could swap for a link: `sh -c APP_SCRIPT agentes-app <folder> <command line…>`.
  */
 const APP_SCRIPT = 'cd "$1" 2>/dev/null || cd; shift; exec "$@"';
 /**
- * What a Terminal opened again says above its first prompt (`TERMINAL_NOTE_ENV`): the computer restarted, or moved to
- * another server (the desktop's record names the computer it was kept on, `/etc/machine-id`).
+ * What a Terminal opened again says above its first prompt (`TERMINAL_NOTE_ENV`): the computer restarted, moved to
+ * another server (the desktop's record names the computer it was kept on, `/etc/machine-id`), or its desktop was
+ * parked while nobody used it.
  */
-export const terminalNote = (moved: boolean) =>
-  `The computer ${moved ? "moved to another server" : "restarted"}: this is a new shell in the same folder.`;
+export type ReopenCause = "restarted" | "moved" | "parked";
+export const terminalNote = (cause: ReopenCause) =>
+  `${cause === "parked" ? "This desktop was put to rest while nobody used it" : `The computer ${cause === "moved" ? "moved to another server" : "restarted"}`}: this is a new shell in the same folder.`;
 /**
  * The look written into a running session (`refresh`) also sets some 70 settings, an `xfconf-query` each through
  * the session's bus, and restarts its dock: seconds on a busy computer, so it gets this many steps' time.
@@ -297,6 +312,32 @@ export function hostMemAvailable(): number | null {
   }
 }
 
+/** `kern.memorystatus_level` (the share of memory macOS can hand out now, in percent) in bytes; null when unreadable. */
+export function pressureLevelBytes(level: string, totalBytes: number): number | null {
+  const text = level.trim();
+  const n = Number(text);
+  return text !== "" && Number.isInteger(n) && n >= 0 && n <= 100 ? (n / 100) * totalBytes : null;
+}
+
+/**
+ * Free memory now, for background tasks' room: Linux `MemAvailable`, macOS its memory-pressure level (`os.freemem()`
+ * reads near zero on a healthy Mac, whose free memory sits in caches it hands back), Windows its available physical
+ * memory (`os.freemem()` there). Null where none can be read.
+ */
+export function freeMemoryNow(): number | null {
+  if (process.platform === "linux") return hostMemAvailable();
+  if (process.platform === "win32") return os.freemem();
+  if (process.platform !== "darwin") return null;
+  const r = spawnSync("sysctl", ["-n", "kern.memorystatus_level"], { encoding: "utf8", timeout: 2000 });
+  return r.status === 0 ? pressureLevelBytes(r.stdout, os.totalmem()) : null;
+}
+
+/** The processor has stayed over 90% busy for the last minute: the 1-minute load average against its CPUs (0 on Windows). */
+export const cpuBusyNow = (load = os.loadavg()[0] ?? 0, cpus = os.availableParallelism()) => load >= 0.9 * cpus;
+
+/** What a background task's start reads (`TaskManagerOptions.room`). */
+export const taskRoomNow = () => ({ free: freeMemoryNow(), cpuBusy: cpuBusyNow() });
+
 /** Where and as whom an agent's desktop runs. */
 export interface DesktopUser {
   /** Runs a command as the agent (`[]`: as the runner's own user). */
@@ -342,6 +383,32 @@ export function runnerEnv(home: string): Record<string, string> {
 export function runnerUser(runnerHome: string, agentFolder: string, agent: AgentScope): DesktopUser {
   const home = path.join(agentFolder, ".agentes", "home");
   return { prefix: [], env: runnerEnv(home), home, dir: path.join(runnerHome, "desktop", id8(agent)) };
+}
+
+/**
+ * `sun_path` fits 107 bytes here (108 with its terminator). A desktop's socket is `dir`'s `vnc.sock`; when that path
+ * is too long for one (a runner home with a long user name), it goes to `agentes-desktop-<uid>` in the temp folder,
+ * named after the path so the same desktop always gets the same one. That folder is the runner's own and 0700
+ * (`ownSocketFolder`): in a shared /tmp another user could otherwise take the name first.
+ * Single-user mode only: in system mode the agent's /tmp is its own, so the runner couldn't reach a socket there.
+ * The desktop's other files (its cookie, its log, its record) stay where they are.
+ */
+export const LONG_SOCKET_PATH = 107;
+
+export function desktopSocketPath(dir: string, tmp = os.tmpdir(), uid = process.getuid?.() ?? 0) {
+  const inDir = path.join(dir, "vnc.sock");
+  if (Buffer.byteLength(inDir) <= LONG_SOCKET_PATH) return inDir;
+  const id = createHash("sha256").update(inDir).digest("hex").slice(0, 16);
+  return path.join(tmp, `agentes-desktop-${uid}`, `${id}.vnc.sock`);
+}
+
+/** Makes `folder` 0700, and refuses one that is a link, someone else's, or open to others. */
+export function ownSocketFolder(folder: string, uid = process.getuid?.() ?? 0) {
+  mkdirSync(folder, { recursive: true, mode: 0o700 });
+  const st = lstatSync(folder);
+  if (!st.isDirectory() || st.uid !== uid || (st.mode & 0o077) !== 0) {
+    throw new RunnerError("internal", `The desktop's socket folder ${folder} isn't the runner's own, 0700`);
+  }
 }
 
 /**
@@ -554,6 +621,8 @@ export interface DesktopSessionsOptions {
   inUse?: (agentId: string) => boolean;
   /** A viewer of the agent's desktop came or went (`status().streams`). */
   onViewers?: (agentId: string) => void;
+  /** A start ended: where its time went, or the code it failed with (the server's `desktop.started`). */
+  onStarted?: (agent: AgentScope, start: DesktopStart) => void;
   /** Browser on the agent's desktop was clicked (`desktop-browser.ts`); without it the desktop has no socket for it. */
   openBrowser?: (agent: AgentScope, installing: () => void) => Promise<void>;
   /** How this runner starts itself, which Browser runs (default: this process). */
@@ -580,6 +649,8 @@ interface Saved {
   look?: string;
   /** Its Xtigervnc has these `LIVE_PARAMS`, from its flags or a `refresh`; none from an earlier runner. */
   params?: string[];
+  /** When it was last used, as of the last sweep, so a runner that takes it back keeps its idle time. */
+  usedAt?: number;
 }
 
 interface Desktop extends Saved {
@@ -607,7 +678,7 @@ interface Desktop extends Saved {
 
 /**
  * What is open on a desktop, in `<id8>.open`: its Terminals as the folders their shells were in, oldest first; its other
- * apps as the keeper listed their windows; whether the agent's Chrome showed there (its tabs are its own session's,
+ * apps as the keeper listed their windows; whether the agent's Chrome showed there (its tabs are kept in its profile,
  * which it opens again); and the computer it was kept on. Background work comes back through the server (ADR 0168).
  */
 export interface OpenOnDesktop {
@@ -615,6 +686,8 @@ export interface OpenOnDesktop {
   apps?: OpenApp[];
   browser?: boolean;
   machine?: string;
+  /** Kept by a park, not by the computer stopping. */
+  parked?: true;
 }
 
 /** An app the desktop opens again: its command line and the folder it ran in. */
@@ -669,6 +742,7 @@ function parseOpen(v: unknown): OpenOnDesktop | null {
     ...(apps.length > 0 ? { apps } : {}),
     ...(browser ? { browser } : {}),
     ...(typeof v.machine === "string" && v.machine ? { machine: v.machine } : {}),
+    ...(v.parked === true ? { parked: true as const } : {}),
   };
 }
 
@@ -689,7 +763,8 @@ function parseSaved(v: unknown): Saved | null {
   }
   // A look or flags that can't be read are taken as not there: a refresh sets them again.
   const params = Array.isArray(v.params) && v.params.every((p) => typeof p === "string") ? v.params : undefined;
-  return { ...(v as unknown as Saved), look: typeof v.look === "string" ? v.look : undefined, params };
+  const usedAt = Number.isFinite(v.usedAt) ? (v.usedAt as number) : undefined;
+  return { ...(v as unknown as Saved), look: typeof v.look === "string" ? v.look : undefined, params, usedAt };
 }
 
 /** What `<id8>.json` keeps of a desktop: its `Saved` part alone. */
@@ -706,6 +781,7 @@ const savedOf = (d: Desktop): Saved => ({
   startedAt: d.startedAt,
   look: d.look,
   params: d.params,
+  usedAt: d.lastUsed,
 });
 
 const iso = (ms: number) => new Date(ms).toISOString();
@@ -718,11 +794,15 @@ export class DesktopSessions {
   private readonly operations = new Map<string, number>();
   /** When each agent's desktop was started again after ending by itself. */
   private readonly restarts = new Map<string, number[]>();
+  /** Each agent's desktop start under way for `ensure`: another `ensure` meanwhile gets its outcome. */
+  private readonly starting = new Map<string, Promise<MachineReplies["desktop.session.start"]>>();
   /** Displays of desktops being started. */
   private readonly claimed = new Set<number>();
   /** Refreshes run one after another: each starts dozens of short processes on the computer. */
   private refreshes: Promise<void> = Promise.resolve();
   private sweepTimer: ReturnType<typeof setInterval> | null = null;
+  /** A sweep's `makeRoom` still parking. */
+  private relieving = false;
   /** The runner is stopping (`close`). */
   private stopping = false;
   private readonly sys: DesktopSystem;
@@ -769,7 +849,10 @@ export class DesktopSessions {
    * `chrome`: the agent's Chrome is about to start on it, so there must be room for that too.
    */
   ensure(agent: AgentScope, opts: { chrome?: boolean } = {}): Promise<MachineReplies["desktop.session.start"]> {
-    return this.serial(agent.id, async () => {
+    // A viewer's retry while its first open still starts the desktop: the same start, never a second one after it.
+    const under = this.starting.get(agent.id);
+    if (under && !opts.chrome) return under;
+    const run = this.serial(agent.id, async () => {
       let d = this.desktops.get(agent.id);
       const running = d !== undefined && this.alive(d);
       if (d && running) {
@@ -779,7 +862,14 @@ export class DesktopSessions {
         if (d) await this.end(d);
         const info = this.info();
         if (!info.available) throw new RunnerError("desktop_unavailable", info.reason ?? "Desktops can't run here");
-        d = await this.start(agent);
+        const began = this.now();
+        try {
+          d = await this.start(agent);
+        } catch (err) {
+          const error = err instanceof RunnerError ? err.code : "internal";
+          this.opts.onStarted?.(agent, { ms: this.now() - began, error });
+          throw err;
+        }
       }
       if (opts.chrome && !(await this.makeRoom(agent.id))) {
         throw new RunnerError(
@@ -789,6 +879,14 @@ export class DesktopSessions {
       }
       return this.started(d, !running);
     });
+    if (!opts.chrome && this.processId(agent.id) === null) {
+      this.starting.set(agent.id, run);
+      const done = () => {
+        if (this.starting.get(agent.id) === run) this.starting.delete(agent.id);
+      };
+      run.then(done, done);
+    }
+    return run;
   }
 
   /**
@@ -809,14 +907,32 @@ export class DesktopSessions {
       await this.serial(oldest.agent.id, async () => {
         if (this.desktops.get(oldest.agent.id) !== oldest || !this.parkable(oldest, forAgentId)) return;
         this.opts.log(`the desktop of ${oldest.agent.handle} was parked to make room: nobody used it for an hour`);
-        await this.end(oldest);
+        await this.end(oldest, true);
       });
     }
     return true;
   }
 
+  /** Every desktop that may be parked (`parkable`) is, what was open on each kept for its next start. How many. */
+  async parkIdle(): Promise<number> {
+    let parked = 0;
+    for (const d of [...this.desktops.values()]) {
+      if (this.stopping) break;
+      await this.serial(d.agent.id, async () => {
+        if (this.stopping || this.desktops.get(d.agent.id) !== d || !this.parkable(d, "")) return;
+        this.opts.log(
+          `the desktop of ${d.agent.handle} was parked: its server is short of memory, nobody used it for an hour`,
+        );
+        await this.end(d, true);
+        parked++;
+      });
+    }
+    return parked;
+  }
+
   /**
-   * Nobody watches it, its agent doesn't use it, and nothing touched it for `PARK_AFTER_MS`.
+   * Nobody watches it, its agent doesn't use it, nothing touched it for `PARK_AFTER_MS`, and parking loses nothing
+   * (`holdsWork`) or nothing touched it for `STALE_WORK_MS`.
    * ponytail: parking closes what was left open on the least-used desktops, which on 8 GB happens only with many
    * agents browsing at once; a per-agent memory measure replaces the hour rule if that ever bites.
    */
@@ -825,8 +941,36 @@ export class DesktopSessions {
       d.agent.id !== forAgentId &&
       d.streams === 0 &&
       this.now() - d.lastUsed >= PARK_AFTER_MS &&
-      !this.opts.inUse?.(d.agent.id)
+      !this.opts.inUse?.(d.agent.id) &&
+      (this.now() - d.lastUsed >= STALE_WORK_MS || !this.holdsWork(d))
     );
+  }
+
+  /**
+   * What a park would lose: a command still running in one of its Terminals (a build, a dev server, or the program a
+   * Terminal was started with), whose process and output a new shell can't bring back, or an app window other than
+   * Terminal, Chrome and Files, whose unsaved content a reopen can't either. Without the keeper's list of this session
+   * (no keeper, or one from an earlier session) or with a window it couldn't list, the desktop's apps are unknown, so
+   * it holds.
+   */
+  private holdsWork(d: Desktop) {
+    const list = this.keeperList(d);
+    if (!list || list.unkept === true || this.keeperListAt(d) < d.startedAt) return true;
+    if (appsOf(list.apps).some((a) => path.basename(a.argv[0] ?? "") !== "thunar")) return true;
+    const procs = this.sys.processes();
+    const shells = this.terminalShells(d, procs);
+    if (shells.some((p) => !SHELLS.has(p.name))) return true;
+    const pids = new Set(shells.map((p) => p.pid));
+    return procs.some((p) => pids.has(p.ppid));
+  }
+
+  /** When the keeper last wrote its list (ms), or 0. */
+  private keeperListAt(d: Desktop) {
+    try {
+      return lstatSync(path.join(d.home, KEEPER_STATE)).mtimeMs;
+    } catch {
+      return 0;
+    }
   }
 
   stop(agent: Pick<AgentScope, "id">): Promise<MachineReplies["desktop.session.stop"]> {
@@ -884,8 +1028,9 @@ export class DesktopSessions {
    * this computer still serves (one archived or moved to another computer leaves).
    */
   async stopAll(keep: ReadonlySet<string> = new Set()) {
-    const leaving = [...this.desktops.values()].filter((d) => !keep.has(d.agent.id));
-    await Promise.all(leaving.map((d) => this.stop(d.agent).catch(() => undefined)));
+    // One being started (asked for, or again after ending by itself) isn't in the map yet: its stop waits its turn.
+    const leaving = [...new Set([...this.desktops.keys(), ...this.operations.keys()])].filter((id) => !keep.has(id));
+    await Promise.all(leaving.map((id) => this.stop({ id }).catch(() => undefined)));
   }
 
   /**
@@ -903,7 +1048,7 @@ export class DesktopSessions {
   /**
    * Desktops a previous run of the runner left running are taken back when
    * the pid it saved is still that display's Xtigervnc (a pid can be
-   * reused); the others' files go.
+   * reused), last used when the file says; the others' files go.
    */
   restore() {
     let names: string[];
@@ -920,7 +1065,7 @@ export class DesktopSessions {
         const d: Desktop = {
           ...saved,
           file,
-          lastUsed: this.now(),
+          lastUsed: Math.min(saved.usedAt ?? this.now(), this.now()),
           streams: 0,
           refresh: { current: false, queued: false, params: false, look: false },
         };
@@ -937,7 +1082,9 @@ export class DesktopSessions {
    * Desktops that ended by themselves start again (one taken back from an earlier runner has no exit to wait
    * on). The agent's Chrome in use on one touches it, so it isn't parked as soon as that Chrome closes. A running
    * one gets what changed since it started (`refresh`); the promise settles once those refreshes are over. One this
-   * runner started says how its session's start went (`sessionStart`), once that is over.
+   * runner started says how its session's start went (`sessionStart`), once that is over. Its last use goes in its
+   * file. While the computer is short of memory, the desktops `parkable` says are parked (`makeRoom`), so an idle one
+   * doesn't wait for the next desktop or Chrome to start.
    */
   sweep(): Promise<void> {
     let procs: ProcessStat[] | undefined;
@@ -951,6 +1098,13 @@ export class DesktopSessions {
         continue;
       }
       if (this.opts.inUse?.(d.agent.id)) d.lastUsed = this.now();
+      if (d.usedAt !== d.lastUsed) {
+        try {
+          this.persist(d);
+        } catch {
+          // A full disk: a runner that takes it back counts it as just used, as before.
+        }
+      }
       const settled = this.now() - d.startedAt >= SESSION_SETTLED_MS;
       if (d.untold && settled) this.sessionStart(d, processes());
       const open = d.reopen;
@@ -969,6 +1123,12 @@ export class DesktopSessions {
         // sweep.
         this.refreshes = this.refreshes.then(() => this.serial(d.agent.id, () => this.refresh(d)).catch(() => {}));
       }
+    }
+    if (!this.relieving) {
+      this.relieving = true;
+      void this.makeRoom("").finally(() => {
+        this.relieving = false;
+      });
     }
     return this.refreshes;
   }
@@ -1005,26 +1165,34 @@ export class DesktopSessions {
     return path.join(this.dir, `${id8(agent)}.open`);
   }
 
-  /** What is open on the desktop now, in its `<id8>.open` when that changed: what a start after a restart reopens. */
-  private recordOpen(d: Desktop, procs: readonly ProcessStat[]) {
+  private openNow(d: Desktop, procs: readonly ProcessStat[]): OpenOnDesktop {
     const kept = this.keeperList(d);
     const apps = appsOf(kept?.apps);
-    const machine = this.sys.machineId?.();
-    const open: OpenOnDesktop = {
+    return {
       terminals: this.terminalFolders(d, procs),
       ...(apps.length > 0 ? { apps } : {}),
       ...(kept?.browser === true ? { browser: true } : {}),
     };
+  }
+
+  /** What is open on the desktop now, in its `<id8>.open` when that changed: what a start after a restart reopens. */
+  private recordOpen(d: Desktop, procs: readonly ProcessStat[]) {
+    const open = this.openNow(d, procs);
     const text = JSON.stringify(open);
     if (text === d.recorded) return;
     try {
-      if (open.terminals.length > 0 || open.apps || open.browser) {
-        writeJson(this.openFile(d.agent), { ...open, ...(machine ? { machine } : {}) });
-      } else rmSync(this.openFile(d.agent), { force: true });
+      this.writeOpen(d, open);
       d.recorded = text;
     } catch {
       // the next sweep writes it
     }
+  }
+
+  private writeOpen(d: Desktop, open: OpenOnDesktop) {
+    const machine = this.sys.machineId?.();
+    if (open.terminals.length > 0 || open.apps || open.browser) {
+      writeJson(this.openFile(d.agent), { ...open, ...(machine ? { machine } : {}) });
+    } else rmSync(this.openFile(d.agent), { force: true });
   }
 
   /**
@@ -1048,13 +1216,7 @@ export class DesktopSessions {
    * dock starts them apart from its session, so they aren't in its tree).
    */
   private terminalFolders(d: Desktop, procs: readonly ProcessStat[]) {
-    const terminals = new Set(
-      procs
-        .filter((p) => p.name === "xfce4-terminal" && this.sys.environ?.(p.pid)?.DISPLAY === `:${d.display}`)
-        .map((p) => p.pid),
-    );
-    return procs
-      .filter((p) => terminals.has(p.ppid))
+    return this.terminalShells(d, procs)
       .sort((a, b) => a.start - b.start)
       .flatMap((p) => {
         const folder = this.sys.cwd?.(p.pid);
@@ -1063,13 +1225,22 @@ export class DesktopSessions {
       .slice(0, REOPEN_MAX);
   }
 
+  private terminalShells(d: Desktop, procs: readonly ProcessStat[]) {
+    const terminals = new Set(
+      procs
+        .filter((p) => p.name === "xfce4-terminal" && this.sys.environ?.(p.pid)?.DISPLAY === `:${d.display}`)
+        .map((p) => p.pid),
+    );
+    return procs.filter((p) => terminals.has(p.ppid));
+  }
+
   /**
    * What was open on the desktop before the computer restarted or moved opens again, on the session's bus, where its
    * settings and the look's prompt are: the agent's Chrome when it showed there (the runner's own, through Browser's
-   * way, which opens its last tabs); each Terminal a new shell in its folder (one that is gone is left out), with
-   * `terminalNote` above its first prompt; each other app with its command line in its folder. Only the bus comes from
-   * the session's environment: what the agent's processes hold is never handed to the launcher, which starts as root
-   * in system mode.
+   * way, which opens the tabs the runner kept of it, `recordTabs`); each Terminal a new shell in its folder (one that
+   * is gone is left out), with `terminalNote` above its first prompt; each other app with its command line in its
+   * folder. Only the bus comes from the session's environment: what the agent's processes hold is never handed to the
+   * launcher, which starts as root in system mode.
    */
   private async reopen(d: Desktop, open: OpenOnDesktop) {
     if (this.desktops.get(d.agent.id) !== d || !this.alive(d)) return;
@@ -1082,7 +1253,8 @@ export class DesktopSessions {
     const apps = open.apps ?? [];
     if (folders.length === 0 && apps.length === 0) return;
     const machine = this.sys.machineId?.();
-    const moved = Boolean(open.machine && machine && open.machine !== machine);
+    const cause: ReopenCause =
+      open.machine && machine && open.machine !== machine ? "moved" : open.parked ? "parked" : "restarted";
     const session = this.sessionTree(d, this.sys.processes()).find((p) => p.name === "xfce4-session");
     const bus = session ? this.sys.environ?.(session.pid)?.DBUS_SESSION_BUS_ADDRESS : undefined;
     const env = {
@@ -1092,7 +1264,7 @@ export class DesktopSessions {
     for (const folder of folders) {
       this.sys.spawn([...user.prefix, terminal as string, "--disable-server", `--working-directory=${folder}`], {
         cwd: "/",
-        env: { ...env, [TERMINAL_NOTE_ENV]: terminalNote(moved) },
+        env: { ...env, [TERMINAL_NOTE_ENV]: terminalNote(cause) },
         detached: true,
       });
     }
@@ -1104,7 +1276,7 @@ export class DesktopSessions {
       });
     }
     this.opts.log(
-      `the desktop of ${d.agent.handle} opened again after the computer ${moved ? "moved" : "restarted"}: ${folders.length} terminals, ${apps.length} other apps${open.browser ? ", its browser" : ""}`,
+      `the desktop of ${d.agent.handle} opened again after ${cause === "parked" ? "its park" : `the computer ${cause}`}: ${folders.length} terminals, ${apps.length} other apps${open.browser ? ", its browser" : ""}`,
     );
   }
 
@@ -1166,12 +1338,13 @@ export class DesktopSessions {
       const passwords = { full: newPassword(), view: newPassword() };
       while (passwords.view === passwords.full) passwords.view = newPassword();
       const files = {
-        socket: path.join(user.dir, "vnc.sock"),
+        socket: user.ids ? path.join(user.dir, "vnc.sock") : desktopSocketPath(user.dir),
         xauthority: path.join(user.dir, "Xauthority"),
         passwd: user.ids
           ? path.join(this.opts.runDir ?? SYSTEM_RUN_DIR, String(user.ids.uid), "passwd")
           : path.join(user.dir, "passwd"),
       };
+      if (path.dirname(files.socket) !== user.dir) ownSocketFolder(path.dirname(files.socket));
       mkdirSync(this.dir, { recursive: true, mode: 0o700 });
       const logFile = path.join(this.dir, `${id8(agent)}.log`);
       // A desktop that ended by itself starts again at once: the log of the start that ended stays (`.log.1`).
@@ -1276,6 +1449,16 @@ export class DesktopSessions {
         this.opts.log(
           `the desktop of ${agent.handle} started on :${display} in ${seconds(now - began)}: room and its user ${seconds(userAt - began)}, prepared in ${seconds(preparedAt - userAt)}, its screen in ${seconds(screenAt - preparedAt)} (the look in ${seconds(lookMs)} meanwhile), its session in ${seconds(now - sessionAt)}`,
         );
+        this.opts.onStarted?.(agent, {
+          ms: now - began,
+          steps: {
+            room: userAt - began,
+            prepared: preparedAt - userAt,
+            screen: screenAt - preparedAt,
+            look: lookMs,
+            session: now - sessionAt,
+          },
+        });
         return d;
       } finally {
         closeSync(log);
@@ -1417,6 +1600,7 @@ export class DesktopSessions {
   }
 
   private persist(d: Desktop) {
+    d.usedAt = d.lastUsed;
     writeJson(d.file, savedOf(d));
   }
 
@@ -1505,8 +1689,18 @@ export class DesktopSessions {
     });
   }
 
-  /** Stops the desktop's processes (pids checked first: one could be reused) and forgets it, and what was open on it. */
-  private async end(d: Desktop) {
+  /**
+   * Stops the desktop's processes (pids checked first: one could be reused) and forgets it, and what was open on it
+   * unless `parked`: then that is kept for its next start (one still to open again stays as it was).
+   */
+  private async end(d: Desktop, parked = false) {
+    if (parked) {
+      try {
+        this.writeOpen(d, { ...(d.reopen ?? this.openNow(d, this.sys.processes())), parked: true });
+      } catch {
+        // Its next start opens nothing again: as before parks kept anything.
+      }
+    }
     d.ending = true;
     if (this.desktops.get(d.agent.id) === d) this.desktops.delete(d.agent.id);
     if (this.isSession(d.sessionPid)) this.sys.kill(d.sessionPid, "SIGTERM");
@@ -1518,7 +1712,7 @@ export class DesktopSessions {
     }
     if (d.browser) closeBrowser(d.browser, browserSocket(d.passwd));
     rmSync(d.file, { force: true });
-    rmSync(this.openFile(d.agent), { force: true });
+    if (!parked) rmSync(this.openFile(d.agent), { force: true });
     rmSync(d.passwd, { force: true });
     if (this.desktops.size === 0) this.stopSweeps();
   }
@@ -1606,7 +1800,10 @@ export class DesktopSessions {
  * in a terminal); no blacklist (TigerVNC counts attempts, not
  * failures, so a burst of reconnects after a deploy would lock everyone out,
  * and behind a 0600 socket it protects nothing); X only through the cookie
- * file, no TCP; no screen saver.
+ * file, no TCP; no screen saver; no pointer drawn (`-nocursor`): TigerVNC
+ * draws it into the picture of a viewer whose own pointer is elsewhere, so
+ * whoever watches saw the computer's arrow beside the agent's cursor the
+ * apps draw (ADR 0040 §7.2); in control the person's own pointer shows.
  */
 function xvncArgs(files: { socket: string; xauthority: string; passwd: string }, name: string): string[] {
   return [
@@ -1635,6 +1832,7 @@ function xvncArgs(files: { socket: string; xauthority: string; passwd: string },
     "tcp",
     "-s",
     "0",
+    "-nocursor",
     "-desktop",
     name,
   ];

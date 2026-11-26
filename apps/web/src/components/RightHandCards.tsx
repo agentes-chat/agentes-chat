@@ -12,16 +12,11 @@ import {
   useActionCard,
   useAgentActions,
   useAgentProposal,
-  useApproval,
-  useApprovals,
-  useAskProposal,
   useAuthConfig,
   useCardProposals,
   useChangeRole,
   useChannels,
   useDecideActionCard,
-  useDecideProposal,
-  useDecideProposals,
   useMembers,
   useModelLabel,
   useRoles,
@@ -29,14 +24,20 @@ import {
   useSetMemberRoles,
 } from "@agenteschat/client";
 import {
-  type ApprovalsCard,
+  actionCardApplyKey,
+  actionCardDestroys,
   actionCardDetail,
   actionCardKey,
+  actionCardMark,
+  actionCardSaysDone,
   actionCardWords,
   type MemberChangeRow,
   type MemberChangesCard,
   mayApplyCard,
   memberRowDone,
+  memberRowNeeds,
+  memberRowsBlocked,
+  memberRowText,
   type OpenPageCard,
   rolesAfter,
   type SettingsProposalCard,
@@ -47,28 +48,15 @@ import { formatTime } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { can } from "@agenteschat/client/lib/permissions";
 import { settingsSectionNameKey } from "@agenteschat/client/lib/personal-view";
-import {
-  cardDecidedBy,
-  cardOutcome,
-  chosenRows,
-  decidersOf,
-  isOpen,
-  onlyKey,
-  proposalWhy,
-  removalOf,
-  rowStatus,
-  sentToText,
-  settingLineText,
-} from "@agenteschat/client/lib/proposals";
-import { Button, EventPillAction, Icon, Switch } from "@agenteschat/ui";
+import { proposalWhy, removalOf, settingLineText } from "@agenteschat/client/lib/proposals";
+import { Button, EventPillAction, Icon } from "@agenteschat/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { AgentProposalCardView } from "@/components/ActionCard";
 import { AgentAvatar, PersonAvatar } from "@/components/AgentAvatar";
-import { ApprovalAsk } from "@/components/ApprovalAsk";
-import { DeleteAgentsDialog } from "@/components/DeleteAgentDialog";
+import { isReviewing, ProposalUndo, proposalEndedAt, proposalOutcome, proposalsOutcome } from "@/components/ChatCards";
 import { useOrg } from "@/components/org-context";
 import { RemoveMemberDialog } from "@/components/RemoveMember";
 import { type RequestAnswer, RequestCard, RequestOpen } from "@/components/RequestCard";
@@ -98,9 +86,9 @@ export function SettingsProposalCardView({ message, card }: { message: Message; 
 }
 
 /**
- * "Arquivar 5 agentes?" (`propose_remove_agents`): the agents listed, each with its switch, and "Arquivar todos" or
- * "Arquivar 3" for whoever may archive (or delete) them, applied as them row by row; the person who asked and can't,
- * Pedir a um admin. Decided, how it ended and Desfazer for what was archived (a deleted agent doesn't come back).
+ * "Archive 5 agents?" (`propose_remove_agents`): the agents listed, each saying how it ended. Nobody decides it here
+ * (ADR 0219): the agent's review archives (or deletes) each as someone who may, or leaves it out with why, and each
+ * archived one has its Undo. A card a person decided keeps Undo on its receipts (a deleted agent doesn't come back).
  */
 function RemovalCard({
   rows,
@@ -114,54 +102,31 @@ function RemovalCard({
   const { t, i18n } = useTranslation();
   const { org, me } = useOrg();
   const dir = useDirectory(org.id);
-  const members = useMembers(org.id).data ?? [];
-  const roles = useRoles(org.id).data?.roles ?? [];
-  const decide = useDecideProposals(org.id);
-  const ask = useAskProposal(org.id);
   const actions = useAgentActions(org.id, message?.channelId ?? "");
   const toast = useToast();
   const qc = useQueryClient();
-  const [off, setOff] = useState<ReadonlySet<string>>(new Set());
-  const [confirming, setConfirming] = useState(false);
   const [first] = rows;
   if (!first) return null;
   const del = removal === "delete";
   const failed = (e: unknown) => toast.show(errorText(t, e), "error");
   const nameOf = (p: Proposal) => dir.anyAgent(p.agentId)?.name ?? t("channel.unknownAgent");
   const label = t(del ? "rightHand.remove.deleteTitle" : "rightHand.remove.archiveTitle", { count: rows.length });
-  const open = rows.filter(isOpen);
-  const { chosen, all } = chosenRows(rows, off);
-  const decides = open.some((p) => p.canDecide);
-  const mine = first.requestedBy?.userId === me.user.id;
-  const toggle = (id: string, on: boolean) =>
-    setOff((prev) => {
-      const next = new Set(prev);
-      if (on) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  const run = (decision: "accept" | "refuse") =>
-    decide.mutate(
-      { ids: chosen.map((p) => p.id), decision },
-      {
-        onSuccess: ({ failed: f }) => f[0] && failed(f[0].error),
-        onSettled: () => setConfirming(false),
-      },
-    );
+  const reviewing = rows.some(isReviewing);
+  // What the agent's review decided, or was put back since, has Undo on its own row.
+  const reviewed = rows.some((p) => p.reviewed || p.status === "undone");
 
-  // Decided: the same card, its rows saying how each ended, and who decided, when and Desfazer where the buttons were.
+  // Decided: the same card, its rows saying how each ended, and how it ended, when and Undo in the footer.
   let answer: RequestAnswer | undefined;
-  if (open.length === 0) {
-    const outcome = cardOutcome(t, rows);
-    const receipts = (message?.actions ?? []).filter((a) => rows.some((p) => p.undoActionId === a.id));
+  if (!reviewing) {
+    const outcome = proposalsOutcome(t, rows, me.user.id);
+    const receipts = reviewed ? [] : (message?.actions ?? []).filter((a) => rows.some((p) => p.undoActionId === a.id));
     const undoable = receipts.some((a) => !a.undoneAt && a.undoableUntil && Date.parse(a.undoableUntil) > Date.now());
     const undone = receipts.length > 0 && receipts.every((a) => a.undoneAt);
+    const at = proposalEndedAt(first);
     answer = {
-      done: outcome.accepted && !undone,
-      text: undone
-        ? `${cardDecidedBy(t, rows, me.user.id)} · ${t("rightHand.card.undone")}`
-        : cardDecidedBy(t, rows, me.user.id),
-      time: first.decidedAt ? formatTime(i18n.language, first.decidedAt) : undefined,
+      done: rows.some((p) => p.status === "accepted" && !p.stale) && !undone,
+      text: undone ? `${outcome} · ${t("rightHand.card.undone")}` : outcome,
+      time: at ? formatTime(i18n.language, at) : undefined,
       action: undoable ? (
         <Button
           size="sm"
@@ -181,121 +146,58 @@ function RemovalCard({
     };
   }
 
-  const unsent = open.filter((p) => !p.canDecide && !p.askedAt);
-  const sent = open.find((p) => p.askedAt);
-  const state = decides ? undefined : mine && unsent.length > 0 ? t(onlyKey(first)) : t("proposals.waitingAdmin");
-  const decision = decides ? (
-    <>
-      <Button
-        size="sm"
-        variant={del ? "danger" : "primary"}
-        disabled={decide.isPending || chosen.length === 0}
-        loading={decide.isPending && decide.variables?.decision === "accept"}
-        onClick={() => (del ? setConfirming(true) : run("accept"))}
-      >
-        {all
-          ? t(del ? "rightHand.remove.deleteAll" : "rightHand.remove.archiveAll")
-          : t(del ? "rightHand.remove.deleteSome" : "rightHand.remove.archiveSome", { count: chosen.length })}
-      </Button>
-      <Button
-        size="sm"
-        variant="ghost"
-        disabled={decide.isPending || chosen.length === 0}
-        loading={decide.isPending && decide.variables?.decision === "refuse"}
-        onClick={() => run("refuse")}
-      >
-        {t(mine ? "rightHand.card.dismiss" : "rightHand.card.decline")}
-      </Button>
-    </>
-  ) : mine && unsent.length > 0 ? (
-    <Button
-      size="sm"
-      variant="primary"
-      icon="arrowUp"
-      loading={ask.isPending}
-      onClick={async () => {
-        try {
-          for (const p of unsent) await ask.mutateAsync(p.id);
-        } catch (e) {
-          failed(e);
-        }
-      }}
-    >
-      {t("rightHand.card.askAdmin")}
-    </Button>
-  ) : (
-    sent?.askedAt && (
-      <span className="rq__sent ac-iconline">
-        <Icon name="arrowUp" size={14} />
-        <span>{sentToText(t, i18n.language, decidersOf(sent, members, roles, null), sent.askedAt)}</span>
-      </span>
-    )
-  );
   return (
-    <>
-      <DeleteAgentsDialog
-        key={String(confirming)}
-        names={confirming ? chosen.map(nameOf) : null}
-        pending={decide.isPending}
-        onConfirm={() => run("accept")}
-        onClose={() => setConfirming(false)}
-      />
-      <RequestCard
-        id={first.id}
-        kind="proposal"
-        agent={dir.anyAgent(first.proposedByAgentId ?? first.agentId)}
-        label={label}
-        mine={decides}
-        waitingFor={state}
-        answer={answer}
-        lead={del && !answer ? `${proposalWhy(t, first)} ${t("rightHand.remove.deleteHelp")}` : proposalWhy(t, first)}
-        body={
-          <ul className="proposal-rows">
-            {rows.map((p) => {
-              const agent = dir.anyAgent(p.agentId);
-              const name = nameOf(p);
-              const status = rowStatus(t, p);
-              return (
-                <li key={p.id} className="proposal-row ac-mediarow ac-mediarow--row">
-                  <span className="ac-mediarow__face">
-                    <AgentAvatar agentId={p.agentId} size="sm" name={name} />
+    <RequestCard
+      id={first.id}
+      kind="proposal"
+      agent={dir.anyAgent(first.proposedByAgentId ?? first.agentId)}
+      label={label}
+      mine={false}
+      waitingFor={reviewing ? t("proposals.reviewing") : undefined}
+      answer={answer}
+      lead={del && !answer ? `${proposalWhy(t, first)} ${t("rightHand.remove.deleteHelp")}` : proposalWhy(t, first)}
+      body={
+        <ul className="proposal-rows">
+          {rows.map((p) => {
+            const agent = dir.anyAgent(p.agentId);
+            const name = nameOf(p);
+            return (
+              <li key={p.id} className="proposal-row ac-mediarow ac-mediarow--row">
+                <span className="ac-mediarow__face">
+                  <AgentAvatar agentId={p.agentId} size="sm" name={name} />
+                </span>
+                <span className="ac-mediarow__head">
+                  <b className="proposal-row__name">{name}</b>
+                  {agent && (
+                    <span className="ac-mediarow__meta">
+                      {[`@${agent.handle}`, agent.role].filter(Boolean).join(" · ")}
+                    </span>
+                  )}
+                </span>
+                <span className="ac-mediarow__end">
+                  <span className="proposal-row__status">{proposalOutcome(t, p, me.user.id)}</span>
+                  {p.reviewed && <ProposalUndo p={p} />}
+                </span>
+                {p.review && (
+                  <span className="ac-mediarow__body">
+                    <span className="proposal-change">{p.review}</span>
                   </span>
-                  <span className="ac-mediarow__head">
-                    <b className="proposal-row__name">{name}</b>
-                    {agent && (
-                      <span className="ac-mediarow__meta">
-                        {[`@${agent.handle}`, agent.role].filter(Boolean).join(" · ")}
-                      </span>
-                    )}
-                  </span>
-                  <span className="ac-mediarow__end">
-                    {status && <span className="proposal-row__status">{status}</span>}
-                    {isOpen(p) && p.canDecide && (
-                      <Switch
-                        checked={!off.has(p.id)}
-                        disabled={decide.isPending}
-                        onCheckedChange={(on) => toggle(p.id, on)}
-                        aria-label={t("proposals.include", { name })}
-                      />
-                    )}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        }
-        actions={(!answer && decision) || undefined}
-        what={label}
-        locked={decide.isPending || ask.isPending}
-      />
-    </>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      }
+      what={label}
+    />
   );
 }
 
 /**
- * One row: "Propõe uma mudança", the agent in the well, "Modelo: Haiku → Sonnet" a line each, and the decision.
- * Who may decide it gets Aplicar and Descartar (Recusar in the inbox); the person who asked and can't, Pedir a um
- * admin, then whom it went to. Decided, one line with who did it, and Desfazer on its receipt while it lasts.
+ * One row: "Proposes a change", the agent in the well, "Model: Haiku → Sonnet" a line each. Nobody decides it here
+ * (ADR 0219): while the agent's review weighs it the header says so; then one line with how it ended, the review's why
+ * under it and Undo while it may be put back. A row a person decided keeps who did it and Undo on its receipt while it
+ * lasts.
  */
 function SettingsRow({
   p,
@@ -313,11 +215,7 @@ function SettingsRow({
   const { org, me } = useOrg();
   const dir = useDirectory(org.id);
   const modelLabel = useModelLabel();
-  const members = useMembers(org.id).data ?? [];
   const channels = useChannels(org.id).data ?? [];
-  const roles = useRoles(org.id).data?.roles ?? [];
-  const decide = useDecideProposal(org.id);
-  const ask = useAskProposal(org.id);
   const redo = useSendDm(org.id);
   const actions = useAgentActions(org.id, message?.channelId ?? "");
   const toast = useToast();
@@ -340,103 +238,60 @@ function SettingsRow({
   const delegated = useDelegateLine(delegate);
   const byRightHand = delegated && (delegate?.state === "approved" || delegate?.state === "undone");
 
-  // Decided: the same card, the lines it changed still there, and who did it, when and Desfazer where the buttons were.
+  // Decided: the same card, the lines it changed still there, and how it ended, when and Undo in the footer.
   let answer: RequestAnswer | undefined;
   if (p.status !== "pending") {
-    const receipt = message?.actions?.find((a) => a.id === p.undoActionId);
-    const who = byRightHand ? delegated : cardDecidedBy(t, [p], me.user.id);
+    // The agent's review decided it, or it was put back since: its why, and its own Undo (ADR 0219).
+    const reviewed = !byRightHand && (p.reviewed || p.status === "undone");
+    const receipt = reviewed ? undefined : message?.actions?.find((a) => a.id === p.undoActionId);
+    const who = byRightHand ? delegated : proposalOutcome(t, p, me.user.id);
     const undoable =
       receipt && !receipt.undoneAt && receipt.undoableUntil && Date.parse(receipt.undoableUntil) > Date.now();
-    answer = {
-      done: p.status === "accepted" && !receipt?.undoneAt && delegate?.state !== "undone",
-      text: receipt?.undoneAt ? `${who} · ${t("rightHand.card.undone")}` : who,
-      note: byRightHand && delegate?.reason ? inlineWords(delegate.reason) : undefined,
-      time: p.decidedAt ? formatTime(i18n.language, p.decidedAt) : undefined,
-      action: byRightHand
-        ? (first && <DelegateUndo d={delegate} />) || undefined
-        : undoable && (
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={actions.undo.isPending}
-              onClick={() =>
-                actions.undo.mutate(receipt.id, {
-                  onSuccess: () => void qc.invalidateQueries({ queryKey: keys.agents(org.id) }),
-                  onError: failed,
-                })
-              }
-            >
-              {t("rightHand.card.undo")}
-            </Button>
-          ),
-    };
-  }
-
-  const asked = p.askedAt
-    ? sentToText(t, i18n.language, decidersOf(p, members, roles, agent?.ownerUserId), p.askedAt)
-    : null;
-  const state = p.stale
-    ? t("rightHand.card.stale")
-    : p.canDecide
-      ? undefined
-      : p.askedAt
-        ? t("proposals.waitingAdmin")
-        : mine
-          ? t(onlyKey(p), g)
-          : t("proposals.waitingAdmin");
-  const decision = p.stale ? (
-    mine &&
-    proposer && (
-      <Button
-        size="sm"
-        variant="primary"
-        icon="refresh"
-        loading={redo.isPending}
-        onClick={() =>
-          redo.mutate({ agentId: proposer.id, body: t("rightHand.card.redoMessage", g) }, { onError: failed })
-        }
-      >
-        {t("rightHand.card.redo")}
-      </Button>
-    )
-  ) : p.canDecide ? (
-    <>
-      <Button
-        size="sm"
-        variant="primary"
-        disabled={decide.isPending}
-        loading={decide.isPending && decide.variables?.decision === "accept"}
-        onClick={() => decide.mutate({ id: p.id, decision: "accept" }, { onError: failed })}
-      >
-        {t("rightHand.card.apply")}
-      </Button>
+    const at = proposalEndedAt(p);
+    const undoChange = <ProposalUndo p={p} />;
+    const undoReceipt = undoable && (
       <Button
         size="sm"
         variant="ghost"
-        disabled={decide.isPending}
-        loading={decide.isPending && decide.variables?.decision === "refuse"}
-        onClick={() => decide.mutate({ id: p.id, decision: "refuse" }, { onError: failed })}
+        disabled={actions.undo.isPending}
+        onClick={() =>
+          actions.undo.mutate(receipt.id, {
+            onSuccess: () => void qc.invalidateQueries({ queryKey: keys.agents(org.id) }),
+            onError: failed,
+          })
+        }
       >
-        {t(mine ? "rightHand.card.dismiss" : "rightHand.card.decline")}
+        {t("rightHand.card.undo")}
       </Button>
-    </>
-  ) : asked ? (
-    <span className="rq__sent ac-iconline">
-      <Icon name="arrowUp" size={14} />
-      <span>{asked}</span>
-    </span>
-  ) : (
-    mine && (
-      <Button
-        size="sm"
-        variant="primary"
-        icon="arrowUp"
-        loading={ask.isPending}
-        onClick={() => ask.mutate(p.id, { onError: failed })}
-      >
-        {t("rightHand.card.askAdmin")}
-      </Button>
-    )
+    );
+    answer = {
+      done: p.status === "accepted" && !receipt?.undoneAt && delegate?.state !== "undone",
+      text: receipt?.undoneAt ? `${who} · ${t("rightHand.card.undone")}` : who,
+      note: byRightHand && delegate?.reason ? inlineWords(delegate.reason) : reviewed ? p.review : undefined,
+      time: at ? formatTime(i18n.language, at) : undefined,
+      action: byRightHand
+        ? (first && <DelegateUndo d={delegate} agentId={p.agentId} />) || undefined
+        : reviewed
+          ? undoChange
+          : undoReceipt,
+    };
+  }
+
+  // Nobody decides it here (ADR 0219): while the agent's review weighs it, the header says so. Out of date, the person
+  // who asked may have the right hand redo it.
+  const state = p.stale ? t("rightHand.card.stale") : p.status === "pending" ? t("proposals.reviewing") : undefined;
+  const decision = p.stale && mine && proposer && (
+    <Button
+      size="sm"
+      variant="primary"
+      icon="refresh"
+      loading={redo.isPending}
+      onClick={() =>
+        redo.mutate({ agentId: proposer.id, body: t("rightHand.card.redoMessage", g) }, { onError: failed })
+      }
+    >
+      {t("rightHand.card.redo")}
+    </Button>
   );
   return (
     <RequestCard
@@ -444,7 +299,7 @@ function SettingsRow({
       kind="proposal"
       agent={proposer}
       label={label}
-      mine={p.canDecide && !p.stale}
+      mine={false}
       waitingFor={state}
       answer={answer}
       lead={p.stale && !answer ? t("rightHand.card.staleHelp", g) : proposalWhy(t, p)}
@@ -476,14 +331,14 @@ function SettingsRow({
       }
       actions={(!answer && decision) || undefined}
       what={label}
-      locked={decide.isPending || ask.isPending || redo.isPending}
+      locked={redo.isPending}
     />
   );
 }
 
 /**
- * "Pedir a um admin" in the inbox of whoever may decide it (`change_request`): the same card, theirs to decide (a new
- * agent's, created as them from here).
+ * "Ask an admin" in the inbox of whoever may decide it (`change_request`): the same card. A settings row says how its
+ * review ended (ADR 0219); a new agent's is created as them from here.
  */
 export function ChangeRequestCard({ n }: { n: AppNotification }) {
   if (n.source.action && n.source.messageId)
@@ -526,39 +381,6 @@ function ChangeRequestProposal({ n }: { n: AppNotification }) {
 }
 
 /**
- * The right hand's approvals card (`offer_approvals`, ADR 0137 §4): each approval as the conversation shows it, with its
- * own buttons, holds and confirmations, decided as whoever clicks (audited via the right hand); decided, its one line.
- */
-export function ApprovalsCardView({ message, card }: { message: Message; card: ApprovalsCard }) {
-  const { t } = useTranslation();
-  return (
-    <CardVia messageId={message.id}>
-      {/* biome-ignore lint/a11y/useSemanticElements: a labelled group inside a message, not a fieldset */}
-      <div className="rh-cards" role="group" aria-label={t("rightHand.approvals.title")}>
-        {card.why && <p>{inlineWords(card.why)}</p>}
-        {card.approvalIds.map((id) => (
-          <CardApproval key={id} id={id} />
-        ))}
-      </div>
-    </CardVia>
-  );
-}
-
-export function CardApproval({ id }: { id: string }) {
-  const { org } = useOrg();
-  const dir = useDirectory(org.id);
-  const list = useApprovals(org.id);
-  const listed = list.data?.find((a) => a.id === id);
-  const one = useApproval(org.id, id, !listed && list.isSuccess);
-  const people = useMembers(org.id).data;
-  const members = new Map((people ?? []).map((m) => [m.userId, m]));
-  const approval = listed ?? one.data;
-  if (!approval) return null;
-  const agent = dir.anyAgent(approval.agentId);
-  return <ApprovalAsk approval={approval} agent={agent} members={members} />;
-}
-
-/**
  * The right hand's people card (`propose_member_changes`): a row per person and change ("Ganha Dono", "Perde Vendas",
  * "Remover do workspace"), each applied with the members screen's own call as whoever clicks, removal through its
  * confirmation. Who can't reads who may. Done from the members list.
@@ -576,34 +398,16 @@ function MemberChanges({ message, card }: { message: Message; card: MemberChange
   const { org } = useOrg();
   const dir = useDirectory(org.id);
   const members = useMembers(org.id);
-  const roles = useRoles(org.id).data?.roles ?? [];
+  const known = useRoles(org.id);
+  const roles = known.data?.roles ?? [];
   const change = useChangeRole(org.id);
   const setRoles = useSetMemberRoles(org.id);
   const toast = useToast();
   const [removing, setRemoving] = useState<{ userId: string; name: string } | null>(null);
   const people = members.data ?? [];
   const title = t("rightHand.people.title");
-  const roleNames = (ids: string[]) =>
-    ids
-      .map((id) => roles.find((r) => r.id === id)?.name ?? "")
-      .filter(Boolean)
-      .join(", ");
-  const owner = t("roles.owner");
-  const what = (r: MemberChangeRow) =>
-    "remove" in r
-      ? t("members.remove.item")
-      : "role" in r
-        ? t(r.role === "owner" ? "rightHand.people.gets" : "rightHand.people.loses", { roles: owner })
-        : [
-            r.addRoleIds.length ? t("rightHand.people.gets", { roles: roleNames(r.addRoleIds) }) : "",
-            r.removeRoleIds.length ? t("rightHand.people.loses", { roles: roleNames(r.removeRoleIds) }) : "",
-          ]
-            .filter(Boolean)
-            .join(" · ");
-  const may = (r: MemberChangeRow) =>
-    "role" in r || ("remove" in r && people.find((p) => p.userId === r.userId)?.role === "owner")
-      ? can(org, "manage_owners")
-      : can(org, "manage_members");
+  const what = (r: MemberChangeRow) => memberRowText(t, r, (id) => roles.find((x) => x.id === id)?.name);
+  const may = (r: MemberChangeRow) => can(org, memberRowNeeds(r, people));
   const done = (r: MemberChangeRow) => members.isSuccess && memberRowDone(r, people);
   const failed = (e: unknown) => toast.show(errorText(t, e), "error");
   const apply = (r: MemberChangeRow) => {
@@ -617,9 +421,7 @@ function MemberChanges({ message, card }: { message: Message; card: MemberChange
   const over = members.isSuccess && card.rows.every(done);
   const open = card.rows.filter((r) => !done(r));
   const mine = open.some(may);
-  const blocked = open.some((r) => "role" in r && !may(r))
-    ? "rightHand.people.onlyOwners"
-    : "rightHand.people.onlyAdmins";
+  const blocked = memberRowsBlocked(open, may);
   return (
     <>
       <RemoveMemberDialog person={removing} onClose={() => setRemoving(null)} />
@@ -650,6 +452,8 @@ function MemberChanges({ message, card }: { message: Message; card: MemberChange
                     <span className="proposal-row__status">{t("rightHand.people.done")}</span>
                   ) : (
                     members.isSuccess &&
+                    // A row offers its button only once it can name the roles it gives or takes.
+                    known.isSuccess &&
                     may(r) && (
                       <Button
                         size="sm"
@@ -739,7 +543,7 @@ export function OpenPageCardView({ card }: { card: OpenPageCard }) {
  * The right hand's card of a change in the workspace (`workspace_action`): what it does in the app's own words (never
  * only the agent's), applied as whoever clicks with the permissions its screen checks; Descartar for the person it was
  * for or whoever may. Who can't reads who may, and the person it was for sends it to them. Decided, one line with who
- * did it and, while it lasts, Desfazer on its receipt.
+ * did it and when.
  */
 export function WorkspaceActionCardView({
   where,
@@ -750,14 +554,13 @@ export function WorkspaceActionCardView({
   where: { messageId: string; channelId: string };
   agentId: string | null;
   card: WorkspaceActionCard;
-  /** The card message's receipts: its Desfazer once applied. */
+  /** The card message's receipts: whether it was undone. */
   actions?: AgentAction[];
 }) {
   const { t, i18n } = useTranslation();
   const { org, me } = useOrg();
   const dir = useDirectory(org.id);
-  const decide = useDecideActionCard(org.id, where);
-  const undo = useAgentActions(org.id, where.channelId).undo;
+  const decide = useDecideActionCard(org.id, { ...where, action: card.params.action });
   const toast = useToast();
   const failed = (e: unknown) => toast.show(errorText(t, e), "error");
   const label = t("rightHand.action.title");
@@ -768,14 +571,17 @@ export function WorkspaceActionCardView({
       components={{ b: <b /> }}
     />
   );
-  const detail = actionCardDetail(card, t, i18n.language);
+  // The answer to their own tap says more than the card everyone reads (an address that already held an invitation).
+  const own = decide.data?.card;
+  const detail = actionCardDetail(own?.state === "applied" ? own : card, t, i18n.language);
   const may = mayApplyCard(card, { userId: me.user.id, may: (key) => can(org, key) });
   const mine = card.forUserId === me.user.id;
-  // Decided: the same card, and who did it, when and Desfazer where the buttons were.
+  // Whoever applies it for someone else reads who asked, in the conversation and in their inbox.
+  const asker = mine ? undefined : dir.memberById.get(card.forUserId)?.name;
+  // Decided: the same card, and who did it and when where the buttons were.
   let answer: RequestAnswer | undefined;
   if (card.state !== "pending") {
     const receipt = actions?.find((a) => a.kind === "workspace.changed");
-    const undoable = receipt && !receipt.undoneAt && Date.parse(receipt.undoableUntil) > Date.now();
     const byMe = card.decidedByUserId === me.user.id;
     const name = dir.memberById.get(card.decidedByUserId ?? "")?.name ?? "";
     const who =
@@ -790,28 +596,18 @@ export function WorkspaceActionCardView({
       done: card.state === "applied" && !receipt?.undoneAt,
       text: receipt?.undoneAt ? `${who} · ${t("rightHand.card.undone")}` : who,
       time: card.decidedAt ? formatTime(i18n.language, card.decidedAt) : undefined,
-      action: undoable && (
-        <Button
-          size="sm"
-          variant="ghost"
-          disabled={undo.isPending}
-          onClick={() => undo.mutate(receipt.id, { onError: failed })}
-        >
-          {t("rightHand.card.undo")}
-        </Button>
-      ),
     };
   }
   const decision = may ? (
     <>
       <Button
         size="sm"
-        variant={card.params.action.startsWith("delete_") ? "danger" : "primary"}
+        variant={actionCardDestroys(card) ? "danger" : "primary"}
         disabled={decide.isPending}
         loading={decide.isPending && decide.variables === "apply"}
         onClick={() => decide.mutate("apply", { onError: failed })}
       >
-        {t("rightHand.card.apply")}
+        {t(actionCardApplyKey(card))}
       </Button>
       <Button
         size="sm"
@@ -848,11 +644,13 @@ export function WorkspaceActionCardView({
       agent={dir.anyAgent(agentId ?? "")}
       label={label}
       mine={may}
+      headless={actionCardSaysDone(card)}
       waitingFor={may ? undefined : t("rightHand.action.only")}
+      source={asker ? t("audit.behind.person", { name: asker }) : undefined}
       answer={answer}
       lead={card.params.why || sentence}
       object={{
-        logo: <Icon name={card.params.action.includes("channel") ? "channel" : "shield"} size={20} />,
+        logo: <Icon name={actionCardMark(card)} size={20} />,
         title: sentence,
         ...(detail ? { detail } : {}),
       }}

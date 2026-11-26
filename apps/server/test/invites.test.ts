@@ -1,7 +1,16 @@
 import { afterEach, expect, test } from "bun:test";
 import { createMemoryRateLimiter, orgTopic } from "@agenteschat/adapters";
 import { eq, schema } from "@agenteschat/db";
-import { type Browser, browser, createTestServer, joinByInvitation, seedOrg, signUp, type TestServer } from "./harness";
+import {
+  type Browser,
+  browser,
+  createTestServer,
+  joinByInvitation,
+  seedOrg,
+  signUp,
+  type TestServer,
+  unconfirm,
+} from "./harness";
 
 let t: TestServer;
 afterEach(() => t.close());
@@ -332,6 +341,7 @@ test("signed in: a confirmed address joins at approval; an unconfirmed one gets 
   // Not confirmed: the account's own address proves itself with a code, which never confirms the account.
   const cris = browser(t);
   await signUp(cris, "cris@example.com");
+  await unconfirm(t, "cris@example.com");
   expect(await errorCode(await ask(cris, token, {}))).toBe("join.code_needed");
   const code = await codeFor(cris, token);
   expect(mailTo("cris@example.com").filter((m) => m.subject.startsWith(code))).toHaveLength(1);
@@ -419,6 +429,7 @@ test("an account that never confirmed its address reads no one else's answer, no
   expect(denied.status).toBe(204);
   const notOtto = browser(t);
   await signUp(notOtto, "otto@corp.com");
+  await unconfirm(t, "otto@corp.com");
   const preview = (await (await notOtto(`/api/app/invitations/${token}`)).json()) as { you?: unknown };
   expect(preview.you).toEqual({ member: false, email: "otto@corp.com", request: null });
   // Asking needs the code from Otto's mailbox.
@@ -574,6 +585,7 @@ test("sign-up from the invitation's email: no 'confirm your email'; from a copie
   expect((await signUpWith("dani@example.com", { token: dani })).status).toBe(200);
   expect((await signUpWith("bia@example.com", { token: ana, mail })).status).toBe(200);
   expect((await signUpWith("caio@example.com")).status).toBe(200);
+  for (const email of ["ana@example.com", "dani@example.com"]) await unconfirm(t, email);
   await t.drain();
   const confirmations = t.email.sent.filter((m) => m.subject === "Confirme seu e-mail no agentes.chat");
   expect(confirmations.map((m) => m.to[0]).sort()).toEqual(["bia@example.com", "caio@example.com", "dani@example.com"]);
@@ -598,4 +610,109 @@ test("a batch of invitations takes `emails` or `invites`, never both nor neither
   expect(await errorCode(both)).toBe("invalid_request");
   expect((await batch({})).status).toBe(400);
   expect((await batch({ invites: [{ email: "b@example.com" }] })).status).toBe(200);
+});
+
+test("links and invitations carry cargos, channels and agents; a link has a lifetime and a maximum (ADR 0184)", async () => {
+  const { owner, orgId, agentId, link } = await start();
+  const org = (path: string) => `/api/app/organizations/${orgId}${path}`;
+  const { id: suporte } = (await (await owner(org("/roles"), { json: { name: "Suporte" } })).json()) as { id: string };
+
+  // An older app's call, with no choices: the workspace's own link.
+  const bare = await owner(org("/invite-links"), { json: {} });
+  expect(bare.status).toBe(200);
+  expect(((await bare.json()) as Link).id).toBe(link.id);
+  // With choices: a link of its own, shown again in the list with what it gives.
+  const made = await owner(org("/invite-links"), {
+    json: { roleIds: [suporte], agentIds: [agentId], maxUses: 1, expiresIn: "never" },
+  });
+  expect(made.status).toBe(201);
+  const chosen = (await made.json()) as Link & { neverExpires?: true; roleIds: string[]; maxUses: number | null };
+  expect(chosen).toMatchObject({ roleIds: [suporte], agentIds: [agentId], maxUses: 1, neverExpires: true });
+  expect(chosen.url).not.toBe(link.url);
+  const listed = (await (await owner(org("/invite-links"))).json()) as { links: Record<string, unknown>[] };
+  expect(listed.links.find((l) => l.id === chosen.id)).toMatchObject({
+    plain: false,
+    roleIds: [suporte],
+    channelIds: [],
+    agentIds: [agentId],
+    maxUses: 1,
+    uses: 0,
+    neverExpires: true,
+    createdBy: expect.any(String),
+  });
+  // At the defaults, the workspace's link again; values off the lists are refused.
+  const plain = await owner(org("/invite-links"), { json: { expiresIn: "30d" } });
+  expect([plain.status, ((await plain.json()) as Link).id]).toEqual([200, link.id]);
+  const odd = await owner(org("/invite-links"), { json: { maxUses: 3 } });
+  expect([odd.status, await errorCode(odd)]).toEqual([400, "invite_link.choice"]);
+  expect((await owner(org("/invite-links"), { json: { expiresIn: "2d" } })).status).toBe(400);
+
+  // Editing keeps the address; an empty change is refused.
+  const edit = (json: Record<string, unknown>) => owner(org(`/invite-links/${chosen.id}`), { method: "PATCH", json });
+  const edited = await edit({ maxUses: 5 });
+  expect(edited.status).toBe(200);
+  expect(await edited.json()).toMatchObject({ id: chosen.id, url: chosen.url, maxUses: 5 });
+  expect((await edit({})).status).toBe(400);
+
+  // A batch with an agent: the invitation carries it; one that isn't the workspace's is named in the refusal.
+  const batch = (json: Record<string, unknown>) => owner(org("/invitations/batch"), { json });
+  expect((await batch({ emails: ["nina@example.com"], roleIds: [suporte], agentIds: [agentId] })).status).toBe(200);
+  const gone = crypto.randomUUID();
+  const refused = await batch({ emails: ["olga@example.com"], agentIds: [gone] });
+  expect(refused.status).toBe(400);
+  expect(await refused.json()).toMatchObject({
+    error: { code: "invitation.agent", params: { agentId: gone, why: "gone" } },
+  });
+  const { invitations } = (await (await owner(org("/invitations/all"))).json()) as {
+    invitations: { id: string; email: string; agentIds: string[] }[];
+  };
+  const nina = invitations.find((i) => i.email === "nina@example.com");
+  expect(nina?.agentIds).toEqual([agentId]);
+  const changed = await owner(org(`/invitations/${nina?.id}`), { method: "PATCH", json: { agentIds: [] } });
+  expect(await changed.json()).toEqual({ roleIds: [suporte], channelIds: [], agentIds: [] });
+  expect((await owner(org(`/invitations/${nina?.id}`), { method: "PATCH", json: {} })).status).toBe(400);
+
+  // Full: the page says so before anyone asks, and asking is refused.
+  await t.db
+    .update(schema.organizationInviteLinks)
+    .set({ uses: 5 })
+    .where(eq(schema.organizationInviteLinks.id, chosen.id));
+  const chosenToken = chosen.url.split("/invite/")[1] ?? "";
+  const anon = browser(t);
+  expect(await (await anon(`/api/app/invitations/${chosenToken}`)).json()).toMatchObject({ kind: "link", full: true });
+  const asked = await ask(anon, chosenToken, { name: "Gus", email: "gus@example.com" });
+  expect([asked.status, await errorCode(asked)]).toEqual([409, "join.link_full"]);
+});
+
+test("accepting an invitation, the device's zone is the person's in the workspace", async () => {
+  const { owner, orgId } = await start();
+  const zoneOf = async (email: string) => {
+    const [row] = await t.db
+      .select({ timezone: schema.organizationMembers.timezone })
+      .from(schema.organizationMembers)
+      .innerJoin(schema.users, eq(schema.users.id, schema.organizationMembers.userId))
+      .where(eq(schema.users.email, email));
+    return row?.timezone;
+  };
+  const invite = async (email: string) => {
+    const res = await owner(`/api/app/organizations/${orgId}/invitations`, { json: { email } });
+    return ((await res.json()) as { url: string }).url.split("/invite/")[1] ?? "";
+  };
+  const ruiToken = await invite("rui@example.com");
+  const rui = browser(t);
+  await signUp(rui, "rui@example.com");
+  expect(
+    (
+      await rui(`/api/app/invitations/${ruiToken}/accept`, {
+        json: { timeZone: "Europe/Lisbon" },
+      })
+    ).status,
+  ).toBe(200);
+  expect(await zoneOf("rui@example.com")).toBe("Europe/Lisbon");
+  // No zone, or one no clock knows: the workspace's.
+  const kaiToken = await invite("kai@example.com");
+  const kai = browser(t);
+  await signUp(kai, "kai@example.com");
+  await kai(`/api/app/invitations/${kaiToken}/accept`, { json: { timeZone: "Mars/Olympus" } });
+  expect(await zoneOf("kai@example.com")).toBeNull();
 });

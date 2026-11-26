@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
-import { Platform, Pressable, type PressableProps, StyleSheet, type TextStyle, View } from "react-native";
+import { Platform, type PressableProps, StyleSheet, type TextStyle, View } from "react-native";
 import { Icon } from "./Icon";
+import { Disclosure } from "./RowMarks";
+import { RowPressable } from "./RowPressable";
 import { Text, textLineOf } from "./Text";
 import { useFontScale } from "./text-scale";
 import { useTheme } from "./theme";
@@ -35,10 +37,14 @@ export interface ListRowProps extends Omit<PressableProps, "style" | "children">
   leading: ReactNode;
   /** Line 1 (a string is drawn as the semibold name; bold when unread). */
   title: ReactNode;
+  /** Right after a title in words, on its line (an agent's role as a `Tag`): it gives way before the title does. */
+  titleAside?: ReactNode;
   /** Lines of the title (default 1). */
   titleLines?: number;
   /** On the right of line 1 (the time, faint; darker when unread). */
   time?: string | null;
+  /** The time is a deadline close to its end: in the color of what waits on the person. */
+  timeWaiting?: boolean;
   /** A small faint line under the title (what and where: "Missão · #canal"). */
   over?: ReactNode;
   /** Line 2 (a string is drawn in the readable secondary color, up to two lines). */
@@ -57,6 +63,12 @@ export interface ListRowProps extends Omit<PressableProps, "style" | "children">
   background?: string;
   /** A chevron on the right, centered on the row: the row opens a screen of its own. */
   chevron?: boolean;
+  /**
+   * The row opens a screen (default true: a conversation, an agent, what happened): it stays lit while that screen
+   * comes in and goes out once covered, so the list is plain again on the way back. A press that opens nothing lets it
+   * go.
+   */
+  opens?: boolean;
   /** Pinned on top: a small pin before the time, so what the person pinned reads as pinned. */
   pinned?: boolean;
 }
@@ -71,7 +83,9 @@ export function ListRow({
   leading,
   title,
   titleLines = 1,
+  titleAside,
   time,
+  timeWaiting,
   over,
   sub,
   subLines = 2,
@@ -82,6 +96,7 @@ export function ListRow({
   background,
   chevron = false,
   pinned = false,
+  opens = true,
   ...press
 }: ListRowProps) {
   const { colors: c } = useTheme();
@@ -91,19 +106,19 @@ export function ListRow({
   // The time likewise stays on the title's first line when the title takes two (Activity's sentences).
   const titleLine = textLineOf("title", fontScale).height;
   return (
-    <Pressable
-      {...press}
-      style={({ pressed }) => [
-        styles.row,
-        background ? { backgroundColor: background } : null,
-        pressed && { backgroundColor: c.sunken },
-      ]}
-    >
-      {divider ? <View style={[styles.divider, { backgroundColor: c.line2 }]} /> : null}
+    <RowPressable {...press} hold={opens} style={[styles.row, background ? { backgroundColor: background } : null]}>
+      {divider ? <View style={[styles.divider, { backgroundColor: c.separator }]} /> : null}
       <View style={styles.avatar}>{leading}</View>
       <View style={styles.tx}>
         <View style={styles.l1}>
-          {typeof title === "string" ? (
+          {typeof title === "string" && titleAside ? (
+            <View style={[styles.shrink, styles.titleRow, { minHeight: titleLine }]}>
+              <Text variant="title" numberOfLines={1} style={[styles.titleFirst, unread && styles.unreadName]}>
+                {title}
+              </Text>
+              {titleAside}
+            </View>
+          ) : typeof title === "string" ? (
             <Text variant="title" numberOfLines={titleLines} style={[styles.shrink, unread && styles.unreadName]}>
               {title}
             </Text>
@@ -116,7 +131,11 @@ export function ListRow({
               <Text
                 variant={TIME_VARIANT}
                 tone={unread ? "ink2" : "faint"}
-                style={[LIST_TIME, unread && styles.unreadTime]}
+                style={[
+                  LIST_TIME,
+                  unread && styles.unreadTime,
+                  timeWaiting && { color: c.amberInk, fontWeight: weights.semibold },
+                ]}
               >
                 {time}
               </Text>
@@ -140,8 +159,8 @@ export function ListRow({
         ) : null}
       </View>
       {dot ? <View style={[styles.dot, { backgroundColor: c.badge }]} /> : null}
-      {chevron ? <Icon name="right" size={15} color={c.faint} /> : null}
-    </Pressable>
+      {chevron ? <Disclosure /> : null}
+    </RowPressable>
   );
 }
 
@@ -164,6 +183,9 @@ const styles = StyleSheet.create({
   trailing: { justifyContent: "center" },
   grow: { flex: 1, minWidth: 0 },
   shrink: { flexShrink: 1 },
+  // A title and what stands after it on its line: the title keeps its words, the aside ends in "…" first.
+  titleRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  titleFirst: { flexShrink: 0, maxWidth: "70%" },
   unreadName: { fontWeight: weights.bold },
   time: { flexShrink: 0, marginLeft: "auto", justifyContent: "center" },
   timeRow: { flexDirection: "row", alignItems: "center", gap: 4 },

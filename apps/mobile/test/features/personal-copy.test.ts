@@ -42,9 +42,8 @@ describe("a personal workspace's words on the phone (ADR 0159)", () => {
 
   test("an agent's first words and its empty conversation's line read the mode", () => {
     expect(src("chat/FirstDay.tsx")).toContain('t(modeKey(org, "mobile.chat.intent.helloRole"), { role: intro.role })');
-    expect(src("chats/ConversationRowView.tsx")).toContain(
-      't(modeKey(org, "mobile.chat.intent.roleIntro"), { role: intro.role })',
-    );
+    // A conversation's row says it from what its screen worked out once for every row (`rowFacts`).
+    expect(src("chats/rowFacts.ts")).toContain('t(modeKey(org, "mobile.chat.intent.roleIntro"), { role: intro.role })');
   });
 
   test("Agents' free section and a new agent's toast: the person's agents, never a team they joined", () => {
@@ -82,15 +81,16 @@ describe("a personal workspace's words on the phone (ADR 0159)", () => {
     );
   });
 
-  test("connectors are suggested for the person and connected by whoever runs the workspace, never by name", () => {
-    expect(src("connectors/ConnectorsScreen.tsx")).toContain('? t("connectors.suggestedPersonal")');
+  test("connectors are featured with no heading of the workspace's name, and connected by whoever runs it", () => {
+    // The suggested services are cards with no "Sugeridos para <workspace>" over them: no "for Personal" to word.
+    expect(src("connectors/ConnectorsScreen.tsx")).not.toContain("mobile.connectors.suggested");
     expect(src("connectors/ConnectSheet.tsx")).toContain(
       't(modeKey(org, "mobile.connectors.adminsOnly"), { org: org?.name ?? "" })',
     );
   });
 
   test("the workspace's own computer is its person's agents', where missions wait for it too", () => {
-    expect(src("chat/sheets.tsx")).toContain(
+    expect(src("chat/NewMissionScreen.tsx")).toContain(
       't(modeKey(org, "computerSetup.titleInSentence"), { org: org?.name ?? "" })',
     );
   });

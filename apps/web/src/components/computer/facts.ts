@@ -14,10 +14,13 @@ import {
   usesScreen,
 } from "@agenteschat/client";
 import { type AgentComputerFacts, entryState } from "@agenteschat/client/lib/agent-computer";
+import { ownsAgentAs } from "@agenteschat/client/lib/agent-owner";
 import { computerEdition, setupView } from "@agenteschat/client/lib/computer";
 import { can } from "@agenteschat/client/lib/permissions";
+import { useSeat } from "@agenteschat/client/lib/seat-context";
 import { useQuery } from "@tanstack/react-query";
 import { useOrg } from "@/components/org-context";
+import { useMyRoleIds } from "@/hooks/useMyRoleIds";
 import { useStreams } from "@/realtime/context";
 
 /** Outside the agent's conversations no event says when its request changes: it's asked again this often. */
@@ -43,10 +46,11 @@ function useScreenRun(agentId: string): LiveRun | undefined {
  * admins and its owner may read).
  */
 export function useAgentComputer(
-  agent: Pick<Agent, "id" | "ownerUserId">,
+  agent: Pick<Agent, "id" | "ownerUserId" | "ownerRoleId">,
   options: { poll?: number | false; runs?: boolean } = {},
 ) {
   const { org, me } = useOrg();
+  const myRoleIds = useMyRoleIds();
   const api = useApi();
   const setupQ = useComputerSetup(org.id);
   const edition = computerEdition(setupQ.data);
@@ -63,6 +67,8 @@ export function useAgentComputer(
     enabled: watches,
     retry: false,
   });
+  // The browser's own handoff. The right hand's browser has none (its window is on its place's desktop), so this
+  // stays the agent's whichever of its places the view shows.
   const handoffQ = useQuery({
     queryKey: keys.agentBrowserHandoff(org.id, agent.id),
     queryFn: () => api.browser.agentHandoff(org.id, agent.id),
@@ -70,7 +76,7 @@ export function useAgentComputer(
     retry: false,
     refetchInterval: HANDOFF_POLL_MS,
   });
-  const readsRuns = can(org, "view_usage") || agent.ownerUserId === me.user.id;
+  const readsRuns = can(org, "view_usage") || ownsAgentAs(agent, me.user.id, myRoleIds);
   const runningQ = useQuery({
     queryKey: keys.runningRuns(org.id, agent.id),
     queryFn: () => api.agents.runs(org.id, { agentId: agent.id, status: "running", limit: 1 }),
@@ -78,7 +84,11 @@ export function useAgentComputer(
     retry: false,
     refetchInterval: RUNNING_POLL_MS,
   });
-  const run = useScreenRun(agent.id);
+  // In a view of the right hand's shared place, the runs this person sees going on may be in their own: none is
+  // shown as this screen's work.
+  const shared = useSeat(agent.id) !== undefined;
+  const ownRun = useScreenRun(agent.id);
+  const run = shared ? undefined : ownRun;
   const desktop = desktopQ.data ?? null;
   const browserOpen = handoffQ.data && isOpenHandoff(handoffQ.data) ? handoffQ.data : null;
   // The screen's own request or take over, or the browser's when its window is on the screen.
@@ -95,7 +105,7 @@ export function useAgentComputer(
         browserGranted: (scopesQ.data ?? []).some((s) => s.connectionId === null && s.scope === BROWSER_TOOL_SCOPE),
         handoff: browserOpen ?? screenOpen,
         userId: me.user.id,
-        working: Boolean(run) || (runningQ.data?.length ?? 0) > 0,
+        working: Boolean(run) || (!shared && (runningQ.data?.length ?? 0) > 0),
       }
     : null;
   return {
@@ -121,7 +131,7 @@ export type AgentComputerView = ReturnType<typeof useAgentComputer>;
  * Whether this person may open the agent's computer from a shortcut (its card): they may watch it and it has one. A
  * self-hosted agent with no computer yet has nothing to open there (its page offers to pick one).
  */
-export function useOpensComputer(agent: Pick<Agent, "id" | "ownerUserId">): boolean {
+export function useOpensComputer(agent: Pick<Agent, "id" | "ownerUserId" | "ownerRoleId">): boolean {
   const view = useAgentComputer(agent);
   const f = view.facts;
   return Boolean(view.ready && !view.forbidden && f && entryState(f).kind !== "noComputer");

@@ -28,7 +28,25 @@ function RightHandRedirect() {
 export const Route = createFileRoute("/org/$orgId/settings_/$section")({
   validateSearch: settingsSearch,
   beforeLoad: ({ params, search }) => {
-    const moved = MOVED_SETTINGS_SECTIONS[params.section];
+    // Skills is a page of its own now: its old address (notices, cards, the phone's links) opens it, at the skill.
+    if (params.section === "skills")
+      throw search.skill
+        ? redirect({
+            to: "/org/$orgId/skills/$skillId",
+            params: { orgId: params.orgId, skillId: search.skill },
+            replace: true,
+          })
+        : redirect({
+            to: "/org/$orgId/skills",
+            params: { orgId: params.orgId },
+            search: { install: search.install, connected: search.connected, agent: search.agent },
+            replace: true,
+          });
+    // The admins' e-mail about a request (`?request=…&do=…`) names Members: requests are answered in Convites now.
+    const moved =
+      params.section === "members" && search.request !== undefined
+        ? "invites"
+        : MOVED_SETTINGS_SECTIONS[params.section];
     if (moved)
       throw redirect({
         to: "/org/$orgId/settings/$section",
@@ -42,7 +60,7 @@ export const Route = createFileRoute("/org/$orgId/settings_/$section")({
   },
   component: function SettingsSectionRoute() {
     const { section } = Route.useParams();
-    const { connected, outcome, review, mail, account, install, skill, agent, person } = Route.useSearch();
+    const { connected, outcome, review, mail, account, agent, person, create, service } = Route.useSearch();
     if (section === RIGHT_HAND_SECTION) return <RightHandRedirect />;
     return (
       <Main>
@@ -53,10 +71,10 @@ export const Route = createFileRoute("/org/$orgId/settings_/$section")({
           review={review !== undefined}
           mail={mail}
           account={account}
-          install={install}
-          skill={skill}
           agent={agent}
           person={person}
+          create={create !== undefined}
+          service={service}
         />
       </Main>
     );

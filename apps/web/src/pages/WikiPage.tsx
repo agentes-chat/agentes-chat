@@ -3,7 +3,18 @@ import { keys, useWikiPage, useWikiReads, useWikiTrash, useWikiTree } from "@age
 import { relativeTime } from "@agenteschat/client/lib/format";
 import { can } from "@agenteschat/client/lib/permissions";
 import { isImportedPage, outlineOf, type WikiFolder, wikiSlug, wikiTree } from "@agenteschat/client/lib/wiki";
-import { Button, Checkbox, EmptyState, GroupHeading, Icon, Kbd, PageHeader, SearchField } from "@agenteschat/ui";
+import {
+  Button,
+  Checkbox,
+  EmptyState,
+  GroupHeading,
+  Icon,
+  Kbd,
+  Menu,
+  MenuItem,
+  PageHeader,
+  SearchField,
+} from "@agenteschat/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { TFunction } from "i18next";
@@ -243,6 +254,8 @@ function WikiNav({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulk, setBulk] = useState<"delete" | "agents" | null>(null);
   const uid = useId();
+  // The side column's own "…", named apart from the open page's: "Mais ações: Wiki".
+  const moreLabel = t("artifacts.more", { title: t("wiki.title") });
   const trashed = useWikiTrash(org.id, writes).data?.length ?? 0;
   const stopSelecting = () => {
     setSelecting(false);
@@ -416,6 +429,17 @@ function WikiNav({
             onClick={onNew}
           />
         )}
+        {can(org, "edit_wiki") && (
+          <Menu
+            align="end"
+            label={moreLabel}
+            trigger={<Button size="sm" variant="ghost" iconOnly icon="more" aria-label={moreLabel} title={moreLabel} />}
+          >
+            <MenuItem icon="upload" onSelect={onImport}>
+              {t("wiki.import.cta")}
+            </MenuItem>
+          </Menu>
+        )}
       </div>
       <SearchField
         size="sm"
@@ -505,7 +529,11 @@ function WikiNav({
         </nav>
       )}
       {selecting && (
-        <div className="wiki-pickbar" role="toolbar" aria-label={t("wiki.bulk.selected", { count: selected.size })}>
+        <div
+          className="wiki-pickbar ac-tailrow"
+          role="toolbar"
+          aria-label={t("wiki.bulk.selected", { count: selected.size })}
+        >
           <label className="wiki-pickbar__all" htmlFor={`${uid}-all`}>
             <Checkbox
               id={`${uid}-all`}
@@ -520,7 +548,7 @@ function WikiNav({
             />
             <span>{selected.size ? t("wiki.bulk.selected", { count: selected.size }) : t("wiki.bulk.selectAll")}</span>
           </label>
-          <span className="wiki-pickbar__acts">
+          <span className="wiki-pickbar__acts ac-tail">
             {choosesAudience && (
               <Button size="sm" icon="agent" disabled={selected.size === 0} onClick={() => setBulk("agents")}>
                 {t("wiki.bulk.agents")}
@@ -555,11 +583,6 @@ function WikiNav({
             ))}
           </div>
         </section>
-      )}
-      {can(org, "edit_wiki") && (
-        <Button icon="upload" className="wiki-import-btn" onClick={onImport}>
-          {t("wiki.import.cta")}
-        </Button>
       )}
     </aside>
   );

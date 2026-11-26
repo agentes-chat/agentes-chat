@@ -1,4 +1,5 @@
 import {
+  APPROVAL_REASON_MAX,
   COVER_MODES,
   cancelAheadApproval,
   decideApproval,
@@ -12,6 +13,7 @@ import {
   memoryJudging,
   RIGHT_HAND_CAPS,
   removeApprovalRule,
+  runApprovalNow,
   setMyCover,
   setRightHandApprovals,
   undoRightHandDecision,
@@ -78,12 +80,26 @@ export const Approval = z
       description: 'Decided by someone covering this person (ADR 0139): "Aprovado por Bruno, cobrindo Ana".',
     }),
     decidedAt: z.string().nullable(),
+    supersededById: z.string().nullable().openapi({
+      description: "Canceled because the agent asked for the same action again in a later turn: that newer request.",
+    }),
     reason: z.string().nullable(),
     canDecide: z.boolean().openapi({ description: "You are the agent's owner or an admin, and it is pending." }),
     ownerUserId: z.string().nullable().openapi({ description: "The agent's owner (they and admins may decide)." }),
+    ownerRoleId: z
+      .uuid()
+      .nullable()
+      .openapi({ description: "Its owner role instead (whoever holds it decides, ADR 0085 addendum of 2026-11-21)." }),
     executedAt: z.string().nullable().openapi({ description: "When the approved action ran." }),
     result: z
-      .object({ ok: z.boolean(), text: z.string() })
+      .object({
+        ok: z.boolean(),
+        text: z.string(),
+        notRunAfter: z.string().optional().openapi({
+          description:
+            "Not run: approved before this request, asked ahead of it on its card, was refused or expired (its id).",
+        }),
+      })
       .nullable()
       .openapi({ description: "What the action returned once it ran (raw, short)." }),
     connector: z.string().nullable().openapi({ example: "github" }),
@@ -119,6 +135,14 @@ export const Approval = z
     canCancel: z
       .boolean()
       .openapi({ description: "Approved ahead and not run yet, and you may withdraw it (`…/cancel`)." }),
+    afterIds: z.array(z.uuid()).openapi({
+      description:
+        "Other runs' requests the agent was told already waited in this conversation when it asked: once approved, it runs after they are settled (ADR 0182). A request waiting for a person over 30 minutes holds nothing.",
+    }),
+    canRunNow: z.boolean().openapi({
+      description:
+        "Approved, not done yet, may wait for `afterIds`, and you may decide it: `…/run-now` runs it at once.",
+    }),
     approvers: z
       .object({
         label: z.string().openapi({ description: "Who decides, in words.", example: "Diretoria" }),
@@ -132,6 +156,10 @@ export const Approval = z
         description:
           "Asked with `request_approval` (ADR 0126): who decides instead of the agent's owner and admins. Null: any other approval.",
       }),
+    routine: z.boolean().openapi({
+      description:
+        "Still waiting, and plain enough to approve along with others in one tap: a connected app's named action that is no merge, deploy, send, delete or payment and runs nothing its input says. The server alone decides it (`…/approvals/decide` with `only`).",
+    }),
   })
   .openapi("Approval");
 
@@ -190,7 +218,7 @@ const ApprovalParams = OrgParams.extend({ approvalId: z.uuid() });
 const AgentParams = OrgParams.extend({ agentId: z.uuid() });
 /** The card it was decided from, for the audit's "via" (ADR 0137 §4): ignored unless that card lists it. */
 const Via = z.uuid().optional().openapi({ description: "The right hand's approvals card it was decided from." });
-const Decision = z.object({ reason: z.string().max(1000).optional(), via: Via });
+const Decision = z.object({ reason: z.string().max(APPROVAL_REASON_MAX).optional(), via: Via });
 const Approve = Decision.extend({
   always: z.boolean().optional().openapi({
     description:
@@ -261,8 +289,12 @@ export function approvalRoutes(deps: AppDeps) {
           z.object({
             ids: z.array(z.uuid()).min(1).max(50),
             decision: z.enum(["approve", "refuse"]),
-            reason: z.string().max(1000).optional(),
+            reason: z.string().max(APPROVAL_REASON_MAX).optional(),
             via: Via,
+            only: z.literal("routine").optional().openapi({
+              description:
+                "Decide only the ones the server calls `routine` among these ids. Every other stays waiting and comes back in `skipped`.",
+            }),
           }),
         ),
       },
@@ -270,9 +302,10 @@ export function approvalRoutes(deps: AppDeps) {
         200: json(
           z.object({
             approvals: z.array(Approval),
-            skipped: z
-              .array(z.uuid())
-              .openapi({ description: "Not decided: already decided, not found, or not yours to decide." }),
+            skipped: z.array(z.uuid()).openapi({
+              description:
+                "Not decided: already decided, not found, not yours to decide, or not `routine` with `only`.",
+            }),
           }),
         ),
         ...errors,
@@ -343,6 +376,26 @@ export function approvalRoutes(deps: AppDeps) {
     async (c) => {
       const { orgId, approvalId } = c.req.valid("param");
       const view = await cancelAheadApproval({ db, pubsub: adapters.pubsub }, c.get("user").id, orgId, approvalId);
+      deps.wakeWorkers?.();
+      return c.json(view, 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/approvals/{approvalId}/run-now",
+      tags,
+      security,
+      summary: '"Rodar este agora": an approved action waiting for other runs\' requests runs at once',
+      description:
+        "Who may decide it may (403 otherwise). It and its run's other approved actions no longer wait for `afterIds`; the run resumes and the audit records `approval.run_now`. 409 `approval.not_waiting` when it waits for nothing (not approved, already done, or nothing before it).",
+      request: { params: ApprovalParams },
+      responses: { 200: json(Approval), ...errors },
+    }),
+    async (c) => {
+      const { orgId, approvalId } = c.req.valid("param");
+      const view = await runApprovalNow({ db, pubsub: adapters.pubsub }, c.get("user").id, orgId, approvalId);
       deps.wakeWorkers?.();
       return c.json(view, 200);
     },

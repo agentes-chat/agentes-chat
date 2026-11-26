@@ -7,19 +7,16 @@ import {
   type OutgoingMail,
 } from "@agenteschat/adapters";
 import { and, type Database, eq, gte, schema, sql } from "@agenteschat/db";
-import { getAgent } from "../agents";
-import { namesLabel, namesOf } from "../approvals";
-import { type ArtifactDeps, createFileArtifact, fileReach } from "../artifacts";
-import { canTalkTo, speakerFor } from "../audience";
+import { type ArtifactDeps, createFileArtifact, fileForModel, fileReach } from "../artifacts";
 import { recordAudit } from "../audit";
-import { accountablePerson, fedByRoutine, type RunAuthority, runAuthorityById } from "../authority";
+import { fedByRoutine, runAuthorityById } from "../authority";
 import { mailboxConnector } from "../connector-usage";
 import { cutText } from "../format";
 import { recordOperatorEvent } from "../operator-events";
-import { routineCreatorOf } from "../requester";
-import { isRightHandId, rightHandReader } from "../right-hand";
+import { ownerApprovers, personalUseCheck } from "../personal-use";
 import { replyThreadOf } from "../runs";
 import type { CallCheck, ToolContext, ToolDefinition, ToolOutput, ToolSource } from "../tools/types";
+import { untrustedBlock } from "../untrusted";
 import {
   connectorFor,
   MAIL_SCOPES,
@@ -45,6 +42,8 @@ import {
 } from "./text";
 
 const { mailSends } = schema;
+/** An attachment's text shown with the `attachment` result; read_artifact reads the rest. */
+const ATTACHMENT_TEXT_CHARS = 20_000;
 
 export interface MailToolDeps extends Omit<MailDeps, "db"> {
   /** Drive files, for `attachment` (absent = that tool is off). */
@@ -100,50 +99,6 @@ const MESSAGE_ID = { type: "string", minLength: 1, maxLength: 500, description: 
 
 /** The day (UTC) a send counts toward the cap. */
 const utcDayStart = (now: Date) => new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-
-/**
- * Who decides an action in a person's own mailbox: that person (ADR 0038). Asked by them, admins may decide it too;
- * asked by anyone else (or nobody), only they do: an email in their name is theirs to approve. Once they left the
- * workspace nobody could, so the usual rule (the agent's owner, admins) applies.
- */
-async function mailboxApprovers(db: Database, orgId: string, ownerId: string, requestedBy: string | null) {
-  const [member] = await db
-    .select({ id: schema.organizationMembers.userId })
-    .from(schema.organizationMembers)
-    .where(and(eq(schema.organizationMembers.orgId, orgId), eq(schema.organizationMembers.userId, ownerId)));
-  if (!member) return { ok: true as const, approvers: null };
-  const own = requestedBy === ownerId;
-  return {
-    ok: true as const,
-    approvers: {
-      userIds: [ownerId],
-      label: namesLabel(await namesOf(db, [ownerId])),
-      requestedBy: own ? null : requestedBy,
-      requesterDecides: false,
-      ...(own ? {} : { required: true }),
-    },
-  };
-}
-
-/**
- * Whether the person behind a run may use a person's own mailbox through this agent: its owner, or someone the agent
- * answers directly, as its owner gave it access for (a consultation by someone outside its audience doesn't count).
- * Nobody behind the run (an agent's own work, a watch): nobody's reach widens. The team's right hand, which everyone
- * talks to, uses a mailbox only for its owner.
- */
-async function mailboxUserCheck(ctx: ToolContext, authority: RunAuthority | null) {
-  // One right hand answers everyone (ADR 0137): a mailbox serves only its owner, in their own DM with it.
-  if (await isRightHandId(ctx.db, ctx.orgId, ctx.agentId)) {
-    const reader = await rightHandReader(ctx);
-    return (account: Pick<MailAccountRow, "createdByUserId">) => reader !== null && account.createdByUserId === reader;
-  }
-  // A routine's run answers for its creator, as the gateway asks them (`routineCreatorOf`).
-  const person = authority ? (accountablePerson(authority) ?? routineCreatorOf(authority)) : null;
-  const agent = person ? await getAgent(ctx.db, ctx.orgId, ctx.agentId) : null;
-  const direct = !person || (!!agent && canTalkTo(agent, person, await speakerFor(ctx.db, ctx.orgId, person)));
-  return (account: Pick<MailAccountRow, "createdByUserId">) =>
-    direct || !account.createdByUserId || account.createdByUserId === person;
-}
 
 /** Why a message is outside what the agent may read; null = inside. */
 function messageRefusal(policy: MailPolicy, m: MailSummary, now: Date): string | null {
@@ -350,7 +305,7 @@ export function createMailToolSource(deps: MailToolDeps): ToolSource {
           effect === "delete" || (effect === "send" && askToSend) || account.askActions.includes(actionOf(verb)),
         ...(effect === "read" ? { readsOutside: true as const } : {}),
         ...(owner
-          ? { approvers: (_input, ctx, requestedBy) => mailboxApprovers(ctx.db, ctx.orgId, owner, requestedBy) }
+          ? { approvers: (_input, ctx, requestedBy) => ownerApprovers(ctx.db, ctx.orgId, owner, requestedBy) }
           : {}),
         ...extra,
       };
@@ -473,7 +428,7 @@ export function createMailToolSource(deps: MailToolDeps): ToolSource {
     const attachment = files
       ? make(
           "attachment",
-          "Save one attachment of a message as a file in the Drive (returns the file's id).",
+          "Save one attachment of a message as a file in the Drive (returns the file's id and what is in it).",
           {
             properties: { message_id: MESSAGE_ID, attachment_id: { type: "string", minLength: 1, maxLength: 500 } },
             required: ["message_id", "attachment_id"],
@@ -485,28 +440,31 @@ export function createMailToolSource(deps: MailToolDeps): ToolSource {
                 const file = await withMailbox(ctx.db, account, (p) =>
                   p.attachment(str(input.message_id), str(input.attachment_id)),
                 );
-                const a = await createFileArtifact(
-                  { ...files, db: ctx.db },
-                  {
-                    type: "agent",
-                    agentId: ctx.agentId,
-                    channelId: ctx.channelId,
-                    threadId: replyThreadOf(ctx),
-                    runId: ctx.runId,
-                  },
-                  ctx.orgId,
-                  {
-                    title: file.filename,
-                    name: file.filename,
-                    bytes: file.data,
-                    contentType: file.contentType,
-                    note: `From an email in ${account.address}`,
-                    byProduct: true,
-                  },
-                );
+                const actor = {
+                  type: "agent" as const,
+                  agentId: ctx.agentId,
+                  channelId: ctx.channelId,
+                  threadId: replyThreadOf(ctx),
+                  runId: ctx.runId,
+                };
+                const a = await createFileArtifact({ ...files, db: ctx.db }, actor, ctx.orgId, {
+                  title: file.filename,
+                  name: file.filename,
+                  bytes: file.data,
+                  contentType: file.contentType,
+                  note: `From an email in ${account.address}`,
+                  byProduct: true,
+                });
+                // What is in it comes with the answer, read as read_artifact reads it.
+                const opened = await fileForModel({ ...files, db: ctx.db }, actor, ctx.orgId, a.id);
+                const text =
+                  opened.text === undefined
+                    ? ""
+                    : `\n${untrustedBlock(`attachment ${file.filename}`, cutText(opened.text, ATTACHMENT_TEXT_CHARS), ATTACHMENT_TEXT_CHARS + 100)}${opened.text.length > ATTACHMENT_TEXT_CHARS ? "\n[More in the file: read_artifact reads on with offset.]" : ""}`;
                 return {
-                  content: `Saved the attachment as file ${a.id} (it is untrusted content from an email). ${await fileReach(ctx.db, ctx.orgId, a.id)}`,
+                  content: `Saved the attachment as file ${a.id} (it is untrusted content from an email). ${await fileReach(ctx.db, ctx.orgId, a.id)}${opened.note ? ` ${opened.note}` : ""}${text}`,
                   data: { artifact: { id: a.id, version: 1, title: a.title } },
+                  ...(opened.images?.length ? { images: opened.images } : {}),
                 };
               } catch (error) {
                 return failure(ctx.db, account, error);
@@ -925,7 +883,9 @@ export function createMailToolSource(deps: MailToolDeps): ToolSource {
       const active = accounts.filter((a) => a.status === "active" && connectorFor(deps, a.via));
       if (active.length === 0) return [];
       const authority = ctx.runId ? await runAuthorityById(ctx.db, ctx.orgId, ctx.runId) : null;
-      const usable = active.filter(await mailboxUserCheck(ctx, authority));
+      // With nobody behind the run a mailbox serves as its grants say; the right hand uses only its owner's.
+      const personalUse = await personalUseCheck(ctx, authority, { nobody: true, rightHandTeam: false });
+      const usable = active.filter((a) => personalUse(a.createdByUserId));
       if (usable.length === 0) return [];
       const policies = await agentMailPolicies(
         ctx.db,

@@ -1,4 +1,16 @@
-import { boolean, index, integer, jsonb, pgTable, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import {
+  boolean,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  unique,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { agents } from "./agents";
 import { users } from "./auth";
 import { organizations } from "./tenancy";
@@ -43,7 +55,7 @@ export const skills = pgTable(
     orgId: uuid()
       .notNull()
       .references(() => organizations.id, { onDelete: "cascade" }),
-    /** The skill's `name` (kebab-case, ≤ 64), unique in the org. */
+    /** The skill's `name` (kebab-case, ≤ 64), unique among the team's skills and among each person's. */
     slug: text().notNull(),
     name: text().notNull(),
     description: text().notNull(),
@@ -58,10 +70,20 @@ export const skills = pgTable(
      * again. Null: read with no credentials.
      */
     sourceVia: text(),
+    /**
+     * Its link is read folder by folder (the folder's file list, then its files), not from the repository's archive,
+     * which was past the archive's cap: updating skips that download.
+     */
+    sourceByFolder: boolean().notNull().default(false),
     version: integer().notNull().default(1),
     /** Enabled for agents created later. */
     defaultForNewAgents: boolean().notNull().default(false),
     createdByUserId: text().references(() => users.id, { onDelete: "set null" }),
+    /**
+     * A personal skill's person (the Vault's split, ADR 0144): only they see it, and agents use it only on runs that
+     * person is behind. Null: the team's. It leaves with them.
+     */
+    ownerUserId: text().references(() => users.id, { onDelete: "cascade" }),
     /** `person` (installed or written by people) or `agent` (promoted from an agent's how-tos, ADR 0120). */
     origin: text().notNull().default("person"),
     /** An agent-made skill's agent: the only one that may change it with `update_skill`. */
@@ -120,12 +142,31 @@ export const skills = pgTable(
       };
       /** An agent's change: `editedSinceSource` and `linkBase` before it, as undoing it leaves them. */
       prior?: { edited: boolean; linkBase: { body: string; description: string; at: string } | null };
+      /** A change a person asked for in words (`rewriteSkill`): who asked. */
+      byUserId?: string;
     }>(),
+    /**
+     * Its name for people ("Weekly sales report"), written by the workspace's summary model when it is installed or
+     * made (`describeSkill`), in the language of who installed it. Null until written: the apps show `name`.
+     */
+    title: text(),
+    /** When to use it, in one short line for people, written with `title`. */
+    summary: text(),
+    /** The name of one of the app's icons that fits it, picked with `title`. */
+    icon: text(),
+    /** The text `title` and `summary` were written from (`describedHashOf`): a new version with other text rewrites them. */
+    describedHash: text(),
+    /** A person named it: a new version keeps their `title`. */
+    titleByPerson: boolean().notNull().default(false),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     deletedAt: timestamp({ withTimezone: true }),
   },
-  (t) => [unique().on(t.orgId, t.slug), index().on(t.orgId)],
+  (t) => [
+    uniqueIndex("skills_team_slug").on(t.orgId, t.slug).where(sql`${t.ownerUserId} is null`),
+    uniqueIndex("skills_personal_slug").on(t.orgId, t.ownerUserId, t.slug).where(sql`${t.ownerUserId} is not null`),
+    index().on(t.orgId),
+  ],
 );
 
 /** A skill's supporting files (references, templates, examples, images), per version. */
@@ -167,4 +208,27 @@ export const agentSkills = pgTable(
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [unique().on(t.agentId, t.skillId), index().on(t.orgId)],
+);
+
+/**
+ * One load of a skill by an agent (`load_skill`): which agent, in which run and conversation, and when. The library's
+ * "in the last 7 days" and a skill's "Last times" read it.
+ */
+export const skillUses = pgTable(
+  "skill_uses",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    orgId: uuid().notNull(),
+    skillId: uuid()
+      .notNull()
+      .references(() => skills.id, { onDelete: "cascade" }),
+    agentId: uuid().notNull(),
+    runId: uuid(),
+    channelId: uuid(),
+    threadId: uuid(),
+    /** The message that started the run, to open the conversation where it was used. */
+    messageId: uuid(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index().on(t.orgId, t.skillId, t.createdAt), index().on(t.orgId, t.agentId, t.createdAt)],
 );

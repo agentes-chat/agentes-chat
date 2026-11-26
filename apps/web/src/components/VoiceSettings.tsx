@@ -80,7 +80,14 @@ export function VoiceSettingsCard({
   onChange: (next: boolean) => void;
 }) {
   const { t } = useTranslation();
-  const view = useSpeechKey().data;
+  const speech = useSpeechKey();
+  const view = speech.data;
+  // With no engine, the way to one: below, for the installation's owner (the only one the picker answers), else who.
+  const noEngine = view
+    ? "voice.settings.noEngineHere"
+    : speech.isPending
+      ? "voice.settings.noEngine"
+      : "voice.settings.noEngineAsk";
   return (
     <Card aria-label={t("voice.settings.title")}>
       <div className="settings-rows">
@@ -89,7 +96,7 @@ export function VoiceSettingsCard({
           icon="mic"
           label={t("voice.settings.on")}
           hint={available ? t("voice.settings.onHelp") : undefined}
-          status={!available && t("voice.settings.noEngine")}
+          status={!available && t(noEngine)}
           control={
             <Switch
               checked={available && on}

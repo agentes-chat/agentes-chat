@@ -11,8 +11,10 @@ import type {
 } from "../../api/types";
 import { IMPORT_APP_CLIENTS } from "../app-clients";
 import { forbiddenText } from "../errors";
+import { formatBytes } from "../files";
 import { joinNames } from "../format";
 import { hiddenRepoOf, hiddenRepoText } from "../skills";
+import { type ComputerCard, computerChat } from "./computer";
 import {
   type AgentFile,
   type AgentFileSkip,
@@ -84,8 +86,11 @@ export type RequestCard = Extract<ImportCard, PromptApp | "other">;
 export const isRequestCard = (card: ImportCard | null): card is RequestCard =>
   card === "grok-bot" || card === "chatgpt-dots" || card === "other";
 
-/** How a source's agents come: the app creates them here through this server's MCP, or the request and its reply. */
-export type ImportMethod = "mcp" | "prompt";
+/**
+ * How a source's agents come: the app creates them here through this server's MCP, the request and its reply, or (an
+ * app on the person's computer) the command that reads it there.
+ */
+export type ImportMethod = "mcp" | "prompt" | "command";
 
 /** A source's steps to connect it to this server's MCP; none for one that can't take an MCP server. */
 export const mcpClient = (card: ImportCard) => IMPORT_APP_CLIENTS.find((c) => c.id === card);
@@ -95,6 +100,17 @@ export const mcpClient = (card: ImportCard) => IMPORT_APP_CLIENTS.find((c) => c.
  * read-only, which can't create agents.
  */
 const MCP_UNCONFIRMED: ReadonlySet<ImportCard> = new Set(["chatgpt-dots"]);
+
+/**
+ * The ways an app on the person's computer offers (ADR 0055, addendum 2026-11-16): the command always (it brings the
+ * most), its own agent creating them here through MCP where the app takes it and reaches this server, and its agent
+ * writing the export where it has a chat to ask in.
+ */
+export const computerPaths = (card: ComputerCard, reachable: boolean): ImportMethod[] => [
+  "command",
+  ...(reachable && mcpClient(card) ? (["mcp"] as const) : []),
+  ...(computerChat(card) ? (["prompt"] as const) : []),
+];
 
 /** MCP wherever the app takes it and apps on the internet reach this server (`aiAppImport`'s `available`). */
 export const defaultMethod = (card: ImportCard, reachable: boolean): ImportMethod =>
@@ -278,10 +294,20 @@ export function importFailureText(
   { from, step, cause }: ImportFailure,
   offline: (e: unknown) => boolean,
   mayConnect = false,
+  locale = "en",
 ) {
   if (cause === NOT_GITHUB) return t("onboarding.import.errors.notGithub");
   const hidden = hiddenRepoOf(cause);
   if (hidden) return hiddenRepoText(t, hidden, mayConnect).text;
+  if (cause instanceof ImportError && cause.limit) {
+    const { kind, have, max, name } = cause.limit;
+    const size = (n: number) => (kind === "files" ? new Intl.NumberFormat(locale).format(n) : formatBytes(locale, n));
+    return t(`onboarding.import.errors.limit.${kind}`, {
+      have: size(have),
+      max: size(max),
+      name: name ? baseName(name) : "",
+    });
+  }
   if (cause instanceof ImportError) {
     return cause.code === "unknown" && from === "paste"
       ? t("onboarding.import.errors.unknownPasted")
@@ -403,6 +429,13 @@ export function agentsArrived(
     if (now?.targetId && now.action !== "skip") out.set(item.key, now.targetId);
   }
   return out;
+}
+
+/** The channels and agents an apply made (not those it updated or left), in order: where Lodi's cursor shows them land. */
+export function madeByImport(applied: readonly ImportItemResult[]): { channelIds: string[]; agentIds: string[] } {
+  const made = (kind: ImportItemResult["kind"]) =>
+    applied.flatMap((i) => (i.kind === kind && i.action === "create" && i.targetId ? [i.targetId] : []));
+  return { channelIds: made("channel"), agentIds: made("agent") };
 }
 
 /** The line each agent keeps in its memory about where its files are: a note the import brings (once). */

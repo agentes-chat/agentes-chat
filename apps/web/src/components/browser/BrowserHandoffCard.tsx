@@ -12,6 +12,7 @@ import {
   useBrowserHandoffMutations,
   useDesktopStatus,
 } from "@agenteschat/client";
+import { ownsAgentAs } from "@agenteschat/client/lib/agent-owner";
 import { formatTime } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { Button, Icon } from "@agenteschat/ui";
@@ -76,7 +77,7 @@ export function BrowserHandoffCard({ handoff }: { handoff: BrowserHandoff }) {
   // The agent's browser opens right here, under the request; on its screen, in the computer dialog.
   const [here, setHere] = useState(false);
   const openComputer = useOpenComputer();
-  const show = () => (opensDesktop ? openComputer(current.agentId) : setHere(true));
+  const show = () => (opensDesktop ? openComputer(current.agentId, current.seat) : setHere(true));
   const take = () =>
     actions.takeControl.mutate(current.id, {
       onSuccess: show,
@@ -107,7 +108,9 @@ export function BrowserHandoffCard({ handoff }: { handoff: BrowserHandoff }) {
   // it ended and who did it where its button was.
   const asker = current.requestedForUserId;
   // Its buttons only for whom it waits on (the server checks again when they open it).
-  const mine = waiting && handoffIsMine(current, me.user.id, agent?.ownerUserId, org);
+  // Its owner reads as me when I hold the role that answers for it (ADR 0085, addendum of 2026-11-21).
+  const owns = !!agent && ownsAgentAs(agent, me.user.id, dir.rolesOf(me.user.id));
+  const mine = waiting && handoffIsMine(current, me.user.id, owns ? me.user.id : agent?.ownerUserId, org);
   const askedName = asker ? dir.memberById.get(asker)?.name : undefined;
   const answer: RequestAnswer | undefined = settled
     ? {
@@ -138,6 +141,7 @@ export function BrowserHandoffCard({ handoff }: { handoff: BrowserHandoff }) {
         id={current.id}
         kind={onDesktop ? "desktop" : "browser"}
         agent={agent}
+        runId={current.runId}
         label={groupLabel}
         mine={mine}
         waitingFor={
@@ -162,7 +166,9 @@ export function BrowserHandoffCard({ handoff }: { handoff: BrowserHandoff }) {
           ...(waiting ? { more: t("ask.seeScreen") } : {}),
         }}
         open={!opensDesktop && showBrowser}
-        onOpenChange={waiting ? (open) => (opensDesktop ? openComputer(current.agentId) : setHere(open)) : undefined}
+        onOpenChange={
+          waiting ? (open) => (opensDesktop ? openComputer(current.agentId, current.seat) : setHere(open)) : undefined
+        }
         actions={
           mine ? (
             <Button

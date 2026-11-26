@@ -221,7 +221,7 @@ const SIGN_IN_POOL: (() => FakeOrgSeed)[] = [
   () => joinedSeed({ id: `org_${rid()}`, name: "Estúdio Norte" }),
 ];
 
-const DEFAULT_CONFIG = { maxConcurrentTasks: 3, taskMaxSeconds: 4 * 3600, brainIdleMinutes: 3, brainMaxProcesses: 1 };
+const DEFAULT_CONFIG = { maxConcurrentTasks: 3, taskMaxSeconds: 4 * 3600, brainIdleMinutes: 30, brainMaxProcesses: 1 };
 
 export class FakeRunner {
   private seed: FakeOrgSeed | null;
@@ -279,6 +279,10 @@ export class FakeRunner {
     },
   ];
   /** The Mac's side of an iPhone's setup; `iphone.download` fills the platform in about a second. */
+  /** How many times the iPhone setup asked to look at the iPhone again (`iphone.look`). */
+  looks = 0;
+  /** The iPhones whose test helper the window asked to repair. */
+  repairs: string[] = [];
   iphone: ControlIphoneSetup = {
     xcode: "27.0",
     platform: { state: "missing" },
@@ -527,6 +531,21 @@ export class FakeRunner {
       case "iphone.open":
         console.info("[fake] open", msg.app);
         return reply({ opened: true });
+      case "iphone.fixXcode":
+        this.iphone =
+          msg.action === "cancel"
+            ? { ...this.iphone, ...(this.iphone.fix ? { fix: { ...this.iphone.fix, state: "canceled" } } : {}) }
+            : { ...this.iphone, fix: { kind: msg.kind, state: msg.kind === "select" ? "asking" : "running", step: 0 } };
+        return reply(this.iphone);
+      case "cli.install":
+        // Its CLIs are all here already: there is nothing to install.
+        return reply({ install: msg.action === "start" ? { tool: msg.tool, state: "done" } : null });
+      case "iphone.look":
+        this.looks++;
+        return reply({ looking: true });
+      case "iphone.repair":
+        this.repairs.push(msg.serial);
+        return reply({ repairing: true });
       case "shutdown":
         return reply({ stopping: true });
     }
@@ -592,8 +611,8 @@ export class FakeRunner {
       protocol: MACHINE_PROTOCOL,
       paused: this.paused,
       executors: {
-        claude: { version: "2.1.4 (Claude Code)", loggedIn: true, authMethod: "claude.ai", plan: "max" },
-        codex: { version: "codex-cli 0.46.0" },
+        claude: { version: "2.1.300 (Claude Code)", loggedIn: true, authMethod: "claude.ai", plan: "max" },
+        codex: { version: "codex-cli 0.170.0" },
       },
       workspace: this.config.workspace,
       agents: s?.agents ?? [],

@@ -21,7 +21,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { useHost, useSnapshot, useStore } from "../app";
-import { saidText } from "../control/activity";
+import { saidText, toolWords } from "../control/activity";
 import {
   BROWSER_NOTIFY_PREF,
   browserRowState,
@@ -30,7 +30,8 @@ import {
   newHelpRequests,
   siteLink,
 } from "../control/browser";
-import { DOCK_PREF, MENU_BAR_PREF, menuBarShown } from "../control/dock";
+import { ControlError } from "../control/client";
+import { MENU_BAR_PREF, menuBarShown } from "../control/dock";
 import { hereBanner, hereLine, isHereServer, type LocalServerStatus } from "../control/local-server";
 import { menuLabels } from "../control/menu-labels";
 import { NOTCH_PREF } from "../control/notch";
@@ -152,8 +153,7 @@ export function Popover() {
   const works = homes.length > 0;
   const busyHere = works || local.run;
   const [menuBarPref, setMenuBarPref] = useState(() => readPref<boolean | null>(MENU_BAR_PREF, null));
-  const [dockPref, setDockPref] = useState(() => readPref(DOCK_PREF, true));
-  const iconShown = menuBarShown(menuBarPref, dockPref, busyHere);
+  const iconShown = menuBarShown(menuBarPref, busyHere);
   useEffect(() => {
     void host.setTrayVisible(iconShown).catch(() => {});
   }, [host, iconShown]);
@@ -198,15 +198,18 @@ export function Popover() {
   useEffect(() => {
     const night = installNight(new Date(now));
     if (!night || triedNight.current === night || !update.state.available || jobs.length > 0) return;
-    if (!autoUpdateOn(readPref<boolean | null>(AUTO_UPDATE_PREF, null), local.run)) return;
+    if (!autoUpdateOn(readPref<boolean | null>(AUTO_UPDATE_PREF, null))) return;
     triedNight.current = night;
     void host.installUpdate().catch(() => {});
-  }, [now, update.state.available, jobs.length, local.run, host]);
+  }, [now, update.state.available, jobs.length, host]);
 
+  // The menu's Quit asking here: the show it brings must not clear the question it shows for.
+  const quitOnShow = useRef(false);
   useOnShown("popover", () => {
     setPauseMenu(false);
     setPauseFor(null);
-    setConfirmQuit(false);
+    setConfirmQuit(quitOnShow.current);
+    quitOnShow.current = false;
     setNow(Date.now());
     readList();
   });
@@ -214,7 +217,6 @@ export function Popover() {
   useEffect(() => {
     const reread = () => {
       setMenuBarPref(readPref<boolean | null>(MENU_BAR_PREF, null));
-      setDockPref(readPref(DOCK_PREF, true));
       readList();
     };
     window.addEventListener("storage", reread);
@@ -271,7 +273,18 @@ export function Popover() {
           })
           .catch(() => {});
       };
-      answerThisMac({ store, openPrefs: openPrefsOn, showRequests, localDir, revealFolder, onPaired }, request)
+      answerThisMac(
+        {
+          store,
+          openPrefs: openPrefsOn,
+          showRequests,
+          localDir,
+          revealFolder,
+          onPaired,
+          openPrivacy: (pane) => host.openPrivacy(pane),
+        },
+        request,
+      )
         .then(
           (data) => host.thisMacReply(id, true, data ?? null),
           (err: unknown) => host.thisMacReply(id, false, err instanceof Error ? err.message : String(err)),
@@ -283,9 +296,8 @@ export function Popover() {
     return off;
   }, [host, store]);
 
-  // In the Dock like Slack, unless the person took it out (Preferences › General); the site's notifications too.
+  // The site's notifications, unless the person turned them off (Preferences › General).
   useEffect(() => {
-    void host.setDock(readPref(DOCK_PREF, true)).catch(() => {});
     void host.setSiteNotify(readPref(SITE_NOTIFY_PREF, true)).catch(() => {});
   }, [host]);
 
@@ -310,13 +322,27 @@ export function Popover() {
         } else if (action === "quit" && runningJobs.current === 0 && !localRuns.current) {
           // Nothing running on this Mac: quits at once, like any Mac app.
           void host.quit().catch(() => {});
+        } else if (action === "quit") {
+          // Agents working here: ask first. From the menu the popover isn't in front, and it hides as soon as another
+          // window takes focus (a window manager that focuses under the pointer hides it at once): the system's own
+          // dialog asks instead. The popover's question when the system can't ask.
+          void host
+            .askQuit({
+              title: t("desktop.tray.quitTitle"),
+              body: localRuns.current ? t("desktop.tray.quitHereBody") : t("desktop.tray.quitBody"),
+              quit: t("desktop.tray.quitConfirm"),
+              cancel: t("desktop.common.cancel"),
+            })
+            .catch(() => {
+              quitOnShow.current = true;
+              setConfirmQuit(true);
+              void host.showWindow("popover").catch(() => {});
+            });
         } else {
-          // Agents working here: ask first, as ⌘Q in the popover does.
-          if (action === "quit") setConfirmQuit(true);
           void host.showWindow("popover").catch(() => {});
         }
       }),
-    [host],
+    [host, t],
   );
 
   /** Asks first only while agents work here or agentes.chat runs here; otherwise quits at once, like any app. */
@@ -711,6 +737,8 @@ export function Popover() {
               }
             />
           )}
+
+          {homes.map((h) => h.allowed && <AllowedBanner key={h.homeId} home={h} />)}
 
           {requests.length > 0 && (
             <section className="dk-psec">
@@ -1169,6 +1197,46 @@ function JobRow({ home, job, now }: { home: Home; job: ControlJob; now: number }
   );
 }
 
+/** Its owner turned a tool on from the apps: said here until seen, with Undo (it goes off again on this computer). */
+function AllowedBanner({ home }: { home: Home }) {
+  const { t } = useTranslation();
+  const store = useStore();
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  const allowed = home.allowed;
+  if (!allowed) return null;
+  const tool = toolWords(t, allowed.tool);
+  const undo = async () => {
+    setBusy(true);
+    try {
+      await store.request(home.homeId, { type: "tools.set", tool: allowed.tool, on: false });
+      store.dismissAllowed(home.homeId);
+      toast(t("desktop.tray.allowedUndone", { tool }), "check");
+    } catch {
+      toast(t("desktop.common.error"), "alert");
+      setBusy(false);
+    }
+  };
+  return (
+    <Banner
+      icon="check"
+      title={t("desktop.tray.allowedTitle", { name: allowed.byName || orgName(home), tool })}
+      actions={
+        <>
+          <Button size="sm" disabled={busy} onClick={() => void undo()}>
+            {t("desktop.tray.allowedUndo")}
+          </Button>
+          <Button size="sm" variant="ghost" disabled={busy} onClick={() => store.dismissAllowed(home.homeId)}>
+            {t("desktop.tray.allowedOk")}
+          </Button>
+        </>
+      }
+    >
+      {t("desktop.tray.allowedBody")}
+    </Banner>
+  );
+}
+
 /** An agent asks for a folder: Liberar (this agent or all) or Agora não. The click is on the machine. */
 function RequestCard({ home, request, now }: { home: Home; request: ControlAccessRequest; now: number }) {
   const { t } = useTranslation();
@@ -1190,8 +1258,14 @@ function RequestCard({ home, request, now }: { home: Home; request: ControlAcces
             : t("desktop.tray.allowedOne", { folder, agent: agent.name }),
         decision === "denied" ? "close" : "check",
       );
-    } catch {
-      toast(t("desktop.common.error"), "alert");
+    } catch (err) {
+      // The computer says why (the folder is gone, is a system folder, too many folders): the person can act on it.
+      toast(
+        err instanceof ControlError && ["invalid_path", "not_found", "bad_request"].includes(err.code)
+          ? t("desktop.tray.answerFailed", { message: err.message })
+          : t("desktop.common.error"),
+        "alert",
+      );
       setBusy(false);
     }
   };

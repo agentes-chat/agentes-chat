@@ -49,12 +49,12 @@ import { useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { SetupAsks, SetupCardView, StepDialog, useDoneSay } from "@/components/AgentSetup";
-import { usePlanHold } from "@/components/ai/ConnectAiSteps";
+import { usePlanHold } from "@/components/ai/plan-hold";
 import { BillingLinkButton } from "@/components/BillingLinkButton";
-import { useConnectAi } from "@/components/ConnectAi";
 import { ConnectFlow, type FlowState } from "@/components/ConnectFlow";
-import { ConnectorIcon } from "@/components/ConnectorCatalog";
+import { ConnectorIcon } from "@/components/ConnectorIcon";
 import { useChannelActions } from "@/components/channel-actions";
+import { useConnectAi } from "@/components/connect-ai-context";
 import { useInviteDialog } from "@/components/invite/InviteDialog";
 import { useOrg } from "@/components/org-context";
 import { useFirstRunPowers } from "@/components/Standing";
@@ -105,7 +105,8 @@ export function useFirstRun(agent: Agent | undefined) {
     context: Boolean(detail.data?.context?.trim()),
     team: team.length > 0,
     ai: !held && (aiState === "ready" || aiState === "waiting"),
-    apps: live.length > 0,
+    // A person's own connection isn't the team's apps.
+    apps: live.some((c) => !c.ownerUserId),
     people: (members.data?.length ?? 1) > 1 || waiting.length > 0,
   };
   const done = agent?.setup && steps.length > 0 ? firstRunDone(agent.setup, facts) : new Set<FirstRunStep>();

@@ -1,13 +1,14 @@
 import { type Message, usePinMessage } from "@agenteschat/client";
 import { messagePath } from "@agenteschat/client/lib/message-links";
 import { can } from "@agenteschat/client/lib/permissions";
-import { voiceOf } from "@agenteschat/client/lib/voice";
+import { listedText } from "@agenteschat/client/lib/voice";
 import { Button, EmojiPickerPopover, Menu } from "@agenteschat/ui";
 import { chartBlocksOf, chartBlockToWidgetSpec } from "@agenteschat/ui/widgets/spec";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useChannelActions } from "@/components/channel-actions";
 import { MenuEntries } from "@/components/DesktopMenus";
+import { ResolveButton } from "@/components/live/media/ResolveBits";
 import { useOrg } from "@/components/org-context";
 import { PinToDashboard } from "@/components/widgets/PinToDashboard";
 import {
@@ -79,6 +80,7 @@ export function PersonMessageActions({
     <div className="ac-msg__actions" role="toolbar" aria-label={t("channel.actions", { name: authorName })}>
       <ReactButton onPick={(emoji) => reactions.toggle(reactionOf(emoji))} />
       <ReplyButton message={message} />
+      <ResolveButton message={message} />
       <MessageMoreMenu entries={more} />
     </div>
   );
@@ -87,7 +89,7 @@ export function PersonMessageActions({
 /**
  * A message's menu (lib/context-menu.ts), one list for its right click and its "…" (`more`): reactions with every
  * emoji, Responder, Copiar texto, Copiar link, Fixar mensagem, Salvar na wiki. With text selected in it, the
- * selection's own menu (Copiar, Responder; Salvar na wiki saves the selection). `touch` is the same menu for a tap on
+ * selection's own menu (Copiar, Responder; Salvar na wiki saves the selection). `touch` is the same menu for a long press on
  * touch, where it stands in for the bar, so an agent's reply (`feedback`) also has the bar's Não ajudou and Corrigir
  * resposta. `dialog` goes with the message. Fixar needs `post` (the server's rule) and a conversation that isn't
  * read only.
@@ -157,8 +159,9 @@ export function useMessageMenu(
     if (selected) {
       return [copy(selected, "copy", t("contextMenu.copy")), ...reply, { kind: "separator" }, copyLink, wiki(selected)];
     }
-    // A file with no words has no text to copy or save.
-    const words = message.body.trim() !== "" && !voiceOf(message.meta);
+    // A file with no words has no text to copy or save; a voice message only what was typed beside it.
+    const text = listedText(message.body, message.meta);
+    const words = text.trim() !== "";
     const pinned = Boolean(message.pinned);
     const pinEntry: MenuEntry | null =
       options.readOnly || !can(org, "post")
@@ -196,7 +199,7 @@ export function useMessageMenu(
           ] satisfies MenuEntry[])
         : []),
       { kind: "separator" },
-      ...(words ? [copy(message.body, "copy-text", t("contextMenu.copyText"))] : []),
+      ...(words ? [copy(text, "copy-text", t("contextMenu.copyText"))] : []),
       copyLink,
       { kind: "separator" },
       ...(pinEntry ? [pinEntry] : []),
@@ -211,7 +214,7 @@ export function useMessageMenu(
             },
           ] satisfies MenuEntry[])
         : []),
-      ...(words ? [wiki(message.body)] : []),
+      ...(words ? [wiki(text)] : []),
     ];
   };
   const onContextMenu = contextMenuHandler((e) => entries(selectedTextAt(e.target)));

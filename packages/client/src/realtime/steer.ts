@@ -96,6 +96,7 @@ export type SteerEvent =
       messageId: string;
       outcome: WaitMessageOutcome;
     }
+  | { type: "agent.run.released"; channelId: string; runId: string; agentId: string; messageId: string }
   | { type: "agent.passed"; channelId: string; runId: string }
   | { type: "agent.run"; channelId: string; runId: string; status: string }
   | { type: "agent.typing" | "agent.delta" | "agent.tool"; channelId: string; runId: string }
@@ -103,6 +104,12 @@ export type SteerEvent =
   | { type: "run.finished"; channelId: string; runId: string; status: string }
   | { type: "run.canceled"; channelId: string; runId: string }
   | { type: string };
+
+/** `record` without `key`. */
+function without<T>(record: Record<string, T>, key: string): Record<string, T> {
+  const { [key]: _gone, ...rest } = record;
+  return rest;
+}
 
 /** Final: nothing later about the same run takes it back. */
 const settled = (s: Pick<LiveSteer, "state">) => s.state === "read" || s.state === "resolved";
@@ -208,6 +215,16 @@ export function applySteerEvent(state: SteerStoreState, event: SteerEvent, now =
         };
       }
       return live === state.live ? state : { ...state, live };
+    }
+    case "agent.run.released": {
+      const e = event as Extract<SteerEvent, { type: "agent.run.released" }>;
+      // Not for that agent after all (the triage): nothing about that run is said under it any more.
+      const live = state.live[e.messageId]?.runId === e.runId ? without(state.live, e.messageId) : state.live;
+      const listed = state.seeded[e.messageId];
+      const seeded = listed?.runs.some((r) => r.runId === e.runId)
+        ? { ...state.seeded, [e.messageId]: { ...listed, runs: listed.runs.filter((r) => r.runId !== e.runId) } }
+        : state.seeded;
+      return live === state.live && seeded === state.seeded ? state : { ...state, live, seeded };
     }
     case "agent.run":
     case "agent.typing":
@@ -348,12 +365,31 @@ export function continuedRunIdOf(message: Pick<Message, "meta">): string | null 
 
 // ── The app's one store ───────────────────────────────────────────────────────
 
+/** Messages each of the store's records keeps: a day-long session hears and lists many. Past it, the oldest half goes. */
+export const STEER_KEPT = 2000;
+
+const latest = <V>(record: Record<string, V>): Record<string, V> => {
+  const ids = Object.keys(record);
+  if (ids.length <= STEER_KEPT) return record;
+  return Object.fromEntries(ids.slice(-STEER_KEPT / 2).map((id) => [id, record[id] as V]));
+};
+
+/** `state` with its records by message held to `STEER_KEPT` (their latest entries); the same object when within it. */
+export function keptSteer(state: SteerStoreState): SteerStoreState {
+  const live = latest(state.live);
+  const seeded = latest(state.seeded);
+  const continued = latest(state.continued);
+  return live === state.live && seeded === state.seeded && continued === state.continued
+    ? state
+    : { ...state, live, seeded, continued };
+}
+
 let current: SteerStoreState = emptySteer;
 const listeners = new Set<() => void>();
 
 function update(next: SteerStoreState) {
   if (next === current) return;
-  current = next;
+  current = keptSteer(next);
   for (const l of [...listeners]) l();
 }
 

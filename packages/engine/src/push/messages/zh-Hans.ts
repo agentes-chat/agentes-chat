@@ -32,6 +32,10 @@ export const strings: Partial<PushStrings> = {
   machineConnectedTitle: "一台新电脑加入了工作区",
   computerReadyTitle: "你的工作区的电脑已就绪",
   computerReadyBody: "打开智能体页面即可实时查看。",
+  computerDownTitle: (n) => `${n} 没有响应`,
+  computerDownBody: "智能体在这台电脑上的工作正在等待。点按查看该怎么做。",
+  computerBackTitle: (n) => `${n} 已恢复`,
+  computerBackBody: (away) => `离线了 ${away}。等待中的工作现在继续。`,
   browserHandoffTitle: (a) => `${a} 需要你在浏览器中帮忙`,
   browserHandoffReminderTitle: (a) => `${a} 仍在等你到浏览器中帮忙`,
   browserHandoffBody: "点按打开画面。",
@@ -81,6 +85,18 @@ export const strings: Partial<PushStrings> = {
   deviceInUseBody: "点按停止它。",
   deviceAccessTitle: (a, p, d) => (p ? `${a}（为 ${p}）请求使用你的 ${d}` : `${a} 请求使用你的 ${d}`),
   deviceAccessBody: "点按允许一次、始终允许，或拒绝。",
+  deviceToolTitle: (a, d) => `${a} 请你在 ${d} 上打开一个工具`,
+  deviceToolBody: "点按即可一键打开。",
+  deviceCliTitle: (a, d) => `${a} 请你在 ${d} 上安装一个程序`,
+  deviceCliBody: "点按即可一键安装。",
+  deviceFolderTitle: (a, f, d) => (f ? `${a} 请你在你的 ${d} 上开放 ${f}` : `${a} 请你在你的 ${d} 上开放一个文件夹`),
+  deviceFolderBody: "在那台电脑的 App 里允许它。",
+  adminAskTitle: (a, what, l) =>
+    what === "channel_agent"
+      ? `${a} 请你把一个智能体加入 #${l}`
+      : what === "create_agents"
+        ? `${a} 请求获得创建智能体的权限`
+        : `${a} 请你为例行任务设置 ${l} webhook`,
   deviceWaitingTitle: (p, d) => `${p} 的智能体正在等待你的 ${d}`,
   deviceWaitingBody: "它回来后就会开始。",
   teamWeekReady: "你的团队周报已准备好",
@@ -92,4 +108,5 @@ export const strings: Partial<PushStrings> = {
   joinRequestTitlePersonal: (name) => `${name} 请求加入你的工作区`,
   joinSuggestionTitlePersonal: (by, name) => `${by} 建议邀请 ${name}`,
   teamWeekReadyPersonal: "你的周报已准备好",
+  teamWatchStill: (n) => `还有 ${n} 件事在等你`,
 };

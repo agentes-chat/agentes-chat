@@ -1,5 +1,5 @@
 import { Slot } from "radix-ui";
-import { type ButtonHTMLAttributes, forwardRef, type ReactNode } from "react";
+import { type ButtonHTMLAttributes, forwardRef, type MouseEvent, type ReactNode } from "react";
 import { cx } from "../cx";
 import { Icon, type IconName } from "../icons/Icon";
 import { Kbd } from "./Kbd";
@@ -28,10 +28,15 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   kbd?: string[];
   /** An async action is running: inline spinner, same width, not clickable (`aria-busy`). */
   loading?: boolean;
-  /** Render the child element (e.g. a router link) with the button styles. */
+  /** Render the child element (e.g. a router link) with the button styles; `disabled` switches it off too. */
   asChild?: boolean;
   children?: ReactNode;
 }
+
+/** Plain words, which a narrow place cuts with an ellipsis (`.ac-btn__label`); any element is left as it is written. */
+const isWords = (children: ReactNode) =>
+  (Array.isArray(children) ? children : [children]).every((c) => typeof c === "string" || typeof c === "number") &&
+  children !== "";
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   {
@@ -68,8 +73,14 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
           className,
         );
   if (asChild) {
+    // A link has no `disabled` of its own: off, it follows no click (Enter is one) and is no stop for Tab.
+    const off = disabled && {
+      "aria-disabled": true,
+      tabIndex: -1,
+      onClick: (event: MouseEvent) => event.preventDefault(),
+    };
     return (
-      <Slot.Root ref={ref} className={classes} aria-disabled={disabled || undefined} {...rest}>
+      <Slot.Root ref={ref} className={classes} {...rest} {...off}>
         {children}
       </Slot.Root>
     );
@@ -85,7 +96,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     >
       {/* The label stays (invisible) while loading, so the width never changes. */}
       {leading && <Icon name={leading} />}
-      {(!iconOnly || !leading) && children}
+      {(!iconOnly || !leading) && (isWords(children) ? <span className="ac-btn__label">{children}</span> : children)}
       {!iconOnly && kbd && kbd.length > 0 && (
         <span className="ac-btn__kbd" aria-hidden="true">
           {kbd.map((k) => (

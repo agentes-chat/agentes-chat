@@ -149,6 +149,7 @@ export async function countToolCall(
     errors?: number;
     approvalsAsked?: number;
     approvalsGiven?: number;
+    costNanoUsd?: number;
   },
 ) {
   try {
@@ -165,6 +166,7 @@ export async function countToolCall(
         errors: call.errors ?? 0,
         approvalsAsked: call.approvalsAsked ?? 0,
         approvalsGiven: call.approvalsGiven ?? 0,
+        costNanoUsd: Math.max(0, Math.round(call.costNanoUsd ?? 0)),
       })
       .onConflictDoUpdate({
         target: [used.day, used.connector, used.via, used.orgId, used.agentId, used.tool],
@@ -173,6 +175,7 @@ export async function countToolCall(
           errors: sql`${used.errors} + excluded.errors`,
           approvalsAsked: sql`${used.approvalsAsked} + excluded.approvals_asked`,
           approvalsGiven: sql`${used.approvalsGiven} + excluded.approvals_given`,
+          costNanoUsd: sql`${used.costNanoUsd} + excluded.cost_nano_usd`,
         },
       });
   } catch {}
@@ -347,54 +350,140 @@ async function accountCounts(db: Database, r: Range, byOrg: boolean) {
 const WORK_EVENTS = ["run.finished", "task.finished"];
 
 /**
- * The product's numbers per UTC day from the operator's events feed (kept `OPERATOR_EVENTS_KEEP_DAYS`), and its
- * active workspaces.
+ * The product's numbers per UTC day from the operator's events feed, with the empty grouping set's row (day null)
+ * for the whole range: its active workspaces.
  */
-async function productDays(db: Database, r: Range) {
+export function productDaysQuery(db: Database, r: Range) {
   const e = operatorEvents;
-  const inRange = and(gte(e.createdAt, r.start), lt(e.createdAt, r.end));
-  const day = sql<string>`to_char(${e.createdAt} at time zone 'utc', 'YYYY-MM-DD')`;
-  const of = (type: string) => howMany(eq(e.type, type));
-  const active = howMany(inArray(e.type, WORK_EVENTS), e.orgId);
-  const [days, [all]] = await Promise.all([
-    db
-      .select({
-        day,
-        runs: of("run.finished"),
-        tasks: of("task.finished"),
-        activeWorkspaces: active,
-        newWorkspaces: of("organization.created"),
-        signUps: of("user.signed_up"),
-      })
-      .from(e)
-      .where(and(inRange, inArray(e.type, [...WORK_EVENTS, "organization.created", "user.signed_up"])))
-      .groupBy(day)
-      .orderBy(day),
-    db
-      .select({ n: active })
-      .from(e)
-      .where(and(inRange, inArray(e.type, WORK_EVENTS))),
-  ]);
-  return { days, activeWorkspaces: all?.n ?? 0, keptDays: OPERATOR_EVENTS_KEEP_DAYS };
+  // Rows per day, type and workspace first, so the distinct counts below sort a few thousand groups, not the
+  // range. The day must stay this exact expression: the statistics `operator_events_day_type_org` (migration 0297)
+  // give the planner its real group count, so it hashes these groups instead of sorting every row of the range.
+  const g = db
+    .select({
+      day: sql<string>`(${e.createdAt} at time zone 'utc')::date`.as("day"),
+      type: e.type,
+      orgId: e.orgId,
+      n: sql<number>`count(*)`.as("n"),
+    })
+    .from(e)
+    .where(
+      and(
+        gte(e.createdAt, r.start),
+        lt(e.createdAt, r.end),
+        inArray(e.type, [...WORK_EVENTS, "organization.created", "user.signed_up"]),
+      ),
+    )
+    .groupBy(sql`1`, e.type, e.orgId)
+    .as("g");
+  const of = (type: string) => sql<number>`coalesce(sum(${g.n}) filter (where ${g.type} = ${type}), 0)`.mapWith(Number);
+  return db
+    .select({
+      day: sql<string | null>`to_char(${g.day}, 'YYYY-MM-DD')`,
+      runs: of("run.finished"),
+      tasks: of("task.finished"),
+      activeWorkspaces: howMany(inArray(g.type, WORK_EVENTS), g.orgId),
+      newWorkspaces: of("organization.created"),
+      signUps: of("user.signed_up"),
+    })
+    .from(g)
+    .groupBy(sql`grouping sets ((${g.day}), ())`)
+    .orderBy(g.day);
 }
+
+/** The product's days (kept `OPERATOR_EVENTS_KEEP_DAYS`) and the range's active workspaces. */
+async function productDays(db: Database, r: Range) {
+  const rows = await productDaysQuery(db, r);
+  const days = rows.filter((d): d is typeof d & { day: string } => d.day !== null);
+  const all = rows.find((d) => d.day === null);
+  return { days, activeWorkspaces: all?.activeWorkspaces ?? 0, keptDays: OPERATOR_EVENTS_KEEP_DAYS };
+}
+
+const monthStart = sql`date_trunc('month', now() at time zone 'utc')::date`;
 
 /** Composio's month (UTC) so far: what was counted since the 1st, connected accounts made included. */
 async function composioMonth(db: Database) {
-  const [month] = await db
-    .select({
-      month: sql<string>`to_char(now() at time zone 'utc', 'YYYY-MM')`,
-      ...composio,
-      connections: total(comp.connections),
-    })
-    .from(comp)
-    .where(gte(comp.day, sql`date_trunc('month', now() at time zone 'utc')::date`));
+  const [[month], orgs] = await Promise.all([
+    db
+      .select({
+        month: sql<string>`to_char(now() at time zone 'utc', 'YYYY-MM')`,
+        ...composio,
+        connections: total(comp.connections),
+      })
+      .from(comp)
+      .where(gte(comp.day, monthStart)),
+    composioMonthOrgs(db),
+  ]);
   return {
     month: month?.month ?? new Date().toISOString().slice(0, 7),
     executions: month?.executions ?? 0,
     failures: month?.failures ?? 0,
     events: month?.events ?? 0,
     connections: month?.connections ?? 0,
+    ...orgs,
   };
+}
+
+/**
+ * Composio's month so far per workspace: its calls of Composio's tools, what Composio billed for it (executions,
+ * trigger events, connected accounts made) and the connectors of either. Most executions first, then events, calls
+ * and connections.
+ */
+async function composioMonthOrgs(db: Database) {
+  const keys = (column: unknown, filter: SQL) =>
+    sql<string[]>`coalesce(array_agg(distinct ${column}) filter (where ${filter}), '{}')`;
+  const [calls, billed] = await Promise.all([
+    db
+      .select({
+        orgId: used.orgId,
+        calls: usage.calls,
+        errors: usage.errors,
+        keys: keys(used.connector, sql`${used.calls} > 0`),
+      })
+      .from(used)
+      .where(and(gte(used.day, monthStart), eq(used.via, "composio")))
+      .groupBy(used.orgId),
+    db
+      .select({
+        orgId: comp.orgId,
+        ...composio,
+        connections: total(comp.connections),
+        keys: keys(comp.toolkit, sql`true`),
+      })
+      .from(comp)
+      .where(gte(comp.day, monthStart))
+      .groupBy(comp.orgId),
+  ]);
+  const rows = new Map<string, ReturnType<typeof newRow>>();
+  const newRow = (orgId: string) => ({
+    orgId,
+    keys: new Set<string>(),
+    calls: 0,
+    errors: 0,
+    executions: 0,
+    failures: 0,
+    events: 0,
+    connections: 0,
+  });
+  const row = (orgId: string) => getOrMake(rows, orgId, () => newRow(orgId));
+  for (const { keys, ...c } of [...calls, ...billed]) {
+    const found = Object.assign(row(c.orgId), c);
+    for (const key of keys) found.keys.add(key);
+  }
+  const ranked = [...rows.values()]
+    .filter((o) => o.calls + o.executions + o.events + o.connections > 0)
+    .map(({ keys, ...o }) => ({
+      ...o,
+      connectors: [...keys].sort().map((connector) => ({ connector, label: connectorLabelOf(connector) })),
+    }))
+    .sort(
+      (a, b) =>
+        b.executions - a.executions ||
+        b.events - a.events ||
+        b.calls - a.calls ||
+        b.connections - a.connections ||
+        a.orgId.localeCompare(b.orgId),
+    );
+  return { orgs: ranked.slice(0, ANALYTICS_ROWS_MAX), orgsMore: ranked.length > ANALYTICS_ROWS_MAX };
 }
 
 /**

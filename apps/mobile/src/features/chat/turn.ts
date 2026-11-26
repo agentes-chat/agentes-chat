@@ -1,6 +1,6 @@
 import type { LiveRun } from "@agenteschat/client";
 import { holdsText } from "@agenteschat/client/lib/text";
-import { type ToolItem, toolItemsLive } from "@agenteschat/client/lib/work";
+import { type ReplyStop, replyStopOf, type ToolItem, toolItemsLive } from "@agenteschat/client/lib/work";
 
 /**
  * An agent's turn in the conversation: while it works nothing of it draws there (the line above the box says who
@@ -78,13 +78,11 @@ export function withOpacity(color: string, opacity: number): string {
 // ── The block's work, handed to the saved reply ──────────────────────────────
 
 /**
- * The work a run at work here did last, so its saved reply shows the same tool block at once ("Usou 4 ferramentas")
- * and the messages it read, instead of loading the run's steps first.
+ * The work a run at work here did last, so its saved reply shows the same tool block at once ("Used 4 tools") instead
+ * of loading the run's steps first.
  */
 export interface TurnSnapshot {
   items: ToolItem[];
-  /** The text of each message it read (the "Leu seu recado" wells). */
-  quotes: Record<string, string>;
   at: number;
 }
 
@@ -108,22 +106,42 @@ export function recentTurn(runId: string, now: number, maxAgeMs = 8000): TurnSna
   return s && now - s.at <= maxAgeMs && s.items.length > 0 ? s : null;
 }
 
+/** What each reply showed of its run's work (`keptTurn`), by message, the oldest first. */
+const SHOWN = new Map<string, TurnSnapshot>();
+export const SHOWN_MAX = 200;
+
+/**
+ * The work reply `messageId` shows from here (`recentTurn`): what it showed the first time, while the app runs. The
+ * list mounts a row again each time it comes back into view, and a reply that came back later than `recentTurn`
+ * reaches showed its saved work instead: the line it opened with and the messages it read were gone and the row was
+ * shorter, moving the rows around it.
+ */
+export function keptTurn(messageId: string, runId: string, now: number): TurnSnapshot | null {
+  const shown = SHOWN.get(messageId);
+  if (shown) return shown;
+  const s = recentTurn(runId, now);
+  if (!s) return null;
+  SHOWN.set(messageId, s);
+  if (SHOWN.size > SHOWN_MAX) {
+    const oldest = SHOWN.keys().next();
+    if (!oldest.done) SHOWN.delete(oldest.value);
+  }
+  return s;
+}
+
 // ── A stopped reply ──────────────────────────────────────────────────────────
 
 /**
- * `meta.canceled` of a stopped reply: who stopped it, and the run that continued it ("Continuar" goes
- * away then). Null when it wasn't stopped.
+ * `meta.canceled` of a stopped reply: who stopped it (or the right hand at their word, or the system's cause), and the
+ * run that continued it ("Continuar" goes away then). Null when it wasn't stopped.
  */
 export function stoppedOf(
   meta: Record<string, unknown> | undefined,
-): { byUserId: string | null; continuedRunId: string | null } | null {
+): (ReplyStop & { continuedRunId: string | null }) | null {
   const c = meta?.canceled;
   if (!c) return null;
   const o = typeof c === "object" ? (c as Record<string, unknown>) : {};
-  return {
-    byUserId: typeof o.byUserId === "string" ? o.byUserId : null,
-    continuedRunId: typeof o.continuedRunId === "string" ? o.continuedRunId : null,
-  };
+  return { ...replyStopOf(c), continuedRunId: typeof o.continuedRunId === "string" ? o.continuedRunId : null };
 }
 
 /**

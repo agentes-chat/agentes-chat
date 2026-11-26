@@ -32,7 +32,7 @@ import {
   setAgentRepositories,
   setAgentScopes,
   type ToolContext,
-  takeBridgeEffects,
+  takeBridgeResult,
   updateAgent,
   ValidationError,
   wrapExternal,
@@ -90,7 +90,7 @@ describe("the list", () => {
   test("the prompt says the repositories and where to start", () => {
     expect(repositoriesPrompt([])).toBe("");
     const text = repositoriesPrompt(["acme/app", "walt/*"]);
-    expect(text).toContain("# Your GitHub repositories");
+    expect(text).toContain("# Your repositories");
     expect(text).toContain("acme/app, every repository of walt (walt/*)");
     expect(text).toContain("When nobody names a repository, work in acme/app.");
     expect(repositoriesPrompt(["walt/*"])).toContain("search the repositories of walt first (search_code)");
@@ -502,7 +502,10 @@ describe("enforcement in the Tool Gateway", () => {
     expect(allowed.result.isError).toBeUndefined();
     expect(mcp.calls.map((x) => `${x.tool} ${x.args.owner}/${x.args.repo}`)).toEqual(["pull_request_read acme/app"]);
     // What the engine takes at the end of the turn: the refused repository and the one it worked in.
-    expect(await takeBridgeEffects(f.db, ctx.runId)).toMatchObject({ deniedRepo: "acme/infra", repo: "acme/app" });
+    expect((await takeBridgeResult(f.db, ctx.runId)).effects).toMatchObject({
+      deniedRepo: "acme/infra",
+      repo: "acme/app",
+    });
   });
 
   test("open_pull_request outside the list never reaches GitHub", async () => {
@@ -698,6 +701,6 @@ describe("the organization's repositories", () => {
       f.owner.id,
       f.org.id,
     );
-    expect(listing).toEqual({ connected: false, accounts: [], truncated: false });
+    expect(listing).toEqual({ connected: false, accounts: [], elsewhere: [], truncated: false });
   });
 });

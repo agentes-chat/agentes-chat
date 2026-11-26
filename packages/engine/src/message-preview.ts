@@ -1,4 +1,16 @@
+import { plainLine } from "@agenteschat/ui/markdown";
+import { cutText } from "./format";
 import { type MessageMedia, mediaOf } from "./media";
+
+/** Length of a channel's last-message preview (plain text). */
+export const CHANNEL_PREVIEW_LENGTH = 140;
+
+/** Plain text for a card or a preview (`plainLine`), at most `max` chars. `@mentions` stay. */
+export function snippetOf(text: string | null | undefined, max: number): string {
+  if (!text) return "";
+  const plain = plainLine(text, max);
+  return plain.length > max ? `${cutText(plain, max - 1).trimEnd()}…` : plain;
+}
 
 /** `meta.voice` of a message (ADR 0100): all the apps need to draw and play it. */
 export interface MessageVoice {
@@ -9,6 +21,13 @@ export interface MessageVoice {
   expiresAt?: string;
   /** `body` is our placeholder, not what was said: never offered as the message's words. */
   noWords?: true;
+  /**
+   * `noWords` for a message with typed text: apps that predate `text` hide a `noWords` body, which holds the typed text
+   * too, so they show it whole in the transcript instead. Read as `noWords`.
+   */
+  unheard?: true;
+  /** What the person typed beside the take: `body` starts with it, then a blank line, then the words. */
+  text?: string;
 }
 
 /** A message's voice recording, if it is one. */
@@ -20,20 +39,23 @@ export function voiceOf(meta: Record<string, unknown> | null | undefined): Messa
         durationMs: v.durationMs,
         peaks: Array.isArray(v.peaks) ? v.peaks : [],
         ...(typeof v.expiresAt === "string" ? { expiresAt: v.expiresAt } : {}),
-        ...(v.noWords === true ? { noWords: true as const } : {}),
+        ...(v.noWords === true || v.unheard === true ? { noWords: true as const } : {}),
+        ...(typeof v.text === "string" && v.text ? { text: v.text } : {}),
       }
     : null;
 }
 
 /**
- * A message's text for what lists it (previews, notifications, quotes, snippets): none for a voice message (ADR 0100).
+ * A message's text for what lists it (previews, notifications, quotes, snippets): of a voice message only what was
+ * typed beside it, never its words (ADR 0100).
  * A notice's body is written for the agent, in English: only what people may read of it (a routine's report, a fast
  * reply, another agent's own answer), else nothing, as the chat's `noticeView` does. What happened on GitHub lists as
  * its line with who wrote it (the apps word it by `previewMeta`): the words alone, under the agent's name, would read
  * as the agent's.
  */
 export const readableBody = (body: string, meta: Record<string, unknown> | null | undefined) => {
-  if (voiceOf(meta)) return "";
+  const voice = voiceOf(meta);
+  if (voice) return voice.text ?? "";
   const notice = meta?.notice as { kind?: unknown; refs?: { answer?: unknown } } | undefined;
   if (!notice || typeof notice !== "object") return body;
   if (notice.kind === "routine_handoff" || notice.kind === "talker_reply" || notice.kind === "github_event")
@@ -61,13 +83,13 @@ export interface PreviewMeta {
   interrupted?: { text: string };
   brainInterrupted?: { brain?: string; text: string; tools?: string[] };
   memoryUpdates?: { action: string; text: string }[];
-  noAi?: { reason: string; own?: string; why?: string };
+  noAi?: { reason: string; own?: string; computer?: string; why?: string };
   /** What a computer brain's wait is on, and a usage wait's state: the chat's words depend on them. */
   brainUnavailable?: Record<string, unknown>;
   usageWait?: Record<string, unknown>;
   /** A GIF or a sticker (ADR 0091), as `meta.media`: a message of only that has no text to preview. */
   media?: MessageMedia;
-  /** A voice message (ADR 0100): its length, never its words. */
+  /** A voice message with nothing typed beside it (ADR 0100): its length, never its words. */
   voice?: { durationMs: number };
 }
 
@@ -79,7 +101,8 @@ export function previewMediaKind(
   body: string | null | undefined,
   meta: Record<string, unknown> | null | undefined,
 ): MessageMedia["kind"] | "voice" | null {
-  if (voiceOf(meta)) return "voice";
+  const voice = voiceOf(meta);
+  if (voice) return voice.text ? null : "voice";
   return (body ?? "").trim() === "" ? (mediaOf(meta)?.kind ?? null) : null;
 }
 
@@ -89,16 +112,18 @@ export function previewMeta(meta: Record<string, unknown> | null | undefined): P
   if (typeof meta.bodyCode === "string") out.bodyCode = meta.bodyCode;
   const media = mediaOf(meta);
   if (media) out.media = media;
+  // With typed text the list shows that text, in apps that predate it too.
   const voice = voiceOf(meta);
-  if (voice) out.voice = { durationMs: voice.durationMs };
+  if (voice && !voice.text) out.voice = { durationMs: voice.durationMs };
   if (meta.bodyParams && typeof meta.bodyParams === "object") {
     out.bodyParams = meta.bodyParams as Record<string, unknown>;
   }
-  const noAi = meta.noAi as { reason?: unknown; own?: unknown; why?: unknown } | undefined;
+  const noAi = meta.noAi as { reason?: unknown; own?: unknown; computer?: unknown; why?: unknown } | undefined;
   if (out.bodyCode === "no_ai" && typeof noAi?.reason === "string") {
     out.noAi = {
       reason: noAi.reason,
       ...(typeof noAi.own === "string" ? { own: noAi.own } : {}),
+      ...(typeof noAi.own === "string" && typeof noAi.computer === "string" ? { computer: noAi.computer } : {}),
       ...(typeof noAi.why === "string" ? { why: noAi.why } : {}),
     };
   }

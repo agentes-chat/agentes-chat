@@ -2,6 +2,7 @@ import { type Database, rowsOf, type SQL, sql } from "@agenteschat/db";
 import { nanoUsdToUsd } from "@agenteschat/providers";
 import { ANALYTICS_ROWS_MAX, analyticsRange } from "./connector-usage";
 import { getOrMake } from "./format";
+import { heavyRead } from "./operator-paging";
 import { apiNano, tokensOf } from "./plan-usage";
 import { runErrorDetail } from "./runs";
 
@@ -24,6 +25,7 @@ const FAILURE_OF: Record<string, Failure> = {
   "run.no_ai": "noAi",
   "run.missing_credential": "noAi",
   "run.credential_revoked": "noAi",
+  "run.credential_unreadable": "noAi",
   "run.credential_wrong_provider": "noAi",
   "run.agent_paused": "paused",
   "run.org_paused": "paused",
@@ -97,9 +99,17 @@ async function workAnalytics(db: Database, query: { from: string; to: string }, 
   // Waits for room are steps (`brain_unavailable`, `busy`), written once per wait; it lasts until the run's next step
   // (`roomFound` when the computer takes the turn), its end or now.
   const busyStep = sql`s.kind = 'error' and s.data->>'reason' = 'brain_unavailable' and s.data->>'code' = 'busy'`;
+  // How long the wait step `s` of the run `ar` lasted: until the run's next step, its end or now, like the peak below.
+  const waitSec = sql`extract(epoch from least(coalesce(
+    (select min(n.created_at) from agent_run_steps n where n.run_id = s.run_id and n.seq > s.seq),
+    ar.finished_at, now()), ${end}::timestamptz) - s.created_at)::float8`;
 
-  const [turnRows, failureRows, peakRows, tokenRows] = await Promise.all([
-    db.execute(sql`
+  const pct = (q: number, column: string, filter = "") =>
+    sql.raw(`percentile_cont(${q}) within group (order by ${column})${filter ? ` filter (where ${filter})` : ""}`);
+
+  const read = (query: SQL) => heavyRead(db, query);
+  const [turnRows, failureRows, peakRows, tokenRows, causeRows, profileRows] = await Promise.all([
+    read(sql`
       with r as (
         select ${runKey} as key, ${bucket(sql`ar.created_at`)} as at, ar.status,
           case
@@ -144,7 +154,7 @@ async function workAnalytics(db: Database, query: { from: string; to: string }, 
       from r group by grouping sets ((at), (key), ())`),
     // Failure reasons are read from the stored error like the app does (`runErrorDetail`); the texts with a
     // free-form tail are cut to their prefix so the groups stay few.
-    db.execute(sql`
+    read(sql`
       select ${GROUPS}, error, count(*)::int as n from (
         select ${runKey} as key, ${bucket(sql`ar.created_at`)} as at,
           case when ar.error like 'provider_error:%' then 'provider_error:'
@@ -152,7 +162,7 @@ async function workAnalytics(db: Database, query: { from: string; to: string }, 
         from agent_runs ar where ${runsIn} and ar.status = 'failed'
       ) f group by grouping sets ((at, error), (key, error), (error))`),
     // ponytail: only waits of runs created in the dates, a peak only where a wait starts or ends.
-    db.execute(sql`
+    read(sql`
       with w as (
         select ${runKey} as key, s.created_at as since,
           least(coalesce(
@@ -171,7 +181,7 @@ async function workAnalytics(db: Database, query: { from: string; to: string }, 
       select ${GROUPS}, max(everyone)::int as everyone, max(own)::int as own
       from (select key, ${bucket(sql`t`)} as at, everyone, own from c where t < ${end}::timestamptz) p
       group by grouping sets ((at), (key), ())`),
-    db.execute(sql`
+    read(sql`
       select ${GROUPS}, payer, model,
         sum(input_tokens)::float8 as input, sum(output_tokens)::float8 as output,
         sum(cache_read_tokens)::float8 as "cacheRead", sum(cache_write_tokens)::float8 as "cacheWrite",
@@ -190,6 +200,49 @@ async function workAnalytics(db: Database, query: { from: string; to: string }, 
           orgId ? sql` and org_id = ${orgId}` : sql``
         }
       ) u group by grouping sets ((at, payer, model), (key, payer, model), (payer, model), ())`),
+    // A reason is read by its own equality: each of `agent_run_steps`'s partial indexes on `run_id` holds one reason,
+    // and the planner reads the waits through an index only when the statement repeats its condition word for word.
+    read(sql`
+      with w as (
+        select 'brain_unavailable:' || coalesce(s.data->>'code', 'other') || coalesce(':' || (s.data->>'room'), '')
+          as cause, ${waitSec} as sec
+        from agent_runs ar join agent_run_steps s on s.run_id = ar.id
+        where ${runsIn} and s.kind = 'error' and s.data->>'reason' = 'brain_unavailable'
+        union all
+        select 'provider_outage', ${waitSec}
+        from agent_runs ar join agent_run_steps s on s.run_id = ar.id
+        where ${runsIn} and s.kind = 'error' and s.data->>'reason' = 'provider_outage'
+      )
+      select cause, count(*)::int as waits, ${pct(0.5, "sec")} as "medianSec", ${pct(0.9, "sec")} as "p90Sec"
+      from w group by cause order by waits desc, cause`),
+    // Each claim's stage profile and its computer turns' starts, kept with the run when it ends (`executeRun`), read
+    // once for both. From `profiles`, never the transcript: that would decompress every run's whole conversation.
+    read(sql`
+      with p as materialized (
+        select pr.value as p from agent_runs ar, jsonb_array_elements(ar.profiles) pr where ${runsIn}
+      ), b as (
+        select (t->>'warm')::boolean as warm, (t->>'initMs')::float8 as init, (t->>'firstEventMs')::float8 as first
+        from p, jsonb_array_elements(coalesce(p.p->'brain', '[]'::jsonb)) t
+      ), st as (
+        select regexp_replace(st->>'stage', '#[0-9]+$', '') as stage, (st->>'ms')::float8 as ms
+        from p, jsonb_array_elements(p.p->'stages') st
+      )
+      select (
+        select to_jsonb(s) from (
+          select count(*)::int as turns, count(*) filter (where warm)::int as warm,
+            ${pct(0.5, "init")} as "initMedianMs", ${pct(0.9, "init")} as "initP90Ms",
+            ${pct(0.5, "first", "warm")} as "warmFirstEventMedianMs",
+            ${pct(0.9, "first", "warm")} as "warmFirstEventP90Ms",
+            ${pct(0.5, "first", "not warm")} as "coldFirstEventMedianMs",
+            ${pct(0.9, "first", "not warm")} as "coldFirstEventP90Ms"
+          from b
+        ) s
+      ) as starts, (
+        select coalesce(jsonb_agg(g order by "medianMs" desc nulls last, stage), '[]'::jsonb) from (
+          select stage, count(*)::int as n, ${pct(0.5, "ms")} as "medianMs", ${pct(0.9, "ms")} as "p90Ms"
+          from st group by stage
+        ) g
+      ) as stages`),
   ]);
 
   const all = zeroRow();
@@ -293,6 +346,10 @@ async function workAnalytics(db: Database, query: { from: string; to: string }, 
     agentShare: row.turns.total > 0 ? Math.round((row.turns.agent / row.turns.total) * 1000) / 1000 : 0,
   });
   const perTurn = (n: number) => (turnsWithUsage > 0 ? Math.round(n / turnsWithUsage) : 0);
+  const round = (v: unknown) => (v === null || v === undefined ? null : Math.round(Number(v)));
+  type Pct = Record<string, number | null>;
+  const profiled = rowsOf<{ starts: Pct | null; stages: ({ stage: string; n: number } & Pct)[] }>(profileRows)[0];
+  const starts = profiled?.starts ?? {};
   const ranked = [...keyed]
     .map(([id, row]) => ({ id, ...out(row) }))
     .sort((a, b) => tokensOf(b.tokens) - tokensOf(a.tokens) || b.turns.total - a.turns.total);
@@ -310,6 +367,28 @@ async function workAnalytics(db: Database, query: { from: string; to: string }, 
         cacheRead: perTurn(inRuns.cacheRead),
         cacheWrite: perTurn(inRuns.cacheWrite),
       },
+      waitsByCause: rowsOf<{ cause: string; waits: number } & Pct>(causeRows).map((c) => ({
+        cause: c.cause,
+        waits: Number(c.waits),
+        medianSec: round(c.medianSec),
+        p90Sec: round(c.p90Sec),
+      })),
+      computerStarts: {
+        turns: Number(starts.turns ?? 0),
+        warm: Number(starts.warm ?? 0),
+        initMedianMs: round(starts.initMedianMs),
+        initP90Ms: round(starts.initP90Ms),
+        warmFirstEventMedianMs: round(starts.warmFirstEventMedianMs),
+        warmFirstEventP90Ms: round(starts.warmFirstEventP90Ms),
+        coldFirstEventMedianMs: round(starts.coldFirstEventMedianMs),
+        coldFirstEventP90Ms: round(starts.coldFirstEventP90Ms),
+      },
+      stages: (profiled?.stages ?? []).map((t) => ({
+        stage: t.stage,
+        runs: Number(t.n),
+        medianMs: round(t.medianMs),
+        p90Ms: round(t.p90Ms),
+      })),
     },
     series: [...series]
       .sort(([a], [b]) => a.localeCompare(b))

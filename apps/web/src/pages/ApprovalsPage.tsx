@@ -10,18 +10,20 @@ import {
   useDecideApprovals,
   usePostMessage,
   useRun,
+  useRunApprovalNow,
 } from "@agenteschat/client";
 import {
-  approvalCards,
-  approvalRuns,
+  APPROVAL_REASON_MAX,
+  approvalLines,
+  approvalPhase,
+  approveAllByAgent,
   approveAllScope,
-  approveAlwaysAlso,
-  approveAlwaysOn,
-  cardDeadline,
-  runKeys,
+  byAsked,
+  type LinePlace,
+  PHASE_STATUS,
 } from "@agenteschat/client/lib/approval-card";
 import { aheadPhase, approveAlwaysOffered } from "@agenteschat/client/lib/approval-kind";
-import { approvalOriginShort, approvalWords } from "@agenteschat/client/lib/approval-origin";
+import { approvalWords } from "@agenteschat/client/lib/approval-origin";
 import {
   type ApprovalEffect,
   type ApprovalUndo,
@@ -33,12 +35,12 @@ import {
 import {
   aheadEndLine,
   approvalDoing,
-  approvalGroupWaitsFor,
+  approvalOwnerOf,
   approvalWaitsFor,
   requesterDecidesLine,
 } from "@agenteschat/client/lib/approval-words";
 import { fromServer, itemName } from "@agenteschat/client/lib/connected";
-import { daysBetween, formatTime, joinNames, nextLabel, relativeTime, timeLeft } from "@agenteschat/client/lib/format";
+import { daysBetween, formatTime, nextLabel, relativeTime, timeLeft } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { connectorName } from "@agenteschat/client/lib/scopes";
 import { formatDuration, type ToolItem, toolItemsSaved, toolPhrase, workFromSteps } from "@agenteschat/client/lib/work";
@@ -49,37 +51,38 @@ import {
   Chip,
   cx,
   DetailsDialog,
-  EmptyState,
+  Disclosure,
   ExpiryFuse,
   type Fact,
   FactStrip,
-  GroupHeading,
   Icon,
   type IconName,
   Kbd,
+  LimitLine,
   Locked,
-  PageHeader,
-  SearchInput,
-  Segmented,
+  limitShown,
+  overLimit,
   StepTrack,
   type StepTrackStep,
   Tip,
-  Toolbar,
   WorkSweep,
 } from "@agenteschat/ui";
 import { Link } from "@tanstack/react-router";
 import type { TFunction } from "i18next";
 import {
+  createContext,
   type KeyboardEvent,
   type PointerEvent,
   type ReactElement,
   type ReactNode,
+  useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { AgentAvatar, AgentWho } from "@/components/AgentAvatar";
+import { AgentAvatar } from "@/components/AgentAvatar";
 import {
   AheadLine,
   ApproveAlways,
@@ -91,87 +94,45 @@ import {
   CancelAhead,
   decisionLabel,
 } from "@/components/ApprovalItem";
-import { ApprovalsTabs } from "@/components/ApprovalsTabs";
-import { ConnectorIcon } from "@/components/ConnectorCatalog";
+import { WhenAsksLink } from "@/components/ApprovalsLevelDialog";
+import { ConnectorIcon } from "@/components/ConnectorIcon";
+import { DetailsLink } from "@/components/details-link";
 import { EmailLetter } from "@/components/EmailLetter";
-import { HelpLink } from "@/components/HelpLink";
-import { ErrorState, LoadingCards } from "@/components/Loading";
-import {
-  MissionCommandsPending,
-  MissionsWaitingList,
-  missionsWaiting,
-  pendingCommandCount,
-  useMissionsWaitingYou,
-} from "@/components/missions/MissionWaiting";
 import { useOrg } from "@/components/org-context";
 import { colorOf, prepareBurst } from "@/components/Sky";
 import { TaskStepsBlock, useCallLogo } from "@/components/ToolCalls";
 import { useDirectory } from "@/hooks/useDirectory";
-import { useRightHandLook } from "@/hooks/useRightHandLook";
+import { useReveal } from "@/hooks/useReveal";
+import { useTextLimit } from "@/hooks/useTextLimit";
 import { TYPED_VALUES } from "@/i18n";
 import { inlineWords, Markdown } from "@/lib/markdown";
-import { useOpenParam } from "@/lib/open-param";
 import { useToast } from "@/lib/toast";
 import "./approvals.css";
 
-type Filter = "pending" | "approved" | "refused" | "expired" | "all";
-const FILTERS: Filter[] = ["pending", "approved", "refused", "expired", "all"];
 const TTL_MS = 24 * 3_600_000;
 const URGENT_MS = 3_600_000;
-/** Approved without a result for this long: it ran before results were kept (or the run died); stop showing "running". */
-const RUNNING_FOR_MS = 15 * 60_000;
 
-/** Where an approval goes on this screen. */
-export type ApprovalPhase =
-  | "waiting"
-  | "running"
-  | "scheduled"
-  | "done"
-  | "failed"
-  | "refused"
-  | "expired"
-  | "canceled";
-
-export function approvalPhase(a: Approval, now = Date.now()): ApprovalPhase {
-  if (a.status === "pending") return "waiting";
-  if (a.status === "approved") {
-    if (a.result) return a.result.ok ? "done" : "failed";
-    if (a.executedAt) return "done";
-    // Approved ahead: it waits for its time, when its routine's run does it.
-    if (aheadPhase(a) === "scheduled") return "scheduled";
-    const decided = a.decidedAt ? new Date(a.decidedAt).getTime() : 0;
-    return now - decided < RUNNING_FOR_MS ? "running" : "done";
-  }
-  return a.status;
+/** Each request's place on its card (`approvalLine`), for the rows and the review under them. */
+const LinesContext = createContext<ReadonlyMap<string, LinePlace>>(new Map());
+const useLinePlace = (a: Approval) => useContext(LinesContext).get(a.id);
+/** Where each of `list`'s requests stands (`approvalLines`), for the rows and reviews under it. */
+export function ApprovalLinesProvider({ list, children }: { list: readonly Approval[]; children: ReactNode }) {
+  const lines = useMemo(() => approvalLines([...list]), [list]);
+  return <LinesContext.Provider value={lines}>{children}</LinesContext.Provider>;
 }
+/** A request with its place on its card ("Criar issue (1 de 2)"): two requests of one kind tell apart by it. */
+const titleOnCard = (t: TFunction, b: Approval, place: Pick<LinePlace, "position" | "count"> | undefined) =>
+  place && place.count > 1
+    ? `${approvalTitle(t, b)} (${t("approvals.position", { n: place.position, total: place.count })})`
+    : approvalTitle(t, b);
+const usePhase = (a: Approval) => approvalPhase(a, Date.now(), useLinePlace(a));
 
-const bucketOf = (p: ApprovalPhase): Exclude<Filter, "all"> =>
-  p === "waiting" || p === "running"
-    ? "pending"
-    : p === "done" || p === "failed" || p === "scheduled"
-      ? "approved"
-      : p === "refused"
-        ? "refused"
-        : "expired";
-
-/** Waiting first, the one closest to expiring on top; running after them. */
+/** In the order the agents asked (each card's requests together at its first, `approvalCards`). */
 export function sortOpen(list: Approval[]) {
-  return [...list].sort((a, b) => {
-    const ra = approvalPhase(a) === "running" ? 1 : 0;
-    const rb = approvalPhase(b) === "running" ? 1 : 0;
-    return ra - rb || a.expiresAt.localeCompare(b.expiresAt);
-  });
+  return [...list].sort(byAsked);
 }
 
 const decidedAt = (a: Approval) => a.decidedAt ?? (a.status === "expired" ? a.expiresAt : a.createdAt);
-
-/** The top-level scalar values of the action (what the card shows; the details show them all). */
-function scalars(params: Record<string, unknown>) {
-  return Object.entries(params ?? {}).filter(
-    (e): e is [string, string | number | boolean] =>
-      typeof e[1] === "string" || typeof e[1] === "number" || typeof e[1] === "boolean",
-  );
-}
 
 /** A GitHub PR the action points at, when its values say so. */
 function prLink(a: Approval) {
@@ -183,351 +144,6 @@ function prLink(a: Approval) {
   if (!repo || (typeof pr !== "number" && typeof pr !== "string")) return null;
   const full = owner && !repo.includes("/") ? `${owner}/${repo}` : repo;
   return /^[\w.-]+\/[\w.-]+$/.test(full) && /^\d+$/.test(String(pr)) ? `https://github.com/${full}/pull/${pr}` : null;
-}
-
-/**
- * Aprovações: who waits on you, each request with its
- * exact action, then the history. Under the requests, the missions' command
- * cards and the decisions and reviews waiting on you in missions (ADR 0029).
- * The requests are a list; the open one (`?open=<id>`, else the first) reads beside it (`ReviewHead`, `ReviewBody`,
- * `DecisionBar`), the same review the details dialog shows on other pages.
- */
-export function ApprovalsPage() {
-  const { t } = useTranslation();
-  const { org } = useOrg();
-  const approvals = useApprovals(org.id);
-  const dir = useDirectory(org.id);
-  const channels = useChannels(org.id);
-  const [filter, setFilter] = useState<Filter>("pending");
-  const [q, setQ] = useState("");
-  const [openId, setOpenId] = useOpenParam();
-  const [refusing, setRefusing] = useState<string | null>(null);
-  // Unfolded runs, by card and `runKeys`: here, not in the run's card, which remounts when its card regroups.
-  const [openRuns, setOpenRuns] = useState<ReadonlySet<string>>(new Set());
-  const all = approvals.data ?? [];
-  const channelName = (id: string) => channels.data?.find((c) => c.id === id)?.name ?? "";
-  const query = q.trim().toLowerCase();
-  const look = useRightHandLook();
-  const matches = (a: Approval) =>
-    !query ||
-    [
-      approvalTitle(t, a),
-      dir.agentById.get(a.agentId)?.name ?? "",
-      channelName(a.channelId),
-      ...scalars(a.params).map(([, v]) => String(v)),
-    ]
-      .join(" ")
-      .toLowerCase()
-      .includes(query);
-  const open = sortOpen(all.filter((a) => bucketOf(approvalPhase(a)) === "pending"));
-  const decided = all
-    .filter((a) => bucketOf(approvalPhase(a)) !== "pending")
-    .sort((a, b) => decidedAt(b).localeCompare(decidedAt(a)));
-  const waiting = open.filter((a) => a.status === "pending");
-  const mine = waiting.filter((a) => a.canDecide);
-  const urgent = mine[0];
-  const urgentLeft = urgent && new Date(urgent.expiresAt).getTime() - Date.now();
-  const shownOpen = filter === "pending" || filter === "all" ? open.filter(matches) : [];
-  const shownDecided = decided.filter(
-    (a) => matches(a) && (filter === "all" || filter === "pending" || bucketOf(approvalPhase(a)) === filter),
-  );
-  // The rows in the order shown; the open one (`?open=<id>`), else the first, is the request beside the list.
-  const order = [...shownOpen, ...(filter === "pending" ? shownDecided.slice(0, 3) : shownDecided)].map((a) => a.id);
-  const selectedId = openId && order.includes(openId) ? openId : (order[0] ?? null);
-  const selected = all.find((a) => a.id === selectedId) ?? null;
-  const cardOf = new Map(approvalCards(shownOpen).flatMap((items) => items.map((a) => [a.id, items] as const)));
-  // A newly opened request starts at its top, not where the last one was scrolled to: in its own column on a wide
-  // window, in the page under the list on a narrow one.
-  useEffect(() => {
-    if (!selectedId) return;
-    const pane = document.querySelector<HTMLElement>(".ap-review");
-    if (!pane) return;
-    pane.scrollTop = 0;
-    if (pane.getBoundingClientRect().top < 0) pane.scrollIntoView?.({ block: "start" });
-  }, [selectedId]);
-  const selectedCard = selected ? cardOf.get(selected.id) : undefined;
-  const select = (id: string) => {
-    if (id !== selectedId) setRefusing(null);
-    setOpenId(id);
-  };
-  // Missions you own or decide in: the executor's commands and what waits on you (decisions, reviews).
-  const { missions } = useMissionsWaitingYou();
-  const commands = pendingCommandCount(missions);
-  const missionWaiting = missionsWaiting(missions).length > 0;
-  const missionsBelow = filter === "pending" && (commands > 0 || missionWaiting);
-  const waitingYou = mine.length + commands;
-
-  // J/K (and ↑/↓ inside the list) walk the requests, A approves the open one (high risk: focuses the hold), R
-  // refuses it, / searches, Escape backs out of refusing. A dialog over the page keeps its own keys.
-  useEffect(() => {
-    const onKey = (e: globalThis.KeyboardEvent) => {
-      const el = e.target instanceof Element ? e.target : null;
-      if (el?.closest("input, textarea, [contenteditable], [role=menu], [role=listbox], [role=dialog]")) return;
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      const key = e.key.toLowerCase();
-      const inList = Boolean(el?.closest(".ap-list"));
-      const down = key === "j" || (inList && e.key === "ArrowDown");
-      const up = key === "k" || (inList && e.key === "ArrowUp");
-      const step = down ? 1 : up ? -1 : 0;
-      if (e.key === "Escape") {
-        if (refusing) setRefusing(null);
-      } else if (e.key === "/") {
-        e.preventDefault();
-        document.querySelector<HTMLInputElement>(".ap-tools__search input")?.focus();
-      } else if (step !== 0) {
-        e.preventDefault();
-        const i = selectedId ? order.indexOf(selectedId) : -1;
-        const next = order[Math.max(0, Math.min(order.length - 1, i + step))];
-        if (next && next !== selectedId) {
-          setRefusing(null);
-          setOpenId(next);
-          document.querySelector<HTMLElement>(`.ap-li[data-id="${next}"]`)?.focus();
-        }
-      } else if ((key === "a" || key === "r") && selected) {
-        if (selected.status !== "pending" || !selected.canDecide) return;
-        e.preventDefault();
-        if (key === "r") setRefusing(selected.id);
-        else document.querySelector<HTMLElement>(`[data-approve="${selected.id}"]`)?.focus();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [order, selected, selectedId, refusing, setOpenId]);
-
-  const countOf = (f: Filter) =>
-    f === "all"
-      ? all.length
-      : all.filter((a) => bucketOf(approvalPhase(a)) === f).length + (f === "pending" ? commands : 0);
-  const waiters = [...new Set(mine.map((a) => a.agentId))];
-
-  return (
-    <div className="page page--list ap">
-      <div className="ap__main">
-        <PageHeader
-          title={t("approvals.title")}
-          meta={
-            waitingYou > 0 ? (
-              <>
-                {t("approvals.summary", { count: waitingYou })}
-                {urgentLeft && urgentLeft <= 2 * URGENT_MS
-                  ? ` · ${t("approvals.urgent", { time: timeLeft(t, urgent.expiresAt) ?? "" })}`
-                  : ""}
-              </>
-            ) : (
-              t("approvals.nothing")
-            )
-          }
-        />
-        <ApprovalsTabs value="requests" />
-        <Toolbar
-          label={t("approvals.filters")}
-          search={
-            <SearchInput
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder={t("approvals.search")}
-              aria-label={t("approvals.search")}
-              className="ap-tools__search"
-            />
-          }
-        >
-          <Segmented
-            label={t("approvals.filters")}
-            value={filter}
-            onValueChange={setFilter}
-            options={FILTERS.map((f) => ({ value: f, label: t(`approvals.filter.${f}`), count: countOf(f) }))}
-          />
-        </Toolbar>
-
-        {filter === "pending" && waiters.length > 1 && (
-          <div className="ap-waiters">
-            <span className="ap-waiters__faces">
-              {waiters.map((id) => (
-                <AgentAvatar key={id} agentId={id} name={dir.agentById.get(id)?.name ?? ""} size="sm" state="waiting" />
-              ))}
-            </span>
-            <span className="ap-waiters__text">
-              <Trans
-                i18nKey="approvals.waiters"
-                count={waiters.length}
-                values={{
-                  names: joinNames(
-                    waiters.map((id) => dir.agentById.get(id)?.name ?? ""),
-                    t,
-                  ),
-                }}
-                components={{ b: <b /> }}
-                {...TYPED_VALUES}
-              />
-            </span>
-          </div>
-        )}
-
-        {approvals.isLoading && <LoadingCards count={2} />}
-        {approvals.isError && !approvals.data && (
-          <ErrorState error={approvals.error} onRetry={() => void approvals.refetch()} />
-        )}
-        {approvals.isSuccess &&
-          filter === "pending" &&
-          shownOpen.length === 0 &&
-          !query &&
-          commands === 0 &&
-          !missionWaiting &&
-          shownDecided.length === 0 && (
-            <EmptyState size="page" agent={look} mood="deal" title={t("approvals.emptyTitle")}>
-              <HelpLink slug="approvals">{t("approvals.how")}</HelpLink>
-            </EmptyState>
-          )}
-        {approvals.isSuccess && query && shownOpen.length === 0 && shownDecided.length === 0 && (
-          <EmptyState size="panel" actions={<Button onClick={() => setQ("")}>{t("filters.clearSearch")}</Button>}>
-            {t("approvals.noResults")}
-          </EmptyState>
-        )}
-
-        {(shownOpen.length > 0 || shownDecided.length > 0) && (
-          // A split ends its page (over-pages.css): with the missions listed under it, the page scrolls as one.
-          <div className={cx("ap-split", !missionsBelow && "page-split")}>
-            <nav
-              className="ap-list"
-              data-scroll-restoration-id="approvals-list"
-              aria-label={t("approvals.review.list")}
-            >
-              {shownOpen.length > 0 &&
-                approvalCards(shownOpen).map((items) => {
-                  const always = approveAlwaysOn(items);
-                  const row = (a: Approval) => (
-                    <ReqRow key={a.id} approval={a} selected={selectedId === a.id} onOpen={() => select(a.id)} />
-                  );
-                  // Waiting requests of one kind in a row: one row that unfolds into them.
-                  // Keyed by `runKeys`: an unfolded run stays open while its requests are decided one by one.
-                  const runs = approvalRuns(items);
-                  const keys = runKeys(runs).map((key) => `${items[0]?.messageId ?? ""}:${key}`);
-                  const rows = runs.map((run, i) =>
-                    run.length > 1 && run[0] ? (
-                      <RunRow
-                        key={keys[i]}
-                        open={openRuns.has(keys[i] ?? "")}
-                        onToggle={() =>
-                          setOpenRuns((o) => {
-                            const next = new Set(o);
-                            if (!next.delete(keys[i] ?? "")) next.add(keys[i] ?? "");
-                            return next;
-                          })
-                        }
-                        run={run}
-                        items={items}
-                        always={always}
-                        agent={dir.agentById.get(run[0].agentId)}
-                      >
-                        {run.map(row)}
-                      </RunRow>
-                    ) : (
-                      run[0] && row(run[0])
-                    ),
-                  );
-                  const first = items[0];
-                  if (!first || runs.length < 2) return rows;
-                  // Requests sharing one card in the conversation: together, with "Aprovar tudo".
-                  const agent = dir.agentById.get(first.agentId);
-                  const partial = approveAllPartial(
-                    t,
-                    items,
-                    approvalGroupWaitsFor(
-                      items,
-                      dir.memberById.get(first.ownerUserId ?? agent?.ownerUserId ?? "")?.name,
-                    ),
-                  );
-                  return (
-                    <section key={first.messageId ?? first.id} className="ap-group" aria-label={agent?.name}>
-                      <div className="ap-group__head">
-                        <span className="ap-group__who">
-                          <Trans
-                            i18nKey="approvals.groupHead"
-                            count={items.length}
-                            values={{ name: agent?.name ?? t("channel.unknownAgent") }}
-                            components={{
-                              b: <AgentWho agentId={first.agentId} name={agent?.name ?? t("channel.unknownAgent")} />,
-                            }}
-                            {...TYPED_VALUES}
-                          />
-                        </span>
-                        <span className="ap-group__acts">
-                          <ApproveAll items={items} />
-                        </span>
-                      </div>
-                      {partial && <p className="ap-group__note">{partial}</p>}
-                      {rows}
-                    </section>
-                  );
-                })}
-              {filter === "pending"
-                ? shownDecided.length > 0 && (
-                    <section className="ap-list__section">
-                      <GroupHeading
-                        title={t("approvals.recent")}
-                        aside={
-                          <button type="button" className="ac-link ac-link--muted" onClick={() => setFilter("all")}>
-                            {t("approvals.seeHistory")}
-                          </button>
-                        }
-                      />
-                      <div className="ap-list__rows">
-                        {shownDecided.slice(0, 3).map((a) => (
-                          <ReqRow key={a.id} approval={a} selected={selectedId === a.id} onOpen={() => select(a.id)} />
-                        ))}
-                      </div>
-                    </section>
-                  )
-                : groups(shownDecided).map(([key, list]) => (
-                    <section key={key} className="ap-list__section">
-                      <GroupHeading title={t(`approvals.groups.${key}`)} count={list.length} />
-                      <div className="ap-list__rows">
-                        {list.map((a) => (
-                          <ReqRow key={a.id} approval={a} selected={selectedId === a.id} onOpen={() => select(a.id)} />
-                        ))}
-                      </div>
-                    </section>
-                  ))}
-            </nav>
-            {selected && (
-              <section
-                className="ap-review"
-                data-scroll-restoration-id="approvals-request"
-                data-burst=""
-                aria-label={approvalTitle(t, selected)}
-              >
-                <ReviewHead approval={selected} channel={channelName(selected.channelId)} />
-                <ReviewBody key={selected.id} approval={selected} channel={channelName(selected.channelId)} />
-                <DecisionBar
-                  approval={selected}
-                  refusing={refusing === selected.id}
-                  onRefuse={() => setRefusing(selected.id)}
-                  onCancelRefuse={() => setRefusing(null)}
-                  also={selectedCard ? approveAlwaysAlso(selectedCard, selected) : undefined}
-                  floating
-                />
-              </section>
-            )}
-          </div>
-        )}
-
-        {filter === "pending" && (
-          <div className="ac-groups">
-            <MissionCommandsPending missions={missions} query={query} />
-            <MissionsWaitingList missions={missions} query={query} />
-          </div>
-        )}
-        {approvals.isSuccess && filter !== "pending" && !query && shownOpen.length + shownDecided.length === 0 && (
-          <EmptyState
-            size="panel"
-            actions={<Button onClick={() => setFilter("pending")}>{t("filters.clearAll")}</Button>}
-          >
-            {t("approvals.noResults")}
-          </EmptyState>
-        )}
-      </div>
-    </div>
-  );
 }
 
 function groups(list: Approval[]): ["today" | "yesterday" | "earlier", Approval[]][] {
@@ -830,7 +446,17 @@ export function HoldToApprove({
  * may decide (one joining during the click is never approved unseen). Held when any of them is high risk.
  * Nothing when fewer than two are theirs: each item's own buttons do. `children` sit between the two ("Aprovar sempre").
  */
-export function ApproveAll({ items, label, children }: { items: Approval[]; label?: string; children?: ReactNode }) {
+export function ApproveAll({
+  items,
+  label,
+  refuseLabel,
+  children,
+}: {
+  items: Approval[];
+  label?: string;
+  refuseLabel?: string;
+  children?: ReactNode;
+}) {
   const { t } = useTranslation();
   const { org } = useOrg();
   const decide = useDecideApprovals(org.id);
@@ -856,9 +482,96 @@ export function ApproveAll({ items, label, children }: { items: Approval[]; labe
         loading={decide.isPending && decide.variables?.decision === "refuse"}
         onClick={() => decide.mutate({ ids, decision: "refuse" })}
       >
-        {t("approval.all.refuse")}
+        {refuseLabel ?? t("approval.all.refuse")}
       </Button>
     </>
+  );
+}
+
+/**
+ * An approved request still waiting for one asked before it (`approvalLine`): that request by name, which opens in
+ * place, and what moves it: deciding that one where this person may, or "Rodar este agora" when it is another run's
+ * (`canRunNow`).
+ */
+export function HeldLine({ approval: a, waitsOn }: { approval: Approval; waitsOn: Approval }) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const decide = useDecideApproval(org.id);
+  const runNow = useRunApprovalNow(org.id);
+  const busy = useApprovalsDeciding(org.id, [a.id, waitsOn.id]);
+  // Its own run's request is decided where it stands, beside it: only another run's gets buttons here.
+  const other = waitsOn.runId !== a.runId;
+  const decidable = other && waitsOn.status === "pending" && waitsOn.canDecide === true;
+  const freeable = other && a.canRunNow === true;
+  return (
+    <span className="ap-held">
+      <span className="ap-held__text">
+        <Trans
+          i18nKey="approval.held.waiting"
+          components={{
+            link: (
+              <DetailsLink item={{ kind: "approval", id: waitsOn.id }} className="ac-link">
+                {approvalTitle(t, waitsOn)}
+              </DetailsLink>
+            ),
+          }}
+        />
+      </span>
+      {(decidable || freeable) && (
+        <span className="ac-acts ap-held__acts">
+          {decidable && <ApproveButton approval={waitsOn} />}
+          {decidable && (
+            <Button
+              size="sm"
+              disabled={busy}
+              loading={decide.isPending}
+              onClick={() => decide.mutate({ id: waitsOn.id, decision: "refuse" })}
+            >
+              {t("approval.refuse")}
+            </Button>
+          )}
+          {freeable && (
+            <Button size="sm" disabled={busy} loading={runNow.isPending} onClick={() => runNow.mutate({ id: a.id })}>
+              {t("approval.held.runNow")}
+            </Button>
+          )}
+        </span>
+      )}
+    </span>
+  );
+}
+
+/**
+ * "Aprovar todos" / "Recusar todos" per agent, over all of its cards: one line for each agent with two or more
+ * requests this person may decide (`approveAllByAgent`), deciding exactly those, as each card's "Aprovar tudo" does.
+ */
+export function ApproveAllByAgent({ list }: { list: readonly Approval[] }) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const dir = useDirectory(org.id);
+  const groups = approveAllByAgent(list);
+  if (groups.length === 0) return null;
+  return (
+    <ul className="ap-agents" aria-label={t("approval.byAgent.approve")}>
+      {groups.map((g) => {
+        const name = dir.agentById.get(g.agentId)?.name ?? t("channel.unknownAgent");
+        return (
+          <li key={g.agentId} className="ap-agents__row ac-tailrow">
+            <span className="ap-agents__who ac-who">
+              <AgentAvatar agentId={g.agentId} name={name} size="xs" />
+              {t("approval.byAgent.head", { count: g.ids.length, name })}
+            </span>
+            <span className="ac-acts">
+              <ApproveAll
+                items={g.items}
+                label={t("approval.byAgent.approve")}
+                refuseLabel={t("approval.byAgent.refuse")}
+              />
+            </span>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
@@ -885,8 +598,11 @@ export function RefuseBox({ approval, agent, onCancel }: { approval: Approval; a
   const g = agentGrammar(agent?.name ?? "");
   const id = `ap-reason-${approval.id}`;
   const ref = useRef<HTMLTextAreaElement>(null);
+  const limit = useTextLimit(APPROVAL_REASON_MAX);
+  const tooLong = overLimit(reason, limit);
   useEffect(() => ref.current?.focus(), []);
   const send = () =>
+    !tooLong &&
     decide.mutate(
       { id: approval.id, decision: "refuse", reason: reason.trim() || undefined },
       { onSuccess: () => toast.show(t("approvals.refused", { name: g.name }), "info") },
@@ -901,12 +617,15 @@ export function RefuseBox({ approval, agent, onCancel }: { approval: Approval; a
           rows={2}
           value={reason}
           placeholder={t("approvals.refusePlaceholder")}
+          aria-invalid={tooLong || undefined}
+          aria-describedby={limitShown(reason, limit) ? `${id}-limit` : undefined}
           onChange={(e) => setReason(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) send();
             if (e.key === "Escape") onCancel();
           }}
         />
+        <LimitLine id={`${id}-limit`} value={reason} limit={limit} />
         <div className="ap-refuse__suggest">
           {SUGGESTIONS.map((s) => (
             <button key={s} type="button" onClick={() => setReason(t(`approvals.suggest.${s}`))}>
@@ -920,7 +639,14 @@ export function RefuseBox({ approval, agent, onCancel }: { approval: Approval; a
             <Button variant="ghost" size="sm" onClick={onCancel}>
               {t("approvals.back")}
             </Button>
-            <Button variant="danger" size="sm" kbd={["⌘", "↵"]} loading={decide.isPending} onClick={send}>
+            <Button
+              variant="danger"
+              size="sm"
+              kbd={["⌘", "↵"]}
+              disabled={tooLong}
+              loading={decide.isPending}
+              onClick={send}
+            >
               {t("approvals.refuseConfirm")}
             </Button>
           </span>
@@ -937,11 +663,15 @@ function ReqRow({ approval: a, selected, onOpen }: { approval: Approval; selecte
   const dir = useDirectory(org.id);
   const agent = dir.agentById.get(a.agentId);
   const name = agent?.name ?? t("channel.unknownAgent");
-  const p = approvalPhase(a);
+  const p = usePhase(a);
+  const place = useLinePlace(a);
   const via = useApprovalVia(a);
   const leftMs = new Date(a.expiresAt).getTime() - Date.now();
-  const waits = approvalWaitsFor(a, dir.memberById.get(a.ownerUserId ?? agent?.ownerUserId ?? "")?.name);
+  // Its owner by name, a person's or a role's (ADR 0085, addendum of 2026-11-21): "Waiting for Engineering".
+  const waits = approvalWaitsFor(a, dir.ownerName(approvalOwnerOf(a, agent)));
   const where = approvalTarget(a) ?? via.name;
+  // On its way (waiting for you, in line, running): when it was asked; decided: who decided and when.
+  const live = p === "waiting" || p === "queued" || p === "running";
   const end =
     p === "waiting" ? (
       <span className={cx("ap-li__left", leftMs <= URGENT_MS && "is-urgent")}>
@@ -967,13 +697,15 @@ function ReqRow({ approval: a, selected, onOpen }: { approval: Approval; selecte
           agentId={a.agentId}
           name={name}
           size="sm"
-          state={p === "waiting" ? "waiting" : p === "running" ? "writing" : "idle"}
-          expression={p === "done" ? "happy" : p === "refused" || p === "expired" ? "closed" : undefined}
+          state={p === "waiting" || p === "queued" ? "waiting" : p === "running" ? "writing" : "idle"}
+          expression={
+            p === "done" ? "happy" : p === "refused" || p === "expired" || p === "notRun" ? "closed" : undefined
+          }
         />
       </span>
       <span className="ac-mediarow__head">
         <span className="ap-li__line">
-          {p === "waiting" || p === "running" ? (
+          {live ? (
             <Trans
               i18nKey="notifications.wait.wants"
               values={{ name, action: approvalDoing(t, a, i18n.language) }}
@@ -991,7 +723,9 @@ function ReqRow({ approval: a, selected, onOpen }: { approval: Approval; selecte
           <ViaGlyph via={via} />
           {where && <span className="ap-li__where">{where}</span>}
           <span className="ap-li__when">
-            {p === "waiting" || p === "running"
+            {/* Its place on its card, in the order the agent asked, when it shares one. */}
+            {place && place.count > 1 && `${t("approvals.position", { n: place.position, total: place.count })} · `}
+            {live
               ? relativeTime(t, i18n.language, a.createdAt)
               : decisionLabel(t, i18n.language, a, me.user.id, dir.memberById)}
           </span>
@@ -1002,68 +736,6 @@ function ReqRow({ approval: a, selected, onOpen }: { approval: Approval; selecte
   );
 }
 
-/**
- * Several waiting requests of one kind in a row from one agent, as one row: "3 pedidos de Ada para Executar sql",
- * "Aprovar todos", "Aprovar sempre" where its kind offers it, and "Ver cada um" unfolding each request's own row.
- */
-function RunRow({
-  run,
-  items,
-  always,
-  agent,
-  open,
-  onToggle,
-  children,
-}: {
-  run: Approval[];
-  items: Approval[];
-  always: Set<string>;
-  agent: Agent | undefined;
-  open: boolean;
-  onToggle: () => void;
-  children: ReactNode;
-}) {
-  const { t } = useTranslation();
-  const { org } = useOrg();
-  const deciding = useApprovalsDeciding(
-    org.id,
-    run.map((a) => a.id),
-  );
-  const first = run[0];
-  if (!first) return null;
-  const name = agent?.name ?? t("channel.unknownAgent");
-  const head = t("approval.run.head", { count: run.length, name, what: approvalTitle(t, first) });
-  const lead = run.find((a) => always.has(a.id) && a.canDecide);
-  const deadline = cardDeadline(run) ?? first.expiresAt;
-  const leftMs = new Date(deadline).getTime() - Date.now();
-  return (
-    <section className="ap-run" data-burst="" aria-label={head}>
-      <div className="ac-mediarow ac-mediarow--row">
-        <span className="ac-mediarow__face">
-          <AgentAvatar agentId={first.agentId} name={name} size="sm" state="waiting" />
-        </span>
-        <span className="ac-mediarow__head">
-          <b className="ap-li__line">{head}</b>
-        </span>
-        <span className={cx("ac-mediarow__end ap-li__left", leftMs <= URGENT_MS && "is-urgent")}>
-          {expiryText(t, { expiresAt: deadline })}
-        </span>
-      </div>
-      <div className="ap-run__acts">
-        <Locked when={deciding}>
-          <ApproveAll items={run} label={t("approval.run.approve")}>
-            {lead && <ApproveAlways approval={lead} agent={agent} also={approveAlwaysAlso(items, lead)} />}
-          </ApproveAll>
-        </Locked>
-      </div>
-      <Button variant="link" className="ap-run__more" aria-expanded={open} onClick={onToggle}>
-        {t("approval.run.show")}
-      </Button>
-      {open && <div className="ap-run__items">{children}</div>}
-    </section>
-  );
-}
-
 const EFFECT_ICON: Record<ApprovalEffect, IconName> = {
   external: "send",
   production: "cloud",
@@ -1071,55 +743,8 @@ const EFFECT_ICON: Record<ApprovalEffect, IconName> = {
   readsOnly: "eye",
 };
 const UNDO_ICON: Record<ApprovalUndo, IconName> = { irreversible: "alert", reversible: "undo", deletable: "undo" };
-/** Its text folds past this many characters ("Ver inteiro"). */
+/** Its text folds past this many characters ("Ver mais"). */
 const TEXT_FOLD = 360;
-
-/** The request's head on the page: the agent, who asked and from where, and the action in one line. */
-function ReviewHead({ approval: a, channel }: { approval: Approval; channel: string }) {
-  const { t, i18n } = useTranslation();
-  const { org } = useOrg();
-  const dir = useDirectory(org.id);
-  const agent = dir.agentById.get(a.agentId);
-  const name = agent?.name ?? t("channel.unknownAgent");
-  const p = approvalPhase(a);
-  const origin = approvalOriginShort(a);
-  const tt = t as unknown as (key: string, options?: Record<string, unknown>) => string;
-  const title = approvalTitle(t, a);
-  const by = [
-    agent?.role,
-    origin ? tt(origin.key, origin.values) : "",
-    channel ? `#${channel}` : "",
-    relativeTime(t, i18n.language, a.createdAt),
-  ]
-    .filter(Boolean)
-    .join(" · ");
-  return (
-    <header className="ap-review__head ac-mediarow">
-      <span className="ac-mediarow__face">
-        <AgentAvatar
-          agentId={a.agentId}
-          name={name}
-          size="md"
-          state={p === "running" ? "writing" : p === "waiting" ? "waiting" : "idle"}
-          running={p === "running"}
-          expression={p === "done" ? "happy" : undefined}
-        />
-      </span>
-      <p className="ap-review__by ac-mediarow__head">
-        <b>{name}</b>
-        <span className="ac-mediarow__meta">{by}</span>
-      </p>
-      <div className="ac-mediarow__body">
-        <div className="ap-review__titleline">
-          <h2 className="ap-review__title" title={title}>
-            {title}
-          </h2>{" "}
-          <UndoChip approval={a} />
-        </div>
-      </div>
-    </header>
-  );
-}
 
 /** Whether what it does can be undone, as a chip after the request's title (on the page and in the dialog). */
 function UndoChip({ approval: a }: { approval: Approval }) {
@@ -1144,9 +769,13 @@ function ReviewBody({ approval: a, channel }: { approval: Approval; channel: str
   const dir = useDirectory(org.id);
   const agent = dir.agentById.get(a.agentId);
   const name = agent?.name ?? t("channel.unknownAgent");
-  const p = approvalPhase(a);
+  const p = usePhase(a);
+  // Won't happen (refused, kept from running, expired, canceled): what it would have done, not what it did.
+  const never = p === "refused" || p === "notRun" || p === "expired" || p === "canceled";
   const via = useApprovalVia(a);
   const [unfold, setUnfold] = useState(false);
+  const textBox = useRef<HTMLDivElement>(null);
+  const reveal = useReveal(textBox, unfold);
   const [steps, setSteps] = useState(false);
   const [tech, setTech] = useState(false);
   const { effect } = approvalEffects(a);
@@ -1155,7 +784,11 @@ function ReviewBody({ approval: a, channel }: { approval: Approval; channel: str
   const why = approvalWords(a);
   const pr = prLink(a);
   const leftMs = new Date(a.expiresAt).getTime() - Date.now();
-  const waits = approvalWaitsFor(a, dir.memberById.get(a.ownerUserId ?? agent?.ownerUserId ?? "")?.name);
+  const owner = approvalOwnerOf(a, agent);
+  const waits = approvalWaitsFor(a, dir.ownerName(owner));
+  // A role answers for it (ADR 0085, addendum of 2026-11-21): who can decide reads that anyone holding it may, and the
+  // first decision counts. A request that named its deciders (`approvers`) is theirs.
+  const ownerRole = owner.ownerRoleId && !a.approvers?.label ? dir.roleName(owner.ownerRoleId) : undefined;
   const facts: Fact[] = [
     {
       key: "where",
@@ -1189,11 +822,30 @@ function ReviewBody({ approval: a, channel }: { approval: Approval; channel: str
         }
       : {
           key: "when",
-          icon: p === "done" ? "check" : p === "failed" ? "alert" : "clock",
+          icon:
+            p === "done"
+              ? "check"
+              : p === "failed"
+                ? "alert"
+                : p === "queued"
+                  ? "waiting"
+                  : p === "notRun"
+                    ? "block"
+                    : "clock",
           label: t("approvals.review.state"),
           value: t(`approvals.status.${PHASE_STATUS[p]}`),
           tone: p === "done" ? "done" : p === "failed" ? "waiting" : undefined,
         },
+    ...(p === "waiting" && a.canDecide && ownerRole
+      ? [
+          {
+            key: "decides",
+            icon: "person" as const,
+            label: t("approvals.review.decides"),
+            value: t("approvals.review.decidesRole", { role: ownerRole }),
+          },
+        ]
+      : []),
   ];
 
   const logo = useCallLogo();
@@ -1212,8 +864,8 @@ function ReviewBody({ approval: a, channel }: { approval: Approval; channel: str
     ...lines.map((l) => ({
       key: l.key,
       icon: logo(l),
-      label: toolPhrase(t, l),
-      title: [toolPhrase(t, l), l.hint].filter(Boolean).join(" · "),
+      label: toolPhrase(t, l, i18n.language),
+      title: [toolPhrase(t, l, i18n.language), l.hint].filter(Boolean).join(" · "),
       state: l.state === "fail" ? ("failed" as const) : ("done" as const),
     })),
     {
@@ -1237,13 +889,13 @@ function ReviewBody({ approval: a, channel }: { approval: Approval; channel: str
     ...afterLines.map((l) => ({
       key: `after-${l.key}`,
       icon: logo(l),
-      label: toolPhrase(t, l),
-      title: [toolPhrase(t, l), l.hint].filter(Boolean).join(" · "),
+      label: toolPhrase(t, l, i18n.language),
+      title: [toolPhrase(t, l, i18n.language), l.hint].filter(Boolean).join(" · "),
       state: l.state === "fail" ? ("failed" as const) : ("after" as const),
     })),
   ];
   const durationMs = around ? workFromSteps(around.before, run.data?.run).durationMs : null;
-  const long = (text?.text.length ?? 0) > TEXT_FOLD || (text?.text.split("\n").length ?? 0) > 6;
+  const folded = !unfold && ((text?.text.length ?? 0) > TEXT_FOLD || (text?.text.split("\n").length ?? 0) > 6);
 
   return (
     <div className="ap-review__body">
@@ -1251,9 +903,10 @@ function ReviewBody({ approval: a, channel }: { approval: Approval; channel: str
       <AheadLine approval={a} className="ap-card__ahead" />
       <Outcome approval={a} agent={agent} />
 
+      {/* One surface: the agent's why and what it will do as plain sections, how it got here one closed line. */}
       {why && (
-        <Card className="ap-review__card">
-          <CardHeader icon="message" title={t("approvals.review.why", { name })} />
+        <section className="ap-review__sect" aria-label={t("approvals.review.why", { name })}>
+          <h3 className="ac-grouphead">{t("approvals.review.why", { name })}</h3>
           <p className="ap-review__why">{inlineWords(why)}</p>
           {a.issue && (
             <Link
@@ -1264,33 +917,48 @@ function ReviewBody({ approval: a, channel }: { approval: Approval; channel: str
               #{a.issue.number} {a.issue.title}
             </Link>
           )}
-        </Card>
+        </section>
       )}
 
-      <Card className="ap-review__card">
-        <CardHeader
-          icon={a.email ? "mail" : text ? "edit" : "approve"}
-          title={
-            a.email
-              ? t("approvals.review.email")
-              : text
-                ? t(p === "done" ? "approvals.review.textDone" : "approvals.review.text")
-                : t(p === "waiting" ? "approvals.review.values" : "approvals.review.valuesDone")
-          }
-          subtitle={[via.name, target].filter(Boolean).join(" · ") || undefined}
-          action={
-            text && long ? (
-              <Button variant="ghost" size="sm" aria-expanded={unfold} onClick={() => setUnfold((o) => !o)}>
-                {unfold ? t("approvals.review.less") : t("approvals.review.more")}
-              </Button>
-            ) : undefined
-          }
-        />
+      <section className="ap-review__sect">
+        <h3 className="ac-grouphead">
+          {a.email
+            ? t("approvals.review.email")
+            : text
+              ? t(
+                  p === "done"
+                    ? "approvals.review.textDone"
+                    : never
+                      ? "approvals.review.textNot"
+                      : "approvals.review.text",
+                )
+              : t(
+                  p === "done" || p === "failed"
+                    ? "approvals.review.valuesDone"
+                    : never
+                      ? "approvals.review.valuesNot"
+                      : "approvals.review.values",
+                )}
+        </h3>
         {a.email ? (
           <EmailLetter email={a.email} full />
         ) : text ? (
-          <div className={cx("ap-review__text", long && !unfold && "is-folded")}>
-            <Markdown source={text.text} variant="message" />
+          <div>
+            <div ref={textBox} className={cx("ap-review__text", folded && "is-folded")}>
+              <Markdown source={text.text} variant="message" />
+            </div>
+            {folded && (
+              <button
+                type="button"
+                className="ac-link folded-body__more"
+                onClick={() => {
+                  reveal();
+                  setUnfold(true);
+                }}
+              >
+                {t("channel.long.more")}
+              </button>
+            )}
           </div>
         ) : (
           <ExactAction approval={a} bare />
@@ -1300,27 +968,18 @@ function ReviewBody({ approval: a, channel }: { approval: Approval; channel: str
             {t("approvals.panel.openPr")}
           </a>
         )}
-      </Card>
+      </section>
 
-      <Card className="ap-review__card">
-        <CardHeader
-          icon="layers"
-          title={t("approvals.review.trail")}
-          subtitle={
-            around
-              ? [t("chat.work.steps", { count: track.length }), durationMs ? formatDuration(t, durationMs) : ""]
-                  .filter(Boolean)
-                  .join(" · ")
-              : undefined
-          }
-          action={
-            lines.length + afterLines.length > 0 ? (
-              <Button variant="ghost" size="sm" aria-expanded={steps} onClick={() => setSteps((o) => !o)}>
-                {steps ? t("approvals.review.hideSteps") : t("approvals.review.showSteps")}
-              </Button>
-            ) : undefined
-          }
-        />
+      <Disclosure
+        className="ap-review__trail"
+        summary={[
+          t("approvals.review.trail"),
+          around ? t("chat.work.steps", { count: track.length }) : "",
+          durationMs ? formatDuration(t, durationMs) : "",
+        ]
+          .filter(Boolean)
+          .join(" · ")}
+      >
         <StepTrack
           steps={track}
           className="ap-review__track"
@@ -1342,8 +1001,18 @@ function ReviewBody({ approval: a, channel }: { approval: Approval; channel: str
             <code>{`${a.tool}\n${JSON.stringify(a.params ?? {}, null, 2)}`}</code>
           </pre>
         )}
-        {(channel || text) && (
-          <p className="ac-card__foot ap-review__foot">
+        {(channel || text || lines.length + afterLines.length > 0) && (
+          <p className="ap-review__foot">
+            {lines.length + afterLines.length > 0 && (
+              <button type="button" className="ap-link" aria-expanded={steps} onClick={() => setSteps((o) => !o)}>
+                {steps ? t("approvals.review.hideSteps") : t("approvals.review.showSteps")}
+              </button>
+            )}
+            {text && (
+              <button type="button" className="ap-link" aria-expanded={tech} onClick={() => setTech((o) => !o)}>
+                {t("approvals.technical")}
+              </button>
+            )}
             {channel && (
               <Link
                 className="ap-link"
@@ -1354,31 +1023,12 @@ function ReviewBody({ approval: a, channel }: { approval: Approval; channel: str
                 {t("approvals.panel.viewChannel", { channel })}
               </Link>
             )}
-            {text && (
-              <button type="button" className="ap-link" aria-expanded={tech} onClick={() => setTech((o) => !o)}>
-                {t("approvals.technical")}
-              </button>
-            )}
           </p>
         )}
-      </Card>
+      </Disclosure>
     </div>
   );
 }
-
-/** The `approvals.status.*` word of each phase. */
-const PHASE_STATUS: Record<
-  Exclude<ApprovalPhase, "waiting">,
-  "approved" | "failed" | "refused" | "expired" | "running" | "canceled" | "scheduled"
-> = {
-  running: "running",
-  scheduled: "scheduled",
-  done: "approved",
-  failed: "failed",
-  refused: "refused",
-  expired: "expired",
-  canceled: "canceled",
-};
 
 /**
  * The decision, in one bar of buttons: Refuse and Approve ("Aprovar sempre" before them where its kind offers it), what
@@ -1406,8 +1056,19 @@ function DecisionBar({
   const agent = dir.agentById.get(a.agentId);
   const name = agent?.name ?? t("channel.unknownAgent");
   const g = agentGrammar(name);
-  const p = approvalPhase(a);
+  const p = usePhase(a);
+  const place = useLinePlace(a);
+  const waitsOn = place?.waitsOn;
   const deciding = useApprovalsDeciding(org.id, [a.id]);
+  // Approved, its turn not come yet: it runs once what the agent asked before it is decided and done.
+  if (p === "queued" && waitsOn)
+    return (
+      <div className={cx("ap-bar", floating && "ap-bar--float")}>
+        <p className="ap-bar__text">
+          <HeldLine approval={a} waitsOn={waitsOn} />
+        </p>
+      </div>
+    );
   if (p === "running")
     return (
       <div className={cx("ap-bar", floating && "ap-bar--float")}>
@@ -1436,8 +1097,9 @@ function DecisionBar({
         ? t("approvals.clickNoteAhead", { when: nextLabel(i18n.language, a.runAt) })
         : t("approvals.review.grants", { name, doing: approvalDoing(t, a, i18n.language) });
   return (
-    <div className={cx("ap-bar ap-bar--acts", floating && "ap-bar--float")}>
-      <div className="ap-bar__acts">
+    <div className={cx("ap-bar ap-bar--acts ac-tailrow", floating && "ap-bar--float")}>
+      <WhenAsksLink approval={a} agent={agent} className="ap-bar__when" />
+      <div className="ap-bar__acts ac-tail">
         <Locked when={deciding}>
           {approveAlwaysOffered(a) && <ApproveAlways approval={a} agent={agent} also={also} />}
           <Button size="sm" onClick={onRefuse}>
@@ -1454,21 +1116,25 @@ function DecisionBar({
 /** A decided request's state at the end of its list row: only its icon (the row's line already says who decided). */
 function PhaseMark({ approval }: { approval: Approval }) {
   const { t } = useTranslation();
-  const p = approvalPhase(approval);
-  const [icon, key]: [IconName, "approved" | "failed" | "refused" | "expired" | "running" | "canceled" | "scheduled"] =
-    p === "done"
-      ? ["check", "approved"]
-      : p === "scheduled"
-        ? ["calendar", "scheduled"]
-        : p === "failed"
-          ? ["alert", "failed"]
-          : p === "refused"
-            ? ["close", "refused"]
-            : p === "expired"
-              ? ["clock", "expired"]
-              : p === "running"
-                ? ["play", "running"]
-                : ["block", "canceled"];
+  const p = usePhase(approval);
+  const [icon, key]: [IconName, (typeof PHASE_STATUS)[keyof typeof PHASE_STATUS]] =
+    p === "queued"
+      ? ["waiting", "queued"]
+      : p === "notRun"
+        ? ["block", "notRun"]
+        : p === "done"
+          ? ["check", "approved"]
+          : p === "scheduled"
+            ? ["calendar", "scheduled"]
+            : p === "failed"
+              ? ["alert", "failed"]
+              : p === "refused"
+                ? ["close", "refused"]
+                : p === "expired"
+                  ? ["clock", "expired"]
+                  : p === "running"
+                    ? ["play", "running"]
+                    : ["block", "canceled"];
   const label = t(`approvals.status.${key}`);
   return (
     <span className={cx("ap-li__state", `is-${p}`)} role="img" aria-label={label} title={label}>
@@ -1513,21 +1179,24 @@ export function ApprovalDetailsDialog({ approvalId, onClose }: { approvalId: str
   const approvals = useApprovals(org.id);
   const channels = useChannels(org.id);
   const [refusing, setRefusing] = useState(false);
-  const all = approvals.data ?? [];
+  const all = useMemo(() => approvals.data ?? [], [approvals.data]);
+  const lines = useMemo(() => approvalLines(all), [all]);
   const approval = all.find((a) => a.id === approvalId);
   useEffect(() => {
     if (approvals.isSuccess && !approval) onClose();
   }, [approvals.isSuccess, approval, onClose]);
   if (!approval) return null;
   return (
-    <ApprovalDetails
-      approval={approval}
-      channel={channels.data?.find((c) => c.id === approval.channelId)?.name ?? ""}
-      refusing={refusing}
-      onRefuse={() => setRefusing(true)}
-      onCancelRefuse={() => setRefusing(false)}
-      onClose={onClose}
-    />
+    <LinesContext.Provider value={lines}>
+      <ApprovalDetails
+        approval={approval}
+        channel={channels.data?.find((c) => c.id === approval.channelId)?.name ?? ""}
+        refusing={refusing}
+        onRefuse={() => setRefusing(true)}
+        onCancelRefuse={() => setRefusing(false)}
+        onClose={onClose}
+      />
+    </LinesContext.Provider>
   );
 }
 
@@ -1552,7 +1221,7 @@ function ApprovalDetails({
   const dir = useDirectory(org.id);
   const agent = dir.agentById.get(a.agentId);
   const name = agent?.name ?? t("channel.unknownAgent");
-  const p = approvalPhase(a);
+  const p = usePhase(a);
   return (
     <DetailsDialog
       open
@@ -1572,7 +1241,7 @@ function ApprovalDetails({
           agentId={a.agentId}
           name={name}
           size="md"
-          state={p === "running" ? "writing" : p === "waiting" ? "waiting" : "idle"}
+          state={p === "running" ? "writing" : p === "waiting" || p === "queued" ? "waiting" : "idle"}
           running={p === "running"}
           expression={p === "done" ? "happy" : undefined}
         />
@@ -1607,7 +1276,10 @@ function Outcome({ approval: a, agent }: { approval: Approval; agent: Agent | un
   const [returned, setReturned] = useState(false);
   const name = agent?.name ?? t("channel.unknownAgent");
   const g = agentGrammar(name);
-  const p = approvalPhase(a);
+  const p = usePhase(a);
+  // Kept from running: the request asked before it whose refusal or expiry did that.
+  const earlier = useApprovals(org.id).data?.find((x) => x.id === a.result?.notRunAfter);
+  const earlierPlace = useContext(LinesContext).get(earlier?.id ?? "");
   if (p === "waiting") return null;
   const who =
     a.decidedByUserId === me.user.id
@@ -1615,28 +1287,46 @@ function Outcome({ approval: a, agent }: { approval: Approval; agent: Agent | un
       : (dir.memberById.get(a.decidedByUserId ?? "")?.name ?? "");
   const when = a.decidedAt ? relativeTime(t, i18n.language, a.decidedAt) : "";
   const approvedBy = t("approvals.panel.approvedBy", { name: who, when });
+  const notRunLine = !earlier
+    ? t("approvals.notRunEarlier")
+    : earlier.status === "refused"
+      ? t("approvals.notRunRefused", { title: titleOnCard(t, earlier, earlierPlace) })
+      : t("approvals.notRunExpired", { title: titleOnCard(t, earlier, earlierPlace) });
   const [icon, title, subtitle]: [IconName, string, string | undefined] =
-    p === "running"
-      ? ["play", t("approvals.panel.runningLine", { context: g.context, name }), approvedBy]
-      : p === "done"
-        ? ["check", t("approvals.panel.done"), approvedBy]
-        : p === "failed"
-          ? ["alert", t("approvals.panel.failed"), approvedBy]
-          : p === "refused"
-            ? [
-                "close",
-                t("approvals.panel.refusedBy", { name: who, when }),
-                a.reason ? `“${a.reason}”` : t("approvals.panel.noReason"),
-              ]
-            : p === "scheduled"
-              ? [
-                  "calendar",
-                  a.runAt ? t("approval.ahead.scheduled", { when: nextLabel(i18n.language, a.runAt) }) : "",
-                  approvedBy,
-                ]
-              : p === "expired"
-                ? ["clock", t("approvals.status.expired"), aheadEndLine(t, a) ?? t("approvals.expiredLine")]
-                : ["block", t("approvals.status.canceled"), aheadEndLine(t, a) ?? t("approvals.canceledLine")];
+    // In line: the bar under the request says what it runs after.
+    p === "queued"
+      ? ["waiting", t("approvals.status.queued"), approvedBy]
+      : p === "notRun"
+        ? ["block", t("approvals.status.notRun"), notRunLine]
+        : p === "running"
+          ? ["play", t("approvals.panel.runningLine", { context: g.context, name }), approvedBy]
+          : p === "done"
+            ? ["check", t("approvals.panel.done"), approvedBy]
+            : p === "failed"
+              ? ["alert", t("approvals.panel.failed"), approvedBy]
+              : p === "refused"
+                ? [
+                    "close",
+                    t("approvals.panel.refusedBy", { name: who, when }),
+                    a.reason ? `“${a.reason}”` : t("approvals.panel.noReason"),
+                  ]
+                : p === "scheduled"
+                  ? [
+                      "calendar",
+                      a.runAt ? t("approval.ahead.scheduled", { when: nextLabel(i18n.language, a.runAt) }) : "",
+                      approvedBy,
+                    ]
+                  : p === "expired"
+                    ? ["clock", t("approvals.status.expired"), aheadEndLine(t, a) ?? t("approvals.expiredLine")]
+                    : [
+                        "block",
+                        t("approvals.status.canceled"),
+                        a.supersededById
+                          ? t("approvals.supersededLine")
+                          : (aheadEndLine(t, a) ?? t("approvals.canceledLine")),
+                      ];
+  // What the action returned; one kept from running returned nothing (its line above says why).
+  const shownResult = p !== "notRun" && a.result?.text ? a.result.text : null;
   const action =
     p === "scheduled" && a.canCancel ? (
       <CancelAhead id={a.id} />
@@ -1649,12 +1339,12 @@ function Outcome({ approval: a, agent }: { approval: Approval; agent: Agent | un
       {p === "refused" && a.reason && (
         <p className="ap-outcome__lesson">{t("approvals.lesson", { name, reason: a.reason })}</p>
       )}
-      {returned && a.result?.text && (
+      {returned && shownResult && (
         <pre className="ap-code ap-review__tech">
-          <code>{a.result.text}</code>
+          <code>{shownResult}</code>
         </pre>
       )}
-      {a.result?.text && (
+      {shownResult && (
         <p className="ac-card__foot ap-review__foot">
           <button type="button" className="ap-link" aria-expanded={returned} onClick={() => setReturned((o) => !o)}>
             {t("approvals.panel.returned")}
@@ -1665,3 +1355,6 @@ function Outcome({ approval: a, agent }: { approval: Approval; agent: Agent | un
     </Card>
   );
 }
+
+/** For the inbox's decided requests: the same rows, by the day each was decided. */
+export { decidedAt as approvalDecidedAt, groups as decidedGroups, ReqRow as ApprovalRow };

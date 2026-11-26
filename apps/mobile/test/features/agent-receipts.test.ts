@@ -15,15 +15,16 @@ import {
   keptLine,
   markLabel,
   markOf,
+  markRowId,
   phaseKey,
   type ReceiptMarkView,
   receiptLine,
   receiptMessageId,
   receiptRows,
   receiptShows,
-  turnHeadId,
 } from "../../src/features/chat/agent-receipts";
 import { endsOnNoAiCard, noAiBanner } from "../../src/features/chat/no-ai-banner";
+import { chatScreenSource } from "./chat-screen-source";
 import { message, translator } from "./fixtures";
 
 const routed = (
@@ -141,10 +142,10 @@ describe("the agents' receipt line under a person's message", () => {
     expect(receiptLine(asking.m1)?.words?.key).toBe("receipts.asking");
     const pt = await translator("pt-BR");
     expect(pt("receipts.outage", { count: 1, names: "Ada" })).toBe(
-      "Ada: o provedor de IA está fora do ar · tenta de novo sozinho",
+      "Ada: a IA não está respondendo · tenta de novo sozinho",
     );
     const en = await translator("en");
-    expect(en("receipts.outage", { count: 1, names: "Ada" })).toBe("Ada: the AI provider is down · retries by itself");
+    expect(en("receipts.outage", { count: 1, names: "Ada" })).toBe("Ada: the AI isn't answering · retries by itself");
   });
 
   test("a run waiting for its computer: in line, or until it is back, on its own line", async () => {
@@ -163,7 +164,7 @@ describe("the agents' receipt line under a person's message", () => {
     expect(waiting("away")?.words).toEqual({ key: "receipts.away", agents: ["ada"] });
     expect(waiting("queued")?.alert).toBe(false);
     const pt = await translator("pt-BR");
-    expect(pt("receipts.queued", { count: 1, names: "Ada" })).toBe("Ada está na fila do computador");
+    expect(pt("receipts.queued", { count: 1, names: "Ada" })).toBe("Ada está na fila");
     const en = await translator("en");
     expect(en("receipts.away", { count: 2, names: "Ada and Theo" })).toBe("Ada and Theo are waiting for the computer");
   });
@@ -390,7 +391,8 @@ describe("the agents' receipt line under a person's message", () => {
     const read = { runId: "r1", agentId: "ada", state: "read" as const };
     expect(markOf(read, null, routed({}).m1)).toEqual({ kind: "steer", agentId: "ada", state: "read", words: "read" });
     const line: MessageReceipt = { routed: true, agents: [["ada", "queued"]] };
-    expect(markOf({ ...read, state: "waiting" }, null, line)).toMatchObject({ state: "waiting", words: "computer" });
+    // Waiting for the next pause: no mark (it was sent; a mark there reads as a message that never arrived).
+    expect(markOf({ ...read, state: "waiting" }, null, line)).toBeNull();
     expect(markOf(null, "u2", undefined)).toEqual({ kind: "seen", personId: "u2" });
     expect(markOf(null, null, undefined)).toBeNull();
   });
@@ -422,7 +424,7 @@ describe("the agents' receipt line under a person's message", () => {
     expect(markLabel(pt, plan, names)).toBe("Escolhendo quem responde");
   });
 
-  test("someone else's mark goes at the end of their turn's name line: a grouped row has none", () => {
+  test("someone else's mark stays on its own row, a grouped one too; with no faces and no bubbles, on its turn's name line", () => {
     const rows = [
       { kind: "day" },
       { kind: "message", message: message({ id: "a" }), grouped: false },
@@ -430,10 +432,17 @@ describe("the agents' receipt line under a person's message", () => {
       { kind: "message", message: message({ id: "c" }), grouped: true },
       { kind: "message", message: message({ id: "d", author: { type: "person", id: "u2" } }), grouped: false },
     ];
-    expect(turnHeadId(rows, "c")).toBe("a");
-    expect(turnHeadId(rows, "a")).toBe("a");
-    expect(turnHeadId(rows, "d")).toBe("d");
-    expect(turnHeadId(rows, "x")).toBeNull();
+    const faces = { faces: true, bubbles: false };
+    expect(markRowId(rows, "c", faces)).toBe("c");
+    expect(markRowId(rows, "c", { faces: false, bubbles: true })).toBe("c");
+    // A bubble look's grouped row with no words has no bubble to wear it: its turn's name line does.
+    const wordless = rows.map((r) => (r.message?.id === "c" ? { ...r, message: message({ id: "c", body: "" }) } : r));
+    expect(markRowId(wordless, "c", { faces: false, bubbles: true })).toBe("a");
+    expect(markRowId(rows, "a", faces)).toBe("a");
+    const bare = { faces: false, bubbles: false };
+    expect(markRowId(rows, "c", bare)).toBe("a");
+    expect(markRowId(rows, "d", bare)).toBe("d");
+    expect(markRowId(rows, "x", faces)).toBeNull();
   });
 
   test("the sheet: each agent with its phase; one the message only names says so", () => {
@@ -566,6 +575,13 @@ describe("the no-AI banner above the box", () => {
     expect(endsOnNoAiCard([message({ id: "m" }), card])).toBe(true);
     expect(endsOnNoAiCard([card, message({ id: "m" })])).toBe(false);
     expect(endsOnNoAiCard([])).toBe(false);
+    // The right hand's stand-in line under its reply is no such card: it answered.
+    const line = message({
+      id: "l",
+      author: { type: "agent", id: "lodi" },
+      meta: { noAi: { agentId: "lodi", standIn: { via: "Acme OpenAI", plan: "Claude Max", why: "needsComputer" } } },
+    });
+    expect(endsOnNoAiCard([message({ id: "m" }), line])).toBe(false);
   });
 });
 
@@ -583,14 +599,14 @@ describe("a receipt never adds a line to its row", () => {
     expect(line).toContain("<ReceiptMark message={m} mine receipt={receipt} seenBy={seenBy} />");
     // The turn's last bubble ends on the cut corner, on the side it stands.
     expect(row).toContain("solo: { borderBottomRightRadius: BUBBLE_CUT }");
-    expect(row).toContain("end: { borderTopRightRadius: 6, borderBottomRightRadius: BUBBLE_CUT }");
+    expect(row).toContain("end: { borderTopRightRadius: RADIUS.sm, borderBottomRightRadius: BUBBLE_CUT }");
     // Someone else's: absolutely placed in room their name line always keeps, so a mark that comes wraps nothing.
     expect(row).toContain('m.author.type === "person" && !inBubble && !compact && styles.whoRoom');
     expect(row).toMatch(/whoMark: \{ position: "absolute"/);
     expect(num(row, /whoRoom: \{ paddingRight: (\d+) \}/)).toBeGreaterThanOrEqual(16 + 4 + 12);
     // No line of its own: neither the steer line under my bubble nor "Visto" under the list's row.
     expect(row).not.toContain("SteerLine");
-    expect(src("features/chat/ChatScreen.tsx")).not.toContain('t("mobile.chat.seen")');
+    expect(chatScreenSource()).not.toContain('t("mobile.chat.seen")');
   });
 });
 

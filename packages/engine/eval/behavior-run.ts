@@ -39,6 +39,7 @@ import {
   createFakeJudge,
   createFakeScheduleReader,
   createFindAgentToolSource,
+  createFollowUpToolSource,
   createHandOffToolSource,
   createIssue,
   createIssueToolSource,
@@ -52,6 +53,7 @@ import {
   createPassToolSource,
   createReactToolSource,
   createRoutine,
+  createSayNowToolSource,
   createScheduleToolSource,
   createToolGateway,
   createWebToolSource,
@@ -205,6 +207,8 @@ export interface BehaviorCase {
   web?: WebFixture;
   /** The computer's `request_secret` (recorded only, no computer): the secure way to ask for a key. */
   secretRequest?: boolean;
+  /** `follow_up`, to come back to the conversation at a time it sets. */
+  followUps?: boolean;
   expect: Expectations & {
     /** What a good answer does, for the judge. */
     behavior: string;
@@ -274,6 +278,15 @@ export interface CaseRun {
   agentRuns?: Record<string, number>;
   /** A `conversation.note` case: what came of the note went back to its sender as a notice. */
   reported?: boolean;
+  /**
+   * The lines said before slow work (`say_now`, ADR 0207), never the reply: each with its run, and the time from the
+   * message that run answers to the line and to the run's last reply (null: none came).
+   */
+  saidNow?: { runId: string; text: string; afterMs: number | null; replyAfterMs: number | null }[];
+  /** Each run of the agent under test: how it ended and its own replies where it answers. */
+  byRun?: { runId: string; status: string; replies: string[] }[];
+  /** The rules of the turn-end checks that sent its runs back. */
+  nudged?: string[];
   error?: string;
 }
 
@@ -433,10 +446,13 @@ export async function runCase(c: BehaviorCase, options: RunOptions): Promise<Cas
     const sources: ToolSource[] = [
       createAskUserToolSource({ judge: resourceful, tools: () => tools }),
       ...(c.schedule ? [createAskAgentToolSource({ pubsub }), createScheduleToolSource({ pubsub, context })] : []),
+      ...(c.followUps ? [createFollowUpToolSource({ pubsub })] : []),
       // Colleagues that really run: who they are, and ask_agent and tell_agent to reach them.
       ...(together ? [createFindAgentToolSource()] : []),
       ...(together && !c.schedule ? [createAskAgentToolSource({ pubsub })] : []),
       createReactToolSource({ pubsub }),
+      // The line before slow work (ADR 0207): listed in every run but a background one, as in production.
+      createSayNowToolSource({ pubsub }),
       createMediaToolSource({ pubsub, gifs: c.noGifs ? null : createFakeGifs() }),
       // Routine cases run in the background and speak through it, with a GIF as in production.
       createHandOffToolSource({
@@ -490,7 +506,8 @@ export async function runCase(c: BehaviorCase, options: RunOptions): Promise<Cas
       ...fakes.map((f) => f.source),
     ];
     const tools: ToolGateway = createToolGateway({ sources });
-    if (together || c.web) {
+    // A `firstTurn` case is judged at its turn's end as in production: right on its first turn, nothing sends it back.
+    if (together || c.web || c.expect.firstTurn) {
       // How agents work together is judged as in production (ADR 0089, ADR 0095): Jev, the cheap model as fallback.
       const llmJudge = createLlmJudge({ gateway, resolveModel: async () => "claude-haiku-5-5" });
       const real =
@@ -835,6 +852,7 @@ export async function runCase(c: BehaviorCase, options: RunOptions): Promise<Cas
             executed: Boolean(r) && !refused,
             isError: r?.isError === true,
             result: r?.content,
+            runId: s.runId,
           };
         });
       const approvalRows = runIds.length
@@ -851,7 +869,7 @@ export async function runCase(c: BehaviorCase, options: RunOptions): Promise<Cas
         : [];
       const posted = runIds.length
         ? await db
-            .select({ body: schema.messages.body })
+            .select({ body: schema.messages.body, runId: schema.messages.agentRunId, at: schema.messages.createdAt })
             .from(schema.messages)
             .innerJoin(schema.agentRuns, eq(schema.agentRuns.id, schema.messages.agentRunId))
             .where(
@@ -864,11 +882,29 @@ export async function runCase(c: BehaviorCase, options: RunOptions): Promise<Cas
             )
             .orderBy(asc(schema.messages.createdAt))
         : [];
+      // The lines said before slow work (`say_now`, ADR 0207): the agent's messages with no run of their own
+      // (`meta.sayNow` names the run), so never in `posted`: never the reply.
+      const lineRows = runIds.length
+        ? await db
+            .select({ body: schema.messages.body, meta: schema.messages.meta, at: schema.messages.createdAt })
+            .from(schema.messages)
+            .where(and(eq(schema.messages.orgId, org.id), sql`${schema.messages.meta}->'sayNow' is not null`))
+            .orderBy(asc(schema.messages.createdAt))
+        : [];
+      const said = lineRows.flatMap((m) => {
+        const runId = (m.meta.sayNow as { runId?: unknown } | undefined)?.runId;
+        return typeof runId === "string" && runIds.includes(runId) ? [{ runId, text: m.body, at: m.at }] : [];
+      });
+      const byRun = runs.map((r) => ({
+        runId: r.id,
+        status: r.status,
+        replies: posted.filter((m) => m.runId === r.id).map((m) => m.body),
+      }));
       const turns = recorder.turns
         .slice(fromTurn)
         .filter(ownTurn)
         .map(({ text, toolCalls }) => ({ text, toolCalls }));
-      return { runs, runIds, steps, calls, approvalRows, posted, turns };
+      return { runs, runIds, steps, calls, approvalRows, posted, said, byRun, turns };
     };
 
     // Holds before anything else happens apply to the trigger already: those agents wait from the start.
@@ -913,12 +949,14 @@ export async function runCase(c: BehaviorCase, options: RunOptions): Promise<Cas
         reply,
         noReply: false,
         approvals: seen.approvalRows.map((r) => r.tool),
+        saidNow: seen.said,
+        byRun: seen.byRun,
       }))
         stepChecks.push({ ...k, id: `step${i + 1}:${k.id}` });
     }
 
     // What happened.
-    const { runs, runIds, steps, calls, approvalRows, posted, turns } = await observe(null);
+    const { runs, runIds, steps, calls, approvalRows, posted, said, byRun, turns } = await observe(null);
     const approvals = approvalRows.map((r) => r.tool);
     // A routine's ledger row: a report every time (`always`) can arrive without a hand_off (`auto_report`).
     const [ledger] = routine
@@ -1008,12 +1046,34 @@ export async function runCase(c: BehaviorCase, options: RunOptions): Promise<Cas
                   ? handleOf(m.authorAgentId)
                   : "?";
               const n = notice(m);
-              return n
-                ? `[notice for @${who}: ${n.kind}${n.refs?.kind ? ` (${n.refs.kind})` : ""}]`
-                : `[${m.authorUserId ? who : `@${who}`}]: ${m.body}`;
+              if (n) return `[notice for @${who}: ${n.kind}${n.refs?.kind ? ` (${n.refs.kind})` : ""}]`;
+              // The line before slow work (ADR 0207) is no reply: the judge reads it as what it is.
+              if (m.meta.sayNow) return `[@${who}, before its work]: ${m.body}`;
+              return `[${m.authorUserId ? who : `@${who}`}]: ${m.body}`;
             })
             .join("\n")
         : undefined;
+    /** When the message a run answers was written (else when the run began): its waits count from there. */
+    const startOf = (runId: string) => {
+      const r = runs.find((x) => x.id === runId);
+      const trigger = r ? here.find((m) => m.id === r.triggerMessageId) : undefined;
+      return (trigger?.createdAt ?? r?.createdAt)?.getTime();
+    };
+    // What the person reads as an agent's message: not a notice, a stretch's card or the line before slow work
+    // (ADR 0207), which only starts a reply.
+    const agentMessage = (m: (typeof here)[number]) =>
+      m.authorType === "agent" && !notice(m) && !stretchCardOf(m.meta) && !m.meta.sayNow;
+    // Each line before slow work, and how long the person waited for it and for the reply after it.
+    const saidNow = said.map((line) => {
+      const from = startOf(line.runId);
+      const replied = posted.filter((m) => m.runId === line.runId).at(-1)?.at;
+      return {
+        runId: line.runId,
+        text: line.text,
+        afterMs: from === undefined ? null : line.at.getTime() - from,
+        replyAfterMs: from === undefined || !replied ? null : replied.getTime() - from,
+      };
+    });
     const last = turns.at(-1);
     const first = recorder.turns.find(ownTurn);
     return {
@@ -1050,10 +1110,16 @@ export async function runCase(c: BehaviorCase, options: RunOptions): Promise<Cas
       ...(transcript ? { transcript } : {}),
       handOffs,
       personSaw: {
-        agentMessages: here.filter((m) => m.authorType === "agent" && !notice(m) && !stretchCardOf(m.meta)).length,
+        agentMessages: here.filter(agentMessage).length,
         noteLines: here.filter((m) => notice(m)?.kind === "agent_note").length,
       },
       agentRuns,
+      ...(saidNow.length ? { saidNow } : {}),
+      byRun,
+      nudged: steps.flatMap((s) => {
+        const d = (s.data as { continuation?: { outcome?: unknown; rule?: unknown } }).continuation;
+        return s.kind === "context" && d?.outcome === "continue" ? [String(d.rule)] : [];
+      }),
       ...(noteId
         ? {
             reported: here.some(
@@ -1176,6 +1242,12 @@ export async function judge(c: BehaviorCase, run: CaseRun, options: JudgeOptions
     `# The agent's tools\n${run.tools?.length ? run.tools.join(", ") : "(unknown)"} (it can't read what none of these covers)`,
     `# What a good answer does\n${c.expect.behavior}`,
     `# The agent's tool calls, in order\n${toolLines}`,
+    // The line before slow work (ADR 0207): what the person read at once, apart from the reply it announced.
+    ...(run.saidNow?.length
+      ? [
+          `# Its line before the work (posted at once with say_now, so the person read it first; it is not the reply)\n${run.saidNow.map((s) => s.text).join("\n")}`,
+        ]
+      : []),
     `# The agent's reply in the chat\n${run.noReply ? "(stayed silent: nothing handed off, nothing posted)" : run.reply.trim() || "(nothing posted)"}`,
     ...(run.transcript
       ? [

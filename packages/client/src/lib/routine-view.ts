@@ -88,6 +88,7 @@ export const RUN_CODES = [
   "waiting_plan_late",
   "waiting_budget_late",
   "stopped",
+  "stalled",
   "no_report",
   "handoff_blocked",
   "deleted",
@@ -102,12 +103,14 @@ export const RUN_CODES = [
   "provider_unavailable",
   "gave_up",
   "empty_reply",
+  "empty_reply_limit",
   "model_refused",
   "runner_outdated",
   "too_many_tool_calls",
   "stuck",
   "missing_credential",
   "credential_revoked",
+  "credential_unreadable",
   "credential_wrong_provider",
   "model_unlisted",
   "agent_archived",
@@ -121,6 +124,7 @@ export const RUN_CODES = [
   "computer_busy",
   "computer_failed",
   "computer_timeout",
+  "disk_full",
   "cli_failed",
   "account_missing",
   "our_error",
@@ -142,6 +146,9 @@ export function runOutcome(
     if (run.code === "waiting_budget") return { key: "routines.outcome.waitingBudget", values: {} };
     return { key: run.approvalId ? "routines.outcome.waitingApproval" : "routines.outcome.waiting", values: {} };
   }
+  // In line behind another routine of the same agent: which one it waits for.
+  if (run.status === "queued" && run.code === "waiting_routine" && run.codeParams?.routine)
+    return { key: "routines.outcome.queuedBehind", values: { name: run.codeParams.routine } };
   const fallback = `routines.outcome.${run.status}`;
   // A run that told people says so, whatever its code (`auto_report`: its final text became the report).
   if (!run.code || isRunAtWork(run.status) || run.status === "reported" || run.status === "silent")
@@ -157,6 +164,15 @@ export function runOutcome(
   if ((RUN_CODES as readonly string[]).includes(run.code))
     return { key: `routines.code.${run.code}`, values: { ...(run.codeParams ?? {}) }, fallback };
   return { key: fallback, values: {} };
+}
+
+/**
+ * What a routine at work says on its line: "Rodando agora", or, while its run waits in line behind another routine
+ * of the same agent, "Na fila: espera a rotina X terminar".
+ */
+export function atWorkWords(r: Pick<Routine, "recentRuns">): Words {
+  const behind = r.recentRuns.find((x) => x.status === "queued" && x.code === "waiting_routine");
+  return behind ? runOutcome(behind) : { key: "routines.runningNow", values: {} };
 }
 
 /** "Abrir na conversa": the agent's message for this run (a thread opens as a thread). */
@@ -438,3 +454,50 @@ export const eventWebhook = (event: RoutineEvent): WebhookProvider | null =>
     : event === "github.pr_opened" || event === "deploy.succeeded"
       ? "github"
       : null;
+
+const CRON_DAYS = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
+
+/**
+ * A simple cron (minute hour day month weekday: numbers, lists, an hour step) as the rule the server would keep for it
+ * (`cronToRule` in packages/engine/src/rrule.ts), to say it in words before it exists; null when it doesn't map.
+ */
+export function cronRule(cron: string, timezone: string): ApiRule | null {
+  const parts = cron.trim().split(/\s+/);
+  if (parts.length !== 5) return null;
+  const [mi, h, dom, mon, dow] = parts as [string, string, string, string, string];
+  if (!/^\d+$/.test(mi)) return null;
+  const pad = (x: number) => String(x).padStart(2, "0");
+  const minute = pad(Number(mi));
+  let days: number[] | null = null;
+  if (dow !== "*") {
+    days = [];
+    for (const part of dow.split(",")) {
+      const range = /^(\d)-(\d)$/.exec(part);
+      if (range) for (let x = Number(range[1]); x <= Number(range[2]); x++) days.push(x % 7);
+      else if (/^\d$/.test(part)) days.push(Number(part) % 7);
+      else return null;
+    }
+  }
+  const byWeekday = days ? [...new Set(days)].sort().map((d) => CRON_DAYS[d] as string) : undefined;
+  const list = (field: string) => (/^\d+(,\d+)*$/.test(field) ? field.split(",").map(Number) : null);
+  const step = /^\*\/(\d+)$/.exec(h);
+  if (h === "*" || step) {
+    if (dom !== "*" || mon !== "*") return null;
+    return { freq: "hourly", interval: step ? Number(step[1]) : 1, times: [`00:${minute}`], timezone, byWeekday };
+  }
+  const hours = list(h);
+  if (!hours) return null;
+  const times = hours.map((x) => `${pad(x)}:${minute}`);
+  if (mon !== "*") {
+    const months = list(mon);
+    const monthDays = list(dom);
+    return months && monthDays && !byWeekday
+      ? { freq: "yearly", byMonth: months, byMonthDay: monthDays, times, timezone }
+      : null;
+  }
+  if (dom !== "*") {
+    const monthDays = list(dom);
+    return monthDays && !byWeekday ? { freq: "monthly", byMonthDay: monthDays, times, timezone } : null;
+  }
+  return byWeekday ? { freq: "weekly", byWeekday, times, timezone } : { freq: "daily", times, timezone };
+}

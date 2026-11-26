@@ -30,15 +30,16 @@ ADR 0056 already gives every hook but one: a hold stops a workspace's agents and
 ### 3. A signed link to the billing service
 
 - `POST /api/app/organizations/{orgId}/billing-link` with `{ from }` answers `{ url, expiresAt }` for owners and admins (`manage_billing`); a suspended workspace refuses it (`org.suspended`), a held one doesn't, since paying is how a billing hold ends, nor one being deleted (ADR 0088 §3), whose payer still reaches its invoices and card. Without `BILLING_URL` it answers 404 `billing.off`, and `GET /api/app/auth-config` says `billingUrl: null`.
-- The URL is `BILLING_URL/link?t=<token>`, with `token = "v1." + payload + "." + signature`: the payload is the claims as UTF-8 JSON in base64url, the signature the base64url HMAC-SHA256 of `"v1." + payload` keyed with `BILLING_LINK_SECRET`. The billing service checks the HMAC over the payload exactly as received (constant time) before it parses anything.
+- The URL is `BILLING_URL/link?t=<token>`, with `token = "v2." + nonce + "." + ciphertext + "." + tag`, each part base64url: the claims as UTF-8 JSON sealed with AES-256-GCM, a fresh random 12-byte nonce per link, the associated data `"v2"`, a 16-byte tag, under the key HKDF-SHA256(`BILLING_LINK_SECRET`, salt `"agentes.chat"`, info `"agentes.chat/link-token/v2"`, 32 bytes) (`sealLinkToken` in `packages/engine/src/billing-link.ts`). The billing service opens it with a tag of exactly 16 bytes, which authenticates it, before it parses anything. A test vector (the key, nonce and claims, and the token they give) is asserted on both sides.
+- *Amended 2026-11-24:* the token was `"v1." + payload + "." + signature`, the claims in base64url JSON signed with HMAC-SHA256: signed, not encrypted, so anyone who saw the address (a browser's history, a synced device, a screenshot) read the person's name, email and workspace. `v2` carries the same claims under the same checks and shows nothing. Deploy order: the billing service first, accepting `v1` and `v2`, then this server, which mints `v2` only. A `v1` link lives minutes, so the billing service can drop `v1` in a later release, once no server that mints it is left.
 - The claims: `aud: "agentes-billing"`, a random `jti`, `iat` and `exp` (seconds, `exp = iat + 300`), the workspace's id and name, the person's id, email, name, role (`owner` or `admin`) and language, `from` (`settings`, `hold`, `onboarding`, `new_workspace`, `invite_full`, `upload_full`, `storage`: the billing service opens on what it came for), `return` (the path on this server it sends the person back to) and `usage`: people, agents, stored bytes (null on the workspace's own bucket), `messages` (in every conversation a person can read, agent-only rooms left out), `channels` (named and not archived), `files` (Drive's, the trash left out), `wikiPages`, `issues` (not canceled) and `since` (when the workspace was created, in seconds). Counts only: never a name or a word of content, never per channel or per person. Messages are counted per conversation on an index without reading one (ADR 0009), so a thread's first message deleted before any reply still counts.
 - `return` is always an app path under the workspace, `/org/{orgId}` or one of its pages: `/settings/billing` for `settings`, `/settings/storage` for `storage`, `/members` for `invite_full`, and `/onboarding` for `onboarding`, the onboarding's computer step. That one opens the onboarding again at the first step still waiting for the person: the furthest step the server keeps, or further where the workspace shows it was passed (its team made, with the import picked before it in; then, with the workspace's own computer and nothing held over it, the computer step too), and the AI step for a workspace with no step kept. The web app reads the workspace, its context and its agents back from the server (the tab keeps only which agents the import made, and their models), and says the plan is active only once nothing is held over the workspace. The person can land before the billing service lifts the `payment` hold, so the page asks again every few seconds until then. A workspace it can't read back opens as it is. The billing service sends people to `return` after Checkout, adding `?paid=1` when the payment went through. That is the address's word, not the server's: until the hold lifts, the hold banner says the payment arrived, asking again every few seconds too, and the onboarding says the payment is being confirmed, with the computer step's offer held back, for a minute at most; then the server's standing decides, with the offer back while the workspace still waits for its plan. The billing service accepts only such paths, on this server. Since 2026-11-03 the web app also sends the page the link was opened from (`returnTo`): when it is one of this workspace's pages (`/org/{orgId}/…`, lowercase letters, digits, `-` and `/` only, since the billing service refuses the whole link over any other `return`), `return` is that page's path, without its search or hash, instead of the entry point's default, so paying from a channel (an upload past the limit, the hold banner) lands back in that channel. Anything else (another workspace, another host, the onboarding outside the workspace) is ignored.
-- The billing service accepts 30 seconds of clock skew, refuses a link that claims more than 10 minutes, and accepts each `jti` once. The web app mints the link on the click and only ever navigates to it, so it lands in no history or log of ours.
+- The billing service accepts 30 seconds of clock skew, refuses a link that claims more than 10 minutes, accepts each `jti` once, and refuses a link whose `aud` isn't its own, `agentes-billing` (*amended 2026-11-17, ADR 0192*: the referral link can be signed with the same secret, and `aud` is what tells the two apart). The web app mints the link on the click and only ever navigates to it, so it lands in no history or log of ours.
 - `BILLING_LINK_SECRET` (at least 32 characters) is shared with the billing service. Rotating it means setting the new value on both sides together: links minted just before fail once and are minted again.
 
 ### 4. Four limits, null meaning none
 
-`PUT /api/operator/v1/orgs/{orgId}/limits` sets `{ members, membersMax, payerUserId, storageBytes, uploadBytesPerDay, platformUsdPerMonth }`, each a number or null (no limit; `membersMax` and `payerUserId` may be left out, as null); `GET /orgs/{orgId}` answers them with `updatedAt`, and the meters. A change (never the same limits set again) sends the workspace's apps `org.limits`, with no payload, and they read their limits again, so a new plan shows within seconds. A self-hosted server never sets any, so nothing is enforced there.
+`PUT /api/operator/v1/orgs/{orgId}/limits` sets `{ members, membersMax, payerUserId, storageBytes, uploadBytesPerDay, platformUsdPerMonth, connectorUsdPerMonth }`, each a number or null (no limit; `membersMax`, `payerUserId` and `connectorUsdPerMonth` may be left out, as null); `GET /orgs/{orgId}` answers them with `updatedAt`, and the meters. A change (never the same limits set again) sends the workspace's apps `org.limits`, with no payload, and they read their limits again, so a new plan shows within seconds. A self-hosted server never sets any, so nothing is enforced there.
 
 | Limit | Counts | Enforced |
 | --- | --- | --- |
@@ -48,6 +49,7 @@ ADR 0056 already gives every hook but one: a hold stops a workspace's agents and
 | `storageBytes` | the bytes of the files a workspace keeps on this server's storage, files in the trash left out | before any file is written (chat and Drive uploads, a computer's uploads, mail attachments, every version, skill files), as `used + incoming > limit` (`storage.full`, 409); skipped for a workspace on its own bucket. Also before a file comes back from the trash and before files are copied back from the workspace's own bucket, which would otherwise bring back more than the limit |
 | `uploadBytesPerDay` | the bytes written to that storage in the last 24 hours, rolling | where files are written (`storage.daily_full`, 409); never for files that come back, which keep the day they were first written |
 | `platformUsdPerMonth` | usage billed to the platform this UTC calendar month | §5 |
+| `connectorUsdPerMonth` | what vendors that bill this server per call (X, ADR 0170) charged for the workspace's connector calls this UTC calendar month, estimated from their price lists when each call answers (`connector_usage_days.cost_nano_usd`, from the tool's `costNanoUsd`); a failed call adds nothing. The operator reads it as `meters.connectorUsdThisMonth`, the app as `connectors` on its limits, and Plan and billing shows it as a share alone ("X this month: 30% used") once the month has any | before each priced call, as `spent + the most the call may cost > limit` (`connector.capped`: "X budget for this month used: …", nothing done, until the 1st UTC), with no lock: calls at the same moment may pass it by their own prices |
 
 Bytes count in GiB (1024³), the unit the apps print. The storage check takes no lock: uploads at the same moment may pass the line by at most their own sizes, where a lock would serialize every upload of a workspace. The refusals tell agents in plain English what happened and what a person can do.
 
@@ -83,7 +85,7 @@ The words name no price (§6). A self-hosted server never gets any of it: holds 
 - A self-hosted server changes nothing: without `BILLING_URL` there is no billing anywhere, and without limits nothing is enforced.
 - A trust hold put over a billing hold, then lifted, leaves the workspace active until the billing service sets its hold again, so the operator's services re-sync billing whenever they lift a hold.
 - The link is a credential for five minutes. It is minted only on a click, carried only in the address bar, and used once by the billing service.
-- One secret signs every link, with no overlap when it changes.
+- One secret seals every link, with no overlap when it changes.
 - Billing's numbers reach the server only through the operator API: when the billing service is down, workspaces keep their last holds and limits.
 
 ## Amendment (2026-11-08): the plan picked in the app, and one way to the plan per place (§3, §7)
@@ -92,3 +94,42 @@ ADR 0162: the billing link may carry `plan`, the billing service's own key for t
 passed on unread so the billing service opens that plan's Checkout. The plan's name and price come to the browser from
 the billing service's public `plans.json`, never from this server. On a hold, the hold's banner is the workspace's one
 way to the plan: the right hand's card and the first-task card offer none.
+
+## Amendment (2026-11-20): past the platform AI, agents keep their tools and go on (§5)
+
+A workspace past `platformUsdPerMonth` with no AI key of its own lost more than routing: every Jev call was refused, so
+runs loaded only the tool groups their thread's previous run used, and turn ends closed as `judge_error` with no nudge.
+Now:
+
+- **Tool groups.** A refused or failed tool-group judge loads every group the agent is granted, the reason on the run's
+  `context` step (`toolGroups.reason`, `platform_cap` here). A slow judge still starts with the kept groups, and so
+  does a server with no Jev key (`JevOffError`) or a confidential thread's run, where no run is ever judged: there,
+  loading every group would only add cost and latency.
+- **Turn ends.** The judge falls back to the workspace's small model as before. When the workspace has none and the
+  refusal is the platform cap, the run gets one self-check turn per run (`uncheckedNudge`, step `nudged: unchecked`):
+  its reply is held, posted as it is if it adds nothing. Any other failure ends as done as before (`judge_error`): no
+  Jev key and no small model (no judge at all), a small model that fails, a check that only ran out of the turn end's
+  wait. When the fallback fails before calling a model, `withJudgeFallback` throws the primary's error, so a turn end
+  tells the platform cap from a server with no Jev.
+- **Routing.** The router's Jev step is skipped past the cap (`platformCapRouter`), so the workspace's own small model
+  picks; only with none is nothing picked (`platform_cap`).
+- **Not told.** The allowance is platform plumbing, not something a person acts on: no notice, and the receipt under
+  an unrouted message stays as it was (mention an agent with @). The operator's feed still hears 50% and 100%.
+- **A routine's resume.** A routine's background run may set `follow_up` for work it is blocked on; at its time the
+  agent wakes where the routine reports, in a run that keeps the routine's bounds.
+
+## Amendment (2026-11-21): moving a plan to another workspace (§3, §6)
+
+A plan belongs to one workspace, and deleting that workspace stops it renewing. Someone who pays for a workspace's plan
+and also manages billing in another workspace with no plan in force can move it there instead of losing it:
+
+- The billing service names the payer in the limits it sets (`payerUserId`, only while the plan pays). `GET /me` marks
+  the workspaces whose plan the person pays for (`paysPlan`).
+- `POST /api/app/organizations/{orgId}/plan-move` (`requestPlanMove`) takes the workspace it goes to. This server checks
+  that the person is the payer, manages billing in both workspaces, and that the other workspace is on a billing hold
+  and isn't being deleted. It then records `organization.plan_move_requested` on the feed (`data.to`). It is allowed
+  while the workspace it leaves is being deleted. The billing service moves the same subscription (same card, same paid
+  period: nothing is charged again and nothing is refunded) and sets both workspaces' holds and limits, all within a
+  minute. 404 `billing.off` without a billing service, so a self-hosted server never offers it.
+- The apps offer the move where a plan would be lost: in the dialog that deletes the workspace, and on the line of a
+  workspace being deleted, to its payer, for each other workspace they manage billing in that has a billing hold.

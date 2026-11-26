@@ -4,13 +4,17 @@ import { serverText } from "@agenteschat/i18n";
 import { appLocale } from "@agenteschat/i18n/locale";
 import { AUTO_MODEL } from "@agenteschat/providers";
 import type { Agent } from "./agents";
+import { accountOrderSql } from "./ai-accounts/chain";
+import { accountServesSql } from "./ai-accounts/serves";
 import { recordAudit } from "./audit";
 import { accountablePerson, fedByRoutine, personOfMessage, runAuthorityById } from "./authority";
 import type { BrainUnavailability, ModelScope } from "./brains/select";
 import { ForbiddenError } from "./errors";
+import type { ModelGateway } from "./gateway";
 import type { MachineStatus } from "./machine-hub";
 import type { NoAiCardReason } from "./no-ai";
 import { personBehindCall } from "./requester";
+import type { RoutineBrief } from "./routine-brief";
 import { runnerUpdateWay } from "./runner-update";
 import { type AgentRun, isCliFailure } from "./runs";
 import { scrubSignIns } from "./tool-detail";
@@ -44,19 +48,24 @@ export const RIGHT_HAND_DEFAULTS = {
   appearance: { color: "teal", eyes: "happy", accessory: "headset" },
 } as const;
 
-/** What "Automático" reads of it (`chooseAutoModel`): small work first, so it starts on the cheap tier. */
+/** What "Automático" reads of it (`chooseAutoModel`): the cheap tier only for a turn that only answers. */
 export const RIGHT_HAND_AUTO = {
   role: "Workspace assistant",
   instructions:
-    "Sets the team up with people through short questions and cards, and follows its work. A status, a greeting or a short question: the smallest tier and low effort. Handing work to an agent, following it up or reporting what came of it: the medium tier. More only when the person asks for something long or complex.",
+    "Sets the team up with people through short questions and cards, and follows its work. Only a greeting, a thanks or a plain status: the smallest tier. Setting something up or changing it, handing work to an agent, following it up, reporting what came of it or going on with steps already under way: at least the medium tier, never the smallest. More when the person asks for something long or complex.",
 } as const;
+
+/** How the router describes it among a channel's agents (`routeMessage`): what fits it, and what is theirs. */
+export const RIGHT_HAND_ROUTING_ABOUT =
+  "Built into the workspace. Fits setting the team up (agents, people, roles, channels, routines, apps, AI accounts, settings), how the app and the workspace work, and which agent should take something. Real work in a channel agent's field is that agent's, not this one's.";
 
 /**
  * What it holds whatever its grant rows say (`loadScopeKeys` adds the rows on top: apps, mailboxes, databases, a
- * tool turned off): every built-in scope an agent can be given, and the setup cards. Not a computer's (`sandbox:run`,
- * `browser:use`, `desktop:use`): it has none of its own, and a row for one gives it nothing. One row answers
- * everyone, so what is one person's stays in that person's own DM with it (`rightHandReader`): their Vault items,
- * their mailbox, their tasks, and what it remembers for them.
+ * tool turned off): every built-in scope an agent can be given but a computer's, and the setup cards. A computer's
+ * (`sandbox:run`, `browser:use`, `desktop:use`) are rows like any agent's, given when it is made
+ * (`RIGHT_HAND_COMPUTER_GRANTS`, ADR 0175), so an admin turns them off on its page. One row answers everyone, so what
+ * is one person's stays in that person's own DM with it (`rightHandReader`): their Vault items, their mailbox, their
+ * tasks, what it remembers for them, and their seat on the workspace's computer (`right-hand-seats.ts`).
  */
 export const RIGHT_HAND_GRANTS: readonly string[] = [
   "setup:write",
@@ -76,9 +85,20 @@ export const RIGHT_HAND_GRANTS: readonly string[] = [
   "vault:write",
 ];
 
-/** What it reads for a computer tool: it has no computer, and no card or admin can give it one. */
-export const RIGHT_HAND_NO_COMPUTER =
-  "you have no computer yet, so you run no commands, keep no files there and open no browser. Hand this to an agent that has one (ask_agent, tell_agent, or create_issue assigned to it) or propose one, and never ask the person to try again";
+/**
+ * Tools it is never offered, whatever its grants: each acts on a computer under the agent's own id, which reaches
+ * none (ADR 0175 §2), so offering it would only end in a refusal. A folder outside its own, its browser's own hand-off
+ * (its browser shows on the seat's desktop, asked for there), missions, and keeping something running after the run.
+ */
+export const RIGHT_HAND_NOT_OFFERED: ReadonlySet<string> = new Set([
+  "request_folder_access",
+  "browser_ask_person",
+  "propose_mission",
+  "keep_running",
+]);
+
+/** The grant rows it is made with: its computer's scopes, used in a seat there, a person's own or the shared one (ADR 0175). */
+export const RIGHT_HAND_COMPUTER_GRANTS = ["sandbox:run", "browser:use", "desktop:use"] as const;
 
 /**
  * Its owner (the person accountable for it) is the workspace's longest-standing owner who can still sign in: set
@@ -108,9 +128,15 @@ export async function ensureRightHand(db: Executor, orgId: string): Promise<stri
   if (had) return null;
   const { freeHandle, takenHandles } = await import("./agents");
   const { FIRST_RUN_SETUP } = await import("./setup-checklist");
-  const [taken, [other]] = await Promise.all([
+  const { workspaceApprovalsLevel } = await import("./workspace-approvals");
+  const [taken, [other], approvalsLevel] = await Promise.all([
     takenHandles(db, orgId),
-    db.select({ id: agents.id }).from(agents).where(eq(agents.orgId, orgId)).limit(1),
+    db
+      .select({ id: agents.id })
+      .from(agents)
+      .where(and(eq(agents.orgId, orgId), isNull(agents.deletedAt)))
+      .limit(1),
+    workspaceApprovalsLevel(db, orgId),
   ]);
   const handle = taken.has(RIGHT_HAND_DEFAULTS.handle)
     ? freeHandle(RIGHT_HAND_DEFAULTS.handle, taken)
@@ -126,6 +152,7 @@ export async function ensureRightHand(db: Executor, orgId: string): Promise<stri
       brainModel: AUTO_MODEL,
       brainEffort: AUTO_MODEL,
       appearance: { ...RIGHT_HAND_DEFAULTS.appearance },
+      approvalsLevel,
       // A workspace with no agent yet opens on its first-run checklist (ADR 0155 §6).
       ...(other ? {} : { setup: FIRST_RUN_SETUP }),
     })
@@ -137,6 +164,10 @@ export async function ensureRightHand(db: Executor, orgId: string): Promise<stri
     .insert(agentBudgetPeriods)
     // The month's counter exists from the start, as for any new agent (`resyncBudgetCounter`): nothing spent yet.
     .values({ orgId, agentId: made.id, periodStart: sql`date_trunc('month', now() at time zone 'utc')::date` })
+    .onConflictDoNothing();
+  await db
+    .insert(schema.agentScopes)
+    .values(RIGHT_HAND_COMPUTER_GRANTS.map((scope) => ({ orgId, agentId: made.id, connectionId: null, scope })))
     .onConflictDoNothing();
   return made.id;
 }
@@ -244,36 +275,58 @@ export async function scrubRightHandReply(
 
 /**
  * Who a run of the right hand reads for (ADR 0137 §13): the person behind it, in their own DM with it. A routine's own
- * run there reads for its creator: only they set what it does (`updateRoutine`), and only they read what it says.
- * Null anywhere else, since others read a reply in a channel, and for any other agent.
+ * run reads for its creator where only they read what it says (`readByCreatorAlone`): only they set what it does
+ * (`updateRoutine`). Null anywhere else, since others read a reply in a channel, and for any other agent.
  */
 export async function rightHandReader(
   ctx: Pick<ToolContext, "orgId" | "agentId" | "channelId" | "runId" | "triggerMessageId"> & { db: Executor },
 ): Promise<string | null> {
   if (!(await isRightHandId(ctx.db, ctx.orgId, ctx.agentId))) return null;
-  const person =
-    (await personBehindCall(ctx)) ??
-    (ctx.runId ? accountablePerson(await runAuthorityById(ctx.db, ctx.orgId, ctx.runId)) : null);
-  return person && (await readsAlone(ctx.db, ctx.channelId, person, ctx.agentId)) ? person : null;
+  const behind = await personBehindCall(ctx);
+  if (behind) return (await readsAlone(ctx.db, ctx.channelId, behind, ctx.agentId)) ? behind : null;
+  const authority = ctx.runId ? await runAuthorityById(ctx.db, ctx.orgId, ctx.runId) : null;
+  const creator = authority ? accountablePerson(authority) : null;
+  if (!creator) return null;
+  if (await readsAlone(ctx.db, ctx.channelId, creator, ctx.agentId)) return creator;
+  const brief = authority?.kind === "routine" ? authority.brief : null;
+  return brief && (await readByCreatorAlone(ctx.db, ctx.orgId, ctx.agentId, brief, creator)) ? creator : null;
 }
 
 /**
- * Whether `person` is the one person who reads `channelId`: their own DM with an agent, where nobody else reads a
- * reply. With `agentId`, no other agent is in it either.
+ * Whether only `creator` reads what a routine's run says: its run works in an agent-only room (ADR 0053 §4), so the
+ * room says nothing of that. A widget's refresh (a draft's test too) is read on its board: the creator's Home or a
+ * private board of theirs (ADR 0135 §8). Any other routine's, where it reports: their own DM with the right hand.
  */
-export async function readsAlone(db: Executor, channelId: string, person: string, agentId?: string) {
+async function readByCreatorAlone(db: Executor, orgId: string, agentId: string, brief: RoutineBrief, creator: string) {
+  if (!brief.widget) return !brief.toDrive && readsAlone(db, brief.deliverTo.channelId, creator, agentId);
+  const [row] = await db
+    .select({ widget: schema.dashboardWidgets, board: schema.dashboards })
+    .from(schema.dashboardWidgets)
+    .innerJoin(schema.dashboards, eq(schema.dashboards.id, schema.dashboardWidgets.dashboardId))
+    .where(and(eq(schema.dashboardWidgets.orgId, orgId), eq(schema.dashboardWidgets.id, brief.widget.widgetId)));
+  if (!row || row.board.deletedAt) return false;
+  // A draft keeps its tested data once confirmed (ADR 0135 §16), so it reads only as its board would.
+  return row.board.ownerUserId === creator && (row.board.kind === "home" || row.board.audience === "private");
+}
+
+/**
+ * The one person who reads `channelId`: their own DM with an agent, where nobody else reads a reply. Null where no
+ * person or more than one reads, and with `agentId` where another agent is in it too.
+ */
+export async function soleReader(db: Executor, channelId: string, agentId?: string): Promise<string | null> {
   const members = await db
     .select({ userId: channelMembers.userId, agentId: channelMembers.agentId })
     .from(channelMembers)
     .innerJoin(channels, eq(channels.id, channelMembers.channelId))
     .where(and(eq(channelMembers.channelId, channelId), eq(channels.kind, "dm")));
   const people = members.filter((m) => m.userId);
-  return (
-    people.length === 1 &&
-    people[0]?.userId === person &&
-    (!agentId || members.every((m) => !m.agentId || m.agentId === agentId))
-  );
+  const alone = people.length === 1 && (!agentId || members.every((m) => !m.agentId || m.agentId === agentId));
+  return alone ? (people[0]?.userId ?? null) : null;
 }
+
+/** Whether `person` is the one person who reads `channelId` (`soleReader`). */
+export const readsAlone = async (db: Executor, channelId: string, person: string, agentId?: string) =>
+  (await soleReader(db, channelId, agentId)) === person;
 
 /** The right hand anywhere but a person's own DM with it: what only reads or writes for that person stays out. */
 export async function rightHandAway(
@@ -299,7 +352,7 @@ export const RIGHT_HAND_TURN = { mode: "chat" } as const;
 
 type ThinkingAgent = Pick<Agent, "orgId" | "brainAccountId" | "machineId"> &
   Partial<Pick<Agent, "builtin" | "ownerUserId" | "brain" | "brainModel" | "brainEffort" | "brainAccountLentBy">> &
-  Partial<Pick<Agent, "planForOthers" | "brainFallback" | "brainExtraUsage">>;
+  Partial<Pick<Agent, "planForOthers" | "credentialId">>;
 
 /** A person's own AI for the right hand (§11): their row, null when their DM thinks with the workspace's. */
 export async function personalBrain(db: Executor, orgId: string, userId: string) {
@@ -310,35 +363,258 @@ export async function personalBrain(db: Executor, orgId: string, userId: string)
   return row ?? null;
 }
 
-/** The right hand with `person`'s own AI (§11) in place of the workspace's brain, when they chose one. */
+/**
+ * The plan that thinks for `person` when they chose none and the workspace's AI can't answer them (ADR 0059 §3): a
+ * model with no key of the workspace's, a plan with no account (a computer's own sign-in, which it never thinks with),
+ * or a plan that serves only someone else. A signed-in plan that serves them (`servingPlans`). `person` null: work nobody is behind, which only a plan that serves everyone answers. Null when
+ * there is none, or none is needed.
+ */
+export async function servingPlanFor(
+  db: Executor,
+  agent: Pick<Agent, "orgId"> & Partial<Pick<Agent, "brain" | "credentialId" | "brainAccountId">>,
+  person: string | null,
+) {
+  if ((agent.brain ?? "model") === "model") {
+    if (agent.credentialId) return null;
+    const [key] = await db
+      .select({ id: schema.providerCredentials.id })
+      .from(schema.providerCredentials)
+      .where(and(eq(schema.providerCredentials.orgId, agent.orgId), isNull(schema.providerCredentials.revokedAt)))
+      .limit(1);
+    if (key) return null;
+  } else if (agent.brainAccountId) {
+    const [workspace] = await db
+      .select({ serves: accountServesSql(person) })
+      .from(machineAccounts)
+      .where(and(eq(machineAccounts.orgId, agent.orgId), eq(machineAccounts.id, agent.brainAccountId)));
+    if (!workspace || workspace.serves) return null;
+  }
+  const plans = await servingPlans(db, agent.orgId, person);
+  const best = plans.find((p) => p.room > 0) ?? plans[0];
+  return best ? planBrain(best) : null;
+}
+
+const planBrain = (p: { kind: string; id: string }) => ({
+  brain: p.kind,
+  brainModel: AUTO_MODEL,
+  brainEffort: null,
+  brainAccountId: p.id,
+  brainAccountLentBy: null,
+});
+
+/**
+ * The signed-in plans that may think for `person` (`accountServesSql`; null: for work nobody is behind, those everyone
+ * uses), in the one order of use (`accountOrderSql`: theirs first, then by place, oldest first). `exclude`: a plan that
+ * can't think now; `room`: only those with room left (`online`: and whose computer says it is online). Room and being
+ * online are filters, never a re-sort.
+ */
+export async function servingPlans(
+  db: Executor,
+  orgId: string,
+  person: string | null,
+  options: { exclude?: string | null; room?: boolean; online?: boolean } = {},
+) {
+  const { machines } = schema;
+  const { machineOnline } = await import("./machines");
+  const { planRoom } = await import("./machine-accounts");
+  const rows = await db
+    .select({
+      id: machineAccounts.id,
+      kind: machineAccounts.kind,
+      label: machineAccounts.label,
+      usage: machineAccounts.usage,
+      ownerId: machineAccounts.createdBy,
+      machineId: machineAccounts.machineId,
+      online: machines.online,
+      lastSeenAt: machines.lastSeenAt,
+      deletedAt: machines.deletedAt,
+    })
+    .from(machineAccounts)
+    .innerJoin(
+      organizationMembers,
+      and(
+        eq(organizationMembers.orgId, machineAccounts.orgId),
+        eq(organizationMembers.userId, machineAccounts.createdBy),
+      ),
+    )
+    .innerJoin(
+      machines,
+      and(
+        eq(machines.orgId, machineAccounts.orgId),
+        eq(machines.id, machineAccounts.machineId),
+        isNull(machines.deletedAt),
+      ),
+    )
+    .where(
+      and(
+        eq(machineAccounts.orgId, orgId),
+        eq(machineAccounts.status, "active"),
+        accountServesSql(person),
+        options.exclude ? sql`${machineAccounts.id} <> ${options.exclude}::uuid` : undefined,
+        // A login made for one agent thinks for that one only (as `setPersonalBrain` keeps it).
+        sql`(${machineAccounts.shared} or not exists (select 1 from ${agents} where ${agents.orgId} = ${machineAccounts.orgId} and ${agents.brainAccountId} = ${machineAccounts.id} and ${agents.archivedAt} is null and ${agents.builtin} is distinct from ${RIGHT_HAND}))`,
+      ),
+    )
+    .orderBy(...accountOrderSql(person));
+  const now = Date.now();
+  return rows
+    .map((r) => ({
+      ...r,
+      online: machineOnline(r, new Date(now)),
+      mine: person !== null && r.ownerId === person,
+      room: planRoom(r.usage as Parameters<typeof planRoom>[0], now),
+    }))
+    .filter((r) => (!options.room || r.room > 0) && (!options.online || r.online));
+}
+
+/**
+ * What thinks for the right hand while its own plan can't (ADR 0137 §7, amended 2026-11-15), in this order: another
+ * plan that serves the person on a computer online now (`servingPlans`), else the workspace's API key. `via` names
+ * what answered and `plan` the plan that couldn't, for the line under the reply (`postStandInLine`); `code` is why.
+ * `keyOnly`: mid-turn, where only the key can take over the same transcript. Null: nothing can, and the run fails
+ * `no_ai` with its card, whose way out is the workspace's (payment on a hold, else Connect).
+ */
+export interface RightHandStandIn {
+  brain: string;
+  brainAccountId?: string;
+  machineId?: string;
+  ownerUserId?: string | null;
+  via: string;
+  plan: string;
+  code: string;
+}
+
+export async function rightHandStandIn(
+  deps: {
+    db: Executor;
+    gateway?: Pick<ModelGateway, "hasModelCredential">;
+    /** The computers' live status; absent: what their rows last said. */
+    machines?: { status(machineId: string): Promise<MachineStatus | null> } | null;
+  },
+  agent: Pick<Agent, "orgId" | "model" | "credentialId" | "brainAccountId"> & Partial<Pick<Agent, "brain">>,
+  person: string | null,
+  code: string,
+  options: { keyOnly?: boolean } = {},
+): Promise<RightHandStandIn | null> {
+  const { db } = deps;
+  const [failing] = agent.brainAccountId
+    ? await db
+        .select({ label: machineAccounts.label })
+        .from(machineAccounts)
+        .where(and(eq(machineAccounts.orgId, agent.orgId), eq(machineAccounts.id, agent.brainAccountId)))
+    : [];
+  const { planName } = await import("./brains/types");
+  const plan = failing?.label ?? planName((agent.brain ?? "claude_code") as Parameters<typeof planName>[0]);
+  if (!options.keyOnly) {
+    const plans = await servingPlans(db, agent.orgId, person, {
+      exclude: agent.brainAccountId,
+      room: true,
+      online: !deps.machines,
+    });
+    let other: (typeof plans)[number] | undefined;
+    for (const p of plans) {
+      const status = deps.machines ? await deps.machines.status(p.machineId).catch(() => null) : null;
+      if (deps.machines && (!status?.online || status.paused)) continue;
+      other = p;
+      break;
+    }
+    if (other)
+      return {
+        brain: other.kind,
+        brainAccountId: other.id,
+        machineId: other.machineId,
+        ownerUserId: other.ownerId,
+        via: other.label,
+        plan,
+        code,
+      };
+  }
+  if (!deps.gateway || (agent.brain ?? "model") === "model") return null;
+  const { modelReady } = await import("./ai-status");
+  if (!(await modelReady({ db, gateway: deps.gateway }, { ...agent, brain: "model" } as never))) return null;
+  return { brain: "model", via: await keyLabel(db, agent), plan, code };
+}
+
+/** The key the API answers with, by its name ("Acme OpenAI"), else its maker's ("Claude"). */
+async function keyLabel(db: Executor, agent: Pick<Agent, "orgId" | "credentialId">) {
+  const { providerCredentials } = schema;
+  const { autoProvider } = await import("./auto-model");
+  const provider = await autoProvider(db, agent).catch(() => "anthropic");
+  const [key] = await db
+    .select({ label: providerCredentials.label })
+    .from(providerCredentials)
+    .where(
+      and(
+        eq(providerCredentials.orgId, agent.orgId),
+        isNull(providerCredentials.revokedAt),
+        agent.credentialId
+          ? eq(providerCredentials.id, agent.credentialId)
+          : eq(providerCredentials.provider, provider),
+      ),
+    )
+    .limit(1);
+  const { PROVIDERS, isKnownProvider } = await import("@agenteschat/providers");
+  return key?.label ?? (isKnownProvider(provider) ? PROVIDERS[provider].label : "Claude");
+}
+
+/** The line a stand-in's reason takes (`chat.standIn.*`): why the right hand's own plan didn't answer. */
+export type StandInWhy = "needsComputer" | "away" | "notShared" | "limit" | "cant";
+
+export function standInWhy(code: string): StandInWhy {
+  if (code === "machine_offline" || code === "machine_paused") return "away";
+  if (code === "plan_limit") return "limit";
+  if (code === "plan_not_shared" || code === "plan_not_owner" || code === "plan_unattended") return "notShared";
+  if (code === "no_computer" || code === "no_session" || code === "not_logged_in" || code === "no_key")
+    return "needsComputer";
+  return code === "cli_missing" || code.endsWith("_missing") ? "needsComputer" : "cant";
+}
+
+/**
+ * The model a person's own AI thinks with: theirs, else the right hand's when it is saved for that same brain (a model
+ * saved for one brain means nothing to another, and the API brain's `auto` would pick tiers on their plan).
+ */
+export function personalModel(
+  own: { brain: string; brainModel: string | null },
+  agent: { brain?: string | null; brainModel?: string | null },
+): string | null {
+  return own.brainModel ?? (own.brain === agent.brain ? (agent.brainModel ?? null) : null);
+}
+
+/**
+ * The right hand with `person`'s own AI (§11) in place of the workspace's brain, when they chose one, else a plan that
+ * serves them while the workspace's AI can't think (`servingPlanFor`).
+ */
 export async function withPersonalBrain<T extends ThinkingAgent>(
   db: Executor,
   agent: T,
   person: string | null | undefined,
-): Promise<{ agent: T; own: boolean }> {
-  const own = person && isRightHand(agent) ? await personalBrain(db, agent.orgId, person) : null;
+): Promise<{ agent: T; own: boolean; signedInOn?: string | null }> {
+  const own = isRightHand(agent)
+    ? ((person ? await personalBrain(db, agent.orgId, person) : null) ??
+      (await servingPlanFor(db, agent, person ?? null)))
+    : null;
   if (!own) return { agent, own: false };
   return {
     agent: {
       ...agent,
       brain: own.brain,
-      brainModel: own.brainModel,
+      brainModel: personalModel(own, agent),
       brainEffort: own.brainEffort,
       brainAccountId: own.brainAccountId,
       brainAccountLentBy: own.brainAccountLentBy,
-      brainFallback: false,
-      brainExtraUsage: false,
     },
     own: true,
+    signedInOn: "machineId" in own && !own.brainAccountId ? own.machineId : null,
   };
 }
 
 /**
  * An agent as its brain sees it. The right hand is on no computer and its owner is the workspace's (`followOwner`):
  * on a plan it thinks on the computer where that plan's account is signed in, and the plan is its owner's (who pays,
- * as for any agent, ADR 0059 §3). With no account it has no computer. `person`: whose DM the run answers; their own
- * AI (§11) thinks for them in place of the workspace's, and serves them alone: their own plan, or one given to them
- * with `use_others_plans`. Every other agent is itself.
+ * as for any agent, ADR 0059 §3). With no account it has no computer, unless a person's own AI is their computer's
+ * own sign-in. `person`: whose DM the run answers; their own AI (§11) thinks for them in place of the workspace's. A
+ * plan thinks for someone else's DM (`planForOthers`) while it serves them (`accountServesSql`). Every other agent is
+ * itself.
  */
 export async function thinkingAgent<T extends ThinkingAgent>(
   db: Executor,
@@ -346,20 +622,25 @@ export async function thinkingAgent<T extends ThinkingAgent>(
   person?: string | null,
 ): Promise<T> {
   if (!isRightHand(agent)) return agent;
-  const { agent: base, own } = await withPersonalBrain(db, agent, person);
+  const { agent: base, signedInOn } = await withPersonalBrain(db, agent, person);
+  // The plan the person's own computer is signed in to: theirs, on that computer, as for any agent they own.
+  if (signedInOn) return { ...base, machineId: signedInOn, ownerUserId: person ?? null, planForOthers: true };
   const [plan] = base.brainAccountId
     ? await db
-        .select({ machineId: machineAccounts.machineId, ownerId: machineAccounts.createdBy })
+        .select({
+          machineId: machineAccounts.machineId,
+          ownerId: machineAccounts.createdBy,
+          // Whether the plan thinks for this person (`accountServesSql`; nobody behind the run: one everyone uses).
+          serves: accountServesSql(person ?? null),
+        })
         .from(machineAccounts)
         .where(and(eq(machineAccounts.orgId, agent.orgId), eq(machineAccounts.id, base.brainAccountId)))
     : [];
-  const ownerUserId = plan?.ownerId ?? null;
   return {
     ...base,
     machineId: plan?.machineId ?? null,
-    ownerUserId,
-    // "Atende outras pessoas" is the workspace's plan's switch: a person's own serves that person.
-    ...(own ? { planForOthers: base.brainAccountLentBy != null || ownerUserId === person } : {}),
+    ownerUserId: plan?.ownerId ?? null,
+    ...(plan ? { planForOthers: plan.serves === true } : {}),
   };
 }
 
@@ -472,7 +753,7 @@ export function rightHandNoAiReason(code: string, scope?: ModelScope): NoAiCardR
             : "plan_limit";
   if (code === "plan_not_shared" || code === "plan_not_owner") return "plan_not_shared";
   if (code === "plan_unattended") return "plan_unattended";
-  if (code === "runner_outdated" || code === "codex_too_old") return "runner_outdated";
+  if (code === "runner_outdated" || code === "codex_too_old" || code === "cli_outdated") return "runner_outdated";
   if (code === "exec_disabled" || code === "tool_off") return "commands_off";
   if (code === "tools_not_locked") return "plan_tools";
   if (code === "no_computer" || code === "no_session") return "no_computer";

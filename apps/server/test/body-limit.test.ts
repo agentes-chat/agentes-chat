@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { ARTIFACT_LIMITS, IMPORT_LIMITS } from "@agenteschat/engine";
-import { API_BODY_BYTES, apiBodyMax } from "../src/http/body-limit";
+import { SKILL_ZIP_BASE64_CHARS } from "@agenteschat/tokens/skills";
+import { Hono } from "hono";
+import { API_BODY_BYTES, apiBodyMax, uploadRoom } from "../src/http/body-limit";
 import { createTestServer, ORIGIN, type TestServer } from "./harness";
 
 let t: TestServer | undefined;
@@ -71,12 +73,52 @@ describe("a request body past its path's limit is refused before any route reads
       "/api/git/org_1/conn_1/acme/site.git/git-receive-pack",
     ])
       expect(apiBodyMax(path)).toBeNull();
-    // Raised for the JSON that carries a whole folder.
+    // Raised for the JSON that carries a whole folder, past the zip its schema takes.
     expect(apiBodyMax(`${org}/skills/import`)).toBeGreaterThan(IMPORT_LIMITS.bodyBytes);
+    expect(apiBodyMax(`${org}/skills/import`)).toBeGreaterThan(SKILL_ZIP_BASE64_CHARS);
     // The web app's batch is 8 Mi characters, each up to 3 bytes.
     expect(apiBodyMax(`${org}/wiki/import`)).toBeGreaterThanOrEqual(3 * 8 * 1024 * 1024);
     // Signing in keeps its limit whatever the path ends with.
     expect(apiBodyMax("/api/auth/x/feedback/files")).toBe(256 * 1024);
     expect(apiBodyMax("/api/auth/x/organizations/y/imports")).toBe(256 * 1024);
   });
+});
+
+test("uploads wait for room past the process's budget, then get 503 with a retry-after; one alone may be larger", async () => {
+  const room = uploadRoom(100, 50);
+  const release: (() => void)[] = [];
+  const app = new Hono().use("*", room).post("*", async (c) => {
+    await new Promise<void>((resolve) => release.push(resolve));
+    return c.text("stored");
+  });
+  const upload = (bytes: number) =>
+    app.request("/api/app/organizations/o1/artifacts/a1/files", {
+      method: "POST",
+      headers: { "content-length": String(bytes) },
+    });
+  // Alone, an upload larger than the whole budget goes through.
+  const big = upload(500);
+  await Bun.sleep(5);
+  expect(release).toHaveLength(1);
+  // Another meanwhile waits for room, and past its wait is told to come back.
+  const refused = await upload(10);
+  expect(refused.status).toBe(503);
+  expect(refused.headers.get("retry-after")).toBe("10");
+  expect(await refused.json()).toMatchObject({ error: { code: "server_busy" } });
+  // One that finds room once the first ends goes on.
+  const next = upload(10);
+  await Bun.sleep(5);
+  release.shift()?.();
+  expect((await big).status).toBe(200);
+  await Bun.sleep(5);
+  release.shift()?.();
+  expect((await next).status).toBe(200);
+  // Not an upload: never waits.
+  const other = app.request("/api/app/organizations/o1/channels", {
+    method: "POST",
+    headers: { "content-length": "999" },
+  });
+  await Bun.sleep(5);
+  release.shift()?.();
+  expect((await other).status).toBe(200);
 });

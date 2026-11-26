@@ -3,10 +3,20 @@
  * it (web: Web Audio; phone: a WAV in its cache, both synthesized by `@agenteschat/ui/sfx`), after the person's
  * choice on that device (off, or a style).
  */
-import type { AppNotification, NotificationKind } from "../api/types";
+import type { AppNotification, NotificationEvent, NotificationKind } from "../api/types";
 
 /** Same names as `SOUNDS` in `@agenteschat/ui/sfx`. */
-export type SoundName = "send" | "reply" | "done" | "attention" | "approved" | "error" | "stop" | "mention";
+export type SoundName =
+  | "send"
+  | "reply"
+  | "done"
+  | "attention"
+  | "approved"
+  | "error"
+  | "stop"
+  | "mention"
+  | "discard"
+  | "record";
 
 let player: ((name: SoundName) => void) | null = null;
 
@@ -37,6 +47,7 @@ const BY_KIND: Partial<Record<NotificationKind, SoundName>> = {
   invitation_accepted: "done",
   approval_cover: "done",
   right_hand_decided: "done",
+  proposal_applied: "done",
   right_hand_paused: "attention",
   app_created: "done",
   mention: "mention",
@@ -70,4 +81,15 @@ export function soundForNotification(
   const sound = BY_KIND[n.kind] ?? (n.waiting ? "attention" : null);
   if (!sound || (background && FOREGROUND_ONLY.has(sound))) return null;
   return sound;
+}
+
+/**
+ * The sound for a `notification.upserted` event: none for what is not news (`alert: false`: the person's own undo,
+ * or a kind they turned off), so undoing a big clear stays silent.
+ */
+export function soundForEvent(
+  event: Extract<NotificationEvent, { type: "notification.upserted" }>,
+  background: boolean,
+): SoundName | null {
+  return event.alert === false ? null : soundForNotification(event.notification, background);
 }

@@ -105,7 +105,9 @@ describe("@mention autocomplete", () => {
       GENERAL_ID,
       { agentId: ATLAS_ID },
     ]);
-    expect(screen().getByText("Atlas entrou no canal.")).toBeTruthy();
+    // No toast: the conversation's own line says who joined, for everyone.
+    expect(screen().queryByText("Atlas entrou no canal.")).toBeNull();
+    expect(screen().queryByText("Atlas não está no canal e não vai ver a menção.")).toBeNull();
   });
 
   test("in a DM the list has no channel note or sections, and picking an agent outside it offers nothing to add", async () => {
@@ -210,7 +212,7 @@ describe("profile card", () => {
     expect(c.textContent).toContain("Agente · Dev");
     expect(c.textContent).toContain("Responsável");
     expect(c.textContent).toContain("João");
-    expect(c.textContent).toContain("sonnet 5.5");
+    expect(c.textContent).toContain("Claude Sonnet 5.5");
     expect(c.textContent).not.toContain("Pode");
     expect(c.textContent).toContain("31% do orçamento usado este mês");
     expect(c.textContent).not.toContain("US$");
@@ -303,7 +305,7 @@ describe("profile card", () => {
     await go(`c/${ENG_ID}`, state);
     await click(screen().getAllByRole("button", { name: "Perfil de Ada" })[0] as HTMLElement);
     await settle(6);
-    expect(card().textContent).toContain("sem responsável");
+    expect(card().textContent).toContain("Administradores");
     expect(within(card()).queryByRole("meter")).toBeNull();
   });
 

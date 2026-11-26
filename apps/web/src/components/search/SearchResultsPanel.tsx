@@ -1,5 +1,5 @@
 import type { SearchHit } from "@agenteschat/client";
-import { useChannelCategories, useChannels } from "@agenteschat/client";
+import { useAgentGroups, useChannels } from "@agenteschat/client";
 import { clockAt } from "@agenteschat/client/lib/format";
 import { hitText } from "@agenteschat/client/lib/media";
 import {
@@ -26,6 +26,7 @@ import { useTranslation } from "react-i18next";
 import { ActorAvatar } from "@/components/AgentAvatar";
 import { useChannelActions } from "@/components/channel-actions";
 import { ErrorState, LoadingList } from "@/components/Loading";
+import { MetaLine } from "@/components/MetaLine";
 import { COMPACT_QUERY } from "@/components/NavDrawer";
 import { useOrg } from "@/components/org-context";
 import { useEscClose } from "@/hooks/useEscClose";
@@ -61,7 +62,7 @@ export function SearchResultsPanel({
   const actions = useChannelActions();
   const navigate = useNavigate();
   const channels = useChannels(org.id);
-  const categories = useChannelCategories(org.id);
+  const sectors = useAgentGroups(org.id);
   const phone = useMatchMedia(COMPACT_QUERY);
   const jumpedFrom = useRef<HTMLElement | null>(null);
   useEscClose(onClose);
@@ -79,9 +80,9 @@ export function SearchResultsPanel({
   const { hits, search, chips } = ws;
   const sorts = SEARCH_SORTS.map((s) => ({ value: s, label: t(`searchPage.sort.${s}`) }));
   const terms = searchTerms(ws.q);
-  const categoryOf = (id: string) => {
-    const category = channels.data?.find((c) => c.id === id)?.categoryId;
-    return categories.data?.find((c) => c.id === category)?.name;
+  const sectorOf = (id: string) => {
+    const sector = channels.data?.find((c) => c.id === id)?.groupId;
+    return sectors.data?.find((g) => g.id === sector)?.name;
   };
   const placeName = (id: string) => {
     const place = ws.placeOf(id);
@@ -169,11 +170,7 @@ export function SearchResultsPanel({
           <h1 className="channel__title thread-title" aria-live="polite">
             {search.isSuccess || hits.length ? count : t("searchPage.panel.label")}
           </h1>
-          {what && (
-            <span className="channel__topic thread-head__meta">
-              <span className="thread-head__where">{what}</span>
-            </span>
-          )}
+          {what && <MetaLine where={what} />}
         </div>
         <Button
           size="sm"
@@ -248,7 +245,7 @@ export function SearchResultsPanel({
                     <span className="search-panel__cat">
                       {g.thread
                         ? t("searchPage.panel.threadIn", { channel: placeName(g.channelId) })
-                        : categoryOf(g.channelId)}
+                        : sectorOf(g.channelId)}
                     </span>
                   </h2>
                   {g.hits.map(card)}

@@ -14,13 +14,23 @@ import {
   schema,
   sql,
 } from "@agenteschat/db";
+import { resolveChannelAgentAsks } from "./admin-asks";
+import { managesAgent, OWNER_COLUMNS, ownsAgent, REACH_COLUMNS } from "./audience";
 import { caches } from "./cache";
-import { endOfCategory, requireCategoryInOrg } from "./channel-categories";
+import { noteJoined, writeLeftLine } from "./channel-joins";
+import { endOfSector, requireSectorInOrg } from "./channel-sectors";
+import { wordsOf } from "./confidential";
 import { ConflictError, ForbiddenError, isUniqueViolation, NotFoundError, ValidationError } from "./errors";
 import { publishChannelEvent, publishChannelsChanged, publishOrgEvent, publishUserEvent } from "./events";
 import { followsThreadSql, threadReadAtSql } from "./follows";
 import { landedAfterSql } from "./message-place";
-import { type PreviewMeta, previewMediaKind, previewMeta, readableBody } from "./message-preview";
+import {
+  CHANNEL_PREVIEW_LENGTH,
+  type PreviewMeta,
+  previewMediaKind,
+  previewMeta,
+  readableBody,
+} from "./message-preview";
 import { quietNoticeSql } from "./notices";
 import { clearChannelNotifications, notificationSnippet } from "./notifications";
 import {
@@ -46,7 +56,14 @@ import {
 import { refuseRightHand } from "./right-hand";
 import { isRoutineRoomKey } from "./routine-brief";
 import { accountInUse, readRefusal, STANDING_COLUMNS } from "./standing";
-import { adminChannelSql, channelReaderSql, channelReadersSql, taskReaderSql } from "./task-access";
+import {
+  adminChannelSql,
+  channelReaderSql,
+  channelReadersSql,
+  fileConversationReaderSql,
+  taskReaderSql,
+} from "./task-access";
+import { isPersonalWorkspace } from "./workspace-mode";
 
 const { channels, channelMembers, agents, organizationMembers, organizations, users } = schema;
 
@@ -175,14 +192,16 @@ export async function createChannel(
     visibility?: "public" | "private";
     /** Private only: people holding one of these roles also see it and may join (ADR 0125). */
     audienceRoleIds?: string[];
-    categoryId?: string | null;
+    /** Its sector (ADR 0240): whoever may create a channel may put it in an existing one. */
+    groupId?: string | null;
+    /** Who joins it right after its creator, with the same checks as adding them one by one (`addChannelMember`). */
+    members?: ({ userId: string } | { agentId: string })[];
   },
   options: { pubsub?: PubSub } = {},
 ): Promise<Channel> {
   await requirePermission(db, actorId, orgId, "create_channels");
-  // Whoever may create a channel may put it in an existing category (arranging categories is for admins).
-  const categoryId = input.categoryId ?? null;
-  if (categoryId) await requireCategoryInOrg(db, orgId, categoryId);
+  const groupId = input.groupId ?? null;
+  if (groupId) await requireSectorInOrg(db, orgId, groupId);
   const name = input.name.trim().toLowerCase();
   if (name.startsWith("dm-")) throw new ValidationError("Channel names can't start with dm-");
   if (!CHANNEL_NAME_PATTERN.test(name)) {
@@ -190,6 +209,11 @@ export async function createChannel(
   }
   const visibility = input.visibility ?? "public";
   const audienceRoleIds = await channelRoleIds(db, orgId, visibility, input.audienceRoleIds);
+  const members = input.members ?? [];
+  // Answers in threads keep the main timeline clear for the other people in it (ADR 0214): a channel made with no one
+  // but its creator, or in a personal workspace (ADR 0159), starts with them in the main timeline instead.
+  const alone = !members.some((m) => "userId" in m && m.userId !== actorId);
+  const threadsOff = alone || (await isPersonalWorkspace(db, orgId));
   try {
     const made = await db.transaction(async (tx) => {
       const [channel] = await tx
@@ -201,8 +225,9 @@ export async function createChannel(
           visibility,
           audienceRoleIds,
           createdByUserId: actorId,
-          categoryId,
-          position: await endOfCategory(tx, orgId, categoryId),
+          groupId,
+          position: await endOfSector(tx, orgId, groupId),
+          ...(threadsOff ? { replyInThreads: false } : {}),
         })
         .returning();
       if (!channel) throw new Error("channel insert returned nothing");
@@ -210,6 +235,10 @@ export async function createChannel(
       return channel;
     });
     await publishChannelsChanged(options.pubsub, orgId);
+    for (const member of members) {
+      if ("userId" in member && member.userId === actorId) continue;
+      await addChannelMember(db, actorId, orgId, made.id, member, options);
+    }
     return made;
   } catch (error) {
     if (isUniqueViolation(error)) throw new ConflictError(`#${name} already exists`);
@@ -219,8 +248,6 @@ export async function createChannel(
 
 /** The most unread messages counted per channel (clients show "99+"). */
 export const MAX_CHANNEL_UNREAD = 100;
-/** Length of a channel's last-message preview (plain text). */
-export const CHANNEL_PREVIEW_LENGTH = 140;
 
 export interface ChannelLastMessage {
   id: string;
@@ -247,10 +274,14 @@ export interface ChannelListItem {
   audienceRoleIds: string[];
   createdByUserId: string | null;
   createdAt: Date;
-  /** Its sidebar category; null: on top, with none. */
-  categoryId: string | null;
-  /** Order inside its category. */
+  /** Its sector (ADR 0240); null: under Canais, in none. */
+  groupId: string | null;
+  /** Order inside its sector (or among the channels in none). */
   position: number;
+  /** Agents asked in its main timeline answer in the thread under that message (ADR 0214). */
+  replyInThreads: boolean;
+  /** The agent responsible for the channel (ADR 0095, addendum of 2026-11-23); null: none. */
+  leadAgentId: string | null;
   isMember: boolean;
   /** Listed only because I'm an administrator (ADR 0151): the apps keep it off the sidebar until opened or joined. */
   seenAsAdmin: boolean;
@@ -287,8 +318,10 @@ interface ChannelListRow {
   audience_role_ids: string[] | string;
   created_by_user_id: string | null;
   created_at: Date | string;
-  category_id: string | null;
+  group_id: string | null;
   position: number | string;
+  reply_in_threads: boolean | string;
+  lead_agent_id: string | null;
   is_member: boolean;
   seen_as_admin: boolean;
   unread_count: number | string | null;
@@ -334,7 +367,7 @@ export async function listChannels(db: Database, userId: string, orgId: string):
     and u.meta->>'mediaAfter' is null`;
   const rows = rowsOf<ChannelListRow>(
     await db.execute(sql`select c.id, c.org_id, c.name, c.topic, c.visibility, c.audience_role_ids, c.created_by_user_id, c.created_at,
-        c.category_id, c.position,
+        c.group_id, c.position, c.reply_in_threads, c.lead_agent_id,
         (cm.id is not null) as is_member,
         (cm.id is null and c.visibility <> 'public' and not ${channelAudienceSql("c", sql`${userId}`)}) as seen_as_admin,
         coalesce(un.n, 0) as unread_count, coalesce(un.m, 0) as mention_count,
@@ -387,8 +420,10 @@ export async function listChannels(db: Database, userId: string, orgId: string):
       audienceRoleIds: uuidArray(r.audience_role_ids),
       createdByUserId: r.created_by_user_id,
       createdAt: asDate(r.created_at),
-      categoryId: r.category_id,
+      groupId: r.group_id,
       position: Number(r.position),
+      replyInThreads: r.reply_in_threads === true || r.reply_in_threads === "t",
+      leadAgentId: r.lead_agent_id,
       isMember: r.is_member === true,
       seenAsAdmin: r.seen_as_admin === true,
       unreadCount: Number(r.unread_count ?? 0),
@@ -403,7 +438,10 @@ export async function listChannels(db: Database, userId: string, orgId: string):
               authorType: r.last_author_type,
               authorId: r.last_author_type === "person" ? r.last_user_id : r.last_agent_id,
               authorName: r.last_author_name,
-              preview: notificationSnippet(readableBody(r.last_body ?? "", lastMeta), CHANNEL_PREVIEW_LENGTH),
+              preview: notificationSnippet(
+                readableBody(wordsOf(r.last_body ?? "", lastMeta), lastMeta),
+                CHANNEL_PREVIEW_LENGTH,
+              ),
               meta: previewMeta(lastMeta),
               mediaKind: previewMediaKind(r.last_body, lastMeta),
               createdAt: asDate(r.last_at),
@@ -488,6 +526,20 @@ export async function isChannelMember(db: Executor, orgId: string, channelId: st
   return row !== undefined;
 }
 
+async function isAgentInChannel(db: Executor, orgId: string, channelId: string, agentId: string) {
+  const [row] = await db
+    .select({ id: channelMembers.id })
+    .from(channelMembers)
+    .where(
+      and(
+        eq(channelMembers.orgId, orgId),
+        eq(channelMembers.channelId, channelId),
+        eq(channelMembers.agentId, agentId),
+      ),
+    );
+  return row !== undefined;
+}
+
 /**
  * Every person who reads `hereId` also reads `thereId` (`channelReaderSql`, so an administrator outside a channel
  * counts): what `thereId` says may be repeated in `hereId`.
@@ -543,7 +595,8 @@ export async function personReach(db: Database, orgId: string, userId: string) {
 
 /**
  * Which of `channelIds` a person reads, by the rule of `requireChannelAccess`: a member, an administrator in a channel,
- * or a task's reader; archived channels left out. For screens that quote a conversation outside it (run history).
+ * a task's reader, or a live file's reader in its conversation; archived channels left out. For screens that quote a
+ * conversation outside it (run history).
  */
 export async function readableChannelIds(
   db: Executor,
@@ -572,6 +625,8 @@ export async function readableChannelIds(
         or(
           isNotNull(channelMembers.id),
           and(eq(channels.kind, "task"), taskReaderSql(sql`${channels.id}`, sql`${userId}::text`)),
+          // A live file's conversation: whoever reads the file (ADR 0199).
+          and(eq(channels.kind, "file"), fileConversationReaderSql(sql`${channels.id}`, sql`${userId}::text`)),
           adminChannelSql(sql`${orgId}::uuid`, sql`${userId}::text`),
         ),
       ),
@@ -600,6 +655,7 @@ export async function requireChannelAccess(db: Database, userId: string, orgId: 
       memberId: channelMembers.id,
       overrides: channelOverridesSql(organizationMembers.orgId, sql`${channelId}::uuid`, organizationMembers.userId),
       taskReader: sql<boolean>`${channels.kind} = 'task' and ${taskReaderSql(sql`${channelId}::uuid`, sql`${userId}::text`)}`,
+      fileReader: sql<boolean>`${channels.kind} = 'file' and ${fileConversationReaderSql(sql`${channelId}::uuid`, sql`${userId}::text`)}`,
     })
     .from(organizationMembers)
     .innerJoin(organizations, eq(organizations.id, organizationMembers.orgId))
@@ -617,8 +673,13 @@ export async function requireChannelAccess(db: Database, userId: string, orgId: 
   if (!channel || channel.archivedAt) throw new NotFoundError("Channel not found");
   const permissions = resolvePermissions(row.role === "owner", row.keys);
   const reads = row.memberId || (channel.kind === "channel" && permissions.has("administrator"));
-  // A task's conversation is read by whoever sees the task (ADR 0145), always checked again: people are never its members.
-  if (channel.kind === "task" ? !(row.taskReader === true || String(row.taskReader) === "t") : !reads)
+  // A task's conversation is read by whoever sees the task (ADR 0145), a live file's by whoever reads the file (ADR
+  // 0199), always checked again: people are never their members.
+  const conversationReader =
+    channel.kind === "task"
+      ? row.taskReader === true || String(row.taskReader) === "t"
+      : row.fileReader === true || String(row.fileReader) === "t";
+  if (channel.kind === "task" || channel.kind === "file" ? !conversationReader : !reads)
     throw new ForbiddenError("Join this channel first");
   const workspace: Membership = {
     orgId,
@@ -665,7 +726,12 @@ export async function joinChannel(
     .where(and(eq(channels.id, channelId), eq(channels.orgId, orgId)));
   if (!channel) throw new NotFoundError("Channel not found");
   const admin = channel.kind === "channel" && can(membership, "administrator");
-  if (channel.kind === "dm" || (channel.visibility !== "public" && channel.byRole !== true && !admin))
+  // A live file's conversation is read by whoever reads the file, never by membership (ADR 0199 §2).
+  if (
+    channel.kind === "dm" ||
+    channel.kind === "file" ||
+    (channel.visibility !== "public" && channel.byRole !== true && !admin)
+  )
     throw new ForbiddenError("This channel is private");
   // The channel's members column shows them at once (a join from a channel's preview or the browser).
   const joined = async () => {
@@ -678,7 +744,12 @@ export async function joinChannel(
     await publishChannelsChanged(options.pubsub, orgId);
   };
   if (channel.visibility === "public" || admin) {
-    await db.insert(channelMembers).values({ orgId, channelId, userId }).onConflictDoNothing();
+    const fresh = await db
+      .insert(channelMembers)
+      .values({ orgId, channelId, userId })
+      .onConflictDoNothing()
+      .returning({ id: channelMembers.id });
+    if (fresh.length > 0) await noteJoined(db, orgId, channelId, userId);
     await joined();
     return;
   }
@@ -692,7 +763,10 @@ export async function joinChannel(
         where c.id = ${channelId}::uuid and c.org_id = ${orgId}::uuid and ${channelAudienceSql("c", sql`${userId}`)}
         on conflict do nothing returning 1`),
     );
-    if (rows.length > 0) return true;
+    if (rows.length > 0) {
+      await noteJoined(tx, orgId, channelId, userId);
+      return true;
+    }
     return isChannelMember(tx, orgId, channelId, userId);
   });
   if (!byRole) throw new ForbiddenError("This channel is private");
@@ -728,8 +802,8 @@ const channelCanSql = (orgId: string, userId: string, key: ChannelKey) =>
   channelMaySql(sql`${orgId}::uuid`, sql`c.id`, sql`${userId}::text`, key);
 
 /**
- * Where `actorId` may put an agent of theirs (or any, with `manage_agents`) or take it out (ADR 0085 §5): a channel
- * they're in and may post in or created, or any with `manage_channels`. One rule for an agent's page
+ * Where `actorId` may put an agent of theirs (or one they manage, `managesAgent`) or take it out (ADR 0085 §5): a
+ * channel they're in and may post in or created, or any with `manage_channels`. One rule for an agent's page
  * (`setAgentChannels`) and a channel's members; the apps mirror it (`addsAgentsTo` in packages/client).
  */
 export const placesAgentsIn = (
@@ -741,8 +815,8 @@ export const placesAgentsIn = (
   (actorIn && (can(membership, "post") || channel.createdByUserId === actorId)) || can(membership, "manage_channels");
 
 /**
- * Refuses unless `actorId` may put `agentId` in `channel` or take it out: the agent theirs or `manage_agents`, and
- * `placesAgentsIn`.
+ * Refuses unless `actorId` may put `agentId` in `channel` or take it out: the agent theirs or one they manage
+ * (`managesAgent`: "Editar qualquer agente" where it reaches, ADR 0085 addendum of 2026-11-17), and `placesAgentsIn`.
  */
 async function requirePlacesAgent(
   db: Database,
@@ -752,11 +826,11 @@ async function requirePlacesAgent(
   agentId: string,
 ) {
   const [agent] = await db
-    .select({ ownerUserId: agents.ownerUserId })
+    .select(REACH_COLUMNS)
     .from(agents)
     .where(and(eq(agents.id, agentId), eq(agents.orgId, channel.orgId), isNull(agents.archivedAt)));
   if (!agent) throw new ValidationError("That agent does not exist in this organization");
-  if (agent.ownerUserId !== actorId && !can(membership, "manage_agents")) {
+  if (!ownsAgent(agent, actorId, membership.roleIds) && !managesAgent(agent, actorId, membership)) {
     throw new ForbiddenError("Only an admin or the agent's owner can change where it works");
   }
   if (!placesAgentsIn(membership, actorId, channel, await isChannelMember(db, channel.orgId, channel.id, actorId))) {
@@ -789,6 +863,22 @@ export async function addChannelMember(
     .where(and(eq(channels.id, channelId), eq(channels.orgId, orgId), isNull(channels.archivedAt)));
   if (!channel) throw new NotFoundError("Channel not found");
   if (channel.kind === "dm") throw new ValidationError("A direct conversation keeps its participants");
+  // A live file's conversation (ADR 0199 §2): read by whoever reads the file, never by membership (a member would read
+  // it after losing the file, in search and notifications), and agents join it only when they may work on the file
+  // (`admitFileAgents`).
+  if (channel.kind === "file") {
+    throw new ValidationError(
+      "A file's conversation is everyone who reads the file: share the file instead",
+      "channel.file_conversation",
+    );
+  }
+  // A task's conversation the same way (ADR 0145): whoever sees the task reads it; a mention admits agents.
+  if (channel.kind === "task") {
+    throw new ValidationError(
+      "A task's conversation is everyone who sees the task: share the task instead",
+      "channel.task_conversation",
+    );
+  }
   if ("userId" in member) {
     if (!(await managesChannel(db, membership, actorId, channel))) {
       throw new ForbiddenError("Only the channel's creator or an admin can add members", "channel.members_forbidden");
@@ -796,7 +886,12 @@ export async function addChannelMember(
     if (!(await getMembership(db, member.userId, orgId))) {
       throw new ValidationError("That person is not a member of this organization");
     }
-    await db.insert(channelMembers).values({ orgId, channelId, userId: member.userId }).onConflictDoNothing();
+    const fresh = await db
+      .insert(channelMembers)
+      .values({ orgId, channelId, userId: member.userId })
+      .onConflictDoNothing()
+      .returning({ id: channelMembers.id });
+    if (fresh.length > 0 && channel.kind === "channel") await noteJoined(db, orgId, channelId, actorId);
     caches.channelMembers.delete(`${orgId}:${channelId}`);
     const event = {
       type: "channel.member_added" as const,
@@ -812,10 +907,13 @@ export async function addChannelMember(
   await refuseRightHand(db, orgId, member.agentId, "added to a channel");
   await requirePlacesAgent(db, membership, actorId, channel, member.agentId);
   const autoReply = member.autoReply ?? true;
+  // Only a real join is said: turning an agent already here to auto-reply adds no line.
+  const already = await isAgentInChannel(db, orgId, channelId, member.agentId);
   await db
     .insert(channelMembers)
     .values({ orgId, channelId, agentId: member.agentId, autoReply })
     .onConflictDoUpdate({ target: [channelMembers.channelId, channelMembers.agentId], set: { autoReply } });
+  if (!already && channel.kind === "channel") await noteJoined(db, orgId, channelId, actorId);
   caches.channelMembers.delete(`${orgId}:${channelId}`);
   caches.scopes.deletePrefix(`${orgId}:${member.agentId}:visible`);
   await publishChannelEvent(options.pubsub, {
@@ -824,6 +922,7 @@ export async function addChannelMember(
     member: { type: "agent", id: member.agentId, autoReply },
   });
   await publishChannelsChanged(options.pubsub, orgId);
+  await resolveChannelAgentAsks({ db, pubsub: options.pubsub }, orgId, channelId, member.agentId);
 }
 
 /**
@@ -841,7 +940,7 @@ export async function setChannelAgentAutoReply(
 ) {
   const membership = await requireActiveMembership(db, actorId, orgId);
   const [row] = await db
-    .select({ createdBy: channels.createdByUserId, ownerUserId: agents.ownerUserId })
+    .select({ createdBy: channels.createdByUserId, ...OWNER_COLUMNS })
     .from(channelMembers)
     .innerJoin(channels, eq(channels.id, channelMembers.channelId))
     .innerJoin(agents, eq(agents.id, channelMembers.agentId))
@@ -854,7 +953,7 @@ export async function setChannelAgentAutoReply(
     );
   if (!row) throw new NotFoundError("That agent is not in this channel");
   if (
-    row.ownerUserId !== actorId &&
+    !ownsAgent(row, actorId, membership.roleIds) &&
     !(await managesChannel(db, membership, actorId, { id: channelId, orgId, createdByUserId: row.createdBy }))
   ) {
     throw new ForbiddenError("Only the channel's creator, an admin or the agent's owner can change this");
@@ -887,8 +986,10 @@ export async function listChannelMembers(db: Database, actorId: string, orgId: s
 /**
  * Removes a person or an agent from a channel. Allowed for yourself (leave),
  * the channel's creator, and admins; an agent also for whoever may put it
- * there (`requirePlacesAgent`). Publishes `membership.revoked` so open
- * WebSocket subscriptions of that person end immediately.
+ * there (`requirePlacesAgent`). A code session's conversation (ADR 0215) can be
+ * left too, and keeps its own agent and whoever opened it. Publishes
+ * `membership.revoked` so open WebSocket subscriptions of that person end
+ * immediately.
  */
 export async function removeChannelMember(
   db: Database,
@@ -905,7 +1006,9 @@ export async function removeChannelMember(
     .where(and(eq(channels.id, channelId), eq(channels.orgId, orgId)));
   if (!channel) throw new NotFoundError("Channel not found");
   const self = "userId" in member && member.userId === actorId;
-  if (self && channel.kind !== "channel") throw new ValidationError("Only a channel can be left", "channel.leave_kind");
+  if (self && channel.kind !== "channel" && channel.kind !== "code")
+    throw new ValidationError("Only a channel can be left", "channel.leave_kind");
+  if (channel.kind === "code") await keepCodeSessionCore(db, channelId, member);
   // Every person joins #general with the workspace: it is how they all hear the same thing.
   if (self && channel.name === "general")
     throw new ValidationError("Everyone stays in #general", "channel.general_stays");
@@ -928,6 +1031,15 @@ export async function removeChannelMember(
     )
     .returning({ channelId: channelMembers.channelId });
   caches.channelMembers.delete(`${orgId}:${channelId}`);
+  // Out of the channel, an agent is no longer responsible for it. The column is read by the update itself, never from
+  // the row above: a lead saved while the agent was leaving goes too (`updateChannel` locks its member row).
+  if ("agentId" in member) {
+    await db
+      .update(channels)
+      .set({ leadAgentId: null })
+      .where(and(eq(channels.orgId, orgId), eq(channels.id, channelId), eq(channels.leadAgentId, member.agentId)));
+    caches.channels.delete(`${orgId}:${channelId}`);
+  }
   // The last person out of a private channel: nobody could reach it again, so it closes (its messages are kept).
   if (self && gone.length > 0 && channel.visibility === "private" && !channel.archivedAt) {
     const [stays] = await db
@@ -937,10 +1049,15 @@ export async function removeChannelMember(
       .limit(1);
     if (!stays) await closeChannel(db, orgId, channelId, options);
   }
+  // The line that says so comes after a person's live subscription ended: the conversation is no longer theirs.
+  const left = (who: { type: "person" | "agent"; id: string }) =>
+    gone.length > 0 ? writeLeftLine({ db, pubsub: options.pubsub }, orgId, channelId, who) : undefined;
   if ("userId" in member) {
     await announceChannelLeavers({ db, pubsub: options.pubsub }, orgId, [{ channelId, userId: member.userId }]);
+    await left({ type: "person", id: member.userId });
     return;
   }
+  await left({ type: "agent", id: member.agentId });
   caches.scopes.deletePrefix(`${orgId}:${member.agentId}:visible`);
   await publishChannelEvent(options.pubsub, {
     type: "channel.member_removed",
@@ -948,6 +1065,18 @@ export async function removeChannelMember(
     member: { type: "agent", id: member.agentId },
   });
   await publishChannelsChanged(options.pubsub, orgId);
+}
+
+/** A code session (ADR 0215) keeps its own agent and whoever opened it: they are the session. */
+async function keepCodeSessionCore(db: Database, channelId: string, member: { userId: string } | { agentId: string }) {
+  const [session] = await db
+    .select({ agentId: schema.codeSessions.agentId, createdBy: schema.codeSessions.createdBy })
+    .from(schema.codeSessions)
+    .where(eq(schema.codeSessions.channelId, channelId))
+    .limit(1);
+  if (!session) return;
+  if ("agentId" in member ? member.agentId === session.agentId : member.userId === session.createdBy)
+    throw new ValidationError("A code session keeps its own agent and whoever opened it", "code_session.member_stays");
 }
 
 /** The channel, when `actorId` may archive it or bring it back: its creator or an admin. */

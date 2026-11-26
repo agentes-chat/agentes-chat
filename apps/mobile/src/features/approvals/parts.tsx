@@ -1,27 +1,39 @@
 import {
   type Approval,
   type ApprovalEmail,
+  useApprovals,
   useCancelApproval,
   useCatalog,
   useCustomServers,
   useDecideApproval,
+  useDecideApprovals,
+  useRunApprovalNow,
 } from "@agenteschat/client";
+import { approveAllByAgent } from "@agenteschat/client/lib/approval-card";
 import { aheadPhase } from "@agenteschat/client/lib/approval-kind";
 import { approvalOriginShort, approvalOriginWords } from "@agenteschat/client/lib/approval-origin";
 import { approvalEffects } from "@agenteschat/client/lib/approval-review";
-import { alwaysRoutineName, approvalDoing, approvalTitle } from "@agenteschat/client/lib/approval-words";
+import {
+  alwaysRoutineName,
+  approvalDoing,
+  approvalLetter,
+  approvalLetterTo,
+  approvalTitle,
+} from "@agenteschat/client/lib/approval-words";
 import { fromServer, itemName } from "@agenteschat/client/lib/connected";
 import { nextLabel } from "@agenteschat/client/lib/format";
 import { connectorName } from "@agenteschat/client/lib/scopes";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import type { TFunction } from "i18next";
 import { type ReactNode, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { Alert, Platform, Pressable, StyleSheet, View } from "react-native";
+import Animated from "react-native-reanimated";
 import { useOrg } from "@/providers/org";
-import { Button, Chip, Fuse, haptics, Text, useToast } from "@/ui";
+import { Button, Chip, Fuse, HoldButton, haptics, Text, useReducedMotion, useToast } from "@/ui";
 import { useInfoHint } from "@/ui/InfoHint";
 import { router } from "@/ui/navigation";
+import { REVEAL } from "../chat/ClippedMessage";
 import { parseInline } from "../chat/logic";
 import { Spans } from "../chat/MessageSpans";
 import { ConnectorIcon, IconTile } from "../connectors/ConnectorIcon";
@@ -193,17 +205,26 @@ export function useRefuseApproval(a: Approval, onRefused?: () => void) {
       router.push(`/approval/${a.id}?mode=refuse`);
       return;
     }
-    Alert.prompt(
-      t("mobile.approval.refuseAsk"),
-      t(`mobile.approval.refuseWhy${g}`, { name }),
-      [
-        { text: t("mobile.common.cancel"), style: "cancel" },
-        { text: t("mobile.approval.refuse"), style: "destructive", onPress: (reason) => send(reason ?? "") },
-      ],
-      "plain-text",
-    );
+    promptRefusal(t, name, send);
   };
   return { refuse, pending: decide.isPending };
+}
+
+/**
+ * iOS: the system's alert that asks before refusing, with the reason as an optional field and Recusar in red (the
+ * platform's alerts take text there). Cancelar leaves everything as it was; `send` gets what was typed. The cards and
+ * the request's sheet ask with this one alert.
+ */
+export function promptRefusal(t: TFunction, name: string, send: (reason: string) => void) {
+  Alert.prompt(
+    t("mobile.approval.refuseAsk"),
+    t(`mobile.approval.refuseWhy${genderOf(name)}`, { name }),
+    [
+      { text: t("mobile.common.cancel"), style: "cancel" },
+      { text: t("mobile.approval.refuse"), style: "destructive", onPress: (reason) => send(reason ?? "") },
+    ],
+    "plain-text",
+  );
 }
 
 /**
@@ -262,6 +283,8 @@ export function ApprovalMark({
  */
 export function ApprovalPreview({ approval: a }: { approval: Approval }) {
   const { t } = useTranslation();
+  const letter = approvalLetter(a);
+  if (letter) return <ApprovalLetter letter={letter} />;
   if (!a.email) return null;
   return (
     <View style={styles.previewMail}>
@@ -282,12 +305,39 @@ export function ApprovalPreview({ approval: a }: { approval: Approval }) {
   );
 }
 
-export const hasApprovalPreview = (a: Approval) => Boolean(a.email);
+export const hasApprovalPreview = (a: Approval) => Boolean(a.email || approvalLetter(a));
+
+/**
+ * A connector's message (`approvalLetter`): its subject, to whom, the first three lines of its text; the whole call
+ * under "Ver detalhes".
+ */
+export function ApprovalLetter({ letter }: { letter: NonNullable<ReturnType<typeof approvalLetter>> }) {
+  const { t } = useTranslation();
+  const to = approvalLetterTo(t, letter);
+  return (
+    <View style={styles.previewMail}>
+      {letter.subject ? (
+        <Text variant="subhead" tone="ink" style={styles.medium}>
+          {letter.subject}
+        </Text>
+      ) : null}
+      {to ? (
+        <Text variant="footnote" tone="muted">
+          {to}
+        </Text>
+      ) : null}
+      <Text variant="small" tone="ink2" style={[styles.said, styles.previewBody]} numberOfLines={3}>
+        {letter.body}
+      </Text>
+    </View>
+  );
+}
 
 /**
  * The email an approval writes, as it will be: its subject in bold, then De (the mailbox and its provider), Para,
- * Cc, Cco, each label above its value (never beside it), the text folded to four lines ("Ler tudo") unless `full`,
- * and the message it answers. `flat`: drawn on a request card, no frame of its own (never a box in a card).
+ * Cc, Cco, each label above its value (never beside it), the text folded to four lines until "Ver mais" opens it in
+ * place (unless `full`), and the message it answers. `flat`: drawn on a request card, no frame of its own (never a
+ * box in a card).
  */
 export function ApprovalEmailLetter({
   email,
@@ -300,6 +350,7 @@ export function ApprovalEmailLetter({
 }) {
   const { t } = useTranslation();
   const c = useColors();
+  const reduced = useReducedMotion();
   const [open, setOpen] = useState(false);
   const long = email.body.length > 180 || email.body.split("\n").length > 4;
   const rows: { label: string; value: string; note?: string }[] = [
@@ -344,19 +395,21 @@ export function ApprovalEmailLetter({
       </View>
       {email.body ? (
         <View style={flat ? styles.letterBodyFlat : styles.letterBody}>
-          <Text variant="small" tone="ink2" style={styles.said} numberOfLines={full || open ? undefined : 4}>
-            {email.body}
-          </Text>
-          {!full && long ? (
+          <Animated.View layout={open && !reduced ? REVEAL : undefined} style={styles.clip}>
+            <Text variant="small" tone="ink2" style={styles.said} numberOfLines={full || open ? undefined : 4}>
+              {email.body}
+            </Text>
+          </Animated.View>
+          {!full && long && !open ? (
             // An 18-point line: 13 of slop around it gives the 44-point target.
             <Pressable
               accessibilityRole="button"
               hitSlop={13}
-              onPress={() => setOpen((o) => !o)}
+              onPress={() => setOpen(true)}
               style={({ pressed }) => (pressed ? styles.pressed : null)}
             >
               <Text variant="footnote" tone="ink2" style={[styles.medium, styles.underline]}>
-                {open ? t("approval.email.less") : t("approval.email.more")}
+                {t("channel.long.more")}
               </Text>
             </Pressable>
           ) : null}
@@ -528,6 +581,156 @@ export function ApprovalAheadLine({
   );
 }
 
+/**
+ * An approved request still waiting for one asked before it (`approvalLine`), as the web's `HeldLine`: that request by
+ * name, which opens its screen, then what moves it: deciding that one where this person may, or "Rodar este agora" when
+ * it is another run's (`canRunNow`).
+ */
+export function HeldLine({ approval: a, waitsOn }: { approval: Approval; waitsOn: Approval }) {
+  const { t } = useTranslation();
+  const toast = useToast();
+  const runNow = useRunApprovalNow(useOrgId());
+  const { approve, pending: approving, high } = useApproveNow(waitsOn);
+  const { refuse, pending: refusing } = useRefuseApproval(waitsOn);
+  // Its own run's request is decided where it stands, beside it: only another run's gets buttons here.
+  const other = waitsOn.runId !== a.runId;
+  const decidable = other && waitsOn.status === "pending" && waitsOn.canDecide === true;
+  const freeable = other && a.canRunNow === true;
+  const busy = approving || refusing || runNow.isPending;
+  return (
+    <View style={styles.held}>
+      <Text variant="footnote" tone="muted">
+        <Trans
+          i18nKey="approval.held.waiting"
+          components={{
+            link: (
+              <Text
+                variant="footnote"
+                tone="ink"
+                accessibilityRole="link"
+                style={styles.heldLink}
+                onPress={() => router.push(`/approval/${waitsOn.id}`)}
+              >
+                {approvalTitle(t, waitsOn)}
+              </Text>
+            ),
+          }}
+        />
+      </Text>
+      {decidable || freeable ? (
+        <View style={styles.heldActs}>
+          {decidable ? (
+            high ? (
+              <HoldButton size="card" label={t("mobile.approval.hold")} disabled={busy} onConfirm={() => approve()} />
+            ) : (
+              <Button
+                variant="primary"
+                size="card"
+                label={t("mobile.approval.approve")}
+                disabled={busy}
+                onPress={() => approve()}
+              />
+            )
+          ) : null}
+          {decidable ? (
+            <Button
+              variant="secondary"
+              size="card"
+              label={t("mobile.approval.refuse")}
+              disabled={busy}
+              onPress={refuse}
+            />
+          ) : null}
+          {freeable ? (
+            <Button
+              variant="secondary"
+              size="card"
+              label={t("approval.held.runNow")}
+              disabled={busy}
+              loading={runNow.isPending}
+              onPress={() =>
+                runNow.mutate({ id: a.id }, { onError: () => toast({ title: t("mobile.app.failed"), icon: "x" }) })
+              }
+            />
+          ) : null}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+/**
+ * "Aprovar todos" / "Recusar todos" per agent over what waits on you, as the web's inbox: one row for each agent with
+ * two or more requests you may decide (`approveAllByAgent`), deciding exactly those. Held when any is high risk.
+ */
+export function ApproveAllByAgent() {
+  const { t } = useTranslation();
+  const orgId = useOrgId();
+  const dir = useDirectory();
+  const toast = useToast();
+  const c = useColors();
+  const decide = useDecideApprovals(orgId);
+  const groups = approveAllByAgent(useApprovals(orgId).data ?? []);
+  if (groups.length === 0) return null;
+  const go = (ids: string[], decision: "approve" | "refuse") =>
+    decide.mutate(
+      { ids, decision },
+      {
+        onSuccess: () => {
+          if (decision === "approve") successHaptic();
+          else haptics.medium();
+        },
+        onError: () => toast({ title: t("mobile.app.failed"), icon: "x" }),
+      },
+    );
+  return (
+    <View style={styles.byAgent}>
+      {groups.map((g, i) => {
+        const name = dir.agentById.get(g.agentId)?.name ?? "";
+        const high = g.items.some((a) => g.ids.includes(a.id) && approvalRisk(a) === "high");
+        return (
+          <View
+            key={g.agentId}
+            style={[styles.byAgentRow, i > 0 && [styles.byAgentDivided, { borderTopColor: c.line2 }]]}
+          >
+            <View style={styles.byAgentWho}>
+              <AgentFace agentId={g.agentId} size={20} />
+              <Text variant="subhead" tone="ink" style={styles.byAgentName}>
+                {t("approval.byAgent.head", { count: g.ids.length, name })}
+              </Text>
+            </View>
+            <View style={styles.heldActs}>
+              {high ? (
+                <HoldButton
+                  size="card"
+                  label={t("approval.byAgent.approve")}
+                  disabled={decide.isPending}
+                  onConfirm={() => go(g.ids, "approve")}
+                />
+              ) : (
+                <Button
+                  variant="primary"
+                  size="card"
+                  label={t("approval.byAgent.approve")}
+                  disabled={decide.isPending}
+                  onPress={() => go(g.ids, "approve")}
+                />
+              )}
+              <Button
+                variant="secondary"
+                size="card"
+                label={t("approval.byAgent.refuse")}
+                disabled={decide.isPending}
+                onPress={() => go(g.ids, "refuse")}
+              />
+            </View>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 /** Withdraws an action approved ahead before its time (its routine's run won't do it), and says so. */
 export function useCancelAhead() {
   const { t } = useTranslation();
@@ -608,6 +811,14 @@ export function ApprovalFuse({ approval: a }: { approval: Pick<Approval, "create
 }
 
 const styles = StyleSheet.create({
+  held: { width: "100%", gap: 8, marginTop: 4 },
+  heldActs: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 },
+  heldLink: { textDecorationLine: "underline" },
+  byAgent: { paddingHorizontal: 16, marginBottom: 8 },
+  byAgentRow: { gap: 8, paddingVertical: 12 },
+  byAgentDivided: { borderTopWidth: StyleSheet.hairlineWidth },
+  byAgentWho: { flexDirection: "row", alignItems: "center", gap: 8 },
+  byAgentName: { flexShrink: 1 },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   facts: { borderRadius: 14, paddingHorizontal: 12, paddingVertical: 4 },
   // With the box's 4, the first and last fact sit 10 from its edge, as the letter's head and body do.
@@ -617,6 +828,7 @@ const styles = StyleSheet.create({
   factKey: { width: 92 },
   grow: { flex: 1, minWidth: 0 },
   said: { lineHeight: 20 },
+  clip: { overflow: "hidden" },
   why: { gap: 4 },
   fuse: { flexDirection: "row", alignItems: "center", gap: 10 },
   letter: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 14, borderBottomLeftRadius: 6, overflow: "hidden" },

@@ -1,5 +1,5 @@
 import type { Message, ComputerQueue as Queue, QueueWhere } from "@agenteschat/client";
-import { receiptView, useChannels, useDms, useMachineQueue, useMachines } from "@agenteschat/client";
+import { useAiAccounts, useChannels, useDms, useMachineQueue, useMachines } from "@agenteschat/client";
 import {
   type ConversationWait,
   conversationWaits,
@@ -13,17 +13,18 @@ import {
   type QueuePlace,
   queueAllStartedText,
   queueButtonText,
-  queuedNextText,
   queueFillText,
   queueLeftText,
-  queueLiveText,
   queuePurposeText,
   queueStartText,
   queueStatusText,
   queueView,
+  queueWaitText,
   queueWhereText,
   waitingFor,
 } from "@agenteschat/client/lib/computer-queue";
+import { SPILL_USES, spillDeviceText, spillOfUse, spillUseOf } from "@agenteschat/client/lib/devices";
+import { devicePlanName } from "@agenteschat/client/lib/no-ai";
 import { badgeCount } from "@agenteschat/client/lib/unread";
 import {
   Button,
@@ -34,12 +35,14 @@ import {
   DialogFooter,
   Icon,
   Message as MessageRow,
+  Select,
   useNow,
 } from "@agenteschat/ui";
 import { useNavigate } from "@tanstack/react-router";
 import { type CSSProperties, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
+import { useDevices, useUpdateComputer } from "@/components/devices/queries";
 import { ErrorState, LoadingList } from "@/components/Loading";
 import { OpensAgent } from "@/components/OpensAgent";
 import { useOrg } from "@/components/org-context";
@@ -140,7 +143,7 @@ export function QueueDialog({
       closeLabel={t("common.close")}
       width={440}
       className="cq-dialog"
-      subtitle={queue ? queueStatusText(t, queueView(queue, names.viewerId), now) : undefined}
+      subtitle={queue ? queueStatusText(t, queueView(queue, names.viewerId), queue) : undefined}
     >
       <DialogBody>
         {queue ? (
@@ -245,9 +248,9 @@ function QueueLists({
                 onStop={() => stop([w.runId], undefined, true)}
                 stopping={stopping.has(w.runId)}
               >
-                <span className="cq__l1">
+                <span className="cq__l1 ac-tailrow">
                   <b>{agentName(w.agentId)}</b>
-                  <span className="cq__time">{queueLeftText(t, w, now)}</span>
+                  <span className="cq__time ac-tail">{queueLeftText(t, w, now)}</span>
                 </span>
                 <span className="cq__l2">
                   {[
@@ -280,10 +283,10 @@ function QueueLists({
                   onStop={() => stop([w.runId], undefined, true)}
                   stopping={stopping.has(w.runId)}
                 >
-                  <span className="cq__l1">
+                  <span className="cq__l1 ac-tailrow">
                     <b>{agentName(w.agentId)}</b>
                     <span className="cq__nth">{nthText(t, i18n.language, w.position)}</span>
-                    <span className="cq__time">{queueStartText(t, w, names.agent, now)}</span>
+                    <span className="cq__time ac-tail">{queueStartText(t, w, names.agent, now)}</span>
                   </span>
                   <span className="cq__l2">
                     {[queuePurposeText(t, w.purpose, names), queueWhereText(t, names.place(w.where))].join(" · ")}
@@ -296,35 +299,54 @@ function QueueLists({
         </section>
       )}
       <p className="cq__rule">{t("queue.rule")}</p>
+      <SpillHere machineId={queue.machineId} />
     </div>
   );
 }
 
-/** The waiting turns of a message's agents in their computer's line, resolved as `waitingFor` finds them. */
-function useQueueWaits(message: Message) {
-  const { org } = useOrg();
-  const receipt = useLive((s) => s.receipts[message.id]);
-  const status = receiptView(receipt).status;
-  const agents = status?.kind === "queued" ? status.agents : [];
-  const machineId = useAgentsMachineId(agents);
-  const q = useMachineQueue(org.id, machineId, agents.length > 0);
-  const rows = agents.flatMap((id) => waitingFor(q.data, receipt, id, message.channelId) ?? []);
-  // The fan-out strip says where each stands instead.
-  const fanned = fanShows(message, fanOutOf(receipt, q.data), receipt);
-  return { agents, rows: fanned ? [] : rows };
-}
-
 /**
- * The receipt of a message whose agents wait in line: "Theo is in line for the computer · next" when its one agent
- * is next, else `fallback` (the plain queued line). Once, whatever the number of agents.
+ * "Your computers": the viewer's other computers, each with how it helps (`spillUseOf`): not at all, while this one is
+ * full or away (`spill.own`), or first for their agents' work (`spill.first`). Nothing when they have none, or while
+ * an admin turned devices' help off for the workspace.
  */
-export function QueuedWords({ message, fallback }: { message: Message; fallback: string }) {
+function SpillHere({ machineId }: { machineId: string }) {
   const { t } = useTranslation();
-  const { org } = useOrg();
-  const dir = useDirectory(org.id);
-  const { agents, rows } = useQueueWaits(message);
-  const next = agents.length === 1 && rows[0]?.position === 1 ? dir.agentById.get(rows[0].agentId)?.name : undefined;
-  return <span>{next ? queuedNextText(t, next) : fallback}</span>;
+  const { org, me } = useOrg();
+  const devices = useDevices(org.id);
+  const update = useUpdateComputer(org.id);
+  const accounts = useAiAccounts(org.id).data;
+  const mine = (devices.data?.devices ?? []).filter(
+    (d) => d.id !== machineId && d.ownerUserId === me.user.id && d.machineKind === "connected" && !d.systemMode,
+  );
+  if (mine.length === 0 || devices.data?.devicesHelp === false) return null;
+  return (
+    <section className="cq-spill" aria-labelledby="cq-spill-title">
+      <h3 className="cq__title" id="cq-spill-title">
+        <span>{t("queue.spill.title")}</span>
+      </h3>
+      <ul className="cq-spill__rows">
+        {mine.map((d) => (
+          <li key={d.id} className="cq-spill__row ac-iconline">
+            <Icon name="computer" size={16} />
+            <span className="cq-spill__name">
+              <b>{d.name}</b>
+              <small>{spillDeviceText(t, d, devicePlanName(t, accounts, d.id))}</small>
+            </span>
+            <Select
+              size="sm"
+              align="end"
+              className="cq-spill__use"
+              aria-label={t("queue.spill.use.label", { name: d.name })}
+              value={spillUseOf(d)}
+              onValueChange={(use) => update.mutate({ id: d.id, spill: spillOfUse(use) })}
+              options={SPILL_USES.map((use) => ({ value: use, label: t(`queue.spill.use.${use}`) }))}
+            />
+          </li>
+        ))}
+      </ul>
+      <p className="cq__rule">{t("queue.spill.text")}</p>
+    </section>
+  );
 }
 
 const sameWaits = (a: ConversationWait[], b: ConversationWait[]) =>
@@ -347,21 +369,17 @@ export function QueueWaitTurns({ channelId, messages }: { channelId: string; mes
 }
 
 /**
- * The agent's turn (its face, its name): "Waiting for the computer. Next up, in about 1 min" or "In line, 4th. After
- * Ada, Kai and Ravi", "You go first" on the viewer's own request, and "See queue"; "Waiting for the computer" until
- * the line knows the turn.
+ * The agent's turn (its face, its name): one line ("In line · starts soon", or "In line, after Ada"
+ * behind another agent's waiting turn), "You go first" on the viewer's own request, and "See queue".
  */
 function QueueWaitTurn({ wait: { agentId, runId }, channelId }: { wait: ConversationWait; channelId: string }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { org, me } = useOrg();
   const dir = useDirectory(org.id);
-  const now = useNow(30_000);
   const machineId = useAgentMachineId(agentId);
   const queue = useMachineQueue(org.id, machineId).data;
   const w = waitingFor(queue, runId ? { runOf: { [agentId]: runId } } : undefined, agentId, channelId);
-  const agentName = (id: string) => dir.agentById.get(id)?.name;
-  const name = agentName(agentId) ?? t("channel.unknownAgent");
-  const text = w ? queueLiveText(t, i18n.language, queue, w.runId, agentName, now) : t("queue.live.waiting");
+  const name = dir.agentById.get(agentId)?.name ?? t("channel.unknownAgent");
   const first = w?.people && w.purpose.kind === "person" && w.purpose.userId === me.user.id;
   return (
     <MessageRow
@@ -374,7 +392,7 @@ function QueueWaitTurn({ wait: { agentId, runId }, channelId }: { wait: Conversa
     >
       <p className="cq-turn__say ac-iconline" aria-live="polite">
         <Icon name="waiting" size={14} />
-        <span>{text}</span>
+        <span>{queueWaitText(t, queue, w, (id) => dir.agentById.get(id)?.name)}</span>
       </p>
       <span className="cq-turn__acts">
         {first && <Chip className="cq-first">{t("queue.youFirst")}</Chip>}

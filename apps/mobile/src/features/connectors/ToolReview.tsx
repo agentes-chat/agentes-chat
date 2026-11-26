@@ -7,13 +7,15 @@ import {
   useCustomServers,
   useMailAction,
 } from "@agenteschat/client";
+import { instructionsSave, instructionsView } from "@agenteschat/client/lib/custom-tools";
 import { mailActionsChanged, mailActionsFrom, mailReviewTools } from "@agenteschat/client/lib/mail";
 import { type ReviewTool, reviewDecisions, reviewToolsOf } from "@agenteschat/client/lib/tool-review";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import {
   Button,
+  GROUPED_ROW,
   GroupedFooter,
   GroupedHeader,
   GroupedList,
@@ -22,9 +24,12 @@ import {
   type IconName,
   InfoHint,
   Locked,
+  RADIUS,
   SearchField,
   Text,
 } from "@/ui";
+import { FoldedBody } from "../chat/FoldedBody";
+import { RowBones } from "../roles/parts";
 import { useColors, useOrgId } from "../shared/hooks";
 import { pickOne } from "../shared/PickerSheet";
 import { errorHaptic, successHaptic } from "../shared/parts";
@@ -48,9 +53,13 @@ import {
 /** Each tool level's mark in the picker. */
 const TOOL_LEVEL_ICON: Record<string, IconName> = { read: "eye", write: "pen", approval: "shield", off: "eyeoff" };
 
-/** What a screen pins at its bottom for the review's save: the words, whether it is busy, what a tap does. */
+/**
+ * What a screen pins at its bottom for the review's save: the words, whether it is saving (the button spins) or
+ * waiting on something else (it can't be pressed), what a tap does.
+ */
 export interface SaveBar {
   label: string;
+  saving: boolean;
   busy: boolean;
   onPress: () => void;
 }
@@ -78,7 +87,6 @@ export function ReviewStep({
   onSaveBar?: (bar: SaveBar | null) => void;
 }) {
   const { t } = useTranslation();
-  const c = useColors();
   const orgId = useOrgId();
   const servers = useCustomServers(orgId);
   const target = reviewTarget(
@@ -99,7 +107,14 @@ export function ReviewStep({
       />
     );
   }
-  if (target.kind === "loading") return <ActivityIndicator color={c.muted} />;
+  // The rows' shape while the tools are read, never a bare spinner.
+  if (target.kind === "loading")
+    return (
+      <GroupedList>
+        <RowBones />
+        <RowBones name={56} />
+      </GroupedList>
+    );
   const tools = target.kind === "catalog" ? catalogReviewTools(t, target.def) : [];
   return (
     <>
@@ -133,6 +148,10 @@ function ServerReview({
   const { save, refresh } = useCustomServerAction(orgId);
   const [server, setServer] = useState(first);
   const [state, setState] = useState<ReviewState>(emptyReview);
+  // Saved with Continuar, beside the tools' levels. An older server leaves it out: on.
+  // Kept from when the screen opened: a refetched list must not move it under the draft.
+  const [startedOn] = useState(first.useInstructions ?? true);
+  const [useInstructions, setUseInstructions] = useState(startedOn);
   const [failed, setFailed] = useState<string | null>(null);
   const tools = useMemo(() => reviewToolsOf(t, server), [t, server]);
   const left = tools.filter((x) => isWaiting(state, x)).length;
@@ -151,7 +170,12 @@ function ServerReview({
   const next = () => {
     setFailed(null);
     save.mutate(
-      { id: server.id, label: server.label, tools: reviewDecisions(tools, state.levels, state.decided) },
+      {
+        id: server.id,
+        label: server.label,
+        tools: reviewDecisions(tools, state.levels, state.decided),
+        ...instructionsSave(server, useInstructions, startedOn),
+      },
       {
         onSuccess: () => {
           successHaptic();
@@ -161,19 +185,16 @@ function ServerReview({
       },
     );
   };
-  const saveLabel = save.isPending
-    ? t("mobile.connectors.review.saving")
-    : onScreen
-      ? t("common.save")
-      : t("connectFlow.next");
+  const saveLabel = onScreen ? t("common.save") : t("connectFlow.next");
+  const saving = save.isPending;
   // Pinned at the screen's bottom (Ferramentas): the bar gets the words and the state, a tap the latest `next`.
   const nextNow = useRef(next);
   useEffect(() => {
     nextNow.current = next;
   });
   useEffect(() => {
-    onSaveBar?.({ label: saveLabel, busy, onPress: () => nextNow.current() });
-  }, [onSaveBar, saveLabel, busy]);
+    onSaveBar?.({ label: saveLabel, saving, busy: refresh.isPending, onPress: () => nextNow.current() });
+  }, [onSaveBar, saveLabel, saving, refresh.isPending]);
   useEffect(() => () => onSaveBar?.(null), [onSaveBar]);
   return (
     <>
@@ -187,6 +208,7 @@ function ServerReview({
           <ToolList tools={tools} levelOf={(x) => chosenLevel(state, x)} review={{ state, onChange: setState }} />
         </Locked>
       )}
+      <ServerInstructions server={server} on={useInstructions} onChange={setUseInstructions} busy={busy} />
       {/* Asking the server again is the last row: it rarely changes right after connecting. */}
       <View>
         <GroupedList>
@@ -205,8 +227,60 @@ function ServerReview({
         <GroupedFooter>{left > 0 ? t("toolReview.missing", { count: left }) : t("toolReview.later")}</GroupedFooter>
       </View>
       {failed ? <Problem key={failed} text={failed} /> : null}
-      {onSaveBar ? null : <Button variant="primary" wide label={saveLabel} disabled={busy} onPress={next} />}
+      {onSaveBar ? null : (
+        <Button variant="primary" wide label={saveLabel} disabled={refresh.isPending} loading={saving} onPress={next} />
+      )}
     </>
+  );
+}
+
+/**
+ * A server by address's own instructions under its tools (the web's `ServerInstructions`, ADR 0016 addendum of
+ * 2026-11-22): the setting (its title the switch's row, its ⓘ, its status) with the text in a well under it in the same
+ * card, as written (outside words: nothing in them made a mention, a link or a chart), folded as a long text on a page is
+ * (`FoldedBody`), faded while agents don't get it; saved with Continuar. A server that sends none says so in one row, no switch.
+ */
+function ServerInstructions({
+  server,
+  on,
+  onChange,
+  busy,
+}: {
+  server: CustomServer;
+  on: boolean;
+  onChange: (on: boolean) => void;
+  busy: boolean;
+}) {
+  const { t, i18n } = useTranslation();
+  const c = useColors();
+  const view = instructionsView(t, i18n.language, server, on);
+  if (view.kind === "hidden") return null;
+  if (view.kind === "none") {
+    return (
+      <GroupedList>
+        <GroupedRow label={view.title} labelLines={0} sub={view.status} subLines={0} />
+      </GroupedList>
+    );
+  }
+  return (
+    <Locked when={busy}>
+      <GroupedList>
+        <GroupedRow
+          label={view.title}
+          labelLines={0}
+          sub={view.status}
+          subLines={0}
+          toggle={on}
+          onPress={() => onChange(!on)}
+          hint={{ name: t("common.about", { label: view.title }), text: view.hint }}
+        />
+        <View style={styles.notesRoom}>
+          <View style={[styles.notes, { backgroundColor: c.sunken }]}>
+            <FoldedBody body={view.text} muted={view.faded} plain />
+          </View>
+        </View>
+      </GroupedList>
+    </Locked>
   );
 }
 
@@ -265,10 +339,8 @@ export function MailReview({
       <Button
         variant="primary"
         wide
-        label={
-          update.isPending ? t("mobile.connectors.review.saving") : onScreen ? t("common.save") : t("connectFlow.next")
-        }
-        disabled={update.isPending}
+        label={onScreen ? t("common.save") : t("connectFlow.next")}
+        loading={update.isPending}
         onPress={next}
       />
     </>
@@ -408,4 +480,7 @@ const styles = StyleSheet.create({
   accept: { paddingTop: 12 },
   // A header's room above a group with none.
   again: { paddingTop: 20 },
+  // The well sits a row's side room inside the card, its corners the card's less that room (26 − 16).
+  notesRoom: { padding: GROUPED_ROW.padX },
+  notes: { paddingVertical: 12, paddingHorizontal: 16, borderRadius: RADIUS.md, borderCurve: "continuous" },
 });

@@ -32,6 +32,10 @@ export const strings: Partial<PushStrings> = {
   machineConnectedTitle: "Una computadora nueva se unió al espacio de trabajo",
   computerReadyTitle: "La computadora de tu espacio de trabajo está lista",
   computerReadyBody: "Abre la página de un agente para verla en vivo.",
+  computerDownTitle: (n) => `${n} no responde`,
+  computerDownBody: "El trabajo de tus agentes en ella está en espera. Toca para ver qué hacer.",
+  computerBackTitle: (n) => `${n} volvió`,
+  computerBackBody: (away) => `Estuvo fuera ${away}. El trabajo que esperaba sigue ahora.`,
   browserHandoffTitle: (a) => `${a} te necesita en el navegador`,
   browserHandoffReminderTitle: (a) => `${a} aún te necesita en el navegador`,
   browserHandoffBody: "Toca para abrir la pantalla.",
@@ -81,6 +85,18 @@ export const strings: Partial<PushStrings> = {
   deviceInUseBody: "Toca para detenerlo.",
   deviceAccessTitle: (a, p, d) => (p ? `${a} (para ${p}) pide usar tu ${d}` : `${a} pide usar tu ${d}`),
   deviceAccessBody: "Toca para permitir una vez, siempre, o decir que no.",
+  deviceToolTitle: (a, d) => `${a} te pide activar una herramienta en tu ${d}`,
+  deviceToolBody: "Toca para activarla con un clic.",
+  deviceCliTitle: (a, d) => `${a} te pide instalar un programa en tu ${d}`,
+  deviceCliBody: "Toca para instalarlo con un clic.",
+  deviceFolderTitle: (a, f, d) => (f ? `${a} pide ${f} en tu ${d}` : `${a} pide una carpeta en tu ${d}`),
+  deviceFolderBody: "Permítelo en la app de ese ordenador.",
+  adminAskTitle: (a, what, l) =>
+    what === "channel_agent"
+      ? `${a} te pide añadir un agente a #${l}`
+      : what === "create_agents"
+        ? `${a} pide poder crear agentes`
+        : `${a} te pide configurar el webhook de ${l} para rutinas`,
   deviceWaitingTitle: (p, d) => `El agente de ${p} está esperando tu ${d}`,
   deviceWaitingBody: "Empieza cuando vuelva.",
   teamWeekReady: "Tu semana del equipo está lista",
@@ -92,4 +108,5 @@ export const strings: Partial<PushStrings> = {
   joinRequestTitlePersonal: (name) => `${name} pide unirse a tu espacio de trabajo`,
   joinSuggestionTitlePersonal: (by, name) => `${by} sugirió invitar a ${name}`,
   teamWeekReadyPersonal: "Tu semana está lista",
+  teamWatchStill: (n) => (n === 1 ? "1 cosa sigue esperándote" : `${n} cosas siguen esperándote`),
 };

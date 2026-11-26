@@ -7,6 +7,7 @@ import {
   type ComputerDevice,
   type DeviceRule,
   type DeviceStatus,
+  type DevicesList,
   listDevices,
   type MachinePhoneRow,
   machineRule,
@@ -210,7 +211,14 @@ export async function checkDeviceUse(
       message: `${name} is ${ruleText}, not for ${forWhom}. Nobody can be asked for it: an admin can change who uses it under Settings › Devices. Use another device.`,
     };
   }
-  const requestId = await askDeviceOwner(deps, ctx, target, { owner, requester, why, requesterName: forWhom });
+  // From a confidential thread (ADR 0190) the owner is asked with none of the run's words: they may not be in the
+  // conversation, and neither the request nor its notification goes with the thread's prune.
+  const requestId = await askDeviceOwner(deps, ctx, target, {
+    owner,
+    requester,
+    why: ctx.confidential ? "" : why,
+    requesterName: forWhom,
+  });
   return {
     ok: false,
     requester,
@@ -320,6 +328,13 @@ async function askDeviceOwner(
   return row.id;
 }
 
+/**
+ * The person's steps when iOS refuses UI testing on an iPhone, and what isn't needed: agents were seen asking for the
+ * helper to be rebuilt in Xcode and for terminal access.
+ */
+const IPHONE_UI_STEPS =
+  "Ask the person, on the iPhone: Settings → Privacy & Security → Developer Mode on; Settings → Developer → Enable UI Automation on (off and on again if it already is); enter the passcode when it asks; keep it unlocked. Then Check again in its setup. Nothing needs rebuilding and no terminal access is needed: the Mac builds and renews the test helper by itself.";
+
 /** What to tell the person for a phone that needs them, by its reason (`PhoneReason`), and whether it ends by itself. */
 export function phoneReasonText(
   reason: PhoneReason | string | null,
@@ -346,7 +361,7 @@ export function phoneReasonText(
       };
     case "ui_automation_off":
       return {
-        text: `${phone} needs UI Automation: Settings → Developer → Enable UI Automation. Ask the person to turn it on.`,
+        text: `iOS doesn't allow UI Automation on ${phone} yet. ${IPHONE_UI_STEPS}`,
         byItself: false,
       };
     case "xcode_missing":
@@ -354,6 +369,11 @@ export function phoneReasonText(
     case "xcode_too_old":
       return {
         text: `${phone} runs an iOS newer than Xcode on ${host} can drive. Ask the person to install the Xcode matching the iPhone's iOS (27 for iOS 27), then run \`xcrun devicectl manage ddis update\`.`,
+        byItself: false,
+      };
+    case "ios_behind_xcode":
+      return {
+        text: `${phone} runs an iOS older than the one Xcode on ${host} is for. Ask the person to update the iPhone: Settings → General → Software Update.`,
         byItself: false,
       };
     case "helper_missing":
@@ -375,7 +395,7 @@ export function phoneReasonText(
       };
     case "ui_not_authorized":
       return {
-        text: `${phone} refused the test helper's taps. Ask the person to unlock it and enter its passcode if it asks, and if it keeps happening to turn Settings → Developer → Enable UI Automation off and on.`,
+        text: `Screen capture on ${phone} works, but iOS refuses the test helper's taps and other actions. ${IPHONE_UI_STEPS}`,
         byItself: false,
       };
     case "team_limit":
@@ -445,10 +465,13 @@ export async function decideDeviceAccess(
   if (rule.ownerUserId !== actorId) throw new ForbiddenError("Only the device's owner can answer this");
   if (row.status !== "pending") throw new ValidationError("This request was already answered");
   const status = decision === "no" ? "denied" : decision;
-  await deps.db
+  // Only while it is still pending: of two answers at once (two of the owner's screens), one stands.
+  const [decided] = await deps.db
     .update(deviceAccessRequests)
     .set({ status, decidedByUserId: actorId, decidedAt: new Date() })
-    .where(eq(deviceAccessRequests.id, row.id));
+    .where(and(eq(deviceAccessRequests.id, row.id), eq(deviceAccessRequests.status, "pending")))
+    .returning({ id: deviceAccessRequests.id });
+  if (!decided) throw new ValidationError("This request was already answered");
   if (decision === "always") {
     // The requester joins the rule the owner reads (the phone's own, or for an iPhone its host's).
     const followsHost = phone ? phone.followsHost : true;
@@ -529,6 +552,8 @@ function statusWords(s: DeviceStatus, people: Map<string, string>) {
       return `getting ready (${s.reason})`;
     case "paused":
       return `paused by its owner${s.until ? ` until ${s.until}` : ""}`;
+    case "moving":
+      return "moving to another server, back in a few minutes";
     case "offline":
       return `${s.withHost ? "offline with its computer" : "offline"} (${seenAgo(s.lastSeenAt)})`;
     case "unsupported":
@@ -659,11 +684,13 @@ export async function devicesForRequester(
     };
   }
   // Its own computer is said above (`computer_status`), not listed again.
-  const home = (await getAgentCached(ctx.db, ctx.orgId, ctx.agentId))?.machineId ?? null;
+  const agent = await getAgentCached(ctx.db, ctx.orgId, ctx.agentId);
+  const home = agent?.machineId ?? null;
   const listed = devices.filter((d) => d.id !== home || d.phones.length > 0);
   const usable = listed.filter((d) => d.mayUse || d.id === home || d.phones.some((p) => p.mayUse));
   const others = listed.filter((d) => !usable.includes(d));
   if (usable.length === 0 && others.length === 0) return { text: "" };
+  const free = helpers(all, agent?.ownerUserId ?? null, home);
   return {
     text: [
       `# Devices you may use for ${forWhom}`,
@@ -682,11 +709,52 @@ export async function devicesForRequester(
       others.length > 0
         ? `Not shared with ${forWhom} (using one asks its owner): ${others.map((d) => `"${d.name}"`).join(", ")}.`
         : "",
+      free.length > 0
+        ? `Free now to help with long work: ${free.map((d) => `"${d.name}"`).join(", ")}. start_task with computer "auto" starts on your own computer when it has room, else on one of them.`
+        : "",
       "Name a computer with `computer` on run_code, start_task and the file tools, and a phone with the phone tools' `phone`. When one isn't ready, wait_for_device starts by itself once it is.",
     ]
       .filter(Boolean)
       .join("\n"),
   };
+}
+
+/** Room for more work there now: nothing running, or less than its limit (or room left, where tasks start on room). */
+const roomNow = (d: ComputerDevice) =>
+  d.status.kind === "ready" ||
+  (d.status.kind === "busy" && (d.status.max === null ? (d.taskRoom?.more ?? 0) > 0 : d.status.running < d.status.max));
+
+/**
+ * The computers that may take an agent's long work now when its own has no room ("Help when the team's computer is
+ * full or away", ADR 0233): its owner lets it help in a workspace that lets devices help, the person the agent works for
+ * may use it, it has room, and it's the agent's owner's own or one marked the workspace's (never someone else's own
+ * computer, where commands would run as its owner).
+ */
+function helpers(list: DevicesList, agentOwner: string | null, home: string | null) {
+  if (!list.devicesHelp) return [];
+  return list.devices.filter(
+    (d) =>
+      d.id !== home &&
+      d.machineKind !== "managed" &&
+      d.spill.own &&
+      d.mayUse &&
+      roomNow(d) &&
+      (d.belongsToWorkspace || (agentOwner !== null && d.ownerUserId === agentOwner)),
+  );
+}
+
+/**
+ * `start_task`'s `computer: "auto"`: "" (the agent's own computer) while it has room or nothing else does, else the
+ * name of a computer that helps (`helpers`).
+ */
+export async function autoComputer(ctx: ToolContext): Promise<string> {
+  const requester = await deviceRequester(ctx);
+  const agent = await getAgentCached(ctx.db, ctx.orgId, ctx.agentId);
+  if (!requester || !agent?.machineId) return "";
+  const list = await listDevices(ctx.db, ctx.orgId, requester).catch(() => null);
+  const home = list?.devices.find((d) => d.id === agent.machineId);
+  if (!list || !home || roomNow(home)) return "";
+  return helpers(list, agent.ownerUserId ?? null, agent.machineId)[0]?.name ?? "";
 }
 
 /**

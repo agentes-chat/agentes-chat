@@ -6,14 +6,17 @@ import {
   continuedRunIdOf,
   emptySteer,
   emptyStreams,
+  keptSteer,
   RealtimeConnection,
   reconcileRuns,
   reconcileSteer,
+  STEER_KEPT,
   seedSteerMessages,
   steerStateIn,
   steerStateOf,
   steerStore,
 } from "../src/index";
+import { applyReceiptEvent } from "../src/realtime/receipts";
 import { fakeSockets } from "./fake-socket";
 
 type Ev = Parameters<typeof applyChannelEvent>[1];
@@ -24,6 +27,7 @@ const read = (...messageIds: string[]) => ({ type: "agent.run.read", ...base, me
 const delivered = (...messageIds: string[]) => ({ type: "agent.run.delivered", ...base, messageIds }) as Ev;
 const redispatched = (runId: string, newRunId: string, ...messageIds: string[]) =>
   ({ type: "agent.run.redispatched", ...base, runId, newRunId, messageIds }) as Ev;
+const released = (messageId: string) => ({ type: "agent.run.released", ...base, messageId }) as Ev;
 const waitMessage = (messageId: string, outcome: "resolved" | "woke" | "held") =>
   ({ type: "agent.run.wait_message", ...base, messageId, waitKind: "browser_help", outcome }) as Ev;
 
@@ -192,6 +196,43 @@ describe("what became of a message sent while an agent works", () => {
     expect(steerStateIn(s, "m3")?.state).toBe("waiting");
   });
 
+  test("a message the triage found for someone else leaves the run: nothing of that run under it, live or listed", () => {
+    let s = applySteerEvent(emptySteer, steered("m2"));
+    s = applySteerEvent(s, released("m2"));
+    expect(steerStateIn(s, "m2")).toBeNull();
+    // A list read before the release had it on that run: the release takes it off.
+    let listed = seedSteerMessages(emptySteer, "c1", [person("m3", ["r1", "r2"])]);
+    listed = applySteerEvent(listed, released("m3"));
+    expect(listed.seeded.m3?.runs.map((r) => r.runId)).toEqual(["r2"]);
+    // Another run's word on a message stays.
+    const other = applySteerEvent(emptySteer, steered("m4", { runId: "r9" }));
+    expect(applySteerEvent(other, released("m4"))).toBe(other);
+  });
+
+  test("its receipt: the agent only saw it, and that run's news is no longer the message's", () => {
+    const at = { channelId: "c1", threadId: null, agentId: "ada", runId: "r1", messageId: "m1" };
+    let r = applyReceiptEvent({}, { type: "agent.run.steered", ...at });
+    expect(r.m1?.agents).toEqual([["ada", "claimed"]]);
+    r = applyReceiptEvent(r, { type: "agent.run.released", ...at });
+    expect(r.m1?.agents).toEqual([["ada", "seen"]]);
+    expect(r.m1?.runs).toEqual([]);
+    r = applyReceiptEvent(r, {
+      type: "run.finished",
+      channelId: "c1",
+      threadId: "t1",
+      agentId: "ada",
+      runId: "r1",
+      status: "done",
+    } as Parameters<typeof applyReceiptEvent>[1]);
+    expect(r.m1?.agents).toEqual([["ada", "seen"]]);
+  });
+
+  test("into a run parked on an outage, its receipt says the AI isn't answering, never that it answers", () => {
+    const at = { channelId: "c1", threadId: null, agentId: "ada", runId: "r1", messageId: "m1" };
+    const r = applyReceiptEvent({}, { type: "agent.run.steered", ...at, outage: true });
+    expect(r.m1?.agents).toEqual([["ada", "outage"]]);
+  });
+
   test("run.continued and meta.canceled.continuedRunId mark the stopped reply", () => {
     const stopped = {
       id: "m9",
@@ -318,5 +359,21 @@ describe("the live work: what it read, when it read it", () => {
     } as Ev);
     expect(s.runs.r1).toBeUndefined();
     expect(s.runs.r2).toMatchObject({ status: "thinking", agentId: "ada", threadId: "m1", triggerMessageId: "m9" });
+  });
+});
+
+describe("a long session", () => {
+  afterEach(() => steerStore.reset());
+
+  test("keeps the latest messages' runs and continuations, not every one ever listed", () => {
+    const many = Array.from({ length: STEER_KEPT + 1 }, (_, i) => person(`m${i}`, [`r${i}`]));
+    steerStore.seed("c1", many);
+    const seeded = Object.keys(steerStore.get().seeded);
+    // Past the mark, the oldest half goes: the newest stay, the first ones listed don't.
+    expect(seeded).toHaveLength(STEER_KEPT / 2);
+    expect(seeded.at(-1)).toBe(`m${STEER_KEPT}`);
+    expect(steerStore.get().seeded.m0).toBeUndefined();
+    const within = { ...emptySteer, live: {}, seeded: { a: { channelId: "c1", runs: [] } }, continued: {} };
+    expect(keptSteer(within)).toBe(within);
   });
 });

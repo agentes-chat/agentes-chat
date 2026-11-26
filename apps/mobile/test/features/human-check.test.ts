@@ -21,6 +21,7 @@ import {
   signUpClosed,
   socialRefusalText,
   socialReturnText,
+  widgetBox,
 } from "../../src/features/auth/human-check";
 import { signUpLinkTarget } from "../../src/features/auth/links";
 import { translator } from "./fixtures";
@@ -84,6 +85,11 @@ describe("the check's WebView", () => {
       language: "pt-BR",
     });
     expect(url).toBe("https://app.agentes.chat/human-check.html?k=1x00000000000000000000AA&a=ask-code&t=dark&l=pt-BR");
+  });
+
+  test("one box for the widget hidden or open, inside the sheet's padding, spanning the sheet on a narrow phone", () => {
+    expect(widgetBox(390)).toEqual({ narrow: false, width: 338, height: 65 });
+    expect(widgetBox(320)).toEqual({ narrow: true, width: 304, height: 65 });
   });
 
   test("reads the server page's messages, and nothing else", () => {
@@ -202,6 +208,24 @@ describe("refusals in the phone's words", () => {
     expect(refusalText(en, { status: 500, code: "internal" })).toBe("Something went wrong. Try again.");
     expect(failureText(en, new TypeError("Network request failed"))).toBe(en("mobile.auth.errors.network"));
     expect(failureText(en, new ApiError(400, "join.code_wrong", "x"))).toBe("Wrong code. Try again.");
+  });
+
+  test("an account out of password tries: when to try again, in minutes from the server's wait", async () => {
+    const out = refusalOf({ error: { status: 429, code: "TOO_MANY_PASSWORD_TRIES", retryIn: 61 } });
+    expect(out).toEqual({
+      status: 429,
+      code: "TOO_MANY_PASSWORD_TRIES",
+      kind: undefined,
+      cloud: undefined,
+      retryIn: 61,
+    });
+    const refused = out ?? { status: 0 };
+    expect(refusalText(await translator("en"), refused)).toBe(
+      "Too many password tries on this account. Try again in 2 minutes.",
+    );
+    expect(refusalText(await translator("pt-BR"), { ...refused, retryIn: 30 })).toBe(
+      "Muitas tentativas de senha nesta conta. Tente de novo em 1 minuto.",
+    );
   });
 
   test("a limit: the sign-in's e-mail step says the sign-in's words, as the web's does, other calls the API's", async () => {

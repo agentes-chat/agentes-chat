@@ -9,8 +9,14 @@ const last = (sheet: string, selector: string, property: string) =>
     .at(-1)?.[1];
 
 test("the activity bar's room opens and closes in a glide (by its cap, from 0), still with reduced motion", () => {
-  const idle = '.channel__composer > .ac-typing:not([data-active="true"])';
+  // Room while someone works here or comes back here (a return, `data-rest`), else none.
+  const idle = '.channel__composer > .ac-typing:not([data-active="true"]):not([data-rest="true"])';
   expect(last(topLevel(css), idle, "max-height")).toBe("0");
+  // At rest: the live pill's box, one line, bare.
+  expect(last(topLevel(css), '.ac-typing[data-rest="true"]', "min-height")).toBe("28px");
+  expect(last(topLevel(css), '.ac-typing[data-rest="true"]', "max-height")).toBe("28px");
+  expect(last(topLevel(css), '.ac-typing[data-rest="true"]', "background")).toBeUndefined();
+  expect(last(topLevel(css), '.ac-typing[data-rest="true"]', "box-shadow")).toBeUndefined();
   // Open, at least its one low line and room for a name on a second (`max-height`, what the glide runs to).
   expect(last(topLevel(css), '.ac-typing[data-active="true"]', "min-height")).toBe("28px");
   expect(last(topLevel(css), '.ac-typing[data-active="true"]', "max-height")).toBe("64px");
@@ -38,9 +44,9 @@ test("an attachment's box is the same before and after what it holds loads: noth
   expect(css).not.toContain(".artifact-tile__picture[data-loading]");
   // A video: one box before and after its metadata.
   const kit = topLevel(await Bun.file(join(import.meta.dir, "../../../packages/ui/src/styles/components.css")).text());
-  expect(last(kit, ".ac-video--tile .ac-video__media", "width")).toBe("320px");
-  expect(last(kit, ".ac-video--tile .ac-video__media", "height")).toBe("180px");
-  expect(last(kit, ".ac-video--tile .ac-video__media", "max-width")).toBe("100%");
+  expect(last(kit, ".ac-video--tile:not([data-full]) .ac-video__media", "width")).toBe("320px");
+  expect(last(kit, ".ac-video--tile:not([data-full]) .ac-video__media", "height")).toBe("180px");
+  expect(last(kit, ".ac-video--tile:not([data-full]) .ac-video__media", "max-width")).toBe("100%");
   expect(kit).not.toContain(".ac-video--tile[data-tall]");
   expect(kit).not.toContain(".ac-video--tile:not([data-ready])");
 });

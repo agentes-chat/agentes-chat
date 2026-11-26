@@ -49,10 +49,13 @@
     "overflow-x",
   ];
 
-  const sig = (el) => {
+  /** A kit button's words sit in its label: whatever a rule finds in them, it names and places as the button. */
+  const worded = (el) => (el.matches(".ac-btn > .ac-btn__label") ? el.parentElement : el);
+  const sig = (labelOrEl) => {
+    const el = worded(labelOrEl);
     const classes = (typeof el.className === "string" ? el.className : (el.className?.baseVal ?? ""))
       .split(/\s+/)
-      .filter((c) => c && !/^(ac-captop|ac-iconline|ac-actrow|is-|has-)/.test(c))
+      .filter((c) => c && !/^(ac-captop|ac-iconline|ac-actrow|ac-tail|is-|has-)/.test(c))
       .slice(0, 3);
     return el.tagName.toLowerCase() + classes.map((c) => `.${c}`).join("");
   };
@@ -63,7 +66,7 @@
   const UTILITY = /^(ac-|row$|stack|small$|muted$|grow$|is-|has-)/;
   const kitOnly = (signature) => !(signature?.match(/\.[\w-]+/g) ?? []).some((c) => !UTILITY.test(c.slice(1)));
   const placeOf = (el) => {
-    for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+    for (let p = worded(el).parentElement; p && p !== document.body; p = p.parentElement) {
       const classes = typeof p.className === "string" ? p.className.split(/\s+/) : [];
       if (classes.some((c) => c && !UTILITY.test(c))) return sig(p);
     }
@@ -225,6 +228,15 @@
     for (let p = svgs[0].parentElement; p && p !== el; p = p.parentElement) if (hasSurface(style(p))) return null;
     return svgs[0];
   };
+  /** The kit's marks drawn without an svg: the working orbit (a canvas), the done, failed and stop squares, the wait. */
+  const MARKS = "canvas.ac-pixspin,.ac-pixdone,.ac-pixfail,.ac-pixstop,.rq-wait";
+  /** The mark a flow child is: one of `MARKS`, or a wordless box around one and nothing else that shows. */
+  const markOf = (el) => {
+    if (el.matches(MARKS)) return el;
+    if (el.matches("button,a,[role=button]") || visibleText(el) || hasSurface(style(el))) return null;
+    const marks = [...el.querySelectorAll(`svg,${MARKS}`)].filter(seen);
+    return marks.length === 1 && marks[0].matches(MARKS) ? marks[0] : null;
+  };
   /** Where what shows of a flow child starts and ends: its glyph, its plate, or its words. */
   const inkOf = (el) => {
     const glyph = glyphOf(el);
@@ -239,7 +251,7 @@
    * column, Google's, its words from its start and the room after them the column's.
    */
   const PILLS =
-    ".ac-btn:not(.ac-btn--icon,.ac-btn--glyph,.ac-btn--loading),.ac-token,.ac-chip,.ac-countchip,[class*='pill'],[class*='chip']:not(.cal-chip),[class*='__tag'],[class*='-tag']";
+    ".ac-btn:not(.ac-btn--icon,.ac-btn--glyph,.ac-btn--loading),.ac-token,.ac-chip,.ac-countchip,[class*='pill'],[class*='chip']:not(.cal-chip,.ac-menu),[class*='__tag'],[class*='-tag']";
   /**
    * A card: a row with a surface of its own that starts with an icon and ends with what can be done about it (a button,
    * a link) or another icon. Pills are the `pad` rule's.
@@ -266,9 +278,11 @@
    */
   const rowOf = (el) => {
     for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+      // The part of one control (a field's affix, a segmented control's, a split control's, a token's) is no action on
+      // a row's edge: the control is drawn as one.
       if (
         p.matches(
-          "main,[role=dialog],[role=alertdialog],.ac-dialog__foot,.ac-dialog__head,.ac-details,.ac-input-affix,.ac-seg,.ac-composer,.ac-token",
+          "main,[role=dialog],[role=alertdialog],.ac-dialog__foot,.ac-dialog__head,.ac-details,.ac-input-affix,.ac-seg,.ac-split,.ac-composer,.ac-token",
         )
       )
         return null;
@@ -529,7 +543,7 @@
         if (!hasSurface(s) || s.display === "inline") continue;
         const b = el.getBoundingClientRect();
         if (b.width > 320 || el.scrollWidth > el.clientWidth + 1) continue;
-        // A face at the start of a pill sits concentric with its round end, tighter than the words at the other.
+        // A face at the start of a pill sits tighter than the words at the other end (`nest` checks its corner).
         if (el.firstElementChild?.matches(".ac-avatar,.ac-rolemark,canvas,[class*='face']")) continue;
         // A frame split into segments (an event pill's actions, each after a hairline) pads each one, not the whole.
         if (el.querySelector(":scope > [class*='__actions']")) continue;
@@ -608,8 +622,11 @@
      * apart from its box (a `::before` set in from its sides, as `.ac-btn--glyph` does).
      */
     square(out) {
-      // A select's trigger and a segmented control's part are sized by the control they belong to.
-      const parts = "[role=combobox],[aria-haspopup=listbox],.ac-select__trigger,.ac-seg__item,[role=tab],[role=radio]";
+      // A select's trigger and a segmented control's part are sized by the control they belong to, and so is a canvas
+      // bar's picker, which shows its value and ▾ like a select, and the ▾ half of a slides toolbar's pair ("New
+      // slide" | ▾ for its layout), one control split in two (ADR 0196).
+      const parts =
+        "[role=combobox],[aria-haspopup=listbox],.ac-select__trigger,.ac-seg__item,[role=tab],[role=radio],.cnv-bar__pick,.sl-tools__pair > .sl-tools__open";
       for (const el of document.querySelectorAll("button,a.ac-btn,[role=button]")) {
         if (!seen(el) || el.matches(parts) || hasWords(el)) continue;
         // One glyph: two side by side (a face and a +) are a pill of their own.
@@ -645,7 +662,9 @@
           const clips = (v) => v === "hidden" || v === "clip";
           if (clips(s.overflowX) && wide > 1 && s.textOverflow !== "ellipsis")
             out.push({ rule: "clipped", node: el, el: sig(el), px: wide, text: words(el) });
-          if (clips(s.overflowY) && tall > 2 && s.webkitLineClamp === "none" && s.textOverflow !== "ellipsis")
+          // A fold ends its words under a fade (a mask) with "Ver mais" under them: on purpose, not at a hard edge.
+          const fold = (s.maskImage || s.webkitMaskImage || "none") !== "none";
+          if (clips(s.overflowY) && tall > 2 && s.webkitLineClamp === "none" && s.textOverflow !== "ellipsis" && !fold)
             out.push({ rule: "clipped", node: el, el: sig(el), px: tall, text: words(el) });
           // Cut by a box around it instead: that box's "…" reaches only words on its own lines, not a block inside it
           // (a picker's two lines, a flex column), so they stop mid-word at its edge.
@@ -823,7 +842,17 @@
         if (!seen(el) || el.children.length !== 1 || ownText(el)) continue;
         const icon = el.firstElementChild;
         if (icon.tagName.toLowerCase() !== "svg" || !seen(icon)) continue;
-        const a = el.getBoundingClientRect();
+        // A plate drawn by `::before` (a glyph's, a pair of icons' in a row of actions) is what shows, not the box.
+        const box = el.getBoundingClientRect();
+        const before = getComputedStyle(el, "::before");
+        const drawn = before.content !== "none" && before.position === "absolute";
+        const inset = (side) => (drawn ? parseFloat(before[side]) || 0 : 0);
+        const a = {
+          left: box.left + inset("left"),
+          right: box.right - inset("right"),
+          top: box.top + inset("top"),
+          bottom: box.bottom - inset("bottom"),
+        };
         const b = icon.getBoundingClientRect();
         const dx = (a.left + a.right - b.left - b.right) / 2;
         const dy = (a.top + a.bottom - b.top - b.bottom) / 2;
@@ -863,8 +892,9 @@
     floating(out) {
       if (innerWidth < DESKTOP_MIN) return;
       const GAP = 10;
-      // An inline position is a test's own stand-in for a narrow window, not the app's layout.
-      for (const pane of document.querySelectorAll(".thread-panel:not([style])")) {
+      // An inline position is a test's own stand-in for a narrow window, not the app's layout. A live file's docked
+      // conversation is a column of the work area beside the file's page, with no scrim, never over it (ADR 0199).
+      for (const pane of document.querySelectorAll(".thread-panel:not([style], .lf-talk)")) {
         if (!seen(pane)) continue;
         const a = pane.getBoundingClientRect();
         const gaps = { Top: a.top - GAP, Right: innerWidth - a.right - GAP, Bottom: innerHeight - a.bottom - GAP };
@@ -904,7 +934,8 @@
     /**
      * Two things side by side in a row, words next to a field, an icon, a pill or a button: at least the kit's smallest
      * gap between them. A box that shows a plate under the pointer (an in-place title, a link button) counts as its
-     * whole box, the plate's, even at rest. A field's own affixes and a segmented control are drawn as one.
+     * whole box, the plate's, even at rest. A field's own affixes, a segmented control and a split control (its words
+     * and the button beside them in one frame, a hairline between) are drawn as one.
      */
     touch(out) {
       const control = (el) => {
@@ -916,7 +947,7 @@
         return ["pointer", "text"].includes(s.cursor) && (!parent || style(parent).cursor !== s.cursor);
       };
       for (const row of document.body.querySelectorAll("*")) {
-        if (!seen(row) || row.closest("svg,.ac-input-affix,.ac-seg")) continue;
+        if (!seen(row) || row.closest("svg,.ac-input-affix,.ac-seg,.ac-split")) continue;
         const s = style(row);
         if (!s.display.includes("flex") || s.flexDirection.startsWith("column")) continue;
         const kids = flow(row);
@@ -945,15 +976,21 @@
         }
       }
     },
-    /** A quiet line across the conversation sitting on a bubble above or under it, with no gap between them. */
+    /**
+     * A quiet line across the conversation sitting on a bubble above or under it, with no gap between them. Within one
+     * layer only: a dialog's line lies over the bubbles of the page behind it and touches none of them.
+     */
     quiet(out) {
+      const layer = (el) => el.closest("[role=dialog],[role=alertdialog]");
       const bubbles = [...document.querySelectorAll(".ac-msg__text")].filter(
         (b) => seen(b) && painted(style(b).backgroundColor),
       );
       for (const line of document.querySelectorAll(".consult-pair,.ac-divider,.channel__unread")) {
         if (!seen(line)) continue;
         const l = line.getBoundingClientRect();
+        const own = layer(line);
         for (const b of bubbles) {
+          if (layer(b) !== own) continue;
           const r = b.getBoundingClientRect();
           if (Math.min(l.right, r.right) - Math.max(l.left, r.left) <= 0) continue;
           const gap = Math.max(r.top - l.bottom, l.top - r.bottom);
@@ -1009,6 +1046,25 @@
             px: +px.toFixed(1),
             text: words(stamp),
           });
+      }
+    },
+    /**
+     * A grouped message's receipt (`.ac-msg__aside`, in its gutter) never sits under the row's bar
+     * (`.ac-msg__actions`, measured where it stands at rest, laid out though unseen) and never leaves the row on its
+     * left, at any text size.
+     */
+    msgaside(out) {
+      for (const aside of document.querySelectorAll(".ac-msg--grouped .ac-msg__aside")) {
+        if (!seen(aside)) continue;
+        const row = aside.closest(".ac-msg");
+        const a = aside.getBoundingClientRect();
+        const r = row.getBoundingClientRect();
+        const bar = row.querySelector(":scope > .ac-msg__body > .ac-msg__actions");
+        const b = bar && style(bar).display !== "none" ? bar.getBoundingClientRect() : null;
+        const ox = b ? Math.min(a.right, b.right) - Math.max(a.left, b.left) : 0;
+        const oy = b ? Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) : 0;
+        const px = Math.max(ox > 0.5 && oy > 0.5 ? Math.min(ox, oy) : 0, r.left - a.left);
+        if (px > 0.5) out.push({ rule: "msgaside", node: aside, el: sig(aside), box: sig(row), px: +px.toFixed(1) });
       }
     },
     /**
@@ -1183,7 +1239,8 @@
      * A glyph's middle on its line's capitals' middle, within 1px, where the eye centres a sign beside words: a row's
      * lead (a glyph, or a face no taller than 1.25 lines) on its first line, and a glyph inside or after words (an svg, or
      * a wordless box around one: a hint's ⓘ, a mark) on those words, in a line of text or in a row, and a face that is a
-     * word of its line (`.ac-who`) on that line. A person's initials sit within 0.5px of their tile's middle.
+     * word of its line (`.ac-who`) on that line. The kit's marks that draw no svg (`MARKS`: the working orbit, the done,
+     * failed and stop squares, the wait) are glyphs here too. A person's initials sit within 0.5px of their tile's middle.
      */
     iconmid(out) {
       const push = (node, part, px, row) =>
@@ -1201,7 +1258,7 @@
         const nodes = flowNodes(row);
         const lead = nodes[0];
         if (lead?.nodeType !== 1) continue;
-        const mark = glyphOf(lead) ?? (lead.matches(FACE) ? lead : null);
+        const mark = glyphOf(lead) ?? markOf(lead) ?? (lead.matches(FACE) ? lead : null);
         if (!mark) continue;
         const text = nodes.slice(1).map(wordsOf).find(Boolean);
         if (!text) continue;
@@ -1222,13 +1279,14 @@
         const px = (box.top + box.bottom) / 2 - caps.mid;
         if (Math.abs(px) > 1) push(lead, "lead", px, row);
       }
-      for (const svg of document.body.querySelectorAll("svg")) {
+      const glyphs = `svg,${MARKS}`;
+      for (const svg of document.body.querySelectorAll(glyphs)) {
         if (!seen(svg) || leads.has(svg) || svg.parentElement?.closest("svg,.ac-avatar,.ac-rolemark")) continue;
         let glyph = svg;
         for (let p = svg.parentElement; p && p !== document.body; p = p.parentElement) {
           const ps = style(p);
           if (ps.display === "contents") continue;
-          if (visibleText(p) || hasSurface(ps) || [...p.querySelectorAll("svg")].filter(seen).length !== 1) break;
+          if (visibleText(p) || hasSurface(ps) || [...p.querySelectorAll(glyphs)].filter(seen).length !== 1) break;
           if (p.matches("button,a,[role=button]") && !p.matches(".ac-hint")) break;
           if (style(glyph).display.startsWith("inline") && !ps.display.startsWith("inline")) break;
           glyph = p;
@@ -1290,11 +1348,19 @@
     /**
      * In a stack of fields (a box holding two or more), each field's control is as wide as the field and as tall as the
      * stack's usual control, within 1 and 0.5px. A button that shows a value is drawn as a select, never a plain button.
+     * A control that grows with what it holds (a chip field's tokens, picks on a second line) a line or more past its
+     * min-height is measured by that min-height: its first line is the one that matches.
      */
     fieldwidth(out) {
       const LABEL = ".ac-field__label,.ac-field__label-row,.ac-hintline";
       const TOGGLE =
         "[role=checkbox],[role=radio],[role=switch],[role=radiogroup],input[type=checkbox],input[type=radio]";
+      const heightOf = (c) => {
+        const h = c.getBoundingClientRect().height;
+        if (c.matches("textarea") || c.querySelector("textarea")) return h;
+        const min = parseFloat(style(c).minHeight) || 0;
+        return min > 0 && h - min >= 16 ? min : h;
+      };
       const stacks = new Set();
       for (const field of document.querySelectorAll(".ac-field")) {
         const p = layoutParent(field);
@@ -1314,7 +1380,7 @@
         );
         const count = new Map();
         for (const [, c] of controls) {
-          const h = Math.round(c.getBoundingClientRect().height * 2) / 2;
+          const h = Math.round(heightOf(c) * 2) / 2;
           count.set(h, (count.get(h) ?? 0) + 1);
         }
         const usual = [...count].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0]?.[0] ?? 0;
@@ -1327,12 +1393,76 @@
             parseFloat(fs.borderLeftWidth) -
             parseFloat(fs.borderRightWidth);
           const c = control.getBoundingClientRect();
+          const h = heightOf(control);
           const base = { rule: "fieldwidth", node: control, el: sig(control), box: sig(field) };
           if (control.matches(".ac-btn")) out.push({ ...base, drawn: "button", text: words(control) });
           if (Math.abs(c.width - inner) > 1) out.push({ ...base, side: "width", px: +(c.width - inner).toFixed(1) });
-          const tall = control.matches("textarea") || control.querySelector("textarea") || c.height > 2 * usual;
-          if (!tall && Math.abs(c.height - usual) > 0.5)
-            out.push({ ...base, side: "height", px: +(c.height - usual).toFixed(1) });
+          const tall = control.matches("textarea") || control.querySelector("textarea") || h > 2 * usual;
+          if (!tall && Math.abs(h - usual) > 0.5) out.push({ ...base, side: "height", px: +(h - usual).toFixed(1) });
+        }
+      }
+    },
+    /**
+     * Rounded inside rounded: a plate or a face near a corner of the box it sits on, with room between them, has that
+     * box's corner less the room (`outer - gap`). In a fully round pill that makes what sits at its ends fully round. A
+     * thing flush with the edge is `corner`'s. Percent corners resolve against the box, every corner clamps to half the
+     * shorter side, as the browser draws them. Only on the surfaces built to it (the notice island, toasts, the banners
+     * over the composer and the computer's stage): elsewhere a card's buttons keep the kit's own corner.
+     */
+    nest(out) {
+      const NESTED = ".ni,.ac-toast,.noai-banner,.cmp-banner";
+      const CORNERS = [
+        ["TopLeft", "Top", "Left"],
+        ["TopRight", "Top", "Right"],
+        ["BottomLeft", "Bottom", "Left"],
+        ["BottomRight", "Bottom", "Right"],
+      ];
+      const REACH = 24;
+      const radius = (s, name, r) => {
+        const v = s[`border${name}Radius`].split(" ")[0];
+        const px = v.endsWith("%") ? (parseFloat(v) / 100) * r.width : parseFloat(v);
+        return Math.min(px || 0, r.width / 2, r.height / 2);
+      };
+      for (const el of document.body.querySelectorAll("*")) {
+        if (!seen(el) || el.closest("svg")) continue;
+        const s = style(el);
+        if (!hasSurface(s) && !el.matches(FACE)) continue;
+        // What a rounded box between them clips (a face's canvas, a tile's picture) takes that box's corner, not its own.
+        let box = el.parentElement;
+        let clipped = false;
+        for (; box && box !== document.body && !hasSurface(style(box)); box = box.parentElement) {
+          const ps = style(box);
+          if (ps.overflowX !== "visible" && parseFloat(ps.borderTopLeftRadius) > 0) clipped = true;
+        }
+        if (clipped || !box || box === document.body || !box.matches(NESTED)) continue;
+        const bs = style(box);
+        const a = el.getBoundingClientRect();
+        const b = box.getBoundingClientRect();
+        const gap = {
+          Top: a.top - b.top - parseFloat(bs.borderTopWidth),
+          Bottom: b.bottom - parseFloat(bs.borderBottomWidth) - a.bottom,
+          Left: a.left - b.left - parseFloat(bs.borderLeftWidth),
+          Right: b.right - parseFloat(bs.borderRightWidth) - a.right,
+        };
+        // An agent's cut corner (`--radius-agent`) is its mark, not a curve to follow.
+        const cut = el.matches(".ac-avatar--agent:not(.ac-avatar--framed)") ? "BottomLeft" : null;
+        for (const [name, v, h] of CORNERS) {
+          if (name === cut || gap[v] > REACH || gap[h] > REACH) continue;
+          const g = Math.min(gap[v], gap[h]);
+          if (g < 1) continue;
+          const want = radius(bs, name, b) - g;
+          if (!(want > 2)) continue;
+          const own = radius(s, name, a);
+          if (Math.abs(own - want) > 1.5)
+            out.push({
+              rule: "nest",
+              node: el,
+              el: sig(el),
+              box: sig(box),
+              side: name,
+              px: +own.toFixed(1),
+              want: +want.toFixed(1),
+            });
         }
       }
     },
@@ -1394,7 +1524,9 @@
      */
     clip(out) {
       for (const el of document.body.querySelectorAll("*")) {
-        if (!seen(el) || el.closest("svg")) continue;
+        // Inside a row `content-visibility` skips (a conversation's rows before their first frame), the row keeps its
+        // placeholder height while its content is measured whole, spilling over the rows below: nothing a person sees.
+        if (!seen(el) || el.closest("svg") || !el.checkVisibility({ contentVisibilityAuto: true })) continue;
         const s = style(el);
         const reach = { top: 0, bottom: 0, left: 0, right: 0 };
         for (const l of outerShadows(s.boxShadow)) {
@@ -2036,9 +2168,11 @@
     },
     /**
      * Buttons side by side stand 8 apart (rule 8): two plated ones, or two icon buttons' plates (a glyph's plate is its
-     * box less its air, `.ac-btn--glyph`). A ghost with words reads by its words (`.ac-acts`), and the parts of one
+     * box less its air, `.ac-btn--glyph`), in a row of actions (`.ac-acts`) too. A ghost with words reads by its words
+     * (`.ac-acts`), and the parts of one
      * control (a split button, a segmented control, a token's ×, an event pill's actions, a message's bar) are drawn
-     * as one, and so are the strips of format toggles: the composer's and the wiki editor's.
+     * as one, and so are the strips of format toggles (the composer's and the wiki editor's) and the composer's own
+     * tools, 4 apart.
      */
     btngap(out) {
       const kind = (el) => {
@@ -2052,8 +2186,10 @@
         const air = parseFloat(getComputedStyle(el, "::before").left) || 0;
         return { left: r.left + air, right: r.right - air, top: r.top + air, bottom: r.bottom - air };
       };
+      // The canvas's tool strips and the spreadsheet's, the document's and the slides' toolbars (ADR 0196) are drawn
+      // as one too, like the format bars.
       const ONE =
-        ".ac-split,.ac-seg,.ac-token,.ac-eventpill,.ac-msg__actions,.ac-formatbar,.wiki-bar,[role=menu],[role=menubar],svg";
+        ".ac-split,.ac-seg,.ac-token,.ac-eventpill,.ac-msg__actions,.ac-formatbar,.ac-composer__tools,.wiki-bar,.cnv-bar,.cnv-dock,.cnv-zoom,.sheet-tools,.sl-tools,[role=menu],[role=menubar],svg";
       for (const row of document.body.querySelectorAll("*")) {
         if (!seen(row) || row.closest(ONE) || !isRow(style(row))) continue;
         const kids = flow(row);
@@ -2064,7 +2200,8 @@
           const [ra, rb] = [plateOf(a), plateOf(b)];
           if (!sameLine(ra, rb)) continue;
           const gap = rb.left - ra.right;
-          if (Math.abs(gap - 8) > 0.5)
+          const want = 8;
+          if (Math.abs(gap - want) > 0.5)
             out.push({
               rule: "btngap",
               node: b,
@@ -2323,6 +2460,159 @@
           side: sides.join(" "),
           px: +px.toFixed(1),
         });
+      }
+    },
+    /**
+     * The glyphs on a list's row tiles (`.settings-row__icon` with a surface of its own: a face or a maker's mark brings
+     * its own tile) are one size, within 1px: a brand's logo drawn on that tile takes the box of the kit's glyphs beside
+     * it, never a tile of its own inside the tile. A glyph is the tile's one svg, or its one masked mark.
+     */
+    tileglyph(out) {
+      const lists = new Map();
+      for (const tile of document.body.querySelectorAll(".settings-row__icon")) {
+        if (!seen(tile) || !hasSurface(style(tile))) continue;
+        const ink = [...tile.querySelectorAll("*")].filter(
+          (el) =>
+            seen(el) &&
+            (el.tagName.toLowerCase() === "svg"
+              ? !el.parentElement.closest("svg")
+              : !el.closest("svg") && (style(el).maskImage || style(el).webkitMaskImage || "none") !== "none"),
+        );
+        if (ink.length !== 1) continue;
+        const list = tile.closest(".settings-row, li")?.parentElement ?? tile.parentElement;
+        lists.set(list, [...(lists.get(list) ?? []), ink[0]]);
+      }
+      for (const [list, glyphs] of lists) {
+        const sizes = glyphs.map((g) => g.getBoundingClientRect()).map((r) => [r.width, r.height]);
+        const count = (a) => sizes.filter((b) => Math.abs(a[0] - b[0]) <= 1 && Math.abs(a[1] - b[1]) <= 1).length;
+        const usual = sizes.reduce((best, a) => (count(a) > count(best) ? a : best), sizes[0]);
+        glyphs.forEach((g, i) => {
+          const [w, h] = sizes[i];
+          const px = Math.max(Math.abs(w - usual[0]), Math.abs(h - usual[1]));
+          if (px > 1) out.push({ rule: "tileglyph", node: g, el: sig(g), box: sig(list), px: +px.toFixed(1) });
+        });
+      }
+    },
+    /**
+     * A settings row's one button (its end's last element) sits on the row's name's line, its middle within that line's
+     * box, and ends at the row's end, within 1px. Under the name only when the name's longest word, the gap and the
+     * end can't share the line, and then still at the row's end. In a button row (`.settings-row--button`), the state
+     * line under the name starts where the name's words do, within 1px, never under the row's icon.
+     */
+    endline(out) {
+      const firstLine = (el) => {
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        return [...range.getClientRects()].find((r) => r.width > 0);
+      };
+      for (const row of document.body.querySelectorAll(".settings-row:not(.settings-row--acts)")) {
+        const label = row.querySelector(".settings-row__label");
+        if (!label || !seen(row)) continue;
+        const line = firstLine(label);
+        if (!line) continue;
+        const status = row.matches(".settings-row--button")
+          ? row.querySelector(":scope > .settings-row__text > .settings-row__status")
+          : null;
+        const from = status && seen(status) ? firstLine(status) : null;
+        if (from && Math.abs(from.left - line.left) > 1)
+          out.push({
+            rule: "endline",
+            node: status,
+            el: sig(status),
+            box: sig(row),
+            text: words(label),
+            side: "status",
+            px: +(from.left - line.left).toFixed(1),
+          });
+        const end = [...row.children].find((c) => c.matches(".settings-row__end"));
+        const btn = end?.lastElementChild;
+        if (!btn?.matches(".ac-btn") || !seen(btn)) continue;
+        const s = style(row);
+        const r = row.getBoundingClientRect();
+        const right = r.right - parseFloat(s.borderRightWidth) - parseFloat(s.paddingRight);
+        const b = btn.getBoundingClientRect();
+        // What ends the row: from the end's first element (a value before the button) to the button.
+        const group = b.right - end.firstElementChild.getBoundingClientRect().left;
+        const mid = (b.top + b.bottom) / 2;
+        const base = { rule: "endline", node: btn, el: sig(btn), box: sig(row), text: words(label) };
+        const short = right - parseFloat(style(end).paddingRight) - b.right;
+        if (Math.abs(short) > 1) {
+          out.push({ ...base, side: "end", px: +short.toFixed(1) });
+          continue;
+        }
+        if (mid >= line.top - 1 && mid <= line.bottom + 1) continue;
+        // The name's narrowest: its longest word, and the room its ⓘ keeps after it.
+        const name = label.closest(".ac-hintline") ?? label;
+        let word = 0;
+        const walk = document.createTreeWalker(label, NodeFilter.SHOW_TEXT);
+        for (let node = walk.nextNode(); node; node = walk.nextNode())
+          for (const m of node.data.matchAll(/\S+/g)) {
+            const w = document.createRange();
+            w.setStart(node, m.index);
+            w.setEnd(node, m.index + m[0].length);
+            word = Math.max(word, w.getBoundingClientRect().width);
+          }
+        const need = word + parseFloat(style(name).paddingRight) + parseFloat(s.columnGap) + group;
+        if (right - name.getBoundingClientRect().left >= need + 1)
+          out.push({ ...base, side: "under", px: +(mid - line.bottom).toFixed(1) });
+      }
+    },
+    /**
+     * A wrapping row keeps one start edge: when one of its lines starts at the row's start with room to spare, no other
+     * line is pushed away from it, by an auto margin (a time left, a status floating at the end under buttons) or by
+     * the row ending its lines at the end (buttons under "Mudar quando perguntar"). A line set in by a fixed margin (an
+     * outcome on its item's words) and rows that end or centre every line are left alone, and so is a control under
+     * words alone: a row's own control at its end (a settings row's switch, a member's role), as `endline` places it.
+     */
+    strayend(out) {
+      // The computed value keeps "auto" where the resolved one is already in pixels.
+      const auto = (el) => {
+        try {
+          return String(el.computedStyleMap().get("margin-left")) === "auto";
+        } catch {
+          return false;
+        }
+      };
+      const control = (el) => el.matches(CONTROL) || !!el.querySelector(CONTROL);
+      for (const row of document.body.querySelectorAll("*")) {
+        // A settings row's end (its value, its control) is `endline`'s: at the row's end, under the name or not.
+        if (!seen(row) || row.matches(".settings-row")) continue;
+        const s = style(row);
+        if (!s.display.includes("flex") || s.flexDirection !== "row" || s.flexWrap !== "wrap" || s.direction === "rtl")
+          continue;
+        // Chrome 158 serializes `flex-end` and `flex-start` as `flow-end` and `flow-start`; older ones keep them.
+        const toEnd = ["flex-end", "flow-end", "end", "right"].includes(s.justifyContent);
+        if (!toEnd && !["normal", "flex-start", "flow-start", "start", "left"].includes(s.justifyContent)) continue;
+        const kids = flow(row);
+        if (kids.length < 2) continue;
+        const r = row.getBoundingClientRect();
+        const start = r.left + parseFloat(s.borderLeftWidth) + parseFloat(s.paddingLeft);
+        const end = r.right - parseFloat(s.borderRightWidth) - parseFloat(s.paddingRight);
+        const lines = [];
+        for (const kid of kids) {
+          const k = kid.getBoundingClientRect();
+          const line = lines.find((l) => sameLine(l.box, k));
+          if (line) line.kids.push([kid, k]);
+          else lines.push({ box: k, kids: [[kid, k]] });
+        }
+        if (lines.length < 2) continue;
+        const firstOf = (line) => line.kids[0];
+        const lastOf = (line) => line.kids[line.kids.length - 1];
+        const anchored = lines.filter((l) => firstOf(l)[1].left <= start + 2 && lastOf(l)[1].right < end - 2);
+        if (!anchored.length) continue;
+        const acts = anchored.some((l) => l.kids.some(([kid]) => control(kid)));
+        for (const line of lines) {
+          const [kid, k] = firstOf(line);
+          if (k.left > start + 2 && (toEnd || auto(kid)) && (acts || !control(kid)))
+            out.push({
+              rule: "strayend",
+              node: kid,
+              el: sig(kid),
+              box: sig(row),
+              px: +(k.left - start).toFixed(1),
+              text: words(kid),
+            });
+        }
       }
     },
   };

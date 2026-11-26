@@ -14,14 +14,16 @@ import {
   type DatabaseDriver,
   type ErrorReporter,
   type GifProvider,
+  type HumanAction,
   type HumanCheck,
   type MailAdapters,
   noPlatformCredentials,
   type S3Fetch,
+  TURNSTILE_SCRIPT_URL,
   type WebPushSender,
 } from "@agenteschat/adapters";
 import { testConfig } from "@agenteschat/config";
-import { eq, isNotNull, like, schema } from "@agenteschat/db";
+import { eq, isNotNull, like, rowsOf, schema, sql, tracingLogger } from "@agenteschat/db";
 import { createTestDatabase } from "@agenteschat/db/testing";
 import {
   createFakeJudge,
@@ -32,6 +34,7 @@ import {
   type EmailArt,
   type FakeScheduleAnswers,
   type FetchAppDocument,
+  type IntentWriter,
   type McpConnect,
   type ResolveHost,
   type ToolSource,
@@ -41,10 +44,13 @@ import { createFakeEmbeddings, createFakeProvider } from "@agenteschat/providers
 import { createApp } from "../src/app";
 import { type AppleTokenRevoker, createAuth } from "../src/auth";
 import { buildEngine } from "../src/engine";
+import { createHumanCheck } from "../src/http/human-check";
 import { createLogger } from "../src/logger";
+import { createLiveSockets } from "../src/realtime/live";
 import { createMachineSockets } from "../src/realtime/machines";
 import { createStreamSockets } from "../src/realtime/streams";
 import { createRealtime, type SocketData } from "../src/realtime/ws";
+import type { AppDeps } from "../src/routes/app/context";
 
 export const ORIGIN = "http://localhost:3000";
 
@@ -77,6 +83,8 @@ export async function createTestServer(
     resolveHost?: ResolveHost;
     /** Fake GitHub (git smart HTTP and REST) for the git proxy. */
     github?: { gitUrl: string; apiUrl: string; fetch: typeof fetch };
+    /** The working line's first words at a run's start (`intent-line.ts`). Default: none. */
+    intents?: IntentWriter;
     /** Answers of the fake judge (judge.ts). Default: every Noul 0, but an agent's mention needs nothing. */
     judge?: Parameters<typeof createFakeJudge>[0];
     /** The fake schedule reader's table (phrase → answer), on top of `TEST_SCHEDULES`. */
@@ -93,8 +101,8 @@ export async function createTestServer(
     emailArt?: EmailArt;
     /** Fake TypeSafe (checks of the Jev key). */
     jevFetch?: typeof fetch;
-    /** The bot check (Turnstile with a fake `fetch`); absent = none, as without its keys. */
-    humanCheck?: HumanCheck;
+    /** The bot check (`turnstileCheck`); absent or null = none, as without its keys. */
+    humanCheck?: HumanCheck | null;
     /** The server's own file store's kind (`disk`, `postgres`, `s3`); it keeps files in memory either way. */
     platformKind?: string;
     /** Browser push (ADR 0071); absent = a fake that records, null = off. */
@@ -115,9 +123,25 @@ export async function createTestServer(
     speechFetch?: typeof fetch;
     /** AI apps (ADR 0119): a fake fetch of apps' metadata documents (CIMD); absent = none answers. */
     appsFetchDocument?: FetchAppDocument;
+    /**
+     * `false`: a server that sends no email from its start, as Better Auth reads it then (no confirmation links, no
+     * password reset). Flipping `t.email.delivers` later reaches only the routes that read it on each request.
+     */
+    emailDelivers?: boolean;
+    /**
+     * `true`: new accounts keep the address they signed up with unconfirmed, as until its link is opened. By default a
+     * test's accounts start confirmed: on a server that sends email, one never confirmed makes no workspace (ADR 0006,
+     * addendum 2026-11-22), and most tests are about what comes after.
+     */
+    unconfirmedSignUps?: boolean;
+    /** The built web app to serve, as `WEB_DIR` does (`scripts/geometry/shifts.ts` opens it in Chrome). */
+    webDir?: string;
+    /** Whether the process counts as overloaded (`watchLoad`); absent = never. */
+    overloaded?: () => string | null;
   } = {},
 ) {
   const { db, close } = await createTestDatabase();
+  if (!options.unconfirmedSignUps) for (const statement of CONFIRMED_SIGN_UPS) await db.execute(sql.raw(statement));
   const config = testConfig({
     PUBLIC_URL: ORIGIN,
     AGENT_MAX_OUTPUT_TOKENS: "1000",
@@ -126,7 +150,7 @@ export async function createTestServer(
     ...options.env,
   });
   const log = createLogger("error", options.errors);
-  const email = createFakeEmailSender();
+  const email = createFakeEmailSender({ delivers: options.emailDelivers ?? true });
   const push = createFakePushSender();
   const webPush = options.webPush === undefined ? createFakeWebPushSender() : options.webPush;
   const platformBlobs = createMemoryBlobStore({ kind: options.platformKind, sign: options.signedBlobs });
@@ -177,6 +201,7 @@ export async function createTestServer(
     github: options.github,
     judge: createFakeJudge(options.judge),
     schedules: createFakeScheduleReader({ ...TEST_SCHEDULES, ...options.schedules }),
+    intents: options.intents ?? null,
     toolsOnDemand: false,
     emailArt: options.emailArt,
     jevFetch: options.jevFetch,
@@ -191,47 +216,63 @@ export async function createTestServer(
     db,
     config,
     log,
-    emailDelivers: true,
+    emailDelivers: options.emailDelivers ?? true,
     rateLimiter: adapters.rateLimiter,
     humanCheck: adapters.humanCheck,
     pubsub: adapters.pubsub,
   });
+  const services: AppDeps = {
+    db,
+    auth,
+    config,
+    adapters,
+    extras: {
+      http: options.http,
+      mcpConnect: options.mcpConnect,
+      resolveHost: options.resolveHost,
+      embed: engine.gateway.embed,
+      storage: engine.storage,
+      artifacts: engine.artifacts,
+      context: engine.context,
+      sandbox: engine.sandbox,
+      gitProxy: engine.gitProxy,
+      desktopFetch: options.desktopFetch,
+      browserLive: engine.browserLive,
+      router: engine.router,
+      streams: engine.streams,
+      jevKey: engine.jevKey,
+      gifKey,
+      githubApp: engine.githubApp,
+      speech: engine.speech,
+      voice: engine.voice,
+      live: engine.live,
+      liveDeps: engine.liveDeps,
+    },
+    log,
+  };
   const app = createApp({
     edition: "selfhost",
     version: "test",
     modules: [],
     pingDatabase: async () => {},
+    overloaded: options.overloaded,
     appsFetchDocument:
       options.appsFetchDocument ??
       (async () => {
         throw new Error("no network in tests");
       }),
-    services: {
-      db,
-      auth,
-      config,
-      adapters,
-      extras: {
-        http: options.http,
-        mcpConnect: options.mcpConnect,
-        resolveHost: options.resolveHost,
-        embed: engine.gateway.embed,
-        storage: engine.storage,
-        artifacts: engine.artifacts,
-        context: engine.context,
-        sandbox: engine.sandbox,
-        gitProxy: engine.gitProxy,
-        desktopFetch: options.desktopFetch,
-        browserLive: engine.browserLive,
-        router: engine.router,
-        streams: engine.streams,
-        jevKey: engine.jevKey,
-        gifKey,
-        githubApp: engine.githubApp,
-        speech: engine.speech,
-        voice: engine.voice,
-      },
-    },
+    services,
+    log,
+    webDir: options.webDir,
+  });
+  const live = createLiveSockets({
+    db,
+    auth,
+    config,
+    pubsub: adapters.pubsub,
+    rateLimiter: adapters.rateLimiter,
+    docs: engine.live,
+    artifacts: engine.artifacts,
     log,
   });
   const realtime = createRealtime({
@@ -243,12 +284,18 @@ export async function createTestServer(
     machines: createMachineSockets(engine.machineHub),
     browserLive: engine.browserLive,
     streams: createStreamSockets({ db, auth, config, broker: engine.streams }),
+    live,
+    overloaded: options.overloaded,
+    // Read at each frame, so a test can spy on it.
+    onTyping: (where) => engine.warmWhileTyping(where),
   });
   return {
     db,
     close: async () => {
       await engine.machineHub.stop();
       engine.streams.stop();
+      live.stop();
+      await engine.live.stop();
       await close();
     },
     config,
@@ -264,12 +311,41 @@ export async function createTestServer(
     gifKey,
     app,
     auth,
+    /** What the routes get, for an app served apart (the chat surface bridge). */
+    services,
     realtime,
     drain: () => drainOutbox(db, handlers),
   };
 }
 
 export type TestServer = Awaited<ReturnType<typeof createTestServer>>;
+
+/**
+ * How the database would run the last statement `read` made on `table`, with its values written in. Nothing in a
+ * test is big enough for the planner to prefer an index on its own, so reading a table whole is off, and whatever
+ * else `off` names.
+ */
+export async function planOfLast(t: TestServer, table: string, read: () => Promise<unknown>, off: string[] = []) {
+  const seen: [string, unknown[]][] = [];
+  const counts = tracingLogger.logQuery;
+  tracingLogger.logQuery = (query = "", params: unknown[] = []) => {
+    seen.push([query, params]);
+    counts();
+  };
+  try {
+    await read();
+  } finally {
+    tracingLogger.logQuery = counts;
+  }
+  const [statement = "", params = []] = seen.filter(([query]) => query.includes(`from "${table}"`)).at(-1) ?? [];
+  const written = statement.replace(/\$(\d+)/g, (_, n) => `'${params[Number(n) - 1]}'`);
+  return t.db.transaction(async (tx) => {
+    for (const setting of ["enable_seqscan", ...off]) await tx.execute(sql.raw(`set local ${setting} = off`));
+    return rowsOf<{ "QUERY PLAN": string }>(await tx.execute(sql.raw(`explain (costs off) ${written}`)))
+      .map((row) => row["QUERY PLAN"])
+      .join("\n");
+  });
+}
 
 /** Starts a real Bun server on a random port (needed for WebSocket tests). */
 export function listen(t: TestServer) {
@@ -296,7 +372,13 @@ export async function upgradeStatus(url: string, headers: Record<string, string>
 }
 
 /** Minimal browser over `app.request`: keeps cookies and sends our Origin. */
-export function browser(t: TestServer) {
+/** Every new account starts with its address confirmed (`unconfirmedSignUps`). */
+const CONFIRMED_SIGN_UPS = [
+  "create function test_confirmed_sign_up() returns trigger language plpgsql as $$ begin new.email_verified := true; return new; end $$",
+  "create trigger test_confirmed_sign_up before insert on users for each row execute function test_confirmed_sign_up()",
+];
+
+export function browser(t: TestServer, origin = ORIGIN) {
   let cookie = "";
   const request = async (
     path: string,
@@ -312,7 +394,7 @@ export function browser(t: TestServer) {
     // The tests' people read Portuguese, as before English became the default (a browser that says none reads English).
     if (!headers.has("accept-language")) headers.set("accept-language", "pt-BR");
     if (cookie) headers.set("cookie", cookie);
-    if (init.origin !== null) headers.set("origin", init.origin ?? ORIGIN);
+    if (init.origin !== null) headers.set("origin", init.origin ?? origin);
     if (init.json !== undefined) headers.set("content-type", "application/json");
     const res = await t.app.request(path, {
       method: init.method ?? (init.json !== undefined ? "POST" : "GET"),
@@ -350,6 +432,45 @@ export function fakeGoogle(email: string, verified = true): typeof fetch {
     return Response.json({ access_token: "ya29.test", id_token: idToken, token_type: "Bearer", expires_in: 3600 });
   }) as typeof fetch;
 }
+
+/** What Cloudflare's test site keys hand out, and its test secret passes. */
+export const TURNSTILE_TEST_TOKEN = "XXXX.DUMMY.TOKEN.XXXX";
+
+/** A token a page made on `host` for `action`: `fakeCloudflare` passes it as a real secret passes a real one. */
+export const tokenMadeOn = (host: string, action: HumanAction) => `made-on:${host}:${action}`;
+
+/**
+ * Cloudflare: the widget's script and siteverify. With `testSecret`, it answers as its test secret does: the dummy
+ * token passes on any host. Without, as a real secret does: the dummy token is refused. A `tokenMadeOn` token passes
+ * with its host and action, and anything else is refused.
+ */
+export function fakeCloudflare() {
+  const state = { up: true, secretRefused: false, testSecret: true };
+  const fakeFetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    if (!state.up) throw new Error("connect ECONNREFUSED");
+    if (String(input) === TURNSTILE_SCRIPT_URL) return new Response("/* api.js */");
+    const { response } = JSON.parse(String(init?.body)) as { response: string };
+    if (state.secretRefused) return Response.json({ success: false, "error-codes": ["invalid-input-secret"] });
+    if (response === TURNSTILE_TEST_TOKEN && state.testSecret)
+      return Response.json({ success: true, hostname: "example.com", metadata: { result_with_testing_key: true } });
+    const [made, hostname, action] = response.split(":");
+    if (made === "made-on") return Response.json({ success: true, hostname, action });
+    return Response.json({ success: false, "error-codes": ["invalid-input-response"] });
+  }) as typeof globalThis.fetch;
+  return { state, fetch: fakeFetch };
+}
+
+/** The bot check as `start.ts` makes it from Cloudflare's test keys, for a server on `ORIGIN`, on a fake `fetch`. */
+export const turnstileCheck = (fetch: typeof globalThis.fetch, landing: { LANDING_URL?: string } = {}) =>
+  createHumanCheck(
+    {
+      PUBLIC_URL: ORIGIN,
+      ...landing,
+      TURNSTILE_SITE_KEY: "1x00000000000000000000AA",
+      TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA",
+    },
+    { fetch },
+  );
 
 /** Where each app's Google sign-in comes back to: the web's page, the Mac app's browser page, the phone app. */
 export const GOOGLE_BACK = {
@@ -429,6 +550,11 @@ export async function deletionsDue(t: TestServer) {
     .set({ nextAttemptAt: new Date(0) })
     .where(eq(schema.outbox.kind, "account.delete"));
   await t.drain();
+}
+
+/** The account at `email` as it is until its link is opened: the address never confirmed (`unconfirmedSignUps`). */
+export async function unconfirm(t: TestServer, email: string) {
+  await t.db.update(schema.users).set({ emailVerified: false }).where(eq(schema.users.email, email));
 }
 
 export async function signUp(b: Browser, email: string) {
