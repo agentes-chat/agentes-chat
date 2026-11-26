@@ -1,12 +1,10 @@
 import { useApi, useMe } from "@agenteschat/client";
-import { Button, EmptyState } from "@agenteschat/ui";
-import { createRootRouteWithContext, Link, Outlet, useRouter, useRouterState } from "@tanstack/react-router";
+import { createRootRouteWithContext, Outlet, useRouter, useRouterState } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { useTranslation } from "react-i18next";
 import type { RouterContext } from "@/app/router-context";
 import { DesktopDragStrip } from "@/components/DesktopDragStrip";
 import { ContextMenuHost } from "@/components/DesktopMenus";
-import { ErrorScreen } from "@/components/ErrorScreen";
+import { ErrorScreen, NotFoundScreen } from "@/components/ErrorScreen";
 import { AccountDeletingScreen } from "@/components/Standing";
 import { useBackCloses } from "@/hooks/useBackCloses";
 import { switchAccount } from "@/lib/accounts";
@@ -17,7 +15,7 @@ import { listenForPushOpens } from "@/lib/web-push";
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   component: Root,
-  notFoundComponent: NotFound,
+  notFoundComponent: NotFoundScreen,
   errorComponent: ErrorScreen,
 });
 
@@ -68,26 +66,5 @@ function Root() {
       <ContextMenuHost />
       {deletion ? <AccountDeletingScreen dueAt={deletion.dueAt} /> : <Outlet />}
     </>
-  );
-}
-
-function NotFound() {
-  const { t } = useTranslation();
-  return (
-    <div className="page page--mid">
-      <header className="page__header">
-        <h1 className="page-title">{t("empty.notFoundTitle")}</h1>
-      </header>
-      <EmptyState
-        icon="search"
-        actions={
-          <Button asChild>
-            <Link to="/">{t("empty.goHome")}</Link>
-          </Button>
-        }
-      >
-        {t("empty.notFoundText")}
-      </EmptyState>
-    </div>
   );
 }

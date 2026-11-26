@@ -133,9 +133,11 @@ describe("route guards", () => {
     cleanup();
   });
 
-  test("unknown paths show the not-found page", async () => {
+  test("unknown paths show the not-found page, in the sign-in's look with its way back", async () => {
     await renderApp("/nada/aqui", { api: createFakeApi() });
     expect(screen().getByRole("heading", { name: "Página não encontrada" })).toBeTruthy();
+    expect(screen().getByRole("link", { name: "Voltar ao início" }).getAttribute("href")).toBe("/");
+    expect(document.querySelector('.auth .auth__face [data-mood="thinking"]')).not.toBeNull();
   });
 
   test("the sidebar's workspace line says where it lives: one's own server, not the Cloud", async () => {

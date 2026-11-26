@@ -2489,6 +2489,11 @@ html:not([data-pointer]) .ac-select__trigger:focus-visible,
   min-width: 200px;
   max-height: var(--radix-dropdown-menu-content-available-height);
 }
+/* An item that explains itself (a switch with its sentence under it) wraps its sentence at a menu's width, never
+   stretches the whole menu across the page. A list of people keeps its one-line descriptions. */
+.ac-menu--dropdown:has(.ac-menu__desc):not(:has(.ac-menu__leading > .ac-avatar)) {
+  max-width: min(360px, calc(100vw - 24px));
+}
 /* The right click (MenuAt): at the pointer at once, like the system's menus. */
 .ac-menu.ac-menu--at[data-state="open"] {
   animation: none;
@@ -7550,6 +7555,19 @@ html:not([data-pointer]) .ac-react:focus-visible {
 .ac-composer__tools:empty {
   display: none;
 }
+/* More than one line (`data-wide`): the text takes the card's whole width, the tools a row of their own under it, at
+   its two ends, the text's edge on the attach button's. */
+.ac-composer[data-wide] .ac-composer__row {
+  flex-wrap: wrap;
+  row-gap: var(--space-1);
+}
+.ac-composer[data-wide] .ac-composer__text {
+  order: -1;
+  flex: 1 0 100%;
+}
+.ac-composer[data-wide] .ac-composer__text ~ .ac-composer__tools {
+  margin-left: auto;
+}
 /* In the column the height comes from the text (Composer measures it); `flex: 1` from the row layout above would
    pin it to its minimum. */
 .ac-composer textarea {
@@ -9479,21 +9497,39 @@ html:not([data-pointer]) button.ac-tools__row:focus-visible {
 }
 
 /*
- * An agent at work (`OrbitGlyph`): rings orbit its glyph, their far halves behind it and their near halves in front,
- * in its colour (`--orbit`) and two neighbours mixed from it (`orbitColors`). The overlay is 3.6 glyphs wide and takes no room
- * (it reaches into the row's gap), but its box counts as overflow: the row holding it clips (`overflow: clip`), or a
- * scrolling list would scroll by it. Only transforms move; reduced motion draws them still, and off screen they pause.
+ * An agent at work (`OrbitGlyph`): two rings around its glyph in its own colours (`orbitColors`), whole behind it, and
+ * on each a light (a fading arc, a small dot at its head) that passes over the glyph on the near half and behind it on
+ * the far one. The overlay is 2.2 glyphs wide and takes no room (it reaches into the row's gap), but its box counts as
+ * overflow: the row holding it clips (`overflow: clip`), or a scrolling list would scroll by it. Only transforms move;
+ * reduced motion draws them still, and off screen they pause.
  */
 .ac-orbit {
+  --orbit-1: var(--orbit-l1);
+  --orbit-2: var(--orbit-l2);
+  --orbit-head: var(--orbit-lh);
+  /* The light's head and the rings' widths, whatever the glyph's size. */
+  --orbit-w: 2.2px;
+  --orbit-ring-w: 1.25px;
+  --orbit-ring-alpha: 0.45;
   position: relative;
   display: inline-flex;
   flex: none;
   isolation: isolate;
 }
+[data-theme="dark"] .ac-orbit {
+  --orbit-1: var(--orbit-d1);
+  --orbit-2: var(--orbit-d2);
+  --orbit-head: var(--orbit-dh);
+  --orbit-ring-alpha: 0.55;
+}
+.ac-orbit:has(> .ac-avatar--lg, > .ac-avatar--xl) {
+  --orbit-w: 2.6px;
+  --orbit-ring-w: 1.5px;
+}
 .ac-orbit > .ac-orbit__back,
 .ac-orbit > .ac-orbit__front {
   position: absolute;
-  inset: -130%;
+  inset: -60%;
   overflow: visible;
   pointer-events: none;
 }
@@ -9506,28 +9542,25 @@ html:not([data-pointer]) button.ac-tools__row:focus-visible {
 .ac-orbit > .ac-orbit__front {
   z-index: var(--z-raised);
 }
-.ac-orbit__ring {
-  --ring: var(--orbit);
-  color: var(--ring);
-}
-.ac-orbit__ring--2 {
-  --ring: var(--orbit-2, var(--orbit));
-}
-.ac-orbit__ring--3 {
-  --ring: var(--orbit-3, var(--orbit));
-}
 .ac-orbit__path {
   fill: none;
-  stroke: currentColor;
-  stroke-width: 1.25;
+  stroke: var(--orbit-1);
+  stroke-width: var(--orbit-ring-w);
   vector-effect: non-scaling-stroke;
-  opacity: 0.5;
+  opacity: var(--orbit-ring-alpha);
 }
-.ac-orbit__back .ac-orbit__path {
-  opacity: 0.28;
+.ac-orbit__ring--2 .ac-orbit__path {
+  stroke: var(--orbit-2);
+}
+.ac-orbit__light {
+  fill: none;
+  vector-effect: non-scaling-stroke;
 }
 .ac-orbit__dot {
-  fill: currentColor;
+  fill: var(--orbit-head);
+}
+.ac-orbit__back .ac-orbit__dot {
+  opacity: 0.7;
 }
 .ac-orbit__spin {
   transform-origin: 0 0;
@@ -9540,11 +9573,9 @@ html:not([data-pointer]) button.ac-tools__row:focus-visible {
 @media (prefers-reduced-motion: no-preference) {
   .ac-orbit__spin {
     animation: ac-orbit-turn var(--turn) linear infinite;
-    animation-direction: var(--dir, normal);
   }
   .ac-orbit__unspin {
     animation: ac-orbit-unturn var(--turn) linear infinite;
-    animation-direction: var(--dir, normal);
   }
   .ac-orbit[data-paused="true"] :is(.ac-orbit__spin, .ac-orbit__unspin) {
     animation-play-state: paused;
@@ -12527,8 +12558,9 @@ html:not([data-pointer]) .ac-msg__note:focus-visible {
   margin: -6px;
 }
 /* A face there (a personal workspace's, ADR 0159) is the slot's size, as a workspace's mark is: a larger one would
-   reach into the gap before the name. */
-.ac-mo__leading > .ac-avatar {
+   reach into the gap before the name. Also when a wrapper holds it (the desktop app's list by server dims an offline
+   server's rows in one). */
+.ac-mo__leading .ac-avatar {
   width: 32px;
   height: 32px;
 }
