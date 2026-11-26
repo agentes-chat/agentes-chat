@@ -59,10 +59,12 @@ const SCOPE_PERMISSIONS: Record<string, AppPermissions[]> = {
 };
 
 /**
- * Tools that need other permissions than their scope's: updating a pull request's branch writes to it, each kind of
- * security alert has its own permission, and a ruleset's evaluations (rule suites) are administration's.
+ * Tools that need other permissions than their scope's: updating a pull request's branch writes to it, marking one
+ * ready for review or converting it to a draft needs contents: write, each kind of security alert has its own
+ * permission, and a ruleset's evaluations (rule suites) are administration's.
  */
 const TOOL_PERMISSIONS: Record<string, AppPermissions[]> = {
+  update_pull_request: [{ pull_requests: "write", contents: "write" }],
   update_pull_request_branch: [{ pull_requests: "write", contents: "write" }],
   repository_ruleset_read: [{ administration: "read" }, { metadata: "read" }],
   list_code_scanning_alerts: [{ security_events: "read" }],

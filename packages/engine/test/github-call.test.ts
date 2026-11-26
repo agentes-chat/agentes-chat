@@ -109,6 +109,9 @@ describe("GitHub's tools act as the app where it is installed (ADR 0156)", () =>
     expect(appPermissionsFor("update_pull_request_branch", "pr.write")).toEqual([
       { pull_requests: "write", contents: "write" },
     ]);
+    expect(appPermissionsFor("update_pull_request", "pr.write")).toEqual([
+      { pull_requests: "write", contents: "write" },
+    ]);
     expect(appPermissionsFor("actions_run_trigger", "actions.run")).toEqual([{ actions: "write" }]);
     // An organization's Projects; an item's title and fields are its issue's or pull request's.
     expect(appPermissionsFor("projects_list", "projects.read")).toEqual([
