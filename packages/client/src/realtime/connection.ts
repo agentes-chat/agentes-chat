@@ -673,6 +673,7 @@ export class RealtimeConnection {
     }
     this.socket = socket;
     socket.onopen = () => {
+      if (this.stopped || this.socket !== socket) return;
       const reconnected = this.everOpened;
       const now = this.now();
       const full = this.missedOnClose || now - (this.downSince ?? now) >= BRIEF_GAP_MS;
@@ -682,6 +683,7 @@ export class RealtimeConnection {
       this.missedOnClose = false;
       this.lastHeardAt = now;
       this.setStatus("open");
+      if (this.stopped || this.socket !== socket) return;
       this.confirmed.clear();
       for (const channelId of this.listeners.keys()) this.send({ type: "subscribe", channelId });
       // The agents' browsers someone is looking at (a watch sent before the socket opened was dropped).
@@ -694,6 +696,7 @@ export class RealtimeConnection {
       this.restarted = false;
     };
     socket.onmessage = (ev) => {
+      if (this.stopped || this.socket !== socket) return;
       // Anything heard proves the socket alive.
       this.lastHeardAt = this.now();
       if (this.pongTimer !== null) this.timers.clearTimeout(this.pongTimer);
@@ -703,7 +706,9 @@ export class RealtimeConnection {
     socket.onerror = () => {
       // `onclose` follows and schedules the retry.
     };
-    socket.onclose = (ev) => this.lost(ev?.code, ev?.reason);
+    socket.onclose = (ev) => {
+      if (!this.stopped && this.socket === socket) this.lost(ev?.code, ev?.reason);
+    };
   }
 
   private lost(code?: number, reason?: string) {
