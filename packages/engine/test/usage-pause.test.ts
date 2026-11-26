@@ -412,7 +412,7 @@ test("a limit with no reset: the stored window's reset, else a re-check in 2 min
   expect(first).toBeLessThan(Date.now() + 2 * 60_000 + RESUME_AFTER_MS + 1000);
 });
 
-test("the head refused again past its reset puts the line on the safety timer, and its turn through still wakes them", async () => {
+test("the head refused again past its reset puts the line on the safety timer; its turn through, or its stop, still moves them", async () => {
   f = await setup({ reply: () => ({ chunks: ["pela API"] }) });
   const machineId = await computerAgent(f);
   const reset = Date.now() + 3600_000;
@@ -431,7 +431,7 @@ test("the head refused again past its reset puts the line on the safety timer, a
   await drainOutbox(f.db, handlers);
   await post(f, "@dev b", (await post(f, "outra")).id);
   await drainOutbox(f.db, handlers);
-  const [, behind] = await runs(f);
+  const [first, behind] = await runs(f);
   expect((await resumeJob(f, behind?.id ?? ""))?.nextAttemptAt.getTime()).toBe(reset + RESUME_AFTER_MS + RESUME_GAP_MS);
 
   // The head's resume, past the stated reset: refused again with no reset, so the run behind it sleeps a day.
@@ -447,12 +447,26 @@ test("the head refused again past its reset puts the line on the safety timer, a
   const wait = (stored?.state as { waitingForBrain?: { until?: string; model?: string | null } } | null)
     ?.waitingForBrain;
   expect(Date.parse(wait?.until ?? "")).toBe(job);
+  // The reset it waited for is gone by: it waits for the head's unknown one now.
+  expect(wait).not.toHaveProperty("resetsAt");
 
   // The plan is back after the reset: the head's turn through wakes the run behind it, not a day later.
   setSystemTime(new Date(resumed + 20 * 60_000));
   const key = usageWaitKey({ code: "plan_limit", machineId, kind: "claude_code" });
   const woken = await wakePlanWaits(f.db, f.org.id, key, wait?.model ?? null);
   expect(woken).toContain(behind?.id ?? "");
+
+  // The head stopped instead (its question expired): the run behind it heads the line and re-checks the plan itself.
+  const [head] = await f.db
+    .select()
+    .from(schema.agentRuns)
+    .where(eq(schema.agentRuns.id, first?.id ?? ""));
+  await stopRun({ db: f.db, pubsub: f.pubsub }, f.org.id, head as never, "channel", {
+    type: "system",
+    reason: "consultation_expired",
+  });
+  const jobs = await f.db.select().from(schema.outbox).where(eq(schema.outbox.status, "pending"));
+  expect(jobs.some((j) => j.payload.runId === behind?.id && j.dedupeKey?.includes(":head:"))).toBe(true);
 });
 
 test("runs waiting on one plan resume 60 s apart, people's first; a resume still limited parks again quietly", async () => {
