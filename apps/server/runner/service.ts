@@ -82,10 +82,21 @@ export const AGENTS_CGROUP = "/sys/fs/cgroup/agents.slice";
 export const agentCgroup = (uid: number) => path.join(AGENTS_CGROUP, agentSlice(uid));
 /**
  * Each agent's own /dev/shm and /run/lock (`<uid>/shm`, `lock`): in memory as the computer's are, on a tmpfs of the
- * agent's own at `<uid>`, in a folder only root can reach. Its /tmp is `<uid>/tmp` there too, in that tmpfs or
- * (`agentTmpOnDisk`) bound from `AGENT_DISK_TMP_ROOT`.
+ * agent's own at `<uid>`, in a folder only root can reach. Its /tmp is `<uid>/tmp` there, bound from its folder in
+ * `AGENT_TMP_POOL` or (`agentTmpOnDisk`) in `AGENT_DISK_TMP_ROOT`.
  */
 export const AGENT_RAM_ROOT = "/run/agentes-runner-tmp";
+/**
+ * The agents' /tmp in memory (ADR 0243): one tmpfs for all of them, `<uid>` each, at most `AGENT_TMP_POOL_SHARE`% of
+ * the RAM together. Its root is root's and 0700.
+ */
+export const AGENT_TMP_POOL = "/run/agentes-runner-tmp-pool";
+/**
+ * 20%: the agents together may use 75% of the RAM (`AGENTS_SHARE`), and the kernel can't drop a tmpfs's pages, only
+ * swap them, so this keeps at least 55% for their programs whatever /tmp holds. It is also the kernel's own default
+ * for unwritten file data (`vm.dirty_ratio`), which is the budget /tmp on disk gets.
+ */
+export const AGENT_TMP_POOL_SHARE = 20;
 /** Each agent's own /var/tmp (`<uid>/var-tmp`): on disk as the computer's is, in a folder only root can reach. */
 export const AGENT_TMP_ROOT = "/var/lib/agentes-runner-tmp";
 /**

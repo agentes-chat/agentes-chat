@@ -271,6 +271,8 @@ export const OP_ROUTES: Readonly<Record<MachineOp, "machine" | "agent">> = {
   // Installed as the runner's own user. Root answers unsupported: the agents' users get their CLIs from the
   // computer's setup, never from an install run as root.
   "cli.install": "machine",
+  // The runner's own copies (ADR 0228 §6) live with the runner; a system-mode root has none and says so.
+  "cli.fetch": "machine",
   // Reads the runner's own log and state: root's.
   "report.collect": "machine",
   // Root's: its data socket needs the machine token, and the connection is the computer's, not an agent's.
@@ -403,6 +405,10 @@ export interface HandlerContext {
   /** `CLI_INSTALL_PROTOCOL`: the coding CLIs looked up now, and installed from the apps. */
   clisCheck?: () => Promise<MachineReplies["clis.check"]>;
   cliInstall?: (req: Extract<MachineRequest, { op: "cli.install" }>) => MachineReplies["cli.install"];
+  /** `CLI_COPIES_PROTOCOL`: the apps' "Try again" on a CLI's fetch. */
+  cliFetch?: (cli: Extract<MachineRequest, { op: "cli.fetch" }>["cli"]) => MachineReplies["cli.fetch"];
+  /** `CLI_COPIES_PROTOCOL`: a brain's CLI ready before its turn (the runner's own copy fetched if it must be). */
+  cliEnsure?: (kind: Extract<MachineRequest, { op: "brain.turn" }>["kind"]) => Promise<void>;
   /** `IPHONE_DEV_MODE_PROTOCOL`: opening Xcode on this Mac; without it the op answers `opened: false`. */
   xcodeOpen?: () => Promise<MachineReplies["xcode.open"]>;
   /** `PROBLEM_REPORT_PROTOCOL`: what a problem report adds from this computer. */
@@ -827,6 +833,10 @@ async function routeRequest(ctx: HandlerContext, req: MachineRequest, scope: Req
   if (req.op === "clis.check") {
     if (!ctx.clisCheck) throw new RunnerError("bad_request", "This runner doesn't look up its programs on request");
     return ctx.clisCheck();
+  }
+  if (req.op === "cli.fetch") {
+    if (ctx.systemMode?.() || !ctx.cliFetch) return { fetch: null };
+    return ctx.cliFetch(req.cli);
   }
   if (req.op === "cli.install") {
     return (
@@ -1360,6 +1370,8 @@ async function doBrainTurn(
   requireTool(ctx, cli ?? "claude");
   if (!req.agent) throw new RunnerError("bad_request", "A brain turn belongs to an agent");
   const runId = requireString(req.runId, "runId");
+  // Its CLI where the person's own is too old or missing: the runner's copy, fetched now if it must be (ADR 0228 §6).
+  await ctx.cliEnsure?.(req.kind);
   // A locked-down turn (protocol 41) gets neither the agent's secrets nor its folders, and stops at the first tool
   // that isn't our bridge's.
   const chat = req.permissions?.mode === "chat";

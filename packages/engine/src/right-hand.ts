@@ -731,7 +731,7 @@ export function rightHandNoAiReason(code: string, scope?: ModelScope): NoAiCardR
             : "plan_limit";
   if (code === "plan_not_shared" || code === "plan_not_owner") return "plan_not_shared";
   if (code === "plan_unattended") return "plan_unattended";
-  if (code === "runner_outdated" || code === "codex_too_old") return "runner_outdated";
+  if (code === "runner_outdated" || code === "codex_too_old" || code === "cli_outdated") return "runner_outdated";
   if (code === "exec_disabled" || code === "tool_off") return "commands_off";
   if (code === "tools_not_locked") return "plan_tools";
   if (code === "no_computer" || code === "no_session") return "no_computer";

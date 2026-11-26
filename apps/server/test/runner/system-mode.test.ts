@@ -540,6 +540,8 @@ test("a system-mode runner (root) without workers does no agent work; machine-le
     "clis.check",
     // Root installs nothing for the agents' users (the computer's setup does): it answers unsupported.
     "cli.install",
+    // Nor fetches their CLIs (ADR 0228 §6, outside system mode only): root answers it has none to fetch.
+    "cli.fetch",
     // Opening Xcode on the Mac, beside its fix (listed in `MACHINE_OPS` order).
     "xcode.open",
     // Repairing an iPhone's test helper is the phones' process's, beside their locks.

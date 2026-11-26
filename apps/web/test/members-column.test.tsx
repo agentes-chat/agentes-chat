@@ -164,6 +164,18 @@ describe("the members column", () => {
     expect(document.activeElement === (rows[1] as HTMLElement)).toBe(true);
   });
 
+  test("you, read offline before your connection counts, stay in your own group: the rows don't move when it does", async () => {
+    widthIs(DESKTOP_QUERY);
+    const state = seedState();
+    state.online.delete("u-walter");
+    await open(state);
+    const side = column() as HTMLElement;
+    const owner = within(side).getByRole("region", { name: "Dono" });
+    expect(owner.textContent).toContain("você");
+    expect(owner.querySelector(".members-side__inner")?.getAttribute("data-presence")).toBe("online");
+    expect(within(side).getByRole("region", { name: "Offline" }).textContent).not.toContain("você");
+  });
+
   test("someone offline sits under Offline, drawn quieter", async () => {
     widthIs(DESKTOP_QUERY);
     await open();
