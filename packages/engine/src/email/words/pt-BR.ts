@@ -618,6 +618,60 @@ export const ptBR: Words = {
       },
       why: () => "Você recebeu este e-mail porque este workspace no agentes.chat é seu. São só dois avisos como este.",
     },
+    picked: {
+      first: {
+        subject: "O seu primeiro agente está pronto, esperando vocês",
+        preheader: "A sua IA achou por onde começar. Só falta contratar.",
+        headline: "O seu primeiro agente está pronto",
+        body: (ai, agent, feminine, role, today) => {
+          const ready = plural("pt-BR", today, {
+            one: ", com 1 entrega pronta para hoje",
+            other: `, com ${today} entregas prontas para hoje`,
+          });
+          return [
+            ai ? `O seu ${ai} achou por onde começar: ` : "A sua IA achou por onde começar: ",
+            feminine ? "a " : "o ",
+            { b: agent },
+            ...(role ? [`, para ${role}`] : []),
+            ...(today > 0 ? [ready] : []),
+            ". Só falta contratar.",
+          ];
+        },
+        button: "Contratar o time",
+        personal: {
+          subject: "O seu primeiro agente está pronto, esperando você",
+          button: "Contratar os agentes",
+        },
+      },
+      later: {
+        subject: (today) =>
+          today > 1
+            ? `As ${today} primeiras entregas ainda não começaram`
+            : today === 1
+              ? "A primeira entrega ainda não começou"
+              : "O seu primeiro agente ainda não começou",
+        preheader: "Contratando hoje, o trabalho começa hoje.",
+        headline: (today) =>
+          today > 1
+            ? `As ${today} primeiras entregas ainda não começaram`
+            : today === 1
+              ? "A primeira entrega ainda não começou"
+              : "O seu primeiro agente ainda não começou",
+        body: (agent, feminine, today, org) =>
+          today > 0
+            ? [`O que ${feminine ? "a" : "o"} `, { b: agent }, " entrega no primeiro dia na ", { b: org }, ":"]
+            : [feminine ? "A " : "O ", { b: agent }, " ainda espera o plano da ", { b: org }, " para começar."],
+        start: (agent, feminine) => [`Contratando hoje, ${feminine ? "a" : "o"} `, { b: agent }, " começa hoje."],
+        button: "Contratar o time",
+        personal: {
+          body: (agent, feminine, today) =>
+            today > 0
+              ? [`O que ${feminine ? "a" : "o"} `, { b: agent }, " entrega no primeiro dia:"]
+              : [feminine ? "A " : "O ", { b: agent }, " ainda espera o seu plano para começar."],
+          button: "Contratar os agentes",
+        },
+      },
+    },
   },
   surface: {
     linked: {

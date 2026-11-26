@@ -11,7 +11,8 @@
   (`propose_first_agents`); `packages/engine/src/standing.ts` (`workRefusalBeforePlan`); routes
   `apps/server/src/routes/app/first-agents.ts`; client `packages/client/src/api/*` (`api.firstAgents`,
   `useFirstAgents`, `usePasteFirstAgents`, `usePickFirstAgent`, the user event `first_agents.received`) and
-  `packages/client/src/lib/apps.ts` (`aiAppAsk`)
+  `packages/client/src/lib/apps.ts` (`aiAppAsk`); the plan-waiting emails `packages/engine/src/email.ts`
+  (`sendPlanWaitingEmail`, `PlanWaitingPick`) and `email/words/*.ts` (`planWaiting.picked`)
 
 ## Context
 
@@ -79,6 +80,14 @@ fits "show me three, I pick one, on the onboarding's own page".
 7. **Open while the workspace waits for its first plan.** The onboarding runs before Checkout, so the app's sign-in,
    personal tokens, the tool and these routes all work on the `payment` hold (`workRefusalBeforePlan`; ADR 0119
    addendum of 2026-11-26). Every other refusal stands.
+
+8. **The plan-waiting emails speak of the picked agent.** When the workspace's first agent came from a pick, the two
+   reminders of ADR 0079 §6 speak of it instead of the counts: its name, role and first day as the option has them,
+   and the AI that proposed it when its app has a verified mark (Claude, ChatGPT). An hour after, that it is ready and
+   only the hiring is missing; on the third day, its first day's deliveries as a list and that hired today, it starts
+   today. Both lead to the billing page ("Hire the team"). The names stay in the body, made inert, and the subjects
+   say "your first agent" and how many deliveries wait (ADR 0069 §5). A workspace whose first agent came another way
+   keeps the counts.
 
 ## Consequences
 

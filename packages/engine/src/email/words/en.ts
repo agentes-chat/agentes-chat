@@ -670,6 +670,67 @@ export const en = {
       },
       why: () => "You got this email because this workspace on agentes.chat is yours. We send two of these, then stop.",
     },
+    /**
+     * The workspace's first agent was picked from what the person's own AI proposed (ADR 0250): the two reminders
+     * speak of that agent and its first day instead of the counts. `first`: an hour after, `later`: on the third day.
+     * `ai`: the AI that proposed it ("Claude"), null when unknown. `feminine`: the agent's name reads as feminine, for
+     * the languages whose words agree with it ("a Ada", "o Caio"). `role`: inside a sentence, lower case unless it
+     * reads as a name. `today`: how many deliveries its first day holds.
+     */
+    picked: {
+      first: {
+        subject: "Your first agent is ready and waiting for you",
+        preheader: "Your AI found where to start. All that's left is to hire.",
+        headline: "Your first agent is ready",
+        body: (ai: string | null, agent: string, _feminine: boolean, role: string, today: number): Text => {
+          const ready = plural("en", today, {
+            one: ", with 1 delivery ready for today",
+            other: `, with ${today} deliveries ready for today`,
+          });
+          return [
+            `Your ${ai ?? "AI"} found where to start: `,
+            { b: agent },
+            ...(role ? [`, for ${role}`] : []),
+            ...(today > 0 ? [ready] : []),
+            ". All that's left is to hire.",
+          ];
+        },
+        button: "Hire the team",
+        personal: {
+          subject: "Your first agent is ready and waiting for you",
+          button: "Hire your agents",
+        },
+      },
+      later: {
+        subject: (today: number) =>
+          today > 1
+            ? `The first ${today} deliveries haven't started yet`
+            : today === 1
+              ? "The first delivery hasn't started yet"
+              : "Your first agent hasn't started yet",
+        preheader: "Hire today and the work starts today.",
+        headline: (today: number) =>
+          today > 1
+            ? `The first ${today} deliveries haven't started yet`
+            : today === 1
+              ? "The first delivery hasn't started yet"
+              : "Your first agent hasn't started yet",
+        /** Over the list of its first day's deliveries, or alone when it has none. `org`: the workspace's name. */
+        body: (agent: string, _feminine: boolean, today: number, org: string): Text =>
+          today > 0
+            ? ["What ", { b: agent }, " delivers on day one at ", { b: org }, ":"]
+            : [{ b: agent }, " is still waiting for the ", { b: org }, " plan to start."],
+        start: (agent: string, _feminine: boolean): Text => ["Hire today and ", { b: agent }, " starts today."],
+        button: "Hire the team",
+        personal: {
+          body: (agent: string, _feminine: boolean, today: number, _org: string): Text =>
+            today > 0
+              ? ["What ", { b: agent }, " delivers on day one:"]
+              : [{ b: agent }, " is still waiting for your plan to start."],
+          button: "Hire your agents",
+        },
+      },
+    },
   },
   /** An outside chat surface linked to the account (ADR 0187), or unlinked by it. */
   surface: {
