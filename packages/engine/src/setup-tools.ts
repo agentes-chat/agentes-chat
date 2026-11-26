@@ -1872,7 +1872,7 @@ const CHANGE_PROPERTIES = {
   approvals: {
     enum: ["always", "risky", "never", "workspace"],
     description:
-      'When it asks a person before acting, only when the person said so in their own words ("pode aprovar tudo daqui pra frente": never): always (before any change), risky (before deleting, sending or paying), never (nothing, merge, deploy and payments included), or workspace (follow the workspace\'s). Always its own card, which someone who manages agents confirms.',
+      'When it asks a person before acting ("pode aprovar tudo daqui pra frente": never): always (any change), risky (deleting, sending, paying), never, or workspace (follow the workspace\'s). Its own confirm card.',
   },
 };
 
