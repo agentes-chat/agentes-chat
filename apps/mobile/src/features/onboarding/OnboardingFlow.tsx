@@ -2,7 +2,7 @@ import { addDm, keys, meQuery, useApi, useAuthConfig, useTeamTemplates } from "@
 import { firstName } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { settingUp } from "@agenteschat/client/lib/guards";
-import { landingOf, type RailStep, railState } from "@agenteschat/client/lib/onboarding";
+import { landingOf, type PhoneStep, phoneRail } from "@agenteschat/client/lib/onboarding";
 import { can } from "@agenteschat/client/lib/permissions";
 import { finishOnboarding, isRightHand, RIGHT_HAND_DEFAULT } from "@agenteschat/client/lib/right-hand";
 import { aboutOf, type BusinessType, templateFor } from "@agenteschat/client/lib/team-plan";
@@ -181,15 +181,13 @@ function FirstRunStep({ pushed }: { pushed: PushedStep | undefined }) {
   const context = settings.data?.context?.trim() ?? "";
   // Made here as "For me", or one being set up that is.
   const personal = isPersonal(mine) || (created !== null && purpose === "personal");
-  const { steps, at } = railState({
+  const { steps, at } = phoneRail({
     orgId,
     standing: mine?.standing,
     billingUrl: authConfig?.billingUrl,
     context,
     team: team.length,
-    picked: null,
     personal,
-    funnel: null,
   });
   // Read once is enough: a refetch that fails later keeps the step on screen with what it read.
   const known = orgId === null || (settings.data !== undefined && agents.data !== undefined && mine !== undefined);
@@ -201,7 +199,7 @@ function FirstRunStep({ pushed }: { pushed: PushedStep | undefined }) {
   const shown = pushed ?? firstShown;
   // The first question, before the workspace exists.
   const asking = shown === "purpose";
-  const step: RailStep = shown === null || shown === "purpose" ? "name" : shown;
+  const step: PhoneStep = shown === null || shown === "purpose" ? "name" : shown;
   // Back on step 1, the workspace's own zone (saved on another visit, maybe on the web), never the phone's.
   const zone = pickedZone ?? settings.data?.timezone ?? phoneTimezone();
   const kind = business ?? aboutOf(t, context).business;

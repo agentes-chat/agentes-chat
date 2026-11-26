@@ -1,0 +1,115 @@
+/*
+ * "Hire the team" (HireStep.tsx): who is hired, one row each (the face on the name's line, the role beside the name,
+ * what it does under it), then the plan in two lines: its name with the way to every plan, its price at the end, and
+ * what it includes under them.
+ */
+.onb-roster {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: -2px 0 22px;
+  padding: 0;
+  list-style: none;
+}
+.onb-roster li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+.onb-roster li > .ac-avatar {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  margin-top: -6px;
+}
+.onb-roster li > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.onb-roster b {
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.onb-roster b span {
+  margin-left: 6px;
+  color: var(--muted);
+  font-size: 13.5px;
+  font-weight: 500;
+}
+.onb-roster li > span > span {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 20px;
+  text-wrap: pretty;
+  overflow-wrap: anywhere;
+}
+.onb-offer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+/* The first agent's step starts on the offer: no rule over it. */
+.onbx__body > .onb-offer:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+.onb-offer__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.onb-offer__name {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  font-size: 16px;
+  line-height: 22px;
+}
+.onb-offer__name b {
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+.onb-offer__name .onb__link {
+  font-size: 13.5px;
+}
+.onb-offer__price {
+  flex: none;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 14px;
+  white-space: nowrap;
+}
+.onb-offer__price b {
+  color: var(--ink);
+  font-size: 26px;
+  line-height: 30px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.onb-offer__fine {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 19px;
+  text-wrap: pretty;
+}
+
+/* A phone: the price under the plan's name when both don't fit. */
+@media (max-width: 400px) {
+  .onb-offer__head {
+    flex-wrap: wrap;
+  }
+}

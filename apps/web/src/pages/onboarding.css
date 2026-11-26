@@ -1,56 +1,9 @@
 /*
- * The onboarding (ADR 0162), the parts only that screen draws: the progress, Lodi on the horizon, each step's column,
- * the plan card and the sidebar's preview. The rail, its steps and the step headings stay in layout.css (Criar agente
- * uses them too). Unlayered, so these win over layout.css's base layer.
+ * The onboarding's step bodies (ADR 0162), inside the box of its frame (onboarding/shell.css): the name's field and
+ * logo, the answers' entrance, the plan card and the first question's drawings. Unlayered, so these win over
+ * layout.css's base layer.
  */
-/* The brand and the account's face on one row at the top of the rail; at phone width, its ends. */
-.onb__top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-/* The logo, and before it the way back for someone with another workspace, its arrow on the rail's edge. */
-.onb__top-start {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  min-width: 0;
-}
-.onb__leave {
-  margin-left: -6px;
-}
-.onb__me {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: var(--control-h-sm);
-  height: var(--control-h-sm);
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius-md);
-  background: transparent;
-  cursor: pointer;
-}
-.onb__me:hover {
-  background: var(--plate);
-}
-html:not([data-pointer]) .onb__me:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
-}
-/* Progress at the top of the rail: what is left, over a strip of pixel sky. */
-.onb__progress {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding: 0 10px;
-}
-.onb__progress-text {
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--muted);
-}
+/* A strip of pixel sky that fills as the steps are answered (`OnboardingProgress`). */
 .onb__progress-sky {
   position: relative;
   display: block;
@@ -65,19 +18,6 @@ html:not([data-pointer]) .onb__me:focus-visible {
 .onb__progress-sky .ac-sky {
   position: absolute;
   inset: 0;
-}
-/* Lodi on the horizon, what it says now over its face; the horizon's agents keep off it (`clear`). */
-.onb__lodi {
-  position: absolute;
-  left: var(--space-4);
-  right: var(--space-4);
-  bottom: 18px;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-1);
-  pointer-events: none;
 }
 .onb__say {
   margin: 0;
@@ -99,72 +39,6 @@ html:not([data-pointer]) .onb__me:focus-visible {
     opacity: 0;
     transform: translateY(6px);
   }
-}
-.onb__lodi-who {
-  display: flex;
-  align-items: flex-end;
-  gap: var(--space-1);
-  margin-left: -6px;
-}
-.onb__lodi-who > .ac-chip {
-  margin-bottom: var(--space-2);
-}
-.onb__main {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  min-width: 0;
-}
-/*
- * A wide window: one stage in its middle instead of a rail on its edge and a column adrift in the rest. The rail is a
- * card the window's height (28px from each edge) with its steps on top and Lodi on its own horizon at its foot; the
- * question and the preview stand beside it, the preview's frame on the card's top line. 72px from the card to the
- * question and 56px from the question to the preview, the body's gutter included. Below this width, the rail on the
- * edge as before.
- */
-@media (min-width: 1400px) {
-  .onb--rail {
-    position: relative;
-    isolation: isolate;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    gap: calc(72px - var(--onb-gutter, 32px));
-    --onb-gutter: 32px;
-  }
-  .onb--rail > .onb__rail {
-    position: sticky;
-    top: 28px;
-    z-index: 1;
-    flex: 0 0 280px;
-    height: calc(var(--onb-h, 100dvh) - 56px);
-    margin-block: 28px;
-    border: 1px solid var(--line);
-    border-radius: var(--radius-section);
-    box-shadow: var(--e1);
-  }
-  .onb--rail > .onb__main {
-    position: relative;
-    z-index: 1;
-    flex: 0 1 auto;
-  }
-  .onb--rail .onb__cols {
-    width: auto;
-    gap: calc(56px - var(--onb-gutter));
-  }
-  .onb--rail .onb-preview {
-    padding-top: 28px;
-  }
-}
-/* The step's column and, on wide screens, the workspace's preview beside it. */
-.onb__cols {
-  --onb-gutter: clamp(16px, 4vw, 32px);
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  gap: calc(var(--space-8) + var(--space-6));
-  width: 100%;
-  max-width: 1040px;
 }
 /*
  * One calm column per step: the heading, the answer, its one action right under it. Every step starts at the same
@@ -212,46 +86,6 @@ html:not([data-pointer]) .onb__me:focus-visible {
       transform: none;
     }
   }
-}
-/* Only the onboarding's: this file is unlayered, so an unscoped rule would beat Criar agente's own head (layout.css). */
-.onb--rail .onb__head {
-  gap: 6px;
-  margin: 0;
-}
-.onb--rail .onb__title {
-  outline: none;
-  font-family: inherit;
-  font-size: 26px;
-  font-weight: 650;
-  line-height: 1.15;
-  letter-spacing: -0.02em;
-  overflow-wrap: anywhere;
-}
-.onb__back {
-  align-self: flex-start;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  height: var(--control-h-sm);
-  margin: -16px 0 -8px -8px;
-  padding: 0 10px 0 6px;
-  border: 0;
-  border-radius: var(--radius-md);
-  background: transparent;
-  color: var(--faint);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  line-height: normal;
-  cursor: pointer;
-}
-.onb__back:hover:not(:disabled) {
-  background: var(--plate);
-  color: var(--ink);
-}
-html:not([data-pointer]) .onb__back:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
 }
 .onb__answer {
   display: flex;
@@ -375,101 +209,6 @@ html:not([data-pointer]) .onb__logo:focus-visible {
 .tp-agents.onb__team {
   margin: 0;
 }
-/* The plan: the team asleep on the agents' sky, what each one does, the price, the one button. */
-.onb__plan {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  padding: var(--space-4);
-  border-radius: var(--radius-section);
-  background: var(--raised);
-  box-shadow: var(--e1);
-}
-.onb__plan-faces {
-  position: relative;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: var(--space-4);
-  padding: var(--space-4) var(--space-4) var(--space-3);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  isolation: isolate;
-  box-shadow: inset 0 0 0 1px var(--line);
-}
-/* The plan just turned on: the team's band, day over it. */
-.team-scene.onb__plan-scene {
-  height: 132px;
-  border-radius: var(--radius-lg);
-}
-.onb__plan-sky {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-}
-.onb__plan-sky .ac-sky {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-.onb__plan-face {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-1);
-  min-width: 0;
-}
-.onb__plan-zz {
-  margin-left: auto;
-  align-self: center;
-}
-.onb__plan-week {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.onb__plan-week li {
-  gap: var(--space-2);
-  line-height: 1.35;
-  overflow-wrap: anywhere;
-}
-.onb__plan-week .ac-icon {
-  color: var(--ok);
-}
-.onb__plan-price {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: var(--space-1) var(--space-2);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--line);
-  font-size: 14px;
-  overflow-wrap: anywhere;
-}
-/* On the words' first line, the button's label among them: what comes after the plan may take two lines. */
-.onb__plan-acts {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-2) var(--space-4);
-  font-size: 14px;
-}
-/* What comes after the plan ("Next: connect your AI."), after its buttons. */
-.onb__plan-acts > .muted {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-/* Back from paying, in place of the buttons: a line of the card, the spinner on its first line. */
-.onb__paid {
-  margin: 0;
-  font-size: 14px;
-  overflow-wrap: anywhere;
-}
 /* The way past a step: a muted note and its link side by side, the link under the note when they don't fit. */
 .onb__skip {
   display: flex;
@@ -485,135 +224,12 @@ html:not([data-pointer]) .onb__logo:focus-visible {
 .onb__actions > .onb__skip {
   padding-bottom: 0;
 }
-/*
- * The preview: the workspace's sidebar at its own size, in a frame, showing only what exists now. Never wider: the
- * sidebar's one-line names (a long workspace or person) end in its ellipsis there, as in the app, instead of widening
- * the preview into the question's column. No caption over it: the frame starts on the step's top line (the rail
- * wordmark's, where Back's middle sits).
- */
-.onb-preview {
-  flex: 0 0 272px;
-  min-width: 0;
-  position: sticky;
-  top: 0;
-  padding-top: 40px;
-}
-/* As tall as what the workspace has so far, the person's row right under it: never a tall frame with a hole. */
-.onb-preview__frame {
-  max-height: calc(100dvh - 120px);
-  overflow: hidden;
-  border-radius: var(--radius-section);
-  box-shadow: var(--e2);
-}
-.onb-preview__side.sidebar {
-  width: 100%;
-  height: auto;
-  max-height: inherit;
-}
-.onb-preview__side .sidebar__item {
-  cursor: default;
-  transition: background-color 0.4s var(--out);
-}
-/* What the template brings, before it is made: tinted in the agents' blue, sliding in. */
-.onb-preview__side [data-fresh] {
-  background: color-mix(in srgb, var(--agent, #2b74e6) 8%, transparent);
-  animation: sidebar-row-in 0.36s var(--out) both;
-}
-@media (prefers-reduced-motion: reduce) {
-  .onb-preview__side [data-fresh] {
-    animation: none;
-  }
-}
-.onb-preview__ghost {
-  margin: var(--space-1) var(--space-2) var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  border: 1.5px dashed var(--line2);
-  border-radius: var(--radius-md);
-  color: var(--faint);
-  font-size: 13px;
-}
-.onb-preview__side .sidebar__me {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  padding: var(--space-1) var(--space-2);
-  color: var(--muted);
-}
-.onb-preview__me {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  color: var(--ink);
-}
-/* Phone: the rail is the step bar; the progress and Lodi's line lead the column. */
-.onb__phone-top {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-4) var(--onb-gutter) 0;
-}
-.onb__phone-top .onb__progress-sky {
-  height: 24px;
-}
-.onb__lodi-row {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-}
-.onb__lodi-row > .onb__say {
-  flex: 1;
-  min-width: 0;
-}
 @media (max-width: 760px) {
-  /* The step bar: the brand, the steps, the account's face at the end. */
-  .onb__top {
-    display: contents;
-  }
-  .onb__me {
-    order: 1;
-  }
-  /* The bar keeps its own height: with an "auto" row a tall step squeezed it (the rail hides its overflow, so its row
-     could shrink below it). */
-  .onb.onb--rail {
-    grid-template-rows: max-content 1fr;
-  }
-  /* With the way back before it, the logo is its mark alone: every step still fits. */
-  .onb__top-start:has(.onb__leave) .ac-logo > :not(.ac-logo__mark) {
-    display: none;
-  }
-  .onb__cols {
-    display: block;
-  }
   .onb__body {
     padding-top: var(--space-6);
   }
-  .onb--rail .onb__title {
-    font-size: 22px;
-  }
-  .onb__plan-faces {
-    gap: var(--space-3);
-    padding: var(--space-3);
-  }
-  .onb__plan-zz {
-    display: none;
-  }
-  /* The plan's one button fills the card, its link centred under it (C4). */
-  .onb__plan-acts {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .onb__plan-acts > .ac-link,
-  .onb__plan-acts > .muted {
-    align-self: center;
-    text-align: center;
-  }
   .onb__actions {
     padding-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--space-3));
-  }
-  html:has(.onb) {
-    scroll-padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 140px);
   }
 }
 /*
@@ -927,39 +543,4 @@ html:not([data-pointer]) .onb-purpose .ac-optrow:focus-visible {
     transition: none;
     animation: none;
   }
-}
-
-/*
- * The person's own step (ADR 0162, amended 2026-11-12): their face beside its label and its two ways in. The label's
- * capitals start on the face's top (`.ac-captop` lifts its 18px line by half less its caps), and the face is as tall as
- * the label and the buttons together, so its foot meets the buttons': half the label's line, its caps, the gap and a
- * button. The face is measured in the label's 13px, so `--cap-top` is the label's; its initials keep their own size.
- */
-.onb-you {
-  --onb-you-face: calc(9px + var(--cap-top) + var(--space-2) + var(--control-h-md));
-  display: flex;
-  /* Where the two buttons don't fit beside the face (a phone), the label and the buttons go under it, full width. */
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: var(--space-4);
-}
-.onb-you__face.ac-avatar {
-  flex: none;
-  width: var(--onb-you-face);
-  height: var(--onb-you-face);
-  font-size: 13px;
-}
-.onb-you__face .ac-avatar__initials {
-  font-size: 24px;
-}
-.onb-you__side {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  min-width: 0;
-}
-.onb-you__acts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
 }

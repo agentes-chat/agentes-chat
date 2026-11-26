@@ -1,5 +1,5 @@
 import type { WorkspaceMode } from "@agenteschat/client";
-import type { RailStep } from "@agenteschat/client/lib/onboarding";
+import type { PhoneStep } from "@agenteschat/client/lib/onboarding";
 import type { BusinessType } from "@agenteschat/client/lib/team-plan";
 import { useSyncExternalStore } from "react";
 
@@ -22,7 +22,7 @@ export const isRootPage = (params: unknown): boolean =>
   typeof params === "object" && params !== null && (params as Record<string, unknown>)[ROOT_PARAM] === "1";
 
 /** The steps pushed over the first page, each its own screen (the phone's rail: the web's own steps aside). */
-export const PUSHED_STEPS = ["name", "business", "team", "plan"] as const satisfies readonly RailStep[];
+export const PUSHED_STEPS = ["name", "business", "team", "plan"] as const satisfies readonly PhoneStep[];
 export type PushedStep = (typeof PUSHED_STEPS)[number];
 
 /** Whether a route param names a step the phone pushes. */
@@ -37,7 +37,7 @@ export const stepHref = (step: PushedStep) => `${ONBOARDING_ROUTE}/${step}`;
  * team's step resumes with the name's and what it does under it, so the system's back walks them as on the first
  * visit. Nothing when `to` is not further on, or is a step the phone doesn't push.
  */
-export function stepsBetween(steps: readonly RailStep[], from: RailStep, to: RailStep | "open"): PushedStep[] {
+export function stepsBetween(steps: readonly PhoneStep[], from: PhoneStep, to: PhoneStep | "open"): PushedStep[] {
   const start = steps.indexOf(from);
   const end = to === "open" ? -1 : steps.indexOf(to);
   if (start < 0 || end <= start) return [];
@@ -45,7 +45,7 @@ export function stepsBetween(steps: readonly RailStep[], from: RailStep, to: Rai
 }
 
 /** The step after `step` on the rail, if the phone pushes one. */
-export function nextStep(steps: readonly RailStep[], step: RailStep): PushedStep | null {
+export function nextStep(steps: readonly PhoneStep[], step: PhoneStep): PushedStep | null {
   const next = steps[steps.indexOf(step) + 1];
   return isPushedStep(next) ? next : null;
 }
