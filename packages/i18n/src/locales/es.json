@@ -5748,7 +5748,8 @@
       "provider_unavailable": "el modelo no respondió",
       "gave_up": "el modelo no respondió tras varios intentos",
       "missing_credential": "falta una clave de API",
-      "credential_revoked": "la clave de API fue revocada"
+      "credential_revoked": "la clave de API fue revocada",
+      "credential_unreadable": "la clave de API guardada no se puede abrir"
     },
     "youReplied": "Respondiste: {{text}}",
     "actions": "Acciones",
@@ -6722,6 +6723,7 @@
         "interrupted": "Interrumpida por un reinicio del servidor.",
         "missing_credential": "El espacio de trabajo no tiene clave de {{provider}}.",
         "credential_revoked": "La clave de este agente fue revocada.",
+        "credential_unreadable": "La clave de API guardada no se puede abrir, normalmente porque el secreto del servidor cambió después de guardarla. Vuelve a pegar la clave en Claves de IA.",
         "credential_wrong_provider": "El modelo es de {{modelProvider}}, pero la clave es de {{keyProvider}}.",
         "model_unlisted": "OpenRouter ya no ofrece {{model}}. Elige otro modelo en la configuración del agente.",
         "no_ai": "El agente no tenía una IA disponible.",
@@ -9588,6 +9590,7 @@
       "stuck": "Se detuvo porque se trabó",
       "missing_credential": "Falta una clave de API",
       "credential_revoked": "La clave de API se revocó",
+      "credential_unreadable": "La clave de API guardada no se puede abrir",
       "credential_wrong_provider": "La clave de API es de otro proveedor",
       "model_unlisted": "OpenRouter ya no ofrece el modelo",
       "agent_archived": "El agente se archivó",
@@ -19428,7 +19431,8 @@
       "talk": "Hablar con {{name}}",
       "missing": "Esta conversación ya no está aquí.",
       "helping": "ayudando a {{name}}",
-      "see": "Ver conversación"
+      "see": "Ver conversación",
+      "relay": "Respuesta de {{name}}: {{excerpt}}. Ver la conversación"
     },
     "unshown": "Este mensaje no se pudo mostrar",
     "unshownPart": "Parte de este mensaje no se pudo mostrar",

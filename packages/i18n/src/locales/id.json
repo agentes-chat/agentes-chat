@@ -5359,7 +5359,8 @@
       "provider_unavailable": "model tidak menjawab",
       "gave_up": "model tidak menjawab setelah beberapa kali dicoba",
       "missing_credential": "kunci API tidak ada",
-      "credential_revoked": "kunci API dicabut"
+      "credential_revoked": "kunci API dicabut",
+      "credential_unreadable": "kunci API yang disimpan tidak bisa dibuka"
     },
     "youReplied": "Kamu membalas: {{text}}",
     "actions": "Tindakan",
@@ -6276,6 +6277,7 @@
         "interrupted": "Terputus karena server dimulai ulang.",
         "missing_credential": "Ruang kerja tidak punya kunci {{provider}}.",
         "credential_revoked": "Kunci agen ini sudah dicabut.",
+        "credential_unreadable": "Kunci API yang disimpan tidak bisa dibuka, biasanya karena rahasia server berubah setelah kunci itu disimpan. Tempel lagi kuncinya di Kunci AI.",
         "credential_wrong_provider": "Modelnya dari {{modelProvider}}, tapi kuncinya dari {{keyProvider}}.",
         "model_unlisted": "OpenRouter tidak lagi menyediakan {{model}}. Pilih model lain di pengaturan agen.",
         "no_ai": "Agen ini tidak punya AI yang tersedia.",
@@ -9030,6 +9032,7 @@
       "stuck": "Dihentikan karena macet",
       "missing_credential": "Kunci API tidak ada",
       "credential_revoked": "Kunci API dicabut",
+      "credential_unreadable": "Kunci API yang disimpan tidak bisa dibuka",
       "credential_wrong_provider": "Kunci API berasal dari penyedia lain",
       "model_unlisted": "OpenRouter sudah tidak menyediakan model ini",
       "agent_archived": "Agennya diarsipkan",
@@ -18328,7 +18331,8 @@
       "talk": "Bicara dengan {{name}}",
       "missing": "Percakapan ini sudah tidak ada di sini.",
       "helping": "membantu {{name}}",
-      "see": "Lihat percakapan"
+      "see": "Lihat percakapan",
+      "relay": "Jawaban {{name}}: {{excerpt}}. Lihat percakapan"
     },
     "unshown": "Pesan ini tidak bisa ditampilkan",
     "unshownPart": "Sebagian pesan ini tidak bisa ditampilkan",
