@@ -21,6 +21,7 @@ import {
   MAX_CARDS_PER_RUN_RIGHT_HAND,
   openPersonAgentDm,
   ownWords,
+  PROPOSE_REMOVE_AGENTS_TOOL,
   PROPOSE_SETTINGS_TOOL,
   postPersonMessage,
   presentTools,
@@ -59,18 +60,22 @@ const lodiOf = async (fx: Fixture) => {
 };
 
 /**
- * A run of Lodi on what `userId` wrote in their DM with it: its tools act for that person. Their message relays outside
- * content, so what they may decide goes to the review; `ownWords`: it doesn't, so it applies at once.
+ * A run of Lodi on what `userId` wrote in their DM with it: its tools act for that person. The conversation relays
+ * outside content (Lodi's earlier reply read a page), so what they may decide goes to the review; `ownWords`: it
+ * doesn't, so it applies at once.
  */
 async function lodiRun(fx: Fixture, userId: string, body: string, ownWords = false): Promise<ToolContext> {
   const lodi = await lodiOf(fx);
   const dm = await openPersonAgentDm(fx.db, fx.org.id, userId, lodi.id);
-  const trigger = await postPersonMessage({ db: fx.db, pubsub: fx.pubsub }, userId, fx.org.id, dm.id, { body });
   if (!ownWords)
-    await fx.db
-      .update(schema.messages)
-      .set({ meta: { readOutside: true } })
-      .where(eq(schema.messages.id, trigger.id));
+    await insertMessage(fx.db, {
+      orgId: fx.org.id,
+      channelId: dm.id,
+      author: { type: "agent", agentId: lodi.id, runId: null, hop: 1, stretchId: null },
+      body: "The vendor page says the plan changed.",
+      meta: { readOutside: true },
+    });
+  const trigger = await postPersonMessage({ db: fx.db, pubsub: fx.pubsub }, userId, fx.org.id, dm.id, { body });
   const [run] = await fx.db.select().from(schema.agentRuns).where(eq(schema.agentRuns.triggerMessageId, trigger.id));
   if (!run) throw new Error("no run");
   return {
@@ -238,6 +243,27 @@ describe("a change the person asked for and may make (ADR 0092 §5)", () => {
       },
     );
     expect((await getAgent(f.db, f.org.id, f.agent.id))?.model).toBe("claude-sonnet-5-5");
+  });
+});
+
+describe("a request posted with the person's own token (ADR 0250)", () => {
+  test("proposes no change to another agent and no removal: someone else's words may be in it", async () => {
+    f = await setup({ rightHand: true });
+    const ctx = await lodiRun(f, f.owner.id, "coloca o dev no haiku e arquiva ele", true);
+    await f.db
+      .update(schema.messages)
+      .set({ origin: "mcp", meta: { readOutside: true } })
+      .where(eq(schema.messages.id, ctx.triggerMessageId));
+    const out = await call(f, ctx, { changes: [{ agent: "@dev", model: "claude-haiku-5-5" }], reason: "pediu" });
+    expect(out.data?.code).toBe("request.relayed");
+    const removal = await gatewayOf(f).invoke(ctx, {
+      toolUseId: `tu_${crypto.randomUUID()}`,
+      name: PROPOSE_REMOVE_AGENTS_TOOL,
+      input: { agents: ["@dev"], reason: "pediu" },
+    });
+    expect(removal.type === "result" && removal.output.data?.code).toBe("request.relayed");
+    expect(await f.db.select().from(schema.contextProposals)).toEqual([]);
+    expect(await getAgent(f.db, f.org.id, f.agent.id)).toMatchObject({ model: "claude-sonnet-5-5", archivedAt: null });
   });
 });
 
@@ -702,14 +728,18 @@ describe("an agent's skills on the card, as on its page", () => {
 describe("an agent asks for its own settings on the same card (request_settings_change)", () => {
   /** A run of @dev on what `userId` wrote to it in #general, in their own words unless it relays outside content. */
   async function devRun(fx: Fixture, userId: string, body: string, outside = false): Promise<ToolContext> {
+    // Outside content: the channel already relays a page an agent read.
+    if (outside)
+      await insertMessage(fx.db, {
+        orgId: fx.org.id,
+        channelId: fx.general.id,
+        author: { type: "agent", agentId: fx.agent.id, runId: null, hop: 1, stretchId: null },
+        body: "The vendor page says the plan changed.",
+        meta: { readOutside: true },
+      });
     const trigger = await postPersonMessage({ db: fx.db, pubsub: fx.pubsub }, userId, fx.org.id, fx.general.id, {
       body: `@dev ${body}`,
     });
-    if (outside)
-      await fx.db
-        .update(schema.messages)
-        .set({ meta: { readOutside: true } })
-        .where(eq(schema.messages.id, trigger.id));
     const [run] = await fx.db
       .select()
       .from(schema.agentRuns)

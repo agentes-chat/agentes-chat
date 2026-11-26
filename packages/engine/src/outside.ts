@@ -1,6 +1,7 @@
 import { and, desc, type Executor, eq, inArray, isNull, or, schema, sql } from "@agenteschat/db";
 import { type AuthorityRun, fedByRoutine, type RunAuthority, runAuthority, transcriptKeys } from "./authority";
 import { caches, cachesEnabled } from "./cache";
+import { ownTypedSql } from "./message-origin";
 import { postedBySql } from "./message-place";
 
 const { agentRuns, agentRunSteps, messages } = schema;
@@ -172,8 +173,9 @@ const PERSON_WORDS_LIMIT = 200;
 
 /**
  * What people wrote in a conversation (its thread and the channel's top level), newest first, joined: an address,
- * handle or credential found here was written by a person, not read from outside. A person's message marked
- * `meta.readOutside` (sent through an AI app, ADR 0119) is left out.
+ * handle or credential found here was written by a person, not read from outside. Only what they typed in our apps
+ * counts (`ownTyped`, ADR 0250): a message posted with a token, sent through an AI app (ADR 0119) or bridged in is left
+ * out.
  */
 export async function personWords(
   db: Executor,
@@ -188,9 +190,8 @@ export async function personWords(
       and(
         eq(messages.orgId, orgId),
         eq(messages.channelId, channelId),
-        eq(messages.authorType, "person"),
+        ownTypedSql(),
         isNull(messages.deletedAt),
-        sql`coalesce(${messages.meta}->>'readOutside', '') <> 'true'`,
         threadId
           ? or(isNull(messages.threadId), eq(messages.id, threadId), eq(messages.threadId, threadId))
           : isNull(messages.threadId),

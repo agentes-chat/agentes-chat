@@ -1237,6 +1237,8 @@ export async function createMission(
         authorType: "person",
         authorUserId: userId,
         body: goal,
+        // Typed on the mission's form in our apps (the only caller is its route).
+        origin: "app",
         meta: { missionStart: { title } },
       })
       .returning();

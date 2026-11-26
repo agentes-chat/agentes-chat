@@ -206,6 +206,14 @@ export const channelPermissionOverrides = pgTable(
 export const authorTypeEnum = pgEnum("author_type", ["person", "agent"]);
 
 /**
+ * How a message reached the server (ADR 0250). Only `app` (typed in our own web, desktop or phone app through a
+ * signed-in session) is a person's own words: `mcp` (an AI app or a script with a personal token) and `surface` (an
+ * outside chat bridged in, ADR 0187) may carry anyone's text under the person's name. `system`: written by the server
+ * (a routine's brief, a notice, a root). `unknown`: written before origins were recorded, never trusted as anyone's.
+ */
+export type MessageOrigin = "app" | "mcp" | "surface" | "agent" | "system" | "unknown";
+
+/**
  * Chat messages. Partitioned by month on `created_at` (see migration 0000 and
  * docs/adr/0009-messages-partitioning.md), so the primary key includes
  * `created_at` and no table can hold a foreign key to a message: references
@@ -248,6 +256,8 @@ export const messages = pgTable(
     agentRunId: uuid(),
     /** Structured attachments, e.g. `{ "approvalId": "…" }` for an approval card. */
     meta: jsonb().$type<Record<string, unknown>>().notNull().default({}),
+    /** How it reached the server (`MessageOrigin`); set by the server, never by a client. */
+    origin: text().$type<MessageOrigin>().notNull().default("unknown"),
     editedAt: timestamp({ withTimezone: true }),
     deletedAt: timestamp({ withTimezone: true }),
   },

@@ -31,11 +31,19 @@ import type { MemoryUpdate } from "../events";
 import { cutText } from "../format";
 import { type DescribedMessage, describeMessages, messageIdOf } from "../message-links";
 import { announceMessageMemories } from "../message-memories";
+import { ownTyped } from "../message-origin";
 import type { ReplyRef } from "../messages";
 import { quietNoticeSql } from "../notices";
 import { can, getMembership } from "../organizations";
 import { personWords, runReadOutsideById, UNASKED_DESTINATION, unaskedDestination } from "../outside";
-import { personBehindCall, triggerPerson, wikiActorOfCall } from "../requester";
+import {
+  personBehindCall,
+  relayedRefusal,
+  relayedRequest,
+  triggerPerson,
+  typedPersonBehindCall,
+  wikiActorOfCall,
+} from "../requester";
 import { isRightHandId, rightHandReader } from "../right-hand";
 import {
   agentSearchChannels,
@@ -800,7 +808,8 @@ export function createContextToolSource(deps: ContextDeps): ToolSource {
         additionalProperties: false,
       },
       async execute(input, ctx) {
-        const requester = await personRequester(ctx);
+        // Only what a person typed changes memory as theirs (ADR 0250): a relayed request changes the agent's own alone.
+        const requester = await typedPersonBehindCall(ctx);
         const item = await changeableItem(ctx, str(input.item_id), requester);
         if (typeof item === "string") return { content: item, isError: true };
         try {
@@ -892,7 +901,7 @@ export function createContextToolSource(deps: ContextDeps): ToolSource {
         additionalProperties: false,
       },
       async execute(input, ctx) {
-        const requester = await personRequester(ctx);
+        const requester = await typedPersonBehindCall(ctx);
         const item = await changeableItem(ctx, str(input.item_id), requester);
         if (typeof item === "string") return { content: item, isError: true };
         await ctx.db.transaction(async (tx) => {
@@ -970,6 +979,7 @@ export function createContextToolSource(deps: ContextDeps): ToolSource {
       async execute(input, ctx) {
         const requester = await personRequester(ctx);
         if (!requester) return notRequested;
+        if (await relayedRequest(ctx)) return relayedRefusal();
         const fail = (content: string) => ({ content, isError: true });
         try {
           const target = str(input.target);
@@ -1195,11 +1205,17 @@ async function handedReach(ctx: ToolContext, person: string): Promise<string[]> 
 async function askerDm(ctx: ToolContext): Promise<{ channelId: string; name: string } | null> {
   if (!UUID.test(ctx.runId) || !UUID.test(ctx.triggerMessageId)) return null;
   const [trigger] = await ctx.db
-    .select({ authorType: messages.authorType, authorUserId: messages.authorUserId, meta: messages.meta })
+    .select({
+      authorType: messages.authorType,
+      authorUserId: messages.authorUserId,
+      meta: messages.meta,
+      origin: messages.origin,
+    })
     .from(messages)
     .where(and(eq(messages.orgId, ctx.orgId), eq(messages.id, ctx.triggerMessageId)));
-  const person = trigger?.authorType === "person" ? trigger.authorUserId : null;
-  if (!person || trigger?.meta?.readOutside === true || (await personBehindCall(ctx)) !== person) return null;
+  // Typed by them in our apps (ADR 0250): a relayed message would carry their private DM to whoever wrote it.
+  const person = trigger && ownTyped(trigger) ? trigger.authorUserId : null;
+  if (!person || (await personBehindCall(ctx)) !== person) return null;
   const dms = schema.channels;
   const [row] = await ctx.db
     .select({ id: dms.id, name: schema.users.name })

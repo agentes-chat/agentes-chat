@@ -631,6 +631,11 @@ export interface NewMessage {
   author: MessageAuthor;
   body: string;
   meta?: Record<string, unknown>;
+  /**
+   * How it reached the server (`MessageOrigin`, ADR 0250). A person's message defaults to `app` (typed in our own apps):
+   * whatever posts one from anywhere else (a token, an AI app, a bridge, the server itself) says so here.
+   */
+  origin?: schema.MessageOrigin;
   /** Placed at this time instead of now (an agent's text that came before a card already posted). */
   createdAt?: Date;
   /**
@@ -681,6 +686,7 @@ interface RawMessage {
   stretch_id: string | null;
   agent_run_id: string | null;
   meta: Record<string, unknown> | string | null;
+  origin: schema.MessageOrigin;
   edited_at: Date | string | null;
   deleted_at: Date | string | null;
   runs: { id: string; agentId: string; replyInThread: boolean }[] | string | null;
@@ -778,6 +784,7 @@ export async function insertMessageWithRuns(
   const stretchId =
     (input.author.type === "agent" && input.author.runId === null ? input.author.stretchId : null) ?? null;
   const threadId = input.threadId ?? null;
+  const origin: schema.MessageOrigin = person ? (input.origin ?? "app") : "agent";
   const channelNames = parseChannelNames(body);
   // `@todos` (any language's word, `mentionsEveryone`) from a person who may `mention_everyone`: every member of the
   // conversation is mentioned, but in a DM (plain text there). Never an agent's: one mentioning everyone would wake
@@ -1076,7 +1083,7 @@ export async function insertMessageWithRuns(
                 and r.channel_id = ${input.channelId}::uuid and r.thread_id is null)) as thread
       ), m as (
         insert into ${messages} (id, created_at, org_id, channel_id, thread_id, author_type, author_user_id,
-          author_agent_id, agent_run_id, hop, stretch_id, body, mentioned_agent_ids, mentioned_user_ids, meta)
+          author_agent_id, agent_run_id, hop, stretch_id, body, mentioned_agent_ids, mentioned_user_ids, meta, origin)
         select ${id}::uuid, coalesce(${input.createdAt?.toISOString() ?? null}::timestamptz, now()), ${input.orgId}::uuid, ${input.channelId}::uuid,
           coalesce(${threadId}::uuid, (select thread from sealed)),
           ${input.author.type}::author_type, ${userId}, ${agentId}::uuid, ${runId}::uuid,
@@ -1114,7 +1121,8 @@ export async function insertMessageWithRuns(
             || case when (select yes from sealed) then jsonb_build_object('confidential', true)
                 || case when ${body}::text <> '' then jsonb_build_object('sealedBody', ${sealedWords}::text)
                   else '{}'::jsonb end
-              else '{}'::jsonb end
+              else '{}'::jsonb end,
+          ${origin}
         where ${threadOk}
           -- An archived thread is read only for people (ADR 0029); an agent's run already going still lands.
           and not exists (select 1 from archived)
@@ -1235,6 +1243,7 @@ export async function insertMessageWithRuns(
     stretchId: row.stretch_id,
     agentRunId: row.agent_run_id,
     meta: parseJson(row.meta, {}),
+    origin: row.origin,
     editedAt: asDate(row.edited_at),
     deletedAt: asDate(row.deleted_at),
   };
@@ -1351,6 +1360,8 @@ export async function postPersonMessage(
      * with the file's kind and title. Only that conversation's own file (`message.live_ref` otherwise).
      */
     liveRef?: { artifactId: string; selection?: LiveAskSelection } | null;
+    /** How it reached the server (ADR 0250): `app` by default, for what the person typed in our own apps. */
+    origin?: "app" | "mcp" | "surface";
   },
 ): Promise<MessageView> {
   // One access check (membership + channel) instead of two round trips. It reads a workspace being deleted; posting
@@ -1424,6 +1435,7 @@ export async function postPersonMessage(
       threadId: input.threadId,
       author: { type: "person", userId },
       body: input.body,
+      origin: input.origin ?? "app",
       clientId,
       meta:
         clientId || meta || input.steer === "now"

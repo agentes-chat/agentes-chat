@@ -21,9 +21,10 @@ import { steeredByOthers } from "../authority";
 import { isConfidentialRun, threadIsConfidential } from "../confidential";
 import { callLine, type LearnSignal, type RunCall, runCalls } from "../continuation";
 import { cutText, cutTextEnd } from "../format";
+import { ownTyped } from "../message-origin";
 import { enqueue } from "../outbox";
 import { runReadOutsideById } from "../outside";
-import { lineLocale, personBehindCall } from "../requester";
+import { lineLocale, personBehindCall, typedPersonBehindCall } from "../requester";
 import { isRightHand } from "../right-hand";
 import { lodiPrefsOf } from "../right-hand-prefs";
 import { addRunStep } from "../runs";
@@ -140,14 +141,14 @@ export const readsOutside = (c: RunCall) =>
   OUTSIDE_MARK.test(c.result?.content ?? "");
 
 /**
- * How far what a run learns is trusted (ADR 0120): high only with a person behind it (`personBehindCall`) and no
- * outside content read so far (the web, a page, mail, a connected app, a computer brain's own fetches, a screen, or
+ * How far what a run learns is trusted (ADR 0120): high only with a person behind it whose request they typed in our
+ * apps (`typedPersonBehindCall`, ADR 0250: not one posted with a token or bridged in) and no outside content read so far (the web, a page, mail, a connected app, a computer brain's own fetches, a screen, or
  * a conversation relaying any of these: `runReadOutside`, ADR 0117). Everything else stays low: data, never shared,
  * never promoted.
  */
 export async function learnTrust(ctx: Pick<ToolContext, "orgId" | "runId" | "triggerMessageId"> & { db: Database }) {
   const [person, calls, relayed] = await Promise.all([
-    personBehindCall(ctx),
+    typedPersonBehindCall(ctx),
     ctx.runId ? runCalls(ctx.db, { id: ctx.runId, orgId: ctx.orgId }) : Promise.resolve([] as RunCall[]),
     ctx.runId ? runReadOutsideById(ctx.db, ctx.orgId, ctx.runId) : Promise.resolve(false),
   ]);
@@ -203,10 +204,15 @@ export async function ownWords(
   const { trust, person } = await learnTrust(ctx);
   if (trust !== "high" || !person) return null;
   const [trigger] = await ctx.db
-    .select({ authorUserId: messages.authorUserId })
+    .select({
+      authorType: messages.authorType,
+      authorUserId: messages.authorUserId,
+      origin: messages.origin,
+      meta: messages.meta,
+    })
     .from(messages)
     .where(and(eq(messages.orgId, ctx.orgId), eq(messages.id, ctx.triggerMessageId)));
-  if (trigger?.authorUserId !== person) return null;
+  if (!trigger || !ownTyped(trigger) || trigger.authorUserId !== person) return null;
   const calls = await runCalls(ctx.db, { id: ctx.runId, orgId: ctx.orgId });
   if (calls.some((c) => OTHERS_WORDS.has(c.name))) return null;
   if (await readOthersInstructions(ctx.db, ctx.orgId, person, calls)) return null;
@@ -669,12 +675,12 @@ export async function learnRun(
     }
     if (cited.calls.some((c) => !readsOutside(c) && c.result && !c.result.isError))
       evidence.push({ type: "self", ref: run.id, agentId: agent.id, at: now });
-    // A person's preference only from a message of theirs, never inferred.
+    // A person's preference only from a message they typed themselves (`ownTyped`), never inferred.
     const person =
       item.scope === "person"
         ? (cited.messages.find(
             (m) =>
-              m.authorType === "person" &&
+              ownTyped(m) &&
               m.authorUserId &&
               (conversation.names.get(m.id) ?? "").toLowerCase() === item.about_person.trim().toLowerCase(),
           )?.authorUserId ?? null)

@@ -683,6 +683,7 @@ export function buildAppsMcpServer(deps: AppsToolDeps, p: AppPrincipal, version:
           body,
           threadId: args.thread_id ?? null,
           clientId: `app:${sha256(`${p.grantId}:${key}`).slice(0, 40)}`,
+          origin: "mcp",
           // The person's own request, with their permissions, but written by their AI, which may carry text it read
           // elsewhere: outside content for learning and for what the run relays (ADR 0117, ADR 0120).
           meta: {

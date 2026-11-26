@@ -46,7 +46,10 @@ async function programmer() {
 }
 
 /** A person's request in `channelId` (or an agent's, with `byAgent`), and Dev's run over it, at work. */
-async function runOver(channelId: string, options: { byAgent?: boolean; background?: boolean; body?: string } = {}) {
+async function runOver(
+  channelId: string,
+  options: { byAgent?: boolean; background?: boolean; body?: string; relayed?: boolean } = {},
+) {
   const trigger = await insertMessage(f.db, {
     orgId: f.org.id,
     channelId,
@@ -54,6 +57,8 @@ async function runOver(channelId: string, options: { byAgent?: boolean; backgrou
       ? { type: "agent", agentId: f.agent.id, runId: null, hop: 1, stretchId: null }
       : { type: "person", userId: f.owner.id },
     body: options.body ?? ASK,
+    // Posted with the person's own token by a script relaying someone else's message (ADR 0250).
+    ...(options.relayed ? { origin: "mcp" as const, meta: { readOutside: true } } : {}),
   });
   const [run] = await f.db
     .insert(schema.agentRuns)
@@ -168,6 +173,15 @@ describe("suggest_code_session", () => {
       expect(bad.isError).toBe(true);
       expect(bad.data?.codeSuggestion).toBeUndefined();
     }
+  });
+
+  test("refused for a request posted with a token: only words the person typed here open a session", async () => {
+    f = await setup();
+    await programmer();
+    const relayed = await runOver(f.general.id, { relayed: true });
+    const out = await suggest(ctxOf(relayed.run), { project: "tarefas", title: "X" });
+    expect(out.isError).toBe(true);
+    expect(out.data?.codeSuggestion).toBeUndefined();
   });
 
   test("never in a task's conversation or a mission's thread: the change is made there, as before", async () => {

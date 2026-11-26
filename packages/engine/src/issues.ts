@@ -1743,6 +1743,7 @@ export async function askAgentToImplement(
       threadId: conversation.rootId,
       author: by ? { type: "agent", agentId: by.agentId, runId: by.runId, hop: by.hop } : { type: "person", userId },
       body: `Please implement issue #${issue.number}.`,
+      origin: by ? "agent" : "system",
       meta: {
         issueId: issue.id,
         issueWorkStart: true,

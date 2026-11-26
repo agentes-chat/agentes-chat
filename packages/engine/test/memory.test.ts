@@ -1033,10 +1033,18 @@ describe("proposals for teammates (one card, a row per agent and kind of change)
     );
 
   /**
-   * @dev's run on a message in #general from Ana (or `userId`), or from another agent (no person behind it). The message
+   * @dev's run on a message in #general from Ana (or `userId`), or from another agent (no person behind it). The channel
    * relays outside content, so changes wait on their card; `ownWords`: they apply at once when the person may decide.
    */
   async function runOn(author: "person" | "agent", userId = f.owner.id, ownWords = false): Promise<ToolContext> {
+    if (!ownWords)
+      await insertMessage(f.db, {
+        orgId: f.org.id,
+        channelId: f.general.id,
+        author: { type: "agent", agentId: f.agent.id, runId: null, hop: 1, stretchId: null },
+        body: "The vendor page says the team changed.",
+        meta: { readOutside: true },
+      });
     const trigger = await insertMessage(f.db, {
       orgId: f.org.id,
       channelId: f.general.id,
@@ -1045,7 +1053,6 @@ describe("proposals for teammates (one card, a row per agent and kind of change)
           ? { type: "person", userId }
           : { type: "agent", agentId: f.agent.id, runId: crypto.randomUUID(), hop: 1 },
       body: "muda o time",
-      ...(ownWords ? {} : { meta: { readOutside: true } }),
     });
     const [run] = await f.db
       .insert(schema.agentRuns)

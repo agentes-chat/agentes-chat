@@ -200,6 +200,7 @@ export async function postFromSurface(deps: SurfaceInboundDeps, input: SurfacePo
       attachments,
       replyTo: await replyInDm(db, orgId, dm.id, input.replyTo),
       clientId,
+      origin: "surface",
       meta: { via, ...(input.forwarded ? { readOutside: true } : {}) },
     },
   ).catch(async (error: unknown) => {

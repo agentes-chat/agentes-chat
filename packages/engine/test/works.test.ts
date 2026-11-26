@@ -1303,6 +1303,19 @@ test("a follow-up does what the work left undone, as the person who asked, where
   expect(work.requestedByUserId).toBe(f.owner.id);
 });
 
+test("a follow-up of an ask bridged in from an outside chat answers for them, never as their own words (ADR 0250)", async () => {
+  f = await setup({ workTools: true, toolSources: [createPassToolSource()] });
+  const bia = await member("bia");
+  const { run, asked } = await passedOn("depois posta o resumo no #time", bia.id);
+  await f.db.update(schema.messages).set({ origin: "surface" }).where(eq(schema.messages.id, asked));
+  await endWork(deps(), await finishRun(run.id), "done");
+  await f.db.delete(schema.outbox).where(eq(schema.outbox.kind, "agent_run.execute"));
+  await drainOutbox(f.db, f.handlers);
+  const [notice] = await followUpNotices();
+  const followUp = (await runs()).find((r) => r.triggerMessageId === notice?.id) as AgentRun;
+  expect(await runAuthority(f.db, followUp)).toEqual({ kind: "person", personId: bia.id, relayed: true });
+});
+
 test("two people pass asks on to one work: one follow-up each, on their own authority, and no card decided for the other", async () => {
   const isDecision = (req: ModelRequest) => JSON.stringify(req.system).includes("workspace's right hand. ");
   f = await setup({

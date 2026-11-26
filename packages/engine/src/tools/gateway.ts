@@ -55,7 +55,7 @@ import { gitVerbOf } from "../git/hosts/refs";
 import { mergeReposOfCall, recordMergeDone, reposOfGithubCall } from "../git/repos";
 import { recordRead } from "../outbound";
 import { ownerOnlyPerson, personalLostNote } from "../personal-use";
-import { routineCreatorOf } from "../requester";
+import { relayedRefusal, routineCreatorOf } from "../requester";
 import { isRightHand, RIGHT_HAND_NOT_OFFERED } from "../right-hand";
 import { type RoutineBrief, routineBriefOf } from "../routine-brief";
 import { keysOfCall, RUN_CODE_TOOL, routineKeysAllowed, routineKeysKind } from "../routine-keys";
@@ -854,6 +854,8 @@ export function createToolGateway(deps: {
   ): Promise<AheadOutcome> {
     const no = (message: string): AheadOutcome => ({ ok: false, message });
     if (authority?.kind !== "person") return no("Only a person's request can have an action approved ahead.");
+    // An approval asked ahead stands until its time (ADR 0250): only for a request the person typed in our apps.
+    if (authority.relayed) return no(relayedRefusal().content);
     const tool = (await allTools(ctx)).get(request.tool.trim());
     if (!tool)
       return no(`No tool named "${request.tool}": use its exact name (a big connector's find_tools gives it).`);

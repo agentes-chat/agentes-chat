@@ -50,6 +50,7 @@ import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from ".
 import { publishAgentsChanged, publishUserEvent } from "../events";
 import { cutText } from "../format";
 import type { Judge } from "../judge";
+import { ownTypedSql } from "../message-origin";
 import { notify, resolveNotifications } from "../notifications";
 import { can, type Membership, requirePermission } from "../organizations";
 import { enqueue } from "../outbox";
@@ -143,8 +144,9 @@ export async function queueSettle(
 }
 
 /**
- * The message that started the run, when `userId` wrote it: the person's own words for a change they asked for. Null
- * for a notice, a colleague's message or anything an agent wrote.
+ * The message that started the run, when `userId` typed it in our apps (`ownTyped`, ADR 0250): the person's own words
+ * for a change they asked for. Null for a notice, a colleague's message, anything an agent wrote, and what was posted
+ * with a token, by an AI app or through a bridge (someone else's words may be in it).
  */
 export async function askedWords(
   db: Database,
@@ -159,7 +161,7 @@ export async function askedWords(
       and(
         eq(messages.orgId, ctx.orgId),
         eq(messages.id, ctx.triggerMessageId),
-        eq(messages.authorType, "person"),
+        ownTypedSql(),
         eq(messages.authorUserId, userId),
       ),
     );

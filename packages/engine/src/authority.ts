@@ -1,5 +1,6 @@
 import { and, type Executor, eq, gte, inArray, schema, sql } from "@agenteschat/db";
 import { caches, cachesEnabled } from "./cache";
+import { ownTyped } from "./message-origin";
 import { getMembership } from "./organizations";
 import { type RoutineBrief, routineBriefOf } from "./routine-brief";
 import { RUN_STATE_KEYS, runState } from "./run-state";
@@ -31,7 +32,8 @@ const { agentRuns, messages, routineRuns } = schema;
  * notice's run, the run on a task's or a folder request's line) are followed, within the workspace.
  */
 export type RunAuthority =
-  | { kind: "person"; personId: string }
+  /** `relayed`: the person's message it roots in wasn't typed in our apps (`ownTyped`): theirs to answer, not to teach. */
+  | { kind: "person"; personId: string; relayed?: true }
   | { kind: "routine"; personId: null; brief: RoutineBrief | null }
   /** `brief`: the routine whose report or work woke it (reasons `routine_report` and `routine`), whose bounds it keeps. */
   | { kind: "unattended"; personId: null; reason: UnattendedReason; brief?: RoutineBrief | null };
@@ -44,7 +46,8 @@ export type UnattendedReason = "routine_report" | "routine" | "agent";
 
 /** What a message's chain roots in. */
 export type MessageRoot =
-  | { kind: "person"; personId: string }
+  /** `relayed`: that person's message wasn't typed in our apps (`ownTyped`, ADR 0250). */
+  | { kind: "person"; personId: string; relayed?: true }
   /** `briefMessageId`: the routine's brief the chain started from, when known. */
   | { kind: "routine"; briefMessageId: string | null }
   /** `backgroundRunId`: the routine's run that handed it off (the notice's `refs.runId`). */
@@ -64,6 +67,7 @@ type MessageLink = {
   authorUserId: string | null;
   agentRunId: string | null;
   meta: Record<string, unknown>;
+  origin: schema.MessageOrigin;
 };
 
 const noticeOf = (meta: Record<string, unknown>) =>
@@ -125,6 +129,7 @@ async function walkRoot(db: Executor, orgId: string, messageId: string, walked: 
         authorUserId: messages.authorUserId,
         agentRunId: messages.agentRunId,
         meta: messages.meta,
+        origin: messages.origin,
       })
       .from(messages)
       .where(and(eq(messages.orgId, orgId), eq(messages.id, id)))) as MessageLink[];
@@ -132,7 +137,10 @@ async function walkRoot(db: Executor, orgId: string, messageId: string, walked: 
     if (m.authorType === "person") {
       // A routine's brief is written by its creator, but nobody is behind the work it starts.
       if (routineBriefOf(m.meta) || m.meta.background === true) return { kind: "routine", briefMessageId: id };
-      return m.authorUserId ? { kind: "person", personId: m.authorUserId } : { kind: "agent" };
+      if (!m.authorUserId) return { kind: "agent" };
+      return ownTyped(m)
+        ? { kind: "person", personId: m.authorUserId }
+        : { kind: "person", personId: m.authorUserId, relayed: true };
     }
     const notice = noticeOf(m.meta);
     if (notice?.kind === "routine_handoff") {
@@ -144,7 +152,8 @@ async function walkRoot(db: Executor, orgId: string, messageId: string, walked: 
     // person, not who asked for the work.
     if (notice?.kind === "github_event" || notice?.kind === "work_follow_up") {
       const personId = notice.refs?.personId;
-      return typeof personId === "string" && personId ? { kind: "person", personId } : { kind: "agent" };
+      if (typeof personId !== "string" || !personId) return { kind: "agent" };
+      return notice.refs?.relayed === "1" ? { kind: "person", personId, relayed: true } : { kind: "person", personId };
     }
     // Work that comes back to the agent continues the run it came back to, for whoever is behind that run; a
     // routine's own message roots in the routine's run that posted it.
@@ -318,7 +327,7 @@ export async function runAuthority(db: Executor, run: AuthorityRun): Promise<Run
     return { kind: "routine", personId: null, brief: routineBriefOf(trigger?.meta) };
   }
   const root = await messageRoot(db, run.orgId, run.triggerMessageId);
-  if (root.kind === "person") return { kind: "person", personId: root.personId };
+  if (root.kind === "person") return root;
   const steeredBy = steeredByOf(run.transcript ?? run.state);
   if (steeredBy) return { kind: "person", personId: steeredBy };
   if (root.kind === "agent") return { kind: "unattended", personId: null, reason: "agent" };
