@@ -2203,6 +2203,46 @@ export const en = {
       startAnyPersonal: "And your agents get to work",
       connect: "Connect the AI",
     },
+    /**
+     * The onboarding of someone who joined a workspace: the team as it is, then the one agent that solves a problem of
+     * theirs, asked of their own AI. `{{org}}`: the workspace's name. `{{first}}`: the person's first name.
+     */
+    member: {
+      title: "Welcome to {{org}}, {{first}}",
+      titleNoName: "Welcome to {{org}}",
+      titlePersonal: "Welcome, {{first}}",
+      titleNoNamePersonal: "Welcome",
+      /**
+       * The lead, one sentence after the other: what people do here, who brought an agent (`{{person}}`: their first
+       * name, `{{agent}}`: the agent as `hire.the` says it, `{{role}}`: its role in lower case), then the question.
+       */
+      intro: "Here, each person brings the agent that solves a problem of theirs.",
+      brought: "{{person}} brought {{agent}}, for {{role}}.",
+      broughtNoRole: "{{person}} brought {{agent}}.",
+      question: "What will yours be?",
+      how: "How do you want to create your agent?",
+      ask: "Ask your AI",
+      askText: "It finds the task that takes most of your time and proposes an agent for it.",
+      scratch: "Start from scratch",
+      /** `{{name}}`: the right hand, the agent that creates and adjusts the other agents. */
+      scratchText: "You describe the problem, and {{name}}, the agents' HR, builds the agent with you.",
+      askGo: "Ask your AI",
+      scratchGo: "Start from scratch",
+      /** Goes to the workspace, with no agent for now. */
+      later: "Not now",
+      /** Picking from what the AI proposed. `{{app}}`: the assistant asked, "Claude". */
+      pickTitle: "Pick your agent",
+      found_one: "Your {{app}} found the task that takes most of your time.",
+      found_other: "Your {{app}} found the {{count}} tasks that take most of your time.",
+      foundAny_one: "Your AI found the task that takes most of your time.",
+      foundAny_other: "Your AI found the {{count}} tasks that take most of your time.",
+      /** `{{names}}`: the agents already there, the right hand last, as `hire.the` says each one. */
+      joins_one: "Start with it: the agent joins the {{org}} team, with {{names}}.",
+      joins_other: "Start with one: the agent joins the {{org}} team, with {{names}}.",
+      joinsPersonal_one: "Start with it: the agent works here with you, beside {{names}}.",
+      joinsPersonal_other: "Start with one: the agent works here with you, beside {{names}}.",
+      pickNote: "It's your first: create others whenever you like.",
+    },
   },
   // The desktop app's notifications while its window is in the background (lib/desktop.ts `desktopNotice`).
   desktopNotice: {

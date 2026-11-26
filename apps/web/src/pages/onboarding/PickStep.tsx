@@ -42,6 +42,7 @@ export function FirstAgentPick({
   app = null,
   eyebrow,
   title,
+  lead,
   note,
 }: {
   orgId: string;
@@ -51,6 +52,8 @@ export function FirstAgentPick({
   eyebrow?: ReactNode;
   /** In place of "Pick your first agent" (a member's first agent). */
   title?: string;
+  /** In place of what the AI found, from how many options it sent (a member's agent joins a team already there). */
+  lead?: (count: number) => string;
   /** In place of "Nothing is created until you pick.". */
   note?: string;
 }) {
@@ -92,9 +95,11 @@ export function FirstAgentPick({
       eyebrow={eyebrow}
       title={title ?? t("onboarding.pick.title")}
       lead={
-        appName
-          ? t("onboarding.pick.lead", { app: appName, count: options.length })
-          : t("onboarding.pick.leadAny", { count: options.length })
+        lead
+          ? lead(options.length)
+          : appName
+            ? t("onboarding.pick.lead", { app: appName, count: options.length })
+            : t("onboarding.pick.leadAny", { count: options.length })
       }
       note={<BoxNote>{note ?? t("onboarding.pick.note")}</BoxNote>}
       acts={
