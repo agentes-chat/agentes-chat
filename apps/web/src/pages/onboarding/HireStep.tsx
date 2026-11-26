@@ -28,7 +28,7 @@ const ROSTER_MAX = 4;
 const the = (t: TFunction, name: string) => t("onboarding.hire.the", agentGrammar(name));
 
 /** A role inside a sentence ("for billing"): lower case, unless it reads as a name or an acronym ("SEO", "Stripe"). */
-function roleWord(role: string, locale: string) {
+export function roleWord(role: string, locale: string) {
   const r = role.trim();
   const second = r.charAt(1);
   return second && second === second.toLocaleLowerCase(locale) && second !== second.toLocaleUpperCase(locale)

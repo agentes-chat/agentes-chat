@@ -89,3 +89,35 @@ fits "show me three, I pick one, on the onboarding's own page".
   nothing on the checklist.
 - Asking an admin when the person can't create agents is left for later; the apps say it needs an admin.
 - A new table, generated as a migration with `bun run db:generate first_agent_proposals`.
+
+## Addendum (2026-11-26): a member's own first agent
+
+Someone who joins a workspace met its team in the chat and was asked, by the right hand's greeting, what they look
+after. The onboarding now asks the owner's own AI for the first agent; the people who join next get the same, in their
+own words, because their AI knows their part of the work and the owner's doesn't.
+
+- **Where.** `/welcome/$orgId` (`MemberOnboardingPage`), a page of its own outside the workspace's shell, on the
+  onboarding's frame (ADR 0162). Two steps. First the hello: "Welcome to <org>, <first name>", the team awake on its
+  daylight sky (the right hand and the agents, the workspace's computer once it is ready), and a lead that says each
+  person brings the agent that solves a problem of theirs, who brought one (the first agent someone else answers for,
+  by that person's first name, with its role; left out when there is none) and asks which will be theirs. The two
+  answers are the owner's: ask your AI, or start from scratch, which opens the right hand's DM, where its greeting asks
+  what they look after and it builds the agent with them. Then asking their AI and picking (`AskYourAi` with the
+  `member` request, `personal` in a personal workspace, never naming a workspace called "Personal"; `FirstAgentPick`
+  with "Pick your agent", a lead that names the team the agent joins and "It's your first: create others whenever you
+  like."). The pick creates the agent as the owner's does (§4 to §6), and the page opens it: its channel in a team's
+  workspace, its DM in a personal one. "Not now" opens the workspace. Every way out carries the arrival with the
+  welcome wizard alone (ADR 0160): the team's AI is the workspace's, already set up.
+- **Who gets there.** Accepting an email invitation, a link request approved and a request approved for an account
+  (ADR 0090) open it when the person may create agents there (`makesAgents`) and has no agent of their own yet, in a
+  team's or a personal workspace (`joinedLanding`). Anyone else, a failed read, and someone who was already a member
+  open the workspace as before. Someone who reaches it without the permission to create agents sees the hello alone,
+  with one line saying to ask an admin for it and a button into the workspace.
+- **The invitation says so.** A team's invitation email adds that, on arrival, the person creates their own agent with
+  their AI. A personal workspace's says only whose space it is.
+- **One welcome, not two.** The right hand's greeting of a newcomer (`postWelcome`) asks what they look after to build
+  their first agent. Once they picked one on this page (a `first_agent_proposals` row with its agent), the greeting
+  is `welcome_member_agent` (hello, the agent is on the team, call me when you need) with no answers to tap, and its
+  newcomer block (`newcomerBlock`) is left out of the prompt, so it never proposes their first agent again. The
+  greeting is queued when they join, so it usually comes before the pick and keeps its question; its block is gone
+  either way once the agent exists.
