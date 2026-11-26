@@ -5,7 +5,7 @@ import { BRAIN_KINDS } from "./brain-settings";
 import { ValidationError } from "./errors";
 import { getOrMake, percentile } from "./format";
 import { heavyRead, instantOf } from "./operator-paging";
-import { NOT_A_REPLY } from "./run-timings";
+import { MODEL_SQL, NOT_A_REPLY } from "./run-timings";
 import { failureOf } from "./work-analytics";
 
 /** Time per task for the operator (ADR 0254): the asks of a window, timed from their stretch's runs and messages. */
@@ -215,8 +215,8 @@ export async function readAsks(db: Database, query: { from: string; to: string; 
         from r group by ask
       )
       select q.asked, k.kind, q.chars, a.runs, a.agents, a.tools, a.brain, a.last_status, a.last_error,
-        (select u.model from usage_records u where u.run_id = a.first_id and u.kind = 'agent' and u.provider <> 'web'
-          order by u.created_at limit 1) as model,
+        (select case when u.model ~ ${MODEL_SQL} then u.model end from usage_records u
+          where u.run_id = a.first_id and u.kind = 'agent' and u.provider <> 'web' order by u.created_at limit 1) as model,
         extract(epoch from (a.active - q.asked)) * 1000 as activity_ms,
         extract(epoch from (a.said - q.asked)) * 1000 as reply_ms,
         a.live or coalesce(w.open, false) as open,
