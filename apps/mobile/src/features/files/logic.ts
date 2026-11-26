@@ -218,6 +218,13 @@ export function singleImageBox(width: number, ratio: number | undefined): { widt
 }
 
 /**
+ * A video's box for `width` in a message, set before it loads: its own shape when the server read its size (a lone
+ * picture's box, an upright one narrowed to fit), else 16:9 (`videoHeight`).
+ */
+export const videoBox = (width: number, ratio: number | undefined) =>
+  ratio ? singleImageBox(width, ratio) : { width, height: videoHeight(width) };
+
+/**
  * A safe file name for a copy in the cache (and the name the share sheet shows): no folders, no
  * characters iOS or other apps refuse, not empty, not too long (the extension is kept).
  */

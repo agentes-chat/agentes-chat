@@ -12,6 +12,7 @@ import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import {
   aiStateOf,
   choiceOfIntent,
+  connectsPlanFor,
   freePlanAccount,
   noAiLockedLine,
   PLAN_CHOICES,
@@ -244,7 +245,9 @@ function FlowScreen({
   // The team's right hand thinks with each person's own AI (ADR 0137 §11): everyone's to connect for their DM.
   const mine = ask.forNew === "1" ? [] : dir.agents.filter((a) => a.ownerUserId === meId || isRightHand(a));
   const named = ask.agentId ? [ask.agentId] : null;
-  const agents = (named ? mine.filter((a) => named.includes(a.id)) : mine).map((a) => ({ id: a.id, name: a.name }));
+  const agents = (
+    named ? dir.agents.filter((a) => ask.forNew !== "1" && named.includes(a.id) && connectsPlanFor(a, meId)) : mine
+  ).map((a) => ({ id: a.id, name: a.name }));
   // The agents connected on any page of this flow think with it before the AI status says so.
   const hasAi = (id: string) => flow.linked.includes(id) || (aiStateOf(status.data, id) ?? "no_ai") !== "no_ai";
   // Settings' Sign in again: that login, on the plan's page it opened on.
@@ -289,7 +292,7 @@ function FlowScreen({
   const hasPlan = planAccount !== undefined;
   // That plan's next step is an agent that thinks with it, for whoever may make one (never over one being made).
   const makeWith = planAccount && ask.forNew !== "1" && makesAgents(org) ? planAccount : undefined;
-  // Someone else's agent: who connects a plan instead.
+  // Someone else's agent they don't manage: who connects a plan instead.
   const owner = one?.ownerUserId ? dir.memberById.get(one.ownerUserId)?.name : undefined;
   const locked =
     agents.length > 0 || bare ? undefined : one ? noAiLockedLine(t, one.name, owner) : t("noAi.lockedAdmins");

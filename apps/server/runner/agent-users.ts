@@ -407,7 +407,8 @@ const GRADLE_OPTS = "-Dorg.gradle.daemon.idletimeout=300000";
 
 const USER_NAME = /^ag-[a-z0-9]{8}$/;
 const AGENT_SHELL = "/bin/bash";
-const AGENT_PATH = "/usr/local/bin:/usr/bin:/bin";
+/** The PATH every agent shares (its own `~/.local/bin` comes after it), and the sign-ins' users' whole PATH. */
+export const AGENT_PATH = "/usr/local/bin:/usr/bin:/bin";
 
 export const agentUserName = (agentId: string) => `ag-${agentId8(agentId)}`;
 export const agentHome = (user: string) => `/home/${user}`;
@@ -1003,7 +1004,7 @@ export function ensureGitCacheUser(run: RunCommand = runSync): { uid: number; gi
  * computer's egress rules can route them (and nothing else of root) like the agents' traffic. Nobody is a member.
  */
 export const AUTH_EGRESS_GROUP = "agentes-auth";
-const SETPRIV = "/usr/bin/setpriv";
+export const SETPRIV = "/usr/bin/setpriv";
 
 /**
  * Becomes the agent's user: its own group and its groups. Never `runuser` or `su`, whose PAM session may load

@@ -1,4 +1,5 @@
 import {
+  AGENTS_CLI_PROTOCOL,
   AGY_COPY_PROTOCOL,
   CLI_COPIES_PROTOCOL,
   type CliFetchState,
@@ -54,6 +55,17 @@ export function fetchesCli(machine: FetchingMachine | null | undefined, cli: Fet
   const protocol = machine.protocol ?? 0;
   if (protocol >= CLI_COPIES_PROTOCOL) return machine.executors?.copies?.fetchable?.includes(cli) ?? false;
   return cli === "antigravity" && protocol >= AGY_COPY_PROTOCOL && (machine.os === "darwin" || machine.os === "linux");
+}
+
+/**
+ * Whether the apps may ask `machine` to fetch `cli` now (their "Try again" and, in system mode, "Install"): where it
+ * comes by itself (`fetchesCli`), and in system mode from `AGENTS_CLI_PROTOCOL` on, for a CLI no agent reaches there.
+ */
+export function fetchesOnAsk(machine: FetchingMachine | null | undefined, cli: FetchName): boolean {
+  if (machine?.executors?.mode !== "system" || machine.kind === "managed") return fetchesCli(machine, cli);
+  return (
+    (machine.protocol ?? 0) >= AGENTS_CLI_PROTOCOL && (machine.executors.copies?.fetchable?.includes(cli) ?? false)
+  );
 }
 
 /** A fetch's percent, or null while its size isn't known. */
@@ -125,7 +137,7 @@ export async function retryCliFetch(
   await requirePermission(deps.db, actorId, orgId, "read");
   const machine = await getMachine(deps.db, orgId, machineId);
   if (!machine) throw new NotFoundError("Computer not found", "machine.not_found");
-  if (!fetchesCli(machine, cli) || machine.protocol < CLI_COPIES_PROTOCOL) {
+  if (!fetchesOnAsk(machine, cli) || machine.protocol < CLI_COPIES_PROTOCOL) {
     throw new ValidationError("This computer doesn't fetch that program by itself.", "machine.cli_not_fetched", {
       name: machine.name,
     });

@@ -1716,7 +1716,7 @@ async function wantedLines(ctx: ToolContext, change: SettingsChangeInput): Promi
       installed.find((k) => k.name === n.trim().toLowerCase()) ?? installed.find((k) => slug(k.name) === slug(n));
     const unknown = wantedSkills.filter((n) => !skillOf(n));
     if (unknown.length > 0) {
-      const install = "offer to install it with offer_install_skill, by its GitHub link";
+      const install = "offer to install it with offer_install_skill, by its GitHub link or its .zip sent here";
       const here = installed.map((k) => k.name);
       return installed.length
         ? `No skill ${firstOf(unknown, NAMES_SHOWN)}. Skills here: ${firstOf(here, NAMES_SHOWN)}. One not installed yet: ${install}.`

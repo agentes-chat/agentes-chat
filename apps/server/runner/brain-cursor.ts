@@ -16,6 +16,7 @@ import {
   codexProfileOf,
   codexThreadKey,
 } from "./brain-codex";
+import { ConsoleDecoder } from "./console-text";
 import { RunnerError } from "./errors";
 import { killTree } from "./exec";
 import { CURSOR_BIN, cliSpawn } from "./executors";
@@ -517,8 +518,9 @@ export async function runCursorTurn(input: CursorTurnInput, opts: CursorTurnOpti
     return fail("cursor_failed", err instanceof Error ? err.message : String(err));
   }
   let stderr = "";
+  const stderrText = new ConsoleDecoder();
   child.stderr?.on("data", (c: Buffer) => {
-    stderr = (stderr + c.toString("utf8")).slice(-2000);
+    stderr = (stderr + stderrText.write(c)).slice(-2000);
   });
   const lines = createInterface({ input: child.stdout as NonNullable<ChildProcess["stdout"]> });
   // A `chat` turn that used a tool of Cursor's own ends there: nothing after it is passed on.

@@ -15940,6 +15940,7 @@
       "noSkillMd": "Tidak ada SKILL.md di {{path}} atau folder di dalamnya.",
       "tooManySkills": "Tautan ini memuat lebih dari {{max}} skill. Tautkan salah satu foldernya.",
       "zipTooManySkills": "File .zip ini memuat lebih dari {{max}} skill. Kirim dalam beberapa bagian.",
+      "zipTooBig": "File .zip ini lebih dari {{maxMb}} MB, batas untuk memasang satu skill.",
       "invalidName": "Nama harus memakai huruf kecil, angka, dan tanda hubung, maksimal {{max}} karakter.",
       "invalidDescription": "Deskripsi harus terdiri dari 1 sampai {{max}} karakter.",
       "tooLarge": "Skill ini punya {{size}} MB teks dan skrip, dan batasnya {{max}} MB.",
@@ -19198,7 +19199,7 @@
     },
     "offer_install_skill": {
       "label": "Tawarkan memasang skill",
-      "description": "Memposting kartu yang tombolnya membuka pemasangan dengan tautan skill sudah terisi."
+      "description": "Memposting kartu yang tombolnya membuka pemasangan dengan skill yang sudah dibaca dari tautan atau .zip-nya."
     },
     "update_skill_from_source": {
       "label": "Perbarui skill dari tautannya",

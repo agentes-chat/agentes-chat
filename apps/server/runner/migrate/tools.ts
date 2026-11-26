@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { consoleText } from "../console-text";
 import { Budget, type Collected, type Entry, MigrateError, noCounts, noLeft, walk } from "./collect";
 
 /**
@@ -24,7 +25,6 @@ interface Ran {
 
 function run(command: string, args: string[]): Ran {
   const r = spawnSync(command, args, {
-    encoding: "utf8",
     timeout: 120_000,
     maxBuffer: 64 * 1024 * 1024,
     // A .cmd shim on Windows only starts through the shell; the arguments here are ours or checked ids.
@@ -32,7 +32,7 @@ function run(command: string, args: string[]): Ran {
     stdio: ["ignore", "pipe", "pipe"],
   });
   const missing = (r.error as NodeJS.ErrnoException | undefined)?.code === "ENOENT";
-  return { status: r.status, stdout: r.stdout ?? "", stderr: r.stderr ?? "", missing };
+  return { status: r.status, stdout: consoleText(r.stdout ?? ""), stderr: consoleText(r.stderr ?? ""), missing };
 }
 
 /** The last line a command said, for the person: its own words on why it stopped. */

@@ -190,7 +190,7 @@ export const Machine = z
     }),
     cliFetchable: z.array(z.enum(FETCH_NAMES)).openapi({
       description:
-        "ADR 0228 §6: the coding CLIs its runner fetches by itself there (a pinned build, hash checked) when a turn or a sign-in needs one, and `git` on Windows (Git for Windows' portable build, Claude Code's shell there). None on the workspace's own computer, in system mode or from an older runner.",
+        "ADR 0228 §6: the coding CLIs its runner fetches by itself there (a pinned build, hash checked) when a turn or a sign-in needs one, and `git` on Windows (Git for Windows' portable build, Claude Code's shell there). In system mode (protocol 88 on) only for agents' users who reach no copy of it, where `cli-install` installs it for all of them. None on the workspace's own computer, in system mode before protocol 88 or from an older runner.",
     }),
     cliFetch: z
       .record(
