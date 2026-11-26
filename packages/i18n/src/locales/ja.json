@@ -573,7 +573,7 @@
       "here": "このコンピューター"
     },
     "whyPaid": "なぜ有料なのですか？",
-    "whyPaidText": "Cloudには常時稼働のエージェント用コンピューターと、サーバーを管理する担当が含まれます。自分のサーバーで動かすのは無料です。"
+    "whyPaidText": "Cloudには常時稼働のエージェント用コンピューターと、サーバーを管理する担当が含まれます。Cloudのワークスペースに自分のコンピューターをつないでも、プランの代わりにはなりません。自分のサーバーやコンピューターでagentes.chatを動かすのは無料です。"
   },
   "auth": {
     "email": "メールアドレス",
@@ -2829,7 +2829,7 @@
     "passed_other": "誰も回答しませんでした",
     "failed_other": "{{names}}は回答できませんでした",
     "asking_other": "{{names}}は回答を待っています",
-    "outage_other": "{{names}}: AIプロバイダーが停止中 · 自動で再試行します",
+    "outage_other": "{{names}}: AIが応答していません · 自動で再試行します",
     "queued_other": "{{names}}が順番待ちです",
     "away_other": "{{names}}がコンピューターを待っています",
     "plan_other": "{{names}}はプランを待っています",
@@ -2843,7 +2843,7 @@
       "claimed": "回答中",
       "waiting": "承認待ち",
       "asking": "回答待ち",
-      "outage": "AIプロバイダーが停止中 · 自動で再試行します",
+      "outage": "AIが応答していません · 自動で再試行します",
       "queued": "順番待ち",
       "away": "コンピューター待ち",
       "plan": "プランを待っています",
@@ -3363,7 +3363,7 @@
         "ended": "ワークスペースがagentes.chatに再び登録したら、ここで返信します。"
       },
       "askAdmin": "管理者がagentes.chatのプランを整えたら、ここで返信します。",
-      "plan": "プランにはエージェントのコンピューターが含まれます。AIはすでに支払っているものを使えます。Claude、ChatGPTなど、またはAPIキーです。",
+      "plan": "プランにはエージェントのコンピューターが含まれます。AIはすでに支払っているものを使えます。Claude、ChatGPTなど、またはAPIキーです。ここに自分のコンピューターをつないでも、プランの代わりにはなりません。自分のサーバーやコンピューターでagentes.chatを動かすのは無料です。",
       "activeTitle": "プランが有効です",
       "activeLine": "AIを接続すると{{name}}がここで返信します。",
       "receipt": "保存済み",
@@ -4277,7 +4277,7 @@
       "queued_computer": "順番待ち",
       "waiting_plan": "プランを待っています",
       "waiting_budget": "予算のリセット待ち",
-      "provider_down": "AIプロバイダーが停止中 · 自動で再試行します",
+      "provider_down": "AIが応答していません · 自動で再試行します",
       "out_of_plan": "プランの上限に達しました",
       "out_of_budget": "今月の予算を使い切りました",
       "out_of_planShort": "上限に到達",
@@ -4440,7 +4440,7 @@
     "computerAway": "{{agent}}のコンピューターが今は応答していません。このリクエストは{{time}}まで開いています。少ししてからもう一度お試しください。",
     "computerPaused": "{{agent}}のコンピューターは所有者が一時停止しています。このリクエストは{{time}}まで開いています。",
     "insecureContext": "このページは https で開かれていないため、ブラウザーはキーを保護できません。https://(または localhost)で開いてください。",
-    "failed": "送信できませんでした。エージェントのコンピューターの電源は入っていますか？",
+    "failed": "送信できませんでした。もう一度送信してください。それでも失敗する場合は、{{agent}}にもう一度依頼し直してもらってください。",
     "changed": "回答中にこのリクエストが変更されました。何も送信されていません。もう一度送信してください。",
     "empty": "値を入力してください。",
     "tooLarge": "大きすぎます（最大16 KB）。"
@@ -4486,6 +4486,24 @@
       "agents_other": "エージェント{{count}}体",
       "used": "{{when}}に使用",
       "never": "未使用"
+    },
+    "bulk": {
+      "select": "選択",
+      "selection": "選択した項目",
+      "selected_other": "{{count}}件を選択中",
+      "selectAll_other": "{{count}}件すべて選択",
+      "clear": "選択をやめる",
+      "access": "アクセスを変更",
+      "accessTitle_other": "{{count}}件のアクセス",
+      "accessText": "選択したすべての項目にこのアクセスを設定します。",
+      "accessGo_other": "{{count}}件に適用",
+      "accessDone_other": "{{count}}件のアクセスを変更しました",
+      "delete": "削除",
+      "deleteTitle_other": "{{count}}件を削除しますか？",
+      "deleteText": "エージェントはもう使えなくなります。元に戻せません。",
+      "deleteGo_other": "{{count}}件を削除",
+      "deleted_other": "{{count}}件をVaultから削除しました",
+      "kept_other": "パスワードマネージャーの{{count}}件は残っています。そちらで削除してください。"
     },
     "kind": {
       "login": "ログイン",
@@ -4685,7 +4703,6 @@
       },
       "as": "保存先",
       "asPersonal": "あなただけに表示されます。",
-      "asTeam": "ワークスペースの全員に表示されます。あとで項目ごとにエージェントを選んでください。",
       "deleteFile": "あとでファイルを削除してください。パスワードが暗号化されずに入っています。",
       "confirm_other": "{{count}}件をインポート",
       "done_other": "{{count}}件のログインをインポートしました",
@@ -5340,7 +5357,8 @@
       "provider_unavailable": "モデルが応答しませんでした",
       "gave_up": "何度か試してもモデルが応答しませんでした",
       "missing_credential": "APIキーがありません",
-      "credential_revoked": "APIキーが取り消されました"
+      "credential_revoked": "APIキーが取り消されました",
+      "credential_unreadable": "保存されたAPIキーを開けません"
     },
     "youReplied": "あなたの返信: {{text}}",
     "actions": "操作",
@@ -6256,6 +6274,7 @@
         "interrupted": "サーバーの再起動で中断されました。",
         "missing_credential": "ワークスペースに{{provider}}のキーがありません。",
         "credential_revoked": "このエージェントのキーは無効化されています。",
+        "credential_unreadable": "保存されたAPIキーを開けません。多くの場合、キーの保存後にサーバーのシークレットが変わったことが原因です。AIキーでキーをもう一度貼り付けてください。",
         "credential_wrong_provider": "モデルは{{modelProvider}}のものですが、キーは{{keyProvider}}のものです。",
         "model_unlisted": "OpenRouterでは{{model}}が提供されなくなりました。エージェントの設定で別のモデルを選んでください。",
         "no_ai": "エージェントに使えるAIがありませんでした。",
@@ -6636,6 +6655,7 @@
         "desc": "すべてのエージェントがこれを読みます。いつでも変更できます。",
         "line": "一文で",
         "optional": "任意です。文がなければ選んだ種類が使われます。",
+        "otherNeeded": "「その他」のときは、ここに何をしているか書くと続けられます。",
         "todoPersonal": "あなたのことを少し教えてください。",
         "todoDescPersonal": "すべてのエージェントがこれを読みます。",
         "donePersonal": "あなたのことを少し知っています",
@@ -7618,6 +7638,9 @@
     "link": "リンク",
     "linkEmpty": "リンクを作成するとコピーできます",
     "linkFailed": "リンクを作成できませんでした。{{cause}}",
+    "localOnly": "このサーバーは動いているコンピューターでしか開けないため、招待した人は招待を開けません。",
+    "localOnlyHow": "そのコンピューターのagentes.chatアプリで、環境設定 › サーバーの「スマートフォンやチームメイトからアクセスする」をオンにするか、招待する人が開けるサーバーでagentes.chatを動かしてください。そのあとで招待してください。",
+    "localOnlyHere": "「スマートフォンやチームメイトからアクセスする」をオンにしてから、招待してください。",
     "never": "無期限",
     "untilDate": "{{date}}まで",
     "validFor": "作成から{{ttl}}有効です。",
@@ -8985,6 +9008,7 @@
       "stuck": "行き詰まったため停止しました",
       "missing_credential": "APIキーがありません",
       "credential_revoked": "APIキーが無効化されました",
+      "credential_unreadable": "保存されたAPIキーを開けません",
       "credential_wrong_provider": "APIキーが別のプロバイダーのものです",
       "model_unlisted": "OpenRouterでこのモデルが提供されなくなりました",
       "agent_archived": "エージェントがアーカイブされました",
@@ -11017,6 +11041,8 @@
       "on": "ボイスメッセージ",
       "onHelp": "このワークスペースの人は、会話で音声を送れます。",
       "noEngine": "ボイスメッセージはここではまだ使えません。",
+      "noEngineAsk": "ボイスメッセージはまだオンになっていません。このサーバーを管理している人が、このページでオンにします。",
+      "noEngineHere": "下で音声をテキストにするサービスを選ぶと、ボイスメッセージがオンになります。",
       "engineTitle": "音声をテキストにするサービス",
       "own": "自分のサーバー",
       "ownHelp": "自分のマシンで動く Whisper または Parakeet。音声はそこから出ません。",
@@ -13312,6 +13338,26 @@
         "1": "ログとメトリクスを検索する",
         "2": "モニターとインシデントを見る"
       },
+      "datadog_us3": {
+        "1": "ログとメトリクスを検索する",
+        "2": "モニターとインシデントを見る"
+      },
+      "datadog_us5": {
+        "1": "ログとメトリクスを検索する",
+        "2": "モニターとインシデントを見る"
+      },
+      "datadog_eu": {
+        "1": "ログとメトリクスを検索する",
+        "2": "モニターとインシデントを見る"
+      },
+      "datadog_ap1": {
+        "1": "ログとメトリクスを検索する",
+        "2": "モニターとインシデントを見る"
+      },
+      "datadog_ap2": {
+        "1": "ログとメトリクスを検索する",
+        "2": "モニターとインシデントを見る"
+      },
       "grafana": {
         "1": "ダッシュボード、メトリクス、ログを見る",
         "2": "ダッシュボードとアラートを作成する"
@@ -13613,7 +13659,12 @@
       "cloudflare_bindings": "Cloudflare（Workers）",
       "cloudflare_observability": "Cloudflare（ログ）",
       "supabase_readonly": "Supabase（読み取り専用）",
-      "intercom_eu": "Intercom（EU）"
+      "intercom_eu": "Intercom（EU）",
+      "datadog_us3": "Datadog (US3)",
+      "datadog_us5": "Datadog (US5)",
+      "datadog_eu": "Datadog (EU)",
+      "datadog_ap1": "Datadog (AP1)",
+      "datadog_ap2": "Datadog (AP2)"
     },
     "descriptions": {
       "github": "コード、PR、Issue、Actions。",
@@ -13651,6 +13702,11 @@
       "vercel": "プロジェクト、デプロイ、ログ。",
       "railway": "プロジェクト、サービス、デプロイ、ログ。",
       "datadog": "ログ、メトリクス、モニター、インシデント（US1サイト）。",
+      "datadog_us3": "ログ、メトリクス、モニター、インシデント（US3サイト、us3.datadoghq.com）。",
+      "datadog_us5": "ログ、メトリクス、モニター、インシデント（US5サイト、us5.datadoghq.com）。",
+      "datadog_eu": "ログ、メトリクス、モニター、インシデント（EUサイト、app.datadoghq.eu）。",
+      "datadog_ap1": "ログ、メトリクス、モニター、インシデント（AP1サイト、ap1.datadoghq.com）。",
+      "datadog_ap2": "ログ、メトリクス、モニター、インシデント（AP2サイト、ap2.datadoghq.com）。",
       "grafana": "Grafana Cloudのダッシュボード、メトリクス、ログ、アラート。",
       "postman": "ワークスペース、コレクション、API。",
       "jam": "バグレポート: 録画、コンソールログ、ネットワークリクエスト。",
@@ -15999,6 +16055,10 @@
       "paused": "{{name}}を一時停止しました",
       "resumed": "{{name}}が作業を再開しました"
     },
+    "runnerBehind": {
+      "command": "{{computer}} の agentes.chat プログラムが古いため、一部の機能が動きません。更新するには、そのコンピューターでこれを実行してください:",
+      "installer": "{{computer}} の agentes.chat プログラムが古いため、一部の機能が動きません。更新するには、そのコンピューターでインストールコマンドを root としてもう一度実行してください。"
+    },
     "seenNow": "接続中",
     "seen": "最終接続 {{when}}",
     "neverSeen": "まだ接続されていません",
@@ -17334,6 +17394,8 @@
         "item_created": "Vaultに項目を保存",
         "item_changed": "Vaultの項目を変更",
         "item_deleted": "Vaultの項目を削除",
+        "items_changed_other": "Vaultの{{count}}件にアクセスできる人を変更",
+        "items_deleted_other": "Vaultの{{count}}件を削除",
         "item_moved": "Vaultの項目を個人とチームの間で移動しました",
         "item_used": "Vaultの項目を使用",
         "imported": "Vaultにパスワードをインポート",
@@ -18287,7 +18349,7 @@
       "waitingApproval": "{{name}}は承認を待っています",
       "waitingInput": "{{name}}は回答を待っています",
       "waitingComputer": "{{name}}はコンピューターを待っています",
-      "waitingProvider": "{{name}}: AIプロバイダーが停止中 · 自動で再試行します",
+      "waitingProvider": "{{name}}: AIが応答していません · 自動で再試行します",
       "waitingAgents": "{{name}}は一部を引き継ぎ、返事を待っています",
       "queued": "{{name}}は順番待ちです"
     },
@@ -18298,7 +18360,7 @@
       "waitingApproval": "承認待ち",
       "waitingInput": "回答待ち",
       "waitingComputer": "コンピューター待ち",
-      "waitingProvider": "AIプロバイダー停止中",
+      "waitingProvider": "AIが応答していません",
       "waitingYourApproval": "あなたの承認待ち",
       "waitingYourAnswer": "あなたの回答待ち",
       "queued": "順番待ち",
@@ -18736,6 +18798,7 @@
       "brain_unavailable_commands_off": "私のコンピューターで{{brain}}がオフになっています。管理している人がオンにしたら返信します。",
       "brain_unavailable_outdated": "{{brain}}が返信するには、私のコンピューターのプログラムを更新する必要があります。更新され次第返信します。",
       "brain_unavailable_plan_owner": "{{brain}}は私のオーナーのものではないプランで考えることになるため、使いません。私のページでオーナーのアカウントを接続してください。",
+      "brain_unavailable_shared_login": "私のコンピューターでは、すべてのエージェント用の Claude のログインを今は使えません。使えるようになったら返信します。失敗が続く場合は、AIアカウントで Claude を接続し直してください。",
       "provider_unavailable": "AIプロバイダーが現在応答していません。戻り次第すぐに返信します。",
       "provider_wait_rate_limit": "{{provider}}が現在このキーのリクエストを制限しています。可能になり次第すぐに返信します。",
       "provider_wait_down": "{{provider}}が現在停止中か、過負荷です。戻り次第すぐに返信します。",
@@ -20488,7 +20551,7 @@
       "budgetSoon": "{{name}}の予算を少し待っています",
       "computer": "{{name}}のコンピューターを待っています",
       "busy": "{{name}}のコンピューターの空きを待っています",
-      "provider": "{{name}}のAIプロバイダーを待っています。{{when}}に再試行します"
+      "provider": "{{name}}のAIの応答を待っています。{{when}}に再試行します"
     },
     "menu": {
       "label": "その他",
@@ -20515,7 +20578,8 @@
     },
     "add": {
       "label": "ウィジェットを追加",
-      "short": "ウィジェット"
+      "short": "ウィジェット",
+      "word": "追加"
     },
     "alert": {
       "label": "何かおかしいときに知らせる",

@@ -94,10 +94,16 @@ export function BusinessStep({
           </div>
           <Field
             label={t("agentSetup.firstRun.about.line")}
-            hint={{
-              name: t("common.about", { label: t("agentSetup.firstRun.about.line") }),
-              text: other ? undefined : t("agentSetup.firstRun.about.optional"),
-            }}
+            hint={
+              other
+                ? undefined
+                : {
+                    name: t("common.about", { label: t("agentSetup.firstRun.about.line") }),
+                    text: t("agentSetup.firstRun.about.optional"),
+                  }
+            }
+            // "Outra coisa" has no words of its own: Continue waits for the sentence, and says so in sight.
+            example={other && !text ? t("agentSetup.firstRun.about.otherNeeded") : undefined}
           >
             <Textarea
               className="onb__line"

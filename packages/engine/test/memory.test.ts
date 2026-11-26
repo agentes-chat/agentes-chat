@@ -1618,6 +1618,21 @@ describe("proposals for teammates (one card, a row per agent and kind of change)
       isError: true,
       content: expect.stringContaining(`Unknown app: Jira. Apps you can name: connector:${linear?.id} (Linear),`),
     });
+    // The asker's own connection: not given through a card, and the refusal says who gives it and where.
+    await f.db.insert(schema.connectorConnections).values({
+      orgId: f.org.id,
+      connector: "custom:crm",
+      toolPrefix: "crm",
+      label: "Acme CRM",
+      serverUrl: "https://crm.example.com/mcp",
+      authType: "none",
+      ownerUserId: f.owner.id,
+    });
+    const theirs = await propose(ctx, { target: "agents", access: [{ agent: "@ada", app: "Acme CRM", on: true }] });
+    expect(theirs).toMatchObject({
+      isError: true,
+      content: expect.stringContaining("Acme CRM: the person asking connected it as their own"),
+    });
     const out = await propose(ctx, {
       target: "agents",
       roles: [{ agent: "@ada", role: "Revisora" }],

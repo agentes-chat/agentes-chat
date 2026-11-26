@@ -16,7 +16,7 @@ import { githubLinkLabel, isGithubLink } from "@agenteschat/client/lib/github-li
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { webUrl } from "@agenteschat/client/lib/guards";
 import { NO_PROJECT } from "@agenteschat/client/lib/issue-projects";
-import { issueEventText } from "@agenteschat/client/lib/issues";
+import { handedFinished, issueEventText } from "@agenteschat/client/lib/issues";
 import { can } from "@agenteschat/client/lib/permissions";
 import { foldSteps, shownSteps } from "@agenteschat/client/lib/work";
 import {
@@ -690,7 +690,7 @@ function WorkBox({ issue: i }: { issue: Issue }) {
   });
   const w = i.work;
   const handed = i.backgroundWork?.how === "handed" ? i.backgroundWork : null;
-  if (!w) return handed?.status === "done" ? <HandedDoneBox issue={i} work={handed} /> : null;
+  if (!w) return handed && handedFinished(i) ? <HandedDoneBox issue={i} work={handed} /> : null;
   const name = actors.name({ type: "agent", id: w.agentId });
   const g = agentGrammar(name);
   const stalled = w.state === "stalled";

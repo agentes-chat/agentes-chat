@@ -28,6 +28,7 @@ import { type PreviewMeta, previewMeta, readableBody } from "./message-preview";
 import { type Message, messageView, replyExcerpt } from "./messages";
 import { pendingCommandsSql } from "./mission-command-rules";
 import { quietNoticeSql } from "./notices";
+import { readConversationNotifications, resolveNotifications } from "./notifications";
 import { can, type Membership, requirePermission } from "./organizations";
 import { maySql } from "./permissions";
 import { fileConversationReaderSql, taskReaderSql } from "./task-access";
@@ -1521,6 +1522,9 @@ export async function markThreadRead(
       target: [schema.threadReads.rootMessageId, schema.threadReads.userId],
       set: { lastReadAt: at },
     });
+  const place = { channelId: root.channelId, threadId: root.id };
+  await resolveNotifications(deps, orgId, { place, userIds: [actorId], kind: "agent_reply" });
+  await readConversationNotifications(deps, orgId, actorId, place, at);
   await publishUserEvent(deps.pubsub, orgId, actorId, {
     type: "thread.read",
     threadId: root.id,

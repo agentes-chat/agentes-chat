@@ -861,6 +861,7 @@
   },
   "agent": {
     "talk": "Discuter",
+    "responsible": "Responsable",
     "task": "Tâche",
     "owner": "responsable : {{name}}",
     "cantTalk": "Cet agent ne travaille pas avec vous.",
@@ -2915,11 +2916,12 @@
     },
     "formatAuto": "{{name}} choisit le meilleur",
     "newWidget": {
-      "alerts": "Alerte activée",
       "realData": "Vraies données",
       "editAsk": "Modifier la demande",
       "asked": "« {{ask}} »",
-      "autoFormat": "Affichage automatique"
+      "testReal": "Tester avec de vraies données",
+      "addHome": "Ajouter à l’accueil",
+      "addTo": "Ajouter à {{where}}"
     },
     "agentPick": {
       "search": "Rechercher des agents",

@@ -1386,7 +1386,7 @@
     "value": "Why pay?"
   },
   "hosting.whyPaidText": {
-    "value": "Cloud includes the agents' always-on computer and someone who keeps the server running. Running it on your own server is free."
+    "value": "Cloud includes the agents' always-on computer and someone who keeps the server running. A computer of yours connected to a Cloud workspace doesn't replace the plan. Running agentes.chat on your own server or computer is free."
   },
   "auth.email": {
     "value": "Email"
@@ -7321,8 +7321,8 @@
   },
   "receipts.outage": {
     "value": {
-      "one": "{{names}}: the AI provider is down · retries by itself",
-      "other": "{{names}}: the AI provider is down · retries by itself"
+      "one": "{{names}}: the AI isn't answering · retries by itself",
+      "other": "{{names}}: the AI isn't answering · retries by itself"
     }
   },
   "receipts.queued": {
@@ -7380,7 +7380,7 @@
     "value": "Waiting for an answer"
   },
   "receipts.status.outage": {
-    "value": "The AI provider is down · retries by itself"
+    "value": "The AI isn't answering · retries by itself"
   },
   "receipts.status.queued": {
     "value": "In line"
@@ -8681,7 +8681,7 @@
     "value": "I'll answer here once an admin sorts out the agentes.chat plan."
   },
   "noAi.kept.plan": {
-    "value": "The plan brings the agents' computer. The AI is the one you already pay for: Claude, ChatGPT and more, or an API key."
+    "value": "The plan brings the agents' computer. The AI is the one you already pay for: Claude, ChatGPT and more, or an API key. A computer of yours connected here doesn't replace the plan. Running agentes.chat on your own server or computer is free."
   },
   "noAi.kept.activeTitle": {
     "value": "Plan active"
@@ -10886,7 +10886,7 @@
     "value": "Waiting for the budget to reset"
   },
   "presence.agent.provider_down": {
-    "value": "The AI provider is down · retries by itself"
+    "value": "The AI isn't answering · retries by itself"
   },
   "presence.agent.out_of_plan": {
     "value": "Out of plan limit"
@@ -11288,7 +11288,7 @@
     "value": "This page isn't open over https, so the browser won't lock the key. Open it at https:// (or localhost)."
   },
   "secret.failed": {
-    "value": "Couldn't deliver it. Is the agent's computer on?"
+    "value": "Couldn't deliver it. Send it again. If it still fails, ask {{agent}} to request it again."
   },
   "secret.changed": {
     "value": "This request changed while you answered. Nothing was sent. Send it again."
@@ -11400,6 +11400,81 @@
   },
   "vault.row.never": {
     "value": "Never used"
+  },
+  "vault.bulk.select": {
+    "value": "Select"
+  },
+  "vault.bulk.selection": {
+    "value": "Selected items"
+  },
+  "vault.bulk.selected": {
+    "value": {
+      "one": "{{count}} selected",
+      "other": "{{count}} selected"
+    }
+  },
+  "vault.bulk.selectAll": {
+    "value": {
+      "one": "Select all {{count}}",
+      "other": "Select all {{count}}"
+    }
+  },
+  "vault.bulk.clear": {
+    "value": "Stop selecting"
+  },
+  "vault.bulk.access": {
+    "value": "Change access"
+  },
+  "vault.bulk.accessTitle": {
+    "value": {
+      "one": "Access for {{count}} item",
+      "other": "Access for {{count}} items"
+    }
+  },
+  "vault.bulk.accessText": {
+    "value": "Each selected item gets this access."
+  },
+  "vault.bulk.accessGo": {
+    "value": {
+      "one": "Apply to {{count}} item",
+      "other": "Apply to {{count}} items"
+    }
+  },
+  "vault.bulk.accessDone": {
+    "value": {
+      "one": "Access changed for {{count}} item",
+      "other": "Access changed for {{count}} items"
+    }
+  },
+  "vault.bulk.delete": {
+    "value": "Delete"
+  },
+  "vault.bulk.deleteTitle": {
+    "value": {
+      "one": "Delete {{count}} item?",
+      "other": "Delete {{count}} items?"
+    }
+  },
+  "vault.bulk.deleteText": {
+    "value": "Your agents can no longer use them. This can't be undone."
+  },
+  "vault.bulk.deleteGo": {
+    "value": {
+      "one": "Delete {{count}}",
+      "other": "Delete {{count}}"
+    }
+  },
+  "vault.bulk.deleted": {
+    "value": {
+      "one": "{{count}} item deleted from the Vault",
+      "other": "{{count}} items deleted from the Vault"
+    }
+  },
+  "vault.bulk.kept": {
+    "value": {
+      "one": "{{count}} from a password manager stayed. Remove it there.",
+      "other": "{{count}} from a password manager stayed. Remove them there."
+    }
   },
   "vault.kind.login": {
     "value": "Login"
@@ -11922,9 +11997,6 @@
   },
   "vault.import.asPersonal": {
     "value": "Only you will see them."
-  },
-  "vault.import.asTeam": {
-    "value": "Everyone in the workspace sees them. Choose agents for each one afterwards."
   },
   "vault.import.deleteFile": {
     "value": "Delete the file afterwards: it holds your passwords unencrypted."
@@ -13617,6 +13689,9 @@
   },
   "notifications.failedCause.credential_revoked": {
     "value": "the API key was revoked"
+  },
+  "notifications.failedCause.credential_unreadable": {
+    "value": "the saved API key can't be opened"
   },
   "notifications.youReplied": {
     "value": "You replied: {{text}}"
@@ -16053,6 +16128,9 @@
   "agentPage.activity.errors.credential_revoked": {
     "value": "This agent's key was revoked."
   },
+  "agentPage.activity.errors.credential_unreadable": {
+    "value": "The saved API key can't be opened, usually because the server's secret changed after the key was saved. Paste the key again in AI keys."
+  },
   "agentPage.activity.errors.credential_wrong_provider": {
     "value": "The model is from {{modelProvider}}, but the key is from {{keyProvider}}."
   },
@@ -16979,6 +17057,9 @@
   },
   "agentSetup.firstRun.about.optional": {
     "value": "Optional. Without one, the type you picked counts."
+  },
+  "agentSetup.firstRun.about.otherNeeded": {
+    "value": "With Something else, write what you do here to continue."
   },
   "agentSetup.firstRun.about.todoPersonal": {
     "value": "Tell me a bit about yourself."
@@ -19348,6 +19429,15 @@
   },
   "invites.linkFailed": {
     "value": "Couldn't make the link. {{cause}}"
+  },
+  "invites.localOnly": {
+    "value": "This server only opens on the computer it runs on, so the people you invite can't open their invitation."
+  },
+  "invites.localOnlyHow": {
+    "value": "In the agentes.chat app on that computer, turn on Reach it from your phone and teammates in Preferences › Servers, or run agentes.chat on a server they can open. Then invite them."
+  },
+  "invites.localOnlyHere": {
+    "value": "Turn on Reach it from your phone and teammates. Then invite them."
   },
   "invites.never": {
     "value": "Never expires"
@@ -22502,6 +22592,9 @@
   },
   "routines.code.credential_revoked": {
     "value": "The API key was revoked"
+  },
+  "routines.code.credential_unreadable": {
+    "value": "The saved API key can't be opened"
   },
   "routines.code.credential_wrong_provider": {
     "value": "The API key is from another provider"
@@ -27849,6 +27942,12 @@
   },
   "voice.settings.noEngine": {
     "value": "Voice messages aren't available here yet."
+  },
+  "voice.settings.noEngineAsk": {
+    "value": "Voice messages aren't on yet. Whoever runs this server turns them on, on this same page."
+  },
+  "voice.settings.noEngineHere": {
+    "value": "Voice messages turn on once you choose below what turns voice into text."
   },
   "voice.settings.engineTitle": {
     "value": "What turns voice into text"
@@ -33766,6 +33865,36 @@
   "connectors.can.datadog.2": {
     "value": "See monitors and incidents"
   },
+  "connectors.can.datadog_us3.1": {
+    "value": "Search logs and metrics"
+  },
+  "connectors.can.datadog_us3.2": {
+    "value": "See monitors and incidents"
+  },
+  "connectors.can.datadog_us5.1": {
+    "value": "Search logs and metrics"
+  },
+  "connectors.can.datadog_us5.2": {
+    "value": "See monitors and incidents"
+  },
+  "connectors.can.datadog_eu.1": {
+    "value": "Search logs and metrics"
+  },
+  "connectors.can.datadog_eu.2": {
+    "value": "See monitors and incidents"
+  },
+  "connectors.can.datadog_ap1.1": {
+    "value": "Search logs and metrics"
+  },
+  "connectors.can.datadog_ap1.2": {
+    "value": "See monitors and incidents"
+  },
+  "connectors.can.datadog_ap2.1": {
+    "value": "Search logs and metrics"
+  },
+  "connectors.can.datadog_ap2.2": {
+    "value": "See monitors and incidents"
+  },
   "connectors.can.grafana.1": {
     "value": "See dashboards, metrics and logs"
   },
@@ -34309,6 +34438,21 @@
   "connectors.names.intercom_eu": {
     "value": "Intercom (EU)"
   },
+  "connectors.names.datadog_us3": {
+    "value": "Datadog (US3)"
+  },
+  "connectors.names.datadog_us5": {
+    "value": "Datadog (US5)"
+  },
+  "connectors.names.datadog_eu": {
+    "value": "Datadog (EU)"
+  },
+  "connectors.names.datadog_ap1": {
+    "value": "Datadog (AP1)"
+  },
+  "connectors.names.datadog_ap2": {
+    "value": "Datadog (AP2)"
+  },
   "connectors.descriptions.github": {
     "value": "Code, PRs, issues and Actions."
   },
@@ -34413,6 +34557,21 @@
   },
   "connectors.descriptions.datadog": {
     "value": "Logs, metrics, monitors and incidents (US1 site)."
+  },
+  "connectors.descriptions.datadog_us3": {
+    "value": "Logs, metrics, monitors and incidents (US3 site, us3.datadoghq.com)."
+  },
+  "connectors.descriptions.datadog_us5": {
+    "value": "Logs, metrics, monitors and incidents (US5 site, us5.datadoghq.com)."
+  },
+  "connectors.descriptions.datadog_eu": {
+    "value": "Logs, metrics, monitors and incidents (EU site, app.datadoghq.eu)."
+  },
+  "connectors.descriptions.datadog_ap1": {
+    "value": "Logs, metrics, monitors and incidents (AP1 site, ap1.datadoghq.com)."
+  },
+  "connectors.descriptions.datadog_ap2": {
+    "value": "Logs, metrics, monitors and incidents (AP2 site, ap2.datadoghq.com)."
   },
   "connectors.descriptions.grafana": {
     "value": "Grafana Cloud dashboards, metrics, logs and alerts."
@@ -40672,6 +40831,12 @@
   "machines.remotePause.resumed": {
     "value": "{{name}} is back to work"
   },
+  "machines.runnerBehind.command": {
+    "value": "The agentes.chat program on {{computer}} is out of date, so some things don't work there. To update it, run this there:"
+  },
+  "machines.runnerBehind.installer": {
+    "value": "The agentes.chat program on {{computer}} is out of date, so some things don't work there. To update it, run the install command there again, as root."
+  },
   "machines.seenNow": {
     "value": "connected now"
   },
@@ -44079,6 +44244,18 @@
   "audit.change.vault.item_deleted": {
     "value": "Deleted a Vault item"
   },
+  "audit.change.vault.items_changed": {
+    "value": {
+      "one": "Changed who has access to {{count}} Vault item",
+      "other": "Changed who has access to {{count}} Vault items"
+    }
+  },
+  "audit.change.vault.items_deleted": {
+    "value": {
+      "one": "Deleted {{count}} Vault item",
+      "other": "Deleted {{count}} Vault items"
+    }
+  },
   "audit.change.vault.item_moved": {
     "value": "Moved a Vault item between Personal and Team"
   },
@@ -46474,7 +46651,7 @@
     "value": "{{name}} is waiting for the computer"
   },
   "chat.consultGroup.waitingProvider": {
-    "value": "{{name}}: the AI provider is down · retries by itself"
+    "value": "{{name}}: the AI isn't answering · retries by itself"
   },
   "chat.consultGroup.waitingAgents": {
     "value": "{{name}} handed part of it on and is waiting to hear back"
@@ -46501,7 +46678,7 @@
     "value": "waiting for its computer"
   },
   "chat.consultPair.waitingProvider": {
-    "value": "AI provider down"
+    "value": "AI not answering"
   },
   "chat.consultPair.waitingYourApproval": {
     "value": "waiting for your approval"
@@ -47755,6 +47932,9 @@
   },
   "chat.body.brain_unavailable_plan_owner": {
     "value": "{{brain}} would think with a plan that isn't my owner's, so I won't use it. Connect my owner's account on my page."
+  },
+  "chat.body.brain_unavailable_shared_login": {
+    "value": "My computer can't run Claude's sign-in for all agents right now. I'll answer once it can. If it keeps failing, connect Claude again in AI accounts."
   },
   "chat.body.provider_unavailable": {
     "value": "My AI provider isn't answering right now. I'll answer as soon as it's back."
@@ -51749,7 +51929,7 @@
     "value": "Waiting for room on {{name}}'s computer"
   },
   "widgets.wait.provider": {
-    "value": "Waiting for {{name}}'s AI provider, next try {{when}}"
+    "value": "Waiting for {{name}}'s AI to answer, next try {{when}}"
   },
   "widgets.menu.label": {
     "value": "More"
@@ -51813,6 +51993,9 @@
   },
   "widgets.add.short": {
     "value": "Widget"
+  },
+  "widgets.add.word": {
+    "value": "Add"
   },
   "widgets.alert.label": {
     "value": "Tell me when something is off"

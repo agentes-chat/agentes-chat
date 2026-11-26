@@ -917,10 +917,10 @@ const MessageBase = z.object({
             .literal("no_ai")
             .optional()
             .openapi({ description: "It couldn't answer: the agent has no AI connected." }),
-          outage: z
-            .literal(true)
-            .optional()
-            .openapi({ description: "`waiting_input` because its AI provider is down: it retries by itself." }),
+          outage: z.literal(true).optional().openapi({
+            description:
+              "`waiting_input` because its AI isn't answering (its provider down, or its computer refusing while online): it retries by itself.",
+          }),
           computer: z.enum(["queued", "away", "line"]).optional().openapi({
             description:
               "`waiting_input` for its computer: in line for room (`queued`) or for it to come back (`away`); long work in the agent's line of work (`line`).",

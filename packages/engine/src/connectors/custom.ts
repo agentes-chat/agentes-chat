@@ -989,7 +989,7 @@ export async function connectCustomServer(
       "connector.headers_with_sign_in",
     );
   }
-  return beginMcpOAuth(deps, actorId, orgId, {
+  const started = beginMcpOAuth(deps, actorId, orgId, {
     connector: "custom",
     serverUrl,
     label,
@@ -1000,6 +1000,13 @@ export async function connectCustomServer(
     connectionId: input.connectionId,
     personal,
   });
+  if (!probe.optional) return started;
+  // It also lets in without a sign-in: one it can't start connects it as it answered.
+  const signIn = await started.catch((error) => {
+    if (error instanceof ValidationError) return null;
+    throw error;
+  });
+  return signIn?.status === "oauth" ? signIn : stored("none", null);
 }
 
 /**

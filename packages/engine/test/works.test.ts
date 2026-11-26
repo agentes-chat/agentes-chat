@@ -29,6 +29,7 @@ import {
   isCatchUp,
   listIssues,
   loadAgentStatuses,
+  markChannelRead,
   moveRun,
   moveToBackground,
   openDm,
@@ -200,6 +201,13 @@ test("work_in_background: the anchor in the timeline, updates in its thread, the
   const notes = await f.db.select().from(schema.notifications);
   expect(notes.some((n) => n.groupKey === `work_end:${work?.id}`)).toBe(true);
   expect(notes.map((n) => n.source.messageId)).not.toContain(update?.id);
+
+  // Read where it landed, the report leaves the inbox like any answer there.
+  await markChannelRead(f.db, f.owner.id, f.org.id, f.general.id, new Date(), f.pubsub);
+  const after = await f.db.select().from(schema.notifications);
+  expect(after.filter((n) => n.groupKey === `work_end:${work?.id}`).map((n) => [n.userId, n.doneAt !== null])).toEqual([
+    [f.owner.id, true],
+  ]);
 });
 
 test("a work frees the conversation: a new message, or a reply in the anchor's thread, starts a reply turn of its own", async () => {

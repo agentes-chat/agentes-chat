@@ -7,6 +7,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { I18nextProvider } from "react-i18next";
 import { AppProvider } from "../src/app";
+import { ControlError } from "../src/control/client";
 import { siteApi } from "../src/control/devices";
 import { PREPARE_PREF } from "../src/control/permissions";
 import { DesktopStore, pairedHomes } from "../src/control/store";
@@ -95,6 +96,22 @@ test("the menu bar menu: what goes on here scrolls, and Open, Preferences and Qu
     for (const label of ["Open agentes.chat", "Preferences…", "Quit agentes.chat"]) {
       expect(actions.some((text) => text.includes(label))).toBe(true);
     }
+  }));
+
+test("a folder request the computer can't answer says why, and stays to be answered again", () =>
+  withMenu(async (el, store) => {
+    const real = store.request.bind(store);
+    store.request = (async (homeId: string, req: { type: string }) => {
+      if (req.type === "access.answer") throw new ControlError("invalid_path", "/Users/voce/roteiros doesn't exist");
+      return real(homeId, req as never);
+    }) as typeof store.request;
+    const allow = [...el.querySelectorAll(".dk-req button")].find((b) => b.textContent === "Allow") as HTMLElement;
+    await act(async () => allow.click());
+    await until(() => document.querySelector(".dk-toast")?.textContent);
+    expect(document.querySelector(".dk-toast")?.textContent).toContain(
+      "Couldn't answer this request: /Users/voce/roteiros doesn't exist",
+    );
+    expect((allow as HTMLButtonElement).disabled).toBe(false);
   }));
 
 test("on a short screen the card's cap is lower, so the window and the actions at its bottom stay on it", async () => {
@@ -243,6 +260,51 @@ describe("the menu's banners say only what matters there", () => {
         "agentes.chat stops on this Mac: nobody can use it, here, on your phone or your teammates', until you open the app again.",
       ),
     );
+  });
+});
+
+describe("Quit from the menu while agents work here", () => {
+  /** The fake host with the menu's choices sent by hand, and what the system's dialog was asked. */
+  const menuHost = (answer: (words: { title: string; body: string }) => Promise<boolean>) => {
+    const host = createFakeHost("popover", "here");
+    const menu: ((action: string) => void)[] = [];
+    host.onMenuAction = (cb) => {
+      menu.push(cb as (action: string) => void);
+      return () => {};
+    };
+    host.askQuit = answer;
+    return { host, choose: (action: string) => act(async () => menu.at(-1)?.(action)) };
+  };
+
+  test("the system's own dialog asks, never the popover that hides when another window takes focus", async () => {
+    const asked: { title: string; body: string }[] = [];
+    const { host, choose } = menuHost(async (words) => {
+      asked.push(words);
+      return false;
+    });
+    await withMenu(async (el) => {
+      await choose("quit");
+      expect(asked).toEqual([
+        {
+          title: "Quit agentes.chat?",
+          body: "agentes.chat stops on this Mac: nobody can use it, here, on your phone or your teammates', until you open the app again.",
+          quit: "Quit",
+          cancel: "Cancel",
+        } as never,
+      ]);
+      expect(el.querySelector(".dk-confirm")).toBeNull();
+    }, host);
+  });
+
+  test("when the system can't ask, the popover does", async () => {
+    const { host, choose } = menuHost(async () => {
+      throw new Error("no dialog");
+    });
+    await withMenu(async (el) => {
+      await choose("quit");
+      await until(() => el.querySelector(".dk-confirm"));
+      expect(el.querySelector(".dk-confirm h2")?.textContent).toBe("Quit agentes.chat?");
+    }, host);
   });
 });
 

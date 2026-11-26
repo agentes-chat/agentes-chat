@@ -127,6 +127,7 @@
     "allowedOne": "已允许 {{agent}} 使用 {{folder}}",
     "allowedAll": "已允许所有智能体使用 {{folder}}",
     "denied": "已拒绝。{{agent}} 会在聊天中告知。",
+    "answerFailed": "无法回应此请求：{{message}}",
     "notifTitle": "{{agent}} 想使用文件夹 {{folder}}",
     "allowedTitle": "{{name}} 通过 agentes.chat 打开了{{tool}}",
     "allowedBody": "如果不是你，请在这里撤销。",

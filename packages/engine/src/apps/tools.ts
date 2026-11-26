@@ -298,7 +298,7 @@ async function taskState(deps: AppsToolDeps, p: AppPrincipal, message: Message, 
       return { status: "done" as TaskStatus, run, ...(reply ? { reply: replyOf(deps, p.orgId, reply) } : {}) };
     }
     case "waiting_input": {
-      // Also held, with nobody to answer, while its computer is away or its AI provider is down: it carries on
+      // Also held, with nobody to answer, while its computer is away or its AI isn't answering: it carries on
       // by itself, and an "answer" sent now would land in the middle of it.
       const wait = consultationWait({ ...run, outage: outageParkedOf(run) });
       if (wait === "computer" || wait === "outage")
@@ -308,7 +308,7 @@ async function taskState(deps: AppsToolDeps, p: AppPrincipal, message: Message, 
           detail:
             wait === "computer"
               ? "The agent is waiting for its computer to come back. It carries on by itself."
-              : "The agent's AI provider is down. The task resumes by itself once it is back.",
+              : "The agent's AI isn't answering right now. The task resumes by itself once it is back.",
         };
       const question = await agentMessage(deps.db, p.orgId, run);
       return {

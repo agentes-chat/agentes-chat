@@ -20,6 +20,8 @@ export const REAUTH_PASSWORD = "reauth.password";
  * takes `untranslatedText`; a guard test (`error-words.test.ts`) fails on a new code that isn't here or on its list.
  */
 const KNOWN = {
+  // A saved provider key this server can't open: saved under another AGENTES_SECRET.
+  credential_unreadable: "agentPage.activity.errors.credential_unreadable",
   // Moving a plan to another workspace (ADR 0079).
   "plan_move.not_payer": "errors.planMove.notPayer",
   "plan_move.same": "errors.planMove.same",
@@ -1175,6 +1177,7 @@ export function errorText(t: TFunction, error: unknown, locale?: string, { maxMb
 const KEY_FAILURES = new Set([
   "run.missing_credential",
   "run.credential_revoked",
+  "run.credential_unreadable",
   "run.credential_wrong_provider",
   "run.provider_account",
   "run.provider_no_credit",

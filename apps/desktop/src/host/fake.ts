@@ -436,6 +436,10 @@ export function createFakeHost(
     quit: async () => {
       console.info("[fake] quit");
     },
+    askQuit: async (words) => {
+      console.info("[fake] ask to quit", words.title);
+      return false;
+    },
     appInfo: async (): Promise<AppInfo> => ({
       version,
       os: platform === "mac" ? "macos" : platform,

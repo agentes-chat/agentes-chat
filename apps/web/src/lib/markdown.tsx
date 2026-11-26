@@ -300,7 +300,7 @@ export function Markdown({
       case "list": {
         const L = b.ordered ? "ol" : "ul";
         return (
-          <L key={k}>
+          <L key={k} start={b.start}>
             {b.items.map((item, j) => {
               // "- [ ] tarefa" / "- [x] feita": a task with our own (read-only) box.
               const task = item.match(TASK);

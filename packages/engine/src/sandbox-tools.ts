@@ -46,7 +46,7 @@ import { autoComputer, deviceRoster, devicesForRequester, rosterFacts, secretsMa
 import { ToolOffError } from "./errors";
 import { publishChannelEvent } from "./events";
 import { copyToComputer } from "./file-pulls";
-import { readForModel } from "./file-reader";
+import { openForModel } from "./file-reader";
 import { clockOf, cutText, formatBytes, textOfBytes } from "./format";
 import { mergeReposOfCall } from "./git/repos";
 import { fullMachinePath, pathInOwnFolder, requestFolderAccess } from "./machine-access";
@@ -1139,7 +1139,7 @@ export function createSandboxToolSource(
           const text = textOfBytes(data.slice(0, SANDBOX_LIMITS.maxFileBytes));
           if (text === null) {
             // A picture, a PDF, an Office file or a zip: shown or read out the way read_artifact does.
-            const opened = readForModel({ name, contentType: "application/octet-stream", bytes: data });
+            const opened = await openForModel({ name, contentType: "application/octet-stream", bytes: data });
             if (!opened.images && opened.text === undefined) return { content: binaryFileNote(name, data) };
             const body =
               opened.text === undefined

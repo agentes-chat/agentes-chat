@@ -1,4 +1,10 @@
-import { type AppNotification, type InstallableCli, useCliInstall, useNotificationAction } from "@agenteschat/client";
+import {
+  type AppNotification,
+  type InstallableCli,
+  useCliInstall,
+  useNotificationAction,
+  useRefuseFolderRequest,
+} from "@agenteschat/client";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { firstName } from "@agenteschat/client/lib/format";
 import { cliInstallFailure, computerKind, installableCli } from "@agenteschat/client/lib/machines";
@@ -41,12 +47,14 @@ export function DeviceNoticeCard({ item: n, first }: { item: AppNotification; fi
 
 /**
  * An agent waits for a folder on the viewer's computer: it is allowed there, in the app on that computer (or with the
- * runner's command), so the card only says what waits, with no button that would grant it from here.
+ * runner's command), so the card has no button that would grant it from here, only No.
  */
 function FolderNotice({ n, d }: { n: AppNotification; d: DeviceNotice }) {
   const { t } = useTranslation();
+  const toast = useToast();
   const when = useWhen();
   const dir = useDirectory();
+  const refuse = useRefuseFolderRequest(useOrgId());
   const agent = n.actors.find((a) => a.type === "agent");
   const name = dir.nameOf(agent ? { type: "agent", id: agent.id } : null);
   return (
@@ -57,6 +65,27 @@ function FolderNotice({ n, d }: { n: AppNotification; d: DeviceNotice }) {
       title={deviceNoticeTitle(t, d, name, "", "")}
       where={when.short(n.updatedAt)}
       onPress={() => router.push(deviceHref(d))}
+      decision={
+        d.machineId && d.requestId ? (
+          <Button
+            variant="secondary"
+            size="sm"
+            label={t("devices.notice.no")}
+            loading={refuse.isPending}
+            onPress={() =>
+              d.machineId &&
+              d.requestId &&
+              refuse.mutate(
+                { machineId: d.machineId, requestId: d.requestId },
+                {
+                  onSuccess: () => toast({ title: t("devices.notice.decided.no"), icon: "check" }),
+                  onError: (err) => toast({ title: errorText(t, err), icon: "x" }),
+                },
+              )
+            }
+          />
+        ) : undefined
+      }
     >
       {d.doing ? (
         <Text variant="small" tone="muted">

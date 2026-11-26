@@ -338,7 +338,12 @@ export function brainModelId(kind: BrainKind, model: string | null | undefined):
 const FREE_MODEL = /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,79}$/;
 
 /** The one maker whose models a CLI runs (the catalog's `provider`); Cursor and OpenCode run many makers' models. */
-const ONE_MAKER: Partial<Record<BrainKind, string>> = { codex: "openai", antigravity: "gemini", grok: "xai" };
+const ONE_MAKER: Partial<Record<BrainKind, string>> = {
+  claude_code: "anthropic",
+  codex: "openai",
+  antigravity: "gemini",
+  grok: "xai",
+};
 /** The plan a maker's models think on, for the refusal's words. */
 const PLAN_OF_MAKER: Record<string, string> = { anthropic: "Claude", openai: "ChatGPT", gemini: "Gemini", xai: "Grok" };
 
@@ -376,11 +381,8 @@ export function normalizeBrainModel(kind: BrainKind, value: unknown, stored?: st
     const alias = CLAUDE_CODE_MODELS.find((o) => o.value === v.toLowerCase() || o.modelId === v);
     if (alias) return alias.value;
     if (/^claude-[a-z0-9.-]{1,60}$/.test(v) || isPlanModelId(v)) return v;
-    throw new ValidationError("Choose Fable, Opus, Sonnet, Haiku or one of the plan's models", "brain.invalid_model", {
-      brain: kind,
-    });
-  }
-  if (!FREE_MODEL.test(v)) throw new ValidationError("That isn't a model name", "brain.invalid_model", { brain: kind });
+  } else if (!FREE_MODEL.test(v))
+    throw new ValidationError("That isn't a model name", "brain.invalid_model", { brain: kind });
   const maker = makerOfModel(v);
   const runs = ONE_MAKER[kind];
   if (runs && maker && maker !== runs) {
@@ -390,6 +392,11 @@ export function normalizeBrainModel(kind: BrainKind, value: unknown, stored?: st
       "brain.invalid_model",
       { brain: kind, model: v, maker },
     );
+  }
+  if (kind === "claude_code") {
+    throw new ValidationError("Choose Fable, Opus, Sonnet, Haiku or one of the plan's models", "brain.invalid_model", {
+      brain: kind,
+    });
   }
   // OpenCode runs `--model provider/model` (its runner refuses anything else).
   if (kind === "opencode" && !/^[\w.-]{1,40}\/[\w.:-]{1,79}$/.test(v)) {
@@ -1006,7 +1013,15 @@ async function setPersonalBrain(
       target: { type: "agent", id: agent.id },
       details: { scope: "mine", from, to },
     });
-  const signIn = input.account === null && typeof input.brain === "string" && isComputerBrain(input.brain as BrainKind);
+  // A model or effort alone on the computer's own sign-in stays on it: that row has no account to keep.
+  const onSignIn =
+    input.account === undefined &&
+    current &&
+    !current.brainAccountId &&
+    (input.brain ?? current.brain) === current.brain;
+  const signIn =
+    onSignIn ||
+    (input.account === null && typeof input.brain === "string" && isComputerBrain(input.brain as BrainKind));
   if (input.brain === "model" || (input.account === null && !signIn)) {
     if (current) {
       await db
@@ -1016,8 +1031,10 @@ async function setPersonalBrain(
     }
     return personalView(db, userId, orgId, agent);
   }
-  if (signIn)
-    return setPersonalSignIn(deps, userId, orgId, agent, input.brain as ComputerBrainKind, input, current, audit);
+  if (signIn) {
+    const brain = (input.brain ?? current?.brain) as ComputerBrainKind;
+    return setPersonalSignIn(deps, userId, orgId, agent, brain, input, current, audit);
+  }
   const accountId = typeof input.account === "string" && input.account ? input.account : current?.brainAccountId;
   if (!accountId) {
     throw new ValidationError(

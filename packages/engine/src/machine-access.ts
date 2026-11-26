@@ -10,7 +10,7 @@ import {
   type RunnerToolchains,
   type RunnerTools,
 } from "@agenteschat/adapters";
-import { and, type Database, eq, isNull, schema, sql } from "@agenteschat/db";
+import { and, type Database, eq, isNull, lt, type SQL, schema, sql } from "@agenteschat/db";
 import { getAgentCached } from "./agents";
 import { recordAudit } from "./audit";
 import { createAgentRuns, eligibleChannelAgents } from "./dispatch";
@@ -427,8 +427,8 @@ export async function requestFolderAccess(
 
 /**
  * The owner of the computer hears about the folder an agent waits for (`device.folder_request`): one waiting row per
- * request, the agent as actor, the computer and the folder in it. Nobody else can answer it (it happens on the
- * machine), so the row has no button of its own: it opens the computer, and `access.decided` ends it.
+ * request, the agent as actor, the computer and the folder in it. A folder is allowed only on the machine; from the
+ * row the owner can only say no (`refuseFolderRequest`). Whichever answer comes first ends it.
  */
 async function notifyFolderRequest(
   deps: AccessDeps,
@@ -485,44 +485,94 @@ async function postRequestedNote(deps: AccessDeps, row: AccessRequestRow, comput
 }
 
 /**
- * `access.decided` from the machine: the request gets its outcome (once) and
- * the outbox wakes the agent's conversation (`machine.access_decided`).
+ * Ends the pending requests `where` picks, once each, and the outbox wakes each agent's conversation
+ * (`machine.access_decided`). Whoever got there first (the machine, the owner in the apps, the sweep) decides.
  */
+async function settleAccessRequests(
+  deps: AccessDeps,
+  where: SQL | undefined,
+  decision: "granted" | "denied" | "expired",
+  scope?: "agent" | "all",
+): Promise<AccessRequestRow[]> {
+  const rows = await deps.db.transaction(async (tx) => {
+    const rows = await tx
+      .update(machineAccessRequests)
+      .set({
+        status: decision,
+        scope: decision === "granted" ? (scope ?? "agent") : null,
+        decidedAt: new Date(),
+      })
+      .where(and(eq(machineAccessRequests.status, "pending"), where))
+      .returning();
+    for (const row of rows) {
+      await enqueue(tx, {
+        orgId: row.orgId,
+        kind: "machine.access_decided",
+        payload: { requestId: row.id },
+        dedupeKey: `machine.access_decided:${row.id}`,
+        maxAttempts: 6,
+      });
+    }
+    return rows;
+  });
+  // The row waiting on the owner in the inbox is done.
+  for (const row of rows) {
+    await resolveNotifications(deps, row.orgId, { groupKey: folderRequestKey(row.id) }).catch(() => 0);
+  }
+  return rows;
+}
+
+/** `access.decided` from the machine: the request gets its outcome, once. */
 export async function applyAccessDecided(
   deps: AccessDeps,
   machineId: string,
   frame: Extract<RunnerFrame, { type: "access.decided" }>,
 ) {
-  const row = await deps.db.transaction(async (tx) => {
-    const [row] = await tx
-      .update(machineAccessRequests)
-      .set({
-        status: frame.decision,
-        scope: frame.decision === "granted" ? (frame.scope ?? "agent") : null,
-        decidedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(machineAccessRequests.id, frame.requestId),
-          eq(machineAccessRequests.machineId, machineId),
-          eq(machineAccessRequests.status, "pending"),
-        ),
-      )
-      .returning();
-    if (!row) return null;
-    await enqueue(tx, {
-      orgId: row.orgId,
-      kind: "machine.access_decided",
-      payload: { requestId: row.id },
-      dedupeKey: `machine.access_decided:${row.id}`,
-      maxAttempts: 6,
+  const [row] = await settleAccessRequests(
+    deps,
+    and(eq(machineAccessRequests.id, frame.requestId), eq(machineAccessRequests.machineId, machineId)),
+    frame.decision,
+    frame.scope,
+  );
+  return row ?? null;
+}
+
+/**
+ * `POST …/machines/{machineId}/access/requests/{requestId}/refuse` (an admin or the person who connected it): says no
+ * to a folder an agent waits for, from the apps, even with the computer offline. Only a no: a folder is
+ * allowed on the computer itself. The agent hears it as the owner's no. An answer given first stands, and is returned.
+ */
+export async function refuseFolderRequest(
+  deps: AccessDeps,
+  actorId: string,
+  orgId: string,
+  machineId: string,
+  requestId: string,
+): Promise<{ status: string }> {
+  const machine = await requireMachineManager(deps.db, actorId, orgId, machineId);
+  const mine = and(eq(machineAccessRequests.id, requestId), eq(machineAccessRequests.machineId, machine.id));
+  const [refused] = await settleAccessRequests(deps, mine, "denied");
+  if (refused) {
+    await recordAudit(deps.db, {
+      orgId,
+      actor: { type: "person", id: actorId },
+      action: "machine.access_refused",
+      target: { type: "machine", id: machine.id },
+      details: { requestId, path: refused.path },
     });
-    return row;
-  });
-  if (!row) return null;
-  // The owner answered it (or it ran out): the row waiting on them in the inbox is done.
-  await resolveNotifications(deps, row.orgId, { groupKey: folderRequestKey(row.id) }).catch(() => 0);
-  return row;
+    return { status: refused.status };
+  }
+  const [row] = await deps.db.select({ status: machineAccessRequests.status }).from(machineAccessRequests).where(mine);
+  if (!row) throw new NotFoundError("That folder request is gone", "machine.not_found");
+  return { status: row.status };
+}
+
+/**
+ * Requests past their day that the machine never answered (offline, or removed), ended as expired here too, so the
+ * agent hears it and the owner's inbox row is done (worker, every minute). The runner expires its own copy as well.
+ */
+export async function expireFolderRequests(deps: AccessDeps, now = new Date()) {
+  return (await settleAccessRequests(deps, lt(machineAccessRequests.expiresAt, now), "expired")).length;
 }
 
 /** The note in the thread (English; the app shows `bodyCode` in the person's language). */

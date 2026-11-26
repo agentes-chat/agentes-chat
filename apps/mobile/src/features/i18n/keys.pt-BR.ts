@@ -878,6 +878,8 @@ export const featureKeysPtBR = {
   },
   agent: {
     talk: "Conversar",
+    /** Who answers for it, a row of its profile's card. */
+    responsible: "Responsável",
     task: "Tarefa",
     owner: "responsável: {{name}}",
     cantTalk: "Este agente não atende você.",
@@ -2885,11 +2887,12 @@ export const featureKeysPtBR = {
     formatAuto: "{{name}} escolhe o melhor",
     /** New widget's card, which is the form. */
     newWidget: {
-      alerts: "Avisa",
       realData: "Dados de verdade",
       editAsk: "Mudar o pedido",
       asked: "“{{ask}}”",
-      autoFormat: "Formato automático",
+      testReal: "Testar com dados de verdade",
+      addHome: "Adicionar ao Início",
+      addTo: "Adicionar em {{where}}",
     },
     /** "Who looks after it", pushed from New widget's card. */
     agentPick: {
