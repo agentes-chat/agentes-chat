@@ -41535,6 +41535,39 @@
   "devices.stopped": {
     "value": "Stopped. {{name}} is free."
   },
+  "devices.power.start": {
+    "value": "Start"
+  },
+  "devices.power.stop": {
+    "value": "Shut down"
+  },
+  "devices.power.starting": {
+    "value": "{{name}} is starting. It's ready in a moment."
+  },
+  "devices.power.stopped": {
+    "value": "{{name}} is shut down."
+  },
+  "devices.power.toolMissingIos": {
+    "value": "{{computer}} needs Xcode to run simulators. Install Xcode from the App Store on that Mac."
+  },
+  "devices.power.toolMissingAndroid": {
+    "value": "{{computer}} doesn't have the Android Emulator. Install it in Android Studio › SDK Manager › SDK Tools on that computer."
+  },
+  "devices.power.gone": {
+    "value": "{{name}} isn't on {{computer}} anymore: it was deleted there. Forget it here, or make it again there."
+  },
+  "devices.power.busy": {
+    "value": "{{name}} is in use right now. Stop what uses it first, or try again when it's free."
+  },
+  "devices.power.startFailed": {
+    "value": "{{name}} didn't start. {{computer}} said: {{why}}"
+  },
+  "devices.power.stopFailed": {
+    "value": "{{name}} didn't shut down. {{computer}} said: {{why}}"
+  },
+  "devices.power.notSimulator": {
+    "value": "Only a simulator or an emulator starts and shuts down from here."
+  },
   "devices.showMe": {
     "value": "Show me how"
   },

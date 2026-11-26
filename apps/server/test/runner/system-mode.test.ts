@@ -547,6 +547,8 @@ test("a system-mode runner (root) without workers does no agent work; machine-le
     "xcode.open",
     // Repairing an iPhone's test helper is the phones' process's, beside their locks.
     "phone.repair",
+    // And starting or shutting down its simulators and emulators.
+    "phone.power",
     // A problem report reads the runner's own log and state: root's.
     "report.collect",
     // Lending the computer's internet dials a data socket, which needs the machine token only root holds (ADR 0237).

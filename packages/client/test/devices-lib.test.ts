@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { resources } from "@agenteschat/i18n";
 import i18next, { type TFunction } from "i18next";
+import { ApiError } from "../src/api/http";
 import type { ComputerDevice, DeviceAudience, PhoneDevice } from "../src/api/types";
 import {
   ANDROID_USB_DRIVERS,
@@ -35,6 +36,7 @@ import {
   phoneCloseState,
   phoneScreenCover,
   phoneScreenUrl,
+  powerChoice,
   reasonText,
   SPILL_USES,
   screenGesture,
@@ -58,6 +60,7 @@ import {
   xcodeFixLive,
   xcodeFixStage,
 } from "../src/lib/devices";
+import { errorText } from "../src/lib/errors";
 
 const i18n = i18next.createInstance();
 void i18n.init({ lng: "en", fallbackLng: "en", resources, initAsync: false, interpolation: { escapeValue: false } });
@@ -812,4 +815,32 @@ describe("agents use a person's computer's internet (ADR 0237)", () => {
     expect(shareInternetText(t, computer({ shareInternet: null }), lending)).toBeNull();
     expect(lendingDevice([mine])).toBeNull();
   });
+});
+
+test("Ligar on an offline simulator, Desligar on one running and free; never a real phone, its Mac away, or held", () => {
+  const sim = (p: Partial<PhoneDevice>) => phone({ platform: "ios", phoneKind: "simulator", ...p });
+  const off = { kind: "offline", lastSeenAt: null } as const;
+  expect(powerChoice(sim({ status: off }))).toBe("start");
+  expect(powerChoice(phone({ phoneKind: "emulator", status: off }))).toBe("start");
+  expect(powerChoice(sim({ status: { kind: "ready" } }))).toBe("stop");
+  expect(powerChoice(sim({ status: { kind: "preparing", reason: "booting" } }))).toBe("stop");
+  expect(powerChoice(phone({ status: off }))).toBeNull();
+  expect(powerChoice(sim({ status: { ...off, withHost: true } }))).toBeNull();
+  expect(
+    powerChoice(
+      sim({ status: { kind: "in_use", agentId: "a", agentName: "Lia", userId: null, userName: null, since: "" } }),
+    ),
+  ).toBeNull();
+  expect(powerChoice(sim({ status: off, mayUse: false, mayManage: false }))).toBeNull();
+  // The Mac's refusals in words: Xcode or the emulator missing, by platform; what it said when it failed.
+  const said = (code: string, params: Record<string, unknown>) => errorText(t, new ApiError(409, code, "", params));
+  expect(said("device.power_tool_missing", { platform: "ios", computer: "MacBook" })).toBe(
+    "MacBook needs Xcode to run simulators. Install Xcode from the App Store on that Mac.",
+  );
+  expect(said("device.power_tool_missing", { platform: "android", computer: "Build PC" })).toStartWith(
+    "Build PC doesn't have the Android Emulator.",
+  );
+  expect(said("device.power_start_failed", { name: "Pixel 8", computer: "Build PC", why: "PANIC: no image" })).toBe(
+    "Pixel 8 didn't start. Build PC said: PANIC: no image",
+  );
 });

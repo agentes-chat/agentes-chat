@@ -17435,6 +17435,22 @@ export const en = {
     forgotten: "{{name}} forgotten.",
     stop: "Stop",
     stopped: "Stopped. {{name}} is free.",
+    /** Ligar / Desligar on an iOS simulator or an Android emulator, which its computer starts or shuts down. */
+    power: {
+      start: "Start",
+      stop: "Shut down",
+      starting: "{{name}} is starting. It's ready in a moment.",
+      stopped: "{{name}} is shut down.",
+      toolMissingIos: "{{computer}} needs Xcode to run simulators. Install Xcode from the App Store on that Mac.",
+      toolMissingAndroid:
+        "{{computer}} doesn't have the Android Emulator. Install it in Android Studio › SDK Manager › SDK Tools on that computer.",
+      gone: "{{name}} isn't on {{computer}} anymore: it was deleted there. Forget it here, or make it again there.",
+      busy: "{{name}} is in use right now. Stop what uses it first, or try again when it's free.",
+      /** `why`: the computer's own words, as its tools said them (in English). */
+      startFailed: "{{name}} didn't start. {{computer}} said: {{why}}",
+      stopFailed: "{{name}} didn't shut down. {{computer}} said: {{why}}",
+      notSimulator: "Only a simulator or an emulator starts and shuts down from here.",
+    },
     showMe: "Show me how",
     notFound: "This device isn't here anymore",
     notFoundText: "It was removed, or this link is wrong.",

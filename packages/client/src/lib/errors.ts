@@ -602,6 +602,11 @@ const KNOWN = {
   "wiki.import_too_many": "errors.said.tooMany",
   "database.host_required": "errors.said.fillIn",
   "device.name_required": "errors.said.fillIn",
+  "device.power_gone": "devices.power.gone",
+  "device.power_busy": "devices.power.busy",
+  "device.power_start_failed": "devices.power.startFailed",
+  "device.power_stop_failed": "devices.power.stopFailed",
+  "device.not_simulator": "devices.power.notSimulator",
   "database.password_required": "errors.said.fillIn",
   "database.user_required": "errors.said.fillIn",
   "endpoint.no_models": "errors.said.fillIn",
@@ -937,6 +942,10 @@ export function knownErrorText(t: TFunction, error: unknown, locale = "en"): str
     return t("errors.mail.ownerOnlyUnknown", error.params);
   // Everyone else in the workspaces that keep the account is an outside collaborator, who can't own one (ADR 0191).
   if (error.code === "sole_owner" && error.params?.onlyOutside === true) return t("errors.said.soleOwnerOutside");
+  if (error.code === "device.power_tool_missing")
+    return t(error.params?.platform === "ios" ? "devices.power.toolMissingIos" : "devices.power.toolMissingAndroid", {
+      computer: error.params?.computer ?? "",
+    });
   if (error.code === "browser_profile.unavailable")
     return t("browser.profiles.notOpened", { machine: error.params?.machineName ?? "" });
   // `provider`: the provider whose key is missing, when the server could name it.

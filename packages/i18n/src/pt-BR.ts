@@ -17362,6 +17362,22 @@ export const ptBR = {
     forgotten: "{{name}} esquecido.",
     stop: "Parar",
     stopped: "Parado. {{name}} está livre.",
+    /** Ligar / Desligar on an iOS simulator or an Android emulator, which its computer starts or shuts down. */
+    power: {
+      start: "Ligar",
+      stop: "Desligar",
+      starting: "{{name}} está ligando. Fica pronto em instantes.",
+      stopped: "{{name}} foi desligado.",
+      toolMissingIos: "{{computer}} precisa do Xcode para rodar simuladores. Instale o Xcode pela App Store nesse Mac.",
+      toolMissingAndroid:
+        "{{computer}} não tem o Android Emulator. Instale em Android Studio › SDK Manager › SDK Tools nesse computador.",
+      gone: "{{name}} não está mais em {{computer}}: foi apagado lá. Esqueça-o aqui, ou crie de novo lá.",
+      busy: "{{name}} está em uso agora. Pare o que o usa primeiro, ou tente de novo quando estiver livre.",
+      /** `why`: the computer's own words, as its tools said them (in English). */
+      startFailed: "{{name}} não ligou. {{computer}} disse: {{why}}",
+      stopFailed: "{{name}} não desligou. {{computer}} disse: {{why}}",
+      notSimulator: "Só um simulador ou um emulador liga e desliga por aqui.",
+    },
     showMe: "Mostrar como",
     notFound: "Este dispositivo não está mais aqui",
     notFoundText: "Ele foi removido, ou este link está errado.",

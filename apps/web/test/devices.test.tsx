@@ -3,7 +3,7 @@ import { domWindow, setupDom } from "@agenteschat/ui/testing/dom";
 
 setupDom();
 
-import type { ComputerDevice, PhoneDevice } from "@agenteschat/client";
+import { ApiError, type ComputerDevice, type PhoneDevice } from "@agenteschat/client";
 import {
   ANDROID_SLOW_MS,
   ANDROID_USB_DRIVERS,
@@ -162,6 +162,51 @@ describe("Settings › Devices", () => {
     expect(within(menu).getAllByRole("menuitem")[0]?.textContent).toBe("Settings");
     await click(within(menu).getByRole("menuitem", { name: "Settings" }));
     expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/settings/devices/phones/${PIXEL}`);
+  });
+
+  test("a simulator's menu: Start when it's off, Shut down once it runs, and the Mac's refusal in words", async () => {
+    const sim: PhoneDevice = {
+      id: "p-sim",
+      platform: "ios",
+      phoneKind: "simulator",
+      name: "iPhone 17 Pro",
+      model: "iPhone 17 Pro",
+      osVersion: "26.2",
+      hostMachineId: MAC,
+      ownerUserId: "u-sam",
+      audience: null,
+      status: { kind: "offline", lastSeenAt: "2026-11-09T12:00:00.000Z" },
+      transport: "local",
+      lastSeenAt: "2026-11-09T12:00:00.000Z",
+      mayUse: true,
+      mayManage: false,
+    };
+    const { state, devices } = await open(`/org/${ORG_ID}/settings/devices`, (d) => {
+      const list = acmeDevices();
+      list.devices.find((c) => c.id === MAC)?.phones.push(sim);
+      d.set(list);
+    });
+    let menu = await openMenu(screen().getByRole("button", { name: "iPhone 17 Pro actions" }));
+    expect(
+      within(menu)
+        .getAllByRole("menuitem")
+        .map((i) => i.textContent),
+    ).toEqual(["Settings", "Start"]);
+    await click(within(menu).getByRole("menuitem", { name: "Start" }));
+    expect(calls(state, "devices.powerPhone").map((c) => c.args)).toEqual([[ORG_ID, "p-sim", true]]);
+    expect(screen().getByText("iPhone 17 Pro is starting. It's ready in a moment.")).toBeTruthy();
+    menu = await openMenu(screen().getByRole("button", { name: "iPhone 17 Pro actions" }));
+    expect(within(menu).getByRole("menuitem", { name: "Shut down" })).toBeTruthy();
+    // The Mac without Xcode: why, and the one way out.
+    devices.client.powerPhone = async () => {
+      throw new ApiError(409, "device.power_tool_missing", "", { platform: "ios", computer: "Sam's MacBook Pro" });
+    };
+    await click(within(menu).getByRole("menuitem", { name: "Shut down" }));
+    expect(
+      screen().getByText(
+        "Sam's MacBook Pro needs Xcode to run simulators. Install Xcode from the App Store on that Mac.",
+      ),
+    ).toBeTruthy();
   });
 
   test("a computer's page: its system at a glance; its size and toolchains behind Details, closed", async () => {
