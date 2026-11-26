@@ -5543,7 +5543,8 @@
       "provider_unavailable": "model yanıt vermedi",
       "gave_up": "model birkaç denemeden sonra yanıt vermedi",
       "missing_credential": "bir API anahtarı eksik",
-      "credential_revoked": "API anahtarı iptal edildi"
+      "credential_revoked": "API anahtarı iptal edildi",
+      "credential_unreadable": "kayıtlı API anahtarı açılamıyor"
     },
     "youReplied": "Yanıtınız: {{text}}",
     "actions": "İşlemler",
@@ -6488,6 +6489,7 @@
         "interrupted": "Sunucu yeniden başlatıldığı için kesildi.",
         "missing_credential": "Çalışma alanında {{provider}} anahtarı yok.",
         "credential_revoked": "Bu ajanın anahtarı iptal edildi.",
+        "credential_unreadable": "Kayıtlı API anahtarı açılamıyor. Bunun nedeni genellikle anahtar kaydedildikten sonra sunucunun gizli anahtarının değişmesidir. Anahtarı Yapay zeka anahtarları bölümüne yeniden yapıştırın.",
         "credential_wrong_provider": "Model {{modelProvider}} sağlayıcısına ait, ama anahtar {{keyProvider}} sağlayıcısına ait.",
         "model_unlisted": "OpenRouter artık {{model}} sunmuyor. Ajanın ayarlarından başka bir model seçin.",
         "no_ai": "Ajanın kullanılabilir bir yapay zekâsı yoktu.",
@@ -9268,6 +9270,7 @@
       "stuck": "Takıldığı için durdu",
       "missing_credential": "Bir API anahtarı eksik",
       "credential_revoked": "API anahtarı iptal edildi",
+      "credential_unreadable": "Kayıtlı API anahtarı açılamıyor",
       "credential_wrong_provider": "API anahtarı başka bir sağlayıcıya ait",
       "model_unlisted": "OpenRouter artık bu modeli sunmuyor",
       "agent_archived": "Ajan arşivlendi",

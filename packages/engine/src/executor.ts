@@ -5008,7 +5008,12 @@ async function executeRunInner(
     // unknown reset, on the safety timer until the head gets through).
     if (!u.soon) {
       const base = known ? at : now + LINE_SAFETY_MS;
-      await retimeLine(db, line.behind, (i) => new Date(base + RESUME_AFTER_MS + RESUME_GAP_MS * (line.place + 1 + i)));
+      await retimeLine(
+        db,
+        line.behind,
+        (i) => new Date(base + RESUME_AFTER_MS + RESUME_GAP_MS * (line.place + 1 + i)),
+        resetsAt,
+      );
     }
     const moved = await transitionRun(db, run.id, "running", "waiting_input", {
       transcript: storedTranscript(t),
