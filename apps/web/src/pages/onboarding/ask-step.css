@@ -166,8 +166,9 @@ html:not([data-pointer]) .onb-ask__ai:focus-visible {
   gap: 8px;
   max-height: 148px;
   overflow: auto;
-  -webkit-mask-image: linear-gradient(180deg, #000 70%, transparent);
-  mask-image: linear-gradient(180deg, #000 70%, transparent);
+  /* The fade spares our scrollbar: the kit's strip, as wide as it, stays whole. */
+  -webkit-mask-image: linear-gradient(180deg, #000 70%, transparent), var(--scroll-strip);
+  mask-image: linear-gradient(180deg, #000 70%, transparent), var(--scroll-strip);
 }
 .onb-ask__text p {
   margin: 0;
