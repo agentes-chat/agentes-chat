@@ -225,7 +225,7 @@ test("agent brain: defaults, who may, letting others talk to a plan, what the co
   await t.db
     .update(schema.machines)
     .set({
-      executors: { claude: { version: "2.1.0" }, codex: { version: "codex-cli 0.170.0" }, detectedAt: "2026-10-17" },
+      executors: { claude: { version: "2.1.300" }, codex: { version: "codex-cli 0.170.0" }, detectedAt: "2026-10-17" },
     })
     .where(eq(schema.machines.id, mac.machineId));
   const codex = await api(`/agents/${agentId}/brain`, {
@@ -357,7 +357,7 @@ test("the agent list carries a plan agent's account and its last windows, for ev
   const week = usage("seven_day", 40);
   await t.db
     .update(schema.machines)
-    .set({ executors: { claude: { version: "2.1.0", plan: "max" }, ownUsage: { claude_code: week } } })
+    .set({ executors: { claude: { version: "2.1.300", plan: "max" }, ownUsage: { claude_code: week } } })
     .where(eq(schema.machines.id, mac.machineId));
   expect(await brainOf(api)).toMatchObject({ account: "Claude Max", usage: week });
   expect(await brainOf(asBia)).toMatchObject({ account: "Claude Max", usage: week });
@@ -414,7 +414,7 @@ test("a new agent starts on Automático on every brain; one with a fixed model k
   await t.db
     .update(schema.machines)
     .set({
-      executors: { claude: { version: "2.1.0" }, codex: { version: "codex-cli 0.170.0" }, detectedAt: "2026-10-17" },
+      executors: { claude: { version: "2.1.300" }, codex: { version: "codex-cli 0.170.0" }, detectedAt: "2026-10-17" },
     })
     .where(eq(schema.machines.id, mac.machineId));
   for (const id of [eva.id, fixedId]) {

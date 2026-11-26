@@ -87,6 +87,7 @@ export type ActivityKind =
   | "usingScreen"
   | "cloningRepo"
   | "listingRepos"
+  | "preparingCli"
   | "openingPullRequest"
   | "handingOff"
   | "recordingFindings"
@@ -146,6 +147,41 @@ export interface Activity {
   service?: string;
   /** A server connected by address: its own icon (`/api/app/connector-icons/…`). */
   icon?: string;
+  /** `preparingCli` (ADR 0228 §6): the computer its program is being fetched on, and how far (null: unknown yet). */
+  computer?: string;
+  percent?: number | null;
+}
+
+/** The coding CLIs' programs as people read them (`claude`, `codex`… as the server names them). */
+export const CLI_PROGRAMS: Readonly<Record<string, string>> = {
+  claude: "Claude Code",
+  codex: "Codex",
+  cursor: "Cursor",
+  opencode: "OpenCode",
+  grok: "Grok Build",
+  antigravity: "Antigravity",
+  // Git for Windows' portable build: Claude Code's shell on Windows (ADR 0228 §6).
+  git: "Git",
+};
+
+/** The CLI each computer brain thinks with. */
+export const CLI_OF_BRAIN: Readonly<Record<string, string>> = {
+  claude_code: "claude",
+  codex: "codex",
+  cursor: "cursor",
+  opencode: "opencode",
+  grok: "grok",
+  antigravity: "antigravity",
+};
+
+/** The tool a run's live line carries while its CLI is fetched on its computer (`<cli>|<computer>|<percent>`). */
+export const PREPARE_CLI_TOOL = "prepare_cli";
+
+/** "preparando o Claude Code no MacBook… 45%": the program, the computer and how far, from the line's detail. */
+function preparingOf(detail: string | null | undefined): Activity {
+  const [cli = "", computer = "", pct = ""] = (detail ?? "").split("|");
+  const percent = /^\d{1,3}$/.test(pct) ? Math.min(100, Number(pct)) : null;
+  return { kind: "preparingCli", app: CLI_PROGRAMS[cli] ?? cli, computer, percent };
 }
 
 /** Where a call works, as `agent.tool` and the saved `tool_call` step say it (the engine's `ToolDefinition`). */
@@ -435,6 +471,8 @@ function activityOf(tool: string | null | undefined, connector?: string | null, 
   }
   if (name === "load_skill")
     return detail?.trim() ? { kind: "openingSkill", app: detail.trim() } : { kind: "consultingSkill" };
+  // ADR 0228 §6: the run waits while its computer fetches the CLI it thinks with.
+  if (name === PREPARE_CLI_TOOL) return preparingOf(detail);
   // "Rodou: Rerun the tests": the command it checked, by the engine's label (`toolDetail`).
   if (name === PERMISSION_TOOL)
     return detail?.trim() ? { kind: "runningCommand", app: detail.trim() } : { kind: "runningCommandAny" };
@@ -699,7 +737,14 @@ export function barElapsed(t: TFunction, entries: ActivityEntry[], runs: LiveRun
 }
 
 /** "trabalhando", "consultando o GitHub". */
-export const activityVerb = (t: TFunction, a: Activity) => t(`chat.activity.${a.kind}`, { app: appLabel(a) });
+export const activityVerb = (t: TFunction, a: Activity) =>
+  a.kind === "preparingCli"
+    ? t(`chat.activity.${a.percent != null ? "preparingCliPct" : "preparingCli"}`, {
+        app: appLabel(a),
+        computer: a.computer ?? "",
+        percent: a.percent ?? 0,
+      })
+    : t(`chat.activity.${a.kind}`, { app: appLabel(a) });
 
 /**
  * The app as people read it: a connector's slug ("himetrica") starts with a capital ("Himetrica"); a name with

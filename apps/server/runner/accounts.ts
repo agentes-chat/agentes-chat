@@ -68,6 +68,8 @@ import {
   placeAgySignIn,
   writeAgySettings,
 } from "./agy-home";
+import { withGitBash } from "./cli-install";
+import { codexLoginStatusOf } from "./codex-sign-in";
 import { errnoCode, RunnerError } from "./errors";
 import { killTree } from "./exec";
 import {
@@ -290,12 +292,16 @@ export function accountEnv(
 ): NodeJS.ProcessEnv {
   const env = withoutSignIns(base);
   env[ENV_VAR[kind]] = dir;
+  if (kind === "claude_code" && platform === "win32") return withGitBash(env, platform);
   if (kind === "cursor") {
     // Linux keeps the sign-in under `$XDG_CONFIG_HOME/cursor`, macOS in the Keychain unless told to use a file: both
     // in the account's folder, so two accounts never share one sign-in. The sign-in prints its link, opens nothing.
     env.XDG_CONFIG_HOME = dir;
     env.AGENT_CLI_CREDENTIAL_STORE = "file";
     env.NO_OPEN_BROWSER = "1";
+    // Windows keeps it in the Credential Manager unless told to use a file, then in `%APPDATA%\Cursor\auth.json`
+    // (its CLI's own credentials module, read off the 2026.11.22 package): the account's folder there too.
+    if (platform === "win32") env.APPDATA = dir;
   }
   if (kind === "opencode") {
     // Its config, its sessions, its caches: all in the account's folder, so two accounts never share a sign-in.
@@ -324,6 +330,18 @@ export function accountEnv(
     if (platform === "darwin") agyKeychain(dir);
   }
   return env;
+}
+
+/**
+ * Where a sign-in of `kind` must have landed in its account's folder on Windows, or null where nothing needs checking:
+ * Cursor's goes to the computer user's one Credential Manager unless it keeps its file, and there every Cursor account
+ * would be one (ADR 0228 §6). The Antigravity CLI's always goes there, so a Windows computer has one Gemini account
+ * (ADR 0143).
+ */
+export function signInFileOnWindows(kind: AccountKind, dir: string, platform: NodeJS.Platform = process.platform) {
+  if (platform !== "win32") return null;
+  if (kind === "cursor") return path.join(dir, "Cursor", "auth.json");
+  return null;
 }
 
 /**
@@ -1358,10 +1376,12 @@ export function parseCursorStatus(status: number | null, output: string): Omit<R
   return { loggedIn, ...(email && email.length <= 254 ? { email } : {}) };
 }
 
-/** `codex login status` (`Logged in using ChatGPT`, on either stream): signed in when it exits 0 and says so. */
+/**
+ * `codex login status` (`Logged in using ChatGPT`, or an API key's `API key configured`, on either stream): signed in
+ * when it exits 0 and says so (`codexLoginStatusOf`).
+ */
 export function parseCodexStatus(status: number | null, output: string): Omit<RunnerAccountInfo, "id" | "kind"> {
-  const text = stripAnsi(output);
-  return { loggedIn: status === 0 && /logged in/i.test(text) && !/not logged in/i.test(text) };
+  return { loggedIn: codexLoginStatusOf(status, stripAnsi(output)).loggedIn };
 }
 
 /**
@@ -1445,8 +1465,8 @@ export interface AccountManagerOptions {
   /** `<runner home>/accounts`. */
   root: string;
   /**
-   * Before a CLI's sign-in starts: the runner's own Antigravity CLI made ready where the computer has none new enough
-   * (`AgyCopy.ensure`, ADR 0143); its failure is the sign-in's.
+   * Before a CLI's sign-in starts: the runner's own copy of that CLI made ready where the computer has none new enough
+   * (`CliCopies.ensure`, ADR 0228 §6); its failure is the sign-in's.
    */
   prepare?: (kind: AccountKind) => Promise<void>;
   /** Tests: the clock. */
@@ -1687,7 +1707,7 @@ export class AccountManager {
   }
 
   private env(kind: AccountKind, dir: string): NodeJS.ProcessEnv {
-    return accountEnv(kind, dir, process.env, this.opts.platform);
+    return accountEnv(kind, dir, process.env, this.opts.platform ?? process.platform);
   }
 
   /**
@@ -2383,6 +2403,19 @@ export class AccountManager {
           // Signed in again, the folder now holds that sign-in, which no agent can think with: signed out for all.
           if (unshared && !unshared.unsure && login.again) await this.refused(login.kind, login.id);
           if (login.state !== "waiting") return;
+          // Windows: a sign-in that didn't keep its file in the folder went to the computer user's Credential Manager,
+          // where it would be every account's: refused, never counted (ADR 0228 §6).
+          const apart =
+            login.child || login.term ? signInFileOnWindows(login.kind, login.dir, this.opts.platform) : null;
+          if (apart && !existsSync(apart)) {
+            this.failWith(
+              login,
+              "failed",
+              "cli_exit",
+              `${LABEL[login.kind]} kept this sign-in where every account on this computer would share it, not in its own folder.`,
+            );
+            return;
+          }
           if (!unshared) {
             await rm(path.join(login.dir, SIGNING_IN), { force: true }).catch(() => undefined);
             // A ChatGPT or Gemini sign-in for all agents: root's alone from now on (`grant`).

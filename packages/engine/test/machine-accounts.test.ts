@@ -7,6 +7,7 @@ import {
   accountCodeAad,
   BRAIN_PROTOCOL,
   CLAUDE_AUTH_PROTOCOL,
+  CLI_COPIES_PROTOCOL,
   GROK_WINDOWS_PROTOCOL,
   generateSecretKeyPair,
   type MachineRequest,
@@ -676,7 +677,7 @@ test("a coding plan's key: no sign-in page but the plan's key page, the key seal
     .set({
       execAllowed: true,
       executors: {
-        claude: { version: "2.1.0", loggedIn: true, plan: "max" },
+        claude: { version: "2.1.300", loggedIn: true, plan: "max" },
         ownUsage: { claude_code: usage },
         detectedAt: new Date().toISOString(),
       },
@@ -692,8 +693,30 @@ test("a coding plan's key: no sign-in page but the plan's key page, the key seal
     .update(schema.machines)
     .set({
       executors: {
-        claude: { version: "2.1.0", loggedIn: false },
+        claude: { version: "2.1.300", loggedIn: false },
         ownUsage: { claude_code: usage },
+        detectedAt: new Date().toISOString(),
+      },
+    })
+    .where(eq(schema.machines.id, machineId));
+  expect((await listAiAccounts({ db: f.db }, f.owner.id, f.org.id)).computers[0]?.own).toEqual({});
+  // Codex's own sign-in as its runner reads it (an API key, or a model provider of its own config), usage or not.
+  await f.db
+    .update(schema.machines)
+    .set({
+      executors: {
+        codex: { version: "codex-cli 0.169.0", loggedIn: true, authMethod: "provider" },
+        detectedAt: new Date().toISOString(),
+      },
+    })
+    .where(eq(schema.machines.id, machineId));
+  expect((await listAiAccounts({ db: f.db }, f.owner.id, f.org.id)).computers[0]?.own).toEqual({ codex: {} });
+  await f.db
+    .update(schema.machines)
+    .set({
+      executors: {
+        codex: { version: "codex-cli 0.169.0", loggedIn: false },
+        ownUsage: { codex: usage },
         detectedAt: new Date().toISOString(),
       },
     })
@@ -1785,14 +1808,19 @@ test("Grok signs in on Windows from GROK_WINDOWS_PROTOCOL on; an older Windows r
   await expect(begin(GROK_WINDOWS_PROTOCOL - 1)).rejects.toMatchObject({ code: "account.runner_old" });
 });
 
-test("Cursor doesn't sign in on a Windows computer: refused before the runner is asked (issue #156)", async () => {
+test("Cursor on a Windows computer signs in from `CLI_COPIES_PROTOCOL`; an older runner is too old, never asked (issue #156)", async () => {
   f = await setup();
   const { machineId } = await ownedMachine(SHARED_GROK_PROTOCOL);
   await f.db.update(schema.machines).set({ os: "windows" }).where(eq(schema.machines.id, machineId));
   const runner = fakeHub(machineId, () => ({ url: "https://cursor.com/device" }), { protocol: SHARED_GROK_PROTOCOL });
   const refused = await beginAccountLogin(runner.deps, f.owner.id, f.org.id, machineId, "cursor").catch((e) => e);
-  expect(refused).toMatchObject({ code: "account.system", params: { program: "Cursor" } });
+  expect(refused).toMatchObject({ code: "account.runner_old" });
   expect(runner.calls).toEqual([]);
+  // Its runner keeps each Cursor account's sign-in in its folder there (ADR 0228 §7).
+  await f.db.update(schema.machines).set({ protocol: CLI_COPIES_PROTOCOL }).where(eq(schema.machines.id, machineId));
+  const now = fakeHub(machineId, () => ({ url: "https://cursor.com/device" }), { protocol: CLI_COPIES_PROTOCOL });
+  await beginAccountLogin(now.deps, f.owner.id, f.org.id, machineId, "cursor");
+  expect(now.calls[0]).toMatchObject({ op: "account", action: "begin", kind: "cursor" });
 });
 
 test("one sign-in for all agents (protocol 29): asked for, it thinks for two agents, once; out and gone for both", async () => {
