@@ -128,9 +128,9 @@ const size = (r: ModelRequest) =>
  * a progress line per new phase of long work (ADR 0207 addendum of 2026-11-24b) adds 42 (50,846; 51,293 on the Cloud),
  * and work set out in steps being the agent's to finish (its line in "# How you work") adds 271 (51,564 on the Cloud),
  * and `find_in_app`, where things are in the app (issue #1001), its line in "# How you work" and the end of "What
- * you can do" add XXX (YYY on the Cloud); the ceiling leaves a little room above them.
+ * you can do" add 364 (51,928 on the Cloud); the ceiling leaves a little room above them.
  */
-const OI_CEILING_CHARS = 51_620;
+const OI_CEILING_CHARS = 52_000;
 
 test("a DM 'oi' stays under the size ceiling", async () => {
   const [request] = await play(TURNS.find((t) => t.id === "greet-dm") as ScriptedTurn);
