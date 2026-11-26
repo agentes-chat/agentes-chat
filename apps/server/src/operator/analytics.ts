@@ -12,6 +12,7 @@ import {
   ASK_OUTCOMES,
   ASK_TIME_BUCKETS,
   ASK_TIMES_MAX_DAYS,
+  BREAKDOWN_KINDS,
   CLI_RUNS_MAX_DAYS,
   CLI_RUNS_ROWS_MAX,
   CONNECTOR_KEY,
@@ -24,6 +25,7 @@ import {
   operatorOrgWorkAnalytics,
   operatorReplyTimes,
   operatorRunTimings,
+  operatorStageBreakdown,
   operatorWorkAnalytics,
   REPLY_BRAINS,
   REPLY_TIME_BUCKETS,
@@ -33,6 +35,11 @@ import {
   RUN_TIMINGS_MAX_DAYS,
   RUN_TIMINGS_ROWS_MAX,
   SHORT_ASK_CHARS,
+  STAGE_BREAKDOWN_FLEET_MAX_DAYS,
+  STAGE_BREAKDOWN_MAX_DAYS,
+  STAGE_BREAKDOWN_MODELS_MAX,
+  STAGE_BREAKDOWN_SLOWEST,
+  STAGE_GROUPS,
   WORK_ANALYTICS_HOURLY_DAYS,
   WORK_ANALYTICS_MAX_DAYS,
 } from "@agenteschat/engine";
@@ -874,6 +881,82 @@ const AskTimes = z
   })
   .openapi("OperatorAskTimes");
 
+const BreakdownQuery = z.object({
+  from: z
+    .string()
+    .openapi({ description: "An ISO 8601 instant: runs created at or after it.", example: "2026-11-25T00:00:00Z" }),
+  to: z.string().openapi({
+    description: `An ISO 8601 instant: runs created before it. After \`from\`, at most ${STAGE_BREAKDOWN_FLEET_MAX_DAYS} days apart across workspaces and ${STAGE_BREAKDOWN_MAX_DAYS} with \`orgId\`. Else 400 \`analytics.range\`.`,
+    example: "2026-11-26T00:00:00Z",
+  }),
+  orgId: z.uuid().optional().openapi({ description: "Only this workspace's runs." }),
+});
+const StageGroup = z.enum(STAGE_GROUPS).openapi("OperatorStageGroup", {
+  description:
+    "Where a run's time went, in the order a turn reaches it: `waits` for a computer (room or any other), `context` (the router's pick, the claim, the context built), `pre_turn_sync` (the agent's checkouts updated before a computer turn), `cli_init` (a new CLI process until ready), `cli_first_byte` (ready to the model API's first streamed message), `model_write` (the model writing, and an API model's whole turn), `tools`, `finish` (the turn's checks, saving, events).",
+});
+const BreakdownQuantiles = z.object({ p50Ms: Ms, p90Ms: Ms });
+const BreakdownMeasures = z
+  .object({
+    runs: Count.openapi({ description: "Runs created in the window that kept a stage profile." }),
+    total: BreakdownQuantiles.openapi({ description: "A run's time in all its claims (waits between them aside)." }),
+    groups: z
+      .array(
+        BreakdownQuantiles.extend({
+          group: StageGroup,
+          runs: Count.openapi({ description: "Of the runs, those that spent time in it." }),
+        }),
+      )
+      .openapi({ description: "Every group, in order: the median and p90 of the runs that spent time in it." }),
+  })
+  .openapi("OperatorStageBreakdownMeasures");
+const BreakdownKind = z.enum(BREAKDOWN_KINDS).openapi({
+  description:
+    "The kind of the run's ask (ADR 0254: Jev's read, else what the work did), `agent` (another agent's message started it) or `background` (a routine or long work).",
+});
+const StageBreakdown = z
+  .object({
+    from: z.string(),
+    to: z.string(),
+    orgId: z.uuid().nullable(),
+    groups: z.array(StageGroup),
+    totals: BreakdownMeasures,
+    days: z.array(BreakdownMeasures.extend({ day: Day })).openapi({ description: "Per UTC day, oldest first." }),
+    kinds: z
+      .array(BreakdownMeasures.extend({ kind: BreakdownKind }))
+      .openapi({ description: "Each kind that had runs, in order." }),
+    brains: z
+      .array(BreakdownMeasures.extend({ brain: z.string() }))
+      .openapi({ description: "Most runs first; `other`: none the server knows." }),
+    models: z.array(BreakdownMeasures.extend({ model: z.string() })).openapi({
+      description: `The model of the run's first turn (\`none\`: no usage recorded, \`custom\`: a workspace's own endpoint), most runs first, at most ${STAGE_BREAKDOWN_MODELS_MAX}.`,
+    }),
+    modelsMore: z.boolean(),
+    slowest: z
+      .array(
+        z.object({
+          runId: z.uuid(),
+          orgId: z.uuid(),
+          agentId: z.uuid(),
+          createdAt: z.string(),
+          brain: z.string(),
+          model: z.string().nullable(),
+          kind: BreakdownKind,
+          totalMs: Count,
+          groups: z.object(
+            Object.fromEntries(STAGE_GROUPS.map((g) => [g, Count])) as Record<
+              (typeof STAGE_GROUPS)[number],
+              typeof Count
+            >,
+          ),
+        }),
+      )
+      .openapi({
+        description: `The ${STAGE_BREAKDOWN_SLOWEST} runs that took longest, slowest first: each one's waterfall is in its trace.`,
+      }),
+  })
+  .openapi("OperatorStageBreakdown");
+
 export function registerOperatorAnalytics(api: OpenAPIHono, { db }: OperatorDeps) {
   api.openapi(
     createRoute({
@@ -942,6 +1025,19 @@ export function registerOperatorAnalytics(api: OpenAPIHono, { db }: OperatorDeps
       responses: { 200: json(RunTimings), 400: errors[400], 401: errors[401] },
     }),
     async (c) => c.json(await operatorRunTimings(db, c.req.valid("query")), 200),
+  );
+
+  api.openapi(
+    createRoute({
+      method: "get",
+      path: "/analytics/stage-breakdown",
+      tags,
+      summary: "Where the time goes: each run's time by stage group, per day, kind of ask, brain and model",
+      description: `Of the runs created in the window that kept a stage profile: ${STAGE_BREAKDOWN_FLEET_MAX_DAYS} days at most across workspaces, ${STAGE_BREAKDOWN_MAX_DAYS} in one (\`orgId\`). Counts, times, ids and the server's own words only: no message, no name.`,
+      request: { query: BreakdownQuery },
+      responses: { 200: json(StageBreakdown), 400: errors[400], 401: errors[401] },
+    }),
+    async (c) => c.json(await operatorStageBreakdown(db, c.req.valid("query")), 200),
   );
 
   api.openapi(

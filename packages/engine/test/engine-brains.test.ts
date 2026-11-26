@@ -94,6 +94,7 @@ import {
 } from "../src";
 import { computerPrompt } from "../src/brains/prompt";
 import { SYSTEM_REFUSED } from "../src/brains/types";
+import type { StageTiming } from "../src/profile";
 import { afterSteered } from "../src/steering";
 import { addMember, type Fixture, setup } from "./fixtures";
 import { pairMachine } from "./machine-fixtures";
@@ -353,6 +354,49 @@ test("a computer-brain turn ends after the tools it ran through the bridge (neve
     .where(eq(schema.runToolTokens.runId, run?.id ?? ""));
   expect(tokens.length).toBe(1);
   expect(tokens[0]?.revokedAt).not.toBeNull();
+});
+
+test("a computer turn keeps where its time went: its checkouts' update, the CLI's start and first byte, tools, the model", async () => {
+  f = await setup();
+  await computerAgent(f);
+  const brain: Brain = {
+    kind: "claude_code",
+    async *run(turn, io) {
+      io.phase?.("code");
+      await Bun.sleep(40);
+      io.phase?.(null);
+      // One of ours through the bridge, timed by the steps the gateway writes, and one of its own at the same time.
+      yield { type: "tool_started", id: "own-1", name: "Bash" };
+      await addRunStep(f.db, { id: turn.runId, orgId: turn.orgId }, "tool_call", { toolUseId: "ours-1", name: "x" });
+      await Bun.sleep(60);
+      await addRunStep(f.db, { id: turn.runId, orgId: turn.orgId }, "tool_result", { toolUseId: "ours-1", name: "x" });
+      yield { type: "tool_call", id: "own-1", name: "Bash", input: {}, executed: { content: "ok" } };
+      yield {
+        type: "done",
+        text: "Feito.",
+        timings: { warm: false, cold: "new_session", initMs: 5, firstTokenMs: 12 },
+      };
+    },
+  };
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id) },
+  });
+  await post(f, "@dev roda");
+  await drainOutbox(f.db, handlers);
+  const [run] = await f.db.select().from(schema.agentRuns);
+  expect(run?.status).toBe("done");
+  const [claim] = (run?.profiles ?? []) as { stages: StageTiming[] }[];
+  const model = claim?.stages.find((s) => s.stage === "model#1");
+  const parts = Object.fromEntries((model?.parts ?? []).map((p) => [p.stage, p.ms]));
+  expect(Object.keys(parts)).toEqual(["pre_turn_sync", "cli_init", "cli_first_byte", "tools", "model_write"]);
+  expect(parts.pre_turn_sync).toBeGreaterThanOrEqual(35);
+  expect([parts.cli_init, parts.cli_first_byte]).toEqual([5, 7]);
+  // The two calls overlapped on different clocks: counted each, never less than the longer.
+  expect(parts.tools).toBeGreaterThanOrEqual(55);
+  const sum = (model?.parts ?? []).reduce((n, p) => n + p.ms, 0);
+  expect(Math.abs(sum - (model?.ms ?? 0))).toBeLessThan(1);
 });
 
 test("a computer brain that keeps doing real work between promises gets both continues, never the ask nudge", async () => {

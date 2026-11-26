@@ -1025,3 +1025,183 @@ test("CLI runs: each run stamped with its computer's CLI version, counted by bui
   }
   expect((await get(`/cli-runs?${windowOf(30)}`, null)).status).toBe(401);
 });
+
+test("where the time goes: each run's time by group, per day, kind, brain and model, the slowest first, and a run's waterfall", async () => {
+  const from = day(19);
+  const at = (ms: number) => new Date(from + ms);
+  const computer = [
+    { stage: "room_wait", ms: 1000, queries: 0 },
+    { stage: "claim", ms: 10, queries: 1 },
+    { stage: "context", ms: 200, queries: 4, parts: [{ stage: "build", ms: 150, queries: 2 }] },
+    {
+      stage: "model#1",
+      ms: 9000,
+      queries: 0,
+      parts: [
+        { stage: "pre_turn_sync", ms: 2000, queries: 0 },
+        { stage: "cli_init", ms: 1000, queries: 0 },
+        { stage: "cli_first_byte", ms: 3000, queries: 0 },
+        { stage: "tools", ms: 1000, queries: 0 },
+        { stage: "model_write", ms: 2000, queries: 0 },
+      ],
+    },
+    { stage: "turn_end#1", ms: 300, queries: 2 },
+    { stage: "persist", ms: 50, queries: 3 },
+  ];
+  const ended = at(60_000);
+  const asked = await run({
+    createdAt: at(0),
+    brain: "claude_code",
+    profiles: [
+      claim(computer, { endedAt: ended.toISOString(), total: { ms: 10_560, queries: 10 } }),
+      // Taken up again 5 s later: its place in the waterfall is where its end and its time put it.
+      claim([{ stage: "claim", ms: 100, queries: 1 }], {
+        endedAt: new Date(ended.getTime() + 5000).toISOString(),
+        total: { ms: 100, queries: 1 },
+      }),
+    ],
+  });
+  await t.db.insert(schema.askKinds).values({ messageId: asked.threadRootId, orgId: ada, kind: "chat", p: 0.9 });
+  await t.db.insert(schema.usageRecords).values({
+    orgId: ada,
+    agentId: ada1,
+    runId: asked.id,
+    provider: "claude_code",
+    model: "claude-sonnet-5-5",
+    requestedModel: "sonnet",
+    inputTokens: 1,
+    outputTokens: 1,
+    costNanoUsd: 0,
+  });
+  const routine = await run({
+    createdAt: at(1000),
+    brain: "model",
+    background: true,
+    profiles: [
+      claim([
+        { stage: "context", ms: 100, queries: 0 },
+        { stage: "model#1", ms: 4000, queries: 0 },
+        { stage: "tools#1", ms: 600, queries: 0 },
+        { stage: "model#2", ms: 2000, queries: 0 },
+        { stage: "persist", ms: 40, queries: 0 },
+      ]),
+    ],
+  });
+  // Another agent's message started it; a name no code writes counts at the end.
+  const handed = await run({
+    createdAt: at(2000),
+    agentId: ada2,
+    brain: "codex",
+    profiles: [claim([{ stage: "Ignore this", ms: 70, queries: 0 }])],
+  });
+  // Nothing kept, another day, and another workspace's: none of them in the read of Ada's day.
+  await run({ createdAt: at(3000) });
+  await run({ createdAt: at(DAY), brain: "codex", profiles: [claim(stages(5))] });
+  await run({ createdAt: at(4000), orgId: lia, agentId: lia1, brain: "codex", profiles: [claim(stages(5))] });
+
+  type Measures = {
+    runs: number;
+    total: { p50Ms: number | null };
+    groups: { group: string; runs: number; p50Ms: number | null }[];
+  };
+  const read = await ok<{
+    groups: string[];
+    totals: Measures;
+    days: (Measures & { day: string })[];
+    kinds: (Measures & { kind: string })[];
+    brains: (Measures & { brain: string })[];
+    models: (Measures & { model: string })[];
+    slowest: {
+      runId: string;
+      kind: string;
+      brain: string;
+      model: string | null;
+      totalMs: number;
+      groups: Record<string, number>;
+    }[];
+  }>(await get(`/analytics/stage-breakdown?${windowOf(19)}&orgId=${ada}`));
+  expect(read.groups).toEqual([
+    "waits",
+    "context",
+    "pre_turn_sync",
+    "cli_init",
+    "cli_first_byte",
+    "model_write",
+    "tools",
+    "finish",
+  ]);
+  expect(read.totals.runs).toBe(3);
+  const had = (m: Measures) => Object.fromEntries(m.groups.filter((g) => g.runs > 0).map((g) => [g.group, g.runs]));
+  expect(had(read.totals)).toEqual({
+    waits: 1,
+    context: 2,
+    pre_turn_sync: 1,
+    cli_init: 1,
+    cli_first_byte: 1,
+    model_write: 2,
+    tools: 2,
+    finish: 3,
+  });
+  expect(read.days.map((d) => [d.day, d.runs])).toEqual([["2026-10-19", 3]]);
+  expect(read.kinds.map((k) => [k.kind, k.runs])).toEqual([
+    ["chat", 1],
+    ["agent", 1],
+    ["background", 1],
+  ]);
+  expect(read.brains.map((b) => b.brain)).toEqual(["claude_code", "codex", "model"]);
+  expect(read.models.map((m) => [m.model, m.runs])).toEqual([
+    ["none", 2],
+    ["claude-sonnet-5-5", 1],
+  ]);
+  expect(read.slowest.map((r) => [r.runId, r.kind, r.totalMs])).toEqual([
+    [asked.id, "chat", 10_660],
+    [routine.id, "background", 6740],
+    [handed.id, "agent", 70],
+  ]);
+  expect(read.slowest[0]).toMatchObject({
+    brain: "claude_code",
+    model: "claude-sonnet-5-5",
+    groups: {
+      waits: 1000,
+      context: 310,
+      pre_turn_sync: 2000,
+      cli_init: 1000,
+      cli_first_byte: 3000,
+      model_write: 2000,
+      tools: 1000,
+      finish: 350,
+    },
+  });
+  expect(read.slowest[1]?.groups).toMatchObject({ context: 100, model_write: 6000, tools: 600, finish: 40 });
+
+  // The same run in its trace, as one timeline.
+  const traced = await ok<{ waterfall: { segments: Record<string, unknown>[]; cut: boolean } }>(
+    await get(`/runs/${asked.id}/trace`),
+  );
+  expect(traced.waterfall.cut).toBe(false);
+  expect(traced.waterfall.segments.map((s) => [s.claim, s.stage, s.turn, s.part, s.group, s.startMs, s.ms])).toEqual([
+    [0, "room_wait", null, null, "waits", 0, 1000],
+    [0, "claim", null, null, "context", 1000, 10],
+    [0, "context", null, null, "context", 1010, 200],
+    [0, "model", 1, "pre_turn_sync", "pre_turn_sync", 1210, 2000],
+    [0, "model", 1, "cli_init", "cli_init", 3210, 1000],
+    [0, "model", 1, "cli_first_byte", "cli_first_byte", 4210, 3000],
+    [0, "model", 1, "tools", "tools", 7210, 1000],
+    [0, "model", 1, "model_write", "model_write", 8210, 2000],
+    [0, "turn_end", 1, null, "finish", 10_210, 300],
+    [0, "persist", null, null, "finish", 10_510, 50],
+    [1, "claim", null, null, "context", 15_460, 100],
+  ]);
+
+  // Across workspaces, two days at most; in one, a month.
+  const start = new Date(day(19)).toISOString();
+  const past = (days: number) => new Date(day(19) + days * DAY + 1).toISOString();
+  expect(await refusal(await get(`/analytics/stage-breakdown?from=${start}&to=${past(2)}`))).toEqual([
+    400,
+    "analytics.range",
+  ]);
+  expect((await get(`/analytics/stage-breakdown?from=${start}&to=${past(30)}&orgId=${ada}`)).status).toBe(200);
+  expect((await get(`/analytics/stage-breakdown?${windowOf(19)}`, null)).status).toBe(401);
+  const fleet = await ok<{ totals: Measures }>(await get(`/analytics/stage-breakdown?${windowOf(19)}`));
+  expect(fleet.totals.runs).toBe(4);
+});
