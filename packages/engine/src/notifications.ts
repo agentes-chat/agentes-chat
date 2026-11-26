@@ -753,9 +753,17 @@ async function upsertOne(deps: NotificationDeps, input: NotifyInput, userId: str
 export async function resolveNotifications(
   deps: NotificationDeps,
   orgId: string,
-  match: { groupKey?: string; groupKeyPrefix?: string; ids?: string[]; userIds?: string[]; kind?: NotificationKind },
+  match: {
+    groupKey?: string;
+    groupKeyPrefix?: string;
+    ids?: string[];
+    userIds?: string[];
+    kind?: NotificationKind;
+    /** Rows about this conversation (`source.channelId`, and `source.threadId` when given), whatever their group. */
+    place?: { channelId: string; threadId?: string };
+  },
 ): Promise<number> {
-  if (!match.groupKey && !match.groupKeyPrefix && !match.ids?.length) return 0;
+  if (!match.groupKey && !match.groupKeyPrefix && !match.ids?.length && !match.place) return 0;
   if (match.userIds && match.userIds.length === 0) return 0;
   const rows = await deps.db
     .update(notifications)
@@ -769,6 +777,8 @@ export async function resolveNotifications(
         match.ids ? inArray(notifications.id, match.ids) : undefined,
         match.userIds ? inArray(notifications.userId, match.userIds) : undefined,
         match.kind ? eq(notifications.kind, match.kind) : undefined,
+        match.place ? sql`${notifications.source}->>'channelId' = ${match.place.channelId}` : undefined,
+        match.place?.threadId ? sql`${notifications.source}->>'threadId' = ${match.place.threadId}` : undefined,
       ),
     )
     .returning({ id: notifications.id, userId: notifications.userId });
@@ -778,6 +788,54 @@ export async function resolveNotifications(
     await publishUserEvent(deps.pubsub, orgId, r.userId, { type: "notification.removed", id: r.id });
   }
   for (const userId of users) await publishCounts(deps, orgId, userId);
+  return rows.length;
+}
+
+/** What people (or an agent on its own) said to me in a conversation, read there like in the inbox. */
+const SAID_HERE: NotificationKind[] = ["dm", "mention", "reaction"];
+
+/**
+ * Reading a conversation reads what was said to me there: a channel or DM (`threadId` unset) its DMs, mentions and
+ * reactions outside threads, a thread its replies and those inside it. Read, not done: they stay in the inbox, out of
+ * the unread count, as "Marcar como lido" leaves them. Only what landed by `at`, so a message arriving after the read
+ * stays unread. Their group keys hold a message or thread id, so the match is on `source`, not a key prefix.
+ */
+export async function readConversationNotifications(
+  deps: NotificationDeps,
+  orgId: string,
+  userId: string,
+  place: { channelId: string; threadId?: string },
+  at: Date,
+): Promise<number> {
+  const threadId = sql`${notifications.source}->>'threadId'`;
+  const rows = await deps.db
+    .update(notifications)
+    .set({ readAt: at })
+    .where(
+      and(
+        eq(notifications.orgId, orgId),
+        eq(notifications.userId, userId),
+        isNull(notifications.doneAt),
+        isNull(notifications.readAt),
+        lte(notifications.updatedAt, at),
+        sql`${notifications.source}->>'channelId' = ${place.channelId}`,
+        place.threadId
+          ? or(
+              and(inArray(notifications.kind, SAID_HERE), sql`${threadId} = ${place.threadId}`),
+              and(eq(notifications.kind, "thread_reply"), eq(notifications.groupKey, `thread:${place.threadId}`)),
+            )
+          : and(inArray(notifications.kind, SAID_HERE), sql`${threadId} is null`),
+      ),
+    )
+    .returning();
+  for (const r of rows) {
+    await publishUserEvent(deps.pubsub, orgId, userId, {
+      type: "notification.upserted",
+      notification: notificationView(r),
+      alert: false,
+    });
+  }
+  if (rows.length) await publishCounts(deps, orgId, userId);
   return rows.length;
 }
 
