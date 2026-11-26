@@ -306,6 +306,7 @@ async function boot(
       openai: { apiKey: config.PLATFORM_OPENAI_API_KEY },
       gemini: { apiKey: config.PLATFORM_GEMINI_API_KEY },
       openrouter: { apiKey: config.PLATFORM_OPENROUTER_API_KEY },
+      llmtr: { apiKey: config.PLATFORM_LLMTR_API_KEY },
     }),
     platformBlobs: platformBlobStore(config, database.db),
     // Phone app push (ADR 0035, ADR 0152, ADR 0178): only devices that registered get anything. Android straight

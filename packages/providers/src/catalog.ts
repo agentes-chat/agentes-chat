@@ -69,6 +69,13 @@ export const PROVIDERS = {
   openrouter: { label: "OpenRouter", protocol: "openrouter" },
   // Claude over Anthropic Messages, the rest over Chat Completions (`commandcode.ts`).
   commandcode: { label: "Command Code", protocol: "commandcode" },
+  // OpenAI-compatible gateway. Model IDs are vendor/model paths the user supplies;
+  // this entry does not freeze a priced catalog list.
+  llmtr: {
+    label: "LLMTR",
+    protocol: "openai",
+    baseURL: "https://llmtr.com/v1",
+  },
   // A workspace's own endpoint (ADR 0146): its address, API style and models live on its credential (`custom.ts`).
   custom: { label: "Other provider", protocol: "custom" },
 } as const satisfies Record<string, ProviderInfo>;
