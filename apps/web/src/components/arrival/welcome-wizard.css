@@ -66,9 +66,10 @@
   gap: 12px;
   padding: 24px 28px;
 }
-/* Skip's words line up with the text above them. */
+/* Skip's words line up with the text above them: a ghost's plate around them, as in a row of actions. */
 .wiz__skip.ac-btn {
-  margin-inline-start: calc(-1 * var(--control-px-md));
+  margin-inline-start: calc(-1 * var(--ghost-plate));
+  padding-inline: var(--ghost-plate);
   color: var(--muted);
 }
 .wiz__acts {
