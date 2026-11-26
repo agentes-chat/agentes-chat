@@ -128,7 +128,7 @@ import { can, getMembership, requirePermission } from "./organizations";
 import { isRightHand, personalBrain, personalModel } from "./right-hand";
 import { orgModelProvider } from "./router";
 import { readRefusal } from "./standing";
-import { paysExtraUsage, wakeAgentsBrainWaits } from "./usage-pause";
+import { paysExtraUsage, wakeAgentsBrainWaits, wakeAgentUsageWaits } from "./usage-pause";
 
 /*
  * "Quem pensa" (ADR 0032 §5): the brain an agent thinks with and its model,
@@ -1060,14 +1060,17 @@ async function setPersonalBrain(
   const from = current
     ? { brain: current.brain, model: current.brainModel, account: current.brainAccountId, effort: current.brainEffort }
     : null;
-  const audit = (to: unknown) =>
-    recordAudit(db, {
+  // Their DM's runs parked on a plan (its limit, its computer) go on with the new choice now, not at the old plan's reset.
+  const audit = async (to: unknown) => {
+    await recordAudit(db, {
       orgId,
       actor: { type: "person", id: userId },
       action: "agent.brain",
       target: { type: "agent", id: agent.id },
       details: { scope: "mine", from, to },
     });
+    await wakeAgentUsageWaits(db, orgId, agent.id, { person: userId }).catch(() => null);
+  };
   // A model or effort alone on the computer's own sign-in stays on it: that row has no account to keep.
   const onSignIn =
     input.account === undefined &&

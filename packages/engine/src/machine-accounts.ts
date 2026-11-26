@@ -102,7 +102,7 @@ import { can, requirePermission } from "./organizations";
 import { runState } from "./run-state";
 import { runnerUpdateWay } from "./runner-update";
 import { scrubSignIns } from "./tool-detail";
-import { agentsMovedOnto, usageWaitKey, wakeAgentsBrainWaits, wakeOnRoom } from "./usage-pause";
+import { agentsWaitingOn, usageWaitKey, wakeAgentsBrainWaits, wakeOnRoom } from "./usage-pause";
 
 const { machineAccounts, agents, machines, rightHandBrains, users } = schema;
 
@@ -1998,7 +1998,7 @@ export async function removeMachineAccount(
   }
   const released = await deps.db.transaction((tx) => tombstone(tx, orgId, [account.id]));
   forgetAgents(orgId, released);
-  await wakeAgentsBrainWaits(deps, orgId, [...released, ...(await agentsMovedOnto(deps.db, orgId, [account.id]))]);
+  await wakeAgentsBrainWaits(deps, orgId, [...released, ...(await agentsWaitingOn(deps.db, orgId, [account.id]))]);
   await recordAudit(deps.db, {
     orgId,
     actor: { type: "person", id: userId },
@@ -2045,15 +2045,10 @@ export async function releaseMemberAccounts(
   const out: ReleasedAccounts = { machines: [], agents: [] };
   for (const org of new Set(rows.map((r) => r.orgId))) {
     const mine = rows.filter((r) => r.orgId === org);
-    out.agents.push({
-      orgId: org,
-      agentIds: await releaseAgents(
-        db,
-        org,
-        mine.map((r) => r.id),
-        now,
-      ),
-    });
+    const ids = mine.map((r) => r.id);
+    // What waited on their plans goes on too (`agentsWaitingOn`), not only the agents that pointed at them.
+    const released = await releaseAgents(db, org, ids, now);
+    out.agents.push({ orgId: org, agentIds: [...new Set([...released, ...(await agentsWaitingOn(db, org, ids))])] });
     for (const machineId of new Set(mine.map((r) => r.machineId))) out.machines.push({ orgId: org, machineId });
   }
   return out;
