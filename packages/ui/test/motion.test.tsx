@@ -5,7 +5,7 @@ setupDom();
 
 import { act, cleanup, render } from "@testing-library/react";
 import { useRef } from "react";
-import { List, MorphRoom, useMorph } from "../src";
+import { glideHeight, List, MorphRoom, useMorph } from "../src";
 
 afterEach(() => cleanup());
 
@@ -211,6 +211,42 @@ describe("motion", () => {
       expect(await css()).toContain(".ac-morph:not([data-closing]):has(> .ac-morph__in:empty)");
     } finally {
       layout.restore();
+    }
+  });
+
+  test("a glide asked again for the same height goes on from where it was", () => {
+    const proto = HTMLElement.prototype as unknown as Record<string, unknown>;
+    const saved = { animate: proto.animate, rect: proto.getBoundingClientRect };
+    // As a browser's: cancelled, its time is unresolved, and no animation takes an unresolved time once it has one.
+    const anims: { time: number | null }[] = [];
+    proto.animate = () => {
+      const state = { time: 0 as number | null };
+      anims.push(state);
+      const anim = new EventTarget() as Animation;
+      Object.defineProperty(anim, "currentTime", {
+        get: () => state.time,
+        set: (t: number | null) => {
+          if (t === null && state.time !== null)
+            throw new TypeError("currentTime may not be changed from resolved to unresolved");
+          state.time = t;
+        },
+      });
+      anim.cancel = () => {
+        state.time = null;
+      };
+      return anim;
+    };
+    // 150 while a glide holds it, 200 on its own.
+    proto.getBoundingClientRect = () =>
+      ({ width: 320, height: anims.some((a) => a.time !== null) ? 150 : 200 }) as DOMRect;
+    try {
+      const el = document.createElement("div");
+      glideHeight(el, 100);
+      (anims[0] as { time: number }).time = 80;
+      expect(() => glideHeight(el, 100)).not.toThrow();
+      expect(anims.map((a) => a.time)).toEqual([null, 80]);
+    } finally {
+      Object.assign(proto, { animate: saved.animate, getBoundingClientRect: saved.rect });
     }
   });
 });
