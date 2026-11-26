@@ -3546,7 +3546,7 @@
                   "properties": {
                     "cause": {
                       "type": "string",
-                      "description": "What the provider or the runner reported: `auth_rejected`, `account_disabled`, `quota`, `billing`, `provider_transient`, `network`, `unknown`. Ignore values you don't know."
+                      "description": "What the provider or the runner reported: `auth_rejected`, `account_disabled`, `quota`, `billing`, `provider_transient`, `network`, `model_unavailable`, `empty_answer`, `unknown`. Ignore values you don't know."
                     },
                     "authMethod": {
                       "type": "string",
@@ -3596,7 +3596,7 @@
                     },
                     "cause": {
                       "type": ["string", "null"],
-                      "description": "What the provider or the runner reported: `auth_rejected`, `account_disabled`, `quota`, `billing`, `provider_transient`, `network`, `unknown`. Ignore values you don't know."
+                      "description": "What the provider or the runner reported: `auth_rejected`, `account_disabled`, `quota`, `billing`, `provider_transient`, `network`, `model_unavailable`, `empty_answer`, `unknown`. Ignore values you don't know."
                     },
                     "code": {
                       "type": ["string", "null"],
@@ -3759,7 +3759,7 @@
                 },
                 "lastFailureCause": {
                   "type": ["string", "null"],
-                  "description": "What the provider or the runner reported: `auth_rejected`, `account_disabled`, `quota`, `billing`, `provider_transient`, `network`, `unknown`. Ignore values you don't know."
+                  "description": "What the provider or the runner reported: `auth_rejected`, `account_disabled`, `quota`, `billing`, `provider_transient`, `network`, `model_unavailable`, `empty_answer`, `unknown`. Ignore values you don't know."
                 },
                 "lastFailureAt": {
                   "type": ["string", "null"]

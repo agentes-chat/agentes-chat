@@ -13,9 +13,11 @@
 // change of that file), "RATE" (the plan's windows moved:
 // `account/rateLimits/updated`), "LEAK" (quotes $FAKE_SECRET in two deltas apart), "FAST_REFUSED" (a turn with
 // `serviceTier: "fast"` fails as the provider's refusal comes back); anything else answers "pong".
-// `account/rateLimits/read` answers the 5 hours at 12% and the week at 55%. `-c windows.sandbox="<mode>" sandbox …
-// echo <MARK>` (Codex's check of a Windows sandbox) prints the mark when $FAKE_CODEX_SANDBOXES lists the mode, else
-// fails as Codex does without it; "old" refuses the check's command line, as a Codex older than the check does.
+// `account/rateLimits/read` answers the 5 hours at 12% and the week at 55%. `account/read` answers a ChatGPT Plus
+// sign-in, or as $FAKE_CODEX_ACCOUNT says: `apiKey`, `provider` (no account, none needed) or `none` (signed out).
+// `-c windows.sandbox="<mode>" sandbox … echo <MARK>` (Codex's check of a Windows sandbox) prints the mark when
+// $FAKE_CODEX_SANDBOXES lists the mode, else fails as Codex does without it; "old" refuses the check's command line,
+// as a Codex older than the check does.
 import { appendFileSync } from "node:fs";
 import { createInterface } from "node:readline";
 
@@ -165,6 +167,13 @@ function appServer() {
             secondary: { usedPercent: 55, windowDurationMins: 10080, resetsAt: 1900500000 },
           },
         });
+      case "account/read": {
+        const kind = process.env.FAKE_CODEX_ACCOUNT ?? "chatgpt";
+        if (kind === "apiKey") return ok({ account: { type: "apiKey" }, requiresOpenaiAuth: true });
+        if (kind === "provider") return ok({ account: null, requiresOpenaiAuth: false });
+        if (kind === "none") return ok({ account: null, requiresOpenaiAuth: true });
+        return ok({ account: { type: "chatgpt", email: null, planType: "plus" }, requiresOpenaiAuth: true });
+      }
       case "thread/start":
         total.input = 0;
         total.cached = 0;
