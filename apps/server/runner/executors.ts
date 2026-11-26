@@ -752,8 +752,15 @@ async function detectVersion(run: Run, name: "claude" | "codex"): Promise<Probe>
   return auth ? { entry: { version, ...auth } } : { entry: { version }, unsure: true };
 }
 
-/** The CLIs whose installers put them in the home's `~/.local/bin`, by their command. */
-const HOME_INSTALLED = { cursor: CURSOR_BIN, grok: GROK_BIN, antigravity: AGY_BIN } as const;
+/** Each CLI by its command: any of them may be in the home's own install folders (`~/.local/bin`…) only. */
+const HOME_INSTALLED = {
+  claude: "claude",
+  codex: "codex",
+  cursor: CURSOR_BIN,
+  opencode: OPENCODE_BIN,
+  grok: GROK_BIN,
+  antigravity: AGY_BIN,
+} as const;
 
 /** `bin` in the install folders under `home` (`~/.local/bin`…), which other users can't reach; null: none there. */
 export function inHomeDirs(bin: string, home = homedir(), isExe: (file: string) => boolean = isExecutable) {
@@ -854,6 +861,8 @@ export function cachedExecutors(
     homeOnly?: (bin: string) => boolean;
     /** How the computer's own Codex is signed in (`readCodexAccount`); left out, only its version. */
     codexSignIn?: CodexSignInProbe;
+    /** System mode: each look as the agents reach it (`agentsReach`), never what root alone can start. */
+    reach?: (found: Executors) => Promise<Executors>;
   } = {},
 ): ExecutorsCache {
   const now = opts.now ?? Date.now;
@@ -872,6 +881,7 @@ export function cachedExecutors(
       .then(() =>
         detectExecutors(opts.run, value, strikes, opts.gitMissing, undefined, opts.homeOnly, opts.codexSignIn),
       )
+      .then(async (look) => (opts.reach ? { ...look, found: await opts.reach(look.found) } : look))
       .then(({ found, unsure }) => {
         at = now();
         retry = unsure ? Math.min(retry ? retry * 2 : EXECUTORS_RETRY_MS, EXECUTORS_TTL_MS) : 0;

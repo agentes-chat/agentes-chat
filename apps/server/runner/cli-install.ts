@@ -118,6 +118,11 @@ export interface CliInstallerOptions {
   platform?: NodeJS.Platform;
   uid?: number;
   env?: NodeJS.ProcessEnv;
+  /**
+   * System mode: the install is the runner's pinned build where every agent's user runs it (`CliCopies.ensure`), never
+   * the vendor's installer as root, which installs for root alone. Rejects in words for the person.
+   */
+  fetch?: (tool: InstallableCli) => Promise<void>;
   /** Tests: the installer to run in place of the vendor's. */
   installer?: typeof cliInstaller;
   gitBash?: () => string | null;
@@ -144,6 +149,7 @@ export class CliInstaller {
 
   start(tool: InstallableCli): CliInstall {
     if (this.install?.state === "running") return { ...this.install };
+    if (this.opts.fetch) return this.fetched(tool, this.opts.fetch);
     const platform = this.opts.platform ?? process.platform;
     const env = this.opts.env ?? process.env;
     const uid = this.opts.uid ?? process.getuid?.() ?? -1;
@@ -227,13 +233,35 @@ export class CliInstaller {
     return { ...this.install };
   }
 
+  private fetched(tool: InstallableCli, fetch: (tool: InstallableCli) => Promise<void>): CliInstall {
+    const ran: CliInstall = { tool, state: "running" };
+    this.install = ran;
+    this.opts.log(`cli install: ${tool} started (for the agents)`);
+    void fetch(tool)
+      .then(() => this.opts.onDone(tool))
+      .then(
+        (found): CliInstall => (found ? { tool, state: "done" } : { tool, state: "failed", cause: "still_missing" }),
+        (err: unknown): CliInstall => ({
+          tool,
+          state: "failed",
+          message: (err instanceof Error ? err.message : String(err)).slice(0, CLI_ERROR_MAX),
+        }),
+      )
+      .then((end) => {
+        if (this.install !== ran) return;
+        this.install = end;
+        this.opts.log(`cli install: ${tool} ${end.state}`);
+      });
+    return { ...ran };
+  }
+
   cancel(): CliInstall | null {
     const child = this.child;
-    if (child && this.install?.state === "running") {
-      this.install = { ...this.install, state: "canceled" };
-      this.end();
-      killTree(child, "SIGTERM");
-    }
+    if (this.install?.state !== "running") return this.state();
+    // A fetch for the agents goes on and is kept for the next ask; only its end is no longer told here.
+    this.install = { ...this.install, state: "canceled" };
+    this.end();
+    if (child) killTree(child, "SIGTERM");
     return this.state();
   }
 

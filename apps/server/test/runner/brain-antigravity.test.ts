@@ -347,6 +347,12 @@ test.skipIf(!posix)(
       command === "agy" && args[0] === "--version" ? { status: 0, stdout: "agy 1.5.14\n" } : none();
     expect((await detectExecutors(run, {}, {}, undefined, () => [], rootOnly)).found.broken).toBeUndefined();
     expect((await detectExecutors(none, {}, {}, undefined, () => [])).found.broken).toBeUndefined();
+    // Every coding CLI, by its own command: Claude Code's installer puts `claude` in root's ~/.local/bin too.
+    const rootClis = (bin: string) => bin === "claude" || bin === "opencode";
+    expect((await detectExecutors(none, {}, {}, undefined, () => [], rootClis)).found.broken).toEqual({
+      claude: CLI_HOME_ONLY,
+      opencode: CLI_HOME_ONLY,
+    });
   },
 );
 

@@ -835,15 +835,11 @@ async function routeRequest(ctx: HandlerContext, req: MachineRequest, scope: Req
     return ctx.clisCheck();
   }
   if (req.op === "cli.fetch") {
-    if (ctx.systemMode?.() || !ctx.cliFetch) return { fetch: null };
+    if (!ctx.cliFetch) return { fetch: null };
     return ctx.cliFetch(req.cli);
   }
   if (req.op === "cli.install") {
-    return (
-      (ctx.systemMode?.() ? undefined : ctx.cliInstall?.(req)) ?? {
-        install: req.tool ? { tool: req.tool, state: "unsupported" } : null,
-      }
-    );
+    return ctx.cliInstall?.(req) ?? { install: req.tool ? { tool: req.tool, state: "unsupported" } : null };
   }
   if (isPhoneOp(req)) return handlePhone(ctx, req, scope);
   // Each agent works in its own folder: that folder is its workspace.
