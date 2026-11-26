@@ -936,7 +936,8 @@ describe("Aceitar convite", () => {
     expect(state.calls.filter((c) => c.method === "orgs.acceptInvitation").map((c) => c.args)).toEqual([
       ["inv", proof],
     ]);
-    expect(router.state.location.pathname.startsWith(`/org/${ORG_ID}`)).toBe(true);
+    // Someone who may create agents there and has none of their own opens their own onboarding first (ADR 0253).
+    expect(router.state.location.pathname).toBe(`/welcome/${ORG_ID}`);
   });
 
   test("a new address whose password is the name typed: back on the name, no account", async () => {
@@ -1016,7 +1017,7 @@ describe("Aceitar convite", () => {
       { email: "rafael@acme.com.br", password: "senha-certa" },
     ]);
     expect(state.calls.filter((c) => c.method === "orgs.acceptInvitation")).toHaveLength(1);
-    expect(router.state.location.pathname.startsWith(`/org/${ORG_ID}`)).toBe(true);
+    expect(router.state.location.pathname).toBe(`/welcome/${ORG_ID}`);
   });
 
   test("a provider signs in or up and comes back here to accept; an account with no password gets only its own", async () => {
@@ -1049,13 +1050,43 @@ describe("Aceitar convite", () => {
     expect(screen().getByRole("button", { name: "Não é você? Sair" })).toBeTruthy();
     await press("Entrar na Acme", 10);
     expect(state.calls.filter((c) => c.method === "orgs.acceptInvitation").map((c) => c.args)).toEqual([["inv"]]);
-    expect(router.state.location.pathname.startsWith(`/org/${ORG_ID}`)).toBe(true);
+    expect(router.state.location.pathname).toBe(`/welcome/${ORG_ID}`);
     cleanup();
 
     const back = await openInvite(mine, { seed: { me: seedState().me }, path: "/invite/inv?join=1" });
     await settle(10);
     expect(back.state.calls.filter((c) => c.method === "orgs.acceptInvitation")).toHaveLength(1);
-    expect(back.router.state.location.pathname.startsWith(`/org/${ORG_ID}`)).toBe(true);
+    expect(back.router.state.location.pathname).toBe(`/welcome/${ORG_ID}`);
+  });
+
+  test("joined, their own onboarding only where they may create agents and have none yet, else the workspace (ADR 0253)", async () => {
+    const mine = { email: "walter@acme.com.br" };
+    // An agent of their own there already: the workspace, as before.
+    const owner = seedState();
+    for (const a of owner.agents) a.ownerUserId = "u-walter";
+    const owns = await openInvite(mine, { seed: { me: owner.me, agents: owner.agents } });
+    await press("Entrar na Acme", 10);
+    expect(owns.router.state.location.pathname.startsWith(`/org/${ORG_ID}`)).toBe(true);
+    cleanup();
+
+    // No permission to create agents: the workspace too.
+    const member = seedState().me;
+    if (member) member.organizations = [{ id: ORG_ID, name: "Acme", role: "member", permissions: ["read", "post"] }];
+    const reads = await openInvite(mine, { seed: { me: member } });
+    await press("Entrar na Acme", 10);
+    expect(reads.router.state.location.pathname.startsWith(`/org/${ORG_ID}`)).toBe(true);
+    cleanup();
+
+    // A read that fails on the way never holds the joining: the workspace.
+    const state = seedState({ me: seedState().me, previews: { inv: { ...INVITED, ...mine } } });
+    const api = createFakeApi(state);
+    api.agents.list = async () => {
+      throw new ApiError(500, "internal", "Something broke");
+    };
+    const { router } = await renderApp("/invite/inv", { api });
+    await settle(4);
+    await press("Entrar na Acme", 10);
+    expect(router.state.location.pathname.startsWith(`/org/${ORG_ID}`)).toBe(true);
   });
 
   test("signed in as someone else: whose invitation it is, and signing in as that address happens right here", async () => {
@@ -1417,47 +1448,43 @@ describe("Onboarding: the workspace's name", () => {
   const next = () => click(button("Continuar"), 8);
   const calls = (state: ReturnType<typeof seedState>, method: string) => state.calls.filter((c) => c.method === method);
 
-  test("the name, step 1 on the rail, Lodi's line on its horizon, never a guide among the presets", async () => {
+  test("the name, step 1 of its count, the right hand alone on the box, never a guide among the presets", async () => {
     await start();
     expect(screen().getByRole("heading", { name: "Como se chama o seu workspace?" })).toBeTruthy();
-    expect(screen().getByRole("navigation", { name: "Passos para começar" })).toBeTruthy();
-    expect(document.querySelector(".onb__say")?.textContent).toContain("Eu sou o Lodi.");
+    // The name, how to start and the first agent's week: no plan step where nothing bills (ADR 0162).
+    expect(document.querySelector(".onbx__eyebrow")?.textContent).toBe("Passo 1 de 3");
+    // The right hand stands on the box's edge, the one host; none of the presets.
+    expect(document.querySelectorAll(".onbw__agent")).toHaveLength(1);
+    expect(document.querySelector(".onbw__agent .ac-avatar")?.getAttribute("data-accessory")).toBe("headset");
     expect(document.body.textContent).not.toContain("Oi, eu sou a Ada");
     // A name is no misspelling.
     expect(screen().getByLabelText("Nome").getAttribute("spellcheck")).toBe("false");
     expect(button("Continuar").hasAttribute("disabled")).toBe(true);
   });
 
-  test("the step's actions: a bar always in view, its notes above it", async () => {
+  test("the step's actions: the box's footer, its notes above it in the step", async () => {
     sessionStorage.setItem("agentes.confirmation.sent", "walter@acme.com.br");
     await start();
-    const bar = document.querySelector(".onb__actions") as HTMLElement;
-    // Where the link went is the step's last line, above the bar.
+    const box = document.querySelector(".onbx") as HTMLElement;
+    const foot = box.querySelector(".ac-dialog__foot") as HTMLElement;
+    // Where the link went is the step's last line, above the footer.
     const note = screen()
       .getByText(/Mandamos um link de confirmação/)
       .closest(".onb__note") as HTMLElement;
-    expect(bar.contains(note)).toBe(false);
-    expect(note.compareDocumentPosition(bar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect([...bar.children].map((b) => b.textContent)).toEqual([expect.stringMatching(/^Continuar/)]);
-    // Right under the step, it holds the screen's bottom only while the step is taller than the screen, clear of a
-    // phone's home bar, and a field being typed in scrolls clear of it.
-    const css = readFileSync(join(import.meta.dir, "../src/pages/onboarding.css"), "utf8");
-    const rule = (selector: string, from = 0) => css.slice(css.indexOf(`${selector} {`, from)).split("}")[0] ?? "";
-    expect(rule("\n.onb__actions")).toContain("position: sticky");
-    expect(rule("\n.onb__actions")).toContain("bottom: 0");
-    expect(rule("\n.onb__body")).not.toMatch(/(^|\n)\s*margin:/);
-    expect(rule("\n.onb__actions")).toContain("margin: 0 calc(-1 * var(--onb-gutter))");
-    expect(rule("\n.onb__cols")).toContain("--onb-gutter: clamp(16px, 4vw, 32px)");
-    expect(rule("\n.onb__actions")).toContain(
-      "padding: var(--space-1) var(--onb-gutter) calc(env(safe-area-inset-bottom, 0px) + var(--space-6))",
-    );
-    expect(rule("\n.onb__actions")).toContain("background: var(--pane)");
-    // The onboarding scrolls itself, never the document (the Linux app doesn't wheel-scroll the document there).
-    const layout = readFileSync(join(import.meta.dir, "../src/layout.css"), "utf8");
-    const onb = layout.slice(layout.indexOf("\n.onb {")).split("}")[0] ?? "";
-    expect(onb).toContain("height: var(--onb-h, 100dvh)");
-    expect(onb).toContain("overflow-y: auto");
-    expect(onb).toContain("scroll-padding-bottom: 104px");
+    expect(box.querySelector(".onbx__body")?.contains(note)).toBe(true);
+    expect(foot.contains(note)).toBe(false);
+    expect(note.compareDocumentPosition(foot) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // Back on the footer's start, the step's one button on its end.
+    expect(foot.querySelector(".ac-dialog__foot-note .onbx__back")?.textContent).toBe("Voltar");
+    expect([...(foot.querySelector(".ac-dialog__foot-acts")?.children ?? [])].map((b) => b.textContent)).toEqual([
+      expect.stringMatching(/^Continuar/),
+    ]);
+    // The page grows with its step and scrolls as a document, clear of a phone's notch, never sideways.
+    const css = readFileSync(join(import.meta.dir, "../src/pages/onboarding/shell.css"), "utf8");
+    const rule = (selector: string) => css.slice(css.indexOf(`${selector} {`)).split("}")[0] ?? "";
+    expect(rule("\n.onbw")).toContain("min-height: 100dvh");
+    expect(rule("\n.onbw")).toContain("overflow-x: clip");
+    expect(rule("\n.onbw")).toContain("padding-inline: env(safe-area-inset-left, 0px) env(safe-area-inset-right, 0px)");
     expect(css).not.toContain("100vw - 100%");
   });
 
@@ -1549,42 +1576,20 @@ describe("Onboarding: the workspace's name", () => {
     }
   });
 
-  test("every step starts at one top: Back on the rail wordmark's line, clear of the desktop app's drag strip", () => {
+  test("the top bar starts under the Mac's buttons, clear of the desktop app's drag strip", () => {
     const sheet = (path: string) => readFileSync(join(import.meta.dir, "../src", path), "utf8");
-    const css = sheet("pages/onboarding.css");
+    const css = sheet("pages/onboarding/shell.css");
     const desktop = sheet("desktop.css");
     const rule = (from: string, selector: string) => from.slice(from.indexOf(`${selector} {`)).split("}")[0] ?? "";
-    const tokens = readFileSync(join(import.meta.dir, "../../../packages/ui/src/styles/tokens.css"), "utf8");
-    // A length in px, through the kit's token where the rule names one (`var(--control-h-sm)`).
-    const px = (decls: string, prop: string) => {
-      const value = decls.match(new RegExp(`\\n\\s*${prop}: ([^;\\s]+)`))?.[1] ?? "";
-      const token = value.match(/^var\((--[\w-]+)\)$/)?.[1];
-      const raw = token ? tokens.match(new RegExp(`${token}: (-?[\\d.]+)px`))?.[1] : value.match(/^(-?[\d.]+)px/)?.[1];
-      return Number(raw);
-    };
-    // No room above the step that follows what's in it, centring it or pinned as it opens.
-    const rows = css.match(/\.onb__body[^{]*::before \{[^}]*\}/g) ?? [];
-    expect(rows.filter((r) => /auto|--onb-lead/.test(r))).toEqual([]);
-    // Back's middle (the column's top padding, its top margin and half its height) on the middle of the 22px logo's
-    // lowercase letters, 16px under its top (the rail's padding), where the label reads on the wordmark's line.
-    const railTop = px(rule(sheet("layout.css"), "\n.onb__rail"), "padding");
-    const top = px(rule(css, "\n.onb__body"), "padding");
-    const back = rule(css, "\n.onb__back");
-    expect(top + px(back, "margin") + px(back, "height") / 2).toBe(railTop + 16);
-    // The first step has no Back: a row of its height and margins keeps its room. A phone keeps its first step under
-    // the step bar.
-    const row = rule(css, "@media (min-width: 761px) {\n  .onb__body:not(:has(> .onb__back))::before");
-    expect(row).toContain('content: ""');
-    expect(px(row, "height")).toBe(px(back, "height"));
-    expect(back).toContain(`margin: ${row.match(/\n\s*margin: ([^;]+);/)?.[1]}`);
-    // Under the Mac's buttons the column moves down with the rail; a window narrow enough for the step bar doesn't.
+    // The logo and the account in a bar of their own, 56px tall.
+    expect(rule(css, "\n.onbw__top")).toContain("height: 56px");
+    // Under the Mac's buttons the bar grows by the title bar's height and keeps its 56px under it.
     const mac = 'html[data-desktop="mac"]:not([data-fullscreen])';
-    expect(rule(desktop, `\n${mac} .onb__rail`)).toContain("padding-top: calc(var(--titlebar-h) + 8px)");
-    expect(rule(desktop, `@media (min-width: 761px) {\n  ${mac} .onb__body`)).toContain(
-      `padding-top: calc(var(--titlebar-h) + 8px + ${top - railTop}px)`,
-    );
+    const top = rule(desktop, `\n${mac} .onbw__top`);
+    expect(top).toContain("height: calc(56px + var(--titlebar-h))");
+    expect(top).toContain("padding-top: var(--titlebar-h)");
     // Where the window isn't dragged from the page (full screen, Windows' and Linux's own title bars), no drag strip
-    // lies over Back.
+    // lies over the bar.
     expect(
       rule(desktop, '\nhtml:is([data-fullscreen], [data-desktop="windows"], [data-desktop="linux"]) .titlebar-strip'),
     ).toContain("display: none");
@@ -1644,8 +1649,8 @@ describe("Onboarding: the workspace's name", () => {
       await settle(4);
       const note = () => document.querySelector(".onb__note")?.textContent;
       expect(note()).toBe("Mandamos um link de confirmação para walter@acme.com.br.Mandar outro link");
-      // Nothing waits for it.
-      expect(button("Continuar").hasAttribute("disabled")).toBe(true);
+      // Nothing waits for it: the question, its answer picked, goes on.
+      expect(button("Continuar").hasAttribute("disabled")).toBe(false);
       await toName();
       await type("Nome", "Acme");
       expect(button("Continuar").hasAttribute("disabled")).toBe(false);
