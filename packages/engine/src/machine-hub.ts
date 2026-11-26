@@ -5,11 +5,15 @@ import {
   type BrowserHandoffInfo,
   brainTopic,
   CLAUDE_SHARED_PROTOCOL,
+  CLI_COPIES_PROTOCOL,
+  CO_AUTHOR_CASE_PROTOCOL,
+  EGRESS_SHARE_PROTOCOL,
   type ErrorReporter,
   HEARTBEAT_MS,
   HELLO_TIMEOUT_MS,
   IPHONE_WIFI_PROTOCOL,
   KEEP_RUNNING_PROTOCOL,
+  listenResumedTopic,
   MACHINE_CLOSE,
   MAX_FRAME_BYTES,
   type MachineErrorCode,
@@ -36,11 +40,16 @@ import {
 } from "@agenteschat/adapters";
 import { and, type Database, eq, inArray, lt, schema, sql } from "@agenteschat/db";
 import type { ToolImage } from "@agenteschat/providers";
+import { CLI_PINS } from "@agenteschat/providers/cli-pins";
 import { getAgentCached } from "./agents";
 import { UUID } from "./authority";
+import { TtlCache } from "./cache";
+import { CLI_OF_KIND, storeCliFetch } from "./cli-fetch";
+import { noticeComputerBack, queueDownChecks } from "./computer-down";
 import { type MachinePhoneRow, publishDevicesChanged, syncMachinePhones } from "./devices";
 import { cutText } from "./format";
-import { agentCoAuthorLine } from "./git/signature";
+import { codeCommitAuthor } from "./git/person-account";
+import { agentCoAuthorLine, oldCoAuthorCase } from "./git/signature";
 import {
   applyAccessDecided,
   storedExecutors,
@@ -72,6 +81,7 @@ import { type WakeWhy, wantMachine } from "./machine-wake";
 import {
   assertNotPaused,
   authenticateMachine,
+  cleanMachineName,
   deletedAgentIds,
   getMachineById,
   inStandby,
@@ -88,7 +98,9 @@ import {
   publishMachineAgentsChanged,
   publishMachineStatus,
   publishMachineUpdated,
+  shownMoving,
   shownStandby,
+  withTaskLimit,
 } from "./machines";
 import {
   DISK_REARM_USE,
@@ -96,6 +108,7 @@ import {
   notifyComputerDiskFull,
   notifyComputerNoChrome,
 } from "./notification-producers";
+import { recordDesktopStarted } from "./operator-events";
 import { enqueue } from "./outbox";
 import { isRightHand } from "./right-hand";
 import { assertCanWork, standingRefusal } from "./standing";
@@ -187,6 +200,8 @@ export interface MachineStatus {
   access?: RunnerAccess | null;
   /** The operator put the workspace's own computer in standby (ADR 0161): asleep, it is woken when wanted. */
   standby?: boolean;
+  /** The workspace's own computer is away moving to another server (`shownMoving`). */
+  moving?: boolean;
   /** `system`: each agent works as its own OS user there (ADR 0058 §10); absent, all as the runner's user. */
   mode?: "system";
 }
@@ -304,8 +319,11 @@ export async function awakeForPerson(
 
 interface Pending {
   onOutput?: MachineCallOptions["onOutput"];
-  /** A `brain.turn`: its run and bridge token, so its frames (events, tool calls) prove it is alive. */
-  brain?: { runId: string; token: string };
+  /**
+   * A `brain.turn`: its run and bridge token, so its frames (events, tool calls) prove it is alive, and its brain, so a
+   * fetch of that brain's CLI there (`cli.fetch`, ADR 0228 §6) keeps it alive too.
+   */
+  brain?: { runId: string; token: string; kind?: string };
   /** Restarts the request's inactivity timer (brain turns). */
   touch?(): void;
   settle(frame: Extract<RunnerFrame, { type: "result" }>): void;
@@ -342,7 +360,10 @@ export interface MachineHubDeps {
   replicaId?: string;
   heartbeatMs?: number;
   helloTimeoutMs?: number;
-  /** Cross-replica callers read the `machine_rpc` row this often (the signal usually comes first). */
+  /**
+   * Cross-replica callers read the `machine_rpc` row this often for a minute after the pub/sub missed events, and a
+   * repeated `mcp.call` reads its first run's row this often. Its signal usually comes first. Tests set it.
+   */
   rpcPollMs?: number;
   /** A machine offline this long has its running tasks interrupted (default `TASK_OFFLINE_GRACE_MS`). */
   taskOfflineGraceMs?: number;
@@ -436,6 +457,7 @@ export function isNewWork(request: MachineRequest) {
     case "phone.pair.cancel":
     // Pausing or resuming the computer itself: a resume must reach a paused one.
     case "pause.set":
+    case "limits.set":
     // A person's guide asking the computer to look for a phone, or its owner picking an iPhone on its Wi-Fi.
     case "phone.look":
     case "phone.wifi":
@@ -557,6 +579,8 @@ export interface MachineBrowserHooks {
   pointer?(machineId: string, frame: Extract<RunnerFrame, { type: "browser.pointer" }>): void;
   /** The same on its desktop (ADR 0062): to whoever has that screen open. */
   desktopPointer?(machineId: string, frame: Extract<RunnerFrame, { type: "desktop.pointer" }>): void;
+  /** The computer starts the desktop for one of its streams first (`stream.starting`). */
+  streamStarting?(machineId: string, streamId: string): void;
   /** This socket's computer is asked to end a desktop (`desktop.session.stop`), named by its screen's id. */
   desktopStopped?(machineId: string, screenId: string): void;
   closed?(machineId: string): void;
@@ -564,12 +588,30 @@ export interface MachineBrowserHooks {
   connected?(machineId: string): void;
 }
 
+/** How often a cross-replica caller reads its request's row while the pub/sub delivers (its signal wakes it first). */
+export const RPC_QUIET_POLL_MS = 5_000;
+/** For how long after the pub/sub missed events (`listenResumedTopic`) callers read it every `rpcPollMs` instead. */
+const RPC_TROUBLED_MS = 60_000;
+/** `status` reads a computer's row at most this often. */
+const STATUS_ROW_MS = 2_000;
+
 export function createMachineHub(deps: MachineHubDeps) {
   const { db, pubsub } = deps;
   const replicaId = deps.replicaId ?? crypto.randomUUID();
   const heartbeatMs = deps.heartbeatMs ?? HEARTBEAT_MS;
   const helloTimeoutMs = deps.helloTimeoutMs ?? HELLO_TIMEOUT_MS;
   const rpcPollMs = deps.rpcPollMs ?? 500;
+  // While the pub/sub delivers, the reply's signal wakes a cross-replica caller: its own read of the row only backs a
+  // lost NOTIFY up, so it can wait. Once the pub/sub says events were missed, every caller reads at once, then often.
+  const rpcQuietPollMs = deps.rpcPollMs ?? RPC_QUIET_POLL_MS;
+  let rpcTroubledUntil = 0;
+  // ponytail: per process; another replica's change to a computer shows here within STATUS_ROW_MS.
+  const statusRows = new TtlCache<MachineRow | null>(STATUS_ROW_MS);
+  const rpcWaiting = new Set<() => void>();
+  pubsub.subscribe(listenResumedTopic, () => {
+    rpcTroubledUntil = Date.now() + RPC_TROUBLED_MS;
+    for (const wake of rpcWaiting) wake();
+  });
   const taskOfflineGraceMs = deps.taskOfflineGraceMs ?? TASK_OFFLINE_GRACE_MS;
   const mcpRepeatWaitMs = deps.mcpRepeatWaitMs ?? MCP_REPEAT_WAIT_MS;
   const brainIdleMs = deps.brainIdleMs ?? BRAIN_IDLE_TIMEOUT_MS;
@@ -649,6 +691,8 @@ export function createMachineHub(deps: MachineHubDeps) {
     };
     if (serverStop) await later(taskOfflineGraceMs, true);
     await later(serverStop ? SERVER_STOP_TASK_GRACE_MS : taskOfflineGraceMs, false);
+    // Still away a while later: who configures the workspace hears it (`computer_down`).
+    await queueDownChecks(db, row.orgId, machineId, new Date(disconnect.at)).catch(() => undefined);
     return true;
   };
 
@@ -658,7 +702,7 @@ export function createMachineHub(deps: MachineHubDeps) {
     (input) => {
       const call: TaskCall = async (_machineId, request) => {
         if (conn.orgId) await assertCanWork(db, conn.orgId, input.agent.id);
-        return callLocal(conn, await outgoing(conn.orgId, request));
+        return callLocal(conn, await outgoing(conn.orgId, request, conn.protocol));
       };
       return startMachineTask({ db, pubsub, call }, input);
     };
@@ -771,6 +815,16 @@ export function createMachineHub(deps: MachineHubDeps) {
     const loginBlocked =
       frame.claudeLoginBlocked ??
       (frame.claudeLoginMethods?.includes("cli_login") ? undefined : machine.executors?.claudeLoginBlocked);
+    // Back from an outage its people were told of: they hear it, with what waited, before those runs go on.
+    await noticeComputerBack({ db, pubsub, home: deps.readyEmail?.publicUrl ?? null }, machine).catch((error) =>
+      deps.log?.warn("computer back notice failed", { machineId: machine.id, error: String(error) }),
+    );
+    const nextHostName =
+      machine.kind === "host" &&
+      frame.hostname &&
+      (!machine.name || (machine.hostname !== "" && machine.name === cleanMachineName(machine.hostname)))
+        ? cleanMachineName(frame.hostname)
+        : "";
     await db
       .update(machines)
       .set({
@@ -781,6 +835,7 @@ export function createMachineHub(deps: MachineHubDeps) {
         // Awake: whatever put it in standby is over (ADR 0161).
         standbyAt: null,
         wakeWantedAt: null,
+        ...(nextHostName && nextHostName !== machine.name ? { name: nextHostName } : {}),
         hostname: frame.hostname,
         os: frame.os,
         arch: frame.arch,
@@ -792,14 +847,17 @@ export function createMachineHub(deps: MachineHubDeps) {
         // Protocol 12: whether it can run the agent browser (ADR 0040), kept with what it found; protocol 18:
         // the same for the agents' desktops and the terminal, and whether each agent is its own OS user (ADR 0058);
         // protocol 21: whether agents can use their desktops (ADR 0062); protocol 50: which Claude sign-ins for all
-        // agents it can make (an older runner says nothing: `claudeLoginMethodsOf` reads that).
+        // agents it can make (an older runner says nothing: `claudeLoginMethodsOf` reads that); protocol 80: a Windows
+        // computer's build.
         ...(frame.executors ||
         frame.browser ||
         frame.desktop ||
         frame.terminal ||
         frame.desktopUse ||
         frame.claudeLoginMethods ||
-        frame.toolchains
+        frame.toolchains ||
+        frame.clis ||
+        frame.windowsBuild
           ? {
               executors: {
                 // A runner that hasn't looked yet leaves the CLIs out: the last ones stored stand.
@@ -810,7 +868,10 @@ export function createMachineHub(deps: MachineHubDeps) {
                 ...(frame.desktop ? { desktop: frame.desktop } : {}),
                 ...(frame.terminal ? { terminal: frame.terminal } : {}),
                 ...(frame.desktopUse ? { desktopUse: frame.desktopUse } : {}),
+                // ADR 0228 §6: what its runner fetches by itself, and where each fetch stands since it started.
+                ...(frame.clis ? { copies: frame.clis } : {}),
                 ...(system ? { mode: "system" as const } : {}),
+                ...(frame.windowsBuild ? { windowsBuild: frame.windowsBuild } : {}),
                 ...(frame.claudeLoginMethods ? { claudeLoginMethods: frame.claudeLoginMethods } : {}),
                 ...(loginBlocked ? { claudeLoginBlocked: loginBlocked } : {}),
                 ...(frame.authEgressGroup ? { authEgressGroup: true as const } : {}),
@@ -832,6 +893,7 @@ export function createMachineHub(deps: MachineHubDeps) {
         updatedAt: now,
       })
       .where(eq(machines.id, machine.id));
+    if (nextHostName) conn.name = nextHostName;
     // An older socket for this machine on another replica (the runner came back elsewhere) is dropped there.
     await pubsub
       .publish(MACHINE_CONTROL_TOPIC, {
@@ -856,13 +918,18 @@ export function createMachineHub(deps: MachineHubDeps) {
     send(conn, {
       type: "welcome",
       machineId: machine.id,
-      name: machine.name,
+      name: nextHostName || machine.name,
       heartbeatMs,
       mcpOnce: true,
       observeEgress: machine.kind === "managed",
+      ...(machine.kind === "managed" && frame.protocol >= EGRESS_SHARE_PROTOCOL ? { egressRelay: true } : {}),
     });
     // Pings start with `welcome` (the runner's watchdog starts there), not after the slower work below.
     startPings(conn);
+    // The pin list its runner fetches the coding CLIs by (ADR 0228 §6): this server's, so a new pin needs no new runner.
+    if (conn.protocol >= CLI_COPIES_PROTOCOL) {
+      send(conn, { type: "clis.pins", pins: CLI_PINS as unknown as Record<string, unknown> });
+    }
     // The workspace's own computer (ADR 0056 §10): ready on its first hello, with its agents, before they are listed.
     const readyEmail = deps.readyEmail ? { ...deps.readyEmail, machines: hub } : null;
     await onManagedMachineHello({ db, pubsub, readyEmail }, machine).catch((error) =>
@@ -970,7 +1037,10 @@ export function createMachineHub(deps: MachineHubDeps) {
     send(conn, { type: "agents", agents, ...(deleted.length ? { deleted } : {}) });
   }
 
-  /** `runner.state` (protocol 9): paused, resumed or a new `until`; stored and told to the org. */
+  /**
+   * `runner.state` (protocol 9): paused, resumed or a new `until`; stored and told to the org. `TASK_LIMIT_PROTOCOL`:
+   * or its task limit changed (kept with its size, as `hello` said it).
+   */
   async function runnerState(conn: MachineConnection, frame: Extract<RunnerFrame, { type: "runner.state" }>) {
     const machineId = conn.machineId as string;
     const wasPaused = pauseActive(conn.pause);
@@ -982,11 +1052,13 @@ export function createMachineHub(deps: MachineHubDeps) {
         paused: conn.pause !== null,
         pausedUntil: conn.pause?.until ? new Date(conn.pause.until) : null,
         pausedByUserId: conn.pause?.by ?? null,
+        ...(frame.maxTasks ? { size: withTaskLimit(frame.maxTasks, frame.room) } : {}),
         updatedAt: new Date(),
       })
       .where(eq(machines.id, machineId))
       .returning({ orgId: machines.orgId });
     if (!row) return;
+    if (frame.maxTasks) await publishDevicesChanged(pubsub, row.orgId);
     await publishMachineUpdated(pubsub, row.orgId, machineId, {
       paused: await pauseForApps(db, row.orgId, conn.pause),
     });
@@ -1009,7 +1081,7 @@ export function createMachineHub(deps: MachineHubDeps) {
    * left it out, and on what runs the agent's programs the agent's own line its commits end with (`coAuthors`,
    * ADR 0156), unless the workspace turned it off.
    */
-  async function outgoing<R extends MachineRequest>(orgId: string | null, request: R): Promise<R> {
+  async function outgoing<R extends MachineRequest>(orgId: string | null, request: R, protocol: number): Promise<R> {
     const scope = request.agent;
     if (!scope || !orgId) return request;
     // A read that fails sends nothing: who the id is must be known before it goes out. An id that is no row's
@@ -1019,10 +1091,25 @@ export function createMachineHub(deps: MachineHubDeps) {
       throw new MachineRequestError("not_allowed", RIGHT_HAND_OWN_ID_MESSAGE);
     }
     if (!agent) return request;
-    const runs = request.op === "exec" || request.op === "brain.turn" || request.op === "task.start";
+    // A warm start carries what its turn will: the runner starts a new process for a turn whose agent differs.
+    const brain = request.op === "brain.turn" || request.op === "brain.warm";
+    const runs = brain || request.op === "exec" || request.op === "task.start";
     const line = runs ? await agentCoAuthorLine(db, orgId, agent).catch(() => null) : null;
-    if (scope.name && !line) return request;
-    return { ...request, agent: { ...scope, name: scope.name || agent.name, ...(line ? { coAuthors: [line] } : {}) } };
+    // A code session's turn is authored as the person who asked, by the GitHub account they connected as their own
+    // (ADR 0215 §13); its commands carry theirs already (`withMachineSandbox`).
+    const author =
+      scope.author ??
+      (brain && request.runId ? await codeCommitAuthor(db, orgId, request.runId).catch(() => null) : null);
+    if (scope.name && !line && !author) return request;
+    return {
+      ...request,
+      agent: {
+        ...scope,
+        name: scope.name || agent.name,
+        ...(line ? { coAuthors: [protocol < CO_AUTHOR_CASE_PROTOCOL ? oldCoAuthorCase(line) : line] } : {}),
+        ...(author ? { author } : {}),
+      },
+    };
   }
 
   /** Bridge calls of work already on the machine stop with its workspace (`standing.ts`). */
@@ -1218,7 +1305,7 @@ export function createMachineHub(deps: MachineHubDeps) {
       const id = crypto.randomUUID();
       const timeoutMs = options.timeoutMs ?? requestTimeoutMs(request);
       const turn = request.op === "brain.turn" ? (request as Extract<MachineRequest, { op: "brain.turn" }>) : null;
-      const brain = turn ? { runId: turn.runId, token: turn.mcp.token } : undefined;
+      const brain = turn ? { runId: turn.runId, token: turn.mcp.token, kind: turn.kind } : undefined;
       let idle: ReturnType<typeof setTimeout> | undefined;
       const cleanup = () => {
         clearTimeout(timer);
@@ -1373,13 +1460,16 @@ export function createMachineHub(deps: MachineHubDeps) {
           throw new MachineRequestError("timeout", `the computer ${machine.name} did not answer in time`);
         }
         await new Promise<void>((resolve) => {
-          const timer = setTimeout(done, Math.min(rpcPollMs, Math.max(0, deadline - Date.now())));
+          const pollMs = Date.now() < rpcTroubledUntil ? rpcPollMs : rpcQuietPollMs;
+          const timer = setTimeout(done, Math.min(pollMs, rpcLivenessMs, Math.max(0, deadline - Date.now())));
           function done() {
             clearTimeout(timer);
             wake = null;
+            rpcWaiting.delete(done);
             resolve();
           }
           wake = done;
+          rpcWaiting.add(done);
         });
       }
     } finally {
@@ -1472,6 +1562,8 @@ export function createMachineHub(deps: MachineHubDeps) {
     conn.pending.clear();
     if (conn.machineId && local.get(conn.machineId) === conn) {
       local.delete(conn.machineId);
+      // Its kept row says this replica holds it: a runner back on another replica a moment later reads as offline.
+      statusRows.delete(conn.machineId);
       browserHooks.closed?.(conn.machineId);
       const how = serverStop ? { code: 1001, reason: "server stopping" } : (close ?? { code: 1005, reason: "" });
       await markOffline(conn, serverStop, how).catch(() => undefined);
@@ -1488,6 +1580,7 @@ export function createMachineHub(deps: MachineHubDeps) {
     }),
     pubsub.subscribe(MACHINE_CONTROL_TOPIC, (event) => {
       if (event.type === "machine.connected" && typeof event.machineId === "string") {
+        statusRows.delete(event.machineId);
         if (event.replicaId === replicaId) return;
         const conn = local.get(event.machineId);
         if (!conn || conn.connectionId === event.connectionId) return;
@@ -1584,7 +1677,13 @@ export function createMachineHub(deps: MachineHubDeps) {
       else if (frame.type === "browser.stream.ended") browserHooks.streamEnded?.(conn.machineId, frame);
       else if (frame.type === "browser.pointer") browserHooks.pointer?.(conn.machineId, frame);
       else if (frame.type === "desktop.pointer") browserHooks.desktopPointer?.(conn.machineId, frame);
-      else if (frame.type === "pong") await touch(conn, frame);
+      else if (frame.type === "stream.starting") browserHooks.streamStarting?.(conn.machineId, frame.streamId);
+      else if (frame.type === "desktop.started") {
+        const { type: _, ...start } = frame;
+        await recordDesktopStarted(db, { orgId: conn.orgId, machineId: conn.machineId, ...start }).catch(
+          () => undefined,
+        );
+      } else if (frame.type === "pong") await touch(conn, frame);
       else if (frame.type === "task.event") {
         await applyTaskEvent({ db, pubsub }, conn.machineId, frame).catch(() => undefined);
       } else if (frame.type === "mcp.call") {
@@ -1643,6 +1742,21 @@ export function createMachineHub(deps: MachineHubDeps) {
               ),
           );
         }
+      } else if (frame.type === "cli.fetch") {
+        // The turns waiting for this CLI there are alive while it comes (their runner holds them until it is ready).
+        // Git for Windows is Claude Code's shell there: its fetch holds Claude Code's turns (ADR 0228 §6).
+        const runIds: string[] = [];
+        for (const p of conn.pending.values()) {
+          const brain = p.brain;
+          const waits = brain?.kind ? CLI_OF_KIND[brain.kind] : undefined;
+          if (brain && waits && (waits === frame.cli || (frame.cli === "git" && waits === "claude"))) {
+            p.touch?.();
+            runIds.push(brain.runId);
+          }
+        }
+        await storeCliFetch({ db, pubsub }, conn.machineId as string, frame.cli, frame.fetch, runIds).catch((error) =>
+          deps.log?.warn("cli.fetch failed", { machineId: conn.machineId, cli: frame.cli, error: String(error) }),
+        );
       } else if (frame.type === "toolchains.changed") {
         await storeMachineToolchains({ db, pubsub }, conn.machineId, frame.toolchains).catch((error) =>
           deps.log?.warn("toolchains.changed failed", { machineId: conn.machineId, error: String(error) }),
@@ -1694,7 +1808,7 @@ export function createMachineHub(deps: MachineHubDeps) {
             if (row) await assertNotPaused(db, row);
           }
         }
-        return callLocal(conn, await outgoing(conn.orgId, request), options);
+        return callLocal(conn, await outgoing(conn.orgId, request, conn.protocol), options);
       }
       const row = await getMachineById(db, machineId);
       if (!row || row.deletedAt) throw new MachineOfflineError(row?.name ?? "computer", row?.kind);
@@ -1709,13 +1823,16 @@ export function createMachineHub(deps: MachineHubDeps) {
         await assertCanWork(db, row.orgId, request.agent?.id);
         await assertNotPaused(db, row);
       }
-      const named = await outgoing(row.orgId, request);
+      const named = await outgoing(row.orgId, request, row.protocol);
       return callRemote({ ...row, connectedReplica: row.connectedReplica }, named, options);
     },
 
-    /** The machine as tools see it: online here, or online (and recently seen) on another replica. */
+    /**
+     * The machine as tools see it: online here, or online (and recently seen) on another replica. Its row is read at
+     * most every `STATUS_ROW_MS` per computer (`statusRows`): every computer tool asks, and a run's burst asks in a row.
+     */
     async status(machineId: string): Promise<MachineStatus | null> {
-      const row = await getMachineById(db, machineId);
+      const row = await statusRows.getOrLoad(machineId, () => getMachineById(db, machineId));
       if (!row || row.deletedAt) return null;
       const online = local.has(machineId) || (machineOnline(row) && row.connectedReplica !== replicaId);
       const pause = machinePause(row);
@@ -1735,6 +1852,7 @@ export function createMachineHub(deps: MachineHubDeps) {
         access: row.access ?? null,
         // Still starting after its standby ended counts too: what waits for it waits on (`shownStandby`).
         standby: inStandby(row) || shownStandby(row),
+        ...(shownMoving(row) ? { moving: true } : {}),
         ...(row.executors?.mode === "system" ? { mode: "system" as const } : {}),
       };
     },

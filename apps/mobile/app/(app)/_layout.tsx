@@ -5,11 +5,14 @@ import type { ErrorBoundaryProps } from "expo-router";
 import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
+import { usePlanTurnedOn } from "@/features/billing/PaidMoment";
 import { NoticeIsland } from "@/features/island/NoticeIsland";
 import { noteWorkspaceOnScreen } from "@/features/links/on-screen";
+import { LiveActivityWork } from "@/features/live-activity/LiveActivityWork";
 import { ShareInbox } from "@/features/share/ShareInbox";
 import { useConnection, useRememberAgentLooks } from "@/features/shared/hooks";
 import { useAppIconBadge } from "@/features/shared/queries";
+import { ReconnectPill } from "@/features/shared/ReconnectPill";
 import { ScreenError } from "@/features/shared/ScreenError";
 import { useUserEvents } from "@/features/shared/userEvents";
 import { useVaultEvents } from "@/features/vault/live";
@@ -42,8 +45,12 @@ export default function AppLayout() {
     <>
       <AppSheets />
       <AppWork />
+      {/* The agents at work in the iPhone's Dynamic Island and on its Lock Screen (ADR 0210). */}
+      <LiveActivityWork />
       {/* What reaches me while the app is open, out of the camera's island (ADR 0071 §9). */}
       <NoticeIsland />
+      {/* The live connection down for two minutes: why, and one way out. */}
+      <ReconnectPill />
       {/* What other apps share through the system's share sheet opens "Compartilhar com…". */}
       <ShareInbox />
     </>
@@ -72,6 +79,8 @@ function AppWork() {
   // The unread and latest conversations load while the app is idle, each with what its rows wait for before it shows
   // (`prefetchConversation`: the threads' links, the agents' questions): opening one is instant.
   usePrefetchRecent(orgId, RECENT_PREFETCH, { whole: true });
+  // The moment a plan turned on since this phone last looked (ADR 0079): the web's, after paying.
+  usePlanTurnedOn();
   // What I sent while the connection was down goes out once it's back, whatever screen is open.
   const { t, i18n } = useTranslation();
   const toast = useToast();
@@ -89,7 +98,6 @@ function AppSheets() {
       full: sheet([1]),
       newMessage: sheet([0.66, 1]),
       shareTo: sheet([0.72, 1]),
-      approval: sheet([0.64, 1]),
       switchComputer: sheet([0.8, 1]),
       computerSetup: sheet([0.7, 1]),
       workspaces: sheet([0.76, 1]),
@@ -108,8 +116,6 @@ function AppSheets() {
       {/* "New" over the tabs as the system's new message: two thirds at rest, the whole screen once typing. */}
       <Sheet.Screen name="new" options={o.newMessage} />
       <Sheet.Screen name="share-to" options={o.shareTo} />
-      {/* A request reads as grouped facts (its white groups on the sheet's gray), as the system's own sheets do. */}
-      <Sheet.Screen name="approval/[id]" options={o.approval} />
       <Sheet.Screen name="switch-computer/[machineId]" options={o.switchComputer} />
       <Sheet.Screen name="computer-setup" options={o.computerSetup} />
       {/* The workspaces as a sheet, from a long press on the workspace's mark in the bar (ADR 0154). */}
@@ -117,6 +123,7 @@ function AppSheets() {
       {/* Another workspace (ADR 0154): a short sheet fitted to its rows. */}
       <Sheet.Screen name="me/add-workspace" options={auto} />
       <Sheet.Screen name="push-ask" options={auto} />
+      <Sheet.Screen name="paid-moment" options={auto} />
       <Sheet.Screen name="wiki-new" options={o.wikiNew} />
       <Sheet.Screen name="new-channel" options={o.newChannel} />
       <Sheet.Screen name="new-chat" options={full} />

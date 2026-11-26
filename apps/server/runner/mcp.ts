@@ -11,6 +11,7 @@ import {
   ASK_IN_CHAT,
   type CommandProfile,
   type CommandScope,
+  commandCall,
   INLINE_CODE_DENY_RULES,
   localVerdict,
   MISSION_DENY_RULES,
@@ -89,6 +90,11 @@ export interface McpTaskInfo {
    * (no ended run's token is ever sent, nothing is logged).
    */
   idle?: boolean;
+  /**
+   * The agent a brain process thinks for: between turns its list is the one this agent's last run got, so a process
+   * started before its first turn (`brain.warm`) lists the agent's tools, as its turn will, not the fixed mission ones.
+   */
+  agentId?: string;
   /**
    * A CLI with the delegated profile: Claude Code's own tools, served here (`delegated-tools.ts`). Its relay opens a
    * `session`, the only way to them; every other executor's list and calls stay as they are.
@@ -220,6 +226,24 @@ const TOOL_NAME = /^[a-zA-Z0-9_-]{1,64}$/;
 /** The pseudo tool name of a list request (in pending and resend bookkeeping). */
 const LIST = "tools/list";
 
+const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
+
+/** The arguments a listed tool's schema requires (none for an unknown tool or a schema without `required`). */
+function requiredArgs(tool: { inputSchema: unknown } | undefined): string[] {
+  const schema = tool?.inputSchema;
+  const required = isRecord(schema) ? schema.required : undefined;
+  return Array.isArray(required) ? required.filter((r): r is string => typeof r === "string") : [];
+}
+
+/**
+ * A call that arrives with no arguments, most often a very long input (a big file write) cut off on the way: passing
+ * `{}` on would answer with a confusing "missing field" from deep inside the tool, and the agent can't tell why.
+ */
+export function noArgumentsError(tool: string, required: readonly string[]) {
+  const needs = required.length > 0 ? ` with ${required.join(", ")}` : " with its arguments";
+  return `${tool} arrived with no arguments: the input was probably cut off on the way. Nothing was done. Call it again${needs}.`;
+}
+
 /** A listed tool as the server sent it (anything else is dropped). */
 function isToolInfo(v: unknown): v is McpToolInfo {
   if (typeof v !== "object" || v === null) return false;
@@ -301,6 +325,8 @@ export class McpBridge {
   private readonly waiting = new Map<string, { frame: RunnerFrame; tool: string }>();
   /** The list each MCP process got last (by its task or process id), for the run it was for. */
   private readonly lists = new Map<string, { run: string; at: number; reply: IpcReply }>();
+  /** The list each agent's brain run got last (`McpTaskInfo.agentId`), most recent last. */
+  private readonly agentLists = new Map<string, IpcReply>();
 
   constructor(
     private readonly opts: {
@@ -460,8 +486,11 @@ export class McpBridge {
     }
     if (!info.running) {
       // A brain process between turns: its background refresh waits for the next turn, quietly.
-      if (info.idle)
+      if (info.idle) {
+        const last = req.kind === "list" && info.agentId ? this.agentLists.get(info.agentId) : undefined;
+        if (last) return last;
         return { ok: false, error: "No turn is running right now. Try again in your next turn.", idle: true };
+      }
       return { ok: false, error: "This task has ended." };
     }
     if (req.kind === "list") {
@@ -484,13 +513,19 @@ export class McpBridge {
       for (const [id, l] of this.lists) if (now - l.at >= LIST_MEMO_MS) this.lists.delete(id);
       const kept: IpcReply = { ...reply, memo: true };
       this.lists.set(taskId, { run, at: now, reply: kept });
+      if (info.agentId) {
+        this.agentLists.delete(info.agentId);
+        this.agentLists.set(info.agentId, kept);
+        if (this.agentLists.size > AGENT_LISTS_KEPT) this.agentLists.delete(this.agentLists.keys().next().value ?? "");
+      }
       return kept;
     }
     const tool = typeof req.tool === "string" ? req.tool.slice(0, 64) : "";
     // A bridge (server token): any tool the server lists; the server decides. Else the fixed mission tools.
     const known = info.serverToken ? TOOL_NAME.test(tool) : MISSION_MCP_TOOLS.some((t) => t.name === tool);
     if (!known) return { ok: false, error: `Unknown tool ${tool}` };
-    const given = req.args && typeof req.args === "object" && !Array.isArray(req.args) ? req.args : {};
+    if (!isRecord(req.args)) return { ok: false, error: noArgumentsError(tool, []) };
+    const given = req.args;
     if (JSON.stringify(given).length > MCP_ARGS_MAX_CHARS) {
       return {
         ok: false,
@@ -733,6 +768,9 @@ export type ToolCaller = (tool: string, args: Record<string, unknown>) => Promis
 /** The run's tools as the bridge knows them now (protocol 8). */
 export type ToolLister = () => Promise<readonly McpToolInfo[]>;
 
+/** Agents whose last list the daemon keeps for their brain processes between turns (`McpBridge.agentLists`). */
+const AGENT_LISTS_KEPT = 200;
+
 /** How long the MCP process trusts its list before asking again (a `tools/list` within this is answered locally). */
 export const TOOLS_CACHE_MS = 30_000;
 /** How long the daemon answers an MCP process's list for the same run by itself (`McpBridge`). */
@@ -762,6 +800,8 @@ export class McpToolCache {
   private asking: Promise<boolean> | null = null;
   /** The daemon answered the last ask by itself (between turns, or the same run's list): asking often is free. */
   local = false;
+  /** The executor was handed the fixed mission tools for want of a list: the first real one is announced. */
+  fellBack = false;
 
   constructor(
     private readonly fetch: () => Promise<IpcReply>,
@@ -776,7 +816,9 @@ export class McpToolCache {
     const now = (this.opts.now ?? Date.now)();
     if (this.list && now - this.loadedAt < (this.opts.ttlMs ?? TOOLS_CACHE_MS)) return this.list;
     await this.refresh();
-    return this.list ?? MISSION_MCP_TOOLS;
+    if (this.list) return this.list;
+    this.fellBack = true;
+    return MISSION_MCP_TOOLS;
   }
 
   /** Asks the server; true when the list differs from the one before (not on the first load). */
@@ -795,7 +837,8 @@ export class McpToolCache {
     if (idle) this.loadedAt = 0;
     if (!reply?.ok || !reply.tools) return false;
     const key = JSON.stringify(reply.tools);
-    const changed = this.list !== null && key !== this.key;
+    const changed = (this.list !== null && key !== this.key) || this.fellBack;
+    this.fellBack = false;
     this.list = reply.tools;
     this.key = key;
     this.loadedAt = (this.opts.now ?? Date.now)();
@@ -895,14 +938,24 @@ export async function handleMcpMessage(
       // kept-alive one), and the server runs any tool the agent may use, or says why not and what to call instead.
       const served = Boolean(list) && !context.local;
       if (!served && !tools.some((t) => t.name === name)) return rpcError(id, -32602, `Unknown tool: ${name}`);
-      const args =
-        typeof params.arguments === "object" && params.arguments !== null && !Array.isArray(params.arguments)
-          ? (params.arguments as Record<string, unknown>)
-          : {};
+      const args = isRecord(params.arguments) ? params.arguments : {};
       // Claude Code's permission prompt: always an answer it understands (allow or deny JSON), never an error.
       if (name === PERMISSION_TOOL) {
-        const answer = await permissionPrompt(args, call, { ...(scope ? { scope } : {}), profile, ...context });
+        const answer = await permissionPrompt(args, call, { ...(scope ? { scope } : {}), profile, ...context }).catch(
+          (err): PermissionAnswer => ({
+            behavior: "deny",
+            message: `This command couldn't be checked (${String(err).slice(0, 200)}). Run it another way, or split it into simpler steps.`,
+          }),
+        );
         return { jsonrpc: "2.0", id, result: { content: [{ type: "text", text: JSON.stringify(answer) }] } };
+      }
+      const required = requiredArgs(tools.find((t) => t.name === name));
+      if (required.length > 0 && Object.keys(args).length === 0) {
+        return {
+          jsonrpc: "2.0",
+          id,
+          result: { content: [{ type: "text", text: noArgumentsError(name, required) }], isError: true },
+        };
       }
       const reply = await call(name, args);
       return {
@@ -1000,14 +1053,16 @@ export async function permissionPrompt(
     return { behavior: "deny", message };
   }
   if (verdict?.behavior === "allow") return { behavior: "allow", updatedInput: input };
-  if (toolName === "Bash" && typeof input.command === "string") {
+  // Pushes, by any tool that runs a command (PowerShell's too).
+  const command = commandCall(toolName, input)?.command;
+  if (command !== undefined) {
     const own = opts.branches ?? [];
     const cwd = opts.scope?.cwd ?? null;
-    const held = await commandApproval(input.command, { cwd, own, how, script: true });
+    const held = await commandApproval(command, { cwd, own, how, script: true });
     if (held) return { behavior: "deny", message: held.never ? held.message : said(held.message) };
     // A push alone to its own branches, or through our git proxy (which decides someone else's branch with a
     // person's grant, so no card here asks first). An agent that always asks is asked for these too.
-    const push = lonePush(input.command);
+    const push = lonePush(command);
     const alone = opts.local || opts.asks !== "always";
     if (push && alone && (opts.local || pushesOwnBranches(push, own) || (await pushThroughProxy(push, cwd)))) {
       return { behavior: "allow", updatedInput: input };
@@ -1117,7 +1172,7 @@ export async function runMcpServer(options: {
     const often = !cache.loaded || cache.local;
     const ms = often ? (options.pollMs ?? TOOLS_POLL_MS) : (options.refreshMs ?? TOOLS_REFRESH_MS);
     refresher = setTimeout(() => {
-      if (!cache.loaded) refreshLater();
+      if (!cache.loaded && !cache.fellBack) refreshLater();
       else void cache.refresh().finally(refreshLater);
     }, ms);
     refresher.unref?.();
@@ -1140,7 +1195,11 @@ export async function runMcpServer(options: {
       .then((res) => {
         if (res) write(res);
       })
-      .catch(() => undefined)
+      // A request left unanswered keeps Claude Code waiting on it for good, its turn quiet until the stall check.
+      .catch((err) => {
+        const id = (message as { id?: unknown } | null)?.id;
+        if (typeof id === "string" || typeof id === "number") write(rpcError(id, -32603, String(err).slice(0, 200)));
+      })
       .finally(() => inflight.delete(p));
     inflight.add(p);
   }

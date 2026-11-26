@@ -10,23 +10,20 @@ import {
   useDecideApprovals,
   usePostMessage,
   useRun,
+  useRunApprovalNow,
 } from "@agenteschat/client";
 import {
   APPROVAL_REASON_MAX,
-  approvalCards,
   approvalLines,
-  approvalRuns,
+  approvalPhase,
+  approveAllByAgent,
   approveAllScope,
-  approveAlwaysAlso,
-  approveAlwaysOn,
   byAsked,
-  cardDeadline,
   type LinePlace,
-  RUNNING_FOR_MS,
-  runKeys,
+  PHASE_STATUS,
 } from "@agenteschat/client/lib/approval-card";
 import { aheadPhase, approveAlwaysOffered } from "@agenteschat/client/lib/approval-kind";
-import { approvalOriginShort, approvalWords } from "@agenteschat/client/lib/approval-origin";
+import { approvalWords } from "@agenteschat/client/lib/approval-origin";
 import {
   type ApprovalEffect,
   type ApprovalUndo,
@@ -38,12 +35,12 @@ import {
 import {
   aheadEndLine,
   approvalDoing,
-  approvalGroupWaitsFor,
+  approvalOwnerOf,
   approvalWaitsFor,
   requesterDecidesLine,
 } from "@agenteschat/client/lib/approval-words";
 import { fromServer, itemName } from "@agenteschat/client/lib/connected";
-import { daysBetween, formatTime, joinNames, nextLabel, relativeTime, timeLeft } from "@agenteschat/client/lib/format";
+import { daysBetween, formatTime, nextLabel, relativeTime, timeLeft } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { connectorName } from "@agenteschat/client/lib/scopes";
 import { formatDuration, type ToolItem, toolItemsSaved, toolPhrase, workFromSteps } from "@agenteschat/client/lib/work";
@@ -55,11 +52,9 @@ import {
   cx,
   DetailsDialog,
   Disclosure,
-  EmptyState,
   ExpiryFuse,
   type Fact,
   FactStrip,
-  GroupHeading,
   Icon,
   type IconName,
   Kbd,
@@ -67,13 +62,9 @@ import {
   Locked,
   limitShown,
   overLimit,
-  PageHeader,
-  SearchInput,
-  Segmented,
   StepTrack,
   type StepTrackStep,
   Tip,
-  Toolbar,
   WorkSweep,
 } from "@agenteschat/ui";
 import { Link } from "@tanstack/react-router";
@@ -91,7 +82,7 @@ import {
   useState,
 } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { AgentAvatar, AgentWho } from "@/components/AgentAvatar";
+import { AgentAvatar } from "@/components/AgentAvatar";
 import {
   AheadLine,
   ApproveAlways,
@@ -104,71 +95,31 @@ import {
   decisionLabel,
 } from "@/components/ApprovalItem";
 import { WhenAsksLink } from "@/components/ApprovalsLevelDialog";
-import { ApprovalsTabs } from "@/components/ApprovalsTabs";
-import { ConnectorIcon } from "@/components/ConnectorCatalog";
+import { ConnectorIcon } from "@/components/ConnectorIcon";
+import { DetailsLink } from "@/components/details-link";
 import { EmailLetter } from "@/components/EmailLetter";
-import { HelpLink } from "@/components/HelpLink";
-import { ErrorState, LoadingCards } from "@/components/Loading";
-import {
-  MissionCommandsPending,
-  MissionsWaitingList,
-  missionsWaiting,
-  pendingCommandCount,
-  useMissionsWaitingYou,
-} from "@/components/missions/MissionWaiting";
 import { useOrg } from "@/components/org-context";
 import { colorOf, prepareBurst } from "@/components/Sky";
 import { TaskStepsBlock, useCallLogo } from "@/components/ToolCalls";
 import { useDirectory } from "@/hooks/useDirectory";
 import { useReveal } from "@/hooks/useReveal";
-import { useRightHandLook } from "@/hooks/useRightHandLook";
 import { useTextLimit } from "@/hooks/useTextLimit";
 import { TYPED_VALUES } from "@/i18n";
 import { inlineWords, Markdown } from "@/lib/markdown";
-import { useOpenParam } from "@/lib/open-param";
 import { useToast } from "@/lib/toast";
 import "./approvals.css";
 
-type Filter = "pending" | "approved" | "refused" | "expired" | "all";
-const FILTERS: Filter[] = ["pending", "approved", "refused", "expired", "all"];
 const TTL_MS = 24 * 3_600_000;
 const URGENT_MS = 3_600_000;
-
-/**
- * Where an approval goes on this screen. `queued`: approved, its turn not come yet (a request the agent asked before
- * it on its card still waits or runs); `notRun`: approved, but one asked before it was refused or expired after that.
- */
-export type ApprovalPhase =
-  | "waiting"
-  | "queued"
-  | "running"
-  | "scheduled"
-  | "done"
-  | "failed"
-  | "notRun"
-  | "refused"
-  | "expired"
-  | "canceled";
-
-/** `place`: where it stands on its card (`approvalLine`); without it, an approved one runs from its decision. */
-export function approvalPhase(a: Approval, now = Date.now(), place?: LinePlace): ApprovalPhase {
-  if (a.status === "pending") return "waiting";
-  if (a.status === "approved") {
-    if (a.result?.notRunAfter) return "notRun";
-    if (a.result) return a.result.ok ? "done" : "failed";
-    if (a.executedAt) return "done";
-    // Approved ahead: it waits for its time, when its routine's run does it.
-    if (aheadPhase(a) === "scheduled") return "scheduled";
-    if (place?.waitsOn) return "queued";
-    const since = place?.freeSince ?? a.decidedAt;
-    return now - (since ? new Date(since).getTime() : 0) < RUNNING_FOR_MS ? "running" : "done";
-  }
-  return a.status;
-}
 
 /** Each request's place on its card (`approvalLine`), for the rows and the review under them. */
 const LinesContext = createContext<ReadonlyMap<string, LinePlace>>(new Map());
 const useLinePlace = (a: Approval) => useContext(LinesContext).get(a.id);
+/** Where each of `list`'s requests stands (`approvalLines`), for the rows and reviews under it. */
+export function ApprovalLinesProvider({ list, children }: { list: readonly Approval[]; children: ReactNode }) {
+  const lines = useMemo(() => approvalLines([...list]), [list]);
+  return <LinesContext.Provider value={lines}>{children}</LinesContext.Provider>;
+}
 /** A request with its place on its card ("Criar issue (1 de 2)"): two requests of one kind tell apart by it. */
 const titleOnCard = (t: TFunction, b: Approval, place: Pick<LinePlace, "position" | "count"> | undefined) =>
   place && place.count > 1
@@ -176,29 +127,12 @@ const titleOnCard = (t: TFunction, b: Approval, place: Pick<LinePlace, "position
     : approvalTitle(t, b);
 const usePhase = (a: Approval) => approvalPhase(a, Date.now(), useLinePlace(a));
 
-const bucketOf = (p: ApprovalPhase): Exclude<Filter, "all"> =>
-  p === "waiting" || p === "queued" || p === "running"
-    ? "pending"
-    : p === "done" || p === "failed" || p === "scheduled" || p === "notRun"
-      ? "approved"
-      : p === "refused"
-        ? "refused"
-        : "expired";
-
 /** In the order the agents asked (each card's requests together at its first, `approvalCards`). */
 export function sortOpen(list: Approval[]) {
   return [...list].sort(byAsked);
 }
 
 const decidedAt = (a: Approval) => a.decidedAt ?? (a.status === "expired" ? a.expiresAt : a.createdAt);
-
-/** The top-level scalar values of the action (what the card shows; the details show them all). */
-function scalars(params: Record<string, unknown>) {
-  return Object.entries(params ?? {}).filter(
-    (e): e is [string, string | number | boolean] =>
-      typeof e[1] === "string" || typeof e[1] === "number" || typeof e[1] === "boolean",
-  );
-}
 
 /** A GitHub PR the action points at, when its values say so. */
 function prLink(a: Approval) {
@@ -210,389 +144,6 @@ function prLink(a: Approval) {
   if (!repo || (typeof pr !== "number" && typeof pr !== "string")) return null;
   const full = owner && !repo.includes("/") ? `${owner}/${repo}` : repo;
   return /^[\w.-]+\/[\w.-]+$/.test(full) && /^\d+$/.test(String(pr)) ? `https://github.com/${full}/pull/${pr}` : null;
-}
-
-/**
- * Aprovações: who waits on you, each request with its
- * exact action, then the history. Under the requests, the missions' command
- * cards and the decisions and reviews waiting on you in missions (ADR 0029).
- * The requests are a list; the open one (`?open=<id>`, else the first) reads beside it (`ReviewHead`, `ReviewBody`,
- * `DecisionBar`), the same review the details dialog shows on other pages.
- */
-export function ApprovalsPage() {
-  const { t } = useTranslation();
-  const { org } = useOrg();
-  const approvals = useApprovals(org.id);
-  const dir = useDirectory(org.id);
-  const channels = useChannels(org.id);
-  const [filter, setFilter] = useState<Filter>("pending");
-  const [q, setQ] = useState("");
-  const [openId, setOpenId] = useOpenParam();
-  const [refusing, setRefusing] = useState<string | null>(null);
-  // Unfolded runs, by card and `runKeys`: here, not in the run's card, which remounts when its card regroups.
-  const [openRuns, setOpenRuns] = useState<ReadonlySet<string>>(new Set());
-  const all = useMemo(() => approvals.data ?? [], [approvals.data]);
-  const lines = useMemo(() => approvalLines(all), [all]);
-  const phaseOf = (a: Approval) => approvalPhase(a, Date.now(), lines.get(a.id));
-  const channelName = (id: string) => channels.data?.find((c) => c.id === id)?.name ?? "";
-  const query = q.trim().toLowerCase();
-  const look = useRightHandLook();
-  const matches = (a: Approval) =>
-    !query ||
-    [
-      approvalTitle(t, a),
-      dir.agentById.get(a.agentId)?.name ?? "",
-      channelName(a.channelId),
-      ...scalars(a.params).map(([, v]) => String(v)),
-    ]
-      .join(" ")
-      .toLowerCase()
-      .includes(query);
-  const open = sortOpen(all.filter((a) => bucketOf(phaseOf(a)) === "pending"));
-  const decided = all
-    .filter((a) => bucketOf(phaseOf(a)) !== "pending")
-    .sort((a, b) => decidedAt(b).localeCompare(decidedAt(a)));
-  const waiting = open.filter((a) => a.status === "pending");
-  const mine = waiting.filter((a) => a.canDecide);
-  // The list goes in the order asked; the header's warning is about the one closest to its deadline.
-  const urgent = mine.reduce<Approval | undefined>((u, a) => (!u || a.expiresAt < u.expiresAt ? a : u), undefined);
-  const urgentLeft = urgent && new Date(urgent.expiresAt).getTime() - Date.now();
-  const shownOpen = filter === "pending" || filter === "all" ? open.filter(matches) : [];
-  const shownDecided = decided.filter(
-    (a) => matches(a) && (filter === "all" || filter === "pending" || bucketOf(phaseOf(a)) === filter),
-  );
-  // The rows in the order shown (each card's requests together): what J/K walk, and the first opens beside the list.
-  const shownCards = approvalCards(shownOpen);
-  const order = [...shownCards.flat(), ...(filter === "pending" ? shownDecided.slice(0, 3) : shownDecided)].map(
-    (a) => a.id,
-  );
-  const selectedId = openId && order.includes(openId) ? openId : (order[0] ?? null);
-  const selected = all.find((a) => a.id === selectedId) ?? null;
-  const cardOf = new Map(shownCards.flatMap((items) => items.map((a) => [a.id, items] as const)));
-  // A newly opened request starts at its top, not where the last one was scrolled to: in its own column on a wide
-  // window, in the page under the list on a narrow one.
-  useEffect(() => {
-    if (!selectedId) return;
-    const pane = document.querySelector<HTMLElement>(".ap-review");
-    if (!pane) return;
-    pane.scrollTop = 0;
-    if (pane.getBoundingClientRect().top < 0) pane.scrollIntoView?.({ block: "start" });
-  }, [selectedId]);
-  const selectedCard = selected ? cardOf.get(selected.id) : undefined;
-  const select = (id: string) => {
-    if (id !== selectedId) setRefusing(null);
-    setOpenId(id);
-  };
-  // Decided while open: the next request waiting on you, in the order shown, opens in its place.
-  const decidedHere = useRef<{ id: string; status: Approval["status"] } | null>(null);
-  const nextUp = (() => {
-    const at = selectedId ? order.indexOf(selectedId) : -1;
-    const ids = [...order.slice(at + 1), ...order.slice(0, Math.max(at, 0))];
-    return ids.find((id) => mine.some((a) => a.id === id));
-  })();
-  useEffect(() => {
-    const before = decidedHere.current;
-    decidedHere.current = selected ? { id: selected.id, status: selected.status } : null;
-    if (!selected || before?.id !== selected.id || before.status !== "pending" || selected.status === "pending") return;
-    if (nextUp) {
-      setRefusing(null);
-      setOpenId(nextUp);
-    }
-  }, [selected, nextUp, setOpenId]);
-  // Missions you own or decide in: the executor's commands and what waits on you (decisions, reviews).
-  const { missions } = useMissionsWaitingYou();
-  const commands = pendingCommandCount(missions);
-  const missionWaiting = missionsWaiting(missions).length > 0;
-  const missionsBelow = filter === "pending" && (commands > 0 || missionWaiting);
-  const waitingYou = mine.length + commands;
-
-  // J/K (and ↑/↓ inside the list) walk the requests, A approves the open one (high risk: focuses the hold), R
-  // refuses it, / searches, Escape backs out of refusing. A dialog over the page keeps its own keys.
-  useEffect(() => {
-    const onKey = (e: globalThis.KeyboardEvent) => {
-      const el = e.target instanceof Element ? e.target : null;
-      if (el?.closest("input, textarea, [contenteditable], [role=menu], [role=listbox], [role=dialog]")) return;
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      const key = e.key.toLowerCase();
-      const inList = Boolean(el?.closest(".ap-list"));
-      const down = key === "j" || (inList && e.key === "ArrowDown");
-      const up = key === "k" || (inList && e.key === "ArrowUp");
-      const step = down ? 1 : up ? -1 : 0;
-      if (e.key === "Escape") {
-        if (refusing) setRefusing(null);
-      } else if (e.key === "/") {
-        e.preventDefault();
-        document.querySelector<HTMLInputElement>(".ap-tools__search input")?.focus();
-      } else if (step !== 0) {
-        e.preventDefault();
-        const i = selectedId ? order.indexOf(selectedId) : -1;
-        const next = order[Math.max(0, Math.min(order.length - 1, i + step))];
-        if (next && next !== selectedId) {
-          setRefusing(null);
-          setOpenId(next);
-          document.querySelector<HTMLElement>(`.ap-li[data-id="${next}"]`)?.focus();
-        }
-      } else if ((key === "a" || key === "r") && selected) {
-        if (selected.status !== "pending" || !selected.canDecide) return;
-        e.preventDefault();
-        if (key === "r") setRefusing(selected.id);
-        else document.querySelector<HTMLElement>(`[data-approve="${selected.id}"]`)?.focus();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [order, selected, selectedId, refusing, setOpenId]);
-
-  const countOf = (f: Filter) =>
-    f === "all" ? all.length : all.filter((a) => bucketOf(phaseOf(a)) === f).length + (f === "pending" ? commands : 0);
-  const waiters = [...new Set(mine.map((a) => a.agentId))];
-
-  return (
-    <LinesContext.Provider value={lines}>
-      <div className="page page--list ap">
-        <div className="ap__main">
-          <PageHeader
-            title={t("approvals.title")}
-            meta={
-              waitingYou > 0 ? (
-                <>
-                  {t("approvals.summary", { count: waitingYou })}
-                  {urgentLeft && urgentLeft <= 2 * URGENT_MS
-                    ? ` · ${t("approvals.urgent", { time: timeLeft(t, urgent.expiresAt) ?? "" })}`
-                    : ""}
-                </>
-              ) : (
-                t("approvals.nothing")
-              )
-            }
-          />
-          <ApprovalsTabs value="requests" />
-          <Toolbar
-            label={t("approvals.filters")}
-            search={
-              <SearchInput
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder={t("approvals.search")}
-                aria-label={t("approvals.search")}
-                className="ap-tools__search"
-              />
-            }
-          >
-            <Segmented
-              label={t("approvals.filters")}
-              value={filter}
-              onValueChange={setFilter}
-              options={FILTERS.map((f) => ({ value: f, label: t(`approvals.filter.${f}`), count: countOf(f) }))}
-            />
-          </Toolbar>
-
-          {filter === "pending" && waiters.length > 1 && (
-            <div className="ap-waiters">
-              <span className="ap-waiters__faces">
-                {waiters.map((id) => (
-                  <AgentAvatar
-                    key={id}
-                    agentId={id}
-                    name={dir.agentById.get(id)?.name ?? ""}
-                    size="sm"
-                    state="waiting"
-                  />
-                ))}
-              </span>
-              <span className="ap-waiters__text">
-                <Trans
-                  i18nKey="approvals.waiters"
-                  count={waiters.length}
-                  values={{
-                    names: joinNames(
-                      waiters.map((id) => dir.agentById.get(id)?.name ?? ""),
-                      t,
-                    ),
-                  }}
-                  components={{ b: <b /> }}
-                  {...TYPED_VALUES}
-                />
-              </span>
-            </div>
-          )}
-
-          {approvals.isLoading && <LoadingCards count={2} />}
-          {approvals.isError && !approvals.data && (
-            <ErrorState error={approvals.error} onRetry={() => void approvals.refetch()} />
-          )}
-          {approvals.isSuccess &&
-            filter === "pending" &&
-            shownOpen.length === 0 &&
-            !query &&
-            commands === 0 &&
-            !missionWaiting &&
-            shownDecided.length === 0 && (
-              <EmptyState size="page" agent={look} mood="deal" title={t("approvals.emptyTitle")}>
-                <HelpLink slug="approvals">{t("approvals.how")}</HelpLink>
-              </EmptyState>
-            )}
-          {approvals.isSuccess && query && shownOpen.length === 0 && shownDecided.length === 0 && (
-            <EmptyState size="panel" actions={<Button onClick={() => setQ("")}>{t("filters.clearSearch")}</Button>}>
-              {t("approvals.noResults")}
-            </EmptyState>
-          )}
-
-          {(shownOpen.length > 0 || shownDecided.length > 0) && (
-            // A split ends its page (over-pages.css): with the missions listed under it, the page scrolls as one.
-            <div className={cx("ap-split", !missionsBelow && "page-split")}>
-              <nav
-                className="ap-list"
-                data-scroll-restoration-id="approvals-list"
-                aria-label={t("approvals.review.list")}
-              >
-                {shownOpen.length > 0 &&
-                  shownCards.map((items) => {
-                    const always = approveAlwaysOn(items);
-                    const row = (a: Approval) => (
-                      <ReqRow key={a.id} approval={a} selected={selectedId === a.id} onOpen={() => select(a.id)} />
-                    );
-                    // Waiting requests of one kind in a row: one row that unfolds into them.
-                    // Keyed by `runKeys`: an unfolded run stays open while its requests are decided one by one.
-                    const runs = approvalRuns(items);
-                    const keys = runKeys(runs).map((key) => `${items[0]?.messageId ?? ""}:${key}`);
-                    const rows = runs.map((run, i) =>
-                      run.length > 1 && run[0] ? (
-                        <RunRow
-                          key={keys[i]}
-                          open={openRuns.has(keys[i] ?? "")}
-                          onToggle={() =>
-                            setOpenRuns((o) => {
-                              const next = new Set(o);
-                              if (!next.delete(keys[i] ?? "")) next.add(keys[i] ?? "");
-                              return next;
-                            })
-                          }
-                          run={run}
-                          items={items}
-                          always={always}
-                          agent={dir.agentById.get(run[0].agentId)}
-                        >
-                          {run.map(row)}
-                        </RunRow>
-                      ) : (
-                        run[0] && row(run[0])
-                      ),
-                    );
-                    const first = items[0];
-                    if (!first || runs.length < 2) return rows;
-                    // Requests sharing one card in the conversation: together, with "Aprovar tudo".
-                    const agent = dir.agentById.get(first.agentId);
-                    const partial = approveAllPartial(
-                      t,
-                      items,
-                      approvalGroupWaitsFor(
-                        items,
-                        dir.memberById.get(first.ownerUserId ?? agent?.ownerUserId ?? "")?.name,
-                      ),
-                    );
-                    return (
-                      <section key={first.messageId ?? first.id} className="ap-group" aria-label={agent?.name}>
-                        <div className="ap-group__head">
-                          <span className="ap-group__who">
-                            <Trans
-                              i18nKey="approvals.groupHead"
-                              count={items.length}
-                              values={{ name: agent?.name ?? t("channel.unknownAgent") }}
-                              components={{
-                                b: <AgentWho agentId={first.agentId} name={agent?.name ?? t("channel.unknownAgent")} />,
-                              }}
-                              {...TYPED_VALUES}
-                            />
-                          </span>
-                          <span className="ap-group__acts">
-                            <ApproveAll items={items} />
-                          </span>
-                        </div>
-                        {partial && <p className="ap-group__note">{partial}</p>}
-                        {rows}
-                      </section>
-                    );
-                  })}
-                {filter === "pending"
-                  ? shownDecided.length > 0 && (
-                      <section className="ap-list__section">
-                        <GroupHeading
-                          title={t("approvals.recent")}
-                          aside={
-                            <button type="button" className="ac-link ac-link--muted" onClick={() => setFilter("all")}>
-                              {t("approvals.seeHistory")}
-                            </button>
-                          }
-                        />
-                        <div className="ap-list__rows">
-                          {shownDecided.slice(0, 3).map((a) => (
-                            <ReqRow
-                              key={a.id}
-                              approval={a}
-                              selected={selectedId === a.id}
-                              onOpen={() => select(a.id)}
-                            />
-                          ))}
-                        </div>
-                      </section>
-                    )
-                  : groups(shownDecided).map(([key, list]) => (
-                      <section key={key} className="ap-list__section">
-                        <GroupHeading title={t(`approvals.groups.${key}`)} count={list.length} />
-                        <div className="ap-list__rows">
-                          {list.map((a) => (
-                            <ReqRow
-                              key={a.id}
-                              approval={a}
-                              selected={selectedId === a.id}
-                              onOpen={() => select(a.id)}
-                            />
-                          ))}
-                        </div>
-                      </section>
-                    ))}
-              </nav>
-              {selected && (
-                <section
-                  className="ap-review"
-                  data-scroll-restoration-id="approvals-request"
-                  data-burst=""
-                  aria-label={approvalTitle(t, selected)}
-                >
-                  <ReviewHead approval={selected} channel={channelName(selected.channelId)} />
-                  <ReviewBody key={selected.id} approval={selected} channel={channelName(selected.channelId)} />
-                  <DecisionBar
-                    approval={selected}
-                    refusing={refusing === selected.id}
-                    onRefuse={() => setRefusing(selected.id)}
-                    onCancelRefuse={() => setRefusing(null)}
-                    also={selectedCard ? approveAlwaysAlso(selectedCard, selected) : undefined}
-                    floating
-                  />
-                </section>
-              )}
-            </div>
-          )}
-
-          {filter === "pending" && (
-            <div className="ac-groups">
-              <MissionCommandsPending missions={missions} query={query} />
-              <MissionsWaitingList missions={missions} query={query} />
-            </div>
-          )}
-          {approvals.isSuccess && filter !== "pending" && !query && shownOpen.length + shownDecided.length === 0 && (
-            <EmptyState
-              size="panel"
-              actions={<Button onClick={() => setFilter("pending")}>{t("filters.clearAll")}</Button>}
-            >
-              {t("approvals.noResults")}
-            </EmptyState>
-          )}
-        </div>
-      </div>
-    </LinesContext.Provider>
-  );
 }
 
 function groups(list: Approval[]): ["today" | "yesterday" | "earlier", Approval[]][] {
@@ -895,7 +446,17 @@ export function HoldToApprove({
  * may decide (one joining during the click is never approved unseen). Held when any of them is high risk.
  * Nothing when fewer than two are theirs: each item's own buttons do. `children` sit between the two ("Aprovar sempre").
  */
-export function ApproveAll({ items, label, children }: { items: Approval[]; label?: string; children?: ReactNode }) {
+export function ApproveAll({
+  items,
+  label,
+  refuseLabel,
+  children,
+}: {
+  items: Approval[];
+  label?: string;
+  refuseLabel?: string;
+  children?: ReactNode;
+}) {
   const { t } = useTranslation();
   const { org } = useOrg();
   const decide = useDecideApprovals(org.id);
@@ -921,9 +482,96 @@ export function ApproveAll({ items, label, children }: { items: Approval[]; labe
         loading={decide.isPending && decide.variables?.decision === "refuse"}
         onClick={() => decide.mutate({ ids, decision: "refuse" })}
       >
-        {t("approval.all.refuse")}
+        {refuseLabel ?? t("approval.all.refuse")}
       </Button>
     </>
+  );
+}
+
+/**
+ * An approved request still waiting for one asked before it (`approvalLine`): that request by name, which opens in
+ * place, and what moves it: deciding that one where this person may, or "Rodar este agora" when it is another run's
+ * (`canRunNow`).
+ */
+export function HeldLine({ approval: a, waitsOn }: { approval: Approval; waitsOn: Approval }) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const decide = useDecideApproval(org.id);
+  const runNow = useRunApprovalNow(org.id);
+  const busy = useApprovalsDeciding(org.id, [a.id, waitsOn.id]);
+  // Its own run's request is decided where it stands, beside it: only another run's gets buttons here.
+  const other = waitsOn.runId !== a.runId;
+  const decidable = other && waitsOn.status === "pending" && waitsOn.canDecide === true;
+  const freeable = other && a.canRunNow === true;
+  return (
+    <span className="ap-held">
+      <span className="ap-held__text">
+        <Trans
+          i18nKey="approval.held.waiting"
+          components={{
+            link: (
+              <DetailsLink item={{ kind: "approval", id: waitsOn.id }} className="ac-link">
+                {approvalTitle(t, waitsOn)}
+              </DetailsLink>
+            ),
+          }}
+        />
+      </span>
+      {(decidable || freeable) && (
+        <span className="ac-acts ap-held__acts">
+          {decidable && <ApproveButton approval={waitsOn} />}
+          {decidable && (
+            <Button
+              size="sm"
+              disabled={busy}
+              loading={decide.isPending}
+              onClick={() => decide.mutate({ id: waitsOn.id, decision: "refuse" })}
+            >
+              {t("approval.refuse")}
+            </Button>
+          )}
+          {freeable && (
+            <Button size="sm" disabled={busy} loading={runNow.isPending} onClick={() => runNow.mutate({ id: a.id })}>
+              {t("approval.held.runNow")}
+            </Button>
+          )}
+        </span>
+      )}
+    </span>
+  );
+}
+
+/**
+ * "Aprovar todos" / "Recusar todos" per agent, over all of its cards: one line for each agent with two or more
+ * requests this person may decide (`approveAllByAgent`), deciding exactly those, as each card's "Aprovar tudo" does.
+ */
+export function ApproveAllByAgent({ list }: { list: readonly Approval[] }) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const dir = useDirectory(org.id);
+  const groups = approveAllByAgent(list);
+  if (groups.length === 0) return null;
+  return (
+    <ul className="ap-agents" aria-label={t("approval.byAgent.approve")}>
+      {groups.map((g) => {
+        const name = dir.agentById.get(g.agentId)?.name ?? t("channel.unknownAgent");
+        return (
+          <li key={g.agentId} className="ap-agents__row ac-tailrow">
+            <span className="ap-agents__who ac-who">
+              <AgentAvatar agentId={g.agentId} name={name} size="xs" />
+              {t("approval.byAgent.head", { count: g.ids.length, name })}
+            </span>
+            <span className="ac-acts">
+              <ApproveAll
+                items={g.items}
+                label={t("approval.byAgent.approve")}
+                refuseLabel={t("approval.byAgent.refuse")}
+              />
+            </span>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
@@ -1019,7 +667,8 @@ function ReqRow({ approval: a, selected, onOpen }: { approval: Approval; selecte
   const place = useLinePlace(a);
   const via = useApprovalVia(a);
   const leftMs = new Date(a.expiresAt).getTime() - Date.now();
-  const waits = approvalWaitsFor(a, dir.memberById.get(a.ownerUserId ?? agent?.ownerUserId ?? "")?.name);
+  // Its owner by name, a person's or a role's (ADR 0085, addendum of 2026-11-21): "Waiting for Engineering".
+  const waits = approvalWaitsFor(a, dir.ownerName(approvalOwnerOf(a, agent)));
   const where = approvalTarget(a) ?? via.name;
   // On its way (waiting for you, in line, running): when it was asked; decided: who decided and when.
   const live = p === "waiting" || p === "queued" || p === "running";
@@ -1087,72 +736,6 @@ function ReqRow({ approval: a, selected, onOpen }: { approval: Approval; selecte
   );
 }
 
-/**
- * Several waiting requests of one kind in a row from one agent, as one row: "3 pedidos de Ada para Executar sql",
- * "Aprovar todos", "Aprovar sempre" where its kind offers it, and "Ver cada um" unfolding each request's own row.
- */
-function RunRow({
-  run,
-  items,
-  always,
-  agent,
-  open,
-  onToggle,
-  children,
-}: {
-  run: Approval[];
-  items: Approval[];
-  always: Set<string>;
-  agent: Agent | undefined;
-  open: boolean;
-  onToggle: () => void;
-  children: ReactNode;
-}) {
-  const { t } = useTranslation();
-  const { org } = useOrg();
-  const deciding = useApprovalsDeciding(
-    org.id,
-    run.map((a) => a.id),
-  );
-  const first = run[0];
-  if (!first) return null;
-  const name = agent?.name ?? t("channel.unknownAgent");
-  const head = t("approval.run.head", { count: run.length, name, what: approvalTitle(t, first) });
-  const lead = run.find((a) => always.has(a.id) && a.canDecide);
-  const decider = run.find((a) => a.canDecide);
-  const deadline = cardDeadline(run) ?? first.expiresAt;
-  const leftMs = new Date(deadline).getTime() - Date.now();
-  return (
-    <section className="ap-run" data-burst="" aria-label={head}>
-      <div className="ac-mediarow ac-mediarow--row">
-        <span className="ac-mediarow__face">
-          <AgentAvatar agentId={first.agentId} name={name} size="sm" state="waiting" />
-        </span>
-        <span className="ac-mediarow__head">
-          <b className="ap-li__line">{head}</b>
-        </span>
-        <span className={cx("ac-mediarow__end ap-li__left", leftMs <= URGENT_MS && "is-urgent")}>
-          {expiryText(t, { expiresAt: deadline })}
-        </span>
-      </div>
-      <div className="ap-run__acts">
-        <Locked when={deciding}>
-          <ApproveAll items={run} label={t("approval.run.approve")}>
-            {lead && <ApproveAlways approval={lead} agent={agent} also={approveAlwaysAlso(items, lead)} />}
-          </ApproveAll>
-        </Locked>
-      </div>
-      <div className="ap-run__links">
-        <Button variant="link" aria-expanded={open} onClick={onToggle}>
-          {t("approval.run.show")}
-        </Button>
-        {decider && <WhenAsksLink approval={decider} agent={agent} />}
-      </div>
-      {open && <div className="ap-run__items">{children}</div>}
-    </section>
-  );
-}
-
 const EFFECT_ICON: Record<ApprovalEffect, IconName> = {
   external: "send",
   production: "cloud",
@@ -1162,55 +745,6 @@ const EFFECT_ICON: Record<ApprovalEffect, IconName> = {
 const UNDO_ICON: Record<ApprovalUndo, IconName> = { irreversible: "alert", reversible: "undo", deletable: "undo" };
 /** Its text folds past this many characters ("Ver mais"). */
 const TEXT_FOLD = 360;
-
-/** The request's head on the page: the agent, who asked and from where, and the action in one line. */
-function ReviewHead({ approval: a, channel }: { approval: Approval; channel: string }) {
-  const { t, i18n } = useTranslation();
-  const { org } = useOrg();
-  const dir = useDirectory(org.id);
-  const agent = dir.agentById.get(a.agentId);
-  const name = agent?.name ?? t("channel.unknownAgent");
-  const p = usePhase(a);
-  const place = useLinePlace(a);
-  const origin = approvalOriginShort(a);
-  const tt = t as unknown as (key: string, options?: Record<string, unknown>) => string;
-  const title = approvalTitle(t, a);
-  const by = [
-    agent?.role,
-    origin ? tt(origin.key, origin.values) : "",
-    channel ? `#${channel}` : "",
-    place && place.count > 1 ? t("approvals.position", { n: place.position, total: place.count }) : "",
-    relativeTime(t, i18n.language, a.createdAt),
-  ]
-    .filter(Boolean)
-    .join(" · ");
-  return (
-    <header className="ap-review__head ac-mediarow">
-      <span className="ac-mediarow__face">
-        <AgentAvatar
-          agentId={a.agentId}
-          name={name}
-          size="md"
-          state={p === "running" ? "writing" : p === "waiting" || p === "queued" ? "waiting" : "idle"}
-          running={p === "running"}
-          expression={p === "done" ? "happy" : undefined}
-        />
-      </span>
-      <p className="ap-review__by ac-mediarow__head">
-        <b>{name}</b>
-        <span className="ac-mediarow__meta">{by}</span>
-      </p>
-      <div className="ac-mediarow__body">
-        <div className="ap-review__titleline">
-          <h2 className="ap-review__title" title={title}>
-            {title}
-          </h2>{" "}
-          <UndoChip approval={a} />
-        </div>
-      </div>
-    </header>
-  );
-}
 
 /** Whether what it does can be undone, as a chip after the request's title (on the page and in the dialog). */
 function UndoChip({ approval: a }: { approval: Approval }) {
@@ -1250,7 +784,11 @@ function ReviewBody({ approval: a, channel }: { approval: Approval; channel: str
   const why = approvalWords(a);
   const pr = prLink(a);
   const leftMs = new Date(a.expiresAt).getTime() - Date.now();
-  const waits = approvalWaitsFor(a, dir.memberById.get(a.ownerUserId ?? agent?.ownerUserId ?? "")?.name);
+  const owner = approvalOwnerOf(a, agent);
+  const waits = approvalWaitsFor(a, dir.ownerName(owner));
+  // A role answers for it (ADR 0085, addendum of 2026-11-21): who can decide reads that anyone holding it may, and the
+  // first decision counts. A request that named its deciders (`approvers`) is theirs.
+  const ownerRole = owner.ownerRoleId && !a.approvers?.label ? dir.roleName(owner.ownerRoleId) : undefined;
   const facts: Fact[] = [
     {
       key: "where",
@@ -1298,6 +836,16 @@ function ReviewBody({ approval: a, channel }: { approval: Approval; channel: str
           value: t(`approvals.status.${PHASE_STATUS[p]}`),
           tone: p === "done" ? "done" : p === "failed" ? "waiting" : undefined,
         },
+    ...(p === "waiting" && a.canDecide && ownerRole
+      ? [
+          {
+            key: "decides",
+            icon: "person" as const,
+            label: t("approvals.review.decides"),
+            value: t("approvals.review.decidesRole", { role: ownerRole }),
+          },
+        ]
+      : []),
   ];
 
   const logo = useCallLogo();
@@ -1482,22 +1030,6 @@ function ReviewBody({ approval: a, channel }: { approval: Approval; channel: str
   );
 }
 
-/** The `approvals.status.*` word of each phase. */
-const PHASE_STATUS: Record<
-  Exclude<ApprovalPhase, "waiting">,
-  "approved" | "failed" | "refused" | "expired" | "running" | "canceled" | "scheduled" | "queued" | "notRun"
-> = {
-  queued: "queued",
-  notRun: "notRun",
-  running: "running",
-  scheduled: "scheduled",
-  done: "approved",
-  failed: "failed",
-  refused: "refused",
-  expired: "expired",
-  canceled: "canceled",
-};
-
 /**
  * The decision, in one bar of buttons: Refuse and Approve ("Aprovar sempre" before them where its kind offers it), what
  * each lets the agent do in its tip (Approve: once, with these values); refusing opens the reason in its place. Pinned
@@ -1533,13 +1065,7 @@ function DecisionBar({
     return (
       <div className={cx("ap-bar", floating && "ap-bar--float")}>
         <p className="ap-bar__text">
-          {t("approvals.queuedLine", {
-            title: titleOnCard(
-              t,
-              waitsOn,
-              place?.waitsOnAt ? { position: place.waitsOnAt, count: place.count } : undefined,
-            ),
-          })}
+          <HeldLine approval={a} waitsOn={waitsOn} />
         </p>
       </div>
     );
@@ -1829,3 +1355,6 @@ function Outcome({ approval: a, agent }: { approval: Approval; agent: Agent | un
     </Card>
   );
 }
+
+/** For the inbox's decided requests: the same rows, by the day each was decided. */
+export { decidedAt as approvalDecidedAt, groups as decidedGroups, ReqRow as ApprovalRow };

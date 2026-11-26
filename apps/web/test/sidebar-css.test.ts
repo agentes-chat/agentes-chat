@@ -142,12 +142,14 @@ test("a channel: gray when read, full ink and bold with the edge pill when unrea
     value(`${unread} .sidebar__item-label`, "font-weight"),
   ]).toEqual(["var(--ink)", "650"]);
   const pill = `${unread}::before`;
-  expect([value(pill, "left"), value(pill, "width"), value(pill, "height"), value(pill, "background")]).toEqual([
-    "-12px",
-    "4px",
-    "8px",
-    "var(--ink)",
-  ]);
+  // A whole pill 4 in from the sidebar's edge (the rows sit 12 in), never cut by the window or a drawer's frame.
+  expect([
+    value(pill, "left"),
+    value(pill, "width"),
+    value(pill, "height"),
+    value(pill, "border-radius"),
+    value(pill, "background"),
+  ]).toEqual(["-8px", "4px", "8px", "2px", "var(--ink)"]);
   expect([value(".sidebar__unread", "background"), value(".sidebar__unread", "color")]).toEqual([
     "var(--danger)",
     "var(--raised)",

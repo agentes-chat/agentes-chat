@@ -13,6 +13,7 @@ import {
   grantScopes,
   type MachineStatus,
   postPersonMessage,
+  publishTyping,
 } from "../src";
 import { type Fixture, setup } from "./fixtures";
 import { pairMachine } from "./machine-fixtures";
@@ -100,6 +101,63 @@ test("API brain: core tools first and cached for an hour whatever group loads; t
   const upTo = (body: Record<string, unknown>) =>
     JSON.stringify((body.tools as unknown[]).slice(0, stable(greeting).length));
   expect(upTo(b)).toBe(upTo(a));
+});
+
+/**
+ * A request body as the provider caches it: the tools, the system blocks, then every block of every message, each
+ * without its `cache_control` (a moving marker is no change), and where the markers were.
+ */
+function cachedPositions(body: Record<string, unknown>) {
+  const out: { text: string; mark: boolean }[] = [];
+  const push = (block: Record<string, unknown>) => {
+    const { cache_control, ...rest } = block;
+    out.push({ text: JSON.stringify(rest), mark: cache_control !== undefined });
+  };
+  for (const t of (body.tools as Record<string, unknown>[]) ?? []) push(t);
+  for (const b of (body.system as Record<string, unknown>[]) ?? []) push(b);
+  for (const m of (body.messages as { content: string | Record<string, unknown>[] }[]) ?? []) {
+    for (const b of typeof m.content === "string" ? [{ type: "text", text: m.content }] : m.content) push(b);
+  }
+  return out;
+}
+
+/** Where the last `cache_control` marker of a request's blocks is, -1 without one. */
+const lastMark = (positions: { mark: boolean }[]) => positions.map((p) => p.mark).lastIndexOf(true);
+
+test("API brain: each call reads the one before it from the cache, also when the next message needs fewer tools", async () => {
+  f = await setup({
+    toolsOnDemand: true,
+    issueTools: true,
+    contextTools: true,
+    judge: (kind, _id, state, q) =>
+      kind === "tool_groups" && String(state.message).includes("issues") && JSON.stringify(q).includes("Issues")
+        ? 0.9
+        : 0,
+    reply: (request) =>
+      JSON.stringify(request.messages.at(-1)).includes("quais issues")
+        ? { chunks: [], toolUses: [{ name: "list_issues", input: {} }] }
+        : { chunks: ["Nenhuma aberta."] },
+  });
+  await grantScopes(f.db, f.org.id, f.agent.id, [{ connectionId: null, scope: "issues:read" }]);
+  // One run with a tool loop that needs the issues, then two that don't: a thanks and a greeting.
+  for (const body of ["@dev quais issues estão abertas?", "@dev valeu", "@dev e o resto, tudo certo?"]) {
+    await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, { body });
+    await drainOutbox(f.db, f.handlers);
+  }
+  const bodies = await Promise.all(f.provider.calls.map((c) => anthropicBody(c.request)));
+  expect(bodies).toHaveLength(4);
+  for (let k = 1; k < bodies.length; k++) {
+    const before = cachedPositions(bodies[k - 1] as Record<string, unknown>);
+    const after = cachedPositions(bodies[k] as Record<string, unknown>);
+    // In the tool loop the automatic breakpoint ends the previous request: all of it is read back. Between runs, up
+    // to its last marked block (the trigger, after the history): what follows was this run's alone.
+    const sameRun = k === 1;
+    const end = sameRun ? before.length : lastMark(before) + 1;
+    expect(after.slice(0, end).map((p) => p.text)).toEqual(before.slice(0, end).map((p) => p.text));
+  }
+  // The second run's trigger carries a breakpoint, after the first run's exchange: the third run reads it back.
+  const [second, third] = [bodies[2], bodies[3]].map((b) => lastMark(cachedPositions(b as Record<string, unknown>)));
+  expect(third).toBeGreaterThan(second ?? 0);
 });
 
 test("computer brain: one system text per session, recent work and where it starts read per turn, the message once", async () => {
@@ -197,13 +255,13 @@ async function onComputer(brain: "claude_code" | "codex", protocol: number) {
     protocol,
     executors: {
       claude: { version: "2.1.300", loggedIn: true },
-      codex: { version: "codex-cli 0.163.0" },
+      codex: { version: "codex-cli 0.170.0" },
       detectedAt: new Date().toISOString(),
     },
   });
 }
 
-test("the quiet window's checkouts sync is the turn's own, its start picked again from what came in meanwhile", async () => {
+test("the typing hold's checkouts sync is the turn's own, its start picked again from what came in meanwhile", async () => {
   f = await setup({ quietMs: 300 });
   const status = await onComputer("claude_code", MACHINE_PROTOCOL_VERSION);
   const codes: (CodeSetup | null | undefined)[] = [];
@@ -242,6 +300,8 @@ test("the quiet window's checkouts sync is the turn's own, its start picked agai
   await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, {
     body: "@dev o deploy quebrou",
   });
+  // Still typing: the line it adds while the checkouts sync is read with the first turn.
+  await publishTyping(f.pubsub, { channelId: f.general.id, threadId: null, userId: f.owner.id });
   await drainOutbox(f.db, handlers);
   expect(syncs).toBe(1);
   expect(codes).toHaveLength(1);

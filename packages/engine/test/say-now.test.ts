@@ -20,13 +20,17 @@ import {
   finishWhatYouStart,
   insertMessage,
   isSayNow,
+  linesSaid,
   loadReplyPolicy,
   type MachineStatus,
   mergeToolEffects,
   moveToBackground,
   openAgentDm,
   openDm,
+  PROGRESS_GAP_MS,
+  PROGRESS_MAX,
   postPersonMessage,
+  progressDue,
   queueOnRun,
   quietForPeople,
   runAtWork,
@@ -42,6 +46,7 @@ import {
   withoutSaidNow,
 } from "../src";
 import { AGENT_MEDIA_JOB, replySkip } from "../src/agent-media";
+import { renderSteered, SAY_HOW_YOU_TAKE_IT } from "../src/live-steer";
 import { type Fixture, setup } from "./fixtures";
 import { pairMachine } from "./machine-fixtures";
 
@@ -228,6 +233,19 @@ async function places() {
   await f.db
     .insert(schema.confidentialThreads)
     .values({ orgId: f.org.id, channelId: f.general.id, rootMessageId: sealedRoot.id });
+  const [task, file] = await f.db
+    .insert(schema.channels)
+    .values(
+      (["task", "file"] as const).map((kind) => ({
+        orgId: f.org.id,
+        name: `${kind}-1234abcd`,
+        kind,
+        visibility: "private" as const,
+        createdByUserId: f.owner.id,
+      })),
+    )
+    .returning();
+  if (!task || !file) throw new Error("no conversations");
   const working = await runOver(dm.id);
   const moved = await moveToBackground(deps(), working.id, {
     how: "agent",
@@ -244,6 +262,9 @@ async function places() {
     agentsDm: await runOver(agentsDm.id, { by: qa.id }),
     mission: await runOver(f.general.id, { threadId: missionRoot.id }),
     confidential: await runOver(f.general.id, { threadId: sealedRoot.id }),
+    task: await runOver(task.id),
+    file: await runOver(file.id),
+    taskHanded: await runOver(task.id, { by: qa.id }),
   };
 }
 
@@ -386,6 +407,142 @@ describe("the tool", () => {
     expect((await lines()).map((m) => m.body)).toEqual([LINE, "Bora! Vou abrir o navegador."]);
   });
 
+  test("long work: a progress line once a minute or more passed since the last one, three at most", async () => {
+    f = await setup({ sayNow: true });
+    const dm = await openDm(f.db, f.owner.id, f.org.id, { agentId: f.agent.id });
+    const run = await runOver(dm.id);
+    // At work for ten minutes now.
+    const before = new Date(Date.now() - 600_000);
+    await f.db
+      .update(schema.agentRuns)
+      .set({ createdAt: before, startedAt: before, workingSince: before })
+      .where(eq(schema.agentRuns.id, run.id));
+    const working = await runById(run.id);
+    expect((await sayNow(working, LINE)).isError).toBeFalsy();
+    // Right after its line: too soon.
+    expect((await sayNow(working, "Já li os e-mails, agora a planilha.")).content).toStartWith("Already told them");
+    const updates = ["Já li os e-mails, agora a planilha.", "Planilha pronta, montando o gráfico.", "Quase lá."];
+    for (const update of updates) {
+      // Its last line went out longer ago than the gap.
+      const [last] = (await lines()).slice(-1);
+      if (!last) throw new Error("no line");
+      await f.db
+        .update(schema.messages)
+        .set({ createdAt: new Date(last.createdAt.getTime() - PROGRESS_GAP_MS - 1000) })
+        .where(eq(schema.messages.id, last.id));
+      expect((await sayNow(working, update)).data).toBeDefined();
+    }
+    const said = await lines();
+    expect(said.map((m) => m.body)).toEqual([LINE, ...updates]);
+    expect(said.map((m) => (m.meta.sayNow as { progress?: boolean }).progress ?? false)).toEqual([
+      false,
+      true,
+      true,
+      true,
+    ]);
+    // Quiet as the first: nobody is mentioned or woken.
+    expect(said.every((m) => m.mentionedUserIds.length === 0)).toBe(true);
+    const [last] = said.slice(-1);
+    if (!last) throw new Error("no line");
+    await f.db
+      .update(schema.messages)
+      .set({ createdAt: new Date(last.createdAt.getTime() - PROGRESS_GAP_MS - 1000) })
+      .where(eq(schema.messages.id, last.id));
+    expect((await sayNow(working, "Mais uma.")).content).toStartWith("Already told them");
+    expect((await lines()).length).toBe(1 + PROGRESS_MAX);
+    // Two more for messages taken in: the paths that leave its lines out of a reply still read the newest one.
+    for (const body of ["Ah, e o relatório de março também.", "Certo, sem o anexo."])
+      await insertMessage(f.db, {
+        orgId: f.org.id,
+        channelId: dm.id,
+        author: { type: "agent", agentId: f.agent.id, runId: null, hop: 0, stretchId: null },
+        body,
+        meta: { sayNow: { runId: run.id, took: ["m"] } },
+      });
+    expect((await linesSaid(f.db, working)).map((l) => l.text).at(-1)).toBe("Certo, sem o anexo.");
+  });
+
+  test("progressDue: long work only, a gap after the last line, three at most", () => {
+    const now = Date.UTC(2026, 10, 24, 12);
+    const run = { createdAt: new Date(now - 30_000), startedAt: new Date(now - 30_000), workingSince: null };
+    const line = (ago: number, progress = false) => ({ at: new Date(now - ago), progress });
+    // Short work: never.
+    expect(progressDue(run, [line(100_000)], now)).toBe(false);
+    const long = { ...run, workingSince: new Date(now - 300_000) };
+    expect(progressDue(long, [line(100_000)], now)).toBe(true);
+    expect(progressDue(long, [line(PROGRESS_GAP_MS - 1)], now)).toBe(false);
+    expect(progressDue(long, [line(400_000), line(300_000, true), line(200_000, true), line(100_000, true)], now)).toBe(
+      false,
+    );
+  });
+
+  test("one more line for a message they send meanwhile that corrects or adds to the task, then none", async () => {
+    f = await setup({ sayNow: true });
+    const dm = await openDm(f.db, f.owner.id, f.org.id, { agentId: f.agent.id });
+    const run = await runOver(dm.id);
+    expect((await sayNow(run, LINE)).isError).toBeFalsy();
+    // The triage wasn't sure, or it was a quick question: no line of the agent's own for it.
+    const asked = await byPerson(dm.id, "tá indo?");
+    await addRunStep(f.db, run, "context", {
+      steerTriage: { messageId: asked.id, sure: true, line: false },
+      reason: "answer",
+    });
+    expect((await sayNow(run, "Tá indo sim.")).content).toStartWith("Already told them");
+    // A correction the triage was sure of, read by now: the agent says how it takes it.
+    const fixed = await byPerson(dm.id, "na verdade, é o de setembro");
+    await addRunStep(f.db, run, "context", {
+      steerTriage: { messageId: fixed.id, sure: true, line: true },
+      reason: "interrupt",
+    });
+    const took = "Boa, troco para setembro então.";
+    const output = await sayNow(run, took);
+    expect(output.isError).toBeFalsy();
+    expect(output.data).toMatchObject({ saidNow: { text: took } });
+    const said = await lines();
+    expect(said.map((m) => m.body)).toEqual([LINE, took]);
+    expect(said[1]?.meta.sayNow).toEqual({ runId: run.id, took: [fixed.id] });
+    // That line was for that message: the next call says so again.
+    const again = await sayNow(run, "Quase lá.");
+    expect(again.content).toStartWith(`Already told them: "${took}"`);
+    expect((await lines()).map((m) => m.body)).toEqual([LINE, took]);
+  });
+
+  test("the message the agent may answer with a line reaches it with a word saying so; the others as they were", async () => {
+    f = await setup({ sayNow: true });
+    const dm = await openDm(f.db, f.owner.id, f.org.id, { agentId: f.agent.id });
+    const run = await runOver(dm.id);
+    const fixed = await byPerson(dm.id, "na verdade, é o de setembro");
+    const asked = await byPerson(dm.id, "tá indo?");
+    await addRunStep(f.db, run, "context", {
+      steerTriage: { messageId: fixed.id, sure: true, line: true },
+      reason: "interrupt",
+    });
+    await addRunStep(f.db, run, "context", {
+      steerTriage: { messageId: asked.id, sure: true, line: false },
+      reason: "answer",
+    });
+    const read = await renderSteered(f.db, f.org.id, [fixed.id, asked.id], { runId: run.id });
+    expect(read.map((r) => r.text.endsWith(`\n${SAY_HOW_YOU_TAKE_IT}`))).toEqual([true, false]);
+    // Another run's triage says nothing for this one, and without the run nothing is added.
+    const other = await runOver(dm.id);
+    expect((await renderSteered(f.db, f.org.id, [fixed.id], { runId: other.id }))[0]?.text).not.toContain("say_now");
+    expect((await renderSteered(f.db, f.org.id, [fixed.id]))[0]?.text).not.toContain("say_now");
+  });
+
+  test("a run's first line takes in what they sent before it: no second line for the same message", async () => {
+    f = await setup({ sayNow: true });
+    const dm = await openDm(f.db, f.owner.id, f.org.id, { agentId: f.agent.id });
+    const run = await runOver(dm.id);
+    const added = await byPerson(dm.id, "inclui o gráfico por região");
+    await addRunStep(f.db, run, "context", {
+      steerTriage: { messageId: added.id, sure: true, line: true },
+      reason: "add",
+    });
+    expect((await sayNow(run, LINE)).isError).toBeFalsy();
+    expect((await sayNow(run, "Incluo o gráfico também.")).content).toStartWith("Already told them");
+    expect((await lines()).map((m) => m.body)).toEqual([LINE]);
+  });
+
   test("words for a person only: code, a tool's name, a path on a computer or the silence word post nothing", async () => {
     f = await setup({ sayNow: true });
     const dm = await openDm(f.db, f.owner.id, f.org.id, { agentId: f.agent.id });
@@ -449,26 +606,30 @@ describe("the tool", () => {
       agentsDm: false,
       mission: false,
       confidential: false,
+      // A task's or a file's conversation, when a person wrote the message it answers; work handed there by an
+      // agent has no reader.
+      task: true,
+      file: true,
+      taskHanded: false,
     });
   });
 
-  test("elsewhere it says why and posts nothing; a routine's run doesn't list it at all", async () => {
+  test("elsewhere it says why and posts nothing; a routine's run and one between agents don't list it at all", async () => {
     f = await setup({ sayNow: true });
     const at = await places();
     const listed = async (run: AgentRun) => (await tools().list(ctxOf(run))).some((t) => t.name === SAY_NOW_TOOL);
-    // Listed in every run with an id, so the list stays the same from run to run; never in a background one.
+    // Listed in every run with an id, so the list stays the same from run to run; never in a background one, nor
+    // in a conversation between agents (a lean wake: nobody reads it).
     expect(await listed(at.dm)).toBe(true);
-    expect(await listed(at.agentsDm)).toBe(true);
+    expect(await listed(at.agentsDm)).toBe(false);
     expect(await listed(at.work)).toBe(true);
     expect(await listed(at.routine)).toBe(false);
     // Nor for a mission task's call through the bridge, which has no run of its own.
     expect(await createSayNowToolSource({}).tools({ ...ctxOf(at.dm), runId: "" })).toEqual([]);
-    for (const run of [at.agentsDm, at.mission]) {
-      expect(await sayNow(run, LINE)).toMatchObject({
-        isError: true,
-        content: expect.stringContaining("Nobody reads this conversation as it goes"),
-      });
-    }
+    expect(await sayNow(at.mission, LINE)).toMatchObject({
+      isError: true,
+      content: expect.stringContaining("Nobody reads this conversation as it goes"),
+    });
     expect(await sayNow(at.work, LINE)).toMatchObject({
       isError: true,
       content: expect.stringContaining("post_update"),
@@ -644,7 +805,7 @@ describe("in a run", () => {
     expect(saidNowOf(run)).toHaveLength(1);
   });
 
-  test('after its line, a turn that ends without a word closes with "Done." for the work beside the line', async () => {
+  test('after its line, a turn that ends without a word is asked for its answer and fails if none comes, never "Done."', async () => {
     const first = workThenLine("build", LINE, ["Primeiro compilo, depois testo."]);
     f = await setup({
       sayNow: true,
@@ -655,13 +816,13 @@ describe("in a run", () => {
     const events = f.listen(f.general.id);
     // Brought in by the router: it could have stayed quiet, until it told them it was on it.
     const run = await routed("alguém roda o build?");
-    expect(await runById(run.id)).toMatchObject({ status: "done" });
-    // The build it called beside its line is work: no nudge, the run closes as any run that worked and wrote nothing.
+    // Its line promised work: the turn that ends without a word is asked for its answer, and with none the run fails
+    // saying so. No closing line is made up for it, nor taken from the words beside its line.
+    expect(await runById(run.id)).toMatchObject({ status: "failed", error: "empty_reply" });
     const nudged = f.provider.calls.map((c) => JSON.stringify(c.request.messages).includes(ANSWER_NUDGE));
-    expect(nudged).toEqual([false, false]);
-    // No closing line taken from the words beside its line; the build it called beside it is work, so the run closes
-    // with "Done." as any run that worked and wrote nothing after.
-    expect(await agentSaid(f.general.id)).toEqual([LINE, "Done."]);
+    expect(nudged[0]).toBe(false);
+    expect(nudged.slice(1)).toContain(true);
+    expect(await agentSaid(f.general.id)).toEqual([LINE]);
     const steps = await f.db.select().from(schema.agentRunSteps).where(eq(schema.agentRunSteps.runId, run.id));
     expect(steps.filter((s) => s.data.passed !== undefined)).toEqual([]);
     expect(events.some((e) => e.type === "agent.passed")).toBe(false);

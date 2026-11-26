@@ -448,6 +448,48 @@ export const en = {
       why: () => "You got this email because you're in this workspace on agentes.chat.",
     },
   },
+  computerDown: {
+    subject: "A computer isn't answering",
+    preheader: "Your agents' work on it is waiting for it.",
+    headline: "A computer isn't answering",
+    body: (name: string, org: string, away: string): Text => [
+      { b: name },
+      " in ",
+      { b: org },
+      ` hasn't answered for ${away}. The work that needs it waits and goes on when it is back.`,
+    ],
+    runs: "Agent requests waiting",
+    calls: "Webhook calls waiting",
+    note: "To go on now, move its agents to another computer on its page.",
+    button: "Open the computer",
+    why: (org: string) => `You got this email because you manage the computers of ${org} on agentes.chat.`,
+    back: {
+      subject: "A computer is back",
+      preheader: "The work that waited for it goes on now.",
+      headline: "The computer is back",
+      runs: "Agent requests that waited",
+      calls: "Webhook calls that waited",
+      body: (name: string, org: string, away: string): Text => [
+        { b: name },
+        " in ",
+        { b: org },
+        ` is back after ${away}. The work that waited for it goes on now.`,
+      ],
+    },
+    personal: {
+      body: (name: string, _org: string, away: string): Text => [
+        { b: name },
+        ` hasn't answered for ${away}. The work that needs it waits and goes on when it is back.`,
+      ],
+      why: () => "You got this email because you manage the computers of your personal workspace on agentes.chat.",
+      back: {
+        body: (name: string, _org: string, away: string): Text => [
+          { b: name },
+          ` is back after ${away}. The work that waited for it goes on now.`,
+        ],
+      },
+    },
+  },
   appConnected: {
     subject: "An app was connected to your agentes.chat account",
     preheader: "It can read and send tasks to agents as you in one workspace.",
@@ -529,6 +571,35 @@ export const en = {
     none: "No workspace." as Text,
     table: (day: string) => `The whole table: bun run report:autonomy --day ${day}`,
     why: "You got this email because this address is in OPS_REPORT_EMAIL on this server. It goes out once a day.",
+  },
+  accountOpened: {
+    subject: (plan: string) => `More people can use your ${plan} account`,
+    preheader: (plan: string) => `What they do with it uses your ${plan} plan and its limits.`,
+    headline: "Someone changed who can use your AI account",
+    body: (by: string, account: string, plan: string): Text => [
+      { b: by },
+      ` changed who can use your ${plan} account `,
+      { b: account },
+      `. What they do with it uses your plan and its limits.`,
+    ],
+    account: "Account",
+    by: "Changed by",
+    setting: "Permission",
+    use: "Use in agents",
+    reply: "Answer everyone",
+    was: "Before",
+    now: "Now",
+    everyone: "Everyone in the workspace",
+    admins: "You and administrators",
+    onlyYou: "Only you",
+    agentOwner: "Only the agent's owner",
+    note: "To undo it, open the account in AI and usage and change its permissions.",
+    button: "Open AI accounts",
+    why: (org: string) =>
+      `You got this email because you connected this AI account in ${org} and someone else changed who can use it.`,
+    personal: {
+      why: () => "You got this email because you connected this AI account and someone else changed who can use it.",
+    },
   },
   planOpened: {
     subject: (plan: string) => `More people can talk to your agent on your ${plan} plan`,
@@ -631,6 +702,29 @@ export const en = {
       why: (surface: string) => `You got this email because ${surface} was linked to your agentes.chat account.`,
       /** The picture's alt text: the assistant beside the phone, switched off. */
       picture: "Your assistant, no longer on your phone",
+    },
+    /** Chooses the PIN that confirms acts from the surface (ADR 0226): `url`, the page that does it once. */
+    pinReset: {
+      subject: (surface: string) => `Choose your ${surface} PIN`,
+      preheader: "Choose the PIN that approves actions from your chat app.",
+      headline: (surface: string) => `Choose your ${surface} PIN`,
+      body: (surface: string) =>
+        `Someone asked for a link to choose the PIN you use to approve actions from ${surface}. If it was you, choose it on the page this button opens.`,
+      button: "Choose my PIN",
+      small: "The link works once, for one hour. If it wasn't you, ignore this email. Nothing changes.",
+      why: (surface: string) => `You got this email because ${surface} is linked to your agentes.chat account.`,
+    },
+    /** Three wrong PINs locked approving from the surface (ADR 0226); `lockedFor`: 15 minutes, an hour, a day. */
+    pinLocked: {
+      subject: (surface: string) => `Your ${surface} PIN is locked`,
+      preheader: "Three wrong PINs in a row. Approving from your chat app is paused for now.",
+      headline: (surface: string) => `Your ${surface} PIN is locked`,
+      body: (surface: string, time: string) =>
+        `Someone typed a wrong PIN three times in a row to approve an action from ${surface}. Approving from ${surface} is paused for ${time}.`,
+      lockedFor: ["15 minutes", "1 hour", "24 hours"] as [string, string, string],
+      small: (surface: string) =>
+        `If it was you, try again later. If it wasn't, unlink ${surface} in your notification settings, so nobody can approve from it.`,
+      button: "Open notification settings",
     },
   },
   /** The answer of whoever runs the server to a member's request for help (ADR 0056). */

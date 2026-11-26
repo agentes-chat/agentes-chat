@@ -11,11 +11,15 @@ import {
   type LiveDeps,
   type LiveDocs,
   liveSnapshotOf,
+  MARK_PICTURE_BYTES,
   MAX_MESSAGE_LENGTH,
   putAsset,
+  putMarkPicture,
+  readFileFonts,
   renameLiveFile,
   requireActiveMembership,
   requireLiveFile,
+  resolveComment,
   withPersonFacts,
 } from "@agenteschat/engine";
 import { createRoute, z } from "@hono/zod-openapi";
@@ -42,8 +46,19 @@ const ArtifactParams = OrgParams.extend({ artifactId: z.uuid() });
 const isUuid = (value: string) => z.uuid().safeParse(value).success;
 const base64 = (bytes: Uint8Array) => Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength).toString("base64");
 
-/** What an asset may be: pictures only, whatever was stored, so nothing else is ever served from here. */
-const ASSET_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
+/**
+ * What an asset may be: pictures and the file's own fonts (ADR 0220 §2, the type its bytes gave), whatever was stored,
+ * so nothing else is ever served from here.
+ */
+const ASSET_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+  "font/ttf",
+  "font/otf",
+  "font/woff",
+]);
 /**
  * An SVG picture (stored as the sanitizer rebuilt it, ADR 0196 §8) is served with a CSP that runs and loads nothing,
  * also when it is opened on its own in a tab: the apps only ever show it as a picture.
@@ -75,8 +90,28 @@ const LiveAsset = z
     size: z.number().int(),
     width: z.number().int().nullable(),
     height: z.number().int().nullable(),
+    font: z
+      .object({
+        family: z.string(),
+        style: z.string(),
+        weight: z.number().int(),
+        italic: z.boolean(),
+      })
+      .nullable()
+      .optional()
+      .openapi({ description: "A font (ADR 0220 §2): its family, style and weight as its own file names them." }),
   })
   .openapi("LiveAsset");
+
+const LiveFileFont = z
+  .object({
+    id: z.string().openapi({ description: "The asset's id; the file names it `asset:<id>`." }),
+    family: z.string(),
+    style: z.string(),
+    weight: z.number().int(),
+    italic: z.boolean(),
+  })
+  .openapi("LiveFileFont");
 
 const PresenceEntry = z
   .object({
@@ -94,6 +129,14 @@ const AssetSource = z.union([
   z.object({ fileId: z.uuid(), assetId: z.uuid() }),
 ]);
 
+/** Who resolved a comment on a picture, a video or a PDF, and when (ADR 0208). */
+const ResolvedMark = z
+  .object({
+    by: z.object({ type: z.enum(["person", "agent"]), id: z.string() }),
+    at: z.string(),
+  })
+  .openapi("ResolvedMark");
+
 /** A file upload (multipart). */
 const fileField = z
   .any()
@@ -109,6 +152,13 @@ export function liveRoutes(deps: AppDeps) {
   const app = createAppRouter(deps);
   app.use("/organizations/*", requireSession(deps.auth));
   // The picture's bytes are counted as they arrive, so a request that states no length is held to the same size.
+  app.use(
+    "/organizations/:orgId/artifacts/:artifactId/marks",
+    bodyLimit({
+      maxSize: MARK_PICTURE_BYTES + MULTIPART_SLACK_BYTES,
+      onError: (c) => apiError(c, 413, "live.asset_too_large", "The picture is too large (max 2 MB)", { max: 2 }),
+    }),
+  );
   app.use(
     "/organizations/:orgId/artifacts/:artifactId/assets",
     bodyLimit({
@@ -409,6 +459,76 @@ export function liveRoutes(deps: AppDeps) {
   app.openapi(
     createRoute({
       method: "post",
+      path: "/organizations/{orgId}/artifacts/{artifactId}/marks",
+      tags,
+      security,
+      summary: "Add the picture of a comment's place on a picture, a video or a PDF (ADR 0208)",
+      description:
+        "What the app took of the place a comment points at: what was marked, or the whole picture, frame or page with the mark drawn. PNG, JPEG or WebP, at most 2 MB, told by its bytes. Whoever reads the file adds one; the message names it in `liveRef.selection` (`crop`, `frame`), and it is served like a live file's pictures (`GET …/assets/{assetId}`).",
+      request: {
+        params: ArtifactParams,
+        body: { required: true, content: { "multipart/form-data": { schema: z.object({ file: fileField }) } } },
+      },
+      responses: { 201: json(LiveAsset, "Added"), 413: errorResponse("The picture is too large"), ...errors },
+    }),
+    async (c) => {
+      const { orgId, artifactId } = c.req.valid("param");
+      const { file } = c.req.valid("form");
+      if (!(file instanceof File)) {
+        return apiError(c, 400, "artifact.file_required", "send the picture in the field file");
+      }
+      if (file.size > MARK_PICTURE_BYTES) {
+        return apiError(c, 413, "live.asset_too_large", "The picture is too large (max 2 MB)", { max: 2 });
+      }
+      const userId = c.get("user").id;
+      await requireActiveMembership(db, userId, orgId);
+      const asset = await putMarkPicture(
+        artifacts(),
+        person(userId),
+        orgId,
+        artifactId,
+        new Uint8Array(await file.arrayBuffer()),
+      );
+      return c.json(assetView(asset), 201);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/messages/{messageId}/resolve",
+      tags,
+      security,
+      summary: "Resolve a comment on a picture, a video or a PDF, or open it again (ADR 0208)",
+      description:
+        "Only a message of a file's conversation that points at a place there (`liveRef.selection` with `mark`, `time` or `page`); 400 `message.not_comment` otherwise. Whoever writes in that conversation. The message stays; its pin leaves the file. Everyone there gets `message.resolved`.",
+      request: {
+        params: OrgParams.extend({ messageId: z.uuid() }),
+        body: { required: true, content: { "application/json": { schema: z.object({ resolved: z.boolean() }) } } },
+      },
+      responses: {
+        200: json(z.object({ resolved: ResolvedMark.nullable() }).openapi("ResolveResult"), "Resolved, or open"),
+        ...errors,
+      },
+    }),
+    async (c) => {
+      const { orgId, messageId } = c.req.valid("param");
+      const { resolved } = c.req.valid("json");
+      const userId = c.get("user").id;
+      const mark = await resolveComment(
+        { db, pubsub: deps.adapters.pubsub },
+        { type: "person", userId },
+        orgId,
+        messageId,
+        resolved,
+      );
+      return c.json({ resolved: mark }, 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
       path: "/organizations/{orgId}/artifacts/{artifactId}/assets",
       tags,
       security,
@@ -466,7 +586,25 @@ export function liveRoutes(deps: AppDeps) {
     },
   );
 
-  // A picture's bytes: named by its id and never changed, so cached for good; only ever served as a picture.
+  app.openapi(
+    createRoute({
+      method: "get",
+      path: "/organizations/{orgId}/artifacts/{artifactId}/fonts",
+      tags,
+      security,
+      summary: "A live file's own fonts (fonts brought from the Drive), for its font list",
+      description: "One row per font file, regular faces first; each is served like a picture (`GET …/assets/{id}`).",
+      request: { params: ArtifactParams },
+      responses: { 200: json(z.object({ fonts: z.array(LiveFileFont) }), "The file's fonts"), ...errors },
+    }),
+    async (c) => {
+      const { orgId, artifactId } = c.req.valid("param");
+      const fonts = await readFileFonts(liveDeps(), person(c.get("user").id), orgId, artifactId);
+      return c.json({ fonts: fonts.map((f) => ({ id: f.id, ...fontView(f) })) }, 200);
+    },
+  );
+
+  // A picture's or a font's bytes: named by its id and never changed, so cached for good; only ever served as itself.
   app.get("/organizations/:orgId/artifacts/:artifactId/assets/:assetId", async (c) => {
     const orgId = c.req.param("orgId");
     const artifactId = c.req.param("artifactId");
@@ -651,13 +789,14 @@ function onePerPeer(list: readonly Present[]): Present[] {
   return [...byPeer.values()];
 }
 
-/** What the apps get of a picture. */
+/** What the apps get of a picture or a font. */
 function assetView(asset: {
   id: string;
   contentType: string;
   size: number;
   width: number | null;
   height: number | null;
+  font?: { family: string; style: string; weight: number; italic: boolean } | null;
 }) {
   return {
     id: asset.id,
@@ -665,7 +804,13 @@ function assetView(asset: {
     size: asset.size,
     width: asset.width ?? null,
     height: asset.height ?? null,
+    font: asset.font ? fontView(asset.font) : null,
   };
+}
+
+/** A font as the apps get it: what names and draws it, not its license words. */
+function fontView(font: { family: string; style: string; weight: number; italic: boolean }) {
+  return { family: font.family, style: font.style, weight: font.weight, italic: font.italic };
 }
 
 type Media = Record<string, { type: string; bytes?: Uint8Array; url?: string }>;

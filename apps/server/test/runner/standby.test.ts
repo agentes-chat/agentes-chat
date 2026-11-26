@@ -59,7 +59,8 @@ function connection() {
     },
     context: { workspaceReal: ws, exec: false, token: "agm_token" },
     dial,
-    random: () => 0,
+    // The longest point of each wait (a random point within the step): the first dial again waits about 1 s.
+    random: () => 0.99,
     onState: (s) => states.push(s),
   });
   return { c, sockets, states };

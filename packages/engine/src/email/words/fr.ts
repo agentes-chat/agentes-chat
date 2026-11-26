@@ -436,6 +436,49 @@ export const words: EmailWords = {
       why: () => "Vous recevez cet e-mail car vous êtes membre de cet espace de travail sur agentes.chat.",
     },
   },
+  computerDown: {
+    subject: "Un ordinateur ne répond pas",
+    preheader: "Le travail de vos agents dessus est en attente.",
+    headline: "Un ordinateur ne répond pas",
+    body: (name, org, away) => [
+      { b: name },
+      " dans ",
+      { b: org },
+      ` ne répond plus depuis ${away}. Le travail qui en a besoin attend et reprendra à son retour.`,
+    ],
+    runs: "Demandes aux agents en attente",
+    calls: "Appels webhook en attente",
+    note: "Pour continuer maintenant, déplacez ses agents vers un autre ordinateur depuis sa page.",
+    button: "Ouvrir l’ordinateur",
+    why: (org) => `Vous recevez cet e-mail car vous gérez les ordinateurs de ${org} sur agentes.chat.`,
+    back: {
+      subject: "Un ordinateur est de retour",
+      preheader: "Le travail qui l’attendait reprend maintenant.",
+      headline: "L’ordinateur est de retour",
+      runs: "Demandes aux agents qui ont attendu",
+      calls: "Appels webhook qui ont attendu",
+      body: (name, org, away) => [
+        { b: name },
+        " dans ",
+        { b: org },
+        ` est de retour après ${away}. Le travail qui l’attendait reprend maintenant.`,
+      ],
+    },
+    personal: {
+      body: (name, _org, away) => [
+        { b: name },
+        ` ne répond plus depuis ${away}. Le travail qui en a besoin attend et reprendra à son retour.`,
+      ],
+      why: () =>
+        "Vous recevez cet e-mail car vous gérez les ordinateurs de votre espace de travail personnel sur agentes.chat.",
+      back: {
+        body: (name, _org, away) => [
+          { b: name },
+          ` est de retour après ${away}. Le travail qui l’attendait reprend maintenant.`,
+        ],
+      },
+    },
+  },
   appConnected: {
     subject: "Une app a été connectée à votre compte agentes.chat",
     preheader: "Elle peut lire et confier des tâches aux agents en votre nom, dans un espace de travail.",
@@ -518,6 +561,36 @@ export const words: EmailWords = {
     none: "Aucun espace de travail.",
     table: (day) => `Le tableau complet : bun run report:autonomy --day ${day}`,
     why: "Vous recevez cet e-mail car cette adresse figure dans OPS_REPORT_EMAIL sur ce serveur. Il est envoyé une fois par jour.",
+  },
+  accountOpened: {
+    subject: (plan) => `Plus de personnes peuvent utiliser votre compte ${plan}`,
+    preheader: (plan) => `Ce qu'elles en font utilise votre forfait ${plan} et ses limites.`,
+    headline: "Quelqu'un a changé qui peut utiliser votre compte d'IA",
+    body: (by, account, plan) => [
+      { b: by },
+      ` a changé qui peut utiliser votre compte ${plan} `,
+      { b: account },
+      `. Ce qu'ils en font utilise votre forfait et ses limites.`,
+    ],
+    account: "Compte",
+    by: "Modifié par",
+    setting: "Permission",
+    use: "Utiliser dans les agents",
+    reply: "Répondre à tous",
+    was: "Avant",
+    now: "Maintenant",
+    everyone: "Tout le monde dans le workspace",
+    admins: "Vous et les administrateurs",
+    onlyYou: "Vous seul",
+    agentOwner: "Seul le propriétaire de l'agent",
+    note: "Pour annuler, ouvrez le compte dans IA et utilisation et modifiez ses permissions.",
+    button: "Ouvrir les comptes d'IA",
+    why: (org) =>
+      `Vous recevez cet e-mail car vous avez connecté ce compte d'IA dans ${org} et quelqu'un d'autre a changé qui peut l'utiliser.`,
+    personal: {
+      why: () =>
+        "Vous recevez cet e-mail car vous avez connecté ce compte d'IA et quelqu'un d'autre a changé qui peut l'utiliser.",
+    },
   },
   planOpened: {
     subject: (plan) => `Plus de personnes peuvent parler à votre agent avec votre forfait ${plan}`,
@@ -618,6 +691,28 @@ export const words: EmailWords = {
       small: "Lie-le à nouveau dans les Paramètres si c'était toi.",
       why: (surface) => `Tu reçois cet e-mail parce que ${surface} était lié à ton compte agentes.chat.`,
       picture: "Ton assistant, plus sur ton téléphone",
+    },
+    pinReset: {
+      subject: (surface) => `Choisis ton code PIN ${surface}`,
+      preheader: "Choisis le code PIN qui approuve les actions depuis ton app de chat.",
+      headline: (surface) => `Choisis ton code PIN ${surface}`,
+      body: (surface) =>
+        `Quelqu'un a demandé un lien pour choisir le code PIN que tu utilises pour approuver des actions depuis ${surface}. Si c'était toi, choisis-le sur la page que ce bouton ouvre.`,
+      button: "Choisir mon code PIN",
+      small:
+        "Le lien fonctionne une fois, pendant une heure. Si ce n'était pas toi, ignore cet e-mail. Rien ne change.",
+      why: (surface) => `Tu reçois cet e-mail parce que ${surface} est lié à ton compte agentes.chat.`,
+    },
+    pinLocked: {
+      subject: (surface) => `Ton code PIN ${surface} est bloqué`,
+      preheader: "Trois codes PIN incorrects d'affilée. Approuver depuis ton app de chat est en pause pour l'instant.",
+      headline: (surface) => `Ton code PIN ${surface} est bloqué`,
+      body: (surface, time) =>
+        `Quelqu'un a saisi un code PIN incorrect trois fois d'affilée pour approuver une action depuis ${surface}. Approuver depuis ${surface} est en pause pendant ${time}.`,
+      lockedFor: ["15 minutes", "1 heure", "24 heures"],
+      small: (surface) =>
+        `Si c'était toi, réessaie plus tard. Sinon, dissocie ${surface} dans tes réglages de notifications, pour que personne ne puisse approuver depuis là.`,
+      button: "Ouvrir les réglages de notifications",
     },
   },
   supportReply: {

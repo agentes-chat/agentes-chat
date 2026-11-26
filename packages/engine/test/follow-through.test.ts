@@ -180,16 +180,16 @@ test("the prompt asks to finish what it starts, and names follow_up only when th
   await ask(f, "@dev oi");
   await drainOutbox(f.db, f.handlers);
   const withTool = systemText(f.provider.calls[0]?.request.system ?? []);
-  expect(withTool).toContain("Finish what you start.");
-  expect(withTool).toContain("set a follow_up to come back to it");
-  expect(withTool).toContain("After a person approves or answers what you waited on, go on with the task at once");
+  expect(withTool).toContain("Before you end your turn, reread your reply.");
+  expect(withTool).toContain("set a follow_up and say when");
+  expect(withTool).toContain("After a person approves or answers what you waited on, go on at once");
   await f.close();
 
   f = await setup({ react: true, reply: () => ({ chunks: ["ok"] }) });
   await ask(f, "@dev oi");
   await drainOutbox(f.db, f.handlers);
   const without = systemText(f.provider.calls[0]?.request.system ?? []);
-  expect(without).toContain("Finish what you start.");
+  expect(without).toContain("Before you end your turn, reread your reply.");
   expect(without).not.toContain("follow_up");
 });
 
@@ -1563,12 +1563,16 @@ describe("a turn end's reads and judgment", () => {
     });
   });
 
-  test("a check refused past the platform cap: once per run the agent checks itself, held in a conversation; then done", async () => {
+  test("a check refused past the platform cap: once per run the agent checks itself, held in an agents' DM; then done", async () => {
     const down = () => Promise.reject(new Error(PLATFORM_CAP));
     const evidence = { means: ["terminal (run_code)"], tried: ["github_get_issue #12 → ok"] };
     const first = await decideTurnEnd(turn({ verdict: down, evidence }));
     expect(first).toMatchObject({ outcome: "continue", rule: "untried", judgeError: true });
-    expect(first.nudge).toStartWith("Not posted yet");
+    // A person's conversation got the reply already (the executor posts it and wraps this in `shownNudge`).
+    expect(first.nudge).not.toContain("Not posted yet");
+    expect((await decideTurnEnd(turn({ kind: "agents_dm", verdict: down, evidence }))).nudge).toStartWith(
+      "Not posted yet",
+    );
     expect(first.nudge).toContain("check it yourself");
     expect(first.nudge).toContain("terminal (run_code)");
     expect(first.nudge).toContain("github_get_issue #12");

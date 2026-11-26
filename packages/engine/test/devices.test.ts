@@ -34,6 +34,7 @@ import {
   repairIphone,
   requestTimeoutMs,
   setAgentComputerTarget,
+  setDevicesHelp,
   setWorkspaceComputers,
   startWifiPairing,
   stopPhone,
@@ -143,6 +144,16 @@ test("the list: the workspace's computer first, each computer's status, its phon
     mayManage: false,
   });
   expect(labBox).toMatchObject({ cpus: 8, memoryGb: 16, status: { kind: "paused", until: null } });
+  // A runner that says its limit (`TASK_LIMIT_PROTOCOL`): the busy pill counts against it, and the page shows it.
+  expect(macbook?.maxTasks).toBeNull();
+  await f.db
+    .update(schema.machines)
+    .set({ size: { cpus: 12, memoryGb: 32, diskGb: 1000, maxTasks: 6 } })
+    .where(eq(schema.machines.id, mac));
+  expect((await listDevices(f.db, f.org.id, rui.id)).devices[1]).toMatchObject({
+    maxTasks: 6,
+    status: { kind: "busy", running: 1, max: 6 },
+  });
   expect(macbook?.phones).toMatchObject([
     {
       name: "Pixel 8",
@@ -235,6 +246,10 @@ test("who can use it: the owner sets it; an admin renames, marks it the workspac
   await expect(updateComputerDevice(deps(), other.id, f.org.id, laptop, { name: "Mine" })).rejects.toThrow(
     ForbiddenError,
   );
+  // How many tasks it runs at once is its owner's: an admin can't, not even down.
+  await expect(updateComputerDevice(deps(), sam.id, f.org.id, laptop, { maxTasks: 1 })).rejects.toMatchObject({
+    code: "device.tasks_owner_only",
+  });
 
   expect(await updateComputerDevice(deps(), rui.id, f.org.id, laptop, { audience: everyone })).toMatchObject({
     audience: everyone,
@@ -276,25 +291,32 @@ test("who can use it: the owner sets it; an admin renames, marks it the workspac
   ).rejects.toMatchObject({ code: "machine.managed" });
 });
 
-test("spill-over: on for its owner's replies by default; only the owner turns it on, an admin only off", async () => {
+test("help when the team's computer is full or away: on by default; only the owner turns it on, an admin only off", async () => {
   f = await setup();
   const sam = await addMember(f.db, f.org.id, "admin", "sam");
   const rui = await addMember(f.db, f.org.id, "member", "rui");
   const laptop = await pair(rui.id, "Rui's laptop");
-  expect((await updateComputerDevice(deps(), rui.id, f.org.id, laptop, {})).spill).toEqual({
-    own: true,
-    others: false,
+  expect((await updateComputerDevice(deps(), rui.id, f.org.id, laptop, {})).spill).toEqual({ own: true, first: false });
+  expect((await updateComputerDevice(deps(), sam.id, f.org.id, laptop, { spill: { own: false } })).spill).toEqual({
+    own: false,
+    first: false,
   });
-  await expect(
-    updateComputerDevice(deps(), sam.id, f.org.id, laptop, { spill: { others: true } }),
-  ).rejects.toMatchObject({ code: "device.spill_owner_only" });
-  expect((await updateComputerDevice(deps(), rui.id, f.org.id, laptop, { spill: { others: true } })).spill).toEqual({
-    own: true,
-    others: true,
+  await expect(updateComputerDevice(deps(), sam.id, f.org.id, laptop, { spill: { own: true } })).rejects.toMatchObject({
+    code: "device.spill_owner_only",
   });
-  expect(
-    (await updateComputerDevice(deps(), sam.id, f.org.id, laptop, { spill: { own: false, others: false } })).spill,
-  ).toEqual({ own: false, others: false });
+  expect((await updateComputerDevice(deps(), rui.id, f.org.id, laptop, { spill: { own: true } })).spill).toEqual({
+    own: true,
+    first: false,
+  });
+});
+
+test("the workspace's switch: on without a row, only an admin turns it off, and the list says so", async () => {
+  f = await setup();
+  const rui = await addMember(f.db, f.org.id, "member", "rui");
+  expect((await listDevices(f.db, f.org.id, rui.id)).devicesHelp).toBe(true);
+  await expect(setDevicesHelp(deps(), rui.id, f.org.id, false)).rejects.toMatchObject({ code: "forbidden" });
+  expect(await setDevicesHelp(deps(), f.owner.id, f.org.id, false)).toBe(false);
+  expect((await listDevices(f.db, f.org.id, rui.id)).devicesHelp).toBe(false);
 });
 
 test("where workspaces have their own computer, a brought one is a target, never an agent's home", async () => {

@@ -837,7 +837,7 @@ describe("an agent's card to install or update a skill", () => {
     const flow = screen().getByRole("dialog", { name: "Conectar GitHub" });
     await click(within(flow).getByRole("button", { name: "Continuar no GitHub" }), 4);
     expect(state.calls.find((c) => c.method === "connectors.startOAuth")?.args[2]).toEqual({
-      returnTo: `/org/${ORG_ID}/settings/skills?install=${encodeURIComponent(link)}&agent=${ATLAS_ID}`,
+      returnTo: `/org/${ORG_ID}/skills?install=${encodeURIComponent(link)}&agent=${ATLAS_ID}`,
       serverUrl: undefined,
     });
   });
@@ -868,7 +868,7 @@ describe("an agent's card to install or update a skill", () => {
     expect(within(row).queryByRole("button", { name: "Instalar" })).toBeNull();
   });
 
-  test("an update waiting on its scripts: Revisar opens the skill, where it is applied", async () => {
+  test("an update waiting on its scripts: Review opens the skill's page, where it is applied", async () => {
     const state = seedState();
     const api = createFakeApi(state);
     const [review] = await api.skills.list(ORG_ID);
@@ -880,9 +880,9 @@ describe("an agent's card to install or update a skill", () => {
     await settle(5);
     const row = cardRow("Atualizar uma skill");
     await click(within(row).getByRole("button", { name: "Revisar" }), 8);
-    const sheet = dialog(review.name) as HTMLElement;
-    expect(sheet.textContent).toContain("A atualização do link muda arquivos que rodam: scripts/lint.sh");
-    await click(within(sheet).getByRole("button", { name: "Aplicar atualização" }), 8);
+    const page = document.querySelector(".sk-one") as HTMLElement;
+    expect(page.textContent).toContain("A atualização do link muda arquivos que rodam: scripts/lint.sh");
+    await click(within(page).getByRole("button", { name: "Aplicar atualização" }), 8);
     expect(state.calls.some((c) => c.method === "skills.approveUpdate")).toBe(true);
   });
 });

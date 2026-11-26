@@ -17,7 +17,7 @@ import {
 import { realFoldersFor } from "./access";
 import { agentAccountHome, agentAccountsDir, grantOf, lentAccounts } from "./accounts";
 import { dropAgySignIns } from "./agy-home";
-import { BrainManager, turnContext } from "./brain";
+import { BrainManager, readyRoom, turnContext } from "./brain";
 import { CodexAppServers } from "./brain-codex-app";
 import { BrowserManager, type BrowserManagerOptions, launchChrome } from "./browser";
 import type { BrowserPorts } from "./browser-ports";
@@ -25,6 +25,7 @@ import { type Dial, RunnerConnection, type SocketHandlers } from "./connection";
 import { DEFAULT_LIMITS, machineOs, prepareWorkspace } from "./daemon";
 import { type DelegatedBridge, DelegatedTools, delegatedTask, parseBridge, type ToolNotice } from "./delegated-tools";
 import { DesktopManager, type DesktopManagerOptions } from "./desktop";
+import { taskRoomNow } from "./desktop-session";
 import { RUNNER_VERSION, RunnerError, toMachineError } from "./errors";
 import type { CacheFill, CloneSlots } from "./git";
 import { type HandlerContext, handleRequest } from "./handlers";
@@ -589,6 +590,9 @@ export async function runWorker(o: WorkerOptions): Promise<number> {
     ...(cli ? { spawnCli: cli } : {}),
     hostedStop: (taskId) => link.taskStop(taskId),
     commitHost: () => state.commitHost,
+    // Read as each task starts: root may turn it on or off with the state it sends.
+    room: () => (state.limits.onRoom ? taskRoomNow() : { free: null, cpuBusy: false }),
+    pushHarder: state.limits.pushHarder === true,
   });
   link.onTaskOut = (taskId, stream, line) => tasks.hostedOutput(taskId, stream, line);
   await tasks.init();
@@ -607,6 +611,7 @@ export async function runWorker(o: WorkerOptions): Promise<number> {
     ...(o.claudeCommand ? { claudeCommand: o.claudeCommand } : {}),
     ...brainLimits(),
     ...(cli ? { spawn: cli } : {}),
+    readyRoom,
     log,
   });
   const codexRuns = new Map<string, McpTaskInfo>();
@@ -844,7 +849,11 @@ export async function runWorker(o: WorkerOptions): Promise<number> {
     const use = (s: WorkerState) => s.access.tools.desktop === true && s.access.tools.commands;
     if (use(state) && !use(next)) desktopUse.stopAll();
     state = next;
-    tasks.setLimits({ maxConcurrent: next.limits.maxConcurrentTasks, defaultMaxSeconds: next.limits.taskMaxSeconds });
+    tasks.setLimits({
+      maxConcurrent: next.limits.maxConcurrentTasks,
+      defaultMaxSeconds: next.limits.taskMaxSeconds,
+      pushHarder: next.limits.pushHarder === true,
+    });
     brains.setLimits(brainLimits());
     codexApp.setLimits(codexLimits());
     if (next.account !== undefined) {

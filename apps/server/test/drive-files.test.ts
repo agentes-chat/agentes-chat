@@ -47,7 +47,7 @@ test("people upload files as is: download with the real name and type, versions,
   );
   expect(file.headers.get("x-content-type-options")).toBe("nosniff");
   expect(file.headers.get("content-security-policy")).toBe("sandbox");
-  expect(file.headers.get("cache-control")).toBe("private, no-store, no-transform");
+  expect(file.headers.get("cache-control")).toBe("private, no-cache, no-transform");
   expect(file.headers.get("accept-ranges")).toBe("bytes");
   expect(new Uint8Array(await file.arrayBuffer())).toEqual(PDF);
   expect((await api(`/artifacts/${a.id}/file?format=pdf`)).status).toBe(400);
@@ -100,6 +100,68 @@ test("people upload files as is: download with the real name and type, versions,
   expect(list.artifacts.map((x) => x.id)).toEqual([a.id]);
 });
 
+test("a file's bytes: a version cached for good, the newest checked again; a video or a download goes to the store", async () => {
+  const owner = browser(t);
+  await signUp(owner, "owner@example.com");
+  const { orgId } = await seedOrg(owner);
+  const base = `/api/app/organizations/${orgId}`;
+  const api = (path: string, headers: Record<string, string> = {}) => owner(`${base}${path}`, { headers });
+  const made = await upload(owner, `${base}/artifacts/files`, { file: new File([PDF], "a.pdf") });
+  const { id } = (await made.json()) as { id: string };
+  const etag = `"${new Bun.CryptoHasher("sha256").update(PDF).digest("hex")}"`;
+
+  // A script's fetch (the previews) gets the bytes from us.
+  const pinned = await api(`/artifacts/${id}/file?version=1`, { "sec-fetch-mode": "cors" });
+  expect(pinned.status).toBe(200);
+  expect(pinned.headers.get("cache-control")).toBe("private, max-age=31536000, immutable, no-transform");
+  expect(pinned.headers.get("etag")).toBe(etag);
+  // The same address answers a video with the store's link: what a load under CORS cached never stands in for it.
+  expect(pinned.headers.get("vary")).toBe("sec-fetch-mode");
+  expect(new Uint8Array(await pinned.arrayBuffer())).toEqual(PDF);
+  expect((await api(`/artifacts/${id}/file`)).headers.get("cache-control")).toBe("private, no-cache, no-transform");
+  const unchanged = await api(`/artifacts/${id}/file`, { "if-none-match": `W/${etag}` });
+  expect(unchanged.status).toBe(304);
+  expect(unchanged.headers.get("vary")).toBe("sec-fetch-mode");
+  expect(await unchanged.text()).toBe("");
+  // A part of a file the client no longer holds would mix two files: the whole of this one.
+  const stale = await api(`/artifacts/${id}/file`, { range: "bytes=1-4", "if-range": '"older"' });
+  expect(stale.status).toBe(200);
+  expect((await api(`/artifacts/${id}/file`, { range: "bytes=1-4", "if-range": etag })).status).toBe(206);
+
+  // What follows a redirect without CORS (a video, a download) goes to the store's short-lived link, never cached.
+  for (const mode of ["no-cors", "navigate"]) {
+    const sent = await api(`/artifacts/${id}/file?version=1`, { "sec-fetch-mode": mode });
+    expect(sent.status).toBe(302);
+    expect(sent.headers.get("location")).toStartWith("memory://");
+    expect(sent.headers.get("cache-control")).toBe("private, no-store");
+  }
+  // Only after the reader's check: a file in the trash gets no link.
+  expect((await owner(`${base}/artifacts/${id}`, { method: "DELETE" })).status).toBe(204);
+  expect((await api(`/artifacts/${id}/file?version=1`, { "sec-fetch-mode": "no-cors" })).status).toBe(404);
+
+  // A store that signs no links (a folder on disk) sends the bytes itself.
+  const plain = await createTestServer({ signedBlobs: false });
+  try {
+    const someone = browser(plain);
+    await signUp(someone, "owner@example.com");
+    const other = await seedOrg(someone);
+    const at = `/api/app/organizations/${other.orgId}`;
+    const form = new FormData();
+    form.set("file", new File([PDF], "a.pdf"));
+    const sent = await plain.app.request(`${at}/artifacts/files`, {
+      method: "POST",
+      headers: { cookie: someone.cookie(), origin: ORIGIN },
+      body: form,
+    });
+    const own = (await sent.json()) as { id: string };
+    const res = await someone(`${at}/artifacts/${own.id}/file?version=1`, { headers: { "sec-fetch-mode": "no-cors" } });
+    expect(res.status).toBe(200);
+    expect(new Uint8Array(await res.arrayBuffer())).toEqual(PDF);
+  } finally {
+    await plain.close();
+  }
+});
+
 test("uploads: a file is required, other origins are refused, multipart only where it uploads, 50 MB at most", async () => {
   const owner = browser(t);
   await signUp(owner, "owner@example.com");
@@ -144,4 +206,48 @@ test("a picture is a snapshot: no versions, so a new one is refused in words the
   });
   expect(shotV2.status).toBe(400);
   expect(((await shotV2.json()) as { error: { code: string } }).error.code).toBe("artifact.not_versioned");
+});
+
+test("an audio file keeps the wave the first app measured, and a sound stored untyped reads as audio by its name", async () => {
+  const owner = browser(t);
+  await signUp(owner, "owner@example.com");
+  const { orgId } = await seedOrg(owner);
+  const base = `/api/app/organizations/${orgId}`;
+  const api = (path: string, init?: Parameters<typeof owner>[1]) => owner(`${base}${path}`, init);
+  const sound = (name: string, type: string) =>
+    upload(owner, `${base}/artifacts/files`, { file: new File([new Uint8Array(64)], name, { type }) });
+
+  const m4a = (await (await sound("entrevista.m4a", "application/octet-stream")).json()) as {
+    id: string;
+    content: { contentType: string };
+  };
+  expect(m4a.content.contentType).toBe("audio/mp4");
+  for (const [name, type] of [
+    ["faixa.flac", "audio/flac"],
+    ["nota.opus", "audio/ogg"],
+  ]) {
+    const a = (await (await sound(name ?? "", "application/octet-stream")).json()) as {
+      content: { contentType: string };
+    };
+    expect(a.content.contentType).toBe(type ?? "");
+  }
+
+  const put = (id: string, json: unknown) => api(`/artifacts/${id}/wave?version=1`, { method: "PUT", json });
+  const first = await put(m4a.id, { peaks: [0.2, 0.9, 0.4], durationMs: 61_500 });
+  expect(first.status).toBe(200);
+  expect(await first.json()).toEqual({ peaks: [0.2, 0.9, 0.4], durationMs: 61_500 });
+  // Measured once: a second app's measure doesn't replace it.
+  expect(await (await put(m4a.id, { peaks: [1, 1], durationMs: 2_000 })).json()).toEqual({
+    peaks: [0.2, 0.9, 0.4],
+    durationMs: 61_500,
+  });
+  expect(((await (await api(`/artifacts/${m4a.id}`)).json()) as { content: unknown }).content).toMatchObject({
+    wave: { peaks: [0.2, 0.9, 0.4], durationMs: 61_500 },
+  });
+
+  const pdf = (await (
+    await upload(owner, `${base}/artifacts/files`, { file: new File([PDF], "a.pdf", { type: "application/pdf" }) })
+  ).json()) as { id: string };
+  expect((await put(pdf.id, { peaks: [0.5], durationMs: 1_000 })).status).toBe(400);
+  expect((await put(m4a.id, { peaks: [2], durationMs: 1_000 })).status).toBe(400);
 });

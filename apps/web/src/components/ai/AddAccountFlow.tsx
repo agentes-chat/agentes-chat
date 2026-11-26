@@ -1,5 +1,5 @@
 import type { AccountLoginStart, AccountLoginStatus, MachineAccount, MachineAccountKind } from "@agenteschat/client";
-import { keys, useAccountLogin, useAiAccounts, useApi } from "@agenteschat/client";
+import { keys, useAccountLogin, useAiAccounts, useApi, useMachines } from "@agenteschat/client";
 import { accountInLine, accountTitle, reusableAccount, signInOf } from "@agenteschat/client/lib/ai-accounts";
 import { knownErrorText } from "@agenteschat/client/lib/errors";
 import {
@@ -23,7 +23,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useOrg } from "@/components/org-context";
 import { inDesktopApp } from "@/lib/desktop";
-import { openPopup, openWaitingPopup, sendPopup } from "@/lib/popup";
+import { openSignInTab, openWaitingTab, sendSignInTab } from "@/lib/sign-in-tab";
 
 /*
  * "Add account" (ADR 0041 §2, ADR 0059): the computer starts the
@@ -262,11 +262,8 @@ export function OpenPage({
         target="_blank"
         rel="noopener noreferrer"
         // In a dialog, the desktop app's link routing (lib/desktop.ts) takes the click before React's `onClick`. The
-        // app opens no popup (its window.open goes to the browser and returns null): the link itself goes there, once.
-        onClickCapture={(e) => {
-          if (!inDesktopApp() && openPopup(href)) e.preventDefault();
-          onOpened?.();
-        }}
+        // link itself opens the new tab (in the app, the browser), once.
+        onClickCapture={() => onOpened?.()}
       >
         <Icon name="external" size={14} />
         {children}
@@ -310,6 +307,9 @@ function AddAccountFlow({
   // Gemini: a personal Google account, or (chosen under it, or the account's own) Gemini Enterprise.
   const [enterprise, setEnterprise] = useState(provider === GEMINI_ENTERPRISE_PROVIDER);
   const signInProvider = keyProvider ?? (kind === "antigravity" && enterprise ? GEMINI_ENTERPRISE_PROVIDER : undefined);
+  // On Windows the Antigravity CLI keeps its sign-in in the user's one Credential Manager (ADR 0143).
+  const machines = useMachines(org.id, kind === "antigravity");
+  const windows = kind === "antigravity" && machines.data?.find((m) => m.id === machineId)?.os === "windows";
   const [login, setLogin] = useState<AccountLoginStart | null>(null);
   const [starting, setStarting] = useState(false);
   // Why the sign-in didn't start, in the person's language.
@@ -350,7 +350,7 @@ function AddAccountFlow({
   const result = status.data;
   const read = loginRead(status);
 
-  const begin = async (popup?: Window | null): Promise<AccountLoginStart | null> => {
+  const begin = async (tab?: Window | null): Promise<AccountLoginStart | null> => {
     setStarting(true);
     setStartFailed(null);
     try {
@@ -360,16 +360,16 @@ function AddAccountFlow({
         hint,
       });
       if (gone.current) {
-        popup?.close();
+        tab?.close();
         void api.machines.cancelAccountLogin(org.id, machineId, l.loginId).catch(() => undefined);
         return null;
       }
       running.current = [...running.current, { machineId, loginId: l.loginId }];
       setLogin(l);
-      if (popup) sendPopup(popup, l.url);
+      if (tab) sendSignInTab(tab, l.url);
       return l;
     } catch (error) {
-      popup?.close();
+      tab?.close();
       if (!gone.current)
         setStartFailed(knownErrorText(t, error) ?? t("agentPage.work.brain.add.startFailed", { computer }));
       return null;
@@ -704,11 +704,11 @@ function AddAccountFlow({
 
   // Opened on the click itself, then sent to the provider's page once the computer has it.
   const start = () => {
-    const popup = openWaitingPopup(kind);
+    const tab = openWaitingTab(kind);
     setOpened(true);
-    // The desktop app has no popup: its page goes to the browser (main_window.rs).
-    void begin(popup).then((l) => {
-      if (l && inDesktopApp()) openPopup(l.url);
+    // The desktop app has no waiting tab: its page goes to the browser (main_window.rs).
+    void begin(tab).then((l) => {
+      if (l && inDesktopApp()) openSignInTab(l.url);
     });
   };
   const openAgain = (url: string) => (
@@ -861,6 +861,7 @@ function AddAccountFlow({
     steps = (
       <>
         {!enterprise && <SettingNote icon="alert">{t("connectAi.plan.gemini.warning")}</SettingNote>}
+        {windows && <SettingNote icon="info">{t("connectAi.plan.gemini.windowsOne")}</SettingNote>}
         {firstStep(
           signInLabel ?? t("agentPage.work.brain.add.open.antigravity"),
           <StepTitle

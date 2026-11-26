@@ -219,6 +219,8 @@ const PUSHED: { kind: AppNotification["kind"]; n: Partial<AppNotification>; to: 
     to: "/org/$orgId/c/$channelId",
   },
   { kind: "computer_ready", n: { source: { machineId: "pc1" } }, to: "/org/$orgId/settings/computers/$machineId" },
+  { kind: "computer_down", n: { source: { machineId: "pc1" } }, to: "/org/$orgId/settings/computers/$machineId" },
+  { kind: "computer_back", n: { source: { machineId: "pc1" } }, to: "/org/$orgId/settings/computers/$machineId" },
   { kind: "join_request", n: { waiting: true, source: { label: "Acme" } }, to: "/org/$orgId/settings/$section" },
   {
     kind: "agent_reply",
@@ -288,6 +290,9 @@ describe("a pushed notification that can't be read", () => {
       to: "/org/$orgId/settings/$section",
       params: { section: "computers" },
     });
+    expect(fallbackTarget(data({ kind: "computer_down" }))).toEqual(
+      fallbackTarget(data({ kind: "machine_connected" })),
+    );
     expect(fallbackTarget(data({ kind: "join_request" }))).toEqual({
       to: "/org/$orgId/settings/$section",
       params: { section: "invites" },

@@ -50,6 +50,10 @@ export const STORED = {
   pushAsked: "push-asked",
   /** The person turned notifications off in the app (no silent re-registration). */
   pushOff: "push-off",
+  /** "0": the agents' Live Activity is off on this phone (Você › Notificações, ADR 0210); on by default. */
+  liveActivityOff: "live-activity-off",
+  /** This install's id for the Live Activity's registration (`POST /api/app/push/live-activity`). */
+  liveActivityInstall: "live-activity-install",
   /** How many times our notifications sheet opened by itself (@agenteschat/client/lib/push-offer). */
   pushOffers: "push-offers",
   /** The wiki pages last opened on this phone, per workspace (JSON: org id → slugs, newest first). */
@@ -60,6 +64,10 @@ export const STORED = {
   arrivalClosed: "arrival-closed",
   /** Conversas' sections the person collapsed (JSON list). */
   homeCollapsed: "home-collapsed",
+  /** How Conversas lists a team's conversations: "recent" (by latest activity) or "sectors" (by the agents' sectors). */
+  homeView: "home-view",
+  /** Conversas' sector sections the person collapsed, in Setores (JSON list of section keys). */
+  homeSectorsCollapsed: "home-sectors-collapsed",
   /** The Threads tab's sections the person collapsed (JSON list). */
   threadsCollapsed: "threads-collapsed",
   /** Agentes' groups the person collapsed, in every workspace (JSON list of group ids). */
@@ -90,6 +98,8 @@ export const STORED = {
   voiceSpeed: "voice-speed",
   /** The person held the send button to stop an agent and send once: the composer's hint is over ("1"). */
   stopSendTaught: "stop-send-taught",
+  /** The workspaces last seen on a billing hold (JSON list of ids): one opened once its plan is on shows the moment. */
+  planHeld: "plan-held",
 } as const;
 
 export async function clearStoredValues(): Promise<void> {

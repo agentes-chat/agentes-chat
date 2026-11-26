@@ -10,16 +10,25 @@ import {
 import { formatBytes } from "@agenteschat/client/lib/files";
 import { whenAt } from "@agenteschat/client/lib/format";
 import { runMessageLink } from "@agenteschat/client/lib/routine-view";
-import { hookCurl, isRefusedHookCall } from "@agenteschat/client/lib/routines";
+import { GROUP_BY_EXAMPLE, hookCurl, isRefusedHookCall } from "@agenteschat/client/lib/routines";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { StyleSheet, View } from "react-native";
-import { GroupedFooter, GroupedHeader, GroupedList, GroupedRow, SkeletonList, useToast } from "@/ui";
+import { StyleSheet, TextInput, View } from "react-native";
+import {
+  fieldText,
+  GROUPED_ROW,
+  GroupedFooter,
+  GroupedHeader,
+  GroupedList,
+  GroupedRow,
+  SkeletonList,
+  useToast,
+} from "@/ui";
 import { router } from "@/ui/navigation";
 import { chatHref } from "../links/logic";
 import { CommandBlock, confirmAction } from "../settings/parts";
 import { LoadFailed } from "../shared/FirstUse";
-import { useOrgId } from "../shared/hooks";
+import { useColors, useOrgId } from "../shared/hooks";
 import { useFailed } from "./hooks";
 
 /** The changes that break the services calling the address, each asked first: what stops working. */
@@ -55,6 +64,7 @@ export function WebhookCard({ routine: r, runs }: { routine: Routine; runs: Rout
   const action = useRoutineHookAction(orgId, r.id);
   const save = useRoutineAction(orgId);
   const [secret, setSecret] = useState<string | null>(null);
+  const [pasting, setPasting] = useState(false);
   const data = hook.data;
   // While the address loads, its rows' shape; if it can't, why, with Retry.
   if (!data) {
@@ -122,6 +132,12 @@ export function WebhookCard({ routine: r, runs }: { routine: Routine; runs: Rout
           disabled={action.isPending}
           onPress={() => (data.signed ? ask("secret") : run("secret"))}
         />
+        <GroupedRow
+          icon="key"
+          label={t("routines.webhook.pasteSecret")}
+          disabled={action.isPending}
+          onPress={() => setPasting(!pasting)}
+        />
         {data.signed ? (
           <GroupedRow
             icon="x"
@@ -131,6 +147,15 @@ export function WebhookCard({ routine: r, runs }: { routine: Routine; runs: Rout
           />
         ) : null}
       </GroupedList>
+      {pasting ? (
+        <PasteSecret
+          routine={r}
+          onDone={() => {
+            setPasting(false);
+            setSecret(null);
+          }}
+        />
+      ) : null}
       <GroupedFooter>{t(data.signed ? "routines.webhook.signedOn" : "routines.webhook.signedOff")}</GroupedFooter>
       {secret && data.signed ? (
         <>
@@ -158,6 +183,8 @@ export function WebhookCard({ routine: r, runs }: { routine: Routine; runs: Rout
           />
         ))}
       </GroupedList>
+
+      <GroupBy routine={r} groupBy={data.groupBy} />
 
       <GroupedHeader>{t("routines.webhook.example")}</GroupedHeader>
       <CommandBlock
@@ -189,6 +216,115 @@ export function WebhookCard({ routine: r, runs }: { routine: Routine; runs: Rout
   );
 }
 
+/**
+ * "Group calls by", the web's field for the phone: a path into each call's data, saved when typing ends. Calls with
+ * the same value run in order, others side by side; emptied, every call waits in one line.
+ */
+function GroupBy({ routine: r, groupBy }: { routine: Routine; groupBy: string | null }) {
+  const { t } = useTranslation();
+  const c = useColors();
+  const orgId = useOrgId();
+  const toast = useToast();
+  const failed = useFailed();
+  const save = useRoutineAction(orgId);
+  const [path, setPath] = useState(groupBy ?? "");
+  const submit = () => {
+    if (path.trim() === (groupBy ?? "") || save.isPending) return;
+    save.mutate(
+      { type: "update", id: r.id, patch: { trigger: { type: "webhook", groupBy: path.trim() || null } } },
+      {
+        onSuccess: () => toast({ title: t("routines.webhook.groupBySaved"), icon: "check" }),
+        onError: (error) => {
+          setPath(groupBy ?? "");
+          failed(error);
+        },
+      },
+    );
+  };
+  return (
+    <>
+      <GroupedHeader
+        hint={{
+          name: t("common.about", { label: t("routines.webhook.groupBy") }),
+          text: t("routines.webhook.groupByHelp"),
+        }}
+      >
+        {t("routines.webhook.groupBy")}
+      </GroupedHeader>
+      <GroupedList>
+        <TextInput
+          value={path}
+          onChangeText={setPath}
+          onEndEditing={submit}
+          onSubmitEditing={submit}
+          placeholder={GROUP_BY_EXAMPLE}
+          placeholderTextColor={c.faint}
+          autoCapitalize="none"
+          autoCorrect={false}
+          maxLength={200}
+          returnKeyType="done"
+          editable={!save.isPending}
+          accessibilityLabel={t("routines.webhook.groupBy")}
+          style={[fieldText("callout"), styles.input, { color: c.ink }]}
+        />
+      </GroupedList>
+      <GroupedFooter>
+        {groupBy ? t("routines.webhook.groupByOn", { path: groupBy }) : t("routines.webhook.groupByOff")}
+      </GroupedFooter>
+    </>
+  );
+}
+
+/** The service's own signing secret (Linear makes its own), the web's field for the phone: never shown back. */
+function PasteSecret({ routine: r, onDone }: { routine: Routine; onDone: () => void }) {
+  const { t } = useTranslation();
+  const c = useColors();
+  const orgId = useOrgId();
+  const toast = useToast();
+  const failed = useFailed();
+  const action = useRoutineHookAction(orgId, r.id);
+  const [value, setValue] = useState("");
+  const submit = () => {
+    if (!value.trim() || action.isPending) return;
+    action.mutate(
+      { paste: value.trim() },
+      {
+        onSuccess: () => {
+          toast({ title: t("routines.webhook.secretPasted"), icon: "check" });
+          onDone();
+        },
+        onError: failed,
+      },
+    );
+  };
+  return (
+    <>
+      <GroupedHeader>{t("routines.webhook.pasteLabel")}</GroupedHeader>
+      <GroupedList>
+        <TextInput
+          value={value}
+          onChangeText={setValue}
+          onSubmitEditing={submit}
+          secureTextEntry
+          autoCapitalize="none"
+          autoCorrect={false}
+          maxLength={512}
+          returnKeyType="done"
+          editable={!action.isPending}
+          accessibilityLabel={t("routines.webhook.pasteLabel")}
+          style={[fieldText("callout"), styles.input, { color: c.ink }]}
+        />
+        <GroupedRow
+          icon="check"
+          label={t("common.save")}
+          disabled={!value.trim() || action.isPending}
+          onPress={submit}
+        />
+      </GroupedList>
+    </>
+  );
+}
+
 /** One call: how it ended, its size, Teste, when; it opens the agent's message of its run when there is one. */
 function CallRow({ call, run, locale }: { call: RoutineHookCall; run: RoutineRun | undefined; locale: string }) {
   const { t } = useTranslation();
@@ -213,4 +349,5 @@ function CallRow({ call, run, locale }: { call: RoutineHookCall; run: RoutineRun
 
 const styles = StyleSheet.create({
   gap: { height: 10 },
+  input: { minHeight: GROUPED_ROW.minHeight, paddingHorizontal: GROUPED_ROW.padX, paddingVertical: GROUPED_ROW.padY },
 });

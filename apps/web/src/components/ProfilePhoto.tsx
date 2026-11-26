@@ -9,8 +9,10 @@ import {
   DialogFooter,
   Locked,
   LogoMark,
+  transferFiles,
   workspaceSky,
 } from "@agenteschat/ui";
+import { hasLightInk } from "@agenteschat/ui/org-logo";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type PointerEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -286,7 +288,7 @@ export function ImageCropDialog({
               onDrop={(e) => {
                 e.preventDefault();
                 setOver(false);
-                if (!busy) void choose(e.dataTransfer?.files?.[0]);
+                if (!busy) void choose(transferFiles(e.dataTransfer)[0]);
               }}
             >
               {placeholder}
@@ -419,7 +421,18 @@ export function OrgMark({
   size?: number;
   className?: string;
 }) {
-  if (logo) return <img className={cx("org-mark", className)} src={logo} alt="" width={size} height={size} />;
+  if (logo) {
+    return (
+      <img
+        className={cx("org-mark", className)}
+        src={logo}
+        alt=""
+        width={size}
+        height={size}
+        data-ink={hasLightInk(logo) ? "light" : undefined}
+      />
+    );
+  }
   return (
     <LogoMark className={className} size={size} {...(accent !== undefined ? { sky: workspaceSky(accent) } : {})} />
   );

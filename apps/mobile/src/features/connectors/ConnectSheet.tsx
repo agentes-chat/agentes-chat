@@ -22,6 +22,7 @@ import {
   type ConnectedItem,
   connectedItems,
   connectionActs,
+  isGitHostConnector,
   itemName,
   orgAccessChange,
   outcomeText,
@@ -88,8 +89,10 @@ import {
   needsKeyText,
   stateOf,
 } from "./logic";
+import { OwnClient } from "./OwnClient";
 import { Problem } from "./Problem";
 import { RequestHeaders } from "./RequestHeaders";
+import { RoutineOfferGroup, useRoutineOffer, useStartRoutine } from "./RoutineOffer";
 import { ADDRESS_STEPS, CATALOG_STEPS, doneSummary, firstStep, reviewTarget, STEP_KEYS, type Step } from "./review";
 import { ReviewStep } from "./ToolReview";
 import { openTools } from "./ToolsScreen";
@@ -144,7 +147,8 @@ function StepHead({
  * connecting: `add`, another account of the service, or `reconnect`, a new sign-in for `item` (a toast says it, and
  * the sheet closes). `account`: GitHub's sign-in alone, without the agentes.chat app first (GitHub through the app
  * alone connecting an account). `personal`: opened from Pessoal, so a connection already there is the person's own and
- * a new one starts as theirs (who may not add the team's connects their own whatever this says).
+ * a new one starts as theirs (who may not add the team's connects their own whatever this says). `fromPage`: opened by
+ * the service's own page, which already said what agents do there: a new one goes straight to connecting.
  */
 export function ConnectSheet({
   def,
@@ -153,6 +157,7 @@ export function ConnectSheet({
   mode,
   account = false,
   personal = false,
+  fromPage = false,
 }: {
   def: ConnectorDef;
   item?: ConnectedItem;
@@ -160,6 +165,7 @@ export function ConnectSheet({
   mode?: "add" | "reconnect";
   account?: boolean;
   personal?: boolean;
+  fromPage?: boolean;
 }) {
   const { t } = useTranslation();
   const { org } = useOrg();
@@ -179,7 +185,9 @@ export function ConnectSheet({
   const mayConnect = existing ? connectionActs(existing, me, admin).change : admin || personalAllowed(def.id);
   const connecting = Boolean(mode) || account;
   // Where it opens, decided once: the steps after it are sheets over it.
-  const [first] = useState<Step>(() => (connecting ? "connect" : firstStep(existing, mayConnect, start)));
+  const [first] = useState<Step>(() =>
+    connecting || (fromPage && !existing && mayConnect) ? "connect" : firstStep(existing, mayConnect, start),
+  );
   const service = connectorName(t, def);
   const head: FlowHead = {
     def,
@@ -531,6 +539,9 @@ function DoneStep({
   const [failed, setFailed] = useState<string | null>(null);
   const summary = doneSummary(t, reviewTarget(connectionId, def, servers.data, servers.isFetching));
   const waiting = summary?.waiting ?? null;
+  // The routine it brings (ADR 0242); a server still waiting for its tools brings none yet.
+  const offer = useRoutineOffer(waiting ? null : def?.id);
+  const startRoutine = useStartRoutine();
   const apply = (server: CustomServer) => {
     setFailed(null);
     save.mutate(
@@ -551,17 +562,27 @@ function DoneStep({
     <>
       <ConnectedNote
         name={name}
-        text={personal && summary && !waiting ? t("connectors.personal.done") : (summary?.text ?? null)}
+        text={
+          personal && summary && !waiting
+            ? t(isGitHostConnector(def?.id) ? "connectors.personal.githubDone" : "connectors.personal.done")
+            : (summary?.text ?? null)
+        }
       />
       {summary?.unreadable ? <Problem text={t("toolReview.unreadable", { reason: summary.unreadable })} /> : null}
       {failed ? <Problem key={failed} text={failed} /> : null}
+      {summary && !waiting ? <RoutineOfferGroup offer={offer} /> : null}
       <Button
         variant="primary"
         wide
         label={waiting ? t("connectFlow.next") : t("connectFlow.done.ok")}
         disabled={!summary}
-        loading={save.isPending}
-        onPress={() => (waiting ? apply(waiting) : sheet.close())}
+        // Done waits for the routine's rows to load: pressed now, it would make nothing.
+        loading={save.isPending || (!waiting && offer.loading)}
+        onPress={() => {
+          if (waiting) return apply(waiting);
+          startRoutine(offer);
+          sheet.close();
+        }}
       />
       <Button
         variant="secondary"
@@ -649,7 +670,7 @@ export function ConnectedNote({ name, text }: { name: string; text: string | nul
         {/* The page's own color on the green: white on dark's light green was hard to read. */}
         <Icon name="check" size={16} color={colors.bg} />
       </Animated.View>
-      <View style={styles.grow}>
+      <View style={[styles.grow, styles.noteText]}>
         <Text variant="body" style={styles.bold}>
           {t("mobile.connectors.connectedTitle", { name })}
         </Text>
@@ -729,7 +750,9 @@ function ConnectStep({
   const access = useGithubAccess(orgId, githubOrgs);
   const githubApp = useGitHubApp(orgId);
   const installer = useInstallGitHubAppHere();
-  const appOffered = def?.id === "github" && !viaComposio && !accountOnly && githubApp.data?.installable === true;
+  // The app is the workspace's GitHub: a person's own account is always a sign-in.
+  const appOffered =
+    def?.id === "github" && !viaComposio && !accountOnly && !theirs && githubApp.data?.installable === true;
   const [via, setVia] = useState<"app" | "account">("app");
   const how = def ? connectHow(def) : "either";
   // Reconectar: the headers the account has, by name. They stay unless new ones are typed or "Remover" drops them.
@@ -747,10 +770,23 @@ function ConnectStep({
   const sendsHeaders = canHeaders && (headers ? headers.length > 0 : savedHeaders.length > 0);
   const [key, setKey] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // The workspace's own OAuth app, for a server that lets in only apps it approved: who manages connectors sets it.
+  const ownOffered = admin && byAddress && !viaComposio;
+  const [own, setOwn] = useState(false);
   const busy = start.isPending || complete.isPending || withKey.isPending || connect.isPending || installer.busy;
   const serverUrl = fixed ?? (def?.kind === "remote_mcp" ? def.serverUrl : url.trim());
   const shownName = name || serverUrl.replace(/^https:\/\//, "").split("/")[0] || "";
-  const keyLabel = t("mobile.connectors.keyLabel", { name: shownName });
+  // A Telegram bot connects with the token @BotFather gives, not an API key.
+  const telegram = def?.id === "telegram";
+  // A git host (GitLab, Bitbucket, a git server) connects with an access token, and may run at its own address.
+  const gitHost = def?.id === "gitlab" || def?.id === "bitbucket" || def?.id === "git" ? def.id : null;
+  const [address, setAddress] = useState("");
+  const typedAddress = def?.address ? address.trim() : "";
+  const keyLabel = telegram
+    ? t("connectFlow.telegram.token")
+    : gitHost
+      ? t("connectFlow.git.token")
+      : t("mobile.connectors.keyLabel", { name: shownName });
   // The service's name: the server names another account after it ("Stripe 2"). A catalog entry's goes in English,
   // so each viewer reads a name nobody changed in their own language.
   const first = fixed ? (servers.data ?? []).find((s) => sameServer(s.serverUrl, fixed)) : undefined;
@@ -839,10 +875,12 @@ function ConnectStep({
         });
         if (res.status === "oauth") return void (await signInWith(res.authorizeUrl));
         if (res.status === "needs_key") {
-          setMode("key");
+          const ownWay = ownOffered && res.reason === "not_approved";
+          if (ownWay) setOwn(true);
+          else setMode("key");
           // "Check their values": the headers it sent are in sight.
           if (sendsHeaders) setHeadersOpen(true);
-          return oops(needsKeyText(t, res, shownName, sendsHeaders));
+          return oops(needsKeyText(t, res, shownName, sendsHeaders, ownWay));
         }
         return await connected(res.server.id, res.server.label, res.outcome);
       }
@@ -861,6 +899,9 @@ function ConnectStep({
     setError(null);
     setRefused(null);
     if (askUrl && !isHttpsUrl(url)) return oops(t("mobile.connectors.addressInvalid"));
+    if (def?.address && (typedAddress ? !isHttpsUrl(typedAddress) : def.address === "required")) {
+      return oops(t("mobile.connectors.addressInvalid"));
+    }
     if (key.trim().length < 8) return oops(t("mobile.connectors.keyShort"));
     try {
       if (byAddress) {
@@ -877,7 +918,12 @@ function ConnectStep({
         return fail();
       }
       if (!def) return;
-      const conn = await withKey.mutateAsync({ connector: def.id, apiKey: key.trim(), ...mine });
+      const conn = await withKey.mutateAsync({
+        connector: def.id,
+        apiKey: key.trim(),
+        ...(typedAddress ? { serverUrl: typedAddress } : {}),
+        ...mine,
+      });
       // One account per catalog connector: connecting it again is its new sign-in.
       await connected(conn.id, name, reconnect ? "reconnected" : "connected");
     } catch (error) {
@@ -892,6 +938,34 @@ function ConnectStep({
     else if (done.error) oops(done.error);
   };
   const field = [styles.field, { backgroundColor: c.raised, color: c.ink, borderColor: c.line }];
+  if (own) {
+    // A one-click server whose vendor's steps we know (Meta Ads, where this server has no Meta app of its own).
+    const preset = catalog.data?.connectors.find((d) => d.kind === "remote_mcp" && sameServer(d.serverUrl, serverUrl));
+    return (
+      <>
+        {error ? <Problem key={error} text={error} /> : null}
+        <OwnClient
+          serverUrl={serverUrl}
+          guide={preset?.id === "meta-ads" ? t("connectFlow.ownClient.guide.metaAds") : null}
+          busy={busy}
+          onSaved={() => {
+            setOwn(false);
+            void signIn();
+          }}
+        />
+        <Button
+          variant="text"
+          size="sm"
+          label={t("mobile.connectors.useSignIn")}
+          disabled={busy}
+          onPress={() => {
+            setError(null);
+            setOwn(false);
+          }}
+        />
+      </>
+    );
+  }
   if (appOffered && via === "app") {
     return (
       <>
@@ -946,6 +1020,11 @@ function ConnectStep({
         <Text variant="small" tone="muted">
           {t("connectFlow.github.accountText")}
         </Text>
+      ) : def?.id === "x" ? (
+        // X wants the account owner's express consent before agents post for them: connecting after this is it.
+        <Text variant="small" tone="muted">
+          {t("connectFlow.x.consent")}
+        </Text>
       ) : null}
       {askUrl ? (
         // The address it will enter, typed on the step before (a flick down goes back to change it).
@@ -964,10 +1043,39 @@ function ConnectStep({
         />
       ) : (
         <>
+          {def?.address && gitHost ? (
+            <Locked when={busy} style={styles.fieldBox}>
+              <InfoHint
+                name={t("common.about", { label: t("connectFlow.git.address") })}
+                text={t(`connectFlow.git.addressHelp.${gitHost === "git" ? "git" : "gitlab"}`)}
+                variant="footnote"
+              >
+                <Text variant="footnote" tone="faint">
+                  {t("connectFlow.git.address")}
+                </Text>
+              </InfoHint>
+              <TextInput
+                value={address}
+                onChangeText={setAddress}
+                keyboardType="url"
+                autoCapitalize="none"
+                autoCorrect={false}
+                placeholder={def.address === "optional" ? "https://gitlab.com" : "https://"}
+                accessibilityLabel={t("connectFlow.git.address")}
+                style={field}
+              />
+            </Locked>
+          ) : null}
           <Locked when={busy} style={styles.fieldBox}>
             <InfoHint
               name={t("common.about", { label: keyLabel })}
-              text={t("mobile.connectors.keyHelp")}
+              text={
+                telegram
+                  ? t("connectFlow.telegram.steps")
+                  : gitHost
+                    ? t(`connectFlow.git.tokenHelp.${gitHost}`)
+                    : t("mobile.connectors.keyHelp")
+              }
               variant="footnote"
             >
               <Text variant="footnote" tone="faint">
@@ -1029,6 +1137,18 @@ function ConnectStep({
           onPress={() => setMode(mode === "signIn" ? "key" : "signIn")}
         />
       ) : null}
+      {ownOffered && (!askUrl || isHttpsUrl(url)) ? (
+        <Button
+          variant="text"
+          size="sm"
+          label={t("connectFlow.ownClient.title")}
+          disabled={busy}
+          onPress={() => {
+            setError(null);
+            setOwn(true);
+          }}
+        />
+      ) : null}
       {appOffered ? (
         <Button
           variant="text"
@@ -1087,13 +1207,16 @@ const styles = StyleSheet.create({
   },
   keyRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   note: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
-  // A neutral card with a colored badge: the outcome of connecting (`Problem` draws what went wrong the same).
+  // A neutral card with a colored badge: the outcome of connecting (`Problem` draws what went wrong the same). The
+  // words wrap: their first line sits at the badge's middle, the badge never in the middle of the words.
   notice: {
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 12,
     padding: 12,
     borderRadius: 14,
     borderWidth: StyleSheet.hairlineWidth,
   },
   badge: { width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center" },
+  // The title's line (22) at the badge's (28) middle.
+  noteText: { paddingTop: 3 },
 });

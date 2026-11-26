@@ -1,5 +1,6 @@
 import {
   type Channel,
+  cardsInto,
   channelsQuery,
   type DirectMessage,
   dmsQuery,
@@ -8,6 +9,7 @@ import {
   type LiveRun,
   MESSAGES_PAGE,
   type Message,
+  replyingUnder,
   useAgentsBrowserHandoffs,
   type useApi,
   useChannelThreads,
@@ -28,7 +30,7 @@ import { can } from "@agenteschat/client/lib/permissions";
 import { isRightHand, rightHandSeenKey } from "@agenteschat/client/lib/right-hand";
 import { seenMessageId } from "@agenteschat/client/lib/seen";
 import { makingImage } from "@agenteschat/client/lib/work";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useIsFocused, useIsPreview } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { frameClock } from "@/agent/clock";
@@ -39,6 +41,7 @@ import { useSetupSteps } from "../../agents/setup/SetupCard";
 import { usePlanHold } from "../../ai/parts";
 import type { Directory } from "../../shared/hooks";
 import { agentLook } from "../../shared/logic";
+import { ownsIn } from "../../shared/owner";
 import { browsingRuns } from "../LiveRows";
 import { useChatLive } from "../live";
 import { mayStopRun, mergeTimeline, pinnedAsListed, quietInset, sameItems, stoppableInLine } from "../logic";
@@ -68,6 +71,7 @@ export function useChatData({
   api: ReturnType<typeof useApi>;
   dir: Directory;
 }) {
+  const qc = useQueryClient();
   // This conversation's row of each list, not the lists: they are read again for a message anywhere in the workspace,
   // and every conversation open was drawn again with each read.
   const ownChannel = useCallback((all: Channel[]) => all.find((x) => x.id === channelId), [channelId]);
@@ -187,6 +191,12 @@ export function useChatData({
     () => live.consults.filter((x) => (isThread ? x.threadId === threadId : inMainTimeline(x, topIds))),
     [live.consults, isThread, threadId, topIds],
   );
+  // A channel whose agents reply in threads (ADR 0214): "Ada is replying in the thread" under the message that asked,
+  // until its thread has a link of its own.
+  const replying = useMemo(
+    () => (isThread ? new Map<string, string[]>() : replyingUnder(live.runs, topIds, linkThreads)),
+    [live.runs, isThread, topIds, linkThreads],
+  );
 
   // "Parar" in the working line (as on the web): who manages the agent (the server's `canManage`), its owner, or who
   // started it.
@@ -197,9 +207,11 @@ export function useChatData({
         meId,
         manageAgents: managesAgent(dir.agentById.get(r.agentId)),
         agentOwnerId: dir.agentById.get(r.agentId)?.ownerUserId,
+        // Holding the role that answers for it counts as its owner (ADR 0085, addendum of 2026-11-21).
+        owns: ownsIn(dir.memberById, meId, dir.agentById.get(r.agentId)),
         messages: list,
       }),
-    [meId, dir.agentById, list],
+    [meId, dir.agentById, dir.memberById, list],
   );
   const { stop } = live;
   const stopRun = useCallback(
@@ -295,7 +307,7 @@ export function useChatData({
     setLoadingOlder(true);
     setOlderFailed(false);
     api.chat
-      .messages(orgId, channelId, { before: oldest.createdAt, limit: MESSAGES_PAGE })
+      .messages(orgId, channelId, { before: oldest.createdAt, limit: MESSAGES_PAGE, onCards: cardsInto(qc, orgId) })
       .then((page) => {
         setOlder((prev) => [...page, ...prev]);
         if (page.length < MESSAGES_PAGE) setOlderDone(true);
@@ -305,7 +317,7 @@ export function useChatData({
         fetchingOlder.current = false;
         setLoadingOlder(false);
       });
-  }, [api, orgId, channelId, isThread, olderDone, top.data, older]);
+  }, [api, qc, orgId, channelId, isThread, olderDone, top.data, older]);
   // The list's own asks (reaching the top, a layout) stop after a page failed: without a connection they would ask
   // again at every layout. "Try again" on the row asks again.
   const loadOlder = useCallback(() => {
@@ -329,7 +341,7 @@ export function useChatData({
     if (!gap || fetchingNewer.current || !newest) return;
     fetchingNewer.current = true;
     api.chat
-      .messages(orgId, channelId, { after: newest.createdAt, limit: MESSAGES_PAGE })
+      .messages(orgId, channelId, { after: newest.createdAt, limit: MESSAGES_PAGE, onCards: cardsInto(qc, orgId) })
       .then((page) => {
         const known = new Set(older.map((m) => m.id));
         const next = [...older, ...page.filter((m) => !known.has(m.id))];
@@ -346,7 +358,7 @@ export function useChatData({
       .finally(() => {
         fetchingNewer.current = false;
       });
-  }, [api, orgId, channelId, gap, older, top.data, showAround]);
+  }, [api, qc, orgId, channelId, gap, older, top.data, showAround]);
   // The workspace's plan holding its agents: the no-AI banner and the key guard read it.
   const planHeld = usePlanHold(orgId, org) !== null;
 
@@ -388,6 +400,7 @@ export function useChatData({
     planHeld,
     quiet,
     readable,
+    replying,
     rhythm,
     rightHand,
     rightHandId,

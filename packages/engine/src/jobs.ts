@@ -12,9 +12,10 @@ import type {
 import { and, count, eq, inArray, isNull, ne, queryTrace, schema, sql } from "@agenteschat/db";
 import { ACCOUNT_CONTACT_JOB, saveAccountContact } from "./account-contacts";
 import { AGENT_MEDIA_JOB, enqueueAgentMedia, maybeSendAgentMedia } from "./agent-media";
+import { ACCOUNT_OPENED_JOB } from "./ai-accounts/serves";
 import { aiConnectIntent, type ConnectIntent } from "./ai-intent";
 import { orgHasAi } from "./ai-status";
-import type { ArtifactDeps } from "./artifacts";
+import { type ArtifactDeps, announceFileConversation } from "./artifacts";
 import { PLAN_OPENED_JOB } from "./audience";
 import { routinePostRun, runAuthorityById } from "./authority";
 import { AUTONOMY_REPORT_JOB, queueAutonomyEmail } from "./autonomy-report";
@@ -24,6 +25,9 @@ import { type BrakeReport, brakeWakes, callableAgents, LATER_JOB, notCallableWhy
 import { HANDOFF_REMIND_JOB, remindBrowserHandoff } from "./browser/handoff";
 import { typingLogFor } from "./burst";
 import { CHANNEL_DELETE_JOB, purgeChannel } from "./channel-deletion";
+import { announceJoins, CHANNEL_JOINED_JOB } from "./channel-joins";
+import { tellChannelLead } from "./channel-lead";
+import { COMPUTER_DOWN_JOB, noticeComputerDown } from "./computer-down";
 import { crowdedAgents, publishQueueChanged } from "./computer-queue";
 import { forgetComposioAccount } from "./connectors/composio";
 import { CONNECTOR_FORGET_JOB, type ConnectorDeps } from "./connectors/connections";
@@ -32,6 +36,9 @@ import { getChannelCached } from "./context";
 import { consolidateOrg } from "./context/consolidate";
 import { applyReactionFeedback } from "./context/feedback";
 import { LEARN_JOB, learnRun } from "./context/learn";
+import { MOVE_LEARNED_JOB, moveLearnedSections } from "./context/learned-sections";
+import { settleProposals } from "./context/proposal-review";
+import { SETTLE_JOB, type SettleOrigin } from "./context/proposals";
 import { REFLECT_DEFAULTS, reflectThread } from "./context/reflect";
 import { judgeOf, summaryModelReady } from "./context/summaries";
 import { reportDroppedMentions, tellWakeSkipped } from "./continuation";
@@ -49,16 +56,17 @@ import {
 } from "./dispatch";
 import { isAgentOnlyDm } from "./dms";
 import {
+  deliverQueuedEmail,
   type EmailArt,
   PLAN_WAITING_JOB,
+  queueAccountOpenedEmail,
   queuePlanLent,
   queuePlanOpenedEmail,
   queuePlanWaiting,
   sendPlanWaitingEmail,
-  sendQueuedEmail,
 } from "./email";
 import { forgetCodeEmail } from "./email-codes";
-import { type DecidedBy, publishListChanged, publishRouted } from "./events";
+import { type DecidedBy, publishAgentsChanged, publishListChanged, publishRouted } from "./events";
 import { executeRun, type RunExecutorDeps } from "./executor";
 import {
   FEEDBACK_FILE_PURGE_JOB,
@@ -81,6 +89,8 @@ import { platformCapReached, platformCapRouter } from "./limits";
 import type { LiveDocs } from "./live/docs";
 import { liveImageJobHandlers } from "./live/images";
 import { liveJobHandlers } from "./live/jobs";
+import { runLiveActivityJob } from "./live-activity";
+import { LIVE_ACTIVITY_JOB } from "./live-activity-queue";
 import { wakeForAccessDecision } from "./machine-access";
 import type { MachineCaller } from "./machine-hub";
 import {
@@ -125,6 +135,7 @@ import { type AgentRun, NO_AI } from "./runs";
 import type { SandboxDeps } from "./sandbox";
 import { indexSource, reindexOrg } from "./search";
 import { activateDeliveredSecret, discardClosedSecret } from "./secrets";
+import { describeSkill, SKILL_DESCRIBE_JOB } from "./skill-library";
 import { runSkillUpdates, SKILL_UPDATES_JOB } from "./skill-updates";
 import type { SkillDeps } from "./skills";
 import { TEAM_HELLO_JOB } from "./standing";
@@ -140,7 +151,7 @@ import { assessThread } from "./thread-assess";
 import { runVaultSync, VAULT_SYNC_JOB, type VaultDeps } from "./vault";
 import { transcribeVoiceClip, VOICE_JOB, type VoiceDeps } from "./voice";
 import { saveWaitlistContact } from "./waitlist";
-import { checkInWork, followUpWork, WORK_CHECK_IN_JOB, WORK_FOLLOW_UP_JOB } from "./works";
+import { CHANNEL_LEAD_JOB, checkInWork, followUpWork, WORK_CHECK_IN_JOB, WORK_FOLLOW_UP_JOB } from "./works";
 import {
   ACCOUNT_DELETE_JOB,
   type DeletionDeps,
@@ -241,10 +252,8 @@ export interface JobDeps extends RunExecutorDeps {
      * on the Cloud (`isAgentesCloud`), where Jev is ours. Absent: no plan step.
      */
     plans?: { hub: Pick<MachineCaller, "call" | "status">; publicUrl: string };
-    /** How long a person's message waits for their next one (`ROUTER_QUIET_MS` on a server); absent: no wait. */
+    /** A person's messages this close are one request to the router (`ROUTER_QUIET_MS` on a server). */
     quietMs?: number;
-    /** The wait ends early when the person isn't typing (token-trim B11). */
-    quietByTyping?: boolean;
   };
 }
 
@@ -307,7 +316,6 @@ export function messageRouter(deps: JobDeps): RouterDeps | null {
     outOfOffice: (orgId, ids) => outOfOfficeIds(deps.db, orgId, ids),
     routing: { jev: () => jevPicks(jev?.key), smallModel, plans },
     quietMs: router.quietMs,
-    quietByTyping: router.quietByTyping,
     pubsub: deps.pubsub,
     // Jev bills the platform: past the workspace's platform AI for the month, its own small model picks, else only
     // @mentions start agents.
@@ -324,8 +332,8 @@ async function jevPicks(key: JevKeySource | undefined): Promise<boolean> {
 
 /** Every outbox job kind the core knows. Modules can add more through the server's worker options. */
 export function createJobHandlers(deps: JobDeps): JobHandlers {
-  // Listening from now on, so typing sent while a run reads its context (before its quiet window) counts.
-  if (deps.quietByTyping || deps.router?.quietByTyping) typingLogFor(deps.pubsub);
+  // Listening from now on, so typing sent while a run reads its context (before its first model call) counts.
+  if (deps.quietMs) typingLogFor(deps.pubsub);
   const routing = messageRouter(deps);
 
   // An agent's @mention is credit or a reference: it wakes the other agent only when it plainly asks it something.
@@ -600,6 +608,9 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
       await dispatchDm(deps.db, message, { maxHops: deps.maxHops }); // idempotent safety net
       return;
     }
+    // A code session's conversation (ADR 0215): what names nobody is for the session's agent, which got it at post
+    // time once its worktree was ready (`codeAgentSql`) or gets it when the worktree becomes ready; never the router's.
+    if (where?.kind === "code") return;
     if (!routing) return routed("none", [], []);
     // In a mission's thread only its owner and deciders make the agent work (the router included).
     if (message.threadId && message.authorUserId) {
@@ -915,6 +926,13 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
         stopped: job.payload.stopped === true,
       });
     },
+    // A work ended in a channel with a responsible agent: the judge reads whether it leaves the lead a step (ADR 0095).
+    [CHANNEL_LEAD_JOB]: async (job) => {
+      await tellChannelLead({ db: deps.db, pubsub: deps.pubsub, judge: deps.context?.judge ?? null }, orgOf(job), {
+        workId: String(job.payload.workId),
+        runId: String(job.payload.runId),
+      });
+    },
     "secret.activate": async (job) => {
       if (!deps.sandbox) throw new Error("Computer secret delivery is unavailable");
       await activateDeliveredSecret(
@@ -950,10 +968,33 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
     },
     [LEARN_JOB]: async (job) => {
       if (!deps.context) return;
-      const res = await learnRun(deps.context, { orgId: orgOf(job), runId: String(job.payload.runId) });
+      const res = await learnRun(deps.context, {
+        orgId: orgOf(job),
+        runId: String(job.payload.runId),
+        signal: String(job.payload.signal ?? ""),
+      });
       // Its run went on after the turn that queued it: the outbox's backoff brings it back once the run ends.
       if (res.skipped === "running") throw Object.assign(new Error("its run is still going"), { retryable: true });
       if (res.saved.length > 0) await publishListChanged(deps.pubsub, orgOf(job), "memory");
+    },
+    // New proposals no person decided at once: the agent's review applies or leaves out each (ADR 0219).
+    [SETTLE_JOB]: async (job) => {
+      if (!deps.context) return;
+      const ids = Array.isArray(job.payload.ids) ? job.payload.ids.map(String) : [];
+      const res = await settleProposals(
+        {
+          context: deps.context,
+          blobs: deps.artifacts?.blobs,
+          deletion: { hub: missions.hub, mail: deps.mail },
+        },
+        {
+          orgId: orgOf(job),
+          ids,
+          origin: String(job.payload.origin ?? "agent") as SettleOrigin,
+          words: typeof job.payload.words === "string" ? job.payload.words : undefined,
+        },
+      );
+      if (res.applied.length > 0) await publishListChanged(deps.pubsub, orgOf(job), "memory");
     },
     // A reply a while ago: the thread's title and "resolved?" suggestion, unless a newer reply came.
     "threads.assess": async (job) => {
@@ -1066,12 +1107,17 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
       };
       try {
         if (!deps.email) throw new PermanentJobError("no email sender configured");
-        await sendQueuedEmail(deps.email, job.payload, deps.emailArt);
+        await deliverQueuedEmail(deps.db, deps.email, job, deps.emailArt, deps.log);
       } catch (error) {
         if (ctx.finalAttempt || error instanceof PermanentJobError) await forget();
         throw error;
       }
       await forget();
+    },
+    // Who joined a channel, in one line there, and at most one welcome with room (ADR 0090, "Joining says so").
+    [CHANNEL_JOINED_JOB]: async (job) => {
+      const by = job.payload.byUserId;
+      await announceJoins(deps, orgOf(job), String(job.payload.channelId), typeof by === "string" ? by : null);
     },
     // The team says hi in #general once it can work (ADR 0162).
     [TEAM_HELLO_JOB]: async (job) => {
@@ -1091,6 +1137,11 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
     },
     [PLAN_WAITING_JOB]: async (job) => {
       if (deps.emailArt) await sendPlanWaitingEmail(deps.db, deps.emailArt.home, orgOf(job), job.payload.step);
+    },
+    // Someone else let more people use a person's AI account or be answered on it (`setAccountPermissions`).
+    [ACCOUNT_OPENED_JOB]: async (job) => {
+      if (!deps.emailArt) return;
+      await queueAccountOpenedEmail(deps.db, deps.emailArt.home, orgOf(job), job.id, job.payload);
     },
     // Someone else let more people talk to an agent on a person's plan: that person's email (`planOpened`).
     [PLAN_OPENED_JOB]: async (job) => {
@@ -1134,6 +1185,10 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
       // machine's queue per task end (also kicked for a resumed item queued with this job, its own id).
       await afterMachineTaskEnded(missions, String(job.payload.taskId)).catch(() => 0);
     },
+    // The runner's connection had no room for a queued task's start (`TASK_BUSY_RETRY_MS`): its queue tries again.
+    "machine.queue_retry": async (job) => {
+      await startQueuedMissionTasks(missions, String(job.payload.machineId)).catch(() => 0);
+    },
     // The `.agentes/` files of a mission changed (debounced): written to its machine.
     "mission.sync_files": async (job) => {
       await syncMissionFiles(missions, String(job.payload.missionId));
@@ -1166,11 +1221,20 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
         statusOnly: job.payload.statusOnly === true,
       });
     },
+    // A computer still away a while after its socket closed: who configures the workspace hears it (ADR 0241).
+    [COMPUTER_DOWN_JOB]: async (job) => {
+      await noticeComputerDown(
+        { db: deps.db, pubsub: deps.pubsub, home: deps.email ? (deps.emailArt?.home ?? null) : null },
+        String(job.payload.machineId),
+        job.payload.stage === "email" ? "email" : "down",
+      );
+    },
     // A computer in standby wanted awake a grace ago: still asleep, people see it down (ADR 0161).
     [WAKE_OVERDUE_JOB]: async (job) => {
       await wakeOverdue({ db: deps.db, pubsub: deps.pubsub }, String(job.payload.machineId));
     },
-    // A task start cut by a drop, once it can't still be underway: the agent's journal on its computer settles it.
+    // A task start cut by a drop (or taken from the queue before a restart), once it can't still be underway: the
+    // agent's journal on its computer settles it.
     "machine.task_start_check": async (job) => {
       const hub = missions.hub;
       if (!hub) return;
@@ -1183,6 +1247,7 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
           startQueued: (machineId) => startQueuedMissionTasks(missions, machineId),
         },
         String(job.payload.taskId),
+        typeof job.payload.claimedAt === "string" ? job.payload.claimedAt : undefined,
       );
     },
     // A request to join through an invitation link, filed apart from the ask's reply (ADR 0068).
@@ -1227,6 +1292,8 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
       }
       // A reply in a task's conversation (ADR 0145): the board's card counts it.
       await announceTaskConversation({ db: deps.db, pubsub: deps.pubsub }, orgOf(job), messageId);
+      // A comment on a picture, a video or a PDF (ADR 0208): its card where it was posted counts it.
+      await announceFileConversation({ db: deps.db, pubsub: deps.pubsub }, orgOf(job), messageId);
     },
     [SURFACE_FALLBACK_JOB]: (job) => fallBack({ db: deps.db, pubsub: deps.pubsub }, String(job.payload.deliveryId)),
     // A request for help in an agent's browser nobody answered within the hour: the people asked hear it again, once.
@@ -1240,6 +1307,16 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
         String(job.payload.notificationId),
         { held: job.payload.held === true },
       );
+    },
+    // The Live Activity of a person's agents at work, on their iPhones (ADR 0210): sent when what it shows changed.
+    [LIVE_ACTIVITY_JOB]: async (job) => {
+      await runLiveActivityJob({ db: deps.db, push: deps.push }, job);
+    },
+    // A skill's name, line and icon for people, after it is installed or made (or its name or "when to use" changed).
+    [SKILL_DESCRIBE_JOB]: async (job) => {
+      if (!deps.context) return;
+      await describeSkill(deps.context, orgOf(job), String(job.payload.skillId));
+      await publishAgentsChanged(deps.pubsub, orgOf(job));
     },
     // A workspace's skills that update by themselves from their links, once a day.
     [SKILL_UPDATES_JOB]: async (job) => {
@@ -1257,6 +1334,11 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
     [VAULT_SYNC_JOB]: async (job) => {
       if (!deps.vault) return;
       await runVaultSync(deps.vault, orgOf(job), String(job.payload.connectionId));
+    },
+    // Queued once by migration 0310: the agents' "## Learned" sections become memory; a no-op once moved.
+    [MOVE_LEARNED_JOB]: async (job) => {
+      if ((await moveLearnedSections(deps.db, orgOf(job))) > 0)
+        await publishListChanged(deps.pubsub, orgOf(job), "memory");
     },
     "context.consolidate": async (job) => {
       if (!deps.context) return;

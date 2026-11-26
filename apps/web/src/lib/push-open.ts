@@ -80,10 +80,26 @@ export function pushOpenOf(path: string): { orgId: string; notificationId: strin
   return { orgId: match[1], notificationId: id };
 }
 
-/** The `open` search value of the inbox's route (`validateSearch`): an id, or nothing. */
-export function notificationsSearch(search: Record<string, unknown>): { open?: string } {
+/** The inbox's filters a link may start on (`InboxFilter`, pages/NotificationsPage.tsx). */
+const INBOX_LINK_FILTERS = ["all", "mentions", "waiting", "unread", "reactions", "requests", "done"] as const;
+export type InboxLinkFilter = (typeof INBOX_LINK_FILTERS)[number];
+
+/**
+ * The inbox's route search (`validateSearch`): `open`, a notification to open where the inbox would; `filter`, the
+ * filter it starts on; `approval`, a request to open in it. Anything else is dropped.
+ */
+export function notificationsSearch(search: Record<string, unknown>): {
+  open?: string;
+  filter?: InboxLinkFilter;
+  approval?: string;
+} {
   const value = search[PUSH_OPEN_PARAM];
-  return isId(value) ? { open: value } : {};
+  const filter = INBOX_LINK_FILTERS.find((f) => f === search.filter);
+  return {
+    ...(isId(value) ? { open: value } : {}),
+    ...(filter ? { filter } : {}),
+    ...(isId(search.approval) ? { approval: search.approval } : {}),
+  };
 }
 
 /** A click the service worker passed to an open tab: where to go, and the push's data when it had any. */
@@ -127,7 +143,7 @@ export function fallbackTarget(data: PushOpenData): OpenTarget | null {
   if (kind === "join_request") return { to: "/org/$orgId/settings/$section", params: { section: "invites" } };
   if (kind === "invitation_accepted") return { to: "/org/$orgId/settings/$section", params: { section: "members" } };
   // Settings › Computers is Devices now: its old address redirects there.
-  if (kind === "machine_connected" || kind === "computer_ready")
+  if (kind === "machine_connected" || kind === "computer_ready" || kind === "computer_down" || kind === "computer_back")
     return { to: "/org/$orgId/settings/$section", params: { section: "computers" } };
   // A folder waits on this person's computer (the agent asked), which is where it is allowed: that computer.
   // Never the conversation it was asked from, which a push can't tell from a DM.

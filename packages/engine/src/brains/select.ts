@@ -5,12 +5,13 @@ import {
   CODEX_WINDOWS_PROTOCOL,
   CURSOR_PROTOCOL,
   GROK_PROTOCOL,
+  GROK_WINDOWS_PROTOCOL,
   isBrainEffort,
   OPENCODE_ACP_PROTOCOL,
   OPENCODE_PROTOCOL,
   type PlanUsage,
 } from "@agenteschat/adapters";
-import { and, desc, type Executor, eq, isNotNull, ne, or, schema, sql } from "@agenteschat/db";
+import { and, desc, type Executor, eq, isNotNull, ne, schema, sql } from "@agenteschat/db";
 import { AUTO_MODEL, isAutoModel } from "@agenteschat/providers";
 import {
   autoPlanModel,
@@ -24,6 +25,10 @@ import {
 } from "@agenteschat/providers/plans";
 import { planFull, planState } from "@agenteschat/ui/plan-state";
 import type { Agent } from "../agents";
+import { replyRefusal } from "../ai-accounts/reply";
+import { accountServes } from "../ai-accounts/serves";
+import { fetchesCli } from "../cli-fetch";
+import type { CodeSessionContext } from "../code-sessions";
 import type { ModelGateway } from "../gateway";
 import type { MachineStatus } from "../machine-hub";
 import { pausedMessage } from "../machines";
@@ -36,9 +41,17 @@ import {
   rightHandStandIn,
   thinkingAgent,
 } from "../right-hand";
+import { runState } from "../run-state";
 import { runnerUpdateWay } from "../runner-update";
 import type { AgentRun } from "../runs";
-import { accountUnavailable, brainSessionId, claudeCodeAvailability, cliMissingMessage, toolOff } from "./claude-code";
+import {
+  accountUnavailable,
+  brainSessionId,
+  claudeCodeAvailability,
+  cliMissingMessage,
+  cliOutdated,
+  toolOff,
+} from "./claude-code";
 import { BRAIN_NAMES, BRAIN_PLAN_NAMES, type BrainAccount, type BrainKind, type BrainSession } from "./types";
 
 const KINDS: readonly BrainKind[] = ["model", "claude_code", "codex", "cursor", "opencode", "grok", "antigravity"];
@@ -74,9 +87,25 @@ export function brainFor(
 export const runBrainOf = (run: { brain?: string | null }, agent?: { brain?: string | null } | null): BrainKind =>
   kindOf(run.brain ?? agent?.brain);
 
-/** Stores the brain a run thinks with now (`agent_runs.brain`). */
-export async function recordRunBrain(db: Executor, runId: string, kind: BrainKind) {
-  await db.update(schema.agentRuns).set({ brain: kind }).where(eq(schema.agentRuns.id, runId));
+/**
+ * A version as a CLI's `--version` gives it, out of its line (`2.1.308 (Claude Code)`, `codex-cli 0.164.0`,
+ * `2026.10.22-27dcf5f`): the line itself is the computer's text, never stored whole.
+ */
+const CLI_VERSION_SQL = "[0-9]+(?:\\.[0-9]+)+(?:[-+][0-9A-Za-z.]+)?";
+
+/**
+ * Stores the brain a run thinks with now (`agent_runs.brain`), and for a computer brain on `machineId` its CLI and the
+ * version that computer last reported (`agent_runs.cli`, `<cli> <version>`, null when it said none): the failures by
+ * CLI version (`operatorCliRuns`).
+ */
+export async function recordRunBrain(db: Executor, runId: string, kind: BrainKind, machineId?: string) {
+  const name = kind === "model" ? null : kind === "claude_code" ? "claude" : kind;
+  const cli =
+    name && machineId
+      ? sql`(select ${name}::text || ' ' || substring(${schema.machines.executors} -> ${name}::text ->> 'version' from ${CLI_VERSION_SQL}::text)
+          from ${schema.machines} where ${schema.machines.id} = ${machineId})`
+      : null;
+  await db.update(schema.agentRuns).set({ brain: kind, cli }).where(eq(schema.agentRuns.id, runId));
 }
 
 /**
@@ -423,16 +452,20 @@ export function computerBrainUnavailable(
         message: `The runner on ${status.name} is too old for ${name} agents. ${runnerUpdateWay(status)}`,
       };
     }
-    // On Windows a runner before `OPENCODE_ACP_PROTOCOL` refuses every OpenCode turn.
-    if (kind === "opencode" && status.os === "windows" && status.protocol < OPENCODE_ACP_PROTOCOL) {
+    // On Windows a runner before `OPENCODE_ACP_PROTOCOL` refuses every OpenCode turn, one before
+    // `GROK_WINDOWS_PROTOCOL` every Grok turn.
+    const windowsProtocol = kind === "opencode" ? OPENCODE_ACP_PROTOCOL : kind === "grok" ? GROK_WINDOWS_PROTOCOL : 0;
+    if (status.os === "windows" && status.protocol < windowsProtocol) {
       return {
         code: "runner_outdated",
         message: `The runner on ${status.name} is too old for ${name} agents on Windows. ${runnerUpdateWay(status)}`,
       };
     }
-    if (status.executors?.detectedAt && !status.executors[kind]) {
+    if (status.executors?.detectedAt && !status.executors[kind] && !fetchesCli(status, kind)) {
       return { code: `${kind}_missing`, message: cliMissingMessage(`${name}'s CLI`, status, kind) };
     }
+    const old = cliOutdated(status, kind, name);
+    if (old) return old;
     return accountUnavailable(status, account, kind);
   }
   const off = toolOff(status, "codex");
@@ -446,9 +479,11 @@ export function computerBrainUnavailable(
     };
   }
   const codex = status.executors?.codex;
-  if (status.executors?.detectedAt && !codex) {
+  if (status.executors?.detectedAt && !codex && !fetchesCli(status, "codex")) {
     return { code: "codex_missing", message: cliMissingMessage("Codex", status, "codex") };
   }
+  const old = cliOutdated(status, "codex", "Codex");
+  if (old) return old;
   return accountUnavailable(status, account, "codex");
 }
 
@@ -474,6 +509,8 @@ export const UNAVAILABLE_CODES: ReadonlySet<string> = new Set([
   "opencode_missing",
   "grok_missing",
   "antigravity_missing",
+  // Its CLI at a version agentes.chat holds back (`cliOutdated`): the run waits for it to be updated there.
+  "cli_outdated",
   "plan_limit",
   "plan_not_owner",
   "plan_not_shared",
@@ -577,9 +614,8 @@ export async function brainAccountFor(
 }
 
 /**
- * Whether the plan may think for this agent (ADR 0059 §3): an account that serves everyone in the workspace
- * (`machine_accounts.serves`), or one that serves only its owner when that is the agent's owner; either way its owner
- * still in the organization. The computer's own sign-in thinks only for agents of the person who connected it.
+ * Whether the plan may think for this agent (ADR 0059 §3): an account that serves its owner (`accountServesSql`). The
+ * computer's own sign-in thinks only for agents of the person who connected it.
  */
 export async function planIsOwners(
   db: Executor,
@@ -589,27 +625,13 @@ export async function planIsOwners(
 ): Promise<boolean> {
   const owner = agent.ownerUserId;
   if (!owner) return false;
-  const { machineAccounts, machines, organizationMembers: members } = schema;
-  const rows = account
-    ? await db
-        .select({ id: machineAccounts.id })
-        .from(machineAccounts)
-        .innerJoin(
-          members,
-          and(eq(members.orgId, machineAccounts.orgId), eq(members.userId, machineAccounts.createdBy)),
-        )
-        .where(
-          and(
-            eq(machineAccounts.orgId, agent.orgId),
-            eq(machineAccounts.id, account.id),
-            or(eq(machineAccounts.createdBy, owner), eq(machineAccounts.serves, "everyone")),
-          ),
-        )
-    : await db
-        .select({ id: machines.id })
-        .from(machines)
-        .innerJoin(members, and(eq(members.orgId, machines.orgId), eq(members.userId, machines.pairedByUserId)))
-        .where(and(eq(machines.orgId, agent.orgId), eq(machines.id, machineId), eq(machines.pairedByUserId, owner)));
+  if (account) return accountServes(db, agent.orgId, account.id, owner);
+  const { machines, organizationMembers: members } = schema;
+  const rows = await db
+    .select({ id: machines.id })
+    .from(machines)
+    .innerJoin(members, and(eq(members.orgId, machines.orgId), eq(members.userId, machines.pairedByUserId)))
+    .where(and(eq(machines.orgId, agent.orgId), eq(machines.id, machineId), eq(machines.pairedByUserId, owner)));
   return rows.length > 0;
 }
 
@@ -708,7 +730,7 @@ async function sessionFor(
             order by s.seq desc limit 1),
           (select max(u.input_tokens + u.cache_read_tokens + u.cache_write_tokens)
             from ${usageRecords} u where u.run_id = "agent_runs"."id" and u.provider = ${kind}), 0)`.mapWith(Number),
-        promptKey: sql<string | null>`${agentRuns.transcript}->>'promptKey'`,
+        promptKey: sql<string | null>`${runState}->>'promptKey'`,
       })
       .from(agentRuns)
       .where(
@@ -783,9 +805,17 @@ export async function resolveBrain(
   /**
    * `fresh`: a new computer session whatever the conversation had (routine runs). `promptKey`: the run's
    * (`Transcript.promptKey`); the conversation's session is picked up only when it started with the same. `peek`:
-   * nothing is kept on the run (the session it would most likely get, before its prompt key is known).
+   * nothing is kept on the run (the session it would most likely get, before its prompt key is known). `codeSession`:
+   * the run's code session, as its executor read it (`codeSessionContext`): none, a turn in the agent's own folder.
    */
-  options: { fresh?: boolean; now?: Date; promptKey?: string; thinker?: Agent; peek?: boolean } = {},
+  options: {
+    fresh?: boolean;
+    now?: Date;
+    promptKey?: string;
+    thinker?: Agent;
+    peek?: boolean;
+    codeSession?: CodeSessionContext | null;
+  } = {},
 ): Promise<BrainPlan> {
   const mission: MissionTurn | null = await missionTurnFor(deps.db, run).catch(() => null);
   // The right hand: the AI of the person whose DM this is, else the workspace's; on a plan, its computer and owner.
@@ -798,7 +828,10 @@ export async function resolveBrain(
     return { kind, ...base, ...(effort ? { effort } : {}) };
   }
   const model = brainModelFor(kind, agent, mission);
-  const machineId = mission?.session?.machineId ?? agent.machineId ?? null;
+  // A code session's conversation (ADR 0215) is pinned to the session's computer and worktree, like a mission's main
+  // session: its own agent's turn runs there (an agent called in, or a mission's thread, keeps its own).
+  const place = mission?.session ? null : (options.codeSession?.place ?? null);
+  const machineId = mission?.session?.machineId ?? place?.machineId ?? agent.machineId ?? null;
   const [status, account] = await Promise.all([
     machineId && deps.machines ? deps.machines.status(machineId).catch(() => null) : null,
     brainAccountFor(deps.db, agent, kind, machineId),
@@ -816,6 +849,7 @@ export async function resolveBrain(
     (isRightHand(agent) && (agent.brainAccountId || agent.machineId)
       ? await rightHandPlanRefusal(deps.db, agent, run, status)
       : null) ??
+    (account && !isRightHand(agent) ? await replyRefusal(deps.db, agent, account.id, run) : null) ??
     (machineId && !deps.machines
       ? null
       : computerBrainUnavailable(
@@ -883,7 +917,7 @@ export async function resolveBrain(
   const settingsChanged =
     mission?.session?.resume && options.promptKey !== undefined
       ? await deps.db
-          .select({ key: sql<string | null>`${schema.agentRuns.transcript}->>'promptKey'` })
+          .select({ key: sql<string | null>`${runState}->>'promptKey'` })
           .from(schema.agentRuns)
           .where(
             and(
@@ -891,7 +925,7 @@ export async function resolveBrain(
               eq(schema.agentRuns.agentId, run.agentId),
               eq(schema.agentRuns.threadRootId, run.threadRootId),
               ne(schema.agentRuns.id, run.id),
-              sql`${schema.agentRuns.transcript}->>'promptKey' is not null`,
+              sql`${runState}->>'promptKey' is not null`,
             ),
           )
           .orderBy(desc(schema.agentRuns.createdAt))
@@ -914,7 +948,9 @@ export async function resolveBrain(
             options.now ?? new Date(),
           )),
           machineId,
-          cwd: "",
+          // Any other chat turn starts in the agent's folder.
+          cwd: place?.cwd ?? "",
+          ...(place ? { codeSession: true } : {}),
         }
       : undefined);
   return {

@@ -13,7 +13,7 @@ import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { type PlanChoice, planOfAccount } from "@agenteschat/client/lib/no-ai";
 import { roomWord } from "@agenteschat/client/lib/plan-usage";
 import { keyLine } from "@agenteschat/client/lib/providers";
-import { Button, Icon, Input, ProviderLogo, planState, Radio, RadioGroup } from "@agenteschat/ui";
+import { Icon, InlineName, ProviderLogo, planState, Radio, RadioGroup } from "@agenteschat/ui";
 import { sortHave } from "@agenteschat/ui/plan-state";
 import type { TFunction } from "i18next";
 import { type CSSProperties, Fragment, type ReactNode, useId, useState } from "react";
@@ -59,13 +59,15 @@ export interface HaveItem {
    * owner gave it, empty while it has the automatic one.
    */
   rename?: { value: string; placeholder: string; save: (name: string) => Promise<unknown> };
+  /** Nobody's free tier (OpenCode's free models): after the plans with room, before the keys. */
+  free?: boolean;
 }
 
 /** How much of its plan an item has used, and whether it is near or at its limit; null where nothing says. */
 const roomOf = (usage: PlanUsage | null) => (usage ? planState(usage) : null);
 const limited = (i: Pick<HaveItem, "usage">) => roomOf(i.usage)?.state === "limited";
 
-type Rankable = Pick<HaveItem, "usage" | "off" | "signIn" | "isKey">;
+type Rankable = Pick<HaveItem, "usage" | "off" | "signIn" | "isKey" | "free">;
 
 export { sortHave };
 
@@ -110,6 +112,19 @@ export const renameOf = (
       }
     : undefined;
 
+/**
+ * A row's mark: the maker's logo on its small tile, as AI e uso lists accounts; a key with no maker on a plain tile.
+ * The title's capitals start at the tile's top (`.ac-captop`).
+ */
+export const haveMark = (maker: string | undefined) =>
+  maker ? (
+    <ProviderLogo id={maker} size="sm" />
+  ) : (
+    <span className="ac-brand ac-brand--sm ac-brand--mono" aria-hidden="true">
+      <Icon name="key" size={16} />
+    </span>
+  );
+
 /** What the person already has (`ExistingAi`), as the list's rows. */
 function itemOf(
   t: TFunction,
@@ -127,7 +142,7 @@ function itemOf(
       about: keyLine(t, r.key),
       whose: group.label,
       group,
-      mark: <Icon name="key" size={20} className="arrival-have__mark" />,
+      mark: haveMark(undefined),
       usage: null,
       word: t("agentPage.work.brain.modelText", agentGrammar(agentName)),
       isKey: true,
@@ -142,7 +157,7 @@ function itemOf(
     about: haveAbout(t, r, agentName),
     whose: a.mine ? t("connectAi.chat.yours") : group.label,
     group,
-    mark: <ProviderLogo id={a.provider ?? a.kind} size="xs" />,
+    mark: haveMark(a.provider ?? a.kind),
     ...(a.mine ? {} : { word: roomWord(t, locale, roomOf(a.usage)) }),
     ...rankOf(r, dims),
   };
@@ -269,48 +284,29 @@ export function HaveRow({
   );
 }
 
-/** The row while its account's name is changed (`HaveItem.rename`): the field and Save where the name stood. */
+/**
+ * The row while its account's name is changed (`HaveItem.rename`): the name itself becomes the field, at its font and
+ * height. Enter or leaving it saves, Esc goes back.
+ */
 function RenameRow({ item, onDone }: { item: HaveItem; onDone: () => void }) {
   const { t } = useTranslation();
   const rename = item.rename;
-  const [name, setName] = useState(rename?.value ?? "");
-  const [busy, setBusy] = useState(false);
   if (!rename) return null;
-  const clean = name.trim();
-  const save = async () => {
-    if (!clean || clean === rename.value) return onDone();
-    setBusy(true);
-    try {
-      await rename.save(clean);
-      onDone();
-    } catch {
-      setBusy(false);
-    }
-  };
   return (
     <div className="arrival-have__row" data-state="unchecked" data-renaming="">
       {item.mark}
       <span className="arrival-have__text">
-        <form
-          className="arrival-have__rename"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void save();
-          }}
-        >
-          <Input
-            value={name}
-            autoFocus
+        <span className="arrival-have__head">
+          <InlineName
+            className="arrival-have__title"
+            value={rename.value}
             maxLength={40}
             placeholder={rename.placeholder}
             aria-label={t("aiAccounts.rename.label")}
-            disabled={busy}
-            onChange={(e) => setName(e.target.value)}
+            onSave={rename.save}
+            onDone={onDone}
           />
-          <Button type="submit" size="sm" variant="primary" loading={busy} disabled={!clean}>
-            {t("common.save")}
-          </Button>
-        </form>
+        </span>
         {item.about && <span className="arrival-have__line">{item.about}</span>}
       </span>
     </div>
@@ -369,7 +365,8 @@ export function HaveList({
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const list = sortHave(items);
-  const many = items.length > HAVE_SHOWN;
+  // Without a way to see the rest, every row shows: a list never hides what can't be reached.
+  const many = items.length > HAVE_SHOWN && onAll !== undefined;
   const row = (i: HaveItem, whose: boolean) => (
     <HaveRow
       key={i.id}
@@ -396,9 +393,9 @@ export function HaveList({
       if (all) for (const i of list.filter(limited)) into("limit", t("connectAi.chat.atLimit"), i);
       return out;
     }
-    for (const i of open) if (i.group.key === "mine") into(i.group.key, i.group.label, i);
-    for (const i of open) if (i.group.key === "keys") into(i.group.key, i.group.label, i);
-    for (const i of open) if (i.group.key !== "mine" && i.group.key !== "keys") into(i.group.key, i.group.label, i);
+    const firsts = ["mine", "free", "keys"];
+    for (const key of firsts) for (const i of open) if (i.group.key === key) into(i.group.key, i.group.label, i);
+    for (const i of open) if (!firsts.includes(i.group.key)) into(i.group.key, i.group.label, i);
     if (all) for (const i of list.filter(limited)) into("limit", t("connectAi.chat.atLimit"), i);
     return out;
   };

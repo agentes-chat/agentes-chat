@@ -38,7 +38,7 @@ export const organizations = pgTable("organizations", {
    * rules). Goes into the system prompt of every agent of the organization.
    */
   context: text().notNull().default(""),
-  /** The workspace logo (`/api/app/org-logos/{orgId}/{hash}.{ext}`), uploaded by an admin; null = the agent mark. */
+  /** The workspace logo (`/api/app/org-logos/{orgId}/{hash}.{ext}`, then `#ink=light` when its ink is light); null = the agent mark. */
   logo: text(),
   /** The workspace's accent, a lower-case "#rrggbb" (ADR 0193): the agent colors its apps derive; null = the default. */
   accent: text(),
@@ -78,6 +78,8 @@ export const organizations = pgTable("organizations", {
   limitStorageBytes: bigint({ mode: "number" }),
   limitUploadBytesPerDay: bigint({ mode: "number" }),
   limitPlatformNanoUsd: bigint({ mode: "number" }),
+  /** What vendors that bill this server per call (X) may charge for the workspace in a UTC month (ADR 0079). */
+  limitConnectorNanoUsd: bigint({ mode: "number" }),
   /** When a limit last changed; null: never set. */
   limitsUpdatedAt: timestamp({ withTimezone: true }),
   /** The month (`YYYY-MM`) and highest share (50, 100) of the platform's AI already told (`platform_ai.threshold`). */
@@ -287,6 +289,11 @@ export const organizationInvitations = pgTable(
      */
     agentIds: uuid().array().notNull().default(sql`'{}'::uuid[]`),
     expiresAt: timestamp({ withTimezone: true }).notNull(),
+    /**
+     * Its last email could never be delivered (`suppressed`: the mail provider stopped mailing the address after a
+     * bounce; `rejected`: the address was refused), set by the `email.send` job; null again on each sending.
+     */
+    undelivered: text().$type<"suppressed" | "rejected">(),
     acceptedAt: timestamp({ withTimezone: true }),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },

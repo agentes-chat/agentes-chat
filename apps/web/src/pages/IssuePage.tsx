@@ -32,6 +32,7 @@ import {
   DetailsSection,
   Field,
   Icon,
+  InlineName,
   Input,
   LimitLine,
   Locked,
@@ -50,7 +51,7 @@ import {
 } from "@agenteschat/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
 import { renderIdRef } from "@/chat/IdRef";
@@ -60,12 +61,19 @@ import { ArtifactCard } from "@/components/artifacts/ArtifactCard";
 import { IssueWorkBlock } from "@/components/BackgroundWork";
 import { EditInPlace, useFocusAtEnd, useSavedFlash, useSent } from "@/components/EditInPlace";
 import { GitHubMark } from "@/components/GitHubMark";
-import { IssueFiles, useIssueFileEntries } from "@/components/IssueFiles";
+import {
+  IssueFiles,
+  PendingTile,
+  useIssueFileAdd,
+  useIssueFileEntries,
+  useIssueFilePaste,
+} from "@/components/IssueFiles";
 import { useOrg } from "@/components/org-context";
 import { SidePanel } from "@/components/SidePanel";
 import { TaskConversationButton, TaskConversationPanel, TaskConversationSummary } from "@/components/TaskConversation";
 import { IssueWhoSeesDialog, WhoSeesButton } from "@/components/WhoSees";
 import { useWikiLinkRenderer } from "@/components/WikiLinks";
+import { useOpenConversation } from "@/hooks/useOpenConversation";
 import { usePersonalView } from "@/hooks/usePersonalView";
 import { useTextLimit } from "@/hooks/useTextLimit";
 import {
@@ -315,10 +323,29 @@ export function IssueDetails({
   const [tab, setTab] = useState<"details" | "files" | "history">("details");
   const files = useIssueFileEntries(i, list);
   const [saved, flashSaved] = useSavedFlash();
-  // The files it was created with show under the description (prints, logs): the rest are in "Anexos".
-  const createdFiles = list.find((a) => a.event === "created")?.attachments ?? [];
+  const toast = useToast();
+  // A file pasted anywhere in the task (the description being edited too) joins "Anexos"; from another tab, the
+  // toast takes there.
+  const tabNow = useRef(tab);
+  tabNow.current = tab;
+  const adding = useIssueFileAdd(i, (count) => {
+    if (tabNow.current === "files") return;
+    toast.show(t("issues.files.added", { count }), "success", {
+      label: t("issues.files.see"),
+      run: () => setTab("files"),
+    });
+  });
+  const root = useRef<HTMLDivElement>(null);
+  useIssueFilePaste(root, adding.onFiles);
+  // The files it was created with show under the description (prints, logs): the rest are in "Anexos". One taken
+  // off the task or in the trash isn't there any more.
+  const linked = new Set(i.artifacts.map((f) => f.id));
+  const createdFiles = (list.find((a) => a.event === "created")?.attachments ?? []).filter((f) => linked.has(f.id));
+  // On their way to "Anexos" (a paste on this tab): shown under the description until they're there.
+  const pending = tab === "details" ? adding.items : [];
+  const filesCount = files.length + adding.items.length;
   return (
-    <div className="issue-details">
+    <div className="issue-details" ref={root}>
       <header className="issue-details__head">
         <span className="small muted tabular">
           {variant === "page"
@@ -336,7 +363,7 @@ export function IssueDetails({
         label={t("issues.tabs.label")}
         items={[
           { value: "details", label: t("issues.tabs.details") },
-          { value: "files", label: t("issues.tabs.files"), count: files.length || undefined },
+          { value: "files", label: t("issues.tabs.files"), count: filesCount || undefined },
           { value: "history", label: t("issues.tabs.history") },
         ]}
       >
@@ -354,6 +381,13 @@ export function IssueDetails({
                 ))}
               </div>
             )}
+            {pending.length > 0 && (
+              <div className="issue-files__grid issue-description__pending">
+                {pending.map((f) => (
+                  <PendingTile key={f.key} file={f} onRemove={() => adding.remove(f.key)} />
+                ))}
+              </div>
+            )}
           </DetailsSection>
           <IssueCriteria issue={i} onSaved={flashSaved} />
           <IssueSubIssues issue={i} />
@@ -362,7 +396,7 @@ export function IssueDetails({
           </DetailsSection>
         </TabPanel>
         <TabPanel value="files">
-          <IssueFiles issue={i} activity={list} />
+          <IssueFiles issue={i} activity={list} adding={adding} />
         </TabPanel>
         <TabPanel value="history">
           <History activity={list} loaded={activity.isSuccess} />
@@ -372,43 +406,33 @@ export function IssueDetails({
   );
 }
 
-/** The title, edited in place: Enter, Esc or leaving the field saves it (an empty one keeps the old title). */
+/** The title, edited in place (the kit's InlineName): Enter or leaving the field saves it, Esc keeps the old title. */
 function IssueTitle({ issue: i, onSaved }: { issue: Issue; onSaved: () => void }) {
   const { t } = useTranslation();
   const { org } = useOrg();
   const action = useIssueAction(org.id);
-  const [draft, setDraft] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
   const sent = useSent<string>(i.title);
   const title = sent.pending ?? i.title;
-  const ref = useFocusAtEnd<HTMLInputElement>(draft !== null);
-  const save = () => {
-    if (draft === null) return;
-    const next = draft.trim();
-    setDraft(null);
-    if (!next || next === title) return;
-    sent.send(next);
-    action.mutate({ type: "update", id: i.id, patch: { title: next } }, { onSuccess: onSaved, onError: sent.clear });
-  };
-  if (draft !== null)
+  if (editing)
     return (
-      <input
-        ref={ref}
+      <InlineName
         className="issue-inplace__title"
-        value={draft}
+        value={title}
         maxLength={300}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={save}
-        onKeyDown={(e) => {
-          if (e.key !== "Enter" && e.key !== "Escape") return;
-          e.preventDefault();
-          e.currentTarget.blur();
-        }}
         aria-label={t("issues.form.title")}
-        data-inplace=""
+        onSave={(next) => {
+          sent.send(next);
+          action.mutate(
+            { type: "update", id: i.id, patch: { title: next } },
+            { onSuccess: onSaved, onError: sent.clear },
+          );
+        }}
+        onDone={() => setEditing(false)}
       />
     );
   return (
-    <EditInPlace label={t("issues.edit.title")} onEdit={() => setDraft(title)}>
+    <EditInPlace label={t("issues.edit.title")} onEdit={() => setEditing(true)}>
       <h1 className="issue-details__title">{codeAndBold(title)}</h1>
     </EditInPlace>
   );
@@ -757,23 +781,8 @@ function WorkBox({ issue: i }: { issue: Issue }) {
 
 /** Where a handed work's card waits for an answer: the person's DM with the agent that handed it, else its channel. */
 function useOpenAsk(work: WorkView) {
-  const { org } = useOrg();
-  const dms = useDms(org.id);
-  const navigate = useNavigate();
-  const dm = dms.data?.find((d) => d.channelId === work.channelId && d.with.type === "agent");
-  const m = work.question?.messageId ?? undefined;
-  return () =>
-    dm
-      ? void navigate({
-          to: "/org/$orgId/dm/agent/$agentId",
-          params: { orgId: org.id, agentId: dm.with.id },
-          search: m ? { m } : {},
-        })
-      : void navigate({
-          to: "/org/$orgId/c/$channelId",
-          params: { orgId: org.id, channelId: work.channelId },
-          search: m ? { m } : {},
-        });
+  const open = useOpenConversation();
+  return () => open({ channelId: work.channelId, messageId: work.question?.messageId });
 }
 
 /** A handed work waiting on the reader: its question, and one way to answer it where its card is. */

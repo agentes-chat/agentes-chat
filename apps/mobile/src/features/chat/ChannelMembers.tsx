@@ -9,6 +9,7 @@ import {
   useLeaveChannel,
   useMuteChannel,
   useRoster,
+  useUpdateChannel,
 } from "@agenteschat/client";
 import { WORK_TICK_MS, workLine, workLineText } from "@agenteschat/client/lib/agent-work";
 import { managesAgent, opensDetails } from "@agenteschat/client/lib/audience";
@@ -44,7 +45,7 @@ import { router } from "@/ui/navigation";
 import { chooseAction, confirmAction, Gap, SettingsPage } from "../settings/parts";
 import { AgentFace, Face, OpensAgent } from "../shared/Face";
 import { LoadFailed } from "../shared/FirstUse";
-import { useColors, useDirectory, useMeId, useNow, useOrgId, usePullRefresh } from "../shared/hooks";
+import { useColors, useDirectory, useMeId, useNow, useOrgId, useOwnsAgent, usePullRefresh } from "../shared/hooks";
 import { PushedLargeTitle } from "../shared/PushedLargeTitle";
 import { goBack, Loaded, successHaptic, tapHaptic, useLatest } from "../shared/parts";
 import { usePresenceOf } from "../status/hooks";
@@ -77,19 +78,27 @@ function useRefresh(channelId: string) {
   };
 }
 
-/** An agent's line says how it answers my messages: on its own only while something reads the ones that mention nobody. */
+/**
+ * An agent's line says how it answers my messages: on its own only while something reads the ones that mention nobody.
+ * The responsible agent's line says that first, alone when it answers on its own and something picks for me.
+ */
 const lineOf = (
   t: TFunction,
   w: Pick<Who, "kind" | "autoReply" | "handle" | "name" | "email">,
   routing: AiRouting | undefined,
-) =>
-  w.kind === "agent"
-    ? !w.autoReply
-      ? t("channelMembers.mentionLine", { handle: w.handle })
-      : !picksForMe(routing)
-        ? t(replyAloneKey(routing), agentGrammar(w.name))
-        : t("channelMembers.aloneLine", agentGrammar(w.name))
-    : w.email;
+  /** It is the agent responsible for the channel. */
+  lead = false,
+) => {
+  if (w.kind !== "agent") return w.email;
+  const line = !w.autoReply
+    ? t("channelMembers.mentionLine", { handle: w.handle })
+    : !picksForMe(routing)
+      ? t(replyAloneKey(routing), agentGrammar(w.name))
+      : t("channelMembers.aloneLine", agentGrammar(w.name));
+  if (!lead) return line;
+  const responsible = t("channelMembers.lead");
+  return w.autoReply && picksForMe(routing) ? responsible : [responsible, line].join(" · ");
+};
 
 /**
  * "Tirar do canal", asked first in the system's confirmation (what it changes for them), then done: a toast says it and
@@ -202,7 +211,8 @@ export function ChannelMembersScreen({ channelId }: { channelId: string }) {
     if (w.kind === "person") return lineOf(t, w, routing);
     const a = presence.agent(w.id);
     const why = a ? agentWhyKey(a.presence, a.noAi) : null;
-    if (!a || !why) return [workText(w.id), lineOf(t, w, routing)].filter(Boolean).join("\n");
+    if (!a || !why)
+      return [workText(w.id), lineOf(t, w, routing, w.id === channel?.leadAgentId)].filter(Boolean).join("\n");
     const own = liveLine(a.noAi ? null : a.status?.status, now);
     const under = agentMemberLine(workText(w.id), own && agentStatusShort(t, own, i18n.language), why);
     return under?.work ?? (under?.line ? lineText(under.line) : t(`presence.agentWhy.${why}`));
@@ -384,16 +394,16 @@ function ChannelOwnActions({ channel }: { channel: Channel }) {
   const leave = useLeaveChannel(orgId);
   const roster = useRoster(orgId, channel.id);
   const failed = (e: unknown) => toast({ title: errorText(t, e, i18n.language), icon: "x" });
-  const go = () =>
-    leave.mutate(channel.id, {
-      onSuccess: () => {
-        successHaptic();
-        toast({ title: t("channel.left", { channel: channel.name }), icon: "check" });
-        // This screen and the conversation under it.
-        router.dismiss(2);
-      },
-      onError: failed,
-    });
+  // The channel leaves my lists before the server answers: this screen and the conversation under it go at once, and
+  // the answer arrives as a toast (a refusal puts the lists back). The promise, not per-call callbacks: they don't run
+  // once this screen is gone.
+  const go = () => {
+    successHaptic();
+    router.dismiss(2);
+    leave
+      .mutateAsync(channel.id)
+      .then(() => toast({ title: t("channel.left", { channel: channel.name }), icon: "check" }), failed);
+  };
   const ask = () => {
     if (channel.visibility !== "private") return go();
     const alone = (roster.data ?? []).filter((m) => m.type !== "agent").length === 1;
@@ -473,6 +483,15 @@ export function ChannelAgentScreen({ channelId, agentId }: { channelId: string; 
       toast({ title: t("mobile.app.failed"), icon: "x" });
     },
   });
+  // The channel's responsible agent: one at a time, set here for this one or taken back.
+  const update = useUpdateChannel(orgId, channelId);
+  const isLead = channel?.leadAgentId === agentId;
+  const setLead = (on: boolean) => {
+    update.mutate(
+      { leadAgentId: on ? agentId : null },
+      { onError: (e) => toast({ title: errorText(t, e), icon: "x" }) },
+    );
+  };
   // Taken out (here, from elsewhere meanwhile, or opened by an old link): nothing to set here any more. Once: the
   // removal's own success and the roster read again after it both lead here.
   const left = useRef(false);
@@ -515,7 +534,7 @@ export function ChannelAgentScreen({ channelId, agentId }: { channelId: string; 
             </GroupedList>
           ) : null}
           {/* How it answers here: the choice for whoever may set it, else said in a line. */}
-          {setsReply ? null : <GroupedFooter>{lineOf(t, who, routing)}</GroupedFooter>}
+          {setsReply ? null : <GroupedFooter>{lineOf(t, who, routing, isLead)}</GroupedFooter>}
           {setsReply ? (
             <>
               <GroupedHeader>{t("channelMembers.replyHeading", g)}</GroupedHeader>
@@ -541,6 +560,18 @@ export function ChannelAgentScreen({ channelId, agentId }: { channelId: string; 
           ) : null}
           {editable ? (
             <>
+              <Gap />
+              <GroupedList>
+                <GroupedRow
+                  label={t("channelMembers.lead")}
+                  labelLines={2}
+                  sub={t("channelMembers.leadHelp")}
+                  subLines={0}
+                  toggle={isLead}
+                  disabled={update.isPending}
+                  onPress={() => setLead(!isLead)}
+                />
+              </GroupedList>
               <Gap />
               <GroupedList>
                 <GroupedRow
@@ -570,7 +601,7 @@ export function AddChannelMembersScreen({ channelId }: { channelId: string }) {
   const api = useApi();
   const toast = useToast();
   const dir = useDirectory();
-  const meId = useMeId();
+  const owns = useOwnsAgent();
   const { org } = useOrg();
   const roster = useRoster(orgId, channelId);
   const refresh = useRefresh(channelId);
@@ -597,11 +628,12 @@ export function AddChannelMembersScreen({ channelId }: { channelId: string }) {
     new Set((roster.data ?? []).map((m) => `${m.type === "agent" ? "agent" : "person"}:${m.id}`)),
     add.isPending || add.isSuccess,
   );
-  // Only the agents this person may place here, as the server's `requirePlacesAgent`: their own, or one they manage
-  // (ADR 0085 addendum of 2026-11-17). Editing an agent, or talking to it, doesn't move it between channels.
+  // Only the agents this person may place here, as the server's `requirePlacesAgent`: their own (or their role's, ADR
+  // 0085, addendum of 2026-11-21), or one they manage (ADR 0085 addendum of 2026-11-17). Editing an agent, or talking
+  // to it, doesn't move it between channels.
   const candidates = [
     ...dir.agents
-      .filter((a) => joinsChannels(a) && ((meId !== null && a.ownerUserId === meId) || managesAgent(a)))
+      .filter((a) => joinsChannels(a) && (owns(a) || managesAgent(a)))
       .map((a) => ({ kind: "agent" as const, id: a.id, name: a.name, line: `@${a.handle}` })),
     ...[...dir.memberById.values()].map((m) => ({
       kind: "person" as const,

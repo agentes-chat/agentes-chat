@@ -153,9 +153,9 @@ describe("Preferences: a setting's explanation behind its ⓘ", () => {
       (el) => {
         expect(row(el, "Send anonymous usage statistics to agentes.chat")).toEqual({
           title: "Send anonymous usage statistics to agentes.chat",
-          hint: "Counts such as people, agents, machine sizes, AI tokens used and how much data the agents' browsers send and receive. Never messages, files, names or sites. Changing it restarts agentes.chat for a moment.",
+          hint: "Counts such as people, agents, machine sizes, AI tokens used, how much data the agents' browsers send and receive, and how fast the apps open and run. Never messages, files, names or sites. Changing it restarts agentes.chat for a moment.",
           switch:
-            "Counts such as people, agents, machine sizes, AI tokens used and how much data the agents' browsers send and receive. Never messages, files, names or sites. Changing it restarts agentes.chat for a moment.",
+            "Counts such as people, agents, machine sizes, AI tokens used, how much data the agents' browsers send and receive, and how fast the apps open and run. Never messages, files, names or sites. Changing it restarts agentes.chat for a moment.",
           line: null,
         });
         expect(el.textContent).not.toContain("nothing is sent");
@@ -531,6 +531,29 @@ describe("Preferences: a setting's explanation behind its ⓘ", () => {
       },
     ));
 
+  test("Advanced with workspaces at different limits: the row says each one's number until a change sets all", () =>
+    pane(
+      "selfhost",
+      <Advanced />,
+      (el) => el.textContent?.includes("Not the same everywhere"),
+      async (el) => {
+        const row = () => [...el.querySelectorAll(".dk-crow")].find((r) => r.textContent?.includes("At the same time"));
+        expect(row()?.textContent).toMatch(/Not the same everywhere: .+ 3, .+ 12\. A change here sets all of them\./);
+        // Only that row: the others are the same everywhere.
+        expect(el.textContent?.match(/Not the same everywhere/g)).toHaveLength(1);
+        await act(async () => row()?.querySelector<HTMLButtonElement>('button[aria-label="Less"]')?.click());
+        await until(() => !el.textContent?.includes("Not the same everywhere"));
+      },
+      {
+        host: (h) => {
+          const [, second] = [...h.runners.values()];
+          (second as unknown as { config: { maxConcurrentTasks?: number } }).config.maxConcurrentTasks = 12;
+          const [first] = [...h.runners.values()];
+          (first as unknown as { config: { maxConcurrentTasks?: number } }).config.maxConcurrentTasks = 3;
+        },
+      },
+    ));
+
   test("Advanced on Linux: back to defaults keeps eight conversations open for 60 minutes, as the runner does", () =>
     pane(
       "selfhost",
@@ -586,6 +609,24 @@ describe("Preferences: a setting's explanation behind its ⓘ", () => {
           "One folder per workspace, with a folder for each agent.",
         );
         for (const r of rows(folders as HTMLElement)) expect(r.line).not.toContain("One folder per workspace");
+      },
+    ));
+
+  test("Advanced: where tasks start on the computer's room, no count of them to set", () =>
+    pane(
+      "selfhost",
+      <Advanced />,
+      (el) => el.querySelectorAll(".dk-card").length === 3 && el.querySelector(".dk-path"),
+      async (el) => {
+        const titles = () => rows(el.querySelector(".dk-card") as HTMLElement).map((r) => r.title);
+        await until(() => titles().length === 1);
+        expect(titles()).toEqual(["Longest each one may run"]);
+      },
+      {
+        host: (h) => {
+          for (const r of h.runners.values())
+            (r as unknown as { config: { tasksOnRoom?: boolean } }).config.tasksOnRoom = true;
+        },
       },
     ));
 

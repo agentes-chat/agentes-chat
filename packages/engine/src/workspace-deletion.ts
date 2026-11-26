@@ -15,7 +15,7 @@ import {
   schema,
   sql,
 } from "@agenteschat/db";
-import { enqueueAccountContact } from "./account-contacts";
+import { enqueueAccountContact, enqueueMemberContacts } from "./account-contacts";
 import { recordAudit } from "./audit";
 import { orgMessageCount } from "./billing-link";
 import { caches } from "./cache";
@@ -68,6 +68,7 @@ const {
   users,
   sessions,
   pushDevices,
+  liveActivityDevices,
   machineProvisioning,
   machines,
   machineAccounts,
@@ -576,6 +577,7 @@ export async function purgeWorkspace(deps: PurgeDeps, orgId: string, options: { 
       .select({ id: githubAppInstallations.installationId })
       .from(githubAppInstallations)
       .where(eq(githubAppInstallations.orgId, orgId));
+    await enqueueMemberContacts(tx, orgId);
     // ponytail: one cascading delete; batch it by table if a workspace's delete ever outlives the job's renewed lease.
     await tx.delete(organizations).where(eq(organizations.id, orgId));
     return { computers, installs, requestedBy: row.requestedBy, via };
@@ -1052,6 +1054,7 @@ export async function scheduleAccountDeletion(deps: DeletionDeps, userId: string
     if (!dueAt) throw new NotFoundError("This account no longer exists");
     await tx.delete(sessions).where(eq(sessions.userId, userId));
     await tx.delete(pushDevices).where(eq(pushDevices.userId, userId));
+    await tx.delete(liveActivityDevices).where(eq(liveActivityDevices.userId, userId));
     for (const m of mine) await followOwner(tx, m.orgId);
     await recordOperatorEvent(tx, { type: "user.deletion_requested", userId, data: { dueAt: dueAt.toISOString() } });
     await enqueueAccountContact(tx, userId);
@@ -1102,6 +1105,8 @@ export async function scheduleAccountDeletion(deps: DeletionDeps, userId: string
     });
     return { dueAt, closed, orgs: mine };
   });
+  // Its sessions ended above: no process serves a kept one (`caches.sessions`).
+  caches.sessions.clear();
   // Their open sockets lose every subscription now.
   for (const m of orgs) {
     caches.membership.delete(`${m.orgId}:${userId}`);

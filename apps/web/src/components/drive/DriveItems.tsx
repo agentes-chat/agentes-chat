@@ -9,7 +9,7 @@ import type { MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { ActorAvatar } from "@/components/AgentAvatar";
 import { ArtifactMoreMenu, useArtifactEntries } from "@/components/artifacts/ArtifactActions";
-import { useAuthorName } from "@/components/artifacts/ArtifactViewer";
+import { useAuthorName } from "@/components/artifacts/viewer-context";
 import type { MenuEntry } from "@/lib/context-menu";
 import { entityMenu } from "@/lib/entity-menu";
 import { dragOut } from "./DriveFolders";
@@ -76,7 +76,7 @@ export function DriveCard({
         {...menu.props}
         {...(dragging ? dragOut(() => dragging(a)) : {})}
       >
-        <DrivePreview artifact={a} />
+        <DrivePreview artifact={a} player />
         <span className="drive-card__kind">
           <Icon name={itemIcon(a)} size={14} />
           <span>

@@ -21,7 +21,7 @@ import {
 } from "@agenteschat/db";
 import { getAgent, getAgentCached } from "./agents";
 import type { ArtifactDeps } from "./artifacts";
-import { audienceSql, managesAgent, managesAgentSql } from "./audience";
+import { audienceSql, managesAgent, managesAgentSql, ownsAgentSql } from "./audience";
 import { recordAudit } from "./audit";
 import { requireChannelAccess } from "./channels";
 import { eligibleChannelAgents } from "./dispatch";
@@ -42,6 +42,7 @@ import {
   taskModeOf,
   taskScope,
   taskSeconds,
+  waitsInQueue,
 } from "./machine-tasks";
 import { MachineOfflineError, type MachineRow, shownOnline } from "./machines";
 import { insertMessage, type Message, messageView } from "./messages";
@@ -1778,7 +1779,7 @@ async function cancelMissionTasks(deps: MissionDeps, mission: MissionRow, actorI
     try {
       // Waiting in our queue: the runner never had it.
       reply =
-        deps.hub && !row.startRequest
+        deps.hub && !waitsInQueue(row)
           ? await deps.hub.call<"task.cancel">(row.machineId, {
               agent: { id: mission.agentId, handle: agent?.handle ?? "agent" },
               op: "task.cancel",
@@ -3342,7 +3343,7 @@ export async function eligibleMissionAgents(deps: Pick<MissionDeps, "db">, userI
     id: string;
     handle: string;
     name: string;
-    owner_user_id: string | null;
+    owns: boolean | null;
     mission_command_approval: string | null;
     can_talk: boolean;
     manages: boolean | null;
@@ -3358,8 +3359,8 @@ export async function eligibleMissionAgents(deps: Pick<MissionDeps, "db">, userI
     executors: schema.MachineExecutors | string | null;
     os: string | null;
   }>(
-    await deps.db.execute(sql`select agents.id, agents.handle, agents.name, agents.owner_user_id,
-        agents.mission_command_approval,
+    await deps.db.execute(sql`select agents.id, agents.handle, agents.name,
+        ${ownsAgentSql("agents", sql`${userId}::text`)} as owns, agents.mission_command_approval,
         ${audienceSql("agents", sql`${userId}::text`)} as can_talk,
         ${managesAgentSql("agents", sql`${userId}::text`)} as manages,
         mc.id as machine_id, mc.name as machine_name, mc.online, mc.last_seen_at, mc.kind, mc.standby_at,
@@ -3371,7 +3372,8 @@ export async function eligibleMissionAgents(deps: Pick<MissionDeps, "db">, userI
       order by agents.name`),
   );
   const list = rows.map((r): EligibleAgent => {
-    const canManage = r.manages === true || (r.owner_user_id != null && r.owner_user_id === userId);
+    // Its owner, or who holds its owner role (ADR 0085, addendum of 2026-11-21), or who manages it.
+    const canManage = r.manages === true || r.owns === true;
     const machine = r.machine_id
       ? {
           id: r.machine_id,

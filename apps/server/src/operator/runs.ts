@@ -297,7 +297,7 @@ const Trace = z
             .string()
             .nullable()
             .openapi({
-              description: `An error's: \`transient\`, \`provider_outage\`, \`brain_unavailable\`, \`brain_stalled\`, \`usage_wait\`, \`no_ai\`, \`canceled\`, \`gave_up\`, \`recovered\`, \`interrupted\`… A \`context\` step's that handed the run's unread messages on to another run (\`redispatchedMessageIds\`): why, one of ${RELEASE_REASONS.map((r) => `\`${r}\``).join(", ")}.`,
+              description: `An error's: \`transient\`, \`provider_outage\`, \`brain_unavailable\`, \`brain_stalled\`, \`usage_wait\`, \`no_ai\`, \`canceled\`, \`gave_up\`, \`recovered\`, \`interrupted\`… A \`context\` step's that handed the run's unread messages on to another run (\`redispatchedMessageIds\`): why, one of ${RELEASE_REASONS.map((r) => `\`${r}\``).join(", ")}. A \`context\` step with \`steerTriage\`: how the triage said the agent takes a message sent while it works (\`stop\`, \`interrupt\`, \`add\`, \`answer\`, \`queue\`, \`elsewhere\`). One with \`talkerDecision\`: what the fast reply decided about that message (\`reply\`, \`pass\`, \`error\`, or why it was skipped).`,
             }),
           toRunId: z.uuid().nullable().openapi({
             description:
@@ -384,6 +384,10 @@ const Trace = z
             .array(
               z.object({
                 warm: z.boolean().openapi({ description: "On a process already open." }),
+                cold: z.string().nullable().openapi({
+                  description:
+                    "Not warm: why it started a new process (`coldStarts.cause` of the run timings); null when warm or an older runner didn't say.",
+                }),
                 initMs: Count.nullable().openapi({ description: "A new process until it said it was ready." }),
                 firstEventMs: Count.nullable().openapi({ description: "Turn start to its first event." }),
                 firstTokenMs: Count.nullable().openapi({

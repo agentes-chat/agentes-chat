@@ -10,14 +10,12 @@ import {
   type SecretRequest,
   useApproval,
   useBrowserHandoff,
-  useCardProposals,
 } from "@agenteschat/client";
 import { agentProposalOf, proposalStatus } from "@agenteschat/client/lib/action-cards";
 import { questionWaitsOn } from "@agenteschat/client/lib/agent-questions";
 import { askKindWords } from "@agenteschat/client/lib/approval-words";
 import { timeLeft } from "@agenteschat/client/lib/format";
 import { can } from "@agenteschat/client/lib/permissions";
-import { isOpen, messageProposalCards, proposalTarget, proposerOf } from "@agenteschat/client/lib/proposals";
 import { secretLabel } from "@agenteschat/client/lib/secret-requests";
 import { LinearGradient } from "expo-linear-gradient";
 import {
@@ -44,10 +42,13 @@ import {
   EventPill,
   EventPillAction,
   EventPillText,
+  FADE_OUT,
   Fuse,
   Icon,
   type IconName,
   InfoHint,
+  MESSAGE_CARD_X,
+  motion,
   Text,
   useReducedMotion,
   useTheme,
@@ -58,7 +59,8 @@ import { useBubbleHead, useBubblePart } from "../shared/bubble-part";
 import { AgentFace } from "../shared/Face";
 import { useColors, useDirectory, useMeId, useNow, useOrgId } from "../shared/hooks";
 import { agentLook, fuseRemaining } from "../shared/logic";
-import { tapHaptic, useSurface } from "../shared/parts";
+import { ownsIn } from "../shared/owner";
+import { tapHaptic } from "../shared/parts";
 import {
   type AskKind,
   type AskStore,
@@ -73,7 +75,7 @@ import {
 } from "./ask-store";
 import { LineStop } from "./LiveRows";
 import { approvalIdOf, lineStops, markedParts, markName, parseInline, questionOf, workingEntries } from "./logic";
-import { useCardTop, useMessageCardCorners, useOwnTop } from "./look";
+import { useCardTop, useMessageCardCorners, useMessageCardFrame, useOwnTop } from "./look";
 import { Spans } from "./MessageSpans";
 import { useRowDirectory } from "./row-data";
 import { withOpacity } from "./turn";
@@ -105,6 +107,11 @@ const CARD_IN = FadeIn.duration(300);
 const PILL_IN = FadeIn.duration(160);
 /** What a card or a pill shows later, on screen (its details opened, how it ended): it fades in where it stands. */
 const PART_IN = FadeIn.duration(220);
+/*
+ * A card deciding (as the web's `useMorph`): its buttons fade out where they were and how it ended fades in 70ms later.
+ * Its height doesn't glide: the list sizes the row.
+ */
+const ANSWER_IN = FadeIn.duration(motion.base).delay(70);
 
 /** The entrance of a card or a pill: none in a conversation (see `CARD_IN`) or with reduced motion. */
 function useEntrance(entering: typeof CARD_IN) {
@@ -162,7 +169,6 @@ const AskProbe = memo(function AskProbe({ message: m, order }: { message: Messag
   const secret = secretRequestOf(m.meta);
   const handoff = browserHandoffOf(m.meta);
   const proposal = agentProposalOf(m.meta);
-  const changes = messageProposalCards(m.meta);
   const asked: PendingAsk | null =
     question?.status === "open" && questionWaitsOn(question, meId)
       ? { id: question.id, kind: "question", agentId: question.agentId, what: question.text, messageId: m.id, order }
@@ -183,9 +189,6 @@ const AskProbe = memo(function AskProbe({ message: m, order }: { message: Messag
       {proposal && m.author.id ? (
         <ProposalProbe card={proposal} agentId={m.author.id} messageId={m.id} order={order} />
       ) : null}
-      {changes.map((ids) => (
-        <ChangeProposalProbe key={ids.join(",")} ids={ids} messageId={m.id} order={order} />
-      ))}
     </>
   );
 });
@@ -244,8 +247,11 @@ function HandoffProbe({
   const dir = useDirectory();
   const h = useBrowserHandoff(orgId, id).data ?? fallback;
   const expired = useExpired(h.expiresAt);
-  // The same rule as its card (`HandoffCard`): by ids, never by a name that may not have loaded.
-  const mine = meId !== null && handoffIsMine(h, meId, dir.agentById.get(h.agentId)?.ownerUserId, org);
+  // The same rule as its card (`HandoffCard`): by ids, never by a name that may not have loaded. One who holds the
+  // role that answers for it helps as its owner (ADR 0085, addendum of 2026-11-21).
+  const agent = dir.agentById.get(h.agentId);
+  const owner = ownsIn(dir.memberById, meId, agent) ? meId : agent?.ownerUserId;
+  const mine = meId !== null && handoffIsMine(h, meId, owner, org);
   const ask =
     h.status === "pending" && h.kind === "ask" && !expired && mine
       ? {
@@ -279,31 +285,6 @@ function ProposalProbe({
       ? { id: messageId, kind: "agent" as const, agentId, what: card.params.draft.name, messageId, order }
       : null;
   return <Report id={messageId} ask={ask} />;
-}
-
-/**
- * A proposal card of the agent's (a change to the context or to agents' instructions, roles or apps, for one agent or
- * several): one request while any of its rows waits on the person. Its id is the card's (`InstructionProposals`).
- */
-function ChangeProposalProbe({ ids, messageId, order }: { ids: string[]; messageId: string; order: number }) {
-  const { t } = useTranslation();
-  const { orgId, org } = useOrg();
-  const dir = useDirectory();
-  const rows = useCardProposals(orgId, ids);
-  const open = rows.find((p) => isOpen(p) && p.canDecide);
-  const id = ids.join(",");
-  const agentName = (a: string) => dir.anyAgent(a)?.name ?? t("channel.unknownAgent");
-  const ask = open
-    ? {
-        id,
-        kind: "proposal" as const,
-        agentId: proposerOf(open),
-        what: proposalTarget(t, open, agentName, org ?? ""),
-        messageId,
-        order,
-      }
-    : null;
-  return <Report id={id} ask={ask} />;
 }
 
 // ── What shows ───────────────────────────────────────────────────────────────
@@ -410,6 +391,7 @@ export const ASK_ICON: Record<AskKind, IconName> = {
   agent: "agent",
   team: "members",
   firstTask: "target",
+  code: "code",
 };
 
 /** How a request ended, where its decision was: the card keeps its box, its words and what it is about. */
@@ -488,7 +470,7 @@ export function AskCard({
   const { t } = useTranslation();
   const c = useColors();
   const dir = useRowDirectory();
-  const surface = useSurface();
+  const frame = useMessageCardFrame();
   // Under someone else's words in a conversation of bubbles: a bubble of that message (its fill, joined to it, no sky),
   // and, when the message is only this request, its name line at the top and its time at the end, as a bubble's.
   const part = useBubblePart();
@@ -560,7 +542,7 @@ export function AskCard({
   return (
     // A plain view the conversation measures (never flattened away), around the card.
     <View ref={slot} collapsable={false} style={ownTop}>
-      <Animated.View entering={entering} style={[styles.card, surface, cardCorners]}>
+      <Animated.View entering={entering} style={[styles.card, frame.style]}>
         {/* What the card holds when it mounts just shows (a row scrolled back into view, its answer already there);
             what comes later fades in. */}
         <LayoutAnimationConfig skipEntering>
@@ -570,7 +552,7 @@ export function AskCard({
             {headless ? null : (
               <View style={styles.head}>
                 <Icon name={ASK_ICON[kind]} size={13} color={c.muted} />
-                <Text variant="footnote" tone="muted" numberOfLines={1} style={[styles.medium, styles.grow]}>
+                <Text variant="cardKind" numberOfLines={1} style={styles.grow}>
                   {kindNote ? `${kindWords} · ${kindNote}` : kindWords}
                 </Text>
                 {waitsFor && waitsFor !== "you" && !ended ? (
@@ -581,7 +563,7 @@ export function AskCard({
               </View>
             )}
             {lead ? (
-              <Text variant={well ? "body" : "title"} tone="ink" style={well ? styles.lead : undefined}>
+              <Text variant={well ? "small" : "cardTitle"} tone="ink">
                 <Spans inline={parseInline(lead)} />
               </Text>
             ) : null}
@@ -617,7 +599,7 @@ export function AskCard({
             {body ? <View style={styles.body}>{body}</View> : null}
             {answer ? (
               <Animated.View
-                entering={reduced ? undefined : PART_IN}
+                entering={reduced ? undefined : ANSWER_IN}
                 // Under the name line its hairline is enough: no second one.
                 style={[styles.edge, styles.answer, { borderTopColor: c.line }, line && !body ? styles.noTop : null]}
               >
@@ -646,10 +628,10 @@ export function AskCard({
                 {answer.actions ? <View style={styles.answerActs}>{answer.actions}</View> : null}
               </Animated.View>
             ) : ended ? null : (
-              <>
+              <Animated.View exiting={reduced ? undefined : FADE_OUT} style={styles.footSlot}>
                 {foot}
                 {waitsFor === "you" && expiry ? <View style={styles.expiryRow}>{expiry}</View> : null}
-              </>
+              </Animated.View>
             )}
             {bubbleHead ? (
               <Text variant="caption" tone="muted" style={styles.bubbleTime}>
@@ -686,18 +668,14 @@ export function AskNote({
   const ownTop = useCardTop(12);
   const { t } = useTranslation();
   const dir = useRowDirectory();
-  const surface = useSurface();
+  const frame = useMessageCardFrame();
   const part = useBubblePart();
   const cardCorners = useMessageCardCorners();
   const entering = useEntrance(CARD_IN);
-  const heading = (
-    <Text variant="body" tone="ink" style={styles.semibold}>
-      {title}
-    </Text>
-  );
+  const heading = <Text variant="cardTitle">{title}</Text>;
   return (
     <View style={ownTop}>
-      <Animated.View entering={entering} style={[styles.card, surface, cardCorners]}>
+      <Animated.View entering={entering} style={[styles.card, frame.style]}>
         <View style={[styles.clip, cardCorners]}>
           {part ? null : (
             <Sky
@@ -1077,7 +1055,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderBottomLeftRadius: 6,
     overflow: "hidden",
-    paddingHorizontal: 16,
+    paddingHorizontal: MESSAGE_CARD_X,
     paddingVertical: 14,
     gap: 8,
   },
@@ -1088,14 +1066,16 @@ const styles = StyleSheet.create({
   sky: { position: "absolute", top: 0, left: 0, right: 0, height: 56, opacity: 0.5 },
   head: { flexDirection: "row", alignItems: "center", gap: 6, minHeight: 18 },
   semibold: { fontWeight: "600" },
-  medium: { fontWeight: "500" },
   grow: { flex: 1, minWidth: 0 },
   shrink: { flexShrink: 1 },
   // Who it waits for never takes the kind's room: at most half the line (long words left the kind none).
   waits: { flexShrink: 1, maxWidth: "50%" },
-  lead: { lineHeight: 22 },
-  // Edge to edge across the card (its 16-point sides), a hairline above.
-  edge: { marginHorizontal: -16, paddingHorizontal: 16, borderTopWidth: StyleSheet.hairlineWidth },
+  // Edge to edge across the card (its sides, `MESSAGE_CARD_X`), a hairline above.
+  edge: {
+    marginHorizontal: -MESSAGE_CARD_X,
+    paddingHorizontal: MESSAGE_CARD_X,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
   // What will happen, drawn small: as tall as a preview gets, fading at its foot.
   preview: { maxHeight: 152, overflow: "hidden", paddingVertical: 10 },
   fade: { position: "absolute", left: 0, right: 0, bottom: 0, height: 40 },
@@ -1115,6 +1095,8 @@ const styles = StyleSheet.create({
   noTop: { borderTopWidth: 0 },
   body: { gap: 8 },
   foot: { marginTop: 4, gap: 10 },
+  // The foot and its deadline, one part that fades out as the card is decided: the card's own gap between them.
+  footSlot: { gap: 8 },
   // How it ended, where the decision was: a strip edge to edge under a hairline, its mark on the words' first line.
   answer: { paddingTop: 12, gap: 4 },
   answerRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },

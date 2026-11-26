@@ -87,7 +87,11 @@ function brokerFor(
     hub,
     authorize:
       options.authorize ??
-      (async (input) => ({ machineId: machine.machineId, agent: { id: input.agentId, handle: "dev" } })),
+      (async (input) => ({
+        machineId: machine.machineId,
+        agent: { id: input.agentId, handle: "dev" },
+        saysStarting: true,
+      })),
     onReady: options.onReady,
     onClosed: options.onClosed,
     recheck: options.recheck,
@@ -532,6 +536,49 @@ describe("the broker", () => {
     expect(watcher.closed).toEqual({ code: STREAM_CLOSE.refused, reason: "held" });
     expect(requests.slice(1)).toHaveLength(1);
     expect(requests[1]).not.toHaveProperty("start");
+  });
+
+  test("an open that starts the desktop waits a start's time once the computer says so; one that doesn't, an open's", async () => {
+    f = await setup();
+    const machine = await paired();
+    let says = true;
+    let older = false;
+    const { broker } = brokerFor(machine, {
+      limits: { openTimeoutMs: 60, startTimeoutMs: 2_000 },
+      authorize: async (input) => ({
+        machineId: machine.machineId,
+        agent: { id: input.agentId, handle: "dev" },
+        ...(older ? {} : { saysStarting: true }),
+      }),
+      // A cold start: the desktop comes up well after the open's own wait.
+      reply: async (request) => {
+        if (request.op !== "stream.open") throw new Error(`unexpected ${request.op}`);
+        if (says) broker.starting(machine.machineId, request.streamId);
+        await Bun.sleep(200);
+        const link = broker.accept(fakeSocket().socket);
+        const hello = { type: "stream.hello", token: machine.token, streamId: request.streamId };
+        await broker.fromRunner(link, JSON.stringify(hello));
+        return { opened: true };
+      },
+    });
+    const viewer = fakeSocket();
+    const stream = broker.open(viewer.socket, input(WATCH));
+    await until(() => stream.runner !== null, "the data socket");
+    expect(viewer.closed).toBeNull();
+
+    // Said nothing: the desktop ran, and the open alone was late.
+    says = false;
+    const late = fakeSocket();
+    broker.open(late.socket, input(WATCH));
+    await until(() => late.closed !== null, "the timeout");
+    expect(late.closed).toEqual({ code: STREAM_CLOSE.late, reason: "timeout" });
+
+    // A computer too old to say it: every open that may start the desktop gets a start's wait.
+    older = true;
+    const old = fakeSocket();
+    const oldStream = broker.open(old.socket, input(WATCH));
+    await until(() => oldStream.runner !== null, "the data socket");
+    expect(old.closed).toBeNull();
   });
 
   test("the hub's own refusal of a held agent's work reads as held", async () => {

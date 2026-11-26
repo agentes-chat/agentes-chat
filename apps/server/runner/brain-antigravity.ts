@@ -20,15 +20,16 @@ import {
 import { AGY_CHAT_AGENT, prepareAgyHome } from "./agy-home";
 import { LIMIT_TEXT } from "./brain";
 import { type CodexBrainEvent, CodexThreads, chatFolder, codexProfileOf, codexThreadKey } from "./brain-codex";
-import { cursorPrompt } from "./brain-cursor";
+import { cursorPrompt, promptMaxOn } from "./brain-cursor";
 import { RunnerError } from "./errors";
 import { killTree } from "./exec";
-import { AGY_BIN, resolveCommand } from "./executors";
+import { AGY_BIN, cliSpawn } from "./executors";
 import { CODEX_MCP_ENV, CODEX_MCP_SERVER, redactDeep } from "./mcp";
 import { resolveForAgent } from "./paths";
 import { resetFromWords } from "./plan-usage";
 import type { Spawn } from "./scope-gate";
 import { agentSecrets } from "./secrets";
+import { turnZoneEnv } from "./turn-zone";
 
 /**
  * The Antigravity branch of `brain.turn` (protocol 44, ADR 0143): one agent turn as one run of Google's Antigravity
@@ -67,6 +68,8 @@ const KILL_GRACE_MS = 5000;
 export interface AntigravityBrainTurnRequest {
   runId: string;
   kind: "antigravity";
+  /** The zone of the turn's "Now" (`turnZoneEnv`). */
+  timeZone?: string;
   session: { id: string; resume: boolean };
   cwd?: string;
   model?: string;
@@ -168,7 +171,8 @@ export function parseAgyError(stderr: string): { message: string; limit: boolean
   }
   const str = (v: unknown) => (typeof v === "string" ? v : typeof v === "number" ? String(v) : "");
   const status = `${str(o.status)} ${str(o.canonical_status)} ${str(o.code)} ${str(o.http_status)}`;
-  const message = (str(o.message) || str(o.error) || status.trim() || "The model call failed").slice(0, 500);
+  const raw = line.slice("AGY_ERROR:".length).trim();
+  const message = (str(o.message) || str(o.error) || status.trim() || raw).slice(0, 500);
   return {
     message,
     limit: /RESOURCE_EXHAUSTED|\b429\b/i.test(status) || AGY_LIMIT.test(message),
@@ -245,10 +249,8 @@ export interface AntigravityTurnOptions {
 export async function runAntigravityTurn(input: AntigravityTurnInput, opts: AntigravityTurnOptions): Promise<void> {
   const fail = (code: string, message: string, retryable?: boolean) =>
     opts.emit({ type: "error", code, message, ...(retryable ? { retryable } : {}) });
-  // On Windows the CLI keeps its sign-in in the one Credential Manager of the computer's user (ADR 0143).
-  if ((opts.platform ?? process.platform) === "win32") {
-    return fail("unsupported", "Gemini plans don't think on Windows computers yet.");
-  }
+  // Windows too, one Gemini account a computer there (ADR 0143 §3).
+  const platform = opts.platform ?? process.platform;
   try {
     prepareAgyHome(input.account.home, opts.mcpCommand);
     if (input.chat) {
@@ -272,7 +274,7 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
     ...(opts.socketPath ? { [CODEX_MCP_ENV[1]]: opts.socketPath } : {}),
     ...(opts.runnerHome ? { [CODEX_MCP_ENV[2]]: opts.runnerHome } : {}),
   };
-  const env = accountEnv("antigravity", input.account.home, base);
+  const env = accountEnv("antigravity", input.account.home, base, platform);
   const clean = (text: string) => (opts.redact ? opts.redact(text) : text);
   const hold = opts.redact ? (opts.redactHold ?? 0) : 0;
 
@@ -280,7 +282,7 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
   for (let attempt = 0; ; attempt++) {
     const chat = opts.chats.get(chatKey);
     const args = antigravityTurnArgs({
-      prompt: cursorPrompt(input.system, input.prompt, !chat),
+      prompt: cursorPrompt(input.system, input.prompt, !chat, promptMaxOn(platform)),
       ...(chat ? { chat } : {}),
       ...(input.model ? { model: input.model } : {}),
       ...(input.effort ? { effort: input.effort } : {}),
@@ -289,11 +291,15 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
     });
     let child: ChildProcess;
     try {
-      child = (opts.spawn ?? spawn)(resolveCommand(opts.bin ?? AGY_BIN, env.PATH), args, {
+      // Not its own group on Windows: there that opens a console, and `killTree` follows the tree anyway.
+      const run = cliSpawn([opts.bin ?? AGY_BIN], args, env.PATH, platform);
+      child = (opts.spawn ?? spawn)(run.file, run.args, {
         cwd: input.cwd,
-        env,
+        env: run.env ? { ...env, ...run.env } : env,
         stdio: ["ignore", "pipe", "pipe"],
-        detached: true,
+        detached: platform !== "win32",
+        windowsHide: true,
+        ...(run.windowsVerbatimArguments ? { windowsVerbatimArguments: true } : {}),
       });
     } catch (err) {
       return fail("antigravity_failed", err instanceof Error ? err.message : String(err));
@@ -571,7 +577,8 @@ export async function handleAntigravityBrainTurn(
         signal: scope.signal,
         runnerHome: ctx.runnerHome,
         ...(ctx.mcp ? { mcpCommand: ctx.mcp.command, socketPath: ctx.mcp.socketPath } : {}),
-        ...(secrets ? { env: secrets.env, redact: secrets.redact, redactHold: secrets.hold } : {}),
+        env: { ...secrets?.env, ...turnZoneEnv(req.timeZone) },
+        ...(secrets ? { redact: secrets.redact, redactHold: secrets.hold } : {}),
         ...(ctx.bin ? { bin: ctx.bin } : {}),
         ...(ctx.spawn ? { spawn: ctx.spawn } : {}),
         ...(ctx.platform ? { platform: ctx.platform } : {}),

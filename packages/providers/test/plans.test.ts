@@ -162,8 +162,9 @@ describe("coding plans' models", () => {
     const kimi = CODING_PLANS.kimi;
     expect(claudeCodeModel(kimi, "opus")).toBe("opus");
     expect(claudeCodeModel(kimi, "k3-256k")).toBe("k3-256k");
-    for (const other of ["glm-5.3", "claude-opus-5-5", "auto", undefined, 3])
+    for (const other of ["fable", "glm-5.3", "claude-opus-5-5", "auto", undefined, 3])
       expect(claudeCodeModel(kimi, other)).toBe("sonnet");
+    expect(claudeCodeModel(undefined, "fable")).toBe("fable");
     expect(claudeCodeModel(undefined, "haiku")).toBe("haiku");
     expect(claudeCodeModel(undefined, "claude-sonnet-4-5")).toBe("claude-sonnet-4-5");
     // Another plan's model kept while Claude thinks.
@@ -394,6 +395,7 @@ test("a model the plan's live list dropped: named, with the table's label; nothi
   try {
     expect(droppedPlanModel("opencode", gone.id)).toBeNull();
     learnPlanModels({ opencode: table.filter((m) => m.id !== gone.id) });
+    expect(droppedPlanModel("opencode", "fable")).toBeNull();
     expect(droppedPlanModel("opencode", gone.id)).toEqual(gone);
     expect(claudeCodeModel(planOf("opencode"), gone.id)).toBe("sonnet");
     learnPlanModels({ opencode: [...table.filter((m) => m.id !== gone.id), { id: "glm-9", label: "GLM-9" }] });
@@ -453,8 +455,9 @@ describe("antigravityModelFor", () => {
     expect(antigravityModelFor(null, "medium", { windows: [...gemini(100), argon(0)] }, now)).toBe(
       "gemini-4-argon-medium",
     );
+    // Argon has a Low level now (the catalog's reserve), so "low" is asked as it is.
     expect(antigravityModelFor(undefined, "low", { windows: [...gemini(100), argon(0)] }, now)).toBe(
-      "gemini-4-argon-medium",
+      "gemini-4-argon-low",
     );
   });
 

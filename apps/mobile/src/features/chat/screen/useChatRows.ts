@@ -1,4 +1,5 @@
 import {
+  codeSessionOf,
   fileConversationOf,
   type Message,
   type ReceiptsState,
@@ -12,6 +13,7 @@ import {
   consultBlocksNearEnd,
   consultNoticeFolds,
   consultsForLine,
+  relayedAnswers,
 } from "@agenteschat/client/lib/consult-group";
 import { taskConversationOf } from "@agenteschat/client/lib/issues";
 import { supersededBrainNotices } from "@agenteschat/client/lib/machine-outages";
@@ -109,40 +111,69 @@ export function useChatRows({
   // In bubbles and compact the messages show no time (a pull does): a line says when the conversation picks up again
   // (`PAUSE_MS`).
   const timeLines = timesOnPull(rowLook.style);
+  // Questions agents asked other agents from here: the pair rows below, and the consulted agents' words their askers
+  // pass on right after (`relayedAnswers`), folded into the quote at the top of the asker's message. Out of the rows
+  // themselves, so what groups around them groups as if they weren't there; worked out again with the messages, the
+  // rows built again only when a fold changes.
+  const consultations = useConsultations(orgId, channelId);
+  const consultData = consultations.data;
+  const relaysNow = useMemo(() => {
+    const shown = isThread && threadId ? list.filter((m) => m.id !== threadId) : list.filter((m) => !m.threadId);
+    return relayedAnswers(
+      [...shown].sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id)),
+      consultData ?? NO_CONSULTATIONS,
+    );
+  }, [isThread, threadId, list, consultData]);
+  const relaysKey = [...relaysNow.relays].map(([id, r]) => `${id}:${r.message.id}`).join(" ");
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `relaysKey` stands for the folds
+  const relays = useMemo(() => relaysNow, [relaysKey]);
   // The messages' rows, built again only when the messages (or the thread's head) change: an agent's run events, many a
   // second while it works, touch only the live rows after them.
   const messageRows = useMemo<Row[]>(() => {
+    // The asker's message that passes another agent's words on carries them, for its quote.
+    const withRelays = (rows: Row[]): Row[] =>
+      relays.relays.size === 0
+        ? rows
+        : rows.map((row) => {
+            const relay = row.kind === "message" ? relays.relays.get(row.message.id) : undefined;
+            return relay && row.kind === "message" ? { ...row, relay } : row;
+          });
     if (isThread && threadId) {
       const root = list.find((m) => m.id === threadId);
       const replies = list.filter((m) => m.id !== threadId);
       // A task's conversation (ADR 0145): its root stands for the task, one screen back; only the replies show. A
-      // live file's (ADR 0199) the same, under where the file was made.
+      // live file's (ADR 0199) the same, under where the file was made, and a code session's (ADR 0215), whose root
+      // is never shown: under where it was opened from, when a suggestion opened it (§11).
       const file = root ? fileConversationOf(root.meta) : null;
+      const code = root ? codeSessionOf(root.meta) : null;
       const head: Row[] = file
         ? [{ kind: "origin", key: "origin", artifactId: file.artifactId, fileKind: file.kind }]
-        : root && !taskConversationOf(root.meta)
-          ? [
-              { kind: "marker", key: "started", text: startedText },
-              // The root as it started the thread (its mission card is pinned above already).
-              {
-                kind: "message",
-                key: root.id,
-                message: { ...root, meta: { ...root.meta, missionStart: undefined, missionLink: undefined } },
-                grouped: false,
-              },
-              {
-                kind: "marker",
-                key: "replies",
-                text: t("mobile.chat.replies", { count: replyCount ?? replies.length }),
-              },
-            ]
-          : [];
-      return [...head, ...buildRows(replies, (m) => superseded.has(m.id), timeLines)];
+        : code?.fromChat
+          ? [{ kind: "codeOrigin", key: "code-origin", sessionId: code.sessionId }]
+          : root && !taskConversationOf(root.meta) && !codeSessionOf(root.meta)
+            ? [
+                { kind: "marker", key: "started", text: startedText },
+                // The root as it started the thread (its mission card is pinned above already).
+                {
+                  kind: "message",
+                  key: root.id,
+                  message: { ...root, meta: { ...root.meta, missionStart: undefined, missionLink: undefined } },
+                  grouped: false,
+                },
+                {
+                  kind: "marker",
+                  key: "replies",
+                  text: t("mobile.chat.replies", { count: replyCount ?? replies.length }),
+                },
+              ]
+            : [];
+      const hidden = (m: Message) => superseded.has(m.id) || relays.relayed.has(m.id);
+      return withRelays([...head, ...buildRows(replies, hidden, timeLines)]);
     }
     // A thread's replies live in the thread; the channel shows its link.
-    const hidden = (m: Message) => superseded.has(m.id) || Boolean(m.threadId);
-    return buildRows(list, hidden, timeLines);
-  }, [isThread, threadId, list, startedText, replyCount, superseded, timeLines, t]);
+    const hidden = (m: Message) => superseded.has(m.id) || Boolean(m.threadId) || relays.relayed.has(m.id);
+    return withRelays(buildRows(list, hidden, timeLines));
+  }, [isThread, threadId, list, startedText, replyCount, superseded, timeLines, relays, t]);
   // What agents do here now, after the messages: browser cards, a picture on its way, turns waiting for a computer.
   const liveRows = useMemo<Row[]>(
     () => [
@@ -167,8 +198,6 @@ export function useChatRows({
   // and posted nothing yet: its reply brings the row), and the working line without the questions a reply near the
   // end shows (an asker at work shows none: the line says them).
   // An exchange between the same two agents draws on its first asking run's reply (`asExchanges`).
-  const consultations = useConsultations(orgId, channelId);
-  const consultData = consultations.data;
   const consultList = useMemo(() => (consultData ? asExchanges(consultData) : NO_CONSULTATIONS), [consultData]);
   // The threads' links under their roots and these questions load beside the messages and change rows: the list waits
   // for them before it shows (`revealOpened`), so no row grows under the person as the conversation appears, at most

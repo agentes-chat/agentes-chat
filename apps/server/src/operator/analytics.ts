@@ -7,9 +7,12 @@ import {
   ANALYTICS_LIST_MAX,
   ANALYTICS_MAX_DAYS,
   ANALYTICS_ROWS_MAX,
+  CLI_RUNS_MAX_DAYS,
+  CLI_RUNS_ROWS_MAX,
   CONNECTOR_KEY,
   operatorAiAccounts,
   operatorAnalytics,
+  operatorCliRuns,
   operatorConnectorAnalytics,
   operatorListAiAccounts,
   operatorOrgWorkAnalytics,
@@ -117,6 +120,23 @@ const Analytics = z
             description:
               "Composio connected accounts made this month (mailboxes), reconnects included: Composio bills each once past the free ones.",
           }),
+          orgs: z
+            .array(
+              z.object({
+                orgId: z.uuid(),
+                connectors: z
+                  .array(z.object({ connector: Key, label: Label }))
+                  .openapi({ description: "Its Composio connectors this month: called, billed or connected." }),
+                calls: Count.openapi({ description: "Its calls of Composio's tools." }),
+                errors: Count,
+                ...ComposioCounts,
+                connections: Count.openapi({ description: "Its connected accounts made this month." }),
+              }),
+            )
+            .openapi({
+              description: `Per workspace with a call or something billed this month, most executions first (then events, calls and connections), at most ${ANALYTICS_ROWS_MAX}.`,
+            }),
+          orgsMore: z.boolean().openapi({ description: "More workspaces than were listed." }),
         })
         .openapi({ description: "This month whatever the dates: Composio's free allowances are monthly." }),
     }),
@@ -376,6 +396,38 @@ const TimingsQuery = z.object({
     description: "`brain`: a row per brain. `model`: a row per brain and model.",
   }),
 });
+const CliRunsQuery = z.object({
+  from: z
+    .string()
+    .openapi({ description: "An ISO 8601 instant: runs created at or after it.", example: "2026-11-21T00:00:00Z" }),
+  to: z.string().openapi({
+    description: `An ISO 8601 instant: runs created before it, after \`from\` and at most ${CLI_RUNS_MAX_DAYS} days apart. Else 400 \`analytics.range\`.`,
+    example: "2026-11-22T00:00:00Z",
+  }),
+});
+const CliRuns = z
+  .object({
+    from: z.string(),
+    to: z.string(),
+    clis: z
+      .array(
+        z.object({
+          cli: z.string().openapi({
+            description: "The coding CLI's name: `claude`, `codex`, `cursor`, `opencode`, `grok`, `antigravity`.",
+          }),
+          version: z.string().openapi({
+            description: "Its version, as its `--version` gave it on the run's computer.",
+            example: "2.1.308",
+          }),
+          runs: z.number().int().openapi({ description: "Runs that ended, done or failed." }),
+          failed: z.number().int().openapi({ description: "Of them, those that failed, whatever the cause." }),
+        }),
+      )
+      .openapi({
+        description: `Most runs first, at most ${CLI_RUNS_ROWS_MAX}. Runs on the model brain, or whose computer said no version, aren't counted.`,
+      }),
+  })
+  .openapi("OperatorCliRuns");
 const Ms = z.number().int().nullable();
 const TimingsGroup = {
   brain: z.string().nullable().openapi({
@@ -441,6 +493,20 @@ const RunTimings = z
         }),
       )
       .openapi({ description: `By brain, then model. At most ${RUN_TIMINGS_ROWS_MAX}: the ones with most turns.` }),
+    coldStarts: z
+      .array(
+        z.object({
+          ...TimingsGroup,
+          cause: z.string().openapi({
+            description:
+              "Why the turn started a new process: `new_session` (a session that never ran there: a new conversation, or a fresh session for an old one), `idle` (its process closed after its idle limit), `cap` (closed for another conversation of the agent), `memory` (closed to make room), `settings` (another launch: folder, permissions, account, sign-in), `warm_mismatch` (a warm start had another system text), `exited`, `closed` (after its last turn: canceled, died, a background turn), `restart` (it ran before, no process left: the runner restarted), `unsaid` (an older runner). Ignore values you don't know.",
+          }),
+          turns: Count,
+        }),
+      )
+      .openapi({
+        description: `Cold computer turns by brain, model and cause, most first. At most ${RUN_TIMINGS_ROWS_MAX}.`,
+      }),
     waits: z
       .array(
         z.object({
@@ -496,9 +562,8 @@ const ReplyTimes = z
       .array(
         z.object({
           at: At,
-          brain: z.enum(["all", ...REPLY_BRAINS]).openapi({
-            description:
-              "`model` (a provider's API), `claude_code`, `codex`, `other` (another CLI, or no turn yet). `all`: every brain.",
+          brain: z.string().openapi({
+            description: `The brain by its name (${REPLY_BRAINS.map((b) => `\`${b}\``).join(", ")}; \`model\` is a provider's API, \`other\` no turn yet). \`all\`: every brain.`,
           }),
           trigger: z.enum(["all", ...schema.agentRunTriggerEnum.enumValues]).openapi({
             description: "`dm`, `mention` or `router` (nobody was named). `all`: every trigger.",
@@ -800,6 +865,20 @@ export function registerOperatorAnalytics(api: OpenAPIHono, { db }: OperatorDeps
       responses: { 200: json(RunTimings), 400: errors[400], 401: errors[401] },
     }),
     async (c) => c.json(await operatorRunTimings(db, c.req.valid("query")), 200),
+  );
+
+  api.openapi(
+    createRoute({
+      method: "get",
+      path: "/cli-runs",
+      tags,
+      summary: "Runs that ended, by the coding CLI and version they thought with, and how many failed",
+      description:
+        "Of the runs created in the window, across workspaces: what a rollout of a CLI's new build compares with the build before. Counts and versions only.",
+      request: { query: CliRunsQuery },
+      responses: { 200: json(CliRuns), 400: errors[400], 401: errors[401] },
+    }),
+    async (c) => c.json(await operatorCliRuns(db, c.req.valid("query")), 200),
   );
 
   api.openapi(

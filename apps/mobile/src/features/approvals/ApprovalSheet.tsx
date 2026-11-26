@@ -1,10 +1,19 @@
-import { ApiError, useApproval, useChannels, useDecideApproval } from "@agenteschat/client";
+import {
+  ApiError,
+  type Approval,
+  useApproval,
+  useApprovals,
+  useChannels,
+  useDecideApproval,
+} from "@agenteschat/client";
+import { approvalLine } from "@agenteschat/client/lib/approval-card";
 import { aheadPhase } from "@agenteschat/client/lib/approval-kind";
 import { approvalEffects } from "@agenteschat/client/lib/approval-review";
 import {
   aheadEndLine,
   alwaysRoutineName,
   approvalDetail,
+  approvalDoing,
   approvalWaitsFor,
   requesterDecidesLine,
 } from "@agenteschat/client/lib/approval-words";
@@ -13,28 +22,31 @@ import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useOrg } from "@/providers/org";
 import {
   Button,
   EmptyState,
+  FactStrip,
   GroupedFooter,
   GroupedHeader,
   GroupedList,
   GroupedRow,
   HoldButton,
   Locked,
-  SHEET_X,
-  SheetBar,
-  SheetScreen,
+  SCREEN_X,
   SkeletonList,
   Text,
   useToast,
 } from "@/ui";
+import { OpenItemHead } from "../activity/OpenItem";
 import { ExpiryLine } from "../chat/asks";
-import { AgentFace } from "../shared/Face";
+import { ApprovalTrail } from "../chat/ToolCalls";
 import { LoadFailed } from "../shared/FirstUse";
-import { useDirectory, useNow, useOrgId } from "../shared/hooks";
-import { genderOf } from "../shared/logic";
+import { useColors, useDirectory, useNow, useOrgId, useOwnerRoles } from "../shared/hooks";
+import { agentLook, genderOf } from "../shared/logic";
+import { approvalOwnerOf, ownerNameIn } from "../shared/owner";
+import { PushedLargeTitle } from "../shared/PushedLargeTitle";
 import { successHaptic } from "../shared/parts";
 import { TextArea } from "../shared/TextArea";
 import {
@@ -47,14 +59,18 @@ import {
   approveAlwaysLabel,
   approveAlwaysOffered,
   approveAlwaysToast,
+  requestFacts,
 } from "./logic";
 import {
   ApprovalAheadLine,
   ApprovalEmailLetter,
+  ApprovalMark,
   ApprovalUndoChip,
   approvalTitleText,
+  HeldLine,
   promptRefusal,
   traitKey,
+  useApprovalSource,
   useCancelAhead,
   useConnectorNamer,
   useOriginShort,
@@ -63,16 +79,25 @@ import { useWhenAsks } from "./when-asks";
 
 /** A value longer than this goes under its label, whole, instead of squeezed at the row's end. */
 const SHORT_VALUE = 22;
+/** The web review's facts strip (ADR 0218, addendum 2026-11-24): where it acts, what it does to the outside, who answers for it. */
+function RequestFacts({ approval: a, role }: { approval: Approval; role?: string }) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const source = useApprovalSource(a);
+  const mark = <ApprovalMark approval={a} size={14} bare />;
+  return <FactStrip facts={requestFacts(t, a, { source: source.name, mark, role, personal: isPersonal(org) })} />;
+}
 
 /**
- * A request, from anywhere (deep link `approval/<id>`), as the system's sheets read: the task sheets' bar (`SheetBar`: ×
- * and its title, "Pedido"), who asks with the action in words and whether it can be undone after it, where and the
- * fuse to its deadline under them at the sheet's width; then the request in groups (why, the service it goes through, the values it runs with, what
- * it affects) and, where its kind allows it, "Aprovar sempre" as a switch for next time. Two buttons side by side:
- * Recusar and Aprovar (held, for high risk). Recusar asks as the cards do: the system's alert with the optional
- * reason on iOS; where alerts take no text (Android) the reason field shows in the sheet in answer to the tap (its
- * keyboard up then), with Cancelar and Recusar. The deep link's `refuse` (Android's cards) opens there, the keyboard
- * down until the person taps the field; its Cancelar closes the sheet, as the alert's leaves everything as it was.
+ * A request, from anywhere (deep link `approval/<id>`), on a pushed screen with the system's back (ADR 0218): the
+ * asking agent on its sky (`OpenItemHead`), where it was asked and the fuse to its deadline, the action in words as
+ * the screen's title with whether it can be undone after it; then the request in groups (why, the service it goes
+ * through, the values it runs with, what it affects) and, where its kind allows it, "Aprovar sempre" as a switch for
+ * next time. The decision is pinned at the screen's foot: Recusar and Aprovar (held, for high risk). Recusar asks as
+ * the cards do: the system's alert with the optional reason on iOS; where alerts take no text (Android) the reason
+ * field shows on the screen in answer to the tap (its keyboard up then), with Cancelar and Recusar. The deep link's
+ * `refuse` (Android's cards) opens there, the keyboard down until the person taps the field; its Cancelar goes back,
+ * as the alert's leaves everything as it was.
  */
 export function ApprovalSheet({
   id,
@@ -87,15 +112,21 @@ export function ApprovalSheet({
   const orgId = useOrgId();
   const { org } = useOrg();
   const dir = useDirectory();
+  const roles = useOwnerRoles();
   const now = useNow();
   const toast = useToast();
+  const c = useColors();
+  const insets = useSafeAreaInsets();
   const approval = useApproval(orgId, id);
+  const known = useApprovals(orgId).data;
   const channels = useChannels(orgId);
   const decide = useDecideApproval(orgId);
   const cancelAhead = useCancelAhead();
   const [refusing, setRefusing] = useState(startRefusing);
   const [reason, setReason] = useState("");
   const [always, setAlways] = useState(false);
+  // The decision's height, so the request scrolls clear of it: its line of what approving does may wrap.
+  const [dockHeight, setDockHeight] = useState(140);
   const a = approval.data;
   const when = useWhenAsks(a);
   const nameOf = useConnectorNamer({ connector: a?.connector ?? null });
@@ -147,6 +178,7 @@ export function ApprovalSheet({
   };
 
   let body: ReactNode;
+  let decision: ReactNode = null;
   if (!a) {
     body =
       approval.error instanceof ApiError && approval.error.status === 404 ? (
@@ -161,8 +193,14 @@ export function ApprovalSheet({
       );
   } else {
     const pending = a.status === "pending" && new Date(a.expiresAt).getTime() > now;
+    const waitsOn = approvalLine([a], known).get(a.id)?.waitsOn;
     const high = approvalRisk(a) === "high";
-    const owner = approvalWaitsFor(a, a.ownerUserId ? dir.memberById.get(a.ownerUserId)?.name : undefined);
+    // The owner it was asked under, else its agent's: a person, or a role (ADR 0085, addendum of 2026-11-21), which
+    // decides as whoever holds it, unless the request names its own deciders.
+    const ownerOf = approvalOwnerOf(a, agent);
+    const ownerName = ownerNameIn(ownerOf, dir.memberById, roles);
+    const owner = approvalWaitsFor(a, ownerName);
+    const holders = !a.approvers?.label && ownerOf.ownerRoleId ? ownerName : undefined;
     const requester = requesterDecidesLine(t, a);
     const said = approvalSaid(a);
     const where = [name, channel ? `#${channel.name}` : null, origin].filter(Boolean).join(" · ");
@@ -170,32 +208,113 @@ export function ApprovalSheet({
     const facts = approvalTable(a, Number.POSITIVE_INFINITY, nameOf, true);
     // A built-in tool's action in words; a connector's is in its facts, an email is the letter.
     const detail = !a.connector && !a.email ? approvalDetail(a, i18n.language) : null;
-    // Whether it can be undone is the chip after the title; what it touches stays in the foot.
-    const { undo } = approvalEffects(a);
+    // Whether it can be undone is the chip after the title, what it does to the outside a fact: the foot keeps the rest.
+    const { undo, effect } = approvalEffects(a);
     const traits = approvalTraits(a)
-      .filter((tr) => tr !== undo)
+      .filter((tr) => tr !== undo && tr !== effect)
       .map((tr) => t(traitKey(tr, isPersonal(org))));
     const foot = [traits.join(" · "), requester].filter(Boolean).join("\n");
     const who = (
       <View style={styles.who}>
-        <View style={styles.whoHead}>
-          <AgentFace agentId={a.agentId} size={40} />
-          {/* The chip on the title's last line while it fits, under the title otherwise. */}
-          <View style={[styles.grow, styles.titleLine]}>
-            <Text variant="body" style={[styles.semibold, styles.shrink]}>
-              {approvalTitleText(t, a)}
-            </Text>
-            <ApprovalUndoChip approval={a} />
-          </View>
-        </View>
+        {/* Who and where, then the action as the screen's title; the agent stands on its sky above (`OpenItemHead`). */}
         <View style={styles.whereRow}>
           <Text variant="footnote" tone="muted" style={styles.shrink}>
             {where || t("mobile.approval.asksYou")}
           </Text>
           {pending ? <ExpiryLine createdAt={a.createdAt} expiresAt={a.expiresAt} /> : null}
         </View>
+        {/* The chip on the title's last line while it fits, under the title otherwise. */}
+        <View style={styles.titleLine}>
+          <Text variant="title2" style={styles.shrink}>
+            {approvalTitleText(t, a)}
+          </Text>
+          <ApprovalUndoChip approval={a} />
+        </View>
+        <RequestFacts approval={a} role={a.canDecide ? holders : undefined} />
       </View>
     );
+    // The decision stays at the screen's foot while the request scrolls under it.
+    if (!refusing)
+      decision = pending ? (
+        a.canDecide ? (
+          <>
+            {/* What approving lets the agent do, as the web's Aprovar says; "Aprovar sempre" on says it in its row. */}
+            {always ? null : (
+              <Text variant="footnote" tone="muted" style={styles.note}>
+                {a.runAt
+                  ? t("approvals.clickNoteAhead", { when: runAt ?? "" })
+                  : t("approvals.review.grants", {
+                      name: name || t("channel.unknownAgent"),
+                      doing: approvalDoing(t, a, i18n.language),
+                    })}
+              </Text>
+            )}
+            <View style={styles.pair}>
+              <View style={styles.half}>
+                <Button
+                  variant="secondary"
+                  wide
+                  label={t("mobile.approval.refuse")}
+                  disabled={decide.isPending}
+                  onPress={askRefusal}
+                />
+              </View>
+              <View style={styles.half}>
+                {high ? (
+                  <HoldButton
+                    label={t("mobile.approval.hold")}
+                    disabled={decide.isPending}
+                    onConfirm={() => done("approve", always)}
+                  />
+                ) : (
+                  <Button
+                    variant="primary"
+                    wide
+                    label={approvalAction(a) === "draft" ? t("approval.approve.draft") : t("mobile.approval.approve")}
+                    loading={decide.isPending}
+                    onPress={() => done("approve", always)}
+                  />
+                )}
+              </View>
+            </View>
+          </>
+        ) : (
+          <Text variant="small" tone="muted" style={styles.note}>
+            {holders
+              ? t("mobile.approval.onlyOwnerRole", { role: holders })
+              : owner
+                ? t("mobile.approval.onlyOwner", { name: owner })
+                : t("mobile.approval.onlyAdmins")}
+          </Text>
+        )
+      ) : waitsOn ? (
+        // Approved, waiting for a request asked before it: what for, and what moves it.
+        <>
+          <Text variant="small" tone="muted" style={styles.note}>
+            {t("mobile.approval.status.approved")}
+          </Text>
+          <HeldLine approval={a} waitsOn={waitsOn} />
+        </>
+      ) : aheadPhase(a) === "scheduled" && runAt ? (
+        <>
+          <Text variant="small" tone="muted" style={styles.note}>
+            {t("mobile.approval.status.scheduled", { when: runAt })}
+          </Text>
+          {a.canCancel ? (
+            <Button
+              variant="secondary"
+              wide
+              label={t("approval.ahead.cancel")}
+              loading={cancelAhead.pending}
+              onPress={() => cancelAhead.cancel(a.id, onClose)}
+            />
+          ) : null}
+        </>
+      ) : (
+        <Text variant="small" tone="muted" style={styles.note}>
+          {aheadEndLine(t, a) ?? t(`mobile.approval.status.${a.status === "pending" ? "expired" : a.status}`)}
+        </Text>
+      );
     body = refusing ? (
       <>
         {who}
@@ -265,6 +384,7 @@ export function ApprovalSheet({
             {foot}
           </Text>
         ) : null}
+        <ApprovalTrail approval={a} color={agentLook(agent).color} />
         {pending && a.canDecide && (approveAlwaysOffered(a) || when.shown) ? (
           <View>
             <GroupedHeader>{t("mobile.approval.sheet.nextTime")}</GroupedHeader>
@@ -295,84 +415,45 @@ export function ApprovalSheet({
             </GroupedList>
           </View>
         ) : null}
-        {pending ? (
-          a.canDecide ? (
-            <View style={styles.pair}>
-              <View style={styles.half}>
-                <Button
-                  variant="secondary"
-                  wide
-                  label={t("mobile.approval.refuse")}
-                  disabled={decide.isPending}
-                  onPress={askRefusal}
-                />
-              </View>
-              <View style={styles.half}>
-                {high ? (
-                  <HoldButton
-                    label={t("mobile.approval.hold")}
-                    disabled={decide.isPending}
-                    onConfirm={() => done("approve", always)}
-                  />
-                ) : (
-                  <Button
-                    variant="primary"
-                    wide
-                    label={approvalAction(a) === "draft" ? t("approval.approve.draft") : t("mobile.approval.approve")}
-                    loading={decide.isPending}
-                    onPress={() => done("approve", always)}
-                  />
-                )}
-              </View>
-            </View>
-          ) : (
-            <Text variant="small" tone="muted" style={styles.note}>
-              {owner ? t("mobile.approval.onlyOwner", { name: owner }) : t("mobile.approval.onlyAdmins")}
-            </Text>
-          )
-        ) : aheadPhase(a) === "scheduled" && runAt ? (
-          <>
-            <Text variant="small" tone="muted" style={styles.note}>
-              {t("mobile.approval.status.scheduled", { when: runAt })}
-            </Text>
-            {a.canCancel ? (
-              <Button
-                variant="secondary"
-                wide
-                label={t("approval.ahead.cancel")}
-                loading={cancelAhead.pending}
-                onPress={() => cancelAhead.cancel(a.id, onClose)}
-              />
-            ) : null}
-          </>
-        ) : (
-          <Text variant="small" tone="muted" style={styles.note}>
-            {aheadEndLine(t, a) ?? t(`mobile.approval.status.${a.status === "pending" ? "expired" : a.status}`)}
-          </Text>
-        )}
       </>
     );
   }
 
+  const dock = decision ? (
+    <View
+      onLayout={(e) => setDockHeight(Math.ceil(e.nativeEvent.layout.height) + 24)}
+      style={[styles.dock, { paddingBottom: insets.bottom + 12, backgroundColor: c.grouped, borderColor: c.line }]}
+    >
+      {decision}
+    </View>
+  ) : null;
   return (
-    <SheetScreen>
-      <SheetBar title={t("mobile.approval.sheet.title")} onClose={onClose} inset />
+    <PushedLargeTitle title="" collapsed grouped keyboard bottomInset={dock ? dockHeight : 24} dock={dock}>
+      <OpenItemHead agentId={a?.agentId ?? null} grouped />
       <View style={styles.in}>{body}</View>
-    </SheetScreen>
+    </PushedLargeTitle>
   );
 }
 
 const styles = StyleSheet.create({
   // The rows' shape runs to the sheet's edges, as a list's rows do, not inside its padding.
-  bleed: { marginHorizontal: -SHEET_X },
-  semibold: { fontWeight: "600" },
-  in: { gap: 24 },
+  bleed: { marginHorizontal: -SCREEN_X },
+  in: { paddingHorizontal: SCREEN_X, paddingTop: 12, gap: 24 },
+  // The decision, pinned at the screen's foot over what scrolls.
+  dock: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    gap: 8,
+    paddingHorizontal: SCREEN_X,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
   // The face beside the title alone (never a column beside where and when): those go under, at the sheet's width.
   who: { gap: 8 },
-  whoHead: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
   titleLine: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: 8, rowGap: 4 },
   whereRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: 8, rowGap: 4 },
-  grow: { flex: 1, minWidth: 0 },
   shrink: { flexShrink: 1 },
   pair: { flexDirection: "row", gap: 8 },
   half: { flex: 1 },

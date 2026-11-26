@@ -1,5 +1,5 @@
 import type { Machine } from "@agenteschat/client";
-import { ApiError, useConfirmDevice, useDenyDevice, useMachineDevice, useMe } from "@agenteschat/client";
+import { ApiError, useConfirmDevice, useDenyDevice, useMachineDevice, useMachines, useMe } from "@agenteschat/client";
 import { workspaceLabel, workspaceNotes } from "@agenteschat/client/lib/deletion";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { relativeTime } from "@agenteschat/client/lib/format";
@@ -54,8 +54,11 @@ export function ConnectPage({ code }: { code: string }) {
   const [orgId, setOrgId] = useState<string | undefined>(undefined);
   const spill = useUpdateComputer(orgId ?? "");
   const [name, setName] = useState("");
-  /** Spill-over for other people's turns (`spill.others`): off unless the person turns it on here. */
-  const [others, setOthers] = useState(false);
+  /** "Help when the team's computer is full or away" (`spill.own`): on, as a new computer's is, unless turned off here. */
+  const [help, setHelp] = useState(true);
+  /** Its internet for the workspace's own computer (ADR 0237): on unless the person turns it off here. */
+  const [lend, setLend] = useState(true);
+  const lends = useMachines(orgId ?? "", !!orgId).data?.some((m) => m.kind === "managed") === true;
   const [outcome, setOutcome] = useState<Outcome>(null);
   const [expired, setExpired] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -206,7 +209,14 @@ export function ConnectPage({ code }: { code: string }) {
               { orgId: org.id, userCode: code, ...(clean ? { name: clean } : {}) },
               {
                 onSuccess: (machine) => {
-                  if (others) spill.mutate({ id: machine.id, spill: { others: true } });
+                  // A new computer's switch, said either way: on, it starts installing the CLIs their agents need
+                  // there. A reconnected one keeps what its owner chose.
+                  if (!reconnect)
+                    spill.mutate({
+                      id: machine.id,
+                      spill: { own: help },
+                      ...(lends && !lend ? { shareInternet: false } : {}),
+                    });
                   setOutcome({
                     kind: "confirmed",
                     machine,
@@ -273,11 +283,20 @@ export function ConnectPage({ code }: { code: string }) {
               </Field>
               <PrefRow
                 id="connect-spill"
-                icon="audiencePeople"
-                label={t("devices.spillOthers")}
-                hint={t("devices.spillOthersHint")}
-                control={<Switch checked={others} onCheckedChange={setOthers} />}
+                icon="bolt"
+                label={t("devices.spillOwn")}
+                hint={t("devices.spillOwnHint")}
+                control={<Switch checked={help} onCheckedChange={setHelp} />}
               />
+              {lends && (
+                <PrefRow
+                  id="connect-internet"
+                  icon="globe"
+                  label={t("devices.shareInternet")}
+                  hint={t("devices.shareInternetHint")}
+                  control={<Switch checked={lend} onCheckedChange={setLend} />}
+                />
+              )}
             </Locked>
           )}
           {error && <Alert>{error}</Alert>}

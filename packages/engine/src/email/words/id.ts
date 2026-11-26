@@ -399,6 +399,48 @@ export const words: EmailWords = {
       why: () => "Kamu menerima email ini karena kamu ada di ruang kerja ini di agentes.chat.",
     },
   },
+  computerDown: {
+    subject: "Sebuah komputer tidak merespons",
+    preheader: "Pekerjaan agenmu di komputer ini sedang menunggu.",
+    headline: "Sebuah komputer tidak merespons",
+    body: (name, org, away) => [
+      { b: name },
+      " di ",
+      { b: org },
+      ` tidak merespons selama ${away}. Pekerjaan yang membutuhkannya menunggu dan berlanjut saat komputer ini kembali.`,
+    ],
+    runs: "Permintaan ke agen yang menunggu",
+    calls: "Panggilan webhook yang menunggu",
+    note: "Untuk lanjut sekarang, pindahkan agennya ke komputer lain dari halamannya.",
+    button: "Buka komputer",
+    why: (org) => `Kamu menerima email ini karena kamu mengelola komputer ${org} di agentes.chat.`,
+    back: {
+      subject: "Sebuah komputer sudah kembali",
+      preheader: "Pekerjaan yang menunggunya kini berlanjut.",
+      headline: "Komputer sudah kembali",
+      runs: "Permintaan ke agen yang sempat menunggu",
+      calls: "Panggilan webhook yang sempat menunggu",
+      body: (name, org, away) => [
+        { b: name },
+        " di ",
+        { b: org },
+        ` kembali setelah ${away}. Pekerjaan yang menunggunya kini berlanjut.`,
+      ],
+    },
+    personal: {
+      body: (name, _org, away) => [
+        { b: name },
+        ` tidak merespons selama ${away}. Pekerjaan yang membutuhkannya menunggu dan berlanjut saat komputer ini kembali.`,
+      ],
+      why: () => "Kamu menerima email ini karena kamu mengelola komputer di ruang kerja pribadimu di agentes.chat.",
+      back: {
+        body: (name, _org, away) => [
+          { b: name },
+          ` kembali setelah ${away}. Pekerjaan yang menunggunya kini berlanjut.`,
+        ],
+      },
+    },
+  },
   appConnected: {
     subject: "Sebuah aplikasi terhubung ke akun agentes.chat kamu",
     preheader: "Aplikasi ini bisa membaca dan mengirim tugas ke agen atas namamu di satu ruang kerja.",
@@ -474,6 +516,36 @@ export const words: EmailWords = {
     none: "Tidak ada ruang kerja.",
     table: (day) => `Tabel lengkapnya: bun run report:autonomy --day ${day}`,
     why: "Kamu menerima email ini karena alamat ini ada di OPS_REPORT_EMAIL di server ini. Email ini dikirim sekali sehari.",
+  },
+  accountOpened: {
+    subject: (plan) => `Lebih banyak orang bisa memakai akun ${plan} kamu`,
+    preheader: (plan) => `Apa yang mereka lakukan dengannya memakai paket ${plan} kamu dan batasnya.`,
+    headline: "Seseorang mengubah siapa yang bisa memakai akun AI kamu",
+    body: (by, account, plan) => [
+      { b: by },
+      ` mengubah siapa yang bisa memakai akun ${plan} kamu `,
+      { b: account },
+      `. Apa yang mereka lakukan dengannya memakai paketmu dan batasnya.`,
+    ],
+    account: "Akun",
+    by: "Diubah oleh",
+    setting: "Izin",
+    use: "Pakai di agen",
+    reply: "Layani semua orang",
+    was: "Sebelumnya",
+    now: "Sekarang",
+    everyone: "Semua orang di workspace",
+    admins: "Kamu dan administrator",
+    onlyYou: "Hanya kamu",
+    agentOwner: "Hanya pemilik agen",
+    note: "Untuk membatalkannya, buka akun di AI dan pemakaian lalu ubah izinnya.",
+    button: "Buka akun AI",
+    why: (org) =>
+      `Kamu menerima email ini karena kamu menghubungkan akun AI ini di ${org} dan orang lain mengubah siapa yang bisa memakainya.`,
+    personal: {
+      why: () =>
+        "Kamu menerima email ini karena kamu menghubungkan akun AI ini dan orang lain mengubah siapa yang bisa memakainya.",
+    },
   },
   planOpened: {
     subject: (plan) => `Lebih banyak orang bisa bicara dengan agenmu lewat paket ${plan} kamu`,
@@ -573,6 +645,27 @@ export const words: EmailWords = {
       small: "Tautkan lagi di Pengaturan kalau itu kamu.",
       why: (surface) => `Kamu menerima email ini karena ${surface} pernah ditautkan ke akun agentes.chat kamu.`,
       picture: "Asistenmu, tidak lagi di ponselmu",
+    },
+    pinReset: {
+      subject: (surface) => `Pilih PIN ${surface} kamu`,
+      preheader: "Pilih PIN yang menyetujui tindakan dari aplikasi chat kamu.",
+      headline: (surface) => `Pilih PIN ${surface} kamu`,
+      body: (surface) =>
+        `Ada yang meminta tautan untuk memilih PIN yang kamu pakai untuk menyetujui tindakan dari ${surface}. Kalau itu kamu, pilih PIN di halaman yang dibuka tombol ini.`,
+      button: "Pilih PIN saya",
+      small: "Tautan ini berlaku sekali, selama satu jam. Kalau bukan kamu, abaikan email ini. Tidak ada yang berubah.",
+      why: (surface) => `Kamu menerima email ini karena ${surface} ditautkan ke akun agentes.chat kamu.`,
+    },
+    pinLocked: {
+      subject: (surface) => `PIN ${surface} kamu terkunci`,
+      preheader: "Tiga kali PIN salah berturut-turut. Menyetujui dari aplikasi chat kamu dijeda untuk sementara.",
+      headline: (surface) => `PIN ${surface} kamu terkunci`,
+      body: (surface, time) =>
+        `Seseorang memasukkan PIN yang salah tiga kali berturut-turut untuk menyetujui tindakan dari ${surface}. Menyetujui dari ${surface} dijeda selama ${time}.`,
+      lockedFor: ["15 menit", "1 jam", "24 jam"],
+      small: (surface) =>
+        `Kalau itu kamu, coba lagi nanti. Kalau bukan, putuskan tautan ${surface} di pengaturan notifikasi kamu, supaya tidak ada yang bisa menyetujui dari sana.`,
+      button: "Buka pengaturan notifikasi",
     },
   },
   supportReply: {

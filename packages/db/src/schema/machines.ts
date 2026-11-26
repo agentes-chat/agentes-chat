@@ -48,8 +48,20 @@ export interface MachinePlanUsage {
 export interface MachineExecutors {
   /** `loggedIn`/`authMethod`/`plan`: from `claude auth status` (protocol 8; absent = unknown). */
   claude?: { version: string; loggedIn?: boolean; authMethod?: string; plan?: string };
-  /** `path`: the copy its runner starts, the newest it found. */
-  codex?: { version: string; path?: string };
+  /**
+   * `path`: the copy its runner starts, the newest it found. `loggedIn`/`authMethod`/`plan`: its own sign-in as its
+   * app-server's `account/read` says (`chatgpt` with its plan, `api_key`, `provider`), else `codex login status` on a
+   * sign-in it found (absent = unknown). `sandbox` (Windows, runner protocol 80): what holds its commands there, `none`
+   * where nothing could; absent until its runner knows.
+   */
+  codex?: {
+    version: string;
+    path?: string;
+    loggedIn?: boolean;
+    authMethod?: string;
+    plan?: string;
+    sandbox?: "mxc" | "unelevated" | "none";
+  };
   /** Cursor's CLI (protocol 36, ADR 0114) and the models its sign-in lists; `inPlan`: the CLI said the plan includes it. */
   cursor?: { version: string; models?: { id: string; label?: string; inPlan?: boolean }[] };
   /** OpenCode's CLI (protocol 39, ADR 0132) and the models it lists; `free`: OpenCode's free tier. */
@@ -78,6 +90,27 @@ export interface MachineExecutors {
   desktopUse?: { available: boolean; reason?: string; code?: string };
   /** `hello.mode` (ADR 0058 §10): each agent works as its own OS user; absent = all as the runner's user. */
   mode?: "system";
+  /** `hello.windowsBuild` (runner protocol 80): a Windows computer's build (`10.0.19045`); absent elsewhere or older. */
+  windowsBuild?: string;
+  /**
+   * `hello.clis` (ADR 0228 §6): the coding CLIs its runner fetches by itself there, and where each fetch stands
+   * (`fetching` with bytes done and total, `ready`, or `failed` with why), updated by its `cli.fetch` frames.
+   */
+  copies?: {
+    fetchable?: ("claude" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "git")[];
+    fetch?: Partial<
+      Record<
+        "claude" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "git",
+        | { state: "fetching"; version: string; done: number; total: number | null }
+        | { state: "ready"; version: string }
+        | {
+            state: "failed";
+            version: string;
+            reason: "offline" | "hash_mismatch" | "no_build" | "disk_full" | "failed";
+          }
+      >
+    >;
+  };
   /** `hello.claudeLoginMethods` (protocol 50): what a new Claude sign-in for all agents can use there; absent: older. */
   claudeLoginMethods?: ("cli_login" | "setup_token" | "api_key")[];
   /** `hello.claudeLoginBlocked`: why the computer's self-check keeps `cli_login` for all agents off, kept until a check passes. */
@@ -104,6 +137,10 @@ export interface MachineSizeRecord {
   memoryGb: number;
   diskGb: number;
   limit?: { cpus: number; memoryGb: number };
+  /** Background tasks it runs at once (protocol 75), also as `runner.state` and `limits.set` said it since. */
+  maxTasks?: number;
+  /** Protocol 78: about how many more tasks fit now, where memory is read (`TaskRoomReport` in the protocol). */
+  room?: { more: number; freeGb: number; cpuBusy: boolean; pushHarder: boolean };
 }
 
 /** How busy a computer got over the last day (protocol 22: `MachineLoad` in the protocol), and when it said so. */
@@ -119,6 +156,8 @@ export interface MachineLoadRecord {
   diskFreeGb?: number;
   diskUse?: number;
   sharedGb?: number;
+  /** What the agents' temporary folders held in memory, GB (`MachineLoad.agentTmpRamGb`). */
+  agentTmpRamGb?: number;
   /** The server's own mark: its admins heard of this disk passing the line, and won't again until it drops under 80%. */
   diskWarned?: boolean;
   at: string;
@@ -248,11 +287,32 @@ export const machines = pgTable(
     /** An admin marked it the workspace's: it stays when its pairer leaves (an `owner` rule then reads as everyone). */
     belongsToWorkspace: boolean().notNull().default(false),
     /**
-     * Spill-over: while an agent's own computer is full, a turn a person waits on may think here instead, on a
-     * sign-in the agent may use. `spill_own`: turns for whoever connected it; `spill_others`: anyone else's.
+     * "Help when the team's computer is full or away" (ADR 0233): while an agent's own computer is full or away, a
+     * fresh turn of its owner's agents (anyone's, on a computer marked the workspace's) may think here instead, on a
+     * sign-in of the agent's owner. Only whoever connected it turns it on.
      */
     spillOwn: boolean().notNull().default(true),
+    /**
+     * "Use this computer for my agents' work" (ADR 0233 addendum): its owner's agents' fresh turns that aren't a
+     * person's reply (asks, routines, long work at its start) start here whenever it is free, before the line of
+     * their own computer. Only whoever connected it turns it on.
+     */
+    spillFirst: boolean().notNull().default(false),
+    /** Retired by ADR 0233 (one switch, `spill_own`): nothing reads it. */
     spillOthers: boolean().notNull().default(false),
+    /**
+     * ADR 0237, a person's computer (`connected`): its owner lets the workspace's own computer's web traffic go out
+     * through this computer's internet. On for every computer: the owners of those paired before the choice was shown
+     * heard it once in the inbox (`device.internet_shared`, migration 0351).
+     */
+    egressShare: boolean().notNull().default(true),
+    /** When it was last turned on or picked: the newest online one carries the traffic. Null: since it was paired. */
+    egressShareAt: timestamp({ withTimezone: true }),
+    /**
+     * The workspace's own computer (`managed`): the lent computer that carried its last connection, and when (written
+     * at most once a minute per server process). The apps say whose internet it uses while that is recent.
+     */
+    egressVia: jsonb().$type<{ machineId: string; at: string }>(),
     /** Last known; trust it only with a recent `last_seen_at` (a replica may have died). */
     online: boolean().notNull().default(false),
     /** The server process holding its socket. */
@@ -276,6 +336,11 @@ export const machines = pgTable(
      * apps show a line; null: they don't wait.
      */
     egressWaitingAt: timestamp({ withTimezone: true }),
+    /**
+     * The operator says the workspace's own computer is moving to another server (`PUT …/moving`): while it is away
+     * the apps say so instead of offline, for at most `MOVING_SHOWN_MS`. Null: not moving.
+     */
+    movingAt: timestamp({ withTimezone: true }),
     /** Last time a run or a person wanted this computer (written at most every 30 s per server process). */
     wantedAt: timestamp({ withTimezone: true }),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
@@ -376,6 +441,22 @@ export const machineAccounts = pgTable(
      * `owner`'s. Only the person who connected it changes it, for every login of that account.
      */
     serves: text().notNull().default("everyone"),
+    /**
+     * Its three permissions, each an audience of people besides its owner, who always holds them: `owner` (nobody
+     * else), `admins` (administrators), `roles` or `people` (the ids below) or `everyone`. "Gerenciar" renames,
+     * removes it and sets "Usar em agentes"; "Usar em agentes" is whose agents (by the agent's owner) and right hand
+     * may think with it, and replaces `serves`, which stays only for older apps; "Atender todos" is whom an agent on it
+     * answers besides the agent's owner (`owner` there: the agent's owner alone).
+     */
+    manageMode: text().notNull().default("admins"),
+    manageUserIds: text().array().notNull().default(sql`'{}'::text[]`),
+    manageRoleIds: uuid().array().notNull().default(sql`'{}'::uuid[]`),
+    useMode: text().notNull().default("everyone"),
+    useUserIds: text().array().notNull().default(sql`'{}'::text[]`),
+    useRoleIds: uuid().array().notNull().default(sql`'{}'::uuid[]`),
+    replyMode: text().notNull().default("owner"),
+    replyUserIds: text().array().notNull().default(sql`'{}'::text[]`),
+    replyRoleIds: uuid().array().notNull().default(sql`'{}'::uuid[]`),
     /**
      * Its place in the workspace's order of use (ADR 0041 §6): at a plan's limit a run goes on with the next account
      * that serves its agent, lowest first; null after every numbered one, oldest first.

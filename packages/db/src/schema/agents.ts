@@ -18,7 +18,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { users } from "./auth";
 import { machineAccounts, machines } from "./machines";
-import { organizationMembers, organizations } from "./tenancy";
+import { organizationMembers, organizations, orgRoles } from "./tenancy";
 
 /**
  * API keys of model providers, owned by the organization (BYOK). Never
@@ -140,6 +140,13 @@ export const agents = pgTable(
     credentialId: uuid().references(() => providerCredentials.id, { onDelete: "set null" }),
     /** Person accountable for this agent (receives approvals, budget alerts). */
     ownerUserId: text().references(() => users.id, { onDelete: "set null" }),
+    /**
+     * A role accountable for it instead of a person (ADR 0085, addendum of 2026-11-21): whoever holds it at the time
+     * is its owner for what is asked and decided (approvals, notices, who changes it); what needs one person (a
+     * personal plan, a commit's signature) works as with no owner. At most one of this and `owner_user_id`; checked
+     * in code to be one of the workspace's own roles. Deleting the role leaves the agent with no owner.
+     */
+    ownerRoleId: uuid().references((): AnyPgColumn => orgRoles.id, { onDelete: "set null" }),
     /** Spend cap per calendar month (UTC) in nano-USD (1e-9 USD). Null = the organization's default (`organization_settings.default_agent_budget_nano_usd`). */
     monthlyBudgetNanoUsd: bigint({ mode: "number" }),
     /**
@@ -186,6 +193,8 @@ export const agents = pgTable(
       hello?: string;
       starter?: string;
       apps?: Record<string, "read" | "write">;
+      /** Closed on its page (its ×): the page shows it no more; its chat's stays. */
+      closed?: boolean;
     }>(),
     /**
      * Its computer (ADR 0025): the connected machine it works on; null = none yet (the workspace's own computer
@@ -210,22 +219,22 @@ export const agents = pgTable(
      */
     approvalsLevelOwn: boolean().notNull().default(false),
     /**
+     * "Learns on its own": it turns what it does the same way again and again into a skill of its own and fixes the
+     * skills it uses (`promoteHowTos`, `changeSkillAsAgent`). Off: skills change only when a person asks it.
+     */
+    learnsSkills: boolean().notNull().default(true),
+    /**
+     * The library's skills that would help it, from its last week of work (`agentSkillSuggestions`): each with why, in
+     * the language of who looked, and when they were picked. Picked again once a day at most.
+     */
+    skillSuggestions: jsonb().$type<{ at: string; items: { skillId: string; why: string }[] }>(),
+    /**
      * Who thinks for it (ADR 0032): `model` (the API, default), `claude_code`
      * or `codex` on its computer; validated in code (`brain-settings.ts`).
      */
     brain: text().notNull().default("model"),
     /** The computer brain's model (`opus`, `sonnet`, `haiku`, a Codex model); null = the brain's default. */
     brainModel: text(),
-    /**
-     * Unused (ADR 0032's 2026-11-15 addendum: the API never stands in for a computer brain). Kept while the previous
-     * release still reads it during a deploy and on rollback; a migration of a later release drops it.
-     */
-    brainFallback: boolean().notNull().default(true),
-    /**
-     * Never read (ADR 0118's 2026-11-15 addendum: paid extra usage follows the plan, `paysExtraUsage`). Kept and dropped
-     * as `brainFallback` is; until then written `false` where the previous release wrote it, which still reads it.
-     */
-    brainExtraUsage: boolean().notNull().default(true),
     /**
      * The account its computer brain runs with (ADR 0041), on its machine and
      * of its brain's kind (checked in code); null = the computer's own sign-in.
@@ -301,11 +310,6 @@ export const agents = pgTable(
      */
     planForOthers: boolean().notNull().default(false),
     /**
-     * Retired with ADR 0093 (superseded by ADR 0137): nothing reads or writes it. Kept, with its index, while a
-     * running version still selects it (`check:migrations`); dropped by a migration in a later release.
-     */
-    coordinator: boolean().notNull().default(false),
-    /**
      * What it says it is doing (`set_status`, ADR 0084): a line, an optional emoji, and whether it asks not
      * to be interrupted. Tied to the run that wrote it (gone once that run ends) unless it set an end time.
      */
@@ -335,8 +339,8 @@ export const agents = pgTable(
   (t) => [
     unique().on(t.orgId, t.handle),
     unique().on(t.orgId, t.id),
-    uniqueIndex("agents_one_coordinator").on(t.orgId).where(sql`${t.coordinator} and ${t.archivedAt} is null`),
     uniqueIndex("agents_one_right_hand").on(t.orgId).where(sql`${t.builtin} = 'right_hand'`),
+    check("agents_one_owner", sql`${t.ownerUserId} is null or ${t.ownerRoleId} is null`),
     // Machines are only soft-deleted (and `deleteMachine` clears this column first).
     foreignKey({ columns: [t.orgId, t.machineId], foreignColumns: [machines.orgId, machines.id] }),
     // No action (a composite SET NULL would null `org_id` too): code clears it before an account row goes.
@@ -390,6 +394,8 @@ export const organizationSettings = pgTable("organization_settings", {
    * (`{ openrouter: { small, medium, large } }`); a tier left out is the provider's default (ADR 0087).
    */
   autoModels: jsonb().$type<Partial<Record<string, Partial<Record<string, string>>>>>().notNull().default({}),
+  /** With every plan account of a run's order at its limit, the run goes on with the workspace's API key (off by default). */
+  planKeyFallback: boolean().notNull().default(false),
   /** People can send GIFs in chat (ADR 0091): needs the server's `GIPHY_API_KEY` too. */
   gifs: boolean().notNull().default(true),
   /** The most a GIF may be rated: `g` (any age) or `pg` (ADR 0091). */
@@ -414,7 +420,7 @@ export const organizationSettings = pgTable("organization_settings", {
    */
   mode: text().$type<"team" | "personal">().notNull().default("team"),
   /**
-   * Agents' commits end with their own `Co-authored-by: <name> <noreply@agentes.chat>` (ADR 0156). On unless a person
+   * Agents' commits end with their own `Co-Authored-By: <name> <noreply@agentes.chat>` (ADR 0156). On unless a person
    * asks an agent to turn it off (`commit_co_author`); no screen has it.
    */
   agentCoAuthor: boolean().notNull().default(true),
@@ -426,10 +432,20 @@ export const organizationSettings = pgTable("organization_settings", {
   /** "Dar boas-vindas a quem entra": the right hand greets each person who joins, once. On without a row too. */
   welcomePeople: boolean().notNull().default(true),
   /**
+   * The right hand learns from conversations on its own, as every other agent does (each person can also turn it off
+   * for themselves, `organization_members.right_hand_learns`). Off: only what people ask it to remember. On without a row.
+   */
+  rightHandLearns: boolean().notNull().default(true),
+  /**
    * How much the workspace's agents ask before acting (ADR 0173 addendum 2026-11-15): what every agent without its
    * own choice (`agents.approvals_level_own`) uses. A workspace with no row here is at `risky`.
    */
   approvalsLevel: text().$type<"always" | "risky" | "never">().notNull().default("risky"),
+  /**
+   * People's computers may help when the workspace's computer is full or away, each as its owner allows
+   * (`machines.spill_own`, ADR 0233). An admin turns it off for everyone; on without a row.
+   */
+  devicesHelp: boolean().notNull().default(true),
   updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
 });
 

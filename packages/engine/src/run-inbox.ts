@@ -9,6 +9,7 @@ import {
   gte,
   inArray,
   isNull,
+  lt,
   ne,
   or,
   schema,
@@ -257,7 +258,10 @@ export async function unreadNow(db: Executor, runId: string, options: { awaitTri
 export async function releaseInbox(
   db: Database,
   pubsub: PubSub | undefined,
-  run: Pick<AgentRun, "id" | "orgId" | "agentId" | "channelId" | "threadRootId" | "triggerMessageId" | "trigger">,
+  run: Pick<
+    AgentRun,
+    "id" | "orgId" | "agentId" | "channelId" | "threadRootId" | "triggerMessageId" | "replyInThread" | "trigger"
+  >,
   options: { reason: ReleaseReason; exclude?: string[] },
 ): Promise<{ runId: string; messageIds: string[] } | null> {
   const taken = await takeToHandOn(db, run).catch(() => [] as string[]);
@@ -273,7 +277,10 @@ export async function releaseInbox(
 export async function handOnMessages(
   db: Database,
   pubsub: PubSub | undefined,
-  run: Pick<AgentRun, "id" | "orgId" | "agentId" | "channelId" | "threadRootId" | "triggerMessageId" | "trigger">,
+  run: Pick<
+    AgentRun,
+    "id" | "orgId" | "agentId" | "channelId" | "threadRootId" | "triggerMessageId" | "replyInThread" | "trigger"
+  >,
   messageIds: string[],
 ): Promise<{ runId: string; messageIds: string[] } | null> {
   if (messageIds.length === 0) return null;
@@ -356,6 +363,53 @@ export async function passedOnTo(db: Executor, orgId: string, workId: string, id
   return rows.map((m) => m.id);
 }
 
+/** The requests `heldHere` tells a run about: another run's of the agent in its conversation, not settled yet. */
+const heldHereWhere = (
+  run: Pick<AgentRun, "id" | "orgId" | "agentId" | "channelId" | "threadRootId" | "triggerMessageId" | "replyInThread">,
+) =>
+  and(
+    eq(approvals.orgId, run.orgId),
+    eq(approvals.agentId, run.agentId),
+    eq(approvals.channelId, run.channelId),
+    // Waiting for a person, or approved and waiting its turn behind a request asked before it (ADR 0182).
+    or(
+      eq(approvals.status, "pending"),
+      and(eq(approvals.status, "approved"), isNull(approvals.result), isNull(approvals.runAt)),
+    ),
+    ne(agentRuns.id, run.id),
+    inArray(agentRuns.status, ["waiting_approval", "waiting_input"]),
+    or(eq(agentRuns.threadRootId, run.threadRootId), replyThreadOf(run) ? undefined : inChannelRun(sql`${agentRuns}`)),
+  );
+
+/**
+ * What a run's new requests wait for once approved (`approvals.after_ids`, ADR 0182 addendum of 2026-11-24): the
+ * requests `heldHere` tells it about that were asked before it started. A background run is told none.
+ */
+export async function heldHereIds(
+  db: Executor,
+  run: Pick<
+    AgentRun,
+    | "id"
+    | "orgId"
+    | "agentId"
+    | "channelId"
+    | "threadRootId"
+    | "triggerMessageId"
+    | "replyInThread"
+    | "background"
+    | "createdAt"
+  >,
+): Promise<string[]> {
+  if (run.background) return [];
+  const rows = await db
+    .select({ id: approvals.id })
+    .from(approvals)
+    .innerJoin(agentRuns, eq(agentRuns.id, approvals.runId))
+    .where(and(heldHereWhere(run), lt(approvals.createdAt, run.createdAt)))
+    .limit(50);
+  return rows.map((r) => r.id);
+}
+
 /**
  * What this agent's other runs in the same conversation still wait on (a person's approval). A run waiting
  * on a decision takes no new message (`holdsMessages`: the decision may take hours), so a message sent
@@ -366,30 +420,13 @@ export async function passedOnTo(db: Executor, orgId: string, workId: string, id
  */
 export async function heldHere(
   db: Executor,
-  run: Pick<AgentRun, "id" | "orgId" | "agentId" | "channelId" | "threadRootId" | "triggerMessageId">,
+  run: Pick<AgentRun, "id" | "orgId" | "agentId" | "channelId" | "threadRootId" | "triggerMessageId" | "replyInThread">,
 ): Promise<string | null> {
   const rows = await db
     .select({ title: approvals.title, params: approvals.params, status: approvals.status })
     .from(approvals)
     .innerJoin(agentRuns, eq(agentRuns.id, approvals.runId))
-    .where(
-      and(
-        eq(approvals.orgId, run.orgId),
-        eq(approvals.agentId, run.agentId),
-        eq(approvals.channelId, run.channelId),
-        // Waiting for a person, or approved and waiting its turn behind a request asked before it (ADR 0182).
-        or(
-          eq(approvals.status, "pending"),
-          and(eq(approvals.status, "approved"), isNull(approvals.result), isNull(approvals.runAt)),
-        ),
-        ne(agentRuns.id, run.id),
-        inArray(agentRuns.status, ["waiting_approval", "waiting_input"]),
-        or(
-          eq(agentRuns.threadRootId, run.threadRootId),
-          replyThreadOf(run) ? undefined : inChannelRun(sql`${agentRuns}`),
-        ),
-      ),
-    )
+    .where(heldHereWhere(run))
     .orderBy(asc(approvals.createdAt))
     .limit(10);
   if (rows.length === 0) return null;
@@ -417,7 +454,10 @@ export async function heldHere(
  */
 export async function whileHeld(
   db: Executor,
-  run: Pick<AgentRun, "id" | "orgId" | "agentId" | "channelId" | "threadRootId" | "triggerMessageId" | "workId">,
+  run: Pick<
+    AgentRun,
+    "id" | "orgId" | "agentId" | "channelId" | "threadRootId" | "triggerMessageId" | "replyInThread" | "workId"
+  >,
 ): Promise<string | null> {
   // The pause: its last step of its own. Handing its inbox on (`handOn`) writes a step after the run it
   // started, which would hide that run and its trigger.
@@ -491,7 +531,10 @@ export async function whileHeld(
 async function handOn(
   db: Database,
   pubsub: PubSub | undefined,
-  run: Pick<AgentRun, "id" | "orgId" | "agentId" | "channelId" | "threadRootId" | "triggerMessageId" | "trigger">,
+  run: Pick<
+    AgentRun,
+    "id" | "orgId" | "agentId" | "channelId" | "threadRootId" | "triggerMessageId" | "replyInThread" | "trigger"
+  >,
   taken: string[],
   options: { reason: ReleaseReason; exclude?: string[] },
 ): Promise<{ runId: string; messageIds: string[] } | null> {
@@ -538,21 +581,25 @@ async function handOn(
             eq(agentConsultations.status, "open"),
           ),
         );
-    const out = await startOrJoinRun(tx, last, run.agentId, trigger);
+    // Where the run answered (ADR 0214): what it took goes on there.
+    const out = await startOrJoinRun(tx, last, run.agentId, trigger, { after: run });
     if (!out) return out;
     const taker = "created" in out ? out.created.id : out.joined;
+    // A new run that answers under the message that asked (ADR 0214) reads that thread, not the main timeline.
+    const thread = "created" in out && out.created.replyInThread ? out.created.threadRootId : null;
     const taken = [last.id];
     for (const m of rows) {
       if (m.id === last.id) continue;
       // One that may not reach the run that took them (a routine's report next to a person's message,
       // ADR 0053 §4) goes its own way.
       if (!(await mayJoin(tx, m, taker))) {
-        const own = await startOrJoinRun(tx, m, run.agentId, await triggerFor(tx, run, m));
+        const own = await startOrJoinRun(tx, m, run.agentId, await triggerFor(tx, run, m), { after: run });
         if (own) await adopt("created" in own ? own.created.id : own.joined, [m.id]);
         continue;
       }
-      // Joined a run that already read its context: the rest go to it too (a new run reads them in the conversation).
-      if ("joined" in out) await queueOnRun(tx, out.joined, m.id);
+      // Joined a run that already read its context: the rest go to it too. A new run reads them in its conversation,
+      // but for what it took from outside the thread it answers in: that comes to its inbox.
+      if ("joined" in out || (thread && m.id !== thread && m.threadId !== thread)) await queueOnRun(tx, taker, m.id);
       taken.push(m.id);
     }
     await adopt(taker, taken);

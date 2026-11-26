@@ -291,13 +291,17 @@ html:not([data-pointer]) .auth__quiet:focus-visible {
   text-align: center;
   text-wrap: balance;
 }
-/* The sign-in code the person matches between the app window and the browser. */
+/* The sign-in code the person matches between the app window and the browser: the code on its own line, never broken,
+   its explanation centred under it. */
 .auth__code {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
   padding: 10px 0 2px;
 }
 .auth__codeValue {
+  white-space: nowrap;
   font-family: var(--font-mono);
   font-size: 28px;
   font-weight: 700;
@@ -372,6 +376,24 @@ html:not([data-pointer]) .auth__quiet:focus-visible {
   max-width: 100%;
   object-fit: contain;
   object-position: left center;
+}
+/* The lockup's plate, as a workspace's `.org-mark`: only where the page would hide the ink. It bleeds into the gutter,
+   so the logo and the column below keep their places with or without it. */
+:root:not([data-theme="dark"]) .auth__host-logo[data-ink="light"],
+[data-theme="dark"] .auth__host-logo:not([data-ink="light"]) {
+  box-sizing: content-box;
+  padding: var(--space-1) var(--space-2);
+  margin: calc(-1 * var(--space-1)) calc(-1 * var(--space-2));
+  border-radius: var(--radius-md);
+}
+.auth__host-logo[data-ink="light"] {
+  background: #1c1c1b;
+}
+[data-theme="dark"] .auth__host-logo {
+  background: #ffffff;
+}
+[data-theme="dark"] .auth__host-logo[data-ink="light"] {
+  background: none;
 }
 .auth__host-name {
   display: block;

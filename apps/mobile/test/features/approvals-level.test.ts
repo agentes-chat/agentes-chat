@@ -7,7 +7,7 @@ const read = (path: string) => readFileSync(join(import.meta.dir, "..", "..", "s
 test("Aprovações on the agent's profile: one row with the level, a sheet only for who manages it, off while saving", () => {
   const row = read("features/agents/ApprovalsLevelRow.tsx");
   // The row says the level, or that it follows the workspace; the three choices and their lines are the web's.
-  expect(row).toMatch(/followsWorkspace\(agent\) && !update\.isPending\s*\? t\("approvalsLevel\.follows"\)/);
+  expect(row).toContain("value={approvalsLevelLine(t, agent, update)}");
   expect(row).toContain("APPROVALS_LEVELS.map(");
   expect(row).toContain("sub: t(`approvalsLevel.${value}.text`)");
   // Each line is a sentence: never cut to one line by a long language or large text.
@@ -36,7 +36,7 @@ test("Settings → Aprovações: the workspace's level for owners and administra
   expect(general).toMatch(/can\(org, "administrator"\) \? \(\s*<>\s*<WorkspaceApprovalsRow \/>/);
 });
 
-test("Mudar quando perguntar: in the approval sheet's Da próxima vez and under a notification's decision", () => {
+test("Mudar quando perguntar: in the request's Da próxima vez and under a conversation card's decision", () => {
   const when = read("features/approvals/when-asks.tsx");
   // Only for who decides it and manages its agent (who may set its level); the switch for every agent only for owners
   // and administrators, as the workspace's level.
@@ -50,7 +50,10 @@ test("Mudar quando perguntar: in the approval sheet's Da próxima vez and under 
   const sheet = read("features/approvals/ApprovalSheet.tsx");
   expect(sheet).toContain("(approveAlwaysOffered(a) || when.shown)");
   expect(sheet).toMatch(/label=\{t\("approvalsLevel\.change"\)\}[\s\S]*?chevron[\s\S]*?onPress=\{when\.open\}/);
-  expect(read("features/activity/ActivityScreen.tsx")).toContain("<WhenAsksLink approval={a} />");
+  // The inbox decides nothing on its rows (ADR 0218 §6): a request opens on its screen, where the row above is.
+  const inbox = read("features/activity/ActivityScreen.tsx");
+  expect(inbox).not.toContain("WhenAsksLink");
+  expect(inbox).not.toContain("useDecideApproval");
   // The conversation's cards, one request or several, as the web's.
   const cards = read("features/chat/cards.tsx");
   expect(cards).toContain("<WhenAsksLink approval={a} />");

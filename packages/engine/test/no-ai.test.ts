@@ -110,7 +110,13 @@ test("no key: the run fails with no_ai before any judge or model call, and one c
   });
   expect(events).toContainEqual(expect.objectContaining({ type: "message.created", messageId: card?.id }));
   expect(events).toContainEqual(
-    expect.objectContaining({ type: "message.handled", messageId: asked.id, status: "failed", reason: "no_ai" }),
+    expect.objectContaining({
+      type: "message.handled",
+      messageId: asked.id,
+      status: "failed",
+      reason: "no_ai",
+      errorCode: "no_key",
+    }),
   );
   expect(events).toContainEqual(
     expect.objectContaining({ type: "agent.run", status: "failed", error: "no_ai", errorCode: "run.no_ai" }),
@@ -119,7 +125,7 @@ test("no key: the run fails with no_ai before any judge or model call, and one c
   // The list's receipts say why (a reload shows the same row as the live event).
   const listed = (await listMessages(f.db, f.owner.id, f.org.id, f.general.id)).find((m) => m.id === asked.id);
   expect(listed?.receipts?.handled).toEqual([
-    { agentId: f.agent.id, runId: run?.id ?? "", status: "failed", reason: "no_ai" },
+    { agentId: f.agent.id, runId: run?.id ?? "", status: "failed", reason: "no_ai", errorCode: "no_key" },
   ]);
   // The card routes nobody (like a notice).
   const decided = await f.db
@@ -212,9 +218,9 @@ test("a computer brain signed out with nothing to fall back on: the card, not a 
   expect(card?.meta.noAi).toMatchObject({ reason: "not_signed_in", intent: "task" });
   // It says Claude Code isn't signed in on its computer (it has no account of its own), not that nothing is
   // connected, and so does the conversation list's preview of it.
-  expect(card?.body).toBe("I can't answer yet: Claude Code isn't signed in on my computer.");
+  expect(card?.body).toBe("I can't answer yet: Claude Code isn't signed in on MacBook.");
   expect(previewMeta(card?.meta)).toMatchObject({ bodyCode: "no_ai", noAi: { reason: "not_signed_in" } });
-  expect(previewMeta(card?.meta)?.noAi).toEqual({ reason: "not_signed_in", own: "claude_code" });
+  expect(previewMeta(card?.meta)?.noAi).toEqual({ reason: "not_signed_in", own: "claude_code", computer: "MacBook" });
 });
 
 test("Codex saved on the workspace's computer's own sign-in: the run fails at once, Connect, never a wait", async () => {
@@ -240,7 +246,7 @@ test("Codex saved on the workspace's computer's own sign-in: the run fails at on
     execAllowed: true,
     os: "linux",
     protocol: 26,
-    executors: { codex: { version: "codex-cli 0.163.0" }, detectedAt: new Date().toISOString() },
+    executors: { codex: { version: "codex-cli 0.170.0" }, detectedAt: new Date().toISOString() },
   };
   const handlers = createJobHandlers({ ...f.jobDeps, machines: { status: async () => status } });
   await post("@dev oi");
@@ -252,8 +258,8 @@ test("Codex saved on the workspace's computer's own sign-in: the run fails at on
   // The apps' own words for it: Codex isn't signed in on this computer, connect a ChatGPT account.
   expect(card?.meta.noAi).toMatchObject({ reason: "not_signed_in", own: "codex" });
   // Its text, and the conversation list's preview of it: nothing was ever signed in there to sign out of.
-  expect(card?.body).toBe("I can't answer yet: Codex isn't signed in on my computer.");
-  expect(previewMeta(card?.meta)?.noAi).toEqual({ reason: "not_signed_in", own: "codex" });
+  expect(card?.body).toBe("I can't answer yet: Codex isn't signed in on Computador.");
+  expect(previewMeta(card?.meta)?.noAi).toEqual({ reason: "not_signed_in", own: "codex", computer: "Computador" });
 });
 
 test("a turn its computer's own sign-in refuses says so on the card, as the computer's, not an account's", async () => {

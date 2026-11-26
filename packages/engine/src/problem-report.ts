@@ -13,8 +13,9 @@ import {
 import { and, appliedMigrations, type Database, eq, isNull, schema, sql } from "@agenteschat/db";
 import { z } from "zod";
 import { requireChannelAccess } from "./channels";
+import { secondsBefore } from "./format";
 import type { MachineCaller } from "./machine-hub";
-import { getMachine } from "./machines";
+import { getMachine, offlineCause } from "./machines";
 import { pinnedOwner, requirePermission } from "./organizations";
 import { telemetryState } from "./telemetry";
 
@@ -69,6 +70,8 @@ export const problemReportSchema = z.object({
       runnerProtocol: z.number().int().optional(),
       web: version,
       mobile: version,
+      /** The system's own version where the sender reads it: macOS's (`15.1`), Windows' build, Linux's kernel. */
+      osVersion: version,
       os: z
         .string()
         .max(80)
@@ -111,6 +114,17 @@ export const problemReportSchema = z.object({
 export type ProblemReport = z.infer<typeof problemReportSchema>;
 type Facts = NonNullable<ProblemReport["facts"]>;
 type Log = NonNullable<ProblemReport["logs"]>[number];
+
+/** An offline computer's last close: its reason text is the runner's word, left out. */
+function offlineFacts(machine: Parameters<typeof offlineCause>[0], now: Date): Facts {
+  const last = machine.disconnects[0];
+  return {
+    "machine.offlineCause": offlineCause(machine, false),
+    "machine.lastCloseCode": last?.code ?? null,
+    "machine.lastCloseS": secondsBefore(now, last?.at),
+    "machine.lastConnectedS": secondsBefore(now, last?.connectedAt),
+  };
+}
 
 /** What the preview shows above the report: why a log isn't in it. */
 export interface ProblemReportMissing {
@@ -321,10 +335,17 @@ export async function buildProblemReport(
         "machine.runner": machine.runnerVersion || null,
         "machine.protocol": status?.protocol ?? machine.protocol,
         "machine.connection": status?.online ? "online" : "offline",
-        "machine.lastSeenS": status?.lastSeenAt
-          ? Math.max(0, Math.round((now.getTime() - Date.parse(status.lastSeenAt)) / 1000))
-          : null,
+        "machine.lastSeenS": secondsBefore(now, status?.lastSeenAt),
         "machine.paused": machine.paused,
+        // Offline: why, from its runner's last close (the device page's cause line), and that socket's code and times.
+        ...(status?.online ? {} : offlineFacts(machine, now)),
+        // Windows: its build, and what holds Codex's commands there (`mxc`, `unelevated`, `none`), once its runner said.
+        ...(machine.os === "windows"
+          ? {
+              "machine.windowsBuild": machine.executors?.windowsBuild ?? null,
+              "machine.codexSandbox": machine.executors?.codex?.sandbox ?? null,
+            }
+          : {}),
       });
       versions.runner = okVersion(machine.runnerVersion);
       versions.runnerProtocol = status?.protocol ?? machine.protocol;

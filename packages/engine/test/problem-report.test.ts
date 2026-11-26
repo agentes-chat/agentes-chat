@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { capProblemReport, PROBLEM_REPORT_TARGET_BYTES } from "@agenteschat/adapters";
+import { capProblemReport, PROBLEM_REPORT_TARGET_BYTES, RUNNER_STOPPED_CLOSE } from "@agenteschat/adapters";
 import { eq, schema } from "@agenteschat/db";
 import { createChannel } from "../src/channels";
 import { postPersonMessage } from "../src/messages";
@@ -32,6 +32,25 @@ describe("problem report", () => {
     expect(problemReportSchema.safeParse({ ...vector.minimal, replyTo: "not an email" }).success).toBe(false);
     // Unknown keys are dropped, not refused.
     expect(problemReportSchema.parse({ ...vector.minimal, extra: 1 })).not.toHaveProperty("extra");
+  });
+
+  test("the desktop app's computer: its system's version is optional in format 1, its size and opening fit as they are", () => {
+    const desktop = {
+      ...vector.minimal,
+      source: "desktop",
+      place: "desktop_server",
+      timings: { opening: 6200 },
+      versions: { desktop: "0.8.18", os: "windows", osVersion: "10.0.19045", arch: "x86_64" },
+      facts: { "desktop.cpus": 8, "desktop.memoryGb": 15.5, "desktop.webviewMb": 412 },
+    };
+    expect(problemReportSchema.parse(desktop)).toMatchObject({
+      versions: { osVersion: "10.0.19045" },
+      timings: { opening: 6200 },
+      facts: { "desktop.cpus": 8, "desktop.memoryGb": 15.5, "desktop.webviewMb": 412 },
+    });
+    const withVersion = (osVersion: string) => problemReportSchema.safeParse({ ...desktop, versions: { osVersion } });
+    expect(withVersion("6.8.0-45-generic").success).toBe(true);
+    expect(withVersion("build/19045").success).toBe(false);
   });
 
   test("a 5 MB log fits the cap and still parses", () => {
@@ -126,6 +145,114 @@ describe("problem report", () => {
     expect(theirs.report.facts?.run).toBe("not_visible");
     expect(theirs.report.facts?.["run.status"]).toBeUndefined();
     expect(theirs.report.code).toBeNull();
+  });
+
+  test("a Windows computer's report and a run's on it carry its build and what holds Codex there", async () => {
+    const fx = await setup();
+    f = fx;
+    const [machine] = await fx.db
+      .insert(schema.machines)
+      .values({
+        orgId: fx.org.id,
+        name: "Desk",
+        os: "windows",
+        executors: {
+          codex: { version: "codex-cli 0.170.0", sandbox: "unelevated" },
+          windowsBuild: "10.0.19045",
+          detectedAt: "2026-11-24T10:00:00.000Z",
+        },
+      })
+      .returning();
+    const machineId = machine?.id ?? "";
+    const computer = await buildProblemReport(
+      fx.db,
+      { orgId: fx.org.id, userId: fx.owner.id, place: "computer", context: { machineId } },
+      { ...SOURCES, serverLines: () => [] },
+    );
+    expect(computer.report.facts).toMatchObject({
+      "machine.os": "windows",
+      "machine.windowsBuild": "10.0.19045",
+      "machine.codexSandbox": "unelevated",
+    });
+
+    await fx.db.update(schema.agents).set({ machineId }).where(eq(schema.agents.id, fx.agent.id));
+    const msg = await postPersonMessage({ db: fx.db, pubsub: fx.pubsub }, fx.owner.id, fx.org.id, fx.general.id, {
+      body: "x",
+    });
+    const [run] = await fx.db
+      .insert(schema.agentRuns)
+      .values({
+        orgId: fx.org.id,
+        agentId: fx.agent.id,
+        channelId: fx.general.id,
+        threadRootId: msg.id,
+        triggerMessageId: msg.id,
+        trigger: "mention",
+        hop: 1,
+        status: "failed",
+        error: "run.windows_sandbox: no isolation",
+      })
+      .returning();
+    const ofRun = await buildProblemReport(
+      fx.db,
+      { orgId: fx.org.id, userId: fx.owner.id, place: "run", context: { runId: run?.id ?? "" } },
+      { ...SOURCES, serverLines: () => [] },
+    );
+    expect(ofRun.report.facts).toMatchObject({
+      "machine.windowsBuild": "10.0.19045",
+      "machine.codexSandbox": "unelevated",
+    });
+
+    // Elsewhere, not a word of it.
+    await fx.db.update(schema.machines).set({ os: "linux" }).where(eq(schema.machines.id, machineId));
+    const linux = await buildProblemReport(
+      fx.db,
+      { orgId: fx.org.id, userId: fx.owner.id, place: "computer", context: { machineId } },
+      { ...SOURCES, serverLines: () => [] },
+    );
+    expect(linux.report.facts).not.toHaveProperty("machine.windowsBuild");
+    expect(linux.report.facts).not.toHaveProperty("machine.codexSandbox");
+  });
+
+  test("an offline computer's report says why, from its runner's last close, never the close's text", async () => {
+    const fx = await setup();
+    f = fx;
+    const now = Date.now();
+    const iso = (agoS: number) => new Date(now - agoS * 1000).toISOString();
+    const [machine] = await fx.db
+      .insert(schema.machines)
+      .values({
+        orgId: fx.org.id,
+        name: "Box",
+        os: "linux",
+        lastSeenAt: new Date(now - 3600_000),
+        disconnects: [{ connectedAt: iso(7200), at: iso(3590), code: RUNNER_STOPPED_CLOSE, reason: "secret words" }],
+      })
+      .returning();
+    const machineId = machine?.id ?? "";
+    const build = () =>
+      buildProblemReport(
+        fx.db,
+        { orgId: fx.org.id, userId: fx.owner.id, place: "computer", context: { machineId } },
+        { ...SOURCES, serverLines: () => [] },
+      );
+    const stopped = await build();
+    expect(stopped.report.facts).toMatchObject({
+      "machine.connection": "offline",
+      "machine.offlineCause": "stopped",
+      "machine.lastCloseCode": RUNNER_STOPPED_CLOSE,
+    });
+    expect(stopped.report.facts?.["machine.lastCloseS"]).toBeWithin(3589, 3600);
+    expect(stopped.report.facts?.["machine.lastConnectedS"]).toBeWithin(7199, 7210);
+    expect(JSON.stringify(stopped.report)).not.toContain("secret words");
+
+    // No close recorded: said so, not left out.
+    await fx.db.update(schema.machines).set({ disconnects: [] }).where(eq(schema.machines.id, machineId));
+    expect((await build()).report.facts).toMatchObject({
+      "machine.offlineCause": null,
+      "machine.lastCloseCode": null,
+      "machine.lastCloseS": null,
+    });
   });
 
   test("too many or too long facts are cut to the contract, never fail the report", async () => {

@@ -221,7 +221,7 @@ const SIGN_IN_POOL: (() => FakeOrgSeed)[] = [
   () => joinedSeed({ id: `org_${rid()}`, name: "Estúdio Norte" }),
 ];
 
-const DEFAULT_CONFIG = { maxConcurrentTasks: 3, taskMaxSeconds: 4 * 3600, brainIdleMinutes: 3, brainMaxProcesses: 1 };
+const DEFAULT_CONFIG = { maxConcurrentTasks: 3, taskMaxSeconds: 4 * 3600, brainIdleMinutes: 30, brainMaxProcesses: 1 };
 
 export class FakeRunner {
   private seed: FakeOrgSeed | null;
@@ -611,8 +611,8 @@ export class FakeRunner {
       protocol: MACHINE_PROTOCOL,
       paused: this.paused,
       executors: {
-        claude: { version: "2.1.4 (Claude Code)", loggedIn: true, authMethod: "claude.ai", plan: "max" },
-        codex: { version: "codex-cli 0.46.0" },
+        claude: { version: "2.1.300 (Claude Code)", loggedIn: true, authMethod: "claude.ai", plan: "max" },
+        codex: { version: "codex-cli 0.170.0" },
       },
       workspace: this.config.workspace,
       agents: s?.agents ?? [],

@@ -168,7 +168,7 @@
   align-self: flex-start;
   justify-self: start;
   height: 22px;
-  margin: 2px 0 0 -6px;
+  margin: 2px 0 0 -8px;
 }
 /*
  * In a narrow card (a phone, a thread beside the conversation) the mark keeps the title's line and everything under the
@@ -655,22 +655,33 @@ html:not([data-pointer]) .rq__choice:focus-visible {
   padding: var(--row-py) 16px;
   border-top: 1px solid var(--line);
 }
+/* Its buttons under its words end it 12 above the next hairline, as the footer's start 12 under theirs. */
+.rq__item:has(> .rq__item-acts) {
+  padding-bottom: var(--space-3);
+}
 /* Under the words, from their edge: past the mark while the words keep a column beside it. */
 .rq__item > .rq__item-acts {
   margin-inline-start: calc(22px + 10px);
+}
+/* The decision for all of them starts there too: the card's buttons in one column, its link under them. */
+.rq__items ~ .rq__foot {
+  padding-inline-start: calc(var(--space-4) + 22px + 10px);
 }
 @container (max-width: 479px) {
   .rq__item > :is(.rq__item-acts, .rq__item-outcome) {
     margin-inline-start: 0;
   }
+  .rq__items ~ .rq__foot {
+    padding-inline-start: var(--space-4);
+  }
 }
 /* "Ver os outros N" under a long group's first rows: on the words' edge, as "Ver …" under an item's words. */
 .rq__item > .rq__more {
-  margin-inline-start: calc(22px + 10px - 6px);
+  margin-inline-start: calc(22px + 10px - 8px);
 }
 @container (max-width: 479px) {
   .rq__item > .rq__more {
-    margin-inline-start: -6px;
+    margin-inline-start: -8px;
   }
 }
 /* What follows its line (its details, how it ended, a reason being typed, a run's items) takes a row of its own. */
@@ -835,11 +846,17 @@ html:not([data-pointer]) .rq__choice:focus-visible {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
-/* Desfazer, Cancelar: a 32 button on the 16 line, the strip still 48. */
-.rq__answer > .ac-btn {
+/* Desfazer, Cancelar: a 32 button on the 16 line, the strip still 48. Two of them (Desfazer and Pular) stand in one
+   `.rq__answer-acts`, 8 apart. */
+.rq__answer > .ac-btn,
+.rq__answer > .rq__answer-acts {
   flex: none;
   height: 32px;
   margin-block: calc(-1 * var(--space-2));
+}
+.rq__answer-acts {
+  display: flex;
+  gap: var(--space-2);
 }
 /* On a narrow card the words and when keep the first line (one line of words is still the 48 strip): what can be done
    goes under the words, from their edge. */
@@ -849,7 +866,8 @@ html:not([data-pointer]) .rq__choice:focus-visible {
     grid-template-columns: auto minmax(0, 1fr) auto;
     row-gap: var(--space-1);
   }
-  .rq__answer > .ac-btn {
+  .rq__answer > .ac-btn,
+  .rq__answer > .rq__answer-acts {
     grid-area: 2 / 2;
     justify-self: start;
     margin-block: 0;

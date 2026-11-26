@@ -38,7 +38,7 @@ ADR 0056 already gives every hook but one: a hold stops a workspace's agents and
 
 ### 4. Four limits, null meaning none
 
-`PUT /api/operator/v1/orgs/{orgId}/limits` sets `{ members, membersMax, payerUserId, storageBytes, uploadBytesPerDay, platformUsdPerMonth }`, each a number or null (no limit; `membersMax` and `payerUserId` may be left out, as null); `GET /orgs/{orgId}` answers them with `updatedAt`, and the meters. A change (never the same limits set again) sends the workspace's apps `org.limits`, with no payload, and they read their limits again, so a new plan shows within seconds. A self-hosted server never sets any, so nothing is enforced there.
+`PUT /api/operator/v1/orgs/{orgId}/limits` sets `{ members, membersMax, payerUserId, storageBytes, uploadBytesPerDay, platformUsdPerMonth, connectorUsdPerMonth }`, each a number or null (no limit; `membersMax`, `payerUserId` and `connectorUsdPerMonth` may be left out, as null); `GET /orgs/{orgId}` answers them with `updatedAt`, and the meters. A change (never the same limits set again) sends the workspace's apps `org.limits`, with no payload, and they read their limits again, so a new plan shows within seconds. A self-hosted server never sets any, so nothing is enforced there.
 
 | Limit | Counts | Enforced |
 | --- | --- | --- |
@@ -48,6 +48,7 @@ ADR 0056 already gives every hook but one: a hold stops a workspace's agents and
 | `storageBytes` | the bytes of the files a workspace keeps on this server's storage, files in the trash left out | before any file is written (chat and Drive uploads, a computer's uploads, mail attachments, every version, skill files), as `used + incoming > limit` (`storage.full`, 409); skipped for a workspace on its own bucket. Also before a file comes back from the trash and before files are copied back from the workspace's own bucket, which would otherwise bring back more than the limit |
 | `uploadBytesPerDay` | the bytes written to that storage in the last 24 hours, rolling | where files are written (`storage.daily_full`, 409); never for files that come back, which keep the day they were first written |
 | `platformUsdPerMonth` | usage billed to the platform this UTC calendar month | §5 |
+| `connectorUsdPerMonth` | what vendors that bill this server per call (X, ADR 0170) charged for the workspace's connector calls this UTC calendar month, estimated from their price lists when each call answers (`connector_usage_days.cost_nano_usd`, from the tool's `costNanoUsd`); a failed call adds nothing. The operator reads it as `meters.connectorUsdThisMonth`, the app as `connectors` on its limits, and Plan and billing shows it as a share alone ("X this month: 30% used") once the month has any | before each priced call, as `spent + the most the call may cost > limit` (`connector.capped`: "X budget for this month used: …", nothing done, until the 1st UTC), with no lock: calls at the same moment may pass it by their own prices |
 
 Bytes count in GiB (1024³), the unit the apps print. The storage check takes no lock: uploads at the same moment may pass the line by at most their own sizes, where a lock would serialize every upload of a workspace. The refusals tell agents in plain English what happened and what a person can do.
 
@@ -115,3 +116,19 @@ Now:
   an unrouted message stays as it was (mention an agent with @). The operator's feed still hears 50% and 100%.
 - **A routine's resume.** A routine's background run may set `follow_up` for work it is blocked on; at its time the
   agent wakes where the routine reports, in a run that keeps the routine's bounds.
+
+## Amendment (2026-11-21): moving a plan to another workspace (§3, §6)
+
+A plan belongs to one workspace, and deleting that workspace stops it renewing. Someone who pays for a workspace's plan
+and also manages billing in another workspace with no plan in force can move it there instead of losing it:
+
+- The billing service names the payer in the limits it sets (`payerUserId`, only while the plan pays). `GET /me` marks
+  the workspaces whose plan the person pays for (`paysPlan`).
+- `POST /api/app/organizations/{orgId}/plan-move` (`requestPlanMove`) takes the workspace it goes to. This server checks
+  that the person is the payer, manages billing in both workspaces, and that the other workspace is on a billing hold
+  and isn't being deleted. It then records `organization.plan_move_requested` on the feed (`data.to`). It is allowed
+  while the workspace it leaves is being deleted. The billing service moves the same subscription (same card, same paid
+  period: nothing is charged again and nothing is refunded) and sets both workspaces' holds and limits, all within a
+  minute. 404 `billing.off` without a billing service, so a self-hosted server never offers it.
+- The apps offer the move where a plan would be lost: in the dialog that deletes the workspace, and on the line of a
+  workspace being deleted, to its payer, for each other workspace they manage billing in that has a billing hold.

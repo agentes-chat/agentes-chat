@@ -79,7 +79,7 @@ people than asked.
    `run.continue_forbidden`, and `wait.canContinue` says which), and any other wait is refused with its cause and when
    it picks up (`widget.waiting`, 409). Beside the cause, the one thing that ends it sooner, for who may do it: a higher
    budget (admins), another model for a model's own limit (its owner and admins), or its computer opened. A refresh
-   isn't long work by kind, so it pauses near the limit only once it grew long (ADR 0118, addendum of 2026-11-11). Each
+   is never long work, whatever its size, so it never pauses near the limit (ADR 0118, addendum of 2026-11-23). Each
    update or failure is kept with what it showed (`dashboard_widget_updates`, the latest 20), shown in the widget's
    panel. When the alert is on and the agent says its condition was met, the person who set the alert hears it in
    "Waiting on you" (`widget_alert`, waiting, one row per widget merging while open); never in the chat. A widget that

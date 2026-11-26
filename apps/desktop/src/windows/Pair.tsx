@@ -5,12 +5,12 @@
  * the runner with the link and waits for its maker to let it in on the web. Both show what agents can do here as
  * switches, and on a Mac go on to `Prepare` (its permissions) once paired.
  */
-import type { DeviceAudience } from "@agenteschat/client";
 import { errorText } from "@agenteschat/client/lib/errors";
-import { Button, Checkbox, Icon, type IconName, PixelSpinner, ProviderLogo, Select, Switch } from "@agenteschat/ui";
+import { Button, Checkbox, Icon, PixelSpinner, ProviderLogo, Switch } from "@agenteschat/ui";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHost, useSnapshot, useStore } from "../app";
+import { siteApi } from "../control/devices";
 import { isHereServer } from "../control/local-server";
 import { type LinkFailure, type LinkInfo, type PairTarget, pairWithLink, pairWithSession } from "../control/pair";
 import { allDone } from "../control/permissions";
@@ -20,13 +20,7 @@ import { useLocalServer, useOpenPrefs } from "../hooks";
 import { MacPortrait, OrgTile } from "../ui/bits";
 import { MacPermissionCard, needsPrepare, useMacGrants } from "../ui/permissions";
 import { CardTitle, hintFor, PrefCard, PrefRow } from "../ui/settings";
-import { PeoplePicker } from "./prefs/ThisMac";
-
-const AUDIENCE_ICON: Record<DeviceAudience["mode"], IconName> = {
-  owner: "audienceOwner",
-  everyone: "audienceEveryone",
-  people: "audiencePeople",
-};
+import { InternetRowFor } from "./InternetRow";
 
 /** A sheet of the welcome window's body: a title, what it says, the buttons at the bottom. */
 function Sheet({
@@ -159,11 +153,14 @@ export function Prepare({
   server,
   resumed = false,
   onClose,
+  children,
 }: {
   org: string;
   server: string;
   resumed?: boolean;
   onClose: () => void;
+  /** Over the permissions: what the pairing that led here still offers (sharing the computer). */
+  children?: ReactNode;
 }) {
   const { t } = useTranslation();
   const host = useHost();
@@ -199,6 +196,7 @@ export function Prepare({
       }
     >
       <p className="dk-lead">{t("desktop.prepare.lead", { org })}</p>
+      {children}
       <div className="dk-pair__group">
         <MacPermissionCard mac={mac} resumed={resumed} />
       </div>
@@ -206,13 +204,68 @@ export function Prepare({
   );
 }
 
-/** "Let Acme's agents use this Mac?": who may use it, open at login, what agents can do, Not now or Allow. */
+/**
+ * "Let the whole workspace use it" once this computer is in: off (its owner alone, as it joined), on saves everyone in
+ * the workspace at once. Preferences › This Mac holds the rest (some people or roles).
+ */
+function ShareSwitch({ target, machineId }: { target: PairTarget; machineId: string }) {
+  const { t, i18n } = useTranslation();
+  const host = useHost();
+  const [on, setOn] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
+  const org = target.name;
+  const title = t("desktop.pair.share");
+  const share = async (next: boolean) => {
+    setSaving(true);
+    setFailed(null);
+    try {
+      await siteApi(host, target.server).devices.updateComputer(target.orgId, machineId, {
+        audience: { mode: next ? "everyone" : "owner", userIds: [], roleIds: [] },
+      });
+      setOn(next);
+    } catch (err) {
+      setFailed(errorText(t, err, i18n.language));
+    } finally {
+      setSaving(false);
+    }
+  };
+  return (
+    <div className="dk-pair__group">
+      <PrefCard>
+        <PrefRow
+          lead={
+            <span className="dk-logo">
+              <Icon name="audienceEveryone" size={16} />
+            </span>
+          }
+          htmlFor="pair-share"
+          title={title}
+          hint={hintFor(t, title, t("desktop.pair.shareHint", { org }))}
+          desc={on ? t("desktop.prefs.thisMac.everyone", { org }) : t("desktop.pair.shareOff")}
+          end={
+            <Switch
+              id="pair-share"
+              aria-describedby="pair-share-hint"
+              checked={on}
+              disabled={saving}
+              onCheckedChange={(next) => void share(next)}
+            />
+          }
+        />
+        <InternetRowFor server={target.server} orgId={target.orgId} machineId={machineId} />
+      </PrefCard>
+      {failed && <Problem text={failed} />}
+    </div>
+  );
+}
+
+/** "Let Acme's agents use this Mac?": open at login, what agents can do, Not now or Allow. */
 export function PairOffer({ target, onClose }: { target: PairTarget; onClose: () => void }) {
   const { t, i18n } = useTranslation();
   const host = useHost();
   const store = useStore();
-  const [audience, setAudience] = useState<DeviceAudience>({ mode: "owner", userIds: [], roleIds: [] });
-  const [picking, setPicking] = useState(false);
+  const [machineId, setMachineId] = useState<string | null>(null);
   const [atLogin, setAtLogin] = useState(true);
   const [tools, setTools] = useState<Partial<PairTools>>({});
   const [state, setState] = useState<"ask" | "busy" | "prepare" | "done">("ask");
@@ -228,7 +281,7 @@ export function PairOffer({ target, onClose }: { target: PairTarget; onClose: ()
     setState("busy");
     setFailed(null);
     try {
-      await pairWithSession(host, store, target, audience, tools);
+      setMachineId(await pairWithSession(host, store, target, tools));
       if (atLogin) await host.setAutostart(true).catch(() => {});
       setState((await needsPrepare(host).catch(() => false)) ? "prepare" : "done");
     } catch (err) {
@@ -240,7 +293,9 @@ export function PairOffer({ target, onClose }: { target: PairTarget; onClose: ()
   if (state === "prepare")
     return (
       <Framed>
-        <Prepare org={org} server={target.server} onClose={onClose} />
+        <Prepare org={org} server={target.server} onClose={onClose}>
+          {machineId && <ShareSwitch target={target} machineId={machineId} />}
+        </Prepare>
       </Framed>
     );
   if (state === "done") {
@@ -254,7 +309,9 @@ export function PairOffer({ target, onClose }: { target: PairTarget; onClose: ()
               {t("desktop.common.close")}
             </Button>
           }
-        />
+        >
+          {machineId && <ShareSwitch target={target} machineId={machineId} />}
+        </Sheet>
       </Framed>
     );
   }
@@ -279,36 +336,6 @@ export function PairOffer({ target, onClose }: { target: PairTarget; onClose: ()
         {onlyOpens && <p className="dk-lead">{t("desktop.pair.offerOnlyIf", { org })}</p>}
         <PrefCard>
           <PrefRow
-            lead={
-              <span className="dk-logo">
-                <Icon name={AUDIENCE_ICON[audience.mode]} size={16} />
-              </span>
-            }
-            htmlFor="pair-who"
-            title={t("desktop.prefs.thisMac.who")}
-            end={
-              <Select
-                id="pair-who"
-                size="sm"
-                align="end"
-                value={audience.mode}
-                disabled={busy}
-                onValueChange={(mode) => {
-                  if (mode === "people") setPicking(true);
-                  else setAudience({ mode, userIds: [], roleIds: [] });
-                }}
-                options={(["owner", "everyone", "people"] as const).map((mode) => ({
-                  value: mode,
-                  label:
-                    mode === "everyone"
-                      ? t("desktop.prefs.thisMac.everyone", { org })
-                      : t(`desktop.prefs.thisMac.${mode}`),
-                  leading: <Icon name={AUDIENCE_ICON[mode]} size={16} />,
-                }))}
-              />
-            }
-          />
-          <PrefRow
             lead={<Checkbox id="pair-login" checked={atLogin} disabled={busy} onCheckedChange={setAtLogin} />}
             htmlFor="pair-login"
             title={t("desktop.pair.keepReady")}
@@ -316,20 +343,6 @@ export function PairOffer({ target, onClose }: { target: PairTarget; onClose: ()
         </PrefCard>
         <ToolSwitches chosen={tools} onChange={setTools} disabled={busy} />
         {failed && <Problem text={failed} />}
-        {picking && (
-          <PeoplePicker
-            server={target.server}
-            orgId={target.orgId}
-            ownerUserId={null}
-            value={audience.mode === "people" ? audience : { mode: "people", userIds: [], roleIds: [] }}
-            saving={false}
-            onCancel={() => setPicking(false)}
-            onSave={(next) => {
-              setAudience(next);
-              setPicking(false);
-            }}
-          />
-        )}
       </Sheet>
     </Framed>
   );

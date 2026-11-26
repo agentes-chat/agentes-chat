@@ -1,6 +1,9 @@
-import { isScreenTool, type ScreenKind, useCatalog, useRun, useTaskSteps } from "@agenteschat/client";
+import { type Approval, isScreenTool, type ScreenKind, useCatalog, useRun, useTaskSteps } from "@agenteschat/client";
 import type { Activity, ActivityKind } from "@agenteschat/client/lib/activity";
+import { approvalPhase, PHASE_STATUS } from "@agenteschat/client/lib/approval-card";
+import { stepsAround } from "@agenteschat/client/lib/approval-review";
 import { formatBytes } from "@agenteschat/client/lib/files";
+import { formatTime } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import {
   appKey,
@@ -10,8 +13,8 @@ import {
   oneCall,
   quietLine,
   quietWork,
+  replySteps,
   savedOneLine,
-  showsActivity,
   type ToolItem,
   type ToolLine,
   type ToolState,
@@ -27,6 +30,7 @@ import {
   workMeta,
   workSteps,
 } from "@agenteschat/client/lib/work";
+import { useShowsWork } from "@agenteschat/client/lib/work-context";
 import type { AgentColorName } from "@agenteschat/ui/agent/engine";
 import type { TFunction } from "i18next";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
@@ -61,9 +65,10 @@ import {
 import { ConnectorIcon, IconTile } from "../connectors/ConnectorIcon";
 import { useColors, useOrgId } from "../shared/hooks";
 import { MONO, tapHaptic } from "../shared/parts";
+import { AccountSwitchLine } from "./AccountRef";
 import { CodeCard } from "./CodeCard";
 import { keepOpen, keptOpen } from "./kept-sizes";
-import { useMessageCardCorners } from "./look";
+import { useMessageCardFrame } from "./look";
 import { MessageText } from "./MessageText";
 import { outputTail } from "./turn";
 
@@ -122,6 +127,7 @@ const KIND_ICON: Partial<Record<ActivityKind, IconName>> = {
   checkingUsage: "chart",
   findingAgent: "agent",
   proposingMission: "flag",
+  suggestingCodeSession: "code",
   messagingMission: "flag",
   updatingPlan: "flag",
   reportingProgress: "flag",
@@ -137,6 +143,7 @@ const KIND_ICON: Partial<Record<ActivityKind, IconName>> = {
   usingScreen: "laptop",
   waitingForDevice: "wait",
   cloningRepo: "code",
+  listingRepos: "code",
   openingPullRequest: "code",
   handingOff: "clock",
   recordingFindings: "flag",
@@ -286,7 +293,7 @@ export function ToolBlock({
   keep?: string | undefined;
 }) {
   const c = useColors();
-  const cardCorners = useMessageCardCorners();
+  const card = useMessageCardFrame();
   const reduced = useReducedMotion();
   const [open, setOpen] = useState(() => defaultOpen || keptOpen(keep));
   const flashing = useFlash(flash, reduced ? FLASH_MS : FLASH_HOLD_MS);
@@ -314,7 +321,7 @@ export function ToolBlock({
         only.line.detail
       );
     return (
-      <View style={[styles.block, { backgroundColor: c.raised, borderColor: c.line2 }, cardCorners]}>
+      <View style={[styles.block, card.style]}>
         {plate}
         <View style={styles.one}>
           <Line line={{ ...only.line, detail }} color={color} onToggle={onToggle} keep={keep} />
@@ -323,7 +330,7 @@ export function ToolBlock({
     );
   }
   return (
-    <View style={[styles.block, { backgroundColor: c.raised, borderColor: c.line2 }, cardCorners]}>
+    <View style={[styles.block, card.style]}>
       {plate}
       <Pressable
         onPress={() => {
@@ -345,7 +352,7 @@ export function ToolBlock({
               <Animated.View
                 key={l.key}
                 entering={moving ? LOGO_IN : undefined}
-                style={[styles.stacked, i > 0 && styles.overlap, { borderColor: c.raised }]}
+                style={[styles.stacked, i > 0 && styles.overlap, { borderColor: card.fill }]}
               >
                 {l.node}
               </Animated.View>
@@ -356,7 +363,7 @@ export function ToolBlock({
         <View style={[styles.grow, styles.clip]}>
           <Animated.View key={head.textKey ?? head.text} entering={moving ? HEAD_IN : undefined}>
             <Breathing on={head.state === "run"}>
-              <Text variant="footnote" tone="ink2" numberOfLines={1} style={styles.medium}>
+              <Text variant="label" tone="ink2" numberOfLines={1}>
                 {head.text}
               </Text>
             </Breathing>
@@ -665,10 +672,11 @@ export function TurnTools({
   const { t, i18n } = useTranslation();
   const { org } = useOrg();
   const logo = useCallLogo();
+  const shows = useShowsWork(org);
   const blockItems = blockItemsOf(items, t, i18n.language, logo);
   // A lone quick read that only fed the answer: no card, as if it called nothing. Done, its tools are the summary
-  // the person chose not to see (`showActivity`) unless they turned it on.
-  const now = quietWork(items) || (done && !showsActivity(org)) ? null : toolNow(items);
+  // the person chose not to see (`showActivity`) unless they turned it on, or in a code session (ADR 0215).
+  const now = quietWork(items) || (done && !shows) ? null : toolNow(items);
   if (!now) {
     // Done without a call: its words are the reply now.
     const said = done ? [] : items.flatMap((i) => (i.kind === "say" ? [i] : []));
@@ -721,6 +729,7 @@ export function TurnTools({
  */
 export function SavedTools({
   runId,
+  messageId,
   meta,
   agentName,
   color,
@@ -728,6 +737,8 @@ export function SavedTools({
   keep,
 }: {
   runId: string;
+  /** The reply it is under: its own part of the run's steps (`replySteps`; none: the whole run). */
+  messageId?: string;
   meta: Record<string, unknown> | undefined;
   agentName: string;
   color: AgentColorName;
@@ -742,20 +753,29 @@ export function SavedTools({
   const [open, setOpen] = useState(() => keptOpen(keep));
   const run = useRun(orgId, open ? runId : null);
   const logo = useCallLogo();
+  const shows = useShowsWork(org);
   const compact = workMeta(meta);
   const onCard = (name: unknown) => skipScreens.some((screen) => isScreenTool(String(name ?? ""), screen));
-  const work = run.data
-    ? workFromSteps(
-        run.data.steps.filter((s) => !(s.kind === "tool_call" && onCard(s.data.name))),
-        run.data.run,
-      )
-    : null;
+  const mine = run.data ? replySteps(run.data.steps, messageId) : null;
+  const work =
+    run.data && mine
+      ? workFromSteps(
+          mine.steps.filter((s) => !(s.kind === "tool_call" && onCard(s.data.name))),
+          mine.whole ? run.data.run : undefined,
+          { quietChecks: mine.cli },
+        )
+      : null;
   const items = work ? toolItemsSaved(work) : [];
-  const blockItems = blockItemsOf(items, t, i18n.language, logo);
+  const switched = run.data?.run?.accountSwitch;
+  // It went on with another account: said here, never in the chat.
+  const blockItems: BlockItem[] = [
+    ...(switched ? [{ kind: "note" as const, key: "account", node: <AccountSwitchLine move={switched} /> }] : []),
+    ...blockItemsOf(items, t, i18n.language, logo),
+  ];
   // Nothing more to show than the message does: no tools (lookups and reactions aren't counted), or only the ones
   // its own cards show (where it browsed).
   const shown = compact ? workSteps(compact, onCard) : 0;
-  if (!compact || shown === 0 || !showsActivity(org)) return null;
+  if (!compact || shown === 0 || !shows) return null;
   const calls = work ? toolCalls(items) : shown;
   const lone = savedOneLine(meta, onCard);
   // Its one call (beside the screens' on their cards) only fed the answer (`quietLine`): the reply says it. Time
@@ -886,8 +906,67 @@ export function RunSteps({
   );
 }
 
+/**
+ * "Como chegou aqui" on a request's screen, as the web's review: what the agent did before it asked, the ask, the
+ * decision and what ran after it, in one block that opens on a tap. Nothing until the run's steps are in.
+ */
+export function ApprovalTrail({ approval: a, color }: { approval: Approval; color: AgentColorName }) {
+  const { t, i18n } = useTranslation();
+  const orgId = useOrgId();
+  const logo = useCallLogo();
+  const run = useRun(orgId, a.runId);
+  if (!run.data) return null;
+  const around = stepsAround(run.data.steps, a);
+  const before = toolItemsSaved(workFromSteps(around.before, run.data.run));
+  const after = toolItemsSaved(workFromSteps(around.after, run.data.run));
+  const calls = (items: ToolItem[]) => items.filter((i) => i.kind === "call");
+  const beforeCalls = calls(before);
+  // The asked call itself, still waiting on its answer, is the ask below: not a step of its own.
+  const last = beforeCalls.at(-1);
+  const shownBefore = last?.kind === "call" && last.line.state === "stop" ? beforeCalls.slice(0, -1) : beforeCalls;
+  const phase = approvalPhase(a);
+  const tile = (name: IconName) => <IconTile name={name} size={20} />;
+  const milestone = (key: string, label: string, iso: string, state: ToolState, icon: IconName): BlockItem => ({
+    kind: "line",
+    line: { key, state, logo: tile(icon), label, hint: null, time: formatTime(i18n.language, iso) },
+  });
+  const items: BlockItem[] = [
+    ...blockItemsOf(shownBefore, t, i18n.language, logo),
+    milestone("asked", t("approvals.review.asked"), a.createdAt, phase === "waiting" ? "run" : "done", "clock"),
+    ...(a.decidedAt && phase !== "waiting"
+      ? [
+          milestone(
+            "decided",
+            t(`approvals.status.${PHASE_STATUS[phase]}`),
+            a.decidedAt,
+            a.status === "approved" ? "done" : "stop",
+            a.status === "approved" ? "check" : a.status === "refused" ? "x" : "clock",
+          ),
+        ]
+      : []),
+    ...blockItemsOf(calls(after), t, i18n.language, logo).map((item) =>
+      item.kind === "line" ? { ...item, line: { ...item.line, key: `after-${item.line.key}` } } : item,
+    ),
+  ];
+  const steps = items.filter((i) => i.kind === "line").length;
+  const durationMs = workFromSteps(around.before, run.data.run).durationMs;
+  const apps = toolApps([...shownBefore, ...calls(after)]);
+  return (
+    <ToolBlock
+      logos={apps.map((app) => ({ key: appKey(app), node: logo(app, 18) }))}
+      head={{
+        text: [t("approvals.review.trail"), t("chat.work.steps", { count: steps })].join(" · "),
+        time: durationMs ? formatDuration(t, durationMs) : undefined,
+      }}
+      items={items}
+      color={color}
+      label={t("approvals.review.trail")}
+    />
+  );
+}
+
 /** A call's row: its side padding, the logo's column (and its first line's height) and the gap to the phrase. */
-const ROW_PAD = 8;
+const ROW_PAD = 10;
 const LOGO = 20;
 const ROW_GAP = 10;
 /** Where a call's phrase starts in the block: why it failed and what it said between calls line up there. */
@@ -904,7 +983,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   // The block opens from here, 44 tall (a finger's target); its logos and words in the rows' columns (the lines'
-  // 4 of padding and a row's own 8).
+  // 4 of padding and a row's own 10: the message cards' 14).
   head: {
     flexDirection: "row",
     alignItems: "center",

@@ -282,6 +282,53 @@ describe("where a status shows", () => {
     expect(within(side).getByRole("region", { name: "Agentes" }).textContent).toContain("🛠️Deploy da v2 em staging");
   });
 
+  test("background work on the card: Abrir a conversa where the reader reads it, private where they don't", async () => {
+    const since = new Date(Date.now() - 4 * 60_000).toISOString();
+    const work = {
+      state: "working" as const,
+      ask: null,
+      since,
+      runId: "11111111-1111-4111-8111-111111111111",
+      channelId: null,
+      channelKind: null,
+      channelName: null,
+      threadId: null,
+      messageId: null,
+      forAgentId: null,
+      routine: false,
+      count: 1,
+    };
+    const line = { by: "auto" as const, text: null, kind: "work" as const, subject: null, emoji: null, until: null };
+    const statusesWith = (w: AgentStatus["work"]): AgentStatus[] => [
+      { agentId: ADA_ID, presence: "busy", status: { ...line, since, count: 1 }, activeAt: since, work: w },
+    ];
+    const open = async (w: AgentStatus["work"]) => {
+      const r = await go(`c/${ENG_ID}`, seedState({ agentStatuses: statusesWith(w) }));
+      await click(screen().getAllByRole("button", { name: "Perfil de Ada" })[0] as HTMLElement);
+      await settle(6);
+      return { ...r, card: screen().getByRole("dialog", { name: "Perfil" }) };
+    };
+    // Someone else's DM: it says so, with nothing to open.
+    const hidden = await open({ ...work, private: true });
+    expect(hidden.card.querySelector(".profile-card__status small")?.textContent).toBe(
+      "Numa conversa particular · só quem está nela vê os detalhes",
+    );
+    expect(within(hidden.card).queryByRole("button", { name: "Abrir a conversa" })).toBeNull();
+    cleanup();
+    // A thread the reader reads: the card opens it.
+    const thread = "22222222-2222-4222-8222-222222222222";
+    const seen = await open({
+      ...work,
+      channelId: ENG_ID,
+      channelKind: "channel",
+      channelName: "eng",
+      threadId: thread,
+    });
+    await click(within(seen.card).getByRole("button", { name: "Abrir a conversa" }));
+    await settle(4);
+    expect(seen.router.state.location.pathname).toBe(`/org/${ORG_ID}/threads/${thread}`);
+  });
+
   test("an agent with no AI is drawn offline, and its card says why", async () => {
     const state = seedState({
       aiStatus: {

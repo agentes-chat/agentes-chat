@@ -12,6 +12,7 @@ import {
   useSettings,
   useUpdateAgent,
 } from "@agenteschat/client";
+import { ownsAgentAs } from "@agenteschat/client/lib/agent-owner";
 import { type WorkPlaceNames, workDetail } from "@agenteschat/client/lib/agent-work";
 import {
   audienceLines,
@@ -69,8 +70,10 @@ import { LetMeTalkButton, useWidenAsk } from "@/components/ReachLines";
 import { useEmojiLabels } from "@/components/Reactions";
 import { RolesPicker } from "@/components/roles/RolesPicker";
 import { colorOf, ProfileSky } from "@/components/Sky";
+import { TextAction } from "@/components/UsagePauseCard";
 import { SeeUsageQueue } from "@/components/UsageQueue";
 import { useDirectory } from "@/hooks/useDirectory";
+import { useOpenConversation } from "@/hooks/useOpenConversation";
 import { type AgentShown, agentLine, personLine, useAgentPresence, usePersonPresence } from "@/hooks/usePresence";
 import { type MenuEntry, tidy } from "@/lib/context-menu";
 import { entityMenu } from "@/lib/entity-menu";
@@ -611,16 +614,21 @@ function AgentCardBody({ agent, onDone }: { agent: Agent; onDone: () => void }) 
   const agentEntries = useAgentMenu();
   const openComputer = useOpenComputer();
   const opensComputer = useOpensComputer(agent);
-  const seesSpend = can(org, "view_usage") || agent.ownerUserId === me.user.id;
+  const myRoleIds = dir.rolesOf(me.user.id);
+  const seesSpend = can(org, "view_usage") || ownsAgentAs(agent, me.user.id, myRoleIds);
   const details = seesDetails(agent);
   const g = agentGrammar(agent.name);
-  const owner = agent.ownerUserId ? dir.memberById.get(agent.ownerUserId)?.name : null;
+  // A person, or the role that answers for it (ADR 0085, addendum of 2026-11-21).
+  const owner = dir.ownerName(agent);
+  const ownerRole = agent.ownerRoleId ? dir.roleName(agent.ownerRoleId) : undefined;
   // Its presence from its work and its line (ADR 0084): its own words or what it is doing now, and where.
   const shown = useAgentPresence(agent.id);
   const line = agentLine(t, shown?.line ?? null, i18n.language);
   const workingIn = useStreams((s) => agentWorkingIn(s, agent.id));
   const busy = workingIn !== null;
   const here = workingIn ? channels?.find((c) => c.id === workingIn)?.name : undefined;
+  const openConversation = useOpenConversation();
+  const workPlace = shown?.work?.channelId ? { ...shown.work, channelId: shown.work.channelId } : null;
   const lines = audienceLines(agent, roles, dir.members);
   const why =
     shown &&
@@ -696,10 +704,23 @@ function AgentCardBody({ agent, onDone }: { agent: Agent; onDone: () => void }) 
                 ? t("profile.nowIn", { channel: here })
                 : shown.line.by === "self"
                   ? t("presence.bySelf", { name: agent.name })
-                  : t("presence.byAuto")}
+                  : shown.work?.private
+                    ? t("presence.byPrivate")
+                    : t("presence.byAuto")}
             </small>
             {/* Out of office with conversations waiting (ADR 0118): what it picks up when it is back, in order. */}
             {isOutOfOffice(shown.line) && shown.line.count ? <SeeUsageQueue agentId={agent.id} /> : null}
+            {/* Where it works, when the reader reads that conversation: the thread or the message it works from. */}
+            {workPlace && (
+              <TextAction
+                onClick={() => {
+                  onDone();
+                  openConversation(workPlace);
+                }}
+              >
+                {t("presence.openWork")}
+              </TextAction>
+            )}
           </span>
         </div>
       )}
@@ -707,7 +728,7 @@ function AgentCardBody({ agent, onDone }: { agent: Agent; onDone: () => void }) 
         <section className="mcard__section" aria-label={t("profile.audience")}>
           <div className="mcard__label-row">
             <span className="mcard__label">{t("profile.audience")}</span>
-            {canEditAudience(org, agent, me.user.id) && <AudienceEdit agent={agent} />}
+            {canEditAudience(org, agent, me.user.id, myRoleIds) && <AudienceEdit agent={agent} />}
           </div>
           <ul className="mcard__who">
             {lines.map((l) =>
@@ -730,7 +751,11 @@ function AgentCardBody({ agent, onDone }: { agent: Agent; onDone: () => void }) 
             )}
           </ul>
           {owner && modeOf(agent) === "people" && (
-            <span className="small muted">{t("audience.ownerAlways", { name: owner })}</span>
+            <span className="small muted">
+              {ownerRole
+                ? t("audience.ownerRoleAlways", { role: ownerRole })
+                : t("audience.ownerAlways", { name: owner })}
+            </span>
           )}
         </section>
       )}
@@ -763,7 +788,7 @@ function AgentCardBody({ agent, onDone }: { agent: Agent; onDone: () => void }) 
         <>
           <p className="small muted">{audienceNotice(t, agent, (id) => dir.memberById.get(id)?.name, dir.roleName)}</p>
           <div className="profile-card__actions">
-            {audienceWithMe(org, agent, me.user.id) ? (
+            {audienceWithMe(org, agent, me.user.id, myRoleIds) ? (
               <LetMeTalkButton agent={agent} />
             ) : (
               <AskAccessButton agent={agent} />
@@ -787,7 +812,7 @@ function AudienceEdit({ agent }: { agent: Agent }) {
   const g = agentGrammar(agent.name);
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<AgentAudience>(() => audienceOf(agent));
-  const valid = audienceValid(draft, agent.ownerUserId);
+  const valid = audienceValid(draft, agent.ownerUserId ?? agent.ownerRoleId);
   return (
     <>
       <Popover
@@ -814,6 +839,7 @@ function AudienceEdit({ agent }: { agent: Agent }) {
             value={draft}
             onChange={setDraft}
             ownerUserId={agent.ownerUserId}
+            ownerRoleId={agent.ownerRoleId}
             agentName={agent.name}
             idPrefix={`mcard-audience-${agent.id}`}
             onPlan={engineOfBrain(agent.brain?.kind) !== "agent"}
@@ -858,7 +884,7 @@ function AudienceEdit({ agent }: { agent: Agent }) {
 function agentWhy(t: TFunction, shown: AgentShown, names: WorkPlaceNames, locale: string): string | null {
   const key = agentWhyKey(shown.presence, shown.noAi);
   if (key) return t(`presence.agentWhy.${key}`);
-  if (shown.presence === "online" && shown.work?.state !== "later") return null;
+  if ((shown.presence === "online" || shown.presence === "away") && shown.work?.state !== "later") return null;
   return workDetail(t, shown.work, names, locale);
 }
 

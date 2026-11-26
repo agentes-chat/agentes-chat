@@ -48,7 +48,7 @@ import {
 import { useSearch } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { usePlanHold } from "@/components/ai/ConnectAiSteps";
+import { usePlanHold } from "@/components/ai/plan-hold";
 import { useFilterCopy } from "@/components/filters";
 import { useCopied } from "@/components/invite/copied";
 import { EditInvitationDialog, EditLinkDialog } from "@/components/invite/EditDialogs";
@@ -818,7 +818,11 @@ function EmailInvitations({
                 name={inv.email}
                 sub={sub}
               >
-                {again && !off ? (
+                {inv.undelivered && !off ? (
+                  <State icon="alert" tone="soon">
+                    {t(`members.invitations.undelivered.${inv.undelivered}`)}
+                  </State>
+                ) : again && !off ? (
                   <State icon="check" tone="ok">
                     {t("members.invitations.resentState", { date: date(again) })}
                   </State>
@@ -866,7 +870,7 @@ function EmailInvitations({
                       variant="ghost"
                       size="sm"
                       icon="send"
-                      disabled={!!again}
+                      disabled={!!again && !inv.undelivered}
                       loading={sending}
                       onClick={() => sendAgain(inv, false)}
                     >

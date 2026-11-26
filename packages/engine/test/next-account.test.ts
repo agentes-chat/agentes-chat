@@ -15,6 +15,7 @@ import {
   executeToolForRun,
   insertMessage,
   listMessages,
+  listRuns,
   type MachineStatus,
   openPersonAgentDm,
   pauseContinuesPastPlan,
@@ -24,10 +25,11 @@ import {
   STAND_IN_LINE,
   setAccountServes,
   setAgentBrain,
+  setPlanKeyFallback,
   thinkingAgent,
   usageQueue,
 } from "../src";
-import { movedAccountPlan, nextAccountPlan } from "../src/spill";
+import { type AccountSwitch, movedAccountPlan, nextAccountPlan } from "../src/spill";
 import { addMember, type Fixture, setup } from "./fixtures";
 import { pairMachine } from "./machine-fixtures";
 
@@ -142,8 +144,17 @@ const notes = async (fx: Fixture, code: string) =>
 
 const runs = (fx: Fixture) => fx.db.select().from(schema.agentRuns).orderBy(schema.agentRuns.createdAt);
 
-type Moved = { accountMove?: { from: string; to: string; lentBy?: string; tried: string[] } };
+type Moved = {
+  accountMove?: { from: string; to: string; lentBy?: string; tried: string[] };
+  accountSwitch?: AccountSwitch;
+};
 const moveOf = (run: { transcript: unknown } | undefined) => (run?.transcript as Moved | undefined)?.accountMove;
+const switchOf = (run: { transcript: unknown } | undefined) => (run?.transcript as Moved | undefined)?.accountSwitch;
+/** A move is quiet in the chat: no line of the run ever says it. */
+const movedLines = async (fx: Fixture) =>
+  (await listMessages(fx.db, fx.owner.id, fx.org.id, fx.general.id)).filter((m) =>
+    String(m.meta.bodyCode ?? "").startsWith("plan_account_moved"),
+  );
 
 const agentRow = async (fx: Fixture) =>
   (await fx.db.select().from(schema.agents).where(eq(schema.agents.id, fx.agent.id)))[0];
@@ -167,10 +178,18 @@ test("an account at its limit before the turn: the next account of its owner ans
   const [run] = await runs(fx);
   expect(run?.status).toBe("done");
   expect(moveOf(run)).toEqual({ from: OWN1, to: OWN2, tried: [OWN1, OWN2] });
-  const [moved, ...more] = await notes(fx, "plan_account_moved");
-  expect(more).toHaveLength(0);
-  expect(moved?.meta.bodyParams).toEqual({ from: "Conta a001", to: "Conta a002" });
-  expect((await listMessages(fx.db, fx.owner.id, fx.org.id, fx.general.id)).at(-1)?.body).toBe("Feito.");
+  expect(switchOf(run)).toEqual({
+    from: { id: OWN1, name: "Conta a001" },
+    to: { id: OWN2, name: "Conta a002" },
+    cause: "limit",
+  });
+  expect(await movedLines(fx)).toHaveLength(0);
+  const said = await listMessages(fx.db, fx.owner.id, fx.org.id, fx.general.id);
+  // Only the reply is the run's message: the apps keep its working row until then.
+  expect(said.filter((m) => m.agentRunId === run?.id).map((m) => m.body)).toEqual(["Feito."]);
+  // Atividade and the run's details say it.
+  const [listed] = await listRuns(fx.db, fx.owner.id, fx.org.id, { runId: run?.id ?? "" });
+  expect(listed?.accountSwitch).toEqual(switchOf(run) ?? null);
   // The move belongs to the run: the agent still thinks with its own account.
   expect((await agentRow(fx))?.brainAccountId).toBe(OWN1);
   // The account that did the work is the one its usage names.
@@ -186,12 +205,130 @@ test("an account at its limit before the turn: the next account of its owner ans
   await ask(fx, "@dev e agora?");
   await drainOutbox(fx.db, handlersWith(fx, brain));
   expect(seen.map((t) => t.account?.id)).toEqual([OWN2, OWN1]);
-  expect(await notes(fx, "plan_account_moved")).toHaveLength(1);
+  expect(switchOf((await runs(fx))[1])).toBeUndefined();
+});
+
+test("its account thinking for all the runs it takes at once: a fresh run goes on with the next one with a free slot, else waits", async () => {
+  const { fx, machineId, account } = await world();
+  await account(OWN2, fx.owner.id);
+  // Another agent's runs think on the accounts.
+  const ops = await createAgent(
+    fx.db,
+    fx.owner.id,
+    fx.org.id,
+    { name: "Ops", handle: "ops", role: "Infra", instructions: "", credentialId: fx.credential.id },
+    { model: "claude-sonnet-5-5" },
+  );
+  const working = async (key: string) => {
+    const id = Bun.randomUUIDv7();
+    await fx.db.insert(schema.agentRuns).values({
+      id,
+      orgId: fx.org.id,
+      agentId: ops.id,
+      channelId: fx.general.id,
+      threadRootId: id,
+      triggerMessageId: id,
+      trigger: "mention",
+      hop: 2,
+      status: "running",
+      heartbeatAt: new Date(),
+      transcript: { roomAsk: { machineId, at: Date.now() - 60_000, signIn: key } },
+    });
+  };
+  await working(OWN1);
+  const { brain, seen } = scripted(() => answers);
+  const handlers = createJobHandlers({
+    ...fx.jobDeps,
+    signInConcurrency: 1,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id) },
+  });
+  await ask(fx);
+  await drainOutbox(fx.db, handlers);
+  expect(seen.map((t) => t.account?.id)).toEqual([OWN2]);
+  const first = (await runs(fx)).find((r) => r.agentId === fx.agent.id);
+  expect(first?.status).toBe("done");
+  expect(switchOf(first)?.cause).toBe("busy");
+  expect(await movedLines(fx)).toHaveLength(0);
+
+  // Both busy: it waits for its own, with no move.
+  await working(OWN2);
+  await ask(fx, "@dev de novo");
+  await drainOutbox(fx.db, handlers);
+  expect(seen).toHaveLength(1);
+  const waiting = (await runs(fx)).find((r) => r.agentId === fx.agent.id && r.id !== first?.id);
+  expect(waiting?.status).toBe("waiting_input");
+  expect(waiting?.transcript).toMatchObject({ waitingForBrain: { code: "busy" }, signInWait: { key: OWN1 } });
+  expect(moveOf(waiting)).toBeUndefined();
+});
+
+test("its account busy, the next one at its pause line: the run waits for its own rather than move there", async () => {
+  const { fx, machineId, account, usage } = await world();
+  await account(OWN2, fx.owner.id);
+  await usage(OWN2, 99);
+  const ops = await createAgent(
+    fx.db,
+    fx.owner.id,
+    fx.org.id,
+    { name: "Ops", handle: "ops", role: "Infra", instructions: "", credentialId: fx.credential.id },
+    { model: "claude-sonnet-5-5" },
+  );
+  const id = Bun.randomUUIDv7();
+  await fx.db.insert(schema.agentRuns).values({
+    id,
+    orgId: fx.org.id,
+    agentId: ops.id,
+    channelId: fx.general.id,
+    threadRootId: id,
+    triggerMessageId: id,
+    trigger: "mention",
+    hop: 2,
+    status: "running",
+    heartbeatAt: new Date(),
+    transcript: { roomAsk: { machineId, at: Date.now() - 60_000, signIn: OWN1 } },
+  });
+  const { brain, seen } = scripted(() => answers);
+  const handlers = createJobHandlers({
+    ...fx.jobDeps,
+    signInConcurrency: 1,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id) },
+  });
+  await ask(fx);
+  await drainOutbox(fx.db, handlers);
+  expect(seen).toHaveLength(0);
+  const waiting = (await runs(fx)).find((r) => r.agentId === fx.agent.id);
+  expect(waiting?.transcript).toMatchObject({ waitingForBrain: { code: "busy" }, signInWait: { key: OWN1 } });
+  expect(moveOf(waiting)).toBeUndefined();
+});
+
+test("a run for someone besides the agent's owner goes on only with an account whose Atender todos takes them", async () => {
+  const { fx, machineId, walter, account, usage } = await world();
+  await account(WALTER_ALL, walter.id, { useOrder: 0 });
+  await account(OWN2, fx.owner.id, { useOrder: 1, replyMode: "everyone" });
+  await usage(OWN1, 100);
+  const agent = await agentRow(fx);
+  if (!agent) throw new Error("no agent");
+  const plan: BrainPlan = {
+    kind: "claude_code",
+    model: "sonnet",
+    session: { id: "s1", resume: true, machineId, cwd: "" },
+    account: { id: OWN1, label: "Conta a001", status: "active" },
+  };
+  const deps = { db: fx.db, machines: { status: async (id: string) => statusOf(id) } };
+  // The agent's owner asks: Walter's account answers them by its place.
+  expect((await nextAccountPlan(deps, agent, plan, [OWN1, OWN2])).plan?.account?.id).toBe(WALTER_ALL);
+  // Walter asks someone else's agent: his own account answers only the agent's owner, so it is passed over.
+  const asked = await nextAccountPlan(deps, agent, plan, [OWN1], { asker: walter.id });
+  expect(asked.plan?.account?.id).toBe(OWN2);
+  expect(await nextAccountPlan(deps, agent, plan, [OWN1, OWN2], { asker: walter.id })).toMatchObject({ plan: null });
+  expect(await movedAccountPlan(deps, agent, plan, WALTER_ALL, null, walter.id)).toBeNull();
+  expect(await movedAccountPlan(deps, agent, plan, OWN2, null, walter.id)).not.toBeNull();
 });
 
 test("the order: the owner's own accounts first, then others that serve everyone by their place; never an owner-only one", async () => {
   const { fx, machineId, walter, account, usage } = await world();
-  await account(WALTER_ONLY, walter.id, { serves: "owner", useOrder: 0 });
+  await account(WALTER_ONLY, walter.id, { serves: "owner", useMode: "owner", useOrder: 0 });
   await account(WALTER_ALL, walter.id, { useOrder: 1 });
   await account(WALTER_SOLO, walter.id, { shared: false, useOrder: 0 });
   await account(OWN2, fx.owner.id, { useOrder: 7 });
@@ -296,7 +433,9 @@ test("an account whose usage is unknown is tried; refused, the next one answers,
   const [run] = await runs(fx);
   expect(run?.status).toBe("done");
   expect(moveOf(run)).toEqual({ from: OWN1, to: OWN3, tried: [OWN1, OWN2, OWN3] });
-  expect(await notes(fx, "plan_account_moved")).toHaveLength(1);
+  // The first account it left, the last it moved to.
+  expect(switchOf(run)).toMatchObject({ from: { id: OWN1 }, to: { id: OWN3 } });
+  expect(await movedLines(fx)).toHaveLength(0);
 });
 
 test("every account refusing: each is tried once, then the run waits for the plan, never in a loop", async () => {
@@ -341,13 +480,30 @@ test("every account at its limit: the run waits until the first of them resets, 
   expect(more).toHaveLength(0);
   expect(all?.meta.bodyParams).toMatchObject({ accounts: "3", plan: "Claude" });
   expect(all?.meta.usageWait).toMatchObject({ resetsAt: first });
-  expect(await notes(fx, "plan_account_moved")).toHaveLength(0);
+  expect(await movedLines(fx)).toHaveLength(0);
   // The agent's line says the whole order waits, until the first reset.
   expect(await usageQueue(fx.db, fx.owner.id, fx.org.id, fx.agent.id)).toMatchObject({
     reason: "plan",
     chain: 3,
     resetsAt: first,
   });
+});
+
+test("every account at its limit with Continuar com a chave de API on: the workspace's key answers instead of waiting", async () => {
+  const { fx, walter, account, usage } = await world();
+  await account(WALTER_ALL, walter.id);
+  await usage(OWN1, 100);
+  await usage(WALTER_ALL, 100);
+  await setPlanKeyFallback(fx.db, fx.owner.id, fx.org.id, true);
+  const { brain, seen } = scripted(() => answers);
+  await ask(fx);
+  await drainOutbox(fx.db, handlersWith(fx, brain));
+  expect(seen).toHaveLength(0);
+  const [run] = await runs(fx);
+  expect(run).toMatchObject({ status: "done", brain: "model" });
+  expect(await notes(fx, "plan_limit_all_wait")).toHaveLength(0);
+  // The move is the run's: the agent keeps its own account as its first choice.
+  expect((await agentRow(fx))?.brainAccountId).toBe(OWN1);
 });
 
 test("an agent pinned to its account waits for it, as before", async () => {
@@ -360,7 +516,7 @@ test("an agent pinned to its account waits for it, as before", async () => {
   expect(seen).toHaveLength(0);
   expect((await runs(fx))[0]?.status).toBe("waiting_input");
   expect(await notes(fx, "plan_limit_wait")).toHaveLength(1);
-  expect(await notes(fx, "plan_account_moved")).toHaveLength(0);
+  expect(await movedLines(fx)).toHaveLength(0);
 });
 
 test("signed out or its computer away: never a reason to move", async () => {
@@ -414,7 +570,7 @@ for (const [cause, failure] of [
     expect(seen.filter((t) => t.account?.id !== OWN1)).toEqual([]);
     const [run] = await runs(fx);
     expect(moveOf(run)).toBeUndefined();
-    expect(await notes(fx, "plan_account_moved")).toHaveLength(0);
+    expect(await movedLines(fx)).toHaveLength(0);
   });
 }
 
@@ -485,7 +641,8 @@ test("a run that moved resumes on the account it moved to, in its session there"
   expect(seen.map((t) => t.account?.id)).toEqual([OWN2, OWN2]);
   expect(seen[1]?.session).toMatchObject({ id: seen[0]?.session?.id, resume: true });
   expect((await runs(fx))[0]?.status).toBe("done");
-  expect(await notes(fx, "plan_account_moved")).toHaveLength(1);
+  expect(switchOf((await runs(fx))[0])).toMatchObject({ from: { id: OWN1 }, to: { id: OWN2 } });
+  expect(await movedLines(fx)).toHaveLength(0);
   expect((await agentRow(fx))?.brainAccountId).toBe(OWN1);
 });
 
@@ -617,9 +774,12 @@ test("the teammate's account a run waits on stops serving it: the run wakes on i
   const handlers = handlersWith(fx, brain);
   await drainOutbox(fx.db, handlers);
   expect(moveOf((await runs(fx))[0])).toMatchObject({ to: WALTER_ALL, lentBy: walter.id });
-  // Two people's accounts often share a label: the line names whose it is.
-  const [line] = await notes(fx, "plan_account_moved");
-  expect(line?.meta.bodyParams).toEqual({ from: "Conta a001", to: `Conta b001 (${walter.name})` });
+  // Two people's accounts often share a label: the details name whose it is.
+  expect(switchOf((await runs(fx))[0])).toEqual({
+    from: { id: OWN1, name: "Conta a001" },
+    to: { id: WALTER_ALL, name: `Conta b001 (${walter.name})` },
+    cause: "limit",
+  });
 
   await usage(OWN1, 10);
   clearPlanLimits();
@@ -748,7 +908,7 @@ test("long work at the pause line goes on with the next account under it, quietl
   // Someone else's plan is lent to the run: its long work never spends that plan's paid extra usage.
   expect(moveOf(run)).toMatchObject({ to: WALTER_ALL, lentBy: walter.id });
   // A routine's run says nothing in the conversation.
-  expect(await notes(fx, "plan_account_moved")).toHaveLength(0);
+  expect(await movedLines(fx)).toHaveLength(0);
 
   // Every account over the line: it pauses on its own.
   await usage(WALTER_ALL, 99);
@@ -963,7 +1123,7 @@ test("the first turn on the account a run moved to refused for room: the next cl
   expect(await turnPrompt(fx)).toContain("Already done in this run, do not repeat: Bash(git push)");
 });
 
-test("the moved line is said once per run, also when the run moves again after every account was limited", async () => {
+test("the switch keeps the first account the run left, also when it moves again after every account was limited", async () => {
   const { fx, account, usage } = await world();
   await account(OWN2, fx.owner.id);
   await usage(OWN1, 100, iso(3600_000));
@@ -977,7 +1137,7 @@ test("the moved line is said once per run, also when the run moves again after e
   await drainOutbox(fx.db, handlers);
   const [parked] = await runs(fx);
   expect(moveOf(parked)).toBeUndefined();
-  expect(await notes(fx, "plan_account_moved")).toHaveLength(1);
+  expect(switchOf(parked)).toMatchObject({ from: { id: OWN1 }, to: { id: OWN2 } });
 
   // Its own account still at its limit when it wakes: it moves again, without a second line.
   await usage(OWN1, 100, iso(5 * 3600_000));
@@ -985,10 +1145,11 @@ test("the moved line is said once per run, also when the run moves again after e
   await drainOutbox(fx.db, handlers, { now: later(3600_000 + RESUME_AFTER_MS + 1000) });
   expect(seen.map((t) => t.account?.id)).toEqual([OWN2, OWN2]);
   expect((await runs(fx))[0]?.status).toBe("done");
-  expect(await notes(fx, "plan_account_moved")).toHaveLength(1);
+  expect(switchOf((await runs(fx))[0])).toMatchObject({ from: { id: OWN1 }, to: { id: OWN2 } });
+  expect(await movedLines(fx)).toHaveLength(0);
 });
 
-test("long work at the pause line of a teammate's account says so, naming whose account it leaves and whose it takes", async () => {
+test("long work at the pause line of a teammate's account records the switch, naming whose account it leaves and whose it takes", async () => {
   const { fx, walter, account, usage } = await world({}, goesOn);
   await account(WALTER_ALL, walter.id);
   await fx.db
@@ -1013,10 +1174,12 @@ test("long work at the pause line of a teammate's account says so, naming whose 
     setSystemTime();
   }
   expect(seen.map((t) => t.account?.id)).toEqual([WALTER_ALL, OWN1]);
-  const [line, ...more] = await notes(fx, "plan_account_moved_line");
-  expect(more).toHaveLength(0);
-  expect(line?.meta.bodyParams).toEqual({ from: `Conta b001 (${walter.name})`, to: "Conta a001" });
-  expect(await notes(fx, "plan_account_moved")).toHaveLength(0);
+  expect(switchOf((await runs(fx))[0])).toEqual({
+    from: { id: WALTER_ALL, name: `Conta b001 (${walter.name})` },
+    to: { id: OWN1, name: "Conta a001" },
+    cause: "line",
+  });
+  expect(await movedLines(fx)).toHaveLength(0);
 });
 
 test("long work on a plan lent to its agent never goes back into that plan's paid extra usage from the account it moved to", async () => {
@@ -1116,7 +1279,7 @@ test("a run refused by the account it just moved to moves again with one note, n
   expect(last.split("Already done in this run").length).toBe(2);
 });
 
-test("long work that would go into its owner's paid extra usage says so when it goes on with a free account", async () => {
+test("long work that would go into its owner's paid extra usage records the switch when it goes on with a free account", async () => {
   const { fx, account, usage } = await world({}, goesOn);
   await account(OWN2, fx.owner.id);
   await usage(OWN2, 40);
@@ -1152,10 +1315,12 @@ test("long work that would go into its owner's paid extra usage says so when it 
     setSystemTime();
   }
   expect(seen.map((t) => t.account?.id)).toEqual([OWN1, OWN2]);
-  const [line, ...more] = await notes(fx, "plan_account_moved_extra");
-  expect(more).toHaveLength(0);
-  expect(line?.meta.bodyParams).toEqual({ from: "Conta a001", to: "Conta a002" });
-  expect(await notes(fx, "plan_account_moved_line")).toHaveLength(0);
+  expect(switchOf((await runs(fx))[0])).toEqual({
+    from: { id: OWN1, name: "Conta a001" },
+    to: { id: OWN2, name: "Conta a002" },
+    cause: "extra",
+  });
+  expect(await movedLines(fx)).toHaveLength(0);
 });
 
 test("a budget wait never moves an account", async () => {
@@ -1165,7 +1330,7 @@ test("a budget wait never moves an account", async () => {
   const [run] = await runs(f);
   expect((run?.transcript as { waitingForBrain?: { code: string } } | undefined)?.waitingForBrain?.code).toBe("budget");
   expect(moveOf(run)).toBeUndefined();
-  expect(await notes(f, "plan_account_moved")).toHaveLength(0);
+  expect(await movedLines(f)).toHaveLength(0);
 });
 
 test("work another agent handed it at its plan's limit goes on with the next account; its report still goes home", async () => {

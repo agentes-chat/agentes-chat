@@ -2129,6 +2129,335 @@
       "when": 1795061928914,
       "tag": "0308_machine_disconnects",
       "breakpoints": true
+    },
+    {
+      "idx": 306,
+      "version": "7",
+      "when": 1795215601286,
+      "tag": "0309_live_activity_devices",
+      "breakpoints": true
+    },
+    {
+      "idx": 307,
+      "version": "7",
+      "when": 1795219383867,
+      "tag": "0310_move_learned_sections",
+      "breakpoints": true
+    },
+    {
+      "idx": 308,
+      "version": "7",
+      "when": 1795280060278,
+      "tag": "0311_provider_outage_wait_index",
+      "breakpoints": true
+    },
+    {
+      "idx": 309,
+      "version": "7",
+      "when": 1795282927263,
+      "tag": "0312_file_access",
+      "breakpoints": true
+    },
+    {
+      "idx": 310,
+      "version": "7",
+      "when": 1795292927263,
+      "tag": "0313_agent_owner_role",
+      "breakpoints": true
+    },
+    {
+      "idx": 311,
+      "version": "7",
+      "when": 1795299112482,
+      "tag": "0314_reply_in_threads",
+      "breakpoints": true
+    },
+    {
+      "idx": 312,
+      "version": "7",
+      "when": 1795305895422,
+      "tag": "0315_telegram_updates",
+      "breakpoints": true
+    },
+    {
+      "idx": 313,
+      "version": "7",
+      "when": 1795313515258,
+      "tag": "0316_connector_spend",
+      "breakpoints": true
+    },
+    {
+      "idx": 314,
+      "version": "7",
+      "when": 1795315046665,
+      "tag": "0317_routine_hook_group_by",
+      "breakpoints": true
+    },
+    {
+      "idx": 315,
+      "version": "7",
+      "when": 1795359714826,
+      "tag": "0318_sweep_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 316,
+      "version": "7",
+      "when": 1795369719064,
+      "tag": "0319_own_oauth_clients",
+      "breakpoints": true
+    },
+    {
+      "idx": 317,
+      "version": "7",
+      "when": 1795376935126,
+      "tag": "0320_brain_model_of_its_plan",
+      "breakpoints": true
+    },
+    {
+      "idx": 318,
+      "version": "7",
+      "when": 1795379566183,
+      "tag": "0321_code_sessions",
+      "breakpoints": true
+    },
+    {
+      "idx": 319,
+      "version": "7",
+      "when": 1795383445167,
+      "tag": "0322_run_cli",
+      "breakpoints": true
+    },
+    {
+      "idx": 320,
+      "version": "7",
+      "when": 1795477389986,
+      "tag": "0323_server_processes",
+      "breakpoints": true
+    },
+    {
+      "idx": 321,
+      "version": "7",
+      "when": 1795495329302,
+      "tag": "0324_account_permissions",
+      "breakpoints": true
+    },
+    {
+      "idx": 322,
+      "version": "7",
+      "when": 1795495393705,
+      "tag": "0325_channels_reply_in_threads_by_default",
+      "breakpoints": true
+    },
+    {
+      "idx": 323,
+      "version": "7",
+      "when": 1795495438746,
+      "tag": "0326_unused_agent_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 324,
+      "version": "7",
+      "when": 1795511295066,
+      "tag": "0327_open_wake_and_platform_spend_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 325,
+      "version": "7",
+      "when": 1795511330961,
+      "tag": "0328_server_tasks",
+      "breakpoints": true
+    },
+    {
+      "idx": 326,
+      "version": "7",
+      "when": 1795511351995,
+      "tag": "0329_outbox_dedupe",
+      "breakpoints": true
+    },
+    {
+      "idx": 327,
+      "version": "7",
+      "when": 1795511411972,
+      "tag": "0330_sweep_storage",
+      "breakpoints": true
+    },
+    {
+      "idx": 328,
+      "version": "7",
+      "when": 1795511434657,
+      "tag": "0331_run_state",
+      "breakpoints": true
+    },
+    {
+      "idx": 329,
+      "version": "7",
+      "when": 1795511446031,
+      "tag": "0332_run_lookup_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 330,
+      "version": "7",
+      "when": 1795511477131,
+      "tag": "0333_server_process_routes",
+      "breakpoints": true
+    },
+    {
+      "idx": 331,
+      "version": "7",
+      "when": 1795511505366,
+      "tag": "0334_shared_presence_limits",
+      "breakpoints": true
+    },
+    {
+      "idx": 332,
+      "version": "7",
+      "when": 1795511527150,
+      "tag": "0335_open_notification_kinds",
+      "breakpoints": true
+    },
+    {
+      "idx": 333,
+      "version": "7",
+      "when": 1795511607122,
+      "tag": "0336_client_vitals",
+      "breakpoints": true
+    },
+    {
+      "idx": 334,
+      "version": "7",
+      "when": 1795521607122,
+      "tag": "0337_proposal_review",
+      "breakpoints": true
+    },
+    {
+      "idx": 335,
+      "version": "7",
+      "when": 1795521707122,
+      "tag": "0338_right_hand_learns",
+      "breakpoints": true
+    },
+    {
+      "idx": 336,
+      "version": "7",
+      "when": 1795521807122,
+      "tag": "0339_audio_file_wave",
+      "breakpoints": true
+    },
+    {
+      "idx": 337,
+      "version": "7",
+      "when": 1795550171282,
+      "tag": "0340_channel_lead",
+      "breakpoints": true
+    },
+    {
+      "idx": 338,
+      "version": "7",
+      "when": 1795555369214,
+      "tag": "0341_surface_pin_pages",
+      "breakpoints": true
+    },
+    {
+      "idx": 339,
+      "version": "7",
+      "when": 1795555379831,
+      "tag": "0342_surface_pin_lockouts",
+      "breakpoints": true
+    },
+    {
+      "idx": 340,
+      "version": "7",
+      "when": 1795558902756,
+      "tag": "0343_client_vitals_day",
+      "breakpoints": true
+    },
+    {
+      "idx": 341,
+      "version": "7",
+      "when": 1795568902756,
+      "tag": "0344_live_asset_fonts",
+      "breakpoints": true
+    },
+    {
+      "idx": 342,
+      "version": "7",
+      "when": 1795580284460,
+      "tag": "0345_machine_moving",
+      "breakpoints": true
+    },
+    {
+      "idx": 343,
+      "version": "7",
+      "when": 1795583938565,
+      "tag": "0346_devices_help",
+      "breakpoints": true
+    },
+    {
+      "idx": 344,
+      "version": "7",
+      "when": 1795620096284,
+      "tag": "0347_approval_after_ids",
+      "breakpoints": true
+    },
+    {
+      "idx": 345,
+      "version": "7",
+      "when": 1795620276098,
+      "tag": "0348_server_instructions",
+      "breakpoints": true
+    },
+    {
+      "idx": 346,
+      "version": "7",
+      "when": 1795620377850,
+      "tag": "0349_devices_first",
+      "breakpoints": true
+    },
+    {
+      "idx": 347,
+      "version": "7",
+      "when": 1795620378850,
+      "tag": "0350_egress_share",
+      "breakpoints": true
+    },
+    {
+      "idx": 348,
+      "version": "7",
+      "when": 1795620379850,
+      "tag": "0351_egress_share_notice",
+      "breakpoints": true
+    },
+    {
+      "idx": 349,
+      "version": "7",
+      "when": 1795620380850,
+      "tag": "0352_channels_in_sectors",
+      "breakpoints": true
+    },
+    {
+      "idx": 350,
+      "version": "7",
+      "when": 1795620554737,
+      "tag": "0353_surface_nudge",
+      "breakpoints": true
+    },
+    {
+      "idx": 351,
+      "version": "7",
+      "when": 1795632021378,
+      "tag": "0354_skill_library",
+      "breakpoints": true
+    },
+    {
+      "idx": 352,
+      "version": "7",
+      "when": 1795650395102,
+      "tag": "0355_undelivered_emails",
+      "breakpoints": true
     }
   ]
 }

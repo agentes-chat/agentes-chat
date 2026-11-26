@@ -83,7 +83,6 @@ async function geminiAgent(fx: Fixture, argonUsed: number, brainModel = FLASH) {
       machineId: paired.machineId,
       brain: "antigravity",
       brainModel,
-      brainFallback: false,
       brainAccountId: accountId,
     })
     .where(eq(schema.agents.id, fx.agent.id));

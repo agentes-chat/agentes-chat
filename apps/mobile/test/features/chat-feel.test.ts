@@ -38,7 +38,7 @@ describe("swiping a message to answer it", () => {
     expect(swipe).toContain("{marked ? <ReplyMark x={x} armed={armed} /> : null}");
     const chat = chatScreenSource();
     expect(chat).toContain("<SwipeReply enabled={canReply && !m.local} onReply={reply}>");
-    expect(chat).toMatch(/\{NATIVE_MENU \? \(\s*<MessageMenuFor/);
+    expect(chat).toMatch(/\{NATIVE_MENU \? \(?\s*<MessageMenuFor/);
     expect(chat).not.toContain("NATIVE_MENU && !m.local");
     // Its menu then holds what works before the server has it: no reactions, no empty palette.
     const menu = src("features/chat/MessageMenu.tsx");
@@ -46,7 +46,13 @@ describe("swiping a message to answer it", () => {
     expect(menu).toContain("{reactions.length > 0 ? (");
     // Built once a finger lands on the row (or with a screen reader on), never for every row a scroll mounts.
     expect(menu).toContain("onArm={armed ? undefined : arm}");
-    expect(menu).toContain("{groups === null ? <Link.MenuAction hidden onPress={noop} /> : null}");
+    expect(menu).toContain(
+      '{groups === null ? <NativeLinkPreviewAction identifier="building" title="" hidden onSelected={noop} /> : null}',
+    );
+    // A plain box around the row, never expo-router's Link: its native view takes `display: contents`, and in there the
+    // row's frames went stale as its words changed size (a long message's bubble drew empty space under its words).
+    expect(menu).toContain("<NativeLinkPreview previewActivationPath={undefined}>");
+    expect(menu).not.toMatch(/<Link[\s.>]/);
   });
 });
 
@@ -122,8 +128,12 @@ describe("the conversation's rows", () => {
     const messages = between(chat, "const messageRows = useMemo<Row[]>(() => {", "const liveRows");
     expect(messages).not.toContain("browsing");
     expect(messages).not.toContain("waits");
-    // Nor the DM and channel lists, read again with each message: only the thread head's words and count.
-    expect(messages).toContain("}, [isThread, threadId, list, startedText, replyCount, superseded, timeLines, t]);");
+    // Nor the DM and channel lists, read again with each message: only the thread head's words and count, and the
+    // consulted agents' words folded into their askers' quotes, kept until a fold changes (`relaysKey`).
+    expect(messages).toContain(
+      "}, [isThread, threadId, list, startedText, replyCount, superseded, timeLines, relays, t]);",
+    );
+    expect(chat).toContain("const relays = useMemo(() => relaysNow, [relaysKey]);");
     expect(chat).toContain("[browsing, held, making, waits],");
     expect(chat).toContain('() => messageRows.flatMap((r) => (r.kind === "message" ? [r.message] : [])),');
     expect(chat).toContain("shownRef.current = keepSameRows(shownRef.current, next);");
@@ -157,7 +167,9 @@ describe("older pages", () => {
   });
 
   test("going to a message reads the page around it at any distance; a failed read says so, a 404 says it's gone", () => {
-    expect(chat).toContain(".messages(orgId, channelId, { around: seek, limit: SEEK_PAGE })");
+    expect(chat).toContain(
+      ".messages(orgId, channelId, { around: seek, limit: SEEK_PAGE, onCards: cardsInto(qc, orgId) })",
+    );
     expect(chat).toContain("const gone = error === undefined || (error instanceof ApiError && error.status === 404);");
     expect(chat).toContain('toast({ title: gone ? t("channel.jumpMissing") : t("common.loadFailed"), icon: "x" });');
     // Away from the latest page: newer pages as the person scrolls down, never pinned to that end.
@@ -253,6 +265,20 @@ describe("the working line", () => {
     expect(lines).not.toContain("ZoomIn");
     const pop = between(lines, "const FACE_POP: EntryExitAnimationFunction", "/**");
     expect(pop).toContain("initialValues: { opacity: 0, transform: [{ scale: 0.9 }] },");
+  });
+
+  test("the agent at work leads with its rings (the web's), what it did so far under the words, paced", () => {
+    // Its face orbited, never the plain working face; the stack's small faces are the others.
+    expect(lines).toContain("<OrbitFace color={agentLook(dir.agentById.get(orbiting.id)).color} size={ORBIT_FACE}>");
+    expect(lines).toContain("const faces = barFaces(entries).filter((e) => e !== orbiting);");
+    expect(lines).toContain("usePacedTrail(trailRun ? workTrail(t, trailRun, i18n.language) : NO_TRAIL)");
+    const orbit = src("agent/OrbitFace.tsx");
+    // The web's rings and colours, turning on the UI thread by transforms alone, still with Reduce Motion and paused
+    // on a screen that isn't showing.
+    expect(orbit).toContain('import { ORBIT_RINGS, ORBIT_SPAN, orbitColors } from "@agenteschat/ui/agent/orbit";');
+    expect(orbit).toContain("const turning = !reduced;");
+    expect(orbit).toContain('loopStyle(ring.back ? UNTURN : TURN, turn, "linear", delay, paused)');
+    expect(orbit).not.toMatch(/useFrameCallback|requestAnimationFrame|setInterval/);
   });
 
   test('"View" reaches 44 points', () => {
@@ -357,7 +383,8 @@ describe("a voice message's row", () => {
     expect(row).toContain("const starting = useSyncExternalStore(subscribePlayback, startingId) === clipId;");
     expect(row).toContain('<ActivityIndicator size="small" color={c.bg} />');
     const toggle = between(row, "const toggle = () => {", "const seek =");
-    expect(toggle.indexOf("voiceAudioGone(")).toBeGreaterThan(toggle.indexOf("const failed = () => {"));
+    expect(toggle.indexOf("isGone?.()")).toBeGreaterThan(toggle.indexOf("const failed = () => {"));
+    expect(row).toContain("isGone={() => voiceAudioGone(url, authedFetch as typeof fetch)}");
     expect(toggle).toContain("onError: failed,");
     expect(toggle).toContain("}).catch(failed);");
     // Where it stands is the playback module's: a row drawn again mid-play shows it.

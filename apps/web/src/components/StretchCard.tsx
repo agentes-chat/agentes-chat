@@ -1,6 +1,7 @@
 import type { Message } from "@agenteschat/client";
 import { useApi, useSettings } from "@agenteschat/client";
 import { mayContinueStretch, type StretchCard, stretchCardText } from "@agenteschat/client/lib/action-cards";
+import { ownsAgentAs } from "@agenteschat/client/lib/agent-owner";
 import { managesAgent } from "@agenteschat/client/lib/audience";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { clockAt } from "@agenteschat/client/lib/format";
@@ -45,7 +46,12 @@ export function StretchCardView({ message, card }: { message: Message; card: Str
     card.agentIds.length > 0
       ? card.agentIds.every((id) => managesAgent(dir.agentById.get(id)))
       : can(org, "manage_agents");
-  const may = mayContinueStretch(card, me.user.id, (id) => dir.agentById.get(id)?.ownerUserId, manages);
+  // Its owner reads as me when I hold the role that answers for it (ADR 0085, addendum of 2026-11-21).
+  const ownerOf = (id: string) => {
+    const a = dir.agentById.get(id);
+    return a && ownsAgentAs(a, me.user.id, dir.rolesOf(me.user.id)) ? me.user.id : a?.ownerUserId;
+  };
+  const may = mayContinueStretch(card, me.user.id, ownerOf, manages);
   const go = async () => {
     setPending(true);
     try {
@@ -59,7 +65,7 @@ export function StretchCardView({ message, card }: { message: Message; card: Str
   const text = stretchCardText(t, card, names, cost);
   if (continued) {
     return (
-      <RequestDone done label={text}>
+      <RequestDone morphKey={`stretch:${message.id}`} done label={text}>
         {by === me.user.id
           ? t("stretchCard.continuedByYou", { time })
           : t("stretchCard.continued", {
@@ -71,6 +77,7 @@ export function StretchCardView({ message, card }: { message: Message; card: Str
   }
   return (
     <RequestOpen
+      morphKey={`stretch:${message.id}`}
       mine={may}
       icon="pause"
       label={text}

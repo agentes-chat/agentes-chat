@@ -4,20 +4,31 @@ import { accessInputOf, replaceableGrants, setAgentAccess } from "./access";
 import { moveAgentToGroup } from "./agent-groups";
 import { type Agent, archiveAgent, getAgent, unarchiveAgent, updateAgent, validateAgentFields } from "./agents";
 import { setAgentAppearance, validateAppearance } from "./appearance";
-import { agentEditorIds, agentManagerIds, audienceOf, editsAgent, managesAgent, setAgentAudience } from "./audience";
-import { normalizeBrainModel, setAgentBrain } from "./brain-settings";
+import {
+  agentEditorIds,
+  agentManagerIds,
+  agentOwnerIds,
+  audienceOf,
+  editsAgent,
+  managesAgent,
+  ownsAgent,
+  setAgentAudience,
+} from "./audience";
+import { isBrainEffortSetting, normalizeBrainModel, setAgentBrain } from "./brain-settings";
 import { isComputerBrain } from "./brains/types";
 import { invalidateOrg } from "./cache";
 import { addChannelMember, removeChannelMember, setChannelAgentAutoReply } from "./channels";
+import { moveLearnedSections, splitLearned } from "./context/learned-sections";
 import { sha256 } from "./crypto";
 import { ForbiddenError, NotFoundError, ValidationError } from "./errors";
-import { publishAgentsChanged } from "./events";
+import { publishAgentsChanged, publishListChanged } from "./events";
 import { setAgentComputerTarget } from "./machines";
 import { can, getMembership, requirePermission } from "./organizations";
 import { reportsToRefusal, setReportsTo } from "./reporting";
 import { isRightHand } from "./right-hand";
 import { setAgentSkills } from "./skills";
 import { canonicalJson } from "./tools/json-schema";
+import { agentBudgetState, orgDefaultAgentBudget } from "./usage";
 
 const {
   agentActions,
@@ -50,6 +61,7 @@ type Proposal = typeof contextProposals.$inferSelect;
  */
 export const SETTING_GROUP: Record<SettingField, "admin" | "editor" | "admin_or_owner" | "account"> = {
   model: "admin",
+  effort: "admin",
   budget: "admin",
   owner: "admin",
   archive: "admin",
@@ -73,6 +85,7 @@ export const SETTING_GROUP: Record<SettingField, "admin" | "editor" | "admin_or_
 const ORDER: SettingField[] = [
   "ai_account",
   "model",
+  "effort",
   "budget",
   "owner",
   "audience",
@@ -89,6 +102,10 @@ const ORDER: SettingField[] = [
 ];
 
 const same = (a: unknown, b: unknown) => canonicalJson(a ?? null) === canonicalJson(b ?? null);
+
+/** Instructions as Undo compares them: without a "## Learned" section, which every write moves to memory. */
+const held = (field: ReceiptLine["field"], value: unknown) =>
+  field === "instructions" ? splitLearned(String(value ?? "")).instructions : value;
 
 /** What `from` and `to` hold for an AI account: the brain it thinks with and the account (null: the API). */
 interface AccountValue {
@@ -124,6 +141,8 @@ async function valueNow(db: Executor, agent: Agent, line: Pick<ReceiptLine, "fie
       return departmentOf(db, agent);
     case "model":
       return isComputerBrain(agent.brain) ? agent.brainModel : agent.model;
+    case "effort":
+      return agent.brainEffort ?? null;
     case "budget":
       return agent.monthlyBudgetNanoUsd;
     case "owner":
@@ -206,7 +225,11 @@ async function setValue(
         .update(agents)
         .set({ instructions: String(value), updatedAt: new Date() })
         .where(eq(agents.id, agentId));
-      return invalidateOrg(orgId);
+      invalidateOrg(orgId);
+      // Text put back with a "## Learned" section moves it to memory again, as a save does.
+      if ((await moveLearnedSections(db, orgId, { agentId, actorId })) > 0)
+        await publishListChanged(pubsub, orgId, "memory");
+      return;
     }
     case "role":
       return void (await updateAgent(db, actorId, orgId, agentId, { role: String(value) }, { pubsub }));
@@ -249,6 +272,8 @@ async function setValue(
         return void (await setAgentBrain(deps, actorId, orgId, agentId, { model: value }));
       return void (await updateAgent(db, actorId, orgId, agentId, { model: String(value) }, { pubsub }));
     }
+    case "effort":
+      return void (await setAgentBrain(deps, actorId, orgId, agentId, { effort: value }));
     case "budget":
       return void (await updateAgent(
         db,
@@ -348,7 +373,8 @@ export async function maySettle(db: Database, actorId: string, p: Proposal) {
     return admin && (!supervisor || managesAgent(supervisor, actorId, membership));
   }
   if (group === "editor") return editsAgent(agent, actorId, membership);
-  if (group === "admin_or_owner") return admin || agent.ownerUserId === actorId;
+  if (group === "admin_or_owner") return admin || ownsAgent(agent, actorId, membership.roleIds);
+  // An AI account's line is its owner's plan: the agent's one person, never a role (ADR 0085, addendum of 2026-11-21).
   return agent.ownerUserId === actorId && (await accountOwner(db, p.orgId, p.settings ?? [])) === actorId;
 }
 
@@ -368,7 +394,7 @@ export async function settingsDeciders(db: Database, p: Proposal): Promise<strin
   if (!agent) return [];
   if (group === "editor") return agentEditorIds(db, p.orgId, agent.id);
   const ids = new Set(await agentManagerIds(db, p.orgId, agent.id));
-  if (group === "admin_or_owner" && agent.ownerUserId) ids.add(agent.ownerUserId);
+  if (group === "admin_or_owner") for (const id of await agentOwnerIds(db, p.orgId, agent)) ids.add(id);
   const under = group === "admin" ? supervisorOf(p) : null;
   if (under && (await getAgent(db, p.orgId, under))) {
     const theirs = new Set(await agentManagerIds(db, p.orgId, under));
@@ -380,6 +406,7 @@ export async function settingsDeciders(db: Database, p: Proposal): Promise<strin
 /** What a card may change on the right hand: what its Settings let admins change. */
 const RIGHT_HAND_SETTINGS: ReadonlySet<SettingField> = new Set([
   "model",
+  "effort",
   "budget",
   "audience",
   "name",
@@ -442,7 +469,9 @@ export async function settingLines(
       w.field === "reports_to" && typeof from === "string"
         ? { ...w.label, from: (await getAgent(db, orgId, from))?.name }
         : w.label;
-    lines.push({ ...w, to, from, ...(label ? { label } : {}) });
+    const { pausesNow: _, ...asked } = w;
+    const pausesNow = w.field === "budget" && (await spentPast(db, agent, to)) !== null;
+    lines.push({ ...asked, to, from, ...(label ? { label } : {}), ...(pausesNow ? { pausesNow } : {}) });
   }
   return { lines, skipped };
 }
@@ -461,17 +490,24 @@ async function refusal(db: Database, orgId: string, requesterId: string, agent: 
       return null;
     case "model":
       try {
-        // On a computer any name its CLI may take goes, as under Quem pensa: the vendor answers for the person's plan.
+        // On a computer any name its CLI may take goes, as under Quem pensa, but another maker's model, which its plan
+        // can't run: the refusal says to give it an AI account that runs it first.
         if (isComputerBrain(agent.brain)) normalizeBrainModel(agent.brain, w.to, agent.brainModel);
         else await validateAgentFields(db, orgId, { model: String(w.to) });
       } catch (error) {
         return error instanceof Error ? error.message : "unknown model";
       }
       return null;
-    case "budget":
-      return w.to === null || (typeof w.to === "number" && Number.isFinite(w.to) && w.to >= 0)
-        ? null
-        : "a budget is 0 or more, or the workspace's default.";
+    case "effort":
+      return w.to === null || isBrainEffortSetting(w.to) ? null : "an effort is auto, low, medium, high, xhigh or max.";
+    case "budget": {
+      if (w.to !== null && !(typeof w.to === "number" && Number.isFinite(w.to) && w.to >= 0))
+        return "a budget is 0 or more, or the workspace's default.";
+      const spent = await spentPast(db, agent, w.to);
+      if (spent === null || w.pausesNow) return null;
+      const usd = `US$ ${(spent / 1e9).toFixed(2)}`;
+      return `that is at or below the ${usd} it spent this month, so it would stop at once. Ask for more than ${usd}, or send budget_cut: true when stopping it is the point.`;
+    }
     case "owner":
       return typeof w.to === "string" && (await getMembership(db, w.to, orgId))
         ? null
@@ -541,6 +577,28 @@ async function refusal(db: Database, orgId: string, requesterId: string, agent: 
   }
 }
 
+/**
+ * This month's spend when a budget of `to` (null: the workspace's default) leaves the agent nothing, so it stops at
+ * once; null when it doesn't.
+ */
+async function spentPast(db: Executor, agent: Agent, to: unknown): Promise<number | null> {
+  const budget = typeof to === "number" ? to : await orgDefaultAgentBudget(db as Database, agent.orgId);
+  const { spentNanoUsd: spent } = await agentBudgetState(db as Database, agent.orgId, agent.id);
+  return budget <= spent ? spent : null;
+}
+
+/**
+ * Whether a row still applies as its card shows it: each `from` is the agent's value now, and a budget the card
+ * didn't say stops the agent still doesn't (the month's spend grows while a card waits).
+ */
+export async function settingsHold(db: Executor, agent: Agent, lines: SettingLine[]) {
+  for (const l of lines) {
+    if (!same(await valueNow(db, agent, l), l.from)) return false;
+    if (l.field === "budget" && !l.pausesNow && (await spentPast(db, agent, l.to)) !== null) return false;
+  }
+  return true;
+}
+
 /** The rows for one agent's lines: one per decider group, each with the hash of what it was made against. */
 export function settingsRows(lines: SettingLine[]) {
   const groups = new Map<string, SettingLine[]>();
@@ -563,7 +621,7 @@ export async function applySettings(
   agent: Agent,
 ) {
   const lines = p.settings ?? [];
-  for (const l of lines) if (!same(await valueNow(deps.db, agent, l), l.from)) return false;
+  if (!(await settingsHold(deps.db, agent, lines))) return false;
   for (const l of lines) await setValue(deps, actorId, p.orgId, agent.id, l, l.to);
   return true;
 }
@@ -620,7 +678,8 @@ export async function revertSettings(
   const agent = await getAgent(deps.db, a.orgId, a.targetId);
   if (!agent) throw new NotFoundError("The agent is gone", "action.target_gone");
   for (const l of steps)
-    if (!same(await valueNow(deps.db, agent, l), direction === "undo" ? l.to : l.from)) throw changedSince();
+    if (!same(held(l.field, await valueNow(deps.db, agent, l)), held(l.field, direction === "undo" ? l.to : l.from)))
+      throw changedSince();
   for (const l of steps) await setValue(deps, userId, a.orgId, agent.id, l, direction === "undo" ? l.from : l.to);
   // Who it answers and its AI have no event of their own.
   await publishAgentsChanged(deps.pubsub, a.orgId);

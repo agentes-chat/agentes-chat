@@ -24,7 +24,7 @@ import { type AgentStyle, isAgentStyle, saveAgentStyle } from "./agent-style";
 import { dropAgentRules } from "./approval-rules";
 import { revokeMemberApps } from "./apps/revoke";
 import { recordAudit } from "./audit";
-import { caches } from "./cache";
+import { caches, cachesEnabled } from "./cache";
 import { memberCardVia } from "./card-via";
 import {
   assertOwnWallpaper,
@@ -126,6 +126,8 @@ export interface Membership {
   standing?: WorkspaceStanding;
   /** What opens when the app starts here (listMemberships). */
   start?: StartChoice;
+  /** The person pays for the workspace's plan, as the billing service said (listMemberships, ADR 0079). */
+  paysPlan?: boolean;
   /** Whether the person sees what agents did under each reply (listMemberships, `setShowActivity`). */
   showActivity?: boolean;
   /** How agents talk to the person here (listMemberships, `setAgentStyle`); null until they pick (ADR 0147). */
@@ -192,6 +194,7 @@ export async function listMemberships(db: Database, userId: string): Promise<Mem
       agentStyle: organizationMembers.agentStyle,
       chatPrefs: organizationMembers.chatPrefs,
       mode: schema.organizationSettings.mode,
+      payer: organizations.payerUserId,
       ...ROLE_COLUMNS,
     })
     .from(organizationMembers)
@@ -200,8 +203,9 @@ export async function listMemberships(db: Database, userId: string): Promise<Mem
     .leftJoin(schema.organizationSettings, eq(schema.organizationSettings.orgId, organizations.id))
     .where(and(eq(organizationMembers.userId, userId), accountInUse))
     .orderBy(asc(organizations.createdAt));
-  return rows.map(({ startPage, startChannelId, chatPrefs, mode, ...row }) => ({
+  return rows.map(({ startPage, startChannelId, chatPrefs, mode, payer, ...row }) => ({
     ...withPermissions(row),
+    paysPlan: payer === userId,
     chatPrefs: chatPrefsOf(chatPrefs),
     mode: isWorkspaceMode(mode) ? mode : "team",
     start: { page: startPage, channelId: startPage === "channel" ? startChannelId : null },
@@ -366,7 +370,14 @@ export async function createOrganization(
     await ensureRightHand(tx, organization.id);
     const [general] = await tx
       .insert(channels)
-      .values({ orgId: organization.id, name: "general", createdByUserId: userId })
+      .values({
+        orgId: organization.id,
+        name: "general",
+        createdByUserId: userId,
+        // Everyone in a team's workspace ends up in #general, so its agents answer in threads (ADR 0214); a personal
+        // workspace's has no one else to keep its main timeline clear for.
+        ...(input.mode === "personal" ? { replyInThreads: false } : {}),
+      })
       .returning();
     if (!general) throw new Error("channel insert returned nothing");
     await tx.insert(channelMembers).values({ orgId: organization.id, channelId: general.id, userId });
@@ -950,6 +961,7 @@ export async function myAccount(db: Database, userId: string) {
       workArea: users.workArea,
       deletionDueAt: users.deletionDueAt,
       deletionRequestedAt: users.deletionRequestedAt,
+      emailUndelivered: users.emailUndelivered,
     })
     .from(users)
     .where(eq(users.id, userId));
@@ -961,6 +973,7 @@ export async function myAccount(db: Database, userId: string) {
     locale: row?.locale ?? null,
     localeAuto: row?.localeAuto ?? true,
     workArea: row?.workArea ?? null,
+    emailUndelivered: row?.emailUndelivered ?? null,
   };
 }
 
@@ -988,6 +1001,16 @@ export function requestLocale(acceptLanguage: string | null | undefined): UserLo
 export async function isEmailVerified(db: Database, userId: string): Promise<boolean | null> {
   const [row] = await db.select({ verified: users.emailVerified }).from(users).where(eq(users.id, userId));
   return row ? row.verified === true : null;
+}
+
+/**
+ * What an address never confirmed holds back (ADR 0006, addendum 2026-11-22), on a server that sends email: an account
+ * in no workspace yet makes none until its link is opened (`required`). One already in a workspace keeps working, with
+ * a reminder: some of those pay, and a mistyped address may never get the link. Null when there is nothing to ask.
+ */
+export function emailConfirmation(input: { emailDelivers: boolean; verified: boolean; workspaces: number }) {
+  if (!input.emailDelivers || input.verified) return null;
+  return input.workspaces === 0 ? ("required" as const) : ("reminder" as const);
 }
 
 async function ownerCount(db: Pick<Database, "select">, orgId: string) {
@@ -1330,6 +1353,7 @@ async function takeOut(
       await tx
         .delete(organizationMembers)
         .where(and(eq(organizationMembers.orgId, orgId), eq(organizationMembers.userId, targetUserId)));
+      await enqueueAccountContact(tx, targetUserId);
       // Leaving the organization also leaves its channels.
       await tx
         .delete(channelMembers)
@@ -1481,7 +1505,12 @@ async function takeOut(
   if (heir && handed.length) {
     const { handOver } = await import("./agents");
     for (const agent of handed) {
-      await handOver({ db, pubsub: options.pubsub }, actorId, { ...agent, ownerUserId: targetUserId }, heir);
+      await handOver(
+        { db, pubsub: options.pubsub },
+        actorId,
+        { ...agent, ownerUserId: targetUserId },
+        { ownerUserId: heir, ownerRoleId: null },
+      );
     }
   }
   await announceReleasedAccounts({ db, pubsub: options.pubsub }, released);
@@ -1504,6 +1533,12 @@ async function takeOut(
   await announceMembers(options.pubsub, orgId, changed);
   const { releaseQuestionsOf } = await import("./questions");
   await releaseQuestionsOf({ db, pubsub: options.pubsub }, orgId, targetUserId);
+  // An agent a role of theirs answers for is asked of who holds it now, or of the admins with nobody left (ADR 0085,
+  // addendum of 2026-11-21): its approvals' inbox follows.
+  if (target.roleIds.length > 0) {
+    const { rerouteRoleApprovals } = await import("./notification-producers");
+    await rerouteRoleApprovals({ db, pubsub: options.pubsub }, orgId, target.roleIds).catch(() => {});
+  }
   // Their routines pause at once and their work stops; the agents' owners hear it (ADR 0053 §6.2).
   // Loaded here: the routine engine builds on this module.
   const { pauseRoutinesOfCreator } = await import("./routine-firing");
@@ -1815,6 +1850,8 @@ export async function sendInvitation(
     tokenHash: sha256(token),
     invitedByUserId: input.invitedBy,
     expiresAt: new Date(now.getTime() + INVITATION_TTL_DAYS * 86_400_000),
+    // Its email goes again: whether this one is delivered is the `email.send` job's to say.
+    undelivered: null,
   };
   const [invitation] = existing
     ? await db.update(organizationInvitations).set(fresh).where(eq(organizationInvitations.id, existing.id)).returning()
@@ -2502,6 +2539,7 @@ export async function joinOrganization(
   await addMemberRolesInTx(tx, orgId, userId, roleIds);
   // The right hand greets who is new here, once: its job's key is spent for good, so a rejoin gets none.
   if (!member) await queueWelcome(tx, orgId, userId);
+  if (!member) await enqueueAccountContact(tx, userId);
   // Nothing a closed request kept stays (ADR 0090): the password it chose goes, and the page's key is spent, so that
   // page reads it closed and signs in no one.
   const closing = await tx
@@ -2541,7 +2579,18 @@ export async function joinOrganization(
 
 /** Marks a person as seen now in an organization (WebSocket connect/disconnect). */
 /** Not while the person is hidden: a "last seen" that keeps moving would give them away. */
+/** A person's "last seen" is written at most this often per workspace and process: every socket opens and closes it. */
+export const LAST_SEEN_EVERY_MS = 5 * 60_000;
+const lastSeenWritten = new Map<string, number>();
+
 export async function touchLastSeen(db: Database, orgId: string, userId: string, at = new Date()) {
+  if (cachesEnabled()) {
+    const key = `${orgId}:${userId}`;
+    if (at.getTime() - (lastSeenWritten.get(key) ?? Number.NEGATIVE_INFINITY) < LAST_SEEN_EVERY_MS) return;
+    // ponytail: forgets everyone at 50,000 people; each is written once more then.
+    if (lastSeenWritten.size >= 50_000) lastSeenWritten.clear();
+    lastSeenWritten.set(key, at.getTime());
+  }
   await db
     .update(organizationMembers)
     .set({ lastSeenAt: at })
@@ -2652,7 +2701,8 @@ export async function inviteMany(
 
 /**
  * Sends an invitation again with a fresh 7-day expiry. With `secret` its link stays the same (ADR 0090); without,
- * a new token replaces it and the old link stops working.
+ * a new token replaces it and the old link stops working. `unsuppress`: the last email went nowhere because the mail
+ * provider stopped mailing the address, so the one sent now asks it to mail the address again first.
  */
 export async function resendInvitation(
   db: Database,
@@ -2673,7 +2723,7 @@ export async function resendInvitation(
   // Its roles go again, expired or not: the ones still there, when the sender may give them (ADR 0085). So do its
   // channels and agents, as far as the sender may give them now (ADR 0184).
   const roleIds = await givableRoleIds(db, actor, orgId, await rolesStillThere(db, orgId, existing.roleIds));
-  return sendInvitation(db, {
+  const sent = await sendInvitation(db, {
     orgId,
     email: existing.email,
     role: existing.role,
@@ -2687,6 +2737,7 @@ export async function resendInvitation(
     invitationId,
     resent: true,
   });
+  return { ...sent, unsuppress: existing.undelivered === "suppressed" };
 }
 
 /**
@@ -2717,6 +2768,7 @@ export async function listInvitationsWithStatus(
       channelIds: i.channelIds,
       agentIds: i.agentIds,
       status: i.expiresAt > now ? ("pending" as const) : ("expired" as const),
+      undelivered: i.undelivered,
       expiresAt: i.expiresAt,
       createdAt: i.createdAt,
       invitedByUserId: i.invitedByUserId,

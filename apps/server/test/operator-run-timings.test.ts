@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { rowsOf, schema, sql, tracingLogger } from "@agenteschat/db";
-import { operatorRunTimings } from "@agenteschat/engine";
+import { rowsOf, schema, sql } from "@agenteschat/db";
+import { conditionWords, issuedBy } from "@agenteschat/db/testing";
+import { operatorRunTimings, recordRunBrain } from "@agenteschat/engine";
 import { createLogger } from "../src/logger";
 import { createOperatorApp } from "../src/operator/app";
 import { createTestServer, type TestServer } from "./harness";
@@ -72,21 +73,6 @@ async function ok<T = Record<string, unknown>>(res: Response) {
   return (await res.json()) as T;
 }
 const refusal = async (res: Response) => [res.status, ((await res.json()) as { error: { code: string } }).error.code];
-/** The statements `read` sent to the database, each on one line. */
-async function issuedBy(read: () => Promise<unknown>) {
-  const issued: string[] = [];
-  const logged = tracingLogger.logQuery;
-  tracingLogger.logQuery = (query?: string) => {
-    issued.push((query ?? "").replace(/\s+/g, " ").trim());
-    logged();
-  };
-  try {
-    await read();
-  } finally {
-    tracingLogger.logQuery = logged;
-  }
-  return issued;
-}
 
 type Rows = Record<string, unknown>[];
 type Timings = {
@@ -98,6 +84,7 @@ type Timings = {
   stages: Rows;
   stagesMore: boolean;
   computerStarts: Rows;
+  coldStarts: Rows;
   waits: Rows;
 };
 const timings = async (query: string) => ok<Timings>(await get(`/analytics/run-timings?${query}`));
@@ -107,10 +94,11 @@ type Claim = {
   queries: number;
   stages: { stage: string; ms: number; queries: number; parts?: { stage: string; ms: number; queries: number }[] }[];
   stagesCut: boolean;
-  computerTurns: ({ warm: boolean } & Record<string, number | null | boolean>)[];
+  computerTurns: ({ warm: boolean } & Record<string, string | number | null | boolean>)[];
 };
 // A turn's measures past the three every runner gives, none of them said.
 const unsaid = {
+  cold: null,
   firstTokenMs: null,
   firstAssistantMs: null,
   retries: null,
@@ -273,6 +261,7 @@ test("computer starts and waits: per brain, each wait until the run's next step,
         brain: [
           {
             warm: false,
+            cold: "new_session",
             initMs: 4000,
             firstEventMs: 6000,
             firstTokenMs: 5000,
@@ -331,6 +320,8 @@ test("computer starts and waits: per brain, each wait until the run's next step,
       thinkingCharsP90: 280,
     },
   ]);
+  // Why the cold one started its process.
+  expect(found.coldStarts).toEqual([{ brain: "claude_code", model: null, cause: "new_session", turns: 1 }]);
   const wait = (brain: string, cause: string, waits: number, runs: number, ...sec: number[]) => ({
     cause,
     brain,
@@ -790,8 +781,6 @@ test("the query is checked, the token is needed, and the read is bounded in time
 
 test("the waits are asked for in the words of the index that finds them", async () => {
   // The planner reads a run's waits through the partial index only when the statement holds the index's condition.
-  // Both are brought down to the same words: the index's as the database prints it, the statement's as it was sent.
-  const words = (text: string) => text.replace(/::\w+|[()\s]|\bs\./g, "").toLowerCase();
   const [index] = rowsOf<{ condition: string }>(
     await t.db.execute(
       sql`select pg_get_expr(indpred, indrelid) as condition from pg_index
@@ -802,7 +791,7 @@ test("the waits are asked for in the words of the index that finds them", async 
   const issued = await issuedBy(() => timings(`${windowOf(19)}&by=model`));
   const waits = issued.filter((statement) => statement.includes("agent_run_steps s "));
   expect(waits.length).toBe(1);
-  expect(words(waits[0] ?? "")).toContain(words(index?.condition ?? "none"));
+  expect(conditionWords(waits[0] ?? "")).toContain(conditionWords(index?.condition ?? "none"));
 });
 
 type ReplyTimes = {
@@ -893,6 +882,23 @@ test("reply times: from a person's message to the run's first message, per bucke
   expect(await replyTimes(windowOf(26))).toMatchObject({ replies: [], computerStarts: [], waits: [] });
 });
 
+test("reply times: every brain under its own name, none yet under other", async () => {
+  const at = (ms: number) => new Date(day(4) + ms);
+  for (const [i, brain] of ["antigravity", "cursor", "opencode", "grok", null].entries()) {
+    const asked = await message("hi", at(i * 10_000));
+    const made = await run({ createdAt: at(i * 10_000), triggerMessageId: asked, brain });
+    await message("hello", at(i * 10_000 + 1000 * (i + 1)), made.id);
+  }
+  const { replies } = await replyTimes(windowOf(4));
+  expect(replies.filter((r) => r.trigger === "all" && r.brain !== "all").map((r) => [r.brain, r.p50Ms])).toEqual([
+    ["antigravity", 1000],
+    ["cursor", 2000],
+    ["grok", 4000],
+    ["opencode", 3000],
+    ["other", 5000],
+  ]);
+});
+
 test("reply times: the server's notices are no reply, and an agent's message nobody waits on starts no count", async () => {
   const from = day(28);
   const at = (ms: number) => new Date(from + ms);
@@ -971,4 +977,51 @@ test("reply times: the window and the bucket are checked, and the token is neede
   expect(await refusal(await get(q({ from, to: plus(DAY), bucket: "week" })))).toEqual([400, "invalid_request"]);
   const issued = await issuedBy(() => replyTimes(windowOf(29)));
   expect(issued.filter((statement) => statement === "set local jit = off").length).toBe(3);
+});
+
+test("CLI runs: each run stamped with its computer's CLI version, counted by build with its failures, the window checked", async () => {
+  const at = (ms: number) => new Date(day(30) + ms);
+  await t.db
+    .update(schema.machines)
+    .set({
+      executors: {
+        claude: { version: "2.1.308 (Claude Code)" },
+        codex: { version: "codex-cli 0.171.0" },
+        grok: { version: "a line of its own words" },
+      },
+    })
+    .where(sql`${schema.machines.id} = ${adaBox}`);
+  const stamped = async (kind: "claude_code" | "codex" | "grok" | "model", status: "done" | "failed" | "running") => {
+    const made = await run({ createdAt: at(1000), status });
+    await recordRunBrain(t.db, made.id, kind, kind === "model" ? undefined : adaBox);
+    return made.id;
+  };
+  const first = await stamped("claude_code", "done");
+  await stamped("claude_code", "done");
+  await stamped("claude_code", "failed");
+  await stamped("codex", "failed");
+  // Still running, on the model brain, and a version line with no version in it: none is counted.
+  await stamped("claude_code", "running");
+  await stamped("model", "failed");
+  await stamped("grok", "failed");
+  const [row] = await t.db
+    .select({ cli: schema.agentRuns.cli })
+    .from(schema.agentRuns)
+    .where(sql`${schema.agentRuns.id} = ${first}`);
+  // The version alone, never the computer's line.
+  expect(row?.cli).toBe("claude 2.1.308");
+
+  const read = await ok<{ clis: unknown[] }>(await get(`/cli-runs?${windowOf(30)}`));
+  expect(read.clis).toEqual([
+    { cli: "claude", version: "2.1.308", runs: 3, failed: 1 },
+    { cli: "codex", version: "0.171.0", runs: 1, failed: 1 },
+  ]);
+  const from = new Date(day(30)).toISOString();
+  for (const to of [from, new Date(day(30) + 7 * DAY + 1).toISOString(), "soon"]) {
+    expect(await refusal(await get(`/cli-runs?from=${from}&to=${encodeURIComponent(to)}`))).toEqual([
+      400,
+      "analytics.range",
+    ]);
+  }
+  expect((await get(`/cli-runs?${windowOf(30)}`, null)).status).toBe(401);
 });

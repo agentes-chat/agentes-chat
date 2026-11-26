@@ -21,6 +21,7 @@ import {
   signUp,
   type TestServer,
   turnstileCheck,
+  unconfirm,
 } from "./harness";
 
 /** ADR 0194: the same server on extra hostnames, each with its own look before sign-in. */
@@ -360,6 +361,7 @@ test("a reset link goes to the main address wherever it was asked; a confirmatio
     return new URL(/https?:\/\/\S+\/api\/auth\/verify-email\S*/.exec(text)?.[0] ?? "").origin;
   };
   await signUp(on(browser(s), HOST), "dani@example.com");
+  await unconfirm(s, "dani@example.com");
   expect(await confirmation("dani@example.com")).toBe(HOST_ORIGIN);
   // A link is stamped to the second: asked for within the sign-up's, it would be the same email.
   await Bun.sleep(1000 - (Date.now() % 1000));
@@ -564,6 +566,9 @@ test("the app's page says it is on a registered host, so its boot hides the prod
     expect(await page(path, HOST)).toStartWith('<!doctype html>\n<html data-host lang="en"');
     expect(await page(path, "localhost:3000")).toBe(index);
   }
+  // The manifest would install the product's name and icon (ADR 0249): only on the server's own names.
+  expect(index).toContain('<link rel="manifest"');
+  expect(await page("/", HOST)).not.toContain('rel="manifest"');
 });
 
 const UNKNOWN = "app.unregistered.example";

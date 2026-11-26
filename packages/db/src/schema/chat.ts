@@ -14,7 +14,7 @@ import {
   unique,
   uuid,
 } from "drizzle-orm/pg-core";
-import { agents } from "./agents";
+import { agentGroups, agents } from "./agents";
 import { users } from "./auth";
 import { organizationMembers, organizations, orgRoles } from "./tenancy";
 
@@ -26,13 +26,13 @@ export const channelVisibilityEnum = pgEnum("channel_visibility", ["public", "pr
  * `forum` is unused: the forum was removed (migration 0216), and Postgres drops an enum value only by recreating the
  * type, which would rewrite `channels` under a lock.
  */
-export const channelKindEnum = pgEnum("channel_kind", ["channel", "dm", "forum", "task", "file"]);
+export const channelKindEnum = pgEnum("channel_kind", ["channel", "dm", "forum", "task", "file", "code"]);
 /** The kinds a channel has: no row is `forum` since migration 0216. */
 export type ChannelKind = Exclude<(typeof channelKindEnum.enumValues)[number], "forum">;
 
 /**
- * A named group of channels in the sidebar, the same for everyone in the organization. Deleting one leaves its
- * channels without a category.
+ * Unused since migration 0352 (ADR 0240): each category became a sector (`agent_groups`) and its channels moved
+ * there (`channels.group_id`). Kept until no running version reads it, then dropped in a later migration.
  */
 export const channelCategories = pgTable(
   "channel_categories",
@@ -79,10 +79,24 @@ export const channels = pgTable(
      * job and the row stays as a tombstone, named `deleted-<id>`, for its runs, usage and audit. Never undone.
      */
     deletedAt: timestamp({ withTimezone: true }),
-    /** Its sidebar category (channels only); null: on top, with no category. */
+    /** Unused since migration 0352 (ADR 0240): read `groupId`. Dropped once no running version reads it. */
     categoryId: uuid().references(() => channelCategories.id, { onDelete: "set null" }),
-    /** Order inside its category (or among the channels with none), from 0. */
+    /** Its sector (ADR 0240; channels only); null: under Canais, with none. Deleting the sector clears it. */
+    groupId: uuid().references(() => agentGroups.id, { onDelete: "set null" }),
+    /** Order inside its sector (or among the channels with none), from 0. */
     position: integer().notNull().default(0),
+    /**
+     * Agents asked in the main timeline answer in the thread under the message that called them (ADR 0214). On by
+     * default; read for regular channels only, so the value on other kinds means nothing. Each run keeps the value it
+     * was created with (`agent_runs.reply_in_thread`).
+     */
+    replyInThreads: boolean().notNull().default(true),
+    /**
+     * The agent responsible for the channel (ADR 0095, addendum of 2026-11-23): one of its member agents, or none.
+     * What a person says to the room goes to it, and it is given the turn when work it didn't hand off ends here.
+     * Regular channels only; cleared when the agent leaves the channel.
+     */
+    leadAgentId: uuid().references(() => agents.id, { onDelete: "set null" }),
   },
   (t) => [unique().on(t.orgId, t.name), unique().on(t.orgId, t.id), unique().on(t.orgId, t.dmKey)],
 );

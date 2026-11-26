@@ -255,7 +255,8 @@ describe("git on a connected machine through the proxy (ADR 0024 addendum)", () 
     const ctx = await runCtx();
     const tools = await source.tools(ctx);
     // GitHub's own tools count as GitHub the native way, beside its MCP server's (ADR 0103).
-    expect(tools.map((t) => t.connector)).toEqual(
+    // (The first, `list_repositories`, is every host's and counts as no connector's.)
+    expect(tools.slice(1).map((t) => t.connector)).toEqual(
       ["git_clone", "open_pull_request", "delete_branches", "request_branch_push"].map((tool) => ({
         key: "github",
         via: "native",
@@ -380,7 +381,7 @@ describe("git on a connected machine through the proxy (ADR 0024 addendum)", () 
     // Where it starts goes in the turn's prompt, with the agent's own line on its commits (ADR 0156): the system text
     // stays the same whichever checkout a turn is about.
     expect(named?.start).toBe(
-      `You start in ${FOLDER}/repos/acme/web.\nCommits you make this turn: end each commit message with the line Co-authored-by: Dev <noreply@agentes.chat>`,
+      `You start in ${FOLDER}/repos/acme/web.\nCommits you make this turn: end each commit message with the line Co-Authored-By: Dev <noreply@agentes.chat>`,
     );
     expect(named?.prompt).not.toContain("beta/old");
     // Nothing named: the agent's first repository.
@@ -799,7 +800,7 @@ describe("agents' commits and the GitHub App (ADR 0156)", () => {
       session: { machineId: w.paired.machineId, cwd: "" },
     };
     w.answers.fn = () => [];
-    const dev = "Co-authored-by: Dev <noreply@agentes.chat>";
+    const dev = "Co-Authored-By: Dev <noreply@agentes.chat>";
     const own = `Commits you make this turn: end each commit message with the line ${dev}`;
     // The agent's own line turned off and no GitHub linked: nothing to say.
     await setAgentCoAuthor(f.db, f.org.id, false);
@@ -814,7 +815,7 @@ describe("agents' commits and the GitHub App (ADR 0156)", () => {
     await f.db
       .insert(schema.accounts)
       .values({ id: crypto.randomUUID(), accountId: "583231", providerId: "github", userId: f.owner.id });
-    const credit = `Commits you make this turn: end each commit message with the lines ${dev} and Co-authored-by: ana <583231+ana-gh@users.noreply.github.com>`;
+    const credit = `Commits you make this turn: end each commit message with the lines ${dev} and Co-Authored-By: ana <583231+ana-gh@users.noreply.github.com>`;
     // Nothing checked out yet: the line comes all the same.
     expect(await prepareAgentCode(deps, turn)).toEqual({
       cwd: "",
@@ -852,7 +853,7 @@ describe("agents' commits and the GitHub App (ADR 0156)", () => {
       })
       .returning();
     expect((await prepareAgentCode(deps, { ...turn, runId: run?.id }))?.start).toBe(
-      `You start in ${FOLDER}/repos/acme/app.\nCommits you make this turn: end each commit message with the lines ${dev} and Co-authored-by: bia <583232+bia-gh@users.noreply.github.com>`,
+      `You start in ${FOLDER}/repos/acme/app.\nCommits you make this turn: end each commit message with the lines ${dev} and Co-Authored-By: bia <583232+bia-gh@users.noreply.github.com>`,
     );
     // Nobody asked and nobody answers for the agent: no person's credit, the agent's own line alone.
     await f.db.update(schema.agents).set({ ownerUserId: null }).where(eq(schema.agents.id, f.agent.id));

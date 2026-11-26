@@ -4,6 +4,7 @@ import {
   formatList,
   formatMoneyUsd,
   formatPhone,
+  formatSpan,
   formatTime,
   maskPhone,
   plural,
@@ -104,4 +105,13 @@ describe("phone numbers", () => {
     expect(maskPhone("447700900123")).toBe("+44 •••• ••0123");
     expect(maskPhone("ana.example")).toBe("ana.example");
   });
+});
+
+test("formatSpan: how long something lasted, to the minute, in the language's own units", () => {
+  expect(formatSpan("en", 20_000)).toBe("1 min");
+  expect(formatSpan("en", 42 * 60_000)).toBe("42 min");
+  expect(formatSpan("en", 120 * 60_000)).toBe("2 hr");
+  expect(formatSpan("pt-BR", 125 * 60_000)).toBe("2 h 5 min");
+  // ICU's data spaces Japanese units differently by platform.
+  expect(formatSpan("ja", 125 * 60_000)).toMatch(/^2 ?時間 5 ?分$/);
 });
