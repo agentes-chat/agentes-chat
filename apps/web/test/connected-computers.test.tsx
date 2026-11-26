@@ -993,7 +993,7 @@ describe("the computer page: pause, folders and tools (ADR 0036)", () => {
   });
 
   test("Liberar uma pasta: the app on the computer opens its folder picker there, and the card waits for the folder", async () => {
-    const { state, m } = await open({ folderPick: true });
+    const { state, m, machines, socket } = await open({ folderPick: true });
     const grant = screen().getByRole("region", { name: "Para liberar mais" });
     expect(grant.textContent).toContain("O app do agentes.chat abre a escolha de pasta no");
     // The command is for a computer without the app: none here.
@@ -1005,6 +1005,15 @@ describe("the computer page: pause, folders and tools (ADR 0036)", () => {
       [ORG_ID, m.id, {}],
     ]);
     expect(within(grant).getByRole("status").textContent).toBe(`Esperando a escolha da pasta no ${m.name}`);
+    // The person there picks a folder already allowed (DOCS, for nobody yet): its agents change, not the count.
+    const folders = [
+      { path: LOJA, agents: [ADA_ID] },
+      { path: DOCS, agents: [ADA_ID] },
+    ];
+    machines.patch(m.id, { access: { ...(m.access as NonNullable<Machine["access"]>), folders } });
+    await act(async () => socket.push(orgEvent({ type: "machine.updated", machineId: m.id, access: true })));
+    await settle(4);
+    expect(within(grant).queryByRole("status")).toBeNull();
   });
 
   test("a Windows computer: what holds Codex there joins its ⓘ when it is less than MXC, never as a line", async () => {

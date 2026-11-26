@@ -1003,9 +1003,9 @@ function GrantSection({ machine: m }: { machine: Machine }) {
   const { t } = useTranslation();
   const toast = useToast();
   const ask = useAskMachineFolder(useOrgId());
-  const folders = m.access?.folders.length ?? 0;
-  // A folder allowed there (picked, or any other way) ends the wait.
-  const [askedAt, setAskedAt] = useState<number | null>(null);
+  // A folder allowed there (picked, or any other way, a folder already allowed given to more agents too) ends the wait.
+  const folders = JSON.stringify(m.access?.folders ?? []);
+  const [askedAt, setAskedAt] = useState<string | null>(null);
   const waiting = askedAt !== null && askedAt === folders;
   // In system mode the runner's settings are root's (ADR 0057): allowing takes the computer's administrator.
   const system = m.mode === "system";

@@ -719,9 +719,9 @@ function AskFolder({ machine: m }: { machine: Machine }) {
   const { org } = useOrg();
   const toast = useToast();
   const ask = useAskMachineFolder(org.id);
-  const folders = m.access?.folders.length ?? 0;
-  // A folder allowed there (picked, or any other way) ends the wait.
-  const [askedAt, setAskedAt] = useState<number | null>(null);
+  // A folder allowed there (picked, or any other way, a folder already allowed given to more agents too) ends the wait.
+  const folders = JSON.stringify(m.access?.folders ?? []);
+  const [askedAt, setAskedAt] = useState<string | null>(null);
   const asked = askedAt !== null && askedAt === folders;
   return (
     <div className="row machine-grant__ask" style={{ gap: 12, alignItems: "center", flexWrap: "wrap" }}>
