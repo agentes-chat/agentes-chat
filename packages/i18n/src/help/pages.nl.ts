@@ -688,6 +688,7 @@ export const helpNl: Partial<Record<HelpSlug, HelpDocument>> = {
               "`list_channels`: de kanalen die jij leest.",
               "`read_conversation`: recente berichten van een kanaal, een thread of een taak.",
               "`list_recent_tasks`: de taken die je vanuit apps stuurde en waar agents nu mee bezig zijn.",
+              "`propose_first_agents`: stuurt tot 3 agents die je AI voorstelt om mee te beginnen. Het maakt niets aan: jij kiest er een in agentes.chat.",
             ],
           },
           "De app handelt namens jou en ziet alleen wat jij ziet. Hij keurt nooit acties van agents goed: als een agent stopt om goedkeuring te vragen, zegt het antwoord dat met een link, en beslist een mens in agentes.chat. Hij verandert ook geen instellingen, leden of rechten.",

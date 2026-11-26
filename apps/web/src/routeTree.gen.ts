@@ -460,8 +460,8 @@ export interface FileRoutesByFullPath {
   '/desktop/signed-in': typeof DesktopSignedInRoute
   '/dev/gallery': typeof DevGalleryRoute
   '/invite/$token': typeof InviteTokenRoute
-  '/welcome/$orgId': typeof WelcomeOrgIdRoute
   '/org/$orgId': typeof OrgOrgIdRouteWithChildren
+  '/welcome/$orgId': typeof WelcomeOrgIdRoute
   '/org/$orgId/approvals': typeof OrgOrgIdApprovalsRoute
   '/org/$orgId/calendar': typeof OrgOrgIdCalendarRoute
   '/org/$orgId/connectors': typeof OrgOrgIdConnectorsRoute
@@ -602,8 +602,8 @@ export interface FileRoutesById {
   '/desktop/signed-in': typeof DesktopSignedInRoute
   '/dev/gallery': typeof DevGalleryRoute
   '/invite/$token': typeof InviteTokenRoute
-  '/welcome/$orgId': typeof WelcomeOrgIdRoute
   '/org/$orgId': typeof OrgOrgIdRouteWithChildren
+  '/welcome/$orgId': typeof WelcomeOrgIdRoute
   '/org/$orgId/approvals': typeof OrgOrgIdApprovalsRoute
   '/org/$orgId/calendar': typeof OrgOrgIdCalendarRoute
   '/org/$orgId/connectors': typeof OrgOrgIdConnectorsRoute
@@ -675,8 +675,8 @@ export interface FileRouteTypes {
     | '/desktop/signed-in'
     | '/dev/gallery'
     | '/invite/$token'
-    | '/welcome/$orgId'
     | '/org/$orgId'
+    | '/welcome/$orgId'
     | '/org/$orgId/approvals'
     | '/org/$orgId/calendar'
     | '/org/$orgId/connectors'
@@ -816,8 +816,8 @@ export interface FileRouteTypes {
     | '/desktop/signed-in'
     | '/dev/gallery'
     | '/invite/$token'
-    | '/welcome/$orgId'
     | '/org/$orgId'
+    | '/welcome/$orgId'
     | '/org/$orgId/approvals'
     | '/org/$orgId/calendar'
     | '/org/$orgId/connectors'
@@ -1069,18 +1069,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InviteTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/welcome/$orgId': {
-      id: '/welcome/$orgId'
-      path: '/welcome/$orgId'
-      fullPath: '/welcome/$orgId'
-      preLoaderRoute: typeof WelcomeOrgIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/org/$orgId': {
       id: '/org/$orgId'
       path: '/org/$orgId'
       fullPath: '/org/$orgId'
       preLoaderRoute: typeof OrgOrgIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/welcome/$orgId': {
+      id: '/welcome/$orgId'
+      path: '/welcome/$orgId'
+      fullPath: '/welcome/$orgId'
+      preLoaderRoute: typeof WelcomeOrgIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/org/$orgId/': {

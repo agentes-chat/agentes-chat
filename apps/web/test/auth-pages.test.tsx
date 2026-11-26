@@ -1576,18 +1576,20 @@ describe("Onboarding: the workspace's name", () => {
     }
   });
 
-  test("the top bar starts under the Mac's buttons, clear of the desktop app's drag strip", () => {
+  test("the onboarding clears the desktop app's title bar: its top bar under the Mac's buttons, no strip elsewhere", () => {
     const sheet = (path: string) => readFileSync(join(import.meta.dir, "../src", path), "utf8");
     const css = sheet("pages/onboarding/shell.css");
     const desktop = sheet("desktop.css");
     const rule = (from: string, selector: string) => from.slice(from.indexOf(`${selector} {`)).split("}")[0] ?? "";
     // The logo and the account in a bar of their own, 56px tall.
     expect(rule(css, "\n.onbw__top")).toContain("height: 56px");
-    // Under the Mac's buttons the bar grows by the title bar's height and keeps its 56px under it.
+    // Under the Mac's buttons the bar grows by the title bar's height and keeps its 56px under it; a new agent's rail
+    // moves down too.
     const mac = 'html[data-desktop="mac"]:not([data-fullscreen])';
     const top = rule(desktop, `\n${mac} .onbw__top`);
     expect(top).toContain("height: calc(56px + var(--titlebar-h))");
     expect(top).toContain("padding-top: var(--titlebar-h)");
+    expect(rule(desktop, `\n${mac} .onb__rail`)).toContain("padding-top: calc(var(--titlebar-h) + 8px)");
     // Where the window isn't dragged from the page (full screen, Windows' and Linux's own title bars), no drag strip
     // lies over the bar.
     expect(

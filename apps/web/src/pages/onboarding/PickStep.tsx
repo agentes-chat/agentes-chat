@@ -30,10 +30,10 @@ const MAIL_MARKS: Record<string, Pick<ConnectorDef, "iconUrl" | "brandColor">> =
 
 /**
  * How many options the AI sent, in words ("três"), as the lead says its tasks and the bubble its ways to start: at
- * most three come, and one has words of its own (`_one`).
+ * most three come. One has words of its own (`_one`), except in a language whose plural has no `_one` form.
  */
 export const optionCount = (t: TFunction, count: number, noun: "tasks" | "ways") =>
-  count === 2 ? t(`onboarding.pick.count.${noun}.two`) : t(`onboarding.pick.count.${noun}.three`);
+  t(`onboarding.pick.count.${noun}.${count === 1 ? "one" : count === 2 ? "two" : "three"}`);
 
 /**
  * The proposal to pick from: a newer one the AI sent meanwhile (unpicked, with options) takes the place of the one on

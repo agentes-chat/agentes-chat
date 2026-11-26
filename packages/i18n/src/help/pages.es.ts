@@ -692,6 +692,7 @@ export const helpEs: Partial<Record<HelpSlug, HelpDocument>> = {
               "`list_channels`: los canales que lees.",
               "`read_conversation`: los mensajes recientes de un canal, un hilo o una tarea.",
               "`list_recent_tasks`: las tareas que enviaste desde apps y lo que los agentes están haciendo ahora.",
+              "`propose_first_agents`: envía hasta 3 agentes que tu IA propone para que empieces. No crea nada: eliges uno en agentes.chat.",
             ],
           },
           "La app actúa en tu nombre y solo ve lo que tú ves. Nunca aprueba las acciones de los agentes: cuando un agente se detiene para pedir aprobación, la respuesta lo dice con un enlace, y una persona decide en agentes.chat. Tampoco cambia la configuración, los miembros ni los permisos.",
