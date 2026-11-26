@@ -296,9 +296,10 @@ agent (ADR 0250), shows that agent's first week, and hires it with the plan. Ame
   first agent with its role and first task, the right hand as the agents' HR; the right hand alone from scratch); the
   recommended plan in two lines, its name and price with "See all plans", then what it includes. The people a plan
   includes are said only when the billing service's `plans.json` gives them (an optional `people` per plan, read by
-  `planOfferOf`); this server still names no plan or price. "Not now" leaves the plan for later as before (the
-  workspace opens in the right hand's DM); the button opens the plan's Checkout. The hint on why the Cloud is paid stays
-  beside the plan's name.
+  `planOfferOf`); this server still names no plan or price. A personal workspace, its owner's alone, is offered the
+  plan for one person (`people: 1`) when the list has one, else the recommended one. "Not now" leaves the plan for
+  later as before (the workspace opens in the right hand's DM); the button opens the plan's Checkout. The hint on why
+  the Cloud is paid stays beside the plan's name.
 - **Back from Checkout, the team's photo.** In the plan step's place, once per payment (ADR 0079's moment): the team
   in daylight with the person among them and a few pixels of confetti, the right hand saying hello, "<org>'s team ·
   since <date>", who is in it, and what is left (the plan checked, the AI, the people, then the first agent's
