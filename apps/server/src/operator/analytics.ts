@@ -486,6 +486,14 @@ const RunTimings = z
           coldFirstEventMedianMs: Ms,
           coldFirstEventP90Ms: Ms,
           coldFirstEventP99Ms: Ms,
+          firstRequestMedianMs: Ms.openapi({
+            description: "Turn start to the CLI's first API request (newer runners): before it, the CLI's own work.",
+          }),
+          firstRequestP90Ms: Ms,
+          apiWaitMedianMs: Ms.openapi({
+            description: "The CLI's first API request to the API's first streamed message: the network and the API.",
+          }),
+          apiWaitP90Ms: Ms,
           firstTokenMedianMs: Ms.openapi({
             description: "Turn start to the model API's first streamed message (newer runners).",
           }),

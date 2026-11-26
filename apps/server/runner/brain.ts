@@ -472,6 +472,8 @@ function taskOf(ev: Record<string, unknown>): ParsedTask | undefined {
 
 /** Where a request's model time went on its process, for its timings (`ClaudeStreamParser.stats`). */
 export interface ClaudeTurnStats {
+  /** The CLI's first API request of the main conversation (`system/status` "requesting"). */
+  firstRequestAt?: number;
   /** The API's first streamed message of the main conversation (`message_start`), and its first whole block. */
   firstTokenAt?: number;
   firstAssistantAt?: number;
@@ -607,6 +609,7 @@ export class ClaudeStreamParser {
         // Claude Code says `init` as each turn starts (also one it starts by itself).
         if (ev.subtype === "init") return { events: [], turnStart: true };
         if (ev.subtype === "status" && main) this.compacting = ev.status === "compacting";
+        if (ev.subtype === "status" && main && ev.status === "requesting") this.stats.firstRequestAt ??= this.now();
         if (ev.subtype === "compact_boundary" && main) {
           this.compacted = true;
           this.compacting = false;
@@ -2812,6 +2815,7 @@ export class BrainManager {
       const measures: Omit<BrainTurnTimings, "warm"> = {
         initMs: since(started?.proc.initAt),
         firstEventMs,
+        firstRequestMs: since(s.firstRequestAt),
         firstTokenMs: since(s.firstTokenAt),
         firstAssistantMs: since(s.firstAssistantAt),
         retries: s.retries,
