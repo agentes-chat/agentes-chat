@@ -227,6 +227,53 @@ describe("Anthropic-compatible providers (scripted transport)", () => {
     expect(seen.imagesLeftOut).toBeUndefined();
   });
 
+  test("a PDF goes as its own text where the PDF can't, with nothing flagged; one with no text keeps the note", async () => {
+    const asked = (model: string, text?: string): ModelRequest =>
+      request({
+        model,
+        messages: [
+          { role: "user", content: "o que diz o contrato?" },
+          { role: "assistant", content: [{ type: "tool_use", id: "t1", name: "read_artifact", input: {} }] },
+          {
+            role: "user",
+            content: [
+              {
+                type: "tool_result",
+                toolUseId: "t1",
+                content: "contrato.pdf",
+                images: [
+                  {
+                    mediaType: "application/pdf",
+                    data: "JVBERi0=",
+                    pages: 1,
+                    name: "contrato.pdf",
+                    ...(text ? { text } : {}),
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+    const words = '<external_data source="file contrato.pdf">\nPrazo de 30 dias.\n</external_data>';
+    for (const model of ["deepseek-flash", "deepseek-v4-pro"]) {
+      const sent = compat("deepseek", sse([start(model), ...text(0, "30 dias"), ...end("end_turn", {})]));
+      const seen = await sent.provider.stream(asked(model, words), quiet);
+      const body = JSON.stringify(sent.requests[0]?.body.messages);
+      expect(body).not.toContain('"type":"document"');
+      expect(body).toContain(JSON.stringify(words).slice(1, -1));
+      expect(body).toContain(`The PDF contrato.pdf is not shown to you as pages: this agent's AI (${model})`);
+      expect(body).not.toContain("The PDF is not shown to you");
+      expect(seen.imagesLeftOut).toBeUndefined();
+    }
+    const scan = compat("deepseek", sse([start("deepseek-flash"), ...text(0, "?"), ...end("end_turn", {})]));
+    const blind = await scan.provider.stream(asked("deepseek-flash"), quiet);
+    expect(JSON.stringify(scan.requests[0]?.body.messages)).toContain(
+      "The PDF is not shown to you: this agent's AI (deepseek-flash) reads pictures through this connection, not PDFs. No text could be read out of the PDF either",
+    );
+    expect(blind.imagesLeftOut).toBe(true);
+  });
+
   test("max goes as high to an endpoint whose models don't list it", async () => {
     const { provider, requests } = compat(
       "moonshot",

@@ -11,8 +11,8 @@ import {
   type ContentBlock,
   deniedError,
   hasToolImages,
-  isPdfImage,
   laidOut,
+  lostWithoutImages,
   type ModelMessage,
   type ModelProvider,
   type ModelRequest,
@@ -143,7 +143,7 @@ export function createAnthropicProvider(
       };
       const textOnly = Boolean(compat && !compat.images);
       const pictures = textOnly && info?.images === true;
-      const leftOut = textOnly && hasToolImages(request.messages, pictures ? isPdfImage : undefined);
+      const leftOut = textOnly && hasToolImages(request.messages, lostWithoutImages(pictures));
       const updates = !compat && !thinkingOff && options.progressNotes !== false && info?.thinkingUpdates === true;
       const params = (withThinking: boolean) => {
         // `block_binding` is taken only with thinking on; the call made without thinking goes plain.

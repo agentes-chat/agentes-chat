@@ -270,9 +270,12 @@ describe("attachments reach every brain", () => {
           if (!seesPictures) expect(body).toContain("The picture is not shown to you: this agent's AI (");
           got = seesPictures ? "picture" : "note";
         } else if (file.shown === "pdf") {
+          // Where the PDF itself can't go, its text does.
           expect(PDF_BLOCK.test(body)).toBe(readsPdf);
-          if (!readsPdf) expect(body).toContain("The PDF is not shown to you");
-          got = readsPdf ? "pdf" : "note";
+          expect(body.includes("Vendas subiram")).toBe(!readsPdf);
+          if (!readsPdf) expect(body).toContain("The PDF relatorio.pdf is not shown to you as pages");
+          expect(body).not.toContain("The PDF is not shown to you");
+          got = readsPdf ? "pdf" : "pdf text";
         } else {
           // Text, and every exact cause, reach every brain as they are.
           expect(body).toContain(JSON.stringify(file.has).slice(1, -1));
