@@ -3807,10 +3807,22 @@
       "zen": "Połącz OpenCode",
       "api_key": "Dodaj klucz API"
     },
+    "cliFetch": {
+      "preparing": "Przygotowywanie {{program}} na {{computer}}…",
+      "preparingPct": "Przygotowywanie {{program}} na {{computer}}… {{percent}}%",
+      "failed": {
+        "offline": "Nie udało się przygotować {{program}} na {{computer}}: komputer nie może pobrać pliku.",
+        "hash_mismatch": "Nie udało się przygotować {{program}} na {{computer}}: pobrany plik nie był oryginalny, więc go nie użyto.",
+        "no_build": "{{program}} nie ma wersji dla systemu {{computer}}.",
+        "disk_full": "Nie udało się przygotować {{program}} na {{computer}}: dysk jest pełny.",
+        "failed": "Nie udało się przygotować {{program}} na {{computer}}: pobieranie się nie zakończyło."
+      }
+    },
     "cli": {
       "missing": "{{program}} nie ma jeszcze na {{computer}}.",
       "claudeApp": "Sama aplikacja Claude nie wystarczy: agenci używają Claude Code, który działa na komputerze.",
       "install": "Zainstaluj {{program}} za mnie",
+      "update": "Zaktualizuj {{program}} za mnie",
       "check": "Zainstalowałem, sprawdź ponownie",
       "checked": "Sprawdzone przed chwilą: {{program}} nadal nie ma na {{computer}}.",
       "installing": "Instalowanie {{program}} na {{computer}}. Potrwa to około minuty.",
@@ -7012,6 +7024,7 @@
         "cli_failed": "Program {{brain}} zatrzymał się z błędem: {{detail}}",
         "cli_stopped": "Program {{brain}} zatrzymał się z błędem.",
         "cli_closed": "Program {{brain}} nagle się zamknął.",
+        "cli_empty": "Program {{brain}} zakończył swoją turę bez odpowiedzi. Zapytaj ponownie. Jeśli to się powtarza, zaktualizuj {{brain}} na komputerze albo wybierz inną AI w ustawieniach agenta.",
         "cli_sandbox": "Program {{brain}} nie może uruchomić swojego sandboxa na tym komputerze. Wybierz inną AI w ustawieniach agenta.",
         "cli_system": "Program {{brain}} nie działa jeszcze w systemie tego komputera. Wybierz inną AI w ustawieniach agenta.",
         "account_missing": "Konta wybranego dla tego agenta nie ma już na jego komputerze. Wybierz inne w ustawieniach agenta albo dodaj je ponownie.",
@@ -13651,6 +13664,8 @@
       "tool_offOne": "{{program}} jest wyłączony na {{computer}}.",
       "not_installed": "{{program}} nie jest zainstalowany na komputerze {{computer}}.",
       "cant_start": "{{program}} jest na {{computer}}, ale się nie uruchamia.",
+      "cli_outdated": "{{program}} na komputerze {{computer}} wymaga aktualizacji, zanim agenci będą mogli go używać.",
+      "cli_outdatedRun": "{{program}} na komputerze {{computer}} wymaga aktualizacji, zanim agenci będą mogli go używać. Uruchom tam {{command}}.",
       "home_only": "{{program}} jest zainstalowany na {{computer}} tylko dla roota, do którego agenci nie mają dostępu.",
       "not_reported": "{{computer}} wciąż sprawdza, jakie ma programy. To zmieni się samo, gdy skończy.",
       "system": "{{program}} nie działa jeszcze w systemie komputera {{computer}}.",
@@ -17172,6 +17187,7 @@
       "privateNetwork": "Ten adres jest w sieci prywatnej. Użyj adresu publicznego albo na własnym serwerze zezwól na niego w `OUTBOUND_ALLOW_CIDRS`.",
       "tooLong": "To za długie. Skróć i spróbuj ponownie.",
       "updateComputerApp": "Aplikacja na komputerze jest na to zbyt stara. Zaktualizuj ją i spróbuj ponownie.",
+      "cliNotFetched": "Ten komputer nie pobiera tego programu sam.",
       "computerUpdatesItself": "Komputer przestrzeni roboczej sam się do tego aktualizuje. Spróbuj ponownie za chwilę.",
       "notInvited": "Nie ma cię wśród zaproszonych na to wydarzenie.",
       "offHere": "To jest tutaj wyłączone.",
@@ -20098,7 +20114,8 @@
       "missing": "Tej rozmowy już tu nie ma.",
       "helping": "pomaga agentowi {{name}}",
       "helping_female": "pomaga agentce {{name}}",
-      "see": "Zobacz rozmowę"
+      "see": "Zobacz rozmowę",
+      "relay": "Odpowiedź od {{name}}: {{excerpt}}. Zobacz rozmowę"
     },
     "unshown": "Nie udało się wyświetlić tej wiadomości",
     "unshownPart": "Nie udało się wyświetlić części tej wiadomości",
@@ -20279,6 +20296,7 @@
         "usingScreen": "Użyto ekranu",
         "cloningRepo": "Sklonowano repozytorium",
         "listingRepos": "Wyświetlono repozytoria",
+        "preparingCli": "Przygotowano {{app}}",
         "openingPullRequest": "Otwarto pull request",
         "handingOff": "Dostarczono raport",
         "recordingFindings": "Zapisano ustalenia",
@@ -20402,6 +20420,8 @@
       "usingScreen": "korzystanie z ekranu",
       "cloningRepo": "klonowanie repozytorium",
       "listingRepos": "wyświetla repozytoria",
+      "preparingCli": "przygotowywanie {{app}} na {{computer}}",
+      "preparingCliPct": "przygotowywanie {{app}} na {{computer}} ({{percent}}%)",
       "openingPullRequest": "otwieranie pull requesta",
       "handingOff": "dostarczanie raportu",
       "recordingFindings": "zapisywanie ustaleń",

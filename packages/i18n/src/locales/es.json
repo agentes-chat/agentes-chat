@@ -3664,10 +3664,22 @@
       "zen": "Conectar OpenCode",
       "api_key": "Agrega una clave de API"
     },
+    "cliFetch": {
+      "preparing": "Preparando {{program}} en {{computer}}…",
+      "preparingPct": "Preparando {{program}} en {{computer}}… {{percent}} %",
+      "failed": {
+        "offline": "No se pudo preparar {{program}} en {{computer}}: la computadora no logra descargarlo.",
+        "hash_mismatch": "No se pudo preparar {{program}} en {{computer}}: la descarga no era el archivo original, así que no se usó.",
+        "no_build": "{{program}} no tiene versión para el sistema de {{computer}}.",
+        "disk_full": "No se pudo preparar {{program}} en {{computer}}: el disco está lleno.",
+        "failed": "No se pudo preparar {{program}} en {{computer}}: la descarga no terminó."
+      }
+    },
     "cli": {
       "missing": "{{program}} todavía no está en {{computer}}.",
       "claudeApp": "La app de Claude no basta: los agentes usan Claude Code, que se ejecuta en el computador.",
       "install": "Instalar {{program}} por mí",
+      "update": "Actualizar {{program}} por mí",
       "check": "Ya lo instalé, comprobar de nuevo",
       "checked": "Comprobado ahora: {{program}} todavía no está en {{computer}}.",
       "installing": "Instalando {{program}} en {{computer}}. Tarda alrededor de un minuto.",
@@ -6725,6 +6737,7 @@
         "cli_failed": "El programa {{brain}} se detuvo con un error: {{detail}}",
         "cli_stopped": "El programa {{brain}} se detuvo con un error.",
         "cli_closed": "El programa {{brain}} se cerró de repente.",
+        "cli_empty": "El programa {{brain}} terminó su turno sin responder. Pregunta de nuevo. Si sigue pasando, actualiza {{brain}} en la computadora o elige otra IA en la configuración del agente.",
         "cli_sandbox": "El programa {{brain}} no puede iniciar su sandbox en esta computadora. Elige otra IA en la configuración del agente.",
         "cli_system": "El programa {{brain}} todavía no funciona en el sistema de esta computadora. Elige otra IA en la configuración del agente.",
         "account_missing": "La cuenta elegida para este agente ya no está en su computadora. Elige otra en la configuración del agente o agrégala de nuevo.",
@@ -13096,6 +13109,8 @@
       "tool_offOne": "{{program}} está desactivado en {{computer}}.",
       "not_installed": "{{program}} no está instalado en {{computer}}.",
       "cant_start": "{{program}} está en {{computer}}, pero no abre.",
+      "cli_outdated": "{{program}} en {{computer}} necesita una actualización para que los agentes lo usen.",
+      "cli_outdatedRun": "{{program}} en {{computer}} necesita una actualización para que los agentes lo usen. Ejecuta {{command}} allí.",
       "home_only": "{{program}} está instalado solo para root en {{computer}}, donde los agentes no llegan.",
       "not_reported": "{{computer}} todavía está comprobando qué programas tiene. Esto cambia solo cuando termine.",
       "system": "{{program}} todavía no funciona en el sistema de {{computer}}.",
@@ -16530,6 +16545,7 @@
       "privateNetwork": "Esta dirección está en una red privada. Usa una dirección pública o, en un servidor propio, permítela con `OUTBOUND_ALLOW_CIDRS`.",
       "tooLong": "Es demasiado largo. Acórtalo e inténtalo de nuevo.",
       "updateComputerApp": "La app de la computadora es demasiado antigua para esto. Actualízala e inténtalo de nuevo.",
+      "cliNotFetched": "Esta computadora no obtiene ese programa por sí sola.",
       "computerUpdatesItself": "La computadora del espacio de trabajo se actualiza sola para esto. Vuelve a intentarlo en un rato.",
       "notInvited": "No estás entre los invitados de este evento.",
       "offHere": "Esto está desactivado aquí.",
@@ -19408,7 +19424,8 @@
       "talk": "Hablar con {{name}}",
       "missing": "Esta conversación ya no está aquí.",
       "helping": "ayudando a {{name}}",
-      "see": "Ver conversación"
+      "see": "Ver conversación",
+      "relay": "Respuesta de {{name}}: {{excerpt}}. Ver la conversación"
     },
     "unshown": "Este mensaje no se pudo mostrar",
     "unshownPart": "Parte de este mensaje no se pudo mostrar",
@@ -19585,6 +19602,7 @@
         "usingScreen": "Usó la pantalla",
         "cloningRepo": "Clonó un repositorio",
         "listingRepos": "Listó los repositorios",
+        "preparingCli": "Preparó {{app}}",
         "openingPullRequest": "Abrió un pull request",
         "handingOff": "Entregó un informe",
         "recordingFindings": "Anotó los hallazgos",
@@ -19708,6 +19726,8 @@
       "usingScreen": "usando la pantalla",
       "cloningRepo": "clonando un repositorio",
       "listingRepos": "listando los repositorios",
+      "preparingCli": "preparando {{app}} en {{computer}}",
+      "preparingCliPct": "preparando {{app}} en {{computer}} ({{percent}} %)",
       "openingPullRequest": "abriendo un pull request",
       "handingOff": "entregando un informe",
       "recordingFindings": "anotando los hallazgos",

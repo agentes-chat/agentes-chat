@@ -27,6 +27,7 @@ import { planFull, planState } from "@agenteschat/ui/plan-state";
 import type { Agent } from "../agents";
 import { replyRefusal } from "../ai-accounts/reply";
 import { accountServes } from "../ai-accounts/serves";
+import { fetchesCli } from "../cli-fetch";
 import type { CodeSessionContext } from "../code-sessions";
 import type { ModelGateway } from "../gateway";
 import type { MachineStatus } from "../machine-hub";
@@ -43,7 +44,14 @@ import {
 import { runState } from "../run-state";
 import { runnerUpdateWay } from "../runner-update";
 import type { AgentRun } from "../runs";
-import { accountUnavailable, brainSessionId, claudeCodeAvailability, cliMissingMessage, toolOff } from "./claude-code";
+import {
+  accountUnavailable,
+  brainSessionId,
+  claudeCodeAvailability,
+  cliMissingMessage,
+  cliOutdated,
+  toolOff,
+} from "./claude-code";
 import { BRAIN_NAMES, BRAIN_PLAN_NAMES, type BrainAccount, type BrainKind, type BrainSession } from "./types";
 
 const KINDS: readonly BrainKind[] = ["model", "claude_code", "codex", "cursor", "opencode", "grok", "antigravity"];
@@ -453,9 +461,11 @@ export function computerBrainUnavailable(
         message: `The runner on ${status.name} is too old for ${name} agents on Windows. ${runnerUpdateWay(status)}`,
       };
     }
-    if (status.executors?.detectedAt && !status.executors[kind]) {
+    if (status.executors?.detectedAt && !status.executors[kind] && !fetchesCli(status, kind)) {
       return { code: `${kind}_missing`, message: cliMissingMessage(`${name}'s CLI`, status, kind) };
     }
+    const old = cliOutdated(status, kind, name);
+    if (old) return old;
     return accountUnavailable(status, account, kind);
   }
   const off = toolOff(status, "codex");
@@ -469,9 +479,11 @@ export function computerBrainUnavailable(
     };
   }
   const codex = status.executors?.codex;
-  if (status.executors?.detectedAt && !codex) {
+  if (status.executors?.detectedAt && !codex && !fetchesCli(status, "codex")) {
     return { code: "codex_missing", message: cliMissingMessage("Codex", status, "codex") };
   }
+  const old = cliOutdated(status, "codex", "Codex");
+  if (old) return old;
   return accountUnavailable(status, account, "codex");
 }
 
@@ -497,6 +509,8 @@ export const UNAVAILABLE_CODES: ReadonlySet<string> = new Set([
   "opencode_missing",
   "grok_missing",
   "antigravity_missing",
+  // Its CLI at a version agentes.chat holds back (`cliOutdated`): the run waits for it to be updated there.
+  "cli_outdated",
   "plan_limit",
   "plan_not_owner",
   "plan_not_shared",

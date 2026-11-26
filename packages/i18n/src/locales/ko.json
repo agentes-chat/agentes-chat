@@ -3384,10 +3384,22 @@
       "zen": "OpenCode 연결",
       "api_key": "API 키 추가"
     },
+    "cliFetch": {
+      "preparing": "{{computer}}에서 {{program}}을(를) 준비하는 중…",
+      "preparingPct": "{{computer}}에서 {{program}}을(를) 준비하는 중… {{percent}}%",
+      "failed": {
+        "offline": "{{computer}}에서 {{program}}을(를) 준비하지 못했어요. 컴퓨터가 다운로드에 연결하지 못해요.",
+        "hash_mismatch": "{{computer}}에서 {{program}}을(를) 준비하지 못했어요. 받은 파일이 원본이 아니어서 사용하지 않았어요.",
+        "no_build": "{{program}}에는 {{computer}}의 시스템용 버전이 없어요.",
+        "disk_full": "{{computer}}에서 {{program}}을(를) 준비하지 못했어요. 디스크가 가득 찼어요.",
+        "failed": "{{computer}}에서 {{program}}을(를) 준비하지 못했어요. 다운로드가 끝나지 않았어요."
+      }
+    },
     "cli": {
       "missing": "{{program}}이(가) 아직 {{computer}}에 없습니다.",
       "claudeApp": "Claude 앱만으로는 부족합니다. 에이전트는 컴퓨터에서 실행되는 Claude Code를 사용합니다.",
       "install": "{{program}} 설치해 주기",
+      "update": "{{program}} 업데이트해 주기",
       "check": "설치했어요, 다시 확인",
       "checked": "방금 확인했습니다. {{program}}이(가) 아직 {{computer}}에 없습니다.",
       "installing": "{{computer}}에 {{program}}을(를) 설치하는 중입니다. 1분 정도 걸립니다.",
@@ -6257,6 +6269,7 @@
         "cli_failed": "오류로 {{brain}} 프로그램이 멈췄어요: {{detail}}",
         "cli_stopped": "오류로 {{brain}} 프로그램이 멈췄어요.",
         "cli_closed": "갑자기 {{brain}} 프로그램이 종료됐어요.",
+        "cli_empty": "{{brain}} 프로그램이 답하지 않고 차례를 끝냈어요. 다시 물어보세요. 계속 그러면 컴퓨터의 {{brain}}을(를) 업데이트하거나 에이전트 설정에서 다른 AI를 고르세요.",
         "cli_sandbox": "{{brain}} 프로그램이 이 컴퓨터에서 샌드박스를 시작할 수 없어요. 에이전트 설정에서 다른 AI를 고르세요.",
         "cli_system": "{{brain}} 프로그램은 아직 이 컴퓨터의 시스템에서 실행되지 않아요. 에이전트 설정에서 다른 AI를 고르세요.",
         "account_missing": "이 에이전트에 고른 계정이 더 이상 컴퓨터에 없어요. 에이전트 설정에서 다른 계정을 고르거나 다시 추가하세요.",
@@ -12175,6 +12188,8 @@
       "tool_offOne": "{{computer}}에서 {{program}}이(가) 꺼져 있습니다.",
       "not_installed": "{{computer}}에 {{program}}이(가) 설치되어 있지 않아요.",
       "cant_start": "{{program}}이(가) {{computer}}에 있지만 실행되지 않습니다.",
+      "cli_outdated": "{{computer}}의 {{program}}은(는) 에이전트가 쓰기 전에 업데이트가 필요해요.",
+      "cli_outdatedRun": "{{computer}}의 {{program}}은(는) 에이전트가 쓰기 전에 업데이트가 필요해요. 거기서 {{command}}을(를) 실행하세요.",
       "home_only": "{{computer}}의 {{program}}은(는) root 전용으로 설치되어 있어 에이전트가 닿지 못해요.",
       "not_reported": "{{computer}}에 어떤 프로그램이 있는지 아직 확인하는 중이에요. 끝나면 저절로 바뀌어요.",
       "system": "{{program}}은(는) 아직 {{computer}}의 시스템에서 실행되지 않아요.",
@@ -15448,6 +15463,7 @@
       "privateNetwork": "이 주소는 사설 네트워크에 있어요. 공개 주소를 쓰거나, 직접 호스팅하는 서버라면 `OUTBOUND_ALLOW_CIDRS`로 허용해 주세요.",
       "tooLong": "너무 길어요. 줄이고 다시 시도해 주세요.",
       "updateComputerApp": "컴퓨터의 앱이 너무 오래됐어요. 업데이트하고 다시 시도해 주세요.",
+      "cliNotFetched": "이 컴퓨터는 그 프로그램을 스스로 받지 않아요.",
       "computerUpdatesItself": "워크스페이스 컴퓨터가 이를 위해 스스로 업데이트돼요. 잠시 후 다시 시도하세요.",
       "notInvited": "이 일정에 초대받지 않았어요.",
       "offHere": "여기서는 꺼져 있어요.",
@@ -18242,7 +18258,8 @@
       "talk": "{{name}}과(와) 대화",
       "missing": "이 대화는 더 이상 여기에 없어요.",
       "helping": "{{name}} 돕는 중",
-      "see": "대화 보기"
+      "see": "대화 보기",
+      "relay": "{{name}}의 답변: {{excerpt}}. 대화 보기"
     },
     "unshown": "이 메시지를 표시할 수 없어요",
     "unshownPart": "이 메시지의 일부를 표시할 수 없어요",
@@ -18411,6 +18428,7 @@
         "usingScreen": "화면을 사용했어요",
         "cloningRepo": "저장소를 클론했어요",
         "listingRepos": "저장소 목록을 확인했습니다",
+        "preparingCli": "{{app}}을(를) 준비했어요",
         "openingPullRequest": "pull request를 열었어요",
         "handingOff": "보고서를 전달했어요",
         "recordingFindings": "발견한 내용을 기록했어요",
@@ -18534,6 +18552,8 @@
       "usingScreen": "화면을 사용하는 중",
       "cloningRepo": "저장소를 클론하는 중",
       "listingRepos": "저장소 목록 확인 중",
+      "preparingCli": "{{computer}}에서 {{app}}을(를) 준비하는 중",
+      "preparingCliPct": "{{computer}}에서 {{app}}을(를) 준비하는 중 ({{percent}}%)",
       "openingPullRequest": "pull request를 여는 중",
       "handingOff": "보고서를 전달하는 중",
       "recordingFindings": "발견한 내용을 기록하는 중",

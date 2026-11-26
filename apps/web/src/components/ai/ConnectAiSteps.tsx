@@ -1758,7 +1758,7 @@ function GateWait({
     );
   } else if (
     gate.state === "unsupported" &&
-    (gate.reason === "not_installed" || gate.reason === "cant_start") &&
+    (gate.reason === "not_installed" || gate.reason === "cant_start" || gate.reason === "cli_outdated") &&
     !hold &&
     row &&
     row.kind !== "managed" &&

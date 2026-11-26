@@ -3729,10 +3729,25 @@ export const ptBR = {
      * A coding CLI that isn't on a computer someone connected (`program`: "Claude Code" or "Codex"), and installing it
      * from here. `claudeApp` sits behind an ⓘ on Windows and macOS, where a Claude chat app is likely.
      */
+    /** A coding CLI its computer fetches by itself (ADR 0228 §6): while it comes, and why it failed. */
+    cliFetch: {
+      preparing: "Preparando o {{program}} no {{computer}}…",
+      preparingPct: "Preparando o {{program}} no {{computer}}… {{percent}}%",
+      failed: {
+        offline: "Não deu para preparar o {{program}} no {{computer}}: o computador não conseguiu baixar.",
+        hash_mismatch:
+          "Não deu para preparar o {{program}} no {{computer}}: o arquivo baixado não era o original, então não foi usado.",
+        no_build: "O {{program}} não tem versão para o sistema do {{computer}}.",
+        disk_full: "Não deu para preparar o {{program}} no {{computer}}: o disco está cheio.",
+        failed: "Não deu para preparar o {{program}} no {{computer}}: o download não terminou.",
+      },
+    },
     cli: {
       missing: "O {{program}} ainda não está no {{computer}}.",
       claudeApp: "O app do Claude não basta: os agentes usam o Claude Code, que roda no computador.",
       install: "Instalar o {{program}} para mim",
+      /** Too old for agentes.chat: the same installer brings the newest. */
+      update: "Atualizar o {{program}} para mim",
       check: "Já instalei, verificar de novo",
       checked: "Verifiquei agora: o {{program}} ainda não está no {{computer}}.",
       installing: "Instalando o {{program}} no {{computer}}. Leva cerca de um minuto.",
@@ -6969,6 +6984,9 @@ export const ptBR = {
         cli_stopped: "O {{brain}} parou com um erro.",
         /** The agent's CLI ended without its answer and without a word (it crashed or was killed). */
         cli_closed: "O {{brain}} fechou de repente.",
+        /** The agent's CLI ended its turn with nothing in it (no answer, no step), even after being asked again. */
+        cli_empty:
+          "O {{brain}} terminou sem responder. Peça de novo. Se continuar, atualize o {{brain}} no computador ou escolha outra IA nas configurações do agente.",
         /** The agent's CLI couldn't start its sandbox on its computer (bubblewrap refused), before the model was asked. */
         cli_sandbox:
           "O {{brain}} não consegue abrir a sandbox dele neste computador. Escolha outra IA nas configurações do agente.",
@@ -13238,6 +13256,11 @@ export const ptBR = {
       tool_offOne: "O {{program}} está desligado no {{computer}}.",
       not_installed: "O {{program}} não está instalado no {{computer}}.",
       cant_start: "O {{program}} está no {{computer}}, mas não abre.",
+      /** Its version is too old for agentes.chat, or one with a known problem: updating it there is the way out. */
+      cli_outdated: "O {{program}} no {{computer}} precisa ser atualizado para os agentes usarem.",
+      /** The same, with the command that updates it (`claude update`, `opencode upgrade`). */
+      cli_outdatedRun:
+        "O {{program}} no {{computer}} precisa ser atualizado para os agentes usarem. Rode {{command}} lá.",
       /** System mode: the CLI is only in root's `~/.local/bin`. */
       home_only: "O {{program}} está instalado só para o root no {{computer}}, onde os agentes não chegam.",
       not_reported: "O {{computer}} ainda está vendo quais programas tem. Isto muda sozinho quando terminar.",
@@ -16439,6 +16462,7 @@ export const ptBR = {
         "Este endereço está numa rede privada. Use um endereço público ou, num servidor próprio, libere-o com `OUTBOUND_ALLOW_CIDRS`.",
       tooLong: "Ficou longo demais. Encurte e tente de novo.",
       updateComputerApp: "O app do computador é antigo demais para isso. Atualize e tente de novo.",
+      cliNotFetched: "Este computador não busca esse programa sozinho.",
       computerUpdatesItself: "O computador do workspace se atualiza sozinho para isso. Tente de novo daqui a pouco.",
       notInvited: "Você não está entre os convidados deste evento.",
       offHere: "Isso está desligado aqui.",
@@ -19422,6 +19446,8 @@ export const ptBR = {
       helping: "ajudando o {{name}}",
       helping_female: "ajudando a {{name}}",
       see: "Ver conversa",
+      /** The quote of another agent's answer at the top of the message that passes it on; opens the conversation. */
+      relay: "Resposta de {{name}}: {{excerpt}}. Ver a conversa",
     },
     /** In place of a row of the conversation that failed to draw (the rest keeps working). */
     unshown: "Esta mensagem não pôde ser exibida",
@@ -19617,6 +19643,7 @@ export const ptBR = {
         usingScreen: "Usou a tela",
         cloningRepo: "Clonou um repositório",
         listingRepos: "Listou os repositórios",
+        preparingCli: "Preparou o {{app}}",
         openingPullRequest: "Abriu um pull request",
         handingOff: "Entregou um relatório",
         recordingFindings: "Anotou o que encontrou",
@@ -19740,6 +19767,8 @@ export const ptBR = {
       usingScreen: "usando a tela",
       cloningRepo: "clonando um repositório",
       listingRepos: "listando os repositórios",
+      preparingCli: "preparando o {{app}} no {{computer}}",
+      preparingCliPct: "preparando o {{app}} no {{computer}} ({{percent}}%)",
       openingPullRequest: "abrindo um pull request",
       handingOff: "entregando um relatório",
       recordingFindings: "anotando o que encontrou",

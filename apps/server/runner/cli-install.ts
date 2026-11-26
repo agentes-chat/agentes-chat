@@ -9,7 +9,7 @@ import {
   isInstallableCli,
 } from "@agenteschat/adapters/machine-protocol";
 import { killTree } from "./exec";
-import { envValue, findOnWindowsPath, isFile } from "./executors";
+import { envValue, findOnWindowsPath, isFile, pickedCli } from "./executors";
 import { CLAUDE_INSTALL_PS1_URL, CLAUDE_INSTALL_URL, CODEX_RELEASES } from "./install-script";
 import { mergePathWith } from "./login-path";
 
@@ -23,11 +23,19 @@ import { mergePathWith } from "./login-path";
 /** A slow connection downloads Claude Code's ~200 MB in minutes. */
 export const CLI_INSTALL_RUN_MS = 15 * 60_000;
 
+/** The command name the runner's own Git Bash is picked by (`setCliPick`): never one found on the PATH. */
+export const GIT_BASH_PICK = "git-bash";
+
 /**
  * Git Bash, which Claude Code needs on Windows: where `CLAUDE_CODE_GIT_BASH_PATH` points, or beside a `git` on the
- * PATH, or where Git for Windows installs for the machine or for the person. Null: none.
+ * PATH, or where Git for Windows installs for the machine or for the person, or else the runner's own (MinGit, fetched
+ * on demand, ADR 0228 §6) unless `runnerCopy` is false (whether the person has one). Null: none.
  */
-export function gitBashPath(env: NodeJS.ProcessEnv = process.env, exists: (file: string) => boolean = isFile) {
+export function gitBashPath(
+  env: NodeJS.ProcessEnv = process.env,
+  exists: (file: string) => boolean = isFile,
+  runnerCopy = true,
+) {
   const pinned = envValue(env, "CLAUDE_CODE_GIT_BASH_PATH", "win32");
   if (pinned && exists(pinned)) return pinned;
   const git = findOnWindowsPath("git", envValue(env, "PATH", "win32") ?? "", envValue(env, "PATHEXT", "win32"), exists);
@@ -41,7 +49,15 @@ export function gitBashPath(env: NodeJS.ProcessEnv = process.env, exists: (file:
       "Git",
     ),
   ];
-  return roots.map((root) => win32.join(root, "bin", "bash.exe")).find((file) => exists(file)) ?? null;
+  const own = roots.map((root) => win32.join(root, "bin", "bash.exe")).find((file) => exists(file));
+  return own ?? (runnerCopy ? (pickedCli(GIT_BASH_PICK) ?? null) : null);
+}
+
+/** `env` with Claude Code's Git Bash on Windows (`CLAUDE_CODE_GIT_BASH_PATH`), when it finds one; as it is elsewhere. */
+export function withGitBash(env: NodeJS.ProcessEnv, platform: NodeJS.Platform = process.platform): NodeJS.ProcessEnv {
+  if (platform !== "win32" || envValue(env, "CLAUDE_CODE_GIT_BASH_PATH", "win32")) return env;
+  const bash = gitBashPath(env);
+  return bash ? { ...env, CLAUDE_CODE_GIT_BASH_PATH: bash } : env;
 }
 
 /** Where the installers below leave the CLI: `~/.local/bin`, on every system. */

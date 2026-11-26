@@ -111,6 +111,7 @@ import type {
   ChannelOverride,
   Choices,
   ClientVitalsReport,
+  CliFetch,
   CliInstall,
   CodeSent,
   CommandApproval,
@@ -1336,6 +1337,8 @@ export interface ApiClient {
     askTool(orgId: string, machineId: string, tool: MachineTool): Promise<void>;
     /** Its PATH read again and its coding CLIs looked for now ("Já instalei, verificar de novo"). */
     checkClis(orgId: string, machineId: string): Promise<void>;
+    /** ADR 0228 §6: "Try again" on a CLI's fetch; where it stands now. */
+    fetchCli(orgId: string, machineId: string, cli: string): Promise<{ fetch: CliFetch | null }>;
     /** Only the person who paired it: installs `tool` there, or where that install stands, or stops it. */
     cliInstall(
       orgId: string,
