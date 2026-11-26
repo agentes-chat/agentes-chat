@@ -35,7 +35,7 @@ import { ScreenError } from "@/features/shared/ScreenError";
 import { catchGlobalErrors, setErrorScope, startErrorReports } from "@/lib/error-reports";
 import { keepLastCrash } from "@/lib/last-crash";
 import { newWorkspaceDone, newWorkspaceMade, newWorkspaceShown, useNewWorkspaceAsk } from "@/lib/new-workspace";
-import { enteringShown, firstRunMounted, suspendedOf } from "@/lib/org-choice";
+import { enteringShown, firstRunMounted, joinFirstOf, suspendedOf } from "@/lib/org-choice";
 import { followScreens } from "@/lib/orientation";
 import { useServer } from "@/lib/server";
 import { AppProviders } from "@/providers/AppProviders";
@@ -172,12 +172,26 @@ function Gate() {
   // An invitation's own screen stays in front of the first run: someone with no workspace yet may be joining one.
   const onInvite = pathname.startsWith("/invite/");
   // An invitation waiting for someone with no workspace yet opens instead of the first run (unless they asked for a
-  // new workspace), once per invitation.
-  const joinFirst = ready && signedIn && org.none && !fresh && !accepting ? (me.data?.join ?? null) : null;
+  // new workspace), once per invitation; going back from it opens the first run.
+  const [leftInvitation, setLeftInvitation] = useState<string | null>(null);
+  const joinFirst = joinFirstOf(
+    ready && signedIn && org.none && !fresh && !accepting,
+    me.data?.join ?? null,
+    leftInvitation,
+  );
   // biome-ignore lint/correctness/useExhaustiveDependencies: once per invitation, not again each time the screen changes
   useEffect(() => {
     if (joinFirst && !onInvite) router.navigate(`/invite/${joinFirst}` as Href);
   }, [joinFirst]);
+  const wasOnInvite = useRef(false);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only leaving the invitation's screen counts
+  useEffect(() => {
+    if (onInvite) wasOnInvite.current = true;
+    else if (wasOnInvite.current) {
+      wasOnInvite.current = false;
+      if (joinFirst) setLeftInvitation(joinFirst);
+    }
+  }, [onInvite]);
   const [firstRunBefore, setFirstRunBefore] = useState(false);
   const firstRun = firstRunMounted(
     firstRunBefore,
