@@ -224,7 +224,12 @@ function castSizes(others: number, lead: boolean) {
   const wide = width();
   if (wide > room) {
     const f = room / wide;
-    sizes = { lead: snap(sizes.lead * f), agent: snap(sizes.agent * f), me: snap(sizes.me * f), gap: Math.round(48 * f) };
+    sizes = {
+      lead: snap(sizes.lead * f),
+      agent: snap(sizes.agent * f),
+      me: snap(sizes.me * f),
+      gap: Math.round(48 * f),
+    };
   }
   return { ...sizes, width: width() };
 }
@@ -279,12 +284,24 @@ async function drawPerson(g: Ctx, fonts: Fonts, person: TeamPhotoInput["person"]
   g.restore();
 }
 
-/** What the right hand says, in its bubble over its face (`.onb-photo__say`): the tail corner toward it. */
-function drawSay(g: Ctx, fonts: Fonts, say: string, leadX: number, leadY: number, leadS: number) {
+/** What the right hand says, as lines in its bubble and the bubble's size: measured before the sky is laid out. */
+function sayBox(g: Ctx, fonts: Fonts, say: string) {
   g.font = fontOf(SAY.weight, SAY.size, fonts.sans);
   const lines = linesOf(g, say, SAY.max - 2 * SAY.padX, 2);
   const w = Math.ceil(Math.max(...lines.map((l) => g.measureText(l).width))) + 2 * SAY.padX;
-  const h = lines.length * SAY.line + 2 * SAY.padY;
+  return { lines, w, h: lines.length * SAY.line + 2 * SAY.padY };
+}
+
+/** The bubble over the right hand's face (`.onb-photo__say`), its tail corner toward it. */
+function drawSay(
+  g: Ctx,
+  fonts: Fonts,
+  { lines, w, h }: ReturnType<typeof sayBox>,
+  leadX: number,
+  leadY: number,
+  leadS: number,
+) {
+  g.font = fontOf(SAY.weight, SAY.size, fonts.sans);
   const x = Math.round(Math.min(leadX + leadS * 0.46, W - PAD / 2 - w));
   const y = Math.round(leadY - 8 * K - h);
   const r = [SAY.radius, SAY.radius, SAY.radius, SAY.tail];
@@ -334,7 +351,12 @@ export async function drawTeamPhoto(input: TeamPhotoInput): Promise<Blob> {
   );
   const markTop = H - 56 - MARK;
   const room = markTop - 48 - textH - 64;
-  const skyH = Math.max(36, Math.min(52, Math.floor(room / SKY_PX))) * SKY_PX;
+  // At least room for the team and the bubble over the right hand, 24 under the picture's top.
+  const [lead, ...rest] = input.cast;
+  const sizes = castSizes(rest.length, Boolean(lead));
+  const say = lead && input.say ? sayBox(g, fonts, input.say) : null;
+  const least = Math.ceil((22 * K + (lead ? sizes.lead : sizes.me) + (say ? 8 * K + say.h : 0) + 24) / SKY_PX);
+  const skyH = Math.max(least, Math.min(52, Math.floor(room / SKY_PX))) * SKY_PX;
 
   // The sky, its pixels whole.
   g.imageSmoothingEnabled = false;
@@ -356,8 +378,6 @@ export async function drawTeamPhoto(input: TeamPhotoInput): Promise<Blob> {
   }
 
   // The team on the sky's ground: the right hand, the person beside it, then the others, their feet on one line.
-  const [lead, ...rest] = input.cast;
-  const sizes = castSizes(rest.length, Boolean(lead));
   const ground = skyH - 22 * K;
   let x = Math.round((W - sizes.width) / 2);
   const leadAt = lead ? { x, y: ground - sizes.lead, s: sizes.lead } : null;
@@ -371,7 +391,7 @@ export async function drawTeamPhoto(input: TeamPhotoInput): Promise<Blob> {
     drawFace(g, face, x, ground - sizes.agent, sizes.agent);
     x += sizes.agent + sizes.gap;
   }
-  if (leadAt && input.say) drawSay(g, fonts, input.say, leadAt.x, leadAt.y, leadAt.s);
+  if (leadAt && say) drawSay(g, fonts, say, leadAt.x, leadAt.y, leadAt.s);
 
   // The words under it.
   let top = skyH + 64;

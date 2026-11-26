@@ -89,7 +89,9 @@ export function TeamWelcome({
           eyebrow,
           title,
           // A picture to share names the person, where "You" would be whoever looks at it.
-          lead: t("onboarding.celebrate.lead", { names: joinNames([first || t("onboarding.celebrate.you"), ...agents], t) }),
+          lead: t("onboarding.celebrate.lead", {
+            names: joinNames([first || t("onboarding.celebrate.you"), ...agents], t),
+          }),
         },
         personal
           ? t("onboarding.celebrate.photoFilePersonal")
