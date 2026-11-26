@@ -78,6 +78,41 @@ describe("every email in every language (ADR 0122)", () => {
     }
   });
 
+  test("a first agent from the person's own AI (ADR 0253): every language has these words of its own", () => {
+    const keys = (group: object): string[] =>
+      Object.entries(group).flatMap(([key, value]) =>
+        value && typeof value === "object" ? keys(value).map((k) => `${key}.${k}`) : [key],
+      );
+    const all = keys(en.planWaiting.picked);
+    const said = (locale: (typeof LOCALE_CODES)[number]) => {
+      const w = wordsFor(locale);
+      const { first, later } = w.planWaiting.picked;
+      const texts = [w.invitation.arrive, first.subject, first.preheader, first.headline, first.button];
+      const built = [
+        first.body("Claude", "Ada", true, "SEO", 2),
+        first.body(null, "Caio", false, "", 0),
+        later.subject(2),
+        later.subject(1),
+        later.subject(0),
+        later.body("Ada", true, 2, "Acme"),
+        later.body("Caio", false, 0, "Acme"),
+        later.start("Ada", true),
+        later.personal.body("Ada", true, 2, "Acme"),
+        later.personal.body("Ada", true, 0, "Acme"),
+      ];
+      return [...texts, ...built.map((text) => JSON.stringify(text))];
+    };
+    for (const locale of LOCALE_CODES) {
+      // Its own file holds each one: none is English's by fallback.
+      expect({ locale, has: keys(WORDS[locale].planWaiting?.picked ?? {}) }).toEqual({ locale, has: all });
+      expect({ locale, arrive: typeof WORDS[locale].invitation?.arrive }).toEqual({ locale, arrive: "string" });
+      if (locale === "en") continue;
+      const same = said(locale).filter((text, i) => text === said("en")[i]);
+      expect({ locale, same }).toEqual({ locale, same: [] });
+      expect({ locale, mark: said(locale).join("\n").match(/—|;/)?.[0] ?? null }).toEqual({ locale, mark: null });
+    }
+  });
+
   test("a language without a word falls back to English's", () => {
     const partial = deepMerge(en, { verify: { headline: "Bestätige" } });
     expect(partial.verify.subject).toBe(en.verify.subject);

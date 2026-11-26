@@ -44,6 +44,7 @@ export const words: EmailWords = {
     ],
     more: (n) => `另外${n}个`,
     what: "agentes.chat 是成员和 AI 智能体一起工作的地方。",
+    arrive: "加入后，你会创建自己的智能体：你的 AI 会找出最占用你时间的任务，并为它推荐一个智能体。",
     noteFrom: (inviter, note) => [{ b: inviter ? `${inviter}：` : "附言：" }, `“${note}”`],
     button: "接受邀请",
     small: "邀请 7 天内有效。请用这个邮箱地址接受。",
@@ -549,6 +550,48 @@ export const words: EmailWords = {
         return `${routines > 0 ? `${a}和${r}` : a}已就绪。只差一个 agentes.chat 套餐了。`;
       },
       why: () => "你收到这封邮件，是因为 agentes.chat 上的这个工作区是你的。此类提醒只发送两次。",
+    },
+    picked: {
+      first: {
+        subject: "你的第一个智能体已就绪，正在等你",
+        preheader: "你的 AI 找到了起点。只差招聘了。",
+        headline: "你的第一个智能体已就绪",
+        body: (ai, agent, _feminine, role, today) => [
+          `你的 ${ai ?? "AI"} 找到了起点：`,
+          { b: agent },
+          ...(role ? [`（${role}）`] : []),
+          ...(today > 0 ? [`，今天就能交付 ${today} 项成果`] : []),
+          "。只差招聘了。",
+        ],
+        button: "招聘团队",
+        personal: { subject: "你的第一个智能体已就绪，正在等你", button: "招聘你的智能体" },
+      },
+      later: {
+        subject: (today) =>
+          today > 1
+            ? `前 ${today} 项成果还没有开始`
+            : today === 1
+              ? "第一项成果还没有开始"
+              : "你的第一个智能体还没有开始工作",
+        preheader: "今天招聘，今天就开始工作。",
+        headline: (today) =>
+          today > 1
+            ? `前 ${today} 项成果还没有开始`
+            : today === 1
+              ? "第一项成果还没有开始"
+              : "你的第一个智能体还没有开始工作",
+        body: (agent, _feminine, today, org) =>
+          today > 0
+            ? [{ b: agent }, " 在 ", { b: org }, " 第一天交付的成果："]
+            : [{ b: agent }, " 还在等待 ", { b: org }, " 的套餐开始。"],
+        start: (agent) => ["今天招聘，", { b: agent }, " 今天就开始。"],
+        button: "招聘团队",
+        personal: {
+          body: (agent, _feminine, today) =>
+            today > 0 ? [{ b: agent }, " 第一天交付的成果："] : [{ b: agent }, " 还在等待你的套餐开始。"],
+          button: "招聘你的智能体",
+        },
+      },
     },
   },
   surface: {

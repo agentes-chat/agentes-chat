@@ -47,6 +47,8 @@ export const words: EmailWords = {
     ],
     more: (n) => `ほか${n}件`,
     what: "agentes.chat は、人と AI エージェントが一緒に働く場所です。",
+    arrive:
+      "参加すると、自分のエージェントを作ります。あなたの AI が、いちばん時間を取られている作業を見つけて、それを任せるエージェントを提案します。",
     noteFrom: (inviter, note) => [{ b: inviter ? `${inviter}: ` : "メッセージ: " }, `「${note}」`],
     button: "招待を承諾",
     small: "招待の有効期限は7日間です。このメールアドレスで承諾してください。",
@@ -623,6 +625,48 @@ export const words: EmailWords = {
       },
       why: () =>
         "agentes.chatのこのワークスペースはあなたのものであるため、このメールをお送りしています。このお知らせは2回だけです。",
+    },
+    picked: {
+      first: {
+        subject: "最初のエージェントの準備ができました",
+        preheader: "AI がどこから始めるかを見つけました。あとは採用するだけです。",
+        headline: "最初のエージェントの準備ができました",
+        body: (ai, agent, _feminine, role, today) => [
+          `${ai ?? "AI"} がどこから始めるかを見つけました。`,
+          { b: agent },
+          ...(role ? [`（${role}）`] : []),
+          today > 0 ? `が、今日すぐに${today}件の成果を出せます。` : "が待っています。",
+          "あとは採用するだけです。",
+        ],
+        button: "チームを採用する",
+        personal: { subject: "最初のエージェントの準備ができました", button: "エージェントを採用する" },
+      },
+      later: {
+        subject: (today) =>
+          today > 1
+            ? `最初の${today}件の成果がまだ始まっていません`
+            : today === 1
+              ? "最初の成果がまだ始まっていません"
+              : "最初のエージェントがまだ始まっていません",
+        preheader: "今日採用すれば、今日から仕事が始まります。",
+        headline: (today) =>
+          today > 1
+            ? `最初の${today}件の成果がまだ始まっていません`
+            : today === 1
+              ? "最初の成果がまだ始まっていません"
+              : "最初のエージェントがまだ始まっていません",
+        body: (agent, _feminine, today, org) =>
+          today > 0
+            ? [{ b: agent }, "が", { b: org }, "で初日に届けるもの："]
+            : [{ b: agent }, "は、", { b: org }, "のプランが始まるのを待っています。"],
+        start: (agent) => ["今日採用すれば、", { b: agent }, "は今日から始めます。"],
+        button: "チームを採用する",
+        personal: {
+          body: (agent, _feminine, today) =>
+            today > 0 ? [{ b: agent }, "が初日に届けるもの："] : [{ b: agent }, "は、プランが始まるのを待っています。"],
+          button: "エージェントを採用する",
+        },
+      },
     },
   },
   surface: {

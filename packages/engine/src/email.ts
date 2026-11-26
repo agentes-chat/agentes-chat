@@ -612,9 +612,13 @@ function feminineName(name: string) {
   return plain.endsWith("a") || FEMININE_NAMES.has(plain);
 }
 
-/** A role inside a sentence ("for billing"): lower case, unless it reads as a name or an acronym ("SEO", "Stripe"). */
+/**
+ * A role inside a sentence ("for billing"): lower case, unless it reads as an acronym ("SEO"). German keeps it as
+ * written: its nouns start with a capital.
+ */
 function roleInSentence(role: string, lang: string) {
   const r = role.trim();
+  if (lang === "de") return r;
   const second = r.charAt(1);
   return second && second === second.toLocaleLowerCase(lang) && second !== second.toLocaleUpperCase(lang)
     ? r.charAt(0).toLocaleLowerCase(lang) + r.slice(1)
