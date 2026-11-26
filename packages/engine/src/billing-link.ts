@@ -1,10 +1,16 @@
 import { createCipheriv, createDecipheriv, hkdfSync, randomBytes, randomUUID } from "node:crypto";
-import { type Database, eq, schema, sql } from "@agenteschat/db";
+import { and, asc, type Database, eq, isNull, rowsOf, type SQL, schema, sql } from "@agenteschat/db";
 import { appLocale } from "@agenteschat/i18n/locale";
+import { normalizeAppearance } from "@agenteschat/tokens/look";
+import { zonedParts, zonedTimeForward } from "./cron";
+import { cutText } from "./format";
+import { isValidTimeZone } from "./management";
 import { operatorOrg } from "./operator";
 import { requirePermission, type UserLocale } from "./organizations";
+import { SYSTEM_LINE_META } from "./router";
 
-const { organizations, channels, messages, artifacts, wikiPages, issues } = schema;
+const { organizations, organizationSettings, agents, channels, messages, artifacts, wikiPages, issues, routines } =
+  schema;
 
 /** Where in the app a billing link was opened from: the billing service opens on what it came for (ADR 0079). */
 export const BILLING_FROM = [
@@ -38,8 +44,8 @@ export interface BillingLinkClaims {
   /** The path on this server the billing service sends the person back to. */
   return: string;
   /**
-   * What the workspace holds, as counts only (`totalsOf`). `storageBytes` null: the workspace keeps its files on its
-   * own bucket.
+   * What the workspace holds (`totalsOf`), counts but for `team`. `storageBytes` null: the workspace keeps its files on
+   * its own bucket.
    */
   usage: {
     members: number;
@@ -52,8 +58,45 @@ export interface BillingLinkClaims {
     issues: number;
     /** When the workspace was created, in seconds. */
     since: number;
+    /** Its first `TEAM_SHOWN` agents, oldest first, its right hand left out (`teamOf`). */
+    team: BillingTeamAgent[];
+    /** Its routines that are on (`ROUTINES_ON`). */
+    routines: number;
+    /** This calendar month so far, in the workspace's time zone (`monthOf`). */
+    month: BillingMonth;
   };
 }
+
+/** One of the agents the billing service's pages name and draw (ADR 0079, amendment of 2026-11-26). */
+export interface BillingTeamAgent {
+  /** At most `TEAM_TEXT_MAX` characters, like `role`. */
+  name: string;
+  /** Null: it has none. */
+  role: string | null;
+  /** Its look as the agent engine names it (`AGENT_COLORS`, `AGENT_EYES`, `AGENT_ACCESSORIES`); null: no accessory. */
+  look: { color: string; eyes: string; accessory: string | null };
+}
+
+/** The workspace's month so far (ADR 0079, amendment of 2026-11-26): counts only, the same ones `usage` keeps. */
+export interface BillingMonth {
+  /** Its 1st at 00:00 in the workspace's time zone, in seconds. */
+  start: number;
+  /** Messages per day, from the 1st to today: one item per day, today last. */
+  days: number[];
+  messages: number;
+  /** The messages agents wrote themselves: a line the server wrote for them (`SYSTEM_LINE_META`) left out. */
+  agentActions: number;
+  /** Drive files added, wiki pages and tasks created this month, as `usage` counts them. */
+  files: number;
+  wikiPages: number;
+  issues: number;
+}
+
+/** How many agents a link names: the billing service's pages draw no more. */
+export const TEAM_SHOWN = 5;
+
+/** The most characters of an agent's name or role a link carries: the billing service takes no more. */
+export const TEAM_TEXT_MAX = 80;
 
 /** A plan's key as the billing service names it: this server passes it on and never reads it. */
 export const PLAN_CLAIM = /^[a-z][a-z0-9_]{0,31}$/;
@@ -125,31 +168,143 @@ const placeIn = (orgId: string, returnTo: string | undefined) => {
   return path?.startsWith(`/org/${orgId}/`) ? path : null;
 };
 
+/** A conversation a person can read, as `c`: an agent-only room has no `u:` in its key, as `isAgentOnlyDm` reads it. */
+const READABLE = sql`(c.kind <> 'dm' or c.dm_key like '%u:%')`;
+
 /**
- * A workspace's messages, those of every conversation a person can read (an agent-only room has no `u:` in its key, as
- * `isAgentOnlyDm` reads it), counted per conversation on each month's `(channel_id, created_at)` index without reading
- * a row: no index of `messages` starts with `org_id` (ADR 0009).
+ * A workspace's messages, those of every conversation a person can read (`READABLE`), counted per conversation on each
+ * month's `(channel_id, created_at)` index without reading a row: no index of `messages` starts with `org_id` (ADR 0009).
  */
 export const orgMessageCount = (orgId: string) =>
   sql<number>`(select coalesce(sum(per.n), 0) from ${channels} c,
       lateral (select count(*) as n from ${messages} m where m.channel_id = c.id) per
-    where c.org_id = ${orgId} and (c.kind <> 'dm' or c.dm_key like '%u:%'))`.mapWith(Number);
+    where c.org_id = ${orgId} and ${READABLE})`.mapWith(Number);
+
+/** A stretch of time, `[from, to)`. */
+interface Range {
+  from: Date;
+  to: Date;
+}
+
+const within = (column: unknown, range: Range | undefined): SQL =>
+  range
+    ? sql` and ${column} >= ${range.from.toISOString()}::timestamptz and ${column} < ${range.to.toISOString()}::timestamptz`
+    : sql``;
 
 /**
- * What a workspace holds, for the billing service's pages (ADR 0079 §3): workspace-wide counts, never a name, a word of
- * content, or a figure per channel or person.
+ * Drive's files (the trash left out), wiki pages (deleted ones left out) and tasks (canceled ones left out), each on an
+ * index that starts with `org_id`; with `range`, only those created in it.
+ */
+const keptOf = (orgId: string, range?: Range) => ({
+  files: sql<number>`(select count(*) from ${artifacts} where ${artifacts.orgId} = ${orgId}
+    and ${artifacts.deletedAt} is null${within(artifacts.createdAt, range)})`.mapWith(Number),
+  wikiPages: sql<number>`(select count(*) from ${wikiPages} where ${wikiPages.orgId} = ${orgId}
+    and ${wikiPages.deletedAt} is null${within(wikiPages.createdAt, range)})`.mapWith(Number),
+  issues: sql<number>`(select count(*) from ${issues} where ${issues.orgId} = ${orgId}
+    and ${issues.status} <> 'canceled'${within(issues.createdAt, range)})`.mapWith(Number),
+});
+
+/**
+ * The routines that are on, as an agent's cap counts them (`checkRoutineCap`): repeating ones that start runs, neither a
+ * one-off, a reminder nor a widget's. An archived agent's are paused, so none of them counts.
+ */
+const ROUTINES_ON = sql`${routines.active} and ${routines.deletedAt} is null and ${routines.triggerType} <> 'once'
+  and coalesce(${routines.target}->>'reminder', 'false') <> 'true' and coalesce(${routines.target}->>'type', '') <> 'widget'`;
+
+/**
+ * What a workspace holds, for the billing service's pages (ADR 0079 §3): workspace-wide counts, never a word of content
+ * or a figure per channel or person; and its time zone, for its month (`monthOf`).
  */
 const totalsOf = (orgId: string) => ({
   messages: orgMessageCount(orgId),
   channels: sql<number>`(select count(*) from ${channels} where ${channels.orgId} = ${orgId}
     and ${channels.kind} = 'channel' and ${channels.archivedAt} is null)`.mapWith(Number),
-  files: sql<number>`(select count(*) from ${artifacts} where ${artifacts.orgId} = ${orgId}
-    and ${artifacts.deletedAt} is null)`.mapWith(Number),
-  wikiPages: sql<number>`(select count(*) from ${wikiPages} where ${wikiPages.orgId} = ${orgId}
-    and ${wikiPages.deletedAt} is null)`.mapWith(Number),
-  issues: sql<number>`(select count(*) from ${issues} where ${issues.orgId} = ${orgId}
-    and ${issues.status} <> 'canceled')`.mapWith(Number),
+  ...keptOf(orgId),
+  routines: sql<number>`(select count(*) from ${routines} where ${routines.orgId} = ${orgId}
+    and ${ROUTINES_ON})`.mapWith(Number),
+  zone: sql<string | null>`(select ${organizationSettings.timezone} from ${organizationSettings}
+    where ${organizationSettings.orgId} = ${orgId})`,
 });
+
+/** The app's default look, for an agent that never picked one (`appearance` null). */
+const DEFAULT_LOOK = { color: "sky", eyes: "round" } as const;
+
+/**
+ * The workspace's first `TEAM_SHOWN` agents, oldest first, as the billing service's price page names and draws them
+ * ("Caio is ready…"): the team's own, not its right hand (ADR 0137), which every workspace has. A look the app no
+ * longer draws reads as its default, as the app shows it (`normalizeAppearance`).
+ */
+async function teamOf(db: Database, orgId: string): Promise<BillingTeamAgent[]> {
+  const rows = await db
+    .select({ name: agents.name, role: agents.role, appearance: agents.appearance })
+    .from(agents)
+    .where(and(eq(agents.orgId, orgId), isNull(agents.archivedAt), isNull(agents.builtin)))
+    .orderBy(asc(agents.createdAt), asc(agents.id))
+    .limit(TEAM_SHOWN);
+  return rows.map(({ name, role, appearance }) => {
+    const look = normalizeAppearance(appearance);
+    return {
+      name: cutText(name.trim(), TEAM_TEXT_MAX),
+      role: cutText(role.trim(), TEAM_TEXT_MAX) || null,
+      look: {
+        color: look.color ?? DEFAULT_LOOK.color,
+        eyes: look.eyes ?? DEFAULT_LOOK.eyes,
+        accessory: look.accessory && look.accessory !== "none" ? look.accessory : null,
+      },
+    };
+  });
+}
+
+/** 00:00 of a day in `timeZone` (moved forward where a DST change skips it), its UTC midnight if none is left. */
+const midnight = (year: number, month: number, day: number, timeZone: string) =>
+  zonedTimeForward(year, month, day, 0, 0, timeZone) ?? new Date(Date.UTC(year, month - 1, day));
+
+/**
+ * This calendar month so far in the workspace's time zone (UTC when it has none, or one this runtime doesn't know):
+ * messages per day and in all, those agents wrote themselves, and the Drive files, wiki pages and tasks created in it.
+ * Messages are counted where `usage` counts them (`READABLE`), per conversation on each month's `(channel_id,
+ * created_at)` index, the days told apart by their local midnights (`width_bucket`), in one statement; the rest in
+ * another, on indexes that start with `org_id`.
+ */
+async function monthOf(db: Database, orgId: string, zone: string | null, now: Date): Promise<BillingMonth> {
+  const timeZone = zone && isValidTimeZone(zone) ? zone : "UTC";
+  const today = zonedParts(now, timeZone);
+  const starts = Array.from({ length: today.day }, (_, i) => midnight(today.year, today.month, i + 1, timeZone));
+  const from = starts[0] ?? now;
+  const to =
+    today.month === 12 ? midnight(today.year + 1, 1, 1, timeZone) : midnight(today.year, today.month + 1, 1, timeZone);
+  const bounds = `{${starts.map((at) => at.toISOString()).join(",")}}`;
+  const systemLines = `{${SYSTEM_LINE_META.join(",")}}`;
+  const [perDay, [kept]] = await Promise.all([
+    db.execute(sql`select per.day, sum(per.n) as n, sum(per.said) as said
+      from ${channels} c,
+        lateral (select width_bucket(m.created_at, ${bounds}::timestamptz[]) as day, count(*) as n,
+            count(*) filter (where m.author_type = 'agent' and not (m.meta ?| ${systemLines}::text[])) as said
+          from ${messages} m
+          where m.channel_id = c.id and m.created_at >= ${from.toISOString()}::timestamptz
+            and m.created_at < ${to.toISOString()}::timestamptz
+          group by 1) per
+      where c.org_id = ${orgId} and ${READABLE}
+      group by per.day`),
+    db.select(keptOf(orgId, { from, to })).from(organizations).where(eq(organizations.id, orgId)),
+  ]);
+  const days = starts.map(() => 0);
+  let agentActions = 0;
+  for (const row of rowsOf<{ day: number | string; n: number | string; said: number | string }>(perDay)) {
+    const at = Number(row.day) - 1;
+    if (at >= 0 && at < days.length) days[at] = Number(row.n);
+    agentActions += Number(row.said);
+  }
+  return {
+    start: Math.floor(from.getTime() / 1000),
+    days,
+    messages: days.reduce((sum, n) => sum + n, 0),
+    agentActions,
+    files: kept?.files ?? 0,
+    wikiPages: kept?.wikiPages ?? 0,
+    issues: kept?.issues ?? 0,
+  };
+}
 
 /**
  * A sealed link to the workspace's plan and billing on the billing service, for its owners and admins. A
@@ -173,16 +328,20 @@ export async function mintBillingLink(
 ): Promise<{ url: string; expiresAt: Date }> {
   const { userId, orgId, from } = input;
   const membership = await requirePermission(db, userId, orgId, "manage_billing");
-  const [org, [user], [totals]] = await Promise.all([
+  const now = input.now ?? new Date();
+  const [org, [user], [totals], team] = await Promise.all([
     operatorOrg(db, orgId),
     db
       .select({ email: schema.users.email, name: schema.users.name, locale: schema.users.locale })
       .from(schema.users)
       .where(eq(schema.users.id, userId)),
     db.select(totalsOf(orgId)).from(organizations).where(eq(organizations.id, orgId)),
+    teamOf(db, orgId),
   ]);
   if (!org || !user || !totals) throw new Error("billing link: the workspace or the account is gone");
-  const iat = Math.floor((input.now ?? new Date()).getTime() / 1000);
+  const { zone, routines: routinesOn, ...counts } = totals;
+  const month = await monthOf(db, orgId, zone, now);
+  const iat = Math.floor(now.getTime() / 1000);
   const exp = iat + BILLING_LINK_SECONDS;
   const token = sealLinkToken<BillingLinkClaims>(input.secret, {
     aud: "agentes-billing",
@@ -203,8 +362,11 @@ export async function mintBillingLink(
       members: org.counts.members,
       agents: org.counts.agents,
       storageBytes: org.meters.ownStorage ? null : org.meters.storageBytes,
-      ...totals,
+      ...counts,
       since: Math.floor(org.createdAt.getTime() / 1000),
+      team,
+      routines: routinesOn,
+      month,
     },
   });
   return { url: linkUrl(input.baseUrl, token), expiresAt: new Date(exp * 1000) };
