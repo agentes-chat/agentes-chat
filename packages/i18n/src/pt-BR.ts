@@ -1865,18 +1865,18 @@ export const ptBR = {
     week: {
       title: "A primeira semana do {{name}}",
       title_female: "A primeira semana da {{name}}",
-      lead: "Ele começa hoje mesmo. Tudo chega no canal dele, e você só aprova.",
-      lead_female: "Ela começa hoje mesmo. Tudo chega no canal dela, e você só aprova.",
-      leadPersonal: "Ele começa hoje mesmo. Tudo chega na conversa com ele, e você só aprova.",
-      leadPersonal_female: "Ela começa hoje mesmo. Tudo chega na conversa com ela, e você só aprova.",
+      lead: "O {{name}} começa hoje mesmo. Tudo chega no canal dele, e você só aprova.",
+      lead_female: "A {{name}} começa hoje mesmo. Tudo chega no canal dela, e você só aprova.",
+      leadPersonal: "O {{name}} começa hoje mesmo. Tudo chega na conversa com ele, e você só aprova.",
+      leadPersonal_female: "A {{name}} começa hoje mesmo. Tudo chega na conversa com ela, e você só aprova.",
       leadRoutine:
-        "Ele começa hoje mesmo, e “{{routine}}” se repete {{when}}. Tudo chega no canal dele, e você só aprova.",
+        "O {{name}} começa hoje mesmo, e “{{routine}}” se repete {{when}}. Tudo chega no canal dele, e você só aprova.",
       leadRoutine_female:
-        "Ela começa hoje mesmo, e “{{routine}}” se repete {{when}}. Tudo chega no canal dela, e você só aprova.",
+        "A {{name}} começa hoje mesmo, e “{{routine}}” se repete {{when}}. Tudo chega no canal dela, e você só aprova.",
       leadRoutinePersonal:
-        "Ele começa hoje mesmo, e “{{routine}}” se repete {{when}}. Tudo chega na conversa com ele, e você só aprova.",
+        "O {{name}} começa hoje mesmo, e “{{routine}}” se repete {{when}}. Tudo chega na conversa com ele, e você só aprova.",
       leadRoutinePersonal_female:
-        "Ela começa hoje mesmo, e “{{routine}}” se repete {{when}}. Tudo chega na conversa com ela, e você só aprova.",
+        "A {{name}} começa hoje mesmo, e “{{routine}}” se repete {{when}}. Tudo chega na conversa com ela, e você só aprova.",
       say: "Assim que o time ligar, a gente começa.",
       sayPersonal: "Assim que ligar, a gente começa.",
       strip: "Os próximos 7 dias",
@@ -1915,12 +1915,13 @@ export const ptBR = {
       titleOne: "Contrate o {{name}}",
       titleOne_female: "Contrate a {{name}}",
       titlePersonal: "Contrate os seus agentes",
-      lead: "Você está contratando {{agent}} para {{role}}. Ele começa hoje, com {{lodi}}, e trabalha de dia e de noite.",
+      lead: "Você está contratando {{agent}} para {{role}}. O {{name}} começa hoje, com {{lodi}}, e trabalha de dia e de noite.",
       lead_female:
-        "Você está contratando {{agent}} para {{role}}. Ela começa hoje, com {{lodi}}, e trabalha de dia e de noite.",
-      leadNoRole: "Você está contratando {{agent}}. Ele começa hoje, com {{lodi}}, e trabalha de dia e de noite.",
+        "Você está contratando {{agent}} para {{role}}. A {{name}} começa hoje, com {{lodi}}, e trabalha de dia e de noite.",
+      leadNoRole:
+        "Você está contratando {{agent}}. O {{name}} começa hoje, com {{lodi}}, e trabalha de dia e de noite.",
       leadNoRole_female:
-        "Você está contratando {{agent}}. Ela começa hoje, com {{lodi}}, e trabalha de dia e de noite.",
+        "Você está contratando {{agent}}. A {{name}} começa hoje, com {{lodi}}, e trabalha de dia e de noite.",
       leadMany: "Você está contratando {{names}}. Eles começam hoje, com {{lodi}}, e trabalham de dia e de noite.",
       leadAlone:
         "Você começa com o {{name}}, o RH dos agentes. Ele cria cada agente com você e trabalha de dia e de noite.",
