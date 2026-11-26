@@ -71,6 +71,8 @@
   margin-inline-start: calc(-1 * var(--ghost-plate));
   padding-inline: var(--ghost-plate);
   color: var(--muted);
+  /* A way out, not an action: plain weight, as the onboarding's own "Agora não". */
+  font-weight: 400;
 }
 .wiz__acts {
   display: flex;
