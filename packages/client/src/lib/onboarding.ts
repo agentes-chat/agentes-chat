@@ -37,15 +37,10 @@ export function presetInput(t: TFunction, preset: Preset): AgentInput {
 /**
  * The onboarding's steps, in order (the server's `ONBOARDING_STEPS`, `packages/db/src/schema/tenancy.ts`, keeps the
  * furthest one reached).
- * "import" reads another product's export (apps/web/src/lib/import); its
- * agents arrive chosen in "agents", which only picks and creates the team.
- * "computer" comes before "ai": a computer the agents can use helps that step,
- * whose plan sign-in runs on it.
- * The web's rail reads them back as answers with no data of their own (`RailFunnel`, ADR 0162): "import" for a team
- * that brings no agents and goes on to its templates, "agents" for a team step left with no agents (a personal
- * workspace's "no agents yet", a team's "Skip this step" or "Create the agents later"), "computer" for a plan step that
- * was shown, "ai" for a team's AI step left for later ("Connect later", the people step next) and "team" for its
- * invitations sent.
+ * The web's rail reads them back as answers with no data of their own (`RailFunnel`, ADR 0162): "agents" for the start
+ * step left with no agent ("Start from scratch") or the picked agent's week seen, "computer" for a plan step that was
+ * shown, "ai" for a team's AI step left for later ("Connect later", the people step next) and "team" for its
+ * invitations sent. "context" and "import" are the phone's and older onboardings'.
  */
 export const ONBOARDING_STEPS = [
   { id: "workspace", optional: false },
@@ -62,132 +57,101 @@ export type OnboardingStepId = (typeof ONBOARDING_STEPS)[number]["id"];
 export const stepIndex = (id: OnboardingStepId) => ONBOARDING_STEPS.findIndex((s) => s.id === id);
 
 /**
- * The onboarding's steps on the rail (ADR 0162), web and phone: the workspace's name, what it does, the person
- * (`you`: their name, their photo and their own area; the web's only, amended 2026-11-12), its team (its agents), the
- * plan (agentes.chat Cloud), connecting an AI and, last, inviting people (`people`: the web's team rail only, amended
- * 2026-11-11). A personal workspace (ADR 0159) has no "what it does" step: its name step is the purpose question. The
- * phone lists neither the person's step, the AI step, the people step nor a personal path (`railState`'s `funnel`).
+ * The web onboarding's steps (ADR 0162, amended for the first agent asked of the person's own AI): the workspace's name
+ * (a personal workspace's: what it is for, ADR 0159), how to start (the person's AI proposes first agents and one is
+ * picked, or from scratch with the right hand alone), the picked agent's first week, the plan (agentes.chat Cloud),
+ * connecting an AI and, a team's last, inviting people. Starting from scratch has no week.
  */
-export type RailStep = "name" | "business" | "you" | "team" | "plan" | "ai" | "people";
-export const railSteps = (f: {
-  plan: boolean;
-  ai: boolean;
-  personal: boolean;
-  people?: boolean;
-  you?: boolean;
-}): RailStep[] => [
-  ...(f.personal ? (["name"] as const) : (["name", "business"] as const)),
-  ...(f.you ? (["you"] as const) : []),
-  "team",
+export type RailStep = "name" | "start" | "week" | "plan" | "ai" | "people";
+export const railSteps = (f: { plan: boolean; personal: boolean; week: boolean }): RailStep[] => [
+  "name",
+  "start",
+  ...(f.week ? (["week"] as const) : []),
   ...(f.plan ? (["plan"] as const) : []),
-  ...(f.ai ? (["ai"] as const) : []),
-  ...(f.people ? (["people"] as const) : []),
+  "ai",
+  ...(f.personal ? [] : (["people"] as const)),
 ];
 
 /**
- * The step to show, read from the workspace's data (it exists, has its context, the person said who they are, has a
- * team, waits for its plan, its team thinks, its people were invited), so a workspace left at any step resumes there;
- * "open" once it is ready to open. `you`, `ai` and `people` say whether the rail has those steps at all.
+ * The step to show, read from the workspace's data (it exists, an agent was picked or the start was left with none,
+ * the picked agent's week was seen, it waits for its plan, its team thinks, its people were invited), so a workspace
+ * left at any step resumes there; "open" once it is ready to open.
  */
 export function railStepAt(f: {
   created: boolean;
-  context: boolean;
-  you?: boolean;
-  /** The person's step answered: their own area said, or skipped (`users.work_area`). */
-  about?: boolean;
-  team: boolean;
+  /** An agent picked (or brought), or the start step left with none (`agents` stored). */
+  started: boolean;
+  /** The rail has the week (an agent was picked, not started from scratch). */
+  week: boolean;
+  /** The week's Continue (`agents` stored). */
+  weekSeen: boolean;
   waitsForPlan: boolean;
-  personal: boolean;
-  ai: boolean;
   thinks: boolean;
-  people?: boolean;
-  invited?: boolean;
+  people: boolean;
+  invited: boolean;
 }): RailStep | "open" {
   if (!f.created) return "name";
-  if (!f.personal && !f.context) return "business";
-  if (f.you && !f.about) return "you";
-  if (!f.team) return "team";
+  if (!f.started) return "start";
+  if (f.week && !f.weekSeen) return "week";
   if (f.waitsForPlan) return "plan";
-  if (f.ai && !f.thinks) return "ai";
+  if (!f.thinks) return "ai";
   return f.people && !f.invited ? "people" : "open";
 }
 
 /**
- * What the web's rail reads besides the workspace's data (ADR 0162, amended 2026-11-10 and 2026-11-11): whether every
- * agent thinks (`teamThinks`; undefined while that isn't known, read as not yet) and the furthest step the server
- * stored (`onboarding.step`), which answers what has no data of its own: a team step left with no agents ("agents": a
- * personal workspace's "no agents yet", a team's "Skip this step" or "Create the agents later"), a plan step once
- * shown ("computer", so the step stays on the rail, answered, after paying), a team's AI step left for later ("ai")
- * and its people invited ("team").
+ * What the rail reads besides the workspace's data: whether every agent thinks (`thinks`; undefined while that isn't
+ * known, read as not yet) and the furthest step the server stored (`onboarding.step`), which answers what has no data
+ * of its own: the start left with no agent or the week seen ("agents"), a plan step once shown ("computer", so the
+ * step stays on the rail, answered, after paying), a team's AI step left for later ("ai") and its people invited
+ * ("team").
  */
 export interface RailFunnel {
   thinks: boolean | undefined;
   passed: OnboardingStepId | undefined;
-  /**
-   * The person said who they are on their own step (amended 2026-11-12): their area, or that they skipped it
-   * (`users.work_area`), once per account. Unknown reads as said.
-   */
-  about?: boolean;
 }
 
 /**
- * Where an onboarding stands, web and phone: its steps, the one its data reaches, how many are answered, and the step
- * to show, which is one the person went back to (`picked`) while it stays answered, else the one reached. Before the
- * workspace exists only the server's billing says whether a plan step will come.
- *
- * `funnel` null (the phone) keeps the rail it has always had: no AI step, and a personal workspace (ADR 0159) has no
- * steps once it exists (it opens, its right hand's card holds the rest). With a funnel (the web, ADR 0162 amended
- * 2026-11-10) the rail ends on connecting an AI, answered once every agent thinks, and a personal workspace walks it
- * too, with no "what it does" step. The team step is answered by agents brought in or made, or by leaving it with no
- * agents (amended 2026-11-11): a personal workspace's "no agents yet", a team's way out of its question or templates.
- * A team's rail then ends on inviting people (amended 2026-11-11), after the AI step, which every agent thinking or
- * "Connect later" answers; the invitations sent answer it, and leaving it for later finishes the onboarding.
+ * Where a web onboarding stands: its steps, the one its data reaches, how many are answered, and the step to show,
+ * which is one the person went back to (`picked`) while it stays answered, else the one reached. Before the workspace
+ * exists only the server's billing says whether a plan step will come. The start step is answered by an agent in the
+ * workspace (picked from the AI's proposal, or brought from another app) or by leaving it with none ("agents"); the
+ * week comes only after a pick, and its Continue stores "agents" too. A team's rail ends on inviting people, after the
+ * AI step, which every agent thinking or "Connect later" answers.
  */
 export function railState(f: {
   orgId: string | null;
   standing: OrgStanding | undefined;
   billingUrl: string | null | undefined;
-  context: string;
   team: number;
   picked: RailStep | null;
   personal?: boolean;
-  funnel: RailFunnel | null;
+  funnel: RailFunnel;
 }) {
   const waitsForPlan = f.orgId ? billingHoldOf(f.standing) === "payment" : Boolean(f.billingUrl);
-  const funnel = f.funnel;
+  const { funnel } = f;
   const personal = Boolean(f.personal);
-  const passed = stepIndex(funnel?.passed ?? "workspace");
+  const passed = stepIndex(funnel.passed ?? "workspace");
+  const agents = stepIndex("agents");
   const computer = stepIndex("computer");
   // A plan step shown once stays on the rail, answered, after paying; a server that never held the workspace has none.
   // Past it ("ai", "team"), only a server with billing showed it: a self-hosted one keeps none.
-  const hasPlanStep =
-    waitsForPlan || (funnel !== null && (passed === computer || (passed > computer && Boolean(f.billingUrl))));
-  // Inviting people ends a team's rail on the web, never a personal workspace's nor the phone's.
-  const people = funnel !== null && !personal;
-  // The person's own step, the web's, team or personal.
-  const you = funnel !== null;
-  const steps = funnel
-    ? railSteps({ plan: hasPlanStep, ai: true, personal, people, you })
-    : railSteps({ plan: waitsForPlan, ai: false, personal: false });
-  const at =
-    !funnel && personal && f.orgId !== null
-      ? "open"
-      : railStepAt({
-          created: f.orgId !== null,
-          context: f.context.trim() !== "",
-          you,
-          about: funnel?.about !== false,
-          // The step left with no agents ("agents") answers it, in a team's workspace too; a team's "no agents yet"
-          // saves only "import", its templates still to come.
-          team: f.team > 0 || (funnel !== null && passed >= stepIndex("agents")),
-          waitsForPlan,
-          personal: funnel !== null && personal,
-          ai: funnel !== null,
-          // Every agent thinks, or a team left its AI step for later ("ai").
-          thinks: funnel?.thinks === true || (people && passed >= stepIndex("ai")),
-          people,
-          invited: passed >= stepIndex("team"),
-        });
+  const hasPlanStep = waitsForPlan || passed === computer || (passed > computer && Boolean(f.billingUrl));
+  // Inviting people ends a team's rail, never a personal workspace's.
+  const people = !personal;
+  // Started from scratch (the start left with no agent): no week to show.
+  const week = !(passed >= agents && f.team === 0);
+  const steps = railSteps({ plan: hasPlanStep, personal, week });
+  const at = railStepAt({
+    created: f.orgId !== null,
+    started: f.team > 0 || passed >= agents,
+    week,
+    weekSeen: passed >= agents,
+    waitsForPlan,
+    // Every agent thinks, or a team left its AI step for later ("ai").
+    thinks: funnel.thinks === true || (people && passed >= stepIndex("ai")),
+    people,
+    invited: passed >= stepIndex("team"),
+  });
   const reached = at === "open" ? steps.length : steps.indexOf(at);
   const back = f.picked ? steps.indexOf(f.picked) : -1;
   const step = back >= 0 && back < reached ? steps[back] : steps[Math.min(reached, steps.length - 1)];
@@ -200,8 +164,51 @@ export function railState(f: {
     waitsForPlan,
     hasPlanStep,
     /** Every agent thinks (the AI step answered by its data, not left for later). */
-    thinks: funnel?.thinks === true,
+    thinks: funnel.thinks === true,
   };
+}
+
+/**
+ * "Passo N de M" for a step: the steps up to the plan count (the name, how to start with its proposal and pick, the
+ * week, the plan); what comes after the plan (the AI, the people) is past the count. Null for a step it doesn't count.
+ */
+export function stepCount(steps: readonly RailStep[], step: RailStep): { n: number; total: number } | null {
+  const counted = steps.filter((s) => s !== "ai" && s !== "people");
+  const i = counted.indexOf(step);
+  return i < 0 ? null : { n: i + 1, total: counted.length };
+}
+
+/**
+ * The phone's onboarding steps (ADR 0162), its own until the phone takes the web's: the workspace's name, what it does,
+ * its team from a template, and the plan it waits for, in words only. A personal workspace (ADR 0159) has no steps once
+ * it exists: it opens, its right hand's card holds the rest.
+ */
+export type PhoneStep = "name" | "business" | "team" | "plan";
+
+/** Where a phone onboarding stands: its steps and the one its data reaches ("open" once it is ready to open). */
+export function phoneRail(f: {
+  orgId: string | null;
+  standing: OrgStanding | undefined;
+  billingUrl: string | null | undefined;
+  context: string;
+  team: number;
+  personal?: boolean;
+}): { steps: PhoneStep[]; at: PhoneStep | "open" } {
+  const waitsForPlan = f.orgId ? billingHoldOf(f.standing) === "payment" : Boolean(f.billingUrl);
+  const steps: PhoneStep[] = ["name", "business", "team", ...(waitsForPlan ? (["plan"] as const) : [])];
+  const at: PhoneStep | "open" =
+    f.orgId === null
+      ? "name"
+      : f.personal
+        ? "open"
+        : f.context.trim() === ""
+          ? "business"
+          : f.team === 0
+            ? "team"
+            : waitsForPlan
+              ? "plan"
+              : "open";
+  return { steps, at };
 }
 
 /** What an agent does first, as the plan step lists it: its first routine, else its role. */
