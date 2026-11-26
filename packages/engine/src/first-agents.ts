@@ -58,7 +58,7 @@ const line = (max: number) => z.string().trim().min(1).max(max);
 
 const optionInput = z.object({
   name: line(FIRST_AGENT_LIMITS.name).describe("A short first name for the agent, as a person's: Caio"),
-  handle: z.string().trim().max(32).optional().describe("Its @handle; made from the name when left out"),
+  handle: z.string().trim().max(32).nullish().describe("Its @handle; made from the name when left out"),
   role: line(FIRST_AGENT_LIMITS.role).describe("Its job title in one or two words, in the person's language"),
   why: line(FIRST_AGENT_LIMITS.why).describe("One sentence, from what you saw, on why this task"),
   tasks: z
@@ -69,7 +69,7 @@ const optionInput = z.object({
   apps: z
     .array(line(60))
     .max(FIRST_AGENT_LIMITS.apps)
-    .optional()
+    .nullish()
     .describe("The apps it needs, by name: Gmail, Stripe, Google Sheets"),
   routine: z
     .object({
@@ -80,31 +80,35 @@ const optionInput = z.object({
         .string()
         .trim()
         .max(100)
-        .optional()
+        .nullish()
         .describe("The same schedule as 5-field cron in the person's time zone: 0 8 * * 1"),
     })
-    .optional()
+    .nullish()
     .describe("Its routine: the recurring job, with a day and a time"),
   today: z
     .array(line(200))
     .max(FIRST_AGENT_LIMITS.today)
-    .optional()
+    .nullish()
     .describe("What it can deliver on its first day, up to 3 items"),
   instructions: z
     .string()
     .trim()
     .max(FIRST_AGENT_LIMITS.instructions)
-    .optional()
+    .nullish()
     .describe("Its standing instructions: how it works, what waits for a person"),
 });
 
-/** What the MCP tool and the paste route take: 1 to 3 options, ordered by the time each task takes. */
+/**
+ * What the MCP tool and the paste route take: 1 to 3 options, ordered by the time each task takes. What may be left out
+ * may also be null, as an AI's JSON often writes it: the tool's own arguments are checked against this before
+ * `saveFirstAgents` reads them.
+ */
 export const firstAgentsInput = z.object({
   about: z
     .string()
     .trim()
     .max(FIRST_AGENT_LIMITS.about)
-    .optional()
+    .nullish()
     .describe("Two or three sentences on what the workspace (or the person) does"),
   options: z
     .array(optionInput)
@@ -308,7 +312,7 @@ async function readSchedule(
   return null;
 }
 
-/** An AI's JSON often writes null for what it leaves out: read as left out. */
+/** An AI's JSON often writes null for what it leaves out: read as left out (a pasted one, or the tool's arguments). */
 const withoutNulls = (value: unknown): unknown =>
   Array.isArray(value)
     ? value.map(withoutNulls)
