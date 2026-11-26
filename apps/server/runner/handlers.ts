@@ -2027,7 +2027,9 @@ export class RequestRunner {
       })
       .catch((err: unknown): RequestOutcome => {
         const error = toMachineError(err);
+        // A refused turn ends its run with only these words on the server: every code of one is kept here too.
         if (error.code === "internal" && error.message !== "Canceled") this.log(`${req.op} failed: ${error.message}`);
+        else if (turn) this.log(`${req.op} failed (${error.code}): ${error.message}`);
         return { ok: false, error };
       })
       .then((outcome) => {
