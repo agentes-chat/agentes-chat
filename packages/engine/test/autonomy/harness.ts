@@ -104,6 +104,7 @@ const INCIDENTAL = new Set([
   "tool_groups",
   "steer_triage",
   "agent_status",
+  "ask_kind",
   "context_budget",
   "ai_intent",
   "status_fits",
