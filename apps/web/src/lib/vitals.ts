@@ -18,8 +18,8 @@ const DESKTOP_PLATFORMS = { mac: "macos", windows: "windows", linux: "linux" } a
 /** This page's side of the measures, read from the window as it is now. */
 export function webVitalsHost(): VitalsHost {
   const desktop = desktopPlatform();
-  // A desktop window hidden to the tray or minimised can keep its page visible (WebView2 is never told, as
-  // `holdSkiesWhileAway` says): there a window without focus is in between, no stall probe and no return counted.
+  // A desktop window hidden to the tray or minimised can keep its page visible (WebView2 is never told, as `sight`
+  // says, packages/ui/src/sight.ts): there a window without focus is in between, no stall probe and no return counted.
   const presence = (): AppPresence =>
     document.visibilityState === "hidden" ? "away" : !desktop || document.hasFocus() ? "front" : "between";
   // A page loaded hidden (a tab opened in the background) paints only once it shows: that opening isn't timed.

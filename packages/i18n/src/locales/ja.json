@@ -3386,10 +3386,22 @@
       "zen": "OpenCodeを接続",
       "api_key": "APIキーを追加"
     },
+    "cliFetch": {
+      "preparing": "{{computer}}で{{program}}を準備しています…",
+      "preparingPct": "{{computer}}で{{program}}を準備しています… {{percent}}%",
+      "failed": {
+        "offline": "{{computer}}で{{program}}を準備できませんでした。コンピューターがダウンロード先に接続できません。",
+        "hash_mismatch": "{{computer}}で{{program}}を準備できませんでした。ダウンロードしたファイルが元のファイルではなかったため、使用していません。",
+        "no_build": "{{program}}には{{computer}}のシステム向けのバージョンがありません。",
+        "disk_full": "{{computer}}で{{program}}を準備できませんでした。ディスクがいっぱいです。",
+        "failed": "{{computer}}で{{program}}を準備できませんでした。ダウンロードが完了しませんでした。"
+      }
+    },
     "cli": {
       "missing": "{{program}} はまだ {{computer}} にありません。",
       "claudeApp": "Claude アプリだけでは足りません。エージェントはコンピューターで動く Claude Code を使います。",
       "install": "{{program}} をインストールする",
+      "update": "{{program}} を更新する",
       "check": "インストールした。もう一度確認",
       "checked": "確認しました。{{program}} はまだ {{computer}} にありません。",
       "installing": "{{computer}} に {{program}} をインストールしています。1 分ほどかかります。",
@@ -6261,6 +6273,7 @@
         "cli_failed": "エラーで{{brain}}が停止しました: {{detail}}",
         "cli_stopped": "エラーで{{brain}}が停止しました。",
         "cli_closed": "突然{{brain}}が終了しました。",
+        "cli_empty": "{{brain}}が回答せずにターンを終えました。もう一度聞いてください。繰り返す場合は、コンピューターの{{brain}}を更新するか、エージェントの設定で別のAIを選んでください。",
         "cli_sandbox": "{{brain}}がこのコンピューターでサンドボックスを起動できません。エージェントの設定で別のAIを選んでください。",
         "cli_system": "{{brain}}はこのコンピューターのシステムではまだ動きません。エージェントの設定で別のAIを選んでください。",
         "account_missing": "このエージェント用に選んだアカウントが、もうコンピューターにありません。エージェントの設定で別のアカウントを選ぶか、もう一度追加してください。",
@@ -12184,6 +12197,8 @@
       "tool_offOne": "{{computer}} では {{program}} がオフです。",
       "not_installed": "{{computer}}に{{program}}がインストールされていません。",
       "cant_start": "{{program}} は {{computer}} にありますが、起動しません。",
+      "cli_outdated": "{{computer}}の{{program}}は、エージェントが使う前に更新が必要です。",
+      "cli_outdatedRun": "{{computer}}の{{program}}は、エージェントが使う前に更新が必要です。そこで {{command}} を実行してください。",
       "home_only": "{{computer}} の {{program}} は root 専用にインストールされていて、エージェントからは届きません。",
       "not_reported": "{{computer}}は、入っているプログラムをまだ確認しています。終わりしだい自動で切り替わります。",
       "system": "{{program}}は{{computer}}のシステムではまだ動きません。",
@@ -15457,6 +15472,7 @@
       "privateNetwork": "このアドレスはプライベートネットワーク上にあります。公開アドレスを使うか、セルフホストのサーバーでは `OUTBOUND_ALLOW_CIDRS` で許可してください。",
       "tooLong": "長すぎます。短くして、もう一度お試しください。",
       "updateComputerApp": "コンピューターのアプリが古すぎます。更新して、もう一度お試しください。",
+      "cliNotFetched": "このコンピューターはそのプログラムを自分で取得しません。",
       "computerUpdatesItself": "ワークスペースのコンピューターはこのために自動で更新されます。少ししてからもう一度お試しください。",
       "notInvited": "この予定には招待されていません。",
       "offHere": "ここではオフになっています。",
@@ -18252,7 +18268,8 @@
       "talk": "{{name}}と話す",
       "missing": "この会話はもうありません。",
       "helping": "{{name}}を手伝っています",
-      "see": "会話を見る"
+      "see": "会話を見る",
+      "relay": "{{name}}の回答：{{excerpt}}。会話を見る"
     },
     "unshown": "このメッセージを表示できませんでした",
     "unshownPart": "このメッセージの一部を表示できませんでした",
@@ -18421,6 +18438,7 @@
         "usingScreen": "画面を使いました",
         "cloningRepo": "リポジトリをクローンしました",
         "listingRepos": "リポジトリを一覧表示しました",
+        "preparingCli": "{{app}}を準備しました",
         "openingPullRequest": "プルリクエストを作成しました",
         "handingOff": "レポートを届けました",
         "recordingFindings": "調査結果を記録しました",
@@ -18544,6 +18562,8 @@
       "usingScreen": "画面を使用中",
       "cloningRepo": "リポジトリをクローン中",
       "listingRepos": "リポジトリを一覧表示中",
+      "preparingCli": "{{computer}}で{{app}}を準備中",
+      "preparingCliPct": "{{computer}}で{{app}}を準備中（{{percent}}%）",
       "openingPullRequest": "プルリクエストを作成中",
       "handingOff": "レポートを届けています",
       "recordingFindings": "調査結果を記録中",

@@ -3398,10 +3398,22 @@
       "zen": "Hubungkan OpenCode",
       "api_key": "Tambahkan kunci API"
     },
+    "cliFetch": {
+      "preparing": "Menyiapkan {{program}} di {{computer}}…",
+      "preparingPct": "Menyiapkan {{program}} di {{computer}}… {{percent}}%",
+      "failed": {
+        "offline": "Tidak bisa menyiapkan {{program}} di {{computer}}: komputer tidak bisa mengunduhnya.",
+        "hash_mismatch": "Tidak bisa menyiapkan {{program}} di {{computer}}: unduhannya bukan file asli, jadi tidak dipakai.",
+        "no_build": "{{program}} tidak punya versi untuk sistem {{computer}}.",
+        "disk_full": "Tidak bisa menyiapkan {{program}} di {{computer}}: disknya penuh.",
+        "failed": "Tidak bisa menyiapkan {{program}} di {{computer}}: unduhannya tidak selesai."
+      }
+    },
     "cli": {
       "missing": "{{program}} belum ada di {{computer}}.",
       "claudeApp": "Aplikasi Claude saja tidak cukup: agen memakai Claude Code, yang berjalan di komputer.",
       "install": "Pasangkan {{program}} untuk saya",
+      "update": "Perbarui {{program}} untuk saya",
       "check": "Sudah saya pasang, periksa lagi",
       "checked": "Baru diperiksa: {{program}} masih belum ada di {{computer}}.",
       "installing": "Memasang {{program}} di {{computer}}. Butuh sekitar satu menit.",
@@ -6281,6 +6293,7 @@
         "cli_failed": "Program {{brain}} berhenti karena kesalahan: {{detail}}",
         "cli_stopped": "Program {{brain}} berhenti karena kesalahan.",
         "cli_closed": "Program {{brain}} tertutup tiba-tiba.",
+        "cli_empty": "Program {{brain}} mengakhiri gilirannya tanpa jawaban. Tanyakan lagi. Jika terus terjadi, perbarui {{brain}} di komputer atau pilih AI lain di pengaturan agen.",
         "cli_sandbox": "Program {{brain}} tidak bisa menjalankan sandbox-nya di komputer ini. Pilih AI lain di pengaturan agen.",
         "cli_system": "Program {{brain}} belum berjalan di sistem komputer ini. Pilih AI lain di pengaturan agen.",
         "account_missing": "Akun yang dipilih untuk agen ini sudah tidak ada di komputernya. Pilih akun lain di pengaturan agen, atau tambahkan lagi.",
@@ -12241,6 +12254,8 @@
       "tool_offOne": "{{program}} mati di {{computer}}.",
       "not_installed": "{{program}} belum terpasang di {{computer}}.",
       "cant_start": "{{program}} ada di {{computer}}, tetapi tidak mau berjalan.",
+      "cli_outdated": "{{program}} di {{computer}} perlu diperbarui sebelum agen bisa memakainya.",
+      "cli_outdatedRun": "{{program}} di {{computer}} perlu diperbarui sebelum agen bisa memakainya. Jalankan {{command}} di sana.",
       "home_only": "{{program}} hanya terpasang untuk root di {{computer}}, yang tidak bisa dijangkau para agen.",
       "not_reported": "{{computer}} masih memeriksa program apa saja yang dimilikinya. Ini berubah sendiri setelah selesai.",
       "system": "{{program}} belum berjalan di sistem {{computer}}.",
@@ -15515,6 +15530,7 @@
       "privateNetwork": "Alamat ini ada di jaringan privat. Gunakan alamat publik, atau di server yang di-host sendiri, izinkan dengan `OUTBOUND_ALLOW_CIDRS`.",
       "tooLong": "Itu terlalu panjang. Persingkat dan coba lagi.",
       "updateComputerApp": "Aplikasi di komputer terlalu lama untuk ini. Perbarui dan coba lagi.",
+      "cliNotFetched": "Komputer ini tidak mengambil program itu sendiri.",
       "computerUpdatesItself": "Komputer ruang kerja memperbarui dirinya sendiri untuk ini. Coba lagi sebentar lagi.",
       "notInvited": "Kamu tidak termasuk yang diundang ke acara ini.",
       "offHere": "Ini dimatikan di sini.",
@@ -18310,7 +18326,8 @@
       "talk": "Bicara dengan {{name}}",
       "missing": "Percakapan ini sudah tidak ada di sini.",
       "helping": "membantu {{name}}",
-      "see": "Lihat percakapan"
+      "see": "Lihat percakapan",
+      "relay": "Jawaban {{name}}: {{excerpt}}. Lihat percakapan"
     },
     "unshown": "Pesan ini tidak bisa ditampilkan",
     "unshownPart": "Sebagian pesan ini tidak bisa ditampilkan",
@@ -18479,6 +18496,7 @@
         "usingScreen": "Memakai layar",
         "cloningRepo": "Meng-clone repositori",
         "listingRepos": "Menampilkan daftar repositori",
+        "preparingCli": "Menyiapkan {{app}}",
         "openingPullRequest": "Membuka pull request",
         "handingOff": "Mengirim laporan",
         "recordingFindings": "Mencatat temuan",
@@ -18602,6 +18620,8 @@
       "usingScreen": "memakai layar",
       "cloningRepo": "meng-clone repositori",
       "listingRepos": "menampilkan daftar repositori",
+      "preparingCli": "menyiapkan {{app}} di {{computer}}",
+      "preparingCliPct": "menyiapkan {{app}} di {{computer}} ({{percent}}%)",
       "openingPullRequest": "membuka pull request",
       "handingOff": "mengirim laporan",
       "recordingFindings": "mencatat temuan",
