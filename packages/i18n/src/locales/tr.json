@@ -18828,7 +18828,8 @@
       "talk": "{{name}} ile konuş",
       "missing": "Bu konuşma artık burada değil.",
       "helping": "{{name}} ajanına yardım ediyor",
-      "see": "Konuşmayı gör"
+      "see": "Konuşmayı gör",
+      "relay": "Yanıt ({{name}}): {{excerpt}}. Konuşmayı gör"
     },
     "unshown": "Bu mesaj gösterilemedi",
     "unshownPart": "Bu mesajın bir kısmı gösterilemedi",

@@ -19603,6 +19603,8 @@ export const en = {
       /** On a card the consulted agent posted where the person asked. */
       helping: "helping {{name}}",
       see: "See conversation",
+      /** The quote of another agent's answer at the top of the message that passes it on; opens the conversation. */
+      relay: "{{name}}'s answer: {{excerpt}}. See the conversation",
     },
     unshown: "This message couldn't be shown",
     unshownPart: "Part of this message couldn't be shown",

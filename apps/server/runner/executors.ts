@@ -241,13 +241,7 @@ export function windowsShellLine(
  */
 export function npmNativeLauncher(
   launcher: string,
-  read: (file: string) => string | null = (file) => {
-    try {
-      return statSync(file).size < 4096 ? readFileSync(file, "utf8") : null;
-    } catch {
-      return null;
-    }
-  },
+  read: (file: string) => string | null = readLauncher,
   exists: (file: string) => boolean = isFile,
 ): string | null {
   if (win32.extname(launcher).toLowerCase() !== ".cmd") return null;
@@ -262,6 +256,42 @@ export function npmNativeLauncher(
   const exe = win32.join(win32.dirname(launcher), target);
   return exists(exe) ? exe : null;
 }
+
+/** A launcher's text, when it is small enough to be one; null otherwise or unreadable. */
+function readLauncher(file: string): string | null {
+  try {
+    return statSync(file).size < 4096 ? readFileSync(file, "utf8") : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * A Node script's launcher (npm's and pnpm's `claude.cmd`) runs the `node.exe` in its own folder, else a bare `node`
+ * from the PATH: true when it names that `node.exe` and neither is there.
+ */
+export function launcherNodeMissing(
+  launcher: string,
+  pathList: string,
+  pathExt: string | undefined,
+  read: (file: string) => string | null = readLauncher,
+  exists: (file: string) => boolean = isFile,
+): boolean {
+  if (!/%~?dp0%?\\node\.exe/i.test(read(launcher) ?? "")) return false;
+  return (
+    !exists(win32.join(win32.dirname(launcher), "node.exe")) && !findOnWindowsPath("node", pathList, pathExt, exists)
+  );
+}
+
+/**
+ * cmd.exe ending at once with its own code for a program it can't find (9009), and no words: its "not recognized"
+ * is in the system's language and comes with exit 1, so only this code reads as not installed everywhere.
+ */
+const notFoundRun = (): CliRun => ({
+  file: windowsShell(),
+  args: ["/d", "/c", "exit", "9009"],
+  env: { ...NO_CWD_LOOKUP },
+});
 
 /** How a CLI starts: the file, its argv, and what to add to its env (Windows: `windowsShellLine`'s). */
 export interface CliRun {
@@ -278,7 +308,8 @@ export interface CliRun {
  * `.cmd` launcher (npm's `claude.cmd`) through cmd.exe with every argument quoted (`windowsShellLine`), since Node's own
  * `shell: true` joins them as they are, so an empty one (`--setting-sources ""`) vanished and the next flag became its
  * value, and a path with a space split in two; unless the launcher only starts a native binary (`npmNativeLauncher`),
- * which then starts as an `.exe`. One not found still goes to cmd.exe, which says it isn't there (exit 9009).
+ * which then starts as an `.exe`. One not found, or a Node script's launcher with no `node` to run
+ * (`launcherNodeMissing`), ends as cmd.exe's not found (`notFoundRun`).
  * Elsewhere, and for a launcher: the file and its argv, no shell.
  */
 export function cliSpawn(
@@ -303,19 +334,17 @@ export function cliSpawn(
       : { file: own, args: [...launch, ...args] };
   }
   if (platform === "win32" && command.length === 1) {
-    const found = findOnWindowsPath(
-      file,
-      pathList ?? envValue(process.env, "PATH", platform) ?? "",
-      lookup.pathExt ?? envValue(process.env, "PATHEXT", platform),
-      lookup.exists,
-    );
+    const path = pathList ?? envValue(process.env, "PATH", platform) ?? "";
+    const pathExt = lookup.pathExt ?? envValue(process.env, "PATHEXT", platform);
+    const found = findOnWindowsPath(file, path, pathExt, lookup.exists);
     const exe = !found
       ? null
       : /\.(?:exe|com)$/i.test(found)
         ? found
         : npmNativeLauncher(found, lookup.read, lookup.exists);
     if (exe) return { file: exe, args: [...args], env: { ...NO_CWD_LOOKUP } };
-    return windowsShellLine(found ?? file, args);
+    if (!found || launcherNodeMissing(found, path, pathExt, lookup.read, lookup.exists)) return notFoundRun();
+    return windowsShellLine(found, args);
   }
   return { file: resolveCommand(file, pathList), args: [...pre, ...args] };
 }

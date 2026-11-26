@@ -268,7 +268,7 @@ test.skipIf(!posix)("killed past its time, with what it started; an answer that 
   expect(await errorCode(() => routeWithPlan(request({ prompt: "BAD_ROUTE" }), deps))).toBe("internal");
 });
 
-test("on Windows a route starts the CLI as every other start does: npm's claude.cmd through cmd.exe, no console", async () => {
+test("on Windows a route starts the CLI as every other start does (cliSpawn), with no console", async () => {
   const { deps } = folders();
   const seen: { file: string; args: readonly string[]; options: Record<string, unknown> }[] = [];
   const fake = ((file: string, args: readonly string[], options: Record<string, unknown>) => {
@@ -285,10 +285,9 @@ test("on Windows a route starts the CLI as every other start does: npm's claude.
   expect(await errorCode(() => routeWithPlan(request(), { ...rest, platform: "win32", spawn: fake }))).toBe("internal");
   expect(seen).toHaveLength(1);
   const [run] = seen;
+  // No claude.cmd on this PATH: cmd.exe's not found, as `cliSpawn` starts it (its quoting of a found one: cli-spawn.test).
   expect(run?.file).toBe(windowsShell());
-  expect(run?.args.slice(0, 4)).toEqual(["/d", "/v:off", "/s", "/c"]);
-  expect(run?.args[4]?.startsWith('""claude" ')).toBe(true);
-  expect(run?.options.windowsVerbatimArguments).toBe(true);
+  expect(run?.args).toEqual(["/d", "/c", "exit", "9009"]);
   expect(run?.options.detached).toBe(false);
 });
 
