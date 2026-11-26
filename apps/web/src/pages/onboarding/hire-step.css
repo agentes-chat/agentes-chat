@@ -7,40 +7,19 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
-  margin: 18px 0 24px;
+  margin: 18px 0 0;
   padding: 0;
   list-style: none;
 }
-.onb-roster li {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  min-width: 0;
+/* Each one a MediaRow: a 36px face on the name's line, the role beside the name, what it does under them. */
+.onb-roster > li {
+  --mediarow-face: 36px;
+  row-gap: 2px;
 }
-.onb-roster li > .ac-avatar {
-  flex: none;
-  width: 36px;
-  height: 36px;
-}
-.onb-roster li > span {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-.onb-roster b {
+.onb-roster .ac-mediarow__head {
   font-size: 15px;
-  line-height: 20px;
-  font-weight: 600;
-  overflow-wrap: anywhere;
 }
-.onb-roster b span {
-  margin-left: 6px;
-  color: var(--muted);
-  font-size: 13.5px;
-  font-weight: 500;
-}
-.onb-roster li > span > span {
+.onb-roster .ac-mediarow__body {
   color: var(--muted);
   font-size: 14px;
   line-height: 20px;
@@ -54,14 +33,17 @@
   padding-top: 18px;
   border-top: 1px solid var(--line);
 }
+/* The price beside the plan's name while both fit, else under it: a long name never squeezed to a word a line. */
 .onb-offer__head {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
+  gap: 8px 16px;
 }
 .onb-offer__name {
   display: flex;
+  flex: 1 1 14em;
   flex-direction: column;
   align-items: flex-start;
   gap: 2px;
@@ -76,14 +58,16 @@
 .onb-offer__name .onb__link {
   font-size: 13.5px;
 }
+/* A long price (taxes, another currency) wraps at its spaces, never past the box. */
 .onb-offer__price {
-  flex: none;
+  flex: 0 1 auto;
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: 6px;
+  gap: 0 6px;
+  min-width: 0;
   color: var(--muted);
   font-size: 14px;
-  white-space: nowrap;
 }
 .onb-offer__price b {
   color: var(--ink);
@@ -101,9 +85,7 @@
   text-wrap: pretty;
 }
 
-/* A phone: the price under the plan's name when both don't fit. */
-@media (max-width: 400px) {
-  .onb-offer__head {
-    flex-wrap: wrap;
-  }
+/* Who is hired, then the plan under a hairline: the box's own rhythm between them. */
+.onbx__body:has(> .onb-roster) {
+  row-gap: 40px;
 }

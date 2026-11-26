@@ -3,6 +3,7 @@ import { WORKSPACE_COMPUTER_KIND } from "@agenteschat/client/lib/computer";
 import {
   type AgentAppearance,
   Avatar,
+  Button,
   ComputerPortrait,
   DialogBody,
   DialogFooter,
@@ -175,9 +176,10 @@ export function Box({
   label?: string;
 }) {
   const { t } = useTranslation();
+  // The kit's ghost button: beside the step's main one they are a pair, the way back a square on a phone.
   const back = onBack ? (
-    <button
-      type="button"
+    <Button
+      variant="ghost"
       className="onbx__back"
       onClick={onBack}
       disabled={busy}
@@ -185,7 +187,7 @@ export function Box({
     >
       <Icon name="chevronLeft" size={16} />
       <span className="onbx__back-label">{backLabel ?? t("onboarding.back")}</span>
-    </button>
+    </Button>
   ) : null;
   // The footer only when it holds something: a note, the way back or the buttons.
   const footNote = note ?? back ?? (acts ? "" : undefined);

@@ -233,43 +233,36 @@ export function AskYourAi({
           </button>
         )}
       </fieldset>
+      {/* Each part as a MediaRow: its number on its title's line, what to do under them at the box's full width. */}
       <ol className="onb-ask__steps">
         {!byPaste && (
-          <li>
-            <span className="onb-ask__n" aria-hidden="true">
-              {n.connect}
-            </span>
-            <div className="onb-ask__step">
-              <p className="onb-ask__title">
-                <span>{t("onboarding.ask.connect")}</span>
-                {connected && (
-                  <span className="onb-ask__done">
-                    <Icon name="check" size={14} />
-                    {t("onboarding.ask.connected")}
-                  </span>
-                )}
-              </p>
+          <li className="ac-mediarow ac-mediarow--row">
+            <StepNumber n={n.connect} />
+            <p className="ac-mediarow__head onb-ask__title">{t("onboarding.ask.connect")}</p>
+            {connected && (
+              <span className="ac-mediarow__end onb-ask__done">
+                <Icon name="check" size={14} />
+                {t("onboarding.ask.connected")}
+              </span>
+            )}
+            <div className="ac-mediarow__body onb-ask__step">
               {mcp?.available && client ? <ConnectGuide client={client} url={mcp.url} /> : <Skeleton width="70%" />}
             </div>
           </li>
         )}
-        <li>
-          <span className="onb-ask__n" aria-hidden="true">
-            {n.prompt}
-          </span>
-          <div className="onb-ask__step">
-            <p className="onb-ask__title">
-              <span>{t(byPaste ? "onboarding.ask.pasteJson" : "onboarding.ask.paste", { app: appName })}</span>
-            </p>
+        <li className="ac-mediarow ac-mediarow--row">
+          <StepNumber n={n.prompt} />
+          <p className="ac-mediarow__head onb-ask__title">
+            {t(byPaste ? "onboarding.ask.pasteJson" : "onboarding.ask.paste", { app: appName })}
+          </p>
+          <div className="ac-mediarow__body onb-ask__step">
             {unavailable && mcp && !mcp.available && <p className="onb-ask__hint">{mcp.note}</p>}
             <PromptBox text={prompt} />
           </div>
         </li>
         {byPaste && (
-          <li>
-            <span className="onb-ask__n" aria-hidden="true">
-              {n.answer}
-            </span>
+          <li className="ac-mediarow ac-mediarow--row">
+            <StepNumber n={n.answer} />
             <PasteAnswer orgId={orgId} app={appName} onRead={(p) => onProposal(p, client ?? null)} />
           </li>
         )}
@@ -278,7 +271,7 @@ export function AskYourAi({
       {!unavailable && (
         <div className="onb-ask__wait">
           {!byPaste && (
-            <p className="onb-ask__line" role="status">
+            <p className="onb-ask__line ac-iconline" role="status">
               <Avatar
                 kind="agent"
                 name={lodi?.name ?? RIGHT_HAND_DEFAULT.name}
@@ -292,10 +285,20 @@ export function AskYourAi({
           <button type="button" className="ac-link onb-ask__switch" onClick={() => setPasting(!pasting)}>
             {t(pasting ? "onboarding.ask.useConnector" : "onboarding.ask.noConnector")}
           </button>
+          {/* Under the wait it is about, on a line of its own. */}
+          {late && !byPaste && <p className="onb-ask__stuck">{t("onboarding.ask.stuck")}</p>}
         </div>
       )}
-      {late && !byPaste && <p className="onb-ask__stuck">{t("onboarding.ask.stuck")}</p>}
     </Box>
+  );
+}
+
+/** A part's number, on its title's line (the MediaRow's face). */
+function StepNumber({ n }: { n: number }) {
+  return (
+    <span className="ac-mediarow__face" aria-hidden="true">
+      <span className="onb-ask__n">{n}</span>
+    </span>
   );
 }
 
@@ -372,34 +375,36 @@ function PasteAnswer({ orgId, app, onRead }: { orgId: string; app: string; onRea
     paste.mutate(body as FirstAgentsInput, { onSuccess: onRead });
   };
   return (
-    <div className="onb-ask__step">
-      <label className="onb-ask__title" htmlFor="onb-ask-answer">
-        <span>{t("onboarding.ask.answer", { app })}</span>
+    <>
+      <label className="ac-mediarow__head onb-ask__title" htmlFor="onb-ask-answer">
+        {t("onboarding.ask.answer", { app })}
       </label>
-      <Textarea
-        id="onb-ask-answer"
-        className="onb-ask__answer"
-        rows={4}
-        value={text}
-        onChange={(e) => {
-          setText(e.target.value);
-          setBad(false);
-        }}
-        placeholder={t("onboarding.ask.answerPlaceholder")}
-        aria-invalid={bad || undefined}
-        aria-describedby={bad ? "onb-ask-bad" : undefined}
-        spellCheck={false}
-      />
-      {bad && (
-        <p id="onb-ask-bad" className="onb-ask__bad" role="alert">
-          {t("onboarding.ask.notJson")}
-        </p>
-      )}
-      <span className="row">
-        <Button variant="primary" disabled={!text.trim()} loading={paste.isPending} onClick={read}>
-          {t("onboarding.ask.read")}
-        </Button>
-      </span>
-    </div>
+      <div className="ac-mediarow__body onb-ask__step">
+        <Textarea
+          id="onb-ask-answer"
+          className="onb-ask__answer"
+          rows={4}
+          value={text}
+          onChange={(e) => {
+            setText(e.target.value);
+            setBad(false);
+          }}
+          placeholder={t("onboarding.ask.answerPlaceholder")}
+          aria-invalid={bad || undefined}
+          aria-describedby={bad ? "onb-ask-bad" : undefined}
+          spellCheck={false}
+        />
+        {bad && (
+          <p id="onb-ask-bad" className="onb-ask__bad" role="alert">
+            {t("onboarding.ask.notJson")}
+          </p>
+        )}
+        <span className="row">
+          <Button variant="primary" disabled={!text.trim()} loading={paste.isPending} onClick={read}>
+            {t("onboarding.ask.read")}
+          </Button>
+        </span>
+      </div>
+    </>
   );
 }
