@@ -1,0 +1,176 @@
+/*
+ * The welcome wizard (ADR 0160, addendum of 2026-11-26): its picture on top (welcome-art.css), the step's words, the
+ * last step's list and beta line, and the way on. The words come in once as each step opens, unless the person asked
+ * for less motion.
+ */
+.ac-dialog.wiz {
+  overflow: hidden;
+}
+.wiz__art {
+  position: relative;
+  flex: none;
+  height: 252px;
+  overflow: hidden;
+  isolation: isolate;
+  container: wiz-art / inline-size;
+}
+.wiz__main {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+.wiz__body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 22px 28px 0;
+}
+.wiz__dots {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 10px;
+}
+.wiz__dots i {
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--line2);
+}
+.wiz__dots i[data-done] {
+  background: color-mix(in srgb, var(--ink) 35%, transparent);
+}
+.wiz__dots i[data-on] {
+  width: 22px;
+  background: var(--ink);
+}
+.wiz__title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 650;
+  line-height: 30px;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+.wiz__text {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 22px;
+  text-wrap: pretty;
+}
+.wiz__foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 24px 28px;
+}
+/* Skip's words line up with the text above them. */
+.wiz__skip.ac-btn {
+  margin-inline-start: calc(-1 * var(--control-px-md));
+  color: var(--muted);
+}
+.wiz__acts {
+  display: flex;
+  gap: 8px;
+  margin-inline-start: auto;
+}
+@media (max-width: 560px) {
+  .wiz__art {
+    height: 212px;
+  }
+  .wiz__body {
+    padding: 18px var(--dialog-pad) 0;
+  }
+  .wiz__title {
+    font-size: 21px;
+    line-height: 27px;
+  }
+  .wiz__foot {
+    padding: 20px var(--dialog-pad);
+  }
+}
+
+/* ---------- the last step: what is left to do, and the beta line ---------- */
+.wiz-board {
+  display: flex;
+  flex-direction: column;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.wiz-board li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 40px;
+  padding: 6px 0;
+  font-size: 14.5px;
+  line-height: 20px;
+}
+.wiz-board li + li {
+  border-top: 1px solid var(--line);
+}
+.wiz-board__text {
+  flex: 1;
+  min-width: 0;
+  text-wrap: pretty;
+}
+.wiz-board li[data-done] .wiz-board__text,
+.wiz-board li[data-dim] .wiz-board__text {
+  color: var(--muted);
+}
+.wiz-board li > .ac-btn {
+  flex: none;
+}
+.wiz-board__mark {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px var(--line-strong);
+}
+.wiz-board li[data-done] .wiz-board__mark {
+  background: var(--ok);
+  box-shadow: none;
+  color: #fff;
+}
+.wiz-betaline {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 19px;
+}
+.wiz-betaline .ac-icon {
+  flex: none;
+  margin-top: 1px;
+  color: var(--ink);
+}
+.wiz-betaline b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .wiz__body {
+    animation: wiz-fade 0.4s ease-out both;
+  }
+}
+@keyframes wiz-fade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
