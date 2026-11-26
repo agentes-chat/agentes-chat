@@ -221,7 +221,7 @@ export function BoxNote({ icon, children }: { icon?: IconName; children: ReactNo
 }
 
 /** A choice as quiet rows: a hairline between them, the round choice at each one's end, on the title's line. */
-export function Pick<V extends string>({
+export function PickRows<V extends string>({
   label,
   value,
   onChange,

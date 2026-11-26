@@ -64,7 +64,7 @@ import { AiHost, AiStep } from "./onboarding/AiStep";
 import { AskYourAi } from "./onboarding/AskStep";
 import { PeopleStep } from "./onboarding/PeopleStep";
 import { FirstAgentPick } from "./onboarding/PickStep";
-import { AppWall, Box, BoxNote, Pick, type ShellFace, World } from "./onboarding/Shell";
+import { AppWall, Box, BoxNote, PickRows, type ShellFace, World } from "./onboarding/Shell";
 import { PlanStep } from "./onboarding/steps";
 import "./onboarding.css";
 
@@ -617,7 +617,7 @@ export function OnboardingPage() {
           >
             <Locked when={busy}>
               <div className="onb__answer">
-                <Pick<WorkspaceMode>
+                <PickRows<WorkspaceMode>
                   label={t("onboarding.purpose.title")}
                   value={purpose}
                   onChange={setPurpose}
@@ -827,7 +827,7 @@ export function OnboardingPage() {
           >
             {!resumed.current && <ResumeProposal orgId={orgId} onFound={resume} />}
             <Locked when={busy}>
-              <Pick<"ask" | "scratch">
+              <PickRows<"ask" | "scratch">
                 label={t("onboarding.start.title")}
                 value={startPick}
                 onChange={setStartPick}
