@@ -13870,6 +13870,23 @@
     "s3": "Votre propre stockage",
     "s3Text": "Cloudflare R2, Amazon S3, Backblaze B2 ou un autre service compatible S3.",
     "current": "Utilisé",
+    "computer": {
+      "title": "Ordinateur de l'espace de travail",
+      "used": "{{used}} sur {{size}} utilisés",
+      "bar": "Disque de l'ordinateur de l'espace de travail",
+      "measuring": "Mesure de ce qui occupe l'espace.",
+      "part": {
+        "projects": "Projets et code",
+        "apps": "Apps et outils",
+        "agents": "Fichiers des agents",
+        "caches": "Caches et fichiers temporaires",
+        "system": "Système",
+        "other": "Autres",
+        "free": "Libre"
+      },
+      "full": "Presque plein, il reste {{free}}. Un agent peut vider les caches et les fichiers temporaires et supprimer ce que plus personne n'utilise.",
+      "ask": "Libère de l'espace sur l'ordinateur de l'espace de travail : vide les caches et les fichiers temporaires (gestionnaires de paquets, navigateurs, outils de build), puis dis-moi ce qui prend le plus de place à part ça."
+    },
     "usage": {
       "files": "{{size}} de fichiers",
       "none": "Aucun fichier",
@@ -17522,15 +17539,21 @@
     "belongs": "Appartient à l'espace de travail",
     "belongsHint": "Il reste quand la personne qui l'a connecté part, et tout le monde peut l'utiliser tant que personne n'en est propriétaire.",
     "spillOwn": "Aider quand l'ordinateur de l'équipe est plein ou absent",
-    "spillOwnHint": "Quand l'ordinateur de tes agents est plein ou absent, leurs réponses, demandes et routines peuvent réfléchir ici avec ta connexion.",
-    "spillTeamHint": "Quand l'ordinateur d'un agent est plein ou absent, ses réponses, demandes et routines peuvent réfléchir ici avec la connexion de son propriétaire sur cet ordinateur.",
+    "spillOwnHint": "Quand l'ordinateur de l'équipe est plein ou absent, les réponses, demandes et routines de vos agents peuvent réfléchir ici, avec les comptes d'IA connectés sur cet ordinateur.",
+    "spillTeamHint": "Quand l'ordinateur d'un agent est plein ou absent, ses réponses, demandes et routines peuvent réfléchir ici, avec le compte d'IA que son propriétaire a connecté sur cet ordinateur.",
     "spillWorkspaceOff": "Un admin a désactivé ceci pour le workspace.",
-    "spillFirst": "Utiliser cet ordinateur pour le travail de mes agents",
-    "spillFirstHint": "Les demandes, les routines et les longs travaux de tes agents démarrent ici dès qu'il est libre, avec l'IA que tu y as connectée. Les réponses aux personnes ne démarrent ici que quand l'ordinateur de l'équipe est plein ou absent.",
+    "helpUse": "Comment il aide vos agents",
+    "helpUses": {
+      "off": "N'aide pas",
+      "help": "Seulement en renfort",
+      "first": "D'abord pour mes agents"
+    },
+    "helpUseHint": "Seulement en renfort : vos agents viennent ici quand l'ordinateur de l'équipe est plein ou absent. D'abord pour mes agents : leurs demandes, routines et longs travaux commencent ici dès qu'il est libre, et les réponses aux personnes seulement quand celui de l'équipe est plein ou absent. Les deux utilisent les comptes d'IA connectés sur cet ordinateur.",
+    "helpUseTeamHint": "Seulement en renfort : les agents de n'importe qui viennent ici quand leur ordinateur est plein ou absent, avec le compte d'IA que leur propriétaire a connecté sur cet ordinateur. D'abord pour mes agents : les demandes, routines et longs travaux de vos agents commencent ici dès qu'il est libre.",
     "helpWorkspace": "Les ordinateurs aident quand celui de l'équipe est plein ou absent",
     "helpWorkspaceHint": "Chaque ordinateur n'aide que si son propriétaire le permet. Désactivé : aucun n'aide, quel que soit le choix de son propriétaire.",
     "shareInternet": "Les agents utilisent la connexion internet de cet ordinateur",
-    "shareInternetHint": "Les sites que les agents ouvrent passent par la connexion de cet ordinateur, ils voient donc votre emplacement. Uniquement des sites web, jusqu’à 5 Go par jour, et jamais rien sur votre propre réseau. Tant que cet ordinateur est hors ligne, les agents utilisent leur connexion habituelle.",
+    "shareInternetHint": "Les sites que les agents ouvrent passent par la connexion de cet ordinateur, ils voient donc votre emplacement. Uniquement des sites web et jamais rien sur votre propre réseau. Tant que cet ordinateur est hors ligne, les agents utilisent leur connexion habituelle.",
     "shareInternetInUse": "Utilisé en ce moment",
     "shareInternetOther": "Les agents utilisent {{name}} en ce moment",
     "shareInternetPick": "Utiliser celui-ci",
@@ -18070,7 +18093,7 @@
       "cliRequest": "<b>{{who}}</b> vous demande d'installer {{tool}} sur votre <b>{{deviceName}}</b>",
       "folderRequest": "<b>{{who}}</b> vous demande le dossier {{path}} sur votre <b>{{deviceName}}</b>",
       "internetShared": "Les agents ouvrent désormais les sites web via la connexion internet de <b>{{deviceName}}</b>",
-      "internetSharedLine": "Uniquement les agents de ce workspace, uniquement des sites web, jusqu’à 5 Go par jour, jamais rien sur son propre réseau. Tant qu’il est hors ligne, ils utilisent leur connexion habituelle.",
+      "internetSharedLine": "Uniquement les agents de ce workspace, uniquement des sites web, jamais rien sur son propre réseau. Tant qu’il est hors ligne, ils utilisent leur connexion habituelle.",
       "internetOff": "Désactiver",
       "internetOffDone": "Les agents n’utilisent plus la connexion internet de {{deviceName}}.",
       "once": "Autoriser une fois",
@@ -18080,6 +18103,22 @@
         "once": "Autorisé une fois.",
         "always": "{{deviceName}} est maintenant partagé avec eux.",
         "no": "Vous avez dit non."
+      }
+    },
+    "permission": {
+      "title": "En attente de {{permission}} sur {{computer}}",
+      "next": "Autorisez-le dans l’app agentes.chat sur cet ordinateur.",
+      "askedBy": "Demandé par {{agent}} pour lancer {{trigger}}",
+      "asked": "Nécessaire pour lancer {{trigger}}",
+      "names": {
+        "app_management": "Gestion des apps",
+        "screen": "Enregistrement de l’écran",
+        "accessibility": "Accessibilité",
+        "disk": "Accès complet au disque",
+        "network": "Réseau local",
+        "camera": "Caméra",
+        "microphone": "Micro",
+        "automation": "Automatisation"
       }
     }
   },

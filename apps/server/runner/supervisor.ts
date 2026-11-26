@@ -1858,12 +1858,15 @@ export class Supervisor {
 
 /**
  * The worker's home `<base>/<user>`: the agent's own (0700), in a folder only
- * root writes to and nobody else can list (0711), so no agent can plant a
- * link where root makes or opens it.
+ * root writes to (0755), so no agent can plant a link where root makes or opens
+ * it. Listable, not 0711: Grok Build's sandbox binds every folder above its
+ * `GROK_HOME` and its turn's folder, which a shared sign-in and a chat turn keep
+ * in this home, and bubblewrap can't bind under a folder its user can't list.
+ * The names it lists are the agents' users, which `/etc/passwd` lists anyway.
  */
 export function workerHome(base: string, user: AgentUser): string {
-  mkdirSync(base, { recursive: true, mode: 0o711 });
-  chmodSync(base, 0o711);
+  mkdirSync(base, { recursive: true, mode: 0o755 });
+  chmodSync(base, 0o755);
   const dir = path.join(base, user.user);
   mkdirSync(dir, { recursive: true, mode: 0o700 });
   const st = lstatSync(dir);

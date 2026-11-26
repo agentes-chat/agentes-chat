@@ -224,6 +224,24 @@ describe("Settings › Devices", () => {
     ]);
   });
 
+  test("a computer waiting on an OS permission: what, where, the one place it is allowed, and who asked for what", async () => {
+    await open(`/org/${ORG_ID}/settings/devices/${MAC}`, (devices) => {
+      const list = acmeDevices();
+      const mac = list.devices.find((d) => d.id === MAC) as ComputerDevice | undefined;
+      if (!mac) throw new Error("fixture");
+      mac.permissions = [
+        { permission: "disk", trigger: "ls ~/Desktop", agentId: LIA, since: "2026-11-26T18:00:00.000Z" },
+        { permission: "screen", trigger: "screencapture -x screen.png", since: "2026-11-26T18:01:00.000Z" },
+      ];
+      devices.set(list);
+    });
+    const card = screen().getByRole("heading", { name: "Sam's MacBook Pro" }).closest(".ac-card") as HTMLElement;
+    expect([...card.querySelectorAll(".dv-permission")].map((a) => a.textContent)).toEqual([
+      "Waiting for Full Disk Access on Sam's MacBook ProAllow it in the agentes.chat app there.Asked by Lia to run ls ~/Desktop",
+      "Waiting for Screen Recording on Sam's MacBook ProAllow it in the agentes.chat app there.Needed to run screencapture -x screen.png",
+    ]);
+  });
+
   test("a computer whose runner is behind this server: its owner sees why and how to update it, no one else", async () => {
     const page = async (update: "command" | "installer" | null, canManage = true) => {
       cleanup();
@@ -1257,19 +1275,29 @@ describe("A device's page", () => {
     expect(calls(state, "devices.updateComputer").map((c) => c.args.at(-1))).toEqual([{ spill: { own: false } }]);
   });
 
-  test("its owner may use their own computer for their agents' work; someone else's computer has no such switch", async () => {
+  test("its owner makes one choice for its help: never, only as backup, or first for their own agents' work", async () => {
     const { state } = await open(`/org/${ORG_ID}/settings/devices/${MAC}`);
-    const first = screen().getByRole("switch", { name: "Use this computer for my agents' work" });
-    expect(first.getAttribute("aria-checked")).toBe("false");
-    await click(first);
+    expect(screen().queryByRole("switch", { name: "Help when the team's computer is full or away" })).toBeNull();
+    const use = screen().getByRole("combobox", { name: "How it helps your agents" });
+    expect(use.textContent).toBe("Only as backup");
+    use.focus();
+    await act(async () => fireEvent.keyDown(use, { key: "Enter" }));
+    expect(
+      screen()
+        .getAllByRole("option")
+        .map((o) => o.textContent),
+    ).toEqual(["Doesn't help", "Only as backup", "First for my agents"]);
+    await click(screen().getByRole("option", { name: "First for my agents" }));
     await settle(4);
-    expect(calls(state, "devices.updateComputer").map((c) => c.args.at(-1))).toEqual([{ spill: { first: true } }]);
+    expect(calls(state, "devices.updateComputer").map((c) => c.args.at(-1))).toEqual([
+      { spill: { own: true, first: true } },
+    ]);
     (globalThis as { geometrySnapshot?: () => void }).geometrySnapshot?.();
   });
 
-  test("someone else's computer: no switch to use it for the viewer's agents' work", async () => {
+  test("someone else's computer: no choice to use it for the viewer's agents' work", async () => {
     await open(`/org/${ORG_ID}/settings/devices/${IMAC}`);
-    expect(screen().queryByRole("switch", { name: "Use this computer for my agents' work" })).toBeNull();
+    expect(screen().queryByRole("combobox", { name: "How it helps your agents" })).toBeNull();
   });
 
   test("agents use this computer's internet: on, says which computer they use now, picks this one, turns off", async () => {
@@ -1468,7 +1496,8 @@ describe("In the chat and the inbox", () => {
     expect(row.textContent).toContain("Agents now open websites through the internet of Sam's MacBook Pro");
     await click(row);
     const read = document.querySelector(".ib-read") as HTMLElement;
-    expect(read.textContent).toContain("only websites, up to 5 GB a day");
+    expect(read.textContent).toContain("only websites, never anything on its own network");
+    expect(read.textContent).not.toContain("GB");
     await click(within(read).getByRole("button", { name: "Turn off" }));
     await settle(4);
     expect(calls(state, "devices.updateComputer").map((c) => c.args)).toEqual([

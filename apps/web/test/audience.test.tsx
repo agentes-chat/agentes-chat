@@ -84,6 +84,11 @@ describe("Quem pode falar com a Ada", () => {
         .closest("label")?.textContent,
     ).toMatch(/^Suporte\d+ pessoas?$/);
     expect(results.querySelector(".ac-rolemark")).toBeTruthy();
+    // A role's mark is a person's face's size, so both lists' names start on one edge.
+    const mark = results.querySelector<HTMLElement>(".scope-row .ac-rolemark");
+    const face = results.querySelector<HTMLElement>(".scope-row .ac-avatar");
+    expect(mark?.style.width).toBe("24px");
+    expect(face?.classList.contains("ac-avatar--sm")).toBe(true);
     const search = within(section).getByRole("searchbox", { name: "Buscar cargos e pessoas" });
     await act(async () => fireEvent.change(search, { target: { value: "sup" } }));
     expect(results.textContent).toContain("Suporte");

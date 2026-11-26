@@ -19,6 +19,7 @@ import {
   MenuItem,
   MenuSeparator,
   PageHeader,
+  Refreshing,
   SearchField,
   Segmented,
   Toolbar,
@@ -280,51 +281,53 @@ export function ThreadsPage({ initialTab, initialChannel }: { initialTab?: Threa
             onClear={clearFilters}
           />
         )}
-        {!missions && list.isPending && <LoadingList count={5} />}
-        {!missions && list.isError && !list.data && (
-          <ErrorState error={list.error} onRetry={() => void list.refetch()} />
-        )}
-        {!missions && list.isSuccess && threads.length === 0 && (
-          <ThreadsEmpty tab={tab} filtered={filtered} onClear={clearFilters} onAll={() => setTab("all")} />
-        )}
-        {!missions && threads.length > 0 && (
-          <div className="ac-groups threads-groups" data-selecting={picked.size > 0 || undefined}>
-            {byPlace(threads).map((group) => {
-              const shut = collapsed.has(group.key);
-              const label = group.dm ? t("threads.dms") : `#${group.name}`;
-              return (
-                <section key={group.key} className="threads-group" aria-label={label}>
-                  <GroupHeading
-                    className="threads-group__head"
-                    title={
-                      <button type="button" aria-expanded={!shut} onClick={() => toggleGroup(group.key)}>
-                        <Icon name="chevronDown" size={14} className="threads-group__chev" />
-                        <Icon name={group.dm ? "person" : "channel"} size={14} />
-                        {group.dm ? label : group.name}
-                      </button>
-                    }
-                    count={group.threads.length}
-                  />
-                  {!shut && (
-                    <div className="list-card">
-                      {group.threads.map((thread) => (
-                        <ThreadRow
-                          key={thread.id}
-                          thread={thread}
-                          open={thread.id === openId}
-                          picked={picked.has(thread.id)}
-                          onOpen={() => setOpenId(openId === thread.id ? null : thread.id)}
-                          onGo={() => go(thread)}
-                          onPick={() => toggle(thread.id)}
-                          onAction={(action) => controls.request([thread], action)}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </section>
-              );
-            })}
-          </div>
+        {!missions && (
+          <Refreshing busy={list.isPlaceholderData} label={t("common.loading")}>
+            {list.isPending && <LoadingList count={5} />}
+            {list.isError && !list.data && <ErrorState error={list.error} onRetry={() => void list.refetch()} />}
+            {list.isSuccess && threads.length === 0 && (
+              <ThreadsEmpty tab={tab} filtered={filtered} onClear={clearFilters} onAll={() => setTab("all")} />
+            )}
+            {threads.length > 0 && (
+              <div className="ac-groups threads-groups" data-selecting={picked.size > 0 || undefined}>
+                {byPlace(threads).map((group) => {
+                  const shut = collapsed.has(group.key);
+                  const label = group.dm ? t("threads.dms") : `#${group.name}`;
+                  return (
+                    <section key={group.key} className="threads-group" aria-label={label}>
+                      <GroupHeading
+                        className="threads-group__head"
+                        title={
+                          <button type="button" aria-expanded={!shut} onClick={() => toggleGroup(group.key)}>
+                            <Icon name="chevronDown" size={14} className="threads-group__chev" />
+                            <Icon name={group.dm ? "person" : "channel"} size={14} />
+                            {group.dm ? label : group.name}
+                          </button>
+                        }
+                        count={group.threads.length}
+                      />
+                      {!shut && (
+                        <div className="list-card">
+                          {group.threads.map((thread) => (
+                            <ThreadRow
+                              key={thread.id}
+                              thread={thread}
+                              open={thread.id === openId}
+                              picked={picked.has(thread.id)}
+                              onOpen={() => setOpenId(openId === thread.id ? null : thread.id)}
+                              onGo={() => go(thread)}
+                              onPick={() => toggle(thread.id)}
+                              onAction={(action) => controls.request([thread], action)}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </section>
+                  );
+                })}
+              </div>
+            )}
+          </Refreshing>
         )}
         {!missions && list.hasNextPage && (
           <Button className="threads-more" loading={list.isFetchingNextPage} onClick={() => void list.fetchNextPage()}>

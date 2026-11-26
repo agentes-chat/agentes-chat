@@ -354,7 +354,7 @@ test("only the computer's Google Chrome is driven, at its standard path on each 
     "--disable-updater-scheduler",
     "--disable-search-engine-choice-screen",
     "--force-prefers-reduced-motion",
-    "--disable-features=SigninPromoOnAvatarPill",
+    "--disable-features=SigninPromoOnAvatarPill,MacAppCodeSignClone",
     "--restore-last-session",
   ]);
 });

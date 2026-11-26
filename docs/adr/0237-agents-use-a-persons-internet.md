@@ -2,7 +2,7 @@
 
 - Status: Accepted (phase 1: the switch, the relay on both computers and the server; the workspace computer's
   routing is the Cloud's, later)
-- Date: 2026-11-24
+- Date: 2026-11-24 (amended 2026-11-26: no daily cap)
 - Extends: ADR 0025 (connected computers), ADR 0058 §11 (data sockets), ADR 0101 (observed egress)
 - Code: protocol `packages/adapters/src/machine-protocol.ts` (`EGRESS_SHARE_PROTOCOL`, `EGRESS_SHARE`,
   `egress.dial`, `StreamHello.egress`, `welcome.egressRelay`); db `machines.egress_share`, `egress_share_at`,
@@ -27,7 +27,7 @@ computers are already connected (ADR 0025) and hold a socket to the server.
    desktop app after pairing) they see that line with its switch, before or as it joins. Computers paired before this
    existed are on too, and their owners hear it once in the inbox (`device.internet_shared`, migration 0351, web and
    phone): "Agents now open websites through the internet of <computer>", what it keeps out (only this workspace's
-   agents, only websites, 5 GB a day, never its own network; offline, the usual way), and one **Turn off** that sets
+   agents, only websites, never its own network; offline, the usual way), and one **Turn off** that sets
    the switch off; turning it off anywhere marks the notice done. A computer marked the workspace's, or whose owner
    left, tells who configures the workspace instead. Only the person who connected it turns it on
    (`device.share_owner_only`); an admin may turn it off. Turning it on again picks it first.
@@ -44,11 +44,10 @@ computers are already connected (ADR 0025) and hold a socket to the server.
 4. **What it carries.** Only TCP to ports 80 and 443 (`EGRESS_SHARE.ports`); SSH and the rest keep their usual way.
    The lending computer resolves a name itself (so the site's own location answers; a guard that passes the address its
    agent already resolved gets that address) and refuses a name or address that is not public, or that is on one of
-   its own interfaces' subnets (a home's global IPv6 prefix, its router, this computer), wholly; at most 256 connections at once and
-   5 GB a day both ways (UTC, kept in `<runner home>/egress-share.json` across restarts), past which an open one ends
-   and new ones are refused until the next day. It is new work: a paused computer, or a workspace or agent on hold,
-   lends nothing. Never another workspace's: the server pairs only a workspace's computer with that workspace's
-   computers.
+   its own interfaces' subnets (a home's global IPv6 prefix, its router, this computer), wholly; at most 256
+   connections at once, with no daily cap on bytes (amendment below). It is new work: a paused computer, or a
+   workspace or agent on hold, lends nothing. Never another workspace's: the server pairs only a workspace's computer
+   with that workspace's computers.
 5. **Falling back.** Nothing lent now, a lending computer offline or asleep, or a refusal, closes the first data socket
    at once with a code the SOCKS socket turns into a reply: `unreachable` → "network unreachable" (go out your usual
    way), `refused` → "not allowed", `notFound` → "host unreachable". Connections already open end with their computer.
@@ -69,7 +68,17 @@ repository's ADR and change.
 
 ## Consequences
 
-- The server carries the bytes of lent connections. The daily cap bounds it per computer.
+- The server carries the bytes of lent connections, with no cap on them.
 - A person sees which of their computers lends, and the workspace sees whose internet it uses; both turn it off in one
   switch.
 - Nothing changes for a self-hosted server: it has no workspace computer, so nothing shows and nothing is asked.
+
+## Amendment 2026-11-26: no daily cap
+
+Owner decision: lending has no daily cap. The 5 GB a day both ways that the lending computer counted (UTC, in
+`<runner home>/egress-share.json`) is gone from the runner (`EGRESS_SHARE.dailyBytes`), and from every string that
+named it (the switch's hint on the web, the phone and the desktop app, and the inbox notice). A permissive default:
+the person turns lending off in one switch. The limits that keep it safe stay: only that workspace's agents, only
+ports 80 and 443, only public addresses, never one on the lending computer's own network, and 256 connections at
+once. A lending computer on an older app keeps the cap until it updates; the server and the protocol are unchanged,
+and a file left in the runner's folder is no longer read.
