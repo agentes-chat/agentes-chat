@@ -1229,7 +1229,7 @@ export const en = {
       people: {
         title: "Who works with you?",
         lead: "Invite your teammates. Each one gets an email to join.",
-        /** Right after the plan, while the team gets ready (`titleWhile`, `leadWhile`); `leadJoin` with no plan. */
+        /** Right after the plan, while the team gets ready (`titleWhile`, `leadWhile`), and `leadJoin` with no plan. */
         titleWhile: "Meanwhile, invite the people you work with",
         leadWhile: "It takes a few minutes. Each person you invite creates, on joining, the agent for their own work.",
         leadJoin: "Each person you invite creates, on joining, the agent for their own work.",
@@ -2104,9 +2104,8 @@ export const en = {
       sayAny_one: "Your AI found one way to start.",
       sayAny_other: "Your AI found {{count}} ways to start.",
     },
-    /** The picked agent's first week, before the plan. */
     /**
-     * The picked agent's first week, as a planner page. `{{routine}}`: its routine's title; `{{when}}`: how it repeats
+     * The picked agent's first week, before the plan, as a planner page. `{{routine}}`: its routine's title. `{{when}}`: how it repeats
      * (`every.*`, or the AI's own words). `days`/`every`: by weekday, as `recurrence.wd`.
      */
     week: {
