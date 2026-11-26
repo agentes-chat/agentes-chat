@@ -46,3 +46,13 @@ export async function* fileLines(stream: AsyncIterable<string>): AsyncGenerator<
   }
   if (rest) yield line(rest);
 }
+
+/** The last line of a program's output with words on it, its terminal colors taken out. */
+export const lastLine = (text: string) =>
+  text
+    // biome-ignore lint/suspicious/noControlCharactersInRegex: terminal colors
+    .replace(/\u001b\[[0-9;]*[A-Za-z]/g, "")
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .at(-1);

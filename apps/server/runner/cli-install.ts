@@ -12,6 +12,7 @@ import { ConsoleDecoder } from "./console-text";
 import { killTree } from "./exec";
 import { envValue, findOnWindowsPath, isFile, pickedCli } from "./executors";
 import { CLAUDE_INSTALL_PS1_URL, CLAUDE_INSTALL_URL, CODEX_RELEASES } from "./install-script";
+import { lastLine } from "./lines";
 import { mergePathWith } from "./login-path";
 
 /**
@@ -178,12 +179,13 @@ export class CliInstaller {
       return { ...this.install };
     }
     this.child = child;
-    let said = "";
-    const keep = (decoder: ConsoleDecoder) => (chunk: Buffer) => {
-      said = `${said}${decoder.write(chunk)}`.slice(-4000);
+    // Apart: two pipes' chunks come in no set order, and why an installer failed is on its stderr.
+    const said = { out: "", err: "" };
+    const keep = (pipe: keyof typeof said, decoder: ConsoleDecoder) => (chunk: Buffer) => {
+      said[pipe] = `${said[pipe]}${decoder.write(chunk)}`.slice(-4000);
     };
-    child.stdout?.on("data", keep(new ConsoleDecoder()));
-    child.stderr?.on("data", keep(new ConsoleDecoder()));
+    child.stdout?.on("data", keep("out", new ConsoleDecoder()));
+    child.stderr?.on("data", keep("err", new ConsoleDecoder()));
     this.timer = setTimeout(() => {
       if (this.child !== child) return;
       this.install = { tool, state: "failed", message: "It took too long" };
@@ -195,15 +197,7 @@ export class CliInstaller {
       if (this.child !== child) return;
       this.end();
       if (code !== 0) {
-        const last =
-          said
-            // biome-ignore lint/suspicious/noControlCharactersInRegex: the installers' colors
-            .replace(/\u001b\[[0-9;]*[A-Za-z]/g, "")
-            .split(/\r?\n/)
-            .map((l) => l.trim())
-            .filter(Boolean)
-            .at(-1)
-            ?.slice(0, CLI_ERROR_MAX) ?? "";
+        const last = (lastLine(said.err) ?? lastLine(said.out) ?? "").slice(0, CLI_ERROR_MAX);
         this.install = { tool, state: "failed", message: last || `exit code ${code}` };
         this.opts.log(`cli install: ${tool} failed: ${this.install.message}`);
         return;
@@ -226,7 +220,7 @@ export class CliInstaller {
     };
     const events = child as unknown as EventEmitter;
     events.on("error", (err: Error) => {
-      said = err.message;
+      said.err = err.message;
       finish(null);
     });
     events.on("close", finish);

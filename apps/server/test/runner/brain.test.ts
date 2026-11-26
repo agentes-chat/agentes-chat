@@ -1762,14 +1762,33 @@ test.if(posix)(
   },
 );
 
+test("parser: the first token is when the API's first message started, the first answer its first whole block", () => {
+  let now = 1_000;
+  const p = new ClaudeStreamParser(() => now);
+  p.beginTurn();
+  p.push(
+    line({ type: "stream_event", parent_tool_use_id: null, event: { type: "message_start", message: { id: "m1" } } }),
+  );
+  now += 50;
+  const block = {
+    type: "assistant",
+    message: { id: "m1", content: [{ type: "text", text: "hi" }] },
+    parent_tool_use_id: null,
+  };
+  p.push(line(block));
+  now += 50;
+  p.push(line(block));
+  expect(p.stats).toMatchObject({ firstTokenAt: 1_000, firstAssistantAt: 1_050 });
+});
+
 test.if(posix)("a turn's timings keep its API retries, its thinking and when the model first answered", async () => {
   const { turn } = setup();
   const r = await turn(1, "RETRYWAIT THOUGHT");
   expect(r.final).toMatchObject({ type: "done" });
   const t = r.final.type === "done" ? r.final.timings : undefined;
   expect(t).toMatchObject({ warm: false, retries: 1, retryDelayMs: 800, thinkingBlocks: 2, thinkingChars: 10 });
-  // The API's first message came 50 ms before its first whole block.
-  expect((t?.firstAssistantMs ?? 0) - (t?.firstTokenMs ?? 0)).toBeGreaterThanOrEqual(40);
+  // How far apart the two lines are read is the machine's pace: the parser's test above holds the clock.
+  expect(t?.firstAssistantMs).toBeGreaterThanOrEqual(t?.firstTokenMs ?? Number.NaN);
   // The next turn on the process counts its own.
   const next = await turn(2, "second");
   expect(next.final).toMatchObject({
