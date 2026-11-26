@@ -144,6 +144,7 @@ import { tailLines } from "./logfile";
 import { addUsualDirs, adoptLoginPath } from "./login-path";
 import { LoopbackGuard, loopbackEndpoints, runnerEndpoints } from "./loopback-guard";
 import { McpBridge, type McpTaskInfo, mcpSocketPath } from "./mcp";
+import { machineModel } from "./model";
 import {
   AgentNetworks,
   desktopUsesHostNetwork,
@@ -347,13 +348,14 @@ export function previousMachineFor(
   return prev?.machineId && prev.server === server && token ? { machineId: prev.machineId, token } : undefined;
 }
 
-/** What `POST /api/machines/device` is told about this computer. */
-export function deviceInfo(name?: string, previous?: { machineId: string; token: string }) {
+/** What `POST /api/machines/device` is told about this computer; `model` (`machineModel`) names it there. */
+export function deviceInfo(name?: string, previous?: { machineId: string; token: string }, model?: string) {
   return {
     ...(name ? { name } : {}),
     os: machineOs(),
     arch: os.arch(),
     hostname: os.hostname(),
+    ...(model ? { model } : {}),
     version: RUNNER_VERSION,
     ...(previous ? { previousMachineId: previous.machineId, previousToken: previous.token } : {}),
   };
@@ -1900,6 +1902,9 @@ export class RunnerDaemon implements RequestObserver {
         this.setConnState(state);
       },
       onWelcome: (welcome) => {
+        // Renamed in the apps (or given its default name there): the app on this computer says the new one.
+        if (welcome.name && this.stored && this.stored.name !== welcome.name)
+          this.write({ ...this.stored, name: welcome.name });
         this.observeEgress = welcome.observeEgress;
         this.egressRelay?.close();
         this.egressRelay = welcome.egressRelay
@@ -2796,63 +2801,72 @@ export class RunnerDaemon implements RequestObserver {
     this.pairing?.abort();
     const ac = new AbortController();
     this.pairing = ac;
-    void devicePair(
-      url,
-      { ...deviceInfo(label, previousMachineFor(this.stored, url)), ...(link ? { link } : {}) },
-      (code) =>
-        this.emit({
-          kind: "pair.code",
-          userCode: code.userCode,
-          verificationUrl: code.verificationUrl,
-          expiresAt: new Date(this.now() + code.expiresIn * 1000).toISOString(),
-        }),
-      {
-        signal: ac.signal,
-        ...(this.opts.fetch ? { fetch: this.opts.fetch } : {}),
-        ...(this.opts.pairSleep ? { sleep: this.opts.pairSleep } : {}),
-        now: this.now,
-      },
-    ).then(
-      (grant) => {
-        if (this.pairing !== ac) return;
-        this.pairing = null;
-        try {
-          const prev = this.stored;
-          const base = this.opts.workspaceBase ?? expandHome("~/agentes");
-          const workspace = prepareWorkspace(prev?.workspace ?? uniqueWorkspace(base, grant.org.name || grant.name));
-          this.write(
-            configFromGrant(prev, {
-              server: url,
-              grant,
-              workspace,
-              ...(label ? { name: label } : {}),
-              tools: { claude: tools?.claude === true, codex: tools?.codex === true, commands: false },
-              desktop: true,
+    void machineModel()
+      .then((model) =>
+        devicePair(
+          url,
+          { ...deviceInfo(label, previousMachineFor(this.stored, url), model), ...(link ? { link } : {}) },
+          (code) =>
+            this.emit({
+              kind: "pair.code",
+              userCode: code.userCode,
+              verificationUrl: code.verificationUrl,
+              expiresAt: new Date(this.now() + code.expiresIn * 1000).toISOString(),
             }),
-          );
-          const org = grant.org.name || url;
-          this.record({ kind: "pair", summary: `connected to ${org}`, said: { key: "connected", org }, result: "ok" });
-          const c = this.requirePaired();
-          this.emit({
-            kind: "pair.done",
-            org: { id: grant.org.id, name: grant.org.name },
-            machine: { id: c.machineId, name: c.name },
-          });
-        } catch (err) {
-          this.emit({
-            kind: "pair.failed",
-            code: "internal",
-            message: err instanceof Error ? err.message : String(err),
-          });
-        }
-      },
-      (err: unknown) => {
-        if (this.pairing === ac) this.pairing = null;
-        const code = err instanceof PairingError ? err.code : "internal";
-        if (code === "canceled") return;
-        this.emit({ kind: "pair.failed", code, message: err instanceof Error ? err.message : String(err) });
-      },
-    );
+          {
+            signal: ac.signal,
+            ...(this.opts.fetch ? { fetch: this.opts.fetch } : {}),
+            ...(this.opts.pairSleep ? { sleep: this.opts.pairSleep } : {}),
+            now: this.now,
+          },
+        ),
+      )
+      .then(
+        (grant) => {
+          if (this.pairing !== ac) return;
+          this.pairing = null;
+          try {
+            const prev = this.stored;
+            const base = this.opts.workspaceBase ?? expandHome("~/agentes");
+            const workspace = prepareWorkspace(prev?.workspace ?? uniqueWorkspace(base, grant.org.name || grant.name));
+            this.write(
+              configFromGrant(prev, {
+                server: url,
+                grant,
+                workspace,
+                ...(label ? { name: label } : {}),
+                tools: { claude: tools?.claude === true, codex: tools?.codex === true, commands: false },
+                desktop: true,
+              }),
+            );
+            const org = grant.org.name || url;
+            this.record({
+              kind: "pair",
+              summary: `connected to ${org}`,
+              said: { key: "connected", org },
+              result: "ok",
+            });
+            const c = this.requirePaired();
+            this.emit({
+              kind: "pair.done",
+              org: { id: grant.org.id, name: grant.org.name },
+              machine: { id: c.machineId, name: c.name },
+            });
+          } catch (err) {
+            this.emit({
+              kind: "pair.failed",
+              code: "internal",
+              message: err instanceof Error ? err.message : String(err),
+            });
+          }
+        },
+        (err: unknown) => {
+          if (this.pairing === ac) this.pairing = null;
+          const code = err instanceof PairingError ? err.code : "internal";
+          if (code === "canceled") return;
+          this.emit({ kind: "pair.failed", code, message: err instanceof Error ? err.message : String(err) });
+        },
+      );
     return { started: true };
   }
 

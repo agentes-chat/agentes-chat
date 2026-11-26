@@ -16648,6 +16648,11 @@
     "removed": "{{name}} kaldırıldı.",
     "name": "Bilgisayar adı",
     "nameHelp": "Kişilerin ve ajanların göreceği ad.",
+    "defaultName": {
+      "model": "{{name}} adlı kişinin {{model}} cihazı",
+      "linux": "{{name}} adlı kişinin Linux bilgisayarı",
+      "other": "{{name}} adlı kişinin bilgisayarı"
+    },
     "os": {
       "linux": "Linux",
       "darwin": "macOS",

@@ -169,3 +169,16 @@ export const formatPhone = (value: string) => printPhone(value, false);
  * phone number comes back as given, unmasked: the caller masks it some other way.
  */
 export const maskPhone = (value: string) => printPhone(value, true);
+
+/** The app's own starter names (`newAgent.roles.*.agent`) that are feminine without ending in "a". */
+const FEMININE = new Set(["iris"]);
+
+/**
+ * A name's grammatical gender, for the languages whose sentences agree with it ("a Ada", "o Theo", she/he): one
+ * agent is never "it" in one line and "her" in the next. Agents and people store none, so it comes from the name: names
+ * ending in "a" are feminine. A name someone types that is feminine and ends otherwise ("Beatriz") reads as masculine.
+ */
+export function isFeminineName(name: string) {
+  const plain = name.trim().normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  return plain.endsWith("a") || FEMININE.has(plain);
+}

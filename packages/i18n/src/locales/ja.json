@@ -16110,6 +16110,11 @@
     "removed": "{{name}}を削除しました。",
     "name": "コンピューターの名前",
     "nameHelp": "人とエージェントに表示される名前です。",
+    "defaultName": {
+      "model": "{{name}}の{{model}}",
+      "linux": "{{name}}のLinuxコンピューター",
+      "other": "{{name}}のコンピューター"
+    },
     "os": {
       "linux": "Linux",
       "darwin": "macOS",

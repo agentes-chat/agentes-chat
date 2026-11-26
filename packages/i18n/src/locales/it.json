@@ -17305,6 +17305,11 @@
     "removed": "{{name}} è stato rimosso.",
     "name": "Nome del computer",
     "nameHelp": "Come lo vedono persone e agenti.",
+    "defaultName": {
+      "model": "{{model}} di {{name}}",
+      "linux": "Computer Linux di {{name}}",
+      "other": "Computer di {{name}}"
+    },
     "os": {
       "linux": "Linux",
       "darwin": "macOS",

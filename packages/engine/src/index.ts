@@ -213,6 +213,7 @@ export * from "./machine-clis";
 export * from "./machine-device";
 export * from "./machine-holds";
 export * from "./machine-hub";
+export * from "./machine-names";
 export * from "./machine-outages";
 export * from "./machine-pause";
 export * from "./machine-provider";

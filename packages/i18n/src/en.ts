@@ -17227,6 +17227,15 @@ export const en = {
     removed: "{{name}} was removed.",
     name: "Computer name",
     nameHelp: "How people and agents see it.",
+    /**
+     * The name a computer gets when it joins, until someone renames it (`defaultMachineName` in the engine): its model
+     * and the first name of who connected it. `model` is a product name ("MacBook Pro", "Mac", "PC"), never translated.
+     */
+    defaultName: {
+      model: "{{name}}'s {{model}}",
+      linux: "{{name}}'s Linux computer",
+      other: "{{name}}'s computer",
+    },
     os: { linux: "Linux", darwin: "macOS", windows: "Windows", other: "Other system" },
     commandCopied: "Command copied. Paste it in the computer's Terminal.",
     // agentes for Mac (ADR 0036): this Mac, from the site inside the app.

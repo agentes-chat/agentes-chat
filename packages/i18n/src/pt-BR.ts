@@ -17164,6 +17164,14 @@ export const ptBR = {
     removed: "{{name}} foi removido.",
     name: "Nome do computador",
     nameHelp: "Como ele aparece para as pessoas e os agentes.",
+    defaultName: {
+      model: "{{model}} do {{name}}",
+      model_female: "{{model}} da {{name}}",
+      linux: "Computador Linux do {{name}}",
+      linux_female: "Computador Linux da {{name}}",
+      other: "Computador do {{name}}",
+      other_female: "Computador da {{name}}",
+    },
     os: { linux: "Linux", darwin: "macOS", windows: "Windows", other: "Outro sistema" },
     commandCopied: "Comando copiado. Cole no Terminal do computador.",
     // agentes for Mac (ADR 0036): this Mac, from the site inside the app.

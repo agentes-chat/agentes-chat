@@ -17280,6 +17280,11 @@
     "removed": "{{name}} a été retiré.",
     "name": "Nom de l'ordinateur",
     "nameHelp": "Le nom que voient les personnes et les agents.",
+    "defaultName": {
+      "model": "{{model}} de {{name}}",
+      "linux": "Ordinateur Linux de {{name}}",
+      "other": "Ordinateur de {{name}}"
+    },
     "os": {
       "linux": "Linux",
       "darwin": "macOS",

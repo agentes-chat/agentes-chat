@@ -16104,6 +16104,11 @@
     "removed": "{{name}}을(를) 삭제했어요.",
     "name": "컴퓨터 이름",
     "nameHelp": "사람과 에이전트에게 보이는 이름이에요.",
+    "defaultName": {
+      "model": "{{name}}의 {{model}}",
+      "linux": "{{name}}의 Linux 컴퓨터",
+      "other": "{{name}}의 컴퓨터"
+    },
     "os": {
       "linux": "Linux",
       "darwin": "macOS",

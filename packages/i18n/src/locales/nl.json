@@ -16787,6 +16787,11 @@
     "removed": "{{name}} is verwijderd.",
     "name": "Naam van de computer",
     "nameHelp": "Zo zien mensen en agents hem.",
+    "defaultName": {
+      "model": "{{model}} van {{name}}",
+      "linux": "Linux-computer van {{name}}",
+      "other": "Computer van {{name}}"
+    },
     "os": {
       "linux": "Linux",
       "darwin": "macOS",

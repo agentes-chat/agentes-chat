@@ -16178,6 +16178,11 @@
     "removed": "已移除 {{name}}。",
     "name": "电脑名称",
     "nameHelp": "成员和智能体看到的名称。",
+    "defaultName": {
+      "model": "{{name}} 的 {{model}}",
+      "linux": "{{name}} 的 Linux 电脑",
+      "other": "{{name}} 的电脑"
+    },
     "os": {
       "linux": "Linux",
       "darwin": "macOS",

@@ -16170,6 +16170,11 @@
     "removed": "{{name}} dihapus.",
     "name": "Nama komputer",
     "nameHelp": "Cara orang dan agen melihatnya.",
+    "defaultName": {
+      "model": "{{model}} {{name}}",
+      "linux": "Komputer Linux {{name}}",
+      "other": "Komputer {{name}}"
+    },
     "os": {
       "linux": "Linux",
       "darwin": "macOS",

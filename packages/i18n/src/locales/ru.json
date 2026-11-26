@@ -17803,6 +17803,11 @@
     "removed": "{{name}} удалён.",
     "name": "Имя компьютера",
     "nameHelp": "Так его видят люди и агенты.",
+    "defaultName": {
+      "model": "{{model}} ({{name}})",
+      "linux": "Компьютер Linux ({{name}})",
+      "other": "Компьютер ({{name}})"
+    },
     "os": {
       "linux": "Linux",
       "darwin": "macOS",

@@ -17858,6 +17858,11 @@
     "removed": "Usunięto {{name}}.",
     "name": "Nazwa komputera",
     "nameHelp": "Tak widzą go osoby i agenci.",
+    "defaultName": {
+      "model": "{{model}} użytkownika {{name}}",
+      "linux": "Komputer z Linuksem użytkownika {{name}}",
+      "other": "Komputer użytkownika {{name}}"
+    },
     "os": {
       "linux": "Linux",
       "darwin": "macOS",
