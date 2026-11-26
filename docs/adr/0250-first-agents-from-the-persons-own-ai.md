@@ -1,0 +1,91 @@
+# 0250. First agents from the person's own AI: three options, one picked
+
+- Status: Proposed
+- Date: 2026-11-26
+- Builds on: ADR 0119 (the MCP server; its addendum of 2026-11-26 adds the tool and the hold exemption), ADR 0081 and
+  ADR 0137 §10 (proposals a person creates; the right hand's team card), ADR 0155 §6 and ADR 0162 (the onboarding and
+  the team templates' one-click team), ADR 0079 (billing holds), ADR 0164 (the new agent's checklist asks for its apps)
+- Code: `packages/db/src/schema/first-agents.ts` (`first_agent_proposals`); `packages/engine/src/first-agents.ts`
+  (`firstAgentsInput`, `saveFirstAgents`, `latestFirstAgents`, `pickFirstAgent`); `packages/engine/src/team-templates.ts`
+  (`createTeamNow`); `packages/engine/src/team-proposals.ts` (`TeamAgent.later`); `packages/engine/src/apps/first-agents-tool.ts`
+  (`propose_first_agents`); `packages/engine/src/standing.ts` (`workRefusalBeforePlan`); routes
+  `apps/server/src/routes/app/first-agents.ts`; client `packages/client/src/api/*` (`api.firstAgents`,
+  `useFirstAgents`, `usePasteFirstAgents`, `usePickFirstAgent`, the user event `first_agents.received`) and
+  `packages/client/src/lib/apps.ts` (`aiAppAsk`)
+
+## Context
+
+The onboarding asked what the business does, who the person is, and then offered six ready-made teams by business type.
+The answers were generic: the templates know nothing of this person's week, and a team of three made at once leaves
+the person with three agents to understand before any of them did something useful.
+
+The person already has an AI that knows their work: Claude, ChatGPT, Gemini, Cursor, with their past conversations,
+their memory and the files and apps they connected. Since ADR 0119 that AI can connect to agentes.chat by MCP. Asked
+the right question, it can find the repetitive tasks that take most of the person's time and describe an agent for
+each, better than any form we could put in front of them.
+
+Two things stood in the way. A new Cloud workspace is on the `payment` hold until Checkout (ADR 0079), and a hold
+refused the app's sign-in, personal tokens and every MCP tool. And the existing ways to make agents either create at
+once (`create_agent` under `manage`) or post a card in a conversation for an agent's run (ADR 0081), neither of which
+fits "show me three, I pick one, on the onboarding's own page".
+
+## Decision
+
+1. **The person's AI proposes, the person picks.** The onboarding gives a prompt to paste into the person's AI (team
+   owner, member and personal variants, and one that asks for JSON when the AI has no connector). It asks for the three
+   repetitive tasks that take most of their time, each as an agent described like a job opening: a short name, a role,
+   why (from what the AI saw), its responsibilities, the apps it needs, a routine with a day and a time, and what it
+   delivers on its first day, ordered by the time each task takes. Nothing is created until the person picks one.
+
+2. **One shape for both ways in.** `firstAgentsInput` (zod) is what the MCP tool and the paste route take: `about` (at
+   most 600 characters) and 1 to 3 options, each `name` (1 to 30), optional `handle`, `role` (1 to 40), `why` (1 to 280),
+   `tasks` (1 to 4, each up to 120), `apps` (names), an optional `routine` (`title`, `schedule` in words, `prompt`, and
+   an optional `cron`), `today` (up to 3) and `instructions` (up to 4,000). The routine's `cron` is optional and not
+   part of the pasted JSON's example: words like "toda segunda às 8:00" need the workspace's own model to read, which a
+   workspace waiting for its plan doesn't have, so the MCP tool asks for the cron of the same schedule too.
+
+3. **Kept per person, newest first.** `first_agent_proposals` (`org_id`, `user_id`, the connection that sent it or none,
+   `source` `mcp` or `paste`, `about`, `options` jsonb, `picked`, `picked_at`, `agent_id`, `created_at`; erased by a
+   workspace reset). `saveFirstAgents` normalizes each option: a handle free in the workspace and among the options
+   (from the name when missing), each app named by the catalog (`key` is the mark the apps draw: a connector brand or a
+   mailbox's provider, else null), the routine's schedule read with the routines' own reader in the person's time zone
+   (`cron` and `timezone`, null when neither the cron nor the words read), and a look with a different color for each
+   option, one no agent there wears when there is one. It is audited (`first_agents.proposed`, with the source and the
+   app), limited to 10 an hour per person and workspace, and the person's apps hear `first_agents.received`. The
+   onboarding has no socket (it is outside the workspace's realtime provider), so it also reads the newest proposal
+   every few seconds while it waits. `GET …/first-agents` answers only the caller's own newest one.
+
+4. **Picking makes one agent through the team card.** `pickFirstAgent` needs `create_agents` (members have it by
+   default; without it, `create_agents_required`). It builds a one-agent team from the option and makes it through
+   `createTeamNow`, the same path the templates take (split out of `useTeamTemplate`): the right hand's team card in the
+   person's DM with it, created at once, with Undo for a day. So the agent gets what a template's agent gets: its
+   channel in a team's workspace (named after its role, `#cobranca`, or its handle; a personal workspace's agent lives
+   in its DM), its routine (read again, from the cron first), the AI suggested for the person (an account of theirs,
+   else the workspace's model), the plan-waiting emails on a `payment` hold, the team's hello once it can work, and the
+   right hand's weekly check when it is a team's first agent. Its instructions are the option's, else its
+   responsibilities as a list. The apps the workspace has are given as for any admin's new agent; each catalog app it
+   names that isn't connected becomes a row of its checklist (`TeamAgent.later` → `setup.apps`, ADR 0164). A handle
+   taken since the proposal gets the next free one.
+
+5. **Once.** The pick holds the row (`picked`, `picked_at`) while it runs, so two clicks make one agent; a failure lets
+   it go, and a hold older than two minutes (a process that stopped) may be taken again. Picking again after it is
+   made answers with the same agent. The answer is where the onboarding opens it: `{ agentId, handle, channelId }`.
+
+6. **The workspace's context from the AI.** With no context yet, the workspace's becomes the proposal's `about` when the
+   person who picks may configure it (in a personal workspace that context is what the person wants help with, ADR 0159).
+   A member's proposal speaks of their own work and is never written there: they can't configure the workspace.
+
+7. **Open while the workspace waits for its first plan.** The onboarding runs before Checkout, so the app's sign-in,
+   personal tokens, the tool and these routes all work on the `payment` hold (`workRefusalBeforePlan`; ADR 0119
+   addendum of 2026-11-26). Every other refusal stands.
+
+## Consequences
+
+- The onboarding's team templates and its business and "about you" steps go; the templates' code stays for the right
+  hand's chat (ADR 0137 §10) until it is retired on its own.
+- The hello in #general (ADR 0162) greets only the templates' agents by handle: a first agent made here says nothing
+  there yet, and the right hand says hi alone. Giving it a line of its own is left for later.
+- A proposal names apps by what the AI wrote. One the catalog doesn't know keeps its name and no mark, and asks for
+  nothing on the checklist.
+- Asking an admin when the person can't create agents is left for later; the apps say it needs an admin.
+- A new table, generated as a migration with `bun run db:generate first_agent_proposals`.

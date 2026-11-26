@@ -36,6 +36,8 @@ export const keys = {
   /** An agent's proposal of a new agent, by its card's message (ADR 0081). */
   agentProposal: (orgId: string, messageId: string) => ["org", orgId, "agent-proposal", messageId] as const,
   actionCard: (orgId: string, messageId: string) => ["org", orgId, "action-card", messageId] as const,
+  /** My newest first-agent proposal (ADR 0250). */
+  firstAgents: (orgId: string) => ["org", orgId, "first-agents"] as const,
   teamTemplates: (orgId: string, locale: string) => ["org", orgId, "team-templates", locale] as const,
   team: (orgId: string) => ["org", orgId, "team"] as const,
   credentials: (orgId: string) => ["org", orgId, "credentials"] as const,

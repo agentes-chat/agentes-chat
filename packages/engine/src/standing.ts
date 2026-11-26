@@ -261,6 +261,17 @@ export const heldOrg = sql<boolean>`(${organizations.standing} = 'suspended' or 
 /** A workspace that waits for its first plan: a person owns one at a time (ADR 0079 §2). */
 export const waitsForPlan = (s: WorkspaceStanding) => isBillingHold(s) && s.reason === "payment" && !s.deletionDueAt;
 
+/**
+ * `workRefusal`, sparing a workspace that only waits for its first plan: its onboarding connects the person's own AI
+ * app and takes the first agents it proposes before Checkout (ADR 0119 addendum of 2026-11-26, ADR 0250). Every other
+ * refusal stands: a suspension, a deletion, an unpaid or ended plan, any hold that isn't billing's.
+ */
+export function workRefusalBeforePlan(
+  standing: WorkspaceStanding | undefined,
+): OrgPausedError | OrgDeletingError | null {
+  return standing && waitsForPlan(standing) ? null : workRefusal(standing);
+}
+
 /** A workspace's standing, cached 5 s per process. An unknown id reads as active: what needs the row fails on its own. */
 export async function orgStanding(db: Executor, orgId: string): Promise<WorkspaceStanding> {
   return (await caches.standing.getOrLoad(`${orgId}:`, async () => {

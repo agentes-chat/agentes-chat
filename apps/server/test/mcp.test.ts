@@ -93,7 +93,12 @@ describe("protocol", () => {
     expect(client.getServerVersion()).toMatchObject({ name: "agentes-chat", title: "agentes.chat" });
     expect(client.getInstructions()).toContain('This connection acts as owner in the workspace "Acme"');
     const { tools } = await client.listTools();
-    expect(tools.map((x) => x.name)).toEqual([...APP_TOOL_NAMES, "list_wiki_pages", "read_wiki_page"]);
+    expect(tools.map((x) => x.name)).toEqual([
+      ...APP_TOOL_NAMES,
+      "list_wiki_pages",
+      "read_wiki_page",
+      "propose_first_agents",
+    ]);
     await client.close();
   });
 
@@ -164,6 +169,7 @@ describe("protocol", () => {
       ...APP_TOOL_NAMES.filter((n) => n !== "send_to_agent"),
       "list_wiki_pages",
       "read_wiki_page",
+      "propose_first_agents",
     ]);
   });
 

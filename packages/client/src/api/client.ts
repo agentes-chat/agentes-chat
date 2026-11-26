@@ -157,6 +157,9 @@ import type {
   FeedbackOffer,
   FileConversationRef,
   FileWave,
+  FirstAgentPicked,
+  FirstAgents,
+  FirstAgentsInput,
   ForeignMailbox,
   FormerAgent,
   GifKey,
@@ -1030,6 +1033,18 @@ export interface ApiClient {
     copyFile(orgId: string, input: ImportFileInput): Promise<ImportedFile>;
     /** Same-origin URL that downloads this workspace as a bundle (`.json`). */
     exportUrl(orgId: string): string;
+  };
+  /**
+   * The first agents my own AI proposed (ADR 0250): sent through `propose_first_agents` or pasted, one picked into an
+   * agent. All of it works while the workspace waits for its first plan.
+   */
+  firstAgents: {
+    /** My newest proposal here, or null. */
+    latest(orgId: string): Promise<FirstAgents | null>;
+    /** An AI's answer pasted ("Sem conector? Cole a resposta"): 400 `first_agents.invalid` says what is wrong. */
+    paste(orgId: string, input: FirstAgentsInput): Promise<FirstAgents>;
+    /** "Criar o …": the option at `index` becomes one agent; again, the same one. 403 `create_agents_required`. */
+    pick(orgId: string, proposalId: string, index: number): Promise<FirstAgentPicked>;
   };
   chat: {
     channels(orgId: string): Promise<Channel[]>;

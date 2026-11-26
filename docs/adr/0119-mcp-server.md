@@ -100,3 +100,30 @@ A team keeps its knowledge in Markdown notes elsewhere (a git repository edited 
 5. **Text others wrote.** The page's text comes back as `untrusted_text`, fenced and cleaned of hidden characters like every read tool's, up to the page's 200,000 characters; titles, folders and tags are cleaned too. A page written back from what was read loses those characters (an emoji joined by U+200D splits in two).
 6. **The consent page says it.** "See the agents, channels and wiki pages you see" for every access, and under `manage` "Write wiki pages and move them to the trash as you". English and Portuguese changed; the other languages follow them through the translation tools (ADR 0122).
 7. **Left out.** Renaming and moving (a sync sends a renamed note as a new page and trashes the old one), restoring from the trash, and changing who sees a page: those stay in the app. A notice for pages an app writes: the history and the audit already say who wrote it through which app, and `app_created`'s words for a page would be new in every language. The help page's list of tools, which every language keeps the same. A page past `/mcp`'s 128 KiB request cap can't be written through it.
+
+## Addendum (2026-11-26): `propose_first_agents`, and a workspace waiting for its first plan
+
+The new onboarding asks the person's own AI for their first agents (ADR 0250): it connects here, finds the repetitive
+tasks that take most of their time and sends three options, of which the person picks one in agentes.chat. That runs
+before Checkout, while a new Cloud workspace is on the `payment` hold (ADR 0079), which refused the sign-in and every
+tool.
+
+1. **The tool** (`packages/engine/src/apps/first-agents-tool.ts`, `APP_FIRST_AGENT_TOOL_NAMES`). `propose_first_agents`
+   takes `firstAgentsInput` (ADR 0250 §2): `about` and 1 to 3 options, each a name, role, why, tasks, apps, routine (its
+   words and its cron), first-day deliveries and instructions. It creates nothing: it keeps the proposal for the person
+   the connection acts as, through `saveFirstAgents`, audited with the app's name and limited to 10 an hour, and answers
+   `{ received, pickIn, options, next }`, `pickIn` being `/onboarding` for an owner whose onboarding is open and the
+   workspace otherwise. Since it only stores something for the caller, it is listed under `read`, so every connection
+   has it. Its description says, without directing the model, that nothing is created and the person picks in
+   agentes.chat; `appsInstructions` names it.
+
+2. **The hold exemption.** A workspace whose only refusal is waiting for its first plan (`waitsForPlan`: the billing
+   hold `payment`, shown, not being deleted) takes the consent (`consentView` no longer marks it paused, `decideConsent`
+   allows it) and personal tokens (`createPersonalToken`), through `workRefusalBeforePlan`. Its connections' principal
+   keeps a refusal, worded for the wait ("waits for its first plan… propose_first_agents is the one tool that works"),
+   with `stillOpen: ["propose_first_agents"]`: that tool runs, every other one answers with the refusal as before, and
+   the instructions say so. A suspension, a deletion, the `unpaid` and `ended` holds and every trust hold refuse as
+   before. Once the plan starts the refusal goes, and the connection made during the onboarding keeps working.
+
+3. **The apps.** The import's way in (`aiAppImport`) still says the workspace is held: its `manage` tools are refused
+   until the plan. The onboarding's ask has its own helper (`aiAppAsk`), open on the `payment` hold.

@@ -147,6 +147,7 @@ import type {
   EndpointModel,
   FileConversation,
   FileConversationRef,
+  FirstAgentsInput,
   ForeignMailbox,
   FormerAgent,
   GifCategory,
@@ -1268,6 +1269,48 @@ export function useApplyTeamTemplate(orgId: string) {
           qc.prefetchQuery({ ...routinesQuery(api, orgId), staleTime: 0 }),
           qc.prefetchQuery({ ...channelsQuery(api, orgId), staleTime: 0 }),
         ]);
+      await qc.invalidateQueries({ queryKey: keys.agents(orgId) });
+    },
+  });
+}
+
+/**
+ * My newest first-agent proposal (ADR 0250), null while none came. `poll`: read again every that many ms while the
+ * onboarding waits for the AI's answer (it has no socket); off by default.
+ */
+export function useFirstAgents(orgId: string, opts: { poll?: number | false } = {}) {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.firstAgents(orgId),
+    queryFn: () => api.firstAgents.latest(orgId),
+    enabled: Boolean(orgId),
+    refetchInterval: opts.poll || false,
+  });
+}
+
+/** "Sem conector? Cole a resposta": the answer pasted from an AI with no connector, kept as my newest proposal. */
+export function usePasteFirstAgents(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: FirstAgentsInput) => api.firstAgents.paste(orgId, input),
+    onSuccess: (proposal) => qc.setQueryData(keys.firstAgents(orgId), proposal),
+  });
+}
+
+/**
+ * "Criar o …": the option at `index` becomes one agent (the same one when picked again). Pending until the agents'
+ * list has it, so a screen that shows it next finds it there; the proposal, channels and routines are read again.
+ */
+export function usePickFirstAgent(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ proposalId, index }: { proposalId: string; index: number }) =>
+      api.firstAgents.pick(orgId, proposalId, index),
+    onSuccess: async () => {
+      for (const key of [keys.firstAgents(orgId), keys.channels(orgId), keys.routines(orgId)])
+        void qc.invalidateQueries({ queryKey: key });
       await qc.invalidateQueries({ queryKey: keys.agents(orgId) });
     },
   });
