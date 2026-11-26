@@ -302,3 +302,7 @@ export function inertLinks(text: string): string {
 /** A JSON value with every string in it made inert (`inertLinks`). */
 export const inertJson = <T>(value: T): T =>
   JSON.parse(JSON.stringify(value, (_key, v) => (typeof v === "string" ? inertLinks(v) : v)));
+
+/** Whole seconds from an ISO time to `now`, never negative; null when there is no readable time. */
+export const secondsBefore = (now: Date, at: string | null | undefined) =>
+  at && Number.isFinite(Date.parse(at)) ? Math.max(0, Math.round((now.getTime() - Date.parse(at)) / 1000)) : null;

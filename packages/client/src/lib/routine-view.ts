@@ -110,6 +110,7 @@ export const RUN_CODES = [
   "stuck",
   "missing_credential",
   "credential_revoked",
+  "credential_unreadable",
   "credential_wrong_provider",
   "model_unlisted",
   "agent_archived",

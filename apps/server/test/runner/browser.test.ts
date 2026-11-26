@@ -708,7 +708,7 @@ test("a tab in the background comes to the front before a command; one that show
   // Switching tabs and waiting need no page in front.
   const before = calls().filter((c) => c === LOOK).length;
   now += 31_000;
-  expect(await t.act("tab", ["2"])).toMatchObject({ success: true });
+  expect(await t.act("tab", ["t2"])).toMatchObject({ success: true });
   expect(await t.act("wait", ["10"])).toMatchObject({ success: true });
   expect(calls().filter((c) => c === LOOK)).toHaveLength(before);
 });
@@ -2081,7 +2081,7 @@ test.if(posix)("with an allowlist, an off-list page is never read and never left
   expect(JSON.parse(readFileSync(process.env.FAKE_AB_STATE as string, "utf8")).url).toBe("about:blank");
   // Switching to a new tab a link opened on another site: checked too, and blanked.
   t.page({ url: "https://shop.example.com/", tabTo: "https://evil.com/phish", noHistory: true });
-  expect(await t.act("tab", ["1"], { allowedDomains })).toMatchObject({
+  expect(await t.act("tab", ["t2"], { allowedDomains })).toMatchObject({
     success: false,
     error: expect.stringContaining("evil.com"),
   });

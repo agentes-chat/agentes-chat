@@ -857,7 +857,8 @@ export function createMachineHub(deps: MachineHubDeps) {
         frame.claudeLoginMethods ||
         frame.toolchains ||
         frame.clis ||
-        frame.windowsBuild
+        frame.windowsBuild ||
+        frame.app
           ? {
               executors: {
                 // A runner that hasn't looked yet leaves the CLIs out: the last ones stored stand.
@@ -875,6 +876,7 @@ export function createMachineHub(deps: MachineHubDeps) {
                 ...(frame.claudeLoginMethods ? { claudeLoginMethods: frame.claudeLoginMethods } : {}),
                 ...(loginBlocked ? { claudeLoginBlocked: loginBlocked } : {}),
                 ...(frame.authEgressGroup ? { authEgressGroup: true as const } : {}),
+                ...(frame.app ? { app: true as const } : {}),
                 ...(Object.keys(ownUsage).length > 0 ? { ownUsage } : {}),
                 // A runner whose probe hasn't finished says none: the last ones stored stand.
                 ...((frame.toolchains ?? machine.executors?.toolchains)

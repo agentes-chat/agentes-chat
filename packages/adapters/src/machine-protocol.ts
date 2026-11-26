@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 86;
+export const MACHINE_PROTOCOL_VERSION = 87;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -2654,6 +2654,12 @@ export const ANTIGRAVITY_WINDOWS_PROTOCOL = 84;
  */
 export const CO_AUTHOR_CASE_PROTOCOL = 85;
 
+/**
+ * Protocol 87: `hello.app` says the agentes.chat app runs this runner (and updates it with its own releases, which lag
+ * this server's protocol). A runner from before says nothing either way.
+ */
+export const RUNNER_APP_PROTOCOL = 87;
+
 /** About how many more background tasks fit on the computer now, and what decides it. */
 export interface TaskRoomReport {
   more: number;
@@ -2993,6 +2999,8 @@ export interface RunnerInfo {
   authEgressGroup?: true;
   /** `KEEP_RUNNING_PROTOCOL`: the holds that live here, and those that ended lately with why (the server may not know). */
   holds?: RunnerHolds;
+  /** `RUNNER_APP_PROTOCOL`: the agentes.chat app runs it; absent, a runner installed from the terminal. */
+  app?: true;
 }
 
 export interface RunnerHolds {
@@ -4371,6 +4379,7 @@ export function parseRunnerFrame(raw: string): RunnerFrame | null {
           : {}),
         ...(isString(f.claudeLoginBlocked) ? { claudeLoginBlocked: f.claudeLoginBlocked.slice(0, 300) } : {}),
         ...(f.authEgressGroup === true ? { authEgressGroup: true as const } : {}),
+        ...(f.app === true ? { app: true as const } : {}),
         ...(Array.isArray(f.phones) ? { phones: parsePhones(f.phones) } : {}),
         ...(isObject(f.toolchains) ? { toolchains: parseToolchains(f.toolchains) } : {}),
         ...(isObject(f.holds) ? { holds: parseHolds(f.holds) } : {}),

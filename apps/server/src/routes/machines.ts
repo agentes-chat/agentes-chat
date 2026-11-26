@@ -167,6 +167,10 @@ export const Machine = z
     }),
     runnerVersion: z.string(),
     protocol: z.number().int().openapi({ description: "The runner's machine protocol (9+: pause; 10+: access)." }),
+    update: z.enum(["command", "installer"]).nullable().openapi({
+      description:
+        "Its runner is behind this server: `command`, its owner runs `agentes-runner update` there; `installer`, the install command again, as root (system mode). Null: nothing to update from here (current, the workspace's or this server's own computer, or run by the agentes.chat app, which updates itself).",
+    }),
     browserProfiles: z.boolean().openapi({
       description:
         "Its runner can hold browser profiles (protocol 34, ADR 0110); `false`: update the computer. A system-mode computer has none at all (`mode`): the apps hide them there.",

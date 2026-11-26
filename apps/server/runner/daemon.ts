@@ -2275,6 +2275,7 @@ export class RunnerDaemon implements RequestObserver {
       size: { ...machineSize(workspaceReal), maxTasks: this.taskLimit(this.stored), ...this.taskRoom() },
       ...this.loginHello(),
       ...(this.accounts.authEgressGroup() ? { authEgressGroup: true as const } : {}),
+      ...(this.stored?.managedBy === "desktop" ? { app: true as const } : {}),
     };
   }
 

@@ -5754,7 +5754,8 @@
       "provider_unavailable": "le modèle n'a pas répondu",
       "gave_up": "le modèle n'a pas répondu après plusieurs essais",
       "missing_credential": "il manque une clé d'API",
-      "credential_revoked": "la clé d'API a été révoquée"
+      "credential_revoked": "la clé d'API a été révoquée",
+      "credential_unreadable": "la clé d'API enregistrée ne peut pas être ouverte"
     },
     "youReplied": "Vous avez répondu : {{text}}",
     "actions": "Actions",
@@ -6758,6 +6759,7 @@
         "interrupted": "Interrompue par un redémarrage du serveur.",
         "missing_credential": "L'espace de travail n'a pas de clé {{provider}}.",
         "credential_revoked": "La clé de cet agent a été révoquée.",
+        "credential_unreadable": "La clé d'API enregistrée ne peut pas être ouverte, en général parce que le secret du serveur a changé après son enregistrement. Collez à nouveau la clé dans Clés d'IA.",
         "credential_wrong_provider": "Le modèle vient de {{modelProvider}}, mais la clé vient de {{keyProvider}}.",
         "model_unlisted": "OpenRouter ne propose plus {{model}}. Choisissez un autre modèle dans les paramètres de l'agent.",
         "no_ai": "L'agent n'avait aucune IA disponible.",
@@ -9634,6 +9636,7 @@
       "stuck": "Arrêtée car elle était bloquée",
       "missing_credential": "Il manque une clé API",
       "credential_revoked": "La clé API a été révoquée",
+      "credential_unreadable": "La clé d'API enregistrée ne peut pas être ouverte",
       "credential_wrong_provider": "La clé API est d'un autre fournisseur",
       "model_unlisted": "OpenRouter ne propose plus ce modèle",
       "agent_archived": "L'agent a été archivé",
@@ -17150,6 +17153,10 @@
       "outdated": "Mets à jour l'app agentes.chat sur cet ordinateur pour le mettre en pause d'ici.",
       "paused": "{{name}} est en pause",
       "resumed": "{{name}} reprend le travail"
+    },
+    "runnerBehind": {
+      "command": "Le programme agentes.chat sur {{computer}} n'est pas à jour, donc certaines choses n'y fonctionnent pas. Pour le mettre à jour, lance ceci sur cet ordinateur :",
+      "installer": "Le programme agentes.chat sur {{computer}} n'est pas à jour, donc certaines choses n'y fonctionnent pas. Pour le mettre à jour, relance la commande d'installation sur cet ordinateur, en root."
     },
     "seenNow": "connecté en ce moment",
     "seen": "vu {{when}}",

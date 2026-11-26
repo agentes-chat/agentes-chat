@@ -13618,6 +13618,9 @@
   "notifications.failedCause.credential_revoked": {
     "value": "the API key was revoked"
   },
+  "notifications.failedCause.credential_unreadable": {
+    "value": "the saved API key can't be opened"
+  },
   "notifications.youReplied": {
     "value": "You replied: {{text}}"
   },
@@ -16052,6 +16055,9 @@
   },
   "agentPage.activity.errors.credential_revoked": {
     "value": "This agent's key was revoked."
+  },
+  "agentPage.activity.errors.credential_unreadable": {
+    "value": "The saved API key can't be opened, usually because the server's secret changed after the key was saved. Paste the key again in AI keys."
   },
   "agentPage.activity.errors.credential_wrong_provider": {
     "value": "The model is from {{modelProvider}}, but the key is from {{keyProvider}}."
@@ -22502,6 +22508,9 @@
   },
   "routines.code.credential_revoked": {
     "value": "The API key was revoked"
+  },
+  "routines.code.credential_unreadable": {
+    "value": "The saved API key can't be opened"
   },
   "routines.code.credential_wrong_provider": {
     "value": "The API key is from another provider"
@@ -40671,6 +40680,12 @@
   },
   "machines.remotePause.resumed": {
     "value": "{{name}} is back to work"
+  },
+  "machines.runnerBehind.command": {
+    "value": "The agentes.chat program on {{computer}} is out of date, so some things don't work there. To update it, run this there:"
+  },
+  "machines.runnerBehind.installer": {
+    "value": "The agentes.chat program on {{computer}} is out of date, so some things don't work there. To update it, run the install command there again, as root."
   },
   "machines.seenNow": {
     "value": "connected now"
