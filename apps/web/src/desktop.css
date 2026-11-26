@@ -116,17 +116,15 @@ html[data-desktop] :is(.sidebar__collapse, .sidebar__head-collapse) {
 html[data-desktop] .auth__logo {
   top: calc(var(--titlebar-h) + 16px);
 }
-/* Onboarding and a new agent: the rail's logo starts under the Mac's buttons (Windows and Linux keep the
-   system's title bar above the page). */
+/* A new agent: the rail's logo starts under the Mac's buttons (Windows and Linux keep the system's title bar above
+   the page). */
 html[data-desktop="mac"]:not([data-fullscreen]) .onb__rail {
   padding-top: calc(var(--titlebar-h) + 8px);
 }
-/* The onboarding's step stays on the wordmark's line, 16px under the rail's padding (onboarding.css). A window
-   narrow enough for the step bar keeps the phone's: the bar on top clears the buttons. */
-@media (min-width: 761px) {
-  html[data-desktop="mac"]:not([data-fullscreen]) .onb__body {
-    padding-top: calc(var(--titlebar-h) + 8px + 16px);
-  }
+/* The onboarding: its top bar (the logo and the account) sits under the Mac's buttons. */
+html[data-desktop="mac"]:not([data-fullscreen]) .onbw__top {
+  height: calc(56px + var(--titlebar-h));
+  padding-top: var(--titlebar-h);
 }
 
 /* The sidebar's drawer (a window zoomed in with ⌘+ narrows to it) hangs from the window's top-left corner, over the

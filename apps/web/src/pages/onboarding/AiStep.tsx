@@ -1,6 +1,4 @@
 import { type Agent, type Me, type OrgSummary, useComputerSetup } from "@agenteschat/client";
-import { joinNames } from "@agenteschat/client/lib/format";
-import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { type AiChoice, gateDims, planLabel, planMark, planOffSystem } from "@agenteschat/client/lib/no-ai";
 import { can } from "@agenteschat/client/lib/permissions";
 import { isRightHand } from "@agenteschat/client/lib/right-hand";
@@ -9,16 +7,15 @@ import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { usePlanGates } from "@/components/ai/ConnectAiSteps";
 import { ConnectChoices } from "@/components/arrival/ConnectChoices";
-import { sceneTeam, TeamScene, useDawn } from "@/components/arrival/TeamScene";
 import { ConnectAiProvider, type ConnectAiRequest, useConnectAi } from "@/components/connect-ai-context";
 import { OrgProvider, useOrg } from "@/components/org-context";
 import "./ai-step.css";
 
 /*
- * The rail's Connect an AI step (ADR 0162, amended), the last but a team's people: the arrival's choices as cards
- * (ADR 0160), each opening the same Connect dialog as anywhere in the app for the right hand and the whole team, and
- * the team asleep on its stage beside them until it thinks. The step is answered by the data (every agent ready or
- * waiting), never by the dialog closing, so a connect made in another tab moves it on too.
+ * The onboarding's Connect an AI step (ADR 0162, amended), the last but a team's people: the arrival's choices as cards
+ * (ADR 0160), each opening the same Connect dialog as anywhere in the app for the right hand and the whole team. The
+ * step is answered by the data (every agent ready or waiting), never by the dialog closing, so a connect made in
+ * another tab moves it on too.
  */
 
 /** Asked again this often while the choices show: this page opens no socket, so no event says a plan can sign in. */
@@ -161,58 +158,5 @@ export function AiStep({
         </button>
       </p>
     </>
-  );
-}
-
-/**
- * Beside the step on wide screens, in place of the workspace's preview: the team on its sky, asleep until it thinks,
- * then waking as the night turns to day, with who answers now.
- */
-export function AiStage({
-  agents,
-  lead,
-  awake,
-  personal,
-}: {
-  /** The right hand first, then the team. */
-  agents: readonly Agent[];
-  lead: Agent | undefined;
-  /** Every agent thinks: the sky turns to day. */
-  awake: boolean;
-  /** A personal workspace has no team (ADR 0159): its agents, in words of its own. */
-  personal: boolean;
-}) {
-  const { t } = useTranslation();
-  const day = useDawn(awake);
-  const names = agents.map((a) => a.name);
-  // The right hand alone (a personal workspace's "no agents yet", a team step left with none): by its name.
-  const alone = lead !== undefined && agents.length === 1 ? agentGrammar(lead.name) : null;
-  const head = alone
-    ? t(awake ? "onboarding.flow.ai.awakeAlone" : "onboarding.flow.ai.readyAlone", alone)
-    : personal
-      ? t(awake ? "onboarding.flow.ai.awakePersonal" : "onboarding.flow.ai.readyPersonal")
-      : t(awake ? "onboarding.flow.ai.awake" : "arrival.stage.ready");
-  return (
-    <aside className="onb-stage">
-      <div className="onb-stage__frame arrival-stage">
-        <TeamScene
-          shape="tall"
-          quiet={0.22}
-          agents={sceneTeam(agents, lead)}
-          lead={lead?.id}
-          asleep={!awake}
-          day={day}
-          expression={awake ? "happy" : undefined}
-        />
-        <div className="arrival-stage__cap">
-          <b>{head}</b>
-          <span>
-            {awake
-              ? t("onboarding.flow.ai.answer", { names: joinNames(names, t), count: agents.length })
-              : t(personal || alone ? "onboarding.flow.ai.wakePersonal" : "arrival.stage.wake")}
-          </span>
-        </div>
-      </div>
-    </aside>
   );
 }

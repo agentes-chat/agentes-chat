@@ -13,6 +13,8 @@
   grid-template-rows: auto 1fr;
   grid-template-columns: minmax(0, 1fr);
   overflow-x: clip;
+  /* Clear the notch (viewport-fit=cover). */
+  padding-inline: env(safe-area-inset-left, 0px) env(safe-area-inset-right, 0px);
   background: var(--bg);
   color: var(--ink);
 }
@@ -493,8 +495,8 @@ html:not([data-pointer]) .onbx__back:focus-visible {
 /* ---------- a phone: the same box at full width, 16px from the edges ---------- */
 @media (max-width: 560px) {
   .onbw__top {
-    height: 52px;
-    padding: 0 16px;
+    height: calc(52px + env(safe-area-inset-top, 0px));
+    padding: env(safe-area-inset-top, 0px) 16px 0;
   }
   .onbw__stage {
     padding: 72px 16px 32px;
