@@ -5758,9 +5758,182 @@
                     ]
                   },
                   "description": "How each of its turns on a computer started, as the computer said, at most 50."
+                },
+                "turns": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "brain": {
+                        "type": "string",
+                        "description": "`model` (a provider's API), a coding CLI's kind, or `other`."
+                      },
+                      "model": {
+                        "type": ["string", "null"],
+                        "description": "The model it asked for; null: its default."
+                      },
+                      "atMs": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "description": "From the claim's start to the turn's."
+                      },
+                      "ms": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "end": {
+                        "type": "string",
+                        "description": "`done`, the code it failed with, or `thrown`."
+                      },
+                      "preTurnMs": {
+                        "type": ["integer", "null"],
+                        "minimum": 0,
+                        "description": "The work before its model (the checkouts)."
+                      },
+                      "firstEventMs": {
+                        "type": ["integer", "null"],
+                        "minimum": 0,
+                        "description": "Turn start to its first event, on the server."
+                      },
+                      "firstTextMs": {
+                        "type": ["integer", "null"],
+                        "minimum": 0,
+                        "description": "Turn start to its first text, on the server."
+                      },
+                      "tools": {
+                        "type": ["object", "null"],
+                        "properties": {
+                          "count": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "ms": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "maxMs": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": ["count", "ms", "maxMs"],
+                        "description": "The calls it ran itself; `ms`: those it said it started, summed."
+                      },
+                      "runner": {
+                        "type": ["object", "null"],
+                        "additionalProperties": {
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "description": "Its computer's measures, as in `computerTurns`."
+                      },
+                      "evidence": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "description": "A slow or failed turn: what the CLI's debug log said during it, timed from the turn's start, scrubbed."
+                      },
+                      "system": {
+                        "type": "object",
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "description": "A computer brain's system text by its blocks, each a short hash: two turns whose hashes differ show which block changed."
+                      }
+                    },
+                    "required": [
+                      "brain",
+                      "model",
+                      "atMs",
+                      "ms",
+                      "end",
+                      "preTurnMs",
+                      "firstEventMs",
+                      "firstTextMs",
+                      "tools",
+                      "runner",
+                      "evidence",
+                      "system"
+                    ]
+                  },
+                  "description": "Each brain turn as the server saw it, at most 50."
+                },
+                "slow": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "stage": {
+                        "type": "string",
+                        "enum": ["context", "pre_turn", "init", "first_byte", "reply"]
+                      },
+                      "ms": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "budgetMs": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "cause": {
+                        "type": "string",
+                        "description": "What took the time: a context step, `checkouts`, a cold start's cause, `api_retry`, `wait`, a failure's code, or a reply's largest stage."
+                      },
+                      "turn": {
+                        "type": ["integer", "null"],
+                        "minimum": 0
+                      }
+                    },
+                    "required": ["stage", "ms", "budgetMs", "cause", "turn"]
+                  },
+                  "description": "The budgets it broke (`SLOW_TURN_BUDGETS`)."
+                },
+                "waterfall": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "span": {
+                        "type": "string"
+                      },
+                      "startMs": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "ms": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "required": ["span", "startMs", "ms"]
+                  },
+                  "description": "Its stages and its turns' marks on one time line from its start; a mark is 0 ms."
                 }
               },
-              "required": ["endedAt", "totalMs", "queries", "stages", "stagesCut", "computerTurns"]
+              "required": [
+                "endedAt",
+                "totalMs",
+                "queries",
+                "stages",
+                "stagesCut",
+                "computerTurns",
+                "turns",
+                "slow",
+                "waterfall"
+              ]
             },
             "description": "Where the time went each time a worker took the run up (a claim), oldest first: the last 10 the run kept, none on a run that kept none. A wait between two claims is in neither."
           },

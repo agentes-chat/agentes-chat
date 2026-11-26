@@ -1,5 +1,6 @@
 import type { BrainTurnTimings } from "@agenteschat/adapters";
 import { currentQueryCount } from "@agenteschat/db";
+import type { TurnTrace } from "./turn-trace";
 
 export interface StageTiming {
   stage: string;
@@ -53,6 +54,10 @@ export function createProfiler() {
     startedAt,
     stages,
     brain,
+    /** Every brain turn of the claim as the server saw it (`turnRecorder`). */
+    turns: [] as TurnTrace[],
+    /** Sources of tools that were slow to list theirs (`ToolContext.slowSource`). */
+    slowSources: [] as { source: string; ms: number }[],
     /** The computer its turns ran on (or were refused by): speed split by computer, and by host where it is known. */
     machineId: undefined as string | undefined,
     /** The run it profiles, once claimed: its profile is kept with it. */

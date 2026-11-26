@@ -107,6 +107,13 @@ export const EMBED_QUERY_TIMEOUT_MS = 1500;
  * of the same words (`gateway.embed`). The hosted model's slow spells last seconds, and every call in one is slow.
  */
 export const EMBED_QUERY_CALL_WAITS = 4;
+/**
+ * A query that waited its whole wait starts a slow spell: for this long the next queries wait only
+ * `EMBED_SLOW_SPELL_WAIT_MS` before searching with words, until one is answered within the whole wait again. In a
+ * spell nearly every wait ran out (production, 2026-11: 1 context in 10 sat at the 1.5 s wait, hour after hour).
+ */
+export const EMBED_SLOW_SPELL_MS = 60_000;
+export const EMBED_SLOW_SPELL_WAIT_MS = 400;
 /** How long a query's vector is kept for the same words, and how many are kept. */
 export const QUERY_VECTOR_TTL_MS = 10 * 60_000;
 const QUERY_VECTORS_KEPT = 256;
@@ -280,6 +287,8 @@ export function createModelGateway(deps: ModelGatewayDeps) {
   let embedFailures = 0;
   /** Query vectors by organization and words, while their call runs and for `QUERY_VECTOR_TTL_MS` after. */
   const queryVectors = new Map<string, { at: number; result: Promise<EmbeddingResult> }>();
+  /** Until when the embeddings server is in a slow spell (`EMBED_SLOW_SPELL_MS`). */
+  let slowSpellUntil = 0;
   /** One call to the embeddings provider, its usage recorded; its failures in a row counted and reported. */
   const embedCall = async (
     embeddings: GatewayEmbeddings,
@@ -1231,8 +1240,17 @@ export function createModelGateway(deps: ModelGatewayDeps) {
       const waitMs = embeddings.queryTimeoutMs ?? EMBED_QUERY_TIMEOUT_MS;
       const key = `${call.orgId}\0${call.texts.join("\0")}`;
       let kept = queryVectors.get(key);
+      const askedAt = Date.now();
+      const wait = askedAt < slowSpellUntil ? Math.min(waitMs, EMBED_SLOW_SPELL_WAIT_MS) : waitMs;
       if (!kept || Date.now() - kept.at > QUERY_VECTOR_TTL_MS) {
         const result = embedCall(embeddings, call, waitMs * EMBED_QUERY_CALL_WAITS);
+        // Answered within the whole wait: the spell, if any, is over.
+        result.then(
+          () => {
+            if (Date.now() - askedAt < waitMs) slowSpellUntil = 0;
+          },
+          () => {},
+        );
         const entry = { at: Date.now(), result };
         kept = entry;
         queryVectors.delete(key);
@@ -1244,10 +1262,10 @@ export function createModelGateway(deps: ModelGatewayDeps) {
       }
       let timer: ReturnType<typeof setTimeout> | undefined;
       const waited = new Promise<never>((_, reject) => {
-        timer = setTimeout(
-          () => reject(new ProviderError(`the embeddings server took more than ${waitMs} ms`, true)),
-          waitMs,
-        );
+        timer = setTimeout(() => {
+          if (wait === waitMs) slowSpellUntil = Date.now() + EMBED_SLOW_SPELL_MS;
+          reject(new ProviderError(`the embeddings server took more than ${wait} ms`, true));
+        }, wait);
       });
       return Promise.race([kept.result, waited]).finally(() => clearTimeout(timer));
     },

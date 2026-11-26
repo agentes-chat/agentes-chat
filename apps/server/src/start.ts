@@ -120,6 +120,7 @@ import { createRealtime, type SocketData } from "./realtime/ws";
 import { takeRouteTimes } from "./route-times";
 import type { AppDeps } from "./routes/app/context";
 import { workerHealth } from "./routes/health";
+import { reportRunProfile } from "./run-reports";
 import { startTelemetry } from "./telemetry";
 import { releaseOf, version } from "./version";
 import { type BootTask, startWorkers } from "./workers";
@@ -461,7 +462,10 @@ async function boot(
     adapters,
     modelProviders,
     onTiming: (name, ms, attrs) => log.info("latency", { metric: name, ms, ...attrs }),
-    onRunProfile: (p) => log.debug("run profile", p),
+    onRunProfile: (p) => {
+      log.debug("run profile", { ...p });
+      void reportRunProfile(errors, p, async (id) => (await engine.machineHub.status(id))?.protocol).catch(() => {});
+    },
     emailArt,
     log,
     errors,
