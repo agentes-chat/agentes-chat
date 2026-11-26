@@ -657,7 +657,10 @@ export interface AgentBrainView {
    * serves the whole workspace (ADR 0059 §3), and the one it thinks with; emails only of the caller's own.
    */
   accounts: MachineAccountView[];
-  /** The caller may add an account there for this agent: its owner, on a computer where they add accounts. */
+  /**
+   * The caller may add an account there for this agent: its owner or who manages it (their own plan, lent to it), on a
+   * computer where they add accounts.
+   */
   canManageAccounts: boolean;
   /** The computer's runner knows accounts (protocol 13). */
   accountsSupported: boolean;
@@ -704,7 +707,7 @@ const NO_ACCOUNTS: BrainAccounts = { accounts: [], canManageAccounts: false, acc
 
 /**
  * The accounts on the agent's computer it may think with: its owner's, every one that serves the whole workspace
- * (ADR 0059 §3), and the one it uses; and whether the caller adds one there for it.
+ * (ADR 0059 §3), and the one it uses; and whether the caller adds one there for it (`manages`: who manages the agent).
  */
 async function brainAccounts(
   db: Database,
@@ -712,6 +715,7 @@ async function brainAccounts(
   orgId: string,
   agent: Pick<Agent, "ownerUserId" | "brainAccountId" | "builtin">,
   machine: Pick<MachineRow, "id" | "protocol" | "pairedByUserId" | "kind"> | null,
+  manages = false,
 ): Promise<BrainAccounts> {
   if (!machine) return NO_ACCOUNTS;
   const supported = machine.protocol >= ACCOUNTS_PROTOCOL;
@@ -735,7 +739,7 @@ async function brainAccounts(
     accounts: accounts
       .filter((a) => serving.has(a.id) || a.id === agent.brainAccountId)
       .map((a) => ({ ...a, usable: serving.has(a.id) })),
-    canManageAccounts: supported && agent.ownerUserId === userId && mayAddAccounts(machine, userId),
+    canManageAccounts: supported && (manages || agent.ownerUserId === userId) && mayAddAccounts(machine, userId),
     accountsSupported: supported,
   };
 }
@@ -1252,7 +1256,7 @@ export async function getAgentBrain(
   const [machine, machines, accounts, keys, inUse] = await Promise.all([
     machineLook,
     candidateMachines(deps.db, userId, orgId, admin, agent.machineId),
-    machineLook.then((m) => brainAccounts(deps.db, userId, orgId, agent, m)),
+    machineLook.then((m) => brainAccounts(deps.db, userId, orgId, agent, m, admin)),
     deps.db
       .select({ id: providerCredentials.id, provider: providerCredentials.provider })
       .from(providerCredentials)
@@ -1471,7 +1475,7 @@ export async function setAgentBrain(
         ),
       );
   }
-  const accounts = await brainAccounts(deps.db, userId, orgId, agent, machine);
+  const accounts = await brainAccounts(deps.db, userId, orgId, agent, machine, admin);
   const thinks =
     changed ||
     model !== agent.brainModel ||
@@ -1646,7 +1650,7 @@ export async function setAgentBrain(
   const shownMachine = shown.machineId === machine?.id ? machine : await agentMachine(deps.db, orgId, shown.machineId);
   const fresh =
     account !== agent.brainAccountId || shownMachine !== machine
-      ? await brainAccounts(deps.db, userId, orgId, shown, shownMachine)
+      ? await brainAccounts(deps.db, userId, orgId, shown, shownMachine, admin)
       : accounts;
   return view(shown, shownMachine, machines, fresh, userId);
 }

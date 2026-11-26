@@ -1,5 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import {
+  AGENTS_CLI_PROTOCOL,
   AGY_COPY_PROTOCOL,
   ANTIGRAVITY_WINDOWS_PROTOCOL,
   CLI_COPIES_PROTOCOL,
@@ -10,7 +11,8 @@ import {
 import { eq, schema } from "@agenteschat/db";
 import { brainOptions } from "../src/brain-settings";
 import { cliOutdated } from "../src/brains/claude-code";
-import { fetchesCli, fetchPercent, storeCliFetch } from "../src/cli-fetch";
+import { fetchesCli, fetchesOnAsk, fetchPercent, storeCliFetch } from "../src/cli-fetch";
+import { listMachines } from "../src/machines";
 import { type Fixture, setup } from "./fixtures";
 
 /*
@@ -56,6 +58,18 @@ test("a CLI its runner fetches comes by itself; never on the workspace's own com
   );
 });
 
+test("system mode: the apps may ask for the agents' copy from a runner that makes one, which still never reads as there", () => {
+  const system = (protocol: number, kind = "connected") =>
+    computer({ kind, protocol, executors: { mode: "system", copies: { fetchable: ["claude", "codex"] } } });
+  expect(fetchesOnAsk(system(AGENTS_CLI_PROTOCOL), "codex")).toBe(true);
+  expect(fetchesOnAsk(system(AGENTS_CLI_PROTOCOL), "grok")).toBe(false);
+  expect(fetchesOnAsk(system(AGENTS_CLI_PROTOCOL - 1), "codex")).toBe(false);
+  expect(fetchesOnAsk(system(AGENTS_CLI_PROTOCOL, "managed"), "codex")).toBe(false);
+  // Until the agents reach it, the brain waits for it: the turn would fail.
+  expect(fetchesCli(system(AGENTS_CLI_PROTOCOL), "codex")).toBe(false);
+  expect(fetchesOnAsk(computer(), "claude")).toBe(true);
+});
+
 test("not installed or too old is no reason where the runner fetches it: the brain can be chosen, the turn goes", () => {
   const options = brainOptions(computer() as never);
   expect(options.find((o) => o.kind === "claude_code")).toMatchObject({ available: true });
@@ -90,6 +104,24 @@ test("a fetch is kept with the computer and told to the apps as it goes", async 
   expect(JSON.stringify(told)).toContain('"cliFetch":{"claude":');
   expect(fetchPercent(fetching)).toBe(45);
   expect(fetchPercent({ state: "fetching", version: "1", done: 5, total: null })).toBeNull();
+});
+
+test("system mode: the apps hear which CLIs the runner installs for the agents, from the runner that does", async () => {
+  f = await setup();
+  const fx = f;
+  const executors = { mode: "system" as const, copies: { fetchable: ["claude", "codex"] as ("claude" | "codex")[] } };
+  const add = async (name: string, protocol: number) =>
+    (
+      await fx.db
+        .insert(schema.machines)
+        .values({ orgId: fx.org.id, name, protocol, executors, pairedByUserId: fx.owner.id })
+        .returning()
+    )[0]?.id;
+  const now = await add("srv-new", AGENTS_CLI_PROTOCOL);
+  const before = await add("srv-old", AGENTS_CLI_PROTOCOL - 1);
+  const listed = await listMachines(fx.db, fx.owner.id, fx.org.id);
+  expect(listed.find((m) => m.id === now)?.cliFetchable).toEqual(["claude", "codex"]);
+  expect(listed.find((m) => m.id === before)?.cliFetchable).toEqual([]);
 });
 
 test("Windows: Cursor, Grok Build and Gemini can be chosen on a runner that keeps each sign-in in its folder there", () => {

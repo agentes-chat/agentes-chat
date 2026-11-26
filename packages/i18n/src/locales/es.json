@@ -17013,6 +17013,7 @@
       "noSkillMd": "No hay SKILL.md en {{path}} ni en las carpetas que contiene.",
       "tooManySkills": "Este enlace tiene más de {{max}} habilidades. Enlaza una de sus carpetas.",
       "zipTooManySkills": "Este .zip tiene más de {{max}} habilidades. Envíalas por partes.",
+      "zipTooBig": "Este .zip supera los {{maxMb}} MB, el máximo para instalar una skill.",
       "invalidName": "El nombre debe usar minúsculas, números y guiones, hasta {{max}} caracteres.",
       "invalidDescription": "La descripción debe tener de 1 a {{max}} caracteres.",
       "tooLarge": "Esta habilidad tiene {{size}} MB de texto y scripts, y el límite es {{max}} MB.",
@@ -20377,7 +20378,7 @@
     },
     "offer_install_skill": {
       "label": "Ofrecer instalar una habilidad",
-      "description": "Publica una tarjeta cuyo botón abre la instalación con el enlace de la habilidad ya puesto."
+      "description": "Publica una tarjeta cuyo botón abre la instalación con la skill ya leída de su enlace o de su .zip."
     },
     "update_skill_from_source": {
       "label": "Actualizar habilidades desde sus enlaces",

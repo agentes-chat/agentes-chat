@@ -16455,6 +16455,7 @@
       "noSkillMd": "{{path}} veya içindeki klasörlerde SKILL.md yok.",
       "tooManySkills": "Bu bağlantıda {{max}} beceriden fazlası var. Klasörlerinden birinin bağlantısını verin.",
       "zipTooManySkills": "Bu .zip dosyasında {{max}} beceriden fazlası var. Parça parça gönderin.",
+      "zipTooBig": "Bu .zip {{maxMb}} MB’tan büyük. Bir skill kurulumu en fazla bu kadar olabilir.",
       "invalidName": "Ad küçük harf, rakam ve kısa çizgi içermeli, en fazla {{max}} karakter.",
       "invalidDescription": "Açıklama 1 ile {{max}} karakter arasında olmalı.",
       "tooLarge": "Bu beceride {{size}} MB metin ve betik var, sınır {{max}} MB.",
@@ -19762,7 +19763,7 @@
     },
     "offer_install_skill": {
       "label": "Beceri yüklemeyi öner",
-      "description": "Düğmesi, becerinin bağlantısı doldurulmuş yükleme penceresini açan bir kart paylaşır."
+      "description": "Düğmesi, skill’i bağlantısından veya .zip dosyasından okunmuş olarak kurulumu açan bir kart paylaşır."
     },
     "update_skill_from_source": {
       "label": "Becerileri bağlantılarından güncelle",

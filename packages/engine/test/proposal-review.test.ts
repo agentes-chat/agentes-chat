@@ -6,6 +6,7 @@ import {
   consolidateItem,
   createAgent,
   getAgent,
+  insertMessage,
   listNotifications,
   listProposals,
   MissingCredentialError,
@@ -15,6 +16,7 @@ import {
   undoProposal,
 } from "../src";
 import { NO_REVIEW, reviewAskedSkill, settleProposals } from "../src/context/proposal-review";
+import { askedWords } from "../src/context/proposals";
 import { addMember, setup as baseSetup, type Fixture } from "./fixtures";
 
 let f: Fixture;
@@ -270,6 +272,37 @@ describe("agents apply their improvements (ADR 0219)", () => {
       .join("\n");
     expect(asked).toContain(`What the person wrote: """${words}`);
     expect((await row(p.id))?.status).toBe("accepted");
+  });
+
+  test("a skill asked for with a file attached reaches the review as the person's request, the file named", async () => {
+    f = await setup();
+    const trigger = await insertMessage(f.db, {
+      orgId: f.org.id,
+      channelId: f.general.id,
+      author: { type: "person", userId: f.owner.id },
+      body: "make this a skill",
+      meta: { artifacts: [{ id: crypto.randomUUID(), version: 1, title: "kit-main.zip" }] },
+    });
+    const words = await askedWords(f.db, { orgId: f.org.id, triggerMessageId: trigger.id }, f.owner.id);
+    expect(words).toBe("make this a skill\n(Attached: kit-main.zip)");
+    verdicts = [{ apply: true, why: "" }];
+    const skill = {
+      orgId: f.org.id,
+      agentId: f.agent.id,
+      name: "deploy",
+      description: "Before any deploy.",
+      body: "1. Build.\n2. Ship.",
+      words,
+    };
+    expect(await reviewAskedSkill(f.context, skill)).toEqual({ apply: true, why: "" });
+    const review = f.provider.calls.find((c) => isReview(systemText(c.request.system)));
+    const asked = (review?.request.messages ?? [])
+      .map((m) => (typeof m.content === "string" ? m.content : JSON.stringify(m.content)))
+      .join("\n");
+    expect(asked).toContain("Asked for by the person in the words below");
+    expect(asked).toContain("(Attached: kit-main.zip)");
+    // Its role and its subject are the person's to choose: only what a rule names leaves it out.
+    expect(systemText(review?.request.system ?? "")).toContain("fits their agent whatever its role says");
   });
 });
 

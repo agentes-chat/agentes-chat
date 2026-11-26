@@ -197,7 +197,7 @@
           "forwarded": {
             "type": "string",
             "enum": ["true"],
-            "description": "Forwarded from another chat: the agent reads it as quoted text, not a request."
+            "description": "Forwarded from another chat: the agent reads it as quoted text, not a request. Set it when any part of the post (a grouped file's caption too) wasn't written by the sender: anything unmarked counts as the sender's own words, which may keep a rule or a memory in their name."
           },
           "replyTo": {
             "type": "string",

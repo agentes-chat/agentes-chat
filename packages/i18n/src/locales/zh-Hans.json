@@ -15985,6 +15985,7 @@
       "noSkillMd": "{{path}} 及其子文件夹中没有 SKILL.md。",
       "tooManySkills": "这个链接包含超过 {{max}} 个技能，请链接到其中一个文件夹。",
       "zipTooManySkills": "这个 .zip 包含超过 {{max}} 个技能，请分批发送。",
+      "zipTooBig": "这个 .zip 超过 {{maxMb}} MB，这是安装技能的上限。",
       "invalidName": "名称只能使用小写字母、数字和连字符，最多 {{max}} 个字符。",
       "invalidDescription": "描述需为 1 到 {{max}} 个字符。",
       "tooLarge": "这个技能有 {{size}} MB 的文本和脚本，上限是 {{max}} MB。",
@@ -19254,7 +19255,7 @@
     },
     "offer_install_skill": {
       "label": "提议安装技能",
-      "description": "发布一张卡片，按钮会打开已填好技能链接的安装窗口。"
+      "description": "发布一张卡片，其按钮打开安装界面，技能已从链接或 .zip 中读取。"
     },
     "update_skill_from_source": {
       "label": "从链接更新技能",

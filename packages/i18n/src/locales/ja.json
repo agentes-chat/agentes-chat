@@ -15917,6 +15917,7 @@
       "noSkillMd": "{{path}}とその中のフォルダにSKILL.mdがありません。",
       "tooManySkills": "このリンクには{{max}}個を超えるスキルがあります。いずれかのフォルダをリンクしてください。",
       "zipTooManySkills": "この.zipには{{max}}個を超えるスキルがあります。いくつかに分けて送ってください。",
+      "zipTooBig": "この .zip は {{maxMb}} MB を超えています。スキルのインストールの上限です。",
       "invalidName": "名前には小文字、数字、ハイフンを使い、{{max}}文字以内にしてください。",
       "invalidDescription": "説明は1〜{{max}}文字にしてください。",
       "tooLarge": "このスキルのテキストとスクリプトは{{size}} MBで、上限は{{max}} MBです。",
@@ -19179,7 +19180,7 @@
     },
     "offer_install_skill": {
       "label": "スキルのインストールを提案",
-      "description": "スキルのリンクを入力済みのインストール画面を開くボタン付きのカードを投稿します。"
+      "description": "ボタンでインストール画面を開くカードを投稿します。スキルはリンクまたは .zip からすでに読み込まれています。"
     },
     "update_skill_from_source": {
       "label": "スキルをリンクから更新",

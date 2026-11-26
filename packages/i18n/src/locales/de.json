@@ -16525,6 +16525,7 @@
       "noSkillMd": "Keine SKILL.md in {{path}} oder den Ordnern darin.",
       "tooManySkills": "Dieser Link enthält mehr als {{max}} Skills. Verlinke einen seiner Ordner.",
       "zipTooManySkills": "Diese .zip enthält mehr als {{max}} Skills. Schick sie in Teilen.",
+      "zipTooBig": "Diese .zip ist größer als {{maxMb}} MB, das Maximum für die Installation eines Skills.",
       "invalidName": "Der Name darf nur Kleinbuchstaben, Zahlen und Bindestriche enthalten, bis zu {{max}} Zeichen.",
       "invalidDescription": "Die Beschreibung muss 1 bis {{max}} Zeichen haben.",
       "tooLarge": "Dieser Skill hat {{size}} MB Text und Skripte, das Limit liegt bei {{max}} MB.",
@@ -19838,7 +19839,7 @@
     },
     "offer_install_skill": {
       "label": "Skill-Installation anbieten",
-      "description": "Postet eine Karte, deren Button die Installation mit dem Link des Skills öffnet."
+      "description": "Postet eine Karte, deren Button die Installation öffnet, mit dem Skill bereits aus seinem Link oder seiner .zip gelesen."
     },
     "update_skill_from_source": {
       "label": "Skills über ihre Links aktualisieren",

@@ -1661,7 +1661,7 @@ html:not([data-pointer]) .wiki-graph__node:focus-visible {
   }
   .wiki-nav {
     position: fixed;
-    top: 0;
+    top: var(--window-top);
     bottom: 0;
     left: 0;
     z-index: var(--z-dialog);

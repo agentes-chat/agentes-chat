@@ -100,7 +100,7 @@ test("people upload files as is: download with the real name and type, versions,
   expect(list.artifacts.map((x) => x.id)).toEqual([a.id]);
 });
 
-test("a file's bytes: a version cached for good, the newest checked again; a video or a download goes to the store", async () => {
+test("a file's bytes: a version cached for good, the newest checked again; only a download goes to the store", async () => {
   const owner = browser(t);
   await signUp(owner, "owner@example.com");
   const { orgId } = await seedOrg(owner);
@@ -115,29 +115,30 @@ test("a file's bytes: a version cached for good, the newest checked again; a vid
   expect(pinned.status).toBe(200);
   expect(pinned.headers.get("cache-control")).toBe("private, max-age=31536000, immutable, no-transform");
   expect(pinned.headers.get("etag")).toBe(etag);
-  // The same address answers a video with the store's link: what a load under CORS cached never stands in for it.
-  expect(pinned.headers.get("vary")).toBe("sec-fetch-mode");
   expect(new Uint8Array(await pinned.arrayBuffer())).toEqual(PDF);
   expect((await api(`/artifacts/${id}/file`)).headers.get("cache-control")).toBe("private, no-cache, no-transform");
   const unchanged = await api(`/artifacts/${id}/file`, { "if-none-match": `W/${etag}` });
   expect(unchanged.status).toBe(304);
-  expect(unchanged.headers.get("vary")).toBe("sec-fetch-mode");
   expect(await unchanged.text()).toBe("");
   // A part of a file the client no longer holds would mix two files: the whole of this one.
   const stale = await api(`/artifacts/${id}/file`, { range: "bytes=1-4", "if-range": '"older"' });
   expect(stale.status).toBe(200);
   expect((await api(`/artifacts/${id}/file`, { range: "bytes=1-4", "if-range": etag })).status).toBe(206);
 
-  // What follows a redirect without CORS (a video, a download) goes to the store's short-lived link, never cached.
-  for (const mode of ["no-cors", "navigate"]) {
-    const sent = await api(`/artifacts/${id}/file?version=1`, { "sec-fetch-mode": mode });
-    expect(sent.status).toBe(302);
-    expect(sent.headers.get("location")).toStartWith("memory://");
-    expect(sent.headers.get("cache-control")).toBe("private, no-store");
-  }
+  // A video or a sound in the page plays from us, in parts: the store's own address may be out of a network's reach
+  // where ours is not.
+  const played = await api(`/artifacts/${id}/file?version=1`, { "sec-fetch-mode": "no-cors", range: "bytes=1-4" });
+  expect(played.status).toBe(206);
+  expect(played.headers.get("location")).toBeNull();
+  expect(new Uint8Array(await played.arrayBuffer())).toEqual(PDF.slice(1, 5));
+  // A download goes to the store's short-lived link, never cached.
+  const sent = await api(`/artifacts/${id}/file?version=1`, { "sec-fetch-mode": "navigate" });
+  expect(sent.status).toBe(302);
+  expect(sent.headers.get("location")).toStartWith("memory://");
+  expect(sent.headers.get("cache-control")).toBe("private, no-store");
   // Only after the reader's check: a file in the trash gets no link.
   expect((await owner(`${base}/artifacts/${id}`, { method: "DELETE" })).status).toBe(204);
-  expect((await api(`/artifacts/${id}/file?version=1`, { "sec-fetch-mode": "no-cors" })).status).toBe(404);
+  expect((await api(`/artifacts/${id}/file?version=1`, { "sec-fetch-mode": "navigate" })).status).toBe(404);
 
   // A store that signs no links (a folder on disk) sends the bytes itself.
   const plain = await createTestServer({ signedBlobs: false });

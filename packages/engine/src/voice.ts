@@ -23,6 +23,7 @@ import { markChannelRead } from "./dms";
 import { ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { publishTyping, publishUserEvent } from "./events";
 import type { Judge } from "./judge";
+import { surfaceWordsMeta } from "./message-origin";
 import type { MessageVoice } from "./message-preview";
 import { attachmentRefsFor, MAX_MESSAGE_LENGTH, postPersonMessage } from "./messages";
 import { can } from "./organizations";
@@ -391,7 +392,7 @@ export async function transcribeVoiceClip(deps: VoiceDeps, clipId: string, optio
         origin: clip.via ? "surface" : "app",
         meta: {
           voice,
-          ...(clip.via ? { via: clip.via, ...(clip.via.forwarded === true ? { readOutside: true } : {}) } : {}),
+          ...(clip.via ? { via: clip.via, ...surfaceWordsMeta(clip.via) } : {}),
         },
       },
     );

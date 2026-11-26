@@ -1225,7 +1225,7 @@ describe("Conectar uma IA for an agent with no AI: what the person already has, 
     expect(box.textContent).not.toContain("agora pensa com");
   });
 
-  test("someone else's agent: its owner's account isn't listed, a line says it is his alone to give; an admin may still give her a key", async () => {
+  test("someone else's agent: its owner's account isn't listed, a line says it is his alone to give; an admin may still give her a key or a plan of his own", async () => {
     const joao = acct({
       id: "acct_joao",
       label: "Claude Max",
@@ -1241,11 +1241,20 @@ describe("Conectar uma IA for an agent with no AI: what the person already has, 
     expect(picker.textContent).toContain("Mais 1 conta de João que só João pode dar.");
     expect(calls(state, "agents.setBrain")).toHaveLength(0);
     expect(within(picker).getByRole("button", { name: /^Claude da Acme/ })).toBeTruthy();
-    // A plan for her is João's to connect, as his account is his to pick.
+    // Walter manages her: never told to ask an admin. On a computer where he can't add a sign-in, the plan is João's.
     await chooseAi(box, "Claude");
-    expect(box.textContent).toContain(
-      "Quem conecta a IA de Ada: um admin, com uma chave de API, ou João, com o próprio plano.",
-    );
+    expect(box.textContent).not.toContain("Quem conecta a IA de Ada");
+    expect(box.textContent).toContain("Só o dono do agente conecta um plano para ele.");
+  });
+
+  test("an admin on another member's agent signs in a plan of his own for her where he may add one", async () => {
+    // Ada is João's; Walter owns the workspace and may add accounts on her computer.
+    const state = withCard();
+    const { box } = await connectAda(state, { canUsePlans: false, canManageAccounts: true });
+    await chooseAi(box, "Claude");
+    expect(box.textContent).not.toContain("Quem conecta a IA de Ada");
+    expect(box.textContent).not.toContain("Só o dono do agente");
+    expect(within(box).getByRole("button", { name: "Entrar com Claude" })).toBeTruthy();
   });
 
   test("nothing the person can pick: no line asking for a pick, the line on whose accounts they are stays", async () => {

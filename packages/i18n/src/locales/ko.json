@@ -15911,6 +15911,7 @@
       "noSkillMd": "{{path}}나 그 안의 폴더에 SKILL.md가 없어요.",
       "tooManySkills": "이 링크에는 스킬이 {{max}}개보다 많아요. 폴더 하나를 링크하세요.",
       "zipTooManySkills": "이 .zip에는 스킬이 {{max}}개보다 많아요. 나눠서 보내세요.",
+      "zipTooBig": "이 .zip은 {{maxMb}}MB를 넘습니다. 스킬 설치의 최대 크기입니다.",
       "invalidName": "이름에는 영문 소문자, 숫자, 하이픈만 쓸 수 있고 최대 {{max}}자예요.",
       "invalidDescription": "설명은 1~{{max}}자여야 해요.",
       "tooLarge": "이 스킬의 텍스트와 스크립트는 {{size}}MB이고, 한도는 {{max}}MB예요.",
@@ -19171,7 +19172,7 @@
     },
     "offer_install_skill": {
       "label": "스킬 설치 제안",
-      "description": "스킬 링크가 채워진 설치 화면을 여는 버튼이 있는 카드를 올려요."
+      "description": "버튼으로 설치 화면을 여는 카드를 게시합니다. 스킬은 링크나 .zip에서 이미 읽어 둡니다."
     },
     "update_skill_from_source": {
       "label": "링크에서 스킬 업데이트",

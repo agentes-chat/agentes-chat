@@ -207,6 +207,7 @@ export function InstallSkillDialog({
   onOpenChange,
   onInstalled,
   initialUrl,
+  initialFile,
   connected = false,
   returnTo,
   forAgentId,
@@ -217,6 +218,8 @@ export function InstallSkillDialog({
   onOpenChange: (open: boolean) => void;
   onInstalled: (id: string) => void;
   initialUrl?: string;
+  /** A .zip sent in a conversation (an agent's card): read on the server from Drive, its skills listed to pick. */
+  initialFile?: { id: string; name: string };
   connected?: boolean;
   /** Where signing in on GitHub comes back to, for the link being read; Skills by default. */
   returnTo?: (url: string) => string;
@@ -273,10 +276,13 @@ export function InstallSkillDialog({
   const [via, setVia] = useState<SkillVia | null>(null);
   /** The .zip whose skills are listed to pick (sent again with the picks); null: the list, if any, is a link's. */
   const [zipSent, setZipSent] = useState<string | null>(null);
+  /** The list is the card's .zip (`initialFile`), read on the server: its picks name it again. */
+  const [fileListed, setFileListed] = useState(false);
   /** Out of what was listed: a new link read, a new file, another tab. */
   const unlist = () => {
     setChoices(null);
     setZipSent(null);
+    setFileListed(false);
   };
   /** The connected GitHub's repositories in place of the tabs, to read one. */
   const [browsing, setBrowsing] = useState(false);
@@ -301,6 +307,29 @@ export function InstallSkillDialog({
   const pick = (paths: string[], on: boolean) => setPicked(pickSkills(picked, paths, on, choices ?? []));
   const cardLink = forAgentId && forName ? initialUrl?.trim() : undefined;
   const forCard = cardLink !== undefined && url.trim() === cardLink;
+  /** The card's .zip is the one on the zip tab (no other file picked), and the box for its agent shows. */
+  const cardFile = initialFile && !file ? initialFile : undefined;
+  const forFileCard = Boolean(cardFile && forAgentId && forName);
+  /** Reads the card's .zip on the server and lists its skills to pick (one picked already). */
+  const readFile = (fileId: string) => {
+    setError(null);
+    action.mutate(
+      { type: "import", input: { fileId, list: true, ...mine } },
+      {
+        onSuccess: (result) => {
+          const found = skillPickOf(result);
+          if (!found) return done(result);
+          setChoices(found.choices);
+          setSkipped(found.skipped);
+          setVia(null);
+          setZipSent(null);
+          setFileListed(true);
+          setPicked(new Set(found.choices.length === 1 ? found.choices.map((c) => c.path) : []));
+        },
+        onError: (e) => setError(errorText(t, e, i18n.language, { maxMb: SKILL_ZIP_MB })),
+      },
+    );
+  };
   /** The agent what installs from `link` goes on for, when the box shows it and is checked. */
   const sendFor = (link: string) =>
     turnOn && cardLink !== undefined && link.trim() === cardLink ? forAgentId : undefined;
@@ -358,6 +387,11 @@ export function InstallSkillDialog({
       readAgain.current = initialUrl;
       read(initialUrl, true);
     }
+    if (initialFile && readAgain.current !== initialFile.id) {
+      readAgain.current = initialFile.id;
+      setTab("zip");
+      readFile(initialFile.id);
+    }
   }, [open]);
   useEffect(() => () => stop.current?.abort(), []);
   // Signed in on GitHub: its confirmation, as Conectores shows after signing in.
@@ -387,6 +421,20 @@ export function InstallSkillDialog({
         },
         { onSuccess: installedPicked, onError },
       );
+    } else if (tab === "zip" && choices && fileListed && cardFile) {
+      if (picked.size === 0) return setError(t("skills.pickMissing"));
+      action.mutate(
+        {
+          type: "importPickedFile",
+          fileId: cardFile.id,
+          paths: choices.map((c) => c.path).filter((p) => picked.has(p)),
+          ...(turnOn && forFileCard ? { forAgentId } : {}),
+          ...mine,
+        },
+        { onSuccess: installedPicked, onError },
+      );
+    } else if (tab === "zip" && !file && cardFile) {
+      readFile(cardFile.id);
     } else if (tab === "zip" && choices && zipSent !== null) {
       if (picked.size === 0) return setError(t("skills.pickMissing"));
       const stopper = new AbortController();
@@ -588,7 +636,7 @@ export function InstallSkillDialog({
                     </div>
                   )}
                   {choices && via && <ViaLine>{skillViaText(t, via, url)}</ViaLine>}
-                  {choices && zipSent === null && pickList}
+                  {choices && zipSent === null && !fileListed && pickList}
                   {forCard && (
                     <label htmlFor="skill-for-agent" className="scope-row">
                       <Checkbox
@@ -627,7 +675,9 @@ export function InstallSkillDialog({
                       {t("skills.zipPick")}
                     </Button>
                     <span className="small muted">
-                      {file ? `${file.name} · ${formatBytes(i18n.language, file.size)}` : t("skills.zipNone")}
+                      {file
+                        ? `${file.name} · ${formatBytes(i18n.language, file.size)}`
+                        : (cardFile?.name ?? t("skills.zipNone"))}
                     </span>
                   </div>
                   {file && tooBig && (
@@ -646,7 +696,19 @@ export function InstallSkillDialog({
                       </div>
                     </div>
                   )}
-                  {choices && zipSent !== null && pickList}
+                  {choices && (zipSent !== null || fileListed) && pickList}
+                  {forFileCard && fileListed && (
+                    <label htmlFor="skill-zip-for-agent" className="scope-row">
+                      <Checkbox
+                        id="skill-zip-for-agent"
+                        checked={turnOn}
+                        onCheckedChange={(on) => setTurnOn(on === true)}
+                      />
+                      <span className="scope-row__text">
+                        {t("skills.forAgent", { agent: forName, count: Math.max(picked.size, 1) })}
+                      </span>
+                    </label>
+                  )}
                 </TabPanel>
                 <TabPanel value="write">
                   <Field label={t("skills.name")} id="skill-name">

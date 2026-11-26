@@ -145,7 +145,7 @@ export async function queueSettle(
 
 /**
  * The message that started the run, when `userId` typed it in our apps (`ownTyped`, ADR 0250): the person's own words
- * for a change they asked for. Null for a notice, a colleague's message, anything an agent wrote, and what was posted
+ * for a change they asked for, with the names of the files it attached. Null for a notice, a colleague's message, anything an agent wrote, and what was posted
  * with a token, by an AI app or through a bridge (someone else's words may be in it).
  */
 export async function askedWords(
@@ -155,7 +155,7 @@ export async function askedWords(
 ): Promise<string | null> {
   if (!userId || !ctx.triggerMessageId) return null;
   const [m] = await db
-    .select({ body: messages.body })
+    .select({ body: messages.body, meta: messages.meta })
     .from(messages)
     .where(
       and(
@@ -165,7 +165,12 @@ export async function askedWords(
         eq(messages.authorUserId, userId),
       ),
     );
-  return m?.body ?? null;
+  if (!m) return null;
+  // What the message attached is part of the request ("install this skill" with its .zip): its files by name.
+  const files = Array.isArray(m.meta?.artifacts)
+    ? (m.meta.artifacts as { title?: unknown }[]).map((a) => a.title).filter((t): t is string => typeof t === "string")
+    : [];
+  return files.length > 0 ? `${m.body}\n(Attached: ${files.join(", ")})` : m.body;
 }
 
 /** The reason of a proposal whose agent gave none. */

@@ -388,7 +388,7 @@ const FILE_FORMATS = ["csv", "patch", "pdf", "docx", "xlsx", "pptx", "json", "md
 const LIVE_DOWNLOAD: Partial<Record<string, "xlsx" | "pptx">> = { spreadsheet: "xlsx", slides: "pptx" };
 /** What `exportLive` writes of a live file as it stands now (ADR 0198). */
 const LIVE_EXPORTS = ["xlsx", "csv", "pptx", "pdf"] as const;
-/** How long the bucket's link a redirect sends to lives: a video keeps reading from it while its page stays open. */
+/** How long the bucket's link a download is sent to lives. */
 const FILE_LINK_TTL_SECONDS = 3600;
 
 /** A download's headers: always an attachment, never sniffed as another type, never run as a page. */
@@ -400,14 +400,15 @@ const attachmentHeaders = (file: { contentType: string; filename: string }) => (
 });
 
 /**
- * A version's stored bytes. What a browser loads for an element or a page (a video, a download), which follows a
- * redirect to another origin without CORS, goes to the bucket's signed link. A script's fetch (the previews: the
- * bucket may allow no CORS) and apps that send no fetch metadata get the bytes from us, read in parts as they go. An
- * asked version never changes, so it is cached for good; the newest is checked again each time.
+ * A version's stored bytes. A download (a navigation) goes to the bucket's signed link. Everything else gets the
+ * bytes from us, read in parts as they go: a script's fetch (the previews: the bucket may allow no CORS), apps that
+ * send no fetch metadata, and a video or a sound in the page. Those never go to the bucket's own address, which some
+ * networks refuse (its TLS reset by name) while ours stays reachable: an element sent there sat black or failed,
+ * while the same file played from us in the viewer. An asked version never changes, so it is cached for good; the
+ * newest is checked again each time.
  */
 async function storedFile(c: Context, file: StoredDownload, versioned: boolean) {
-  const mode = c.req.header("sec-fetch-mode");
-  if (mode === "navigate" || mode === "no-cors") {
+  if (c.req.header("sec-fetch-mode") === "navigate") {
     const url = await file.store.signedUrl(file.key, {
       expiresInSeconds: FILE_LINK_TTL_SECONDS,
       filename: file.filename,
@@ -425,9 +426,6 @@ async function storedFile(c: Context, file: StoredDownload, versioned: boolean) 
       ? "private, max-age=31536000, immutable, no-transform"
       : "private, no-cache, no-transform",
     etag,
-    // A video's own load is sent to the bucket: bytes cached for a load under CORS (a fetch, the comment stage's
-    // video) must never answer it, since Chrome fails a video whose first bytes came from here and the next from there.
-    vary: "sec-fetch-mode",
   };
   if (etagMatches(c.req.header("if-none-match"), etag)) return new Response(null, { status: 304, headers });
   // A part of another version than the one the client holds (`If-Range`) would mix two files: the whole one instead.

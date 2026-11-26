@@ -17087,6 +17087,7 @@
       "noSkillMd": "Aucun SKILL.md dans {{path}} ni dans les dossiers qu'il contient.",
       "tooManySkills": "Ce lien contient plus de {{max}} compétences. Liez l'un de ses dossiers.",
       "zipTooManySkills": "Ce .zip contient plus de {{max}} compétences. Envoyez-les en plusieurs fois.",
+      "zipTooBig": "Ce .zip dépasse {{maxMb}} Mo, le maximum pour installer une skill.",
       "invalidName": "Le nom doit utiliser des lettres minuscules, des chiffres et des tirets, jusqu'à {{max}} caractères.",
       "invalidDescription": "La description doit compter de 1 à {{max}} caractères.",
       "tooLarge": "Cette compétence contient {{size}} Mo de texte et de scripts, et la limite est de {{max}} Mo.",
@@ -20464,7 +20465,7 @@
     },
     "offer_install_skill": {
       "label": "Proposer d'installer une compétence",
-      "description": "Publie une carte dont le bouton ouvre l'installation avec le lien de la compétence déjà rempli."
+      "description": "Publie une carte dont le bouton ouvre l’installation avec la skill déjà lue depuis son lien ou son .zip."
     },
     "update_skill_from_source": {
       "label": "Mettre à jour les compétences depuis leurs liens",

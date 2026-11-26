@@ -6770,7 +6770,7 @@ export interface AgentBrain {
    * computador" isn't listed. A plan thinks only for its owner's agents (ADR 0059).
    */
   accounts: MachineAccount[];
-  /** The viewer may add an account there for this agent: its owner, on a computer where they add accounts. */
+  /** The viewer may add an account there for this agent: its owner or who manages it, on a computer where they add accounts. */
   canManageAccounts: boolean;
   /** False while the app on the computer is too old for accounts (nothing about them shows). */
   accountsSupported: boolean;

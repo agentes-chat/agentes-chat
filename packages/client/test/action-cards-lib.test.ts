@@ -18,6 +18,7 @@ import {
   draftLevels,
   draftMailLevels,
   installSkillDone,
+  installSkillSource,
   inviteDone,
   mayApplyCard,
   mayContinueStretch,
@@ -278,8 +279,33 @@ test("skill cards: install done once a skill has its link; each update's state f
     actionCardOf({ actionCard: { kind: "install_skill", forUserId: null, params: { url: "http://x" } } }),
   ).toBeNull();
   if (install?.kind !== "install_skill") throw new Error("no card");
-  expect(installSkillDone(install, [{ sourceUrl: null }])).toBe(false);
-  expect(installSkillDone(install, [{ sourceUrl: link }])).toBe(true);
+  expect(installSkillDone(install, [{ sourceUrl: null, name: "deploy" }])).toBe(false);
+  expect(installSkillDone(install, [{ sourceUrl: link, name: "deploy" }])).toBe(true);
+  expect(installSkillSource(install)).toBe(link);
+
+  // A .zip sent in the conversation: done once every skill its SKILL.md files name is in the library.
+  const fromZip = actionCardOf({
+    actionCard: {
+      kind: "install_skill",
+      forUserId: "u1",
+      params: { file: "f1", name: "kit.zip", skills: ["deploy", "review", 3], why: "Deploys" },
+    },
+  });
+  expect(fromZip).toEqual({
+    kind: "install_skill",
+    forUserId: "u1",
+    file: { id: "f1", name: "kit.zip", skills: ["deploy", "review"] },
+    why: "Deploys",
+  });
+  if (fromZip?.kind !== "install_skill") throw new Error("no card");
+  expect(installSkillSource(fromZip)).toBe("kit.zip");
+  expect(installSkillDone(fromZip, [{ sourceUrl: null, name: "deploy" }])).toBe(false);
+  expect(
+    installSkillDone(fromZip, [
+      { sourceUrl: null, name: "deploy" },
+      { sourceUrl: null, name: "review" },
+    ]),
+  ).toBe(true);
 
   expect(
     actionCardOf({ actionCard: { kind: "update_skills", forUserId: null, params: { skillIds: ["s1", 2], why: "" } } }),

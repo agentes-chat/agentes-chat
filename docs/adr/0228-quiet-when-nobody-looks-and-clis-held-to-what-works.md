@@ -115,8 +115,15 @@ The same for Claude Code, Codex, Cursor, OpenCode, Grok Build and the Antigravit
   the pinned build itself, checks the hash (a mismatch is never used), unpacks it aside and moves it in whole under its
   own home, and every call of that CLI's command runs it. The person's install is never touched. One fetch per CLI at
   a time; a failure waits 30 minutes unless someone asks again. Every process the runner starts runs with each CLI's
-  self-update switched off (`CLI_NO_SELF_UPDATE`), so the version checked is the one that runs. Outside system mode
-  only: there the computer's setup installs the CLIs for the agents' users.
+  self-update switched off (`CLI_NO_SELF_UPDATE`), so the version checked is the one that runs.
+- **System mode** (amended, protocol 88). Each agent is its own OS user, so a CLI is the computer's only when every
+  agent's user can start it: root's look is run again as a stand-in agent (no groups, the PATH all agents share) and,
+  where that misses, as each agent through its launcher (its groups, its own `~/.local/bin`). One only root starts
+  (root's own `~/.local/bin`, a link into `/root`) is left out of `executors` as `broken: home_only`, so no picker,
+  receipt or device page says it is ready. The computer's setup still installs the agents' CLIs and they update
+  themselves, so the runner fetches its pinned build only where no agent reaches any copy at all, wanted as above or
+  asked for by the apps' Install (`cli.install`, Claude Code and Codex) or Try again: in `/opt/agentes-runner/clis`,
+  root's and closed to every other user's writes, linked from `/usr/local/bin` where nothing else is there.
 - **Who knows.** `hello.clis` says which CLIs the runner fetches on its system and where each fetch stands; `cli.fetch`
   frames tell a fetch as it goes (at most once a second or every 5%), when it is ready, or why it failed (`offline`,
   `hash_mismatch`, `no_build`, `disk_full`, `failed`). The server keeps them with the computer (`executors.copies`),
