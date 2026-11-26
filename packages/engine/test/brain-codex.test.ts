@@ -58,7 +58,7 @@ function link(opts: {
         execAllowed: true,
         ...(opts.protocol !== undefined ? { protocol: opts.protocol } : {}),
         ...(opts.os ? { os: opts.os } : {}),
-        executors: opts.version === null ? {} : { codex: { version: opts.version ?? "codex-cli 0.163.0" } },
+        executors: opts.version === null ? {} : { codex: { version: opts.version ?? "codex-cli 0.170.0" } },
       };
     },
     async turn(_machineId, request, { onEvent }) {
@@ -263,13 +263,18 @@ test("a model the ChatGPT sign-in refused stays out of that sign-in's later turn
   expect(l.sent.map((r) => r.model)).toEqual(["gpt-6.2-sol", undefined, "gpt-6.2-sol"]);
 });
 
-test("refuses before sending: offline, no Codex, no session; any Codex version goes", async () => {
+test("refuses before sending: offline, no Codex, no session, a Codex below its floor; any other version goes", async () => {
   const run = async (l: ComputerBrainLink, t = turn()) =>
     collect(new CodexBrain({ link: l, mcp: async () => ({ token: "t" }) }).run(t, io()));
   const offline = link({ online: false });
   expect(await run(offline)).toMatchObject([{ type: "error", code: "machine_offline", retryable: true }]);
   expect(await run(link({ version: null }))).toMatchObject([{ type: "error", code: "codex_missing" }]);
-  for (const version of ["codex-cli 0.100.0", "codex-cli 0.170.0", "WARNING: proceeding\ncodex-cli 0.170.0", ""]) {
+  // Older than `CLI_FLOORS.codex`: the turn waits for an update there, never sent to fail.
+  const old = link({ version: "codex-cli 0.100.0" });
+  expect(await run(old)).toMatchObject([{ type: "error", code: "cli_outdated", retryable: true }]);
+  expect(old.sent).toHaveLength(0);
+  // A line with no version in it is never held back on a guess.
+  for (const version of ["codex-cli 0.170.0", "WARNING: proceeding\ncodex-cli 0.170.0", ""]) {
     const any = link({ version });
     await run(any);
     expect(any.sent).toHaveLength(1);

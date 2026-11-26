@@ -1,3 +1,4 @@
+import { CLI_UPDATE_COMMAND } from "@agenteschat/providers/cli-floors";
 import type { TFunction } from "i18next";
 import type {
   Agent,
@@ -667,6 +668,8 @@ const CLOUD_REASON = {
   system: "stuck",
   windows_sandbox: "stuck",
   cant_start: "stuck",
+  // The Cloud's programs are updated with its image: said as being updated.
+  cli_outdated: "installing",
 } as const satisfies Record<BrainUnavailable | "keys", string>;
 
 /**
@@ -739,6 +742,16 @@ export function gateLine(
     if (said === CLI_HOME_ONLY) return { text: t("brain.reasons.home_only", words), rechecks };
     if (said === CLI_GIT_MISSING) return { text: t("connectAi.cli.gitMissing", words), rechecks };
     if (said) return { text: t("connectAi.cli.cantStart", { ...words, message: said }), rechecks };
+  }
+  // Too old for agentes.chat, or a blocked version: with the command that updates it where its own updater is the way.
+  if (gate.reason === "cli_outdated") {
+    const command = CLI_UPDATE_COMMAND[kind === "claude_code" ? "claude" : kind];
+    return {
+      text: command
+        ? t("brain.reasons.cli_outdatedRun", { computer, program, command })
+        : t("brain.reasons.cli_outdated", { computer, program }),
+      rechecks,
+    };
   }
   return { text: t(`brain.reasons.${gate.reason}`, { computer, program }), rechecks };
 }

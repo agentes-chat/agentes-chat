@@ -480,7 +480,7 @@ async function start(): Promise<number> {
     mode: "start",
     log,
     print: (line) => console.log(line),
-    agyCopy: true,
+    cliCopies: true,
     taskRoom: taskRoomNow,
   });
   const stop = () => void daemon.stop();

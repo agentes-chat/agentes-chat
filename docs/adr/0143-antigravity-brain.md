@@ -47,6 +47,8 @@ What the CLI does, read in antigravity.google/docs (cli/headless, cli/reference,
 
    *Amended 2026-11-22:* a runner's service keeps the PATH of the shell that installed it, so an `agy` that Google's installer put in `~/.local/bin` afterwards (or with that folder missing from the shell's PATH, as for root on most Linux servers) wasn't found, and the apps said the CLI isn't installed. Outside system mode the runner now adds the usual install folders that exist after its PATH, at start and before every look (`addUsualDirs`). In system mode it never does (root's folders are no agent's): an `agy`, `grok` or Cursor's `agent` found only in root's own install folders is reported as `executors.broken.<cli>` `home_only` (`CLI_HOME_ONLY`), and where one of these CLIs is missing on a computer someone connected, the apps show the line to run there (`cliInstallCommand`): the vendor's installer, or in system mode the install under `/opt` linked into `/usr/local/bin`, with Check again.
 
+   *Amended 2026-11-25 (ADR 0228 §6, §7):* the CLI is one of the pinned CLIs every runner fetches the same way (the per-CLI `AGY_PIN` and `agy-copy.ts` are gone, its builds now in `CLI_PINS`), at 1.5.16 from the manifests Google's installers read, Windows' bare `.exe` included. On Windows the one-account rule of §3 stands.
+
 ## Not done
 
 - More than one Gemini account on a Windows computer (see §3, 2026-11-24); the computer's own sign-in.

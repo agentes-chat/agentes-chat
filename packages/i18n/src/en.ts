@@ -3854,10 +3854,25 @@ export const en = {
      * A coding CLI that isn't on a computer someone connected (`program`: "Claude Code" or "Codex"), and installing it
      * from here. `claudeApp` sits behind an ⓘ on Windows and macOS, where a Claude chat app is likely.
      */
+    /** A coding CLI its computer fetches by itself (ADR 0228 §6): while it comes, and why it failed. */
+    cliFetch: {
+      preparing: "Preparing {{program}} on {{computer}}…",
+      preparingPct: "Preparing {{program}} on {{computer}}… {{percent}}%",
+      failed: {
+        offline: "Couldn't prepare {{program}} on {{computer}}: the computer can't reach the download.",
+        hash_mismatch:
+          "Couldn't prepare {{program}} on {{computer}}: the download wasn't the original file, so it wasn't used.",
+        no_build: "{{program}} has no version for {{computer}}'s system.",
+        disk_full: "Couldn't prepare {{program}} on {{computer}}: its disk is full.",
+        failed: "Couldn't prepare {{program}} on {{computer}}: the download didn't finish.",
+      },
+    },
     cli: {
       missing: "{{program}} isn't on {{computer}} yet.",
       claudeApp: "The Claude app isn't enough: agents use Claude Code, which runs on the computer.",
       install: "Install {{program}} for me",
+      /** Too old for agentes.chat: the same installer brings the newest. */
+      update: "Update {{program}} for me",
       check: "I installed it, check again",
       checked: "Checked just now: {{program}} still isn't on {{computer}}.",
       installing: "Installing {{program}} on {{computer}}. It takes about a minute.",
@@ -7079,13 +7094,16 @@ export const en = {
         cli_stopped: "The {{brain}} program stopped with an error.",
         /** The agent's CLI ended without its answer and without a word (it crashed or was killed). */
         cli_closed: "The {{brain}} program closed unexpectedly.",
+        /** The agent's CLI ended its turn with nothing in it (no answer, no step), even after being asked again. */
+        cli_empty:
+          "The {{brain}} program ended its turn without an answer. Ask again. If it keeps happening, update {{brain}} on the computer or choose another AI in the agent's settings.",
         /**
          * The agent's CLI couldn't start its sandbox on its computer (bubblewrap refused), before the model was asked.
          * No "update the computer": on Cloud nobody in the workspace can.
          */
         cli_sandbox:
           "The {{brain}} program can't start its sandbox on this computer. Choose another AI in the agent's settings.",
-        /** The agent's CLI doesn't run on its computer's system (Grok Build on Windows), so no turn was sent there. */
+        /** Its vendor makes no build of the agent's CLI for its computer's system, so no turn was sent there. */
         cli_system:
           "The {{brain}} program doesn't run on this computer's system yet. Choose another AI in the agent's settings.",
         account_missing:
@@ -13211,11 +13229,15 @@ export const en = {
       tool_offOne: "{{program}} is turned off on {{computer}}.",
       not_installed: "{{program}} isn't installed on {{computer}}.",
       cant_start: "{{program}} is on {{computer}}, but it won't start.",
+      /** Its version is too old for agentes.chat, or one with a known problem: updating it there is the way out. */
+      cli_outdated: "{{program}} on {{computer}} needs an update before agents can use it.",
+      /** The same, with the command that updates it (`claude update`, `opencode upgrade`). */
+      cli_outdatedRun: "{{program}} on {{computer}} needs an update before agents can use it. Run {{command}} there.",
       /** System mode: the CLI is only in root's `~/.local/bin`. */
       home_only: "{{program}} is installed only for root on {{computer}}, where the agents can't reach it.",
       /** Its runner hasn't said which CLIs it has yet: nobody knows whether this one is there. */
       not_reported: "{{computer}} is still checking which programs it has. This changes by itself when it's done.",
-      /** The runner doesn't run this program on that computer's system (Cursor on Windows, for one). */
+      /** Its vendor makes no build of this program for that computer's system. */
       system: "{{program}} doesn't run on {{computer}}'s system yet.",
       /** Codex on a Windows computer where neither MXC nor Codex's own sandbox could start. */
       windows_sandbox:
@@ -16474,6 +16496,7 @@ export const en = {
         "This address is on a private network. Use a public address, or on a self-hosted server allow it with `OUTBOUND_ALLOW_CIDRS`.",
       tooLong: "That's too long. Shorten it and try again.",
       updateComputerApp: "The computer's app is too old for this. Update it and try again.",
+      cliNotFetched: "This computer doesn't get that program by itself.",
       computerUpdatesItself: "The workspace's computer updates itself for this. Try again in a little while.",
       notInvited: "You're not invited to this event.",
       offHere: "This is turned off here.",
@@ -19780,6 +19803,7 @@ export const en = {
         usingScreen: "Used the screen",
         cloningRepo: "Cloned a repository",
         listingRepos: "Listed the repositories",
+        preparingCli: "Prepared {{app}}",
         openingPullRequest: "Opened a pull request",
         handingOff: "Delivered a report",
         recordingFindings: "Noted the findings",
@@ -19904,6 +19928,8 @@ export const en = {
       usingScreen: "using the screen",
       cloningRepo: "cloning a repository",
       listingRepos: "listing the repositories",
+      preparingCli: "preparing {{app}} on {{computer}}",
+      preparingCliPct: "preparing {{app}} on {{computer}} ({{percent}}%)",
       openingPullRequest: "opening a pull request",
       handingOff: "delivering a report",
       recordingFindings: "noting the findings",

@@ -8,6 +8,7 @@ import {
   BRAIN_PROTOCOL,
   type BrainEffort,
   type BrainSpeed,
+  CLI_COPIES_PROTOCOL,
   CODEX_WINDOWS_PROTOCOL,
   CURSOR_PROTOCOL,
   GROK_PROTOCOL,
@@ -45,6 +46,7 @@ import {
   modelProvider,
   parseCustomModel,
 } from "@agenteschat/providers";
+import { CLI_UPDATE_COMMAND, cliVersionProblem, type FloorCli } from "@agenteschat/providers/cli-floors";
 import {
   ANTIGRAVITY_MODELS,
   ANTIGRAVITY_NEON_CLI,
@@ -79,6 +81,7 @@ import {
 import { recordAudit } from "./audit";
 import { BRAIN_NAMES, type BrainKind, brainRunsOn, type ComputerBrainKind, isComputerBrain } from "./brains/types";
 import { caches } from "./cache";
+import { fetchesCli } from "./cli-fetch";
 import { defaultCredentials, providerKeyOf } from "./credentials";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import {
@@ -408,8 +411,10 @@ export type BrainUnavailable =
   | "not_reported"
   /** It is there and can't start (`executors.broken`, with its own error): not missing, so installing it won't help. */
   | "cant_start"
-  /** Its runner doesn't run this CLI on the computer's system (`brainRunsOn`): Cursor on Windows, for one. */
+  /** No build of its CLI for the computer's system (`brainRunsOn`, the pin list). */
   | "system"
+  /** It is there at a version agentes.chat holds back (`CLI_FLOORS`): too old, or a blocked one. Updating it helps. */
+  | "cli_outdated"
   /** Codex on a Windows computer where no sandbox could hold its commands (`executors.codex.sandbox` is `none`). */
   | "windows_sandbox";
 
@@ -430,6 +435,11 @@ export interface BrainOption {
    * (`cli_old`, system mode), or no account signed in there has a plan that includes it (`plan`).
    */
   missing?: { modelId: string; label: string; why: "app_old" | "cli_old" | "plan" };
+  /**
+   * With `cli_outdated`: the version it reported, the floor it is under (none: a blocked version), and the command that
+   * updates it where its own updater is the way (`CLI_UPDATE_COMMAND`).
+   */
+  outdated?: { version: string; min?: string; command?: string };
 }
 
 type MachineLike = Parameters<typeof machineExecutors>[0] & {
@@ -462,6 +472,18 @@ const missingCli = (
 ): BrainUnavailable =>
   machine.executors?.broken?.[cli] ? "cant_start" : machine.executors?.detectedAt ? "not_installed" : "not_reported";
 
+/** A CLI the computer reports at a version agentes.chat holds back (`CLI_FLOORS`), with how to update it; else null. */
+function outdatedCli(machine: MachineLike, cli: FloorCli): NonNullable<BrainOption["outdated"]> | null {
+  const problem = cliVersionProblem(cli, machine.executors?.[cli]?.version);
+  if (!problem) return null;
+  const command = CLI_UPDATE_COMMAND[cli];
+  return {
+    version: problem.version,
+    ...(problem.kind === "too_old" ? { min: problem.min } : {}),
+    ...(command ? { command } : {}),
+  };
+}
+
 /**
  * What the agent's computer can think with; the model brain always. A
  * computer brain needs the runner's `brain.turn` (`BRAIN_PROTOCOL`, the same
@@ -484,13 +506,18 @@ export function brainOptions(machine: MachineLike | null, { chat = false } = {})
     else if (machine.protocol < BRAIN_PROTOCOL) reason = "runner_old";
     else if (executor === "codex" && machine.os === "windows" && machine.protocol < CODEX_WINDOWS_PROTOCOL)
       reason = "runner_old";
-    else if (!found?.available.includes(executor)) reason = missingCli(machine, executor);
+    // Its runner fetches the pinned CLI itself (ADR 0228 §6): missing, too old or broken there is no reason.
+    else if (!found?.available.includes(executor) && !fetchesCli(machine, executor))
+      reason = missingCli(machine, executor);
+    else if (outdatedCli(machine, executor) && !fetchesCli(machine, executor)) reason = "cli_outdated";
     else if (machine.access?.tools && machine.access.tools[executor] !== true) reason = "tool_off";
     else if (sandbox === "none") reason = "windows_sandbox";
+    const outdated = reason === "cli_outdated" && machine ? outdatedCli(machine, executor) : null;
     return {
       kind,
       available: !reason,
       ...(reason ? { reason } : {}),
+      ...(outdated ? { outdated } : {}),
       ...(!reason && sandbox === "unelevated" ? { sandbox: "partial" as const } : {}),
       models: brainModelOptions(kind),
       defaultModel: defaultBrainModel(kind),
@@ -529,43 +556,28 @@ function cliOption(machine: MachineLike | null, kind: "cursor" | "opencode" | "g
   // On Windows a runner before `OPENCODE_ACP_PROTOCOL` refuses every OpenCode turn.
   else if (kind === "opencode" && machine.os === "windows" && machine.protocol < OPENCODE_ACP_PROTOCOL)
     reason = "runner_old";
-  // On Windows a runner before `GROK_WINDOWS_PROTOCOL` refuses every Grok turn.
-  else if (kind === "grok" && machine.os === "windows" && machine.protocol < GROK_WINDOWS_PROTOCOL)
-    reason = "runner_old";
   // On a Mac a runner before `ANTIGRAVITY_MAC_PROTOCOL` refuses every Gemini sign-in and turn.
   else if (kind === "antigravity" && machine.os === "darwin" && machine.protocol < ANTIGRAVITY_MAC_PROTOCOL)
     reason = "runner_old";
-  // On Windows a runner before `ANTIGRAVITY_WINDOWS_PROTOCOL` refuses every Gemini sign-in and turn.
-  else if (kind === "antigravity" && machine.os === "windows" && machine.protocol < ANTIGRAVITY_WINDOWS_PROTOCOL)
-    reason = "runner_old";
+  // On Windows a runner before the CLI's `WINDOWS_FROM` refuses every sign-in and turn of it (ADR 0228 §7).
+  else if (isWindowsLate(kind, machine)) reason = "runner_old";
   else if (!brainRunsOn(kind, machine.os)) reason = "system";
-  else if (!machine.executors?.[kind] && !(kind === "antigravity" && bringsAgy(machine)))
-    reason = missingCli(machine, kind);
+  else if (!machine.executors?.[kind] && !fetchesCli(machine, kind)) reason = missingCli(machine, kind);
+  else if (outdatedCli(machine, kind) && !fetchesCli(machine, kind)) reason = "cli_outdated";
   else if (tools && (tools[kind] ?? tools.codex) !== true) reason = "tool_off";
   const models = brainModelOptions(kind, machine);
   const missing = kind === "antigravity" ? antigravityMissing(models, machine) : undefined;
+  const outdated = reason === "cli_outdated" && machine ? outdatedCli(machine, kind) : null;
   return {
     kind,
     available: !reason,
     ...(reason ? { reason } : {}),
+    ...(outdated ? { outdated } : {}),
     models,
     defaultModel: null,
     ...(missing ? { missing } : {}),
   };
 }
-
-/**
- * A computer whose runner brings its own Antigravity CLI (`AGY_COPY_PROTOCOL`, ADR 0143): outside system mode, on macOS,
- * Linux and Windows (`ANTIGRAVITY_WINDOWS_PROTOCOL`), never the workspace's own (its image brings it). There Gemini can
- * be connected with no CLI installed: the runner downloads it as the first sign-in starts.
- */
-const bringsAgy = (machine: MachineLike) =>
-  machine.protocol >= AGY_COPY_PROTOCOL &&
-  machine.kind !== "managed" &&
-  machine.executors?.mode !== "system" &&
-  (machine.os === "darwin" ||
-    machine.os === "linux" ||
-    (machine.os === "windows" && machine.protocol >= ANTIGRAVITY_WINDOWS_PROTOCOL));
 
 /** "Usar um computador": the agent's machine as the brain section shows it. */
 export interface BrainComputer {
@@ -2244,6 +2256,30 @@ function ownSignIns(
       ...(claude?.plan ? { plan: claude.plan } : {}),
       ...(usage.claude_code ? { usage: usage.claude_code } : {}),
     };
-  if (can("codex") && usage.codex) out.codex = { usage: usage.codex };
+  // Codex's own sign-in as its runner reads it (its app-server's `account/read`: a ChatGPT plan, an API key or a model
+  // provider of the computer's own config), or its usage reading from before runners said it.
+  const codex = executors?.codex;
+  if (can("codex") && (codex?.loggedIn === true || (codex?.loggedIn !== false && usage.codex)))
+    out.codex = {
+      ...(codex?.plan ? { plan: codex.plan } : {}),
+      ...(usage.codex ? { usage: usage.codex } : {}),
+    };
   return out;
+}
+
+/**
+ * The runner each CLI thinks on Windows from: Cursor's keeps each account's sign-in in its folder there (ADR 0228 §7),
+ * Grok Build's keeps a turn to Grok's own rules (ADR 0142 §10), the Antigravity CLI's has one Gemini account a computer
+ * (ADR 0143 §3). Claude Code, Codex and OpenCode have their own checks.
+ */
+const WINDOWS_FROM: Readonly<Record<string, number>> = {
+  cursor: CLI_COPIES_PROTOCOL,
+  grok: GROK_WINDOWS_PROTOCOL,
+  antigravity: ANTIGRAVITY_WINDOWS_PROTOCOL,
+};
+
+/** A Windows runner too old for `kind` there (`WINDOWS_FROM`). */
+export function isWindowsLate(kind: string, machine: { os?: string | null; protocol?: number | null }): boolean {
+  const from = WINDOWS_FROM[kind];
+  return from !== undefined && machine.os === "windows" && (machine.protocol ?? 0) < from;
 }
