@@ -142,6 +142,7 @@ export const RESET_ERASES = [
   "artifact_uploads",
   "artifact_versions",
   "artifacts",
+  "ask_kinds",
   "autonomy_signals",
   "block_states",
   "browser_handoffs",

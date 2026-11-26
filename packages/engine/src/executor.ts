@@ -54,6 +54,7 @@ import { type AgentAi, agentAiState, noAiReasonOf, ownNotSignedIn } from "./ai-s
 import { heldBehind, markNotRun, notRunAfter, notRunText, wakeLine } from "./approval-order";
 import { deciderName, publishApproval } from "./approvals";
 import { withFileFacts } from "./artifacts";
+import { judgeAskKind, recordAskKind } from "./asks";
 import { accountablePerson, fedByRoutine, fromApp, personOfMessage, runAuthority } from "./authority";
 import {
   type AutoChoice,
@@ -2166,11 +2167,43 @@ async function executeRunInner(
   };
   const autoEarly = needsContext && autoWanted(agent);
   const groupsJudged = needsContext && deps.toolsOnDemand && judge && granted.length > 0 && !every;
-  // The run's start judgments (Automático, its tool groups, its line) go to Jev as one request.
+  // The first run of a person's ask reads what kind of ask it is, for the operator's time per task (ADR 0254).
+  const asksKind =
+    needsContext &&
+    fresh &&
+    !run.background &&
+    !run.workId &&
+    trigger?.authorType === "person" &&
+    (run.stretchId ?? run.triggerMessageId) === trigger.id;
+  // The run's start judgments (Automático, its tool groups, its line, the ask's kind) go to Jev as one request.
   const startGroup =
     needsContext && judge
-      ? new JudgeGroup([...(autoEarly ? ["auto_model"] : []), ...(groupsJudged ? ["tool_groups"] : []), "agent_status"])
+      ? new JudgeGroup([
+          ...(autoEarly ? ["auto_model"] : []),
+          ...(groupsJudged ? ["tool_groups"] : []),
+          "agent_status",
+          ...(asksKind ? ["ask_kind"] : []),
+        ])
       : undefined;
+  if (asksKind && judge && trigger) {
+    void queryTrace
+      .run({ count: 0 }, async () => {
+        const read = await judgeAskKind(judge, {
+          orgId: run.orgId,
+          agentId: agent.id,
+          runId: run.id,
+          agent: { name: agent.name, role: agent.role, instructions: agent.instructions },
+          message: trigger.body,
+          recent: await recentMessages(),
+          group: startGroup,
+        }).catch(() => {
+          startGroup?.skip("ask_kind");
+          return null;
+        });
+        if (read) await recordAskKind(db, { orgId: run.orgId, messageId: trigger.id, ...read });
+      })
+      .catch(() => {});
+  }
   /** The routine whose prompt the run works on: the same work every firing, so Automático's choice is kept for it. */
   const routineCalled = (trigger?.meta?.routine as { id?: unknown } | undefined)?.id;
   // "Automático": the judge picks the run's model tier and effort while the context is built; the
