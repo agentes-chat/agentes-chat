@@ -33,6 +33,7 @@ import {
   voiceOf,
 } from "../src";
 import { addMember, type Fixture, SECRET, setup } from "./fixtures";
+import { until } from "./stream-fixtures";
 
 const { voiceClips, messages } = schema;
 
@@ -290,9 +291,8 @@ describe("“gravando áudio…” while the words are made out", () => {
 
   test("the others keep seeing it from the upload to the message, which ends it: none comes after it", async () => {
     const { done, answer, heard, beats } = await listening();
-    await Bun.sleep(70);
     // At once, then every beat, to the conversation and to the agents' quiet window alike.
-    expect(beats().length).toBeGreaterThanOrEqual(6);
+    await until(() => beats().length >= 6, "three beats");
     expect(beats()[0]?.e).toEqual({
       type: "user.typing",
       channelId: f.general.id,

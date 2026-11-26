@@ -545,6 +545,9 @@ export class ClaudeStreamParser {
   /** Each API call's whole input (cache included), by message id: the largest is the turn's biggest step. */
   private context = new Map<string, number>();
 
+  /** `now`: the clock its timings read (`stats`). */
+  constructor(private readonly now: () => number = Date.now) {}
+
   /** The calls of the main conversation (ours and its own) whose result hasn't come yet, oldest first. */
   inFlight(): InFlightTool[] {
     return [...this.tools.values()];
@@ -637,7 +640,7 @@ export class ClaudeStreamParser {
           this.streamedMessage = isObj(e.message) ? str(e.message.id) || null : null;
           const m = isObj(e.message) ? realModel(e.message.model) : "";
           if (m) this.turnModel = m;
-          this.stats.firstTokenAt ??= Date.now();
+          this.stats.firstTokenAt ??= this.now();
         }
         if (main && e.type === "content_block_delta" && delta.type === "text_delta" && str(delta.text)) {
           this.sawDelta = true;
@@ -661,7 +664,7 @@ export class ClaudeStreamParser {
           this.failure = {};
           const m = isObj(ev.message) ? realModel(ev.message.model) : "";
           if (m) this.turnModel = m;
-          this.stats.firstAssistantAt ??= Date.now();
+          this.stats.firstAssistantAt ??= this.now();
         }
         const messageId = isObj(ev.message) ? str(ev.message.id) : "";
         if (messageId && isObj(ev.message) && isObj(ev.message.usage)) {
