@@ -11,6 +11,8 @@ import {
   removeMachineAccount,
   retimeLine,
   setAgentBrain,
+  syncMachineAccounts,
+  takeBackPlan,
   usageWaitKey,
   wakeAgentUsageWaits,
 } from "../src";
@@ -135,6 +137,28 @@ test("the plan a run is parked on is disconnected: the run goes on, though its a
     fx.org.id,
     machineId,
     ANAS,
+  );
+  expect(await switchedWakes(fx, parked)).toHaveLength(1);
+});
+
+test("the computer no longer has the plan a run is parked on: the run goes on", async () => {
+  const { fx, machineId, bia, parkedIn } = await world();
+  const parked = await parkedIn(bia.id, ANAS);
+  await syncMachineAccounts({ db: fx.db, pubsub: fx.pubsub }, fx.org.id, machineId, []);
+  expect(await switchedWakes(fx, parked)).toHaveLength(1);
+});
+
+test("the owner takes back the plan a person gave the right hand: that person's parked run goes on", async () => {
+  const { fx, bia, lodi, parkedIn } = await world();
+  await setAgentBrain({ db: fx.db }, bia.id, fx.org.id, lodi.id, {
+    scope: "mine",
+    brain: "claude_code",
+    account: ANAS,
+  });
+  const parked = await parkedIn(bia.id, ANAS);
+  await takeBackPlan({ db: fx.db, pubsub: fx.pubsub }, fx.owner.id, fx.org.id, ANAS);
+  expect(await fx.db.select().from(schema.rightHandBrains).where(eq(schema.rightHandBrains.userId, bia.id))).toEqual(
+    [],
   );
   expect(await switchedWakes(fx, parked)).toHaveLength(1);
 });

@@ -128,7 +128,7 @@ import { can, getMembership, requirePermission } from "./organizations";
 import { isRightHand, personalBrain, personalModel } from "./right-hand";
 import { orgModelProvider } from "./router";
 import { readRefusal } from "./standing";
-import { paysExtraUsage, wakeAgentsBrainWaits, wakeAgentUsageWaits } from "./usage-pause";
+import { agentsWaitingOn, paysExtraUsage, wakeAgentsBrainWaits, wakeAgentUsageWaits } from "./usage-pause";
 
 /*
  * "Quem pensa" (ADR 0032 §5): the brain an agent thinks with and its model,
@@ -1853,8 +1853,12 @@ export async function takeBackPlan(
         )
         .returning({ userId: schema.rightHandBrains.userId })
     : [];
-  // Their right hand's user lets the sign-in go now, not at the next change (`machineAgents`).
-  if (personal.length > 0) await publishMachineAgentsChanged(deps.pubsub, orgId);
+  // Their right hand's user lets the sign-in go now, not at the next change (`machineAgents`), and what waited on
+  // the plan's limit goes on with what they think with now.
+  if (personal.length > 0) {
+    await publishMachineAgentsChanged(deps.pubsub, orgId);
+    await wakeAgentsBrainWaits(deps, orgId, await agentsWaitingOn(deps.db, orgId, [accountId]));
+  }
   for (const p of personal) {
     await recordAudit(deps.db, {
       orgId,

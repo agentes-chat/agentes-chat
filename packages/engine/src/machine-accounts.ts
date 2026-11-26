@@ -981,7 +981,7 @@ export async function syncMachineAccounts(
       );
       if (gone.length > 0) {
         const ids = gone.map((r) => r.id);
-        released.push(...(await releaseAgents(tx, orgId, ids, now)));
+        released.push(...(await releaseAgents(tx, orgId, ids, now)), ...(await agentsWaitingOn(tx, orgId, ids)));
         await tx
           .delete(machineAccounts)
           .where(
