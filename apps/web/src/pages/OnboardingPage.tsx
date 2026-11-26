@@ -550,11 +550,16 @@ export function OnboardingPage() {
   const firstOption = madeFrom && madeFrom.picked !== null ? (madeFrom.options[madeFrom.picked] ?? null) : null;
   const aiLabel = aiNamed && aiNamed !== "key" ? planLabel(t, aiNamed) : null;
   // "Step N of M" up to the plan; none on the first question, the paid moment or past the plan. A personal workspace
-  // counts asking its AI as a step of its own.
+  // counts asking its AI as a step of its own. "Start from scratch" picked on the start step already counts without the
+  // week it skips, so the total doesn't drop from one step to the next.
+  const scratchPicked = step === "start" && startView === "choose" && startPick === "scratch";
   const counted =
     asking || awake
       ? null
-      : stepCount(steps, step, { personal: personalNow, asking: step === "start" && startView !== "choose" });
+      : stepCount(scratchPicked ? steps.filter((s) => s !== "week") : steps, step, {
+          personal: personalNow,
+          asking: step === "start" && startView !== "choose",
+        });
   const stepLine = counted ? t("onboarding.flow.stepOf", counted) : undefined;
   const toStart = (view: StartView) => {
     resumed.current = true;
