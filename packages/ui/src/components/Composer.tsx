@@ -528,6 +528,55 @@ function useOneLinePlaceholder(ref: RefObject<HTMLTextAreaElement | null>, place
   return fits ? placeholder : placeholder?.split(" · ")[0];
 }
 
+let measuring: CanvasRenderingContext2D | null | undefined;
+
+/** How wide a line of text is in a field's font (null where nothing can measure it). */
+function textWidth(field: HTMLElement, text: string): number | null {
+  if (measuring === undefined) measuring = document.createElement("canvas").getContext?.("2d") ?? null;
+  if (!measuring) return null;
+  measuring.font = getComputedStyle(field).font;
+  return measuring.measureText(text).width;
+}
+
+/**
+ * More than one line: the text takes the card's whole width and the tools a row of their own under it (`data-wide`).
+ * It goes back to one row only once the words fit beside the tools again, measured at that narrower width, so a line
+ * near the edge never flips the box back and forth.
+ */
+function useWideText(ref: RefObject<HTMLTextAreaElement | null>, value: string): boolean {
+  const [wide, setWide] = useState(false);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    const row = el?.closest<HTMLElement>(".ac-composer__row");
+    if (!el || !row || !value) {
+      setWide(false);
+      return;
+    }
+    if (value.includes("\n")) {
+      setWide(true);
+      return;
+    }
+    const style = getComputedStyle(el);
+    if (!wide) {
+      // Wrapped: taller than its one line.
+      if (el.offsetHeight > (Number.parseFloat(style.minHeight) || 0) + 2) setWide(true);
+      return;
+    }
+    const tools = [...row.querySelectorAll<HTMLElement>(":scope > .ac-composer__tools")];
+    const rowStyle = getComputedStyle(row);
+    const room =
+      row.clientWidth -
+      (Number.parseFloat(rowStyle.paddingLeft) || 0) -
+      (Number.parseFloat(rowStyle.paddingRight) || 0) -
+      tools.reduce((sum, t) => sum + t.offsetWidth, 0) -
+      (Number.parseFloat(style.paddingLeft) || 0) -
+      (Number.parseFloat(style.paddingRight) || 0);
+    const width = textWidth(el, value);
+    if (width !== null && width < room - 2) setWide(false);
+  }, [ref, value, wide]);
+  return wide;
+}
+
 /**
  * The chat message box, one row: attach and emoji, the text, the microphone and send (primary, icon only). The row
  * grows with the text, its buttons staying at the bottom. Formatting floats over selected text. Focus on the whole box.
@@ -609,6 +658,7 @@ export function Composer({
   const selectAfter = useRef<[number, number] | null>(null);
 
   useAutoGrow(ref, value);
+  const wide = useWideText(ref, value);
   // Once the text is in: the caret after an inserted mention, or a selection put back.
   useLayoutEffect(() => {
     // The box emptied without a keystroke (the message went out, a draft was cleared): no list stays open over it.
@@ -1087,6 +1137,7 @@ export function Composer({
         <div
           ref={box}
           className={cx("ac-composer", className)}
+          data-wide={wide || undefined}
           data-disabled={disabled || undefined}
           data-dragging={dragging || undefined}
           data-voice={recording ? rec.phase : undefined}
