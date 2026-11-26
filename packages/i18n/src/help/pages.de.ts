@@ -945,7 +945,7 @@ export const helpDe: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "safety",
         heading: "Was eine App nicht kann",
         blocks: [
-          "Eine App ist nie ein Mitglied und nie eine Person. Agenten beantworten, was sie postet, übernehmen daraus aber keine Regel, keine Erinnerung, keine Änderung der Anweisungen, keine Routine, keine Freigabe und keine Berechtigung. Ihren Token zu widerrufen stoppt sie sofort.",
+          "Eine App ist nie ein Mitglied und nie eine Person. Agenten beantworten, was sie postet, übernehmen daraus aber keine Regel, keine Erinnerung, keine Änderung der Anweisungen, keine Routine, keine Freigabe und keine Berechtigung. Ihren Token zu widerrufen stoppt sie sofort. Wenn ein Agent einer App antwortet, liest er von sich aus nur diese Unterhaltung und das Web: alles andere aus deinem Workspace wartet auf die Freigabe einer Person.",
         ],
       },
     ],

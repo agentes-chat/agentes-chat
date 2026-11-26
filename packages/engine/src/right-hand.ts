@@ -7,7 +7,7 @@ import type { Agent } from "./agents";
 import { accountOrderSql } from "./ai-accounts/chain";
 import { accountServesSql } from "./ai-accounts/serves";
 import { recordAudit } from "./audit";
-import { accountablePerson, fedByRoutine, personOfMessage, runAuthorityById } from "./authority";
+import { accountablePerson, fedByRoutine, fromApp, personOfMessage, runAuthorityById } from "./authority";
 import type { BrainUnavailability, ModelScope } from "./brains/select";
 import { ForbiddenError } from "./errors";
 import type { ModelGateway } from "./gateway";
@@ -349,6 +349,19 @@ export async function rightHandAwayRun(db: Executor, run: { orgId: string; agent
 
 /** Its computer turns' permission profile: the runner's locked-down `chat` (`LOCKED_BRAIN_PROTOCOL`). */
 export const RIGHT_HAND_TURN = { mode: "chat" } as const;
+
+/**
+ * Whether a computer turn is locked to our tools (`RIGHT_HAND_TURN`): the right hand's, and one of a run an integration
+ * app's message started (ADR 0252), where the CLI's own shell and files would read the computer, unasked, for someone
+ * outside.
+ */
+export async function locksTurn(
+  db: Executor,
+  agent: Parameters<typeof isRightHand>[0],
+  turn: { orgId: string; runId: string },
+): Promise<boolean> {
+  return isRightHand(agent) || fromApp(await runAuthorityById(db, turn.orgId, turn.runId));
+}
 
 type ThinkingAgent = Pick<Agent, "orgId" | "brainAccountId" | "machineId"> &
   Partial<Pick<Agent, "builtin" | "ownerUserId" | "brain" | "brainModel" | "brainEffort" | "brainAccountLentBy">> &

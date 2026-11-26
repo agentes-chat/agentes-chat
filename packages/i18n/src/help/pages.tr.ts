@@ -943,7 +943,7 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "safety",
         heading: "Bir uygulamanın yapamadıkları",
         blocks: [
-          "Bir uygulama hiçbir zaman üye ya da kişi değildir. Ajanlar paylaştıklarına yanıt verir, ama ondan hiçbir kural, bellek, talimat değişikliği, rutin, onay veya izin almaz. Tokenini iptal etmek onu hemen durdurur.",
+          "Bir uygulama hiçbir zaman üye ya da kişi değildir. Ajanlar paylaştıklarına yanıt verir, ama ondan hiçbir kural, bellek, talimat değişikliği, rutin, onay veya izin almaz. Tokenini iptal etmek onu hemen durdurur. Bir uygulamaya yanıt verirken ajan kendiliğinden yalnızca o konuşmayı ve web'i okur: çalışma alanınızdaki diğer her şey bir kişinin onayını bekler.",
         ],
       },
     ],

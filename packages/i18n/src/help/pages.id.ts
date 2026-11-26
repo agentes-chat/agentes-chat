@@ -941,7 +941,7 @@ export const helpId: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "safety",
         heading: "Yang tidak bisa dilakukan app",
         blocks: [
-          "App tidak pernah menjadi anggota atau orang. Agen menjawab yang diposting app, tetapi tidak mengambil aturan, memori, perubahan instruksi, rutinitas, persetujuan, atau izin darinya. Mencabut tokennya langsung menghentikannya.",
+          "App tidak pernah menjadi anggota atau orang. Agen menjawab yang diposting app, tetapi tidak mengambil aturan, memori, perubahan instruksi, rutinitas, persetujuan, atau izin darinya. Mencabut tokennya langsung menghentikannya. Saat menjawab app, agen hanya membaca percakapan itu dan web dengan sendirinya: hal lain dari ruang kerjamu menunggu persetujuan seseorang.",
         ],
       },
     ],

@@ -932,7 +932,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         id: "safety",
         heading: "What an app can't do",
         blocks: [
-          "An app is never a member or a person. Agents answer what it posts, but take no rule, memory, instruction change, routine, approval or permission from it. Revoking its token stops it at once.",
+          "An app is never a member or a person. Agents answer what it posts, but take no rule, memory, instruction change, routine, approval or permission from it. Revoking its token stops it at once. While it answers an app, an agent reads only that conversation and the web on its own: anything else of your workspace waits for a person's approval.",
         ],
       },
     ],

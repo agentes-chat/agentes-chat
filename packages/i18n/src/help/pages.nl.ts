@@ -940,7 +940,7 @@ export const helpNl: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "safety",
         heading: "Wat een app niet kan",
         blocks: [
-          "Een app is nooit een lid of een persoon. Agents beantwoorden wat hij post, maar nemen er geen regel, geheugen, wijziging van instructies, routine, goedkeuring of toestemming uit over. Zijn token intrekken stopt hem meteen.",
+          "Een app is nooit een lid of een persoon. Agents beantwoorden wat hij post, maar nemen er geen regel, geheugen, wijziging van instructies, routine, goedkeuring of toestemming uit over. Zijn token intrekken stopt hem meteen. Als een agent een app antwoordt, leest hij uit zichzelf alleen dat gesprek en het web: al het andere uit je werkruimte wacht op de goedkeuring van een persoon.",
         ],
       },
     ],

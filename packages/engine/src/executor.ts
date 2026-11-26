@@ -54,7 +54,7 @@ import { type AgentAi, agentAiState, noAiReasonOf, ownNotSignedIn } from "./ai-s
 import { heldBehind, markNotRun, notRunAfter, notRunText, wakeLine } from "./approval-order";
 import { deciderName, publishApproval } from "./approvals";
 import { withFileFacts } from "./artifacts";
-import { accountablePerson, fedByRoutine, personOfMessage, runAuthority } from "./authority";
+import { accountablePerson, fedByRoutine, fromApp, personOfMessage, runAuthority } from "./authority";
 import {
   type AutoChoice,
   type AutoLine,
@@ -2688,8 +2688,13 @@ async function executeRunInner(
     // The tools the context names are core ones: listed whatever groups the judge loads, so it needn't wait for it.
     // A connector's tool of the same name could come with a group: then it waits.
     if (judging && !granted.every((t) => isCore(t) || !CONTEXT_TOOLS.includes(t.name))) await judging;
+    let behind: ReturnType<typeof runAuthority> | undefined;
+    const authority = () => (behind ??= runAuthority(db, run));
+    // Someone outside reads what a run an app's message started replies (ADR 0252): nothing of memory or the wiki
+    // comes in by itself, found by their words; each read of them asks a person. A person's message roots in them.
+    const appRun = trigger?.authorType !== "person" && fromApp(await authority().catch(() => null));
     // A routine's instructions name what it checks; the wiki stays one `read_wiki_page` away.
-    const searchesWiki = tools.some((t) => t.name === "read_wiki_page") && !viaRoutine;
+    const searchesWiki = tools.some((t) => t.name === "read_wiki_page") && !viaRoutine && !appRun;
     // Only the kinds searched below: with vectors for the wiki alone, a run that doesn't search it pays for none.
     const queryEmbedding = contextDeps
       ? sharedQueryEmbedding(
@@ -2699,7 +2704,7 @@ async function executeRunInner(
           searchesWiki ? ["context_item", "wiki"] : ["context_item"],
         )
       : undefined;
-    const personBehind = () => runAuthority(db, run).then((a) => a.personId);
+    const personBehind = () => authority().then((a) => a.personId);
     const [pending, skillList, repositories, browsers, workApplies, choicesApply, sayNowHere, codeHere] =
       await Promise.all([
         deps.tools
@@ -2774,7 +2779,7 @@ async function executeRunInner(
         workspaceComputer: deps.workspaceComputer,
         unseal: brainOf(agent.brain) === "model",
       }),
-      contextDeps
+      contextDeps && !appRun
         ? // A person's own message already names who is behind the run: no read for it.
           (trigger?.authorUserId ? Promise.resolve(trigger.authorUserId) : personBehind().catch(() => null))
             .then((personId) =>
@@ -2804,7 +2809,7 @@ async function executeRunInner(
               reader: async () => ({
                 type: "agent",
                 agentId: agent.id,
-                requestedByUserId: wikiPersonOf(await runAuthority(db, run)),
+                requestedByUserId: wikiPersonOf(await authority()),
                 channelId: run.channelId,
               }),
             },

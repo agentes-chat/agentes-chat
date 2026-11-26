@@ -1,5 +1,5 @@
 import { and, type Executor, eq, schema } from "@agenteschat/db";
-import { fedByRoutine, type RunAuthority } from "../authority";
+import { fedByRoutine, fromApp, type RunAuthority } from "../authority";
 import { gitVerbOf } from "../git/hosts/refs";
 import { directoryRole } from "./directory";
 import type { JsonSchema } from "./json-schema";
@@ -19,6 +19,8 @@ import type { ToolDefinition } from "./types";
  *   `hand_off` nor a mission's tools; every write to a connected app asks a person, except, on the run its report
  *   or a teammate's answer to its question woke while that is all it read, the routine's own actions (`onOwnJob`,
  *   ADR 0053 addendum 2026-11-13).
+ * - `unattended` an integration app's message started (`fromApp`, ADR 0252): as one a routine's reading feeds, and
+ *   besides the web (`PUBLIC_READS`) every read, internal change and word elsewhere asks a person.
  * - `routine`: nothing that speaks for someone (reactions, GIFs and stickers, questions, reminders,
  *   routines, events, channels, secrets, permissions). It may come back to its own work (`follow_up`, `ROUTINE_RESUME`):
  *   blocked now, it resumes by itself where it reports, in a run that keeps its bounds. It reports through `hand_off`, whose message may carry a GIF
@@ -153,6 +155,9 @@ const ROUTINE_RESUME = new Set(["follow_up", "cancel_follow_up"]);
 
 /** What a routine may use of `ELSEWHERE`, by name. */
 const ROUTINE_REACH = new Set(["post_message", "send_dm", "ask_agent", "tell_agent"]);
+
+/** What a run an integration app's message started reads without asking (ADR 0252): the web holds nothing of ours. */
+const PUBLIC_READS = new Set(["web_search", "web_fetch", "image_search"]);
 
 /** Speaks in the run's own conversation, by name. */
 const HERE = new Set([
@@ -440,6 +445,13 @@ export function toolPolicy(
   if (authority.kind !== "routine" && !fed) {
     if (what.kind === "hand_off") return refuse(REFUSALS.handOffOnly);
     return asks ? APPROVE : ALLOW;
+  }
+  // Someone outside writes what feeds a run an app's message started and reads its reply (ADR 0252): any look at the
+  // workspace's data, an internal change and a word to another conversation or agent ask a person first, so an
+  // injected request can't carry the workspace out through the reply.
+  if (fromApp(authority)) {
+    if (what.kind === "read" && !PUBLIC_READS.has(tool.name)) return APPROVE;
+    if (what.kind === "internal" || (what.kind === "elsewhere" && ROUTINE_REACH.has(tool.name))) return APPROVE;
   }
   // What a routine read feeds a run its report or work woke (`fedByRoutine`): that run keeps the routine's
   // bounds, replies where it is, and asks a person before writing to a connected app.

@@ -401,6 +401,13 @@ export async function feedingBrief(
 export const fedByRoutine = (authority: RunAuthority | null): boolean =>
   authority?.kind === "routine" || (authority?.kind === "unattended" && authority.reason !== "agent");
 
+/**
+ * A run an integration app's message started (ADR 0251): someone outside wrote what feeds it and reads its reply, so
+ * it also keeps the workspace's own data out of reach unless a person approves (ADR 0252).
+ */
+export const fromApp = (authority: RunAuthority | null): authority is Extract<RunAuthority, { kind: "unattended" }> =>
+  authority?.kind === "unattended" && authority.reason === "app";
+
 /** Who is behind a run, by its id (the tool context's `runId`); unattended when the run is gone. */
 export async function runAuthorityById(db: Executor, orgId: string, runId: string): Promise<RunAuthority> {
   if (!UUID.test(runId)) return { kind: "unattended", personId: null, reason: "agent" };

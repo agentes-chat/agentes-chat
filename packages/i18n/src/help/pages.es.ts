@@ -944,7 +944,7 @@ export const helpEs: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "safety",
         heading: "Lo que una app no puede hacer",
         blocks: [
-          "Una app nunca es un miembro ni una persona. Los agentes responden lo que publica, pero no toman de ella ninguna regla, memoria, cambio de instrucciones, rutina, aprobación ni permiso. Revocar su token la detiene al instante.",
+          "Una app nunca es un miembro ni una persona. Los agentes responden lo que publica, pero no toman de ella ninguna regla, memoria, cambio de instrucciones, rutina, aprobación ni permiso. Revocar su token la detiene al instante. Cuando responde a una app, un agente solo lee por su cuenta esa conversación y la web: cualquier otra cosa de tu espacio de trabajo espera la aprobación de una persona.",
         ],
       },
     ],

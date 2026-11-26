@@ -112,10 +112,10 @@ import {
   INTEGRATION_DELIVERY_JOB,
   type IntentWriter,
   isAgentesCloud,
-  isRightHand,
   type JobDeps,
   type Judge,
   type LiveDeps,
+  locksTurn,
   type MailDeps,
   type McpConnect,
   messageRouter,
@@ -730,8 +730,9 @@ export function buildEngine(o: EngineOptions) {
    * (ADR 0173); a mission's turn follows the mission's own setting.
    */
   const turnPermissions = async (turn: BrainTurn): Promise<BrainTurnRequest["permissions"]> =>
-    // The team's right hand on a plan: our tools and nothing else (ADR 0137 §4).
-    isRightHand(await getAgentCached(db, turn.orgId, turn.agentId))
+    // The team's right hand on a plan, and a run an app's message started: our tools and nothing else (ADR 0137 §4,
+    // ADR 0252).
+    (await locksTurn(db, await getAgentCached(db, turn.orgId, turn.agentId), turn))
       ? RIGHT_HAND_TURN
       : ((await missionTurnPermissions(db, turn)) ?? {
           mode: "work",

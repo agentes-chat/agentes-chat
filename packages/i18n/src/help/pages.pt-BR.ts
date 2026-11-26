@@ -937,7 +937,7 @@ export const helpPtBR: Record<HelpSlug, HelpDocument> = {
         id: "safety",
         heading: "O que um app não faz",
         blocks: [
-          "Um app nunca é membro nem pessoa. Os agentes respondem o que ele posta, mas não tiram dele regra, memória, mudança de instrução, rotina, aprovação ou permissão. Revogar o token o para na hora.",
+          "Um app nunca é membro nem pessoa. Os agentes respondem o que ele posta, mas não tiram dele regra, memória, mudança de instrução, rotina, aprovação ou permissão. Revogar o token o para na hora. Respondendo a um app, o agente lê sozinho só aquela conversa e a web: qualquer outra coisa do workspace espera a aprovação de uma pessoa.",
         ],
       },
     ],

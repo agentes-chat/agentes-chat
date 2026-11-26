@@ -1,6 +1,6 @@
 import { and, type Executor, eq, type SQL, schema, sql } from "@agenteschat/db";
 import type { Agent } from "../agents";
-import { runAuthorityById } from "../authority";
+import { fromApp, runAuthorityById } from "../authority";
 import type { AgentRun } from "../runs";
 import { audienceAllowsSql } from "./serves";
 
@@ -17,7 +17,7 @@ export async function runAsker(
   run: Pick<AgentRun, "orgId" | "id">,
 ): Promise<string | null> {
   const authority = await runAuthorityById(db, run.orgId, run.id).catch(() => null);
-  if (authority?.kind === "unattended" && authority.reason === "app") return `app:${authority.appId ?? ""}`;
+  if (fromApp(authority)) return `app:${authority.appId ?? ""}`;
   const person = authority?.personId ?? null;
   return person && person !== agent.ownerUserId ? person : null;
 }

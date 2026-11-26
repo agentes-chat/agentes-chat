@@ -67,8 +67,8 @@ credential, its own name on its messages, and the permissions an admin gave it, 
 - It joins only a run that its own app's message started (`mayJoin` and the insert's steering both check it): never
   a person's run in progress, never another app's.
 - Its root is `{ kind: "app", appId }` and its run is unattended with reason `app`. That run is fed by outside text
-  exactly like a run a routine's reading woke (`fedByRoutine`): it replies where it is and reads, but never sends a
-  credential, and every write to a connected service or a mail send asks a person, whose approval goes to the
+  exactly like a run a routine's reading woke (`fedByRoutine`): it replies where it is, reads only what ADR 0252
+  lets it (beyond its conversation and the web, a person approves), never sends a credential, and every write to a connected service or a mail send asks a person, whose approval goes to the
   agent's owner. A person writing into that run never puts them behind it (`steeredBy` is ignored for an app's root),
   so a support conversation can't borrow a person's authority.
 - Nothing in it teaches or grants (ADR 0250's `ownTyped` needs a person's typed message): no rule, memory in anyone's

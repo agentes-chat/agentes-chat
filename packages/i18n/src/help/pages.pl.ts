@@ -937,7 +937,7 @@ export const helpPl: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "safety",
         heading: "Czego aplikacja nie może",
         blocks: [
-          "Aplikacja nigdy nie jest członkiem ani osobą. Agenci odpowiadają na to, co publikuje, ale nie przyjmują od niej żadnej reguły, pamięci, zmiany instrukcji, rutyny, zatwierdzenia ani uprawnienia. Unieważnienie tokenu od razu ją zatrzymuje.",
+          "Aplikacja nigdy nie jest członkiem ani osobą. Agenci odpowiadają na to, co publikuje, ale nie przyjmują od niej żadnej reguły, pamięci, zmiany instrukcji, rutyny, zatwierdzenia ani uprawnienia. Unieważnienie tokenu od razu ją zatrzymuje. Odpowiadając aplikacji, agent sam czyta tylko tę rozmowę i sieć: wszystko inne z twojego workspace'u czeka na zatwierdzenie przez człowieka.",
         ],
       },
     ],
