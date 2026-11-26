@@ -256,6 +256,8 @@ export interface StreamOptions {
 export interface Endpoint {
   style: "openai" | "anthropic";
   baseURL: string;
+  /** Models configured to receive pictures over this endpoint's Chat Completions API. */
+  imageInputModels?: readonly string[];
 }
 
 export interface ModelProvider {

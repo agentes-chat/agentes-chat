@@ -16,24 +16,30 @@ const MODEL_ID = /^[\w.:/@+-]{1,200}$/;
 
 type Raw = Record<string, unknown>;
 const obj = (v: unknown): Raw | null => (v && typeof v === "object" && !Array.isArray(v) ? (v as Raw) : null);
+type ListedModel = { id: string; label?: string; imageInput?: true };
 
 /**
  * The model ids an endpoint lists: `{ data: [{ id }] }` (OpenAI's and Anthropic's `GET /v1/models`, LiteLLM, vLLM,
  * LM Studio, Ollama's `/v1`), or Ollama's own `{ models: [{ model | name }] }`. Outside data: ids that don't look
  * like one are dropped, repeats too, at most 500.
  */
-export function parseEndpointModels(body: unknown): { id: string; label?: string }[] {
+export function parseEndpointModels(body: unknown): ListedModel[] {
   const root = obj(body);
   const rows = Array.isArray(root?.data) ? root.data : Array.isArray(root?.models) ? root.models : [];
   const seen = new Set<string>();
-  const out: { id: string; label?: string }[] = [];
+  const out: ListedModel[] = [];
   for (const row of rows) {
     const r = obj(row);
     const id = r && [r.id, r.model, r.name].find((v): v is string => typeof v === "string");
     if (!id || !MODEL_ID.test(id) || seen.has(id)) continue;
     seen.add(id);
     const name = r.display_name;
-    out.push({ id, ...(typeof name === "string" && name.trim() && name.length <= 120 ? { label: name.trim() } : {}) });
+    const modalities = r.input_modalities ?? obj(r.architecture)?.input_modalities;
+    out.push({
+      id,
+      ...(typeof name === "string" && name.trim() && name.length <= 120 ? { label: name.trim() } : {}),
+      ...(Array.isArray(modalities) && modalities.includes("image") ? { imageInput: true } : {}),
+    });
     if (out.length >= MAX_LISTED) break;
   }
   return out;
@@ -67,7 +73,7 @@ export async function listEndpointModels(
   endpoint: Endpoint,
   apiKey: string,
   http: typeof fetch,
-): Promise<{ id: string; label?: string }[]> {
+): Promise<ListedModel[]> {
   const url = endpoint.style === "anthropic" ? `${endpoint.baseURL}/v1/models` : `${endpoint.baseURL}/models`;
   const headers: Record<string, string> =
     endpoint.style === "anthropic"
@@ -182,7 +188,11 @@ export function createCustomProvider(
               maxRetries: options.maxRetries,
             })
           : createOpenRouterProvider({
-              compatible: { id: "custom", baseURL: endpoint.baseURL },
+              compatible: {
+                id: "custom",
+                baseURL: endpoint.baseURL,
+                pictures: endpoint.imageInputModels?.includes(parsed.model),
+              },
               fetch: http,
               maxRetries: options.maxRetries,
             });
