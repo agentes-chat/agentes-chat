@@ -12568,6 +12568,11 @@ html:not([data-pointer]) .ac-msg__note:focus-visible {
 .ac-mo__kbd {
   visibility: hidden;
 }
+/* A row with no shortcut (a workspace) keeps no room for one: its hint ("You're here", a count) ends on the row's
+   padding, as its face starts on the other side, instead of a hidden key's width further in. */
+.ac-mo__kbd:empty {
+  display: none;
+}
 .ac-mo__item:hover .ac-mo__kbd:not(:empty),
 .ac-mo__item:focus-visible .ac-mo__kbd:not(:empty) {
   visibility: visible;
