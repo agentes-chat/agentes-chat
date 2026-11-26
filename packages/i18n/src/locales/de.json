@@ -12775,6 +12775,7 @@
       "home_only": "{{program}} ist auf {{computer}} nur für root installiert, wo die Agenten nicht hinkommen.",
       "not_reported": "{{computer}} prüft noch, welche Programme vorhanden sind. Das ändert sich von selbst, wenn es so weit ist.",
       "system": "{{program}} läuft noch nicht auf dem System von {{computer}}.",
+      "systemDevin": "{{computer}} läuft mit Windows, wo Devin noch nicht läuft: Dort kann seine CLI die Anmeldung jedes Kontos nicht getrennt halten. Nutze Devin auf einem Mac- oder Linux-Computer oder wähle eine andere KI.",
       "windows_sandbox": "Windows auf {{computer}} kann die Befehle von {{program}} nicht isolieren. Wähle stattdessen Claude oder einen API-Schlüssel oder aktualisiere diesen Computer auf Windows 11 24H2 oder neuer, mit den neuesten Updates.",
       "no_computerCloud": "Bereit, sobald {{computer}} es ist."
     },

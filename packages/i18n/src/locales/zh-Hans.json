@@ -12321,6 +12321,7 @@
       "home_only": "{{computer}} 上的 {{program}} 只为 root 安装了，智能体访问不到。",
       "not_reported": "{{computer}} 还在检查有哪些程序。完成后这里会自动更新。",
       "system": "{{program}} 暂时还不能在 {{computer}} 的系统上运行。",
+      "systemDevin": "{{computer}} 运行的是 Windows，Devin 暂不支持 Windows：在那里它的 CLI 无法把每个账号的登录分开保存。请在 Mac 或 Linux 电脑上使用 Devin，或选择其他 AI。",
       "windows_sandbox": "{{computer}} 的 Windows 无法隔离 {{program}} 的命令。请改选 Claude 或 API 密钥，或把那台电脑更新到 Windows 11 24H2 或更高版本，并装好最新更新。",
       "no_computerCloud": "{{computer}} 一就绪即可使用。"
     },

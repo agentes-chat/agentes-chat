@@ -504,6 +504,7 @@
     "antigravityDesc": "使用你的 Gemini 账号，在允许的文件夹中编写和修改代码。",
     "devinName": "Devin CLI",
     "devinDesc": "使用你的 Devin 账号，在允许的文件夹中编写和修改代码。",
+    "devinWindows": "Devin 暂不支持 Windows：在这里它的 CLI 无法把每个账号的登录分开保存。智能体会在 Mac 或 Linux 电脑上用 Devin 思考。",
     "found": "已找到",
     "notFound": "未找到",
     "loggedOut": "未登录",

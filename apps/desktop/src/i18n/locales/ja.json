@@ -504,6 +504,7 @@
     "antigravityDesc": "あなたのGeminiアカウントで、許可されたフォルダ内のコードを書いたり変更したりします。",
     "devinName": "Devin CLI",
     "devinDesc": "あなたのDevinアカウントで、許可されたフォルダ内のコードを書いたり変更したりします。",
+    "devinWindows": "DevinはまだWindowsでは動きません。ここではDevinのCLIがアカウントごとのサインインを分けて保てないためです。エージェントはMacかLinuxのコンピューターでDevinを使って考えます。",
     "found": "見つかりました",
     "notFound": "見つかりません",
     "loggedOut": "ログインしていません",

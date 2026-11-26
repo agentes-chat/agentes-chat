@@ -508,6 +508,7 @@
     "antigravityDesc": "Gemini hesabınızla, izin verilen klasörlerde kod yazar ve değiştirir.",
     "devinName": "Devin CLI",
     "devinDesc": "Devin hesabınızla, izin verilen klasörlerde kod yazar ve değiştirir.",
+    "devinWindows": "Devin henüz Windows'ta çalışmıyor: burada CLI'ı her hesabın oturumunu ayrı tutamıyor. Ajanlar Devin ile bir Mac ya da Linux bilgisayarda düşünür.",
     "found": "Bulundu",
     "notFound": "Bulunamadı",
     "loggedOut": "Giriş yapılmadı",

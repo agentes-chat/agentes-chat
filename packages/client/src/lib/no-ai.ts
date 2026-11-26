@@ -784,6 +784,9 @@ export function gateLine(
       rechecks,
     };
   }
+  // The Devin CLI's pin has no Windows build (ADR 0253): its line says why, and the way out.
+  if (gate.reason === "system" && kind === "devin" && gate.os === "windows")
+    return { text: t("brain.reasons.systemDevin", { computer }), rechecks };
   return { text: t(`brain.reasons.${gate.reason}`, { computer, program }), rechecks };
 }
 

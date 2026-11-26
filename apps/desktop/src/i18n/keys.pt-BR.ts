@@ -550,6 +550,8 @@ export const desktopPtBR = {
     antigravityDesc: "Escreve e muda código nas pastas liberadas, com a sua conta do Gemini.",
     devinName: "Devin CLI",
     devinDesc: "Escreve e muda código nas pastas liberadas, com a sua conta do Devin.",
+    devinWindows:
+      "O Devin ainda não roda no Windows: aqui a CLI dele não consegue manter separado o login de cada conta. Os agentes pensam com o Devin num computador Mac ou Linux.",
     found: "Encontrado",
     notFound: "Não encontrado",
     loggedOut: "Sem login",

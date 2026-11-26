@@ -12250,6 +12250,7 @@
       "home_only": "{{computer}} の {{program}} は root 専用にインストールされていて、エージェントからは届きません。",
       "not_reported": "{{computer}}は、入っているプログラムをまだ確認しています。終わりしだい自動で切り替わります。",
       "system": "{{program}}は{{computer}}のシステムではまだ動きません。",
+      "systemDevin": "{{computer}}はWindowsで動いていますが、DevinはまだWindowsでは動きません。WindowsではDevinのCLIがアカウントごとのサインインを分けて保てないためです。DevinはMacかLinuxのコンピューターで使うか、別のAIを選んでください。",
       "windows_sandbox": "{{computer}}のWindowsでは{{program}}のコマンドを隔離できません。代わりにClaudeかAPIキーを選ぶか、そのコンピューターを最新の更新プログラムを適用したWindows 11 24H2以降に更新してください。",
       "no_computerCloud": "{{computer}}の準備ができ次第使えます。"
     },

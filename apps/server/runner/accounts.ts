@@ -1966,7 +1966,10 @@ export class AccountManager {
     }
     // ADR 0253: an account's folder as the CLI's home is read on Linux and macOS only.
     if (kind === "devin" && (this.opts.platform ?? process.platform) === "win32") {
-      throw new RunnerError("bad_request", "Devin accounts don't sign in on Windows computers yet.");
+      throw new RunnerError(
+        "bad_request",
+        "Devin accounts don't sign in on Windows computers yet: there the Devin CLI can't keep each account's sign-in apart.",
+      );
     }
     if (this.logins.get(loginId)?.state === "waiting") {
       throw new RunnerError("bad_request", "This sign-in already exists");
@@ -2008,8 +2011,8 @@ export class AccountManager {
         throw new RunnerError("bad_request", "This computer already has too many accounts. Remove one first.");
       }
     }
-    // The CLI it signs in with, before anything is written: the runner may bring the Antigravity CLI itself.
-    if (kind === "antigravity") await this.opts.prepare?.(kind);
+    // The CLI it signs in with, before anything is written: the runner may bring the Antigravity or Devin CLI itself.
+    if (kind === "antigravity" || kind === "devin") await this.opts.prepare?.(kind);
     // Claude Code and the Antigravity CLI: the key the browser seals the pasted code (or a plan's key) to; the private
     // half stays in memory.
     const pair =

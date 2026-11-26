@@ -372,7 +372,14 @@ export class CodexBrain implements Brain {
     }
     // Its runner would refuse every turn there in its own words; refused here, it reads in the person's language.
     if (!brainRunsOn(this.kind, status.os)) {
-      yield { type: "error", code: SYSTEM_REFUSED, message: `${name} doesn't run on this computer's system yet.` };
+      // The Devin CLI's pin has no Windows build (ADR 0253): there it can't keep each account's sign-in apart.
+      const why =
+        this.kind === "devin" && status.os === "windows" ? " There it can't keep each account's sign-in apart." : "";
+      yield {
+        type: "error",
+        code: SYSTEM_REFUSED,
+        message: `${name} doesn't run on this computer's system yet.${why}`,
+      };
       return;
     }
     // Its runner fetches the pinned CLI itself (ADR 0228 §6): not there yet is no reason to refuse the turn.

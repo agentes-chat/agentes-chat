@@ -504,6 +504,7 @@
     "antigravityDesc": "Menulis dan mengubah kode di folder yang diizinkan, dengan akun Gemini-mu.",
     "devinName": "Devin CLI",
     "devinDesc": "Menulis dan mengubah kode di folder yang diizinkan, dengan akun Devin-mu.",
+    "devinWindows": "Devin belum berjalan di Windows: di sini CLI-nya tidak bisa memisahkan login setiap akun. Agen berpikir dengan Devin di komputer Mac atau Linux.",
     "found": "Ditemukan",
     "notFound": "Tidak ditemukan",
     "loggedOut": "Belum masuk",

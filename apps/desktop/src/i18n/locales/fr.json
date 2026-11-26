@@ -512,6 +512,7 @@
     "antigravityDesc": "Écrit et modifie du code dans les dossiers autorisés, avec votre compte Gemini.",
     "devinName": "Devin CLI",
     "devinDesc": "Écrit et modifie du code dans les dossiers autorisés, avec votre compte Devin.",
+    "devinWindows": "Devin ne fonctionne pas encore sous Windows : ici, sa CLI ne sépare pas la connexion de chaque compte. Les agents pensent avec Devin sur un ordinateur Mac ou Linux.",
     "found": "Trouvé",
     "notFound": "Introuvable",
     "loggedOut": "Non connecté",
