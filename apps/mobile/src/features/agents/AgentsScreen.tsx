@@ -45,7 +45,6 @@ import {
   LIST_PREVIEW,
   LineIcon,
   ListRow,
-  PixelOrbit,
   SectionHeader,
   SkeletonList,
   SkeletonOver,
@@ -71,6 +70,7 @@ import { useColors, useDirectory, useNow, useOrgId, usePullRefresh } from "../sh
 import { agentLook } from "../shared/logic";
 import { successHaptic, Tile } from "../shared/parts";
 import { useWaitingApprovals, useWorkingNow } from "../shared/queries";
+import { StatusBadge } from "../shared/StatusBadge";
 import { useTabHeader } from "../shared/tabHeader";
 import { channelNameIn, useChannelNames, usePresenceOf } from "../status/hooks";
 import { useTasksToday } from "../task-manager/hooks";
@@ -664,35 +664,31 @@ const AgentRow = memo(function AgentRow({
             : a.name;
   const sub = (
     <Animated.View key={state} entering={reduced ? undefined : STATE_IN} style={styles.state}>
+      {/* Its status as a badge, as the web's lists draw it; what follows (its time, what it asks) is plain text. */}
       {state === "asks" ? (
-        <Text variant="small" tone="ink2" numberOfLines={1} style={[LIST_PREVIEW, styles.shrink]}>
-          <Text variant="small" style={[LIST_PREVIEW, styles.medium, { color: c.amber }]}>
-            {t("mobile.agents.state.waitsYou")}
+        <>
+          <StatusBadge text={t("mobile.agents.state.waitsYou")} tone="you" />
+          <Text variant="small" tone="ink2" numberOfLines={1} style={[LIST_PREVIEW, styles.shrink]}>
+            {asks}
           </Text>
-          {` · ${asks}`}
-        </Text>
+        </>
       ) : state === "works" ? (
         <>
-          <PixelOrbit color={agentLook(a).color} size={16} />
-          <Text variant="small" tone="ink2" numberOfLines={1} style={[LIST_PREVIEW, styles.shrink]}>
-            {work?.tone === "working" || !w ? work?.text : (statusText ?? workTitle(t, w))}
-          </Text>
+          <StatusBadge text={t("agentWork.working")} tone="working" color={agentLook(a).color} />
+          {(work?.tone === "working" || !w ? work?.time : (statusText ?? workTitle(t, w))) ? (
+            <Text variant="small" tone="faint" numberOfLines={1} style={[LIST_PREVIEW, styles.shrink]}>
+              {work?.tone === "working" || !w ? work?.time : (statusText ?? workTitle(t, w))}
+            </Text>
+          ) : null}
         </>
       ) : state === "waits" && waits ? (
         <>
-          {waits.tone === "neutral" ? (
-            <LineIcon name="clock" size={15} color={c.faint} variant="small" text={LIST_PREVIEW} />
-          ) : null}
-          <Text variant="small" tone="muted" numberOfLines={1} style={[LIST_PREVIEW, styles.shrink]}>
-            <Text
-              variant="small"
-              tone="muted"
-              style={[LIST_PREVIEW, styles.medium, waits.tone === "you" ? { color: c.amber } : null]}
-            >
-              {waits.text}
+          <StatusBadge text={waits.text} tone={waits.tone} />
+          {waits.time ? (
+            <Text variant="small" tone="faint" numberOfLines={1} style={[LIST_PREVIEW, styles.shrink]}>
+              {waits.time}
             </Text>
-            {waits.time ? ` · ${waits.time}` : ""}
-          </Text>
+          ) : null}
         </>
       ) : state === "routine" && routine ? (
         <Text variant="small" tone="faint" numberOfLines={1} style={[LIST_PREVIEW, styles.shrink]}>

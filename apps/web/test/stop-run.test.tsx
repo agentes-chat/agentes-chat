@@ -44,7 +44,7 @@ describe("Parar is immediate", () => {
     const tail = document.querySelector(".working-tail") as HTMLElement;
     const orbit = tail.querySelector(".ac-orbit") as HTMLElement;
     expect(orbit.querySelector(".ac-avatar--agent")).not.toBeNull();
-    expect(orbit.style.getPropertyValue("--orbit")).not.toBe("");
+    expect(orbit.style.getPropertyValue("--orbit-l1")).not.toBe("");
     expect(tail.querySelector(".ac-typing__text")?.textContent).toBe("Ada pensando…");
     // It is at the end already: nothing to go back to.
     expect(within(tail).queryByRole("button", { name: "Ver" })).toBeNull();

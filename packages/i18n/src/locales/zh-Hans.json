@@ -2080,7 +2080,7 @@
       },
       "computers": {
         "title": "电脑",
-        "help": "有电脑加入、就绪或无响应时"
+        "help": "有电脑加入或就绪时"
       },
       "reactions": {
         "title": "表情回应",
@@ -7756,11 +7756,12 @@
     "noOrgBack": "返回你的工作区",
     "crashTitle": "出了点问题",
     "crashText": "请重新加载页面以继续。",
-    "crashCode": "如需求助，请提供代码 {{id}}。",
+    "supportCode": "支持代码",
     "unreachableTitle": "无法连接 agentes.chat",
     "unreachableText": "它可能正在重启。恢复后此页面会自动打开。",
     "offlineTitle": "你已离线",
     "offlineText": "恢复联网后此页面会自动打开。",
+    "waitingConnection": "正在等待连接恢复",
     "unknownHostTitle": "此地址尚未设置",
     "unknownHostText": "如果刚刚完成连接，请过几分钟再试。",
     "unknownHostTab": "地址未设置 · agentes.chat"
@@ -18254,9 +18255,9 @@
   },
   "work": {
     "handed": {
-      "lead": "已移交给 <0/>{{name}}",
-      "working": "进行中",
-      "done": "用时 {{duration}} 完成",
+      "lead": "已移交给 <0>{{name}}</0>",
+      "working": "工作中",
+      "ready": "已完成",
       "waitingYou": "等待你的回答",
       "waiting": "等待回答",
       "waitingApprovalYou": "等待你的批准",
@@ -18394,6 +18395,8 @@
       "doing": "{{name}} {{doing}}",
       "yourApproval": "{{name}} 正在等你批准",
       "yourAnswer": "{{name}} 正在等你回答",
+      "helping": "{{to}} 正在协助 {{from}}",
+      "helping_female": "{{to}} 正在协助 {{from}}",
       "done": "{{to}} 已完成。{{from}} 正在撰写",
       "notDone": "{{to}} 没有完成。{{from}} 正在撰写",
       "handedOff": "{{to}} 正在处理 {{from}} 交给它的工作"

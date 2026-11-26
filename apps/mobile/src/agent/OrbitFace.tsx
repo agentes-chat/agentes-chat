@@ -1,160 +1,216 @@
-import { ORBIT_RINGS, ORBIT_SPAN, orbitColors } from "@agenteschat/ui/agent/orbit";
-import type { ReactNode } from "react";
+import { ORBIT_LIGHT, ORBIT_RINGS, ORBIT_SPAN, orbitColors, orbitFade, orbitTaper } from "@agenteschat/ui/agent/orbit";
+import { Canvas, Circle, Group, Oval, Path, Skia } from "@shopify/react-native-skia";
+import { type ReactNode, useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
-import Animated, { type CSSKeyframesRule, css } from "react-native-reanimated";
-import Svg, { G, Path } from "react-native-svg";
-import { useReducedMotion } from "@/ui/theme";
+import { type SharedValue, useDerivedValue } from "react-native-reanimated";
+import { useReducedMotion, useTheme } from "@/ui/theme";
+import { useDrawingClock } from "../sky/clock";
 import { useLivePaused } from "./live";
-import { loopStyle } from "./loop";
 
-/** One turn each way: the dot rides its ring, and turns back as much so it stays round. */
-const TURN: CSSKeyframesRule = css.keyframes({
-  from: { transform: [{ rotate: "0deg" }] },
-  to: { transform: [{ rotate: "360deg" }] },
-});
-const UNTURN: CSSKeyframesRule = css.keyframes({
-  from: { transform: [{ rotate: "0deg" }] },
-  to: { transform: [{ rotate: "-360deg" }] },
-});
+type Ring = (typeof ORBIT_RINGS)[number];
+type Colors = { rings: readonly [string, string]; head: string };
 
-/** The dot's side, in points, whatever the glyph's size. */
-const DOT = 3.5;
+/** Points along each piece of the light: enough for a smooth arc at a face's size. */
+const PIECE_POINTS = 4;
+const PIECE = (ORBIT_LIGHT.arc / ORBIT_LIGHT.steps) * (Math.PI / 180);
 
 /**
- * One half of the rings (the far one behind the glyph, the near one over it): each ring's arc, and its dot where the
- * dot is on that half. A ring is a circle squashed and tilted, so a plain turn moves its dot along the ellipse; the
- * half is the squashed box's top or bottom, clipped.
+ * Where the light's head is on its ring (radians, in the ring's own frame) at `ms`: its start, then a turn every
+ * `turn` seconds, the other way round for a ring that turns back.
  */
-function Half({
+function headAngle(ring: Ring, phase: number, ms: number): number {
+  "worklet";
+  const dir = ring.back ? -1 : 1;
+  return (ring.start * Math.PI) / 180 + dir * 2 * Math.PI * ((ms / 1000 + phase) / ring.turn);
+}
+
+/**
+ * One piece of the light on one half of its ring (the far half runs over the top, y < 0): the arc from `step` pieces
+ * behind the head to one piece further, only where it is on that half.
+ */
+function LightPiece({
+  clock,
+  ring,
+  rx,
+  phase,
+  step,
+  back,
+  color,
+  width,
+}: {
+  clock: SharedValue<number>;
+  ring: Ring;
+  rx: number;
+  phase: number;
+  step: number;
+  back: boolean;
+  color: string;
+  width: number;
+}) {
+  const ry = rx * ring.flat;
+  const path = useDerivedValue(() => {
+    // Paths are immutable in this Skia: made with a builder.
+    const p = Skia.PathBuilder.Make();
+    const dir = ring.back ? -1 : 1;
+    const head = headAngle(ring, phase, clock.value);
+    let open = false;
+    for (let i = 0; i <= PIECE_POINTS; i++) {
+      const th = head - dir * (step + i / PIECE_POINTS) * PIECE;
+      if (Math.sin(th) < 0 !== back) {
+        open = false;
+        continue;
+      }
+      const x = rx * Math.cos(th);
+      const y = ry * Math.sin(th);
+      if (open) p.lineTo(x, y);
+      else p.moveTo(x, y);
+      open = true;
+    }
+    return p.build();
+  });
+  return (
+    <Path
+      path={path}
+      style="stroke"
+      strokeWidth={width * orbitTaper(step)}
+      strokeCap={step === 0 ? "round" : "butt"}
+      color={color}
+      opacity={orbitFade(step)}
+    />
+  );
+}
+
+/** The dot at the light's head, drawn on the half it is on (none on the other). */
+function Head({
+  clock,
+  ring,
+  rx,
+  phase,
+  back,
+  r,
+  color,
+}: {
+  clock: SharedValue<number>;
+  ring: Ring;
+  rx: number;
+  phase: number;
+  back: boolean;
+  r: number;
+  color: string;
+}) {
+  const ry = rx * ring.flat;
+  const cx = useDerivedValue(() => rx * Math.cos(headAngle(ring, phase, clock.value)));
+  const cy = useDerivedValue(() => ry * Math.sin(headAngle(ring, phase, clock.value)));
+  const radius = useDerivedValue(() => (Math.sin(headAngle(ring, phase, clock.value)) < 0 === back ? r : 0));
+  return <Circle cx={cx} cy={cy} r={radius} color={color} opacity={back ? 0.7 : 1} />;
+}
+
+/**
+ * One layer of the orbit: the far one (behind the face) holds both rings whole and the light on their far halves; the
+ * near one only the light on their near halves, so the light passes over the face while no line ever crosses it.
+ */
+function Layer({
   half,
   size,
+  clock,
+  phases,
   colors,
-  turning,
-  paused,
+  dark,
 }: {
   half: "back" | "front";
   size: number;
-  colors: readonly string[];
-  turning: boolean;
-  paused: boolean;
+  clock: SharedValue<number>;
+  phases: readonly number[];
+  colors: Colors;
+  dark: boolean;
 }) {
   const box = size * ORBIT_SPAN;
   const c = box / 2;
   const back = half === "back";
+  const width = size > 36 ? 2.6 : 2.2;
   return (
-    <View
+    <Canvas
       pointerEvents="none"
       style={[styles.layer, { width: box, height: box, left: -(box - size) / 2, top: -(box - size) / 2 }]}
     >
-      <Svg width={box} height={box}>
-        {ORBIT_RINGS.map((ring, i) => {
-          const rx = (ring.r * size) / 2;
-          const ry = rx * ring.flat;
-          // The far half runs over the top (y < 0), the near one under it.
-          const d = back ? `M ${-rx} 0 A ${rx} ${ry} 0 0 1 ${rx} 0` : `M ${rx} 0 A ${rx} ${ry} 0 0 1 ${-rx} 0`;
-          return (
-            // biome-ignore lint/suspicious/noArrayIndexKey: a fixed list of rings
-            <G key={i} transform={`translate(${c} ${c}) rotate(${ring.tilt})`}>
-              <Path d={d} stroke={colors[i]} strokeWidth={1.25} fill="none" opacity={back ? 0.28 : 0.5} />
-            </G>
-          );
-        })}
-      </Svg>
       {ORBIT_RINGS.map((ring, i) => {
         const rx = (ring.r * size) / 2;
-        const turn = ring.turn * 1000;
-        // Where its dot is now, as a negative delay into its turn; still, it rests at its start.
-        const delay = -(ring.start / 360) * turn;
-        const spin = turning
-          ? loopStyle(ring.back ? UNTURN : TURN, turn, "linear", delay, paused)
-          : { transform: [{ rotate: `${ring.back ? -ring.start : ring.start}deg` }] };
-        const unspin = turning
-          ? loopStyle(ring.back ? TURN : UNTURN, turn, "linear", delay, paused)
-          : { transform: [{ rotate: `${ring.back ? ring.start : -ring.start}deg` }] };
+        const ringColor = colors.rings[i] ?? colors.head;
         return (
-          <View
+          <Group
             // biome-ignore lint/suspicious/noArrayIndexKey: a fixed list of rings
             key={i}
-            style={[
-              styles.ring,
-              {
-                left: c - rx,
-                top: c - rx,
-                width: rx * 2,
-                height: rx * 2,
-                transform: [{ rotate: `${ring.tilt}deg` }, { scaleY: ring.flat }],
-              },
-            ]}
+            transform={[{ translateX: c }, { translateY: c }, { rotate: (ring.tilt * Math.PI) / 180 }]}
           >
-            {/* The half's window: the top or the bottom of the squashed circle, a dot's width past it. */}
-            <View
-              style={[
-                styles.clip,
-                {
-                  left: -DOT,
-                  width: rx * 2 + DOT * 2,
-                  top: back ? -DOT / ring.flat : rx,
-                  height: rx + DOT / ring.flat,
-                },
-              ]}
-            >
-              <Animated.View
-                style={[
-                  styles.ring,
-                  { left: DOT, top: back ? DOT / ring.flat : -rx, width: rx * 2, height: rx * 2 },
-                  spin,
-                ]}
-              >
-                <Animated.View
-                  style={[
-                    styles.dot,
-                    {
-                      left: rx * 2 - DOT / 2,
-                      top: rx - DOT / ring.flat / 2,
-                      width: DOT,
-                      height: DOT / ring.flat,
-                      borderRadius: DOT,
-                      backgroundColor: colors[i],
-                    },
-                    unspin,
-                  ]}
-                />
-              </Animated.View>
-            </View>
-          </View>
+            {back && (
+              <Oval
+                x={-rx}
+                y={-rx * ring.flat}
+                width={rx * 2}
+                height={rx * 2 * ring.flat}
+                style="stroke"
+                strokeWidth={size > 36 ? 1.5 : 1.25}
+                color={ringColor}
+                opacity={dark ? 0.55 : 0.45}
+              />
+            )}
+            {Array.from({ length: ORBIT_LIGHT.steps }, (_, step) => (
+              <LightPiece
+                // biome-ignore lint/suspicious/noArrayIndexKey: the light's fixed pieces, head first
+                key={step}
+                clock={clock}
+                ring={ring}
+                rx={rx}
+                phase={phases[i] ?? 0}
+                step={step}
+                back={back}
+                color={step === 0 ? colors.head : ringColor}
+                width={width}
+              />
+            ))}
+            <Head
+              clock={clock}
+              ring={ring}
+              rx={rx}
+              phase={phases[i] ?? 0}
+              back={back}
+              r={(ORBIT_LIGHT.dot * size) / 100}
+              color={colors.head}
+            />
+          </Group>
         );
       })}
-    </View>
+    </Canvas>
   );
 }
 
 /**
- * An agent at work (the web's `OrbitGlyph`): its face with two or three tilted rings orbiting it, in its colour and two
- * neighbours of it, each with a dot riding it, the far half of each ring behind the face and the near half in front.
- * It turns on the UI thread (Reanimated CSS animations, transforms only); it holds still with Reduce Motion and stops
- * where it is on a screen that isn't showing (`LivePause`). The rings take no room: they reach past the face.
+ * An agent at work (the web's `OrbitGlyph`): its face with two tilted rings around it, in its own colours. The rings
+ * stay behind the face; on each a light runs round, a fading arc with a small dot at its head, over the face on the
+ * near half and behind it on the far one. Drawn by Skia on the UI thread from a clock that runs only while it moves:
+ * still with Reduce Motion and on a screen that isn't showing (`LivePause`). Each face starts at its own point of the
+ * turn. The rings take no room: they reach past the face.
  */
 export function OrbitFace({ color, size, children }: { color: string; size: number; children: ReactNode }) {
   const reduced = useReducedMotion();
   const paused = useLivePaused();
-  const colors = orbitColors(color);
-  const turning = !reduced;
+  const dark = useTheme().scheme === "dark";
+  const colors = useMemo(() => orbitColors(color, dark), [color, dark]);
+  const [phases] = useState(() => ORBIT_RINGS.map((ring) => Math.random() * ring.turn));
+  const clock = useDrawingClock(!reduced && !paused);
   return (
     <View
       style={{ width: size, height: size }}
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
     >
-      <Half half="back" size={size} colors={colors} turning={turning} paused={paused} />
+      <Layer half="back" size={size} clock={clock} phases={phases} colors={colors} dark={dark} />
       {children}
-      <Half half="front" size={size} colors={colors} turning={turning} paused={paused} />
+      <Layer half="front" size={size} clock={clock} phases={phases} colors={colors} dark={dark} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   layer: { position: "absolute" },
-  ring: { position: "absolute" },
-  clip: { position: "absolute", overflow: "hidden" },
-  dot: { position: "absolute" },
 });

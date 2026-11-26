@@ -5313,7 +5313,7 @@
     "value": "Computers"
   },
   "noticePrefs.category.computers.help": {
-    "value": "A computer joined, is ready, or stopped answering"
+    "value": "A computer joined or is ready"
   },
   "noticePrefs.category.reactions.title": {
     "value": "Reactions"
@@ -19647,8 +19647,8 @@
   "empty.crashText": {
     "value": "Reload the page to carry on."
   },
-  "empty.crashCode": {
-    "value": "If you ask for help, give the code {{id}}."
+  "empty.supportCode": {
+    "value": "Code for support"
   },
   "empty.unreachableTitle": {
     "value": "Can't reach agentes.chat"
@@ -19661,6 +19661,9 @@
   },
   "empty.offlineText": {
     "value": "This page opens by itself when you're back online."
+  },
+  "empty.waitingConnection": {
+    "value": "Waiting for the connection to come back"
   },
   "empty.unknownHostTitle": {
     "value": "This address isn't set up yet"
@@ -46270,13 +46273,13 @@
     "value": "tomorrow {{time}}"
   },
   "work.handed.lead": {
-    "value": "Handed to <0/>{{name}}"
+    "value": "Handed to <0>{{name}}</0>"
   },
   "work.handed.working": {
-    "value": "working on it"
+    "value": "working"
   },
-  "work.handed.done": {
-    "value": "done in {{duration}}"
+  "work.handed.ready": {
+    "value": "done"
   },
   "work.handed.waitingYou": {
     "value": "waiting for your answer"
@@ -46307,6 +46310,9 @@
   },
   "work.handed.step": {
     "value": "step {{current}} of {{total}}"
+  },
+  "work.handed.done": {
+    "value": "done in {{duration}}"
   },
   "work.duration.minutes": {
     "value": {
@@ -46610,6 +46616,9 @@
   },
   "chat.consult.yourAnswer": {
     "value": "{{name}} is waiting for your answer"
+  },
+  "chat.consult.helping": {
+    "value": "{{to}} helping {{from}}"
   },
   "chat.consult.done": {
     "value": "{{to}} is done. {{from}} is writing"

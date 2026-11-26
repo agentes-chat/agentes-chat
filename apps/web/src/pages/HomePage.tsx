@@ -310,7 +310,9 @@ function AskAgent({ agents, composer }: { agents: Agent[]; composer: RefObject<H
             }))}
             renderValue={(o) => (
               <span className="home-ask__agent">
-                <AgentAvatar agentId={o.value} name={o.label} size="xs" />
+                {/* In its tile, as in the list it opens: a bare body's accessory reaches above its box, which the
+                    chosen value's line cuts. */}
+                <AgentAvatar agentId={o.value} name={o.label} size="xs" framed />
                 {o.label}
               </span>
             )}

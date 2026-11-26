@@ -92,7 +92,7 @@ import {
   MenuSub,
   modKey,
   OPEN_LAYER,
-  PixelSpinner,
+  OrbitGlyph,
   Popover,
   PresenceBadge,
   ProviderLogo,
@@ -137,6 +137,7 @@ import type { MenuEntry } from "@/lib/context-menu";
 import { onPhoneAsk, takePhoneAsk, thisMac } from "@/lib/desktop";
 import { entityMenu } from "@/lib/entity-menu";
 import { lazyDialog } from "@/lib/lazy-dialog";
+import { lookOf } from "@/lib/look";
 import { navigateAway } from "@/lib/navigate";
 import { useOpenParam } from "@/lib/open-param";
 import { markOpen } from "@/lib/perf";
@@ -1753,9 +1754,9 @@ function AgentRow({
   // Listed for who manages it though it doesn't talk to them (its DM opens, `opensDm`): the line says who it talks to.
   const locked = !canTalk(a);
   const names = locked ? audienceNames(a, (id) => dir.memberById.get(id)?.name, dir.roleName) : [];
-  // Working: the pixel orbit in its color beside its name (what it is on in its label and the row's title), so the
-  // row never changes height.
-  const working = busy || shown?.line?.kind === "work";
+  // Working: its face wears the orbit (what it is on is in the row's title), so the row never changes height; the
+  // orbit says it, so the face's "working" badge steps aside.
+  const working = busy || shown?.line?.kind === "work" || shown?.presence === "working";
   const now = busy
     ? here
       ? t("sidebarAgents.workingIn", { channel: here })
@@ -1776,18 +1777,30 @@ function AgentRow({
           ? t("sidebarAgents.talksOnly", { name: names[0] })
           : chip
       : a.role);
-  // Its title: who it is over what it does, whole ("Ajudando a Ada · #vendas · 22 min", "Retorno às 00:32 · #vendas").
+  // Its title: who it is over what it does, whole ("Working · helping Ada · #sales · 22 min", "Back at 00:32 · #sales"):
+  // the line under the name only says the status.
   const place =
     (work?.forAgentId || work?.state === "later") && work.channelId
       ? (work.channelName ?? channelName(work.channelId))
       : undefined;
   const doingTitle = doing
-    ? [upperFirst(doing.text, i18n.language), place && `#${place}`, doing.time].filter(Boolean).join(" · ")
+    ? [upperFirst(doing.text, i18n.language), doing.place, place && `#${place}`, doing.time].filter(Boolean).join(" · ")
     : null;
   const title = doingTitle
     ? `${[a.name, a.role].filter(Boolean).join(" · ")}\n${doingTitle}`
     : [a.name, a.role, now ?? word, line?.text].filter(Boolean).join(" · ");
   const roleTag = !locked && !out;
+  const face = (
+    <AgentAvatar
+      agentId={a.id}
+      name={a.name}
+      size="sm"
+      presence={working && shown?.presence === "working" ? null : (shown?.presence ?? null)}
+      presenceLabel={word ?? undefined}
+      asleep={isOutOfOffice(shown?.line)}
+      {...(waitingFor ? { state: "idle" as const, expression: "closed" as const } : {})}
+    />
+  );
   return (
     <div
       className="sidebar__row"
@@ -1813,29 +1826,15 @@ function AgentRow({
       >
         {busy && <AgentTrail color={color} />}
         {busy && <AgentGlow color={color} />}
-        <AgentAvatar
-          agentId={a.id}
-          name={a.name}
-          size="sm"
-          presence={shown?.presence ?? null}
-          presenceLabel={word ?? undefined}
-          asleep={isOutOfOffice(shown?.line)}
-          {...(waitingFor ? { state: "idle" as const, expression: "closed" as const } : {})}
-        />
+        {working ? <OrbitGlyph appearance={lookOf(a)}>{face}</OrbitGlyph> : face}
         <span className="sidebar__item-text">
-          <span className={doing || under ? "sidebar__item-label ac-captop" : "sidebar__item-label"}>
-            {a.name}
-            {working && (
-              <PixelSpinner
-                size={14}
-                color={color}
-                label={state === "idle" && doingTitle ? doingTitle : now}
-                className="sidebar__item-spin"
-              />
-            )}
-          </span>
+          <span className={doing || under ? "sidebar__item-label ac-captop" : "sidebar__item-label"}>{a.name}</span>
+          {/* What it is on, for screen readers, after its name (the orbit before it says it to the eye). */}
+          {working && (state === "idle" && doingTitle ? doingTitle : now) && (
+            <span className="ac-visually-hidden">{state === "idle" && doingTitle ? doingTitle : now}</span>
+          )}
           {doing ? (
-            <AgentWorkLine line={doing} className="sidebar__item-role" />
+            <AgentWorkLine line={doing} tone={agentGradient(color)[1]} className="sidebar__item-role" />
           ) : (
             under && <span className={cx("sidebar__item-role", roleTag && "ac-tag")}>{under}</span>
           )}

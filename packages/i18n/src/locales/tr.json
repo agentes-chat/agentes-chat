@@ -2153,7 +2153,7 @@
       },
       "computers": {
         "title": "Bilgisayarlar",
-        "help": "Bir bilgisayar katıldı, hazır ya da yanıt vermiyor"
+        "help": "Bir bilgisayar katıldı ya da hazır"
       },
       "reactions": {
         "title": "Tepkiler",
@@ -7989,11 +7989,12 @@
     "noOrgBack": "Çalışma alanlarınıza dönün",
     "crashTitle": "Bir şeyler ters gitti",
     "crashText": "Devam etmek için sayfayı yeniden yükleyin.",
-    "crashCode": "Yardım isterseniz {{id}} kodunu verin.",
+    "supportCode": "Destek kodu",
     "unreachableTitle": "agentes.chat'e ulaşılamıyor",
     "unreachableText": "Yeniden başlatılıyor olabilir. Geri döner dönmez bu sayfa kendiliğinden açılır.",
     "offlineTitle": "Çevrimdışısınız",
     "offlineText": "Yeniden çevrimiçi olduğunuzda bu sayfa kendiliğinden açılır.",
+    "waitingConnection": "Bağlantının geri gelmesi bekleniyor",
     "unknownHostTitle": "Bu adres henüz ayarlanmadı",
     "unknownHostText": "Yeni bağlandıysa birkaç dakika sonra tekrar deneyin.",
     "unknownHostTab": "Adres ayarlanmadı · agentes.chat"
@@ -18762,9 +18763,9 @@
   },
   "work": {
     "handed": {
-      "lead": "Devredildi: <0/>{{name}}",
-      "working": "üzerinde çalışıyor",
-      "done": "{{duration}} içinde bitti",
+      "lead": "Devredildi: <0>{{name}}</0>",
+      "working": "çalışıyor",
+      "ready": "bitti",
       "waitingYou": "yanıtını bekliyor",
       "waiting": "bir yanıt bekliyor",
       "waitingApprovalYou": "onayını bekliyor",
@@ -18906,6 +18907,7 @@
       "doing": "{{name}} {{doing}}",
       "yourApproval": "{{name}} onayınızı bekliyor",
       "yourAnswer": "{{name}} yanıtınızı bekliyor",
+      "helping": "{{to}}, {{from}} ajanına yardım ediyor",
       "done": "{{to}} bitirdi. {{from}} yazıyor",
       "notDone": "{{to}} bitiremedi. {{from}} yazıyor",
       "handedOff": "{{to}}, {{from}} ajanının devrettiği iş üzerinde çalışıyor"

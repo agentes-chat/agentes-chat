@@ -2306,7 +2306,7 @@ export const en = {
       threads: { title: "Threads you follow", help: "Replies in threads you wrote in or follow" },
       tasks: { title: "Tasks", help: "Tasks for you, comments and when one changes stage" },
       routines: { title: "Routines and missions", help: "When they stop, fail or wait for their computer" },
-      computers: { title: "Computers", help: "A computer joined, is ready, or stopped answering" },
+      computers: { title: "Computers", help: "A computer joined or is ready" },
       reactions: { title: "Reactions", help: "When someone reacts to a message of yours" },
     },
   },
@@ -8643,11 +8643,14 @@ export const en = {
     noOrgBack: "Back to your workspaces",
     crashTitle: "Something went wrong",
     crashText: "Reload the page to carry on.",
-    crashCode: "If you ask for help, give the code {{id}}.",
+    /** The report's short code goes after it, on a line of its own with a copy button (ErrorScreen). */
+    supportCode: "Code for support",
     unreachableTitle: "Can't reach agentes.chat",
     unreachableText: "It may be restarting. This page opens by itself as soon as it's back.",
     offlineTitle: "You're offline",
     offlineText: "This page opens by itself when you're back online.",
+    /** Under the way out of the two screens that open again by themselves. */
+    waitingConnection: "Waiting for the connection to come back",
     /** The page on a hostname that reaches the server but isn't set up there. */
     unknownHostTitle: "This address isn't set up yet",
     unknownHostText: "If it was just connected, try again in a few minutes.",
@@ -19488,9 +19491,10 @@ export const en = {
   work: {
     /** A handed work's line under the reply that handed it: "Handed to [face] Atlas · working on it · step 3 of 5 · 2 min". */
     handed: {
-      lead: "Handed to <0/>{{name}}",
-      working: "working on it",
-      done: "done in {{duration}}",
+      lead: "Handed to <0>{{name}}</0>",
+      working: "working",
+      /** The state's badge once it is over; its time comes after it ("Done · 1 min"). */
+      ready: "done",
       waitingYou: "waiting for your answer",
       waiting: "waiting for an answer",
       waitingApprovalYou: "waiting for your approval",
@@ -19656,6 +19660,8 @@ export const en = {
       doing: "{{name}} {{doing}}",
       yourApproval: "{{name}} is waiting for your approval",
       yourAnswer: "{{name}} is waiting for your answer",
+      /** Work handed off, at work: the agent it went to and whoever handed it, as the reply that comes after says it. */
+      helping: "{{to}} helping {{from}}",
       /** The work handed off came back: whoever handed it writes now. */
       done: "{{to}} is done. {{from}} is writing",
       notDone: "{{to}} didn't finish. {{from}} is writing",

@@ -1,6 +1,6 @@
 import type { Agent, Channel, Member } from "@agenteschat/client";
 import { agentStateIn, useChannelName, useRoles } from "@agenteschat/client";
-import { WORK_TICK_MS, workLine, workLineText } from "@agenteschat/client/lib/agent-work";
+import { WORK_TICK_MS, workLine } from "@agenteschat/client/lib/agent-work";
 import { ErrorBoundary } from "@agenteschat/client/lib/error-boundary";
 import { relativeTime } from "@agenteschat/client/lib/format";
 import { memberGroups } from "@agenteschat/client/lib/member-groups";
@@ -11,7 +11,17 @@ import {
   agentWhyKey,
   isOutOfOffice,
 } from "@agenteschat/client/lib/presence";
-import { Avatar, Button, Icon, matchesWords, OPEN_LAYER, PixelSpinner, RoleMark, SearchField } from "@agenteschat/ui";
+import {
+  Avatar,
+  agentGradient,
+  Button,
+  Icon,
+  matchesWords,
+  OPEN_LAYER,
+  OrbitGlyph,
+  RoleMark,
+  SearchField,
+} from "@agenteschat/ui";
 import { type KeyboardEvent, type TouchEvent, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
@@ -39,6 +49,7 @@ import {
   usePresences,
   usePresencesLoaded,
 } from "@/hooks/usePresence";
+import { lookOf } from "@/lib/look";
 import { useStreams } from "@/realtime/context";
 import "./members.css";
 
@@ -383,15 +394,29 @@ function AgentRow({
   const line = shown?.line ? agentStatusShort(t, shown.line, i18n.language) : null;
   const full = agentLine(t, shown?.line ?? null, i18n.language)?.text;
   const under = agentMemberLine(now, line, shown ? agentWhyKey(shown.presence, shown.noAi) : null);
+  // Its work in words, where it is included ("Working · here · 3 min"): the line under the name only says the status.
+  const workWords = now ? [now.text, now.place, now.time].filter(Boolean).join(" · ") : null;
   // What it does here now (a run this tab hears), else its work's words: the orbit's label and the row's title.
   const doing =
     state !== "idle"
       ? t(`channel.agentState.${state}`)
       : work?.state === "working"
-        ? (now && workLineText(now)) || agentFaceWord(t, "working")
+        ? workWords || agentFaceWord(t, "working")
         : null;
   // Under the name, one line of one height: `agentMemberLine`, else its role (the agent's fixed label) as a tag, else its
-  // presence. Working here is the pixel orbit beside its name, so the row never jumps.
+  // presence. Working, its face wears the orbit, so the row never jumps; the orbit says it, so its "working" badge goes.
+  const atWork = doing !== null || shown?.presence === "working";
+  const face = (
+    <AgentAvatar
+      agentId={agent.id}
+      channelId={channelId}
+      size="sm"
+      name={agent.name}
+      presence={atWork && shown?.presence === "working" ? null : (shown?.presence ?? null)}
+      presenceLabel={word ?? undefined}
+      asleep={isOutOfOffice(shown?.line)}
+    />
+  );
   const shows = useId();
   return (
     <ProfileTrigger
@@ -408,27 +433,18 @@ function AgentRow({
         data-arriving-agent={arrival && "data-arriving" in arrival ? agent.id : undefined}
         data-presence={shown?.presence}
         data-busy={busy || undefined}
-        title={
-          [doing ?? (now && workLineText(now)) ?? full ?? word, agent.role].filter(Boolean).join(" · ") || undefined
-        }
+        title={[doing ?? workWords ?? full ?? word, agent.role].filter(Boolean).join(" · ") || undefined}
       >
         {busy && <AgentTrail color={colorOf(agent)} />}
-        <AgentAvatar
-          agentId={agent.id}
-          channelId={channelId}
-          size="sm"
-          name={agent.name}
-          presence={shown?.presence ?? null}
-          presenceLabel={word ?? undefined}
-          asleep={isOutOfOffice(shown?.line)}
-        />
+        {atWork ? <OrbitGlyph appearance={lookOf(agent)}>{face}</OrbitGlyph> : face}
         <span className="members-side__text">
           <span className="members-side__name">
             <span className="members-side__label">{agent.name}</span>
-            {doing && <PixelSpinner size={14} color={colorOf(agent)} label={doing} className="members-side__spin" />}
           </span>
+          {/* What it does, for screen readers, after its name (the orbit before it says it to the eye). */}
+          {atWork && (doing ?? word) && <span className="ac-visually-hidden">{doing ?? word}</span>}
           {under?.work ? (
-            <AgentWorkLine line={under.work} className="members-side__line" />
+            <AgentWorkLine line={under.work} tone={agentGradient(colorOf(agent))[1]} className="members-side__line" />
           ) : under?.line ? (
             <StatusLine {...under.line} className="members-side__line" />
           ) : under?.why ? (
