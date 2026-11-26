@@ -70,7 +70,12 @@ describe("a line's values over its points", () => {
     expect(lineMarksFit(week, 600)).toBe(true);
     // 584 points between the pads over 6 gaps: 97 each; a 13-character value needs 103.5.
     expect(lineMarksFit([...week.slice(0, 6), "1.234.567,890"], 600)).toBe(false);
-    expect(lineMarksFit(Array.from({ length: 30 }, () => "1.234"), 600)).toBe(false);
+    expect(
+      lineMarksFit(
+        Array.from({ length: 30 }, () => "1.234"),
+        600,
+      ),
+    ).toBe(false);
     expect(lineMarksFit(["3"], 600)).toBe(false);
     expect(lineMarksFit(week, 0)).toBe(false);
   });
