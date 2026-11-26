@@ -44,7 +44,6 @@ import {
   Dialog,
   DialogBody,
   DialogFooter,
-  GroupHeading,
   Icon,
   type IconName,
   Input,
@@ -248,8 +247,9 @@ export function WorkCard({
   );
   return (
     <div className="agp-work">
-      <GroupHeading id="agp-ficha-work" title={t("agentPage.work.cell.label", g)} />
-      <section className="agp-workcard agp-ficha__card" aria-labelledby="agp-ficha-work">
+      {/* No title over the card: its top meets the cards beside it ("What Theo does"), and its cells say what they
+          are; the title stays its name for screen readers. */}
+      <section className="agp-workcard agp-ficha__card" aria-label={t("agentPage.work.cell.label", g)}>
         {before}
         {/* The Cloud's agents all work on the workspace's own computer, whose state the page's computer entry says:
               nothing to pick, so no cell. */}

@@ -448,48 +448,6 @@ export const en = {
       why: () => "You got this email because you're in this workspace on agentes.chat.",
     },
   },
-  computerDown: {
-    subject: "A computer isn't answering",
-    preheader: "Your agents' work on it is waiting for it.",
-    headline: "A computer isn't answering",
-    body: (name: string, org: string, away: string): Text => [
-      { b: name },
-      " in ",
-      { b: org },
-      ` hasn't answered for ${away}. The work that needs it waits and goes on when it is back.`,
-    ],
-    runs: "Agent requests waiting",
-    calls: "Webhook calls waiting",
-    note: "To go on now, move its agents to another computer on its page.",
-    button: "Open the computer",
-    why: (org: string) => `You got this email because you manage the computers of ${org} on agentes.chat.`,
-    back: {
-      subject: "A computer is back",
-      preheader: "The work that waited for it goes on now.",
-      headline: "The computer is back",
-      runs: "Agent requests that waited",
-      calls: "Webhook calls that waited",
-      body: (name: string, org: string, away: string): Text => [
-        { b: name },
-        " in ",
-        { b: org },
-        ` is back after ${away}. The work that waited for it goes on now.`,
-      ],
-    },
-    personal: {
-      body: (name: string, _org: string, away: string): Text => [
-        { b: name },
-        ` hasn't answered for ${away}. The work that needs it waits and goes on when it is back.`,
-      ],
-      why: () => "You got this email because you manage the computers of your personal workspace on agentes.chat.",
-      back: {
-        body: (name: string, _org: string, away: string): Text => [
-          { b: name },
-          ` is back after ${away}. The work that waited for it goes on now.`,
-        ],
-      },
-    },
-  },
   appConnected: {
     subject: "An app was connected to your agentes.chat account",
     preheader: "It can read and send tasks to agents as you in one workspace.",

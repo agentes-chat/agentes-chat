@@ -2206,7 +2206,7 @@ export const ptBR = {
       threads: { title: "Threads que você segue", help: "Respostas nas threads em que você escreveu ou que segue" },
       tasks: { title: "Tarefas", help: "Tarefa para você, comentários e quando muda de etapa" },
       routines: { title: "Rotinas e missões", help: "Quando param, falham ou esperam o computador" },
-      computers: { title: "Computadores", help: "Um computador entrou, ficou pronto ou parou de responder" },
+      computers: { title: "Computadores", help: "Um computador entrou ou ficou pronto" },
       reactions: { title: "Reações", help: "Quando reagem a uma mensagem sua" },
     },
   },
@@ -8592,12 +8592,15 @@ export const ptBR = {
     noOrgBack: "Voltar aos seus workspaces",
     crashTitle: "Algo deu errado",
     crashText: "Recarregue a página para continuar.",
-    crashCode: "Se pedir ajuda, informe o código {{id}}.",
+    /** The report's short code goes after it, on a line of its own with a copy button (ErrorScreen). */
+    supportCode: "Código para o suporte",
     /** A request that got no answer, or only the proxy's: the page opens again by itself (ErrorScreen). */
     unreachableTitle: "Sem conexão com o agentes.chat",
     unreachableText: "Ele pode estar reiniciando. Esta página abre sozinha assim que ele voltar.",
     offlineTitle: "Você está sem internet",
     offlineText: "Esta página abre sozinha quando a internet voltar.",
+    /** Under the way out of the two screens that open again by themselves. */
+    waitingConnection: "Esperando a conexão voltar",
     unknownHostTitle: "Este endereço ainda não está configurado",
     unknownHostText: "Se ele acabou de ser conectado, tente de novo em alguns minutos.",
     unknownHostTab: "Endereço não configurado · agentes.chat",
@@ -19316,9 +19319,10 @@ export const ptBR = {
   },
   work: {
     handed: {
-      lead: "Passado para <0/>{{name}}",
-      working: "trabalhando nisso",
-      done: "pronto em {{duration}}",
+      lead: "Passado para <0>{{name}}</0>",
+      working: "trabalhando",
+      /** The state's badge once it is over; its time comes after it ("Done · 1 min"). */
+      ready: "pronto",
       waitingYou: "esperando sua resposta",
       waiting: "esperando uma resposta",
       waitingApprovalYou: "esperando sua aprovação",
@@ -19477,6 +19481,9 @@ export const ptBR = {
       doing: "{{name}} {{doing}}",
       yourApproval: "{{name}} espera sua aprovação",
       yourAnswer: "{{name}} espera sua resposta",
+      /** Work handed off, at work: the agent it went to and whoever handed it, as the reply that comes after says it. */
+      helping: "{{to}} ajudando o {{from}}",
+      helping_female: "{{to}} ajudando a {{from}}",
       /** The work handed off came back: whoever handed it writes now. */
       done: "{{to}} terminou. {{from}} está escrevendo",
       notDone: "{{to}} não terminou. {{from}} está escrevendo",

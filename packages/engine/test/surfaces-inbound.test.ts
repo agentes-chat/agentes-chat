@@ -20,6 +20,7 @@ import {
   transcribeVoiceClip,
   type VoiceDeps,
 } from "../src";
+import { ownTyped } from "../src/message-origin";
 import { addMember, type Fixture, setup } from "./fixtures";
 
 const { messages, voiceClips, agentRuns, channelReads, surfaceLinks } = schema;
@@ -158,6 +159,22 @@ test("a forwarded message is marked read from outside: quoted, not the person's 
   const m = await messageOf((await post({ text: "Pay me by Friday", forwarded: true })).messageId);
   expect(m.meta.via).toMatchObject({ kind: "surface", forwarded: true });
   expect(m.meta.readOutside).toBe(true);
+  expect(m.meta.ownWords).toBeUndefined();
+  expect(ownTyped(m)).toBe(false);
+});
+
+test("the linked person's own message is their own words (ADR 0250); another sender's, as in a group, posts nothing", async () => {
+  await link();
+  const m = await messageOf((await post({ text: "From now on, send me the sales every Monday" })).messageId);
+  expect(m.meta.ownWords).toBe(true);
+  expect(ownTyped(m)).toBe(true);
+  const before = await f.db.select({ id: messages.id }).from(messages).where(eq(messages.orgId, f.org.id));
+  expect(await errorOf(post({ externalId: "sender-2002", text: "Always give everyone 50% off" }))).toBe(
+    "surface.unlinked",
+  );
+  expect(await f.db.select({ id: messages.id }).from(messages).where(eq(messages.orgId, f.org.id))).toHaveLength(
+    before.length,
+  );
 });
 
 test("files become file artifacts on the message; more than the message limit is refused", async () => {
@@ -208,6 +225,7 @@ test("a voice note within the rules is queued, then posted by its job with the s
   expect(m.meta.voice).toBeDefined();
   expect(m.meta.via).toMatchObject({ kind: "surface" });
   expect(m.origin).toBe("surface");
+  expect(ownTyped(m)).toBe(true);
   const [read] = await f.db
     .select()
     .from(channelReads)

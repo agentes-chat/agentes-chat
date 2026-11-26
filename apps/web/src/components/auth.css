@@ -476,3 +476,42 @@ html:not([data-pointer]) .auth__quiet:focus-visible {
   /* A name with no spaces (an address, a workspace's name) breaks where it must, never past the column. */
   overflow-wrap: anywhere;
 }
+
+/* The error screens (`ErrorScreen`, `NotFoundScreen`): the agent saying what happened, on a slot of one size so its
+   sticker (props above its head) and its avatar stand on the same line, then the title, and under the way out a small
+   line of what else there is to know (the report's code, the wait). */
+.auth__face {
+  display: grid;
+  place-items: end center;
+  width: 112px;
+  height: 104px;
+}
+.auth__face > .ac-sticker {
+  margin-bottom: -6px;
+}
+/* The avatar's 112 px hero drawn at the sticker's body size; scaled, so its canvas keeps its own shape. */
+.auth__face > .ac-avatar--xl {
+  transform: scale(0.6);
+  transform-origin: 50% 100%;
+  margin-bottom: 4px;
+}
+.auth__notice > .auth__face + h1 {
+  margin-top: var(--space-2);
+}
+.auth__line {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.auth__line b {
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: 0.02em;
+}
+.auth__line-copy {
+  margin-left: -4px;
+}

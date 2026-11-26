@@ -20,8 +20,6 @@ const KINDS = [
   "plan_reset_unknown",
   "machine_connected",
   "computer_ready",
-  "computer_down",
-  "computer_back",
   "browser_handoff",
   "secret_request",
   "join_request",
@@ -42,8 +40,6 @@ test("every push kind in every language: words, within the phone's limits (ADR 0
         // A personal workspace's words (ADR 0159), with no words of the agent's own to stand in for them.
         { actorName: "Ana", actorType: "user" as const, title: "Deploy", reason: "creator_left", personal: true },
         { actorType: "agent" as const, suggestedBy: "Bia", personal: true },
-        // A computer back after a long outage (ADR 0241): its name and how long, in the language's own units.
-        { title: "Workspace computer", awayMs: 26 * 3600_000 + 59 * 60_000 },
       ]) {
         const { title, body } = renderPush(locale, { kind, waiting: true, ...variant });
         expect({ locale, kind, title: title.length > 0 }).toEqual({ locale, kind, title: true });
@@ -72,24 +68,6 @@ test("a personal workspace's pushes speak of one person and their agents, never 
   expect(keys.length).toBe(7);
   for (const locale of LOCALE_CODES)
     expect({ locale, missing: keys.filter((k) => !(k in PUSH[locale])) }).toEqual({ locale, missing: [] });
-});
-
-test("a computer that isn't answering, and back with how long it was away (ADR 0241)", () => {
-  const push = (locale: "en" | "pt-BR" | "ja", kind: string, awayMs?: number) =>
-    renderPush(locale, { kind, waiting: false, title: "Workspace computer", awayMs });
-  expect(push("en", "computer_down")).toEqual({
-    title: "Workspace computer isn't answering",
-    body: "Your agents' work on it is waiting. Tap to see what to do.",
-  });
-  expect(push("en", "computer_back", 42 * 60_000).body).toBe(
-    "It was away for 42 min. The work that waited goes on now.",
-  );
-  expect(push("pt-BR", "computer_back", 125 * 60_000)).toEqual({
-    title: "Workspace computer voltou",
-    body: "Ficou fora por 2 h 5 min. O trabalho que esperava continua agora.",
-  });
-  // ICU's data spaces Japanese units differently by platform: the units are what matter.
-  expect(push("ja", "computer_back", 125 * 60_000).body).toMatch(/^2 ?時間 5 ?分/);
 });
 
 test("a language without a word says it in English", () => {

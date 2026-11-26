@@ -2153,7 +2153,7 @@
       },
       "computers": {
         "title": "Computers",
-        "help": "Een computer is bijgekomen, is klaar of reageert niet meer"
+        "help": "Een computer is bijgekomen of is klaar"
       },
       "reactions": {
         "title": "Reacties",
@@ -8073,11 +8073,12 @@
     "noOrgBack": "Terug naar je werkruimtes",
     "crashTitle": "Er ging iets mis",
     "crashText": "Herlaad de pagina om verder te gaan.",
-    "crashCode": "Vraag je om hulp, geef dan de code {{id}} door.",
+    "supportCode": "Code voor support",
     "unreachableTitle": "agentes.chat is niet bereikbaar",
     "unreachableText": "Misschien wordt het opnieuw opgestart. Deze pagina opent vanzelf zodra het weer werkt.",
     "offlineTitle": "Je bent offline",
     "offlineText": "Deze pagina opent vanzelf zodra je weer online bent.",
+    "waitingConnection": "Wachten tot de verbinding terug is",
     "unknownHostTitle": "Dit adres is nog niet ingesteld",
     "unknownHostText": "Is het net gekoppeld, probeer het dan over een paar minuten opnieuw.",
     "unknownHostTab": "Adres niet ingesteld · agentes.chat"
@@ -18899,9 +18900,9 @@
   },
   "work": {
     "handed": {
-      "lead": "Overgedragen aan <0/>{{name}}",
+      "lead": "Overgedragen aan <0>{{name}}</0>",
       "working": "bezig",
-      "done": "klaar in {{duration}}",
+      "ready": "klaar",
       "waitingYou": "wacht op jouw antwoord",
       "waiting": "wacht op een antwoord",
       "waitingApprovalYou": "wacht op jouw goedkeuring",
@@ -19043,6 +19044,8 @@
       "doing": "{{name}} {{doing}}",
       "yourApproval": "{{name}} wacht op je goedkeuring",
       "yourAnswer": "{{name}} wacht op je antwoord",
+      "helping": "{{to}} helpt {{from}}",
+      "helping_female": "{{to}} helpt {{from}}",
       "done": "{{to}} is klaar. {{from}} schrijft",
       "notDone": "{{to}} is niet klaar gekomen. {{from}} schrijft",
       "handedOff": "{{to}} werkt aan wat {{from}} heeft doorgegeven"

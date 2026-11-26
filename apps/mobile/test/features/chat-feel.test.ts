@@ -267,18 +267,22 @@ describe("the working line", () => {
     expect(pop).toContain("initialValues: { opacity: 0, transform: [{ scale: 0.9 }] },");
   });
 
-  test("the agent at work leads with its rings (the web's), what it did so far under the words, paced", () => {
-    // Its face orbited, never the plain working face; the stack's small faces are the others.
-    expect(lines).toContain("<OrbitFace color={agentLook(dir.agentById.get(orbiting.id)).color} size={ORBIT_FACE}>");
-    expect(lines).toContain("const faces = barFaces(entries).filter((e) => e !== orbiting);");
+  test("whoever does the work leads with its orbit (the web's), what it did so far under the words, paced", () => {
+    // The agent at work, or the one a question or hand-off went to; the stack's small faces are the others, never a
+    // face twice.
+    expect(lines).toContain("const worker = asking ? { id: asking.to, name: asking.toName } : lead;");
+    expect(lines).toContain("<OrbitFace color={agentLook(dir.agentById.get(worker.id)).color} size={ORBIT_FACE}>");
+    expect(lines).toContain("const faces = barFaces(entries).filter((e) => e !== lead);");
     expect(lines).toContain("usePacedTrail(trailRun ? workTrail(t, trailRun, i18n.language) : NO_TRAIL)");
+    // The folded steps in words ("3 earlier steps"), never a bare "+3".
+    expect(lines).toContain('{t("chat.trail.earlier", { count: trail.earlier })}');
+    expect(lines).not.toContain("+{trail.earlier}");
     const orbit = src("agent/OrbitFace.tsx");
-    // The web's rings and colours, turning on the UI thread by transforms alone, still with Reduce Motion and paused
-    // on a screen that isn't showing.
-    expect(orbit).toContain('import { ORBIT_RINGS, ORBIT_SPAN, orbitColors } from "@agenteschat/ui/agent/orbit";');
-    expect(orbit).toContain("const turning = !reduced;");
-    expect(orbit).toContain('loopStyle(ring.back ? UNTURN : TURN, turn, "linear", delay, paused)');
-    expect(orbit).not.toMatch(/useFrameCallback|requestAnimationFrame|setInterval/);
+    // The web's rings, light and colours, drawn on the UI thread from a clock that runs only while it moves: still
+    // with Reduce Motion and on a screen that isn't showing.
+    expect(orbit).toContain('} from "@agenteschat/ui/agent/orbit";');
+    expect(orbit).toContain("const clock = useDrawingClock(!reduced && !paused);");
+    expect(orbit).not.toMatch(/requestAnimationFrame|setInterval/);
   });
 
   test('"View" reaches 44 points', () => {
