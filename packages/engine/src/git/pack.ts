@@ -130,6 +130,8 @@ export function readPack(
       base = commitById.get(Buffer.from(data.subarray(pos, pos + 20)).toString("hex"));
       pos += 20;
     }
+    // A delta that git writes is smaller than what it builds, so one bigger than a commit may be is never kept in memory.
+    if (base && size > maxCommitBytes) throw new Error("commit exceeds size limit");
     const inflated = inflateZlib(data, pos, { keep: type === 1 || base !== undefined, maxOut: Math.max(size, 1) });
     if (inflated.size !== size) throw new Error("pack object size mismatch");
     inflatedTotal += inflated.size;

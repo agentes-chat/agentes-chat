@@ -230,6 +230,9 @@ describe("pack reading", () => {
     const grown = packOf([a, { ...long, data: deltaOf(a.data, long.data), ofs: 0 }]);
     expect(readPack(grown).commits).toHaveLength(2);
     expect(() => readPack(grown, 0, { maxCommitBytes: a.data.length + 100 })).toThrow("commit exceeds size limit");
+    // A delta on a commit that is itself bigger than a commit may be is refused before it is inflated and kept.
+    const huge = packOf([a, { ...long, data: new Uint8Array(a.data.length + 200).fill(7), ofs: 0 }]);
+    expect(() => readPack(huge, 0, { maxCommitBytes: a.data.length + 100 })).toThrow("commit exceeds size limit");
   });
 
   test("ref rules: agentes/{handle}/… goes, another existing branch needs a grant; no tags, deletes or new branches", () => {
