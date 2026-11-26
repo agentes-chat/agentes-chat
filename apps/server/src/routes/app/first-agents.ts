@@ -52,35 +52,32 @@ const FirstAgents = z
   })
   .openapi("FirstAgents");
 
-const text = (max: number) => z.string().min(1).max(max);
-
-/** What the person pastes from their AI, as `firstAgentsInput` reads it (the engine checks it again). */
+/**
+ * What the person pastes from their AI, as `firstAgentsInput` reads it (a null reads as left out). Only its shape here:
+ * the engine checks its lengths and counts, so a long name answers `first_agents.invalid` with what is wrong.
+ */
 const FirstAgentsBody = z
   .object({
-    about: z.string().max(FIRST_AGENT_LIMITS.about).optional(),
+    about: z.string().nullish().openapi({ description: `Up to ${FIRST_AGENT_LIMITS.about} characters.` }),
     options: z
       .array(
         z.object({
-          name: text(FIRST_AGENT_LIMITS.name),
-          handle: z.string().max(32).optional(),
-          role: text(FIRST_AGENT_LIMITS.role),
-          why: text(FIRST_AGENT_LIMITS.why),
-          tasks: z.array(text(FIRST_AGENT_LIMITS.task)).min(1).max(FIRST_AGENT_LIMITS.tasks),
-          apps: z.array(text(60)).max(FIRST_AGENT_LIMITS.apps).optional(),
+          name: z.string().openapi({ description: `1 to ${FIRST_AGENT_LIMITS.name} characters.` }),
+          handle: z.string().nullish(),
+          role: z.string().openapi({ description: `1 to ${FIRST_AGENT_LIMITS.role} characters.` }),
+          why: z.string().openapi({ description: `1 to ${FIRST_AGENT_LIMITS.why} characters.` }),
+          tasks: z.array(z.string()).openapi({
+            description: `1 to ${FIRST_AGENT_LIMITS.tasks}, each up to ${FIRST_AGENT_LIMITS.task} characters.`,
+          }),
+          apps: z.array(z.string()).nullish().openapi({ description: "By name: Gmail, Stripe." }),
           routine: z
-            .object({
-              title: text(120),
-              schedule: text(120),
-              prompt: text(FIRST_AGENT_LIMITS.instructions),
-              cron: z.string().max(100).optional(),
-            })
-            .optional(),
-          today: z.array(text(200)).max(FIRST_AGENT_LIMITS.today).optional(),
-          instructions: z.string().max(FIRST_AGENT_LIMITS.instructions).optional(),
+            .object({ title: z.string(), schedule: z.string(), prompt: z.string(), cron: z.string().nullish() })
+            .nullish(),
+          today: z.array(z.string()).nullish().openapi({ description: `Up to ${FIRST_AGENT_LIMITS.today}.` }),
+          instructions: z.string().nullish(),
         }),
       )
-      .min(1)
-      .max(FIRST_AGENT_LIMITS.options),
+      .openapi({ description: `1 to ${FIRST_AGENT_LIMITS.options}, the task that takes the most time first.` }),
   })
   .openapi("FirstAgentsInput");
 

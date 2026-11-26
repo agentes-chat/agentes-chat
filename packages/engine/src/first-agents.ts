@@ -307,6 +307,16 @@ async function readSchedule(
   return null;
 }
 
+/** An AI's JSON often writes null for what it leaves out: read as left out. */
+const withoutNulls = (value: unknown): unknown =>
+  Array.isArray(value)
+    ? value.map(withoutNulls)
+    : value && typeof value === "object"
+      ? Object.fromEntries(
+          Object.entries(value).flatMap(([k, v]): [string, unknown][] => (v === null ? [] : [[k, withoutNulls(v)]])),
+        )
+      : value;
+
 const issueText = (error: z.ZodError) =>
   error.issues
     .slice(0, 3)
@@ -326,7 +336,7 @@ export async function saveFirstAgents(
 ): Promise<FirstAgents> {
   const { db } = deps;
   const { orgId, userId } = who;
-  const parsed = firstAgentsInput.safeParse(input);
+  const parsed = firstAgentsInput.safeParse(withoutNulls(input));
   if (!parsed.success) throw new ValidationError(issueText(parsed.error), "first_agents.invalid");
   const membership = await requireActiveMembership(db, userId, orgId);
   const refusal = workRefusalBeforePlan(membership.standing);
