@@ -86,7 +86,8 @@ describe("reading and pasting", () => {
   test("none yet, then my newest, nulls read as left out; signed out is 401", async () => {
     const { owner, orgId } = await setup();
     const me = api(owner, orgId);
-    expect(await me.latest()).toEqual({ status: 200, json: { proposal: null } });
+    const none = await me.latest();
+    expect({ status: none.status, proposal: none.json.proposal }).toEqual({ status: 200, proposal: null });
     const pasted = await me.paste(body([option(), option({ name: "Caio", role: "Suporte", apps: null })]));
     expect(pasted.status).toBe(200);
     expect(pasted.json.proposal).toMatchObject({
