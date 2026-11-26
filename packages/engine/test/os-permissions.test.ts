@@ -41,6 +41,12 @@ test("the permissions a computer waits on come with its hello and each change, a
   const [row] = await f.db.select().from(schema.machines).where(eq(schema.machines.id, paired.machineId));
   expect(row?.executors?.permissions).toHaveLength(1);
 
+  // Offline, nothing there asks: its last list isn't shown.
+  await f.db.update(schema.machines).set({ online: false }).where(eq(schema.machines.id, paired.machineId));
+  expect((await computer())?.permissions).toEqual([]);
+  await f.db.update(schema.machines).set({ online: true }).where(eq(schema.machines.id, paired.machineId));
+  expect((await computer())?.permissions).toHaveLength(1);
+
   // Allowed there: the wait ends.
   await runner.frame({ type: "permissions.changed", permissions: [] });
   await Bun.sleep(5);

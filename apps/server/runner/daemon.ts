@@ -1786,6 +1786,7 @@ export class RunnerDaemon implements RequestObserver {
     const context: HandlerContext = {
       workspaceReal,
       ...(this.opts.platform ? { platform: this.opts.platform } : {}),
+      appAsks: config.managedBy === "desktop",
       get exec() {
         return daemon.access().tools.commands;
       },

@@ -1,3 +1,6 @@
+import { closeSync, openSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import {
   type OsPermission,
   PERMISSION_TRIGGER_CHARS,
@@ -12,21 +15,46 @@ import {
 const MAC_REFUSALS: [OsPermission, RegExp][] = [
   ["screen", /could not create image from (display|window)/i],
   ["automation", /not authori[sz]ed to send apple events|\(-1743\)/i],
-  ["accessibility", /not allowed assistive access|\(-1719\)|\(-25211\)/i],
+  // Not a bare -1719: it is also AppleScript's "Invalid index".
+  ["accessibility", /not allowed assistive access|\(-25211\)/i],
 ];
 const EPERM_LINE = /^.*operation not permitted.*$/im;
 const APP_BUNDLE = /\.app(\/|\b)/i;
 
+const TCC_DB = "Library/Application Support/com.apple.TCC/TCC.db";
+
+/**
+ * Whether this process has Full Disk Access: macOS's privacy database opens only with it (the user's copy, else the
+ * system's), the same read as the app's own (`prepare.rs` `disk_access`).
+ */
+export function fullDiskAccess(home: string = os.homedir()): boolean {
+  for (const file of [path.join(home, TCC_DB), path.join("/", TCC_DB)]) {
+    try {
+      closeSync(openSync(file, "r"));
+      return true;
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") return false;
+    }
+  }
+  return false;
+}
+
 /**
  * The OS permission a failed command's output says it lacked, or null: macOS only (Windows prints no refusal of its
- * own a command could be told by). A false alarm costs nothing: the app checks the permission before it asks.
+ * own a command could be told by). EPERM with Full Disk Access already on is something else (SIP, another user's
+ * process, a file's owner), which no permission fixes.
  */
-export function permissionOfOutput(text: string, platform: string = process.platform): OsPermission | null {
+export function permissionOfOutput(
+  text: string,
+  platform: string = process.platform,
+  diskOn: () => boolean = fullDiskAccess,
+): OsPermission | null {
   if (platform !== "darwin" || !text) return null;
   for (const [permission, refused] of MAC_REFUSALS) if (refused.test(text)) return permission;
   const eperm = EPERM_LINE.exec(text)?.[0];
   if (!eperm) return null;
-  return APP_BUNDLE.test(eperm) ? "app_management" : "disk";
+  if (APP_BUNDLE.test(eperm)) return "app_management";
+  return diskOn() ? null : "disk";
 }
 
 /**

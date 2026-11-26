@@ -485,7 +485,8 @@ export async function listDevices(
       maxTasks: m.size?.maxTasks ?? null,
       taskRoom: m.size?.room ?? null,
       toolchains: m.executors?.toolchains ?? {},
-      permissions: parsePermissionNeeds(m.executors?.permissions),
+      // Kept in the runner's memory: an offline computer's last list may be over, and nothing there asks now.
+      permissions: online ? parsePermissionNeeds(m.executors?.permissions) : [],
       opensXcode: !managed && m.os === "darwin" && m.protocol >= IPHONE_DEV_MODE_PROTOCOL,
       lastSeenAt: iso(m.lastSeenAt),
       mayUse,

@@ -290,6 +290,11 @@ export interface HandlerContext {
   workspaceReal: string;
   /** Tests: the system a failed command's output is read for refusals (`permissionOfOutput`). */
   platform?: string;
+  /**
+   * The agentes.chat app runs this runner and asks the person for an OS permission a command was refused; from a
+   * terminal nothing would ask, so a refusal stays the command's own output.
+   */
+  appAsks?: boolean;
   /** `false`: commands off (`--no-exec`, or `access.tools.commands` off). */
   exec: boolean;
   /** The machine token (authenticates `push` uploads). */
@@ -539,7 +544,9 @@ async function doExec(
     ...(redact ? { redact: redact.redact, redactHold: redact.hold } : {}),
   });
   const permission =
-    result.exitCode === 0 ? null : permissionOfOutput(`${result.stderr}\n${result.stdout}`, ctx.platform);
+    result.exitCode === 0 || !ctx.appAsks
+      ? null
+      : permissionOfOutput(`${result.stderr}\n${result.stdout}`, ctx.platform);
   return { ...result, ...(merge ? { merge } : {}), ...(permission ? { permission } : {}) };
 }
 
