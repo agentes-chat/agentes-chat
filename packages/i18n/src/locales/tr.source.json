@@ -46476,6 +46476,9 @@
   "chat.consultPanel.see": {
     "value": "See conversation"
   },
+  "chat.consultPanel.relay": {
+    "value": "{{name}}'s answer: {{excerpt}}. See the conversation"
+  },
   "chat.unshown": {
     "value": "This message couldn't be shown"
   },

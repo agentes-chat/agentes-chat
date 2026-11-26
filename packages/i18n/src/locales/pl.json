@@ -20143,7 +20143,8 @@
       "missing": "Tej rozmowy już tu nie ma.",
       "helping": "pomaga agentowi {{name}}",
       "helping_female": "pomaga agentce {{name}}",
-      "see": "Zobacz rozmowę"
+      "see": "Zobacz rozmowę",
+      "relay": "Odpowiedź od {{name}}: {{excerpt}}. Zobacz rozmowę"
     },
     "unshown": "Nie udało się wyświetlić tej wiadomości",
     "unshownPart": "Nie udało się wyświetlić części tej wiadomości",

@@ -18353,7 +18353,8 @@
       "talk": "Bicara dengan {{name}}",
       "missing": "Percakapan ini sudah tidak ada di sini.",
       "helping": "membantu {{name}}",
-      "see": "Lihat percakapan"
+      "see": "Lihat percakapan",
+      "relay": "Jawaban {{name}}: {{excerpt}}. Lihat percakapan"
     },
     "unshown": "Pesan ini tidak bisa ditampilkan",
     "unshownPart": "Sebagian pesan ini tidak bisa ditampilkan",

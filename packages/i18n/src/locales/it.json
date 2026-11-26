@@ -19555,7 +19555,8 @@
       "missing": "Questa conversazione non c'è più.",
       "helping": "aiuta {{name}}",
       "helping_female": "aiuta {{name}}",
-      "see": "Vedi conversazione"
+      "see": "Vedi conversazione",
+      "relay": "Risposta di {{name}}: {{excerpt}}. Vedi la conversazione"
     },
     "unshown": "Questo messaggio non si può mostrare",
     "unshownPart": "Una parte di questo messaggio non si può mostrare",

@@ -18934,7 +18934,8 @@
       "talk": "Mit {{name}} sprechen",
       "missing": "Diese Unterhaltung ist nicht mehr da.",
       "helping": "hilft {{name}}",
-      "see": "Unterhaltung ansehen"
+      "see": "Unterhaltung ansehen",
+      "relay": "Antwort von {{name}}: {{excerpt}}. Unterhaltung ansehen"
     },
     "unshown": "Diese Nachricht konnte nicht angezeigt werden",
     "unshownPart": "Ein Teil dieser Nachricht konnte nicht angezeigt werden",
