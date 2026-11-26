@@ -314,9 +314,9 @@ html:not([data-pointer]) .onbx__back:focus-visible {
   font-size: 13px;
   line-height: 18px;
 }
+/* With an icon the note is an .ac-iconline: the icon on its first line's capitals. */
 .onbx__note .ac-icon {
   flex: none;
-  margin-top: 1px;
   color: var(--faint);
 }
 /* ---------- a choice: quiet rows, a hairline between them, the round choice at the end ---------- */

@@ -215,7 +215,7 @@ export function Box({
 /** A footer's quiet note, its icon on the first line. */
 export function BoxNote({ icon, children }: { icon?: IconName; children: ReactNode }) {
   return (
-    <span className="onbx__note">
+    <span className={icon ? "onbx__note ac-iconline" : "onbx__note"}>
       {icon && <Icon name={icon} size={16} />}
       <span>{children}</span>
     </span>

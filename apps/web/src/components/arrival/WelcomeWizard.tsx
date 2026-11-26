@@ -139,7 +139,7 @@ export function WelcomeWizard({ onDone }: { onDone: (handOff: boolean) => void }
           {last && (
             <>
               {board.ready && board.rows.length > 0 && <Board rows={board.rows} />}
-              <p className="wiz-betaline">
+              <p className="wiz-betaline ac-iconline">
                 <Icon name="bolt" size={16} />
                 <span>
                   <b>{t("arrival.welcome.ready.beta")}</b>{" "}

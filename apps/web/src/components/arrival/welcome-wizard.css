@@ -154,9 +154,8 @@
   font-size: 13.5px;
   line-height: 19px;
 }
+/* The row is an .ac-iconline: the icon on the first line's capitals. */
 .wiz-betaline .ac-icon {
-  flex: none;
-  margin-top: 1px;
   color: var(--ink);
 }
 .wiz-betaline b {

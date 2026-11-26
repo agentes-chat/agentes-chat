@@ -62,11 +62,14 @@
 .onb-card[data-pos="right"] {
   transform: translateX(176px) translateY(16px) scale(0.86);
 }
-.onb-card[data-pos="left"]:hover {
-  transform: translateX(-184px) translateY(12px) scale(0.87);
-}
+/* A card behind answers the pointer in place, its colour and ring back: one that slid out on its own hover would lose
+   the pointer on its edge and win it back every frame. */
+.onb-card[data-pos="left"]:hover,
 .onb-card[data-pos="right"]:hover {
-  transform: translateX(184px) translateY(12px) scale(0.87);
+  filter: none;
+  box-shadow:
+    0 0 0 1px var(--line-strong),
+    0 14px 30px -20px rgb(10 30 70 / 0.45);
 }
 .onb-card[data-pos="side"]:not([data-on]):hover {
   box-shadow:
