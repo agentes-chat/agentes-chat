@@ -148,14 +148,22 @@ export async function postWelcome(deps: JobDeps, orgId: string, payload: Record<
     // Someone whose area the onboarding already knows, or who picked their agent there, is not asked to tap it.
     ...(picked || areaOf(person.workArea) ? {} : { meta: { replyChips: chips } }),
     push: true,
-    // Anything already in their conversation with it: they wrote first, or it was restored on a rejoin.
+    // Anything already in their conversation with it: they wrote first, or it was restored on a rejoin. Not the team
+    // card their pick made there (ADR 0253): the hello still goes out after it. The card's kind is `TEAM_PROPOSAL_CARD`,
+    // written out here since importing team-proposals from this module makes an import cycle.
     posted: async (tx, lodiId) =>
       (
         await tx
           .select({ id: messages.id })
           .from(messages)
           .innerJoin(channels, and(eq(channels.orgId, messages.orgId), eq(channels.id, messages.channelId)))
-          .where(and(eq(messages.orgId, orgId), eq(channels.dmKey, personAgentDmKey(userId, lodiId))))
+          .where(
+            and(
+              eq(messages.orgId, orgId),
+              eq(channels.dmKey, personAgentDmKey(userId, lodiId)),
+              picked ? sql`coalesce(${messages.meta}->'actionCard'->>'kind', '') <> 'team_proposal'` : undefined,
+            ),
+          )
           .limit(1)
       ).length > 0,
     lodi,
