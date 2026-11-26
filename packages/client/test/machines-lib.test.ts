@@ -625,6 +625,11 @@ describe("one click where a tool is off (ADR 0036 §8)", () => {
     expect(cliOneClick(pc, "u-bia", "codex")).toBeNull();
     expect(cliOneClick({ ...pc, os: "darwin" }, "u-bia", "codex")).toEqual({ kind: "allow" });
     expect(cliOneClick({ ...pc, os: "linux", mode: "system" }, "u-bia", "claude")).toBeNull();
+    // A system-mode runner that installs its own copy for all of its agents' users: the same button.
+    const agents = { ...pc, os: "linux", mode: "system" as const, cliFetchable: ["claude", "codex"] };
+    expect(cliOneClick(agents, "u-bia", "codex")).toEqual({ kind: "allow" });
+    expect(cliOneClick(agents, "u-caio", "claude")).toEqual({ kind: "ask", ownerId: "u-bia", ownerName: "Bia Rocha" });
+    expect(cliOneClick({ ...agents, cliFetchable: ["claude"] }, "u-bia", "codex")).toBeNull();
     expect(cliOneClick({ ...pc, kind: "managed" }, "u-bia", "claude")).toBeNull();
     expect(installableCli("claude_code")).toBe("claude");
     const words = { program: "Claude Code", computer: "PC" };

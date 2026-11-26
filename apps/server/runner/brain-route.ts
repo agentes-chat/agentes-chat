@@ -25,6 +25,7 @@ import {
   TOKEN_STDIO,
   withoutContainers,
 } from "./accounts";
+import { ConsoleDecoder } from "./console-text";
 import { RunnerError } from "./errors";
 import { killTree } from "./exec";
 import { cliSpawn, envValue } from "./executors";
@@ -433,13 +434,13 @@ function runCli(
     timer = setTimeout(() => kill("timeout"), o.timeoutMs);
     if (o.signal?.aborted) onAbort();
     else o.signal?.addEventListener("abort", onAbort, { once: true });
-    child.stdout?.setEncoding("utf8");
-    child.stdout?.on("data", (chunk: string) => {
-      if (stdout.length < OUTPUT_MAX) stdout += chunk;
+    const stdoutText = new ConsoleDecoder();
+    const stderrText = new ConsoleDecoder();
+    child.stdout?.on("data", (chunk: Buffer) => {
+      if (stdout.length < OUTPUT_MAX) stdout += stdoutText.write(chunk);
     });
-    child.stderr?.setEncoding("utf8");
-    child.stderr?.on("data", (chunk: string) => {
-      stderr = (stderr + chunk).slice(-2000);
+    child.stderr?.on("data", (chunk: Buffer) => {
+      stderr = (stderr + stderrText.write(chunk)).slice(-2000);
     });
     child.stdin?.on("error", () => {});
     child.stdin?.end(o.input);

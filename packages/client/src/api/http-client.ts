@@ -1554,6 +1554,12 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
             json: { url, paths, ...(forAgentId ? { forAgentId } : {}), ...(personal ? { personal } : {}) },
           })
         ).skills,
+      importPickedFile: async (orgId, fileId, paths, forAgentId, personal) =>
+        (
+          await request<{ skills: SkillDetail[] }>(`${org(orgId)}/skills/import`, {
+            json: { fileId, paths, ...(forAgentId ? { forAgentId } : {}), ...(personal ? { personal } : {}) },
+          })
+        ).skills,
       importPickedZip: async (orgId, zipBase64, paths, personal, upload) =>
         (
           await request<{ skills: SkillDetail[] }>(`${org(orgId)}/skills/import`, {

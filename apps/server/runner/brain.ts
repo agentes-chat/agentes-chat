@@ -84,6 +84,7 @@ import {
 import { withGitBash } from "./cli-install";
 import { coAuthorLines, commitAuthorEnv } from "./co-authors";
 import { ownBranches } from "./command-gate";
+import { ConsoleDecoder } from "./console-text";
 import { DELEGATED_RESULT_CHARS, type DelegatedBridge } from "./delegated-tools";
 import { hostMemAvailable, MIN_FREE_BYTES } from "./desktop-session";
 import { RunnerError } from "./errors";
@@ -1424,9 +1425,9 @@ export class ClaudeProcess {
         else this.noteIdle(line);
       });
     }
-    this.child.stderr?.setEncoding("utf8");
-    this.child.stderr?.on("data", (chunk: string) => {
-      this.stderr = (this.stderr + chunk).slice(-STDERR_KEEP);
+    const decoder = new ConsoleDecoder();
+    this.child.stderr?.on("data", (chunk: Buffer) => {
+      this.stderr = (this.stderr + decoder.write(chunk)).slice(-STDERR_KEEP);
     });
   }
 
