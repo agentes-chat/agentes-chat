@@ -156,6 +156,7 @@ import type {
   JoinClaim,
   JoinRequest,
   LearnedSkill,
+  ListedEndpointModel,
   Machine,
   MachineAccess,
   MachineAccount,
@@ -981,7 +982,7 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       addCredential: (orgId, input) =>
         request<Credential & { checks?: EndpointCheck[] }>(`${org(orgId)}/credentials`, { json: input }),
       endpointModels: (orgId, input) =>
-        request<{ baseURL: string; models: { id: string; label?: string }[]; error?: string }>(
+        request<{ baseURL: string; models: ListedEndpointModel[]; error?: string }>(
           `${org(orgId)}/credentials/endpoint-models`,
           { json: input },
         ),

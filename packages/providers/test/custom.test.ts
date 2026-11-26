@@ -16,6 +16,7 @@ import {
   ProviderError,
   parseCustomModel,
   parseEndpointModels,
+  parseModelGroupPrices,
   setCustomModels,
 } from "../src";
 import { scripted, sse } from "./scripted";
@@ -111,16 +112,89 @@ describe("model lists", () => {
       { id: "m1" },
     ]);
     await listEndpointModels({ style: "anthropic", baseURL: "https://gw.example/anthropic" }, "k-123456789", ok);
-    expect(seen[0]?.url).toBe("https://gw.example/v1/models");
-    expect(seen[0]?.headers.get("authorization")).toBe("Bearer k-123456789");
-    expect(seen[1]?.url).toBe("https://gw.example/anthropic/v1/models");
-    expect(seen[1]?.headers.get("x-api-key")).toBe("k-123456789");
+    // Each list is followed by a look for LiteLLM's prices (below): the lists alone here.
+    const lists = seen.filter((s) => s.url.endsWith("/models"));
+    expect(lists[0]?.url).toBe("https://gw.example/v1/models");
+    expect(lists[0]?.headers.get("authorization")).toBe("Bearer k-123456789");
+    expect(lists[1]?.url).toBe("https://gw.example/anthropic/v1/models");
+    expect(lists[1]?.headers.get("x-api-key")).toBe("k-123456789");
     const refused = listEndpointModels({ style: "openai", baseURL: "https://gw.example/v1" }, "k", answer("", 401));
     await expect(refused).rejects.toThrow("the provider answered 401");
     const huge = answer(JSON.stringify({ data: [{ id: "x".repeat(2_100_000) }] }));
     await expect(listEndpointModels({ style: "openai", baseURL: "https://gw.example/v1" }, "k", huge)).rejects.toThrow(
       "too large",
     );
+  });
+
+  test("LiteLLM's model groups: prices per token read as US$ per million, both or none, free ones left unpriced", () => {
+    expect(
+      parseModelGroupPrices({
+        data: [
+          { model_group: "gpt-x", input_cost_per_token: 3e-6, output_cost_per_token: 0.000015 },
+          { model_group: "tiny", input_cost_per_token: 1e-7, output_cost_per_token: 4e-7 },
+          { model_group: "half", input_cost_per_token: 1e-6 },
+          { model_group: "local", input_cost_per_token: 0, output_cost_per_token: 0 },
+          { model_group: "minus", input_cost_per_token: -1e-6, output_cost_per_token: 1e-6 },
+          { model_group: "huge", input_cost_per_token: 1, output_cost_per_token: 1 },
+          { model_group: "words", input_cost_per_token: "3e-6", output_cost_per_token: "1e-5" },
+          { input_cost_per_token: 1e-6, output_cost_per_token: 1e-6 },
+          "junk",
+        ],
+      }),
+    ).toEqual(
+      new Map([
+        ["gpt-x", { input: 3, output: 15 }],
+        ["tiny", { input: 0.1, output: 0.4 }],
+      ]),
+    );
+    expect(parseModelGroupPrices("nope")).toEqual(new Map());
+    expect(parseModelGroupPrices({ data: "nope" })).toEqual(new Map());
+  });
+
+  test("a LiteLLM endpoint's list comes with its prices from /model_group/info; any other endpoint's as before", async () => {
+    const seen: { url: string; headers: Headers }[] = [];
+    const litellm = (async (url: string | URL | Request, init?: RequestInit) => {
+      seen.push({ url: String(url), headers: new Headers(init?.headers) });
+      if (String(url).endsWith("/v1/models"))
+        return new Response(JSON.stringify({ data: [{ id: "m1" }, { id: "m2" }] }));
+      if (String(url) === "https://gw.example/model_group/info")
+        return new Response(
+          JSON.stringify({
+            data: [
+              { model_group: "m1", input_cost_per_token: 2.5e-6, output_cost_per_token: 1e-5 },
+              { model_group: "m2" },
+            ],
+          }),
+        );
+      return new Response("not found", { status: 404 });
+    }) as unknown as typeof fetch;
+    expect(
+      await listEndpointModels({ style: "openai", baseURL: "https://gw.example/v1" }, "k-123456789", litellm),
+    ).toEqual([{ id: "m1", prices: { input: 2.5, output: 10 } }, { id: "m2" }]);
+    expect(seen[1]?.url).toBe("https://gw.example/model_group/info");
+    expect(seen[1]?.headers.get("authorization")).toBe("Bearer k-123456789");
+    // Anthropic's style: the same server root, the key as LiteLLM reads it.
+    expect(
+      await listEndpointModels({ style: "anthropic", baseURL: "https://gw.example" }, "k-123456789", litellm),
+    ).toEqual([{ id: "m1", prices: { input: 2.5, output: 10 } }, { id: "m2" }]);
+    expect(seen[3]?.url).toBe("https://gw.example/model_group/info");
+
+    // A server with no model groups (404), one that can't be reached, or one that answers junk: the list as before.
+    for (const info of [
+      () => new Response("not found", { status: 404 }),
+      () => {
+        throw new Error("connection refused");
+      },
+      () => new Response("{not json"),
+    ]) {
+      const other = (async (url: string | URL | Request) =>
+        String(url).endsWith("/models")
+          ? new Response(JSON.stringify({ data: [{ id: "m1" }] }))
+          : info()) as unknown as typeof fetch;
+      expect(await listEndpointModels({ style: "openai", baseURL: "https://gw.example/v1" }, "k", other)).toEqual([
+        { id: "m1" },
+      ]);
+    }
   });
 });
 
