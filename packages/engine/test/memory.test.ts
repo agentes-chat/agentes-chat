@@ -1033,10 +1033,18 @@ describe("proposals for teammates (one card, a row per agent and kind of change)
     );
 
   /**
-   * @dev's run on a message in #general from Ana (or `userId`), or from another agent (no person behind it). The message
+   * @dev's run on a message in #general from Ana (or `userId`), or from another agent (no person behind it). The channel
    * relays outside content, so changes wait on their card; `ownWords`: they apply at once when the person may decide.
    */
   async function runOn(author: "person" | "agent", userId = f.owner.id, ownWords = false): Promise<ToolContext> {
+    if (!ownWords)
+      await insertMessage(f.db, {
+        orgId: f.org.id,
+        channelId: f.general.id,
+        author: { type: "agent", agentId: f.agent.id, runId: null, hop: 1, stretchId: null },
+        body: "The vendor page says the team changed.",
+        meta: { readOutside: true },
+      });
     const trigger = await insertMessage(f.db, {
       orgId: f.org.id,
       channelId: f.general.id,
@@ -1045,7 +1053,6 @@ describe("proposals for teammates (one card, a row per agent and kind of change)
           ? { type: "person", userId }
           : { type: "agent", agentId: f.agent.id, runId: crypto.randomUUID(), hop: 1 },
       body: "muda o time",
-      ...(ownWords ? {} : { meta: { readOutside: true } }),
     });
     const [run] = await f.db
       .insert(schema.agentRuns)
@@ -1471,7 +1478,7 @@ describe("proposals for teammates (one card, a row per agent and kind of change)
     f = await setup();
     const ada = await teammate("ada");
     const lia = await teammate("lia");
-    const atlas = await teammate("atlas", { instructions: "Seja breve.\n\n## Learned\n- Outra." });
+    const atlas = await teammate("atlas", { instructions: "Seja breve.\n\n## Tom\n- Outra." });
     const { proposals } = await proposeFor({
       target: "agent_instructions",
       agentIds: [ada.id, lia.id, atlas.id],
@@ -1610,6 +1617,21 @@ describe("proposals for teammates (one card, a row per agent and kind of change)
     expect(unknown).toMatchObject({
       isError: true,
       content: expect.stringContaining(`Unknown app: Jira. Apps you can name: connector:${linear?.id} (Linear),`),
+    });
+    // The asker's own connection: not given through a card, and the refusal says who gives it and where.
+    await f.db.insert(schema.connectorConnections).values({
+      orgId: f.org.id,
+      connector: "custom:crm",
+      toolPrefix: "crm",
+      label: "Acme CRM",
+      serverUrl: "https://crm.example.com/mcp",
+      authType: "none",
+      ownerUserId: f.owner.id,
+    });
+    const theirs = await propose(ctx, { target: "agents", access: [{ agent: "@ada", app: "Acme CRM", on: true }] });
+    expect(theirs).toMatchObject({
+      isError: true,
+      content: expect.stringContaining("Acme CRM: the person asking connected it as their own"),
     });
     const out = await propose(ctx, {
       target: "agents",

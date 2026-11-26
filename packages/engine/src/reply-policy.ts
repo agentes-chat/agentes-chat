@@ -123,7 +123,8 @@ export interface ReplyPolicy {
  * Notices that only inform the agent (ADR 0053 §10): another agent's note, the late result of a wait it
  * stopped waiting on, its own fast reply, its own follow-up coming due, what happened on GitHub (it answers there),
  * a check that failed on its code session's branch (a push since may have fixed it, ADR 0215), the asks its ended
- * background work took on (the work may have done them). The run one of them wakes may stay quiet.
+ * background work took on (the work may have done them), a newcomer it may welcome (`member_joined`). The run one of
+ * them wakes may stay quiet.
  */
 const INFORMING_NOTICES: ReadonlySet<string> = new Set([
   "channel_work",
@@ -134,6 +135,7 @@ const INFORMING_NOTICES: ReadonlySet<string> = new Set([
   "github_event",
   "github_check",
   "work_follow_up",
+  "member_joined",
 ]);
 
 /**

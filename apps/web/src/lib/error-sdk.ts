@@ -10,28 +10,18 @@ import { appFiles, type ErrorSdk, foreignStack, shortErrorId } from "./error-rep
  * file: that address goes as its pattern, like the request's (ADR 0104), since it holds the workspace's and the
  * person's ids and a wiki page's name. The app's own files (`/assets/`) and other origins' stay as they are.
  *
- * In a copy of the exception: `beforeSend` gets a shallow copy of the event the SDK's dedupe keeps, to compare the next
- * report's message and frames with. Scrubbed in place, a repeat would read as a new report and go too. What
- * `scrubEvent` rewrites in the exception (its message) then lands in the copy as well.
+ * In place on `scrubEvent`'s copy, whose frames are its own: the SDK's dedupe keeps the frames `beforeSend` is given,
+ * to compare the next report's with.
  */
-function scrubPageFrames(event: Event) {
+function scrubPageFrames<T extends Event>(event: T): T {
   const page = `${location.origin}/`;
   const scrub = (file: string) => (file.startsWith(page) && !file.startsWith(appFiles()) ? urlPattern(file) : file);
-  if (event.exception)
-    event.exception = {
-      ...event.exception,
-      values: event.exception.values?.map((value) => ({
-        ...value,
-        stacktrace: value.stacktrace && {
-          ...value.stacktrace,
-          frames: value.stacktrace.frames?.map((frame) => ({
-            ...frame,
-            ...(frame.filename && { filename: scrub(frame.filename) }),
-            ...(frame.abs_path && { abs_path: scrub(frame.abs_path) }),
-          })),
-        },
-      })),
-    };
+  for (const value of event.exception?.values ?? [])
+    for (const frame of value.stacktrace?.frames ?? []) {
+      if (frame.filename) frame.filename = scrub(frame.filename);
+      if (frame.abs_path) frame.abs_path = scrub(frame.abs_path);
+    }
+  return event;
 }
 
 /**
@@ -47,8 +37,7 @@ export function startSdk(config: ErrorReportsConfig, taken: (eventId: string) =>
       // fails in an extension's code is the extension's. This file's chunk holds the SDK too: nothing else imports it.
       if (reloadingForNewVersion() || foreignStack(event, import.meta.url)) return null;
       if (event.event_id) taken(event.event_id);
-      scrubPageFrames(event);
-      return scrubEvent(event);
+      return scrubPageFrames(scrubEvent(event));
     },
     dsn: config.dsn,
     environment: config.environment,

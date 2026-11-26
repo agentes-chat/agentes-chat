@@ -8,6 +8,7 @@ import {
   type AiChoiceTarget,
   accountShortName,
   aiChoiceOf,
+  keyChosen,
   reasonText,
 } from "@agenteschat/client/lib/ai-choice";
 import { type EffortLevel, effortOf } from "@agenteschat/client/lib/brain-advanced";
@@ -52,7 +53,7 @@ export function rowOfChoice(rows: readonly AiChoiceRow[], c: AiChoice | null | u
   return rows.find((r) => {
     if (r.type === "plan")
       return c.brain !== "model" && !!c.account && (r.account?.id === c.account || r.account?.sameAs === c.account);
-    if (r.type === "key") return c.brain === "model" && (c.key ? r.apiKey?.id === c.key : r.apiKey?.isDefault === true);
+    if (r.type === "key") return c.brain === "model" && !!r.apiKey && keyChosen(c, r.apiKey);
     if (r.type === "workspace") return c.brain === "model";
     return r.brain === c.brain;
   });
@@ -60,9 +61,9 @@ export function rowOfChoice(rows: readonly AiChoiceRow[], c: AiChoice | null | u
 
 /** A row's name: the account's, the key's, a brain's maker, "A do workspace". */
 export function rowName(t: TFunction, row: AiChoiceRow): string {
+  if (row.type === "workspace") return t("aiHub.choice.workspace");
   if (row.account) return accountShortName(t, row.account);
   if (row.apiKey) return row.apiKey.label;
-  if (row.type === "workspace") return t("aiHub.choice.workspace");
   return row.brain === "model" ? t("aiHub.apiKey") : t(`aiAccounts.connect.${row.brain}`);
 }
 
@@ -86,6 +87,8 @@ function rowMeta(t: TFunction, row: AiChoiceRow, withOwner: boolean): string {
       .filter(Boolean)
       .join(" · ");
   }
+  // "A do workspace": which key it is.
+  if (row.type === "workspace") return row.apiKey?.label ?? t("aiHub.apiKey");
   if (row.apiKey) return row.apiKey.endpoint ? row.apiKey.endpoint.baseURL : t("aiHub.apiKey");
   // A plan through its computer's own sign-in.
   if (row.type === "brain" && row.brain !== "model") return t("brain.picker.ownSignIn");
@@ -351,7 +354,7 @@ export function AiChoiceFields({
     commit({ ...shown, model: v, ...(effort !== undefined ? { effort } : {}) }, row);
   };
 
-  const levels = row ? state.efforts(row) : [];
+  const levels = row ? state.efforts(row, isAuto(model) ? null : (shown?.model ?? null)) : [];
   const autoModel = isAuto(model);
   const effort = row ? effortOf(row.brain, shown?.effort) : null;
   const effortOptions: SelectOption<string>[] = autoModel

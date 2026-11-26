@@ -63,8 +63,9 @@ fonts, as today.
 
 A person or an agent uploads a `.ttf`, `.otf` or `.woff` to the Drive like any file (`.woff2` isn't taken: its tables
 need a decoder the server doesn't carry). The upload is checked before it is kept (`readFont`): at most 10 MB, a
-font the server can parse, its tables within bounds. A font in the Drive the reader can see shows in the font picker
-beside the catalog, under its family name; an agent brings one into a file with `add_font {font_file}`.
+font the server can parse, its tables within bounds. A person brings one into a file from the font list ("Bring a
+font from the Drive", the Drive's picker showing only fonts); an agent with `add_font {font_file}`. The file's own
+fonts then show in its font list under their family names (`GET …/artifacts/{id}/fonts`).
 
 Using one in a live file copies it into the file's assets (ADR 0196 §8), under the reader's check that they can read
 it, like a picture from the Drive: the file refers to it as `asset:<id>`, so whoever opens the file draws it right,
@@ -144,8 +145,22 @@ own effects. A document's PDF stays the Drive's Markdown PDF.
 ### 8. The apps
 
 The web and the desktop app load a font when a file uses it (`@font-face` from `/api/fonts` or the file's asset
-route); the phone loads the static files with `expo-font`. People change fonts and the new text styles from the
-toolbars of slides, canvases and documents; those controls are designed with a prototype before they are built.
+route); the phone loads the static files with `expo-font`.
+
+People change fonts and the new text styles from the toolbars of slides, canvases and documents, the same controls
+in the three (`apps/web/src/components/live/type/`), chosen among three prototyped directions:
+
+- A font list beside the size: a search, then the file's heading and text fonts (a canvas, which has none, lists the
+  fonts it already uses), the company's fonts brought into the file, and the catalog by kind, each name in its own
+  face (loaded when the list opens). Under it, the file's own heading and text fonts (a dialog, presentations and
+  documents) and bringing a font from the Drive.
+- A text style menu "Aa": the weights the font draws, letter spacing, line height (not in documents, whose blocks
+  keep theirs), all caps and a highlight.
+- On a shape, an effects menu: no, soft or strong shadow; solid, dashed or dotted border; four gradients.
+
+Each choice is a preset written as the file stores it (§3). A chosen box takes the style whole and loses its words'
+own marks of that kind, so the choice shows; words chosen while typing take marks. A deck's heading or text font
+equal to its theme's isn't stored, so a new theme still changes it.
 
 ## Consequences
 

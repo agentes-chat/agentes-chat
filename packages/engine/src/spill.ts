@@ -24,7 +24,8 @@ export interface SpillRecord {
   toName?: string;
 }
 
-export type SpillCause = "full" | "away";
+/** "chosen": its owner chose a computer of theirs for their agents' work (`spill_first`), and it was free. */
+export type SpillCause = "full" | "away" | "chosen";
 
 /**
  * How long an agent's ask, a routine or long work waits in its computer's line before it looks for another computer
@@ -315,6 +316,19 @@ const spillable = (orgId: string, home: string) =>
       and coalesce(w.state, w.transcript)->'waitingForBrain'->>'code' = 'busy')`,
   );
 
+/** The computers `owner` chose for their agents' work (`spill_first`), free to take a turn now. */
+const chosenBy = (owner: string) => and(eq(machines.spillFirst, true), eq(machines.pairedByUserId, owner));
+
+/** Whether `owner` has a computer for their agents' work free now (`spillTarget` with `chosen`): worth a look. */
+export async function chosenComputerFree(db: Executor, orgId: string, owner: string, home: string): Promise<boolean> {
+  const [row] = await db
+    .select({ id: machines.id })
+    .from(machines)
+    .where(and(spillable(orgId, home), chosenBy(owner)))
+    .limit(1);
+  return row !== undefined;
+}
+
 /** Whether a turn waiting behind others on `home` may find another computer (`spillTarget`): worth a look now. */
 export async function spillMayHelp(db: Executor, orgId: string, home: string): Promise<boolean> {
   const [row] = await db.select({ id: machines.id }).from(machines).where(spillable(orgId, home)).limit(1);
@@ -334,16 +348,19 @@ export async function spillTarget(
   plan: BrainPlan,
   personId: string | null,
   session: { id: string },
+  /** Only a computer its owner chose for their agents' work (`chosenBy`). */
+  chosen = false,
 ): Promise<{ machineId: string; name: string; homeName: string | null; plan: BrainPlan } | null> {
   const home = plan.session?.machineId;
   const owner = agent.ownerUserId;
-  if (!home) return null;
+  if (!home || (chosen && !owner)) return null;
   const candidates = await deps.db
     .select()
     .from(machines)
     .where(
       and(
         spillable(agent.orgId, home),
+        chosen && owner ? chosenBy(owner) : undefined,
         owner
           ? sql`(${machines.belongsToWorkspace} or ${machines.pairedByUserId} = ${owner})`
           : eq(machines.belongsToWorkspace, true),

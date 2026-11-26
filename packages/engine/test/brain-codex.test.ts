@@ -3,10 +3,17 @@ import {
   CODEX_FOLDER_PROTOCOL,
   CODEX_WINDOWS_PROTOCOL,
   CONTEXT_LIMIT_PROTOCOL,
+  GROK_WINDOWS_PROTOCOL,
   MACHINE_PROTOCOL_VERSION,
   OPENCODE_ACP_PROTOCOL,
 } from "@agenteschat/adapters";
-import { type BrainTurnRequest, CodexBrain, type ComputerBrainLink, OpencodeBrain } from "../src/brains/codex";
+import {
+  type BrainTurnRequest,
+  CodexBrain,
+  type ComputerBrainLink,
+  GrokBrain,
+  OpencodeBrain,
+} from "../src/brains/codex";
 import { computerPrompt } from "../src/brains/prompt";
 import type { BrainEvent, BrainTurn } from "../src/brains/types";
 import { MachineRequestError } from "../src/machine-hub";
@@ -51,7 +58,7 @@ function link(opts: {
         execAllowed: true,
         ...(opts.protocol !== undefined ? { protocol: opts.protocol } : {}),
         ...(opts.os ? { os: opts.os } : {}),
-        executors: opts.version === null ? {} : { codex: { version: opts.version ?? "codex-cli 0.163.0" } },
+        executors: opts.version === null ? {} : { codex: { version: opts.version ?? "codex-cli 0.170.0" } },
       };
     },
     async turn(_machineId, request, { onEvent }) {
@@ -119,6 +126,33 @@ test("on Windows a runner before OPENCODE_ACP_PROTOCOL refuses every OpenCode tu
   expect(current.sent).toHaveLength(1);
   expect(current.sent[0]).toMatchObject({ kind: "opencode" });
   const mac = opencodeLink("darwin", OPENCODE_ACP_PROTOCOL - 1);
+  await collect(brain(mac).run(turn(), io()));
+  expect(mac.sent).toHaveLength(1);
+});
+
+test("Grok runs on Windows from GROK_WINDOWS_PROTOCOL; an older Windows runner is too old there, nothing sent", async () => {
+  const grokLink = (os: string, protocol: number) => {
+    const l = link({ os, protocol, events: [{ type: "done", text: "ok" }] });
+    l.status = async () => ({
+      online: true,
+      execAllowed: true,
+      protocol,
+      os,
+      executors: { grok: { version: "1.0.45" } },
+    });
+    return l;
+  };
+  const brain = (l: ComputerBrainLink) => new GrokBrain({ link: l, mcp: async () => ({ token: "t" }) });
+  const old = grokLink("windows", GROK_WINDOWS_PROTOCOL - 1);
+  expect(await collect(brain(old).run(turn(), io()))).toMatchObject([
+    { type: "error", code: "runner_outdated", message: expect.stringContaining("Grok Build on Windows") },
+  ]);
+  expect(old.sent).toEqual([]);
+  const current = grokLink("windows", GROK_WINDOWS_PROTOCOL);
+  await collect(brain(current).run(turn(), io()));
+  expect(current.sent).toHaveLength(1);
+  expect(current.sent[0]).toMatchObject({ kind: "grok" });
+  const mac = grokLink("darwin", GROK_WINDOWS_PROTOCOL - 1);
   await collect(brain(mac).run(turn(), io()));
   expect(mac.sent).toHaveLength(1);
 });
@@ -229,13 +263,18 @@ test("a model the ChatGPT sign-in refused stays out of that sign-in's later turn
   expect(l.sent.map((r) => r.model)).toEqual(["gpt-6.2-sol", undefined, "gpt-6.2-sol"]);
 });
 
-test("refuses before sending: offline, no Codex, no session; any Codex version goes", async () => {
+test("refuses before sending: offline, no Codex, no session, a Codex below its floor; any other version goes", async () => {
   const run = async (l: ComputerBrainLink, t = turn()) =>
     collect(new CodexBrain({ link: l, mcp: async () => ({ token: "t" }) }).run(t, io()));
   const offline = link({ online: false });
   expect(await run(offline)).toMatchObject([{ type: "error", code: "machine_offline", retryable: true }]);
   expect(await run(link({ version: null }))).toMatchObject([{ type: "error", code: "codex_missing" }]);
-  for (const version of ["codex-cli 0.100.0", "codex-cli 0.170.0", "WARNING: proceeding\ncodex-cli 0.170.0", ""]) {
+  // Older than `CLI_FLOORS.codex`: the turn waits for an update there, never sent to fail.
+  const old = link({ version: "codex-cli 0.100.0" });
+  expect(await run(old)).toMatchObject([{ type: "error", code: "cli_outdated", retryable: true }]);
+  expect(old.sent).toHaveLength(0);
+  // A line with no version in it is never held back on a guess.
+  for (const version of ["codex-cli 0.170.0", "WARNING: proceeding\ncodex-cli 0.170.0", ""]) {
     const any = link({ version });
     await run(any);
     expect(any.sent).toHaveLength(1);

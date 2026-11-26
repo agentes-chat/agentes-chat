@@ -286,6 +286,8 @@ export async function createTestServer(
     streams: createStreamSockets({ db, auth, config, broker: engine.streams }),
     live,
     overloaded: options.overloaded,
+    // Read at each frame, so a test can spy on it.
+    onTyping: (where) => engine.warmWhileTyping(where),
   });
   return {
     db,

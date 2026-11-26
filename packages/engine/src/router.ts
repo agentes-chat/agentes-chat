@@ -25,7 +25,6 @@ import {
   routerModelOf,
 } from "@agenteschat/providers";
 import { audienceSql } from "./audience";
-import { TYPING_GRACE_MS, typesInApp, typingLogFor } from "./burst";
 import { caches } from "./cache";
 import { summarizeGrants } from "./capabilities";
 import { isConfidential } from "./confidential";
@@ -35,6 +34,7 @@ import { createAgentRuns, requesterOf } from "./dispatch";
 import { type DecidedBy, MENTION_NEEDED } from "./events";
 import { cutText, hasQuestionMark, wordCount } from "./format";
 import type { ModelGateway } from "./gateway";
+import { appAuthorOf } from "./integrations/author";
 import { PLATFORM_CAP } from "./limits";
 import type { MachineCaller } from "./machine-hub";
 import { AGENT_CHIME_IN_MAX_HOP, getMessage, type Message, type ReplyRef } from "./messages";
@@ -697,14 +697,12 @@ export interface RouterDeps {
    */
   outOfOffice?(orgId: string, agentIds: string[]): Promise<Set<string>>;
   /**
-   * How long a person's message waits for their next one before the router decides (`ROUTER_QUIET_MS` on a
-   * server). Absent or 0: no wait, and each message is decided alone.
+   * How close a person's messages are to be one request (`ROUTER_QUIET_MS` on a server): their next one already here
+   * decides for both, and one decided reads those right before it. Never a wait. Absent or 0: each is decided alone.
    */
   quietMs?: number;
   /** Where an agent's reaction to a person's social message shows live (`RoutingResult.social`). */
   pubsub?: PubSub;
-  /** The quiet window ends early when the person isn't typing (`typingLogFor` on `pubsub`, token-trim B11). */
-  quietByTyping?: boolean;
 }
 
 /**
@@ -718,8 +716,8 @@ export const ROUTER_SLICE = { messages: 12, maxAgeMs: 30 * 60_000, charsPerMessa
 export const ROUTER_MESSAGE_CHARS = 4000;
 
 /**
- * How long the router waits for a person's next message (`RouterDeps.quietMs`): one thing said in a few
- * messages ("boa tarde walter", "como esta hoje") gets one decision, on the last of them.
+ * A person's messages this close are one thing said in a few ("boa tarde walter", "como esta hoje"), read together
+ * (`RouterDeps.quietMs`). Nothing waits for it.
  */
 export const ROUTER_QUIET_MS = 2500;
 
@@ -785,9 +783,9 @@ export { AGENT_CHIME_IN_MAX_HOP };
  * (ADR 0034): the author is never a candidate, at most one agent is picked,
  * only a clear pick (`AGENT_CHIME_IN_SCORE`), and never from an answer to an
  * answer (`AGENT_CHIME_IN_MAX_HOP`). One decision per message (unique),
- * stored with every score. A person's message first waits `quietMs` for
- * their next one; when it comes and the router decides on it too
- * (`routable`), that one decides for both (`continued`). The agent a
+ * stored with every score. A person's message is decided at once; when their
+ * next one, within `quietMs`, is already here and the router decides on it
+ * too (`routable`), that one decides for both (`continued`). The agent a
  * person's message speaks to (`addressee`) answers it, addressed, over who
  * spoke last, and over the agent replied to once the router picks it. One
  * that speaks to no agent in particular goes to the agent the person last
@@ -828,11 +826,15 @@ export async function routeMessage(
   // Waiting for its first plan: a person's message reaches the candidates, to be kept for after it (`no_ai`).
   const waitsForPlan = (await billingHold(db, input.orgId)) === "payment";
   if (refusal && !waitsForPlan) return paused;
-  const message = await getMessage(db, input.orgId, input.messageId);
-  if (!message) return { runs: [], skipped: "message_missing" };
+  const stored = await getMessage(db, input.orgId, input.messageId);
+  if (!stored) return { runs: [], skipped: "message_missing" };
+  // An integration app's message (ADR 0251) is routed as a person's, with the app as its author here (`app:<id>`,
+  // never a user id): its own earlier messages are its talk, nobody else's are, and nobody is behind it.
+  const app = stored.authorType === "app" ? appAuthorOf(stored.meta) : null;
+  const message = app ? { ...stored, authorUserId: `app:${app.id}` } : stored;
   if (waitsForPlan && message.authorType !== "person") return paused;
   const byAgent = message.authorType === "agent" && message.authorAgentId !== null;
-  if (message.authorType !== "person" && !byAgent) return { runs: [], skipped: "not_a_person" };
+  if (message.authorType !== "person" && !byAgent && !app) return { runs: [], skipped: "not_a_person" };
   if (byAgent && SYSTEM_LINE_META.some((k) => k in message.meta)) return { runs: [], skipped: "system_line" };
   if (message.mentionedAgentIds.length > 0) return { runs: [], skipped: "has_mentions" };
   if (message.hop >= deps.policy.maxHops) return { runs: [], skipped: "hop_limit" };
@@ -848,7 +850,7 @@ export async function routeMessage(
       }
     : deps.policy;
   // The person behind it (`authority.ts`): the author, or for an agent's message the person behind its run.
-  const personId = byAgent ? await requesterOf(db, message) : message.authorUserId;
+  const personId = byAgent ? await requesterOf(db, message) : app ? null : message.authorUserId;
   const [already] = await db
     .select({ id: routingDecisions.id })
     .from(routingDecisions)
@@ -946,35 +948,9 @@ export async function routeMessage(
   )
     return unrouted(PLATFORM_CAP);
   const quietMs = byAgent ? 0 : (deps.quietMs ?? 0);
-  if (quietMs > 0) {
-    const end = message.createdAt.getTime() + quietMs;
-    // Token-trim B11: past a short grace, the rest of the window only while the person is typing here.
-    const log =
-      deps.quietByTyping && deps.pubsub && message.authorUserId && typesInApp(message)
-        ? typingLogFor(deps.pubsub)
-        : null;
-    const from = message.createdAt.getTime();
-    const typed = () =>
-      (log?.lastTyped({
-        channelId: message.channelId,
-        threadId: message.threadId ?? null,
-        userId: message.authorUserId as string,
-      }) ?? Number.NEGATIVE_INFINITY) >= from;
-    // Naming exactly one agent, with no typing since: the person said who it is for and nothing more is coming.
-    const namesOneAgent =
-      log !== null && namesIn(message.body, candidates.map(agentNameable), message.authorUserId).length === 1;
-    if (!namesOneAgent || typed()) {
-      const grace = from + Math.min(TYPING_GRACE_MS, quietMs);
-      // ponytail: the wait holds a worker slot; a delayed job of its own if routing ever runs short of slots.
-      if (log && grace > Date.now()) await Bun.sleep(grace - Date.now());
-      if (!log || typed()) {
-        const wait = end - Date.now();
-        if (wait > 0) await Bun.sleep(wait);
-      }
-    }
-    // Not waited for, a next message already here (a busy queue) still decides for both.
-    if (await continuedSoon(db, message, quietMs)) return { runs: [], skipped: "continued" };
-  }
+  // Decided at once, never waited on (ADR 0112): what the person adds next joins the run this starts. Only their next
+  // message already here (a busy queue) decides for both.
+  if (quietMs > 0 && (await continuedSoon(db, message, quietMs))) return { runs: [], skipped: "continued" };
   // What each one can reach, by name ("Sentry"): a question about an app goes to who has it. A person's own
   // connection is never named: the router's reason is read by the whole conversation.
   const [granted, connections] = await Promise.all([
@@ -1037,7 +1013,9 @@ export async function routeMessage(
         userName: users.name,
         agentHandle: agents.handle,
         authorAgentId: messages.authorAgentId,
-        authorUserId: messages.authorUserId,
+        // An app's as the router names its author (above).
+        authorUserId: sql<string | null>`case when ${messages.authorType} = 'app'
+          then 'app:' || (${messages.meta} -> 'app' ->> 'id') else ${messages.authorUserId} end`,
         mentionedAgentIds: messages.mentionedAgentIds,
         mentionedUserIds: messages.mentionedUserIds,
         routable,
@@ -1095,14 +1073,16 @@ export async function routeMessage(
     candidates = candidates.filter((c) => !spoke.has(c.agentId));
     if (candidates.length === 0) return { runs: [], skipped: "no_candidates" };
   }
-  const [author] = message.authorUserId
-    ? await db.select({ name: users.name }).from(users).where(eq(users.id, message.authorUserId))
-    : message.authorAgentId
-      ? await db
-          .select({ name: sql<string>`'@' || ${agents.handle}` })
-          .from(agents)
-          .where(eq(agents.id, message.authorAgentId))
-      : [];
+  const [author] = app
+    ? [{ name: app.name }]
+    : message.authorUserId
+      ? await db.select({ name: users.name }).from(users).where(eq(users.id, message.authorUserId))
+      : message.authorAgentId
+        ? await db
+            .select({ name: sql<string>`'@' || ${agents.handle}` })
+            .from(agents)
+            .where(eq(agents.id, message.authorAgentId))
+        : [];
 
   // The person's messages right before this one, here, each within the quiet period of the next and one the
   // router decides on itself (`routable`): decided with it, as one message (their own jobs stopped as `continued`).
@@ -1257,7 +1237,7 @@ export async function routeMessage(
         answeredBy = m.authorAgentId;
       }
       if (m.authorUserId !== message.authorUserId) continue;
-      // `continuedSoon`'s test: the next message here is theirs, one the router decides on, within the quiet wait.
+      // `continuedSoon`'s test: the next message here is theirs, one the router decides on, within `quietMs`.
       const continued =
         m.routable &&
         after?.authorUserId === m.authorUserId &&

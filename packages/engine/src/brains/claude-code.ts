@@ -19,14 +19,17 @@ import {
   type WireBrainEvent,
 } from "@agenteschat/adapters";
 import { type Database, schema } from "@agenteschat/db";
+import { CLI_FLOORS, CLI_UPDATE_COMMAND, cliVersionProblem, type FloorCli } from "@agenteschat/providers/cli-floors";
 import { autoContextFor } from "@agenteschat/providers/context-limits";
 import { getAgentCached } from "../agents";
+import { fetchesCli } from "../cli-fetch";
 import type { CodeSetup } from "../git/machine";
 import { type MachineCaller, MachineRequestError, type MachineStatus } from "../machine-hub";
 import { MachineDroppedError, MachineOfflineError, MachinePausedError, pausedMessage } from "../machines";
 import { addPersonSpend } from "../person-usage";
 import { apiNano } from "../plan-usage";
 import { runnerUpdateWay } from "../runner-update";
+import { noteModelRefusal, skipRefusedModel, withFailureCause } from "./failure-causes";
 import { computerPrompt, systemWithConversation } from "./prompt";
 import {
   askingPermissions,
@@ -246,6 +249,43 @@ export function cliMissingMessage(
     : `${program} is on ${status.name} but can't start: ${said}`;
 }
 
+/**
+ * A CLI the computer reports at a version agentes.chat holds back (`CLI_FLOORS`): older than its floor, or a blocked one.
+ * Its turns wait (`cli_outdated` is in `UNAVAILABLE_CODES`) until the runner reports a newer one (`executors.changed`
+ * resumes them), never sent to fail there. Null: it may run.
+ */
+export function cliOutdated(
+  status: {
+    name?: string | null;
+    executors?:
+      | (Partial<Record<FloorCli, { version: string }>> & Pick<schema.MachineExecutors, "copies" | "mode">)
+      | null;
+    kind?: string | null;
+    os?: string;
+    protocol?: number;
+  },
+  cli: FloorCli,
+  program: string,
+  floors = CLI_FLOORS,
+): { code: "cli_outdated"; message: string } | null {
+  // Its runner fetches the pinned CLI itself (ADR 0228 §6): the turn goes, and the runner brings it first.
+  if (fetchesCli(status, cli)) return null;
+  const problem = cliVersionProblem(cli, status.executors?.[cli]?.version, floors);
+  if (!problem) return null;
+  const where = status.name || "the computer";
+  const command = CLI_UPDATE_COMMAND[cli];
+  const how = command
+    ? `Update it there (${command}).`
+    : "Update it there, from the agent's settings or with the installer it came from.";
+  return {
+    code: "cli_outdated",
+    message:
+      problem.kind === "too_old"
+        ? `${program} ${problem.version} on ${where} is older than ${problem.min}, the oldest version agentes.chat works with. ${how}`
+        : `${program} ${problem.version} on ${where} has a known problem with agentes.chat. ${how}`,
+  };
+}
+
 /** Why the turn can't go to this machine now (null: it can). With an account, the account decides the sign-in. */
 export function claudeCodeAvailability(status: MachineStatus | null, account?: BrainAccount): BrainEvent | null {
   if (!status) return err("machine_offline", "The agent's computer is not connected to the organization.", true);
@@ -265,7 +305,11 @@ export function claudeCodeAvailability(status: MachineStatus | null, account?: B
     );
   }
   const ex = status.executors ?? {};
-  if (ex.detectedAt && !ex.claude) return err("cli_missing", cliMissingMessage("Claude Code", status, "claude"), true);
+  if (ex.detectedAt && !ex.claude && !fetchesCli(status, "claude")) {
+    return err("cli_missing", cliMissingMessage("Claude Code", status, "claude"), true);
+  }
+  const old = cliOutdated(status, "claude", "Claude Code");
+  if (old) return err(old.code, old.message, true);
   if (account) {
     const e = accountUnavailable(status, account, "claude_code");
     return e ? err(e.code, e.message, true) : null;
@@ -345,7 +389,8 @@ export function claudeCodeCallError(error: unknown): BrainEvent {
   return err("runner_error", error instanceof Error ? error.message : String(error), false);
 }
 
-const toBrainEvent = (e: WireBrainEvent): BrainEvent => e as BrainEvent;
+/** A runner's event, with the cause its words say where the runner gave none (`withFailureCause`). */
+const toBrainEvent = (e: WireBrainEvent): BrainEvent => withFailureCause(e as BrainEvent);
 const isFinal = (e: BrainEvent) => e.type === "done" || e.type === "error";
 
 type Item = { kind: "event"; event: BrainEvent } | { kind: "stream_end" } | { kind: "reply"; final: BrainEvent };
@@ -403,6 +448,7 @@ export function createClaudeCodeBrain(deps: ClaudeCodeBrainDeps): Brain {
           session.machineId,
           {
             op: "brain.warm",
+            runId: turn.runId,
             kind: "claude_code",
             session: { id: session.id, resume: session.resume },
             cwd: session.cwd,
@@ -414,6 +460,7 @@ export function createClaudeCodeBrain(deps: ClaudeCodeBrainDeps): Brain {
             ...(permissions ? { permissions } : {}),
             ...accountFields(status.protocol, turn),
             ...contextFields(status.protocol, turn, "claude_code"),
+            ...(turn.timeZone ? { timeZone: turn.timeZone } : {}),
             agent,
           },
           { timeoutMs: WARM_CALL_MS },
@@ -422,7 +469,9 @@ export function createClaudeCodeBrain(deps: ClaudeCodeBrainDeps): Brain {
         // the turn starts its CLI itself
       }
     },
-    async *run(turn: BrainTurn, io: BrainIO): AsyncIterable<BrainEvent> {
+    async *run(asked: BrainTurn, io: BrainIO): AsyncIterable<BrainEvent> {
+      // A model the sign-in refused lately goes out as the CLI's default; a new refusal is remembered (as Codex's).
+      const turn = skipRefusedModel("claude_code", asked);
       const session = turn.session;
       if (!session) {
         yield err("no_session", "This agent has no computer for Claude Code.", true);
@@ -492,6 +541,7 @@ export function createClaudeCodeBrain(deps: ClaudeCodeBrainDeps): Brain {
           ...accountFields(status?.protocol, turn),
           ...contextFields(status?.protocol, turn, "claude_code"),
           ...(turn.personWaiting ? { personWaiting: true } : {}),
+          ...(turn.timeZone ? { timeZone: turn.timeZone } : {}),
           // Each answer the turn finishes before it goes on is its own message (ADR 0112).
           answers: "each",
         };
@@ -531,10 +581,14 @@ export function createClaudeCodeBrain(deps: ClaudeCodeBrainDeps): Brain {
         for (;;) {
           const item = await queue.next(replyFinal ? (streamEnded ? 0 : (deps.finalGraceMs ?? 1500)) : undefined);
           if (item === null) {
-            if (replyFinal) yield replyFinal;
+            if (replyFinal) {
+              noteModelRefusal("claude_code", asked, replyFinal);
+              yield replyFinal;
+            }
             return;
           }
           if (item.kind === "event") {
+            noteModelRefusal("claude_code", asked, item.event);
             yield item.event;
             if (isFinal(item.event)) return;
           } else if (item.kind === "stream_end") {

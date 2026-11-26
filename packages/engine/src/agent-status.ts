@@ -514,7 +514,7 @@ export function lineInEnglish(line: AgentStatusLine): string | null {
     queued_computer: "in line for its computer",
     waiting_plan: "waiting for its plan to reset",
     waiting_budget: "waiting for its budget to renew",
-    provider_down: "waiting for its AI provider to come back (it retries by itself)",
+    provider_down: "waiting for its AI to answer again (it retries by itself)",
     out_of_plan: `out of office: its AI plan hit its limit${line.until ? `, back at ${line.until}` : ""}; what you send waits until then${line.count ? ` (${line.count} conversation${line.count === 1 ? "" : "s"} already waiting)` : ""}`,
     out_of_budget: `out of office: its monthly budget is spent${line.until ? `, back at ${line.until}` : ""}; what you send waits until then`,
     work:
@@ -697,6 +697,16 @@ export interface StatusPick {
   heavy: number;
   worth: number | null;
 }
+
+/**
+ * A run whose only line says what its work is for (a task, a mission) shows it at once, as it would without Jev:
+ * asking first held it back by a model round trip. Any other sole line (where it answers, what a tool could do) still
+ * waits for Jev, who keeps a quick reply from saying anything (§8). Not weighed, so it doesn't make the agent busy.
+ */
+export const soleStatusPick = (candidates: StatusCandidate[]): StatusPick | null => {
+  const [only] = candidates;
+  return candidates.length === 1 && only && STICKY.has(only.kind) ? { line: only.key, heavy: 0, worth: 1 } : null;
+};
 
 /**
  * The run's line and whether it is busy, as it starts (§8–9): Jev's pick when it rated it worth showing, else no

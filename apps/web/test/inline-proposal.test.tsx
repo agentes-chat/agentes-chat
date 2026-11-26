@@ -188,10 +188,16 @@ describe("a change proposed in the chat, one row", () => {
   test("a new role reads as proposed, with no Edit", async () => {
     await openCard([adaRole("p-role")]);
     const card = one();
-    expect(card.textContent).toContain("função da Ada");
+    // A title of its own starts with a capital: "função da Ada" is written to follow "propõe ·".
+    expect(card.querySelector(".rq__wt b")?.textContent).toBe("Função da Ada");
     expect(card.textContent).toContain("Mudar a função da Ada");
     expect(card.textContent).toContain("Função: Dev → Revisora de código");
     noDecision(card);
+  });
+
+  test("an agent's instructions: the well's title starts with a capital", async () => {
+    await openCard([atlas("p-inst")]);
+    expect(one().querySelector(".rq__wt b")?.textContent).toBe("Instruções do Atlas");
   });
 
   test("a card of one row reads it by id too", async () => {

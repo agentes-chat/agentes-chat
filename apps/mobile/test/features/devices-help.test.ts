@@ -14,6 +14,16 @@ describe("computers that help when the team's is full or away", () => {
     expect(page).toContain('sub: t("devices.spillWorkspaceOff")');
   });
 
+  test("its owner alone may use it for their agents' work, a second switch; the line offers the three choices", () => {
+    const page = flat("features/devices/ComputerSection.tsx");
+    expect(page).toContain('label={t("devices.spillFirst")}');
+    expect(page).toContain("{brought && d.ownerUserId === meId && !d.systemMode ? (");
+    expect(page).toContain("first.mutate(!firstOn");
+    const line = flat("features/queue/QueueSheet.tsx");
+    expect(line).toContain("SPILL_USES.map((use) => ({");
+    expect(line).toContain("checked: use === spillUseOf(d),");
+  });
+
   test("the devices list gives admins the workspace's switch", () => {
     const list = flat("features/devices/DevicesScreen.tsx");
     expect(list).toContain('label={t("devices.helpWorkspace")}');

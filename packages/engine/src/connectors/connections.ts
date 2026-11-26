@@ -1378,8 +1378,9 @@ async function nativeAuthorizeUrl(
   returnTo?: string,
   personal = false,
 ) {
-  const probe = await probeMcpServer(deps, serverUrl).catch(() => null);
-  if (probe?.kind !== "oauth") return null;
+  // Its failures say their own cause (unreachable, an error status, unreadable OAuth details), not "no OAuth".
+  const probe = await probeMcpServer(deps, serverUrl);
+  if (probe.kind !== "oauth") return null;
   const started = await beginMcpOAuth(deps, actorId, orgId, {
     connector,
     serverUrl,
@@ -1388,8 +1389,12 @@ async function nativeAuthorizeUrl(
     scopes: probe.scopes,
     returnTo,
     personal,
+  }).catch((error) => {
+    // A server that also lets in without a sign-in: one it can't start is no OAuth, as before it was read.
+    if (probe.optional && error instanceof ValidationError) return null;
+    throw error;
   });
-  return started.status === "oauth" ? started.authorizeUrl : null;
+  return started?.status === "oauth" ? started.authorizeUrl : null;
 }
 
 /** Callback of an MCP-native authorization: token with PKCE and `resource`, then the connection. */

@@ -14,7 +14,6 @@ import {
   reconcileRuns,
   steerStore,
 } from "@agenteschat/client";
-import { elapsedParts } from "@agenteschat/client/lib/activity";
 import { act, cleanup, within } from "@testing-library/react";
 import { blockRowByRun, nextSlots, rowShows, SLOT_HOLD_MS, sameSlots, waitingLast } from "@/chat/run-slots";
 import { createStreamsStore, reconcileChannelRuns } from "@/realtime/context";
@@ -137,12 +136,6 @@ describe("one block per answer (run-slots)", () => {
     expect(rowShows({ ...fresh, lastEventAt: 10_000 - QUIET_AFTER_MS })).toBe(false);
     // Ended badly: its row says why.
     expect(rowShows({ ...fresh, status: "failed" })).toBe(true);
-  });
-
-  test("the elapsed time", () => {
-    expect(elapsedParts(1_500)).toBeNull();
-    expect(elapsedParts(4_200)).toEqual({ m: 0, s: 4 });
-    expect(elapsedParts(75_000)).toEqual({ m: 1, s: 15 });
   });
 });
 

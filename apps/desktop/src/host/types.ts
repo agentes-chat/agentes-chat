@@ -154,6 +154,11 @@ export interface Host {
   showWindow(name: WindowName): Promise<void>;
   hideWindow(name: WindowName): Promise<void>;
   quit(): Promise<void>;
+  /**
+   * Asks with the system's own dialog whether to quit, and quits on yes (`quit_ask`): a window of its own, which stays
+   * up while another window takes focus. True when the person chose to quit.
+   */
+  askQuit(words: { title: string; body: string; quit: string; cancel: string }): Promise<boolean>;
   appInfo(): Promise<AppInfo>;
   /** This computer's system, size and web view's memory, and this opening, for a problem report (vitals.rs). */
   reportFacts(): Promise<ReportFacts>;

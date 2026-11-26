@@ -144,6 +144,21 @@ export function queueStartText(
 }
 
 /**
+ * A waiting turn's one line: "In line, after Ada" behind another agent's turn waiting just ahead of it, else (the head
+ * of the line, waiting for room) "In line · starts soon".
+ */
+export function queueWaitText(
+  t: TFunction,
+  queue: ComputerQueue | null | undefined,
+  w: QueueWaiting | null,
+  agentName: (id: string) => string | undefined,
+) {
+  const ahead = w && w.position > 1 ? queue?.waiting[w.position - 2]?.agentId : undefined;
+  const name = ahead && ahead !== w?.agentId ? agentName(ahead) : undefined;
+  return name ? t("queue.waitingAfter", agentGrammar(name)) : t("queue.waiting");
+}
+
+/**
  * An agent's place in line for a message: its run as the receipt follows it, else its one waiting turn in this
  * conversation (a new mention joins the turn already waiting).
  */

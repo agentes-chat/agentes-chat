@@ -5,6 +5,7 @@ import {
   useAgents,
   useConfirmSurfaceLink,
   useRemoveSurfaceLink,
+  useSetSurfaceNudge,
   useSetSurfacePin,
   useSurfaceLinks,
 } from "@agenteschat/client";
@@ -15,7 +16,10 @@ import { rightHandName } from "@agenteschat/client/lib/right-hand";
 import {
   CODE_TTL_MS,
   codeDeadline,
+  DAY_HOURS,
+  hourLabel,
   LINK_POLL_MS,
+  NUDGE_AFTER_HOURS,
   newlyLinked,
   pinChosen,
   pinMismatch,
@@ -24,7 +28,19 @@ import {
   surfaceRowOf,
 } from "@agenteschat/client/lib/surface-links";
 import { formatPhone } from "@agenteschat/i18n/format";
-import { Alert, Button, Dialog, DialogBody, DialogFooter, Icon, PixelSpinner, QrCode, useNow } from "@agenteschat/ui";
+import {
+  Alert,
+  Button,
+  Dialog,
+  DialogBody,
+  DialogFooter,
+  Icon,
+  PixelSpinner,
+  QrCode,
+  Select,
+  Switch,
+  useNow,
+} from "@agenteschat/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -146,7 +162,7 @@ export function SurfacePrefRow() {
         <PrefRow
           id="notice-surface-pin"
           icon="lock"
-          label={t("surface.pin.title", { surface })}
+          label={t("surface.pin.row")}
           hint={t("surface.pin.text", { surface })}
           control={
             <Button size="sm" onClick={() => setPinOpen(1)}>
@@ -155,6 +171,7 @@ export function SurfacePrefRow() {
           }
         />
       )}
+      {row.kind === "active" && <SurfaceNudgeRows link={row.link} surface={surface} assistant={assistant} />}
       <SurfaceLinkDialog open={open !== null} onClose={() => setOpen(null)} />
       <SurfacePinDialog
         link={pinOpen !== null && row.kind === "active" ? row.link : null}
@@ -191,6 +208,86 @@ export function SurfacePrefRow() {
           </Button>
         </DialogFooter>
       </Dialog>
+    </>
+  );
+}
+
+/**
+ * The unread nudge under a linked surface (ADR 0234): on or off, after how long, and the quiet hours, each saved at
+ * once. When and whether one goes is the server's call.
+ */
+function SurfaceNudgeRows({ link, surface, assistant }: { link: SurfaceLink; surface: string; assistant: string }) {
+  const { t, i18n } = useTranslation();
+  const toast = useToast();
+  const save = useSetSurfaceNudge();
+  const { nudge } = link;
+  const change = (input: Partial<SurfaceLink["nudge"]>) =>
+    save.mutate({ linkId: link.id, ...input }, { onError: (e) => toast.show(errorText(t, e), "error") });
+  const hours = DAY_HOURS.map((h) => ({ value: String(h), label: hourLabel(i18n.language, h) }));
+  return (
+    <>
+      <PrefRow
+        id="notice-surface-nudge"
+        icon="bell"
+        label={t("surface.nudge.title")}
+        hint={t("surface.nudge.hint", { assistant, surface })}
+        control={
+          <Switch
+            checked={nudge.on}
+            onCheckedChange={(on) => change({ on })}
+            disabled={save.isPending}
+            aria-label={t("surface.nudge.title")}
+          />
+        }
+      />
+      {nudge.on && (
+        <>
+          <PrefRow
+            id="notice-surface-nudge-after"
+            icon="clock"
+            label={t("surface.nudge.after")}
+            control={
+              <Select
+                size="sm"
+                value={String(nudge.afterHours)}
+                onValueChange={(v) => change({ afterHours: Number(v) })}
+                options={NUDGE_AFTER_HOURS.map((h) => ({
+                  value: String(h),
+                  label: t("surface.nudge.hours", { hours: h }),
+                }))}
+                disabled={save.isPending}
+                aria-label={t("surface.nudge.after")}
+              />
+            }
+          />
+          <PrefRow
+            id="notice-surface-nudge-quiet"
+            icon="mute"
+            label={t("surface.nudge.quiet")}
+            hint={t("surface.nudge.quietHint")}
+            actions={
+              <>
+                <Select
+                  size="sm"
+                  value={String(nudge.quietFrom)}
+                  onValueChange={(v) => change({ quietFrom: Number(v) })}
+                  options={hours}
+                  disabled={save.isPending}
+                  aria-label={t("surface.nudge.quietFrom")}
+                />
+                <Select
+                  size="sm"
+                  value={String(nudge.quietTo)}
+                  onValueChange={(v) => change({ quietTo: Number(v) })}
+                  options={hours}
+                  disabled={save.isPending}
+                  aria-label={t("surface.nudge.quietTo")}
+                />
+              </>
+            }
+          />
+        </>
+      )}
     </>
   );
 }

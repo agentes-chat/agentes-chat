@@ -19,7 +19,7 @@ import { audienceOf, audiencePatch } from "@agenteschat/client/lib/audience";
 import { modelRows } from "@agenteschat/client/lib/brain-picker";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
-import { handleAfterRename } from "@agenteschat/client/lib/new-agent";
+import { handleAfterRename, workspaceBudgetText } from "@agenteschat/client/lib/new-agent";
 
 import { can } from "@agenteschat/client/lib/permissions";
 import { brainPlan } from "@agenteschat/client/lib/plans";
@@ -336,6 +336,7 @@ function RightHandForm({ agent }: { agent: Agent }) {
   const credentials = useCredentials(org.id, can(org, "manage_credentials"));
   const platform = usePlatformKey(org.id);
   const usesApi = useWorkspaceUsesApi(org.id);
+  const defaultBudget = useSettings(org.id).data?.defaultAgentBudgetUsd;
   const { solo } = usePersonalView();
   const [name, setName] = useState(agent.name);
   const [budget, setBudget] = useState(agent.monthlyBudgetUsd == null ? "" : String(agent.monthlyBudgetUsd));
@@ -450,7 +451,7 @@ function RightHandForm({ agent }: { agent: Agent }) {
                     prefix="US$"
                     inputMode="decimal"
                     value={budget}
-                    placeholder={t("rightHand.value.budgetDefault")}
+                    placeholder={workspaceBudgetText(t, i18n.language, defaultBudget)}
                     onChange={(e) => setBudget(e.target.value)}
                     onBlur={saveBudget}
                     onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}

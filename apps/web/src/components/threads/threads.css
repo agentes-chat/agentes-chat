@@ -828,6 +828,19 @@ html:not([data-pointer]) .thsel-cap__handle:focus-visible,
   }
 }
 
+/* The message a thread belongs to, while that thread is open beside it and 700ms after it closes: a soft plate and a
+   2px mark on its left edge (a color fade, kept under reduced motion). */
+.channel__messages .ac-msg:has(.thread-line) {
+  transition:
+    background-color 0.12s,
+    box-shadow var(--dur-base) ease 520ms;
+}
+.channel__messages .ac-msg:has(.thread-line[aria-pressed="true"]) {
+  box-shadow:
+    inset 2px 0 0 var(--line-strong),
+    inset 0 0 0 100vmax var(--plate-soft);
+  transition-delay: 0s;
+}
 /*
  * A "Responder" thread under its message: no card, one
  * line that lights on hover: who is in it, "N respostas", what it needs, when. Pressed while the
@@ -948,7 +961,7 @@ html:not([data-pointer]) .thread-line:focus-visible {
 .thread-panel {
   position: fixed;
   z-index: var(--z-dialog);
-  top: 10px;
+  top: calc(10px + var(--window-top));
   right: 10px;
   bottom: 10px;
   width: min(640px, calc(100vw - 20px));
@@ -995,7 +1008,7 @@ html:not([data-pointer]) .thread-line:focus-visible {
 }
 @media (max-width: 860px) {
   .thread-panel {
-    inset: 0;
+    inset: var(--window-top) 0 0;
     width: auto;
     border-radius: 0;
     box-shadow: none;
@@ -1102,6 +1115,74 @@ html:not([data-pointer]) .thread-line:focus-visible {
 .thread-panel[data-leaving],
 .thread-panel__scrim[data-leaving] {
   pointer-events: none;
+}
+/* Landing (`data-landing`, SidePanel): its header, its last rows top to bottom and its composer rise 6px in turn, 35ms
+   apart, and rows that load meanwhile (a thread's replies) rise in too instead of popping. A list in any pane the same.
+   Reduced motion: they fade in. */
+@media (prefers-reduced-motion: no-preference) {
+  .thread-panel[data-landing] > .thread-panel__chat > :first-child,
+  .thread-panel[data-landing] .channel__messages > *,
+  .thread-panel[data-landing] .channel__composer,
+  .thread-panel[data-landing] .ac-list > * {
+    animation: ac-msg-enter var(--dur-base) var(--out) backwards;
+  }
+  .thread-panel[data-landing] .channel__messages > :nth-last-child(8) {
+    animation-delay: 35ms;
+  }
+  .thread-panel[data-landing] .channel__messages > :nth-last-child(7) {
+    animation-delay: 70ms;
+  }
+  .thread-panel[data-landing] .channel__messages > :nth-last-child(6) {
+    animation-delay: 105ms;
+  }
+  .thread-panel[data-landing] .channel__messages > :nth-last-child(5) {
+    animation-delay: 140ms;
+  }
+  .thread-panel[data-landing] .channel__messages > :nth-last-child(4) {
+    animation-delay: 175ms;
+  }
+  .thread-panel[data-landing] .channel__messages > :nth-last-child(3) {
+    animation-delay: 210ms;
+  }
+  .thread-panel[data-landing] .channel__messages > :nth-last-child(2) {
+    animation-delay: 245ms;
+  }
+  .thread-panel[data-landing] .channel__messages > :nth-last-child(1) {
+    animation-delay: 280ms;
+  }
+  .thread-panel[data-landing] .channel__composer {
+    animation-delay: 140ms;
+  }
+  .thread-panel[data-landing] .ac-list > :nth-child(2) {
+    animation-delay: 35ms;
+  }
+  .thread-panel[data-landing] .ac-list > :nth-child(3) {
+    animation-delay: 70ms;
+  }
+  .thread-panel[data-landing] .ac-list > :nth-child(4) {
+    animation-delay: 105ms;
+  }
+  .thread-panel[data-landing] .ac-list > :nth-child(5) {
+    animation-delay: 140ms;
+  }
+  .thread-panel[data-landing] .ac-list > :nth-child(6) {
+    animation-delay: 175ms;
+  }
+  .thread-panel[data-landing] .ac-list > :nth-child(7) {
+    animation-delay: 210ms;
+  }
+  .thread-panel[data-landing] .ac-list > :nth-child(8) {
+    animation-delay: 245ms;
+  }
+  .thread-panel[data-landing] .ac-list > :nth-child(n + 9) {
+    animation-delay: 280ms;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .thread-panel[data-landing] .channel__messages > *,
+  .thread-panel[data-landing] .ac-list > * {
+    animation: ac-fade-in 120ms ease-out;
+  }
 }
 @keyframes thread-panel-in {
   from {

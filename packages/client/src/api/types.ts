@@ -248,6 +248,8 @@ export interface AuthConfig {
   mobileErrorReports?: ErrorReportsConfig | null;
   /** An outside chat surface is bridged (ADR 0187); whether I may link it is `surfaces.list().allowed`. */
   surface?: boolean;
+  /** A computer's own install at an address only that computer opens: its invitation links work nowhere else. */
+  localOnly?: boolean;
   /**
    * This address is one the server's operator registered (ADR 0194): the pages before sign-in show its look, and sign-in
    * is by email alone. Null or absent on any other address.
@@ -369,6 +371,17 @@ export interface SurfaceLink {
   expiresAt: string | null;
   /** A PIN confirms actions asked from the surface (ADR 0226). */
   pinSet: boolean;
+  /** The unread nudge on the surface (ADR 0234), the person's own. */
+  nudge: SurfaceNudge;
+}
+
+/** When the surface reminds the person of what waits unread: on, after how many hours, never in the quiet hours. */
+export interface SurfaceNudge {
+  on: boolean;
+  afterHours: number;
+  /** Whole hours of the day in the person's time zone; equal: no quiet hours. */
+  quietFrom: number;
+  quietTo: number;
 }
 
 /** `GET /me/surface-links`: `allowed`, never `AuthConfig.surface`, decides whether the apps offer linking. */
@@ -445,6 +458,11 @@ export interface User {
   canCreateWorkspace?: boolean;
   /** They deleted this account: the apps show only its waiting screen. `dueAt` is null once the date passed. */
   deletion?: { dueAt: string | null; requestedAt: string | null };
+  /**
+   * The last confirmation or reset email to their address could never be delivered (`EmailUndelivered`); null or
+   * absent: nothing says so.
+   */
+  emailUndelivered?: EmailUndelivered | null;
   /** The app's language for emails, pushes and every device (ADR 0122); null before any app said one. */
   locale?: string | null;
   /** The language follows each device's own (Automático) until the person picks one. */
@@ -475,7 +493,7 @@ export interface OrgSummary {
   permissions?: string[];
   /** Their highest role's position (0 the top), null with none: they manage the roles and people below it. */
   rank?: number | null;
-  /** The workspace logo (`/api/app/org-logos/…`); null or absent = the agent mark. */
+  /** The workspace logo (`/api/app/org-logos/…`, `#ink=light` after a light-ink one); null or absent = the agent mark. */
   logo?: string | null;
   /** The workspace's accent "#rrggbb" (ADR 0193): the apps paint the agent colors from it. Null or absent: the default. */
   accent?: string | null;
@@ -1087,6 +1105,8 @@ export interface AgentSetupChecklist {
   starter?: string;
   /** The apps it was made to use (catalog connector ids) at their levels (ADR 0164): its checklist suggests them. */
   apps?: Record<string, "read" | "write">;
+  /** Closed on its page (its ×): the page shows it no more, whatever is left; its chat keeps its own. */
+  closed?: true;
 }
 
 /** A costly step unrequested work needs a person's go for (ADR 0131 §3). */
@@ -1505,9 +1525,9 @@ export interface Channel {
   createdAt: string;
   /** Who created it: may change it and its members, like admins. */
   createdByUserId?: string | null;
-  /** Its sidebar category (ADR 0080); null or absent: on top, with none. */
-  categoryId?: string | null;
-  /** Order inside its category, from 0. */
+  /** Its sector (ADR 0240); null or absent: under Canais, in none. */
+  groupId?: string | null;
+  /** Order inside its sector (or among the channels in none), from 0. */
   position?: number;
   /** Agents asked in its main timeline answer in the thread under that message (ADR 0214). Regular channels only. */
   replyInThreads?: boolean;
@@ -1611,14 +1631,6 @@ export interface ChannelCard {
   agents: number;
 }
 
-/** A named group of channels in the sidebar, the same for everyone in the organization (ADR 0080). */
-export interface ChannelCategory {
-  id: string;
-  name: string;
-  /** Order in the sidebar, from 0. */
-  position: number;
-}
-
 /** A channel's latest top-level message, for the conversation list. */
 export interface ChannelLastMessage {
   id: string;
@@ -1652,7 +1664,8 @@ export interface Message {
   id: string;
   channelId: string;
   threadId: string | null;
-  author: { type: AuthorType; id: string | null };
+  /** `app`: an integration app (ADR 0251); `appAuthor(meta)` reads its name, color and sender. */
+  author: { type: AuthorType | "app"; id: string | null };
   body: string;
   mentionedAgentIds: string[];
   agentRunId: string | null;
@@ -1718,7 +1731,7 @@ export interface MessageReceipts {
     /** `failed` for another reason: why, as a run's error is worded (`runErrorText`). */
     errorCode?: string;
     errorParams?: Record<string, string>;
-    /** `waiting_input` because its AI provider is down: it retries by itself. */
+    /** `waiting_input` because its AI isn't answering (its provider down, or its computer refusing while online): it retries by itself. */
     outage?: true;
     /** `waiting_input` for its computer: in line for room (`queued`) or for it to come back (`away`). */
     computer?: "queued" | "away" | "line";
@@ -2421,6 +2434,13 @@ export interface Approval {
   /** Approved ahead and not run yet, and you may withdraw it (`approvals.cancel`). */
   canCancel?: boolean;
   /**
+   * Other runs' requests the agent was told already waited in this conversation when it asked: once approved it runs
+   * after they settle (ADR 0182). Absent from older servers: then it waits for none.
+   */
+  afterIds?: string[];
+  /** Approved and waiting for `afterIds`, and you may run it now (`approvals.runNow`, "Rodar este agora"). */
+  canRunNow?: boolean;
+  /**
    * Asked with `request_approval` (ADR 0126): who decides, in words ("Diretoria"), and whose request it was, who
    * decides it only as an approver by role (`requesterDecides`). Null or absent: any other approval.
    */
@@ -3065,6 +3085,8 @@ export interface AgentWork {
   count: number;
   /** With `later`: when it comes back to that conversation (ISO). */
   at?: string;
+  /** Its conversation is one you don't read (someone else's DM, a private channel): nowhere to open. */
+  private?: true;
 }
 
 /**
@@ -3107,6 +3129,12 @@ export interface CanceledReturn {
   canceledBy: { kind: "person"; userId: string; name: string } | { kind: "agent"; agentId: string } | null;
 }
 
+/**
+ * Why an email could never reach its address: `suppressed`, the mail provider stopped mailing it after an earlier
+ * bounce; `rejected`, the address itself was refused.
+ */
+export type EmailUndelivered = "suppressed" | "rejected";
+
 export interface InvitationWithStatus {
   id: string;
   email: string;
@@ -3117,6 +3145,11 @@ export interface InvitationWithStatus {
   /** Agents they start with (ADR 0184). */
   agentIds?: string[];
   status: "pending" | "expired";
+  /**
+   * Its last email could never be delivered: `suppressed`, the mail provider stopped mailing the address after an
+   * earlier bounce (sending it again asks the provider to mail it again); `rejected`, the address was refused.
+   */
+  undelivered?: EmailUndelivered | null;
   expiresAt: string;
   createdAt: string;
   /** Who sent it (their name). */
@@ -3346,6 +3379,13 @@ export interface CustomServer {
   tools: CustomTool[];
   /** What routines can wait on from it (ADR 0130). Older servers leave it out. */
   events?: RoutineConnectorTrigger["event"][];
+  /**
+   * What the server says on how to use its tools (MCP's `instructions`), as agents read it: `cut` when it said more
+   * than `maxChars`. Null when it says nothing, and for who doesn't manage connectors. Older servers leave it out.
+   */
+  instructions?: { text: string; cut: boolean; maxChars: number } | null;
+  /** Agents granted its tools get `instructions` after their own. Older servers leave it out (on). */
+  useInstructions?: boolean;
   /** Last time an admin saved the classification; null = never (nothing exposed). */
   reviewedAt: string | null;
   createdAt: string;
@@ -3468,7 +3508,7 @@ export interface ReplyRef {
   messageId: string;
   /** Its thread (null = the main timeline). */
   threadId: string | null;
-  author: { type: AuthorType; id: string | null };
+  author: { type: AuthorType | "app"; id: string | null };
   authorName: string;
   excerpt: string;
   /** What it quotes was a GIF or a sticker (ADR 0091): the quote says so where its excerpt is empty. */
@@ -3602,6 +3642,7 @@ export const AGENT_ACTION_KINDS = [
   "routine.updated",
   "routine.deleted",
   "channel.agent_added",
+  "channel.lead_changed",
   "channel.created",
   "wiki.page_created",
   "wiki.page_edited",
@@ -3642,6 +3683,7 @@ export const WORKSPACE_ACTION_IDS = [
   "continue_work",
   "update_workspace",
   "set_action_check",
+  "set_computer_help",
   "invite_people",
   "remove_ai_key",
 ] as const;
@@ -3685,6 +3727,8 @@ export interface AgentActionTarget {
  *   English words, never shown), `active`; `routine.updated`: `name`,
  *   `fields` (name, prompt, target, schedule, active), `active`, `schedule`
  * - `channel.agent_added`: `agentId`, `agentName`, `agentHandle`, `channel`
+ * - `channel.lead_changed` (ADR 0095): `channel`, `agentId`, `agentName`, `agentHandle` (null: the channel has no
+ *   responsible agent now), `self` (the agent made itself responsible), `previousAgentId`, `previousAgentName`
  * - `channel.created`: `name` (undo archives it)
  * - `pr.merged`: `repo`, and `number` (a pull request) or `ref` (a branch); nothing undoes it
  * - `wiki.page_created` / `wiki.page_edited`: `title`, `slug`
@@ -4847,7 +4891,26 @@ export interface RoutineRun {
   link: { channelId: string; threadId: string | null; messageId: string } | null;
   /** Waiting for this approval ("Esperando sua aprovação"). */
   approvalId?: string | null;
+  /** A webhook routine's run: how many calls it carried (`routines.runCalls` reads them, for who manages it). */
+  calls?: number;
   finishedAt: string | null;
+}
+
+/** One call a webhook routine's run carried, as it was kept. */
+export interface RoutineRunCall {
+  /** Its number in the run, as its model read it ("call 2 of 5"). */
+  n: number;
+  at: string;
+  method: string;
+  /** The headers kept: its type, sender and event or delivery ids, never a signature. */
+  headers: Record<string, string>;
+  bytes: number;
+  /** Up to 16,000 characters: a longer JSON body has its longest strings shortened, any other is cut (`cut`). */
+  body: string;
+  cut: boolean;
+  /** Not text: nothing of its body was kept. */
+  binary: boolean;
+  test: boolean;
 }
 
 export interface RoutineInput {
@@ -5112,11 +5175,78 @@ export interface Skill {
     agentId?: string | null;
     /** A person chose this update while it waited: Desfazer makes it wait again. */
     waited?: boolean;
+    /** A change a person asked for in words: who asked. */
+    byUserId?: string | null;
   } | null;
   /** "Agentes melhoram as skills sozinhos" set for this skill; null: the workspace's setting. */
   agentsImprove?: boolean | null;
+  /** Its name for people, written when installed or made; null until then (older servers leave it out): show `name`. */
+  title?: string | null;
+  /** When to use it, one line for people; null until written. */
+  summary?: string | null;
+  /** One of the app's icons that fits it. */
+  icon?: string | null;
+  /** A person named it. */
+  titleByPerson?: boolean;
+  /** The library's list: the active agents with it on, by name. */
+  agentIds?: string[];
+  /** The library's list: how many times agents loaded it in the last 7 days. */
+  weekUses?: number;
   createdAt: string;
   updatedAt: string;
+}
+
+/** One time a skill was used: where (null where the viewer isn't in that conversation), by which agent and when. */
+export interface SkillUse {
+  at: string;
+  agentId: string;
+  channelId: string | null;
+  channelKind: string | null;
+  channelName: string | null;
+  threadId: string | null;
+  messageId: string | null;
+  excerpt: string | null;
+}
+
+/** A line of a skill's history, newest first. */
+export interface SkillEvent {
+  id: string;
+  at: string;
+  kind: "created" | "installed" | "edited" | "rewritten" | "link" | "agent" | "restored" | "undone";
+  by: { type: "person" | "agent"; id: string } | null;
+  words: string | null;
+  before: string | null;
+  after: string | null;
+  /** The newest change still in place: `undoUpdate` takes it back. */
+  undoable: boolean;
+  undone: boolean;
+}
+
+/** A skill written from a person's words, to read before saving it. */
+export interface SkillDraft {
+  name: string;
+  title: string;
+  summary: string;
+  icon: string;
+  description: string;
+  body: string;
+  /** The workspace's apps it uses, and which of the chosen agents don't use each yet. */
+  apps: { id: string; label: string; missing: string[] }[];
+}
+
+export interface SkillDraftInput {
+  words: string;
+  agentIds?: string[];
+  personal?: boolean;
+  /** With `change`: the draft to change. */
+  draft?: Pick<SkillDraft, "name" | "description" | "body">;
+  change?: string;
+}
+
+/** A library skill that would help an agent, and why. */
+export interface SkillSuggestion {
+  skillId: string;
+  why: string;
 }
 
 /**
@@ -5172,6 +5302,9 @@ export interface SkillDetail extends Skill {
   pending?: SkillPending | null;
   /** The agents' changes to its text, the last 20 (older servers leave it out). */
   changes?: SkillAgentChange[];
+  /** Its page: its last uses and what changed (older servers leave them out). */
+  uses?: SkillUse[];
+  history?: SkillEvent[];
 }
 
 /** A skill a GitHub link holds, offered to pick when it holds several. */
@@ -5182,6 +5315,8 @@ export interface SkillChoice {
   description: string;
   /** A skill of this name is installed (it becomes a new version of it) or was removed (it comes back, on for nobody). */
   replaces?: "installed" | "removed";
+  /** Another skill the link holds has this name: only one of them may be picked. */
+  sameName?: true;
 }
 
 /** A skill a GitHub link holds that can't be installed: its folder and the server's refusal. */
@@ -5207,6 +5342,9 @@ export type SkillVia = "github_app" | "github";
 /** `GET …/agents/{id}/skills`: every skill of the library, with whether this agent has it. */
 export interface AgentSkill extends Skill {
   enabled: boolean;
+  /** How many times this agent loaded it in the last 7 days (older servers leave it out). */
+  agentWeekUses?: number;
+  agentLastUsedAt?: string | null;
 }
 
 /** "Escrever": a skill made here. */
@@ -5230,6 +5368,8 @@ export interface SkillPatch {
   autoUpdate?: boolean;
   /** Agents improve it by themselves; null follows the workspace. */
   agentsImprove?: boolean | null;
+  /** Its name for people; empty gives it back to the summary model. */
+  title?: string;
 }
 
 /** The workspace's skill settings: "Agentes melhoram as skills sozinhos" (on by default). */
@@ -5283,6 +5423,11 @@ export interface Machine {
   egress?: { ip: string; country?: string; at: string } | null;
   networkTransition?: { state: "draining" | "restart_required"; deadline: string; agents: string[] } | null;
   /**
+   * ADR 0237, the workspace's own computer: the person's computer whose internet its agents' web traffic uses now, and
+   * who connected it. Null or absent: its usual way out.
+   */
+  egressVia?: { machineId: string; name: string; userName: string | null } | null;
+  /**
    * The workspace's own computer, online, has its agents waiting for their way out: none of the proxies its network
    * requires works now, so their connections are refused for a while. Absent from an older server: they don't wait.
    */
@@ -5316,6 +5461,11 @@ export interface Machine {
   /** `system`: each agent works as its own OS user, in its own folder (ADR 0057). Absent on older servers: `single`. */
   mode?: "system" | "single";
   runnerVersion: string;
+  /**
+   * Its runner is behind this server: `command`, its owner runs `agentes-runner update` there; `installer`, the
+   * install command again, as root. Null or absent (an older server): nothing to update from here.
+   */
+  update?: "command" | "installer" | null;
   /** ADR 0110: its runner can hold browser profiles; `false`: update the computer. */
   browserProfiles?: boolean;
   /** `false`: started with `--no-exec` (files and uploads only). */
@@ -5348,6 +5498,13 @@ export interface Machine {
    * `CLI_GIT_MISSING`; null or absent for people who don't manage it.
    */
   cliErrors?: Partial<Record<string, string>> | null;
+  /**
+   * ADR 0228 §6: the coding CLIs its runner fetches by itself there (`claude`, `codex`, `cursor`, `opencode`, `grok`,
+   * `antigravity`), so one not installed or too old is no reason to refuse it; absent or empty from an older runner.
+   */
+  cliFetchable?: string[];
+  /** Where each fetch of a coding CLI stands there (`CliFetch`), by CLI; live as `machine.updated` with `cliFetch`. */
+  cliFetch?: Partial<Record<string, CliFetch>> | null;
   /**
    * Windows: what holds Codex's commands there: `mxc`, `unelevated` (Codex's own sandbox where MXC is missing: writes
    * held to the agent's folders, the internet only partly blocked) or `none` (nothing could). Null or absent elsewhere,
@@ -5717,6 +5874,19 @@ export interface PlanDropped {
   provider: string | null;
 }
 
+/**
+ * A runner's fetch of a coding CLI's pinned build (ADR 0228 §6): `fetching` (`done` bytes of `total`, null while
+ * unknown), `ready`, or `failed` with why: `offline`, `hash_mismatch` (not the vendor's build, so never used),
+ * `no_build` (none for that system), `disk_full`, or `failed`.
+ */
+export interface CliFetch {
+  state: "fetching" | "ready" | "failed";
+  version: string;
+  done?: number;
+  total?: number | null;
+  reason?: "offline" | "hash_mismatch" | "no_build" | "disk_full" | "failed";
+}
+
 /** Org events about connected computers. */
 export type MachineEvent =
   | { type: "machine.status"; machineId: string; online: boolean }
@@ -5732,6 +5902,8 @@ export type MachineEvent =
       accounts?: true;
       /** `true`: the coding CLIs it found changed (protocol 41); refetch the agents' brain settings. */
       executors?: true;
+      /** ADR 0228 §6: a fetch of a coding CLI moved on, ended or failed there (by CLI), patched in place. */
+      cliFetch?: Partial<Record<string, CliFetch>>;
     }
   /** ADR 0036: a new pause state or access reported by the machine (also accepted inside `machine.updated`). */
   | { type: "machine.state"; machineId: string; paused?: MachinePause | null }
@@ -5942,8 +6114,11 @@ export interface BundleNote {
 }
 
 export interface BundleTodo {
-  /** `webhook`: a routine that now has an address of its own here, to give the app that called the old one. */
-  kind: "connection" | "app" | "secret" | "model" | "file" | "webhook";
+  /**
+   * `webhook`: a routine that now has an address of its own here, to give the app that called the old one. `path`: a
+   * file or folder an agent's instructions point at that the import didn't bring.
+   */
+  kind: "connection" | "app" | "secret" | "model" | "file" | "path" | "webhook";
   label: string;
   url?: string;
   /** Keys of the agents it matters to. */
@@ -6127,7 +6302,8 @@ export type ThreadChange =
 
 /** A person or an agent in a thread (`id` null: someone who left). */
 export interface ThreadActor {
-  type: AuthorType;
+  /** `app`: an integration app (ADR 0251). */
+  type: AuthorType | "app";
   id: string | null;
 }
 
@@ -6493,6 +6669,8 @@ export type BrainUnavailable =
   | "system"
   /** It is there and can't start: the computer's row has its error (`Machine.cliErrors`). */
   | "cant_start"
+  /** It is there at a version agentes.chat holds back: too old, or a blocked one (`BrainOption.outdated`). */
+  | "cli_outdated"
   /** Codex on a Windows computer where no sandbox could hold its commands. */
   | "windows_sandbox";
 
@@ -6527,6 +6705,8 @@ export interface BrainOption {
    * account there has a plan that includes it (`plan`).
    */
   missing?: { modelId: string; label: string; why: "app_old" | "cli_old" | "plan" };
+  /** With `cli_outdated`: the version reported, the oldest one that runs (absent: blocked), and the command that updates it. */
+  outdated?: { version: string; min?: string; command?: string };
 }
 
 /** A computer the caller may give an agent, with what it offers. */
@@ -6557,7 +6737,8 @@ export interface AgentBrain {
   /** As stored; null = the brain's default. */
   model: string | null;
   effectiveModel: string | null;
-  computer: { machineId: string; name: string; online: boolean } | null;
+  /** `os`: its system, where a plan doesn't run there (absent: an older server). */
+  computer: { machineId: string; name: string; online: boolean; os?: string } | null;
   options: BrainOption[];
   /** Every computer the caller may give the agent, with what each offers ("Vai para o Mac mini"). */
   machines: BrainMachine[];
@@ -6580,7 +6761,7 @@ export interface AgentBrain {
    * computador" isn't listed. A plan thinks only for its owner's agents (ADR 0059).
    */
   accounts: MachineAccount[];
-  /** The viewer may add an account there for this agent: its owner, on a computer where they add accounts. */
+  /** The viewer may add an account there for this agent: its owner or who manages it, on a computer where they add accounts. */
   canManageAccounts: boolean;
   /** False while the app on the computer is too old for accounts (nothing about them shows). */
   accountsSupported: boolean;
@@ -6601,6 +6782,11 @@ export interface AgentBrain {
   autonomy?: CommandApproval;
   /** The workspace's live API keys, id and provider only: what its owner may move it onto (absent: an older server). */
   keys?: { id: string; provider: string }[];
+  /**
+   * On the API: the workspace's key its calls take now (its own, else its provider's), the one the picker shows chosen
+   * even when it isn't the default; null with none or on a plan (absent: an older server).
+   */
+  keyId?: string | null;
 }
 
 /** The team's right hand's AIs: the viewer's own, or the workspace's (admins). */
@@ -6769,6 +6955,8 @@ export interface AiComputer {
   machineId: string;
   name: string;
   online: boolean;
+  /** Its system, where a plan doesn't run there (absent: an older server). */
+  os?: string;
   /** The viewer connected it. */
   mine: boolean;
   /** The viewer adds accounts there (they connected it, or nobody did), on a runner that knows accounts. */
@@ -7339,6 +7527,11 @@ export type NotificationKind =
    */
   | "device.folder_request"
   /**
+   * ADR 0237: a computer paired before agents could use a person's internet lends its own now (its owner, else who
+   * configures the workspace), once: `source.machineId`, its name in `source.label`. Inbox only, "Turn off" on the row.
+   */
+  | "device.internet_shared"
+  /**
    * "Pedir a um admin" (`POST …/admin-asks`): the asker as actor, what in `latest.reason` (`channel_agent` with
    * `source.channelId` and `agentId`, waiting until added; `create_agents`; `webhook` with the service in `latest.title`).
    */
@@ -7380,6 +7573,13 @@ export type NotificationKind =
   | "computer_disk_full"
   /** ADR 0133: a computer has no Google Chrome for its agents' browsers (who connected it). `source.machineId`. */
   | "computer_no_chrome"
+  /**
+   * ADR 0241: a computer the agents work on has been away 10 minutes (who configures the workspace). Once per outage;
+   * `source.machineId` and its name in `source.label`, `latest.since`, `latest.runs`, `latest.calls`.
+   */
+  | "computer_down"
+  /** ADR 0241: that computer is back (who heard it was down), with the same fields. Opens the computer. */
+  | "computer_back"
   /** ADR 0059 §8: someone else took control of the person's agent's desktop. Once a day per agent; `source.agentId`. */
   | "desktop_taken"
   /**
@@ -7629,6 +7829,9 @@ export interface NotificationLatest {
   /** `computer_disk_full`: the share of the disk in use (0 to 1) and the GB left. */
   diskUse?: number;
   diskFreeGb?: number;
+  /** `computer_down`, `computer_back`: when the outage began (ISO), the webhook calls that waited (`runs`: the runs). */
+  since?: string;
+  calls?: number;
   /** `app_created`: how many of each kind (`agent`, `routine`, `skill`, `memory`, `channel`). */
   created?: Record<string, number>;
   /** `run_failed`: every run the row stands for, failed for one cause close together (`latest.reason`). */
@@ -7643,6 +7846,7 @@ export interface NotificationLatest {
   limitUsd?: number;
   raiseToUsd?: number;
   limitFrom?: string;
+  /** `usage_limit`: this month's requests; `computer_down`, `computer_back`: the runs that waited for the computer. */
   runs?: number;
   /** `usage_limit`: the share of the requests made with the agent named in `title`. */
   share?: number;
@@ -7791,6 +7995,7 @@ export type SidebarItem =
   | "routines"
   | "calendar"
   | "team"
+  | "skills"
   | "dashboards"
   | "taskManager"
   | "code";
@@ -8926,8 +9131,15 @@ export interface ComputerDevice {
   /**
    * "Help when the team's computer is full or away": fresh turns of its owner's agents (anyone's, on one marked the
    * workspace's) may think here while their own computer is full or away. An older server also sent a retired `others`.
+   * `first`: "Use this computer for my agents' work", its owner's agents' asks, routines and long work start here first
+   * (absent: an older server).
    */
-  spill: { own: boolean };
+  spill: { own: boolean; first?: boolean };
+  /**
+   * ADR 0237: whether its owner lends its internet to the workspace's own computer, and whether that computer goes out
+   * through it now. Null (or absent from an older server): nothing to lend to.
+   */
+  shareInternet?: { on: boolean; inUse: boolean } | null;
   systemMode: boolean;
   audience: DeviceAudience;
   status: DeviceStatus;
@@ -9067,10 +9279,44 @@ export interface ComputerDeviceInput {
   belongsToWorkspace?: boolean;
   maxTasks?: number;
   pushHarder?: boolean;
-  spill?: { own?: boolean };
+  /** ADR 0237: lend its internet to the workspace's own computer (its owner); on again picks it first. */
+  shareInternet?: boolean;
+  spill?: { own?: boolean; first?: boolean };
 }
 
 export interface PhoneDeviceInput {
   name?: string;
   audience?: DeviceAudience;
+}
+
+/** An integration app (ADR 0251) as Settings › Integrations lists it. Its token is never shown again. */
+export interface IntegrationApp {
+  id: string;
+  name: string;
+  color: string;
+  channels: { channelId: string; canPost: boolean }[];
+  /** The live token's last four characters; null once revoked. */
+  tokenHint: string | null;
+  tokenCreatedAt: string | null;
+  webhookUrl: string | null;
+  webhookLastAt: string | null;
+  /** `http_<status>`, `network` or `address_refused`; null when the last delivery went through. */
+  webhookLastError: string | null;
+  createdByUserId: string | null;
+  createdAt: string;
+  lastUsedAt: string | null;
+}
+
+export interface IntegrationAppInput {
+  name: string;
+  color?: string;
+  channels: { channelId: string; canPost: boolean }[];
+  webhookUrl?: string | null;
+}
+
+/** What a change shows once: a new token, a new webhook signing secret. */
+export interface IntegrationAppSecrets {
+  app: IntegrationApp;
+  token?: string;
+  webhookSecret?: string | null;
 }

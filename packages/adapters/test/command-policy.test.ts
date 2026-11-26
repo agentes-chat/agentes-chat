@@ -5,6 +5,7 @@ import {
   ASK_IN_CHAT,
   approvalMessage,
   approvalNeeded,
+  approvalOf,
   badActorRefusal,
   commandKind,
   DELETE_BRANCHES_POINTER,
@@ -36,6 +37,7 @@ import {
   secretRead,
   shellWords,
   simpleCommands,
+  textVerdict,
   unaskedMessage,
 } from "../src/command-policy";
 import { ruleMatches } from "../src/machine-protocol";
@@ -1134,6 +1136,67 @@ describe("whether a push waits for a person", () => {
     // Each took seconds when the deny list cut every command into its parts again for each of its rules. Both take
     // about 0.5 s on a laptop and up to 1.7 s on a busy CI runner, well under what the old cut took.
     expect(performance.now() - started).toBeLessThan(3000);
+  });
+
+  test("worked out apart and sent back as JSON, a text's verdict is the one worked out here: crafted and random scripts", async () => {
+    const profiles = [
+      facts(),
+      facts({ proxied: ["origin"] }),
+      facts({ defaults: {} }),
+      facts({ protected: ["release/*", "fix"], defaults: { origin: "develop", upstream: "trunk" } }),
+      facts({ current: null, target: null }),
+    ];
+    const pieces = [
+      "git push origin develop",
+      "git push origin agentes/ada/fix",
+      "git push --force origin fix",
+      "git push origin --delete old",
+      "git push",
+      "git push -u origin HEAD",
+      "git push --all origin",
+      "git push --mirror backup",
+      "git push --prune origin fix",
+      "git push origin :",
+      "git push upstream trunk",
+      "git push origin release/2.1",
+      "git -C sub push origin develop",
+      "git push origin $BRANCH",
+      "git checkout develop",
+      "cd app",
+      "cd ..",
+      "cd ~",
+      "sh -c 'git push origin develop'",
+      "bash -lc 'cd app && git push origin fix'",
+      "env git push origin develop",
+      "echo develop | xargs git push origin",
+      "gh pr merge 12",
+      "vercel deploy --prod",
+      "gh api repos/o/r -X PUT",
+      "gh auth token",
+      'subprocess.run(["gh", "pr", "merge", "12"])',
+      'os.system("git push origin fix")',
+      "grep -rn 'git push' .",
+      "echo hi",
+      "# a comment",
+      "x=$(git push)",
+      "'",
+    ];
+    const joins = ["\n", " && ", "; ", " | ", " || ", " "];
+    const pick = <T>(list: readonly T[]) => list[Math.floor(Math.random() * list.length)] as T;
+    const crafted = [...pieces, pieces.join("\n"), pieces.join(" && "), `cd app\n${pieces.join("\n")}`];
+    const random = Array.from({ length: 200 }, () =>
+      Array.from({ length: 1 + Math.floor(Math.random() * 8) }, () => `${pick(pieces)}${pick(joins)}`).join(""),
+    );
+    for (const text of [...crafted, ...random]) {
+      for (const code of [false, true]) {
+        for (const f of profiles) {
+          const here = await approvalNeeded(text, ASK_AGAIN, { code, own, facts: () => f });
+          const sent = JSON.parse(JSON.stringify(textVerdict(text, ASK_AGAIN, code)));
+          const apart = await approvalOf(sent, ASK_AGAIN, { own, facts: () => f });
+          expect([text, code, apart]).toEqual([text, code, here]);
+        }
+      }
+    }
   });
 
   test("through our git proxy, what it refuses whoever approves never runs here, and the refusal says where to go", async () => {

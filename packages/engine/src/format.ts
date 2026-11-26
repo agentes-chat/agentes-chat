@@ -9,6 +9,37 @@ export const cutText = (text: string, max: number) => text.slice(0, max).replace
 /** `cutText` for text people read: a cut ends in "…", never passing for the whole. */
 export const cutMarked = (text: string, max: number) => (text.length > max ? `${cutText(text, max - 1)}…` : text);
 
+/**
+ * A JSON object or array as compact JSON within `max` characters, its longest strings shortened first (each cut one
+ * ends in "…"): every key, number and short value stays, where a cut at the end drops whole fields. Null when the text
+ * isn't one, when even its keys alone don't fit, or when written again it would say another number (an id past 2^53).
+ */
+export function shortenJson(text: string, max: number): string | null {
+  let value: unknown;
+  try {
+    value = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  if (typeof value !== "object" || value === null || changesNumbers(value)) return null;
+  const capped = (cap: number) =>
+    JSON.stringify(value, (_key, v) => (typeof v === "string" && v.length > cap ? `${cutText(v, cap)}…` : v));
+  if (capped(0).length > max) return null;
+  let [lo, hi] = [0, text.length];
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    if (capped(mid).length <= max) lo = mid;
+    else hi = mid - 1;
+  }
+  return capped(lo);
+}
+
+/** A parsed JSON value holding a number that `JSON.stringify` would not write back as it was read. */
+const changesNumbers = (v: unknown): boolean =>
+  typeof v === "number"
+    ? !Number.isFinite(v) || (Number.isInteger(v) && !Number.isSafeInteger(v))
+    : typeof v === "object" && v !== null && Object.values(v).some(changesNumbers);
+
 /** A sentence's words as they compare: lower case, no accents, no punctuation or emoji, single spaces. */
 export const plainWords = (s: string) =>
   s
@@ -271,3 +302,7 @@ export function inertLinks(text: string): string {
 /** A JSON value with every string in it made inert (`inertLinks`). */
 export const inertJson = <T>(value: T): T =>
   JSON.parse(JSON.stringify(value, (_key, v) => (typeof v === "string" ? inertLinks(v) : v)));
+
+/** Whole seconds from an ISO time to `now`, never negative; null when there is no readable time. */
+export const secondsBefore = (now: Date, at: string | null | undefined) =>
+  at && Number.isFinite(Date.parse(at)) ? Math.max(0, Math.round((now.getTime() - Date.parse(at)) / 1000)) : null;

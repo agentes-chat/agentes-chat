@@ -171,38 +171,57 @@ const ID_TAGS = new Set(["org_id", "user_id", "agent_id", "run_id", "machine_id"
  * release, the route as a pattern and pseudonymous internal ids. Never emails, names, IP addresses, cookies, auth
  * headers, request or response bodies, message or mail content, tool inputs or outputs, prompts, model output, file
  * contents or tokens.
+ *
+ * A copy: the event it is given stays as it came, and each exception and frame is the copy's own. The SDK's dedupe
+ * keeps the last event it let through, whose exception `beforeSend` is given, to compare the next one with: scrubbed in
+ * place, a repeat would no longer match it and be sent again.
  */
 export function scrubEvent<T extends Event>(event: T): T {
-  const { request, user, contexts, tags } = event;
+  const { request, user, contexts, tags, exception } = event;
+  const clean = { ...event };
   if (request) {
     const headers = Object.entries(request.headers ?? {}).filter(([name]) => KEPT_HEADERS.has(name.toLowerCase()));
-    event.request = {
+    clean.request = {
       method: request.method,
       url: request.url === undefined ? undefined : urlPattern(request.url),
       ...(headers.length > 0 ? { headers: Object.fromEntries(headers) } : {}),
     };
   }
-  event.user = user?.id === undefined ? undefined : { id: user.id };
-  delete event.server_name;
-  delete event.extra;
-  delete event.sdkProcessingMetadata;
-  if (event.message) event.message = scrubText(event.message);
-  if (event.logentry) event.logentry = { message: event.logentry.message && scrubText(event.logentry.message) };
-  if (event.transaction) event.transaction = pathPattern(event.transaction);
-  for (const exception of event.exception?.values ?? []) {
-    if (exception.value) exception.value = scrubText(exception.value);
-    for (const frame of exception.stacktrace?.frames ?? []) delete frame.vars;
-  }
-  if (event.breadcrumbs) event.breadcrumbs = event.breadcrumbs.flatMap((crumb) => scrubBreadcrumb(crumb) ?? []);
+  clean.user = user?.id === undefined ? undefined : { id: user.id };
+  delete clean.server_name;
+  delete clean.extra;
+  delete clean.sdkProcessingMetadata;
+  if (clean.message) clean.message = scrubText(clean.message);
+  if (clean.logentry) clean.logentry = { message: clean.logentry.message && scrubText(clean.logentry.message) };
+  if (clean.transaction) clean.transaction = pathPattern(clean.transaction);
+  if (exception?.values)
+    clean.exception = {
+      ...exception,
+      values: exception.values.map((value) => ({
+        ...value,
+        ...(value.value && { value: scrubText(value.value) }),
+        ...(value.stacktrace?.frames && {
+          stacktrace: {
+            ...value.stacktrace,
+            frames: value.stacktrace.frames.map(({ vars: _vars, ...frame }) => frame),
+          },
+        }),
+      })),
+    };
+  if (clean.breadcrumbs) clean.breadcrumbs = clean.breadcrumbs.flatMap((crumb) => scrubBreadcrumb(crumb) ?? []);
   if (contexts) {
-    delete contexts.response;
-    if (contexts.device) delete contexts.device.name;
+    const { response: _response, ...kept } = contexts;
+    if (kept.device) {
+      const { name: _name, ...device } = kept.device;
+      kept.device = device;
+    }
+    clean.contexts = kept;
   }
   if (tags)
-    event.tags = Object.fromEntries(
+    clean.tags = Object.fromEntries(
       Object.entries(tags).map(([k, v]) => [k, typeof v === "string" && !ID_TAGS.has(k) ? scrubText(v) : v]),
     );
-  return event;
+  return clean;
 }
 
 /** What every reporting SDK starts with: nothing personal, no traces, every event and breadcrumb scrubbed. */

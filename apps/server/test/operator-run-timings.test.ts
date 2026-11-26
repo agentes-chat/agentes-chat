@@ -882,6 +882,23 @@ test("reply times: from a person's message to the run's first message, per bucke
   expect(await replyTimes(windowOf(26))).toMatchObject({ replies: [], computerStarts: [], waits: [] });
 });
 
+test("reply times: every brain under its own name, none yet under other", async () => {
+  const at = (ms: number) => new Date(day(4) + ms);
+  for (const [i, brain] of ["antigravity", "cursor", "opencode", "grok", null].entries()) {
+    const asked = await message("hi", at(i * 10_000));
+    const made = await run({ createdAt: at(i * 10_000), triggerMessageId: asked, brain });
+    await message("hello", at(i * 10_000 + 1000 * (i + 1)), made.id);
+  }
+  const { replies } = await replyTimes(windowOf(4));
+  expect(replies.filter((r) => r.trigger === "all" && r.brain !== "all").map((r) => [r.brain, r.p50Ms])).toEqual([
+    ["antigravity", 1000],
+    ["cursor", 2000],
+    ["grok", 4000],
+    ["opencode", 3000],
+    ["other", 5000],
+  ]);
+});
+
 test("reply times: the server's notices are no reply, and an agent's message nobody waits on starts no count", async () => {
   const from = day(28);
   const at = (ms: number) => new Date(from + ms);

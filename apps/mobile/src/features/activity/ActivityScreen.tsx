@@ -1,5 +1,6 @@
 import {
   type AppNotification,
+  type Approval,
   type NotificationCounts,
   type NotificationFilter,
   type Routine,
@@ -10,7 +11,9 @@ import {
   useNotifications,
   useRoutines,
 } from "@agenteschat/client";
+import { approvalLines } from "@agenteschat/client/lib/approval-card";
 import { approvalTitle } from "@agenteschat/client/lib/approval-words";
+import { computerOutageLine, isComputerOutage } from "@agenteschat/client/lib/computer-outage";
 import { errorText, restrictionLine } from "@agenteschat/client/lib/errors";
 import { dateFormat, timeLeft, upperFirst } from "@agenteschat/client/lib/format";
 import { mediaWord } from "@agenteschat/client/lib/media";
@@ -49,6 +52,7 @@ import {
   useToast,
 } from "@/ui";
 import { router } from "@/ui/navigation";
+import { ApproveAllByAgent } from "../approvals/parts";
 import { dashboardWaitingCard } from "../dashboards/logic";
 import { deviceNoticeOf, isDeviceNotice } from "../devices/logic";
 import { DeviceNoticeActions, DeviceNoticeCard } from "../devices/notices";
@@ -193,6 +197,7 @@ export function ActivityScreen() {
       {waiting.length > 0 ? (
         <>
           <SectionHeader title={t("mobile.home.waiting")} count={waitingCount} />
+          <ApproveAllByAgent />
           <LayoutAnimationConfig skipEntering skipExiting>
             {waiting.map((n, i) => (
               <Animated.View key={n.id} {...cardMotion}>
@@ -383,6 +388,10 @@ function DecidedRequests() {
         .sort((a, b) => (b.decidedAt ?? b.expiresAt).localeCompare(a.decidedAt ?? a.expiresAt)),
     [approvals.data],
   );
+  // Approved and waiting for a request asked before it: "Na fila", as the web's rows say.
+  const lines = useMemo(() => approvalLines(approvals.data ?? []), [approvals.data]);
+  const stateOf = (a: Approval) =>
+    lines.get(a.id)?.waitsOn ? "queued" : a.status === "pending" ? "expired" : a.status;
   if (approvals.isPending) return <SkeletonList rows={3} />;
   if (approvals.isError && !approvals.data) return <LoadFailed onRetry={() => void approvals.refetch()} />;
   if (decided.length === 0) return <EmptyState size="inline" title={t("notifications.noneRequests")} />;
@@ -398,9 +407,7 @@ function DecidedRequests() {
           title={dir.agentById.get(a.agentId)?.name ?? t("channel.unknownAgent")}
           time={when.short(a.decidedAt ?? a.expiresAt)}
           // How it ended, in one word after what it was.
-          sub={[approvalTitle(t, a), t(`approvals.status.${a.status === "pending" ? "expired" : a.status}`)].join(
-            " · ",
-          )}
+          sub={[approvalTitle(t, a), t(`approvals.status.${stateOf(a)}`)].join(" · ")}
         />
       ))}
     </>
@@ -570,18 +577,20 @@ const ActivityRow = memo(function ActivityRow({
   );
   const sub = restriction
     ? restrictionLine(t, restriction.code, restriction.facts)
-    : n.kind === "usage_limit"
-      ? usageLimitLine(t, n)
-      : // What the right hand found (ADR 0177 §1) is the title itself: nothing under it says it again.
-        n.kind === "team_watch" || n.kind === "budget_paused"
-        ? ""
-        : failed
-          ? failed.sub
-          : // Where first, then the words, as the web inbox ("#canal · snippet"). A widget's or routine's name is
-            // often its line too: said once ("Assinaturas hoje", not twice).
-            [emojisOf(n).join(" "), [...new Set([placeOf(n), line].filter(Boolean))].join(" · ")]
-              .filter(Boolean)
-              .join(" ");
+    : isComputerOutage(n)
+      ? [placeOf(n), computerOutageLine(t, n, i18n.language)].filter(Boolean).join(" · ")
+      : n.kind === "usage_limit"
+        ? usageLimitLine(t, n)
+        : // What the right hand found (ADR 0177 §1) is the title itself: nothing under it says it again.
+          n.kind === "team_watch" || n.kind === "budget_paused"
+          ? ""
+          : failed
+            ? failed.sub
+            : // Where first, then the words, as the web inbox ("#canal · snippet"). A widget's or routine's name is
+              // often its line too: said once ("Assinaturas hoje", not twice).
+              [emojisOf(n).join(" "), [...new Set([placeOf(n), line].filter(Boolean))].join(" · ")]
+                .filter(Boolean)
+                .join(" ");
   const time = when.short(n.updatedAt);
   // As Conversas' rows: line 1 who (the names alone, one line, the time on their baseline), line 2 what they did and
   // where. A sentence that doesn't open with the names (or has none) is line 1 itself, on one line too.
@@ -683,8 +692,9 @@ const ActivityRow = memo(function ActivityRow({
           <Button variant="secondary" size="sm" label={t("mobile.activity.chooseModel")} onPress={open} />
         </View>
       ) : null}
-      {/* An agent holds the person's phone: Stop, right here (nothing, and no room for it, once it let go). */}
-      {deviceStoppable(n) ? (
+      {/* An agent holds the person's phone: Stop; a computer lends its internet: Turn off. Right here (nothing, and no
+          room for it, once it's done). */}
+      {deviceActionable(n) ? (
         <View style={styles.change}>
           <DeviceNoticeActions item={n} />
         </View>
@@ -709,11 +719,14 @@ const ActivityRow = memo(function ActivityRow({
 /** A notification's read, done and their undo, as the screen hands it to its rows. */
 type NotificationAct = ReturnType<typeof useNotificationAction>["mutate"];
 
-/** Whether a phone notice still has its Stop under the row (`DeviceNoticeActions` draws it only then). */
-function deviceStoppable(n: AppNotification): boolean {
+/** Whether a device notice still has its button under the row (`DeviceNoticeActions` draws it only then). */
+function deviceActionable(n: AppNotification): boolean {
   if (!isDeviceNotice(n.kind) || n.doneAt) return false;
   const d = deviceNoticeOf(n);
-  return d?.kind === "device.in_use" && Boolean(d.phoneId);
+  return (
+    (d?.kind === "device.in_use" && Boolean(d.phoneId)) ||
+    (d?.kind === "device.internet_shared" && Boolean(d.machineId))
+  );
 }
 
 /** Two faces share the avatar box (grouped items: reactions, replies). */

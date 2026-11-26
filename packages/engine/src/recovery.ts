@@ -1,5 +1,5 @@
 import type { PubSub } from "@agenteschat/adapters";
-import { and, asc, type Database, desc, type Executor, eq, inArray, rowsOf, schema, sql } from "@agenteschat/db";
+import { and, asc, type Database, desc, type Executor, eq, inArray, or, rowsOf, schema, sql } from "@agenteschat/db";
 import { textOf } from "@agenteschat/providers";
 import { announceAgentStatus } from "./agent-status";
 import { publishApproval } from "./approvals";
@@ -148,8 +148,9 @@ export async function recoverStaleRuns(
     });
     out.requeued.push(run.id);
   }
-  // Waiting on its plan or budget past its time with no job left to wake it (that job failed or was lost): it would
-  // wait forever, and Rotinas and the agent's status would say so. Woken now; still limited, it parks again.
+  // Waiting on its plan or budget past its time, or for room on a busy computer, with no job left to wake it (that job
+  // failed or was lost): it would wait forever, and Rotinas and the agent's status would say so. Woken now; still
+  // limited or busy, it parks again with a new job.
   const overdue = await db
     .select({
       id: agentRuns.id,
@@ -160,9 +161,17 @@ export async function recoverStaleRuns(
     .where(
       and(
         eq(agentRuns.status, "waiting_input"),
-        inArray(sql<string>`${runState}->'waitingForBrain'->>'code'`, [...USAGE_WAIT_CODES]),
         sql`${runState}->'waitingForBrain'->>'waitId' is not null`,
-        sql`(${runState}->'waitingForBrain'->>'until')::timestamptz < ${cutoff.toISOString()}::timestamptz`,
+        or(
+          and(
+            inArray(sql<string>`${runState}->'waitingForBrain'->>'code'`, [...USAGE_WAIT_CODES]),
+            sql`(${runState}->'waitingForBrain'->>'until')::timestamptz < ${cutoff.toISOString()}::timestamptz`,
+          ),
+          and(
+            sql`${runState}->'waitingForBrain'->>'code' = 'busy'`,
+            sql`${agentRuns.updatedAt} < ${cutoff.toISOString()}::timestamptz`,
+          ),
+        ),
         sql`not ${liveJob}`,
       ),
     )

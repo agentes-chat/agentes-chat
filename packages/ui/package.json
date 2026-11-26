@@ -50,6 +50,7 @@
     "./markdown": "./src/markdown.ts",
     "./media-grid": "./src/media-grid.ts",
     "./names": "./src/names.ts",
+    "./org-logo": "./src/org-logo.ts",
     "./plan-state": "./src/plan-state.ts",
     "./recurrence": "./src/recurrence.ts",
     "./search": "./src/search.ts",

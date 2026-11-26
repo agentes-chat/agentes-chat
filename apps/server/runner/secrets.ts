@@ -297,13 +297,11 @@ async function handleSecretLocked(
       // value to commands, browser use, or files in the workspace.
       const staged = stagedFile(dir, req.requestId);
       await ensureDir(path.dirname(staged));
-      const payload = JSON.stringify(req);
-      try {
-        await writeFile(staged, payload, { flag: "wx", mode: 0o600 });
-      } catch (err) {
-        if (errnoCode(err) !== "EEXIST" || (await readFile(staged, "utf8")) !== payload) throw err;
-        // A lost stage reply may be retried with the same sealed box.
-      }
+      // The person's latest Send replaces what an earlier try staged: each try seals a new box, and a try whose reply
+      // was lost left its box here while the request stayed open.
+      const tmp = `${staged}.${process.pid}.${crypto.randomUUID()}.tmp`;
+      await writeFile(tmp, JSON.stringify(req), { mode: 0o600 });
+      await rename(tmp, staged);
       return { size: Buffer.byteLength(value) };
     }
     case "activate": {
@@ -559,7 +557,7 @@ export function handedSiteSecret(root: string, agent: AgentScope, requestId: str
 
 /**
  * What commands of this agent get: env values (never a site's password: that one only its browser types) and the git
- * settings that end its commits with the request's `Co-authored-by` lines (`co-authors.ts`, in `<runner
+ * settings that end its commits with the request's `Co-Authored-By` lines (`co-authors.ts`, in `<runner
  * home>/git-hooks`) and author them as the person the request names (`commitAuthorEnv`), and a redactor for everything that leaves the machine: every value kept, a site's password in
  * memory, and every Vault value opened here in the last 10 minutes (ADR 0144).
  */

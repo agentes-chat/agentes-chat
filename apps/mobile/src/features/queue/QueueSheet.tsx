@@ -1,4 +1,5 @@
 import {
+  type ComputerDevice,
   type ComputerQueue,
   type QueueWaiting,
   type QueueWorking,
@@ -23,6 +24,7 @@ import {
   queueView,
   queueWhereText,
 } from "@agenteschat/client/lib/computer-queue";
+import { SPILL_USES, type SpillUse, spillOfUse, spillUseOf } from "@agenteschat/client/lib/devices";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { devicePlanName } from "@agenteschat/client/lib/no-ai";
 import { type ReactNode, useCallback, useMemo } from "react";
@@ -50,6 +52,7 @@ import { useComputerSays, useWatchableComputer } from "../chat/DmComputerButton"
 import { openComputer } from "../computer/AgentComputerRow";
 import { StatusLine } from "../devices/parts";
 import { useDeviceMutation, useDevices } from "../devices/queries";
+import { chooseAction } from "../settings/parts";
 import { AgentFace, OpensAgent } from "../shared/Face";
 import { LoadFailed } from "../shared/FirstUse";
 import { useColors, useDirectory, useMeId, useNow, useOrgId } from "../shared/hooks";
@@ -208,8 +211,9 @@ export function QueueSheet({ machineId, computer }: { machineId: string; compute
 }
 
 /**
- * "Your computers": my other computers, each with its switch to help while this one is full or away (`spill.own`).
- * Nothing when I have none, or while an admin turned devices' help off for the workspace.
+ * "Your computers": my other computers, each with how it helps (`spillUseOf`): not at all, while this one is full or
+ * away (`spill.own`), or first for my agents' work (`spill.first`). Nothing when I have none, or while an admin turned
+ * devices' help off for the workspace.
  */
 function SpillHere({ machineId }: { machineId: string }) {
   const { t } = useTranslation();
@@ -218,9 +222,22 @@ function SpillHere({ machineId }: { machineId: string }) {
   const toast = useToast();
   const devices = useDevices();
   const accounts = useAiAccounts(useOrgId()).data;
-  const spill = useDeviceMutation((api, orgId, input: { id: string; own: boolean }) =>
-    api.devices.updateComputer(orgId, input.id, { spill: { own: input.own } }),
+  const spill = useDeviceMutation((api, orgId, input: { id: string; use: SpillUse }) =>
+    api.devices.updateComputer(orgId, input.id, { spill: spillOfUse(input.use) }),
   );
+  const choose = (d: ComputerDevice) =>
+    chooseAction(
+      t("queue.spill.use.label", { name: d.name }),
+      SPILL_USES.map((use) => ({
+        label: t(`queue.spill.use.${use}`),
+        checked: use === spillUseOf(d),
+        onPress: () => {
+          if (use !== spillUseOf(d))
+            spill.mutate({ id: d.id, use }, { onError: (err) => toast({ title: errorText(t, err), icon: "x" }) });
+        },
+      })),
+      t("common.cancel"),
+    );
   const mine = (devices.data?.devices ?? []).filter(
     (d) => d.id !== machineId && d.ownerUserId === meId && d.machineKind === "connected" && !d.systemMode,
   );
@@ -237,14 +254,10 @@ function SpillHere({ machineId }: { machineId: string }) {
             label={d.name}
             below={<StatusLine status={d.status} />}
             belowText={plan(devicePlanName(t, accounts, d.id))}
-            toggle={d.spill.own}
+            value={t(`queue.spill.use.${spillUseOf(d)}`)}
+            menu
             disabled={spill.isPending}
-            onPress={() =>
-              spill.mutate(
-                { id: d.id, own: !d.spill.own },
-                { onError: (err) => toast({ title: errorText(t, err), icon: "x" }) },
-              )
-            }
+            onPress={() => choose(d)}
           />
         ))}
       </GroupedList>

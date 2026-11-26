@@ -531,6 +531,29 @@ describe("Preferences: a setting's explanation behind its ⓘ", () => {
       },
     ));
 
+  test("Advanced with workspaces at different limits: the row says each one's number until a change sets all", () =>
+    pane(
+      "selfhost",
+      <Advanced />,
+      (el) => el.textContent?.includes("Not the same everywhere"),
+      async (el) => {
+        const row = () => [...el.querySelectorAll(".dk-crow")].find((r) => r.textContent?.includes("At the same time"));
+        expect(row()?.textContent).toMatch(/Not the same everywhere: .+ 3, .+ 12\. A change here sets all of them\./);
+        // Only that row: the others are the same everywhere.
+        expect(el.textContent?.match(/Not the same everywhere/g)).toHaveLength(1);
+        await act(async () => row()?.querySelector<HTMLButtonElement>('button[aria-label="Less"]')?.click());
+        await until(() => !el.textContent?.includes("Not the same everywhere"));
+      },
+      {
+        host: (h) => {
+          const [, second] = [...h.runners.values()];
+          (second as unknown as { config: { maxConcurrentTasks?: number } }).config.maxConcurrentTasks = 12;
+          const [first] = [...h.runners.values()];
+          (first as unknown as { config: { maxConcurrentTasks?: number } }).config.maxConcurrentTasks = 3;
+        },
+      },
+    ));
+
   test("Advanced on Linux: back to defaults keeps eight conversations open for 60 minutes, as the runner does", () =>
     pane(
       "selfhost",

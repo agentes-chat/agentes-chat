@@ -33,6 +33,7 @@ import {
   WINDOWS_SANDBOX_MESSAGE,
   windowsCodexSandbox,
 } from "./codex-windows";
+import { ConsoleDecoder } from "./console-text";
 import { RunnerError } from "./errors";
 import { killTree } from "./exec";
 import { cachedCodexVersion, codexRefusal, envValue } from "./executors";
@@ -40,6 +41,7 @@ import { CODEX_MCP_ENV, CODEX_MCP_SERVER, codexWritableRoots } from "./mcp";
 import { isInside, resolveForAgent } from "./paths";
 import type { Spawn } from "./scope-gate";
 import { agentSecrets } from "./secrets";
+import { turnZoneEnv } from "./turn-zone";
 
 /**
  * The Codex branch of `brain.turn` (ADR 0032, ADR 0029 "Codex"): one agent
@@ -135,6 +137,8 @@ export type CodexBrainEvent =
 export interface CodexBrainTurnRequest {
   runId: string;
   kind: "codex";
+  /** The zone of the turn's "Now" (`turnZoneEnv`). */
+  timeZone?: string;
   session: { id: string; resume: boolean };
   /** Relative to the agent's folder. */
   cwd?: string;
@@ -1003,9 +1007,11 @@ async function runCodexExec(input: CodexTurnInput, opts: CodexTurnOptions, versi
   }
 
   let stderr = "";
+
+  const stderrText = new ConsoleDecoder();
   child.stderr?.on("data", (c: Buffer) => {
     // Never a failure by itself (the person's own MCP servers log here); kept for a bad exit.
-    stderr = (stderr + c.toString("utf8")).slice(-2000);
+    stderr = (stderr + stderrText.write(c)).slice(-2000);
   });
   const lines = createInterface({ input: child.stdout as NonNullable<ChildProcess["stdout"]> });
   // A `chat` turn that used a tool of Codex's own ends there: nothing after it is passed on.
@@ -1214,7 +1220,8 @@ export async function handleCodexBrainTurn(
         signal: scope.signal,
         runnerHome: ctx.runnerHome,
         ...(ctx.mcp ? { mcpCommand: ctx.mcp.command, socketPath: ctx.mcp.socketPath } : {}),
-        ...(secrets ? { env: secrets.env, redact: secrets.redact, redactHold: secrets.hold } : {}),
+        env: { ...secrets?.env, ...turnZoneEnv(req.timeZone) },
+        ...(secrets ? { redact: secrets.redact, redactHold: secrets.hold } : {}),
         ...(ctx.codexVersion ? { codexVersion: ctx.codexVersion } : {}),
         ...(ctx.bin ? { bin: ctx.bin } : {}),
         ...(ctx.app ? { app: ctx.app } : {}),

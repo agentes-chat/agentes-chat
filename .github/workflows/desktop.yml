@@ -281,6 +281,9 @@ jobs:
             "$BIN_DIR/agentes-runner-aarch64-apple-darwin" "$BIN_DIR/agentes-runner-x86_64-apple-darwin"
           chmod +x "$BIN_DIR"/agentes-runner-*
           lipo -info "$BIN_DIR/agentes-runner-universal-apple-darwin"
+          # A long script is checked by the runner starting itself (`script-check`): the compiled form answers it.
+          echo '{"text":"git push origin main","how":"ask","code":false}' \
+            | "$BIN_DIR/agentes-runner-universal-apple-darwin" script-check | grep -q '"pushes":\['
 
       # agent-browser ships next to the runner as a second sidecar (ADR 0040): the pinned release, checked
       # against the SHA-256 in machine-protocol.ts (the one source of the version and the hashes), lipo'd
@@ -479,6 +482,8 @@ jobs:
           bun build --compile --target=${{ matrix.bun }} apps/server/runner/main.ts \
             --outfile "$BIN_DIR/agentes-runner-${{ matrix.triple }}.exe"
           "$BIN_DIR/agentes-runner-${{ matrix.triple }}.exe" --version
+          echo '{"text":"git push origin main","how":"ask","code":false}' \
+            | "$BIN_DIR/agentes-runner-${{ matrix.triple }}.exe" script-check | grep -q '"pushes":\['
 
       - name: Fetch agent-browser
         shell: bash
@@ -715,6 +720,8 @@ jobs:
               || { echo "::error::The AppImage's $name isn't the one built"; exit 1; }
           done
           "$dir/squashfs-root/usr/bin/agentes-runner" --version
+          echo '{"text":"git push origin main","how":"ask","code":false}' \
+            | "$dir/squashfs-root/usr/bin/agentes-runner" script-check | grep -q '"pushes":\['
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:

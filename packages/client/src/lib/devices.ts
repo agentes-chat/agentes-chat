@@ -16,7 +16,7 @@ import { DESKTOP_CLOSE, type DesktopMode, type DesktopRetry } from "../desktop";
 import { type SocketBase, socketUrl } from "../realtime/connection";
 import { computerNameOf } from "./computer";
 import { clockAt, firstName, joinNames } from "./format";
-import { computerKind } from "./machines";
+import { computerKind, osName } from "./machines";
 import { norm as fold } from "./tool-review";
 import { isPersonal } from "./workspace-mode";
 
@@ -225,10 +225,7 @@ export function portraitOf(d: ComputerDevice | PhoneDevice): { kind: DevicePortr
 export const deviceName = (t: TFunction, d: { name: string; machineKind?: string; hostname?: string }) =>
   d.name || (d.machineKind === "host" ? t("machines.host.label") : (d.hostname ?? ""));
 
-const OS_CODES = new Set(["linux", "darwin", "windows", "other"]);
-
-/** "macOS", "Windows", or the server's own words when it sends a full name with a version ("Ubuntu 24.04"). */
-export const osName = (t: TFunction, os: string) => (OS_CODES.has(os) ? say(t, `machines.os.${os}`) : os);
+export { osName };
 
 /** "macOS 26.1 · 12 CPU · 36 GB"; the workspace computer says "Cloud" where a system would go. */
 export function computerLine(t: TFunction, d: ComputerDevice): string {
@@ -276,6 +273,27 @@ export function tasksAutoText(t: TFunction, d: ComputerDevice): string | null {
     : t("devices.tasksAutoFull", { running });
 }
 
+/** How a computer helps its owner's agents: never, while their own computer is full or away, or first for their work. */
+export const SPILL_USES = ["off", "help", "first"] as const;
+export type SpillUse = (typeof SPILL_USES)[number];
+export const spillUseOf = (d: Pick<ComputerDevice, "spill">): SpillUse =>
+  d.spill.first ? "first" : d.spill.own ? "help" : "off";
+export const spillOfUse = (use: SpillUse) => ({ own: use !== "off", first: use === "first" });
+
+/**
+ * ADR 0237, under "Agents use this computer's internet": in use now, or which computer the agents use instead (the
+ * computer that lends now, `lending`, from the same list). Null: nothing to say.
+ */
+export function shareInternetText(t: TFunction, d: ComputerDevice, lending: ComputerDevice | null): string | null {
+  if (!d.shareInternet?.on) return null;
+  if (d.shareInternet.inUse) return t("devices.shareInternetInUse");
+  return lending && lending.id !== d.id ? t("devices.shareInternetOther", { name: lending.name }) : null;
+}
+
+/** The computer of a devices list whose internet the workspace's computer uses now (ADR 0237), if any. */
+export const lendingDevice = (devices: readonly ComputerDevice[] | undefined) =>
+  devices?.find((x) => x.shareInternet?.inUse) ?? null;
+
 /** A computer in the line's "More computers" list: "Online · macOS · 16 GB · your Claude Max plan" (`plan`: the viewer's there). */
 export const spillDeviceText = (t: TFunction, d: ComputerDevice, plan: string | null) =>
   [statusPill(t, d.status), computerLine(t, d), plan && t("queue.spill.plan", { plan })].filter(Boolean).join(" · ");
@@ -292,6 +310,8 @@ export function spilledText(
 ): string | null {
   const s = meta?.spilled as { to?: unknown; from?: unknown; cause?: unknown } | undefined;
   if (!s || typeof s.to !== "string") return null;
+  // Its owner chose that computer for their agents' work (`spill.first`): nothing was wrong with its own.
+  if (s.cause === "chosen") return t("chat.spilled.chosen", { to: s.to });
   const from =
     typeof s.from === "string" && s.from
       ? computerNameOf(t, org?.name ?? "", s.from, isPersonal(org))
@@ -1226,7 +1246,8 @@ export type DeviceNoticeKind =
   | "device.waiting"
   | "device.tool_request"
   | "device.cli_request"
-  | "device.folder_request";
+  | "device.folder_request"
+  | "device.internet_shared";
 const NOTICE_KINDS = new Set<string>([
   "device.join_request",
   "device.in_use",
@@ -1235,6 +1256,7 @@ const NOTICE_KINDS = new Set<string>([
   "device.tool_request",
   "device.cli_request",
   "device.folder_request",
+  "device.internet_shared",
 ]);
 
 /**
@@ -1287,8 +1309,8 @@ export function deviceNoticeOf(
     device: str(s.label) ?? str(l.title) ?? "",
     agentId: actor?.id ?? str(s.agentId),
     userId: str(s.userId),
-    // A folder request's `latest.title` is the folder itself, not a person: it reads in the line, not as a name.
-    forName: join || kind === "device.folder_request" ? null : str(l.title),
+    // A folder request's `latest.title` is the folder itself, and a lent internet's the computer: neither is a person.
+    forName: join || kind === "device.folder_request" || kind === "device.internet_shared" ? null : str(l.title),
     text: str(l.text),
     join: join
       ? {

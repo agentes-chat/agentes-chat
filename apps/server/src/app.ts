@@ -53,6 +53,7 @@ import { feedbackRoutes, registerFeedbackFiles, registerFeedbackInbox } from "./
 import { gifKeyRoutes } from "./routes/app/gif-key";
 import { gifRoutes } from "./routes/app/gifs";
 import { imageRoutes } from "./routes/app/images";
+import { integrationAppRoutes } from "./routes/app/integration-apps";
 import { inviteRoutes } from "./routes/app/invites";
 import { issueRoutes } from "./routes/app/issues";
 import { jevRoutes } from "./routes/app/jev";
@@ -97,6 +98,7 @@ import { registerGitProxy } from "./routes/git";
 import { githubAppRoutes, registerGitHubAppWebhook } from "./routes/github-app";
 import { registerHealth } from "./routes/health";
 import { registerInstance } from "./routes/instance";
+import { registerIntegrationApi } from "./routes/integration-api";
 import { machineAppRoutes, registerMachinePublicRoutes } from "./routes/machines";
 import { type AppsRouteOptions, registerAppsRoot, registerOauthRoutes } from "./routes/oauth";
 import { pushRelayRoutes } from "./routes/push-relay";
@@ -145,6 +147,7 @@ export interface AppOptions {
  * - `/api/waitlist`       public: join the waiting list and confirm the email (the landing page, only with LANDING_URL)
  * - `/api/partners/waitlist` public: join the partner program's waiting list (the landing page, only with LANDING_URL)
  * - `/api/oauth/*`        public: the OAuth 2.1 authorization server for AI apps (ADR 0119)
+ * - `/api/v1/*`           public: integration apps' API, `agi_` bearer tokens only (ADR 0251)
  * - `/api/push-relay/v1/*` other installations' phone pushes, server to server (only with PUSH_RELAY_SERVE, ADR 0152)
  * - `/mcp`                AI apps' MCP endpoint, bearer tokens only (ADR 0119); `/.well-known/oauth-*` its discovery
  * - `/api/ws`             WebSocket (real-time)
@@ -266,6 +269,9 @@ export function createApp(options: AppOptions) {
     api.route("/app", voiceRoutes(deps));
     api.route("/app", surfaceRoutes(deps));
     api.route("/app", webhookAdminRoutes(deps));
+    // Integration apps (ADR 0251): Settings › Integrations, and their own public API.
+    api.route("/app", integrationAppRoutes(deps));
+    registerIntegrationApi(api, deps);
     api.route("/app", githubAppRoutes(deps));
     registerOauthRoutes(api, deps, { version, fetchDocument: options.appsFetchDocument });
     registerWebhookReceiver(api, deps);
@@ -490,7 +496,9 @@ export function createApp(options: AppOptions) {
             ? "data-unknown-host"
             : null;
         if (mark) {
-          const page = (await c.res.text()).replace("<html", `<html ${mark}`);
+          let page = (await c.res.text()).replace("<html", `<html ${mark}`);
+          // The web app manifest (ADR 0249) installs the product's name and icon; a registered host wears its own.
+          if (mark === "data-host") page = page.replace(/<link rel="manifest"[^>]*>\s*/, "");
           c.res.headers.delete("content-length");
           // The address may be registered a moment later: nothing keeps this answer.
           if (mark === "data-unknown-host") c.res.headers.set("cache-control", "no-store");

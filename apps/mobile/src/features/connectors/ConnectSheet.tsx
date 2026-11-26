@@ -92,6 +92,7 @@ import {
 import { OwnClient } from "./OwnClient";
 import { Problem } from "./Problem";
 import { RequestHeaders } from "./RequestHeaders";
+import { RoutineOfferGroup, useRoutineOffer, useStartRoutine } from "./RoutineOffer";
 import { ADDRESS_STEPS, CATALOG_STEPS, doneSummary, firstStep, reviewTarget, STEP_KEYS, type Step } from "./review";
 import { ReviewStep } from "./ToolReview";
 import { openTools } from "./ToolsScreen";
@@ -538,6 +539,9 @@ function DoneStep({
   const [failed, setFailed] = useState<string | null>(null);
   const summary = doneSummary(t, reviewTarget(connectionId, def, servers.data, servers.isFetching));
   const waiting = summary?.waiting ?? null;
+  // The routine it brings (ADR 0242); a server still waiting for its tools brings none yet.
+  const offer = useRoutineOffer(waiting ? null : def?.id);
+  const startRoutine = useStartRoutine();
   const apply = (server: CustomServer) => {
     setFailed(null);
     save.mutate(
@@ -566,13 +570,19 @@ function DoneStep({
       />
       {summary?.unreadable ? <Problem text={t("toolReview.unreadable", { reason: summary.unreadable })} /> : null}
       {failed ? <Problem key={failed} text={failed} /> : null}
+      {summary && !waiting ? <RoutineOfferGroup offer={offer} /> : null}
       <Button
         variant="primary"
         wide
         label={waiting ? t("connectFlow.next") : t("connectFlow.done.ok")}
         disabled={!summary}
-        loading={save.isPending}
-        onPress={() => (waiting ? apply(waiting) : sheet.close())}
+        // Done waits for the routine's rows to load: pressed now, it would make nothing.
+        loading={save.isPending || (!waiting && offer.loading)}
+        onPress={() => {
+          if (waiting) return apply(waiting);
+          startRoutine(offer);
+          sheet.close();
+        }}
       />
       <Button
         variant="secondary"
@@ -660,7 +670,7 @@ export function ConnectedNote({ name, text }: { name: string; text: string | nul
         {/* The page's own color on the green: white on dark's light green was hard to read. */}
         <Icon name="check" size={16} color={colors.bg} />
       </Animated.View>
-      <View style={styles.grow}>
+      <View style={[styles.grow, styles.noteText]}>
         <Text variant="body" style={styles.bold}>
           {t("mobile.connectors.connectedTitle", { name })}
         </Text>
@@ -1197,13 +1207,16 @@ const styles = StyleSheet.create({
   },
   keyRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   note: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
-  // A neutral card with a colored badge: the outcome of connecting (`Problem` draws what went wrong the same).
+  // A neutral card with a colored badge: the outcome of connecting (`Problem` draws what went wrong the same). The
+  // words wrap: their first line sits at the badge's middle, the badge never in the middle of the words.
   notice: {
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 12,
     padding: 12,
     borderRadius: 14,
     borderWidth: StyleSheet.hairlineWidth,
   },
   badge: { width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center" },
+  // The title's line (22) at the badge's (28) middle.
+  noteText: { paddingTop: 3 },
 });

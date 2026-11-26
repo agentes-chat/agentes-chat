@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { capProblemReport, PROBLEM_REPORT_TARGET_BYTES } from "@agenteschat/adapters";
+import { capProblemReport, PROBLEM_REPORT_TARGET_BYTES, RUNNER_STOPPED_CLOSE } from "@agenteschat/adapters";
 import { eq, schema } from "@agenteschat/db";
 import { createChannel } from "../src/channels";
 import { postPersonMessage } from "../src/messages";
@@ -23,6 +23,8 @@ const SOURCES = {
   config: { "config.SMTP_URL": "set" },
   publicUrl: "https://chat.example.com",
 };
+
+const FAKE_KEY = "sk-ant-api03-FAKE-not-a-real-key-000000000000000000000000";
 
 describe("problem report", () => {
   test("the shared vector parses", () => {
@@ -121,7 +123,7 @@ describe("problem report", () => {
           trigger: "mention",
           hop: 1,
           status: "failed",
-          error: "provider.unavailable: the model said no",
+          error: `provider.unavailable: ${fx.org.name} refused key ${FAKE_KEY}`,
         })
         .returning();
       return run?.id ?? "";
@@ -134,7 +136,9 @@ describe("problem report", () => {
     );
     expect(mine.report.code).toBe("provider.unavailable");
     expect(mine.report.facts?.["run.status"]).toBe("failed");
-    expect(JSON.stringify(mine.report)).not.toContain("the model said no");
+    // Its words, scrubbed as a log line: the workspace's name and a key never leave.
+    expect(mine.report.facts?.["run.error"]).toStartWith("provider.unavailable: [workspace] refused key ");
+    expect(JSON.stringify(mine.report)).not.toContain(FAKE_KEY);
 
     const member = await addMember(f.db, f.org.id, "member", "bia");
     const theirs = await buildProblemReport(
@@ -144,7 +148,42 @@ describe("problem report", () => {
     );
     expect(theirs.report.facts?.run).toBe("not_visible");
     expect(theirs.report.facts?.["run.status"]).toBeUndefined();
+    expect(theirs.report.facts?.["run.error"]).toBeUndefined();
     expect(theirs.report.code).toBeNull();
+  });
+
+  test("a run's computer is the one its turns ran on, also when its agent has none (the right hand's plan)", async () => {
+    const fx = await setup();
+    f = fx;
+    const [machine] = await fx.db
+      .insert(schema.machines)
+      .values({ orgId: fx.org.id, name: "Plan box", os: "linux", arch: "x64" })
+      .returning();
+    const msg = await postPersonMessage({ db: fx.db, pubsub: fx.pubsub }, fx.owner.id, fx.org.id, fx.general.id, {
+      body: "x",
+    });
+    const [run] = await fx.db
+      .insert(schema.agentRuns)
+      .values({
+        orgId: fx.org.id,
+        agentId: fx.agent.id,
+        channelId: fx.general.id,
+        threadRootId: msg.id,
+        triggerMessageId: msg.id,
+        trigger: "dm",
+        hop: 1,
+        status: "failed",
+        error: "runner_error: No such file or folder",
+        profiles: [{ stages: [] }, { stages: [], machineId: machine?.id }, { stages: [], machineId: "not-a-uuid" }],
+      })
+      .returning();
+    const built = await buildProblemReport(
+      fx.db,
+      { orgId: fx.org.id, userId: fx.owner.id, place: "run", context: { runId: run?.id ?? "" } },
+      { ...SOURCES, serverLines: () => [] },
+    );
+    expect(built.report.facts).toMatchObject({ "machine.os": "linux", "machine.arch": "x64", runnerLog: "no_answer" });
+    expect(built.missing.computer).toBe("Plan box");
   });
 
   test("a Windows computer's report and a run's on it carry its build and what holds Codex there", async () => {
@@ -212,6 +251,47 @@ describe("problem report", () => {
     );
     expect(linux.report.facts).not.toHaveProperty("machine.windowsBuild");
     expect(linux.report.facts).not.toHaveProperty("machine.codexSandbox");
+  });
+
+  test("an offline computer's report says why, from its runner's last close, never the close's text", async () => {
+    const fx = await setup();
+    f = fx;
+    const now = Date.now();
+    const iso = (agoS: number) => new Date(now - agoS * 1000).toISOString();
+    const [machine] = await fx.db
+      .insert(schema.machines)
+      .values({
+        orgId: fx.org.id,
+        name: "Box",
+        os: "linux",
+        lastSeenAt: new Date(now - 3600_000),
+        disconnects: [{ connectedAt: iso(7200), at: iso(3590), code: RUNNER_STOPPED_CLOSE, reason: "secret words" }],
+      })
+      .returning();
+    const machineId = machine?.id ?? "";
+    const build = () =>
+      buildProblemReport(
+        fx.db,
+        { orgId: fx.org.id, userId: fx.owner.id, place: "computer", context: { machineId } },
+        { ...SOURCES, serverLines: () => [] },
+      );
+    const stopped = await build();
+    expect(stopped.report.facts).toMatchObject({
+      "machine.connection": "offline",
+      "machine.offlineCause": "stopped",
+      "machine.lastCloseCode": RUNNER_STOPPED_CLOSE,
+    });
+    expect(stopped.report.facts?.["machine.lastCloseS"]).toBeWithin(3589, 3600);
+    expect(stopped.report.facts?.["machine.lastConnectedS"]).toBeWithin(7199, 7210);
+    expect(JSON.stringify(stopped.report)).not.toContain("secret words");
+
+    // No close recorded: said so, not left out.
+    await fx.db.update(schema.machines).set({ disconnects: [] }).where(eq(schema.machines.id, machineId));
+    expect((await build()).report.facts).toMatchObject({
+      "machine.offlineCause": null,
+      "machine.lastCloseCode": null,
+      "machine.lastCloseS": null,
+    });
   });
 
   test("too many or too long facts are cut to the contract, never fail the report", async () => {

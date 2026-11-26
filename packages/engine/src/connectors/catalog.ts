@@ -30,7 +30,7 @@ export interface ConnectorTool {
   /**
    * Where the agent's own words go on GitHub (ADR 0156): a `body` gets the agent's signature line when given
    * (`always`: an empty one too), a commit message (`message`, a merge's `commit_message`) the agent's own
-   * `Co-authored-by` and the person's credit when given.
+   * `Co-Authored-By` and the person's credit when given.
    */
   sign?: { field: "body" | "message" | "commit_message"; always?: true };
   /** A sensitive tool of ours that asks every time: no "Aprovar sempre" (it spends money or lets people in). */

@@ -2,20 +2,41 @@ import { type AgentColorName, gradientOf, mixHex } from "./engine.js";
 
 /**
  * The rings an agent at work wears (web `OrbitGlyph`, phone `OrbitFace`): radius in halves of the glyph's side,
- * flatness (ry / rx), tilt in degrees, one turn's seconds, where its dot starts (degrees) and whether it turns the other
- * way. Different speeds, one the other way round, so they never line up into one shape.
+ * flatness (ry / rx), tilt in degrees, one turn's seconds, where its light starts (degrees) and whether it turns the
+ * other way. Two rings at different speeds, one the other way round, so they never line up into one shape; tight
+ * enough that they reach a few pixels past the face, never into the name beside it.
  */
 export const ORBIT_RINGS = [
-  { r: 1.42, flat: 0.26, tilt: -16, turn: 2.4, start: 20, back: false },
-  { r: 1.3, flat: 0.34, tilt: 22, turn: 3.6, start: 200, back: true },
-  { r: 1.52, flat: 0.18, tilt: 4, turn: 5.2, start: 120, back: false },
+  { r: 1.36, flat: 0.3, tilt: -17, turn: 2.6, start: 30, back: false },
+  { r: 1.24, flat: 0.38, tilt: 21, turn: 3.9, start: 210, back: true },
 ] as const;
 
-/** The rings' box, in glyph sides: the widest ring and its dot fit. */
-export const ORBIT_SPAN = 3.6;
+/** The rings' box, in glyph sides: the wider ring and its light fit. */
+export const ORBIT_SPAN = 2.2;
 
-/** The rings' colours: the agent's own tone, then two neighbours mixed toward a warm and a cool hue. */
-export function orbitColors(color?: AgentColorName | string): [string, string, string] {
-  const [top, lead] = gradientOf(color);
-  return [lead, mixHex(lead, "#ff4fb8", 0.42), mixHex(top, "#22c3b0", 0.42)];
+/**
+ * The light that rides each ring: an arc of `arc` degrees that fades from its head in `steps` pieces, a small dot at
+ * the head (`dot`, its radius in hundredths of the glyph's side). The ring itself stays behind the face; the light
+ * passes over the face on the near half and behind it on the far one.
+ */
+export const ORBIT_LIGHT = { arc: 110, steps: 8, dot: 5.6 } as const;
+
+/** How much of the light each piece keeps, head first: it fades out along the arc. */
+export const orbitFade = (step: number) => (1 - step / ORBIT_LIGHT.steps) ** 1.3;
+
+/** How wide each piece is, as a share of the head's width: the arc thins out behind its head. */
+export const orbitTaper = (step: number) => 1 - (0.65 * step) / ORBIT_LIGHT.steps;
+
+/**
+ * The orbit's colours, all the agent's own: each ring's (the first in its deep tone, the second between its tones) and
+ * the light's head. On a dark ground the light tones lead, so the rings still read.
+ */
+export function orbitColors(
+  color?: AgentColorName | string,
+  dark = false,
+): { rings: readonly [string, string]; head: string } {
+  const [top, bottom] = gradientOf(color);
+  return dark
+    ? { rings: [top, mixHex(top, "#ffffff", 0.5)], head: mixHex(top, "#ffffff", 0.78) }
+    : { rings: [bottom, mixHex(bottom, top, 0.5)], head: bottom };
 }

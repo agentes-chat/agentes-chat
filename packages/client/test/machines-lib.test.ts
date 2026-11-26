@@ -12,6 +12,7 @@ import {
   brainTool,
   browserNoAnswerMessage,
   browserOffMessage,
+  CLI_GIT_MISSING,
   CLI_HOME_ONLY,
   cliCommandWayOut,
   cliInstallCommand,
@@ -23,6 +24,7 @@ import {
   computerState,
   desktopTargetOf,
   downloadHref,
+  egressViaText,
   folderName,
   foldersOfAgent,
   formatUserCode,
@@ -623,6 +625,11 @@ describe("one click where a tool is off (ADR 0036 §8)", () => {
     expect(cliOneClick(pc, "u-bia", "codex")).toBeNull();
     expect(cliOneClick({ ...pc, os: "darwin" }, "u-bia", "codex")).toEqual({ kind: "allow" });
     expect(cliOneClick({ ...pc, os: "linux", mode: "system" }, "u-bia", "claude")).toBeNull();
+    // A system-mode runner that installs its own copy for all of its agents' users: the same button.
+    const agents = { ...pc, os: "linux", mode: "system" as const, cliFetchable: ["claude", "codex"] };
+    expect(cliOneClick(agents, "u-bia", "codex")).toEqual({ kind: "allow" });
+    expect(cliOneClick(agents, "u-caio", "claude")).toEqual({ kind: "ask", ownerId: "u-bia", ownerName: "Bia Rocha" });
+    expect(cliOneClick({ ...agents, cliFetchable: ["claude"] }, "u-bia", "codex")).toBeNull();
     expect(cliOneClick({ ...pc, kind: "managed" }, "u-bia", "claude")).toBeNull();
     expect(installableCli("claude_code")).toBe("claude");
     const words = { program: "Claude Code", computer: "PC" };
@@ -696,10 +703,14 @@ describe("one click where a tool is off (ADR 0036 §8)", () => {
     for (const no of [
       cliInstallCommand("claude_code", server),
       cliInstallCommand("opencode", server),
-      cliInstallCommand("grok", { ...server, os: "windows" }),
+      cliInstallCommand("antigravity", { ...server, os: "windows" }),
       cliInstallCommand("grok", { ...server, kind: "managed" }),
     ])
       expect(no).toBeNull();
+    // xAI's PowerShell installer, in a line cmd runs too.
+    expect(cliInstallCommand("grok", { ...server, os: "windows" })).toBe(
+      'powershell -ExecutionPolicy Bypass -Command "irm https://x.ai/cli/install.ps1 | iex"',
+    );
 
     const words = { program: "Antigravity CLI", computer: "srv-1" };
     expect(cliCommandWayOut(t, "antigravity", server, "not_installed", "srv-1")?.text).toBe(
@@ -725,6 +736,41 @@ describe("one click where a tool is off (ADR 0036 §8)", () => {
         machine: rootOnly,
       })?.text,
     ).toBe(t("brain.reasons.home_only", words));
+  });
+
+  test("a CLI there that won't start says the CLI's own words, and Gemini on Windows says why it can't", async () => {
+    const { resources } = await import("@agenteschat/i18n");
+    const i18next = (await import("i18next")).default;
+    const instance = i18next.createInstance();
+    void instance.init({
+      lng: "pt-BR",
+      fallbackLng: "en",
+      resources,
+      initAsync: false,
+      // As the apps: React escapes.
+      interpolation: { escapeValue: false },
+    });
+    const t = instance.t;
+    const pc = { kind: "connected", os: "windows", mode: "single" } as const;
+    const cantStart = { state: "unsupported", reason: "cant_start" } as const;
+    const line = (
+      kind: "opencode" | "claude_code" | "antigravity",
+      machine: Parameters<typeof gateLine>[1]["machine"],
+      gate: Parameters<typeof gateLine>[1]["gate"] = cantStart,
+    ) => gateLine(t, { gate, edition: "selfhost", kind, computer: "PC da Bia", machine })?.text;
+    const said = "Error: Cannot find module 'opencode-windows-x64/package.json'";
+    expect(line("opencode", { ...pc, cliErrors: { opencode: said } })).toBe(
+      `O OpenCode está no PC da Bia, mas não abre: ${said}`,
+    );
+    // Claude Code's error is kept under its command's name; Git for Windows missing is a code, said in words.
+    expect(line("claude_code", { ...pc, cliErrors: { claude: "spawn EPERM" } })).toBe(
+      "O Claude Code está no PC da Bia, mas não abre: spawn EPERM",
+    );
+    expect(line("claude_code", { ...pc, cliErrors: { claude: CLI_GIT_MISSING } })).toBe(
+      t("connectAi.cli.gitMissing", { program: "Claude Code", computer: "PC da Bia" }),
+    );
+    // No words from the runner (an older one): the plain line.
+    expect(line("opencode", pc)).toBe(t("brain.reasons.cant_start", { program: "OpenCode", computer: "PC da Bia" }));
   });
 
   test("Prefiro no Terminal: the same switches as one command, only for who turns them on, where there may be no app", () => {
@@ -786,4 +832,18 @@ describe("one click where a tool is off (ADR 0036 §8)", () => {
     expect(browserNoAnswerMessage("the computer Desk did not answer within 120 s")).toBe(false);
     expect(browserNoAnswerMessage(null)).toBe(false);
   });
+});
+
+test("whose internet the workspace's computer uses: the computer and who connected it, only while it is online", () => {
+  const t = ((key: string, o?: Record<string, unknown>) => `${key}${o ? JSON.stringify(o) : ""}`) as never;
+  const via = { machineId: "m-ana", name: "Ana's iMac", userName: "Ana" };
+  expect(egressViaText(t, { kind: "managed", online: true, egressVia: via })).toBe(
+    'machines.egress.viaBy{"name":"Ana\'s iMac","person":"Ana"}',
+  );
+  expect(egressViaText(t, { kind: "managed", online: true, egressVia: { ...via, userName: null } })).toBe(
+    'machines.egress.via{"name":"Ana\'s iMac"}',
+  );
+  expect(egressViaText(t, { kind: "managed", online: false, egressVia: via })).toBeNull();
+  expect(egressViaText(t, { kind: "connected", online: true, egressVia: via })).toBeNull();
+  expect(egressViaText(t, { kind: "managed", online: true, egressVia: null })).toBeNull();
 });

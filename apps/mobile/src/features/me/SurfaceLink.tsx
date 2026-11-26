@@ -7,6 +7,7 @@ import {
   useConfirmSurfaceLink,
   useMintSurfaceCode,
   useRemoveSurfaceLink,
+  useSetSurfaceNudge,
   useSetSurfacePin,
   useSurfaceLinks,
 } from "@agenteschat/client";
@@ -14,7 +15,10 @@ import { errorCode, errorText } from "@agenteschat/client/lib/errors";
 import { rightHandName } from "@agenteschat/client/lib/right-hand";
 import {
   codeDeadline,
+  DAY_HOURS,
+  hourLabel,
   LINK_POLL_MS,
+  NUDGE_AFTER_HOURS,
   newlyLinked,
   pinChosen,
   pinDigits,
@@ -34,6 +38,7 @@ import { Button, GroupedList, GroupedRow, haptics, Sheet, Text, useToast } from 
 import { iconUri } from "../connectors/logic";
 import { confirmAction } from "../settings/parts";
 import { useColors, useNow } from "../shared/hooks";
+import { pickOne } from "../shared/PickerSheet";
 import { MONO } from "../shared/parts";
 import {
   codeIsStale,
@@ -41,6 +46,7 @@ import {
   linkAssistant,
   linkRanOut,
   linkStep,
+  quietHoursText,
   surfaceRowText,
   surfaceSenderText,
 } from "./surface";
@@ -103,6 +109,9 @@ export function SurfaceLinkRow() {
             onPress={() => setPinOpen(true)}
           />
         ) : null}
+        {row.kind === "active" && (
+          <NudgeRows link={row.link} surface={row.surface} assistant={assistant ?? t("rightHand.labelCapitalized")} />
+        )}
       </GroupedList>
       <SurfaceLinkSheet open={open} onClose={() => setOpen(false)} row={row} />
       <SurfacePinSheet
@@ -197,6 +206,70 @@ function SurfacePinSheet({
         />
       </View>
     </Sheet>
+  );
+}
+
+/**
+ * The unread nudge under the linked surface, as on the web (ADR 0234): its switch, then its delay and quiet hours,
+ * each picked in the app's sheet and saved at once.
+ */
+function NudgeRows({ link, surface, assistant }: { link: SurfaceLink; surface: string; assistant: string }) {
+  const { t, i18n } = useTranslation();
+  const toast = useToast();
+  const save = useSetSurfaceNudge();
+  const { nudge } = link;
+  const change = (input: Partial<SurfaceLink["nudge"]>) =>
+    save.mutate({ linkId: link.id, ...input }, { onError: (e) => toast({ title: errorText(t, e), icon: "x" }) });
+  const hours = DAY_HOURS.map((h) => ({ key: String(h), label: hourLabel(i18n.language, h) }));
+  const pickAfter = async () => {
+    const key = await pickOne({
+      title: t("surface.nudge.after"),
+      value: String(nudge.afterHours),
+      options: NUDGE_AFTER_HOURS.map((h) => ({ key: String(h), label: t("surface.nudge.hours", { hours: h }) })),
+    });
+    if (key) change({ afterHours: Number(key) });
+  };
+  const pickQuiet = async () => {
+    const from = await pickOne({ title: t("surface.nudge.quietFrom"), value: String(nudge.quietFrom), options: hours });
+    if (!from) return;
+    const to = await pickOne({ title: t("surface.nudge.quietTo"), value: String(nudge.quietTo), options: hours });
+    if (to) change({ quietFrom: Number(from), quietTo: Number(to) });
+  };
+  const title = t("surface.nudge.title");
+  const quiet = t("surface.nudge.quiet");
+  return (
+    <>
+      <GroupedRow
+        icon="bell"
+        label={title}
+        labelLines={0}
+        hint={{ name: t("common.about", { label: title }), text: t("surface.nudge.hint", { assistant, surface }) }}
+        toggle={nudge.on}
+        disabled={save.isPending}
+        onPress={() => change({ on: !nudge.on })}
+      />
+      {nudge.on && (
+        <>
+          <GroupedRow
+            icon="clock"
+            label={t("surface.nudge.after")}
+            value={t("surface.nudge.hours", { hours: nudge.afterHours })}
+            menu
+            disabled={save.isPending}
+            onPress={() => void pickAfter()}
+          />
+          <GroupedRow
+            icon="mute"
+            label={quiet}
+            value={quietHoursText(t, i18n.language, nudge)}
+            hint={{ name: t("common.about", { label: quiet }), text: t("surface.nudge.quietHint") }}
+            menu
+            disabled={save.isPending}
+            onPress={() => void pickQuiet()}
+          />
+        </>
+      )}
+    </>
   );
 }
 

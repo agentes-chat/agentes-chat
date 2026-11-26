@@ -14,6 +14,7 @@ import { agentProposalOf, costlyProposalOf, stretchCardOf } from "@agenteschat/c
 import { type ActivityEntry, barEntries, type barWords, markedPieces, markInk } from "@agenteschat/client/lib/activity";
 import { splitChannelRefs } from "@agenteschat/client/lib/channel-refs";
 import type { ChatStyle, ChatTextSize } from "@agenteschat/client/lib/chat-look";
+import type { RelayedAnswer } from "@agenteschat/client/lib/consult-group";
 import { agentsByAnyHandle } from "@agenteschat/client/lib/directory";
 import { loneIdRef, splitIdRefs } from "@agenteschat/client/lib/id-refs";
 import { issueWorkOf } from "@agenteschat/client/lib/issues";
@@ -216,6 +217,8 @@ export type ChatRow =
       continued?: boolean;
       /** The message it groups under (what hangs under that one ends the run: `runAround`). */
       above?: Message;
+      /** Another agent's words it passes on (`relayedAnswers`): quoted at its top, their own row folded away. */
+      relay?: RelayedAnswer<Message>;
     };
 
 /** A row's key: an optimistic message keeps it when the server copy (same `clientId`) replaces it. */
@@ -350,7 +353,7 @@ const NOTICE_ICON: Record<string, EventLineView["icon"]> = {
 
 export function eventLineOf(
   m: Pick<Message, "body" | "meta">,
-  names: { author: string; agentByHandle: (handle: string) => string | null },
+  names: Parameters<typeof noticeView>[1],
 ): EventLineView | null {
   const view = noticeView(m, names);
   const kind = noticeOf(m.meta)?.kind ?? "";

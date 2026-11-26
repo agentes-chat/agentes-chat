@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 import { TAB_BADGE } from "@/lib/nav";
 import { Count, LineIcon, PixelOrbit, PressScale, SCREEN_X, SideScroll, Text, weights } from "@/ui";
-import type { RowAction } from "../categories/menus";
+import type { RowAction } from "../channel-sectors/menus";
 import { WaitMark } from "../chat/WaitMark";
 import { AgentFace, Face } from "../shared/Face";
 import { useColors } from "../shared/hooks";
@@ -90,17 +90,20 @@ const PinnedFace = memo(function PinnedFace({
   const { t } = useTranslation();
   const c = useColors();
   const name = r.kind === "channel" ? r.name : r.kind === "dm" ? r.with.name : r.title;
+  // At work, an agent's face wears the orbit, as its row's does; the mark before the name then says nothing more.
+  const ringed = r.kind === "dm" && r.with.type === "agent" && facts.face === "run";
   const face =
     r.kind === "dm" ? (
       r.with.type === "agent" ? (
-        <AgentFace agentId={r.with.id} size={FACE - 2} mode={facts.face} live={live} presence />
+        <AgentFace agentId={r.with.id} size={FACE - 2} mode={facts.face} live={live} presence orbit={ringed} />
       ) : (
         <Face who={{ type: r.with.type, id: r.with.id }} size={FACE} live={false} presence />
       )
     ) : (
       <Tile icon="hash" size={FACE} />
     );
-  const mark = faceMark(facts.line);
+  const lineMark = faceMark(facts.line);
+  const mark = ringed && lineMark === "orbit" ? null : lineMark;
   const unread = r.unread > 0;
   const a11y = [
     name,

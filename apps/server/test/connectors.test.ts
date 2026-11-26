@@ -619,6 +619,54 @@ test("connector tools API: classified on listing (judge for ambiguous names), se
   expect(await waiting()).toEqual([{ pending: "v2" }]);
 });
 
+test("a server's own instructions: shown as agents read them to who may change it, turned off with the tools' save", async () => {
+  const said = "Call preview_change before apply_change.\n\nAsk the person before apply_change.";
+  const mcpConnect: McpConnect = async () => ({
+    listTools: async () => [{ name: "preview_change", inputSchema: { type: "object" }, readOnlyHint: true }],
+    callTool: async () => ({ content: "ok", isError: false }),
+    instructions: () => `  ${said}\n`,
+    close: async () => {},
+  });
+  t = await createTestServer({ mcpConnect, resolveHost: async () => ["93.184.216.34"] });
+  const owner = browser(t);
+  await signUp(owner, "owner@example.com");
+  const { orgId } = await seedOrg(owner);
+  const custom = `/api/app/organizations/${orgId}/connectors/custom`;
+  const started = (await (
+    await owner(custom, { json: { serverUrl: "https://changes.example.com/mcp", apiKey: "chg_secret_12345" } })
+  ).json()) as { server: { id: string; instructions: unknown; useInstructions: boolean } };
+  // Trimmed, whole (under the limit), and on.
+  expect(started.server).toMatchObject({
+    instructions: { text: said, cut: false, maxChars: 4000 },
+    useInstructions: true,
+  });
+
+  const save = (as: typeof owner, body: Record<string, unknown>) =>
+    as(`${custom}/${started.server.id}/tools`, {
+      method: "PUT",
+      json: { label: "Changes", tools: [{ name: "preview_change", access: "read", label: "Preview" }], ...body },
+    });
+  // Who may only read the workspace's connectors neither changes it nor reads the text.
+  const member = await joinByInvitation(t, owner, orgId, "ada@example.com", { role: "member" });
+  expect((await save(member, { useInstructions: false })).status).toBe(403);
+  const theirs = (await (await member(custom)).json()) as { servers: { instructions: unknown }[] };
+  expect(theirs.servers.map((s) => s.instructions)).toEqual([null]);
+
+  const off = await save(owner, { useInstructions: false });
+  expect(off.status).toBe(200);
+  expect(await off.json()).toMatchObject({ useInstructions: false, instructions: { text: said } });
+  // Left out, the switch stays as it was.
+  expect(await (await save(owner, {})).json()).toMatchObject({ useInstructions: false });
+  const listed = (await (await owner(custom)).json()) as { servers: { useInstructions: boolean }[] };
+  expect(listed.servers.map((s) => s.useInstructions)).toEqual([false]);
+  // The change is in the audit log once, on the save that made it.
+  const audits = await t.db
+    .select({ details: schema.auditLog.details })
+    .from(schema.auditLog)
+    .where(eq(schema.auditLog.action, "connector.custom_tools_classified"));
+  expect(audits.map((a) => (a.details as { useInstructions?: boolean }).useInstructions)).toEqual([false, undefined]);
+});
+
 /**
  * Stripe's servers as far as accounts go: its MCP OAuth (discovery, registration, a token per code) and an MCP
  * server whose account tool answers with the token's account (`rk_<account>_…`).

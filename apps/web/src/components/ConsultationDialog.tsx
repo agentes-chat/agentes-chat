@@ -14,6 +14,7 @@ import { buildTimeline } from "@agenteschat/client/lib/timeline";
 import { AvatarStack, Button, DayDivider, Dialog, DialogFooter, Icon, PixelSpinner, Segmented } from "@agenteschat/ui";
 import { Fragment, type ReactNode, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { anchorsScroll } from "@/chat/anchor";
 import { MessageBody } from "@/chat/MessageBody";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { consultLineLabel } from "@/components/ConsultGroup";
@@ -207,7 +208,12 @@ export function ConsultationDialog({
             }))}
           />
         )}
-        <section className="channel__messages consult-dialog__list" aria-label={label}>
+        <section
+          className="channel__messages consult-dialog__list"
+          // Its rows are drawn whole where the browser can't hold the place (layout.css): it never marks them sized.
+          data-manual-anchor={anchorsScroll() ? undefined : ""}
+          aria-label={label}
+        >
           {query.isLoading && <LoadingConversation />}
           {query.isError && !query.data && <ErrorState error={query.error} onRetry={() => void query.refetch()} />}
           {query.isSuccess && !query.data && <p className="thread-origin">{t("chat.consultPanel.missing")}</p>}

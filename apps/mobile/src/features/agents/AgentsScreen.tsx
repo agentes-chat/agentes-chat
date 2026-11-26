@@ -45,7 +45,6 @@ import {
   LIST_PREVIEW,
   LineIcon,
   ListRow,
-  PixelOrbit,
   SectionHeader,
   SkeletonList,
   SkeletonOver,
@@ -68,9 +67,9 @@ import { chooseAction } from "../settings/parts";
 import { AgentFace } from "../shared/Face";
 import { FirstUse, LoadFailed } from "../shared/FirstUse";
 import { useColors, useDirectory, useNow, useOrgId, usePullRefresh } from "../shared/hooks";
-import { agentLook } from "../shared/logic";
 import { successHaptic, Tile } from "../shared/parts";
 import { useWaitingApprovals, useWorkingNow } from "../shared/queries";
+import { StatusWord } from "../shared/StatusBadge";
 import { useTabHeader } from "../shared/tabHeader";
 import { channelNameIn, useChannelNames, usePresenceOf } from "../status/hooks";
 import { useTasksToday } from "../task-manager/hooks";
@@ -571,10 +570,10 @@ const sameWorkLine = (a: WorkLine, b: WorkLine) =>
   a.text === b.text && a.short === b.short && a.time === b.time && a.tone === b.tone;
 
 /**
- * One agent: its living body at 52 (running at work, asleep when it can't work), its name, the time at the right
- * (how long since it asked or started; when you last talked, free), then its state as text: what waits on you in
- * amber, what it is on with the orbit, its computer away or no AI in the quiet color, what its work waits on (the
- * clock, or amber for your answer) with how long, else its role in plain words. Pinned ones come first, with no mark.
+ * One agent: its living body at 52 (running at work and wearing the orbit, asleep when it can't work), its name, the
+ * time at the right (how long since it asked or started; when you last talked, free), then its state as text: what
+ * waits on you in amber, working in the ink, its computer away or no AI in the quiet color, what its work waits on with
+ * how long, else its role in plain words. Pinned ones come first, with no mark.
  */
 const AgentRow = memo(function AgentRow({
   agent: a,
@@ -664,36 +663,17 @@ const AgentRow = memo(function AgentRow({
             : a.name;
   const sub = (
     <Animated.View key={state} entering={reduced ? undefined : STATE_IN} style={styles.state}>
+      {/* Its status in words, as the web's lists say it, then what follows (its time, what it asks). */}
       {state === "asks" ? (
-        <Text variant="small" tone="ink2" numberOfLines={1} style={[LIST_PREVIEW, styles.shrink]}>
-          <Text variant="small" style={[LIST_PREVIEW, styles.medium, { color: c.amber }]}>
-            {t("mobile.agents.state.waitsYou")}
-          </Text>
-          {` · ${asks}`}
-        </Text>
+        <StatusWord text={t("mobile.agents.state.waitsYou")} tone="you" rest={asks} restTone="ink2" />
       ) : state === "works" ? (
-        <>
-          <PixelOrbit color={agentLook(a).color} size={16} />
-          <Text variant="small" tone="ink2" numberOfLines={1} style={[LIST_PREVIEW, styles.shrink]}>
-            {work?.tone === "working" || !w ? work?.text : (statusText ?? workTitle(t, w))}
-          </Text>
-        </>
+        <StatusWord
+          text={t("agentWork.working")}
+          tone="working"
+          rest={work?.tone === "working" || !w ? work?.time : (statusText ?? workTitle(t, w))}
+        />
       ) : state === "waits" && waits ? (
-        <>
-          {waits.tone === "neutral" ? (
-            <LineIcon name="clock" size={15} color={c.faint} variant="small" text={LIST_PREVIEW} />
-          ) : null}
-          <Text variant="small" tone="muted" numberOfLines={1} style={[LIST_PREVIEW, styles.shrink]}>
-            <Text
-              variant="small"
-              tone="muted"
-              style={[LIST_PREVIEW, styles.medium, waits.tone === "you" ? { color: c.amber } : null]}
-            >
-              {waits.text}
-            </Text>
-            {waits.time ? ` · ${waits.time}` : ""}
-          </Text>
-        </>
+        <StatusWord text={waits.text} tone={waits.tone} rest={waits.time} />
       ) : state === "routine" && routine ? (
         <Text variant="small" tone="faint" numberOfLines={1} style={[LIST_PREVIEW, styles.shrink]}>
           {t("mobile.agents.state.routine", { time: agoShort(t, agoOf(routine, now)) })}
@@ -760,6 +740,7 @@ const AgentRow = memo(function AgentRow({
                 }
                 live={live}
                 gaze={gaze}
+                orbit={state === "works"}
                 {...(arriving ? { expression: "happy" as const } : {})}
               />
             </Animated.View>
@@ -822,9 +803,8 @@ function useArrival(arriving: boolean, reduced: boolean) {
 }
 
 const styles = StyleSheet.create({
-  // The orbit sits on the line's left, 8 before the words, as the state's mark.
+  // A mark (the lock) sits on the line's left, 8 before the words.
   state: { flexDirection: "row", alignItems: "center", gap: 8, minWidth: 0 },
-  medium: { fontWeight: weights.medium },
   semibold: { fontWeight: weights.semibold },
   shrink: { flexShrink: 1 },
 });

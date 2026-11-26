@@ -1419,8 +1419,19 @@ html:not([data-pointer]) .issues-dest:focus-visible {
   flex: none;
   translate: 0 calc(9px - var(--cap-mid) - 50%);
 }
+/* Its words trimmed to their capitals and padded back to the line (`.ac-chip__text`): the first line's capitals sit
+   at its middle, with no --cap-mid to make up. */
+@supports (text-box: trim-both cap alphabetic) {
+  @supports (top: 1lh) {
+    .issue-props .issue-github__chip > svg {
+      translate: 0 calc(9px - 50%);
+    }
+  }
+}
+/* Wrapped words end in no "…", so they need no clip: with one, the descent trimmed off their last line would scroll
+   inside it. */
 .issue-props .issue-github__chip > .ac-chip__text {
-  text-overflow: clip;
+  overflow: visible;
 }
 .issue-props .issue-link {
   color: var(--ink2);

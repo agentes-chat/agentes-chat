@@ -23,6 +23,7 @@ import { publishOrgEvent } from "./events";
 import type { MachineCaller, MachineHub } from "./machine-hub";
 import {
   cleanMachineName,
+  egressViaNow,
   getMachine,
   MachineOfflineError,
   type MachineRow,
@@ -35,6 +36,7 @@ import {
   shownOnline,
   withTaskLimit,
 } from "./machines";
+import { resolveNotifications } from "./notifications";
 import { can, getMembership, type Membership, requirePermission } from "./organizations";
 import { closedRefusal, OrgDeletingError, orgStanding } from "./standing";
 import type { Stream, StreamInput, StreamTarget } from "./streams";
@@ -116,7 +118,19 @@ export interface ComputerDevice {
    * "Help when the team's computer is full or away" (`machines.spill_own`, ADR 0233): fresh turns of its owner's
    * agents (anyone's, on one marked the workspace's) may think here while their own computer is full or away.
    */
-  spill: { own: boolean };
+  spill: {
+    own: boolean;
+    /**
+     * "Use this computer for my agents' work" (`machines.spill_first`): its owner's agents' asks, routines and long
+     * work start here first whenever it is free, a person's reply on their own computer as before.
+     */
+    first: boolean;
+  };
+  /**
+   * ADR 0237, a person's computer in a workspace that has its own computer: whether its owner lends it its internet
+   * (`on`), and whether the workspace's computer goes out through it now (`inUse`). Null: nothing to lend to.
+   */
+  shareInternet: { on: boolean; inUse: boolean } | null;
   /** Each agent works as its own OS user there (a server install). */
   systemMode: boolean;
   audience: DeviceAudience;
@@ -433,6 +447,8 @@ export async function listDevices(
     ),
   };
   const busy = new Map(running.map((r) => [r.machineId, Number(r.n)]));
+  const workspaceComputer = rows.find((m) => m.kind === "managed");
+  const lentNow = workspaceComputer ? egressViaNow(workspaceComputer.egressVia, now) : null;
   const grantedMachines = new Set(grants.filter((g) => !g.phoneId).map((g) => g.machineId));
   const grantedPhones = new Set(grants.map((g) => g.phoneId).filter(Boolean));
 
@@ -454,7 +470,11 @@ export async function listDevices(
       memoryGb: m.size?.memoryGb ?? null,
       ownerUserId: m.pairedByUserId,
       belongsToWorkspace: m.belongsToWorkspace,
-      spill: { own: m.spillOwn },
+      spill: { own: m.spillOwn, first: m.spillFirst },
+      shareInternet:
+        workspaceComputer && m.kind === "connected"
+          ? { on: m.egressShare, inUse: m.egressShare && lentNow === m.id }
+          : null,
       systemMode: m.executors?.mode === "system",
       audience: rule.audience,
       status: computerStatus(m, busy.get(m.id) ?? 0, now),
@@ -564,15 +584,20 @@ async function deviceOf(db: Database, viewerUserId: string, orgId: string, machi
   return device;
 }
 
+/** The once-only inbox note that a computer paired before ADR 0237 lends its internet (`device.internet_shared`). */
+export const internetSharedGroup = (machineId: string) => `device-internet:${machineId}`;
+
 export interface ComputerDeviceInput {
   name?: string;
   audience?: DeviceAudience;
   belongsToWorkspace?: boolean;
-  spill?: { own?: boolean };
+  spill?: { own?: boolean; first?: boolean };
   /** Background tasks at once (`TASK_LIMIT_BOUNDS`): the computer applies it, so it must be online. */
   maxTasks?: number;
   /** `TASK_ROOM_PROTOCOL`: tasks may fill memory down to 0.5 GB free, whatever the processor. Online, its owner's. */
   pushHarder?: boolean;
+  /** ADR 0237: lend its internet to the workspace's own computer; on again (or on once more) picks it first. */
+  shareInternet?: boolean;
 }
 
 /**
@@ -583,7 +608,7 @@ export interface ComputerDeviceInput {
  * How many tasks it runs at once is its owner's too (their computer's memory), an admin's only on one nobody connected.
  */
 export async function updateComputerDevice(
-  deps: { db: Database; pubsub?: PubSub; hub?: Pick<MachineCaller, "call" | "status"> },
+  deps: { db: Database; pubsub?: PubSub; hub?: Pick<MachineCaller, "call" | "status" | "agentsChanged"> },
   actorId: string,
   orgId: string,
   machineId: string,
@@ -612,9 +637,25 @@ export async function updateComputerDevice(
   }
   if (input.belongsToWorkspace !== undefined) set.belongsToWorkspace = input.belongsToWorkspace;
   const help = input.spill?.own;
-  if (help !== undefined) {
-    if (help && !owner) throw new ForbiddenError("Only the device's owner can turn this on", "device.spill_owner_only");
-    set.spillOwn = help;
+  const first = input.spill?.first;
+  if ((help || first) && !owner) {
+    throw new ForbiddenError("Only the device's owner can turn this on", "device.spill_owner_only");
+  }
+  // Used first for its owner's agents is a kind of help: on turns help on, help off turns it off.
+  if (help !== undefined) set.spillOwn = help;
+  if (help === false) set.spillFirst = false;
+  if (first !== undefined) set.spillFirst = first;
+  if (first) set.spillOwn = true;
+  // Its owner's connection: only they lend it; an admin may stop it.
+  if (input.shareInternet !== undefined) {
+    if (machine.kind !== "connected") {
+      throw new ForbiddenError("Only a person's own computer lends its internet", "device.share_connected_only");
+    }
+    if (input.shareInternet && !owner) {
+      throw new ForbiddenError("Only the device's owner can lend its internet", "device.share_owner_only");
+    }
+    set.egressShare = input.shareInternet;
+    if (input.shareInternet) set.egressShareAt = new Date();
   }
   if (input.maxTasks !== undefined || input.pushHarder !== undefined) {
     if (!owner && machine.pairedByUserId !== null) {
@@ -672,8 +713,13 @@ export async function updateComputerDevice(
       details: { ...set },
     });
     if (set.name) await publishMachineUpdated(deps.pubsub, orgId, machine.id, { name: set.name });
+    // Marked the workspace's and open to everyone, it may now be the right hand's computer (`workspaceHomeId`).
+    if (set.belongsToWorkspace !== undefined || set.audienceMode !== undefined)
+      await deps.hub?.agentsChanged?.(orgId).catch(() => undefined);
     await publishDevicesChanged(deps.pubsub, orgId);
   }
+  if (input.shareInternet === false)
+    await resolveNotifications(deps, orgId, { groupKey: internetSharedGroup(machine.id) });
   return deviceOf(deps.db, actorId, orgId, machine.id);
 }
 

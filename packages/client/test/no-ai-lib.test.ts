@@ -25,6 +25,7 @@ import {
   CLOUD_AWAY_MS,
   CLOUD_INSTALL_WAIT_MS,
   catchUp,
+  connectsPlanFor,
   defaultChoice,
   defaultTarget,
   dimmedLine,
@@ -41,6 +42,7 @@ import {
   noAiCardOf,
   noAiCardShown,
   noAiLineKey,
+  noAiReceiptLine,
   noAiStatusKey,
   onlyOwnerReplies,
   ownSignInFor,
@@ -54,6 +56,7 @@ import {
   planLineFix,
   planMark,
   planOfAccount,
+  planOffSystem,
   planOfKind,
   planPickText,
   plansNotYoursOf,
@@ -177,8 +180,15 @@ describe("planGate: what a plan's panel can do now", () => {
     expect(gate({ edition: null })).toEqual({ state: "loading" });
   });
 
-  test("an agent the viewer doesn't own, before anything about its computer", () => {
-    expect(gate({ brain: brain({ canUsePlans: false, computer: null }) })).toEqual({ state: "locked", who: "owner" });
+  test("an agent the viewer doesn't own and can't sign a plan in for, before anything about its computer", () => {
+    expect(gate({ brain: brain({ canUsePlans: false, canManageAccounts: false, computer: null }) })).toEqual({
+      state: "locked",
+      who: "owner",
+    });
+  });
+
+  test("someone else's agent that the viewer manages: a plan of their own signs in for it where they add accounts", () => {
+    expect(gate({ brain: brain({ canUsePlans: false }) })).toEqual({ state: "ready" });
   });
 
   test("self-host with no computer for the agent: missing", () => {
@@ -319,6 +329,17 @@ describe("the Cloud's plan gate tells the truth", () => {
     );
     expect(dimmedLine(enT, { state: "unsupported", reason: "not_installed" }, where)).toBe(
       gateLine(enT, { gate: { state: "unsupported", reason: "not_installed" }, ...where })?.text ?? "",
+    );
+  });
+
+  test("a CLI at a version agentes.chat holds back: needs an update there, with its command where it has one", () => {
+    const where = { edition: "selfhost", computer: "Acme" } as const;
+    const gate = { state: "unsupported", reason: "cli_outdated" } as const;
+    expect(gateLine(enT, { gate, kind: "claude_code", ...where })?.text).toBe(
+      "Claude Code on Acme needs an update before agents can use it. Run claude update there.",
+    );
+    expect(gateLine(enT, { gate, kind: "codex", ...where })?.text).toBe(
+      "Codex on Acme needs an update before agents can use it.",
     );
   });
 
@@ -936,6 +957,19 @@ describe("a card says the real cause, not that the agent has no AI", () => {
   });
   const card = (reason: string, extra?: Record<string, unknown>) => noAiCardOf(meta(reason, extra));
 
+  test("Connect signs a plan in for the person's own agents, the right hand and the ones they manage; nobody else's", () => {
+    const joaos = { ownerUserId: "u-joao" };
+    expect(connectsPlanFor(joaos, "u-joao")).toBe(true);
+    // A workspace admin on João's agent: a plan of his own, lent to it, never "ask an admin".
+    expect(connectsPlanFor({ ...joaos, canManage: true }, "u-walter")).toBe(true);
+    // A plain member on João's agent: who connects it instead.
+    expect(connectsPlanFor({ ...joaos, canManage: false }, "u-bia")).toBe(false);
+    expect(connectsPlanFor(joaos, "u-bia")).toBe(false);
+    expect(connectsPlanFor({ ownerUserId: "u-joao", builtin: "right_hand" }, "u-bia")).toBe(true);
+    expect(connectsPlanFor(undefined, "u-bia")).toBe(false);
+    expect(connectsPlanFor(joaos, null)).toBe(false);
+  });
+
   test("Connect is for who can: the agent's owner, who manages it or keys, nobody else", () => {
     const agent = { ownerUserId: "u1" };
     expect(mayConnectAi(agent, "u1", { permissions: [] })).toBe(true);
@@ -1056,12 +1090,17 @@ describe("a card says the real cause, not that the agent has no AI", () => {
       expect(serverBody(pt, "…", wait(code))).toBe(
         "O Codex está desligado no meu computador. Respondo quando quem cuida dele ligar.",
       );
-    for (const code of ["runner_outdated", "codex_too_old"])
+    // Its CLI at a version agentes.chat holds back reads the same: a program there to update.
+    for (const code of ["runner_outdated", "codex_too_old", "cli_outdated"])
       expect(serverBody(pt, "…", wait(code))).toBe(
         "O programa no meu computador precisa ser atualizado para o Codex responder. Respondo assim que ele for atualizado.",
       );
     expect(serverBody(pt, "…", wait("plan_not_owner"))).toBe(
       "O Codex pensaria com um plano que não é do meu dono, então não uso. Conecte a conta do meu dono na minha página.",
+    );
+    // Its computer online, its shared Claude login refused there: what can't run, and the way out.
+    expect(serverBody(pt, "…", wait("shared_login_off"))).toBe(
+      "Meu computador não consegue usar o login do Claude para todos os agentes agora. Respondo assim que conseguir. Se continuar falhando, conecte o Claude de novo em Contas de IA.",
     );
     // Its computer gone still waits for it to come back.
     expect(serverBody(pt, "…", wait("machine_offline"))).toBe(
@@ -1139,5 +1178,62 @@ describe("the right hand's stand-in line (ADR 0137 §7, amended 2026-11-15)", ()
     const view = { computers: [laptop] as AiComputer[], accounts: [login("a1"), login("a2"), login("a3")] };
     expect(rightHandUnusable(view).map((u) => [u.id, u.ids])).toEqual([["a1", ["a1", "a2", "a3"]]]);
     expect(rightHandUnusable(view, "a2")).toEqual([]);
+  });
+});
+
+describe("a plan that doesn't run on the computer's system says so before it is picked", () => {
+  const off = { ...option("codex"), kind: "antigravity", available: false, reason: "system" } as never;
+  const windows = brain({ computer: { machineId: "m1", name: "Desktop", online: true, os: "windows" } });
+
+  test("the gate carries the system, and the picker names it", () => {
+    const g = gate({ choice: "gemini", brain: { ...windows, options: [option("claude_code"), off] } });
+    expect(g).toEqual({ state: "unsupported", reason: "system", os: "windows" });
+    expect(planOffSystem(enT, g)).toBe("Windows");
+    expect(enT("connectAi.offSystem", { system: planOffSystem(enT, g) })).toBe("Doesn't run on Windows yet");
+    // Every other reason says nothing there: its panel says why.
+    expect(planOffSystem(enT, gate())).toBeNull();
+    expect(planOffSystem(enT, { state: "unsupported", reason: "not_installed" })).toBeNull();
+  });
+
+  test("with no agent yet, the computer they'd sign in on says it too", () => {
+    const pc: AiComputer = {
+      ...MAC,
+      os: "windows",
+      brains: { claude_code: true, codex: true, antigravity: false },
+      off: { antigravity: "system" },
+    };
+    const { gate: g } = planGateWithoutAgent({ choice: "gemini", edition: "selfhost", setup: null, computers: [pc] });
+    expect(planOffSystem(enT, g)).toBe("Windows");
+  });
+});
+
+describe("noAiReceiptLine", () => {
+  const say = (why: Parameters<typeof noAiReceiptLine>[0]) => {
+    const line = noAiReceiptLine(why);
+    return line ? { text: enT(line.key, { name: "Lodi", model: line.model }), connect: line.connect } : null;
+  };
+
+  test("a plan it has that can't think there says why, with no Connect: another account wouldn't start it", () => {
+    expect(say({ code: "cli_failed" })).toEqual({
+      text: "Lodi can't answer now: the plan's AI stopped with an error.",
+      connect: false,
+    });
+    expect(say({ code: "plan_limit" })?.connect).toBe(false);
+    expect(say({ code: "model_limit", params: { model: "GPT-5.5" } })?.text).toContain("GPT-5.5");
+  });
+
+  test("a missing piece says which and keeps Connect; a plan that isn't this person's keeps Connect too", () => {
+    expect(say({ code: "cli_missing" })).toEqual({
+      text: enT("noAi.cliMissing", { name: "Lodi" }),
+      connect: true,
+    });
+    expect(say({ code: "plan_not_shared" })?.connect).toBe(true);
+  });
+
+  test("no AI at all, no reason, or one it can't word: the plain line", () => {
+    expect(noAiReceiptLine(undefined)).toBeNull();
+    expect(noAiReceiptLine({ code: "no_key" })).toBeNull();
+    expect(noAiReceiptLine({ code: "plans_not_yours" })).toBeNull();
+    expect(noAiReceiptLine({ code: "model_limit" })).toBeNull();
   });
 });

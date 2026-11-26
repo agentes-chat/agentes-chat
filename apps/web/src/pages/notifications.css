@@ -851,10 +851,13 @@ html:not([data-pointer]) .nt-fails .nt-rep:focus-visible {
   padding: var(--page-top) 16px 12px 24px;
   background: var(--pane);
 }
-/* The filter and Mark all as read are small: beside the title while it fits whole, under it when it doesn't (a long
-   filter's name, a narrow column), on a phone too, where page buttons take a row of their own. */
+/* Mark all as read is one small icon: beside the title, on a phone too, where page buttons take a row of their own. The
+   filter has its own row under the title, at its end, so a long filter's name never squeezes the title. */
 .ib-head .ac-pagehead__actions {
   flex-basis: auto;
+}
+.ib-head .ac-pagehead__bar {
+  justify-content: flex-end;
 }
 .ib-filter {
   flex: none;

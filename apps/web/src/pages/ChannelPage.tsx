@@ -38,17 +38,18 @@ import {
   MESSAGES_PAGE,
   messageLiveRef,
   OPEN_THREAD,
+  PAGE_AHEAD_SCREENS,
   runsInChannel,
   type StreamsState,
   sendHelpers,
   typingIn,
   useAddChannelMember,
+  useAgentGroups,
   useAiStatus,
   useApproval,
   useApprovals,
   useCachedMessages,
   useCardApprovals,
-  useChannelCategories,
   useChannelMembers,
   useChannels,
   useChannelThreads,
@@ -118,7 +119,7 @@ import {
 import { firstUnreadId, opensAtLastRead, unreadThreadRootId } from "@agenteschat/client/lib/chat-look";
 import { choiceReplyLine } from "@agenteschat/client/lib/choices";
 import { draftKeyOf } from "@agenteschat/client/lib/composer-drafts";
-import { type ConsultPairItem, consultsForLine } from "@agenteschat/client/lib/consult-group";
+import { type ConsultPairItem, consultsForLine, type RelayedAnswer } from "@agenteschat/client/lib/consult-group";
 import { consultationsOf } from "@agenteschat/client/lib/consultations";
 import { deviceWaitOf, spilledText } from "@agenteschat/client/lib/devices";
 import { clearDraft, peekDraft } from "@agenteschat/client/lib/drafts";
@@ -175,13 +176,14 @@ import { contextMarks, hiddenByThreads, rangeCandidates, threadStartOf } from "@
 import { buildTimeline, lastPostedId, mergeTimeline, type TimelineItem } from "@agenteschat/client/lib/timeline";
 import { type TrailLine, usePacedTrail, workTrail } from "@agenteschat/client/lib/trail";
 import { usageWaitOf } from "@agenteschat/client/lib/usage-pause";
-import { appVia, surfaceVia } from "@agenteschat/client/lib/via";
+import { appAuthor, appVia, surfaceVia } from "@agenteschat/client/lib/via";
 import { listedText, voiceOf } from "@agenteschat/client/lib/voice";
 import { waitingAway, waitingNotification } from "@agenteschat/client/lib/waiting";
 import { barStep, makingImage, splitCanceled } from "@agenteschat/client/lib/work";
 import { CodeConversation, useShowsWork } from "@agenteschat/client/lib/work-context";
 import {
   AffixInput,
+  AppMark,
   Avatar,
   Button,
   Composer,
@@ -252,7 +254,7 @@ import {
 } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
-import { anchorShift, anchorsScroll, type RowResize } from "@/chat/anchor";
+import { anchorShift, anchorsScroll, type RowResize, topInList } from "@/chat/anchor";
 import { tokenizeBody } from "@/chat/body";
 import { ChatMedia } from "@/chat/ChatMedia";
 import { ChatVoice } from "@/chat/ChatVoice";
@@ -290,12 +292,12 @@ import { BrowserHandoffCard } from "@/components/browser/BrowserHandoffCard";
 import { BrowserTrailCard } from "@/components/browser/BrowserTrailCard";
 import { requestBrowserCard } from "@/components/browser/open";
 import { ScreenPanelContext } from "@/components/browser/screen-panel";
-import { CategorySelect } from "@/components/ChannelCategoryDialogs";
 import { ChannelHeader } from "@/components/ChannelHeader";
 import { ChannelPermissions } from "@/components/ChannelPermissions";
 import { ChannelPinnedBar } from "@/components/ChannelPins";
 import { InlineProposal, MemoryChangeCard, QuestionCard, SecretCard } from "@/components/ChatCards";
 import {
+  AppAuthorTags,
   AppViaTag,
   NoticeLine,
   RoutineReport,
@@ -319,6 +321,7 @@ import {
   ConsultGroupsProvider,
   ConsultHelpingTag,
   ConsultPairRow,
+  RelayQuote,
   useConsultGroups,
   useReplyConsults,
 } from "@/components/ConsultGroup";
@@ -338,7 +341,7 @@ import { ArrivalCard, useArrival } from "@/components/invite/Arrival";
 import { InviteOfferRow, useInviteDialog, useInviteOffer } from "@/components/invite/InviteDialog";
 import { useLeaveChannelWithUndo } from "@/components/LeaveChannelDialog";
 import { useUploadFailed } from "@/components/Limits";
-import { LiveCodeToggle } from "@/components/LiveCode";
+import { CodePanel, lastCodeCall } from "@/components/LiveCode";
 import { ErrorState, LoadingConversation } from "@/components/Loading";
 import { ResolveButton, ResolvedLine } from "@/components/live/media/ResolveBits";
 import { ChatCommentsLine } from "@/components/live/media/ViewerBits";
@@ -394,6 +397,7 @@ import {
   WaitMark,
 } from "@/components/RequestCard";
 import { ReturnLine } from "@/components/ReturnLine";
+import { SectorSelect } from "@/components/SectorSelect";
 import { SidePanel } from "@/components/SidePanel";
 import { ChannelWelcome, colorOf } from "@/components/Sky";
 import { isStoppable, StopButton, useContinueRun, useStopRun, useWasContinued } from "@/components/StopRun";
@@ -677,7 +681,7 @@ function QuotedMessage({ reply }: { reply: ReplyRef }) {
         else actions?.jumpTo?.(reply.messageId);
       }}
     >
-      {reply.author.id ? (
+      {reply.author.id && reply.author.type !== "app" ? (
         <ActorAvatar actor={{ type: reply.author.type, id: reply.author.id }} name={name} size="xs" />
       ) : null}
       <span className="msg-quote__who" aria-hidden="true">
@@ -1369,7 +1373,7 @@ function ChannelView({
   // pages come as the person scrolls down, until they reach it.
   const [gap, setGap] = useState(false);
   const [newerLoading, setNewerLoading] = useState(false);
-  const anchor = useRef<{ height: number; top: number } | null>(null);
+  const anchor = useRef<{ row: HTMLElement; top: number } | null>(null);
   const loadOlder = (limit = OLDER_PAGE) => {
     // A thread view loads its whole conversation at once.
     if (thread || olderState !== "idle" || !messages.data) return;
@@ -1382,16 +1386,20 @@ function ChannelView({
     api.chat
       .messages(org.id, channel.id, { before: oldest.createdAt, limit, onCards: cardsInto(qc, org.id) })
       .then((page) => {
-        // Keep what's on screen where it is: remember the distance from the bottom.
+        // Keep what's on screen where it is: the list moves down by what lands above the oldest row it holds.
         const el = scroller.current;
-        if (el) anchor.current = { height: el.scrollHeight, top: el.scrollTop };
-        setOlder((prev) => {
-          const known = new Set(prev.map((m) => m.id));
-          const next = [...page.filter((m) => !known.has(m.id)), ...prev];
-          if (!gap) qc.setQueryData<OlderPages>(olderKey, { pages: next, done: page.length < limit });
-          return next;
+        const row = el?.querySelector<HTMLElement>(".ac-msg");
+        if (el && row) anchor.current = { row, top: topInList(el, row) };
+        // Drawn in slices: fifty rows in one task would hold the page still while the person scrolls on.
+        startTransition(() => {
+          setOlder((prev) => {
+            const known = new Set(prev.map((m) => m.id));
+            const next = [...page.filter((m) => !known.has(m.id)), ...prev];
+            if (!gap) qc.setQueryData<OlderPages>(olderKey, { pages: next, done: page.length < limit });
+            return next;
+          });
+          setOlderState(page.length < limit ? "done" : "idle");
         });
-        setOlderState(page.length < limit ? "done" : "idle");
       })
       .catch(() => setOlderState("idle"));
   };
@@ -1431,7 +1439,10 @@ function ChannelView({
     const a = anchor.current;
     if (!el || !a) return;
     anchor.current = null;
-    el.scrollTop = el.scrollHeight - a.height + a.top;
+    // Scroll anchoring already moved a list that isn't at its very top (Chromium, measured: also when only read here).
+    if (anchorsScroll() && el.scrollTop > 0) return;
+    // By what came above, not back to where the list was: the person may have scrolled on since the page was asked for.
+    if (a.row.isConnected) el.scrollTop += topInList(el, a.row) - a.top;
   }, [older]);
 
   // Every thread with replies is one line under its root; its replies live in the panel.
@@ -1829,6 +1840,8 @@ function ChannelView({
         const before = heights.get(target);
         const after = target.offsetHeight;
         heights.set(target, after);
+        // Laid out whole once: it may be skipped now, at the height it remembers (layout.css).
+        if (before === undefined) target.dataset.sized = "";
         if (before !== undefined && before !== after)
           resized.push({ top: target.getBoundingClientRect().top - listTop, before, after });
       }
@@ -1935,13 +1948,10 @@ function ChannelView({
     }
   }, [lastKey, slotsKey]);
 
-  // Which agents' blocks are on screen: the line above the composer speaks only for those out of view.
-  // By run: a "pensando…" hands its block (same key) to the real run, and that run must count as in view.
-  // A block's row draws only once it has something to show (`RunBlock`, `rowShows`): then it is measured again.
+  // A block's row draws only once it has something to show (`RunBlock`, `rowShows`): then what is on screen is measured
+  // again.
   const [rowsDrawn, setRowsDrawn] = useState(0);
   const rowDrawn = useCallback(() => setRowsDrawn((n) => n + 1), []);
-  const inView = useBlocksInView(scroller, `${slots.map((x) => x.runId).join(" ")} ${rowsDrawn}`);
-  const outOfView = useMemo(() => (runId: string) => !inView.has(runId), [inView]);
   // Hand-offs whose line under the reply that handed them is on screen (`HandedWorkLine`): the bar leaves those out.
   const handoffsKey = timeline
     .flatMap((i) => (i.kind === "message" ? (i.message.handedWorks ?? []).map((w) => w.id) : []))
@@ -2356,7 +2366,7 @@ function ChannelView({
     }
     toBottom(true);
     setDraft("");
-    const meta = localMeta(quote, quote ? dir.authorName(quote.author) : "", attached);
+    const meta = localMeta(quote, quote ? dir.authorName(quote.author, quote.meta) : "", attached);
     setQuote(null);
     // About what is selected in the file beside it (ADR 0199): the message carries it, then the quote goes. A comment
     // on a picture, a video or a PDF uploads its pictures of the place first (ADR 0208), so only a sent one keeps them.
@@ -2382,7 +2392,10 @@ function ChannelView({
   const sendMediaNow = useRef<(media: MessageMedia) => void>(() => {});
   sendMediaNow.current = (media) => {
     toBottom(true);
-    const meta: Record<string, unknown> = { ...localMeta(quote, quote ? dir.authorName(quote.author) : "", []), media };
+    const meta: Record<string, unknown> = {
+      ...localMeta(quote, quote ? dir.authorName(quote.author, quote.meta) : "", []),
+      media,
+    };
     setQuote(null);
     if (thread && chrome?.openThread) meta[OPEN_THREAD] = true;
     send("", thread ? thread.id : null, meta);
@@ -2424,7 +2437,7 @@ function ChannelView({
               replyTo: quote?.id ?? null,
               language: i18n.language.split("-")[0] ?? null,
               text,
-              meta: localMeta(quote, quote ? dir.authorName(quote.author) : "", attached),
+              meta: localMeta(quote, quote ? dir.authorName(quote.author, quote.meta) : "", attached),
             })
               .then((went) => {
                 // Refused: what was typed and attached comes back to the box (thumbnails as icons: theirs are freed).
@@ -2675,7 +2688,7 @@ function ChannelView({
       send(
         handle ? `@${handle} ${text}` : text,
         thread ? thread.id : (message.threadId ?? null),
-        localMeta(message, dir.authorName(message.author), []),
+        localMeta(message, dir.authorName(message.author, message.meta), []),
       );
     },
     jumpTo,
@@ -2876,6 +2889,7 @@ function ChannelView({
                             data-look={look.style}
                             data-faces={look.faces ? undefined : "false"}
                             data-wallpaper={wallpaper?.wallpaper.kind}
+                            data-manual-anchor={anchorsScroll() ? undefined : ""}
                             aria-label={t("channel.messages")}
                             aria-live="polite"
                             aria-relevant="additions"
@@ -2904,7 +2918,8 @@ function ChannelView({
                                 Date.now() - lastUpGesture.current < GESTURE_MS ||
                                 (byPerson && selectingIn(e.currentTarget));
                               if (byPerson) datePill.current?.poke();
-                              if (byPerson && e.currentTarget.scrollTop < 240) loadOlder();
+                              const ahead = e.currentTarget.clientHeight * PAGE_AHEAD_SCREENS;
+                              if (byPerson && e.currentTarget.scrollTop <= ahead) loadOlder();
                               if (upByPerson && previousTop !== null && e.currentTarget.scrollTop < previousTop) {
                                 letGo();
                                 return;
@@ -2912,7 +2927,7 @@ function ChannelView({
                               // Away from the latest page, its end is not the conversation's: newer pages, never pinned.
                               if (gap) {
                                 const below = e.currentTarget.scrollHeight - e.currentTarget.scrollTop;
-                                if (byPerson && below - e.currentTarget.clientHeight < 240) loadNewer();
+                                if (byPerson && below - e.currentTarget.clientHeight <= ahead) loadNewer();
                                 return;
                               }
                               const near = nearBottom(e.currentTarget);
@@ -3083,7 +3098,6 @@ function ChannelView({
                             channelId={channel.id}
                             threadId={thread?.id ?? null}
                             visible={runVisible}
-                            outOfView={outOfView}
                             asks={asksOut}
                             pendingAsks={pendingAsks}
                             onSeeAsk={seeAsk}
@@ -3152,7 +3166,7 @@ function ChannelView({
                                   quote ? (
                                     <>
                                       <QuoteBar
-                                        name={dir.authorName(quote.author)}
+                                        name={dir.authorName(quote.author, quote.meta)}
                                         onCancel={() => {
                                           setQuote(null);
                                           composer.current?.focus();
@@ -3675,9 +3689,17 @@ const Timeline = memo(function Timeline({
       />
     );
   };
+  // A row after a consulted agent's words folded into its asker's quote doesn't group under them.
+  let afterRelayed = false;
   for (const [at, item] of items.entries()) {
     if (at < from) continue;
-    const grouped = item.kind === "message" && item.grouped && !afterUnshown();
+    // A consulted agent's words its asker passes on right below: they are the quote at the top of that message.
+    if (item.kind === "message" && consultGroups.relayed.has(item.message.id)) {
+      afterRelayed = true;
+      continue;
+    }
+    const grouped = item.kind === "message" && item.grouped && !afterUnshown() && !afterRelayed;
+    afterRelayed = false;
     const after = items[at + 1];
     // Where it sits in its author's run: my own rows' bubbles square the corners they share.
     const run = runPosition(grouped, after?.kind === "message" && after.grouped && !unshown.has(item.key));
@@ -3720,6 +3742,7 @@ const Timeline = memo(function Timeline({
           lastOfRun={lastByRun.get(m.agentRunId) === item.key}
           run={run}
           answer={answers.has(m.id)}
+          relay={consultGroups.relays.get(m.id)}
         />
       ) : (
         <TimelineMessage
@@ -3736,6 +3759,7 @@ const Timeline = memo(function Timeline({
           helping={m.agentRunId && !isMediaAfterReply(m.meta) ? consultGroups.helping.get(m.agentRunId) : undefined}
           run={run}
           answer={answers.has(m.id)}
+          relay={consultGroups.relays.get(m.id)}
         />
       ),
     );
@@ -3838,6 +3862,7 @@ function RunBlock({
   lastOfRun?: boolean;
   run?: RunPosition;
   answer?: boolean;
+  relay?: RelayedAnswer<MessageType>;
 }) {
   const run = useStreams((s) => (message ? undefined : s.runs[runId]));
   const last = useRef<LiveRun | undefined>(undefined);
@@ -3981,9 +4006,8 @@ function RowsProvider({
 }
 
 /**
- * The end of an agent's live row: "· 12 s" (the bar's clock) and its stop. The bar says neither while the row is on
- * screen, so they sit where the eye already is. The clock keeps its room from the start, so the stop never shifts
- * when the seconds appear.
+ * The end of an agent's live row: "· 2 min" (the bar's clock, from a minute on) and its stop. The bar says neither
+ * while the row is on screen, so they sit where the eye already is.
  */
 function RunTail({ run }: { run: LiveRun }) {
   const { t } = useTranslation();
@@ -4274,10 +4298,9 @@ function useWorkHere({ channelId, threadId, visible, pendingAsks, consultBlocks,
 /**
  * The bar right above the composer: what waits on the reader (a request out of view, what waits on them here with no
  * card loaded) and, while nobody works, the soonest return (ADR 0037 addendum). Who works and what they do is the
- * conversation's last row (`WorkingTail`), as a reply on its way; agents running code keep "Ver código" here.
+ * conversation's last row (`WorkingTail`), as a reply on its way, with the code it runs.
  */
 function ActivityBar({
-  outOfView,
   asks,
   onSeeAsk,
   waiting,
@@ -4285,8 +4308,6 @@ function ActivityBar({
   member,
   ...here
 }: WorkHere & {
-  /** The run's block is not on screen. */
-  outOfView: (runId: string) => boolean;
   /** Requests waiting for the viewer out of view: the bar says the first one. */
   asks: PendingAsk[];
   /** "Ver" on a request: scrolls to it and lights it up. */
@@ -4304,12 +4325,7 @@ function ActivityBar({
   const { channelId, threadId } = here;
   // The returns agents set here (a thread's own, else the main timeline's): the bar holds them while nobody works.
   const returns = returnsHere(useFollowUps(org.id, channelId).data, threadId);
-  const { runs, entries } = useWorkHere(here);
-  // Agents running code: "Ver código" with the live code and output.
-  const coding = runs.filter(
-    (r) =>
-      (waitsForWords(r) || outOfView(r.runId)) && r.code && (r.work ?? []).some((w) => w.kind === "call" && w.running),
-  );
+  const { entries } = useWorkHere(here);
   // A request waiting for you, out of view: the bar says that instead (waiting beats working).
   const ask = asks[0];
   const askName = ask ? (dir.anyAgent(ask.agentId)?.name ?? t("channel.unknownAgent")) : "";
@@ -4318,72 +4334,58 @@ function ActivityBar({
   // Nobody at work and nothing waiting on the reader: the soonest return rests in the same box (ADR 0037 addendum).
   const rest = !ask && !away && entries.length === 0 && returns.length > 0;
   return (
-    <>
-      {coding.map((r) =>
-        r.code ? (
-          <LiveCodeToggle
-            key={r.runId}
-            name={dir.agentById.get(r.agentId)?.name ?? t("channel.unknownAgent")}
-            code={r.code}
-            output={r.output ?? []}
-          />
-        ) : null,
+    <div
+      className="ac-typing"
+      aria-live="polite"
+      data-active={Boolean(ask) || Boolean(away)}
+      data-rest={rest || undefined}
+      data-ask={ask || away ? true : undefined}
+    >
+      {ask && (
+        <>
+          <span className="ac-typing__avatars" aria-hidden="true">
+            <span className="ac-typing__tok">
+              <AgentAvatar agentId={ask.agentId} size="xs" name={askName} state="waiting" />
+            </span>
+          </span>
+          <WaitMark />
+          <span className="ac-typing__text">
+            {/* What it asks is the agent's or a person's own text: shown as written, never read as markup. */}
+            <Trans
+              i18nKey={`ask.bar.${ask.kind}` as const}
+              values={{ name: askName, what: ask.what }}
+              components={{ b: <b /> }}
+              {...TYPED_VALUES}
+            />
+          </span>
+          {asks.length > 1 && <span className="ac-typing__more">{t("ask.bar.more", { count: asks.length - 1 })}</span>}
+          <span className="ac-typing__sep" aria-hidden="true" />
+          <button type="button" className="ac-typing__see" onClick={() => onSeeAsk(ask.id)}>
+            {t("ask.bar.see")}
+          </button>
+        </>
       )}
-      <div
-        className="ac-typing"
-        aria-live="polite"
-        data-active={Boolean(ask) || Boolean(away)}
-        data-rest={rest || undefined}
-        data-ask={ask || away ? true : undefined}
-      >
-        {ask && (
-          <>
+      {away && (
+        <>
+          {awayAgent && (
             <span className="ac-typing__avatars" aria-hidden="true">
               <span className="ac-typing__tok">
-                <AgentAvatar agentId={ask.agentId} size="xs" name={askName} state="waiting" />
+                <AgentAvatar agentId={awayAgent.id} size="xs" name={awayAgent.name} state="waiting" />
               </span>
             </span>
-            <WaitMark />
-            <span className="ac-typing__text">
-              {/* What it asks is the agent's or a person's own text: shown as written, never read as markup. */}
-              <Trans
-                i18nKey={`ask.bar.${ask.kind}` as const}
-                values={{ name: askName, what: ask.what }}
-                components={{ b: <b /> }}
-                {...TYPED_VALUES}
-              />
-            </span>
-            {asks.length > 1 && (
-              <span className="ac-typing__more">{t("ask.bar.more", { count: asks.length - 1 })}</span>
-            )}
-            <span className="ac-typing__sep" aria-hidden="true" />
-            <button type="button" className="ac-typing__see" onClick={() => onSeeAsk(ask.id)}>
-              {t("ask.bar.see")}
-            </button>
-          </>
-        )}
-        {away && (
-          <>
-            {awayAgent && (
-              <span className="ac-typing__avatars" aria-hidden="true">
-                <span className="ac-typing__tok">
-                  <AgentAvatar agentId={awayAgent.id} size="xs" name={awayAgent.name} state="waiting" />
-                </span>
-              </span>
-            )}
-            <WaitMark />
-            <span className="ac-typing__text">
-              <b>{t("ask.bar.here", { count: waiting.length })}</b>
-            </span>
-            <span className="ac-typing__sep" aria-hidden="true" />
-            <button type="button" className="ac-typing__see" onClick={() => onSeeWaiting(away)}>
-              {t("ask.bar.see")}
-            </button>
-          </>
-        )}
-        {rest && <ReturnLine returns={returns} channelId={channelId} canAnswer={member} />}
-      </div>
-    </>
+          )}
+          <WaitMark />
+          <span className="ac-typing__text">
+            <b>{t("ask.bar.here", { count: waiting.length })}</b>
+          </span>
+          <span className="ac-typing__sep" aria-hidden="true" />
+          <button type="button" className="ac-typing__see" onClick={() => onSeeWaiting(away)}>
+            {t("ask.bar.see")}
+          </button>
+        </>
+      )}
+      {rest && <ReturnLine returns={returns} channelId={channelId} canAnswer={member} />}
+    </div>
   );
 }
 
@@ -4423,11 +4425,19 @@ function WorkingTail({ onSeeAsk, ...here }: WorkHere & { onSeeAsk: (id: string) 
   // An agent working in its browser: the row says so, and a click opens its browser card in the conversation.
   const browsing = runs.find((r) => usesBrowser(r) && waitsForWords(r));
   const openBrowser = browsing ? () => requestBrowserCard({ agentId: browsing.agentId }) : undefined;
+  // Its last code and that code's output, from its first command until its reply: "See code" stays between two
+  // commands (and the code stays open, showing the last one), or the row would change under the pointer each time.
+  const code = solo && step !== null ? lastCodeCall(solo) : undefined;
+  const [codeOpenFor, setCodeOpenFor] = useState<string | null>(null);
+  const codeOpen = Boolean(code) && codeOpenFor === solo?.runId;
   if (entries.length === 0) return null;
-  // The agent at work leads in the face's column, with its rings; the line's small faces are the others.
-  const orbiting = lead && !lead.consult ? lead : undefined;
-  const faces = barFaces(entries).filter((e) => e !== orbiting);
-  const agent = orbiting ? dir.agentById.get(orbiting.id) : undefined;
+  // The face's column holds whoever does the work, with its orbit while it works: the agent at work, or the one a
+  // question or hand-off went to (its own wait holds it still). The line names both and never repeats a face: its
+  // small faces are the others at it.
+  const worker = consult ? { id: consult.to, name: consult.toName } : lead;
+  const atWork = consult ? !consult.yours && !consult.wait : Boolean(lead);
+  const faces = barFaces(entries).filter((e) => e !== lead);
+  const agent = worker ? dir.agentById.get(worker.id) : undefined;
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: the globe button inside is the keyboard way; the row is a bigger target
     // biome-ignore lint/a11y/useKeyWithClickEvents: same
@@ -4445,12 +4455,12 @@ function WorkingTail({ onSeeAsk, ...here }: WorkHere & { onSeeAsk: (id: string) 
       }
     >
       <div className="working-tail__face" aria-hidden="true">
-        {orbiting ? (
+        {worker && atWork ? (
           <OrbitGlyph appearance={lookOf(agent)}>
-            <AgentAvatar agentId={orbiting.id} name={orbiting.name} state="writing" />
+            <AgentAvatar agentId={worker.id} name={worker.name} state={consult ? "thinking" : "writing"} />
           </OrbitGlyph>
-        ) : lead ? (
-          <AgentAvatar agentId={lead.id} name={lead.name} state="idle" />
+        ) : worker ? (
+          <AgentAvatar agentId={worker.id} name={worker.name} state={consult?.yours ? "waiting" : "idle"} />
         ) : someoneTypes(entries) && !bothAtIt(entries) ? (
           <TypingMark />
         ) : null}
@@ -4472,6 +4482,19 @@ function WorkingTail({ onSeeAsk, ...here }: WorkHere & { onSeeAsk: (id: string) 
             </span>
             {/* Its time and its stop right after its words; who types beside it after them. */}
             {solo && step !== null && <RunTail run={solo} />}
+            {solo && code && (
+              <>
+                <span className="ac-typing__sep" aria-hidden="true" />
+                <button
+                  type="button"
+                  className="ac-typing__see"
+                  aria-expanded={codeOpen}
+                  onClick={() => setCodeOpenFor(codeOpen ? null : solo.runId)}
+                >
+                  {t(codeOpen ? "code.hide" : "code.see")}
+                </button>
+              </>
+            )}
             <ConsultClock entries={entries} now={now} />
             {consultTime && <span className="ac-typing__elapsed ac-num">{consultTime}</span>}
             {step !== null && <BarAlsoTyping entries={entries} />}
@@ -4506,14 +4529,17 @@ function WorkingTail({ onSeeAsk, ...here }: WorkHere & { onSeeAsk: (id: string) 
             })}
           >
             {trail.earlier > 0 && (
-              <li className="working-tail__more" aria-label={t("chat.trail.earlier", { count: trail.earlier })}>
-                +{trail.earlier}
-              </li>
+              <li className="working-tail__more">{t("chat.trail.earlier", { count: trail.earlier })}</li>
             )}
             {trail.lines.map((l) => (
               <li key={l.key}>{l.text}</li>
             ))}
           </ol>
+        )}
+        {code && codeOpen && (
+          <div className="working-tail__code">
+            <CodePanel code={code.code} output={code.output} live={code.running} header={code.code.language} />
+          </div>
         )}
       </div>
     </div>
@@ -4543,6 +4569,7 @@ export const TimelineMessage = memo(function TimelineMessage({
   readOnly = false,
   run = "solo",
   answer = false,
+  relay,
 }: {
   message: MessageType;
   grouped: boolean;
@@ -4570,6 +4597,8 @@ export const TimelineMessage = memo(function TimelineMessage({
   run?: RunPosition;
   /** The newest message, or one after my latest (`answerIds`): it shows whole however long. */
   answer?: boolean;
+  /** Another agent's words this agent passes on (`relayedAnswers`): quoted at its top, as a reply quotes. */
+  relay?: RelayedAnswer<MessageType>;
 }) {
   const { t, i18n } = useTranslation();
   const { org, me } = useOrg();
@@ -4601,7 +4630,9 @@ export const TimelineMessage = memo(function TimelineMessage({
   // Mine in a DM between people: the slot of their face, from the moment it is sent, so it never rewraps a line.
   const own = m.author.type === "person" && m.author.id === me.user.id;
   const seenSlot = dmPersonId !== undefined && own;
-  const name = dir.authorName(m.author);
+  const name = dir.authorName(m.author, m.meta);
+  // An integration app's message (ADR 0251): its mark and an "App" tag, never a person's or an agent's card.
+  const app = m.author.type === "app" ? appAuthor(m.meta) : null;
   // What a routine found, told by its agent (`meta.routine`): a tag that opens the routine, and the report
   // it answers on demand (that report's own line folds into this message).
   const routine = routineReplyOf(m);
@@ -4756,7 +4787,10 @@ export const TimelineMessage = memo(function TimelineMessage({
   );
   // Work it handed over that reports here: its line under this reply says what the pair row would.
   const handedWorks = lastOfRun && !m.local ? (m.handedWorks ?? []) : [];
-  const paired = consults.filter((c) => !handedWorks.some((w) => w.handedBy?.consultationId === c.id));
+  // The question whose answer it quotes at its top (`relay`) isn't in the pair row too.
+  const paired = consults.filter(
+    (c) => !handedWorks.some((w) => w.handedBy?.consultationId === c.id) && c.id !== relay?.consultation.id,
+  );
   const pair =
     m.author.type === "agent" && m.author.id && paired.length > 0 ? (
       <ConsultPairRow askerId={m.author.id} items={paired} />
@@ -4862,9 +4896,10 @@ export const TimelineMessage = memo(function TimelineMessage({
         run={run}
         bare={waiting || !bodyShown}
         quote={
-          quoted || liveRef ? (
+          quoted || liveRef || relay ? (
             <>
               {quoted && <QuotedMessage reply={quoted} />}
+              {relay && <RelayQuote relay={relay} />}
               {liveRef && <LiveRefLine liveRef={liveRef} />}
             </>
           ) : undefined
@@ -4883,7 +4918,9 @@ export const TimelineMessage = memo(function TimelineMessage({
         onFocus={feedback ? () => setActive(true) : undefined}
         onContextMenu={live || readOnly ? undefined : menu.onContextMenu}
         avatar={
-          m.author.id ? (
+          m.author.type === "app" ? (
+            <AppMark color={app?.color ?? "graphite"} name={name} />
+          ) : m.author.id ? (
             <ProfileTrigger
               actor={{ type: m.author.type, id: m.author.id }}
               label={t("profile.of", { name })}
@@ -4913,7 +4950,9 @@ export const TimelineMessage = memo(function TimelineMessage({
           )
         }
         author={
-          m.author.id ? (
+          m.author.type === "app" ? (
+            <AppAuthorTags name={name} sender={app?.sender ?? null} />
+          ) : m.author.id ? (
             <>
               <ProfileTrigger
                 actor={{ type: m.author.type, id: m.author.id }}
@@ -5360,15 +5399,14 @@ function ChannelDetails({
   const update = useUpdateChannel(org.id, channel.id);
   const editable = managesChannel(channel, me.user.id, org);
   const toast = useToast();
-  const categories = useChannelCategories(org.id);
+  const sectors = useAgentGroups(org.id).data ?? [];
   const place = usePlaceChannel(org.id);
   const archive = useArchiveChannelWithUndo();
   const leaving = useLeaveChannelWithUndo();
   // Name: saved on blur or Enter, like the description.
   const [name, setName] = useState(channel.name);
   const [nameError, setNameError] = useState<string | undefined>();
-  const categoryName =
-    categories.data?.find((c) => c.id === channel.categoryId)?.name ?? t("channelCategories.noCategory");
+  const sectorName = sectors.find((g) => g.id === channel.groupId)?.name ?? t("agentGroups.none");
   const [q, setQ] = useState("");
   const [topic, setTopic] = useState(channel.topic);
   const [saved, setSaved] = useState(false);
@@ -5459,9 +5497,9 @@ function ChannelDetails({
     setAdding(false);
     onOpenChange(false);
   };
-  const moveTo = (categoryId: string | null) =>
+  const moveTo = (groupId: string | null) =>
     place.mutate(
-      { channelId: channel.id, categoryId },
+      { channelId: channel.id, groupId },
       {
         onSuccess: () => setSaved(true),
         onError: (e) => toast.show(errorText(t, e), "error"),
@@ -5671,7 +5709,7 @@ function ChannelDetails({
         width={editable ? 760 : 600}
         onOpenChange={(o) => (o ? onOpenChange(o) : leave())}
         subtitle={t("channel.detailsSub", {
-          category: categoryName,
+          category: sectorName,
           visibility: t(ACCESS_LABEL[accessOf(channel).mode]),
         })}
         title={
@@ -5784,9 +5822,11 @@ function ChannelDetails({
                       maxLength={250}
                     />
                   </Field>
-                  <Field label={t("channelCategories.category")} id="channel-edit-category">
-                    <CategorySelect value={channel.categoryId ?? null} onChange={moveTo} canCreate={editable} />
-                  </Field>
+                  {sectors.length > 0 && (
+                    <Field label={t("agentGroups.group")} id="channel-edit-sector">
+                      <SectorSelect value={channel.groupId ?? null} onChange={moveTo} />
+                    </Field>
+                  )}
                   <SettingRow
                     title={t("channel.replyInThreads")}
                     hint={{
@@ -6053,7 +6093,6 @@ function AddToChannelOffer({ channelId, agentId, onDone }: { channelId: string; 
   const { org } = useOrg();
   const dir = useDirectory(org.id);
   const add = useAddChannelMember(org.id);
-  const toast = useToast();
   const name = dir.agentById.get(agentId)?.name ?? t("channel.unknownAgent");
   const admin = can(org, "manage_channels");
   return (
@@ -6067,12 +6106,8 @@ function AddToChannelOffer({ channelId, agentId, onDone }: { channelId: string; 
           onClick={() =>
             add.mutate(
               { channelId, member: { agentId } },
-              {
-                onSuccess: () => {
-                  toast.show(t("mentions.added", { name }));
-                  onDone();
-                },
-              },
+              // No toast: the conversation's own line says who joined, for everyone.
+              { onSuccess: onDone },
             )
           }
         >

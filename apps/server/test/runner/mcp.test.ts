@@ -93,11 +93,30 @@ test("MCP JSON-RPC: initialize, notifications, tools/list, tools/call and errors
     ),
   ).toEqual({ jsonrpc: "2.0", id: 3, result: { content: [{ type: "text", text: "Reported." }], isError: false } });
   expect(
-    await handleMcpMessage({ jsonrpc: "2.0", id: 4, method: "tools/call", params: { name: "get_context" } }, call),
+    await handleMcpMessage(
+      { jsonrpc: "2.0", id: 4, method: "tools/call", params: { name: "get_context", arguments: { query: "q" } } },
+      call,
+    ),
   ).toMatchObject({ result: { content: [{ text: "Nope" }], isError: true } });
+  // A tool that needs arguments and got none (a long input cut off on the way): said plainly, nothing run.
+  for (const params of [{ name: "report" }, { name: "report", arguments: {} }]) {
+    expect(await handleMcpMessage({ jsonrpc: "2.0", id: 9, method: "tools/call", params }, call)).toEqual({
+      jsonrpc: "2.0",
+      id: 9,
+      result: {
+        content: [
+          {
+            type: "text",
+            text: "report arrived with no arguments: the input was probably cut off on the way. Nothing was done. Call it again with summary.",
+          },
+        ],
+        isError: true,
+      },
+    });
+  }
   expect(calls).toEqual([
     ["report", { summary: "hi" }],
-    ["get_context", {}],
+    ["get_context", { query: "q" }],
   ]);
   expect(
     await handleMcpMessage({ jsonrpc: "2.0", id: 5, method: "tools/call", params: { name: "rm_rf" } }, call),

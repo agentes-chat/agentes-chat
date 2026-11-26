@@ -141,6 +141,8 @@ test("status commands: signed in through claude.ai with email and plan (short wo
   });
   expect(parseClaudeStatus(1, JSON.stringify({ loggedIn: false }))).toEqual({ loggedIn: false });
   expect(parseCodexStatus(0, `${ESC}[32mLogged in using ChatGPT${ESC}[0m\n`)).toEqual({ loggedIn: true });
+  // A key in its `auth.json` is a sign-in too.
+  expect(parseCodexStatus(0, "API key configured - sk-***abcd\n")).toEqual({ loggedIn: true });
   expect(parseCodexStatus(1, "Not logged in\n")).toEqual({ loggedIn: false });
   expect(parseCodexStatus(0, "Not logged in\n")).toEqual({ loggedIn: false });
 });
@@ -1674,12 +1676,13 @@ function sharedLoginSetup(ready = true, over: Partial<AccountManagerOptions> = {
   const store = tempDir("accounts-store-");
   dirs.push(store);
   const removed: string[] = [];
-  const state = { ready };
+  const state = { ready, turns: true };
   const made = setup({
     lending: { chown: async () => {} },
     authEgress: () => ["/usr/bin/env", "FAKE_AUTH_GROUP=1"],
     sharedLogin: {
       ready: () => state.ready,
+      turnsReady: () => state.ready && state.turns,
       launcher: () => ({
         // Stands in for the mount view and `setpriv`.
         prefix: ["/usr/bin/env", "FAKE_ACCOUNT_USER=1"],
@@ -1709,6 +1712,11 @@ test.if(posix)("whether a turn may run on a shared CLI login, from root's marker
   expect(m.isCliShared("claude_code", ACCOUNT_ID)).toBe(true);
   expect(m.isCliShared("claude_code", "../../etc/passwd")).toBe(false);
   expect(m.cliSharedState(ACCOUNT_ID)).toBe("ready");
+  // The self-check waits for an agent's user to try the network with: a sign-in may begin, a turn waits.
+  state.turns = false;
+  expect(m.cliSharedState(ACCOUNT_ID)).toBe("deferred");
+  expect(m.claudeLoginMethods()).toEqual(["setup_token", "cli_login"]);
+  state.turns = true;
   writeFileSync(marker("shared"), "");
   // A worker gets only the word that its task's CLI is root's: no token, no folder.
   expect(await m.grant("claude_code", ACCOUNT_ID)).toEqual({ kind: "hosted" });
@@ -2174,4 +2182,84 @@ test.if(posix)(
     expect(looks()).toBe(4);
   },
   15_000,
+);
+
+test.if(posix)(
+  "Cursor's models: each account's own `agent models`, its sign-in's or its key's, at most hourly, never in a lent folder",
+  async () => {
+    const home = tempDir("cursor-models-");
+    dirs.push(home);
+    const root = path.join(home, "accounts");
+    const log = path.join(home, "calls.log");
+    const cli = path.join(home, "fake-agent.mjs");
+    writeFileSync(
+      cli,
+      [
+        'import { appendFileSync } from "node:fs";',
+        "const [cmd] = process.argv.slice(2);",
+        `appendFileSync(${JSON.stringify(log)}, \`\${cmd} \${process.env.CURSOR_API_KEY ? "key" : "folder"}\\n\`);`,
+        'if (cmd === "status") { process.stdout.write("Logged in as ada@example.com\\n"); process.exit(0); }',
+        'if (cmd === "models" && process.env.CURSOR_API_KEY) { process.stdout.write("Available models\\n\\nauto - Auto\\nfast-model-2 - Fast Model 2\\n"); process.exit(0); }',
+        'if (cmd === "models") { process.stdout.write("Available models\\n\\nauto - Auto (current)\\nsmart-model-5 - Smart Model 5 (included)\\nfast-model-2 - Fast Model 2\\n"); process.exit(0); }',
+        "process.exit(1);",
+      ].join("\n"),
+    );
+    const folder = (id: string, files: Record<string, string> = {}) => {
+      const dir = path.join(root, "cursor", id);
+      mkdirSync(dir, { recursive: true, mode: 0o700 });
+      for (const [name, text] of Object.entries(files)) writeFileSync(path.join(dir, name), text);
+    };
+    const signedIn = LOGIN(110);
+    const keyed = LOGIN(111);
+    const lent = LOGIN(112);
+    folder(signedIn);
+    folder(keyed, { "cursor-key.json": JSON.stringify({ key: "crsr_fake_0000000000000000000000000000" }) });
+    folder(lent);
+    writeFileSync(path.join(root, "cursor", `${lent}.lent`), "1234");
+    let clock = Date.parse("2030-01-01T00:00:00Z");
+    const m = new AccountManager({ root, commands: { cursor: [process.execPath, cli] }, now: () => clock });
+    managers.push(m);
+    const calls = () => readFileSync(log, "utf8").trim().split("\n").sort();
+
+    await m.list();
+    // The sign-in's list first (it lists the most), then what only the key's adds; the plan's own marked. "auto" is the
+    // picker's own Automático.
+    expect(m.listedModels("cursor")).toEqual([
+      { id: "smart-model-5", label: "Smart Model 5", inPlan: true },
+      { id: "fast-model-2", label: "Fast Model 2" },
+    ]);
+    // The lent folder is never run on: its agent's user holds it.
+    expect(calls()).toEqual(["models folder", "models key", "status folder"]);
+
+    // Looked again within the hour: the status only.
+    m.invalidate();
+    await m.list();
+    expect(calls()).toEqual(["models folder", "models key", "status folder", "status folder"]);
+    clock += 3600_000;
+    m.invalidate();
+    await m.list();
+    expect(calls().filter((c) => c.startsWith("models"))).toHaveLength(4);
+
+    // Kept across a restart, as Grok's and Gemini's are.
+    const again = new AccountManager({ root, commands: { cursor: [process.execPath, cli] } });
+    managers.push(again);
+    expect(again.listedModels("cursor")?.map((x) => x.id)).toEqual(["smart-model-5", "fast-model-2"]);
+
+    // A sign-in whose first turn comes before any look: listed as its folder is lent, never after.
+    const early = LOGIN(113);
+    folder(early);
+    const lending = new AccountManager({
+      root,
+      commands: { cursor: [process.execPath, cli] },
+      lending: { chown: async () => {} },
+    });
+    managers.push(lending);
+    const listings = () => calls().filter((c) => c === "models folder").length;
+    const before = listings();
+    expect(await lending.lendTo("cursor", early, 21003)).toBe(true);
+    expect(listings()).toBe(before + 1);
+    expect(await lending.lendTo("cursor", early, 21004)).toBe(true);
+    expect(listings()).toBe(before + 1);
+  },
+  20_000,
 );

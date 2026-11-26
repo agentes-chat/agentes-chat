@@ -276,6 +276,7 @@ export const DEVICE_NOTICES = [
   "device.tool_request",
   "device.cli_request",
   "device.folder_request",
+  "device.internet_shared",
 ] as const;
 export type DeviceNoticeKind = (typeof DEVICE_NOTICES)[number];
 
@@ -333,6 +334,7 @@ export function deviceNoticeTitle(t: TFunction, d: DeviceNotice, names: string, 
   if (d.kind === "device.join_request") return t("mobile.devices.notice.join_request", { device: d.device, org });
   if (d.kind === "device.folder_request")
     return t("mobile.devices.notice.folder_request", { names, device: d.device, path: d.path ?? "" });
+  if (d.kind === "device.internet_shared") return t("mobile.devices.notice.internet_shared", { device: d.device });
   if (d.kind === "device.tool_request" || d.kind === "device.cli_request")
     return t(`mobile.devices.notice.${d.kind === "device.cli_request" ? "cli_request" : "tool_request"}`, {
       names,

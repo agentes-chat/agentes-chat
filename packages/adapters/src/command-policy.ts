@@ -1922,6 +1922,30 @@ function commandsInCode(code: string): string[] {
 }
 
 /**
+ * What a text says by itself, before git is asked (`approvalNeeded`): the pushes it makes (null: one can't be
+ * read) and the deny list's refusal (null: none). Plain data, so it can be worked out in another process.
+ */
+export interface TextVerdict {
+  pushes: GitPush[] | null;
+  denied: string | null;
+}
+
+/**
+ * `approvalNeeded`'s part that asks nothing of the computer, and nearly all of its work on a long script: the
+ * runner works a long one out in a child process (`script-check`), so its own thread never waits for it.
+ */
+export function textVerdict(text: string, how: string, code = false): TextVerdict {
+  const pushes = code ? (PUSH_MENTION.test(text) ? null : []) : gitPushes(text);
+  // Code: each command it spells out once.
+  const commands = code ? [...new Set(commandsInCode(text))] : [text];
+  for (const command of commands) {
+    const denied = deniedMessage("Bash", { command }, how);
+    if (denied) return { pushes, denied };
+  }
+  return { pushes, denied: null };
+}
+
+/**
  * Why a command, a shell script or code (`code`: another language) waits for a person, as the refusal
  * tells the agent (`how`: what it can do to ask), or null: a push our git proxy would refuse never runs (it
  * outranks the rest, so no approval lets the command through), then the deny list's kinds, then every push it
@@ -1932,20 +1956,24 @@ export async function approvalNeeded(
   how: string,
   opts: { code?: boolean; own?: readonly string[]; facts: (dir: string | null) => RepoFacts },
 ): Promise<Hold | null> {
+  return approvalOf(textVerdict(text, how, opts.code), how, opts);
+}
+
+/** `approvalNeeded` from a text's `textVerdict`: each of its pushes read with git, then the order above. */
+export async function approvalOf(
+  verdict: TextVerdict,
+  how: string,
+  opts: { own?: readonly string[]; facts: (dir: string | null) => RepoFacts },
+): Promise<Hold | null> {
   const own = opts.own ?? [];
-  const pushes = opts.code ? (PUSH_MENTION.test(text) ? null : []) : gitPushes(text);
+  const { pushes, denied } = verdict;
   let first: Held | null = null;
   for (const push of pushes ?? []) {
     const held = await heldPush(push, opts.facts(push.dir), own);
     if (held?.never) return { message: held.what, never: true };
     first ??= held;
   }
-  // Code: each command it spells out once.
-  const commands = opts.code ? [...new Set(commandsInCode(text))] : [text];
-  for (const command of commands) {
-    const denied = deniedMessage("Bash", { command }, how);
-    if (denied) return { message: denied, never: false };
-  }
+  if (denied) return { message: denied, never: false };
   if (pushes === null) {
     const message = approvalMessage(
       "This runs git push in a way the computer can't read, so where it goes is unknown",

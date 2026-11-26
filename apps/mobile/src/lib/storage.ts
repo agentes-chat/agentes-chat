@@ -72,8 +72,6 @@ export const STORED = {
   threadsCollapsed: "threads-collapsed",
   /** Agentes' groups the person collapsed, in every workspace (JSON list of group ids). */
   agentGroupsCollapsed: "agent-groups-collapsed",
-  /** The agent profile's tab last chosen (Hoje, Acesso, Memória): every profile opens on it (features/agents). */
-  agentProfileTab: "agent-profile-tab",
   /** An invitation opened before signing in: dealt with once the person is in (features/auth/invite.ts). */
   invite: "invite",
   /** The request this phone made through a link, with the key that signs in once approved (features/auth/invite.ts). */
@@ -98,6 +96,8 @@ export const STORED = {
   voiceSpeed: "voice-speed",
   /** The person held the send button to stop an agent and send once: the composer's hint is over ("1"). */
   stopSendTaught: "stop-send-taught",
+  /** The workspaces last seen on a billing hold (JSON list of ids): one opened once its plan is on shows the moment. */
+  planHeld: "plan-held",
 } as const;
 
 export async function clearStoredValues(): Promise<void> {

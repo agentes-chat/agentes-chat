@@ -134,7 +134,7 @@ async function linesAllowed(db: Executor, runId: string, ids: string[]): Promise
  * Messages people (or events) sent while the run worked, oldest first, as the
  * agent reads them: "[New message from Ada, while you were working]: …", or
  * the notice a task or event carries. Deleted ones are left out. `beforeStart`:
- * read before its first model call (the rest of a burst, `waitForBurst`), they
+ * read before its first model call (the rest of a burst, ADR 0112), they
  * are plain conversation lines, "[Ada]: …", part of the same request. `workId`:
  * the reading run's own background work, which reads what was passed on to it
  * as part of its job. `runId`: the reading run, whose triage may let it say how it takes a message

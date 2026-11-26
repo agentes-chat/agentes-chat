@@ -73,13 +73,6 @@ export type RoomRank = 0 | 1 | 2;
  */
 export type RoomWaitCause = "line" | "sign_in" | "spacing" | "memory";
 
-/**
- * Runs one Claude plan sign-in thinks for at once, by default (`CLAUDE_PLAN_CONCURRENCY`). A personal plan used by
- * many sessions at once reads as automated use to its provider; past this the next run waits in its computer's line
- * for one of them to end. Long work can hold a slot for hours, so 1 would park every reply behind it.
- */
-export const SIGN_IN_CONCURRENCY = 12;
-
 /** A Claude plan sign-in a run thinks with: its account, or its computer's own sign-in (`own`). */
 export interface SignInSlot {
   key: string;

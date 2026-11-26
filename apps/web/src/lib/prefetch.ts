@@ -1,8 +1,8 @@
 import {
   type ApiClient,
+  agentGroupsQuery,
   agentsQuery,
   type Channel,
-  channelCategoriesQuery,
   channelMembersQuery,
   channelsQuery,
   channelThreadsQuery,
@@ -29,7 +29,8 @@ import type { QueryClient } from "@tanstack/react-query";
 export function prefetchShell(qc: QueryClient, api: ApiClient, orgId: string) {
   void qc.prefetchQuery(channelsQuery(api, orgId));
   void qc.prefetchQuery(dmsQuery(api, orgId));
-  void qc.prefetchQuery(channelCategoriesQuery(api, orgId));
+  // A channel in a sector (ADR 0240) would show under Canais until the sectors are in.
+  void qc.prefetchQuery(agentGroupsQuery(api, orgId));
   void qc.prefetchQuery(sidebarItemsQuery(api, orgId));
   void qc.prefetchQuery(membersQuery(api, orgId));
   void qc.prefetchQuery(agentsQuery(api, orgId));

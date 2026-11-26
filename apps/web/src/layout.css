@@ -249,9 +249,14 @@ p {
   border-bottom: 1px solid var(--line);
   background: var(--surface-raised);
 }
+/* The notices on top of the work area (`MorphRoom`): their room glides, never shrinks. */
+.shell__notices {
+  flex: none;
+}
 /* On the paper above the work's sheet: each notice is its own rounded card, 8px clear of the sheet, never a square
    strip over the sheet's rounded corners. */
-.shell__work > .outages {
+.shell__work > .outages,
+.shell__notices > .ac-morph__in > .outages {
   margin-bottom: 8px;
   border-bottom: 0;
   border-radius: var(--radius-section) var(--radius-section) var(--radius-section) 4px;
@@ -423,7 +428,14 @@ p {
 }
 /* A phone's line has room for the names, the count and the time only: the subject would be a letter and its "…". */
 @container (max-width: 420px) {
-  .consult-pair__subject {
+  /* Except another agent's request in this agent's DM: nothing else there says what was asked. */
+  .consult-pair__row:not(.consult-pair__row--handed) .consult-pair__subject {
+    display: none;
+  }
+  /* There "por você" and the time give way instead. */
+  .consult-pair__row--handed .consult-pair__for,
+  .consult-pair__row--handed .consult-pair__how,
+  .consult-pair__row--handed .consult-pair__time {
     display: none;
   }
 }
@@ -475,6 +487,22 @@ html:not([data-pointer]) .consult-pair__row:focus-visible {
   height: 15px;
   margin-inline: 6px;
   vertical-align: calc(var(--cap-top) - var(--cap-mid) - 7.5px);
+}
+/* Another agent's request in this agent's DM: the words in the arrows' place ("Atlas pediu à Ada"), as quiet. */
+.consult-pair__asked {
+  margin-inline: 6px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.consult-pair__for {
+  margin-inline-start: 0.25em;
+  color: var(--muted);
+}
+/* Where it was asked stays whole beside the subject, which gives way first; only a very long channel name is cut. */
+.consult-pair__row > .consult-pair__where {
+  max-width: 16em;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 /* Cut out of what is under them: the open row's blue too (the page's ring drew gray circles on it in dark). */
 .consult-pair__faces > .ac-avatar {
@@ -735,12 +763,24 @@ html:not([data-pointer]) .consult-pair__row:focus-visible {
   width: 28px;
   height: 28px;
 }
-/* An uploaded workspace logo: cropped square, in the agent's shape (the cut corner). */
+/* A workspace logo, whole, in the agent's shape (the cut corner). It may arrive uncropped (a wordmark), so it is
+   contained, not covered. Its plate shows only where the surface would hide the ink (`logoPlate`,
+   @agenteschat/ui/org-logo, same colors): white behind dark ink on dark, dark behind light ink on light. A square
+   opaque logo hides the plate. */
 .org-mark {
   display: block;
   flex: none;
-  object-fit: cover;
+  object-fit: contain;
   border-radius: 30% 30% 30% 9%;
+}
+.org-mark[data-ink="light"] {
+  background: #1c1c1b;
+}
+[data-theme="dark"] .org-mark {
+  background: #ffffff;
+}
+[data-theme="dark"] .org-mark[data-ink="light"] {
+  background: none;
 }
 .sidebar__org-text {
   display: flex;
@@ -755,11 +795,6 @@ html:not([data-pointer]) .consult-pair__row:focus-visible {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-/* A personal workspace's top row is you: your name wraps whole there, as at a team's foot. */
-.sidebar__org-button--me .sidebar__org-name {
-  white-space: normal;
-  overflow-wrap: anywhere;
 }
 .sidebar__org-meta {
   font-size: 12px;
@@ -914,13 +949,16 @@ html:not([data-pointer]) .sidebar__user:focus-visible {
   display: flex;
   flex-direction: column;
 }
-/* A long name wraps whole: never cut to an ellipsis. */
+/* One line, cut to an ellipsis, as your line under it and a personal workspace's top row are: the face never stands
+   beside more than the name and your line. The button says the whole name (its label and title). */
 .sidebar__user-name {
   font-size: 14px;
   font-weight: 600;
   line-height: 22px;
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Page container */
@@ -1311,13 +1349,15 @@ html:not([data-pointer]) .sidebar__user:focus-visible {
   background: var(--plate);
   color: var(--ink2);
 }
-/* An agent's work in a list's line (`AgentWorkLine`, ADR 0084 addendum): plain text, no plate, the words in --muted,
-   " · " and the time in --faint and tabular, "esperando você" in amber. One line: short of room it drops its time,
-   then says its short form; only a short form that still doesn't fit ends in "…". In the role's box, so the row keeps
-   its height (`span.` outranks the members column's own line box). */
+/* An agent's work in a list's line (`AgentWorkLine`, ADR 0084 addendum): its status in bold words, first letter up,
+   amber while it waits on you and the ink otherwise (working, the face's orbit has its colours), then the time in
+   --faint and tabular. No plate: the role it replaces is the line's one badge. One line: short of room it drops its
+   time, then says its short form; only a short form that still doesn't fit ends in "…". In the role's box, so the row
+   keeps its height (`span.` outranks the members column's own line box). */
 span.work-line {
   display: flex;
-  align-items: baseline;
+  align-items: center;
+  gap: 6px;
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
@@ -1329,33 +1369,28 @@ span.work-line {
 .work-line__words {
   min-width: 0;
   overflow: hidden;
+  color: var(--ink2);
+  font-weight: 600;
   text-overflow: ellipsis;
 }
-.work-line__dot {
-  flex: none;
-  white-space: pre;
+.work-line__words::first-letter {
+  text-transform: uppercase;
+}
+.work-line[data-tone="you"] .work-line__words {
+  color: var(--warn);
 }
 .work-line__time {
   flex: none;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
 }
 /* In the role tag's place, at its height (its 1px above included): the row doesn't move when work starts or ends. */
 .sidebar__item-role.work-line,
 .members-side__line.work-line {
   margin-top: 1px;
 }
-.work-line[data-tone="you"] .work-line__words {
-  color: var(--warn);
-  font-weight: 600;
-}
-.work-line__dot,
-.work-line__time {
-  color: var(--faint);
-}
-.work-line__time {
-  font-variant-numeric: tabular-nums;
-}
-.sidebar__item[data-status="active"] .work-line:not([data-tone="you"]) {
-  color: var(--ink2);
+.sidebar__item[data-status="active"] .work-line__time {
+  color: var(--muted);
 }
 @media (prefers-reduced-motion: no-preference) {
   .work-line__words {
@@ -1367,14 +1402,6 @@ span.work-line {
     opacity: 0;
     transform: translateY(2px);
   }
-}
-/* An agent at work: its pixel orbit beside its name, inside the name's line (what it is on is the orbit's label and
-   the row's title), so the row keeps its height. On the name's capitals' middle by the kit's own rule (`.ac-pixspin`). */
-.sidebar__item-spin {
-  margin-left: 6px;
-}
-.sidebar[data-rail="true"] .sidebar__item-spin {
-  display: none;
 }
 .sidebar__lock {
   display: inline-flex;
@@ -3784,6 +3811,13 @@ html:not([data-pointer]) .channel-ref:focus-visible {
 .folded-body .md--message > * + * {
   margin-top: 0.6em;
 }
+/* Words as written: their spaces and breaks kept, a space a line ends on wrapping with it (break-spaces) rather than
+   standing past the fold's edge. */
+.folded-body__plain {
+  margin: 0;
+  white-space: break-spaces;
+  overflow-wrap: anywhere;
+}
 .folded-body__text[data-folded] {
   max-height: 9em;
   overflow: hidden;
@@ -5628,6 +5662,24 @@ html:not([data-pointer]) .cflow__more summary:focus-visible {
 .cflow__lead > .cflow__text {
   flex: 1 1 260px;
 }
+/* A server by address's own instructions under its tools: the setting, then the text as agents read it, as written, in
+   a well, folded as a long text on a page is (FoldedBody), "Ver mais" inside the well. Muted while agents don't get
+   it. */
+.cflow-notes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.cflow-notes .folded-body {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--sunken);
+  transition: color var(--dur-base) var(--out);
+}
+.cflow-notes[data-off] .folded-body {
+  color: var(--muted);
+}
 .cflow-tools {
   list-style: none;
   margin: 0;
@@ -5735,6 +5787,69 @@ html:not([data-pointer]) .cflow__more summary:focus-visible {
   flex: none;
   width: 15px;
   height: 15px;
+}
+/*
+ * The routine that comes on with a connection (ADR 0242): a line under what was said, no card. Its icon and switch
+ * sit on the title's line (22), never in the middle of a sentence that wraps; who and when line up with the words.
+ */
+.cflow-routine {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.cflow-routine__head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: 12px;
+  cursor: pointer;
+}
+.cflow-routine:has(.ac-switch:disabled) .cflow-routine__head {
+  cursor: default;
+}
+.cflow-routine__icon {
+  display: inline-grid;
+  place-items: center;
+  height: 22px;
+  color: var(--ink2);
+}
+.cflow-routine__words {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.cflow-routine__words b {
+  font-weight: 600;
+  line-height: 22px;
+}
+.cflow-routine__head .ac-switch {
+  margin-top: 1px;
+}
+.cflow-routine__props {
+  padding-left: 30px;
+}
+.cflow-routine[data-off] .cflow-routine__icon,
+.cflow-routine[data-off] .cflow-routine__words b {
+  color: var(--ink-muted);
+}
+/* Loading: the sentence's line and the two selects as their shapes, at their size. */
+.cflow-routine__wait {
+  display: flex;
+  align-items: center;
+  height: 20px;
+}
+.cflow-routine__select {
+  height: var(--control-h-sm);
+  border-radius: var(--control-r-sm);
+}
+/* Who and when land softly where their shapes were. */
+@media (prefers-reduced-motion: no-preference) {
+  .cflow-routine:not(.ac-skeleton-group) .cflow-routine__props {
+    animation: ac-fade-in var(--dur-fast) ease-out;
+  }
 }
 
 /* Email (ADR 0038): app password help, hosts under "Avançado", actions by level, address lists, the agent's rules. */
@@ -6447,6 +6562,16 @@ html:not([data-pointer]) .tr-ok:focus-visible {
   contain-intrinsic-size: auto 56px;
 }
 /*
+ * With no scroll anchoring (`data-manual-anchor`: Safari, the desktop app on macOS, iPhones), a row is drawn whole until
+ * it was laid out once (`data-sized`, set by the list's ResizeObserver): skipped from then on, it keeps the height it
+ * remembers. Such a browser draws a skipped row only once it reaches the screen: one never drawn would come in at the
+ * 56px placeholder and grow as it crosses the list's top edge, pushing what the person reads down by hundreds of pixels
+ * on every long message scrolled into view from above.
+ */
+.channel__messages[data-manual-anchor] .ac-msg:not([data-sized]) {
+  content-visibility: visible;
+}
+/*
  * The newest rows are never skipped either (the last three): a row that just came in starts skipped, at the 56px
  * placeholder, until the next frame finds it on screen. The glide down to a message I sent reads the list's end in
  * that state, stops short of the row's real height (a bubble and its time: ~72px), and the end is caught up with a
@@ -6533,15 +6658,17 @@ html:not([data-pointer]) .tr-ok:focus-visible {
   color: var(--ink);
   font-weight: 600;
 }
+/* The unread pill stands whole inside the sidebar, 4 in from its edge: flush with the edge it was cut in half by the
+   window, and the phone's drawer drew its frame through it. */
 .sidebar__item[data-kind="channel"][data-unread="true"]::before {
   content: "";
   position: absolute;
-  left: -12px;
+  left: -8px;
   top: 50%;
   width: 4px;
   height: 8px;
   margin-top: -4px;
-  border-radius: 0 4px 4px 0;
+  border-radius: 2px;
   background: var(--ink);
   pointer-events: none;
 }
@@ -6681,36 +6808,6 @@ html:not([data-pointer]) .sidebar__jump:focus-visible {
 }
 
 /* Live code (the agent's PC): mono only here, neutral tokens; stderr in the danger tone. */
-.live-code-toggle {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 6px;
-}
-.live-code-toggle__btn {
-  align-self: flex-start;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: var(--control-h-sm);
-  padding: 0 var(--control-px-sm);
-  border: 0;
-  border-radius: var(--control-r-sm);
-  background: var(--sunken);
-  color: var(--ink2);
-  font: inherit;
-  font-size: 12.5px;
-  font-weight: 600;
-  line-height: normal;
-  cursor: pointer;
-}
-.live-code-toggle__btn:hover {
-  background: var(--plate);
-}
-html:not([data-pointer]) .live-code-toggle__btn:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
-}
 .live-code {
   border-radius: var(--radius-lg);
   background: var(--raised);
@@ -7612,9 +7709,11 @@ html:not([data-pointer]) .run-continue:focus-visible {
   width: var(--name-face);
   height: var(--name-face);
 }
+/* The agent at work a step smaller than a message's face (24, the small face), its orbit with it, centred in the
+   faces' column so its words keep the messages' text column. */
 .working-tail__face .ac-avatar:not(.ac-avatar--xs) {
-  width: var(--name-face);
-  height: var(--name-face);
+  width: 24px;
+  height: 24px;
 }
 .working-tail__body {
   display: flex;
@@ -7683,6 +7782,11 @@ html:not([data-pointer]) .run-continue:focus-visible {
 .working-tail__more {
   color: var(--faint);
   font-variant-numeric: tabular-nums;
+}
+/* The code it runs, opened from "See code" on its line: as wide as a card in a message. */
+.working-tail__code {
+  max-width: var(--msg-card-w);
+  margin-top: var(--space-2);
 }
 @media (prefers-reduced-motion: no-preference) {
   .working-tail__trail > li {
@@ -8425,9 +8529,9 @@ html:not([data-pointer]) .sky-welcome__close:focus-visible {
   .ac-details.artifact-sheet--image {
     --details-pad: 16px;
     width: calc(100% - 32px);
-    height: calc(100vh - 32px);
+    height: calc(100vh - 32px - var(--window-top));
     /* biome-ignore lint/suspicious/noDuplicateProperties: dvh with a vh fallback for older browsers */
-    height: calc(100dvh - 32px);
+    height: calc(100dvh - 32px - var(--window-top));
     max-height: none;
   }
   .artifact-sheet--image .ac-details__body {
@@ -9509,6 +9613,10 @@ html:not([data-pointer]) .onb__step:focus-visible {
   box-shadow: var(--card-key);
   color: var(--ok);
 }
+/* Passed but left for later: its dash in a neutral ink, never the done green. */
+.onb__steps li[data-later] .onb__n {
+  color: var(--faint);
+}
 .onb__step[aria-current="step"] .onb__n {
   background: var(--ink);
   color: var(--bg);
@@ -9615,7 +9723,7 @@ html:not([data-pointer]) .onb__step:focus-visible {
     min-height: 0;
     padding: 4px;
   }
-  /* The setup's seven steps beside the logo at 390px: 28px steps 3px apart, and 2px around them for the current
+  /* The setup's seven steps beside the logo's mark at 390px: 28px steps 3px apart, and 2px around them for the current
      one's ring, reaching past the strip's edges. Criar agente and the landing's card keep the shared strip. */
   .onb:not(.newag) .onb__steps {
     gap: 3px;
@@ -9635,8 +9743,8 @@ html:not([data-pointer]) .onb__step:focus-visible {
     white-space: nowrap;
   }
 }
-/* Narrower, they fit beside the logo's mark alone. */
-@media (max-width: 384px) {
+/* Seven steps and the whole logo need about 430px: narrower, the steps sit beside the logo's mark alone. */
+@media (max-width: 439px) {
   .onb__brand .ac-logo > :not(.ac-logo__mark) {
     display: none;
   }
@@ -11136,13 +11244,15 @@ html:not([data-pointer]) .agp-cell:focus-visible {
   min-width: 0;
 }
 /* 12px above and below, as the attention tiles (`.agp-attn`): a head with a button (a 32px row) reaches into the padding
-   as far as `--action-clear` lets it. The foot meets the card's edge, so it pulls 12px, not --card-pad. */
+   as far as `--action-clear` lets it, its title in the button's middle. A head with a quiet line under its title keeps
+   the 12px: that title sits at the head's top, so pulled up it would touch the card's edge. The foot meets the card's
+   edge, so it pulls 12px, not --card-pad. */
 .agp-card.ac-card {
   --agp-card-py: 12px;
   gap: 12px;
   padding-block: var(--agp-card-py);
 }
-.agp-card > .ac-card__head:first-child:has(.ac-card__action :is(.ac-btn, .ac-seg)) {
+.agp-card > .ac-card__head:first-child:not(:has(.ac-card__sub)):has(.ac-card__action :is(.ac-btn, .ac-seg)) {
   margin-block: calc(var(--action-clear) - var(--agp-card-py)) calc(-1 * var(--space-1));
 }
 .agp-card > .ac-card__foot {
@@ -11186,11 +11296,12 @@ html:not([data-pointer]) .agp-cell:focus-visible {
   background: linear-gradient(180deg, var(--card-face-top), var(--surface-raised) 64px);
   box-shadow: var(--card-shadow);
 }
-.agp-work:has(> .ac-grouphead) {
+/* The profile's card (no title over it): its top on the cards' line beside it. */
+.agp-work:has(> .ac-grouphead, > .agp-ficha__card:first-child) {
   gap: 0;
   padding-top: 0;
 }
-.agp-work:has(> .ac-grouphead) > :not(.ac-grouphead, .agp-ficha__card) {
+.agp-work:has(> .ac-grouphead, > .agp-ficha__card:first-child) > :not(.ac-grouphead, .agp-ficha__card) {
   margin-top: 10px;
 }
 /* One line each: the key (24), its label, the value with its note after it on its line, then the chevron or a button.
@@ -12881,8 +12992,9 @@ html[data-menu-overlay] .shell {
 .sidebar[data-personal] {
   --sidebar-agent-face: 40px;
 }
-/* Faces on the rail. */
-.sidebar__item > .ac-avatar--sm {
+/* Faces on the rail (an agent at work's inside its orbit). */
+.sidebar__item > .ac-avatar--sm,
+.sidebar__item > .ac-orbit > .ac-avatar--sm {
   width: var(--sidebar-rail-face);
   height: var(--sidebar-rail-face);
   font-size: 12px;
@@ -12892,12 +13004,14 @@ html[data-menu-overlay] .shell {
  * its face; a name over a role is a face line: the name's capitals on the face's top (`.ac-captop`), the role under
  * it, what ends the row on its middle.
  */
-.sidebar:not([data-rail="true"]) .sidebar__item > .ac-avatar--sm {
+.sidebar:not([data-rail="true"]) .sidebar__item > .ac-avatar--sm,
+.sidebar:not([data-rail="true"]) .sidebar__item > .ac-orbit > .ac-avatar--sm {
   width: var(--name-face);
   height: var(--name-face);
   font-size: 13px;
 }
-.sidebar:not([data-rail="true"]) .sidebar__item:has(> .ac-avatar) {
+.sidebar:not([data-rail="true"]) .sidebar__item:has(> .ac-avatar),
+.sidebar:not([data-rail="true"]) .sidebar__item:has(> .ac-orbit) {
   padding-block: 8px;
 }
 /* An agent's row breathes: the face 12px from its words, a little air between the name and its line. Its face keeps
@@ -12907,7 +13021,8 @@ html[data-menu-overlay] .shell {
 }
 .sidebar:not([data-rail="true"])
   :is([data-agent-row] > .sidebar__item, .sidebar__item[data-right-hand])
-  > .ac-avatar--sm {
+  > .ac-avatar--sm,
+.sidebar:not([data-rail="true"]) [data-agent-row] > .sidebar__item > .ac-orbit > .ac-avatar--sm {
   width: var(--sidebar-agent-face);
   height: var(--sidebar-agent-face);
 }
@@ -12916,13 +13031,33 @@ html[data-menu-overlay] .shell {
   .sidebar__item-text {
   gap: 2px;
 }
-.sidebar:not([data-rail="true"]) .sidebar__item:has(> .ac-avatar + .sidebar__item-text > .sidebar__item-role) {
+.sidebar:not([data-rail="true"]) .sidebar__item:has(> .ac-avatar + .sidebar__item-text > .sidebar__item-role),
+.sidebar:not([data-rail="true"]) .sidebar__item:has(> .ac-orbit + .sidebar__item-text > .sidebar__item-role) {
   align-items: flex-start;
 }
 .sidebar:not([data-rail="true"])
   .sidebar__item:has(> .ac-avatar + .sidebar__item-text > .sidebar__item-role)
-  > :not(.ac-avatar, .sidebar__item-text) {
+  > :not(.ac-avatar, .sidebar__item-text),
+.sidebar:not([data-rail="true"])
+  .sidebar__item:has(> .ac-orbit + .sidebar__item-text > .sidebar__item-role)
+  > :not(.ac-orbit, .sidebar__item-text) {
   align-self: center;
+}
+/* A face larger than a name's (the personal sidebar's 40px): the name and the line under it take the face's height, as
+   they do beside a 32px face (the name's capitals on its top, the line's baseline at its foot), the room between them
+   growing by what the face grows, instead of leaving the face's lower part bare. */
+.sidebar:not([data-rail="true"])
+  :is([data-agent-row] > .sidebar__item, .sidebar__item[data-right-hand]):has(
+    > :is(.ac-avatar, .ac-orbit) + .sidebar__item-text > .sidebar__item-role
+  )
+  > .sidebar__item-text {
+  gap: calc(2px + var(--sidebar-agent-face) - var(--name-face));
+}
+/* An agent at work: its orbit reaches a few pixels past its face, inside the row's padding; the rings' box would count
+   as overflow in the scrolling list. */
+.sidebar [data-agent-row] > .sidebar__item:has(> .ac-orbit) {
+  overflow: clip;
+  overflow-clip-margin: 4px;
 }
 .sidebar:not([data-rail="true"]) .sidebar__item-text > .sidebar__item-label {
   line-height: 20px;
@@ -12947,6 +13082,10 @@ html[data-menu-overlay] .shell {
 }
 .sidebar__section-head:hover {
   background: var(--plate-soft);
+}
+/* A closed part's or sector's unread count ends on the rows' counts' edge (8 in from the row, the head's 2 plus 6). */
+.sidebar__section-head > .sidebar__unread {
+  margin-inline-end: calc(var(--space-2) - 2px);
 }
 /* A category's header is laid out as a row: its chevron centred in the icons' place, its name in the names' column. */
 .sidebar__section-toggle {
@@ -13480,13 +13619,29 @@ html:not([data-pointer]) .channel-perms__target:focus-visible {
 .sidebar__section--group[data-open="false"] .sidebar__section-body > [data-live="true"] {
   display: flex;
 }
-/* A group stands apart from the agents above it; its mark in gray, as quiet as its name. */
+/* A group stands apart from the agents above it. Its mark keeps the setor's own color, so setores tell apart. */
 .sidebar:not([data-rail="true"]) .sidebar__section--group {
   margin-top: 8px;
 }
-.sidebar__section--group .sidebar__section-toggle > .ac-rolemark {
-  filter: grayscale(1);
-  opacity: 0.6;
+/* A setor's header on its rows' column: its mark centred over the faces, its name 8 after it, the chevron right after
+   the name. */
+.sidebar:not([data-rail="true"]) .sidebar__section--group .sidebar__section-toggle {
+  gap: 0;
+  padding-left: calc(10px + (var(--sidebar-agent-face) - 16px) / 2);
+}
+.sidebar:not([data-rail="true"]) .sidebar__section--group .sidebar__section-toggle > .ac-rolemark {
+  flex: none;
+  margin-right: 8px;
+}
+.sidebar:not([data-rail="true"]) .sidebar__section--group .sidebar__section-chevron {
+  margin: 0 0 0 4px;
+}
+/* A setor's channels follow its agents under a hairline (ADR 0240), from the faces' column to the row's end. */
+.sidebar__sector-line {
+  flex: none;
+  margin: 4px 8px;
+  border: 0;
+  border-top: 1px solid var(--line);
 }
 .sidebar__section-count {
   min-width: 24px;
@@ -13549,7 +13704,7 @@ html:not([data-pointer]) .channel-perms__target:focus-visible {
   line-height: 17px;
   color: var(--faint);
 }
-.sidebar[data-rail="true"] :is(.sidebar__see-all, .sidebar__pins-end, .sidebar__section-count) {
+.sidebar[data-rail="true"] :is(.sidebar__see-all, .sidebar__pins-end, .sidebar__sector-line, .sidebar__section-count) {
   display: none;
 }
 /* More: the other tools in a panel beside the sidebar, each with a line on what it is for. */
@@ -14228,31 +14383,24 @@ html:not([data-pointer]) .ac-typing__see:focus-visible {
 .ai-panel > .ac-setnote {
   margin: 0;
 }
-/* Under the key's steps a note keeps their columns: its icon centred in the numbers' 20px, its words on the text's. */
-.ai-panel > .agp-addacct__step ~ .ac-setnote {
-  gap: 12px;
-}
+/* Under the key's steps a note's icon sits centred in the numbers' 20px, its words the kit's gap after it. */
 .ai-panel > .agp-addacct__step ~ .ac-setnote > :first-child {
-  margin-inline: calc((20px - 14px) / 2);
+  margin-inline-start: calc((20px - 14px) / 2);
 }
 /*
  * A plan's panel: only its head reads in two columns (the mark's 30px, `.ac-brand--sm`, and the name's 12px after it).
  * Under the hairline the lines start at the panel's edge, as a step does outside the panel, with no empty column on
- * their left: what leads a line (an icon, a step's number) sits centred in the numbers' 20px at the edge, its words
- * 12px after it, where a numbered step's words are. A note inside a step's words is the step's, not the panel's: its
- * icon stays on the step's text.
+ * their left: what leads a line (an icon, a step's number) sits centred in the numbers' 20px at the edge. A step's
+ * words are 12px after its number, a note's the kit's 8px after its icon, as every icon line's. A note inside a step's
+ * words is the step's, not the panel's: its icon stays on the step's text.
  */
 .ai-panel--plan {
   --mark: 30px;
   --lead: 20px;
 }
-.ai-panel--plan > :is(.ac-setnote, .setup-line, .ac-card__foot).ac-iconline,
-.ai-panel--plan .ai-panel__row > .ac-setnote {
-  gap: 12px;
-}
 .ai-panel--plan > :is(.ac-setnote, .setup-line, .ac-card__foot).ac-iconline > :first-child,
 .ai-panel--plan .ai-panel__row > .ac-setnote > :first-child {
-  margin-inline: calc((var(--lead) - 14px) / 2);
+  margin-inline-start: calc((var(--lead) - 14px) / 2);
 }
 .ai-panel--plan .agp-addacct__step > i {
   margin-inline: calc((var(--lead) - 20px) / 2);
@@ -14487,12 +14635,12 @@ html:not([data-pointer]) .ac-typing__see:focus-visible {
 .agp-addacct > .ai-panel__row > :not(.ac-setnote) {
   margin-left: 22px;
 }
-/* In a plan's panel the row's action is its sign-in's state: under the note's words, as a numbered step's button. */
+/* In a plan's panel the row's action is its sign-in's state: under the note's words (its icon centred in the lead). */
 .ai-panel--plan .ai-panel__row > .ac-setnote {
   flex-basis: 100%;
 }
 .ai-panel--plan .ai-panel__row > :not(.ac-setnote) {
-  margin-left: calc(var(--lead) + 12px);
+  margin-left: calc((var(--lead) + 14px) / 2 + 8px);
 }
 .ai-panel__use {
   overflow: hidden;
@@ -14801,10 +14949,20 @@ html:not([data-pointer]) .ac-typing__see:focus-visible {
 .settings-row--acts {
   row-gap: var(--space-2);
 }
+/* Several controls in that group (a button beside its switch) keep a gap between them. */
+.settings-row--acts > .settings-row__end {
+  gap: var(--space-2);
+}
 .settings-row__lead {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-3);
+  gap: 2px var(--space-3);
+}
+/* Its status goes under the name, as a line's does; on a phone, under the icon too, from the row's edge. */
+.settings-row__lead > .settings-row__status {
+  flex-basis: 100%;
+  padding-left: calc(28px + var(--space-3));
 }
 /* Configurações › Aprovações (ADR 0139): a row whose box is the choice, centred on its label, on the label's first line
    when a line says under it why it is off. */
@@ -15042,6 +15200,12 @@ html:not([data-pointer]) .app-icons__agent:focus-visible {
   .settings-row--lead:not(.settings-row--open, :has(> .settings-row__end))
     > .settings-row__text:has(> .settings-row__status) {
     display: contents;
+  }
+  .settings-row__lead:has(> .settings-row__status) {
+    row-gap: var(--space-2);
+  }
+  .settings-row__lead > .settings-row__status {
+    padding-left: 0;
   }
   .settings-row--lead:has(> .settings-row__end > .ac-switch)
     > .settings-row__text:has(> .settings-row__status)
@@ -15379,29 +15543,96 @@ html:not([data-pointer]) .rh-set__face-edit:focus-visible {
   }
 }
 
-/* A handed work's line under the reply that handed it (ADR 0121 addendum): the delegate's face inline, the state word
-   in the agent's colour while it works and amber while it waits on someone. */
-/* One text line tall, the face centred in it: the 18px face never makes the first line taller than the mark beside it. */
-.handed-line__who {
+/* A handed work's line under the reply that handed it (ADR 0121 addendum): a quiet line on the reply's text, no
+   plate (so no edge to miss the bubble's): its mark, "Passado para", the delegate's face and name (`.ac-who`), its
+   state as a badge in the line's tone, the facts in --faint, the actions. It wraps between whole pieces. */
+.handed-line {
+  --tone: var(--work-tone, var(--agent));
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  max-width: var(--msg-card-w);
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--muted);
+}
+.ac-msg[data-look="bubbles"] .handed-line {
+  padding-inline: 14px;
+}
+/* One line tall, its mark on that line's middle. */
+.handed-line__mark {
+  flex: none;
   display: inline-flex;
   align-items: center;
-  height: 18px;
-  vertical-align: top;
-  margin-inline-end: 4px;
+  justify-content: center;
+  width: 14px;
+  height: 20px;
+  color: var(--faint);
 }
-@supports (top: 1lh) {
-  .handed-line__who {
-    height: 1lh;
-  }
+.handed-line[data-tone="done"] .handed-line__mark {
+  color: var(--ok);
 }
-.handed-line__state {
-  font-weight: 550;
+.handed-line[data-tone="failed"] .handed-line__mark {
+  color: var(--danger);
 }
-.ac-workline--working .handed-line__state {
-  color: var(--agent);
+.handed-line__dot {
+  width: 6px;
+  height: 6px;
+  background: currentColor;
 }
-.ac-workline--waiting .handed-line__state {
+.handed-line[data-tone="waiting"] .handed-line__mark {
   color: var(--warn);
+}
+.handed-line__text {
+  min-width: 0;
+  margin: 0;
+}
+.handed-line__who > b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.handed-line__keep {
+  white-space: nowrap;
+}
+/* Inline, so its words are the sentence's and wrap with it (its first letter is up in the words themselves). */
+.handed-line__state {
+  margin-right: 2px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: var(--plate);
+  color: var(--ink2);
+  font-size: 11.5px;
+  font-weight: 600;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+.handed-line[data-tone="waiting"] {
+  --tone: var(--warn);
+}
+.handed-line[data-tone="done"] {
+  --tone: var(--ok);
+}
+.handed-line[data-tone="failed"] {
+  --tone: var(--danger);
+}
+.handed-line:is([data-tone="working"], [data-tone="waiting"], [data-tone="done"], [data-tone="failed"])
+  .handed-line__state {
+  background: color-mix(in srgb, var(--tone) 13%, transparent);
+  color: color-mix(in srgb, var(--tone) 86%, var(--ink));
+}
+[data-theme="dark"]
+  .handed-line:is([data-tone="working"], [data-tone="waiting"], [data-tone="done"], [data-tone="failed"])
+  .handed-line__state {
+  background: color-mix(in srgb, var(--tone) 26%, transparent);
+  color: color-mix(in srgb, var(--tone), white 55%);
+}
+.handed-line__facts {
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.handed-line .ac-workline__action:not(.ac-workline__action--danger) {
+  color: var(--ink2);
 }
 
 /*

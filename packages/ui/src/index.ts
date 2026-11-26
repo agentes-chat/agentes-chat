@@ -92,6 +92,7 @@ export {
   randomAppearance,
 } from "./components/AgentLook";
 export { AgentSticker, type AgentStickerProps } from "./components/AgentSticker";
+export { AppMark } from "./components/AppMark";
 export { ApprovalCard, type ApprovalCardProps, type ApprovalStatus } from "./components/ApprovalCard";
 export { type AutonomyKind, AutonomyPixels, drawAutonomy } from "./components/AutonomyPixels";
 export {
@@ -495,6 +496,7 @@ export { HOVERLESS, matchesNow, TOUCH, useMatchMedia } from "./hooks/useMatchMed
 export { useNow } from "./hooks/useNow";
 export { type ScrollSides, useScrollSides } from "./hooks/useScrollSides";
 export { Icon, type IconName, type IconProps, iconNames, icons } from "./icons/Icon";
+export { arriveAfter, crossFade, glideHeight, MorphRoom, useMorph } from "./motion";
 export { driveFolder, initialsOf, isIdHandle } from "./names";
 export {
   BGS as PERSON_BACKGROUNDS,
@@ -529,13 +531,13 @@ export {
   zonedInstant,
 } from "./recurrence";
 export { fold, matchesWords } from "./search";
+export { IDLE_MS, onSight, type Sight, sight, watchSight } from "./sight";
 export { workspaceSky } from "./sky/accent";
-export { pixelBurst, pixelConfetti } from "./sky/burst";
+export { pixelBurst, pixelConfetti, pixelVeil } from "./sky/burst";
 export { ditherCells, ditherSvg, ditherTones, ditherUrl } from "./sky/dither";
 export {
   drawSprite,
   holdSkies,
-  holdSkiesWhileAway,
   prefersReducedMotion,
   redrawSkies,
   type SkyBlob,

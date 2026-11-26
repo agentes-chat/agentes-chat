@@ -977,7 +977,43 @@ describe("the agent's screen in the computer dialog", () => {
     await settle(4);
     expect(still()).toBeNull();
     expect(screen().getByText("Abrindo o computador da Ada…")).toBeTruthy();
-    expect(screen().getByText("Tentando de novo…")).toBeTruthy();
+    expect(screen().getByText("O Servidor de casa não está respondendo.")).toBeTruthy();
+  });
+
+  test("a screen that doesn't open says why with Tentar de novo, and after 2 minutes stops trying by itself", async () => {
+    const t = await dialog({ ...RUNNING, running: false });
+    expect(screen().getByText("Abrindo o computador da Ada…")).toBeTruthy();
+    expect(view().queryByRole("button", { name: "Tentar de novo" })).toBeNull();
+    // The computer was late: still opening, now with the cause and a way to try at once.
+    await act(async () => t.sockets.desktops[0]?.serverClose(4408, "timeout"));
+    await settle(4);
+    expect(screen().getByText("Abrindo o computador da Ada…")).toBeTruthy();
+    expect(screen().getByText("O Servidor de casa demorou a responder.")).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(/acord|dormi|desperta|wak|sleep/i);
+    await act(async () => new Promise((r) => setTimeout(r, 1100)));
+    await settle(4);
+    expect(t.sockets.desktops).toHaveLength(2);
+    // Two minutes on, a try that fails again is the last one: no spinner over an endless wait.
+    try {
+      setSystemTime(new Date(Date.now() + 121_000));
+      await act(async () => t.sockets.desktops[1]?.serverClose(1006));
+      await settle(4);
+      expect(screen().getByText("Não deu para abrir a tela da Ada.")).toBeTruthy();
+      expect(screen().getByText("A conexão caiu.")).toBeTruthy();
+      expect(screen().queryByText("Abrindo o computador da Ada…")).toBeNull();
+    } finally {
+      setSystemTime();
+    }
+    await act(async () => new Promise((r) => setTimeout(r, 1100)));
+    await settle(2);
+    expect(t.sockets.desktops).toHaveLength(2);
+    // Tentar de novo opens it afresh, its cause gone until a try fails again.
+    await click(view().getByRole("button", { name: "Tentar de novo" }));
+    expect(t.sockets.desktops).toHaveLength(3);
+    expect(screen().getByText("Abrindo o computador da Ada…")).toBeTruthy();
+    expect(screen().queryByText("A conexão caiu.")).toBeNull();
+    await connected();
+    expect(sub()).toBe("Ao vivo · você está assistindo");
   });
 
   test("a hand back keeps the last picture dimmed under Devolvendo à Ada… until the watcher draws, never the cold cover", async () => {
@@ -1586,7 +1622,7 @@ describe("the dialog's size (computer.css)", () => {
     const inSheet = (selector: string) => sheet.split(`\n  ${selector} {`)[1]?.split("}")[0] ?? "";
     // The kit's full-screen sheet (Details on a phone): clear of the notch and the home bar, its full screen excepted.
     const clear = inSheet(".ac-dialog.cmp-dialog:not(.is-full)");
-    expect(clear).toContain("padding-top: env(safe-area-inset-top, 0px)");
+    expect(clear).toContain("padding-top: calc(env(safe-area-inset-top, 0px) + var(--window-top))");
     expect(clear).toContain("padding-bottom: env(safe-area-inset-bottom, 0px)");
     // The wait's and the page's stages grow to the sheet's foot, never shorter than their words.
     expect(

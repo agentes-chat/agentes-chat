@@ -13,7 +13,7 @@ import { act, cleanup, fireEvent, within } from "@testing-library/react";
 import { objectUrls } from "@/components/artifacts/FileView";
 import { fileSaver } from "@/components/artifacts/fileSaver";
 import { createI18n } from "@/i18n";
-import { ADA_ID, createFakeApi, ENG_ID, fakeMachinesOf, ORG_ID, seedState } from "./fake-api";
+import { ADA_ID, createFakeApi, ENG_ID, fakeMachinesOf, ORG_ID, seedState, withRightHand } from "./fake-api";
 import { hintOf, shownText } from "./hint";
 import { onScreen, renderApp, screen, settle, showIn } from "./render";
 
@@ -488,6 +488,17 @@ describe("Configurações → Dispositivos (self-host)", () => {
     const card = screen().getByRole("region", { name: "Qual computador cada agente usa" });
     const trigger = within(card).getByRole("combobox", { name: "Computador de Ada" });
     expect(trigger.textContent).toContain("Computador deste servidor");
+  });
+
+  test("which computer each agent uses: the right hand's row only says its computer, for admins too", async () => {
+    const api = createFakeApi(withRightHand(seedState()));
+    fakeMachinesOf.get(api)?.pair({ name: "Escritório" });
+    await renderApp(`/org/${ORG_ID}/settings/computers`, { api });
+    await settle(8);
+    const card = screen().getByRole("region", { name: "Qual computador cada agente usa" });
+    expect(within(card).getByRole("combobox", { name: "Computador de Ada" })).toBeTruthy();
+    expect(within(card).queryByRole("combobox", { name: "Computador de Lodi" })).toBeNull();
+    expect(card.textContent).toContain("Lodi");
   });
 
   test("members see each agent's computer but don't pick for agents they don't own", async () => {

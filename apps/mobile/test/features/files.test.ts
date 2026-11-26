@@ -20,6 +20,7 @@ import {
   singleImageBox,
   singleImageHeight,
   utf8Bytes,
+  videoBox,
   videoClock,
   videoHeight,
   whereKnown,
@@ -77,6 +78,13 @@ describe("videos", () => {
     expect(videoClock(725)).toBe("12:05");
     expect(videoClock(3729)).toBe("1:02:09");
     expect(videoClock(Number.NaN)).toBe("0:00");
+  });
+
+  test("a video whose size the server read has its own shape from the first frame, an upright one narrowed to fit", () => {
+    expect(videoBox(320, 16 / 9)).toEqual({ width: 320, height: 180 });
+    expect(videoBox(320, 9 / 16)).toEqual({ width: 225, height: 400 });
+    // Not read: the 16:9 box.
+    expect(videoBox(320, undefined)).toEqual({ width: 320, height: 180 });
   });
 });
 

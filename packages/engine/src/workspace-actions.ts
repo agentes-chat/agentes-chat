@@ -27,6 +27,7 @@ import { cardPlace, NO_PERSON_READS } from "./consultations";
 import { ownWords } from "./context/learn";
 import { continueRun } from "./continue-run";
 import { deleteCredential, listCredentials } from "./credentials";
+import { updateComputerDevice } from "./devices";
 import { personAgentDmKey } from "./dms";
 import { queueInvitationEmail } from "./email";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "./errors";
@@ -1004,17 +1005,22 @@ const channelTarget = (c: Pick<ChannelRow, "id" | "name">): AgentActionTarget =>
   id: c.id,
   title: c.name,
 });
-/** With its roles' audience: made public, a private channel forgets them, and Undo gives them back. */
+/**
+ * With its roles' audience (made public, a private channel forgets them, and Undo gives them back), its responsible
+ * agent (ADR 0095) and whether its agents answer in threads (ADR 0214).
+ */
 const channelSnapshot = (c: ChannelRow) => ({
   name: c.name,
   topic: c.topic,
   visibility: c.visibility,
   audienceRoleIds: [...c.audienceRoleIds],
+  leadAgentId: c.leadAgentId,
+  replyInThreads: c.replyInThreads,
 });
 
 const updateChannelAction: WorkspaceAction = {
   id: "update_channel",
-  does: "Rename a channel, change its topic, or make it private (invite only) or public.",
+  does: "Rename a channel, change its topic, make it private (invite only) or public, choose the agent responsible for it, or have agents answer there in threads or in the channel.",
   input: {
     type: "object",
     properties: {
@@ -1022,6 +1028,17 @@ const updateChannelAction: WorkspaceAction = {
       name: { type: "string", minLength: 1, maxLength: 80, description: "Lower-case letters, digits, - or _." },
       topic: { type: "string", maxLength: 500 },
       private: { type: "boolean" },
+      responsible: {
+        type: "string",
+        maxLength: 64,
+        description:
+          'The @handle of an agent in the channel to make responsible for it: it answers what people say to the room for the team and takes the next step of work that ends there. One per channel. "" for none.',
+      },
+      reply_in_threads: {
+        type: "boolean",
+        description:
+          "true: agents called in its main timeline answer in the thread under that message; false: in the channel itself. Work already going stays where it is.",
+      },
     },
     required: ["channel"],
     additionalProperties: false,
@@ -1031,10 +1048,23 @@ const updateChannelAction: WorkspaceAction = {
   async resolve(ctx, person, input) {
     const channel = await channelNamed(ctx, person, str(input.channel));
     if (typeof channel === "string") return channel;
-    if (input.name === undefined && input.topic === undefined && input.private === undefined)
-      return "Say what changes: its name, topic or whether it is private.";
-    const { channel: _, ...rest } = input;
-    return { input: { ...rest, channelId: channel.id }, words: { channel: channel.name } };
+    if (
+      input.name === undefined &&
+      input.topic === undefined &&
+      input.private === undefined &&
+      input.responsible === undefined &&
+      input.reply_in_threads === undefined
+    )
+      return "Say what changes: its name, topic, whether it is private, the agent responsible for it or whether agents answer in threads.";
+    const { channel: _, responsible, ...rest } = input;
+    let lead: { leadAgentId?: string | null } = {};
+    if (typeof responsible === "string") {
+      const handle = responsible.trim();
+      const agent = handle ? (await agentsByHandle(ctx.db, ctx.orgId, [handle])).rows[0] : null;
+      if (handle && !agent) return `No agent ${handle.startsWith("@") ? handle : `@${handle}`} here.`;
+      lead = { leadAgentId: agent?.id ?? null };
+    }
+    return { input: { ...rest, ...lead, channelId: channel.id }, words: { channel: channel.name } };
   },
   async run(deps, actorId, orgId, input) {
     const row = await channelRow(deps.db, orgId, str(input.channelId));
@@ -1049,6 +1079,10 @@ const updateChannelAction: WorkspaceAction = {
         ...(str(input.name) ? { name: str(input.name).replace(/^#/, "") } : {}),
         ...(typeof input.topic === "string" ? { topic: input.topic } : {}),
         ...(typeof input.private === "boolean" ? { visibility: input.private ? "private" : "public" } : {}),
+        ...(input.leadAgentId !== undefined
+          ? { leadAgentId: typeof input.leadAgentId === "string" ? input.leadAgentId : null }
+          : {}),
+        ...(typeof input.reply_in_threads === "boolean" ? { replyInThreads: input.reply_in_threads } : {}),
       },
       deps,
     );
@@ -1064,12 +1098,15 @@ const updateChannelAction: WorkspaceAction = {
     const access = same([from.visibility, from.audienceRoleIds], [to.visibility, to.audienceRoleIds])
       ? {}
       : { visibility: to.visibility as "public" | "private", audienceRoleIds: list(to.audienceRoleIds) };
+    // Only when it changed: saving a lead checks it is still in the channel, and an archived one is kept, not saved.
+    const lead = same(from.leadAgentId, to.leadAgentId) ? {} : { leadAgentId: str(to.leadAgentId) || null };
+    const threads = from.replyInThreads === to.replyInThreads ? {} : { replyInThreads: to.replyInThreads === true };
     await updateChannel(
       deps.db,
       actorId,
       a.orgId,
       row.id,
-      { name: str(to.name), topic: String(to.topic ?? ""), ...access },
+      { name: str(to.name), topic: String(to.topic ?? ""), ...access, ...lead, ...threads },
       deps,
     );
     return undefined;
@@ -1382,7 +1419,7 @@ const resendInvitationAction: WorkspaceAction = {
     if (!deps.server) throw new Error("Sending an invitation needs the server's address");
     await requirePermission(deps.db, actorId, orgId, "invite_people");
     const row = await pendingInvitation(deps.db, orgId, str(input.email));
-    const { invitation, token } = await resendInvitation(
+    const { invitation, token, unsuppress } = await resendInvitation(
       deps.db,
       actorId,
       orgId,
@@ -1398,6 +1435,7 @@ const resendInvitationAction: WorkspaceAction = {
       url: `${deps.server.publicUrl.replace(/\/$/, "")}/invite/${token}`,
       inviterId: actorId,
       ...(deps.server.secret ? { secret: deps.server.secret } : {}),
+      unsuppress,
     });
     return {
       target: { type: "person", id: invitation.id, title: invitation.email },
@@ -1910,6 +1948,99 @@ const actionCheckAction: WorkspaceAction = {
   },
 };
 
+// ── Computers ────────────────────────────────────────────────────────────────
+
+type HelpUse = "first" | "help" | "off";
+const HELP_USES: readonly HelpUse[] = ["first", "help", "off"];
+const helpUseOf = (m: { spillOwn: boolean; spillFirst: boolean }): HelpUse =>
+  m.spillFirst ? "first" : m.spillOwn ? "help" : "off";
+const helpSpill = (use: HelpUse) => ({ own: use !== "off", first: use === "first" });
+/** Its sentence: `set_computer_help` (help), `_first` or `_off`. */
+const helpWords = (computer: string, use: HelpUse): Record<string, string> =>
+  use === "help" ? { computer } : { computer, variant: use };
+
+/** The computers this person connected that can help their agents: never the workspace's own, nor a server install. */
+async function ownHelpComputers(db: Database, orgId: string, person: string) {
+  const rows = await db
+    .select({
+      id: schema.machines.id,
+      name: schema.machines.name,
+      spillOwn: schema.machines.spillOwn,
+      spillFirst: schema.machines.spillFirst,
+      mode: sql<string | null>`${schema.machines.executors}->>'mode'`,
+    })
+    .from(schema.machines)
+    .where(
+      and(
+        eq(schema.machines.orgId, orgId),
+        eq(schema.machines.pairedByUserId, person),
+        eq(schema.machines.kind, "connected"),
+        isNull(schema.machines.deletedAt),
+      ),
+    );
+  return rows.filter((r) => r.mode !== "system");
+}
+
+const computerHelpAction: WorkspaceAction = {
+  id: "set_computer_help",
+  does: "How one of their own computers helps their agents. first: their agents' asks, routines and long work start there whenever it is free (a reply to a person still starts on the agent's own computer, unless that one is full or away). help: only when the agent's own computer is full or away. off: never. Runs there use their own AI sign-in on that computer, and missions, code sessions and agents with repositories stay on the agent's own computer. Use it when work waits in line on the team's computer and they have a computer of their own.",
+  input: {
+    type: "object",
+    properties: {
+      computer: {
+        type: "string",
+        minLength: 1,
+        maxLength: 120,
+        description: "Its name, as Settings › Devices shows it. Leave it out when they have one computer.",
+      },
+      use: { enum: [...HELP_USES] },
+    },
+    required: ["use"],
+    additionalProperties: false,
+  },
+  mode: "now",
+  needs: null,
+  self: true,
+  async resolve(ctx, person, input) {
+    const mine = await ownHelpComputers(ctx.db, ctx.orgId, person);
+    const name = str(input.computer).toLowerCase();
+    const hit = name ? mine.filter((m) => m.name.toLowerCase() === name) : mine;
+    if (mine.length === 0)
+      return "They have no computer of their own connected here that can help: they connect one in Settings › Devices.";
+    if (hit.length !== 1 || !hit[0])
+      return `${name ? `No computer of theirs is called "${str(input.computer)}"` : "They have several computers"}. Theirs: ${mine.map((m) => m.name).join(", ")}. Ask which one.`;
+    const use = HELP_USES.find((u) => u === input.use) ?? "help";
+    return { input: { machineId: hit[0].id, use }, words: helpWords(hit[0].name, use) };
+  },
+  async run(deps, actorId, orgId, input) {
+    const machineId = str(input.machineId);
+    const use = HELP_USES.find((u) => u === input.use) ?? "help";
+    const now = (await ownHelpComputers(deps.db, orgId, actorId)).find((m) => m.id === machineId);
+    if (!now) throw new NotFoundError("That computer isn't theirs anymore", "device.not_found");
+    if (helpUseOf(now) === use) throw new ValidationError("It already is like that");
+    await updateComputerDevice({ db: deps.db, pubsub: deps.pubsub }, actorId, orgId, machineId, {
+      spill: helpSpill(use),
+    });
+    return {
+      target: { type: "person", id: actorId },
+      words: helpWords(now.name, use),
+      before: { machineId, use: helpUseOf(now) },
+      after: { machineId, use },
+    };
+  },
+  async revert(deps, actorId, a, direction, changedSince) {
+    const [from, to] = direction === "undo" ? [obj(a.after), obj(a.before)] : [obj(a.before), obj(a.after)];
+    if (actorId !== a.targetId) throw new ForbiddenError("Only its owner changes how it helps", "action.not_allowed");
+    const now = (await ownHelpComputers(deps.db, a.orgId, actorId)).find((m) => m.id === from.machineId);
+    if (!now || helpUseOf(now) !== from.use) throw changedSince();
+    const use = HELP_USES.find((u) => u === to.use) ?? "help";
+    await updateComputerDevice({ db: deps.db, pubsub: deps.pubsub }, actorId, a.orgId, now.id, {
+      spill: helpSpill(use),
+    });
+    return undefined;
+  },
+};
+
 // ── The catalog ──────────────────────────────────────────────────────────────
 
 export const WORKSPACE_ACTIONS: readonly WorkspaceAction[] = [
@@ -1935,6 +2066,7 @@ export const WORKSPACE_ACTIONS: readonly WorkspaceAction[] = [
   continueWorkAction,
   updateWorkspaceAction,
   actionCheckAction,
+  computerHelpAction,
   invitePeopleAction,
   removeAiKeyAction,
 ];

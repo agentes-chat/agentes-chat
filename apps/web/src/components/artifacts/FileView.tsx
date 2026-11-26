@@ -107,6 +107,7 @@ export function FileVideo({
   actions,
   fallback,
   tip,
+  ratio,
 }: {
   content: ArtifactFileContent;
   artifactId: string;
@@ -115,6 +116,8 @@ export function FileVideo({
   actions?: ReactNode;
   fallback: ReactNode;
   tip?: string;
+  /** Its width over its height, when the server read them (`pictureRatio`): the tile's shape before it loads. */
+  ratio?: number | undefined;
 }) {
   const { org } = useOrg();
   const api = useApi();
@@ -127,6 +130,7 @@ export function FileVideo({
         <VideoPlayer
           src={api.artifacts.fileUrl(org.id, artifactId, { version })}
           name={content.name}
+          ratio={ratio}
           labels={labels}
           onOpen={onOpen}
           actions={actions}

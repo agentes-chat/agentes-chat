@@ -1,4 +1,4 @@
-import { type Channel, keys, type OrgRole, useChannels, useRoles } from "@agenteschat/client";
+import { type Channel, keys, type OrgRole, useAgentGroups, useChannels, useRoles } from "@agenteschat/client";
 import {
   accessInput,
   accessValid,
@@ -6,7 +6,6 @@ import {
   type ChannelAccessMode,
 } from "@agenteschat/client/lib/channel-access";
 import { useHeldWhile } from "@agenteschat/client/lib/hold";
-import { can } from "@agenteschat/client/lib/permissions";
 import { rolePicksInSight } from "@agenteschat/client/lib/personal-view";
 import { isEveryone, sortRoles } from "@agenteschat/client/lib/roles";
 import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
@@ -29,10 +28,10 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
 import { usePersonalView } from "@/hooks/usePersonalView";
-import { CategorySelect } from "./ChannelCategoryDialogs";
 import { memberOf, PeoplePicker, type PickKey } from "./MemberPicker";
 import { useOrg } from "./org-context";
 import { RoleChecklist } from "./roles/RoleChecklist";
+import { SectorSelect } from "./SectorSelect";
 
 const ACCESS_MODES: ChannelAccessMode[] = ["public", "roles", "private"];
 
@@ -86,7 +85,7 @@ export function ChannelAccessChoice({
         : modeKey(org, `newChannel.${mode}Desc` as const);
   return (
     <div className="channel-access">
-      {/* A dropdown, as "Categoria" above it: three cards side by side broke their words in a narrow dialog. */}
+      {/* A dropdown, as "Setor" above it: three cards side by side broke their words in a narrow dialog. */}
       <Field
         label={t("newChannel.visibility")}
         id={`${idPrefix}-vis`}
@@ -235,7 +234,7 @@ export function channelNameError(name: string, taken: Set<string>): "invalid" | 
 }
 
 /**
- * "Criar canal", in one column: name, topic, sidebar category, who can join, then the initial members (people and
+ * "Criar canal", in one column: name, topic, its sector (once the workspace has one), who can join, then the initial members (people and
  * agents: search and a list that scrolls in its own box). The footer, with the count and Criar, stays in view. A
  * personal workspace calls it a group conversation, and alone leaves out who can join while it is the default, open to
  * everyone here (ADR 0159): the same channel either way.
@@ -243,13 +242,10 @@ export function channelNameError(name: string, taken: Set<string>): "invalid" | 
 export function NewChannelDialog({
   open,
   onOpenChange,
-  category = null,
   roleIds,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Opened from a category's +: it starts chosen. */
-  category?: string | null;
   /** Opened from a cargo's Canais: it starts limited to these cargos. */
   roleIds?: string[];
 }) {
@@ -265,19 +261,20 @@ export function NewChannelDialog({
   const [access, setAccess] = useState<ChannelAccess>(
     roleIds?.length ? { mode: "roles", roleIds } : { mode: "public", roleIds: [] },
   );
-  const [categoryId, setCategoryId] = useState<string | null>(category);
+  const sectors = useAgentGroups(org.id).data ?? [];
+  const [groupId, setGroupId] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<PickKey>>(new Set());
   const [touched, setTouched] = useState(false);
   const create = useMutation({
     mutationFn: async () => {
-      const channel = await api.chat.createChannel(org.id, {
+      // Who it starts with goes along: the server decides from them whether its agents answer in threads.
+      return api.chat.createChannel(org.id, {
         name,
         topic: topic.trim() || undefined,
         ...accessInput(access),
-        ...(categoryId ? { categoryId } : {}),
+        ...(groupId ? { groupId } : {}),
+        ...(selected.size > 0 ? { members: [...selected].map(memberOf) } : {}),
       });
-      for (const key of selected) await api.chat.addMember(org.id, channel.id, memberOf(key));
-      return channel;
     },
     onSuccess: async (channel) => {
       // In the list at once, so its page opens on it without waiting for the list to be read again.
@@ -285,7 +282,7 @@ export function NewChannelDialog({
         list && !list.some((c) => c.id === channel.id) ? [...list, channel] : list,
       );
       void qc.invalidateQueries({ queryKey: keys.channels(org.id) });
-      void qc.invalidateQueries({ queryKey: keys.channelCategories(org.id) });
+      if (groupId) void qc.invalidateQueries({ queryKey: keys.agentGroups(org.id) });
       onOpenChange(false);
       await navigate({ to: "/org/$orgId/c/$channelId", params: { orgId: org.id, channelId: channel.id } });
     },
@@ -296,11 +293,11 @@ export function NewChannelDialog({
     setName("");
     setTopic("");
     setAccess(roleIds?.length ? { mode: "roles", roleIds } : { mode: "public", roleIds: [] });
-    setCategoryId(category);
+    setGroupId(null);
     setSelected(new Set());
     setTouched(false);
     create.reset();
-  }, [open, category, create.reset]);
+  }, [open, create.reset]);
   const taken = useHeldWhile(new Set((channels.data ?? []).map((c) => c.name)), create.isPending || create.isSuccess);
   const error = channelNameError(name, taken);
 
@@ -349,16 +346,18 @@ export function NewChannelDialog({
                 placeholder={t("newChannel.topicPlaceholder")}
               />
             </Field>
-            <Field
-              label={t("channelCategories.category")}
-              id="ch-category"
-              hint={{
-                name: t("common.about", { label: t("channelCategories.category") }),
-                text: t("channelCategories.categoryHelp"),
-              }}
-            >
-              <CategorySelect value={categoryId} onChange={setCategoryId} canCreate={can(org, "manage_channels")} />
-            </Field>
+            {sectors.length > 0 && (
+              <Field
+                label={t("agentGroups.group")}
+                id="ch-sector"
+                hint={{
+                  name: t("common.about", { label: t("agentGroups.group") }),
+                  text: t("channelCategories.categoryHelp"),
+                }}
+              >
+                <SectorSelect value={groupId} onChange={setGroupId} />
+              </Field>
+            )}
             {!(solo && access.mode === "public") && (
               <ChannelAccessChoice value={access} onChange={setAccess} idPrefix="ch" showError={touched} />
             )}

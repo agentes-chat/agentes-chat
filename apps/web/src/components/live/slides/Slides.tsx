@@ -1,6 +1,6 @@
-import { type Artifact, type LiveAsset, useApi, useLivePeers } from "@agenteschat/client";
+import { type Artifact, type LiveAsset, useApi, useFileFonts, useLivePeers } from "@agenteschat/client";
 import { errorText } from "@agenteschat/client/lib/errors";
-import { LOCAL, type Point } from "@agenteschat/live";
+import { type FileFonts, type FontRef, type FontWeight, isFontRole, LOCAL, type Point } from "@agenteschat/live";
 import type { Peer } from "@agenteschat/live/awareness";
 import type { RichAlign, RichList } from "@agenteschat/live/rich";
 import {
@@ -8,14 +8,17 @@ import {
   type ElementView,
   elementTextFragment,
   type NewElement,
+  roleFonts,
   type ShapeKind,
   type SlideChart,
   type SlideLayout,
   type SlideTable,
   type SlideView,
+  setDeckFonts,
   type ThemeId,
   textLook,
   themeOf,
+  updateElement,
 } from "@agenteschat/live/slides";
 import { Button, EmptyState, useMatchMedia } from "@agenteschat/ui";
 import {
@@ -37,6 +40,7 @@ import type { LiveEditorProps } from "../editor";
 import { FontAssetUrl } from "../fonts";
 import { PeerFace, type PeerLook, peerWorking, usePeerLooks } from "../peers";
 import {
+  capsWholeText,
   colorWholeText,
   markWholeText,
   NO_FORMAT,
@@ -44,15 +48,22 @@ import {
   type RichMarkKey,
   type RichTextHandle,
   setRichAlign,
+  setRichCaps,
   setRichColor,
+  setRichLineHeight,
   setRichLink,
+  setRichType,
   setWholeParagraphs,
   shiftRichLevel,
   shiftWholeLevels,
   toggleRichList,
   toggleRichMark,
+  typeWholeText,
   wholeFormat,
 } from "../rich";
+import { FileFontsDialog, useFontFromDrive } from "../type/FileFonts";
+import { type FontChoices, fontWeights } from "../type/FontPicker";
+import { type EffectsPatch, TYPE_WEIGHTS, type TypePatch } from "../type/TypeMenus";
 import {
   type AlignHow,
   alignPatches,
@@ -477,12 +488,29 @@ export function Slides(props: LiveEditorProps) {
 
   const editingEl = editing ? byId.get(editing.id) : undefined;
   const texts = editingEl ? [editingEl] : chosen.filter((el) => el.type === "text" || el.type === "shape");
+  const firstText = texts[0];
+  const textFormat = editingEl ? caret : wholeFormat(firstText?.text ?? []);
+  const firstLook = firstText ? textLook(theme, firstText, deck.fonts) : null;
+  // The words' own font where they all have one, else the box's (a role of the deck, or a font of its own).
+  const shownFont: FontRef = textFormat.font ?? firstText?.style?.font ?? firstLook?.font ?? "body";
   const textTools: TextTools | null =
-    texts.length && texts.length === (editingEl ? 1 : chosen.length) && !tableEdit
+    firstText && firstLook && texts.length === (editingEl ? 1 : chosen.length) && !tableEdit
       ? {
-          format: editingEl ? caret : wholeFormat(texts[0]?.text ?? []),
-          size: textLook(theme, texts[0] as ElementView).size,
+          format: textFormat,
+          size: firstLook.size,
           editing: !!editingEl,
+          font: shownFont,
+          look: {
+            weight: textFormat.weight ?? firstLook.weight,
+            tracking: textFormat.tracking ?? firstLook.tracking,
+            lineHeight: textFormat.lineHeight ?? firstLook.lineHeight,
+            caps: textFormat.caps || firstLook.caps,
+            highlight: textFormat.highlight,
+          },
+          weights: fontWeights(
+            isFontRole(shownFont) ? roleFonts(theme, deck.fonts)[shownFont] : shownFont,
+            TYPE_WEIGHTS,
+          ),
         }
       : null;
 
@@ -559,15 +587,114 @@ export function Slides(props: LiveEditorProps) {
     if (!rich.current.run(setRichLink(href)) && href) toast.show(t("live.slides.link.invalid"), "error");
   };
 
+  // ── Fonts and text styles (ADR 0220 §8) ─────────────────────────────────────────────────────────────────────────
+
+  const ownFonts = useFileFonts(orgId, fileId);
+  const fontChoices: FontChoices = useMemo(
+    () => ({ kind: "slides", roles: roleFonts(theme, deck.fonts), own: ownFonts.data ?? [] }),
+    [theme, deck.fonts, ownFonts.data],
+  );
+  const [fileFontsOpen, setFileFontsOpen] = useState(false);
+  const fontFromDrive = useFontFromDrive(orgId, fileId);
+
+  /** A style on every chosen box whole, with the words' own marks of that kind taken away so it shows. */
+  const typeWhole = (style: NonNullable<ElementPatch["style"]>, words: (fragment: Y.XmlFragment) => void) => {
+    if (!slide) return;
+    const slideId = slide.id;
+    refuse(
+      edit(room.doc, () => {
+        for (const el of texts) {
+          updateElement(room.doc, slideId, el.id, { style }, LOCAL);
+          const fragment = elementTextFragment(room.doc, slideId, el.id);
+          if (fragment) words(fragment);
+        }
+      }),
+    );
+  };
+
+  const font = (ref: FontRef) => {
+    if (editingEl && rich.current) {
+      // On words: the box's own font takes their marks away; a role of the deck is its font itself.
+      const box = editingEl.style?.font ?? textLook(theme, editingEl, deck.fonts).font;
+      const value = ref === box ? null : isFontRole(ref) ? roleFonts(theme, deck.fonts)[ref] : ref;
+      onText(
+        () => rich.current?.run(setRichType("font", value)),
+        () => {},
+      );
+      rich.current.focus();
+      return;
+    }
+    typeWhole({ font: ref }, (f) => typeWholeText(f, "font", null, LOCAL));
+  };
+
+  const typeStyle = (patch: TypePatch) => {
+    const words = rich.current;
+    if (editingEl && words) {
+      onText(
+        () => {
+          if (patch.weight !== undefined) words.run(setRichType("weight", patch.weight));
+          if (patch.tracking !== undefined) words.run(setRichType("tracking", patch.tracking));
+          if (patch.caps !== undefined) words.run(setRichCaps(patch.caps));
+          if (patch.highlight !== undefined) words.run(setRichType("highlight", patch.highlight));
+          if (patch.lineHeight !== undefined) words.run(setRichLineHeight(patch.lineHeight));
+        },
+        () => {},
+      );
+      words.focus();
+      return;
+    }
+    const style: NonNullable<ElementPatch["style"]> = {};
+    if (patch.weight !== undefined) style.weight = patch.weight as FontWeight;
+    if (patch.tracking !== undefined) style.tracking = patch.tracking || null;
+    if (patch.lineHeight !== undefined) style.lineHeight = patch.lineHeight;
+    if (patch.caps !== undefined) style.caps = patch.caps || null;
+    typeWhole(style, (f) => {
+      if (patch.weight !== undefined) typeWholeText(f, "weight", null, LOCAL);
+      if (patch.tracking !== undefined) typeWholeText(f, "tracking", null, LOCAL);
+      if (patch.caps !== undefined) capsWholeText(f, false, LOCAL);
+      if (patch.highlight !== undefined) typeWholeText(f, "highlight", patch.highlight, LOCAL);
+      if (patch.lineHeight !== undefined) setWholeParagraphs(f, { lineHeight: null }, LOCAL);
+    });
+  };
+
+  /** The deck's own heading or text font; one the theme already draws isn't kept (so a new theme's shows). */
+  const fileFont = (role: "heading" | "body", ref: FontRef) => {
+    const theme0 = roleFonts(theme);
+    const next: FileFonts = { ...deck.fonts };
+    next[role] = ref;
+    for (const r of ["heading", "body"] as const) if (next[r] === theme0[r]) delete next[r];
+    refuse(edit(room.doc, () => setDeckFonts(room.doc, next.heading || next.body ? next : null, LOCAL)));
+  };
+
+  const effects = (patch: EffectsPatch) =>
+    patchChosen((el) =>
+      el.type === "shape"
+        ? {
+            style: {
+              ...(patch.shadow !== undefined ? { shadow: patch.shadow } : {}),
+              ...(patch.gradient !== undefined ? { gradient: patch.gradient } : {}),
+              ...(patch.dash !== undefined ? { dash: patch.dash === "solid" ? null : patch.dash } : {}),
+            },
+          }
+        : null,
+    );
+
   // ── Shapes, lines, tables, charts ─────────────────────────────────────────────────────────────────────────────
 
   const allOf = (type: ElementView["type"]) => chosen.length > 0 && chosen.every((el) => el.type === type);
+  const firstStroke = chosen[0]?.style?.stroke && chosen[0].style.stroke !== "none" ? chosen[0].style.stroke : null;
   const shapeTools: ShapeTools | null = allOf("shape")
     ? {
         line: false,
         fill: chosen[0]?.style?.fill && chosen[0].style.fill !== "none" ? chosen[0].style.fill : null,
-        stroke: chosen[0]?.style?.stroke && chosen[0].style.stroke !== "none" ? chosen[0].style.stroke : null,
+        stroke: firstStroke,
         arrow: false,
+        effects: {
+          shadow: chosen[0]?.style?.shadow,
+          gradient: chosen[0]?.style?.gradient,
+          dash: chosen[0]?.style?.dash,
+        },
+        border: !!firstStroke,
       }
     : allOf("line")
       ? {
@@ -575,6 +702,8 @@ export function Slides(props: LiveEditorProps) {
           fill: null,
           stroke: chosen[0]?.style?.stroke ?? null,
           arrow: chosen[0]?.style?.lineEnd === "arrow",
+          effects: null,
+          border: false,
         }
       : null;
   const tableEl = chosen.length === 1 && chosen[0]?.type === "table" ? chosen[0] : null;
@@ -975,6 +1104,12 @@ export function Slides(props: LiveEditorProps) {
                 onList={list}
                 onLevel={level}
                 onSize={size}
+                fonts={fontChoices}
+                onFont={font}
+                onType={typeStyle}
+                onFileFonts={() => setFileFontsOpen(true)}
+                onBringFont={() => fontFromDrive.open(font)}
+                onEffects={effects}
                 onLink={link}
                 linkOpen={linkOpen}
                 onLinkOpenChange={setLinkOpen}
@@ -1137,6 +1272,17 @@ export function Slides(props: LiveEditorProps) {
               onClose={() => setDriveOpen(false)}
               onPick={(a) => void fromDrive(a)}
             />
+            {fontFromDrive.picker}
+            {fileFontsOpen && (
+              <FileFontsDialog
+                open
+                onOpenChange={setFileFontsOpen}
+                choices={{ kind: "slides", own: fontChoices.own }}
+                value={roleFonts(theme, deck.fonts)}
+                onChange={fileFont}
+                onBring={() => fontFromDrive.open()}
+              />
+            )}
             {watching?.state.presenting && watchingLook ? (
               <Present
                 deck={deck}

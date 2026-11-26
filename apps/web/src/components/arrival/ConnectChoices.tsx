@@ -18,10 +18,13 @@ export function ConnectChoices({
   dims,
   mayAddKey,
   perAgent,
+  offSystem,
 }: {
   onPick: (choice: AiChoice) => void;
   /** A plan that can't sign in now: its mark dims, and its steps say why. */
   dims: (choice: PlanChoice) => boolean;
+  /** The computer's system where a plan doesn't run there (`planOffSystem`): its card says so before it is picked. */
+  offSystem?: (choice: PlanChoice) => string | null;
   mayAddKey: boolean;
   /**
    * For several agents: a plan that will ask for one login per agent there ends its card saying so, quietly, before
@@ -38,14 +41,17 @@ export function ConnectChoices({
     description: string,
     more: Pick<OptionLinkItem, "tag" | "side"> = {},
   ): OptionLinkItem => ({ value: choice, leading, title, description, onSelect: () => onPick(choice), ...more });
+  const off = (c: PlanChoice) => offSystem?.(c) ?? null;
   const plan = (c: PlanChoice) =>
     card(
       c,
       <ProviderLogo id={planMark(c)} size="tile" off={dims(c)} />,
       planLabel(t, c),
-      t(`connectAi.plan.${c}.tiers`),
-      perAgent?.(c) ? { side: t("connectAi.team.perAgent") } : {},
+      off(c) ? t("connectAi.offSystem", { system: off(c) }) : t(`connectAi.plan.${c}.tiers`),
+      // A plan that can't run there has no logins to count.
+      perAgent?.(c) && !off(c) ? { side: t("connectAi.team.perAgent") } : {},
     );
+  const offOthers = OTHERS.filter((c) => off(c));
   const more: OptionLinkItem = {
     value: "others",
     leading: (
@@ -56,9 +62,25 @@ export function ConnectChoices({
       </span>
     ),
     title: t("arrival.connect.others"),
-    description: joinNames(
-      OTHERS.map((c) => planLabel(t, c)),
-      t,
+    description: (
+      <>
+        {joinNames(
+          OTHERS.map((c) => planLabel(t, c)),
+          t,
+        )}
+        {offOthers.length > 0 && (
+          <span className="ac-optrow__desc">
+            {t("connectAi.offSystemSome", {
+              count: offOthers.length,
+              names: joinNames(
+                offOthers.map((c) => planLabel(t, c)),
+                t,
+              ),
+              system: off(offOthers[0] as PlanChoice),
+            })}
+          </span>
+        )}
+      </>
     ),
     end: "chevronDown",
     button: { "aria-expanded": false },

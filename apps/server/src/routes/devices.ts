@@ -127,9 +127,13 @@ const Computer = z
     memoryGb: z.number().nullable(),
     ownerUserId: z.string().nullable(),
     belongsToWorkspace: z.boolean(),
-    spill: z.object({ own: z.boolean() }).openapi({
+    spill: z.object({ own: z.boolean(), first: z.boolean() }).openapi({
       description:
-        "\"Help when the team's computer is full or away\" (`own`): while an agent's own computer is full or away, fresh turns of its owner's agents (anyone's, on a computer marked the workspace's) may think here, on a sign-in of the agent's owner.",
+        "\"Help when the team's computer is full or away\" (`own`): while an agent's own computer is full or away, fresh turns of its owner's agents (anyone's, on a computer marked the workspace's) may think here, on a sign-in of the agent's owner. \"Use this computer for my agents' work\" (`first`, implies `own`): its owner's agents' asks, routines and long work start here whenever it is free.",
+    }),
+    shareInternet: z.object({ on: z.boolean(), inUse: z.boolean() }).nullable().openapi({
+      description:
+        "A person's computer in a workspace with its own computer (ADR 0237): whether its owner lends it its internet, and whether the workspace's computer's web traffic goes out through it now. Null: nothing to lend to.",
     }),
     systemMode: z.boolean().openapi({ description: "Each agent works as its own OS user there (a server install)." }),
     audience: Audience,
@@ -329,7 +333,7 @@ export function deviceAppRoutes(deps: AppDeps) {
       summary:
         "Rename a computer, change who can use it, mark it the workspace's, let it help when the team's computer is full or away, set its tasks at once",
       description:
-        "Its owner: anything. An admin: rename, mark it the workspace's, and narrow who can use someone's own computer (`device.widen_forbidden` otherwise). Never the workspace's computer (`machine.managed`). Only its owner turns its help on (`device.spill_owner_only`), which starts installing the CLIs their agents think with that it lacks, and changes its tasks at once or Push harder (`device.tasks_owner_only`; an admin too on a computer nobody connected; never on a Cloud computer, `device.tasks_cloud`), which the computer applies: it must be online (`machine.offline`) with an app that can (`machine.outdated`).",
+        "Its owner: anything. An admin: rename, mark it the workspace's, and narrow who can use someone's own computer (`device.widen_forbidden` otherwise). Never the workspace's computer (`machine.managed`). Only its owner turns its help on (`device.spill_owner_only`), which starts installing the CLIs their agents think with that it lacks, and changes its tasks at once or Push harder (`device.tasks_owner_only`; an admin too on a computer nobody connected; never on a Cloud computer, `device.tasks_cloud`), which the computer applies: it must be online (`machine.offline`) with an app that can (`machine.outdated`). Only its owner lends its internet to the workspace's own computer (`shareInternet`, `device.share_owner_only`; on again picks it first); an admin may stop it; only a person's own computer lends (`device.share_connected_only`).",
       request: {
         params: MachineParams,
         body: body(
@@ -337,9 +341,10 @@ export function deviceAppRoutes(deps: AppDeps) {
             name: z.string().min(1).max(80).optional(),
             audience: Audience.optional(),
             belongsToWorkspace: z.boolean().optional(),
-            spill: z.object({ own: z.boolean().optional() }).optional(),
+            spill: z.object({ own: z.boolean().optional(), first: z.boolean().optional() }).optional(),
             maxTasks: z.number().int().min(TASK_LIMIT_BOUNDS[0]).max(TASK_LIMIT_BOUNDS[1]).optional(),
             pushHarder: z.boolean().optional(),
+            shareInternet: z.boolean().optional(),
           }),
         ),
       },
@@ -357,7 +362,7 @@ export function deviceAppRoutes(deps: AppDeps) {
         input,
       );
       // Best effort: the switch is saved, and a turn that finds no CLI there says so later.
-      if (input.spill?.own === true && machineHub)
+      if ((input.spill?.own === true || input.spill?.first === true) && machineHub)
         await installHelpClis({ db, pubsub, hub: machineHub }, c.get("user").id, orgId, machineId).catch(() => []);
       return c.json(device, 200);
     },

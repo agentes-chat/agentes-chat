@@ -5,7 +5,7 @@ import type { AppLocale } from "@agenteschat/i18n/locale";
 import { plainLines } from "@agenteschat/ui/markdown";
 import { runAuthority } from "./authority";
 import { confidentialThreadSql, threadIsConfidential } from "./confidential";
-import { answersHandOffs, consultationOrigin } from "./consultations";
+import { answersHandOffs, consultationOrigin, settleHandedWorkTrace } from "./consultations";
 import { getChannelCached } from "./context";
 import type { ContextDeps } from "./context/summaries";
 import { deliverNotice, publishDelivery } from "./delivery";
@@ -16,6 +16,7 @@ import { cutMarked, cutText } from "./format";
 import { linkIssueToWork, setWorkIssueState } from "./issues";
 import { deliverLive, renderSteered } from "./live-steer";
 import { messageLink } from "./message-links";
+import { ownTyped } from "./message-origin";
 import { insertMessage, type Message, messageView, replyExcerpt } from "./messages";
 import { missionOfThread } from "./missions";
 import { enqueue } from "./outbox";
@@ -1188,6 +1189,7 @@ export async function endWork(
   if (!ended) return null;
   if (ended.end && deps.pubsub) await publishMessageCreated(deps.pubsub, messageView(ended.end));
   if (ended.work.issueId) await setWorkIssueState(deps, ended.work, { ended: ended.status }).catch(() => null);
+  await settleHandedWorkTrace(deps, ended.work).catch(() => {});
   await announceWork(deps.pubsub, db, ended.work.orgId, ended.work.id);
   for (const id of ended.released) await announceWork(deps.pubsub, db, ended.work.orgId, id);
   return ended.work;
@@ -1303,9 +1305,12 @@ export async function followUpWork(
     const asks = await tx
       .select({
         id: messages.id,
+        authorType: messages.authorType,
         userId: messages.authorUserId,
         channelId: messages.channelId,
         threadId: messages.threadId,
+        origin: messages.origin,
+        meta: messages.meta,
       })
       .from(messages)
       .where(
@@ -1373,6 +1378,8 @@ export async function followUpWork(
               ...(work.title ? { title: work.title } : {}),
               ...(input.stopped ? { stopped: "1" } : {}),
               ...(home ? {} : { away: "1" }),
+              // Not all typed in our apps (ADR 0250): the run it wakes answers them, never learns from them as theirs.
+              ...(theirs.every(ownTyped) ? {} : { relayed: "1" }),
             },
           },
           trigger: run.trigger === "dm" ? "dm" : "mention",

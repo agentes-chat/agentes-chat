@@ -4,6 +4,7 @@ import type { ChatPrefs } from "../lib/chat-look";
 import { humanCheckHeaders } from "../lib/human-check";
 import type { OnboardingStepId } from "../lib/onboarding";
 import { type LodiPrefs, lodiPrefsOf } from "../lib/right-hand-prefs";
+import { browserTimezone } from "../lib/routines";
 import { CLOUD_SERVER, withoutTrailingSlashes } from "../lib/server";
 import { createLiveApi } from "../live/api";
 import { consultSeeds } from "../realtime/consults";
@@ -75,10 +76,10 @@ import type {
   CalendarRange,
   Channel,
   ChannelCard,
-  ChannelCategory,
   ChannelMember,
   ChannelOverride,
   Choices,
+  CliFetch,
   CliInstall,
   CodeSent,
   CommandApproval,
@@ -132,6 +133,8 @@ import type {
   ImportedSource,
   ImportPlan,
   Instance,
+  IntegrationApp,
+  IntegrationAppSecrets,
   Invitation,
   InvitationPreview,
   InvitationState,
@@ -219,6 +222,7 @@ import type {
   Routine,
   RoutineHook,
   RoutineRun,
+  RoutineRunCall,
   RuleInfo,
   Run,
   RunConsultation,
@@ -237,9 +241,11 @@ import type {
   SignInOptions,
   Skill,
   SkillDetail,
+  SkillDraft,
   SkillPick,
   SkillSettings,
   SkillSourceUpdate,
+  SkillSuggestion,
   SpeechKey,
   StartChoice,
   StorageConfig,
@@ -249,6 +255,7 @@ import type {
   SurfaceLink,
   SurfaceLinkCode,
   SurfaceLinks,
+  SurfaceNudge,
   SurfacePage,
   TaskManagerView,
   TaskOutput,
@@ -553,6 +560,9 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       update: (orgId, itemId, patch) =>
         request<VaultItem>(`${org(orgId)}/vault/items/${enc(itemId)}`, { method: "PATCH", json: patch }),
       remove: (orgId, itemId) => request<void>(`${org(orgId)}/vault/items/${enc(itemId)}`, { method: "DELETE" }),
+      setAccessMany: (orgId, ids, access) =>
+        request(`${org(orgId)}/vault/items/bulk/access`, { method: "PUT", json: { ids, access } }),
+      removeMany: (orgId, ids) => request(`${org(orgId)}/vault/items/bulk/delete`, { json: { ids } }),
       importCsv: (orgId, input) => request<VaultImportResult>(`${org(orgId)}/vault/import`, { json: input }),
       importKeys: (orgId, input) => request<VaultKeysImportResult>(`${org(orgId)}/vault/keys`, { json: input }),
       move: (orgId, itemId, scope) =>
@@ -664,6 +674,8 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       mintCode: (orgId) => request<SurfaceLinkCode>(`${org(orgId)}/surface-link/code`, { json: {} }),
       confirm: (linkId) => request<SurfaceLink>(`/api/app/me/surface-links/${enc(linkId)}/confirm`, { json: {} }),
       remove: (linkId) => request<void>(`/api/app/me/surface-links/${enc(linkId)}`, { method: "DELETE" }),
+      setNudge: (linkId, input) =>
+        request<SurfaceNudge>(`/api/app/me/surface-links/${enc(linkId)}/nudge`, { method: "PATCH", json: input }),
       setPin: (linkId, pin) =>
         request<void>(`/api/app/me/surface-links/${enc(linkId)}/pin`, { method: "PUT", json: { pin } }),
       undo: (token) =>
@@ -790,7 +802,7 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       acceptInvitation: (token, mail) =>
         request<{ orgId: string }>(
           `/api/app/invitations/${enc(token)}/accept${mail ? `?${new URLSearchParams({ mail })}` : ""}`,
-          { json: {} },
+          { json: { timeZone: browserTimezone() ?? undefined } },
         ),
       settings: (orgId) => request<OrgSettings>(`${org(orgId)}/settings`),
       updateSettings: (orgId, input) =>
@@ -950,6 +962,8 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         request<Agent>(`${org(orgId)}/agents/${enc(agentId)}`, { method: "PATCH", json: input }),
       confirmSetup: (orgId, agentId, step) =>
         request<Agent>(`${org(orgId)}/agents/${enc(agentId)}/setup/${enc(step)}`, { json: {} }),
+      closeSetup: (orgId, agentId) =>
+        request<Agent>(`${org(orgId)}/agents/${enc(agentId)}/setup`, { method: "PATCH", json: { closed: true } }),
       mailLoss: async (orgId, agentId, audience) =>
         (
           await request<{ mailboxes: ForeignMailbox[] }>(`${org(orgId)}/agents/${enc(agentId)}/audience/mail-loss`, {
@@ -1107,21 +1121,6 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
     chat: {
       channels: async (orgId) => (await request<{ channels: Channel[] }>(`${org(orgId)}/channels`)).channels,
       createChannel: (orgId, input) => request<Channel>(`${org(orgId)}/channels`, { json: input }),
-      categories: async (orgId) =>
-        (await request<{ categories: ChannelCategory[] }>(`${org(orgId)}/channel-categories`)).categories,
-      createCategory: (orgId, input) => request<ChannelCategory>(`${org(orgId)}/channel-categories`, { json: input }),
-      renameCategory: (orgId, categoryId, name) =>
-        request<ChannelCategory>(`${org(orgId)}/channel-categories/${enc(categoryId)}`, {
-          method: "PATCH",
-          json: { name },
-        }),
-      deleteCategory: (orgId, categoryId) =>
-        request<void>(`${org(orgId)}/channel-categories/${enc(categoryId)}`, { method: "DELETE" }),
-      placeCategory: (orgId, categoryId, beforeCategoryId) =>
-        request<void>(`${org(orgId)}/channel-categories/${enc(categoryId)}/place`, {
-          method: "PUT",
-          json: { beforeCategoryId },
-        }),
       place: (orgId, channelId, input) =>
         request<void>(`${org(orgId)}/channels/${enc(channelId)}/place`, { method: "PUT", json: input }),
       join: (orgId, channelId) => request<void>(`${org(orgId)}/channels/${enc(channelId)}/join`, { json: {} }),
@@ -1224,6 +1223,7 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
           json: { ...(reason ? { reason } : {}), ...(via ? { via } : {}) },
         }),
       cancel: (orgId, id) => request<Approval>(`${org(orgId)}/approvals/${enc(id)}/cancel`, { json: {} }),
+      runNow: (orgId, id) => request<Approval>(`${org(orgId)}/approvals/${enc(id)}/run-now`, { json: {} }),
       decideMany: (orgId, input) =>
         request<{ approvals: Approval[]; skipped: string[] }>(`${org(orgId)}/approvals/decide`, { json: input }),
       rules: async (orgId, agentId) =>
@@ -1420,9 +1420,18 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       askTool: async (orgId, machineId, tool) => {
         await request<unknown>(`${org(orgId)}/machines/${enc(machineId)}/access/ask`, { json: { tool } });
       },
+      refuseFolder: (orgId, machineId, requestId) =>
+        request<{ status: string }>(
+          `${org(orgId)}/machines/${enc(machineId)}/access/requests/${enc(requestId)}/refuse`,
+          { json: {} },
+        ),
       checkClis: async (orgId, machineId) => {
         await request<unknown>(`${org(orgId)}/machines/${enc(machineId)}/clis/check`, { json: {} });
       },
+      fetchCli: (orgId, machineId, cli) =>
+        request<{ fetch: CliFetch | null }>(`${org(orgId)}/machines/${enc(machineId)}/clis/${enc(cli)}/fetch`, {
+          json: {},
+        }),
       cliInstall: (orgId, machineId, tool, action) => {
         const path = `${org(orgId)}/machines/${enc(machineId)}/cli-install`;
         if (action === "start") return request<{ install: CliInstall | null }>(path, { json: { tool } });
@@ -1511,6 +1520,26 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       createToken: (orgId, input) => request<CreatedPersonalToken>(`${org(orgId)}/tokens`, { json: input }),
       revokeToken: (orgId, grantId) => request<void>(`${org(orgId)}/tokens/${enc(grantId)}`, { method: "DELETE" }),
     },
+    integrationApps: {
+      list: async (orgId) => (await request<{ apps: IntegrationApp[] }>(`${org(orgId)}/integration-apps`)).apps,
+      create: (orgId, input) => request<IntegrationAppSecrets>(`${org(orgId)}/integration-apps`, { json: input }),
+      update: (orgId, appId, input) =>
+        request<IntegrationAppSecrets>(`${org(orgId)}/integration-apps/${enc(appId)}`, {
+          method: "PATCH",
+          json: input,
+        }),
+      newToken: (orgId, appId) =>
+        request<IntegrationAppSecrets>(`${org(orgId)}/integration-apps/${enc(appId)}/token`, { json: {} }),
+      revokeToken: async (orgId, appId) =>
+        (
+          await request<{ app: IntegrationApp }>(`${org(orgId)}/integration-apps/${enc(appId)}/token`, {
+            method: "DELETE",
+          })
+        ).app,
+      newWebhookSecret: (orgId, appId) =>
+        request<IntegrationAppSecrets>(`${org(orgId)}/integration-apps/${enc(appId)}/webhook-secret`, { json: {} }),
+      remove: (orgId, appId) => request<void>(`${org(orgId)}/integration-apps/${enc(appId)}`, { method: "DELETE" }),
+    },
     skills: {
       list: async (orgId) => (await request<{ skills: Skill[] }>(`${org(orgId)}/skills`)).skills,
       get: (orgId, id) => request<SkillDetail>(`${org(orgId)}/skills/${enc(id)}`),
@@ -1525,6 +1554,20 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         (
           await request<{ skills: SkillDetail[] }>(`${org(orgId)}/skills/import`, {
             json: { url, paths, ...(forAgentId ? { forAgentId } : {}), ...(personal ? { personal } : {}) },
+          })
+        ).skills,
+      importPickedFile: async (orgId, fileId, paths, forAgentId, personal) =>
+        (
+          await request<{ skills: SkillDetail[] }>(`${org(orgId)}/skills/import`, {
+            json: { fileId, paths, ...(forAgentId ? { forAgentId } : {}), ...(personal ? { personal } : {}) },
+          })
+        ).skills,
+      importPickedZip: async (orgId, zipBase64, paths, personal, upload) =>
+        (
+          await request<{ skills: SkillDetail[] }>(`${org(orgId)}/skills/import`, {
+            json: { zipBase64, paths, ...(personal ? { personal } : {}) },
+            signal: upload?.signal,
+            onUploadProgress: upload?.onProgress,
           })
         ).skills,
       update: (orgId, id, patch) =>
@@ -1555,6 +1598,18 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       settings: (orgId) => request<SkillSettings>(`${org(orgId)}/skill-settings`),
       saveSettings: (orgId, input) =>
         request<SkillSettings>(`${org(orgId)}/skill-settings`, { method: "PUT", json: input }),
+      draft: (orgId, input) => request<SkillDraft>(`${org(orgId)}/skills/draft`, { json: input }),
+      saveDraft: (orgId, input) => request<SkillDetail>(`${org(orgId)}/skills/drafted`, { json: input }),
+      rewrite: (orgId, id, words) =>
+        request<SkillDetail>(`${org(orgId)}/skills/${enc(id)}/rewrite`, { json: { words } }),
+      suggestions: async (orgId, agentId) =>
+        (await request<{ suggestions: SkillSuggestion[] }>(`${org(orgId)}/agents/${enc(agentId)}/skill-suggestions`))
+          .suggestions,
+      learns: async (orgId, agentId) =>
+        (await request<{ learnsSkills?: boolean }>(`${org(orgId)}/agents/${enc(agentId)}/skills`)).learnsSkills ?? true,
+      setLearns: (orgId, agentId, on) =>
+        request<void>(`${org(orgId)}/agents/${enc(agentId)}/learns-skills`, { method: "PUT", json: { on } }),
+      zipUrl: (orgId, id) => `${base}${org(orgId)}/skills/${enc(id)}/download`,
     },
     access: {
       get: (orgId, agentId, options) =>
@@ -1903,6 +1958,9 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       takeOver: (orgId, id) => request<Routine>(`${org(orgId)}/routines/${enc(id)}/take-over`, { json: {} }),
       continueUsage: (orgId, id) => request<Routine>(`${org(orgId)}/routines/${enc(id)}/continue`, { json: {} }),
       runs: async (orgId, id) => (await request<{ runs: RoutineRun[] }>(`${org(orgId)}/routines/${enc(id)}/runs`)).runs,
+      runCalls: async (orgId, id, runId) =>
+        (await request<{ calls: RoutineRunCall[] }>(`${org(orgId)}/routines/${enc(id)}/runs/${enc(runId)}/calls`))
+          .calls,
       parseRule: (orgId, phrase, timezone) =>
         request<RuleInfo>(`${org(orgId)}/routines/parse-rule`, { json: { phrase, ...(timezone ? { timezone } : {}) } }),
       describeRule: (orgId, rule) => request<RuleInfo>(`${org(orgId)}/routines/describe-rule`, { json: { rule } }),
@@ -1914,8 +1972,10 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       hook: (orgId, id) => request<RoutineHook>(`${org(orgId)}/routines/${enc(id)}/hook`),
       newHookAddress: (orgId, id) =>
         request<RoutineHook>(`${org(orgId)}/routines/${enc(id)}/hook/address`, { json: {} }),
-      newHookSecret: (orgId, id) =>
-        request<{ secret: string; hook: RoutineHook }>(`${org(orgId)}/routines/${enc(id)}/hook/secret`, { json: {} }),
+      newHookSecret: (orgId, id, pasted) =>
+        request<{ secret: string; hook: RoutineHook }>(`${org(orgId)}/routines/${enc(id)}/hook/secret`, {
+          json: pasted === undefined ? {} : { secret: pasted },
+        }),
       removeHookSecret: (orgId, id) =>
         request<RoutineHook>(`${org(orgId)}/routines/${enc(id)}/hook/secret`, { method: "DELETE" }),
       testHook: (orgId, id) =>

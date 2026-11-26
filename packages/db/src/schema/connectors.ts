@@ -88,6 +88,13 @@ export const connectorConnections = pgTable(
      * now: Reconectar adds the rest. Null: a key, a server's own sign-in or Composio.
      */
     oauthScopes: text(),
+    /**
+     * A server by address: what it said in `initialize` on how to use it (MCP's `instructions`) at its last listing,
+     * trimmed and kept up to a bound; null when it said nothing (ADR 0016 addendum of 2026-11-22).
+     */
+    instructions: text(),
+    /** A server by address: agents granted its tools get `instructions` (who may change the connection turns it off). */
+    useInstructions: boolean().notNull().default(true),
     /** `active`, or `needs_reconnect` (a Composio account that stopped working: no tools until Reconectar). */
     status: text().notNull().default("active"),
     /** Why it needs reconnecting. */

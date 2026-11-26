@@ -138,6 +138,7 @@ describe("the tools on top", () => {
       "Wiki",
       "Rotinas",
       "Calendário",
+      "Skills",
       "Painéis",
       "Gerenciador de tarefas",
     ]);
@@ -313,6 +314,7 @@ describe("the tools on top", () => {
       "Wiki",
       "Drive",
       "Calendário",
+      "Skills",
       "Painéis",
       "Gerenciador de tarefas",
     ]);
@@ -393,6 +395,7 @@ describe("the tools on top", () => {
           "routines",
           "calendar",
           "team",
+          "skills",
           "dashboards",
           "code",
           "taskManager",
@@ -439,6 +442,7 @@ describe("the tools on top", () => {
         "routines",
         "calendar",
         "team",
+        "skills",
         "dashboards",
         "code",
         "taskManager",
@@ -476,10 +480,11 @@ describe("the tools on top", () => {
 });
 
 describe("the sidebar's parts", () => {
-  test("space, no lines, between the tools, the channels and the DMs; Canais and Mensagens diretas aren't categories", async () => {
+  test("space, no lines, between the tools, the channels and the DMs; Canais and Mensagens diretas aren't sectors", async () => {
     const state = seedState();
-    state.channelCategories = [{ id: "00000000-0000-4000-8000-0000000000f1", name: "Engenharia", position: 0 }];
-    for (const c of state.channels) if (c.id === ENG_ID) c.categoryId = "00000000-0000-4000-8000-0000000000f1";
+    const engineering = "00000000-0000-4000-8000-0000000000f1";
+    state.agentGroups = [...(state.agentGroups ?? []), { id: engineering, name: "Engenharia", agentIds: [] }];
+    for (const c of state.channels) if (c.id === ENG_ID) c.groupId = engineering;
     await go(state);
     const section = (name: string) =>
       within(nav()).getByRole("button", { name }).closest(".sidebar__section") as HTMLElement;
@@ -488,8 +493,8 @@ describe("the sidebar's parts", () => {
       expect(section(part).closest(".sidebar__block")?.previousElementSibling?.className).toBe("sidebar__block");
       expect(section(part).classList.contains("sidebar__section--part")).toBe(true);
     }
-    // The categories follow their part's channels, in its block.
-    expect(section("Engenharia").closest(".sidebar__block")).toBe(section("Canais").closest(".sidebar__block"));
+    // A sector, with its channels, follows the agents, in their block (ADR 0240).
+    expect(section("Engenharia").closest(".sidebar__block")).toBe(section("Agentes").closest(".sidebar__block"));
     expect(section("Engenharia").classList.contains("sidebar__section--part")).toBe(false);
   });
 });

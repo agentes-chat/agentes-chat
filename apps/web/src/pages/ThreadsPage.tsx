@@ -52,8 +52,8 @@ import "./threads.css";
  * channel) and no counts on the tabs (the API doesn't give them).
  */
 
-const actorsOf = (t: ThreadInfo): { type: ThreadActor["type"]; id: string }[] =>
-  t.participants.flatMap((p) => (p.id ? [{ type: p.type, id: p.id }] : []));
+const actorsOf = (t: ThreadInfo): { type: "person" | "agent"; id: string }[] =>
+  t.participants.flatMap((p) => (p.id && p.type !== "app" ? [{ type: p.type, id: p.id }] : []));
 
 export function ThreadsPage({ initialTab, initialChannel }: { initialTab?: ThreadsTab; initialChannel?: string }) {
   const { t } = useTranslation();
@@ -547,7 +547,7 @@ function ThreadRow({
 }
 
 /** Who carries the thread: the mission's agent, else the agent who spoke last, else the last agent in it, else whoever started it. */
-function leadOf(thread: ThreadInfo): { type: ThreadActor["type"]; id: string } {
+function leadOf(thread: ThreadInfo): { type: "person" | "agent"; id: string } {
   if (thread.mission) return { type: "agent", id: thread.mission.agentId };
   const lastAuthor = thread.lastMessage?.author;
   if (lastAuthor?.type === "agent" && lastAuthor.id) return { type: "agent", id: lastAuthor.id };
@@ -570,7 +570,11 @@ function byPlace(threads: ThreadInfo[]) {
   return [...groups.values()];
 }
 
-const lastActor = (a: ThreadActor) => ({ type: a.type, id: a.id ?? "" });
+/** An app (ADR 0251) has no face here: its line names it as nobody's (no member, no agent). */
+const lastActor = (a: ThreadActor) => ({
+  type: a.type === "app" ? ("person" as const) : a.type,
+  id: a.type === "app" ? "" : (a.id ?? ""),
+});
 
 function ThreadsEmpty({
   tab,

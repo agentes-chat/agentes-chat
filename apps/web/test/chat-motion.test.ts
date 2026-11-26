@@ -73,7 +73,7 @@ describe("the card's phrase and the waiting row's step line", () => {
     const old = { ...base, status: "failed" as const, startedAt: 0, work: [call({ running: false })] };
     const entries = barEntries([old, again], [], name, () => undefined);
     expect(barPhrase(t, entries)).toBe("Theo");
-    expect(barElapsed(t, entries, [old, again], 100_000)).toBe("10 s");
+    expect(barElapsed(t, entries, [old, again], 160_000)).toBe("1 min");
   });
 
   test("at work its words wait for its message, whatever it did so far: only a failed run has a row of its own", () => {
@@ -135,10 +135,11 @@ describe("the card's phrase and the waiting row's step line", () => {
     expect(barStep(tEn, { status: "thinking", work: [] }, "en")).toBe("thinking…");
   });
 
-  test("a run's time, the bar's and its row's alike: from 2 s on, minutes past a minute", () => {
-    expect(runElapsed(t, { startedAt: 10_000 }, 11_500)).toBeNull();
-    expect(runElapsed(t, { startedAt: 10_000 }, 22_000)).toBe("12 s");
-    expect(runElapsed(t, { startedAt: 0 }, 65_000)).toBe("1 min 5 s");
+  test("a run's time, the bar's and its row's alike: nothing for the first minute, then whole minutes", () => {
+    expect(runElapsed(t, { startedAt: 10_000 }, 22_000)).toBeNull();
+    expect(runElapsed(t, { startedAt: 10_000 }, 69_999)).toBeNull();
+    expect(runElapsed(t, { startedAt: 10_000 }, 70_000)).toBe("1 min");
+    expect(runElapsed(t, { startedAt: 0 }, 125_000)).toBe("2 min");
   });
 });
 

@@ -123,6 +123,16 @@ describe("agents it asked first: quoted at the top of the reply, as a reply quot
     expect(source("cards.tsx")).not.toContain("Consultation");
   });
 
+  test("another agent's request in this agent's DM is the same quote, its words in the arrows' place, no state while out", () => {
+    const line = source("EventLine.tsx");
+    expect(line).toContain("const handed = handOffOf(message.meta);");
+    expect(line).toMatch(/alone\s+handed\s+askedIn=\{handed\.askedIn\}/);
+    const quote = source("ConsultGroup.tsx");
+    expect(quote).toContain('t("chat.consultPair.askedHere", { context: agentGrammar(to).context })');
+    expect(quote).toContain('t("chat.consultPair.askedIn", { channel: `#');
+    expect(quote).toContain("handed && live ? { ...found, word: null, seconds: null, tone: null } : found");
+  });
+
   test("an answer far below its question is the same quote on its own, never a line of words or a pill", () => {
     const line = source("EventLine.tsx");
     expect(line).toContain("items={[fold.consultation]}");
@@ -442,7 +452,7 @@ describe("the secret card on the phone", () => {
     expect(failed.indexOf("secretRefusalKey(err)")).toBeLessThan(failed.indexOf("api.secrets.get(orgId, r.id)"));
     expect(failed).toContain("secretClosedBy(err, r, fresh)");
     expect(failed).toContain("done(closed)");
-    expect(failed).toContain('t(fresh ? "secret.changed" : "secret.failed")');
+    expect(failed).toContain('t(fresh ? "secret.changed" : "secret.failed", { agent: agentName })');
     expect(card).toContain('if (!pending) setValue("");');
     expect(card).toContain('t("secret.seeNewer")');
   });
@@ -502,8 +512,10 @@ describe("an agent's offer card is done for everyone once it's done", () => {
     const install = offer.slice(offer.indexOf("function InstallSkill("), offer.indexOf("\nfunction UpdateSkills("));
     expect(install).toContain("useSkills(orgId)");
     expect(install).toContain('action={t("actionCard.install_skill.open")}');
-    // Its screen's row turns what installs on for the agent that posted it, as on the web.
-    expect(install).toContain("openedFromCard({ url: card.url, agentId })");
+    // Its screen's row turns what installs on for the agent that posted it, as on the web: its link, or its .zip.
+    expect(install).toContain("const source = card.file?.id ?? card.url");
+    expect(install).toContain("openedFromCard({ url: source, agentId })");
+    expect(install).toContain("/settings/skills/new?file=");
     expect(install).toContain("&agent=");
   });
 
@@ -519,7 +531,10 @@ describe("an agent's offer card is done for everyone once it's done", () => {
     expect(routeAgent(link, undefined)).toBeUndefined();
     // The route hands the screen only what `routeAgent` keeps.
     const route = readFileSync(join(import.meta.dir, "../../app/(app)/(main)/settings/skills/new.tsx"), "utf8");
-    expect(route).toContain("forAgentId={routeAgent(url, agent)}");
+    expect(route).toContain("forAgentId={routeAgent(file ?? url, agent)}");
+    // A .zip sent in the conversation: read on the server from Drive, the agent kept the same way.
+    openedFromCard({ url: "f-kit", agentId: "a-dev" });
+    expect(routeAgent("f-kit", "a-dev")).toBe("a-dev");
     // The screen sends it only on an install from the card's link with its row checked, never on a read.
     const screen = readFileSync(join(import.meta.dir, "../../src/features/settings/SkillsScreen.tsx"), "utf8");
     expect(screen).toContain("? { url: link, list, ...mine }");

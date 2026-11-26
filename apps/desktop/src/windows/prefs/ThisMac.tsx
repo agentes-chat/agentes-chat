@@ -50,6 +50,7 @@ import { AgentFace, ConnectionChip, OrgTile } from "../../ui/bits";
 import { MacPermissionCard, useMacGrants } from "../../ui/permissions";
 import { CardTitle, hintFor, PrefCard, PrefRow } from "../../ui/settings";
 import { useToast } from "../../ui/Toast";
+import { InternetRow } from "../InternetRow";
 
 /**
  * How often the devices are asked while Preferences shows (the runner's own phone changes ask at once): each ask is a
@@ -179,6 +180,7 @@ export function ThisMacCards({
 
   const whoHome = homes.find((h) => h.homeId === who);
   const whoTarget = whoHome ? targets[homes.indexOf(whoHome)] : undefined;
+  const whoComputer = whoHome ? thisComputer(answers[whoHome.homeId]?.list, whoHome) : null;
   const phoneHomes = homes.flatMap((h, i) => {
     const target = targets[i];
     const computer = thisComputer(answers[h.homeId]?.list, h);
@@ -396,6 +398,14 @@ export function ThisMacCards({
                 user={user}
                 onChanged={load}
               />
+              {whoComputer && (
+                <InternetRow
+                  server={whoTarget.server}
+                  orgId={whoTarget.orgId}
+                  computer={whoComputer}
+                  onChanged={load}
+                />
+              )}
             </PrefCard>
           </DialogBody>
         </Dialog>

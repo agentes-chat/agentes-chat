@@ -17,6 +17,7 @@ export { PlanTrack, type PlanTrackProps } from "@/sky/PlanTrack";
 export { Sky, type SkyProps, WorkspaceSky } from "@/sky/Sky";
 export { SpendBar, type SpendBarProps } from "@/sky/SpendBar";
 export { ACT_LINE } from "./ActLine";
+export { AppMark } from "./AppMark";
 export { Button, type ButtonProps, type ButtonVariant } from "./Button";
 export { Card, type CardProps } from "./Card";
 export { Chip, type ChipProps } from "./Chip";
@@ -40,6 +41,7 @@ export {
   EventPillText,
 } from "./EventPill";
 export { CLICK_IN, FADE_IN, FADE_OUT, RISE_IN } from "./entrances";
+export { type Fact, FactStrip } from "./FactStrip";
 export { type FilterItem, Filters, type FiltersProps } from "./Filters";
 export {
   besideFold,

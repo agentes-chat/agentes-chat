@@ -78,6 +78,8 @@ export const RESET_KEEPS = [
   "storage_migrations",
   "app_grants",
   "app_tokens",
+  // An integration app (ADR 0251) is the workspace's connection, like a connector: its channels go with the channels.
+  "integration_apps",
   "oauth_app_requests",
   "blobs",
   "usage_records",
@@ -104,6 +106,7 @@ export const RESET_KEEPS_JOBS = [
   "connector.forget_accounts",
   "vault.sync",
   "machine.tasks_offline",
+  "machine.down_notice",
   "machine.wake_overdue",
   "storage.migrate",
   "feedback.send",
@@ -120,6 +123,7 @@ export const RESET_TOMBSTONES = ["agents", "right_hand_seats"] as const;
  * `MESSAGE_BATCH` at a time and then whatever came meanwhile.
  */
 export const RESET_ERASES = [
+  "integration_app_channels",
   "agent_actions",
   "agent_budget_periods",
   "agent_consultations",
@@ -216,6 +220,7 @@ export const RESET_ERASES = [
   "search_documents",
   "secret_requests",
   "skill_files",
+  "skill_uses",
   "skills",
   "surface_deliveries",
   "surface_page_links",

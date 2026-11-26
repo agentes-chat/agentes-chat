@@ -15,9 +15,16 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { PassThrough } from "node:stream";
-import type { AgentScope, MachineRequest, RunnerFrame, ServerFrame } from "@agenteschat/adapters/machine-protocol";
+import {
+  type AgentScope,
+  type MachineRequest,
+  type RunnerFrame,
+  type ServerFrame,
+  SHARED_LOGIN_OFF,
+} from "@agenteschat/adapters/machine-protocol";
 import { sealSecret, secretAad, vaultAad } from "@agenteschat/adapters/secret-box";
-import { AccountBrains, type AccountBrainsOptions, SHARED_LOGIN_OFF } from "../../runner/account-brains";
+import { AccountBrains, type AccountBrainsOptions } from "../../runner/account-brains";
+import { SELF_CHECK_DEFERRED } from "../../runner/account-check";
 import { AccountManager } from "../../runner/accounts";
 import { AGENT_USERS_FILE, type AgentUser, systemLauncher } from "../../runner/agent-users";
 import { AGY_SIGN_IN_FILE } from "../../runner/agy-home";
@@ -2847,6 +2854,25 @@ test.if(posix)(
     );
     expect(recovered.checks()).toBe(2);
     await recovered.daemon.stop();
+
+    // No agent's user yet to try the network with: a sign-in may begin, nothing is reported, and nothing is asked
+    // again until a turn has made one; then the pass needs no new connection.
+    const waiting = await run(on, SELF_CHECK_DEFERRED, null);
+    await waitFor(
+      () => hellos(waiting.sockets).at(-1)?.claudeLoginMethods?.toString() === "setup_token,cli_login",
+      8000,
+    );
+    expect(hellos(waiting.sockets).at(-1)).not.toHaveProperty("claudeLoginBlocked");
+    await Bun.sleep(200);
+    expect(waiting.checks()).toBe(1);
+    const connections = waiting.sockets.length;
+    await (waiting.daemon as unknown as { recheckSharedLogin(): Promise<void> }).recheckSharedLogin();
+    expect(waiting.checks()).toBe(2);
+    await Bun.sleep(50);
+    expect(waiting.sockets.length).toBe(connections);
+    await (waiting.daemon as unknown as { recheckSharedLogin(): Promise<void> }).recheckSharedLogin();
+    expect(waiting.checks()).toBe(2);
+    await waiting.daemon.stop();
   },
   20_000,
 );
@@ -2984,6 +3010,32 @@ test.if(posix)(
     }
   },
   30_000,
+);
+
+test.if(posix)(
+  "a self-check waiting for an agent's user lists the method but keeps no CLI on the store until it passed",
+  async () => {
+    const d = sharedLoginDaemon();
+    const keep = spyOn(BrainManager.prototype, "keepAccount");
+    d.daemon.start();
+    try {
+      await waitFor(() => d.checks.length === 1);
+      d.checks[0]?.(SELF_CHECK_DEFERRED);
+      await d.lists(true);
+      d.online().frame({ type: "agents", agents: [{ ...ANA, account: SHARED_LOGIN }] });
+      expect(keep).toHaveBeenLastCalledWith(null, [], ANA.id);
+
+      const recheck = (d.daemon as unknown as { recheckSharedLogin(): Promise<void> }).recheckSharedLogin();
+      await waitFor(() => d.checks.length === 2);
+      d.checks[1]?.(null);
+      await recheck;
+      expect(keep).toHaveBeenLastCalledWith(SHARED_LOGIN, undefined, ANA.id);
+    } finally {
+      keep.mockRestore();
+      await d.daemon.stop();
+    }
+  },
+  20_000,
 );
 
 test.if(posix)(
@@ -4162,7 +4214,7 @@ function hosted(t: ReturnType<typeof setup>, over: Partial<AccountBrainsOptions>
   const stores = tempDir("stores-");
   dirs.push(stores);
   const log = path.join(stores, "spawns.log");
-  const state: { now: "ready" | "off" | "signed_out" } = { now: "ready" };
+  const state: { now: "ready" | "deferred" | "off" | "signed_out" } = { now: "ready" };
   const usage: unknown[][] = [];
   const refused: string[] = [];
   const store = path.join(stores, SHARED_LOGIN);
@@ -4185,6 +4237,7 @@ function hosted(t: ReturnType<typeof setup>, over: Partial<AccountBrainsOptions>
     grants: async () => [],
     relay: ["/usr/local/bin/agentes-runner"],
     shared: () => undefined,
+    recheck: async () => {},
     launcher: (_login, agent, cwd) => ({
       prefix: [],
       env: { PATH: process.env.PATH ?? "", HOME: stores, FAKE_CLAUDE_LOG: log, FAKE_CWD: String(cwd) },
@@ -4239,6 +4292,49 @@ test.if(posix)("a turn on a shared CLI login runs in root: its worker serves it,
   expect(log.system).toContain("from the worker");
   h.brains.brains.close();
 });
+
+test.if(posix)(
+  "a self-check that waited for an agent's user: the turn makes this agent's, asks the check again, then runs",
+  async () => {
+    const t = setup();
+    let rechecks = 0;
+    const h = hosted(t, {
+      recheck: async () => {
+        rechecks++;
+        // The check runs with the agent's user made by the turn's worker.
+        if (t.workers.length === 1) h.state.now = "ready";
+      },
+    });
+    t.sup.boot();
+    t.sup.attach();
+    h.state.now = "deferred";
+    const run = handleRequest(h.ctx, hostedTurn(), scope().scope);
+    await waitFor(() => t.workers.length === 1);
+    const ana = t.last(ANA.id);
+    ana.hello();
+    const stop = answersAsWorker(ana, "/home/ag-a1b2c3d4/ana-a1b2c3d4");
+    const out = (await run) as { final: { type: string; text?: string } };
+    stop();
+    expect(out.final).toMatchObject({ type: "done", text: "echo 1: hi" });
+    expect(rechecks).toBe(1);
+
+    h.brains.brains.close();
+
+    // Still waiting after the check: the turn says why, and the server tries it again later.
+    const t2 = setup();
+    const waits = hosted(t2, { recheck: async () => void rechecks++ });
+    t2.sup.boot();
+    t2.sup.attach();
+    waits.state.now = "deferred";
+    const refused = handleRequest(waits.ctx, hostedTurn(), scope().scope);
+    await waitFor(() => t2.workers.length === 1);
+    t2.last(ANA.id).hello();
+    const off = (await refused) as { final: unknown };
+    expect(off.final).toEqual({ type: "error", code: "unsupported", message: SHARED_LOGIN_OFF, retryable: true });
+    expect(rechecks).toBe(2);
+    waits.brains.brains.close();
+  },
+);
 
 test.if(posix)("a sign-in that isn't a shared CLI login goes to the worker, as it always did", async () => {
   const t = setup();

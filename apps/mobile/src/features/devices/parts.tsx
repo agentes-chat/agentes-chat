@@ -12,7 +12,7 @@ import { AgentFace } from "../shared/Face";
 import { useColors, useDirectory, useMeId, useWhen } from "../shared/hooks";
 import { successHaptic, useSurface } from "../shared/parts";
 import { audienceText, computerPortrait, type DeviceJoin, joinFacts, phonePortrait, statusView } from "./logic";
-import { useDeviceMutation } from "./queries";
+import { useDeviceMutation, useDevices } from "./queries";
 
 /** A device's state: its chip (with its icon, the agent's face, or amber when it needs you) and the words after it. */
 export function StatusLine({
@@ -104,11 +104,23 @@ export function JoinRequestCard({ request: r }: { request: DeviceJoin }) {
       <Text variant="small" tone="muted">
         {joinFacts(t, r)}
       </Text>
+      <JoinInternetLine />
       <View style={styles.buttons}>
         <JoinButtons request={r} />
       </View>
     </View>
   );
+}
+
+/** Under Let it join, in a workspace with its own computer: this computer will lend it its internet (ADR 0237). */
+export function JoinInternetLine() {
+  const { t } = useTranslation();
+  const lends = useDevices().data?.devices.some((d) => d.machineKind === "managed") === true;
+  return lends ? (
+    <Text variant="small" tone="muted">
+      {t("devices.shareInternetJoin")}
+    </Text>
+  ) : null;
 }
 
 /** Let it join / Deny for a computer asking to join, on its card or on its notice in Atividade. */

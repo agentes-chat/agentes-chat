@@ -74,7 +74,7 @@ const nav = () => screen().getByRole("navigation", { name: "Navegação do works
 const agentRow = (id: string) => nav().querySelector(`[data-agent-row="${id}"]`) as HTMLElement;
 
 describe("the sidebar's agents", () => {
-  test("whom it helps and how long, its orbit, a blue face, and Agentes counts it; amber for what waits on you", async () => {
+  test("its status and how long, whom it helps in its title, its orbit, and Agentes counts it; amber for what waits on you", async () => {
     const state = seedState();
     state.agentStatuses = [
       status(ATLAS_ID, { presence: "busy", working: true, work: work({ forAgentId: ADA_ID }) }),
@@ -83,19 +83,20 @@ describe("the sidebar's agents", () => {
     await renderApp(`/org/${ORG_ID}/c/${GENERAL_ID}`, { api: createFakeApi(state) });
     await settle(8);
     const atlas = agentRow(ATLAS_ID);
-    expect(atlas.querySelector(".work-line")?.textContent).toBe("ajudando a Ada · 22 min");
+    expect(atlas.querySelector(".work-line")?.textContent).toBe("trabalhando 22 min");
     expect(atlas.querySelector(".work-line")?.getAttribute("data-tone")).toBe("working");
     // Its role gives the slot up: the row keeps its height.
     expect(atlas.querySelector(".sidebar__item-role.ac-tag")).toBeNull();
-    expect(atlas.querySelector(".sidebar__item-label .ac-pixspin")).toBeTruthy();
-    expect(atlas.querySelector(".ac-presence")?.getAttribute("data-presence")).toBe("working");
-    // Never red "Ocupado": the badge's words say what it does.
-    expect(atlas.querySelector(".ac-avatar__badge")?.getAttribute("title")).toBe("Trabalhando");
+    // Its face wears the orbit, which says it works: no pixels beside its name, no "working" badge on its face.
+    expect(atlas.querySelector(".ac-orbit > .ac-avatar--agent")).toBeTruthy();
+    expect(atlas.querySelector(".ac-pixspin")).toBeNull();
+    expect(atlas.querySelector(".ac-presence")).toBeNull();
+    // Whom it helps and where: the row's title, after its status.
     expect(atlas.querySelector(".sidebar__item")?.getAttribute("title")).toContain(
-      "Ajudando a Ada · #general · 22 min",
+      "Trabalhando · ajudando a Ada · #general · 22 min",
     );
     const ada = agentRow(ADA_ID);
-    expect(ada.querySelector(".work-line")?.textContent).toBe("esperando você · 3 min");
+    expect(ada.querySelector(".work-line")?.textContent).toBe("esperando você 3 min");
     expect(ada.querySelector(".work-line")?.getAttribute("data-tone")).toBe("you");
     expect(ada.querySelector(".ac-presence")?.getAttribute("data-presence")).toBe("waiting");
     const head = within(nav()).getByRole("button", { name: "Agentes" }).closest(".sidebar__section-head");
@@ -166,15 +167,16 @@ describe("the worst case (break-ui, measured by CI's geometry step)", () => {
     await renderApp(`/org/${ORG_ID}/c/${ENG_ID}`, { api: createFakeApi(state) });
     await settle(8);
     const line = agentRow(ATLAS_ID).querySelector(".work-line") as HTMLElement;
-    // The happy-dom has no layout: the whole line, which a narrow row trades for its short form.
-    expect(line.textContent).toBe("ajudando o Assistente de Atendimento ao Cliente Internacional · 1,6 h");
+    // The happy-dom has no layout: the whole line, which a narrow row trades for its short form; whom it helps, however
+    // long a name, is in the row's title, never the line.
+    expect(line.textContent).toBe("trabalhando 1,6 h");
     expect(agentRow(ATLAS_ID).querySelector(".ac-count, .sidebar__unread, [class*='unread']")).toBeTruthy();
-    expect(agentRow(ADA_ID).querySelector(".work-line")?.textContent).toBe("esperando aprovação · 1 h");
+    expect(agentRow(ADA_ID).querySelector(".work-line")?.textContent).toBe("esperando aprovação 1 h");
   });
 });
 
 describe("two blues on small faces", () => {
-  test("at work (three dots) beside out of office (the arrow, asleep): each keeps its own mark", async () => {
+  test("at work (its orbit) beside out of office (the arrow, asleep): each keeps its own mark", async () => {
     const state = seedState();
     state.agentStatuses = [
       status(ATLAS_ID, { presence: "busy", working: true, work: work({ forAgentId: ADA_ID }) }),
@@ -192,7 +194,7 @@ describe("two blues on small faces", () => {
     ];
     await renderApp(`/org/${ORG_ID}/c/${GENERAL_ID}`, { api: createFakeApi(state) });
     await settle(8);
-    expect(agentRow(ATLAS_ID).querySelector(".ac-presence")?.getAttribute("data-presence")).toBe("working");
+    expect(agentRow(ATLAS_ID).querySelector(".ac-orbit > .ac-avatar--agent")).toBeTruthy();
     expect(agentRow(ADA_ID).querySelector(".ac-presence")?.getAttribute("data-presence")).toBe("out");
     // Out of office keeps its own line: why, and when it is back.
     expect(agentRow(ADA_ID).querySelector(".sidebar__item-role")?.textContent).toContain("Sem limite");
@@ -200,7 +202,7 @@ describe("two blues on small faces", () => {
 });
 
 describe("the members column", () => {
-  test("its work here reads 'aqui', with how long, before its role", async () => {
+  test("its work here: its status and how long before its role, 'aqui' in its title", async () => {
     desktop();
     const state = seedState();
     state.agentStatuses = [
@@ -212,8 +214,9 @@ describe("the members column", () => {
     const atlas = [...side.querySelectorAll<HTMLElement>(".members-side__row")].find(
       (r) => r.querySelector(".members-side__label")?.textContent === "Atlas",
     );
-    expect(atlas?.querySelector(".work-line")?.textContent).toBe("aqui · 5 min");
-    expect(atlas?.querySelector(".members-side__name .ac-pixspin")).toBeTruthy();
+    expect(atlas?.querySelector(".work-line")?.textContent).toBe("trabalhando 5 min");
+    expect(atlas?.querySelector(".ac-orbit > .ac-avatar--agent")).toBeTruthy();
+    expect(atlas?.querySelector(".members-side__inner")?.getAttribute("title")).toContain("trabalhando · aqui · 5 min");
   });
 });
 

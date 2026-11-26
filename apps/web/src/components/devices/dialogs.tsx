@@ -2,7 +2,17 @@ import type { DeviceJoinRequest } from "@agenteschat/client";
 import { defaultLinkAudience, joinFacts } from "@agenteschat/client/lib/devices";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { computerKind } from "@agenteschat/client/lib/machines";
-import { Button, ComputerPortrait, Dialog, DialogBody, DialogFooter, Field, Input, Locked } from "@agenteschat/ui";
+import {
+  Button,
+  ComputerPortrait,
+  Dialog,
+  DialogBody,
+  DialogFooter,
+  Field,
+  Icon,
+  Input,
+  Locked,
+} from "@agenteschat/ui";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -151,6 +161,8 @@ export function JoinRequestForm({
   const toast = useToast();
   const approve = useApproveRequest(org.id);
   const deny = useDenyRequest(org.id);
+  // A workspace with its own computer: it will open websites through this one's internet too (ADR 0237).
+  const lends = useDevices(org.id).data?.devices.some((d) => d.machineKind === "managed") === true;
   const [name, setName] = useState(request.name);
   const busy = approve.isPending || deny.isPending;
   const clean = name.trim();
@@ -184,6 +196,12 @@ export function JoinRequestForm({
           <Field label={t("devices.name")} id={`join-${request.id}-name`} example={t("devices.nameHelp")}>
             <Input value={name} maxLength={80} onChange={(e) => setName(e.target.value)} />
           </Field>
+          {lends && (
+            <p className="setup-line ac-iconline small muted">
+              <Icon name="globe" size={14} />
+              <span>{t("devices.shareInternetJoin")}</span>
+            </p>
+          )}
         </DialogBody>
       </Locked>
       {footer && (

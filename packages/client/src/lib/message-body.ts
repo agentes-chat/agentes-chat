@@ -35,7 +35,8 @@ type Meta = Record<string, unknown> | undefined;
 
 /**
  * A computer brain's wait (`meta.brainUnavailable.code`) that isn't its computer gone or busy, by the words that say
- * it: paused by whoever connected it, its CLI or commands off there, a program to update, a plan not the owner's.
+ * it: paused by whoever connected it, its CLI or commands off there, a program to update, a plan not the owner's, its
+ * shared Claude login that can't run there.
  */
 const WAIT_CAUSES: Record<string, string> = {
   machine_paused: "paused",
@@ -43,7 +44,10 @@ const WAIT_CAUSES: Record<string, string> = {
   tool_off: "commands_off",
   runner_outdated: "outdated",
   codex_too_old: "outdated",
+  // Its CLI at a version agentes.chat holds back: "the program on my computer needs an update".
+  cli_outdated: "outdated",
   plan_not_owner: "plan_owner",
+  shared_login_off: "shared_login",
 };
 const waitCauseOf = (code: unknown) =>
   typeof code === "string" && Object.hasOwn(WAIT_CAUSES, code) ? WAIT_CAUSES[code] : null;

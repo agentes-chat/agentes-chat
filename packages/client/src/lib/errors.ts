@@ -2,6 +2,7 @@ import type { TFunction } from "i18next";
 import { ApiError, NetworkError } from "../api/http";
 import type { AuthConfig, OrgStanding } from "../api/types";
 import { widgetWaitOf, widgetWaitText } from "../dashboards/lib";
+import { refusalText } from "./audience";
 import { billingHoldOf } from "./billing";
 import { MAX_UPLOAD_MB } from "./files";
 import { joinNames, lowerFirst } from "./format";
@@ -20,6 +21,8 @@ export const REAUTH_PASSWORD = "reauth.password";
  * takes `untranslatedText`; a guard test (`error-words.test.ts`) fails on a new code that isn't here or on its list.
  */
 const KNOWN = {
+  // A saved provider key this server can't open: saved under another AGENTES_SECRET.
+  credential_unreadable: "agentPage.activity.errors.credential_unreadable",
   // Moving a plan to another workspace (ADR 0079).
   "plan_move.not_payer": "errors.planMove.notPayer",
   "plan_move.same": "errors.planMove.same",
@@ -65,6 +68,7 @@ const KNOWN = {
   "channel.permission_forbidden": "channel.perms.forbidden",
   "agent.handle_taken": "newAgent.errors.handleTaken",
   "agent.right_hand_permanent": "errors.rightHand.permanent",
+  "agent.right_hand_computer": "errors.rightHand.computer",
   "agent.not_owner": "errors.agent.ownerOrAdmin",
   "usage_queue.cancel_forbidden": "errors.agent.ownerOrAdmin",
   "agent.details_hidden": "errors.agent.detailsHidden",
@@ -139,12 +143,15 @@ const KNOWN = {
   "device.not_link_maker": "errors.device.notLinkMaker",
   "device.widen_forbidden": "errors.device.widenForbidden",
   "device.spill_owner_only": "errors.device.spillOwnerOnly",
+  "device.share_owner_only": "errors.device.shareOwnerOnly",
+  "device.share_connected_only": "errors.device.shareConnectedOnly",
   "device.tasks_owner_only": "errors.device.tasksOwnerOnly",
   "device.tasks_cloud": "errors.device.tasksCloud",
   "device.not_home": "errors.device.notHome",
   "machine.not_found": "errors.machine.notFound",
   "machine.name_required": "errors.machine.nameRequired",
   "account.method_unsupported": "errors.machine.accountMethodUnsupported",
+  "account.windows_one_gemini": "errors.machine.windowsOneGemini",
   "brain.unavailable": "errors.machine.brainUnavailable",
   "machine.pairing_invalid": "errors.machine.pairingInvalid",
   "machine.pairing_off": "errors.machine.pairingOff",
@@ -282,6 +289,7 @@ const KNOWN = {
   "connector.headers_with_sign_in": "errors.connector.headersWithSignIn",
   "connector.headers_unreadable": "errors.connector.headersUnreadable",
   "connector.no_oauth": "errors.connector.noOAuth",
+  "connector.oauth_discovery": "errors.connector.oauthDiscovery",
   "connector.oauth_client_in_use": "errors.connector.ownClientInUse",
   "connector.oauth_client_id": "errors.connector.ownClientId",
   // Facts only (the phone shows this one): the web's onboarding says `standing.createUnpaid` beside the way to pay.
@@ -373,6 +381,8 @@ const KNOWN = {
   "wiki.github_too_large": "errors.wiki.githubTooLarge",
   "skill.no_skill_md": "errors.skill.noSkillMd",
   "skill.too_many_skills": "errors.skill.tooManySkills",
+  "skill.zip_too_many_skills": "errors.skill.zipTooManySkills",
+  "skill.zip_too_big": "errors.skill.zipTooBig",
   "skill.invalid_name": "errors.skill.invalidName",
   "skill.invalid_description": "errors.skill.invalidDescription",
   "skill.too_large": "errors.skill.tooLarge",
@@ -389,6 +399,13 @@ const KNOWN = {
   "skill.link_renamed": "errors.skill.linkRenamed",
   "skill.no_link": "errors.skill.noLink",
   "skill.no_pending_update": "errors.skill.noPendingUpdate",
+  "skill.picked_twice": "errors.skill.pickedTwice",
+  "skill.draft_unavailable": "errors.skill.draftUnavailable",
+  "skill.draft_failed": "errors.skill.draftFailed",
+  "skill.draft_empty": "errors.skill.draftEmpty",
+  "skill.change_empty": "errors.skill.changeEmpty",
+  "skill.secret": "errors.skill.secret",
+  "skill.permissions": "errors.skill.permissions",
   "handle.invalid": "errors.handle.invalid",
   "handle.taken": "errors.handle.taken",
   "handle.taken_by_agent": "errors.handle.takenByAgent",
@@ -492,6 +509,8 @@ const KNOWN = {
   "pull.not_found": "errors.said.gone",
   "right_hand.not_found": "errors.said.gone",
   "routine.no_webhook": "errors.said.gone",
+  "routine.run_not_found": "errors.said.gone",
+  "routine.webhook_secret_invalid": "errors.said.input",
   "task.not_found": "errors.said.gone",
   "team_proposal.no_agent": "errors.said.gone",
   "team_proposal.not_found": "errors.said.gone",
@@ -509,6 +528,7 @@ const KNOWN = {
   "agent_proposal.asked": "errors.said.alreadyDone",
   "approval.not_ahead": "errors.said.alreadyDone",
   "approval.not_cancelable": "errors.said.alreadyDone",
+  "approval.not_waiting": "errors.said.alreadyDone",
   "browser.handoff_over": "errors.said.alreadyDone",
   "choices.answered": "errors.said.alreadyDone",
   "follow_up.not_pending": "errors.said.alreadyDone",
@@ -565,6 +585,12 @@ const KNOWN = {
   "mail.invalid_from": "errors.said.validEmail",
   "mail.invalid_rule": "errors.said.validEmail",
   "database.too_many": "errors.said.tooMany",
+  // Integration apps (ADR 0251): Settings › Integrations.
+  "integration.too_many": "errors.said.tooMany",
+  "integration.too_many_channels": "errors.said.tooMany",
+  "integration.name_required": "errors.said.fillIn",
+  "integration.not_found": "errors.said.gone",
+  "integration.channel": "errors.said.gone",
   "endpoint.too_many_models": "errors.said.tooMany",
   "mail.too_many_addresses": "errors.said.tooMany",
   "mail.too_many_aliases": "errors.said.tooMany",
@@ -608,8 +634,10 @@ const KNOWN = {
   "status.too_long": "errors.said.tooLong",
   "wiki.body_too_long": "errors.said.tooLong",
   "account.runner_old": "errors.said.updateComputerApp",
+  "account.system": "brain.reasons.system",
   "machine.access_outdated": "errors.said.updateComputerApp",
   "machine.cli_outdated": "errors.said.updateComputerApp",
+  "machine.cli_not_fetched": "errors.said.cliNotFetched",
   "machine.outdated": "errors.said.updateComputerApp",
   "machine.updates_itself": "errors.said.computerUpdatesItself",
   "database.disabled": "errors.said.offHere",
@@ -887,6 +915,8 @@ export function knownErrorText(t: TFunction, error: unknown, locale = "en"): str
   if (restriction) return restriction;
   const limit = limitRefusalText(t, locale, error.code, error.params);
   if (limit) return limit;
+  const refused = refusalText(t, error.code, error.params);
+  if (refused) return refused;
   // An agent that doesn't answer this person (`audienceError`): whom it answers, by name.
   if (
     (error.code === "audience.only" || error.code === "audience.nobody") &&
@@ -1154,6 +1184,7 @@ export function errorText(t: TFunction, error: unknown, locale?: string, { maxMb
 const KEY_FAILURES = new Set([
   "run.missing_credential",
   "run.credential_revoked",
+  "run.credential_unreadable",
   "run.credential_wrong_provider",
   "run.provider_account",
   "run.provider_no_credit",

@@ -25,6 +25,7 @@ const FAILURE_OF: Record<string, Failure> = {
   "run.no_ai": "noAi",
   "run.missing_credential": "noAi",
   "run.credential_revoked": "noAi",
+  "run.credential_unreadable": "noAi",
   "run.credential_wrong_provider": "noAi",
   "run.agent_paused": "paused",
   "run.org_paused": "paused",

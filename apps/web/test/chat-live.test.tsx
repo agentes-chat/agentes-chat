@@ -280,7 +280,7 @@ describe("the working row at the conversation's end (the bar above the composer 
       type: "agent.run",
       ...a,
       status: "running",
-      startedAt: new Date(Date.now() - 13_000).toISOString(),
+      startedAt: new Date(Date.now() - 73_000).toISOString(),
     });
     await push(socket, { type: "agent.tool", ...a, tool: "github_list_prs" });
     await push(socket, { type: "agent.run", threadId: null, runId: "r-b", agentId: ATLAS_ID, status: "running" });
@@ -307,10 +307,10 @@ describe("the working row at the conversation's end (the bar above the composer 
     await settle();
     expect(bar().textContent).toStartWith("Ada consultando o GitHub");
     const took = typingBar().querySelector(".run-tail__clock") as HTMLElement;
-    expect(took.textContent).toMatch(/^1\d s$/);
+    expect(took.textContent).toBe("1 min");
     // Who is typing after its time and its stop; the time and the stop stay the agent's.
     expect(took.closest(".run-tail")?.nextElementSibling?.textContent).toBe("João digitando…");
-    // Tabular figures: the seconds tick without nudging what is beside them.
+    // Tabular figures: the minutes turn without nudging what is beside them.
     expect(took.classList.contains("ac-num")).toBe(true);
   });
 });

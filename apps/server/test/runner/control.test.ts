@@ -12,9 +12,9 @@ import { windowsCodexSandbox } from "../../runner/codex-windows";
 import { configPath, readStoredConfig, type StoredConfig, writeConfig } from "../../runner/config";
 import type { Dial, Socket, SocketHandlers } from "../../runner/connection";
 import { EXIT_LOCKED, type RunControlOptions, runControl } from "../../runner/control";
-import { DEFAULT_LIMITS, RunnerDaemon, sizedTaskLimit } from "../../runner/daemon";
+import { brainLimitsFor, DEFAULT_LIMITS, RunnerDaemon, sizedTaskLimit } from "../../runner/daemon";
 import { RUNNER_VERSION } from "../../runner/errors";
-import { ORG_LOGO_MAX_BYTES, orgLogoPath } from "../../runner/org-logo";
+import { logoDataUrl, ORG_LOGO_MAX_BYTES, orgLogoPath } from "../../runner/org-logo";
 import type { FetchFn } from "../../runner/pairing";
 import { askStandby, standbyAcked } from "../../runner/standby";
 import { removeDirs, tempDir, waitFor } from "./helpers";
@@ -717,6 +717,33 @@ test("access requests: pending until the person answers on the machine; the answ
   expect(lines.some((l) => l.includes(`agentes-runner folders allow ${other} --agent dev`))).toBe(true);
 });
 
+test("a folder past the cap can't be allowed from a request: it says why and the request stays pending", async () => {
+  const full = Array.from({ length: 100 }, (_, i) => ({ path: `/allowed/f-${i}`, agents: [AGENT.id] }));
+  const { home } = pairedHome({ access: { folders: full, tools: { claude: false, codex: false, commands: false } } });
+  const folder = tempDir("proj-");
+  dirs.push(folder);
+  const c = control(home);
+  const s = await c.connect();
+  s.frame({ type: "agents", agents: [AGENT] });
+  s.frame({
+    type: "request",
+    id: "a1",
+    op: "access.request",
+    requestId: "req-00000001",
+    path: folder,
+    reason: "run the tests",
+    agent: AGENT,
+  });
+  await waitFor(() => c.events("access.requested").length === 1);
+
+  expect(
+    await c.request({ type: "access.answer", requestId: "req-00000001", decision: "granted", scope: "all" }),
+  ).toMatchObject({ ok: false, error: { code: "bad_request", message: expect.stringContaining("100 folders") } });
+  const pending = await c.data<{ requests: { requestId: string }[] }>({ type: "access.pending" });
+  expect(pending.requests.map((r) => r.requestId)).toEqual(["req-00000001"]);
+  expect(s.of("access.decided")).toEqual([]);
+});
+
 test("a tool turned on from the apps: the switch is written, the server and the app are told, and Undo turns it off", async () => {
   const { home } = pairedHome();
   const lines: string[] = [];
@@ -828,6 +855,12 @@ test("the task limit is sized to the memory: one per 1.5 GiB past 4, at least 3,
   // A container's limit, not the host's.
   expect(sizedTaskLimit({ memoryGb: 256, limit: { cpus: 4, memoryGb: 8 } })).toBe(3);
   expect(DEFAULT_LIMITS.maxConcurrentTasks).toBeGreaterThanOrEqual(3);
+});
+
+test("an idle Claude Code stays warm half an hour off Linux, an hour on it (memory pressure closes it sooner)", () => {
+  expect(brainLimitsFor("darwin")).toEqual({ brainIdleMinutes: 30, brainMaxProcesses: 1 });
+  expect(brainLimitsFor("win32")).toEqual({ brainIdleMinutes: 30, brainMaxProcesses: 1 });
+  expect(brainLimitsFor("linux")).toEqual({ brainIdleMinutes: 60, brainMaxProcesses: 8 });
 });
 
 test("report: facts and the end of the log, with no paths, names, addresses or token", async () => {
@@ -1096,6 +1129,12 @@ test("an edit of config.json from a terminal reaches the app and the server", as
   expect((await c.data<{ access: { tools: { claude: boolean } } }>({ type: "status" })).access.tools.claude).toBe(true);
 }, 10_000);
 
+test("the org logo's data URL carries the server's light-ink mark from its ETag, as a logo's address does", () => {
+  const logo = { etag: '"a1.png"', contentType: "image/png", base64: "AA==" };
+  expect(logoDataUrl(logo)).toBe("data:image/png;base64,AA==");
+  expect(logoDataUrl({ ...logo, etag: '"a1.png#ink=light"' })).toBe("data:image/png;base64,AA==#ink=light");
+});
+
 test("the org logo: fetched after welcome, cached by ETag, a data URL for the app, gone on 404", async () => {
   const { home } = pairedHome();
   const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
@@ -1264,3 +1303,16 @@ test.if(process.platform !== "win32")(
   },
   20_000,
 );
+
+test("hello says the agentes.chat app runs this runner, and nothing when the terminal installed it", async () => {
+  for (const [over, app] of [
+    [{}, true],
+    [{ managedBy: undefined }, undefined],
+  ] as const) {
+    const c = control(pairedHome(over).home);
+    const s = await c.connect();
+    expect(s.of("hello")[0]?.app).toBe(app);
+    c.input.end();
+    expect(await c.done).toBe(0);
+  }
+});

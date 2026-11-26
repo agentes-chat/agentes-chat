@@ -340,6 +340,15 @@ const InvitationWithStatus = z
     channelIds: z.array(z.string()).openapi({ description: "Channels it adds them to, besides #general (ADR 0090)." }),
     agentIds: z.array(z.string()).openapi({ description: "Agents they start with (ADR 0184), pinned on joining." }),
     status: z.enum(["pending", "expired"]),
+    undelivered: z
+      .enum(["suppressed", "rejected"])
+      .nullable()
+      .openapi({
+        description:
+          "Its last email could never be delivered: `suppressed`, the mail provider stopped mailing the address after an " +
+          "earlier bounce (sending it again asks the provider to mail it again first); `rejected`, the address was " +
+          "refused. Null while nothing says so.",
+      }),
     expiresAt: z.string(),
     createdAt: z.string(),
     invitedBy: z.string().nullable().openapi({ description: "Who sent it (their name)." }),
@@ -1285,6 +1294,7 @@ export function managementRoutes(deps: AppDeps) {
             channelIds: i.channelIds,
             agentIds: i.agentIds,
             status: i.status,
+            undelivered: i.undelivered,
             expiresAt: i.expiresAt.toISOString(),
             createdAt: i.createdAt.toISOString(),
             invitedBy: i.invitedBy,
@@ -1423,7 +1433,7 @@ export function managementRoutes(deps: AppDeps) {
     }),
     async (c) => {
       const { orgId, invitationId } = c.req.valid("param");
-      const { invitation, token } = await resendInvitation(
+      const { invitation, token, unsuppress } = await resendInvitation(
         db,
         c.get("user").id,
         orgId,
@@ -1440,6 +1450,7 @@ export function managementRoutes(deps: AppDeps) {
         url: inviteUrl(base, token),
         inviterId: c.get("user").id,
         secret: config.AGENTES_SECRET,
+        unsuppress,
       });
       deps.wakeWorkers?.();
       return c.json({ url: inviteUrl(base, token), expiresAt: invitation.expiresAt.toISOString() }, 200);

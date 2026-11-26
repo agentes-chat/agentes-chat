@@ -104,7 +104,6 @@ describe("finding the settings", () => {
       ["invites", "Convites", "members"],
       ["access", "Agentes e acesso", "connectors"],
       ["connectors", "Conectores e MCPs", "connectors"],
-      ["skills", "Skills", "connectors"],
       ["storage", "Armazenamento", "storage"],
       ["devices", "Dispositivos", "devices"],
       ["usage", "IA e uso", "usage"],

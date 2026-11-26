@@ -296,15 +296,17 @@ test("help when the team's computer is full or away: on by default; only the own
   const sam = await addMember(f.db, f.org.id, "admin", "sam");
   const rui = await addMember(f.db, f.org.id, "member", "rui");
   const laptop = await pair(rui.id, "Rui's laptop");
-  expect((await updateComputerDevice(deps(), rui.id, f.org.id, laptop, {})).spill).toEqual({ own: true });
+  expect((await updateComputerDevice(deps(), rui.id, f.org.id, laptop, {})).spill).toEqual({ own: true, first: false });
   expect((await updateComputerDevice(deps(), sam.id, f.org.id, laptop, { spill: { own: false } })).spill).toEqual({
     own: false,
+    first: false,
   });
   await expect(updateComputerDevice(deps(), sam.id, f.org.id, laptop, { spill: { own: true } })).rejects.toMatchObject({
     code: "device.spill_owner_only",
   });
   expect((await updateComputerDevice(deps(), rui.id, f.org.id, laptop, { spill: { own: true } })).spill).toEqual({
     own: true,
+    first: false,
   });
 });
 

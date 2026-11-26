@@ -5,35 +5,11 @@
   "app.send": {
     "value": "Send"
   },
-  "categories.title": {
-    "value": "Categories"
-  },
   "categories.where": {
     "value": "Where #{{channel}} shows"
   },
   "categories.whereHelp": {
     "value": "Changes for everyone. Who takes part in the channel stays the same."
-  },
-  "categories.create": {
-    "value": "Create"
-  },
-  "categories.endOfList": {
-    "value": "Goes to the end of the list for everyone."
-  },
-  "categories.channelCount": {
-    "value": {
-      "one": "{{count}} channel",
-      "other": "{{count}} channels"
-    }
-  },
-  "categories.none": {
-    "value": "No categories yet."
-  },
-  "categories.manageHint": {
-    "value": "Order, names and delete"
-  },
-  "categories.deleteTitle": {
-    "value": "Delete {{name}}?"
   },
   "categories.order": {
     "value": "Place in the list"
@@ -44,14 +20,8 @@
   "categories.down": {
     "value": "Move down"
   },
-  "categories.position": {
-    "value": "{{at}} of {{count}}."
-  },
   "categories.channelPosition": {
     "value": "{{at}} of {{count}}."
-  },
-  "categories.itsChannels": {
-    "value": "Channels"
   },
   "blocks.send": {
     "value": "Send"
@@ -2017,6 +1987,9 @@
   "agent.talk": {
     "value": "Chat"
   },
+  "agent.responsible": {
+    "value": "Owner"
+  },
   "agent.task": {
     "value": "Task"
   },
@@ -2429,6 +2402,18 @@
     "value": {
       "one": "A computer needs Google Chrome. Get it at google.com/chrome",
       "other": "Computers need Google Chrome. Get it at google.com/chrome"
+    }
+  },
+  "activity.kind.computer_down": {
+    "value": {
+      "one": "A computer isn't answering",
+      "other": "A computer isn't answering"
+    }
+  },
+  "activity.kind.computer_back": {
+    "value": {
+      "one": "A computer is back",
+      "other": "A computer is back"
     }
   },
   "activity.kind.app_created": {
@@ -5178,6 +5163,9 @@
   "devices.notice.folder_request": {
     "value": "{{names}} asks for the folder {{path}} on your {{device}}"
   },
+  "devices.notice.internet_shared": {
+    "value": "Agents now open websites through the internet of {{device}}"
+  },
   "devices.notice.allowOnce": {
     "value": "Allow once"
   },
@@ -6892,9 +6880,6 @@
   "dashboards.formatAuto": {
     "value": "{{name}} picks the best one"
   },
-  "dashboards.newWidget.alerts": {
-    "value": "Alerts"
-  },
   "dashboards.newWidget.realData": {
     "value": "Real data"
   },
@@ -6904,8 +6889,14 @@
   "dashboards.newWidget.asked": {
     "value": "“{{ask}}”"
   },
-  "dashboards.newWidget.autoFormat": {
-    "value": "Auto format"
+  "dashboards.newWidget.testReal": {
+    "value": "Test with real data"
+  },
+  "dashboards.newWidget.addHome": {
+    "value": "Add to Home"
+  },
+  "dashboards.newWidget.addTo": {
+    "value": "Add to {{where}}"
   },
   "dashboards.agentPick.search": {
     "value": "Search agents"
@@ -7914,6 +7905,9 @@
   },
   "aiHub.choice.api": {
     "value": "API"
+  },
+  "aiHub.choice.asksMove": {
+    "value": "{{agent}} stops using it."
   },
   "aiHub.missionAi": {
     "value": "AI"

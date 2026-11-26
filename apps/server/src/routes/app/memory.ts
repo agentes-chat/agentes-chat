@@ -33,6 +33,7 @@ import {
   SERVER_REASONS,
   SETTING_GROUP,
   settingsGroup,
+  settingsPerson,
   undoProposal,
   userVisibleChannels,
   WAITING_GROUP,
@@ -471,6 +472,7 @@ async function proposalViews(db: Database, rows: (ProposalRow & { canDecide: boo
   return rows.map((r) => {
     const agent = r.agentId ? agentById.get(r.agentId) : undefined;
     const owner = agent?.ownerUserId;
+    const person = r.target === "agent_settings" ? settingsPerson(r) : null;
     const sourceItems = r.itemIds.flatMap((id) => (itemById.get(id) ? [itemById.get(id) as ContextItem] : []));
     const name = agent?.name ?? "the agent";
     return {
@@ -516,10 +518,11 @@ async function proposalViews(db: Database, rows: (ProposalRow & { canDecide: boo
               ? ("undone" as const)
               : ("refused" as const),
       stale: r.status === "stale",
-      // Its owner decides it beside who manages it (`ownerDecides`), or as who edits it (`editorDecides`, ADR 0085
-      // addendum of 2026-11-17): the apps name them.
-      decider:
-        (ownerDecides(r) || editorDecides(r)) && owner
+      // A row on a person's own AI is theirs alone (`settingsPerson`). Its owner decides it beside who manages it
+      // (`ownerDecides`), or as who edits it (`editorDecides`, ADR 0085 addendum of 2026-11-17): the apps name them.
+      decider: person
+        ? { type: "user" as const, userId: person, name: users.get(person) ?? "" }
+        : (ownerDecides(r) || editorDecides(r)) && owner
           ? { type: "user" as const, userId: owner, name: users.get(owner) ?? "" }
           : r.target === "agent_settings" && settingsGroup(r) === "account"
             ? { type: "account_owner" as const }

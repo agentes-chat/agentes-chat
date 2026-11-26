@@ -114,6 +114,18 @@ const Notification = z
         .openapi({ description: "`join_request`: the first two people who asked, in the order they asked." }),
       diskUse: z.number().optional().openapi({ description: "`computer_disk_full`: the share of the disk in use." }),
       diskFreeGb: z.number().optional().openapi({ description: "`computer_disk_full`: the GB left on it." }),
+      since: z
+        .string()
+        .optional()
+        .openapi({ description: "`computer_down`, `computer_back`: when the outage began (ISO)." }),
+      runs: z
+        .number()
+        .int()
+        .optional()
+        .openapi({ description: "`computer_down`, `computer_back`: the runs that waited for the computer." }),
+      calls: z.number().int().optional().openapi({
+        description: "`computer_down`, `computer_back`: the webhook calls its agents' routines took meanwhile.",
+      }),
       failures: z
         .array(
           z.object({

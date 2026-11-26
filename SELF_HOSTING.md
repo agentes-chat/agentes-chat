@@ -389,7 +389,8 @@ COMPOSE_PROFILES=https
 and run `docker compose up -d`. The `caddy` service gets a Let's Encrypt certificate for `DOMAIN` and
 renews it, redirects http to https, and passes everything to the app, WebSockets included. Its
 certificates are kept in the `caddy-data` volume. Caddy sends the client's address as the only value
-of `X-Forwarded-For`, which the app trusts as is, so leave `TRUSTED_PROXIES` empty. While the app
+of `X-Forwarded-For`, which the app trusts since Caddy reaches it over a private network, so leave
+`TRUSTED_PROXIES` empty. While the app
 restarts or is down, Caddy answers with a page that says so and opens the app again once it's back.
 
 </details>
@@ -475,11 +476,16 @@ Then add to the `server` block:
 Sign-in rate limits count per client address, read from `X-Forwarded-For`; wrong passwords also count
 per account (10 in 15 minutes from one address, 50 from all), each count kept in one server process's
 memory, so a restart starts them again and with several processes behind a load balancer each allows
-that many. A single value, as above, is trusted as is, and the client can't
-forge it (nginx replaces whatever the client sent). With another proxy or a CDN in front of nginx,
-send the chain instead (`$proxy_add_x_forwarded_for`) and list those proxies' addresses or ranges in
-`TRUSTED_PROXIES`, comma-separated: the chain is read from the right past every trusted hop, and the
-first other address is the client.
+that many. The app reads `X-Forwarded-For` only from a connection on loopback or a private network
+(your proxy) or from an address in `TRUSTED_PROXIES`; from any other address the header is ignored and
+the connection's own address counts, so a client that reaches the app directly can't pick its own. A
+single value, as above, is trusted as is, and the client can't forge it (nginx replaces whatever the
+client sent). With another proxy or a CDN in front of nginx, send the chain instead
+(`$proxy_add_x_forwarded_for`) and list those proxies' addresses or ranges in `TRUSTED_PROXIES`,
+comma-separated: the chain is read from the right past every trusted hop, and the first other address
+is the client. The app never reads `CF-Connecting-IP`: with Cloudflare in front, list
+[Cloudflare's ranges](https://www.cloudflare.com/ips/) in `TRUSTED_PROXIES`, or have your proxy
+write `CF-Connecting-IP` into `X-Forwarded-For` for connections from those ranges only.
 
 </details>
 
@@ -518,9 +524,9 @@ The app is published on `127.0.0.1:3000` only; `HOST_PORT` changes the port. To 
 machines, use Tailscale or put it behind HTTPS, or try it through an SSH tunnel first:
 `ssh -L 3000:localhost:3000 your-server`. Don't serve it over plain http to other machines
 (`BIND_ADDRESS=0.0.0.0`), not even on a LAN. Browsers treat http as a secure context only on
-localhost, and parts of the web app need one. With no proxy in front, nothing sets
-`X-Forwarded-For`, so the sign-in rate limits can't tell clients apart. And Docker opens a published
-port past the host's firewall.
+localhost, and parts of the web app need one. With no proxy in front, the sign-in rate limits count
+each connection's address, but a machine on a private network can write its own `X-Forwarded-For`
+(the app takes such a machine for a proxy). And Docker opens a published port past the host's firewall.
 
 </details>
 
@@ -809,7 +815,7 @@ ones a self-hosted instance usually touches:
 | `TAILSCALE_FUNNEL` | `false` | `true` opens the instance to the internet at the same address (What needs a public URL). Only `true` or `false`. |
 | `ALLOW_SIGNUP` | `false` | `true` lets anyone create an account. |
 | `OWNER_CLAIM_SHA256` | | While no account exists, only the owner link made with it creates the first one (Sign-up, below). `OWNER_KEY_SHA256` is the desktop app's. |
-| `TRUSTED_PROXIES` | | Proxies in front of your proxy (see nginx above). |
+| `TRUSTED_PROXIES` | | Public proxies in front of your proxy, or of the app, such as Cloudflare's ranges (see nginx above). `X-Forwarded-For` counts only from these, loopback and private networks. |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | | "Sign in with Google", redirect URI `{PUBLIC_URL}/api/auth/callback/google`. `GITHUB_*` and `APPLE_*` work the same way. |
 | `APPLE_TEAM_ID` + `APPLE_APP_BUNDLE_ID`, `ANDROID_APP_PACKAGE` + `ANDROID_APP_CERT_SHA256` | | For a phone app you build yourself with `EXPO_PUBLIC_API_URL` set to this server: links to its pages (a conversation, a message, a thread, an agent, a task, a routine, an approval, the inbox, settings, invitations, password resets) open in the app instead of the browser. The server then publishes `/.well-known/apple-app-site-association` (also at `/apple-app-site-association`) and `/.well-known/assetlinks.json`; your proxy must pass them through as they are, with no redirect. Several bundle ids or packages are comma-separated. The fingerprints are the SHA-256 of Google Play's app signing key and of your upload key. Without them, links open the website, as before. |
 | `TERMS_URL`, `PRIVACY_URL` | | Your terms and privacy policy, linked on the sign-in and sign-up screens when both are set. `/terms` and `/privacy` on this server go to them, or say it has none. |
@@ -1176,7 +1182,7 @@ report. A report holds:
 | `code`, `step`, `happenedAt`, `timings` | What failed and at which step, as codes (`browser.no_answer`, a run's error code), when, and counts or durations the screen measured (`attempts`; from the desktop app, `opening`: how long this opening took, from the app's start to the site's first screen). |
 | `versions` | The server's, the runner's (and its protocol), the desktop app's and the phone app's versions, the server's system and processor, and the browser's family and major version (`chrome 142`), never the whole User-Agent. From the desktop app, its computer's system version too, as numbers alone (`osVersion`: macOS's, Windows' build, Linux's kernel). |
 | `install`, `locale` | `docker`, `native` or `desktop`; the app's language. |
-| `facts` | Which settings differ from their defaults, as `config.<NAME>: "set"`, never their values (`TELEMETRY`, `INSTALL_MODE`, `NODE_ENV`, `LOG_LEVEL` and `MACHINE_PROVISIONING` by value, and `config.publicUrl` as `https`, `http` or `loopback`, never the address); how many workspaces, agents and computers; hours since the server started; migrations applied; for the computer involved, its system, processor, runner version, connection, last sign of life, pause, its coding CLIs' versions and which of its tools are on; for a run, its status, brain, turns and hop; from the desktop app, its computer's CPUs, memory and the memory behind its window (`desktop.cpus`, `desktop.memoryGb`, `desktop.webviewMb`). |
+| `facts` | Which settings differ from their defaults, as `config.<NAME>: "set"`, never their values (`TELEMETRY`, `INSTALL_MODE`, `NODE_ENV`, `LOG_LEVEL` and `MACHINE_PROVISIONING` by value, and `config.publicUrl` as `https`, `http` or `loopback`, never the address); how many workspaces, agents and computers; hours since the server started; migrations applied; for the computer involved, its system, processor, runner version, connection, last sign of life, pause, its coding CLIs' versions and which of its tools are on; for a run, its status, brain, turns and hop, and its error's words, scrubbed as log lines are (the computer involved is the one its turns ran on); from the desktop app, its computer's CPUs, memory and the memory behind its window (`desktop.cpus`, `desktop.memoryGb`, `desktop.webviewMb`). |
 | `logs` | The last lines of the computer's `runner.log` (up to 300, from its app when it answers within 5 seconds), and the server's own last log lines from the last 30 minutes (only when the installation's owner sends it); the desktop app's server log and setup steps. Every line is scrubbed first: emails, IP addresses, keys, tokens and cookie headers masked, links cut to their origin (with any user and password in them), home folders as `~`, and the names of the server, its workspaces, computers, agents and the sender replaced by `[server]`, `[workspace]`, `[computer]`, `[agent]`, `[person]`. Lines over 1,000 characters are cut. |
 | `note`, `replyTo` | What the person wrote (credentials masked) and an email for a reply, both optional and empty unless filled in. |
 
@@ -1271,11 +1277,11 @@ without an OAuth app) or the GitHub App.
 Connected with a person's GitHub account, agents open pull requests and comment as that person. With the
 GitHub App, they do it as the app: pull requests, issues, comments and commits come from the app's bot, each
 body ends with one line naming the agent and the person it works for, and commits credit that person
-(`Co-authored-by`) when they signed in with GitHub. Where the app isn't installed, the account connection is
+(`Co-Authored-By`) when they signed in with GitHub. Where the app isn't installed, the account connection is
 used, as before.
 
 Every commit an agent makes, through GitHub or with git on its computer, ends with its own line too:
-`Co-authored-by: <agent's name> <noreply@agentes.chat>`, next to the coding CLI's own (`Co-Authored-By: Claude …`)
+`Co-Authored-By: <agent's name> <noreply@agentes.chat>`, next to the coding CLI's own (`Co-Authored-By: Claude …`)
 and the person's, never twice. It is on by default; to turn it off for the whole workspace, ask any agent ("stop
 adding your co-author line to commits"), and ask again to turn it back on. On a computer the runner adds it with git
 hooks of its own, handed only to the agents' processes through their environment: your own git, outside them, is
@@ -1369,7 +1375,7 @@ Install the ones you want on that computer, as the user that runs the runner: Cu
 even when its service's PATH lacks it), OpenCode's with `npm install -g opencode-ai@1.19.5`, Grok Build with
 `curl -fsSL https://x.ai/cli/install.sh | bash` (it puts `grok` in `~/.local/bin` too; agents think with it only
 through a Grok account added in Settings, AI and usage, never the computer's own sign-in. On Linux its sandbox needs
-bubblewrap, `sudo apt install -y bubblewrap`, or Grok Build refuses to start and every turn fails), Google's
+bubblewrap, `sudo apt install -y bubblewrap`, or Grok Build refuses to start and every turn fails; on Ubuntu 24.04 and later it also needs the AppArmor profile below), Google's
 Antigravity CLI with
 `curl -fsSL https://antigravity.google/cli/install.sh | bash` (`agy` in `~/.local/bin`; Gemini accounts sign in on Linux
 and macOS computers, not Windows yet, each in a folder of its own (on a Mac, with a keychain of its own there), and a personal Google plan used this way is against Google's terms for
@@ -1385,12 +1391,32 @@ extracted to `/usr/local/bin/opencode`; Grok Build with
 also makes `~/.local/bin/agent`, Cursor's name: where both are installed, link Cursor's `agent` last. The Antigravity
 CLI the same way: `sudo env HOME=/opt/agy sh -c 'curl -fsSL https://antigravity.google/cli/install.sh | bash -s -- --skip-path'`,
 then `sudo chmod -R a+rX /opt/agy` and `sudo ln -sf /opt/agy/.local/bin/agy /usr/local/bin/agy`.
-One installed in root's own `~/.local/bin` there is out of the agents' reach, and the apps say so with the line
-that installs it for all of them. Agents never use a sign-in made in a terminal: Gemini, Grok and the other plans
+One installed in root's own `~/.local/bin` there, or anywhere else an agent's user can't run it, is out of the
+agents' reach: the computer checks each CLI as its agents' users and the apps say so, with the line that installs it
+for all of them or an Install button. Where no agent reaches a copy at all, the runner installs its own pinned build
+for them once an account of that CLI is on the computer (in `/opt/agentes-runner/clis`, linked from `/usr/local/bin`
+unless something is already there). Agents never use a sign-in made in a terminal: Gemini, Grok and the other plans
 sign in from the apps (Settings, AI and usage), once for all of their owner's agents.
 Commands run as the user that runs the runner, so give it a dedicated user or a VM.
 `agentes-runner tools disable commands` (or `claude`, `codex`, `cursor`, `opencode`, `grok` or `antigravity`) turns a capability off on that
 computer, and `agentes-runner folders allow <path>` shares a folder besides the agents' own.
+
+Ubuntu 24.04 and later block unprivileged user namespaces (`kernel.apparmor_restrict_unprivileged_userns = 1`),
+which the bubblewrap sandbox of Grok Build and of the Antigravity CLI's terminal needs. Allow them for `bwrap`
+alone, rather than turning AppArmor off:
+
+```sh
+sudo tee /etc/apparmor.d/bwrap >/dev/null <<'PROFILE'
+abi <abi/4.0>,
+include <tunables/global>
+
+profile bwrap /usr/bin/bwrap flags=(unconfined) {
+  userns,
+  include if exists <local/bwrap>
+}
+PROFILE
+sudo systemctl reload apparmor
+```
 
 On a Linux server, the installer's `--system` option (below) installs Google Chrome from Google's apt
 repository (its signing key checked against its fingerprint) when the computer has none, with a
@@ -1509,7 +1535,9 @@ simple mode, a Mac) each place is a folder and a browser profile of that one use
 Lodi keeps each person's work in their own place and is told never to look outside it, but other agents'
 commands there can read it, and only the person who connected the computer takes control of its desktop or
 opens its terminal. Lodi's page says which of the two a place is. For places nobody else can read, set the
-server up with `--system`. A computer a person connected is never Lodi's. Turn its commands, browser or desktop
+server up with `--system`. A computer a person connected becomes Lodi's only when the workspace has neither, an
+admin connected it, and it is marked the workspace's on its page ("Belongs to the workspace" on, open to everyone in the workspace): a
+VPS you paired works that way without this server's own runner. Turn its commands, browser or desktop
 off for everyone on its page, under what it can use. The computer's shared folder is still shared: every agent
 and every person's Lodi reads and writes it. Without a computer of the workspace's own, Lodi has no computer,
 and its page links here.
@@ -1536,8 +1564,9 @@ computer (`tailscale serve`, an nginx or a Caddy outside Docker) takes
 `sudo agentes-runner services allow tcp/443` too, or agents can't push to its git. Container and VM
 networks on the computer are closed to agents, except ports published on an address other than
 loopback. Each agent also has its own `/tmp`, `/dev/shm` and `/run/lock`, in memory as the computer's
-are (a tmpfs of its own, which counts in the agents' memory), and its own `/var/tmp` on disk (in
-`/var/lib/agentes-runner-tmp`), cleared of what is 10 days old (30 in `/var/tmp`), so a socket or file
+are (its `/tmp` in one tmpfs all agents share, a fifth of the RAM, which counts in the agents' memory), and
+its own `/var/tmp` on disk (in `/var/lib/agentes-runner-tmp`), cleared of what is 10 days old (30 in
+`/var/tmp`; 6 hours in `/tmp` and `/dev/shm` for an agent with nothing running), so a socket or file
 another agent leaves there is out of its reach, and its own adb server port
 (`ANDROID_ADB_SERVER_PORT`). Agents can't schedule cron or at jobs, which would run outside their own
 folders: the runner adds their users to `/etc/cron.deny` and `/etc/at.deny` (a job one scheduled before
@@ -1555,7 +1584,9 @@ have no owner, so a program an agent runs that listens on one without checking w
 the other agents, and an agent can take a name another agent's program wants. An X display's name taken
 before a desktop starts sends that desktop to another display, but an agent holding all 50 stops every new
 or restarted desktop on the computer, and on this server's own computer the names span its
-organizations.
+organizations. A root-owned `networkLauncher` helper that gives each agent its own network namespace
+closes the second ([ADR 0030](docs/adr/0030-runner-isolation.md), [ADR 0096](docs/adr/0096-agents-own-local-ports.md));
+agentes.chat Cloud's computers run one, and none is installed by default.
 
 **Memory and CPUs.** With `--system` the agents share the computer: none has memory or CPUs of its own,
 so one agent's build may use every CPU and all the memory the agents have; when several want the CPUs,
@@ -1564,13 +1595,17 @@ computer), plus swap for a third of that, which keeps the rest for the system, t
 the server. At that limit the kernel stops one process, usually the biggest (Chrome's pages first), and
 only that process: the command it belonged to fails, and the agent is told it was most likely memory
 (with systemd 253 or newer; a desktop or a task already running when you update gets this when it next
-starts). What agents leave in `/tmp` holds RAM until they delete it or the computer restarts. To keep
-it on disk instead, add `"agentTmpOnDisk": true` to `/var/lib/agentes-runner/config.json` as root (on
+starts). What agents leave in `/tmp` holds RAM until they delete it, it ages out or the computer
+restarts, at most a fifth of the RAM for all of them: past that, writes there fail with "no space". An
+agent's desktop nobody used for an hour is put to rest while less than 1.5 GB is free, and one with a
+command still running in its Terminal once nobody used it for a day. To keep `/tmp` on disk instead (its
+small files stay in the page cache, which the kernel takes back when memory is short), add
+`"agentTmpOnDisk": true` to `/var/lib/agentes-runner/config.json` as root (on
 this server's own computer too, for all its organizations): each agent takes it at its first launch
 after the next boot (until then it keeps the `/tmp` it has). The agents' `/tmp` is then a filesystem of
 their own, made anew at every boot in `/var/cache/agentes-runner-tmp` with half of what the system disk
 has free, so they can't fill that disk or take its inodes. It needs loop devices and `mkfs.ext4`
-(e2fsprogs), which an unprivileged container doesn't have.
+(e2fsprogs), which an unprivileged container doesn't have: there `/tmp` stays in memory.
 `agentes-runner computer`, which any agent (or you) can run, prints what the computer has, what is free
 for new work and which agents use the most; agents are told to run it before something heavy, to tell
 the person when another agent's work leaves no room, and to stop what a finished build left running.
@@ -1654,6 +1689,14 @@ restart. The app can install Claude Code there for you, but not Codex. Then sign
 - No plan on Windows, Codex's or Claude's, picks who answers a message (Plans, below).
 - The isolation leaves the computer's own loopback open: a command can reach a service listening on
   `127.0.0.1` there.
+
+**Grok Build on Windows.** Install it as the Windows user that runs the app, with
+`powershell -ExecutionPolicy Bypass -Command "irm https://x.ai/cli/install.ps1 | iex"` (it puts `grok.exe` in
+`%USERPROFILE%\.grok\bin`), then add a Grok account in **Settings → AI and usage**; a PC can hold several, each
+in a folder of its own. Grok Build's own sandbox doesn't run on Windows, so there its own tools only edit files in
+the agent's folder and run read-only commands (`git status`, `ls`, `grep`); every other command goes through the
+agent's terminal tool, under the same command rules as Claude Code's on Windows. Lodi's turns are the same as
+elsewhere.
 
 Use HTTPS with a certificate from a public authority (Tailscale and the Caddy profile get one). Over
 plain http the computer's token travels unencrypted, and the runner's background service doesn't

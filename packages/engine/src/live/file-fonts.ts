@@ -1,7 +1,7 @@
 import { and, eq, isNotNull, schema } from "@agenteschat/db";
 import { fontAssetRef } from "@agenteschat/live";
-import type { ArtifactActor, ArtifactDeps } from "../artifacts";
-import { ValidationError } from "../errors";
+import { type ArtifactActor, type ArtifactDeps, liveFileAccess } from "../artifacts";
+import { NotFoundError, ValidationError } from "../errors";
 import { copyAssetFrom, type LiveAsset, type LiveAssetFont, readAsset } from "./assets";
 
 /**
@@ -41,6 +41,25 @@ export async function fileFonts(
     if (!byFamily.has(styled)) byFamily.set(styled, f.id);
   }
   return { list, byFamily };
+}
+
+/** The file's fonts for whoever reads it (the apps' font lists), regular faces first; not found otherwise. */
+export async function readFileFonts(
+  deps: ArtifactDeps,
+  actor: ArtifactActor,
+  orgId: string,
+  fileId: string,
+): Promise<FileFont[]> {
+  if (!(await liveFileAccess(deps, actor, orgId, fileId))) {
+    throw new NotFoundError("Artifact not found", "artifact.not_found");
+  }
+  const { list } = await fileFonts(deps, orgId, fileId);
+  return list.sort(
+    (a, b) =>
+      a.family.localeCompare(b.family) ||
+      Math.abs(a.weight - 400) - Math.abs(b.weight - 400) ||
+      Number(a.italic) - Number(b.italic),
+  );
 }
 
 /** The bytes of some of the file's fonts, to measure text with. */

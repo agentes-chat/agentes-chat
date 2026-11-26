@@ -267,10 +267,13 @@ describe("Notificações", () => {
     expect((await open("n-routine")).textContent).toContain("Parou na etapa 4 de 5");
   });
 
-  test("the filters are a menu beside the title, each with its count; picking one changes the list", async () => {
+  test("the filters are a menu under the title, each with its count; picking one changes the list", async () => {
     await go();
-    const filter = () => document.querySelector(".ac-pagehead__actions .ib-filter") as HTMLElement;
+    // On its own row: beside the title, a long filter's name squeezed the title in the list's narrow column.
+    const filter = () => document.querySelector(".ib-head .ac-pagehead__bar .ib-filter") as HTMLElement;
     expect(filter().textContent).toBe("Tudo");
+    expect(document.querySelector(".ac-pagehead__actions .ib-filter")).toBeNull();
+    expect(document.querySelector(".ac-pagehead__actions .ib-readall")).not.toBeNull();
     const menu = await filterMenu();
     const names = [/Tudo/, /Menções/, /Esperando você/, /Não lidas/, /Reações/, /Pedidos decididos/, /Concluídas/];
     const radios = names.map((name) => menu.getByRole("menuitemradio", { name }));
@@ -336,6 +339,38 @@ describe("Notificações", () => {
     // A finished run says nothing extra: no step strip, open either.
     expect((await open("n-done")).querySelector(".ib-read__say")?.textContent).toContain("Revisar o PR");
     expect(read().querySelector(".nt-steprow")).toBeNull();
+  });
+
+  test("a computer that isn't answering, then back: its name leads, since when or how long, what waited (ADR 0241)", async () => {
+    const since = new Date(Date.now() - 50 * 60_000).toISOString();
+    const items = [
+      notification({
+        id: "n-down",
+        kind: "computer_down",
+        actors: [],
+        source: { machineId: "m-ws", label: "Computador do workspace" },
+        latest: { since, runs: 3, calls: 7 },
+        updatedAt: ago(40),
+      }),
+      notification({
+        id: "n-back",
+        kind: "computer_back",
+        actors: [],
+        source: { machineId: "m-ws", label: "Computador do workspace" },
+        latest: { since, runs: 3, calls: 0 },
+        createdAt: new Date(Date.parse(since) + 42 * 60_000).toISOString(),
+        updatedAt: ago(8),
+      }),
+    ];
+    await go(seed(items));
+    expect(row("n-down").textContent).toContain("Computador do workspace não está respondendo");
+    expect(row("n-down").querySelector(".ib-row__sub")?.textContent).toMatch(
+      /^Computador · Desde \d{1,2}:\d{2} · Esperando: 3 pedidos a agentes e 7 chamadas de webhook/,
+    );
+    expect(row("n-back").textContent).toContain("Computador do workspace voltou");
+    expect(row("n-back").querySelector(".ib-row__sub")?.textContent).toContain(
+      "Voltou depois de 42 min · Esperaram: 3 pedidos a agentes",
+    );
   });
 
   test("an approval is the conversation's card: the agent's why, the action in its well, who asked behind Ver detalhes", async () => {

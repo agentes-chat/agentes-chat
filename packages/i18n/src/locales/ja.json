@@ -573,7 +573,7 @@
       "here": "このコンピューター"
     },
     "whyPaid": "なぜ有料なのですか？",
-    "whyPaidText": "Cloudには常時稼働のエージェント用コンピューターと、サーバーを管理する担当が含まれます。自分のサーバーで動かすのは無料です。"
+    "whyPaidText": "Cloudには常時稼働のエージェント用コンピューターと、サーバーを管理する担当が含まれます。Cloudのワークスペースに自分のコンピューターをつないでも、プランの代わりにはなりません。自分のサーバーやコンピューターでagentes.chatを動かすのは無料です。"
   },
   "auth": {
     "email": "メールアドレス",
@@ -611,7 +611,11 @@
       "wrongAddress": "アドレスが違いますか？変更する",
       "banner": "メールアドレスを確認してください",
       "bannerSub": "{{email}}に送信したリンクを開いてください。",
-      "change": "アドレスを変更"
+      "change": "アドレスを変更",
+      "undelivered": {
+        "suppressed": "メールが届きませんでした：以前の不達により、メールプロバイダーが {{email}} への送信を止めています。アドレスが正しいか確認して、新しいリンクを依頼してください。",
+        "rejected": "メールが届きませんでした：{{email}} は受け取りを拒否されました。アドレスが正しいか確認するか、別のアドレスに変更してください。"
+      }
     },
     "unconfirmed": "このメールアドレスには、まだ確認されていないパスワード付きのアカウントがあります。そのパスワードでログインするか、メールで新しいパスワードを作成してください。",
     "unconfirmedReset": "新しいパスワードを作成",
@@ -1414,6 +1418,7 @@
         "secret_other": "{{who}}は{{label}}を使います。これはファイルに含まれないため、エージェントがチャットで尋ねます。",
         "model_other": "{{who}}は{{label}}を使いますが、ここでは利用できません。",
         "file_other": "{{who}}は{{label}}を使います。",
+        "path_other": "{{who}}の指示は{{label}}を参照していますが、インポートに含まれていないため、エージェントは開けません。そのファイルをDriveに置くか、指示からそのパスを削除してください。",
         "webhook_other": "{{who}}のルーティン{{label}}には、ここで新しいアドレスが割り当てられます。古いアドレスを呼び出していたサイトやアプリで、アドレスを変更してください。"
       },
       "say": {
@@ -1511,6 +1516,7 @@
         "app": "接続",
         "model": "モデルを選ぶ",
         "file": "Driveを開く",
+        "path": "Driveを開く",
         "webhook": "ルーティンを開く"
       },
       "linkSkipped_other": "リンクの上限を超えたファイル{{count}}件",
@@ -2075,7 +2081,7 @@
       },
       "computers": {
         "title": "コンピューター",
-        "help": "新しいコンピューターが加わったとき、ワークスペースのコンピューターの準備ができたとき"
+        "help": "新しいコンピューターが加わったとき、準備ができたとき"
       },
       "reactions": {
         "title": "リアクション",
@@ -2120,6 +2126,8 @@
       "calendar": "会議と締め切り",
       "team": "誰が誰か：メンバー、エージェント、そのグループ",
       "dashboards": "エージェントが最新に保つ数値やグラフ",
+      "skills": "チームができることと、新しく教えること",
+      "skillsPersonal": "あなたのエージェントができることと、新しく教えること",
       "taskManager": "各エージェントが今していることと、必要なものの停止",
       "code": "エージェントとプログラミング、依頼ごとに専用のワークツリーで",
       "approvalsPersonal": "あなたのエージェントからの許可のお願い",
@@ -2139,8 +2147,8 @@
       "title": "サイドバー",
       "newChannel": "新しいチャンネル",
       "newChannelPersonal": "新しいグループ会話",
-      "addToChannels": "新しいチャンネルまたはカテゴリ",
-      "addToChannelsPersonal": "新しいグループ会話またはカテゴリ",
+      "addToChannels": "新しいチャンネル",
+      "addToChannelsPersonal": "新しいグループ会話",
       "newMessage": "新しいメッセージ",
       "addMembers": "人またはエージェントを追加",
       "channelSettings": "チャンネルの設定",
@@ -2236,6 +2244,7 @@
     "routines": "ルーティン",
     "team": "チーム",
     "dashboards": "ダッシュボード",
+    "skills": "スキル",
     "taskManager": "タスクマネージャー",
     "code": "コード",
     "calendar": "カレンダー",
@@ -2293,7 +2302,9 @@
     "delete": "部署を削除",
     "deleteTitle": "部署「{{name}}」を削除しますか?",
     "deleteText": "グループ内のエージェントは「エージェント」に戻ります。",
+    "deleteChannels": "グループ内のチャンネルは「チャンネル」に戻ります。",
     "dropHere": "ここにエージェントをドラッグ",
+    "dropHereAll": "ここにエージェントかチャンネルをドラッグ",
     "moved": "{{name}} は {{group}} に移動しました",
     "movedOut": "{{name}} は {{group}} から外れました",
     "undo": "元に戻す"
@@ -2341,6 +2352,10 @@
     "phoneText": "通知をポケットに。どこからでも返信できます。",
     "testFlight": "TestFlight",
     "googlePlay": "Google Play"
+  },
+  "lodiCursor": {
+    "skip": "スキップ",
+    "inMenu_other": "メニューに新着 {{count}} 件"
   },
   "openOnPhone": {
     "qr": "agentesアプリにログインするためのQRコード",
@@ -2390,6 +2405,17 @@
       "unlinkTitle": "{{surface}}の連携を解除しますか？",
       "unlinkText": "{{assistant}}はそちらで返信しなくなります。いつでも再び連携できます。",
       "unlinked": "{{surface}}の連携を解除しました"
+    },
+    "nudge": {
+      "title": "未読のリマインダー",
+      "hint": "アプリに未読があると、{{assistant}} が {{surface}} で知らせます。1 日 1 回までです。スマートフォンにプッシュ通知が届く場合は送りません。",
+      "after": "通知までの時間",
+      "hours": "{{hours}} 時間",
+      "quiet": "通知しない時間帯",
+      "quietHint": "この時間帯はリマインダーを送りません。時刻はあなたのタイムゾーンです。",
+      "quietFrom": "開始",
+      "quietTo": "終了",
+      "quietRange": "{{from}}〜{{to}}"
     },
     "undo": {
       "title": "チャットアプリの連携を解除しますか？",
@@ -2443,6 +2469,7 @@
       "set": "PIN を設定",
       "change": "PIN を変更",
       "title": "{{surface}} の PIN",
+      "row": "PIN",
       "text": "{{surface}} から依頼した操作を承認するときに入力する 6 桁の数字です。チャットで送信されることはありません。",
       "save": "PIN を保存"
     }
@@ -2724,6 +2751,7 @@
     "nameLabel": "名前",
     "nameHelp": "全員に対して変更されます。古いリンクも引き続き使えます。",
     "replyInThreads": "エージェントはスレッドで返信",
+    "replyInChannel": "エージェントはチャンネルで返信",
     "replyInThreadsHelp": "チャンネルで呼ばれたエージェントは、そのメッセージの下のスレッドで答え、チャンネルにはそのスレッドが1行で表示されます。進行中の作業はそのままです。",
     "nameTaken": "#{{name}}はすでにあります。",
     "generalName": "#generalの名前は変更できません。",
@@ -2802,7 +2830,7 @@
     "passed_other": "誰も回答しませんでした",
     "failed_other": "{{names}}は回答できませんでした",
     "asking_other": "{{names}}は回答を待っています",
-    "outage_other": "{{names}}: AIプロバイダーが停止中 · 自動で再試行します",
+    "outage_other": "{{names}}: AIが応答していません · 自動で再試行します",
     "queued_other": "{{names}}が順番待ちです",
     "away_other": "{{names}}がコンピューターを待っています",
     "plan_other": "{{names}}はプランを待っています",
@@ -2816,7 +2844,7 @@
       "claimed": "回答中",
       "waiting": "承認待ち",
       "asking": "回答待ち",
-      "outage": "AIプロバイダーが停止中 · 自動で再試行します",
+      "outage": "AIが応答していません · 自動で再試行します",
       "queued": "順番待ち",
       "away": "コンピューター待ち",
       "plan": "プランを待っています",
@@ -3105,6 +3133,9 @@
       "set_notifications_off": "<b>{{category}}</b>の通知をオフにする",
       "set_my_timezone": "タイムゾーンを<b>{{timezone}}</b>にする",
       "set_my_timezone_workspace": "ワークスペースのタイムゾーンに合わせる",
+      "set_computer_help": "エージェントのコンピューターが満杯か不在のとき、<b>{{computer}}</b> に手伝わせる",
+      "set_computer_help_first": "<b>{{computer}}</b> をエージェントの作業に使う",
+      "set_computer_help_off": "<b>{{computer}}</b> をエージェントに使うのをやめる",
       "set_invitation_roles": "<b>{{email}}</b>への招待で付与するロールを変更: {{change}}",
       "update_channel": "チャンネル<b>#{{channel}}</b>を変更",
       "archive_channel": "<b>#{{channel}}</b>をアーカイブ",
@@ -3333,7 +3364,7 @@
         "ended": "ワークスペースがagentes.chatに再び登録したら、ここで返信します。"
       },
       "askAdmin": "管理者がagentes.chatのプランを整えたら、ここで返信します。",
-      "plan": "プランにはエージェントのコンピューターが含まれます。AIはすでに支払っているものを使えます。Claude、ChatGPTなど、またはAPIキーです。",
+      "plan": "プランにはエージェントのコンピューターが含まれます。AIはすでに支払っているものを使えます。Claude、ChatGPTなど、またはAPIキーです。ここに自分のコンピューターをつないでも、プランの代わりにはなりません。自分のサーバーやコンピューターでagentes.chatを動かすのは無料です。",
       "activeTitle": "プランが有効です",
       "activeLine": "AIを接続すると{{name}}がここで返信します。",
       "receipt": "保存済み",
@@ -3356,10 +3387,22 @@
       "zen": "OpenCodeを接続",
       "api_key": "APIキーを追加"
     },
+    "cliFetch": {
+      "preparing": "{{computer}}で{{program}}を準備しています…",
+      "preparingPct": "{{computer}}で{{program}}を準備しています… {{percent}}%",
+      "failed": {
+        "offline": "{{computer}}で{{program}}を準備できませんでした。コンピューターがダウンロード先に接続できません。",
+        "hash_mismatch": "{{computer}}で{{program}}を準備できませんでした。ダウンロードしたファイルが元のファイルではなかったため、使用していません。",
+        "no_build": "{{program}}には{{computer}}のシステム向けのバージョンがありません。",
+        "disk_full": "{{computer}}で{{program}}を準備できませんでした。ディスクがいっぱいです。",
+        "failed": "{{computer}}で{{program}}を準備できませんでした。ダウンロードが完了しませんでした。"
+      }
+    },
     "cli": {
       "missing": "{{program}} はまだ {{computer}} にありません。",
       "claudeApp": "Claude アプリだけでは足りません。エージェントはコンピューターで動く Claude Code を使います。",
       "install": "{{program}} をインストールする",
+      "update": "{{program}} を更新する",
       "check": "インストールした。もう一度確認",
       "checked": "確認しました。{{program}} はまだ {{computer}} にありません。",
       "installing": "{{computer}} に {{program}} をインストールしています。1 分ほどかかります。",
@@ -3447,6 +3490,9 @@
       "plan": "プランで",
       "key": "APIキーで"
     },
+    "offSystem": "{{system}} ではまだ動きません",
+    "offSystemGroup": "{{system}} ではまだ動きません",
+    "offSystemSome_other": "{{names}} は {{system}} ではまだ動きません",
     "pick": {
       "plan": "プラン",
       "placeholder": "プランを選ぶ",
@@ -3475,7 +3521,8 @@
       "gemini": {
         "title": "あなたのGeminiプラン",
         "tiers": "Google AI Pro、Google AI Ultra、またはGemini Enterprise",
-        "warning": "Googleによると、個人のGeminiプランを他のアプリ内で使うと、アカウントが停止されることがあります。このリスクを避けるには、Gemini APIキーまたはGemini Enterpriseを使ってください。"
+        "warning": "Googleによると、個人のGeminiプランを他のアプリ内で使うと、アカウントが停止されることがあります。このリスクを避けるには、Gemini APIキーまたはGemini Enterpriseを使ってください。",
+        "windowsOne": "WindowsではGeminiアカウントは1台のコンピューターで一度に1つしか使えません。"
       },
       "zen": {
         "title": "OpenCode",
@@ -3640,7 +3687,7 @@
     "nowEveryAgent": "すべてのエージェントは今後：{{level}}。",
     "undo": "元に戻す",
     "everyAgent": "ワークスペースのすべてのエージェントに適用",
-    "follows": "ワークスペースに従う",
+    "follows": "{{level}} · ワークスペースの設定",
     "edit": "変更",
     "workspaceLead": "エージェントが動く前に人へ確認するタイミング。",
     "workspaceHelp": "各エージェントは、誰かがエージェントのページで個別に変更するまでこの設定に従います。",
@@ -3890,6 +3937,9 @@
     },
     "channel": {
       "agent_added": "{{agentName}}を<b>#{{channel}}</b>に追加しました",
+      "lead_changed": "{{agentName}}を<b>#{{channel}}</b>の責任者にしました",
+      "lead_changed_self": "<b>#{{channel}}</b>の責任者になりました",
+      "lead_changed_none": "<b>#{{channel}}</b>を責任者なしにしました",
       "created": "チャンネル<b>#{{name}}</b>を作成しました"
     },
     "wiki": {
@@ -3931,6 +3981,9 @@
       "changed_set_notifications_off": "<b>{{category}}</b>の通知をオフにしました",
       "changed_set_my_timezone": "タイムゾーンを<b>{{timezone}}</b>にしました",
       "changed_set_my_timezone_workspace": "タイムゾーンをワークスペースに合わせる設定に戻しました",
+      "changed_set_computer_help": "エージェントのコンピューターが満杯か不在のとき、<b>{{computer}}</b> が手伝うようになりました",
+      "changed_set_computer_help_first": "エージェントの作業は <b>{{computer}}</b> で始まるようになりました",
+      "changed_set_computer_help_off": "<b>{{computer}}</b> はエージェントを手伝わなくなりました",
       "changed_set_invitation_roles": "<b>{{email}}</b>への招待で付与するロールを変更しました: {{change}}",
       "changed_update_channel": "チャンネル<b>#{{channel}}</b>を変更しました",
       "changed_archive_channel": "<b>#{{channel}}</b>をアーカイブしました",
@@ -4075,50 +4128,8 @@
     "create": "#{{name}}を作成"
   },
   "channelCategories": {
-    "newCategory": "新しいカテゴリ",
-    "newCategoryHelp": "リストの最後に追加されます。後からドラッグで移動できます。",
-    "newCategoryDesc": "全員のサイドバーで、チャンネルを1つの名前でまとめます。",
-    "name": "名前",
-    "namePlaceholder": "例: プロダクト",
-    "nameEmpty": "カテゴリに名前を付けてください。",
-    "nameTaken": "カテゴリ「{{name}}」はすでにあります。",
-    "channels": "含めるチャンネル",
-    "channelsSearch": "チャンネルを検索",
-    "channelsEmpty": "「{{q}}」に一致するチャンネルはありません。",
-    "inCategory": "現在{{name}}に含まれています",
-    "noCategory": "カテゴリなし",
-    "noCategoryDesc": "見出しなしで一番上に表示",
-    "create": "カテゴリを作成",
-    "createWith_other": "{{count}}個のチャンネルで作成",
-    "created": "{{name}}を作成しました。",
-    "rename": "名前を変更",
-    "renameTitle": "カテゴリ名を変更",
-    "save": "保存",
-    "delete": "カテゴリを削除",
-    "deleteDesc": "チャンネルは一番上に移動します",
-    "deleted_other": "{{name}}を削除しました。{{count}}個のチャンネルが一番上に移動しました。",
-    "deletedEmpty": "{{name}}を削除しました。",
     "undo": "元に戻す",
-    "collapseAll": "すべて閉じる",
-    "expandAll": "すべて開く",
-    "newChannelHere": "ここに新しいチャンネル",
-    "newChannelIn": "{{name}}に新しいチャンネル",
-    "options": "{{name}}のオプション",
-    "category": "カテゴリ",
     "categoryHelp": "全員のサイドバーでチャンネルが表示される場所です。",
-    "newCategoryOption": "新しいカテゴリ…",
-    "move": "移動…",
-    "moveTitle": "#{{channel}}を移動",
-    "moveDesc": "全員のサイドバーでのチャンネルの位置を変更します。参加者は変わりません。",
-    "moveSearch": "カテゴリを検索",
-    "moveEmpty": "「{{q}}」に一致するカテゴリはありません。",
-    "moveTo": "{{name}}に移動",
-    "moveSame": "移動",
-    "moveNow": "現在",
-    "moveEmptyCategory": "チャンネルはまだありません",
-    "moveCreate": "「{{name}}」を作成",
-    "moved": "#{{channel}}は{{name}}に移動しました。",
-    "newWithChannel": "このチャンネルで新しいカテゴリを作成",
     "editChannel": "チャンネルを編集"
   },
   "channelMembers": {
@@ -4267,7 +4278,7 @@
       "queued_computer": "順番待ち",
       "waiting_plan": "プランを待っています",
       "waiting_budget": "予算のリセット待ち",
-      "provider_down": "AIプロバイダーが停止中 · 自動で再試行します",
+      "provider_down": "AIが応答していません · 自動で再試行します",
       "out_of_plan": "プランの上限に達しました",
       "out_of_budget": "今月の予算を使い切りました",
       "out_of_planShort": "上限に到達",
@@ -4285,7 +4296,9 @@
       "noAi": "AIが接続されていません"
     },
     "bySelf": "{{name}}が設定 · 完了するとクリアされます",
-    "byAuto": "今やっていること"
+    "byAuto": "今やっていること",
+    "byPrivate": "非公開の会話で作業中 · 詳細は参加者だけが見られます",
+    "openWork": "会話を開く"
   },
   "agentWork": {
     "working": "作業中",
@@ -4294,6 +4307,7 @@
     "queued": "順番待ち",
     "here": "ここ",
     "routine": "ルーティン中",
+    "private": "非公開の会話で",
     "yourApproval": "あなたの承認",
     "yourAnswer": "あなたの回答",
     "later": "フォローアップ {{when}}",
@@ -4427,7 +4441,7 @@
     "computerAway": "{{agent}}のコンピューターが今は応答していません。このリクエストは{{time}}まで開いています。少ししてからもう一度お試しください。",
     "computerPaused": "{{agent}}のコンピューターは所有者が一時停止しています。このリクエストは{{time}}まで開いています。",
     "insecureContext": "このページは https で開かれていないため、ブラウザーはキーを保護できません。https://(または localhost)で開いてください。",
-    "failed": "送信できませんでした。エージェントのコンピューターの電源は入っていますか？",
+    "failed": "送信できませんでした。もう一度送信してください。それでも失敗する場合は、{{agent}}にもう一度依頼し直してもらってください。",
     "changed": "回答中にこのリクエストが変更されました。何も送信されていません。もう一度送信してください。",
     "empty": "値を入力してください。",
     "tooLarge": "大きすぎます（最大16 KB）。"
@@ -4473,6 +4487,24 @@
       "agents_other": "エージェント{{count}}体",
       "used": "{{when}}に使用",
       "never": "未使用"
+    },
+    "bulk": {
+      "select": "選択",
+      "selection": "選択した項目",
+      "selected_other": "{{count}}件を選択中",
+      "selectAll_other": "{{count}}件すべて選択",
+      "clear": "選択をやめる",
+      "access": "アクセスを変更",
+      "accessTitle_other": "{{count}}件のアクセス",
+      "accessText": "選択したすべての項目にこのアクセスを設定します。",
+      "accessGo_other": "{{count}}件に適用",
+      "accessDone_other": "{{count}}件のアクセスを変更しました",
+      "delete": "削除",
+      "deleteTitle_other": "{{count}}件を削除しますか？",
+      "deleteText": "エージェントはもう使えなくなります。元に戻せません。",
+      "deleteGo_other": "{{count}}件を削除",
+      "deleted_other": "{{count}}件をVaultから削除しました",
+      "kept_other": "パスワードマネージャーの{{count}}件は残っています。そちらで削除してください。"
     },
     "kind": {
       "login": "ログイン",
@@ -4672,7 +4704,6 @@
       },
       "as": "保存先",
       "asPersonal": "あなただけに表示されます。",
-      "asTeam": "ワークスペースの全員に表示されます。あとで項目ごとにエージェントを選んでください。",
       "deleteFile": "あとでファイルを削除してください。パスワードが暗号化されずに入っています。",
       "confirm_other": "{{count}}件をインポート",
       "done_other": "{{count}}件のログインをインポートしました",
@@ -4894,8 +4925,16 @@
     "expiredChip": "期限切れ · {{when}}",
     "canceledChip": "キャンセル済み · {{when}}",
     "line": {
-      "after": "「{{title}}」の後に実行",
       "notRun": "未実行：前の依頼が承認されませんでした"
+    },
+    "held": {
+      "waiting": "<link/> を待っています",
+      "runNow": "今すぐ実行"
+    },
+    "byAgent": {
+      "head_other": "{{name}} からの依頼 {{count}} 件",
+      "approve": "すべて承認",
+      "refuse": "すべて却下"
     },
     "waitingFor": "{{name}}の対応待ち",
     "waitingAdmin": "管理者の対応待ち",
@@ -5319,7 +5358,8 @@
       "provider_unavailable": "モデルが応答しませんでした",
       "gave_up": "何度か試してもモデルが応答しませんでした",
       "missing_credential": "APIキーがありません",
-      "credential_revoked": "APIキーが取り消されました"
+      "credential_revoked": "APIキーが取り消されました",
+      "credential_unreadable": "保存されたAPIキーを開けません"
     },
     "youReplied": "あなたの返信: {{text}}",
     "actions": "操作",
@@ -5457,7 +5497,6 @@
       "queued": "順番待ち",
       "notRun": "未実行"
     },
-    "queuedLine": "承認済み。先に依頼された「{{title}}」の後に実行されます。",
     "notRunRefused": "先に依頼された「{{title}}」が、これを承認した後に却下されたため、これは実行されませんでした。",
     "notRunExpired": "先に依頼された「{{title}}」が、これを承認した後に判断のないまま期限切れになったため、これは実行されませんでした。",
     "notRunEarlier": "これを承認した後に前の依頼が却下されたか期限切れになったため、これは実行されませんでした。",
@@ -5677,6 +5716,7 @@
           "low": "低",
           "medium": "中",
           "high": "高",
+          "xhigh": "さらに高い",
           "max": "最大"
         },
         "effortsLower": {
@@ -5684,6 +5724,7 @@
           "low": "低",
           "medium": "中",
           "high": "高",
+          "xhigh": "さらに高い",
           "max": "最大"
         },
         "effortText": {
@@ -5693,6 +5734,7 @@
           "mediumKey": "たいていは十分に考えます。",
           "none": "モデルはいつもどおりに考えます。レベルを選ぶと固定できます。",
           "high": "難しいタスクでより深く考えます。時間とコストがかかります。",
+          "xhigh": "最も難しいタスクで「高」より長く考えます。さらに遅く、費用もかかります。",
           "max": "できる限り深く考えます。かなり時間とコストがかかります。"
         },
         "speed": "速度",
@@ -5866,6 +5908,8 @@
           "limitSoon": "{{account}}はプランが更新されたら戻ります",
           "limitHelp": "それまでの間、{{name}}は接続済みの別のアカウントで考えられます。",
           "fullWait": "このアカウントでは、{{name}}はプランが更新されるまで待ちます。",
+          "switchTo": "{{label}}に切り替え",
+          "seeUsage": "使用量を見る",
           "modelTitle": "{{name}}のモデル",
           "moreTitle": "{{name}}のその他のオプション",
           "computer": "コンピューター",
@@ -6231,6 +6275,7 @@
         "interrupted": "サーバーの再起動で中断されました。",
         "missing_credential": "ワークスペースに{{provider}}のキーがありません。",
         "credential_revoked": "このエージェントのキーは無効化されています。",
+        "credential_unreadable": "保存されたAPIキーを開けません。多くの場合、キーの保存後にサーバーのシークレットが変わったことが原因です。AIキーでキーをもう一度貼り付けてください。",
         "credential_wrong_provider": "モデルは{{modelProvider}}のものですが、キーは{{keyProvider}}のものです。",
         "model_unlisted": "OpenRouterでは{{model}}が提供されなくなりました。エージェントの設定で別のモデルを選んでください。",
         "no_ai": "エージェントに使えるAIがありませんでした。",
@@ -6246,6 +6291,7 @@
         "cli_failed": "エラーで{{brain}}が停止しました: {{detail}}",
         "cli_stopped": "エラーで{{brain}}が停止しました。",
         "cli_closed": "突然{{brain}}が終了しました。",
+        "cli_empty": "{{brain}}が回答せずにターンを終えました。もう一度聞いてください。繰り返す場合は、コンピューターの{{brain}}を更新するか、エージェントの設定で別のAIを選んでください。",
         "cli_sandbox": "{{brain}}がこのコンピューターでサンドボックスを起動できません。エージェントの設定で別のAIを選んでください。",
         "cli_system": "{{brain}}はこのコンピューターのシステムではまだ動きません。エージェントの設定で別のAIを選んでください。",
         "account_missing": "このエージェント用に選んだアカウントが、もうコンピューターにありません。エージェントの設定で別のアカウントを選ぶか、もう一度追加してください。",
@@ -6610,6 +6656,7 @@
         "desc": "すべてのエージェントがこれを読みます。いつでも変更できます。",
         "line": "一文で",
         "optional": "任意です。文がなければ選んだ種類が使われます。",
+        "otherNeeded": "「その他」のときは、ここに何をしているか書くと続けられます。",
         "todoPersonal": "あなたのことを少し教えてください。",
         "todoDescPersonal": "すべてのエージェントがこれを読みます。",
         "donePersonal": "あなたのことを少し知っています",
@@ -7420,6 +7467,10 @@
       "expires": "あと{{left}}で期限切れ",
       "expired": "{{when}}に期限切れ",
       "resentState": "再送信済み · {{date}}まで有効",
+      "undelivered": {
+        "suppressed": "届いていません：以前の不達により、メールプロバイダーがこのアドレスへの送信を止めています。正しいか確認して再送するか、リンクをコピーしてください。",
+        "rejected": "届いていません：このアドレスは拒否されました。正しいか確認するか、リンクをコピーして別の方法で送ってください。"
+      },
       "copied": "{{email}}への招待リンクをコピーしました。メールに記載されたものと同じです。",
       "copiedNoEmail": "{{email}}への招待リンクをコピーしました。",
       "resent": "{{email}}にもう一度送信しました。リンクは同じで、{{date}}まで有効です。",
@@ -7588,6 +7639,9 @@
     "link": "リンク",
     "linkEmpty": "リンクを作成するとコピーできます",
     "linkFailed": "リンクを作成できませんでした。{{cause}}",
+    "localOnly": "このサーバーは動いているコンピューターでしか開けないため、招待した人は招待を開けません。",
+    "localOnlyHow": "そのコンピューターのagentes.chatアプリで、環境設定 › サーバーの「スマートフォンやチームメイトからアクセスする」をオンにするか、招待する人が開けるサーバーでagentes.chatを動かしてください。そのあとで招待してください。",
+    "localOnlyHere": "「スマートフォンやチームメイトからアクセスする」をオンにしてから、招待してください。",
     "never": "無期限",
     "untilDate": "{{date}}まで",
     "validFor": "作成から{{ttl}}有効です。",
@@ -7666,11 +7720,12 @@
     "noOrgBack": "自分のワークスペースに戻る",
     "crashTitle": "問題が発生しました",
     "crashText": "続けるにはページを再読み込みしてください。",
-    "crashCode": "助けを求めるときは、コード{{id}}を伝えてください。",
+    "supportCode": "サポート用コード",
     "unreachableTitle": "agentes.chatに接続できません",
     "unreachableText": "再起動中かもしれません。復旧しだい、このページは自動で開きます。",
     "offlineTitle": "オフラインです",
     "offlineText": "オンラインに戻ると、このページは自動で開きます。",
+    "waitingConnection": "接続が戻るのを待っています",
     "unknownHostTitle": "このアドレスはまだ設定されていません",
     "unknownHostText": "接続したばかりなら、数分後にもう一度お試しください。",
     "unknownHostTab": "未設定のアドレス · agentes.chat"
@@ -8347,6 +8402,13 @@
     "notFound": "このルーティンは存在しないか、アクセス権がありません。",
     "copyWebhook": "Webhook URLをコピー",
     "webhookCopied": "Webhook URLをコピーしました。",
+    "runCalls": {
+      "show": "呼び出し（{{n}}）",
+      "hide": "呼び出しを隠す",
+      "cut": "短縮済み",
+      "binary": "テキストではないため保存されていません",
+      "copied": "呼び出しをコピーしました。"
+    },
     "webhook": {
       "when": "Webhookが呼ばれたとき",
       "waiting": "次の呼び出しを待機中",
@@ -8372,8 +8434,11 @@
       "signature": "署名",
       "signedOff": "オフ: アドレスへのすべての呼び出しがエージェントに届きます。",
       "signedOn": "オン: シークレットで署名された呼び出しだけが届きます。",
-      "signedHelp": "本文（GETの呼び出しではクエリ文字列、?を除く）のHMAC-SHA256をX-Agentes-Signature（sha256=…）で送ってください。GitHubのX-Hub-Signature-256も使えます。",
+      "signedHelp": "本文（GETの呼び出しではクエリ文字列、?を除く）のHMAC-SHA256をX-Agentes-Signature（sha256=…）で送ってください。GitHubのX-Hub-Signature-256も使えます。Linearの場合は、Linearが表示する署名シークレットを貼り付けてください。Linear-Signatureが確認され、1分以上前の呼び出しは拒否されます。",
       "addSecret": "署名を必須にする",
+      "pasteSecret": "サービスのシークレットを使う",
+      "pasteLabel": "サービスの署名シークレット",
+      "secretPasted": "シークレットを保存しました。これで署名された呼び出しだけが通ります。",
       "newSecret": "新しいシークレット",
       "newSecretTitle": "新しいシークレットを作成しますか？",
       "newSecretBody": "現在のシークレットはすぐに使えなくなります。このルーティンを呼び出すサービスを更新するまで、古いシークレットで署名された呼び出しは拒否されます。",
@@ -8670,6 +8735,11 @@
         "text": "メールが届くと、エージェントが返信案を作ります。",
         "prompt": "届いたメールを読み、内容と緊急度を教えてください。返信案を書きますが、送信はしないでください。"
       },
+      "inbox": {
+        "name": "返信が必要なメール",
+        "text": "平日9時と14時に、返信が必要なメールを下書き付きで。",
+        "prompt": "前回以降に届いたメールを確認してください。返信が必要なものを緊急度の高い順に挙げ、それぞれに送信はせずに返信の下書きを書いてください。"
+      },
       "tickets": {
         "name": "未返信のチケット",
         "text": "平日9時と14時に、まだ待っている人を確認します。",
@@ -8754,6 +8824,11 @@
         "name": "新しいPRをレビュー",
         "text": "PRが作成されると、エージェントが読んでコメントします。",
         "prompt": "新しいPRの差分を読み、リスクを指摘し、手動でテストすべき点を伝えてください。"
+      },
+      "openPrs": {
+        "name": "レビュー待ちのPR",
+        "text": "平日10時に、まだ誰もレビューしていない未完了のPR。",
+        "prompt": "まだレビューを待っている未完了のPRを確認してください。それぞれについて、何を変更するか、どれくらい待っているか、最初に何を見るべきかを書いてください。"
       },
       "week": {
         "name": "週のまとめ",
@@ -8886,6 +8961,7 @@
     "busyAnyComputer_other": "コンピューターで1日{{count}}回実行されるため、電源を入れたままにする必要があります。",
     "outcome": {
       "queued": "順番待ち",
+      "queuedBehind": "順番待ち: ルーティン「{{name}}」の終了を待っています",
       "running": "作業中",
       "waiting": "誰かの回答を待機中",
       "waitingApproval": "あなたの承認待ち",
@@ -8934,6 +9010,7 @@
       "stuck": "行き詰まったため停止しました",
       "missing_credential": "APIキーがありません",
       "credential_revoked": "APIキーが無効化されました",
+      "credential_unreadable": "保存されたAPIキーを開けません",
       "credential_wrong_provider": "APIキーが別のプロバイダーのものです",
       "model_unlisted": "OpenRouterでこのモデルが提供されなくなりました",
       "agent_archived": "エージェントがアーカイブされました",
@@ -10171,6 +10248,7 @@
       "app": "GitHub Appからアクセスできません。{{owner}}のアプリにリポジトリを追加するか、GitHubを接続してください。"
     },
     "pickLead_other": "このリンクには{{count}}件のスキルがあります。インストールするものを選んでください。",
+    "pickLeadZip_other": "この.zipには{{count}}件のスキルがあります。インストールするものを選んでください。",
     "pickAll": "すべて",
     "pickMissing": "スキルを1つ以上選んでください。",
     "pickSkipped": "インストールできません。{{reason}}",
@@ -10178,7 +10256,8 @@
     "pickReplacesRemoved": "削除されたスキル {{name}} を置き換えます",
     "forAgent_other": "{{agent}} でオンにする",
     "installedMany": "{{count}}件のスキルをインストールしました。",
-    "zipHelp": "スキルのフォルダの.zip（最大{{max}} MB）。",
+    "zipHelp": "1つまたは複数のスキルのフォルダの.zip（最大{{max}} MB）。",
+    "zipManyHere_other": "この.zipには{{count}}件のスキルがあります。インストールするものを選ぶには、パソコンの「スキル」から行ってください。",
     "zipAbout": "SKILL.mdは.zipの最上位か、その中の唯一のフォルダに置きます。スキルが保持できるのはテキスト{{text}} MBまでと、画像などのファイル{{assets}} MBまでです。",
     "zipTooLarge": "{{name}}は{{size}}です。スキルの.zipは{{max}} MBまでです。",
     "zipUseLink": "GitHubのリンクを使う",
@@ -10293,7 +10372,155 @@
     "agentTitle": "スキル",
     "agentSubtitle": "{{name}}が必要なときに開けるもの。",
     "agentEmpty": "{{name}}にはまだスキルがありません。",
-    "manage": "スキルを管理"
+    "manage": "スキルを管理",
+    "page": {
+      "meta": "{{org}}のチームができること。",
+      "metaFor": "{{name}}が知っていることと、チームが教えられること。",
+      "metaFor_female": "{{name}}が知っていることと、チームが教えられること。",
+      "for": "対象",
+      "forEveryone": "すべてのエージェント",
+      "teachNew": "新しいことを教える",
+      "fromLink": "GitHubのリンクから取り込む",
+      "fromZip": ".zipをアップロード",
+      "haveOne": "用意したスキルがありますか？",
+      "fromLinkLower": "GitHubのリンクから取り込む",
+      "or": "または",
+      "fromZipLower": ".zipをアップロード",
+      "filters": "スキルを絞り込む",
+      "all": "すべて",
+      "learned": "エージェントが覚えたもの",
+      "mine": "自分のものだけ",
+      "colSkill": "スキル",
+      "colWho": "知っているエージェント",
+      "colWeek": "今週",
+      "noneHere": "まだスキルはありません。",
+      "inRepo_other": "{{count}}件のスキル",
+      "chooseVersion": "バージョンを選ぶ",
+      "onlyYours": "あなた専用",
+      "learnedBy": "{{name}}が覚えた",
+      "learnedBy_female": "{{name}}が覚えた",
+      "knows": "習得済み",
+      "teach": "教える",
+      "taught": "{{name}}が{{skill}}を覚えました。",
+      "taught_female": "{{name}}が{{skill}}を覚えました。"
+    },
+    "teach": {
+      "ask": "チームに何ができるようになってほしいですか？",
+      "askMine": "あなたのエージェントに何ができるようになってほしいですか？",
+      "help": "チームの新人に説明するように書いてください。{{name}}がスキルにまとめます。",
+      "help_female": "チームの新人に説明するように書いてください。{{name}}がスキルにまとめます。",
+      "writer": "あなたの右腕",
+      "placeholder": "例: 毎週月曜日に、サポートの受信箱から返金依頼を集め、7日以内か確認して、お客様一人ひとりに返信する。",
+      "who": "誰が覚えるか",
+      "nobody": "まだエージェントはいません",
+      "forTeam": "チーム全体",
+      "forMe": "自分だけ",
+      "haveOne": "用意したものがありますか？",
+      "link": "GitHubのリンク",
+      "zip": ".zipファイル",
+      "write": "スキルを書く",
+      "writing": "{{name}}が書いています…",
+      "writing_female": "{{name}}が書いています…",
+      "wrote": "このように書きました。保存する前に確認してください。",
+      "adjust": "調整",
+      "adjustPlaceholder": "調整したい点を書いてください。例: チリのお客様向けにスペイン語で",
+      "appsOk_other": "{{agents}}はすでに{{apps}}を使っています。",
+      "appMissing_other": "{{agents}}はまだ{{app}}を使っていません。",
+      "giveAccess": "アクセスを許可",
+      "save": "保存",
+      "saveFor": "保存して教える",
+      "saved_other": "{{skill}}の準備ができました。{{agents}}が覚えました。",
+      "savedNobody": "{{skill}}の準備ができました。スキルのページでエージェントに教えてください。"
+    },
+    "one": {
+      "how": "やり方",
+      "teachOther": "ほかのエージェントに教える",
+      "editText": "テキストを編集",
+      "rename": "名前を変更",
+      "name": "名前",
+      "nameHelp": "空欄にすると、元の名前「{{name}}」に戻ります。",
+      "readMore": "もっと見る",
+      "download": ".zipをダウンロード",
+      "who": "知っているエージェント",
+      "nobody": "まだエージェントはいません",
+      "change": "変更",
+      "week": "今週",
+      "times_other": "{{count}}回",
+      "notUsed": "まだ使われていません",
+      "lastChange": "最終変更",
+      "byLink": "リンクから、{{when}}",
+      "someone": "誰か",
+      "never": "まだありません",
+      "from": "入手元",
+      "learnedBy": "{{name}}が習得、{{when}}",
+      "learnedBy_female": "{{name}}が習得、{{when}}",
+      "fromLink": "GitHubのリンク",
+      "fromLinkAuto": "GitHubのリンク、自動で更新",
+      "fromZip": ".zipファイル",
+      "madeBy": "{{name}}が作成、{{when}}",
+      "madeHere": "ここで作成",
+      "alsoUses": "ほかに使うもの",
+      "ask": "変更を依頼",
+      "askPlaceholder": "変更したい点を書いてください。例: 販売員ごとの売上を追加",
+      "askSend": "依頼する",
+      "askHelp_other": "{{agents}}がすぐに書き直します。元に戻すこともできます。",
+      "askHelpNobody": "あなたの右腕がすぐに書き直します。元に戻すこともできます。",
+      "changed": "{{name}}を依頼どおりに変更しました。",
+      "undone": "{{name}}を元に戻しました。",
+      "lastTimes": "最近の使用",
+      "noUses": "まだどのエージェントも使っていません。",
+      "quoted": "「{{words}}」",
+      "openConversation": "会話を開く",
+      "usedPrivately": "あなたが見られない会話で",
+      "inChannel": "#{{channel}}で{{agent}}が使用",
+      "inDm": "DMで{{name}}が使用",
+      "inTask": "タスクで{{name}}が使用",
+      "somewhere": "会話で{{name}}が使用",
+      "changes": "変更履歴",
+      "noChanges": "まだ変更はありません。",
+      "goneTitle": "このスキルはここにありません",
+      "gone": "削除されたか、ほかの人の個人用スキルです。",
+      "event": {
+        "created": "{{name}}が作成",
+        "installed": "{{name}}がインストール",
+        "edited": "{{name}}がテキストを編集",
+        "rewritten": "{{name}}が変更を依頼",
+        "rewrittenWords": "{{name}}の依頼:「{{words}}」",
+        "link": "リンクから更新",
+        "agent": "{{name}}が改善",
+        "restored": "{{name}}が復元",
+        "undone": "{{name}}が直前の変更を取り消し"
+      }
+    },
+    "agentTab": {
+      "title": "{{name}}ができること",
+      "title_female": "{{name}}ができること",
+      "sub": "仕事に応じて、ぴったりのスキルを開きます。",
+      "sub_female": "仕事に応じて、ぴったりのスキルを開きます。",
+      "emptyTitle": "{{name}}はまだスキルを知りません",
+      "emptyTitle_female": "{{name}}はまだスキルを知りません",
+      "empty": "チームがすでに知っていることや新しいことを、言葉で教えましょう。",
+      "week_other": "今週{{count}}回",
+      "lastUsed": "最終使用：{{when}}",
+      "notYet": "まだ使っていません",
+      "open": "スキルを開く",
+      "takeAway": "{{name}}から外す",
+      "takeAway_female": "{{name}}から外す",
+      "removed": "{{name}}から{{skill}}を外しました。",
+      "removed_female": "{{name}}から{{skill}}を外しました。",
+      "learnedHere": "自分で覚えた",
+      "learnedHere_female": "自分で覚えた",
+      "couldLearn": "覚えられるもの",
+      "usedBy": "{{name}}が使用中",
+      "team": "チーム共有",
+      "learns": "自分で覚える",
+      "learns_female": "自分で覚える",
+      "learnsHelp": "{{name}}は同じやり方を何度か繰り返すと、それをスキルとして残し、使っているスキルも改善します。変更はここに表示され、「元に戻す」もできます。",
+      "learnsHelp_female": "{{name}}は同じやり方を何度か繰り返すと、それをスキルとして残し、使っているスキルも改善します。変更はここに表示され、「元に戻す」もできます。",
+      "madeMoved_other": "{{name}}が作った{{count}}件のスキルは「スキル」タブにあります。",
+      "madeMoved_female_other": "{{name}}が作った{{count}}件のスキルは「スキル」タブにあります。",
+      "seeSkills": "スキルを見る"
+    }
   },
   "edit": {
     "unsaved": "未保存の変更があります",
@@ -10698,7 +10925,9 @@
     "notice": {
       "only": "{{name}}は{{names}}にだけ返信します。",
       "some": "{{name}}は一部の人にだけ返信します。",
-      "nobody": "{{name}}は現在誰にも返信していません。"
+      "nobody": "{{name}}は現在誰にも返信していません。",
+      "noTalk": "あなたのロールには「エージェントと話す」が含まれていません。管理者がいずれかのロールに追加できます。",
+      "planOwnerOnly": "{{name}}は持ち主にしか応えないプランで考えています。{{name}}を管理している人が、{{name}}のページで「他の人にも返信する」をオンにできます。"
     }
   },
   "editors": {
@@ -10816,6 +11045,8 @@
       "on": "ボイスメッセージ",
       "onHelp": "このワークスペースの人は、会話で音声を送れます。",
       "noEngine": "ボイスメッセージはここではまだ使えません。",
+      "noEngineAsk": "ボイスメッセージはまだオンになっていません。このサーバーを管理している人が、このページでオンにします。",
+      "noEngineHere": "下で音声をテキストにするサービスを選ぶと、ボイスメッセージがオンになります。",
       "engineTitle": "音声をテキストにするサービス",
       "own": "自分のサーバー",
       "ownHelp": "自分のマシンで動く Whisper または Parakeet。音声はそこから出ません。",
@@ -11132,7 +11363,7 @@
   },
   "code": {
     "ranSummary_other": "{{language}}を{{count}}行実行 · 出力 {{size}}",
-    "show": "{{name}}のコードを見る",
+    "see": "コードを見る",
     "hide": "コードを隠す",
     "running": "{{name}}が実行中",
     "source": "コード（{{language}}）",
@@ -11993,6 +12224,8 @@
       "tool_offOne": "{{computer}} では {{program}} がオフです。",
       "not_installed": "{{computer}}に{{program}}がインストールされていません。",
       "cant_start": "{{program}} は {{computer}} にありますが、起動しません。",
+      "cli_outdated": "{{computer}}の{{program}}は、エージェントが使う前に更新が必要です。",
+      "cli_outdatedRun": "{{computer}}の{{program}}は、エージェントが使う前に更新が必要です。そこで {{command}} を実行してください。",
       "home_only": "{{computer}} の {{program}} は root 専用にインストールされていて、エージェントからは届きません。",
       "not_reported": "{{computer}}は、入っているプログラムをまだ確認しています。終わりしだい自動で切り替わります。",
       "system": "{{program}}は{{computer}}のシステムではまだ動きません。",
@@ -12073,7 +12306,13 @@
     "rule": "新しい作業はコンピューターに空きメモリがあるときに始まります。人が優先です。一緒にメンションされたエージェントは1つずつ始まります。",
     "spill": {
       "title": "あなたのコンピューター",
-      "text": "このコンピューターが満杯または不在のとき、あなたのエージェントはあなたのコンピューターで始められます。ミッション、コードセッション、リポジトリを持つエージェントはここに残ります。",
+      "text": "このコンピューターが満杯または不在のとき、あなたのエージェントはあなたのコンピューターで始められます。エージェントの作業に使うコンピューターには、依頼、ルーティン、長い作業が先に回ります。ミッション、コードセッション、リポジトリを持つエージェントはここに残ります。",
+      "use": {
+        "label": "{{name}} の手伝い方",
+        "off": "手伝わない",
+        "help": "このコンピューターが満杯か不在のとき",
+        "first": "自分のエージェントの作業用"
+      },
       "plan": "あなたの{{plan}}プラン"
     },
     "youFirst": "あなたが先です",
@@ -12107,6 +12346,7 @@
       "private": "非公開の会話"
     },
     "waiting": "順番待ち · まもなく開始",
+    "waitingAfter": "順番待ち · {{name}}の次",
     "nth": {
       "one": "{{n}}番目",
       "two": "{{n}}番目",
@@ -13102,6 +13342,26 @@
         "1": "ログとメトリクスを検索する",
         "2": "モニターとインシデントを見る"
       },
+      "datadog_us3": {
+        "1": "ログとメトリクスを検索する",
+        "2": "モニターとインシデントを見る"
+      },
+      "datadog_us5": {
+        "1": "ログとメトリクスを検索する",
+        "2": "モニターとインシデントを見る"
+      },
+      "datadog_eu": {
+        "1": "ログとメトリクスを検索する",
+        "2": "モニターとインシデントを見る"
+      },
+      "datadog_ap1": {
+        "1": "ログとメトリクスを検索する",
+        "2": "モニターとインシデントを見る"
+      },
+      "datadog_ap2": {
+        "1": "ログとメトリクスを検索する",
+        "2": "モニターとインシデントを見る"
+      },
       "grafana": {
         "1": "ダッシュボード、メトリクス、ログを見る",
         "2": "ダッシュボードとアラートを作成する"
@@ -13403,7 +13663,12 @@
       "cloudflare_bindings": "Cloudflare（Workers）",
       "cloudflare_observability": "Cloudflare（ログ）",
       "supabase_readonly": "Supabase（読み取り専用）",
-      "intercom_eu": "Intercom（EU）"
+      "intercom_eu": "Intercom（EU）",
+      "datadog_us3": "Datadog (US3)",
+      "datadog_us5": "Datadog (US5)",
+      "datadog_eu": "Datadog (EU)",
+      "datadog_ap1": "Datadog (AP1)",
+      "datadog_ap2": "Datadog (AP2)"
     },
     "descriptions": {
       "github": "コード、PR、Issue、Actions。",
@@ -13441,6 +13706,11 @@
       "vercel": "プロジェクト、デプロイ、ログ。",
       "railway": "プロジェクト、サービス、デプロイ、ログ。",
       "datadog": "ログ、メトリクス、モニター、インシデント（US1サイト）。",
+      "datadog_us3": "ログ、メトリクス、モニター、インシデント（US3サイト、us3.datadoghq.com）。",
+      "datadog_us5": "ログ、メトリクス、モニター、インシデント（US5サイト、us5.datadoghq.com）。",
+      "datadog_eu": "ログ、メトリクス、モニター、インシデント（EUサイト、app.datadoghq.eu）。",
+      "datadog_ap1": "ログ、メトリクス、モニター、インシデント（AP1サイト、ap1.datadoghq.com）。",
+      "datadog_ap2": "ログ、メトリクス、モニター、インシデント（AP2サイト、ap2.datadoghq.com）。",
       "grafana": "Grafana Cloudのダッシュボード、メトリクス、ログ、アラート。",
       "postman": "ワークスペース、コレクション、API。",
       "jam": "バグレポート: 録画、コンソールログ、ネットワークリクエスト。",
@@ -14234,6 +14504,7 @@
       "send_dm": "ダイレクトメッセージを送信",
       "read_conversation": "会話を読み取り",
       "add_agent_to_channel": "チャンネルにエージェントを追加",
+      "set_channel_lead": "チャンネルの責任者を選ぶ",
       "ask_agent": "別のエージェントに質問",
       "tell_agent": "別のエージェントに連絡",
       "find_agent": "エージェントを検索",
@@ -14444,7 +14715,15 @@
     "see": "見る",
     "seeAsks": "承認を求めるものを見る",
     "agentTitle": "{{name}}が使えるもの",
-    "agentSub": "コネクタと分野別。既定では、重要な操作は承認を求めます。"
+    "agentSub": "コネクタと分野別。既定では、重要な操作は承認を求めます。",
+    "instructions": {
+      "title": "サーバーの指示",
+      "hint": "これらのツールを使うエージェントは、自分の指示のあとにこのテキストを受け取ります。",
+      "chars": "{{used}} / {{max}} 文字",
+      "cut": "{{max}} 文字で切り詰め",
+      "off": "エージェントはこのテキストを受け取りません。",
+      "none": "サーバーは指示を送っていません。"
+    }
   },
   "connectFlow": {
     "steps": "ステップ",
@@ -14492,6 +14771,7 @@
     "serverSaid": "サーバーの応答: {{detail}}",
     "ownClient": {
       "title": "自分の OAuth アプリを使う",
+      "addressFirst": "先にサーバーの https アドレスを入力してください。",
       "notApproved": "{{name}} は承認したアプリしか受け付けず、agentes.chat はまだ承認されていません。自分のアプリで接続できます。",
       "askAdmin": "管理者がワークスペース独自のアプリで接続できます。",
       "help": "プロバイダーでアプリを作成し、このリダイレクト URI を登録して、クライアント ID を貼り付けてください。以後、このワークスペースからのサインインはすべてあなたのアプリを使います。",
@@ -14557,6 +14837,28 @@
       "asks_other": "{{count}}件の操作は、チャットで承認を求めます。",
       "adjust": "調整",
       "ok": "完了"
+    },
+    "routine": {
+      "inbox": "{{name}}があなたのメールを読み、返信が必要なものを下書き付きでDMで送ります。",
+      "dayPlan": "{{name}}があなたのカレンダーを見て、今日の会議と準備することをDMで送ります。",
+      "failed": "{{name}}が拒否、返金、異議申し立てを確認し、DMで知らせます。",
+      "leads": "{{name}}がCRMに入った人を確認し、誰から始めるかをDMで伝えます。",
+      "tickets": "{{name}}が返信待ちのチケットを見つけ、返信案付きでDMで送ります。",
+      "late": "{{name}}が期限切れのタスクを見つけ、それぞれの担当者をDMで伝えます。",
+      "traffic": "{{name}}がサイトの数値を確認し、前の週から何が変わったかをDMで伝えます。",
+      "openPrs": "{{name}}がレビュー待ちのPRを確認し、最初に見るべきものをDMで伝えます。",
+      "errors": "{{name}}が新しいエラーを確認し、対応が必要なものをDMで伝えます。",
+      "noAgent": "上でエージェントにアクセスを与えると、エージェントがこれを引き受けます。",
+      "preparing": "ルーティンを準備しています…",
+      "who": "担当",
+      "when": "タイミング",
+      "on": "ルーティン「{{name}}」を作成",
+      "created": "ルーティンを作成しました: {{name}}",
+      "createdDetail": "{{agent}}が始めました。最初のまとめはDMに届きます。",
+      "undo": "元に戻す",
+      "undone": "ルーティンを取り消しました",
+      "notCreated": "ルーティンを作成できませんでした。ルーティンから作成できます。",
+      "mailboxOnly": "{{address}}のメールボックスのみ。"
     },
     "git": {
       "token": "アクセストークン",
@@ -15230,6 +15532,7 @@
       "privateNetwork": "このアドレスはプライベートネットワーク上にあります。公開アドレスを使うか、セルフホストのサーバーでは `OUTBOUND_ALLOW_CIDRS` で許可してください。",
       "tooLong": "長すぎます。短くして、もう一度お試しください。",
       "updateComputerApp": "コンピューターのアプリが古すぎます。更新して、もう一度お試しください。",
+      "cliNotFetched": "このコンピューターはそのプログラムを自分で取得しません。",
       "computerUpdatesItself": "ワークスペースのコンピューターはこのために自動で更新されます。少ししてからもう一度お試しください。",
       "notInvited": "この予定には招待されていません。",
       "offHere": "ここではオフになっています。",
@@ -15318,6 +15621,7 @@
       "headersWithSignIn": "このサーバーはログインを求めていますが、ログインではまだヘッダーを送れません。ヘッダーを削除してログインするか、APIキーで接続してください。",
       "headersUnreadable": "保存済みのヘッダーを読み込めませんでした。もう一度入力するか、削除してください。",
       "noOAuth": "この MCP サーバーは OAuth でサインインしないため、独自のアプリは使えません。API キーで接続してください。",
+      "oauthDiscovery": "この MCP サーバーは OAuth でサインインしますが、{{host}} にあるサインイン情報を読み取れませんでした。数分後にもう一度お試しください。",
       "ownClientInUse": "以前保存したアプリでサインインしているアカウントがまだあります。先に接続を解除してから変更してください。",
       "ownClientId": "クライアント ID を確認してください。プロバイダーの表示どおりの 1 語です。"
     },
@@ -15545,6 +15849,8 @@
       "notLinkMaker": "このコンピューターを参加させられるのは、リンクを作った人だけです。",
       "widenForbidden": "管理者は、誰かの個人デバイスを使える人を絞ることしかできません。",
       "spillOwnerOnly": "このコンピューターを接続した人だけが手伝いをオンにできます。オフにはできます。",
+      "shareOwnerOnly": "このコンピューターを接続した人だけが、エージェントにそのインターネットを使わせられます。オフにすることはできます。",
+      "shareConnectedOnly": "インターネットをエージェントと共有できるのは、誰かが接続したコンピューターだけです。",
       "tasksOwnerOnly": "同時に実行するタスクの数を変えられるのは、このコンピューターを接続した人だけです。",
       "tasksCloud": "このコンピューターのタスク用の余裕は Cloud が自動で決めます。",
       "notHome": "エージェントはワークスペースのコンピューターにいて、名前を指定したときにこのコンピューターを使います。"
@@ -15564,6 +15870,7 @@
       "askSelf": "あなたのコンピューターです。ボタンでオンにしてください。",
       "adminAskSelf": "ここで自分で行えます。",
       "accountMethodUnsupported": "このコンピューターでは、まだこの方法でClaudeを接続できません。コンピューターのagentes.chatプログラムを更新するか、APIキーを使ってください。",
+      "windowsOneGemini": "WindowsではGeminiアカウントは1台のコンピューターで一度に1つしか使えません。このアカウントでサインインするには、このコンピューターからもう一方のGeminiアカウントを削除してください。",
       "brainUnavailable": "このAIは{{computer}}でまだ設定されていません。そちらで設定するか、別のAIを選んでください。",
       "offline": "{{name}}は現在オフラインです。戻ったらもう一度お試しください。",
       "paused": "{{name}}は一時停止中です。再開されるまで新しいものは始まりません。",
@@ -15578,6 +15885,8 @@
     "skill": {
       "noSkillMd": "{{path}}とその中のフォルダにSKILL.mdがありません。",
       "tooManySkills": "このリンクには{{max}}個を超えるスキルがあります。いずれかのフォルダをリンクしてください。",
+      "zipTooManySkills": "この.zipには{{max}}個を超えるスキルがあります。いくつかに分けて送ってください。",
+      "zipTooBig": "この .zip は {{maxMb}} MB を超えています。スキルのインストールの上限です。",
       "invalidName": "名前には小文字、数字、ハイフンを使い、{{max}}文字以内にしてください。",
       "invalidDescription": "説明は1〜{{max}}文字にしてください。",
       "tooLarge": "このスキルのテキストとスクリプトは{{size}} MBで、上限は{{max}} MBです。",
@@ -15593,7 +15902,14 @@
       "linkHoldsSeveral": "リンクに複数のスキルが含まれるようになりました。このスキル専用のフォルダーからもう一度インストールしてください。",
       "linkRenamed": "リンクのスキルが{{name}}になりました。",
       "noLink": "リンクからインストールしたスキルだけが、そのリンクから更新されます。",
-      "noPendingUpdate": "このスキルの更新待ちはありません。"
+      "noPendingUpdate": "このスキルの更新待ちはありません。",
+      "pickedTwice": "選んだスキルのうち2つが「{{name}}」という名前です。どちらか1つだけ選んでください。",
+      "draftUnavailable": "今はスキルを書けるAIモデルがありません。少し待ってからもう一度お試しください。",
+      "draftFailed": "スキルを書けませんでした。もう一度お試しください。",
+      "draftEmpty": "仕事のやり方を書いてください。",
+      "changeEmpty": "変更したい点を書いてください。",
+      "secret": "パスワードかキーのようです。スキルには入れられません。",
+      "permissions": "スキルで権限や承認を変えることはできません。"
     },
     "agentGroup": {
       "notFound": "この部署はもうありません。",
@@ -15602,6 +15918,7 @@
     },
     "rightHand": {
       "permanent": "右腕はワークスペースの一部で、チャンネルには入りません。@メンションすれば、どのチャンネルでも呼べます。",
+      "computer": "右腕は常にワークスペース自身のコンピューターを使うため、別のコンピューターは選べません。このコンピューターで作業するにはエージェントを作成してください。",
       "updateApp": "このアプリは古いため、このカードを適用できません。アプリを更新するか、設定で変更してください。",
       "nobodyNew": "このカードの全員が、すでに参加しているか招待済みです。カードを破棄するか、「メンバーと招待」で招待を再送してください。"
     },
@@ -15696,7 +16013,10 @@
       "restart": "ネットワークを反映するため、コンピューターのセッションを再起動しています。新しい作業は完了まで待機します。",
       "line": "出口IP {{ip}}",
       "hint": "エージェントがブラウズするときにサイトから見えるアドレスです。コンピューターのネットワークが変わると更新されます。",
-      "waiting": "エージェントのインターネットに再接続しています。戻るまで接続は待機します。"
+      "waiting": "エージェントのインターネットに再接続しています。戻るまで接続は待機します。",
+      "via": "エージェントは {{name}} のインターネットを使っています",
+      "viaBy": "エージェントは {{name}}（{{person}}）のインターネットを使っています",
+      "viaHint": "サイトからはそのコンピューターの場所が見えます。接続した人はそのページでオフにできます。"
     },
     "moving": {
       "short": "サーバー移行中",
@@ -15743,6 +16063,10 @@
       "outdated": "ここから一時停止するには、このコンピューターのagentes.chatアプリを更新してください。",
       "paused": "{{name}}を一時停止しました",
       "resumed": "{{name}}が作業を再開しました"
+    },
+    "runnerBehind": {
+      "command": "{{computer}} の agentes.chat プログラムが古いため、一部の機能が動きません。更新するには、そのコンピューターでこれを実行してください:",
+      "installer": "{{computer}} の agentes.chat プログラムが古いため、一部の機能が動きません。更新するには、そのコンピューターでインストールコマンドを root としてもう一度実行してください。"
     },
     "seenNow": "接続中",
     "seen": "最終接続 {{when}}",
@@ -15848,6 +16172,16 @@
       "diskFullNotice": "{{name}}のディスクがもうすぐいっぱいです"
     },
     "chromeMissingNotice": "{{name}}でエージェントのブラウザを使うにはGoogle Chromeが必要です。google.com/chromeからダウンロードしてください",
+    "outage": {
+      "down": "{{name}}が応答していません",
+      "back": "{{name}}が復旧しました",
+      "since": "{{time}}から",
+      "backAfter": "{{away}}後に復旧",
+      "waiting": "待機中：{{what}}",
+      "waited": "待機していたもの：{{what}}",
+      "runs_other": "エージェントへのリクエスト{{count}}件",
+      "calls_other": "Webhook呼び出し{{count}}件"
+    },
     "access": {
       "folders": "許可されたフォルダ",
       "ownFolder": "各エージェントのフォルダ",
@@ -15979,8 +16313,16 @@
     "spillOwnHint": "あなたのエージェントのコンピューターが満杯または不在のとき、その返信、依頼、ルーティンはあなたのサインインでここで考えられます。",
     "spillTeamHint": "エージェントのコンピューターが満杯または不在のとき、その返信、依頼、ルーティンはこのコンピューター上のオーナーのサインインでここで考えられます。",
     "spillWorkspaceOff": "管理者がワークスペース全体でこれをオフにしました。",
+    "spillFirst": "このコンピューターを自分のエージェントの作業に使う",
+    "spillFirstHint": "エージェントへの依頼、ルーティン、長い作業は、このコンピューターが空いていればここで、ここに接続した AI で始まります。人への返信がここで始まるのは、チームのコンピューターが満杯または不在のときだけです。",
     "helpWorkspace": "チームのコンピューターが満杯または不在のとき、ほかのコンピューターが手伝う",
     "helpWorkspaceHint": "各コンピューターはオーナーが許可した場合だけ手伝います。オフ：オーナーの選択に関係なく、どれも手伝いません。",
+    "shareInternet": "エージェントがこのコンピューターのインターネットを使う",
+    "shareInternetHint": "エージェントが開くサイトはこのコンピューターの接続を通るため、サイトからはあなたの場所が見えます。対象はウェブサイトのみ、1日5 GBまでで、あなた自身のネットワーク上のものには決してアクセスしません。このコンピューターがオフラインの間、エージェントはいつもの接続を使います。",
+    "shareInternetInUse": "使用中",
+    "shareInternetOther": "エージェントは今 {{name}} を使っています",
+    "shareInternetPick": "これを使う",
+    "shareInternetJoin": "エージェントはこのコンピューターのインターネットを通してもサイトを開くため、サイトからはあなたの場所が見えます。そのページでオフにできます。",
     "connectedBy": "{{name}}が接続",
     "downloadFor": "{{system}}版をダウンロード",
     "downloadApp": "アプリをダウンロード",
@@ -16509,6 +16851,10 @@
       "toolRequest": "<b>{{who}}</b> があなたの <b>{{deviceName}}</b> で{{tool}}をオンにするよう頼んでいます",
       "cliRequest": "<b>{{who}}</b> が <b>{{deviceName}}</b> に {{tool}} をインストールするよう求めています",
       "folderRequest": "<b>{{who}}</b> があなたの <b>{{deviceName}}</b> でフォルダ {{path}} を求めています",
+      "internetShared": "エージェントは今後 <b>{{deviceName}}</b> のインターネットを通じてウェブサイトを開きます",
+      "internetSharedLine": "対象はこのワークスペースのエージェントのみ、ウェブサイトのみ、1日5 GBまで。そのコンピューターのネットワーク内には一切アクセスしません。オフラインの間は、いつもの接続を使います。",
+      "internetOff": "オフにする",
+      "internetOffDone": "エージェントは {{deviceName}} のインターネットを使わなくなりました。",
       "once": "今回のみ許可",
       "always": "常に許可",
       "no": "許可しない",
@@ -16630,6 +16976,62 @@
     "deniedTitle": "接続されていません",
     "denied": "コンピューターは接続されませんでした。開いたのがあなたでなければ、誰もアクセスしていません。",
     "home": "agentesへ移動"
+  },
+  "integrations": {
+    "badge": "アプリ",
+    "unknownApp": "アプリ",
+    "appTip": "{{name}} はこのワークスペースに接続されたアプリです。人としてではなく、アプリ自身として投稿します。",
+    "sender": "{{sender}} から",
+    "senderTip": "{{sender}} が agentes.chat の外で書いたものを {{name}} が転送しました。",
+    "connect": "アプリを接続",
+    "emptyTitle": "アプリはまだありません",
+    "empty": "サポートボット、フォーム、監視ツールなどが、専用のトークンでアプリ自身としてここに投稿します。",
+    "api": "アプリの呼び出し先",
+    "apiHelp": "API と MCP のアドレス。アプリのトークンを Bearer として送ります。",
+    "apiCopied": "アドレスをコピーしました",
+    "help": "サポートボットの接続方法",
+    "name": "名前",
+    "color": "色",
+    "colorOf": "色 {{color}}",
+    "channels": "チャンネル",
+    "channelsHelp": "投稿するチャンネルでエージェントの返信を読みます。",
+    "channelsEmpty": "ワークスペースにはまだチャンネルがありません。",
+    "access": {
+      "none": "アクセスなし",
+      "read": "読む",
+      "post": "読む・投稿する"
+    },
+    "webhook": "Webhook のアドレス",
+    "webhookHelp": "ここでのエージェントの返信は、署名付きでこのアドレスに送られます。空欄の場合、アプリは API で読み取ります。",
+    "save": "保存",
+    "create": "接続",
+    "edit": "編集",
+    "actions": "{{name}} の操作",
+    "newToken": "新しいトークン",
+    "revoke": "トークンを取り消す",
+    "newSecret": "新しい Webhook シークレット",
+    "remove": "削除",
+    "tokenTitle": "{{name}} のトークン",
+    "secretTitle": "{{name}} の Webhook シークレット",
+    "secretUse": "各配信の webhook-signature ヘッダーをこれで確認してください（Standard Webhooks）。",
+    "secretCopied": "シークレットをコピーしました",
+    "tokenUse": "アプリは毎回の呼び出しで Authorization: Bearer として送ります。",
+    "revokeTitle": "{{name}} のトークンを取り消しますか？",
+    "revokeText": "新しいトークンを作るまで、すぐに投稿も読み取りもできなくなります。",
+    "newTokenTitle": "{{name}} の新しいトークンを作りますか？",
+    "newTokenText": "今のトークンはすぐに使えなくなります。",
+    "newSecretTitle": "{{name}} の新しい Webhook シークレットを作りますか？",
+    "newSecretText": "配信はすぐに新しいシークレットで署名されます。アプリにも設定しないと、署名の確認に失敗します。",
+    "removeTitle": "{{name}} を削除しますか？",
+    "removeText": "メッセージは残ります。投稿も読み取りもできなくなります。",
+    "removed": "{{name}} を削除しました",
+    "revoked": "トークンを取り消しました",
+    "facts": {
+      "token": "末尾が {{hint}} のトークン",
+      "noToken": "トークンなし",
+      "channels_other": "{{count}} チャンネル",
+      "webhookFailed": "Webhook が失敗しています（{{why}}）"
+    }
   },
   "apps": {
     "connect": "アプリを接続",
@@ -17001,6 +17403,8 @@
         "item_created": "Vaultに項目を保存",
         "item_changed": "Vaultの項目を変更",
         "item_deleted": "Vaultの項目を削除",
+        "items_changed_other": "Vaultの{{count}}件にアクセスできる人を変更",
+        "items_deleted_other": "Vaultの{{count}}件を削除",
         "item_moved": "Vaultの項目を個人とチームの間で移動しました",
         "item_used": "Vaultの項目を使用",
         "imported": "Vaultにパスワードをインポート",
@@ -17150,6 +17554,7 @@
       "billing": "プランと請求",
       "media": "GIFとステッカー",
       "voice": "音声",
+      "integrations": "連携",
       "apps": "AIアプリ",
       "approvals": "承認",
       "about": "agentes.chat について",
@@ -17181,6 +17586,7 @@
       "billing": "プラン、カード、請求書は、アプリ外の当社ページにあります。",
       "media": "会話で送れるものと、エージェントのGIFやステッカー。",
       "voice": "会話でのボイスメッセージと、音声をテキストにするサービス。",
+      "integrations": "サポートボットのように、アプリ自身としてチャンネルに投稿するアプリ。",
       "apps": "Claude、Cursor などのアプリからエージェントにタスクを頼めます。",
       "approvals": "エージェントがあなたの承認を求めたとき、代わりに決める人。",
       "about": "開発元、ライセンス、ソースコードの場所。",
@@ -17792,9 +18198,9 @@
   },
   "work": {
     "handed": {
-      "lead": "<0/>{{name}}に引き継ぎ",
+      "lead": "<0>{{name}}</0>に引き継ぎ",
       "working": "作業中",
-      "done": "{{duration}}で完了",
+      "ready": "完了",
       "waitingYou": "あなたの回答待ち",
       "waiting": "回答待ち",
       "waitingApprovalYou": "あなたの承認待ち",
@@ -17900,7 +18306,8 @@
     "spilled": {
       "full": "{{to}}で考えました：{{from}}が満杯でした。",
       "away": "{{to}}で考えました：{{from}}が不在でした。",
-      "itsComputer": "自分のコンピューター"
+      "itsComputer": "自分のコンピューター",
+      "chosen": "{{to}} で考えました。持ち主が自分のエージェントの作業に使っているコンピューターです。"
     },
     "modelStandIn": {
       "text": "{{plan}}がこのキーで{{from}}を拒否しました。このキーで使える{{to}}で返信しました。",
@@ -17931,6 +18338,7 @@
       "doing": "{{name}} {{doing}}",
       "yourApproval": "{{name}}があなたの承認を待っています",
       "yourAnswer": "{{name}}があなたの回答を待っています",
+      "helping": "{{to}}が{{from}}を手伝っています",
       "done": "{{to}}が完了しました。{{from}}が書いています",
       "notDone": "{{to}}は完了できませんでした。{{from}}が書いています",
       "handedOff": "{{to}}は{{from}}から任された作業をしています"
@@ -17951,7 +18359,7 @@
       "waitingApproval": "{{name}}は承認を待っています",
       "waitingInput": "{{name}}は回答を待っています",
       "waitingComputer": "{{name}}はコンピューターを待っています",
-      "waitingProvider": "{{name}}: AIプロバイダーが停止中 · 自動で再試行します",
+      "waitingProvider": "{{name}}: AIが応答していません · 自動で再試行します",
       "waitingAgents": "{{name}}は一部を引き継ぎ、返事を待っています",
       "queued": "{{name}}は順番待ちです"
     },
@@ -17962,7 +18370,7 @@
       "waitingApproval": "承認待ち",
       "waitingInput": "回答待ち",
       "waitingComputer": "コンピューター待ち",
-      "waitingProvider": "AIプロバイダー停止中",
+      "waitingProvider": "AIが応答していません",
       "waitingYourApproval": "あなたの承認待ち",
       "waitingYourAnswer": "あなたの回答待ち",
       "queued": "順番待ち",
@@ -17971,7 +18379,10 @@
       "noAnswer": "回答なし",
       "notFinished": "完了せず",
       "someAnswered": "{{total}}件中{{done}}件回答",
-      "labelMany": "{{from}}と{{to}}の会話"
+      "labelMany": "{{from}}と{{to}}の会話",
+      "askedHere": "→",
+      "forYou": "あなたの代わりに",
+      "askedIn": "{{channel}} で"
     },
     "consultPanel": {
       "label": "{{from}}と{{to}}の会話",
@@ -17984,7 +18395,8 @@
       "talk": "{{name}}と話す",
       "missing": "この会話はもうありません。",
       "helping": "{{name}}を手伝っています",
-      "see": "会話を見る"
+      "see": "会話を見る",
+      "relay": "{{name}}の回答：{{excerpt}}。会話を見る"
     },
     "unshown": "このメッセージを表示できませんでした",
     "unshownPart": "このメッセージの一部を表示できませんでした",
@@ -17995,8 +18407,12 @@
       "consultReplyAnon": "別のエージェントが回答しました",
       "agentNote": "{{from}}からのメモ",
       "agentNoteAnon": "別のエージェントからのメモ",
+      "handOff": "{{from}} から {{to}} への依頼",
       "waitResult": "{{name}}が待っていたものが届きました",
       "other": "{{name}}へのお知らせ",
+      "joined_other": "{{who}}がチャンネルに参加しました",
+      "joinedBy_other": "{{who}}がチャンネルに参加しました · {{by}}が追加",
+      "left": "{{who}}がチャンネルを退出しました",
       "wakeSkipped": "{{name}}のメンションは{{agents}}に届きませんでした",
       "wakeSkippedAnon": "{{name}} のメンションはほかのエージェントに届きませんでした",
       "wakeSkippedAudience": "{{agents}} を呼べるのは一部の人だけで、{{name}} のこの作業はその誰からの依頼でもありません。{{agents}} を呼べる人が依頼を引き継げます。",
@@ -18149,6 +18565,7 @@
         "usingScreen": "画面を使いました",
         "cloningRepo": "リポジトリをクローンしました",
         "listingRepos": "リポジトリを一覧表示しました",
+        "preparingCli": "{{app}}を準備しました",
         "openingPullRequest": "プルリクエストを作成しました",
         "handingOff": "レポートを届けました",
         "recordingFindings": "調査結果を記録しました",
@@ -18188,6 +18605,7 @@
         "workingOnWorkspace": "ワークスペースで作業しました",
         "updatingThread": "スレッドを更新しました",
         "addingAgent": "エージェントをチャンネルに追加しました",
+        "settingChannelLead": "チャンネルの責任者を選びました",
         "readingConversation": "会話を読みました",
         "usingTool": "ツール{{tool}}を使いました",
         "thinking": "考えました",
@@ -18271,6 +18689,8 @@
       "usingScreen": "画面を使用中",
       "cloningRepo": "リポジトリをクローン中",
       "listingRepos": "リポジトリを一覧表示中",
+      "preparingCli": "{{computer}}で{{app}}を準備中",
+      "preparingCliPct": "{{computer}}で{{app}}を準備中（{{percent}}%）",
       "openingPullRequest": "プルリクエストを作成中",
       "handingOff": "レポートを届けています",
       "recordingFindings": "調査結果を記録中",
@@ -18310,6 +18730,7 @@
       "workingOnWorkspace": "ワークスペースで作業中",
       "updatingThread": "スレッドを更新中",
       "addingAgent": "エージェントをチャンネルに追加中",
+      "settingChannelLead": "チャンネルの責任者を選択中",
       "readingConversation": "会話を読み中",
       "usingTool": "ツールを使用中"
     },
@@ -18387,6 +18808,7 @@
       "brain_unavailable_commands_off": "私のコンピューターで{{brain}}がオフになっています。管理している人がオンにしたら返信します。",
       "brain_unavailable_outdated": "{{brain}}が返信するには、私のコンピューターのプログラムを更新する必要があります。更新され次第返信します。",
       "brain_unavailable_plan_owner": "{{brain}}は私のオーナーのものではないプランで考えることになるため、使いません。私のページでオーナーのアカウントを接続してください。",
+      "brain_unavailable_shared_login": "私のコンピューターでは、すべてのエージェント用の Claude のログインを今は使えません。使えるようになったら返信します。失敗が続く場合は、AIアカウントで Claude を接続し直してください。",
       "provider_unavailable": "AIプロバイダーが現在応答していません。戻り次第すぐに返信します。",
       "provider_wait_rate_limit": "{{provider}}が現在このキーのリクエストを制限しています。可能になり次第すぐに返信します。",
       "provider_wait_down": "{{provider}}が現在停止中か、過負荷です。戻り次第すぐに返信します。",
@@ -18715,7 +19137,7 @@
     },
     "offer_connect_app": {
       "label": "アプリやMCPの接続を提案",
-      "description": "アプリやMCPサーバーをアドレスで接続するダイアログを開くボタン付きのカードを投稿します。"
+      "description": "アプリやMCPサーバーを接続するダイアログを開くボタン付きのカードを投稿します。カタログにあるものは名前で、それ以外はアドレスで接続します。"
     },
     "offer_invites": {
       "label": "メンバーの招待を提案",
@@ -18723,7 +19145,7 @@
     },
     "offer_install_skill": {
       "label": "スキルのインストールを提案",
-      "description": "スキルのリンクを入力済みのインストール画面を開くボタン付きのカードを投稿します。"
+      "description": "ボタンでインストール画面を開くカードを投稿します。スキルはリンクまたは .zip からすでに読み込まれています。"
     },
     "update_skill_from_source": {
       "label": "スキルをリンクから更新",
@@ -19423,6 +19845,9 @@
     "failed": "今は開けませんでした。少し待ってからもう一度お試しください。",
     "adminsOnly": "ワークスペースのagentes.chatプランを管理できるのは、オーナーと管理者だけです。",
     "seeOptions": "オプションを見る",
+    "plan": "プラン",
+    "planMonth": "{{plan}}（月払い）",
+    "planYear": "{{plan}}（年払い）",
     "people": "人",
     "files": "ファイル",
     "usedOf": "{{used}} / {{limit}}",
@@ -19599,6 +20024,14 @@
       "busy": "現在、見ている人が多すぎます。",
       "ended": "画面が閉じられました。",
       "retrying": "再試行中…"
+    },
+    "open": {
+      "gaveUp": "{{name}}の画面を開けませんでした。",
+      "slow": "いつもより時間がかかっています。",
+      "late": "{{computer}}の応答に時間がかかりすぎました。",
+      "dropped": "接続が切れました。",
+      "offline": "{{computer}}が応答していません。",
+      "refused": "{{computer}}は画面を開けませんでした。"
     },
     "retry": "もう一度試す",
     "takeover": "操作を代わる",
@@ -20128,7 +20561,7 @@
       "budgetSoon": "{{name}}の予算を少し待っています",
       "computer": "{{name}}のコンピューターを待っています",
       "busy": "{{name}}のコンピューターの空きを待っています",
-      "provider": "{{name}}のAIプロバイダーを待っています。{{when}}に再試行します"
+      "provider": "{{name}}のAIの応答を待っています。{{when}}に再試行します"
     },
     "menu": {
       "label": "その他",
@@ -20155,7 +20588,8 @@
     },
     "add": {
       "label": "ウィジェットを追加",
-      "short": "ウィジェット"
+      "short": "ウィジェット",
+      "word": "追加"
     },
     "alert": {
       "label": "何かおかしいときに知らせる",
@@ -20933,6 +21367,34 @@
     "approvals": "顧客に送るものはあなたの承認を待ちます。信頼できるようになったら、あとで任せられます。",
     "approvalsPersonal": "あなたの名前で送るもの、支払うもの、予約するものはすべて、あなたの承認を待ちます。信頼できるようになったら、あとで任せられます。"
   },
+  "paidMoment": {
+    "on": "プランが有効になりました",
+    "onPlan": "{{plan}}プランをご利用中です",
+    "onMonth": "{{plan}}プラン（月払い）をご利用中です",
+    "onYear": "{{plan}}プラン（年払い）をご利用中です",
+    "room": {
+      "both_other": "{{people}}人分の席と{{files}}のファイル容量があります。",
+      "people_other": "{{people}}人分の席があり、ファイル容量は無制限です。",
+      "files": "{{files}}のファイル容量があり、人数は無制限です。",
+      "none": "人数もファイル容量も無制限です。"
+    },
+    "computer": {
+      "on": "コンピューターは起動しています。",
+      "starting": "コンピューターを準備しています。",
+      "startingTold": "コンピューターを準備しています。起動したらお知らせします。"
+    },
+    "hello": "こんにちは、{{first}}さん",
+    "hi": "こんにちは",
+    "say": "みんなそろいました。さあ、始めましょう。",
+    "sayOn": "みんなそろって、コンピューターも起動しています。さあ、始めましょう。",
+    "sayStarting": "みんなそろいました。コンピューターが起動したらお知らせします。",
+    "next": {
+      "ai": "AIを接続",
+      "people": "メンバーを招待",
+      "open": "ワークスペースへ",
+      "talk": "{{name}}と話す"
+    }
+  },
   "arrival": {
     "beta": {
       "word": "BETA",
@@ -21048,6 +21510,92 @@
     "settingsText": "技術的な詳細を agentes.chat チームに送信します。"
   },
   "live": {
+    "type": {
+      "font": "フォント",
+      "search": "フォントを検索",
+      "noResults": "その名前のフォントはありません",
+      "list": "フォント",
+      "groups": {
+        "slides": "このプレゼンテーション",
+        "canvas": "このキャンバス",
+        "document": "このドキュメント",
+        "company": "会社のフォント",
+        "sans": "サンセリフ",
+        "serif": "セリフ",
+        "display": "見出し用",
+        "mono": "等幅",
+        "handwriting": "手書き"
+      },
+      "headings": "見出し",
+      "body": "本文",
+      "fromDrive": "Driveから",
+      "ownFont": "ファイルのフォント",
+      "fileFonts": {
+        "slides": "プレゼンテーションのフォント",
+        "document": "ドキュメントのフォント"
+      },
+      "fileFontsNote": "ファイル全体に適用されます。独自のフォントを持つテキストはそのままです。",
+      "headingFont": "見出しのフォント",
+      "bodyFont": "本文のフォント",
+      "bring": "Driveからフォントを取り込む…",
+      "bringButton": "Driveから取り込む",
+      "bringTitle": "Driveからフォントを取り込む",
+      "bringSearch": "Driveのフォントを検索",
+      "bringEmpty": "Driveにフォントがありません。先に .ttf、.otf、.woff のファイルをDriveに追加してください。",
+      "brought": "{{name}} をファイルに追加しました",
+      "notFont": "このファイルはフォントではありません。.ttf、.otf、.woff を選んでください。",
+      "done": "完了",
+      "text": "文字のスタイル",
+      "glyph": "Aa",
+      "weight": "太さ",
+      "weights": {
+        "w300": "細い",
+        "w400": "標準",
+        "w500": "中",
+        "w600": "やや太い",
+        "w700": "太い",
+        "w800": "極太"
+      },
+      "tracking": "文字間隔",
+      "trackings": {
+        "tight": "狭く",
+        "normal": "標準",
+        "open": "広く",
+        "wide": "とても広く"
+      },
+      "lineHeight": "行の高さ",
+      "caps": "すべて大文字",
+      "highlight": "蛍光ペン",
+      "highlights": {
+        "none": "なし",
+        "yellow": "黄",
+        "green": "緑",
+        "blue": "青",
+        "pink": "ピンク",
+        "orange": "オレンジ"
+      },
+      "effects": "効果",
+      "shadow": "影",
+      "shadows": {
+        "none": "なし",
+        "soft": "やわらかい",
+        "strong": "強い"
+      },
+      "border": "枠線",
+      "dashes": {
+        "solid": "実線",
+        "dashed": "破線",
+        "dotted": "点線"
+      },
+      "gradient": "グラデーション",
+      "gradients": {
+        "none": "なし",
+        "ocean": "オーシャン",
+        "graphite": "グラファイト",
+        "sunset": "夕焼け",
+        "violet": "バイオレット"
+      }
+    },
     "slides": {
       "rail": {
         "label": "スライド",

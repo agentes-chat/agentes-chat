@@ -1,7 +1,7 @@
 import { type Agent, type Me, type OrgSummary, useComputerSetup } from "@agenteschat/client";
 import { joinNames } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
-import { type AiChoice, gateDims, planLabel, planMark } from "@agenteschat/client/lib/no-ai";
+import { type AiChoice, gateDims, planLabel, planMark, planOffSystem } from "@agenteschat/client/lib/no-ai";
 import { can } from "@agenteschat/client/lib/permissions";
 import { isRightHand } from "@agenteschat/client/lib/right-hand";
 import { Button, Chip, Icon, ProviderLogo } from "@agenteschat/ui";
@@ -148,6 +148,7 @@ export function AiStep({
         <ConnectChoices
           mayAddKey={can(org, "manage_credentials")}
           dims={(c) => reader !== undefined && gateDims(gates.gateOf(c))}
+          offSystem={(c) => (reader !== undefined ? planOffSystem(t, gates.gateOf(c)) : null)}
           onPick={(choice) =>
             connect?.open({ ...connectRequest(choice, ids), ...(onConnected ? { onConnected } : {}) })
           }

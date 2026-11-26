@@ -1,6 +1,7 @@
 import type { AppNotification, NotificationActor } from "@agenteschat/client";
 import { appCreatedLine } from "@agenteschat/client/lib/apps";
 import { WORKSPACE_COMPUTER_KIND } from "@agenteschat/client/lib/computer";
+import { isComputerOutage } from "@agenteschat/client/lib/computer-outage";
 import { deviceNoticeOf } from "@agenteschat/client/lib/devices";
 import { formatUsd, namesText } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
@@ -112,6 +113,12 @@ export function SystemFace({ n, className = "nt-av24" }: { n: AppNotification; c
     return (
       <span className={cx("nt-sys", className)} aria-hidden="true">
         <Icon name="bulb" size={16} />
+      </span>
+    );
+  if (isComputerOutage(n))
+    return (
+      <span className={cx("nt-sys", className)} aria-hidden="true">
+        <Icon name="computer" size={16} />
       </span>
     );
   if (n.kind === "computer_disk_full")

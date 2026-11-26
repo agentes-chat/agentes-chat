@@ -18,7 +18,12 @@ import {
   useReduceMachineAccess,
 } from "@agenteschat/client";
 import { computerName, setupView } from "@agenteschat/client/lib/computer";
-import { mayChangeTasks, offlineCauseText, taskLimitLine } from "@agenteschat/client/lib/devices";
+import {
+  mayChangeTasks,
+  offlineCauseText,
+  RUNNER_UPDATE_COMMAND,
+  taskLimitLine,
+} from "@agenteschat/client/lib/devices";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { clockAt, firstName, formatTime, joinNames } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
@@ -30,6 +35,7 @@ import {
   commandInReason,
   computerKind,
   computerState,
+  egressViaText,
   folderName,
   hostDescKey,
   isPaused,
@@ -245,6 +251,7 @@ function MachinePage({ machineId }: { machineId: string }) {
     // System mode: each agent works in its own home, never in the folder the computer was connected from.
     m.mode === "system" && !managed && m.kind !== "host" ? t("machines.agentUsers") : null,
     managed && m.online && m.egressWaiting ? t("machines.egress.waiting") : null,
+    egressViaText(t, m),
     managed && m.networkTransition
       ? t(m.networkTransition.state === "draining" ? "machines.egress.draining" : "machines.egress.restart", {
           when: formatTime(i18n.language, m.networkTransition.deadline),
@@ -280,6 +287,19 @@ function MachinePage({ machineId }: { machineId: string }) {
           </Text>
         ))}
       </View>
+
+      {m.canManage && m.update ? (
+        <>
+          <Gap />
+          <GroupedFooter>{t(`machines.runnerBehind.${m.update}`, { computer: title })}</GroupedFooter>
+          {m.update === "command" ? (
+            <>
+              <Gap />
+              <CommandBlock command={RUNNER_UPDATE_COMMAND} />
+            </>
+          ) : null}
+        </>
+      ) : null}
 
       {details.length > 0 || egressIp ? (
         <>

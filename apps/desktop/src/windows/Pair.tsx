@@ -20,6 +20,7 @@ import { useLocalServer, useOpenPrefs } from "../hooks";
 import { MacPortrait, OrgTile } from "../ui/bits";
 import { MacPermissionCard, needsPrepare, useMacGrants } from "../ui/permissions";
 import { CardTitle, hintFor, PrefCard, PrefRow } from "../ui/settings";
+import { InternetRowFor } from "./InternetRow";
 
 /** A sheet of the welcome window's body: a title, what it says, the buttons at the bottom. */
 function Sheet({
@@ -252,6 +253,7 @@ function ShareSwitch({ target, machineId }: { target: PairTarget; machineId: str
             />
           }
         />
+        <InternetRowFor server={target.server} orgId={target.orgId} machineId={machineId} />
       </PrefCard>
       {failed && <Problem text={failed} />}
     </div>

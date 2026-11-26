@@ -7,22 +7,12 @@ export const featureKeysEn = {
     send: "Send",
   },
   categories: {
-    title: "Categories",
     where: "Where #{{channel}} shows",
     whereHelp: "Changes for everyone. Who takes part in the channel stays the same.",
-    create: "Create",
-    endOfList: "Goes to the end of the list for everyone.",
-    channelCount_one: "{{count}} channel",
-    channelCount_other: "{{count}} channels",
-    none: "No categories yet.",
-    manageHint: "Order, names and delete",
-    deleteTitle: "Delete {{name}}?",
     order: "Place in the list",
     up: "Move up",
     down: "Move down",
-    position: "{{at}} of {{count}}.",
     channelPosition: "{{at}} of {{count}}.",
-    itsChannels: "Channels",
   },
   blocks: {
     send: "Send",
@@ -917,6 +907,8 @@ export const featureKeysEn = {
   },
   agent: {
     talk: "Chat",
+    /** Who answers for it, a row of its profile's card. */
+    responsible: "Owner",
     task: "Task",
     owner: "owner: {{name}}",
     cantTalk: "This agent doesn't work with you.",
@@ -1073,6 +1065,10 @@ export const featureKeysEn = {
       computer_disk_full_other: "A computer's disk is almost full",
       computer_no_chrome_one: "A computer needs Google Chrome. Get it at google.com/chrome",
       computer_no_chrome_other: "Computers need Google Chrome. Get it at google.com/chrome",
+      computer_down_one: "A computer isn't answering",
+      computer_down_other: "A computer isn't answering",
+      computer_back_one: "A computer is back",
+      computer_back_other: "A computer is back",
       app_created_one: "An AI app created things for you",
       app_created_other: "An AI app created things for you",
     },
@@ -2268,6 +2264,8 @@ export const featureKeysEn = {
       tool_request: "{{names}} asks you to turn on {{tool}} on your {{device}}",
       cli_request: "{{names}} asks you to install {{tool}} on your {{device}}",
       folder_request: "{{names}} asks for the folder {{path}} on your {{device}}",
+      /** Once, for a computer paired before agents could use a person's internet (ADR 0237). */
+      internet_shared: "Agents now open websites through the internet of {{device}}",
       allowOnce: "Allow once",
       always: "Always allow {{name}}",
       no: "No",
@@ -3041,11 +3039,12 @@ export const featureKeysEn = {
     formatAuto: "{{name}} picks the best one",
     /** New widget's card, which is the form. */
     newWidget: {
-      alerts: "Alerts",
       realData: "Real data",
       editAsk: "Change the ask",
       asked: "“{{ask}}”",
-      autoFormat: "Auto format",
+      testReal: "Test with real data",
+      addHome: "Add to Home",
+      addTo: "Add to {{where}}",
     },
     /** "Who looks after it", pushed from New widget's card. */
     agentPick: {
@@ -3517,6 +3516,8 @@ export const featureKeysEn = {
       key: "API key",
       keyDefault: "workspace default",
       api: "API",
+      /** Before a pick takes a login another agent thinks with: `agent` is that agent. */
+      asksMove: "{{agent}} stops using it.",
     },
     /** A mission's AI, on its screen. */
     missionAi: "AI",

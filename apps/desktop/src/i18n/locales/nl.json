@@ -130,6 +130,7 @@
     "allowedOne": "{{folder}} toegestaan voor {{agent}}",
     "allowedAll": "{{folder}} toegestaan voor alle agents",
     "denied": "Geweigerd. {{agent}} laat het in het gesprek weten.",
+    "answerFailed": "Kon niet op dit verzoek reageren: {{message}}",
     "notifTitle": "{{agent}} wil de map {{folder}} gebruiken",
     "allowedTitle": "{{name}} heeft {{tool}} aangezet via agentes.chat",
     "allowedBody": "Was jij het niet? Maak het hier ongedaan.",
@@ -456,6 +457,10 @@
     "waiting": "Wachten tot {{by}} hem binnenlaat…",
     "done": "Verbonden met {{org}}",
     "share": "Laat de hele werkruimte hem gebruiken",
+    "internet": "Agents gebruiken het internet van deze computer",
+    "internetOn": "Websites die de agents openen, zien jouw locatie",
+    "internetOff": "Uit: agents gebruiken hun gewone verbinding",
+    "internetHint": "De agents van de workspace openen websites via de verbinding van deze computer. Alleen websites, tot 5 GB per dag, en nooit iets op je eigen netwerk. Zolang deze computer offline is, gebruiken ze hun gewone verbinding.",
     "shareOff": "Voorlopig alleen jij",
     "shareHint": "De agents van iedereen in {{org}} kunnen er taken op draaien, als jouw gebruiker.",
     "addFolders": "Mappen toevoegen",
@@ -791,6 +796,7 @@
       "brainMax": "Open gesprekken",
       "brainMaxDesc": "Hoeveel er open blijven in elke werkruimte. Meer ervan antwoorden sneller, maar gebruiken meer geheugen.",
       "brainIdle": "Een inactief gesprek sluiten na",
+      "mixed": "Niet overal hetzelfde: {{values}}. Een wijziging hier geldt voor allemaal.",
       "folder": "Map van de agents",
       "folderDesc": "Eén map per werkruimte, met een map voor elke agent."
     }

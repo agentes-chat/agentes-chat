@@ -51,7 +51,10 @@ describe("scrubbing (ADR 0104)", () => {
       user: { id: "user-1", email: "ana@example.com", username: "Ana Souza", ip_address: "203.0.113.9" },
       extra: { body: "the message she wrote" },
       server_name: "Ana Souza's MacBook",
-      contexts: { response: { status_code: 500, headers: { "set-cookie": "session_token=abc" } } },
+      contexts: {
+        response: { status_code: 500, headers: { "set-cookie": "session_token=abc" } },
+        device: { name: "Ana Souza's iPhone", family: "iPhone" },
+      },
       tags: { org_id: ORG_ID, note: "ana@example.com" },
       breadcrumbs: [
         { category: "console", message: "the message she wrote" },
@@ -67,9 +70,13 @@ describe("scrubbing (ADR 0104)", () => {
         { category: "ui.click", message: 'button.send[aria-label="Ana Souza"]' },
       ],
     };
+    const asItCame = structuredClone(event);
     const clean = scrubEvent(event);
     const text = JSON.stringify(clean);
     for (const value of PRIVATE) expect(text).not.toContain(value);
+    // A copy: the SDK's dedupe keeps the event as it came, to compare the next one with.
+    expect(event).toEqual(asItCame);
+    expect(clean.contexts).toEqual({ device: { family: "iPhone" } });
     expect(clean.user).toEqual({ id: "user-1" });
     expect(clean.request).toEqual({
       method: "POST",
@@ -196,6 +203,24 @@ describe("the reporter", () => {
       tags: { view: "computer", page_ready: "false" },
       exception: { values: [{ value: "for [email]" }] },
     });
+  });
+
+  test("the same error twice is sent once, scrubbed: the SDK's dedupe compares the next with the last as it came", async () => {
+    const { reporter, sent } = await reporterToFakeServer();
+    // From one line, as a query failing in a loop throws them: the same message and stack each time.
+    for (let i = 0; i < 2; i++)
+      reporter.capture(
+        new Error(
+          "Failed query: select id from people where email = 'ana@example.com'\nparams: Ana Souza,the message she wrote",
+        ),
+      );
+    expect(await reporter.flush(2000)).toBe(true);
+    expect(sent).toHaveLength(1);
+    const body = sent[0]?.body ?? "";
+    for (const value of PRIVATE) expect(body).not.toContain(value);
+    expect(eventOf(body).exception.values[0].value).toBe(
+      "Failed query: select id from people where email = '[email]'\nparams: [removed]",
+    );
   });
 
   test("a failed query is reported with its SQL and its cause, never the values it was given", async () => {

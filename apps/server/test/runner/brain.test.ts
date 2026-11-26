@@ -2,6 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import { execFileSync } from "node:child_process";
 import {
   copyFileSync,
+  existsSync,
   mkdirSync,
   readdirSync,
   readFileSync,
@@ -11,6 +12,7 @@ import {
   utimesSync,
   writeFileSync,
 } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { INLINE_CODE_DENY_RULES, PUSH_ASK_RULES } from "@agenteschat/adapters/command-policy";
 import {
@@ -564,6 +566,19 @@ test("parser: a failed turn says why the provider failed it, from Claude Code's 
   expect(
     fail(errorFrame("invalid_request", disabled), { type: "result", is_error: true, result: disabled }),
   ).toMatchObject({ code: "claude_failed", cause: "account_disabled", httpStatus: 400 });
+  // A model the sign-in or its endpoint doesn't serve: the model's, never the sign-in's, and no retry on it.
+  const noModel =
+    "There's an issue with the selected model (claude-x). It may not exist or you may not have access to it.";
+  expect(fail({ type: "result", is_error: true, result: noModel })).toMatchObject({
+    code: "claude_failed",
+    cause: "model_unavailable",
+    retryable: false,
+  });
+  const notFound = 'API Error: 404 {"type":"error","error":{"type":"not_found_error","message":"model: claude-x"}}';
+  expect(fail({ type: "result", is_error: true, result: notFound })).toMatchObject({
+    cause: "model_unavailable",
+    httpStatus: 404,
+  });
   expect(
     fail(errorFrame("billing_error", "Credit balance is too low"), {
       type: "result",
@@ -1487,6 +1502,15 @@ test.if(posix)("a wrong session flag on a one-shot start is retried once with th
 test.if(posix)("no Claude Code, a canceled turn, and bad requests", async () => {
   const missing = setup({ claudeCommand: ["/nonexistent/claude-xyz"] });
   expect((await missing.turn(1, "hi")).final).toMatchObject({ code: "cli_missing", retryable: true });
+  // Through cmd.exe on Windows a missing CLI is no ENOENT: cmd says so and ends (exit 9009 there).
+  const cmd = setup({
+    claudeCommand: [
+      "/bin/sh",
+      "-c",
+      "printf \"'claude' is not recognized as an internal or external command,\\r\\noperable program or batch file.\\r\\n\" >&2; exit 1",
+    ],
+  });
+  expect((await cmd.turn(1, "hi")).final).toMatchObject({ code: "cli_missing", retryable: true });
   const { turn } = setup();
   const ac = new AbortController();
   const p = turn(2, "SLOW wait", {}, ac.signal);
@@ -1689,6 +1713,38 @@ test.if(posix)(
   },
 );
 
+test.if(posix)("each CLI process has a temp folder of its own, gone with the process", async () => {
+  const { spawns, turn } = setup();
+  const logged = () => spawns() as unknown as { tmpdir: string | null }[];
+  await turn(1, "first", { timeZone: "America/Sao_Paulo" });
+  await turn(2, "second", { timeZone: "Asia/Tokyo" });
+  const [first, second] = logged().map((l) => l.tmpdir ?? "");
+  expect(path.dirname(first ?? "")).toBe(os.tmpdir());
+  expect(path.basename(first ?? "")).toStartWith("agentes-run-");
+  expect(second).not.toBe(first);
+  expect(existsSync(second ?? "")).toBe(true);
+  await waitFor(() => !existsSync(first ?? ""), 4000);
+});
+
+test.if(posix)(
+  "the turn's zone is the CLI's TZ, so its date is the person's; a turn in another zone restarts it, resumed",
+  async () => {
+    const { spawns, turn } = setup();
+    const logged = () => spawns() as unknown as { args: string[]; tz: string | null }[];
+    await turn(1, "first", { timeZone: "America/Sao_Paulo" });
+    expect(logged()[0]?.tz).toBe("America/Sao_Paulo");
+    await turn(2, "second", { timeZone: "America/Sao_Paulo" });
+    expect(logged()).toHaveLength(1);
+    await turn(3, "third", { timeZone: "Asia/Tokyo" });
+    expect(logged()).toHaveLength(2);
+    expect(logged()[1]?.tz).toBe("Asia/Tokyo");
+    expect(logged()[1]?.args.slice(-2)).toEqual(["--resume", SESSION(1)]);
+    // None, or one no clock knows: the computer's own.
+    await turn(4, "fourth", { timeZone: "Mars/Olympus" });
+    expect(logged()[2]?.tz).toBe(process.env.TZ ?? null);
+  },
+);
+
 test.if(posix)(
   "a session started with no limit takes 200K once, resumed in the same session; later turns keep the process",
   async () => {
@@ -1782,7 +1838,7 @@ test.if(posix)(
   "other lines for the agent's commits (turned off, the agent renamed) restart the process, resumed",
   async () => {
     const { spawns, turn } = setup();
-    const nick = { agent: { ...AGENT, coAuthors: ["Co-authored-by: Nick <noreply@agentes.chat>"] } };
+    const nick = { agent: { ...AGENT, coAuthors: ["Co-Authored-By: Nick <noreply@agentes.chat>"] } };
     await turn(1, "first", {}, undefined, nick);
     await turn(2, "second", {}, undefined, nick);
     expect(spawns()).toHaveLength(1);
@@ -3388,5 +3444,66 @@ test.if(posix)(
     expect(c.final).toMatchObject({ type: "done" });
     expect(spawns().map((s) => s.system)).toEqual(["S1", "S1", "S1", "S2"]);
     expect(spawns().at(-1)?.args.slice(-2)).toEqual(["--session-id", SESSION(3)]);
+  },
+);
+
+test.if(posix)(
+  "brain.warm guesses from the agent's last kept turn, not from a background turn's own text",
+  async () => {
+    const { m, ws, spawns, turn } = setup();
+    const ctx = { agent: AGENT, folder: await agentWorkspace(ws, AGENT), emit: () => {} };
+    await turn(1, "hi", { system: "S1" });
+    // A routine's run: its own text, and no process kept.
+    await turn(2, "routine", { system: "ROUTINE", keepAlive: false, session: { id: SESSION(2), resume: false } });
+    expect(await m.prewarm({ kind: "claude_code", session: { id: SESSION(3), resume: false }, cwd: "" }, ctx)).toEqual({
+      open: true,
+      started: true,
+    });
+    await waitFor(() => spawns().length === 3, 4000);
+    const c = await turn(3, "there", { system: "S1", session: { id: SESSION(3), resume: false } });
+    expect(c.final).toMatchObject({ type: "done", timings: { warm: true } });
+    expect(spawns().map((s) => s.system)).toEqual(["S1", "ROUTINE", "S1"]);
+  },
+);
+
+test.if(posix)(
+  "a second brain.warm with another launch replaces the first warm's process; the turn finds it",
+  async () => {
+    const { m, ws, spawns, turn } = setup();
+    const ctx = { agent: AGENT, folder: await agentWorkspace(ws, AGENT), emit: () => {} };
+    const warm = (model: string) =>
+      m.prewarm({ kind: "claude_code", session: { id: SESSION(2), resume: false }, cwd: "", model }, ctx);
+    await turn(1, "hi", { system: "S1", model: "sonnet" });
+    expect(await warm("sonnet")).toEqual({ open: true, started: true });
+    await waitFor(() => spawns().length === 2, 4000);
+    // The run chose the large tier since: another `--fallback-model`, which only a start sets.
+    expect(await warm("opus")).toEqual({ open: true, started: true });
+    await waitFor(() => spawns().length === 3, 4000);
+    expect(spawns()[2]?.args).toContain("--fallback-model");
+    const b = await turn(2, "there", { system: "S1", model: "opus", session: { id: SESSION(2), resume: false } });
+    expect(b.final).toMatchObject({ type: "done", timings: { warm: true } });
+    expect(spawns()).toHaveLength(3);
+    // Once a turn ran on it, a warm with another launch leaves it to the turn.
+    expect(await warm("sonnet")).toEqual({ open: true, started: false });
+    expect(spawns()).toHaveLength(3);
+  },
+);
+
+test.if(posix)(
+  "a warm replaced on a resumed session leaves no guessed text behind: the turn with its own text starts its own",
+  async () => {
+    const { m, ws, spawns, turn } = setup();
+    const ctx = { agent: AGENT, folder: await agentWorkspace(ws, AGENT), emit: () => {} };
+    const warm = (model: string) =>
+      m.prewarm({ kind: "claude_code", session: { id: SESSION(2), resume: true }, cwd: "", model }, ctx);
+    await turn(1, "hi", { system: "S1", model: "sonnet" });
+    expect(await warm("sonnet")).toEqual({ open: true, started: true });
+    await waitFor(() => spawns().length === 2, 4000);
+    expect(await warm("opus")).toEqual({ open: true, started: true });
+    await waitFor(() => spawns().length === 3, 4000);
+    // The conversation's own text: the warms' guess (S1) must not become the session's.
+    const b = await turn(2, "there", { system: "S2", model: "opus", session: { id: SESSION(2), resume: true } });
+    expect(b.final).toMatchObject({ type: "done", timings: { warm: false } });
+    expect(spawns().map((s) => s.system)).toEqual(["S1", "S1", "S1", "S2"]);
   },
 );

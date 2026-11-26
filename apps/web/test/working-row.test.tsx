@@ -23,7 +23,7 @@ const open = async () => {
   return { state, ev };
 };
 const started = (ev: (event: Record<string, unknown>) => Promise<void>) =>
-  ev({ type: "agent.run", ...ids, status: "running", startedAt: new Date(Date.now() - 13_000).toISOString() });
+  ev({ type: "agent.run", ...ids, status: "running", startedAt: new Date(Date.now() - 73_000).toISOString() });
 /** At work for a while already, on a step. */
 const thinking = async (ev: (event: Record<string, unknown>) => Promise<void>) => {
   await started(ev);
@@ -58,12 +58,13 @@ describe("while it works the conversation's last row says it, as a reply on its 
     // The last thing in the conversation.
     expect(tail().parentElement?.lastElementChild).toBe(tail());
     expect(tail().querySelector(".working-tail__face .ac-orbit .ac-avatar--agent")).not.toBeNull();
-    expect(tail().querySelectorAll(".ac-orbit__back circle.ac-orbit__path")).toHaveLength(3);
+    // Two rings, whole behind the face.
+    expect(tail().querySelectorAll(".ac-orbit__back circle.ac-orbit__path")).toHaveLength(2);
     expect(line().querySelector(".ac-typing__text")?.textContent).toBe("Ada mexendo nos arquivos do PC · refresh.ts…");
     expect(line().querySelector(".ac-typing__step")?.getAttribute("title")).toBe(
       "mexendo nos arquivos do PC · refresh.ts…",
     );
-    expect(line().querySelector(".run-tail__clock")?.textContent).toMatch(/^1\d s$/);
+    expect(line().querySelector(".run-tail__clock")?.textContent).toBe("1 min");
     expect(bar().dataset.active).toBe("false");
     expect(bar().textContent).toBe("");
     // Its stop is on its row, and the composer's still stops it too.
@@ -72,26 +73,34 @@ describe("while it works the conversation's last row says it, as a reply on its 
     expect(cancels(state)).toHaveLength(1);
   });
 
+  test("its first minute shows no time, and its stop is already in place", async () => {
+    const { ev } = await open();
+    await ev({ type: "agent.run", ...ids, status: "running", startedAt: new Date(Date.now() - 20_000).toISOString() });
+    await settle(3);
+    expect(line().querySelector(".run-tail__clock")?.textContent).toBe("");
+    expect(within(line()).getByRole("button", { name: "Parar" })).not.toBeNull();
+  });
+
   test("writing: still no row and none of its words; the row says it writes and its time, the composer stops it", async () => {
     const { state, ev } = await open();
     await writing(ev);
     expect(row()).toBeNull();
     expect(document.body.textContent).not.toContain("O refresh expira cedo.");
     expect(line().querySelector(".ac-typing__text")?.textContent).toBe("Ada escrevendo…");
-    expect(line().querySelector(".run-tail__clock")?.textContent).toMatch(/^1\d s$/);
+    expect(line().querySelector(".run-tail__clock")?.textContent).toBe("1 min");
     await act(async () => fireEvent.click(screen().getByRole("button", { name: "Parar a Ada" })));
     await settle(2);
     expect(cancels(state)).toHaveLength(1);
   });
 
-  test("someone typing beside it: 'Ada mexendo… · 13 s · João digitando…', the time hers", async () => {
+  test("someone typing beside it: 'Ada mexendo… · 1 min · João digitando…', the time hers", async () => {
     const { ev } = await open();
     await thinking(ev);
     await typing(ev);
     await settle(2);
     expect(line().querySelector(".ac-typing__text")?.textContent).toBe("Ada mexendo nos arquivos do PC · refresh.ts…");
     const took = line().querySelector(".run-tail__clock") as HTMLElement;
-    expect(took.textContent).toMatch(/^1\d s$/);
+    expect(took.textContent).toBe("1 min");
     const also = took.closest(".run-tail")?.nextElementSibling as HTMLElement;
     expect(also.classList.contains("ac-typing__also")).toBe(true);
     expect(also.textContent).toBe("João digitando…");

@@ -22,7 +22,11 @@ with the bench, below).
      `still stalled` line at once, so a main thread that never comes back leaves one too.
    - `panic on thread ...`: the release build aborts on a panic, and this line is all that is left of it.
    - `the web process of main ended ...`: the system ended the page's web process (memory, a crash); the window loads
-     it again. Linux names the reason.
+     it again. Linux names the reason, Windows the renderer's exit code (`0x80000003` is the `STATUS_BREAKPOINT` of
+     WebView2's "This page is having a problem": the renderer crashed; its dump is in
+     `%LOCALAPPDATA%\chat.agentes.desktop\EBWebView\Crashpad\reports\`).
+   - `the web process of main ended again ...: left as it is` (Windows): it ended within a minute of the last reload,
+     so WebView2's own page stays, with its Refresh button, instead of a reload loop.
 2. **Is it Rust or the web view?** During the freeze, `sample <pid> 5` (or Activity Monitor › Sample Process). The main
    thread in `local_server::status`, `std::fs`, `Command::output` or `place_lights` / `setFrame` is Rust; the main
    thread idle in `mach_msg` while the window is stuck is the web view. The release build is stripped: for Rust frames

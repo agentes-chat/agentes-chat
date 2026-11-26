@@ -5,6 +5,7 @@ import type {
   Agent,
   AgentComputer,
   ChannelEvent,
+  CliFetch,
   ComputerSetup,
   ComputerTarget,
   Machine,
@@ -50,6 +51,30 @@ export function pauseOf(v: unknown): MachinePause | undefined {
 }
 
 /** Access from an event (`{ folders, tools }`), checked; `null` when the machine stopped reporting it. */
+const FETCH_STATES = ["fetching", "ready", "failed"] as const;
+const FETCH_FAILURES = ["offline", "hash_mismatch", "no_build", "disk_full", "failed"] as const;
+
+/** A `machine.updated`'s `cliFetch` (ADR 0228 §6), checked: known states and numbers only; undefined when none is. */
+export function cliFetchOf(v: unknown): Partial<Record<string, CliFetch>> | undefined {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return undefined;
+  const out: Partial<Record<string, CliFetch>> = {};
+  for (const [cli, f] of Object.entries(v as Record<string, unknown>)) {
+    if (!/^[a-z]{1,20}$/.test(cli) || !f || typeof f !== "object") continue;
+    const x = f as Record<string, unknown>;
+    const state = FETCH_STATES.find((s) => s === x.state);
+    if (!state || typeof x.version !== "string") continue;
+    const num = (n: unknown) => (typeof n === "number" && Number.isFinite(n) && n >= 0 ? n : undefined);
+    const reason = FETCH_FAILURES.find((r) => r === x.reason);
+    out[cli] = {
+      state,
+      version: x.version.slice(0, 60),
+      ...(state === "fetching" ? { done: num(x.done) ?? 0, total: num(x.total) ?? null } : {}),
+      ...(state === "failed" ? { reason: reason ?? "failed" } : {}),
+    };
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
 export function accessOf(v: unknown): MachineAccess | null | undefined {
   if (v === null) return null;
   if (!isObject(v) || !Array.isArray(v.folders) || !isObject(v.tools)) return undefined;
@@ -111,6 +136,7 @@ export function applyMachineEvent(qc: QueryClient, orgId: string, event: { type:
     egress?: unknown;
     networkTransition?: unknown;
     standby?: unknown;
+    cliFetch?: unknown;
     moving?: unknown;
   };
   if (typeof e.machineId !== "string") return true;
@@ -219,6 +245,11 @@ export function applyMachineEvent(qc: QueryClient, orgId: string, event: { type:
       if (paused) patch.paused = paused;
       const access = accessOf(e.access);
       if (access !== undefined) patch.access = access;
+      const fetch = cliFetchOf(e.cliFetch);
+      if (fetch) {
+        const now = qc.getQueryData<Machine[]>(list)?.find((m) => m.id === machineId)?.cliFetch;
+        patch.cliFetch = { ...now, ...fetch };
+      }
       if (Object.keys(patch).length > 0) {
         qc.setQueryData<Machine[]>(list, (old) =>
           old?.map((m) =>
@@ -431,7 +462,7 @@ function prefetchCard(
  * computer, and one active again waits for one. `org.deleting` (an owner deleted it) sets its deletion there, so the
  * line on top shows at once and the workspace turns read-only. `org.limits` (a new plan, ADR 0079) asks for the
  * limits again, so a full workspace's invitations open by themselves. `agent.groups` (ADR 0083) says the groups of
- * agents changed: they are read again.
+ * agents changed, and `channels.layout` that a channel moved between sectors (ADR 0240): both lists are read again.
  * `member.status` and `agent.status` (ADR 0084) refetch the people and the agents' presence. `org.members` (someone
  * joined or left, a role changed, ADR 0085, or a person's name, handle or photo) refetches the people, Members, each
  * channel's roster, the roles, `me`, the agents, the
@@ -493,8 +524,10 @@ export function applyWorkspaceEvent(qc: QueryClient, orgId: string, event: { typ
     }
     return true;
   }
-  if (event.type === "agent.groups") {
+  // A sector's channels (ADR 0240) are the channel list's `groupId`: a deleted sector lets them go, a new one takes some.
+  if (event.type === "agent.groups" || event.type === "channels.layout") {
     void qc.invalidateQueries({ queryKey: keys.agentGroups(orgId) });
+    void qc.invalidateQueries({ queryKey: keys.channels(orgId) });
     return true;
   }
   if (event.type === "machine.provisioning") {

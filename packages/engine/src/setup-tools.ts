@@ -1,6 +1,7 @@
 import { holdEvents, type PubSub } from "@agenteschat/adapters";
 import { and, count, eq, inArray, isNull, or, schema, sql } from "@agenteschat/db";
 import { isKnownProvider, PROVIDERS } from "@agenteschat/providers";
+import { ROUTINE_PROMPT_MAX } from "@agenteschat/tokens/routines";
 import { actWithUndo, publishMessageActions } from "./agent-actions";
 import {
   AGENT_PROPOSAL_CARD,
@@ -18,7 +19,7 @@ import { agentsByHandle, getAgentCached } from "./agents";
 import type { AiStatusDeps } from "./ai-status";
 import { AGENT_LOOK } from "./appearance";
 import { listApprovals } from "./approvals";
-import { addChannelMember, createChannel, listChannels } from "./channels";
+import { createChannel, listChannels } from "./channels";
 import { findMember } from "./chat-tools";
 import { CONNECTOR_CATALOG } from "./connectors/catalog";
 import { connectorListing, type ServerCatalog } from "./connectors/listing";
@@ -35,11 +36,11 @@ import {
 } from "./context/proposals";
 import type { ContextDeps } from "./context/summaries";
 import { publishMessageCreated } from "./events";
-import { firstOf } from "./format";
+import { editDistance, firstOf } from "./format";
 import { insertMessage, messageView, parseMentionHandles } from "./messages";
 import { can, getMembership } from "./organizations";
 import type { RolePermission } from "./permissions";
-import { personBehindCall } from "./requester";
+import { personBehindCall, relayedRefusal, relayedRequest } from "./requester";
 import { isRightHand } from "./right-hand";
 import { queueRightHandLook } from "./right-hand-approvals";
 import { liveLodiSwitches } from "./right-hand-lane";
@@ -77,6 +78,9 @@ export const PROPOSE_AGENT_TOOL = "propose_agent";
 export const OFFER_INVITES_TOOL = "offer_invites";
 /** Archiving or deleting teammates, one card for them all (ADR 0137 amendment): any agent with setup tools. */
 export const PROPOSE_REMOVE_AGENTS_TOOL = "propose_remove_agents";
+/** `propose_remove_agents` called with a channel: archiving would take the agents out of the whole workspace. */
+const CHANNEL_NOT_REMOVAL =
+  "Nothing proposed: propose_remove_agents archives agents from the whole workspace, never from one channel. To take agents out of a channel, call propose_settings_change with `leave` for each of them (they stay in the workspace). Archive them only if the person asked for that in so many words.";
 /** At most this many agents on one removal card. */
 export const MAX_REMOVALS_PER_CARD = 20;
 /** Teammates' settings on one card (ADR 0137): the right hand's, and any agent's with setup tools (ADR 0139). */
@@ -248,23 +252,80 @@ const slug = (v: string) => v.toLowerCase().replace(/[^a-z0-9]+/g, "");
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
- * A catalog connector or one-click MCP server by its id or name ("GitHub", "google-drive"). With `server`, as this
- * server's connectors store lists it, whether it connects here (`soon`: its vendor hasn't approved agentes.chat).
+ * Words people and models put around a service's name when they mean its MCP server ("Sentry MCP", "o MCP do
+ * Sentry", "Vercel's official MCP server"): never part of a name in the catalog.
  */
-export function catalogConnector(
-  name: string,
-  server?: ServerCatalog,
-): { id: string; label: string; available: boolean; soon: boolean } | null {
-  const key = slug(name);
-  if (!key) return null;
-  const all = server
+const AROUND_A_NAME = new Set(
+  "a an app conector connector da das de do dos mcp o official oficial remote remoto server servidor the".split(" "),
+);
+
+/** A name as the catalog is searched by: no accents or case, without the words around it (`AROUND_A_NAME`). */
+function nameKey(name: string) {
+  return name
+    .normalize("NFD")
+    .replace(/\p{M}+/gu, "")
+    .toLowerCase()
+    .replace(/['’]s\b/g, "")
+    .split(/[^a-z0-9]+/)
+    .filter((w) => w && !AROUND_A_NAME.has(w))
+    .join("");
+}
+
+/** A label without what its variant is ("Cloudflare (logs)" → "cloudflare"): the brand people name it by. */
+const brandKey = (label: string) => slug(label.replace(/\s*\(.*\)\s*$/, ""));
+
+interface CatalogEntry {
+  id: string;
+  label: string;
+  available: boolean;
+  soon: boolean;
+}
+
+/** Every entry of the catalog: as this server's connectors store lists it with `server`, else all of them. */
+const catalogEntries = (server?: ServerCatalog): CatalogEntry[] =>
+  server
     ? connectorListing(server)
     : [...Object.values(CONNECTOR_CATALOG), ...MCP_PRESETS].map((c) => ({ ...c, available: true, soon: false }));
-  const hit =
-    all.find((c) => slug(c.id) === key) ??
-    all.find((c) => slug(c.label) === key) ??
-    all.find((c) => CONNECTOR_NAMES[c.id]?.some((n) => slug(n) === key));
+
+/**
+ * A catalog connector or one-click MCP server by its id or name ("GitHub", "google-drive", "MCP do Sentry"), or by its
+ * brand when only one entry has it ("Cloudflare" has two: `catalogNear` names them). With `server`, as this server's
+ * connectors store lists it, whether it connects here (`soon`: its vendor hasn't approved agentes.chat).
+ */
+export function catalogConnector(name: string, server?: ServerCatalog): CatalogEntry | null {
+  const all = catalogEntries(server);
+  const by = (key: string) =>
+    key
+      ? (all.find((c) => slug(c.id) === key) ??
+        all.find((c) => slug(c.label) === key) ??
+        all.find((c) => CONNECTOR_NAMES[c.id]?.some((n) => slug(n) === key)))
+      : undefined;
+  const key = nameKey(name);
+  const brand = key ? all.filter((c) => brandKey(c.label) === key) : [];
+  const hit = by(slug(name)) ?? by(key) ?? (brand.length === 1 ? brand[0] : undefined);
   return hit ? { id: hit.id, label: hit.label, available: hit.available, soon: hit.soon } : null;
+}
+
+/** At most this many entries close to a name the catalog doesn't have. */
+const NEAR_NAMES = 5;
+
+/**
+ * The catalog's entries close to a name it doesn't have, for the agent to pick from: its brand's variants, names it
+ * starts or that start it, and one or two letters off (a typo). Their labels, in the catalog's order.
+ */
+export function catalogNear(name: string, server?: ServerCatalog): string[] {
+  const key = nameKey(name);
+  if (key.length < 3) return [];
+  const near = (k: string) =>
+    k === key ||
+    k.startsWith(key) ||
+    (k.length >= 4 && key.startsWith(k)) ||
+    (key.length >= 4 && editDistance(k, key) <= (key.length >= 7 ? 2 : 1));
+  return catalogEntries(server)
+    .filter((c) => [brandKey(c.label), slug(c.id), ...(CONNECTOR_NAMES[c.id] ?? []).map(slug)].some(near))
+    .map((c) => c.label)
+    .filter((label, i, labels) => labels.indexOf(label) === i)
+    .slice(0, NEAR_NAMES);
 }
 
 /** Names of what the connectors store connects outside the catalog list: a mailbox (Email) or a database. */
@@ -532,22 +593,23 @@ export function createSetupToolSource(deps: {
           const channel = await actWithUndo(
             ctx,
             async (db) => {
-              const created = await createChannel(
+              // Agents first: only they can be refused (their owner or an admin adds them), and a refusal
+              // undoes the whole channel before anyone was told they're in it. The people it starts with decide
+              // whether its agents answer in threads (ADR 0214).
+              return await createChannel(
                 db,
                 requester,
                 ctx.orgId,
-                { name: str(input.name).trim().replace(/^#/, ""), topic: str(input.topic).trim() },
+                {
+                  name: str(input.name).trim().replace(/^#/, ""),
+                  topic: str(input.topic).trim(),
+                  members: [
+                    ...agents.rows.map((a) => ({ agentId: a.id })),
+                    ...[...people.keys()].map((userId) => ({ userId })),
+                  ],
+                },
                 events,
               );
-              // Agents first: only they can be refused (their owner or an admin adds them), and a refusal
-              // undoes the whole channel before anyone was told they're in it.
-              for (const a of agents.rows) {
-                await addChannelMember(db, requester, ctx.orgId, created.id, { agentId: a.id }, events);
-              }
-              for (const userId of people.keys()) {
-                await addChannelMember(db, requester, ctx.orgId, created.id, { userId }, events);
-              }
-              return created;
             },
             (created) => ({
               kind: "channel.created",
@@ -641,7 +703,7 @@ export function createSetupToolSource(deps: {
               prompt: {
                 type: "string",
                 minLength: 1,
-                maxLength: 10_000,
+                maxLength: ROUTINE_PROMPT_MAX,
                 description: "What each run does, in the person's language.",
               },
               title: { type: "string", maxLength: 120 },
@@ -749,7 +811,7 @@ export function createSetupToolSource(deps: {
     {
       name: PROPOSE_REMOVE_AGENTS_TOOL,
       description:
-        "Propose archiving teammates (or deleting them for good) with one card in this conversation that lists them all: whoever may archive or delete agents applies it from the card as themselves, all at once or leaving some out, and archiving has Undo. A person who can't sends it from the card to an admin. Use it when someone asks to remove, archive, delete or start the team over ('apaga os outros agentes'). Never you or the workspace's assistant. Nothing changes until someone clicks: never say it is done. To rebuild the team after, propose the new agents with propose_agent.",
+        "Propose archiving teammates out of the whole workspace (or deleting them for good), never out of one channel (that is propose_settings_change with `leave`), with one card in this conversation that lists them all: whoever may archive or delete agents applies it from the card as themselves, all at once or leaving some out, and archiving has Undo. A person who can't sends it from the card to an admin. Use it when someone asks to archive, delete or start the team over ('apaga os outros agentes'), or to remove them from the workspace. Never you or the workspace's assistant. Nothing changes until someone clicks: never say it is done. To rebuild the team after, propose the new agents with propose_agent.",
       scope: SETUP_SCOPE,
       inputSchema: {
         type: "object",
@@ -772,6 +834,11 @@ export function createSetupToolSource(deps: {
             maxLength: 500,
             description: "One short line on the card, in the person's language: why.",
           },
+          channel: {
+            type: "string",
+            maxLength: 81,
+            description: "Never pass it.",
+          },
         },
         required: ["agents", "reason"],
         additionalProperties: false,
@@ -780,6 +847,9 @@ export function createSetupToolSource(deps: {
         try {
           const forUserId = await personBehindCall(ctx);
           if (!forUserId) return { content: "Only a person's request can propose removing agents.", isError: true };
+          if (await relayedRequest(ctx)) return relayedRefusal();
+          // A model asked to take agents out of a channel reaches for this tool with `channel`: send it to the right one.
+          if (input.channel !== undefined) return { content: CHANNEL_NOT_REMOVAL, isError: true };
           const reason = str(input.reason).trim();
           if (!reason) return { content: "Say in `reason` why: one short line.", isError: true };
           const field = input.delete === true ? "delete" : "archive";
@@ -844,7 +914,7 @@ export function createSetupToolSource(deps: {
     {
       name: OFFER_CONNECT_APP_TOOL,
       description:
-        "Offer to connect an app or an MCP server with a card in this conversation: its button opens the app's own connect dialog (sign-in or key, then its tools and which agents use it). Use it when a person asks to connect a service ('conecta o Linear', 'connect https://mcp.acme.com/mcp', 'add an MCP', 'adicionar MCP'). Pass `app` for a service by name, or `url` for an MCP server's address. When they want an MCP server and gave no address, ask for it in one short line first, or post the card without one and its dialog asks. Never ask for keys, tokens or passwords in the chat: the person types them in the dialog.",
+        "Offer to connect an app or an MCP server with a card in this conversation: its button opens the app's own connect dialog (sign-in or key, then its tools and which agents use it). Use it when a person asks to connect a service or its MCP ('conecta o Linear', 'adiciona o MCP do Sentry', 'connect https://mcp.acme.com/mcp', 'adicionar MCP'). Pass `app` with the service's name: the catalog has the apps and the official MCP servers of most services (Sentry, Vercel, Supabase, Stripe, Figma…), connected in one click, so never ask for the address of one of those. Pass `url` only for a server the catalog doesn't have (the result says so, with its closest names). When they want such a server and gave no address, ask for it in one short line first, or post the card without one and its dialog asks. Never ask for keys, tokens or passwords in the chat: the person types them in the dialog.",
       scope: SETUP_SCOPE,
       inputSchema: {
         type: "object",
@@ -853,13 +923,14 @@ export function createSetupToolSource(deps: {
             type: "string",
             minLength: 1,
             maxLength: 80,
-            description: "A service by name or id (GitHub, Linear, Notion…).",
+            description:
+              "A service by name or id (GitHub, Linear, Sentry…): its app or its MCP server, as the catalog has it.",
           },
           url: {
             type: "string",
             minLength: 9,
             maxLength: 2000,
-            description: "An MCP server's https address, as the person gave it.",
+            description: "An MCP server's https address, as the person gave it: only for one the catalog doesn't have.",
           },
           why: {
             type: "string",
@@ -890,11 +961,15 @@ export function createSetupToolSource(deps: {
           const listed = app && !url ? catalogConnector(app, deps.catalog) : null;
           const known = preset ? { id: preset.id, label: preset.label } : listed;
           if (app && !url && !listed) {
-            const where = MAILBOX_NAMES.has(slug(app)) ? "Email" : DATABASE_NAMES.has(slug(app)) ? "Database" : null;
+            const named = (names: Set<string>) => names.has(slug(app)) || names.has(nameKey(app));
+            const where = named(MAILBOX_NAMES) ? "Email" : named(DATABASE_NAMES) ? "Database" : null;
+            const near = where ? [] : catalogNear(app, deps.catalog);
             return {
               content: where
                 ? `This isn't connected with a card: a person who manages connectors does it in Settings › Connectors and MCPs › Browse connectors › ${where} (in Portuguese, Configurações › Conectores e MCPs › Ver conectores › ${where === "Email" ? "Email" : "Banco de dados"}). Tell the person exactly this.`
-                : `"${app}" isn't in the catalog. Ask the person for its MCP server's https address and pass it as \`url\`.`,
+                : near.length
+                  ? `"${app}" isn't in the catalog by that name. Closest: ${near.join(", ")}. If the person meant one of them, call again with it as \`app\` (when more than one could be it, ask which in one short line). Otherwise ask for its MCP server's https address and pass it as \`url\`.`
+                  : `"${app}" isn't in the catalog. Ask the person for its MCP server's https address and pass it as \`url\`.`,
               isError: true,
             };
           }
@@ -1120,11 +1195,11 @@ const SETUP_TOOLS_PERSONAL: Record<string, string> = {
   [PROPOSE_AGENT_TOOL]:
     "Propose a new agent for this person with one card in this conversation: a person creates it in one click (or reviews and edits it first), or says no. Use it when someone asks for a new agent or bot, or when work needs a role none of their agents has. Put in this one call everything the request implies, so the agent works as soon as it is created: its access to the connected apps and to the asker's own mailbox (by its address) when the job reads or sends their email, and `routine` when the job runs on a schedule ('todo dia ao meio-dia'). It lives in its DM with the person: leave `channels` out, unless they asked for it in a group conversation (a channel). It creates nothing: never say the agent exists until you are told it was created. The card suggests an AI for it by itself.",
   [PROPOSE_REMOVE_AGENTS_TOOL]:
-    "Propose archiving agents (or deleting them for good) with one card in this conversation that lists them all: whoever may archive or delete agents applies it from the card as themselves, all at once or leaving some out, and archiving has Undo. A person who can't sends it from the card to an admin. Use it when someone asks to remove, archive, delete or start their agents over ('apaga os outros agentes'). Never you or the workspace's assistant. Nothing changes until someone clicks: never say it is done. To set up new agents after, propose them with propose_agent.",
+    "Propose archiving agents out of the whole workspace (or deleting them for good), never out of one channel (that is propose_settings_change with `leave`), with one card in this conversation that lists them all: whoever may archive or delete agents applies it from the card as themselves, all at once or leaving some out, and archiving has Undo. A person who can't sends it from the card to an admin. Use it when someone asks to archive, delete or start their agents over ('apaga os outros agentes'), or to remove them from the workspace. Never you or the workspace's assistant. Nothing changes until someone clicks: never say it is done. To set up new agents after, propose them with propose_agent.",
   [OFFER_INVITES_TOOL]:
     "Offer to invite someone the person trusts (family, a partner, someone who helps them) to this workspace with a card in this conversation: its button opens the app's invite dialog with these addresses filled in, as members. A person who may invite sends it there (and may change roles); you send nothing. Use it when they ask to invite or add someone by email, never on your own.",
   [PROPOSE_SETTINGS_TOOL]:
-    "Change agents' settings with one card in this conversation: the model and its effort, the AI account it thinks with, its monthly budget, its owner, who may talk to it, the channels it joins or leaves and whether it answers there without a mention, the skills it has on, its name, its look, its department, who it reports to, or archiving it. A change the person who asked may make, with nothing read from outside this turn, applies at once with Undo. Any other waits on the card for who may make it, and one they can't make they send from there. The result says which: never say it is done before it does. Instructions, a role or apps go through propose_instruction_change.",
+    "Change agents' settings with one card in this conversation: the model and its effort, the AI account it thinks with, its monthly budget, its owner, who may talk to it, the channels it joins or leaves (`leave` removes an agent from a channel, and it stays in the workspace) and whether it answers there without a mention, the skills it has on, its name, its look, its department, who it reports to, or archiving it. A change the person who asked may make, with nothing read from outside this turn, applies at once with Undo. Any other waits on the card for who may make it, and one they can't make they send from there. The result says which: never say it is done before it does. Instructions, a role or apps go through propose_instruction_change.",
   [OFFER_ANSWERS_TOOL]:
     "Ask the person one short question with answers to tap under it, in this conversation: each tap sends the answer as their own message (several at once with `multiple`), and they can always type instead. Use it for the questions that set their agents up (what they want help with, what takes most of their time, when they want to hear from their agents), one per turn, with `step` and `of` ('Pergunta 2 de 3'). The question shows as your message: write nothing else in this turn and end it. Their answer comes as their next message.",
   [PROPOSE_TEAM_TOOL]:
@@ -1641,7 +1716,7 @@ async function wantedLines(ctx: ToolContext, change: SettingsChangeInput): Promi
       installed.find((k) => k.name === n.trim().toLowerCase()) ?? installed.find((k) => slug(k.name) === slug(n));
     const unknown = wantedSkills.filter((n) => !skillOf(n));
     if (unknown.length > 0) {
-      const install = "offer to install it with offer_install_skill, by its GitHub link";
+      const install = "offer to install it with offer_install_skill, by its GitHub link or its .zip sent here";
       const here = installed.map((k) => k.name);
       return installed.length
         ? `No skill ${firstOf(unknown, NAMES_SHOWN)}. Skills here: ${firstOf(here, NAMES_SHOWN)}. One not installed yet: ${install}.`
@@ -1839,7 +1914,7 @@ function settingsTool(deps: { pubsub?: PubSub }, own = false): ToolDefinition {
     name: own ? REQUEST_SETTINGS_TOOL : PROPOSE_SETTINGS_TOOL,
     description: own
       ? "Ask a person to change a setting of your own, with one card in this conversation: turn on or off a skill installed here, join or leave a channel or how you answer there, your model and its effort, the AI account you think with, your monthly budget, your owner, who may talk to you, your name, your look, the department you are in or who you report to. Use it whenever a request needs a setting of yours you don't have, instead of telling the person how to change it by hand or saying you can't ask. Nothing changes until a person clicks, even when the person who asked could change it: the card waits for whoever may (they send one they can't decide from there), and the result says which. Apps and permissions: request_permission. A skill not installed yet: offer_install_skill."
-      : "Change teammates' settings with one card in this conversation: the model and its effort, the AI account it thinks with, its monthly budget, its owner, who may talk to it, the channels it joins or leaves and whether it answers there without a mention, the skills it has on, its name, its look, its department, who it reports to, or archiving it. A change the person who asked may make, with nothing read from outside this turn, applies at once with Undo. Any other waits on the card for who may make it, and one they can't make they send from there. The result says which: never say it is done before it does. Instructions, a role or apps go through propose_instruction_change.",
+      : "Change teammates' settings with one card in this conversation: the model and its effort, the AI account it thinks with, its monthly budget, its owner, who may talk to it, the channels it joins or leaves (`leave` removes an agent from a channel, and it stays in the workspace) and whether it answers there without a mention, the skills it has on, its name, its look, its department, who it reports to, or archiving it. A change the person who asked may make, with nothing read from outside this turn, applies at once with Undo. Any other waits on the card for who may make it, and one they can't make they send from there. The result says which: never say it is done before it does. Instructions, a role or apps go through propose_instruction_change.",
     scope: own ? "" : SETUP_SCOPE,
     inputSchema: own
       ? {
@@ -1874,6 +1949,8 @@ function settingsTool(deps: { pubsub?: PubSub }, own = false): ToolDefinition {
       try {
         const forUserId = await personBehindCall(ctx);
         if (!forUserId) return { content: "Only a person's request can propose a change.", isError: true };
+        // Another agent's settings only on the person's typed words (ADR 0250); an agent's own needs still get a review.
+        if (!own && (await relayedRequest(ctx))) return relayedRefusal();
         const self = own ? await getAgentCached(ctx.db, ctx.orgId, ctx.agentId) : null;
         const other = self ? await teammateNamed(ctx, self, str(input.reason)) : null;
         if (other)

@@ -400,6 +400,8 @@ export type ChannelEvent =
       computer?: "queued" | "away" | "line";
       /** Into a run waiting on its plan's limit or its budget. */
       usage?: "plan" | "budget";
+      /** Into a run parked on an outage (`outageParkedSql`): it retries by itself. */
+      outage?: true;
     }
   /** The run read these messages sent while it worked (they are in its conversation now): "Ada leu". */
   | {
@@ -536,7 +538,7 @@ export type ChannelEvent =
       status: "done" | "failed" | "waiting_approval" | "waiting_input" | "canceled";
       /** `no_ai`: the agent has no AI to think with. */
       reason?: string;
-      /** `failed`: why, for the app to word (`runErrorDetail`). */
+      /** `failed`: why, for the app to word (`runErrorDetail`); with `no_ai`, why it had none (`noAiDetail`). */
       errorCode?: string;
       errorParams?: Record<string, string>;
       /** `waiting_input` parked on a provider outage. */
@@ -807,7 +809,7 @@ export interface ActivityLine {
   counts: boolean;
   /** Its line, when it may be the last one: a channel's top-level message, any of a DM's. Absent: a routine's call. */
   last?: {
-    authorType: "person" | "agent";
+    authorType: "person" | "agent" | "app";
     authorId: string | null;
     /** As a channel's row has it, at most `CHANNEL_PREVIEW_LENGTH` chars. */
     preview: string;

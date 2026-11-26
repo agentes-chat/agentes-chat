@@ -241,11 +241,10 @@ export const Organization = z
       .string()
       .optional()
       .openapi({ description: "What the agents know of it: only for who may `configure`." }),
-    logo: z
-      .string()
-      .nullable()
-      .optional()
-      .openapi({ description: "The workspace logo (`/api/app/org-logos/…`); null = the agent mark." }),
+    logo: z.string().nullable().optional().openapi({
+      description:
+        "The workspace logo (`/api/app/org-logos/…`), ending with `#ink=light` when its ink is light; null = the agent mark.",
+    }),
     accent: AccentColor.nullable()
       .optional()
       .openapi({ description: "The workspace's accent color (ADR 0193); null = the default." }),
@@ -579,6 +578,9 @@ export const AgentSetupChecklist = z
       .openapi({
         description: "The apps it was made to use (catalog connector ids) at their levels (ADR 0164).",
       }),
+    closed: z.literal(true).optional().openapi({
+      description: "Closed on its page: the page shows it no more, whatever is left; its chat keeps its own.",
+    }),
   })
   .openapi("AgentSetupChecklist");
 
@@ -694,15 +696,6 @@ export const Agent = z
   })
   .openapi("Agent");
 
-/** A named group of channels in the sidebar, the same for everyone in the organization. */
-export const ChannelCategory = z
-  .object({
-    id: z.uuid(),
-    name: z.string(),
-    position: z.number().int().openapi({ description: "Order in the sidebar, from 0." }),
-  })
-  .openapi("ChannelCategory");
-
 export const Channel = z
   .object({
     id: z.uuid(),
@@ -722,12 +715,12 @@ export const Channel = z
       .optional()
       .openapi({ description: "The channel's creator: may manage its members, like admins." }),
     createdAt: z.string(),
-    categoryId: z
+    groupId: z
       .uuid()
       .nullable()
       .optional()
-      .openapi({ description: "Its sidebar category; null: on top, with none." }),
-    position: z.number().int().optional().openapi({ description: "Order inside its category, from 0." }),
+      .openapi({ description: "Its sector (`agent-groups`, ADR 0240); null: under Canais, in none." }),
+    position: z.number().int().optional().openapi({ description: "Order inside its sector, from 0." }),
     replyInThreads: z.boolean().optional().openapi({
       description:
         "Agents asked in its main timeline answer in the thread under that message, which then shows as one line (ADR 0214). Regular channels only.",
@@ -757,7 +750,7 @@ export const Channel = z
     lastMessage: z
       .object({
         id: z.uuid(),
-        authorType: z.enum(["person", "agent"]),
+        authorType: z.enum(["person", "agent", "app"]),
         authorId: z.string().nullable(),
         authorName: z.string().nullable().openapi({ description: "Null when the author was deleted." }),
         preview: z.string().openapi({ description: "Plain text, at most 140 characters." }),
@@ -900,7 +893,9 @@ const MessageBase = z.object({
   id: z.uuid(),
   channelId: z.uuid(),
   threadId: z.uuid().nullable(),
-  author: z.object({ type: z.enum(["person", "agent"]), id: z.string().nullable() }),
+  author: z
+    .object({ type: z.enum(["person", "agent", "app"]), id: z.string().nullable() })
+    .openapi({ description: "`app`: an integration app (ADR 0251); its name, color and sender are in `meta.app`." }),
   body: z.string(),
   mentionedAgentIds: z.array(z.uuid()),
   mentionedUserIds: z.array(z.string()).openapi({ description: "People mentioned by handle who are in the channel." }),
@@ -922,10 +917,10 @@ const MessageBase = z.object({
             .literal("no_ai")
             .optional()
             .openapi({ description: "It couldn't answer: the agent has no AI connected." }),
-          outage: z
-            .literal(true)
-            .optional()
-            .openapi({ description: "`waiting_input` because its AI provider is down: it retries by itself." }),
+          outage: z.literal(true).optional().openapi({
+            description:
+              "`waiting_input` because its AI isn't answering (its provider down, or its computer refusing while online): it retries by itself.",
+          }),
           computer: z.enum(["queued", "away", "line"]).optional().openapi({
             description:
               "`waiting_input` for its computer: in line for room (`queued`) or for it to come back (`away`); long work in the agent's line of work (`line`).",
@@ -1035,10 +1030,10 @@ export const Message = MessageBase.extend({
       z.object({
         agentId: z.uuid(),
         text: z.string(),
-        code: z
-          .string()
-          .optional()
-          .openapi({ description: "`audience.only` / `audience.nobody`: translate with `params`." }),
+        code: z.string().optional().openapi({
+          description:
+            "`audience.only` / `audience.nobody` (whom it answers), `audience.no_talk` (the person's roles lack `talk_to_agents`), `audience.plan_owner_only` (its plan answers only its owner), `channel.agents_denied`: translate with `params`.",
+        }),
         params: z.record(z.string(), z.unknown()).optional(),
       }),
     )
@@ -1115,6 +1110,7 @@ export const BrainUnavailable = z.enum([
   "not_reported",
   "system",
   "cant_start",
+  "cli_outdated",
   "windows_sandbox",
 ]);
 
@@ -1159,6 +1155,13 @@ export const BrainOption = z
       .openapi({
         description:
           "Antigravity: the newest Gemini isn't among its models because the computer's agentes.chat is too old to bring a CLI that runs it (`app_old`), its CLI predates it where the computer's setup installs it (`cli_old`), or no account there has a plan with it (`plan`).",
+      }),
+    outdated: z
+      .object({ version: z.string(), min: z.string().optional(), command: z.string().optional() })
+      .optional()
+      .openapi({
+        description:
+          "With `cli_outdated`: the version its computer reported, the oldest one agentes.chat runs (absent: that version is blocked), and the command that updates it where its own updater is the way.",
       }),
   })
   .openapi("BrainOption");
@@ -1355,7 +1358,7 @@ export const AgentBrain = z
     }),
     canManageAccounts: z.boolean().openapi({
       description:
-        "The caller may add an account there for this agent: its owner, on a computer where they add accounts.",
+        "The caller may add an account there for this agent: its owner or who manages it, on a computer where they add accounts.",
     }),
     accountsSupported: z.boolean().openapi({ description: "The computer's runner knows accounts (protocol 13)." }),
     onlyOwner: z.boolean().openapi({ description: '"Atende outras pessoas" off: nobody but its owner talks to it.' }),
@@ -1384,6 +1387,10 @@ export const AgentBrain = z
         description:
           "The workspace's live API keys, id and provider only: the providers its owner may move it onto (only admins list the keys).",
       }),
+    keyId: z.string().nullable().optional().openapi({
+      description:
+        "On the API: the workspace's key its calls take now (its own, else its provider's), shown chosen in the picker; null with none or on a plan.",
+    }),
   })
   .openapi("AgentBrain");
 

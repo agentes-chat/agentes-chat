@@ -862,7 +862,7 @@ export const subagentsTail = (t: TFunction, busy: SubagentsNow) =>
     : t("cliTools.progress.agents", { count: Math.max(1, busy.agents) });
 
 /** A turn quicker than this shows nothing new: its step line says the agent's own words only past it. */
-export const STEP_WORDS_AFTER_MS = 5000;
+export const STEP_WORDS_AFTER_MS = 1500;
 
 /**
  * The waiting row's step line: what the agent does right now, verb first ("Usando o navegador · console.example.com…",
