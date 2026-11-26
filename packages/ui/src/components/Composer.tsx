@@ -545,21 +545,33 @@ function textWidth(field: HTMLElement, text: string): number | null {
  */
 function useWideText(ref: RefObject<HTMLTextAreaElement | null>, value: string): boolean {
   const [wide, setWide] = useState(false);
+  // The text the box last changed shape for (`reshape`).
+  const shapedFor = useRef<string | null>(null);
   useLayoutEffect(() => {
+    // Where the canvas and the box's own lines disagree (Windows' text, a zoom), each shape would ask for the other
+    // until React gives up (its error #185, the page's crash screen): one change per text, then the shape stays
+    // until the text changes.
+    const reshape = (to: boolean) => {
+      if (shapedFor.current === value) return;
+      shapedFor.current = value;
+      setWide(to);
+    };
     const el = ref.current;
     const row = el?.closest<HTMLElement>(".ac-composer__row");
     if (!el || !row || !value) {
+      shapedFor.current = null;
       setWide(false);
       return;
     }
     if (value.includes("\n")) {
+      shapedFor.current = null;
       setWide(true);
       return;
     }
     const style = getComputedStyle(el);
     if (!wide) {
       // Wrapped: taller than its one line.
-      if (el.offsetHeight > (Number.parseFloat(style.minHeight) || 0) + 2) setWide(true);
+      if (el.offsetHeight > (Number.parseFloat(style.minHeight) || 0) + 2) reshape(true);
       return;
     }
     const tools = [...row.querySelectorAll<HTMLElement>(":scope > .ac-composer__tools")];
@@ -572,7 +584,7 @@ function useWideText(ref: RefObject<HTMLTextAreaElement | null>, value: string):
       (Number.parseFloat(style.paddingLeft) || 0) -
       (Number.parseFloat(style.paddingRight) || 0);
     const width = textWidth(el, value);
-    if (width !== null && width < room - 2) setWide(false);
+    if (width !== null && width < room - 2) reshape(false);
   }, [ref, value, wide]);
   return wide;
 }
