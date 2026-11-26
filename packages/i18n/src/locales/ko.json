@@ -9401,8 +9401,7 @@
       "machine_access_requested": "{{agent}}이(가) {{computer}}의 {{folder}} 폴더를 요청했어요. 그곳에서 답을 기다리고 있어요.",
       "machine_access_granted": "허용됨: 이제 {{agent}}이(가) {{computer}}의 {{folder}}을(를) 사용할 수 있어요",
       "machine_access_denied": "거절됨: {{agent}}은(는) {{computer}}의 {{folder}}을(를) 사용하지 않아요",
-      "machine_access_expired": "{{computer}}의 {{folder}} 폴더 요청에 응답이 없었어요",
-      "access_command": "컴퓨터에 앱이 없나요? 터미널에서 이 명령을 실행하세요:"
+      "machine_access_expired": "{{computer}}의 {{folder}} 폴더 요청에 응답이 없었어요"
     },
     "suggestion": {
       "pending": "미션 제안",
@@ -16251,6 +16250,13 @@
       "grantTextTerminal": "허용은 컴퓨터에서 직접, 터미널에서 해요.",
       "grantTextAdmin": "허용은 컴퓨터에서 직접, 관리자 권한으로 터미널에서 해요.",
       "grantTerminal": "앱이 없나요? 컴퓨터의 터미널에서:",
+      "pickText": "agentes.chat 앱이 {{machine}}에서 폴더 선택 창을 열고, 그곳에 있는 사람이 고릅니다.",
+      "pick": "폴더 허용",
+      "picked": "{{machine}}에서 폴더 선택 창이 열렸어요. 그곳에서 폴더를 고르세요.",
+      "pickWaiting": "{{machine}}에서 폴더를 고르기를 기다리는 중",
+      "grantTerminalMore": "앱이 없나요? 터미널을 사용하세요",
+      "noApp": "이 컴퓨터에는 폴더를 고를 agentes.chat 앱이 없어요. 그 컴퓨터의 터미널에서 허용하세요.",
+      "requestDone": "이 요청은 이미 답변되었거나 만료되었어요.",
       "preferTerminal": "터미널이 더 좋아요",
       "grantOnlyOwner": "더 허용하는 건 {{name}} 님만 컴퓨터에서 직접 할 수 있어요. 필요한 게 있으면 요청하세요.",
       "pathPlaceholder": "<폴더>",
@@ -16866,6 +16872,8 @@
       "toolRequest": "<b>{{who}}</b>님이 회원님의 <b>{{deviceName}}</b>에서 {{tool}}을(를) 켜 달라고 요청합니다",
       "cliRequest": "<b>{{who}}</b> 님이 <b>{{deviceName}}</b>에 {{tool}}을(를) 설치해 달라고 요청합니다",
       "folderRequest": "<b>{{who}}</b>님이 회원님의 <b>{{deviceName}}</b>에서 {{path}} 폴더를 요청합니다",
+      "folderOnComputer": "컴퓨터에서 허용",
+      "folderShown": "{{deviceName}}에서 열렸어요. 그곳에서 허용하세요.",
       "internetShared": "이제 에이전트가 <b>{{deviceName}}</b>의 인터넷으로 웹사이트를 열어요",
       "internetSharedLine": "이 워크스페이스의 에이전트만, 웹사이트만, 하루 최대 5GB까지 쓰고, 그 컴퓨터의 네트워크에는 절대 접근하지 않아요. 오프라인인 동안에는 평소 연결을 써요.",
       "internetOff": "끄기",
@@ -20111,14 +20119,13 @@
       }
     },
     "use": {
-      "title": "에이전트 화면의 앱",
-      "description": "에이전트는 사람처럼 자기 화면에서 앱을 열고 사용하고, 사람들은 각 에이전트 페이지에서 지켜봐요.",
+      "title": "에이전트마다 따로 쓰는 화면",
+      "description": "여기서는 에이전트마다 내 화면과 분리된 자기만의 화면을 갖고, 그 화면에서 브라우저나 스프레드시트처럼 창이 있는 앱을 사람처럼 사용해요. 에이전트 페이지에서 지켜볼 수 있어요. 지금은 Linux에서만 돼요. Linux는 내 화면을 건드리지 않고 에이전트마다 화면을 하나 더 열 수 있어요.",
       "ready": "준비됨",
       "off": "꺼짐",
-      "unavailable": "사용할 수 없음",
+      "unavailable": "준비 필요",
       "offHelp": "이 컴퓨터에서 화면과 명령을 켜세요:",
       "offOne": "이 컴퓨터는 화면과 명령이 모두 켜져 있어야 합니다.",
-      "linuxOnly": "에이전트는 Linux 컴퓨터에서만 자기 화면의 앱을 사용할 수 있어요.",
       "agent": "{{name}}은(는) 아직 {{computer}}에서 자기 화면의 앱을 사용할 수 없어요.",
       "agent_female": "{{name}}은(는) 아직 {{computer}}에서 자기 화면의 앱을 사용할 수 없어요."
     },

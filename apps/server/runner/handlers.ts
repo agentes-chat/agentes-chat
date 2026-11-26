@@ -210,6 +210,7 @@ export const OP_ROUTES: Readonly<Record<MachineOp, "machine" | "agent">> = {
   "access.request": "machine",
   "access.reduce": "machine",
   "access.allow": "machine",
+  "access.pick": "machine",
   "browser.act": "agent",
   "browser.stop": "agent",
   "browser.stream.start": "agent",
@@ -283,6 +284,7 @@ export const OP_ROUTES: Readonly<Record<MachineOp, "machine" | "agent">> = {
 type AccessRequestOp = Extract<MachineRequest, { op: "access.request" }>;
 type AccessReduceOp = Extract<MachineRequest, { op: "access.reduce" }>;
 type AccessAllowOp = Extract<MachineRequest, { op: "access.allow" }>;
+type AccessPickOp = Extract<MachineRequest, { op: "access.pick" }>;
 
 export interface HandlerContext {
   /** Real path of the workspace folder. */
@@ -369,6 +371,8 @@ export interface HandlerContext {
     reduce(req: AccessReduceOp): Promise<MachineReplies["access.reduce"]>;
     /** `ACCESS_ALLOW_PROTOCOL`: the owner turned a tool on from the apps; absent: refused. */
     allow?(req: AccessAllowOp): Promise<MachineReplies["access.allow"]>;
+    /** `FOLDER_PICK_PROTOCOL`: someone asks from the apps for a folder, picked here in the app; absent: refused. */
+    pick?(req: AccessPickOp): Promise<MachineReplies["access.pick"]>;
   };
   /** Set per request (protocol 10): the folders allowed for the request's agent, as real paths. */
   grants?: string[];
@@ -766,7 +770,12 @@ async function routeRequest(ctx: HandlerContext, req: MachineRequest, scope: Req
     if (req.op === "brain.turn") signedOut(ctx, req, (out as Partial<MachineReplies["brain.turn"]> | null)?.final);
     return out;
   }
-  if (req.op === "access.request" || req.op === "access.reduce" || req.op === "access.allow") {
+  if (
+    req.op === "access.request" ||
+    req.op === "access.reduce" ||
+    req.op === "access.allow" ||
+    req.op === "access.pick"
+  ) {
     return handleAccess(ctx, req);
   }
   if (req.op === "keep.start" || req.op === "keep.end") {
@@ -1334,7 +1343,7 @@ async function handleAccount(
 }
 
 /** Protocol 10: the agent asks for a folder, or the site reduces what the machine allows. */
-async function handleAccess(ctx: HandlerContext, req: AccessRequestOp | AccessReduceOp | AccessAllowOp) {
+async function handleAccess(ctx: HandlerContext, req: AccessRequestOp | AccessReduceOp | AccessAllowOp | AccessPickOp) {
   if (!ctx.accessOps) throw new RunnerError("bad_request", "This runner keeps no access settings");
   if (req.op === "access.request") {
     if (!req.agent) throw new RunnerError("bad_request", "A folder request belongs to an agent");
@@ -1343,6 +1352,11 @@ async function handleAccess(ctx: HandlerContext, req: AccessRequestOp | AccessRe
   if (req.op === "access.allow") {
     if (!ctx.accessOps.allow) throw new RunnerError("bad_request", "This runner can't turn tools on from the apps");
     return ctx.accessOps.allow(req);
+  }
+  if (req.op === "access.pick") {
+    if (!ctx.accessOps.pick)
+      throw new RunnerError("bad_request", "no_app: this computer has no agentes.chat app to pick a folder in");
+    return ctx.accessOps.pick(req);
   }
   return ctx.accessOps.reduce(req);
 }
@@ -1788,6 +1802,8 @@ function describeOp(req: MachineRequest): string {
       return `${req.op} ${String(req.platform)}/${String(req.serial)}${"app" in req && req.app ? ` ${String(req.app)}` : ""}`;
     case "access.allow":
       return `access.allow tool ${String(req.tool)}`;
+    case "access.pick":
+      return `access.pick${req.requestId ? ` request ${String(req.requestId)}` : ""}`;
     case "access.reduce":
       return `access.reduce${req.removeFolder ? ` folder ${String(req.removeFolder.path ?? "")}` : ""}${req.disableTool ? ` tool ${String(req.disableTool)}` : ""}`;
     default:

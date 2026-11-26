@@ -139,6 +139,11 @@ export const desktopEn = {
     allowedUndo: "Undo",
     allowedOk: "OK",
     allowedUndone: "Off again: {{tool}}",
+    /** Someone asked from agentes.chat (the site or the phone) for a folder here: the popover's card and the notification. */
+    pickTitle: "{{name}} asks for a folder for the agents",
+    pickTitleAgent: "{{name}} asks for a folder for {{agent}}",
+    pickBody: "Choose which folder to allow on this {{device}}.",
+    pickChoose: "Choose folder",
     quitTitle: "Quit agentes.chat?",
     quitBody:
       "Agents can't use this {{device}} while the app is closed. What is already running finishes and sends the result when you open it again.",

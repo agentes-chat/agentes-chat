@@ -1408,6 +1408,31 @@ describe("In the chat and the inbox", () => {
     expect(calls(state, "machines.refuseFolder").map((c) => c.args)).toEqual([[ORG_ID, MAC, "fr-1"]]);
   });
 
+  test("an agent waits for a folder on my computer with the app: Allow on the computer opens the request there", async () => {
+    const state = acmeState();
+    state.notifications = [
+      notification({
+        id: "n-folder",
+        kind: "device.folder_request" as never,
+        waiting: true,
+        actors: [{ type: "agent", id: LIA }],
+        source: { machineId: MAC, label: "Sam's MacBook Pro", agentId: LIA, requestId: "fr-1" } as never,
+        latest: { title: "/Users/sam/Contracts", text: "read the contracts" },
+      }),
+    ];
+    const api = createFakeApi(state);
+    fakeMachinesOf.get(api)?.pair({ id: MAC, name: "Sam's MacBook Pro", os: "darwin", folderPick: true });
+    const app = await renderApp(`/org/${ORG_ID}/notifications`, { api });
+    await settle(6);
+    await showIn(app.services, "en");
+    await click(document.querySelector('[data-n="n-folder"]') as HTMLElement);
+    const read = document.querySelector(".ib-read") as HTMLElement;
+    await click(within(read).getByRole("button", { name: "Allow on the computer" }));
+    await settle(4);
+    expect(calls(state, "machines.askFolder").map((c) => c.args)).toEqual([[ORG_ID, MAC, { requestId: "fr-1" }]]);
+    expect(document.body.textContent).toContain("Opened on Sam's MacBook Pro. Allow it there.");
+  });
+
   test("my computer paired before lends its internet now: the inbox says so plainly, with Turn off", async () => {
     const state = acmeState();
     state.notifications = [

@@ -10146,8 +10146,7 @@
       "machine_access_requested": "{{agent}} a demandé le dossier {{folder}} sur {{computer}}. En attente de la réponse là-bas.",
       "machine_access_granted": "Autorisé : {{agent}} peut désormais utiliser {{folder}} sur {{computer}}",
       "machine_access_denied": "Refusé : {{agent}} n'utilisera pas {{folder}} sur {{computer}}",
-      "machine_access_expired": "La demande pour le dossier {{folder}} sur {{computer}} est restée sans réponse",
-      "access_command": "Pas d'app sur l'ordinateur ? Lancez ceci dans son Terminal :"
+      "machine_access_expired": "La demande pour le dossier {{folder}} sur {{computer}} est restée sans réponse"
     },
     "suggestion": {
       "pending": "Suggestion pour la mission",
@@ -17433,6 +17432,13 @@
       "grantTextTerminal": "Les autorisations se donnent sur l'ordinateur lui-même, dans son Terminal :",
       "grantTextAdmin": "Les autorisations se donnent sur l'ordinateur lui-même, dans son Terminal, en tant qu'administrateur :",
       "grantTerminal": "Pas d'app ? Dans le terminal de l'ordinateur :",
+      "pickText": "L'app agentes.chat ouvre un sélecteur de dossier sur {{machine}}, pour que la personne sur place choisisse.",
+      "pick": "Autoriser un dossier",
+      "picked": "Un sélecteur de dossier s'est ouvert sur {{machine}}. Choisissez le dossier là-bas.",
+      "pickWaiting": "En attente du choix du dossier sur {{machine}}",
+      "grantTerminalMore": "Pas d'app sur place ? Utilisez le Terminal",
+      "noApp": "Cet ordinateur n'a pas l'app agentes.chat pour choisir le dossier. Autorisez-le depuis son Terminal.",
+      "requestDone": "Cette demande a déjà reçu une réponse ou a expiré.",
       "preferTerminal": "Je préfère le Terminal",
       "grantOnlyOwner": "Seule la personne {{name}} peut autoriser davantage, sur l'ordinateur lui-même. Si vous avez besoin de quelque chose, demandez-lui.",
       "pathPlaceholder": "<dossier>",
@@ -18056,6 +18062,8 @@
       "toolRequest": "<b>{{who}}</b> vous demande d'activer {{tool}} sur votre <b>{{deviceName}}</b>",
       "cliRequest": "<b>{{who}}</b> vous demande d'installer {{tool}} sur votre <b>{{deviceName}}</b>",
       "folderRequest": "<b>{{who}}</b> vous demande le dossier {{path}} sur votre <b>{{deviceName}}</b>",
+      "folderOnComputer": "Autoriser sur l'ordinateur",
+      "folderShown": "Ouvert sur {{deviceName}}. Autorisez-le là-bas.",
       "internetShared": "Les agents ouvrent désormais les sites web via la connexion internet de <b>{{deviceName}}</b>",
       "internetSharedLine": "Uniquement les agents de ce workspace, uniquement des sites web, jusqu’à 5 Go par jour, jamais rien sur son propre réseau. Tant qu’il est hors ligne, ils utilisent leur connexion habituelle.",
       "internetOff": "Désactiver",
@@ -21517,14 +21525,13 @@
       }
     },
     "use": {
-      "title": "Applications sur les écrans des agents",
-      "description": "Les agents ouvrent et utilisent ici des applications sur leurs propres écrans, comme le ferait une personne, pendant que les gens regardent depuis la page de chaque agent.",
+      "title": "L'écran de chaque agent",
+      "description": "Ici, chaque agent a un écran à lui, séparé du vôtre, et y utilise des apps avec des fenêtres, comme un navigateur ou un tableur, comme le ferait une personne. Vous regardez depuis la page de l'agent. Linux seulement pour l'instant : il peut ouvrir un écran en plus pour chaque agent sans toucher au vôtre.",
       "ready": "Prêt",
       "off": "Désactivé",
-      "unavailable": "Indisponible",
+      "unavailable": "À préparer",
       "offHelp": "Activez les écrans et les commandes sur cet ordinateur :",
       "offOne": "Cet ordinateur a besoin de l'écran et des commandes activés.",
-      "linuxOnly": "Les agents n'utilisent des applications sur leurs propres écrans que sur les ordinateurs Linux.",
       "agent": "{{name}} ne peut pas encore utiliser d'applications sur son écran sur {{computer}}.",
       "agent_female": "{{name}} ne peut pas encore utiliser d'applications sur son écran sur {{computer}}."
     },

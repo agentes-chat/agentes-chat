@@ -10314,7 +10314,6 @@ export const ptBR = {
       machine_access_granted: "Liberado: {{agent}} já pode usar {{folder}} no {{computer}}",
       machine_access_denied: "Recusado: {{agent}} não vai usar {{folder}} no {{computer}}",
       machine_access_expired: "O pedido da pasta {{folder}} no {{computer}} ficou sem resposta",
-      access_command: "Sem o app no computador? Rode no Terminal dele:",
     },
     suggestion: {
       pending: "Sugestão para a missão",
@@ -17309,6 +17308,13 @@ export const ptBR = {
       grantTextTerminal: "Liberar é no próprio computador, no Terminal dele:",
       grantTextAdmin: "Liberar é no próprio computador, no Terminal dele, como administrador:",
       grantTerminal: "Sem o app? No terminal do computador:",
+      pickText: "O app do agentes.chat abre a escolha de pasta no {{machine}}, para quem estiver lá escolher.",
+      pick: "Liberar uma pasta",
+      picked: "A escolha de pasta abriu no {{machine}}. Escolha a pasta lá.",
+      pickWaiting: "Esperando a escolha da pasta no {{machine}}",
+      grantTerminalMore: "Sem o app lá? Use o Terminal",
+      noApp: "Este computador não tem o app do agentes.chat para escolher a pasta. Libere pelo Terminal dele.",
+      requestDone: "Este pedido já foi respondido ou expirou.",
       /** Under a one-click button: the same as a command to paste on that computer. */
       preferTerminal: "Prefiro no Terminal",
       grantOnlyOwner: "Só {{name}} libera, no próprio computador. Se precisar de algo, peça para ele ou ela.",
@@ -17963,6 +17969,8 @@ export const ptBR = {
       toolRequest: "<b>{{who}}</b> pede para ligar {{tool}} no seu <b>{{deviceName}}</b>",
       cliRequest: "<b>{{who}}</b> pede para instalar {{tool}} no seu <b>{{deviceName}}</b>",
       folderRequest: "<b>{{who}}</b> pede a pasta {{path}} no seu <b>{{deviceName}}</b>",
+      folderOnComputer: "Liberar no computador",
+      folderShown: "Aberto no {{deviceName}}. Libere lá.",
       internetShared: "Agora os agentes abrem sites pela internet de <b>{{deviceName}}</b>",
       internetSharedLine:
         "Só os agentes deste workspace, só sites, até 5 GB por dia, nunca nada da rede dele. Enquanto ele estiver offline, os agentes usam a conexão de sempre.",
@@ -21596,16 +21604,15 @@ export const ptBR = {
     },
     /** Whether agents can use apps on their desktops on a computer (ADR 0062): its page and the agent's. */
     use: {
-      title: "Apps nas telas dos agentes",
+      title: "Tela própria de cada agente",
       description:
-        "Os agentes abrem e usam apps na própria tela aqui, como uma pessoa faria, e as pessoas assistem pela página de cada um.",
+        "Aqui cada agente ganha uma tela só dele, separada da sua, e usa nela apps com janelas, como um navegador ou uma planilha, como uma pessoa faria. Você assiste pela página do agente. Por enquanto só no Linux, que abre uma tela extra para cada agente sem mexer na sua.",
       ready: "Pronto",
       off: "Desligado",
-      unavailable: "Indisponível",
+      unavailable: "Falta preparar",
       offHelp: "Ligue a tela e os comandos neste computador:",
       /** Whoever connected it turns each switch on with the buttons that follow. */
       offOne: "A tela e os comandos precisam estar ligados neste computador.",
-      linuxOnly: "Os agentes só usam apps na própria tela em computadores Linux.",
       agent: "O {{name}} ainda não consegue usar apps na própria tela no {{computer}}.",
       agent_female: "A {{name}} ainda não consegue usar apps na própria tela no {{computer}}.",
     },

@@ -503,6 +503,7 @@ test("a system-mode runner (root) without workers does no agent work; machine-le
     "access.request",
     "access.reduce",
     "access.allow",
+    "access.pick",
     // Root refuses it, and every op with a browser profile, until profiles have OS users of their own (ADR 0110).
     "browser.profile.delete",
     "desktop.session.start",

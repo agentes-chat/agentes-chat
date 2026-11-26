@@ -374,6 +374,18 @@
   "tray.allowedUndone": {
     "value": "Off again: {{tool}}"
   },
+  "tray.pickTitle": {
+    "value": "{{name}} asks for a folder for the agents"
+  },
+  "tray.pickTitleAgent": {
+    "value": "{{name}} asks for a folder for {{agent}}"
+  },
+  "tray.pickBody": {
+    "value": "Choose which folder to allow on this {{device}}."
+  },
+  "tray.pickChoose": {
+    "value": "Choose folder"
+  },
   "tray.quitTitle": {
     "value": "Quit agentes.chat?"
   },

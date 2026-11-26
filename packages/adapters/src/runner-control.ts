@@ -371,7 +371,21 @@ export type ControlEvent =
   | { kind: "access.resolved"; requestId: string; decision: "granted" | "denied" | "expired" }
   | { kind: "access.changed"; access: RunnerAccess }
   /** The computer's owner turned `tool` on from the apps (`access.allow`): the app says so, with Undo. */
-  | { kind: "access.allowed"; tool: keyof RunnerTools; byName: string };
+  | { kind: "access.allowed"; tool: keyof RunnerTools; byName: string }
+  /**
+   * Someone asked from the apps for a folder here (`access.pick`): the app shows who, and the person here picks one in
+   * the system's folder picker, for `agentId` or every agent. With `requestId`: an agent's pending request, again.
+   */
+  | { kind: "access.pick"; pick: ControlFolderPick };
+
+/** `access.pick` as the app gets it. */
+export interface ControlFolderPick {
+  byName: string;
+  agentId?: string;
+  agentName?: string;
+  requestId?: string;
+  at: string;
+}
 
 /** Runner → app. */
 export type ControlOut =

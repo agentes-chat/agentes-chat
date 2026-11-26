@@ -9734,8 +9734,7 @@
       "machine_access_requested": "{{agent}}, {{computer}} üzerindeki {{folder}} klasörünü istedi. Oradan yanıt bekleniyor.",
       "machine_access_granted": "İzin verildi: {{agent}} artık {{computer}} üzerinde {{folder}} klasörünü kullanabilir",
       "machine_access_denied": "Reddedildi: {{agent}}, {{computer}} üzerinde {{folder}} klasörünü kullanmayacak",
-      "machine_access_expired": "{{computer}} üzerindeki {{folder}} klasörü isteğine yanıt gelmedi",
-      "access_command": "Bilgisayarda uygulama yok mu? Bunu Terminal'inde çalıştırın:"
+      "machine_access_expired": "{{computer}} üzerindeki {{folder}} klasörü isteğine yanıt gelmedi"
     },
     "suggestion": {
       "pending": "Misyon için öneri",
@@ -16799,6 +16798,13 @@
       "grantTextTerminal": "İzin vermek bilgisayarın kendisinde, Terminal'inde yapılır:",
       "grantTextAdmin": "İzin vermek bilgisayarın kendisinde, Terminal'inde, yöneticisi olarak yapılır:",
       "grantTerminal": "Uygulama yok mu? Bilgisayarın terminalinde:",
+      "pickText": "agentes.chat uygulaması {{machine}} üzerinde bir klasör seçici açar, orada olan kişi seçer.",
+      "pick": "Bir klasöre izin ver",
+      "picked": "{{machine}} üzerinde bir klasör seçici açıldı. Klasörü orada seç.",
+      "pickWaiting": "{{machine}} üzerinde klasörün seçilmesi bekleniyor",
+      "grantTerminalMore": "Orada uygulama yok mu? Terminal'i kullan",
+      "noApp": "Bu bilgisayarda klasörü seçmek için agentes.chat uygulaması yok. İzni onun Terminal'inden ver.",
+      "requestDone": "Bu isteğe zaten yanıt verildi ya da süresi doldu.",
       "preferTerminal": "Terminal'i tercih ederim",
       "grantOnlyOwner": "Daha fazlasına yalnızca {{name}}, bilgisayarın kendisinden izin verebilir. Bir şeye ihtiyacınız varsa ona sorun.",
       "pathPlaceholder": "<klasör>",
@@ -17418,6 +17424,8 @@
       "toolRequest": "<b>{{who}}</b>, <b>{{deviceName}}</b> cihazınızda {{tool}} açmanızı istiyor",
       "cliRequest": "<b>{{who}}</b>, <b>{{deviceName}}</b> cihazınıza {{tool}} kurmanızı istiyor",
       "folderRequest": "<b>{{who}}</b>, <b>{{deviceName}}</b> cihazınızda {{path}} klasörünü istiyor",
+      "folderOnComputer": "Bilgisayarda izin ver",
+      "folderShown": "{{deviceName}} üzerinde açıldı. İzni orada ver.",
       "internetShared": "Ajanlar artık web sitelerini <b>{{deviceName}}</b> bilgisayarının internetiyle açıyor",
       "internetSharedLine": "Yalnızca bu çalışma alanının ajanları, yalnızca web siteleri, günde en fazla 5 GB, bilgisayarın kendi ağındaki hiçbir şeye asla erişmez. Çevrimdışıyken ajanlar her zamanki bağlantılarını kullanır.",
       "internetOff": "Kapat",
@@ -20711,14 +20719,13 @@
       }
     },
     "use": {
-      "title": "Ajanların ekranlarındaki uygulamalar",
-      "description": "Ajanlar burada kendi ekranlarında uygulamaları bir insan gibi açıp kullanır, kişiler de her ajanın sayfasından izler.",
+      "title": "Her ajanın kendi ekranı",
+      "description": "Burada her ajanın seninkinden ayrı, kendine ait bir ekranı olur ve bu ekranda tarayıcı ya da tablo gibi pencereli uygulamaları bir insanın yapacağı gibi kullanır. Ajanın sayfasından izlersin. Şimdilik yalnızca Linux'ta: Linux seninkine dokunmadan her ajan için ek bir ekran açabilir.",
       "ready": "Hazır",
       "off": "Kapalı",
-      "unavailable": "Kullanılamıyor",
+      "unavailable": "Hazırlanması gerekiyor",
       "offHelp": "Bu bilgisayarda ekranları ve komutları açın:",
       "offOne": "Bu bilgisayarda ekran ve komutların ikisi de açık olmalı.",
-      "linuxOnly": "Ajanlar kendi ekranlarında uygulamaları yalnızca Linux bilgisayarlarda kullanır.",
       "agent": "{{name}}, {{computer}} üzerinde kendi ekranındaki uygulamaları henüz kullanamıyor.",
       "agent_female": "{{name}}, {{computer}} üzerinde kendi ekranındaki uygulamaları henüz kullanamıyor."
     },

@@ -772,10 +772,44 @@ describe("an agent's folder request in the chat (ADR 0036 §8)", () => {
     await settle(10);
     const ask = document.querySelector('[data-message-id="m-ask"]') as HTMLElement;
     expect(ask.textContent).toContain("Ada pediu a pasta loja-v5 no MacBook do Walter. Esperando a resposta lá.");
-    expect(ask.querySelector(".machine-command__code")?.textContent).toBe(params.command);
+    // The command is the way without the app: folded.
+    const fold = ask.querySelector("details");
+    expect(fold?.open).toBe(false);
+    expect(fold?.querySelector("summary")?.textContent).toBe("Sem o app lá? Use o Terminal");
+    expect(fold?.querySelector(".machine-command__code")?.textContent).toBe(params.command);
     const ok = document.querySelector('[data-message-id="m-ok"]') as HTMLElement;
     expect(ok.textContent).toContain("Liberado: Ada já pode usar loja-v5 no MacBook do Walter");
     expect(ok.querySelector(".machine-command__code")).toBeNull();
+  });
+
+  test("a computer the agentes.chat app runs: Liberar no computador opens the request there, and no command", async () => {
+    const state = seedState();
+    const api = createFakeApi(state);
+    const m = fakeMachinesOf.get(api)?.pair({ name: "MacBook do Walter", os: "darwin", folderPick: true }) as Machine;
+    const base = state.messages[0] as (typeof state.messages)[number];
+    state.messages.push({
+      ...base,
+      id: "m-ask",
+      threadId: null,
+      author: { type: "agent", id: ADA_ID },
+      body: "Ada asked for a folder.",
+      mentionedAgentIds: [],
+      meta: {
+        bodyCode: "machine_access_requested",
+        bodyParams: params,
+        machineAccess: { machineId: m.id, requestId: "0193aaaa-bbbb-7ccc-8ddd-eeeeffff0001" },
+      },
+      createdAt: new Date().toISOString(),
+    });
+    await renderApp(`/org/${ORG_ID}/c/${ENG_ID}`, { api });
+    await settle(10);
+    const ask = document.querySelector('[data-message-id="m-ask"]') as HTMLElement;
+    expect(ask.querySelector(".machine-command__code")).toBeNull();
+    await act(async () => fireEvent.click(within(ask).getByRole("button", { name: "Liberar no computador" })));
+    await settle(4);
+    expect(state.calls.filter((c) => c.method === "machines.askFolder").map((c) => c.args)).toEqual([
+      [ORG_ID, m.id, { requestId: "0193aaaa-bbbb-7ccc-8ddd-eeeeffff0001" }],
+    ]);
   });
 
   test("the notice codes the chat knows", () => {
@@ -945,14 +979,32 @@ describe("the computer page: pause, folders and tools (ADR 0036)", () => {
     expect(reduceCalls(state)).toEqual([[ORG_ID, m.id, { disableTool: "claude" }]]);
     expect((tools.querySelector('[data-tool="claude"]') as HTMLElement).textContent).toContain("Desligado");
 
-    // To grant: on the computer (the app), the terminal command as a fallback; no grant button.
+    // An app too old to pick a folder from here: on the computer (the app), the terminal command folded as the way
+    // without it; no grant button.
     expect(screen().queryByRole("button", { name: /^(Liberar|Ligar)/ })).toBeNull();
     const grant = screen().getByRole("region", { name: "Para liberar mais" });
     expect(grant.textContent).toContain("abra o app do agentes.chat nele (Preferências → Pastas).");
-    expect(grant.textContent).toContain("Sem o app? No terminal do computador:");
-    expect(grant.querySelector(".machine-command__code")?.textContent).toBe(
+    const fold = grant.querySelector("details");
+    expect(fold?.open).toBe(false);
+    expect(fold?.querySelector("summary")?.textContent).toBe("Sem o app lá? Use o Terminal");
+    expect(fold?.querySelector(".machine-command__code")?.textContent).toBe(
       "agentes-runner folders allow <pasta> --agent <agente>",
     );
+  });
+
+  test("Liberar uma pasta: the app on the computer opens its folder picker there, and the card waits for the folder", async () => {
+    const { state, m } = await open({ folderPick: true });
+    const grant = screen().getByRole("region", { name: "Para liberar mais" });
+    expect(grant.textContent).toContain("O app do agentes.chat abre a escolha de pasta no");
+    // The command is for a computer without the app: none here.
+    expect(grant.querySelector("details")).toBeNull();
+    expect(grant.textContent).not.toContain("agentes-runner");
+    await click(within(grant).getByRole("button", { name: "Liberar uma pasta" }));
+    await settle(4);
+    expect(state.calls.filter((c) => c.method === "machines.askFolder").map((c) => c.args)).toEqual([
+      [ORG_ID, m.id, {}],
+    ]);
+    expect(within(grant).getByRole("status").textContent).toBe(`Esperando a escolha da pasta no ${m.name}`);
   });
 
   test("a Windows computer: what holds Codex there joins its ⓘ when it is less than MXC, never as a line", async () => {
@@ -1037,7 +1089,7 @@ describe("the computer page: pause, folders and tools (ADR 0036)", () => {
       return screen().getByRole("region", { name: "Para liberar mais" }).textContent;
     };
     expect(await grantText({ os: "windows", name: "PC da Ana" })).toContain(
-      "abra o app do agentes.chat nele (Preferências → Pastas).Sem o app? No terminal do computador:",
+      "abra o app do agentes.chat nele (Preferências → Pastas).Sem o app lá? Use o Terminal",
     );
     const linux = await grantText({ os: "linux", name: "Servidor", mode: "system" });
     expect(linux).toContain("Liberar é no próprio computador, no Terminal dele, como administrador:");

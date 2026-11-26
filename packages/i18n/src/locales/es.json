@@ -10097,8 +10097,7 @@
       "machine_access_requested": "{{agent}} pidió la carpeta {{folder}} en {{computer}}. Esperando la respuesta ahí.",
       "machine_access_granted": "Permitido: {{agent}} ya puede usar {{folder}} en {{computer}}",
       "machine_access_denied": "Rechazado: {{agent}} no usará {{folder}} en {{computer}}",
-      "machine_access_expired": "La solicitud de la carpeta {{folder}} en {{computer}} no tuvo respuesta",
-      "access_command": "¿No tienes la app en la computadora? Ejecuta esto en su Terminal:"
+      "machine_access_expired": "La solicitud de la carpeta {{folder}} en {{computer}} no tuvo respuesta"
     },
     "suggestion": {
       "pending": "Sugerencia para la misión",
@@ -17359,6 +17358,13 @@
       "grantTextTerminal": "Los permisos se dan en la propia computadora, en su Terminal:",
       "grantTextAdmin": "Los permisos se dan en la propia computadora, en su Terminal, como su administrador:",
       "grantTerminal": "¿No tienes la app? En la terminal de la computadora:",
+      "pickText": "La app de agentes.chat abre un selector de carpetas en {{machine}} para que quien esté allí elija.",
+      "pick": "Permitir una carpeta",
+      "picked": "Se abrió un selector de carpetas en {{machine}}. Elige la carpeta allí.",
+      "pickWaiting": "Esperando que se elija la carpeta en {{machine}}",
+      "grantTerminalMore": "¿No hay app allí? Usa la Terminal",
+      "noApp": "Este computador no tiene la app de agentes.chat para elegir la carpeta. Permítela desde su Terminal.",
+      "requestDone": "Esta solicitud ya fue respondida o expiró.",
       "preferTerminal": "Prefiero la terminal",
       "grantOnlyOwner": "Solo {{name}} permite más, desde la propia computadora. Si necesitas algo, pídeselo.",
       "pathPlaceholder": "<carpeta>",
@@ -17982,6 +17988,8 @@
       "toolRequest": "<b>{{who}}</b> te pide activar {{tool}} en tu <b>{{deviceName}}</b>",
       "cliRequest": "<b>{{who}}</b> te pide instalar {{tool}} en tu <b>{{deviceName}}</b>",
       "folderRequest": "<b>{{who}}</b> te pide la carpeta {{path}} en tu <b>{{deviceName}}</b>",
+      "folderOnComputer": "Permitir en el computador",
+      "folderShown": "Abierto en {{deviceName}}. Permítelo allí.",
       "internetShared": "Los agentes ahora abren sitios web a través del internet de <b>{{deviceName}}</b>",
       "internetSharedLine": "Solo los agentes de este workspace, solo sitios web, hasta 5 GB al día, nunca nada de su propia red. Mientras esté sin conexión, usan su conexión de siempre.",
       "internetOff": "Desactivar",
@@ -21383,14 +21391,13 @@
       }
     },
     "use": {
-      "title": "Apps en las pantallas de los agentes",
-      "description": "Aquí los agentes abren y usan apps en sus propias pantallas, como lo haría una persona, mientras las personas miran desde la página de cada agente.",
+      "title": "La pantalla propia de cada agente",
+      "description": "Aquí cada agente tiene una pantalla solo suya, aparte de la tuya, y usa en ella apps con ventanas, como un navegador o una hoja de cálculo, como lo haría una persona. Lo ves desde la página del agente. Por ahora solo en Linux, que abre una pantalla extra para cada agente sin tocar la tuya.",
       "ready": "Listo",
       "off": "Desactivado",
-      "unavailable": "No disponible",
+      "unavailable": "Falta prepararlo",
       "offHelp": "Activa las pantallas y los comandos en esta computadora:",
       "offOne": "Este ordenador necesita la pantalla y los comandos activados.",
-      "linuxOnly": "Los agentes usan apps en sus propias pantallas solo en computadoras con Linux.",
       "agent": "{{name}} todavía no puede usar apps en su pantalla en {{computer}}.",
       "agent_female": "{{name}} todavía no puede usar apps en su pantalla en {{computer}}."
     },

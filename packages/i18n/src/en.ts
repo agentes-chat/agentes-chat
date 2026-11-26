@@ -10366,7 +10366,6 @@ export const en = {
       machine_access_granted: "Allowed: {{agent}} can now use {{folder}} on {{computer}}",
       machine_access_denied: "Declined: {{agent}} won't use {{folder}} on {{computer}}",
       machine_access_expired: "The request for the folder {{folder}} on {{computer}} got no answer",
-      access_command: "No app on the computer? Run this in its Terminal:",
     },
     suggestion: {
       pending: "Suggestion for the mission",
@@ -17377,6 +17376,16 @@ export const en = {
       grantTextTerminal: "Allowing happens on the computer itself, in its Terminal:",
       grantTextAdmin: "Allowing happens on the computer itself, in its Terminal, as its administrator:",
       grantTerminal: "No app? In the computer's terminal:",
+      /** "Liberar uma pasta": the agentes.chat app on that computer opens the system's folder picker for whoever is there. */
+      pickText: "The agentes.chat app opens a folder picker on {{machine}}, for whoever is there to choose.",
+      pick: "Allow a folder",
+      picked: "A folder picker opened on {{machine}}. Choose the folder there.",
+      /** While the person at the computer hasn't picked yet. */
+      pickWaiting: "Waiting for the folder to be chosen on {{machine}}",
+      /** A computer without the app (or one too old): the command, folded under this. */
+      grantTerminalMore: "No app there? Use the Terminal",
+      noApp: "This computer has no agentes.chat app to pick the folder in. Allow it from its Terminal.",
+      requestDone: "This request was already answered or has expired.",
       /** Under a one-click button: the same as a command to paste on that computer. */
       preferTerminal: "I'd rather use the Terminal",
       grantOnlyOwner: "Only {{name}} allows more, on the computer itself. If you need something, ask them.",
@@ -18094,6 +18103,9 @@ export const en = {
       toolRequest: "<b>{{who}}</b> asks you to turn on {{tool}} on your <b>{{deviceName}}</b>",
       cliRequest: "<b>{{who}}</b> asks you to install {{tool}} on your <b>{{deviceName}}</b>",
       folderRequest: "<b>{{who}}</b> asks for the folder {{path}} on your <b>{{deviceName}}</b>",
+      /** Its button where the agentes.chat app runs that computer: the request opens there, for the person to allow. */
+      folderOnComputer: "Allow on the computer",
+      folderShown: "Opened on {{deviceName}}. Allow it there.",
       /**
        * Once, for a computer paired before agents could use a person's internet (ADR 0237): to its owner, or to admins
        * for a computer marked the workspace's. `deviceName` the computer's name.
@@ -21697,16 +21709,16 @@ export const en = {
     },
     /** Whether agents can use apps on their desktops on a computer (ADR 0062): its page and the agent's. */
     use: {
-      title: "Apps on the agents' screens",
+      title: "Each agent's own screen",
       description:
-        "Agents open and use apps on their own screens here, the way a person would, while people watch from each agent's page.",
+        "Each agent gets a screen of its own here, apart from yours, and uses apps with windows on it, like a browser or a spreadsheet, the way a person would. You watch from the agent's page. Linux only for now: it can open an extra screen for each agent without touching yours.",
       ready: "Ready",
       off: "Off",
-      unavailable: "Not available",
+      /** A Linux computer that still lacks what the screens need: the line under it says what. */
+      unavailable: "Needs setup",
       offHelp: "Turn on the screens and commands on this computer:",
       /** Whoever connected it turns each switch on with the buttons that follow. */
       offOne: "This computer needs both the screen and commands on.",
-      linuxOnly: "Agents use apps on their own screens only on Linux computers.",
       agent: "{{name}} can't use apps on his screen on {{computer}} yet.",
       agent_female: "{{name}} can't use apps on her screen on {{computer}} yet.",
     },

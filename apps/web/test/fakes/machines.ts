@@ -299,6 +299,9 @@ export function createFakeMachines(ctx: MockContext, log: (method: string, ...ar
         log("machines.refuseFolder", orgId, machineId, requestId);
         return { status: "denied" };
       },
+      askFolder: async (orgId, machineId, input) => {
+        log("machines.askFolder", orgId, machineId, input);
+      },
       fetchCli: async (orgId, machineId, cli) => {
         log("machines.fetchCli", orgId, machineId, cli);
         return { fetch: { state: "fetching", version: "1.0.0", done: 0, total: null } };

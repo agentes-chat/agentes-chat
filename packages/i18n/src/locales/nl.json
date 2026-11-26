@@ -9833,8 +9833,7 @@
       "machine_access_requested": "{{agent}} vroeg om de map {{folder}} op {{computer}}. Wacht daar op antwoord.",
       "machine_access_granted": "Toegestaan: {{agent}} kan nu {{folder}} gebruiken op {{computer}}",
       "machine_access_denied": "Geweigerd: {{agent}} gebruikt {{folder}} niet op {{computer}}",
-      "machine_access_expired": "De aanvraag voor de map {{folder}} op {{computer}} kreeg geen antwoord",
-      "access_command": "Geen app op de computer? Voer dit uit in de Terminal:"
+      "machine_access_expired": "De aanvraag voor de map {{folder}} op {{computer}} kreeg geen antwoord"
     },
     "suggestion": {
       "pending": "Suggestie voor de missie",
@@ -16938,6 +16937,13 @@
       "grantTextTerminal": "Toestaan gebeurt op de computer zelf, in de Terminal:",
       "grantTextAdmin": "Toestaan gebeurt op de computer zelf, in de Terminal, als beheerder van die computer:",
       "grantTerminal": "Geen app? In de terminal van de computer:",
+      "pickText": "De agentes.chat-app opent een mapkiezer op {{machine}}, zodat wie daar is kiest.",
+      "pick": "Een map toestaan",
+      "picked": "Op {{machine}} is een mapkiezer geopend. Kies daar de map.",
+      "pickWaiting": "Wachten tot er op {{machine}} een map is gekozen",
+      "grantTerminalMore": "Geen app daar? Gebruik de Terminal",
+      "noApp": "Deze computer heeft geen agentes.chat-app om de map te kiezen. Sta hem toe via de Terminal ervan.",
+      "requestDone": "Dit verzoek is al beantwoord of verlopen.",
       "preferTerminal": "Liever in de Terminal",
       "grantOnlyOwner": "Alleen {{name}} kan meer toestaan, op de computer zelf. Heb je iets nodig, vraag het dan aan die persoon.",
       "pathPlaceholder": "<map>",
@@ -17557,6 +17563,8 @@
       "toolRequest": "<b>{{who}}</b> vraagt je {{tool}} aan te zetten op je <b>{{deviceName}}</b>",
       "cliRequest": "<b>{{who}}</b> vraagt je {{tool}} te installeren op je <b>{{deviceName}}</b>",
       "folderRequest": "<b>{{who}}</b> vraagt je om de map {{path}} op je <b>{{deviceName}}</b>",
+      "folderOnComputer": "Toestaan op de computer",
+      "folderShown": "Geopend op {{deviceName}}. Sta het daar toe.",
       "internetShared": "Agents openen websites nu via het internet van <b>{{deviceName}}</b>",
       "internetSharedLine": "Alleen de agents van deze workspace, alleen websites, tot 5 GB per dag, nooit iets op het eigen netwerk van de computer. Zolang hij offline is, gebruiken ze hun gewone verbinding.",
       "internetOff": "Uitzetten",
@@ -20958,14 +20966,13 @@
       }
     },
     "use": {
-      "title": "Apps op de schermen van de agents",
-      "description": "Agents openen en gebruiken hier apps op hun eigen scherm, zoals een mens dat zou doen, terwijl mensen meekijken vanaf de pagina van elke agent.",
+      "title": "Een eigen scherm voor elke agent",
+      "description": "Hier krijgt elke agent een eigen scherm, los van het jouwe, en gebruikt daarop apps met vensters, zoals een browser of een spreadsheet, zoals een mens dat zou doen. Je kijkt mee vanaf de pagina van de agent. Voorlopig alleen op Linux: dat kan voor elke agent een extra scherm openen zonder aan het jouwe te komen.",
       "ready": "Klaar",
       "off": "Uit",
-      "unavailable": "Niet beschikbaar",
+      "unavailable": "Moet nog ingesteld worden",
       "offHelp": "Zet de schermen en opdrachten op deze computer aan:",
       "offOne": "Deze computer heeft het scherm en de commando's aan nodig.",
-      "linuxOnly": "Agents gebruiken apps op hun eigen scherm alleen op Linux-computers.",
       "agent": "{{name}} kan nog geen apps op zijn scherm gebruiken op {{computer}}.",
       "agent_female": "{{name}} kan nog geen apps op haar scherm gebruiken op {{computer}}."
     },

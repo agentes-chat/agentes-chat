@@ -780,6 +780,75 @@ test("a tool turned on from the apps: the switch is written, the server and the 
   expect(s.sent.find((f) => f.id === "w3")).toMatchObject({ ok: false, error: { code: "bad_request" } });
 });
 
+test("a folder asked for from the apps: the app here is told who asks and for whom, nothing is allowed by it, and an agent's request is shown again", async () => {
+  const { home } = pairedHome();
+  const c = control(home);
+  const s = await c.connect();
+  s.frame({ type: "agents", agents: [AGENT] });
+  s.frame({
+    type: "request",
+    id: "p1",
+    op: "access.pick",
+    by: "u-bia",
+    byName: "Bia Rocha",
+    agentId: AGENT.id,
+    agentName: "Dev",
+  });
+  await waitFor(() => s.sent.some((f) => f.id === "p1"));
+  expect(s.sent.find((f) => f.id === "p1")).toMatchObject({ ok: true, data: { asked: true } });
+  expect(c.events("access.pick")).toEqual([
+    { kind: "access.pick", pick: { byName: "Bia Rocha", agentId: AGENT.id, agentName: "Dev", at: expect.any(String) } },
+  ]);
+  expect((stored(home).access as { folders: unknown[] }).folders).toEqual([]);
+
+  // A request that is gone says so; a pending one is shown again.
+  s.frame({
+    type: "request",
+    id: "p2",
+    op: "access.pick",
+    by: "u-bia",
+    byName: "Bia Rocha",
+    requestId: "req-00000009",
+  });
+  await waitFor(() => s.sent.some((f) => f.id === "p2"));
+  expect(s.sent.find((f) => f.id === "p2")).toMatchObject({ ok: false, error: { code: "not_found" } });
+  const folder = tempDir("proj-");
+  dirs.push(folder);
+  s.frame({
+    type: "request",
+    id: "a1",
+    op: "access.request",
+    requestId: "req-00000001",
+    path: folder,
+    reason: "tests",
+    agent: AGENT,
+  });
+  await waitFor(() => c.events("access.requested").length === 1);
+  s.frame({
+    type: "request",
+    id: "p3",
+    op: "access.pick",
+    by: "u-bia",
+    byName: "Bia Rocha",
+    requestId: "req-00000001",
+  });
+  await waitFor(() => s.sent.some((f) => f.id === "p3"));
+  expect(c.events("access.pick").at(-1)).toMatchObject({ pick: { requestId: "req-00000001" } });
+});
+
+test("a folder asked for from the apps on a runner the app doesn't run: refused with no_app, so the apps show the command", async () => {
+  const { home } = pairedHome({ managedBy: undefined });
+  const c = control(home);
+  const s = await c.connect();
+  s.frame({ type: "request", id: "p1", op: "access.pick", by: "u-bia", byName: "Bia Rocha" });
+  await waitFor(() => s.sent.some((f) => f.id === "p1"));
+  expect(s.sent.find((f) => f.id === "p1")).toMatchObject({
+    ok: false,
+    error: { code: "bad_request", message: expect.stringContaining("no_app") },
+  });
+  expect(c.events("access.pick")).toEqual([]);
+});
+
 test("folders, tools and settings from the app: system folders refused, everything lands in config.json", async () => {
   const { home } = pairedHome();
   const folder = tempDir("proj-");

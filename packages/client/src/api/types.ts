@@ -5488,6 +5488,8 @@ export interface Machine {
   remotePause?: boolean;
   /** Who paired it turns its tools on from the apps (`POST …/access/allow`); `false` or absent: its app is too old. */
   accessAllow?: boolean;
+  /** A folder can be asked for from here (`POST …/access/pick`): the agentes.chat app runs it and the person there picks it. */
+  folderPick?: boolean;
   /**
    * Its coding CLIs are looked for again from the apps (`POST …/clis/check`) and installed there by who paired it
    * (`…/cli-install`); `false` or absent: its app is too old, or it is the workspace's own computer.

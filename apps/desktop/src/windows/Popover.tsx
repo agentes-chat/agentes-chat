@@ -83,6 +83,7 @@ export function Popover() {
   const runningJobs = useRef(0);
   runningJobs.current = jobs.length;
   const requests = homes.flatMap((h) => h.requests.map((r) => ({ home: h, request: r })));
+  const picks = homes.filter((h) => h.pick);
   const incompatible = snap.homes.some(isIncompatible);
   const refused = homes.find(isRefusedHome);
   const outdated = homes.some((h) => h.status?.connection === "outdated");
@@ -740,11 +741,14 @@ export function Popover() {
 
           {homes.map((h) => h.allowed && <AllowedBanner key={h.homeId} home={h} />)}
 
-          {requests.length > 0 && (
+          {requests.length + picks.length > 0 && (
             <section className="dk-psec">
               <div className="dk-pcap">
-                {t("desktop.tray.requests")} <Count n={requests.length} />
+                {t("desktop.tray.requests")} <Count n={requests.length + picks.length} />
               </div>
+              {picks.map((h) => (
+                <PickCard key={h.homeId} home={h} now={now} />
+              ))}
               {requests.map(({ home, request }) => (
                 <RequestCard key={request.requestId} home={home} request={request} now={now} />
               ))}
@@ -1234,6 +1238,73 @@ function AllowedBanner({ home }: { home: Home }) {
     >
       {t("desktop.tray.allowedBody")}
     </Banner>
+  );
+}
+
+/**
+ * Someone asked from the apps for a folder here (`access.pick`): the person here picks it in the system's folder
+ * picker, for the agent named or every agent of that organization here, or says not now. Nothing is allowed unpicked.
+ */
+function PickCard({ home, now }: { home: Home; now: number }) {
+  const { t } = useTranslation();
+  const host = useHost();
+  const store = useStore();
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  const pick = home.pick;
+  if (!pick) return null;
+  const name = pick.byName || orgName(home);
+  const agent = pick.agentId ? agentOf(home, { id: pick.agentId, name: pick.agentName ?? "" }) : null;
+  const choose = async () => {
+    setBusy(true);
+    try {
+      const path = await host.pickFolder().catch(() => null);
+      if (!path) return;
+      const agents = agent ? [agent.id] : (home.status?.agents ?? []).map((a) => a.id);
+      await store.request(home.homeId, { type: "folders.add", path, agents });
+      store.dismissPick(home.homeId);
+      const folder = baseName(path);
+      toast(
+        agent ? t("desktop.tray.allowedOne", { folder, agent: agent.name }) : t("desktop.tray.allowedAll", { folder }),
+        "check",
+      );
+    } catch (err) {
+      toast(
+        err instanceof ControlError && ["invalid_path", "not_found", "bad_request"].includes(err.code)
+          ? t("desktop.tray.answerFailed", { message: err.message })
+          : t("desktop.common.error"),
+        "alert",
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="dk-banner dk-req">
+      <div className="dk-req__who">
+        {agent ? <AgentFace agent={agent} size="sm" state="waiting" /> : <OrgTile logo={home.logo} size="sm" />}
+        <span className="dk-req__whotext">
+          <b>
+            {agent
+              ? t("desktop.tray.pickTitleAgent", { name, agent: agent.name })
+              : t("desktop.tray.pickTitle", { name })}
+          </b>
+          <small>
+            {agent && <OrgTile logo={home.logo} size="sm" />}
+            {orgName(home)} · {since(pick.at, t, now)}
+          </small>
+        </span>
+      </div>
+      <div className="dk-req__quote">{t("desktop.tray.pickBody")}</div>
+      <div className="dk-banner__acts">
+        <Button size="sm" variant="primary" icon="drive" loading={busy} onClick={() => void choose()}>
+          {t("desktop.tray.pickChoose")}
+        </Button>
+        <Button size="sm" variant="ghost" disabled={busy} onClick={() => store.dismissPick(home.homeId)}>
+          {t("desktop.tray.deny")}
+        </Button>
+      </div>
+    </div>
   );
 }
 

@@ -9453,8 +9453,7 @@
       "machine_access_requested": "{{agent}} meminta folder {{folder}} di {{computer}}. Menunggu jawaban di sana.",
       "machine_access_granted": "Diizinkan: {{agent}} sekarang bisa memakai {{folder}} di {{computer}}",
       "machine_access_denied": "Ditolak: {{agent}} tidak akan memakai {{folder}} di {{computer}}",
-      "machine_access_expired": "Permintaan folder {{folder}} di {{computer}} tidak dijawab",
-      "access_command": "Tidak ada aplikasi di komputer itu? Jalankan ini di Terminal-nya:"
+      "machine_access_expired": "Permintaan folder {{folder}} di {{computer}} tidak dijawab"
     },
     "suggestion": {
       "pending": "Saran untuk misi",
@@ -16319,6 +16318,13 @@
       "grantTextTerminal": "Izin diberikan di komputer itu sendiri, lewat Terminal-nya:",
       "grantTextAdmin": "Izin diberikan di komputer itu sendiri, lewat Terminal-nya, sebagai administrator:",
       "grantTerminal": "Tidak ada aplikasi? Di terminal komputer itu:",
+      "pickText": "Aplikasi agentes.chat membuka pemilih folder di {{machine}}, supaya orang di sana yang memilih.",
+      "pick": "Izinkan folder",
+      "picked": "Pemilih folder terbuka di {{machine}}. Pilih foldernya di sana.",
+      "pickWaiting": "Menunggu folder dipilih di {{machine}}",
+      "grantTerminalMore": "Tidak ada aplikasinya di sana? Pakai Terminal",
+      "noApp": "Komputer ini tidak punya aplikasi agentes.chat untuk memilih folder. Izinkan lewat Terminal-nya.",
+      "requestDone": "Permintaan ini sudah dijawab atau sudah kedaluwarsa.",
       "preferTerminal": "Saya lebih suka Terminal",
       "grantOnlyOwner": "Hanya {{name}} yang bisa mengizinkan lebih banyak, di komputer itu sendiri. Kalau kamu butuh sesuatu, minta padanya.",
       "pathPlaceholder": "<folder>",
@@ -16934,6 +16940,8 @@
       "toolRequest": "<b>{{who}}</b> memintamu menyalakan {{tool}} di <b>{{deviceName}}</b> milikmu",
       "cliRequest": "<b>{{who}}</b> meminta kamu memasang {{tool}} di <b>{{deviceName}}</b> kamu",
       "folderRequest": "<b>{{who}}</b> memintamu membuka folder {{path}} di <b>{{deviceName}}</b> milikmu",
+      "folderOnComputer": "Izinkan di komputer",
+      "folderShown": "Terbuka di {{deviceName}}. Izinkan di sana.",
       "internetShared": "Agen kini membuka situs web lewat internet <b>{{deviceName}}</b>",
       "internetSharedLine": "Hanya agen workspace ini, hanya situs web, hingga 5 GB sehari, tidak pernah apa pun di jaringannya sendiri. Selama komputer itu offline, agen memakai koneksi biasa mereka.",
       "internetOff": "Matikan",
@@ -20227,14 +20235,13 @@
       }
     },
     "use": {
-      "title": "Aplikasi di layar agen",
-      "description": "Di sini agen membuka dan memakai aplikasi di layarnya sendiri, seperti yang dilakukan orang, sementara orang menonton dari halaman tiap agen.",
+      "title": "Layar sendiri untuk tiap agen",
+      "description": "Di sini tiap agen mendapat layarnya sendiri, terpisah dari layarmu, dan memakai aplikasi berjendela di sana, seperti browser atau spreadsheet, seperti yang dilakukan orang. Kamu menontonnya dari halaman agen. Untuk sekarang hanya di Linux, yang bisa membuka layar tambahan untuk tiap agen tanpa mengganggu layarmu.",
       "ready": "Siap",
       "off": "Nonaktif",
-      "unavailable": "Tidak tersedia",
+      "unavailable": "Perlu disiapkan",
       "offHelp": "Aktifkan layar dan perintah di komputer ini:",
       "offOne": "Komputer ini perlu layar dan perintah menyala.",
-      "linuxOnly": "Agen hanya bisa memakai aplikasi di layarnya sendiri pada komputer Linux.",
       "agent": "{{name}} belum bisa memakai aplikasi di layarnya di {{computer}}.",
       "agent_female": "{{name}} belum bisa memakai aplikasi di layarnya di {{computer}}."
     },

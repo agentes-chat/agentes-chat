@@ -55,13 +55,16 @@ function useCopy() {
   };
 }
 
-/** "Prefiro no Terminal": under a one-click button, the same switch as a command, folded until asked for. */
-export function TerminalFallback({ command }: { command: string | null }) {
+/**
+ * "Prefiro no Terminal": under a one-click button, the same switch as a command, folded until asked for. `label`
+ * names the fold where the command is the way without the app ("Sem o app lá? Use o Terminal").
+ */
+export function TerminalFallback({ command, label }: { command: string | null; label?: string }) {
   const { t } = useTranslation();
   if (!command) return null;
   return (
     <details className="cflow__more">
-      <summary>{t("machines.access.preferTerminal")}</summary>
+      <summary>{label ?? t("machines.access.preferTerminal")}</summary>
       <div className="cflow__key">
         <CommandBlock command={command} />
       </div>
