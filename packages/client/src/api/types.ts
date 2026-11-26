@@ -5496,6 +5496,13 @@ export interface Machine {
    */
   cliErrors?: Partial<Record<string, string>> | null;
   /**
+   * ADR 0228 §6: the coding CLIs its runner fetches by itself there (`claude`, `codex`, `cursor`, `opencode`, `grok`,
+   * `antigravity`), so one not installed or too old is no reason to refuse it; absent or empty from an older runner.
+   */
+  cliFetchable?: string[];
+  /** Where each fetch of a coding CLI stands there (`CliFetch`), by CLI; live as `machine.updated` with `cliFetch`. */
+  cliFetch?: Partial<Record<string, CliFetch>> | null;
+  /**
    * Windows: what holds Codex's commands there: `mxc`, `unelevated` (Codex's own sandbox where MXC is missing: writes
    * held to the agent's folders, the internet only partly blocked) or `none` (nothing could). Null or absent elsewhere,
    * until its runner knows, or from an older server.
@@ -5864,6 +5871,19 @@ export interface PlanDropped {
   provider: string | null;
 }
 
+/**
+ * A runner's fetch of a coding CLI's pinned build (ADR 0228 §6): `fetching` (`done` bytes of `total`, null while
+ * unknown), `ready`, or `failed` with why: `offline`, `hash_mismatch` (not the vendor's build, so never used),
+ * `no_build` (none for that system), `disk_full`, or `failed`.
+ */
+export interface CliFetch {
+  state: "fetching" | "ready" | "failed";
+  version: string;
+  done?: number;
+  total?: number | null;
+  reason?: "offline" | "hash_mismatch" | "no_build" | "disk_full" | "failed";
+}
+
 /** Org events about connected computers. */
 export type MachineEvent =
   | { type: "machine.status"; machineId: string; online: boolean }
@@ -5879,6 +5899,8 @@ export type MachineEvent =
       accounts?: true;
       /** `true`: the coding CLIs it found changed (protocol 41); refetch the agents' brain settings. */
       executors?: true;
+      /** ADR 0228 §6: a fetch of a coding CLI moved on, ended or failed there (by CLI), patched in place. */
+      cliFetch?: Partial<Record<string, CliFetch>>;
     }
   /** ADR 0036: a new pause state or access reported by the machine (also accepted inside `machine.updated`). */
   | { type: "machine.state"; machineId: string; paused?: MachinePause | null }
@@ -6643,6 +6665,8 @@ export type BrainUnavailable =
   | "system"
   /** It is there and can't start: the computer's row has its error (`Machine.cliErrors`). */
   | "cant_start"
+  /** It is there at a version agentes.chat holds back: too old, or a blocked one (`BrainOption.outdated`). */
+  | "cli_outdated"
   /** Codex on a Windows computer where no sandbox could hold its commands. */
   | "windows_sandbox";
 
@@ -6677,6 +6701,8 @@ export interface BrainOption {
    * account there has a plan that includes it (`plan`).
    */
   missing?: { modelId: string; label: string; why: "app_old" | "cli_old" | "plan" };
+  /** With `cli_outdated`: the version reported, the oldest one that runs (absent: blocked), and the command that updates it. */
+  outdated?: { version: string; min?: string; command?: string };
 }
 
 /** A computer the caller may give an agent, with what it offers. */

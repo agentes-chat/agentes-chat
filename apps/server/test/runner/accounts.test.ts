@@ -141,6 +141,8 @@ test("status commands: signed in through claude.ai with email and plan (short wo
   });
   expect(parseClaudeStatus(1, JSON.stringify({ loggedIn: false }))).toEqual({ loggedIn: false });
   expect(parseCodexStatus(0, `${ESC}[32mLogged in using ChatGPT${ESC}[0m\n`)).toEqual({ loggedIn: true });
+  // A key in its `auth.json` is a sign-in too.
+  expect(parseCodexStatus(0, "API key configured - sk-***abcd\n")).toEqual({ loggedIn: true });
   expect(parseCodexStatus(1, "Not logged in\n")).toEqual({ loggedIn: false });
   expect(parseCodexStatus(0, "Not logged in\n")).toEqual({ loggedIn: false });
 });

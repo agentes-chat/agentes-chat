@@ -324,6 +324,17 @@ describe("the Cloud's plan gate tells the truth", () => {
     );
   });
 
+  test("a CLI at a version agentes.chat holds back: needs an update there, with its command where it has one", () => {
+    const where = { edition: "selfhost", computer: "Acme" } as const;
+    const gate = { state: "unsupported", reason: "cli_outdated" } as const;
+    expect(gateLine(enT, { gate, kind: "claude_code", ...where })?.text).toBe(
+      "Claude Code on Acme needs an update before agents can use it. Run claude update there.",
+    );
+    expect(gateLine(enT, { gate, kind: "codex", ...where })?.text).toBe(
+      "Codex on Acme needs an update before agents can use it.",
+    );
+  });
+
   test("a CLI missing from a computer ready just now may still be coming; past that it never reads as installing", () => {
     const soon = codexGate(CLOUD_INSTALL_WAIT_MS - 60_000);
     expect(soon).toEqual({ state: "unsupported", reason: "not_installed" });
@@ -1058,7 +1069,8 @@ describe("a card says the real cause, not that the agent has no AI", () => {
       expect(serverBody(pt, "…", wait(code))).toBe(
         "O Codex está desligado no meu computador. Respondo quando quem cuida dele ligar.",
       );
-    for (const code of ["runner_outdated", "codex_too_old"])
+    // Its CLI at a version agentes.chat holds back reads the same: a program there to update.
+    for (const code of ["runner_outdated", "codex_too_old", "cli_outdated"])
       expect(serverBody(pt, "…", wait(code))).toBe(
         "O programa no meu computador precisa ser atualizado para o Codex responder. Respondo assim que ele for atualizado.",
       );

@@ -3669,10 +3669,22 @@
       "zen": "Connecter OpenCode",
       "api_key": "Ajouter une clé API"
     },
+    "cliFetch": {
+      "preparing": "Préparation de {{program}} sur {{computer}}…",
+      "preparingPct": "Préparation de {{program}} sur {{computer}}… {{percent}} %",
+      "failed": {
+        "offline": "Impossible de préparer {{program}} sur {{computer}} : l'ordinateur n'arrive pas à le télécharger.",
+        "hash_mismatch": "Impossible de préparer {{program}} sur {{computer}} : le téléchargement n'était pas le fichier d'origine, il n'a donc pas été utilisé.",
+        "no_build": "{{program}} n'a pas de version pour le système de {{computer}}.",
+        "disk_full": "Impossible de préparer {{program}} sur {{computer}} : le disque est plein.",
+        "failed": "Impossible de préparer {{program}} sur {{computer}} : le téléchargement n'a pas abouti."
+      }
+    },
     "cli": {
       "missing": "{{program}} n'est pas encore sur {{computer}}.",
       "claudeApp": "L'app Claude ne suffit pas : les agents utilisent Claude Code, qui tourne sur l'ordinateur.",
       "install": "Installer {{program}} pour moi",
+      "update": "Mettre à jour {{program}} pour moi",
       "check": "Je l'ai installé, vérifier à nouveau",
       "checked": "Vérifié à l'instant : {{program}} n'est toujours pas sur {{computer}}.",
       "installing": "Installation de {{program}} sur {{computer}}. Cela prend environ une minute.",
@@ -6761,6 +6773,7 @@
         "cli_failed": "Le programme {{brain}} s'est arrêté sur une erreur : {{detail}}",
         "cli_stopped": "Le programme {{brain}} s'est arrêté sur une erreur.",
         "cli_closed": "Le programme {{brain}} s'est fermé de façon inattendue.",
+        "cli_empty": "Le programme {{brain}} a terminé son tour sans répondre. Redemandez. Si cela continue, mettez à jour {{brain}} sur l'ordinateur ou choisissez une autre IA dans les paramètres de l'agent.",
         "cli_sandbox": "Le programme {{brain}} ne peut pas démarrer sa sandbox sur cet ordinateur. Choisissez une autre IA dans les paramètres de l'agent.",
         "cli_system": "Le programme {{brain}} ne fonctionne pas encore sur le système de cet ordinateur. Choisissez une autre IA dans les paramètres de l'agent.",
         "account_missing": "Le compte choisi pour cet agent n'est plus sur son ordinateur. Choisissez-en un autre dans les paramètres de l'agent, ou ajoutez-le à nouveau.",
@@ -13170,6 +13183,8 @@
       "tool_offOne": "{{program}} est désactivé sur {{computer}}.",
       "not_installed": "{{program}} n'est pas installé sur {{computer}}.",
       "cant_start": "{{program}} est sur {{computer}}, mais ne démarre pas.",
+      "cli_outdated": "{{program}} sur {{computer}} doit être mis à jour pour que les agents puissent l'utiliser.",
+      "cli_outdatedRun": "{{program}} sur {{computer}} doit être mis à jour pour que les agents puissent l'utiliser. Exécutez {{command}} sur place.",
       "home_only": "{{program}} est installé uniquement pour root sur {{computer}}, où les agents n'ont pas accès.",
       "not_reported": "{{computer}} vérifie encore quels programmes il a. Ceci change tout seul une fois terminé.",
       "system": "{{program}} ne fonctionne pas encore sur le système de {{computer}}.",
@@ -16604,6 +16619,7 @@
       "privateNetwork": "Cette adresse se trouve sur un réseau privé. Utilisez une adresse publique ou, sur un serveur auto-hébergé, autorisez-la avec `OUTBOUND_ALLOW_CIDRS`.",
       "tooLong": "C'est trop long. Raccourcissez et réessayez.",
       "updateComputerApp": "L'application de l'ordinateur est trop ancienne pour ceci. Mettez-la à jour et réessayez.",
+      "cliNotFetched": "Cet ordinateur ne récupère pas ce programme tout seul.",
       "computerUpdatesItself": "L'ordinateur de l'espace de travail se met à jour tout seul pour cela. Réessayez dans un moment.",
       "notInvited": "Vous ne faites pas partie des invités de cet événement.",
       "offHere": "Ceci est désactivé ici.",
@@ -19496,7 +19512,8 @@
       "missing": "Cette conversation n'est plus là.",
       "helping": "aide {{name}}",
       "helping_female": "aide {{name}}",
-      "see": "Voir la conversation"
+      "see": "Voir la conversation",
+      "relay": "Réponse de {{name}} : {{excerpt}}. Voir la conversation"
     },
     "unshown": "Ce message n'a pas pu être affiché",
     "unshownPart": "Une partie de ce message n'a pas pu être affichée",
@@ -19673,6 +19690,7 @@
         "usingScreen": "A utilisé l'écran",
         "cloningRepo": "A cloné un dépôt",
         "listingRepos": "A listé les dépôts",
+        "preparingCli": "A préparé {{app}}",
         "openingPullRequest": "A ouvert une pull request",
         "handingOff": "A livré un rapport",
         "recordingFindings": "A noté les résultats",
@@ -19796,6 +19814,8 @@
       "usingScreen": "utilisation de l'écran",
       "cloningRepo": "clonage d'un dépôt",
       "listingRepos": "liste les dépôts",
+      "preparingCli": "préparation de {{app}} sur {{computer}}",
+      "preparingCliPct": "préparation de {{app}} sur {{computer}} ({{percent}} %)",
       "openingPullRequest": "ouverture d'une pull request",
       "handingOff": "livraison d'un rapport",
       "recordingFindings": "prise de notes des résultats",

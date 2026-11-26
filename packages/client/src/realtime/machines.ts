@@ -5,6 +5,7 @@ import type {
   Agent,
   AgentComputer,
   ChannelEvent,
+  CliFetch,
   ComputerSetup,
   ComputerTarget,
   Machine,
@@ -50,6 +51,30 @@ export function pauseOf(v: unknown): MachinePause | undefined {
 }
 
 /** Access from an event (`{ folders, tools }`), checked; `null` when the machine stopped reporting it. */
+const FETCH_STATES = ["fetching", "ready", "failed"] as const;
+const FETCH_FAILURES = ["offline", "hash_mismatch", "no_build", "disk_full", "failed"] as const;
+
+/** A `machine.updated`'s `cliFetch` (ADR 0228 §6), checked: known states and numbers only; undefined when none is. */
+export function cliFetchOf(v: unknown): Partial<Record<string, CliFetch>> | undefined {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return undefined;
+  const out: Partial<Record<string, CliFetch>> = {};
+  for (const [cli, f] of Object.entries(v as Record<string, unknown>)) {
+    if (!/^[a-z]{1,20}$/.test(cli) || !f || typeof f !== "object") continue;
+    const x = f as Record<string, unknown>;
+    const state = FETCH_STATES.find((s) => s === x.state);
+    if (!state || typeof x.version !== "string") continue;
+    const num = (n: unknown) => (typeof n === "number" && Number.isFinite(n) && n >= 0 ? n : undefined);
+    const reason = FETCH_FAILURES.find((r) => r === x.reason);
+    out[cli] = {
+      state,
+      version: x.version.slice(0, 60),
+      ...(state === "fetching" ? { done: num(x.done) ?? 0, total: num(x.total) ?? null } : {}),
+      ...(state === "failed" ? { reason: reason ?? "failed" } : {}),
+    };
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
 export function accessOf(v: unknown): MachineAccess | null | undefined {
   if (v === null) return null;
   if (!isObject(v) || !Array.isArray(v.folders) || !isObject(v.tools)) return undefined;
@@ -111,6 +136,7 @@ export function applyMachineEvent(qc: QueryClient, orgId: string, event: { type:
     egress?: unknown;
     networkTransition?: unknown;
     standby?: unknown;
+    cliFetch?: unknown;
     moving?: unknown;
   };
   if (typeof e.machineId !== "string") return true;
@@ -219,6 +245,11 @@ export function applyMachineEvent(qc: QueryClient, orgId: string, event: { type:
       if (paused) patch.paused = paused;
       const access = accessOf(e.access);
       if (access !== undefined) patch.access = access;
+      const fetch = cliFetchOf(e.cliFetch);
+      if (fetch) {
+        const now = qc.getQueryData<Machine[]>(list)?.find((m) => m.id === machineId)?.cliFetch;
+        patch.cliFetch = { ...now, ...fetch };
+      }
       if (Object.keys(patch).length > 0) {
         qc.setQueryData<Machine[]>(list, (old) =>
           old?.map((m) =>

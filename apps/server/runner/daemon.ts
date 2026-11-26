@@ -1,3 +1,5 @@
+import { spawn } from "node:child_process";
+import type { EventEmitter } from "node:events";
 import { mkdirSync, realpathSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -75,11 +77,13 @@ import {
   type AgentUser,
   AgentUsers,
   agentGid,
+  agentTmpMemoryBytes,
   authEgressPrefix,
   denySchedulers,
   ensureGitCacheUser,
   GIT_CACHE_DIR,
   grantGitCache,
+  idleTmpLines,
   keepContainers,
   readAgentUsers,
   rootlessContainers,
@@ -87,13 +91,14 @@ import {
   systemLauncher,
   trustedNetworkLauncher,
 } from "./agent-users";
-import { AgyCopy, type AgyCopyOptions } from "./agy-copy";
 import { BrainManager, readyRoom } from "./brain";
 import { CodexAppServers } from "./brain-codex-app";
 import { BrowserManager } from "./browser";
 import { ensureBrowserBindPolicy, prepareAgents } from "./browser-bind-policy";
 import { BrowserViews } from "./browser-views";
+import { CLI_OF_BRAIN, CliCopies, type CliCopiesOptions, holdCliSelfUpdates, isPinCli } from "./cli-copies";
 import { CliInstaller, type CliInstallerOptions, gitBashPath } from "./cli-install";
+import { readCodexAccount } from "./codex-account";
 import { codexSandboxReport } from "./codex-windows";
 import {
   accessToStore,
@@ -203,6 +208,7 @@ import { XcodeFixer, type XcodeFixOptions } from "./xcode-fix";
 const MEMORY_READ = process.platform === "linux";
 /** How often the tasks' room is read for the server (sent only when it changed). */
 const TASK_ROOM_REPORT_MS = 15_000;
+const IDLE_TMP_SWEEP_MS = 60 * 60_000;
 
 /**
  * Background tasks at once, sized to the computer's memory: one per 1.5 GiB left after 4 GiB for the system and the
@@ -455,10 +461,10 @@ export interface DaemonOptions {
    */
   windows?: { build: string; chooseCodexSandbox?: (version: string) => Promise<unknown> } | null;
   /**
-   * The runner brings its own Antigravity CLI where the person's is older than `AGY_PIN` (`AgyCopy`, ADR 0143): on for
-   * the runner people run (`main.ts`), off in tests unless they ask.
+   * The runner fetches its own copy of a coding CLI where the person's is older than the pinned one or missing
+   * (`CliCopies`, ADR 0228 §6): on for the runner people run (`main.ts`), off in tests unless they ask.
    */
-  agyCopy?: boolean | Partial<AgyCopyOptions>;
+  cliCopies?: boolean | Partial<CliCopiesOptions>;
   /**
    * Where tasks read their room (`TaskManagerOptions.room`; system mode tells its workers to read it too): the machine's
    * own for the runner people run (`main.ts`), none in tests unless they ask, so a busy test machine decides nothing.
@@ -584,8 +590,8 @@ export class RunnerDaemon implements RequestObserver {
   private fixer: XcodeFixer | null = null;
   /** An install of a coding CLI (`cli.install`), made on its first request. */
   private installer: CliInstaller | null = null;
-  /** The Antigravity CLI the runner brings, outside system mode on macOS and Linux; null elsewhere. */
-  private readonly agy: AgyCopy | null;
+  /** The coding CLIs the runner fetches itself (ADR 0228 §6), outside system mode; null there. */
+  private readonly copies: CliCopies | null;
   /**
    * The PATH read again (app mode's `refreshPath`). On Windows before every look too: an app keeps the PATH it started
    * with, so a CLI installed since is found only through the registry.
@@ -614,7 +620,10 @@ export class RunnerDaemon implements RequestObserver {
       opts.executors ??
       cachedExecutors({
         file: path.join(opts.home, "executors.json"),
-        ...(opts.executorRun ? { run: opts.executorRun } : {}),
+        // A fake run (tests) never starts a real Codex app-server.
+        ...(opts.executorRun
+          ? { run: opts.executorRun }
+          : { codexSignIn: (bin: string, version: string) => readCodexAccount({ bin, version }) }),
         onChange: () => this.executorsChanged(),
         ...(process.platform === "win32"
           ? { before: () => this.refreshPath?.(), gitMissing: () => gitBashPath() === null }
@@ -654,27 +663,30 @@ export class RunnerDaemon implements RequestObserver {
           authEgress: () => authEgressPrefix(),
         })
       : null;
+    // Every CLI the runner starts, the person's own or its copy, stays the version it was checked at (ADR 0228 §6).
+    holdCliSelfUpdates();
     // Outside system mode, where the person's own CLI runs: the root's are the computer's setup's (the Cloud's image).
-    this.agy =
-      opts.agyCopy && !system && ["darwin", "linux", "win32"].includes(process.platform)
-        ? new AgyCopy({
+    this.copies =
+      opts.cliCopies && !system
+        ? new CliCopies({
             home: opts.home,
             log: opts.log,
-            inUse: () => this.accounts.snapshot()?.some((a) => a.kind === "antigravity") ?? false,
+            // Git for Windows is wanted where Claude Code is, on Windows: its bash is Claude Code's shell there.
+            inUse: (cli) =>
+              this.accounts.snapshot()?.some((a) => CLI_OF_BRAIN[a.kind] === (cli === "git" ? "claude" : cli)) ?? false,
             onChange: () => {
               void this.clisLook().then(() => this.accounts.refresh(true).catch(() => undefined));
             },
-            ...(typeof opts.agyCopy === "object" ? opts.agyCopy : {}),
+            onFetch: (cli, fetch) => this.send({ type: "cli.fetch", cli, fetch }),
+            ...(typeof opts.cliCopies === "object" ? opts.cliCopies : {}),
           })
         : null;
     const accountUsers = system ? (opts.accountUsers ?? new AccountUsers({ home: opts.home, log: opts.log })) : null;
     this.accountUsers = accountUsers;
     this.accounts = new AccountManager({
       root: lent?.root ?? path.join(opts.home, "accounts"),
-      // A Gemini sign-in on a computer with no Antigravity CLI new enough: the runner brings its own first.
-      prepare: async (kind) => {
-        if (kind === "antigravity") await this.agy?.ensure();
-      },
+      // A sign-in on a computer with no copy of its CLI new enough: the runner fetches its own first.
+      prepare: async (kind) => this.cliReady(kind),
       ...(lent ? { lending: { chown: lent.chown } } : {}),
       ...(lent?.grokRoot ? { grokRoot: lent.grokRoot } : {}),
       ...(lent && !opts.systemAccounts && process.platform === "linux"
@@ -949,11 +961,11 @@ export class RunnerDaemon implements RequestObserver {
     browsers.unref?.();
     this.timers.push(browsers);
     // A CLI installed while the runner stays up: with no app asking for the status, nothing else looks again. The
-    // runner's own Antigravity CLI is checked as often (a download is due only when Gemini thinks here).
-    void this.agy?.check();
+    // runner's own copies are checked as often (a fetch is due only where the CLI is wanted, ADR 0228 §6).
+    void this.copies?.check();
     const clis = setInterval(() => {
       this.executors();
-      void this.agy?.check();
+      void this.copies?.check();
     }, EXECUTORS_TTL_MS);
     clis.unref?.();
     this.timers.push(clis);
@@ -968,6 +980,9 @@ export class RunnerDaemon implements RequestObserver {
             this.load.add(l && oomKills !== undefined ? { ...l, oomKills } : l, undefined, {
               ...diskFigures(d),
               ...(this.sharedGb === undefined ? {} : { sharedGb: this.sharedGb }),
+              ...(this.stored?.mode === "system" && process.platform === "linux"
+                ? { agentTmpRamGb: Math.round((agentTmpMemoryBytes() / 2 ** 30) * 10) / 10 }
+                : {}),
             }),
           );
         })
@@ -993,6 +1008,9 @@ export class RunnerDaemon implements RequestObserver {
     const sizes = setInterval(() => this.measureShared(), SHARED_SIZE_MS);
     sizes.unref?.();
     this.timers.push(sizes);
+    const idleTmp = setInterval(() => this.cleanIdleTmp(), IDLE_TMP_SWEEP_MS);
+    idleTmp.unref?.();
+    this.timers.push(idleTmp);
     const sharing = setInterval(() => this.shareFiles(), SHARED_FIX_MS);
     sharing.unref?.();
     this.timers.push(sharing);
@@ -1782,6 +1800,8 @@ export class RunnerDaemon implements RequestObserver {
         return { executors: this.executors() };
       },
       cliInstall: (req) => this.cliInstaller().handle(req),
+      cliFetch: (cli) => ({ fetch: isPinCli(cli) ? (this.copies?.retry(cli) ?? null) : null }),
+      cliEnsure: async (kind) => this.cliReady(kind),
       xcodeOpen: () => this.iphoneSetup().open("xcode"),
       reportParts: () => this.reportParts(),
       egressShare: this.egressShare,
@@ -1811,6 +1831,7 @@ export class RunnerDaemon implements RequestObserver {
           desktop: this.desktops.info(),
           terminal: this.terminals.info(),
           desktopUse: desktopUse.info(),
+          ...(this.copies ? { clis: this.copies.info() } : {}),
           ...(accounts ? { accounts } : {}),
           ...usage,
           // Who may control a desktop or open a terminal follows it (ADR 0058 §4).
@@ -1828,6 +1849,7 @@ export class RunnerDaemon implements RequestObserver {
       log,
       observer: this,
       onAgents: (raw, deleted) => this.setAgents(raw, deleted),
+      onPins: (pins) => void this.copies?.setPins(pins),
       onBrowserHandoff: (frame) =>
         supervisor ? supervisor.handoff(frame) : browser.setHandoff(frame.agentId, frame.handoff),
       onState: (state) => {
@@ -2188,6 +2210,21 @@ export class RunnerDaemon implements RequestObserver {
     });
   }
 
+  /** System mode, as root: what agents with nothing running but their worker left in /tmp goes (`idleTmpLines`). */
+  private cleanIdleTmp() {
+    const supervisor = this.session?.supervisor;
+    if (!supervisor || process.platform !== "linux" || process.getuid?.() !== 0 || this.opts.workers) return;
+    const procs = readNetworkProcesses();
+    const idle = readAgentUsers(this.opts.home)
+      .filter((u) => !uidHasOtherProcesses(procs, u.uid, supervisor.runningPid(u.id)))
+      .map((u) => u.uid);
+    if (idle.length === 0) return;
+    const clean = spawn("/usr/bin/systemd-tmpfiles", ["--clean", "-"], { stdio: ["pipe", "ignore", "ignore"] });
+    (clean as unknown as EventEmitter).on("error", () => undefined);
+    clean.stdin?.on("error", () => undefined);
+    clean.stdin?.end(idleTmpLines(idle));
+  }
+
   /** System mode: what agents moved or copied into the shared folder becomes the others' to change too. */
   private shareFiles() {
     const spec = this.sharedGroup;
@@ -2452,6 +2489,17 @@ export class RunnerDaemon implements RequestObserver {
   async executorsCheck(): Promise<ControlStatus> {
     await this.clisLook();
     return this.status();
+  }
+
+  /**
+   * A brain's CLI ready before its turn or sign-in (ADR 0228 §6): the person's own, else the runner's copy, fetched now
+   * if it isn't here. Claude Code on Windows needs Git Bash first: the person's, else the runner's MinGit.
+   */
+  private async cliReady(kind: string) {
+    const cli = CLI_OF_BRAIN[kind];
+    if (!cli) return;
+    if (cli === "claude" && process.platform === "win32") await this.copies?.ensure("git");
+    await this.copies?.ensure(cli);
   }
 
   /** The PATH read again and the coding CLIs looked up now; a change reaches the server (`executors.changed`). */

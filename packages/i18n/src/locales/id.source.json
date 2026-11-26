@@ -8728,6 +8728,27 @@
   "connectAi.title.api_key": {
     "value": "Add an API key"
   },
+  "connectAi.cliFetch.preparing": {
+    "value": "Preparing {{program}} on {{computer}}…"
+  },
+  "connectAi.cliFetch.preparingPct": {
+    "value": "Preparing {{program}} on {{computer}}… {{percent}}%"
+  },
+  "connectAi.cliFetch.failed.offline": {
+    "value": "Couldn't prepare {{program}} on {{computer}}: the computer can't reach the download."
+  },
+  "connectAi.cliFetch.failed.hash_mismatch": {
+    "value": "Couldn't prepare {{program}} on {{computer}}: the download wasn't the original file, so it wasn't used."
+  },
+  "connectAi.cliFetch.failed.no_build": {
+    "value": "{{program}} has no version for {{computer}}'s system."
+  },
+  "connectAi.cliFetch.failed.disk_full": {
+    "value": "Couldn't prepare {{program}} on {{computer}}: its disk is full."
+  },
+  "connectAi.cliFetch.failed.failed": {
+    "value": "Couldn't prepare {{program}} on {{computer}}: the download didn't finish."
+  },
   "connectAi.cli.missing": {
     "value": "{{program}} isn't on {{computer}} yet."
   },
@@ -8736,6 +8757,9 @@
   },
   "connectAi.cli.install": {
     "value": "Install {{program}} for me"
+  },
+  "connectAi.cli.update": {
+    "value": "Update {{program}} for me"
   },
   "connectAi.cli.check": {
     "value": "I installed it, check again"
@@ -16073,6 +16097,9 @@
   },
   "agentPage.activity.errors.cli_closed": {
     "value": "The {{brain}} program closed unexpectedly."
+  },
+  "agentPage.activity.errors.cli_empty": {
+    "value": "The {{brain}} program ended its turn without an answer. Ask again. If it keeps happening, update {{brain}} on the computer or choose another AI in the agent's settings."
   },
   "agentPage.activity.errors.cli_sandbox": {
     "value": "The {{brain}} program can't start its sandbox on this computer. Choose another AI in the agent's settings."
@@ -30924,6 +30951,12 @@
   "brain.reasons.cant_start": {
     "value": "{{program}} is on {{computer}}, but it won't start."
   },
+  "brain.reasons.cli_outdated": {
+    "value": "{{program}} on {{computer}} needs an update before agents can use it."
+  },
+  "brain.reasons.cli_outdatedRun": {
+    "value": "{{program}} on {{computer}} needs an update before agents can use it. Run {{command}} there."
+  },
   "brain.reasons.home_only": {
     "value": "{{program}} is installed only for root on {{computer}}, where the agents can't reach it."
   },
@@ -39337,6 +39370,9 @@
   "errors.said.updateComputerApp": {
     "value": "The computer's app is too old for this. Update it and try again."
   },
+  "errors.said.cliNotFetched": {
+    "value": "This computer doesn't get that program by itself."
+  },
   "errors.said.computerUpdatesItself": {
     "value": "The workspace's computer updates itself for this. Try again in a little while."
   },
@@ -46386,6 +46422,9 @@
   "chat.consultPanel.see": {
     "value": "See conversation"
   },
+  "chat.consultPanel.relay": {
+    "value": "{{name}}'s answer: {{excerpt}}. See the conversation"
+  },
   "chat.unshown": {
     "value": "This message couldn't be shown"
   },
@@ -46865,6 +46904,9 @@
   "chat.work.step.listingRepos": {
     "value": "Listed the repositories"
   },
+  "chat.work.step.preparingCli": {
+    "value": "Prepared {{app}}"
+  },
   "chat.work.step.openingPullRequest": {
     "value": "Opened a pull request"
   },
@@ -47224,6 +47266,12 @@
   },
   "chat.activity.listingRepos": {
     "value": "listing the repositories"
+  },
+  "chat.activity.preparingCli": {
+    "value": "preparing {{app}} on {{computer}}"
+  },
+  "chat.activity.preparingCliPct": {
+    "value": "preparing {{app}} on {{computer}} ({{percent}}%)"
   },
   "chat.activity.openingPullRequest": {
     "value": "opening a pull request"

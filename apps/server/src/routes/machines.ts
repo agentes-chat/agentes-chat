@@ -1,5 +1,12 @@
 import { isIP } from "node:net";
-import { CLI_INSTALL_CAUSES, CLI_INSTALL_STATES, INSTALLABLE_CLIS, limitIp } from "@agenteschat/adapters";
+import {
+  CLI_FETCH_FAILURES,
+  CLI_INSTALL_CAUSES,
+  CLI_INSTALL_STATES,
+  FETCH_NAMES,
+  INSTALLABLE_CLIS,
+  limitIp,
+} from "@agenteschat/adapters";
 import {
   ARTIFACT_LIMITS,
   allowMachineTool,
@@ -31,6 +38,7 @@ import {
   reduceMachineAccess,
   renameMachine,
   restoreHostComputer,
+  retryCliFetch,
   safeEqual,
   setAgentComputerTarget,
   setMachinePause,
@@ -179,6 +187,26 @@ export const Machine = z
       description:
         "Its coding CLIs can be looked for again from here (`POST …/clis/check`) and installed by the person who paired it (`…/cli-install`); `false`: its app is too old, or it is the workspace's own computer.",
     }),
+    cliFetchable: z.array(z.enum(FETCH_NAMES)).openapi({
+      description:
+        "ADR 0228 §6: the coding CLIs its runner fetches by itself there (a pinned build, hash checked) when a turn or a sign-in needs one, and `git` on Windows (Git for Windows' portable build, Claude Code's shell there). None on the workspace's own computer, in system mode or from an older runner.",
+    }),
+    cliFetch: z
+      .record(
+        z.string(),
+        z.object({
+          state: z.enum(["fetching", "ready", "failed"]),
+          version: z.string(),
+          done: z.number().optional(),
+          total: z.number().nullable().optional(),
+          reason: z.enum(CLI_FETCH_FAILURES).optional(),
+        }),
+      )
+      .nullable()
+      .openapi({
+        description:
+          "Where each fetch of a coding CLI stands there, by CLI: `fetching` (bytes `done` of `total`, null while unknown), `ready`, or `failed` with `reason` (`offline`, `hash_mismatch`, `no_build`, `disk_full`, `failed`). Live as `machine.updated` with `cliFetch`.",
+      }),
     cliErrors: z.record(z.string(), z.string()).nullable().openapi({
       description:
         "The coding CLIs there that can't start (`claude`, `codex`…), each with its own last error line; `git_missing`: Claude Code on Windows without Git for Windows. Null unless admin or the person who paired it.",
@@ -755,6 +783,44 @@ export function machineAppRoutes(deps: AppDeps) {
       const limited = await cliLimited(c, userId, "check");
       if (limited) return limited;
       return c.json(await checkMachineClis({ db, pubsub, hub: hub() }, userId, orgId, machineId), 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/machines/{machineId}/clis/{cli}/fetch",
+      tags,
+      security,
+      summary: "Fetch a coding CLI's pinned build on the computer again now (the apps' Try again)",
+      description:
+        "Any member: it brings the version agentes.chat already chose, nothing else (ADR 0228 §6). Where it stands comes back at once and then as `machine.updated` with `cliFetch`. 400 `machine.cli_not_fetched` when that computer doesn't fetch it by itself.",
+      request: { params: MachineParams.extend({ cli: z.enum(FETCH_NAMES) }) },
+      responses: {
+        200: json(
+          z.object({
+            fetch: z
+              .object({
+                state: z.enum(["fetching", "ready", "failed"]),
+                version: z.string(),
+                done: z.number().optional(),
+                total: z.number().nullable().optional(),
+                reason: z.enum(CLI_FETCH_FAILURES).optional(),
+              })
+              .nullable(),
+          }),
+        ),
+        429: errorResponse("Too many tries"),
+        ...errors,
+        ...cliOffline,
+      },
+    }),
+    async (c) => {
+      const { orgId, machineId, cli } = c.req.valid("param");
+      const userId = c.get("user").id;
+      const limited = await cliLimited(c, userId, "fetch");
+      if (limited) return limited;
+      return c.json(await retryCliFetch({ db, pubsub, hub: hub() }, userId, orgId, machineId, cli), 200);
     },
   );
 

@@ -5,6 +5,7 @@ import {
   type BrowserHandoffInfo,
   brainTopic,
   CLAUDE_SHARED_PROTOCOL,
+  CLI_COPIES_PROTOCOL,
   CO_AUTHOR_CASE_PROTOCOL,
   EGRESS_SHARE_PROTOCOL,
   type ErrorReporter,
@@ -39,9 +40,11 @@ import {
 } from "@agenteschat/adapters";
 import { and, type Database, eq, inArray, lt, schema, sql } from "@agenteschat/db";
 import type { ToolImage } from "@agenteschat/providers";
+import { CLI_PINS } from "@agenteschat/providers/cli-pins";
 import { getAgentCached } from "./agents";
 import { UUID } from "./authority";
 import { TtlCache } from "./cache";
+import { CLI_OF_KIND, storeCliFetch } from "./cli-fetch";
 import { noticeComputerBack, queueDownChecks } from "./computer-down";
 import { type MachinePhoneRow, publishDevicesChanged, syncMachinePhones } from "./devices";
 import { cutText } from "./format";
@@ -316,8 +319,11 @@ export async function awakeForPerson(
 
 interface Pending {
   onOutput?: MachineCallOptions["onOutput"];
-  /** A `brain.turn`: its run and bridge token, so its frames (events, tool calls) prove it is alive. */
-  brain?: { runId: string; token: string };
+  /**
+   * A `brain.turn`: its run and bridge token, so its frames (events, tool calls) prove it is alive, and its brain, so a
+   * fetch of that brain's CLI there (`cli.fetch`, ADR 0228 §6) keeps it alive too.
+   */
+  brain?: { runId: string; token: string; kind?: string };
   /** Restarts the request's inactivity timer (brain turns). */
   touch?(): void;
   settle(frame: Extract<RunnerFrame, { type: "result" }>): void;
@@ -850,6 +856,7 @@ export function createMachineHub(deps: MachineHubDeps) {
         frame.desktopUse ||
         frame.claudeLoginMethods ||
         frame.toolchains ||
+        frame.clis ||
         frame.windowsBuild ||
         frame.app
           ? {
@@ -862,6 +869,8 @@ export function createMachineHub(deps: MachineHubDeps) {
                 ...(frame.desktop ? { desktop: frame.desktop } : {}),
                 ...(frame.terminal ? { terminal: frame.terminal } : {}),
                 ...(frame.desktopUse ? { desktopUse: frame.desktopUse } : {}),
+                // ADR 0228 §6: what its runner fetches by itself, and where each fetch stands since it started.
+                ...(frame.clis ? { copies: frame.clis } : {}),
                 ...(system ? { mode: "system" as const } : {}),
                 ...(frame.windowsBuild ? { windowsBuild: frame.windowsBuild } : {}),
                 ...(frame.claudeLoginMethods ? { claudeLoginMethods: frame.claudeLoginMethods } : {}),
@@ -919,6 +928,10 @@ export function createMachineHub(deps: MachineHubDeps) {
     });
     // Pings start with `welcome` (the runner's watchdog starts there), not after the slower work below.
     startPings(conn);
+    // The pin list its runner fetches the coding CLIs by (ADR 0228 §6): this server's, so a new pin needs no new runner.
+    if (conn.protocol >= CLI_COPIES_PROTOCOL) {
+      send(conn, { type: "clis.pins", pins: CLI_PINS as unknown as Record<string, unknown> });
+    }
     // The workspace's own computer (ADR 0056 §10): ready on its first hello, with its agents, before they are listed.
     const readyEmail = deps.readyEmail ? { ...deps.readyEmail, machines: hub } : null;
     await onManagedMachineHello({ db, pubsub, readyEmail }, machine).catch((error) =>
@@ -1294,7 +1307,7 @@ export function createMachineHub(deps: MachineHubDeps) {
       const id = crypto.randomUUID();
       const timeoutMs = options.timeoutMs ?? requestTimeoutMs(request);
       const turn = request.op === "brain.turn" ? (request as Extract<MachineRequest, { op: "brain.turn" }>) : null;
-      const brain = turn ? { runId: turn.runId, token: turn.mcp.token } : undefined;
+      const brain = turn ? { runId: turn.runId, token: turn.mcp.token, kind: turn.kind } : undefined;
       let idle: ReturnType<typeof setTimeout> | undefined;
       const cleanup = () => {
         clearTimeout(timer);
@@ -1731,6 +1744,21 @@ export function createMachineHub(deps: MachineHubDeps) {
               ),
           );
         }
+      } else if (frame.type === "cli.fetch") {
+        // The turns waiting for this CLI there are alive while it comes (their runner holds them until it is ready).
+        // Git for Windows is Claude Code's shell there: its fetch holds Claude Code's turns (ADR 0228 §6).
+        const runIds: string[] = [];
+        for (const p of conn.pending.values()) {
+          const brain = p.brain;
+          const waits = brain?.kind ? CLI_OF_KIND[brain.kind] : undefined;
+          if (brain && waits && (waits === frame.cli || (frame.cli === "git" && waits === "claude"))) {
+            p.touch?.();
+            runIds.push(brain.runId);
+          }
+        }
+        await storeCliFetch({ db, pubsub }, conn.machineId as string, frame.cli, frame.fetch, runIds).catch((error) =>
+          deps.log?.warn("cli.fetch failed", { machineId: conn.machineId, cli: frame.cli, error: String(error) }),
+        );
       } else if (frame.type === "toolchains.changed") {
         await storeMachineToolchains({ db, pubsub }, conn.machineId, frame.toolchains).catch((error) =>
           deps.log?.warn("toolchains.changed failed", { machineId: conn.machineId, error: String(error) }),

@@ -3385,10 +3385,22 @@
       "zen": "连接 OpenCode",
       "api_key": "添加 API 密钥"
     },
+    "cliFetch": {
+      "preparing": "正在 {{computer}} 上准备 {{program}}…",
+      "preparingPct": "正在 {{computer}} 上准备 {{program}}… {{percent}}%",
+      "failed": {
+        "offline": "无法在 {{computer}} 上准备 {{program}}：这台电脑无法访问下载地址。",
+        "hash_mismatch": "无法在 {{computer}} 上准备 {{program}}：下载的文件不是原始文件，因此没有使用。",
+        "no_build": "{{program}} 没有适用于 {{computer}} 系统的版本。",
+        "disk_full": "无法在 {{computer}} 上准备 {{program}}：磁盘已满。",
+        "failed": "无法在 {{computer}} 上准备 {{program}}：下载没有完成。"
+      }
+    },
     "cli": {
       "missing": "{{computer}} 上还没有 {{program}}。",
       "claudeApp": "只有 Claude 应用还不够：智能体使用在电脑上运行的 Claude Code。",
       "install": "帮我安装 {{program}}",
+      "update": "帮我更新 {{program}}",
       "check": "我已安装，再检查一次",
       "checked": "刚刚检查过：{{computer}} 上仍然没有 {{program}}。",
       "installing": "正在 {{computer}} 上安装 {{program}}。大约需要一分钟。",
@@ -6291,6 +6303,7 @@
         "cli_failed": "因为出错，{{brain}} 程序已停止：{{detail}}",
         "cli_stopped": "因为出错，{{brain}} 程序已停止。",
         "cli_closed": "程序 {{brain}} 意外关闭。",
+        "cli_empty": "程序 {{brain}} 结束了这一轮却没有回答。请再问一次。如果仍然这样，请在电脑上更新 {{brain}}，或在智能体设置中选择其他 AI。",
         "cli_sandbox": "程序 {{brain}} 无法在这台电脑上启动它的沙盒。请在智能体设置中选择其他 AI。",
         "cli_system": "程序 {{brain}} 暂时还不能在这台电脑的系统上运行。请在智能体设置中选择其他 AI。",
         "account_missing": "为这个智能体选择的账号已不在它的电脑上。请在智能体设置中选择另一个账号，或重新添加。",
@@ -12252,6 +12265,8 @@
       "tool_offOne": "{{computer}} 上的 {{program}} 已关闭。",
       "not_installed": "{{computer}} 上没有安装 {{program}}。",
       "cant_start": "{{program}} 在 {{computer}} 上，但无法启动。",
+      "cli_outdated": "{{computer}} 上的 {{program}} 需要更新后智能体才能使用。",
+      "cli_outdatedRun": "{{computer}} 上的 {{program}} 需要更新后智能体才能使用。请在那里运行 {{command}}。",
       "home_only": "{{computer}} 上的 {{program}} 只为 root 安装了，智能体访问不到。",
       "not_reported": "{{computer}} 还在检查有哪些程序。完成后这里会自动更新。",
       "system": "{{program}} 暂时还不能在 {{computer}} 的系统上运行。",
@@ -15522,6 +15537,7 @@
       "privateNetwork": "此地址位于私有网络。请使用公网地址，或在自托管服务器上通过 `OUTBOUND_ALLOW_CIDRS` 允许它。",
       "tooLong": "内容太长。请缩短后重试。",
       "updateComputerApp": "电脑上的应用版本太旧。请更新后重试。",
+      "cliNotFetched": "这台电脑不会自己获取那个程序。",
       "computerUpdatesItself": "工作区的电脑会为此自动更新。请稍后再试。",
       "notInvited": "你不在此日程的受邀者之中。",
       "offHere": "此功能在这里已关闭。",
@@ -18326,7 +18342,8 @@
       "missing": "这段对话已不在这里。",
       "helping": "正在协助 {{name}}",
       "helping_female": "正在协助 {{name}}",
-      "see": "查看对话"
+      "see": "查看对话",
+      "relay": "{{name}} 的回答：{{excerpt}}。查看对话"
     },
     "unshown": "无法显示这条消息",
     "unshownPart": "这条消息的部分内容无法显示",
@@ -18495,6 +18512,7 @@
         "usingScreen": "使用了屏幕",
         "cloningRepo": "克隆了仓库",
         "listingRepos": "已列出仓库",
+        "preparingCli": "准备了 {{app}}",
         "openingPullRequest": "创建了拉取请求",
         "handingOff": "交付了报告",
         "recordingFindings": "记录了发现",
@@ -18618,6 +18636,8 @@
       "usingScreen": "使用屏幕",
       "cloningRepo": "克隆仓库",
       "listingRepos": "正在列出仓库",
+      "preparingCli": "在 {{computer}} 上准备 {{app}}",
+      "preparingCliPct": "在 {{computer}} 上准备 {{app}}（{{percent}}%）",
       "openingPullRequest": "创建拉取请求",
       "handingOff": "交付报告",
       "recordingFindings": "记录发现",
