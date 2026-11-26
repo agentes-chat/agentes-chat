@@ -566,6 +566,19 @@ test("parser: a failed turn says why the provider failed it, from Claude Code's 
   expect(
     fail(errorFrame("invalid_request", disabled), { type: "result", is_error: true, result: disabled }),
   ).toMatchObject({ code: "claude_failed", cause: "account_disabled", httpStatus: 400 });
+  // A model the sign-in or its endpoint doesn't serve: the model's, never the sign-in's, and no retry on it.
+  const noModel =
+    "There's an issue with the selected model (claude-x). It may not exist or you may not have access to it.";
+  expect(fail({ type: "result", is_error: true, result: noModel })).toMatchObject({
+    code: "claude_failed",
+    cause: "model_unavailable",
+    retryable: false,
+  });
+  const notFound = 'API Error: 404 {"type":"error","error":{"type":"not_found_error","message":"model: claude-x"}}';
+  expect(fail({ type: "result", is_error: true, result: notFound })).toMatchObject({
+    cause: "model_unavailable",
+    httpStatus: 404,
+  });
   expect(
     fail(errorFrame("billing_error", "Credit balance is too low"), {
       type: "result",

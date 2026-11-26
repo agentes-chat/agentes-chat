@@ -11,6 +11,7 @@ import {
   type AuthMethod,
   accountCodeAad,
   CLAUDE_AUTH_PROTOCOL,
+  CLI_COPIES_PROTOCOL,
   type ClaudeLoginMethod,
   CURSOR_KEY_PROVIDER,
   CURSOR_PROTOCOL,
@@ -1566,7 +1567,7 @@ export async function beginAccountLogin(
   }
   const plan = planOf(provider);
   const { machine } = await memberMachine(deps.db, userId, orgId, machineId);
-  // A CLI its runner won't run on this system (Cursor on Windows) would sign in and fail every turn.
+  // A CLI its runner won't run on this system would sign in and fail every turn.
   if (!brainRunsOn(kind, machine.os)) {
     throw new ConflictError(`${BRAIN_NAMES[kind]} doesn't run on ${machine.name}'s system yet.`, "account.system", {
       program: BRAIN_NAMES[kind],
@@ -1589,7 +1590,9 @@ export async function beginAccountLogin(
     deps,
     machine,
     kind === "cursor"
-      ? CURSOR_PROTOCOL
+      ? machine.os === "windows"
+        ? CLI_COPIES_PROTOCOL
+        : CURSOR_PROTOCOL
       : kind === "antigravity"
         ? machine.os === "darwin"
           ? ANTIGRAVITY_MAC_PROTOCOL

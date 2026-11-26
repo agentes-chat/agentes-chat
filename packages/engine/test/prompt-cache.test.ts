@@ -255,7 +255,7 @@ async function onComputer(brain: "claude_code" | "codex", protocol: number) {
     protocol,
     executors: {
       claude: { version: "2.1.300", loggedIn: true },
-      codex: { version: "codex-cli 0.163.0" },
+      codex: { version: "codex-cli 0.170.0" },
       detectedAt: new Date().toISOString(),
     },
   });

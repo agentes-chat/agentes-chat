@@ -247,9 +247,10 @@ export function ConsultQuote({
 }
 
 /** The quote's faces. */
-const QUOTE_FACE = 16;
+export const QUOTE_FACE = 16;
 
-const quote = StyleSheet.create({
+/** The quote's plate, head and lines: `RelayQuote` wears the same. */
+export const quote = StyleSheet.create({
   // The words' column, a step off the bubble's own fill, the chevron at its right.
   box: {
     flexDirection: "row",

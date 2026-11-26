@@ -1,5 +1,6 @@
 import type { AgentBrain, AgentBrainInput, BrainKind, MachineAccount, MachineAccountKind } from "@agenteschat/client";
 import { useAgents, useAiChoice, useAiStatus, useApi, useSetComputerTarget, useUpdateAgent } from "@agenteschat/client";
+import { CLI_OF_BRAIN } from "@agenteschat/client/lib/activity";
 import type { BrainScreen } from "@agenteschat/client/lib/agent-edit";
 import { accountInLine } from "@agenteschat/client/lib/ai-accounts";
 import type { AiChoiceRow, AiChoice as AiChoiceValue } from "@agenteschat/client/lib/ai-choice";
@@ -43,6 +44,7 @@ import { NO_COMPUTER } from "@/components/AgentComputer";
 import { DEFAULT_KEY } from "@/components/AgentFields";
 import { AddAccount, OpenPage } from "@/components/ai/AddAccountFlow";
 import { type AiChoiceExtra, AiChoiceFields } from "@/components/ai/AiChoice";
+import { CliFetchLine } from "@/components/ai/CliFetchLine";
 import { CliMissing } from "@/components/ai/CliMissing";
 import { PlanHold } from "@/components/ai/plan-hold";
 import { UseOnAgentsDialog } from "@/components/ai/UseOnAgents";
@@ -657,11 +659,12 @@ function BrainFlow({
       : null;
   const offOn = work.machines.data?.find((x) => x.id === view.computer?.machineId) ?? null;
   const offTool = offBrain && offOn && offOn.kind !== "managed" ? brainTool(offBrain) : null;
-  // Its CLI not on its computer, or there and failing to start: installed from here, or looked for again.
+  // Its CLI not on its computer, there and failing to start, or too old: installed (or updated) from here, or looked
+  // for again.
   const missingReason = view.brain !== "model" ? view.options.find((o) => o.kind === view.brain)?.reason : undefined;
   const missingCli =
     view.brain !== "model" &&
-    (missingReason === "not_installed" || missingReason === "cant_start") &&
+    (missingReason === "not_installed" || missingReason === "cant_start" || missingReason === "cli_outdated") &&
     offOn &&
     offOn.kind !== "managed" &&
     (installableCli(view.brain) || cliCommandWayOut(t, view.brain, offOn, missingReason, offOn.name))
@@ -813,6 +816,7 @@ function BrainFlow({
             disabled={busy || !can("brain")}
           />
           {accountNotes()}
+          {offOn && view.brain !== "model" && <CliFetchLine machine={offOn} cli={CLI_OF_BRAIN[view.brain]} />}
           {!empty && <AiChoiceFields state={choice} parts={["model", "effort"]} disabled={busy || !can("brain")} />}
           {modelLimit && (
             <SettingNote icon="alert" live>

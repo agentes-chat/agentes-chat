@@ -305,7 +305,7 @@ describe("computer on someone else's device", () => {
         os: "darwin",
         execAllowed: false,
         access: { folders: [], tools: { claude: false, codex: false, commands: false } },
-        executors: { claude: { version: "2.1.0" } },
+        executors: { claude: { version: "2.1.300" } },
       })
       .where(machine);
     const mac = await call(ctx, "computer_status", { computer: "Sam's MacBook" });
