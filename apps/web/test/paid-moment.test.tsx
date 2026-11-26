@@ -28,7 +28,8 @@ afterEach(() => {
 });
 
 const ON = "O seu plano está ativo";
-const BETA = "Você chegou cedo. Que bom.";
+/** The welcome wizard's first step (ADR 0160, addendum of 2026-11-26), named after the workspace and the person. */
+const WELCOME = "Boas-vindas à Acme, Walter";
 const CONNECT = "Conecte uma IA para o seu time pensar";
 const SETTINGS = `/org/${ORG_ID}/settings/billing`;
 const OTHER_ID = "00000000-0000-4000-8000-0000000000b2";
@@ -314,7 +315,7 @@ describe("a confirmation that comes later", () => {
 });
 
 describe("with the arrival (a workspace that opens right after its onboarding)", () => {
-  test("the moment first, as a dialog, then the beta notice, then Connect an AI: one at a time", async () => {
+  test("the moment first, as a dialog, then the welcome wizard, then Connect an AI: one at a time", async () => {
     const { router } = await open(withoutAi(workspace()), `/org/${ORG_ID}?paid=1&arrival=1`);
     // Both marks leave the address together: neither brings the other back.
     expect(router.state.location.search).toEqual({});
@@ -323,17 +324,19 @@ describe("with the arrival (a workspace that opens right after its onboarding)",
     expect(card()).toBeNull();
     expect(paid.textContent).toContain("Sem limite de pessoas nem de arquivos.");
     await click(within(paid).getByRole("button", { name: /Continuar/ }));
-    const beta = screen().getByRole("dialog", { name: BETA });
+    const welcome = screen().getByRole("dialog", { name: WELCOME });
     expect(screen().getAllByRole("dialog")).toHaveLength(1);
-    await click(within(beta).getByRole("button", { name: /Continuar/ }));
+    // Skipped to its last step, whose button goes on.
+    await click(within(welcome).getByRole("button", { name: "Pular" }));
+    await click(within(screen().getByRole("dialog")).getByRole("button", { name: /^Começar/ }));
     expect(screen().getByRole("dialog", { name: CONNECT })).toBeTruthy();
     expect(screen().getAllByRole("dialog")).toHaveLength(1);
     expect(card()).toBeNull();
   });
 
-  test("still held as the notice opens: the notice alone, no moment", async () => {
+  test("still held as the wizard opens: the wizard alone, no moment", async () => {
     await open(held(withoutAi(workspace())), `/org/${ORG_ID}?paid=1&arrival=1`);
-    expect(screen().getByRole("dialog", { name: BETA })).toBeTruthy();
+    expect(screen().getByRole("dialog", { name: WELCOME })).toBeTruthy();
     expect(screen().queryByRole("dialog", { name: ON })).toBeNull();
     expect(card()).toBeNull();
   });

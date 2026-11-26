@@ -224,11 +224,14 @@ describe("the arrival's Connect: the right hand never picks the computer either"
     machines?.setAiAccounts({ accounts: [], computers: [MAC] });
     await renderApp(`/org/${ORG_ID}?arrival=1`, { api });
     await settle(6);
+    // The welcome wizard first (ADR 0160), skipped to its last step, whose button goes on to Connect.
     await click(
-      within(screen().getByRole("dialog", { name: "Você chegou cedo. Que bom." })).getByRole("button", {
-        name: /Continuar/,
+      within(screen().getByRole("dialog", { name: "Boas-vindas à Acme, Walter" })).getByRole("button", {
+        name: "Pular",
       }),
     );
+    await settle(2);
+    await click(within(screen().getByRole("dialog")).getByRole("button", { name: /^Começar/ }));
     await settle(6);
     const dialog = screen().getByRole("dialog", { name: "Conecte uma IA para o seu time pensar" });
     await pickPlan(dialog, "Claude");
