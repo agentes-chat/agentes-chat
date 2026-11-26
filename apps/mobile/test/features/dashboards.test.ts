@@ -603,6 +603,8 @@ describe("the widget card", () => {
     expect(bleedSeries(line, false)).toEqual([1, 2]);
     expect(bleedSeries(line, true)).toBeNull();
     expect(bleedSeries({ ...line, note: "up" }, false)).toBeNull();
+    // On the home's strip a line always runs along the foot: its last value and note stand above it.
+    expect(bleedSeries({ ...line, note: "up" }, false, true)).toEqual([1, 2]);
     expect(bleedSeries({ kind: "bars", labels: ["a"], values: [1] }, false)).toBeNull();
     expect(bleedSeries(null, false)).toBeNull();
   });

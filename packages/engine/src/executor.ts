@@ -2177,6 +2177,8 @@ async function executeRunInner(
       .then(async (choice) => keptAutoChoice(choice, await previousHere()));
   };
   const autoAsked = autoEarly ? askAuto() : null;
+  /** The computer that said this run's CLI is open (`warmAtClaim`): its first turn there starts no process. */
+  let cliOpenOn: string | null = null;
   if (warmsAtClaim) {
     const guess = previousHere().then((previous) => keptAutoChoice(fallbackChoice("none"), previous));
     void warmAtClaim(
@@ -2188,7 +2190,11 @@ async function executeRunInner(
       trigger?.authorUserId ?? null,
       guess,
       autoAsked,
-    ).catch(() => {});
+    )
+      .then((open) => {
+        cliOpenOn = open;
+      })
+      .catch(() => {});
   }
   // The judge's answer is awaited where the tools are needed: the context is read meanwhile (`CONTEXT_TOOLS`).
   const judging: Promise<void> | null =
@@ -5460,6 +5466,7 @@ async function executeRunInner(
         const place = {
           rank: personWaiting ? 0 : transcript.roomAsked ? 1 : 2,
           since: transcript.roomOrderSince ?? transcript.roomWaitSince ?? Date.now(),
+          warmOn: cliOpenOn,
         } as const;
         // The right hand is how people find out what the line is doing: it never waits behind it. Its turn is
         // locked down, so the runner lets it in on a lower floor (`admit`).
@@ -5499,7 +5506,8 @@ async function executeRunInner(
         if (behind?.cause === "sign_in" && run.turns === 0 && !transcript.spill) {
           const full = await fullSignIns(db, run.orgId, deps.signInConcurrency ?? 0);
           const next = await moveToNextAccount("busy", (usage, id) => !full.has(id) && underTheLine(usage));
-          if (next?.plan) behind = await roomGate(db, run, askOn, place, slotOf(plan));
+          // Another sign-in starts another process: the CLI warmed on the first is not its.
+          if (next?.plan) behind = await roomGate(db, run, askOn, { ...place, warmOn: null }, slotOf(plan));
         }
         const slot = slotOf(plan);
         if (behind) {
@@ -7045,7 +7053,7 @@ async function executeRunInner(
  * (nothing kept on the run). With "Automático" it starts on `guess` (the conversation's kept choice, else the medium
  * tier) and, once the run's own choice (`chosen`) gives another model or effort, warms again with that: the runner
  * replaces a process no turn used yet, so the turn finds the one it would start. `gate`: whether to warm on the plan
- * found (`warmWhileTyping`'s, which has no run yet).
+ * found (`warmWhileTyping`'s, which has no run yet). Returns the computer that holds the CLI the turn will take open now.
  */
 export async function warmAtClaim(
   deps: EngineDeps,
@@ -7058,12 +7066,12 @@ export async function warmAtClaim(
   guess: Promise<AutoChoice>,
   chosen: Promise<AutoChoice> | null,
   gate?: (plan: BrainPlan) => Promise<boolean>,
-) {
+): Promise<string | null> {
   const factory = deps.brains?.claude_code;
-  if (!factory) return;
+  if (!factory) return null;
   const base = await resolveBrain(deps, agent, run, conversation, { peek: true, codeSession });
-  if (gate && !(await gate(base))) return;
-  if (base.kind !== "claude_code" || base.unavailable || !base.session) return;
+  if (gate && !(await gate(base))) return null;
+  if (base.kind !== "claude_code" || base.unavailable || !base.session) return null;
   const session = sessionSent(base.session, false);
   const brain = factory(agent, run, { mcpToken: () => "" });
   const timeZone = await zoneOf(deps.db, run.orgId, author);
@@ -7096,7 +7104,7 @@ export async function warmAtClaim(
   // A pinned model needs no guess: its warm doesn't wait for the conversation's previous run to be read.
   const first = auto ? planFor(await guess) : base;
   const again = auto && chosen;
-  await Promise.all([
+  const [open, reopened] = await Promise.all([
     warm(first),
     again
       ? again.then((choice) => {
@@ -7105,6 +7113,8 @@ export async function warmAtClaim(
         })
       : undefined,
   ]);
+  // Warmed again on the run's own choice: that process is the one the turn takes.
+  return (reopened ?? open) === true ? session.machineId : null;
 }
 
 /** Builds the brain of this kind (`resolveBrain` picks it): a registered factory, else the built-in model brain. */

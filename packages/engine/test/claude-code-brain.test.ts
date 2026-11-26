@@ -10,6 +10,7 @@ import {
   CONVERSATION_PROTOCOL,
   createMemoryPubSub,
   MACHINE_PROTOCOL_VERSION,
+  type MachineReplies,
   type MachineRequest,
   type PubSub,
   type ServerFrame,
@@ -746,4 +747,14 @@ test("brain.warm: the turn's launch without its words, sent only to a runner tha
   expect(await warmWith({ online: false })).toEqual([]);
   // A background run keeps no process: nothing to warm.
   expect(await warmWith({}, false)).toEqual([]);
+  // What the runner answered: the session's CLI is open now (its turn starts no process), or not.
+  const answering = (reply: MachineReplies["brain.warm"]) =>
+    createClaudeCodeBrain({
+      hub: { status: async () => status({ protocol: BRAIN_WARM_PROTOCOL }), call: async () => reply as never },
+      pubsub,
+      agentScope: async (t) => ({ id: t.agentId, handle: "dev" }),
+      permissions: async () => permissions,
+    }).warm?.(turn());
+  expect(await answering({ open: true, started: false })).toBe(true);
+  expect(await answering({ open: false, started: false })).toBe(false);
 });

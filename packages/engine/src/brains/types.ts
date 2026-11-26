@@ -311,7 +311,8 @@ export interface Brain {
   run(turn: BrainTurn, io: BrainIO): AsyncIterable<BrainEvent>;
   /**
    * The run was claimed: its computer starts the CLI its turn will most likely use now, while the engine builds the
-   * turn (`brain.warm`). Best effort, never fails; `turn` has no words yet.
+   * turn (`brain.warm`). Best effort, never fails; `turn` has no words yet. True: the computer said the session's CLI
+   * is open now, so the turn starts no process.
    */
-  warm?(turn: BrainTurn): Promise<void>;
+  warm?(turn: BrainTurn): Promise<boolean | undefined>;
 }
