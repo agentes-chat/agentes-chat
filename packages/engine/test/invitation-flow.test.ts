@@ -74,7 +74,7 @@ const outboxEmails = async () =>
     .filter((p) => p.template.kind !== "join_code");
 
 /** Proves `email` with the code its email carries, then asks signed out with a password (as the route hashed it). */
-async function askWithPassword(token: string, email: string, passwordHash: string, secret: string) {
+async function askWithCode(token: string, email: string, passwordHash: string, pageKey: string) {
   await sendJoinCode(deps(), PUBLIC, { token, user: null, email, locale: "pt-BR" }, NOW);
   const [codeEmail] = (
     await fx().db.select().from(schema.outbox).where(eq(schema.outbox.kind, "email.send")).orderBy(schema.outbox.id)
@@ -95,7 +95,7 @@ async function askWithPassword(token: string, email: string, passwordHash: strin
       proofNeeded: true,
       code,
       passwordHash,
-      claimHash: sha256(secret),
+      claimHash: sha256(pageKey),
     },
     NOW,
   );
@@ -129,7 +129,7 @@ async function insertWaiting(n: number, prefix: string, by: { linkId?: string; s
 describe("asking through a link with a password (ADR 0090)", () => {
   test("approval makes the confirmed account with it and lets the page that asked in, once", async () => {
     const { token } = await start();
-    const asked = await askWithPassword(token, "rafael@example.com", "hash:rafael", "page-secret");
+    const asked = await askWithCode(token, "rafael@example.com", "hash:rafael", "page-secret");
     expect(asked).toMatchObject({ status: "pending", created: true });
     const id = "requestId" in asked ? asked.requestId : null;
     expect(id).toBeTruthy();
@@ -174,7 +174,7 @@ describe("asking through a link with a password (ADR 0090)", () => {
     await fx()
       .db.insert(schema.users)
       .values({ id: "u_bia", name: "Bia", email: "bia@example.com", emailVerified: true });
-    const asked = await askWithPassword(token, "bia@example.com", "hash:bia", "bia-secret");
+    const asked = await askWithCode(token, "bia@example.com", "hash:bia", "bia-secret");
     const id = "requestId" in asked ? (asked.requestId ?? "") : "";
     await approveJoinRequest(deps(), PUBLIC, fx().owner.id, fx().org.id, id, [], NOW);
     expect(await memberOf("u_bia")).toBeTruthy();
@@ -183,7 +183,7 @@ describe("asking through a link with a password (ADR 0090)", () => {
     expect(await requestOf(id)).toMatchObject({ passwordHash: null, claimHash: spentClaimHash(sha256("bia-secret")) });
     expect(await claimJoinRequest(fx().db, token, `${id}.bia-secret`, NOW)).toEqual({ status: "closed" });
 
-    const other = await askWithPassword(token, "caio@example.com", "hash:caio", "caio-secret");
+    const other = await askWithCode(token, "caio@example.com", "hash:caio", "caio-secret");
     const otherId = "requestId" in other ? (other.requestId ?? "") : "";
     await denyJoinRequest(deps(), fx().owner.id, fx().org.id, otherId, "Só o time interno", NOW);
     expect(await requestOf(otherId)).toMatchObject({ status: "denied", passwordHash: null });
@@ -196,7 +196,7 @@ describe("asking through a link with a password (ADR 0090)", () => {
   test("an unconfirmed account with the address: the page that asked opens the invitation the approval sent, once", async () => {
     const { token } = await start();
     await fx().db.insert(schema.users).values({ id: "u_lia", name: "Lia", email: "lia@example.com" });
-    const asked = await askWithPassword(token, "lia@example.com", "hash:lia", "lia-secret");
+    const asked = await askWithCode(token, "lia@example.com", "hash:lia", "lia-secret");
     const id = "requestId" in asked ? (asked.requestId ?? "") : "";
     const approval = await approveJoinRequest(
       { ...deps(), secret: SECRET },
@@ -228,7 +228,7 @@ describe("asking through a link with a password (ADR 0090)", () => {
 
   test("joining another way closes the request, its page told so; a key is good for a day", async () => {
     const { token } = await start();
-    const asked = await askWithPassword(token, "gabi@example.com", "hash:gabi", "gabi-secret");
+    const asked = await askWithCode(token, "gabi@example.com", "hash:gabi", "gabi-secret");
     const id = "requestId" in asked ? (asked.requestId ?? "") : "";
     // An email invitation to the same address, accepted: the request closes, its password gone, its key spent.
     const [invited] = await inviteMany(fx().db, fx().owner.id, fx().org.id, { emails: ["gabi@example.com"] }, NOW);
@@ -243,7 +243,7 @@ describe("asking through a link with a password (ADR 0090)", () => {
     expect(await claimJoinRequest(fx().db, token, `${id}.gabi-secret`, NOW)).toEqual({ status: "closed" });
 
     // Approved and made, but the page never came back: a day later its key signs in no one.
-    const other = await askWithPassword(token, "hugo@example.com", "hash:hugo", "hugo-secret");
+    const other = await askWithCode(token, "hugo@example.com", "hash:hugo", "hugo-secret");
     const otherId = "requestId" in other ? (other.requestId ?? "") : "";
     await approveJoinRequest(deps(), PUBLIC, fx().owner.id, fx().org.id, otherId, [], NOW);
     expect((await requestOf(otherId))?.claimHash).toBe(sha256("hugo-secret"));
@@ -254,7 +254,7 @@ describe("asking through a link with a password (ADR 0090)", () => {
 
   test("a request that runs out drops the password and the key", async () => {
     const { token } = await start();
-    const asked = await askWithPassword(token, "duda@example.com", "hash:duda", "duda-secret");
+    const asked = await askWithCode(token, "duda@example.com", "hash:duda", "duda-secret");
     const id = "requestId" in asked ? (asked.requestId ?? "") : "";
     await pruneJoinRequests(deps(), at(15));
     expect(await requestOf(id)).toMatchObject({ passwordHash: null, claimHash: null });
@@ -278,7 +278,7 @@ describe("asking through a link with a password (ADR 0090)", () => {
       .values({ id: "u_tom", name: "Tom", email: "tom@example.com", emailVerified: true });
     // The account asks; then a page signed out asks for its address, proven, with a password of its own.
     await askToJoin(deps(), PUBLIC, { token, user: { id: "u_tom" } }, NOW);
-    const asked = await askWithPassword(token, "tom@example.com", "hash:tom", "tom-secret");
+    const asked = await askWithCode(token, "tom@example.com", "hash:tom", "tom-secret");
     const id = "requestId" in asked ? (asked.requestId ?? "") : "";
     expect(await requestOf(id)).toMatchObject({ userId: "u_tom", claimHash: sha256("tom-secret") });
     const approval = await approveJoinRequest(deps(), PUBLIC, fx().owner.id, fx().org.id, id, [], NOW);
@@ -290,7 +290,7 @@ describe("asking through a link with a password (ADR 0090)", () => {
 
   test("an account signed up for the address while the approval runs is never written over", async () => {
     const { token } = await start();
-    const asked = await askWithPassword(token, "iris@example.com", "hash:iris", "iris-secret");
+    const asked = await askWithCode(token, "iris@example.com", "hash:iris", "iris-secret");
     const id = "requestId" in asked ? (asked.requestId ?? "") : "";
     // Someone signs up with the address just as the approval makes the account: theirs lands first.
     await fx().db.execute(
@@ -395,7 +395,7 @@ describe("members suggest someone (ADR 0090)", () => {
     const { token, link } = await start();
     const carla = await addMember(fx().db, fx().org.id, "member", "carla");
     const { id } = await suggestPerson(deps(), carla.id, fx().org.id, { email: "rafael@example.com" }, NOW);
-    const asked = await askWithPassword(token, "rafael@example.com", "hash:rafael", "rafa-secret");
+    const asked = await askWithCode(token, "rafael@example.com", "hash:rafael", "rafa-secret");
     expect(asked).toMatchObject({ created: false, requestId: id });
     expect(await requestOf(id)).toMatchObject({ linkId: link.id, suggestedByUserId: null, name: "Rafael Costa" });
     expect(await listMySuggestions(fx().db, carla.id, fx().org.id, NOW)).toEqual([]);
@@ -424,11 +424,11 @@ describe("members suggest someone (ADR 0090)", () => {
     await insertWaiting(rest, "eli", { suggestedByUserId: eli.id });
     await expect(suggest(dani, "dani1@example.com")).rejects.toMatchObject({ code: "join.full" });
     // Nor do suggestions fill the asks' room: one ask answered, the next is filed.
-    await expect(askWithPassword(token, "l@example.com", "hash:l", "l")).rejects.toMatchObject({ code: "join.full" });
+    await expect(askWithCode(token, "l@example.com", "hash:l", "l")).rejects.toMatchObject({ code: "join.full" });
     await fx()
       .db.delete(schema.organizationJoinRequests)
       .where(eq(schema.organizationJoinRequests.email, "ask0@example.com"));
-    expect(await askWithPassword(token, "n@example.com", "hash:n", "n")).toMatchObject({ created: true });
+    expect(await askWithCode(token, "n@example.com", "hash:n", "n")).toMatchObject({ created: true });
   });
 });
 
