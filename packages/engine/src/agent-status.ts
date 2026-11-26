@@ -514,7 +514,7 @@ export function lineInEnglish(line: AgentStatusLine): string | null {
     queued_computer: "in line for its computer",
     waiting_plan: "waiting for its plan to reset",
     waiting_budget: "waiting for its budget to renew",
-    provider_down: "waiting for its AI provider to come back (it retries by itself)",
+    provider_down: "waiting for its AI to answer again (it retries by itself)",
     out_of_plan: `out of office: its AI plan hit its limit${line.until ? `, back at ${line.until}` : ""}; what you send waits until then${line.count ? ` (${line.count} conversation${line.count === 1 ? "" : "s"} already waiting)` : ""}`,
     out_of_budget: `out of office: its monthly budget is spent${line.until ? `, back at ${line.until}` : ""}; what you send waits until then`,
     work:

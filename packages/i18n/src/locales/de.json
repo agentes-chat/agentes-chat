@@ -2938,8 +2938,8 @@
     "failed_other": "{{names}} konnten nicht antworten",
     "asking_one": "{{names}} wartet auf eine Antwort",
     "asking_other": "{{names}} warten auf eine Antwort",
-    "outage_one": "{{names}}: Der KI-Anbieter ist ausgefallen · versucht es von selbst erneut",
-    "outage_other": "{{names}}: Der KI-Anbieter ist ausgefallen · versucht es von selbst erneut",
+    "outage_one": "{{names}}: Die KI antwortet nicht · versucht es von selbst erneut",
+    "outage_other": "{{names}}: Die KI antwortet nicht · versucht es von selbst erneut",
     "queued_one": "{{names}} steht in der Warteschlange",
     "queued_other": "{{names}} stehen in der Warteschlange",
     "away_one": "{{names}} wartet auf den Computer",
@@ -2959,7 +2959,7 @@
       "claimed": "Antwortet",
       "waiting": "Wartet auf Freigabe",
       "asking": "Wartet auf eine Antwort",
-      "outage": "Der KI-Anbieter ist ausgefallen · versucht es von selbst erneut",
+      "outage": "Die KI antwortet nicht · versucht es von selbst erneut",
       "queued": "In der Warteschlange",
       "away": "Wartet auf den Computer",
       "plan": "Wartet auf das Abo",
@@ -4448,7 +4448,7 @@
       "queued_computer": "In der Warteschlange",
       "waiting_plan": "Wartet auf das Abo",
       "waiting_budget": "Wartet, bis sich das Budget zurücksetzt",
-      "provider_down": "Der KI-Anbieter ist ausgefallen · versucht es von selbst erneut",
+      "provider_down": "Die KI antwortet nicht · versucht es von selbst erneut",
       "out_of_plan": "Planlimit erreicht",
       "out_of_budget": "Monatsbudget aufgebraucht",
       "out_of_planShort": "Limit erreicht",
@@ -16601,6 +16601,10 @@
       "paused": "{{name}} ist pausiert",
       "resumed": "{{name}} arbeitet wieder"
     },
+    "runnerBehind": {
+      "command": "Das agentes.chat-Programm auf {{computer}} ist veraltet, daher funktioniert dort einiges nicht. Zum Aktualisieren führe dort Folgendes aus:",
+      "installer": "Das agentes.chat-Programm auf {{computer}} ist veraltet, daher funktioniert dort einiges nicht. Zum Aktualisieren führe dort den Installationsbefehl erneut als root aus."
+    },
     "seenNow": "gerade verbunden",
     "seen": "zuletzt gesehen {{when}}",
     "neverSeen": "hat sich noch nicht verbunden",
@@ -18870,7 +18874,7 @@
       "waitingApproval": "{{name}} wartet auf eine Freigabe",
       "waitingInput": "{{name}} wartet auf eine Antwort",
       "waitingComputer": "{{name}} wartet auf den Computer",
-      "waitingProvider": "{{name}}: Der KI-Anbieter ist ausgefallen · versucht es von selbst erneut",
+      "waitingProvider": "{{name}}: Die KI antwortet nicht · versucht es von selbst erneut",
       "waitingAgents": "{{name}} hat einen Teil weitergegeben und wartet auf Rückmeldung",
       "queued": "{{name}} ist in der Warteschlange"
     },
@@ -18881,7 +18885,7 @@
       "waitingApproval": "wartet auf Freigabe",
       "waitingInput": "wartet auf eine Antwort",
       "waitingComputer": "wartet auf den Computer",
-      "waitingProvider": "KI-Anbieter gestört",
+      "waitingProvider": "KI antwortet nicht",
       "waitingYourApproval": "wartet auf deine Freigabe",
       "waitingYourAnswer": "wartet auf deine Antwort",
       "queued": "in der Warteschlange",
@@ -19325,6 +19329,7 @@
       "brain_unavailable_commands_off": "{{brain}} ist auf meinem Computer ausgeschaltet. Ich antworte, sobald die Person, die ihn betreut, es einschaltet.",
       "brain_unavailable_outdated": "Das Programm auf meinem Computer braucht ein Update, bevor {{brain}} antworten kann. Ich antworte, sobald es aktualisiert ist.",
       "brain_unavailable_plan_owner": "{{brain}} würde mit einem Abo denken, das nicht meinem Besitzer gehört, deshalb nutze ich es nicht. Verbinde das Konto meines Besitzers auf meiner Seite.",
+      "brain_unavailable_shared_login": "Mein Computer kann Claudes Anmeldung für alle Agenten gerade nicht nutzen. Ich antworte, sobald es geht. Wenn es weiter fehlschlägt, verbinde Claude in KI-Konten neu.",
       "provider_unavailable": "Mein KI-Anbieter antwortet gerade nicht. Ich antworte, sobald er wieder da ist.",
       "provider_wait_rate_limit": "{{provider}} begrenzt gerade die Anfragen dieses Schlüssels. Ich antworte, sobald es wieder geht.",
       "provider_wait_down": "{{provider}} ist gerade ausgefallen oder überlastet. Ich antworte, sobald es wieder da ist.",
@@ -21114,7 +21119,7 @@
       "budgetSoon": "Wartet kurz auf das Budget von {{name}}",
       "computer": "Wartet auf den Computer von {{name}}",
       "busy": "Wartet auf Platz am Computer von {{name}}",
-      "provider": "Wartet auf den KI-Anbieter von {{name}}, nächster Versuch {{when}}"
+      "provider": "Wartet auf eine Antwort der KI von {{name}}, nächster Versuch {{when}}"
     },
     "menu": {
       "label": "Mehr",

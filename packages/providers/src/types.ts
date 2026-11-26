@@ -53,18 +53,21 @@ export const PDF_PAGE_CHARS = 8000;
 export const toolImageChars = (i: ToolImage) =>
   i.mediaType === PDF_MEDIA_TYPE ? Math.max(1, i.pages ?? 1) * PDF_PAGE_CHARS : IMAGE_CHARS;
 
-/** Whether a tool result carries a picture or a PDF. */
-export const hasToolImages = (messages: ModelMessage[]) =>
+/** Whether a tool result carries a picture or a PDF (`which`: only one it matches). */
+export const hasToolImages = (messages: ModelMessage[], which: (image: ToolImage) => boolean = () => true) =>
   messages.some(
-    (m) => typeof m.content !== "string" && m.content.some((b) => b.type === "tool_result" && b.images?.length),
+    (m) => typeof m.content !== "string" && m.content.some((b) => b.type === "tool_result" && b.images?.some(which)),
   );
+
+export const isPdfImage = (image: ToolImage) => image.mediaType === PDF_MEDIA_TYPE;
 
 /**
  * The messages with tool results' pictures and PDFs left out, a note in their place: for endpoints that take text
  * only (another company's Anthropic-compatible API, OpenRouter), where one would fail the whole request. The note
- * names the AI (`model`) and the way out, so the agent tells the person the real cause.
+ * names the AI (`model`) and the way out, so the agent tells the person the real cause. `pictures`: the endpoint reads
+ * pictures but no PDFs, so only the PDFs are left out.
  */
-export const withoutImages = (messages: ModelMessage[], model?: string): ModelMessage[] =>
+export const withoutImages = (messages: ModelMessage[], model?: string, pictures = false): ModelMessage[] =>
   messages.map((m) =>
     typeof m.content === "string"
       ? m
@@ -73,13 +76,19 @@ export const withoutImages = (messages: ModelMessage[], model?: string): ModelMe
           content: m.content.map((b) => {
             if (b.type !== "tool_result" || !b.images?.length) return b;
             const { images, ...rest } = b;
-            const pdf = images.some((i) => i.mediaType === PDF_MEDIA_TYPE);
-            const picture = images.some((i) => i.mediaType !== PDF_MEDIA_TYPE);
+            const kept = pictures ? images.filter((i) => !isPdfImage(i)) : [];
+            if (kept.length === images.length) return b;
+            const pdf = images.some(isPdfImage);
+            const picture = !pictures && images.some((i) => !isPdfImage(i));
             const what = pdf && picture ? "picture and the PDF" : pdf ? "PDF" : "picture";
             const ai = model ? `this agent's AI (${model})` : "this agent's AI";
+            const reads = pictures
+              ? "reads pictures through this connection, not PDFs"
+              : "reads text only through this connection";
             return {
               ...rest,
-              content: `${b.content}\n[The ${what} is not shown to you: ${ai} reads text only through this connection. Tell the person exactly that, and that an AI that reads ${pdf ? "pictures and PDFs" : "pictures"} (Claude, GPT or Gemini), picked in this agent's settings, would see it. Never say the file came empty.]`,
+              ...(kept.length > 0 ? { images: kept } : {}),
+              content: `${b.content}\n[The ${what} is not shown to you: ${ai} ${reads}. Tell the person exactly that, and that an AI that reads ${pdf ? "pictures and PDFs" : "pictures"} (Claude, GPT or Gemini), picked in this agent's settings, would see it. Never say the file came empty.]`,
             };
           }),
         },

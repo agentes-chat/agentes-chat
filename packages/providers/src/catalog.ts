@@ -128,6 +128,11 @@ export interface ModelInfo {
   /** It can't follow an `outputSchema`: never a pick for routing, the judge or summaries. */
   structuredOutput?: false;
   /**
+   * Reads tool results' pictures (no PDFs) through its provider's Anthropic-compatible endpoint (`ProviderInfo.compat`),
+   * which otherwise gets them left out.
+   */
+  images?: true;
+  /**
    * `false`: the pickers offer it only to a workspace with its provider's key (OpenRouter's long list, Command Code's).
    * `true`: a long list's good pick, shown first, greyed without a key. Absent: a catalog model.
    */
@@ -424,6 +429,10 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     leastThinking: "off",
     recommended: true,
     tier: "small",
+    // DeepSeek's Anthropic API guide (api-docs.deepseek.com/guides/anthropic_api, read 2026-11-25): "deepseek-flash
+    // supports images in user messages and tool_result content" (base64 PNG, JPEG, GIF, WebP); a document goes only by
+    // `file` or `text` source, so a PDF stays out. `deepseek-v4-pro` swaps a picture for "[Unsupported Image]".
+    images: true,
   },
   "deepseek-v4-pro": {
     provider: "deepseek",

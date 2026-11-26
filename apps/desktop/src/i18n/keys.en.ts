@@ -131,6 +131,8 @@ export const desktopEn = {
     allowedOne: "{{folder}} allowed for {{agent}}",
     allowedAll: "{{folder}} allowed for all agents",
     denied: "Declined. {{agent}} lets them know in the chat.",
+    /** The computer's own reason, in English (a folder that no longer exists, a system folder, too many folders). */
+    answerFailed: "Couldn't answer this request: {{message}}",
     notifTitle: "{{agent}} wants to use the folder {{folder}}",
     allowedTitle: "{{name}} turned on {{tool}} from agentes.chat",
     allowedBody: "If it wasn't you, undo it here.",

@@ -179,6 +179,27 @@ describe("Settings › Devices", () => {
     ]);
   });
 
+  test("a computer whose runner is behind this server: its owner sees why and how to update it, no one else", async () => {
+    const page = async (update: "command" | "installer" | null, canManage = true) => {
+      cleanup();
+      const app = await open(`/org/${ORG_ID}/settings/devices/${MAC}`);
+      fakeMachinesOf.get(app.api)?.pair({ id: MAC, name: "Sam's MacBook Pro", update, canManage });
+      await refetch(app.services);
+      return screen().getByRole("heading", { name: "Sam's MacBook Pro" }).closest(".ac-card") as HTMLElement;
+    };
+    const behind = "The agentes.chat program on Sam's MacBook Pro is out of date, so some things don't work there.";
+    let card = await page("command");
+    expect(card.textContent).toContain(`${behind} To update it, run this there:`);
+    expect(card.querySelector(".machine-command code")?.textContent).toBe("agentes-runner update");
+    card = await page("installer");
+    expect(card.textContent).toContain(`${behind} To update it, run the install command there again, as root.`);
+    expect(card.querySelector(".machine-command")).toBeNull();
+    for (card of [await page(null), await page("command", false)]) {
+      expect(card.textContent).not.toContain(behind);
+      expect(card.querySelector(".machine-command")).toBeNull();
+    }
+  });
+
   test("a busy computer's page says its tasks at once and where that changes, for its owner or anyone else", async () => {
     await open(`/org/${ORG_ID}/settings/devices/${BUILD_PC}`);
     expect(screen().getByText("Tasks at once here: 1. The person who connected it can change that.")).toBeTruthy();
@@ -1364,6 +1385,27 @@ describe("In the chat and the inbox", () => {
     const read = document.querySelector(".ib-read") as HTMLElement;
     await click(within(read).getByRole("button", { name: "Allow once" }));
     expect(calls(state, "devices.decideAccess")[0]?.args).toEqual([ORG_ID, "ar-1", "once"]);
+  });
+
+  test("an agent waits for a folder on my computer: No from the inbox, never a yes", async () => {
+    const state = acmeState();
+    state.notifications = [
+      notification({
+        id: "n-folder",
+        kind: "device.folder_request" as never,
+        waiting: true,
+        actors: [{ type: "agent", id: LIA }],
+        source: { machineId: MAC, label: "Sam's MacBook Pro", agentId: LIA, requestId: "fr-1" } as never,
+        latest: { title: "/Users/sam/Contracts", text: "read the contracts" },
+      }),
+    ];
+    await open(`/org/${ORG_ID}/notifications`, undefined, state);
+    await click(document.querySelector('[data-n="n-folder"]') as HTMLElement);
+    const read = document.querySelector(".ib-read") as HTMLElement;
+    expect(within(read).queryByRole("button", { name: /allow/i })).toBeNull();
+    await click(within(read).getByRole("button", { name: "No" }));
+    await settle(4);
+    expect(calls(state, "machines.refuseFolder").map((c) => c.args)).toEqual([[ORG_ID, MAC, "fr-1"]]);
   });
 
   test("my computer paired before lends its internet now: the inbox says so plainly, with Turn off", async () => {

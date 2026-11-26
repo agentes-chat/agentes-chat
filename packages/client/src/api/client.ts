@@ -1335,6 +1335,8 @@ export interface ApiClient {
     allowTool(orgId: string, machineId: string, tool: MachineTool): Promise<MachineAccess>;
     /** Anyone else: asks whoever paired it to turn `tool` on (an inbox row with the same button). */
     askTool(orgId: string, machineId: string, tool: MachineTool): Promise<void>;
+    /** Admins or whoever paired it: no to a folder an agent waits for there (never a yes). The request's outcome. */
+    refuseFolder(orgId: string, machineId: string, requestId: string): Promise<{ status: string }>;
     /** Its PATH read again and its coding CLIs looked for now ("Já instalei, verificar de novo"). */
     checkClis(orgId: string, machineId: string): Promise<void>;
     /** ADR 0228 §6: "Try again" on a CLI's fetch; where it stands now. */

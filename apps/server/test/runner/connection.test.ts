@@ -445,6 +445,27 @@ test("a browser command is logged when it ends, with how long it took and what i
   expect(lines[4]).toMatch(/^\[dev\] browser\.warm \(desktop\) \d+ms \(desktop 2\.3 s, launch 1\.4 s\)$/);
 });
 
+test("a refused brain turn is logged with its code and words, whatever the code; a canceled one and another op's expected refusal aren't", async () => {
+  const lines: string[] = [];
+  const ws = tempDir();
+  dirs.push(ws);
+  const runner = new RequestRunner(
+    { workspaceReal: ws, exec: true, token: "agm_x" },
+    () => {},
+    (l) => lines.push(l),
+    async (_ctx, req) => {
+      if (req.op === "brain.turn" && req.runId === "c") throw new RunnerError("internal", "Canceled");
+      throw new RunnerError("not_found", "No such file or folder");
+    },
+    { memAvailable: () => null },
+  );
+  const agent = { id: "01a142cb-489d-7000-87a3-efb5adb382ca", handle: "dev" };
+  await runner.start("t", { op: "brain.turn", runId: "t", agent } as unknown as MachineRequest);
+  await runner.start("c", { op: "brain.turn", runId: "c", agent } as unknown as MachineRequest);
+  await runner.start("l", { op: "list", path: "", depth: 1 });
+  expect(lines.filter((l) => l.includes("failed"))).toEqual(["brain.turn failed (not_found): No such file or folder"]);
+});
+
 test("requests run concurrently up to the ceiling; beyond it the runner answers busy (never to a person's view); cancel aborts", async () => {
   const ws = tempDir();
   dirs.push(ws);

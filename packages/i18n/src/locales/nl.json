@@ -2941,8 +2941,8 @@
     "failed_other": "{{names}} konden niet antwoorden",
     "asking_one": "{{names}} wacht op een antwoord",
     "asking_other": "{{names}} wachten op een antwoord",
-    "outage_one": "{{names}}: de AI-aanbieder ligt eruit · probeert het zelf opnieuw",
-    "outage_other": "{{names}}: de AI-aanbieder ligt eruit · proberen het zelf opnieuw",
+    "outage_one": "{{names}}: de AI antwoordt niet · probeert het zelf opnieuw",
+    "outage_other": "{{names}}: de AI antwoordt niet · proberen het zelf opnieuw",
     "queued_one": "{{names}} staat in de wachtrij",
     "queued_other": "{{names}} staan in de wachtrij",
     "away_one": "{{names}} wacht op de computer",
@@ -2962,7 +2962,7 @@
       "claimed": "Is aan het antwoorden",
       "waiting": "Wacht op goedkeuring",
       "asking": "Wacht op een antwoord",
-      "outage": "De AI-aanbieder ligt eruit · probeert het zelf opnieuw",
+      "outage": "De AI antwoordt niet · probeert het zelf opnieuw",
       "queued": "In de wachtrij",
       "away": "Wacht op de computer",
       "plan": "Wacht op het abonnement",
@@ -4448,7 +4448,7 @@
       "queued_computer": "In de wachtrij",
       "waiting_plan": "Wacht op het abonnement",
       "waiting_budget": "Wacht tot het budget opnieuw begint",
-      "provider_down": "De AI-aanbieder ligt eruit · probeert het zelf opnieuw",
+      "provider_down": "De AI antwoordt niet · probeert het zelf opnieuw",
       "out_of_plan": "Planlimiet bereikt",
       "out_of_budget": "Maandbudget op",
       "out_of_planShort": "Limiet bereikt",
@@ -16668,6 +16668,10 @@
       "paused": "{{name}} is gepauzeerd",
       "resumed": "{{name}} werkt weer"
     },
+    "runnerBehind": {
+      "command": "Het agentes.chat-programma op {{computer}} is verouderd, dus sommige dingen werken daar niet. Voer dit daar uit om het bij te werken:",
+      "installer": "Het agentes.chat-programma op {{computer}} is verouderd, dus sommige dingen werken daar niet. Voer daar de installatieopdracht opnieuw uit als root om het bij te werken."
+    },
     "seenNow": "nu verbonden",
     "seen": "gezien {{when}}",
     "neverSeen": "nog niet verbonden",
@@ -18938,7 +18942,7 @@
       "waitingInput_female": "{{name}} wacht op een antwoord",
       "waitingComputer": "{{name}} wacht op de computer",
       "waitingComputer_female": "{{name}} wacht op de computer",
-      "waitingProvider": "{{name}}: de AI-aanbieder ligt eruit · probeert het vanzelf opnieuw",
+      "waitingProvider": "{{name}}: de AI antwoordt niet · probeert het vanzelf opnieuw",
       "waitingAgents": "{{name}} heeft een deel doorgegeven en wacht op antwoord",
       "waitingAgents_female": "{{name}} heeft een deel doorgegeven en wacht op antwoord",
       "queued": "{{name}} staat in de rij"
@@ -18950,7 +18954,7 @@
       "waitingApproval": "wacht op goedkeuring",
       "waitingInput": "wacht op een antwoord",
       "waitingComputer": "wacht op de computer",
-      "waitingProvider": "AI-provider ligt eruit",
+      "waitingProvider": "AI antwoordt niet",
       "waitingYourApproval": "wacht op je goedkeuring",
       "waitingYourAnswer": "wacht op je antwoord",
       "queued": "in de rij",
@@ -19398,6 +19402,7 @@
       "brain_unavailable_commands_off": "{{brain}} staat uit op mijn computer. Ik antwoord zodra wie die beheert het aanzet.",
       "brain_unavailable_outdated": "Het programma op mijn computer heeft een update nodig voordat {{brain}} kan antwoorden. Ik antwoord zodra het bijgewerkt is.",
       "brain_unavailable_plan_owner": "{{brain}} zou denken met een abonnement dat niet van mijn eigenaar is, dus ik gebruik het niet. Koppel het account van mijn eigenaar op mijn pagina.",
+      "brain_unavailable_shared_login": "Mijn computer kan Claudes login voor alle agents nu niet gebruiken. Ik antwoord zodra het lukt. Blijft het mislukken, verbind Claude dan opnieuw in AI-accounts.",
       "provider_unavailable": "Mijn AI-aanbieder reageert nu niet. Ik antwoord zodra die terug is.",
       "provider_wait_rate_limit": "{{provider}} beperkt nu de verzoeken van deze sleutel. Ik antwoord zodra dat weer kan.",
       "provider_wait_down": "{{provider}} is nu uitgevallen of overbelast. Ik antwoord zodra die terug is.",
@@ -21296,7 +21301,7 @@
       "budgetSoon": "Wacht even op het budget van {{name}}",
       "computer": "Wacht op de computer van {{name}}",
       "busy": "Wacht op ruimte op de computer van {{name}}",
-      "provider": "Wacht op de AI-aanbieder van {{name}}, volgende poging {{when}}"
+      "provider": "Wacht op een antwoord van de AI van {{name}}, volgende poging {{when}}"
     },
     "menu": {
       "label": "Meer",

@@ -7,6 +7,7 @@ import {
   type BrainTurnRequest,
   type MachineRequest,
   MISSION_RULES_NO_GIT,
+  SHARED_LOGIN_OFF,
   type TaskStart,
   type ToolNotice,
   type TurnContext,
@@ -39,8 +40,6 @@ import { type HostedExit, type HostedTask, TASK_MAX_SECONDS_CAP } from "./tasks"
 const REFRESH_POLL_MS = 200;
 const REFRESH_WAIT_MS = 30_000;
 
-export const SHARED_LOGIN_OFF =
-  "This computer can't run this Claude sign-in right now. Try again later, or remove it in AI accounts and connect Claude again.";
 /** Past this a line is lost, as in a task's own watcher. */
 const TASK_LINE_MAX = 1024 * 1024;
 

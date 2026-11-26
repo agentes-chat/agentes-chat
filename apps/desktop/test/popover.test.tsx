@@ -7,6 +7,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { I18nextProvider } from "react-i18next";
 import { AppProvider } from "../src/app";
+import { ControlError } from "../src/control/client";
 import { siteApi } from "../src/control/devices";
 import { PREPARE_PREF } from "../src/control/permissions";
 import { DesktopStore, pairedHomes } from "../src/control/store";
@@ -95,6 +96,22 @@ test("the menu bar menu: what goes on here scrolls, and Open, Preferences and Qu
     for (const label of ["Open agentes.chat", "Preferences…", "Quit agentes.chat"]) {
       expect(actions.some((text) => text.includes(label))).toBe(true);
     }
+  }));
+
+test("a folder request the computer can't answer says why, and stays to be answered again", () =>
+  withMenu(async (el, store) => {
+    const real = store.request.bind(store);
+    store.request = (async (homeId: string, req: { type: string }) => {
+      if (req.type === "access.answer") throw new ControlError("invalid_path", "/Users/voce/roteiros doesn't exist");
+      return real(homeId, req as never);
+    }) as typeof store.request;
+    const allow = [...el.querySelectorAll(".dk-req button")].find((b) => b.textContent === "Allow") as HTMLElement;
+    await act(async () => allow.click());
+    await until(() => document.querySelector(".dk-toast")?.textContent);
+    expect(document.querySelector(".dk-toast")?.textContent).toContain(
+      "Couldn't answer this request: /Users/voce/roteiros doesn't exist",
+    );
+    expect((allow as HTMLButtonElement).disabled).toBe(false);
   }));
 
 test("on a short screen the card's cap is lower, so the window and the actions at its bottom stay on it", async () => {
