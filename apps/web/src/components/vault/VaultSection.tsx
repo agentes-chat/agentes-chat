@@ -359,7 +359,7 @@ export function VaultSection() {
                       icon="checks"
                       onClick={() => setPicked(new Set(shown.map((i) => i.id)))}
                     >
-                      {t("vault.bulk.selectAll", { count: shown.length })}
+                      <span className="drive-selbar__label">{t("vault.bulk.selectAll", { count: shown.length })}</span>
                     </Button>
                   )}
                   <Button
@@ -369,7 +369,7 @@ export function VaultSection() {
                     disabled={chosen.length === 0}
                     onClick={() => setBulk("access")}
                   >
-                    {t("vault.bulk.access")}
+                    <span className="drive-selbar__label">{t("vault.bulk.access")}</span>
                   </Button>
                   <Button
                     size="sm"
@@ -379,7 +379,7 @@ export function VaultSection() {
                     disabled={chosen.length === 0}
                     onClick={() => setBulk("delete")}
                   >
-                    {t("vault.bulk.delete")}
+                    <span className="drive-selbar__label">{t("vault.bulk.delete")}</span>
                   </Button>
                   <span className="drive-selbar__sep" aria-hidden="true" />
                   <Button
