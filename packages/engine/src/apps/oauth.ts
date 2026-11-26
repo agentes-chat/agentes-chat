@@ -5,7 +5,7 @@ import { sha256 } from "../crypto";
 import { emailLocale, modeStamp, queueEmail } from "../email";
 import { ConflictError, ForbiddenError, NotFoundError } from "../errors";
 import { getMembership, listMemberships } from "../organizations";
-import { accountClosed, workRefusal } from "../standing";
+import { accountClosed, workRefusalBeforePlan } from "../standing";
 import {
   type AppIdentity,
   appIdentity,
@@ -153,7 +153,8 @@ export async function consentView(deps: OauthDeps, userId: string, requestId: st
       id: m.orgId,
       name: m.orgName,
       logo: m.orgLogo ?? null,
-      paused: !!workRefusal(m.standing),
+      // A workspace waiting for its first plan takes the connection its onboarding asks for (ADR 0250).
+      paused: !!workRefusalBeforePlan(m.standing),
       current: i === 0,
       createdAt: m.orgCreatedAt?.toISOString(),
       ...(m.standing?.deletionDueAt ? { deletion: { dueAt: m.standing.deletionDueAt.toISOString() } } : {}),
@@ -191,7 +192,8 @@ export async function decideConsent(
   if (!input.orgId) throw new ForbiddenError("Pick a workspace", "not_member");
   const membership = await getMembership(db, userId, input.orgId);
   if (!membership) throw new ForbiddenError("You are not a member of this workspace", "not_member");
-  if (workRefusal(membership.standing)) throw new ConflictError("This workspace is paused", "workspace_paused");
+  if (workRefusalBeforePlan(membership.standing))
+    throw new ConflictError("This workspace is paused", "workspace_paused");
   const allowed = appScopesFor(input.access ?? "write");
   const scopes = (request.scopes as AppScope[]).filter((s) => allowed.includes(s));
   const identity = appIdentity(client, request.redirectUri, new URL(publicUrl).hostname);

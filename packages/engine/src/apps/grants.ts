@@ -3,7 +3,8 @@ import { recordAudit } from "../audit";
 import { sha256 } from "../crypto";
 import { ConflictError, ForbiddenError, NotFoundError } from "../errors";
 import { can, getMembership, requireActiveMembership } from "../organizations";
-import { accountInUse, workRefusal } from "../standing";
+import { accountInUse, waitsForPlan, workRefusal, workRefusalBeforePlan } from "../standing";
+import { APP_FIRST_AGENT_TOOL_NAMES } from "./first-agents-tool";
 import { queueReceipt } from "./oauth";
 import { revokeAppGrants, revokeMemberApps } from "./revoke";
 import {
@@ -31,6 +32,11 @@ export interface AppPrincipal {
   app: { name: string; brand: string | null; host: string | null; kind: string };
   /** A reason every tool call is refused with (blocked account, paused workspace), instead of a 401 loop. */
   refusal: string | null;
+  /**
+   * Tools that still work despite `refusal`: `propose_first_agents` while the workspace only waits for its first
+   * plan, since its onboarding asks the person's AI for their first agents before Checkout (ADR 0250).
+   */
+  stillOpen?: readonly string[];
 }
 
 /**
@@ -72,6 +78,7 @@ export async function appPrincipal(
 ): Promise<AppPrincipal | null> {
   const { grant } = row;
   let refusal: string | null = null;
+  let stillOpen: readonly string[] = [];
   if (!row.open) {
     refusal = "This agentes.chat account can't be used right now.";
   } else {
@@ -80,8 +87,13 @@ export async function appPrincipal(
       await db.transaction((tx) => revokeMemberApps(tx, grant.orgId, grant.userId));
       return null;
     }
-    if (workRefusal(membership.standing))
+    if (membership.standing && waitsForPlan(membership.standing)) {
+      refusal =
+        "This workspace waits for its first plan in agentes.chat. Until then propose_first_agents is the one tool that works through this app.";
+      stillOpen = APP_FIRST_AGENT_TOOL_NAMES;
+    } else if (workRefusal(membership.standing)) {
       refusal = "This workspace is paused in agentes.chat. Nothing can be read or sent through this app now.";
+    }
   }
   const [org] = await db
     .select({ name: organizations.name })
@@ -97,6 +109,7 @@ export async function appPrincipal(
     scopes: (row.tokenScopes ?? grant.scopes).filter((s) => grant.scopes.includes(s)) as AppScope[],
     app: { name: grant.displayName, brand: grant.brand, host: grant.displayHost, kind: grant.displayKind },
     refusal,
+    ...(stillOpen.length > 0 ? { stillOpen } : {}),
   };
 }
 
@@ -234,7 +247,9 @@ export async function createPersonalToken(
   input: { name: string; access: AppAccess; expiresInDays: (typeof TOKEN_EXPIRY_DAYS)[number] | null },
 ) {
   const membership = await requireActiveMembership(db, userId, orgId);
-  if (workRefusal(membership.standing)) throw new ConflictError("This workspace is paused", "workspace_paused");
+  // A workspace waiting for its first plan still makes one: its onboarding connects the person's AI (ADR 0250).
+  if (workRefusalBeforePlan(membership.standing))
+    throw new ConflictError("This workspace is paused", "workspace_paused");
   const name = input.name
     .replace(/[\p{Cc}\p{Cf}]/gu, "")
     .trim()

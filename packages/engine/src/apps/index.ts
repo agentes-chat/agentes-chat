@@ -1,4 +1,5 @@
 export * from "./clients";
+export * from "./first-agents-tool";
 export * from "./grants";
 export * from "./manage-tools";
 export * from "./oauth";
