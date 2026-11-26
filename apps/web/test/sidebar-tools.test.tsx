@@ -371,10 +371,13 @@ describe("the tools on top", () => {
     test("the server's order: the same list on every device", async () => {
       await go(
         seedState({
-          sidebarToolOrder: ["drive", "issues", "waiting", "threads", "wiki", "routines", "calendar"],
+          sidebarToolOrder: ["drive", "issues", "waiting", "threads", "calendar", "routines", "wiki"],
         }),
       );
       expect(listed()).toEqual(["Drive", "Tarefas", "Caixa de entrada", "Threads", "Equipe"]);
+      expect(inMore(await openMore()).filter((name) => ["Wiki", "Rotinas", "Calendário"].includes(name ?? ""))).toEqual(
+        ["Wiki", "Rotinas", "Calendário"],
+      );
     });
 
     test("Alt+Shift+↑/↓ moves a tool past its neighbour in the list, over the ones in More, and saves it", async () => {

@@ -55,7 +55,7 @@ export function CommandMenu() {
       setPalette((current) => (current ? null : {}));
     };
     const onOpen = (event: Event) => {
-      const returnFocus = (event as CustomEvent<DialogProps["returnFocus"]>).detail;
+      const returnFocus = (event as CustomEvent<DialogProps["returnFocus"]>).detail ?? undefined;
       setPalette((current) => current ?? { returnFocus });
     };
     window.addEventListener("keydown", onKey);
@@ -115,7 +115,7 @@ export function CommandMenu() {
       { key: "proposals", to: "/org/$orgId/proposals", icon: "bulb", label: t("shell.proposals") },
       { key: "issues", to: "/org/$orgId/issues", icon: "issues", label: t("shell.issues") },
       { key: "routines", to: "/org/$orgId/routines", icon: "routines", label: t("shell.routines") },
-      { key: "task-manager", to: "/org/$orgId/task-manager", icon: "activity", label: t("taskManager.title") },
+      { key: "task-manager", to: "/org/$orgId/task-manager", icon: "stageProgress", label: t("taskManager.title") },
       { key: "code", to: "/org/$orgId/code", icon: "code", label: t("shell.code") },
       { key: "calendar", to: "/org/$orgId/calendar", icon: "calendar", label: t("shell.calendar") },
       { key: "drive", to: "/org/$orgId/drive", icon: "drive", label: t("shell.drive") },

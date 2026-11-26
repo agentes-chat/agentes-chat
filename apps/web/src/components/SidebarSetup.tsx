@@ -64,7 +64,7 @@ export const SIDEBAR_TOOLS = {
   team: { to: "/org/$orgId/team", icon: "agent", group: "workspaceTools" },
   skills: { to: "/org/$orgId/skills", icon: "bolt", group: "workspaceTools" },
   dashboards: { to: "/org/$orgId/dashboards", icon: "chart", group: "workspaceTools" },
-  taskManager: { to: "/org/$orgId/task-manager", icon: "activity", group: "workspaceTools" },
+  taskManager: { to: "/org/$orgId/task-manager", icon: "stageProgress", group: "workspaceTools" },
   code: { to: "/org/$orgId/code", icon: "code", group: "workspaceTools" },
 } as const satisfies Record<SidebarItem, { to: string; icon: IconName; group: PersonalToolGroup }>;
 
@@ -242,7 +242,7 @@ export function SidebarSetupDialog({
               <Segmented
                 block
                 size="sm"
-                className="sidebar-setup__choices"
+                className={personal ? "sidebar-setup__choices" : undefined}
                 label={t(`shell.${id}`)}
                 value={sidebarPlace(items, id, personal)}
                 onValueChange={(place) => save.mutate({ item: id, place })}

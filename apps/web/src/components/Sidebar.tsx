@@ -66,7 +66,7 @@ import {
 import { recentDms } from "@agenteschat/client/lib/recent";
 import { isRightHand, rightHandSeenKey } from "@agenteschat/client/lib/right-hand";
 import { SERVER_PLACE_ICON } from "@agenteschat/client/lib/server";
-import { inSidebarList, offeredTools, sidebarPlace } from "@agenteschat/client/lib/sidebar-items";
+import { inSidebarList, offeredTools, sidebarItemOrder, sidebarPlace } from "@agenteschat/client/lib/sidebar-items";
 import { AGENT_SORTS, sortAgents, splitPinned } from "@agenteschat/client/lib/sidebar-view";
 import { badgeCount, looksUnread } from "@agenteschat/client/lib/unread";
 import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
@@ -292,10 +292,9 @@ export function Sidebar() {
     waiting: waitingOnMe,
     threads: missionsWaiting + unreadThreads,
   };
-  // Keep the person's preferred order in both the shortcuts and the tools catalog.
   // Code only where it has anything for me (ADR 0215 §12).
-  const toolOrder = offeredTools(savedToolOrder, overview.data?.code, sidebarItems);
-  const listed = toolOrder.filter((id) => inSidebarList(sidebarPlace(sidebarItems, id, personal), counts[id] ?? 0));
+  const toolOrder = offeredTools(personal ? savedToolOrder : sidebarItemOrder(), overview.data?.code, sidebarItems);
+  const listed = toolOrder.filter((id) => inSidebarList(placeOf(id), counts[id] ?? 0));
   const inMore = toolOrder.filter((id) => !listed.includes(id));
   const countOf = (id: SidebarItem) =>
     id === "waiting" && waitingOnMe > 0 ? (
@@ -1027,7 +1026,7 @@ export function Sidebar() {
         {sectionOrder.order.filter((id) => blocks[id]).map((id) => sectionOrder.block(id, blocks[id], !rail))}
       </div>
 
-      {/* The personal workspace's fixed shortcuts, followed by More (ADR 0159). */}
+      {/* The personal workspace's fixed shortcuts and Tools catalog (ADR 0159). */}
       {personal && (
         <div className="sidebar__end">
           {rail && (createAgentItem.length > 0 || newChannelItem.length > 0) && (
