@@ -3,6 +3,7 @@ import { chmodSync, existsSync, mkdirSync, rmSync, statSync, writeFileSync } fro
 import os from "node:os";
 import path from "node:path";
 import { DEFAULT_AGENT_UID_RANGE, pairedConfig, runnerHome, updateConfig } from "./config";
+import { consoleText } from "./console-text";
 import { thisRunner } from "./launch";
 import type { ScopeKind } from "./scope-gate";
 import { xmlEscape } from "./xml";
@@ -324,9 +325,9 @@ interface RunResult {
 export type RunCommand = (file: string, args: string[]) => RunResult;
 
 export const runSync: RunCommand = (file, args) => {
-  const r = spawnSync(file, args, { encoding: "utf8" });
+  const r = spawnSync(file, args);
   if (r.error) return { code: 127, output: r.error.message };
-  return { code: r.status ?? 1, output: `${r.stdout ?? ""}${r.stderr ?? ""}`.trim() };
+  return { code: r.status ?? 1, output: `${consoleText(r.stdout ?? "")}${consoleText(r.stderr ?? "")}`.trim() };
 };
 
 export function systemdUserAvailable(run: RunCommand = runSync) {

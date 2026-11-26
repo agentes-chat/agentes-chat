@@ -15,6 +15,7 @@ import {
   importPickedSkills,
   importPickedZipSkills,
   importSkillFromUrl,
+  importSkillsFromFile,
   importSkillsZip,
   listSkills,
   NotFoundError,
@@ -408,7 +409,7 @@ export function skillRoutes(deps: AppDeps) {
       tags,
       security,
       summary:
-        "Import a skill: a GitHub link (a skill's folder or a file in it, or a folder holding several to pick from) or a zip of the folder, or of several to pick from (base64)",
+        "Import a skill: a GitHub link (a skill's folder or a file in it, or a folder holding several to pick from), a zip of the folder or of several to pick from (base64), or such a zip sent in a conversation (a Drive file)",
       description:
         "A private repository (github.com answers 404) is read through the workspace's GitHub: the GitHub App's token for it, else the GitHub connection's, never sent to the app. `github.repo_missing` says in `connection` how the GitHub connection fared (`none`; `refused`: GitHub no longer takes its token; `ok`: it works and can't see the repository) and in `app` whether the GitHub App is installed on some account for the workspace. `github.unreachable`: GitHub didn't answer, try again.",
       request: {
@@ -445,6 +446,26 @@ export function skillRoutes(deps: AppDeps) {
                 .max(SKILLS_PER_ARCHIVE)
                 .optional()
                 .openapi({ description: "The skills picked among the zip's `choices` (their `path`)." }),
+              personal: Personal,
+            }),
+            z.object({
+              fileId: z.uuid().openapi({
+                description:
+                  "A .zip of skills in Drive, as the installer reads it: the file an agent's card (`offer_install_skill`) names.",
+              }),
+              paths: z
+                .array(z.string().max(500))
+                .min(1)
+                .max(SKILLS_PER_ARCHIVE)
+                .optional()
+                .openapi({ description: "The skills picked among the file's `choices` (their `path`)." }),
+              list: z.boolean().optional().openapi({
+                description: "Answer with the skills the file holds to pick, even one, installing none.",
+              }),
+              forAgentId: z.uuid().optional().openapi({
+                description:
+                  "The agent whose card opened the install: what installs goes on for it when the installer may change its skills.",
+              }),
               personal: Personal,
             }),
           ]),
@@ -486,6 +507,12 @@ export function skillRoutes(deps: AppDeps) {
           forAgentId,
           personal,
         });
+        return "choices" in result ? c.json(result, 200) : c.json(result, 201);
+      }
+      if ("fileId" in input) {
+        const { fileId, ...options } = input;
+        const result = await importSkillsFromFile(skills(), actor, orgId, fileId, options);
+        if (Array.isArray(result)) return c.json({ skills: result }, 201);
         return "choices" in result ? c.json(result, 200) : c.json(result, 201);
       }
       let zip: Uint8Array;

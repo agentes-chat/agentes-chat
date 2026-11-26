@@ -55,8 +55,8 @@ export type RowLine =
       em: boolean;
       amber: boolean;
       rest: string;
-      /** An agent's work: its word drawn as a status badge in this tone, `rest` its time. */
-      badge?: WorkTone;
+      /** An agent's work: its word drawn as its status in this tone (`StatusWord`), `rest` its time. */
+      status?: WorkTone;
     }
   /** Waiting for its offline computer: a clock and the words. */
   | { kind: "away"; text: string }
@@ -185,8 +185,7 @@ export function rowFacts(r: ConversationRow, agent: AgentRowState | undefined, c
       rest: ` · ${progress}`,
     };
   } else if (work) {
-    // The same line as the web's lists: the status as a badge (the agent's colour at work, amber what waits on me,
-    // neutral a wait elsewhere), then its time.
+    // The same line as the web's lists: the status in words (amber what waits on me, the ink otherwise), then its time.
     label = [work.text, work.time].filter(Boolean).join(" · ");
     line = {
       kind: "state",
@@ -196,7 +195,7 @@ export function rowFacts(r: ConversationRow, agent: AgentRowState | undefined, c
       em: true,
       amber: work.tone === "you",
       rest: work.time ?? "",
-      badge: work.tone,
+      status: work.tone,
     };
   } else if (agentState?.kind === "waiting") {
     const verb = t(`mobile.homeNow.rowWait.${agentState.wait}`);

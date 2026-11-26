@@ -4,6 +4,7 @@ import { errorText } from "@agenteschat/client/lib/errors";
 import { firstName } from "@agenteschat/client/lib/format";
 import {
   CLI_GIT_MISSING,
+  CLI_HOME_ONLY,
   cliCommandWayOut,
   cliInstallFailure,
   cliOneClick,
@@ -85,7 +86,10 @@ export function CliMissing({
   const install = run.install;
   const running = install?.state === "running";
   const pending = run.start.isPending || run.cancel.isPending || run.ask.isPending || check.isPending;
-  const broken = reason === "cant_start" ? (machine.cliErrors?.[cli] ?? "") : null;
+  const said = reason === "cant_start" ? (machine.cliErrors?.[cli] ?? "") : null;
+  // Only root starts it (system mode): to the agents it isn't there, so its install is the way on, not its error.
+  const homeOnly = said === CLI_HOME_ONLY;
+  const broken = homeOnly ? null : said;
   const gitMissing =
     (install?.state === "failed" && install.cause === "git_missing") ||
     (broken === CLI_GIT_MISSING && install?.state !== "failed");
@@ -107,16 +111,18 @@ export function CliMissing({
           ? broken
             ? t("connectAi.cli.cantStart", { ...words, message: broken })
             : t("brain.reasons.cant_start", words)
-          : reason === "cli_outdated"
-            ? t("brain.reasons.cli_outdated", words)
-            : checked
-              ? t("connectAi.cli.checked", words)
-              : oneClick?.kind === "outdated"
-                ? t("common.joinSentences", {
-                    a: t("connectAi.cli.missing", words),
-                    b: t("connectAi.cli.outdated", { computer }),
-                  })
-                : null));
+          : homeOnly
+            ? t("brain.reasons.home_only", words)
+            : reason === "cli_outdated"
+              ? t("brain.reasons.cli_outdated", words)
+              : checked
+                ? t("connectAi.cli.checked", words)
+                : oneClick?.kind === "outdated"
+                  ? t("common.joinSentences", {
+                      a: t("connectAi.cli.missing", words),
+                      b: t("connectAi.cli.outdated", { computer }),
+                    })
+                  : null));
     // The Claude chat app is likely on a Mac or a PC, and isn't Claude Code: said once, behind the ⓘ.
     const why = cli === "claude" && (machine.os === "windows" || machine.os === "darwin");
     line = (

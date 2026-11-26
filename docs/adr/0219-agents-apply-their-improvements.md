@@ -102,6 +102,14 @@ you just did into a skill" after real work never got one. It now goes through th
 as the person's request and nothing planted, refused with the review's line otherwise, and refused when no review can
 run (no model, or the call failed).
 
+*Addendum 2026-11-26 (what the review weighs in an asked skill):* the review refused a skill a person asked for because
+the agent had no role, because of what the skill taught, and as if the content had asked for it. The block now says
+the person asked for it in the words given, and those words carry the names of the files the message attached
+(`askedWords`), so a skill made from a file the person sent reads as their request. A new skill a person asked for fits
+their agent whatever its role says and teaches what they choose: it is left out only for what the rules name (a new
+destination, a weaker safety rule, steps that serve someone else). A skill sent whole (a .zip, a link) installs with
+its card instead (ADR 0020, amendment of 2026-11-26).
+
 ## Consequences
 
 - Improvements take effect within seconds of being proposed, with nobody asked; people correct after the fact with

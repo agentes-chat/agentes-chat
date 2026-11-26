@@ -1716,6 +1716,11 @@ export const useChannelMembers = (orgId: string, channelId: string, enabled = tr
 
 /** Messages per page: the latest page, then older pages on scroll-up. */
 export const MESSAGES_PAGE = 100;
+/**
+ * A conversation's next page loads while this many screens are still left to scroll, web and phone: asked for only at
+ * its edge, a quick scroll stopped there and waited for it.
+ */
+export const PAGE_AHEAD_SCREENS = 3;
 /** A thread's root and replies, in one read. */
 export const THREAD_PAGE = 200;
 
@@ -6396,12 +6401,17 @@ export function useSkillUsage(orgId: string, enabled: boolean) {
 type SkillChange =
   | {
       type: "import";
-      input: ({ url: string; list?: boolean; forAgentId?: string } | { zipBase64: string }) & {
+      input: (
+        | { url: string; list?: boolean; forAgentId?: string }
+        | { zipBase64: string }
+        | { fileId: string; list?: boolean; forAgentId?: string }
+      ) & {
         personal?: boolean;
       };
       upload?: UploadOptions;
     }
   | { type: "importPicked"; url: string; paths: string[]; forAgentId?: string; personal?: boolean }
+  | { type: "importPickedFile"; fileId: string; paths: string[]; forAgentId?: string; personal?: boolean }
   | { type: "importPickedZip"; zipBase64: string; paths: string[]; personal?: boolean; upload?: UploadOptions }
   | { type: "create"; input: SkillInput }
   | { type: "update"; id: string; patch: SkillPatch }
@@ -6425,6 +6435,8 @@ export function useSkillAction(orgId: string, { silent = false } = {}) {
           return api.skills.import(orgId, action.input, action.upload);
         case "importPicked":
           return api.skills.importPicked(orgId, action.url, action.paths, action.forAgentId, action.personal);
+        case "importPickedFile":
+          return api.skills.importPickedFile(orgId, action.fileId, action.paths, action.forAgentId, action.personal);
         case "importPickedZip":
           return api.skills.importPickedZip(orgId, action.zipBase64, action.paths, action.personal, action.upload);
         case "create":

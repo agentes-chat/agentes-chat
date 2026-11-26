@@ -1,7 +1,8 @@
 import type { BlobStoreResolver, PubSub } from "@agenteschat/adapters";
 import { and, asc, type Database, eq, gt, inArray, isNull, lte, or, type SQL, schema, sql } from "@agenteschat/db";
-import { SKILL_ASSET_BYTES, SKILL_TEXT_BYTES } from "@agenteschat/tokens/skills";
+import { SKILL_ASSET_BYTES, SKILL_TEXT_BYTES, SKILL_ZIP_BYTES } from "@agenteschat/tokens/skills";
 import { getAgent } from "./agents";
+import { type ArtifactActor, fileBytesOf } from "./artifacts";
 import { editsAgent } from "./audience";
 import { recordAudit } from "./audit";
 import { mapInBatches } from "./batches";
@@ -771,13 +772,15 @@ export async function importSkillsZip(
   actorId: string,
   orgId: string,
   zip: Uint8Array,
-  options: { personal?: boolean } = {},
+  options: { list?: boolean; forAgentId?: string; personal?: boolean } = {},
 ): Promise<SkillDetail | SkillPick> {
   await requirePermission(deps.db, actorId, orgId, options.personal ? "read" : "manage_agents");
   const owner = options.personal ? actorId : null;
   const skills = zipSkills(zip);
-  if (skills.found.size > 1) return pickFrom(deps, orgId, owner, skills);
-  return saveSkill(deps, actorId, orgId, { ...(await skills.single()), owner });
+  if (skills.found.size > 1 || (options.list && skills.found.size > 0)) return pickFrom(deps, orgId, owner, skills);
+  const skill = await saveSkill(deps, actorId, orgId, { ...(await skills.single()), owner });
+  await turnOnFor(deps, actorId, orgId, options.forAgentId, [skill.id]);
+  return skill;
 }
 
 /** Import from a .zip of one skill's folder; one holding several is refused (`importSkillsZip` lists them). */
@@ -800,11 +803,73 @@ export async function importPickedZipSkills(
   orgId: string,
   zip: Uint8Array,
   paths: string[],
-  options: { personal?: boolean } = {},
+  options: { forAgentId?: string; personal?: boolean } = {},
 ) {
   await requirePermission(deps.db, actorId, orgId, options.personal ? "read" : "manage_agents");
-  return installPicked(deps, actorId, orgId, zipSkills(zip), paths, options.personal ? actorId : null);
+  const installed = await installPicked(deps, actorId, orgId, zipSkills(zip), paths, options.personal ? actorId : null);
+  await turnOnFor(
+    deps,
+    actorId,
+    orgId,
+    options.forAgentId,
+    installed.map((k) => k.id),
+  );
+  return installed;
 }
+
+/**
+ * A .zip of skills sent in a conversation (a Drive file), as the installer reads it: what an agent's card
+ * (`offer_install_skill` with `file`) opens the install on, so the bytes never go through the app and back. Then as
+ * `importSkillsZip`, or `importPickedZipSkills` with `paths`.
+ */
+export async function importSkillsFromFile(
+  deps: SkillDeps,
+  actorId: string,
+  orgId: string,
+  fileId: string,
+  options: { paths?: string[]; list?: boolean; forAgentId?: string; personal?: boolean } = {},
+): Promise<SkillDetail | SkillPick | SkillDetail[]> {
+  await requirePermission(deps.db, actorId, orgId, options.personal ? "read" : "manage_agents");
+  const { bytes: zip } = await skillZipOfFile(deps, { type: "person", userId: actorId }, orgId, fileId);
+  const { paths, ...rest } = options;
+  return paths
+    ? importPickedZipSkills(deps, actorId, orgId, zip, paths, rest)
+    : importSkillsZip(deps, actorId, orgId, zip, rest);
+}
+
+/**
+ * A Drive file as a skills .zip, as `actor` reads it, with the names its `SKILL.md` files give (the first
+ * `NAMED_IN_FILE`, those that read); refused when it isn't a .zip or is past the install's size.
+ */
+export async function skillZipOfFile(deps: SkillDeps, actor: ArtifactActor, orgId: string, fileId: string) {
+  const file = await fileBytesOf(deps, actor, orgId, fileId);
+  if (!/\.zip$/i.test(file.name) && file.contentType !== "application/zip") {
+    throw new ValidationError(`${file.name} isn't a .zip: only a .zip of a skill's folder installs from a file`);
+  }
+  if (file.bytes.byteLength > SKILL_ZIP_BYTES) {
+    throw new ValidationError(
+      `${file.name} is past the ${formatBytes(SKILL_ZIP_BYTES)} a skill's .zip may be`,
+      "skill.zip_too_big",
+      { maxMb: Math.floor(SKILL_ZIP_BYTES / 1024 / 1024) },
+    );
+  }
+  const found = listZip(file.bytes).filter(
+    (e) => !e.symlink && /(^|\/)SKILL\.md$/i.test(e.path) && !e.path.split("/").includes("__MACOSX"),
+  );
+  const names = new Set<string>();
+  for (const e of found.slice(0, NAMED_IN_FILE)) {
+    try {
+      const name = parseSkillMarkdown(new TextDecoder().decode(inflateZipEntry(file.bytes, e))).name;
+      if (name) names.add(name);
+    } catch {
+      // One that doesn't read is the install dialog's to say, as for a .zip picked there.
+    }
+  }
+  return { name: file.name, bytes: file.bytes, skillFiles: found.length, names: [...names] };
+}
+
+/** The skill names `skillZipOfFile` reads out of a .zip: what an install card checks it against. */
+const NAMED_IN_FILE = 20;
 
 const GITHUB_HOSTS = new Set(["github.com", "raw.githubusercontent.com", "api.github.com", "codeload.github.com"]);
 

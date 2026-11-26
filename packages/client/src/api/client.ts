@@ -1440,13 +1440,28 @@ export interface ApiClient {
      */
     import(
       orgId: string,
-      input: ({ url: string; list?: boolean; forAgentId?: string } | { zipBase64: string }) & { personal?: boolean },
+      input: (
+        | { url: string; list?: boolean; forAgentId?: string }
+        | { zipBase64: string }
+        | { fileId: string; list?: boolean; forAgentId?: string }
+      ) & { personal?: boolean },
       upload?: UploadOptions,
     ): Promise<SkillDetail | SkillPick>;
     /** Installs the skills picked among a link's choices (their `path`), on for `forAgentId` as `import` does. */
     importPicked(
       orgId: string,
       url: string,
+      paths: string[],
+      forAgentId?: string,
+      personal?: boolean,
+    ): Promise<SkillDetail[]>;
+    /**
+     * Installs the skills picked among the choices of a .zip sent in a conversation (`fileId`, a Drive file the card
+     * of `offer_install_skill` names), on for `forAgentId` as `import` does.
+     */
+    importPickedFile(
+      orgId: string,
+      fileId: string,
       paths: string[],
       forAgentId?: string,
       personal?: boolean,
