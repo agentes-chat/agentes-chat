@@ -1,7 +1,8 @@
 /**
  * Test fake — bring your own devices. Mirrors the server's `/organizations/{orgId}/devices` routes:
  * - `GET …/devices` → `{ devices, requests }` (what `set()` gave; nothing by default)
- * - `PATCH`/`DELETE …/devices/computers/{id}`, `PATCH`/`DELETE …/devices/phones/{id}`, `POST …/phones/{id}/stop`
+ * - `PATCH`/`DELETE …/devices/computers/{id}`, `PATCH`/`DELETE …/devices/phones/{id}`, `POST …/phones/{id}/stop`,
+ *   `POST …/phones/{id}/power` `{ on }` (a simulator starting, or offline)
  * - `POST …/devices/connect-links` `{ kind }` → a link with its two one-line commands
  * - `GET …/devices/connect-links/{id}` → where it stands (`setLink()` moves it on: a computer asking, joined…)
  * - `POST …/devices/requests/{id}/approve` `{ name?, audience? }` → `{ machineId }`, `…/deny`
@@ -140,6 +141,12 @@ export function createFakeDevices(
     stopPhone: async (orgId, id) => {
       record("devices.stopPhone", orgId, id);
       phone(id).status = { kind: "ready" };
+    },
+    powerPhone: async (orgId, id, on) => {
+      record("devices.powerPhone", orgId, id, on);
+      phone(id).status = on
+        ? { kind: "preparing", reason: "booting" }
+        : { kind: "offline", lastSeenAt: now().toISOString() };
     },
     createLink: async (orgId, kind) => {
       record("devices.createLink", orgId, kind);

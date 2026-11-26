@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-11-26
-- Code: `packages/adapters/src/machine-protocol.ts` (`OS_PERMISSIONS`, `PermissionNeed`, `OS_PERMISSIONS_PROTOCOL` 90, `permissionWaitText`), `apps/server/runner/os-permissions.ts` (`permissionOfOutput`, `PermissionNeeds`), `handlers.ts` (`exec`'s `permission`), `daemon.ts` (`hello.permissions`, `permissions.changed`, the control's `permission.clear`), `packages/engine/src/machine-access.ts` (`storeMachinePermissions`), `machine-hub.ts`, `machine-provider.ts`, `devices.ts`, `apps/web/src/components/devices/DevicePage.tsx`, `apps/mobile/src/features/devices/parts.tsx` (`PermissionWaits`), `apps/desktop/src/windows/Pair.tsx` (`PermissionAskSheet`), `Popover.tsx`, `src-tauri/src/prepare.rs` (`pane_url`)
+- Code: `packages/adapters/src/machine-protocol.ts` (`OS_PERMISSIONS`, `PermissionNeed`, `OS_PERMISSIONS_PROTOCOL` 91, `permissionWaitText`), `apps/server/runner/os-permissions.ts` (`permissionOfOutput`, `PermissionNeeds`), `handlers.ts` (`exec`'s `permission`), `daemon.ts` (`hello.permissions`, `permissions.changed`, the control's `permission.clear`), `packages/engine/src/machine-access.ts` (`storeMachinePermissions`), `machine-hub.ts`, `machine-provider.ts`, `devices.ts`, `apps/web/src/components/devices/DevicePage.tsx`, `apps/mobile/src/features/devices/parts.tsx` (`PermissionWaits`), `apps/desktop/src/windows/Pair.tsx` (`PermissionAskSheet`), `Popover.tsx`, `src-tauri/src/prepare.rs` (`pane_url`)
 
 ## Context
 

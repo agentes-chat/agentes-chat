@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 90;
+export const MACHINE_PROTOCOL_VERSION = 91;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -759,10 +759,16 @@ export const TERMINAL_KEEP_PROTOCOL = 77;
  */
 export const DEVIN_PROTOCOL = 89;
 /**
+ * `phone.power`: an iOS simulator or an Android emulator this computer runs started (`on`) or shut down, from the
+ * apps or by an agent. A Mac boots a simulator with `simctl` and shows it in Simulator; an emulator starts detached
+ * from the Android SDK's `emulator`, its AVD found by the model it showed (`model`). The server asks no older runner.
+ */
+export const SIMULATOR_POWER_PROTOCOL = 90;
+/**
  * From this protocol on: the OS permissions the computer waits on (`hello.permissions`, `permissions.changed`, whole
  * each time), and `exec`'s `permission` when a command failed for want of one. Older servers drop both.
  */
-export const OS_PERMISSIONS_PROTOCOL = 90;
+export const OS_PERMISSIONS_PROTOCOL = 91;
 
 /**
  * The OS permissions agents' work on a computer may wait on, one name for both systems where Windows has one too:
@@ -3391,6 +3397,8 @@ export type MachineRequest = (
   | { op: "xcode.open" }
   /** `PHONE_REPAIR_PROTOCOL`: repair the test helper of the iPhone `serial`; answers once its rebuild started. */
   | { op: "phone.repair"; serial: string }
+  /** `SIMULATOR_POWER_PROTOCOL`: start or shut down a simulator or emulator; answers once it is starting or off. */
+  | { op: "phone.power"; platform: PhonePlatform; serial: string; model: string; on: boolean }
   /** `PROBLEM_REPORT_PROTOCOL`: facts and the scrubbed log tail for a problem report. */
   | { op: "report.collect" }
   /** `EGRESS_SHARE_PROTOCOL`: one connection to `host`:`port`, its bytes on the data socket `streamId`. */
@@ -3479,6 +3487,7 @@ export const MACHINE_OPS: readonly MachineOp[] = [
   "cli.fetch",
   "xcode.open",
   "phone.repair",
+  "phone.power",
   "report.collect",
   "egress.dial",
 ];
@@ -3659,6 +3668,7 @@ export interface MachineReplies {
   "cli.fetch": { fetch: CliFetchState | null };
   "xcode.open": { opened: boolean };
   "phone.repair": { repairing: boolean };
+  "phone.power": { on: boolean };
   "report.collect": RunnerReportParts;
   "egress.dial": { connected: true };
 }
