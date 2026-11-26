@@ -5922,7 +5922,7 @@
                     },
                     "authorType": {
                       "type": "string",
-                      "enum": ["person", "agent"]
+                      "enum": ["person", "agent", "app"]
                     },
                     "authorUserId": {
                       "type": ["string", "null"]
@@ -6401,7 +6401,7 @@
               },
               "authorType": {
                 "type": "string",
-                "enum": ["person", "agent"]
+                "enum": ["person", "agent", "app"]
               },
               "authorUserId": {
                 "type": ["string", "null"]

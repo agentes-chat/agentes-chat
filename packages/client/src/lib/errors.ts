@@ -578,6 +578,12 @@ const KNOWN = {
   "mail.invalid_from": "errors.said.validEmail",
   "mail.invalid_rule": "errors.said.validEmail",
   "database.too_many": "errors.said.tooMany",
+  // Integration apps (ADR 0251): Settings › Integrations.
+  "integration.too_many": "errors.said.tooMany",
+  "integration.too_many_channels": "errors.said.tooMany",
+  "integration.name_required": "errors.said.fillIn",
+  "integration.not_found": "errors.said.gone",
+  "integration.channel": "errors.said.gone",
   "endpoint.too_many_models": "errors.said.tooMany",
   "mail.too_many_addresses": "errors.said.tooMany",
   "mail.too_many_aliases": "errors.said.tooMany",

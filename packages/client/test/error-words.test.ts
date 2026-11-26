@@ -403,6 +403,16 @@ test("a provider refused this server's own OAuth app: what's wrong and who fixes
  * hit goes in `KNOWN` instead.
  */
 const PLAIN_LINE = new Set([
+  // Integration apps (ADR 0251): refusals of the app's own public API and `/mcp`, read by a program, never by the
+  // apps (a color comes from the swatches, a new webhook secret is offered only with a webhook); a rate limit says
+  // `common.tooMany` by its status.
+  "integration.channel_post",
+  "integration.channel_read",
+  "integration.cursor",
+  "integration.color",
+  "integration.no_webhook",
+  "message.empty",
+  "rate_limited",
   // A code session (ADR 0215): the apps start one only with words in the field and rename one only to a name, build
   // its git and file requests themselves, never offer removing who must stay, and retry only a failed worktree.
   "code_session.empty",
