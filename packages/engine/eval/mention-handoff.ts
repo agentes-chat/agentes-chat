@@ -106,6 +106,26 @@ const CASES: Case[] = [
     body: "@ada, pode abrir o PR que tira o prompt de review depois da compra?",
   },
   {
+    // A request to another agent in the middle of a long report to the person, which ends asking the person.
+    id: "ask-inside-report",
+    wakes: true,
+    from: "theo",
+    to: atlas,
+    body: [
+      "Walter, montei o plano da migração para a conta nova da AWS. Resumo do que encontrei no código:",
+      "",
+      "- O app usa S3 (dois buckets), SQS (uma fila de e-mails) e um RDS Postgres; os nomes estão em `infra/env.ts`.",
+      "- O deploy hoje assume a conta antiga no `deploy.yml`, então o corte precisa trocar o role e as variáveis.",
+      "- Os backups do RDS ficam na conta antiga: a cópia tem que ser feita antes do corte.",
+      "",
+      "@atlas, inclui no seu inventário os recursos que o código usa e que precisam existir na conta nova antes do corte, com o alarme de cada um.",
+      "",
+      "Ordem que proponho: criar os recursos, copiar os dados, trocar o deploy, observar um dia e só então desligar a conta antiga.",
+      "",
+      "Você já tem a organização da conta nova criada, ou eu preparo o passo a passo para isso também?",
+    ].join("\n"),
+  },
+  {
     id: "data-pull",
     wakes: true,
     from: "theo",
