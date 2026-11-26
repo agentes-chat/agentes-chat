@@ -410,7 +410,7 @@ import {
 } from "./runs";
 import { SANDBOX_SCOPE, truncateOutput } from "./sandbox";
 import { isSayNow, linesSaid, SAY_NOW_TOOL, type SaidNow, sayNowApplies, sayNowText, withoutSaidNow } from "./say-now";
-import { sharedQueryEmbedding } from "./search";
+import { RUN_QUERY_CHARS, sharedQueryEmbedding } from "./search";
 import { secretResult } from "./secrets";
 import { enabledSkills } from "./skills";
 import {
@@ -2055,16 +2055,43 @@ async function executeRunInner(
     ctx.loadedGroups = [EVERY_TOOL];
   }
   const every = listsEveryTool(ctx);
+  let behind: ReturnType<typeof runAuthority> | undefined;
+  const authority = () => (behind ??= runAuthority(db, run));
+  /**
+   * The trigger's query vector is asked as soon as the trigger is read, so the provider's answer comes while the reads
+   * below run; memory and the wiki search ask the same words later and share the call (`gateway.embed`). Not for a
+   * run an app's message started: nothing of memory or the wiki comes in by itself there.
+   */
+  const embedEarly = <T extends { body: string; authorType: string }>(rows: T[]) => {
+    const body = rows[0]?.body.trim().slice(0, RUN_QUERY_CHARS);
+    const contextDeps = deps.context;
+    if (!body || !contextDeps?.gateway.hasEmbeddings()) return rows;
+    const viaApp = rows[0]?.authorType === "person" ? Promise.resolve(false) : authority().then(fromApp);
+    void viaApp
+      .then((app) =>
+        app
+          ? null
+          : contextDeps.gateway.embed({
+              orgId: run.orgId,
+              texts: [body],
+              inputType: "query",
+              kinds: ["context_item", "wiki"],
+            }),
+      )
+      .catch(() => {});
+    return rows;
+  };
   // Independent reads together: the trigger, the tools it may use, and whether a new run's agent can think.
   const [triggerRows, granted, ai] = await Promise.all([
     !needsContext
       ? Promise.resolve([])
       : topTrigger
-        ? Promise.resolve([topTrigger])
+        ? Promise.resolve(embedEarly([topTrigger]))
         : db
             .select()
             .from(schema.messages)
-            .where(and(eq(schema.messages.orgId, run.orgId), eq(schema.messages.id, run.triggerMessageId))),
+            .where(and(eq(schema.messages.orgId, run.orgId), eq(schema.messages.id, run.triggerMessageId)))
+            .then(embedEarly),
     deps.tools ? deps.tools.granted(ctx, heldBack) : Promise.resolve([]),
     needsContext && agent && !agent.archivedAt
       ? agentAiState({ db, gateway: deps.gateway, machines: deps.machines }, agent, run)
@@ -2688,8 +2715,6 @@ async function executeRunInner(
     // The tools the context names are core ones: listed whatever groups the judge loads, so it needn't wait for it.
     // A connector's tool of the same name could come with a group: then it waits.
     if (judging && !granted.every((t) => isCore(t) || !CONTEXT_TOOLS.includes(t.name))) await judging;
-    let behind: ReturnType<typeof runAuthority> | undefined;
-    const authority = () => (behind ??= runAuthority(db, run));
     // Someone outside reads what a run an app's message started replies (ADR 0252): nothing of memory or the wiki
     // comes in by itself, found by their words; each read of them asks a person. A person's message roots in them.
     const appRun = trigger?.authorType !== "person" && fromApp(await authority().catch(() => null));
@@ -2700,7 +2725,7 @@ async function executeRunInner(
       ? sharedQueryEmbedding(
           contextDeps,
           run.orgId,
-          (trigger?.body ?? "").trim().slice(0, 500),
+          (trigger?.body ?? "").trim().slice(0, RUN_QUERY_CHARS),
           searchesWiki ? ["context_item", "wiki"] : ["context_item"],
         )
       : undefined;
