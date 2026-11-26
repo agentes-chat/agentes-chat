@@ -1549,44 +1549,17 @@ describe("Onboarding: the workspace's name", () => {
     }
   });
 
-  test("every step starts at one top: Back on the rail wordmark's line, clear of the desktop app's drag strip", () => {
-    const sheet = (path: string) => readFileSync(join(import.meta.dir, "../src", path), "utf8");
-    const css = sheet("pages/onboarding.css");
-    const desktop = sheet("desktop.css");
-    const rule = (from: string, selector: string) => from.slice(from.indexOf(`${selector} {`)).split("}")[0] ?? "";
-    const tokens = readFileSync(join(import.meta.dir, "../../../packages/ui/src/styles/tokens.css"), "utf8");
-    // A length in px, through the kit's token where the rule names one (`var(--control-h-sm)`).
-    const px = (decls: string, prop: string) => {
-      const value = decls.match(new RegExp(`\\n\\s*${prop}: ([^;\\s]+)`))?.[1] ?? "";
-      const token = value.match(/^var\((--[\w-]+)\)$/)?.[1];
-      const raw = token ? tokens.match(new RegExp(`${token}: (-?[\\d.]+)px`))?.[1] : value.match(/^(-?[\d.]+)px/)?.[1];
-      return Number(raw);
-    };
-    // No room above the step that follows what's in it, centring it or pinned as it opens.
-    const rows = css.match(/\.onb__body[^{]*::before \{[^}]*\}/g) ?? [];
-    expect(rows.filter((r) => /auto|--onb-lead/.test(r))).toEqual([]);
-    // Back's middle (the column's top padding, its top margin and half its height) on the middle of the 22px logo's
-    // lowercase letters, 16px under its top (the rail's padding), where the label reads on the wordmark's line.
-    const railTop = px(rule(sheet("layout.css"), "\n.onb__rail"), "padding");
-    const top = px(rule(css, "\n.onb__body"), "padding");
-    const back = rule(css, "\n.onb__back");
-    expect(top + px(back, "margin") + px(back, "height") / 2).toBe(railTop + 16);
-    // The first step has no Back: a row of its height and margins keeps its room. A phone keeps its first step under
-    // the step bar.
-    const row = rule(css, "@media (min-width: 761px) {\n  .onb__body:not(:has(> .onb__back))::before");
-    expect(row).toContain('content: ""');
-    expect(px(row, "height")).toBe(px(back, "height"));
-    expect(back).toContain(`margin: ${row.match(/\n\s*margin: ([^;]+);/)?.[1]}`);
-    // Under the Mac's buttons the column moves down with the rail; a window narrow enough for the step bar doesn't.
+  test("the onboarding clears the desktop app's title bar: its top bar under the Mac's buttons, no strip elsewhere", () => {
+    const desktop = readFileSync(join(import.meta.dir, "../src/desktop.css"), "utf8");
+    const rule = (selector: string) => desktop.slice(desktop.indexOf(`${selector} {`)).split("}")[0] ?? "";
+    // Under the Mac's buttons the onboarding's top bar (the logo and the account) and a new agent's rail move down.
     const mac = 'html[data-desktop="mac"]:not([data-fullscreen])';
-    expect(rule(desktop, `\n${mac} .onb__rail`)).toContain("padding-top: calc(var(--titlebar-h) + 8px)");
-    expect(rule(desktop, `@media (min-width: 761px) {\n  ${mac} .onb__body`)).toContain(
-      `padding-top: calc(var(--titlebar-h) + 8px + ${top - railTop}px)`,
-    );
+    expect(rule(`\n${mac} .onbw__top`)).toContain("padding-top: var(--titlebar-h)");
+    expect(rule(`\n${mac} .onb__rail`)).toContain("padding-top: calc(var(--titlebar-h) + 8px)");
     // Where the window isn't dragged from the page (full screen, Windows' and Linux's own title bars), no drag strip
     // lies over Back.
     expect(
-      rule(desktop, '\nhtml:is([data-fullscreen], [data-desktop="windows"], [data-desktop="linux"]) .titlebar-strip'),
+      rule('\nhtml:is([data-fullscreen], [data-desktop="windows"], [data-desktop="linux"]) .titlebar-strip'),
     ).toContain("display: none");
   });
 

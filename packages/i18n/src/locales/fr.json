@@ -934,7 +934,6 @@
     }
   },
   "onboarding": {
-    "stepsLabel": "Étapes pour commencer",
     "deleteLink": "Supprimer cet espace de travail",
     "optionalTag": "facultatif",
     "stepDone": "(fait)",
@@ -954,64 +953,21 @@
       "theo": "Enchanté, je suis Theo. J'organise les tâches de l'équipe.",
       "atlas": "Salut, ici Atlas. Je m'occupe des ordinateurs."
     },
-    "progress": {
-      "left_one": "Encore {{count}} étape",
-      "left_many": "Encore {{count}} étapes",
-      "left_other": "Encore {{count}} étapes",
-      "done": "Tout est prêt"
-    },
     "flow": {
       "steps": {
         "name": "Nom de l'espace de travail",
         "business": "Ce que vous faites",
-        "you": "À propos de vous",
         "team": "Votre équipe",
-        "plan": "Activer l'équipe",
-        "ai": "Connecter une IA",
-        "people": "Inviter des personnes",
-        "namePersonal": "Pour quoi faire",
-        "teamPersonal": "Vos agents",
-        "planPersonal": "Activer les agents",
-        "aiPersonal": "Connecter une IA"
+        "plan": "Activer l'équipe"
       },
       "stepOf": "Étape {{n}} sur {{total}}",
       "lodi": {
         "name": "Bonjour {{first}}. Je suis {{name}}. Je monte l'équipe avec vous en deux minutes environ.",
         "business": "Avec ça, je sais qui appeler dans l'équipe.",
         "team": "Voici l'équipe que je monterais. Vous pourrez tout changer ensuite.",
-        "teamMade": "L'équipe est déjà en place. On continue quand vous voulez.",
-        "teamMadePersonal": "Vos agents sont déjà là. On continue quand vous voulez.",
         "plan": "Après l'abonnement, il ne reste qu'à connecter une IA. Je vous montre où.",
-        "planThen": "Une fois l'abonnement activé, l'écran suivant sert à connecter votre IA.",
-        "you": "Avant l'équipe, un peu sur vous.",
-        "youPersonal": "Avant vos agents, un peu sur vous.",
-        "ask": "Vous avez déjà une équipe ailleurs ? Je l'apporte ici en entier.",
-        "start": "J'ai une équipe prête pour ce que vous faites. Ou on commence à deux.",
-        "askPersonal": "Vous utilisez déjà des agents ailleurs ? Je les apporte tous ici.",
-        "bring": "Copiez la demande, collez-la dans {{app}} et rapportez la réponse. Je m'occupe du reste.",
-        "bringFiles": "Déposez ici ce que l'app a exporté. Je m'occupe du reste.",
-        "bringMcp": "Suivez les étapes dans l'app et elle crée elle-même les agents ici. Je guette leur arrivée.",
-        "found": "J'ai trouvé votre équipe. Vérifiez que tout le monde est là.",
-        "foundPersonal": "J'ai trouvé vos agents. Vérifiez qu'ils sont tous là.",
-        "ai": "Dernière étape. Choisissez l'IA que vous utilisez déjà et l'équipe se réveille.",
-        "aiPersonal": "Dernière étape. Choisissez l'IA que vous utilisez déjà et je me réveille.",
-        "aiThen": "Choisissez l'IA que vous utilisez déjà et l'équipe se réveille. Ensuite, il ne reste qu'à inviter les personnes.",
-        "aiThenAlone": "Choisissez l'IA que vous utilisez déjà et je me réveille. Ensuite, il ne reste qu'à inviter les personnes.",
-        "connected": "Voilà. Appelez-moi dans l'espace de travail et je vous montre le reste.",
-        "connectedThen": "Voilà. Il ne reste qu'à inviter les personnes avec qui vous travaillez.",
         "people": "Maintenant, les personnes. Donnez-moi leurs e-mails et j'envoie les invitations.",
         "peopleLink": "Maintenant, les personnes. Envoyez-leur le lien et je vous montre chaque demande."
-      },
-      "you": {
-        "title": "Maintenant, parlons de vous",
-        "lead": "Votre nom et votre photo sont visibles par l'équipe et par les agents.",
-        "leadPersonal": "Votre nom et votre photo sont visibles par vos agents.",
-        "photo": "Votre photo",
-        "build": "Créer un avatar",
-        "edit": "Modifier l'avatar",
-        "upload": "Envoyer une photo",
-        "area": "Vous travaillez sur quoi ?",
-        "areaHint": "Facultatif. Juste pour savoir qui utilise agentes.chat."
       },
       "area": {
         "options": {
@@ -1024,124 +980,31 @@
           "other": "Autre chose"
         }
       },
-      "preview": {
-        "label": "Votre espace de travail, pendant que vous répondez",
-        "name": "Votre espace de travail",
-        "ghost": "Votre équipe apparaît ici",
-        "ghostPersonal": "Vos agents apparaissent ici"
-      },
       "team": {
-        "title": "Votre équipe",
-        "madeLead": "Ils sont déjà dans l'espace de travail. Vous pourrez ajuster chacun ensuite.",
-        "start": {
-          "title": "Comment voulez-vous démarrer l'équipe ?",
-          "lead": "Vous pourrez tout changer plus tard, rien n'est perdu.",
-          "template": "Démarrer avec une équipe toute prête",
-          "templateText_one": "{{count}} agent du modèle {{template}}, dans son propre canal, avec sa routine prête.",
-          "templateText_many": "{{count}} agents du modèle {{template}}, chacun dans son canal, avec ses routines prêtes.",
-          "templateText_other": "{{count}} agents du modèle {{template}}, chacun dans son canal, avec ses routines prêtes.",
-          "scratch": "Partir de zéro",
-          "scratchText": "Seulement {{name}}, votre bras droit. Vous créerez chaque agent plus tard, à votre façon.",
-          "scratchWho": "{{name}} et ceux que vous créerez",
-          "see": "Voir l'équipe toute prête",
-          "scratchGo": "Continuer seulement avec {{name}}"
-        },
-        "ask": {
-          "title": "Vous avez déjà des agents dans une autre app ?",
-          "lead": "Si oui, j'apporte toute l'équipe : instructions, compétences et routines.",
-          "leadPersonal": "Si oui, je les apporte tous : instructions, compétences et routines.",
-          "none": "Je n'en utilise pas encore",
-          "noneText": "Je monte une équipe pour {{org}} à partir de ce que vous faites.",
-          "noneTextPersonal": "On commence à deux. Les agents viendront plus tard, quand vous voudrez.",
-          "from": "Importer depuis {{app}}",
-          "fresh": "Monter une nouvelle équipe",
-          "freshPersonal": "Continuer sans agents",
-          "skip": "Passer cette étape",
-          "skipText": "Vous pourrez créer les agents plus tard, un par un."
-        },
-        "bring": {
-          "title": "Importez votre équipe depuis {{app}}",
-          "titlePersonal": "Importez vos agents depuis {{app}}",
-          "titleOther": "Importez votre équipe depuis une autre app",
-          "titleOtherPersonal": "Importez vos agents depuis une autre app",
-          "lead": "Ça prend une minute. Rien ne change là-bas.",
-          "ask": "Demandez à {{app}} d'exporter",
-          "paste": "Collez-la dans votre conversation avec {{app}}.",
-          "reply": "Il répond avec un JSON : copiez toute la réponse et collez-la dans le champ ci-dessous.",
-          "field": "Collez ici la réponse de {{app}}",
-          "placeholder": "Le JSON de la réponse",
-          "read": "Lire la réponse",
-          "fresh": "Je préfère monter une nouvelle équipe"
-        },
-        "found": {
-          "title_one": "J'ai trouvé {{count}} agent dans {{app}}",
-          "title_many": "J'ai trouvé {{count}} agents dans {{app}}",
-          "title_other": "J'ai trouvé {{count}} agents dans {{app}}",
-          "lead": "Ils arrivent avec les instructions, les compétences et les routines qu'ils ont déjà. Vous pourrez tout changer ensuite.",
-          "bring": "Importer l'équipe",
-          "bringPersonal": "Importer les agents"
-        }
+        "title": "Votre équipe"
       },
       "plan": {
         "title": "Activez votre équipe",
-        "lead": "Votre équipe est prête. Avec l'abonnement et une IA, elle commence aujourd'hui.",
-        "leadAlone": "Avec l'abonnement et une IA, votre bras droit commence aujourd'hui. Vous pourrez créer les autres agents plus tard.",
-        "asleep": "Endormie jusqu'à l'abonnement",
-        "price": "<b>Abonnement {{name}}</b> · {{price}} par mois",
-        "name": "<b>Abonnement {{name}}</b>",
         "generic": "Un abonnement agentes.chat",
-        "cancel": "Résiliable à tout moment",
-        "cta": "Activer l'équipe",
-        "all": "Voir tous les abonnements",
-        "skip": "L'activer plus tard et juste découvrir l'espace de travail",
-        "next": "Ensuite : connecter votre IA.",
-        "titlePersonal": "Activez vos agents",
-        "leadPersonal": "Avec l'abonnement et une IA, ils commencent aujourd'hui.",
-        "asleepPersonal": "Endormis jusqu'à l'abonnement",
-        "ctaPersonal": "Activer les agents"
+        "all": "Voir tous les abonnements"
       },
       "ai": {
-        "titlePersonal": "Connectez une IA pour que vos agents réfléchissent",
-        "titleAlone": "Connectez une IA pour que {{name}} réfléchisse",
         "later": "Connecter plus tard",
         "doneTitle": "C'est fait. L'équipe de {{org}} réfléchit déjà.",
         "doneTitlePersonal": "C'est fait. {{name}} réfléchit déjà.",
         "doneLead": "Votre {{label}} répond pour tous les agents. Vous pourrez le changer plus tard, un par un.",
         "doneLeadAny": "L'IA que vous avez connectée répond pour tous les agents. Vous pourrez la changer plus tard, un par un.",
         "connected": "Connecté",
-        "enter": "Entrer dans l'espace de travail",
-        "awake": "Votre équipe s'est réveillée",
-        "answer_one": "{{names}} répond déjà.",
-        "answer_many": "{{names}} répondent déjà.",
-        "answer_other": "{{names}} répondent déjà.",
-        "readyPersonal": "Vos agents sont prêts",
-        "readyAlone": "{{name}} est prêt",
-        "readyAlone_female": "{{name}} est prête",
-        "wakePersonal": "Plus qu'une IA avant le réveil.",
-        "awakePersonal": "Vos agents se sont réveillés",
-        "awakeAlone": "{{name}} s'est réveillé",
-        "awakeAlone_female": "{{name}} s'est réveillée"
+        "enter": "Entrer dans l'espace de travail"
       },
       "people": {
         "title": "Qui travaille avec vous ?",
-        "lead": "Invitez les personnes de votre équipe. Chacune reçoit un e-mail pour rejoindre.",
         "send": "Envoyer les invitations",
         "later": "Inviter plus tard"
       },
       "account": "Votre compte"
     },
-    "railValue": {
-      "context": "Rédigé",
-      "skipped": "Passé",
-      "later": "Plus tard",
-      "on": "Activé",
-      "ai": "Connectée",
-      "invites_one": "{{count}} invitation",
-      "invites_many": "{{count}} invitations",
-      "invites_other": "{{count}} invitations"
-    },
     "back": "Retour",
-    "leave": "Retour à {{name}}",
     "leaveLater": "Retour à {{name}}, terminer plus tard",
     "actions": {
       "continue": "Continuer",
@@ -22867,24 +22730,6 @@
     }
   },
   "arrival": {
-    "beta": {
-      "word": "BETA",
-      "title": "Vous arrivez tôt. Tant mieux.",
-      "text": "agentes.chat est en bêta : vous pouvez déjà vraiment travailler avec, et nous le peaufinons encore.",
-      "weekly": {
-        "title": "Il s'améliore chaque semaine",
-        "text": "Les nouveautés et les corrections sortent en continu."
-      },
-      "fails": {
-        "title": "Parfois, quelque chose échoue",
-        "text": "Si ça se bloque ou paraît étrange, le problème vient de nous, pas de vous."
-      },
-      "feedback": {
-        "title": "Vos retours décident de la suite",
-        "text": "Dites-nous ce qui a manqué ou gêné. Nous lisons tout."
-      },
-      "where": "Pour nous écrire, utilisez Envoyer un retour, en bas de la barre latérale."
-    },
     "stage": {
       "ready": "Votre équipe est prête",
       "wake": "Il ne lui manque qu'une IA pour se réveiller.",

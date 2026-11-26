@@ -896,7 +896,6 @@
     }
   },
   "onboarding": {
-    "stepsLabel": "入门步骤",
     "deleteLink": "删除此工作区",
     "optionalTag": "可选",
     "stepDone": "（已完成）",
@@ -916,62 +915,21 @@
       "theo": "很高兴认识你，我是 Theo。我负责整理团队的任务。",
       "atlas": "嗨，我是 Atlas。我负责照看电脑。"
     },
-    "progress": {
-      "left_other": "还剩 {{count}} 步",
-      "done": "全部就绪"
-    },
     "flow": {
       "steps": {
         "name": "工作区名称",
         "business": "你们做什么",
-        "you": "关于你",
         "team": "你的团队",
-        "plan": "开启团队",
-        "ai": "连接 AI",
-        "people": "邀请成员",
-        "namePersonal": "用途",
-        "teamPersonal": "你的智能体",
-        "planPersonal": "开启智能体",
-        "aiPersonal": "连接 AI"
+        "plan": "开启团队"
       },
       "stepOf": "第 {{n}} 步，共 {{total}} 步",
       "lodi": {
         "name": "你好，{{first}}。我是{{name}}。大约两分钟，我们一起把团队组建好。",
         "business": "有了这些，我就知道该请谁加入团队了。",
         "team": "这是我会组建的团队。之后可以随时修改。",
-        "teamMade": "团队已经组好了。准备好了我们就继续。",
-        "teamMadePersonal": "你的智能体已经到了。准备好了我们就继续。",
         "plan": "有了套餐之后，只差连接一个 AI。我会告诉你在哪里连接。",
-        "planThen": "套餐开通后，下一个界面就是连接你的 AI。",
-        "you": "组建团队前，先简单了解一下你。",
-        "youPersonal": "在你的智能体之前，先简单了解一下你。",
-        "ask": "在别处已经有团队了？我把它完整地搬过来。",
-        "start": "我为你们的业务准备了一个现成的团队。也可以先从我们两个开始。",
-        "askPersonal": "已经在别处使用智能体了？我把它们全部搬过来。",
-        "bring": "复制请求，粘贴到 {{app}}，再把回复带回来。剩下的交给我。",
-        "bringFiles": "把应用导出的内容拖到这里。剩下的交给我。",
-        "bringMcp": "在应用里按步骤操作，它会自己在这里创建智能体。我会留意它们的到来。",
-        "found": "找到你的团队了。看看大家是不是都在。",
-        "foundPersonal": "找到你的智能体了。看看是不是都在。",
-        "ai": "最后一步。选择你已经在用的 AI，团队就会醒来。",
-        "aiPersonal": "最后一步。选择你已经在用的 AI，我就会醒来。",
-        "aiThen": "选择你已经在用的 AI，团队就会醒来。之后只剩邀请成员了。",
-        "aiThenAlone": "选择你已经在用的 AI，我就会醒来。之后只剩邀请成员了。",
-        "connected": "好了。在工作区里叫我，我带你看看其余的。",
-        "connectedThen": "好了。现在只剩邀请和你一起工作的人了。",
         "people": "现在轮到成员了。把他们的邮箱告诉我，我来发送邀请。",
         "peopleLink": "现在轮到成员了。把链接发给他们，我会把每个申请展示给你。"
-      },
-      "you": {
-        "title": "现在，说说你",
-        "lead": "你的名字和照片会显示给团队和智能体。",
-        "leadPersonal": "你的名字和照片会显示给你的智能体。",
-        "photo": "你的照片",
-        "build": "创建头像",
-        "edit": "编辑头像",
-        "upload": "上传照片",
-        "area": "你负责哪方面的工作？",
-        "areaHint": "可选。只是想了解谁在使用 agentes.chat。"
       },
       "area": {
         "options": {
@@ -984,114 +942,31 @@
           "other": "其他"
         }
       },
-      "preview": {
-        "label": "你的工作区，随你的回答而变化",
-        "name": "你的工作区",
-        "ghost": "你的团队会出现在这里",
-        "ghostPersonal": "你的智能体会出现在这里"
-      },
       "team": {
-        "title": "你的团队",
-        "madeLead": "它们已经在工作区里了。之后可以逐个调整。",
-        "start": {
-          "title": "你想怎样开始组建团队？",
-          "lead": "之后都可以修改，不会丢失任何内容。",
-          "template": "从现成的团队开始",
-          "templateText_other": "{{template}}模板中的 {{count}} 个智能体，各有自己的频道，例行任务也已备好。",
-          "scratch": "从零开始",
-          "scratchText": "只有你的得力助手 {{name}}。每个智能体之后按你的方式逐个创建。",
-          "scratchWho": "{{name}}，以及你将创建的智能体",
-          "see": "查看现成的团队",
-          "scratchGo": "只带着 {{name}} 继续"
-        },
-        "ask": {
-          "title": "你已经在其他应用中有智能体了吗？",
-          "lead": "如果有，我会把整个团队搬过来：指令、技能和例行工作。",
-          "leadPersonal": "如果有，我会把它们全部搬过来：指令、技能和例行工作。",
-          "none": "还没有使用任何智能体",
-          "noneText": "我会根据你们做的事，为 {{org}} 组建一个团队。",
-          "noneTextPersonal": "先从我们两个开始。智能体以后随时都能加。",
-          "from": "从 {{app}} 导入",
-          "fresh": "组建新团队",
-          "freshPersonal": "不带智能体继续",
-          "skip": "跳过这一步",
-          "skipText": "智能体可以以后逐个创建。"
-        },
-        "bring": {
-          "title": "从 {{app}} 导入你的团队",
-          "titlePersonal": "从 {{app}} 导入你的智能体",
-          "titleOther": "从其他应用导入你的团队",
-          "titleOtherPersonal": "从其他应用导入你的智能体",
-          "lead": "只需一分钟。那边什么都不会变。",
-          "ask": "让 {{app}} 导出",
-          "paste": "粘贴到你和 {{app}} 的对话中。",
-          "reply": "它会回复一段 JSON：复制完整的回复，粘贴到下面的输入框。",
-          "field": "在这里粘贴 {{app}} 的回复",
-          "placeholder": "回复中的 JSON",
-          "read": "读取回复",
-          "fresh": "我更想组建一个新团队"
-        },
-        "found": {
-          "title_other": "在 {{app}} 中找到 {{count}} 个智能体",
-          "lead": "它们会带着已有的指令、技能和例行工作过来。之后什么都能改。",
-          "bring": "导入团队",
-          "bringPersonal": "导入智能体"
-        }
+        "title": "你的团队"
       },
       "plan": {
         "title": "开启你的团队",
-        "lead": "你的团队已就绪。有了套餐和 AI，今天就能开工。",
-        "leadAlone": "有了套餐和 AI，你的得力助手今天就能开工。其他智能体以后再创建。",
-        "asleep": "在套餐开通前休眠中",
-        "price": "<b>{{name}}套餐</b> · 每月 {{price}}",
-        "name": "<b>{{name}}套餐</b>",
         "generic": "一个 agentes.chat 套餐",
-        "cancel": "可随时取消",
-        "cta": "开启团队",
-        "all": "查看所有套餐",
-        "skip": "稍后开启，先看看工作区",
-        "next": "下一步：连接你的 AI。",
-        "titlePersonal": "开启你的智能体",
-        "leadPersonal": "有了套餐和 AI，今天就能开工。",
-        "asleepPersonal": "在套餐开通前休眠中",
-        "ctaPersonal": "开启智能体"
+        "all": "查看所有套餐"
       },
       "ai": {
-        "titlePersonal": "连接一个 AI，让你的智能体开始思考",
-        "titleAlone": "连接一个 AI，让 {{name}} 开始思考",
         "later": "稍后连接",
         "doneTitle": "好了。{{org}} 的团队已经在思考了。",
         "doneTitlePersonal": "好了。{{name}} 已经在思考了。",
         "doneLead": "你的 {{label}} 为所有智能体作答。之后可以逐个更换。",
         "doneLeadAny": "你连接的 AI 为所有智能体作答。之后可以逐个更换。",
         "connected": "已连接",
-        "enter": "进入工作区",
-        "awake": "你的团队醒了",
-        "answer_other": "{{names}} 已经能回复了。",
-        "readyPersonal": "你的智能体准备好了",
-        "readyAlone": "{{name}} 准备好了",
-        "wakePersonal": "只差一个 AI 就能醒来。",
-        "awakePersonal": "你的智能体醒了",
-        "awakeAlone": "{{name}} 醒了"
+        "enter": "进入工作区"
       },
       "people": {
         "title": "谁和你一起工作？",
-        "lead": "邀请你团队里的成员。每个人都会收到一封加入邮件。",
         "send": "发送邀请",
         "later": "稍后邀请"
       },
       "account": "你的账号"
     },
-    "railValue": {
-      "context": "已填写",
-      "skipped": "已跳过",
-      "later": "稍后",
-      "on": "已开启",
-      "ai": "已连接",
-      "invites_other": "{{count}} 份邀请"
-    },
     "back": "返回",
-    "leave": "返回 {{name}}",
     "leaveLater": "返回 {{name}}，稍后再完成",
     "actions": {
       "continue": "继续",
@@ -21572,24 +21447,6 @@
     }
   },
   "arrival": {
-    "beta": {
-      "word": "BETA",
-      "title": "你来得很早，真好。",
-      "text": "agentes.chat 还在测试阶段：已经可以用它做真正的工作，我们也还在继续打磨。",
-      "weekly": {
-        "title": "每周都在变好",
-        "text": "新功能和修复会不断推出。"
-      },
-      "fails": {
-        "title": "有时会出问题",
-        "text": "如果卡住或看起来不对，那是我们的问题，不是你的。"
-      },
-      "feedback": {
-        "title": "你的反馈决定接下来做什么",
-        "text": "告诉我们缺了什么、哪里让你不顺手。我们每条都看。"
-      },
-      "where": "想给我们留言，请点侧边栏底部的“发送反馈”。"
-    },
     "stage": {
       "ready": "你的团队准备好了",
       "wake": "只差一个 AI 就能醒来。",

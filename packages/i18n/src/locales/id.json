@@ -896,7 +896,6 @@
     }
   },
   "onboarding": {
-    "stepsLabel": "Langkah untuk memulai",
     "deleteLink": "Hapus ruang kerja ini",
     "optionalTag": "opsional",
     "stepDone": "(selesai)",
@@ -916,62 +915,21 @@
       "theo": "Senang berkenalan, aku Theo. Aku mengatur tugas tim.",
       "atlas": "Halo, ini Atlas. Aku mengurus komputer."
     },
-    "progress": {
-      "left_other": "{{count}} langkah lagi",
-      "done": "Semua siap"
-    },
     "flow": {
       "steps": {
         "name": "Nama ruang kerja",
         "business": "Apa yang kalian lakukan",
-        "you": "Tentang kamu",
         "team": "Timmu",
-        "plan": "Nyalakan tim",
-        "ai": "Hubungkan AI",
-        "people": "Undang orang",
-        "namePersonal": "Untuk apa",
-        "teamPersonal": "Agenmu",
-        "planPersonal": "Nyalakan agen",
-        "aiPersonal": "Hubungkan AI"
+        "plan": "Nyalakan tim"
       },
       "stepOf": "Langkah {{n}} dari {{total}}",
       "lodi": {
         "name": "Hai, {{first}}. Aku {{name}}. Aku akan menyusun tim bersamamu dalam sekitar dua menit.",
         "business": "Dengan ini aku tahu siapa yang perlu masuk tim.",
         "team": "Ini tim yang akan aku susun. Kamu bisa mengubah semuanya nanti.",
-        "teamMade": "Timnya sudah tersusun. Kita lanjut kapan pun kamu siap.",
-        "teamMadePersonal": "Agenmu sudah di sini. Kita lanjut kapan pun kamu siap.",
         "plan": "Setelah paketnya, tinggal hubungkan AI. Nanti aku tunjukkan di mana.",
-        "planThen": "Setelah paketnya aktif, layar berikutnya untuk menghubungkan AI-mu.",
-        "you": "Sebelum tim, sedikit tentang kamu.",
-        "youPersonal": "Sebelum agen-agenmu, sedikit tentang kamu.",
-        "ask": "Sudah punya tim di tempat lain? Aku bawa semuanya ke sini.",
-        "start": "Aku punya tim yang siap untuk pekerjaan kalian. Atau kita mulai berdua saja.",
-        "askPersonal": "Sudah memakai agen di tempat lain? Aku bawa semuanya ke sini.",
-        "bring": "Salin permintaannya, tempel di {{app}}, lalu bawa jawabannya. Sisanya urusanku.",
-        "bringFiles": "Taruh di sini apa yang diekspor aplikasinya. Sisanya urusanku.",
-        "bringMcp": "Ikuti langkahnya di aplikasi, lalu aplikasinya sendiri yang membuat agen di sini. Aku pantau kedatangannya.",
-        "found": "Timmu sudah ketemu. Cek apakah semuanya ada.",
-        "foundPersonal": "Agenmu sudah ketemu. Cek apakah semuanya ada.",
-        "ai": "Langkah terakhir. Pilih AI yang sudah kamu pakai dan timmu bangun.",
-        "aiPersonal": "Langkah terakhir. Pilih AI yang sudah kamu pakai dan aku bangun.",
-        "aiThen": "Pilih AI yang sudah kamu pakai dan timmu bangun. Setelah itu, tinggal mengundang orang-orangnya.",
-        "aiThenAlone": "Pilih AI yang sudah kamu pakai dan aku bangun. Setelah itu, tinggal mengundang orang-orangnya.",
-        "connected": "Nah, beres. Panggil aku di ruang kerja dan aku tunjukkan sisanya.",
-        "connectedThen": "Nah, beres. Tinggal mengundang orang-orang yang bekerja denganmu.",
         "people": "Sekarang orang-orangnya. Kasih tahu email mereka dan aku kirim undangannya.",
         "peopleLink": "Sekarang orang-orangnya. Kirim tautannya ke mereka dan aku tunjukkan tiap permintaan."
-      },
-      "you": {
-        "title": "Sekarang, tentang kamu",
-        "lead": "Nama dan fotomu terlihat oleh tim dan para agen.",
-        "leadPersonal": "Nama dan fotomu terlihat oleh agen-agenmu.",
-        "photo": "Fotomu",
-        "build": "Buat avatar",
-        "edit": "Ubah avatar",
-        "upload": "Unggah foto",
-        "area": "Kamu mengurus bidang apa?",
-        "areaHint": "Opsional. Hanya supaya kami tahu siapa yang memakai agentes.chat."
       },
       "area": {
         "options": {
@@ -984,114 +942,31 @@
           "other": "Lainnya"
         }
       },
-      "preview": {
-        "label": "Ruang kerjamu, saat kamu menjawab",
-        "name": "Ruang kerjamu",
-        "ghost": "Timmu muncul di sini",
-        "ghostPersonal": "Agenmu muncul di sini"
-      },
       "team": {
-        "title": "Timmu",
-        "madeLead": "Mereka sudah ada di ruang kerja. Kamu bisa menyesuaikan masing-masing nanti.",
-        "start": {
-          "title": "Bagaimana kamu mau memulai tim?",
-          "lead": "Semuanya bisa diubah nanti, tidak ada yang hilang.",
-          "template": "Mulai dengan tim siap pakai",
-          "templateText_other": "{{count}} agen dari template {{template}}, masing-masing di kanalnya sendiri, dengan rutinitas yang sudah siap.",
-          "scratch": "Mulai dari nol",
-          "scratchText": "Hanya {{name}}, tangan kananmu. Setiap agen kamu buat nanti, dengan caramu sendiri.",
-          "scratchWho": "{{name}} dan agen yang kamu buat",
-          "see": "Lihat tim siap pakai",
-          "scratchGo": "Lanjut hanya dengan {{name}}"
-        },
-        "ask": {
-          "title": "Sudah punya agen di aplikasi lain?",
-          "lead": "Kalau ada, aku bawa seluruh timnya: instruksi, skill, dan rutinitas.",
-          "leadPersonal": "Kalau ada, aku bawa semuanya: instruksi, skill, dan rutinitas.",
-          "none": "Belum pakai satu pun",
-          "noneText": "Aku susun tim untuk {{org}} berdasarkan apa yang kalian lakukan.",
-          "noneTextPersonal": "Kita mulai berdua saja. Agen bisa menyusul nanti, kapan pun kamu mau.",
-          "from": "Bawa dari {{app}}",
-          "fresh": "Susun tim baru",
-          "freshPersonal": "Lanjut tanpa agen",
-          "skip": "Lewati langkah ini",
-          "skipText": "Kamu bisa membuat agen nanti, satu per satu."
-        },
-        "bring": {
-          "title": "Bawa timmu dari {{app}}",
-          "titlePersonal": "Bawa agenmu dari {{app}}",
-          "titleOther": "Bawa timmu dari aplikasi lain",
-          "titleOtherPersonal": "Bawa agenmu dari aplikasi lain",
-          "lead": "Cuma semenit. Di sana tidak ada yang berubah.",
-          "ask": "Minta {{app}} mengekspor",
-          "paste": "Tempel di obrolanmu dengan {{app}}.",
-          "reply": "Ia menjawab dengan JSON: salin seluruh jawabannya dan tempel di kolom bawah.",
-          "field": "Tempel jawaban dari {{app}} di sini",
-          "placeholder": "JSON jawabannya",
-          "read": "Baca jawabannya",
-          "fresh": "Aku lebih suka menyusun tim baru"
-        },
-        "found": {
-          "title_other": "Ketemu {{count}} agen di {{app}}",
-          "lead": "Mereka datang dengan instruksi, skill, dan rutinitas yang sudah mereka punya. Kamu bisa mengubah semuanya nanti.",
-          "bring": "Bawa timnya",
-          "bringPersonal": "Bawa agennya"
-        }
+        "title": "Timmu"
       },
       "plan": {
         "title": "Nyalakan timmu",
-        "lead": "Timmu sudah siap. Dengan paketnya dan sebuah AI, tim mulai hari ini.",
-        "leadAlone": "Dengan paketnya dan sebuah AI, tangan kananmu mulai hari ini. Agen lainnya bisa kamu buat nanti.",
-        "asleep": "Tidur sampai ada paket",
-        "price": "<b>Paket {{name}}</b> · {{price}} per bulan",
-        "name": "<b>Paket {{name}}</b>",
         "generic": "Paket agentes.chat",
-        "cancel": "Batalkan kapan saja",
-        "cta": "Nyalakan tim",
-        "all": "Lihat semua paket",
-        "skip": "Nyalakan nanti dan lihat-lihat ruang kerja dulu",
-        "next": "Berikutnya: hubungkan AI-mu.",
-        "titlePersonal": "Nyalakan agenmu",
-        "leadPersonal": "Dengan paketnya dan sebuah AI, mereka mulai hari ini.",
-        "asleepPersonal": "Tidur sampai ada paket",
-        "ctaPersonal": "Nyalakan agen"
+        "all": "Lihat semua paket"
       },
       "ai": {
-        "titlePersonal": "Hubungkan AI supaya agenmu bisa berpikir",
-        "titleAlone": "Hubungkan AI supaya {{name}} bisa berpikir",
         "later": "Hubungkan nanti",
         "doneTitle": "Beres. Tim {{org}} sudah berpikir.",
         "doneTitlePersonal": "Beres. {{name}} sudah berpikir.",
         "doneLead": "{{label}}-mu menjawab untuk semua agen. Nanti bisa diganti satu per satu.",
         "doneLeadAny": "AI yang kamu hubungkan menjawab untuk semua agen. Nanti bisa diganti satu per satu.",
         "connected": "Terhubung",
-        "enter": "Masuk ke ruang kerja",
-        "awake": "Timmu sudah bangun",
-        "answer_other": "{{names}} sudah bisa menjawab.",
-        "readyPersonal": "Agenmu sudah siap",
-        "readyAlone": "{{name}} sudah siap",
-        "wakePersonal": "Tinggal butuh AI untuk bangun.",
-        "awakePersonal": "Agenmu sudah bangun",
-        "awakeAlone": "{{name}} sudah bangun"
+        "enter": "Masuk ke ruang kerja"
       },
       "people": {
         "title": "Siapa yang bekerja denganmu?",
-        "lead": "Undang orang-orang di timmu. Tiap orang menerima email untuk bergabung.",
         "send": "Kirim undangan",
         "later": "Undang nanti"
       },
       "account": "Akunmu"
     },
-    "railValue": {
-      "context": "Sudah ditulis",
-      "skipped": "Dilewati",
-      "later": "Nanti",
-      "on": "Aktif",
-      "ai": "Terhubung",
-      "invites_other": "{{count}} undangan"
-    },
     "back": "Kembali",
-    "leave": "Kembali ke {{name}}",
     "leaveLater": "Kembali ke {{name}}, lanjutkan nanti",
     "actions": {
       "continue": "Lanjut",
@@ -21495,24 +21370,6 @@
     }
   },
   "arrival": {
-    "beta": {
-      "word": "BETA",
-      "title": "Kamu datang lebih awal. Senang kamu di sini.",
-      "text": "agentes.chat masih beta: kamu sudah bisa benar-benar bekerja dengannya, dan kami masih memolesnya.",
-      "weekly": {
-        "title": "Makin baik tiap minggu",
-        "text": "Hal baru dan perbaikan terus keluar."
-      },
-      "fails": {
-        "title": "Kadang ada yang gagal",
-        "text": "Kalau macet atau terlihat aneh, itu salah kami, bukan kamu."
-      },
-      "feedback": {
-        "title": "Masukanmu menentukan yang berikutnya",
-        "text": "Ceritakan apa yang kurang atau mengganggu. Kami baca semuanya."
-      },
-      "where": "Untuk menulis ke kami, pakai Kirim masukan, di bagian bawah bilah sisi."
-    },
     "stage": {
       "ready": "Timmu sudah siap",
       "wake": "Tinggal butuh AI supaya bangun.",

@@ -316,20 +316,6 @@ html:not([data-pointer]) .onbx__back:focus-visible {
   margin-top: 1px;
   color: var(--faint);
 }
-/* A step that draws its own buttons (the people) inside the box: on its ground, never sticky. */
-.onbx .onb__actions {
-  position: static;
-  margin: 0;
-  padding: 0;
-  background: none;
-}
-.onbx .onb__actions::before {
-  display: none;
-}
-.onbx .onb__skip {
-  padding-bottom: 0;
-}
-
 /* ---------- a choice: quiet rows, a hairline between them, the round choice at the end ---------- */
 .onb-pick {
   display: flex;

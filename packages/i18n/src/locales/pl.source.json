@@ -2276,9 +2276,6 @@
   "invite.ask.deniedTextPersonal": {
     "value": "If you think it's a mistake, ask whoever sent you the link to invite you."
   },
-  "onboarding.stepsLabel": {
-    "value": "Steps to get started"
-  },
   "onboarding.deleteLink": {
     "value": "Delete this workspace"
   },
@@ -2324,47 +2321,17 @@
   "onboarding.hosts.atlas": {
     "value": "Hey, Atlas here. I look after the computers."
   },
-  "onboarding.progress.left": {
-    "value": {
-      "one": "{{count}} step left",
-      "other": "{{count}} steps left"
-    }
-  },
-  "onboarding.progress.done": {
-    "value": "All set"
-  },
   "onboarding.flow.steps.name": {
     "value": "Workspace name"
   },
   "onboarding.flow.steps.business": {
     "value": "What you do"
   },
-  "onboarding.flow.steps.you": {
-    "value": "About you"
-  },
   "onboarding.flow.steps.team": {
     "value": "Your team"
   },
   "onboarding.flow.steps.plan": {
     "value": "Turn the team on"
-  },
-  "onboarding.flow.steps.ai": {
-    "value": "Connect an AI"
-  },
-  "onboarding.flow.steps.people": {
-    "value": "Invite people"
-  },
-  "onboarding.flow.steps.namePersonal": {
-    "value": "What it's for"
-  },
-  "onboarding.flow.steps.teamPersonal": {
-    "value": "Your agents"
-  },
-  "onboarding.flow.steps.planPersonal": {
-    "value": "Turn the agents on"
-  },
-  "onboarding.flow.steps.aiPersonal": {
-    "value": "Connect an AI"
   },
   "onboarding.flow.stepOf": {
     "value": "Step {{n}} of {{total}}"
@@ -2378,98 +2345,14 @@
   "onboarding.flow.lodi.team": {
     "value": "This is the team I'd put together. You can change anything later."
   },
-  "onboarding.flow.lodi.teamMade": {
-    "value": "The team is already put together. We move on whenever you're ready."
-  },
-  "onboarding.flow.lodi.teamMadePersonal": {
-    "value": "Your agents are already here. We move on whenever you're ready."
-  },
   "onboarding.flow.lodi.plan": {
     "value": "After the plan, all that's left is connecting an AI. I'll show you where."
-  },
-  "onboarding.flow.lodi.planThen": {
-    "value": "Once the plan is on, the next screen is where you connect your AI."
-  },
-  "onboarding.flow.lodi.you": {
-    "value": "Before the team, a little about you."
-  },
-  "onboarding.flow.lodi.youPersonal": {
-    "value": "Before your agents, a little about you."
-  },
-  "onboarding.flow.lodi.ask": {
-    "value": "Already have a team somewhere else? I'll bring all of it here."
-  },
-  "onboarding.flow.lodi.start": {
-    "value": "I have a team ready for what you do. Or we start with just the two of us."
-  },
-  "onboarding.flow.lodi.askPersonal": {
-    "value": "Already use agents somewhere else? I'll bring them all here."
-  },
-  "onboarding.flow.lodi.bring": {
-    "value": "Copy the request, paste it in {{app}} and bring back the answer. I'll do the rest."
-  },
-  "onboarding.flow.lodi.bringFiles": {
-    "value": "Drop here what the app exported. I'll do the rest."
-  },
-  "onboarding.flow.lodi.bringMcp": {
-    "value": "Follow the steps in the app and it creates the agents here itself. I'll watch for them."
-  },
-  "onboarding.flow.lodi.found": {
-    "value": "Found your team. Check that everyone is here."
-  },
-  "onboarding.flow.lodi.foundPersonal": {
-    "value": "Found your agents. Check that they're all here."
-  },
-  "onboarding.flow.lodi.ai": {
-    "value": "Last step. Pick the AI you already use and the team wakes up."
-  },
-  "onboarding.flow.lodi.aiPersonal": {
-    "value": "Last step. Pick the AI you already use and I wake up."
-  },
-  "onboarding.flow.lodi.aiThen": {
-    "value": "Pick the AI you already use and the team wakes up. Then all that's left is inviting people."
-  },
-  "onboarding.flow.lodi.aiThenAlone": {
-    "value": "Pick the AI you already use and I wake up. Then all that's left is inviting people."
-  },
-  "onboarding.flow.lodi.connected": {
-    "value": "There we go. Call me in the workspace and I'll show you the rest."
-  },
-  "onboarding.flow.lodi.connectedThen": {
-    "value": "There we go. All that's left is inviting the people you work with."
   },
   "onboarding.flow.lodi.people": {
     "value": "Now the people. Give me their emails and I'll send the invitations."
   },
   "onboarding.flow.lodi.peopleLink": {
     "value": "Now the people. Send them the link and I'll show you each request."
-  },
-  "onboarding.flow.you.title": {
-    "value": "Now, about you"
-  },
-  "onboarding.flow.you.lead": {
-    "value": "Your name and photo show to the team and to the agents."
-  },
-  "onboarding.flow.you.leadPersonal": {
-    "value": "Your name and photo show to your agents."
-  },
-  "onboarding.flow.you.photo": {
-    "value": "Your photo"
-  },
-  "onboarding.flow.you.build": {
-    "value": "Build an avatar"
-  },
-  "onboarding.flow.you.edit": {
-    "value": "Edit avatar"
-  },
-  "onboarding.flow.you.upload": {
-    "value": "Upload a photo"
-  },
-  "onboarding.flow.you.area": {
-    "value": "What do you work on?"
-  },
-  "onboarding.flow.you.areaHint": {
-    "value": "Optional. Just so we know who uses agentes.chat."
   },
   "onboarding.flow.area.options.dev": {
     "value": "Development"
@@ -2492,191 +2375,17 @@
   "onboarding.flow.area.options.other": {
     "value": "Something else"
   },
-  "onboarding.flow.preview.label": {
-    "value": "Your workspace, as you answer"
-  },
-  "onboarding.flow.preview.name": {
-    "value": "Your workspace"
-  },
-  "onboarding.flow.preview.ghost": {
-    "value": "Your team shows up here"
-  },
-  "onboarding.flow.preview.ghostPersonal": {
-    "value": "Your agents show up here"
-  },
   "onboarding.flow.team.title": {
     "value": "Your team"
-  },
-  "onboarding.flow.team.madeLead": {
-    "value": "They're already in the workspace. You can adjust each one later."
-  },
-  "onboarding.flow.team.start.title": {
-    "value": "How do you want to start the team?"
-  },
-  "onboarding.flow.team.start.lead": {
-    "value": "You can change all of it later, nothing is lost."
-  },
-  "onboarding.flow.team.start.template": {
-    "value": "Start with a ready-made team"
-  },
-  "onboarding.flow.team.start.templateText": {
-    "value": {
-      "one": "{{count}} agent from the {{template}} template, in its own channel, with its routine ready.",
-      "other": "{{count}} agents from the {{template}} template, each in its own channel, with their routines ready."
-    }
-  },
-  "onboarding.flow.team.start.scratch": {
-    "value": "Start from scratch"
-  },
-  "onboarding.flow.team.start.scratchText": {
-    "value": "Just {{name}}, your right hand. You create each agent later, your way."
-  },
-  "onboarding.flow.team.start.scratchWho": {
-    "value": "{{name}} and whoever you create"
-  },
-  "onboarding.flow.team.start.see": {
-    "value": "See the ready-made team"
-  },
-  "onboarding.flow.team.start.scratchGo": {
-    "value": "Go on with just {{name}}"
-  },
-  "onboarding.flow.team.ask.title": {
-    "value": "Do you already have agents in another app?"
-  },
-  "onboarding.flow.team.ask.lead": {
-    "value": "If you do, I'll bring the whole team: instructions, skills and routines."
-  },
-  "onboarding.flow.team.ask.leadPersonal": {
-    "value": "If you do, I'll bring them all: instructions, skills and routines."
-  },
-  "onboarding.flow.team.ask.none": {
-    "value": "I don't use any yet"
-  },
-  "onboarding.flow.team.ask.noneText": {
-    "value": "I'll put together a team for {{org}} from what you do."
-  },
-  "onboarding.flow.team.ask.noneTextPersonal": {
-    "value": "We start with just the two of us. Agents can come later, whenever you want."
-  },
-  "onboarding.flow.team.ask.from": {
-    "value": "Bring from {{app}}"
-  },
-  "onboarding.flow.team.ask.fresh": {
-    "value": "Build a new team"
-  },
-  "onboarding.flow.team.ask.freshPersonal": {
-    "value": "Continue without agents"
-  },
-  "onboarding.flow.team.ask.skip": {
-    "value": "Skip this step"
-  },
-  "onboarding.flow.team.ask.skipText": {
-    "value": "You can create the agents later, one by one."
-  },
-  "onboarding.flow.team.bring.title": {
-    "value": "Bring your team from {{app}}"
-  },
-  "onboarding.flow.team.bring.titlePersonal": {
-    "value": "Bring your agents from {{app}}"
-  },
-  "onboarding.flow.team.bring.titleOther": {
-    "value": "Bring your team from another app"
-  },
-  "onboarding.flow.team.bring.titleOtherPersonal": {
-    "value": "Bring your agents from another app"
-  },
-  "onboarding.flow.team.bring.lead": {
-    "value": "It takes a minute. Nothing changes there."
-  },
-  "onboarding.flow.team.bring.ask": {
-    "value": "Ask {{app}} to export"
-  },
-  "onboarding.flow.team.bring.paste": {
-    "value": "Paste it in your chat with {{app}}."
-  },
-  "onboarding.flow.team.bring.reply": {
-    "value": "It answers with a JSON: copy the whole answer and paste it in the field below."
-  },
-  "onboarding.flow.team.bring.field": {
-    "value": "Paste the answer from {{app}} here"
-  },
-  "onboarding.flow.team.bring.placeholder": {
-    "value": "The answer's JSON"
-  },
-  "onboarding.flow.team.bring.read": {
-    "value": "Read the answer"
-  },
-  "onboarding.flow.team.bring.fresh": {
-    "value": "I'd rather build a new team"
-  },
-  "onboarding.flow.team.found.title": {
-    "value": {
-      "one": "Found {{count}} agent in {{app}}",
-      "other": "Found {{count}} agents in {{app}}"
-    }
-  },
-  "onboarding.flow.team.found.lead": {
-    "value": "They arrive with the instructions, skills and routines they already have. You can change everything later."
-  },
-  "onboarding.flow.team.found.bring": {
-    "value": "Bring the team"
-  },
-  "onboarding.flow.team.found.bringPersonal": {
-    "value": "Bring the agents"
   },
   "onboarding.flow.plan.title": {
     "value": "Turn your team on"
   },
-  "onboarding.flow.plan.lead": {
-    "value": "Your team is ready. With the plan and an AI, it starts today."
-  },
-  "onboarding.flow.plan.leadAlone": {
-    "value": "With the plan and an AI, your right hand starts today. You can create the other agents later."
-  },
-  "onboarding.flow.plan.asleep": {
-    "value": "Asleep until the plan"
-  },
-  "onboarding.flow.plan.price": {
-    "value": "<b>{{name}} plan</b> · {{price}} a month"
-  },
-  "onboarding.flow.plan.name": {
-    "value": "<b>{{name}} plan</b>"
-  },
   "onboarding.flow.plan.generic": {
     "value": "An agentes.chat plan"
   },
-  "onboarding.flow.plan.cancel": {
-    "value": "Cancel anytime"
-  },
-  "onboarding.flow.plan.cta": {
-    "value": "Turn the team on"
-  },
   "onboarding.flow.plan.all": {
     "value": "See all plans"
-  },
-  "onboarding.flow.plan.skip": {
-    "value": "Turn it on later and just look around the workspace"
-  },
-  "onboarding.flow.plan.next": {
-    "value": "Next: connect your AI."
-  },
-  "onboarding.flow.plan.titlePersonal": {
-    "value": "Turn your agents on"
-  },
-  "onboarding.flow.plan.leadPersonal": {
-    "value": "With the plan and an AI, they start today."
-  },
-  "onboarding.flow.plan.asleepPersonal": {
-    "value": "Asleep until the plan"
-  },
-  "onboarding.flow.plan.ctaPersonal": {
-    "value": "Turn the agents on"
-  },
-  "onboarding.flow.ai.titlePersonal": {
-    "value": "Connect an AI for your agents to think"
-  },
-  "onboarding.flow.ai.titleAlone": {
-    "value": "Connect an AI for {{name}} to think"
   },
   "onboarding.flow.ai.later": {
     "value": "Connect later"
@@ -2699,35 +2408,8 @@
   "onboarding.flow.ai.enter": {
     "value": "Go to the workspace"
   },
-  "onboarding.flow.ai.awake": {
-    "value": "Your team woke up"
-  },
-  "onboarding.flow.ai.answer": {
-    "value": {
-      "one": "{{names}} answers now.",
-      "other": "{{names}} answer now."
-    }
-  },
-  "onboarding.flow.ai.readyPersonal": {
-    "value": "Your agents are ready"
-  },
-  "onboarding.flow.ai.readyAlone": {
-    "value": "{{name}} is ready"
-  },
-  "onboarding.flow.ai.wakePersonal": {
-    "value": "Just one AI away from waking up."
-  },
-  "onboarding.flow.ai.awakePersonal": {
-    "value": "Your agents woke up"
-  },
-  "onboarding.flow.ai.awakeAlone": {
-    "value": "{{name}} woke up"
-  },
   "onboarding.flow.people.title": {
     "value": "Who works with you?"
-  },
-  "onboarding.flow.people.lead": {
-    "value": "Invite your teammates. Each one gets an email to join."
   },
   "onboarding.flow.people.send": {
     "value": "Send invitations"
@@ -2738,32 +2420,8 @@
   "onboarding.flow.account": {
     "value": "Your account"
   },
-  "onboarding.railValue.context": {
-    "value": "Written"
-  },
-  "onboarding.railValue.skipped": {
-    "value": "Skipped"
-  },
-  "onboarding.railValue.later": {
-    "value": "Later"
-  },
-  "onboarding.railValue.on": {
-    "value": "On"
-  },
-  "onboarding.railValue.ai": {
-    "value": "Connected"
-  },
-  "onboarding.railValue.invites": {
-    "value": {
-      "one": "{{count}} invite",
-      "other": "{{count}} invites"
-    }
-  },
   "onboarding.back": {
     "value": "Back"
-  },
-  "onboarding.leave": {
-    "value": "Back to {{name}}"
   },
   "onboarding.leaveLater": {
     "value": "Back to {{name}}, finish later"
@@ -53871,36 +53529,6 @@
   },
   "paidMoment.next.talk": {
     "value": "Talk to {{name}}"
-  },
-  "arrival.beta.word": {
-    "value": "BETA"
-  },
-  "arrival.beta.title": {
-    "value": "You're early. We're glad."
-  },
-  "arrival.beta.text": {
-    "value": "agentes.chat is in beta: you can already do real work with it, and we're still polishing."
-  },
-  "arrival.beta.weekly.title": {
-    "value": "It gets better every week"
-  },
-  "arrival.beta.weekly.text": {
-    "value": "New things and fixes come out all the time."
-  },
-  "arrival.beta.fails.title": {
-    "value": "Sometimes something fails"
-  },
-  "arrival.beta.fails.text": {
-    "value": "If it gets stuck or looks odd, the problem is ours, not yours."
-  },
-  "arrival.beta.feedback.title": {
-    "value": "Your feedback decides what comes next"
-  },
-  "arrival.beta.feedback.text": {
-    "value": "Tell us what was missing or got in your way. We read everything."
-  },
-  "arrival.beta.where": {
-    "value": "To write to us, use Send feedback, at the bottom of the sidebar."
   },
   "arrival.stage.ready": {
     "value": "Your team is ready"
