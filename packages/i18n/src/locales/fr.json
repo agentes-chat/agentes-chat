@@ -13870,6 +13870,23 @@
     "s3": "Votre propre stockage",
     "s3Text": "Cloudflare R2, Amazon S3, Backblaze B2 ou un autre service compatible S3.",
     "current": "Utilisé",
+    "computer": {
+      "title": "Ordinateur de l'espace de travail",
+      "used": "{{used}} sur {{size}} utilisés",
+      "bar": "Disque de l'ordinateur de l'espace de travail",
+      "measuring": "Mesure de ce qui occupe l'espace.",
+      "part": {
+        "projects": "Projets et code",
+        "apps": "Apps et outils",
+        "agents": "Fichiers des agents",
+        "caches": "Caches et fichiers temporaires",
+        "system": "Système",
+        "other": "Autres",
+        "free": "Libre"
+      },
+      "full": "Presque plein, il reste {{free}}. Un agent peut vider les caches et les fichiers temporaires et supprimer ce que plus personne n'utilise.",
+      "ask": "Libère de l'espace sur l'ordinateur de l'espace de travail : vide les caches et les fichiers temporaires (gestionnaires de paquets, navigateurs, outils de build), puis dis-moi ce qui prend le plus de place à part ça."
+    },
     "usage": {
       "files": "{{size}} de fichiers",
       "none": "Aucun fichier",

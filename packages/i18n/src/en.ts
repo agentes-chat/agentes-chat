@@ -13933,6 +13933,25 @@ export const en = {
     s3: "Your own storage",
     s3Text: "Cloudflare R2, Amazon S3, Backblaze B2 or another compatible with S3.",
     current: "In use",
+    /** The workspace's own Cloud computer's disk, under the files' storage: a bar by what takes it, with a legend. */
+    computer: {
+      title: "Workspace computer",
+      used: "{{used}} of {{size}} in use",
+      bar: "The workspace computer's disk",
+      measuring: "Measuring what takes the space.",
+      part: {
+        projects: "Projects and code",
+        apps: "Apps and tools",
+        agents: "Agents' files",
+        caches: "Caches and temporary files",
+        system: "System",
+        other: "Other",
+        free: "Free",
+      },
+      full: "Almost full, {{free}} left. An agent can clear caches and temporary files and remove what nobody uses anymore.",
+      /** The message an agent gets, already in its DM's composer, from the button under `full`. */
+      ask: "Free up space on the workspace computer: clear caches and temporary files (package managers, browsers, build tools), then tell me what else takes the most room.",
+    },
     usage: {
       files: "{{size}}\u00a0of\u00a0files",
       none: "No\u00a0files",

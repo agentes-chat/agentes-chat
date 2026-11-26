@@ -12862,6 +12862,23 @@
     "s3": "Penyimpanan milikmu sendiri",
     "s3Text": "Cloudflare R2, Amazon S3, Backblaze B2, atau lainnya yang kompatibel dengan S3.",
     "current": "Sedang dipakai",
+    "computer": {
+      "title": "Komputer ruang kerja",
+      "used": "{{used}} dari {{size}} terpakai",
+      "bar": "Disk komputer ruang kerja",
+      "measuring": "Mengukur apa yang memakai ruang.",
+      "part": {
+        "projects": "Proyek dan kode",
+        "apps": "Aplikasi dan alat",
+        "agents": "File agen",
+        "caches": "Cache dan file sementara",
+        "system": "Sistem",
+        "other": "Lainnya",
+        "free": "Kosong"
+      },
+      "full": "Hampir penuh, tersisa {{free}}. Agen bisa membersihkan cache dan file sementara serta menghapus yang tidak dipakai lagi.",
+      "ask": "Kosongkan ruang di komputer ruang kerja: bersihkan cache dan file sementara (manajer paket, browser, alat build), lalu beri tahu saya apa lagi yang paling banyak memakai ruang."
+    },
     "usage": {
       "files": "{{size}} file",
       "none": "Tidak ada file",

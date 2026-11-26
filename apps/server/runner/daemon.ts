@@ -18,6 +18,8 @@ import {
   type AccountKind,
   type AgentScope,
   ALL_AGENTS,
+  DISK_PARTS_MS,
+  type DiskParts,
   isAccountId,
   isAccountKind,
   LOAD_SAMPLE_MS,
@@ -129,6 +131,7 @@ import {
 import { type ConnectionOutcome, type Dial, RunnerConnection } from "./connection";
 import { DesktopManager } from "./desktop";
 import { DesktopSessions, type DesktopUser, runnerUser, systemDesktopUser } from "./desktop-session";
+import { diskLayout, keepDiskParts, keptDiskParts, measureDiskParts } from "./disk-parts";
 import { EgressObservation, probeEgress } from "./egress";
 import { EGRESS_RELAY_SOCKET, startEgressRelay } from "./egress-relay";
 import { EGRESS_SHARE_FILE, EgressShare } from "./egress-share";
@@ -533,6 +536,9 @@ export class RunnerDaemon implements RequestObserver {
   /** The computer's shared folder (ADR 0115) once the session made it, and its last measured size. */
   private shared: string | null = null;
   private sharedGb: number | undefined;
+  /** What takes the workspace disk by kind (`disk-parts.ts`), once measured or kept from before a restart. */
+  private diskParts: DiskParts | null = null;
+  private measuringDisk = false;
   /** System mode's folder (real path) and group, for `shareFiles`; null elsewhere. */
   private sharedGroup: Required<SharedSpec> | null = null;
   private sharing = false;
@@ -1015,6 +1021,7 @@ export class RunnerDaemon implements RequestObserver {
             this.load.add(l && oomKills !== undefined ? { ...l, oomKills } : l, undefined, {
               ...diskFigures(d),
               ...(this.sharedGb === undefined ? {} : { sharedGb: this.sharedGb }),
+              ...(this.diskParts ? { diskParts: this.diskParts } : {}),
               ...(this.stored?.mode === "system" && process.platform === "linux"
                 ? { agentTmpRamGb: Math.round((agentTmpMemoryBytes() / 2 ** 30) * 10) / 10 }
                 : {}),
@@ -1043,6 +1050,9 @@ export class RunnerDaemon implements RequestObserver {
     const sizes = setInterval(() => this.measureShared(), SHARED_SIZE_MS);
     sizes.unref?.();
     this.timers.push(sizes);
+    const parts = setInterval(() => this.measureDisk(), DISK_PARTS_MS);
+    parts.unref?.();
+    this.timers.push(parts);
     const idleTmp = setInterval(() => this.cleanIdleTmp(), IDLE_TMP_SWEEP_MS);
     idleTmp.unref?.();
     this.timers.push(idleTmp);
@@ -1462,6 +1472,7 @@ export class RunnerDaemon implements RequestObserver {
     this.shared = this.prepareShared(workspaceReal, sharedSpec);
     this.sharedGroup = sharedSpec && this.shared ? { path: this.shared, group: sharedSpec.group } : null;
     this.measureShared();
+    this.measureDisk(true);
     this.shareFiles();
     const secretsDir = path.join(home, "secrets");
     // Site passwords live in memory now (ADR 0144): one an older runner kept on disk goes.
@@ -2244,6 +2255,29 @@ export class RunnerDaemon implements RequestObserver {
     void sharedSizeGb(dir).then((gb) => {
       if (gb !== null && this.shared === dir) this.sharedGb = gb;
     });
+  }
+
+  /**
+   * System mode on Linux, as root: what takes the workspace disk by kind, for the next load report (`du` in the
+   * background). `kept`: a measure newer than `DISK_PARTS_MS` from before a restart stands instead.
+   */
+  private measureDisk(kept = false) {
+    const workspace = this.session?.workspaceReal;
+    if (!workspace || this.measuringDisk || this.opts.workers) return;
+    if (this.stored?.mode !== "system" || process.platform !== "linux" || process.getuid?.() !== 0) return;
+    if (kept) this.diskParts ??= keptDiskParts(this.opts.home, DISK_PARTS_MS);
+    if (kept && this.diskParts) return;
+    this.measuringDisk = true;
+    void measureDiskParts(diskLayout(workspace))
+      .then((parts) => {
+        if (!parts) return;
+        this.diskParts = parts;
+        keepDiskParts(this.opts.home, parts);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        this.measuringDisk = false;
+      });
   }
 
   /** System mode, as root: what agents with nothing running but their worker left in /tmp goes (`idleTmpLines`). */

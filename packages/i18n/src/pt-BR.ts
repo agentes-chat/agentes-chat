@@ -13935,6 +13935,23 @@ export const ptBR = {
     s3: "Seu próprio armazenamento",
     s3Text: "Cloudflare R2, Amazon S3, Backblaze B2 ou outro compatível com S3.",
     current: "Em uso",
+    computer: {
+      title: "Computador do workspace",
+      used: "{{used}} de {{size}} em uso",
+      bar: "Disco do computador do workspace",
+      measuring: "Medindo o que ocupa o espaço.",
+      part: {
+        projects: "Projetos e código",
+        apps: "Apps e ferramentas",
+        agents: "Arquivos dos agentes",
+        caches: "Caches e temporários",
+        system: "Sistema",
+        other: "Outros",
+        free: "Livre",
+      },
+      full: "Quase cheio, restam {{free}}. Um agente pode limpar caches e arquivos temporários e apagar o que ninguém usa mais.",
+      ask: "Libere espaço no computador do workspace: limpe caches e arquivos temporários (gerenciadores de pacotes, navegadores, ferramentas de build) e me diga o que mais ocupa espaço.",
+    },
     // What the option in use holds, no-break spaces inside each part: a narrow card breaks the line after its "·".
     usage: {
       files: "{{size}}\u00a0de\u00a0arquivos",

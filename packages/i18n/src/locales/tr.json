@@ -13292,6 +13292,23 @@
     "s3": "Kendi depolama alanınız",
     "s3Text": "Cloudflare R2, Amazon S3, Backblaze B2 veya S3 uyumlu başka bir hizmet.",
     "current": "Kullanımda",
+    "computer": {
+      "title": "Çalışma alanının bilgisayarı",
+      "used": "{{size}} alanın {{used}} kadarı kullanımda",
+      "bar": "Çalışma alanı bilgisayarının diski",
+      "measuring": "Alanı neyin kapladığı ölçülüyor.",
+      "part": {
+        "projects": "Projeler ve kod",
+        "apps": "Uygulamalar ve araçlar",
+        "agents": "Ajanların dosyaları",
+        "caches": "Önbellekler ve geçici dosyalar",
+        "system": "Sistem",
+        "other": "Diğer",
+        "free": "Boş"
+      },
+      "full": "Neredeyse dolu, {{free}} kaldı. Bir ajan önbellekleri ve geçici dosyaları temizleyebilir, kimsenin artık kullanmadığını silebilir.",
+      "ask": "Çalışma alanının bilgisayarında yer aç: önbellekleri ve geçici dosyaları (paket yöneticileri, tarayıcılar, derleme araçları) temizle, sonra başka neyin en çok yer kapladığını söyle."
+    },
     "usage": {
       "files": "{{size}} dosya",
       "none": "Dosya yok",

@@ -32604,6 +32604,45 @@
   "storage.current": {
     "value": "In use"
   },
+  "storage.computer.title": {
+    "value": "Workspace computer"
+  },
+  "storage.computer.used": {
+    "value": "{{used}} of {{size}} in use"
+  },
+  "storage.computer.bar": {
+    "value": "The workspace computer's disk"
+  },
+  "storage.computer.measuring": {
+    "value": "Measuring what takes the space."
+  },
+  "storage.computer.part.projects": {
+    "value": "Projects and code"
+  },
+  "storage.computer.part.apps": {
+    "value": "Apps and tools"
+  },
+  "storage.computer.part.agents": {
+    "value": "Agents' files"
+  },
+  "storage.computer.part.caches": {
+    "value": "Caches and temporary files"
+  },
+  "storage.computer.part.system": {
+    "value": "System"
+  },
+  "storage.computer.part.other": {
+    "value": "Other"
+  },
+  "storage.computer.part.free": {
+    "value": "Free"
+  },
+  "storage.computer.full": {
+    "value": "Almost full, {{free}} left. An agent can clear caches and temporary files and remove what nobody uses anymore."
+  },
+  "storage.computer.ask": {
+    "value": "Free up space on the workspace computer: clear caches and temporary files (package managers, browsers, build tools), then tell me what else takes the most room."
+  },
   "storage.usage.files": {
     "value": "{{size}} of files"
   },

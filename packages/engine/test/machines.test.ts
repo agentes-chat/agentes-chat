@@ -534,10 +534,21 @@ describe("a runner that dies mid-request (brain turns never stay working)", () =
       );
     await runner.frame({ type: "pong", at: 1, load: { ...base, diskFreeGb: 40, diskUse: 0.6, sharedGb: 2.5 } });
     expect(await warnings()).toEqual([]);
-    expect((await listMachines(f.db, f.owner.id, f.org.id))[0]?.disk).toEqual({ freeGb: 40, use: 0.6, sharedGb: 2.5 });
+    expect((await listMachines(f.db, f.owner.id, f.org.id))[0]?.disk).toEqual({
+      freeGb: 40,
+      use: 0.6,
+      sharedGb: 2.5,
+      sizeGb: null,
+      parts: null,
+    });
 
     await runner.frame({ type: "pong", at: 2, load: { ...base, diskFreeGb: 9, diskUse: 0.91, sharedGb: 30 } });
-    await runner.frame({ type: "pong", at: 3, load: { ...base, diskFreeGb: 8, diskUse: 0.92, sharedGb: 31 } });
+    const parts = { projects: 20, apps: 15, agents: 40, caches: 12, system: 6 };
+    await runner.frame({
+      type: "pong",
+      at: 3,
+      load: { ...base, diskFreeGb: 8, diskUse: 0.92, sharedGb: 31, diskGb: 100, diskParts: parts },
+    });
     const [warned] = await warnings();
     expect(await warnings()).toHaveLength(1);
     expect(warned?.source).toMatchObject({ machineId: paired.machineId, label: "Build box" });
@@ -545,7 +556,13 @@ describe("a runner that dies mid-request (brain turns never stay working)", () =
 
     // A runner that restarts reports once without the disk: the page keeps it and nobody hears it again.
     await runner.frame({ type: "pong", at: 4, load: base });
-    expect((await listMachines(f.db, f.owner.id, f.org.id))[0]?.disk).toEqual({ freeGb: 8, use: 0.92, sharedGb: 31 });
+    expect((await listMachines(f.db, f.owner.id, f.org.id))[0]?.disk).toEqual({
+      freeGb: 8,
+      use: 0.92,
+      sharedGb: 31,
+      sizeGb: 100,
+      parts,
+    });
     await runner.frame({ type: "pong", at: 5, load: { ...base, diskFreeGb: 8, diskUse: 0.92 } });
     // Hovering at the line: under 85% but not under 80% doesn't arm it again.
     await runner.frame({ type: "pong", at: 6, load: { ...base, diskFreeGb: 14, diskUse: 0.83 } });

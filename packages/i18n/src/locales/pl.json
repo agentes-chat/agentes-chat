@@ -14398,6 +14398,23 @@
     "s3": "Własne miejsce na dane",
     "s3Text": "Cloudflare R2, Amazon S3, Backblaze B2 lub inny zgodny z S3.",
     "current": "W użyciu",
+    "computer": {
+      "title": "Komputer przestrzeni roboczej",
+      "used": "Zajęte: {{used}} z {{size}}",
+      "bar": "Dysk komputera przestrzeni roboczej",
+      "measuring": "Mierzymy, co zajmuje miejsce.",
+      "part": {
+        "projects": "Projekty i kod",
+        "apps": "Aplikacje i narzędzia",
+        "agents": "Pliki agentów",
+        "caches": "Pamięć podręczna i pliki tymczasowe",
+        "system": "System",
+        "other": "Inne",
+        "free": "Wolne"
+      },
+      "full": "Prawie pełny, zostało {{free}}. Agent może wyczyścić pamięć podręczną i pliki tymczasowe oraz usunąć to, czego nikt już nie używa.",
+      "ask": "Zwolnij miejsce na komputerze przestrzeni roboczej: wyczyść pamięć podręczną i pliki tymczasowe (menedżery pakietów, przeglądarki, narzędzia do budowania), a potem powiedz mi, co jeszcze zajmuje najwięcej miejsca."
+    },
     "usage": {
       "files": "{{size}} plików",
       "none": "Brak plików",

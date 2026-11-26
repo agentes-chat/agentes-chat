@@ -13360,6 +13360,23 @@
     "s3": "Dein eigener Speicher",
     "s3Text": "Cloudflare R2, Amazon S3, Backblaze B2 oder ein anderer S3-kompatibler Dienst.",
     "current": "In Verwendung",
+    "computer": {
+      "title": "Computer des Workspace",
+      "used": "{{used}} von {{size}} belegt",
+      "bar": "Festplatte des Workspace-Computers",
+      "measuring": "Es wird gemessen, was den Platz belegt.",
+      "part": {
+        "projects": "Projekte und Code",
+        "apps": "Apps und Tools",
+        "agents": "Dateien der Agenten",
+        "caches": "Caches und temporäre Dateien",
+        "system": "System",
+        "other": "Sonstiges",
+        "free": "Frei"
+      },
+      "full": "Fast voll, noch {{free}} frei. Ein Agent kann Caches und temporäre Dateien leeren und löschen, was niemand mehr nutzt.",
+      "ask": "Schaffe Platz auf dem Computer des Workspace: Leere Caches und temporäre Dateien (Paketmanager, Browser, Build-Tools) und sag mir dann, was sonst am meisten Platz belegt."
+    },
     "usage": {
       "files": "{{size}} an Dateien",
       "none": "Keine Dateien",

@@ -174,6 +174,9 @@ export interface MachineLoadRecord {
   diskFreeGb?: number;
   diskUse?: number;
   sharedGb?: number;
+  /** The workspace disk's size in GB, and what takes it by kind (`MachineLoad.diskGb`, `diskParts`). */
+  diskGb?: number;
+  diskParts?: { projects: number; apps: number; agents: number; caches: number; system: number };
   /** What the agents' temporary folders held in memory, GB (`MachineLoad.agentTmpRamGb`). */
   agentTmpRamGb?: number;
   /** The server's own mark: its admins heard of this disk passing the line, and won't again until it drops under 80%. */

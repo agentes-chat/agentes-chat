@@ -13796,6 +13796,23 @@
     "s3": "Tu propio almacenamiento",
     "s3Text": "Cloudflare R2, Amazon S3, Backblaze B2 u otro compatible con S3.",
     "current": "En uso",
+    "computer": {
+      "title": "Computadora del espacio de trabajo",
+      "used": "{{used}} de {{size}} en uso",
+      "bar": "Disco de la computadora del espacio de trabajo",
+      "measuring": "Midiendo qué ocupa el espacio.",
+      "part": {
+        "projects": "Proyectos y código",
+        "apps": "Apps y herramientas",
+        "agents": "Archivos de los agentes",
+        "caches": "Cachés y archivos temporales",
+        "system": "Sistema",
+        "other": "Otros",
+        "free": "Libre"
+      },
+      "full": "Casi lleno, quedan {{free}}. Un agente puede vaciar las cachés y los archivos temporales y borrar lo que ya nadie usa.",
+      "ask": "Libera espacio en la computadora del espacio de trabajo: vacía las cachés y los archivos temporales (gestores de paquetes, navegadores, herramientas de compilación) y luego dime qué más ocupa más espacio."
+    },
     "usage": {
       "files": "{{size}} de archivos",
       "none": "Sin archivos",
