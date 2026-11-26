@@ -2060,7 +2060,8 @@ async function executeRunInner(
   /**
    * The trigger's query vector is asked as soon as the trigger is read, so the provider's answer comes while the reads
    * below run; memory and the wiki search ask the same words later and share the call (`gateway.embed`). Not for a
-   * run an app's message started: nothing of memory or the wiki comes in by itself there.
+   * run an app's message started: nothing of memory or the wiki comes in by itself there. Memory's kind alone: with
+   * vectors for the wiki alone, a run that doesn't search it pays for none.
    */
   const embedEarly = <T extends { body: string; authorType: string }>(rows: T[]) => {
     const body = rows[0]?.body.trim().slice(0, RUN_QUERY_CHARS);
@@ -2075,7 +2076,7 @@ async function executeRunInner(
               orgId: run.orgId,
               texts: [body],
               inputType: "query",
-              kinds: ["context_item", "wiki"],
+              kinds: ["context_item"],
             }),
       )
       .catch(() => {});

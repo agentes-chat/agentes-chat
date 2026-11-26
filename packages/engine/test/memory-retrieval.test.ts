@@ -334,4 +334,22 @@ describe("one query embedding for a run's memory and wiki", () => {
     expect(queries).toEqual([[body]]);
     expect(JSON.stringify(f.provider.calls)).toContain("Deploy Northwind with scripts/blue.sh.");
   });
+
+  test("with vectors for the wiki alone, a run that doesn't search the wiki asks no query vector", async () => {
+    f = await setup({ embeddings: { kinds: ["wiki"] }, contextTools: true });
+    await add({ title: "Deploy da Northwind", content: "Deploy Northwind with scripts/blue.sh." });
+    await drainOutbox(f.db, f.handlers);
+    const queries: string[][] = [];
+    const embed = f.embeddings.embed.bind(f.embeddings);
+    f.embeddings.embed = (texts, options) => {
+      if (options.inputType === "query") queries.push(texts);
+      return embed(texts, options);
+    };
+    await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, {
+      body: "@dev como faço o deploy da Northwind?",
+    });
+    await drainOutbox(f.db, f.handlers);
+    expect(queries).toEqual([]);
+    expect(JSON.stringify(f.provider.calls)).toContain("Deploy Northwind with scripts/blue.sh.");
+  });
 });
