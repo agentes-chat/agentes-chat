@@ -14,7 +14,7 @@ import {
   schema,
   sql,
 } from "@agenteschat/db";
-import { formatMoneyUsd, formatSpan } from "@agenteschat/i18n/format";
+import { formatMoneyUsd } from "@agenteschat/i18n/format";
 import { appLocale, localeInfo } from "@agenteschat/i18n/locale";
 import { deepMerge } from "@agenteschat/i18n/tree";
 import { nanoUsdToUsd } from "@agenteschat/providers";
@@ -380,22 +380,6 @@ export type EmailTemplate =
       url: string;
       /** A message kept on a billing hold: the conversation it waits in, which the AI step opens instead. */
       keptUrl?: string;
-      personal?: true;
-    }
-  /**
-   * A computer the workspace's agents work on has been away for a while, or is back (`back`) after it was (ADR 0241):
-   * its name, how long it was away, and the runs and webhook calls that waited. `url`: the computer's page.
-   */
-  | {
-      kind: "computer_down";
-      locale: EmailLocale;
-      back: boolean;
-      orgName: string;
-      name: string;
-      awayMinutes: number;
-      runs: number;
-      calls: number;
-      url: string;
       personal?: true;
     }
   /**
@@ -840,29 +824,6 @@ function docOf(t: EmailTemplate, sender: string | null): EmailDoc {
         ],
         c.why(org),
         { crew: crewOr(t.crew), computer: c.computer },
-      );
-    }
-    case "computer_down": {
-      const c = inMode(w.computerDown, t.personal);
-      const org = inertText(t.orgName);
-      const name = inertText(t.name);
-      const away = formatSpan(lang, t.awayMinutes * 60_000);
-      const said = t.back ? c.back : c;
-      const facts: [string, string][] = [
-        ...(t.runs > 0 ? [[said.runs, t.runs.toLocaleString(lang)] as [string, string]] : []),
-        ...(t.calls > 0 ? [[said.calls, t.calls.toLocaleString(lang)] as [string, string]] : []),
-      ];
-      return doc(
-        said.subject,
-        said.preheader,
-        said.headline,
-        [
-          { p: said.body(name, org, away) },
-          ...(facts.length > 0 ? [{ facts }] : []),
-          ...(t.back ? [] : [{ note: c.note }]),
-          { button: c.button, url: t.url },
-        ],
-        c.why(org),
       );
     }
     case "join_request": {
@@ -1456,6 +1417,8 @@ export async function sendQueuedEmail(sender: EmailSender, payload: Record<strin
   const template = payload.template as EmailTemplate;
   // A reply whose words are gone was sent, or given up: its job run again (a lease lost after the send) sends nothing.
   if (template.kind === "support_reply" && !template.reply && template.text === undefined) return;
+  // A template since removed (the computer notices, ADR 0241): a job queued before that sends nothing.
+  if ((template.kind as string) === "computer_down") return;
   const { subject, html, text, inline } = renderEmail(template, art);
   await sender
     .send({

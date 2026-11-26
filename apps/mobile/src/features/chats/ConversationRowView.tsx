@@ -13,6 +13,7 @@ import { chatHref } from "../links/logic";
 import { AgentFace, Face } from "../shared/Face";
 import { useColors, useOrgId } from "../shared/hooks";
 import { Tile } from "../shared/parts";
+import { StatusBadge } from "../shared/StatusBadge";
 import type { ConversationRow } from "./logic";
 import type { AgentRowState } from "./now";
 import type { RowFacts } from "./rowFacts";
@@ -108,7 +109,17 @@ export const ConversationItem = memo(function ConversationItem({
   const orbit = <PixelOrbit color={facts.orbit} size={ORBIT} />;
   const l = facts.line;
   const line =
-    l.kind === "state" ? (
+    l.kind === "state" && l.badge ? (
+      // An agent's work: its status as a badge, then its time (the web's lists' line).
+      <View style={styles.work}>
+        <StatusBadge text={l.word} tone={l.badge} color={facts.orbit} />
+        {l.rest ? (
+          <Text variant="small" tone="faint" numberOfLines={1} style={[LIST_PREVIEW, styles.shrink]}>
+            {l.rest}
+          </Text>
+        ) : null}
+      </View>
+    ) : l.kind === "state" ? (
       <View style={styles.work}>
         {l.mark === "orbit" ? (
           orbit

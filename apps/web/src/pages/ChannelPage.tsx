@@ -4389,10 +4389,13 @@ function WorkingTail({ onSeeAsk, ...here }: WorkHere & { onSeeAsk: (id: string) 
   const [codeOpenFor, setCodeOpenFor] = useState<string | null>(null);
   const codeOpen = Boolean(code) && codeOpenFor === solo?.runId;
   if (entries.length === 0) return null;
-  // The agent at work leads in the face's column, with its rings; the line's small faces are the others.
-  const orbiting = lead && !lead.consult ? lead : undefined;
-  const faces = barFaces(entries).filter((e) => e !== orbiting);
-  const agent = orbiting ? dir.agentById.get(orbiting.id) : undefined;
+  // The face's column holds whoever does the work, with its orbit while it works: the agent at work, or the one a
+  // question or hand-off went to (its own wait holds it still). The line names both and never repeats a face: its
+  // small faces are the others at it.
+  const worker = consult ? { id: consult.to, name: consult.toName } : lead;
+  const atWork = consult ? !consult.yours && !consult.wait : Boolean(lead);
+  const faces = barFaces(entries).filter((e) => e !== lead);
+  const agent = worker ? dir.agentById.get(worker.id) : undefined;
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: the globe button inside is the keyboard way; the row is a bigger target
     // biome-ignore lint/a11y/useKeyWithClickEvents: same
@@ -4410,12 +4413,12 @@ function WorkingTail({ onSeeAsk, ...here }: WorkHere & { onSeeAsk: (id: string) 
       }
     >
       <div className="working-tail__face" aria-hidden="true">
-        {orbiting ? (
+        {worker && atWork ? (
           <OrbitGlyph appearance={lookOf(agent)}>
-            <AgentAvatar agentId={orbiting.id} name={orbiting.name} state="writing" />
+            <AgentAvatar agentId={worker.id} name={worker.name} state={consult ? "thinking" : "writing"} />
           </OrbitGlyph>
-        ) : lead ? (
-          <AgentAvatar agentId={lead.id} name={lead.name} state="idle" />
+        ) : worker ? (
+          <AgentAvatar agentId={worker.id} name={worker.name} state={consult?.yours ? "waiting" : "idle"} />
         ) : someoneTypes(entries) && !bothAtIt(entries) ? (
           <TypingMark />
         ) : null}
@@ -4484,9 +4487,7 @@ function WorkingTail({ onSeeAsk, ...here }: WorkHere & { onSeeAsk: (id: string) 
             })}
           >
             {trail.earlier > 0 && (
-              <li className="working-tail__more" aria-label={t("chat.trail.earlier", { count: trail.earlier })}>
-                +{trail.earlier}
-              </li>
+              <li className="working-tail__more">{t("chat.trail.earlier", { count: trail.earlier })}</li>
             )}
             {trail.lines.map((l) => (
               <li key={l.key}>{l.text}</li>

@@ -416,49 +416,6 @@ export const words: EmailWords = {
       why: () => "Recibiste este correo porque formas parte de este espacio de trabajo en agentes.chat.",
     },
   },
-  computerDown: {
-    subject: "Una computadora no responde",
-    preheader: "El trabajo de tus agentes en ella está en espera.",
-    headline: "Una computadora no responde",
-    body: (name, org, away) => [
-      { b: name },
-      " en ",
-      { b: org },
-      ` no responde desde hace ${away}. El trabajo que la necesita espera y sigue cuando vuelva.`,
-    ],
-    runs: "Pedidos a agentes en espera",
-    calls: "Llamadas de webhook en espera",
-    note: "Para seguir ahora, mueve sus agentes a otra computadora desde su página.",
-    button: "Abrir la computadora",
-    why: (org) => `Recibiste este correo porque gestionas las computadoras de ${org} en agentes.chat.`,
-    back: {
-      subject: "Una computadora volvió",
-      preheader: "El trabajo que la esperaba sigue ahora.",
-      headline: "La computadora volvió",
-      runs: "Pedidos a agentes que esperaron",
-      calls: "Llamadas de webhook que esperaron",
-      body: (name, org, away) => [
-        { b: name },
-        " en ",
-        { b: org },
-        ` volvió después de ${away}. El trabajo que la esperaba sigue ahora.`,
-      ],
-    },
-    personal: {
-      body: (name, _org, away) => [
-        { b: name },
-        ` no responde desde hace ${away}. El trabajo que la necesita espera y sigue cuando vuelva.`,
-      ],
-      why: () =>
-        "Recibiste este correo porque gestionas las computadoras de tu espacio de trabajo personal en agentes.chat.",
-      back: {
-        body: (name, _org, away) => [
-          { b: name },
-          ` volvió después de ${away}. El trabajo que la esperaba sigue ahora.`,
-        ],
-      },
-    },
-  },
   appConnected: {
     subject: "Se conectó una app a tu cuenta de agentes.chat",
     preheader: "Puede leer y enviar tareas a los agentes en tu nombre en un espacio de trabajo.",

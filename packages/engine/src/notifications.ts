@@ -155,12 +155,12 @@ export const NOTIFICATION_KINDS = [
   "computer_no_chrome",
   /**
    * A computer the workspace's agents work on has been away `DOWN_NOTICE_MS` (ADR 0241): who configures the workspace
-   * (and who connected one they brought) hears it once per outage, by email too from `DOWN_EMAIL_MS`.
-   * `source.machineId` and its name in `source.label`, `latest.since` when the outage began, `latest.runs` the runs
-   * waiting for it and `latest.calls` the webhook calls its agents' routines took since. Never for standby or a move.
+   * (and who connected one they brought) hears it once per outage. `source.machineId` and its name in `source.label`,
+   * `latest.since` when the outage began, `latest.runs` the runs waiting for it and `latest.calls` the webhook calls
+   * its agents' routines took since. Never for standby or a move. Inbox only (no category, no push, no email).
    */
   "computer_down",
-  /** The same computer is back (ADR 0241): only to who heard it was down, with the same fields, then. */
+  /** The same computer is back (ADR 0241): only to who heard it was down, with the same fields, then. Inbox only. */
   "computer_back",
   /**
    * Someone other than the agent's owner took control of its desktop (ADR 0059 §8): its owner, once a day per agent,
@@ -436,8 +436,6 @@ export interface NotificationLatest {
   calls?: number;
   /** `computer_down`, `computer_back`: when the outage began (ISO). */
   since?: string;
-  /** `computer_down`: it went by email too, so the "back" does. */
-  emailed?: boolean;
   /** `computer_disk_full`: the share of the disk in use (0 to 1) and the GB left. */
   diskUse?: number;
   diskFreeGb?: number;

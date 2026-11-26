@@ -2080,7 +2080,7 @@
       },
       "computers": {
         "title": "Komputer",
-        "help": "Komputer bergabung, siap, atau berhenti merespons"
+        "help": "Komputer bergabung atau siap"
       },
       "reactions": {
         "title": "Reaksi",
@@ -7752,11 +7752,12 @@
     "noOrgBack": "Kembali ke ruang kerjamu",
     "crashTitle": "Ada yang salah",
     "crashText": "Muat ulang halaman untuk melanjutkan.",
-    "crashCode": "Kalau kamu minta bantuan, sebutkan kode {{id}}.",
+    "supportCode": "Kode untuk dukungan",
     "unreachableTitle": "agentes.chat tidak bisa dijangkau",
     "unreachableText": "Mungkin sedang dimulai ulang. Halaman ini terbuka sendiri begitu kembali normal.",
     "offlineTitle": "Kamu sedang offline",
     "offlineText": "Halaman ini terbuka sendiri saat kamu kembali online.",
+    "waitingConnection": "Menunggu koneksi kembali",
     "unknownHostTitle": "Alamat ini belum disiapkan",
     "unknownHostText": "Kalau baru saja dihubungkan, coba lagi dalam beberapa menit.",
     "unknownHostTab": "Alamat belum disiapkan · agentes.chat"
@@ -18250,9 +18251,9 @@
   },
   "work": {
     "handed": {
-      "lead": "Diserahkan ke <0/>{{name}}",
-      "working": "sedang dikerjakan",
-      "done": "selesai dalam {{duration}}",
+      "lead": "Diserahkan ke <0>{{name}}</0>",
+      "working": "sedang bekerja",
+      "ready": "selesai",
       "waitingYou": "menunggu jawabanmu",
       "waiting": "menunggu jawaban",
       "waitingApprovalYou": "menunggu persetujuanmu",
@@ -18390,6 +18391,7 @@
       "doing": "{{name}} {{doing}}",
       "yourApproval": "{{name}} menunggu persetujuanmu",
       "yourAnswer": "{{name}} menunggu jawabanmu",
+      "helping": "{{to}} membantu {{from}}",
       "done": "{{to}} sudah selesai. {{from}} sedang menulis",
       "notDone": "{{to}} tidak selesai. {{from}} sedang menulis",
       "handedOff": "{{to}} mengerjakan yang diserahkan {{from}}"

@@ -2153,7 +2153,7 @@
       },
       "computers": {
         "title": "Computer",
-        "help": "Ein Computer ist dazugekommen, ist bereit oder antwortet nicht mehr"
+        "help": "Ein Computer ist dazugekommen oder ist bereit"
       },
       "reactions": {
         "title": "Reaktionen",
@@ -8035,11 +8035,12 @@
     "noOrgBack": "Zurück zu deinen Workspaces",
     "crashTitle": "Etwas ist schiefgelaufen",
     "crashText": "Lad die Seite neu, um weiterzumachen.",
-    "crashCode": "Wenn du um Hilfe bittest, gib den Code {{id}} an.",
+    "supportCode": "Code für den Support",
     "unreachableTitle": "agentes.chat ist nicht erreichbar",
     "unreachableText": "Es startet vielleicht gerade neu. Diese Seite öffnet sich von selbst, sobald es wieder da ist.",
     "offlineTitle": "Du bist offline",
     "offlineText": "Diese Seite öffnet sich von selbst, sobald du wieder online bist.",
+    "waitingConnection": "Warten, bis die Verbindung zurück ist",
     "unknownHostTitle": "Diese Adresse ist noch nicht eingerichtet",
     "unknownHostText": "Wenn sie gerade erst verbunden wurde, versuch es in ein paar Minuten noch einmal.",
     "unknownHostTab": "Adresse nicht eingerichtet · agentes.chat"
@@ -18838,9 +18839,9 @@
   },
   "work": {
     "handed": {
-      "lead": "Übergeben an <0/>{{name}}",
-      "working": "arbeitet daran",
-      "done": "fertig in {{duration}}",
+      "lead": "Übergeben an <0>{{name}}</0>",
+      "working": "arbeitet",
+      "ready": "fertig",
       "waitingYou": "wartet auf deine Antwort",
       "waiting": "wartet auf eine Antwort",
       "waitingApprovalYou": "wartet auf deine Freigabe",
@@ -18982,6 +18983,7 @@
       "doing": "{{name}} {{doing}}",
       "yourApproval": "{{name}} wartet auf deine Freigabe",
       "yourAnswer": "{{name}} wartet auf deine Antwort",
+      "helping": "{{to}} hilft {{from}}",
       "done": "{{to}} ist fertig. {{from}} schreibt",
       "notDone": "{{to}} ist nicht fertig geworden. {{from}} schreibt",
       "handedOff": "{{to}} arbeitet an dem, was {{from}} übergeben hat"

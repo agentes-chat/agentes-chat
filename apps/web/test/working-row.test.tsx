@@ -58,7 +58,8 @@ describe("while it works the conversation's last row says it, as a reply on its 
     // The last thing in the conversation.
     expect(tail().parentElement?.lastElementChild).toBe(tail());
     expect(tail().querySelector(".working-tail__face .ac-orbit .ac-avatar--agent")).not.toBeNull();
-    expect(tail().querySelectorAll(".ac-orbit__back circle.ac-orbit__path")).toHaveLength(3);
+    // Two rings, whole behind the face.
+    expect(tail().querySelectorAll(".ac-orbit__back circle.ac-orbit__path")).toHaveLength(2);
     expect(line().querySelector(".ac-typing__text")?.textContent).toBe("Ada mexendo nos arquivos do PC · refresh.ts…");
     expect(line().querySelector(".ac-typing__step")?.getAttribute("title")).toBe(
       "mexendo nos arquivos do PC · refresh.ts…",

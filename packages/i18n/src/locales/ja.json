@@ -2080,7 +2080,7 @@
       },
       "computers": {
         "title": "コンピューター",
-        "help": "新しいコンピューターが加わったとき、準備ができたとき、応答しなくなったとき"
+        "help": "新しいコンピューターが加わったとき、準備ができたとき"
       },
       "reactions": {
         "title": "リアクション",
@@ -7719,11 +7719,12 @@
     "noOrgBack": "自分のワークスペースに戻る",
     "crashTitle": "問題が発生しました",
     "crashText": "続けるにはページを再読み込みしてください。",
-    "crashCode": "助けを求めるときは、コード{{id}}を伝えてください。",
+    "supportCode": "サポート用コード",
     "unreachableTitle": "agentes.chatに接続できません",
     "unreachableText": "再起動中かもしれません。復旧しだい、このページは自動で開きます。",
     "offlineTitle": "オフラインです",
     "offlineText": "オンラインに戻ると、このページは自動で開きます。",
+    "waitingConnection": "接続が戻るのを待っています",
     "unknownHostTitle": "このアドレスはまだ設定されていません",
     "unknownHostText": "接続したばかりなら、数分後にもう一度お試しください。",
     "unknownHostTab": "未設定のアドレス · agentes.chat"
@@ -18192,9 +18193,9 @@
   },
   "work": {
     "handed": {
-      "lead": "<0/>{{name}}に引き継ぎ",
+      "lead": "<0>{{name}}</0>に引き継ぎ",
       "working": "作業中",
-      "done": "{{duration}}で完了",
+      "ready": "完了",
       "waitingYou": "あなたの回答待ち",
       "waiting": "回答待ち",
       "waitingApprovalYou": "あなたの承認待ち",
@@ -18332,6 +18333,7 @@
       "doing": "{{name}} {{doing}}",
       "yourApproval": "{{name}}があなたの承認を待っています",
       "yourAnswer": "{{name}}があなたの回答を待っています",
+      "helping": "{{to}}が{{from}}を手伝っています",
       "done": "{{to}}が完了しました。{{from}}が書いています",
       "notDone": "{{to}}は完了できませんでした。{{from}}が書いています",
       "handedOff": "{{to}}は{{from}}から任された作業をしています"
