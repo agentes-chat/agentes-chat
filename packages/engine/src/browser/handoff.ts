@@ -597,8 +597,9 @@ export async function requireBrowserControl(
   const open =
     handoff === undefined ? await openHandoffOf(db, orgId, agentId, screen, shared ? SHARED_SEAT : userId) : handoff;
   const access = await requireBrowserAccess(db, userId, orgId, agentId, open, screen, shared);
-  // A seat's browser has no view of its own: its window is on the seat's desktop, driven there.
-  if (access.seat && screen === "browser") {
+  // Where its browser is a desktop window, drive it there. A browser-only computer (macOS) uses
+  // the seat-isolated browser stream instead, with the same ownership and role checks below.
+  if (access.seat && screen === "browser" && (await browserOnDesktop(db, orgId, agentId))) {
     throw new ForbiddenError("Its browser shows on its desktop: take control of the desktop instead");
   }
   if (access.admin || access.owns) return access;
@@ -1886,7 +1887,8 @@ export async function openPageInControl(
   agentId: string,
   to: string | { go: PageMove },
 ) {
-  const open = await openHandoffOf(deps.db, orgId, agentId);
+  const personal = (await isRightHandId(deps.db, orgId, agentId)) ? actorId : undefined;
+  const open = await openHandoffOf(deps.db, orgId, agentId, "browser", personal);
   await requireBrowserControl(deps.db, actorId, orgId, agentId, open);
   if (open?.status !== "active" || open.controllerUserId !== actorId) {
     throw new ConflictError("Take control of the browser first", "browser.not_in_control");
@@ -1901,13 +1903,20 @@ export async function openPageInControl(
   const agent = await getAgentCached(deps.db, orgId, agentId);
   if (!agent) throw new NotFoundError("Agent not found");
   const desktop = await browserOnDesktop(deps.db, orgId, agentId, open.machineId);
+  const target = personal ? await viewerScope(deps.db, orgId, agentId, actorId, undefined, false) : null;
+  if (personal && (!target || "reason" in target || !target.scope))
+    throw new ForbiddenError("Your browser session is unavailable");
+  const scope =
+    target && !("reason" in target) && target.scope
+      ? target.scope
+      : { id: agentId, handle: agent.handle, ...(agent.name ? { name: agent.name } : {}) };
   let reply: MachineReplies["browser.act"];
   try {
     reply = await hub.call<"browser.act">(
       open.machineId,
       {
         op: "browser.act",
-        agent: { id: agentId, handle: agent.handle, ...(agent.name ? { name: agent.name } : {}) },
+        agent: scope,
         command,
         args,
         timeoutSeconds: OPEN_PAGE_SECONDS,
@@ -1926,6 +1935,13 @@ export async function openPageInControl(
     throw error;
   }
   // Even a page that failed to load leaves the browser open on Chrome's error page: the views show it.
-  await deps.pubsub?.publish(BROWSER_HANDOFF_TOPIC, { type: "browser.opened", orgId, agentId }).catch(() => {});
+  await deps.pubsub
+    ?.publish(BROWSER_HANDOFF_TOPIC, {
+      type: "browser.opened",
+      orgId,
+      agentId,
+      ...(personal ? { seatUserId: personal } : {}),
+    })
+    .catch(() => {});
   if (!reply.success) throw new ValidationError(reply.error || "The page didn't open", "browser.open_failed");
 }
