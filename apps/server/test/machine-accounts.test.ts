@@ -15,7 +15,7 @@ let t: TestServer;
 afterEach(() => t.close());
 
 const RUNNER = {
-  hostname: "office-mac",
+  hostname: "mac",
   os: "darwin",
   arch: "arm64",
   version: "0.9.0",

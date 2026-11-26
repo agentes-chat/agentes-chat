@@ -527,11 +527,11 @@ export async function confirmPendingCode(
         restored = back.map((a) => a.id);
       }
     } else {
-      const given = cleanMachineName(input.name);
+      // A name typed on the confirm page stays; with none, the one the computer asked under, or its default.
       const name = await distinctMachineName(
         tx,
         orgId,
-        given && !hostnameLike(given, claimed.hostname) ? given : await suggestedName(tx, claimed, actorId),
+        cleanMachineName(input.name) || (await suggestedName(tx, claimed, actorId)),
       );
       const rule = input.audience
         ? {

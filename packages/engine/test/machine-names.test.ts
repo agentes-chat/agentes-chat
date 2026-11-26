@@ -65,11 +65,14 @@ describe("a computer's default name", () => {
   test("a name made of the host name counts as nobody's choice", () => {
     expect(hostnameLike("Tomass-MacBook-Pro.local", "Tomass-MacBook-Pro.local")).toBe(true);
     expect(hostnameLike("Tomass-MacBook-Pro.local", "Tomass-MacBook-Pro-2.local")).toBe(true);
-    expect(hostnameLike("tomass-macbook-pro", "Tomass-MacBook-Pro.local")).toBe(true);
+    expect(hostnameLike("Tomass-MacBook-Pro", "Tomass-MacBook-Pro.local")).toBe(true);
     expect(hostnameLike("MacBook-Air.local", "something-else")).toBe(true);
     expect(hostnameLike("", "box")).toBe(true);
     expect(hostnameLike("Trabalho", "box")).toBe(false);
     expect(hostnameLike("Build box", "box")).toBe(false);
+    // Typed: another case, or a space no host name has.
+    expect(hostnameLike("Studio", "studio")).toBe(false);
+    expect(hostnameLike("Bia's PC", "Bia's PC")).toBe(false);
   });
 });
 
@@ -104,10 +107,11 @@ test("connecting names the computer for who connects it, a chosen name stays, an
   expect((await getDeviceCode({ db: f.db }, first.userCode, rui.id)).name).toBe("MacBook Pro do Rui");
   expect((await confirmDeviceCode({ db: f.db }, rui.id, f.org.id, first.userCode, {})).name).toBe("MacBook Pro do Rui");
 
-  // The desktop app sends the host name back as the name: still the default, now told apart.
+  // A second one, as the desktop app connects it (no name): told apart.
   const second = await pending(mac);
-  const again = await confirmDeviceCode({ db: f.db }, rui.id, f.org.id, second.userCode, { name: mac.hostname });
-  expect(again.name).toBe("MacBook Pro do Rui 2");
+  expect((await confirmDeviceCode({ db: f.db }, rui.id, f.org.id, second.userCode, {})).name).toBe(
+    "MacBook Pro do Rui 2",
+  );
 
   const chosen = await pending({ ...mac, name: "Trabalho" });
   expect((await getDeviceCode({ db: f.db }, chosen.userCode, rui.id)).name).toBe("Trabalho");

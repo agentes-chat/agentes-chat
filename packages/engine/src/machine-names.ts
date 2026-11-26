@@ -14,19 +14,19 @@ const { machines, notifications, users } = schema;
  * "DESKTOP-AB12CD3", "instance-20260101-0000"). The workspace's own computer has its own (`managedMachineName`).
  */
 
-/** What a host name says once its network suffix and the number a clash adds are gone ("tomass-macbook-pro"). */
-const hostCore = (s: string) =>
-  s
-    .trim()
-    .toLowerCase()
-    .replace(/\.(local|lan|home|localdomain|internal)\.?$/, "")
-    .replace(/[-_ ]\d+$/, "");
+/** A host name without its network suffix ("Rui-MacBook-Pro.local" → "Rui-MacBook-Pro"). */
+const hostCore = (s: string) => s.trim().replace(/\.(local|lan|home|localdomain|internal)\.?$/i, "");
 
-/** `name` is what the computer's host name made of it (nobody chose it): the host name itself, or one with `.local`. */
-export const hostnameLike = (name: string, hostname: string) =>
-  !name.trim() ||
-  /\.local\.?$/i.test(name.trim()) ||
-  (hostname.trim() !== "" && hostCore(name) === hostCore(cleanMachineName(hostname)));
+/**
+ * `name` is what the computer's host name made of it (nobody chose it): empty, the host name itself as a runner sends
+ * it when nobody gave `--name`, or one with `.local`. A name with a space, or another case, someone typed.
+ */
+export const hostnameLike = (name: string, hostname: string) => {
+  const n = name.trim();
+  return (
+    !n || /\.local\.?$/i.test(n) || (!/\s/.test(n) && hostname.trim() !== "" && hostCore(n) === hostCore(hostname))
+  );
+};
 
 /** Apple's names, as macOS writes them into a Mac's default host name ("Tomass-MacBook-Pro", "MacBook-Air-de-Ana"). */
 const MAC_MODELS: [RegExp, string][] = [
