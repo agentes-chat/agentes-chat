@@ -3413,6 +3413,12 @@ export const ptBR = {
       update_workspace: "Mudar o workspace <b>{{name}}</b>",
       set_action_check_on: "Ligar a conferência do que o time já fez",
       set_action_check_off: "Desligar a conferência do que o time já fez",
+      /** `level`: the choice's title, as on Settings › Approvals ("Never ask"). */
+      set_approvals_level: "Mudar as aprovações do workspace para <b>{{level}}</b>",
+      set_approvals_level_every:
+        "Mudar as aprovações de todos os agentes para <b>{{level}}</b>, também as escolhas próprias",
+      set_agent_approvals_level: "Mudar as aprovações de <b>{{agent}}</b> para <b>{{level}}</b>",
+      set_agent_approvals_level_workspace: "Fazer <b>{{agent}}</b> seguir as aprovações do workspace",
       invite_people: "Convidar <b>{{emails}}</b> para o workspace.",
       /** Under it: the roles every address gets ("Vendas e Suporte"). `count`: how many roles. */
       invite_roles_one: "Com o cargo {{roles}}.",
@@ -4424,6 +4430,10 @@ export const ptBR = {
       changed_update_workspace: "Mudei o workspace <b>{{name}}</b>",
       changed_set_action_check_on: "Liguei a conferência do que o time já fez",
       changed_set_action_check_off: "Desliguei a conferência do que o time já fez",
+      changed_set_approvals_level: "Mudei as aprovações do workspace para <b>{{level}}</b>",
+      changed_set_approvals_level_every: "Mudei as aprovações de todos os agentes para <b>{{level}}</b>",
+      changed_set_agent_approvals_level: "Mudei as aprovações de <b>{{agent}}</b> para <b>{{level}}</b>",
+      changed_set_agent_approvals_level_workspace: "<b>{{agent}}</b> voltou a seguir as aprovações do workspace",
       changed_invite_people: "Convidei <b>{{invited}}</b> para o workspace",
       changed_remove_ai_key: "Apaguei a chave de API <b>{{name}}</b>",
     },

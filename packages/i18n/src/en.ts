@@ -3550,6 +3550,11 @@ export const en = {
       update_workspace: "Change the workspace <b>{{name}}</b>",
       set_action_check_on: "Turn on the check of what the team already did",
       set_action_check_off: "Turn off the check of what the team already did",
+      /** `level`: the choice's title, as on Settings › Approvals ("Never ask"). */
+      set_approvals_level: "Set the workspace's approvals to <b>{{level}}</b>",
+      set_approvals_level_every: "Set every agent's approvals to <b>{{level}}</b>, their own choices too",
+      set_agent_approvals_level: "Set <b>{{agent}}</b>'s approvals to <b>{{level}}</b>",
+      set_agent_approvals_level_workspace: "Make <b>{{agent}}</b> follow the workspace's approvals",
       /** `emails`: every address on the card, in a list ("ana@example.com, bia@example.com"). */
       invite_people: "Invite <b>{{emails}}</b> to the workspace.",
       /** Under it: the roles every address gets ("Sales and Support"). `count`: how many roles. */
@@ -4562,6 +4567,10 @@ export const en = {
       changed_update_workspace: "Changed the workspace <b>{{name}}</b>",
       changed_set_action_check_on: "Turned on the check of what the team already did",
       changed_set_action_check_off: "Turned off the check of what the team already did",
+      changed_set_approvals_level: "Set the workspace's approvals to <b>{{level}}</b>",
+      changed_set_approvals_level_every: "Set every agent's approvals to <b>{{level}}</b>",
+      changed_set_agent_approvals_level: "Set <b>{{agent}}</b>'s approvals to <b>{{level}}</b>",
+      changed_set_agent_approvals_level_workspace: "<b>{{agent}}</b> follows the workspace's approvals again",
       /** `invited`: the addresses that got an invitation, in a list. */
       changed_invite_people: "Invited <b>{{invited}}</b> to the workspace",
       changed_remove_ai_key: "Deleted the API key <b>{{name}}</b>",
