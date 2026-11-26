@@ -23,7 +23,7 @@ import {
   type RouterStrategy,
   runAuthorityById,
 } from "../src";
-import { addMember, type Fixture, setup } from "./fixtures";
+import { addMember, everyoneWithout, type Fixture, setup } from "./fixtures";
 import { pairMachine } from "./machine-fixtures";
 
 /**
@@ -407,6 +407,26 @@ test("Responder agora for someone the agent no longer answers (a personal plan a
     expect(refused).toMatchObject({ name: "ForbiddenError", code: "audience.only" });
   }
   expect(await runs()).toMatchObject([{ id: failed.id, status: "failed", error: "no_ai" }]);
+});
+
+test("Responder agora for someone whose roles lost Talk to agents: she hears her roles, the owner doesn't", async () => {
+  f = await setup();
+  await revokeKeys();
+  const bia = await addMember(f.db, f.org.id, "member", "bia");
+  await addChannelMember(f.db, f.owner.id, f.org.id, f.general.id, { userId: bia.id });
+  await postPersonMessage({ db: f.db, pubsub: f.pubsub }, bia.id, f.org.id, f.general.id, {
+    body: "@dev resume o canal",
+  });
+  await drainOutbox(f.db, f.handlers);
+  const [card] = await cards();
+  if (!card) throw new Error("no card");
+  await restoreKeys();
+  await everyoneWithout(f.db, f.org.id, "talk_to_agents");
+  const hers = await answerNow(deps(), bia.id, f.org.id, card.id).catch((e) => e);
+  expect(hers).toMatchObject({ name: "ForbiddenError", code: "audience.no_talk" });
+  const his = await answerNow(deps(), f.owner.id, f.org.id, card.id).catch((e) => e);
+  expect(his).toMatchObject({ name: "ForbiddenError" });
+  expect(his.code).not.toBe("audience.no_talk");
 });
 
 test("Responder agora never starts over a run that had done something: 409, and the run stays", async () => {
