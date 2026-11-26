@@ -6892,6 +6892,26 @@ export function useCheckMachineClis(orgId: string) {
 }
 
 /**
+ * "Try again" on a coding CLI the computer fetches by itself (ADR 0228 §6): its runner fetches the pinned build now;
+ * where it stands comes back and then live (`machine.updated` with `cliFetch`).
+ */
+export function useRetryCliFetch(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ machineId, cli }: { machineId: string; cli: string }) =>
+      api.machines.fetchCli(orgId, machineId, cli),
+    onSuccess: (r, { machineId, cli }) => {
+      if (!r.fetch) return;
+      const fetch = r.fetch;
+      qc.setQueryData<Machine[]>(keys.machines(orgId), (old) =>
+        old?.map((m) => (m.id === machineId ? { ...m, cliFetch: { ...m.cliFetch, [cli]: fetch } } : m)),
+      );
+    },
+  });
+}
+
+/**
  * Installing a coding CLI on a computer, for the person who paired it (`on`): where it stands, asked every 1.5 s while
  * it runs; once it ends, what thinks for the agents is asked again (the computer has already looked again).
  */

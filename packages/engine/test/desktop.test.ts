@@ -449,7 +449,9 @@ describe("the agents frame (protocol 9)", () => {
     const runner = fakeRunner(hub);
     await runner.hello(paired.token);
     expect(runner.sent[0]).toMatchObject({ type: "welcome" });
-    expect(runner.sent[1]).toEqual({ type: "agents", agents: [] });
+    // The coding CLIs' pins come right after it (ADR 0228 §6), then the agents.
+    expect(runner.sent[1]).toMatchObject({ type: "clis.pins" });
+    expect(runner.sent[2]).toEqual({ type: "agents", agents: [] });
 
     await setAgentComputerTarget(deps(), f.owner.id, f.org.id, f.agent.id, paired.machineId);
     await Bun.sleep(20);

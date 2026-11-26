@@ -1,5 +1,6 @@
 import type { AgentBrain, BrainScope, MachineAccount } from "@agenteschat/client";
 import { useAgentBrain, useAiAccounts, useApi, useMachines, useModels } from "@agenteschat/client";
+import { CLI_OF_BRAIN } from "@agenteschat/client/lib/activity";
 import {
   accountChoices,
   accountInLine,
@@ -60,6 +61,7 @@ import { PlanMeter, PlanModels } from "../usage/parts";
 import { advancedOf, openAgentAdvanced } from "./AgentAdvancedScreen";
 import { openAgentSetup } from "./AgentSetupScreen";
 import { AiChoiceFields, AskLine } from "./AiChoice";
+import { CliFetchNote } from "./CliFetchNote";
 import { EffortRamp, useEffortChoice } from "./EffortRamp";
 import {
   accountInput,
@@ -243,6 +245,9 @@ export function AgentAiScreen({ agentId }: { agentId: string }) {
           </Text>
         </View>
         {hold ? <PlanHoldNote org={org} inset /> : null}
+        {view?.computer?.machineId && view.brain !== "model" ? (
+          <CliFetchNote machineId={view.computer.machineId} cli={CLI_OF_BRAIN[view.brain]} />
+        ) : null}
         {!allowed ? (
           <Note icon="lock" inset>
             {t("agentPage.lock.admins")}

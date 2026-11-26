@@ -128,8 +128,12 @@ describe("the conversation's rows", () => {
     const messages = between(chat, "const messageRows = useMemo<Row[]>(() => {", "const liveRows");
     expect(messages).not.toContain("browsing");
     expect(messages).not.toContain("waits");
-    // Nor the DM and channel lists, read again with each message: only the thread head's words and count.
-    expect(messages).toContain("}, [isThread, threadId, list, startedText, replyCount, superseded, timeLines, t]);");
+    // Nor the DM and channel lists, read again with each message: only the thread head's words and count, and the
+    // consulted agents' words folded into their askers' quotes, kept until a fold changes (`relaysKey`).
+    expect(messages).toContain(
+      "}, [isThread, threadId, list, startedText, replyCount, superseded, timeLines, relays, t]);",
+    );
+    expect(chat).toContain("const relays = useMemo(() => relaysNow, [relaysKey]);");
     expect(chat).toContain("[browsing, held, making, waits],");
     expect(chat).toContain('() => messageRows.flatMap((r) => (r.kind === "message" ? [r.message] : [])),');
     expect(chat).toContain("shownRef.current = keepSameRows(shownRef.current, next);");

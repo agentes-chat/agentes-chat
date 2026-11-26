@@ -55,9 +55,9 @@ webkit2gtk = { version = "2", features = ["v2_40"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 # The main window's page loaded again when its renderer ends (main_window.rs `reload_when_renderer_ends`): the copies
-# Tauri already builds with.
+# Tauri already builds with. The local clock (local_server.rs `local_stamp`): the nightly backup's hour.
 webview2-com = "0.39"
-windows = "0.62"
+windows = { version = "0.62", features = ["Win32_Foundation", "Win32_System_SystemInformation"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 # The notch window (src/notch.rs): its level, Spaces and frame, and finding the notch.

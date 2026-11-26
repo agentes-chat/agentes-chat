@@ -145,6 +145,15 @@ describe("the load sampler", () => {
       load: { ...base, diskFreeGb: 10, diskUse: 0.9, sharedGb: 33 },
     });
     expect(pong({ ...base, diskFreeGb: -1, diskUse: 2, sharedGb: "x" })).toEqual({ type: "pong", at: 1, load: base });
+    // What the agents' temporary folders hold in memory (ADR 0243), as the disk's figures are.
+    w.add({ load: 0.4, memory: 0.3 }, t0 + 2 * LOAD_SAMPLE_MS, { agentTmpRamGb: 2.3 });
+    expect(w.summary()).toMatchObject({ agentTmpRamGb: 2.3 });
+    expect(pong({ ...base, agentTmpRamGb: 2.3 })).toEqual({
+      type: "pong",
+      at: 1,
+      load: { ...base, agentTmpRamGb: 2.3 },
+    });
+    expect(pong({ ...base, agentTmpRamGb: -1 })).toEqual({ type: "pong", at: 1, load: base });
   });
 
   test("in a container with limits: the machine's size with the limit beside it, the load per machine CPU", async () => {

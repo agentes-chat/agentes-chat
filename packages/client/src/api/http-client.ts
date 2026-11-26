@@ -79,6 +79,7 @@ import type {
   ChannelMember,
   ChannelOverride,
   Choices,
+  CliFetch,
   CliInstall,
   CodeSent,
   CommandApproval,
@@ -1415,6 +1416,10 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       checkClis: async (orgId, machineId) => {
         await request<unknown>(`${org(orgId)}/machines/${enc(machineId)}/clis/check`, { json: {} });
       },
+      fetchCli: (orgId, machineId, cli) =>
+        request<{ fetch: CliFetch | null }>(`${org(orgId)}/machines/${enc(machineId)}/clis/${enc(cli)}/fetch`, {
+          json: {},
+        }),
       cliInstall: (orgId, machineId, tool, action) => {
         const path = `${org(orgId)}/machines/${enc(machineId)}/cli-install`;
         if (action === "start") return request<{ install: CliInstall | null }>(path, { json: { tool } });

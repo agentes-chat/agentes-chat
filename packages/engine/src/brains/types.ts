@@ -9,6 +9,7 @@ import type {
   WireWorkflowAgent,
 } from "@agenteschat/adapters";
 import type { ToolImage } from "@agenteschat/providers";
+import { CLI_PINS, type PinCli } from "@agenteschat/providers/cli-pins";
 import { planOf } from "@agenteschat/providers/plans";
 import type { CodeSetup } from "../git/machine";
 
@@ -27,14 +28,28 @@ export const BRAIN_NAMES: Readonly<Record<ComputerBrainKind, string>> = {
   antigravity: "Antigravity CLI",
 };
 
+/** The pin list's name for each computer brain's CLI (`CLI_PINS`). */
+const PIN_OF_BRAIN: Readonly<Record<ComputerBrainKind, PinCli>> = {
+  claude_code: "claude",
+  codex: "codex",
+  cursor: "cursor",
+  opencode: "opencode",
+  grok: "grok",
+  antigravity: "antigravity",
+};
+
+/** `hello.os` as the pin list names systems. */
+const PIN_SYSTEM: Readonly<Record<string, string>> = { darwin: "darwin-", linux: "linux-", windows: "win32-" };
+
 /**
- * Whether a computer brain runs on a computer's system (`hello.os`), as its runner allows: Cursor not on Windows yet.
- * A system nobody reported passes: the runner says.
+ * Whether a computer brain runs on a computer's system (`hello.os`): its vendor makes a build of its CLI for that
+ * system (`CLI_PINS`, ADR 0228 §6). All six do for macOS, Linux and Windows; on Windows each account's sign-in stays
+ * in its own folder (`accountEnv`). A system nobody reported, or one the list doesn't name, passes: the runner says.
  */
 export function brainRunsOn(kind: ComputerBrainKind, os: string | null | undefined): boolean {
-  if (!os) return true;
-  if (kind === "cursor") return os !== "windows";
-  return true;
+  const prefix = os ? PIN_SYSTEM[os] : undefined;
+  if (!prefix) return true;
+  return Object.keys(CLI_PINS[PIN_OF_BRAIN[kind]].builds).some((p) => p.startsWith(prefix));
 }
 
 /** A turn refused because its brain doesn't run on its computer's system (`brainRunsOn`): no runner asked, no retry. */
