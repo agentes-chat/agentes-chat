@@ -337,25 +337,30 @@ export async function drawTeamPhoto(input: TeamPhotoInput): Promise<Blob> {
   g.fillStyle = RAISED;
   g.fillRect(0, 0, W, H);
 
-  // The words first, measured: the sky takes what they leave, in whole sky pixels.
-  const wide = W - 2 * PAD;
-  const block = [EYEBROW, TITLE, LEAD].map((style, i) => {
-    g.font = fontOf(style.weight, style.size, fonts.sans);
-    const text = [input.eyebrow, input.title, input.lead][i] ?? "";
-    return { style, lines: text ? linesOf(g, text, wide, style.max) : [] };
-  });
-  const GAPS = [10, 16];
-  const textH = block.reduce(
-    (sum, b, i) => sum + b.lines.length * b.style.line + (i > 0 && b.lines.length ? (GAPS[i - 1] ?? 0) : 0),
-    0,
-  );
-  const markTop = H - 56 - MARK;
-  const room = markTop - 48 - textH - 64;
-  // At least room for the team and the bubble over the right hand, 24 under the picture's top.
+  // The sky holds at least the team and the bubble over the right hand, 24 under the picture's top.
   const [lead, ...rest] = input.cast;
   const sizes = castSizes(rest.length, Boolean(lead));
   const say = lead && input.say ? sayBox(g, fonts, input.say) : null;
   const least = Math.ceil((22 * K + (lead ? sizes.lead : sizes.me) + (say ? 8 * K + say.h : 0) + 24) / SKY_PX);
+  // The words, measured: 64 under the sky, 48 over the product's name. Where even the least sky leaves them too
+  // little room, the lead gives up a line; the sky takes what they leave, in whole sky pixels.
+  const markTop = H - 56 - MARK;
+  const GAPS = [10, 16];
+  const measure = (leadMax: number) =>
+    [EYEBROW, TITLE, { ...LEAD, max: leadMax }].map((style, i) => {
+      g.font = fontOf(style.weight, style.size, fonts.sans);
+      const text = [input.eyebrow, input.title, input.lead][i] ?? "";
+      return { style, lines: text ? linesOf(g, text, W - 2 * PAD, style.max) : [] };
+    });
+  const heightOf = (words: ReturnType<typeof measure>) =>
+    words.reduce(
+      (sum, b, i) => sum + b.lines.length * b.style.line + (i > 0 && b.lines.length ? (GAPS[i - 1] ?? 0) : 0),
+      0,
+    );
+  let block = measure(LEAD.max);
+  for (let max = LEAD.max - 1; max >= 1 && heightOf(block) > markTop - 48 - 64 - least * SKY_PX; max--)
+    block = measure(max);
+  const room = markTop - 48 - heightOf(block) - 64;
   const skyH = Math.max(least, Math.min(52, Math.floor(room / SKY_PX))) * SKY_PX;
 
   // The sky, its pixels whole.
