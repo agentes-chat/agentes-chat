@@ -1385,6 +1385,15 @@
   "tools.antigravityDesc": {
     "value": "Writes and changes code in the allowed folders, with your Gemini account."
   },
+  "tools.devinName": {
+    "value": "Devin CLI"
+  },
+  "tools.devinDesc": {
+    "value": "Writes and changes code in the allowed folders, with your Devin account."
+  },
+  "tools.devinWindows": {
+    "value": "Devin doesn't run on Windows yet: here its CLI can't keep each account's sign-in apart. Agents think with Devin on a Mac or Linux computer."
+  },
   "tools.found": {
     "value": "Found"
   },

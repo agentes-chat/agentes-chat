@@ -203,13 +203,18 @@ async function askAutoChoice(
       return fallbackChoice("error");
     }
     const tierP = percent(answers.tier?.probabilities?.[tier]);
-    const effortP = percent(answers.effort?.probabilities?.[effort]);
-    const reason = `${TIER_REASON[tier]}${tierP}; ${effort} effort${effortP}.`;
+    const sure = answers.effort?.probabilities?.[effort];
+    const unsureHigh =
+      effort === "high" && tier !== "large" && !input.routine && !input.mission && (sure ?? 1) < AUTO_HIGH_P;
+    const effortWhy = unsureHigh
+      ? `medium effort (high not sure enough${percent(sure)})`
+      : `${effort} effort${percent(sure)}`;
+    const reason = `${TIER_REASON[tier]}${tierP}; ${effortWhy}.`;
     const p = answers.tier?.probabilities?.[tier];
     return flooredAutoChoice(
       {
         tier,
-        effort,
+        effort: unsureHigh ? "medium" : effort,
         reason: reason.charAt(0).toUpperCase() + reason.slice(1),
         source: "judge",
         ...(typeof p === "number" ? { tierP: p } : {}),
@@ -229,6 +234,16 @@ async function askAutoChoice(
  * cents.
  */
 export const AUTO_SMALL_P = 0.75;
+
+/**
+ * High effort below the large tier only when the judge is this sure of it, else medium, where a person waits on the
+ * reply: higher effort thinks longer and makes more tool calls on the same task. Measured in production
+ * (2026-11-24 to 26, a person's message on the medium tier): half of the judge's high picks came under 60%, and a
+ * reply took a median 32 s at high against 21 s at medium on Claude Code, 52 s against 35 s on Codex. Medium is what
+ * Claude's own guidance starts agentic work at on Sonnet 5.5 and Opus 5.5's default. Routines and missions, with
+ * nobody waiting, keep the judge's pick, and the large tier keeps its effort.
+ */
+export const AUTO_HIGH_P = 0.6;
 
 /**
  * The floor under a judged tier: a small one the judge isn't sure of, or one in a mission (its main session works

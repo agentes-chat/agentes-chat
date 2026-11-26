@@ -97,6 +97,7 @@ import {
   createWithdrawRequestToolSource,
   createWorkspaceToolSource,
   createWorkToolSource,
+  DevinBrain,
   deliverToApp,
   deviceWaitHooks,
   type EmailArt,
@@ -807,6 +808,15 @@ export function buildEngine(o: EngineOptions) {
     // ADR 0143: Google's Antigravity CLI, one process per turn like Grok's.
     antigravity: (_agent, _run, setup) =>
       new AntigravityBrain({
+        link: brainLink,
+        mcp: async () => ({ token: setup.mcpToken() }),
+        agent: agentScope,
+        permissions: turnPermissions,
+        prepare: prepareCode,
+      }),
+    // ADR 0253: Cognition's Devin CLI over ACP, one process per turn like OpenCode's.
+    devin: (_agent, _run, setup) =>
+      new DevinBrain({
         link: brainLink,
         mcp: async () => ({ token: setup.mcpToken() }),
         agent: agentScope,

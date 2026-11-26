@@ -26,13 +26,13 @@ import {
   type ChannelEvent,
   CODEX_IMAGE_NOTE,
   COMPUTER_BUSY_RETRY_MS,
+  COMPUTER_MEDIA_NOTE,
   COMPUTER_QUEUE_NOTE_MS,
   COMPUTER_REACT_NOTE,
   COMPUTER_TOOLS_NOTE,
   cancelRun,
   clearPlanLimits,
   computerBrainUnavailable,
-  computerMediaNote,
   computerQueue,
   connectorScope,
   consultationWait,
@@ -68,6 +68,7 @@ import {
   mcpSessionOver,
   notePlanLimit,
   OUTAGE_PARK,
+  openAgentDm,
   openDm,
   operatorRunTimings,
   outageParkedOf,
@@ -596,7 +597,8 @@ test("people taking turns keep one session; a repository added to the agent's ac
   await addChannelMember(f.db, f.owner.id, f.org.id, f.general.id, { userId: bia.id });
   const systems: string[] = [];
   const { brain, seen } = scriptedComputerBrain((_n, turn) => {
-    systems.push(turn.system);
+    // What the session starts with: its system text and, once, what holds for the conversation (its tools, repositories).
+    systems.push(`${turn.system}\n${turn.conversation ?? ""}`);
     return [
       { type: "usage", input: 40, output: 5, source: "plan", model: "claude-sonnet-5-5" },
       { type: "done", text: "ok" },
@@ -3247,17 +3249,14 @@ test("a computer brain with the react tool is told to end with an empty reply af
   expect(systems[0]).toContain("not even the emoji again");
 });
 
-test("a computer brain with the GIF and sticker tools is told an empty reply after one adds nothing", async () => {
-  f = await setup({ mediaTools: true });
+test("a computer agent that may send GIFs and stickers is told so in one text, whether or not this run lists them", async () => {
+  f = await setup({ mediaTools: true, react: true });
   await computerAgent(f);
   const systems: string[] = [];
-  const brain: Brain = {
-    kind: "claude_code",
-    async *run(turn) {
-      systems.push(turn.system);
-      yield { type: "done", text: "Oi." };
-    },
-  };
+  const { brain, seen } = scriptedComputerBrain((_n, turn) => {
+    systems.push(turn.system);
+    return [{ type: "done", text: "Oi." }];
+  });
   const handlers = createJobHandlers({
     ...f.jobDeps,
     brains: { claude_code: () => brain },
@@ -3265,10 +3264,115 @@ test("a computer brain with the GIF and sticker tools is told an empty reply aft
   });
   await post(f, "@dev oi");
   await drainOutbox(f.db, handlers);
-  // No GIF search on this server: the note names only the sticker, and no reaction note without `react`.
-  expect(systems[0]).toContain(computerMediaNote(["send_sticker"]));
+  // Another agent's DM: nobody there to send a sticker to, so the run doesn't list it.
+  const qa = await createAgent(
+    f.db,
+    f.owner.id,
+    f.org.id,
+    { name: "QA", handle: "qa", role: "Tests", instructions: "", credentialId: f.credential.id },
+    { model: "claude-sonnet-5-5" },
+  );
+  const dm = await openAgentDm(f.db, f.org.id, f.agent.id, qa.id);
+  const asked = await insertMessage(f.db, {
+    orgId: f.org.id,
+    channelId: dm.id,
+    author: { type: "agent", agentId: qa.id, runId: null, hop: 1, stretchId: null },
+    body: "Os testes passaram?",
+  });
+  const [run] = await f.db
+    .insert(schema.agentRuns)
+    .values({
+      orgId: f.org.id,
+      agentId: f.agent.id,
+      channelId: dm.id,
+      threadRootId: asked.id,
+      triggerMessageId: asked.id,
+      trigger: "dm",
+      hop: 1,
+    })
+    .returning();
+  if (!run) throw new Error("no run");
+  await enqueue(f.db, {
+    orgId: f.org.id,
+    kind: "agent_run.execute",
+    payload: { runId: run.id },
+    dedupeKey: `agent_run.execute:${run.id}`,
+  });
+  await drainOutbox(f.db, handlers);
+
+  expect(seen[0]?.tools.map((t) => t.name)).toContain("send_sticker");
+  expect(seen[1]?.tools.map((t) => t.name)).not.toContain("send_sticker");
+  // The CLI its computer started with the agent's last text is the one each of these turns takes.
+  expect(systems[1]).toBe(systems[0] as string);
+  expect(systems[0]).toContain(COMPUTER_MEDIA_NOTE);
+  expect(systems[0]).toContain(COMPUTER_REACT_NOTE);
+  // No GIF search on this server: no GIF tool is named.
   expect(systems[0]).not.toContain("`send_gif`");
-  expect(systems[0]).not.toContain(COMPUTER_REACT_NOTE);
+
+  // An agent whose own switch is off is never told of them.
+  await f.db.update(schema.agents).set({ mediaReplies: false }).where(eq(schema.agents.id, f.agent.id));
+  await post(f, "@dev e agora?");
+  await drainOutbox(f.db, handlers);
+  expect(systems[2]).not.toContain(COMPUTER_MEDIA_NOTE);
+});
+
+test("a resumed session reads what it can do here again when it changed, and goes on rather than starting over", async () => {
+  let more = false;
+  const listed = (name: string) => ({
+    name,
+    description: `The ${name} tool.`,
+    scope: "",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    execute: async () => ({ content: "ok" }),
+  });
+  // A tool of the conversation's own (no scope to grant) that shows up between two turns.
+  const source: ToolSource = {
+    name: "late",
+    tools: async () => [listed("check_build"), ...(more ? [listed("check_deploy")] : [])],
+  };
+  f = await setup({ toolSources: [source] });
+  await computerAgent(f);
+  const prompts: string[] = [];
+  const { brain, seen } = scriptedComputerBrain((_n, turn) => {
+    prompts.push(computerPrompt(turn));
+    return [
+      { type: "usage", input: 40, output: 5, source: "plan", model: "claude-sonnet-5-5" },
+      { type: "done", text: "ok" },
+    ];
+  });
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id) },
+  });
+  const question = await post(f, "@dev o build passou?");
+  await drainOutbox(f.db, handlers);
+  const reply = async (body: string) => {
+    await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, {
+      body,
+      threadId: question.id,
+    });
+    await drainOutbox(f.db, handlers);
+  };
+
+  // Nothing changed here: the session goes on and isn't told again.
+  await reply("@dev e o lint?");
+  expect(seen[1]?.session).toMatchObject({ id: seen[0]?.session?.id, resume: true });
+  expect(prompts[1]).not.toContain("# This conversation, now");
+
+  more = true;
+  await reply("@dev e o deploy?");
+  expect(seen[2]?.session).toMatchObject({ id: seen[0]?.session?.id, resume: true });
+  expect(prompts[2]).toContain("# This conversation, now");
+  expect(prompts[2]).toContain("`check_deploy`");
+  // Only the lines of "What you can do" that changed, not the whole block again.
+  expect(prompts[2]).toContain("### What you can do (changed lines)");
+  expect(prompts[2]).not.toContain("You can:");
+
+  // Read once: the turn after goes on without it.
+  await reply("@dev e agora?");
+  expect(seen[3]?.session).toMatchObject({ id: seen[0]?.session?.id, resume: true });
+  expect(prompts[3]).not.toContain("# This conversation, now");
 });
 
 test("bridged side effects reach the engine: artifacts and memory cards on the reply, memory.updated published", async () => {
@@ -4650,6 +4754,23 @@ test("agents' turns on one computer start apart, parked in line (never handed to
     (j) => j.dedupeKey?.startsWith(`agent_run.execute:${fromAgents.id}:room-kick:`) && j.status === "pending",
   );
   expect(kick).toBeDefined();
+});
+
+test("an agent's turn on a CLI its computer already holds open isn't spaced: it starts no process", async () => {
+  f = await setup({ reply: () => ({ chunks: ["Pela API."] }) });
+  const machineId = await computerAgent(f);
+  const { brain: scripted, seen } = scriptedComputerBrain(() => [{ type: "done", text: "Pronto." }]);
+  const brain: Brain = { ...scripted, warm: async () => true };
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id) },
+  });
+  await askedJustNow(f, machineId);
+  const fromAgents = await secondRun(f, (await personMessage(f, "@dev revisa")).id, 2);
+  await drainOutbox(f.db, handlers);
+  expect(seen).toHaveLength(1);
+  expect((await runById(f, fromAgents.id))?.status).toBe("done");
 });
 
 test("only the head of the computer's line asks it: an agent's run waits behind a person's", async () => {

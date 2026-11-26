@@ -140,6 +140,7 @@ const CLI_INSTALLERS: Record<string, { script: string; bin: string; opt: string;
     windows: 'powershell -ExecutionPolicy Bypass -Command "irm https://x.ai/cli/install.ps1 | iex"',
   },
   cursor: { script: "curl https://cursor.com/install -fsS | bash", bin: "agent", opt: "/opt/cursor", flags: "" },
+  devin: { script: "curl -fsSL https://cli.devin.ai/install.sh | bash", bin: "devin", opt: "/opt/devin", flags: "" },
 };
 
 /**
@@ -324,6 +325,7 @@ export const MACHINE_TOOLS: MachineToolName[] = [
   "opencode",
   "grok",
   "antigravity",
+  "devin",
   "commands",
 ];
 

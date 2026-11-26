@@ -3077,7 +3077,7 @@
                 },
                 "cause": {
                   "type": "string",
-                  "description": "Why the turn started a new process: `new_session` (a session that never ran there: a new conversation, or a fresh session for an old one), `idle` (its process closed after its idle limit), `cap` (closed for another conversation of the agent), `memory` (closed to make room), `settings` (another launch: folder, permissions, account, sign-in), `warm_mismatch` (a warm start had another system text), `exited`, `closed` (after its last turn: canceled, died, a background turn), `restart` (it ran before, no process left: the runner restarted), `unsaid` (an older runner). Ignore values you don't know."
+                  "description": "Why the turn started a new process: `new_session` (a session that never ran there: a new conversation, or a fresh session for an old one), `idle` (its process closed after its idle limit), `cap` (closed for another conversation of the agent), `memory` (closed to make room), `settings` (another launch: folder, permissions, account, sign-in), `warm_mismatch` (a warm start had another system text), `exited`, `closed` (after its last turn: canceled, died, a background turn), `restart` (it ran before, no process left: the runner restarted), `warm_settings` (a warm start had another launch than its turn), `no_launch` (a warm start came before the runner ran a turn of the agent), `unsaid` (an older runner). Ignore values you don't know."
                 },
                 "turns": {
                   "type": "integer",
@@ -3161,7 +3161,7 @@
               "properties": {
                 "cli": {
                   "type": "string",
-                  "description": "The coding CLI's name: `claude`, `codex`, `cursor`, `opencode`, `grok`, `antigravity`."
+                  "description": "The coding CLI's name: `claude`, `codex`, `cursor`, `opencode`, `grok`, `antigravity`, `devin`."
                 },
                 "version": {
                   "type": "string",
@@ -3209,7 +3209,7 @@
                 },
                 "brain": {
                   "type": "string",
-                  "description": "The brain by its name (`model`, `claude_code`, `codex`, `cursor`, `opencode`, `grok`, `antigravity`, `other`; `model` is a provider's API, `other` no turn yet). `all`: every brain."
+                  "description": "The brain by its name (`model`, `claude_code`, `codex`, `cursor`, `opencode`, `grok`, `antigravity`, `devin`, `other`; `model` is a provider's API, `other` no turn yet). `all`: every brain."
                 },
                 "trigger": {
                   "type": "string",
@@ -3354,6 +3354,252 @@
         },
         "required": ["from", "to", "bucket", "replies", "computerStarts", "waits"]
       },
+      "OperatorAskTimes": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "bucket": {
+            "type": "string",
+            "enum": ["hour", "day"]
+          },
+          "orgId": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/OperatorAskMeasures"
+          },
+          "kinds": {
+            "type": "array",
+            "items": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/OperatorAskMeasures"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": ["chat", "question", "lookup", "action", "task", "project"]
+                    },
+                    "targetMs": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["kind", "targetMs"]
+                }
+              ]
+            },
+            "description": "Every kind, in order, with its target for the first reply."
+          },
+          "brains": {
+            "type": "array",
+            "items": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/OperatorAskMeasures"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "brain": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["brain"]
+                }
+              ]
+            },
+            "description": "By the brain of the ask's first run (`other`: none yet), most asks first."
+          },
+          "models": {
+            "type": "array",
+            "items": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/OperatorAskMeasures"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "model": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["model"]
+                }
+              ]
+            },
+            "description": "By the model of the ask's first run (`none`: no usage recorded), most asks first, at most 20."
+          },
+          "modelsMore": {
+            "type": "boolean"
+          },
+          "series": {
+            "type": "array",
+            "items": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/OperatorAskMeasures"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "at": {
+                      "type": "string",
+                      "description": "The bucket's start, UTC: `YYYY-MM-DDTHH:00:00Z`.",
+                      "example": "2026-10-30T00:00:00Z"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": ["all", "chat", "question", "lookup", "action", "task", "project"]
+                    }
+                  },
+                  "required": ["at", "kind"]
+                }
+              ]
+            },
+            "description": "Per bucket, oldest first: `all`, then each kind that had asks."
+          }
+        },
+        "required": ["from", "to", "bucket", "orgId", "totals", "kinds", "brains", "models", "modelsMore", "series"]
+      },
+      "OperatorAskMeasures": {
+        "type": "object",
+        "properties": {
+          "asks": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "People's messages that started agents' work, each with all the work it set off (ADR 0254): the hand-offs to other agents and their follow-ups, until a person wrote again."
+          },
+          "judged": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Of them, the ones whose kind Jev read; the others' kind is what the work did."
+          },
+          "index": {
+            "type": ["integer", "null"],
+            "minimum": 0,
+            "maximum": 100,
+            "description": "The speed index, 0 to 100: replies within the kind's target, plus half of those within four times it, over the asks that count. A failure, and an ask with no reply past four times its target, count against; no AI or a hold, a stop by a person, a pass by every agent and an ask still within its time don't count. Null: none counted."
+          },
+          "satisfied": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "tolerating": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "frustrated": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "firstActivity": {
+            "type": "object",
+            "properties": {
+              "p50Ms": {
+                "type": ["integer", "null"]
+              },
+              "p90Ms": {
+                "type": ["integer", "null"]
+              }
+            },
+            "required": ["p50Ms", "p90Ms"],
+            "description": "From the person's message to the first tool step or message."
+          },
+          "firstReply": {
+            "type": "object",
+            "properties": {
+              "p50Ms": {
+                "type": ["integer", "null"]
+              },
+              "p90Ms": {
+                "type": ["integer", "null"]
+              }
+            },
+            "required": ["p50Ms", "p90Ms"],
+            "description": "To the work's first message in the conversation; the server's own notices (no AI, a limit) aren't one."
+          },
+          "done": {
+            "type": "object",
+            "properties": {
+              "p50Ms": {
+                "type": ["integer", "null"]
+              },
+              "p90Ms": {
+                "type": ["integer", "null"]
+              }
+            },
+            "required": ["p50Ms", "p90Ms"],
+            "description": "To when its every run ended, and its long work, of the asks done."
+          },
+          "outcomes": {
+            "type": "object",
+            "properties": {
+              "done": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "failed": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "setup": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "canceled": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "open": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "passed": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": ["done", "failed", "setup", "canceled", "open", "passed"],
+            "description": "`done` with a reply, `failed`, `setup` (no AI, a hold or a spent budget, before any reply), `canceled` by a person, `open` (a run or its long work goes on), `passed` (every agent passed)."
+          },
+          "multiAgent": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Asks two or more agents worked on."
+          },
+          "runsPerAsk": {
+            "type": ["number", "null"]
+          },
+          "toolsP50": {
+            "type": ["number", "null"],
+            "description": "Our tools' calls per ask, the median."
+          }
+        },
+        "required": [
+          "asks",
+          "judged",
+          "index",
+          "satisfied",
+          "tolerating",
+          "frustrated",
+          "firstActivity",
+          "firstReply",
+          "done",
+          "outcomes",
+          "multiAgent",
+          "runsPerAsk",
+          "toolsP50"
+        ]
+      },
       "OperatorAiAccounts": {
         "type": "object",
         "properties": {
@@ -3457,7 +3703,7 @@
                 },
                 "runtime": {
                   "type": "string",
-                  "description": "`claude_code`, `codex`, `grok`, `antigravity`, `cursor`, `opencode`, or `api` (an API key)."
+                  "description": "`claude_code`, `codex`, `grok`, `antigravity`, `cursor`, `opencode`, `devin`, or `api` (an API key)."
                 },
                 "authMethod": {
                   "$ref": "#/components/schemas/OperatorAiAuthMethod"
@@ -11832,6 +12078,92 @@
         }
       }
     },
+    "/analytics/asks": {
+      "get": {
+        "tags": ["Operator"],
+        "summary": "Time per task: how long people's asks took, by kind, with a speed index",
+        "description": "Of the asks people made in the window, 31 days at most, across workspaces or in one: Jev's read of each one's kind (or what its work did), the time to the first activity, the first reply and done, and how they ended. Counts and times only: no message, no name.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "An ISO 8601 instant: asks made at or after it.",
+              "example": "2026-11-19T00:00:00Z"
+            },
+            "required": true,
+            "description": "An ISO 8601 instant: asks made at or after it.",
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "An ISO 8601 instant: asks made before it, at most 31 days after `from`. Else 400 `analytics.range`.",
+              "example": "2026-11-26T00:00:00Z"
+            },
+            "required": true,
+            "description": "An ISO 8601 instant: asks made before it, at most 31 days after `from`. Else 400 `analytics.range`.",
+            "name": "to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": ["hour", "day"],
+              "default": "day",
+              "description": "The series per UTC hour or day."
+            },
+            "required": false,
+            "description": "The series per UTC hour or day.",
+            "name": "bucket",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "One workspace's asks; every workspace's without it."
+            },
+            "required": false,
+            "description": "One workspace's asks; every workspace's without it.",
+            "name": "orgId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperatorAskTimes"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request (`analytics.range`: the dates)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/analytics/ai-accounts": {
       "get": {
         "tags": ["Operator"],
@@ -11933,7 +12265,7 @@
           {
             "schema": {
               "type": "string",
-              "enum": ["claude_code", "codex", "cursor", "opencode", "grok", "antigravity"]
+              "enum": ["claude_code", "codex", "cursor", "opencode", "grok", "antigravity", "devin"]
             },
             "required": false,
             "name": "kind",

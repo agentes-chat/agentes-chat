@@ -6,6 +6,7 @@ import { createFakeEmbeddings } from "@agenteschat/providers/testing";
 import {
   drainOutbox,
   EMBED_FAILURES_REPORTED,
+  EMBED_QUERY_CALL_WAITS,
   indexSource,
   insertContextItem,
   postPersonMessage,
@@ -67,6 +68,8 @@ describe("vectors for the kinds that get them (EMBEDDINGS_KINDS)", () => {
     expect(await embeddingCalls()).toBe(before);
     await searchVisible(deps(), { ...inGeneral, text: "deploys", kinds: ["context_item"] });
     await searchVisible(deps(), { ...inGeneral, text: "deploys" });
+    await searchVisible(deps(), { ...inGeneral, text: "deploy scripts" });
+    // The same words share one call.
     expect(await embeddingCalls()).toBe(before + 2);
   });
 
@@ -167,18 +170,22 @@ describe("a slow or failing embeddings server leaves search to its words", () =>
     };
     f = await setup({ embeddings: { provider: server.provider, kinds: ["context_item"], queryTimeoutMs: 50 }, errors });
     const memory = await remember("Deploy Northwind with scripts/blue.sh.", "Deploy da Northwind");
+    // New words each time: the same words share one call (`gateway.embed`).
+    let asked = 0;
     const memoryFor = () =>
       retrieveForRun(f.context, {
         orgId: f.org.id,
         agentId: f.agent.id,
         channelId: f.general.id,
-        text: "como fazer o deploy da northwind?",
+        text: `como fazer o deploy da northwind? (${++asked})`,
       });
 
     server.state.mode = "hang";
     const started = Date.now();
     expect((await memoryFor()).matchedIds).toEqual([memory.id]);
     expect(Date.now() - started).toBeLessThan(1000);
+    // The call itself gives up later (`EMBED_QUERY_CALL_WAITS`): the first failure.
+    await Bun.sleep(50 * EMBED_QUERY_CALL_WAITS + 50);
     server.state.mode = "fail";
     expect((await memoryFor()).matchedIds).toEqual([memory.id]);
     expect(reports).toEqual([]);
@@ -198,6 +205,29 @@ describe("a slow or failing embeddings server leaves search to its words", () =>
     expect(reports).toHaveLength(2);
     // A failed call records no usage.
     expect(await embeddingCalls()).toBe(calls + 1);
+  });
+
+  test("a query's vector that comes after its search stopped waiting is there for the next search of the same words", async () => {
+    const fake = createFakeEmbeddings();
+    let calls = 0;
+    const provider: EmbeddingProvider = {
+      id: "slow",
+      model: "fake-embed",
+      embed: async (texts, options) => {
+        calls++;
+        await Bun.sleep(120);
+        return fake.embed(texts, options);
+      },
+    };
+    f = await setup({ embeddings: { provider, kinds: ["context_item"], queryTimeoutMs: 50 } });
+    const call = { orgId: f.org.id, texts: ["northwind deploy"], inputType: "query" as const };
+    const [first, second] = await Promise.allSettled([f.gateway.embed(call), f.gateway.embed(call)]);
+    expect([first.status, second.status, calls]).toEqual(["rejected", "rejected", 1]);
+    await Bun.sleep(100);
+    const started = Date.now();
+    expect((await f.gateway.embed(call))?.vectors).toHaveLength(1);
+    expect(Date.now() - started).toBeLessThan(40);
+    expect([calls, await embeddingCalls()]).toEqual([1, 1]);
   });
 
   test("a memory whose vector fails is still found by its words, and its job tries the vector again", async () => {

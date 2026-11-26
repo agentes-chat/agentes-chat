@@ -155,6 +155,8 @@ export interface LiveRun {
   intent?: string;
   /** Its line on the way (`say_now`) is in the conversation: a late `agent.intent` says nothing more. */
   said?: boolean;
+  /** A step before the model has the turn that is taking a while (`agent.phase`): `code`, its checkouts updating. */
+  phase?: LivePhase;
   /** "Parar" was pressed and the server hasn't confirmed yet. */
   stopping?: boolean;
   /** Its browser command waits for a shared profile someone else has (ADR 0110). */
@@ -356,6 +358,18 @@ export interface AgentIntentEvent {
   text: string;
 }
 
+export type LivePhase = "code";
+
+/** A step before the model has the turn that is taking a while, and its end (`phase: null`). */
+export interface AgentPhaseEvent {
+  type: "agent.phase";
+  channelId: string;
+  threadId: string;
+  runId: string;
+  agentId: string;
+  phase: LivePhase | null;
+}
+
 export interface StreamsState {
   runs: Record<string, LiveRun>;
   /** Runs heard to stop, and when: late deltas for them are ignored. */
@@ -480,6 +494,7 @@ type StreamEvent =
   | AgentToolEvent
   | AgentStepEvent
   | AgentIntentEvent
+  | AgentPhaseEvent
   | AgentToolOutputEvent
   | AgentToolProgressEvent
   | RunCanceledEvent
@@ -633,7 +648,8 @@ function applyEvent(state: StreamsState, event: StreamEvent): StreamsState {
         service: event.service ?? null,
         serviceIcon: event.serviceIcon ?? null,
         toolDetail: event.detail ?? null,
-        ...(newCall ? { code: event.code ?? null, output: [] } : {}),
+        // A call means the model has the turn: whatever came before it is over, even if its end was never heard.
+        ...(newCall ? { code: event.code ?? null, output: [], phase: undefined } : {}),
         // A new call is the step now: its own words, or none (the call's verb says it). The computer's permission
         // check before a command is no step of its own: the command it lets through was told a moment before
         // (`agent.step`) and stays the step while it runs, or the bar would say "thinking" for as long as it takes.
@@ -648,7 +664,7 @@ function applyEvent(state: StreamsState, event: StreamEvent): StreamsState {
       const step = { tool: event.tool, ...(event.said ? { said: event.said } : {}) };
       // In a code session (ADR 0215) the call is a line of the work too: its start adds it, its end closes it.
       const cli = cliLineOf(event.cli);
-      if (!cli || !event.toolUseId) return upsert(state, event, { step });
+      if (!cli || !event.toolUseId) return upsert(state, event, { step, phase: undefined });
       const work = current.work ?? [];
       const at = work.findIndex((w) => w.kind === "call" && w.id === event.toolUseId);
       const told = work[at];
@@ -674,7 +690,7 @@ function applyEvent(state: StreamsState, event: StreamEvent): StreamsState {
         ...(event.said ? { said: event.said } : {}),
         cli,
       };
-      return upsert(state, event, { step, work: [...work, line] });
+      return upsert(state, event, { step, work: [...work, line], phase: undefined });
     }
     case "agent.tool.progress": {
       if (state.finished[event.runId]) return state;
@@ -697,6 +713,13 @@ function applyEvent(state: StreamsState, event: StreamEvent): StreamsState {
       // Its own words came first: the line it said on the way, or its reply.
       if (state.finished[event.runId] || !r || r.said) return state;
       return { ...state, runs: { ...state.runs, [event.runId]: { ...r, intent: event.text } } };
+    }
+    case "agent.phase": {
+      const r = state.runs[event.runId];
+      if (state.finished[event.runId] || !r) return state;
+      // A phase this app doesn't know says nothing: the line stays as it was.
+      const phase = event.phase === "code" ? event.phase : undefined;
+      return { ...state, runs: { ...state.runs, [event.runId]: { ...r, phase } } };
     }
     case "agent.tool.output": {
       if (state.finished[event.runId]) return state;

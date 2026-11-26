@@ -3760,6 +3760,7 @@ export const en = {
       cursor: "Cursor isn't signed in on this computer. Connect a Cursor account on {{name}}'s\u00a0page.",
       grok: "Grok isn't signed in on this computer. Connect a Grok account on {{name}}'s\u00a0page.",
       antigravity: "Gemini isn't signed in on this computer. Connect a Gemini account on {{name}}'s\u00a0page.",
+      devin: "Devin isn't signed in on this computer. Connect a Devin account on {{name}}'s\u00a0page.",
       opencode: "OpenCode can't think on this computer. Connect an OpenCode key on {{name}}'s\u00a0page.",
     },
     /** The same, naming the computer it isn't signed in on (`NoAiCard.computer`). */
@@ -3769,6 +3770,7 @@ export const en = {
       cursor: "Cursor isn't signed in on {{computer}}. Connect a Cursor account on {{name}}'s\u00a0page.",
       grok: "Grok isn't signed in on {{computer}}. Connect a Grok account on {{name}}'s\u00a0page.",
       antigravity: "Gemini isn't signed in on {{computer}}. Connect a Gemini account on {{name}}'s\u00a0page.",
+      devin: "Devin isn't signed in on {{computer}}. Connect a Devin account on {{name}}'s\u00a0page.",
       opencode: "OpenCode can't think on {{computer}}. Connect an OpenCode key on {{name}}'s\u00a0page.",
     },
     card: {
@@ -3848,6 +3850,7 @@ export const en = {
       cursor: "Connect your Cursor plan",
       grok: "Connect your Grok plan",
       gemini: "Connect your Gemini plan",
+      devin: "Connect your Devin plan",
       zen: "Connect OpenCode",
       api_key: "Add an API key",
     },
@@ -4028,6 +4031,8 @@ export const en = {
           "Google says using a personal Gemini plan inside other apps can get the account suspended. To avoid that risk, use a Gemini API key or Gemini Enterprise.",
         windowsOne: "On Windows, a computer uses one Gemini account at a time.",
       },
+      /** A Devin plan (ADR 0253): its own sign-in, the plan its account has. */
+      devin: { title: "Your Devin plan", tiers: "Free, Pro, Max or Teams" },
       /** OpenCode's CLI (ADR 0132): its free models with no sign-in, or a key from OpenCode's console. */
       zen: { title: "OpenCode", tiers: "Free models, or your OpenCode key" },
       zai: { tiers: "Lite, Pro or Max" },
@@ -4137,6 +4142,7 @@ export const en = {
       cursor: "Cursor signed in as {{email}}, not {{account}}. Sign out on Cursor's page and try again.",
       grok: "Grok signed in as {{email}}, not {{account}}. Sign out on Grok's page and try again.",
       antigravity: "Gemini signed in as {{email}}, not {{account}}. Sign out on Google's page and try again.",
+      devin: "Devin signed in as {{email}}, not {{account}}. Sign out on Devin's page and try again.",
       opencode: "OpenCode signed in as {{email}}, not {{account}}. Try again with the right key.",
     },
     useAnyway: "Use {{email}}",
@@ -6582,6 +6588,7 @@ export const en = {
             cursor: "Add a Cursor account",
             grok: "Add a Grok account",
             antigravity: "Add a Gemini account",
+            devin: "Add a Devin account",
             opencode: "Add an OpenCode key",
           },
           stepOne: {
@@ -6589,6 +6596,7 @@ export const en = {
             codex: "The account with your plan",
             cursor: "The account with your plan",
             grok: "The account with your plan",
+            devin: "The account with your plan",
             antigravity: "The Google account with your plan",
             antigravityEnterprise: "Your Gemini Enterprise account",
           },
@@ -6600,6 +6608,7 @@ export const en = {
             cursor: "Sign in with Cursor",
             grok: "Sign in with Grok",
             antigravity: "Sign in with Google",
+            devin: "Sign in with Devin",
           },
           /** OpenCode thinks with its free models without any key: the key is for its paid models. */
           opencodeFree: "No key needed for OpenCode's free models. A key from OpenCode's console adds its paid ones.",
@@ -6619,6 +6628,10 @@ export const en = {
           /** The Gemini sign-in's second step: Google's page shows a code and takes it out of its own address. */
           stepTwoGoogle: "Paste the code Google shows",
           codeLabelGoogle: "Google's code",
+          /** The Devin sign-in's second step: Devin's page shows a code to paste back (ADR 0253). */
+          stepTwoDevin: "Paste the code Devin shows",
+          codeHintDevin: "Paste the code Devin's page shows, not the page's address.",
+          codeLabelDevin: "Devin's code",
           codeHintGoogle: "Paste the code Google's page shows, not the page's address.",
           notCodeGoogle: "That's an address with no code in it. Paste the code Google's page shows.",
           send: "Send to {{computer}}",
@@ -6664,6 +6677,8 @@ export const en = {
             grok: "Grok signed in as {{account}}, an account you already connected. To use another, sign out on Grok's page and try again.",
             antigravity:
               "Gemini signed in as {{account}}, an account you already connected. To use another, sign out on Google's page and try again.",
+            devin:
+              "Devin signed in as {{account}}, an account you already connected. To use another, sign out on Devin's page and try again.",
             opencode: "That OpenCode key is already connected as {{account}}.",
           },
           startFailed: "No answer from {{computer}}. Try again in a moment.",
@@ -11711,6 +11726,7 @@ export const en = {
       cursor: "Cursor",
       grok: "Grok",
       antigravity: "Gemini",
+      devin: "Devin",
       opencode: "OpenCode",
       needs: {
         keys: "Update agentes on the computer to use a plan's key",
@@ -13225,6 +13241,7 @@ export const en = {
       cursor: "{{model}} on the Cursor plan",
       grok: "{{model}} on the Grok plan",
       gemini: "{{model}} on the Gemini plan",
+      devin: "{{model}} on the Devin plan",
       zen: "{{model}} on OpenCode",
       coding: "{{model}} on {{plan}}",
       claudeOf: "{{model}} on {{owner}}'s Claude plan",
@@ -13232,6 +13249,7 @@ export const en = {
       cursorOf: "{{model}} on {{owner}}'s Cursor plan",
       grokOf: "{{model}} on {{owner}}'s Grok plan",
       geminiOf: "{{model}} on {{owner}}'s Gemini plan",
+      devinOf: "{{model}} on {{owner}}'s Devin plan",
       zenOf: "{{model}} on {{owner}}'s OpenCode",
       codingOf: "{{model}} on {{owner}}'s {{plan}}",
       claudeAuto: "Claude plan",
@@ -13239,6 +13257,7 @@ export const en = {
       cursorAuto: "Cursor plan",
       grokAuto: "Grok plan",
       geminiAuto: "Gemini plan",
+      devinAuto: "Devin plan",
       zenAuto: "OpenCode",
       codingAuto: "{{plan}}",
       claudeAutoOf: "{{owner}}'s Claude plan",
@@ -13246,6 +13265,7 @@ export const en = {
       cursorAutoOf: "{{owner}}'s Cursor plan",
       grokAutoOf: "{{owner}}'s Grok plan",
       geminiAutoOf: "{{owner}}'s Gemini plan",
+      devinAutoOf: "{{owner}}'s Devin plan",
       zenAutoOf: "{{owner}}'s OpenCode",
       codingAutoOf: "{{owner}}'s {{plan}}",
       on: "{{line}} on {{computer}}",
@@ -13260,6 +13280,7 @@ export const en = {
       opencode: "OpenCode",
       grok: "Grok Build",
       antigravity: "Antigravity CLI",
+      devin: "Devin CLI",
     },
     foot: {
       api: "Through the API",
@@ -13272,6 +13293,7 @@ export const en = {
     cursorText: "Uses the Cursor plan of whoever connected the computer.",
     grokText: "Uses the Grok plan of whoever connected the computer.",
     antigravityText: "Uses the Gemini plan of whoever connected the computer.",
+    devinText: "Uses the Devin plan of whoever connected the computer.",
     opencodeText: "OpenCode's free models, or the OpenCode key of whoever connected the computer.",
     /** Cursor's models (ADR 0114), where its CLI said which the plan includes. */
     cursorModel: { inPlan: "In your Cursor plan", apiPrice: "Billed by Cursor at API prices" },
@@ -13293,6 +13315,9 @@ export const en = {
       not_reported: "{{computer}} is still checking which programs it has. This changes by itself when it's done.",
       /** Its vendor makes no build of this program for that computer's system. */
       system: "{{program}} doesn't run on {{computer}}'s system yet.",
+      /** Devin on a Windows computer (its pin has no Windows build): why, and the way out. */
+      systemDevin:
+        "{{computer}} runs Windows, where Devin doesn't run yet: there its CLI can't keep each account's sign-in apart. Use Devin on a Mac or Linux computer, or choose another AI.",
       /** Codex on a Windows computer where neither MXC nor Codex's own sandbox could start. */
       windows_sandbox:
         "{{computer}}'s Windows can't isolate {{program}}'s commands. Choose Claude or an API key instead, or update that computer to Windows\u00a011\u00a024H2 or newer, with its latest updates.",
@@ -13356,6 +13381,7 @@ export const en = {
       cursor: "Cursor · {{model}}",
       grok: "Grok Build · {{model}}",
       antigravity: "Antigravity CLI · {{model}}",
+      devin: "Devin CLI · {{model}}",
       opencode: "OpenCode · {{model}}",
     },
     mission: {
@@ -17145,6 +17171,7 @@ export const en = {
         opencode: "OpenCode",
         grok: "Grok Build",
         antigravity: "Antigravity CLI",
+        devin: "Devin CLI",
         commands: "commands",
         browser: "the browser",
         desktop: "the screen",
@@ -17319,6 +17346,7 @@ export const en = {
         cursor: "Cursor",
         grok: "Grok Build",
         antigravity: "Antigravity CLI",
+        devin: "Devin CLI",
         opencode: "OpenCode",
         commands: "Commands",
         browser: "Browser",
@@ -17329,6 +17357,7 @@ export const en = {
         cursor: "Like Claude Code, with a Cursor account. Only in the allowed folders.",
         grok: "Like Claude Code, with a Grok account. Only in the allowed folders.",
         antigravity: "Like Claude Code, with a Gemini account. Only in the allowed folders.",
+        devin: "Like Claude Code, with a Devin account. Only in the allowed folders.",
         opencode: "Like Claude Code, with OpenCode's free models or an OpenCode key. Only in the allowed folders.",
         commands: "Runs Terminal commands, like tests and builds.",
       },
@@ -19641,6 +19670,8 @@ export const en = {
     /** The waiting row's step line before its first step (`waitStep`). */
     wait: {
       thinking: "Thinking…",
+      /** Before the model has the turn: the agent's checkouts are being updated from their repositories. */
+      code: "Updating the code…",
       held: "Waiting for approval…",
       /** The agent's own words for its step (what it wrote before the call), quoted. */
       said: "“{{text}}”",

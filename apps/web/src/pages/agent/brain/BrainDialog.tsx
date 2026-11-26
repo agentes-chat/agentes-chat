@@ -123,7 +123,14 @@ interface Adding {
 const ADD_FIRST: readonly PlanChoice[] = ["claude", "chatgpt", "gemini"];
 const ADD_MORE = PLAN_CHOICES.filter((c) => !ADD_FIRST.includes(c));
 /** The accounts that sign in on their maker's page in the browser (a key's plan takes the key pasted instead). */
-const BROWSER_SIGN_IN: readonly MachineAccountKind[] = ["claude_code", "codex", "antigravity", "cursor", "grok"];
+const BROWSER_SIGN_IN: readonly MachineAccountKind[] = [
+  "claude_code",
+  "codex",
+  "antigravity",
+  "cursor",
+  "grok",
+  "devin",
+];
 
 /**
  * `at`: a screen to open on (a link's): "Mais opções" or "Adicionar conta" past the first one, which "back" leads to;

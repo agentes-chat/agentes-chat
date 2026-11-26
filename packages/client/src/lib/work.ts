@@ -1,6 +1,6 @@
 import type { TFunction } from "i18next";
 import type { ConnectorDef, Message, OrgSummary, Run, RunStep } from "../api/types";
-import type { LiveCode, LiveOutput, LiveRun, LiveStep, LiveWork } from "../realtime/streams";
+import type { LiveCode, LiveOutput, LivePhase, LiveRun, LiveStep, LiveWork } from "../realtime/streams";
 import { type Activity, type ActivityKind, activityVerb, appLabel, PERMISSION_TOOL, toolActivity } from "./activity";
 import {
   type CliLine,
@@ -869,6 +869,7 @@ export const STEP_WORDS_AFTER_MS = 1500;
  * "Mexendo nos arquivos do PC · refresh.ts…"), from the same live work as its tool block; "Pensando…" while no step
  * runs; "Esperando aprovação…" while its last call waits on a person. `step`: the brain's own words for its latest call
  * (quoted), or its own call no `agent.tool` told. `intent`: what it is about to do (`LiveRun.intent`), for "Pensando…".
+ * `phase`: a step before the model has the turn that is taking a while ("Atualizando o código…"), while no call runs.
  */
 export function waitStep(
   t: TFunction,
@@ -876,6 +877,7 @@ export function waitStep(
   step?: LiveStep,
   intent?: string,
   locale?: string,
+  phase?: LivePhase,
 ): string {
   const last = (work ?? []).findLast((w) => w.kind === "call");
   if (last?.kind === "call" && last.held) return t("chat.wait.held");
@@ -890,6 +892,7 @@ export function waitStep(
     return `${capitalize(words, locale)}…`;
   }
   if (now?.state !== "run") {
+    if (phase === "code") return t("chat.wait.code");
     if (step?.tool) return `${capitalize(activityVerb(t, toolActivity(step.tool)))}…`;
     return intent ? `${capitalize(intent)}…` : t("chat.wait.thinking");
   }
@@ -918,7 +921,7 @@ export function waitStep(
  */
 export function barStep(
   t: TFunction,
-  run: Pick<LiveRun, "status" | "work" | "step" | "startedAt" | "workingSince" | "intent">,
+  run: Pick<LiveRun, "status" | "work" | "step" | "startedAt" | "workingSince" | "intent" | "phase">,
   locale?: string,
   now = Date.now(),
 ): string {
@@ -926,7 +929,7 @@ export function barStep(
   if (!calling && run.status === "running")
     return run.intent ? `${lowerFirst(run.intent, locale)}…` : `${activityVerb(t, { kind: "writing" })}…`;
   const long = now - (run.workingSince ?? run.startedAt ?? now) >= STEP_WORDS_AFTER_MS;
-  return lowerFirst(waitStep(t, run.work, long ? run.step : undefined, run.intent, locale), locale);
+  return lowerFirst(waitStep(t, run.work, long ? run.step : undefined, run.intent, locale, run.phase), locale);
 }
 
 export { formatLineTime } from "./format";

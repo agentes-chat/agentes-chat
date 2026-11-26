@@ -3600,6 +3600,8 @@
       "grok_female": "Grok non ha effettuato l'accesso su questo computer. Collega un account Grok nella pagina di {{name}}.",
       "antigravity": "Gemini non ha effettuato l'accesso su questo computer. Collega un account Gemini nella pagina di {{name}}.",
       "antigravity_female": "Gemini non ha effettuato l'accesso su questo computer. Collega un account Gemini nella pagina di {{name}}.",
+      "devin": "Devin non ha effettuato l'accesso su questo computer. Collega un account Devin nella pagina di {{name}}.",
+      "devin_female": "Devin non ha effettuato l'accesso su questo computer. Collega un account Devin nella pagina di {{name}}.",
       "opencode": "OpenCode non può pensare su questo computer. Collega una chiave OpenCode nella pagina di {{name}}.",
       "opencode_female": "OpenCode non può pensare su questo computer. Collega una chiave OpenCode nella pagina di {{name}}."
     },
@@ -3614,6 +3616,8 @@
       "grok_female": "Grok non ha effettuato l'accesso su {{computer}}. Collega un account Grok nella pagina di {{name}}.",
       "antigravity": "Gemini non ha effettuato l'accesso su {{computer}}. Collega un account Gemini nella pagina di {{name}}.",
       "antigravity_female": "Gemini non ha effettuato l'accesso su {{computer}}. Collega un account Gemini nella pagina di {{name}}.",
+      "devin": "Devin non ha effettuato l'accesso su {{computer}}. Collega un account Devin nella pagina di {{name}}.",
+      "devin_female": "Devin non ha effettuato l'accesso su {{computer}}. Collega un account Devin nella pagina di {{name}}.",
       "opencode": "OpenCode non può pensare su {{computer}}. Collega una chiave OpenCode nella pagina di {{name}}.",
       "opencode_female": "OpenCode non può pensare su {{computer}}. Collega una chiave OpenCode nella pagina di {{name}}."
     },
@@ -3673,6 +3677,7 @@
       "cursor": "Collega il tuo piano Cursor",
       "grok": "Collega il tuo piano Grok",
       "gemini": "Collega il tuo piano Gemini",
+      "devin": "Collega il tuo piano Devin",
       "zen": "Collega OpenCode",
       "api_key": "Aggiungi una chiave API"
     },
@@ -3827,6 +3832,10 @@
         "warning": "Google dice che usare un piano Gemini personale all'interno di altre app può portare alla sospensione dell'account. Per evitare questo rischio, usa una chiave API di Gemini o Gemini Enterprise.",
         "windowsOne": "Su Windows, un computer usa un solo account Gemini alla volta."
       },
+      "devin": {
+        "title": "Il tuo piano Devin",
+        "tiers": "Free, Pro, Max o Teams"
+      },
       "zen": {
         "title": "OpenCode",
         "tiers": "Modelli gratuiti, o la tua chiave OpenCode"
@@ -3934,6 +3943,7 @@
       "cursor": "Cursor ha effettuato l'accesso come {{email}}, non {{account}}. Esci dalla pagina di Cursor e riprova.",
       "grok": "Grok ha effettuato l'accesso come {{email}}, non {{account}}. Esci dalla pagina di Grok e riprova.",
       "antigravity": "Gemini ha effettuato l'accesso come {{email}}, non {{account}}. Esci dalla pagina di Google e riprova.",
+      "devin": "Devin ha effettuato l'accesso come {{email}}, non {{account}}. Esci dalla pagina di Devin e riprova.",
       "opencode": "OpenCode ha effettuato l'accesso come {{email}}, non come {{account}}. Riprova con la chiave giusta."
     },
     "useAnyway": "Usa {{email}}",
@@ -6311,6 +6321,7 @@
             "cursor": "Aggiungi un account Cursor",
             "grok": "Aggiungi un account Grok",
             "antigravity": "Aggiungi un account Gemini",
+            "devin": "Aggiungi un account Devin",
             "opencode": "Aggiungi una chiave OpenCode"
           },
           "stepOne": {
@@ -6318,6 +6329,7 @@
             "codex": "L'account con il tuo piano",
             "cursor": "L'account con il tuo piano",
             "grok": "L'account con il tuo piano",
+            "devin": "L'account con il tuo piano",
             "antigravity": "L'account Google con il tuo piano",
             "antigravityEnterprise": "Il tuo account Gemini Enterprise"
           },
@@ -6327,7 +6339,8 @@
             "codex": "Accedi con ChatGPT",
             "cursor": "Accedi con Cursor",
             "grok": "Accedi con Grok",
-            "antigravity": "Accedi con Google"
+            "antigravity": "Accedi con Google",
+            "devin": "Accedi con Devin"
           },
           "opencodeFree": "I modelli gratuiti di OpenCode non richiedono chiavi. Una chiave dalla console di OpenCode aggiunge quelli a pagamento.",
           "cursorFinish": "Accedi sulla pagina di Cursor e l'accesso si completa da solo su {{computer}}.",
@@ -6342,6 +6355,9 @@
           "notCode": "Non sembra un codice di Claude.",
           "stepTwoGoogle": "Incolla il codice che mostra Google",
           "codeLabelGoogle": "Codice di Google",
+          "stepTwoDevin": "Incolla il codice che mostra Devin",
+          "codeHintDevin": "Incolla il codice mostrato dalla pagina di Devin, non l'indirizzo della pagina.",
+          "codeLabelDevin": "Codice di Devin",
           "codeHintGoogle": "Incolla il codice mostrato dalla pagina di Google, non l'indirizzo della pagina.",
           "notCodeGoogle": "Questo è un indirizzo senza codice. Incolla il codice mostrato dalla pagina di Google.",
           "send": "Invia a {{computer}}",
@@ -6375,6 +6391,7 @@
             "cursor": "Cursor ha effettuato l'accesso come {{account}}, un account che hai già collegato. Per usarne un altro, esci sulla pagina di Cursor e riprova.",
             "grok": "Grok ha effettuato l'accesso come {{account}}, un account che hai già collegato. Per usarne un altro, esci sulla pagina di Grok e riprova.",
             "antigravity": "Gemini ha effettuato l'accesso come {{account}}, un account che hai già collegato. Per usarne un altro, esci sulla pagina di Google e riprova.",
+            "devin": "Devin ha effettuato l'accesso come {{account}}, un account che hai già collegato. Per usarne un altro, esci sulla pagina di Devin e riprova.",
             "opencode": "Questa chiave OpenCode è già collegata come {{account}}."
           },
           "startFailed": "Nessuna risposta da {{computer}}. Riprova tra un attimo.",
@@ -11646,6 +11663,7 @@
       "cursor": "Cursor",
       "grok": "Grok",
       "antigravity": "Gemini",
+      "devin": "Devin",
       "opencode": "OpenCode",
       "needs": {
         "keys": "Aggiorna agentes sul computer per usare la chiave di un piano"
@@ -13197,6 +13215,7 @@
       "cursor": "{{model}} con il piano Cursor",
       "grok": "{{model}} con il piano Grok",
       "gemini": "{{model}} con il piano Gemini",
+      "devin": "{{model}} con il piano Devin",
       "zen": "{{model}} con OpenCode",
       "coding": "{{model}} con {{plan}}",
       "claudeOf": "{{model}} con il piano Claude di {{owner}}",
@@ -13204,6 +13223,7 @@
       "cursorOf": "{{model}} con il piano Cursor di {{owner}}",
       "grokOf": "{{model}} con il piano Grok di {{owner}}",
       "geminiOf": "{{model}} con il piano Gemini di {{owner}}",
+      "devinOf": "{{model}} con il piano Devin di {{owner}}",
       "zenOf": "{{model}} con l'OpenCode di {{owner}}",
       "codingOf": "{{model}} con {{plan}} di {{owner}}",
       "claudeAuto": "Piano Claude",
@@ -13211,6 +13231,7 @@
       "cursorAuto": "Piano Cursor",
       "grokAuto": "Piano Grok",
       "geminiAuto": "Piano Gemini",
+      "devinAuto": "Piano Devin",
       "zenAuto": "OpenCode",
       "codingAuto": "{{plan}}",
       "claudeAutoOf": "Piano Claude di {{owner}}",
@@ -13218,6 +13239,7 @@
       "cursorAutoOf": "Piano Cursor di {{owner}}",
       "grokAutoOf": "Piano Grok di {{owner}}",
       "geminiAutoOf": "Piano Gemini di {{owner}}",
+      "devinAutoOf": "Piano Devin di {{owner}}",
       "zenAutoOf": "OpenCode di {{owner}}",
       "codingAutoOf": "{{plan}} di {{owner}}",
       "on": "{{line}} su {{computer}}"
@@ -13232,7 +13254,8 @@
       "cursor": "Cursor",
       "opencode": "OpenCode",
       "grok": "Grok Build",
-      "antigravity": "Antigravity CLI"
+      "antigravity": "Antigravity CLI",
+      "devin": "Devin CLI"
     },
     "foot": {
       "api": "Tramite l'API",
@@ -13245,6 +13268,7 @@
     "cursorText": "Usa il piano Cursor di chi ha collegato il computer.",
     "grokText": "Usa il piano Grok di chi ha collegato il computer.",
     "antigravityText": "Usa il piano Gemini di chi ha collegato il computer.",
+    "devinText": "Usa il piano Devin di chi ha collegato il computer.",
     "opencodeText": "I modelli gratuiti di OpenCode, o la chiave OpenCode di chi ha collegato il computer.",
     "cursorModel": {
       "inPlan": "Nel tuo piano Cursor",
@@ -13262,6 +13286,7 @@
       "home_only": "{{program}} è installato solo per root su {{computer}}, dove gli agenti non arrivano.",
       "not_reported": "{{computer}} sta ancora controllando quali programmi ha. Questo cambia da solo quando ha finito.",
       "system": "{{program}} non funziona ancora sul sistema di {{computer}}.",
+      "systemDevin": "{{computer}} usa Windows, dove Devin non funziona ancora: lì la sua CLI non riesce a tenere separato l'accesso di ogni account. Usa Devin su un computer Mac o Linux, oppure scegli un'altra IA.",
       "windows_sandbox": "Il Windows di {{computer}} non riesce a isolare i comandi di {{program}}. Scegli invece Claude o una chiave API, oppure aggiorna quel computer a Windows 11 24H2 o successivo, con gli ultimi aggiornamenti.",
       "no_computerCloud": "Pronto appena lo è {{computer}}."
     },
@@ -13307,6 +13332,7 @@
       "cursor": "Cursor · {{model}}",
       "grok": "Grok Build · {{model}}",
       "antigravity": "Antigravity CLI · {{model}}",
+      "devin": "Devin CLI · {{model}}",
       "opencode": "OpenCode · {{model}}"
     },
     "mission": {
@@ -17226,6 +17252,7 @@
         "opencode": "OpenCode",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
+        "devin": "Devin CLI",
         "commands": "i comandi",
         "browser": "il browser",
         "desktop": "lo schermo",
@@ -17401,6 +17428,7 @@
         "cursor": "Cursor",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
+        "devin": "Devin CLI",
         "opencode": "OpenCode",
         "commands": "Comandi",
         "browser": "Browser"
@@ -17411,6 +17439,7 @@
         "cursor": "Come Claude Code, con un account Cursor. Solo nelle cartelle consentite.",
         "grok": "Come Claude Code, con un account Grok. Solo nelle cartelle consentite.",
         "antigravity": "Come Claude Code, con un account Gemini. Solo nelle cartelle consentite.",
+        "devin": "Come Claude Code, con un account Devin. Solo nelle cartelle consentite.",
         "opencode": "Come Claude Code, con i modelli gratuiti di OpenCode o una chiave OpenCode. Solo nelle cartelle consentite.",
         "commands": "Esegue comandi del Terminale, come test e build."
       },
@@ -19588,6 +19617,7 @@
     "namesMore": "{{first}} e altri {{count}}",
     "wait": {
       "thinking": "Sta pensando…",
+      "code": "Sta aggiornando il codice…",
       "held": "In attesa di approvazione…",
       "said": "«{{text}}»"
     },

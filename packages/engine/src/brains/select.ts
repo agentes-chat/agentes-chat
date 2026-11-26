@@ -4,6 +4,7 @@ import {
   type BrainEffort,
   CODEX_WINDOWS_PROTOCOL,
   CURSOR_PROTOCOL,
+  DEVIN_PROTOCOL,
   GROK_PROTOCOL,
   GROK_WINDOWS_PROTOCOL,
   isBrainEffort,
@@ -54,7 +55,16 @@ import {
 } from "./claude-code";
 import { BRAIN_NAMES, BRAIN_PLAN_NAMES, type BrainAccount, type BrainKind, type BrainSession } from "./types";
 
-const KINDS: readonly BrainKind[] = ["model", "claude_code", "codex", "cursor", "opencode", "grok", "antigravity"];
+const KINDS: readonly BrainKind[] = [
+  "model",
+  "claude_code",
+  "codex",
+  "cursor",
+  "opencode",
+  "grok",
+  "antigravity",
+  "devin",
+];
 const kindOf = (v: unknown): BrainKind => (KINDS.includes(v as BrainKind) ? (v as BrainKind) : "model");
 
 /** A mission's choice for a run in its thread (`missionTurnFor`). */
@@ -435,7 +445,7 @@ export function computerBrainUnavailable(
       ...pausedUntil,
     };
   }
-  if (kind === "cursor" || kind === "opencode" || kind === "grok" || kind === "antigravity") {
+  if (kind === "cursor" || kind === "opencode" || kind === "grok" || kind === "antigravity" || kind === "devin") {
     const off = toolOff(status, kind);
     if (off) return off;
     if (
@@ -445,6 +455,7 @@ export function computerBrainUnavailable(
         opencode: OPENCODE_PROTOCOL,
         grok: GROK_PROTOCOL,
         antigravity: ANTIGRAVITY_PROTOCOL,
+        devin: DEVIN_PROTOCOL,
       }[kind]
     ) {
       return {
@@ -509,6 +520,7 @@ export const UNAVAILABLE_CODES: ReadonlySet<string> = new Set([
   "opencode_missing",
   "grok_missing",
   "antigravity_missing",
+  "devin_missing",
   // Its CLI at a version agentes.chat holds back (`cliOutdated`): the run waits for it to be updated there.
   "cli_outdated",
   "plan_limit",
@@ -531,6 +543,7 @@ export const NO_AI_CODES: ReadonlySet<string> = new Set([
   "opencode_missing",
   "grok_missing",
   "antigravity_missing",
+  "devin_missing",
 ]);
 
 /** What the engine runs a turn with. */
@@ -704,11 +717,13 @@ async function sessionFor(
   accountId: string | null,
   options: { fresh?: boolean; promptKey?: string; peek?: boolean },
   now: Date,
-): Promise<{ id: string; resume: boolean }> {
+): Promise<{ id: string; resume: boolean; partsRead?: string | null; refreshRead?: string[] }> {
   if (run.brainSessionId) {
     return { id: run.brainSessionId, resume: await sessionUsed(db, run, kind, run.brainSessionId) };
   }
   let id: string | null = null;
+  let partsRead: string | null = null;
+  let refreshRead: string[] = [];
   if (!options.fresh && !run.background) {
     const { agentRuns, agentRunSteps, usageRecords, messages } = schema;
     const [last] = await db
@@ -731,6 +746,13 @@ async function sessionFor(
           (select max(u.input_tokens + u.cache_read_tokens + u.cache_write_tokens)
             from ${usageRecords} u where u.run_id = "agent_runs"."id" and u.provider = ${kind}), 0)`.mapWith(Number),
         promptKey: sql<string | null>`${runState}->>'promptKey'`,
+        // Not in `state`: read on this one row only.
+        partsRead: sql<string | null>`${agentRuns.transcript}->>'sessionParts'`,
+        refreshRead: sql<
+          string[]
+        >`jsonb_path_query_array(${agentRuns.transcript}->'system', '$[*] ? (@.refresh == true).text')::text`.mapWith(
+          (v: string | null) => (v ? (JSON.parse(v) as string[]) : []),
+        ),
       })
       .from(agentRuns)
       .where(
@@ -777,12 +799,16 @@ async function sessionFor(
       (options.promptKey === undefined || last.promptKey === options.promptKey)
     ) {
       id = last.sessionId;
+      partsRead = last.partsRead;
+      refreshRead = last.refreshRead;
     }
   }
   const sessionId = id ?? brainSessionId(agent.id, `${conversation}:${run.id}`, kind);
   if (!options.peek)
     await db.update(schema.agentRuns).set({ brainSessionId: sessionId }).where(eq(schema.agentRuns.id, run.id));
-  return { id: sessionId, resume: id ? await sessionUsed(db, run, kind, sessionId) : false };
+  return id
+    ? { id: sessionId, resume: await sessionUsed(db, run, kind, sessionId), partsRead, refreshRead }
+    : { id: sessionId, resume: false };
 }
 
 /**
