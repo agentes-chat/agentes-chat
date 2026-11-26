@@ -85,7 +85,10 @@ export interface BillingMonth {
   /** Messages per day, from the 1st to today: one item per day, today last. */
   days: number[];
   messages: number;
-  /** The messages agents wrote themselves: a line the server wrote for them (`SERVER_LINE_META`) left out. */
+  /**
+   * The messages agents wrote themselves, up to `MONTH_ACTIONS_MAX`: a line the server wrote for them
+   * (`SERVER_LINE_META`) left out.
+   */
   agentActions: number;
   /** Drive files added, wiki pages and tasks created this month, as `usage` counts them. */
   files: number;
@@ -98,6 +101,12 @@ export const TEAM_SHOWN = 5;
 
 /** The most characters of an agent's name or role a link carries: the billing service takes no more. */
 export const TEAM_TEXT_MAX = 80;
+
+/**
+ * The most of the agents' own lines a month counts. The billing service reads `agentActions` only as whether the team
+ * did anything (at least 1), so the count stops here and a busy month reads no more of its agents' messages.
+ */
+export const MONTH_ACTIONS_MAX = 10_000;
 
 /** A plan's key as the billing service names it: this server passes it on and never reads it. */
 export const PLAN_CLAIM = /^[a-z][a-z0-9_]{0,31}$/;
@@ -214,7 +223,7 @@ const ROUTINES_ON = sql`${routines.active} and ${routines.deletedAt} is null and
 
 /**
  * What a workspace holds, for the billing service's pages (ADR 0079 §3): workspace-wide counts, never a word of content
- * or a figure per channel or person; and its time zone, for its month (`monthOf`).
+ * or a figure per channel or person.
  */
 const totalsOf = (orgId: string) => ({
   messages: orgMessageCount(orgId),
@@ -223,8 +232,6 @@ const totalsOf = (orgId: string) => ({
   ...keptOf(orgId),
   routines: sql<number>`(select count(*) from ${routines} where ${routines.orgId} = ${orgId}
     and ${ROUTINES_ON})`.mapWith(Number),
-  zone: sql<string | null>`(select ${organizationSettings.timezone} from ${organizationSettings}
-    where ${organizationSettings.orgId} = ${orgId})`,
 });
 
 /** The app's default look, for an agent that never picked one (`appearance` null). */
@@ -277,51 +284,76 @@ const SERVER_LINE_META = [
   MEDIA_AFTER_KEY,
 ] as const;
 
+/** `SERVER_LINE_META` as a Postgres array, for `?|`. */
+const SERVER_LINES = `{${SERVER_LINE_META.join(",")}}`;
+
+/**
+ * The agents' own lines in `range`, where `usage` counts messages (`READABLE`), up to `MONTH_ACTIONS_MAX`. Read from
+ * each of the workspace's agents' messages (its archived and deleted ones too, whose rows stay for their messages) on
+ * the `author_agent_id` index of the range's monthly partitions (ADR 0009), so no person's message is read, and the
+ * reading stops at the cap. Each subquery's own `limit` keeps it a loop per agent rather than one join over the month.
+ */
+const agentActionsIn = (orgId: string, range: Range) => {
+  const max = sql.raw(String(MONTH_ACTIONS_MAX));
+  return sql<number>`(select count(*) from (select 1 from ${agents} a,
+      lateral (select 1 from ${messages} m
+        where m.author_agent_id = a.id${within(sql`m.created_at`, range)}
+          and not (m.meta ?| ${SERVER_LINES}::text[])
+          and exists (select 1 from ${channels} c where c.id = m.channel_id and c.org_id = ${orgId} and ${READABLE})
+        limit ${max}) said
+    where a.org_id = ${orgId} limit ${max}) own)`.mapWith(Number);
+};
+
 /** 00:00 of a day in `timeZone` (moved forward where a DST change skips it), its UTC midnight if none is left. */
 const midnight = (year: number, month: number, day: number, timeZone: string) =>
   zonedTimeForward(year, month, day, 0, 0, timeZone) ?? new Date(Date.UTC(year, month - 1, day));
 
 /**
  * This calendar month so far in the workspace's time zone (UTC when it has none, or one this runtime doesn't know):
- * messages per day and in all, those agents wrote themselves, and the Drive files, wiki pages and tasks created in it.
- * Messages are counted where `usage` counts them (`READABLE`), per conversation on each month's `(channel_id,
- * created_at)` index, the days told apart by their local midnights (`width_bucket`), in one statement; the rest in
- * another, on indexes that start with `org_id`.
+ * messages per day and in all, those agents wrote themselves (`agentActionsIn`), and the Drive files, wiki pages and
+ * tasks created in it. Messages are counted where `usage` counts them (`READABLE`), per conversation on each month's
+ * `(channel_id, created_at)` index without reading a row, the days told apart by their local midnights
+ * (`width_bucket`), in one statement; the rest in another beside it, the Drive's, wiki's and tasks' on indexes that
+ * start with `org_id`. It reads its time zone on its own, so the link waits for it beside the totals, not after them.
  */
-async function monthOf(db: Database, orgId: string, zone: string | null, now: Date): Promise<BillingMonth> {
+async function monthOf(db: Database, orgId: string, now: Date): Promise<BillingMonth> {
+  const [settings] = await db
+    .select({ zone: organizationSettings.timezone })
+    .from(organizationSettings)
+    .where(eq(organizationSettings.orgId, orgId));
+  const zone = settings?.zone;
   const timeZone = zone && isValidTimeZone(zone) ? zone : "UTC";
   const today = zonedParts(now, timeZone);
   const starts = Array.from({ length: today.day }, (_, i) => midnight(today.year, today.month, i + 1, timeZone));
   const from = starts[0] ?? now;
   const to =
     today.month === 12 ? midnight(today.year + 1, 1, 1, timeZone) : midnight(today.year, today.month + 1, 1, timeZone);
+  const range = { from, to };
   const bounds = `{${starts.map((at) => at.toISOString()).join(",")}}`;
-  const serverLines = `{${SERVER_LINE_META.join(",")}}`;
   const [perDay, [kept]] = await Promise.all([
-    db.execute(sql`select per.day, sum(per.n) as n, sum(per.said) as said
+    db.execute(sql`select per.day, sum(per.n) as n
       from ${channels} c,
-        lateral (select width_bucket(m.created_at, ${bounds}::timestamptz[]) as day, count(*) as n,
-            count(*) filter (where m.author_type = 'agent' and not (m.meta ?| ${serverLines}::text[])) as said
+        lateral (select width_bucket(m.created_at, ${bounds}::timestamptz[]) as day, count(*) as n
           from ${messages} m
-          where m.channel_id = c.id and m.created_at >= ${from.toISOString()}::timestamptz
-            and m.created_at < ${to.toISOString()}::timestamptz
+          where m.channel_id = c.id${within(sql`m.created_at`, range)}
           group by 1) per
       where c.org_id = ${orgId} and ${READABLE}
       group by per.day`),
-    db.select(keptOf(orgId, { from, to })).from(organizations).where(eq(organizations.id, orgId)),
+    db
+      .select({ ...keptOf(orgId, range), agentActions: agentActionsIn(orgId, range) })
+      .from(organizations)
+      .where(eq(organizations.id, orgId)),
   ]);
   const days = starts.map(() => 0);
-  let agentActions = 0;
-  for (const row of rowsOf<{ day: number | string; n: number | string; said: number | string }>(perDay)) {
+  for (const row of rowsOf<{ day: number | string; n: number | string }>(perDay)) {
     const at = Number(row.day) - 1;
     if (at >= 0 && at < days.length) days[at] = Number(row.n);
-    agentActions += Number(row.said);
   }
   return {
     start: Math.floor(from.getTime() / 1000),
     days,
     messages: days.reduce((sum, n) => sum + n, 0),
-    agentActions,
+    agentActions: kept?.agentActions ?? 0,
     files: kept?.files ?? 0,
     wikiPages: kept?.wikiPages ?? 0,
     issues: kept?.issues ?? 0,
@@ -351,7 +383,7 @@ export async function mintBillingLink(
   const { userId, orgId, from } = input;
   const membership = await requirePermission(db, userId, orgId, "manage_billing");
   const now = input.now ?? new Date();
-  const [org, [user], [totals], team] = await Promise.all([
+  const [org, [user], [totals], team, month] = await Promise.all([
     operatorOrg(db, orgId),
     db
       .select({ email: schema.users.email, name: schema.users.name, locale: schema.users.locale })
@@ -359,10 +391,10 @@ export async function mintBillingLink(
       .where(eq(schema.users.id, userId)),
     db.select(totalsOf(orgId)).from(organizations).where(eq(organizations.id, orgId)),
     teamOf(db, orgId),
+    monthOf(db, orgId, now),
   ]);
   if (!org || !user || !totals) throw new Error("billing link: the workspace or the account is gone");
-  const { zone, routines: routinesOn, ...counts } = totals;
-  const month = await monthOf(db, orgId, zone, now);
+  const { routines: routinesOn, ...counts } = totals;
   const iat = Math.floor(now.getTime() / 1000);
   const exp = iat + BILLING_LINK_SECONDS;
   const token = sealLinkToken<BillingLinkClaims>(input.secret, {

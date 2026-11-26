@@ -157,11 +157,15 @@ three fields (`BillingTeamAgent`, `BillingMonth` in `packages/engine/src/billing
   agent with no model call that the router has no reason to skip, `SERVER_LINE_META` in `billing-link.ts`: the team's
   hello in #general (`meta.greeting`, ADR 0162), which every team workspace gets once its first plan starts, a
   reminder's line, the card a run waits on while a device is away, the hidden first message of a task's or a file's
-  conversation, and the sticker or GIF added after a reply, ADR 0091 §4), and the Drive `files`, `wikiPages` and
-  `issues` created in it, counted as the totals count them (the trash, deleted pages and canceled tasks left out).
-  Messages are counted where `messages` counts them, per conversation on each month's `(channel_id, created_at)` index
-  (ADR 0009), the days told apart by their local midnights computed on this server, so a day a DST change makes 23 or
-  25 hours long is still one day; one statement for the messages, one for the rest on indexes that start with `org_id`.
+  conversation, and the sticker or GIF added after a reply, ADR 0091 §4; counted up to 10,000, `MONTH_ACTIONS_MAX`),
+  and the Drive `files`, `wikiPages` and `issues` created in it, counted as the totals count them (the trash, deleted
+  pages and canceled tasks left out). Messages are counted where `messages` counts them, per conversation on each
+  month's `(channel_id, created_at)` index without reading a row (ADR 0009), the days told apart by their local
+  midnights computed on this server, so a day a DST change makes 23 or 25 hours long is still one day. The agents' own
+  lines are the only ones read: from each agent's messages on the `author_agent_id` index of the month's partitions,
+  never a person's, stopping at the cap, since the billing service only asks whether there is one. One statement for the
+  messages, one beside it for the agents' lines and the rest (on indexes that start with `org_id`); the month reads its
+  time zone on its own, so the link waits for it beside the totals, not after them.
 
 The billing service shows the month only when the team did something in it (`agentActions` of at least 1): without
 real use, no numbers. With the longest team (five names and roles of 80 three-byte characters) and a 31-day month a

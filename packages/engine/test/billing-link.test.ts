@@ -12,6 +12,7 @@ import {
   deleteArtifact,
   deleteWikiPage,
   insertMessage,
+  MONTH_ACTIONS_MAX,
   mintBillingLink,
   openAgentDm,
   openLinkToken,
@@ -539,6 +540,29 @@ describe("mintBillingLink", () => {
     } finally {
       await g.close();
     }
+  });
+
+  test("the agents' own lines count up to MONTH_ACTIONS_MAX, and the reading stops there; every message still counts", async () => {
+    const over = MONTH_ACTIONS_MAX + 1;
+    // A month of the past, which nothing else this workspace wrote reaches.
+    await f.db.execute(sql`insert into messages (id, org_id, channel_id, author_type, author_agent_id, body, created_at)
+      select gen_random_uuid(), ${f.org.id}::uuid, ${f.general.id}::uuid, 'agent'::author_type, ${f.agent.id}::uuid, 'Oi',
+        timestamptz '2026-09-10T12:00:00Z' + i * interval '1 second'
+      from generate_series(1, ${over}) i`);
+    const month = claimsOf(
+      (
+        await mintBillingLink(f.db, {
+          secret: SECRET,
+          baseUrl: "https://billing.example.com",
+          userId: f.owner.id,
+          orgId: f.org.id,
+          from: "settings",
+          now: new Date("2026-09-20T12:00:00Z"),
+        })
+      ).url,
+    ).usage.month;
+    expect(month).toMatchObject({ messages: over, agentActions: MONTH_ACTIONS_MAX });
+    expect(month.days[9]).toBe(over);
   });
 
   test("the link stays short enough for any address bar and proxy, with the longest team and month", async () => {
