@@ -62,6 +62,7 @@ import { STORAGE_KEYS, sessionStore, storage } from "@/lib/storage";
 import { useToast } from "@/lib/toast";
 import { AiHost, AiStep } from "./onboarding/AiStep";
 import { AskYourAi } from "./onboarding/AskStep";
+import { HireTeam } from "./onboarding/HireStep";
 import { PeopleStep } from "./onboarding/PeopleStep";
 import { FirstAgentPick } from "./onboarding/PickStep";
 import { AppWall, Box, BoxNote, PickRows, type ShellFace, World } from "./onboarding/Shell";
@@ -896,6 +897,25 @@ export function OnboardingPage() {
         ),
       };
     }
+
+    // Hiring the team: the plan, the team asleep at night on the box's own header.
+    if (step === "plan" && orgId && !awake)
+      return {
+        box: (
+          <HireTeam
+            orgId={orgId}
+            lodi={lodiFace}
+            team={team}
+            option={firstOption}
+            offer={offer}
+            personal={personalNow}
+            confirming={paid}
+            skipping={open.isPending}
+            onSkip={() => open.mutate("skipped")}
+            eyebrow={stepLine}
+          />
+        ),
+      };
 
     if (step === "plan" && orgId)
       return {

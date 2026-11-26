@@ -2031,6 +2031,36 @@ export const ptBR = {
       about: "O que o seu {{app}} contou",
       aboutAny: "O que a sua IA contou",
     },
+    hire: {
+      the: "o {{name}}",
+      the_female: "a {{name}}",
+      title: "Contrate o time",
+      titleOne: "Contrate o {{name}}",
+      titleOne_female: "Contrate a {{name}}",
+      titlePersonal: "Contrate os seus agentes",
+      lead: "Você está contratando {{agent}} para {{role}}. Ele começa hoje, com {{lodi}}, e trabalha de dia e de noite.",
+      lead_female:
+        "Você está contratando {{agent}} para {{role}}. Ela começa hoje, com {{lodi}}, e trabalha de dia e de noite.",
+      leadNoRole: "Você está contratando {{agent}}. Ele começa hoje, com {{lodi}}, e trabalha de dia e de noite.",
+      leadNoRole_female: "Você está contratando {{agent}}. Ela começa hoje, com {{lodi}}, e trabalha de dia e de noite.",
+      leadMany: "Você está contratando {{names}}. Eles começam hoje, com {{lodi}}, e trabalham de dia e de noite.",
+      leadAlone:
+        "Você começa com o {{name}}, o RH dos agentes. Ele cria cada agente com você e trabalha de dia e de noite.",
+      leadAlone_female:
+        "Você começa com a {{name}}, o RH dos agentes. Ela cria cada agente com você e trabalha de dia e de noite.",
+      rightHand: "RH dos agentes",
+      rightHandLine: "Cria e ajusta os seus agentes, quando você pedir.",
+      plan: "Plano {{name}}",
+      perMonth: "por mês",
+      fine_one: "Até {{count}} pessoa. Crie outros agentes depois, sem pagar a mais. Cancele em um clique.",
+      fine_other: "Até {{count}} pessoas. Crie outros agentes depois, sem pagar a mais. Cancele em um clique.",
+      fineAny: "Crie outros agentes depois, sem pagar a mais. Cancele em um clique.",
+      later: "Agora não",
+      cta: "Contratar o time",
+      ctaOne: "Contratar o {{name}}",
+      ctaOne_female: "Contratar a {{name}}",
+      ctaPersonal: "Contratar os agentes",
+    },
   },
   /** The desktop app's right click (lib/context-menu.ts). */
   // The desktop app's notifications while its window is in the background (lib/desktop.ts `desktopNotice`).

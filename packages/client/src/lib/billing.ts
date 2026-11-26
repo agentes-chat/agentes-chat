@@ -135,11 +135,15 @@ export function planHeldNext(
   return { held: next, turnedOn };
 }
 
-/** The plan the onboarding offers: its key for the billing link, its name, and its price as the billing service writes it. */
+/**
+ * The plan the onboarding offers: its key for the billing link, its name, its price as the billing service writes it,
+ * and the people it includes (`people`) when the list says so.
+ */
 export interface PlanOffer {
   key: string;
   name: string;
   price?: string;
+  people?: number;
 }
 
 const PLAN_KEY = /^[a-z][a-z0-9_]{0,31}$/;
@@ -161,5 +165,9 @@ export function planOfferOf(json: unknown, key?: string): PlanOffer | null {
   const name = shortText(plan?.name, 40);
   if (!plan || !PLAN_KEY.test(wanted) || !name) return null;
   const price = shortText(plan.price, 24);
-  return { key: wanted, name, ...(price ? { price } : {}) };
+  const people =
+    typeof plan.people === "number" && Number.isInteger(plan.people) && plan.people > 0 && plan.people <= 10_000
+      ? plan.people
+      : undefined;
+  return { key: wanted, name, ...(price ? { price } : {}), ...(people ? { people } : {}) };
 }

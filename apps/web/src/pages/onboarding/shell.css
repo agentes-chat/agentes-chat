@@ -295,6 +295,14 @@ html:not([data-pointer]) .onbx__back:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
 }
+.onbx__back:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+/* A way out in words alone ("Not now"): no arrow, its text on the box's edge. */
+.onbx__back--text {
+  padding-inline: 8px;
+}
 .onbx__note {
   display: inline-flex;
   align-items: flex-start;
@@ -308,7 +316,7 @@ html:not([data-pointer]) .onbx__back:focus-visible {
   margin-top: 1px;
   color: var(--faint);
 }
-/* A step that draws its own buttons (the plan, the AI, the people) inside the box: on its ground, never sticky. */
+/* A step that draws its own buttons (the people) inside the box: on its ground, never sticky. */
 .onbx .onb__actions {
   position: static;
   margin: 0;
@@ -320,11 +328,6 @@ html:not([data-pointer]) .onbx__back:focus-visible {
 }
 .onbx .onb__skip {
   padding-bottom: 0;
-}
-.onbx .onb__plan {
-  padding: 0;
-  background: none;
-  box-shadow: none;
 }
 
 /* ---------- a choice: quiet rows, a hairline between them, the round choice at the end ---------- */

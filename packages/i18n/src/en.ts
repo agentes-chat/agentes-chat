@@ -2141,6 +2141,33 @@ export const en = {
       about: "What your {{app}} said",
       aboutAny: "What your AI said",
     },
+    /**
+     * "Hire the team", the plan step of a workspace waiting for its first plan. `the`: an agent's name with the article
+     * a language gives it ("o Caio" in Portuguese). `{{role}}`: the first agent's role, in lower case. `fine`: what the
+     * plan includes, `{{count}}` the people it includes when the billing service says so.
+     */
+    hire: {
+      the: "{{name}}",
+      title: "Hire the team",
+      titleOne: "Hire {{name}}",
+      titlePersonal: "Hire your agents",
+      lead: "You're hiring {{agent}} for {{role}}. {{name}} starts today, with {{lodi}}, and works day and night.",
+      leadNoRole: "You're hiring {{agent}}. {{name}} starts today, with {{lodi}}, and works day and night.",
+      leadMany: "You're hiring {{names}}. They start today, with {{lodi}}, and work day and night.",
+      leadAlone:
+        "You start with {{name}}, the agents' HR. {{name}} creates each agent with you and works day and night.",
+      rightHand: "Agents' HR",
+      rightHandLine: "Creates and adjusts your agents, whenever you ask.",
+      plan: "{{name}} plan",
+      perMonth: "a month",
+      fine_one: "Up to {{count}} person. Create more agents later at no extra cost. Cancel in one click.",
+      fine_other: "Up to {{count}} people. Create more agents later at no extra cost. Cancel in one click.",
+      fineAny: "Create more agents later at no extra cost. Cancel in one click.",
+      later: "Not now",
+      cta: "Hire the team",
+      ctaOne: "Hire {{name}}",
+      ctaPersonal: "Hire your agents",
+    },
   },
   // The desktop app's notifications while its window is in the background (lib/desktop.ts `desktopNotice`).
   desktopNotice: {
