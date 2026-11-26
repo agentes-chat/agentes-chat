@@ -1158,6 +1158,7 @@ export const ptBR = {
         later: "Convidar depois",
       },
       account: "Sua conta",
+      switchNote: "Dá para trocar depois, sem perder nada.",
     },
     railValue: {
       context: "Escrito",
@@ -1883,6 +1884,117 @@ export const ptBR = {
     confirmation: {
       sent: "Mandamos um link de confirmação para {{email}}.",
       first: "Já tem convite? Confirme seu e-mail primeiro.",
+    },
+    start: {
+      title: "Como você quer começar?",
+      lead: "Os agentes trabalham nos apps que vocês já usam, mais de {{n}}. Dá para mudar tudo depois.",
+      leadPersonal: "Os seus agentes trabalham nos apps que você já usa, mais de {{n}}. Dá para mudar tudo depois.",
+      leadAny: "Os agentes trabalham nos apps que vocês já usam. Dá para mudar tudo depois.",
+      leadAnyPersonal: "Os seus agentes trabalham nos apps que você já usa. Dá para mudar tudo depois.",
+      ask: "Pedir para a sua IA",
+      askText:
+        "Claude, ChatGPT, Gemini ou a que você usar acha as tarefas que mais tomam o seu tempo e propõe um agente para cada uma. Você escolhe por onde começar.",
+      askTextPersonal:
+        "Claude, ChatGPT, Gemini ou a que você usar acha as tarefas que mais tomam o seu tempo, no trabalho ou fora dele, e propõe um agente para cada uma. Você escolhe por onde começar.",
+      scratch: "Começar do zero",
+      scratchText: "Você cria cada agente quando quiser. O {{name}}, o RH dos agentes, monta cada um com você.",
+      scratchText_female: "Você cria cada agente quando quiser. A {{name}}, o RH dos agentes, monta cada um com você.",
+      askGo: "Pedir à sua IA",
+      scratchGo: "Começar do zero",
+    },
+    ask: {
+      title: "Peça o seu primeiro agente",
+      titleMember: "Peça o seu agente",
+      lead: "A sua IA já conhece o seu trabalho. Com o agentes.chat conectado, ela acha as tarefas que você mais repete e propõe um agente para cada uma. Você escolhe por onde começar.",
+      leadPersonal:
+        "A sua IA já conhece a sua rotina. Com o agentes.chat conectado, ela acha as tarefas que você mais repete, no trabalho ou fora dele, e propõe um agente para cada uma. Você escolhe por onde começar.",
+      apps: "O seu assistente",
+      other: "Outro app de agentes",
+      connect: "Conecte o agentes.chat",
+      connected: "Conectado",
+      paste: "Cole este pedido numa conversa nova",
+      pasteJson: "Cole este pedido numa conversa nova com o {{app}}",
+      copy: "Copiar o pedido",
+      waiting: "Esperando a proposta do {{app}}…",
+      noConnector: "Sem conector? Cole a resposta",
+      useConnector: "Usar o conector",
+      answer: "Cole aqui a resposta inteira do {{app}}",
+      answerPlaceholder: "O JSON que ele respondeu",
+      read: "Ler a resposta",
+      notJson: "Não achei um JSON nessa resposta. Copie a resposta inteira e cole de novo.",
+      later: "Agora não",
+      say: "Estou ouvindo. A proposta aparece aqui.",
+      stuck:
+        "Nada depois de alguns minutos? Confira se o conector está ligado nessa conversa e mande o pedido de novo.",
+      /** `propose_first_agents` is the tool's name and stays as is. The JSON example keeps its keys in English. */
+      prompt: {
+        team: {
+          open: "Quero começar a usar o agentes.chat, que acabei de conectar aqui, com um agente de IA que tire do meu dia um trabalho que se repete.",
+          know: "1. Antes de me perguntar qualquer coisa, use o que você já sabe sobre mim: as nossas conversas anteriores, a sua memória e os arquivos e apps a que você tem acesso. Entenda o que a {{org}} faz, para quem, quais apps a gente usa e quais tarefas eu repito toda semana.",
+          send: "4. Mande as 3 opções pela ferramenta propose_first_agents do agentes.chat, junto com um resumo de duas ou três frases do que a {{org}} faz. Não crie nada: eu escolho por onde começar.",
+        },
+        member: {
+          open: "Acabei de entrar no workspace da {{org}} no agentes.chat, que conectei aqui, e quero começar com um agente de IA que tire do meu dia um trabalho que se repete no meu papel no time.",
+          know: "1. Antes de me perguntar qualquer coisa, use o que você já sabe sobre mim: as nossas conversas anteriores, a sua memória e os arquivos e apps a que você tem acesso. Entenda qual é o meu papel na {{org}}, com quem eu trabalho, quais apps uso e quais tarefas eu repito toda semana.",
+          send: "4. Mande as 3 opções pela ferramenta propose_first_agents do agentes.chat, junto com um resumo de duas ou três frases do que eu faço na {{org}}. Não crie nada: eu escolho por onde começar.",
+        },
+        personal: {
+          open: "Quero começar a usar o agentes.chat, que acabei de conectar aqui, com um agente de IA que tire do meu dia um trabalho que se repete, no trabalho ou fora dele.",
+          know: "1. Antes de me perguntar qualquer coisa, use o que você já sabe sobre mim: as nossas conversas anteriores, a sua memória e os arquivos e apps a que você tem acesso. Entenda o que eu faço, como é a minha semana, quais apps uso e quais tarefas eu repito.",
+          send: "4. Mande as 3 opções pela ferramenta propose_first_agents do agentes.chat, junto com um resumo de duas ou três frases sobre mim. Não crie nada: eu escolho por onde começar.",
+        },
+        interview:
+          "2. Se faltar algo importante, me entreviste: uma pergunta por vez, no máximo 3, começando pela que mais muda a recomendação. Se eu não souber responder, siga com a melhor suposição e diga qual foi.",
+        design:
+          "3. Escolha as 3 tarefas repetitivas que mais tomam o meu tempo. Para cada uma, desenhe um agente como uma vaga de emprego: um nome curto, o cargo, 3 responsabilidades (o que ele faz sozinho, quando roda e quando me chama), os apps de que precisa, a rotina com dia e hora e o que ele já pode entregar no primeiro dia. Ordene da tarefa que mais toma o meu tempo para a que menos toma e diga em uma frase, com o que você viu, por que escolheu cada uma.",
+        json: {
+          team: "Quero começar a usar o agentes.chat com um agente de IA que tire do meu dia um trabalho que se repete.",
+          member:
+            "Acabei de entrar no workspace da {{org}} no agentes.chat e quero começar com um agente de IA que tire do meu dia um trabalho que se repete no meu papel no time.",
+          personal:
+            "Quero começar a usar o agentes.chat com um agente de IA que tire do meu dia um trabalho que se repete, no trabalho ou fora dele.",
+          send: "4. Responda só com um JSON neste formato, sem texto antes ou depois:",
+          example:
+            '{"about":"…","options":[{"name":"…","role":"…","why":"…","tasks":["…","…","…"],"apps":["…"],"routine":{"title":"…","schedule":"toda segunda às 8:00","prompt":"…"},"today":["…","…"],"instructions":"…"}]}',
+        },
+      },
+    },
+    pick: {
+      title: "Escolha o seu primeiro agente",
+      lead_one: "O seu {{app}} achou a tarefa que mais toma o seu tempo. Comece por ela.",
+      lead_other:
+        "O seu {{app}} achou as {{count}} tarefas que mais tomam o seu tempo. Comece por uma: as outras ficam para depois.",
+      leadAny_one: "A sua IA achou a tarefa que mais toma o seu tempo. Comece por ela.",
+      leadAny_other:
+        "A sua IA achou as {{count}} tarefas que mais tomam o seu tempo. Comece por uma: as outras ficam para depois.",
+      eyebrow: "Proposta do seu {{app}} · passo {{n}} de {{total}}",
+      eyebrowAny: "Proposta da sua IA · passo {{n}} de {{total}}",
+      rank: {
+        first: "A que mais se repete",
+        second: "Em 2º lugar",
+        third: "Em 3º lugar",
+      },
+      duties: "Responsabilidades",
+      needs: "Requisitos",
+      why: "Por que o {{name}}:",
+      why_female: "Por que a {{name}}:",
+      note: "Nada é criado até você escolher.",
+      create: "Criar o {{name}}",
+      create_female: "Criar a {{name}}",
+      say_one: "O {{app}} achou um jeito de começar.",
+      say_other: "O {{app}} achou {{count}} jeitos de começar.",
+      sayAny_one: "A sua IA achou um jeito de começar.",
+      sayAny_other: "A sua IA achou {{count}} jeitos de começar.",
+      needsAdmin: "Criar agentes aqui precisa de um admin. Peça a quem administra o workspace.",
+    },
+    week: {
+      title: "A primeira semana do {{name}}",
+      title_female: "A primeira semana da {{name}}",
+      lead: "Ele começa hoje mesmo. Tudo chega no canal dele, e você só aprova.",
+      lead_female: "Ela começa hoje mesmo. Tudo chega no canal dela, e você só aprova.",
+      leadPersonal: "Ele começa hoje mesmo. Tudo chega na conversa com ele, e você só aprova.",
+      leadPersonal_female: "Ela começa hoje mesmo. Tudo chega na conversa com ela, e você só aprova.",
+      say: "Assim que o time ligar, a gente começa.",
     },
   },
   /** The desktop app's right click (lib/context-menu.ts). */

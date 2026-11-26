@@ -1230,6 +1230,8 @@ export const en = {
         later: "Invite later",
       },
       account: "Your account",
+      /** Beside Continue on the first question: the workspace's mode changes later in Settings. */
+      switchNote: "You can switch later without losing anything.",
     },
     railValue: {
       context: "Written",
@@ -1969,6 +1971,137 @@ export const en = {
     confirmation: {
       sent: "We sent a confirmation link to {{email}}.",
       first: "Already invited? Confirm your email first.",
+    },
+    /**
+     * How to start (the onboarding's first agent): the person's own AI proposes agents, or from scratch with the
+     * right hand alone. Over it, the apps the agents work in; `{{n}}` is the catalog's count in tens ("more than 70").
+     */
+    start: {
+      title: "How do you want to start?",
+      lead: "Agents work in the apps you already use, more than {{n}}. You can change everything later.",
+      leadPersonal: "Your agents work in the apps you already use, more than {{n}}. You can change everything later.",
+      leadAny: "Agents work in the apps you already use. You can change everything later.",
+      leadAnyPersonal: "Your agents work in the apps you already use. You can change everything later.",
+      ask: "Ask your AI",
+      askText:
+        "Claude, ChatGPT, Gemini or whichever you use finds the tasks that take most of your time and proposes an agent for each one. You pick where to start.",
+      askTextPersonal:
+        "Claude, ChatGPT, Gemini or whichever you use finds the tasks that take most of your time, at work or outside it, and proposes an agent for each one. You pick where to start.",
+      scratch: "Start from scratch",
+      /** `{{name}}`: the right hand, the agent that creates and adjusts the other agents. */
+      scratchText: "You create each agent whenever you want. {{name}}, the agents' HR, builds each one with you.",
+      askGo: "Ask your AI",
+      scratchGo: "Start from scratch",
+    },
+    /**
+     * Asking the person's own AI for a first agent: the assistants, connecting agentes.chat to it by MCP, the request
+     * to paste, and the way without a connector (the same request asking for a JSON answer, pasted here).
+     */
+    ask: {
+      title: "Ask for your first agent",
+      titleMember: "Ask for your agent",
+      lead: "Your AI already knows your work. With agentes.chat connected, it finds the tasks you repeat the most and proposes an agent for each one. You pick where to start.",
+      leadPersonal:
+        "Your AI already knows your routine. With agentes.chat connected, it finds the tasks you repeat the most, at work or outside it, and proposes an agent for each one. You pick where to start.",
+      /** The row of assistants, for screen readers. */
+      apps: "Your assistant",
+      /** The row's last answer: the import of other agent apps, a file or a link. */
+      other: "Another agent app",
+      connect: "Connect agentes.chat",
+      connected: "Connected",
+      paste: "Paste this request into a new conversation",
+      pasteJson: "Paste this request into a new conversation with {{app}}",
+      copy: "Copy the request",
+      waiting: "Waiting for {{app}}'s proposal…",
+      noConnector: "No connector? Paste the answer",
+      useConnector: "Use the connector",
+      answer: "Paste {{app}}'s whole answer here",
+      answerPlaceholder: "The JSON it answered with",
+      read: "Read the answer",
+      notJson: "There's no JSON in this answer. Copy the whole answer and paste it again.",
+      later: "Not now",
+      /** The right hand, over the box while the step waits. */
+      say: "I'm listening. The proposal shows up here.",
+      stuck:
+        "Nothing after a few minutes? Check that the connector is on in that conversation and send the request again.",
+      /**
+       * The request pasted into the person's AI, in parts joined by blank lines: the variant's opening and what to
+       * read first (`team`: a team's owner, `member`: someone who just joined, `personal`), the shared interview and
+       * job descriptions, then how to send it. `propose_first_agents` is the tool's name and stays as is. `json`: the
+       * same request with no connector, answered as JSON (its example keeps its keys in English).
+       */
+      prompt: {
+        team: {
+          open: "I want to start using agentes.chat, which I just connected here, with an AI agent that takes a repetitive piece of work off my day.",
+          know: "1. Before asking me anything, use what you already know about me: our past conversations, your memory and the files and apps you can access. Understand what {{org}} does, for whom, which apps we use and which tasks I repeat every week.",
+          send: "4. Send the 3 options with the propose_first_agents tool of agentes.chat, along with a two or three sentence summary of what {{org}} does. Don't create anything: I'll pick where to start.",
+        },
+        member: {
+          open: "I just joined the {{org}} workspace on agentes.chat, which I connected here, and I want to start with an AI agent that takes a repetitive piece of my role on the team off my day.",
+          know: "1. Before asking me anything, use what you already know about me: our past conversations, your memory and the files and apps you can access. Understand my role at {{org}}, who I work with, which apps I use and which tasks I repeat every week.",
+          send: "4. Send the 3 options with the propose_first_agents tool of agentes.chat, along with a two or three sentence summary of what I do at {{org}}. Don't create anything: I'll pick where to start.",
+        },
+        personal: {
+          open: "I want to start using agentes.chat, which I just connected here, with an AI agent that takes a repetitive piece of work off my day, at work or outside it.",
+          know: "1. Before asking me anything, use what you already know about me: our past conversations, your memory and the files and apps you can access. Understand what I do, what my week looks like, which apps I use and which tasks I repeat.",
+          send: "4. Send the 3 options with the propose_first_agents tool of agentes.chat, along with a two or three sentence summary about me. Don't create anything: I'll pick where to start.",
+        },
+        interview:
+          "2. If something important is missing, interview me: one question at a time, at most 3, starting with the one that changes the recommendation the most. If I don't know an answer, go on with your best guess and say what it was.",
+        design:
+          "3. Pick the 3 repetitive tasks that take most of my time. For each one, design an agent like a job description: a short name, the role, 3 responsibilities (what it does on its own, when it runs and when it calls me), the apps it needs, its routine with day and time, and what it can already deliver on its first day. Order them from the task that takes most of my time to the one that takes the least, and say in one sentence, from what you saw, why you picked each one.",
+        json: {
+          team: "I want to start using agentes.chat with an AI agent that takes a repetitive piece of work off my day.",
+          member:
+            "I just joined the {{org}} workspace on agentes.chat and I want to start with an AI agent that takes a repetitive piece of my role on the team off my day.",
+          personal:
+            "I want to start using agentes.chat with an AI agent that takes a repetitive piece of work off my day, at work or outside it.",
+          send: "4. Answer only with a JSON in this format, with no text before or after it:",
+          example:
+            '{"about":"…","options":[{"name":"…","role":"…","why":"…","tasks":["…","…","…"],"apps":["…"],"routine":{"title":"…","schedule":"every Monday at 8:00","prompt":"…"},"today":["…","…"],"instructions":"…"}]}',
+        },
+      },
+    },
+    /**
+     * Picking the first agent from what the person's AI proposed: each option as a job description, the task that
+     * repeats the most first. `{{app}}`: the assistant asked ("Claude").
+     */
+    pick: {
+      title: "Pick your first agent",
+      lead_one: "Your {{app}} found the task that takes most of your time. Start with it.",
+      lead_other:
+        "Your {{app}} found the {{count}} tasks that take most of your time. Start with one: the others are for later.",
+      leadAny_one: "Your AI found the task that takes most of your time. Start with it.",
+      leadAny_other:
+        "Your AI found the {{count}} tasks that take most of your time. Start with one: the others are for later.",
+      eyebrow: "Proposal from your {{app}} · step {{n}} of {{total}}",
+      eyebrowAny: "Your AI's proposal · step {{n}} of {{total}}",
+      /** Over each card's name, in the AI's order. */
+      rank: {
+        first: "Repeats the most",
+        second: "Second",
+        third: "Third",
+      },
+      /** A card's list of what the agent does, as in a job description. */
+      duties: "Responsibilities",
+      /** A card's list of the apps the agent needs. */
+      needs: "Requirements",
+      /** Before the reason the AI gave, in its words. */
+      why: "Why {{name}}:",
+      note: "Nothing is created until you pick.",
+      create: "Create {{name}}",
+      say_one: "{{app}} found one way to start.",
+      say_other: "{{app}} found {{count}} ways to start.",
+      sayAny_one: "Your AI found one way to start.",
+      sayAny_other: "Your AI found {{count}} ways to start.",
+      needsAdmin: "Creating agents here needs an admin. Ask whoever manages the workspace.",
+    },
+    /** The picked agent's first week, before the plan. */
+    week: {
+      title: "{{name}}'s first week",
+      lead: "{{name}} starts today. Everything arrives in its channel, and you only approve.",
+      leadPersonal: "{{name}} starts today. Everything arrives in your conversation with it, and you only approve.",
+      say: "As soon as the team is on, we start.",
     },
   },
   // The desktop app's notifications while its window is in the background (lib/desktop.ts `desktopNotice`).

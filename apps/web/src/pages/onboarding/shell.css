@@ -164,6 +164,12 @@ html:not([data-pointer]) .onbw__me:focus-visible {
     background: color-mix(in srgb, var(--ink) 16%, transparent);
   }
 }
+/* The page's main region: the box, under the cast. */
+.onbw__main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
 /* What the right hand says, over its head, the cut corner pointing down at it. */
 .onbw__say {
   position: absolute;
@@ -246,6 +252,20 @@ html:not([data-pointer]) .onbw__me:focus-visible {
 .onbx .ac-dialog__body.onbx__body {
   padding-top: 20px;
   overflow: visible;
+}
+/* A new step's words and answer come in where they stand; the box itself stays put. Played once, on insertion. */
+.onbx__lede,
+.onbx__body {
+  transition:
+    opacity 0.36s var(--out),
+    transform 0.36s var(--out);
+}
+@starting-style {
+  .onbx__lede,
+  .onbx__body {
+    opacity: 0;
+    transform: translateY(8px);
+  }
 }
 .onbx .ac-dialog__foot {
   padding-top: 24px;
@@ -556,7 +576,9 @@ html:not([data-pointer]) .onbx__back:focus-visible {
     animation: none;
   }
   @starting-style {
-    .onbw__say {
+    .onbw__say,
+    .onbx__lede,
+    .onbx__body {
       transform: none;
     }
   }
