@@ -1276,3 +1276,16 @@ test.if(process.platform !== "win32")(
   },
   20_000,
 );
+
+test("hello says the agentes.chat app runs this runner, and nothing when the terminal installed it", async () => {
+  for (const [over, app] of [
+    [{}, true],
+    [{ managedBy: undefined }, undefined],
+  ] as const) {
+    const c = control(pairedHome(over).home);
+    const s = await c.connect();
+    expect(s.of("hello")[0]?.app).toBe(app);
+    c.input.end();
+    expect(await c.done).toBe(0);
+  }
+});

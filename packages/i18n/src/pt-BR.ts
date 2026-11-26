@@ -3023,8 +3023,8 @@ export const ptBR = {
     failed_other: "{{names}} não conseguiram responder",
     asking_one: "{{names}} está esperando uma resposta",
     asking_other: "{{names}} estão esperando uma resposta",
-    outage_one: "{{names}}: o provedor de IA está fora do ar · tenta de novo sozinho",
-    outage_other: "{{names}}: o provedor de IA está fora do ar · tenta de novo sozinho",
+    outage_one: "{{names}}: a IA não está respondendo · tenta de novo sozinho",
+    outage_other: "{{names}}: a IA não está respondendo · tenta de novo sozinho",
     queued_one: "{{names}} está na fila",
     queued_other: "{{names}} estão na fila",
     away_one: "{{names}} aguarda o computador",
@@ -3044,7 +3044,7 @@ export const ptBR = {
       claimed: "Respondendo",
       waiting: "Esperando aprovação",
       asking: "Esperando uma resposta",
-      outage: "O provedor de IA está fora do ar · tenta de novo sozinho",
+      outage: "A IA não está respondendo · tenta de novo sozinho",
       queued: "Na fila",
       away: "Aguardando o computador",
       plan: "Esperando o plano",
@@ -4710,7 +4710,7 @@ export const ptBR = {
       queued_computer: "Na fila",
       waiting_plan: "Esperando o plano",
       waiting_budget: "Esperando o orçamento renovar",
-      provider_down: "O provedor de IA está fora do ar · tenta de novo sozinho",
+      provider_down: "A IA não está respondendo · tenta de novo sozinho",
       out_of_plan: "Sem limite no plano",
       out_of_budget: "Orçamento do mês esgotado",
       /** The members column's one line ("Sem limite · volta às 01:00"). */
@@ -5899,6 +5899,7 @@ export const ptBR = {
       gave_up: "o modelo não respondeu depois de várias tentativas",
       missing_credential: "falta uma chave de API",
       credential_revoked: "a chave de API foi revogada",
+      credential_unreadable: "a chave de API salva não abre",
     },
     youReplied: "Você respondeu: {{text}}",
     actions: "Ações",
@@ -6964,6 +6965,8 @@ export const ptBR = {
         interrupted: "Interrompida porque o servidor reiniciou.",
         missing_credential: "Falta uma chave {{provider}} no workspace.",
         credential_revoked: "A chave deste agente foi revogada.",
+        credential_unreadable:
+          "A chave de API salva não abre, geralmente porque o segredo do servidor mudou depois que ela foi salva. Cole a chave de novo em Chaves de IA.",
         credential_wrong_provider: "O modelo usa {{modelProvider}}, mas a chave é para {{keyProvider}}.",
         model_unlisted: "A OpenRouter não oferece mais {{model}}. Escolha outro modelo nas configurações do agente.",
         no_ai: "O agente estava sem uma IA disponível.",
@@ -9839,6 +9842,7 @@ export const ptBR = {
       stuck: "Parou porque travou",
       missing_credential: "Falta uma chave de API",
       credential_revoked: "A chave de API foi revogada",
+      credential_unreadable: "A chave de API salva não abre",
       credential_wrong_provider: "A chave de API é de outro provedor",
       model_unlisted: "A OpenRouter não oferece mais o modelo",
       agent_archived: "O agente foi arquivado",
@@ -17044,6 +17048,12 @@ export const ptBR = {
       paused: "{{name}} está pausado",
       resumed: "{{name}} voltou a trabalhar",
     },
+    runnerBehind: {
+      command:
+        "O programa do agentes.chat em {{computer}} está desatualizado, então algumas coisas não funcionam lá. Para atualizar, rode isto lá:",
+      installer:
+        "O programa do agentes.chat em {{computer}} está desatualizado, então algumas coisas não funcionam lá. Para atualizar, rode de novo o comando de instalação lá, como root.",
+    },
     seenNow: "conectado agora",
     seen: "visto {{when}}",
     neverSeen: "ainda não conectou",
@@ -19382,7 +19392,7 @@ export const ptBR = {
       waitingComputer: "O {{name}} espera o computador voltar",
       waitingComputer_female: "A {{name}} espera o computador voltar",
       /** The consulted agent's AI provider is down: its run is parked and retries by itself. */
-      waitingProvider: "{{name}}: o provedor de IA está fora do ar · tenta de novo sozinho",
+      waitingProvider: "{{name}}: a IA não está respondendo · tenta de novo sozinho",
       /** Its part done, the agent waits on what it handed to other agents. */
       waitingAgents: "O {{name}} passou uma parte adiante e espera o retorno",
       waitingAgents_female: "A {{name}} passou uma parte adiante e espera o retorno",
@@ -19401,7 +19411,7 @@ export const ptBR = {
       waitingApproval: "esperando aprovação",
       waitingInput: "esperando uma resposta",
       waitingComputer: "esperando o computador",
-      waitingProvider: "IA fora do ar",
+      waitingProvider: "IA não responde",
       /** What it waits on is yours to give: the row turns amber. */
       waitingYourApproval: "esperando sua aprovação",
       waitingYourAnswer: "esperando sua resposta",
@@ -19897,6 +19907,8 @@ export const ptBR = {
         "O programa no meu computador precisa ser atualizado para o {{brain}} responder. Respondo assim que ele for atualizado.",
       brain_unavailable_plan_owner:
         "O {{brain}} pensaria com um plano que não é do meu dono, então não uso. Conecte a conta do meu dono na minha página.",
+      brain_unavailable_shared_login:
+        "Meu computador não consegue usar o login do Claude para todos os agentes agora. Respondo assim que conseguir. Se continuar falhando, conecte o Claude de novo em Contas de IA.",
       provider_unavailable: "Meu provedor de IA não está respondendo agora. Respondo assim que ele voltar.",
       provider_wait_rate_limit: "{{provider}} está limitando os pedidos desta chave agora. Respondo assim que liberar.",
       provider_wait_down: "{{provider}} está fora do ar ou sobrecarregado agora. Respondo assim que voltar.",
@@ -21932,7 +21944,7 @@ export const ptBR = {
       budgetSoon: "Esperando um instante pelo orçamento de {{name}}",
       computer: "Esperando o computador de {{name}}",
       busy: "Esperando vaga no computador de {{name}}",
-      provider: "Esperando o provedor de IA de {{name}}, próxima tentativa {{when}}",
+      provider: "Esperando a IA de {{name}} responder, próxima tentativa {{when}}",
     },
     menu: {
       label: "Mais",

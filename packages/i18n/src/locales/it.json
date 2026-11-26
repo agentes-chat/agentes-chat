@@ -3052,9 +3052,9 @@
     "asking_one": "{{names}} aspetta una risposta",
     "asking_many": "{{names}} aspettano una risposta",
     "asking_other": "{{names}} aspettano una risposta",
-    "outage_one": "{{names}}: il provider IA non risponde · riprova da solo",
-    "outage_many": "{{names}}: il provider IA non risponde · riprovano da soli",
-    "outage_other": "{{names}}: il provider IA non risponde · riprovano da soli",
+    "outage_one": "{{names}}: l'IA non risponde · riprova da solo",
+    "outage_many": "{{names}}: l'IA non risponde · riprovano da soli",
+    "outage_other": "{{names}}: l'IA non risponde · riprovano da soli",
     "queued_one": "{{names}} è in coda",
     "queued_many": "{{names}} sono in coda",
     "queued_other": "{{names}} sono in coda",
@@ -3079,7 +3079,7 @@
       "claimed": "Sta rispondendo",
       "waiting": "In attesa di approvazione",
       "asking": "Aspetta una risposta",
-      "outage": "Il provider IA non risponde · riprova da solo",
+      "outage": "L'IA non risponde · riprova da sola",
       "queued": "In coda",
       "away": "In attesa del computer",
       "plan": "In attesa del piano",
@@ -4605,7 +4605,7 @@
       "queued_computer": "In coda",
       "waiting_plan": "In attesa del piano",
       "waiting_budget": "In attesa del rinnovo del budget",
-      "provider_down": "Il provider IA non risponde · riprova da solo",
+      "provider_down": "L'IA non risponde · riprova da sola",
       "out_of_plan": "Limite del piano raggiunto",
       "out_of_budget": "Budget del mese esaurito",
       "out_of_planShort": "Limite raggiunto",
@@ -5761,7 +5761,8 @@
       "provider_unavailable": "il modello non ha risposto",
       "gave_up": "il modello non ha risposto dopo vari tentativi",
       "missing_credential": "manca una chiave API",
-      "credential_revoked": "la chiave API è stata revocata"
+      "credential_revoked": "la chiave API è stata revocata",
+      "credential_unreadable": "la chiave API salvata non si può aprire"
     },
     "youReplied": "Hai risposto: {{text}}",
     "actions": "Azioni",
@@ -6768,6 +6769,7 @@
         "interrupted": "Interrotta da un riavvio del server.",
         "missing_credential": "Lo spazio di lavoro non ha una chiave {{provider}}.",
         "credential_revoked": "La chiave di questo agente è stata revocata.",
+        "credential_unreadable": "La chiave API salvata non si può aprire, di solito perché il segreto del server è cambiato dopo che è stata salvata. Incolla di nuovo la chiave in Chiavi IA.",
         "credential_wrong_provider": "Il modello è di {{modelProvider}}, ma la chiave è di {{keyProvider}}.",
         "model_unlisted": "OpenRouter non offre più {{model}}. Scegli un altro modello nelle impostazioni dell'agente.",
         "no_ai": "L'agente non aveva un'IA disponibile.",
@@ -9649,6 +9651,7 @@
       "stuck": "Fermata perché si era bloccata",
       "missing_credential": "Manca una chiave API",
       "credential_revoked": "La chiave API è stata revocata",
+      "credential_unreadable": "La chiave API salvata non si può aprire",
       "credential_wrong_provider": "La chiave API è di un altro provider",
       "model_unlisted": "OpenRouter non offre più il modello",
       "agent_archived": "L'agente è stato archiviato",
@@ -17174,6 +17177,10 @@
       "paused": "{{name}} è in pausa",
       "resumed": "{{name}} è di nuovo al lavoro"
     },
+    "runnerBehind": {
+      "command": "Il programma agentes.chat su {{computer}} non è aggiornato, quindi lì alcune cose non funzionano. Per aggiornarlo, esegui questo lì:",
+      "installer": "Il programma agentes.chat su {{computer}} non è aggiornato, quindi lì alcune cose non funzionano. Per aggiornarlo, esegui di nuovo lì il comando di installazione, come root."
+    },
     "seenNow": "connesso ora",
     "seen": "visto {{when}}",
     "neverSeen": "non si è ancora connesso",
@@ -19483,7 +19490,7 @@
       "waitingInput_female": "{{name}} aspetta una risposta",
       "waitingComputer": "{{name}} aspetta il computer",
       "waitingComputer_female": "{{name}} aspetta il computer",
-      "waitingProvider": "{{name}}: il provider di IA non funziona · riprova da solo",
+      "waitingProvider": "{{name}}: l'IA non risponde · riprova da solo",
       "waitingAgents": "{{name}} ha passato una parte ad altri e aspetta notizie",
       "waitingAgents_female": "{{name}} ha passato una parte ad altri e aspetta notizie",
       "queued": "{{name}} è in coda"
@@ -19495,7 +19502,7 @@
       "waitingApproval": "in attesa di approvazione",
       "waitingInput": "in attesa di una risposta",
       "waitingComputer": "in attesa del computer",
-      "waitingProvider": "provider IA non disponibile",
+      "waitingProvider": "l'IA non risponde",
       "waitingYourApproval": "aspetta la tua approvazione",
       "waitingYourAnswer": "aspetta la tua risposta",
       "queued": "in coda",
@@ -19949,6 +19956,7 @@
       "brain_unavailable_commands_off": "{{brain}} è disattivato sul mio computer. Risponderò quando chi se ne occupa lo attiverà.",
       "brain_unavailable_outdated": "Il programma sul mio computer va aggiornato perché {{brain}} possa rispondere. Risponderò appena sarà aggiornato.",
       "brain_unavailable_plan_owner": "{{brain}} penserebbe con un piano che non è del mio proprietario, quindi non lo uso. Collega l'account del mio proprietario nella mia pagina.",
+      "brain_unavailable_shared_login": "Il mio computer non riesce a usare l'accesso di Claude per tutti gli agenti in questo momento. Risponderò appena possibile. Se continua a non funzionare, ricollega Claude in Account IA.",
       "provider_unavailable": "Il mio provider di IA non risponde in questo momento. Risponderò appena tornerà disponibile.",
       "provider_wait_rate_limit": "{{provider}} sta limitando le richieste di questa chiave. Risponderò appena lo consentirà.",
       "provider_wait_down": "{{provider}} è fuori servizio o sovraccarico in questo momento. Risponderò appena tornerà disponibile.",
@@ -21884,7 +21892,7 @@
       "budgetSoon": "Breve attesa del budget di {{name}}",
       "computer": "In attesa del computer di {{name}}",
       "busy": "In attesa di spazio sul computer di {{name}}",
-      "provider": "In attesa del provider IA di {{name}}, prossimo tentativo {{when}}"
+      "provider": "In attesa che l'IA di {{name}} risponda, prossimo tentativo {{when}}"
     },
     "menu": {
       "label": "Altro",

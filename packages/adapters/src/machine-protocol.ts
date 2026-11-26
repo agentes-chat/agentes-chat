@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 86;
+export const MACHINE_PROTOCOL_VERSION = 87;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -49,6 +49,13 @@ export const BRIDGE_PROTOCOL = 8;
 export const RUN_TOOL_TOKEN_PREFIX = "agr_";
 export const isRunToolToken = (v: unknown): v is string =>
   typeof v === "string" && v.length <= 100 && /^agr_[A-Za-z0-9_-]{20,96}$/.test(v);
+/** How the runner's refusals of a turn on Claude's own login for all agents begin (older runners end them otherwise). */
+export const SHARED_LOGIN_REFUSED = "This computer can't run this Claude sign-in";
+/** The runner's refusal while that login's switch is off on the computer or its self-check fails. */
+export const SHARED_LOGIN_OFF = `${SHARED_LOGIN_REFUSED} right now. Try again later, or remove it in AI accounts and connect Claude again.`;
+/** A computer brain's error that is such a refusal: the computer is online, its shared Claude login is what can't run. */
+export const sharedLoginRefused = (code: string, message: string) =>
+  code === "unsupported" && message.startsWith(SHARED_LOGIN_REFUSED);
 /**
  * From this protocol on, the runner runs conversational brain turns
  * (`brain.turn`, ADR 0032): Claude Code thinks for an agent on the machine,
@@ -2654,6 +2661,12 @@ export const ANTIGRAVITY_WINDOWS_PROTOCOL = 84;
  */
 export const CO_AUTHOR_CASE_PROTOCOL = 85;
 
+/**
+ * Protocol 87: `hello.app` says the agentes.chat app runs this runner (and updates it with its own releases, which lag
+ * this server's protocol). A runner from before says nothing either way.
+ */
+export const RUNNER_APP_PROTOCOL = 87;
+
 /** About how many more background tasks fit on the computer now, and what decides it. */
 export interface TaskRoomReport {
   more: number;
@@ -2993,6 +3006,8 @@ export interface RunnerInfo {
   authEgressGroup?: true;
   /** `KEEP_RUNNING_PROTOCOL`: the holds that live here, and those that ended lately with why (the server may not know). */
   holds?: RunnerHolds;
+  /** `RUNNER_APP_PROTOCOL`: the agentes.chat app runs it; absent, a runner installed from the terminal. */
+  app?: true;
 }
 
 export interface RunnerHolds {
@@ -4371,6 +4386,7 @@ export function parseRunnerFrame(raw: string): RunnerFrame | null {
           : {}),
         ...(isString(f.claudeLoginBlocked) ? { claudeLoginBlocked: f.claudeLoginBlocked.slice(0, 300) } : {}),
         ...(f.authEgressGroup === true ? { authEgressGroup: true as const } : {}),
+        ...(f.app === true ? { app: true as const } : {}),
         ...(Array.isArray(f.phones) ? { phones: parsePhones(f.phones) } : {}),
         ...(isObject(f.toolchains) ? { toolchains: parseToolchains(f.toolchains) } : {}),
         ...(isObject(f.holds) ? { holds: parseHolds(f.holds) } : {}),

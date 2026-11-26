@@ -2496,7 +2496,7 @@ function stuckOn(
   // Asking its computer from the line it still waits (`computerWaitOf`).
   const asking = target.status === "running" && target.waitingMachineId !== null;
   if (target.status !== "waiting_input" && !asking) return null;
-  if (target.outage) return hung("its AI provider stayed down");
+  if (target.outage) return hung("its AI stayed unavailable");
   if (asking || target.code === "busy")
     return hung(
       "it stayed in line for room on its computer",

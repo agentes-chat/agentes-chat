@@ -179,6 +179,27 @@ describe("Settings › Devices", () => {
     ]);
   });
 
+  test("a computer whose runner is behind this server: its owner sees why and how to update it, no one else", async () => {
+    const page = async (update: "command" | "installer" | null, canManage = true) => {
+      cleanup();
+      const app = await open(`/org/${ORG_ID}/settings/devices/${MAC}`);
+      fakeMachinesOf.get(app.api)?.pair({ id: MAC, name: "Sam's MacBook Pro", update, canManage });
+      await refetch(app.services);
+      return screen().getByRole("heading", { name: "Sam's MacBook Pro" }).closest(".ac-card") as HTMLElement;
+    };
+    const behind = "The agentes.chat program on Sam's MacBook Pro is out of date, so some things don't work there.";
+    let card = await page("command");
+    expect(card.textContent).toContain(`${behind} To update it, run this there:`);
+    expect(card.querySelector(".machine-command code")?.textContent).toBe("agentes-runner update");
+    card = await page("installer");
+    expect(card.textContent).toContain(`${behind} To update it, run the install command there again, as root.`);
+    expect(card.querySelector(".machine-command")).toBeNull();
+    for (card of [await page(null), await page("command", false)]) {
+      expect(card.textContent).not.toContain(behind);
+      expect(card.querySelector(".machine-command")).toBeNull();
+    }
+  });
+
   test("a busy computer's page says its tasks at once and where that changes, for its owner or anyone else", async () => {
     await open(`/org/${ORG_ID}/settings/devices/${BUILD_PC}`);
     expect(screen().getByText("Tasks at once here: 1. The person who connected it can change that.")).toBeTruthy();
