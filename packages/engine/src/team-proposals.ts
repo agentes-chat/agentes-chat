@@ -104,6 +104,11 @@ export interface TeamAgent {
   routines: ProposedRoutine[];
   /** What the receipt's "Abrir com a tarefa" types in its DM, never sent. */
   firstTask: string | null;
+  /**
+   * Catalog apps its job needs that the workspace hasn't connected (preset ids): its chat's checklist asks to connect
+   * them once it exists (ADR 0164). Only a first agent picked on the onboarding names them (ADR 0250).
+   */
+  later?: string[];
 }
 
 export interface TeamSkill {
@@ -599,7 +604,16 @@ export async function createTeam(deps: TeamDeps, userId: string, orgId: string, 
             tx,
             userId,
             orgId,
-            { name: a.name, handle: a.handle, role: a.role, instructions: a.instructions },
+            {
+              name: a.name,
+              handle: a.handle,
+              role: a.role,
+              instructions: a.instructions,
+              // Its chat's checklist asks to connect the apps its job still needs (ADR 0164), read until said more.
+              ...(a.later?.length
+                ? { setup: { role: null, apps: Object.fromEntries(a.later.map((id) => [id, "read"])) } }
+                : {}),
+            },
             NEW_AGENT_DEFAULTS,
             { via: found.proposedBy, pubsub: events.pubsub },
           );
