@@ -196,8 +196,8 @@ export function OnboardingPage() {
   const paid = usePaidReturn(orgId ?? "", held);
   useQuery({ ...meQuery(api), enabled: paid, refetchInterval: PAID_POLL_MS });
   // Once the plan is on, the moment it turned on (ADR 0079): the team's photo between the plan and the step that comes
-  // next. Once per payment, never on a plain visit. A workspace `/me` doesn't list yet (one made in this
-  // visit, before it is read again) counts as held: its standing is unknown, not in force.
+  // next. Once per payment, never on a plain visit. A workspace `/me` doesn't list yet (one made in this visit, before
+  // it is read again) counts as held: its standing is unknown, not in force.
   const paidMoment = usePaidMoment(orgId ?? "", mine ? mine.standing : { state: "hold", reason: null });
   const moment = paidMoment.moment;
   // Made here as "For me", one being set up that is, or "For me" picked and not made yet (ADR 0159).

@@ -85,7 +85,7 @@ function repeatOf(t: TFunction, rule: ApiRule | null, schedule: string): string 
 
 /**
  * The step's box: the title by the agent's name, the lead with its routine and how it repeats (else the plain one),
- * the planner, and what the AI told. `zone`: the workspace's, for a routine the server kept none for.
+ * the planner, and what the AI said. `zone`: the workspace's, for a routine the server kept none for.
  */
 export function FirstWeek({
   orgId,
