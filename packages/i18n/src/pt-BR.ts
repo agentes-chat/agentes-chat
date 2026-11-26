@@ -22823,24 +22823,6 @@ export const ptBR = {
   },
   /** Right after the onboarding (ADR 0160): the welcome wizard, then Connect an AI with the team beside it. */
   arrival: {
-    beta: {
-      word: "BETA",
-      title: "Você chegou cedo. Que bom.",
-      text: "O agentes.chat está em beta: já dá para trabalhar de verdade com ele, e ainda estamos lapidando.",
-      weekly: {
-        title: "Melhora toda semana",
-        text: "Novidades e correções saem o tempo todo.",
-      },
-      fails: {
-        title: "Às vezes algo falha",
-        text: "Se travar ou ficar estranho, o problema é nosso, não seu.",
-      },
-      feedback: {
-        title: "O seu feedback decide o que vem",
-        text: "Conte o que faltou ou incomodou. A gente lê tudo.",
-      },
-      where: "Para escrever para a gente, use Enviar feedback, no fim da barra lateral.",
-    },
     /** The welcome wizard (ADR 0160, addendum of 2026-11-26). The pictures' sample words are never real data. */
     welcome: {
       stepOf: "Passo {{n}} de {{total}}",

@@ -22969,27 +22969,6 @@ export const en = {
   },
   /** Right after the onboarding (ADR 0160): the welcome wizard, then Connect an AI with the team beside it. */
   arrival: {
-    beta: {
-      /** Drawn large over the sky: the word itself, in capitals. */
-      word: "BETA",
-      title: "You're early. We're glad.",
-      text: "agentes.chat is in beta: you can already do real work with it, and we're still polishing.",
-      weekly: {
-        title: "It gets better every week",
-        text: "New things and fixes come out all the time.",
-      },
-      fails: {
-        title: "Sometimes something fails",
-        text: "If it gets stuck or looks odd, the problem is ours, not yours.",
-      },
-      /** Only where the feedback form exists. */
-      feedback: {
-        title: "Your feedback decides what comes next",
-        text: "Tell us what was missing or got in your way. We read everything.",
-      },
-      /** "Send feedback" is the row at the bottom of the sidebar (`feedback.open`): the same words. */
-      where: "To write to us, use Send feedback, at the bottom of the sidebar.",
-    },
     /**
      * The welcome wizard (ADR 0160, addendum of 2026-11-26): seven short steps, each under a moving picture drawn with
      * the app's own pieces. The pictures are decorative: their sample words (a list of payments, a chat, notes) are
