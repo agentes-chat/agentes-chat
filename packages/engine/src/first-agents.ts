@@ -94,7 +94,7 @@ const optionInput = z.object({
     .trim()
     .max(FIRST_AGENT_LIMITS.instructions)
     .optional()
-    .describe("Its standing instructions: how it works, what it never does alone"),
+    .describe("Its standing instructions: how it works, what waits for a person"),
 });
 
 /** What the MCP tool and the paste route take: 1 to 3 options, ordered by the time each task takes. */
