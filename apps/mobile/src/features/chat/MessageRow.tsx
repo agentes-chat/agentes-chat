@@ -1,12 +1,16 @@
 import {
   browserHandoffOf,
   browserTrailOf,
+  codeSuggestionOf,
   desktopTrailOf,
+  isPinnedSelection,
   keys,
   type Message,
   type MessageReceipt,
+  messageLiveRef,
   type ReplyRef,
   type RunConsultation,
+  resolvedOf,
   type ScreenKind,
   type SurfaceLinks,
   type ThreadInfo,
@@ -19,10 +23,13 @@ import {
 import { actionCardOf, costlyProposalOf, stretchCardOf } from "@agenteschat/client/lib/action-cards";
 import { foldTalk, TALK_LINE_CHARS, talksToAgent } from "@agenteschat/client/lib/agent-talk";
 import { APP_BRANDS } from "@agenteschat/client/lib/apps";
+import { managesAgent } from "@agenteschat/client/lib/audience";
 import { channelRefsOf } from "@agenteschat/client/lib/channel-refs";
 import { type RunPosition, runAround } from "@agenteschat/client/lib/chat";
 import { mineOnRight } from "@agenteschat/client/lib/chat-look";
 import { choiceReplyLine } from "@agenteschat/client/lib/choices";
+import type { RelayedAnswer } from "@agenteschat/client/lib/consult-group";
+import { spilledText } from "@agenteschat/client/lib/devices";
 import { agentsByAnyHandle } from "@agenteschat/client/lib/directory";
 import {
   CONTINUE_ERRORS,
@@ -45,22 +52,22 @@ import { serverBody } from "@agenteschat/client/lib/message-body";
 import { missionSetupOf } from "@agenteschat/client/lib/missions";
 import { isStandInLine, noAiCardOf } from "@agenteschat/client/lib/no-ai";
 import { isTalkerReply, routineReportText, talkerWaited } from "@agenteschat/client/lib/notices";
-import { can } from "@agenteschat/client/lib/permissions";
 import { modelStandInText } from "@agenteschat/client/lib/plan-usage";
 import { reachHandoffs } from "@agenteschat/client/lib/reach";
 import { replyOf } from "@agenteschat/client/lib/reply";
 import { isReminderMessage, reminderBody, routineReplyOf } from "@agenteschat/client/lib/routines";
 import { replyChipsOf } from "@agenteschat/client/lib/team-plan";
 import { usagePauseCardOf, usageWaitOf } from "@agenteschat/client/lib/usage-pause";
-import { appVia } from "@agenteschat/client/lib/via";
+import { appAuthor, appVia } from "@agenteschat/client/lib/via";
 import { listedText, voiceOf } from "@agenteschat/client/lib/voice";
-import { type ReplyStop, showsActivity, splitCanceled } from "@agenteschat/client/lib/work";
+import { type ReplyStop, splitCanceled } from "@agenteschat/client/lib/work";
+import { useShowsWork } from "@agenteschat/client/lib/work-context";
 import { type AgentColorName, mixHex } from "@agenteschat/ui/agent/engine";
 import { WALLPAPER_LIFT } from "@agenteschat/ui/sky/wallpaper";
-import { useQueryClient } from "@tanstack/react-query";
-import { memo, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { memo, type ReactNode, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { type GestureResponderEvent, Pressable, StyleSheet, View } from "react-native";
+import { type GestureResponderEvent, Keyboard, Pressable, StyleSheet, View } from "react-native";
 import Animated, {
   Easing,
   type EntryExitAnimationFunction,
@@ -89,7 +96,10 @@ import {
   useTheme,
   useToast,
 } from "@/ui";
+import { AppMark } from "@/ui/AppMark";
+import { Shake } from "@/ui/auth/Shake";
 import { router } from "@/ui/navigation";
+import { RADIUS } from "@/ui/radius";
 import { InstructionProposals } from "../agents/InstructionProposalCard";
 import { ProposalCard } from "../agents/ProposalCard";
 import { CostlyProposalCard } from "../ai/CostlyProposalCard";
@@ -99,6 +109,7 @@ import { StretchCard } from "../ai/StretchCard";
 import { UsagePauseCard, UsageWaitCancel } from "../ai/UsagePauseCard";
 import { HandoffCard } from "../browser/HandoffCard";
 import { TrailCard } from "../browser/TrailCard";
+import { CodeSuggestionCard } from "../coding/SuggestionCard";
 import { iconUri } from "../connectors/logic";
 import { DeviceWait } from "../devices/DeviceWait";
 import { deviceWaitOf } from "../devices/logic";
@@ -106,6 +117,7 @@ import { WaitToolOffAction } from "../devices/ToolOneClick";
 import { localFilesOf } from "../files/local-files";
 import { LocalFiles, MessageFiles } from "../files/MessageFiles";
 import { consultationHref, routineHref } from "../links/logic";
+import { MessageAbout, ResolvedLine } from "../live-files/talk/AboutLine";
 import { surfaceTagText } from "../me/surface";
 import { DecisionCard, MissionCard, PlanCard, ReviewCard, SetupFailedCard } from "../missions/cards";
 import { AwayPill, BrainWait } from "../outages/WaitCard";
@@ -116,14 +128,16 @@ import { type BubbleHead, BubbleHeadContext, type BubblePart, BubblePartContext 
 import { AgentFace, Face, withAgentFaces } from "../shared/Face";
 import { useColors, useOrgId, useWhen } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
+import { ownsIn } from "../shared/owner";
 import { tapHaptic } from "../shared/parts";
 import { VoiceMessage } from "../voice/VoiceMessage";
 import { FilesTextOnlyFix, ReceiptMark } from "./AgentReceipts";
 import { secretRequestOf } from "./ask-store";
+import { useBubbleCap } from "./bubble-cap";
 import { ChatMedia } from "./ChatMedia";
-import { ClippedMessage } from "./ClippedMessage";
-import { ConsultPairRow, useRunConsults } from "./ConsultGroup";
-import { ApprovalInline, QuestionCard, ThreadLink } from "./cards";
+import { ClippedMessage, OpenedMessagesContext } from "./ClippedMessage";
+import { ConsultQuote, useRunConsults } from "./ConsultGroup";
+import { ApprovalInline, QuestionCard, ThreadLink, ThreadReplyingLink } from "./cards";
 import { FeedbackOfferRow } from "./FeedbackOffer";
 import { HandedTaskChips, IssueWorkCard } from "./issue-work";
 import { keepOpen, keptOpen } from "./kept-sizes";
@@ -131,6 +145,7 @@ import { cacheContinued } from "./live";
 import {
   approvalIdOf,
   artifactsOf,
+  BUBBLES_EDGE,
   CHAT_TEXT_MAX_SCALE,
   chatNameOf,
   chatTimeOf,
@@ -147,17 +162,19 @@ import {
   missionPlanOf,
   nameInk,
   questionOf,
+  ROW_BODY_INSET,
   reactionPills,
   rowFrame,
   workStepsOf,
 } from "./logic";
-import { liftedEdge, lookRows, RowPartContext, useRhythm, useRowLook } from "./look";
+import { liftedEdge, lookRows, plateInset, RowPartContext, useRhythm, useRowLook } from "./look";
 import { MessageText } from "./MessageText";
-import { QuoteAbove, QuotePlate } from "./QuoteLine";
+import { aboveInset, QuoteAbove, QuotePlate } from "./QuoteLine";
 import { ReachLines } from "./ReachLines";
 import { Receipts } from "./Receipts";
+import { RelayQuote } from "./RelayQuote";
 import {
-  useRowConsults,
+  useRowConsultsPart,
   useRowDirectory,
   useRowMeId,
   useRowMyHandle,
@@ -165,10 +182,12 @@ import {
   useRowRoles,
 } from "./row-data";
 import { SecretCard } from "./SecretCard";
-import { ModelStandInLine, SpeedFallbackLine, StopPill } from "./StoppedLine";
+import { ModelStandInLine, SpeedFallbackLine, SpilledLine, StopPill } from "./StoppedLine";
 import { useStopMovedOn, useStoppedRun } from "./stopped-runs";
+import { SwipeSlide, SwipeTime, useGiveWay, useSwipeSlide } from "./swipe-time";
 import { TeamChecks } from "./TeamChecks";
 import { SavedTools, TurnTools } from "./ToolCalls";
+import { ThreadRootMark, useLandingEntrance } from "./thread-open";
 import { keptTurn, stepLimitOf, stoppedOf, turnOpener } from "./turn";
 import { HandedWorkLines, MessageWorkLine } from "./WorkLine";
 
@@ -188,13 +207,23 @@ const TRAIL_RECENT_MS = 12 * 60 * 60_000;
  * What the row holds when it mounts just shows (`skipEntering`): the list mounts a row again each time it comes back
  * into view, and a part that fades in when it changes (a receipt's mark, a decided request's outcome, an undone
  * action's line) faded in again on every scroll. What changes while the row shows still fades in.
+ *
+ * "See more" opening its message mounts the row again the same way, at its whole height from its first frame (the
+ * words' height and a table's columns are kept): grown in place, the bubble's frame stayed taller than its words, an
+ * empty block under the last line that pushed what follows away (seen on a phone).
  */
 export const MessageRow = memo(function MessageRow(props: RowProps) {
-  return (
-    <LayoutAnimationConfig skipEntering>
+  const opened = useContext(OpenedMessagesContext)?.has(props.message.id) === true;
+  const reduced = useReducedMotion();
+  const entering = useLandingEntrance(reduced);
+  const body = (
+    <LayoutAnimationConfig key={opened ? "opened" : "row"} skipEntering>
       <RowBody {...props} />
     </LayoutAnimationConfig>
   );
+  const row = props.thread ? <ThreadRootMark threadId={props.thread.id}>{body}</ThreadRootMark> : body;
+  // A row of a thread's first load, as its screen opens: it fades in after the one above it.
+  return entering ? <Animated.View entering={entering}>{row}</Animated.View> : row;
 });
 
 interface RowProps {
@@ -207,9 +236,13 @@ interface RowProps {
   /** The message it groups under, and whether that one shows its thread's link: what hangs under it ends the run. */
   above?: Message;
   aboveThread?: boolean;
+  /** Another agent's words it passes on (`relayedAnswers`): quoted at the top of its words. */
+  relay?: RelayedAnswer<Message> | undefined;
   meId: string | null;
   /** Its thread, when it is the root of one the conversation shows as a link. */
   thread?: ThreadInfo;
+  /** With no `thread` yet: the agents replying in the thread under it, comma-joined (ADR 0214). */
+  replying?: string | undefined;
   /** Absent where it is read only. */
   onLongPress?: (m: Message) => void;
   onRetry?: (m: Message) => void;
@@ -231,6 +264,7 @@ function RowBody({
   newTurn,
   meId,
   thread,
+  replying,
   onLongPress,
   onRetry,
   onQuote,
@@ -241,10 +275,30 @@ function RowBody({
   run: runAt = "solo",
   above,
   aboveThread = false,
+  relay,
 }: RowProps) {
   const { t, i18n } = useTranslation();
   // Mine and not sent for lack of a connection: it waits and goes by itself when the connection is back.
   const offline = useWaiting(m.local === "failed" ? m.clientId : null);
+  // The moment a send fails (not a row drawn already failed, nor one waiting for the connection): the row shakes
+  // once and the phone says so, once. A row that was ever on its way keeps the shaking view, so the saved copy
+  // taking its place never mounts the row again.
+  const failedNow = m.local === "failed" && !offline;
+  const sendId = m.clientId ?? m.id;
+  const failSeen = useRef({ id: sendId, failed: failedNow });
+  const [shook, setShook] = useState(false);
+  const [shakes, setShakes] = useState(Boolean(m.local));
+  if (m.local && !shakes) setShakes(true);
+  useEffect(() => {
+    const seen = failSeen.current;
+    failSeen.current = { id: sendId, failed: failedNow };
+    if (!failedNow) setShook(false);
+    else if (seen.id === sendId && !seen.failed) {
+      haptics.error();
+      setShook(true);
+    }
+  }, [sendId, failedNow]);
+  const shaking = (row: ReactNode) => (shakes ? <Shake when={shook}>{row}</Shake> : row);
   const dir = useRowDirectory();
   const c = useColors();
   const when = useWhen();
@@ -252,8 +306,10 @@ function RowBody({
   const agent = isAgent && m.author.id ? dir.agentById.get(m.author.id) : undefined;
   const accent = agent ? agentLook(agent).color : undefined;
   const color = agentLook(agent).color;
-  const name = dir.nameOf(m.author) || t("mobile.chat.someone");
   const meta = m.meta;
+  // An integration app's message (ADR 0251): its mark, its name and an "App" tag, never a person's face or profile.
+  const app = m.author.type === "app" ? appAuthor(meta) : null;
+  const name = app?.name ?? (dir.nameOf(m.author) || t("mobile.chat.someone"));
   const standIn = modelStandInText(t, meta);
   // What a routine found, told by its agent (as on the web): a small tag, and the report it answers on demand
   // (that report's own line folds into this message). Unfolded, it comes back unfolded with its row (`keptOpen`).
@@ -262,15 +318,17 @@ function RowBody({
   const qc = useQueryClient();
   const orgId = useOrgId();
   const { org } = useOrg();
-  const report = routine?.noticeId
-    ? routineReportText(
-        [
-          ...(qc.getQueryData<Message[]>(keys.messages(orgId, m.channelId)) ?? []),
-          ...((m.threadId && qc.getQueryData<Message[]>(keys.thread(orgId, m.channelId, m.threadId))) || []),
-        ],
-        routine.noticeId,
-      )
-    : null;
+  const spilled = isAgent ? spilledText(t, meta, org) : null;
+  const shows = useShowsWork(org);
+  // Found again only when the cached lists it reads change, not on every draw of the row.
+  const noticeId = routine?.noticeId;
+  const listed = noticeId ? qc.getQueryData<Message[]>(keys.messages(orgId, m.channelId)) : undefined;
+  const threaded =
+    noticeId && m.threadId ? qc.getQueryData<Message[]>(keys.thread(orgId, m.channelId, m.threadId)) : undefined;
+  const report = useMemo(
+    () => (noticeId ? routineReportText([...(listed ?? []), ...(threaded ?? [])], noticeId) : null),
+    [noticeId, listed, threaded],
+  );
   // A plain reminder: the agent's own message with a "Lembrete" label (the server's prefix dropped).
   const reminder = isReminderMessage(meta);
   // A short reply it gave while its task kept working (the talker): its message, "enquanto trabalha".
@@ -304,18 +362,20 @@ function RowBody({
       !inThread &&
       !readOnly &&
       !m.local &&
-      talksToAgent(m, (handle) => agentsByAnyHandle(dir.agents).get(handle)?.id)
+      talksToAgent(m, (handle) => agentsByAnyHandle([...dir.agentById.values()]).get(handle)?.id)
         ? foldTalk(body, TALK_LINE_CHARS.phone)
         : null,
-    [isAgent, inThread, readOnly, m, body, dir.agents],
+    [isAgent, inThread, readOnly, m, body, dir.agentById],
   );
   // A GIF or a sticker (ADR 0091); with no words, the message is the picture alone (no empty bubble).
   const media = messageMediaOf(meta);
   // The one an agent adds after its own reply carries the reply's run: the run's tools, questions and stop line
   // stay on the reply, never shown twice.
   const mediaAfter = isAgent && isMediaAfterReply(meta);
-  // It asked other agents first: one row right before it (its run's questions on the run's first message here, and
-  // the ones its `meta.consulted` names), so it shows its face and name again under that row.
+  // It asked other agents first (its run's questions on the run's first message here, and the ones its
+  // `meta.consulted` names): quoted at the top of its words, as a reply quotes a message. With no words to sit in (a
+  // reply that is only cards), the quote stands on its own right before it, and the reply shows its face and name
+  // again under it.
   const reached = useMemo(() => reachHandoffs(m.meta), [m.meta]);
   const rhythm = useRhythm();
   const consults = useRunConsults(
@@ -326,19 +386,36 @@ function RowBody({
     reached,
   );
   // Work it handed over that reports here: its line under this reply says what the pair row would.
-  const paired = consults.filter((c) => !m.handedWorks?.some((w) => w.handedBy?.consultationId === c.id));
-  const pair =
+  // The question whose answer it passes on is quoted with those words (`relay`), not in the pair's quote too.
+  const paired = consults.filter(
+    (c) => !m.handedWorks?.some((w) => w.handedBy?.consultationId === c.id) && c.id !== relay?.consultation.id,
+  );
+  const relayQuote = relay && !readOnly ? <RelayQuote relay={relay} channelId={m.channelId} /> : null;
+  const pairQuote =
     isAgent && m.author.id && paired.length > 0 ? (
-      <ConsultPairRow askerId={m.author.id} channelId={m.channelId} items={paired} />
+      <ConsultQuote askerId={m.author.id} channelId={m.channelId} items={paired} />
     ) : null;
-  const grouped = groupedIn && !pair;
+  const consultQuote =
+    relayQuote && pairQuote ? (
+      <>
+        {relayQuote}
+        {pairQuote}
+      </>
+    ) : (
+      (relayQuote ?? pairQuote)
+    );
+  const quoteAlone = consultQuote !== null && (!body || Boolean(choiceReply));
+  const quoteInWords = quoteAlone ? null : consultQuote;
+  const grouped = groupedIn && !quoteAlone;
   // A question to another agent (in their DM) carries the asking run: its work shows on that run's reply.
   const ownWork = isAgent && Boolean(m.agentRunId) && !meta?.consultation && !mediaAfter;
   const steps = ownWork ? workStepsOf(meta) : null;
-  // Posted by a run answering another agent's question from here (its approval, question, secret): whom it helps.
-  const consultations = useRowConsults(m.channelId);
-  const helping =
-    isAgent && m.agentRunId && !readOnly && !mediaAfter ? consultations.byConsultedRun.get(m.agentRunId) : undefined;
+  // Posted by a run answering another agent's question from here (its approval, question, secret): whom it helps. Only
+  // that question: the row draws again when it changes, not on every reload of the conversation's questions.
+  const helpingRun = isAgent && m.agentRunId && !readOnly && !mediaAfter ? m.agentRunId : null;
+  const helping = useRowConsultsPart(m.channelId, (list) =>
+    helpingRun ? list.byConsultedRun.get(helpingRun) : undefined,
+  );
   // No `onLongPress` where the system's menu takes the hold (iOS): the row adds nothing of its own to it.
   const press =
     readOnly || !onLongPress
@@ -358,21 +435,23 @@ function RowBody({
   const lastTap = useRef(0);
   const [pop, setPop] = useState<{ x: number; y: number; at: number } | null>(null);
   const canReact = !readOnly && !m.local;
-  const onTap = canReact
-    ? (e: GestureResponderEvent) => {
-        const at = Date.now();
-        if (at - lastTap.current > DOUBLE_TAP_MS) {
-          lastTap.current = at;
-          return;
-        }
-        lastTap.current = 0;
-        haptics.light();
-        const mine = reactionPills(reactions, meId).find((p) => p.reaction === THUMBS)?.mine ?? false;
-        toggle.mutate({ reaction: THUMBS, on: !mine });
-        setPop({ x: e.nativeEvent.locationX, y: e.nativeEvent.locationY, at });
-        teachDoubleTap();
-      }
-    : undefined;
+  // The row takes the tap, so the list (`keyboardShouldPersistTaps="handled"`) never puts the keyboard away for it:
+  // the row does, as a tap on the conversation does in any chat.
+  const onTap = (e: GestureResponderEvent) => {
+    Keyboard.dismiss();
+    if (!canReact) return;
+    const at = Date.now();
+    if (at - lastTap.current > DOUBLE_TAP_MS) {
+      lastTap.current = at;
+      return;
+    }
+    lastTap.current = 0;
+    haptics.light();
+    const mine = reactionPills(reactions, meId).find((p) => p.reaction === THUMBS)?.mine ?? false;
+    toggle.mutate({ reaction: THUMBS, on: !mine });
+    setPop({ x: e.nativeEvent.locationX, y: e.nativeEvent.locationY, at });
+    teachDoubleTap();
+  };
   useEffect(() => {
     if (!pop) return;
     const timer = setTimeout(() => setPop(null), POP_MS);
@@ -406,7 +485,6 @@ function RowBody({
   const question = isAgent ? questionOf(meta) : null;
   // An agent asks a person for a secret for its computer (ADR 0027).
   const secret = isAgent ? secretRequestOf(meta) : null;
-  // An agent proposes a change to the workspace's context or to an agent's instructions: decided right here.
   // The agent needs a person in its browser (ADR 0040): the request, live.
   const handoff = isAgent ? browserHandoffOf(meta) : null;
   // A card its run posts on the way (Connect, a proposal, an approval, a question, a secret, a handoff), from inside a
@@ -426,14 +504,26 @@ function RowBody({
   // Preparing the mission's copy of the project failed (ADR 0044): the card with "Tentar de novo".
   const setup = missionSetupOf(meta);
   const link = missionLinkOf(meta);
+  // A code session it suggested for a change asked here (ADR 0215 §11): the person's card under the reply.
+  const suggestion = m.author.type === "agent" && !m.local ? codeSuggestionOf(meta) : null;
   const files = artifactsOf(meta);
   // Mine, just sent: drawn from the phone while they upload.
   const localFiles = localFilesOf(meta);
-  const aboveReactions = useReactions(orgId, above?.id ?? "", false).data;
+  // The message above's reactions as `useReactions` reads them (cached, never fetched here); with no message above,
+  // nothing to follow.
+  const api = useApi();
+  const aboveId = above?.id ?? "";
+  const aboveReactions = useQuery({
+    queryKey: keys.reactions(orgId, aboveId),
+    queryFn: () => api.chat.reactions(orgId, aboveId),
+    enabled: false,
+    staleTime: 30_000,
+    subscribed: above !== undefined,
+  }).data;
   const run = runAround(
     runAt,
     above ? hangsUnder(above, aboveThread, aboveReactions, meId) : false,
-    hangsUnder(m, Boolean(thread), cachedReactions.data, meId),
+    hangsUnder(m, Boolean(thread || replying), cachedReactions.data, meId),
   );
   // A card in a row of its own under the same author's words stands as far off them as in the same row.
   const cardRow = !body && !media && postedCard;
@@ -445,7 +535,7 @@ function RowBody({
   // Where it browsed, or what it did on its desktop, after the run (as on the web): the steps' card.
   // Step summaries, no picture: activity, so the person's setting hides them like the tool block.
   const trails =
-    isAgent && m.author.id && !m.local && showsActivity(org)
+    isAgent && m.author.id && !m.local && shows
       ? {
           browser: browserTrailOf(meta),
           desktop: desktopTrailOf(meta),
@@ -490,6 +580,10 @@ function RowBody({
         : undefined;
   const solidInk = bubbled && look.tone === "strong" ? ON_SOLID : undefined;
   const quote = replyOf(meta);
+  // About part of a live file (ADR 0199): its line over the message, a tap shows that part in the file.
+  const liveRef = messageLiveRef(m);
+  // A comment with a pin on a picture, a video or a PDF, resolved (ADR 0208): who did it, under it.
+  const resolved = liveRef && !m.local && isPinnedSelection(liveRef.selection) ? resolvedOf(meta) : null;
   const myHandle = useRowMyHandle();
   const mentionsMe = !mine && mentionsReader({ body, meta }, myHandle);
 
@@ -501,6 +595,7 @@ function RowBody({
       ) : null}
       {meta?.missionStart ? <MissionCard threadId={m.id} /> : null}
       {link ? <MissionCard missionId={link.missionId} /> : null}
+      {suggestion ? <CodeSuggestionCard message={m} suggestion={suggestion} /> : null}
       {plan ? <PlanCard missionId={plan.missionId} goal={plan.goal} /> : null}
       {review ? <ReviewCard missionId={review.missionId} reviewId={review.id} /> : null}
       {setup ? (
@@ -514,12 +609,18 @@ function RowBody({
     </>
   );
   const missionDecision = decision ? <DecisionCard missionId={decision.missionId} decisionId={decision.id} /> : null;
-  // Under everything: the thread it started, its reactions and whether it went out.
+  // Under everything: who resolved it (a comment on a file), the thread it started, its reactions and whether it went
+  // out.
   const foot = (
     <>
+      {resolved ? <ResolvedLine resolved={resolved} end={onRight} /> : null}
       {thread && !meta?.missionStart ? (
         <View style={onRight ? styles.meEnd : undefined}>
           <ThreadLink thread={thread} />
+        </View>
+      ) : replying ? (
+        <View style={onRight ? styles.meEnd : undefined}>
+          <ThreadReplyingLink channelId={m.channelId} threadId={m.id} agentIds={replying.split(",")} />
         </View>
       ) : null}
       {readOnly ? null : (
@@ -552,19 +653,27 @@ function RowBody({
       ) : null}
     </>
   );
+  // Someone else's bubble gives way to the times only when it is too wide for them (`useGiveWay`): its bubbles end
+  // sooner than mine at the screen's edge, so that much room is there before it moves.
+  const giveWay = useGiveWay(ROW_BODY_INSET.bubbles.right - BUBBLES_EDGE);
+  // Someone else's bubble never taller than what it holds (`useBubbleCap`).
+  const bubbleCap = useBubbleCap();
+  // A compact row runs to the screen's edge: its face and words slide over with the pull, for its time.
+  const slide = useSwipeSlide(compact);
 
   if (onRight) {
-    const stamp = (
-      <View style={styles.stamp}>
-        {surfaceTag ? <SurfaceMark tag={surfaceTag} color={solidInk ?? c.muted} /> : null}
-        <Text variant="caption" tone="muted" style={solidInk ? { color: solidInk } : undefined}>
-          {when.time(m.createdAt)}
-        </Text>
-        <ReceiptMark message={m} mine receipt={receipt} seenBy={seenBy} {...(solidInk ? { ink: solidInk } : {})} />
-      </View>
-    );
-    // A voice message and a choice's answer lead with their own player or line, so their time stays under them.
-    const myBubble = bubbled && Boolean(body) && !voiceOf(meta) && !choiceReply;
+    // In bubbles the time and what became of the message are never in it (a mark coming in or swapping changed the
+    // bubble's width): a pull to the left shows them (`SwipeTime`). A send in flight has its place too.
+    const swipeTime =
+      bubbled && m.local !== "failed" ? (
+        <SwipeTime>
+          {surfaceTag ? <SurfaceMark tag={surfaceTag} color={c.muted} /> : null}
+          <Text variant="caption" tone="muted">
+            {when.time(m.createdAt)}
+          </Text>
+          <ReceiptMark message={m} mine receipt={receipt} seenBy={seenBy} />
+        </SwipeTime>
+      ) : null;
     const player = voiceOf(meta) ? (
       <View style={styles.meFiles}>
         <VoiceMessage message={m} />
@@ -585,20 +694,16 @@ function RowBody({
         ]}
       >
         {quote ? <QuotePlate reply={quote} onJump={onQuote} {...(solidInk ? { ink: solidInk } : {})} /> : null}
-        <View style={bubbled ? styles.bubbleLine : undefined}>
-          <ClippedMessage id={m.id} behind={[(bubbled && look.fill) || c.bubble]} ink={solidInk}>
-            <MessageText
-              body={body}
-              selectable={false}
-              accent={accent}
-              channelRefs={channelRefsOf(m.meta)}
-              everyone={m.meta?.mentionsEveryone === true}
-              {...(solidInk ? { ink: solidInk } : {})}
-            />
-          </ClippedMessage>
-          {/* On its way too (its own clock): the bubble keeps its size when the server's copy takes its place. */}
-          {myBubble && m.local !== "failed" ? stamp : null}
-        </View>
+        <ClippedMessage id={m.id} behind={[(bubbled && look.fill) || c.bubble]} ink={solidInk}>
+          <MessageText
+            body={body}
+            selectable={false}
+            accent={accent}
+            channelRefs={channelRefsOf(m.meta)}
+            everyone={m.meta?.mentionsEveryone === true}
+            {...(solidInk ? { ink: solidInk } : {})}
+          />
+        </ClippedMessage>
       </View>
     ) : player ? (
       player
@@ -615,65 +720,75 @@ function RowBody({
         <LocalFiles files={localFiles} align="end" sending={m.local === "pending"} />
       </View>
     ) : null;
-    return (
+    return shaking(
       <Pressable
         onPress={onTap}
         onLongPress={press}
         delayLongPress={380}
         accessibilityHint={press ? t("mobile.chat.longPressHint") : undefined}
-        style={({ pressed }) => [styles.me, rowFrame(rhythm.block, rowGap), pressed && press && styles.mePressed]}
+        style={({ pressed }) => [
+          styles.me,
+          rowFrame(rhythm.block, rowGap),
+          bubbled && styles.ownBox,
+          pressed && press && styles.mePressed,
+        ]}
       >
-        <RowPartContext.Provider value={cardTop}>
-          <View style={[styles.meParts, { gap: rhythm.part }]}>
-            {m.pinned ? (
-              <View style={[styles.pinLine, styles.meEnd, { marginBottom: PIN_GAP - rhythm.part }]}>
-                <PinMark />
-                <Text variant="caption" tone="faint">
-                  {t("mobile.pins.mark")}
-                </Text>
-              </View>
-            ) : null}
-            {/* With no words there is no bubble to hold it. */}
-            {quote && (!body || choiceReply) ? (
-              <View style={styles.meEnd}>
-                <QuotePlate reply={quote} onJump={onQuote} />
-              </View>
-            ) : null}
-            {lead}
-            {body ? player : null}
-            {body && media ? (
-              <View style={styles.meFiles}>
-                <ChatMedia media={media} align="end" liveId={m.id} />
-              </View>
-            ) : null}
-            {(body || media) && files.length > 0 ? (
-              <View style={styles.meFiles}>
-                <MessageFiles files={files} align="end" />
-              </View>
-            ) : null}
-            {(body || media) && localFiles.length > 0 ? (
-              <View style={styles.meFiles}>
-                <LocalFiles files={localFiles} align="end" sending={m.local === "pending"} />
-              </View>
-            ) : null}
-            {cards}
-            {missionDecision}
-            {foot}
-          </View>
-        </RowPartContext.Provider>
-        {/* One time per run of my rows (they group a few minutes apart), under its last, the receipt's mark ending
-            its line; a send in flight has it too (its own clock), so nothing moves when the server's copy lands. */}
-        {m.local !== "failed" && (run === "end" || run === "solo") && !myBubble ? (
-          <View style={[styles.meTime, { marginTop: rhythm.part / 2 }]}>
-            {surfaceTag ? <SurfaceMark tag={surfaceTag} color={c.faint} /> : null}
-            <Text variant="caption" tone="faint">
-              {when.time(m.createdAt)}
-            </Text>
-            <ReceiptMark message={m} mine receipt={receipt} seenBy={seenBy} />
-          </View>
-        ) : null}
+        <SwipeSlide on={bubbled} style={styles.meSlide}>
+          <RowPartContext.Provider value={cardTop}>
+            <View style={[styles.meParts, { gap: rhythm.part }]}>
+              {m.pinned ? (
+                <View style={[styles.pinLine, styles.meEnd, { marginBottom: PIN_GAP - rhythm.part }]}>
+                  <PinMark />
+                  <Text variant="caption" tone="faint">
+                    {t("mobile.pins.mark")}
+                  </Text>
+                </View>
+              ) : null}
+              {liveRef ? <MessageAbout liveRef={liveRef} messageId={m.id} end /> : null}
+              {/* With no words there is no bubble to hold it. */}
+              {quote && (!body || choiceReply) ? (
+                <View style={styles.meEnd}>
+                  <QuotePlate reply={quote} onJump={onQuote} />
+                </View>
+              ) : null}
+              {lead}
+              {body ? player : null}
+              {body && media ? (
+                <View style={styles.meFiles}>
+                  <ChatMedia media={media} align="end" liveId={m.id} />
+                </View>
+              ) : null}
+              {(body || media) && files.length > 0 ? (
+                <View style={styles.meFiles}>
+                  <MessageFiles files={files} align="end" />
+                </View>
+              ) : null}
+              {(body || media) && localFiles.length > 0 ? (
+                <View style={styles.meFiles}>
+                  <LocalFiles files={localFiles} align="end" sending={m.local === "pending"} />
+                </View>
+              ) : null}
+              {cards}
+              {missionDecision}
+              {foot}
+            </View>
+          </RowPartContext.Provider>
+          {/* One time per run of my rows (they group a few minutes apart), under its last, the receipt's mark ending
+            its line; a send in flight has it too (its own clock), so nothing moves when the server's copy lands. In
+            bubbles a pull to the left shows it instead. */}
+          {m.local !== "failed" && (run === "end" || run === "solo") && !bubbled ? (
+            <View style={[styles.meTime, { marginTop: rhythm.part / 2 }]}>
+              {surfaceTag ? <SurfaceMark tag={surfaceTag} color={c.faint} /> : null}
+              <Text variant="caption" tone="faint">
+                {when.time(m.createdAt)}
+              </Text>
+              <ReceiptMark message={m} mine receipt={receipt} seenBy={seenBy} />
+            </View>
+          ) : null}
+        </SwipeSlide>
+        {swipeTime}
         {popNode}
-      </Pressable>
+      </Pressable>,
     );
   }
 
@@ -698,6 +813,14 @@ function RowBody({
         >
           {name}
         </Text>
+      ) : null}
+      {app ? <Tag icon="bolt" label={t("integrations.badge")} hint={t("integrations.appTip", { name })} /> : null}
+      {app?.sender ? (
+        <Tag
+          icon="person"
+          label={t("integrations.sender", { sender: app.sender })}
+          hint={t("integrations.senderTip", { sender: app.sender, name })}
+        />
       ) : null}
       {reminder ? <Tag icon="bell" label={t("channel.reminder")} /> : null}
       {via ? (
@@ -737,14 +860,14 @@ function RowBody({
           hitSlop={NAME_LINE_SLOP}
           style={({ pressed }) => [styles.shrink, pressed && styles.pressedDim]}
         >
-          <Text variant="caption" tone="muted" numberOfLines={1} style={styles.medium}>
+          <Text variant="label" tone="muted" numberOfLines={1}>
             {reportOpen ? t("channel.routineReportHide") : t("channel.routineReport")}
           </Text>
         </Pressable>
       ) : null}
       {talker ? (
         <Text
-          variant="caption"
+          variant="footnote"
           tone="faint"
           numberOfLines={1}
           style={styles.shrink}
@@ -757,7 +880,7 @@ function RowBody({
       {/* The agent's role tells agents apart where several speak; in a DM (`look.names` off) the bar under its name
           already says it, and it isn't said again on every turn. */}
       {!reminder && !routine && !talker && !helping && agent?.role && look.names && !bubbled && !compact ? (
-        <Text variant="caption" tone="faint" numberOfLines={1} style={styles.shrink}>
+        <Text variant="footnote" tone="faint" numberOfLines={1} style={styles.shrink}>
           {agent.role}
         </Text>
       ) : null}
@@ -824,13 +947,19 @@ function RowBody({
   ) : choiceReply ? (
     choiceReply
   ) : body ? (
-    <ClippedMessage id={m.id} behind={behindWords} lead={talk ? saying(talk.lead) : undefined}>
+    <ClippedMessage
+      id={m.id}
+      behind={behindWords}
+      lead={talk ? saying(talk.lead) : undefined}
+      // In a bubble, where its words end keeps the bubble no taller than them (`useBubbleCap`).
+      onEnd={bubbled ? bubbleCap.onEnd : undefined}
+    >
       {saying(body)}
     </ClippedMessage>
   ) : null;
   // The bubble holds its words, the tags of its name line and, at its end, the time; a row with none keeps its line.
   const inBubble = bubbled && Boolean(body) && !brainWait && !deviceWait && !choiceReply;
-  const tagged = Boolean(reminder || via || surfaceTag || routine || talker || helping || m.pinned);
+  const tagged = Boolean(app || reminder || via || surfaceTag || routine || talker || helping || m.pinned);
   const opener = opened?.said ? <MessageText body={opened.said} selectable={false} accent={accent} /> : null;
   // Outside a bubble the line it opened with is a part of its own, as the web's second text.
   const openerPart = opener && words ? <View style={{ marginBottom: rhythm.part }}>{opener}</View> : opener;
@@ -839,7 +968,8 @@ function RowBody({
       <View
         style={[
           styles.report,
-          { borderLeftColor: c.line },
+          // On a plate a step off what is around it, never a bar at its left edge.
+          { backgroundColor: c.plate },
           (inBubble || opener || words) && { marginBottom: rhythm.part },
         ]}
       >
@@ -870,8 +1000,17 @@ function RowBody({
   const partTop = bubbled && (body || media) ? BUBBLE_JOIN - rhythm.part : cardTop;
   return (
     <>
-      {pair}
-      {quote && !inBubble ? <QuoteAbove look={look} reply={quote} onJump={onQuote} gap={rowGap} /> : null}
+      {quoteAlone && m.author.id ? (
+        <View style={[plateInset(look, aboveInset(look)), { marginTop: rhythm.turn }]}>
+          <ConsultQuote askerId={m.author.id} channelId={m.channelId} items={paired} alone />
+        </View>
+      ) : null}
+      {liveRef ? (
+        <View style={[styles.aboutAbove, { paddingLeft: aboveInset(look), marginTop: rowGap }]}>
+          <MessageAbout liveRef={liveRef} messageId={m.id} />
+        </View>
+      ) : null}
+      {quote && !inBubble ? <QuoteAbove look={look} reply={quote} onJump={onQuote} gap={liveRef ? 0 : rowGap} /> : null}
       <Pressable
         onPress={onTap}
         onLongPress={press}
@@ -880,23 +1019,31 @@ function RowBody({
         style={({ pressed }) => [
           styles.msg,
           bubbled && lookRows.bubblesRow,
+          bubbled && !look.faces && lookRows.bubblesBare,
+          // A bubble row paints nothing past its own box: the list puts the next row right under it, and a bubble
+          // drawn taller than its row (its frame lagging its layout) covered the messages after it.
+          bubbled && styles.ownBox,
           compact && lookRows.compactRow,
           rowFrame(rhythm.block, rowGap),
-          // On the quote it answers, its plate never over it.
+          // On the quote it answers (or the line about a file's part), its plate never over it.
           quoteAbove && styles.replied,
+          liveRef !== null && styles.replied,
           // A mention of me: the row's tint says it, with round corners; no accent bar on its left edge. In bubbles the
           // bubble says it.
           mentionsMe && !inBubble && { backgroundColor: `${c.amber}17`, borderRadius: 14 },
           pressed && press && { backgroundColor: c.sunken },
         ]}
       >
-        {compact ? (
-          <Text variant="caption" tone="faint" style={lookRows.compactClock}>
-            {when.time(m.createdAt)}
-          </Text>
-        ) : null}
         {look.faces ? (
-          <View style={[styles.avslot, bubbled && lookRows.bubblesSlot, compact && lookRows.compactSlot]}>
+          <Animated.View
+            style={[
+              styles.avslot,
+              bubbled && lookRows.bubblesSlot,
+              compact && lookRows.compactSlot,
+              inBubble && giveWay.style,
+              compact && slide,
+            ]}
+          >
             {grouped ? (
               // A grouped row's receipt in its face's place, on its first line: a tap opens who it went to.
               (receipt || seenBy) && !m.local && !inBubble ? (
@@ -904,49 +1051,57 @@ function RowBody({
                   <ReceiptMark message={m} mine={mine} receipt={receipt} seenBy={seenBy} />
                 </View>
               ) : null
+            ) : app ? (
+              <AppMark color={app.color} name={app.name} size={compact ? 18 : bubbled ? 30 : 34} />
             ) : (
               <Face who={m.author} size={compact ? 18 : bubbled ? 30 : 34} live={false} />
             )}
-          </View>
+          </Animated.View>
         ) : null}
-        <View style={[styles.body, { gap: rhythm.part }]}>
+        {/* Its face and its body give way together (`useGiveWay`), so the bubble never runs under the face. */}
+        <Animated.View style={[styles.body, { gap: rhythm.part }, inBubble && giveWay.style, compact && slide]}>
           <RowParts top={partTop} part={bubblePart} head={bubbleHead}>
             {nameOrWords ? (
-              <View>
+              <View onLayout={inBubble ? giveWay.onArea : undefined}>
                 {inBubble ? (
                   <>
                     {pinLine}
                     {reportOpened}
-                    <View style={[lookRows.bubble, OTHER_RUN[run], { backgroundColor: otherBubble }, bubbleEdge]}>
+                    <View
+                      onLayout={(e) => {
+                        giveWay.onBubble(e);
+                        bubbleCap.onBubble(e);
+                      }}
+                      style={[
+                        lookRows.bubble,
+                        OTHER_RUN[run],
+                        { backgroundColor: otherBubble },
+                        bubbleEdge,
+                        bubbleCap.capStyle,
+                      ]}
+                    >
                       {!grouped && (look.names || tagged) ? who(true) : null}
+                      {quoteInWords}
                       {quote ? <QuotePlate reply={quote} onJump={onQuote} /> : null}
                       {opener}
-                      <View style={styles.bubbleLine}>
-                        {words}
-                        <View style={styles.stamp}>
-                          <Text variant="caption" tone="muted">
-                            {when.time(m.createdAt)}
-                          </Text>
-                          {receipt || seenBy ? (
-                            <ReceiptMark message={m} mine={mine} receipt={receipt} seenBy={seenBy} />
-                          ) : null}
-                        </View>
-                      </View>
+                      {words}
                     </View>
                   </>
                 ) : compact && !grouped ? (
                   <>
                     <View style={styles.compactLine}>
                       {who(false)}
-                      {!reportOpened && !opener ? words : null}
+                      {!reportOpened && !opener && !quoteInWords ? words : null}
                     </View>
+                    {quoteInWords}
                     {reportOpened}
                     {openerPart}
-                    {reportOpened || opener ? words : null}
+                    {reportOpened || opener || quoteInWords ? words : null}
                   </>
                 ) : (
                   <>
                     {nameLine && !askAlone ? who(false) : null}
+                    {quoteInWords}
                     {pinLine}
                     {reportOpened}
                     {openerPart}
@@ -959,6 +1114,7 @@ function RowBody({
             {voiceOf(meta) ? <VoiceMessage message={m} /> : null}
             {isAgent && meta?.speedFallback === true ? <SpeedFallbackLine message={m} /> : null}
             {isAgent && standIn ? <ModelStandInLine message={m} text={standIn} /> : null}
+            {spilled ? <SpilledLine text={spilled} /> : null}
             {(stopped || atLimit || providerCut) && m.agentRunId ? (
               <StoppedLine
                 message={m}
@@ -1009,7 +1165,6 @@ function RowBody({
                 items={opened?.lines ?? kept.items}
                 agentName={agent?.name ?? name}
                 color={color}
-                quoteOf={(id) => kept.quotes[id]}
                 done
                 settled
                 keep={`tools:${m.id}`}
@@ -1017,6 +1172,7 @@ function RowBody({
             ) : steps && m.agentRunId && !meta?.workUpdate ? (
               <SavedTools
                 runId={m.agentRunId}
+                messageId={m.id}
                 meta={meta}
                 agentName={agent?.name ?? name}
                 color={color}
@@ -1055,7 +1211,19 @@ function RowBody({
             {foot}
           </RowParts>
           {hintNode}
-        </View>
+        </Animated.View>
+        {/* A bubble holds no time (its words alone set its width), nor does a compact row: a pull to the left shows it,
+            in the row's gutter (a compact row's mark stays on its first line). */}
+        {inBubble || compact ? (
+          <SwipeTime>
+            <Text variant="caption" tone="muted">
+              {when.time(m.createdAt)}
+            </Text>
+            {inBubble && (receipt || seenBy) ? (
+              <ReceiptMark message={m} mine={mine} receipt={receipt} seenBy={seenBy} />
+            ) : null}
+          </SwipeTime>
+        ) : null}
         {popNode}
       </Pressable>
     </>
@@ -1156,7 +1324,6 @@ function StoppedLine({
   const toast = useToast();
   const meId = useRowMeId();
   const dir = useRowDirectory();
-  const org = useOrg().org;
   const [busy, setBusy] = useState(false);
   // The stop's notice, when it is in this conversation: who stopped it, the reason, its time.
   const stop = useStoppedRun(limit ? null : runId);
@@ -1173,17 +1340,20 @@ function StoppedLine({
     : by
       ? t("mobile.chat.stopped.plain")
       : (runErrorText(t, stopped.code) ?? t("mobile.chat.stopped.plain"));
-  const owner = m.author.id ? dir.agentById.get(m.author.id)?.ownerUserId : null;
+  const author = m.author.id ? dir.agentById.get(m.author.id) : undefined;
+  const owner = author?.ownerUserId ?? null;
+  // Holding the role that answers for it counts as its owner (ADR 0085, addendum of 2026-11-21).
+  const owns = ownsIn(dir.memberById, meId, author);
   const loaded = [
     ...(qc.getQueryData<Message[]>(keys.messages(orgId, m.channelId)) ?? []),
     ...((m.threadId && qc.getQueryData<Message[]>(keys.thread(orgId, m.channelId, m.threadId))) || []),
   ];
-  // Same people who may stop it (the server checks again): an admin, the agent's owner, or who asked.
+  // Same people who may stop it (the server checks again): who manages the agent, its owner, or who asked.
   const may =
     byMe ||
     mayStopRun(
       { agentId: m.author.id ?? "", threadId: m.threadId ?? m.id, triggerMessageId: null },
-      { meId, manageAgents: can(org, "manage_agents"), agentOwnerId: owner, messages: loaded },
+      { meId, manageAgents: managesAgent(author), agentOwnerId: owner, owns, messages: loaded },
     );
   // The agent works here again, or wrote after the stop: it went on, the stop offers nothing.
   const movedOn = useStopMovedOn(runId);
@@ -1273,7 +1443,7 @@ function Tag({
   hint,
   wrap,
 }: {
-  icon: "bell" | "chat" | "clock" | "sparkle";
+  icon: "bell" | "chat" | "clock" | "sparkle" | "bolt" | "person";
   /** In place of the icon (an app's mark). */
   lead?: ReactNode;
   label: string;
@@ -1321,12 +1491,10 @@ function HelpingTag({ consultation: c, channelId }: { consultation: RunConsultat
   const from = agentGrammar(dir.agentById.get(c.agentId)?.name ?? t("mobile.chat.someone"));
   return (
     <>
-      <Text variant="caption" tone="faint" numberOfLines={1} style={styles.shrink}>
-        {withAgentFaces(
-          t("chat.consultPanel.helping", { name: from.name, context: from.context }),
-          [{ name: from.name, agentId: c.agentId }],
-          12,
-        )}
+      <Text variant="footnote" tone="faint" numberOfLines={1} style={styles.shrink}>
+        {withAgentFaces(t("chat.consultPanel.helping", { name: from.name, context: from.context }), [
+          { name: from.name, agentId: c.agentId },
+        ])}
       </Text>
       <Pressable
         onPress={() => router.push(consultationHref(c.id, channelId))}
@@ -1334,7 +1502,7 @@ function HelpingTag({ consultation: c, channelId }: { consultation: RunConsultat
         hitSlop={NAME_LINE_SLOP}
         style={({ pressed }) => [styles.shrink, pressed && styles.pressedDim]}
       >
-        <Text variant="caption" tone="muted" numberOfLines={1} style={styles.medium}>
+        <Text variant="label" tone="muted" numberOfLines={1}>
           {t("chat.consultPanel.see")}
         </Text>
       </Pressable>
@@ -1457,7 +1625,7 @@ const POP_IN: EntryExitAnimationFunction = () => {
 const POP_OUT = FadeOut.duration(160);
 
 /** The turn's last corner, cut as a card's is, on the side my bubble stands. */
-const BUBBLE_CUT = 6;
+const BUBBLE_CUT = RADIUS.sm;
 
 /** A row under the quote it answers: they read as one. */
 const QUOTE_GAP = 2;
@@ -1470,9 +1638,9 @@ const AMBER_TINT = 0x21 / 0xff;
 
 const BUBBLE_RUN: Record<RunPosition, { borderTopRightRadius?: number; borderBottomRightRadius?: number }> = {
   solo: { borderBottomRightRadius: BUBBLE_CUT },
-  start: { borderBottomRightRadius: 6 },
-  mid: { borderTopRightRadius: 6, borderBottomRightRadius: 6 },
-  end: { borderTopRightRadius: 6, borderBottomRightRadius: BUBBLE_CUT },
+  start: { borderBottomRightRadius: RADIUS.sm },
+  mid: { borderTopRightRadius: RADIUS.sm, borderBottomRightRadius: RADIUS.sm },
+  end: { borderTopRightRadius: RADIUS.sm, borderBottomRightRadius: BUBBLE_CUT },
 };
 
 /**
@@ -1506,9 +1674,9 @@ const BUBBLE_JOIN = 3;
 /** Anyone else's bubble in `bubbles`: the same, on the left. */
 const OTHER_RUN: Record<RunPosition, { borderTopLeftRadius?: number; borderBottomLeftRadius?: number }> = {
   solo: {},
-  start: { borderBottomLeftRadius: 6 },
-  mid: { borderTopLeftRadius: 6, borderBottomLeftRadius: 6 },
-  end: { borderTopLeftRadius: 6 },
+  start: { borderBottomLeftRadius: RADIUS.sm },
+  mid: { borderTopLeftRadius: RADIUS.sm, borderBottomLeftRadius: RADIUS.sm },
+  end: { borderTopLeftRadius: RADIUS.sm },
 };
 
 /** Words and time on my solid bubble. */
@@ -1523,6 +1691,10 @@ const styles = StyleSheet.create({
     paddingRight: 16,
   },
   replied: { marginTop: 0, paddingTop: QUOTE_GAP },
+  // Bubbles only: the other looks' cards cast shadows past the row.
+  ownBox: { overflow: "hidden" },
+  aboutAbove: { paddingRight: 16 },
+  // A quote of the agents' talk with no words to sit in: on the words' column, as wide as a bubble's.
   avslot: { width: MSG_AVATAR, alignItems: "center", paddingTop: 2 },
   body: { flex: 1, minWidth: 0 },
   // A long pick wraps: the check stays on its first line.
@@ -1536,21 +1708,14 @@ const styles = StyleSheet.create({
   // On the words' first line: the slot's 2 over the words' own 1.
   slotMark: { marginTop: -1, justifyContent: "center" },
   whoTight: { marginBottom: 0 },
-  // The time ends the words' line when it fits; a longer text pushes it to a line of its own, at the bubble's end.
-  bubbleLine: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "flex-end",
-    alignItems: "flex-end",
-    columnGap: 8,
-  },
   bubbleEnd: { alignSelf: "flex-end" },
   retry: { fontWeight: "600", textDecorationLine: "underline" },
-  stamp: { flexDirection: "row", alignItems: "center", gap: 4, height: 16, marginLeft: "auto" },
   compactLine: { flexDirection: "row", flexWrap: "wrap", alignItems: "baseline", columnGap: 6 },
   name: { fontWeight: "600", fontSize: 14, lineHeight: 19, flexShrink: 1 },
-  me: { paddingLeft: 64, paddingRight: 16, alignItems: "flex-end" },
+  me: { paddingLeft: 64, paddingRight: BUBBLES_EDGE, alignItems: "flex-end" },
   meParts: { alignSelf: "stretch" },
+  // What slides with a pull to the left (`SwipeSlide`): the row's whole width, as its parts were.
+  meSlide: { alignSelf: "stretch" },
   meTime: { flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 4, height: 16 },
   mePressed: { opacity: 0.7 },
   meEnd: { alignSelf: "flex-end" },
@@ -1573,7 +1738,8 @@ const styles = StyleSheet.create({
   tagPress: { flexShrink: 1, maxWidth: "100%", alignSelf: "center" },
   pin: { alignSelf: "center" },
   // The routine report a message answers, unfolded under its name (like the notice line's text).
-  report: { marginTop: 2, paddingLeft: 10, borderLeftWidth: 2 },
+  // A plate in the words, as a quote's: the scale's item corner, the plates' room.
+  report: { marginTop: 2, paddingHorizontal: 12, paddingVertical: 10, borderRadius: RADIUS.md },
   tag: {
     flexDirection: "row",
     alignItems: "center",

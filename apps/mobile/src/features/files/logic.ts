@@ -1,14 +1,31 @@
 import type { ArtifactDetail, ArtifactKind } from "@agenteschat/client";
-import { fileIcon, previewType } from "@agenteschat/client/lib/files";
+import { extensionOf, fileIcon, isMarkdownFile, previewKind, previewType } from "@agenteschat/client/lib/files";
 import { filePath } from "@agenteschat/client/lib/message-links";
+import { type LiveScreen, liveRoute, opensLive, type PhoneLiveKind } from "../live-files/routes";
 
 /**
  * Files on a message: which ones show as pictures, the card's tile and
  * line ("MD", "Documento · 4 KB"), how a viewer shows each, and the name a shared copy gets.
  */
 
-/** How the app shows a file: inline picture or video, the document screen (Markdown, text, PDF), or only its card. */
-export type FileView = "image" | "video" | "markdown" | "text" | "pdf" | "html" | "other";
+/**
+ * How the app shows a file: inline picture or video, the document screen (Markdown, text, PDF, an audio file's
+ * player), a live file's own screen (ADR 0196), an Office file as the server read it (ADR 0198: a workbook's grid, a
+ * deck's slides, a Word document's page; an old table in the same grid), or only its card.
+ */
+export type FileView =
+  | "image"
+  | "video"
+  | "audio"
+  | "markdown"
+  | "text"
+  | "pdf"
+  | "html"
+  | "live"
+  | "sheet"
+  | "deck"
+  | "word"
+  | "other";
 
 /** The word under the name ("Imagem", "PDF", "Documento"…): `mobile.files.type.<key>`. */
 export type FileTypeKey =
@@ -23,6 +40,9 @@ export type FileTypeKey =
   | "diagram"
   | "page"
   | "text"
+  | "spreadsheet"
+  | "slides"
+  | "canvas"
   | "file";
 
 export interface FileInfo {
@@ -46,7 +66,6 @@ const VIDEO_TYPES = new Set(["video/mp4", "video/quicktime", "video/x-m4v", "vid
 export const VIDEO_EXT = new Set(["mp4", "mov", "m4v", "webm"]);
 /** Names that say "picture": while the details load, and when the stored type doesn't (an upload typed as bytes). */
 export const IMAGE_EXT = new Set(["png", "jpg", "jpeg", "gif", "webp", "heic", "heif"]);
-const MARKDOWN_EXT = new Set(["md", "markdown", "mdx"]);
 const TEXT_EXT = new Set(["txt", "log", "csv", "tsv", "json", "yml", "yaml", "toml", "xml", "ini", "env"]);
 
 /** Non-file artifacts: the extension their download gets (as the server names them). */
@@ -59,6 +78,10 @@ const KIND_EXT: Record<Exclude<ArtifactKind, "file">, string> = {
   block: "html",
   poll: "json",
   choices: "json",
+  // A live file downloads as the Office file other apps open (ADR 0198); a canvas as its shapes.
+  spreadsheet: "xlsx",
+  slides: "pptx",
+  canvas: "json",
 };
 
 const KIND_TYPE: Record<Exclude<ArtifactKind, "file">, FileTypeKey> = {
@@ -70,13 +93,12 @@ const KIND_TYPE: Record<Exclude<ArtifactKind, "file">, FileTypeKey> = {
   block: "page",
   poll: "file",
   choices: "file",
+  spreadsheet: "spreadsheet",
+  slides: "slides",
+  canvas: "canvas",
 };
 
-/** "relatorio.final.PDF" → "pdf" ("" without one). */
-export function extensionOf(name: string): string {
-  const m = /\.([a-z0-9]{1,8})$/i.exec(name.trim());
-  return m?.[1]?.toLowerCase() ?? "";
-}
+export { extensionOf, isCodeName } from "@agenteschat/client/lib/files";
 
 /** The tile's label: "MD", "PDF", "JPEG" (4 letters at most); "" → the caller shows an icon. */
 export const extLabel = (ext: string) => ext.slice(0, 4).toUpperCase();
@@ -111,22 +133,40 @@ export function fileInfo(a: Pick<ArtifactDetail, "kind" | "title" | "content">):
     const mime = previewType(c.contentType);
     // The type says what it is; a file stored as plain bytes goes by its name.
     const untyped = !mime || mime === "application/octet-stream";
+    // Spreadsheets, decks and Word documents the server reads for the app to draw (ADR 0198), CSV included.
+    const office = OFFICE_VIEW[previewKind(mime, name) ?? ""];
     let view: FileView = "other";
     if (IMAGE_TYPES.has(mime) || (untyped && IMAGE_EXT.has(ext))) view = "image";
     else if (VIDEO_TYPES.has(mime) || (untyped && VIDEO_EXT.has(ext))) view = "video";
     else if (mime === "application/pdf" || ext === "pdf") view = "pdf";
+    else if (previewKind(mime) === "audio" || (untyped && previewKind("", name) === "audio")) view = "audio";
+    else if (office) view = office;
     // A page is shown as a page (its source isn't the point), before the text types it is one of.
     else if (mime === "text/html" || ext === "html" || ext === "htm") view = "html";
-    else if (MARKDOWN_EXT.has(ext) || mime === "text/markdown") view = "markdown";
+    else if (isMarkdownFile(name, mime)) view = "markdown";
     else if (TEXT_EXT.has(ext) || mime.startsWith("text/")) view = "text";
     return { name, view, type: fileType(name, mime, view), ext: extLabel(ext), size: c.size, mime };
   }
   const ext = KIND_EXT[c.kind];
   const name = withExtension(a.title, ext);
-  const view: FileView = c.kind === "document" ? "markdown" : c.kind === "html" ? "html" : "other";
+  // A document is a live file (ADR 0200): it opens on its own screen as every live kind.
+  const view: FileView = opensLive(c.kind)
+    ? "live"
+    : c.kind === "html"
+      ? "html"
+      : c.kind === "table"
+        ? "sheet"
+        : "other";
   const size = c.kind === "document" ? utf8Bytes(c.markdown) : null;
   return { name, view, type: KIND_TYPE[c.kind], ext: extLabel(ext), size, mime: "" };
 }
+
+/** The Office previews, by the kind `previewKind` names them. */
+const OFFICE_VIEW: Record<string, FileView> = {
+  "office-sheet": "sheet",
+  "office-slides": "deck",
+  "office-doc": "word",
+};
 
 function fileType(name: string, mime: string, view: FileView): FileTypeKey {
   if (view === "image") return "image";
@@ -139,6 +179,7 @@ function fileType(name: string, mime: string, view: FileView): FileTypeKey {
   if (icon === "code") return "code";
   if (icon === "archive") return "archive";
   if (icon === "page") return "page";
+  if (icon === "slides") return "slides";
   if (icon === "document") return view === "text" ? "text" : "document";
   return view === "text" ? "text" : "file";
 }
@@ -219,12 +260,14 @@ export function resolveDownloadUrl(apiUrl: string, url: string): { uri: string; 
 
 /**
  * Where a shared copy comes from: the text the app already has (documents, diagrams, pages, small
- * text files), or a download (uploaded files, and tables and code changes as CSV / .patch exports).
+ * text files), or a download (uploaded files, tables and code changes as CSV / .patch exports, live files as the
+ * Office file other apps open).
  */
 export type ShareSource =
   | { from: "text"; text: string; name: string; mime: string }
   | { from: "download"; name: string; mime: string }
-  | { from: "export"; format: "csv" | "patch"; name: string; mime: string };
+  /** Made by the server: a table's CSV, a change's .patch, a live file as it is now (no format: a canvas's JSON). */
+  | { from: "export"; format?: "csv" | "patch" | "xlsx" | "pptx"; name: string; mime: string };
 
 export function shareSource(a: Pick<ArtifactDetail, "kind" | "title" | "content">): ShareSource {
   const info = fileInfo(a);
@@ -259,6 +302,23 @@ export function shareSource(a: Pick<ArtifactDetail, "kind" | "title" | "content"
       return { from: "export", format: "csv", name, mime: "text/csv" };
     case "diff":
       return { from: "export", format: "patch", name, mime: "text/x-patch" };
+    // A live file as the Office file other apps open, made from it as it is now (ADR 0198).
+    case "spreadsheet":
+      return {
+        from: "export",
+        format: "xlsx",
+        name,
+        mime: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      };
+    case "slides":
+      return {
+        from: "export",
+        format: "pptx",
+        name,
+        mime: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      };
+    case "canvas":
+      return { from: "export", name, mime: "application/json" };
     case "file":
       return { from: "download", name, mime: info.mime };
   }
@@ -303,15 +363,24 @@ export function isMediaFile(ref: FileRef): boolean {
 
 export type FileRoute =
   | { pathname: "/images"; params: { files: string; at: string; from?: string } }
-  | { pathname: "/file/[id]"; params: { id: string; v?: string } };
+  | { pathname: "/file/[id]"; params: { id: string; v?: string } }
+  | { pathname: LiveScreen; params: { id: string } };
+
+/** A live file's kind, from its details or from the kind the place names (ADR 0196). */
+export function liveKindOfRef(ref: FileRef): PhoneLiveKind | null {
+  const kind = ref.detail?.kind ?? ref.kind;
+  return opensLive(kind) ? kind : null;
+}
 
 /**
  * Where a file opens, the one way in from every place that shows one: a picture or a video straight in the picture
  * viewer, among the pictures and videos beside it (`siblings`, in the order they show, so the viewer pages through
- * them) at the one tapped; anything else in the file screen, at an older version when that's the one shown. `from`:
- * the deck it opened from, told where the person stops.
+ * them) at the one tapped; a live file on its own screen, as it is now (ADR 0196 §9); anything else in the file screen,
+ * at an older version when that's the one shown. `from`: the deck it opened from, told where the person stops.
  */
 export function fileRoute(ref: FileRef, siblings?: readonly FileRef[], from?: string): FileRoute {
+  const live = liveKindOfRef(ref);
+  if (live) return liveRoute(live, ref.id);
   if (!isMediaFile(ref)) {
     // Its details say whether the version shown is an older one; without them, the version the place names.
     const older = ref.detail && ref.detail.shownVersion < ref.detail.version ? ref.detail.shownVersion : undefined;
@@ -396,4 +465,40 @@ function lineParts(line: string, size: number): string[] {
   }
   parts.push(line.slice(at));
   return parts;
+}
+
+// ── A PDF's first page on its cards (`pdf-preview.tsx`) ──────────────────────────────────────────────────────────
+
+/**
+ * The most a PDF may weigh for a card to draw its first page: the phone's renderer reads the whole file, and past this
+ * a card would download a large file only to show the top of a page. Heavier ones keep their type's tile.
+ */
+export const PDF_PREVIEW_MAX_BYTES = 15 * 1024 * 1024;
+
+/** The query a PDF's copy in the cache and its pages' sizes are read under: its screen and its previews share it. */
+export const pdfCopyKey = (orgId: string, id: string, version: number) =>
+  ["org", orgId, "artifacts", "pdf", id, version] as const;
+
+/** A PDF whose first page a card draws: a file read as a PDF, of a known size up to `PDF_PREVIEW_MAX_BYTES`. */
+export function pdfPreviewable(detail: Pick<ArtifactDetail, "kind" | "title" | "content"> | undefined): boolean {
+  if (detail?.content.kind !== "file") return false;
+  const info = fileInfo(detail);
+  return info.view === "pdf" && info.size !== null && info.size > 0 && info.size <= PDF_PREVIEW_MAX_BYTES;
+}
+
+/** A file picked on the phone that is a PDF (by its type, else by its name). */
+export const isLocalPdf = (f: { type: string; name: string }) =>
+  f.type === "application/pdf" || extensionOf(f.name) === "pdf";
+
+/**
+ * The path the renderer reads for a file on the phone: it takes a path, not a link, and only drops `file://` from one
+ * (a picked file's name keeps its spaces and accents escaped in the link, which the path must not have).
+ */
+export function localPdfPath(uri: string): string {
+  const path = uri.replace(/^file:\/\//, "");
+  try {
+    return decodeURIComponent(path);
+  } catch {
+    return path;
+  }
 }

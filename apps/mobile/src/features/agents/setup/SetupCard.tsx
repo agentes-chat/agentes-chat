@@ -1,7 +1,7 @@
 import type { Agent, AgentSetupStep } from "@agenteschat/client";
 import { useAgentAccess, useAgentDetail, useAiStatus, useMe } from "@agenteschat/client";
 import { levelOf, resourcesOf } from "@agenteschat/client/lib/access-levels";
-import { audienceOf } from "@agenteschat/client/lib/audience";
+import { audienceOf, editsAgent, managesAgent } from "@agenteschat/client/lib/audience";
 import { firstName, joinNames } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { aiStateOf, planHoldPhoneLine } from "@agenteschat/client/lib/no-ai";
@@ -42,7 +42,8 @@ import { usePlanHold } from "../../ai/parts";
 import { requestComposerText } from "../../chat/composer-request";
 import { resourceName, useConnectedById, usePersonalView } from "../../settings/hooks";
 import { AgentFace } from "../../shared/Face";
-import { useColors, useDirectory, useMeId } from "../../shared/hooks";
+import { useColors, useDirectory, useMeId, useOwnerRoles, useOwnsAgent } from "../../shared/hooks";
+import { ownerRoleOf } from "../../shared/owner";
 import { successHaptic, tapHaptic } from "../../shared/parts";
 import { openSetupStep } from "./SetupStepScreen";
 import { setupStepsInSight } from "./steps";
@@ -52,8 +53,8 @@ import { useAgentChannels } from "./useAgentChannels";
  * A new agent's setup checklist on the phone (ADR 0155 §2), as on the web: the top of its DM, drawn by the app and
  * never stored, in its voice. Five steps (think, apps, channels, who talks to it, how it works); each button opens a
  * screen of its own with the suggestion marked (managing is a pushed screen), think opens Connect AI. Only who may set
- * the agent up sees it: who manages agents all the steps, its owner the ones they may change. It lives in the DM only:
- * on the agent's page it read as a to-do list about the page's subject, between its head and what it is on. Alone in a
+ * the agent up sees it (`setupSteps`): who manages it all the steps, its owner the ones they may change. DM only: on
+ * the agent's page it read as a to-do list about the page's subject, between its head and what it is on. Alone in a
  * personal workspace (ADR 0159), "who talks to it" isn't asked while it holds its default (`setupStepsInSight`), and
  * the rows read the workspace's own words.
  */
@@ -71,12 +72,16 @@ const ARRIVED = new Set<string>();
 
 /** The steps this person sees for this agent (none: the checklist isn't theirs, or the agent has none). */
 export function useSetupSteps(agent: Agent | undefined): AgentSetupStep[] {
-  const { org } = useOrg();
   const meId = useMeId();
+  const owns = useOwnsAgent();
   const { solo } = usePersonalView();
-  return agent && meId
-    ? setupStepsInSight(setupSteps(agent, { meId, admin: can(org, "manage_agents") }), audienceOf(agent), solo)
-    : [];
+  if (!agent || !meId) return [];
+  // Who manages it (the server's `canManage`) sees every step; its owner, theirs, how it works as who edits it. One
+  // who holds the role that answers for it sees them as its owner (ADR 0085, addendum of 2026-11-21): `setupSteps`
+  // reads the owner person alone, so it is told that person is me.
+  const asOwner = owns(agent) ? { ...agent, ownerUserId: meId } : agent;
+  const steps = setupSteps(asOwner, { meId, admin: managesAgent(agent), edits: editsAgent(agent) });
+  return setupStepsInSight(steps, audienceOf(agent), solo);
 }
 
 /**
@@ -86,7 +91,7 @@ export function useSetupSteps(agent: Agent | undefined): AgentSetupStep[] {
 function useSetupProgress(agent: Agent) {
   const { orgId, org } = useOrg();
   const dir = useDirectory();
-  const admin = can(org, "manage_agents");
+  const admin = managesAgent(agent);
   const steps = useSetupSteps(agent);
   const status = useAiStatus(orgId);
   const access = useAgentAccess(orgId, agent.id, admin && steps.includes("apps"));
@@ -188,6 +193,8 @@ export function AgentSetupCard({ agent, channelId }: { agent: Agent; channelId: 
   const role = setupRole(agent.setup);
   const next = nextStep(steps, done);
   const said = useDoneSay(ready, doneHere, (step) => t(`agentSetup.say.${step}`, agentGrammar(agent.name)));
+  const ownerRoles = useOwnerRoles();
+  const ownerRole = ownerRoleOf(agent, ownerRoles);
 
   // In the new agent's conversation its first card's steps arrive one after another, once per agent while the app
   // runs: a first-time moment, never replayed when the conversation's list recycles the row or it opens again.
@@ -223,7 +230,13 @@ export function AgentSetupCard({ agent, channelId }: { agent: Agent; channelId: 
         : null,
       firstChannel: firstChannel ? `#${firstChannel.name}` : null,
       audience: audience.mode,
-      otherOwner: !ownerIsMe && owner ? firstName(owner.name) : null,
+      // A role that answers for it is named as whoever holds it, even to one who does (ADR 0085, addendum of
+      // 2026-11-21).
+      otherOwner: ownerRole
+        ? t("audience.whoHolds", { role: ownerRole.name })
+        : !ownerIsMe && owner
+          ? firstName(owner.name)
+          : null,
       onPlan: Boolean(agent.brain && agent.brain.kind !== "model"),
       personal: isPersonal(org),
     });

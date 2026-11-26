@@ -21,7 +21,7 @@ import {
 } from "@agenteschat/providers";
 import { recordAudit } from "./audit";
 import { caches } from "./cache";
-import { openSecret, sealSecret } from "./crypto";
+import { openSecret, SealedValueError, sealSecret } from "./crypto";
 import {
   cleanEndpointModels,
   ENDPOINT_NO_KEY,
@@ -31,7 +31,14 @@ import {
   loadEndpointModels,
   type StoredEndpoint,
 } from "./endpoints";
-import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "./errors";
+import {
+  ConflictError,
+  ForbiddenError,
+  MissingCredentialError,
+  NotFoundError,
+  UNREADABLE_KEY,
+  ValidationError,
+} from "./errors";
 import type { KeyCheck, ModelGateway } from "./gateway";
 import { requirePermission } from "./organizations";
 import { orgModelProvider } from "./router";
@@ -370,8 +377,10 @@ async function resave(
 }
 
 /** Whether a key is the one its provider's calls take by default: its provider's default, else the single default. */
-const isDefaultOf = (defaults: Awaited<ReturnType<typeof defaultCredentials>>, r: { id: string; provider: string }) =>
-  defaults.perProvider[r.provider] ? defaults.perProvider[r.provider] === r.id : defaults.legacy === r.id;
+export const isDefaultOf = (
+  defaults: Awaited<ReturnType<typeof defaultCredentials>>,
+  r: { id: string; provider: string },
+) => (defaults.perProvider[r.provider] ? defaults.perProvider[r.provider] === r.id : defaults.legacy === r.id);
 
 /**
  * Tries a stored key again (admins), before an agent is pointed at it: a key kept before this check, or one whose
@@ -625,7 +634,11 @@ export async function decryptCredential(
     keyWrappers,
     { ciphertext: row.secretCiphertext, wrappedDataKey: row.wrappedDataKey, kekId: row.kekId },
     aadFor(orgId, row.id),
-  );
+  ).catch((error) => {
+    // Permanent: a retry opens it no better, so the run fails at once saying what to do.
+    if (error instanceof SealedValueError) throw new MissingCredentialError(UNREADABLE_KEY);
+    throw error;
+  });
   return {
     provider: row.provider as ProviderId,
     apiKey,

@@ -8,6 +8,7 @@ import { toYmd } from "@agenteschat/client/lib/format";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
 import { mondayOf } from "@/pages/CalendarPage";
 import { splitCriteria } from "@/pages/IssuesPage";
+import { pinClockInDescribe } from "./clock";
 import { ADA_ID, ATLAS_ID, createFakeApi, ORG_ID, seedState } from "./fake-api";
 import { nextCronRun, parseSchedulePhrase } from "./fakes/planning";
 import { renderApp, screen, settle } from "./render";
@@ -617,7 +618,7 @@ describe("Issue detail", () => {
     expect(criteria().textContent).toContain("0 de 5");
   });
 
-  test("in the dialog: the task's page at full height; Esc in the title being edited saves it and stays", async () => {
+  test("in the dialog: the task's page at full height; Esc in the title being edited goes back and stays, Enter saves", async () => {
     const { api } = await go("issues?open=131");
     const dialog = screen().getByRole("dialog", { name: "Confirmação do agendamento por WhatsApp" });
     expect(dialog.className).toContain("ac-details--fill");
@@ -633,11 +634,18 @@ describe("Issue detail", () => {
     expect(dialog.querySelectorAll(".issue-details__title")).toHaveLength(1);
     expect(bar.textContent).not.toContain("Criada por");
     await click(within(dialog).getByRole("button", { name: "Editar o título" }));
+    // Esc goes back to the title as it was, the dialog still open; Enter saves.
     const title = within(dialog).getByRole("textbox", { name: "Título" });
-    await type(title, "Confirmação por WhatsApp");
+    await type(title, "Something else");
     await act(async () => fireEvent.keyDown(title, { key: "Escape" }));
     await settle(4);
     expect(screen().getByRole("dialog")).toBeTruthy();
+    expect((await api.issues.get(ORG_ID, 131)).title).toBe("Confirmação do agendamento por WhatsApp");
+    await click(within(dialog).getByRole("button", { name: "Editar o título" }));
+    const again = within(dialog).getByRole("textbox", { name: "Título" });
+    await type(again, "Confirmação por WhatsApp");
+    await act(async () => fireEvent.keyDown(again, { key: "Enter" }));
+    await settle(4);
     expect((await api.issues.get(ORG_ID, 131)).title).toBe("Confirmação por WhatsApp");
   });
 
@@ -822,13 +830,13 @@ describe("Rotinas", () => {
   test("rows with agent, target, schedule, next and last run; no money", async () => {
     await go("routines");
     const weekly = screen().getByRole("article", { name: "Resumo da semana" });
-    expect(weekly.textContent).toContain("entrega em #eng");
+    // Two lines: its name, then when it runs and the next run. Where it delivers and its runs are in its details.
+    expect(weekly.textContent).not.toContain("entrega em #eng");
     expect(weekly.textContent).toContain("Toda semana, seg, às 09:00");
     expect(weekly.textContent).toMatch(/Próxima/);
     // No money on the rows.
     expect(weekly.textContent).not.toContain("US$");
-    // The last runs as a pixel strip, said in words.
-    expect(within(weekly).getByRole("img", { name: /^(Últimas execuções|Nenhuma execução)/ })).toBeTruthy();
+    expect(within(weekly).queryByRole("img", { name: /^(Últimas execuções|Nenhuma execução)/ })).toBeNull();
     const pr = screen().getByRole("article", { name: "Revisar PR aberto" });
     expect(pr.textContent).toContain("PR aberto no GitHub");
     expect(pr.textContent).toMatch(/Espera/);
@@ -863,7 +871,8 @@ describe("Rotinas", () => {
     await click(labels()[0] as HTMLElement);
     await settle(4);
     expect(labels()[0]?.getAttribute("aria-pressed")).toBe("true");
-    for (const row of screen().getAllByRole("article")) expect(row.textContent).toContain(names[0] as string);
+    for (const row of screen().getAllByRole("article"))
+      expect(row.querySelector(".routine-row__who")?.textContent).toBe(names[0] as string);
     // Again: the filter goes away.
     await click(labels()[0] as HTMLElement);
     await settle(4);
@@ -932,7 +941,6 @@ describe("Rotinas", () => {
     await settle(5);
     const card = screen().getByRole("article", { name: "PRs parados" });
     expect(card.textContent).toContain("De segunda a sexta, às 08:30");
-    expect(card.textContent).toContain("Ainda não rodou");
   });
 
   test("Nova rotina: a template from one search fills the form, and all of it stays editable", async () => {
@@ -1115,6 +1123,7 @@ describe("Rotinas", () => {
 });
 
 describe("Calendário", () => {
+  pinClockInDescribe();
   const openPanel = async () => {
     const show = screen().queryByRole("button", { name: "Mostrar painel" });
     if (show) await click(show);

@@ -1,7 +1,7 @@
 import type { Machine, MachineAccessReduce, MachinePause, MachineToolName } from "@agenteschat/client";
 import {
   profilesApply,
-  useAgents,
+  useAllAgents,
   useAuthConfig,
   useDesktopStatus,
   useHostComputer,
@@ -17,6 +17,7 @@ import {
   allowedFolders,
   allowsInApp,
   canReduceAccess,
+  codexSandboxNote,
   computerKind,
   computerState,
   folderName,
@@ -40,6 +41,7 @@ import {
   Dialog,
   DialogBody,
   DialogFooter,
+  Disclosure,
   EmptyState,
   Field,
   Icon,
@@ -165,7 +167,7 @@ function MachineRow({
             {machineTitle(m, t("machines.host.label"))}
           </Link>
           {m.kind === "host" && m.name && <Chip icon="computer">{t("machines.host.label")}</Chip>}
-          <MachineChip online={m.online} />
+          <MachineChip online={m.online} moving={m.moving} />
           <PausedChip paused={m.paused} />
           {!m.execAllowed && <Chip icon="block">{t("machines.execOff")}</Chip>}
         </span>
@@ -471,7 +473,7 @@ function ReduceDialog({ machine, reduce, onClose }: { machine: Machine; reduce: 
 function FoldersCard({ machine: m, onReduce }: { machine: Machine; onReduce: (r: Reduce) => void }) {
   const { t, i18n } = useTranslation();
   const { org } = useOrg();
-  const agents = useAgents(org.id);
+  const agents = useAllAgents(org.id);
   const nameOf = (id: string) =>
     agents.data?.find((a) => a.id === id)?.name ?? m.agents.find((a) => a.id === id)?.name ?? "";
   const access = m.access;
@@ -601,6 +603,9 @@ function ToolsCard({ machine: m, onReduce }: { machine: Machine; onReduce: (r: R
         {MACHINE_TOOLS.map((tool) => {
           const on = isOn(tool);
           const name = t(`machines.access.tool.${tool}`);
+          const about = t(`machines.access.toolText.${tool}`);
+          // Codex on Windows: what holds its commands there, when that is less than MXC.
+          const note = tool === "codex" ? codexSandboxNote(t, m) : null;
           // Commands, on, has a line under its name: the name rises to its tile's top and its state stays on the
           // name's line. A name alone centres on the tile, its state with it.
           const warn = tool === "commands" && on;
@@ -618,7 +623,9 @@ function ToolsCard({ machine: m, onReduce }: { machine: Machine; onReduce: (r: R
               <span className="ac-mediarow__head">
                 <span className="ac-hintline">
                   <span className="machine-folder__name">{name}</span>
-                  <InfoHint name={t("common.about", { label: name })}>{t(`machines.access.toolText.${tool}`)}</InfoHint>
+                  <InfoHint name={t("common.about", { label: name })}>
+                    {note ? t("common.joinSentences", { a: about, b: note }) : about}
+                  </InfoHint>
                 </span>
               </span>
               {warn && <span className="ac-mediarow__body small muted">{t("machines.access.commandsWarn")}</span>}
@@ -873,6 +880,40 @@ export function MachinePage({ machineId }: { machineId: string }) {
   // The workspace's own computer (ADR 0056 §10): its size and one user per agent, never its system or folder.
   const managed = m.kind === "managed";
   const title = machineTitle(m, t("machines.host.label"));
+  // What most people never need, behind "Detalhes": the host's description, the version, the way out to the internet,
+  // where agents work and who connected it.
+  const details = [
+    m.kind === "host" && (
+      <span key="host" className="small">
+        {t(`machines.host.${hostDescKey(m.os)}`)}
+      </span>
+    ),
+    !managed && m.runnerVersion && (
+      <span key="version" className="small muted">
+        {t("machines.versionShort", { version: m.runnerVersion })}
+      </span>
+    ),
+    // Egress draws nothing without an observation, a wait or a move: only then does it count as a detail.
+    managed && (m.networkTransition || (m.online && (m.egressWaiting || m.egress?.ip || m.egressVia))) && (
+      <Egress key="egress" machine={m} />
+    ),
+    // System mode: each agent works in its own home, never in the folder the computer was connected from.
+    m.mode === "system" && !managed && m.kind !== "host" && (
+      <span key="users" className="small muted">
+        {t("machines.agentUsers")}
+      </span>
+    ),
+    m.workspace && m.mode !== "system" && (
+      <span key="workspace" className="small muted machine-row__workspace">
+        {t("machines.workspace")} <code>{m.workspace}</code>
+      </span>
+    ),
+    m.pairedBy && (
+      <span key="paired" className="small muted">
+        {t("machines.pairedBy", { name: m.pairedBy.name })}
+      </span>
+    ),
+  ].filter(Boolean);
   const heading = (
     <h2 id="sec-machine" className="ac-card__title">
       {title}
@@ -891,17 +932,14 @@ export function MachinePage({ machineId }: { machineId: string }) {
           />
           <span className="list-col machine-page__title">
             {managed ? <ComputerTitle name={title}>{heading}</ComputerTitle> : heading}
+            {/* One status word: paused outranks online. */}
             <span className="row" style={{ gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-              {m.kind === "host" && m.name && <Chip icon="computer">{t("machines.host.label")}</Chip>}
-              <MachineChip online={m.online} />
-              <PausedChip paused={m.paused} />
-              {m.pairedBy && <Chip icon="person">{t("machines.pairedBy", { name: m.pairedBy.name })}</Chip>}
+              {paused ? <PausedChip paused={m.paused} /> : <MachineChip online={m.online} moving={m.moving} />}
             </span>
           </span>
           {m.canManage && <MachineMenu machine={m} onRename={() => setRenaming(m)} onRemove={() => setRemoving(m)} />}
         </div>
         <div className="machine-page__facts">
-          {m.kind === "host" && <span className="small">{t(`machines.host.${hostDescKey(m.os)}`)}</span>}
           {managed ? (
             <>
               {setup && <SetupFacts view={setup} />}
@@ -909,26 +947,16 @@ export function MachinePage({ machineId }: { machineId: string }) {
             </>
           ) : (
             <span className="small muted">
-              {t("machines.details", {
-                os: t(`machines.os.${osOf(m.os)}`),
-                arch: m.arch,
-                version: m.runnerVersion,
-                seen: seenText(t, i18n.language, m),
-              })}
+              {[t(`machines.os.${osOf(m.os)}`), m.arch, seenText(t, i18n.language, m)].filter(Boolean).join(" · ")}
             </span>
           )}
-          <Egress machine={m} />
           {paused && <span className="small muted">{t("machines.pausedHint")}</span>}
-          {/* System mode: each agent works in its own home, never in the folder the computer was connected from. */}
-          {m.mode === "system" && !managed && m.kind !== "host" && (
-            <span className="small muted">{t("machines.agentUsers")}</span>
-          )}
-          {m.workspace && m.mode !== "system" && (
-            <span className="small muted machine-row__workspace">
-              {t("machines.workspace")} <code>{m.workspace}</code>
-            </span>
-          )}
         </div>
+        {details.length > 0 && (
+          <Disclosure summary={t("common.details")} className="machine-page__more">
+            <div className="machine-page__facts">{details}</div>
+          </Disclosure>
+        )}
         <MachineAgents machine={m} />
       </Card>
       {/* Nobody in the workspace changes what its own computer allows, admins included. */}

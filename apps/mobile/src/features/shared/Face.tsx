@@ -8,10 +8,10 @@ import { Pressable, Text as RNText, StyleSheet, View } from "react-native";
 import type { Gaze } from "@/agent/AgentAvatar";
 import type { AgentLookInput } from "@/agent/looks";
 import { type AgentMode, agentLayout, framedByDefault } from "@/agent/poses";
-import { AgentAvatar, PersonAvatar, WithPresence } from "@/ui";
+import { AgentAvatar, type BadgePresence, PersonAvatar, WithPresence } from "@/ui";
 import { router } from "@/ui/navigation";
 import { useRowDirectory } from "../chat/row-data";
-import { usePresenceOf } from "../status/hooks";
+import { useAgentPresence, usePersonPresence } from "../status/hooks";
 import { agentLook } from "./logic";
 import { usePersonPhoto } from "./photo";
 import { useSheetIfAny } from "./SheetHost";
@@ -61,8 +61,28 @@ export function Face({
   const face = <PersonAvatar name={dir.nameOf(who) || "?"} size={size} photo={photo} radius={radius} />;
   if (!presence || !who?.id) return face;
   return (
-    <Badged who={{ type: who.type, id: who.id }} size={size} ring={ring} inset={0}>
+    <PresentPersonFace userId={who.id} size={size} ring={ring}>
       {face}
+    </PresentPersonFace>
+  );
+}
+
+/** A person's face with their presence on the corner, drawn again only when theirs changes. */
+function PresentPersonFace({
+  userId,
+  size,
+  ring,
+  children,
+}: {
+  userId: string;
+  size: number;
+  ring: string | undefined;
+  children: ReactNode;
+}) {
+  const presence = usePersonPresence(userId)?.presence;
+  return (
+    <Badged presence={presence} size={size} ring={ring} inset={0}>
+      {children}
     </Badged>
   );
 }
@@ -181,10 +201,11 @@ function PresentAgentFace({
     radius?: number | undefined;
   };
 }) {
-  const status = usePresenceOf().agent(agentId)?.status?.status;
-  const asleep = mode === "idle" && isOutOfOffice(status);
+  // Its own row of the statuses: the face draws again when this agent changes, not when any other does.
+  const shown = useAgentPresence(agentId);
+  const asleep = mode === "idle" && isOutOfOffice(shown?.status?.status);
   return (
-    <Badged who={{ type: "agent", id: agentId }} size={size} ring={ring} inset={agentBadgeInset(look, size, framed)}>
+    <Badged presence={shown?.presence} size={size} ring={ring} inset={agentBadgeInset(look, size, framed)}>
       <AgentAvatar
         agent={look}
         size={size}
@@ -210,23 +231,23 @@ export function agentBadgeInset(look: AgentLookInput, size: number, framed?: boo
   return Math.round((size - agentLayout(size, accessory).inner) / 2);
 }
 
-/** A face with its presence (people's from the people, agents' from their work); none while it loads. */
+/**
+ * A face with its presence: an agent's says free, at work, waiting on you, out or offline (ADR 0084 addendum); a
+ * person's, theirs. None while it loads.
+ */
 function Badged({
-  who,
+  presence,
   size,
   ring,
   inset,
   children,
 }: {
-  who: { type: string; id: string };
+  presence: BadgePresence | undefined;
   size: number;
   ring: string | undefined;
   inset: number;
   children: ReactNode;
 }) {
-  const of = usePresenceOf();
-  // An agent's face says free, at work, waiting on you, out or offline (ADR 0084 addendum); a person's, theirs.
-  const presence = who.type === "agent" ? of.agent(who.id)?.presence : of.person(who.id)?.presence;
   return (
     <WithPresence size={size} presence={presence} inset={inset} {...(ring !== undefined ? { ring } : {})}>
       {children}
@@ -253,11 +274,13 @@ export function AgentWho({
   // A view inside a line of text sits on the baseline and iOS drops its margins, so the face touched the name: the
   // room around it is text (a narrow space before, unless it opens the line, and after), and it is lowered to sit on
   // the words' middle (its bottom on the baseline put it a little high next to lowercase text).
+  // In its sky tile, standing in its middle: bare, the body sits at its box's foot under the room kept for a hat, so
+  // the face read as sunk under the words and smaller than it is.
   return (
     <RNText style={whoStyles.who}>
       {lead ? "" : NARROW}
       <View style={{ width: size, height: size, transform: [{ translateY: Math.round(size * 0.2) }] }}>
-        <AgentFace agentId={agentId} size={size} live={false} />
+        <AgentFace agentId={agentId} size={size} live={false} framed />
       </View>
       {NARROW}
       {name}

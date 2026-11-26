@@ -1,5 +1,5 @@
 import type { Agent, AgentGroup } from "@agenteschat/client";
-import { useAgentGroupAction, useRoles } from "@agenteschat/client";
+import { useAgentGroupAction, useAgentGroups, useChannelsPick, useRoles } from "@agenteschat/client";
 import { groupOf, NO_GROUP } from "@agenteschat/client/lib/agent-groups";
 import { errorText } from "@agenteschat/client/lib/errors";
 import {
@@ -27,8 +27,10 @@ import { MenuEntries } from "./DesktopMenus";
 import { useOrg } from "./org-context";
 import "./roles/roles.css";
 
-/** What Equipe's group dialog is for: a new group (with these agents in it), or renaming one. */
-export type GroupDialogFor = { mode: "create"; agentIds?: string[] } | { mode: "rename"; group: AgentGroup };
+/** What Equipe's group dialog is for: a new group (with these agents or channels in it), or renaming one. */
+export type GroupDialogFor =
+  | { mode: "create"; agentIds?: string[]; channelIds?: string[] }
+  | { mode: "rename"; group: AgentGroup };
 
 /** "Novo setor" and "Editar setor" (ADR 0148): its name, color and icon. Mounted while open. */
 export function GroupNameDialog({ purpose, onClose }: { purpose: GroupDialogFor; onClose: () => void }) {
@@ -36,24 +38,31 @@ export function GroupNameDialog({ purpose, onClose }: { purpose: GroupDialogFor;
   const { org } = useOrg();
   const action = useAgentGroupAction(org.id);
   const looks = useRoles(org.id).data;
+  const groups = useAgentGroups(org.id).data;
   const renaming = purpose.mode === "rename" ? purpose.group : null;
   const [name, setName] = useState(renaming?.name ?? "");
-  const [color, setColor] = useState(renaming?.color ?? "graphite");
+  // A new setor starts in a color no other one has, so the sidebar's marks tell them apart.
+  const [picked, setColor] = useState(renaming ? (renaming.color ?? "graphite") : undefined);
+  const color = picked ?? looks?.colors.find((c) => !groups?.some((g) => (g.color ?? "graphite") === c)) ?? "graphite";
   const [icon, setIcon] = useState(renaming?.icon ?? "person");
   const save = () => {
     const value = name.trim();
     if (!value) return;
     if (renaming && value === renaming.name && color === renaming.color && icon === renaming.icon) return onClose();
+    // A change to a group shows at once, so the dialog closes now; a new one waits for the server to make it.
+    if (renaming) {
+      action.mutate({ type: "update", groupId: renaming.id, name: value, color, icon });
+      return onClose();
+    }
     action.mutate(
-      renaming
-        ? { type: "update", groupId: renaming.id, name: value, color, icon }
-        : {
-            type: "create",
-            name: value,
-            color,
-            icon,
-            agentIds: purpose.mode === "create" ? purpose.agentIds : undefined,
-          },
+      {
+        type: "create",
+        name: value,
+        color,
+        icon,
+        agentIds: purpose.mode === "create" ? purpose.agentIds : undefined,
+        channelIds: purpose.mode === "create" ? purpose.channelIds : undefined,
+      },
       { onSuccess: onClose },
     );
   };
@@ -139,17 +148,22 @@ export function GroupNameDialog({ purpose, onClose }: { purpose: GroupDialogFor;
   );
 }
 
-/** "Excluir o grupo X?": its agents go back to Agentes. Mounted while open. */
+/** "Excluir o grupo X?": its agents go back to Agentes, its channels to Canais (ADR 0240). Mounted while open. */
 export function DeleteGroupDialog({ group, onClose }: { group: AgentGroup; onClose: () => void }) {
   const { t } = useTranslation();
   const { org } = useOrg();
   const action = useAgentGroupAction(org.id);
+  const hasChannels = useChannelsPick(org.id, (list) => list.some((c) => c.groupId === group.id));
   return (
     <Dialog
       open
       onOpenChange={(open) => !open && onClose()}
       title={t("agentGroups.deleteTitle", { name: group.name })}
-      description={group.agentIds.length > 0 ? t("agentGroups.deleteText") : undefined}
+      description={
+        [group.agentIds.length > 0 && t("agentGroups.deleteText"), hasChannels && t("agentGroups.deleteChannels")]
+          .filter(Boolean)
+          .join(" ") || undefined
+      }
       closeLabel={t("common.close")}
       width={440}
     >
@@ -160,7 +174,11 @@ export function DeleteGroupDialog({ group, onClose }: { group: AgentGroup; onClo
         <Button
           variant="danger"
           loading={action.isPending}
-          onClick={() => action.mutate({ type: "remove", groupId: group.id }, { onSuccess: onClose })}
+          onClick={() => {
+            // It leaves the sidebar at once: the dialog closes now (a refusal brings it back).
+            action.mutate({ type: "remove", groupId: group.id });
+            onClose();
+          }}
         >
           {t("agentGroups.delete")}
         </Button>

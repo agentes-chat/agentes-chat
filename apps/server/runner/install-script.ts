@@ -16,6 +16,17 @@ export function shQuote(value: string): string {
 }
 
 /**
+ * `address` without the slashes it ends with, read from the end. Not by `/\/+$/`: the address comes from outside (the
+ * server's settings, a request), and that pattern reads each run of slashes that doesn't end the text again from each
+ * of its slashes, quadratic in the run's length.
+ */
+export function withoutTrailingSlashes(address: string): string {
+  let end = address.length;
+  while (end > 0 && address.charAt(end - 1) === "/") end--;
+  return address.slice(0, end);
+}
+
+/**
  * The Bun a system-mode runner runs on, and any runner whose computer has no
  * Bun with `Bun.Terminal` (1.3.5 or newer), which screens and terminals
  * need: the one the repo builds and tests with (`packageManager` in
@@ -206,7 +217,7 @@ export const CODEX_EXE = "/usr/local/bin/codex";
  * whole computer as `--system` does; anywhere else, for the user who runs it.
  */
 export function installScript(publicUrl: string, options: { link?: string } = {}): string {
-  const server = shQuote(publicUrl.trim().replace(/\/+$/, ""));
+  const server = shQuote(withoutTrailingSlashes(publicUrl.trim()));
   const uids = DEFAULT_AGENT_UID_RANGE.join("-");
   const shaCases = Object.entries(RUNNER_BUN_SHA256)
     .map(([target, sha]) => `    ${target}) BUN_SHA256=${shQuote(sha)} ;;`)
@@ -1149,7 +1160,7 @@ export const RUNNER_BUN_WINDOWS_SHA256 = {
  * ASCII only (`psText`).
  */
 export function installScriptPowerShell(publicUrl: string, options: { link?: string } = {}): string {
-  const server = psQuote(publicUrl.trim().replace(/\/+$/, ""));
+  const server = psQuote(withoutTrailingSlashes(publicUrl.trim()));
   const sha = RUNNER_BUN_WINDOWS_SHA256;
   return `# agentes.chat runner installer for Windows: connects this computer to your organization.
 # Usage, with a link made under Settings > Devices: irm <server>/i/<code>/ps | iex
@@ -1239,12 +1250,16 @@ function Install-AgentesRunner {
   Set-Content -Path $Start -Encoding ASCII -Value @("\`$env:AGENTES_RUNNER_HOME = $(Q $RunnerHome)", "& $(Q $Bun) $(Q $Bundle) start")
   $Run = '-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "' + $Start + '"'
   try {
-    $Me = "$env:USERDOMAIN\\$env:USERNAME"
+    # The signed-in account as Windows itself names it: on a workgroup computer USERDOMAIN can hold the workgroup's
+    # name, an account no SID maps to.
+    $Me = [Security.Principal.WindowsIdentity]::GetCurrent().Name
     $Action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $Run
     $Trigger = New-ScheduledTaskTrigger -AtLogOn -User $Me
     $Principal = New-ScheduledTaskPrincipal -UserId $Me -LogonType Interactive -RunLevel Limited
     $Settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
-    Register-ScheduledTask -TaskName $Task -Action $Action -Trigger $Trigger -Principal $Principal -Settings $Settings -Force | Out-Null
+    # -ErrorAction Stop: the ScheduledTasks module doesn't see this function's $ErrorActionPreference, so a refusal
+    # would otherwise go on past the catch below.
+    Register-ScheduledTask -TaskName $Task -Action $Action -Trigger $Trigger -Principal $Principal -Settings $Settings -Force -ErrorAction Stop | Out-Null
     Start-ScheduledTask -TaskName $Task
     Step "Runs in the background from sign-in (Task Scheduler: $Task)"
   } catch {

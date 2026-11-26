@@ -1,3 +1,5 @@
+import { withoutTrailingSlashes } from "../lib/server";
+
 /**
  * Fetch wrapper for the private app API. The web app calls it on the same
  * origin with its cookie session; the phone app passes `baseUrl` and sends its
@@ -11,12 +13,15 @@ export class ApiError extends Error {
   readonly code: string;
   /** Details for the translated text (`{ error: { params } }`), e.g. who can't see a range. */
   readonly params?: Record<string, unknown>;
-  constructor(status: number, code: string, message: string, params?: Record<string, unknown>) {
+  /** How long the server asked to wait before trying again (`Retry-After`, a busy server's 503). */
+  readonly retryAfterMs?: number;
+  constructor(status: number, code: string, message: string, params?: Record<string, unknown>, retryAfterMs?: number) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.code = code;
     if (params) this.params = params;
+    if (retryAfterMs !== undefined) this.retryAfterMs = retryAfterMs;
   }
 }
 
@@ -84,7 +89,7 @@ interface Transport {
 }
 
 function transport(options: TransportOptions): Transport {
-  const base = (options.baseUrl ?? "").replace(/\/+$/, "");
+  const base = withoutTrailingSlashes(options.baseUrl ?? "");
   const send = options.fetch ?? ((input, init) => fetch(input, init));
   return {
     fetch: async (input, init) => {
@@ -105,7 +110,7 @@ function transport(options: TransportOptions): Transport {
 interface Xhr {
   open(method: string, url: string): void;
   setRequestHeader(name: string, value: string): void;
-  send(body: string): void;
+  send(body: string | FormData): void;
   abort(): void;
   withCredentials: boolean;
   readonly status: number;
@@ -122,7 +127,12 @@ const platformXhr = () => (globalThis as { XMLHttpRequest?: new () => Xhr }).XML
 function sendWithProgress(
   Request: new () => Xhr,
   url: string,
-  init: { headers: Record<string, string>; body: string; credentials: Transport["credentials"]; signal?: AbortSignal },
+  init: {
+    headers: Record<string, string>;
+    body: string | FormData;
+    credentials: Transport["credentials"];
+    signal?: AbortSignal;
+  },
   onProgress: (sent: number) => void,
 ): Promise<Response> {
   return new Promise((resolve, reject) => {
@@ -216,11 +226,13 @@ async function parseResponse<T>(res: Response): Promise<T> {
     )?.error;
     // Some routes answer `{ error: "auth" }`: the string is the code.
     const error = typeof raw === "string" ? { code: raw, message: raw, params: undefined } : raw;
+    const retryAfter = Number(res.headers.get("retry-after"));
     throw new ApiError(
       res.status,
       error?.code ?? `http_${res.status}`,
       error?.message ?? (res.statusText || `HTTP ${res.status}`),
       error?.params && typeof error.params === "object" ? error.params : undefined,
+      retryAfter > 0 ? retryAfter * 1000 : undefined,
     );
   }
   return data as T;
@@ -235,14 +247,25 @@ export type Requester = ReturnType<typeof createRequester>;
 export function createFileRequester(options: TransportOptions = {}) {
   const t = transport(options);
   return {
-    /** `POST` a form; the platform sets the multipart boundary. */
-    async upload<T>(path: string, form: FormData): Promise<T> {
-      const res = await t.fetch(t.base + path, {
-        method: "POST",
-        headers: { ...(t.headers ? await t.headers() : {}), accept: "application/json" },
-        credentials: t.credentials,
-        body: form,
-      });
+    /** `POST` a form; the platform sets the multipart boundary. With `onProgress`, by `XMLHttpRequest` where there is one. */
+    async upload<T>(path: string, form: FormData, upload?: UploadOptions): Promise<T> {
+      const headers = { ...(t.headers ? await t.headers() : {}), accept: "application/json" };
+      const Xhr = upload?.onProgress && !t.ownFetch ? platformXhr() : undefined;
+      const res =
+        Xhr && upload?.onProgress
+          ? await sendWithProgress(
+              Xhr,
+              t.base + path,
+              { headers, body: form, credentials: t.credentials, signal: upload.signal },
+              upload.onProgress,
+            )
+          : await t.fetch(t.base + path, {
+              method: "POST",
+              headers,
+              credentials: t.credentials,
+              body: form,
+              ...(upload?.signal ? { signal: upload.signal } : {}),
+            });
       return parseResponse<T>(res);
     },
     /** The bytes of a download. */

@@ -13,7 +13,8 @@ import { canonicalResource } from "./oauth-mcp";
  *
  * A preset marked `soon` is one whose vendor doesn't accept the registration
  * yet (its redirect URI or client name, or registration itself is limited to
- * clients the vendor approved); it stays `soon` until the vendor does.
+ * clients the vendor approved); it stays `soon` until the vendor does. Meta
+ * Ads isn't: it takes an admin's own Meta app (ADR 0016, 2026-11-21).
  * Calendly accepts only letters, digits, hyphens and spaces in the client
  * name: `ensureOAuthClient` registers it again without the dot.
  *
@@ -136,7 +137,7 @@ export const MCP_PRESETS: readonly McpPreset[] = [
     id: "drive",
     category: "docs",
     label: "Google Drive",
-    description: "Google Drive files and folders: search, read, create and share.",
+    description: "Google Drive files and folders: search, read, create, upload and share.",
     icon: "drive",
     serverUrl: composioToolkitUrl("googledrive"),
     // One billed call names the account: its Google address.
@@ -156,6 +157,7 @@ export const MCP_PRESETS: readonly McpPreset[] = [
         "GOOGLEDRIVE_DOWNLOAD_FILE",
         "GOOGLEDRIVE_EXPORT_GOOGLE_WORKSPACE_FILE",
         "GOOGLEDRIVE_CREATE_FILE_FROM_TEXT",
+        "GOOGLEDRIVE_UPLOAD_FILE",
         "GOOGLEDRIVE_CREATE_FOLDER",
         "GOOGLEDRIVE_MOVE_FILE",
         "GOOGLEDRIVE_CREATE_COMMENT",
@@ -224,7 +226,7 @@ export const MCP_PRESETS: readonly McpPreset[] = [
     id: "onedrive",
     category: "docs",
     label: "OneDrive",
-    description: "OneDrive files and folders (Microsoft 365).",
+    description: "OneDrive files and folders (Microsoft 365): search, read, create and upload.",
     icon: "onedrive",
     serverUrl: composioToolkitUrl("one_drive"),
     composio: {
@@ -239,6 +241,7 @@ export const MCP_PRESETS: readonly McpPreset[] = [
         "ONE_DRIVE_GET_ITEM",
         "ONE_DRIVE_DOWNLOAD_FILE",
         "ONE_DRIVE_ONEDRIVE_CREATE_TEXT_FILE",
+        "ONE_DRIVE_ONEDRIVE_UPLOAD_FILE",
         "ONE_DRIVE_ONEDRIVE_CREATE_FOLDER",
         "ONE_DRIVE_MOVE_ITEM",
         "ONE_DRIVE_COPY_ITEM",
@@ -556,18 +559,59 @@ export const MCP_PRESETS: readonly McpPreset[] = [
     serverUrl: "https://mcp.zapier.com/api/mcp/mcp",
   },
   {
+    // TikTok for Business' own server, every tool at once (the big ones reach agents as a directory).
+    id: "tiktok-ads",
+    category: "marketing",
+    label: "TikTok Ads",
+    description: "TikTok ad campaigns, ad groups, ads and their results.",
+    icon: "tiktok",
+    serverUrl: "https://business-api.tiktok.com/open_mcp/tt-ads-mcp-flat",
+  },
+  {
     id: "canva",
     category: "marketing",
     label: "Canva",
     description: "Canva designs and templates.",
     icon: "canva",
     serverUrl: "https://mcp.canva.com/mcp",
+    // Its server registers any client, then refuses the sign-in of one whose redirect URI Canva hasn't listed
+    // ("Invalid redirect URI." at `/authorize`, checked 2026-11-22).
+    soon: true,
+    // Left out: deleting assets and folders, and uploads from a file (an image comes in by its address).
+    composio: {
+      toolkit: "canva",
+      version: "20261116_00",
+      auth: "managed",
+      actions: [
+        "CANVA_LIST_USER_DESIGNS",
+        "CANVA_FETCH_DESIGN_METADATA_AND_ACCESS_INFORMATION",
+        "CANVA_LIST_DESIGN_PAGES_WITH_PAGINATION",
+        "CANVA_LIST_FOLDER_ITEMS_BY_TYPE_WITH_SORTING",
+        "CANVA_ACCESS_USER_SPECIFIC_BRAND_TEMPLATES_LIST",
+        "CANVA_RETRIEVE_BRAND_TEMPLATE_DATASET_DEFINITION",
+        "CANVA_GET_DESIGNS_DESIGNID_COMMENTS_THREADID",
+        "CANVA_GET_DESIGN_COMMENT_REPLIES",
+        "CANVA_GET_DESIGNS_DESIGNID_EXPORT_FORMATS",
+        "CANVA_POST_DESIGNS",
+        "CANVA_POST_EXPORTS",
+        "CANVA_GET_DESIGN_EXPORT_JOB_RESULT",
+        "CANVA_CREATE_URL_ASSET_UPLOAD_JOB",
+        "CANVA_GET_URL_ASSET_UPLOADS_JOBID",
+        "CANVA_INITIATE_CANVA_DESIGN_AUTOFILL_JOB",
+        "CANVA_RETRIEVE_DESIGN_AUTOFILL_JOB_STATUS",
+        "CANVA_CREATE_DESIGN_RESIZE_JOB",
+        "CANVA_RETRIEVE_DESIGN_RESIZE_JOB_STATUS",
+        "CANVA_POST_DESIGNS_DESIGNID_COMMENTS",
+        "CANVA_POST_DESIGNS_DESIGNID_COMMENTS_THREADID_REPLIES",
+      ],
+    },
   },
   {
-    id: "gitlab",
+    // `gitlab` is the git host (ADR 0227): repositories and merge requests through our proxy.
+    id: "gitlab-mcp",
     category: "dev",
-    label: "GitLab",
-    description: "GitLab.com projects, merge requests, issues and pipelines.",
+    label: "GitLab (issues and pipelines)",
+    description: "GitLab.com issues, merge requests and pipelines, through GitLab's own server.",
     icon: "gitlab",
     serverUrl: "https://gitlab.com/api/v4/mcp",
   },
@@ -619,6 +663,47 @@ export const MCP_PRESETS: readonly McpPreset[] = [
     description: "Datadog logs, metrics, monitors and incidents (US1 site).",
     icon: "datadog",
     serverUrl: "https://mcp.datadoghq.com/api/unstable/mcp-server/mcp",
+  },
+  {
+    id: "datadog-us3",
+    category: "dev",
+    label: "Datadog (US3)",
+    description: "Datadog logs, metrics, monitors and incidents (US3 site, us3.datadoghq.com).",
+    icon: "datadog",
+    // Each Datadog site has its own server, and an account signs in only at its own site's (checked 2026-11-25).
+    serverUrl: "https://mcp.us3.datadoghq.com/api/unstable/mcp-server/mcp",
+  },
+  {
+    id: "datadog-us5",
+    category: "dev",
+    label: "Datadog (US5)",
+    description: "Datadog logs, metrics, monitors and incidents (US5 site, us5.datadoghq.com).",
+    icon: "datadog",
+    serverUrl: "https://mcp.us5.datadoghq.com/api/unstable/mcp-server/mcp",
+  },
+  {
+    id: "datadog-eu",
+    category: "dev",
+    label: "Datadog (EU)",
+    description: "Datadog logs, metrics, monitors and incidents (EU site, app.datadoghq.eu).",
+    icon: "datadog",
+    serverUrl: "https://mcp.datadoghq.eu/api/unstable/mcp-server/mcp",
+  },
+  {
+    id: "datadog-ap1",
+    category: "dev",
+    label: "Datadog (AP1)",
+    description: "Datadog logs, metrics, monitors and incidents (AP1 site, ap1.datadoghq.com).",
+    icon: "datadog",
+    serverUrl: "https://mcp.ap1.datadoghq.com/api/unstable/mcp-server/mcp",
+  },
+  {
+    id: "datadog-ap2",
+    category: "dev",
+    label: "Datadog (AP2)",
+    description: "Datadog logs, metrics, monitors and incidents (AP2 site, ap2.datadoghq.com).",
+    icon: "datadog",
+    serverUrl: "https://mcp.ap2.datadoghq.com/api/unstable/mcp-server/mcp",
   },
   {
     id: "grafana",
@@ -948,8 +1033,9 @@ export const MCP_PRESETS: readonly McpPreset[] = [
     label: "Meta Ads",
     description: "Meta (Facebook and Instagram) ad campaigns and results.",
     icon: "meta",
+    // Meta takes only apps a business made in Meta for Developers: without this server's own Meta app (the native
+    // connector, ADR 0170), an admin pastes theirs (`setOwnOAuthClient`).
     serverUrl: "https://mcp.facebook.com/ads",
-    soon: true,
   },
   {
     id: "klaviyo",

@@ -75,6 +75,7 @@ import {
   withOpacity,
 } from "../../src/features/chat/turn";
 import { pacedClock } from "../../src/features/shared/logic";
+import { chatScreenSource } from "./chat-screen-source";
 import { at, message, translator } from "./fixtures";
 
 /** A screen's source, for the wiring a test can't render (React Native). */
@@ -171,16 +172,14 @@ describe("timeline", () => {
   });
 
   test("my row takes its place in the run: the bubble's corners and the time under the run's last", async () => {
-    expect(await source("features/chat/ChatScreen.tsx")).toContain(
-      "run={runPosition(item.grouped, item.continued ?? false)}",
-    );
+    expect(chatScreenSource()).toContain("run={runPosition(item.grouped, item.continued ?? false)}");
     const row = await source("features/chat/MessageRow.tsx");
     expect(row).toContain("BUBBLE_RUN[run]");
     expect(row).toContain('(run === "end" || run === "solo")');
   });
 
   test("reading marks read up to the message posted last, wherever its place, and counts a reply placed above as new", async () => {
-    const screen = await source("features/chat/ChatScreen.tsx");
+    const screen = chatScreenSource();
     expect(screen).toContain("const postedNow = useMemo(() => lastPostedId(list), [list]);");
     expect(screen).toContain("if (peeking || !focused || !inFront || !member || !postedNow) return;");
     expect(screen).toContain("unseenBelow(scrollRows, seenKey, seenPostedId)");
@@ -403,7 +402,7 @@ describe("working line", () => {
     expect(line).not.toContain("<Dither");
     expect(line).not.toContain("glassSolid");
     expect(line).toContain("const plate = [styles.tok, { backgroundColor: c.bg }];");
-    // The requests' lines that take its place are as bare.
+    // The requests' lines over the composer are as bare.
     const asks = await source("features/chat/asks.tsx");
     const askLines = asks.slice(asks.indexOf("export function AskBar("), asks.indexOf("const styles"));
     expect(askLines).not.toContain("glassSolid");
@@ -425,7 +424,7 @@ describe("working line", () => {
     const take = await source("features/voice/useVoiceTake.ts");
     const tick = take.slice(take.indexOf("const tick = useCallback("), take.indexOf("const record = useCallback("));
     expect(tick).toContain('if (phaseNow === "hold" || phaseNow === "locked") targetRef.current.onRecording?.();');
-    const screen = await source("features/chat/ChatScreen.tsx");
+    const screen = chatScreenSource();
     // Recording never waits on what was just written (an agent asked in it waits for the take); the upload's frames do.
     expect(screen).toContain(
       'const onRecording = useCallback(() => sendTyping(threadId, undefined, "voice"), [sendTyping, threadId]);',
@@ -520,17 +519,18 @@ describe("working line", () => {
   test("one agent on its own shows how long it has been at it, as on the web; several, or a question out, don't", async () => {
     const [pt, en] = await Promise.all([translator("pt-BR"), translator("en")]);
     const now = 1_000_000;
-    const ada = run({ runId: "r", agentId: "ada", status: "running", startedAt: now - 16_400 });
+    const ada = run({ runId: "r", agentId: "ada", status: "running", startedAt: now - 75_400 });
     const one = workingEntries([ada], [], name);
-    expect(barElapsed(pt, one, [ada], now)).toBe("16 s");
-    expect(barElapsed(en, one, [ada], now)).toBe("16s");
-    expect(barElapsed(pt, one, [ada], now + 49_000)).toBe("1 min 5 s");
-    expect(barElapsed(en, one, [ada], now - 15_000)).toBeNull();
+    expect(barElapsed(pt, one, [ada], now)).toBe("1 min");
+    expect(barElapsed(en, one, [ada], now)).toBe("1 min");
+    expect(barElapsed(pt, one, [ada], now + 60_000)).toBe("2 min");
+    // Its first minute shows no time.
+    expect(barElapsed(en, one, [ada], now - 16_000)).toBeNull();
     // Someone typing beside it doesn't take its time away, nor does a turn of its own that failed before.
     const typingToo = workingEntries([ada], [], name, typing("u1"), () => "Marina");
-    expect(barElapsed(en, typingToo, [ada], now)).toBe("16s");
-    const failed = run({ runId: "r0", agentId: "ada", status: "failed", startedAt: now - 90_000 });
-    expect(barElapsed(en, workingEntries([failed, ada], [], name), [failed, ada], now)).toBe("16s");
+    expect(barElapsed(en, typingToo, [ada], now)).toBe("1 min");
+    const failed = run({ runId: "r0", agentId: "ada", status: "failed", startedAt: now - 300_000 });
+    expect(barElapsed(en, workingEntries([failed, ada], [], name), [failed, ada], now)).toBe("1 min");
     const atlas = run({ runId: "r2", agentId: "atlas", status: "running", startedAt: now - 30_000 });
     expect(barElapsed(en, workingEntries([ada, atlas], [], name), [ada, atlas], now)).toBeNull();
     const asking: LiveConsult = {
@@ -546,15 +546,15 @@ describe("working line", () => {
     expect(barElapsed(en, workingEntries([ada], [asking], name), [ada], now)).toBeNull();
   });
 
-  test("left on its own mid-turn, an agent's seconds are right from the first draw and step evenly: one clock, read afresh as the line narrows", async () => {
+  test("left on its own mid-turn, an agent's time is right from the first draw and turns on the clock's reads: one clock, read afresh as the line narrows", async () => {
     const en = await translator("en");
     const U = 1_000_000;
-    const ada = run({ runId: "r", agentId: "ada", status: "running", startedAt: U - 148_700 });
+    const ada = run({ runId: "r", agentId: "ada", status: "running", startedAt: U - 87_700 });
     // Atlas is done. With two at work the clock moved once a minute, so it can be 50 s old: the new pace reads it afresh.
     const alone = workingEntries([ada], [], name);
     let clock = pacedClock({ every: 60_000, now: U - 50_000 }, 1000, U);
     const shown = [{ at: U, took: barElapsed(en, alone, [ada], clock.now) }];
-    expect(shown[0]?.took).toBe("2m 28s");
+    expect(shown[0]?.took).toBe("1 min");
     // Each second its interval reads the time; an event redraws the line in between (every 2.6 s here).
     const reads = Array.from({ length: 12 }, (_, k) => U + 4 + (k + 1) * 1000);
     const turns = Array.from({ length: 4 }, (_, k) => U + 4 + (k + 1) * 2600);
@@ -563,7 +563,8 @@ describe("working line", () => {
       const took = barElapsed(en, alone, [ada], clock.now);
       if (took !== shown.at(-1)?.took) shown.push({ at, took });
     }
-    expect(shown.slice(1, -1).map((s, i) => (shown[i + 2]?.at ?? 0) - s.at)).toEqual(Array(11).fill(1000));
+    // 90 s of work falls between the read at +2 s and the redraw at +2.6 s: the minute turns at the next read.
+    expect(shown.slice(1)).toEqual([{ at: U + 3004, took: "2 min" }]);
     // The line shows that clock, never a time read at each draw.
     const lines = await source("features/chat/LiveRows.tsx");
     const line = lines.slice(lines.indexOf("export function WorkingLine("), lines.indexOf("type LinePiece"));
@@ -577,21 +578,23 @@ describe("working line", () => {
     const atlas = run({ runId: "s", agentId: "atlas" });
     expect(barWords(en, workingEntries([ada], [], name), markName)[0]).toBe(markName("Ada"));
     expect(barWords(en, workingEntries([ada, atlas], [], name))[0]).toBe("Ada and Atlas are working…");
-    // The agents at work lead it with their faces (no orbit).
+    // The agent at work leads it with its face and its rings (`OrbitFace`, not the pixel orbit); the stack's small faces
+    // are the others.
     const lines = await source("features/chat/LiveRows.tsx");
     const line = lines.slice(lines.indexOf("export function WorkingLine("), lines.indexOf("type LinePiece"));
-    expect(line).toContain("const faces = barFaces(entries);");
+    expect(line).toContain("const faces = barFaces(entries).filter((e) => e !== orbiting);");
+    expect(line).toContain("<OrbitFace ");
     expect(line).not.toContain("PixelOrbit");
   });
 
   test("the line speaks for one agent at work: its step, its time right after it, and its stop", async () => {
     const en = await translator("en");
     const now = 1_000_000;
-    const ada = run({ runId: "r", agentId: "ada", status: "running", startedAt: now - 16_000 });
+    const ada = run({ runId: "r", agentId: "ada", status: "running", startedAt: now - 76_000 });
     const atlas = run({ runId: "s", agentId: "atlas", status: "running" });
     const alone = workingEntries([ada], [], name);
     expect(awayRun(alone, [ada])?.runId).toBe("r");
-    expect(barElapsed(en, alone, [ada], now)).toBe("16s");
+    expect(barElapsed(en, alone, [ada], now)).toBe("1 min");
     expect(lineStops(alone, [ada], () => true).map((r) => r.runId)).toEqual(["r"]);
     // Two agents at work: the line can't say whose time or stop.
     const both = workingEntries([ada, atlas], [], name);
@@ -609,7 +612,7 @@ describe("working line", () => {
     expect(line).not.toContain("seeable");
     expect(line).toContain("const stopHere = stop?.runs ?? [];");
     expect(line).toContain('<LineStop runs={stopHere} onStop={stop.onStop} place="word" />');
-    const screen = await source("features/chat/ChatScreen.tsx");
+    const screen = chatScreenSource();
     expect(screen).toContain("const busy = busyRuns.length > 0;");
     expect(screen).toContain("const working = useMemo<ComposerWorking | null>(() => (busy ? {} : null), [busy]);");
   });
@@ -619,7 +622,7 @@ describe("working line", () => {
     expect(lines).not.toContain("TurnRow");
     expect(lines).not.toContain("RevealText");
     expect(lines).not.toContain("WaitLine");
-    const screen = await source("features/chat/ChatScreen.tsx");
+    const screen = chatScreenSource();
     expect(screen).not.toContain('kind: "run"');
     expect(screen).toContain("entering={isFresh(item.key) ? ENTER : undefined}");
     // 24 points drawn, 44 to the finger.
@@ -1134,7 +1137,7 @@ describe("an agent's turn: nothing drawn while it works, its work kept for the r
 
   test("the saved reply finds the work its run did, heard a moment ago", () => {
     const items = turnItems(run({ runId: "r9", work: [call("1", "sentry_list_issues", false)] }));
-    rememberTurn("r9", { items, quotes: {}, at: 1000 });
+    rememberTurn("r9", { items, at: 1000 });
     expect(recentTurn("r9", 2000)?.items).toEqual(items);
     expect(recentTurn("r9", 1000 + 60_000)).toBeNull();
     expect(recentTurn("nope", 2000)).toBeNull();
@@ -1497,7 +1500,7 @@ describe("reading a conversation", () => {
     );
 
   test("only the screen in view reads: under another screen or with the app in the background nothing is marked, and coming back marks it", async () => {
-    const screen = await source("features/chat/ChatScreen.tsx");
+    const screen = chatScreenSource();
     const reading = readMarkOf(screen);
     // The screen's focus is read once, before "Novas" (which goes when the screen is left), and handed to the mark.
     expect(screen.match(/const focused = useIsFocused\(\);/g)).toHaveLength(1);
@@ -1510,14 +1513,16 @@ describe("reading a conversation", () => {
     // Both are among what the effect runs again on: back on the screen, or back in the app, it reads.
     const again = reading.slice(reading.lastIndexOf("}, ["));
     expect(again).toContain("focused, inFront,");
-    // In front means the app's state is "active", and it follows every change of it.
+    // In front means the app's state is "active", and it follows every change of it: a glance away (the notification
+    // shade) marks nothing either, unlike the socket that stays through it (test/app-active.test.ts).
     const active = await source("lib/useAppActive.ts");
     expect(active).toContain('useState(AppState.currentState === "active")');
-    expect(active).toContain('AppState.addEventListener("change", (s) => setActive(s === "active"))');
+    expect(active).toContain("export function useAppActive(inactiveGraceMs = 0)");
+    expect(active).toContain('else listener(s === "active");');
   });
 
   test("a reply in one of the conversation's threads marks it read again", async () => {
-    const screen = await source("features/chat/ChatScreen.tsx");
+    const screen = chatScreenSource();
     const reading = readMarkOf(screen);
     expect(reading).toContain("const threadReplies = useThreadActivity(orgId, channelId);");
     expect(reading.slice(reading.lastIndexOf("}, ["))).toContain("postedNow, threadReplies]);");

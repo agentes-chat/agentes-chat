@@ -1,4 +1,5 @@
 import type {
+  Agent,
   MailFolder,
   Routine,
   RoutineConnectorTrigger,
@@ -10,8 +11,9 @@ import type {
   RoutineTarget,
   RoutineTargetInput,
 } from "@agenteschat/client";
+import { createsRoutinesFor } from "@agenteschat/client/lib/audience";
 import type { RunStatus } from "@agenteschat/client/lib/calendar";
-import { type RoutineFix, runPixels } from "@agenteschat/client/lib/routine-view";
+import { pausedFix, type RoutineFix, runPixels } from "@agenteschat/client/lib/routine-view";
 import type { IconName } from "@/ui";
 import { defaultRule, fromApiRule, onceAt, onceRule, type RecurrenceRule, toApiRule } from "./rule";
 
@@ -27,6 +29,7 @@ export const ROUTINE_EVENTS: RoutineEvent[] = [
   "github.pr_opened",
   "issue.created",
   "deploy.succeeded",
+  "telegram.message",
 ];
 
 /** Started by something happening (an event, an email, a webhook call), not by the clock. */
@@ -130,6 +133,18 @@ export interface AgentGroup<T> {
   routines: T[];
 }
 
+/** One name order per language, made once: `localeCompare` with a language builds a collator on every comparison. */
+const nameOrders = new Map<string, Intl.Collator>();
+const nameOrder = (locale?: string): Intl.Collator => {
+  const key = locale ?? "";
+  let order = nameOrders.get(key);
+  if (!order) {
+    order = new Intl.Collator(locale, { sensitivity: "base" });
+    nameOrders.set(key, order);
+  }
+  return order;
+};
+
 /**
  * The list broken by agent, one section each: the agents A to Z by `nameOf` (in `locale`), each one's routines in the
  * list's order (`routineSections`' live ones before its paused ones).
@@ -141,9 +156,10 @@ export function byAgent<T extends Pick<Routine, "agentId">>(
 ): AgentGroup<T>[] {
   const groups = new Map<string, T[]>();
   for (const r of list) groups.set(r.agentId, [...(groups.get(r.agentId) ?? []), r]);
+  const order = nameOrder(locale);
   return [...groups]
     .map(([agentId, routines]) => ({ agentId, routines }))
-    .sort((a, b) => nameOf(a.agentId).localeCompare(nameOf(b.agentId), locale, { sensitivity: "base" }));
+    .sort((a, b) => order.compare(nameOf(a.agentId), nameOf(b.agentId)));
 }
 
 // ── Icons (the phone's set) ─────────────────────────────────────────────────
@@ -185,6 +201,19 @@ export const STATE_ICON: Record<"repeat" | "pause" | "alert" | "computer" | "wai
 
 /** A one-tap fix's icon. */
 export const FIX_ICON: Record<RoutineFix, IconName> = { add_agent: "plus", take_over: "join", resume: "play" };
+
+/**
+ * The one-tap fix a paused routine offers me (`pausedFix`), for who changes it (`canManage`). "Take over" makes it
+ * mine, the server's create check (`takeOverRoutine`, ADR 0053 §6.2): only where I may make one for its agent
+ * (`createsRoutinesFor`, its entry in the directory; ADR 0085 addendum of 2026-11-17).
+ */
+export function fixFor(
+  r: Pick<Routine, "active" | "pausedReason" | "target" | "canManage">,
+  agent: Pick<Agent, "canManageRoutines" | "canTalk"> | undefined,
+): RoutineFix | null {
+  const fix = r.canManage ? pausedFix(r) : null;
+  return fix === "take_over" && !createsRoutinesFor(agent) ? null : fix;
+}
 
 // ── What the row says under the "when" ──────────────────────────────────────
 

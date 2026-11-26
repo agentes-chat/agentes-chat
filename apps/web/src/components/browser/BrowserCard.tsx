@@ -76,6 +76,7 @@ import {
   type KeyboardEvent,
   type PointerEvent,
   useCallback,
+  useContext,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -99,6 +100,7 @@ import { DesktopView } from "../desktop/DesktopView";
 import { PASTE_MAX_BYTES, pasteBytes } from "../desktop/paste";
 import { MachineToolButton } from "../devices/ToolOneClick";
 import { useOrg } from "../org-context";
+import { ReportProblem } from "../ReportProblem";
 import { colorOf } from "../Sky";
 import { useComputerEdition } from "../WorkspaceComputer";
 import { AddressBar } from "./AddressBar";
@@ -107,6 +109,7 @@ import { Cover } from "./Cover";
 import { LivePicture } from "./LivePicture";
 import { requestBrowserCard, useBrowserCardRequest } from "./open";
 import { SiteIcon } from "./SiteIcon";
+import { ScreenLine, ScreenPanelContext } from "./screen-panel";
 import "./browser.css";
 
 // The card's title, shared with the phone.
@@ -209,6 +212,23 @@ function newest(a: BrowserHandoff | null, b: BrowserHandoff | null): BrowserHand
  * stopped keeps it only for the person still in control (they hand back from it).
  */
 export function RunBrowserCard({ run, name }: { run: LiveRun; name: string }) {
+  const panel = useContext(ScreenPanelContext);
+  return panel ? <RunScreenLine run={run} panel={panel} /> : <RunBrowser run={run} name={name} />;
+}
+
+/** Where the screen has a panel of its own: the run's last step there, as a line; the panel turns to it once. */
+function RunScreenLine({ run, panel }: { run: LiveRun; panel: { show: () => void } }) {
+  const { t } = useTranslation();
+  const last = browserSteps(run.work).at(-1);
+  const started = last !== undefined;
+  useEffect(() => {
+    if (started) panel.show();
+  }, [started, panel]);
+  if (!last) return null;
+  return <ScreenLine icon={iconOf(last.tool)} text={stepText(t, last)} detail={last.detail} onShow={panel.show} />;
+}
+
+function RunBrowser({ run, name }: { run: LiveRun; name: string }) {
   const { org, me } = useOrg();
   const steps = browserSteps(run.work);
   // In a shared profile (ADR 0110) the card shows the profile, to those who may watch it.
@@ -261,8 +281,11 @@ export function HeldBrowserCard({
   /** Ask the server (a recent message); otherwise only what the realtime events said. */
   enabled?: boolean;
 }) {
+  const panel = useContext(ScreenPanelContext);
   const held = useHeldTakeover(agentId, runId, enabled);
+  const { t } = useTranslation();
   if (!held) return null;
+  if (panel) return <ScreenLine icon="computer" text={t("codeSessions.screenLine.held")} onShow={panel.show} />;
   return <BrowserCard agentId={agentId} name={name} runId={runId} handoff={held} />;
 }
 
@@ -851,7 +874,9 @@ export function BrowserCard({
   const blocker = shows
     ? null
     : unavailable?.reason === "offline"
-      ? t(cloud ? "browser.inCard.offlineCloud" : "browser.inCard.offline", g)
+      ? machine?.moving
+        ? t("machines.moving.named", { computer: machine.name })
+        : t(cloud ? "browser.inCard.offlineCloud" : "browser.inCard.offline", g)
       : unavailable?.reason === "no_computer"
         ? t(cloud ? "browser.inCard.noComputerCloud" : "browser.inCard.noComputer", g)
         : unavailable?.reason === "forbidden" || live.error === "forbidden" || live.error === "not_found"
@@ -872,6 +897,13 @@ export function BrowserCard({
   const [attempt, setAttempt] = useState(0);
   // Never on the screen: the card watches no frames there (`watching`).
   const stuck = useBrowserStuck(watching && online && !hidden && (starting || reconnecting || opening), attempt);
+  const reportOf = (code: string) => ({
+    place: "browser" as const,
+    code,
+    step: opening ? "open" : reconnecting ? "reconnect" : "start",
+    context: { agentId, ...(machine ? { machineId: machine.id } : {}) },
+    timings: { attempts: attempt + 1 },
+  });
   const retry = () => {
     setAttempt((n) => n + 1);
     // Watching again after the restart too: this view's own watch may be what the server refused.
@@ -1147,14 +1179,17 @@ export function BrowserCard({
           profile?.machine && offHere ? (
             <MachineToolButton machine={profile.machine} tool="browser" onAllowed={retry} />
           ) : (
-            <Button
-              size="sm"
-              icon="refresh"
-              loading={actions.restart.isPending || profileActions.takeover.isPending}
-              onClick={retry}
-            >
-              {t("common.retry")}
-            </Button>
+            <span className="ac-acts">
+              <Button
+                size="sm"
+                icon="refresh"
+                loading={actions.restart.isPending || profileActions.takeover.isPending}
+                onClick={retry}
+              >
+                {t("common.retry")}
+              </Button>
+              {noAnswer && <ReportProblem {...reportOf("browser.no_answer")} />}
+            </span>
           )
         }
       />
@@ -1178,9 +1213,12 @@ export function BrowserCard({
         text={t("browser.inCard.stuck", g)}
         help={mayDrive ? t("browser.inCard.stuckHelp") : undefined}
         action={
-          <Button size="sm" icon="refresh" loading={actions.restart.isPending} onClick={retry}>
-            {t("common.retry")}
-          </Button>
+          <span className="ac-acts">
+            <Button size="sm" icon="refresh" loading={actions.restart.isPending} onClick={retry}>
+              {t("common.retry")}
+            </Button>
+            <ReportProblem {...reportOf("browser.stuck")} />
+          </span>
         }
       />
     ) : opening ? (

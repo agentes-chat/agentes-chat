@@ -1,5 +1,4 @@
 import type { Issue, IssueColumn, IssueProjectRef } from "@agenteschat/client";
-import { useTaskUnread } from "@agenteschat/client";
 import { dueLabel, dueTone, joinNames } from "@agenteschat/client/lib/format";
 import { githubLinkLabel } from "@agenteschat/client/lib/github-link";
 import {
@@ -10,15 +9,16 @@ import {
   isOpen,
   taskAgentId,
 } from "@agenteschat/client/lib/issues";
-import { codeAndBoldParts } from "@agenteschat/client/lib/markdown";
 import { stepPhrase } from "@agenteschat/client/lib/work";
 import { bodyTones } from "@agenteschat/ui/agent/engine";
+import type { TFunction } from "i18next";
 import { memo, type ReactNode, useCallback } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { Text as RNText, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import {
   Chip,
+  CodeWords,
   Icon,
   IconButton,
   type IconName,
@@ -36,10 +36,11 @@ import {
 import { SocialMark } from "@/ui/auth/SocialMarks";
 import { mediaRowAxis } from "@/ui/media-row";
 import { router } from "@/ui/navigation";
+import { useRowDirectory } from "../chat/row-data";
 import { Face } from "../shared/Face";
-import { useColors, useDirectory, useOrgId } from "../shared/hooks";
+import { useColors } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
-import { MentionCount, MONO, Tile, useSurface } from "../shared/parts";
+import { MentionCount, Tile, useSurface } from "../shared/parts";
 import { criteriaProgress, type IssueState, issueState, latestPr } from "./logic";
 
 /** An agent's step in the person's words ("Mexeu nos arquivos do PC · trips.service.ts"), as the web says it. */
@@ -85,22 +86,9 @@ export function ColumnHeader({ label, count, onNew }: { label: string; count: nu
 
 /** A task's title, whole, with its `code` as the inline code pill and its **bold** (the web card's); no links. */
 export function TaskTitle({ title, ...text }: { title: string } & Omit<TextProps, "children">) {
-  const c = useColors();
   return (
     <Text {...text}>
-      {codeAndBoldParts(title).map((part, k) =>
-        part.mark ? (
-          <RNText
-            // biome-ignore lint/suspicious/noArrayIndexKey: the pieces of one title, in order
-            key={k}
-            style={part.mark === "code" ? [styles.code, { backgroundColor: c.sunken, color: c.ink2 }] : styles.heavy}
-          >
-            {part.text}
-          </RNText>
-        ) : (
-          part.text
-        ),
-      )}
+      <CodeWords text={title} />
     </Text>
   );
 }
@@ -118,7 +106,7 @@ const STATE_ICON: Record<Exclude<IssueState, "running">, IconName> = {
 /** The issue's state as a chip: "Trabalhando" with the agent's orbit, "Em revisão · PR #212", "Esperando você"… */
 export function StateChip({ issue }: { issue: Issue }) {
   const { t } = useTranslation();
-  const dir = useDirectory();
+  const dir = useRowDirectory();
   const state = issueState(issue);
   const pr = latestPr(issue);
   const label =
@@ -153,7 +141,7 @@ export function AssigneeFace({
 }) {
   const { t } = useTranslation();
   const c = useColors();
-  const dir = useDirectory();
+  const dir = useRowDirectory();
   const [first, ...rest] = issue.assignees;
   if (!first) return <Tile icon="circle" size={size} />;
   const state = issue.work?.state;
@@ -219,7 +207,7 @@ export function useCardState(i: Issue) {
 /** A state's mark and words, beside who has it on a card, after the name in a row. */
 export function StateWords({ issue, state, words }: { issue: Issue; state: CardState; words: string }) {
   const c = useColors();
-  const dir = useDirectory();
+  const dir = useRowDirectory();
   const agent = dir.agentById.get(taskAgentId(issue) ?? "");
   return (
     <View style={[styles.inline, styles.state]}>
@@ -256,7 +244,7 @@ function CardFacts({
 }) {
   const { t, i18n } = useTranslation();
   const c = useColors();
-  const dir = useDirectory();
+  const dir = useRowDirectory();
   const [label, ...labels] = i.labels;
   const due = i.dueDate && isOpen(i) ? { text: dueLabel(t, i18n.language, i.dueDate), tone: dueTone(i.dueDate) } : null;
   const crit = criteriaProgress(i);
@@ -350,22 +338,26 @@ export const BoardCard = memo(function BoardCard({
   issue: i,
   live,
   project = true,
+  mentions,
+  unread,
 }: {
   issue: Issue;
   live: boolean;
   /** Its project among the facts. A project's own board leaves it out. */
   project?: boolean;
+  /** Mentions of me not read in its conversation (ADR 0145), red as on the web's card; the board reads them for all. */
+  mentions: number;
+  /** Its conversation's replies I haven't read. */
+  unread: number;
 }) {
   const { t } = useTranslation();
-  const dir = useDirectory();
+  const dir = useRowDirectory();
   const surface = useSurface();
   const reduced = useReducedMotion();
   const axis = mediaRowAxis(24, textLineOf("small", useFontScale()));
   const { state, words } = useCardState(i);
   const agent = dir.agentById.get(taskAgentId(i) ?? "");
   const [who, ...others] = i.assignees;
-  // Mentions of me not read in its conversation (ADR 0145), red as on the web's card.
-  const { mentions, unread } = useTaskUnread(useOrgId(), i.id);
   return (
     <PressScale
       haptic={false}
@@ -556,7 +548,6 @@ const styles = StyleSheet.create({
   // A person's photo is 20 (an agent's body 24): either sits in the 24 box, on the name's first line.
   face: { width: 24, height: 24, alignItems: "center", justifyContent: "center" },
   name: { flexShrink: 1 },
-  code: { fontFamily: MONO },
   column: {
     flexDirection: "row",
     alignItems: "center",

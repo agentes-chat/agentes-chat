@@ -6,10 +6,17 @@ import {
   useMailAccounts,
   useRoutineAction,
 } from "@agenteschat/client";
+import { createsRoutinesFor } from "@agenteschat/client/lib/audience";
 import { knownErrorText } from "@agenteschat/client/lib/errors";
 import { relativeTime, toYmd, whenAt } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
-import { type RoutineFix, routineChannelOf, runPixels, type Words } from "@agenteschat/client/lib/routine-view";
+import {
+  atWorkWords,
+  type RoutineFix,
+  routineChannelOf,
+  runPixels,
+  type Words,
+} from "@agenteschat/client/lib/routine-view";
 import { browserTimezone, onceParts, routineHookUrl, timezoneName } from "@agenteschat/client/lib/routines";
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
@@ -87,12 +94,13 @@ export function useWhenText() {
 /** "Próxima em 10 min" (within a day), else "Próxima: sex 16 out, 10:00"; a one-off, an event, a pause. */
 export function useNextText() {
   const { t, i18n } = useTranslation();
+  const say = useSay();
   return useCallback(
     (r: Routine, now: Date): string => {
       const n = nextLine(r, now);
       switch (n.kind) {
         case "running":
-          return t("routines.runningNow");
+          return say(atWorkWords(r));
         case "fired":
           return t("routines.firedAt", { when: whenAt(t, i18n.language, n.at, now) });
         case "canceled":
@@ -119,20 +127,21 @@ export function useNextText() {
           return t("routines.next", { when: nextLabel(i18n.language, n.iso) });
       }
     },
-    [t, i18n.language],
+    [t, i18n.language, say],
   );
 }
 
 /** The runs as words: the strip's caption ("Respondeu há 2 h") and what a screen reader hears for it. */
 export function useRunWords() {
   const { t, i18n } = useTranslation();
+  const say = useSay();
   return useMemo(
     () => ({
       caption: (r: Routine, now: Date) => {
         const c = runCaption(r);
         switch (c.kind) {
           case "running":
-            return t("routines.runningNow");
+            return say(atWorkWords(r));
           case "never":
             return t("routines.neverRan");
           case "silentOf":
@@ -153,7 +162,7 @@ export function useRunWords() {
         });
       },
     }),
-    [t, i18n.language],
+    [t, i18n.language, say],
   );
 }
 
@@ -283,6 +292,7 @@ export function useRoutineMenu(r: Routine, onDeleted?: () => void): HeaderAction
   const toast = useToast();
   const failed = useFailed();
   const action = useRoutineAction(useOrgId());
+  const dir = useDirectory();
   const title = routineTitle(r);
   const remove = () =>
     Alert.alert(
@@ -344,7 +354,9 @@ export function useRoutineMenu(r: Routine, onDeleted?: () => void): HeaderAction
       label: t("routines.edit"),
       onPress: () => router.push(editRoutineHref(r.id)),
     });
-  if (r.canManage && !widget)
+  // A copy is a new routine, its copier's: only for who may make one for its agent (`createsRoutinesFor`, ADR 0085
+  // addendum of 2026-11-17), not for its creator alone, who still edits it.
+  if (!widget && createsRoutinesFor(dir.agentById.get(r.agentId)))
     items.push({ icon: "copy", sf: "plus.square.on.square", label: t("routines.duplicate"), onPress: duplicate });
   if (r.canManage && hookUrl)
     items.push({ icon: "link", sf: "link", label: t("routines.copyWebhook"), onPress: () => void copyWebhook() });

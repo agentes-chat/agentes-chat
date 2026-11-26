@@ -151,16 +151,18 @@ const typingBar = () => document.querySelector(".ac-typing") as HTMLElement;
 const bar = () => ({ textContent: typingBar().querySelector(".ac-typing__text")?.textContent ?? "" });
 const lastPerson = (state: ReturnType<typeof seedState>) => state.messages[state.messages.length - 1];
 
-describe("typing bar above the composer", () => {
+/** The face's column of the conversation's last row while someone works here. */
+const tailFace = () => document.querySelector(".working-tail__face");
+
+describe("the working row at the conversation's end (the bar above the composer while nobody works)", () => {
   test("mention → the bar says 'Atlas pensando…', then 'escrevendo…'; none of its words in the conversation until its reply", async () => {
     const { socket } = await open();
     await sendText("@atlas olha o deploy");
     expect(bar().textContent).toBe("Atlas pensando…");
-    // Agents at work: their faces open the pill, no pixel orbit beside them (the dots are for people typing).
+    // An agent at work: its face leads the row with its rings, no pixel orbit and no dots (those are for people typing).
     expect(typingBar().querySelector(".ac-pixspin")).toBeNull();
-    expect(typingBar().querySelector(".ac-typing__dots")).toBeNull();
-    // Its row isn't in the conversation yet: the bar has its face.
-    expect(typingBar().querySelector(".ac-avatar--agent")).not.toBeNull();
+    expect(document.querySelector(".working-tail .ac-typing__dots")).toBeNull();
+    expect(tailFace()?.querySelector(".ac-orbit .ac-avatar--agent")).not.toBeNull();
     // The words are the bar's.
     expect(rowsWith("Atlas está")).toHaveLength(0);
     await settle(4);
@@ -174,7 +176,7 @@ describe("typing bar above the composer", () => {
     expect(document.querySelector(".ac-msg--streaming")).toBeNull();
     expect(rowsWith("Deploy ok")).toHaveLength(0);
     expect(bar().textContent).toBe("Atlas escrevendo…");
-    expect(typingBar().querySelector(".ac-avatar--agent")).not.toBeNull();
+    expect(tailFace()?.querySelector(".ac-orbit .ac-avatar--agent")).not.toBeNull();
     await push(socket, { type: "agent.idle", ...run });
     await settle();
     expect(bar().textContent).toBe("");
@@ -210,8 +212,10 @@ describe("typing bar above the composer", () => {
     await settle();
     expect(typingBar().dataset.active).toBe("true");
     expect(bar().textContent).toBe("João está digitando…");
-    // People only: the typing dots lead (the orbit is for agents), their face in the stack, no clock and no stop.
-    expect(typingBar().querySelector(".ac-typing__dots")).not.toBeNull();
+    // People only: the typing dots lead in the face's column (the rings are for agents), their face in the stack, no
+    // clock and no stop.
+    expect(tailFace()?.querySelector(".ac-typing__dots")).not.toBeNull();
+    expect(tailFace()?.querySelector(".ac-orbit")).toBeNull();
     expect(typingBar().querySelector(".ac-pixspin")).toBeNull();
     expect(typingBar().querySelectorAll(".ac-typing__tok .ac-avatar")).toHaveLength(1);
     expect(typingBar().querySelector(".ac-typing__elapsed, .stop-run")).toBeNull();
@@ -276,7 +280,7 @@ describe("typing bar above the composer", () => {
       type: "agent.run",
       ...a,
       status: "running",
-      startedAt: new Date(Date.now() - 13_000).toISOString(),
+      startedAt: new Date(Date.now() - 73_000).toISOString(),
     });
     await push(socket, { type: "agent.tool", ...a, tool: "github_list_prs" });
     await push(socket, { type: "agent.run", threadId: null, runId: "r-b", agentId: ATLAS_ID, status: "running" });
@@ -289,10 +293,12 @@ describe("typing bar above the composer", () => {
     const people = typingBar().querySelector(".ac-typing__people");
     expect(people?.textContent).toBe("João está digitando…");
     expect(people?.querySelector(".ac-typing__typers")?.textContent).toBe("João");
-    expect(typingBar().querySelectorAll(".ac-typing__tok")).toHaveLength(3);
+    // Three faces: the first agent's with its rings, leading the row, and two small ones on the line.
+    expect(tailFace()?.querySelector(".ac-orbit")).not.toBeNull();
+    expect(typingBar().querySelectorAll(".ac-typing__tok")).toHaveLength(2);
     expect(typingBar().querySelector(".ac-pixspin")).toBeNull();
     // The time, "Ver" and the stop are one agent's: with two at work the line shows none (the composer still stops).
-    expect(typingBar().querySelector(".ac-typing__elapsed")).toBeNull();
+    expect(typingBar().querySelector(".run-tail")).toBeNull();
     expect(within(typingBar()).queryByRole("button", { name: "Ver" })).toBeNull();
     expect(within(typingBar()).queryByRole("button", { name: "Parar" })).toBeNull();
     // One leaves: the other gets its own line back, with its time.
@@ -300,11 +306,11 @@ describe("typing bar above the composer", () => {
     await push(socket, { type: "run.finished", threadId: null, runId: "r-b", agentId: ATLAS_ID, status: "done" });
     await settle();
     expect(bar().textContent).toStartWith("Ada consultando o GitHub");
-    const took = typingBar().querySelector(".ac-typing__elapsed") as HTMLElement;
-    expect(took.textContent).toMatch(/^1\d s$/);
-    // Who is typing after its time; the time and the stop stay the agent's.
-    expect(took.nextElementSibling?.textContent).toBe("João digitando…");
-    // Tabular figures: the seconds tick without nudging what is beside them.
+    const took = typingBar().querySelector(".run-tail__clock") as HTMLElement;
+    expect(took.textContent).toBe("1 min");
+    // Who is typing after its time and its stop; the time and the stop stay the agent's.
+    expect(took.closest(".run-tail")?.nextElementSibling?.textContent).toBe("João digitando…");
+    // Tabular figures: the minutes turn without nudging what is beside them.
     expect(took.classList.contains("ac-num")).toBe(true);
   });
 });
@@ -355,6 +361,8 @@ describe("bottom anchoring", () => {
     Object.defineProperty(log, "clientHeight", { configurable: true, value: 500 });
     await sendText("primeira");
     await settle(3);
+    // The list measures how far up it is once a frame.
+    const frame = () => act(() => new Promise<void>((r) => requestAnimationFrame(() => r())));
     const latest = () => screen().queryByRole("button", { name: /Ir para as mensagens mais recentes/ });
     expect(latest()).toBeNull();
     // Less than a screen up: nothing new, no button.
@@ -363,6 +371,7 @@ describe("bottom anchoring", () => {
       fireEvent.wheel(log, { deltaY: -40 });
       fireEvent.scroll(log);
     });
+    await frame();
     expect(latest()).toBeNull();
     // More than a screen up: the button, keyboard reachable, with no count yet.
     log.scrollTop = 600;
@@ -370,6 +379,7 @@ describe("bottom anchoring", () => {
       fireEvent.wheel(log, { deltaY: -40 });
       fireEvent.scroll(log);
     });
+    await frame();
     const button = latest() as HTMLElement;
     expect(button.getAttribute("aria-label")).toBe("Ir para as mensagens mais recentes");
     expect(button.tabIndex).toBe(0);
@@ -406,6 +416,7 @@ describe("bottom anchoring", () => {
     // A frame of the glide down, still far up: the button does not come back.
     log.scrollTop = 1200;
     await act(async () => fireEvent.scroll(log));
+    await frame();
     expect(latest()).toBeNull();
   });
 
@@ -1236,7 +1247,7 @@ describe("memory changes and proposals in the chat", () => {
     expect(screen().getByRole("group", { name: "Proposta de mudança de Ada" })).toBeTruthy();
   });
 
-  test("a proposal in the chat: Ver a mudança opens the diff, Editar there, Aceitar / Recusar in the footer", async () => {
+  test("a proposal in the chat: Ver a mudança opens the diff, nothing to edit or decide; its review's end lands live", async () => {
     const state = seedState();
     state.messages.push({
       id: "msg-prop",
@@ -1249,33 +1260,44 @@ describe("memory changes and proposals in the chat", () => {
       meta: { proposalId: "prop-1" },
       createdAt: new Date().toISOString(),
     });
-    await open(state);
+    const { socket } = await open(state);
     const card = screen().getByRole("group", { name: "Proposta de mudança de Ada" });
     expect(card.getAttribute("data-ask-kind")).toBe("proposal");
-    // The change is behind "Ver a mudança", drawn as its Markdown in green and red blocks; Editar lives there too.
+    // While the agent's review weighs it (ADR 0219), its head says so.
+    expect(card.querySelector(".rq__state--other")?.textContent).toBe("Avaliando…");
+    // The change is behind "See the change", drawn as its Markdown in green and red blocks.
     expect(card.querySelector(".ac-diff__block--add")).toBeNull();
     await act(async () => fireEvent.click(within(card).getByRole("button", { name: "Ver a mudança" })));
     expect(card.querySelectorAll(".ac-diff__block--add").length).toBeGreaterThan(0);
-    await act(async () => fireEvent.click(within(card).getByRole("button", { name: "Editar" })));
+    for (const name of ["Editar", /^Aceitar/, /^Recusar/])
+      expect(within(card).queryByRole("button", { name })).toBeNull();
+    expect(within(card).queryByRole("textbox")).toBeNull();
+    // Its review applied it: the server says so to whoever looks after Ada, and the same card ends.
+    const prop = state.proposals.find((p) => p.id === "prop-1");
+    if (!prop) throw new Error("no prop-1");
+    Object.assign(prop, {
+      status: "accepted",
+      reviewed: true,
+      decidedByAgent: { agentId: ADA_ID, name: "Ada" },
+      review: "O João pediu isso três vezes.",
+      undoable: true,
+      decidedAt: new Date().toISOString(),
+    });
     await act(async () =>
-      fireEvent.change(within(card).getByLabelText("Texto final das instruções"), {
-        target: { value: "Só PRs pequenos." },
+      socket.push({
+        type: "event",
+        scope: "user",
+        event: { type: "proposal.decided", proposalId: "prop-1", status: "accepted" },
       }),
     );
-    await act(async () => fireEvent.click(within(card).getByRole("button", { name: "Aceitar com ajustes" })));
     await settle(4);
-    expect(state.calls.find((c) => c.method === "proposals.accept")?.args).toEqual([
-      ORG_ID,
-      "prop-1",
-      "Só PRs pequenos.",
-    ]);
-    // Decided: the same card, who accepted where the buttons were, and nothing left to edit.
     const done = screen().getByRole("group", { name: "Proposta de mudança de Ada" });
     expect(done.classList.contains("rq--ended")).toBe(true);
     expect(done.querySelector(".rq-done__mark[data-done]")).not.toBeNull();
-    expect(done.querySelector(".rq__answer-text")?.textContent).toBe("Aplicado por você");
-    expect(within(done).queryByRole("textbox")).toBeNull();
-    expect(within(done).queryByRole("button", { name: "Aceitar com ajustes" })).toBeNull();
+    expect(done.querySelector(".rq__answer-text")?.firstChild?.textContent).toBe("Aplicado pela Ada");
+    expect(done.querySelector(".rq__answer-note")?.textContent).toBe("O João pediu isso três vezes.");
+    expect(within(done).getByRole("button", { name: "Desfazer" })).toBeTruthy();
+    expect(state.calls.some((c) => c.method === "proposals.accept")).toBe(false);
   });
 });
 

@@ -13,6 +13,7 @@ import {
   isAgentOnlyNotice,
   isReturnLine,
   isTalkerReply,
+  joinLineOf,
   NOTICE_KINDS,
   noticeAgentHandle,
   noticeOf,
@@ -302,14 +303,16 @@ describe("what people read of a notice", () => {
     const missing: string[] = [];
     for (const kind of seen) {
       for (const reason of ["audience", "callable"]) {
-        // A routine's report is what it found for people, a GitHub event what someone wrote there; every other
-        // notice's text is the agent's.
+        // A routine's report is what it found for people, a GitHub event what someone wrote there, a failed check what
+        // the check said; every other notice's text is the agent's.
         const said =
           kind === "routine_handoff"
             ? "3 erros novos no checkout"
             : kind === "github_event"
               ? "Pode cobrir o token expirado?"
-              : AGENT_TEXT;
+              : kind === "github_check"
+                ? "2 tests failed"
+                : AGENT_TEXT;
         const view = noticeView(
           { body: said, meta: { notice: { kind, text: said, from: "@ivy", refs: { ...refs, reason } } } },
           names,
@@ -320,12 +323,15 @@ describe("what people read of a notice", () => {
         }
         expect(view.key).not.toBe("chat.notice.other");
         const keys = [view.key, ...(view.detail && "words" in view.detail ? [view.detail.words.key] : [])];
+        // A plural line (who joined) has its forms instead: `_other` is in every language.
         for (const code of LOCALES.map((l) => l.code))
-          for (const key of keys) if (typeof leaf(code, key) !== "string") missing.push(`${kind}: ${key} in ${code}`);
+          for (const key of keys)
+            if (typeof (leaf(code, key) ?? leaf(code, `${key}_other`)) !== "string")
+              missing.push(`${kind}: ${key} in ${code}`);
         // What "Show" opens is the app's words or what people wrote, never the agent's English.
         if (view.detail && "content" in view.detail) {
           expect(view.detail.content).not.toContain("github_actions_list");
-          expect(["routine_handoff", "consult_reply", "github_event"]).toContain(kind);
+          expect(["routine_handoff", "consult_reply", "github_event", "github_check"]).toContain(kind);
         }
       }
     }
@@ -385,6 +391,30 @@ describe("what people read of a notice", () => {
       answer: false,
     });
   });
+
+  test("a check that failed on a code session's branch: which, on its pull request or its commit, and its page", () => {
+    const view = (r: Record<string, string>, text = "") =>
+      noticeView({ body: AGENT_TEXT, meta: { notice: { kind: "github_check", text, refs: r } } }, names);
+    const check = {
+      check: "lint",
+      repo: "acme/app",
+      sha: "1a2b3c4d5e6f",
+      conclusion: "failure",
+      url: "https://github.com/acme/app/runs/5",
+    };
+    expect(view({ ...check, number: "12" }, "2 problems found")).toMatchObject({
+      key: "chat.notice.github.checkFailed",
+      values: { check: "lint", number: "12", repo: "acme/app" },
+      detail: { content: "2 problems found\n\nhttps://github.com/acme/app/runs/5" },
+      answer: false,
+    });
+    // Pushed before any pull request: on its commit, and "Show" opens the check's page.
+    expect(view(check)).toMatchObject({
+      key: "chat.notice.github.checkFailedCommit",
+      values: { check: "lint", commit: "1a2b3c4" },
+      detail: { content: "https://github.com/acme/app/runs/5" },
+    });
+  });
 });
 
 describe("what lists a GitHub event (previews, notifications)", () => {
@@ -413,5 +443,42 @@ describe("what lists a GitHub event (previews, notifications)", () => {
     expect(previewBody(t, "drive-by merged PR #12 (acme/app) on GitHub", merged)).toBe(
       "drive-by fez o merge do PR #12 (acme/app) no GitHub",
     );
+  });
+});
+
+describe("who joined or left a channel", () => {
+  const meta = (kind: string, refs: Record<string, string>) => ({
+    notice: { kind, text: "Iara and Bento joined this channel, added by Ana", refs },
+  });
+  const names = {
+    author: "Iara",
+    agentByHandle: () => null,
+    nameOf: (m: { type: string; id: string }) => ({ a1: "Iara", a2: "Bento", u1: "Ana" })[m.id] ?? null,
+    list: (all: string[]) => all.join(" e "),
+  };
+
+  test("the line names everyone who came and who added them, in the reader's words", () => {
+    const m = { body: "", meta: meta("joined", { members: "agent:a1,agent:a2", by: "u1" }) };
+    expect(joinLineOf(m.meta)).toEqual({
+      kind: "joined",
+      members: [
+        { type: "agent", id: "a1" },
+        { type: "agent", id: "a2" },
+      ],
+      byUserId: "u1",
+    });
+    expect(noticeView(m, names)).toMatchObject({
+      key: "chat.notice.joinedBy",
+      values: { who: "Iara e Bento", by: "Ana", count: "2" },
+      detail: null,
+    });
+  });
+
+  test("joined by themself, no adder; leaving, its own line", () => {
+    expect(noticeView({ body: "", meta: meta("joined", { members: "person:u1" }) }, names)).toMatchObject({
+      key: "chat.notice.joined",
+      values: { who: "Ana", count: "1" },
+    });
+    expect(noticeView({ body: "", meta: meta("left", { members: "agent:a1" }) }, names)?.key).toBe("chat.notice.left");
   });
 });

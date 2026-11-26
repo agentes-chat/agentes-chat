@@ -1,16 +1,18 @@
 import { type Message, useIssue } from "@agenteschat/client";
 import { type HandedTask, handedTasksOf, type IssueWorkRef, issueTakenOf } from "@agenteschat/client/lib/issues";
+import { memo } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
-import { CARD_PAD, Disclosure, EventPill, Icon, PressScale, Text, TOUCH } from "@/ui";
+import { Disclosure, EventPill, Icon, MESSAGE_CARD_X, PressScale, Text, TOUCH } from "@/ui";
 import { router } from "@/ui/navigation";
 import { StateChip } from "../issues/parts";
 import { chatHref } from "../links/logic";
 import { AgentFace } from "../shared/Face";
-import { useColors, useDirectory, useMeId, useOrgId, useWhen } from "../shared/hooks";
+import { useColors, useOrgId, useWhen } from "../shared/hooks";
 import { useSurface } from "../shared/parts";
 import { usePresenceOf } from "../status/hooks";
-import { useCardTop, useQuietInset } from "./look";
+import { useCardTop, useMessageCardFrame, useQuietInset } from "./look";
+import { useRowDirectory, useRowMeId } from "./row-data";
 
 /**
  * "Ask Ada to implement" (as on the web): the root of the work thread in the
@@ -21,10 +23,10 @@ export function IssueWorkCard({ work, authorId }: { work: IssueWorkRef; authorId
   const { t } = useTranslation();
   const c = useColors();
   const cardTop = useCardTop();
-  const surface = useSurface();
+  const frame = useMessageCardFrame();
   const orgId = useOrgId();
-  const meId = useMeId();
-  const dir = useDirectory();
+  const meId = useRowMeId();
+  const dir = useRowDirectory();
   const issue = useIssue(orgId, work.number);
   const current = issue.data?.id === work.issueId ? issue.data : null;
   const asker = authorId && authorId !== meId ? dir.nameOf({ type: "person", id: authorId }) : "";
@@ -36,22 +38,22 @@ export function IssueWorkCard({ work, authorId }: { work: IssueWorkRef; authorId
       accessibilityHint={t("chat.issueWork.view")}
       // The card's own size: the press area never grows past it.
       fill={false}
-      style={[styles.cardBox, surface, cardTop]}
+      style={[styles.cardBox, frame.style, cardTop]}
       contentStyle={styles.card}
     >
       <View style={styles.head}>
         {/* The icon alone: no tile inside the card. */}
         <Icon name="issue" size={15} color={c.ink2} />
-        <Text variant="small" tone="muted" style={styles.grow} numberOfLines={1}>
+        <Text variant="cardKind" style={styles.grow} numberOfLines={1}>
           {asker ? t("chat.issueWork.askedBy", { name: asker }) : t("chat.issueWork.asked")} #{work.number}
         </Text>
         {current ? <StateChip issue={current} /> : null}
       </View>
-      <Text variant="callout" tone="ink" style={styles.title} numberOfLines={3}>
+      <Text variant="cardTitle" numberOfLines={3}>
         {current?.title ?? work.title}
       </Text>
       <View style={styles.foot}>
-        <Text variant="small" tone="ink2" style={styles.bold}>
+        <Text variant="label" tone="ink2">
           {t("chat.issueWork.view")}
         </Text>
         <Disclosure />
@@ -61,9 +63,9 @@ export function IssueWorkCard({ work, authorId }: { work: IssueWorkRef; authorId
 }
 
 /** Where the issue came from: one event pill, "Ada took task #24 · its title", the issue a tap on it away. */
-export function IssueTakenLine({ message, gap }: { message: Message; gap: number }) {
+export const IssueTakenLine = memo(function IssueTakenLine({ message, gap }: { message: Message; gap: number }) {
   const { t } = useTranslation();
-  const dir = useDirectory();
+  const dir = useRowDirectory();
   const when = useWhen();
   const inset = useQuietInset();
   const taken = issueTakenOf(message.meta);
@@ -86,7 +88,7 @@ export function IssueTakenLine({ message, gap }: { message: Message; gap: number
       </EventPill>
     </View>
   );
-}
+});
 
 /**
  * The tasks the right hand handed on in this reply (ADR 0137 §13), as on the web: one row each, "#42 Campanha de
@@ -109,7 +111,7 @@ function HandedTaskChip({ task }: { task: HandedTask }) {
   const c = useColors();
   const surface = useSurface();
   const orgId = useOrgId();
-  const dir = useDirectory();
+  const dir = useRowDirectory();
   const issue = useIssue(orgId, task.number);
   const current = issue.data?.id === task.issueId ? issue.data : null;
   const agent = dir.agentById.get(task.agentId);
@@ -153,10 +155,9 @@ const styles = StyleSheet.create({
   fit: { flexShrink: 1, minWidth: 0 },
   // The card's box, as every card in a message, and its content at the cards' padding.
   cardBox: { borderRadius: 20 },
-  card: { padding: CARD_PAD, gap: 8 },
+  card: { paddingVertical: 14, paddingHorizontal: MESSAGE_CARD_X, gap: 8 },
   head: { flexDirection: "row", alignItems: "center", gap: 8 },
   grow: { flex: 1, flexShrink: 1 },
-  title: { fontWeight: "600" },
   foot: { flexDirection: "row", alignItems: "center", gap: 4 },
   bold: { fontWeight: "600" },
   // An event pill at the messages' words, left aligned; the list sets its top.

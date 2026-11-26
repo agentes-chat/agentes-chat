@@ -314,6 +314,14 @@ export const words: EmailWords = {
   deletionCode: {
     subjectWorkspace: (code) => `${code} ist dein Code zum Löschen eines Workspace`,
     subjectAccount: (code) => `${code} ist dein Code zum Löschen deines ganzen Kontos`,
+    subjectReset: (code) => `${code} ist dein Code zum Zurücksetzen eines Workspace`,
+    reset: (org) => [
+      "Gib diesen Code ein, um den Workspace ",
+      { b: org },
+      " zurückzusetzen. Seine Agenten, Unterhaltungen, Dateien und Erinnerungen werden sofort und endgültig gelöscht, und er beginnt neu wie ein neuer Workspace.",
+    ],
+    whyReset: (org) =>
+      `Du erhältst diese E-Mail, weil über dein Konto das Zurücksetzen von ${org} auf agentes.chat angefragt wurde.`,
     preheader: "Gib ihn in agentes.chat ein, um zu bestätigen. Er gilt 10 Minuten lang.",
     headline: "Dein Code",
     workspace: (org) => [
@@ -416,6 +424,49 @@ export const words: EmailWords = {
       why: () => "Du erhältst diese E-Mail, weil du in diesem Workspace auf agentes.chat bist.",
     },
   },
+  computerDown: {
+    subject: "Ein Computer antwortet nicht",
+    preheader: "Die Arbeit deiner Agenten auf diesem Computer wartet.",
+    headline: "Ein Computer antwortet nicht",
+    body: (name, org, away) => [
+      { b: name },
+      " in ",
+      { b: org },
+      ` antwortet seit ${away} nicht. Die Arbeit, die ihn braucht, wartet und läuft weiter, sobald er wieder da ist.`,
+    ],
+    runs: "Wartende Anfragen an Agenten",
+    calls: "Wartende Webhook-Aufrufe",
+    note: "Um jetzt weiterzumachen, verschiebe seine Agenten auf seiner Seite auf einen anderen Computer.",
+    button: "Computer öffnen",
+    why: (org) => `Du erhältst diese E-Mail, weil du die Computer von ${org} auf agentes.chat verwaltest.`,
+    back: {
+      subject: "Ein Computer ist wieder da",
+      preheader: "Die Arbeit, die auf ihn gewartet hat, läuft jetzt weiter.",
+      headline: "Der Computer ist wieder da",
+      runs: "Anfragen an Agenten, die gewartet haben",
+      calls: "Webhook-Aufrufe, die gewartet haben",
+      body: (name, org, away) => [
+        { b: name },
+        " in ",
+        { b: org },
+        ` ist nach ${away} wieder da. Die Arbeit, die auf ihn gewartet hat, läuft jetzt weiter.`,
+      ],
+    },
+    personal: {
+      body: (name, _org, away) => [
+        { b: name },
+        ` antwortet seit ${away} nicht. Die Arbeit, die ihn braucht, wartet und läuft weiter, sobald er wieder da ist.`,
+      ],
+      why: () =>
+        "Du erhältst diese E-Mail, weil du die Computer deines persönlichen Workspace auf agentes.chat verwaltest.",
+      back: {
+        body: (name, _org, away) => [
+          { b: name },
+          ` ist nach ${away} wieder da. Die Arbeit, die auf ihn gewartet hat, läuft jetzt weiter.`,
+        ],
+      },
+    },
+  },
   appConnected: {
     subject: "Eine App wurde mit deinem agentes.chat-Konto verbunden",
     preheader: "Sie kann in einem Workspace in deinem Namen lesen und Agenten Aufgaben schicken.",
@@ -498,6 +549,36 @@ export const words: EmailWords = {
     none: "Kein Workspace.",
     table: (day) => `Die ganze Tabelle: bun run report:autonomy --day ${day}`,
     why: "Du erhältst diese E-Mail, weil diese Adresse auf diesem Server in OPS_REPORT_EMAIL steht. Sie kommt einmal am Tag.",
+  },
+  accountOpened: {
+    subject: (plan) => `Mehr Leute können dein ${plan}-Konto nutzen`,
+    preheader: (plan) => `Was sie damit tun, nutzt dein ${plan}-Abo und seine Limits.`,
+    headline: "Jemand hat geändert, wer dein KI-Konto nutzen darf",
+    body: (by, account, plan) => [
+      { b: by },
+      ` hat geändert, wer dein ${plan}-Konto `,
+      { b: account },
+      ` nutzen darf. Was sie damit tun, nutzt dein Abo und seine Limits.`,
+    ],
+    account: "Konto",
+    by: "Geändert von",
+    setting: "Berechtigung",
+    use: "In Agenten nutzen",
+    reply: "Allen antworten",
+    was: "Vorher",
+    now: "Jetzt",
+    everyone: "Alle im Workspace",
+    admins: "Du und Administratoren",
+    onlyYou: "Nur du",
+    agentOwner: "Nur der Besitzer des Agenten",
+    note: "Zum Rückgängigmachen öffne das Konto unter KI und Nutzung und ändere seine Berechtigungen.",
+    button: "KI-Konten öffnen",
+    why: (org) =>
+      `Du erhältst diese E-Mail, weil du dieses KI-Konto in ${org} verbunden hast und jemand anderes geändert hat, wer es nutzen darf.`,
+    personal: {
+      why: () =>
+        "Du erhältst diese E-Mail, weil du dieses KI-Konto verbunden hast und jemand anderes geändert hat, wer es nutzen darf.",
+    },
   },
   planOpened: {
     subject: (plan) => `Mehr Leute können über dein ${plan}-Abo mit deinem Agenten sprechen`,
@@ -602,6 +683,28 @@ export const words: EmailWords = {
       small: "Verknüpfe es in den Einstellungen neu, wenn du das warst.",
       why: (surface) => `Du erhältst diese E-Mail, weil ${surface} mit deinem agentes.chat-Konto verknüpft war.`,
       picture: "Dein Assistent, nicht mehr auf deinem Handy",
+    },
+    pinReset: {
+      subject: (surface) => `Wähle deine ${surface}-PIN`,
+      preheader: "Wähle die PIN, mit der du Aktionen über deine Chat-App genehmigst.",
+      headline: (surface) => `Wähle deine ${surface}-PIN`,
+      body: (surface) =>
+        `Jemand hat einen Link angefordert, um die PIN zu wählen, mit der du Aktionen über ${surface} genehmigst. Wenn du das warst, wähle sie auf der Seite, die dieser Button öffnet.`,
+      button: "Meine PIN wählen",
+      small:
+        "Der Link funktioniert einmal, eine Stunde lang. Wenn du das nicht warst, ignoriere diese E-Mail. Es ändert sich nichts.",
+      why: (surface) => `Du erhältst diese E-Mail, weil ${surface} mit deinem agentes.chat-Konto verknüpft ist.`,
+    },
+    pinLocked: {
+      subject: (surface) => `Deine ${surface}-PIN ist gesperrt`,
+      preheader: "Dreimal hintereinander eine falsche PIN. Genehmigen über deine Chat-App ist vorerst pausiert.",
+      headline: (surface) => `Deine ${surface}-PIN ist gesperrt`,
+      body: (surface, time) =>
+        `Jemand hat dreimal hintereinander eine falsche PIN eingegeben, um eine Aktion über ${surface} zu genehmigen. Genehmigen über ${surface} ist für ${time} pausiert.`,
+      lockedFor: ["15 Minuten", "1 Stunde", "24 Stunden"],
+      small: (surface) =>
+        `Wenn du das warst, versuch es später noch einmal. Wenn nicht, heb die Verknüpfung mit ${surface} in deinen Benachrichtigungseinstellungen auf, damit niemand darüber genehmigen kann.`,
+      button: "Benachrichtigungseinstellungen öffnen",
     },
   },
   supportReply: {

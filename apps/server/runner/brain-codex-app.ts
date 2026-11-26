@@ -8,6 +8,7 @@ import { createInterface } from "node:readline";
 import type { CommandProfile, CommandScope } from "@agenteschat/adapters/command-policy";
 import { type BrainSteerReply, type BrainSteerRequest, isBrainEffort } from "@agenteschat/adapters/machine-protocol";
 import { accountEnv, withoutContainers, yieldRoute } from "./accounts";
+import { awakeClock } from "./awake";
 import {
   CODEX_DIRECT_MCP_CONFIG,
   CODEX_NO_NETWORK,
@@ -23,9 +24,10 @@ import {
   codexProblem,
   codexSandbox,
   codexThreadKey,
+  reasoningNotes,
   shellScript,
 } from "./brain-codex";
-import { CODEX_WINDOWS_CONFIG, codexLaunch } from "./codex-windows";
+import { type CodexWindowsSandbox, codexLaunch, codexWindowsConfig } from "./codex-windows";
 import { killTree } from "./exec";
 import { envValue } from "./executors";
 import {
@@ -67,7 +69,8 @@ import type { Spawn } from "./scope-gate";
  *   `item/fileChange/requestApproval`); the runner answers with the same
  *   decision Claude Code's permission prompt gets (`permissionPrompt`: deny
  *   list, secrets, plain reads, a `plan` turn's refusals, then the server's
- *   rules or a person), `accept` or `decline`.
+ *   rules or a person), `accept` or `decline`. A decline carries no reason in
+ *   the protocol: the reason is steered into the turn (`DECLINED_PREFIX`).
  * - Notifications → the same events exec gives: `item/agentMessage/delta`
  *   streamed as text deltas (batched), a completed `commandExecution` /
  *   `fileChange` as an executed `tool_call`, `thread/tokenUsage/updated`
@@ -93,10 +96,10 @@ import type { Spawn } from "./scope-gate";
  *   A turn where Codex would load someone's own rules runs on exec as well,
  *   which leaves them out (`codexRulesNear` in `runCodexTurn`): an allow there
  *   would run a command outside the sandbox and never ask the runner.
- * - Windows (`codex-windows.ts`): MXC named in `-c`, `approvalPolicy: "never"`
- *   (nothing asks: the command policy doesn't read PowerShell, so the sandbox
- *   is the limit, as for exec), and any approval Codex asks all the same is
- *   declined.
+ * - Windows (`codex-windows.ts`): the turn's sandbox (MXC, else Codex's own
+ *   `unelevated`) named in `-c`, `approvalPolicy: "never"` (nothing asks: the
+ *   command policy doesn't read PowerShell, so the sandbox is the limit, as
+ *   for exec), and any approval Codex asks all the same is declined.
  *
  * The protocol shapes below are the minimum this file reads, copied from
  * `codex app-server generate-ts` of codex-cli 0.163.0 (`ClientRequest`,
@@ -104,7 +107,7 @@ import type { Spawn } from "./scope-gate";
  * checks them against a real CLI.
  */
 
-/** The first Codex whose app-server has `turn/steer` and the shapes below (the same as `CODEX_MIN_VERSION` today). */
+/** The first Codex whose app-server has `turn/steer` and the shapes below: older ones run their turns on `codex exec`. */
 export const CODEX_APP_MIN_VERSION = "0.163.0";
 export const CODEX_APP_IDLE_MS = 10 * 60_000;
 export const CODEX_APP_MAX_PROCESSES = 3;
@@ -184,8 +187,8 @@ export function codexAppServerArgs(input: {
   writableRoots?: string[];
   /** Protocol 28: the agent's context limit (a process serves one). */
   contextTokens?: number;
-  /** Windows: the sandbox, named (`CODEX_WINDOWS_CONFIG`). */
-  windows?: boolean;
+  /** Windows: the sandbox, named (`codexWindowsConfig`). */
+  windows?: CodexWindowsSandbox;
 }): string[] {
   return [
     "app-server",
@@ -195,7 +198,7 @@ export function codexAppServerArgs(input: {
     CODEX_NO_NETWORK,
     "-c",
     codexWritableRoots(input.writableRoots ?? []),
-    ...(input.windows ? CODEX_WINDOWS_CONFIG.flatMap((c) => ["-c", c]) : []),
+    ...(input.windows ? codexWindowsConfig(input.windows).flatMap((c) => ["-c", c]) : []),
     ...codexContextOverride(input.contextTokens),
     ...(input.mcp
       ? [CODEX_DIRECT_MCP_CONFIG, ...codexBridgeOverrides({ runId: input.processId, ...input.mcp })].flatMap((o) => [
@@ -486,14 +489,17 @@ export class CodexAppMapper {
   private answer?: string;
   /** Agent messages already sent, streamed or whole (by item id): Codex may complete one twice. */
   private readonly sent = new Set<string>();
+  /** Reasoning summaries as their deltas came (`item/reasoning/summaryTextDelta`), by item and part. */
+  private readonly summaries = new Map<string, string[]>();
   private lastDeltaItem: string | null = null;
   private anyText = false;
   /** The thread's totals before this `brain.turn`, and now. */
   private base?: TokenUsageBreakdown;
   private total?: TokenUsageBreakdown;
-  /** Model requests of this `brain.turn`, and the most input one read. */
+  /** Model requests of this `brain.turn`, the most input one read, and what the last one read. */
   private calls = 0;
   private maxContext = 0;
+  private lastContext = 0;
   /** An `error` notification Codex won't retry (the turn's own error says more). */
   lastError?: string;
   /** The turn ran a command, changed a file or called our bridge: a cut now loses work the API couldn't see. */
@@ -536,6 +542,16 @@ export class CodexAppMapper {
     return this.textOf(itemId, delta);
   }
 
+  /** `item/reasoning/summaryTextDelta`: kept until its item completes, told then as notes. */
+  summaryDelta(params: Record<string, unknown>) {
+    const itemId = str(params.itemId);
+    if (!itemId) return;
+    const parts = this.summaries.get(itemId) ?? [];
+    const at = typeof params.summaryIndex === "number" ? params.summaryIndex : Math.max(0, parts.length - 1);
+    parts[at] = (parts[at] ?? "") + str(params.delta);
+    this.summaries.set(itemId, parts);
+  }
+
   /** `item/completed`: executed tool calls, the answer, and the text of a message that wasn't streamed. */
   completed(item: Record<string, unknown>): { events: CodexBrainEvent[]; text?: string } {
     const id = str(item.id) || `codex-${randomUUID()}`;
@@ -547,6 +563,13 @@ export class CodexAppMapper {
     )
       this.worked = true;
     switch (item.type) {
+      case "reasoning": {
+        // The parts as the item has them; else what their deltas said (`summaryDelta`).
+        const heard = this.summaries.get(id);
+        this.summaries.delete(id);
+        const parts = Array.isArray(item.summary) && item.summary.length > 0 ? item.summary : (heard ?? []);
+        return { events: reasoningNotes(parts, (t) => this.clean(t)) };
+      }
       case "agentMessage": {
         const t = str(item.text);
         if (!t.trim()) return { events: [] };
@@ -597,7 +620,10 @@ export class CodexAppMapper {
     if (!this.total || num(u.total.totalTokens) > num(this.total.totalTokens)) {
       this.calls++;
       // Codex counts cached input inside `inputTokens`: the request's whole context.
-      if (isObj(u.last)) this.maxContext = Math.max(this.maxContext, num(u.last.inputTokens));
+      if (isObj(u.last)) {
+        this.lastContext = num(u.last.inputTokens);
+        this.maxContext = Math.max(this.maxContext, this.lastContext);
+      }
     }
     this.total = u.total;
   }
@@ -626,6 +652,7 @@ export class CodexAppMapper {
           ...(u && u.cacheWriteInputTokens > 0 ? { cacheWrite: u.cacheWriteInputTokens } : {}),
           ...(this.calls > 0 ? { calls: this.calls } : {}),
           ...(this.maxContext > 0 ? { maxContext: this.maxContext } : {}),
+          ...(this.lastContext > 0 ? { lastContext: this.lastContext } : {}),
         },
         { type: "done", text: answer, session: { id: sessionId } },
       ];
@@ -644,6 +671,9 @@ export class CodexAppMapper {
 }
 
 // ── Approvals (ADR 0053 §3) ──────────────────────────────────────────────────
+
+/** How the reason of a declined command or change starts, steered to Codex: from the computer, not a person. */
+export const DECLINED_PREFIX = "[agentes.chat, not the person] The computer declined that command or change: ";
 
 /** A call as the command policy reads it (Claude Code's permission prompt arguments). */
 export type PolicyCall = { tool_name: string; input: Record<string, unknown> };
@@ -687,11 +717,20 @@ export function approvalCalls(
   return null;
 }
 
-/** `accept` only when the policy allows every call of the approval (`permissionPrompt`, as Claude Code's prompt). */
+/**
+ * `accept` only when the policy allows every call of the approval (`permissionPrompt`, as Claude Code's prompt).
+ * `onDecline` gets why, the words Claude Code's prompt would have answered.
+ */
 export async function decideApproval(
   calls: PolicyCall[],
   ask: (tool: string, args: Record<string, unknown>) => Promise<IpcReply>,
-  opts: { scope: CommandScope; profile: CommandProfile; signal?: AbortSignal; asks?: "never" },
+  opts: {
+    scope: CommandScope;
+    profile: CommandProfile;
+    signal?: AbortSignal;
+    asks?: "never";
+    onDecline?: (message: string) => void;
+  },
 ): Promise<"accept" | "decline"> {
   if (calls.length === 0) return "decline";
   const sleep = (ms: number) =>
@@ -717,7 +756,10 @@ export async function decideApproval(
       sleep,
       ...(opts.asks ? { asks: opts.asks } : {}),
     });
-    if (answer.behavior !== "allow") return "decline";
+    if (answer.behavior !== "allow") {
+      opts.onDecline?.(answer.message);
+      return "decline";
+    }
   }
   return "accept";
 }
@@ -743,6 +785,8 @@ interface AppLive {
   tools: Set<string> | null;
   busy: boolean;
   lastUsed: number;
+  /** Awake time (`awakeClock`) its last turn ended at. */
+  idleSince: number;
   idleTimer: ReturnType<typeof setTimeout> | null;
   /** The bridge entry between turns (no run: its calls are refused quietly). */
   bridge: McpTaskInfo | null;
@@ -898,6 +942,8 @@ export class CodexAppServers implements CodexAppRunner {
       profile: input.profile ?? "work",
       // The context limit is the process's (`-c`): another one is another process.
       context: input.contextTokens ?? null,
+      // So is the sandbox on Windows.
+      sandbox: input.windowsSandbox ?? null,
     });
   }
 
@@ -970,7 +1016,7 @@ export class CodexAppServers implements CodexAppRunner {
       mcp: { ...(opts.mcpCommand ? { command: opts.mcpCommand } : {}) },
       ...(input.writableRoots?.length ? { writableRoots: input.writableRoots } : {}),
       ...(input.contextTokens ? { contextTokens: input.contextTokens } : {}),
-      ...(platform === "win32" ? { windows: true } : {}),
+      ...(platform === "win32" ? { windows: input.windowsSandbox ?? "mxc" } : {}),
     });
     const brokenKey = `${opts.bin ?? "codex"}@${input.version}`;
     const launch = codexLaunch(args, {
@@ -1002,13 +1048,11 @@ export class CodexAppServers implements CodexAppRunner {
           capabilities: {
             experimentalApi: false,
             requestAttestation: false,
-            // Never read here (each is one line per chunk of output).
+            // Never read here (each is one line per chunk of output). Its reasoning summary is (`reasoningNotes`).
             optOutNotificationMethods: [
               "item/commandExecution/outputDelta",
               "item/fileChange/outputDelta",
               "item/reasoning/textDelta",
-              "item/reasoning/summaryTextDelta",
-              "item/reasoning/summaryPartAdded",
               "item/plan/delta",
               "turn/diff/updated",
             ],
@@ -1053,6 +1097,7 @@ export class CodexAppServers implements CodexAppRunner {
       tools: null,
       busy: false,
       lastUsed: Date.now(),
+      idleSince: awakeClock.read(),
       idleTimer: null,
       bridge,
       turn: null,
@@ -1303,9 +1348,13 @@ export class CodexAppServers implements CodexAppRunner {
         if (turnId && turn.id !== turnId) return;
         flush();
         if (restart && turn.status !== "failed") {
-          // The next Codex turn starts with the urgent messages (and any that came while it stopped).
+          // The next Codex turn starts with the urgent messages (and any that came while it stopped). The answer of
+          // the one that ended is posted now when the server takes each answer as it comes, else it leads the last.
           const answer = mapper.nextTurn();
-          if (turn.status === "completed" && answer) held.push(answer);
+          if (turn.status === "completed" && answer) {
+            if (input.answers === "each") emit({ type: "answer", text: redact(answer) });
+            else held.push(answer);
+          }
           const batch = restart;
           restart = null;
           const clientId = (batch[0] as SteerMessage).uuid;
@@ -1333,6 +1382,9 @@ export class CodexAppServers implements CodexAppRunner {
           }
           case "item/agentMessage/delta":
             addText(mapper.delta(params));
+            return;
+          case "item/reasoning/summaryTextDelta":
+            mapper.summaryDelta(params);
             return;
           case "item/started":
           case "item/completed": {
@@ -1386,6 +1438,23 @@ export class CodexAppServers implements CodexAppRunner {
         ...(opts.runnerHome ? { runnerHome: opts.runnerHome } : {}),
       };
       const windows = (opts.platform ?? process.platform) === "win32";
+      // A decline has no field for why (`v2/CommandExecutionApprovalDecision`), and Codex tells the model only that it
+      // was rejected: why reaches it as steered input, written before the decline so it is there at its next request.
+      const tellDeclined = (message: string) => {
+        if (settled || !turnId || !message) return;
+        void client
+          .request(
+            "turn/steer",
+            {
+              threadId,
+              expectedTurnId: turnId,
+              clientUserMessageId: randomUUID(),
+              input: [text(`${DECLINED_PREFIX}${redact(message)}`)],
+            },
+            STEER_RPC_MS,
+          )
+          .catch(() => undefined);
+      };
       client.onRequest((method, params) => {
         if (settled) return null;
         if (typeof params.threadId === "string" && params.threadId !== threadId) return null;
@@ -1401,6 +1470,7 @@ export class CodexAppServers implements CodexAppRunner {
           profile: input.profile ?? "work",
           signal: approvals.signal,
           ...(input.asks ? { asks: input.asks } : {}),
+          onDecline: tellDeclined,
         }).then((decision) => {
           if (decision === "decline")
             this.log(`codex approval declined: ${redact(JSON.stringify(calls)).slice(0, 300)}`);
@@ -1431,13 +1501,21 @@ export class CodexAppServers implements CodexAppRunner {
   }
 
   private armIdle(live: AppLive) {
+    live.idleSince = awakeClock.read();
+    this.checkIdle(live, this.opts.idleMs ?? CODEX_APP_IDLE_MS);
+  }
+
+  /** Idle time is awake time: a timer that fires after the computer slept finds less and waits on. */
+  private checkIdle(live: AppLive, waitMs: number) {
     if (live.idleTimer) clearTimeout(live.idleTimer);
     live.idleTimer = setTimeout(() => {
-      if (!live.busy) {
-        this.log(`codex app-server for ${live.sessionId.slice(0, 8)} idle; closing`);
-        this.drop(live);
-      }
-    }, this.opts.idleMs ?? CODEX_APP_IDLE_MS);
+      live.idleTimer = null;
+      if (live.busy) return;
+      const left = (this.opts.idleMs ?? CODEX_APP_IDLE_MS) - (awakeClock.read() - live.idleSince);
+      if (left > 0) return this.checkIdle(live, left);
+      this.log(`codex app-server for ${live.sessionId.slice(0, 8)} idle; closing`);
+      this.drop(live);
+    }, waitMs);
     live.idleTimer.unref?.();
   }
 

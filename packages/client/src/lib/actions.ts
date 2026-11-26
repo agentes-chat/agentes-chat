@@ -142,6 +142,12 @@ export function actionTextValues(
     }
     case "channel.agent_added":
       return { agentName: str(p.agentName), channel: str(p.channel) || a.target.title || "" };
+    case "channel.lead_changed": {
+      // Made itself responsible, another agent, or the channel left with none.
+      const channel = str(p.channel) || a.target.title || "";
+      if (!str(p.agentName)) return { channel, context: "none" };
+      return p.self === true ? { channel, context: "self" } : { agentName: str(p.agentName), channel };
+    }
     case "channel.created":
       return { name: str(p.name) || a.target.title || "" };
     case "wiki.page_created":
@@ -239,8 +245,8 @@ interface Blend {
 /**
  * The kinds whose changes blend into one row (`receiptRows`). The row says `agentActions.several.<kind>`, or the kind's
  * own sentence for a `slot`.
- * ponytail: a workspace change, a renamed conversation, a branch merge and a restricted page stay one row each, their
- * sentences saying more than a name. Give them `several` sentences once agents make many of them in one reply.
+ * ponytail: a workspace change, a renamed conversation, a channel's responsible agent, a branch merge and a restricted
+ * page stay one row each, their sentences saying more than a name. Give them `several` sentences once agents make many of them in one reply.
  */
 const BLENDS: Partial<Record<AgentActionKind, Blend>> = {
   "issue.created": { ref: hashed("number") },

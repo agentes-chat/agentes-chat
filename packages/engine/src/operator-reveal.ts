@@ -1,4 +1,4 @@
-import { and, type Database, type Executor, eq, gt, isNull, rowsOf, schema, sql } from "@agenteschat/db";
+import { and, type Database, type Executor, eq, gt, isNull, rowsOf, type SQL, schema, sql } from "@agenteschat/db";
 import { othersPersonalTools } from "./agent-audit";
 import { requireAgentDetails } from "./audience";
 import { recordAudit } from "./audit";
@@ -8,7 +8,7 @@ import { ConflictError, ForbiddenError, NotFoundError, TooManyError, ValidationE
 import { cutText, pgSafeText } from "./format";
 import { requireUsageAccess } from "./management";
 import { recordContentViewed } from "./operator-events";
-import { listedOf } from "./operator-paging";
+import { listedOf, orgExists } from "./operator-paging";
 import { inputLines, keptText, taskRunSql } from "./operator-review";
 import { runShownSql } from "./operator-runs";
 import { getMembership, requirePermission } from "./organizations";
@@ -21,16 +21,19 @@ import { neutralizeUntrusted } from "./untrusted";
 
 /**
  * The operator API's reveal door (ADR 0056): one field of one record of what a workspace wrote, read by whoever runs
- * the server, with a stated reason, for one of two purposes that a record of the workspace proves. A member asked for
- * help (a support request): what that member reads in the app now. A run failed or got stuck (the run): what hangs
- * on that run. The read is on record, in the operator's feed and in the workspace's own audit log, before any text
- * is read out; credentials are masked before the text is cut.
+ * the server, with a stated reason, for one of three purposes. Two are proved by a record of the workspace. A member
+ * asked for help (a support request): what that member reads in the app now. A run failed or got stuck (the run):
+ * what hangs on that run. Either read is on record, in the operator's feed and in the workspace's own audit log,
+ * before any text is read out. The third is a safety review, to investigate suspected abuse: no record of the
+ * workspace can prove it, so it is capped for the whole instance, on record in the operator's feed alone, and the
+ * operator tells the workspace afterwards (`operatorDisclose`). Credentials are masked before the text is cut.
  */
 
 const {
   agentRuns,
   agentRunSteps,
   agents,
+  auditLog,
   channels,
   connectorConnections,
   machineTasks,
@@ -55,7 +58,7 @@ export const REVEAL_FIELDS = {
 } as const;
 export type RevealKind = keyof typeof REVEAL_FIELDS;
 export const REVEAL_KINDS = Object.keys(REVEAL_FIELDS) as [RevealKind, ...RevealKind[]];
-export const REVEAL_PURPOSES = ["member_request", "fault"] as const;
+export const REVEAL_PURPOSES = ["member_request", "fault", "trust_safety"] as const;
 export type RevealPurpose = (typeof REVEAL_PURPOSES)[number];
 
 /** The most characters one read gives; a longer field is read on from `offset`, each read on record. */
@@ -71,6 +74,11 @@ export const REVEAL_STUCK_MS = 60 * 60_000;
 /** The door's own bounds, for an instance with nothing in front of it: calls a minute, and reads of one workspace a day. */
 export const REVEAL_PER_MINUTE = { limit: 30, windowMs: 60_000 } as const;
 export const REVEAL_PER_WORKSPACE_DAY = 100;
+/** Reads a day, on the whole instance, that no workspace is told of at the time (`trust_safety`). */
+export const REVEAL_UNTOLD_PER_DAY = 150;
+/** A disclosure's bounds: how long a period it may tell of, and how many items. */
+export const DISCLOSURE_MAX_DAYS = 90;
+export const DISCLOSURE_MAX_COUNT = 10_000;
 /** The sentences a reply to a support request can say in core's own words (`operatorReply`). */
 export const REPLY_TEMPLATES = ["received", "need_more", "resolved", "handed_over"] as const;
 export type ReplyTemplate = (typeof REPLY_TEMPLATES)[number];
@@ -79,6 +87,7 @@ export const REPLIES_PER_REQUEST = 3;
 export const REPLIES_PER_DAY = 60;
 
 const DAY_MS = 86_400_000;
+const CONTENT_REVIEW_DISCLOSED = "operator.content_review_disclosed";
 
 export interface RevealInput {
   kind: RevealKind;
@@ -96,7 +105,7 @@ export interface RevealInput {
   assistedByAi: boolean;
   /** The support request: the proof of `member_request`; with `fault`, the report the run's days count back from. */
   requestId?: string;
-  /** The run: the proof of `fault`. */
+  /** The run: the proof of `fault`. `trust_safety` names neither: no call may look like it had a proof. */
   runId?: string;
 }
 
@@ -116,6 +125,16 @@ export interface Revealed {
 const ADDRESS = /[^\s@]@[^\s@][^\s@.]*\.[^\s@]|:\/\/\S|\bwww\.\S/i;
 const MORE_THAN_A_LINE = /[\p{Cc}\p{Zl}\p{Zp}]/u;
 
+/** A read's reason: one line that says the question, kept where others read it, so with no address in it. */
+export function checkRevealReason(reason: string) {
+  const line = reason.trim();
+  if (line.length < REVEAL_REASON_CHARS.min || MORE_THAN_A_LINE.test(line) || ADDRESS.test(line)) {
+    throw new ValidationError(
+      "reason: one line of at least 20 characters that says the question, with no email or web address",
+    );
+  }
+}
+
 /** What a request's shape must also hold, beyond its types. */
 function checkShape(input: RevealInput) {
   const refuse = (message: string) => {
@@ -125,17 +144,17 @@ function checkShape(input: RevealInput) {
     refuse(`field: a ${input.kind} has ${REVEAL_FIELDS[input.kind].join(", ")}`);
   }
   if ((input.kind === "run_step") !== (input.seq !== undefined)) refuse("seq: a run's step has one, nothing else does");
-  const reason = input.reason.trim();
-  if (reason.length < REVEAL_REASON_CHARS.min || MORE_THAN_A_LINE.test(reason) || ADDRESS.test(reason)) {
-    refuse("reason: one line of at least 20 characters that says the question, with no email or web address");
-  }
+  checkRevealReason(input.reason);
   if (input.purpose === "member_request" && (!input.requestId || input.runId)) {
     refuse("requestId: member_request takes the support request, and no run");
   }
   if (input.purpose === "fault" && !input.runId) refuse("runId: fault takes the run");
+  if (input.purpose === "trust_safety" && (input.requestId || input.runId)) {
+    refuse("requestId, runId: trust_safety takes neither");
+  }
 }
 
-const refused = (code: string, message: string) => new ForbiddenError(message, `reveal.${code}`);
+export const revealRefused = (code: string, message: string) => new ForbiddenError(message, `reveal.${code}`);
 
 /** One answer for a record of another workspace, a deleted one and one nobody has. */
 export const noSuchRecord = () => new NotFoundError("No such record in this workspace");
@@ -143,7 +162,7 @@ export const noSuchRecord = () => new NotFoundError("No such record in this work
 /** Who made a support request is still a member the app lets in: not gone, blocked or being deleted. */
 export async function requireRequester(db: Executor, orgId: string, userId: string) {
   if (!(await getMembership(db, userId, orgId))) {
-    throw refused("requester", "Who asked is no longer a member of this workspace");
+    throw revealRefused("requester", "Who asked is no longer a member of this workspace");
   }
 }
 
@@ -173,6 +192,8 @@ interface FaultRun {
 interface Found {
   /** It is of a direct conversation. */
   direct: boolean;
+  /** A message no agent wrote and that started no run: in a direct conversation, what people said to each other. */
+  ofPeople?: boolean;
   /**
    * It holds what a run of a confidential thread read or wrote (ADR 0190): the run's step, a task it started, a task
    * the server started again from that one.
@@ -245,6 +266,8 @@ const findMessage: Find = async (db, orgId, { id }) => {
     .select({
       channelId: messages.channelId,
       agentRunId: messages.agentRunId,
+      ofPeople: sql<boolean>`${messages.authorType} = 'person' and not exists (
+        select 1 from ${agentRuns} r where r.trigger_message_id = "messages"."id" and r.org_id = "messages"."org_id")`,
       direct: directOf('"messages"."channel_id"', `"messages"."id", ${firingOf('"messages"."agent_run_id"')}`),
       has: filled(messages.body),
     })
@@ -516,7 +539,8 @@ async function openRequest(db: Database, orgId: string, requestId: string, now: 
         gt(supportRequests.createdAt, new Date(now.getTime() - REVEAL_REQUEST_DAYS * DAY_MS)),
       ),
     );
-  if (!request) throw refused("no_request", "No support request of this workspace by this id in the last 30 days");
+  if (!request)
+    throw revealRefused("no_request", "No support request of this workspace by this id in the last 30 days");
   return request;
 }
 
@@ -574,14 +598,14 @@ async function checkFault(db: Database, orgId: string, input: RevealInput, found
   const reported = request ? age(request.createdAt) : -1;
   const inDays = run && (age(now) <= days || (reported >= 0 && reported <= days));
   if (!run || !inDays || !(run.open || run.failedStep)) {
-    throw refused("no_fault", "No run of this workspace by this id failed or got stuck in its 14 days");
+    throw revealRefused("no_fault", "No run of this workspace by this id failed or got stuck in its 14 days");
   }
   const itsOwn = await found.ofRun(run);
   // A run that went on past one failure opens that failure, never the rest of itself.
   if (!itsOwn || !(run.open || found.failure)) {
-    throw refused("not_the_fault", "This is not something the failed or stuck run is about");
+    throw revealRefused("not_the_fault", "This is not something the failed or stuck run is about");
   }
-  if (found.direct) throw refused("direct_conversation", "A direct conversation is not read to diagnose a run");
+  if (found.direct) throw revealRefused("direct_conversation", "A direct conversation is not read to diagnose a run");
   return { member: null, facts: { runId: run.id, ...(request ? { requestId: request.id } : {}) } };
 }
 
@@ -590,23 +614,38 @@ async function checkMemberRequest(db: Database, orgId: string, input: RevealInpu
   const request = await openRequest(db, orgId, input.requestId ?? "", now);
   await requireRequester(db, orgId, request.userId);
   if (!(await found.seenBy(request.userId))) {
-    throw refused("not_visible", "Who asked can't read this in the app");
+    throw revealRefused("not_visible", "Who asked can't read this in the app");
   }
   const source = listedOf(SUPPORT_SOURCES, request.source);
   return { member: request.userId, facts: { requestId: request.id, ...(source ? { source } : {}) } };
 }
 
-/** How many reads of this workspace the door gave in the last day, counted from the events they wrote. */
-async function readsToday(db: Database, orgId: string, now: Date) {
+/**
+ * `trust_safety`: no record of the workspace proves an abuse investigation, so none is asked for. Whether the operator
+ * had cause is its own service's to answer for. What no such read opens: what people said to each other in a direct
+ * conversation, and a support request's words, which open to that request alone.
+ */
+function checkSafety(input: RevealInput, found: Found) {
+  if (input.kind === "support_request") {
+    throw revealRefused("not_visible", "A support request's words open to that request alone");
+  }
+  if (found.direct && found.ofPeople) {
+    throw revealRefused("direct_conversation", "What people said to each other in a direct conversation is not read");
+  }
+  return { member: null, facts: {} };
+}
+
+/** How many reads the door gave in the last day, counted from the events they wrote: `of` a workspace, or a purpose. */
+export async function revealsToday(db: Database, now: Date, of: SQL) {
   const [row] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(operatorEvents)
     .where(
       and(
         eq(operatorEvents.type, "content.viewed"),
-        eq(operatorEvents.orgId, orgId),
         gt(operatorEvents.createdAt, new Date(now.getTime() - DAY_MS)),
         sql`${operatorEvents.data}->>'ref' like 'reveal:%'`,
+        of,
       ),
     );
   return row?.n ?? 0;
@@ -614,9 +653,9 @@ async function readsToday(db: Database, orgId: string, now: Date) {
 
 /**
  * Reads one field of one record of a workspace for its operator. In order: the request's shape; the workspace's
- * day; the record, in this workspace and not deleted (one answer for another workspace's and for nobody's); the
- * purpose's proof; whether a confidential thread keeps it (ADR 0190); the record of the read, committed; and only
- * then the text, masked whole and cut.
+ * day, and for a safety review the instance's; the record, in this workspace and not deleted (one answer for another
+ * workspace's and for nobody's); the purpose's check; whether a confidential thread keeps it (ADR 0190); the record
+ * of the read, committed; and only then the text, masked whole and cut.
  */
 export async function operatorReveal(
   db: Database,
@@ -626,10 +665,18 @@ export async function operatorReveal(
 ): Promise<Revealed> {
   checkShape(input);
   // ponytail: two reads at the same instant can pass one over the day's count; a lock on the workspace if it matters.
-  if ((await readsToday(db, orgId, now)) >= REVEAL_PER_WORKSPACE_DAY) {
+  if ((await revealsToday(db, now, eq(operatorEvents.orgId, orgId))) >= REVEAL_PER_WORKSPACE_DAY) {
     throw new TooManyError(
       `This workspace's ${REVEAL_PER_WORKSPACE_DAY} reads of the last 24 hours are used`,
       "reveal.limit_workspace",
+    );
+  }
+  // ponytail: two such reads at one instant can pass one over the day's count; a lock on the instance if it matters.
+  const untold = sql`${operatorEvents.data}->>'purpose' = 'trust_safety'`;
+  if (input.purpose === "trust_safety" && (await revealsToday(db, now, untold)) >= REVEAL_UNTOLD_PER_DAY) {
+    throw new TooManyError(
+      `This server's ${REVEAL_UNTOLD_PER_DAY} reads for a safety review in the last 24 hours are used: each frees 24 hours after it was made`,
+      "reveal.limit_untold",
     );
   }
   const [org] = await db.select({ id: organizations.id }).from(organizations).where(eq(organizations.id, orgId));
@@ -643,10 +690,12 @@ export async function operatorReveal(
   const { member, facts } =
     input.purpose === "fault"
       ? await checkFault(db, orgId, input, found, now)
-      : await checkMemberRequest(db, orgId, input, found, now);
+      : input.purpose === "member_request"
+        ? await checkMemberRequest(db, orgId, input, found, now)
+        : checkSafety(input, found);
   // Told only to a caller whose proof holds, as a direct conversation is.
   if (found.confidential) {
-    throw refused("confidential", "What a run of a confidential thread holds is read only in that thread");
+    throw revealRefused("confidential", "What a run of a confidential thread holds is read only in that thread");
   }
 
   const { kind, id, seq, field, offset, limit, purpose, assistedByAi } = input;
@@ -661,6 +710,8 @@ export async function operatorReveal(
       assistedByAi,
       ...facts,
     });
+    // A safety review tells the workspace nothing at the time: its operator discloses it afterwards.
+    if (purpose === "trust_safety") return;
     await recordAudit(tx, {
       orgId,
       actor: { type: "system", id: null },
@@ -688,4 +739,57 @@ export async function operatorReveal(
   // A window of one that would stop before a pair gives the pair: the next read starts past what this one gave.
   const text = cutText(rest, limit) || rest.slice(0, 2);
   return { kind, id, field, text, chars: whole.length, offset, more: offset + text.length < whole.length };
+}
+
+export interface DisclosureInput {
+  from: Date;
+  to: Date;
+  /** How many items were read: a whole number from 1 to `DISCLOSURE_MAX_COUNT`, which the route's schema holds it to. */
+  count: number;
+}
+
+/**
+ * An operator that read content to investigate suspected abuse tells the workspace afterwards that it did: one entry
+ * in the workspace's audit log, with the period and how many items, and nothing else. The count is the operator's
+ * word: nothing here checks it against what was read. The same period again answers the entry first written and
+ * writes nothing, so a call that timed out can be sent again. Null: no such workspace.
+ */
+export async function operatorDisclose(db: Database, orgId: string, input: DisclosureInput, now = new Date()) {
+  const [from, to] = [input.from.getTime(), input.to.getTime()];
+  // A minute's grace: the caller's clock may run ahead of this server's.
+  if (!(from < to) || to > now.getTime() + 60_000 || to - from > DISCLOSURE_MAX_DAYS * DAY_MS) {
+    throw new ValidationError(
+      `from, to: a period that has ended, from before to, of at most ${DISCLOSURE_MAX_DAYS} days`,
+    );
+  }
+  if (!(await orgExists(db, orgId))) return null;
+  const period = { from: input.from.toISOString(), to: input.to.toISOString() };
+  return db.transaction(async (tx) => {
+    // One at a time per workspace: a call sent again while the first is still being written finds its entry.
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`content-review:${orgId}`}))`);
+    const [first] = await tx
+      .select({ count: sql<number>`(${auditLog.details}->>'count')::int` })
+      .from(auditLog)
+      .where(
+        and(
+          eq(auditLog.orgId, orgId),
+          eq(auditLog.actorType, "system"),
+          isNull(auditLog.actorId),
+          eq(auditLog.action, CONTENT_REVIEW_DISCLOSED),
+          sql`${auditLog.details}->>'from' = ${period.from}`,
+          sql`${auditLog.details}->>'to' = ${period.to}`,
+        ),
+      )
+      .limit(1);
+    if (first) return { ...period, count: first.count };
+    await recordAudit(tx, {
+      orgId,
+      actor: { type: "system", id: null },
+      action: CONTENT_REVIEW_DISCLOSED,
+      target: { type: "organization", id: null },
+      // Who "the operator" is to the workspace's people: the apps name agentes.chat's own support there.
+      details: { ...period, count: input.count, ...cloudNotice() },
+    });
+    return { ...period, count: input.count };
+  });
 }

@@ -1,11 +1,13 @@
 import { AGENT_FOLDERS_PROTOCOL, type PubSub, type SandboxProvider } from "@agenteschat/adapters";
 import { type Database, eq, schema } from "@agenteschat/db";
 import { getAgent, getAgentCached } from "./agents";
+import { managesAgent, ownsAgent } from "./audience";
 import { recordAudit } from "./audit";
 import type { WorkspaceComputer } from "./context";
 import { checkDeviceUse, noteDeviceInUse, pickDevice, seenAgo, waitHint, workspaceDevices } from "./device-resolve";
 import { ForbiddenError, NotFoundError } from "./errors";
 import { cutText, cutTextEnd } from "./format";
+import { codeCommitAuthor } from "./git/person-account";
 import { computerBackSoon, type MachineCaller } from "./machine-hub";
 import { createMachineSandboxProvider } from "./machine-provider";
 import { computerPreparing } from "./machine-provisioning";
@@ -17,11 +19,12 @@ import {
   REMOVED_COMPUTER_MESSAGE,
 } from "./machines";
 import { missionOfRun } from "./mission-context";
-import { can, requirePermission } from "./organizations";
+import { requirePermission } from "./organizations";
 import { isRightHand } from "./right-hand";
 import { machineScope, NO_HOME_MESSAGE, type ScopeContext, toolMachineId } from "./right-hand-seats";
 import { runnerUpdateWay } from "./runner-update";
 import { SANDBOX_SCOPE } from "./sandbox-scope";
+import { grantedScopeKeys, isAllowed, toolAccess } from "./tools/scopes";
 import type { ToolContext } from "./tools/types";
 
 const { orgSandboxSettings } = schema;
@@ -107,6 +110,26 @@ export async function getSandboxSettings(db: Database, orgId: string): Promise<S
   return { enabled: row.enabled, execTimeoutSeconds: row.execTimeoutSeconds, requireApproval: row.requireApproval };
 }
 
+/** `run_code` as the gateway checks it: what running commands on a computer takes. */
+export const RUN_CODE_TOOL = { name: "run_code", scope: SANDBOX_SCOPE } as const;
+
+/**
+ * Whether the agent may run commands on a computer: its grants allow `run_code` (`toolAccess`: a denial wins, then
+ * the tool, then `sandbox:run`) and the workspace's code environment is on. The agent's desktop needs it, and so does
+ * an agent that thinks through the API to work in a code session. `refused` says which of the two is missing.
+ */
+export async function codeRunning(
+  db: Database,
+  orgId: string,
+  agentId: string,
+  granted?: Set<string>,
+): Promise<{ refused: "grant" | "off" } | { refused: null; approvals: boolean }> {
+  const keys = granted ?? (await grantedScopeKeys(db, orgId, agentId));
+  if (!isAllowed(toolAccess(keys, RUN_CODE_TOOL))) return { refused: "grant" };
+  const settings = await getSandboxSettings(db, orgId);
+  return settings.enabled ? { refused: null, approvals: settings.requireApproval } : { refused: "off" };
+}
+
 /**
  * Org settings (admins, `configure`). The default timeout is clamped between 5 s and
  * `SANDBOX_LIMITS.maxTimeoutSeconds`.
@@ -175,7 +198,10 @@ export async function withSandbox<T>(
       options,
     );
   }
-  const machineId = await toolMachineId(deps.db, agent);
+  // In a code session (ADR 0215) the work runs on the session's computer, where its worktree is; with no worktree
+  // there for its own agent, nothing runs in the agent's own folder instead.
+  if (ctx.codeSession?.unavailable) throw new SandboxUnavailableError(ctx.codeSession.unavailable);
+  const machineId = ctx.codeSession?.place?.machineId ?? (await toolMachineId(deps.db, agent));
   if (agent && machineId) {
     return withMachine(deps, ctx, { machineId, handle: agent.handle, name: agent.name }, fn, options);
   }
@@ -291,7 +317,11 @@ export async function withConnectedMachine<T>(
     );
   }
   // The right hand's requests go to the seat its run works in (a person's own, the shared one), or nowhere (ADR 0175).
-  const provider = createMachineSandboxProvider(hub, await machineScope(hub, ctx, machineId), device);
+  const scope = await machineScope(hub, ctx, machineId);
+  // In a code session the commands' commits are authored as the person who asked, by their own GitHub account
+  // (ADR 0215 §13).
+  const author = await codeCommitAuthor(ctx.db, ctx.orgId, ctx.runId).catch(() => null);
+  const provider = createMachineSandboxProvider(hub, author ? { ...scope, author } : scope, device);
   return fn({ id: machineId, provider, ref: `machine:${machineId}`, machineId });
 }
 
@@ -351,12 +381,12 @@ export interface AgentComputerView {
   target: ComputerTarget;
 }
 
-/** The agent's owner or an admin (`manage_agents`). */
+/** The agent's owner or who manages it (`managesAgent`, ADR 0085 addendum of 2026-11-17). */
 export async function requireComputerManager(db: Database, actorId: string, orgId: string, agentId: string) {
   const membership = await requirePermission(db, actorId, orgId, "read");
   const agent = await getAgent(db, orgId, agentId);
   if (!agent || agent.archivedAt) throw new NotFoundError("Agent not found");
-  if (!can(membership, "manage_agents") && agent.ownerUserId !== actorId) {
+  if (!managesAgent(agent, actorId, membership) && !ownsAgent(agent, actorId, membership.roleIds)) {
     throw new ForbiddenError("Only an admin or the agent's owner can manage its computer");
   }
 }

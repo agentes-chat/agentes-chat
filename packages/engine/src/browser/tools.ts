@@ -53,8 +53,10 @@ import {
   resolveTarget,
   runPlan,
   type ScreenImage,
+  type ScreenJudgmentShadow,
   type ScreenStep,
   type ScreenVerb,
+  screenJudgmentsData,
   screenRef,
   screenStepOf,
   type TargetCache,
@@ -135,7 +137,7 @@ export {
 import { publishChannelEvent } from "../events";
 import { cutText } from "../format";
 import { outboundRefusal } from "../outbound";
-import { releaseProfileTurns } from "../runs";
+import { releaseProfileTurns, replyThreadOf } from "../runs";
 import { neutralizeUntrusted } from "../untrusted";
 
 const { agents, agentRuns, secretRequests, users } = schema;
@@ -582,7 +584,7 @@ function tabsLine(t: BrowserTabs | undefined): string {
   for (const host of t.closed ?? []) counts.set(host, (counts.get(host) ?? 0) + 1);
   const closed = [...counts].map(([host, n]) => (n > 1 ? `${host} ×${n}` : host)).join(", ");
   return `\nTabs open: ${t.count}${list.length > 0 ? ` (${list.join("; ")})` : ""}.${
-    closed ? ` Closed to keep your tabs tidy: ${closed}, so the tab numbers from list changed.` : ""
+    closed ? ` Closed to keep your tabs tidy: ${closed}.` : ""
   }`;
 }
 
@@ -766,7 +768,7 @@ export function createBrowserToolSource(deps: BrowserToolDeps): ToolSource & { r
     publishChannelEvent(deps.pubsub, {
       type: "agent.browser.waiting",
       channelId: ctx.channelId,
-      threadId: ctx.threadRootId === ctx.triggerMessageId ? null : ctx.threadRootId,
+      threadId: replyThreadOf(ctx),
       runId: ctx.runId,
       agentId: ctx.agentId,
       wait,
@@ -1207,6 +1209,7 @@ export function createBrowserToolSource(deps: BrowserToolDeps): ToolSource & { r
     // A take over that begins and ends within one step leaves no open handoff to see: it is checked too.
     const started = new Date();
     let handedBack = false;
+    const shadow: ScreenJudgmentShadow[] = [];
     const report = await runPlan(
       {
         judge,
@@ -1239,6 +1242,7 @@ export function createBrowserToolSource(deps: BrowserToolDeps): ToolSource & { r
         before: seen.within(key, KNOWN_LOOK_MS),
         vision: deps.vision?.() === true && linked.status.protocol >= BROWSER_FAST_PROTOCOL,
         now,
+        shadow,
       },
       steps,
     );
@@ -1263,6 +1267,7 @@ export function createBrowserToolSource(deps: BrowserToolDeps): ToolSource & { r
       ...(options.trail ? { browserTrail: trailOf(report) } : {}),
       ...profileData(linked.profile),
       timing,
+      ...screenJudgmentsData(shadow),
     };
     const waiting = paused as ToolOutput | null;
     if (waiting) {
@@ -1573,10 +1578,10 @@ export function createBrowserToolSource(deps: BrowserToolDeps): ToolSource & { r
         properties: {
           action: { type: "string", enum: ["list", "open", "switch", "close"] },
           url: { type: "string", description: "For `open`: the address.", maxLength: 2048 },
-          index: {
-            type: "integer",
-            description: "For `switch` and `close`: the tab's number from `list`.",
-            minimum: 0,
+          tab: {
+            type: "string",
+            description: "For `switch` and `close`: the tab's id from `list` (`t2`), or its label.",
+            maxLength: 64,
           },
         },
         required: ["action"],
@@ -1584,7 +1589,12 @@ export function createBrowserToolSource(deps: BrowserToolDeps): ToolSource & { r
       },
       async (input, ctx) => {
         const action = str(input.action);
-        const index = typeof input.index === "number" ? String(Math.max(0, Math.round(input.index))) : null;
+        // `agent-browser` takes a tab by id (`t2`), label or target id, never by position: it refuses a bare number.
+        // Its subcommand words are no tab either: a switch to `close` would close the tab the agent is on.
+        const tab = str(input.tab).trim() || null;
+        if (tab !== null && (!/^[A-Za-z0-9][\w-]*$/.test(tab) || /^(\d+|new|list|close)$/i.test(tab))) {
+          return { content: "Give the tab's id from `list`, like `t2`, not its position.", isError: true };
+        }
         let args: string[];
         if (action === "list") args = [];
         else if (action === "open") {
@@ -1596,10 +1606,9 @@ export function createBrowserToolSource(deps: BrowserToolDeps): ToolSource & { r
           if (refused) return refused;
           args = ["new", ...(url ? [url] : [])];
         } else if (action === "switch") {
-          if (index === null)
-            return Promise.resolve({ content: "Say which tab (`index` from `list`).", isError: true });
-          args = [index];
-        } else args = ["close", ...(index !== null ? [index] : [])];
+          if (tab === null) return { content: "Say which tab (`tab`: its id from `list`).", isError: true };
+          args = [tab];
+        } else args = ["close", ...(tab !== null ? [tab] : [])];
         return run(ctx, { command: "tab", args, timeoutSeconds: COMMAND_SECONDS }, (d) =>
           action === "list"
             ? dataText(d)
@@ -1645,6 +1654,7 @@ export function createBrowserToolSource(deps: BrowserToolDeps): ToolSource & { r
         const sized = emulatedLine(linked.emulated()).slice(1);
         const head = `${url ? `Page: ${neutralizeUntrusted(url)}\n` : ""}${sized ? `${sized}\n` : ""}`;
         if (question && page && deps.judge) {
+          const shadow: ScreenJudgmentShadow[] = [];
           const found = await findInPage({
             judge,
             orgId: ctx.orgId,
@@ -1652,6 +1662,7 @@ export function createBrowserToolSource(deps: BrowserToolDeps): ToolSource & { r
             runId: ctx.runId,
             question,
             observation: page,
+            shadow,
           }).catch(() => null);
           const part = found?.searched
             ? ` (searched ${found.searched.lines} of the page's ${found.searched.of} lines)`
@@ -1660,13 +1671,13 @@ export function createBrowserToolSource(deps: BrowserToolDeps): ToolSource & { r
             const partly = found.answered === "partly" ? " (it may only partly answer it)" : "";
             return {
               content: `${head}Where the page answers "${question}"${partly}${part}:\n${wrapPage(found.text)}`,
-              data: { ...(url ? { url } : {}), ...profileData(linked.profile) },
+              data: { ...(url ? { url } : {}), ...profileData(linked.profile), ...screenJudgmentsData(shadow) },
             };
           }
           if (found) {
             return {
               content: `${head}Nothing on the page answers "${question}"${part}. Read the whole page (no \`find\`) to look yourself, or go where it would be.`,
-              data: { ...(url ? { url } : {}), ...profileData(linked.profile) },
+              data: { ...(url ? { url } : {}), ...profileData(linked.profile), ...screenJudgmentsData(shadow) },
             };
           }
         }

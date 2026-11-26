@@ -314,6 +314,78 @@ describe("a message's attachments", () => {
     }
   });
 
+  test("an audio file plays right in the message, in the voice-message player, its name under it", async () => {
+    const box = (el: HTMLElement | undefined) => ({
+      audio: el?.classList.contains("artifact-audio") ?? false,
+      name: el?.querySelector(".artifact-audio__title")?.textContent ?? null,
+    });
+    const [loading] = await withFiles([["entrevista.m4a", "audio/mp4"]], true);
+    expect(box(loading)).toEqual({ audio: true, name: "entrevista.m4a" });
+    expect(loading?.getAttribute("aria-busy")).toBe("true");
+    cleanup();
+    const [loaded] = await withFiles([["entrevista.m4a", "audio/mp4"]]);
+    expect(box(loaded)).toEqual({ audio: true, name: "entrevista.m4a" });
+    expect(loaded?.querySelector(".ac-voice [role=slider]")).not.toBeNull();
+    expect(loaded?.querySelector(".ac-voice__speed")).not.toBeNull();
+    expect(loaded?.querySelector("audio")).toBeNull();
+    expect(loaded?.querySelector("button[aria-label='Baixar']")).not.toBeNull();
+  });
+
+  test("audio files with no wave yet are measured one at a time, decoded at a low rate, and their wave kept", async () => {
+    const rates: number[] = [];
+    let busy = 0;
+    let most = 0;
+    const g = globalThis as { OfflineAudioContext?: unknown };
+    const native = g.OfflineAudioContext;
+    g.OfflineAudioContext = class {
+      constructor(_channels: number, _length: number, rate: number) {
+        rates.push(rate);
+      }
+      async decodeAudioData() {
+        most = Math.max(most, ++busy);
+        await new Promise((r) => setTimeout(r, 5));
+        busy--;
+        return { duration: 2, getChannelData: () => new Float32Array([0, 0.5, 1, 0.5]) };
+      }
+    };
+    try {
+      const state = seedState();
+      const api = createFakeApi(state);
+      const kept: string[] = [];
+      const setWave = api.artifacts.setWave;
+      api.artifacts.setWave = (orgId, id, version, wave) => {
+        kept.push(id);
+        return setWave(orgId, id, version, wave);
+      };
+      const refs = [];
+      for (const name of ["um.mp3", "dois.mp3", "tres.mp3"]) {
+        const file = await api.artifacts.upload(
+          ORG_ID,
+          new File([new Uint8Array([1, 2, 3])], name, { type: "audio/mpeg" }),
+        );
+        refs.push({ id: file.id, version: 1, title: name });
+      }
+      const base = state.messages[0] as (typeof state.messages)[number];
+      state.messages.push({
+        ...base,
+        id: "m-sounds",
+        threadId: null,
+        body: "Os áudios:",
+        mentionedAgentIds: [],
+        meta: { artifacts: refs },
+        createdAt: new Date().toISOString(),
+      });
+      await renderApp(`/org/${ORG_ID}/c/${ENG_ID}`, { api });
+      await settle(10);
+      await act(() => new Promise((r) => setTimeout(r, 60)));
+      expect(kept.sort()).toEqual(refs.map((r) => r.id).sort());
+      expect(most).toBe(1);
+      expect(rates.every((r) => r <= 8000)).toBe(true);
+    } finally {
+      g.OfflineAudioContext = native;
+    }
+  });
+
   test("and keeps that box once they do, and once the picture is in: no tile changes shape", async () => {
     const before = (await withFiles(FILES, true)).map(shape);
     cleanup();
@@ -322,7 +394,8 @@ describe("a message's attachments", () => {
     expect(document.querySelector(".artifact-tile--loading")).toBeNull();
     const picture = tiles[1]?.querySelector(".artifact-tile__picture") as HTMLElement;
     const img = picture.querySelector("img") as HTMLImageElement;
-    expect(img.getAttribute("src")).toStartWith("blob:");
+    // The server's small copy, never the whole file.
+    expect(img.getAttribute("src")).toEndWith("/thumb?version=1&w=480");
     // No attribute, class or size of its own marks the picture as loading or loaded: the tile's box is its box.
     const marks = () => [picture.className, picture.getAttribute("style"), img.getAttribute("style"), img.className];
     const loading = marks();

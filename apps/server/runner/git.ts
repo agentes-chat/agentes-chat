@@ -10,6 +10,7 @@ import {
   type GitSyncRepo,
   type GitSyncRequest,
   isGitRepoName,
+  isGitRepoPath,
   type MachineReplies,
 } from "@agenteschat/adapters/machine-protocol";
 import { RunnerError } from "./errors";
@@ -69,6 +70,8 @@ export interface GitContext {
   folder: string;
   /** `<runner home>/git`: where the agents' proxy credentials are kept. */
   gitDir: string;
+  /** The address this runner reaches its server at: the git proxy is reached the same way (`proxyBaseAt`). */
+  server?: string;
   agent: AgentScope;
   signal: AbortSignal;
   /** git's progress, when the request asked for it. */
@@ -135,8 +138,25 @@ function remoteFor(proxy: { base: string }, repo: string, tokenFile: string, git
   };
 }
 
+/**
+ * The proxy's address as this computer reaches it. The server names it by its public address, which the computer it
+ * runs on may not resolve (a server on a private network, this server's own computer on `127.0.0.1`): the proxy is
+ * the server, so it is reached at the address this runner already reaches the server at. The path stays the server's.
+ */
+export function proxyBaseAt(base: string, server: string | undefined) {
+  if (!server) return base;
+  try {
+    const at = new URL(server);
+    const given = new URL(base);
+    if (!/^https?:$/.test(at.protocol) || at.origin === given.origin) return base;
+    return `${at.origin}${at.pathname.replace(/\/+$/, "")}${given.pathname}`;
+  } catch {
+    return base;
+  }
+}
+
 /** The proxy URL must be ours: http(s), a `/api/git/` path, no credentials in it. */
-function checkProxy(proxy: GitSyncRequest["proxy"] | undefined) {
+function checkProxy(proxy: GitSyncRequest["proxy"] | undefined, server?: string) {
   if (!proxy || typeof proxy.base !== "string" || typeof proxy.token !== "string") {
     throw new RunnerError("bad_request", "proxy is required");
   }
@@ -150,7 +170,8 @@ function checkProxy(proxy: GitSyncRequest["proxy"] | undefined) {
     throw new RunnerError("bad_request", "proxy.base is not a git proxy URL");
   }
   if (!TOKEN.test(proxy.token)) throw new RunnerError("bad_request", "proxy.token is not a proxy credential");
-  return { base: proxy.base.endsWith("/") ? proxy.base : `${proxy.base}/`, token: proxy.token };
+  const base = proxyBaseAt(proxy.base, server);
+  return { base: base.endsWith("/") ? base : `${base}/`, token: proxy.token };
 }
 
 /**
@@ -670,7 +691,7 @@ async function awaitClone(
 
 /** `git.sync`: clones or updates the request's repositories (one at a time, within the deadline). */
 export async function gitSync(ctx: GitContext, req: GitSyncRequest): Promise<MachineReplies["git.sync"]> {
-  const proxy = checkProxy(req.proxy);
+  const proxy = checkProxy(req.proxy, ctx.server);
   const agentId = String(ctx.agent.id);
   if (!AGENT_ID.test(agentId)) throw new RunnerError("bad_request", "agent.id is invalid");
   // Before anything else in the request can refuse it: the agent's own `git fetch` and `git push` through the
@@ -684,7 +705,7 @@ export async function gitSync(ctx: GitContext, req: GitSyncRequest): Promise<Mac
   if (!Array.isArray(req.repos)) throw new RunnerError("bad_request", "repos must be a list");
   const wanted: { repo: string; dir: string; clone: boolean; github?: string }[] = [];
   for (const r of req.repos.slice(0, GIT_SYNC_LIMITS.repos)) {
-    if (!isGitRepoName(r?.repo)) throw new RunnerError("bad_request", "repo must be owner/name");
+    if (!isGitRepoPath(r?.repo)) throw new RunnerError("bad_request", "repo must be a repository's path");
     if (r.github !== undefined && (typeof r.github !== "string" || !GITHUB_APP_TOKEN.test(r.github))) {
       throw new RunnerError("bad_request", "github is not a GitHub App token");
     }

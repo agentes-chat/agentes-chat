@@ -11,7 +11,8 @@ import {
   useUnarchiveAgent,
   useWorkingRuns,
 } from "@agenteschat/client";
-import { workLineText } from "@agenteschat/client/lib/agent-work";
+import { seesFactsOnly } from "@agenteschat/client/lib/agent-facts";
+import { type WorkLine, workLine, workLineText } from "@agenteschat/client/lib/agent-work";
 import { listsAgent } from "@agenteschat/client/lib/audience";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
@@ -21,8 +22,8 @@ import { aiStateOf } from "@agenteschat/client/lib/no-ai";
 import { can } from "@agenteschat/client/lib/permissions";
 import { isOutOfOffice } from "@agenteschat/client/lib/presence";
 import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
-import { useIsFocused } from "expo-router";
-import { Fragment, memo, useEffect, useMemo, useState } from "react";
+import { Stack, useIsFocused } from "expo-router";
+import { Fragment, memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 import Animated, {
@@ -47,15 +48,19 @@ import {
   PixelOrbit,
   SectionHeader,
   SkeletonList,
+  SkeletonOver,
   SwipeRow,
   Text,
+  useFirstLoad,
   useReducedMotion,
   useToast,
+  useWide,
   weights,
 } from "@/ui";
 import { router } from "@/ui/navigation";
+import { withAlpha } from "@/ui/palette";
 import { usePlanHold } from "../ai/parts";
-import { CollapsibleSection, useCollapsedSections } from "../chats/HomeSection";
+import { CollapsibleSection, LandRow, useCollapsedSections } from "../chats/HomeSection";
 import { usePins } from "../chats/pins";
 import { mayCreate } from "../new/logic";
 import { useMachineOutages } from "../outages/queries";
@@ -67,17 +72,24 @@ import { agentLook } from "../shared/logic";
 import { successHaptic, Tile } from "../shared/parts";
 import { useWaitingApprovals, useWorkingNow } from "../shared/queries";
 import { useTabHeader } from "../shared/tabHeader";
-import { useAgentWorkLine, usePresenceOf } from "../status/hooks";
+import { channelNameIn, useChannelNames, usePresenceOf } from "../status/hooks";
 import { useTasksToday } from "../task-manager/hooks";
 import { useSectorMenu } from "../team/SectorScreen";
 import { TeamEntry } from "../team/TeamEntry";
+import { AgentsHandoff, AgentsSplit } from "./AgentsSplit";
 import { ARRIVAL_LOOK_MS, clearArrived, useArrived } from "./arrival";
 import { openAgentDelete } from "./DeleteAgentScreen";
 import { agoOf, freeSections, plainRole, type TeamLine, teamLines } from "./logic";
+import { agentSplit, useAgentOpener } from "./split";
 import { agoShort, workTitle } from "./work";
 
 /** Rows whose agent moves (a long team stays light). */
 const LIVE_ROWS = 8;
+/** The chosen agent's row beside the list (ADR 0212): the ink this faint over the page, as Conversas' open row. */
+const CHOSEN_TINT = 0.08;
+/** Said either way: a screen's options merge, so the bar the split hid stays hidden until it is shown again. */
+const SPLIT_OPTIONS = { headerShown: false };
+const LIST_OPTIONS = { headerShown: true };
 /** While Agentes is on screen, how often it asks whether the task manager is there (the manager itself: seconds). */
 const TASKS_POLL_MS = 15_000;
 /**
@@ -85,6 +97,8 @@ const TASKS_POLL_MS = 15_000;
  * something seen many times a day (animate-expo's gate).
  */
 const STATE_IN = FadeIn.duration(140);
+/** On the first load the two fixed rows on top arrive first, then the agents in the order they show. */
+const LEAD_ROWS = 2;
 /** Back from a routine: the body comes back into its sky's frame. */
 const FACE_IN = FadeIn.duration(280).easing(Easing.bezier(0.23, 1, 0.32, 1));
 
@@ -95,10 +109,24 @@ const FACE_IN = FadeIn.duration(280).easing(Easing.bezier(0.23, 1, 0.32, 1));
  * in plain words), split by the workspace's departments when it has some. Each row says its state as text in the
  * state's color (amber only for what waits on you; no badges, no dots), one fact per line, and the face is the state
  * too: running at work, asleep without an AI or while its computer is away. Tapping an agent opens its profile; the
- * bar's "+" creates one; an archived agent restores with a swipe.
+ * bar's "+" creates one; an archived agent restores with a swipe. On a large screen (ADR 0212: the iPhone Duo's inner
+ * display) the profile opens beside the list instead (`AgentsSplit`), each pane with its own bar: the tab's bar would
+ * stand over both. A compact window shows the list alone, as before.
  */
 export function AgentsScreen() {
-  const { t } = useTranslation();
+  const wide = useWide();
+  return (
+    <>
+      <Stack.Screen options={wide ? SPLIT_OPTIONS : LIST_OPTIONS} />
+      <AgentsHandoff wide={wide} />
+      {wide ? <AgentsSplit list={<AgentsList />} /> : <AgentsList />}
+    </>
+  );
+}
+
+/** Agentes' list (see `AgentsScreen`). */
+function AgentsList() {
+  const { t, i18n } = useTranslation();
   const dir = useDirectory();
   const header = useTabHeader();
   const orgId = useOrgId();
@@ -126,7 +154,8 @@ export function AgentsScreen() {
       ),
     [statuses],
   );
-  const agents = useMemo(() => dir.agents.filter((a) => listsAgent(org, a)), [dir.agents, org]);
+  // A teammate's private agent seen by its facts alone is on the team too, locked.
+  const agents = useMemo(() => dir.agents.filter((a) => listsAgent(org, a) || seesFactsOnly(a)), [dir.agents, org]);
   // The same lines while nothing they come from changes: the rows below are memoized on what each line holds.
   const { waiting, working, free } = useMemo(
     () => teamLines(agents, work, dms.data ?? [], asking, offline, atWork),
@@ -154,10 +183,56 @@ export function AgentsScreen() {
     ],
     [waiting, working, free, groups.data, pins.pins.agents],
   );
+  // Beside the list (ADR 0212) the first agent's page shows while none is chosen; before the frame is shown, so the
+  // pane doesn't say "nothing open" first.
+  const opener = useAgentOpener();
+  const firstId = order[0] ?? null;
+  useLayoutEffect(() => {
+    if (opener) agentSplit.offer(opener.orgId, firstId);
+  }, [opener, firstId]);
   const greeting = useGreeting(order);
   const gazeOf = (id: string): Gaze | undefined => {
     if (!greeting || id === greeting) return undefined;
     return order.indexOf(id) < order.indexOf(greeting) ? "down" : "up";
+  };
+  // Each agent's presence, AI and work for me, read once here for every row and handed down as plain values: a row
+  // draws again only when its own change.
+  const presence = usePresenceOf();
+  const ai = useAiStatus(orgId).data;
+  // On a billing hold an AI comes after the plan: no "Sem IA" on a team just made.
+  const held = usePlanHold(orgId, org) !== null;
+  const channelNames = useChannelNames();
+  const keptWork = useRef(new Map<string, WorkLine>());
+  const rowOf = (l: TeamLine): RowProps => {
+    const id = l.agent.id;
+    const shown = presence.agent(id);
+    // Its work for me, workspace-wide (ADR 0084 addendum): whom it helps or where, in the web lists' words; the line
+    // of before while its words stay, so the row isn't drawn again for the clock alone.
+    const line = workLine(
+      t,
+      i18n.language,
+      shown?.work ?? null,
+      { agentName: (x) => dir.agentById.get(x)?.name, channelName: (x) => channelNameIn(channelNames, x) },
+      now,
+    );
+    const before = keptWork.current.get(id);
+    const kept = line && before && sameWorkLine(before, line) ? before : line;
+    if (kept) keptWork.current.set(id, kept);
+    else keptWork.current.delete(id);
+    const worksForMe = shown?.work?.state === "working" && !shown.work.routine;
+    const routine = onRoutine.get(id);
+    // Only a row that says how long (it asks, works or is out on a routine) follows the clock; the rest stay drawn.
+    const ticks = l.approval !== null || l.work !== null || worksForMe || routine !== undefined;
+    return {
+      ...lineProps(l),
+      atWork: worksForMe,
+      aiMissing: !held && aiStateOf(ai, id) === "no_ai",
+      outOfOffice: isOutOfOffice(shown?.status?.status),
+      statusText: shown?.line?.text ?? null,
+      workLine: kept,
+      routine,
+      now: ticks ? now : 0,
+    };
   };
   const pull = usePullRefresh(() =>
     Promise.allSettled([
@@ -170,9 +245,11 @@ export function AgentsScreen() {
     ]),
   );
   const total = agents.length;
-  // Archived agents have no profile: admins bring them back, or delete them for good (ADR 0082), from here.
-  const admin = can(org, "manage_agents");
-  const archived = (useFormerAgents(orgId).data ?? []).filter((a) => admin && !a.deleted);
+  // The team's first load: its rows arrive over the stand-ins (a refetch plays nothing).
+  const load = useFirstLoad(dir.loading);
+  // Archived agents have no profile: who manages each one brings it back, or deletes it for good (ADR 0082), from here;
+  // the server's `canManage` on it (ADR 0085 addendum of 2026-11-17), so someone's private agent stays out of reach.
+  const archived = (useFormerAgents(orgId).data ?? []).filter((a) => a.canManage === true && !a.deleted);
   const restore = useUnarchiveAgent(orgId);
   const toast = useToast();
   const c = useColors();
@@ -208,10 +285,14 @@ export function AgentsScreen() {
     : header.actions;
   return (
     <LargeTitleScreen title={t("mobile.agents.title")} left={header.left} actions={actions} pull={pull}>
-      {/* The rows' shape while the team loads; a team that didn't load is not an empty one. */}
-      {dir.loading ? (
-        <SkeletonList rows={4} />
-      ) : directory.isError && !directory.data ? (
+      {/* The rows' shape while the team loads, fading away over the rows as they come in one after the other; a team
+          that didn't load is not an empty one. */}
+      {load.skeleton ? (
+        <SkeletonOver leaving={load.landing}>
+          <SkeletonList rows={4} />
+        </SkeletonOver>
+      ) : null}
+      {dir.loading ? null : directory.isError && !directory.data ? (
         <LoadFailed onRetry={() => void directory.refetch()} />
       ) : dir.agents.length === 0 ? (
         <FirstUse
@@ -224,25 +305,25 @@ export function AgentsScreen() {
         <FirstUse place="agentsForYou" acts={false} />
       ) : null}
       {showsManager ? (
-        <ManagerRow working={working.length} waiting={waiting.length} onPress={() => router.push("/task-manager")} />
+        <LandRow land={load.landing}>
+          <ManagerRow working={working.length} waiting={waiting.length} onPress={() => router.push("/task-manager")} />
+        </LandRow>
       ) : null}
       {/* Equipe's org chart and channels (ADR 0148). A personal workspace (ADR 0159) keeps it as the last row of You ›
           Work: one person's agents rarely need an org chart in sight. */}
-      {total > 0 && !isPersonal(org) ? <TeamEntry divider={showsManager} /> : null}
+      {total > 0 && !isPersonal(org) ? (
+        <LandRow land={load.landing} index={1}>
+          <TeamEntry divider={showsManager} />
+        </LandRow>
+      ) : null}
       <LayoutAnimationConfig skipEntering>
         {waiting.length > 0 ? (
           <>
             <SectionHeader title={t("mobile.intentAgents.waitingSection")} count={waiting.length} />
             {waiting.map((l, i) => (
-              <AgentRow
-                key={l.agent.id}
-                {...lineProps(l)}
-                now={now}
-                divider={i > 0}
-                live={i < LIVE_ROWS}
-                gaze={gazeOf(l.agent.id)}
-                routine={onRoutine.get(l.agent.id)}
-              />
+              <LandRow key={l.agent.id} land={load.landing} index={LEAD_ROWS + i}>
+                <AgentRow {...rowOf(l)} divider={i > 0} live={i < LIVE_ROWS} gaze={gazeOf(l.agent.id)} />
+              </LandRow>
             ))}
           </>
         ) : null}
@@ -250,15 +331,14 @@ export function AgentsScreen() {
           <>
             <SectionHeader title={t("mobile.agents.workingSection")} count={working.length} />
             {working.map((l, i) => (
-              <AgentRow
-                key={l.agent.id}
-                {...lineProps(l)}
-                now={now}
-                divider={i > 0}
-                live={waiting.length + i < LIVE_ROWS}
-                gaze={gazeOf(l.agent.id)}
-                routine={onRoutine.get(l.agent.id)}
-              />
+              <LandRow key={l.agent.id} land={load.landing} index={LEAD_ROWS + waiting.length + i}>
+                <AgentRow
+                  {...rowOf(l)}
+                  divider={i > 0}
+                  live={waiting.length + i < LIVE_ROWS}
+                  gaze={gazeOf(l.agent.id)}
+                />
+              </LandRow>
             ))}
           </>
         ) : null}
@@ -266,15 +346,18 @@ export function AgentsScreen() {
           <FreeSections
             free={free}
             groups={groups.data ?? []}
+            pinned={pins.pins.agents}
             before={busy}
             greeting={greeting}
             gazeOf={gazeOf}
-            onRoutine={onRoutine}
-            now={now}
+            rowOf={rowOf}
+            land={load.landing}
+            landFrom={LEAD_ROWS}
           />
         ) : null}
         {archived.length > 0 ? (
-          <>
+          // Under the departments: it travels with them when one closes or opens.
+          <LandRow moves>
             <SectionHeader title={t("team.archived")} count={archived.length} />
             {archived.map((a, i) => (
               <SwipeRow
@@ -307,7 +390,7 @@ export function AgentsScreen() {
                 </View>
               </SwipeRow>
             ))}
-          </>
+          </LandRow>
         ) : null}
       </LayoutAnimationConfig>
     </LargeTitleScreen>
@@ -354,46 +437,51 @@ function ManagerRow({ working, waiting, onPress }: { working: number; waiting: n
 function FreeSections({
   free,
   groups,
+  pinned,
   before,
   greeting,
   gazeOf,
-  onRoutine,
-  now,
+  rowOf,
+  land,
+  landFrom,
 }: {
   free: TeamLine[];
   groups: AgentGroup[];
+  /** The agents pinned on top ("Fixar no topo"), the screen's `usePins`. */
+  pinned: string[];
   before: number;
   greeting: string | null;
   gazeOf: (id: string) => Gaze | undefined;
-  onRoutine: ReadonlyMap<string, string>;
-  now: number;
+  /** A row's props from its line, as the screen reads them for every row. */
+  rowOf: (l: TeamLine) => RowProps;
+  /** The list's first load: the rows arrive (`LandRow`), counted from `landFrom` plus the rows before them. */
+  land: boolean;
+  landFrom: number;
 }) {
   const { t } = useTranslation();
   // A personal workspace's free agents are its person's, not a team (ADR 0159).
   const { org } = useOrg();
   const { collapsed, toggle } = useCollapsedSections<string>(STORED.agentGroupsCollapsed, null);
-  const pins = usePins();
   const sectorMenu = useSectorMenu();
   const manages = can(org, "manage_agents");
   let shown = before;
   return (
     <>
-      {freeSections(free, groups, pins.pins.agents).map(({ group, lines, pinnedCount }) => {
+      {freeSections(free, groups, pinned).map(({ group, lines, pinnedCount }) => {
         const first = shown;
         shown += lines.length;
         const rows = lines.map((l, i) => (
-          <AgentRow
-            key={l.agent.id}
-            {...lineProps(l)}
-            now={now}
-            divider={i > 0}
-            // The newcomer and the ones looking at it move while it arrives, wherever they sit in the list.
-            live={first + i < LIVE_ROWS || greeting !== null}
-            pinned={i < pinnedCount}
-            arriving={greeting === l.agent.id}
-            gaze={gazeOf(l.agent.id)}
-            routine={onRoutine.get(l.agent.id)}
-          />
+          <LandRow key={l.agent.id} land={land} index={landFrom + first + i}>
+            <AgentRow
+              {...rowOf(l)}
+              divider={i > 0}
+              // The newcomer and the ones looking at it move while it arrives, wherever they sit in the list.
+              live={first + i < LIVE_ROWS || greeting !== null}
+              pinned={i < pinnedCount}
+              arriving={greeting === l.agent.id}
+              gaze={gazeOf(l.agent.id)}
+            />
+          </LandRow>
         ));
         return group ? (
           <CollapsibleSection
@@ -457,6 +545,31 @@ const lineProps = (l: TeamLine): RowLine => ({
   computer: l.computer,
 });
 
+/** What a row shows of its agent's presence (`usePresenceOf`) and its work for me, as the screen reads them. */
+interface RowPresence {
+  /** At work for me, also where I don't read: its face is at work, so is its row. */
+  atWork: boolean;
+  /** No AI to think with (never on a billing hold: an AI comes after the plan). */
+  aiMissing: boolean;
+  /** Out of office (its plan or budget ran out, ADR 0084): its line says when it is back. */
+  outOfOffice: boolean;
+  /** Its line in words; null: none. */
+  statusText: string | null;
+  /** Its work for me, workspace-wide, in the web lists' words (`workLine`); null: none. */
+  workLine: WorkLine | null;
+}
+
+/** A row's props from its line, as the screen reads them for every row (`rowOf`). */
+interface RowProps extends RowLine, RowPresence {
+  /** Since when it is out on a routine (its background run), when it is. */
+  routine: string | undefined;
+  /** The screen's clock, one for every row; 0 for a row that says no time (it isn't drawn again for it). */
+  now: number;
+}
+
+const sameWorkLine = (a: WorkLine, b: WorkLine) =>
+  a.text === b.text && a.short === b.short && a.time === b.time && a.tone === b.tone;
+
 /**
  * One agent: its living body at 52 (running at work, asleep when it can't work), its name, the time at the right
  * (how long since it asked or started; when you last talked, free), then its state as text: what waits on you in
@@ -473,6 +586,11 @@ const AgentRow = memo(function AgentRow({
   previewMeta,
   previewMedia,
   computer,
+  atWork,
+  aiMissing,
+  outOfOffice,
+  statusText,
+  workLine: work,
   now,
   divider,
   live,
@@ -480,9 +598,7 @@ const AgentRow = memo(function AgentRow({
   arriving = false,
   gaze,
   routine,
-}: RowLine & {
-  /** The screen's clock, one for every row. */
-  now: number;
+}: RowProps & {
   divider: boolean;
   live: boolean;
   /** On top of the free ones ("Fixar no topo"): said to screen readers; the order shows it. */
@@ -491,28 +607,20 @@ const AgentRow = memo(function AgentRow({
   arriving?: boolean;
   /** Where its face looks while a newcomer arrives (up or down at the newcomer's row). */
   gaze?: Gaze | undefined;
-  /** Since when it is out on a routine (its background run), when it is. */
-  routine?: string | undefined;
 }) {
   const { t } = useTranslation();
   const c = useColors();
   const reduced = useReducedMotion();
+  // Beside the list (ADR 0212) a press opens its page there, and the row stays lit while that page shows.
+  const opener = useAgentOpener();
+  const chosen = agentSplit.useIsShown(opener?.orgId ?? null, a.id);
   const approval = approvalTitle !== null;
-  const { orgId, org } = useOrg();
-  const ai = useAiStatus(orgId);
-  // On a billing hold an AI comes after the plan: no "Sem IA" on a team just made.
-  const held = usePlanHold(orgId, org) !== null;
-  const shown = usePresenceOf().agent(a.id);
-  // Its work for me, workspace-wide (ADR 0084 addendum): whom it helps or where, in the web lists' words.
-  const work = useAgentWorkLine(a.id);
   // At work also where I don't read: its face is at work, so is its row.
-  const works = Boolean(w) || (shown?.work?.state === "working" && !shown.work.routine);
+  const works = Boolean(w) || atWork;
   const onRoutineNow = !approval && !works && routine !== undefined;
-  const noAi =
-    !held && !approval && !works && !onRoutineNow && computer === undefined && aiStateOf(ai.data, a.id) === "no_ai";
+  const noAi = !approval && !works && !onRoutineNow && computer === undefined && aiMissing;
   // Out of office (its plan or budget ran out, ADR 0084): the server's line says when it is back.
-  const out =
-    !approval && !works && !onRoutineNow && computer === undefined && !noAi && isOutOfOffice(shown?.status?.status);
+  const out = !approval && !works && !onRoutineNow && computer === undefined && !noAi && outOfOffice;
   // Its work waits (on someone's approval or answer, its computer, in line) or asks me: said in its role's place.
   const waits = work && work.tone !== "working" ? work : null;
   const busy = approval || works;
@@ -567,7 +675,7 @@ const AgentRow = memo(function AgentRow({
         <>
           <PixelOrbit color={agentLook(a).color} size={16} />
           <Text variant="small" tone="ink2" numberOfLines={1} style={[LIST_PREVIEW, styles.shrink]}>
-            {work?.tone === "working" || !w ? work?.text : (shown?.line?.text ?? workTitle(t, w))}
+            {work?.tone === "working" || !w ? work?.text : (statusText ?? workTitle(t, w))}
           </Text>
         </>
       ) : state === "waits" && waits ? (
@@ -602,10 +710,17 @@ const AgentRow = memo(function AgentRow({
             {t("mobile.agents.state.connect")}
           </Text>
         </Text>
-      ) : state === "out" && shown?.line ? (
+      ) : state === "out" && statusText !== null ? (
         <Text variant="small" tone="faint" numberOfLines={1} style={[LIST_PREVIEW, styles.shrink]}>
-          {shown.line.text}
+          {statusText}
         </Text>
+      ) : seesFactsOnly(a) ? (
+        <>
+          <LineIcon name="lock" size={15} color={c.faint} variant="small" text={LIST_PREVIEW} />
+          <Text variant="small" tone="muted" numberOfLines={1} style={[LIST_PREVIEW, styles.shrink]}>
+            {[t("agentPage.facts.private"), role].filter(Boolean).join(" · ")}
+          </Text>
+        </>
       ) : role ? (
         <Text variant="small" tone="muted" numberOfLines={1} style={[LIST_PREVIEW, styles.shrink]}>
           {role}
@@ -617,7 +732,9 @@ const AgentRow = memo(function AgentRow({
     // Only the newcomer's row carries a style; the rest stay plain views.
     <Animated.View style={arriving ? entrance : undefined}>
       <ListRow
-        onPress={() => router.push(`/agent/${a.id}`)}
+        onPress={() => (opener ? opener.open(a.id) : router.push(`/agent/${a.id}`))}
+        opens={!opener}
+        {...(chosen ? { background: withAlpha(c.ink, CHOSEN_TINT), accessibilityState: { selected: true } } : {})}
         accessibilityRole="button"
         accessibilityLabel={[
           said,
@@ -651,7 +768,7 @@ const AgentRow = memo(function AgentRow({
         title={a.name}
         time={time}
         // An agent with no role and nothing on has no second line, never an empty one.
-        sub={(state === "free" || (state === "out" && !shown?.line)) && !role ? null : sub}
+        sub={(state === "free" || (state === "out" && statusText === null)) && !role && !seesFactsOnly(a) ? null : sub}
       />
     </Animated.View>
   );

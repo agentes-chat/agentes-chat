@@ -15,8 +15,12 @@ import { daysAgo } from "../shared/logic";
  * says who and how many.
  */
 
-/** `done`: "Concluídas", what I marked done (the last 30 days), by when. */
-export type ActivityFilter = "all" | "waiting" | "done";
+/**
+ * The inbox's filters, the web's own: `requests`, the requests already decided (the approvals' list, not the
+ * notifications'); `done`, what I marked done (the last 30 days), by when.
+ */
+export type ActivityFilter = "all" | "waiting" | "mentions" | "unread" | "requests" | "done";
+export const ACTIVITY_FILTERS: readonly ActivityFilter[] = ["all", "waiting", "mentions", "unread", "requests", "done"];
 
 /**
  * Waiting ones in this order: an agent stuck in its browser or waiting for a secret (both expire in minutes), an
@@ -120,6 +124,8 @@ export function subtitleOf(
     return [origin ? say(origin) : "", l.title ?? l.text ?? ""].filter(Boolean).join(" · ");
   }
   if (n.kind === "issue_assigned") return l.title ?? l.text ?? "";
+  // What lending its internet keeps out, said once under the line that says it lends.
+  if (n.kind === "device.internet_shared") return say({ key: "devices.notice.internetSharedLine", values: {} });
   // Its title names the device and whom the agent works for (`latest.title`): only what it is doing goes under it.
   if (isDeviceNotice(n.kind)) return l.text ?? "";
   return written(l) || word || (l.text ?? l.title ?? "");

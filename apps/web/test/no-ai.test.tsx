@@ -271,7 +271,7 @@ describe("no AI connected: above the composer", () => {
     // Settings › AI accounts, where the person was told to go.
     await renderApp(`/org/${ORG_ID}/settings/keys`, { api });
     await settle(5);
-    await click(screen().getByRole("button", { name: "Conectar uma IA" }), 6);
+    await click(screen().getByRole("button", { name: "Adicionar conta" }), 6);
     const box = dialog("Conectar uma IA") as HTMLElement;
     expect(aiSelect(box).textContent).toBe("Claude");
     const panel = within(box).getByRole("region", { name: "Seu plano do Claude" });
@@ -306,7 +306,7 @@ describe("no AI connected: above the composer", () => {
     machines.setAiAccounts(ai(machines));
     await renderApp(`/org/${ORG_ID}/settings/keys`, { api });
     await settle(5);
-    await click(screen().getByRole("button", { name: "Conectar uma IA" }), 6);
+    await click(screen().getByRole("button", { name: "Adicionar conta" }), 6);
     return { state, machines, box: dialog("Conectar uma IA") as HTMLElement };
   };
   const CLAUDE_OF_MINE: Parameters<Machines["setAiAccounts"]>[0]["accounts"][number] = {
@@ -445,7 +445,7 @@ describe("no AI connected: above the composer", () => {
     expect(banner()).toBeNull();
   });
 
-  test("Connect from an agent's DM: for every agent of the viewer's with no AI, or for that one alone", async () => {
+  test("Connect from an agent's DM for every agent of the viewer's with no AI; that one alone opens its own Quem pensa", async () => {
     const both = () => walters(seedState({ aiStatus: aiStatus(false, ADA_ID, ATLAS_ID) }), ADA_ID, ATLAS_ID);
     await open(both(), `dm/agent/${ADA_ID}`);
     await click(within(banner() as HTMLElement).getByRole("button", { name: "Conectar" }), 6);
@@ -467,11 +467,11 @@ describe("no AI connected: above the composer", () => {
     for (const name of ["Claude", "ChatGPT", "Outro plano", "Começar grátis"])
       expect(within(team).getByRole("button", { name: new RegExp(`^${name}`) })).toBeTruthy();
     cleanup();
-    // Only Ada has none: the dialog is hers, and there is nobody else to choose.
+    // Only Ada has none: her own "Quem pensa", beside the conversation, its account list open.
     await open(walters(seedState({ aiStatus: aiStatus(true, ADA_ID) }), ADA_ID, ATLAS_ID), `dm/agent/${ADA_ID}`);
-    await click(within(banner() as HTMLElement).getByRole("button", { name: "Conectar" }), 6);
-    const hers = dialog("Conectar uma IA para a Ada") as HTMLElement;
-    expect(within(hers).queryByRole("group", { name: "Agentes que usam este plano" })).toBeNull();
+    await click(within(banner() as HTMLElement).getByRole("button", { name: "Conectar" }), 8);
+    expect(dialog("Conectar uma IA para a Ada")).toBeNull();
+    expect(screen().getByRole("dialog", { name: "Quem pensa pela Ada" })).toBeTruthy();
     cleanup();
     // Opened from anywhere else, it is for the whole team: both on one line, and the way to pick among them.
     await open(both());
@@ -772,25 +772,18 @@ describe("the agent's no-AI card", () => {
     expect(within(plan).getByRole("button", { name: "Entrar com ChatGPT" })).toBeTruthy();
   });
 
-  test("the open ChatGPT panel unlocks when the runner reports an upgraded Codex", async () => {
+  test("the open ChatGPT panel unlocks when the runner reports Codex installed", async () => {
     const state = walters(withCard({ intent: "chatgpt" }), ADA_ID);
     const api = createFakeApi(state);
     const brain = api.agents.brain;
-    let version = "0.149.0";
+    let installed = false;
     api.agents.brain = async (orgId, agentId) => {
       const view = await brain(orgId, agentId);
       return {
         ...view,
         ownSignIn: false,
         options: view.options.map((option) =>
-          option.kind === "codex" && version === "0.149.0"
-            ? {
-                ...option,
-                available: false,
-                reason: "outdated",
-                codexVersion: { detected: version, minimum: "0.163.0" },
-              }
-            : option,
+          option.kind === "codex" && !installed ? { ...option, available: false, reason: "not_installed" } : option,
         ),
       };
     };
@@ -802,11 +795,8 @@ describe("the agent's no-AI card", () => {
     const box = dialog("Conectar uma IA para a Ada") as HTMLElement;
     await toPlan(box, "ChatGPT");
     const panel = () => within(box).getByRole("region", { name: "Seu plano do ChatGPT" });
-    expect(panel().textContent).toContain("Codex CLI 0.149.0");
-    expect(panel().textContent).toContain("0.163.0");
     expect(within(panel()).queryByRole("region", { name: "Adicionar conta do ChatGPT" })).toBeNull();
-    expect(within(panel()).getByRole("link", { name: "Como atualizar o Codex CLI" })).toBeTruthy();
-    version = "0.169.0";
+    installed = true;
     await act(async () =>
       socket.push({
         type: "event",
@@ -816,7 +806,6 @@ describe("the agent's no-AI card", () => {
     );
     await settle(8);
     expect(within(panel()).getByRole("region", { name: "Adicionar conta do ChatGPT" })).toBeTruthy();
-    expect(panel().textContent).not.toContain("0.149.0");
   });
 
   test("Conectar asks the computers for their own sign-ins again: ChatGPT's is known by the usage read with it", async () => {
@@ -894,7 +883,7 @@ describe("the agent's no-AI card", () => {
   test("connected elsewhere: 'Responder agora'; still no AI: it says so and keeps Connect", async () => {
     const state = withCard({}, aiStatus(true));
     await open(state);
-    expect(cardRow().textContent).toContain("Pronto: Ada já tem uma IA.");
+    expect(cardRow().textContent).toContain("Ada já tem uma IA.");
     state.answerNowError = new ApiError(409, "ai.still_missing", "There is still no AI connected");
     await click(within(cardRow()).getByRole("button", { name: "Responder agora" }));
     expect(calls(state, "chat.answerNow").map((c) => c.args)).toEqual([[ORG_ID, "m-noai"]]);
@@ -1121,6 +1110,36 @@ describe("Conectar uma IA for an agent with no AI: what the person already has, 
     expect(within(box).getByRole("region", { name: "Seu plano do Claude" }).textContent).toContain(
       "Ada agora pensa com it@example.org.",
     );
+  });
+
+  test("the account she already thinks with, still signed in, isn't offered again: picking it would change nothing", async () => {
+    const state = walters(withCard(), ADA_ID);
+    const hers = acct({ id: "acct_hers", kind: "codex", label: "ChatGPT Pro", plan: "pro", email: "hers@example.com" });
+    const other = acct({
+      id: "acct_other",
+      kind: "codex",
+      label: "ChatGPT Plus",
+      plan: "plus",
+      email: "o@example.com",
+    });
+    const { box } = await connectAda(onClaudeCode(state), {
+      brain: "codex",
+      account: "acct_hers",
+      accounts: [{ ...hers, usedBy: ["Ada"] }, other],
+    });
+    expect(haveTitles(box)).toContain("o@example.com");
+    expect(haveTitles(box)).not.toContain("hers@example.com");
+  });
+
+  test("the account she thinks with, signed out, is offered to sign in again", async () => {
+    const state = walters(withCard(), ADA_ID);
+    const out = acct({ id: "acct_hers", label: "Claude 08", email: "hers@example.com", status: "signed_out" });
+    const { box } = await connectAda(onClaudeCode(state), {
+      brain: "claude_code",
+      account: "acct_hers",
+      accounts: [{ ...out, usedBy: ["Ada"] }],
+    });
+    expect(haveTitles(box)[0]).toStartWith("hers@example.com");
   });
 
   test("on Claude Code with no sign-in left she has no AI either: the list shows, the free account hers in one click", async () => {
@@ -1395,6 +1414,51 @@ describe("receipts and the live block", () => {
     expect(check.getAttribute("aria-label")).toBe("Vista por Ada. Ninguém vai responder: falta uma IA");
     expect(receipt.textContent).toContain("Ninguém vai responder: falta uma IA·Conectar");
     expect(receipt.textContent).not.toContain("Tentar de novo");
+  });
+
+  test("a plan she has whose AI can't start on its computer: the receipt says that, with no Conectar to pick it again", async () => {
+    const { socket, state } = await open(seedState({ aiStatus: aiStatus(true, ADA_ID) }));
+    await sendText("@ada e o login?");
+    const mine = state.messages.at(-1) as Message;
+    const run = { threadId: null, runId: "r-ada", agentId: ADA_ID, triggerMessageId: mine.id };
+    await push(socket, { type: "agent.thinking", ...run });
+    await push(socket, { type: "run.finished", ...run, status: "failed", error: "no_ai" });
+    await push(socket, {
+      type: "message.handled",
+      messageId: mine.id,
+      ...run,
+      status: "failed",
+      reason: "no_ai",
+      errorCode: "cli_failed",
+    });
+    await settle();
+    const receipt = receiptOf("e o login?");
+    const words = "Ada não consegue responder agora: a IA do plano parou com um erro.";
+    expect(receipt.textContent).toContain(words);
+    expect(receipt.textContent).not.toContain("falta uma IA");
+    expect(within(receipt).queryByRole("button", { name: "Conectar" })).toBeNull();
+    const check = receipt.querySelector(".ac-receipt__check") as HTMLElement;
+    expect(check.getAttribute("aria-label")).toBe(`Vista por Ada. ${words}`);
+  });
+
+  test("her computer has no Codex: the receipt says the program is missing, and Conectar stays", async () => {
+    const { socket, state } = await open(seedState({ aiStatus: aiStatus(false, ADA_ID) }));
+    await sendText("@ada e o login?");
+    const mine = state.messages.at(-1) as Message;
+    const run = { threadId: null, runId: "r-ada", agentId: ADA_ID, triggerMessageId: mine.id };
+    await push(socket, { type: "run.finished", ...run, status: "failed", error: "no_ai" });
+    await push(socket, {
+      type: "message.handled",
+      messageId: mine.id,
+      ...run,
+      status: "failed",
+      reason: "no_ai",
+      errorCode: "cli_missing",
+    });
+    await settle();
+    const receipt = receiptOf("e o login?");
+    expect(receipt.textContent).toContain("Ada não vai responder: o programa da IA não está instalado no computador.");
+    expect(within(receipt).getByRole("button", { name: "Conectar" })).not.toBeNull();
   });
 
   /** Walter's message to Ada, read with her run at `handled`. */

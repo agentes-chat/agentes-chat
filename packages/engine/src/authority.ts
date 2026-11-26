@@ -1,7 +1,9 @@
 import { and, type Executor, eq, gte, inArray, schema, sql } from "@agenteschat/db";
 import { caches, cachesEnabled } from "./cache";
+import { ownTyped } from "./message-origin";
 import { getMembership } from "./organizations";
 import { type RoutineBrief, routineBriefOf } from "./routine-brief";
+import { RUN_STATE_KEYS, runState } from "./run-state";
 
 const { agentRuns, messages, routineRuns } = schema;
 
@@ -23,31 +25,39 @@ const { agentRuns, messages, routineRuns } = schema;
  *   message, work either started. It works as the agent itself, with the tools a person's run has (one a
  *   routine's report or work woke keeps within that routine's `brief`: see `run-policy.ts`); what
  *   needs a person's request (their channels, their reminders) is refused, and its approvals and pauses
- *   go to the agent's owner. A person writing into such a run (`steeredBy`) puts that person behind it
- *   from then on.
+ *   go to the agent's owner (or whoever holds its owner role, ADR 0085, addendum of 2026-11-21). A person writing
+ *   into such a run (`steeredBy`) puts that person behind it from then on.
  *
  * Message metadata alone never proves a person: only authorship and server-set links (a message's run, a
  * notice's run, the run on a task's or a folder request's line) are followed, within the workspace.
  */
 export type RunAuthority =
-  | { kind: "person"; personId: string }
+  /** `relayed`: the person's message it roots in wasn't typed in our apps (`ownTyped`): theirs to answer, not to teach. */
+  | { kind: "person"; personId: string; relayed?: true }
   | { kind: "routine"; personId: null; brief: RoutineBrief | null }
-  /** `brief`: the routine whose report or work woke it (reasons `routine_report` and `routine`), whose bounds it keeps. */
-  | { kind: "unattended"; personId: null; reason: UnattendedReason; brief?: RoutineBrief | null };
+  /**
+   * `brief`: the routine whose report or work woke it (reasons `routine_report` and `routine`), whose bounds it keeps.
+   * `appId`: the integration app whose message it answers (reason `app`).
+   */
+  | { kind: "unattended"; personId: null; reason: UnattendedReason; brief?: RoutineBrief | null; appId?: string };
 
 /**
  * Why nobody is behind an unattended run: a routine's report woke it (`routine_report`), its chain roots in a
- * routine's background run (`routine`: the end of a task one started), or an agent's own work (`agent`).
+ * routine's background run (`routine`: the end of a task one started), an agent's own work (`agent`), or an
+ * integration app's message (`app`, ADR 0251): outside text, like what a routine reads, so it keeps the same bounds.
  */
-export type UnattendedReason = "routine_report" | "routine" | "agent";
+export type UnattendedReason = "routine_report" | "routine" | "agent" | "app";
 
 /** What a message's chain roots in. */
 export type MessageRoot =
-  | { kind: "person"; personId: string }
+  /** `relayed`: that person's message wasn't typed in our apps (`ownTyped`, ADR 0250). */
+  | { kind: "person"; personId: string; relayed?: true }
   /** `briefMessageId`: the routine's brief the chain started from, when known. */
   | { kind: "routine"; briefMessageId: string | null }
   /** `backgroundRunId`: the routine's run that handed it off (the notice's `refs.runId`). */
   | { kind: "routine_report"; backgroundRunId: string | null }
+  /** An integration app's message (ADR 0251): nobody is behind it, whoever writes into the run later. */
+  | { kind: "app"; appId: string }
   | { kind: "agent" };
 
 export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -63,6 +73,7 @@ type MessageLink = {
   authorUserId: string | null;
   agentRunId: string | null;
   meta: Record<string, unknown>;
+  origin: schema.MessageOrigin;
 };
 
 const noticeOf = (meta: Record<string, unknown>) =>
@@ -124,14 +135,22 @@ async function walkRoot(db: Executor, orgId: string, messageId: string, walked: 
         authorUserId: messages.authorUserId,
         agentRunId: messages.agentRunId,
         meta: messages.meta,
+        origin: messages.origin,
       })
       .from(messages)
       .where(and(eq(messages.orgId, orgId), eq(messages.id, id)))) as MessageLink[];
     if (!m) return null;
+    if (m.authorType === "app") {
+      const appId = (m.meta.app as { id?: unknown } | undefined)?.id;
+      return typeof appId === "string" ? { kind: "app", appId } : { kind: "agent" };
+    }
     if (m.authorType === "person") {
       // A routine's brief is written by its creator, but nobody is behind the work it starts.
       if (routineBriefOf(m.meta) || m.meta.background === true) return { kind: "routine", briefMessageId: id };
-      return m.authorUserId ? { kind: "person", personId: m.authorUserId } : { kind: "agent" };
+      if (!m.authorUserId) return { kind: "agent" };
+      return ownTyped(m)
+        ? { kind: "person", personId: m.authorUserId }
+        : { kind: "person", personId: m.authorUserId, relayed: true };
     }
     const notice = noticeOf(m.meta);
     if (notice?.kind === "routine_handoff") {
@@ -143,7 +162,8 @@ async function walkRoot(db: Executor, orgId: string, messageId: string, walked: 
     // person, not who asked for the work.
     if (notice?.kind === "github_event" || notice?.kind === "work_follow_up") {
       const personId = notice.refs?.personId;
-      return typeof personId === "string" && personId ? { kind: "person", personId } : { kind: "agent" };
+      if (typeof personId !== "string" || !personId) return { kind: "agent" };
+      return notice.refs?.relayed === "1" ? { kind: "person", personId, relayed: true } : { kind: "person", personId };
     }
     // Work that comes back to the agent continues the run it came back to, for whoever is behind that run; a
     // routine's own message roots in the routine's run that posted it.
@@ -286,21 +306,48 @@ export type AuthorityRun = {
   triggerMessageId: string;
   background: boolean;
   transcript?: Record<string, unknown> | null;
+  /** Its `state` copy of the transcript's status keys, read when no transcript is given. */
+  state?: Record<string, unknown> | null;
 };
 
 /**
  * Only these keys of a run's transcript, in its place in a select: a transcript holds the whole conversation (tens of
- * KB), and the lookups that read a key or two would otherwise ship and parse all of it.
+ * KB), and the lookups that read a key or two would otherwise ship and parse all of it. Keys that are all in its
+ * `state` copy are read there, without decompressing the transcript.
  */
-export const transcriptKeys = (...keys: string[]) =>
-  sql<Record<string, unknown> | null>`jsonb_build_object(${sql.join(
-    keys.map((k) => sql`${k}::text, ${agentRuns.transcript}->${k}::text`),
+export const transcriptKeys = (...keys: string[]) => {
+  const from = keys.every((k) => (RUN_STATE_KEYS as readonly string[]).includes(k)) ? runState : agentRuns.transcript;
+  return sql<Record<string, unknown> | null>`jsonb_build_object(${sql.join(
+    keys.map((k) => sql`${k}::text, ${from}->${k}::text`),
     sql`, `,
   )})`;
+};
 
 /** The person who wrote into an unattended run while it worked (`Transcript.steeredBy`), if any. */
 export const steeredByOf = (transcript: Record<string, unknown> | null | undefined) =>
   typeof transcript?.steeredBy === "string" ? transcript.steeredBy : null;
+
+/**
+ * The person behind a run they wrote into (`steeredBy`), `relayed` when what they wrote wasn't typed in our apps
+ * (`Transcript.steeredRelayed`, ADR 0250): a token's or a bridge's words steered in teach and grant nothing either.
+ * `steeredRelayed` isn't in the `state` copy, so without the whole transcript it is read alone, only for a steered run.
+ */
+async function steeredAuthority(
+  db: Executor,
+  run: Pick<AuthorityRun, "id" | "orgId">,
+  personId: string,
+  transcript: Record<string, unknown> | null | undefined,
+): Promise<RunAuthority> {
+  let relayed = transcript?.steeredRelayed === true;
+  if (!relayed && !Array.isArray(transcript?.messages)) {
+    const [row] = await db
+      .select({ relayed: sql<boolean | null>`(${agentRuns.transcript}->>'steeredRelayed')::boolean` })
+      .from(agentRuns)
+      .where(and(eq(agentRuns.orgId, run.orgId), eq(agentRuns.id, run.id)));
+    relayed = row?.relayed === true;
+  }
+  return relayed ? { kind: "person", personId, relayed: true } : { kind: "person", personId };
+}
 
 /** Who is behind a run (see `RunAuthority`). */
 export async function runAuthority(db: Executor, run: AuthorityRun): Promise<RunAuthority> {
@@ -312,9 +359,11 @@ export async function runAuthority(db: Executor, run: AuthorityRun): Promise<Run
     return { kind: "routine", personId: null, brief: routineBriefOf(trigger?.meta) };
   }
   const root = await messageRoot(db, run.orgId, run.triggerMessageId);
-  if (root.kind === "person") return { kind: "person", personId: root.personId };
-  const steeredBy = steeredByOf(run.transcript);
-  if (steeredBy) return { kind: "person", personId: steeredBy };
+  if (root.kind === "person") return root;
+  // A person writing into it never puts them behind what an app's outside text started (`steeredBy`).
+  if (root.kind === "app") return { kind: "unattended", personId: null, reason: "app", appId: root.appId };
+  const steeredBy = steeredByOf(run.transcript ?? run.state);
+  if (steeredBy) return steeredAuthority(db, run, steeredBy, run.transcript ?? run.state);
   if (root.kind === "agent") return { kind: "unattended", personId: null, reason: "agent" };
   return { kind: "unattended", personId: null, reason: root.kind, brief: await feedingBrief(db, run.orgId, root) };
 }
@@ -347,9 +396,17 @@ export async function feedingBrief(
  * work woke. Such text may come from outside (inbound mail, a webhook, the web) through the routine, so the run
  * never sends a credential, its writes to connected apps and its mail sends always ask a person (ADR 0038, 0053 §3),
  * except the routine's own actions on its own run and on the runs its report or a teammate's answer woke (`onOwnJob`).
+ * A run an integration app's message woke (reason `app`, ADR 0251) is fed the same way: by someone outside.
  */
 export const fedByRoutine = (authority: RunAuthority | null): boolean =>
   authority?.kind === "routine" || (authority?.kind === "unattended" && authority.reason !== "agent");
+
+/**
+ * A run an integration app's message started (ADR 0251): someone outside wrote what feeds it and reads its reply, so
+ * it also keeps the workspace's own data out of reach unless a person approves (ADR 0252).
+ */
+export const fromApp = (authority: RunAuthority | null): authority is Extract<RunAuthority, { kind: "unattended" }> =>
+  authority?.kind === "unattended" && authority.reason === "app";
 
 /** Who is behind a run, by its id (the tool context's `runId`); unattended when the run is gone. */
 export async function runAuthorityById(db: Executor, orgId: string, runId: string): Promise<RunAuthority> {
@@ -360,17 +417,24 @@ export async function runAuthorityById(db: Executor, orgId: string, runId: strin
       orgId: agentRuns.orgId,
       triggerMessageId: agentRuns.triggerMessageId,
       background: agentRuns.background,
-      transcript: transcriptKeys("steeredBy"),
     })
     .from(agentRuns)
     .where(and(eq(agentRuns.orgId, orgId), eq(agentRuns.id, runId)));
   if (!run) return { kind: "unattended", personId: null, reason: "agent" };
-  return runAuthority(db, run);
+  const authority = await runAuthority(db, run);
+  if (authority.kind !== "unattended" || authority.reason === "app") return authority;
+  // `steeredBy` (read off the run's state copy) only for a run no person is behind yet.
+  const [steered] = await db
+    .select({ transcript: transcriptKeys("steeredBy") })
+    .from(agentRuns)
+    .where(and(eq(agentRuns.orgId, orgId), eq(agentRuns.id, runId)));
+  const steeredBy = steeredByOf(steered?.transcript);
+  return steeredBy ? steeredAuthority(db, { id: runId, orgId }, steeredBy, null) : authority;
 }
 
 /**
  * Who answers for a run's requests (approvals, questions, failures): the person behind it, else the
- * routine's creator. Null for an unattended run: the caller falls back to the agent's owner.
+ * routine's creator. Null for an unattended run: the caller falls back to the agent's owner (`agentOwnerIds`).
  */
 export const accountablePerson = (authority: RunAuthority): string | null =>
   authority.kind === "person"

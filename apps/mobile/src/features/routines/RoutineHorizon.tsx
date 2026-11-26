@@ -1,6 +1,6 @@
 import { type Routine, useCalendar } from "@agenteschat/client";
-import { clockHour, whenAt } from "@agenteschat/client/lib/format";
-import { useMemo, useState } from "react";
+import { clockHour, dateFormat, whenAt } from "@agenteschat/client/lib/format";
+import { memo, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 import { Button, RowPressable, Text } from "@/ui";
@@ -49,7 +49,7 @@ type Tag = NonNullable<ReturnType<typeof laneTag>>;
  * first; past four, "Mostrar todos" shows the rest. The coming runs come from the calendar (the server's schedule
  * math). A lane opens the agent's next routine.
  */
-export function RoutineHorizon({
+export const RoutineHorizon = memo(function RoutineHorizon({
   routines,
   now,
   open,
@@ -82,9 +82,8 @@ export function RoutineHorizon({
   const track = Math.max(0, width - LABEL);
   const nowX = track * horizonPos(at, from, to);
   const time = (iso: string | Date) =>
-    new Intl.DateTimeFormat(i18n.language, { hour: clockHour(i18n.language), minute: "2-digit" }).format(new Date(iso));
-  const weekday = (d: Date) =>
-    new Intl.DateTimeFormat(i18n.language, { weekday: "short" }).format(d).replace(/\./g, "");
+    dateFormat(i18n.language, { hour: clockHour(i18n.language), minute: "2-digit" }).format(new Date(iso));
+  const weekday = (d: Date) => dateFormat(i18n.language, { weekday: "short" }).format(d).replace(/\./g, "");
   const tagText = (tag: Tag) => (tag.kind === "soon" ? t("format.inMinutes", { count: tag.minutes }) : time(tag.at));
   const sub = [
     t("routines.horizon.lanes", { count: scheduled.length }),
@@ -158,7 +157,7 @@ export function RoutineHorizon({
       ) : null}
     </View>
   );
-}
+});
 
 /**
  * An agent's lane: its face, then the track with the agent on its next run and that run's time and routine beside it

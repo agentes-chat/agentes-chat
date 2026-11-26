@@ -28,7 +28,9 @@ import {
   accountEnv,
   accountSignIn,
   agentAccountHome,
+  CODEX_REFRESH_AFTER_MS,
   codexAuthOf,
+  codexProbeSafe,
   grantOf,
   grokAuthOf,
   lentAccounts,
@@ -58,6 +60,7 @@ const FAKE_ENV = [
   "FAKE_CODEX_DELAY",
   "FAKE_CODEX_REFRESHED",
   "FAKE_ACCOUNT_STATUS",
+  "FAKE_ACCOUNT_USAGE",
   "FAKE_ACCOUNT_STATUS_DELAY",
 ];
 const dirs: string[] = [];
@@ -138,6 +141,8 @@ test("status commands: signed in through claude.ai with email and plan (short wo
   });
   expect(parseClaudeStatus(1, JSON.stringify({ loggedIn: false }))).toEqual({ loggedIn: false });
   expect(parseCodexStatus(0, `${ESC}[32mLogged in using ChatGPT${ESC}[0m\n`)).toEqual({ loggedIn: true });
+  // A key in its `auth.json` is a sign-in too.
+  expect(parseCodexStatus(0, "API key configured - sk-***abcd\n")).toEqual({ loggedIn: true });
   expect(parseCodexStatus(1, "Not logged in\n")).toEqual({ loggedIn: false });
   expect(parseCodexStatus(0, "Not logged in\n")).toEqual({ loggedIn: false });
 });
@@ -664,6 +669,43 @@ test.if(posix)("a key sign-in nobody finishes expires and leaves no folder", asy
   await waitFor(() => !existsSync(path.join(root, "claude_code", id)));
 });
 
+test.if(posix)(
+  "a terminal as the agent gets its own sign-in's folder; never one kept for several agents, a plan's key, or another CLI's",
+  async () => {
+    const lent: number[] = [];
+    const chown = async (_file: string, uid: number) => {
+      lent.push(uid);
+    };
+    // One user for every agent: the folder itself.
+    const single = setup();
+    const own = LOGIN(61);
+    mkdirSync(path.join(single.root, "claude_code", own), { recursive: true });
+    expect(await single.m.terminalEnv(own)).toEqual({ CLAUDE_CONFIG_DIR: path.join(single.root, "claude_code", own) });
+    const codex = LOGIN(62);
+    mkdirSync(path.join(single.root, "codex", codex), { recursive: true });
+    expect(await single.m.terminalEnv(codex)).toEqual({ CODEX_HOME: path.join(single.root, "codex", codex) });
+    const other = LOGIN(63);
+    mkdirSync(path.join(single.root, "opencode", other), { recursive: true });
+    expect(await single.m.terminalEnv(other)).toEqual({});
+    expect(await single.m.terminalEnv(LOGIN(64))).toEqual({});
+
+    // System mode: lent to the agent's user first, as for a turn; one root keeps for several agents stays root's.
+    const { m, root } = setup({ lending: { chown } });
+    const id = LOGIN(65);
+    const dir = path.join(root, "claude_code", id);
+    mkdirSync(dir, { recursive: true });
+    expect(await m.terminalEnv(id)).toEqual({});
+    expect(await m.terminalEnv(id, 21001)).toEqual({ CLAUDE_CONFIG_DIR: dir });
+    expect(lent.at(-1)).toBe(21001);
+    const shared = LOGIN(66);
+    mkdirSync(path.join(root, "claude_code", shared), { recursive: true });
+    writeFileSync(path.join(root, "claude_code", `${shared}.shared`), "");
+    const before = lent.length;
+    expect(await m.terminalEnv(shared, 21001)).toEqual({});
+    expect(lent.length).toBe(before);
+  },
+);
+
 // ── System mode: folders lent to agents' users ───────────────────────────────
 
 test.if(posix)(
@@ -1165,6 +1207,16 @@ test.if(posix)(
   20_000,
 );
 
+test("root reads a ChatGPT sign-in for all agents' limits only while Codex won't refresh it", () => {
+  const home = tempDir("codex-probe-");
+  dirs.push(home);
+  expect(codexProbeSafe(home, Date.now())).toBe(false);
+  const at = Date.parse("2030-01-01T00:00:00.000Z");
+  writeFileSync(path.join(home, "auth.json"), codexAuth("r1", at));
+  expect(codexProbeSafe(home, at + 24 * 3600_000)).toBe(true);
+  expect(codexProbeSafe(home, at + CODEX_REFRESH_AFTER_MS - 30 * 60_000)).toBe(false);
+});
+
 test("in an agent's worker: root's copy goes in unless the agent's is newer, and a refreshed one goes back", async () => {
   const home = tempDir("codex-home-");
   dirs.push(home);
@@ -1624,12 +1676,13 @@ function sharedLoginSetup(ready = true, over: Partial<AccountManagerOptions> = {
   const store = tempDir("accounts-store-");
   dirs.push(store);
   const removed: string[] = [];
-  const state = { ready };
+  const state = { ready, turns: true };
   const made = setup({
     lending: { chown: async () => {} },
     authEgress: () => ["/usr/bin/env", "FAKE_AUTH_GROUP=1"],
     sharedLogin: {
       ready: () => state.ready,
+      turnsReady: () => state.ready && state.turns,
       launcher: () => ({
         // Stands in for the mount view and `setpriv`.
         prefix: ["/usr/bin/env", "FAKE_ACCOUNT_USER=1"],
@@ -1638,6 +1691,7 @@ function sharedLoginSetup(ready = true, over: Partial<AccountManagerOptions> = {
           CLAUDE_CONFIG_DIR: store,
           FAKE_ACCOUNT_LOG: process.env.FAKE_ACCOUNT_LOG,
           ...(process.env.FAKE_ACCOUNT_MODE ? { FAKE_ACCOUNT_MODE: process.env.FAKE_ACCOUNT_MODE } : {}),
+          ...(process.env.FAKE_ACCOUNT_USAGE ? { FAKE_ACCOUNT_USAGE: process.env.FAKE_ACCOUNT_USAGE } : {}),
         } as Record<string, string>,
         home: store,
       }),
@@ -1658,6 +1712,11 @@ test.if(posix)("whether a turn may run on a shared CLI login, from root's marker
   expect(m.isCliShared("claude_code", ACCOUNT_ID)).toBe(true);
   expect(m.isCliShared("claude_code", "../../etc/passwd")).toBe(false);
   expect(m.cliSharedState(ACCOUNT_ID)).toBe("ready");
+  // The self-check waits for an agent's user to try the network with: a sign-in may begin, a turn waits.
+  state.turns = false;
+  expect(m.cliSharedState(ACCOUNT_ID)).toBe("deferred");
+  expect(m.claudeLoginMethods()).toEqual(["setup_token", "cli_login"]);
+  state.turns = true;
   writeFileSync(marker("shared"), "");
   // A worker gets only the word that its task's CLI is root's: no token, no folder.
   expect(await m.grant("claude_code", ACCOUNT_ID)).toEqual({ kind: "hosted" });
@@ -1796,6 +1855,32 @@ test.if(posix)("a new sign-in of this kind that fails or is canceled leaves no u
   expect(removed).toEqual([id, canceled]);
   expect(existsSync(path.join(root, "claude_code", `${canceled}.method`))).toBe(false);
 });
+
+test.if(posix)(
+  "Claude's own login: a turn's refusal ends when its provider answers the usage call; one it doesn't answer stays out",
+  async () => {
+    process.env.FAKE_ACCOUNT_USAGE = "1";
+    const { m, root, store } = sharedLoginSetup(true, { usageTtlMs: 0 });
+    const id = LOGIN(209);
+    await signInClaude(m, id, false, true, "cli_login");
+    const invalid = path.join(root, "claude_code", `${id}.invalid`);
+    // A refresh another process had just rotated failed one turn: the login itself still works.
+    await m.refused("claude_code", id);
+    m.invalidate();
+    expect((await m.list())[0]).toMatchObject({ loggedIn: false });
+    m.probeUsage([id]);
+    await waitFor(() => !existsSync(invalid), 5000);
+    m.invalidate();
+    expect((await m.list())[0]).toMatchObject({ loggedIn: true, authMethod: "cli_login" });
+    // Ended for real (the store has no sign-in): the provider refuses the call too, and it stays signed out.
+    rmSync(path.join(store, "signed-in"), { force: true });
+    await m.refused("claude_code", id);
+    m.probeUsage([id]);
+    await new Promise((r) => setTimeout(r, 1000));
+    expect(existsSync(invalid)).toBe(true);
+  },
+  20_000,
+);
 
 test.if(posix)(
   "switched off or failing its check: the sign-in stays as known, no CLI touches its store, and only removing ends it",
@@ -1974,3 +2059,207 @@ test("system mode: root keeps a Grok copy back only from the account it lent, ne
   // A copy for an account made for one agent is never taken.
   expect(m.keepGrokAuth(LOGIN(93), grokAuth("y", at))).toBe(false);
 });
+
+test.if(posix)(
+  "Grok Build's status look: an expired access token refreshed in the background looks once more; a transient failure keeps statusUnknown and retries on its own",
+  async () => {
+    const home = tempDir("grok-probe-");
+    dirs.push(home);
+    const root = path.join(home, "accounts");
+    const stateFile = path.join(home, "probe-state.json");
+    const cli = path.join(home, "fake-grok-probe.mjs");
+    writeFileSync(
+      cli,
+      [
+        'import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";',
+        'import path from "node:path";',
+        "const authFile = path.join(process.env.GROK_HOME, 'auth.json');",
+        `const { mode } = JSON.parse(readFileSync(${JSON.stringify(stateFile)}, "utf8"));`,
+        'if (mode === "cli_crash") { process.stderr.write("Error: connection reset by peer\\n"); process.exit(1); }',
+        'if (mode === "revoked") { rmSync(authFile, { force: true }); process.stdout.write("You are not authenticated.\\n"); process.exit(0); }',
+        'const store = existsSync(authFile) ? JSON.parse(readFileSync(authFile, "utf8")) : {};',
+        'const entry = store["https://accounts.x.ai/sign-in"];',
+        "const expired = entry && Date.parse(entry.expires_at) <= Date.now();",
+        'if (mode === "refresh_race" && expired) {',
+        '  store["https://accounts.x.ai/sign-in"] = { ...entry, key: "access-r2", refresh_token: "r2", expires_at: new Date(Date.now() + 6 * 3600_000).toISOString() };',
+        "  writeFileSync(authFile, JSON.stringify(store));",
+        '  process.stdout.write("You are not authenticated.\\n\\nDefault model: grok-4.6\\n\\nAvailable models:\\n  * grok-4.6 (default)\\n  - grok-4.5\\n");',
+        "  process.exit(0);",
+        "}",
+        'if (mode === "transient_503" && expired) {',
+        '  process.stdout.write("You are not authenticated.\\n\\nDefault model: grok-4.6\\n\\nAvailable models:\\n  * grok-4.6 (default)\\n  - grok-4.5\\n");',
+        "  process.exit(0);",
+        "}",
+        'process.stdout.write("You are logged in with grok.com.\\n\\nDefault model: grok-4.7\\n\\nAvailable models:\\n  * grok-4.7 (default)\\n  - grok-4.6\\n  - grok-4.5\\n");',
+        "process.exit(0);",
+      ].join("\n"),
+    );
+    const id = LOGIN(94);
+    const dir = path.join(root, "grok", id);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(path.join(dir, "auth.json"), grokAuth("r1", Date.now() - 60_000));
+    writeFileSync(stateFile, JSON.stringify({ mode: "refresh_race" }));
+    let changed = 0;
+    const m = new AccountManager({
+      root,
+      commands: { grok: [process.execPath, cli] },
+      statusRetryMs: 40,
+      onChange: () => {
+        changed++;
+      },
+    });
+    managers.push(m);
+
+    // 1. First look hits Grok 1.0.73's expired-token startup race: retries once immediately, stays signed in, keeps full models.
+    expect(await m.list()).toEqual([{ id, kind: "grok", loggedIn: true, shared: true, authMethod: "cli_login" }]);
+    expect(m.listedModels("grok")).toEqual([{ id: "grok-4.7" }, { id: "grok-4.6" }, { id: "grok-4.5" }]);
+
+    // 2. Non-zero CLI failure without sign-out text keeps the last known sign-in with statusUnknown.
+    writeFileSync(stateFile, JSON.stringify({ mode: "cli_crash" }));
+    m.invalidate();
+    expect(await m.list()).toEqual([
+      { id, kind: "grok", loggedIn: true, statusUnknown: true, shared: true, authMethod: "cli_login" },
+    ]);
+
+    // 3. Transient OIDC refresh failure (expired access token still kept on disk) also sets statusUnknown, then recovers automatically.
+    writeFileSync(path.join(dir, "auth.json"), grokAuth("r2", Date.now() - 60_000));
+    writeFileSync(stateFile, JSON.stringify({ mode: "transient_503" }));
+    m.invalidate();
+    expect(await m.list()).toEqual([
+      { id, kind: "grok", loggedIn: true, statusUnknown: true, shared: true, authMethod: "cli_login" },
+    ]);
+    const beforeRecovery = changed;
+    writeFileSync(stateFile, JSON.stringify({ mode: "ok" }));
+    await waitFor(() => m.snapshot()?.[0]?.statusUnknown === undefined, 3000);
+    expect(await m.list()).toEqual([{ id, kind: "grok", loggedIn: true, shared: true, authMethod: "cli_login" }]);
+    expect(changed).toBeGreaterThan(beforeRecovery);
+
+    // 4. Permanent refresh rejection (auth.json cleared by Grok CLI) signs the account out conclusively.
+    writeFileSync(stateFile, JSON.stringify({ mode: "revoked" }));
+    m.invalidate();
+    expect(await m.list()).toEqual([{ id, kind: "grok", loggedIn: false, shared: true, authMethod: "cli_login" }]);
+  },
+  15_000,
+);
+
+test.if(posix)(
+  "an inconclusive status look is looked at again at doubling waits, and no more once the wait reaches the list's TTL",
+  async () => {
+    const home = tempDir("grok-retry-");
+    dirs.push(home);
+    const root = path.join(home, "accounts");
+    const looked = path.join(home, "looks.log");
+    const cli = path.join(home, "fake-grok-down.mjs");
+    // Signed in on disk, but every status look fails without saying why: never conclusive.
+    writeFileSync(
+      cli,
+      [
+        'import { appendFileSync } from "node:fs";',
+        `if (process.argv.includes("models")) appendFileSync(${JSON.stringify(looked)}, "x");`,
+        'process.stderr.write("Error: connection reset by peer\\n");',
+        "process.exit(1);",
+      ].join("\n"),
+    );
+    const id = LOGIN(195);
+    const dir = path.join(root, "grok", id);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(path.join(dir, "auth.json"), grokAuth("r1", Date.now() + 6 * 3600_000));
+    const m = new AccountManager({
+      root,
+      commands: { grok: [process.execPath, cli] },
+      statusRetryMs: 20,
+      listTtlMs: 100,
+    });
+    managers.push(m);
+    const looks = () => (existsSync(looked) ? readFileSync(looked, "utf8").length : 0);
+
+    expect(await m.list()).toEqual([
+      { id, kind: "grok", loggedIn: true, statusUnknown: true, shared: true, authMethod: "cli_login" },
+    ]);
+    // Again after 20, 40 and 80 ms; the next wait (160 ms) passes the 100 ms TTL, so no timer is set.
+    await waitFor(() => looks() >= 4, 5000);
+    await new Promise((r) => setTimeout(r, 600));
+    expect(looks()).toBe(4);
+  },
+  15_000,
+);
+
+test.if(posix)(
+  "Cursor's models: each account's own `agent models`, its sign-in's or its key's, at most hourly, never in a lent folder",
+  async () => {
+    const home = tempDir("cursor-models-");
+    dirs.push(home);
+    const root = path.join(home, "accounts");
+    const log = path.join(home, "calls.log");
+    const cli = path.join(home, "fake-agent.mjs");
+    writeFileSync(
+      cli,
+      [
+        'import { appendFileSync } from "node:fs";',
+        "const [cmd] = process.argv.slice(2);",
+        `appendFileSync(${JSON.stringify(log)}, \`\${cmd} \${process.env.CURSOR_API_KEY ? "key" : "folder"}\\n\`);`,
+        'if (cmd === "status") { process.stdout.write("Logged in as ada@example.com\\n"); process.exit(0); }',
+        'if (cmd === "models" && process.env.CURSOR_API_KEY) { process.stdout.write("Available models\\n\\nauto - Auto\\nfast-model-2 - Fast Model 2\\n"); process.exit(0); }',
+        'if (cmd === "models") { process.stdout.write("Available models\\n\\nauto - Auto (current)\\nsmart-model-5 - Smart Model 5 (included)\\nfast-model-2 - Fast Model 2\\n"); process.exit(0); }',
+        "process.exit(1);",
+      ].join("\n"),
+    );
+    const folder = (id: string, files: Record<string, string> = {}) => {
+      const dir = path.join(root, "cursor", id);
+      mkdirSync(dir, { recursive: true, mode: 0o700 });
+      for (const [name, text] of Object.entries(files)) writeFileSync(path.join(dir, name), text);
+    };
+    const signedIn = LOGIN(110);
+    const keyed = LOGIN(111);
+    const lent = LOGIN(112);
+    folder(signedIn);
+    folder(keyed, { "cursor-key.json": JSON.stringify({ key: "crsr_fake_0000000000000000000000000000" }) });
+    folder(lent);
+    writeFileSync(path.join(root, "cursor", `${lent}.lent`), "1234");
+    let clock = Date.parse("2030-01-01T00:00:00Z");
+    const m = new AccountManager({ root, commands: { cursor: [process.execPath, cli] }, now: () => clock });
+    managers.push(m);
+    const calls = () => readFileSync(log, "utf8").trim().split("\n").sort();
+
+    await m.list();
+    // The sign-in's list first (it lists the most), then what only the key's adds; the plan's own marked. "auto" is the
+    // picker's own Automático.
+    expect(m.listedModels("cursor")).toEqual([
+      { id: "smart-model-5", label: "Smart Model 5", inPlan: true },
+      { id: "fast-model-2", label: "Fast Model 2" },
+    ]);
+    // The lent folder is never run on: its agent's user holds it.
+    expect(calls()).toEqual(["models folder", "models key", "status folder"]);
+
+    // Looked again within the hour: the status only.
+    m.invalidate();
+    await m.list();
+    expect(calls()).toEqual(["models folder", "models key", "status folder", "status folder"]);
+    clock += 3600_000;
+    m.invalidate();
+    await m.list();
+    expect(calls().filter((c) => c.startsWith("models"))).toHaveLength(4);
+
+    // Kept across a restart, as Grok's and Gemini's are.
+    const again = new AccountManager({ root, commands: { cursor: [process.execPath, cli] } });
+    managers.push(again);
+    expect(again.listedModels("cursor")?.map((x) => x.id)).toEqual(["smart-model-5", "fast-model-2"]);
+
+    // A sign-in whose first turn comes before any look: listed as its folder is lent, never after.
+    const early = LOGIN(113);
+    folder(early);
+    const lending = new AccountManager({
+      root,
+      commands: { cursor: [process.execPath, cli] },
+      lending: { chown: async () => {} },
+    });
+    managers.push(lending);
+    const listings = () => calls().filter((c) => c === "models folder").length;
+    const before = listings();
+    expect(await lending.lendTo("cursor", early, 21003)).toBe(true);
+    expect(listings()).toBe(before + 1);
+    expect(await lending.lendTo("cursor", early, 21004)).toBe(true);
+    expect(listings()).toBe(before + 1);
+  },
+  20_000,
+);

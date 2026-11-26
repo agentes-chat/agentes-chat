@@ -79,7 +79,7 @@ people than asked.
    `run.continue_forbidden`, and `wait.canContinue` says which), and any other wait is refused with its cause and when
    it picks up (`widget.waiting`, 409). Beside the cause, the one thing that ends it sooner, for who may do it: a higher
    budget (admins), another model for a model's own limit (its owner and admins), or its computer opened. A refresh
-   isn't long work by kind, so it pauses near the limit only once it grew long (ADR 0118, addendum of 2026-11-11). Each
+   is never long work, whatever its size, so it never pauses near the limit (ADR 0118, addendum of 2026-11-23). Each
    update or failure is kept with what it showed (`dashboard_widget_updates`, the latest 20), shown in the widget's
    panel. When the alert is on and the agent says its condition was met, the person who set the alert hears it in
    "Waiting on you" (`widget_alert`, waiting, one row per widget merging while open); never in the chat. A widget that
@@ -147,11 +147,13 @@ people than asked.
     widget, from anywhere, asks first: its routine stops and its history goes. Charts in messages get "Pin".
 15. **On the phone.** Dashboards open from the home screen: at the top of Chats, what Início shows (My Home, or the
     board chosen for it, §18) heads a strip of its widgets, small and side by side, that scrolls sideways (with none
-    yet, one card asks for a widget), and "See all" at its end pushes the list, `/dashboards`. The tab bar is unchanged (Chats, Threads,
+    yet, one card asks for a widget), and at its end "Add" (for who edits that board) beside "See all", which pushes the list, `/dashboards`. The tab bar is unchanged (Chats, Threads,
     Agents, Activity and Search): a sixth tab would push search out of Android's bar, which holds five at most. The
     list shows "My Home" first, then the same groups. Everything is a pushed screen with a back button, never a sheet:
     the list, a board (two columns, a 2-wide widget across the row), a widget (big, how it updates, history, remove,
-    ask for a change), a new widget (preview on top, text and suggestions, agent, format, schedule, alert, board),
+    ask for a change), a new widget (the card on top holds only its title and the ask with its suggestions; agent,
+    format, size, schedule, alert and board are rows under it, each a finger's target, and Test, then Add, sit at the
+    screen's foot over the keyboard: a form squeezed inside the card left 24-point controls on a phone),
     share and a new board.
 16. **Test before creating.** "+ Widget" asks the agent first and creates after: "Test" makes a draft
     (`dashboard_widgets.draft`) that its agent builds at once with real data, through the same refresh run as any

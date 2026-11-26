@@ -15,7 +15,10 @@ import {
   peopleGroups,
   someoneTypes,
 } from "@agenteschat/client/lib/activity";
+import { agentGrammar } from "@agenteschat/client/lib/grammar";
+import { type TrailLine, usePacedTrail, workTrail } from "@agenteschat/client/lib/trail";
 import { barStep } from "@agenteschat/client/lib/work";
+import { type AgentColorName, gradientOf } from "@agenteschat/ui/agent/engine";
 import { type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -27,6 +30,7 @@ import {
   type TextLayoutEvent,
   type TextStyle,
   View,
+  type ViewStyle,
 } from "react-native";
 import Animated, {
   css,
@@ -34,15 +38,18 @@ import Animated, {
   type EntryExitAnimationFunction,
   FadeIn,
   FadeOut,
+  LayoutAnimationConfig,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
 import { useLivePaused } from "@/agent/live";
 import { loopStyle } from "@/agent/loop";
+import { OrbitFace } from "@/agent/OrbitFace";
 import { CHROME_MAX_SCALE, haptics, Icon, PixelStop, Text, TOUCH, useReducedMotion, useTheme } from "@/ui";
 import { AgentFace, AgentWho, Face } from "../shared/Face";
 import { useNow } from "../shared/hooks";
+import { agentLook } from "../shared/logic";
 import {
   awayRun,
   type LineDrawn,
@@ -71,10 +78,12 @@ export function browsingRuns(runs: LiveRun[]): LiveRun[] {
 }
 
 /**
- * The working line, as the web's activity bar above the composer (ChannelPage `ActivityBar`,
+ * The working line, saying what the web's activity bar above the composer says (ChannelPage `ActivityBar`,
  * WorkingLine.tsx, `.ac-typing[data-active]`), one for everyone at work here and the one thing that says so while
- * their words wait for their replies (which show whole, once posted): a bare line on the conversation's ground, as
- * wide as the box under it whatever it says (no glass, no shadow, no band behind it: the faces and the words say it);
+ * their words wait for their replies (which show whole, once posted). On the phone it is the conversation's last line,
+ * under its last message and scrolling with it, as a reply on its way (above the composer only while there is no
+ * conversation yet): a bare line on the conversation's ground, as wide as the composer whatever it says (no glass, no
+ * shadow, no band behind it: the faces and the words say it);
  * a few small faces, each on a plate and popping in (an agent on its own asking another shows both, with an arrow;
  * three dots first while only people type); one line with names in ink, crossfading whenever it changes ("Theo e mais 2 estão
  * trabalhando · Marina está digitando…"), who records a voice message last, after three bars and their faces ("Rui
@@ -91,6 +100,7 @@ export function WorkingLine({
   onSeeConsult,
   stop,
   rest = null,
+  style,
 }: {
   runs: LiveRun[];
   consults: ConsultWithDetails[];
@@ -107,6 +117,8 @@ export function WorkingLine({
   stop?: { runs: LiveRun[]; onStop: (run: LiveRun) => void } | undefined;
   /** What the line holds while nobody works here: a return (`ReturnLine`). Work comes first. */
   rest?: ReactNode;
+  /** Its room where it is drawn (in the conversation: a turn's gap above it), only while it says something. */
+  style?: StyleProp<ViewStyle>;
 }) {
   const { t, i18n } = useTranslation();
   const dir = useRowDirectory();
@@ -123,11 +135,19 @@ export function WorkingLine({
   // phrase turning, an event) reads the same second, so both step evenly; narrowing to one agent changes the pace, and a
   // new pace reads the clock afresh (`useNow`).
   const now = useNow(asking || solo ? 1000 : 60_000);
+  // What it did so far, under the line (`workTrail`): the same lines its reply's work block shows once posted. One
+  // agent's, at work (a question it asks keeps its own phrase).
+  const trailRun = solo && !solo.consult ? runs.find((r) => r.agentId === solo.id) : undefined;
+  const trail = usePacedTrail(trailRun ? workTrail(t, trailRun, i18n.language) : NO_TRAIL);
   if (entries.length === 0) return rest;
   // The one agent it speaks for; a question it asks keeps its own phrase.
   const away = awayRun(entries, runs);
   const step = away && lead && !lead.consult ? barStep(t, away, i18n.language, now) : null;
   const took = away ? barElapsed(t, entries, runs, now) : null;
+  // Its effort so far, one pixel per call it made: only for the one agent the line speaks for.
+  const soloRun = solo ? runs.find((r) => r.agentId === solo.id) : undefined;
+  const calls = soloRun ? (soloRun.work ?? []).filter((w) => w.kind === "call").length : 0;
+  const soloColor = solo ? agentLook(dir.agentById.get(solo.id)).color : null;
   // Who types or records beside that agent, after its time ("· Marina digitando · Rui gravando áudio…"): the names give
   // way first, never what they do.
   const groups = step === null ? [] : peopleGroups(entries);
@@ -177,7 +197,8 @@ export function WorkingLine({
   const plate = [styles.tok, { backgroundColor: c.bg }];
   // The agents at work open the pill with their faces. Who records shows after the words with their mark, and so does
   // who types beside them: their faces come and go with the phrase as it turns, so they don't pop in again at each turn.
-  const faces = barFaces(entries);
+  const orbiting = lead && !lead.consult ? lead : undefined;
+  const faces = barFaces(entries).filter((e) => e !== orbiting);
   const groupFaces = (kind: "typing" | "recordingVoice") => {
     const who = facesOf(entries, kind);
     return who.length > 0 ? (
@@ -195,7 +216,7 @@ export function WorkingLine({
   const openBrowser = browsing && onOpenBrowser ? () => onOpenBrowser(browsing.agentId) : undefined;
   const stopHere = stop?.runs ?? [];
   return (
-    <View style={styles.dock}>
+    <View style={[styles.dock, style]}>
       <Animated.View
         // In and out on an ease-out, under 200 ms: the line is chrome that comes and goes many times a day.
         entering={reduced ? undefined : LINE_IN}
@@ -204,8 +225,19 @@ export function WorkingLine({
         accessibilityLiveRegion="polite"
       >
         {lead || !someoneTypes(entries) || bothAtIt(entries) ? null : <TypingDots color={c.muted} />}
+        {/* The agent at work leads, a little larger, its rings orbiting it (`OrbitFace`); the stack's faces are the
+            others. */}
+        {orbiting ? (
+          <Animated.View key={`o:${orbiting.id}`} entering={pop} style={styles.orbit}>
+            <OrbitFace color={agentLook(dir.agentById.get(orbiting.id)).color} size={ORBIT_FACE}>
+              <AgentFace agentId={orbiting.id} size={ORBIT_FACE} framed mode="run" />
+            </OrbitFace>
+          </Animated.View>
+        ) : null}
         {faces.length > 0 ? (
           <View style={styles.stack} importantForAccessibility="no-hide-descendants">
+            {/* Agents in their sky tile, standing in its middle: bare, a body sits at its box's foot under the room kept
+                for a hat, so two faces with different hats looked uneven and low beside the arrow and the words. */}
             {faces.map((e, i) => {
               const gap = i > 0 ? styles.overlap : undefined;
               if (e.type === "person")
@@ -218,7 +250,7 @@ export function WorkingLine({
                 return (
                   <Animated.View key={`c:${e.id}`} entering={pop} style={[styles.pair, gap]}>
                     <View style={plate}>
-                      <AgentFace agentId={e.id} size={18} mode="idle" />
+                      <AgentFace agentId={e.id} size={18} framed mode="idle" />
                     </View>
                     {/* What waits on me takes the arrow's place; a wait on someone else, the quiet clock. */}
                     {asking.yours ? (
@@ -229,13 +261,18 @@ export function WorkingLine({
                       <Icon name="right" size={12} color={c.faint} />
                     )}
                     <View style={plate}>
-                      <AgentFace agentId={asking.to} size={18} mode={asking.yours || asking.wait ? "idle" : "think"} />
+                      <AgentFace
+                        agentId={asking.to}
+                        size={18}
+                        framed
+                        mode={asking.yours || asking.wait ? "idle" : "think"}
+                      />
                     </View>
                   </Animated.View>
                 );
               return (
                 <Animated.View key={`a:${e.id}`} entering={pop} style={[plate, gap]}>
-                  <AgentFace agentId={e.id} size={18} mode="run" />
+                  <AgentFace agentId={e.id} size={18} framed mode="run" />
                 </Animated.View>
               );
             })}
@@ -266,6 +303,7 @@ export function WorkingLine({
               · {took}
             </Text>
           ) : null}
+          {soloColor && calls > 0 ? <StepPixels count={calls} color={soloColor} reduced={reduced} /> : null}
           {also.map((a) => (
             <View key={a.kind} style={styles.also}>
               {piece(`· ${a.names}`, styles.shrink)}
@@ -310,13 +348,70 @@ export function WorkingLine({
             while it shows; the composer keeps only its send). */}
         {stop && stopHere.length > 0 ? <LineStop runs={stopHere} onStop={stop.onStop} place="word" /> : null}
       </Animated.View>
+      {trail.lines.length > 0 ? (
+        <View
+          style={[styles.trail, orbiting ? styles.trailUnderWords : undefined]}
+          accessibilityLabel={t("chat.trail.label", agentGrammar(lead?.name ?? ""))}
+        >
+          {trail.earlier > 0 ? (
+            <Text
+              variant="caption"
+              tone="faint"
+              maxFontSizeMultiplier={CHROME_MAX_SCALE}
+              accessibilityLabel={t("chat.trail.earlier", { count: trail.earlier })}
+              style={styles.took}
+            >
+              +{trail.earlier}
+            </Text>
+          ) : null}
+          {trail.lines.map((l) => (
+            <Animated.View key={l.key} entering={reduced ? undefined : LINE_IN}>
+              <Text variant="caption" tone="muted" maxFontSizeMultiplier={CHROME_MAX_SCALE}>
+                {l.text}
+              </Text>
+            </Animated.View>
+          ))}
+        </View>
+      ) : null}
     </View>
   );
 }
 
+/** The agent at work's face on the line, in points: a little larger than the stack's, its rings around it. */
+const ORBIT_FACE = 24;
+const NO_TRAIL: TrailLine[] = [];
+
 const LINE_EASE = Easing.bezier(0.23, 1, 0.32, 1);
 const LINE_IN = FadeIn.duration(160).easing(LINE_EASE);
 const LINE_OUT = FadeOut.duration(120).easing(LINE_EASE);
+
+/** How many of its calls the line draws: the latest ones, the oldest of a full strip fading away. */
+const STEP_PIXELS = 8;
+const STEP_FADE = [0.35, 0.65];
+
+/**
+ * The effort so far, after the line's words: a 4pt pixel per tool call the run made, in the agent's two tones by
+ * turns. Each new one comes in from 0.9 as the faces do; the ones already made when the line shows are just there. Past eight, the oldest
+ * leave and the two before them fade. Decoration: the line's label says what the agent does.
+ */
+function StepPixels({ count, color, reduced }: { count: number; color: AgentColorName; reduced: boolean }) {
+  const tones = gradientOf(color);
+  const first = Math.max(0, count - STEP_PIXELS);
+  const shown = Array.from({ length: count - first }, (_, i) => first + i);
+  return (
+    <View style={styles.steps} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+      <LayoutAnimationConfig skipEntering>
+        {shown.map((n, i) => (
+          <Animated.View
+            key={n}
+            entering={reduced ? undefined : FACE_POP}
+            style={[styles.step, { backgroundColor: tones[n % 2], opacity: first > 0 ? (STEP_FADE[i] ?? 1) : 1 }]}
+          />
+        ))}
+      </LayoutAnimationConfig>
+    </View>
+  );
+}
 /** The "View" word's line (caption, 16). */
 const SEE_LINE = 16;
 /**
@@ -658,6 +753,12 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   stack: { flexDirection: "row", alignItems: "center", flexShrink: 0 },
+  // The rings reach past the face into the gap on each side.
+  orbit: { marginHorizontal: 6, flexShrink: 0 },
+  // What it did so far, under the line's words: the newest last.
+  trail: { gap: 2, paddingHorizontal: 8, paddingTop: 2 },
+  // Under the words when the orbiting face leads the line: its padding, the face, its margins and the line's gap.
+  trailUnderWords: { paddingLeft: 8 + 6 + ORBIT_FACE + 6 + 6 },
   tok: { padding: 1.5, borderRadius: 7 },
   pair: { flexDirection: "row", alignItems: "center", gap: 1 },
   overlap: { marginLeft: -6 },
@@ -699,6 +800,9 @@ const styles = StyleSheet.create({
   },
   ink: { fontWeight: "600" },
   took: { fontVariant: ["tabular-nums"] },
+  // The calls' pixels keep their size: the words before them give way.
+  steps: { flexDirection: "row", alignItems: "center", gap: 2, flexShrink: 0 },
+  step: { width: 4, height: 4 },
   // "Ver" after a hand-off's time: the two agents' talk.
   see: { marginLeft: 8, justifyContent: "center" },
   seeText: { fontWeight: "600" },

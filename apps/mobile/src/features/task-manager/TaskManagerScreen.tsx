@@ -24,13 +24,14 @@ import {
   returnPlace,
   shownCauses,
   taskPlace,
+  taskSince,
   taskState,
   taskTime,
   taskTitle,
   taskWaitWords,
   type WaitCause,
 } from "@agenteschat/client/lib/task-manager";
-import { useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, RefreshControl, StyleSheet, View } from "react-native";
 import Animated, {
@@ -83,6 +84,18 @@ const LIVE_ROWS = 8;
 /** A task's own screen. */
 const taskHref = (runId: string) => `/task-manager/${runId}` as const;
 
+const MINUTE = 60_000;
+
+/**
+ * Whether a task's time shows seconds (`taskTime`): its clock while it works or waits its turn ("6:12"), or a wait
+ * under a minute ("12 s"); a longer wait says minutes or more ("25 min").
+ */
+function showsSeconds(task: ManagedTask, now: number): boolean {
+  if (taskState(task) !== "waiting") return true;
+  const since = task.wait?.since ? Date.parse(task.wait.since) : taskSince(task);
+  return now - since < MINUTE;
+}
+
 /**
  * Rows that come and go while the person watches (a task stopped, one that ended, a group folded) fade, and what
  * stays slides into place; nothing moves with reduced motion.
@@ -102,8 +115,8 @@ function useRowMotion() {
  * ("2 trabalhando · 1 espera você"). The tasks people asked for, by agent (its row says how its tasks stand and is
  * one tap: folded until opened), each a row with its state as a mark (the orbit while it runs, amber while it waits on
  * you), its time and a chevron: stopping is done on the task's own screen, never from a button in the list. Then the
- * routines' work in the background and what ended today. Above them, the computers with work, each opening its line
- * in a sheet. Every row is one line that ends in "…": a task's own screen says it whole, a return's sheet its words.
+ * routines' work in the background and what ended today. Above them, while something waits, what holds it (a full
+ * computer opens its line in a sheet). Every row is one line that ends in "…": a task's own screen says it whole, a return's sheet its words.
  */
 export function TaskManagerScreen() {
   return (
@@ -117,15 +130,19 @@ function TaskManager() {
   const { t } = useTranslation();
   const look = useEmptyLook();
   const meId = useMeId();
-  const tasks = useTasksToday({ doneToday: true });
+  const tasks = useTasksToday();
   const pull = usePullRefresh(tasks.refetch);
-  const now = useNow(1000);
   // Tasks being stopped from their screens read "Parando…" here too.
   const { stopping } = useStopper();
   const { fade, layout } = useRowMotion();
   const [opened, setOpened] = useState<ReadonlySet<string>>(() => new Set());
   const [endedOpen, setEndedOpen] = useState(false);
   const view = tasks.data;
+  // Each second only while a row shows seconds; otherwise the minute pace.
+  const ticking = (view?.tasks ?? []).some((task) => showsSeconds(task, Date.now()));
+  const now = useNow(ticking ? 1000 : MINUTE);
+  // What says minutes or a time of day moves once a minute beside a ticking clock: its rows (memoized) skip the rest.
+  const minuteNow = ticking ? now - (now % MINUTE) : now;
   const { groups, delegated, background } = useMemo(
     () => groupTasks(view?.tasks ?? [], stopping),
     [view?.tasks, stopping],
@@ -159,19 +176,24 @@ function TaskManager() {
     ]
       .filter(Boolean)
       .join(" · ") || t("mobile.taskManager.quiet");
-  const toggle = (agentId: string) =>
-    setOpened((was) => {
-      const next = new Set(was);
-      if (next.has(agentId)) next.delete(agentId);
-      else next.add(agentId);
-      return next;
-    });
+  const toggle = useCallback(
+    (agentId: string) =>
+      setOpened((was) => {
+        const next = new Set(was);
+        if (next.has(agentId)) next.delete(agentId);
+        else next.add(agentId);
+        return next;
+      }),
+    [],
+  );
+  // A row's time: to the second where it shows seconds, else the minute's.
+  const rowNow = (list: readonly ManagedTask[]) => (list.some((task) => showsSeconds(task, now)) ? now : minuteNow);
   const askedCount = groups.reduce((n, g) => n + g.tasks.length, 0);
   const delegatedCount = delegated.reduce((n, g) => n + g.tasks.length, 0);
   const computers = view?.computers ?? [];
   const causes = shownCauses(all);
-  const listed = computersBesides(computers, causes);
-  const done = view?.doneToday ?? ended.filter((e) => e.status === "done").length;
+  // A computer with a line holds work too (each turn waits its place): a row of the same block, opening its line.
+  const lined = computersBesides(computers, causes).filter((m) => m.inLine > 0);
   return (
     <PushedLargeTitle
       title={t("taskManager.title")}
@@ -189,16 +211,14 @@ function TaskManager() {
             <Text variant="subhead" tone="muted" style={styles.summary}>
               {summary}
             </Text>
-            {causes.length > 0 ? (
+            {causes.length + lined.length > 0 ? (
               <Animated.View {...fade} layout={layout}>
-                <Text variant="footnote" tone="muted" style={styles.today}>
-                  {t("taskManager.capacity.today", {
-                    count: done,
-                    waiting: all.filter((x) => taskState(x) === "waiting").length,
-                  })}
-                </Text>
+                <SectionHeader title={t("taskManager.capacity.label")} count={causes.length + lined.length} />
                 {causes.map((cause, i) => (
                   <CauseRow key={cause.key} cause={cause} computers={computers} divider={i > 0} />
+                ))}
+                {lined.map((m, i) => (
+                  <ComputerRow key={m.id} computer={m} divider={causes.length + i > 0} />
                 ))}
               </Animated.View>
             ) : null}
@@ -216,30 +236,22 @@ function TaskManager() {
                 {t("taskManager.hiddenLine", { count: hidden })}
               </Text>
             ) : null}
-            {listed.length > 0 ? (
-              <Animated.View {...fade} layout={layout}>
-                <SectionHeader title={t("taskManager.queue.computers")} count={listed.length} />
-                {listed.map((m, i) => (
-                  <Animated.View key={m.id} {...fade} layout={layout}>
-                    <ComputerRow computer={m} divider={i > 0} />
-                  </Animated.View>
-                ))}
-              </Animated.View>
-            ) : null}
             {groups.length > 0 ? (
               <Animated.View {...fade} layout={layout}>
                 <SectionHeader title={t("taskManager.sections.asked")} count={askedCount} />
-                <WaitLines tasks={groups.flatMap((g) => g.tasks)} now={now} />
+                <WaitLines tasks={groups.flatMap((g) => g.tasks)} now={minuteNow} />
                 {groups.map((g, i) => (
                   <AgentGroup
                     key={g.agentId}
+                    id={g.agentId}
                     group={g}
                     open={opened.has(g.agentId)}
-                    onToggle={() => toggle(g.agentId)}
+                    onToggle={toggle}
                     divider={i > 0}
                     live={i < LIVE_ROWS}
                     stopping={stopping}
-                    now={now}
+                    now={rowNow(g.tasks)}
+                    minuteNow={minuteNow}
                     meId={meId}
                   />
                 ))}
@@ -248,18 +260,20 @@ function TaskManager() {
             {delegated.length > 0 ? (
               <Animated.View {...fade} layout={layout}>
                 <SectionHeader title={t("taskManager.sections.delegated")} count={delegatedCount} />
-                <WaitLines tasks={delegated.flatMap((g) => g.tasks)} now={now} />
+                <WaitLines tasks={delegated.flatMap((g) => g.tasks)} now={minuteNow} />
                 {delegated.map((g, i) => (
                   <AgentGroup
                     key={g.agentId}
+                    id={`by:${g.agentId}`}
                     group={g}
                     flat
                     open={opened.has(`by:${g.agentId}`)}
-                    onToggle={() => toggle(`by:${g.agentId}`)}
+                    onToggle={toggle}
                     divider={i > 0}
                     live={i < LIVE_ROWS}
                     stopping={stopping}
-                    now={now}
+                    now={rowNow(g.tasks)}
+                    minuteNow={minuteNow}
                     meId={meId}
                   />
                 ))}
@@ -268,10 +282,17 @@ function TaskManager() {
             {background.length > 0 ? (
               <Animated.View {...fade} layout={layout}>
                 <SectionHeader title={t("taskManager.sections.background")} count={background.length} />
-                <WaitLines tasks={background} now={now} />
+                <WaitLines tasks={background} now={minuteNow} />
                 {background.map((task, i) => (
                   <Animated.View key={task.runId} {...fade} layout={layout}>
-                    <TaskRow task={task} state={rowState(task, stopping)} flat divider={i > 0} now={now} meId={meId} />
+                    <TaskRow
+                      task={task}
+                      state={rowState(task, stopping)}
+                      flat
+                      divider={i > 0}
+                      now={rowNow([task])}
+                      meId={meId}
+                    />
                   </Animated.View>
                 ))}
               </Animated.View>
@@ -281,7 +302,7 @@ function TaskManager() {
                 <SectionHeader title={t("taskManager.sections.returns")} count={followUps.length} />
                 {followUps.map((r, i) => (
                   <Animated.View key={r.messageId} {...fade} layout={layout}>
-                    <ReturnRow item={r} divider={i > 0} now={now} />
+                    <ReturnRow item={r} divider={i > 0} now={minuteNow} />
                   </Animated.View>
                 ))}
               </Animated.View>
@@ -325,7 +346,8 @@ function TaskManager() {
  * beside it (unless its words say it), how its tasks stand ("1 trabalhando · 1 espera você") cut at the end, the mark
  * and time of the task that says it, and the chevron that folds them. One tap, the whole row.
  */
-function AgentGroup({
+const AgentGroup = memo(function AgentGroup({
+  id,
   group,
   flat = false,
   open,
@@ -334,17 +356,22 @@ function AgentGroup({
   live,
   stopping,
   now,
+  minuteNow,
   meId,
 }: {
+  /** What `onToggle` is called with: the key of its fold. */
+  id: string;
   group: AgentTasks;
   /** The group of an agent that asked: its rows are other agents' tasks, each with its face. */
   flat?: boolean;
   open: boolean;
-  onToggle: () => void;
+  onToggle: (id: string) => void;
   divider: boolean;
   live: boolean;
   stopping: ReadonlySet<string>;
+  /** To the second while one of its tasks shows seconds, else `minuteNow`. */
   now: number;
+  minuteNow: number;
   meId: string | null;
 }) {
   const { t, i18n } = useTranslation();
@@ -365,7 +392,7 @@ function AgentGroup({
   return (
     <Animated.View {...fade} layout={layout}>
       <RowPressable
-        onPress={onToggle}
+        onPress={() => onToggle(id)}
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
         accessibilityLabel={`${name}, ${line.text}, ${time}`}
@@ -398,20 +425,27 @@ function AgentGroup({
       {open
         ? group.tasks.map((task, i) => (
             <Animated.View key={task.runId} {...fade} layout={layout}>
-              <TaskRow task={task} state={rowState(task, stopping)} flat={flat} divider={i > 0} now={now} meId={meId} />
+              <TaskRow
+                task={task}
+                state={rowState(task, stopping)}
+                flat={flat}
+                divider={i > 0}
+                now={showsSeconds(task, now) ? now : minuteNow}
+                meId={meId}
+              />
             </Animated.View>
           ))
         : null}
     </Animated.View>
   );
-}
+});
 
 /**
  * A task, one line: its state's mark (the orbit while it runs, amber while it waits on you) under its agent's face, its
  * title and what it is about in quiet type, cut at the end, its time and a chevron, since it opens its own screen,
  * where it is said whole and where it is stopped. A routine's or another agent's (`flat`) says whose it is first.
  */
-function TaskRow({
+const TaskRow = memo(function TaskRow({
   task,
   state,
   flat = false,
@@ -456,7 +490,7 @@ function TaskRow({
       <Disclosure />
     </RowPressable>
   );
-}
+});
 
 /** A row's words on one line: the title, then what it is about in quiet type, cut at the end ("…"). */
 function OneLine({ title, line, variant = "body" }: { title: string; line?: string | null; variant?: TextVariant }) {
@@ -470,12 +504,11 @@ function OneLine({ title, line, variant = "body" }: { title: string; line?: stri
 
 /**
  * What holds waiting work (`waitCauses`), one line with its count, as the web's strip: a plan at its limit opens IA e
- * uso, a full computer its line, one away the computers, people's oks and answers the first such task's screen.
+ * uso, one away the computers, people's oks and answers the first such task's screen.
  */
 function CauseRow({ cause, computers, divider }: { cause: WaitCause; computers: ComputerSummary[]; divider: boolean }) {
   const { t, i18n } = useTranslation();
   const c = useColors();
-  const openQueue = useOpenQueue();
   const first = cause.tasks[0] as ManagedTask;
   const { name: title, fact: line } = causeWords(t, i18n.language, cause, computers);
   const brain = first.brain && first.brain !== "model" ? first.brain : null;
@@ -489,7 +522,7 @@ function CauseRow({ cause, computers, divider }: { cause: WaitCause; computers: 
       : cause.kind === "computer"
         ? {
             lead: <ComputerIcon kind={kind} size={16} color={c.muted} />,
-            onPress: cause.busy ? () => openQueue(cause.machineId) : () => router.push("/settings/devices"),
+            onPress: () => router.push("/settings/devices"),
           }
         : {
             lead: <Icon name="clock" size={16} color={c.muted} />,
@@ -511,10 +544,7 @@ function CauseRow({ cause, computers, divider }: { cause: WaitCause; computers: 
   );
 }
 
-/**
- * A computer with work (ADR 0128): its name, whether it has room or how many wait for it, how many run there now. It
- * opens its line (`QueueSheet`).
- */
+/** A computer with a line (ADR 0128): its name, how many wait and run there. It opens its line (`QueueSheet`). */
 function ComputerRow({ computer, divider }: { computer: ComputerSummary; divider: boolean }) {
   const { t } = useTranslation();
   const c = useColors();
@@ -585,26 +615,42 @@ function EndedRow({ task, divider, meId }: { task: EndedTask; divider: boolean; 
  * comes. A tap or a long press opens its sheet (`ReturnSheet`): the row's words cut at the end, and a return has no
  * screen of its own.
  */
-function ReturnRow({ item, divider, now }: { item: PendingReturn; divider: boolean; now: number }) {
+const ReturnRow = memo(function ReturnRow({
+  item,
+  divider,
+  now,
+}: {
+  item: PendingReturn;
+  divider: boolean;
+  /** The minute's time: the row says a time of day. */
+  now: number;
+}) {
   const { t, i18n } = useTranslation();
   const c = useColors();
   const dir = useDirectory();
   const sheet = useSheet();
   const agent = dir.nameOf({ type: "agent", id: item.agentId });
   const line = [agent, returnPlace(t, item)].filter(Boolean).join(" · ");
-  const when = item.held ? t("threads.status.input") : returnWhen(t, i18n.language, item.at, now, true);
-  const soon = item.held
-    ? null
-    : t("followUps.inTime", { time: formatLineTime(i18n.language, Math.max(1000, Date.parse(item.at) - now)) });
-  const open = () =>
+  const whenAt = (at: number) =>
+    item.held ? t("threads.status.input") : returnWhen(t, i18n.language, item.at, at, true);
+  const soonAt = (at: number) =>
+    item.held
+      ? null
+      : t("followUps.inTime", { time: formatLineTime(i18n.language, Math.max(1000, Date.parse(item.at) - at)) });
+  const when = whenAt(now);
+  const soon = soonAt(now);
+  const open = () => {
+    // The sheet says how long is left from the moment it opens: the row's time moves once a minute.
+    const at = Date.now();
     sheet.open(
       <ReturnSheet
         item={item}
         line={line}
-        when={[when, soon].filter(Boolean).join(" · ")}
+        when={[whenAt(at), soonAt(at)].filter(Boolean).join(" · ")}
         onOpen={() => router.push(chatHref(item.channelId, item.threadId, item.replyMessageId))}
       />,
     );
+  };
   return (
     <RowPressable
       hold
@@ -625,7 +671,7 @@ function ReturnRow({ item, divider, now }: { item: PendingReturn; divider: boole
       <Disclosure />
     </RowPressable>
   );
-}
+});
 
 /** A return that won't come, among what ended today: who canceled it (nobody: its time found it couldn't). */
 function CanceledReturnRow({ item, divider, meId }: { item: CanceledReturn; divider: boolean; meId: string | null }) {
@@ -748,7 +794,6 @@ const GAP = "  ";
 const styles = StyleSheet.create({
   // Under the large title's words, as Equipe's line.
   summary: { paddingHorizontal: SCREEN_X, marginTop: -4, paddingBottom: 4 },
-  today: { paddingHorizontal: SCREEN_X, paddingTop: 8 },
   // One line each: the touch rows' 12 above and below it, the lead (28) at most as tall as that.
   agent: {
     flexDirection: "row",

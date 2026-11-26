@@ -2,12 +2,12 @@ import {
   activeRunsIn,
   addChannelMember,
   answerNow,
-  can,
   cancelFollowUp,
   channelCard,
   consultationConversation,
   consultationsIn,
   createChannel,
+  handedConversation,
   idRef,
   joinChannel,
   listChannelMembers,
@@ -18,15 +18,18 @@ import {
   MEDIA_REFUSALS,
   type MessageView,
   messageCard,
+  messageCards,
   openConsultationsIn,
   pendingReturns,
   postPersonMessage,
   requireChannelAccess,
   STICKER_MOODS,
   ValidationError,
+  withPersonFacts,
 } from "@agenteschat/engine";
 import { createRoute, z } from "@hono/zod-openapi";
 import { apiError, errorResponse } from "../../http/errors";
+import { ArtifactDetail, BlockState, Choices, Poll } from "./artifacts";
 import {
   type AppDeps,
   aiStatusDeps,
@@ -40,7 +43,7 @@ import {
   requireSession,
   security,
 } from "./context";
-import { Channel, Message, PendingReturn } from "./schemas";
+import { Channel, LiveSelection, Message, PendingReturn } from "./schemas";
 
 const tags = ["Chat"];
 const ChannelParams = OrgParams.extend({ channelId: z.uuid() });
@@ -109,8 +112,10 @@ export function chatRoutes(deps: AppDeps) {
             seenAsAdmin: r.seenAsAdmin,
             createdByUserId: r.createdByUserId,
             createdAt: r.createdAt.toISOString(),
-            categoryId: r.categoryId,
+            groupId: r.groupId,
             position: r.position,
+            replyInThreads: r.replyInThreads,
+            leadAgentId: r.leadAgentId,
             unreadCount: r.unreadCount,
             mentionCount: r.mentionCount,
             lastReadAt: iso(r.lastReadAt),
@@ -208,7 +213,15 @@ export function chatRoutes(deps: AppDeps) {
               description:
                 "Private only: people holding one of these roles (departments) also see it and may join (ADR 0125); empty: invite only.",
             }),
-            categoryId: z.uuid().nullable().optional().openapi({ description: "Put it in this sidebar category." }),
+            groupId: z.uuid().nullable().optional().openapi({ description: "Put it in this sector (`agent-groups`)." }),
+            members: z
+              .array(z.union([z.object({ userId: z.string() }), z.object({ agentId: z.uuid() })]))
+              .max(200)
+              .optional()
+              .openapi({
+                description:
+                  "Who joins it right after you, with the same checks as adding each one. Its agents answer in threads (ADR 0214) only when another person is among them, and never in a personal workspace.",
+              }),
           }),
         ),
       },
@@ -228,8 +241,10 @@ export function chatRoutes(deps: AppDeps) {
           isMember: true,
           createdByUserId: r.createdByUserId,
           createdAt: r.createdAt.toISOString(),
-          categoryId: r.categoryId,
+          groupId: r.groupId,
           position: r.position,
+          replyInThreads: r.replyInThreads,
+          leadAgentId: r.leadAgentId,
         },
         201,
       );
@@ -442,6 +457,10 @@ export function chatRoutes(deps: AppDeps) {
                   description:
                     "Work in the background (a routine's, or long work, ADR 0121): not the conversation's working row.",
                 }),
+                replyInThread: z.boolean().openapi({
+                  description:
+                    "Asked in the main timeline, it answers in the thread under that message, as its channel said when it was asked (ADR 0214). `threadId` stays its conversation's root either way.",
+                }),
               }),
             ),
             consults: z
@@ -535,14 +554,18 @@ export function chatRoutes(deps: AppDeps) {
       security,
       summary: "One question asked from here, opened: what the two agents said for it (read only)",
       description:
-        "The question as it went into the agents' DM, the consulted agent's messages there and the cards it posted here (approvals, questions, secret requests), oldest first. Only this question's part of their DM. 404 when it wasn't asked from this conversation.",
+        "The question as it went into the agents' DM, the consulted agent's messages there and the cards it posted here (approvals, questions, secret requests), oldest first. Only this question's part of their DM. Also from the DM of the agent it was asked of, where it left its trace, for a person who reads where it was asked. 404 otherwise.",
       request: { params: ChannelParams.extend({ consultationId: z.uuid() }) },
       responses: { 200: json(z.object({ consultation: Consultation, messages: z.array(Message) })), ...errors },
     }),
     async (c) => {
       const { orgId, channelId, consultationId } = c.req.valid("param");
-      await requireChannelAccess(db, c.get("user").id, orgId, channelId);
-      const found = await consultationConversation(db, orgId, channelId, consultationId);
+      const userId = c.get("user").id;
+      await requireChannelAccess(db, userId, orgId, channelId);
+      // Asked from here, or handed to the agent of this DM for the person who reads it (its trace here).
+      const found =
+        (await consultationConversation(db, orgId, channelId, consultationId)) ??
+        (await handedConversation(db, orgId, channelId, consultationId, userId));
       if (!found) return apiError(c, 404, "not_found", "Question not found");
       const q = found.consultation;
       return c.json(
@@ -574,25 +597,62 @@ export function chatRoutes(deps: AppDeps) {
         query: z.object({
           threadId: z.uuid().optional(),
           before: z.iso.datetime().optional().openapi({ description: "Page backwards from this time." }),
-          limit: z.coerce.number().int().min(1).max(200).optional(),
-          include: z
-            .string()
+          after: z.iso
+            .datetime()
             .optional()
-            .openapi({ description: "`replies`: add reply count, last activity and the latest replies per thread." }),
+            .openapi({ description: "Page forwards from this time: the oldest `limit` after it." }),
+          around: z.uuid().optional().openapi({
+            description:
+              "The page with this top-level message in its middle (404 when it is deleted or not in this channel).",
+          }),
+          limit: z.coerce.number().int().min(1).max(200).optional(),
+          include: z.string().optional().openapi({
+            description:
+              "`replies`: add reply count, last activity and the latest replies per thread. `cards`: add `cards`, what the messages' live blocks, votes and question cards show, so they draw whole at once.",
+          }),
         }),
       },
-      responses: { 200: json(z.object({ messages: z.array(Message) })), ...errors },
+      responses: {
+        200: json(
+          z.object({
+            messages: z.array(Message),
+            cards: z
+              .object({
+                artifacts: z.array(ArtifactDetail),
+                polls: z.array(Poll),
+                choices: z.array(Choices),
+                blocks: z.array(BlockState),
+              })
+              .optional()
+              .openapi({
+                description:
+                  "With `include=cards`: each card on these messages at the version it shows, with its state (cards the reader can't see are left out).",
+              }),
+          }),
+        ),
+        ...errors,
+      },
     }),
     async (c) => {
       const { orgId, channelId } = c.req.valid("param");
       const q = c.req.valid("query");
-      const messages = await listMessages(db, c.get("user").id, orgId, channelId, {
+      const userId = c.get("user").id;
+      const include = q.include?.split(",") ?? [];
+      const messages = await listMessages(db, userId, orgId, channelId, {
         threadId: q.threadId,
         before: q.before ? new Date(q.before) : undefined,
+        after: q.after ? new Date(q.after) : undefined,
+        around: q.around,
         limit: q.limit,
-        includeReplies: q.include?.split(",").includes("replies") ?? false,
+        includeReplies: include.includes("replies"),
       });
-      return c.json({ messages }, 200);
+      const artifacts = deps.extras?.artifacts;
+      if (!include.includes("cards") || !artifacts) return c.json({ messages }, 200);
+      const cards = await messageCards(artifacts, userId, orgId, messages);
+      return c.json(
+        { messages, cards: { ...cards, artifacts: await withPersonFacts(db, userId, orgId, cards.artifacts) } },
+        200,
+      );
     },
   );
 
@@ -643,6 +703,14 @@ export function chatRoutes(deps: AppDeps) {
               description:
                 "Sent while an agent works here (it goes into its task): stop its current model call and read this message now. Without it, the agent reads it at its next step.",
             }),
+            liveRef: z
+              .object({ artifactId: z.uuid(), selection: LiveSelection.optional() })
+              .nullable()
+              .optional()
+              .openapi({
+                description:
+                  "In a live file's conversation (ADR 0199): what you had selected in the file. Stored as `meta.liveRef` ({ artifactId, kind, title, selection? }) and shown as the message's `liveRef`. Only that conversation's own file (400 `message.live_ref`).",
+              }),
             clientId: z
               .string()
               .max(64)
@@ -677,7 +745,7 @@ export function chatRoutes(deps: AppDeps) {
           user.id,
           orgId,
           channelId,
-          c.req.valid("json"),
+          { ...c.req.valid("json"), origin: "app" },
         );
       } catch (error) {
         // A GIF or sticker that can't go (ADR 0091): the request was fine, what it names can't be sent.
@@ -742,11 +810,8 @@ export function chatRoutes(deps: AppDeps) {
     async (c) => {
       const { orgId, channelId } = c.req.valid("param");
       const userId = c.get("user").id;
-      const { workspace } = await requireChannelAccess(db, userId, orgId, channelId);
-      const followUps = await pendingReturns(db, userId, orgId, {
-        channelId,
-        managesAgents: can(workspace, "manage_agents"),
-      });
+      await requireChannelAccess(db, userId, orgId, channelId);
+      const followUps = await pendingReturns(db, userId, orgId, { channelId });
       return c.json({ followUps }, 200);
     },
   );

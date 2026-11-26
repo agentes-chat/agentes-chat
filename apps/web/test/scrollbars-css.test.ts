@@ -58,6 +58,7 @@ const SIDEWAYS: Record<string, "strip" | "content"> = {
   ".agp-subnav": "strip",
   ".ac-tabs": "strip",
   ".settings__groups": "strip",
+  ".store-cats": "strip",
   ".channel-settings__nav": "strip",
   ".onb__steps": "strip",
   ".newag .onb__steps": "strip",
@@ -72,8 +73,17 @@ const SIDEWAYS: Record<string, "strip" | "content"> = {
   ".dk-orgpick": "strip",
   ".wiki-doc .wiki-editor__bar": "strip",
   ".nac-band__path": "strip",
+  ".cnv-dock": "strip",
+  ".sheet-tabs__strip": "strip",
+  ".sheet-tools": "strip",
+  ".sl-tools": "strip",
+  ".ac-formatbar__row": "strip",
+  // A document's code block with long lines keeps our scrollbar (ADR 0200).
+  ".lf-doc__body pre.lf-doc__code": "content",
+  ".sl-rail__list": "strip",
   ".code-card__code": "content",
   ".code-card__preview": "content",
+  ".code-tabs": "strip",
   ".level-matrix": "content",
   ".pu-table-card": "content",
   ".spec-block__table": "content",
@@ -85,6 +95,7 @@ const SIDEWAYS: Record<string, "strip" | "content"> = {
   ".mi-log": "content",
   ".mi-cmd__line": "content",
   ".ac-msg__text pre": "content",
+  ".sl-chartdlg__data": "content",
 };
 
 describe("our scrollbars, never the browser's", () => {

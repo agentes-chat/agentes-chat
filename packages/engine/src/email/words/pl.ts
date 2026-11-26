@@ -338,6 +338,14 @@ export const words: EmailWords = {
   deletionCode: {
     subjectWorkspace: (code) => `${code} to twój kod do usunięcia przestrzeni roboczej`,
     subjectAccount: (code) => `${code} to twój kod do usunięcia całego konta`,
+    subjectReset: (code) => `${code} to twój kod do zresetowania przestrzeni roboczej`,
+    reset: (org) => [
+      "Wpisz ten kod, żeby zresetować przestrzeń roboczą ",
+      { b: org },
+      ". Jej agenci, rozmowy, pliki i pamięć zostaną od razu usunięte na dobre, a ona zacznie od nowa jak nowa przestrzeń.",
+    ],
+    whyReset: (org) =>
+      `Otrzymujesz tę wiadomość, ponieważ z twojego konta poproszono o zresetowanie ${org} w agentes.chat.`,
     preheader: "Wpisz go w agentes.chat, żeby potwierdzić. Działa przez 10 minut.",
     headline: "Twój kod",
     workspace: (org) => [
@@ -440,6 +448,49 @@ export const words: EmailWords = {
       why: () => "Otrzymujesz tę wiadomość, ponieważ jesteś w tej przestrzeni roboczej w agentes.chat.",
     },
   },
+  computerDown: {
+    subject: "Komputer nie odpowiada",
+    preheader: "Praca twoich agentów na nim czeka.",
+    headline: "Komputer nie odpowiada",
+    body: (name, org, away) => [
+      { b: name },
+      " w ",
+      { b: org },
+      ` nie odpowiada od ${away}. Praca, która go potrzebuje, czeka i ruszy dalej, gdy wróci.`,
+    ],
+    runs: "Czekające prośby do agentów",
+    calls: "Czekające wywołania webhooka",
+    note: "Aby działać dalej już teraz, przenieś jego agentów na inny komputer na jego stronie.",
+    button: "Otwórz komputer",
+    why: (org) => `Dostajesz ten e-mail, bo zarządzasz komputerami ${org} w agentes.chat.`,
+    back: {
+      subject: "Komputer znów działa",
+      preheader: "Praca, która na niego czekała, idzie teraz dalej.",
+      headline: "Komputer znów działa",
+      runs: "Prośby do agentów, które czekały",
+      calls: "Wywołania webhooka, które czekały",
+      body: (name, org, away) => [
+        { b: name },
+        " w ",
+        { b: org },
+        ` znów działa po ${away}. Praca, która na niego czekała, idzie teraz dalej.`,
+      ],
+    },
+    personal: {
+      body: (name, _org, away) => [
+        { b: name },
+        ` nie odpowiada od ${away}. Praca, która go potrzebuje, czeka i ruszy dalej, gdy wróci.`,
+      ],
+      why: () =>
+        "Dostajesz ten e-mail, bo zarządzasz komputerami swojej osobistej przestrzeni roboczej w agentes.chat.",
+      back: {
+        body: (name, _org, away) => [
+          { b: name },
+          ` znów działa po ${away}. Praca, która na niego czekała, idzie teraz dalej.`,
+        ],
+      },
+    },
+  },
   appConnected: {
     subject: "Do twojego konta agentes.chat podłączono aplikację",
     preheader: "Może czytać i wysyłać zadania agentom w twoim imieniu w jednej przestrzeni roboczej.",
@@ -523,6 +574,36 @@ export const words: EmailWords = {
     none: "Brak przestrzeni roboczych.",
     table: (day) => `Cała tabela: bun run report:autonomy --day ${day}`,
     why: "Otrzymujesz tę wiadomość, ponieważ ten adres jest w OPS_REPORT_EMAIL na tym serwerze. Przychodzi raz dziennie.",
+  },
+  accountOpened: {
+    subject: (plan) => `Więcej osób może korzystać z twojego konta ${plan}`,
+    preheader: (plan) => `To, co z nim robią, korzysta z twojego planu ${plan} i jego limitów.`,
+    headline: "Ktoś zmienił, kto może korzystać z twojego konta AI",
+    body: (by, account, plan) => [
+      { b: by },
+      ` zmienił(a), kto może korzystać z twojego konta ${plan} `,
+      { b: account },
+      `. To, co z nim robią, korzysta z twojego planu i jego limitów.`,
+    ],
+    account: "Konto",
+    by: "Zmienił(a)",
+    setting: "Uprawnienie",
+    use: "Używanie w agentach",
+    reply: "Odpowiadanie wszystkim",
+    was: "Wcześniej",
+    now: "Teraz",
+    everyone: "Wszyscy w workspace",
+    admins: "Ty i administratorzy",
+    onlyYou: "Tylko ty",
+    agentOwner: "Tylko właściciel agenta",
+    note: "Aby to cofnąć, otwórz konto w sekcji AI i użycie i zmień jego uprawnienia.",
+    button: "Otwórz konta AI",
+    why: (org) =>
+      `Otrzymujesz tę wiadomość, ponieważ połączyłeś(-aś) to konto AI w ${org}, a ktoś inny zmienił, kto może z niego korzystać.`,
+    personal: {
+      why: () =>
+        "Otrzymujesz tę wiadomość, ponieważ połączyłeś(-aś) to konto AI, a ktoś inny zmienił, kto może z niego korzystać.",
+    },
   },
   planOpened: {
     subject: (plan) => `Więcej osób może rozmawiać z twoim agentem w ramach twojego planu ${plan}`,
@@ -646,6 +727,27 @@ export const words: EmailWords = {
       small: "Połącz ponownie w Ustawieniach, jeśli to Ty.",
       why: (surface) => `Otrzymujesz tego e-maila, bo ${surface} było połączone z Twoim kontem agentes.chat.`,
       picture: "Twój asystent, już nie w telefonie",
+    },
+    pinReset: {
+      subject: (surface) => `Wybierz PIN do ${surface}`,
+      preheader: "Wybierz PIN, którym zatwierdzasz działania z aplikacji czatu.",
+      headline: (surface) => `Wybierz PIN do ${surface}`,
+      body: (surface) =>
+        `Ktoś poprosił o link do wybrania PIN-u, którym zatwierdzasz działania z ${surface}. Jeśli to Ty, wybierz go na stronie, którą otwiera ten przycisk.`,
+      button: "Wybierz mój PIN",
+      small: "Link działa raz, przez godzinę. Jeśli to nie Ty, zignoruj tego e-maila. Nic się nie zmieni.",
+      why: (surface) => `Otrzymujesz tego e-maila, bo ${surface} jest połączone z Twoim kontem agentes.chat.`,
+    },
+    pinLocked: {
+      subject: (surface) => `Twój PIN do ${surface} jest zablokowany`,
+      preheader: "Trzy błędne PIN-y z rzędu. Zatwierdzanie z aplikacji czatu jest na razie wstrzymane.",
+      headline: (surface) => `Twój PIN do ${surface} jest zablokowany`,
+      body: (surface, time) =>
+        `Ktoś trzy razy z rzędu wpisał błędny PIN, aby zatwierdzić działanie z ${surface}. Zatwierdzanie z ${surface} jest wstrzymane na ${time}.`,
+      lockedFor: ["15 minut", "1 godzinę", "24 godziny"],
+      small: (surface) =>
+        `Jeśli to Ty, spróbuj ponownie później. Jeśli nie, odłącz ${surface} w ustawieniach powiadomień, aby nikt nie mógł nic przez nie zatwierdzić.`,
+      button: "Otwórz ustawienia powiadomień",
     },
   },
   supportReply: {

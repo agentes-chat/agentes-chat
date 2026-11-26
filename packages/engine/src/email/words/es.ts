@@ -308,6 +308,13 @@ export const words: EmailWords = {
   deletionCode: {
     subjectWorkspace: (code) => `${code} es tu código para eliminar un espacio de trabajo`,
     subjectAccount: (code) => `${code} es tu código para eliminar toda tu cuenta`,
+    subjectReset: (code) => `${code} es tu código para reiniciar un espacio de trabajo`,
+    reset: (org) => [
+      "Escribe este código para reiniciar el espacio de trabajo ",
+      { b: org },
+      ". Sus agentes, conversaciones, archivos y memoria se borran al instante y para siempre, y empieza de cero como uno nuevo.",
+    ],
+    whyReset: (org) => `Recibiste este correo porque tu cuenta pidió reiniciar ${org} en agentes.chat.`,
     preheader: "Escríbelo en agentes.chat para confirmar. Es válido por 10 minutos.",
     headline: "Tu código",
     workspace: (org) => [
@@ -409,6 +416,49 @@ export const words: EmailWords = {
       why: () => "Recibiste este correo porque formas parte de este espacio de trabajo en agentes.chat.",
     },
   },
+  computerDown: {
+    subject: "Una computadora no responde",
+    preheader: "El trabajo de tus agentes en ella está en espera.",
+    headline: "Una computadora no responde",
+    body: (name, org, away) => [
+      { b: name },
+      " en ",
+      { b: org },
+      ` no responde desde hace ${away}. El trabajo que la necesita espera y sigue cuando vuelva.`,
+    ],
+    runs: "Pedidos a agentes en espera",
+    calls: "Llamadas de webhook en espera",
+    note: "Para seguir ahora, mueve sus agentes a otra computadora desde su página.",
+    button: "Abrir la computadora",
+    why: (org) => `Recibiste este correo porque gestionas las computadoras de ${org} en agentes.chat.`,
+    back: {
+      subject: "Una computadora volvió",
+      preheader: "El trabajo que la esperaba sigue ahora.",
+      headline: "La computadora volvió",
+      runs: "Pedidos a agentes que esperaron",
+      calls: "Llamadas de webhook que esperaron",
+      body: (name, org, away) => [
+        { b: name },
+        " en ",
+        { b: org },
+        ` volvió después de ${away}. El trabajo que la esperaba sigue ahora.`,
+      ],
+    },
+    personal: {
+      body: (name, _org, away) => [
+        { b: name },
+        ` no responde desde hace ${away}. El trabajo que la necesita espera y sigue cuando vuelva.`,
+      ],
+      why: () =>
+        "Recibiste este correo porque gestionas las computadoras de tu espacio de trabajo personal en agentes.chat.",
+      back: {
+        body: (name, _org, away) => [
+          { b: name },
+          ` volvió después de ${away}. El trabajo que la esperaba sigue ahora.`,
+        ],
+      },
+    },
+  },
   appConnected: {
     subject: "Se conectó una app a tu cuenta de agentes.chat",
     preheader: "Puede leer y enviar tareas a los agentes en tu nombre en un espacio de trabajo.",
@@ -490,6 +540,35 @@ export const words: EmailWords = {
     none: "Ningún espacio de trabajo.",
     table: (day) => `La tabla completa: bun run report:autonomy --day ${day}`,
     why: "Recibiste este correo porque esta dirección está en OPS_REPORT_EMAIL en este servidor. Se envía una vez al día.",
+  },
+  accountOpened: {
+    subject: (plan) => `Más personas pueden usar tu cuenta de ${plan}`,
+    preheader: (plan) => `Lo que hagan con ella usa tu plan de ${plan} y sus límites.`,
+    headline: "Alguien cambió quién puede usar tu cuenta de IA",
+    body: (by, account, plan) => [
+      { b: by },
+      ` cambió quién puede usar tu cuenta de ${plan} `,
+      { b: account },
+      `. Lo que hagan con ella usa tu plan y sus límites.`,
+    ],
+    account: "Cuenta",
+    by: "Cambiado por",
+    setting: "Permiso",
+    use: "Usar en agentes",
+    reply: "Atender a todos",
+    was: "Antes",
+    now: "Ahora",
+    everyone: "Todos en el workspace",
+    admins: "Tú y los administradores",
+    onlyYou: "Solo tú",
+    agentOwner: "Solo el dueño del agente",
+    note: "Para deshacerlo, abre la cuenta en IA y uso y cambia sus permisos.",
+    button: "Abrir cuentas de IA",
+    why: (org) =>
+      `Recibiste este correo porque conectaste esta cuenta de IA en ${org} y otra persona cambió quién puede usarla.`,
+    personal: {
+      why: () => "Recibiste este correo porque conectaste esta cuenta de IA y otra persona cambió quién puede usarla.",
+    },
   },
   planOpened: {
     subject: (plan) => `Más personas pueden hablar con tu agente con tu plan de ${plan}`,
@@ -589,6 +668,27 @@ export const words: EmailWords = {
       small: "Vincúlalo de nuevo en Configuración si fuiste tú.",
       why: (surface) => `Recibiste este correo porque ${surface} estaba vinculado a tu cuenta de agentes.chat.`,
       picture: "Tu asistente, ya no en tu teléfono",
+    },
+    pinReset: {
+      subject: (surface) => `Elige tu PIN de ${surface}`,
+      preheader: "Elige el PIN que aprueba acciones desde tu app de chat.",
+      headline: (surface) => `Elige tu PIN de ${surface}`,
+      body: (surface) =>
+        `Alguien pidió un enlace para elegir el PIN que usas para aprobar acciones desde ${surface}. Si fuiste tú, elígelo en la página que abre este botón.`,
+      button: "Elegir mi PIN",
+      small: "El enlace funciona una vez, durante una hora. Si no fuiste tú, ignora este correo. No cambia nada.",
+      why: (surface) => `Recibiste este correo porque ${surface} está vinculado a tu cuenta de agentes.chat.`,
+    },
+    pinLocked: {
+      subject: (surface) => `Tu PIN de ${surface} está bloqueado`,
+      preheader: "Tres PIN incorrectos seguidos. Aprobar desde tu app de chat está en pausa por ahora.",
+      headline: (surface) => `Tu PIN de ${surface} está bloqueado`,
+      body: (surface, time) =>
+        `Alguien escribió un PIN incorrecto tres veces seguidas para aprobar una acción desde ${surface}. Aprobar desde ${surface} queda en pausa durante ${time}.`,
+      lockedFor: ["15 minutos", "1 hora", "24 horas"],
+      small: (surface) =>
+        `Si fuiste tú, vuelve a intentarlo más tarde. Si no, desvincula ${surface} en tus ajustes de notificaciones para que nadie pueda aprobar desde ahí.`,
+      button: "Abrir ajustes de notificaciones",
     },
   },
   supportReply: {

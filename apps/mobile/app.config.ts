@@ -60,6 +60,7 @@ export const APP_LINK_PATTERNS = [
   "/org/*/routines",
   "/org/*/search",
   "/org/*/drive",
+  "/org/*/drive/*",
   "/org/*/wiki",
   "/org/*/wiki/*",
   "/org/*/members",
@@ -129,7 +130,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       dark: `${ICONS}/peekNight/ios-dark.png`,
       tinted: `${ICONS}/peekNight/ios-tinted.png`,
     },
-    supportsTablet: false,
+    // On iPad too, as a tablet app: every orientation and Split View (no full-screen requirement), the large-screen
+    // layout of ADR 0212 (two panes from 600 points, `homeOrientation` free there); also what lets it resize on a Mac.
+    supportsTablet: true,
     usesAppleSignIn: true,
     associatedDomains: [`applinks:${linkHost}`],
     config: { usesNonExemptEncryption: false },
@@ -252,13 +255,25 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         enableBackgroundPlayback: false,
       },
     ],
+    // The agents at work in the Dynamic Island and on the Lock Screen (ADR 0210): a widget extension
+    // (`<bundle id>.ExpoWidgetsTarget`, in the app group `group.<bundle id>`) for the Live Activity the server starts,
+    // updates and ends by push; `frequentUpdates` lets those pushes come as often as an agent moves on.
+    ["expo-widgets", { enablePushNotifications: true, frequentUpdates: true }],
+    // The share extension reads as the app in the share sheet. Before expo-share-intent, so it runs once the
+    // extension's files are written (a project's changes run from the last plugin to the first).
+    "./plugins/with-share-extension-name",
+    // The agents a person sends to, among the share sheet's suggestions (ADR 0213): the app declares the intent it
+    // donates, the extension the suggestions it takes and passes the one picked on to the app. Also before
+    // expo-share-intent, for the same reason.
+    "./plugins/with-share-suggestions",
     [
       // "Compartilhar com…": the app in the system's share sheet (an iOS share extension and Android's send intents),
       // for photos, videos, files, links and text; what arrives opens the agent picker (src/features/share). The
-      // extension takes the app's name and shares its URL scheme; it reaches phones only with a new native build.
+      // extension shares the app's URL scheme; it reaches phones only with a new native build. No
+      // `iosShareExtensionName`: it also names the extension's Xcode target, and the app's name there is the app's
+      // own target, so the extension was never made (plugins/with-share-extension-name.js gives it its name).
       "expo-share-intent",
       {
-        iosShareExtensionName: variant === "production" ? "agentes" : `agentes ${variant}`,
         iosActivationRules: {
           NSExtensionActivationSupportsText: true,
           NSExtensionActivationSupportsWebURLWithMaxCount: 1,

@@ -20,6 +20,7 @@ import type {
   RunnerExecutorInfo,
   RunnerPause,
   RunnerPhone,
+  RunnerReportParts,
   RunnerTools,
   XcodeBlocked,
   XcodeFix,
@@ -182,6 +183,10 @@ export interface ControlConfigPatch {
 /** Settings as `config.get` returns them. */
 export interface ControlConfig extends Required<ControlConfigPatch> {
   workspace: string;
+  /** The runner's own `maxConcurrentTasks` when the config has none, sized to the computer; absent: an older one (3). */
+  defaultMaxConcurrentTasks?: number;
+  /** Background tasks start on the computer's room (`TASK_ROOM_PROTOCOL`): `maxConcurrentTasks` decides nothing there. */
+  tasksOnRoom?: boolean;
   managedBy?: "desktop";
 }
 
@@ -245,6 +250,8 @@ export type ControlRequest =
   /** Forgets the pairing (the token is deleted; the server side is the site's "Desconectar"). */
   | { type: "unpair" }
   | { type: "diagnostics" }
+  /** `PROBLEM_REPORT_PROTOCOL`: what a problem report adds from this computer, scrubbed. Older runners: `bad_request`. */
+  | { type: "report" }
   /** The organization's logo, fetched by the runner with its token (the app never sees the token). */
   | { type: "org.logo" }
   /** Protocol 10. */
@@ -291,6 +298,8 @@ export type ControlRequest =
   | { type: "cli.install"; action: "start" | "status" | "cancel"; tool: InstallableCli }
   /** Reads the plugged iPhone again now; answers once the status carries what it found. */
   | { type: "iphone.look" }
+  /** Repairs the test helper of the iPhone `serial` here (machine op `phone.repair`); the status shows its rebuild. */
+  | { type: "iphone.repair"; serial: string }
   /** Finish what's running briefly, then exit 0 (the app quits). */
   | { type: "shutdown" };
 
@@ -310,6 +319,7 @@ export interface ControlReplies {
   unpair: { unpaired: true };
   /** Redacted: versions, OS, recent log lines with secrets removed. Safe to paste in a support chat. */
   diagnostics: { text: string };
+  report: RunnerReportParts;
   /** A `data:image/png|jpeg|webp;base64,…` URL; null without a logo (the app draws the initial). */
   "org.logo": { logo: string | null };
   "access.get": RunnerAccess;
@@ -334,6 +344,7 @@ export interface ControlReplies {
   "iphone.fixXcode": ControlIphoneSetup;
   "cli.install": { install: CliInstall | null };
   "iphone.look": { looking: boolean };
+  "iphone.repair": { repairing: boolean };
   shutdown: { stopping: true };
 }
 

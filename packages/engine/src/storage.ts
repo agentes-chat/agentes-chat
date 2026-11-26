@@ -21,6 +21,7 @@ import {
   isNull,
   ne,
   or,
+  rowsOf,
   schema,
   sql,
 } from "@agenteschat/db";
@@ -30,10 +31,13 @@ import { NotFoundError, ValidationError } from "./errors";
 import { transcriptKey } from "./file-reader";
 import { assertStorageRoom } from "./limits";
 import { assertPublicHttpsUrl, outboundFetch, type ResolveHost } from "./net-guard";
+import { heavyRead } from "./operator-paging";
 import { requirePermission } from "./organizations";
 import { enqueue } from "./outbox";
+import { withoutTrailingSlashes } from "./url-text";
 
-const { storageConfigs, storageMigrations, artifacts, artifactVersions, skillFiles, voiceClips } = schema;
+const { storageConfigs, storageMigrations, artifacts, artifactVersions, skillFiles, voiceClips, liveAssets, liveDocs } =
+  schema;
 
 type StorageConfigRow = typeof storageConfigs.$inferSelect;
 type MigrationRow = typeof storageMigrations.$inferSelect;
@@ -105,7 +109,11 @@ const TEST_VALID_MS = 30 * 60_000;
 const aadFor = (orgId: string, id: string) => `storage:${orgId}:${id}`;
 const hint = (s: string) => (s.length <= 4 ? "••••" : `••••${s.slice(-4)}`);
 const keyPrefix = (prefix: string | null | undefined) => {
-  const p = (prefix ?? "").trim().replace(/^\/+|\/+$/g, "");
+  const typed = (prefix ?? "").trim();
+  // Slashes out from both ends by index, not by `/^\/+|\/+$/g`, which rescans each inner run of them.
+  let start = 0;
+  while (typed.charAt(start) === "/") start++;
+  const p = withoutTrailingSlashes(typed.slice(start));
   return p ? `${p}/` : "";
 };
 
@@ -218,7 +226,7 @@ export function storageErrorText(error: unknown): string {
 
 /** Settings plus keys (the stored ones when the input leaves them empty). */
 async function resolveInput(deps: StorageDeps, orgId: string, input: S3Input) {
-  const endpoint = input.endpoint.trim().replace(/\/+$/, "");
+  const endpoint = withoutTrailingSlashes(input.endpoint.trim());
   const bucket = input.bucket.trim();
   const region = input.region.trim() || "auto";
   if (!bucket || !/^[a-z0-9][a-z0-9.-]{1,62}$/.test(bucket))
@@ -466,7 +474,10 @@ export interface StoredBytes {
   ownBucketBytes: number;
 }
 
-/** The statements `storedBytes` runs, the Drive's and the skills', exported for the test that reads their plans. */
+/**
+ * The statements `storedBytes` runs, the Drive's and the skills', exported for the test that reads their plans.
+ * `instanceStoredBytes` sums the same rows for every workspace at once: what changes here changes there.
+ */
 export const storedBytesQueries = (db: Executor, orgId: string) =>
   [
     db
@@ -492,21 +503,102 @@ export const storedBytesQueries = (db: Executor, orgId: string) =>
       })
       .from(voiceClips)
       .where(and(eq(voiceClips.orgId, orgId), isNull(voiceClips.audioDeletedAt))),
+    // Live files' pictures (ADR 0196 §8), out of the trash like the versions.
+    db
+      .select({
+        platform: sql<string>`coalesce(sum(${liveAssets.size}) filter (where ${liveAssets.storageConfigId} is null), 0)`,
+        own: sql<string>`coalesce(sum(${liveAssets.size}) filter (where ${liveAssets.storageConfigId} is not null), 0)`,
+      })
+      .from(liveAssets)
+      .innerJoin(artifacts, eq(artifacts.id, liveAssets.artifactId))
+      .where(and(eq(liveAssets.orgId, orgId), eq(artifacts.orgId, orgId), isNull(artifacts.deletedAt))),
+    // Live files' documents, kept in this server's database whatever storage the workspace uses (ADR 0196 §4).
+    db
+      .select({ platform: sql<string>`coalesce(sum(${liveDocs.stateBytes}), 0)`, own: sql<string>`0` })
+      .from(liveDocs)
+      .innerJoin(artifacts, eq(artifacts.id, liveDocs.artifactId))
+      .where(and(eq(liveDocs.orgId, orgId), eq(artifacts.orgId, orgId), isNull(artifacts.deletedAt))),
   ] as const;
 
 /**
  * What a workspace's files take, summed from the size each one recorded when it was written: no bucket is listed and
  * no folder walked. It counts every version kept of the Drive's files (uploads, what agents make or bring from their
  * computers, files attached to messages, issues and wiki pages) and every stored file of its skills, deleted skills'
- * included, as their files stay, and the voice recordings still kept. Left out: the Drive's trash, which goes for good after 30 days; the workspace's
+ * included, as their files stay, the voice recordings still kept, and live files' pictures and documents (ADR 0196).
+ * Left out: the Drive's trash, which goes for good after 30 days; the workspace's
  * logo, connectors' icons and people's photos, small and with no size on record; the old copies a copy between
  * storages (`runMigration`) leaves where the files were.
  */
 export async function storedBytes(db: Executor, orgId: string): Promise<StoredBytes> {
-  const [[files], [skills], [voice]] = await Promise.all(storedBytesQueries(db, orgId));
+  const sums = await Promise.all(storedBytesQueries(db, orgId));
+  let platformBytes = 0;
+  let ownBucketBytes = 0;
+  for (const [sum] of sums) {
+    platformBytes += Number(sum?.platform ?? 0);
+    ownBucketBytes += Number(sum?.own ?? 0);
+  }
+  return { platformBytes, ownBucketBytes };
+}
+
+/** What the files of every workspace on this server's storage take together (`instanceStoredBytes`). */
+export interface InstanceStoredBytes {
+  /** `storedBytes`' platform bytes, summed over the workspaces whose new files go to this server's storage. */
+  storageBytes: number;
+  /** How many workspaces that sum is of: each has at least one byte counted. */
+  workspaces: number;
+  /** How many workspaces send new files to a bucket of their own: left out whole. */
+  ownStorageWorkspaces: number;
+}
+
+/**
+ * `storedBytes`' platform bytes for the whole instance: the rows `storedBytesQueries` sums for one workspace, summed
+ * for all of them at once, so a change to what one counts is a change to the other. A workspace with a bucket of its
+ * own is left out with whatever it still keeps here (files written before the bucket and not copied to it, live
+ * files' documents). No index holds a file's size, so every row of the five tables is read: it runs as a `heavyRead`.
+ */
+export async function instanceStoredBytes(db: Database): Promise<InstanceStoredBytes> {
+  // Out of the Drive's trash, the workspace matched on both sides as for one workspace.
+  const kept = (orgId: unknown, artifactId: unknown) =>
+    sql`join ${artifacts} on ${artifacts.id} = ${artifactId} and ${artifacts.orgId} = ${orgId}
+      and ${artifacts.deletedAt} is null`;
+  const [total] = rowsOf<{ storageBytes: number | null; workspaces: number; ownStorageWorkspaces: number }>(
+    await heavyRead(
+      db,
+      sql`
+      with own as (
+        select ${storageConfigs.orgId} as org_id from ${storageConfigs} where ${storageConfigs.status} = 'active'
+      ), files as (
+        select ${artifactVersions.orgId} as org_id, ${artifactVersions.size} as bytes from ${artifactVersions}
+          ${kept(artifactVersions.orgId, artifactVersions.artifactId)}
+          where ${artifactVersions.storageConfigId} is null
+        union all
+        select ${skillFiles.orgId}, ${skillFiles.size} from ${skillFiles}
+          where ${skillFiles.storageConfigId} is null and ${skillFiles.blobKey} is not null
+        union all
+        select ${voiceClips.orgId}, ${voiceClips.size} from ${voiceClips}
+          where ${voiceClips.storageConfigId} is null and ${voiceClips.audioDeletedAt} is null
+        union all
+        select ${liveAssets.orgId}, ${liveAssets.size} from ${liveAssets}
+          ${kept(liveAssets.orgId, liveAssets.artifactId)}
+          where ${liveAssets.storageConfigId} is null
+        union all
+        select ${liveDocs.orgId}, ${liveDocs.stateBytes} from ${liveDocs}
+          ${kept(liveDocs.orgId, liveDocs.artifactId)}
+      ), per_org as (
+        select org_id, sum(bytes) as bytes from files
+        where org_id not in (select org_id from own)
+        group by org_id having sum(bytes) > 0
+      )
+      select sum(bytes)::float8 as "storageBytes", count(*)::int as workspaces,
+        (select count(*)::int from own) as "ownStorageWorkspaces"
+      from per_org`,
+    ),
+  );
   return {
-    platformBytes: Number(files?.platform ?? 0) + Number(skills?.platform ?? 0) + Number(voice?.platform ?? 0),
-    ownBucketBytes: Number(files?.own ?? 0) + Number(skills?.own ?? 0) + Number(voice?.own ?? 0),
+    // No workspace with a byte counted sums to null.
+    storageBytes: total?.storageBytes ?? 0,
+    workspaces: total?.workspaces ?? 0,
+    ownStorageWorkspaces: total?.ownStorageWorkspaces ?? 0,
   };
 }
 
@@ -524,6 +616,15 @@ const notAt = (orgId: string, target: string | null) =>
     sql`exists (select 1 from ${artifacts} where ${artifacts.id} = ${artifactVersions.artifactId} and ${artifacts.deletedAt} is null)`,
     target ? or(isNull(artifactVersions.storageConfigId), ne(artifactVersions.storageConfigId, target)) : undefined,
     target ? undefined : sql`${artifactVersions.storageConfigId} is not null`,
+  );
+
+/** Live files' pictures not yet where new files go, those of files out of the trash (ADR 0196 §8). */
+const assetsNotAt = (orgId: string, target: string | null) =>
+  and(
+    eq(liveAssets.orgId, orgId),
+    sql`exists (select 1 from ${artifacts} where ${artifacts.id} = ${liveAssets.artifactId} and ${artifacts.deletedAt} is null)`,
+    target ? or(isNull(liveAssets.storageConfigId), ne(liveAssets.storageConfigId, target)) : undefined,
+    target ? undefined : sql`${liveAssets.storageConfigId} is not null`,
   );
 
 /** Voice recordings not yet where new files go; those already swept have nothing to copy (ADR 0100). */
@@ -557,7 +658,11 @@ export async function startMigration(deps: StorageDeps, actorId: string, orgId: 
     .select({ n: sql<number>`count(*)::int` })
     .from(voiceClips)
     .where(clipsNotAt(orgId, target));
-  const remaining = (counted?.n ?? 0) + (countedClips?.n ?? 0);
+  const [countedAssets] = await deps.db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(liveAssets)
+    .where(assetsNotAt(orgId, target));
+  const remaining = (counted?.n ?? 0) + (countedClips?.n ?? 0) + (countedAssets?.n ?? 0);
   // Back onto this server's storage, the files it copies count against its limit.
   if (target === null) {
     const [moving] = await deps.db
@@ -568,7 +673,11 @@ export async function startMigration(deps: StorageDeps, actorId: string, orgId: 
       .select({ bytes: sql<string>`coalesce(sum(${voiceClips.size}), 0)` })
       .from(voiceClips)
       .where(clipsNotAt(orgId, null));
-    const bytes = Number(moving?.bytes ?? 0) + Number(movingClips?.bytes ?? 0);
+    const [movingAssets] = await deps.db
+      .select({ bytes: sql<string>`coalesce(sum(${liveAssets.size}), 0)` })
+      .from(liveAssets)
+      .where(assetsNotAt(orgId, null));
+    const bytes = Number(moving?.bytes ?? 0) + Number(movingClips?.bytes ?? 0) + Number(movingAssets?.bytes ?? 0);
     if (bytes > 0) await assertStorageRoom(deps.db, orgId, bytes, { daily: false });
   }
   const resume = last && last.status !== "done" && last.toStorageConfigId === target ? last : null;
@@ -727,6 +836,39 @@ export async function runMigration(deps: StorageDeps, migrationId: string, optio
         // As for the Drive's files: only our own store frees the old copy.
         if (clip.storageConfigId === null && clip.blobKey !== key)
           await source.delete(clip.blobKey).catch(() => undefined);
+      } catch (error) {
+        await db
+          .update(storageMigrations)
+          .set({ status: "failed", error: storageErrorText(error), copied, cursor, updatedAt: new Date() })
+          .where(eq(storageMigrations.id, m.id));
+        return;
+      }
+      copied++;
+      await db.update(storageMigrations).set({ copied, updatedAt: new Date() }).where(eq(storageMigrations.id, m.id));
+    }
+  }
+  // Live files' pictures last, the same way: each one copied stops matching.
+  for (;;) {
+    const batch = await db
+      .select()
+      .from(liveAssets)
+      .where(assetsNotAt(m.orgId, m.toStorageConfigId))
+      .limit(options.batch ?? 50);
+    if (batch.length === 0) break;
+    for (const asset of batch) {
+      try {
+        const source = await resolver.forConfig(m.orgId, asset.storageConfigId);
+        const object = await source.get(asset.blobKey);
+        if (!object) throw new StorageError("not_found", `missing object ${asset.blobKey}`);
+        const key = `${target.prefix}artifacts/${asset.artifactId}/assets/${asset.id}`;
+        await target.store.put(key, object.body, { contentType: object.contentType });
+        await db
+          .update(liveAssets)
+          .set({ storageConfigId: target.storageConfigId, blobKey: key })
+          .where(and(eq(liveAssets.artifactId, asset.artifactId), eq(liveAssets.id, asset.id)));
+        if (asset.storageConfigId === null && asset.blobKey !== key) {
+          await source.delete(asset.blobKey).catch(() => undefined);
+        }
       } catch (error) {
         await db
           .update(storageMigrations)

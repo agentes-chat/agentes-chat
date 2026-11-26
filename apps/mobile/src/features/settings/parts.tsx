@@ -18,10 +18,12 @@ import { LayoutAnimationConfig } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button, GroupedList, GroupedRow, type HeaderAction, type IconName, Locked, Text, useToast } from "@/ui";
 import { KeyboardBar, TOOLBAR_HEIGHT } from "@/ui/auth/AuthScaffold";
+import { useReadableSide } from "@/ui/pane";
 import { useColors, useNow, usePullRefresh } from "../shared/hooks";
 import { showActionSheet } from "../shared/PickerSheet";
 import { PushedLargeTitle } from "../shared/PushedLargeTitle";
 import { BottomBar, copyText, type HeaderWordAction, MONO, PushedHeader, successHaptic } from "../shared/parts";
+import { useSplitGuard } from "../shared/SplitPanes";
 
 /**
  * What the workspace's settings screens share (each one a screen pushed with the platform's push, as Você's): the
@@ -49,6 +51,7 @@ export function SettingsPage(props: SettingsPageProps) {
 
 interface SettingsPageProps {
   title: string;
+  /** What the page is about (whose role, which channel): the bar's line under its title. */
   subtitle?: string | undefined;
   action?: HeaderWordAction;
   /** An icon button on the bar's right in place of a word. Prefer `actions`. */
@@ -127,6 +130,7 @@ function CompactPage({
 }: SettingsPageProps) {
   const c = useColors();
   const insets = useSafeAreaInsets();
+  const side = useReadableSide();
   const refreshControl = usePageRefresh(onRefresh);
   // The docked action rides over the keyboard (over the system's bar too, with a form's ‹ ›): what it covers there
   // (its height less the home indicator's room, which drops behind the keyboard) is kept clear of a focused field.
@@ -138,7 +142,7 @@ function CompactPage({
     <View style={[styles.fill, { backgroundColor: c.grouped }]}>
       <PushedHeader
         title={title}
-        {...(subtitle ? { subtitle } : {})}
+        subtitle={subtitle}
         solid={false}
         grouped
         {...(busy
@@ -160,7 +164,11 @@ function CompactPage({
         extraKeyboardSpace={toolbarRoom}
         {...(refreshControl ? { refreshControl } : {})}
         // A docked action holds the home indicator's room itself.
-        contentContainerStyle={[styles.body, { paddingBottom: bottom ? 24 : 24 + insets.bottom }]}
+        // On a large screen the form keeps to the readable column (ADR 0212).
+        contentContainerStyle={[
+          styles.body,
+          { paddingHorizontal: BODY_SIDE + side, paddingBottom: bottom ? 24 : 24 + insets.bottom },
+        ]}
       >
         {/* What is there as the screen opens doesn't fade in; what loads while it is watched does (`Loaded`). */}
         <Locked when={locked || busy || frozen} readable={frozen && !locked && !busy}>
@@ -182,19 +190,23 @@ function CompactPage({
 
 /**
  * Leaving a form with changes not saved asks first (back, the edge swipe, a replace), as editing an agent does: the
- * changes go only when the person says so. Returns `leave`, which a finished save calls before it goes on, so it isn't
+ * changes go only when the person says so. In a split's detail pane (ADR 0212) another row of the list replacing the
+ * form asks the same (`useSplitGuard`). Returns `leave`, which a finished save calls before it goes on, so it isn't
  * asked about what it just saved.
  */
 export function useUnsavedGuard(dirty: boolean): () => void {
   const { t } = useTranslation();
   const leaving = useRef(false);
-  usePreventRemove(dirty, ({ repeat }) => {
-    if (leaving.current) return repeat();
+  const ask = (repeat: () => void) =>
     Alert.alert(t("mobile.agentEdit.discardTitle"), t("mobile.agentEdit.discardText"), [
       { text: t("mobile.agentEdit.keepEditing"), style: "cancel" },
       { text: t("mobile.agentEdit.discard"), style: "destructive", onPress: repeat },
     ]);
+  usePreventRemove(dirty, ({ repeat }) => {
+    if (leaving.current) return repeat();
+    ask(repeat);
   });
+  useSplitGuard(dirty ? (go) => (leaving.current ? go() : ask(go)) : null);
   return () => {
     leaving.current = true;
   };
@@ -402,9 +414,12 @@ export function Meter({ value, max, label }: { value: number; max: number; label
   );
 }
 
+/** A form page's sides on a phone (the readable column's margins add to them on a large screen). */
+const BODY_SIDE = 16;
+
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  body: { paddingHorizontal: 16, paddingTop: 4 },
+  body: { paddingHorizontal: BODY_SIDE, paddingTop: 4 },
   gap: { height: 14 },
   command: { paddingHorizontal: 14, paddingVertical: 12 },
   mono: { fontFamily: MONO, fontSize: 13, lineHeight: 19 },

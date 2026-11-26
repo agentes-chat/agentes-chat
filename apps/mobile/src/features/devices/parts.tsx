@@ -6,28 +6,35 @@ import { useTranslation } from "react-i18next";
 import { StyleSheet, TextInput, View } from "react-native";
 import { ComputerPortrait } from "@/computer/ComputerPortrait";
 import { useOrg } from "@/providers/org";
-import { Button, Chip, fieldText, GroupedField, GroupedList, Icon, InkOrbit, Text, useToast } from "@/ui";
+import { Button, Chip, CodeWords, fieldText, GroupedField, GroupedList, Icon, InkOrbit, Text, useToast } from "@/ui";
 import { AskButtons } from "../chat/asks";
 import { AgentFace } from "../shared/Face";
 import { useColors, useDirectory, useMeId, useWhen } from "../shared/hooks";
 import { successHaptic, useSurface } from "../shared/parts";
 import { audienceText, computerPortrait, type DeviceJoin, joinFacts, phonePortrait, statusView } from "./logic";
-import { useDeviceMutation } from "./queries";
+import { useDeviceMutation, useDevices } from "./queries";
 
 /** A device's state: its chip (with its icon, the agent's face, or amber when it needs you) and the words after it. */
 export function StatusLine({
   status,
   hostName,
   center = false,
+  text,
 }: {
   status: DeviceStatus;
   hostName?: string | null;
   /** On a device's page, under its portrait. */
   center?: boolean;
+  /**
+   * In place of the status's own words, its `code` as code (the offline cause's way out). The status's own words carry
+   * typed names, so they show as typed.
+   */
+  text?: string | null;
 }) {
   const { t } = useTranslation();
   const when = useWhen();
   const v = statusView(t, status, when, hostName);
+  const words = text ?? v.line;
   const leading =
     v.icon === "spin" ? (
       <InkOrbit size={12} />
@@ -41,9 +48,9 @@ export function StatusLine({
         tone={v.wait ? "wait" : "neutral"}
         {...(leading ? { leading } : v.icon && v.icon !== "face" && v.icon !== "spin" ? { icon: v.icon } : {})}
       />
-      {v.line ? (
-        <Text variant="footnote" tone="faint">
-          {v.line}
+      {words ? (
+        <Text variant="footnote" tone="faint" style={center ? styles.centerText : undefined}>
+          {text ? <CodeWords text={text} /> : v.line}
         </Text>
       ) : null}
     </View>
@@ -97,11 +104,23 @@ export function JoinRequestCard({ request: r }: { request: DeviceJoin }) {
       <Text variant="small" tone="muted">
         {joinFacts(t, r)}
       </Text>
+      <JoinInternetLine />
       <View style={styles.buttons}>
         <JoinButtons request={r} />
       </View>
     </View>
   );
+}
+
+/** Under Let it join, in a workspace with its own computer: this computer will lend it its internet (ADR 0237). */
+export function JoinInternetLine() {
+  const { t } = useTranslation();
+  const lends = useDevices().data?.devices.some((d) => d.machineKind === "managed") === true;
+  return lends ? (
+    <Text variant="small" tone="muted">
+      {t("devices.shareInternetJoin")}
+    </Text>
+  ) : null;
 }
 
 /** Let it join / Deny for a computer asking to join, on its card or on its notice in Atividade. */
@@ -237,6 +256,7 @@ const styles = StyleSheet.create({
   center: { textAlign: "center" },
   status: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: 8, rowGap: 4, marginTop: 4 },
   centered: { justifyContent: "center", marginTop: 0 },
+  centerText: { textAlign: "center" },
   card: { borderRadius: 14, padding: 16, gap: 4 },
   bold: { fontWeight: "600" },
   buttons: { marginTop: 12 },

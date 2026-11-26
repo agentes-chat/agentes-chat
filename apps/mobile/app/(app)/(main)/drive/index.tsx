@@ -2,8 +2,11 @@ import { useLocalSearchParams } from "expo-router";
 import { DriveScreen } from "@/features/drive/DriveScreen";
 import { isSafeId } from "@/features/shared/logic";
 
-/** The Drive, pushed from Você; `?artifact=<id>` ("Ver no Drive" in the file viewer) outlines that item. */
+/**
+ * The Drive, pushed from Você; `?artifact=<id>` ("Ver no Drive" in the file viewer) outlines that item; `?folder=<id>`
+ * is a folder's own screen.
+ */
 export default function DriveRoute() {
-  const { artifact } = useLocalSearchParams<{ artifact?: string }>();
-  return <DriveScreen highlightId={isSafeId(artifact) ? artifact : null} />;
+  const { artifact, folder } = useLocalSearchParams<{ artifact?: string; folder?: string }>();
+  return <DriveScreen highlightId={isSafeId(artifact) ? artifact : null} folderId={isSafeId(folder) ? folder : null} />;
 }

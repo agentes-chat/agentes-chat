@@ -1,11 +1,10 @@
 import { type Agent, type AgentBrakes, BRAKES_DEFAULTS, useUpdateAgent } from "@agenteschat/client";
+import { managesAgent } from "@agenteschat/client/lib/audience";
 import { joinNames } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
-import { can } from "@agenteschat/client/lib/permissions";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, TextInput } from "react-native";
-import { useOrg } from "@/providers/org";
 import { fieldText, GROUPED_ROW, GroupedFooter, GroupedHeader, GroupedList, GroupedRow } from "@/ui";
 import { router } from "@/ui/navigation";
 import { useFailed } from "../routines/hooks";
@@ -19,19 +18,19 @@ const PRS = [0, 1, 2, 3, 5, 10];
 
 /**
  * The web's Autonomia sem pedido (ADR 0131) on the phone: costly work nobody asked for asks first, how many such jobs
- * at once, PRs an hour, which agents it may call and its project. Saved at once by who manages agents; a number is
+ * at once, PRs an hour, which agents it may call and its project. Saved at once by who manages it; a number is
  * picked from its list in the app's picker (one save), the agents it may call on a screen of their own (each tap
  * saved), and forgetting the remembered answers asks first. Settings' own groups: each header over its group, each
  * note under it.
  */
 export function BrakesSection({ agent }: { agent: Agent }) {
   const { t } = useTranslation();
-  const { org } = useOrg();
   const dir = useDirectory();
   const c = useColors();
   const failed = useFailed();
   const update = useUpdateAgent(useOrgId(), agent.id);
-  const editable = can(org, "manage_agents");
+  // Its brakes are for who manages it (the server's `canManage`), as its apps and budget.
+  const editable = managesAgent(agent);
   const saved: AgentBrakes = agent.brakes ?? BRAKES_DEFAULTS;
   const b = { ...saved, ...(update.isPending ? (update.variables?.brakes ?? {}) : {}) };
   const [project, setProject] = useState(b.project);
@@ -57,7 +56,7 @@ export function BrakesSection({ agent }: { agent: Agent }) {
       cancel: t("common.cancel"),
       onConfirm: () => save({ go: [], never: [] }),
     });
-  const others = [...dir.agentById.values()].filter((a) => !a.former && a.id !== agent.id);
+  const others = dir.agents.filter((a) => !a.former && a.id !== agent.id);
   // The picker's taps reach the latest `save` (the brakes as they are then).
   const latest = useRef(save);
   useLayoutEffect(() => {

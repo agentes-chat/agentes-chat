@@ -9,9 +9,10 @@ import {
   useLeaveChannel,
   useMuteChannel,
   useRoster,
+  useUpdateChannel,
 } from "@agenteschat/client";
 import { WORK_TICK_MS, workLine, workLineText } from "@agenteschat/client/lib/agent-work";
-import { listsAgent, opensDetails } from "@agenteschat/client/lib/audience";
+import { managesAgent, opensDetails } from "@agenteschat/client/lib/audience";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { useHeldWhile } from "@agenteschat/client/lib/hold";
@@ -22,7 +23,7 @@ import { joinsChannels } from "@agenteschat/client/lib/right-hand";
 import { picksForMe, replyAloneKey } from "@agenteschat/client/lib/routing";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { RefreshControl, StyleSheet, View } from "react-native";
 import { LayoutAnimationConfig } from "react-native-reanimated";
@@ -44,9 +45,9 @@ import { router } from "@/ui/navigation";
 import { chooseAction, confirmAction, Gap, SettingsPage } from "../settings/parts";
 import { AgentFace, Face, OpensAgent } from "../shared/Face";
 import { LoadFailed } from "../shared/FirstUse";
-import { useColors, useDirectory, useMeId, useNow, useOrgId, usePullRefresh } from "../shared/hooks";
+import { useColors, useDirectory, useMeId, useNow, useOrgId, useOwnsAgent, usePullRefresh } from "../shared/hooks";
 import { PushedLargeTitle } from "../shared/PushedLargeTitle";
-import { goBack, Loaded, successHaptic, tapHaptic } from "../shared/parts";
+import { goBack, Loaded, successHaptic, tapHaptic, useLatest } from "../shared/parts";
 import { usePresenceOf } from "../status/hooks";
 import { lineText } from "../status/logic";
 import { addTargets, channelMembersHrefs } from "./members";
@@ -77,19 +78,27 @@ function useRefresh(channelId: string) {
   };
 }
 
-/** An agent's line says how it answers my messages: on its own only while something reads the ones that mention nobody. */
+/**
+ * An agent's line says how it answers my messages: on its own only while something reads the ones that mention nobody.
+ * The responsible agent's line says that first, alone when it answers on its own and something picks for me.
+ */
 const lineOf = (
   t: TFunction,
   w: Pick<Who, "kind" | "autoReply" | "handle" | "name" | "email">,
   routing: AiRouting | undefined,
-) =>
-  w.kind === "agent"
-    ? !w.autoReply
-      ? t("channelMembers.mentionLine", { handle: w.handle })
-      : !picksForMe(routing)
-        ? t(replyAloneKey(routing), agentGrammar(w.name))
-        : t("channelMembers.aloneLine", agentGrammar(w.name))
-    : w.email;
+  /** It is the agent responsible for the channel. */
+  lead = false,
+) => {
+  if (w.kind !== "agent") return w.email;
+  const line = !w.autoReply
+    ? t("channelMembers.mentionLine", { handle: w.handle })
+    : !picksForMe(routing)
+      ? t(replyAloneKey(routing), agentGrammar(w.name))
+      : t("channelMembers.aloneLine", agentGrammar(w.name));
+  if (!lead) return line;
+  const responsible = t("channelMembers.lead");
+  return w.autoReply && picksForMe(routing) ? responsible : [responsible, line].join(" · ");
+};
 
 /**
  * "Tirar do canal", asked first in the system's confirmation (what it changes for them), then done: a toast says it and
@@ -146,7 +155,9 @@ export function ChannelMembersScreen({ channelId }: { channelId: string }) {
   const pull = usePullRefresh(roster.refetch);
   const routing = useAiStatus(orgId).data?.routing;
   const channels = useChannels(orgId).data;
-  const channel = channels?.find((x) => x.id === channelId);
+  // The channels by id, once per list: every agent's work line names where it works.
+  const channelsById = useMemo(() => new Map((channels ?? []).map((ch) => [ch.id, ch])), [channels]);
+  const channel = channelsById.get(channelId);
   const channelName = channel?.name ?? "";
   const removal = useRemoveMember(channelId, channelName);
   // An agent's work first, as the web's members column says it ("aqui" for this channel), then how it replies.
@@ -159,7 +170,7 @@ export function ChannelMembersScreen({ channelId }: { channelId: string }) {
       presence.agent(id)?.work,
       {
         agentName: (x) => dir.agentById.get(x)?.name,
-        channelName: (x) => channels?.find((ch) => ch.id === x)?.name,
+        channelName: (x) => channelsById.get(x)?.name,
         here: channelId,
       },
       now,
@@ -200,7 +211,8 @@ export function ChannelMembersScreen({ channelId }: { channelId: string }) {
     if (w.kind === "person") return lineOf(t, w, routing);
     const a = presence.agent(w.id);
     const why = a ? agentWhyKey(a.presence, a.noAi) : null;
-    if (!a || !why) return [workText(w.id), lineOf(t, w, routing)].filter(Boolean).join("\n");
+    if (!a || !why)
+      return [workText(w.id), lineOf(t, w, routing, w.id === channel?.leadAgentId)].filter(Boolean).join("\n");
     const own = liveLine(a.noAi ? null : a.status?.status, now);
     const under = agentMemberLine(workText(w.id), own && agentStatusShort(t, own, i18n.language), why);
     return under?.work ?? (under?.line ? lineText(under.line) : t(`presence.agentWhy.${why}`));
@@ -211,23 +223,23 @@ export function ChannelMembersScreen({ channelId }: { channelId: string }) {
    * be taken out, the short menu with that action (asked again before it goes); an agent with nothing to change here,
    * its profile. Not on my own row: taking myself out of my own list reads as a mistake (as on the web).
    */
-  const opens = (w: Who, mine: boolean) => {
-    if (w.kind === "agent" && (w.setsReply || editable))
-      return { chevron: true, onPress: () => router.push(channelMembersHrefs.agent(channelId, w.id)) };
-    if (w.kind === "person" && editable && !mine)
-      return {
-        more: true,
-        onPress: () =>
-          chooseAction(
-            w.name,
-            [{ label: t("channelMembers.remove"), icon: "x", destructive: true, onPress: () => removal.ask(w) }],
-            t("common.cancel"),
-          ),
-      };
-    if (w.kind === "agent" && opensDetails(dir.anyAgent(w.id)))
-      return { chevron: true, onPress: () => router.push(`/agent/${w.id}`) };
-    return {};
+  const opens = (w: Who, mine: boolean): RowOpens => {
+    if (w.kind === "agent" && (w.setsReply || editable)) return "screen";
+    if (w.kind === "person" && editable && !mine) return "menu";
+    if (w.kind === "agent" && opensDetails(dir.anyAgent(w.id))) return "profile";
+    return null;
   };
+  // What a tap does, one function for every row (the rows are memoized), reading this render's state.
+  const open = useLatest((w: Pick<Who, "kind" | "id" | "name">, what: Exclude<RowOpens, null>) => {
+    if (what === "screen") router.push(channelMembersHrefs.agent(channelId, w.id));
+    else if (what === "profile") router.push(`/agent/${w.id}`);
+    else
+      chooseAction(
+        w.name,
+        [{ label: t("channelMembers.remove"), icon: "x", destructive: true, onPress: () => removal.ask(w) }],
+        t("common.cancel"),
+      );
+  });
 
   return (
     <PushedLargeTitle
@@ -283,20 +295,20 @@ export function ChannelMembersScreen({ channelId }: { channelId: string }) {
                     <GroupedList>
                       {g.rows.map((w) => {
                         const mine = w.kind === "person" && w.id === meId;
-                        const face = (
-                          <Face who={{ type: w.kind, id: w.id }} size={FACE} live={false} presence ring={c.raised} />
-                        );
                         return (
-                          <GroupedRow
+                          <RosterRow
                             key={`${w.kind}:${w.id}`}
-                            // An agent's face opens its profile, as on every surface about it; the row its options.
-                            leading={w.kind === "agent" ? <OpensAgent agentId={w.id}>{face}</OpensAgent> : face}
+                            kind={w.kind}
+                            id={w.id}
+                            name={w.name}
                             label={mine ? `${w.name}${t("common.youSuffix")}` : w.name}
                             sub={subtitleOf(w)}
-                            subLines={w.kind === "agent" ? 2 : 1}
                             // Off for now (the web's Offline rows): in faint, under its own header.
                             faint={off(w)}
-                            {...opens(w, mine)}
+                            opens={opens(w, mine)}
+                            ring={c.raised}
+                            onOpen={open}
+                            leading
                           />
                         );
                       })}
@@ -319,6 +331,56 @@ export function ChannelMembersScreen({ channelId }: { channelId: string }) {
   );
 }
 
+/** What a member's row opens: its agent's screen here, the menu to take a person out, the agent's profile; nothing. */
+type RowOpens = "screen" | "menu" | "profile" | null;
+
+/**
+ * One member: the face (an agent's opens its profile), the name, the line under it, faint while off. Drawn again only
+ * when what it shows changes, not at every change of anyone's presence.
+ */
+const RosterRow = memo(function RosterRow({
+  kind,
+  id,
+  name,
+  label,
+  sub,
+  faint,
+  opens,
+  ring,
+  onOpen,
+}: {
+  kind: Kind;
+  id: string;
+  name: string;
+  label: string;
+  sub: string;
+  faint: boolean;
+  opens: RowOpens;
+  /** The surface the face's presence badge is ringed in. */
+  ring: string;
+  onOpen: (w: Pick<Who, "kind" | "id" | "name">, what: Exclude<RowOpens, null>) => void;
+  /** Always with a face: GroupedList reads it to start the hairline after the face's column, as a GroupedRow's. */
+  leading: boolean;
+}) {
+  const face = <Face who={{ type: kind, id }} size={FACE} live={false} presence ring={ring} />;
+  const what = opens;
+  const tap =
+    what === null
+      ? {}
+      : { ...(what === "menu" ? { more: true } : { chevron: true }), onPress: () => onOpen({ kind, id, name }, what) };
+  return (
+    <GroupedRow
+      // An agent's face opens its profile, as on every surface about it; the row its options.
+      leading={kind === "agent" ? <OpensAgent agentId={id}>{face}</OpensAgent> : face}
+      label={label}
+      sub={sub}
+      subLines={kind === "agent" ? 2 : 1}
+      faint={faint}
+      {...tap}
+    />
+  );
+});
+
 /**
  * What I do about a channel for myself, as the web's channel menu: mute it, and leave it. A public one goes at once;
  * a private one asks first, since only someone in it can bring me back, and the last person out archives it. Leaving
@@ -332,16 +394,16 @@ function ChannelOwnActions({ channel }: { channel: Channel }) {
   const leave = useLeaveChannel(orgId);
   const roster = useRoster(orgId, channel.id);
   const failed = (e: unknown) => toast({ title: errorText(t, e, i18n.language), icon: "x" });
-  const go = () =>
-    leave.mutate(channel.id, {
-      onSuccess: () => {
-        successHaptic();
-        toast({ title: t("channel.left", { channel: channel.name }), icon: "check" });
-        // This screen and the conversation under it.
-        router.dismiss(2);
-      },
-      onError: failed,
-    });
+  // The channel leaves my lists before the server answers: this screen and the conversation under it go at once, and
+  // the answer arrives as a toast (a refusal puts the lists back). The promise, not per-call callbacks: they don't run
+  // once this screen is gone.
+  const go = () => {
+    successHaptic();
+    router.dismiss(2);
+    leave
+      .mutateAsync(channel.id)
+      .then(() => toast({ title: t("channel.left", { channel: channel.name }), icon: "check" }), failed);
+  };
   const ask = () => {
     if (channel.visibility !== "private") return go();
     const alone = (roster.data ?? []).filter((m) => m.type !== "agent").length === 1;
@@ -421,6 +483,15 @@ export function ChannelAgentScreen({ channelId, agentId }: { channelId: string; 
       toast({ title: t("mobile.app.failed"), icon: "x" });
     },
   });
+  // The channel's responsible agent: one at a time, set here for this one or taken back.
+  const update = useUpdateChannel(orgId, channelId);
+  const isLead = channel?.leadAgentId === agentId;
+  const setLead = (on: boolean) => {
+    update.mutate(
+      { leadAgentId: on ? agentId : null },
+      { onError: (e) => toast({ title: errorText(t, e), icon: "x" }) },
+    );
+  };
   // Taken out (here, from elsewhere meanwhile, or opened by an old link): nothing to set here any more. Once: the
   // removal's own success and the roster read again after it both lead here.
   const left = useRef(false);
@@ -463,7 +534,7 @@ export function ChannelAgentScreen({ channelId, agentId }: { channelId: string; 
             </GroupedList>
           ) : null}
           {/* How it answers here: the choice for whoever may set it, else said in a line. */}
-          {setsReply ? null : <GroupedFooter>{lineOf(t, who, routing)}</GroupedFooter>}
+          {setsReply ? null : <GroupedFooter>{lineOf(t, who, routing, isLead)}</GroupedFooter>}
           {setsReply ? (
             <>
               <GroupedHeader>{t("channelMembers.replyHeading", g)}</GroupedHeader>
@@ -489,6 +560,18 @@ export function ChannelAgentScreen({ channelId, agentId }: { channelId: string; 
           ) : null}
           {editable ? (
             <>
+              <Gap />
+              <GroupedList>
+                <GroupedRow
+                  label={t("channelMembers.lead")}
+                  labelLines={2}
+                  sub={t("channelMembers.leadHelp")}
+                  subLines={0}
+                  toggle={isLead}
+                  disabled={update.isPending}
+                  onPress={() => setLead(!isLead)}
+                />
+              </GroupedList>
               <Gap />
               <GroupedList>
                 <GroupedRow
@@ -518,6 +601,7 @@ export function AddChannelMembersScreen({ channelId }: { channelId: string }) {
   const api = useApi();
   const toast = useToast();
   const dir = useDirectory();
+  const owns = useOwnsAgent();
   const { org } = useOrg();
   const roster = useRoster(orgId, channelId);
   const refresh = useRefresh(channelId);
@@ -544,9 +628,12 @@ export function AddChannelMembersScreen({ channelId }: { channelId: string }) {
     new Set((roster.data ?? []).map((m) => `${m.type === "agent" ? "agent" : "person"}:${m.id}`)),
     add.isPending || add.isSuccess,
   );
+  // Only the agents this person may place here, as the server's `requirePlacesAgent`: their own (or their role's, ADR
+  // 0085, addendum of 2026-11-21), or one they manage (ADR 0085 addendum of 2026-11-17). Editing an agent, or talking
+  // to it, doesn't move it between channels.
   const candidates = [
     ...dir.agents
-      .filter((a) => listsAgent(org, a) && joinsChannels(a))
+      .filter((a) => joinsChannels(a) && (owns(a) || managesAgent(a)))
       .map((a) => ({ kind: "agent" as const, id: a.id, name: a.name, line: `@${a.handle}` })),
     ...[...dir.memberById.values()].map((m) => ({
       kind: "person" as const,

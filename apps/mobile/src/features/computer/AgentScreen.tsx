@@ -1,6 +1,8 @@
 import {
   askControlWords,
+  DESKTOP_SLOW_MS,
   type DesktopMode,
+  type DesktopOpenWhy,
   type DesktopViewState,
   desktopMode,
   desktopStatusState,
@@ -15,14 +17,14 @@ import {
   useBrowserHandoffActions,
 } from "@agenteschat/client";
 import { liveSubLine } from "@agenteschat/client/lib/agent-computer";
+import { managesAgent } from "@agenteschat/client/lib/audience";
 import { computerName } from "@agenteschat/client/lib/computer";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
-import { can } from "@agenteschat/client/lib/permissions";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import { type AgentColorName, bodyTones } from "@agenteschat/ui/agent/engine";
 import { Canvas, Fill, Shader, Skia } from "@shopify/react-native-skia";
 import * as Clipboard from "expo-clipboard";
-import { Stack } from "expo-router";
+import { Stack, useIsFocused } from "expo-router";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Keyboard, type LayoutChangeEvent, ScrollView, StyleSheet, TextInput, View } from "react-native";
@@ -77,6 +79,7 @@ import { AskButtons, AskCard, AskFoot, ExpiryLine } from "../chat/asks";
 import { mayStopRun } from "../chat/logic";
 import { useColors, useDirectory, useMeId, useNow } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
+import { ownsIn } from "../shared/owner";
 import { successHaptic, tapHaptic } from "../shared/parts";
 import { useActiveWork } from "../shared/queries";
 import { DesktopAgentPointer } from "./AgentPointer";
@@ -119,7 +122,7 @@ import { type PadLesson, padLesson } from "./trackpad";
 import type { AgentComputerView } from "./useAgentComputer";
 import { useSideways } from "./useSideways";
 
-/** How long the screen may stay opening before it says it can't: a socket refused before it opens never closes with a code. */
+/** How long the screen may stay opening before it is reported: a socket refused before it opens never closes with a code. */
 const STUCK_MS = 30_000;
 /** The trackpad's height: a thumb's reach, the rest goes to the screen. */
 const PAD_HEIGHT = 224;
@@ -217,6 +220,9 @@ export function AgentScreen({
   const [ready, setReady] = useState(false);
   const [page, setPage] = useState<DesktopViewState>("connecting");
   const [stuck, setStuck] = useState(false);
+  // The page's last failed try to open the screen: why, and whether it stopped trying.
+  const [failed, setFailed] = useState<{ why: DesktopOpenWhy; gaveUp: boolean } | null>(null);
+  const [fresh, setFresh] = useState(0);
   // How far the page got, for the report of a screen that never opens.
   const pageNow = useRef({ ready, page, status: view.desktopQ.status });
   pageNow.current = { ready, page, status: view.desktopQ.status };
@@ -245,6 +251,10 @@ export function AgentScreen({
   useEffect(() => {
     if (ready) web.current?.call("set", { connect, mode });
   }, [ready, connect, mode]);
+  // Opened again (back in front, a state that let it): the page tries afresh, and so does what its cover says.
+  useEffect(() => {
+    if (connect) setFailed(null);
+  }, [connect]);
 
   const s = useSharedValue(0.25);
   const x = useSharedValue(0);
@@ -292,8 +302,10 @@ export function AgentScreen({
 
   const handoff = f?.handoff ?? null;
   const waiting = handoff && isWaitingHandoff(handoff, now) ? handoff : null;
-  // Whose it is goes by ids, the same rule as the request's card: its owner and who controls computers may help too.
-  const mine = waiting !== null && handoffIsMine(waiting, userId, agent?.ownerUserId, org);
+  // Whose it is goes by ids, the same rule as the request's card: its owner (or one who holds the role that answers for
+  // it, ADR 0085, addendum of 2026-11-21) and who controls computers may help too.
+  const owner = ownsIn(dir.memberById, userId, agent) ? userId : agent?.ownerUserId;
+  const mine = waiting !== null && handoffIsMine(waiting, userId, owner, org);
   const ask = inControl && handoff?.kind === "ask";
   const doneLabel = ask ? t("mobile.browser.live.done") : t("mobile.browser.live.handBack");
   const { handBack, leaveNote, couldnt, finishing } = useFinishHandoff(
@@ -330,7 +342,17 @@ export function AgentScreen({
     }, STUCK_MS);
     return () => clearTimeout(id);
   }, [waitsOn, agentId]);
-  const lost = stuck && waitsOn;
+  // A switch the stream never takes can't be shown; a screen still opening says so on its own cover (`slow`).
+  const lost = stuck && waitsOn && switching !== null;
+  const opening = active && !failed?.gaveUp && (shown === "connecting" || shown === "offline");
+  const [slow, setSlow] = useState(false);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Tentar de novo (`fresh`) starts the wait again
+  useEffect(() => {
+    setSlow(false);
+    if (!opening) return;
+    const id = setTimeout(() => setSlow(true), DESKTOP_SLOW_MS);
+    return () => clearTimeout(id);
+  }, [opening, fresh]);
   const words = askControlWords(status, Boolean(f?.browser), Boolean(run));
   // Watching, a tap on the screen asks before control and reaches nothing there; the question stays until Cancelar.
   const offer = live && !inControl && !switching && !status?.controllerUserId && !waiting && canTakeOver;
@@ -435,6 +457,8 @@ export function AgentScreen({
 
   const retry = () => {
     setStuck(false);
+    setFailed(null);
+    setFresh((n) => n + 1);
     setPage("connecting");
     if (ready) web.current?.call("retry");
     else setLife((n) => n + 1);
@@ -443,7 +467,6 @@ export function AgentScreen({
   const again = <DockText label={t("desktop.retry")} onPress={retry} />;
   const { color } = agentLook(agent);
   const tones = bodyTones(color);
-  const opening = <Cover fill sky spinner color={color} text={t("agentComputer.state.opening", g)} />;
   const cantShow = (
     <Cover
       fill
@@ -484,19 +507,27 @@ export function AgentScreen({
       }
     />
   );
-  const covers: Record<Exclude<DesktopViewState, "live">, ReactNode> = {
-    connecting: stuck ? cantShow : opening,
-    hidden: <Cover fill icon="eyeoff" text={t("browser.inCard.hiddenHelp", g)} />,
-    offline: (
+  // Opening, then the cause and Tentar de novo once a try failed or it took long; stopped, the cause stays.
+  const cause: DesktopOpenWhy | null = failed?.why ?? (slow ? (shown === "offline" ? "offline" : "slow") : null);
+  const openLine = cause ? t(`desktop.open.${cause}` as const, { computer }) : undefined;
+  const openingCover = (help?: string) =>
+    failed?.gaveUp ? (
+      <Cover fill icon="eyeoff" text={t("desktop.open.gaveUp", g)} help={openLine} action={again} />
+    ) : (
       <Cover
         fill
         sky
         spinner
         color={color}
         text={t("agentComputer.state.opening", g)}
-        help={t("desktop.state.retrying")}
+        help={openLine ?? help}
+        action={cause ? again : undefined}
       />
-    ),
+    );
+  const covers: Record<Exclude<DesktopViewState, "live">, ReactNode> = {
+    connecting: openingCover(),
+    hidden: <Cover fill icon="eyeoff" text={t("browser.inCard.hiddenHelp", g)} />,
+    offline: openingCover(t("desktop.state.retrying")),
     busy: <Cover fill spinner color={color} text={t("desktop.state.busy")} help={t("desktop.state.retrying")} />,
     noRoom: <Cover fill icon="clock" text={t("agentComputer.state.noRoom", { computer })} action={again} />,
     paused: <Cover fill icon="pause" text={t("agentComputer.state.pausedPlain", { computer })} />,
@@ -800,7 +831,10 @@ export function AgentScreen({
                   agentId={agentId}
                   onEvent={(event) => {
                     if (event.type === "ready") setReady(true);
-                    else if (event.type === "view") setPage(event.state);
+                    else if (event.type === "view") {
+                      setPage(event.state);
+                      if (event.state === "live") setFailed(null);
+                    } else if (event.type === "why") setFailed({ why: event.why, gaveUp: event.gaveUp });
                     else if (event.type === "session") setSession(event.mode);
                     else if (event.type === "size") setDeskSize({ width: event.width, height: event.height });
                     else if (event.type === "changed") void view.desktopQ.refetch();
@@ -809,6 +843,7 @@ export function AgentScreen({
                   onGone={() => {
                     setReady(false);
                     setSession(null);
+                    setFailed(null);
                     // The page that said "live" is gone: the new one starts over, so its cover and the wait for it do.
                     setPage("connecting");
                     setLife((n) => n + 1);
@@ -970,22 +1005,30 @@ function Trackpad({
     demo.value = l;
     ghost.value = { x: l.cursorX, y: l.cursorY, scale: l.cursorScale };
   }, false);
+  // The lesson is due until the first touch (read once, with the pad), and runs only while the screen shows: a screen
+  // pushed over it stops it, and it starts again when it comes back.
+  const focused = useIsFocused();
+  const [due, setDue] = useState(false);
+  const over = useRef(false);
   const lessonOver = () => {
-    lesson.setActive(false);
+    over.current = true;
+    setDue(false);
     void writeValue(STORED.trackpadTaught, "1");
   };
-  // biome-ignore lint/correctness/useExhaustiveDependencies: the lesson starts once, with the pad
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the lesson is read once, with the pad
   useEffect(() => {
     let alive = true;
     void readValue(STORED.trackpadTaught).then((v) => {
-      if (alive && v !== "1" && !reduced) lesson.setActive(true);
+      if (alive && !over.current && v !== "1" && !reduced) setDue(true);
     });
     return () => {
       alive = false;
-      lesson.setActive(false);
       ghost.value = GHOST_REST;
     };
   }, []);
+  useEffect(() => {
+    lesson.setActive(due && focused);
+  }, [lesson, due, focused]);
 
   const touch = (px: number, py: number) => {
     "worklet";
@@ -1459,13 +1502,16 @@ function Watching({
     api.chat.post(orgId, channelId, { body: body.trim(), ...steer }).catch(failed);
   };
   const atWork = run !== null && (run.status === "thinking" || run.status === "queued" || run.status === "running");
-  // Who may stop it here: its owner and who manages agents (the conversation's own rule also lets its asker).
+  // Who may stop it here: its owner and who manages it (the server's `canManage`; the conversation's own rule also
+  // lets its asker).
   const mayStop =
     run !== null &&
     mayStopRun(run, {
       meId,
-      manageAgents: can(org, "manage_agents"),
+      manageAgents: managesAgent(dir.agentById.get(agentId)),
       agentOwnerId: dir.agentById.get(agentId)?.ownerUserId,
+      // Holding the role that answers for it counts as its owner (ADR 0085, addendum of 2026-11-21).
+      owns: ownsIn(dir.memberById, meId, dir.agentById.get(agentId)),
       messages: [],
     });
   const stop = () => {

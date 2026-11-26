@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import type { ChatCompletionCreateParamsStreaming } from "openai/resources/chat/completions";
 import {
+  effortWithin,
   isCustomModel,
   type ModelInfo,
   type ModelTier,
@@ -9,6 +10,14 @@ import {
   type TokenPrices,
   usdToNanoUsd,
 } from "./catalog";
+import {
+  decodeImage,
+  type ImageRequest,
+  type ImageResult,
+  imageBlockedError,
+  MAX_IMAGES_PER_REQUEST,
+  type MadeImage,
+} from "./images";
 import { openAIError, saidIn } from "./openai";
 import {
   type ContentBlock,
@@ -16,6 +25,7 @@ import {
   estimateTokens,
   hasToolImages,
   laidOut,
+  lostWithoutImages,
   type ModelProvider,
   type ModelRequest,
   type ModelResult,
@@ -24,6 +34,7 @@ import {
   ProviderError,
   promptChars,
   type StopReason,
+  shortSaid,
   stableToolsFirst,
   withoutImages,
 } from "./types";
@@ -408,12 +419,60 @@ function toMessages(request: ModelRequest, claude: boolean): Message[] {
   return out;
 }
 
+/** Our effort scale, weakest first: an endpoint's refusal is matched against it. */
+const EFFORT_ORDER = ["none", "low", "medium", "high", "xhigh", "max"] as const;
+
+/** The value nearest `wanted` among `supported`, the stronger one on a tie: never less thinking than was asked. */
+function nearestEffort(wanted: string, supported: readonly string[]): string | undefined {
+  const order = (value: string) => EFFORT_ORDER.indexOf(value as (typeof EFFORT_ORDER)[number]);
+  const wantedAt = order(wanted);
+  let best: string | undefined;
+  for (const value of supported) {
+    const at = order(value);
+    if (at < 0) continue;
+    if (best === undefined) {
+      best = value;
+      continue;
+    }
+    if (wantedAt < 0) continue;
+    const distance = Math.abs(at - wantedAt);
+    const bestDistance = Math.abs(order(best) - wantedAt);
+    if (distance < bestDistance || (distance === bestDistance && at > order(best))) best = value;
+  }
+  return best;
+}
+
+/**
+ * What a compatible endpoint's 400 says about the effort it refused, when it says. Mistral, for one, has no `medium`:
+ * `reasoning_effort 'medium' is not supported for this model; supported values: ['none', 'low', 'high', 'xhigh', 'max']`.
+ */
+function effortRefusal(error: unknown): { wanted: string; supported: string[] } | undefined {
+  if (!(error instanceof OpenAI.APIError) || error.status !== 400) return undefined;
+  const wanted = /reasoning_effort\s+['"]?([a-z]+)['"]?\s+is not supported/i.exec(error.message)?.[1];
+  const listed = /supported values?:\s*\[?([^\]\n]+?)\]?\s*$/im.exec(error.message)?.[1];
+  if (!wanted || !listed) return undefined;
+  const supported = listed
+    .split(",")
+    .map((value) =>
+      value
+        .trim()
+        .replace(/^['"]|['"]$/g, "")
+        .toLowerCase(),
+    )
+    .filter((value) => value.length > 0);
+  return supported.length > 0 ? { wanted: wanted.toLowerCase(), supported } : undefined;
+}
+
+/** What each endpoint said it takes, per `${baseURL}|${model}`: learned once, so the refusal costs one turn, not every. */
+const effortSupport = new Map<string, readonly string[]>();
+
 function toBody(request: ModelRequest, compatible: boolean) {
   const claude = !compatible && isClaude(request.model);
   const reasoning = compatible ? undefined : reasoningFor(request.effort, modelInfo(request.model));
   // A workspace endpoint (#432): Chat Completions' own `reasoning_effort`, which OpenAI, vLLM, LiteLLM and most gateways
   // take. `none` is left out, since not every model can turn thinking off, and so is a request with no effort.
-  const reasoningEffort = compatible && request.effort && request.effort !== "none" ? request.effort : undefined;
+  const reasoningEffort =
+    compatible && request.effort && request.effort !== "none" ? effortWithin(request.effort) : undefined;
   return {
     model: request.model,
     messages: toMessages(request, claude),
@@ -565,10 +624,31 @@ export function createOpenRouterProvider(
           maxRetries: options.maxRetries ?? 2,
           fetch: options.fetch,
         });
-        const stream = await client.chat.completions.create(
-          toBody(request, compatible !== undefined) as unknown as ChatCompletionCreateParamsStreaming,
-          { signal: request.signal },
-        );
+        // An effort the endpoint refused before goes out already mapped, so only the first turn pays for learning it.
+        const body = toBody(request, compatible !== undefined) as unknown as Record<string, unknown>;
+        const supportKey = compatible ? `${compatible.baseURL}|${request.model}` : undefined;
+        const support = supportKey ? effortSupport.get(supportKey) : undefined;
+        const asked = typeof body.reasoning_effort === "string" ? body.reasoning_effort : undefined;
+        if (support && asked) {
+          const near = nearestEffort(asked, support);
+          if (near) body.reasoning_effort = near;
+        }
+        const open = (payload: Record<string, unknown>) =>
+          client.chat.completions.create(payload as unknown as ChatCompletionCreateParamsStreaming, {
+            signal: request.signal,
+          });
+        let stream: Awaited<ReturnType<typeof open>>;
+        try {
+          stream = await open(body);
+        } catch (error) {
+          // A 400 comes before any stream: nothing was said yet, so the nearest effort it does take is worth one retry.
+          const refused = supportKey ? effortRefusal(error) : undefined;
+          const near = refused ? nearestEffort(refused.wanted, refused.supported) : undefined;
+          if (!refused || !near || !supportKey) throw error;
+          effortSupport.set(supportKey, refused.supported);
+          body.reasoning_effort = near;
+          stream = await open(body);
+        }
         for await (const raw of stream) {
           const chunk = raw as unknown as Chunk;
           if (typeof chunk.model === "string" && chunk.model) model = chunk.model;
@@ -645,7 +725,7 @@ export function createOpenRouterProvider(
                 cacheWriteTokens: 0,
               },
           ...(cost !== undefined ? { costNanoUsd: cost } : {}),
-          ...(hasToolImages(request.messages) ? { imagesLeftOut: true as const } : {}),
+          ...(hasToolImages(request.messages, lostWithoutImages()) ? { imagesLeftOut: true as const } : {}),
         };
       } catch (error) {
         const mapped = request.signal?.aborted
@@ -657,5 +737,87 @@ export function createOpenRouterProvider(
         throw mapped;
       }
     },
+    // A workspace's own endpoint makes pictures through the Images API (`custom.ts`), never this route.
+    ...(compatible
+      ? {}
+      : {
+          generateImage: (request: ImageRequest, { apiKey }: { apiKey: string }) =>
+            openRouterImages(options.fetch ?? fetch, request, apiKey),
+        }),
   };
+}
+
+/** A prompt OpenRouter or the model's maker refused: its moderation, or the maker's safety words. */
+const IMAGE_REFUSED = /moderation|flagged|content policy|safety|prohibited|blocked/i;
+
+/**
+ * Pictures over OpenRouter's Images API (ADR 0197): `POST /api/v1/images` with the aspect, 1K, `n` pictures and the
+ * references as data URLs, answered in base64 with what it charged (`usage.cost`, its upstream's too on the person's
+ * own provider key). Called again for the rest when a model makes fewer than `n`. A refused prompt is
+ * `imageBlockedError`; a failure after some pictures came returns those, with the failure in `error`.
+ */
+async function openRouterImages(http: typeof fetch, request: ImageRequest, apiKey: string): Promise<ImageResult> {
+  const count = Math.max(1, Math.min(MAX_IMAGES_PER_REQUEST, Math.floor(request.count)));
+  const made: MadeImage[] = [];
+  let cost: number | undefined;
+  let model: string | undefined;
+  for (let call = 0; call < count && made.length < count; call++) {
+    try {
+      let res: Response;
+      try {
+        res = await http(`${OPENROUTER_API}/images`, {
+          method: "POST",
+          headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}`, ...ATTRIBUTION },
+          body: JSON.stringify({
+            model: request.model,
+            prompt: request.prompt,
+            n: count - made.length,
+            aspect_ratio: request.aspect,
+            resolution: request.size ?? "1K",
+            ...(request.references?.length
+              ? {
+                  input_references: request.references.map((r) => ({
+                    type: "image_url",
+                    image_url: { url: `data:${r.mediaType};base64,${r.data}` },
+                  })),
+                }
+              : {}),
+          }),
+          signal: request.signal,
+        });
+      } catch {
+        throw request.signal?.aborted
+          ? new ProviderError("request aborted", false)
+          : new ProviderError("could not reach provider", true);
+      }
+      const body = (await res.json().catch(() => null)) as Raw | null;
+      if (!res.ok || !body || obj(body.error)) {
+        const error = obj(body?.error);
+        const said = typeof error?.message === "string" ? shortSaid(error.message) : "";
+        const status = res.ok ? Number(error?.code) || undefined : res.status;
+        if ((status === 400 || status === 403) && IMAGE_REFUSED.test(said)) throw imageBlockedError(said);
+        throw statusError(status, said);
+      }
+      if (typeof body.model === "string") model = body.model;
+      const spent = obj(body.usage) ? costOf(body.usage as Usage) : undefined;
+      if (spent !== undefined) cost = (cost ?? 0) + spent;
+      const before = made.length;
+      for (const item of Array.isArray(body.data) ? body.data : []) {
+        const data = obj(item)?.b64_json;
+        if (typeof data === "string" && data && made.length < count) made.push(decodeImage(data));
+      }
+      if (made.length === before) throw new ProviderError("the provider sent no picture", true);
+    } catch (error) {
+      const failure =
+        error instanceof ProviderError ? error : new ProviderError("could not read the provider's answer", true);
+      if (made.length === 0) throw failure;
+      return {
+        images: made,
+        ...(model ? { model } : {}),
+        ...(cost !== undefined ? { costNanoUsd: cost } : {}),
+        error: failure,
+      };
+    }
+  }
+  return { images: made, ...(model ? { model } : {}), ...(cost !== undefined ? { costNanoUsd: cost } : {}) };
 }

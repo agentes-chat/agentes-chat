@@ -27,7 +27,14 @@ import { cutText } from "./format";
 import { getMessage } from "./messages";
 import { can, type Membership, requireActiveMembership } from "./organizations";
 import { maySql } from "./permissions";
-import { enqueueIndex, registerDocumentBuilder, registerReindexSource, type SearchDeps, searchVisible } from "./search";
+import {
+  enqueueIndex,
+  type QueryEmbedding,
+  registerDocumentBuilder,
+  registerReindexSource,
+  type SearchDeps,
+  searchVisible,
+} from "./search";
 import { type Audience, adminChannelSql, taskSeenSql } from "./task-access";
 import {
   pagesBySlug,
@@ -1313,6 +1320,11 @@ async function defaultNote(db: Executor, actor: WikiActor, what: string) {
   return `by ${agent?.name ?? "agent"}${person ? `, at ${person.name}'s request` : ""}: ${what}`;
 }
 
+/** "through Claude Code: edited": a person's save that came through an AI app (ADR 0119 addendum of 2026-11-16). */
+export function noteThroughApp(app: string, what: string) {
+  return `through ${app.replace(/:/g, "").trim() || "an app"}: ${what}`;
+}
+
 /** The notes `defaultNote` and the server write, by code (the author is shown apart, so only the action). */
 const NOTE_PATTERNS: [RegExp, string, string[]][] = [
   [/^created the page$/, "created", []],
@@ -1330,7 +1342,7 @@ const NOTE_PATTERNS: [RegExp, string, string[]][] = [
 
 /** `noteCode`/`noteParams` of a version note the server wrote; nothing for a person's own note. */
 export function wikiNoteDetail(note: string): { noteCode: string; noteParams: Record<string, string> } | null {
-  const action = note.replace(/^by [^:]+: /, "");
+  const action = note.replace(/^(by|through) [^:]+: /, "");
   for (const [pattern, code, names] of NOTE_PATTERNS) {
     const m = pattern.exec(action);
     if (m) return { noteCode: code, noteParams: Object.fromEntries(names.map((n, i) => [n, m[i + 1] ?? ""])) };
@@ -2360,12 +2372,23 @@ export async function getWikiPage(db: Database, actor: WikiActor, orgId: string,
   return detail(db, actor, await findPage(db, actor, orgId, ref));
 }
 
-/** Pages (no bodies): all of them, or by folder (and its subfolders), tag or title words; most recent first. */
+/**
+ * Pages (no bodies): all of them, or by folder (and its subfolders), tag, title words or a change since a time; most
+ * recent first, and by id among pages saved at the same instant (an import's batch), so `offset` pages hold still.
+ */
 export async function listWikiPages(
   db: Database,
   actor: WikiActor,
   orgId: string,
-  filters: { folder?: string; tag?: string; q?: string; deleted?: boolean; limit?: number } = {},
+  filters: {
+    folder?: string;
+    tag?: string;
+    q?: string;
+    deleted?: boolean;
+    updatedSince?: Date;
+    offset?: number;
+    limit?: number;
+  } = {},
 ): Promise<WikiPageSummary[]> {
   await requireReader(db, actor, orgId);
   const folder = filters.folder !== undefined ? cleanFolder(filters.folder) : undefined;
@@ -2382,11 +2405,13 @@ export async function listWikiPages(
           : undefined,
         filters.tag ? sql`${filters.tag.trim().replace(/^#/, "").toLowerCase()} = any(${wikiPages.tags})` : undefined,
         q ? sql`${wikiPages.title} ilike ${`%${q.replace(/[%_\\]/g, "\\$&")}%`}` : undefined,
+        filters.updatedSince ? gte(wikiPages.updatedAt, filters.updatedSince) : undefined,
         visibleTo(actor),
       ),
     )
-    .orderBy(filters.deleted ? desc(wikiPages.deletedAt) : desc(wikiPages.updatedAt))
-    .limit(Math.min(filters.limit ?? 2000, 5000));
+    .orderBy(filters.deleted ? desc(wikiPages.deletedAt) : desc(wikiPages.updatedAt), desc(wikiPages.id))
+    .limit(Math.min(filters.limit ?? 2000, 5000))
+    .offset(filters.offset ?? 0);
   return summaries(db, rows);
 }
 
@@ -2661,6 +2686,7 @@ async function searchPages(
   text: string,
   limit: number,
   minTextRank?: number,
+  queryEmbedding?: () => Promise<QueryEmbedding>,
 ): Promise<PageRow[]> {
   const q = text.trim();
   if (!q) return [];
@@ -2673,6 +2699,7 @@ async function searchPages(
       limit,
       match: "any",
       minTextRank,
+      queryEmbedding,
     }).catch(() => null);
     if (minTextRank !== undefined && !hits?.length) return [];
     if (hits && hits.length > 0) {
@@ -2792,13 +2819,21 @@ export async function createPageFromSource(
 
 /**
  * Wiki pages relevant to the trigger message, for the run's prompt (a trusted
- * source written by the team). Pages marked "Sempre no contexto" and the pages
- * the message links with `[[…]]` come first, then the search's matches that
+ * source written by the team). The message's `[[…]]`, then the channel topic's,
+ * then pages marked "Sempre no contexto" come first, then the search's matches that
  * pass `WIKI_MIN_RANK`. An org without a wiki costs one cached lookup.
  */
 export async function retrieveWikiForRun(
   deps: WikiDeps,
-  input: { orgId: string; text: string; budgetChars?: number; reader: () => Promise<WikiActor> },
+  input: {
+    orgId: string;
+    text: string;
+    channelText?: string;
+    budgetChars?: number;
+    reader: () => Promise<WikiActor>;
+    /** `sharedQueryEmbedding` of `text`, shared with the run's memory search. */
+    queryEmbedding?: () => Promise<QueryEmbedding>;
+  },
 ): Promise<{ text: string; pageIds: string[]; held: boolean }> {
   const { db } = deps;
   const known = (await caches.contextPresence.getOrLoad(`${input.orgId}:wiki`, async () => {
@@ -2817,33 +2852,33 @@ export async function retrieveWikiForRun(
     ]);
     return { any: Boolean(row), always: always.map((r) => r.id) };
   })) as { any: boolean; always: string[] };
-  if (!known.any || (!input.text.trim() && known.always.length === 0)) return { text: "", pageIds: [], held: false };
+  const channelLinks = parseWikiLinks(input.channelText ?? "");
+  if (!known.any || (!input.text.trim() && channelLinks.length === 0 && known.always.length === 0))
+    return { text: "", pageIds: [], held: false };
   const actor = await input.reader();
   const wide = withoutConversation(actor);
   const linked = parseWikiLinks(input.text);
-  const namedLinks = linked.length
-    ? [
-        ...(
-          await pagesBySlug(
-            db,
-            input.orgId,
-            linked.map((l) => l.slug),
-          )
-        ).values(),
-      ].map((p) => p.id)
-    : [];
-  // "Sempre no contexto" goes in as if the message named it, after the pages it names: those come first in the budget.
-  const named = [...namedLinks, ...known.always.filter((id) => !namedLinks.includes(id))];
+  const resolved = await pagesBySlug(
+    db,
+    input.orgId,
+    [...linked, ...channelLinks].map((l) => l.slug),
+  );
+  const namedLinks = linked.flatMap((l) => resolved.get(l.slug)?.id ?? []);
+  const channelNamed = channelLinks.flatMap((l) => resolved.get(l.slug)?.id ?? []);
+  // The message, then the topic, then "Sempre no contexto": one budget, each page only once.
+  const named = [...new Set([...namedLinks, ...channelNamed, ...known.always])];
   const namedRows = named.length
     ? await db
         .select()
         .from(wikiPages)
         .where(and(inArray(wikiPages.id, named), isNull(wikiPages.deletedAt), visibleTo(wide)))
     : [];
-  const hits = await searchPages(deps, wide, input.orgId, input.text, 5, WIKI_MIN_RANK).catch(() => [] as PageRow[]);
+  const hits = await searchPages(deps, wide, input.orgId, input.text, 5, WIKI_MIN_RANK, input.queryEmbedding).catch(
+    () => [] as PageRow[],
+  );
   const seen = await visibleIds(db, actor, [...new Set([...namedRows, ...hits].map((p) => p.id))]);
   // What the message names, or the best match, kept from this conversation only: it goes to the person's DM. A page
-  // always in context that this conversation may not read just stays out.
+  // named only by the topic or always in context that this conversation may not read just stays out.
   const held = [...namedRows.filter((p) => namedLinks.includes(p.id)), ...hits.slice(0, 1)].some(
     (p) => !seen.has(p.id),
   );

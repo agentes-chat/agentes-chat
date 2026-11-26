@@ -22,6 +22,7 @@ import {
   TextInput,
   type TextInputInstance,
   type TextStyle,
+  useWindowDimensions,
   View,
 } from "react-native";
 import {
@@ -48,7 +49,6 @@ import { scheduleOnRN } from "react-native-worklets";
 import { PixelStop } from "@/agent/PixelMarks";
 import { readValueSync, STORED, writeValueSync } from "@/lib/storage";
 import { FADE_OUT, RISE_IN } from "./entrances";
-import { Glass } from "./Glass";
 import { haptics } from "./haptics";
 import { Icon } from "./Icon";
 import { PRESS_IN, PRESS_OUT, PressScale } from "./PressScale";
@@ -170,7 +170,10 @@ const SEND = 36;
  * 36 button to the field's 48 under the finger, up to the pill's own edges.
  */
 const INSET = (FIELD - SEND) / 2;
-/** The field's ring and its soft shadow; a voice take's bar wears the same. */
+/**
+ * The field's ring (the system's separator, so the capsule's edge reads on any ground) and its soft shadow; a voice
+ * take's bar wears the same.
+ */
 const FIELD_SHADOW = (line: string) => `0px 0px 0px 0.5px ${line}, 0px 6px 18px -10px rgba(0, 0, 0, 0.25)`;
 /** Words left in a conversation's field, by `draftKey`, while the app runs. */
 const DRAFTS = new Map<string, string>();
@@ -283,10 +286,11 @@ function useShake(count: number, reduced: boolean) {
 }
 
 /**
- * The center of the app: a round glass "+" for attachments and actions,
- * then the field, a raised pill; with text, the round ink send button comes in. One line keeps "+", text and send on the
- * same center line; longer text grows the pill upward and everything stays at the bottom. GIFs and stickers (`media`)
- * have their button at the empty field's end: they go as a message of their own, never with words.
+ * The center of the app: one raised capsule that holds everything, the "+" for attachments and actions at its start,
+ * the words, then its round buttons at the end: the quiet ones (stickers, the mic) on a neutral fill, the one that acts
+ * (send, stop) in ink, the only ink circle. One line keeps them all on the same center line; longer text grows the
+ * capsule upward and everything stays at the bottom. GIFs and stickers (`media`) have their button at the empty field's
+ * end: they go as a message of their own, never with words.
  * Formatting has no button in the row: while words are selected in the field, a bar of them (bold, italic, lists…)
  * shows right over it and writes Markdown around the selection, which stays selected.
  *
@@ -323,6 +327,11 @@ export function Composer({
 }: ComposerProps) {
   const { colors, shadows, reducedMotion } = useTheme();
   const { t, i18n } = useTranslation();
+  // An empty field is one line high on iOS (`oneLineIos`): emptied from code right after typing, a multiline field
+  // kept the height of the words that had gone (its height is measured from the text the native side last reported,
+  // and a late report of the old words won over the empty value: an empty five-line field after a long message).
+  const { fontScale } = useWindowDimensions();
+  const emptyCap = Platform.OS === "ios" ? { maxHeight: oneLineIos(fontScale) } : null;
   const toast = useToast();
   const [text, setText] = useState(() => (draftKey ? (DRAFTS.get(draftKey) ?? "") : ""));
   const tooLong = tooLongToSend(text);
@@ -382,6 +391,10 @@ export function Composer({
   const mediaButton = media && !has ? media : null;
   // Files waiting don't take it away: a take started then goes with them.
   const mic = voice && !typed ? voice.mic : null;
+  // The mic that comes back for the send button (the words sent or erased) comes in as the button does; the one the
+  // field opens with is just there.
+  const micReturns = useRef(false);
+  if (typed) micReturns.current = true;
   // A take too short to send: the field shakes once, as a refused entry does (with the haptic and the line saying so).
   const shakeStyle = useShake(voice?.nope ?? 0, reducedMotion);
 
@@ -587,19 +600,19 @@ export function Composer({
         <Animated.View
           entering={reducedMotion ? undefined : RISE_IN}
           exiting={reducedMotion ? undefined : FADE_OUT}
-          style={[styles.bar, { backgroundColor: colors.raised, boxShadow: FIELD_SHADOW(colors.line2) }]}
+          style={[styles.bar, { backgroundColor: colors.raised, boxShadow: FIELD_SHADOW(colors.separator) }]}
         >
           {voice.bar}
         </Animated.View>
       ) : null}
       <View style={styles.row}>
-        {onPlus ? <PlusButton label={t("mobile.a11y.attach")} onPress={onPlus} /> : null}
         <Animated.View
           style={[
             styles.field,
             {
               backgroundColor: colors.raised,
-              boxShadow: FIELD_SHADOW(colors.line2),
+              boxShadow: FIELD_SHADOW(colors.separator),
+              paddingLeft: onPlus ? INSET : 14,
               paddingRight: button || mediaButton || mic ? INSET : 14,
             },
             shakeStyle,
@@ -607,6 +620,8 @@ export function Composer({
         >
           {/* What goes with the message: a row of its own across the field, over the words and the send button. */}
           {attachments ? <View style={styles.attachRow}>{attachments}</View> : null}
+          {/* The capsule's start, on the words' last line as the buttons at its end. */}
+          {onPlus ? <PlusButton label={t("mobile.a11y.attach")} onPress={onPlus} /> : null}
           {/* The placeholder is ours, on one line (cut with "…"): a long one wrapped and grew the empty field. */}
           <View style={styles.inputBox}>
             {!text ? (
@@ -644,7 +659,7 @@ export function Composer({
               onFocus={() => setFocused(true)}
               onBlur={() => setFocused(false)}
               accessibilityLabel={placeholder}
-              style={[inputText, styles.inputFill, { color: colors.ink }]}
+              style={[inputText, styles.inputFill, { color: colors.ink }, text ? null : emptyCap]}
             />
           </View>
           {mediaButton ? (
@@ -659,7 +674,7 @@ export function Composer({
                 accessibilityRole="button"
                 accessibilityLabel={mediaButton.label}
                 hitSlop={INSET}
-                style={styles.media}
+                style={[styles.media, { backgroundColor: colors.chip }]}
               >
                 <View style={styles.center}>
                   <Icon name="sticker" size={20} color={colors.muted} />
@@ -677,29 +692,38 @@ export function Composer({
             />
           ) : null}
           {voice?.overlay ?? null}
-          {mic ? <View style={styles.micBox}>{mic}</View> : null}
+          {mic ? (
+            <Animated.View
+              entering={micReturns.current ? (reducedMotion ? SEND_FADE_IN : SEND_IN) : undefined}
+              style={styles.micBox}
+            >
+              {mic}
+            </Animated.View>
+          ) : null}
         </Animated.View>
       </View>
     </View>
   );
 }
 
-/** The round glass "+": a piece of its own, so the keys typed in the field never draw it again. */
+/**
+ * The "+" at the capsule's start: a round button on the neutral fill, as the quiet ones at its end, its slop reaching
+ * the capsule's edges. A piece of its own, so the keys typed in the field never draw it again.
+ */
 const PlusButton = memo(function PlusButton({ label, onPress }: { label: string; onPress: () => void }) {
-  const { colors, shadows } = useTheme();
+  const { colors } = useTheme();
   return (
     <PressScale
       to={0.9}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
-      style={[styles.plus, { boxShadow: `0px 0px 0px 0.5px ${colors.line2}, ${shadows.top}` }]}
+      hitSlop={INSET}
+      style={[styles.plus, { backgroundColor: colors.chip }]}
     >
-      <Glass style={styles.plusGlass} intensity={50}>
-        <View style={styles.center}>
-          <Icon name="plus" size={24} color={colors.ink2} />
-        </View>
-      </Glass>
+      <View style={styles.center}>
+        <Icon name="plus" size={22} color={colors.ink2} />
+      </View>
     </PressScale>
   );
 });
@@ -864,6 +888,8 @@ const SendButton = memo(function SendButton({
  * keeps the font's own height and the padding centers it; Android centers it itself.
  */
 const body = systemText("body");
+/** The field's padding over and under its words on iOS. */
+const IOS_PAD_V = 8;
 const inputText: TextStyle = {
   flex: 1,
   minWidth: 0,
@@ -874,7 +900,7 @@ const inputText: TextStyle = {
   letterSpacing: body.letterSpacing,
   paddingHorizontal: 0,
   ...Platform.select<TextStyle>({
-    ios: { paddingTop: 8, paddingBottom: 8 },
+    ios: { paddingTop: IOS_PAD_V, paddingBottom: IOS_PAD_V },
     // The one line centered in the send button's height: the field is exactly as tall.
     default: {
       lineHeight: body.lineHeight,
@@ -885,6 +911,13 @@ const inputText: TextStyle = {
     },
   }),
 };
+
+/**
+ * One line of the field on iOS at the system's text size: the body's line (the font's size and a fifth, as SF draws
+ * it) and the padding over and under it, never under the send button's height.
+ */
+const oneLineIos = (fontScale: number) =>
+  Math.max(SEND, Math.ceil((body.fontSize ?? 17) * fontScale * 1.2) + IOS_PAD_V * 2);
 
 /** The placeholder's words, as the field's own text sits on its first line. */
 const placeholderText: TextStyle = {
@@ -918,8 +951,8 @@ const styles = StyleSheet.create({
   format: { flexDirection: "row", height: 44, padding: 4, gap: 2, borderRadius: 22 },
   formatButton: { width: SEND, height: SEND, borderRadius: SEND / 2 },
   row: { flexDirection: "row", alignItems: "flex-end", gap: 8 },
-  plus: { width: FIELD, height: FIELD, borderRadius: FIELD / 2 },
-  plusGlass: { flex: 1, borderRadius: FIELD / 2 },
+  // The send button's size, on the same center line.
+  plus: { width: SEND, height: SEND, borderRadius: SEND / 2 },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   field: {
     flex: 1,

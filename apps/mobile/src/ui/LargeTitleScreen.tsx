@@ -1,15 +1,16 @@
 import { type NativeStackNavigationOptions, Stack, useIsFocused } from "expo-router";
 import { useHeaderHeight } from "expo-router/react-navigation";
-import { createContext, type ReactNode, useContext, useMemo } from "react";
-import { Platform, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { createContext, type ReactNode, useCallback, useContext, useMemo } from "react";
+import { Platform, RefreshControl, type ScrollEvent, ScrollView, StyleSheet, View } from "react-native";
 import Animated, { type AnimatedRef } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { LivePause } from "@/agent/live";
+import { LivePause, useStillWhileScrolling } from "@/agent/live";
 import { CoverBarBackdrop, CoverParallax, FadingHeaderTitle } from "./cover";
 import { type HeaderAction, useHeaderActionOptions } from "./headerActions";
 import { LargeTitleHead, useLargeTitleScroll } from "./LargeTitleHead";
 import { useScrollUnderPushedOptions } from "./navigation";
 import { PULL_TINT, PullOrbit } from "./PullOrbit";
+import { ReadableColumn, usePane, usePaneHeader } from "./pane";
 import { SCREEN_X } from "./rhythm";
 import { Text } from "./Text";
 import { useTheme } from "./theme";
@@ -82,8 +83,43 @@ export interface LargeTitleScreenProps {
  * (`drawnTitle`), and on Android, the title is drawn in the content instead. Agents inside stop moving while the
  * screen is not showing.
  */
-export function LargeTitleScreen(props: LargeTitleScreenProps) {
+export function LargeTitleScreen(own: LargeTitleScreenProps) {
+  // A pane has no navigation bar to hold the system's large title (ADR 0212): there it is always drawn.
+  const props = usePane() ? { ...own, drawnTitle: true } : own;
   return IOS && !props.drawnTitle ? <SystemTitleScreen {...props} /> : <DrawnTitleScreen {...props} />;
+}
+
+/**
+ * The list's drag and glide handlers that hold the faces still while it moves, as a conversation's do
+ * (`useStillWhileScrolling`: their frames share the thread that places the rows): a drag or a glide holds them, its
+ * end lets them go. Each also runs the screen's own handler for that event (`then`).
+ */
+function useStillList(then: {
+  onScrollBeginDrag?: (() => void) | undefined;
+  onScrollEndDrag?: ((e: ScrollEvent) => void) | undefined;
+  onMomentumScrollEnd?: ((e: ScrollEvent) => void) | undefined;
+}) {
+  const { hold, settle } = useStillWhileScrolling();
+  const { onScrollBeginDrag: began, onScrollEndDrag: dragEnded, onMomentumScrollEnd: glideEnded } = then;
+  const onScrollBeginDrag = useCallback(() => {
+    hold();
+    began?.();
+  }, [hold, began]);
+  const onScrollEndDrag = useCallback(
+    (e: ScrollEvent) => {
+      settle();
+      dragEnded?.(e);
+    },
+    [settle, dragEnded],
+  );
+  const onMomentumScrollEnd = useCallback(
+    (e: ScrollEvent) => {
+      settle();
+      glideEnded?.(e);
+    },
+    [settle, glideEnded],
+  );
+  return { onScrollBeginDrag, onScrollEndDrag, onMomentumScrollBegin: hold, onMomentumScrollEnd };
 }
 
 /**
@@ -110,6 +146,7 @@ function SystemTitleScreen({
   const foot = useContext(TabFoot);
   const bar = useScrollUnderPushedOptions();
   const actionOptions = useHeaderActionOptions({ right: actions, left, leftActions });
+  const still = useStillList({ onScrollBeginDrag });
   // Stable options: `setOptions` runs when the title or the actions change, not on every render.
   const options = useMemo<NativeStackNavigationOptions>(
     () => ({
@@ -131,7 +168,10 @@ function SystemTitleScreen({
         <ScrollView
           contentInsetAdjustmentBehavior="automatic"
           style={[styles.screen, { backgroundColor: grouped ? colors.grouped : colors.bg }]}
-          onScrollBeginDrag={onScrollBeginDrag}
+          onScrollBeginDrag={still.onScrollBeginDrag}
+          onScrollEndDrag={still.onScrollEndDrag}
+          onMomentumScrollBegin={still.onMomentumScrollBegin}
+          onMomentumScrollEnd={still.onMomentumScrollEnd}
           refreshControl={pull ? <RefreshControl refreshing={pull.refreshing} onRefresh={pull.onRefresh} /> : undefined}
           keyboardDismissMode="on-drag"
           keyboardShouldPersistTaps="handled"
@@ -143,7 +183,8 @@ function SystemTitleScreen({
             </Text>
           ) : null}
           {below}
-          {children}
+          {/* On a large screen the content keeps to the readable column (ADR 0212). */}
+          <ReadableColumn>{children}</ReadableColumn>
         </ScrollView>
       </LivePause>
       {foot?.node}
@@ -183,7 +224,14 @@ function DrawnTitleScreen({
   // height): the automatic adjustment didn't apply under the tab stacks' clear bar inside the system tabs, so the
   // list rested under the bar with the large title hidden, shown only while pulled. Android lays it out from the top,
   // under the bar. Folded away for a search, there is no title to settle.
-  const scroll = useLargeTitleScroll(IOS ? headerHeight : 0, { snap: !collapsed });
+  const titled = useLargeTitleScroll(IOS ? headerHeight : 0, { snap: !collapsed });
+  // The title's settling once the list stops, and the faces held still while it moves.
+  const still = useStillList({
+    onScrollBeginDrag,
+    onScrollEndDrag: titled.onScrollEndDrag,
+    onMomentumScrollEnd: titled.onMomentumScrollEnd,
+  });
+  const scroll = { ...titled, ...still };
   const { y } = scroll;
   const actionOptions = useHeaderActionOptions({ right: actions, left, leftActions });
   // Stable options: `setOptions` runs when the title or the actions change, not on every render.
@@ -199,15 +247,32 @@ function DrawnTitleScreen({
     }),
     [actionOptions, title, y, collapsed],
   );
+  // In a pane (ADR 0212) the same bar is the pane's own, clear over the art: the title that fades in, the mark at its
+  // start, the buttons at its end. Outside one this sets nothing.
+  const pane = usePane();
+  const paneTitle = useMemo(
+    () => (collapsed ? title : <FadingHeaderTitle y={y} from={BAR_TITLE_FROM} to={BAR_TITLE_TO} text={title} />),
+    [collapsed, title, y],
+  );
+  usePaneHeader({
+    title: paneTitle,
+    left,
+    leftActions,
+    actions,
+    over: true,
+    // Its material comes in as its title does, as the system's bar outside a pane.
+    scroll: { y, from: BAR_TITLE_FROM, to: BAR_TITLE_TO },
+  });
   return (
     <View style={[styles.screen, { backgroundColor: grouped ? colors.grouped : colors.bg }]}>
-      <Stack.Screen options={options} />
+      {pane ? null : <Stack.Screen options={options} />}
       <LivePause paused={!focused}>
         <Animated.ScrollView
           ref={scroll.ref}
           onScroll={scroll.onScroll}
-          onScrollBeginDrag={onScrollBeginDrag}
+          onScrollBeginDrag={scroll.onScrollBeginDrag}
           onScrollEndDrag={scroll.onScrollEndDrag}
+          onMomentumScrollBegin={scroll.onMomentumScrollBegin}
           onMomentumScrollEnd={scroll.onMomentumScrollEnd}
           scrollEventThrottle={16}
           // The pixel orbit stands in for the wheel, hidden on iOS (Android keeps its own over the content).
@@ -242,7 +307,7 @@ function DrawnTitleScreen({
             <LargeTitleHead y={y} title={title} subtitle={subtitle} collapsed={collapsed} tight={Boolean(below)} />
             {below}
           </View>
-          {children}
+          <ReadableColumn>{children}</ReadableColumn>
           {pull ? (
             // On iOS the content starts under the bar's inset: the gap opens above that.
             <View pointerEvents="none" style={[styles.pullMark, { top: -PULL_MARK - (IOS ? headerHeight : 0) }]}>

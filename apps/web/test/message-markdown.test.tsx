@@ -5,12 +5,13 @@ setupDom();
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { codeAndBold } from "@agenteschat/ui";
 import { act, cleanup, fireEvent, render, within } from "@testing-library/react";
 import { Glob } from "bun";
 import { MessageBody } from "@/chat/MessageBody";
 import { setMermaidRenderer } from "@/components/artifacts/Mermaid";
 import { createI18n } from "@/i18n";
-import { codeAndBold, inlineWords, Markdown, renderInline } from "@/lib/markdown";
+import { inlineWords, Markdown, renderInline } from "@/lib/markdown";
 import { ADA_ID, createFakeApi, ENG_ID, ORG_ID, seedState } from "./fake-api";
 import { renderApp, screen, settle } from "./render";
 
@@ -20,6 +21,13 @@ const body = (text: string, resolve?: (h: string) => string | null) =>
   render(<MessageBody body={text} resolveMention={resolve} />).container;
 
 describe("message Markdown", () => {
+  test("a numbered list with blank lines between its items counts on, and one starting past 1 keeps its number", () => {
+    const loose = body("1. um\n\n2. dois\n\n3. três");
+    expect(loose.querySelectorAll("ol")).toHaveLength(1);
+    expect(loose.querySelectorAll("ol li")).toHaveLength(3);
+    expect(body("Depois:\n4. quatro").querySelector("ol")?.getAttribute("start")).toBe("4");
+  });
+
   test("bold, italic, inline code, code blocks, lists, links and line breaks", () => {
     const el = body(
       [

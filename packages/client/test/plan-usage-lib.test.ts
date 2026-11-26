@@ -14,7 +14,6 @@ import {
   accountOwner,
   accountShares,
   groupUsageAccounts,
-  kindFacts,
   loginsText,
   notSharedText,
   ownPlanLines,
@@ -22,7 +21,7 @@ import {
   planModelUsage,
   SHARES_SHOWN,
   servesText,
-  shareFacts,
+  shareCells,
   splitUsage,
   usageOrderSections,
   usageShown,
@@ -364,9 +363,14 @@ describe("an agent's line under an account's bars, and whose the account is", ()
     `${key}${o ? `(${Object.values(o).join(",")})` : ""}`) as unknown as TFunction;
 
   test("the share only while a window has parts; tokens, else that it is on it now, else nothing", () => {
-    expect(shareFacts(t, "en", "week", { share: 48, tokens: 1200 })).toMatch(/^ · week 48\s?% · usageViews\.tokens\(/);
-    expect(shareFacts(t, "en", null, { share: 0, tokens: 0, now: true })).toBe(" · usageViews.usesNow");
-    expect(shareFacts(t, "en", null, { share: 0, tokens: 0 })).toBe("");
+    const cells = shareCells(t, "en", "week", { share: 48, tokens: 1200 });
+    expect(cells.share).toMatch(/^48\u00a0?%$/);
+    expect(cells.tokens).toMatch(/^usageViews\.tokens\(/);
+    expect(shareCells(t, "en", null, { share: 0, tokens: 0, now: true })).toEqual({
+      share: null,
+      tokens: "usageViews.usesNow",
+    });
+    expect(shareCells(t, "en", null, { share: 0, tokens: 0 })).toEqual({ share: null, tokens: null });
   });
 
   test("the owner by first name; no owner named, no words", () => {
@@ -634,15 +638,15 @@ describe("an account's use by kind", () => {
   test("a kind with a share of the week but no tokens this month (a week that began last month) stays listed", () => {
     const kinds = accountKinds({ kinds: [{ kind: "handoffs", tokens: 0, percent: 37 }] });
     expect(kinds.map((k) => k.kind)).toEqual(["handoffs"]);
-    expect(kindFacts(t, "en", "week", { percent: 37, tokens: 0 })).toBe(" · week\u00a037%");
+    const cells = shareCells(t, "en", "week", { share: 37, tokens: 0 });
+    expect(cells.share).toMatch(/^37\u00a0?%$/);
+    expect(cells.tokens).toBeNull();
   });
 
-  test("each fact stays whole: no breaking space inside one, a plain space around the dots", () => {
-    const facts = kindFacts(t, "en", "week", { percent: 37, tokens: 6_900_000 });
-    expect(facts.startsWith(" · week\u00a037")).toBe(true);
-    const [, share, tokens] = facts.split(" · ");
-    expect(share).not.toContain(" ");
-    expect(tokens).not.toContain(" ");
-    expect(kindFacts(t, "en", null, { percent: null, tokens: 0 })).toBe("");
+  test("each cell stays whole: no breaking space inside one", () => {
+    const cells = shareCells(t, "en", "week", { share: 37, tokens: 6_900_000 });
+    expect(cells.share).not.toContain(" ");
+    expect(cells.tokens).not.toContain(" ");
+    expect(shareCells(t, "en", null, { share: null, tokens: 0 })).toEqual({ share: null, tokens: null });
   });
 });

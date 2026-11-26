@@ -1,12 +1,15 @@
+import { upperFirst } from "@agenteschat/client/lib/format";
 import { Children, isValidElement, type ReactNode } from "react";
 import { type AccessibilityActionEvent, Pressable, StyleSheet, View } from "react-native";
 import Animated, { FadeIn, LayoutAnimationConfig } from "react-native-reanimated";
+import { CodeWords } from "./CodeWords";
 import { haptics } from "./haptics";
 import { Icon, type IconName } from "./Icon";
 import { IconTile } from "./IconTile";
 import { InfoHint, useInfoHint } from "./InfoHint";
 import { MEDIA_ROW } from "./media-row";
 import { PRESS_DELAY } from "./PressScale";
+import { cardEdge, withAlpha } from "./palette";
 import { CheckMark, Disclosure, MenuMark, ROW_MARK } from "./RowMarks";
 import { RowPressable } from "./RowPressable";
 import { GROUPED_ROW, TOUCH } from "./rhythm";
@@ -21,6 +24,10 @@ import { leadBox } from "./type-scale";
  * the smaller of the two framed sizes), so a face never spills into the gap before the text.
  */
 const LEAD = GROUPED_ROW.lead;
+/** An icon's tile in a row (IconTile's own size). */
+const TILE = 30;
+/** The switch's height (`ToggleSwitch`). */
+const SWITCH_H = 28;
 /** The remove ×'s glyph, inside its 44-point button. */
 const REMOVE_GLYPH = 16;
 /**
@@ -28,6 +35,12 @@ const REMOVE_GLYPH = 16;
  * system's own.
  */
 const LIST_CORNER = 26;
+
+/**
+ * The row whose page stands beside the list (`selected`, ADR 0212): the ink this faint over the row, in both themes, as
+ * the open conversation's row beside Conversations.
+ */
+const SELECTED_TINT = 0.08;
 
 /** How far a nested row (`tree`: a phone under its computer) moves in, and where its branch line runs. */
 const NEST = 24;
@@ -59,23 +72,23 @@ function leads(props: unknown, depth = 0): boolean {
 
 /** A nested row's hairline starts at its own text, moved in with it. */
 const nests = (props: unknown) => {
-  const tree = (props as { tree?: unknown } | null)?.tree;
-  return tree === "mid" || tree === "end";
+  const p = props as { tree?: unknown; depth?: unknown } | null;
+  return (p?.tree === "mid" || p?.tree === "end" ? NEST : 0) + (typeof p?.depth === "number" ? p.depth * NEST : 0);
 };
 
 /**
- * Settings as on the iPhone: grouped inset lists, flat (no shadow) with the system's corner, the system's hairlines
- * inset to the text, an uppercase faint header above and a faint footer below. With no rows it draws nothing, never
- * an empty card.
+ * Settings as on the iPhone: grouped inset lists with the system's corner and the cards' light edge (no shadow), so a
+ * list and a card read as one family; the system's hairlines inset to the text, a faint semibold header above in its
+ * own case (never capitals) and a faint footer below. With no rows it draws nothing, never an empty card.
  */
 export function GroupedList({ children }: { children?: ReactNode }) {
-  const { colors: c, reducedMotion } = useTheme();
+  const { colors: c, reducedMotion, scheme } = useTheme();
   const items = Children.toArray(children).filter(isValidElement);
   if (items.length === 0) return null;
   return (
     // The rows it opens with appear with the screen, and when the whole group goes its rows go with it: neither fades.
     <LayoutAnimationConfig skipEntering skipExiting>
-      <View style={[styles.list, { backgroundColor: c.raised }]}>
+      <View style={[styles.list, { backgroundColor: c.raised }, cardEdge(scheme)]}>
         {items.map((child, i) => (
           <Animated.View key={child.key ?? i} entering={reducedMotion ? undefined : ROW_IN}>
             {i > 0 ? (
@@ -86,8 +99,7 @@ export function GroupedList({ children }: { children?: ReactNode }) {
                     backgroundColor: c.separator,
                     // A tile and a face share one leading column, so the text and its hairline start at one place.
                     marginLeft:
-                      (leads(child.props) ? GROUPED_ROW.padX + LEAD + 12 : GROUPED_ROW.padX) +
-                      (nests(child.props) ? NEST : 0),
+                      (leads(child.props) ? GROUPED_ROW.padX + LEAD + 12 : GROUPED_ROW.padX) + nests(child.props),
                   },
                 ]}
               />
@@ -107,7 +119,16 @@ interface GroupedHeaderProps {
   hint?: { name: string; text: string };
 }
 
-/** The small uppercase header of a group, with `aside` at the end of its line: a small text action. */
+/** Whether a word has a capital after its first letter, as a name like "iPhone" or "macOS" does. */
+const mixedCase = (word: string) => [...word.slice(1)].some((ch) => ch !== ch.toLocaleLowerCase());
+
+/**
+ * A header's words as a title: a first letter in lower case becomes a capital (a long date over its day's rows, which
+ * some languages write in lower case), unless the first word already mixes cases.
+ */
+const headerWords = (words: string) => (mixedCase(words.split(/\s/, 1)[0] ?? "") ? words : upperFirst(words));
+
+/** The small header of a group, semibold in its own case, with `aside` at the end of its line: a small text action. */
 export function GroupedHeader({ children, aside, hint }: GroupedHeaderProps) {
   if (hint)
     return (
@@ -118,7 +139,7 @@ export function GroupedHeader({ children, aside, hint }: GroupedHeaderProps) {
   return (
     <View style={aside ? styles.headerRow : null}>
       <Text variant="footnote" tone="faint" accessibilityRole="header" style={[styles.header, styles.shrink]}>
-        {children.toLocaleUpperCase()}
+        {headerWords(children)}
       </Text>
       {aside ? <View style={styles.headerAside}>{aside}</View> : null}
     </View>
@@ -132,8 +153,8 @@ function HintedHeader({ children, aside, hint }: GroupedHeaderProps & { hint: { 
     <View style={styles.headerRoom}>
       <View style={styles.headerLine}>
         <View style={[styles.headerWords, styles.shrink]}>
-          <Text variant="footnote" tone="faint" accessibilityRole="header" style={[styles.headerCaps, styles.shrink]}>
-            {children.toLocaleUpperCase()}
+          <Text variant="footnote" tone="faint" accessibilityRole="header" style={[styles.headerText, styles.shrink]}>
+            {headerWords(children)}
           </Text>
           {info.button}
         </View>
@@ -153,19 +174,20 @@ export function GroupedFooter({
   /** An ⓘ after the footer's one sentence, with the rest of the explanation; its text shows under the sentence. */
   hint?: { name: string; text: string };
 }) {
+  const words = typeof children === "string" ? <CodeWords text={children} /> : children;
   if (hint)
     return (
       <View style={styles.footer}>
         <InfoHint {...hint} variant="footnote">
           <Text variant="footnote" tone="faint">
-            {children}
+            {words}
           </Text>
         </InfoHint>
       </View>
     );
   return (
     <Text variant="footnote" tone="faint" style={styles.footer}>
-      {children}
+      {words}
     </Text>
   );
 }
@@ -210,6 +232,12 @@ export interface GroupedRowProps {
   menu?: boolean;
   /** A chevron: it opens a screen. */
   chevron?: boolean;
+  /**
+   * A row of a split's list (ADR 0212: two panes on a regular-width window), whose page opens beside the list instead
+   * of over it: lit while that page shows (true), plain otherwise (false), and never a chevron or the held light of a
+   * row that opens a screen. Left out everywhere else.
+   */
+  selected?: boolean;
   /** Three dots: it opens a sheet of actions. */
   more?: boolean;
   /** A checkmark: the chosen option. */
@@ -241,6 +269,9 @@ export interface GroupedRowProps {
    * `mid` and `end` move in and branch off it (`end` closes the trunk).
    */
   tree?: "host" | "mid" | "end";
+  /** A level in a tree of any depth (a folder picker): moved in a step per level, a thin guide line per level. */
+  depth?: number;
+  onLongPress?: () => void;
 }
 
 export interface RowButton {
@@ -283,7 +314,8 @@ function Row({
   value,
   valueNote,
   valueLeading,
-  chevron = false,
+  chevron: opensScreen = false,
+  selected,
   menu = false,
   more = false,
   checked,
@@ -296,11 +328,15 @@ function Row({
   buttons,
   media = false,
   tree,
+  depth = 0,
+  onLongPress,
   said,
   labelAfter,
 }: Omit<GroupedRowProps, "hint"> & { said?: string; labelAfter?: ReactNode }) {
   const { colors: c } = useTheme();
   const fontScale = useFontScale();
+  // A split's row opens its page beside the list: no chevron, it isn't a screen over this one (ADR 0212).
+  const chevron = opensScreen && selected === undefined;
   const tone = danger ? c.danger : faint ? c.faint : c.ink;
   // A switch answers the finger as it flips, as `Toggle` does.
   const press =
@@ -318,12 +354,24 @@ function Row({
   const tall = !flat && (labelLines !== 1 || subLines !== 1 || Boolean(below) || Boolean(belowText));
   const line = tall ? textLineOf("body", fontScale) : null;
   const onLine = (size: number) => (line ? [leadBox(line, size), styles.onLine] : null);
+  // The switch is taller than the label's line: its middle on the line's, overhanging it into the row's padding, so it
+  // sits level with a one-line label and the row stays a one-line row's height (from the line's top it hung 3 points
+  // low and made the row 6 taller).
+  const switchOnLine = line
+    ? { marginTop: line.middle - SWITCH_H / 2, marginBottom: line.height - line.middle - SWITCH_H / 2 }
+    : null;
+  // A tree row's name wraps: its tile stays centred on the first line, as on a one-line row, and takes no more than
+  // that line's height, so a one-line tree row is as tall as any other.
+  const tileOnLine =
+    depth > 0 && line
+      ? { marginTop: line.middle - TILE / 2, marginBottom: line.height - line.middle - TILE / 2 }
+      : null;
   const lead = (
     <>
       {/* One column for whatever leads (an icon's tile, a 24 to 36 face, a mark): the text, and the hairline above,
           start at 64 in every row, so a list mixing tiles and faces reads as one column. */}
       {icon ? (
-        <View style={styles.lead}>
+        <View style={[styles.lead, tileOnLine]}>
           {/* The system Settings' 30-point tile, in the 36 column: 11 from the row's top and bottom. */}
           <IconTile icon={icon} danger={danger} mark={mark ?? null} />
         </View>
@@ -430,18 +478,13 @@ function Row({
         </View>
       ) : null}
       {toggle !== undefined ? (
-        <View style={onLine(28)}>
+        <View style={switchOnLine}>
           <ToggleSwitch value={toggle} />
         </View>
       ) : null}
       {chevron ? (
         <View style={onLine(ROW_MARK.disclosure)}>
           <Disclosure />
-        </View>
-      ) : null}
-      {more ? (
-        <View style={onLine(20)}>
-          <Icon name="more" size={20} color={c.label2} />
         </View>
       ) : null}
       {remove ? (
@@ -478,6 +521,12 @@ function Row({
           ))}
         </View>
       ) : null}
+      {/* After the row's own buttons: the mark says what a tap on the rest of the row opens. */}
+      {more ? (
+        <View style={onLine(20)}>
+          <Icon name="more" size={20} color={c.label2} />
+        </View>
+      ) : null}
     </>
   );
   // VoiceOver reads the row as one: its × and its buttons are its actions.
@@ -488,6 +537,7 @@ function Row({
   return (
     <RowPressable
       onPress={press}
+      {...(onLongPress ? { onLongPress } : {})}
       // A row that opens a screen stays lit until that screen covers it; a switch's row answers with its switch.
       hold={chevron}
       light={toggle === undefined}
@@ -506,17 +556,27 @@ function Row({
       accessibilityState={{
         disabled,
         ...(toggle !== undefined ? { checked: toggle } : {}),
-        ...(checked !== undefined ? { selected: checked } : {}),
+        ...(checked !== undefined ? { selected: checked } : selected !== undefined ? { selected } : {}),
       }}
       style={[
         styles.row,
         flat ? styles.media : tall ? styles.tall : null,
         tree === "mid" || tree === "end" ? styles.nested : null,
+        depth > 0 ? { paddingLeft: GROUPED_ROW.padX + depth * NEST } : null,
+        selected ? { backgroundColor: withAlpha(c.ink, SELECTED_TINT) } : null,
         // Off, it looks off: a tap that does nothing never looks like one that should.
         disabled ? styles.off : null,
       ]}
     >
       {tree ? <TreeLines tree={tree} color={c.line2} /> : null}
+      {Array.from({ length: depth }, (_, i) => (
+        <View
+          // biome-ignore lint/suspicious/noArrayIndexKey: one guide per level, never reordered
+          key={i}
+          pointerEvents="none"
+          style={[styles.guide, { left: TREE_X + i * NEST, backgroundColor: c.line2 }]}
+        />
+      ))}
       {flat ? (
         <>
           <View style={styles.mediaHead}>
@@ -599,7 +659,7 @@ export function GroupedField({ label, hint, children, onPress, stacked = false }
 }
 
 /**
- * A field whose label has an ⓘ. With `onPress` the row's button lies under the label and the value rather than
+ * A field whose label has an ⓘ, at the row's end (after the value, before the chevron). With `onPress` the row's button lies under the label and the value rather than
  * around them: inside another button the ⓘ would be part of it to VoiceOver, never a button of its own.
  */
 function HintedField({ label, hint, children, onPress }: GroupedFieldProps & { hint: { name: string; text: string } }) {
@@ -617,22 +677,22 @@ function HintedField({ label, hint, children, onPress }: GroupedFieldProps & { h
             style={StyleSheet.absoluteFill}
           />
         ) : null}
-        <View style={[styles.key, styles.keyLine]} pointerEvents="box-none">
-          <View
-            pointerEvents={passive}
-            style={styles.shrink}
-            accessibilityElementsHidden={Boolean(onPress)}
-            importantForAccessibility={onPress ? "no-hide-descendants" : "auto"}
-          >
-            <Text variant="callout" tone="muted">
-              {label}
-            </Text>
-          </View>
-          {info.button}
+        {/* The label has its whole column, as a field's with no ⓘ: sharing it with the ⓘ broke a two-word label in
+            two lines. The ⓘ goes after the value, before the chevron. */}
+        <View
+          pointerEvents={passive}
+          style={styles.key}
+          accessibilityElementsHidden={Boolean(onPress)}
+          importantForAccessibility={onPress ? "no-hide-descendants" : "auto"}
+        >
+          <Text variant="callout" tone="muted">
+            {label}
+          </Text>
         </View>
         <View style={styles.grow} pointerEvents={passive}>
           {children}
         </View>
+        {info.button}
         {onPress ? (
           <View pointerEvents="none">
             <Disclosure />
@@ -697,11 +757,11 @@ const styles = StyleSheet.create({
   marked: { fontWeight: "600" },
   list: { borderRadius: LIST_CORNER, borderCurve: "continuous", overflow: "hidden" },
   divider: { height: StyleSheet.hairlineWidth },
-  header: { paddingTop: 20, paddingBottom: 8, paddingHorizontal: 16, letterSpacing: 0.4 },
+  header: { paddingTop: 20, paddingBottom: 8, paddingHorizontal: 16, fontWeight: "600" },
   headerRoom: { paddingTop: 20, paddingBottom: 8, paddingHorizontal: 16 },
   headerLine: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 8 },
   headerWords: { flexDirection: "row", alignItems: "flex-start", gap: 6 },
-  headerCaps: { letterSpacing: 0.4 },
+  headerText: { fontWeight: "600" },
   headerRow: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" },
   headerAside: { paddingRight: 16 },
   footer: { paddingTop: 8, paddingHorizontal: 16 },
@@ -714,6 +774,8 @@ const styles = StyleSheet.create({
     paddingVertical: GROUPED_ROW.padY,
   },
   nested: { paddingLeft: GROUPED_ROW.padX + NEST },
+  // A tree level's guide: under the middle of the parent's lead, the row's whole height, so levels read as lines.
+  guide: { position: "absolute", top: 0, bottom: 0, width: 1 },
   // From just under the drawing (a laptop's base, a tower's foot), not the bottom of its 48-point box.
   trunkHost: { position: "absolute", left: TREE_X, top: GROUPED_ROW.tallPadY + 45, bottom: 0, width: 1 },
   trunk: { position: "absolute", left: TREE_X, top: TREE_ELBOW - TREE_CURVE, bottom: 0, width: 1 },

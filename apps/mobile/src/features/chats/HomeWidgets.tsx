@@ -1,8 +1,9 @@
 import { frozenBoard, useHomeBoard, type Widget } from "@agenteschat/client";
+import { memo, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { useOrg } from "@/providers/org";
-import { Icon, RowPressable, Text, useTheme } from "@/ui";
+import { Icon, type IconName, RowPressable, SideScroll, Text, useTheme } from "@/ui";
 import { router } from "@/ui/navigation";
 import { newWidgetHref } from "../dashboards/BoardScreen";
 import { HOME, widgetsInOrder } from "../dashboards/logic";
@@ -18,12 +19,19 @@ const STRIP_WIDGET = 162;
  * Home") and "See all", which pushes Dashboards; then its widgets small, side by side, on a strip that scrolls
  * sideways. Tapping one opens it. With none yet, one card asks for a widget (when the person edits that board).
  */
-export function HomeWidgets({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
+export const HomeWidgets = memo(function HomeWidgets({
+  collapsed,
+  onToggle,
+}: {
+  collapsed: boolean;
+  onToggle: () => void;
+}) {
   const { t } = useTranslation();
   const c = useColors();
-  const { shadows } = useTheme();
   const { orgId, org } = useOrg();
   const home = useHomeBoard(orgId);
+  // One object while the board stays: each card is memoized on it.
+  const where = useMemo(() => ({ id: home.chosenId ?? HOME, home: !home.chosenId }), [home.chosenId]);
   if (home.loading && !home.board) return null;
   const board = home.board && frozenBoard(home.board, org);
   const title = home.chosenId ? (board?.title ?? home.chosenTitle ?? "") : t("dashboards.home");
@@ -34,43 +42,21 @@ export function HomeWidgets({ collapsed, onToggle }: { collapsed: boolean; onTog
   return (
     <CollapsibleSection title={title} count={widgets.length} collapsed={collapsed} onToggle={onToggle}>
       {widgets.length > 0 || !canAdd ? (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          snapToInterval={STRIP_WIDGET + GAP}
-          decelerationRate="fast"
-          contentContainerStyle={styles.strip}
-        >
+        <SideScroll snapToInterval={STRIP_WIDGET + GAP} decelerationRate="fast" contentContainerStyle={styles.strip}>
           {widgets.map((w) => (
             <View key={w.id} style={styles.item}>
-              <WidgetPeek
-                widget={w}
-                canEdit={canAdd}
-                board={{ id: home.chosenId ?? HOME, home: !home.chosenId }}
-                compact
-              />
+              <WidgetPeek widget={w} canEdit={canAdd} board={where} compact />
             </View>
           ))}
-          {/* "Ver todos" ends the strip, on no plate: a round button with the arrow, its words under it. */}
-          <Pressable
-            onPress={() => router.push("/dashboards")}
-            accessibilityRole="button"
-            accessibilityLabel={t("dashboards.seeAll")}
-            style={({ pressed }) => [styles.all, pressed && styles.pressed]}
-          >
-            <View
-              style={[
-                styles.allButton,
-                { backgroundColor: c.raised, boxShadow: `0px 0px 0px 0.5px ${c.line2}, ${shadows.e1}` },
-              ]}
-            >
-              <Icon name="right" size={20} color={c.ink2} />
-            </View>
-            <Text variant="footnote" tone="muted" style={styles.medium} numberOfLines={1}>
-              {t("dashboards.seeAll")}
-            </Text>
-          </Pressable>
-        </ScrollView>
+          {/* The strip ends on round buttons on no plate, their words under them: "Add" (who edits this board)
+              beside "See all". */}
+          <View style={styles.ends}>
+            {canAdd ? (
+              <StripButton icon="plus" label={t("widgets.add.word")} said={t("widgets.add.label")} onPress={add} />
+            ) : null}
+            <StripButton icon="right" label={t("dashboards.seeAll")} onPress={() => router.push("/dashboards")} />
+          </View>
+        </SideScroll>
       ) : canAdd ? (
         <RowPressable
           // A full-width row: it lights a beat after the finger lands, as the list's rows do.
@@ -87,6 +73,42 @@ export function HomeWidgets({ collapsed, onToggle }: { collapsed: boolean; onTog
       ) : null}
     </CollapsibleSection>
   );
+});
+
+/** A round button at the strip's end, its words under it; `said` is what VoiceOver reads when the words are short. */
+function StripButton({
+  icon,
+  label,
+  said,
+  onPress,
+}: {
+  icon: IconName;
+  label: string;
+  said?: string;
+  onPress: () => void;
+}) {
+  const c = useColors();
+  const { shadows } = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={said ?? label}
+      style={({ pressed }) => [styles.all, pressed && styles.pressed]}
+    >
+      <View
+        style={[
+          styles.allButton,
+          { backgroundColor: c.raised, boxShadow: `0px 0px 0px 0.5px ${c.line2}, ${shadows.e1}` },
+        ]}
+      >
+        <Icon name={icon} size={20} color={c.ink2} />
+      </View>
+      <Text variant="footnote" tone="muted" style={styles.medium} numberOfLines={1}>
+        {label}
+      </Text>
+    </Pressable>
+  );
 }
 
 /** Between the cards: the lists' 12. */
@@ -99,6 +121,8 @@ const styles = StyleSheet.create({
   medium: { fontWeight: "500" },
   // Room above and below: the cards' hairline and shadow are never cut by the strip's edge.
   strip: { paddingHorizontal: 16, gap: GAP, paddingTop: 4, paddingBottom: 6 },
+  // The end's buttons side by side, as one pair (each its own 84 of room).
+  ends: { flexDirection: "row" },
   all: { width: 84, alignItems: "center", justifyContent: "center", gap: 8 },
   allButton: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
   pressed: { opacity: 0.7 },

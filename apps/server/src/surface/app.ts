@@ -134,9 +134,10 @@ const Taken = z
 const Delivery = z
   .object({
     id: z.uuid(),
-    kind: z
-      .enum(["reply", "linked"])
-      .openapi({ description: "`linked`: say in your own words that the link is active." }),
+    kind: z.enum(["reply", "linked", "nudge"]).openapi({
+      description:
+        "`linked`: say in your own words that the link is active. `nudge` (only with `nudges=true`): tell the person something waits unread in the app, by `nudge`'s counts.",
+    }),
     linkId: z.uuid(),
     externalId: z.string(),
     orgId: z.uuid(),
@@ -164,6 +165,16 @@ const Delivery = z
       })
       .nullable(),
     choices: z.array(z.string()).nullable().openapi({ description: "A question's choices, to list in words." }),
+    nudge: z
+      .object({
+        unread: z.number().int().openapi({ description: "What waits unread in `orgName` now." }),
+        waiting: z.number().int().openapi({ description: "Of those, what blocks someone: an approval, a question." }),
+      })
+      .nullable()
+      .openapi({
+        description:
+          "A nudge's counts; null for every other kind. Core already checked the person's settings, quiet hours, the day's one nudge and their phone's pushes: send it or report it unsent, never in-app.",
+      }),
   })
   .openapi("SurfaceDelivery");
 
@@ -405,12 +416,23 @@ export function createSurfaceApp(deps: AppDeps, token: string, version: string) 
       summary: "What to send now: replies of the right hand to linked people, and links just made",
       description:
         "Oldest first, only rows not yet taken and younger than 5 minutes: anything older already reached the person in the app. Close each with `POST /deliveries/taken`.",
-      request: { query: z.object({ limit: z.coerce.number().int().min(1).max(100).default(50) }) },
+      request: {
+        query: z.object({
+          limit: z.coerce.number().int().min(1).max(100).default(50),
+          nudges: z
+            .enum(["true", "false"])
+            .default("false")
+            .openapi({ description: "`true`: list `nudge` deliveries too (ADR 0234). Without it none is listed." }),
+        }),
+      },
       responses: { 200: json(z.object({ deliveries: z.array(Delivery) }).openapi("SurfaceDeliveries")), ...errors },
     }),
     async (c) => {
-      const { limit } = c.req.valid("query");
-      return c.json({ deliveries: await listSurfaceDeliveries(deliveryDeps(), limit) }, 200);
+      const { limit, nudges } = c.req.valid("query");
+      return c.json(
+        { deliveries: await listSurfaceDeliveries(deliveryDeps(), limit, { nudges: nudges === "true" }) },
+        200,
+      );
     },
   );
 

@@ -286,6 +286,13 @@ export const ptBR: Words = {
   deletionCode: {
     subjectWorkspace: (code) => `${code} é seu código para apagar um workspace`,
     subjectAccount: (code) => `${code} é seu código para apagar sua conta inteira`,
+    subjectReset: (code) => `${code} é seu código para recomeçar um workspace`,
+    reset: (org) => [
+      "Digite este código para recomeçar o workspace ",
+      { b: org },
+      ". Os agentes, as conversas, os arquivos e a memória dele são apagados na hora, sem volta, e ele começa de novo como um workspace novo.",
+    ],
+    whyReset: (org) => `Você recebeu este e-mail porque sua conta pediu para recomeçar ${org} no agentes.chat.`,
     preheader: "Digite no agentes.chat para confirmar. Vale por 10 minutos.",
     headline: "Seu código",
     workspace: (org) => [
@@ -388,6 +395,48 @@ export const ptBR: Words = {
       why: () => "Você recebeu este e-mail porque está neste workspace no agentes.chat.",
     },
   },
+  computerDown: {
+    subject: "Um computador não está respondendo",
+    preheader: "O trabalho dos seus agentes nele está esperando.",
+    headline: "Um computador não está respondendo",
+    body: (name, org, away) => [
+      { b: name },
+      " na ",
+      { b: org },
+      ` não responde há ${away}. O trabalho que precisa dele espera e continua quando ele voltar.`,
+    ],
+    runs: "Pedidos a agentes esperando",
+    calls: "Chamadas de webhook esperando",
+    note: "Para continuar agora, mova os agentes dele para outro computador na página dele.",
+    button: "Abrir o computador",
+    why: (org) => `Você recebeu este e-mail porque gerencia os computadores da ${org} no agentes.chat.`,
+    back: {
+      subject: "Um computador voltou",
+      preheader: "O trabalho que esperava por ele continua agora.",
+      headline: "O computador voltou",
+      runs: "Pedidos a agentes que esperaram",
+      calls: "Chamadas de webhook que esperaram",
+      body: (name, org, away) => [
+        { b: name },
+        " na ",
+        { b: org },
+        ` voltou depois de ${away}. O trabalho que esperava por ele continua agora.`,
+      ],
+    },
+    personal: {
+      body: (name, _org, away) => [
+        { b: name },
+        ` não responde há ${away}. O trabalho que precisa dele espera e continua quando ele voltar.`,
+      ],
+      why: () => "Você recebeu este e-mail porque gerencia os computadores do seu workspace pessoal no agentes.chat.",
+      back: {
+        body: (name, _org, away) => [
+          { b: name },
+          ` voltou depois de ${away}. O trabalho que esperava por ele continua agora.`,
+        ],
+      },
+    },
+  },
   appConnected: {
     subject: "Um app foi conectado à sua conta do agentes.chat",
     preheader: "Ele pode ler e mandar tarefas aos agentes em seu nome em um workspace.",
@@ -469,6 +518,35 @@ export const ptBR: Words = {
     none: "Nenhum workspace.",
     table: (day) => `A tabela inteira: bun run report:autonomy --day ${day}`,
     why: "Você recebeu este e-mail porque este endereço está em OPS_REPORT_EMAIL neste servidor. Ele sai uma vez por dia.",
+  },
+  accountOpened: {
+    subject: (plan) => `Mais pessoas podem usar a sua conta do ${plan}`,
+    preheader: (plan) => `O que fizerem com ela usa o seu plano do ${plan} e os limites dele.`,
+    headline: "Alguém mudou quem pode usar a sua conta de IA",
+    body: (by, account, plan) => [
+      { b: by },
+      ` mudou quem pode usar a sua conta do ${plan} `,
+      { b: account },
+      `. O que fizerem com ela usa o seu plano e os limites dele.`,
+    ],
+    account: "Conta",
+    by: "Mudado por",
+    setting: "Permissão",
+    use: "Usar em agentes",
+    reply: "Atender todos",
+    was: "Antes",
+    now: "Agora",
+    everyone: "Todo mundo no workspace",
+    admins: "Você e administradores",
+    onlyYou: "Só você",
+    agentOwner: "Só o dono do agente",
+    note: "Para desfazer, abra a conta em IA e uso e mude as permissões dela.",
+    button: "Abrir Contas de IA",
+    why: (org) =>
+      `Você recebeu este e-mail porque conectou esta conta de IA na ${org} e outra pessoa mudou quem pode usá-la.`,
+    personal: {
+      why: () => "Você recebeu este e-mail porque conectou esta conta de IA e outra pessoa mudou quem pode usá-la.",
+    },
   },
   planOpened: {
     subject: (plan) => `Mais pessoas podem falar com seu agente pelo seu plano do ${plan}`,
@@ -566,6 +644,27 @@ export const ptBR: Words = {
       small: "Vincule de novo em Configurações se foi você.",
       why: (surface) => `Você recebeu este e-mail porque ${surface} estava vinculado à sua conta do agentes.chat.`,
       picture: "Seu assistente, não mais no seu celular",
+    },
+    pinReset: {
+      subject: (surface) => `Escolha seu PIN do ${surface}`,
+      preheader: "Escolha o PIN que aprova ações pelo seu app de chat.",
+      headline: (surface) => `Escolha seu PIN do ${surface}`,
+      body: (surface) =>
+        `Pediram um link para escolher o PIN que você usa para aprovar ações pelo ${surface}. Se foi você, escolha-o na página que este botão abre.`,
+      button: "Escolher meu PIN",
+      small: "O link funciona uma vez, por uma hora. Se não foi você, ignore este e-mail. Nada muda.",
+      why: (surface) => `Você recebeu este e-mail porque ${surface} está vinculado à sua conta do agentes.chat.`,
+    },
+    pinLocked: {
+      subject: (surface) => `Seu PIN do ${surface} está bloqueado`,
+      preheader: "Três PINs errados seguidos. Aprovar pelo seu app de chat está pausado por enquanto.",
+      headline: (surface) => `Seu PIN do ${surface} está bloqueado`,
+      body: (surface, time) =>
+        `Alguém digitou um PIN errado três vezes seguidas para aprovar uma ação pelo ${surface}. Aprovar pelo ${surface} está pausado por ${time}.`,
+      lockedFor: ["15 minutos", "1 hora", "24 horas"],
+      small: (surface) =>
+        `Se foi você, tente de novo mais tarde. Se não foi, desvincule o ${surface} nas suas configurações de notificações, para que ninguém aprove por ele.`,
+      button: "Abrir configurações de notificações",
     },
   },
   supportReply: {

@@ -1,6 +1,7 @@
 import type { TFunction } from "i18next";
 import type { AgentAudience } from "../api/types";
 import type { Level } from "./access-levels";
+import { formatBudgetUsd } from "./format";
 import { handleFrom, parseAmount } from "./text";
 
 /**
@@ -316,6 +317,8 @@ export interface DraftCheck {
   handle: string;
   taken: Set<string>;
   ownerUserId: string | null;
+  /** A role that answers for it instead of a person (ADR 0085, addendum of 2026-11-21): an owner all the same. */
+  ownerRoleId?: string | null;
   audience: AgentAudience;
   budget: string;
   /** The chosen model can be used (a key for its provider, or the platform key). */
@@ -340,9 +343,10 @@ export function stepErrors(step: NewAgentStep, d: DraftCheck): DraftError[] {
     if (h) out.push({ field: "handle", code: h });
   }
   if (step === "where") {
-    if (d.audience.mode === "owner" && !d.ownerUserId) out.push({ field: "audience", code: "noOwner" });
+    const owned = !!d.ownerUserId || !!d.ownerRoleId;
+    if (d.audience.mode === "owner" && !owned) out.push({ field: "audience", code: "noOwner" });
     const nobody = d.audience.userIds.length === 0 && (d.audience.roleIds?.length ?? 0) === 0;
-    if (d.audience.mode === "people" && nobody && !d.ownerUserId) out.push({ field: "audience", code: "nobody" });
+    if (d.audience.mode === "people" && nobody && !owned) out.push({ field: "audience", code: "nobody" });
   }
   if (step === "model") {
     if (!d.modelOk) out.push({ field: "model", code: "unavailable" });
@@ -369,3 +373,9 @@ export async function savePart(failures: unknown[], save: () => Promise<unknown>
     return false;
   }
 }
+
+/** An agent's budget left empty: the workspace's default, with its amount once the settings say it. */
+export const workspaceBudgetText = (t: TFunction, locale: string, amount: number | undefined) =>
+  amount === undefined
+    ? t("agentPage.budgetDefault")
+    : t("agentPage.budgetDefaultAmount", { amount: formatBudgetUsd(locale, amount) });

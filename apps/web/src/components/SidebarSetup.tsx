@@ -1,6 +1,7 @@
 import type { SidebarItem, SidebarPlace } from "@agenteschat/client";
 import {
   keys,
+  useOverview,
   useSetSidebarItem,
   useSetSidebarToolOrder,
   useSidebarItems,
@@ -9,6 +10,7 @@ import {
 import {
   moveSection,
   moveShownTool,
+  offeredTools,
   placeTool,
   SIDEBAR_COUNTED,
   sameOrder,
@@ -50,8 +52,8 @@ type PersonalToolGroup = (typeof PERSONAL_TOOL_GROUPS)[number];
 
 /** The page, icon and catalog group for each sidebar tool. */
 export const SIDEBAR_TOOLS = {
-  waiting: { to: "/org/$orgId/waiting", icon: "question", group: "reviewTools" },
-  approvals: { to: "/org/$orgId/approvals", icon: "waiting", group: "reviewTools" },
+  // The inbox: what waits on me, what is new and what I decided, in one place.
+  waiting: { to: "/org/$orgId/notifications", icon: "inbox", group: "reviewTools" },
   proposals: { to: "/org/$orgId/proposals", icon: "bulb", group: "reviewTools" },
   threads: { to: "/org/$orgId/threads", icon: "thread", group: "workspaceTools" },
   issues: { to: "/org/$orgId/issues", icon: "issues", group: "organizeTools" },
@@ -60,8 +62,10 @@ export const SIDEBAR_TOOLS = {
   routines: { to: "/org/$orgId/routines", icon: "routines", group: "organizeTools" },
   calendar: { to: "/org/$orgId/calendar", icon: "calendar", group: "organizeTools" },
   team: { to: "/org/$orgId/team", icon: "agent", group: "workspaceTools" },
+  skills: { to: "/org/$orgId/skills", icon: "bolt", group: "workspaceTools" },
   dashboards: { to: "/org/$orgId/dashboards", icon: "chart", group: "workspaceTools" },
   taskManager: { to: "/org/$orgId/task-manager", icon: "activity", group: "workspaceTools" },
+  code: { to: "/org/$orgId/code", icon: "code", group: "workspaceTools" },
 } as const satisfies Record<SidebarItem, { to: string; icon: IconName; group: PersonalToolGroup }>;
 
 /**
@@ -203,6 +207,9 @@ export function SidebarSetupDialog({
   const save = useSetSidebarItem(org.id, personal);
   const sections = useSectionOrder(org.id, personal);
   const tools = useToolOrder(org.id, personal);
+  // Code only where it has anything for me (ADR 0215 §12); the arrows move a tool past its shown neighbour.
+  const shown = offeredTools(tools.order, useOverview(org.id).data?.code, items);
+  // What another device changed since this one loaded shows as the dialog opens.
   // The pending write already returns the server's full preferences. Reading before it lands can undo its optimistic update.
   useEffect(() => {
     if (open && queryClient.isMutating({ mutationKey: keys.sidebarItems(org.id) }) === 0) void refetch();
@@ -226,7 +233,7 @@ export function SidebarSetupDialog({
     >
       <DialogBody>
         <ul className="sidebar-setup">
-          {tools.order.map((id, i) => (
+          {shown.map((id, i) => (
             <li key={id} className="sidebar-setup__row">
               <span className="settings-row__icon" aria-hidden="true">
                 <Icon name={SIDEBAR_TOOLS[id].icon} size={16} />
@@ -250,7 +257,7 @@ export function SidebarSetupDialog({
                   aria-label={`${t("contextMenu.moveUp")}: ${t(`shell.${id}`)}`}
                   data-move
                   disabled={i === 0}
-                  onClick={(e) => tools.put(moveSection(tools.order, id, -1), e.currentTarget)}
+                  onClick={(e) => tools.put(moveShownTool(tools.order, shown, id, -1), e.currentTarget)}
                 />
                 <Button
                   size="sm"
@@ -259,8 +266,8 @@ export function SidebarSetupDialog({
                   icon="chevronDown"
                   aria-label={`${t("contextMenu.moveDown")}: ${t(`shell.${id}`)}`}
                   data-move
-                  disabled={i === tools.order.length - 1}
-                  onClick={(e) => tools.put(moveSection(tools.order, id, 1), e.currentTarget)}
+                  disabled={i === shown.length - 1}
+                  onClick={(e) => tools.put(moveShownTool(tools.order, shown, id, 1), e.currentTarget)}
                 />
               </span>
             </li>

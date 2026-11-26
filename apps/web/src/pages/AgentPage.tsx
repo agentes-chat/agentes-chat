@@ -8,21 +8,32 @@ import {
   useAgentSkills,
   useCredentials,
   useModels,
-  useProposals,
   useRuns,
   useSettings,
   useUpdateAgent,
 } from "@agenteschat/client";
 import { type Level, levelsOf, resourcesOf } from "@agenteschat/client/lib/access-levels";
+import { hidesAgentPage } from "@agenteschat/client/lib/agent-facts";
 import { groupOf, NO_GROUP } from "@agenteschat/client/lib/agent-groups";
-import { audienceOf, audiencePatch, seesDetails } from "@agenteschat/client/lib/audience";
+import { ownerPatchOf, ownerValueOf, ownsAgentAs, roleOfOwnerValue } from "@agenteschat/client/lib/agent-owner";
+import {
+  audienceOf,
+  audiencePatch,
+  type EditorsValue,
+  editorsPatch,
+  editorsSummary,
+  editorsValueOf,
+  editsAgent,
+  managesAgent,
+  seesDetails,
+} from "@agenteschat/client/lib/audience";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { FIELD_LIMITS } from "@agenteschat/client/lib/field-limits";
 import { joinNames } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { overLimitText, tooLongToSend } from "@agenteschat/client/lib/message-length";
+import { edit, optimistic, without } from "@agenteschat/client/lib/optimistic";
 import { can } from "@agenteschat/client/lib/permissions";
-import { pendingOnAgent } from "@agenteschat/client/lib/proposals";
 import { isAuto } from "@agenteschat/client/lib/providers";
 import { type RepoChoice, repoChoiceOf, repoListOf, reposText } from "@agenteschat/client/lib/repos";
 import { isRightHand, tellsNameStory } from "@agenteschat/client/lib/right-hand";
@@ -72,6 +83,7 @@ import {
   type Field,
   type Look,
   lineChanges,
+  ownsOrManages,
   PERSONAL_AGENT_TABS,
   revertKey,
   type Saved,
@@ -80,7 +92,7 @@ import {
   type Viewer,
 } from "@/lib/agent-edit";
 import { fullLook, lookOf } from "@/lib/look";
-import { handleAfterRename, handleProblemText, readBudget, takenHandles } from "@/lib/new-agent";
+import { handleAfterRename, handleProblemText, readBudget, takenHandles, workspaceBudgetText } from "@/lib/new-agent";
 import { agentPanelSearch } from "@/lib/open-param";
 import { useToast } from "@/lib/toast";
 import { AccessTab } from "./agent/AccessTab";
@@ -97,6 +109,7 @@ import { useVisibleChannels } from "./agent/pieces";
 import { RepoDialog } from "./agent/Repos";
 import { SaveBar } from "./agent/SaveBar";
 import { SettingsTab } from "./agent/SettingsTab";
+import { SkillsTab } from "./agent/SkillsTab";
 import { UsageTab } from "./agent/UsageTab";
 import { type WorkDialog, WorkDialogs } from "./agent/Work";
 
@@ -106,10 +119,10 @@ const sortIds = (ids: string[]) => [...ids].sort();
  * The tabs always in the bar; the rest live in its "More" menu, and the one open from there shows in the bar. A
  * personal workspace's bar (ADR 0159 §3) is `PERSONAL_AGENT_TABS`, with Advanced instead of "More".
  */
-const MAIN_TABS: AgentTab[] = ["overview", "instructions", "memory", "activity"];
+const MAIN_TABS: AgentTab[] = ["overview", "instructions", "skills", "memory", "activity"];
 const MORE_TABS = AGENT_TABS.filter((id) => !MAIN_TABS.includes(id) && id !== "advanced");
 const PERSONAL_TABS: readonly AgentTab[] = PERSONAL_AGENT_TABS;
-const RIGHT_HAND_TABS: readonly AgentTab[] = ["settings", "access", "memory"];
+const RIGHT_HAND_TABS: readonly AgentTab[] = ["settings", "access", "skills", "memory"];
 const MORE_ICON: Partial<Record<AgentTab, IconName>> = {
   access: "plug",
   files: "file",
@@ -153,7 +166,8 @@ export function AgentPage(props: AgentPageProps) {
       </div>
     );
   }
-  if (!agent) {
+  // A private agent whose page this person may not open reads as one that isn't there, as its link answers.
+  if (!agent || hidesAgentPage(agent)) {
     return (
       <div className="page page--full">
         <EmptyState icon="agent">{t("agent.notFound")}</EmptyState>
@@ -191,8 +205,17 @@ function AgentProfile({
   const toast = useToast();
   const navigate = useNavigate();
   const dir = useDirectory(org.id);
-  const admin = can(org, "manage_agents");
-  const viewer: Viewer = admin ? "admin" : agent.ownerUserId === me.user.id ? "owner" : "member";
+  // Per agent (ADR 0085 addendum of 2026-11-17): "Editar agentes" (`manage_agents`) reaches only some agents, and an
+  // agent's "Quem pode editar" lets more people edit how it works.
+  const admin = managesAgent(agent);
+  // Its owner, or whoever holds the role that answers for it (ADR 0085, addendum of 2026-11-21).
+  const viewer: Viewer = admin
+    ? "admin"
+    : ownsAgentAs(agent, me.user.id, dir.rolesOf(me.user.id))
+      ? "owner"
+      : editsAgent(agent)
+        ? "editor"
+        : "member";
   // A personal workspace's page (ADR 0159 §3): a shorter bar, the hard parts in Advanced; every address still works.
   const personal = isPersonal(org);
   // The right hand's page (ADR 0137): its settings, what it may use and what it keeps for the viewer. Its
@@ -208,8 +231,7 @@ function AgentProfile({
   const repos = useAgentRepos(org.id, agent.id);
   const groups = useAgentGroups(org.id);
   const library = useAgentSkills(org.id, agent.id);
-  const proposals = useProposals(org.id);
-  const runs = useRuns(org.id, agent.id, viewer !== "member");
+  const runs = useRuns(org.id, agent.id, ownsOrManages(viewer));
   const visible = useVisibleChannels();
   const items = useConnectedById();
   const update = useUpdateAgent(org.id, agent.id);
@@ -221,6 +243,8 @@ function AgentProfile({
   const [deleting, setDeleting] = useState(false);
   /** The dialog of the sentence under the name that is open (who thinks, where it works, the browser). */
   const [work, setWork] = useState<WorkDialog | null>(null);
+  // The screen "Quem pensa" opens on again from the Connect it closed for ("Adicionar conta").
+  const [reopenAt, setReopenAt] = useState<BrainScreen>();
   /** The repositories picker: open, with a repository to add ("Liberar"). */
   const [picking, setPicking] = useState<{ add?: string } | null>(null);
   const top = useRef<HTMLDivElement>(null);
@@ -246,8 +270,9 @@ function AgentProfile({
             : DEFAULT_KEY
           : undefined,
       budget: admin && d ? (d.monthlyBudgetUsd ?? null) : undefined,
-      owner: agent.ownerUserId ?? NO_OWNER,
+      owner: ownerValueOf(agent, NO_OWNER),
       audience: audienceOf(agent),
+      editors: editorsValueOf(agent),
       levels: access.data ? levelsOf(access.data) : undefined,
       repos: repos.data ? repoChoiceOf(repos.data) : undefined,
       skills: library.data ? sortIds(library.data.filter((s) => s.enabled).map((s) => s.id)) : undefined,
@@ -274,6 +299,7 @@ function AgentProfile({
         : new Intl.NumberFormat(i18n.language, { useGrouping: false, maximumFractionDigits: 2 }).format(saved.budget)),
     owner: edits.owner ?? saved.owner,
     audience: edits.audience ?? saved.audience,
+    editors: edits.editors ?? saved.editors ?? editorsValueOf(agent),
     levels: { ...(saved.levels ?? {}), ...(edits.levels ?? {}) },
     repos: edits.repos ?? saved.repos,
     skills: edits.skills ?? saved.skills,
@@ -285,29 +311,49 @@ function AgentProfile({
 
   const g = agentGrammar(agent.name);
   const ownerFirst = agent.ownerUserId ? (dir.memberById.get(agent.ownerUserId)?.name.split(/\s+/)[0] ?? null) : null;
+  // Who answers for it in a sentence: the person's first name, or the role's name (ADR 0085, addendum of 2026-11-21).
+  const ownerLabel = ownerFirst ?? (agent.ownerRoleId ? (dir.roleName(agent.ownerRoleId) ?? null) : null);
   const lookText = (l: Look) =>
     [
       t(`look.colors.${colorKey(l.color)}`),
       t(`look.eyesNames.${l.eyes}`),
       ...(l.accessory !== "none" ? [t(`look.accessories.${l.accessory}`)] : []),
     ].join(" · ");
-  const memberName = (id: string) =>
-    id === NO_OWNER ? t("newAgent.noOwnerOption") : (dir.memberById.get(id)?.name ?? t("channel.unknownPerson"));
+  // The owner picker's value in words: a person, a role (`role:<id>`, ADR 0085, addendum of 2026-11-21) or nobody.
+  const ownerText = (value: string) => {
+    const roleId = roleOfOwnerValue(value);
+    if (roleId) return dir.roleName(roleId) ?? t("channel.unknownPerson");
+    return value === NO_OWNER
+      ? t("newAgent.noOwnerOption")
+      : (dir.memberById.get(value)?.name ?? t("channel.unknownPerson"));
+  };
   const audienceText = (a: AgentAudience, owner: string) => {
-    const first = (id: string) => memberName(id).split(/\s+/)[0] ?? "";
+    const first = (id: string) => ownerText(id).split(/\s+/)[0] ?? "";
+    const roleOwner = roleOfOwnerValue(owner);
     if (a.mode === "everyone") return t("audience.summary.everyone");
     if (a.mode === "owner")
-      return owner === NO_OWNER ? t("audience.summary.nobody") : t("audience.summary.owner", { name: first(owner) });
-    const ids = [...new Set([...(owner === NO_OWNER ? [] : [owner]), ...a.userIds])];
-    const roles = (a.roleIds ?? []).flatMap((id) => dir.roleName(id) ?? []);
+      return owner === NO_OWNER
+        ? t("audience.summary.nobody")
+        : roleOwner
+          ? t("audience.summary.ownerRole", { role: ownerText(owner) })
+          : t("audience.summary.owner", { name: first(owner) });
+    const ids = [...new Set([...(owner === NO_OWNER || roleOwner ? [] : [owner]), ...a.userIds])];
+    const roleIds = [...new Set([...(roleOwner ? [roleOwner] : []), ...(a.roleIds ?? [])])];
+    const roles = roleIds.flatMap((id) => dir.roleName(id) ?? []);
     const names = [...roles, ...ids.map(first)];
     return names.length ? joinNames(names, t) : t("audience.summary.nobody");
   };
+  // "Quem pode editar" as its row on the overview says it, with the owner it has then.
+  const editorsText = (e: EditorsValue | undefined, owner: string) =>
+    editorsSummary(
+      t,
+      { name: agent.name, ...ownerPatchOf(owner, NO_OWNER), editors: e && editorsPatch(e) },
+      (id) => dir.memberById.get(id)?.name,
+      dir.roleName,
+    );
   const budgetText = (amount: number | null) =>
     amount === null
-      ? settings.data?.defaultAgentBudgetUsd === undefined
-        ? t("agentPage.budgetDefault")
-        : t("agentPage.budgetDefaultAmount", { amount: usd(t, i18n.language, settings.data.defaultAgentBudgetUsd) })
+      ? workspaceBudgetText(t, i18n.language, settings.data?.defaultAgentBudgetUsd)
       : t("agentPage.perMonth", { amount: usd(t, i18n.language, amount) });
   const keyText = (k: string) =>
     keyOptions(t, credentials.data ?? [], settings.data?.defaultCredentialId ?? null).find((o) => o.value === k)
@@ -330,10 +376,16 @@ function AgentProfile({
       // The right hand's page has no Advanced: all of what it may use is on one tab.
       !rightHand &&
       (field === "skills" || (field === "levels" && resourceById.get(resource ?? "")?.kind !== "connector"));
+    // What it knows is on the Skills tab; the skills' own level is with the other areas.
+    const onSkills = field === "skills";
     const base = {
       key,
       field,
-      tab: advanced ? ("advanced" as const) : shownAgentTab(place.tab, place.sec, personal),
+      tab: advanced
+        ? ("advanced" as const)
+        : onSkills
+          ? ("skills" as const)
+          : shownAgentTab(place.tab, place.sec, personal),
       sec: place.sec,
     };
     const label = (f: Field) => t(`agentPage.fields.${f}`);
@@ -401,13 +453,20 @@ function AgentProfile({
         };
       }
       case "owner":
-        return { ...base, label: label("owner"), was: memberName(saved.owner), now: memberName(draft.owner) };
+        return { ...base, label: label("owner"), was: ownerText(saved.owner), now: ownerText(draft.owner) };
       case "audience":
         return {
           ...base,
           label: label("audience"),
           was: audienceText(saved.audience, saved.owner),
           now: audienceText(draft.audience, draft.owner),
+        };
+      case "editors":
+        return {
+          ...base,
+          label: label("editors"),
+          was: editorsText(saved.editors, saved.owner),
+          now: editorsText(draft.editors, draft.owner),
         };
       case "channels":
         return {
@@ -428,7 +487,8 @@ function AgentProfile({
   const errors = {
     name: fields.has("name") && !draft.name.trim() ? t("newAgent.errors.nameRequired") : undefined,
     handle: fields.has("handle")
-      ? (handleProblemText(t, draft.handle, takenHandles(dir.agents, dir.members, agent.id)) ?? undefined)
+      ? (handleProblemText(t, draft.handle, takenHandles([...dir.agentById.values()], dir.members, agent.id)) ??
+        undefined)
       : undefined,
     budget: edits.budget !== undefined && readBudget(edits.budget).invalid ? t("agent.budgetInvalid") : undefined,
     audience:
@@ -497,7 +557,7 @@ function AgentProfile({
       failed = true;
       if (silent) toast.show(errorText(t, e), "error");
     };
-    // 1. The agent itself: one PATCH (the owner may send only the look and the audience).
+    // 1. The agent itself: one PATCH (who doesn't manage it sends only what `canEdit` lets them change).
     const patch: Partial<AgentInput> = {};
     const patchFields: Field[] = [];
     const put = <K extends keyof typeof patch>(field: Field, k: K, v: (typeof patch)[K]) => {
@@ -511,10 +571,18 @@ function AgentProfile({
     if (fields.has("model")) put("model", "model", draft.model);
     if (fields.has("key")) put("key", "credentialId", draft.key === DEFAULT_KEY ? null : (draft.key ?? null));
     if (fields.has("budget")) put("budget", "monthlyBudgetUsd", budgetValue(draft.budget) ?? null);
-    if (fields.has("owner")) put("owner", "ownerUserId", draft.owner === NO_OWNER ? null : draft.owner);
+    // A person or a role, never both (ADR 0085, addendum of 2026-11-21): the server clears the other one, so only the
+    // one picked goes (a person's id or null for nobody, else the role).
+    if (fields.has("owner")) {
+      const owner = ownerPatchOf(draft.owner, NO_OWNER);
+      if (owner.ownerRoleId) put("owner", "ownerRoleId", owner.ownerRoleId);
+      else put("owner", "ownerUserId", owner.ownerUserId);
+    }
     if (fields.has("audience")) {
       put("audience", "audience", audiencePatch(draft.audience));
     }
+    // "Quem pode editar": the whole lists, empty under "owner" (ADR 0085 addendum of 2026-11-17).
+    if (fields.has("editors")) put("editors", "editors", editorsPatch(draft.editors));
     if (fields.has("look")) put("look", "appearance", normalizeAppearance(draft.look));
     if (patchFields.length > 0) {
       try {
@@ -662,10 +730,12 @@ function AgentProfile({
     dirtyRef.current = false;
     void navigate({ to: "/org/$orgId", params: { orgId: org.id } });
   };
+  // Out of the team's lists at once and the page closes (`leave` on the button); a refusal brings it back to the lists
+  // with the app's toast saying why.
   const archive = useMutation({
     mutationFn: () => api.agents.archive(org.id, agent.id),
+    ...optimistic<void>(qc, () => [edit<Agent[]>(keys.agents(org.id), without<Agent>(agent.id))]),
     onSuccess: () => {
-      setArchiving(false);
       // Desfazer runs after this page closed: the call's own promise, never a mutation's callbacks.
       toast.show(t("agentPage.archive.done", g), "success", {
         label: t("agentPage.undo"),
@@ -679,15 +749,14 @@ function AgentProfile({
             .catch((e: unknown) => toast.show(errorText(t, e), "error")),
       });
       void qc.invalidateQueries({ queryKey: keys.agents(org.id) });
-      leave();
     },
   });
 
   /* ---------- Tabs ---------- */
 
-  const pending = pendingOnAgent(proposals.data ?? [], agent.id).length;
-  const failures =
-    viewer === "member" ? 0 : (runs.data ?? []).filter((r) => r.status === "failed" && thisMonth(r.createdAt)).length;
+  const failures = !ownsOrManages(viewer)
+    ? 0
+    : (runs.data ?? []).filter((r) => r.status === "failed" && thisMonth(r.createdAt)).length;
   const tabLabel = (id: AgentTab): ReactNode => {
     const n = changes.filter((c) => c.tab === id).length;
     let badge: ReactNode = null;
@@ -696,15 +765,6 @@ function AgentProfile({
         <span className="agp-badge agp-badge--edit ac-num" title={t("agentPage.changesCount", { count: n })}>
           <Icon name="edit" size={14} />
           {n}
-        </span>
-      );
-    else if (id === "memory" && pending > 0)
-      badge = (
-        <span
-          className="agp-badge agp-badge--ask ac-num"
-          title={t("agentPage.memory.waitingCount", { count: pending })}
-        >
-          {pending}
         </span>
       );
     else if ((id === "activity" || (personal && id === "advanced" && view !== "activity")) && failures > 0)
@@ -748,6 +808,7 @@ function AgentProfile({
       setPicking({ add });
     },
     ownerFirst,
+    ownerLabel,
     openWork: setWork,
     workOpen: work,
     save,
@@ -772,6 +833,8 @@ function AgentProfile({
           </div>
           {view === "access" ? (
             <AccessTab />
+          ) : view === "skills" ? (
+            <SkillsTab />
           ) : view === "memory" ? (
             <MemoryTab item={item} />
           ) : (
@@ -841,6 +904,7 @@ function AgentProfile({
                   {view === "overview" && <OverviewTab />}
                   {view === "instructions" && <InstructionsTab />}
                   {view === "access" && <AccessTab part={personal ? "basic" : "all"} />}
+                  {view === "skills" && <SkillsTab />}
                   {view === "memory" && <MemoryTab item={item} />}
                   {view === "files" && <FilesTab />}
                   {view === "usage" && <UsageTab />}
@@ -883,10 +947,15 @@ function AgentProfile({
 
       <WorkDialogs
         open={work}
-        brainAt={section === "brain" ? brainAt : undefined}
+        brainAt={reopenAt ?? (section === "brain" ? brainAt : undefined)}
         onClose={() => {
           setWork(null);
+          setReopenAt(undefined);
           if (section === "brain") onNavigate(tab);
+        }}
+        onReopen={(at) => {
+          setReopenAt(at);
+          setWork("brain");
         }}
       />
 
@@ -936,7 +1005,15 @@ function AgentProfile({
       >
         <DialogFooter>
           <Button onClick={() => setArchiving(false)}>{t("common.cancel")}</Button>
-          <Button variant="danger" icon="archive" loading={archive.isPending} onClick={() => archive.mutate()}>
+          <Button
+            variant="danger"
+            icon="archive"
+            onClick={() => {
+              archive.mutate();
+              setArchiving(false);
+              leave();
+            }}
+          >
             {t("agentPage.archive.button")}
           </Button>
         </DialogFooter>

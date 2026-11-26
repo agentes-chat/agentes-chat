@@ -203,6 +203,9 @@ test("accounts on a computer: the runner's list, signing in with a sealed code, 
   // A name its owner gave it: the apps title the account by it, not by its email.
   expect(named.named).toBe(true);
   expect((await api(`${base}/accounts/${login.loginId}`, { method: "PATCH", json: { label: "" } })).status).toBe(400);
+  // "Gerenciar" is its owner's and the administrators' by default; "Só você" keeps them out.
+  const onlyMe = { manage: { mode: "owner", userIds: [], roleIds: [] } };
+  expect((await api(`/ai-accounts/${login.loginId}/permissions`, { method: "PUT", json: onlyMe })).status).toBe(200);
   expect((await asAdmin(`${base}/accounts/${login.loginId}`, { method: "PATCH", json: { label: "Meu" } })).status).toBe(
     403,
   );
@@ -392,7 +395,7 @@ test("AI accounts see Codex become available after an executor update on the sam
       type: "hello",
       token,
       ...computer,
-      executors: report("0.149.0"),
+      executors: {},
       accounts: [{ id: OLD_ACCOUNT, kind: "codex", loggedIn: true }],
     }),
   );
@@ -407,18 +410,16 @@ test("AI accounts see Codex become available after an executor update on the sam
       {
         machineId,
         brains: { codex: false },
-        off: { codex: "outdated" },
-        codexVersion: { detected: "0.149.0", minimum: "0.163.0" },
+        off: { codex: "not_installed" },
       },
     ],
   });
-  await hub.message(conn, JSON.stringify({ type: "executors.changed", executors: report("0.169.0") }));
+  await hub.message(conn, JSON.stringify({ type: "executors.changed", executors: report("0.170.0") }));
   const updated = await read();
   expect(updated).toMatchObject({
     accounts: [{ id: OLD_ACCOUNT, machineId }],
     computers: [{ machineId, brains: { codex: true } }],
   });
-  expect(updated.computers[0]).not.toHaveProperty("codexVersion");
 });
 
 test("Contas de IA: the caller's own accounts with their computer, and where they can add one; an unknown plan is refused", async () => {

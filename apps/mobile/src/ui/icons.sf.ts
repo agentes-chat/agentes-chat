@@ -104,6 +104,7 @@ export const SF_SYMBOLS: Record<IconName, { sf: SFSymbolName; fill?: SFSymbolNam
   replyTo: { sf: "arrowshape.turn.up.left", fill: "arrowshape.turn.up.left.fill" },
   swap: { sf: "arrow.left.arrow.right" },
   updown: { sf: "chevron.up.chevron.down" },
+  grip: { sf: "line.3.horizontal" },
   up: { sf: "arrow.up" },
   wallet: { sf: "wallet.bifold", fill: "wallet.bifold.fill" },
   book: { sf: "book", fill: "book.fill" },
@@ -114,6 +115,32 @@ export const SF_SYMBOLS: Record<IconName, { sf: SFSymbolName; fill?: SFSymbolNam
   plug: { sf: "powerplug", fill: "powerplug.fill" },
   audienceEveryone: { sf: "person.3", fill: "person.3.fill" },
   audienceOwner: { sf: "person.badge.key", fill: "person.badge.key.fill" },
+  // Live files and their tools (ADR 0196).
+  spreadsheet: { sf: "tablecells", fill: "tablecells.fill" },
+  slides: { sf: "rectangle.stack", fill: "rectangle.stack.fill" },
+  canvas: { sf: "scribble.variable" },
+  frame: { sf: "rectangle.dashed" },
+  note: { sf: "note.text" },
+  shape: { sf: "square.on.circle" },
+  textTool: { sf: "textformat" },
+  follow: { sf: "eye", fill: "eye.fill" },
+  present: { sf: "play.rectangle", fill: "play.rectangle.fill" },
+  redo: { sf: "arrow.uturn.forward" },
+  paste: { sf: "doc.on.clipboard", fill: "doc.on.clipboard.fill" },
+  pointer: { sf: "cursorarrow" },
+  arrowTool: { sf: "arrow.up.right" },
+  rect: { sf: "rectangle" },
+  ellipse: { sf: "circle" },
+  diamond: { sf: "diamond" },
+  triangle: { sf: "triangle" },
+  star: { sf: "star", fill: "star.fill" },
+  line: { sf: "line.diagonal" },
+  comment: { sf: "ellipsis.bubble", fill: "ellipsis.bubble.fill" },
+  crop: { sf: "crop" },
+  marker: { sf: "highlighter" },
+  curve: { sf: "point.topleft.down.to.point.bottomright.curvepath" },
+  elbow: { sf: "arrow.turn.down.right" },
+  heading: { sf: "textformat.size" },
 };
 
 /** The symbol for an icon (its filled form when `filled` and the system has one), or null to draw our own. */
@@ -225,4 +252,8 @@ export const TILE_TINTS: Partial<Record<IconName, TileTint>> = {
   book: "brown",
   // Ours.
   agent: "agent",
+  // Files made in the Drive: each kind its own color, as the system gives each of its apps.
+  spreadsheet: "teal",
+  slides: "orange",
+  canvas: "cyan",
 };

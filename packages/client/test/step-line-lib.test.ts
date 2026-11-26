@@ -33,7 +33,9 @@ const ended = (toolUseId: string) => ({ type: "agent.tool", ...base, tool: null,
 
 test("its own words for the call show quoted, only once the turn has gone on for a while", () => {
   const events = [call("b1", "browser_open", "Vou abrir o Play Console")];
-  expect(stepAfter(events, 2000)).toBe("usando o navegador…");
+  expect(stepAfter(events, 1000)).toBe("usando o navegador…");
+  // A second and a half in: soon enough to tell what it does while the reply still feels quick.
+  expect(stepAfter(events, 1500)).toBe("“Vou abrir o Play Console”");
   expect(stepAfter(events, STEP_WORDS_AFTER_MS)).toBe("“Vou abrir o Play Console”");
   // Still what it is on after the call ended, while it thinks about what it found.
   expect(stepAfter([...events, ended("b1")], STEP_WORDS_AFTER_MS)).toBe("“Vou abrir o Play Console”");
@@ -51,6 +53,19 @@ test("a computer brain's own call, which no agent.tool told, says what it did un
   expect(stepAfter([{ ...read, tool: "Bash", said: "Vou rodar os testes" }], 9000)).toBe("“Vou rodar os testes”");
   expect(stepAfter([read], 1000)).toBe("pensando…");
   expect(stepAfter([{ ...read, tool: "run_terminal_command" }], 9000)).toBe("rodando um comando…");
+});
+
+test("the computer's permission check keeps the command it lets through as the step, for as long as it runs", () => {
+  const read = { type: "agent.step", ...base, tool: "Read" };
+  const check = [call("p1", "permission_prompt"), ended("p1")];
+  expect(stepAfter([read, ...check], 9000)).toBe("mexendo nos arquivos do PC…");
+  expect(stepAfter([{ ...read, tool: "Bash", said: "Vou rodar os testes" }, ...check], 9000)).toBe(
+    "“Vou rodar os testes”",
+  );
+  // A check with words of its own, or one no call came before, is the step as before.
+  expect(stepAfter([read, call("p1", "permission_prompt", "Vou conferir o deploy"), ended("p1")], 9000)).toBe(
+    "“Vou conferir o deploy”",
+  );
 });
 
 test("a call waiting on a person says so before any words", () => {

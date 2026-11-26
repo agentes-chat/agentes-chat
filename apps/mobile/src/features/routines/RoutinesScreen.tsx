@@ -1,10 +1,12 @@
 import { type Routine, useRoutines } from "@agenteschat/client";
+import { createsRoutinesFor } from "@agenteschat/client/lib/audience";
 import { routineStateTime, routineStateWords } from "@agenteschat/client/lib/routine-view";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { RefreshControl, StyleSheet, View } from "react-native";
 import Animated, { FadeIn, FadeOut, LayoutAnimationConfig, LinearTransition } from "react-native-reanimated";
 import { useOrg } from "@/providers/org";
+import { useRealtime } from "@/providers/realtime";
 import {
   Button,
   EmptyState,
@@ -19,12 +21,13 @@ import {
   useReducedMotion,
 } from "@/ui";
 import { router } from "@/ui/navigation";
+import { useRowDirectory, useRowNamesComputers } from "../chat/row-data";
 import { CollapsibleSection } from "../chats/HomeSection";
 import { routineHref, widgetHref } from "../links/logic";
 import { mayCreate } from "../new/logic";
 import { AgentFace } from "../shared/Face";
 import { FirstUse, LoadFailed } from "../shared/FirstUse";
-import { useDirectory, useMeId, useNamesComputers, useNow, useOrgId, usePullRefresh } from "../shared/hooks";
+import { useDirectory, useNow, useOrgId, usePullRefresh } from "../shared/hooks";
 import { PushedLargeTitle } from "../shared/PushedLargeTitle";
 import { useNextText, useSay, useWhenText } from "./hooks";
 import {
@@ -40,10 +43,13 @@ import {
   type StatusFilter,
   whenIcon,
 } from "./logic";
+import { RoutineRunBars } from "./parts";
 import { RoutineHorizon } from "./RoutineHorizon";
 
 /** While a run works (or waits), the list is asked again this often: its state and its next run move on. */
 const WORKING_POLL_MS = 15_000;
+/** The same with the socket open, which brings every run's queueing, start and end (`routine.runs`). */
+const WORKING_POLL_LIVE_MS = 60_000;
 /** Sections whose agent's face moves (a long list stays light). */
 const LIVE_SECTIONS = 6;
 
@@ -64,18 +70,19 @@ export function RoutinesScreen() {
   const { t, i18n } = useTranslation();
   const orgId = useOrgId();
   const dir = useDirectory();
-  const meId = useMeId();
   const routines = useRoutines(orgId);
   const pull = usePullRefresh(routines.refetch);
   const now = useNow(60_000);
   const whenText = useWhenText();
   const [q, setQ] = useState("");
+  // The list follows the field a beat behind: a letter typed draws the field first.
+  const query = useDeferredValue(q);
   const [status, setStatus] = useState<StatusFilter>("all");
   const [showDone, setShowDone] = useState(false);
   const list = useMemo(() => routines.data ?? [], [routines.data]);
   const sections = useMemo(
-    () => routineSections(list, { status, agentId: null, query: q }, whenText),
-    [list, status, q, whenText],
+    () => routineSections(list, { status, agentId: null, query }, whenText),
+    [list, status, query, whenText],
   );
   const nameOf = useCallback((agentId: string) => dir.nameOf({ type: "agent", id: agentId }), [dir]);
   const groups = useMemo(
@@ -88,18 +95,20 @@ export function RoutinesScreen() {
   );
   const working = list.some(isAtWork);
   const { refetch } = routines;
+  const socketOpen = useRealtime().status === "open";
   useEffect(() => {
     if (!working) return;
-    const timer = setInterval(() => void refetch(), WORKING_POLL_MS);
+    const timer = setInterval(() => void refetch(), socketOpen ? WORKING_POLL_LIVE_MS : WORKING_POLL_MS);
     return () => clearInterval(timer);
-  }, [working, refetch]);
+  }, [working, socketOpen, refetch]);
   const openNew = () => router.push("/routines/new");
   const clear = () => {
     setQ("");
     setStatus("all");
   };
-  const ownsAgent = Boolean(meId) && dir.agents.some((a) => a.ownerUserId === meId);
-  const mayNew = mayCreate(useOrg().org, "routine", { ownsAgent });
+  // Some agent this person may make a routine for (`createsRoutinesFor`: they set up its routines and it answers them).
+  const createsRoutines = dir.agents.some((a) => createsRoutinesFor(a));
+  const mayNew = mayCreate(useOrg().org, "routine", { createsRoutines });
   // A section that comes or goes with a filter, or as a routine is paused or deleted, fades while the rest slide into
   // place; what shows when the screen opens doesn't fade section by section (as Drive's days).
   const reduced = useReducedMotion();
@@ -142,7 +151,7 @@ export function RoutinesScreen() {
               <RoutineHorizon routines={list} now={now} open={openRoutine} />
               {groups.map((g, i) => (
                 <Animated.View key={g.agentId} {...fade} layout={layout}>
-                  <AgentSection group={g} now={now} live={i < LIVE_SECTIONS} />
+                  <AgentSection group={g} now={now} live={i < LIVE_SECTIONS} whenText={whenText} />
                 </Animated.View>
               ))}
               {groups.length === 0 && sections.filtered ? (
@@ -163,7 +172,7 @@ export function RoutinesScreen() {
                     onToggle={() => setShowDone((v) => !v)}
                   >
                     {doneGroups.map((g) => (
-                      <AgentSection key={g.agentId} group={g} now={now} live={false} />
+                      <AgentSection key={g.agentId} group={g} now={now} live={false} whenText={whenText} />
                     ))}
                   </CollapsibleSection>
                 </Animated.View>
@@ -180,16 +189,24 @@ export function RoutinesScreen() {
  * One agent's routines: its face and name as the section's head with how many it has here (the web's horizon label),
  * then its routines in a grouped card. A row is the system's grouped row: the tile of what starts it, the routine's
  * name, when it runs (or, in the waiting color, what needs a look) and what's next; a paused or finished one is faint.
- * `now` ticks each minute ("Próxima em 10 min" stays true).
+ * `now` ticks each minute ("Next in 10 min" stays true). Drawn again only when its routines or the minute change.
  */
-function AgentSection({ group, now, live }: { group: AgentGroup<Routine>; now: number; live: boolean }) {
-  const { t, i18n } = useTranslation();
-  const dir = useDirectory();
+const AgentSection = memo(function AgentSection({
+  group,
+  now,
+  live,
+  whenText,
+}: {
+  group: AgentGroup<Routine>;
+  now: number;
+  live: boolean;
+  whenText: ReturnType<typeof useWhenText>;
+}) {
+  const { t } = useTranslation();
+  const dir = useRowDirectory();
   const say = useSay();
-  const names = useNamesComputers();
-  const whenText = useWhenText();
+  const names = useRowNamesComputers();
   const nextText = useNextText();
-  const at = new Date(now);
   const name = dir.nameOf({ type: "agent", id: group.agentId }) || t("channel.unknownAgent");
   const count = t("routines.horizon.agentRoutines", { count: group.routines.length });
   const running = group.routines.some(isRunning);
@@ -206,33 +223,68 @@ function AgentSection({ group, now, live }: { group: AgentGroup<Routine>; now: n
         />
       </View>
       <GroupedList>
-        {group.routines.map((r) => {
-          const done = isDoneOnce(r);
-          const state = routineStateWords(r, routineStateTime(t, i18n.language, r), names);
-          // Something needs a look (a reason it paused, failures, waiting for a computer or a person): it says so in
-          // place of when it runs.
-          const needsLook = !done && state.tone === "waiting";
-          const next = nextText(r, at);
-          return (
-            <GroupedRow
-              key={r.id}
-              icon={needsLook ? "wait" : whenIcon(r)}
-              label={routineTitle(r)}
-              labelLines={2}
-              faint={isPaused(r) || done}
-              sub={needsLook ? say(state) : whenText(r)}
-              subLines={2}
-              {...(needsLook ? { subTone: "amber" as const } : {})}
-              {...(next && !needsLook ? { belowText: next } : {})}
-              chevron
-              onPress={() => openRoutine(r)}
-            />
-          );
-        })}
+        {group.routines.map((r) => (
+          <RoutineRow
+            key={r.id}
+            routine={r}
+            now={now}
+            names={names}
+            whenText={whenText}
+            nextText={nextText}
+            say={say}
+            leading
+          />
+        ))}
       </GroupedList>
     </>
   );
-}
+});
+
+/**
+ * A routine's row: its words (when it runs, its state, what's next) worked out again only when the routine or the
+ * minute changes, not at each letter typed in the search.
+ */
+const RoutineRow = memo(function RoutineRow({
+  routine: r,
+  now,
+  names,
+  whenText,
+  nextText,
+  say,
+}: {
+  routine: Routine;
+  now: number;
+  /** Whether lines about where things run name the computer. */
+  names: boolean;
+  whenText: ReturnType<typeof useWhenText>;
+  nextText: ReturnType<typeof useNextText>;
+  say: ReturnType<typeof useSay>;
+  /** Always with its tile: GroupedList reads it to start the hairline after the tile's column, as a GroupedRow's. */
+  leading: boolean;
+}) {
+  const { t, i18n } = useTranslation();
+  const done = isDoneOnce(r);
+  const state = routineStateWords(r, routineStateTime(t, i18n.language, r), names);
+  // Something needs a look (a reason it paused, failures, waiting for a computer or a person): it says so in place of
+  // when it runs.
+  const needsLook = !done && state.tone === "waiting";
+  const next = nextText(r, new Date(now));
+  return (
+    <GroupedRow
+      icon={needsLook ? "wait" : whenIcon(r)}
+      label={routineTitle(r)}
+      labelLines={2}
+      faint={isPaused(r) || done}
+      sub={needsLook ? say(state) : whenText(r)}
+      subLines={2}
+      {...(needsLook ? { subTone: "amber" as const } : {})}
+      {...(next && !needsLook ? { belowText: next } : {})}
+      valueLeading={<RoutineRunBars routine={r} running={isRunning(r)} toRoutine />}
+      chevron
+      onPress={() => openRoutine(r)}
+    />
+  );
+});
 
 const styles = StyleSheet.create({
   search: { paddingHorizontal: SCREEN_X, paddingTop: 8, paddingBottom: 10 },

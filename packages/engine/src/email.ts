@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { EmailError, type EmailSender, type PubSub } from "@agenteschat/adapters";
+import { EmailError, type EmailSender, type PubSub, type Undelivered } from "@agenteschat/adapters";
 import {
   and,
   asc,
@@ -14,13 +14,15 @@ import {
   schema,
   sql,
 } from "@agenteschat/db";
-import { formatMoneyUsd } from "@agenteschat/i18n/format";
+import { formatMoneyUsd, formatSpan } from "@agenteschat/i18n/format";
 import { appLocale, localeInfo } from "@agenteschat/i18n/locale";
 import { deepMerge } from "@agenteschat/i18n/tree";
 import { nanoUsdToUsd } from "@agenteschat/providers";
 import { z } from "zod";
+import type { AccountAudienceMode } from "./ai-accounts/serves";
 import { notifiedIds } from "./approvals";
-import { isComputerBrain, planName } from "./brains/types";
+import { agentOwnerIds } from "./audience";
+import { type BrainKind, isComputerBrain, planName } from "./brains/types";
 import { confidentialRoots } from "./confidential";
 import { invitationMailProof } from "./crypto";
 import { inertSender, inertText } from "./email/inert";
@@ -42,9 +44,10 @@ import { type Words, wordsFor } from "./email/words";
 import { dayAndTime } from "./format";
 import { adminIds } from "./gateway";
 import { publicHostAddress, type ResolveHost, resolveHostDns } from "./net-guard";
-import { enqueue, PermanentJobError } from "./outbox";
+import { enqueue, type OutboxJob, PermanentJobError } from "./outbox";
 import { billingHold } from "./standing";
 import { isAgentesCloud } from "./telemetry";
+import { withoutTrailingSlashes } from "./url-text";
 import { budgetPercent } from "./usage";
 import { isPersonalWorkspace } from "./workspace-mode";
 
@@ -170,6 +173,8 @@ export type EmailTemplate =
       url: string;
       /** With `orgName`: a personal workspace's (ADR 0159). */
       personal?: true;
+      /** With `orgName`: the code resets the workspace instead of deleting it. */
+      reset?: true;
     }
   /**
    * A code to type before the account's address becomes `newEmail` (ADR 0088 §2, addendum 2026-11-13), to its current
@@ -206,6 +211,13 @@ export type EmailTemplate =
     } & Beside)
   /** The surface unlinked the account because the sender's identity there changed. `url`: the server, for the pictures. */
   | ({ kind: "surface_unlinked"; locale: EmailLocale; surface: string; display: string; url: string } & Beside)
+  /**
+   * "Email me a link" or "Forgot your PIN?" on a page the surface linked to (ADR 0226): `url` is the page that chooses
+   * the PIN, once, for an hour.
+   */
+  | ({ kind: "surface_pin_reset"; locale: EmailLocale; surface: string; url: string } & Beside)
+  /** Three wrong PINs locked approving from the surface; `step` 0, 1, 2: for 15 minutes, an hour, a day. `url`: settings. */
+  | ({ kind: "surface_pin_locked"; locale: EmailLocale; surface: string; step: 0 | 1 | 2; url: string } & Beside)
   /**
    * Double opt-in for the landing page's waiting list, in the language they
    * joined in. `email` is the address being confirmed (absent in jobs queued
@@ -275,6 +287,23 @@ export type EmailTemplate =
       plan: string;
       was: PlanAudience;
       now: PlanAudience;
+      url: string;
+      personal?: true;
+    }
+  /**
+   * Someone other than the reader let more people use the reader's AI account ("Usar em agentes", `right: "use"`) or be
+   * answered on it ("Atender todos", `right: "reply"`). `plan`: its maker's name ("Claude"). `url`: IA e uso.
+   */
+  | {
+      kind: "account_opened";
+      locale: EmailLocale;
+      orgName: string;
+      byName: string;
+      account: string;
+      plan: string;
+      right: "use" | "reply";
+      was: AccountAudienceNames;
+      now: AccountAudienceNames;
       url: string;
       personal?: true;
     }
@@ -354,6 +383,22 @@ export type EmailTemplate =
       personal?: true;
     }
   /**
+   * A computer the workspace's agents work on has been away for a while, or is back (`back`) after it was (ADR 0241):
+   * its name, how long it was away, and the runs and webhook calls that waited. `url`: the computer's page.
+   */
+  | {
+      kind: "computer_down";
+      locale: EmailLocale;
+      back: boolean;
+      orgName: string;
+      name: string;
+      awayMinutes: number;
+      runs: number;
+      calls: number;
+      url: string;
+      personal?: true;
+    }
+  /**
    * The answer of whoever runs the server to a member's support request (ADR 0056), to the address of their account:
    * one of our own sentences (`reply`), or the operator's words (`text`), which are another party's and print inert,
    * line by line. With neither, the words were sent already (`forgetReplyWords`). `support`: where to answer back
@@ -393,8 +438,14 @@ export interface PlanAudience {
   names: string[];
 }
 
+/** An account's permission as its owner reads it: names of the people or roles it names. */
+export interface AccountAudienceNames {
+  mode: AccountAudienceMode;
+  names: string[];
+}
+
 export function emailArtAt(publicUrl: string): EmailArt {
-  const home = publicUrl.replace(/\/+$/, "");
+  const home = withoutTrailingSlashes(publicUrl);
   return { home, base: `${home}/email/`, files: null };
 }
 
@@ -414,7 +465,8 @@ export async function emailArtFor(
   resolve: ResolveHost = resolveHostDns,
 ): Promise<EmailArt & { attached?: "attach" | "blocked" | "unreachable" }> {
   const art = emailArtAt(publicUrl);
-  const host = mode === "auto" ? await publicHostAddress(new URL(publicUrl).hostname, resolve) : null;
+  const host =
+    mode === "auto" ? await publicHostAddress(new URL(publicUrl).hostname, resolve, { internet: true }) : null;
   if (host?.ok) return art;
   const files = webDir ? await readPictures(join(webDir, "email")) : null;
   return files ? { ...art, base: null, files, attached: host?.reason ?? "attach" } : art;
@@ -514,6 +566,20 @@ export const modeStamp = async (db: Executor, orgId: string): Promise<{ personal
  */
 const inMode = <G extends { personal: object }>(group: G, personal: boolean | undefined): G =>
   personal ? deepMerge(group, group.personal) : group;
+
+const LINE_BREAKS = new Set(["\n", "\r", "\u2028", "\u2029"]);
+
+/**
+ * `url` without its query and fragment, cut where `/[?#].*$/` cuts it: at the first `?` or `#` past its last line
+ * break (`.` doesn't cross one). Read by index: that pattern reads the rest of the text again from each `?` or `#`
+ * that a line break follows, quadratic in its length.
+ */
+function withoutQuery(url: string): string {
+  let from = url.length;
+  while (from > 0 && !LINE_BREAKS.has(url.charAt(from - 1))) from--;
+  for (let i = from; i < url.length; i++) if (url.charAt(i) === "?" || url.charAt(i) === "#") return url.slice(0, i);
+  return url;
+}
 
 /**
  * One email's content: our words in the subject, preheader, headline and buttons; what people typed or
@@ -746,7 +812,7 @@ function docOf(t: EmailTemplate, sender: string | null): EmailDoc {
         ? [...(t.needsAi ? (["ai"] as const) : []), "task", "watch"]
         : ["create", ...(t.needsAi ? (["ai"] as const) : [])];
       // `url` is the workspace in every job, however old: the button's address follows its step.
-      const home = t.url.replace(/[?#].*$/, "").replace(/\/$/, "");
+      const home = withoutQuery(t.url).replace(/\/$/, "");
       const url = { ai: `${t.keptUrl ?? home}?connect=ai`, task: t.keptUrl ?? home, create: `${home}/agents/new` }[
         first
       ];
@@ -774,6 +840,29 @@ function docOf(t: EmailTemplate, sender: string | null): EmailDoc {
         ],
         c.why(org),
         { crew: crewOr(t.crew), computer: c.computer },
+      );
+    }
+    case "computer_down": {
+      const c = inMode(w.computerDown, t.personal);
+      const org = inertText(t.orgName);
+      const name = inertText(t.name);
+      const away = formatSpan(lang, t.awayMinutes * 60_000);
+      const said = t.back ? c.back : c;
+      const facts: [string, string][] = [
+        ...(t.runs > 0 ? [[said.runs, t.runs.toLocaleString(lang)] as [string, string]] : []),
+        ...(t.calls > 0 ? [[said.calls, t.calls.toLocaleString(lang)] as [string, string]] : []),
+      ];
+      return doc(
+        said.subject,
+        said.preheader,
+        said.headline,
+        [
+          { p: said.body(name, org, away) },
+          ...(facts.length > 0 ? [{ facts }] : []),
+          ...(t.back ? [] : [{ note: c.note }]),
+          { button: c.button, url: t.url },
+        ],
+        c.why(org),
       );
     }
     case "join_request": {
@@ -852,6 +941,14 @@ function docOf(t: EmailTemplate, sender: string | null): EmailDoc {
     case "deletion_code": {
       const c = inMode(w.deletionCode, t.personal);
       const org = t.orgName === undefined ? null : inertText(t.orgName);
+      if (org !== null && t.reset)
+        return doc(
+          c.subjectReset(t.code),
+          c.preheader,
+          c.headline,
+          [{ p: c.reset(org) }, { code: t.code }, { small: t.support ? c.support(t.support) : c.noSupport }],
+          c.whyReset(org),
+        );
       return doc(
         org === null ? c.subjectAccount(t.code) : c.subjectWorkspace(t.code),
         c.preheader,
@@ -930,6 +1027,32 @@ function docOf(t: EmailTemplate, sender: string | null): EmailDoc {
         [{ p: c.body(t.surface, inertSender(t.display)) }, { small: c.small }],
         c.why(t.surface),
         { crew: surfaceCrew(t.assistant), phone: { alt: c.picture, on: false } },
+      );
+    }
+    case "surface_pin_reset": {
+      const c = w.surface.pinReset;
+      return doc(
+        c.subject(t.surface),
+        c.preheader,
+        c.headline(t.surface),
+        [{ p: c.body(t.surface) }, { button: c.button, url: t.url }, { small: c.small }, fallback(t.url)],
+        c.why(t.surface),
+        { crew: surfaceCrew(t.assistant), phone: { alt: w.surface.linked.picture, on: true } },
+      );
+    }
+    case "surface_pin_locked": {
+      const c = w.surface.pinLocked;
+      return doc(
+        c.subject(t.surface),
+        c.preheader,
+        c.headline(t.surface),
+        [
+          { p: c.body(t.surface, c.lockedFor[t.step]) },
+          { button: c.button, url: t.url },
+          { small: c.small(t.surface) },
+        ],
+        w.surface.pinReset.why(t.surface),
+        { crew: surfaceCrew(t.assistant), phone: { alt: w.surface.linked.picture, on: true } },
       );
     }
     case "autonomy_report": {
@@ -1030,6 +1153,40 @@ function docOf(t: EmailTemplate, sender: string | null): EmailDoc {
             facts: [
               [c.agent, inertText(t.agentName)],
               [c.by, inertText(t.byName) || w.someone],
+              [c.was, who(t.was)],
+              [c.now, who(t.now)],
+            ],
+          },
+          { small: c.note },
+          { button: c.button, url: t.url },
+        ],
+        c.why(inertText(t.orgName)),
+      );
+    }
+    case "account_opened": {
+      const c = inMode(w.accountOpened, t.personal);
+      const who = (a: AccountAudienceNames): Text =>
+        a.mode === "everyone"
+          ? c.everyone
+          : a.mode === "admins"
+            ? c.admins
+            : (a.mode === "people" || a.mode === "roles") && a.names.length > 0
+              ? new Intl.ListFormat(lang, { type: "conjunction" }).format(a.names.map((n) => inertText(n)))
+              : t.right === "reply"
+                ? c.agentOwner
+                : c.onlyYou;
+      const by = inertText(t.byName) || w.someone;
+      return doc(
+        c.subject(t.plan),
+        c.preheader(t.plan),
+        c.headline,
+        [
+          { p: c.body(by, inertText(t.account), t.plan) },
+          {
+            facts: [
+              [c.account, inertText(t.account)],
+              [c.by, by],
+              [c.setting, t.right === "use" ? c.use : c.reply],
               [c.was, who(t.was)],
               [c.now, who(t.now)],
             ],
@@ -1201,6 +1358,8 @@ export async function queueEmail(
     template: EmailTemplate;
     maxAttempts?: number;
     runAt?: Date;
+    /** Sent again by hand after the provider stopped mailing the address: it is asked to mail it again first. */
+    unsuppress?: boolean;
   },
 ) {
   const to = ABOUT_THE_ACCOUNT.has(input.template.kind) ? input.to : await inUse(tx, input.to);
@@ -1208,7 +1367,7 @@ export async function queueEmail(
   await enqueue(tx, {
     orgId: input.orgId,
     kind: "email.send",
-    payload: { key: input.key, to, template: input.template },
+    payload: { key: input.key, to, template: input.template, ...(input.unsuppress ? { unsuppress: true } : {}) },
     dedupeKey: `email:${input.key}`,
     maxAttempts: input.maxAttempts ?? 6,
     runAt: input.runAt,
@@ -1313,8 +1472,86 @@ export async function sendQueuedEmail(sender: EmailSender, payload: Record<strin
 
 /** A provider's refusal that a retry won't change fails the job for good; anything else is retried. */
 export function rethrowEmailError(error: unknown): never {
-  if (error instanceof EmailError && !error.retryable) throw new PermanentJobError(error.message, error.status);
+  if (error instanceof EmailError && !error.retryable) {
+    throw new PermanentJobError(error.message, error.status, { cause: error });
+  }
   throw error;
+}
+
+/** Why an email's job failed for good because of its recipient, if it did. */
+function undeliveredOf(error: unknown): Undelivered | undefined {
+  const cause = error instanceof PermanentJobError ? error.cause : error;
+  return cause instanceof EmailError && !cause.retryable ? cause.recipient : undefined;
+}
+
+/** The emails a person waits on in the app besides an invitation: the account's confirmation and reset links. */
+const WAITED_ON: ReadonlySet<EmailTemplate["kind"]> = new Set(["verify_email", "password_reset"]);
+
+/** Whether the email reached its recipients, where someone waits on it: the invitation's row, or the account. */
+async function noteDelivery(
+  db: Executor,
+  orgId: string | null,
+  kind: EmailTemplate["kind"],
+  to: string[],
+  undelivered: Undelivered | null,
+) {
+  const addresses = to.map((a) => a.toLowerCase());
+  if (kind === "invitation" && orgId) {
+    await db
+      .update(organizationInvitations)
+      .set({ undelivered })
+      .where(
+        and(
+          eq(organizationInvitations.orgId, orgId),
+          inArray(organizationInvitations.email, addresses),
+          isNull(organizationInvitations.acceptedAt),
+        ),
+      );
+  } else if (WAITED_ON.has(kind)) {
+    await db
+      .update(users)
+      .set({ emailUndelivered: undelivered })
+      .where(inArray(sql`lower(${users.email})`, addresses));
+  }
+}
+
+/**
+ * Job `email.send` (`sendQueuedEmail`), on a server: one sent again by hand after a suppression (`unsuppress`) first
+ * has the provider mail its addresses again, when the provider keeps such a list (`removeSuppression`); then the
+ * invitation or the account it was for says whether it could be delivered (ADR 0006, 0090).
+ */
+export async function deliverQueuedEmail(
+  db: Executor,
+  sender: EmailSender,
+  job: Pick<OutboxJob, "id" | "orgId" | "payload">,
+  art?: EmailArt,
+  log?: { info(message: string, data?: Record<string, unknown>): void },
+) {
+  const to = Array.isArray(job.payload.to) ? job.payload.to.map(String) : [];
+  const kind = (job.payload.template as EmailTemplate | undefined)?.kind;
+  if (job.payload.unsuppress === true && sender.removeSuppression) {
+    for (const address of to) {
+      // A provider that won't lift it (a key without the right, say) still gets the email, whose refusal then marks
+      // the row as before; only a failure a retry may change retries the job.
+      const lifted = await sender.removeSuppression(address).catch((error: unknown) => {
+        if (error instanceof EmailError && !error.retryable) return `refused ${error.status ?? ""}`.trim();
+        throw error;
+      });
+      log?.info("email: asked the provider to mail an address again before sending to it", {
+        jobId: job.id,
+        kind,
+        lifted,
+      });
+    }
+  }
+  try {
+    await sendQueuedEmail(sender, job.payload, art);
+  } catch (error) {
+    const undelivered = undeliveredOf(error);
+    if (undelivered && kind) await noteDelivery(db, job.orgId, kind, to, undelivered);
+    throw error;
+  }
+  if (kind) await noteDelivery(db, job.orgId, kind, to, null);
 }
 
 /** The 80%/100% budget email to the agent's owner, or the admins without one (once per agent, month and level). */
@@ -1322,14 +1559,18 @@ export async function queueBudgetEmail(
   db: Database,
   publicUrl: string,
   e: {
-    agent: { id: string; orgId: string; name: string; ownerUserId: string | null };
+    agent: { id: string; orgId: string; name: string; ownerUserId: string | null; ownerRoleId?: string | null };
     level: "warning" | "exhausted";
     spentNanoUsd: number;
     budgetNanoUsd: number;
   },
 ) {
-  // The owner, or the org's admins when the agent has none.
-  const recipientIds = e.agent.ownerUserId ? [e.agent.ownerUserId] : await adminIds(db, e.agent.orgId);
+  // The owner (or whoever holds its owner role), or the org's admins when the agent has neither.
+  const owners = await agentOwnerIds(db, e.agent.orgId, {
+    ownerUserId: e.agent.ownerUserId,
+    ownerRoleId: e.agent.ownerRoleId ?? null,
+  });
+  const recipientIds = owners.length > 0 ? owners : await adminIds(db, e.agent.orgId);
   if (recipientIds.length === 0) return;
   const recipients = await db
     .select({ email: users.email, locale: users.locale })
@@ -1459,6 +1700,75 @@ export async function queuePlanOpenedEmail(
       was: audience(from),
       now: audience(to),
       url: `${publicUrl.replace(/\/$/, "")}/org/${orgId}/agents/${agentId}?tab=settings&sec=audience`,
+      ...(await modeStamp(db, orgId)),
+    },
+  });
+}
+
+/**
+ * Job `account.opened` (`ACCOUNT_OPENED_JOB`): the account owner's email, in their language, through `email.send`.
+ * Nothing when the account, its owner or the person who changed it is gone, or the change was undone since.
+ */
+export async function queueAccountOpenedEmail(
+  db: Database,
+  publicUrl: string,
+  orgId: string,
+  jobId: string,
+  payload: Record<string, unknown>,
+) {
+  const { accountId, actorId } = payload as { accountId: string; actorId: string };
+  const right = payload.right === "use" ? "use" : "reply";
+  const from = payload.from as { mode: AccountAudienceMode; userIds: string[]; roleIds: string[] };
+  const to = payload.to as typeof from;
+  const [account] = await db
+    .select({
+      label: schema.machineAccounts.label,
+      kind: schema.machineAccounts.kind,
+      provider: schema.machineAccounts.provider,
+      ownerId: schema.machineAccounts.createdBy,
+      mode: right === "use" ? schema.machineAccounts.useMode : schema.machineAccounts.replyMode,
+    })
+    .from(schema.machineAccounts)
+    .where(and(eq(schema.machineAccounts.orgId, orgId), eq(schema.machineAccounts.id, accountId)));
+  if (!account?.ownerId || account.mode !== to.mode) return;
+  const userIds = [...new Set([account.ownerId, actorId, ...from.userIds, ...to.userIds])];
+  const roleIds = [...new Set([...from.roleIds, ...to.roleIds])];
+  const [people, roles, [org]] = await Promise.all([
+    db
+      .select({ id: users.id, name: users.name, email: users.email, locale: users.locale })
+      .from(users)
+      .where(inArray(users.id, userIds)),
+    roleIds.length
+      ? db
+          .select({ id: schema.orgRoles.id, name: schema.orgRoles.name })
+          .from(schema.orgRoles)
+          .where(and(eq(schema.orgRoles.orgId, orgId), inArray(schema.orgRoles.id, roleIds)))
+      : Promise.resolve([]),
+    db.select({ name: organizations.name }).from(organizations).where(eq(organizations.id, orgId)),
+  ]);
+  const owner = people.find((p) => p.id === account.ownerId);
+  const actor = people.find((p) => p.id === actorId);
+  if (!owner || !actor || !org) return;
+  const name = new Map([...people, ...roles].map((x) => [x.id, x.name]));
+  const names = (a: typeof from): AccountAudienceNames => ({
+    mode: a.mode,
+    names: [...a.roleIds, ...a.userIds].flatMap((id) => name.get(id) ?? []),
+  });
+  await queueEmail(db, {
+    orgId,
+    key: `account-opened:${jobId}`,
+    to: [owner.email],
+    template: {
+      kind: "account_opened",
+      locale: emailLocale(owner.locale),
+      orgName: org.name,
+      byName: actor.name,
+      account: account.label,
+      plan: planName(account.kind as BrainKind, account.provider ?? undefined),
+      right,
+      was: names(from),
+      now: names(to),
+      url: `${publicUrl.replace(/\/$/, "")}/org/${orgId}/settings/usage`,
       ...(await modeStamp(db, orgId)),
     },
   });
@@ -1654,6 +1964,8 @@ export async function queueInvitationEmail(
     url: string;
     inviterId: string;
     secret?: string;
+    /** Sent again by hand after the provider stopped mailing the address (`resendInvitation`). */
+    unsuppress?: boolean;
   },
 ) {
   const [invitation] = await db
@@ -1683,6 +1995,7 @@ export async function queueInvitationEmail(
     // One per sending: the link stays the same when sent again (ADR 0090), its expiry doesn't.
     key: `invite:${input.invitationId}:${invitation?.expiresAt.getTime() ?? input.url.slice(-16)}`,
     to: [input.email],
+    unsuppress: input.unsuppress,
     template: {
       kind: "invitation",
       locale: emailLocale(invitee?.locale ?? inviter?.locale),

@@ -81,7 +81,7 @@ export interface WorkLine {
   tone: WorkTone;
 }
 
-/** A neutral wait in a list's words: "esperando aprovação", "esperando o computador", "IA fora do ar". */
+/** A neutral wait in a list's words: "esperando aprovação", "esperando o computador", "IA não responde". */
 export const WAIT_WORDS = {
   approval: "chat.consultPair.waitingApproval",
   answer: "chat.consultPair.waitingInput",
@@ -89,9 +89,13 @@ export const WAIT_WORDS = {
   outage: "chat.consultPair.waitingProvider",
 } as const satisfies Record<Exclude<AgentWorkState, "you" | "working" | "queued" | "later">, string>;
 
-/** Where its work is, in a list's line: "ajudando a Ada", "#vendas", "aqui", "numa rotina", "trabalhando". */
+/**
+ * Where its work is, in a list's line: "ajudando a Ada", "#vendas", "aqui", "numa rotina", "numa conversa particular",
+ * "trabalhando".
+ */
 function workPlace(t: TFunction, work: AgentWork, names: WorkPlaceNames): string {
   if (work.routine) return t("agentWork.routine");
+  if (work.private) return t("agentWork.private");
   const forName = work.forAgentId ? names.agentName(work.forAgentId) : undefined;
   if (forName) {
     const g = agentGrammar(forName);
@@ -153,7 +157,8 @@ export function workDetail(
   if (!work) return null;
   if (work.state === "you") return t(work.ask === "approval" ? "agentWork.yourApproval" : "agentWork.yourAnswer");
   if (work.state === "later") return t("agentWork.later", { when: returnWhen(t, locale, work.at ?? work.since, now) });
-  if (work.state !== "working") return null;
+  // A private conversation: the card's line already says so, under what it does.
+  if (work.state !== "working" || work.private) return null;
   const place = workPlace(t, work, names);
   return place === t("agentWork.working") ? null : place;
 }

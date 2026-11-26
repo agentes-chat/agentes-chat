@@ -1,6 +1,11 @@
-import { NEXT_ACCOUNT_KINDS } from "@agenteschat/providers/plans";
+import { accountOnlyBrain, compareInOrder, NEXT_ACCOUNT_KINDS } from "@agenteschat/providers/plans";
+
+/** The one order of use (`@agenteschat/providers/plans`), for apps that read it through the client. */
+export { compareInOrder };
+
 import type { TFunction } from "i18next";
 import type {
+  AccountOrderGroup,
   Agent,
   AgentBrain,
   AiAccounts,
@@ -521,26 +526,30 @@ export const ownSignInReady = (
   row: (Pick<AiComputer, "own"> & Partial<Pick<AiComputer, "mine" | "brains" | "canAdd">>) | undefined,
   kind: MachineAccountKind,
 ) =>
-  kind === "opencode"
-    ? row?.brains?.opencode === true &&
-      row.canAdd === true &&
-      (brain?.ownSignIn === true || (brain !== undefined && row.mine === false))
-    : brain?.ownSignIn === true && row?.own?.[kind] !== undefined;
+  accountOnlyBrain(kind)
+    ? false
+    : kind === "opencode"
+      ? row?.brains?.opencode === true &&
+        row.canAdd === true &&
+        (brain?.ownSignIn === true || (brain !== undefined && row.mine === false))
+      : brain?.ownSignIn === true && row?.own?.[kind] !== undefined;
 
 /**
  * An agent's account choice lists the computer's own sign-in where it is ready (`ownSignInReady`), and while the
  * agent thinks with it: on a computer its owner connected, whatever that computer reported, and to an admin who
  * doesn't own the agent wherever it is (what it thinks with). To that admin also wherever its owner connected the
- * computer: only the person who connected it sees whether that CLI is signed in there.
+ * computer: only the person who connected it sees whether that CLI is signed in there. Never for account-only brains
+ * (`antigravity`, `grok`), which cannot run without a connected account.
  */
 export const ownSignInListed = (
   brain: Pick<AgentBrain, "ownSignIn" | "brain" | "account" | "canUsePlans">,
   row: Parameters<typeof ownSignInReady>[1],
   kind: MachineAccountKind,
 ) =>
-  ownSignInReady(brain, row, kind) ||
-  (brain.ownSignIn && !brain.canUsePlans) ||
-  (brain.brain === kind && brain.account === null && (brain.ownSignIn || !brain.canUsePlans));
+  !accountOnlyBrain(kind) &&
+  (ownSignInReady(brain, row, kind) ||
+    (brain.ownSignIn && !brain.canUsePlans) ||
+    (brain.brain === kind && brain.account === null && (brain.ownSignIn || !brain.canUsePlans)));
 
 /**
  * The plan an agent's sign-in is on, as the CLI said it (`team`, `max`…): its account's, or with none (`account`
@@ -581,8 +590,8 @@ export function keyRemovalText(
 /**
  * The accounts a run of an agent goes through at its plan's limit (ADR 0041 §6, the server's `nextAccountPlan`): its
  * own account, then the others of its kind with the CLI's own sign-in (never a key, `movable`) that are signed in and shared
- * between agents (a login made for one agent is lent to that agent only), its owner's first and then those that serve
- * everyone, each by `useOrder` (the unplaced after, in the order given: oldest first). Only its own account when it is
+ * between agents (a login made for one agent is lent to that agent only) that serve its owner, in the one order of use
+ * (`compareInOrder`: its owner's first, then by `useOrder`, the unplaced after in the order given: oldest first). Only its own account when it is
  * pinned ("Só esta conta"), a key's, or of a kind that never moves (Gemini, Grok, Cursor, OpenCode). The right hand's
  * `scope`: its person's own AI goes on only with that person's accounts (`mine`), and never on a plan someone else
  * gave it, the workspace's included.
@@ -596,12 +605,12 @@ export function accountChain<A extends MachineAccount>(
   const lent = agent.scope === "workspace" || (agent.scope === "mine" && !own.mine);
   if (agent.pinned || lent || own.provider || !NEXT_ACCOUNT_KINDS.includes(own.kind)) return [own];
   const mine = (a: A) => (agent.scope === "mine" ? a.mine : agent.ownerId !== null && a.ownerId === agent.ownerId);
-  const serves = (a: A) => mine(a) || (agent.scope !== "mine" && (a.serves ?? "everyone") === "everyone");
-  const place = (a: A) => a.useOrder ?? Number.POSITIVE_INFINITY;
+  // The server says whether each serves the agent's owner (`usable`); an older one only says `serves`.
+  const serves = (a: A) => mine(a) || (agent.scope !== "mine" && (a.usable ?? (a.serves ?? "everyone") === "everyone"));
+  const person = agent.scope === "mine" ? (accounts.find((a) => a.mine)?.ownerId ?? null) : agent.ownerId;
   const next = accounts
-    .map((a, i) => ({ a, i }))
     .filter(
-      ({ a }) =>
+      (a) =>
         a.id !== own.id &&
         a.kind === own.kind &&
         a.provider === null &&
@@ -610,8 +619,8 @@ export function accountChain<A extends MachineAccount>(
         runMayMoveTo(a) &&
         serves(a),
     )
-    .sort((x, y) => Number(mine(y.a)) - Number(mine(x.a)) || place(x.a) - place(y.a) || x.i - y.i);
-  return [own, ...next.map(({ a }) => a)];
+    .sort(compareInOrder(person));
+  return [own, ...next];
 }
 
 /**
@@ -687,3 +696,28 @@ export function orderDrop(
   const at = others.findIndex((b) => b.some((a) => a.id === onto));
   return at < 0 ? null : at + (where === "after" ? 1 : 0);
 }
+
+/**
+ * An account a run thought with (`RunAccount`), as the order of use (any member reads it) has it now: the account and
+ * its computer, for its pill's card. Null once it left the workspace: the pill keeps the name it went by.
+ */
+export function accountInOrder(groups: readonly AccountOrderGroup[] | undefined, id: string) {
+  for (const g of groups ?? []) {
+    const account = g.accounts.find((a) => a.id === id);
+    if (account) return { account, computer: g.computer };
+  }
+  return null;
+}
+
+/** An account's card under its title: whose it is ("Sua conta", "Conta de Ada") and on which computer. */
+export function accountCardFacts(
+  t: TFunction,
+  a: Pick<MachineAccount, "mine" | "ownerName">,
+  computer: string,
+): string[] {
+  const whose = a.mine ? t("accountRef.mine") : a.ownerName ? t("accountRef.of", { name: a.ownerName }) : null;
+  return [whose, t("accountRef.on", { computer })].filter((x): x is string => Boolean(x));
+}
+
+/** An account's mark: a key account's coding plan, else its CLI's maker. */
+export const accountMark = (a: Pick<MachineAccount, "kind" | "provider">) => a.provider ?? a.kind;

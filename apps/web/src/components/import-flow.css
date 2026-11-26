@@ -274,10 +274,12 @@ html:not([data-pointer]) .imp-drop__area:focus-visible {
   padding: 0;
   list-style: none;
 }
+/* Its state ends the words' line, or starts its own under them from the row's edge (`.ac-tailrow`). */
 .imp-row {
+  --tail-gap: 10px;
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: var(--tail-gap);
   padding: var(--row-py) 14px;
   border-top: 1px solid var(--line);
 }

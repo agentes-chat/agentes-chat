@@ -152,7 +152,7 @@ describe("a thread opening in the panel", () => {
     expect(within(panel).queryByRole("status", { name: "Carregando mensagens" })).toBeNull();
   });
 
-  test("a thread with replies: only its replies wait, under its real root", async () => {
+  test("a thread with replies: their skeleton alone waits, and the root comes with them, at the end in one paint", async () => {
     const state = seedState();
     state.messages.push({
       id: "m-3",
@@ -173,14 +173,16 @@ describe("a thread opening in the panel", () => {
     await settle(2);
     const panel = screen().getByRole("complementary", { name: "Thread" });
     expect(panel.querySelector(".thread-title")?.textContent).toContain("o login está devolvendo 401");
-    expect(panel.querySelector('article[data-message-id="m-1"]')).toBeTruthy();
+    // Not the root the channel holds: the replies would push it out of view when they land.
+    expect(panel.querySelector('article[data-message-id="m-1"]')).toBeNull();
     const waiting = within(panel).getByRole("status", { name: "Carregando mensagens" });
-    expect(waiting.querySelectorAll(".ac-skeleton-msg")).toHaveLength(1);
+    expect(waiting.querySelectorAll(".ac-skeleton-msg")).toHaveLength(2);
     // Nothing of the whole-conversation skeleton: the header and the composer are the real ones.
     expect(panel.querySelector(".channel__skeleton")).toBeNull();
     expect(within(panel).getByRole("combobox", { name: "Responder na thread" })).toBeTruthy();
     await release();
     await settle(6);
+    expect(panel.querySelector('article[data-message-id="m-1"]')).toBeTruthy();
     expect(panel.textContent).toContain("vou olhar o refresh");
     expect(within(panel).queryByRole("status", { name: "Carregando mensagens" })).toBeNull();
   });

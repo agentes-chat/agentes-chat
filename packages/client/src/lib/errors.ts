@@ -2,6 +2,7 @@ import type { TFunction } from "i18next";
 import { ApiError, NetworkError } from "../api/http";
 import type { AuthConfig, OrgStanding } from "../api/types";
 import { widgetWaitOf, widgetWaitText } from "../dashboards/lib";
+import { refusalText } from "./audience";
 import { billingHoldOf } from "./billing";
 import { MAX_UPLOAD_MB } from "./files";
 import { joinNames, lowerFirst } from "./format";
@@ -20,6 +21,13 @@ export const REAUTH_PASSWORD = "reauth.password";
  * takes `untranslatedText`; a guard test (`error-words.test.ts`) fails on a new code that isn't here or on its list.
  */
 const KNOWN = {
+  // A saved provider key this server can't open: saved under another AGENTES_SECRET.
+  credential_unreadable: "agentPage.activity.errors.credential_unreadable",
+  // Moving a plan to another workspace (ADR 0079).
+  "plan_move.not_payer": "errors.planMove.notPayer",
+  "plan_move.same": "errors.planMove.same",
+  "plan_move.target_has_plan": "errors.planMove.targetHasPlan",
+  "plan_move.target_deleting": "errors.planMove.targetDeleting",
   // Linking an outside chat surface (ADR 0187). The lines name no surface: the server's errors carry no name.
   "surface.off": "errors.surface.off",
   "surface.not_allowed": "errors.surface.notAllowed",
@@ -28,6 +36,14 @@ const KNOWN = {
   "surface.link_gone": "errors.surface.linkGone",
   "surface.taken": "errors.surface.taken",
   "surface.undo_gone": "errors.surface.undoGone",
+  "surface.page_gone": "errors.surface.pageGone",
+  "surface.page_elsewhere": "errors.surface.pageElsewhere",
+  "surface.pin_wrong": "errors.surface.pinWrong",
+  "surface.pin_locked": "errors.surface.pinLocked",
+  "surface.pin_shape": "errors.surface.pinShape",
+  "surface.pin_unset": "errors.surface.pinUnset",
+  "surface.email_unverified": "errors.surface.emailUnverified",
+  "surface.pin_reset_gone": "errors.surface.pinResetGone",
   "surface.code_gone": "errors.surface.codeGone",
   // A new-password link an owner can't make (ADR 0158).
   "password_link.email": "errors.passwordLink.email",
@@ -50,13 +66,18 @@ const KNOWN = {
   "channel.permission_forbidden": "channel.perms.forbidden",
   "agent.handle_taken": "newAgent.errors.handleTaken",
   "agent.right_hand_permanent": "errors.rightHand.permanent",
+  "agent.right_hand_computer": "errors.rightHand.computer",
   "agent.not_owner": "errors.agent.ownerOrAdmin",
   "usage_queue.cancel_forbidden": "errors.agent.ownerOrAdmin",
   "agent.details_hidden": "errors.agent.detailsHidden",
+  // Who answers for an agent (ADR 0085, addendum of 2026-11-21): a person or a role, never both.
+  "agent.owner_both": "errors.agent.ownerBoth",
+  "agent.owner_role_unknown": "errors.agent.ownerRoleUnknown",
   "action.not_allowed": "errors.agent.undoForbidden",
   "action.skills_admins": "errors.agent.undoSkillsAdmins",
   "account.not_owner": "errors.account.notOwner",
   "account.order_forbidden": "errors.account.orderForbidden",
+  "account.permission_forbidden": "errors.account.permissionForbidden",
   "channel.members_forbidden": "errors.channel.membersForbidden",
   "agent_proposal.not_requester": "errors.agentProposal.notRequester",
   "proposal.not_requester": "errors.agentProposal.notRequester",
@@ -86,16 +107,50 @@ const KNOWN = {
   "artifact.sharing_empty": "errors.artifact.sharingEmpty",
   "artifact.sharing_too_many": "errors.artifact.sharingTooMany",
   "artifact.not_in_drive": "errors.artifact.notInDrive",
+  "drive.folder_into_itself": "errors.drive.folderIntoItself",
+  // Who edits (ADR 0202): a change from someone whose access lets them only view the file, an access that doesn't read.
+  "artifact.view_only": "errors.artifact.viewOnly",
+  "artifact.access_invalid": "errors.artifact.accessInvalid",
+  // Live files (ADR 0196): a change to a file that is read-only now (in the trash, its workspace closing), a picture
+  // over the size a file takes or that is no picture, a file past what it may hold, a whole new content sent for one
+  // (it changes only in place).
+  "live.read_only": "errors.live.readOnly",
+  "live.too_large": "errors.live.tooLarge",
+  "live.asset_too_large": "errors.live.assetTooLarge",
+  "live.asset_type": "errors.live.assetType",
+  "live.font_invalid": "errors.live.fontInvalid",
+  "artifact.live_only": "errors.live.liveOnly",
+  // Uploaded Office files (ADR 0198): damaged, past what the server reads, of a kind only downloaded, locked with a
+  // password, or past what a live file holds.
+  "office.unreadable": "errors.office.unreadable",
+  "office.too_large": "errors.office.tooLarge",
+  "office.unsupported": "errors.office.unsupported",
+  "office.encrypted": "errors.office.encrypted",
+  "office.too_large_to_edit": "errors.office.tooLargeToEdit",
+  // Images made on a canvas (ADR 0197).
+  "images.no_model": "errors.images.noModel",
+  "images.model_unavailable": "errors.images.modelUnavailable",
+  "images.reference": "errors.images.reference",
+  "images.not_canvas": "errors.images.notCanvas",
+  "images.rate": "errors.images.rate",
+  person_limit: "errors.images.personLimit",
+  provider_error: "errors.images.provider",
   "machine.forbidden": "errors.machine.forbidden",
   "device.forbidden": "errors.machine.forbidden",
   "device.link_not_found": "errors.machine.pairingInvalid",
   "device.not_link_maker": "errors.device.notLinkMaker",
   "device.widen_forbidden": "errors.device.widenForbidden",
   "device.spill_owner_only": "errors.device.spillOwnerOnly",
+  "device.share_owner_only": "errors.device.shareOwnerOnly",
+  "device.share_connected_only": "errors.device.shareConnectedOnly",
+  "device.tasks_owner_only": "errors.device.tasksOwnerOnly",
+  "device.tasks_cloud": "errors.device.tasksCloud",
   "device.not_home": "errors.device.notHome",
   "machine.not_found": "errors.machine.notFound",
   "machine.name_required": "errors.machine.nameRequired",
   "account.method_unsupported": "errors.machine.accountMethodUnsupported",
+  "account.windows_one_gemini": "errors.machine.windowsOneGemini",
+  "brain.unavailable": "errors.machine.brainUnavailable",
   "machine.pairing_invalid": "errors.machine.pairingInvalid",
   "machine.pairing_off": "errors.machine.pairingOff",
   "machine.target_offline": "errors.machine.targetOffline",
@@ -136,6 +191,19 @@ const KNOWN = {
   "mission.agent_unavailable": "errors.mission.agentUnavailable",
   "mission.no_computer": "errors.mission.noComputer",
   "mission.computer_offline": "errors.mission.computerOffline",
+  // A code session (ADR 0215): starting one, and what its panel reads on the agent's computer.
+  "code_session.too_long": "errors.said.tooLong",
+  "code_session.bad_repo": "errors.webhook.invalidRepo",
+  "code_session.offline": "errors.mission.computerOffline",
+  "code_session.no_computer": "errors.codeSession.noComputer",
+  "code_session.cannot_code": "errors.codeSession.cannotCode",
+  "code_session.repo_not_allowed": "errors.codeSession.repoNotAllowed",
+  "code_session.not_yours": "errors.codeSession.notYours",
+  "code_session.not_ready": "errors.codeSession.notReady",
+  "code_session.file_changed": "errors.codeSession.fileChanged",
+  "code_session.file_locked": "errors.codeSession.fileLocked",
+  "code_session.suggestion_gone": "errors.codeSession.suggestionGone",
+  "code_session.suggestion_not_yours": "errors.codeSession.suggestionNotYours",
   "mission.exec_disabled": "errors.mission.execDisabled",
   "mission.runner_outdated": "errors.mission.runnerOutdated",
   "mission.codex_windows": "errors.mission.codexWindows",
@@ -177,6 +245,7 @@ const KNOWN = {
   "routine.widget_fixed": "errors.routine.widgetFixed",
   "routine.agent_not_in_channel": "errors.routine.agentNotInChannel",
   "routine.webhook_paused": "errors.routine.webhookPaused",
+  "routine.group_by_invalid": "errors.routine.groupByInvalid",
   "routine.continue_extra_off": "errors.routine.continueExtraOff",
   "run.continue_extra_off": "errors.routine.continueExtraOff",
   "routine.continue_extra_used_up": "errors.routine.continueExtraUsedUp",
@@ -217,6 +286,10 @@ const KNOWN = {
   "connector.headers_too_many": "errors.connector.headersTooMany",
   "connector.headers_with_sign_in": "errors.connector.headersWithSignIn",
   "connector.headers_unreadable": "errors.connector.headersUnreadable",
+  "connector.no_oauth": "errors.connector.noOAuth",
+  "connector.oauth_discovery": "errors.connector.oauthDiscovery",
+  "connector.oauth_client_in_use": "errors.connector.ownClientInUse",
+  "connector.oauth_client_id": "errors.connector.ownClientId",
   // Facts only (the phone shows this one): the web's onboarding says `standing.createUnpaid` beside the way to pay.
   "org.create_unpaid": "standing.createInactive",
   "credentials.plan_hold": "connectAi.key.closed",
@@ -254,6 +327,7 @@ const KNOWN = {
   "email.undo_taken": "emailUndo.takenLead",
   "invitation.ask_to_join": "errors.invitation.askToJoin",
   "org.create_invite_only": "errors.org.createInviteOnly",
+  "org.create_unconfirmed": "errors.org.createUnconfirmed",
   "org.not_restorable": "errors.org.notRestorable",
   "account.not_restorable": "errors.account.notRestorable",
   "issue.assignee_outside": "errors.issue.assigneeOutside",
@@ -305,6 +379,7 @@ const KNOWN = {
   "wiki.github_too_large": "errors.wiki.githubTooLarge",
   "skill.no_skill_md": "errors.skill.noSkillMd",
   "skill.too_many_skills": "errors.skill.tooManySkills",
+  "skill.zip_too_many_skills": "errors.skill.zipTooManySkills",
   "skill.invalid_name": "errors.skill.invalidName",
   "skill.invalid_description": "errors.skill.invalidDescription",
   "skill.too_large": "errors.skill.tooLarge",
@@ -321,6 +396,13 @@ const KNOWN = {
   "skill.link_renamed": "errors.skill.linkRenamed",
   "skill.no_link": "errors.skill.noLink",
   "skill.no_pending_update": "errors.skill.noPendingUpdate",
+  "skill.picked_twice": "errors.skill.pickedTwice",
+  "skill.draft_unavailable": "errors.skill.draftUnavailable",
+  "skill.draft_failed": "errors.skill.draftFailed",
+  "skill.draft_empty": "errors.skill.draftEmpty",
+  "skill.change_empty": "errors.skill.changeEmpty",
+  "skill.secret": "errors.skill.secret",
+  "skill.permissions": "errors.skill.permissions",
   "handle.invalid": "errors.handle.invalid",
   "handle.taken": "errors.handle.taken",
   "handle.taken_by_agent": "errors.handle.takenByAgent",
@@ -424,6 +506,8 @@ const KNOWN = {
   "pull.not_found": "errors.said.gone",
   "right_hand.not_found": "errors.said.gone",
   "routine.no_webhook": "errors.said.gone",
+  "routine.run_not_found": "errors.said.gone",
+  "routine.webhook_secret_invalid": "errors.said.input",
   "task.not_found": "errors.said.gone",
   "team_proposal.no_agent": "errors.said.gone",
   "team_proposal.not_found": "errors.said.gone",
@@ -441,6 +525,7 @@ const KNOWN = {
   "agent_proposal.asked": "errors.said.alreadyDone",
   "approval.not_ahead": "errors.said.alreadyDone",
   "approval.not_cancelable": "errors.said.alreadyDone",
+  "approval.not_waiting": "errors.said.alreadyDone",
   "browser.handoff_over": "errors.said.alreadyDone",
   "choices.answered": "errors.said.alreadyDone",
   "follow_up.not_pending": "errors.said.alreadyDone",
@@ -453,6 +538,11 @@ const KNOWN = {
   "poll.closed": "errors.said.alreadyDone",
   "proposal.asked": "errors.said.alreadyDone",
   "proposal.decided": "errors.said.alreadyDone",
+  "proposal.undone": "errors.said.alreadyDone",
+  "proposal.changed": "errors.proposal.changed",
+  "proposal.not_applied": "errors.proposal.notApplied",
+  "proposal.not_undoable": "errors.proposal.notUndoable",
+  "proposal.not_allowed": "errors.proposal.notAllowed",
   "right_hand.undone": "errors.said.alreadyDone",
   run_finished: "errors.said.alreadyDone",
   "secret.closed": "errors.said.alreadyDone",
@@ -492,6 +582,12 @@ const KNOWN = {
   "mail.invalid_from": "errors.said.validEmail",
   "mail.invalid_rule": "errors.said.validEmail",
   "database.too_many": "errors.said.tooMany",
+  // Integration apps (ADR 0251): Settings › Integrations.
+  "integration.too_many": "errors.said.tooMany",
+  "integration.too_many_channels": "errors.said.tooMany",
+  "integration.name_required": "errors.said.fillIn",
+  "integration.not_found": "errors.said.gone",
+  "integration.channel": "errors.said.gone",
   "endpoint.too_many_models": "errors.said.tooMany",
   "mail.too_many_addresses": "errors.said.tooMany",
   "mail.too_many_aliases": "errors.said.tooMany",
@@ -527,7 +623,7 @@ const KNOWN = {
   "database.url": "errors.said.checkAddress",
   "url.credentials": "errors.said.checkAddress",
   "url.https_required": "errors.said.checkAddress",
-  "url.internal": "errors.said.checkAddress",
+  "url.internal": "errors.said.privateNetwork",
   "url.invalid": "errors.said.checkAddress",
   "url.not_found": "errors.said.checkAddress",
   "database.too_long": "errors.said.tooLong",
@@ -535,8 +631,10 @@ const KNOWN = {
   "status.too_long": "errors.said.tooLong",
   "wiki.body_too_long": "errors.said.tooLong",
   "account.runner_old": "errors.said.updateComputerApp",
+  "account.system": "brain.reasons.system",
   "machine.access_outdated": "errors.said.updateComputerApp",
   "machine.cli_outdated": "errors.said.updateComputerApp",
+  "machine.cli_not_fetched": "errors.said.cliNotFetched",
   "machine.outdated": "errors.said.updateComputerApp",
   "machine.updates_itself": "errors.said.computerUpdatesItself",
   "database.disabled": "errors.said.offHere",
@@ -560,6 +658,8 @@ const KNOWN = {
   "channel.delete_name": "errors.said.deleteName",
   "channel.general": "errors.said.generalKept",
   "channel.general_stays": "errors.said.generalStays",
+  "channel.lead_channel_only": "errors.said.leadChannelOnly",
+  "channel.lead_not_member": "errors.said.leadNotMember",
   "connector.mcp_status": "errors.said.mcpUnreachable",
   "connector.mcp_unreachable": "errors.said.mcpUnreachable",
   "connector.not_approved": "errors.said.notApproved",
@@ -567,6 +667,7 @@ const KNOWN = {
   "join.waiting": "errors.said.alreadyAsked",
   "mail.already_connected": "errors.said.mailboxConnected",
   "mail.send_without_asking_needs_recipients": "errors.said.sendNeedsRecipients",
+  "mission.executor_unavailable": "errors.mission.executorUnavailable",
   "mission.tasks_live": "errors.said.missionLive",
   "org.create_refused": "errors.said.createRefused",
   "reminder.no_agent": "errors.said.noAgentToRemind",
@@ -811,6 +912,8 @@ export function knownErrorText(t: TFunction, error: unknown, locale = "en"): str
   if (restriction) return restriction;
   const limit = limitRefusalText(t, locale, error.code, error.params);
   if (limit) return limit;
+  const refused = refusalText(t, error.code, error.params);
+  if (refused) return refused;
   // An agent that doesn't answer this person (`audienceError`): whom it answers, by name.
   if (
     (error.code === "audience.only" || error.code === "audience.nobody") &&
@@ -916,6 +1019,18 @@ function readsEnglish(t: TFunction) {
 export const forbiddenText = (t: TFunction, error: ApiError, locale?: string): string =>
   knownErrorText(t, error, locale) ?? t("common.notAllowed");
 
+/** A password sign-in past its account's tries (apps/server auth.ts `TOO_MANY_PASSWORD_TRIES`). */
+export const TOO_MANY_PASSWORD_TRIES = "TOO_MANY_PASSWORD_TRIES";
+
+/**
+ * Too many password tries on this account: when to try again, in whole minutes from the refusal's `retryIn` (its
+ * `Retry-After`, in seconds). Null for any other refusal.
+ */
+export function passwordTriesText(t: TFunction, refusal: { code?: string | null; retryIn?: number }): string | null {
+  if (refusal.code !== TOO_MANY_PASSWORD_TRIES) return null;
+  return t("auth.passwordTries", { count: Math.max(1, Math.ceil((refusal.retryIn ?? 15 * 60) / 60)) });
+}
+
 /**
  * A sign-in, sign-up or reset Better Auth refused (`{ status, code, message }`, a block's kind on agentes.chat Cloud)
  * in the person's words: too many tries, a blocked account and the bot check by their codes, no answer (status 0, or
@@ -923,8 +1038,10 @@ export const forbiddenText = (t: TFunction, error: ApiError, locale?: string): s
  */
 export function authErrorText(
   t: TFunction,
-  refusal: { status: number; code?: string; message: string } & RestrictionFacts,
+  refusal: { status: number; code?: string; message: string; retryIn?: number } & RestrictionFacts,
 ): string {
+  const tries = passwordTriesText(t, refusal);
+  if (tries) return tries;
   if (refusal.status === 429) return t("auth.tooManyTries");
   if (refusal.status === 0) return noAnswerText(t);
   const { kind, cloud } = refusal;
@@ -1064,6 +1181,7 @@ export function errorText(t: TFunction, error: unknown, locale?: string, { maxMb
 const KEY_FAILURES = new Set([
   "run.missing_credential",
   "run.credential_revoked",
+  "run.credential_unreadable",
   "run.credential_wrong_provider",
   "run.provider_account",
   "run.provider_no_credit",
@@ -1080,6 +1198,15 @@ export const FILES_TEXT_ONLY = "run.files_text_only";
 export const filesTextOnlyOf = (meta: Record<string, unknown> | null | undefined) =>
   meta?.filesTextOnly === true ? FILES_TEXT_ONLY : null;
 
+/** Failures another model fixes: one gone, a text-only connection, and a model that wrote no words when asked. */
+const CHANGE_MODEL_FAILURES = new Set([
+  "run.model_unlisted",
+  "run.provider_model_unavailable",
+  FILES_TEXT_ONLY,
+  "run.empty_reply",
+  "run.empty_reply_limit",
+]);
+
 /**
  * The one thing to do about a failed run, by its code, for someone who can: another key (`keys`: who manages them),
  * another model or another account (the agent's owner or who manages agents). Null when nothing fixes it or it's
@@ -1089,8 +1216,7 @@ export function failedRunFix(
   code: string | null | undefined,
   who: { keys: boolean; admin: boolean; owner: boolean },
 ): "useKey" | "changeModel" | "changeAccount" | null {
-  if (code === "run.model_unlisted" || code === "run.provider_model_unavailable" || code === FILES_TEXT_ONLY)
-    return who.admin || who.owner ? "changeModel" : null;
+  if (CHANGE_MODEL_FAILURES.has(code ?? "")) return who.admin || who.owner ? "changeModel" : null;
   if (code === "run.account_missing") return who.admin || who.owner ? "changeAccount" : null;
   return code && KEY_FAILURES.has(code) && who.keys ? "useKey" : null;
 }

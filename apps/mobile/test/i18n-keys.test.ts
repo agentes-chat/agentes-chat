@@ -4,6 +4,7 @@ import { join, relative } from "node:path";
 import { resources } from "@agenteschat/i18n";
 import { LOCALES } from "@agenteschat/i18n/locale";
 import { checkLocale } from "@agenteschat/i18n/testing";
+import { uncodedCommands } from "../../../packages/i18n/test/command-code";
 import identical from "../../../packages/i18n/test/identical.json";
 import { leaves as entries } from "../../../packages/i18n/test/leaves";
 import { filesNamingMakers } from "../../../packages/i18n/test/maker-words";
@@ -94,6 +95,11 @@ test("no semicolon, no em dash in what the phone shows", () => {
   expect(trees.flatMap((tree) => unplainLeaves(tree))).toEqual([]);
 });
 
+test("every command, path and setting the phone shows is code", () => {
+  const trees = [featureKeysEn, featureKeysPtBR, mobileEn, mobilePtBR, nativeEn, nativePtBR];
+  expect(trees.flatMap((tree) => uncodedCommands(tree))).toEqual([]);
+});
+
 test("the phone's words are true in every setup", () => {
   const phone = (...trees: object[]) =>
     trees.flatMap((tree) => entries(tree).map(([k, v]): [string, string] => [`mobile.${k}`, String(v)]));
@@ -138,6 +144,8 @@ test("the plan's notifications have their own Activity line in both languages, n
       "browser_profile_request",
       "computer_disk_full",
       "computer_no_chrome",
+      "computer_down",
+      "computer_back",
       "desktop_taken",
       "plan_lent",
       "plan_serves",

@@ -9,6 +9,7 @@ import {
   executeRoutineRun,
   getAgentBrain,
   insertMessage,
+  listAiAccounts,
   listMachineAccounts,
   MACHINE_CONTROL_TOPIC,
   type MachineStatus,
@@ -156,7 +157,44 @@ test("a member gives their own DM with Lodi their plan; everyone else keeps the 
   expect((await fx.db.select().from(schema.rightHandBrains)).map((r) => r.userId)).toEqual([caio.id]);
 });
 
-test("with no key in the workspace, a person with no AI of their own thinks with a plan that serves them, the roomiest", async () => {
+test("Lodi thinks with ChatGPT on a Windows computer where nothing holds Codex's commands: its turns run none", async () => {
+  const { fx, deps, machineId, bia, lodi } = await world();
+  const GPT = "0193eeee-0000-4000-8000-0000000000b2";
+  await fx.db
+    .update(schema.machines)
+    .set({
+      os: "windows",
+      protocol: MACHINE_PROTOCOL_VERSION,
+      executors: { codex: { version: "codex-cli 0.172.0", sandbox: "none" }, detectedAt: new Date().toISOString() },
+    })
+    .where(eq(schema.machines.id, machineId));
+  await fx.db.insert(schema.machineAccounts).values({
+    id: GPT,
+    orgId: fx.org.id,
+    machineId,
+    kind: "codex",
+    label: GPT,
+    status: "active",
+    createdBy: bia.id,
+    shared: true,
+  });
+  const view = await setAgentBrain(deps, bia.id, fx.org.id, lodi.id, { scope: "mine", brain: "codex", account: GPT });
+  expect(view).toMatchObject({ scope: "mine", brain: "codex", account: GPT, computer: { machineId } });
+  const codex = view.options.find((o) => o.kind === "codex");
+  expect(codex).toMatchObject({ available: true });
+  expect(codex).not.toHaveProperty("reason");
+  // A ChatGPT sign-in there still thinks for Lodi: the AI accounts page takes one.
+  const ai = await listAiAccounts(deps, bia.id, fx.org.id);
+  expect(ai.computers.find((c) => c.machineId === machineId)?.brains.codex).toBe(true);
+  // Any other agent there runs commands: Codex is refused for it, with why.
+  await fx.db.update(schema.agents).set({ machineId }).where(eq(schema.agents.id, fx.agent.id));
+  const refused = await setAgentBrain(deps, fx.owner.id, fx.org.id, fx.agent.id, { brain: "codex" }).catch(
+    (e: { code?: string; params?: unknown }) => e,
+  );
+  expect(refused).toMatchObject({ code: "brain.unavailable", params: { reason: "windows_sandbox" } });
+});
+
+test("with no key in the workspace, a person with no AI of their own thinks with a plan that serves them: the first of the order of use with room", async () => {
   const { fx, bia, runIn } = await world();
   // The workspace's AI is the model, with no key: before, everyone's DM read "no AI" despite plans being here.
   await fx.db.update(schema.providerCredentials).set({ revokedAt: new Date() });
@@ -165,17 +203,18 @@ test("with no key in the workspace, a person with no AI of their own thinks with
     source: "probe" as const,
     at: new Date().toISOString(),
   });
+  // Room only filters (Ana's is at its limit): the rest go by their place, never by who has more room.
   await fx.db
     .update(schema.machineAccounts)
-    .set({ usage: window(90) })
+    .set({ usage: window(100) })
     .where(eq(schema.machineAccounts.id, ANAS));
   await fx.db
     .update(schema.machineAccounts)
-    .set({ usage: window(10) })
+    .set({ usage: window(90), useOrder: 0 })
     .where(eq(schema.machineAccounts.id, CAIOS));
   await fx.db
     .update(schema.machineAccounts)
-    .set({ usage: window(50) })
+    .set({ usage: window(10), useOrder: 1 })
     .where(eq(schema.machineAccounts.id, BIAS));
   const dani = await addMember(fx.db, fx.org.id, "member", "dani");
   const plan = await runIn(dani.id);
@@ -183,7 +222,7 @@ test("with no key in the workspace, a person with no AI of their own thinks with
   expect(plan.unavailable).toBeUndefined();
   // Someone with a plan of their own thinks with it first.
   expect(await runIn(bia.id)).toMatchObject({ account: { id: BIAS } });
-  // A login made for one agent that an agent thinks with stays that agent's: the next roomiest answers.
+  // A login made for one agent that an agent thinks with stays that agent's: the next of the order answers.
   await fx.db.update(schema.machineAccounts).set({ shared: false }).where(eq(schema.machineAccounts.id, CAIOS));
   await fx.db.update(schema.agents).set({ brainAccountId: CAIOS }).where(eq(schema.agents.id, fx.agent.id));
   const eva = await addMember(fx.db, fx.org.id, "member", "eva");
@@ -751,4 +790,53 @@ test("a model the person chose for their own DM wins over the right hand's", asy
     .set({ brain: "claude_code", brainModel: "deepseek-v4.1-flash", brainAccountId: BIAS })
     .where(eq(schema.agents.id, lodi.id));
   expect((await runIn(bia.id)).model).toBe("glm-5.3");
+});
+
+test("a person's own Lodi thinks with the plan their own computer is signed in to, as any agent they own may", async () => {
+  const { fx, deps, machineId, bia, caio, lodi, runIn } = await world();
+  await fx.db.update(schema.machines).set({ pairedByUserId: bia.id }).where(eq(schema.machines.id, machineId));
+  expect(await getAgentBrain(deps, bia.id, fx.org.id, lodi.id, "mine")).toMatchObject({ ownSignIn: true });
+  expect(await getAgentBrain(deps, caio.id, fx.org.id, lodi.id, "mine")).toMatchObject({ ownSignIn: false });
+  const view = await setAgentBrain(deps, bia.id, fx.org.id, lodi.id, {
+    scope: "mine",
+    brain: "claude_code",
+    account: null,
+  });
+  expect(view).toMatchObject({ scope: "mine", brain: "claude_code", account: null, computer: { machineId } });
+  expect(await runIn(bia.id)).toMatchObject({ kind: "claude_code", session: { machineId } });
+  expect((await runIn(bia.id)).account).toBeUndefined();
+  expect((await runIn(bia.id)).unavailable).toBeUndefined();
+  // Her sign-in is hers alone: nobody else's DM thinks with it, and nobody else may pick it.
+  expect((await runIn(fx.owner.id)).kind).toBe("model");
+  expect(
+    await codeOf(
+      setAgentBrain(deps, caio.id, fx.org.id, lodi.id, { scope: "mine", brain: "claude_code", account: null }),
+    ),
+  ).toBe("account.not_owner");
+  // Her computer's frame lists Lodi, on the computer's own sign-in.
+  const frame = (await machineAgents(fx.db, fx.org.id, machineId)).find((a) => a.id === lodi.id);
+  expect(frame).toBeDefined();
+  expect(frame?.account).toBeUndefined();
+  // `account: null` alone still goes back to the workspace's.
+  await setAgentBrain(deps, bia.id, fx.org.id, lodi.id, { scope: "mine", account: null });
+  expect((await runIn(bia.id)).kind).toBe("model");
+});
+
+test("a model or effort alone keeps a person's own Lodi on their computer's own sign-in", async () => {
+  const { fx, deps, machineId, bia, lodi, runIn } = await world();
+  await fx.db.update(schema.machines).set({ pairedByUserId: bia.id }).where(eq(schema.machines.id, machineId));
+  await setAgentBrain(deps, bia.id, fx.org.id, lodi.id, { scope: "mine", brain: "claude_code", account: null });
+  // As older apps save a pick: the model, or the effort, and nothing else.
+  expect(await setAgentBrain(deps, bia.id, fx.org.id, lodi.id, { scope: "mine", model: "opus" })).toMatchObject({
+    brain: "claude_code",
+    model: "opus",
+    account: null,
+    computer: { machineId },
+  });
+  expect(await setAgentBrain(deps, bia.id, fx.org.id, lodi.id, { scope: "mine", effort: "high" })).toMatchObject({
+    model: "opus",
+    effort: "high",
+    account: null,
+  });
+  expect(await runIn(bia.id)).toMatchObject({ kind: "claude_code", session: { machineId } });
 });

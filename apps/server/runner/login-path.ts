@@ -66,11 +66,22 @@ export function mergePathWith(delimiter: string, ...lists: (string | null | unde
   return out.join(delimiter);
 }
 
-/** Where the usual installers put a CLI on Windows: Claude Code's own, npm's global launchers, Bun's. */
+/**
+ * Where the usual installers put a CLI on Windows: Claude Code's own, npm's global launchers, Bun's, Google's for the
+ * Antigravity CLI (`%LOCALAPPDATA%\agy\bin\agy.exe`, its `install.ps1`) and xAI's for Grok Build
+ * (`%USERPROFILE%\.grok\bin\grok.exe`, its `install.ps1`).
+ */
 export function usualWindowsDirs(env: NodeJS.ProcessEnv = process.env): string[] {
   const home = envValue(env, "USERPROFILE", "win32") || os.homedir();
   const appData = envValue(env, "APPDATA", "win32") || win32.join(home, "AppData", "Roaming");
-  return [win32.join(home, ".local", "bin"), win32.join(appData, "npm"), win32.join(home, ".bun", "bin")];
+  const localAppData = envValue(env, "LOCALAPPDATA", "win32") || win32.join(home, "AppData", "Local");
+  return [
+    win32.join(home, ".local", "bin"),
+    win32.join(appData, "npm"),
+    win32.join(home, ".bun", "bin"),
+    win32.join(localAppData, "agy", "bin"),
+    win32.join(home, ".grok", "bin"),
+  ];
 }
 
 /**
@@ -121,6 +132,19 @@ export function adoptWindowsPath(
 ): void {
   const usual = usualWindowsDirs(env).filter((d) => exists(d));
   env.PATH = mergePathWith(";", envValue(env, "PATH", "win32"), registry(), usual.join(";"));
+}
+
+/**
+ * The usual folders that exist, after what `env.PATH` has: a service keeps the PATH of the shell that installed it,
+ * which may lack `~/.local/bin` (or it was made since), where Google's, xAI's, Cursor's and Claude's installers put
+ * their CLIs. Never in system mode: root's own folders are no agent's.
+ */
+export function addUsualDirs(
+  env: NodeJS.ProcessEnv = process.env,
+  home = os.homedir(),
+  exists: (dir: string) => boolean = existsSync,
+): void {
+  env.PATH = mergePath(env.PATH, usualDirs(home).filter(exists).join(path.delimiter));
 }
 
 /** Sets `process.env.PATH` to the login shell's PATH + the usual folders that exist + what we had. */

@@ -22,11 +22,33 @@ describe("Agents", () => {
     expect(screen).toContain("directory.refetch(),");
   });
 
+  test("a private agent unlisted to me (listed: false) stays off every list, while its name and face still resolve", () => {
+    const hooks = src("shared/hooks.ts");
+    expect(hooks).toContain("const agents = all.filter((a) => a.listed !== false);");
+    expect(hooks).toContain("const agentById = new Map(all.map((a) => [a.id, a]));");
+    expect(hooks).toContain("const agents = useAllAgents(orgId);");
+    // The brakes' list of agents it may call is a list too: the directory's, not its lookups.
+    expect(src("agents/BrakesSection.tsx")).toContain("const others = dir.agents.filter(");
+  });
+
+  test("a message's mentions and a new @ read every agent, unlisted ones too: they still name it and hold its @", () => {
+    for (const file of ["chat/EventLine.tsx", "chat/MessageRow.tsx"])
+      expect(src(file)).toContain("agentsByAnyHandle([...dir.agentById.values()])");
+    expect(src("chat/MessageSpans.tsx")).toContain("mentionTint(handle, [...agentById.values()], scheme)");
+    for (const file of ["agents/AgentEditScreen.tsx", "agents/NewAgentScreen.tsx"])
+      expect(src(file)).toContain("takenHandles([...dir.agentById.values()],");
+  });
+
   test("rows are memoized on plain values and share the screen's one clock", () => {
     const screen = src("agents/AgentsScreen.tsx");
     expect(screen).toContain("const AgentRow = memo(function AgentRow(");
     expect(screen.match(/useNow\(\)/g)).toHaveLength(1);
-    expect(screen.match(/\{\.\.\.lineProps\(l\)\}\s+now=\{now\}/g)).toHaveLength(3);
+    // Every row's props come from the screen's one read (`rowOf`); only a row that says how long gets the clock.
+    expect(screen.match(/\{\.\.\.rowOf\(l\)\}/g)).toHaveLength(3);
+    expect(screen).toContain("now: ticks ? now : 0,");
+    const row = screen.slice(screen.indexOf("const AgentRow = memo("), screen.indexOf("function useGreeting("));
+    for (const hook of ["usePresenceOf(", "useAiStatus(", "usePlanHold(", "useAgentWorkLine(", "useNow("])
+      expect({ hook, read: row.includes(hook) }).toEqual({ hook, read: false });
     expect(screen).toContain("() => teamLines(agents, work, dms.data ?? [], asking, offline, atWork),");
     expect(screen).not.toContain("line={l}");
   });
@@ -42,12 +64,13 @@ describe("an agent's profile", () => {
     expect(screen.indexOf("{forYou.data ? (")).toBeLessThan(screen.indexOf("mobile.intentAgents.did.empty"));
   });
 
-  test("Chat opens a conversation it knows at once, else spins and takes no second tap", () => {
+  test("the message field and Ask for access open a conversation it knows at once, else wait and take no second tap", () => {
     const screen = src("agents/AgentProfileScreen.tsx");
     expect(screen).toContain("if (opening) return;");
     expect(screen).toContain("const known = dms.data?.find(");
     expect(screen).toMatch(/if \(known\) \{\s+router\.push\(chatHref\(known\.channelId\)\);/);
-    expect(screen.match(/loading=\{opening\}/g)).toHaveLength(2);
+    expect(screen.match(/loading=\{opening\}/g)).toHaveLength(1);
+    expect(screen).toContain("busy={opening}");
     expect(screen).toContain(".finally(() => setOpening(false));");
   });
 
@@ -117,7 +140,6 @@ describe("saving forms", () => {
     expect(setup.match(/toast\(\{/g)).toHaveLength(2);
     expect(setup).toContain('...(rest.length > 0 ? { subtitle: rest.join(" ") } : {}),');
     expect(setup).toMatch(/loading=\{busy\}\s+disabled=\{chosen\.length === 0\}/);
-    expect(src("ai/KeyForAllScreen.tsx")).toMatch(/loading=\{busy\}\s+disabled=\{!chosen \|\| can\.length === 0\}/);
   });
 
   test("a device code's Copied says Copy again after a moment, with a tap of success; Start spins in place", () => {
@@ -189,7 +211,7 @@ describe("Connect an AI and the right hand's cards", () => {
 
 describe("the agents' pages on the phone's standards", () => {
   test("a choice of one agent, of several or of a person is a pushed screen, never a list unfolding in a card", () => {
-    for (const route of ["agent-choose", "person-choose", "agent-look", "agent-brain", "agent-merge/[id]"])
+    for (const route of ["agent-choose", "person-choose", "agent-look", "agent-merge/[id]"])
       expect({ route, pushed: pushedByDefault(route) }).toEqual({ route, pushed: true });
     const reports = src("agents/ReportsToSection.tsx");
     expect(reports).toContain('router.push("/agent-choose");');
@@ -266,7 +288,7 @@ describe("the agents' pages on the phone's standards", () => {
     // The setor's "…" in Agentes is the app's action list, as every "…".
     expect(sector).toContain("chooseAction(");
     expect(sector).not.toContain("<ActionList");
-    const create = src("agents/NewAgentScreen.tsx");
-    expect(create).toContain("{...(start ? { menu: true } : { chevron: true })}");
+    // Criar agente's "Quem pensa" is the one AI choice, whose fields open in place.
+    expect(src("agents/NewAgentScreen.tsx")).toContain("<AiChoiceFields");
   });
 });

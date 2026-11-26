@@ -15,8 +15,8 @@ test("a button centres its icon and words; only the rows dressed as buttons star
       for (const rule of rules(await Bun.file(path.join(ROOT, dir, file)).text()))
         if (rule.declarations.some(([p, v]) => p === "justify-content" && v !== "center"))
           left.push(...rule.selectors.filter((s) => BUTTON.test(s)));
-  // The sidebar's "Criar agente" lines up with the rows around it. A board column adds a task from its head's "+".
-  expect(left.sort()).toEqual([".sidebar__create.ac-btn"]);
+  // Activity and Create agent are sidebar rows. Their icons line up with the other navigation entries.
+  expect(left.sort()).toEqual([".sidebar__activity.ac-btn", ".sidebar__create.ac-btn"]);
 });
 
 test("the sign-in's 'Último usado' ships on its button's corner, out of the flow, so the words stay centred", async () => {

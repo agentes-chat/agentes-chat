@@ -3,7 +3,9 @@ import { and, type Database, desc, eq, gte, inArray, isNull, lt, schema, sql } f
 import { isConfidential } from "../confidential";
 import { cutText, cutTextEnd } from "../format";
 import type { ModelGateway } from "../gateway";
+import type { IntentWriter } from "../intent-line";
 import { createLlmJudge, type Judge } from "../judge";
+import { ownTyped } from "../message-origin";
 import type { Message } from "../messages";
 import { cheapModelForOrg } from "../router";
 import { createLlmScheduleReader, type ScheduleReader } from "../schedule-reader";
@@ -29,6 +31,8 @@ export interface ContextDeps {
   judge?: Judge;
   /** Reads schedules and moments people write (schedule-reader.ts); default: the org's cheap model. Tests pass a fake. */
   schedules?: ScheduleReader;
+  /** The working line's first words at a run's start (`intent-line.ts`); absent: none. */
+  intents?: IntentWriter;
   /** Where learning's failures are reported (ADR 0104, `reportLearnFailure`); absent: not reported. */
   errors?: ErrorReporter;
 }
@@ -83,10 +87,11 @@ export async function summaryModelReady(
 
 /**
  * Content from outside the org (webhooks, system notices) is untrusted, and so is an agent's message
- * relaying what it read outside (`meta.readOutside`, ADR 0117): memory built from it stays low trust.
+ * relaying what it read outside (`meta.readOutside`, ADR 0117), and a person's message they didn't type in our apps
+ * (`ownTyped`, ADR 0250: a token's, an AI app's, a bridge's): memory built from it stays low trust.
  */
-export const isTrustedMessage = (m: Pick<Message, "authorType"> & { meta?: Message["meta"] | null }) =>
-  (m.authorType === "person" || m.authorType === "agent") && m.meta?.readOutside !== true;
+export const isTrustedMessage = (m: Pick<Message, "authorType" | "origin"> & { meta?: Message["meta"] | null }) =>
+  m.authorType === "person" ? ownTyped(m) : m.authorType === "agent" && m.meta?.readOutside !== true;
 
 export interface ThreadView {
   root: Message;

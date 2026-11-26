@@ -3,15 +3,18 @@ import {
   type Edition,
   type FormerAgent,
   type Member,
+  type OrgRole,
   type RealtimeConnection,
-  useAgents,
+  useAllAgents,
   useAuthConfig,
   useComputerSetup,
   useFormerAgents,
   useMachines,
   useMe,
   useMembers,
+  useRoles,
 } from "@agenteschat/client";
+import { type AgentOwnerLike, ownsAgentAs } from "@agenteschat/client/lib/agent-owner";
 import { computerEdition } from "@agenteschat/client/lib/computer";
 import { formerById } from "@agenteschat/client/lib/directory";
 import { errorText } from "@agenteschat/client/lib/errors";
@@ -21,15 +24,15 @@ import { NavigationContext } from "expo-router/react-navigation";
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AppState, type AppStateStatus } from "react-native";
-import { useOrg } from "@/providers/org";
+import { useOrgId } from "@/providers/org";
 import { useRealtime } from "@/providers/realtime";
 import { haptics, rememberAgentLooks, useTheme, useToast } from "@/ui";
+import { usePane } from "@/ui/pane";
 import { agentLook, daysAgo, type PacedClock, pacedClock, whenKind } from "./logic";
+import { roleIdsOf } from "./owner";
 
-/** The current organization's id. */
-export function useOrgId(): string {
-  return useOrg().orgId;
-}
+/** The current organization's id, from its own context: a change of `me` doesn't draw its readers again. */
+export { useOrgId };
 
 /**
  * Which words the computers get here: the Cloud's or self-host's (`computerEdition`). The server's
@@ -90,8 +93,10 @@ interface KeptDirectory {
  */
 const directories = new WeakMap<Agent[], WeakMap<FormerAgent[], WeakMap<Member[], KeptDirectory>>>();
 
-function directoryMaps(agents: Agent[], former: FormerAgent[], members: Member[]): DirectoryMaps {
-  const agentById = new Map(agents.map((a) => [a.id, a]));
+/** `agents` is what lists and pickers offer (`listed`); the lookups also resolve an agent unlisted to me. */
+function directoryMaps(all: Agent[], former: FormerAgent[], members: Member[]): DirectoryMaps {
+  const agents = all.filter((a) => a.listed !== false);
+  const agentById = new Map(all.map((a) => [a.id, a]));
   const gone = formerById(former);
   const anyAgent = (id: string) => agentById.get(id) ?? gone.get(id);
   const memberById = new Map(members.map((m) => [m.userId, m]));
@@ -136,7 +141,7 @@ function directoryOf(agents: Agent[], former: FormerAgent[], members: Member[], 
 /** Agents and people of the organization, by id: one object for every caller while the lists stay the same. */
 export function useDirectory(): Directory {
   const orgId = useOrgId();
-  const agents = useAgents(orgId);
+  const agents = useAllAgents(orgId);
   const former = useFormerAgents(orgId);
   const members = useMembers(orgId);
   return directoryOf(
@@ -147,15 +152,38 @@ export function useDirectory(): Directory {
   );
 }
 
+/** The signed-in person's roles (their member row's), for `ownsAgentAs`; none while they load. */
+export function useMyRoleIds(): readonly string[] {
+  return roleIdsOf(useDirectory().memberById, useMeId());
+}
+
+/**
+ * Whether I answer for an agent: its owner, or holding the role that answers for it (the server's `ownsAgent`, ADR
+ * 0085, addendum of 2026-11-21).
+ */
+export function useOwnsAgent() {
+  const meId = useMeId();
+  const roleIds = useMyRoleIds();
+  return useCallback(
+    (a: AgentOwnerLike | null | undefined) => Boolean(a && meId && ownsAgentAs(a, meId, roleIds)),
+    [meId, roleIds],
+  );
+}
+
+/** The workspace's roles, for the name and mark of a role that answers for an agent (undefined while they load). */
+export function useOwnerRoles(): OrgRole[] | undefined {
+  return useRoles(useOrgId()).data?.roles;
+}
+
 /** Toasts and other places that only know an agent's id draw it from these looks (once, at the app's root). */
 export function useRememberAgentLooks() {
-  const agents = useAgents(useOrgId());
+  const agents = useAllAgents(useOrgId());
   useEffect(() => {
     if (agents.data) rememberAgentLooks(agents.data.map((a) => ({ id: a.id, ...agentLook(a) })));
   }, [agents.data]);
 }
 
-/** The organization's WebSocket (null until it opens). */
+/** The organization's WebSocket (null without one; stopped while the app is in the background). */
 export function useConnection(): RealtimeConnection | null {
   return useRealtime().connection;
 }
@@ -300,11 +328,12 @@ type TransitionEvents = { addListener(event: "transitionEnd", listener: () => vo
 /**
  * False until the screen's push has ended (its stack's `transitionEnd`): what moves on it (a sky, a living face) starts
  * then, so the slide has the threads to itself. A screen shown without a slide, or outside a stack, starts after
- * `PUSH_END_MAX_MS` at the latest.
+ * `PUSH_END_MAX_MS` at the latest; one in a split's pane (ADR 0212), which nothing slides in, at once.
  */
 export function usePushEnded(): boolean {
   const navigation = useContext(NavigationContext) as unknown as TransitionEvents | undefined;
-  const [ended, setEnded] = useState(false);
+  const inPane = usePane() !== null;
+  const [ended, setEnded] = useState(inPane);
   useEffect(() => {
     if (ended) return;
     const end = () => setEnded(true);

@@ -18,6 +18,7 @@ import {
   denyDeviceCode,
   devicesText,
   drainOutbox,
+  expireFolderRequests,
   ForbiddenError,
   formatUserCode,
   fullMachinePath,
@@ -38,6 +39,7 @@ import {
   postPersonMessage,
   publishMachineAgentsChanged,
   reduceMachineAccess,
+  refuseFolderRequest,
   setAgentComputerTarget,
   sharedFolderText,
   sharingText,
@@ -449,7 +451,9 @@ describe("the agents frame (protocol 9)", () => {
     const runner = fakeRunner(hub);
     await runner.hello(paired.token);
     expect(runner.sent[0]).toMatchObject({ type: "welcome" });
-    expect(runner.sent[1]).toEqual({ type: "agents", agents: [] });
+    // The coding CLIs' pins come right after it (ADR 0228 §6), then the agents.
+    expect(runner.sent[1]).toMatchObject({ type: "clis.pins" });
+    expect(runner.sent[2]).toEqual({ type: "agents", agents: [] });
 
     await setAgentComputerTarget(deps(), f.owner.id, f.org.id, f.agent.id, paired.machineId);
     await Bun.sleep(20);
@@ -754,6 +758,72 @@ describe("folders and tools on the machine (protocol 10)", () => {
     expect((await folderRows())[0]?.doneAt).not.toBeNull();
   });
 
+  test("the computer's owner says no from the apps: the agent hears it, the inbox row ends, the machine can't undo it", async () => {
+    f = await setup({ machines: true, reply: () => ({ chunks: ["Ok"] }) });
+    const hub = f.machineHub as MachineHub;
+    const paired = await pairMachine(deps(), f.owner.id, f.org.id, COMPUTER);
+    const carl = await addMember(f.db, f.org.id, "member", "carl");
+    await grantScopes(f.db, f.org.id, f.agent.id, SANDBOX);
+    await setAgentComputerTarget(deps(), f.owner.id, f.org.id, f.agent.id, paired.machineId);
+    const runner = fakeRunner(hub, (req) =>
+      req.op === "access.request" ? { ok: true, data: { requestId: req.requestId, status: "pending" } } : undefined,
+    );
+    await runner.hello(paired.token, { access: ACCESS });
+    await invoke(await runCtx(), "request_folder_access", { path: "/Users/ana/Documents", reason: "ler os contratos" });
+    const [asked] = await f.db.select().from(schema.machineAccessRequests);
+    const id = asked?.id ?? "";
+
+    // Only an admin or whoever connected the computer.
+    await expect(refuseFolderRequest(deps(), carl.id, f.org.id, paired.machineId, id)).rejects.toBeInstanceOf(
+      ForbiddenError,
+    );
+    await expect(
+      refuseFolderRequest(deps(), f.owner.id, f.org.id, paired.machineId, crypto.randomUUID()),
+    ).rejects.toBeInstanceOf(NotFoundError);
+
+    expect(await refuseFolderRequest(deps(), f.owner.id, f.org.id, paired.machineId, id)).toEqual({ status: "denied" });
+    const [row] = await f.db
+      .select()
+      .from(schema.notifications)
+      .where(eq(schema.notifications.kind, "device.folder_request"));
+    expect(row?.doneAt).not.toBeNull();
+    // A yes from the computer afterwards, or a second no, changes nothing.
+    await runner.send({ type: "access.decided", requestId: id, decision: "granted", scope: "all" });
+    expect(await refuseFolderRequest(deps(), f.owner.id, f.org.id, paired.machineId, id)).toEqual({ status: "denied" });
+    await drainOutbox(f.db, f.handlers);
+    const timeline = await listMessages(f.db, f.owner.id, f.org.id, f.general.id);
+    expect(timeline.filter((m) => m.meta.bodyCode === "machine_access_denied")).toHaveLength(1);
+  });
+
+  test("a request the computer never answers (offline, removed) expires on the server after its day", async () => {
+    f = await setup({ machines: true, reply: () => ({ chunks: ["Ok"] }) });
+    const hub = f.machineHub as MachineHub;
+    const paired = await pairMachine(deps(), f.owner.id, f.org.id, COMPUTER);
+    await grantScopes(f.db, f.org.id, f.agent.id, SANDBOX);
+    await setAgentComputerTarget(deps(), f.owner.id, f.org.id, f.agent.id, paired.machineId);
+    const runner = fakeRunner(hub, (req) =>
+      req.op === "access.request" ? { ok: true, data: { requestId: req.requestId, status: "pending" } } : undefined,
+    );
+    await runner.hello(paired.token, { access: ACCESS });
+    await invoke(await runCtx(), "request_folder_access", { path: "/Users/ana/Documents", reason: "ler os contratos" });
+    const [asked] = await f.db.select().from(schema.machineAccessRequests);
+
+    expect(await expireFolderRequests(deps())).toBe(0);
+    const later = new Date((asked?.expiresAt ?? new Date()).getTime() + 60_000);
+    expect(await expireFolderRequests(deps(), later)).toBe(1);
+    expect(await expireFolderRequests(deps(), later)).toBe(0);
+    const [settled] = await f.db.select().from(schema.machineAccessRequests);
+    expect(settled?.status).toBe("expired");
+    const [row] = await f.db
+      .select()
+      .from(schema.notifications)
+      .where(eq(schema.notifications.kind, "device.folder_request"));
+    expect(row?.doneAt).not.toBeNull();
+    await drainOutbox(f.db, f.handlers);
+    const timeline = await listMessages(f.db, f.owner.id, f.org.id, f.general.id);
+    expect(timeline.filter((m) => m.meta.bodyCode === "machine_access_expired")).toHaveLength(1);
+  });
+
   test("the workspace's own computer: nobody to ask, and every refusal says what the agent can do", async () => {
     f = await setup({ machines: true, reply: () => ({ chunks: ["Ok"] }) });
     const hub = f.machineHub as MachineHub;
@@ -936,7 +1006,10 @@ describe("folders and tools on the machine (protocol 10)", () => {
 
   test("the containers block: Docker's commands, the agent's own containers, ports above 1024 (ADR 0169)", () => {
     const text = containersText("Build box");
-    expect(text).toStartWith('# Containers on "Build box"\ndocker, docker compose and podman work there');
+    expect(text).toStartWith(
+      '# Containers on "Build box"\ndocker, docker compose, docker buildx and podman work there, rootless',
+    );
+    expect(text).toContain("Root inside a container is yours");
     expect(text).toContain("never another agent's containers or files");
     expect(text).toContain("-p 8080:80");
     expect(text).toContain("restart: always come back");
@@ -953,6 +1026,9 @@ describe("folders and tools on the machine (protocol 10)", () => {
     expect(text).toContain('exit code 137, "Killed"');
     // A finished build's daemons hold their memory for hours unless stopped.
     expect(text).toContain("./gradlew --stop");
+    // Each agent's home is private there: a path handed to another agent leads nowhere.
+    expect(text).toContain("as a git branch or pull request");
+    expect(text).toContain("never as a path in your own home");
     // A size the runner never reported: no numbers.
     expect(sharingText("Build box", null)).toContain("share its CPUs and memory, with no part");
   });

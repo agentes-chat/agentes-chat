@@ -1,3 +1,4 @@
+import { accountOnlyBrain } from "@agenteschat/providers/plans";
 import type { TFunction } from "i18next";
 import type {
   Agent,
@@ -24,6 +25,7 @@ import {
   planSearchNames,
 } from "./no-ai";
 import {
+  antigravityLabel,
   type BrainModelChoice,
   brainModelChoice,
   brainModelChoices,
@@ -81,7 +83,7 @@ export interface BrainPickOption {
 }
 
 /** Claude's own models describe themselves by family; any other, by its price ("Grátis" for a free one). */
-const CLAUDE_FAMILIES = ["sonnet", "opus", "haiku"] as const;
+const CLAUDE_FAMILIES = ["sonnet", "opus", "haiku", "fable"] as const;
 const claudeFamily = (model: Model) =>
   model.provider === "anthropic" ? CLAUDE_FAMILIES.find((f) => model.id.toLowerCase().includes(f)) : undefined;
 const freeModel = (model: Model) => model.inputUsdPerMTok === 0 && model.outputUsdPerMTok === 0;
@@ -436,7 +438,10 @@ export function modelRows(
   const rows: Omit<ModelRow, "checked">[] = [
     { value: AUTO, label: t("brain.auto.label"), sub: t("brain.auto.hint") },
     // The model it runs stays a row when its list doesn't have it, as the web's picker keeps it: one row is checked.
-    ...(!chosen || isAuto(chosen) || models.some((m) => m.value === chosen) ? [] : [{ value: chosen, label: chosen }]),
+    // Gemini's by its name ("Gemini 4 Argon (High)"), never its slug.
+    ...(!chosen || isAuto(chosen) || models.some((m) => m.value === chosen)
+      ? []
+      : [{ value: chosen, label: view.brain === "antigravity" ? antigravityLabel(chosen) : chosen }]),
     ...models.map((m) => {
       // What each is for (Claude's own), sold as, or costs: the agent's page's line.
       const sub = brainModelLine(t, view.brain, plan, m, cursorSays);
@@ -561,8 +566,8 @@ export interface PickerModel {
   textOnly: boolean;
 }
 
-/** How full an account is: its tightest window's use, unknown as empty. */
-const usedOf = (u: PlanUsage | null) => Math.max(0, ...(u?.windows.map((w) => w.usedPercent) ?? []));
+/** How full an account is: its tightest window's use; unmeasured ranks behind measured accounts. */
+const usedOf = (u: PlanUsage | null) => (u ? Math.max(0, ...u.windows.map((w) => w.usedPercent)) : 101);
 
 /**
  * The picker's tiles (web and phone): the plans the agent's computer runs that it has an account for (its owner's, or
@@ -577,6 +582,8 @@ export function modelPickerTiles(
   api: [string, ModelChoice[]][],
   apiModel: string | null,
   models: readonly Model[],
+  /** The agent's computer's row of `GET …/ai-accounts`: its own sign-ins, as "Quem pensa" lists them. */
+  computer?: Parameters<typeof ownSignInReady>[1],
 ): PickerTile[] {
   const runs = (k: MachineAccountKind) => view.options.some((o) => o.kind === k && (o.available || view.brain === k));
   const byChoice = new Map<PlanChoice, PickerAccount[]>();
@@ -589,8 +596,11 @@ export function modelPickerTiles(
   for (const o of view.options) {
     if (o.kind === "model" || !runs(o.kind)) continue;
     const k = o.kind as MachineAccountKind;
+    if (accountOnlyBrain(k)) continue;
     const own = view.brain === k && view.account === null;
-    if (own || (view.ownSignIn && o.available))
+    // The computer's own sign-in only where its runner reported it signed in (`ownSignInReady`): a CLI being there, or
+    // coming with the first sign-in (the Antigravity CLI the runner brings), isn't a sign-in.
+    if (own || (o.available && ownSignInReady(view, computer, k)))
       add(planOfKind(k), {
         id: null,
         label: t("brain.picker.ownSignIn"),
@@ -603,7 +613,10 @@ export function modelPickerTiles(
     if (!accounts?.length) return [];
     const inUse = (a: PickerAccount) => view.brain !== "model" && (a.id ?? null) === (view.account ?? null);
     const sorted = [...accounts].sort(
-      (a, b) => Number(inUse(b)) - Number(inUse(a)) || usedOf(a.usage) - usedOf(b.usage),
+      (a, b) =>
+        Number(inUse(b)) - Number(inUse(a)) ||
+        usedOf(a.usage) - usedOf(b.usage) ||
+        Number(a.id === null) - Number(b.id === null),
     );
     return [
       {

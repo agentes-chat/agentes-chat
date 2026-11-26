@@ -1,10 +1,22 @@
 import { expect, test } from "bun:test";
-import { GROK_PROTOCOL, LOCKED_BRAIN_PROTOCOL, SHARED_GROK_PROTOCOL } from "@agenteschat/adapters";
+import {
+  GROK_PROTOCOL,
+  GROK_WINDOWS_PROTOCOL,
+  LOCKED_BRAIN_PROTOCOL,
+  SHARED_GROK_PROTOCOL,
+} from "@agenteschat/adapters";
 import { GROK_BUILD_MODELS, loginPerAgent, sharedSignIn } from "@agenteschat/providers/plans";
 import { brainOptions, defaultBrainModel, grokModels, isBrainKind } from "../src/brain-settings";
 import { type BrainTurnRequest, type ComputerBrainLink, GrokBrain } from "../src/brains/codex";
 import { computerBrainUnavailable, NO_AI_CODES, UNAVAILABLE_CODES } from "../src/brains/select";
-import { BRAIN_NAMES, BRAIN_PLAN_NAMES, type BrainEvent, type BrainTurn, isComputerBrain } from "../src/brains/types";
+import {
+  BRAIN_NAMES,
+  BRAIN_PLAN_NAMES,
+  type BrainEvent,
+  type BrainTurn,
+  brainRunsOn,
+  isComputerBrain,
+} from "../src/brains/types";
 import { defaultAccountLabel, sharesSignIns } from "../src/machine-accounts";
 import type { MachineStatus } from "../src/machine-hub";
 import { scrubSignIns } from "../src/tool-detail";
@@ -28,6 +40,7 @@ const turn = (over: Partial<BrainTurn> = {}): BrainTurn => ({
 });
 
 function link(opts: {
+  os?: string;
   protocol?: number;
   grok?: boolean;
   tools?: { claude: boolean; codex: boolean; grok?: boolean; commands: boolean };
@@ -41,6 +54,7 @@ function link(opts: {
         online: true,
         execAllowed: true,
         protocol: opts.protocol ?? GROK_PROTOCOL,
+        ...(opts.os ? { os: opts.os } : {}),
         executors: opts.grok === false ? {} : { grok: { version: "grok 1.0.34 (3736acbc8658) [stable]" } },
         ...(opts.tools ? { access: { tools: opts.tools } } : {}),
       };
@@ -170,4 +184,28 @@ test("the right hand's reply never carries an xAI key", () => {
   );
   expect(out.text).not.toContain("xai-");
   expect(out.found).toBeGreaterThan(0);
+});
+
+test("a Grok turn on a Windows computer reaches its runner from `GROK_WINDOWS_PROTOCOL` on, like Linux and macOS", async () => {
+  // Every vendor builds its CLI for Windows (ADR 0228 §7): the system never refuses it, an older runner does.
+  expect(brainRunsOn("grok", "windows")).toBe(true);
+  expect(brainRunsOn("cursor", "windows")).toBe(true);
+  expect(brainRunsOn("antigravity", "windows")).toBe(true);
+  const old = link({ os: "windows", protocol: GROK_WINDOWS_PROTOCOL - 1 });
+  expect((await collect(brain(old).run(turn(), io()))).at(-1)).toMatchObject({ code: "runner_outdated" });
+  expect(old.sent).toEqual([]);
+  for (const [os, protocol] of [
+    ["windows", GROK_WINDOWS_PROTOCOL],
+    ["linux", undefined],
+    ["darwin", undefined],
+    [undefined, undefined],
+  ] as const) {
+    const l = link({
+      ...(os ? { os } : {}),
+      ...(protocol ? { protocol } : {}),
+      events: [{ type: "done", text: "ok", session: { id: "s" } }],
+    });
+    await collect(brain(l).run(turn(), io()));
+    expect(l.sent).toHaveLength(1);
+  }
 });

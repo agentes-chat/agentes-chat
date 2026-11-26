@@ -264,10 +264,22 @@ const announceRoles = async (pubsub: PubSub | undefined, orgId: string) => {
 };
 
 /**
+ * Agents a role's change rewrote (who they answer, who edits them), once its transaction committed: their cached rows
+ * and the team's go, and the apps read the agents again.
+ */
+async function agentsChanged(pubsub: PubSub | undefined, orgId: string, agentIds: readonly string[]) {
+  if (agentIds.length === 0) return;
+  for (const id of new Set(agentIds)) caches.agents.delete(`${orgId}:${id}`);
+  caches.agents.delete(`${orgId}:team`);
+  await publishAgentsChanged(pubsub, orgId);
+}
+
+/**
  * Creates a role at the bottom of the others (just above `everyone`). Needs `manage_roles`. `copyFrom` (Duplicar): a
  * role below the actor whose keys they all hold, whose keys, look and switches fill what `input` leaves out, and
- * whose channels and agents the new role joins (their `audience_role_ids`), with its channel exceptions, in the same
- * transaction. It has nobody yet, so nobody reaches anything new until someone is given it.
+ * whose channels and agents the new role joins (their `audience_role_ids`, and the agents' `editor_role_ids`), with
+ * its channel exceptions, in the same transaction. It has nobody yet, so nobody reaches anything new until someone is
+ * given it.
  */
 export async function createRole(
   db: Database,
@@ -291,6 +303,8 @@ export async function createRole(
   const reach = {
     channelIds: [] as string[],
     agentIds: [] as string[],
+    /** The agents whose "Who can edit" names the source: the copy joins it (ADR 0085 addendum of 2026-11-17). */
+    editorOf: [] as string[],
     exceptions: [] as { channelId: string; allow: string[]; deny: string[] }[],
   };
   const role = await db.transaction(async (tx) => {
@@ -363,6 +377,14 @@ export async function createRole(
           .where(and(eq(agents.orgId, orgId), sql`${source.id}::uuid = any(${agents.audienceRoleIds})`))
           .returning({ id: agents.id })
       ).map((a) => a.id);
+      // And the agents it edits ("Quem pode editar", ADR 0085 addendum of 2026-11-17).
+      reach.editorOf = (
+        await tx
+          .update(agents)
+          .set({ editorRoleIds: sql`array_append(${agents.editorRoleIds}, ${row.id}::uuid)`, updatedAt: new Date() })
+          .where(and(eq(agents.orgId, orgId), sql`${source.id}::uuid = any(${agents.editorRoleIds})`))
+          .returning({ id: agents.id })
+      ).map((a) => a.id);
     }
     await recordAudit(tx, {
       orgId,
@@ -377,12 +399,9 @@ export async function createRole(
     });
     return row;
   });
+  // Once it committed: a run reading one of them while it was open would otherwise keep the row from before.
   for (const id of reach.channelIds) caches.channels.delete(`${orgId}:${id}`);
-  for (const id of reach.agentIds) caches.agents.delete(`${orgId}:${id}`);
-  if (reach.agentIds.length > 0) {
-    caches.agents.delete(`${orgId}:team`);
-    await publishAgentsChanged(options.pubsub, orgId);
-  }
+  await agentsChanged(options.pubsub, orgId, [...reach.agentIds, ...reach.editorOf]);
   if (reach.channelIds.length > 0) await publishChannelsChanged(options.pubsub, orgId);
   await announceRoles(options.pubsub, orgId);
   return role;
@@ -559,7 +578,7 @@ export async function deleteRole(
   const role = await loadRole(db, orgId, roleId);
   if (role.kind === "everyone") throw new ForbiddenError("Every workspace keeps its base role", "role.base");
   if (!mayEdit(actor, role)) throw new ForbiddenError("Only someone above this role changes it", "role.above_you");
-  const leavers = await db.transaction(async (tx) => {
+  const { leavers, unedited, owned } = await db.transaction(async (tx) => {
     // The lock joinChannel takes for a role channel: a join at the same moment sees the role gone, or is dropped here.
     await lockOrgMembers(tx, orgId);
     const holders = (
@@ -568,6 +587,11 @@ export async function deleteRole(
         .from(organizationMemberRoles)
         .where(and(eq(organizationMemberRoles.orgId, orgId), eq(organizationMemberRoles.roleId, role.id)))
     ).map((r) => r.userId);
+    // The agents it answers for are left with no owner (the foreign key): their cached rows go once this commits.
+    const owned = await tx
+      .select({ id: schema.agents.id })
+      .from(schema.agents)
+      .where(and(eq(schema.agents.orgId, orgId), eq(schema.agents.ownerRoleId, role.id)));
     await tx.delete(orgRoles).where(eq(orgRoles.id, role.id));
     // Its holders leave the channels they were in through it alone (ADR 0125); then the channels forget it.
     const left = await dropRoleLeavers(tx, orgId, { people: holders, roleIds: [role.id] });
@@ -575,6 +599,13 @@ export async function deleteRole(
       .update(schema.channels)
       .set({ audienceRoleIds: sql`array_remove(${schema.channels.audienceRoleIds}, ${role.id}::uuid)` })
       .where(and(eq(schema.channels.orgId, orgId), sql`${role.id}::uuid = any(${schema.channels.audienceRoleIds})`));
+    // Agents' "Who can edit" forget it, or saving one sends a role that is gone. Their cached rows go once this
+    // commits (`agentsChanged`).
+    const unedited = await tx
+      .update(schema.agents)
+      .set({ editorRoleIds: sql`array_remove(${schema.agents.editorRoleIds}, ${role.id}::uuid)` })
+      .where(and(eq(schema.agents.orgId, orgId), sql`${role.id}::uuid = any(${schema.agents.editorRoleIds})`))
+      .returning({ id: schema.agents.id });
     // Invitations and links forget it too, or an app starting an approval or a change on their cargos sends one gone.
     for (const t of [schema.organizationInvitations, schema.organizationInviteLinks]) {
       await tx
@@ -605,9 +636,12 @@ export async function deleteRole(
       target: { type: "role", id: role.id },
       details: { name: role.name, permissions: role.permissions },
     });
-    return left;
+    return { leavers: left, unedited: unedited.map((a) => a.id), owned: owned.map((a) => a.id) };
   });
+  await agentsChanged(options.pubsub, orgId, [...unedited, ...owned]);
   await announceChannelLeavers({ db, pubsub: options.pubsub }, orgId, leavers);
+  // Approvals asked while it answered for an agent now go to the admins (it matches nobody).
+  await rerouted({ db, pubsub: options.pubsub }, orgId, [role.id]);
   await announceRoles(options.pubsub, orgId);
 }
 
@@ -763,6 +797,8 @@ export async function setMemberRoles(
   if (actorId !== targetUserId && !outranks(actor, target.rank))
     throw new ForbiddenError("Only someone above them changes their roles", "role.above_you");
   const next = [...new Set(roleIds)];
+  // The roles given or taken: an agent one of them answers for changes who is asked its approvals (`rerouted` below).
+  let touched: string[] = [];
   // Read and checked under the lock: two people changing the same person's roles at once never undo each other.
   const changed = await db.transaction(async (tx): Promise<false | ChannelLeaver[]> => {
     await lockOrgMembers(tx, orgId);
@@ -771,6 +807,7 @@ export async function setMemberRoles(
     const removed = before.filter((id) => !next.includes(id));
     await givableRoleIds(tx, actor, orgId, [...added, ...removed]);
     if (added.length === 0 && removed.length === 0) return false;
+    touched = [...added, ...removed];
     const seen = options.mailLossSeen;
     if (seen) {
       const { newRoleMemberMailLoss } = await import("./audience");
@@ -813,9 +850,22 @@ export async function setMemberRoles(
     // Loaded here: questions build on channels, which this module loads.
     const { releaseQuestionsOutOfReach } = await import("./questions");
     await releaseQuestionsOutOfReach({ db, pubsub: options.pubsub }, orgId, targetUserId);
+    await rerouted({ db, pubsub: options.pubsub }, orgId, touched);
     await announceMembers(options.pubsub, orgId);
   }
   return next;
+}
+
+/**
+ * Who holds `roleIds` changed: the approvals waiting on an agent one of them answers for (ADR 0085, addendum of
+ * 2026-11-21) follow, in the inbox, whoever holds it now (`rerouteRoleApprovals`). Best effort: the approvals list
+ * reads who decides at the click anyway.
+ */
+async function rerouted(deps: { db: Database; pubsub?: PubSub }, orgId: string, roleIds: readonly string[]) {
+  if (roleIds.length === 0) return;
+  // Loaded here: notifications build on the approvals, which build on this module.
+  const { rerouteRoleApprovals } = await import("./notification-producers");
+  await rerouteRoleApprovals(deps, orgId, roleIds).catch(() => {});
 }
 
 /**

@@ -55,7 +55,7 @@
     const el = worded(labelOrEl);
     const classes = (typeof el.className === "string" ? el.className : (el.className?.baseVal ?? ""))
       .split(/\s+/)
-      .filter((c) => c && !/^(ac-captop|ac-iconline|ac-actrow|is-|has-)/.test(c))
+      .filter((c) => c && !/^(ac-captop|ac-iconline|ac-actrow|ac-tail|is-|has-)/.test(c))
       .slice(0, 3);
     return el.tagName.toLowerCase() + classes.map((c) => `.${c}`).join("");
   };
@@ -251,7 +251,7 @@
    * column, Google's, its words from its start and the room after them the column's.
    */
   const PILLS =
-    ".ac-btn:not(.ac-btn--icon,.ac-btn--glyph,.ac-btn--loading),.ac-token,.ac-chip,.ac-countchip,[class*='pill'],[class*='chip']:not(.cal-chip),[class*='__tag'],[class*='-tag']";
+    ".ac-btn:not(.ac-btn--icon,.ac-btn--glyph,.ac-btn--loading),.ac-token,.ac-chip,.ac-countchip,[class*='pill'],[class*='chip']:not(.cal-chip,.ac-menu),[class*='__tag'],[class*='-tag']";
   /**
    * A card: a row with a surface of its own that starts with an icon and ends with what can be done about it (a button,
    * a link) or another icon. Pills are the `pad` rule's.
@@ -278,9 +278,11 @@
    */
   const rowOf = (el) => {
     for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+      // The part of one control (a field's affix, a segmented control's, a split control's, a token's) is no action on
+      // a row's edge: the control is drawn as one.
       if (
         p.matches(
-          "main,[role=dialog],[role=alertdialog],.ac-dialog__foot,.ac-dialog__head,.ac-details,.ac-input-affix,.ac-seg,.ac-composer,.ac-token",
+          "main,[role=dialog],[role=alertdialog],.ac-dialog__foot,.ac-dialog__head,.ac-details,.ac-input-affix,.ac-seg,.ac-split,.ac-composer,.ac-token",
         )
       )
         return null;
@@ -620,8 +622,11 @@
      * apart from its box (a `::before` set in from its sides, as `.ac-btn--glyph` does).
      */
     square(out) {
-      // A select's trigger and a segmented control's part are sized by the control they belong to.
-      const parts = "[role=combobox],[aria-haspopup=listbox],.ac-select__trigger,.ac-seg__item,[role=tab],[role=radio]";
+      // A select's trigger and a segmented control's part are sized by the control they belong to, and so is a canvas
+      // bar's picker, which shows its value and ▾ like a select, and the ▾ half of a slides toolbar's pair ("New
+      // slide" | ▾ for its layout), one control split in two (ADR 0196).
+      const parts =
+        "[role=combobox],[aria-haspopup=listbox],.ac-select__trigger,.ac-seg__item,[role=tab],[role=radio],.cnv-bar__pick,.sl-tools__pair > .sl-tools__open";
       for (const el of document.querySelectorAll("button,a.ac-btn,[role=button]")) {
         if (!seen(el) || el.matches(parts) || hasWords(el)) continue;
         // One glyph: two side by side (a face and a +) are a pill of their own.
@@ -837,7 +842,17 @@
         if (!seen(el) || el.children.length !== 1 || ownText(el)) continue;
         const icon = el.firstElementChild;
         if (icon.tagName.toLowerCase() !== "svg" || !seen(icon)) continue;
-        const a = el.getBoundingClientRect();
+        // A plate drawn by `::before` (a glyph's, a pair of icons' in a row of actions) is what shows, not the box.
+        const box = el.getBoundingClientRect();
+        const before = getComputedStyle(el, "::before");
+        const drawn = before.content !== "none" && before.position === "absolute";
+        const inset = (side) => (drawn ? parseFloat(before[side]) || 0 : 0);
+        const a = {
+          left: box.left + inset("left"),
+          right: box.right - inset("right"),
+          top: box.top + inset("top"),
+          bottom: box.bottom - inset("bottom"),
+        };
         const b = icon.getBoundingClientRect();
         const dx = (a.left + a.right - b.left - b.right) / 2;
         const dy = (a.top + a.bottom - b.top - b.bottom) / 2;
@@ -877,8 +892,9 @@
     floating(out) {
       if (innerWidth < DESKTOP_MIN) return;
       const GAP = 10;
-      // An inline position is a test's own stand-in for a narrow window, not the app's layout.
-      for (const pane of document.querySelectorAll(".thread-panel:not([style])")) {
+      // An inline position is a test's own stand-in for a narrow window, not the app's layout. A live file's docked
+      // conversation is a column of the work area beside the file's page, with no scrim, never over it (ADR 0199).
+      for (const pane of document.querySelectorAll(".thread-panel:not([style], .lf-talk)")) {
         if (!seen(pane)) continue;
         const a = pane.getBoundingClientRect();
         const gaps = { Top: a.top - GAP, Right: innerWidth - a.right - GAP, Bottom: innerHeight - a.bottom - GAP };
@@ -918,7 +934,8 @@
     /**
      * Two things side by side in a row, words next to a field, an icon, a pill or a button: at least the kit's smallest
      * gap between them. A box that shows a plate under the pointer (an in-place title, a link button) counts as its
-     * whole box, the plate's, even at rest. A field's own affixes and a segmented control are drawn as one.
+     * whole box, the plate's, even at rest. A field's own affixes, a segmented control and a split control (its words
+     * and the button beside them in one frame, a hairline between) are drawn as one.
      */
     touch(out) {
       const control = (el) => {
@@ -930,7 +947,7 @@
         return ["pointer", "text"].includes(s.cursor) && (!parent || style(parent).cursor !== s.cursor);
       };
       for (const row of document.body.querySelectorAll("*")) {
-        if (!seen(row) || row.closest("svg,.ac-input-affix,.ac-seg")) continue;
+        if (!seen(row) || row.closest("svg,.ac-input-affix,.ac-seg,.ac-split")) continue;
         const s = style(row);
         if (!s.display.includes("flex") || s.flexDirection.startsWith("column")) continue;
         const kids = flow(row);
@@ -1507,7 +1524,9 @@
      */
     clip(out) {
       for (const el of document.body.querySelectorAll("*")) {
-        if (!seen(el) || el.closest("svg")) continue;
+        // Inside a row `content-visibility` skips (a conversation's rows before their first frame), the row keeps its
+        // placeholder height while its content is measured whole, spilling over the rows below: nothing a person sees.
+        if (!seen(el) || el.closest("svg") || !el.checkVisibility({ contentVisibilityAuto: true })) continue;
         const s = style(el);
         const reach = { top: 0, bottom: 0, left: 0, right: 0 };
         for (const l of outerShadows(s.boxShadow)) {
@@ -2149,9 +2168,11 @@
     },
     /**
      * Buttons side by side stand 8 apart (rule 8): two plated ones, or two icon buttons' plates (a glyph's plate is its
-     * box less its air, `.ac-btn--glyph`). A ghost with words reads by its words (`.ac-acts`), and the parts of one
+     * box less its air, `.ac-btn--glyph`), in a row of actions (`.ac-acts`) too. A ghost with words reads by its words
+     * (`.ac-acts`), and the parts of one
      * control (a split button, a segmented control, a token's ×, an event pill's actions, a message's bar) are drawn
-     * as one, and so are the strips of format toggles: the composer's and the wiki editor's.
+     * as one, and so are the strips of format toggles (the composer's and the wiki editor's) and the composer's own
+     * tools, 4 apart.
      */
     btngap(out) {
       const kind = (el) => {
@@ -2165,8 +2186,10 @@
         const air = parseFloat(getComputedStyle(el, "::before").left) || 0;
         return { left: r.left + air, right: r.right - air, top: r.top + air, bottom: r.bottom - air };
       };
+      // The canvas's tool strips and the spreadsheet's, the document's and the slides' toolbars (ADR 0196) are drawn
+      // as one too, like the format bars.
       const ONE =
-        ".ac-split,.ac-seg,.ac-token,.ac-eventpill,.ac-msg__actions,.ac-formatbar,.wiki-bar,[role=menu],[role=menubar],svg";
+        ".ac-split,.ac-seg,.ac-token,.ac-eventpill,.ac-msg__actions,.ac-formatbar,.ac-composer__tools,.wiki-bar,.cnv-bar,.cnv-dock,.cnv-zoom,.sheet-tools,.sl-tools,[role=menu],[role=menubar],svg";
       for (const row of document.body.querySelectorAll("*")) {
         if (!seen(row) || row.closest(ONE) || !isRow(style(row))) continue;
         const kids = flow(row);
@@ -2177,7 +2200,8 @@
           const [ra, rb] = [plateOf(a), plateOf(b)];
           if (!sameLine(ra, rb)) continue;
           const gap = rb.left - ra.right;
-          if (Math.abs(gap - 8) > 0.5)
+          const want = 8;
+          if (Math.abs(gap - want) > 0.5)
             out.push({
               rule: "btngap",
               node: b,
@@ -2531,6 +2555,64 @@
         const need = word + parseFloat(style(name).paddingRight) + parseFloat(s.columnGap) + group;
         if (right - name.getBoundingClientRect().left >= need + 1)
           out.push({ ...base, side: "under", px: +(mid - line.bottom).toFixed(1) });
+      }
+    },
+    /**
+     * A wrapping row keeps one start edge: when one of its lines starts at the row's start with room to spare, no other
+     * line is pushed away from it, by an auto margin (a time left, a status floating at the end under buttons) or by
+     * the row ending its lines at the end (buttons under "Mudar quando perguntar"). A line set in by a fixed margin (an
+     * outcome on its item's words) and rows that end or centre every line are left alone, and so is a control under
+     * words alone: a row's own control at its end (a settings row's switch, a member's role), as `endline` places it.
+     */
+    strayend(out) {
+      // The computed value keeps "auto" where the resolved one is already in pixels.
+      const auto = (el) => {
+        try {
+          return String(el.computedStyleMap().get("margin-left")) === "auto";
+        } catch {
+          return false;
+        }
+      };
+      const control = (el) => el.matches(CONTROL) || !!el.querySelector(CONTROL);
+      for (const row of document.body.querySelectorAll("*")) {
+        // A settings row's end (its value, its control) is `endline`'s: at the row's end, under the name or not.
+        if (!seen(row) || row.matches(".settings-row")) continue;
+        const s = style(row);
+        if (!s.display.includes("flex") || s.flexDirection !== "row" || s.flexWrap !== "wrap" || s.direction === "rtl")
+          continue;
+        // Chrome 158 serializes `flex-end` and `flex-start` as `flow-end` and `flow-start`; older ones keep them.
+        const toEnd = ["flex-end", "flow-end", "end", "right"].includes(s.justifyContent);
+        if (!toEnd && !["normal", "flex-start", "flow-start", "start", "left"].includes(s.justifyContent)) continue;
+        const kids = flow(row);
+        if (kids.length < 2) continue;
+        const r = row.getBoundingClientRect();
+        const start = r.left + parseFloat(s.borderLeftWidth) + parseFloat(s.paddingLeft);
+        const end = r.right - parseFloat(s.borderRightWidth) - parseFloat(s.paddingRight);
+        const lines = [];
+        for (const kid of kids) {
+          const k = kid.getBoundingClientRect();
+          const line = lines.find((l) => sameLine(l.box, k));
+          if (line) line.kids.push([kid, k]);
+          else lines.push({ box: k, kids: [[kid, k]] });
+        }
+        if (lines.length < 2) continue;
+        const firstOf = (line) => line.kids[0];
+        const lastOf = (line) => line.kids[line.kids.length - 1];
+        const anchored = lines.filter((l) => firstOf(l)[1].left <= start + 2 && lastOf(l)[1].right < end - 2);
+        if (!anchored.length) continue;
+        const acts = anchored.some((l) => l.kids.some(([kid]) => control(kid)));
+        for (const line of lines) {
+          const [kid, k] = firstOf(line);
+          if (k.left > start + 2 && (toEnd || auto(kid)) && (acts || !control(kid)))
+            out.push({
+              rule: "strayend",
+              node: kid,
+              el: sig(kid),
+              box: sig(row),
+              px: +(k.left - start).toFixed(1),
+              text: words(kid),
+            });
+        }
       }
     },
   };

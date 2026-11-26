@@ -53,6 +53,7 @@ import {
 } from "../../src/features/files/zoom";
 import { ICONS } from "../../src/ui/icons.data";
 import { ownOptionsOf } from "../main-stack";
+import { chatScreenSource } from "./chat-screen-source";
 
 const src = (file: string) => readFileSync(join(import.meta.dir, "../../src", file), "utf8");
 
@@ -79,6 +80,19 @@ describe("videos", () => {
   });
 });
 
+describe("audio", () => {
+  test("audio files play in the file screen's player; their tile stays a file card", () => {
+    expect(fileInfo(upload("entrevista.mp3", "audio/mpeg"))).toMatchObject({ view: "audio", type: "file", ext: "MP3" });
+    expect(fileInfo(upload("nota.m4a", "audio/x-m4a")).view).toBe("audio");
+    expect(fileInfo(upload("faixa.wav", "audio/wav")).view).toBe("audio");
+    expect(fileInfo(upload("midi.mid", "audio/midi")).view).toBe("other");
+    // Stored as plain bytes (an agent's recording with no type given): by its name.
+    expect(fileInfo(upload("entrevista.m4a", "application/octet-stream")).view).toBe("audio");
+    expect(fileInfo(upload("nota.opus", "application/octet-stream")).view).toBe("audio");
+    expect(fileInfo(upload("faixa.flac", "application/octet-stream")).view).toBe("audio");
+  });
+});
+
 describe("file kind, tile and size", () => {
   test("raster pictures are images; SVG is not", () => {
     expect(fileInfo(upload("home.png", "image/png")).view).toBe("image");
@@ -87,13 +101,13 @@ describe("file kind, tile and size", () => {
     expect(fileInfo(upload("logo.svg", "image/svg+xml")).type).toBe("image");
   });
 
-  test("PDF, Markdown and text open in the document screen", () => {
+  test("PDF, Markdown and text open in the document screen; a CSV in the spreadsheet's grid (ADR 0198)", () => {
     const pdf = fileInfo(upload("Relatório.pdf", "application/pdf", 2048));
     expect(pdf).toMatchObject({ view: "pdf", type: "pdf", ext: "PDF", size: 2048, name: "Relatório.pdf" });
     expect(fileInfo(upload("notes.md", "application/octet-stream")).view).toBe("markdown");
     expect(fileInfo(upload("notes.md", "text/markdown")).type).toBe("document");
     const csv = fileInfo(upload("vendas.csv", "text/csv"));
-    expect(csv).toMatchObject({ view: "text", type: "table", ext: "CSV" });
+    expect(csv).toMatchObject({ view: "sheet", type: "table", ext: "CSV" });
     expect(fileInfo(upload("log.txt", "text/plain")).type).toBe("text");
   });
 
@@ -112,9 +126,11 @@ describe("file kind, tile and size", () => {
       title: "Resumo da home",
       content: { kind: "document", markdown: "Olá é" },
     });
-    expect(doc).toMatchObject({ name: "Resumo da home.md", view: "markdown", type: "document", ext: "MD", size: 7 });
+    // A document is a live file (ADR 0200): it opens on its own screen.
+    expect(doc).toMatchObject({ name: "Resumo da home.md", view: "live", type: "document", ext: "MD", size: 7 });
     const table = fileInfo({ kind: "table", title: "Vendas", content: { kind: "table", columns: [], rows: [] } });
-    expect(table).toMatchObject({ name: "Vendas.csv", view: "other", type: "table", size: null });
+    // An old table opens read-only in the spreadsheet's grid.
+    expect(table).toMatchObject({ name: "Vendas.csv", view: "sheet", type: "table", size: null });
   });
 
   test("helpers", () => {
@@ -234,6 +250,7 @@ describe("viewer", () => {
     expect(viewer).toContain(
       '<Round icon="right" label={t("mobile.files.next")} plate={SCRIM} onPress={() => turn(next)} />',
     );
+    // Gone while zoomed.
     expect(viewer).toContain("visible={chrome && !zoomed}");
     expect(viewer).toContain("else pager.current?.setPage(to);");
     // The count took the dots' place: one place says where you are.
@@ -250,10 +267,12 @@ describe("viewer", () => {
 
   test("photos, videos and files go up as parts Expo's fetch sends, never React Native's { uri } part", () => {
     // Expo's fetch refuses `{ uri, name, type }` ("Unsupported FormDataPart implementation"): no upload ever left.
-    const chat = src("features/chat/ChatScreen.tsx");
+    const chat = chatScreenSource();
     expect(chat).toContain("api.artifacts.upload(orgId, uploadPart(file), {");
     expect(chat).not.toContain("as unknown as Parameters<typeof api.artifacts.upload>[1]");
-    expect(src("features/drive/useDriveUpload.ts")).toContain("api.artifacts.upload(orgId, uploadPart(file))");
+    expect(src("features/drive/useDriveUpload.ts")).toContain(
+      "api.artifacts.upload(orgId, uploadPart(file), folderId ? { folderId } : {})",
+    );
     expect(src("features/files/upload-part.ts")).toContain("bytes: () => source.bytes()");
   });
 
@@ -276,7 +295,7 @@ describe("viewer", () => {
   });
 
   test("sending with files is optimistic: the message shows at once with its files, the field is free", () => {
-    const chat = src("features/chat/ChatScreen.tsx");
+    const chat = chatScreenSource();
     // In the conversation at once, under the clientId the real message comes back with.
     expect(chat).toContain(
       "qc.setQueryData<Message[]>(keys.messages(orgId, channelId), (list) => upsertMessage(list, local));",
@@ -310,7 +329,10 @@ describe("viewer", () => {
     expect(fileRoute({ id: "v1", version: 2, title: "abertura.mp4", kind: "file" }).pathname).toBe("/images");
     // A file's link that turns out to be one still goes on to the viewer, in the file screen's place.
     const document = src("features/files/DocumentViewer.tsx");
-    expect(document).toContain('const media = info?.view === "image" || info?.view === "video";');
+    // (A live file's too, on to its own screen, ADR 0196.)
+    expect(document).toContain(
+      'const media = info?.view === "image" || info?.view === "video" || info?.view === "live";',
+    );
     expect(document).toContain("openFile({ id: detail.id, detail }, undefined, { replace: true });");
     expect(document).not.toContain("<VideoPlayer");
   });
@@ -341,7 +363,7 @@ describe("viewer", () => {
       params: { files: "x", at: "0" },
     });
     expect(fileRoute({ id: "d", title: "Plano", kind: "document" }, media)).toEqual({
-      pathname: "/file/[id]",
+      pathname: "/document/[id]",
       params: { id: "d" },
     });
     // The file screen at an older version only when that's the one shown.
@@ -385,6 +407,12 @@ describe("viewer", () => {
     expect(zoom).toContain("maximumZoomScale={max}");
     expect(zoom).toContain("pinchGestureEnabled");
     expect(zoom).toContain("scroll.current?.scrollResponderZoomTo({ ...rect, animated: !reduced });");
+    // Centered by the system's insets, worked out from the content's size: the content is the picture's own box (a
+    // vertical scroll view stretches its content to its width, and a narrower picture sat at its left edge), and at
+    // 1× the scroll view is put at those insets when a size changes.
+    expect(zoom).toContain("centerContent");
+    expect(zoom).toContain("contentContainerStyle={picture}");
+    expect(zoom).toContain("scroll.current?.scrollTo({ x: -left, y: -top, animated: false })");
     // Android: a pinch of ours that gives a little past its limits and springs back, a drag that resists past the
     // edges, a fling that glides and bounces off an edge it hits; with reduced motion, no glide and no spring.
     expect(zoom).toContain('Platform.OS === "ios" ? <SystemZoom {...zoom} /> : <OwnZoom {...zoom} />');
@@ -539,7 +567,7 @@ describe("viewer", () => {
     expect(zoom).toContain("{pixels ? null : <PageWait failed={failed} onRetry={retry} />}");
   });
 
-  test("a video and a PDF read their link once: the app coming back or a new link never starts them over", () => {
+  test("a video and a PDF read their file once: the app coming back or a new link never starts them over", () => {
     const source = src("features/files/source.ts");
     expect(source).toContain('staleTime: "static" as const,');
     expect(source).toContain("refetchOnWindowFocus: false,");
@@ -551,9 +579,13 @@ describe("viewer", () => {
     const message = src("features/files/MessageFiles.tsx");
     expect(message).toContain("useRemoteFile(orgId, file.id, file.version, { once: true })");
     expect(message).toMatch(/key=\{`\$\{file\.id\}@\$\{file\.version \?\? "latest"\}`\}/);
-    expect(src("features/files/DocumentViewer.tsx")).toContain(
-      "useRemoteFile(orgId, detail.id, detail.shownVersion, { once: true })",
-    );
+    // A PDF: a copy in the cache per version, drawn from there (ADR 0208), read once while the screen stays; the same
+    // copy its cards' first page is drawn from (`usePdfCopy`).
+    expect(src("features/files/PdfPages.tsx")).toContain("const copy = usePdfCopy(detail);");
+    const pdf = src("features/files/pdf-preview.tsx");
+    expect(pdf).toContain("const path = await pdfCopy(api, orgId, detail);");
+    expect(pdf).toContain("staleTime: Number.POSITIVE_INFINITY,");
+    expect(source).toContain("if (file.exists && (file.size ?? 0) > 0) return file.uri;");
     // Never keyed on the link itself, which changes every few minutes.
     for (const file of ["features/files/ImageViewer.tsx", "features/files/MessageFiles.tsx"])
       expect({ file, uri: /key=\{(video)?[sS]ource\.uri\}/.test(src(file)) }).toEqual({ file, uri: false });
@@ -603,13 +635,13 @@ describe("viewer", () => {
 });
 
 describe("a document's head", () => {
-  test("a file is a pushed screen: the native bar holds its name, its line, Enviar cópia and the ⋯", () => {
+  test("a file is a pushed screen: the native bar holds its name and its line, Send a copy and the ⋯", () => {
     // Pushed, never a full-screen modal: the app's sheets, menus and toasts live at the root, under a modal.
     expect(ownOptionsOf("file/[id]")).toBe("solid,");
     const viewer = src("features/files/DocumentViewer.tsx");
     expect(viewer).toContain("<PushedHeader");
     expect(viewer).toContain('title={info?.name ?? ""}');
-    expect(viewer).toContain("subtitle: line(info, [dir.nameOf(detail.createdBy)])");
+    expect(viewer).toContain("subtitle={info && detail ? line(info, [dir.nameOf(detail.createdBy)]) : undefined}");
     expect(viewer).toContain("actions={bar}");
     // The system's share sheet says what it does; the ⋯ is the system's menu on iOS and the app's list on Android.
     expect(viewer).toContain('label: t("mobile.files.sendCopy")');
@@ -629,14 +661,16 @@ describe("a document's head", () => {
     expect(viewer).toContain("...(textual && text.data !== undefined");
   });
 
-  test("a picture's head too: × alone on the first row, the name and its line on the row under it", () => {
+  test("a picture's head: × on the left, the name and its line centred beside it, a space as wide on the right", () => {
     const viewer = readFileSync(join(import.meta.dir, "../../src/features/files/ImageViewer.tsx"), "utf8");
     const top = viewer.slice(viewer.indexOf("style={[styles.top,"), viewer.indexOf("</Chrome>"));
     expect(top.indexOf('icon="x"')).toBeGreaterThan(-1);
     expect(top.indexOf('icon="x"')).toBeLessThan(top.indexOf("{info?.name"));
-    expect(top).toContain("numberOfLines={3}");
-    expect(top).not.toContain("numberOfLines={1}");
-    expect(viewer).toContain('title: { flexBasis: "100%", gap: 2 }');
+    // One line each, a long name shortened in its middle so the kind of file stays.
+    expect(top).toContain('numberOfLines={1} ellipsizeMode="middle"');
+    expect(top.indexOf("{info?.name")).toBeLessThan(top.indexOf('<View pointerEvents="none" style={styles.round} />'));
+    expect(viewer).toContain('title: { flex: 1, minWidth: 0, alignItems: "center" },');
+    expect(viewer).not.toContain('flexBasis: "100%"');
   });
 
   test("a picture's actions are the row at the bottom, never repeated in a ⋯, and Share has one icon", () => {

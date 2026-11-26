@@ -4,14 +4,17 @@ import { serverText } from "@agenteschat/i18n";
 import { appLocale } from "@agenteschat/i18n/locale";
 import { AUTO_MODEL } from "@agenteschat/providers";
 import type { Agent } from "./agents";
+import { accountOrderSql } from "./ai-accounts/chain";
+import { accountServesSql } from "./ai-accounts/serves";
 import { recordAudit } from "./audit";
-import { accountablePerson, fedByRoutine, personOfMessage, runAuthorityById } from "./authority";
+import { accountablePerson, fedByRoutine, fromApp, personOfMessage, runAuthorityById } from "./authority";
 import type { BrainUnavailability, ModelScope } from "./brains/select";
 import { ForbiddenError } from "./errors";
 import type { ModelGateway } from "./gateway";
 import type { MachineStatus } from "./machine-hub";
 import type { NoAiCardReason } from "./no-ai";
 import { personBehindCall } from "./requester";
+import type { RoutineBrief } from "./routine-brief";
 import { runnerUpdateWay } from "./runner-update";
 import { type AgentRun, isCliFailure } from "./runs";
 import { scrubSignIns } from "./tool-detail";
@@ -45,12 +48,16 @@ export const RIGHT_HAND_DEFAULTS = {
   appearance: { color: "teal", eyes: "happy", accessory: "headset" },
 } as const;
 
-/** What "Automático" reads of it (`chooseAutoModel`): small work first, so it starts on the cheap tier. */
+/** What "Automático" reads of it (`chooseAutoModel`): the cheap tier only for a turn that only answers. */
 export const RIGHT_HAND_AUTO = {
   role: "Workspace assistant",
   instructions:
-    "Sets the team up with people through short questions and cards, and follows its work. A status, a greeting or a short question: the smallest tier and low effort. Handing work to an agent, following it up or reporting what came of it: the medium tier. More only when the person asks for something long or complex.",
+    "Sets the team up with people through short questions and cards, and follows its work. Only a greeting, a thanks or a plain status: the smallest tier. Setting something up or changing it, handing work to an agent, following it up, reporting what came of it or going on with steps already under way: at least the medium tier, never the smallest. More when the person asks for something long or complex.",
 } as const;
+
+/** How the router describes it among a channel's agents (`routeMessage`): what fits it, and what is theirs. */
+export const RIGHT_HAND_ROUTING_ABOUT =
+  "Built into the workspace. Fits setting the team up (agents, people, roles, channels, routines, apps, AI accounts, settings), how the app and the workspace work, and which agent should take something. Real work in a channel agent's field is that agent's, not this one's.";
 
 /**
  * What it holds whatever its grant rows say (`loadScopeKeys` adds the rows on top: apps, mailboxes, databases, a
@@ -124,7 +131,11 @@ export async function ensureRightHand(db: Executor, orgId: string): Promise<stri
   const { workspaceApprovalsLevel } = await import("./workspace-approvals");
   const [taken, [other], approvalsLevel] = await Promise.all([
     takenHandles(db, orgId),
-    db.select({ id: agents.id }).from(agents).where(eq(agents.orgId, orgId)).limit(1),
+    db
+      .select({ id: agents.id })
+      .from(agents)
+      .where(and(eq(agents.orgId, orgId), isNull(agents.deletedAt)))
+      .limit(1),
     workspaceApprovalsLevel(db, orgId),
   ]);
   const handle = taken.has(RIGHT_HAND_DEFAULTS.handle)
@@ -264,17 +275,38 @@ export async function scrubRightHandReply(
 
 /**
  * Who a run of the right hand reads for (ADR 0137 §13): the person behind it, in their own DM with it. A routine's own
- * run there reads for its creator: only they set what it does (`updateRoutine`), and only they read what it says.
- * Null anywhere else, since others read a reply in a channel, and for any other agent.
+ * run reads for its creator where only they read what it says (`readByCreatorAlone`): only they set what it does
+ * (`updateRoutine`). Null anywhere else, since others read a reply in a channel, and for any other agent.
  */
 export async function rightHandReader(
   ctx: Pick<ToolContext, "orgId" | "agentId" | "channelId" | "runId" | "triggerMessageId"> & { db: Executor },
 ): Promise<string | null> {
   if (!(await isRightHandId(ctx.db, ctx.orgId, ctx.agentId))) return null;
-  const person =
-    (await personBehindCall(ctx)) ??
-    (ctx.runId ? accountablePerson(await runAuthorityById(ctx.db, ctx.orgId, ctx.runId)) : null);
-  return person && (await readsAlone(ctx.db, ctx.channelId, person, ctx.agentId)) ? person : null;
+  const behind = await personBehindCall(ctx);
+  if (behind) return (await readsAlone(ctx.db, ctx.channelId, behind, ctx.agentId)) ? behind : null;
+  const authority = ctx.runId ? await runAuthorityById(ctx.db, ctx.orgId, ctx.runId) : null;
+  const creator = authority ? accountablePerson(authority) : null;
+  if (!creator) return null;
+  if (await readsAlone(ctx.db, ctx.channelId, creator, ctx.agentId)) return creator;
+  const brief = authority?.kind === "routine" ? authority.brief : null;
+  return brief && (await readByCreatorAlone(ctx.db, ctx.orgId, ctx.agentId, brief, creator)) ? creator : null;
+}
+
+/**
+ * Whether only `creator` reads what a routine's run says: its run works in an agent-only room (ADR 0053 §4), so the
+ * room says nothing of that. A widget's refresh (a draft's test too) is read on its board: the creator's Home or a
+ * private board of theirs (ADR 0135 §8). Any other routine's, where it reports: their own DM with the right hand.
+ */
+async function readByCreatorAlone(db: Executor, orgId: string, agentId: string, brief: RoutineBrief, creator: string) {
+  if (!brief.widget) return !brief.toDrive && readsAlone(db, brief.deliverTo.channelId, creator, agentId);
+  const [row] = await db
+    .select({ widget: schema.dashboardWidgets, board: schema.dashboards })
+    .from(schema.dashboardWidgets)
+    .innerJoin(schema.dashboards, eq(schema.dashboards.id, schema.dashboardWidgets.dashboardId))
+    .where(and(eq(schema.dashboardWidgets.orgId, orgId), eq(schema.dashboardWidgets.id, brief.widget.widgetId)));
+  if (!row || row.board.deletedAt) return false;
+  // A draft keeps its tested data once confirmed (ADR 0135 §16), so it reads only as its board would.
+  return row.board.ownerUserId === creator && (row.board.kind === "home" || row.board.audience === "private");
 }
 
 /**
@@ -318,6 +350,19 @@ export async function rightHandAwayRun(db: Executor, run: { orgId: string; agent
 /** Its computer turns' permission profile: the runner's locked-down `chat` (`LOCKED_BRAIN_PROTOCOL`). */
 export const RIGHT_HAND_TURN = { mode: "chat" } as const;
 
+/**
+ * Whether a computer turn is locked to our tools (`RIGHT_HAND_TURN`): the right hand's, and one of a run an integration
+ * app's message started (ADR 0252), where the CLI's own shell and files would read the computer, unasked, for someone
+ * outside.
+ */
+export async function locksTurn(
+  db: Executor,
+  agent: Parameters<typeof isRightHand>[0],
+  turn: { orgId: string; runId: string },
+): Promise<boolean> {
+  return isRightHand(agent) || fromApp(await runAuthorityById(db, turn.orgId, turn.runId));
+}
+
 type ThinkingAgent = Pick<Agent, "orgId" | "brainAccountId" | "machineId"> &
   Partial<Pick<Agent, "builtin" | "ownerUserId" | "brain" | "brainModel" | "brainEffort" | "brainAccountLentBy">> &
   Partial<Pick<Agent, "planForOthers" | "credentialId">>;
@@ -352,12 +397,13 @@ export async function servingPlanFor(
     if (key) return null;
   } else if (agent.brainAccountId) {
     const [workspace] = await db
-      .select({ serves: machineAccounts.serves, ownerId: machineAccounts.createdBy })
+      .select({ serves: accountServesSql(person) })
       .from(machineAccounts)
       .where(and(eq(machineAccounts.orgId, agent.orgId), eq(machineAccounts.id, agent.brainAccountId)));
-    if (!workspace || workspace.serves === "everyone" || (person && workspace.ownerId === person)) return null;
+    if (!workspace || workspace.serves) return null;
   }
-  const [best] = await servingPlans(db, agent.orgId, person);
+  const plans = await servingPlans(db, agent.orgId, person);
+  const best = plans.find((p) => p.room > 0) ?? plans[0];
   return best ? planBrain(best) : null;
 }
 
@@ -370,11 +416,10 @@ const planBrain = (p: { kind: string; id: string }) => ({
 });
 
 /**
- * The signed-in plans that may think for `person` (null: for work nobody is behind, those that serve everyone), best
- * first: on the workspace's own computer (in Cloud the always-on one, so a plan signed in there thinks for the right
- * hand without anyone choosing it), then on a computer online now, then their own, then the most room left in its
- * tightest window. `exclude`: a plan that can't think now; `room`: only those with room left (`online`: and whose
- * computer says it is online).
+ * The signed-in plans that may think for `person` (`accountServesSql`; null: for work nobody is behind, those everyone
+ * uses), in the one order of use (`accountOrderSql`: theirs first, then by place, oldest first). `exclude`: a plan that
+ * can't think now; `room`: only those with room left (`online`: and whose computer says it is online). Room and being
+ * online are filters, never a re-sort.
  */
 export async function servingPlans(
   db: Executor,
@@ -383,70 +428,56 @@ export async function servingPlans(
   options: { exclude?: string | null; room?: boolean; online?: boolean } = {},
 ) {
   const { machines } = schema;
-  const { workspaceHomeId } = await import("./agents");
   const { machineOnline } = await import("./machines");
   const { planRoom } = await import("./machine-accounts");
-  const [rows, home] = await Promise.all([
-    db
-      .select({
-        id: machineAccounts.id,
-        kind: machineAccounts.kind,
-        label: machineAccounts.label,
-        usage: machineAccounts.usage,
-        ownerId: machineAccounts.createdBy,
-        machineId: machineAccounts.machineId,
-        online: machines.online,
-        lastSeenAt: machines.lastSeenAt,
-        deletedAt: machines.deletedAt,
-      })
-      .from(machineAccounts)
-      .innerJoin(
-        organizationMembers,
-        and(
-          eq(organizationMembers.orgId, machineAccounts.orgId),
-          eq(organizationMembers.userId, machineAccounts.createdBy),
-        ),
-      )
-      .innerJoin(
-        machines,
-        and(
-          eq(machines.orgId, machineAccounts.orgId),
-          eq(machines.id, machineAccounts.machineId),
-          isNull(machines.deletedAt),
-        ),
-      )
-      .where(
-        and(
-          eq(machineAccounts.orgId, orgId),
-          eq(machineAccounts.status, "active"),
-          person
-            ? sql`(${machineAccounts.serves} = 'everyone' or ${machineAccounts.createdBy} = ${person})`
-            : eq(machineAccounts.serves, "everyone"),
-          options.exclude ? sql`${machineAccounts.id} <> ${options.exclude}::uuid` : undefined,
-          // A login made for one agent thinks for that one only (as `setPersonalBrain` keeps it).
-          sql`(${machineAccounts.shared} or not exists (select 1 from ${agents} where ${agents.orgId} = ${machineAccounts.orgId} and ${agents.brainAccountId} = ${machineAccounts.id} and ${agents.archivedAt} is null and ${agents.builtin} is distinct from ${RIGHT_HAND}))`,
-        ),
-      )
-      .orderBy(machineAccounts.createdAt),
-    workspaceHomeId(db, orgId),
-  ]);
+  const rows = await db
+    .select({
+      id: machineAccounts.id,
+      kind: machineAccounts.kind,
+      label: machineAccounts.label,
+      usage: machineAccounts.usage,
+      ownerId: machineAccounts.createdBy,
+      machineId: machineAccounts.machineId,
+      online: machines.online,
+      lastSeenAt: machines.lastSeenAt,
+      deletedAt: machines.deletedAt,
+    })
+    .from(machineAccounts)
+    .innerJoin(
+      organizationMembers,
+      and(
+        eq(organizationMembers.orgId, machineAccounts.orgId),
+        eq(organizationMembers.userId, machineAccounts.createdBy),
+      ),
+    )
+    .innerJoin(
+      machines,
+      and(
+        eq(machines.orgId, machineAccounts.orgId),
+        eq(machines.id, machineAccounts.machineId),
+        isNull(machines.deletedAt),
+      ),
+    )
+    .where(
+      and(
+        eq(machineAccounts.orgId, orgId),
+        eq(machineAccounts.status, "active"),
+        accountServesSql(person),
+        options.exclude ? sql`${machineAccounts.id} <> ${options.exclude}::uuid` : undefined,
+        // A login made for one agent thinks for that one only (as `setPersonalBrain` keeps it).
+        sql`(${machineAccounts.shared} or not exists (select 1 from ${agents} where ${agents.orgId} = ${machineAccounts.orgId} and ${agents.brainAccountId} = ${machineAccounts.id} and ${agents.archivedAt} is null and ${agents.builtin} is distinct from ${RIGHT_HAND}))`,
+      ),
+    )
+    .orderBy(...accountOrderSql(person));
   const now = Date.now();
   return rows
     .map((r) => ({
       ...r,
-      home: r.machineId === home,
       online: machineOnline(r, new Date(now)),
       mine: person !== null && r.ownerId === person,
       room: planRoom(r.usage as Parameters<typeof planRoom>[0], now),
     }))
-    .filter((r) => (!options.room || r.room > 0) && (!options.online || r.online))
-    .sort(
-      (a, b) =>
-        Number(b.home) - Number(a.home) ||
-        Number(b.online) - Number(a.online) ||
-        Number(b.mine) - Number(a.mine) ||
-        b.room - a.room,
-    );
+    .filter((r) => (!options.room || r.room > 0) && (!options.online || r.online));
 }
 
 /**
@@ -570,7 +601,7 @@ export async function withPersonalBrain<T extends ThinkingAgent>(
   db: Executor,
   agent: T,
   person: string | null | undefined,
-): Promise<{ agent: T; own: boolean }> {
+): Promise<{ agent: T; own: boolean; signedInOn?: string | null }> {
   const own = isRightHand(agent)
     ? ((person ? await personalBrain(db, agent.orgId, person) : null) ??
       (await servingPlanFor(db, agent, person ?? null)))
@@ -586,15 +617,17 @@ export async function withPersonalBrain<T extends ThinkingAgent>(
       brainAccountLentBy: own.brainAccountLentBy,
     },
     own: true,
+    signedInOn: "machineId" in own && !own.brainAccountId ? own.machineId : null,
   };
 }
 
 /**
  * An agent as its brain sees it. The right hand is on no computer and its owner is the workspace's (`followOwner`):
  * on a plan it thinks on the computer where that plan's account is signed in, and the plan is its owner's (who pays,
- * as for any agent, ADR 0059 §3). With no account it has no computer. `person`: whose DM the run answers; their own
- * AI (§11) thinks for them in place of the workspace's. A plan thinks for someone else's DM (`planForOthers`) while it
- * serves everyone in the workspace (`machine_accounts.serves`). Every other agent is itself.
+ * as for any agent, ADR 0059 §3). With no account it has no computer, unless a person's own AI is their computer's
+ * own sign-in. `person`: whose DM the run answers; their own AI (§11) thinks for them in place of the workspace's. A
+ * plan thinks for someone else's DM (`planForOthers`) while it serves them (`accountServesSql`). Every other agent is
+ * itself.
  */
 export async function thinkingAgent<T extends ThinkingAgent>(
   db: Executor,
@@ -602,24 +635,25 @@ export async function thinkingAgent<T extends ThinkingAgent>(
   person?: string | null,
 ): Promise<T> {
   if (!isRightHand(agent)) return agent;
-  const { agent: base, own } = await withPersonalBrain(db, agent, person);
+  const { agent: base, signedInOn } = await withPersonalBrain(db, agent, person);
+  // The plan the person's own computer is signed in to: theirs, on that computer, as for any agent they own.
+  if (signedInOn) return { ...base, machineId: signedInOn, ownerUserId: person ?? null, planForOthers: true };
   const [plan] = base.brainAccountId
     ? await db
         .select({
           machineId: machineAccounts.machineId,
           ownerId: machineAccounts.createdBy,
-          serves: machineAccounts.serves,
+          // Whether the plan thinks for this person (`accountServesSql`; nobody behind the run: one everyone uses).
+          serves: accountServesSql(person ?? null),
         })
         .from(machineAccounts)
         .where(and(eq(machineAccounts.orgId, agent.orgId), eq(machineAccounts.id, base.brainAccountId)))
     : [];
-  const ownerUserId = plan?.ownerId ?? null;
-  const everyone = plan?.serves === "everyone";
   return {
     ...base,
     machineId: plan?.machineId ?? null,
-    ownerUserId,
-    ...(own ? { planForOthers: everyone || ownerUserId === person } : plan ? { planForOthers: everyone } : {}),
+    ownerUserId: plan?.ownerId ?? null,
+    ...(plan ? { planForOthers: plan.serves === true } : {}),
   };
 }
 
@@ -732,7 +766,7 @@ export function rightHandNoAiReason(code: string, scope?: ModelScope): NoAiCardR
             : "plan_limit";
   if (code === "plan_not_shared" || code === "plan_not_owner") return "plan_not_shared";
   if (code === "plan_unattended") return "plan_unattended";
-  if (code === "runner_outdated" || code === "codex_too_old") return "runner_outdated";
+  if (code === "runner_outdated" || code === "codex_too_old" || code === "cli_outdated") return "runner_outdated";
   if (code === "exec_disabled" || code === "tool_off") return "commands_off";
   if (code === "tools_not_locked") return "plan_tools";
   if (code === "no_computer" || code === "no_session") return "no_computer";

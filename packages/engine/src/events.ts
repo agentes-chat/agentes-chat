@@ -9,12 +9,24 @@ import type { BlockStateView } from "./block-state";
 import type { ChoicesView, PollView } from "./blocks";
 import type { BrowserHandoffView } from "./browser/handoff";
 import type { CalendarEventView, CalendarProposalView } from "./calendar";
+import type { CliProgress, CliToolSummary } from "./cli-tools";
+import type { CodeSuggestion } from "./code-suggestions";
+import { isConfidential, wordsOf } from "./confidential";
 import type { FeedbackOfferView } from "./feedback-offers";
 import type { IssueActivityView, IssueView } from "./issues";
 import type { MachineTaskView } from "./machine-tasks";
 import { oneLine } from "./mail/text";
 import type { MessageMemory } from "./message-memories";
+import {
+  CHANNEL_PREVIEW_LENGTH,
+  type PreviewMeta,
+  previewMediaKind,
+  previewMeta,
+  readableBody,
+  snippetOf,
+} from "./message-preview";
 import type { MessageView, ReactionCount } from "./messages";
+import { isQuietNotice } from "./notices";
 import { stripSentinel } from "./reply-policy";
 import type { TeamProposalCard } from "./team-proposals";
 import { redactCredentials } from "./tool-detail";
@@ -40,7 +52,7 @@ export interface MemoryUpdate {
 }
 
 import type { AgentQuestion } from "./questions";
-import type { RunStatus } from "./runs";
+import type { AgentRun, RunStatus } from "./runs";
 import type { SecretRequestView } from "./secrets";
 import type { ThreadChange, ThreadInfo, ThreadState } from "./threads";
 
@@ -179,7 +191,8 @@ export type ChannelEvent =
     }
   /**
    * An agent's question to another agent (`ask_agent`, ADR 0034), or the work it handed it (`kind` `note`), came
-   * back: `status` answered, expired or failed.
+   * back: `status` answered, expired or failed. `goesOn: false`: work handed off whose result woke nobody (ADR 0095),
+   * so the agent that handed it isn't writing; `stillOutAgentId`: a colleague still at work on another part it handed.
    */
   | {
       type: "agent.consulted";
@@ -190,6 +203,8 @@ export type ChannelEvent =
       consultedAgentId: string;
       status: "answered" | "expired" | "failed";
       kind?: "note";
+      goesOn?: false;
+      stillOutAgentId?: string;
     }
   /**
    * A question or hand-off still out changed without closing: the consulted agent stopped on a person (an approval,
@@ -262,6 +277,40 @@ export type ChannelEvent =
       agentId: string;
       tool: string;
       said?: string;
+      /**
+       * In a code session (ADR 0215), the call's line in the run's work: its id and what it does and on what (`cli`),
+       * as it starts and again once it ended (`ended`; `failed` when its result was an error), then with what it came
+       * to. The end of a call told as it started carries no words.
+       */
+      toolUseId?: string;
+      cli?: CliToolSummary;
+      ended?: true;
+      failed?: true;
+    }
+  /**
+   * A subagent or a workflow of a computer brain's own while it works (ADR 0215), by the call that started it: what
+   * it does now, how many calls it made, a workflow's agents, its end. Never stored.
+   */
+  | {
+      type: "agent.tool.progress";
+      channelId: string;
+      threadId: string | null;
+      runId: string;
+      agentId: string;
+      toolUseId: string;
+      progress: CliProgress;
+    }
+  /**
+   * What a run started on a person's message is about to do, in a few words of the workspace's small model
+   * (`announceIntent`): the bar's line until the agent's own words come. Never stored.
+   */
+  | {
+      type: "agent.intent";
+      channelId: string;
+      threadId: string | null;
+      runId: string;
+      agentId: string;
+      text: string;
     }
   /** What a computer command prints while it runs (throttled, ≤ 64 KB per call). */
   | {
@@ -351,6 +400,8 @@ export type ChannelEvent =
       computer?: "queued" | "away" | "line";
       /** Into a run waiting on its plan's limit or its budget. */
       usage?: "plan" | "budget";
+      /** Into a run parked on an outage (`outageParkedSql`): it retries by itself. */
+      outage?: true;
     }
   /** The run read these messages sent while it worked (they are in its conversation now): "Ada leu". */
   | {
@@ -385,6 +436,18 @@ export type ChannelEvent =
       runId: string;
       newRunId: string;
       messageIds: string[];
+    }
+  /**
+   * A message that went into the agent's task isn't for it (the triage, `steerHandling` `elsewhere`): it saw it and
+   * won't answer it; the router decides who does (`message.routed` follows).
+   */
+  | {
+      type: "agent.run.released";
+      channelId: string;
+      threadId: string | null;
+      agentId: string;
+      runId: string;
+      messageId: string;
     }
   /** The run ended without posting: nobody called it by name and it had nothing to add (`pass`). */
   | { type: "agent.passed"; channelId: string; threadId: string | null; agentId: string; runId: string }
@@ -475,7 +538,7 @@ export type ChannelEvent =
       status: "done" | "failed" | "waiting_approval" | "waiting_input" | "canceled";
       /** `no_ai`: the agent has no AI to think with. */
       reason?: string;
-      /** `failed`: why, for the app to word (`runErrorDetail`). */
+      /** `failed`: why, for the app to word (`runErrorDetail`); with `no_ai`, why it had none (`noAiDetail`). */
       errorCode?: string;
       errorParams?: Record<string, string>;
       /** `waiting_input` parked on a provider outage. */
@@ -543,6 +606,8 @@ export type ChannelEvent =
   | { type: "artifact.created" | "artifact.updated"; channelId: string; artifact: ArtifactView }
   /** A file was deleted (it shows as removed; restorable for 30 days). */
   | { type: "artifact.deleted"; channelId: string; artifactId: string }
+  /** Who is in a live file changed (ADR 0196 §5): its cards ask `…/live/presence` again. Ids only. */
+  | { type: "live.presence"; channelId: string; artifactId: string }
   /** Channel membership changed (agents carry `autoReply`). */
   | {
       type: "channel.member_added" | "channel.member_removed" | "channel.member_updated";
@@ -575,6 +640,14 @@ export type ChannelEvent =
   | { type: "block.state"; channelId: string; block: BlockStateView }
   /** A choice card was answered (ADR 0124). */
   | { type: "choices.updated"; channelId: string; choices: ChoicesView }
+  /** A suggested code session was opened, kept in the chat, or is waiting again (ADR 0215 §11): the reply's card. */
+  | {
+      type: "code.suggestion";
+      channelId: string;
+      threadId: string | null;
+      messageId: string;
+      suggestion: CodeSuggestion;
+    }
   /** A message was pinned in this channel (`GET …/channels/{id}/pins` lists them, newest first). */
   | {
       type: "message.pinned";
@@ -586,6 +659,17 @@ export type ChannelEvent =
     }
   /** A message was unpinned. */
   | { type: "message.unpinned"; channelId: string; messageId: string }
+  /**
+   * A comment on a picture, a video or a PDF was resolved or opened again (ADR 0208): its `meta.resolved` now (null:
+   * open). Its pin leaves the file while resolved.
+   */
+  | {
+      type: "message.resolved";
+      channelId: string;
+      messageId: string;
+      threadId: string | null;
+      resolved: { by: { type: "person" | "agent"; id: string }; at: string } | null;
+    }
   /** A person read this DM up to `lastReadAt` (DMs between people only: "Visto"). */
   | { type: "channel.read"; channelId: string; userId: string; lastReadAt: string }
   /** An agent saved something to memory from this person's message: its current memory marks. */
@@ -713,6 +797,60 @@ export async function publishTyping(
   );
 }
 
+/**
+ * A new message as the conversation lists show it (`listChannels`, `listDms`), for its `channel.activity`: whether it
+ * counts as unread and, when it may be a list's last line, that line. The apps patch their row with it instead of
+ * reading the list again.
+ */
+export interface ActivityLine {
+  id: string;
+  createdAt: string;
+  /** It counts as unread for whoever hears it: not a quiet notice, nor an agent's sticker after its own reply. */
+  counts: boolean;
+  /** Its line, when it may be the last one: a channel's top-level message, any of a DM's. Absent: a routine's call. */
+  last?: {
+    authorType: "person" | "agent" | "app";
+    authorId: string | null;
+    /** As a channel's row has it, at most `CHANNEL_PREVIEW_LENGTH` chars. */
+    preview: string;
+    /** As a DM's row has it. */
+    body: string;
+    meta: PreviewMeta | null;
+    mediaKind: "gif" | "sticker" | "voice" | null;
+  };
+}
+
+/** A heavier line is left out (the lists read again instead): the whole payload must stay under NOTIFY's limit. */
+const ACTIVITY_LINE_LIMIT = 2000;
+
+/** `message`'s `ActivityLine`; null for a confidential one (its readers may be fewer than the channel's) or a heavy one. */
+export function activityLine(message: MessageView): ActivityLine | null {
+  const meta = message.meta ?? {};
+  if (isConfidential(meta)) return null;
+  const counts = !isQuietNotice(meta) && meta.mediaAfter == null;
+  // A routine's call is hidden in the chat: the agent's answer is the line.
+  const shown = counts && !(message.author.type === "person" && meta.routine !== undefined);
+  const words = readableBody(wordsOf(message.body, meta), meta);
+  const line: ActivityLine = {
+    id: message.id,
+    createdAt: message.createdAt,
+    counts,
+    ...(shown
+      ? {
+          last: {
+            authorType: message.author.type,
+            authorId: message.author.id,
+            preview: snippetOf(words, CHANNEL_PREVIEW_LENGTH),
+            body: words.slice(0, 200),
+            meta: previewMeta(meta),
+            mediaKind: previewMediaKind(message.body, meta),
+          },
+        }
+      : {}),
+  };
+  return Buffer.byteLength(JSON.stringify(line)) <= ACTIVITY_LINE_LIMIT ? line : null;
+}
+
 export async function publishMessageCreated(pubsub: PubSub, message: MessageView) {
   const inline = Buffer.byteLength(JSON.stringify(message)) <= INLINE_LIMIT;
   const authorUserId = message.author.type === "person" ? message.author.id : null;
@@ -723,26 +861,28 @@ export async function publishMessageCreated(pubsub: PubSub, message: MessageView
     ...(inline ? { message } : { threadId: message.threadId, agentRunId: message.agentRunId, authorUserId }),
   });
   try {
+    const line = activityLine(message);
     await pubsub.publish(chatActivityTopic, {
       type: "channel.activity",
       channelId: message.channelId,
       threadId: message.threadId,
       authorUserId,
       mentionedUserIds: message.mentionedUserIds,
+      ...(line ? { line } : {}),
     });
   } catch {
     // Best effort: the lists catch up when they're read again.
   }
 }
 
-/** Receipts of a routed message (`message.routed`), then "thinking" for each run it started, where the message is. */
+/** Receipts of a routed message (`message.routed`), then "thinking" for each run it started, where it answers. */
 export async function publishRouted(
   pubsub: PubSub | undefined,
   message: { id: string; channelId: string; threadId: string | null },
   routed: {
     strategy: "mention" | "dm" | "router" | "none";
     seenBy: string[];
-    runs: { id: string; agentId: string }[];
+    runs: Pick<AgentRun, "id" | "agentId" | "threadRootId" | "triggerMessageId" | "replyInThread">[];
     reason?: string;
     decidedBy?: DecidedBy;
     referenced?: string[];
@@ -762,11 +902,13 @@ export async function publishRouted(
     ...(decidedBy ? { decidedBy } : {}),
     ...intent,
   });
+  // Loaded on call: imported at the top, runs.ts closes a cycle back to this module that breaks the engine's start-up.
+  const { replyThreadOf } = await import("./runs");
   for (const run of runs) {
     await publishChannelEvent(pubsub, {
       type: "agent.thinking",
       channelId: message.channelId,
-      threadId: message.threadId,
+      threadId: replyThreadOf(run),
       agentId: run.agentId,
       runId: run.id,
     });

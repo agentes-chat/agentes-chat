@@ -137,11 +137,11 @@ function MentionText({ text, everyone, ink }: { text: string; everyone: boolean;
   const c = useColors();
   const myHandle = useRowMyHandle();
   const { i18n } = useTranslation();
-  const { agents, memberByHandle } = useRowDirectory();
+  const { agentById, memberByHandle } = useRowDirectory();
   const { scheme } = useTheme();
   const handle = text.slice(1);
   const all = everyone && isEveryoneWord(handle);
-  const tint = mentionTint(handle, agents, scheme);
+  const tint = mentionTint(handle, [...agentById.values()], scheme);
   if (!all && !tint && !memberByHandle.has(handle.toLowerCase())) return <RNText>{text}</RNText>;
   return (
     <RNText
@@ -261,7 +261,7 @@ export function Table({
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
         >
-          <ScrollView horizontal scrollEnabled={false} showsHorizontalScrollIndicator={false}>
+          <ScrollView horizontal scrollEnabled={false} showsHorizontalScrollIndicator={false} style={styles.sideways}>
             {header.map((h, col) => (
               <View
                 // biome-ignore lint/suspicious/noArrayIndexKey: the columns of one table, in order
@@ -296,6 +296,7 @@ export function Table({
         <GestureScrollView
           ref={scroller}
           horizontal
+          style={styles.sideways}
           directionalLockEnabled
           nestedScrollEnabled
           alwaysBounceHorizontal={false}
@@ -343,6 +344,13 @@ export function Table({
 
 const styles = StyleSheet.create({
   table: { borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, overflow: "hidden" },
+  /**
+   * A sideways scroller never grows downward. React Native's scroll view takes `flexGrow: 1`, so inside a message it
+   * grew to the height the row already had: the row then measured that plus the rest of the message, the scroller grew
+   * into it again, and so on with every layout. A long message with a table drew thousands of points of empty bubble
+   * under its words (on a phone, each layer over the words larger than the one under it by the words less the table).
+   */
+  sideways: { flexGrow: 0 },
   fade: { position: "absolute", top: 0, bottom: 0, width: 28 },
   fadeLeft: { left: 0 },
   fadeRight: { right: 0 },

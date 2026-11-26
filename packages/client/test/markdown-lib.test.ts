@@ -147,6 +147,21 @@ test("a title's `code` and **bold**, the rest as typed: no link or mention, noth
   expect(codeAndBoldParts("")).toEqual([]);
 });
 
+test("a typed name in a line stays as typed: its backticks neither mark it nor pair with the line's own", () => {
+  expect(codeAndBoldParts("a`b is down. Run `doctor`.", ["a`b"])).toEqual([
+    { text: "a`b" },
+    { text: " is down. Run " },
+    { text: "doctor", mark: "code" },
+    { text: "." },
+  ]);
+  expect(codeAndBoldParts("`x` **y** and `x` again", ["`x` **y**", null, ""])).toEqual([
+    { text: "`x` **y**" },
+    { text: " and " },
+    { text: "x", mark: "code" },
+    { text: " again" },
+  ]);
+});
+
 describe("lines that look like a block's start but open none", () => {
   test("are read as prose instead of stopping the parser for good", () => {
     for (const [text, types] of [
@@ -168,5 +183,36 @@ describe("lines that look like a block's start but open none", () => {
       const [block] = parseMarkdown(`${open}\nconst a = 1\n\`\`\``);
       expect(block?.type === "code" && block.lang).toBe(lang);
     }
+  });
+});
+
+describe("numbered lists", () => {
+  test("blank lines between items keep one list, so its numbers go on", () => {
+    expect(parseMarkdown("1. a\n\n2. b\n\n3. c")).toEqual([{ type: "list", ordered: true, items: ["a", "b", "c"] }]);
+    expect(parseMarkdown("1. **a**\n\n   detail\n\n2. b")).toEqual([
+      { type: "list", ordered: true, items: ["**a** detail", "b"] },
+    ]);
+    // Another kind of list or prose after the blank still ends it.
+    expect(parseMarkdown("1. a\n\n- b").map((b) => b.type === "list" && b.ordered)).toEqual([true, false]);
+    expect(parseMarkdown("1. a\n\nfim").map((b) => b.type)).toEqual(["list", "paragraph"]);
+  });
+
+  test("an indented code block, quote or table after a blank stays a block, and the next item keeps its number", () => {
+    for (const detail of ["   ```bash\n   npm i\n   ```", "   > note", "   | x | y |\n   |---|---|\n   | 1 | 2 |"]) {
+      const blocks = parseMarkdown(`1. Install:\n\n${detail}\n\n2. Run`);
+      expect(blocks.map((b) => b.type)).toEqual([
+        "list",
+        detail.includes("```") ? "code" : detail.includes(">") ? "quote" : "table",
+        "list",
+      ]);
+      expect(blocks[2]).toEqual({ type: "list", ordered: true, start: 2, items: ["Run"] });
+    }
+  });
+
+  test("a list that starts past 1 keeps its first number", () => {
+    expect(parseMarkdown("intro\n3. c\n4. d")).toEqual([
+      { type: "paragraph", text: "intro" },
+      { type: "list", ordered: true, start: 3, items: ["c", "d"] },
+    ]);
   });
 });

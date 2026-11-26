@@ -61,7 +61,11 @@ const failed = (error: unknown): ToolOutput => ({
   isError: true,
 });
 /** The right hand's tasks are its person's, in their DM (ADR 0137 §13): in a channel, others read the reply. */
-const ONLY_IN_DM: ToolOutput = { content: "Tasks only in your private conversation with a person.", isError: true };
+const ONLY_IN_DM: ToolOutput = {
+  content:
+    "Tasks only where one person alone reads you: your private conversation with them, or a routine or widget of theirs that only they see (a widget on their Home or a private board of theirs). Others read this one.",
+  isError: true,
+};
 
 /** Who each assignee is, as the agent can name them: "@ada (you)", "Walter (@walter)". */
 async function assigneeNames(deps: IssueDeps, ctx: ToolContext, list: IssueView[]) {
@@ -373,14 +377,15 @@ async function bringFiles(
 
 /**
  * Whether everyone `readers` names opens this file where it lives, and `shareArtifact` takes it into `channelId` as it
- * is: one in the Drive or a public channel, or for people who each read it, one already in `channelId`. True for no
- * such file: `shareArtifact` refuses it.
+ * is: one in the Drive shared with everyone (ADR 0157, amendment 2026-11-17) or a public channel, or for people who
+ * each read it, one already in `channelId`. True for no such file: `shareArtifact` refuses it.
  */
 async function readsAsIs(deps: ArtifactDeps, orgId: string, id: string, readers: Audience, channelId: string) {
   const [file] = UUID.test(id)
     ? await deps.db
         .select({
           channelId: schema.artifacts.channelId,
+          share: schema.artifacts.share,
           kind: schema.channels.kind,
           visibility: schema.channels.visibility,
         })
@@ -388,7 +393,8 @@ async function readsAsIs(deps: ArtifactDeps, orgId: string, id: string, readers:
         .leftJoin(schema.channels, eq(schema.channels.id, schema.artifacts.channelId))
         .where(and(eq(schema.artifacts.orgId, orgId), eq(schema.artifacts.id, id), isNull(schema.artifacts.deletedAt)))
     : [];
-  if (!file?.channelId || (file.kind === "channel" && file.visibility === "public")) return true;
+  if (!file || (!file.channelId && file.share === "everyone")) return true;
+  if (file.kind === "channel" && file.visibility === "public") return true;
   if (readers.mode === "everyone" || file.channelId !== channelId) return false;
   const read = await Promise.all(readers.userIds.map((userId) => fileRefOf(deps.db, userId, orgId, id)));
   return read.every(Boolean);

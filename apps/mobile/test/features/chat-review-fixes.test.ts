@@ -11,6 +11,7 @@ import {
   tableColumnWidths,
   tableResolvesLate,
 } from "../../src/features/chat/logic";
+import { chatScreenSource } from "./chat-screen-source";
 
 const src = (path: string) => readFileSync(join(import.meta.dir, "../../src", path), "utf8");
 
@@ -43,7 +44,7 @@ describe("a sheet that never shows can't leave the conversation's sheet host ope
 
 describe("answering an agent that waits: 'pensando…' comes once, not twice", () => {
   test("the server's answer drops the guess only when a steered run has its own row here", () => {
-    const chat = src("features/chat/ChatScreen.tsx");
+    const chat = chatScreenSource();
     const sent = chat.slice(chat.indexOf("onSent: (message, local) => {"), chat.indexOf("onFailed: (error,"));
     expect(sent).toContain(
       "if (live.runs.some((r) => !r.provisional && steered.includes(r.runId))) live.forget(message.id, false);",
@@ -54,7 +55,7 @@ describe("answering an agent that waits: 'pensando…' comes once, not twice", (
 
 describe("a reply that fit is never judged again over the keyboard", () => {
   test("the keyboard coming up, and going to the end, drop the reply waiting to be read from the top", () => {
-    const chat = src("features/chat/ChatScreen.tsx");
+    const chat = chatScreenSource();
     expect(chat).toMatch(
       /KeyboardEvents\.addListener\("keyboardWillShow", \(\) => \{\s*toReadRef\.current = null;\s*\}\);/,
     );
@@ -155,7 +156,7 @@ describe("the instant 'pensando…' is skipped only for a run that will take the
   });
 
   test("a run waiting for an approval never takes a new message", () => {
-    const chat = src("features/chat/ChatScreen.tsx");
+    const chat = chatScreenSource();
     expect(chat).toContain('const AT_WORK: ReadonlySet<string> = new Set(["thinking", "queued", "running"]);');
     expect(chat).toMatch(/AT_WORK\.has\(r\.status\) &&\s*runInConversation\(r, local\.threadId \?\? null\)/);
   });
@@ -163,7 +164,7 @@ describe("the instant 'pensando…' is skipped only for a run that will take the
 
 describe("files sent while others go up stay under them", () => {
   test("a second batch waits behind the first as words do, and leaves the queue when its turn comes", () => {
-    const chat = src("features/chat/ChatScreen.tsx");
+    const chat = chatScreenSource();
     const files = chat.slice(chat.indexOf("const sendWithFiles = ("), chat.indexOf("const deliverFiles = async ("));
     expect(files).toMatch(
       /if \(filesAhead\.current\) waitingBehind\.current\.push\(clientId\);\s*behindFiles\(\(\) => \{\s*waitingBehind\.current = waitingBehind\.current\.filter\(\(id\) => id !== clientId\);\s*return deliverFiles\(local, how\);/,
@@ -184,9 +185,9 @@ describe("a message from an older page follows its pin", () => {
   });
 
   test("the screen builds its list from the older pages as pinned", () => {
-    const chat = src("features/chat/ChatScreen.tsx");
+    const chat = chatScreenSource();
     expect(chat).toContain("const olderPinned = useMemo(() => pinnedAsListed(older, pinsData), [older, pinsData]);");
-    expect(chat).toContain("return mergeTimeline([...olderPinned, ...(top.data ?? [])], []);");
+    expect(chat).toContain("return mergeTimeline(gap ? olderPinned : [...olderPinned, ...(top.data ?? [])], []);");
     expect(chat.indexOf("const pinsData = usePins(orgId, channelId, member).data;")).toBeLessThan(
       chat.indexOf("const olderPinned = "),
     );
@@ -195,7 +196,7 @@ describe("a message from an older page follows its pin", () => {
 
 describe("back on the conversation, the list follows the keyboard at once", () => {
   test("a popped screen releases the freeze at once when no keyboard is about; sheets keep the delay", () => {
-    const chat = src("features/chat/ChatScreen.tsx");
+    const chat = chatScreenSource();
     expect(chat).toMatch(
       /if \(now && !KeyboardController\.isVisible\(\)\) \{\s*freeze\.value = false;\s*return;\s*\}\s*setTimeout\(/,
     );

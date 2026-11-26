@@ -1,8 +1,14 @@
 import { describe, expect, test } from "bun:test";
-import { ACCOUNTS_PROTOCOL, BRAIN_PROTOCOL } from "@agenteschat/adapters";
+import {
+  ACCOUNTS_PROTOCOL,
+  BRAIN_PROTOCOL,
+  MACHINE_PROTOCOL_VERSION,
+  RUNNER_APP_PROTOCOL,
+} from "@agenteschat/adapters";
 import { accountUnavailable, claudeCodeAvailability } from "../src/brains/claude-code";
 import type { MachineStatus } from "../src/machine-hub";
 import { RunnerOutdatedError } from "../src/machine-tasks";
+import { runnerUpdateOf } from "../src/runner-update";
 
 const status = (over: Partial<MachineStatus> = {}): MachineStatus => ({
   id: "m1",
@@ -46,5 +52,36 @@ describe("a computer too old for something says how it gets its update", () => {
       "Its owner updates the agentes app there, or runs `agentes-runner update`.",
     );
     expect(new RunnerOutdatedError("MacBook", false, null).message).toContain("`agentes-runner update`");
+  });
+});
+
+describe("a computer whose runner is behind this server says how to update it, whatever its version label says", () => {
+  const box = (over: Partial<Parameters<typeof runnerUpdateOf>[0]> = {}) => ({
+    kind: "connected",
+    os: "linux",
+    protocol: 56,
+    executors: {},
+    ...over,
+  });
+  const later = RUNNER_APP_PROTOCOL + 4;
+
+  test("a Linux runner installed from the terminal, from before images reached agents, runs the update command", () => {
+    expect(runnerUpdateOf(box())).toBe("command");
+    expect(runnerUpdateOf(box({ executors: { mode: "system" } }))).toBe("installer");
+    expect(runnerUpdateOf(box({ protocol: RUNNER_APP_PROTOCOL }), later)).toBe("command");
+  });
+
+  test("nothing to update: current, the server's or the workspace's own, or run by the app", () => {
+    expect(runnerUpdateOf(box({ protocol: MACHINE_PROTOCOL_VERSION }))).toBeNull();
+    expect(runnerUpdateOf(box({ kind: "host" }))).toBeNull();
+    expect(runnerUpdateOf(box({ kind: "managed" }))).toBeNull();
+    expect(runnerUpdateOf(box({ protocol: RUNNER_APP_PROTOCOL, executors: { app: true } }), later)).toBeNull();
+  });
+
+  test("a runner from before it said whether the app runs it counts only on Linux, below the app of that time", () => {
+    expect(runnerUpdateOf(box({ os: "darwin" }))).toBeNull();
+    expect(runnerUpdateOf(box({ os: "windows" }))).toBeNull();
+    expect(runnerUpdateOf(box({ protocol: 77 }))).toBeNull();
+    expect(runnerUpdateOf(box({ protocol: 76 }))).toBe("command");
   });
 });

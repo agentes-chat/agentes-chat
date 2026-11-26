@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 67;
+export const MACHINE_PROTOCOL_VERSION = 87;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -49,6 +49,13 @@ export const BRIDGE_PROTOCOL = 8;
 export const RUN_TOOL_TOKEN_PREFIX = "agr_";
 export const isRunToolToken = (v: unknown): v is string =>
   typeof v === "string" && v.length <= 100 && /^agr_[A-Za-z0-9_-]{20,96}$/.test(v);
+/** How the runner's refusals of a turn on Claude's own login for all agents begin (older runners end them otherwise). */
+export const SHARED_LOGIN_REFUSED = "This computer can't run this Claude sign-in";
+/** The runner's refusal while that login's switch is off on the computer or its self-check fails. */
+export const SHARED_LOGIN_OFF = `${SHARED_LOGIN_REFUSED} right now. Try again later, or remove it in AI accounts and connect Claude again.`;
+/** A computer brain's error that is such a refusal: the computer is online, its shared Claude login is what can't run. */
+export const sharedLoginRefused = (code: string, message: string) =>
+  code === "unsupported" && message.startsWith(SHARED_LOGIN_REFUSED);
 /**
  * From this protocol on, the runner runs conversational brain turns
  * (`brain.turn`, ADR 0032): Claude Code thinks for an agent on the machine,
@@ -290,7 +297,20 @@ export interface MachineSize {
   memoryGb: number;
   diskGb: number;
   limit?: { cpus: number; memoryGb: number };
+  /** `TASK_LIMIT_PROTOCOL`: the background tasks it runs at once (where memory isn't read: `room` decides else). */
+  maxTasks?: number;
+  /** `TASK_ROOM_PROTOCOL`: tasks start on room here. */
+  room?: TaskRoomReport;
 }
+
+/** A memory size as `MachineSize` says it: in GB (2^30 bytes), to 0.5. */
+export const halfGb = (bytes: number) => Math.round((bytes / 2 ** 30) * 2) / 2;
+
+/**
+ * A system's version as its numbers alone (`6.8.0-45-generic` → `6.8.0`): what a kernel's own name adds after them
+ * (a distribution's flavour, a custom build's name) stays home. Undefined when it doesn't start with a number.
+ */
+export const versionNumbers = (version: string) => /^\d{1,6}(?:\.\d{1,6}){0,3}/.exec(version)?.[0];
 
 /**
  * Protocol 22: how busy a computer got over the last day (`pong.load`): the 5-minute load average per
@@ -316,6 +336,11 @@ export interface MachineLoad {
   diskFreeGb?: number;
   diskUse?: number;
   sharedGb?: number;
+  /**
+   * What the agents' temporary folders hold in memory now (GB), ADR 0243: system mode on Linux. Absent from an older
+   * runner: no protocol number, as `oomKills`.
+   */
+  agentTmpRamGb?: number;
 }
 
 /** How often a computer's load is sampled (protocol 22). */
@@ -453,6 +478,12 @@ export const CODEX_FOLDER_PROTOCOL = 32;
  * open again in the new mode.
  */
 export const DESKTOP_SWITCH_PROTOCOL = 30;
+/**
+ * From this protocol on: a runner that starts a desktop for a `stream.open` says so first (`stream.starting`), and the
+ * server then waits `STREAM_LIMITS.startTimeoutMs` for that stream instead of `openTimeoutMs`. An older runner can't
+ * say it, so each of its opens that may start the desktop gets the longer wait.
+ */
+export const DESKTOP_STARTING_PROTOCOL = 83;
 
 /**
  * From this protocol on (ADR 0114): the Cursor brain. `brain.turn` takes `kind: "cursor"` (Cursor's CLI, `agent -p`,
@@ -631,6 +662,23 @@ export const SHARED_GEMINI_PROTOCOL = 58;
  */
 export const CODEX_WINDOWS_PROTOCOL = 60;
 /**
+ * Codex where Windows has no MXC (ADR 0053's addendum of 2026-11-24): a `plan` or `work` turn runs in Codex's own
+ * `unelevated` sandbox there instead of failing with `windows_sandbox`. `hello.windowsBuild` says a Windows computer's
+ * build, and `executors.codex.sandbox` what holds Codex's commands there once the runner has checked (in the
+ * background, after start). An older runner says neither, and runs Codex on Windows only inside MXC.
+ */
+export const CODEX_UNELEVATED_PROTOCOL = 80;
+/**
+ * Grok Build turns on Windows (ADR 0142 §10). Grok's own sandbox doesn't run there, so a `work` turn's own tools keep
+ * to Grok's permission rules: edits in the turn's folder, read-only commands, everything else through our tools. A
+ * Windows runner before it refuses every Grok turn, so the server reads it as too old for Grok there.
+ */
+export const GROK_WINDOWS_PROTOCOL = 82;
+/** What holds Codex's commands on a Windows computer (`executors.codex.sandbox`): `none`, nothing it could start. */
+export const CODEX_SANDBOXES = ["mxc", "unelevated", "none"] as const;
+export type CodexSandbox = (typeof CODEX_SANDBOXES)[number];
+export const isCodexSandbox = (v: unknown): v is CodexSandbox => (CODEX_SANDBOXES as readonly unknown[]).includes(v);
+/**
  * `keep_running` (ADR 0176): `keep.start` and `keep.end` take and end an agent's hold, the computer's standard "don't go
  * idle" lock, bound to one of its programs, its browser or a time; `hello.holds` says which live and which ended since,
  * and `keep.ended` says one ended. The server asks no older runner.
@@ -677,6 +725,39 @@ export const IPHONE_DEV_MODE_PROTOCOL = 65;
  * per agent, as before.
  */
 export const SHARED_GROK_PROTOCOL = 67;
+/**
+ * From this protocol on, Gemini accounts sign in and think on macOS too, each in a keychain of its own inside its
+ * folder (ADR 0143). An older Mac runner refuses them, so the server reads it as too old for the Antigravity CLI.
+ */
+export const ANTIGRAVITY_MAC_PROTOCOL = 68;
+/**
+ * `phone.repair`: a Mac repairs a real iPhone's test helper (stops it and its leftovers, builds it again with the Xcode
+ * installed now, checks it on the phone). Older runners answer `bad_request`: the server asks none of them.
+ */
+export const PHONE_REPAIR_PROTOCOL = 73;
+/**
+ * A code session's terminal (ADR 0215): `stream.open` of a terminal may carry `cwd`, a folder inside the agent's own
+ * (relative to it, the session's worktree), where the shell starts. One that isn't there starts it in the agent's
+ * folder; one that leaves the agent's folder is refused. The server sends `cwd` to no older runner, which opens the
+ * terminal in the agent's folder.
+ */
+export const TERMINAL_CWD_PROTOCOL = 76;
+/**
+ * A terminal that outlives its viewer (ADR 0215): `stream.open` of a terminal may carry `keep`, a name the person's
+ * app gave that terminal. Its shell stays on the computer when the viewer's socket drops (a page read again, a
+ * connection lost) and the next `stream.open` with the same name, for the same agent, comes back to it with what it
+ * printed last; nobody back within `STREAM_LIMITS.terminalKeptMs` ends it, and so does the viewer's `end` frame (the
+ * person closed it). The server sends `keep` to no older runner, where each open is a new shell.
+ */
+export const TERMINAL_KEEP_PROTOCOL = 77;
+/** A kept terminal's name: the server puts the person's id in front of the app's, so each person reaches only theirs. */
+export const isTerminalKeep = (v: unknown): v is string => typeof v === "string" && /^[A-Za-z0-9_.-]{8,128}$/.test(v);
+/**
+ * From this protocol on, the runner sends `room.freed` once there is room again after it refused a turn (`no_slot`): a
+ * turn ended there, or its memory came back over the agents' floor. The server asks its line again at once; an older
+ * runner's line asks again on its timer.
+ */
+export const ROOM_FREED_PROTOCOL = 69;
 
 /**
  * `clis.check`: the coding CLIs looked up again now, the PATH read again first (the apps' "I installed it, check again").
@@ -685,6 +766,33 @@ export const SHARED_GROK_PROTOCOL = 67;
  * runner holds the installers. Older runners answer `bad_request`: the server asks none of them.
  */
 export const CLI_INSTALL_PROTOCOL = 66;
+/**
+ * `report.collect`: the facts and the scrubbed end of its log a computer adds to a problem report someone chose to
+ * send. The server asks no older runner, and says in the report that its log is missing.
+ */
+export const PROBLEM_REPORT_PROTOCOL = 72;
+/** Lines of the runner's log `report.collect` gives, at most. */
+export const REPORT_LOG_LINES = 300;
+
+/** What `report.collect` answers: no paths, names or addresses (the log tail is scrubbed on the computer). */
+export interface RunnerReportParts {
+  runner: string;
+  protocol: number;
+  runtime: string;
+  os: string;
+  arch: string;
+  compiled: boolean;
+  managedBy: string;
+  connection: string;
+  paused: boolean;
+  tools: Record<string, boolean>;
+  executors: { claude?: string; codex?: string; claudeLoggedIn?: boolean };
+  agents: number;
+  runningNow: number;
+  browser?: { state: string; chrome?: string; lastError?: string };
+  logTail: string[];
+}
+
 /** The coding CLIs `cli.install` installs: Claude Code and Codex. */
 export const INSTALLABLE_CLIS = ["claude", "codex"] as const;
 export type InstallableCli = (typeof INSTALLABLE_CLIS)[number];
@@ -1098,7 +1206,12 @@ export const isClaudeLoginMethod = (v: unknown): v is ClaudeLoginMethod => v ===
 export const claudeLoginMethodsOf = (said: readonly AuthMethod[] | undefined, system: boolean): AuthMethod[] =>
   said ? [...said] : [system ? "setup_token" : "cli_login"];
 
-/** Why a provider refused or failed a turn (protocol 50), as far as the runner could tell from the CLI. */
+/**
+ * Why a provider refused or failed a turn (protocol 50), as far as the runner could tell from the CLI.
+ * `model_unavailable`: the sign-in or its endpoint doesn't serve the model it was given (it doesn't exist there, or the
+ * account can't use it); `empty_answer`: the CLI ended its turn with nothing in it. A server that doesn't know a cause
+ * drops it (`isProviderFailureCause`), and the engine reads both from the CLI's words too (`withFailureCause`).
+ */
 export type ProviderFailureCause =
   | "auth_rejected"
   | "account_disabled"
@@ -1106,6 +1219,8 @@ export type ProviderFailureCause =
   | "billing"
   | "provider_transient"
   | "network"
+  | "model_unavailable"
+  | "empty_answer"
   | "unknown";
 export const PROVIDER_FAILURE_CAUSES: readonly ProviderFailureCause[] = [
   "auth_rejected",
@@ -1114,6 +1229,8 @@ export const PROVIDER_FAILURE_CAUSES: readonly ProviderFailureCause[] = [
   "billing",
   "provider_transient",
   "network",
+  "model_unavailable",
+  "empty_answer",
   "unknown",
 ];
 export const isProviderFailureCause = (v: unknown): v is ProviderFailureCause =>
@@ -1169,6 +1286,11 @@ export interface PlanWindow {
   label?: string;
   usedPercent: number;
   resetsAt?: string;
+  /**
+   * When this window was last read, where that is before its snapshot's `at`: a turn's event that didn't name it
+   * kept the older reading. Absent: the snapshot's `at`.
+   */
+  at?: string;
 }
 export type PlanWindowKind = "five_hour" | "seven_day" | "seven_day_opus" | "seven_day_sonnet" | "monthly" | "other";
 export const PLAN_WINDOW_KINDS: readonly PlanWindowKind[] = [
@@ -1538,6 +1660,11 @@ export type RunnerDesktopUseInfo = RunnerTerminalInfo;
 export const STREAM_LIMITS = {
   /** The server waits this long for the runner's data socket after `stream.open`. */
   openTimeoutMs: 20_000,
+  /**
+   * The same for an open that starts the agent's desktop first (`DESKTOP_STARTING_PROTOCOL`): its steps may take
+   * 10 s each, and it may wait for another start of that agent's (its browser) to end.
+   */
+  startTimeoutMs: 90_000,
   /** A data socket's `stream.hello` must come this soon. */
   helloTimeoutMs: 10_000,
   /** Both sides ping this often: an idle desktop sends nothing, and proxies drop idle sockets. */
@@ -1556,6 +1683,10 @@ export const STREAM_LIMITS = {
   terminalsPerMachine: 10,
   terminalIdleMs: 30 * 60_000,
   terminalMaxMs: 12 * 3_600_000,
+  /** A kept terminal with nobody watching ends after this long (`TERMINAL_KEEP_PROTOCOL`). */
+  terminalKeptMs: 30 * 60_000,
+  /** The last output a kept terminal shows again to whoever comes back to it. */
+  terminalReplayMax: 256 << 10,
   /** Streams a person may open in a minute. */
   opensPerMinute: 30,
   /** The server checks this often that whoever has an open stream may still have it. */
@@ -1610,7 +1741,11 @@ export const STREAM_CLOSE = {
  */
 export type StreamRequest =
   | { kind: "desktop"; mode: DesktopMode }
-  | { kind: "terminal"; cols: number; rows: number }
+  /**
+   * `cwd` (`TERMINAL_CWD_PROTOCOL`): where the shell starts, a folder relative to the agent's own (ADR 0215). `keep`
+   * (`TERMINAL_KEEP_PROTOCOL`): the terminal's name, whose shell outlives the viewer.
+   */
+  | { kind: "terminal"; cols: number; rows: number; cwd?: string; keep?: string }
   /** A phone's screen (`PHONES_PROTOCOL`): `stream.open` carries the phone itself as `phone`, its holder the person. */
   | { kind: "phone"; mode: DesktopMode; phoneId: string };
 
@@ -1636,6 +1771,8 @@ export interface StreamHello {
   type: "stream.hello";
   token: string;
   streamId: string;
+  /** `EGRESS_SHARE_PROTOCOL`: the workspace's computer asks for a connection there through a lent one. */
+  egress?: { host: string; port: number };
 }
 
 /**
@@ -1646,6 +1783,15 @@ export interface StreamHello {
 export type StreamControl =
   | { type: "resize"; cols: number; rows: number }
   | { type: "exit"; code: number | null }
+  /** Viewer → runner (`TERMINAL_KEEP_PROTOCOL`): the person closed a kept terminal, so its shell ends now. */
+  | { type: "end" }
+  /** Runner → viewer (`TERMINAL_KEEP_PROTOCOL`): another viewer took this kept terminal; its shell goes on there. */
+  | { type: "moved" }
+  /**
+   * Server → viewer, once a terminal is ready (ADR 0215): its computer is too old for the folder it was asked to start
+   * in (`TERMINAL_CWD_PROTOCOL`), so the shell started in the agent's folder.
+   */
+  | { type: "cwd_ignored" }
   | { type: "mode"; mode: DesktopMode }
   /** Protocol 49: a browser view's frame arrived (server → runner), or a phone's picture was drawn (viewer → runner). */
   | { type: "ack" }
@@ -1734,6 +1880,32 @@ export function parseAgentPointer(f: Record<string, unknown>): AgentPointer | nu
   return { x: within(x, width), y: within(y, height), width: Math.round(width), height: Math.round(height), act };
 }
 
+/** Where a desktop start's time went (ms), as its runner's log line says it: the look runs beside its screen. */
+export const DESKTOP_START_STEPS = ["room", "prepared", "screen", "look", "session"] as const;
+export type DesktopStartStep = (typeof DESKTOP_START_STEPS)[number];
+
+/** A desktop start (`desktop.started`): its whole time, and each step's once it started, or why it failed. */
+export interface DesktopStart {
+  ms: number;
+  steps?: Record<DesktopStartStep, number>;
+  /** The error code it failed with. */
+  error?: string;
+}
+
+export function parseDesktopStart(f: Record<string, unknown>): DesktopStart | null {
+  const time = (v: unknown) => (typeof v === "number" && Number.isFinite(v) && v >= 0 ? Math.round(v) : undefined);
+  const ms = time(f.ms);
+  if (ms === undefined) return null;
+  const given = isObject(f.steps) ? f.steps : null;
+  const steps = given ? Object.fromEntries(DESKTOP_START_STEPS.map((k) => [k, time(given[k])])) : null;
+  const whole = steps !== null && Object.values(steps).every((v) => v !== undefined);
+  return {
+    ms,
+    ...(whole ? { steps: steps as Record<DesktopStartStep, number> } : {}),
+    ...(isString(f.error) && /^[a-z0-9_]{1,64}$/.test(f.error) ? { error: f.error } : {}),
+  };
+}
+
 /** What a frame shows. */
 export interface BrowserFrameMetadata {
   deviceWidth: number;
@@ -1757,6 +1929,18 @@ export const gitCheckoutDir = (repo: string) => `${GIT_CHECKOUTS_DIR}/${repo}`;
 export const isGitRepoName = (v: unknown): v is string =>
   typeof v === "string" &&
   /^[A-Za-z0-9_.-]{1,100}\/[A-Za-z0-9_.-]{1,100}$/.test(v) &&
+  v.split("/").every((part) => part !== "." && part !== "..");
+
+/**
+ * Protocol 79: `git.sync` takes a repository of any git host (ADR 0227), whose path may be deeper or shallower than
+ * GitHub's `owner/name` (`group/subgroup/project`, `project.git`); the proxy address it comes with says which host. An
+ * older runner refuses those, so the server asks it only for two-part paths.
+ */
+export const GIT_HOST_PATH_PROTOCOL = 79;
+/** A repository's path on its host: one to twenty-one parts, none of them `.` or `..`. */
+export const isGitRepoPath = (v: unknown): v is string =>
+  typeof v === "string" &&
+  /^[A-Za-z0-9_.-]{1,100}(\/[A-Za-z0-9_.-]{1,100}){0,20}$/.test(v) &&
   v.split("/").every((part) => part !== "." && part !== "..");
 
 /** Largest pieces of a `git.sync`. */
@@ -1863,6 +2047,17 @@ export interface GitSyncRepo {
 export const HELLO_TIMEOUT_MS = 10_000;
 /** The server pings this often; the runner reconnects after two missed pings. */
 export const HEARTBEAT_MS = 25_000;
+/** Close codes the server sends the runner. */
+export const MACHINE_CLOSE = {
+  badFrame: 4400,
+  invalidToken: 4401,
+  revoked: 4403,
+  timeout: 4408,
+  replaced: 4409,
+  outdated: 4426,
+} as const;
+/** The close code a runner sends when it stops for good (its service stopped, the app quit), not a lost link. */
+export const RUNNER_STOPPED_CLOSE = 4000;
 /** Largest text frame either side accepts (a `write` of 5 MB is about 6.7 MB in base64). */
 export const MAX_FRAME_BYTES = 8 * 1024 * 1024;
 /** `read`/`write` bodies (base64 in JSON); larger files go through `push` and `pull`. */
@@ -1992,19 +2187,39 @@ export interface TaskStart {
    * that doesn't read it runs the plan's `sonnet`).
    */
   model?: string;
+  /** `TASK_ROOM_PROTOCOL`: a person asked, in their own message, to push this computer harder for this work. */
+  pushHarder?: boolean;
 }
 
 /** The coding CLIs `hello.executors` reports. */
 export const CLI_NAMES = ["claude", "codex", "cursor", "opencode", "grok", "antigravity"] as const;
 export type CliName = (typeof CLI_NAMES)[number];
 
+/**
+ * What a runner fetches by itself (ADR 0228 §6): the coding CLIs, and on Windows Git for Windows' portable build
+ * (`git`), whose bash is Claude Code's shell there.
+ */
+export const FETCH_NAMES = [...CLI_NAMES, "git"] as const;
+export type FetchName = (typeof FETCH_NAMES)[number];
+
 /** A coding CLI on the machine, as `hello` reports it (protocol 7). */
 export interface RunnerExecutorInfo {
-  /** The first line of `<cli> --version`. */
+  /** The line of `<cli> --version` that holds its version (else its first line, or `unknown`). */
   version: string;
-  /** Protocol 8, `claude` only: `claude auth status` says it is logged in (absent: unknown). */
+  /** `codex` only: the copy the runner starts, the newest of those it found. */
+  path?: string;
+  /** `CODEX_UNELEVATED_PROTOCOL`, `codex` on Windows: what holds its commands there; absent until the runner knows. */
+  sandbox?: CodexSandbox;
+  /**
+   * Protocol 8, `claude`: `claude auth status` says it is logged in (absent: unknown). `codex` (any protocol: an older
+   * runner leaves it out): its app-server's `account/read`, else `codex login status`, which is believed only on a
+   * sign-in it found.
+   */
   loggedIn?: boolean;
-  /** Protocol 8, `claude` only: how it is logged in (`claude.ai`, `api_key`…) and the plan (`pro`, `max`, `ultra`…). */
+  /**
+   * How it is logged in and the plan: `claude` (protocol 8) `claude.ai`, `api_key`… with `pro`, `max`, `ultra`…;
+   * `codex` `chatgpt` (with `plus`, `pro`, `team`…), `api_key`, or `provider` (a model provider of its own config).
+   */
   authMethod?: string;
   plan?: string;
   /**
@@ -2030,13 +2245,56 @@ export const CURSOR_MODEL_LIMITS = { models: 60, id: 80, label: 80 } as const;
 
 /**
  * How a brain turn started on the runner (Claude Code; an older runner leaves it out): on a process already open
- * (`warm`), how long a new one took to say it was ready (`initMs`), and the first event after the turn began.
+ * (`warm`), how long a new one took to say it was ready (`initMs`), and the first event after the turn began. A newer
+ * runner adds where the model's own time went: the API's first streamed message (`firstTokenMs`) and the first whole
+ * block of the answer (`firstAssistantMs`) from the turn's start, the CLI's API retries and the waits they announced,
+ * and the thinking blocks with the characters of their text (0 when the API leaves the text out).
  */
 export interface BrainTurnTimings {
   warm: boolean;
+  /** Not `warm`: why the turn started a new process (`BRAIN_COLD_CAUSES`). */
+  cold?: BrainColdCause;
   initMs?: number;
   firstEventMs?: number;
+  firstTokenMs?: number;
+  firstAssistantMs?: number;
+  retries?: number;
+  retryDelayMs?: number;
+  thinkingBlocks?: number;
+  thinkingChars?: number;
 }
+
+/**
+ * Why a turn started a new Claude Code process: a session that never ran on this runner (a new conversation, or a
+ * fresh session the server started for an old one), or the end of the session's last process: idle past its limit,
+ * closed for another conversation of the agent (its cap) or for memory, another launch asked (folder, permissions,
+ * account, sign-in), a warm start with another system text, exited by itself, closed after its turn (canceled,
+ * died, a background turn), or a session that ran before with no process left in this runner (it restarted).
+ */
+export const BRAIN_COLD_CAUSES = [
+  "new_session",
+  "idle",
+  "cap",
+  "memory",
+  "settings",
+  "warm_mismatch",
+  "exited",
+  "closed",
+  "restart",
+] as const;
+export type BrainColdCause = (typeof BRAIN_COLD_CAUSES)[number];
+
+/** The measures of `BrainTurnTimings` past `warm`, each a whole number from 0 up to a day. */
+export const BRAIN_TURN_MEASURES = [
+  "initMs",
+  "firstEventMs",
+  "firstTokenMs",
+  "firstAssistantMs",
+  "retries",
+  "retryDelayMs",
+  "thinkingBlocks",
+  "thinkingChars",
+] as const;
 
 /**
  * One event of a brain turn on the wire (`brain.event`), the same shape as
@@ -2045,6 +2303,8 @@ export interface BrainTurnTimings {
  */
 export type WireBrainEvent =
   | { type: "text_delta"; text: string }
+  /** A note the model wrote between its calls, apart from its text (Codex's reasoning summary). An older server drops it. */
+  | { type: "note"; text: string }
   | {
       type: "tool_call";
       id: string;
@@ -2064,11 +2324,13 @@ export type WireBrainEvent =
       /**
        * The API calls the turn made (Claude Code's `num_turns`, Codex's model requests), the most uncached input one of
        * them read (Claude Code), and the most input one read, cache included: its context at that step. An older
-       * runner sends none.
+       * runner sends none. `lastContext`: what the turn's last call read, cache included, the session's size as it
+       * ends (an older runner sends none: the engine takes the biggest call, else the turn's input over `calls`).
        */
       calls?: number;
       maxUncached?: number;
       maxContext?: number;
+      lastContext?: number;
     }
   | { type: "limit"; resetsAt?: string }
   | { type: "done"; text: string; session?: { id: string }; timings?: BrainTurnTimings }
@@ -2088,15 +2350,94 @@ export type WireBrainEvent =
     }
   /** Protocol 15: messages handed with `brain.steer` that the turn read (their `uuid`s). */
   | { type: "steer_read"; uuids: string[] }
+  /**
+   * An answer the turn finished before it went on (`BrainTurnRequest.answers`): the server posts it as a message of its
+   * own now; `done` holds only what came after it. Sent only to a request that asked for it.
+   */
+  | { type: "answer"; text: string }
   /** Protocol 46: Fast failed (`message`: the provider's words) and this turn answered at standard speed. */
   | { type: "speed_fallback"; message: string }
-  /** A call the brain starts on its own (Claude Code's Read, Bash, Task): its `tool_call` follows once it ended. */
-  | { type: "tool_started"; id: string; name: string }
+  /**
+   * A call the brain starts on its own (Claude Code's Read, Bash, Task): its `tool_call` follows once it ended.
+   * `input`: what it was given, masked (a code session shows the call's line while it runs, ADR 0215); an older runner
+   * sends none, an older server drops it.
+   */
+  | { type: "tool_started"; id: string; name: string; input?: unknown }
   /**
    * A file a tool of the brain's own made (Codex's image generation), kept in the agent's folder (`path`, relative
    * to it): the server sends it to the Drive and its card goes with the reply. An older server drops the event.
    */
-  | { type: "file"; path: string };
+  | { type: "file"; path: string }
+  /**
+   * The CLI printed nothing for longer than the phase it was in allows, and the runner stopped it (Claude Code,
+   * `brain-silence.ts`): waiting for the `model`, while it was `compacting`, or in one of its own tools (`tool`, the
+   * tool's name, `label` what it ran on, masked). `resumed`: the same turn goes on in a resumed session; else the turn
+   * ends (`brain_stalled`). An older server drops the event.
+   */
+  | {
+      type: "stalled";
+      phase: BrainStallPhase;
+      tool?: string;
+      label?: string;
+      silentMs: number;
+      resumed: boolean;
+    }
+  /**
+   * How a call of the brain's own that runs subagents goes while they work (Claude Code's `Agent`, `Task` and
+   * `Workflow`, ADR 0215), by that call's id: its subagent's latest call (`step`: the tool, and its input cut as a
+   * `tool_call`'s when the CLI shows it), how many calls it made so far, a workflow's agents, and `ended` once it is
+   * over (a workflow ends after its own call did). An older server drops it.
+   */
+  | {
+      type: "tool_progress";
+      id: string;
+      kind: BrainProgressKind;
+      step?: { name: string; input?: unknown };
+      calls?: number;
+      agents?: WireWorkflowAgent[];
+      ended?: { failed?: boolean };
+    };
+
+/** Where a stalled brain turn was (`stalled`). */
+export const BRAIN_STALL_PHASES = ["model", "compacting", "tool"] as const;
+export type BrainStallPhase = (typeof BRAIN_STALL_PHASES)[number];
+
+/** What a call that runs subagents started (`tool_progress`): one subagent, or a workflow of them. */
+export type BrainProgressKind = "agent" | "workflow";
+/** How a workflow's agent is doing. */
+export const WORKFLOW_AGENT_STATES = ["running", "done", "failed"] as const;
+export type WorkflowAgentState = (typeof WORKFLOW_AGENT_STATES)[number];
+
+/** A workflow's agent as its progress says it (`tool_progress`). */
+export interface WireWorkflowAgent {
+  /** What the workflow calls it (`reviewer:index.html`). */
+  label: string;
+  /** The title of the phase it belongs to. */
+  phase?: string;
+  state: WorkflowAgentState;
+  /** Calls it made so far. */
+  calls?: number;
+  /** The tool of its latest call (`Read`). */
+  tool?: string;
+}
+
+/** Most agents one `tool_progress` names (the latest), and the longest label and phase title. */
+export const PROGRESS_LIMITS = { agents: 24, label: 120, phase: 80 } as const;
+
+/** A workflow's agent from a `tool_progress`, checked and cut; null when it isn't one. */
+function parseWorkflowAgent(v: unknown): WireWorkflowAgent | null {
+  if (!isObject(v) || !isString(v.label) || !v.label.trim()) return null;
+  const state = WORKFLOW_AGENT_STATES.find((s) => s === v.state);
+  if (!state) return null;
+  const calls = finite(v.calls);
+  return {
+    label: v.label.trim().slice(0, PROGRESS_LIMITS.label),
+    ...(isString(v.phase) && v.phase.trim() ? { phase: v.phase.trim().slice(0, PROGRESS_LIMITS.phase) } : {}),
+    state,
+    ...(calls !== undefined && calls > 0 ? { calls: Math.round(calls) } : {}),
+    ...(isString(v.tool) && v.tool ? { tool: v.tool.slice(0, BRAIN_LIMITS.toolName) } : {}),
+  };
+}
 
 /**
  * `brain.steer` (protocol 15): messages for the turn of `runId` in progress.
@@ -2162,6 +2503,12 @@ export interface BrainTurnRequest {
   /** Also load the machine owner's own MCP servers (default false: `--strict-mcp-config`; never in a `plan` turn). */
   personalMcp?: boolean;
   /**
+   * A code session's turn (ADR 0215), Claude Code: its own subagents and skills too, and the worktree's `.claude`
+   * agents, skills and commands as a plugin, without their hooks, MCP servers or allowed tools. An older runner
+   * ignores it.
+   */
+  codeSession?: boolean;
+  /**
    * The turn's permission profile (ADR 0053 §3): `work` (default) edits and asks a person (or the server's
    * rules) for the rest; `plan` reads only. Codex honours it from `BRAIN_PROFILES_PROTOCOL` on.
    */
@@ -2195,6 +2542,18 @@ export interface BrainTurnRequest {
    * (`PERSON_TURN_MIN_FREE_BYTES`). No protocol step: a runner that doesn't read it admits the turn like any other.
    */
   personWaiting?: boolean;
+  /**
+   * The IANA zone the turn's "Now" is in (the person's, else the workspace's, a routine's own): the CLI runs with it as
+   * its `TZ`, so its own clock, and the date its system prompt states, match the person's day. The computer's own
+   * zone stays as its egress sets it. No protocol step: a runner that doesn't read it keeps the computer's zone.
+   */
+  timeZone?: string;
+  /**
+   * `each` (ADR 0112): an answer the turn finished before it went on (a message handed to it mid-turn was read after
+   * it, work moved to the background, a background task's notice) goes out at once as an `answer` event, and `done`
+   * holds only what came after it. No protocol step: a runner that doesn't read it joins them into `done`, as before.
+   */
+  answers?: "each";
 }
 
 /**
@@ -2226,6 +2585,167 @@ export const ROUTE_PROTOCOL = 24;
 export const ROUTE_TIMEOUT_MS = 30_000;
 /** Largest `brain.route` fields (characters; the schema as JSON). */
 export const ROUTE_LIMITS = { system: 8000, prompt: 32_000, schema: 8000 } as const;
+
+/**
+ * `brain.warm` (protocol 74): the engine claimed a run that will think with Claude Code here, and asks before it builds
+ * the turn's context: the session's CLI starts now (or stays open), with the launch the turn will most likely ask for,
+ * so the turn finds it warm. Best effort: the runner may decline (no room, nothing to start it with) and the turn
+ * starts its CLI as before; a turn whose launch differs starts its own. The server sends it to no older runner.
+ */
+export const BRAIN_WARM_PROTOCOL = 74;
+
+/**
+ * Background tasks at once, from the apps (protocol 75): `hello.size.maxTasks` and `runner.state.maxTasks` say the
+ * computer's limit, and `limits.set` changes it as its owner asked. An older runner says none: it runs 3, its old
+ * default, unless its config says otherwise.
+ */
+export const TASK_LIMIT_PROTOCOL = 75;
+
+/**
+ * Protocol 76 (ADR 0143): outside system mode the runner brings its own Antigravity CLI (now one of `CLI_PINS`, at least that
+ * version) where the person's is older or missing and Gemini thinks there, so a computer's Gemini models follow the
+ * app's version. An older runner runs whatever `agy` the person installed.
+ */
+export const AGY_COPY_PROTOCOL = 76;
+
+/**
+ * Protocol 78: where the runner reads free memory, background tasks start on room, not on a count (`TaskRoomReport`
+ * in `hello.size.room` and `runner.state.room`), and `limits.set` `pushHarder` lowers the floor it keeps for the
+ * person's own apps; `task.start` `pushHarder` does that for one task, when a person asked in their own words.
+ * An older runner keeps its count and is never sent either.
+ */
+export const TASK_ROOM_PROTOCOL = 78;
+
+/**
+ * Protocol 81 (ADR 0237): a person's computer may lend its internet connection to its workspace's own computer.
+ * `egress.dial` asks it to open one TCP connection to `host`:`port` (`EGRESS_SHARE`'s ports only, a name it resolves
+ * itself or a public address, never one on its own network) and to carry its bytes on a data socket it dials for
+ * `streamId`; it answers once that socket is ready. A data socket's `stream.hello` may carry `egress`: the workspace's
+ * computer asks the server for such a connection, and the server answers `stream.ready` once a lent connection
+ * carries it, or closes the socket (`STREAM_CLOSE.unreachable`: none is lent now; `refused`: that destination isn't
+ * carried). The server asks no older runner, and `welcome.egressRelay` goes to the workspace's computer alone.
+ */
+export const EGRESS_SHARE_PROTOCOL = 81;
+/** What a lent connection carries, at most. */
+export const EGRESS_SHARE = {
+  /** The web only: anything else leaves the workspace's computer its usual way. */
+  ports: [80, 443] as readonly number[],
+  /** Bytes both ways a day (UTC) the lending computer carries before it refuses new connections until the next. */
+  dailyBytes: 5 * 1024 ** 3,
+  /** Connections open at once through one lending computer. */
+  open: 256,
+  /** How long the lending computer waits to reach the destination. */
+  connectMs: 10_000,
+} as const;
+/** A host `egress.dial` takes: a DNS name or an IP literal, short and plain. */
+export const isEgressHost = (v: unknown): v is string =>
+  typeof v === "string" &&
+  v.length > 0 &&
+  v.length <= 253 &&
+  (/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*\.?$/.test(v) ||
+    /^[0-9A-Fa-f:.]+$/.test(v));
+/** A target `stream.hello` or `egress.dial` names: a host as `isEgressHost` and one of `EGRESS_SHARE.ports`. */
+export const isEgressTarget = (v: unknown): v is { host: string; port: number } =>
+  isObject(v) && isEgressHost(v.host) && typeof v.port === "number" && EGRESS_SHARE.ports.includes(v.port);
+
+/**
+ * Protocol 84 (ADR 0143): Gemini signs in and thinks on Windows, one account a computer (the CLI keeps its sign-in in
+ * the Windows user's one Credential Manager), with the runner's own `agy.exe` where the person's is older or missing.
+ * An older Windows runner refuses every Gemini sign-in and turn.
+ */
+export const ANTIGRAVITY_WINDOWS_PROTOCOL = 84;
+
+/**
+ * Protocol 85 (ADR 0156): `AgentScope.coAuthors` lines are written `Co-Authored-By`. An older runner takes only
+ * `Co-authored-by` and would drop them, so the server sends it the old capitals (git and GitHub read either).
+ */
+export const CO_AUTHOR_CASE_PROTOCOL = 85;
+
+/**
+ * Protocol 87: `hello.app` says the agentes.chat app runs this runner (and updates it with its own releases, which lag
+ * this server's protocol). A runner from before says nothing either way.
+ */
+export const RUNNER_APP_PROTOCOL = 87;
+
+/** About how many more background tasks fit on the computer now, and what decides it. */
+export interface TaskRoomReport {
+  more: number;
+  /** Free memory now, in GB with one decimal. */
+  freeGb: number;
+  /** The processor has stayed over 90% busy for the last minute. */
+  cpuBusy: boolean;
+  /** The owner's Push harder switch. */
+  pushHarder: boolean;
+}
+
+export function parseTaskRoom(v: unknown): TaskRoomReport | null {
+  if (!isObject(v) || !inRange(v.more, [0, 1024]) || !between(v.freeGb, 0, 1 << 16)) return null;
+  return { more: v.more, freeGb: v.freeGb, cpuBusy: v.cpuBusy === true, pushHarder: v.pushHarder === true };
+}
+
+/**
+ * Protocol 86 (ADR 0228 §6): one way to every coding CLI. The server sends its pin list after `welcome`
+ * (`clis.pins`, `@agenteschat/providers/cli-pins`); outside system mode the runner runs the person's own copy at the
+ * pinned version or newer, else fetches the pinned build on demand, checks its hash and runs that one, never touching
+ * the person's. `hello.clis` says which CLIs it can fetch on its system and where each fetch stands; `cli.fetch`
+ * frames report a fetch as it goes (at most once a second or every 5%); the `cli.fetch` op starts one again at once
+ * (the apps' "Try again"). An older runner brings only its Antigravity copy (`AGY_COPY_PROTOCOL`).
+ */
+export const CLI_COPIES_PROTOCOL = 86;
+
+/** Why a fetch failed: no network, a download that isn't the vendor's build, no build for this system, a full disk. */
+export type CliFetchFailure = "offline" | "hash_mismatch" | "no_build" | "disk_full" | "failed";
+export const CLI_FETCH_FAILURES: readonly CliFetchFailure[] = [
+  "offline",
+  "hash_mismatch",
+  "no_build",
+  "disk_full",
+  "failed",
+];
+
+/** Where a runner's fetch of one CLI stands (`hello.clis.fetch`, the `cli.fetch` frame). `total`: null when unknown. */
+export type CliFetchState =
+  | { state: "fetching"; version: string; done: number; total: number | null }
+  | { state: "ready"; version: string }
+  | { state: "failed"; version: string; reason: CliFetchFailure };
+
+/** `hello.clis` (`CLI_COPIES_PROTOCOL`). */
+export interface RunnerClisInfo {
+  /** The CLIs this runner fetches by itself on this system (a pinned build for it, outside system mode). */
+  fetchable: FetchName[];
+  /** The last state of each fetch since the runner started. */
+  fetch: Partial<Record<FetchName, CliFetchState>>;
+}
+/** The tasks a computer may run at once (`maxConcurrentTasks` in the runner's config). */
+export const TASK_LIMIT_BOUNDS = [1, 20] as const;
+
+/**
+ * What `brain.turn` would start its CLI with, without the turn's own words (no prompt, system text or run); a code
+ * session's turn (`codeSession`, ADR 0215) starts with its session's tools, so its warm start does too.
+ */
+export type BrainWarmRequest = Pick<
+  BrainTurnRequest,
+  | "kind"
+  | "session"
+  | "cwd"
+  | "model"
+  | "personalMcp"
+  | "permissions"
+  | "account"
+  | "effort"
+  | "contextTokens"
+  | "codeSession"
+  | "timeZone"
+> & {
+  /** The run it warms for: the server signs its commits as the turn's (`agent.author`); the runner ignores it. */
+  runId?: string;
+};
+
+/** `open`: the session has a CLI now; `started`: this request started it. */
+export interface BrainWarmReply {
+  open: boolean;
+  started: boolean;
+}
 
 /** `brain.route` (protocol 24): one answer in `schema`'s shape from the account's CLI. */
 export interface BrainRouteRequest {
@@ -2426,6 +2946,8 @@ export interface RunnerInfo {
   protocol: number;
   os: MachineOs;
   arch: string;
+  /** `CODEX_UNELEVATED_PROTOCOL`, Windows only: its build (`os.release()`, `10.0.19045`). */
+  windowsBuild?: string;
   hostname: string;
   /** Absolute path of the workspace on the machine (shown to admins only). */
   workspace: string;
@@ -2445,6 +2967,8 @@ export interface RunnerInfo {
      */
     broken?: Partial<Record<CliName, string>>;
   };
+  /** `CLI_COPIES_PROTOCOL`: which CLIs it fetches by itself, and where each fetch stands. */
+  clis?: RunnerClisInfo;
   /** Protocol 9: whether the owner paused this computer. */
   paused?: RunnerPause;
   /** Protocol 10: folders and tools allowed on the machine. */
@@ -2482,6 +3006,8 @@ export interface RunnerInfo {
   authEgressGroup?: true;
   /** `KEEP_RUNNING_PROTOCOL`: the holds that live here, and those that ended lately with why (the server may not know). */
   holds?: RunnerHolds;
+  /** `RUNNER_APP_PROTOCOL`: the agentes.chat app runs it; absent, a runner installed from the terminal. */
+  app?: true;
 }
 
 export interface RunnerHolds {
@@ -2509,10 +3035,22 @@ export interface AgentScope {
   /** Protocol 9: the agent's display name, for the machine's activity log. */
   name?: string;
   /**
-   * Protocol 63 (ADR 0156): on the work the server starts (`exec`, `brain.turn`, `task.start`), the `Co-authored-by`
+   * Protocol 63 (ADR 0156): on the work the server starts (`exec`, `brain.turn`, `task.start`), the `Co-Authored-By`
    * lines its commits end with. The runner hands them to git in the agent's own processes alone (`co-authors.ts`).
    */
   coAuthors?: string[];
+  /**
+   * On a code session's work (`exec`, `brain.turn`): the person its commits are authored as, when they connected a
+   * GitHub account as their own (ADR 0215 §13). The runner hands it to git in the agent's own processes alone, never
+   * to a repository's config. A runner that doesn't know it leaves the checkout's author, the agent.
+   */
+  author?: CommitAuthor;
+}
+
+/** Who a commit is authored as: a name and an address, each one line. */
+export interface CommitAuthor {
+  name: string;
+  email: string;
 }
 
 /** What the server asks. Paths are always relative to the workspace (the agent's folder when `agent` is set). */
@@ -2550,6 +3088,8 @@ export type MachineRequest = (
   | ({ op: "brain.steer" } & BrainSteerRequest)
   /** Protocol 24: a plan picks who answers a message (ADR 0074); the request's agent is the one it is lent to. */
   | ({ op: "brain.route" } & BrainRouteRequest)
+  /** Protocol 74: start (or keep) a session's Claude Code before its turn comes (`BRAIN_WARM_PROTOCOL`). */
+  | ({ op: "brain.warm" } & BrainWarmRequest)
   /** Protocol 11: clone or update the agent's checkouts through our git proxy. */
   | ({ op: "git.sync" } & GitSyncRequest)
   /** Protocol 14: the mission's worktree (ADR 0044). */
@@ -2702,6 +3242,8 @@ export type MachineRequest = (
   | { op: "phone.pair.cancel"; pairingId: string }
   /** `REMOTE_PAUSE_PROTOCOL`: pause (until `until`, null: until resumed) or resume, for the person `by`. */
   | { op: "pause.set"; paused: boolean; until?: string | null; by: string }
+  /** `TASK_LIMIT_PROTOCOL`: the background tasks it runs at once, from now on (stored in its config). */
+  | { op: "limits.set"; maxTasks?: number; pushHarder?: boolean }
   /**
    * A phone guide is open and waits for a phone: for the next minute, a Windows runner also looks for a plugged phone
    * Windows has no USB driver for (adb never lists one) and reports it as `no_driver`. From `IPHONE_DEV_MODE_PROTOCOL`
@@ -2728,8 +3270,16 @@ export type MachineRequest = (
   | { op: "clis.check" }
   /** `CLI_INSTALL_PROTOCOL`: start an install of `tool`, or say where the last one stands, or stop it. One at a time. */
   | { op: "cli.install"; action: "start" | "status" | "cancel"; tool?: InstallableCli }
+  /** `CLI_COPIES_PROTOCOL`: fetch `cli`'s pinned build now, whatever an earlier failure said; answers at once. */
+  | { op: "cli.fetch"; cli: FetchName }
   /** `IPHONE_DEV_MODE_PROTOCOL`: open Xcode on this Mac (it shows Developer Mode on a plugged iPhone). */
   | { op: "xcode.open" }
+  /** `PHONE_REPAIR_PROTOCOL`: repair the test helper of the iPhone `serial`; answers once its rebuild started. */
+  | { op: "phone.repair"; serial: string }
+  /** `PROBLEM_REPORT_PROTOCOL`: facts and the scrubbed log tail for a problem report. */
+  | { op: "report.collect" }
+  /** `EGRESS_SHARE_PROTOCOL`: one connection to `host`:`port`, its bytes on the data socket `streamId`. */
+  | { op: "egress.dial"; streamId: string; host: string; port: number }
 ) & {
   agent?: AgentScope;
   /** Protocol 34: a `browser.*` op in this browser profile's session instead of the agent's (ADR 0110). */
@@ -2763,6 +3313,7 @@ export const MACHINE_OPS: readonly MachineOp[] = [
   "brain.turn",
   "brain.steer",
   "brain.route",
+  "brain.warm",
   "git.sync",
   "mission.worktree",
   "access.request",
@@ -2802,6 +3353,7 @@ export const MACHINE_OPS: readonly MachineOp[] = [
   "phone.pair.status",
   "phone.pair.cancel",
   "pause.set",
+  "limits.set",
   "phone.look",
   "phone.wifi",
   "keep.start",
@@ -2809,7 +3361,11 @@ export const MACHINE_OPS: readonly MachineOp[] = [
   "xcode.fix",
   "clis.check",
   "cli.install",
+  "cli.fetch",
   "xcode.open",
+  "phone.repair",
+  "report.collect",
+  "egress.dial",
 ];
 
 /** What each op answers with `ok: true`. */
@@ -2874,6 +3430,7 @@ export interface MachineReplies {
   "brain.turn": { runId: string; final: WireBrainEvent };
   "brain.steer": BrainSteerReply;
   "brain.route": BrainRouteReply;
+  "brain.warm": BrainWarmReply;
   "git.sync": { repos: GitSyncRepo[] };
   /** `remove` answers `{ removed }` (`false`: the folder was already gone). */
   "mission.worktree": Partial<MissionWorktreeEnsured> & { removed?: boolean };
@@ -2972,6 +3529,7 @@ export interface MachineReplies {
   "phone.pair.status": PhonePairing;
   "phone.pair.cancel": { canceled: boolean };
   "pause.set": { paused: RunnerPause };
+  "limits.set": { maxTasks: number; room?: TaskRoomReport };
   "phone.look": { looking: boolean };
   "phone.wifi": { available: WifiIphone[] };
   "keep.start": { held: true };
@@ -2980,7 +3538,12 @@ export interface MachineReplies {
   "xcode.fix": { fix: XcodeFix | null };
   "clis.check": { executors: NonNullable<RunnerInfo["executors"]> };
   "cli.install": { install: CliInstall | null };
+  /** Where its fetch stands now; null: the person's own copy serves, nothing to fetch. */
+  "cli.fetch": { fetch: CliFetchState | null };
   "xcode.open": { opened: boolean };
+  "phone.repair": { repairing: boolean };
+  "report.collect": RunnerReportParts;
+  "egress.dial": { connected: true };
 }
 
 /** An element numbered on a `browser.capture` image: its ref and box (CSS pixels). */
@@ -3078,6 +3641,11 @@ export type ServerFrame =
       /** Only the workspace’s managed computer observes its agents’ public route. */
       observeEgress?: boolean;
       /**
+       * `EGRESS_SHARE_PROTOCOL`, the workspace's managed computer alone: it offers its network guard a local SOCKS5
+       * socket whose connections go out through a computer a person lent (ADR 0237).
+       */
+      egressRelay?: boolean;
+      /**
        * The server runs each `mcp.call` once per `callId` and answers a copy with the first answer: a call cut by
        * a reconnect may be sent again. Absent (older servers): sent again it would run twice.
        */
@@ -3114,6 +3682,8 @@ export type ServerFrame =
    * runners ignore it.
    */
   | { type: "browser.handoff"; agentId: string; handoff: BrowserHandoffInfo | null }
+  /** `CLI_COPIES_PROTOCOL`: the server's pin list (`CliPins`), after each `welcome`; the runner checks it itself. */
+  | { type: "clis.pins"; pins: Record<string, unknown> }
   /** The server closes after sending this (bad token, revoked, outdated runner). */
   | { type: "refused"; reason: "invalid_token" | "revoked" | "outdated" | "replaced"; message: string };
 
@@ -3168,7 +3738,14 @@ export type RunnerFrame =
   /** Protocol 8: a `brain.turn` sent its last event. */
   | { type: "brain.done"; runId: string }
   /** Protocol 9: the pause state changed on the machine (paused, resumed, new `until`). */
-  | { type: "runner.state"; paused: RunnerPause }
+  | {
+      type: "runner.state";
+      paused: RunnerPause;
+      /** `TASK_LIMIT_PROTOCOL`: the tasks it runs at once, sent when that changed on the computer. */
+      maxTasks?: number;
+      /** `TASK_ROOM_PROTOCOL`: the room for tasks, sent when it changed. */
+      room?: TaskRoomReport;
+    }
   /** Protocol 10: what the machine allows changed (the person granted, removed, or turned a tool on or off). */
   | { type: "access.changed"; access: RunnerAccess }
   /**
@@ -3180,6 +3757,8 @@ export type RunnerFrame =
   | { type: "executors.changed"; executors: NonNullable<RunnerInfo["executors"]> }
   /** What `hello.toolchains` said changed (an Apple team found, Xcode updated), whole. An older server drops it. */
   | { type: "toolchains.changed"; toolchains: RunnerToolchains }
+  /** `CLI_COPIES_PROTOCOL`: a fetch of `cli` moved on (throttled), ended or failed. An older server drops it. */
+  | { type: "cli.fetch"; cli: FetchName; fetch: CliFetchState }
   /** `PHONES_PROTOCOL`: the phones it reaches changed (one came or went, a state or a holder changed), whole. */
   | { type: "phones.changed"; phones: RunnerPhone[] }
   /**
@@ -3205,7 +3784,16 @@ export type RunnerFrame =
   /** The same on the agent's desktop (ADR 0062), in the screen's pixels: desktop use, and its browser's window there. */
   | ({ type: "desktop.pointer"; agentId: string } & AgentPointer)
   /** `KEEP_RUNNING_PROTOCOL`: a hold ended on the computer by itself (the next `hello` says so again). */
-  | { type: "keep.ended"; holdId: string; reason: HoldEnd };
+  | { type: "keep.ended"; holdId: string; reason: HoldEnd }
+  /** `ROOM_FREED_PROTOCOL`: room again after a `no_slot`. */
+  | { type: "room.freed" }
+  /** `DESKTOP_STARTING_PROTOCOL`: this `stream.open` starts the agent's desktop first, so it takes longer. */
+  | { type: "stream.starting"; streamId: string }
+  /**
+   * A desktop start ended here (for a viewer, the agent's own use or its browser): how long it took in all and in
+   * each step (ms), or the error code it failed with. The operator's events feed keeps it. An older server drops it.
+   */
+  | ({ type: "desktop.started"; agentId: string } & DesktopStart);
 
 /** A tool as `mcp.tools` lists it (what MCP `tools/list` returns). */
 export interface McpToolInfo {
@@ -3405,7 +3993,8 @@ export function parseCursorModels(v: unknown): CursorModelInfo[] {
 
 /**
  * `hello.executors`: only `claude`, `codex`, `cursor`, `opencode`, `grok` and `antigravity`, each with a short version
- * line (and Claude Code's login), and `broken`: the error line of each of them that is there and can't start.
+ * line (and Claude Code's login, Codex's sandbox on Windows), and `broken`: the error line of each of them that is there
+ * and can't start.
  */
 export function parseExecutors(v: Record<string, unknown>): NonNullable<RunnerInfo["executors"]> {
   const out: NonNullable<RunnerInfo["executors"]> = {};
@@ -3415,8 +4004,11 @@ export function parseExecutors(v: Record<string, unknown>): NonNullable<RunnerIn
     if (!isObject(e) || !isString(e.version)) continue;
     const authMethod = word(e.authMethod);
     const plan = word(e.plan);
+    const path = name === "codex" && isString(e.path) && /^[^\0\r\n]{1,500}$/.test(e.path) ? e.path : undefined;
     out[name] = {
       version: e.version.replace(/\s+/g, " ").trim().slice(0, 80),
+      ...(path ? { path } : {}),
+      ...(name === "codex" && isCodexSandbox(e.sandbox) ? { sandbox: e.sandbox } : {}),
       ...(typeof e.loggedIn === "boolean" ? { loggedIn: e.loggedIn } : {}),
       ...(authMethod ? { authMethod } : {}),
       ...(plan ? { plan } : {}),
@@ -3435,10 +4027,43 @@ export function parseExecutors(v: Record<string, unknown>): NonNullable<RunnerIn
   return out;
 }
 
+/** A fetch's state as a runner reported it, checked; null when it isn't one. */
+export function parseCliFetchState(v: unknown): CliFetchState | null {
+  if (!isObject(v) || !isString(v.version)) return null;
+  const version = v.version.slice(0, 60);
+  if (v.state === "ready") return { state: "ready", version };
+  if (v.state === "failed") {
+    const reason = CLI_FETCH_FAILURES.find((r) => r === v.reason) ?? "failed";
+    return { state: "failed", version, reason };
+  }
+  if (v.state !== "fetching") return null;
+  const count = (x: unknown) => (typeof x === "number" && Number.isFinite(x) && x >= 0 ? Math.floor(x) : null);
+  const total = count(v.total);
+  return { state: "fetching", version, done: Math.min(count(v.done) ?? 0, total ?? Number.MAX_SAFE_INTEGER), total };
+}
+
+/** `hello.clis`, checked: known CLIs (and Git) only. */
+export function parseClis(v: Record<string, unknown>): RunnerClisInfo {
+  const fetchable = Array.isArray(v.fetchable) ? FETCH_NAMES.filter((n) => (v.fetchable as unknown[]).includes(n)) : [];
+  const fetch: RunnerClisInfo["fetch"] = {};
+  if (isObject(v.fetch)) {
+    for (const name of FETCH_NAMES) {
+      const state = parseCliFetchState(v.fetch[name]);
+      if (state) fetch[name] = state;
+    }
+  }
+  return { fetchable, fetch };
+}
+
 /** The longest error line `executors.broken` keeps for a CLI. */
 export const CLI_ERROR_MAX = 300;
 /** `executors.broken.claude` on Windows when Git for Windows, which Claude Code needs there, isn't on the computer. */
 export const CLI_GIT_MISSING = "git_missing";
+/**
+ * `executors.broken.<cli>` in system mode for Cursor's, Grok Build or the Antigravity CLI found only in root's own
+ * `~/.local/bin`, where its installer puts it and no agent's user can run it.
+ */
+export const CLI_HOME_ONLY = "home_only";
 
 /** `hello.accounts` (protocol 13): at most `MAX_MACHINE_ACCOUNTS`, ids and kinds checked, short words only. */
 export function parseAccounts(v: unknown[]): RunnerAccountInfo[] {
@@ -3492,11 +4117,13 @@ export function parsePlanUsage(v: unknown): PlanUsage | undefined {
           .slice(0, PLAN_USAGE_LIMITS.label)
       : "";
     const resetsAt = isoOf(w.resetsAt);
+    const read = isoOf(w.at);
     windows.push({
       kind,
       ...(label ? { label } : {}),
       usedPercent: Math.round(Math.min(100, Math.max(0, used))),
       ...(resetsAt ? { resetsAt } : {}),
+      ...(read && read < at ? { at: read } : {}),
     });
   }
   return {
@@ -3534,6 +4161,10 @@ export function parseBrainEvent(v: unknown): WireBrainEvent | null {
   switch (v.type) {
     case "text_delta":
       return isString(v.text) ? { type: "text_delta", text: v.text.slice(0, BRAIN_LIMITS.delta) } : null;
+    case "note":
+      return isString(v.text) && v.text.trim()
+        ? { type: "note", text: v.text.trim().slice(0, BRAIN_LIMITS.delta) }
+        : null;
     case "tool_call": {
       if (!isString(v.id) || !isString(v.name)) return null;
       const ex = isObject(v.executed) && isString(v.executed.content) ? v.executed : null;
@@ -3564,16 +4195,25 @@ export function parseBrainEvent(v: unknown): WireBrainEvent | null {
         ...(num(v.calls) > 0 ? { calls: num(v.calls) } : {}),
         ...(num(v.maxUncached) > 0 ? { maxUncached: num(v.maxUncached) } : {}),
         ...(num(v.maxContext) > 0 ? { maxContext: num(v.maxContext) } : {}),
+        ...(num(v.lastContext) > 0 ? { lastContext: num(v.lastContext) } : {}),
       };
     case "limit":
       return { type: "limit", ...(isString(v.resetsAt) ? { resetsAt: v.resetsAt.slice(0, 40) } : {}) };
     case "done": {
       if (!isString(v.text)) return null;
       const session = isObject(v.session) && isString(v.session.id) ? { id: v.session.id.slice(0, 64) } : undefined;
-      const ms = (x: unknown) => (finite(x) !== undefined && (x as number) >= 0 ? Math.round(x as number) : undefined);
+      // A runner reports these itself: past a day it is a wrong clock, not a slow start, and would skew the percentiles
+      // (the counts share the bound, far above any real turn's).
+      const DAY_MS = 86_400_000;
+      const ms = (x: unknown) =>
+        finite(x) !== undefined && (x as number) >= 0 && (x as number) <= DAY_MS ? Math.round(x as number) : undefined;
       const t = isObject(v.timings) && typeof v.timings.warm === "boolean" ? v.timings : null;
-      const initMs = ms(t?.initMs);
-      const firstEventMs = ms(t?.firstEventMs);
+      const measures = t
+        ? BRAIN_TURN_MEASURES.flatMap((k) => {
+            const n = ms(t[k]);
+            return n === undefined ? [] : [[k, n] as const];
+          })
+        : [];
       return {
         type: "done",
         text: v.text.slice(0, BRAIN_LIMITS.doneText),
@@ -3582,8 +4222,10 @@ export function parseBrainEvent(v: unknown): WireBrainEvent | null {
           ? {
               timings: {
                 warm: t.warm as boolean,
-                ...(initMs !== undefined ? { initMs } : {}),
-                ...(firstEventMs !== undefined ? { firstEventMs } : {}),
+                ...(!t.warm && (BRAIN_COLD_CAUSES as readonly unknown[]).includes(t.cold)
+                  ? { cold: t.cold as BrainColdCause }
+                  : {}),
+                ...Object.fromEntries(measures),
               },
             }
           : {}),
@@ -3610,14 +4252,60 @@ export function parseBrainEvent(v: unknown): WireBrainEvent | null {
         .map((u) => u.slice(0, 64));
       return uuids.length ? { type: "steer_read", uuids } : null;
     }
+    case "answer":
+      return isString(v.text) && v.text.trim() !== ""
+        ? { type: "answer", text: v.text.slice(0, BRAIN_LIMITS.doneText) }
+        : null;
     case "speed_fallback":
       return { type: "speed_fallback", message: (isString(v.message) ? v.message : "").slice(0, BRAIN_LIMITS.message) };
     case "tool_started":
       return isString(v.id) && isString(v.name)
-        ? { type: "tool_started", id: v.id.slice(0, 128), name: v.name.slice(0, BRAIN_LIMITS.toolName) }
+        ? {
+            type: "tool_started",
+            id: v.id.slice(0, 128),
+            name: v.name.slice(0, BRAIN_LIMITS.toolName),
+            ...(v.input !== undefined ? { input: cutJson(v.input, BRAIN_LIMITS.toolText) } : {}),
+          }
         : null;
     case "file":
       return isString(v.path) && v.path.length > 0 && v.path.length <= 1024 ? { type: "file", path: v.path } : null;
+    case "tool_progress": {
+      if (!isString(v.id) || !v.id || (v.kind !== "agent" && v.kind !== "workflow")) return null;
+      const step =
+        isObject(v.step) && isString(v.step.name) && v.step.name
+          ? {
+              name: v.step.name.slice(0, BRAIN_LIMITS.toolName),
+              ...(v.step.input !== undefined ? { input: cutJson(v.step.input, BRAIN_LIMITS.toolText) } : {}),
+            }
+          : undefined;
+      const agents = Array.isArray(v.agents)
+        ? v.agents
+            .slice(-PROGRESS_LIMITS.agents)
+            .map(parseWorkflowAgent)
+            .filter((a): a is WireWorkflowAgent => a !== null)
+        : undefined;
+      return {
+        type: "tool_progress",
+        id: v.id.slice(0, 128),
+        kind: v.kind,
+        ...(step ? { step } : {}),
+        ...(num(v.calls) > 0 ? { calls: num(v.calls) } : {}),
+        ...(agents ? { agents } : {}),
+        ...(isObject(v.ended) ? { ended: v.ended.failed === true ? { failed: true } : {} } : {}),
+      };
+    }
+    case "stalled": {
+      const phase = BRAIN_STALL_PHASES.find((p) => p === v.phase);
+      if (!phase) return null;
+      return {
+        type: "stalled",
+        phase,
+        ...(isString(v.tool) && v.tool ? { tool: v.tool.slice(0, BRAIN_LIMITS.toolName) } : {}),
+        ...(isString(v.label) && v.label ? { label: v.label.slice(0, 200) } : {}),
+        silentMs: num(v.silentMs),
+        resumed: v.resumed === true,
+      };
+    }
     default:
       return null;
   }
@@ -3667,10 +4355,14 @@ export function parseRunnerFrame(raw: string): RunnerFrame | null {
         protocol: f.protocol,
         os: (["linux", "darwin", "windows"] as const).find((o) => o === f.os) ?? "other",
         arch: isString(f.arch) ? f.arch.slice(0, 40) : "",
+        ...(isString(f.windowsBuild) && /^\d{1,3}\.\d{1,3}\.\d{1,6}$/.test(f.windowsBuild)
+          ? { windowsBuild: f.windowsBuild }
+          : {}),
         hostname: isString(f.hostname) ? f.hostname.slice(0, 200) : "",
         workspace: isString(f.workspace) ? f.workspace.slice(0, 500) : "",
         exec: f.exec !== false,
         ...(isObject(f.executors) ? { executors: parseExecutors(f.executors) } : {}),
+        ...(isObject(f.clis) ? { clis: parseClis(f.clis) } : {}),
         ...(Array.isArray(f.tasks)
           ? {
               tasks: f.tasks
@@ -3694,10 +4386,21 @@ export function parseRunnerFrame(raw: string): RunnerFrame | null {
           : {}),
         ...(isString(f.claudeLoginBlocked) ? { claudeLoginBlocked: f.claudeLoginBlocked.slice(0, 300) } : {}),
         ...(f.authEgressGroup === true ? { authEgressGroup: true as const } : {}),
+        ...(f.app === true ? { app: true as const } : {}),
         ...(Array.isArray(f.phones) ? { phones: parsePhones(f.phones) } : {}),
         ...(isObject(f.toolchains) ? { toolchains: parseToolchains(f.toolchains) } : {}),
         ...(isObject(f.holds) ? { holds: parseHolds(f.holds) } : {}),
       };
+    }
+    case "room.freed":
+      return { type: "room.freed" };
+    case "stream.starting":
+      return isStreamId(f.streamId) ? { type: "stream.starting", streamId: f.streamId } : null;
+    case "desktop.started": {
+      const start = parseDesktopStart(f);
+      return isString(f.agentId) && start
+        ? { type: "desktop.started", agentId: f.agentId.slice(0, 64), ...start }
+        : null;
     }
     case "keep.ended": {
       const reason = HOLD_ENDS.find((r) => r === f.reason);
@@ -3751,7 +4454,14 @@ export function parseRunnerFrame(raw: string): RunnerFrame | null {
     }
     case "runner.state": {
       const paused = parsePause(f.paused);
-      return paused ? { type: "runner.state", paused } : null;
+      if (!paused) return null;
+      const room = parseTaskRoom(f.room);
+      return {
+        type: "runner.state",
+        paused,
+        ...(taskLimit(f.maxTasks) ? { maxTasks: f.maxTasks } : {}),
+        ...(room ? { room } : {}),
+      };
     }
     case "access.changed": {
       const access = parseAccess(f.access);
@@ -3766,6 +4476,11 @@ export function parseRunnerFrame(raw: string): RunnerFrame | null {
       return isObject(f.executors) ? { type: "executors.changed", executors: parseExecutors(f.executors) } : null;
     case "toolchains.changed":
       return isObject(f.toolchains) ? { type: "toolchains.changed", toolchains: parseToolchains(f.toolchains) } : null;
+    case "cli.fetch": {
+      const cli = FETCH_NAMES.find((n) => n === f.cli);
+      const fetch = parseCliFetchState(f.fetch);
+      return cli && fetch ? { type: "cli.fetch", cli, fetch } : null;
+    }
     case "access.decided": {
       if (!isString(f.requestId)) return null;
       const decision = (["granted", "denied", "expired"] as const).find((d) => d === f.decision);
@@ -3915,6 +4630,7 @@ const SERVER_FRAME_TYPES = [
   "mcp.tools",
   "agents",
   "browser.handoff",
+  "clis.pins",
 ];
 
 /** Parses a server frame (runner side); null when it isn't one. */
@@ -3936,6 +4652,7 @@ export function parseServerFrame(raw: string): ServerFrame | null {
   if ((f.type === "mcp.result" || f.type === "mcp.tools") && !isString(f.callId)) return null;
   if (f.type === "mcp.tools" && f.ok === true && !Array.isArray(f.tools)) return null;
   if (f.type === "agents" && !Array.isArray(f.agents)) return null;
+  if (f.type === "clis.pins" && !isObject(f.pins)) return null;
   if (f.type === "browser.handoff" && (!isString(f.agentId) || (f.handoff !== null && !isObject(f.handoff)))) {
     return null;
   }
@@ -4149,6 +4866,8 @@ export const MISSION_MCP_TOOLS: readonly MissionMcpTool[] = [
         request_id: { type: "string", maxLength: 64 },
         /** Added by the runner: where the task runs and its folders (the code-side rules check paths). */
         scope: { type: "object" },
+        /** Added by the runner: it refused this call by itself (`localVerdict`'s code and words), told for the run's steps. */
+        refused: { type: "object" },
       },
     },
   },
@@ -4189,13 +4908,16 @@ export function commandParts(command: string): string[] {
     .filter(Boolean);
 }
 
+/** The most of a call `commandOf` keeps: all of a command a permission rule reads. */
+export const COMMAND_OF_MAX = 1000;
+
 /** What a tool call does, as one line for people (`git init`, `WebFetch https://…`). */
 export function commandOf(toolName: string, input: Record<string, unknown> | null | undefined): string {
   const i = input ?? {};
   const s = (k: string) => (typeof i[k] === "string" ? (i[k] as string) : "");
-  if (toolName === "Bash") return s("command").trim().replace(/\s+/g, " ").slice(0, 1000);
+  if (toolName === "Bash") return s("command").trim().replace(/\s+/g, " ").slice(0, COMMAND_OF_MAX);
   const what = s("url") || s("file_path") || s("path") || s("query") || s("pattern");
-  return `${toolName}${what ? ` ${what}` : ""}`.slice(0, 1000);
+  return `${toolName}${what ? ` ${what}` : ""}`.slice(0, COMMAND_OF_MAX);
 }
 
 const globRe = (pattern: string) =>
@@ -4207,12 +4929,16 @@ const globRe = (pattern: string) =>
   );
 
 /** The `Bash(...)` pattern of a rule, or null for another tool's rule. */
-const bashPattern = (rule: string) => /^Bash\((.*)\)$/s.exec(rule.trim())?.[1] ?? null;
+export const bashPattern = (rule: string) => /^Bash\((.*)\)$/s.exec(rule.trim())?.[1] ?? null;
 
-/** One part of a command against one `Bash(...)` pattern (Claude Code's `*` matches anything; `x *` also matches `x`). */
-function partMatches(pattern: string, part: string) {
-  if (globRe(pattern).test(part)) return true;
-  return pattern.endsWith(" *") && part === pattern.slice(0, -2);
+/**
+ * One `Bash(...)` pattern as a test of one part of a command, built once for all the parts it reads (Claude Code's
+ * `*` matches anything; `x *` also matches `x`).
+ */
+export function partTest(pattern: string): (part: string) => boolean {
+  const re = globRe(pattern);
+  const bare = pattern.endsWith(" *") ? pattern.slice(0, -2) : null;
+  return (part) => re.test(part) || part === bare;
 }
 
 /**
@@ -4225,7 +4951,7 @@ export function ruleMatches(rule: string, toolName: string, input: Record<string
   const pattern = bashPattern(rule);
   if (pattern !== null) {
     if (toolName !== "Bash") return false;
-    return commandParts(commandOf("Bash", input)).some((part) => partMatches(pattern, part));
+    return commandParts(commandOf("Bash", input)).some(partTest(pattern));
   }
   const r = rule.trim();
   if (r === toolName) return true;
@@ -4252,7 +4978,7 @@ export function allowedBy(
   return parts.every((part) =>
     rules.some((r) => {
       const pattern = bashPattern(r);
-      return pattern !== null && partMatches(pattern, part);
+      return pattern !== null && partTest(pattern)(part);
     }),
   );
 }
@@ -4416,8 +5142,18 @@ export function parseMachineSize(v: unknown): MachineSize | null {
     isObject(l) && inRange(l.cpus, [1, v.cpus]) && between(l.memoryGb, 0, v.memoryGb)
       ? { limit: { cpus: l.cpus, memoryGb: l.memoryGb } }
       : {};
-  return { cpus: v.cpus, memoryGb: v.memoryGb, diskGb: v.diskGb, ...limit };
+  const room = parseTaskRoom(v.room);
+  return {
+    cpus: v.cpus,
+    memoryGb: v.memoryGb,
+    diskGb: v.diskGb,
+    ...limit,
+    ...(taskLimit(v.maxTasks) ? { maxTasks: v.maxTasks } : {}),
+    ...(room ? { room } : {}),
+  };
 }
+
+const taskLimit = (v: unknown): v is number => inRange(v, TASK_LIMIT_BOUNDS);
 
 /** `pong.load` (protocol 22): sane numbers, else none. */
 export function parseMachineLoad(v: unknown): MachineLoad | null {
@@ -4433,6 +5169,7 @@ export function parseMachineLoad(v: unknown): MachineLoad | null {
     ...(between(v.diskFreeGb, 0, 1e6) ? { diskFreeGb: v.diskFreeGb } : {}),
     ...(between(v.diskUse, 0, 1) ? { diskUse: v.diskUse } : {}),
     ...(between(v.sharedGb, 0, 1e6) ? { sharedGb: v.sharedGb } : {}),
+    ...(between(v.agentTmpRamGb, 0, 1e6) ? { agentTmpRamGb: v.agentTmpRamGb } : {}),
   };
 }
 
@@ -4455,10 +5192,13 @@ export const isStreamId = (v: unknown): v is string => typeof v === "string" && 
 
 /** A data socket's `stream.hello` (server side); null when it isn't one. The token is checked by the caller. */
 export function parseStreamHello(raw: string): StreamHello | null {
-  const f = smallJson(raw, 512);
+  // Room for the longest token and an `egress` host (253), never for padding.
+  const f = smallJson(raw, 640);
   if (!isObject(f) || f.type !== "stream.hello" || !isStreamId(f.streamId)) return null;
   if (!isString(f.token) || !f.token.startsWith(MACHINE_TOKEN_PREFIX) || f.token.length > 200) return null;
-  return { type: "stream.hello", token: f.token, streamId: f.streamId };
+  if (f.egress !== undefined && !isEgressTarget(f.egress)) return null;
+  const egress = f.egress === undefined ? {} : { egress: { host: f.egress.host, port: f.egress.port } };
+  return { type: "stream.hello", token: f.token, streamId: f.streamId, ...egress };
 }
 
 /** A terminal's size within `STREAM_LIMITS` (whole columns and rows). */
@@ -4489,6 +5229,8 @@ export function parseStreamControl(raw: string): StreamControl | null {
   if (f.type === "exit" && (f.code === null || Number.isInteger(f.code))) {
     return { type: "exit", code: f.code as number | null };
   }
+  if (f.type === "end") return { type: "end" };
+  if (f.type === "moved") return { type: "moved" };
   if (f.type === "mode" && (f.mode === "watch" || f.mode === "control")) return { type: "mode", mode: f.mode };
   if (f.type === "ack") return { type: "ack" };
   return null;

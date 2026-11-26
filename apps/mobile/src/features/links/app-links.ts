@@ -1,5 +1,6 @@
 import type { ApiClient, MessageCard } from "@agenteschat/client";
 import { messagePath } from "@agenteschat/client/lib/message-links";
+import { liveActivityTargetOf } from "../live-activity/props";
 import { isSafeId } from "../shared/logic";
 import { chatHref, notificationHref } from "./logic";
 import { workspaceOnScreen } from "./on-screen";
@@ -130,6 +131,9 @@ function workspaceScreen(rest: string[], q: Record<string, string>): Record<stri
       // A file's link (`filePath`): the file itself, at its version when named.
       if (isSafeId(q.artifact))
         return /^\d{1,9}$/.test(q.v ?? "") ? `/file/${q.artifact}?v=${q.v}` : `/file/${q.artifact}`;
+      // A live file's own page on the web (ADR 0196 §9): the file here, which goes on to its kind's screen; with `m`,
+      // its conversation at that message (ADR 0199).
+      if (id !== undefined) return isSafeId(id) ? (m ? `/file/${id}?m=${m}` : `/file/${id}`) : null;
       return "/drive";
     case "wiki":
       if (id === undefined) return "/wiki";
@@ -251,4 +255,15 @@ export async function resolveLink(
   if (isSafeId(p.notification))
     return notificationHref(await api.notifications.read(orgId, p.notification, true)) ?? "/activity";
   return "/";
+}
+
+/**
+ * A tap on the agents' island (ADR 0210): the conversation it points at, straight away in `current` (the workspace on
+ * screen), else through `/link`, which switches workspace first. Null for any other link.
+ */
+export function liveActivityLinkHref(url: string, current: string | null = null): string | null {
+  const target = liveActivityTargetOf(url);
+  if (!target || !isSafeId(target.orgId) || !isSafeId(target.channelId)) return null;
+  const to = chatHref(target.channelId, target.threadId, target.messageId);
+  return target.orgId === current ? to : linkHref({ org: target.orgId, to });
 }

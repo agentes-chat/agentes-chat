@@ -1,13 +1,8 @@
-import { useEffect } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
-import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withSequence,
-  withTiming,
-} from "react-native-reanimated";
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import { useLivePaused } from "@/agent/live";
+import { useDrawingClock } from "@/sky/clock";
 import { LIST_AVATAR } from "./ListRow";
 import { useReducedMotion, useTheme } from "./theme";
 
@@ -19,7 +14,7 @@ import { useReducedMotion, useTheme } from "./theme";
 export function SkeletonRow({ name = 42, preview = 80 }: { name?: number; preview?: number }) {
   const { colors } = useTheme();
   const pulse = usePulse();
-  const bone = { backgroundColor: colors.sunken };
+  const bone = { backgroundColor: colors.plate };
   return (
     <Animated.View
       style={[styles.row, pulse]}
@@ -47,6 +42,54 @@ export function SkeletonList({ rows = 4 }: { rows?: number }) {
   );
 }
 
+/** How long the stand-in rows take to fade away once the real ones are in. */
+const SKELETON_OUT = 220;
+
+/**
+ * A list's first load, so its rows can arrive over the stand-ins instead of replacing them at once. `skeleton`: the
+ * stand-ins still show (loading, or fading away over the rows); `landing`: the data just came, for as long as the
+ * stand-ins fade, which is when the rows mounting play their arrival. A refetch never loads again, so it plays
+ * nothing; a screen that opens with its data, or a phone asked for less motion, has no arrival at all.
+ */
+export function useFirstLoad(loading: boolean): { skeleton: boolean; landing: boolean } {
+  const reduced = useReducedMotion();
+  const [phase, setPhase] = useState<"loading" | "landing" | "done">(loading ? "loading" : "done");
+  // Told while rendering, so the rows' very first render already knows they arrive.
+  let now = phase;
+  if (loading) now = "loading";
+  else if (phase === "loading") now = reduced ? "done" : "landing";
+  if (now !== phase) setPhase(now);
+  useEffect(() => {
+    if (phase !== "landing") return;
+    const timer = setTimeout(() => setPhase("done"), SKELETON_OUT);
+    return () => clearTimeout(timer);
+  }, [phase]);
+  return { skeleton: now !== "done", landing: now === "landing" };
+}
+
+/**
+ * The stand-ins of a list around its first load: in the list's place while it loads, then (`leaving`) lifted over
+ * the rows that took that place and faded away, so the rows come in under them and nothing is swapped. Put it first
+ * in the box that holds the rows, and take it out when `useFirstLoad` says the stand-ins are gone.
+ */
+export function SkeletonOver({ leaving, children }: { leaving: boolean; children: ReactNode }) {
+  const k = useSharedValue(1);
+  useEffect(() => {
+    if (leaving) k.set(withTiming(0, { duration: SKELETON_OUT }));
+  }, [k, leaving]);
+  const look = useAnimatedStyle(() => ({ opacity: k.get() }));
+  return (
+    <Animated.View
+      pointerEvents={leaving ? "none" : "auto"}
+      style={[leaving && styles.over, look]}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      {children}
+    </Animated.View>
+  );
+}
+
 /** Row shapes: the name's and the preview's widths, in percent of the text column. */
 const SHAPES: [number, number][] = [
   [42, 80],
@@ -57,27 +100,30 @@ const SHAPES: [number, number][] = [
   [34, 78],
 ];
 
-/** The soft pulse every bone shares: 1 → 0.55 → 1 over 1.4 s, still with reduced motion. */
+/** Half a pulse: down to its low in this long, back up in as long. */
+const PULSE_HALF_MS = 700;
+const PULSE_EASE = Easing.inOut(Easing.quad);
+
+/**
+ * The soft pulse every bone shares: 1 → 0.55 → 1 over 1.4 s, still with reduced motion. Off screen (`LivePause`) its
+ * time stops where it was, and it carries on from there when it shows again.
+ */
 export function usePulse() {
   const reduced = useReducedMotion();
-  const k = useSharedValue(1);
-  useEffect(() => {
-    if (reduced) {
-      k.value = 0.8;
-      return;
-    }
-    k.value = withRepeat(
-      withSequence(
-        withTiming(0.55, { duration: 700, easing: Easing.inOut(Easing.quad) }),
-        withTiming(1, { duration: 700, easing: Easing.inOut(Easing.quad) }),
-      ),
-      -1,
-    );
-  }, [k, reduced]);
-  return useAnimatedStyle(() => ({ opacity: k.value }));
+  const paused = useLivePaused();
+  const clock = useDrawingClock(!reduced && !paused);
+  return useAnimatedStyle(() => {
+    if (reduced) return { opacity: 0.8 };
+    const at = clock.get() % (2 * PULSE_HALF_MS);
+    const down = at < PULSE_HALF_MS;
+    const e = PULSE_EASE((down ? at : at - PULSE_HALF_MS) / PULSE_HALF_MS);
+    return { opacity: down ? 1 - 0.45 * e : 0.55 + 0.45 * e };
+  });
 }
 
 const styles = StyleSheet.create({
+  // Over the rows, from the top of their box: the stand-ins take no room while they fade.
+  over: { position: "absolute", top: 0, left: 0, right: 0 },
   // The same box as `ListRow`: 16 at the sides, the 52 avatar, 12 to the text, 76 tall.
   row: {
     flexDirection: "row",

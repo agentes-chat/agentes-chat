@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, setSystemTime, test } from "bun:test";
+import { afterEach, describe, expect, setSystemTime, spyOn, test } from "bun:test";
 import { setupDom } from "@agenteschat/ui/testing/dom";
 
 setupDom();
@@ -117,7 +117,7 @@ describe.each(["panel", "page"] as const)("%s", (surface) => {
     });
     await event(socket, { type: "agent.tool.output", ...run, toolUseId: "t1", stream: "stdout", text: "saida\n" });
     await settle(2);
-    await act(async () => fireEvent.click(within(view).getByRole("button", { name: "Ver código da Ada" })));
+    await act(async () => fireEvent.click(within(view).getByRole("button", { name: "Ver código" })));
     const live = view.querySelector(".live-code") as HTMLElement;
     expect(within(live).getByLabelText("Saída").querySelector(".live-code__stdout")?.textContent).toBe("saida\n");
     await event(socket, { type: "agent.tool", ...run, tool: null, toolUseId: "t1" });
@@ -572,8 +572,14 @@ describe("other conversations shown as a thread", () => {
       document.querySelector('[data-card="131"] .ac-factline__fact[title$="mensagens"]')?.textContent;
     expect(talking()).toBe("3");
     conversation.count = 4;
-    await act(async () => socket.push({ type: "event", scope: "org", event: { type: "issue.updated" } }));
-    await act(() => new Promise((done) => setTimeout(done, UNREAD_REFRESH_MS + 100)));
+    // No random spread on the board's read, so the wait stays inside Bun's default timeout.
+    const random = spyOn(Math, "random").mockReturnValue(0);
+    try {
+      await act(async () => socket.push({ type: "event", scope: "org", event: { type: "issue.updated" } }));
+      await act(() => new Promise((done) => setTimeout(done, UNREAD_REFRESH_MS + 100)));
+    } finally {
+      random.mockRestore();
+    }
     await settle(5);
     expect(talking()).toBe("4");
   });

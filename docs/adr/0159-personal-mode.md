@@ -139,10 +139,10 @@ seus agentes.", before the four rows above.
 
 ## Amendment (2026-11-18): personal sidebar shortcuts on web and desktop (§3)
 
-Home stays above the scrollable list, alongside Activity. The Mac app shows Activity in its title bar. Settings opens
-Your account and the account menu links to About you for people who may configure the workspace. The expanded sidebar
-keeps the creation actions in their sections. The collapsed sidebar has one Create menu with the actions the person may use.
+Home and Activity stay above the scrollable list on web and desktop. Settings opens Your account, and the account menu
+links to About you for people who may configure the workspace. The expanded sidebar keeps the creation actions in their
+sections. The collapsed sidebar has one Create menu with the actions the person may use.
 
-Tools replaces More in the personal sidebar. It lists every tool, including pinned tools, and opens Go to… and
+Tools replaces More in the personal sidebar. It lists the available tools, including pinned tools, and opens Go to… and
 Customize sidebar. Pinning or removing a shortcut there updates the same per-person workspace preference as
 Customize sidebar.

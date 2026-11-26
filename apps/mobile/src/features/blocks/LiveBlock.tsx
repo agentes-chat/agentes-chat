@@ -1,6 +1,5 @@
 import { type BlockChange, useArtifact, useBlockReply, useKeepBlock, useSharedBlock } from "@agenteschat/client";
 import { type BlockEvent, blockEvent, blockPage, DRAFT_SETTLE_MS } from "@agenteschat/client/lib/blocks";
-import { clockHour } from "@agenteschat/client/lib/format";
 import { chartRamp } from "@agenteschat/ui/sky/chart";
 import { randomUUID } from "expo-crypto";
 import { LinearGradient } from "expo-linear-gradient";
@@ -11,9 +10,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 import { Button, IconButton, SCREEN_X, Sky, Text, useTheme, useToast } from "@/ui";
 import { router } from "@/ui/navigation";
+import { useMessageCardFrame } from "../chat/look";
+import { useRowDirectory } from "../chat/row-data";
+import { withOpacity } from "../chat/turn";
 import { PageBones } from "../files/PageBones";
+import { useBubblePart } from "../shared/bubble-part";
 import { LoadFailed } from "../shared/FirstUse";
-import { useColors, useDirectory, useErrorToast, useOrgId } from "../shared/hooks";
+import { useColors, useErrorToast, useOrgId, useWhen } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
 import { PushedHeader } from "../shared/parts";
 import { hostScript, INLINE_HEIGHT, ISOLATED_WEB_VIEW, themeScript, withLiveBlock } from "./logic";
@@ -188,10 +191,13 @@ export function LiveBlock({
   agentId: string;
   screen?: boolean;
 }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
+  const when = useWhen();
   const c = useColors();
+  // What the tall block fades into: the bubble's fill where its card is a bubble of the message.
+  const fill = useBubblePart()?.fill ?? c.raised;
   const orgId = useOrgId();
-  const dir = useDirectory();
+  const dir = useRowDirectory();
   const toast = useToast();
   const agent = dir.agentById.get(agentId);
   const blockKey = `${id}@${version}`;
@@ -277,11 +283,7 @@ export function LiveBlock({
   }
 
   const same = sent !== null && sent.text === draft?.text;
-  const time = sent
-    ? new Intl.DateTimeFormat(i18n.language, { hour: clockHour(i18n.language), minute: "2-digit" }).format(
-        new Date(sent.at),
-      )
-    : "";
+  const time = sent ? when.time(sent.at) : "";
   return (
     <View style={screen ? styles.fill : undefined}>
       <View style={screen ? styles.fill : [styles.view, { height: tall && open ? height : INLINE_HEIGHT }]}>
@@ -317,7 +319,7 @@ export function LiveBlock({
           </Pressable>
         )}
         {tall && !open ? (
-          <LinearGradient pointerEvents="none" colors={[`${c.raised}00`, c.raised]} style={styles.fade} />
+          <LinearGradient pointerEvents="none" colors={[withOpacity(fill, 0), fill]} style={styles.fade} />
         ) : null}
       </View>
       {tall && !open ? (
@@ -355,15 +357,16 @@ export function LiveBlock({
 
 /** A block on its message: the agent's card, its title, and the block itself. */
 export function LiveBlockCard({ id, version }: { id: string; version?: number }) {
+  const card = useMessageCardFrame();
   const { t } = useTranslation();
   const c = useColors();
   const orgId = useOrgId();
-  const dir = useDirectory();
+  const dir = useRowDirectory();
   const query = useArtifact(orgId, id, version);
   const a = query.data;
   if (a?.content.kind !== "block") {
     return (
-      <View style={[styles.card, styles.loading, { backgroundColor: c.raised, borderColor: c.line2 }]}>
+      <View style={[styles.card, styles.loading, card.style]}>
         <ActivityIndicator color={c.faint} />
         <Text variant="footnote" tone="muted">
           {t("mobile.blocks.building")}
@@ -374,14 +377,17 @@ export function LiveBlockCard({ id, version }: { id: string; version?: number })
   const agentId = a.createdBy.id;
   const open = () => router.push({ pathname: "/block/[id]", params: { id: a.id, v: String(a.shownVersion) } });
   return (
-    <View style={[styles.card, { backgroundColor: c.raised, borderColor: c.line2 }]}>
-      <Sky
-        color={agentLook(dir.agentById.get(agentId)).color}
-        surface="raised"
-        depth={0.95}
-        fade={0}
-        style={styles.sky}
-      />
+    <View style={[styles.card, card.style]}>
+      {/* A bubble of the message has no sky across its top (as a request's card there). */}
+      {card.bubble ? null : (
+        <Sky
+          color={agentLook(dir.agentById.get(agentId)).color}
+          surface="raised"
+          depth={0.95}
+          fade={0}
+          style={styles.sky}
+        />
+      )}
       <View style={styles.head}>
         <View style={styles.titles}>
           <Text variant="subhead" style={styles.bold} numberOfLines={2}>

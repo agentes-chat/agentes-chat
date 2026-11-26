@@ -1,3 +1,32 @@
+import { MACHINE_PROTOCOL_VERSION, RUNNER_APP_PROTOCOL } from "@agenteschat/adapters";
+
+/**
+ * The newest desktop app's protocol when runners didn't yet say whether the app ran them (`RUNNER_APP_PROTOCOL`).
+ * Below it an update exists however that runner was installed; at or above it, it may be the newest app there is.
+ */
+const UNSAID_APP_PROTOCOL = 77;
+
+/**
+ * How the person updates a computer whose runner is behind this server, which `agentes-runner update` and the
+ * installer both catch up with: `command` (`agentes-runner update`), `installer` (system mode: the install command
+ * again, as root). Null: nothing to update from here: current, the workspace's or this server's own computer (each
+ * updated with its server), or run by the agentes.chat app, whose releases lag this server and which updates itself.
+ * A runner from before `RUNNER_APP_PROTOCOL` counts only on Linux, where the app is rare, and only below the app of
+ * that time.
+ */
+export function runnerUpdateOf(
+  m: { kind: string; os: string; protocol: number; executors?: { mode?: string; app?: true } | null },
+  server = MACHINE_PROTOCOL_VERSION,
+): "command" | "installer" | null {
+  if (m.kind !== "connected" || m.protocol >= server) return null;
+  const app =
+    m.protocol >= RUNNER_APP_PROTOCOL
+      ? m.executors?.app === true
+      : m.os !== "linux" || m.protocol >= UNSAID_APP_PROTOCOL;
+  if (app) return null;
+  return m.executors?.mode === "system" ? "installer" : "command";
+}
+
 /**
  * How a computer too old for something gets its update, said to the agent that tells the person. The workspace's own
  * computer (`managed`) updates by itself; this server's computer (`host`) and one that runs every agent as its own

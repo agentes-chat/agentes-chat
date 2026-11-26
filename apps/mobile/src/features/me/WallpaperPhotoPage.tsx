@@ -160,7 +160,7 @@ function PhotoPreview({ photo }: { photo: PickedPhoto }) {
   const dm = one ? Boolean(dmRow) : true;
   const agent = dmRow?.with.type === "agent" ? dir.agentById.get(dmRow.with.id) : undefined;
   const color: AgentColorName = agent ? agentLook(agent).color : SAMPLE_HUE;
-  const { style, tone } = chatLookOf(prefs, dm, isPersonal(org));
+  const { style, tone } = chatLookOf(prefs, dm, isPersonal(org), "phone");
   const strength = wallpaperStrength(style === "bubbles");
   const [box, setBox] = useState({ width: 0, height: 0 });
   const [dockHeight, setDockHeight] = useState(0);

@@ -1,19 +1,24 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { channelTopic } from "@agenteschat/adapters";
-import { eq, schema } from "@agenteschat/db";
+import { countQueries, eq, schema } from "@agenteschat/db";
 import type { ModelRequest } from "@agenteschat/providers";
 import {
   addChannelMember,
   ConflictError,
   cancelRun,
   createAgent,
+  createRole,
   drainOutbox,
   ForbiddenError,
   listMessages,
+  mayStopRun,
   OrgDeletingError,
   postPersonMessage,
+  REACH_COLUMNS,
+  requireActiveMembership,
   SYSTEM_STOP_REASONS,
   type SystemStopReason,
+  setMemberRoles,
   standingText,
   stopChecksSettled,
   stopError,
@@ -167,6 +172,33 @@ describe("canceling a run", () => {
     const [other] = (await f.db.select().from(schema.agentRuns)).filter((r) => r.agentId === hers.id);
     expect((await cancelRun(deps(), caio.id, f.org.id, other?.id ?? "")).status).toBe("canceled");
   });
+
+  test("'Edit agents' stops the runs of an agent whose audience takes them, never a private agent's", async () => {
+    f = await setup();
+    const keys = await createRole(f.db, f.owner.id, f.org.id, { name: "Agentes", permissions: ["manage_agents"] });
+    const lia = await addMember(f.db, f.org.id, "member", "lia");
+    await setMemberRoles(f.db, f.owner.id, f.org.id, lia.id, [keys.id]);
+    // Ana's @dev, kept to her: the key alone doesn't reach it (ADR 0085 addendum of 2026-11-17).
+    const audience = (mode: "owner" | "everyone") =>
+      f.db.update(schema.agents).set({ audienceMode: mode }).where(eq(schema.agents.id, f.agent.id));
+    await audience("owner");
+    await ask("@dev oi");
+    const run = await runOf();
+    if (!run) throw new Error("no run");
+    await expect(cancelRun(deps(), lia.id, f.org.id, run.id)).rejects.toMatchObject({ code: "run.cancel_forbidden" });
+
+    await audience("everyone");
+    // Given the run's agent, as a list of runs passes it, the rule reads nothing for it; else only its reach.
+    const membership = await requireActiveMembership(f.db, lia.id, f.org.id);
+    const row = { run, requester: f.owner.id, ownerUserId: f.owner.id };
+    const [agent] = await f.db.select(REACH_COLUMNS).from(schema.agents).where(eq(schema.agents.id, f.agent.id));
+    expect(await countQueries(() => mayStopRun(f.db, lia.id, membership, { ...row, agent }))).toEqual({
+      result: true,
+      queries: 0,
+    });
+    expect(await countQueries(() => mayStopRun(f.db, lia.id, membership, row))).toEqual({ result: true, queries: 1 });
+    expect((await cancelRun(deps(), lia.id, f.org.id, run.id)).status).toBe("canceled");
+  });
 });
 
 describe("who or what stopped a run, from its error", () => {
@@ -309,7 +341,7 @@ describe("one active run per agent and conversation", () => {
   test('a stop ("para", as the judge hears it) while it works cancels the task instead of starting another', async () => {
     let threadId = "";
     f = await setup({
-      judge: (kind, _id, state) => (kind === "stop_request" && state.message === "para" ? 0.95 : 0),
+      judge: (kind, _id, state) => (kind === "steer_triage" ? (state.message === "para" ? "stop" : undefined) : 0),
       toolSources: [
         slowTool(async () => {
           await postPersonMessage(

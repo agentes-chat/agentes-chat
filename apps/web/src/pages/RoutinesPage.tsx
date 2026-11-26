@@ -1,4 +1,5 @@
 import type {
+  Agent,
   Routine,
   RoutineEvent,
   RoutineHookCall,
@@ -20,12 +21,14 @@ import {
   useRoutineAction,
   useRoutineHook,
   useRoutineHookAction,
+  useRoutineRunCalls,
   useRoutineRuns,
   useRoutines,
   useRuleDescribe,
   useRuleParse,
 } from "@agenteschat/client";
 import { approvalTitle, ownActionName, routineVaultKey, splitOwnActions } from "@agenteschat/client/lib/approval-words";
+import { createsRoutinesFor, managesAgent } from "@agenteschat/client/lib/audience";
 import type { RunStatus } from "@agenteschat/client/lib/calendar";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { FIELD_LIMITS } from "@agenteschat/client/lib/field-limits";
@@ -51,6 +54,7 @@ import {
   templateRule,
 } from "@agenteschat/client/lib/routine-templates";
 import {
+  atWorkWords,
   busyOnComputer,
   eventWebhook,
   healthWords,
@@ -73,14 +77,17 @@ import {
   type Words,
   whereItRuns,
 } from "@agenteschat/client/lib/routine-view";
+import { runCallText } from "@agenteschat/client/lib/routine-webhooks";
 import {
   browserTimezone,
+  GROUP_BY_EXAMPLE,
   hookCurl,
   isRefusedHookCall,
   onceParts,
   routineHookUrl,
   timezoneName,
 } from "@agenteschat/client/lib/routines";
+import { formatDuration } from "@agenteschat/client/lib/work";
 import {
   Button,
   CheckboxPill,
@@ -100,6 +107,7 @@ import {
   Icon,
   type IconName,
   InfoHint,
+  InlineName,
   Input,
   LimitLine,
   Locked,
@@ -109,6 +117,7 @@ import {
   PageHeader,
   RecurrencePicker,
   type RecurrenceRule,
+  type RunBar,
   RunKey,
   RunLane,
   RunMark,
@@ -175,6 +184,7 @@ export const ROUTINE_EVENTS: RoutineEvent[] = [
   "github.pr_opened",
   "issue.created",
   "deploy.succeeded",
+  "telegram.message",
 ];
 
 /** Started by something happening (an event, an email, a webhook call), not by the clock. */
@@ -256,19 +266,6 @@ function useOpenWidget() {
     });
 }
 
-const targetIcon = (target: RoutineTarget): IconName =>
-  target.type === "dm"
-    ? "message"
-    : target.type === "conversation"
-      ? target.threadId
-        ? "reply"
-        : "channel"
-      : target.type === "artifact"
-        ? "file"
-        : target.type === "widget"
-          ? "grid"
-          : "channel";
-
 /** The agent's look for the pixel pieces (color and eyes). */
 function useLook() {
   const actors = useActors();
@@ -306,7 +303,7 @@ export function useWhen() {
 /** Rotinas: scheduled and event-driven agent tasks. */
 export function RoutinesPage() {
   const { t } = useTranslation();
-  const { org, me } = useOrg();
+  const { org } = useOrg();
   const dir = useDirectory(org.id);
   const routines = useRoutines(org.id);
   const now = useNow();
@@ -320,8 +317,9 @@ export function RoutinesPage() {
   // After the directory: who may create hangs on the agents they own.
   const noRoutines = routines.isSuccess && list.length === 0 && !dir.loading;
   const look = useRightHandLook();
-  // The server's rule: who manages routines, or an agent's owner for that agent.
-  const mayCreate = can(org, "manage_routines") || dir.agents.some((a) => a.ownerUserId === me.user.id);
+  // The server's `createRoutine`, per agent (ADR 0085 addendum of 2026-11-17): who sets up its routines (who edits it,
+  // or "Create routines" where it reaches) and talks to it, since a routine asks it on its creator's behalf (ADR 0053).
+  const mayCreate = dir.agents.some((a) => createsRoutinesFor(a));
   const [agents, setAgents] = useState<string[]>([]);
   const copy = useFilterCopy();
   const agentOptions = useActorFilterOptions().filter((o) => o.value.startsWith("agent:"));
@@ -347,10 +345,20 @@ export function RoutinesPage() {
   const live = current.filter((r) => byStatus(r) && !isPaused(r));
   const paused = current.filter((r) => byStatus(r) && isPaused(r));
   const open = list.find((r) => r.id === openId) ?? null;
-  const toggleOpen = (id: string) => setOpenId(openId === id ? null : id);
+  // The tab the details open on: a run's bar opens them on its runs.
+  const [openTab, setOpenTab] = useState<"details" | "runs">("details");
+  const toggleOpen = (id: string) => {
+    setOpenTab("details");
+    setOpenId(openId === id ? null : id);
+  };
+  const openRuns = (id: string) => {
+    setOpenTab("runs");
+    setOpenId(id);
+  };
   const filtered = agents.length > 0 || query.length > 0 || status !== "all";
-  // "N" opens "Nova rotina" (not while typing).
+  // "N" opens "New routine" (not while typing), for who may make one.
   useEffect(() => {
+    if (!mayCreate) return;
     const onKey = (e: KeyboardEvent) => {
       const el = e.target instanceof Element ? e.target : null;
       if (e.metaKey || e.ctrlKey || e.altKey || e.key.toLowerCase() !== "n") return;
@@ -360,7 +368,7 @@ export function RoutinesPage() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [mayCreate]);
   const group = (title: string, rows: Routine[]) =>
     rows.length > 0 && (
       <section className="routines-group" aria-label={title}>
@@ -373,6 +381,7 @@ export function RoutinesPage() {
               now={now}
               selected={r.id === openId}
               onOpen={() => toggleOpen(r.id)}
+              onOpenRuns={() => openRuns(r.id)}
               onEdit={() => setOpenId(r.id)}
             />
           ))}
@@ -522,6 +531,7 @@ export function RoutinesPage() {
                           now={now}
                           selected={r.id === openId}
                           onOpen={() => toggleOpen(r.id)}
+                          onOpenRuns={() => openRuns(r.id)}
                           onEdit={() => setOpenId(r.id)}
                         />
                       ))}
@@ -533,7 +543,15 @@ export function RoutinesPage() {
           </>
         )}
       </div>
-      {open && <RoutineDetails routine={open} now={now} onClose={() => setOpenId(null)} />}
+      {open && (
+        <RoutineDetails
+          key={`${open.id}-${openTab}`}
+          routine={open}
+          now={now}
+          tab={openTab}
+          onClose={() => setOpenId(null)}
+        />
+      )}
       <RoutineDialog open={creating} onClose={() => setCreating(false)} onWebhook={(r) => setOpenId(r.id)} />
     </div>
   );
@@ -544,6 +562,16 @@ export function RoutinesPage() {
  * target change from the widget; here it can be paused, resumed, run, stopped or deleted.
  */
 const isWidgetRoutine = (r: Pick<Routine, "target">) => r.target.type === "widget";
+
+/**
+ * The one-tap fix a paused routine offers me (`pausedFix`), for who changes it (`canManage`). "Take over the routine"
+ * makes it mine, the server's create check (`takeOverRoutine`, ADR 0053 §6.2), so only where I may make one for its
+ * agent (`createsRoutinesFor`, the agent's entry in the directory; ADR 0085 addendum of 2026-11-17).
+ */
+function fixFor(r: Routine, agent: Agent | undefined): RoutineFix | null {
+  const fix = r.canManage ? pausedFix(r) : null;
+  return fix === "take_over" && !createsRoutinesFor(agent) ? null : fix;
+}
 
 /** A title for the card: a routine made from a chat message may be named with its whole prompt. */
 export function routineTitle(r: Pick<Routine, "name" | "prompt">) {
@@ -564,10 +592,11 @@ function everyMinutes(t: TFunction, cron: string) {
 /** The runs as words, for the strip's label and the horizon's tooltips. */
 function useRunWords() {
   const { t, i18n } = useTranslation();
+  const say = useSay();
   return {
     status: (s: RunStatus) => t(`routines.statusWord.${s}`),
     caption: (r: Routine, now: Date) => {
-      if (isRunning(r)) return t("routines.runningNow");
+      if (isRunning(r)) return say(atWorkWords(r));
       // The finished runs (one at work is the strip's own "running").
       const runs = runPixels(r.recentRuns.length > 0 ? r.recentRuns : r.lastRun ? [r.lastRun] : []);
       const last = runs[0];
@@ -596,8 +625,9 @@ function useRunWords() {
 /** "Próxima em 10 min" (within a day), else "Próxima sex 16 out, 10:00". */
 function useNextText() {
   const { t, i18n } = useTranslation();
+  const say = useSay();
   return (r: Routine, now: Date) => {
-    if (isRunning(r)) return t("routines.runningNow");
+    if (isRunning(r)) return say(atWorkWords(r));
     if (hasFired(r))
       return r.lastRun
         ? t("routines.firedAt", { when: whenAt(t, i18n.language, r.lastRun.at) })
@@ -760,17 +790,70 @@ function FixButton({ routine: r, fix, size = "sm" }: { routine: Routine; fix: Ro
   );
 }
 
+/** The trigger's icon: a widget's grid, a reminder's bell, a schedule's repeat. */
+function triggerIcon(r: Routine, widget: boolean, reminder: boolean): IconName {
+  if (widget) return "grid";
+  if (r.trigger.type === "event") return "bolt";
+  if (r.trigger.type === "email" || r.trigger.type === "connector") return "mail";
+  if (r.trigger.type === "webhook") return "link";
+  if (r.trigger.type === "once") return reminder ? "bell" : "calendar";
+  return "repeat";
+}
+
+/**
+ * The row's last runs as bars, each with its tip (when it ran, how long, how it went) and opening the routine's runs.
+ */
+function RowRuns({ routine: r, running, onOpenRuns }: { routine: Routine; running: boolean; onOpenRuns: () => void }) {
+  const { t, i18n } = useTranslation();
+  const actors = useActors();
+  const say = useSay();
+  const { color } = useLook()(r.agentId);
+  // The finished runs as `runPixels` keeps them: the same order, so a bar's index is its run's.
+  const finished = r.recentRuns.filter((x) => runPixelStatus(x.status));
+  const atWork = r.recentRuns.find((x) => isRunAtWork(x.status));
+  const bar = (i: number): RunBar => {
+    const x = i < 0 ? atWork : finished[i];
+    const took = x?.finishedAt ? formatDuration(t, Date.parse(x.finishedAt) - Date.parse(x.at)) : null;
+    const head = [x && capitalize(whenAt(t, i18n.language, x.at), i18n.language), took].filter(Boolean).join(" · ");
+    const how =
+      i < 0 || !x ? say(atWorkWords(r)) : say(runOutcome(x, (id) => actors.dir.memberById.get(id)?.name ?? null));
+    return {
+      label: head ? `${head}: ${how}` : how,
+      tip: (
+        <>
+          {head && (
+            <>
+              <b>{head}</b>
+              <br />
+            </>
+          )}
+          {how}
+        </>
+      ),
+      onPick: onOpenRuns,
+    };
+  };
+  return (
+    // Each bar's button says its run; with none, the strip is only dots.
+    <div className="routine-row__runs">
+      <RunStrip runs={runPixels(r.recentRuns)} color={color} slots={RUN_SLOTS} running={running} bar={bar} />
+    </div>
+  );
+}
+
 function RoutineRow({
   routine: r,
   now,
   selected,
   onOpen,
+  onOpenRuns,
   onEdit,
 }: {
   routine: Routine;
   now: Date;
   selected: boolean;
   onOpen: () => void;
+  onOpenRuns: () => void;
   onEdit: () => void;
 }) {
   const { t } = useTranslation();
@@ -779,12 +862,9 @@ function RoutineRow({
   const controls = useRoutineControls(r);
   const action = controls.action;
   const [deleting, setDeleting] = useState(false);
-  const target = useTargetLabel();
   const openWidget = useOpenWidget();
   const when = useWhen();
   const nextText = useNextText();
-  const words = useRunWords();
-  const look = useLook()(r.agentId);
   const agent = { type: "agent" as const, id: r.agentId };
   const widget = isWidgetRoutine(r) ? r.widget : null;
   // A widget's routine reads as its widget (ADR 0135 §4).
@@ -798,7 +878,9 @@ function RoutineRow({
   const more = t("routines.more", { name: title });
   // Something needs a look (a reason it paused, failures, waiting for a computer or a person): a chip says it.
   const needsLook = !done && routineStateWords(r).tone === "waiting";
-  const fix = r.canManage && needsLook ? pausedFix(r) : null;
+  // Its agent as the directory has it: whether I may make (or copy, or take over) a routine for it.
+  const itsAgent = actors.dir.agentById.get(r.agentId);
+  const fix = needsLook ? fixFor(r, itsAgent) : null;
   // Paused near its plan's limit: said quietly (it picks up by itself), with no fix.
   const showState = needsLook || r.state === "usage_paused";
   // Its "…" and its right click: run or stop, pause or resume, then what the "…" always had.
@@ -844,8 +926,9 @@ function RoutineRow({
       : r.canManage
         ? ([{ kind: "item", id: "edit", label: t("routines.edit"), icon: "edit", run: onEdit }] satisfies MenuEntry[])
         : []),
-    { kind: "item", id: "runs", label: t("routines.runs"), icon: "waiting", run: () => !selected && onOpen() },
-    ...(r.canManage && !widget
+    { kind: "item", id: "runs", label: t("routines.runs"), icon: "waiting", run: onOpenRuns },
+    // A copy is a new routine of mine for its agent: the server's create check (`duplicateRoutine`), not its editor's.
+    ...(!widget && createsRoutinesFor(itsAgent)
       ? ([
           {
             kind: "item",
@@ -897,32 +980,30 @@ function RoutineRow({
         onOpen();
       }}
     >
-      <span className="routine-row__who">{actors.avatar(agent, "sm")}</span>
+      <span className="routine-row__who">
+        {actors.avatar(agent, "sm")}
+        {/* Its agent, for a screen reader: the face says it to the eye. */}
+        <span className="ac-visually-hidden">{actors.name(agent)}</span>
+      </span>
       <div className="routine-row__main">
         <button type="button" className="routine-row__title" title={title} aria-expanded={selected} onClick={onOpen}>
           {title}
         </button>
+        {/* Two lines: its name, then when it runs and the next run. Chips only for trouble; where it delivers is in the
+            details the row opens. */}
         <span className="routine-row__sub">
           <span className="routine-row__to ac-iconline">
-            <Icon name={targetIcon(r.target)} size={14} />
+            <Icon name={triggerIcon(r, Boolean(widget), reminder)} size={14} />
             <span>
-              {widget
-                ? t("routines.widgetLine", { agent: actors.name(agent) })
-                : r.target.type === "conversation"
-                  ? t("routines.deliversIn", { agent: actors.name(agent), place: target(r.target) })
-                  : t("routines.deliversTo", { agent: actors.name(agent), target: target(r.target) })}
+              <span>{when(r)}</span>
+              {nextText(r, now) && (
+                <>
+                  {" · "}
+                  <span className={cx(running && "is-live")}>{nextText(r, now)}</span>
+                </>
+              )}
             </span>
           </span>
-          {widget && (
-            <Chip icon="grid" className="routine-row__chip">
-              {t("routines.widgetChip")}
-            </Chip>
-          )}
-          {reminder && (
-            <Chip icon="bell" className="routine-row__chip">
-              {t("routines.reminder")}
-            </Chip>
-          )}
           {mailTrouble(r) && (
             <Chip icon="alert" tone="waiting" className="routine-row__chip">
               {t(mailTrouble(r) === "error" ? "mail.routine.error" : "mail.routine.needsReconnect")}
@@ -932,36 +1013,7 @@ function RoutineRow({
           {fix && fix !== "resume" && <FixButton routine={r} fix={fix} />}
         </span>
       </div>
-      <div className="routine-row__when ac-mediarow ac-mediarow--row">
-        <span className="ac-mediarow__face routine-row__when-icon" aria-hidden="true">
-          <Icon
-            name={
-              r.trigger.type === "event"
-                ? "bolt"
-                : r.trigger.type === "email" || r.trigger.type === "connector"
-                  ? "mail"
-                  : r.trigger.type === "webhook"
-                    ? "link"
-                    : r.trigger.type === "once"
-                      ? reminder
-                        ? "bell"
-                        : "calendar"
-                      : "repeat"
-            }
-            size={16}
-          />
-        </span>
-        <span className="ac-mediarow__head routine-row__when-text">
-          <b>{when(r)}</b>
-        </span>
-        <span className="ac-mediarow__body routine-row__when-text">
-          <small className={cx(running && "is-live")}>{nextText(r, now)}</small>
-        </span>
-      </div>
-      <div className="routine-row__runs" role="img" aria-label={words.label(r)}>
-        <RunStrip runs={runPixels(r.recentRuns)} color={look.color} slots={RUN_SLOTS} running={running} />
-        <small>{words.caption(r, now)}</small>
-      </div>
+      <RowRuns routine={r} running={running} onOpenRuns={onOpenRuns} />
       <div className="routine-row__actions">
         {fired || !r.canManage ? (
           <span className="routine-row__ph routine-row__ph--switch" aria-hidden="true" />
@@ -1321,18 +1373,30 @@ function useWhereHint() {
  * runs; the webhook; what was prepared for later) and "Execuções"; the aside holds "No ar" and the fields that change
  * at once. "Rodar agora" (or Parar) and the one-tap fix are on the bar. Who can't change it sees the values.
  */
-function RoutineDetails({ routine: r, now, onClose }: { routine: Routine; now: Date; onClose: () => void }) {
+function RoutineDetails({
+  routine: r,
+  now,
+  tab: firstTab = "details",
+  onClose,
+}: {
+  routine: Routine;
+  now: Date;
+  tab?: "details" | "runs";
+  onClose: () => void;
+}) {
   const { t, i18n } = useTranslation();
   const { org } = useOrg();
   const actors = useActors();
   const controls = useRoutineControls(r);
   const action = controls.action;
   const runs = useRoutineRuns(org.id, r.id);
+  const itsAgent = actors.dir.agentById.get(r.agentId);
+  const moves = managesAgent(itsAgent);
   const when = useWhen();
   const say = useSay();
   const outages = useMachineOutages(org.id, r.state === "waiting_computer");
   const [switching, setSwitching] = useState(false);
-  const [tab, setTab] = useState<"details" | "runs">("details");
+  const [tab, setTab] = useState<"details" | "runs">(firstTab);
   const [saved, flashSaved] = useSavedFlash();
   const agent = { type: "agent" as const, id: r.agentId };
   const name = actors.name(agent);
@@ -1346,12 +1410,12 @@ function RoutineDetails({ routine: r, now, onClose }: { routine: Routine; now: D
     r.active && r.trigger.type === "schedule" && r.trigger.rule ? r.trigger.rule : null,
   );
   const nexts = described.data?.ok ? described.data.nextRuns.slice(0, 4) : r.nextRunAt ? [r.nextRunAt] : [];
-  const fix = r.canManage ? pausedFix(r) : null;
-  // "Trocar computador": the outage its run waits on, for whoever can move agents, where people connect their own
+  const fix = fixFor(r, itsAgent);
+  // "Trocar computador": the outage its run waits on, for whoever manages its agent, where people connect their own
   // computers (a Cloud workspace has one).
   const selfHost = useComputerEdition(org.id) === "selfhost";
   const outage =
-    selfHost && r.state === "waiting_computer" && r.waitingFor && can(org, "manage_agents")
+    selfHost && r.state === "waiting_computer" && r.waitingFor && moves
       ? outages.data?.outages.find((o) => o.machineId === r.waitingFor?.machineId)
       : undefined;
   const usage = usageParts(r.usage, can(org, "view_usage"));
@@ -1581,49 +1645,36 @@ function RoutineName({ routine: r, onSaved }: { routine: Routine; onSaved: () =>
   const { org } = useOrg();
   const toast = useToast();
   const action = useRoutineAction(org.id);
-  const [draft, setDraft] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
   const sent = useSent<string>(r.name);
   const name = sent.pending ?? r.name;
-  const ref = useFocusAtEnd<HTMLInputElement>(draft !== null);
   const shown = (isWidgetRoutine(r) && r.widget?.title) || routineTitle({ name, prompt: r.prompt });
   if (!r.canManage || isWidgetRoutine(r)) return <h1 className="issue-details__title">{shown}</h1>;
-  const save = () => {
-    if (draft === null) return;
-    const next = draft.trim();
-    setDraft(null);
-    if (!next || next === name) return;
-    sent.send(next);
-    action.mutate(
-      { type: "update", id: r.id, patch: { name: next } },
-      {
-        onSuccess: onSaved,
-        onError: (error) => {
-          sent.clear();
-          toast.show(errorText(t, error), "error");
-        },
-      },
-    );
-  };
-  if (draft !== null)
+  if (editing)
     return (
-      <input
-        ref={ref}
+      <InlineName
         className="issue-inplace__title"
-        value={draft}
+        value={name}
         maxLength={120}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={save}
-        onKeyDown={(e) => {
-          if (e.key !== "Enter" && e.key !== "Escape") return;
-          e.preventDefault();
-          e.currentTarget.blur();
-        }}
         aria-label={t("routines.panel.nameLabel")}
-        data-inplace=""
+        onSave={(next) => {
+          sent.send(next);
+          action.mutate(
+            { type: "update", id: r.id, patch: { name: next } },
+            {
+              onSuccess: onSaved,
+              onError: (error) => {
+                sent.clear();
+                toast.show(errorText(t, error), "error");
+              },
+            },
+          );
+        }}
+        onDone={() => setEditing(false)}
       />
     );
   return (
-    <EditInPlace label={t("routines.panel.editName")} onEdit={() => setDraft(name)}>
+    <EditInPlace label={t("routines.panel.editName")} onEdit={() => setEditing(true)}>
       <h1 className="issue-details__title">{shown}</h1>
     </EditInPlace>
   );
@@ -1738,7 +1789,8 @@ function RoutineWeek({ routine: r, runs, now }: { routine: Routine; runs: Routin
     <div className="routine-week">
       <span className="routine-week__text">
         <b>{first ? say(first) : t("routines.health.none")}</b>
-        {rest.length > 0 && <span className="small muted">{rest.map(say).join(" · ")}</span>}
+        {/* The last run's line ("Parada há 5 min") lives here, out of the list's rows. */}
+        <span className="small muted">{[words.caption(r, now), ...rest.map(say)].filter(Boolean).join(" · ")}</span>
       </span>
       <span className="routine-week__days" role="img" aria-label={words.label(r)}>
         {days.map((d) => (
@@ -1802,13 +1854,18 @@ function RoutineStrip({
       { onSuccess: onSaved, onError: (error) => toast.show(errorText(t, error), "error") },
     );
   const hint = (kind: ReturnType<typeof whereHint>) => t(`routines.panel.whereHint.${kind}`);
+  // The routine's own agent, kept: its creator still edits it after losing that agent's routines. Another one only where
+  // I may make a routine for it (`createsRoutinesFor`): moving it there is the server's create check in `updateRoutine`,
+  // setting up that agent's routines and talking to it (ADR 0085 addendum of 2026-11-17).
   const agentOptions = [
-    ...actors.dir.agents.map((a) => ({
-      value: a.id,
-      label: a.name,
-      description: a.role || undefined,
-      leading: actors.avatar({ type: "agent", id: a.id }, "sm"),
-    })),
+    ...actors.dir.agents
+      .filter((a) => createsRoutinesFor(a) || a.id === r.agentId)
+      .map((a) => ({
+        value: a.id,
+        label: a.name,
+        description: a.role || undefined,
+        leading: actors.avatar({ type: "agent", id: a.id }, "sm"),
+      })),
     ...(actors.dir.agentById.has(r.agentId)
       ? []
       : [{ value: r.agentId, label: actors.name(agent), description: undefined, leading: actors.avatar(agent, "sm") }]),
@@ -2057,9 +2114,56 @@ function RunItem({ run: x, routine: r }: { run: RoutineRun; routine: Routine }) 
           </div>
         )}
         <RunChatLink run={x} />
+        {r.canManage && x.calls ? <RunCalls routine={r} run={x} count={x.calls} /> : null}
       </div>
       <time dateTime={x.at}>{whenAt(t, i18n.language, x.at)}</time>
     </li>
+  );
+}
+
+/** A webhook run's calls as they were kept, for who manages the routine: read when opened. */
+function RunCalls({ routine: r, run: x, count }: { routine: Routine; run: RoutineRun; count: number }) {
+  const { t, i18n } = useTranslation();
+  const { org } = useOrg();
+  const [open, setOpen] = useState(false);
+  const calls = useRoutineRunCalls(org.id, r.id, open ? x.id : null);
+  return (
+    <div className="routine-run-calls">
+      <button
+        type="button"
+        className="ac-link ac-link--muted routine-run-calls__toggle"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+      >
+        {t(open ? "routines.runCalls.hide" : "routines.runCalls.show", { n: count })}
+      </button>
+      {open &&
+        (calls.isError ? (
+          <ErrorState error={calls.error} onRetry={() => void calls.refetch()} />
+        ) : !calls.data ? (
+          <LoadingList count={1} avatar={false} />
+        ) : (
+          <ol className="routine-run-calls__list">
+            {calls.data.map((c) => {
+              const text = runCallText(c);
+              return (
+                <li key={c.n} className="routine-run-calls__item">
+                  <span className="small muted">
+                    {[
+                      `${c.method} ${whenAt(t, i18n.language, c.at)}`,
+                      formatBytes(i18n.language, c.bytes),
+                      ...(c.test ? [t("routines.webhook.callTest")] : []),
+                      ...(c.cut ? [t("routines.runCalls.cut")] : []),
+                      ...(c.binary ? [t("routines.runCalls.binary")] : []),
+                    ].join(" · ")}
+                  </span>
+                  {text && <CommandBlock command={text} copied={t("routines.runCalls.copied")} />}
+                </li>
+              );
+            })}
+          </ol>
+        ))}
+    </div>
   );
 }
 
@@ -2102,6 +2206,7 @@ function WebhookPanel({ routine: r, runs }: { routine: Routine; runs: RoutineRun
   const action = useRoutineHookAction(org.id, r.id);
   const [secret, setSecret] = useState<string | null>(null);
   const [asking, setAsking] = useState<"address" | "secret" | "unsign" | null>(null);
+  const [pasting, setPasting] = useState(false);
   const data = hook.data;
   if (!data) {
     return hook.isError ? (
@@ -2183,6 +2288,9 @@ function WebhookPanel({ routine: r, runs }: { routine: Routine; runs: RoutineRun
             >
               {t(data.signed ? "routines.webhook.newSecret" : "routines.webhook.addSecret")}
             </Button>
+            <Button type="button" size="sm" variant="ghost" onClick={() => setPasting(!pasting)}>
+              {t("routines.webhook.pasteSecret")}
+            </Button>
             {data.signed && (
               <Button type="button" size="sm" variant="ghost" onClick={() => setAsking("unsign")}>
                 {t("routines.webhook.removeSecret")}
@@ -2190,8 +2298,18 @@ function WebhookPanel({ routine: r, runs }: { routine: Routine; runs: RoutineRun
             )}
           </div>
         )}
+        {pasting && (
+          <HookPasteSecret
+            routine={r}
+            onDone={() => {
+              setPasting(false);
+              setSecret(null);
+            }}
+          />
+        )}
       </div>
       <HookMethods routine={r} methods={data.methods} />
+      <HookGroupBy routine={r} groupBy={data.groupBy} />
       <div className="routine-hook__part">
         <span className="ac-field__label">{t("routines.webhook.example")}</span>
         <CommandBlock
@@ -2267,6 +2385,120 @@ function HookMethods({ routine: r, methods }: { routine: Routine; methods: Routi
         ))}
       </div>
     </div>
+  );
+}
+
+/**
+ * "Group calls by": a path into each call's data. Calls with the same value there run in order, others side by side.
+ * Saved with its button (or Enter); emptied, every call waits in one line.
+ */
+function HookGroupBy({ routine: r, groupBy }: { routine: Routine; groupBy: string | null }) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const toast = useToast();
+  const save = useRoutineAction(org.id);
+  const [path, setPath] = useState(groupBy ?? "");
+  const changed = path.trim() !== (groupBy ?? "");
+  const submit = () => {
+    if (!changed || save.isPending) return;
+    save.mutate(
+      { type: "update", id: r.id, patch: { trigger: { type: "webhook", groupBy: path.trim() || null } } },
+      {
+        onSuccess: () => toast.show(t("routines.webhook.groupBySaved")),
+        onError: (error) => toast.show(errorText(t, error), "error"),
+      },
+    );
+  };
+  return (
+    <div className="routine-hook__part">
+      <span className="ac-hintline">
+        <label className="ac-field__label" htmlFor={`hook-group-${r.id}`}>
+          {t("routines.webhook.groupBy")}
+        </label>
+        <InfoHint name={t("common.about", { label: t("routines.webhook.groupBy") })}>
+          {t("routines.webhook.groupByHelp")}
+        </InfoHint>
+      </span>
+      <form
+        className="routine-hook__group"
+        onSubmit={(e) => {
+          e.preventDefault();
+          submit();
+        }}
+      >
+        <Input
+          id={`hook-group-${r.id}`}
+          value={path}
+          placeholder={GROUP_BY_EXAMPLE}
+          maxLength={200}
+          spellCheck={false}
+          autoCapitalize="off"
+          autoComplete="off"
+          disabled={save.isPending}
+          onChange={(e) => setPath(e.target.value)}
+        />
+        {changed && (
+          <Button type="submit" loading={save.isPending}>
+            {t("common.save")}
+          </Button>
+        )}
+      </form>
+      <p className="small muted">
+        {groupBy ? t("routines.webhook.groupByOn", { path: groupBy }) : t("routines.webhook.groupByOff")}
+      </p>
+    </div>
+  );
+}
+
+/**
+ * The service's own signing secret (Linear makes its own), pasted in place of ours: from then on its signed calls
+ * get through. Never shown back.
+ */
+function HookPasteSecret({ routine: r, onDone }: { routine: Routine; onDone: () => void }) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const toast = useToast();
+  const action = useRoutineHookAction(org.id, r.id);
+  const [value, setValue] = useState("");
+  const id = `hook-paste-${r.id}`;
+  return (
+    <form
+      className="routine-hook__part"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!value.trim() || action.isPending) return;
+        action.mutate(
+          { paste: value.trim() },
+          {
+            onSuccess: () => {
+              toast.show(t("routines.webhook.secretPasted"));
+              onDone();
+            },
+            onError: (error) => toast.show(errorText(t, error), "error"),
+          },
+        );
+      }}
+    >
+      <label className="ac-field__label" htmlFor={id}>
+        {t("routines.webhook.pasteLabel")}
+      </label>
+      <div className="routine-hook__group">
+        <Input
+          id={id}
+          type="password"
+          value={value}
+          maxLength={512}
+          spellCheck={false}
+          autoCapitalize="off"
+          autoComplete="off"
+          disabled={action.isPending}
+          onChange={(e) => setValue(e.target.value)}
+        />
+        <Button type="submit" loading={action.isPending} disabled={!value.trim()}>
+          {t("common.save")}
+        </Button>
+      </div>
+    </form>
   );
 }
 
@@ -2401,7 +2633,9 @@ function RoutineDialog({
   const channels = useChannels(org.id);
   const targetLabel = useTargetLabel();
   const action = useRoutineAction(org.id);
-  const agents = actors.dir.agents;
+  // The agents I may make a routine for (`createsRoutinesFor`: I set up its routines and it answers me, the server's
+  // `createRoutine`, ADR 0085 addendum of 2026-11-17; the server checks again), the routine's own kept when editing.
+  const agents = actors.dir.agents.filter((a) => createsRoutinesFor(a) || a.id === routine?.agentId);
   const editing = Boolean(routine);
   const shows = (p: RoutinePart) => !part || part === p;
   const myZone = actors.dir.memberById.get(me.user.id)?.timezone || browserTimezone() || "America/Sao_Paulo";
@@ -3000,7 +3234,6 @@ function OwnActions({
                 iconOnly
                 icon="close"
                 aria-label={t("routines.ownActions.remove", { action: ownActionName(t, name) })}
-                disabled={action.isPending}
                 onClick={() =>
                   action.mutate({
                     type: "update",
@@ -3039,7 +3272,6 @@ function VaultKeys({ routine }: { routine: Routine }) {
                 iconOnly
                 icon="close"
                 aria-label={t("routines.vaultKeys.remove", { key })}
-                disabled={action.isPending}
                 onClick={() =>
                   action.mutate({
                     type: "update",

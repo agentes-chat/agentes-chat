@@ -5,6 +5,7 @@ import {
   type TeamPlan,
   type TeamProposalCard,
   useAiStatus,
+  useFormerAgents,
   useMessages,
   usePostMessage,
   useTeamCard,
@@ -18,6 +19,7 @@ import {
   answerPicks,
   answerText,
   firstTasks,
+  managesTeamAgents,
   replyChipsOf,
   teamColumns,
   teamCounts,
@@ -33,9 +35,23 @@ import type { TFunction } from "i18next";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, StyleSheet, View } from "react-native";
+import Animated from "react-native-reanimated";
 import { StickerCanvas } from "@/agent/StickerCanvas";
 import { useOrg } from "@/providers/org";
-import { AgentAvatar, Button, Icon, LineIcon, MEDIA_ROW, MediaRow, Sheet, SheetBar, Text } from "@/ui";
+import {
+  AgentAvatar,
+  Button,
+  FADE_OUT,
+  Icon,
+  LineIcon,
+  MEDIA_ROW,
+  MediaRow,
+  RISE_IN,
+  Sheet,
+  SheetBar,
+  Text,
+  useReducedMotion,
+} from "@/ui";
 import { router } from "@/ui/navigation";
 import { fullLook } from "../agents/edit";
 import { openConnectAi } from "../ai/NoAiCard";
@@ -48,6 +64,7 @@ import { proposedRoutineWhen } from "../routines/rule";
 import { useColors, useDirectory, useMeId, useWhen } from "../shared/hooks";
 import { tapHaptic } from "../shared/parts";
 import { openTeamAdjust } from "./TeamAdjustScreen";
+import { arrivalKeys, teamArrivals } from "./team-arrivals";
 
 /**
  * The right hand's team setup on the phone (ADR 0137 §10), as on the web: answers to tap as chips (each the person's
@@ -309,6 +326,12 @@ export const countsText = (t: TFunction, plan: TeamPlan, personal: boolean) => {
 };
 
 /** The right hand's team card in place of its text (`meta.actionCard.kind = team_proposal`). */
+/* After Criar o time, as on the web: the waving team and the lines under the card, then the first tasks, rows 50ms
+   apart. */
+const WAVE_IN_MS = 160;
+const FIRST_TASK_IN_MS = 250;
+const ROW_STEP_MS = 50;
+
 export function TeamCard({ message: m }: { message: Message }) {
   const card = teamProposalOf(m.meta);
   if (!card || m.author.type !== "agent") return null;
@@ -323,12 +346,17 @@ function TeamCardView({ message: m, card }: { message: Message; card: TeamPropos
   const when = useWhen();
   const failed = useFailed();
   const held = usePlanHold(orgId, org) !== null;
+  const reduced = useReducedMotion();
   const team = useTeamCard(orgId, { channelId: m.channelId, messageId: m.id });
+  const former = useFormerAgents(orgId).data;
   // Made here and now, on a hold: when the new agents' wave started.
   const [waveFrom, setWaveFrom] = useState<number>();
   const [map, setMap] = useState(false);
   const plan = card.params;
   const status = teamStatus(card);
+  // Created while on screen: what comes under the card rises in, in turn (as the web's `ac-arrive`).
+  const [createdHere] = useState(() => status === "open");
+  const arrive = (ms: number) => (createdHere && !reduced ? RISE_IN.delay(ms) : undefined);
   const personal = isPersonal(org);
   const names = joinNames(
     plan.agents.map((a) => a.name),
@@ -339,6 +367,10 @@ function TeamCardView({ message: m, card }: { message: Message; card: TeamPropos
   const open = status === "open";
   const decidedAt = card.decidedAt ? when.short(card.decidedAt) : undefined;
   const by = card.decidedByUserId === meId ? null : dir.memberById.get(card.decidedByUserId ?? "")?.name;
+  // Undoing archives its agents: anyone but who created it needs to manage each one it made, the ones archived since
+  // included (the server's `undoTeam`, so a private agent stays out of reach of who only holds "Edit agents", ADR 0085
+  // addendum of 2026-11-17). An archived one says so in the former agents' list, not in the directory.
+  const managesTeam = managesTeamAgents(org, card.created?.agentIds ?? [], dir.agents, former);
   const answer: AskAnswer | null = open
     ? null
     : status === "created"
@@ -348,7 +380,7 @@ function TeamCardView({ message: m, card }: { message: Message; card: TeamPropos
             ? t(modeKey(org, "teamPlan.card.created"), { name: by })
             : t(modeKey(org, "teamPlan.card.createdYou")),
           time: decidedAt,
-          actions: teamUndoable(card, { userId: meId ?? "", admin: can(org, "manage_agents") }) ? (
+          actions: teamUndoable(card, { userId: meId ?? "", admin: managesTeam }) ? (
             <Button
               variant="ghost"
               size="card"
@@ -429,7 +461,15 @@ function TeamCardView({ message: m, card }: { message: Message; card: TeamPropos
                 disabled={busy}
                 onPress={() =>
                   team.create.mutate(undefined, {
-                    onSuccess: ({ noAi }) => {
+                    onSuccess: ({ card: made, noAi }) => {
+                      // Where it went: the faces fly into the back button, the rows come into Conversas once.
+                      teamArrivals.add(
+                        arrivalKeys({
+                          channelIds: personal ? [] : (made.created?.channelIds ?? []),
+                          agentIds: made.created?.agentIds ?? [],
+                        }),
+                        plan.agents.map((a) => ({ key: a.handle, name: a.name, appearance: a.appearance })),
+                      );
                       if (held) setWaveFrom(Date.now());
                       else if (noAi?.[0]) openConnectAi({ agentId: noAi[0] });
                     },
@@ -451,12 +491,19 @@ function TeamCardView({ message: m, card }: { message: Message; card: TeamPropos
       {status === "created" ? (
         <>
           {card.created?.skipped.includes("skills") ? (
-            <Text variant="footnote" tone="muted">
-              {t("teamPlan.card.skillsWait")}
-            </Text>
+            <Animated.View entering={arrive(WAVE_IN_MS)}>
+              <Text variant="footnote" tone="muted">
+                {t("teamPlan.card.skillsWait")}
+              </Text>
+            </Animated.View>
           ) : null}
           {waveFrom !== undefined ? (
-            <View style={styles.wave} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+            <Animated.View
+              entering={arrive(WAVE_IN_MS)}
+              style={styles.wave}
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+            >
               {plan.agents.map((a) => (
                 <StickerCanvas
                   key={a.handle}
@@ -469,9 +516,9 @@ function TeamCardView({ message: m, card }: { message: Message; card: TeamPropos
                   from={waveFrom}
                 />
               ))}
-            </View>
+            </Animated.View>
           ) : null}
-          {card.decidedByUserId === meId ? <FirstTasks message={m} card={card} held={held} /> : null}
+          {card.decidedByUserId === meId ? <FirstTasks message={m} card={card} held={held} arrive={arrive} /> : null}
         </>
       ) : null}
     </>
@@ -482,7 +529,19 @@ function TeamCardView({ message: m, card }: { message: Message; card: TeamPropos
  * A first task per agent (its DM opens with it typed, never sent, for the person to finish) and inviting the people.
  * Only once the team can answer: never on a billing hold, nor before an AI.
  */
-function FirstTasks({ message: m, card, held }: { message: Message; card: TeamProposalCard; held: boolean }) {
+function FirstTasks({
+  message: m,
+  card,
+  held,
+  arrive,
+}: {
+  message: Message;
+  card: TeamProposalCard;
+  held: boolean;
+  /** Its entrance and its rows', at a time after Criar o time (none when it was already there). */
+  arrive: (ms: number) => typeof RISE_IN | undefined;
+}) {
+  const reduced = useReducedMotion();
   const { t } = useTranslation();
   const { org, orgId } = useOrg();
   const dir = useDirectory();
@@ -495,76 +554,82 @@ function FirstTasks({ message: m, card, held }: { message: Message; card: TeamPr
   const people = isPersonal(org) ? [] : card.params.invite;
   if (later || held || !thinks || (tasks.length === 0 && people.length === 0)) return null;
   return (
-    <AskCard
-      id={`${m.id}-first`}
-      kind="firstTask"
-      agentId={m.author.id ?? ""}
-      waitsFor={t("teamPlan.firstTask.suggestion")}
-      lead={t("teamPlan.firstTask.lead")}
-      body={
-        <View style={styles.rows}>
-          {tasks.map((f, i) => (
-            <View key={f.agentId} style={i > 0 && [styles.divided, { borderTopColor: c.line2 }]}>
-              {/* The task under the name at the card's width, its one action under it at its start. */}
-              <MediaRow
-                face={
-                  <AgentAvatar agent={fullLook(f.appearance)} size={MEDIA_ROW.card.face} name={f.name} live={false} />
-                }
-                name={f.name}
+    <Animated.View entering={arrive(FIRST_TASK_IN_MS)} exiting={reduced ? undefined : FADE_OUT}>
+      <AskCard
+        id={`${m.id}-first`}
+        kind="firstTask"
+        agentId={m.author.id ?? ""}
+        waitsFor={t("teamPlan.firstTask.suggestion")}
+        lead={t("teamPlan.firstTask.lead")}
+        body={
+          <View style={styles.rows}>
+            {tasks.map((f, i) => (
+              <Animated.View
+                key={f.agentId}
+                entering={arrive(FIRST_TASK_IN_MS + ROW_STEP_MS * (i + 1))}
+                style={i > 0 && [styles.divided, { borderTopColor: c.line2 }]}
               >
-                <Text variant="small" tone="ink2">
-                  {f.task}
-                </Text>
-                <View style={styles.agentFoot}>
+                {/* The task under the name at the card's width, its one action under it at its start. */}
+                <MediaRow
+                  face={
+                    <AgentAvatar agent={fullLook(f.appearance)} size={MEDIA_ROW.card.face} name={f.name} live={false} />
+                  }
+                  name={f.name}
+                >
+                  <Text variant="small" tone="ink2">
+                    {f.task}
+                  </Text>
+                  <View style={styles.agentFoot}>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      label={t("teamPlan.firstTask.open")}
+                      onPress={() => void openDm({ agentId: f.agentId }, { compose: true, text: `${f.task} ` })}
+                    />
+                  </View>
+                </MediaRow>
+              </Animated.View>
+            ))}
+          </View>
+        }
+        foot={
+          <AskFoot>
+            <AskButtons
+              primary={
+                people.length > 0 && can(org, "invite_people") ? (
                   <Button
-                    variant="secondary"
-                    size="sm"
-                    label={t("teamPlan.firstTask.open")}
-                    onPress={() => void openDm({ agentId: f.agentId }, { compose: true, text: `${f.task} ` })}
+                    variant="primary"
+                    size="card"
+                    wide
+                    label={t("teamPlan.firstTask.invite", { names: joinNames(people, t) })}
+                    onPress={() => router.push("/invite-people")}
                   />
-                </View>
-              </MediaRow>
-            </View>
-          ))}
-        </View>
-      }
-      foot={
-        <AskFoot>
-          <AskButtons
-            primary={
-              people.length > 0 && can(org, "invite_people") ? (
-                <Button
-                  variant="primary"
-                  size="card"
-                  wide
-                  label={t("teamPlan.firstTask.invite", { names: joinNames(people, t) })}
-                  onPress={() => router.push("/invite-people")}
-                />
-              ) : (
-                <Button
-                  variant="ghost"
-                  size="card"
-                  wide
-                  label={t("teamPlan.firstTask.later")}
-                  onPress={() => setLater(true)}
-                />
-              )
-            }
-            secondary={
-              people.length > 0 && can(org, "invite_people") ? (
-                <Button
-                  variant="ghost"
-                  size="card"
-                  wide
-                  label={t("teamPlan.firstTask.later")}
-                  onPress={() => setLater(true)}
-                />
-              ) : undefined
-            }
-          />
-        </AskFoot>
-      }
-    />
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="card"
+                    wide
+                    label={t("teamPlan.firstTask.later")}
+                    onPress={() => setLater(true)}
+                  />
+                )
+              }
+              secondary={
+                people.length > 0 && can(org, "invite_people") ? (
+                  <Button
+                    variant="ghost"
+                    size="card"
+                    wide
+                    label={t("teamPlan.firstTask.later")}
+                    onPress={() => setLater(true)}
+                  />
+                ) : undefined
+              }
+            />
+          </AskFoot>
+        }
+      />
+    </Animated.View>
   );
 }
 

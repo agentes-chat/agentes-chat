@@ -86,6 +86,7 @@ import { router } from "@/ui/navigation";
 import { Note } from "../ai/parts";
 import { MessageText } from "../chat/MessageText";
 import { ConnectSheet } from "../connectors/ConnectSheet";
+import { AgentFace } from "../shared/Face";
 import { FirstUse, LoadFailed } from "../shared/FirstUse";
 import { useColors, useDirectory, useErrorToast } from "../shared/hooks";
 import { goBack, successHaptic } from "../shared/parts";
@@ -200,19 +201,11 @@ export function SkillsScreen() {
         </View>
       ) : null}
       <GroupedFooter>{t("settings.sectionText.skills")}</GroupedFooter>
-      {scope === "personal" && list.length > 0 ? (
-        <View style={styles.note}>
-          <Note icon="lock">{t("skills.personal.note")}</Note>
-        </View>
-      ) : null}
+      {/* Why there is nothing to do here, in the footer's column under it (an icon's note started elsewhere). */}
       {!mayInstall && none ? (
-        <View style={styles.note}>
-          <Note icon="lock">{t("settings.readOnly")}</Note>
-        </View>
+        <GroupedFooter>{t("settings.readOnly")}</GroupedFooter>
       ) : unavailable ? (
-        <View style={styles.note}>
-          <Note icon="info">{t("skills.unavailable")}</Note>
-        </View>
+        <GroupedFooter>{t("skills.unavailable")}</GroupedFooter>
       ) : (
         <>
           {scope === "team" && settings.data ? (
@@ -275,6 +268,8 @@ export function SkillsScreen() {
               ))}
             </GroupedList>
           ) : null}
+          {/* Personal's rule under its skills, as a group's footer (Connectors says its own the same way). */}
+          {scope === "personal" && shown.length > 0 ? <GroupedFooter>{t("skills.personal.note")}</GroupedFooter> : null}
           {scope === "team" && others.length > 0 ? (
             <>
               <GroupedHeader>{`${t("skills.personal.others")} · ${others.length}`}</GroupedHeader>
@@ -391,6 +386,7 @@ export function SkillScreen({ id }: { id: string }) {
               <Note icon={<SocialMark provider="github" color={c.muted} size={15} />}>{via}</Note>
             </View>
           ) : null}
+          {manages && admin ? <SkillAgents skill={s} users={users} /> : null}
           {manages ? <SourceUpdate skill={s} /> : null}
           {manages ? <AgentImprove skill={s} /> : null}
           <Gap />
@@ -443,6 +439,49 @@ export function SkillScreen({ id }: { id: string }) {
         </>
       ) : null}
     </SettingsPage>
+  );
+}
+
+/** Which agents have the skill on, each switched on or off here as on its agent's page (the web's "Escolher agentes"). */
+function SkillAgents({ skill, users }: { skill: SkillDetail; users: { id: string }[] }) {
+  const { t } = useTranslation();
+  const { orgId } = useOrg();
+  const dir = useDirectory();
+  const action = useSkillAction(orgId);
+  const failed = useErrorToast();
+  const on = new Set(users.map((u) => u.id));
+  const v = action.isPending && action.variables?.type === "assign" ? action.variables : undefined;
+  return (
+    <>
+      <GroupedHeader>{t("skills.agents.title")}</GroupedHeader>
+      {dir.agents.length === 0 ? (
+        <GroupedFooter>{t("skills.agents.none")}</GroupedFooter>
+      ) : (
+        <GroupedList>
+          {dir.agents.map((a) => {
+            // What is being saved shows at once, as the library's switches do.
+            const saving = v?.agentId === a.id ? v.skills[0]?.enabled : undefined;
+            const checked = saving ?? on.has(a.id);
+            return (
+              <GroupedRow
+                key={a.id}
+                label={a.name}
+                leading={<AgentFace agentId={a.id} size={36} live={false} />}
+                toggle={checked}
+                disabled={action.isPending}
+                onPress={() =>
+                  action.mutate(
+                    { type: "assign", agentId: a.id, skills: [{ skillId: skill.id, enabled: !checked }] },
+                    { onError: failed },
+                  )
+                }
+              />
+            );
+          })}
+        </GroupedList>
+      )}
+      <GroupedFooter>{t("skills.agents.dialogText")}</GroupedFooter>
+    </>
   );
 }
 
@@ -1008,7 +1047,12 @@ function InstallSkill({
       action.mutate(
         { type: "import", input: { zipBase64, ...mine }, upload: { signal: stopper.signal, onProgress: setSending } },
         {
-          onSuccess: done,
+          // A .zip of several skills answers with them to pick: picked on the web's dialog, for now.
+          onSuccess: (result) => {
+            const found = skillPickOf(result);
+            if (!found) return done(result);
+            setError(t("skills.zipManyHere", { count: found.choices.length }));
+          },
           onError: (e) => {
             if (!stopper.signal.aborted) setError(errorText(t, e, i18n.language, { maxMb: SKILL_ZIP_MB }));
           },

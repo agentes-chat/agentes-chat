@@ -16,6 +16,7 @@ import { removalLines } from "@agenteschat/client/lib/removal";
 import { isBelow, leaves, removes } from "@agenteschat/client/lib/roles";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import { useQueryClient } from "@tanstack/react-query";
+import { memo, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert } from "react-native";
 import { useOrg } from "@/providers/org";
@@ -29,11 +30,11 @@ import { chooseAction, Gap } from "../settings/parts";
 import { Face } from "../shared/Face";
 import { LoadFailed } from "../shared/FirstUse";
 import { useColors, useMeId } from "../shared/hooks";
-import { errorHaptic, Loaded, successHaptic } from "../shared/parts";
+import { errorHaptic, Loaded, successHaptic, useLatest } from "../shared/parts";
 import { invitersOf, memberActions, memberLine, membersByName, outsideLine, whenWords } from "./logic";
 
 /** What leads each of a person's actions in their row's menu. */
-const ACT_ICON = { dm: "chat", roles: "shield", leave: "out", remove: "trash" } as const;
+const ACT_ICON = { roles: "shield", leave: "out", remove: "trash" } as const;
 /**
  * How long a removal's preview (what goes with the person) is reused: it is read as the row's menu opens, so Remove
  * confirms at once, and it is read again for any later removal.
@@ -75,6 +76,29 @@ export function MembersPage() {
   // Their cargos (P11): who manages people, for someone below them (or themselves), with a cargo to give.
   const givesCargos = (m: Person) =>
     !frozen && can(org, "manage_members") && isBelow(viewer, m, roles) && roles.some((r) => r.givable);
+  // Sorted once per list: the page draws again on every change of anyone's presence.
+  const sorted = useMemo(() => (list ? membersByName(list, i18n.language) : []), [list, i18n.language]);
+  // A row's menu, the same function for every row and render (the rows are memoized).
+  const message = useLatest((m: Person) => void openDm({ userId: m.userId }));
+  const openMenu = useLatest((m: Person, acts: MemberAct[]) => {
+    const run = {
+      roles: () => router.push(rolesHref.person(m.userId)),
+      remove: () => void remove(m),
+    };
+    const removes = acts.includes("remove") || acts.includes("leave");
+    // What goes with them is read while the menu opens: Remove asks at once.
+    if (removes) void qc.prefetchQuery(removalQuery(api, orgId, m.userId));
+    chooseAction(
+      m.name,
+      acts.map((a) => ({
+        icon: ACT_ICON[a],
+        label: t(a === "roles" ? "rolesPage.rolesCta" : a === "leave" ? "members.remove.leave" : "members.remove.item"),
+        destructive: a === "remove" || a === "leave",
+        onPress: run[a === "leave" ? "remove" : a],
+      })),
+      t("common.cancel"),
+    );
+  });
 
   return (
     <Page
@@ -103,54 +127,20 @@ export function MembersPage() {
       {list ? (
         <Loaded>
           <GroupedList>
-            {membersByName(list, i18n.language).map((m) => {
-              const acts = memberActions(m.userId === meId, Boolean(removable(m)), givesCargos(m));
-              const run = {
-                dm: () => void openDm({ userId: m.userId }),
-                roles: () => router.push(rolesHref.person(m.userId)),
-                remove: () => void remove(m),
-              };
-              const removes = acts.includes("remove") || acts.includes("leave");
-              const outside = outsideLine(t, m);
-              return (
-                <GroupedRow
-                  key={m.userId}
-                  leading={
-                    <Face who={{ type: "person", id: m.userId }} size={30} live={false} presence ring={c.raised} />
-                  }
-                  label={m.userId === meId ? `${m.name}${t("common.youSuffix")}` : m.name}
-                  sub={memberLine(t, i18n.language, m, roles)}
-                  {...(outside ? { belowText: outside } : {})}
-                  {...(acts.length > 0
-                    ? {
-                        more: true,
-                        onPress: () => {
-                          // What goes with them is read while the menu opens: Remove asks at once.
-                          if (removes) void qc.prefetchQuery(removalQuery(api, orgId, m.userId));
-                          chooseAction(
-                            m.name,
-                            acts.map((a) => ({
-                              icon: ACT_ICON[a],
-                              label: t(
-                                a === "dm"
-                                  ? "profile.dm"
-                                  : a === "roles"
-                                    ? "rolesPage.rolesCta"
-                                    : a === "leave"
-                                      ? "members.remove.leave"
-                                      : "members.remove.item",
-                              ),
-                              destructive: a === "remove" || a === "leave",
-                              onPress: run[a === "leave" ? "remove" : a],
-                            })),
-                            t("common.cancel"),
-                          );
-                        },
-                      }
-                    : {})}
-                />
-              );
-            })}
+            {sorted.map((m) => (
+              <MemberRow
+                key={m.userId}
+                person={m}
+                mine={m.userId === meId}
+                sub={memberLine(t, i18n.language, m, roles)}
+                removable={Boolean(removable(m))}
+                cargos={givesCargos(m)}
+                ring={c.raised}
+                onMenu={openMenu}
+                onMessage={message}
+                leading
+              />
+            ))}
           </GroupedList>
         </Loaded>
       ) : people.isError ? (
@@ -167,6 +157,54 @@ export function MembersPage() {
     </Page>
   );
 }
+
+type MemberAct = ReturnType<typeof memberActions>[number];
+
+/**
+ * A person on Members: their face with its presence, their name (marked as you on one's own row), their line and,
+ * for an outside collaborator, whom they work for; a message button for anyone else, and a tap opens the actions
+ * the viewer has on them, if any. Drawn again only when what it shows changes.
+ */
+const MemberRow = memo(function MemberRow({
+  person: m,
+  mine,
+  sub,
+  removable,
+  cargos,
+  ring,
+  onMenu,
+  onMessage,
+}: {
+  person: Person;
+  mine: boolean;
+  sub: string;
+  removable: boolean;
+  cargos: boolean;
+  /** The surface the face's presence badge is ringed in. */
+  ring: string;
+  onMenu: (m: Person, acts: MemberAct[]) => void;
+  onMessage: (m: Person) => void;
+  /** Always with a face: GroupedList reads it to start the hairline after the face's column, as a GroupedRow's. */
+  leading: boolean;
+}) {
+  const { t } = useTranslation();
+  const acts = memberActions(mine, removable, cargos);
+  const outside = outsideLine(t, m);
+  return (
+    <GroupedRow
+      leading={<Face who={{ type: "person", id: m.userId }} size={30} live={false} presence ring={ring} />}
+      label={mine ? `${m.name}${t("common.youSuffix")}` : m.name}
+      sub={sub}
+      {...(outside ? { belowText: outside } : {})}
+      {...(mine
+        ? {}
+        : {
+            buttons: [{ icon: "chat", label: t("profile.messageTo", { name: m.name }), onPress: () => onMessage(m) }],
+          })}
+      {...(acts.length > 0 ? { more: true, onPress: () => onMenu(m, acts) } : {})}
+    />
+  );
+});
 
 /**
  * "Remover do workspace" (or "Sair do workspace"): what goes with the person, as the server reads it, in the system's

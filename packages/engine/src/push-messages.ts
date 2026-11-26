@@ -9,6 +9,7 @@
  * approved from the notification.
  */
 
+import { formatSpan } from "@agenteschat/i18n/format";
 import { type AppLocale, appLocale } from "@agenteschat/i18n/locale";
 import { pushStrings } from "./push/messages";
 
@@ -56,6 +57,8 @@ export interface PushTextInput {
   percent?: number | null;
   /** `widget_failed`: its coded reason (ADR 0135 §6); `agent_reported` sends the agent's words in `text`. */
   reason?: string | null;
+  /** `computer_back`: how long the computer was away (ms). */
+  awayMs?: number | null;
   /** The workspace is personal (ADR 0159): the words for one person and their agents, where a team's would differ. */
   personal?: boolean;
 }
@@ -145,6 +148,10 @@ function renderOne(locale: PushLocale, input: PushTextInput): { title: string; b
       );
     case "computer_ready":
       return out(input.personal ? s.computerReadyTitlePersonal : s.computerReadyTitle, s.computerReadyBody);
+    case "computer_down":
+      return out(s.computerDownTitle(what || s.someone), s.computerDownBody);
+    case "computer_back":
+      return out(s.computerBackTitle(what || s.someone), s.computerBackBody(formatSpan(locale, input.awayMs ?? 0)));
     case "browser_handoff":
       // What the agent asked for, in its words ("Entrar no Stripe com a conta de teste"). A desktop doesn't
       // open on the phone: its body says where it does.
@@ -234,6 +241,9 @@ function renderOne(locale: PushLocale, input: PushTextInput): { title: string; b
       }
     case "team_watch":
       // The right hand's name, then its whole sentence: what is wrong and the one way out, in the person's language.
+      return out(actor, text || s.openBody);
+    case "budget_paused":
+      // The agent's name, then its pause line in the person's language.
       return out(actor, text || s.openBody);
     default:
       return out(input.waiting ? s.waitingTitle : actor, text || what || s.openBody);

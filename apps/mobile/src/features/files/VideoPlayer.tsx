@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Text as RNText, StyleSheet, View } from "react-native";
 import { Icon, PressScale } from "@/ui";
+import { useMessageCardCorners } from "../chat/look";
 import { useColors } from "../shared/hooks";
 import { videoClock, videoHeight } from "./logic";
 
@@ -65,6 +66,8 @@ function InlineVideo({
 }) {
   const { t } = useTranslation();
   const c = useColors();
+  // In a message, the corners every card there has, as the picture's beside it (its loading frame had them).
+  const cardCorners = useMessageCardCorners();
   // Silent and still: it is here only for its first frame and its length.
   const player = useVideoPlayer(source, (p) => {
     p.muted = true;
@@ -83,7 +86,11 @@ function InlineVideo({
       disabled={!onOpen}
       accessibilityRole="button"
       accessibilityLabel={`${t("mobile.files.video.play")}: ${name}${length ? `, ${length}` : ""}`}
-      style={[styles.inline, { width, height: videoHeight(width), backgroundColor: c.sunken, borderColor: c.line2 }]}
+      style={[
+        styles.inline,
+        { width, height: videoHeight(width), backgroundColor: c.sunken, borderColor: c.line2 },
+        cardCorners,
+      ]}
     >
       <VideoView
         player={player}
@@ -100,7 +107,9 @@ function InlineVideo({
         </View>
       </View>
       {length ? (
+        // The length as a video on its way up shows it (`MessageFiles`): a play mark and the time on a dark pill.
         <View style={styles.length} pointerEvents="none">
+          <Icon name="play" size={9} color="#fff" />
           <RNText style={styles.lengthText}>{length}</RNText>
         </View>
       ) : null}
@@ -111,22 +120,43 @@ function InlineVideo({
 /**
  * A video in the picture viewer (`ImageViewer`), among the pictures: the system's player with the platform's controls
  * (the timeline, full screen and back out of it, AirPlay), playing while its page is the one in sight and paused when
- * the person swipes on. `onFailed`: this phone can't play it.
+ * the person swipes on. `onFailed`: this phone can't play it. `startAt`: the moment it starts from (a comment's, ADR
+ * 0208); `onPlayer`: its player, for the viewer to read the moment it is at (null once it goes).
  */
 export function ViewerVideo({
   source,
   name,
   active,
   onFailed,
+  startAt,
+  onPlayer,
 }: {
   source: VideoPlayerProps["source"];
   name: string;
   active: boolean;
   onFailed: () => void;
+  startAt?: number | undefined;
+  onPlayer?: ((player: Player | null) => void) | undefined;
 }) {
   const player = useVideoPlayer(source, (p) => {
     p.loop = false;
   });
+  useEffect(() => {
+    onPlayer?.(player);
+    return () => onPlayer?.(null);
+  }, [player, onPlayer]);
+  // At a comment's moment: once it is loaded, and if the moment comes after it loaded.
+  useEventListener(player, "sourceLoad", () => {
+    if (startAt !== undefined) player.currentTime = startAt;
+  });
+  useEffect(() => {
+    if (startAt === undefined) return;
+    try {
+      player.currentTime = startAt;
+    } catch {
+      // Released with its page.
+    }
+  }, [player, startAt]);
   useEffect(() => {
     try {
       if (active) player.play();
@@ -208,10 +238,13 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 8,
     bottom: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
     paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 7,
-    backgroundColor: "rgba(0, 0, 0, 0.65)",
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "rgba(0,0,0,0.6)",
   },
   lengthText: { color: "#fff", fontSize: 12, fontWeight: "600", fontVariant: ["tabular-nums"] },
 });

@@ -73,6 +73,11 @@ describe("an agent's list line (ADR 0084 addendum)", () => {
     // Where the viewer reads nothing: the bare state.
     expect(line(work({ channelId: null, channelKind: null, channelName: null }))?.text).toBe("trabalhando");
     expect(line(work({ routine: true, channelId: null }))?.text).toBe("numa rotina");
+    // Someone else's DM: says it is private, rather than a bare "trabalhando" that reads as nothing to open.
+    const hidden = work({ channelId: null, channelKind: null, channelName: null, private: true });
+    expect(line(hidden)?.text).toBe("numa conversa particular");
+    // The card's line says it already.
+    expect(workDetail(t, hidden, names)).toBeNull();
     expect(line(work({ state: "you", ask: "approval", since: ago(3) }))).toEqual({
       text: "esperando você",
       short: "esperando",
@@ -82,7 +87,7 @@ describe("an agent's list line (ADR 0084 addendum)", () => {
     expect(line(work({ state: "approval" }))?.text).toBe("esperando aprovação");
     expect(line(work({ state: "answer" }))?.text).toBe("esperando uma resposta");
     expect(line(work({ state: "computer" }))?.text).toBe("esperando o computador");
-    expect(line(work({ state: "outage" }))?.text).toBe("IA fora do ar");
+    expect(line(work({ state: "outage" }))?.text).toBe("IA não responde");
     expect(line(work({ state: "queued" }))).toMatchObject({ text: "na fila", short: "na fila", tone: "neutral" });
     expect(workLine(en, "en", work({ forAgentId: "ada" }), names, NOW)?.text).toBe("helping Ada");
     expect(workLine(t, "pt-BR", null, names, NOW)).toBeNull();
@@ -122,7 +127,7 @@ describe("an agent's face", () => {
     activeAt: null,
     ...over,
   });
-  test("never red Ocupado or amber Ausente: working, waiting on you, available", () => {
+  test("never red Ocupado or a person's Ausente: working, waiting on you, available, idle", () => {
     expect(agentPresenceShown(status({ presence: "busy", working: true }), true)).toBe("working");
     // Busy with nothing at work (long work waiting on someone, a routine's run in line): free, as its line says.
     expect(
@@ -133,7 +138,15 @@ describe("an agent's face", () => {
     ).toBe("online");
     // An older server sends no `working`: its busy still reads at work.
     expect(agentPresenceShown(status({ presence: "busy" }), true)).toBe("working");
-    expect(agentPresenceShown(status({ presence: "away" }), true)).toBe("online");
+    // Idle a while: its own word, never a person's "Ausente"; work and waiting on you still come first.
+    expect(agentPresenceShown(status({ presence: "away" }), true)).toBe("away");
+    expect(agentFaceWord(t, "away")).toBe("Inativo");
+    expect(agentFaceWord(en, "away")).toBe("Idle");
+    expect(agentPresenceShown(status({ presence: "away" }), true, true)).toBe("working");
+    expect(agentPresenceShown(status({ presence: "away", work: work({ state: "you", ask: "answer" }) }), true)).toBe(
+      "waiting",
+    );
+    expect(agentPresenceShown(undefined, true)).toBe("online");
     expect(agentPresenceShown(status({ work: work({ state: "you", ask: "approval" }) }), true)).toBe("waiting");
     expect(agentPresenceShown(status({ presence: "out" }), true)).toBe("out");
     expect(agentPresenceShown(status({ presence: "away" }), false)).toBe("offline");

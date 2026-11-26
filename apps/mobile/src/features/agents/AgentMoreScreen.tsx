@@ -1,3 +1,4 @@
+import { managesAgent } from "@agenteschat/client/lib/audience";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { can } from "@agenteschat/client/lib/permissions";
 import { isRightHand } from "@agenteschat/client/lib/right-hand";
@@ -5,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { useOrg } from "@/providers/org";
 import { EmptyState, GroupedList, GroupedRow } from "@/ui";
 import { Gap, SettingsPage } from "../settings/parts";
-import { useDirectory, useMeId } from "../shared/hooks";
+import { useDirectory, useOwnsAgent } from "../shared/hooks";
 import { AlwaysApproved } from "./AgentProfileScreen";
 import { BrakesSection } from "./BrakesSection";
 import { openAgentDelete } from "./DeleteAgentScreen";
@@ -21,12 +22,14 @@ import { ReportsToSection } from "./ReportsToSection";
 export function AgentMoreScreen({ agentId }: { agentId: string }) {
   const { t } = useTranslation();
   const dir = useDirectory();
-  const meId = useMeId();
+  const owns = useOwnsAgent();
   const org = useOrg().org;
   const agent = dir.agentById.get(agentId);
   const name = agent?.name ?? "";
-  const mine = Boolean(meId && agent?.ownerUserId === meId);
-  const admin = can(org, "manage_agents");
+  // Its owner, or one who holds the role that answers for it (ADR 0085, addendum of 2026-11-21).
+  const mine = owns(agent);
+  // Who manages it (the server's `canManage`: "Editar qualquer agente" where it reaches).
+  const admin = managesAgent(agent);
   const rightHand = isRightHand(agent);
   if (!agent)
     return (
@@ -43,7 +46,7 @@ export function AgentMoreScreen({ agentId }: { agentId: string }) {
         </>
       ) : null}
       <AlwaysApproved agentId={agentId} name={name} mayRemove={mine || can(org, "approve_actions")} />
-      <MergeReposSection agentId={agentId} mayEdit={mine || can(org, "manage_agents")} />
+      <MergeReposSection agentId={agentId} mayEdit={mine || admin} />
       {/* Deleting for good asks for its name on a screen of its own (ADR 0082). */}
       {admin && !rightHand ? (
         <>

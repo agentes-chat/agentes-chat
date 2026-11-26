@@ -74,6 +74,20 @@ describe("the pinned strip", () => {
     expect(keys(pinnedRows(rows, starters, pins))).toEqual(["d:d-dev"]);
     expect(pinnedRows(rows, starters, { agents: [], channels: [], people: [] })).toEqual([]);
   });
+
+  test("an agent whose DM wouldn't open is never one to start, though the Agents tab lists it", () => {
+    // Who it answers or who manages it opens its DM (the server's `openDm`, ADR 0085 addendum of 2026-11-17): an agent I
+    // only edit, or someone's private agent under a mere "Edit agents", would open a refused one.
+    const edited = { id: "iris", name: "Iris", handle: "iris", canTalk: false, canEdit: true, canManage: false };
+    const locked = { id: "ivo", name: "Ivo", handle: "ivo", canTalk: false, canManage: false };
+    const managed = { id: "lia", name: "Lia", handle: "lia", canTalk: false, canManage: true };
+    const pins = { agents: ["iris", "ivo", "lia", "ada"], channels: [], people: [] };
+    // The one I manage opens its DM (its composer offers to let me in); the others hold no place on the strip.
+    expect(keys(pinnedRows(rows, agentStarters([...team, edited, locked, managed]), pins))).toEqual([
+      "a:lia",
+      "d:d-ada",
+    ]);
+  });
 });
 
 describe("Recentes", () => {
@@ -134,18 +148,31 @@ describe("Conversas with the strip and one list", () => {
   });
 
   test("loading stands as the one section it will be; nothing yet invites the first conversation", () => {
-    const loading = home.slice(home.indexOf(") : list.loading ? ("), home.indexOf("<HomeWidgets"));
+    const loading = home.slice(home.indexOf("<SkeletonOver"), home.indexOf("<HomeWidgets"));
     expect(loading).toContain('title={t("mobile.chats.recent")}');
     expect(loading).toContain("<SkeletonList rows={6} />");
     expect(loading).not.toContain("count=");
     expect(home).toContain('place="chats"');
   });
 
+  test("the invitation to make the first agent waits for an empty Agents tab, agents I only edit counted", () => {
+    // Those are never ones to start (`agentStarters`), nor are their DMs listed, yet the team isn't empty; the
+    // greeting's count of who works matches the Agents tab too.
+    expect(home).toContain("const teamListed = dir.agents.some((a) => !isRightHand(a) && listsAgent(org, a));");
+    expect(home).toContain("const empty = !list.loading && !failed && pinned.rows.length === 0 && !teamListed;");
+    expect(home).toContain("return a !== undefined && listsAgent(org, a) && !offline.has(id);");
+  });
+
   test("every part collapses and is remembered, with the home's own keys", () => {
     expect([...HOME_SECTIONS]).toEqual(["widgets", "pinned", "recent", "otherChannels"]);
     expect(home).toContain("const { collapsed, toggle } = useCollapsedSections();");
     for (const key of ["widgets", "pinned", "recent", "otherChannels"])
-      expect({ key, toggles: home.includes(`onToggle={() => toggle("${key}")}`) }).toEqual({ key, toggles: true });
+      expect({
+        key,
+        toggles:
+          home.includes(`onToggle={() => toggle("${key}")}`) ||
+          home.includes(`useCallback(() => toggle("${key}"), [toggle])`),
+      }).toEqual({ key, toggles: true });
   });
 
   test("a face opens its conversation as its row does, and its long press is the row's own", () => {
@@ -165,7 +192,8 @@ describe("Conversas with the strip and one list", () => {
     expect(strip).toContain("<Count");
     expect(strip).toContain("paddingHorizontal: SCREEN_X");
     expect(strip).toContain("if (items.length === 0) return null;");
-    expect(strip).toContain("<ScrollView horizontal showsHorizontalScrollIndicator={false}");
+    // The kit's sideways strip: a fade at the edge where more pinned faces wait.
+    expect(strip).toContain("<SideScroll contentContainerStyle={styles.strip}>");
     expect(strip).not.toMatch(/entering=|withTiming|withSpring|snapToInterval/);
     // Only a pinned agent at work moves, within the home's budget, and none while the strip is closed.
     expect(home).toContain('const moves = !collapsed.includes("pinned") && facts.face === "run" && live < LIVE_ROWS;');

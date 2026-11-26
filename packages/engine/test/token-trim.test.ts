@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { MACHINE_PROTOCOL_VERSION, typingTopic } from "@agenteschat/adapters";
+import { MACHINE_PROTOCOL_VERSION } from "@agenteschat/adapters";
 import { asc, eq, schema } from "@agenteschat/db";
 import { createAnthropicProvider, type ModelMessage, type ModelRequest, systemText } from "@agenteschat/providers";
 import {
@@ -10,12 +10,12 @@ import {
   createAgent,
   createBlockToolSource,
   createContextToolSource,
+  createCredential,
   createJobHandlers,
   createWorkToolSource,
   drainOutbox,
   EVERY_TOOL,
   flattenContent,
-  getMessage,
   grantScopes,
   historyStart,
   insertMessage,
@@ -28,7 +28,6 @@ import {
   type ToolContext,
   toTurns,
 } from "../src";
-import { TYPING_GRACE_MS, typingLogFor, waitForBurst } from "../src/burst";
 import {
   compactToolResults,
   cutOldToolSteps,
@@ -363,25 +362,67 @@ test("B12: a compaction that removes old results keeps every cut one's text whol
   expect([...(fitted?.removed ?? [])].some((id) => results.get(id)?.content.startsWith("[Result removed"))).toBe(true);
 });
 
+/** Fixture @dev thinking with an OpenAI model (`f.openaiProvider` answers). */
+async function devOnOpenAi(fx: Fixture) {
+  const key = await createCredential(fx.db, fx.keyWrapper, fx.owner.id, fx.org.id, {
+    provider: "openai",
+    label: "openai",
+    apiKey: "sk-proj-openai-9999",
+  });
+  await fx.db
+    .update(schema.agents)
+    .set({ model: "gpt-6-sol", credentialId: key.id })
+    .where(eq(schema.agents.id, fx.agent.id));
+}
+
+const logPage = (i: number) => `log ${i}: ${"erro de conexão ".repeat(300)}`;
+
+/** An agent with a tool that reads long deploy log pages. */
+const logReads = () => ({
+  contextTools: true,
+  toolSources: [
+    {
+      name: "logs",
+      tools: async () => [
+        {
+          name: "read_log",
+          description: "Read a deploy log page.",
+          inputSchema: { type: "object", properties: { page: { type: "number" } }, additionalProperties: false },
+          scope: "context:read",
+          execute: async (input: Record<string, unknown>) => ({ content: logPage(Number(input.page)) }),
+        },
+      ],
+    },
+  ],
+});
+
+test("B12: on Claude's own API a run's history stays as sent: each call starts with the one before, nothing cut", async () => {
+  const reads = 14;
+  f = await setup({
+    ...logReads(),
+    reply: (_r, n) =>
+      n <= reads
+        ? { chunks: [], toolUses: [{ id: `toolu_read_${n}`, name: "read_log", input: { page: n } }] }
+        : { chunks: ["ok"] },
+  });
+  await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, {
+    body: "@dev lê os logs",
+  });
+  await drainOutbox(f.db, f.handlers);
+  const calls = agentCalls(f);
+  expect(calls.length).toBe(reads + 1);
+  // A thinking block reads back only after the same bytes: a cut moving every few steps dropped them all.
+  for (let i = 1; i < calls.length; i++) {
+    const before = JSON.stringify((calls[i - 1] as ModelRequest).messages).slice(0, -1);
+    expect(JSON.stringify((calls[i] as ModelRequest).messages).startsWith(before), `call ${i}`).toBe(true);
+  }
+  expect(JSON.stringify(calls.at(-1)?.messages)).not.toContain("reopens it whole");
+});
+
 test("B12: an agent that needs a cut tool result calls expand and reads it whole", async () => {
-  const log = (i: number) => `log ${i}: ${"erro de conexão ".repeat(300)}`;
   const reads = 9;
   f = await setup({
-    contextTools: true,
-    toolSources: [
-      {
-        name: "logs",
-        tools: async () => [
-          {
-            name: "read_log",
-            description: "Read a deploy log page.",
-            inputSchema: { type: "object", properties: { page: { type: "number" } }, additionalProperties: false },
-            scope: "context:read",
-            execute: async (input) => ({ content: log(Number(input.page)) }),
-          },
-        ],
-      },
-    ],
+    ...logReads(),
     reply: (_r, n) =>
       n <= reads
         ? { chunks: [], toolUses: [{ id: `toolu_read_${n}`, name: "read_log", input: { page: n } }] }
@@ -389,11 +430,15 @@ test("B12: an agent that needs a cut tool result calls expand and reads it whole
           ? { chunks: [], toolUses: [{ id: "toolu_expand", name: "expand", input: { item_id: "toolu_read_1" } }] }
           : { chunks: ["ok"] },
   });
+  // Claude's own API never cuts (above): another provider's does.
+  await devOnOpenAi(f);
   await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, {
     body: "@dev lê os logs",
   });
   await drainOutbox(f.db, f.handlers);
-  const calls = agentCalls(f);
+  const calls = f.openaiProvider.calls
+    .map((c) => c.request)
+    .filter((r) => (r.tools?.length ?? 0) > 0 && r.maxTokens > 0);
   const results = (r: ModelRequest) =>
     r.messages
       .flatMap((m) => (typeof m.content === "string" ? [] : m.content))
@@ -403,7 +448,7 @@ test("B12: an agent that needs a cut tool result calls expand and reads it whole
   expect(results(before)[0]?.content).toContain("expand toolu_read_1 reopens it whole");
   const last = calls.at(-1) as ModelRequest;
   const reopened = results(last).find((b) => b.toolUseId === "toolu_expand");
-  expect(reopened?.content).toBe(`Tool call read_log {"page":1}\n\nResult:\n${log(1)}`);
+  expect(reopened?.content).toBe(`Tool call read_log {"page":1}\n\nResult:\n${logPage(1)}`);
   // The run's transcript keeps every result whole; the request reads the old ones cut.
   const [row] = await f.db.select().from(schema.agentRuns).where(eq(schema.agentRuns.agentId, f.agent.id));
   const kept = (row?.transcript as { messages: ModelMessage[] } | undefined)?.messages.slice(0, last.messages.length);
@@ -461,17 +506,17 @@ test("B12: expand reopens a cut call from an earlier run of the same computer se
   expect(await expand(other)).toMatchObject({ isError: true, content: "Not found." });
 });
 
-test("B10: during the quiet window the first call's prompt is pre-warmed: the same request with no output", async () => {
+test("B10: while the person is still typing, the first call's prompt is pre-warmed: the same request with no output", async () => {
   f = await setup({
     contextTools: true,
     react: true,
-    // Long enough that the run reaches its window while it is still open on a machine busy with other test files:
-    // with 300 ms the run sometimes got there after it, and then there is rightly no pre-warm (the test below).
-    quietMs: 2000,
+    // The hold ends four windows from the message: long enough to be reached on a machine busy with other test files.
+    quietMs: 600,
     reply: (r) => (r.maxTokens === 0 ? { chunks: [], usage: { outputTokens: 0 } } : { chunks: ["Oi!"] }),
   });
   const handlers = createJobHandlers({ ...f.jobDeps, prewarm: true });
   await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, { body: "@dev oi" });
+  await publishTyping(f.pubsub, { channelId: f.general.id, threadId: null, userId: f.owner.id });
   await drainOutbox(f.db, handlers);
   const [warm, real] = f.provider.calls.map((c) => c.request);
   expect(warm?.maxTokens).toBe(0);
@@ -487,7 +532,7 @@ test("B10: during the quiet window the first call's prompt is pre-warmed: the sa
   expect(body.stream).toBe(false);
 });
 
-test("B10: no pre-warm when the quiet window is already over: it would only delay the first call", async () => {
+test("B10: no pre-warm when nobody is typing: it would only delay the first call", async () => {
   f = await setup({
     contextTools: true,
     react: true,
@@ -496,67 +541,9 @@ test("B10: no pre-warm when the quiet window is already over: it would only dela
   });
   const handlers = createJobHandlers({ ...f.jobDeps, prewarm: true });
   await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, { body: "@dev oi" });
-  // The run starts after its window (a busy worker, a slow context).
-  await Bun.sleep(400);
   await drainOutbox(f.db, handlers);
   expect(f.provider.calls.map((c) => c.request.maxTokens > 0)).toEqual([true]);
 });
-
-test("B11: the quiet window ends early when the person isn't typing, and lasts while they are", async () => {
-  f = await setup({ contextTools: true });
-  const log = typingLogFor(f.pubsub);
-  const sent = async (body: string) => {
-    const posted = await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, {
-      body,
-    });
-    const m = await getMessage(f.db, f.org.id, posted.id);
-    if (!m) throw new Error("not posted");
-    return m;
-  };
-  const typed = () =>
-    f.pubsub.publish(typingTopic, {
-      type: "user.typing",
-      channelId: f.general.id,
-      threadId: null,
-      userId: f.owner.id,
-      ttlMs: 6000,
-    });
-  // Typing for the message itself, before it was sent, is no sign of another.
-  await typed();
-  await Bun.sleep(5);
-  const alone = await sent("@dev oi");
-  await waitForBurst(f.db, alone, 2500, undefined, log);
-  const quiet = Date.now() - alone.createdAt.getTime();
-  expect(quiet).toBeGreaterThanOrEqual(TYPING_GRACE_MS - 10);
-  expect(quiet).toBeLessThan(2300);
-
-  const typing = await sent("@dev oi");
-  setTimeout(() => void typed(), 300);
-  await waitForBurst(f.db, typing, 2500, undefined, log);
-  expect(Date.now() - typing.createdAt.getTime()).toBeGreaterThanOrEqual(2490);
-
-  // Typed while the run still read its context, before its wait started: still heard.
-  const early = await sent("@dev oi");
-  await Bun.sleep(300);
-  await typed();
-  await Bun.sleep(1100);
-  await waitForBurst(f.db, early, 2500, undefined, log);
-  expect(Date.now() - early.createdAt.getTime()).toBeGreaterThanOrEqual(2490);
-
-  // Sent through a connected AI app (ADR 0119): no typing ever comes from there, so the whole window.
-  const viaApp = await sent("@dev oi");
-  await waitForBurst(f.db, { ...viaApp, meta: { via: { kind: "app", name: "Claude" } } }, 2500, undefined, log);
-  expect(Date.now() - viaApp.createdAt.getTime()).toBeGreaterThanOrEqual(2490);
-
-  // Recording a voice message after it ("gravando áudio…") holds the window as typing does.
-  const recording = await sent("@dev oi");
-  setTimeout(
-    () => void publishTyping(f.pubsub, { channelId: f.general.id, threadId: null, userId: f.owner.id, kind: "voice" }),
-    300,
-  );
-  await waitForBurst(f.db, recording, 2500, undefined, log);
-  expect(Date.now() - recording.createdAt.getTime()).toBeGreaterThanOrEqual(2490);
-}, 25_000);
 
 /**
  * The agent on Claude Code on a paired computer, with a teammate and a second person: three turns, a DM from the
@@ -679,6 +666,7 @@ const toolsSetup = (judge?: NonNullable<Parameters<typeof setup>[0]>["judge"], t
     askUser: true,
     askAgent: true,
     react: true,
+    sayNow: true,
     followUps: true,
     workTools: true,
     blockTools: true,
@@ -712,6 +700,9 @@ test("Claude Code: two sessions of one agent list the same tools, every one it h
   // By name, the search over them last.
   expect(listed.slice(-2)).toEqual(["find_tools", "use_tool"]);
   expect(listed.slice(0, -2)).toEqual(listed.slice(0, -2).sort());
+  // The line before slow work (ADR 0207) is in hand from the first round, never behind a computer brain's tool search.
+  const upFront = (JSON.parse(dmTurn.tools) as { name: string; upFront?: boolean }[]).filter((t) => t.upFront);
+  expect(upFront.map((t) => t.name)).toEqual(["say_now"]);
   // "What you can do" names them all, and how to search them.
   expect(dmTurn.turn.system).toContain("`list_issues`");
   expect(dmTurn.turn.system).toContain("- Search all your tools by what you need with `find_tools`");

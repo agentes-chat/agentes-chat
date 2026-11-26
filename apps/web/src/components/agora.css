@@ -1,6 +1,5 @@
 /*
- * Agora (`Agora.tsx`). Its button takes its place's sizes: the sidebar's collapse beside it (layout.css), the title
- * bar's buttons (desktop.css). Its popover: 360 wide (the window less its room on a phone), as tall as the window lets
+ * Agora (`Agora.tsx`). Its button takes its place's sizes from the sidebar (layout.css). Its popover: 360 wide (the window less its room on a phone), as tall as the window lets
  * it (`.ac-popover`, its list scrolls past that), the menu's concentric corner (its rows' 10 plus its 8 of room).
  */
 .agora.ac-popover {

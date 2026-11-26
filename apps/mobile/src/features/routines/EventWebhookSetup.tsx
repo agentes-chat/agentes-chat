@@ -28,7 +28,7 @@ import { ConnectorIcon } from "../connectors/ConnectorIcon";
 import { CommandBlock } from "../settings/parts";
 import { AskAdminRow } from "../shared/AdminAsk";
 import { LoadFailed } from "../shared/FirstUse";
-import { useColors, useOrgId } from "../shared/hooks";
+import { useColors, useNow, useOrgId } from "../shared/hooks";
 
 /** Repositories offered to pick before typing one: the ones pushed to last. */
 const QUICK_REPOS = 5;
@@ -59,9 +59,6 @@ export function EventWebhookSetup({ provider }: { provider: WebhookProvider }) {
   const testing = since !== null && (state === "waiting" || state === "refused");
   useEffect(() => {
     setPolling(testing);
-    if (!testing) return;
-    const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(timer);
   }, [testing]);
   const [more, setMore] = useState(false);
   const test = () => {
@@ -93,6 +90,8 @@ export function EventWebhookSetup({ provider }: { provider: WebhookProvider }) {
   return (
     <>
       {title}
+      {/* While Testar waits, the time each second: the wait runs out with no call. */}
+      {testing ? <TestClock onTick={setNow} /> : null}
       <GroupedList>
         <View style={styles.status}>
           <ConnectorIcon def={def} label={name} size={28} />
@@ -142,6 +141,15 @@ export function EventWebhookSetup({ provider }: { provider: WebhookProvider }) {
       ) : null}
     </>
   );
+}
+
+/** The time each second while mounted, on `useNow`'s clock: it stops while the screen is covered or the app away. */
+function TestClock({ onTick }: { onTick: (now: number) => void }) {
+  const now = useNow(1000);
+  useEffect(() => {
+    onTick(now);
+  }, [now, onTick]);
+  return null;
 }
 
 function GitHubSteps({ setup, onAdded }: { setup: WebhookSetup; onAdded: () => void }) {

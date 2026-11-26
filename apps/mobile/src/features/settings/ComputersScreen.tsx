@@ -8,6 +8,7 @@ import {
   useMachines,
   useSetComputerTarget,
 } from "@agenteschat/client";
+import { managesAgent } from "@agenteschat/client/lib/audience";
 import { type NoComputer, setupView } from "@agenteschat/client/lib/computer";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { computerState, machineTitle } from "@agenteschat/client/lib/machines";
@@ -25,7 +26,7 @@ import { openPage } from "../ai/parts";
 import { computerIcon } from "../outages/logic";
 import { AgentFace } from "../shared/Face";
 import { LoadFailed } from "../shared/FirstUse";
-import { useMeId } from "../shared/hooks";
+import { useMeId, useMyRoleIds } from "../shared/hooks";
 import { FocusLive, goBack, successHaptic } from "../shared/parts";
 import { type AgentComputerPick, agentComputerPick, NO_COMPUTER, noComputerKey } from "./logic";
 import { Gap, SettingsPage } from "./parts";
@@ -117,14 +118,14 @@ export function HostComputerOff() {
 }
 
 /**
- * "Qual computador cada agente usa": each agent and its computer. Who manages agents picks any; an agent's owner,
- * the ones they connected (the server checks again); a row anyone else can't change only says it.
+ * "Qual computador cada agente usa": each agent and its computer. Who manages the agent (the server's `canManage`)
+ * picks any; its owner, the ones they connected (the server checks again); a row anyone else can't change only says it.
  */
 export function AgentComputers() {
   const { t } = useTranslation();
   const { orgId, org } = useOrg();
   const meId = useMeId();
-  const admin = can(org, "manage_agents");
+  const myRoleIds = useMyRoleIds();
   const agents = useAgents(orgId);
   const machines = useMachines(orgId);
   const setupQ = useComputerSetup(orgId);
@@ -142,7 +143,14 @@ export function AgentComputers() {
       ) : (
         <GroupedList>
           {list.map((a) => {
-            const pick = agentComputerPick({ agent: a, meId, admin, machines: machines.data ?? [], setup });
+            const pick = agentComputerPick({
+              agent: a,
+              meId,
+              myRoleIds,
+              admin: managesAgent(a),
+              machines: machines.data ?? [],
+              setup,
+            });
             return (
               <GroupedRow
                 key={a.id}
@@ -174,7 +182,7 @@ export function AgentComputerScreen({ agentId }: { agentId: string }) {
   const toast = useToast();
   const { orgId, org } = useOrg();
   const meId = useMeId();
-  const admin = can(org, "manage_agents");
+  const myRoleIds = useMyRoleIds();
   const agents = useAgents(orgId);
   const machines = useMachines(orgId);
   const setupQ = useComputerSetup(orgId);
@@ -194,7 +202,14 @@ export function AgentComputerScreen({ agentId }: { agentId: string }) {
       </SettingsPage>
     );
   }
-  const pick = agentComputerPick({ agent, meId, admin, machines: machines.data ?? [], setup });
+  const pick = agentComputerPick({
+    agent,
+    meId,
+    myRoleIds,
+    admin: managesAgent(agent),
+    machines: machines.data ?? [],
+    setup,
+  });
   const choose = (id: string) => {
     if (id === pick.value) {
       goBack();

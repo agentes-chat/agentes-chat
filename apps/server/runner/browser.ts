@@ -258,6 +258,9 @@ const DAEMON_HOLD_MS = 30_000;
 const PAGE_OPEN_MS = 1000;
 /** A tab whose socket didn't open is tried again after this; the relay carries the input meanwhile. */
 const PAGE_RETRY_MS = 10_000;
+/** How often a person's input waits for `agent-browser` to see a tab that opened or closed (`followTab`), and how long between. */
+const FOLLOW_TAB_TRIES = 3;
+const FOLLOW_TAB_RETRY_MS = 200;
 /** After a failed download or install, wait this long before trying again. */
 const RETRY_FAILURE_MS = 10 * 60_000;
 const STREAM_OPEN_MS = 5000;
@@ -466,7 +469,7 @@ export function crashPage(memory: boolean, tag?: string | null): string {
   const words = CRASH_WORDS[locale];
   const title = memory ? words.memory : words.stopped;
   const html =
-    `<!doctype html><html lang="${locale}"><head><meta charset="utf-8"><title>${title}</title>` +
+    `<!doctype html><html lang="${locale}" translate="no"><head><meta charset="utf-8"><meta name="google" content="notranslate"><title>${title}</title>` +
     `<style>${CRASH_STYLE}</style></head><body><main><h1>${title}</h1><p>${words.told}</p></main></body></html>`;
   return `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
 }
@@ -895,6 +898,35 @@ export function missingLibrariesText(missing: string[]): string {
 }
 
 /**
+ * The uids listening on `port` where Chrome's 127.0.0.1 would be, from `ss -Htln -e` (ss leaves root's uid out, read
+ * as 0). ss prints a dual-stack IPv6 wildcard as `*`, which holds 127.0.0.1, and a v6-only one as `[::]`, which doesn't.
+ */
+export function listenerUidsIn(ssOutput: string, port: number): number[] {
+  return ssOutput
+    .split("\n")
+    .filter((line) => {
+      const cols = line.trim().split(/\s+/);
+      const local = cols[3] ?? "";
+      return (
+        cols[0] === "LISTEN" &&
+        /^(127\.0\.0\.1|0\.0\.0\.0|\*):\d+$/.test(local) &&
+        Number(local.slice(local.lastIndexOf(":") + 1)) === port
+      );
+    })
+    .map((line) => Number(/\buid:(\d+)\b/.exec(line)?.[1] ?? 0));
+}
+
+/** `listenerUidsIn` on this computer now, or null when ss can't say. */
+function listenerUids(port: number): number[] | null {
+  const result = spawnSync("ss", ["-Htln", "-e"], { encoding: "utf8", timeout: 1000 });
+  return result.status === 0 ? listenerUidsIn(result.stdout ?? "", port) : null;
+}
+
+/** Another program holds an agent's fixed debugging port (system mode): what follows `CHROME_FAILURES.start`. */
+export const portTakenText = (port: number) =>
+  `Another program on this computer listens on port ${port}, which this agent's browser needs. Move that program to another port or stop it (sudo ss -tlnp 'sport = :${port}' shows which), then try again.`;
+
+/**
  * Starts Chrome and waits for its debugging port (Chrome writes it to
  * `<profile>/DevToolsActivePort` with `--remote-debugging-port=0`, its
  * browser endpoint on the next line).
@@ -905,27 +937,27 @@ export async function launchChrome(
   profile: string,
   env?: Record<string, string>,
   start: Spawn = spawn,
-  ownsPort: (port: number) => boolean = (port) => {
-    const uid = process.getuid?.();
-    if (uid === undefined) return false;
-    const result = spawnSync("ss", ["-Htln", "-e"], { encoding: "utf8", timeout: 1000 });
-    if (result.status !== 0) return false;
-    const rows = (result.stdout ?? "").split("\n").filter((line) => {
-      const cols = line.trim().split(/\s+/);
-      const local = cols[3] ?? "";
-      return (
-        cols[0] === "LISTEN" &&
-        (local.startsWith("127.0.0.1:") || local.startsWith("0.0.0.0:")) &&
-        Number(local.slice(local.lastIndexOf(":") + 1)) === port
-      );
-    });
-    return rows.length > 0 && rows.every((line) => Number(/\buid:(\d+)\b/.exec(line)?.[1]) === uid);
-  },
+  portListeners: (port: number) => number[] | null = listenerUids,
+  uid = process.getuid?.(),
 ): Promise<OwnChrome> {
   const portFile = path.join(profile, "DevToolsActivePort");
   const fixedPort = Number(args.find((arg) => arg.startsWith("--remote-debugging-port="))?.split("=")[1] ?? 0);
   if (!Number.isInteger(fixedPort) || fixedPort < 0 || fixedPort > 65_535) {
     throw new ChromeStartError("Invalid Chrome debugging port", "");
+  }
+  const ownsPort = (port: number) => {
+    const uids = portListeners(port);
+    return uid !== undefined && !!uids?.length && uids.every((u) => u === uid);
+  };
+  const holders = fixedPort ? (portListeners(fixedPort) ?? []).filter((u) => u !== uid) : [];
+  if (holders.length) {
+    throw new ChromeStartError(
+      `Chrome's debugging port ${fixedPort} is taken by uid ${holders.join(", ")}`,
+      "",
+      [],
+      false,
+      portTakenText(fixedPort),
+    );
   }
   await rm(portFile, { force: true });
   const child = start(exe, args, { stdio: ["ignore", "ignore", "pipe"], windowsHide: true, ...(env ? { env } : {}) });
@@ -3380,10 +3412,12 @@ export class BrowserManager {
       this.opts.connectDevtools,
       (page) => this.pageCrashed(session, chrome, page),
       (targetId, popup) => {
+        this.followTab(session, targetId, true);
         if (!popup && !this.personsTurn(session.agentId)) return;
         session.keptTabs ??= new Set();
         session.keptTabs.add(targetId);
       },
+      (targetId) => this.followTab(session, targetId, false),
     );
     this.counters.set(chrome, counter);
     if (session.viewport) counter.emulate(emulationCommands(session.viewport, session.version ?? null));
@@ -5117,6 +5151,37 @@ export class BrowserManager {
     });
     stream.inputQueue = run.catch(() => undefined);
     return run;
+  }
+
+  /**
+   * While a person drives, a tab opened or closed (a sign-in popup, a link's new tab, a popup that closed once signed
+   * in). `agent-browser` makes it its active tab when it next reads Chrome's events, but moves its stream there and
+   * says so (`tabs`) only after a command, and the person's input goes on the tab's own socket, never as a command.
+   * Their clicks and keys would go on to a tab in the background or one that is gone: Chrome holds a pointer move for
+   * a hidden tab until it draws again (it doesn't), so each one fails after `INPUT_TIMEOUT_MS`, and the view stays on
+   * the old picture. A tab list on the relay moves both, and the input after it waits for it. Asked again while the
+   * list doesn't show the change yet (`agent-browser` hears of it on its own socket, maybe later than this one).
+   */
+  private followTab(session: Session, targetId: string, opened: boolean) {
+    const stream = session.stream;
+    if (stream?.mode !== "control" || stream.closing) return;
+    stream.inputQueue = stream.inputQueue
+      .then(async () => {
+        for (let i = 0; i < FOLLOW_TAB_TRIES && session.stream === stream && !stream.closing; i++) {
+          if (i > 0) await new Promise((r) => setTimeout(r, FOLLOW_TAB_RETRY_MS));
+          // Not behind the agent's command the daemon may still finish: the stream's `tabs` says it when it gets there.
+          const answer = await this.relayAnswer(stream.port, { action: "tab_list" });
+          const tabs = isRecord(answer?.data) && Array.isArray(answer.data.tabs) ? answer.data.tabs : null;
+          if (!tabs) return;
+          if (tabs.some((t) => isRecord(t) && t.targetId === targetId) !== opened) continue;
+          const active = tabs.find((t) => isRecord(t) && t.active === true);
+          if (isRecord(active) && typeof active.targetId === "string" && TARGET_ID.test(active.targetId)) {
+            stream.targetId = active.targetId;
+          }
+          return;
+        }
+      })
+      .catch(() => undefined);
   }
 
   /**

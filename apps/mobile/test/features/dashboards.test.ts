@@ -232,6 +232,16 @@ describe("dashboards on the phone (ADR 0135)", () => {
     expect(formatWithUnit(6, undefined, "en")).toBe("6");
   });
 
+  test("a number's prefix is a text of its own on the number's baseline, so Android never cuts the digits", () => {
+    const view = readFileSync(join(import.meta.dir, "../../src/features/dashboards/WidgetView.tsx"), "utf8");
+    // As the first, smaller part of the number's own text, the line took its height and cut the digits' tops.
+    expect(view).not.toMatch(/\$\{spec\.prefix\}/);
+    expect(view).toContain(
+      "{spec.prefix ? <Text style={[styles.affix, { color: c.muted }]}>{spec.prefix}</Text> : null}",
+    );
+    expect(view).toContain('figure: { flexDirection: "row", alignItems: "baseline", gap: 4 },');
+  });
+
   test("bars keep every label while there's room, else every n-th; values only with room", () => {
     expect(barWords(5, 300)).toEqual({ every: 1, values: true });
     expect(barWords(24, 150).every).toBeGreaterThan(1);
@@ -744,6 +754,29 @@ describe("one of many, on a pushed screen", () => {
     expect(widget).toContain("onPress: pickSchedule");
     expect(widget).not.toContain('open === "');
     expect(existsSync(join(import.meta.dir, "../../app/(app)/(main)/widget-edit/[id].tsx"))).toBe(true);
+  });
+
+  test("New widget: the card shows the widget, its settings are rows under it, the action at the page's foot", () => {
+    const create = src("dashboards/NewWidgetScreen.tsx");
+    // Nothing but the title and the ask in the card: no bell, no size switch, no footer of tiny picks.
+    expect(create).toContain("footer={null}");
+    expect(create).not.toContain('accessibilityRole="switch"');
+    expect(create).not.toContain("<PushedHeader");
+    for (const row of [
+      'label={t("dashboards.newWidget.who")}',
+      'label={t("dashboards.newWidget.format")}',
+      '<SizeRow key="size" value={sized} onChange={setSize} />',
+      'label={t("dashboards.newWidget.updates")}',
+      "toggle={alert}",
+      '<GroupedField key="condition" label={t("widgets.alert.condition")}>',
+    ])
+      expect(create).toContain(row);
+    expect(create).toContain('t("mobile.dashboards.newWidget.testReal")');
+    expect(create).toContain('t("mobile.dashboards.newWidget.addHome")');
+    // The home's strip ends on "Add" (who edits the board) beside "See all".
+    const strip = src("chats/HomeWidgets.tsx");
+    expect(strip).toMatch(/\{canAdd \? \(\s*<StripButton icon="plus" label=\{t\("widgets\.add\.word"\)\}/);
+    expect(strip).toContain('<StripButton icon="right" label={t("dashboards.seeAll")}');
   });
 
   test("a board's screens: no bare spinner, a way to retry, and the menu in the app's sheet", () => {

@@ -1,5 +1,6 @@
 import { and, type Executor, eq, schema } from "@agenteschat/db";
-import { fedByRoutine, type RunAuthority } from "../authority";
+import { fedByRoutine, fromApp, type RunAuthority } from "../authority";
+import { gitVerbOf } from "../git/hosts/refs";
 import { directoryRole } from "./directory";
 import type { JsonSchema } from "./json-schema";
 import type { ToolDefinition } from "./types";
@@ -18,8 +19,11 @@ import type { ToolDefinition } from "./types";
  *   `hand_off` nor a mission's tools; every write to a connected app asks a person, except, on the run its report
  *   or a teammate's answer to its question woke while that is all it read, the routine's own actions (`onOwnJob`,
  *   ADR 0053 addendum 2026-11-13).
+ * - `unattended` an integration app's message started (`fromApp`, ADR 0252): as one a routine's reading feeds, and
+ *   besides the web (`PUBLIC_READS`) every read, internal change and word elsewhere asks a person.
  * - `routine`: nothing that speaks for someone (reactions, GIFs and stickers, questions, reminders,
- *   routines, events, channels, secrets, permissions). It reports through `hand_off`, whose message may carry a GIF
+ *   routines, events, channels, secrets, permissions). It may come back to its own work (`follow_up`, `ROUTINE_RESUME`):
+ *   blocked now, it resumes by itself where it reports, in a run that keeps its bounds. It reports through `hand_off`, whose message may carry a GIF
  *   (its `gif`, as `post_message`'s, ADR 0091 addendum 2026-11-09). Otherwise it
  *   works as the agent (ADR 0109: one permission model, the agent's own): reads, the web and the browser,
  *   internal changes people can undo (issues, memory, wiki, Drive, Vault contacts, its own branches and pull
@@ -131,6 +135,7 @@ const ELSEWHERE = new Set([
   "delete_routine",
   "run_routine_now",
   "add_agent_to_channel",
+  "set_channel_lead",
   "create_channel",
   "request_secret",
   "request_permission",
@@ -145,8 +150,14 @@ const ELSEWHERE = new Set([
 /** Long work's tools (ADR 0121), on the run's own work: `self`. */
 const SELF_WORK = new Set(["work_in_background", "post_update", "steer_work", "stop_work"]);
 
+/** What a routine may use of `HERE`: its own resume, woken where it reports (`deliverNoticeToRun`). */
+const ROUTINE_RESUME = new Set(["follow_up", "cancel_follow_up"]);
+
 /** What a routine may use of `ELSEWHERE`, by name. */
 const ROUTINE_REACH = new Set(["post_message", "send_dm", "ask_agent", "tell_agent"]);
+
+/** What a run an integration app's message started reads without asking (ADR 0252): the web holds nothing of ours. */
+const PUBLIC_READS = new Set(["web_search", "web_fetch", "image_search"]);
 
 /** Speaks in the run's own conversation, by name. */
 const HERE = new Set([
@@ -157,7 +168,13 @@ const HERE = new Set([
   "show_block",
   "start_poll",
   "ask_choices",
+  // One short line before slow work, in this conversation (ADR 0207).
+  "say_now",
+  // A code session suggested to the person here, on the reply (ADR 0215 §11).
+  "suggest_code_session",
   "share_artifact",
+  // A picture from the web on the reply, here (ADR 0217).
+  "show_image",
   "propose_mission",
   "browser_ask_person",
   "desktop_ask_person",
@@ -184,16 +201,21 @@ const READS = new Set([
   "list_routines",
   "list_reminders",
   "find_agent",
+  "read_agent",
   "get_my_usage",
   "computer_status",
   "read_file",
+  "review_media",
   "list_files",
   "list_tasks",
   "task_status",
   "get_context",
+  "read_webhook_call",
   "web_search",
   "web_fetch",
+  "image_search",
   "list_dashboards",
+  "team_status",
   "phone_screenshot",
   "phone_logs",
 ]);
@@ -245,6 +267,10 @@ const LOOKS_ONLY = new Set([
   "desktop_read",
   "desktop_screenshot",
   "git_clone",
+  "gitlab_git_clone",
+  "bitbucket_git_clone",
+  "gitserver_git_clone",
+  "list_repositories",
   "team_status",
   "offer_approvals",
   "offer_open_page",
@@ -302,8 +328,8 @@ export function toolKind(tool: PolicyTool): ToolKind {
   if (tool.name === "run_approved_action" && !tool.connectionId && tool.scope === "") return { kind: "directory" };
   // These Git tools carry a connection ID for credentials, but they are our own
   // workspace-changing actions. Their exact scopes distinguish them from MCP tools.
-  if (tool.name === "git_clone" && tool.scope === "github:git.read") return { kind: "internal", area: "code" };
-  if (tool.name === "open_pull_request" && tool.scope === "github:pr.write") return { kind: "internal", area: "code" };
+  const git = gitVerbOf(tool);
+  if (git === "git_clone" || git === "open_pull_request") return { kind: "internal", area: "code" };
   // Opening a pull request is the agent's own code work, like a push to its own branch, through any connected app:
   // nothing changes until someone merges it, and a merge is another tool.
   if (opensPullRequest(tool)) return { kind: "internal", area: "code" };
@@ -322,7 +348,8 @@ export function toolKind(tool: PolicyTool): ToolKind {
     tool.name === "withdraw_request" ||
     tool.name === "set_reply_style" ||
     tool.name === "commit_co_author" ||
-    tool.name === "wait_for_device"
+    tool.name === "wait_for_device" ||
+    tool.name === "ignore_usage_limit"
   )
     return { kind: "self" };
   // Long work (ADR 0121): the run's own work only; who may go to the background is the tool source's.
@@ -347,10 +374,12 @@ export function toolKind(tool: PolicyTool): ToolKind {
 
 export const REFUSALS = {
   routineElsewhere:
-    "This is a routine's background work: it can't manage routines or reminders, propose events, change channels, or ask for secrets or permissions. Put it in hand_off; the people decide.",
+    "This is a routine's background work: it can't manage routines or reminders, propose events, change channels, or ask for secrets or permissions. Put it in hand_off; the people decide. To come back to blocked work yourself, set a follow_up.",
   routineAskUser:
     "This is a routine's background work: nobody is here to answer. Decide with your best judgement; if a person must decide, say so in hand_off.",
   routineReact: "This is a routine's background work: there is no message to react to. Just finish, or use hand_off.",
+  routineSayNow:
+    "This is a routine's background work: nobody is in its room to tell. Just do the work; what people should hear goes in hand_off.",
   routineMedia:
     "This is a routine's background work: nobody is in its room to send a GIF or a sticker to. A GIF goes with the routine's message: give hand_off a `gif` (when it has one), never a link to a GIF site.",
   routineHere: "This is a routine's background work in a room nobody reads: put it in hand_off; the people decide.",
@@ -373,6 +402,7 @@ export const REFUSALS = {
 const ROUTINE_HERE_REFUSAL: Readonly<Record<string, string>> = {
   ask_user: REFUSALS.routineAskUser,
   react: REFUSALS.routineReact,
+  say_now: REFUSALS.routineSayNow,
   send_gif: REFUSALS.routineMedia,
   send_sticker: REFUSALS.routineMedia,
   share_artifact: REFUSALS.routineShare,
@@ -416,6 +446,13 @@ export function toolPolicy(
     if (what.kind === "hand_off") return refuse(REFUSALS.handOffOnly);
     return asks ? APPROVE : ALLOW;
   }
+  // Someone outside writes what feeds a run an app's message started and reads its reply (ADR 0252): any look at the
+  // workspace's data, an internal change and a word to another conversation or agent ask a person first, so an
+  // injected request can't carry the workspace out through the reply.
+  if (fromApp(authority)) {
+    if (what.kind === "read" && !PUBLIC_READS.has(tool.name)) return APPROVE;
+    if (what.kind === "internal" || (what.kind === "elsewhere" && ROUTINE_REACH.has(tool.name))) return APPROVE;
+  }
   // What a routine read feeds a run its report or work woke (`fedByRoutine`): that run keeps the routine's
   // bounds, replies where it is, and asks a person before writing to a connected app.
   switch (what.kind) {
@@ -427,7 +464,9 @@ export function toolPolicy(
       if (!ROUTINE_REACH.has(tool.name)) return refuse(fed ? REFUSALS.fedElsewhere : REFUSALS.routineElsewhere);
       return asks ? APPROVE : ALLOW;
     case "here":
-      return fed ? ALLOW : refuse(ROUTINE_HERE_REFUSAL[tool.name] ?? REFUSALS.routineHere);
+      return fed || ROUTINE_RESUME.has(tool.name)
+        ? ALLOW
+        : refuse(ROUTINE_HERE_REFUSAL[tool.name] ?? REFUSALS.routineHere);
     case "internal":
       return asks ? APPROVE : ALLOW;
     case "external":

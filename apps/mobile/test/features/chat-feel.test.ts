@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { keepSameRows, sameItems } from "../../src/features/chat/logic";
+import { chatScreenSource } from "./chat-screen-source";
 
 const src = (file: string) => readFileSync(join(import.meta.dir, "../../src", file), "utf8");
 /** The text from `from` up to `to` (or the end). */
@@ -35,9 +36,9 @@ describe("swiping a message to answer it", () => {
     expect(swipe).toContain("const pan = usePanGesture(config);");
     // The mark under the row mounts only once a finger lands on it.
     expect(swipe).toContain("{marked ? <ReplyMark x={x} armed={armed} /> : null}");
-    const chat = src("features/chat/ChatScreen.tsx");
+    const chat = chatScreenSource();
     expect(chat).toContain("<SwipeReply enabled={canReply && !m.local} onReply={reply}>");
-    expect(chat).toMatch(/\{NATIVE_MENU \? \(\s*<MessageMenuFor/);
+    expect(chat).toMatch(/\{NATIVE_MENU \? \(?\s*<MessageMenuFor/);
     expect(chat).not.toContain("NATIVE_MENU && !m.local");
     // Its menu then holds what works before the server has it: no reactions, no empty palette.
     const menu = src("features/chat/MessageMenu.tsx");
@@ -45,13 +46,19 @@ describe("swiping a message to answer it", () => {
     expect(menu).toContain("{reactions.length > 0 ? (");
     // Built once a finger lands on the row (or with a screen reader on), never for every row a scroll mounts.
     expect(menu).toContain("onArm={armed ? undefined : arm}");
-    expect(menu).toContain("{groups === null ? <Link.MenuAction hidden onPress={noop} /> : null}");
+    expect(menu).toContain(
+      '{groups === null ? <NativeLinkPreviewAction identifier="building" title="" hidden onSelected={noop} /> : null}',
+    );
+    // A plain box around the row, never expo-router's Link: its native view takes `display: contents`, and in there the
+    // row's frames went stale as its words changed size (a long message's bubble drew empty space under its words).
+    expect(menu).toContain("<NativeLinkPreview previewActivationPath={undefined}>");
+    expect(menu).not.toMatch(/<Link[\s.>]/);
   });
 });
 
 describe("the conversation's rows", () => {
   test("a receipt, a thread's link or the lit row redraws its own row, never every row on screen with its menu", () => {
-    const chat = src("features/chat/ChatScreen.tsx");
+    const chat = chatScreenSource();
     // Each message row is one memoized piece, handed what is its own and callbacks that keep their identity.
     expect(chat).toContain("const ChatMessage = memo(function ChatMessage({");
     expect(chat).toMatch(/const hands = useMemo<RowHands>\(\s*\(\) => \(\{ onReply, onMission, onRemind, onLongPress,/);
@@ -67,7 +74,7 @@ describe("the conversation's rows", () => {
   });
 
   test("someone typing or an agent's step redraws the screen, not the list: nothing it is handed is made anew", () => {
-    const chat = src("features/chat/ChatScreen.tsx");
+    const chat = chatScreenSource();
     expect(chat).toContain(
       "const ConversationList = memo(KeyboardAwareLegendList) as unknown as typeof KeyboardAwareLegendList;",
     );
@@ -114,15 +121,19 @@ describe("the conversation's rows", () => {
   });
 
   test("run events rebuild only the live rows; the messages' rows and what reads them keep", () => {
-    const chat = src("features/chat/ChatScreen.tsx");
+    const chat = chatScreenSource();
     expect(chat).toContain("browsingRef.current = sameItems(browsingRef.current, browsingRuns(runs));");
     expect(chat).toContain(`const makingKey = makingNow.map((r) => \`\${r.runId}:\${r.agentId}\`).join(" ");`);
     expect(chat).toContain("const making = useMemo(() => makingNow, [makingKey]);");
     const messages = between(chat, "const messageRows = useMemo<Row[]>(() => {", "const liveRows");
     expect(messages).not.toContain("browsing");
     expect(messages).not.toContain("waits");
-    // Nor the DM and channel lists, read again with each message: only the thread head's words and count.
-    expect(messages).toContain("}, [isThread, threadId, list, startedText, replyCount, superseded, t]);");
+    // Nor the DM and channel lists, read again with each message: only the thread head's words and count, and the
+    // consulted agents' words folded into their askers' quotes, kept until a fold changes (`relaysKey`).
+    expect(messages).toContain(
+      "}, [isThread, threadId, list, startedText, replyCount, superseded, timeLines, relays, t]);",
+    );
+    expect(chat).toContain("const relays = useMemo(() => relaysNow, [relaysKey]);");
     expect(chat).toContain("[browsing, held, making, waits],");
     expect(chat).toContain('() => messageRows.flatMap((r) => (r.kind === "message" ? [r.message] : [])),');
     expect(chat).toContain("shownRef.current = keepSameRows(shownRef.current, next);");
@@ -130,7 +141,7 @@ describe("the conversation's rows", () => {
 
   test("a new row rises in on the strong ease-out", () => {
     // The app's one rise (`RISE_IN`), also the voice take's line and bar.
-    expect(src("features/chat/ChatScreen.tsx")).toContain("const ENTER = RISE_IN;");
+    expect(chatScreenSource()).toContain("const ENTER = RISE_IN;");
     const entrances = src("ui/entrances.ts");
     expect(entrances).toContain("100: { opacity: 1, transform: [{ translateY: 0 }], easing: motion.easeOut },");
     expect(src("ui/theme.tsx")).toContain("easeOut: Easing.bezier(0.23, 1, 0.32, 1),");
@@ -138,7 +149,7 @@ describe("the conversation's rows", () => {
 });
 
 describe("older pages", () => {
-  const chat = src("features/chat/ChatScreen.tsx");
+  const chat = chatScreenSource();
 
   test("a page that didn't come is not the start: the row above the oldest message offers to try again", () => {
     expect(chat).toContain(".catch(() => setOlderFailed(true))");
@@ -155,19 +166,21 @@ describe("older pages", () => {
     expect(chat).toContain('older: { height: OLDER_ROW, alignItems: "center", justifyContent: "center" },');
   });
 
-  test("going to a message asks a failed page again once, and gives up on one that fails while it looks", () => {
-    expect(chat).toContain("const pageFailed = olderFailed && seekPages.current > 0;");
-    expect(chat).toContain("if (isThread || olderDone || pageFailed || seekPages.current >= SEEK_MAX_PAGES) {");
-    expect(chat).toContain('if (pageFailed) toast({ title: t("common.loadFailed"), icon: "x" });');
-    // The search's own asks go through even after a failure (the list's own don't).
-    const seek = between(chat, "const pageFailed =", "useEffect(() => {");
-    expect(seek).toContain("seekPages.current += 1;\n      fetchOlder();");
+  test("going to a message reads the page around it at any distance; a failed read says so, a 404 says it's gone", () => {
+    expect(chat).toContain(
+      ".messages(orgId, channelId, { around: seek, limit: SEEK_PAGE, onCards: cardsInto(qc, orgId) })",
+    );
+    expect(chat).toContain("const gone = error === undefined || (error instanceof ApiError && error.status === 404);");
+    expect(chat).toContain('toast({ title: gone ? t("channel.jumpMissing") : t("common.loadFailed"), icon: "x" });');
+    // Away from the latest page: newer pages as the person scrolls down, never pinned to that end.
+    expect(chat).toContain("onEndReached={gap ? loadNewer : undefined}");
+    expect(chat).toContain("maintainScrollAtEnd={readHold || gap ? false : GLIDE}");
   });
 });
 
 describe('the "New" line', () => {
   test("it comes in the same frame as the first new row and stays put until the person leaves the screen", () => {
-    const chat = src("features/chat/ChatScreen.tsx");
+    const chat = chatScreenSource();
     // Derived in the render that brings the row (put a render later, it pushed the row down under the person's eyes).
     expect(chat).toContain("const dividerKey = placedDivider ?? unseen.firstKey;");
     expect(chat).toContain("if (!focused) setPlacedDivider(null);");
@@ -177,28 +190,32 @@ describe('the "New" line', () => {
   });
 
   test("the older pages' row keeps its room once the start is reached", () => {
-    const chat = src("features/chat/ChatScreen.tsx");
+    const chat = chatScreenSource();
     expect(chat).toContain("<View style={styles.older} />");
   });
 });
 
 describe("sheets that open the next thing", () => {
-  test("wait for the sheet to be gone (`sheet.close` says when), never a guessed time", () => {
-    const chat = src("features/chat/ChatScreen.tsx");
+  test("stack the next step over the sheet, or wait for it to be gone (`sheet.close` says when), never a guessed time", () => {
+    const chat = chatScreenSource();
     expect(chat).not.toContain("SHEET_LEAVE_MS");
     expect(chat).not.toMatch(/setTimeout\(\(\) => open(NewMission|Remind)\(\), \d+\)/);
     // The message the last conversation opened at goes with it (`m`): the params merge.
     expect(chat).toContain(
       'else sheet.close(() => router.setParams({ channelId: id, thread: "", handoff: "", m: "" }));',
     );
-    expect(chat).toContain('const after = pick !== "summary" || Boolean(mission);');
-    expect(chat).toContain("if (after) await new Promise<void>((done) => sheet.close(done));");
+    // The "+": the GIFs, a reminder and a mission's summary stack over it at once (a flick down goes back to it); the
+    // camera, the library and the files picker wait for it to be gone.
+    const plus = between(chat, "const onPlus = async (pick: PlusPick) => {", 'case "camera": {');
+    expect(plus).toMatch(/case "media":\s*openMedia\(\);\s*return;\s*case "remind":\s*openRemind\(\);\s*return;/);
+    expect(plus).toContain("await new Promise<void>((done) => sheet.close(done));");
+    expect(chat).toContain("const openMedia = () =>\n    sheet.push(");
   });
 });
 
 describe("the composer", () => {
   const composer = src("ui/Composer.tsx");
-  const chat = src("features/chat/ChatScreen.tsx");
+  const chat = chatScreenSource();
 
   test("the picker and the pills float above the measured box: typing never moves the conversation", () => {
     expect(composer).toContain("{float ? null : floating}");
@@ -211,11 +228,12 @@ describe("the composer", () => {
     expect(float).toBeGreaterThan(button);
     expect(chat.indexOf("ref={composerRef}", dock)).toBeGreaterThan(float);
     expect(chat).toContain("float={composerFloat}");
-    // No suggestion pills over the conversation: the list's end inset is the box alone.
+    // No suggestion pills over the conversation: the list's end inset is the box (and what the keyboard library's two
+    // paths disagree on, `useListEnd`).
     expect(chat).not.toContain("composerSuggestions");
     expect(chat).not.toContain("PILLS_ROOM");
-    expect(chat).toContain("endInset.value = height;");
-    expect(chat).toContain("contentInsetEndAdjustment={endInset}");
+    expect(chat).toContain("boxHeight.set(height);");
+    expect(chat).toContain("contentInsetEndAdjustment={listEnd}");
   });
 
   test("the send button comes in from 0.85 on an ease-out with no overshoot, and leaves the same way", () => {
@@ -247,6 +265,20 @@ describe("the working line", () => {
     expect(lines).not.toContain("ZoomIn");
     const pop = between(lines, "const FACE_POP: EntryExitAnimationFunction", "/**");
     expect(pop).toContain("initialValues: { opacity: 0, transform: [{ scale: 0.9 }] },");
+  });
+
+  test("the agent at work leads with its rings (the web's), what it did so far under the words, paced", () => {
+    // Its face orbited, never the plain working face; the stack's small faces are the others.
+    expect(lines).toContain("<OrbitFace color={agentLook(dir.agentById.get(orbiting.id)).color} size={ORBIT_FACE}>");
+    expect(lines).toContain("const faces = barFaces(entries).filter((e) => e !== orbiting);");
+    expect(lines).toContain("usePacedTrail(trailRun ? workTrail(t, trailRun, i18n.language) : NO_TRAIL)");
+    const orbit = src("agent/OrbitFace.tsx");
+    // The web's rings and colours, turning on the UI thread by transforms alone, still with Reduce Motion and paused
+    // on a screen that isn't showing.
+    expect(orbit).toContain('import { ORBIT_RINGS, ORBIT_SPAN, orbitColors } from "@agenteschat/ui/agent/orbit";');
+    expect(orbit).toContain("const turning = !reduced;");
+    expect(orbit).toContain('loopStyle(ring.back ? UNTURN : TURN, turn, "linear", delay, paused)');
+    expect(orbit).not.toMatch(/useFrameCallback|requestAnimationFrame|setInterval/);
   });
 
   test('"View" reaches 44 points', () => {
@@ -351,7 +383,8 @@ describe("a voice message's row", () => {
     expect(row).toContain("const starting = useSyncExternalStore(subscribePlayback, startingId) === clipId;");
     expect(row).toContain('<ActivityIndicator size="small" color={c.bg} />');
     const toggle = between(row, "const toggle = () => {", "const seek =");
-    expect(toggle.indexOf("voiceAudioGone(")).toBeGreaterThan(toggle.indexOf("const failed = () => {"));
+    expect(toggle.indexOf("isGone?.()")).toBeGreaterThan(toggle.indexOf("const failed = () => {"));
+    expect(row).toContain("isGone={() => voiceAudioGone(url, authedFetch as typeof fetch)}");
     expect(toggle).toContain("onError: failed,");
     expect(toggle).toContain("}).catch(failed);");
     // Where it stands is the playback module's: a row drawn again mid-play shows it.

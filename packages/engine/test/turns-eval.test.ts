@@ -114,9 +114,22 @@ const size = (r: ModelRequest) =>
  * ADR 0137), and 47,631 with recall reading the asker's own DM with the agent from anywhere they ask, an empty search
  * never told as "the first time", and the DM rule saying what may be said of it elsewhere. Where each workspace gets its
  * own computer, `workspaceComputerText` adds 447 to that (48,078); and a sign-in whose link or
- * code goes to a mailbox the agent reads being its own work adds 360; the ceiling leaves a little room above both.
+ * code goes to a mailbox the agent reads being its own work adds 360; the live files' group (ADR 0196 §6) named with
+ * the others, in the prompt and in `find_tools`, adds about 170 (48,834 on the Cloud), and `ignore_usage_limit`, for a person telling the agent to go past
+ * its usage pause, adds 356 (49,190), and `say_now`, one short line before slow work (ADR 0207), its definition and
+ * its line in "# How you work" add about 765 (about 49,955), and a question getting its answer instead of unasked work
+ * (its line in "# How you work" and `tell_agent`) adds 572 (50,720), and the reply rule following the person, not the
+ * message, adds 46, and history sent as it was on Claude's own API with lean wakes adds about 150 (50,918 on the Cloud),
+ * and the memory guard taking an admin's own words with the plainer nudges adds about 140, and `say_now` named the very
+ * first call before slow work (ADR 0207 addendum of 2026-11-21) adds 9, and the end-of-turn check (reread the reply: a
+ * promise, a running command, a rule to save), where a result no call of this turn made came from, no list of what's
+ * missing and the other ways in after a closed one add 165 (50,741; 51,188 on the Cloud), and `say_now` once more for a
+ * message that corrects or adds to the task (ADR 0207 addendum of 2026-11-24) adds 63 (50,804; 51,251 on the Cloud), and
+ * a progress line per new phase of long work (ADR 0207 addendum of 2026-11-24b) adds 42 (50,846; 51,293 on the Cloud),
+ * and work set out in steps being the agent's to finish (its line in "# How you work") adds 271 (51,564 on the Cloud);
+ * the ceiling leaves a little room above them.
  */
-const OI_CEILING_CHARS = 48_700;
+const OI_CEILING_CHARS = 51_620;
 
 test("a DM 'oi' stays under the size ceiling", async () => {
   const [request] = await play(TURNS.find((t) => t.id === "greet-dm") as ScriptedTurn);

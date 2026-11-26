@@ -85,7 +85,7 @@ test("password reset: the email links straight to the web's /reset-password with
 });
 
 test("at most 3 reset and 3 confirmation emails an hour to one address: more go nowhere, with the same answer", async () => {
-  t = await createTestServer({ env: { ALLOW_SIGNUP: "true" } });
+  t = await createTestServer({ unconfirmedSignUps: true, env: { ALLOW_SIGNUP: "true" } });
   const ana = browser(t);
   await signUp(ana, "ana@example.com");
   const reset = () =>
@@ -117,7 +117,7 @@ test("at most 3 reset and 3 confirmation emails an hour to one address: more go 
 });
 
 test("the sign-up's own language: the confirmation email and the account follow it before anything else is picked", async () => {
-  t = await createTestServer({ env: { ALLOW_SIGNUP: "true" } });
+  t = await createTestServer({ unconfirmedSignUps: true, env: { ALLOW_SIGNUP: "true" } });
   const localeOf = async (email: string) =>
     (await t.db.select({ locale: schema.users.locale }).from(schema.users).where(eq(schema.users.email, email)))[0]
       ?.locale;
@@ -233,4 +233,76 @@ test("/email/* serves the pictures to anyone, cached for good, and never the web
   } finally {
     rmSync(web, { recursive: true, force: true });
   }
+});
+
+test("an invitation the mail provider won't deliver says so on its row; sending it again lifts the suppression first", async () => {
+  t = await createTestServer();
+  const owner = browser(t);
+  await signUp(owner, "owner@example.com");
+  const { orgId } = await seedOrg(owner);
+  await t.drain();
+  t.email.refused.set("ana@example.com", "suppressed");
+  t.email.refused.set("bia@example.com", "rejected");
+  await owner(`/api/app/organizations/${orgId}/invitations/batch`, {
+    json: { emails: ["ana@example.com", "bia@example.com"] },
+  });
+  await t.drain();
+  const list = async () =>
+    (
+      (await (await owner(`/api/app/organizations/${orgId}/invitations/all`)).json()) as {
+        invitations: { id: string; email: string; undelivered: string | null; url: string | null }[];
+      }
+    ).invitations;
+  const before = await list();
+  expect(before.map((i) => [i.email, i.undelivered]).sort()).toEqual([
+    ["ana@example.com", "suppressed"],
+    ["bia@example.com", "rejected"],
+  ]);
+  // Its link is still there to send another way.
+  expect(before.every((i) => i.url)).toBe(true);
+
+  const ana = before.find((i) => i.email === "ana@example.com");
+  await owner(`/api/app/organizations/${orgId}/invitations/${ana?.id}/resend`, { json: {} });
+  // Until the job says how it went, the row says nothing.
+  expect((await list()).find((i) => i.email === "ana@example.com")?.undelivered).toBeNull();
+  await t.drain();
+  expect(t.email.unsuppressed).toEqual(["ana@example.com"]);
+  expect(t.email.sent.filter((m) => m.to[0] === "ana@example.com").length).toBe(1);
+  expect((await list()).find((i) => i.email === "ana@example.com")?.undelivered).toBeNull();
+
+  // A refused address isn't a suppression: sent again, nothing is lifted, and it fails again.
+  const bia = before.find((i) => i.email === "bia@example.com");
+  await owner(`/api/app/organizations/${orgId}/invitations/${bia?.id}/resend`, { json: {} });
+  await t.drain();
+  expect(t.email.unsuppressed).toEqual(["ana@example.com"]);
+  expect((await list()).find((i) => i.email === "bia@example.com")?.undelivered).toBe("rejected");
+});
+
+test("a confirmation email the provider won't deliver: /me names why, and a new link the person asks for lifts the suppression", async () => {
+  t = await createTestServer({ unconfirmedSignUps: true, env: { ALLOW_SIGNUP: "true" } });
+  t.email.refused.set("ana@example.com", "suppressed");
+  const ana = browser(t);
+  await signUp(ana, "ana@example.com");
+  await t.drain();
+  const me = async () =>
+    ((await (await ana("/api/app/me")).json()) as { user: { emailUndelivered: string | null } }).user;
+  expect((await me()).emailUndelivered).toBe("suppressed");
+
+  // A new second makes a new link (links are stamped to the second).
+  await Bun.sleep(1000 - (Date.now() % 1000));
+  // Asked for by someone signed out, a link goes as always and lifts nothing.
+  const stranger = browser(t);
+  expect((await stranger("/api/auth/send-verification-email", { json: { email: "ana@example.com" } })).status).toBe(
+    200,
+  );
+  await t.drain();
+  expect(t.email.unsuppressed).toEqual([]);
+  expect((await me()).emailUndelivered).toBe("suppressed");
+
+  await Bun.sleep(1000 - (Date.now() % 1000));
+  expect((await ana("/api/auth/send-verification-email", { json: { email: "ana@example.com" } })).status).toBe(200);
+  await t.drain();
+  expect(t.email.unsuppressed).toEqual(["ana@example.com"]);
+  expect(t.email.sent.filter((m) => m.to[0] === "ana@example.com").length).toBe(1);
+  expect((await me()).emailUndelivered).toBeNull();
 });

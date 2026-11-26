@@ -10,12 +10,12 @@ import { fileIcon, formatBytes, MAX_UPLOAD_BYTES, previewKind } from "@agentesch
 import { taskNoticeOf } from "@agenteschat/client/lib/missions";
 import { QueryClient } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
-import { fileSaver } from "@/components/artifacts/ArtifactViewer";
 import { objectUrls } from "@/components/artifacts/FileView";
+import { fileSaver } from "@/components/artifacts/fileSaver";
 import { createI18n } from "@/i18n";
-import { ADA_ID, createFakeApi, ENG_ID, fakeMachinesOf, ORG_ID, seedState } from "./fake-api";
+import { ADA_ID, createFakeApi, ENG_ID, fakeMachinesOf, ORG_ID, seedState, withRightHand } from "./fake-api";
 import { hintOf, shownText } from "./hint";
-import { renderApp, screen, settle, showIn } from "./render";
+import { onScreen, renderApp, screen, settle, showIn } from "./render";
 
 const saved: { url: string; name: string }[] = [];
 const realSave = fileSaver.save;
@@ -114,7 +114,9 @@ describe("uploaded files in the Drive", () => {
     const tiles = Array.from(document.querySelectorAll<HTMLElement>(".artifact-cards > .artifact-tile"));
     expect(tiles).toHaveLength(2);
     const [thumb, row] = tiles as [HTMLElement, HTMLElement];
-    expect(thumb.querySelector(".artifact-tile__picture img")?.getAttribute("src")).toMatch(/^blob:preview-/);
+    expect(thumb.querySelector(".artifact-tile__picture img")?.getAttribute("src")).toEndWith(
+      `/artifacts/${image.id}/thumb?version=1&w=480`,
+    );
     // A picture is only the picture (its name and size are in its tip and the viewer's header, below).
     expect(thumb.querySelector(".artifact-tile__foot")).toBeNull();
     expect(row.querySelector(".artifact-tile__title")?.textContent).toBe("carrossel.zip");
@@ -187,6 +189,79 @@ describe("uploaded files in the Drive", () => {
     expect(dialog.querySelector(".ac-details__subtitle")?.textContent).toMatch(/7\s?(byte|B)/);
   });
 
+  test("an audio file plays in the voice-message player in the viewer and on its Drive card, never the browser's", async () => {
+    // A browser that can't play it: the player hands its place back.
+    const played: string[] = [];
+    const RealAudio = globalThis.Audio;
+    globalThis.Audio = class {
+      src = "";
+      preload = "";
+      currentTime = 0;
+      duration = Number.NaN;
+      playbackRate = 1;
+      onerror: (() => void) | null = null;
+      onended: (() => void) | null = null;
+      onloadedmetadata: (() => void) | null = null;
+      constructor(src?: string) {
+        if (src) this.src = src;
+      }
+      play() {
+        played.push(this.src);
+        return Promise.reject(Object.assign(new Error("no"), { name: "NotSupportedError" }));
+      }
+      pause() {}
+      removeAttribute() {}
+    } as unknown as typeof Audio;
+    try {
+      const api = createFakeApi(seedState());
+      const audio = await api.artifacts.upload(
+        ORG_ID,
+        new File([new Uint8Array([73, 68, 51, 4])], "entrevista.mp3", { type: "audio/mpeg" }),
+      );
+      const src = `/api/app/organizations/${ORG_ID}/artifacts/${audio.id}/file?version=1`;
+      await renderApp(`/org/${ORG_ID}/drive?artifact=${audio.id}`, { api });
+      await settle(8);
+      const dialog = screen().getByRole("dialog", { name: "entrevista.mp3" });
+      expect(dialog.querySelector("audio")).toBeNull();
+      const player = dialog.querySelector<HTMLElement>(".file-view--audio .ac-voice");
+      expect(player).not.toBeNull();
+      expect(player?.querySelector("[role=slider]")).not.toBeNull();
+      expect(player?.querySelector(".ac-voice__speed")?.textContent).toBe("1×");
+      expect(dialog.textContent).not.toContain("Sem prévia para este tipo de arquivo.");
+      // One the browser can't play says so, and Baixar stays in the header.
+      const play = player?.querySelector<HTMLButtonElement>(".ac-voice__play");
+      await act(async () => play?.click());
+      await settle(2);
+      expect(played).toEqual([src]);
+      expect(dialog.querySelector(".ac-voice")).toBeNull();
+      expect(dialog.textContent).toContain("Não deu para mostrar a prévia. Baixe o arquivo para abrir.");
+      cleanup();
+      const undo = onScreen(".drive-pv");
+      try {
+        await renderApp(`/org/${ORG_ID}/drive`, { api });
+        await settle(8);
+        const card = document.querySelector<HTMLElement>(".drive-card:has(.ac-voice)");
+        const pv = card?.querySelector(".drive-pv--audio");
+        expect(pv?.getAttribute("aria-hidden")).toBeNull();
+        expect(card?.querySelector("audio")).toBeNull();
+        // One this browser can't play leaves its type tile, as before.
+        await act(async () => pv?.querySelector<HTMLButtonElement>(".ac-voice__play")?.click());
+        await settle(2);
+        expect(card?.querySelector(".ac-voice")).toBeNull();
+        expect(card?.querySelector(".drive-pv--audio")).toBeNull();
+        expect(card?.querySelector(".drive-pv")?.getAttribute("aria-hidden")).toBe("true");
+        expect(card?.querySelector(".drive-pv__ext")?.textContent).toBe("MP3");
+      } finally {
+        undo();
+      }
+    } finally {
+      globalThis.Audio = RealAudio;
+    }
+    expect(previewKind("audio/mpeg")).toBe("audio");
+    expect(previewKind("audio/x-m4a")).toBe("audio");
+    expect(previewKind("application/octet-stream", "entrevista.m4a")).toBe("audio");
+  });
+
   test("SVG and other types are download-only; small text files show their text, read-only", async () => {
     const api = createFakeApi(seedState());
     const svg = await api.artifacts.upload(
@@ -211,6 +286,26 @@ describe("uploaded files in the Drive", () => {
     dialog = screen().getByRole("dialog", { name: "notas.txt" });
     expect(dialog.querySelector(".file-view__text")?.textContent).toBe("linha 1\nlinha 2");
     expect(dialog.querySelector("textarea")).toBeNull();
+  });
+
+  test("a Markdown file reads as a document and a code file in a code card", async () => {
+    const api = createFakeApi(seedState());
+    const md = await api.artifacts.upload(
+      ORG_ID,
+      new File(["# Plano\n\nUm **passo** por vez"], "plano.md", { type: "text/markdown" }),
+    );
+    const ts = await api.artifacts.upload(ORG_ID, new File(["const total = 1;"], "soma.ts", { type: "text/plain" }));
+    await renderApp(`/org/${ORG_ID}/drive?artifact=${md.id}`, { api });
+    await settle(8);
+    let dialog = screen().getByRole("dialog", { name: "plano.md" });
+    expect(dialog.querySelector(".file-view__doc strong")?.textContent).toBe("passo");
+    expect(dialog.querySelector(".file-view__text")).toBeNull();
+    cleanup();
+    await renderApp(`/org/${ORG_ID}/drive?artifact=${ts.id}`, { api });
+    await settle(8);
+    dialog = screen().getByRole("dialog", { name: "soma.ts" });
+    expect(dialog.querySelector(".code-card .code-card__code")?.textContent).toBe("const total = 1;");
+    expect(dialog.querySelector(".file-view__text")).toBeNull();
   });
 
   test("a JSON file reads formatted in a code card, the text as written one press away", async () => {
@@ -393,6 +488,17 @@ describe("Configurações → Dispositivos (self-host)", () => {
     const card = screen().getByRole("region", { name: "Qual computador cada agente usa" });
     const trigger = within(card).getByRole("combobox", { name: "Computador de Ada" });
     expect(trigger.textContent).toContain("Computador deste servidor");
+  });
+
+  test("which computer each agent uses: the right hand's row only says its computer, for admins too", async () => {
+    const api = createFakeApi(withRightHand(seedState()));
+    fakeMachinesOf.get(api)?.pair({ name: "Escritório" });
+    await renderApp(`/org/${ORG_ID}/settings/computers`, { api });
+    await settle(8);
+    const card = screen().getByRole("region", { name: "Qual computador cada agente usa" });
+    expect(within(card).getByRole("combobox", { name: "Computador de Ada" })).toBeTruthy();
+    expect(within(card).queryByRole("combobox", { name: "Computador de Lodi" })).toBeNull();
+    expect(card.textContent).toContain("Lodi");
   });
 
   test("members see each agent's computer but don't pick for agents they don't own", async () => {
@@ -739,7 +845,7 @@ describe("the computer page: pause, folders and tools (ADR 0036)", () => {
     // "Pausado", "até 16:24" (past midnight the date comes first: "até 10 nov 00:08").
     const sameDay = new Date(until).toDateString() === new Date().toDateString();
     const line = head.querySelector(".dv-statusline")?.textContent ?? "";
-    expect(line).toContain("Pausado");
+    expect(head.querySelector(".dv-headchips")?.textContent).toContain("Pausado");
     expect(line).toContain(sameDay ? `até ${time}` : "até ");
     expect(line).toContain(time);
     expect(head.textContent).toContain("Pausado no próprio computador por quem o conectou.");
@@ -846,6 +952,30 @@ describe("the computer page: pause, folders and tools (ADR 0036)", () => {
     expect(grant.textContent).toContain("Sem o app? No terminal do computador:");
     expect(grant.querySelector(".machine-command__code")?.textContent).toBe(
       "agentes-runner folders allow <pasta> --agent <agente>",
+    );
+  });
+
+  test("a Windows computer: what holds Codex there joins its ⓘ when it is less than MXC, never as a line", async () => {
+    const codexHint = async (codexSandbox: Machine["codexSandbox"]) => {
+      cleanup();
+      await open({
+        name: "Estudio-PC",
+        os: "windows",
+        codexSandbox,
+        access: { folders: [], tools: { claude: true, codex: true, commands: true } },
+      });
+      const tools = screen().getByRole("region", { name: "Ferramentas" });
+      return { text: hintOf("Codex", tools).text, shown: shownText(tools) };
+    };
+    const plain = "Como o Claude Code, com uma conta do ChatGPT. Só nas pastas liberadas.";
+    for (const sandbox of ["mxc", null] as const) expect((await codexHint(sandbox)).text).toBe(plain);
+    const partial = await codexHint("unelevated");
+    expect(partial.text).toBe(
+      `${plain} Neste Windows, os comandos do Codex só escrevem nas pastas dos agentes, mas a internet fica bloqueada só em parte para eles. O Windows\u00a011\u00a024H2 ou mais novo, com as atualizações em dia, bloqueia por completo.`,
+    );
+    expect(partial.shown).not.toContain("Neste Windows");
+    expect((await codexHint("none")).text).toBe(
+      `${plain} O Windows do Estudio-PC não consegue isolar os comandos do Codex. Escolha o Claude ou uma chave de API, ou atualize esse computador para o Windows\u00a011\u00a024H2 ou mais novo, com as atualizações em dia.`,
     );
   });
 

@@ -1,5 +1,6 @@
-import { and, asc, type Database, type Executor, eq, inArray, isNull, schema } from "@agenteschat/db";
+import { and, asc, type Database, type Executor, eq, inArray, isNull, or, schema } from "@agenteschat/db";
 import { getAgent } from "./agents";
+import { managesAgent, ownsAgent, REACH_COLUMNS } from "./audience";
 import { recordAudit } from "./audit";
 import { BROWSER_SCOPE, BROWSER_TOOL_INFO, BROWSER_TOOLS, DESKTOP_SCOPE, DESKTOP_TOOL_INFO } from "./browser/types";
 import { caches } from "./cache";
@@ -10,7 +11,7 @@ import { exposedToolName } from "./connectors/mcp";
 import { othersLabel, othersPersonal, seesOthersOnAgent } from "./connectors/personal";
 import { sha256 } from "./crypto";
 import { ForbiddenError, NotFoundError, ValidationError } from "./errors";
-import { can, requirePermission } from "./organizations";
+import { requirePermission } from "./organizations";
 import { isRightHand, isRightHandId, RIGHT_HAND_COMPUTER_GRANTS, RIGHT_HAND_GRANTS } from "./right-hand";
 import { isSensitive } from "./tools/gateway";
 import {
@@ -41,11 +42,41 @@ const { agentScopes, connectorConnections, agents } = schema;
  * scope missing here would be dropped by any save.
  */
 export const BUILTIN_TOOLS: Record<string, string[]> = {
-  "": ["ask_user", "request_approval", "react", "show_block", "start_poll", "ask_choices", "web_search", "web_fetch"],
+  "": [
+    "ask_user",
+    "request_approval",
+    "react",
+    "show_block",
+    "start_poll",
+    "ask_choices",
+    "web_search",
+    "web_fetch",
+    "image_search",
+    "show_image",
+  ],
   "context:read": ["search_context", "get_summary", "expand"],
   "memory:write": ["remember", "update_memory", "forget", "save_how_to", "propose_instruction_change"],
-  "drive:read": ["read_artifact", "list_artifacts", "share_artifact"],
-  "drive:write": ["create_artifact", "update_artifact"],
+  "drive:read": [
+    "read_artifact",
+    "list_artifacts",
+    "share_artifact",
+    "read_spreadsheet",
+    "read_presentation",
+    "read_canvas",
+    "read_document",
+  ],
+  "drive:write": [
+    "create_artifact",
+    "update_artifact",
+    "create_spreadsheet",
+    "edit_spreadsheet",
+    "create_presentation",
+    "edit_presentation",
+    "create_canvas",
+    "edit_canvas",
+    "edit_document",
+    "generate_image",
+  ],
   "issues:read": ["list_issues"],
   "issues:write": ["create_issue", "update_issue", "comment_issue"],
   "calendar:read": ["list_events", "find_free_time"],
@@ -108,6 +139,7 @@ export const BUILTIN_TOOLS: Record<string, string[]> = {
 const UNLISTED_TOOLS: Record<string, string[]> = {
   "context:read": ["read_conversation"],
   "schedule:write": ["delete_routine", "run_routine_now"],
+  "sandbox:run": ["review_media"],
 };
 
 /**
@@ -179,6 +211,33 @@ export const BUILTIN_TOOL_INFO: Record<string, { label: string; description: str
   },
   create_artifact: { label: "Create file", description: "Creates a document, table, diff, diagram or page." },
   update_artifact: { label: "Update file", description: "Saves a new version of a file." },
+  // Live files (ADR 0196 §6) and images onto a canvas (ADR 0197).
+  read_spreadsheet: { label: "Read spreadsheet", description: "Reads a spreadsheet's cells and formulas." },
+  read_presentation: { label: "Read presentation", description: "Reads a presentation's slides and notes." },
+  read_canvas: { label: "Read canvas", description: "Reads what is on a canvas: images, notes and text." },
+  create_spreadsheet: { label: "Create spreadsheet", description: "Makes a spreadsheet, with its first rows." },
+  edit_spreadsheet: {
+    label: "Edit spreadsheet",
+    description: "Changes cells, formulas, formats, rows and sheets while people watch.",
+  },
+  create_presentation: { label: "Create presentation", description: "Makes a presentation with its slides." },
+  edit_presentation: {
+    label: "Edit presentation",
+    description: "Changes slides, their text, pictures, charts and notes while people watch.",
+  },
+  create_canvas: { label: "Create canvas", description: "Makes a canvas for images, notes and ideas." },
+  edit_canvas: { label: "Edit canvas", description: "Adds and moves notes, text, pictures and arrows." },
+  // Documents (ADR 0200): made with create_artifact.
+  read_document: { label: "Read document", description: "Reads a document's text, block by block." },
+  edit_document: {
+    label: "Edit document",
+    description: "Writes, rewrites and formats a document's text while people watch.",
+  },
+  generate_image: {
+    label: "Generate images",
+    description:
+      "Makes images with the workspace's image AI, in the conversation or on a canvas. Paid from its budget.",
+  },
   list_issues: { label: "View issues", description: "Lists and opens issues." },
   create_issue: { label: "Create issue", description: "Creates an issue with acceptance criteria." },
   update_issue: { label: "Update issue", description: "Changes status or priority, or links a PR." },
@@ -254,7 +313,8 @@ export const BUILTIN_TOOL_INFO: Record<string, { label: string; description: str
   },
   offer_connect_app: {
     label: "Offer to connect an app or MCP",
-    description: "Posts a card whose button opens the dialog to connect an app or an MCP server by its address.",
+    description:
+      "Posts a card whose button opens the dialog to connect an app or an MCP server: from the catalog by name, any other by its address.",
   },
   offer_invites: {
     label: "Offer to invite people",
@@ -383,7 +443,7 @@ export async function orgToolCatalog(db: Database, orgId: string, options: { vie
       continue;
     }
     if (isCustom(c)) {
-      const tools = await classifiedTools(db, c.id);
+      const tools = await classifiedTools(db, c);
       const byScope = new Map<string, CatalogTool[]>();
       for (const t of tools) {
         const scope = customScope(c.id, t.access as ToolAccess);
@@ -563,11 +623,10 @@ export async function getAgentAccess(
 }
 
 /**
- * `PUT …/agents/{id}/access`: replaces the agent's grants. Admins give and take
- * anything; the agent's owner may only narrow it (drop grants it has, add
- * denials), like `PUT …/scopes`: giving an agent a connector, a tool or a
- * built-in is an admin's call. Approvals never change: sensitive tools still
- * ask a person.
+ * `PUT …/agents/{id}/access`: replaces the agent's grants. Who manages the agent (`managesAgent`, ADR 0085 addendum
+ * of 2026-11-17) gives and takes anything; its owner may only narrow it (drop grants it has, add denials), like
+ * `PUT …/scopes`: giving an agent a connector, a tool or a built-in is an admin's call, and "Quem pode editar" doesn't
+ * give it. Approvals never change: sensitive tools still ask a person.
  */
 export async function setAgentAccess(
   db: Database,
@@ -580,8 +639,8 @@ export async function setAgentAccess(
   const membership = await requirePermission(db, actorId, orgId, "read");
   const agent = await getAgent(db, orgId, agentId);
   if (!agent) throw new NotFoundError("Agent not found");
-  const admin = can(membership, "manage_agents");
-  if (!admin && agent.ownerUserId !== actorId) {
+  const admin = managesAgent(agent, actorId, membership);
+  if (!admin && !ownsAgent(agent, actorId, membership.roleIds)) {
     throw new ForbiddenError("Only an admin or the agent's owner can change its access");
   }
   const live = await db
@@ -814,20 +873,24 @@ export function appHeldBy(grants: ScopeGrant[], id: string): string | null {
  * of the organization's connections by `connector:<id>`, its name or its catalog id (mailboxes and databases have
  * their own screens). `choices` lists them all.
  */
-export async function resolveApps(db: Executor, orgId: string, names: string[]) {
+export async function resolveApps(db: Executor, orgId: string, names: string[], personId?: string | null) {
   // The team's alone: a person's own connection is given to agents by that person only, never through a card.
+  // `personId`'s own are read only to say which unknown names are theirs (`personal`); nobody else's is ever named.
   const active = await db
     .select({
       id: connectorConnections.id,
       label: connectorConnections.label,
       connector: connectorConnections.connector,
+      ownerUserId: connectorConnections.ownerUserId,
     })
     .from(connectorConnections)
     .where(
       and(
         eq(connectorConnections.orgId, orgId),
         isNull(connectorConnections.revokedAt),
-        isNull(connectorConnections.ownerUserId),
+        personId
+          ? or(isNull(connectorConnections.ownerUserId), eq(connectorConnections.ownerUserId, personId))
+          : isNull(connectorConnections.ownerUserId),
       ),
     )
     .orderBy(asc(connectorConnections.createdAt));
@@ -836,9 +899,12 @@ export async function resolveApps(db: Executor, orgId: string, names: string[]) 
     orgId,
     active.map((c) => c.id),
   );
-  const connections = active.filter((c) => !own.has(c.id));
+  const apps = active.filter((c) => !own.has(c.id));
+  const connections = apps.filter((c) => !c.ownerUserId);
+  const theirs = apps.filter((c) => c.ownerUserId);
   const found = new Map<string, { id: string; label: string }>();
   const unknown: string[] = [];
+  const personal: string[] = [];
   for (const name of new Set(names)) {
     const key = name.trim();
     const builtin = isBuiltinScope(key) ? BUILTIN_SCOPES[key] : undefined;
@@ -848,23 +914,30 @@ export async function resolveApps(db: Executor, orgId: string, names: string[]) 
     }
     const lower = key.toLowerCase();
     const byId = lineConnection(lower);
-    const matches = connections.filter((c) =>
-      byId ? c.id === byId : c.label.toLowerCase() === lower || c.connector === lower,
-    );
+    const named = (c: { id: string; label: string; connector: string }) =>
+      byId ? c.id === byId : c.label.toLowerCase() === lower || c.connector === lower;
+    const matches = connections.filter(named);
     const [only] = matches;
     if (only && matches.length === 1) found.set(name, { id: `${CONNECTOR_LINE}${only.id}`, label: only.label });
-    else unknown.push(name);
+    else {
+      unknown.push(name);
+      if (matches.length === 0 && theirs.some(named)) personal.push(name);
+    }
   }
   const choices = [
     ...connections.map((c) => `${CONNECTOR_LINE}${c.id} (${c.label})`),
     ...Object.entries(BUILTIN_SCOPES).map(([scope, info]) => `${scope} (${info.label})`),
   ];
-  return { found, unknown, choices };
+  return { found, unknown, personal, choices };
 }
 
-/** `GET …/access-matrix` (admins): agents × tools with the effective state. */
+/**
+ * `GET …/access-matrix` (admins): agents × tools with the effective state, for the agents the person manages
+ * (`managesAgent`): a private agent's access stays out of reach of who merely edits any agent (ADR 0085 addendum of
+ * 2026-11-17).
+ */
 export async function accessMatrix(db: Database, actorId: string, orgId: string) {
-  await requirePermission(db, actorId, orgId, "manage_agents");
+  const membership = await requirePermission(db, actorId, orgId, "manage_agents");
   const catalog = await orgToolCatalog(db, orgId);
   const tools: (Omit<AccessTool, "state"> & { group: string; key: string })[] = [
     ...Object.entries(BUILTIN_TOOLS).flatMap(([scope, names]) =>
@@ -882,11 +955,15 @@ export async function accessMatrix(db: Database, actorId: string, orgId: string)
       ),
     ),
   ];
-  const agentRows = await db
-    .select({ id: agents.id, name: agents.name, handle: agents.handle })
-    .from(agents)
-    .where(and(eq(agents.orgId, orgId), isNull(agents.archivedAt)))
-    .orderBy(asc(agents.createdAt));
+  const agentRows = (
+    await db
+      .select({ id: agents.id, name: agents.name, handle: agents.handle, ...REACH_COLUMNS })
+      .from(agents)
+      .where(and(eq(agents.orgId, orgId), isNull(agents.archivedAt)))
+      .orderBy(asc(agents.createdAt))
+  )
+    .filter((a) => managesAgent(a, actorId, membership))
+    .map((a) => ({ id: a.id, name: a.name, handle: a.handle }));
   const grants = agentRows.length
     ? await db
         .select({ agentId: agentScopes.agentId, connectionId: agentScopes.connectionId, scope: agentScopes.scope })

@@ -1,8 +1,7 @@
 import { type Message, useAiAccounts, useStopReason } from "@agenteschat/client";
-import { seesDetails } from "@agenteschat/client/lib/audience";
+import { managesAgent, seesDetails } from "@agenteschat/client/lib/audience";
 import { mayPickModel } from "@agenteschat/client/lib/brain-picker";
 import { type StoppedNotice, stopLine, stopperOf } from "@agenteschat/client/lib/notices";
-import { can } from "@agenteschat/client/lib/permissions";
 import { modelStandInKey } from "@agenteschat/client/lib/plan-usage";
 import { planOf } from "@agenteschat/client/lib/plans";
 import { type ReactNode, useState } from "react";
@@ -11,7 +10,7 @@ import { StyleSheet, View } from "react-native";
 import { useOrg } from "@/providers/org";
 import { Button, EventPill, EventPillAction, PixelStop, useToast } from "@/ui";
 import { openAgentAi } from "../ai/AgentAiScreen";
-import { openKeyForAll } from "../ai/KeyForAllScreen";
+import { openKeyForAll } from "../ai/AgentSetupScreen";
 import { useColors, useOrgId, useWhen } from "../shared/hooks";
 import { ReasonField } from "../task-manager/parts";
 import { useQuietInset } from "./look";
@@ -163,6 +162,11 @@ export function SpeedFallbackLine({ message }: { message: Message }) {
   );
 }
 
+/** Under a reply that thought on another computer because the agent's own was full or away (`meta.spilled`). */
+export function SpilledLine({ text }: { text: string }) {
+  return <EventPill mark="laptop">{text}</EventPill>;
+}
+
 /**
  * Under a reply "Automático" gave with another model because the plan refused the one it maps to
  * (`meta.modelStandIn`). Whoever may change the agent gets "Usar o <modelo> em todos" (the key's screen, on that
@@ -170,11 +174,11 @@ export function SpeedFallbackLine({ message }: { message: Message }) {
  */
 export function ModelStandInLine({ message, text }: { message: Message; text: string }) {
   const { t } = useTranslation();
-  const { org, orgId } = useOrg();
+  const { orgId } = useOrg();
   const dir = useRowDirectory();
   const meId = useRowMeId();
   const agent = dir.agentById.get(message.author.id ?? "");
-  const may = mayPickModel(agent, meId, can(org, "manage_agents"));
+  const may = mayPickModel(agent, meId, managesAgent(agent));
   const key = may ? modelStandInKey(message.meta) : null;
   const ai = useAiAccounts(orgId, Boolean(key));
   const account = key

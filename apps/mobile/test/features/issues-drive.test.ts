@@ -538,7 +538,7 @@ describe("a task's number and title on one row; its conversation on the card", (
     expect(card).toContain("<PressScale");
     expect(card).not.toContain("<Pressable");
     const title = parts.slice(parts.indexOf("export function TaskTitle("), parts.indexOf("const STATE_ICON"));
-    expect(title).toContain("codeAndBoldParts(title)");
+    expect(title).toContain("<CodeWords text={title} />");
     expect(title).not.toContain("numberOfLines");
     // Then its facts, then who has it with its state.
     expect(card.indexOf("<CardFacts")).toBeGreaterThan(card.indexOf("{i.title}"));
@@ -798,5 +798,17 @@ describe("Tarefas as one list", () => {
     const doneOnly = [issue({ number: 9, status: "done", updatedAt: at(30, NOW) })];
     expect(taskListSections(doneOnly, null, NOW).map((s) => s.key)).toEqual(["doneToday"]);
     expect(taskListSections([], "me", NOW)).toEqual([]);
+  });
+});
+
+describe("a Drive file in a task's Ligados", () => {
+  test("held, it asks and comes off the task, never out of the Drive", () => {
+    const screen = readFileSync(join(import.meta.dir, "../../src/features/issues/IssueScreen.tsx"), "utf8");
+    expect(screen).toContain("remove: removeFile(a),");
+    expect(screen).toContain("onLongPress: remove.run,");
+    expect(screen).toContain('accessibilityActions: [{ name: "remove", label: remove.label }]');
+    expect(screen).toContain('text: t("mobile.issues.removeFileText"),');
+    expect(screen).toContain('{ type: "update", id: i.id, patch: { removeFiles: [file.id] } }');
+    expect(screen).toContain('toast({ title: t("issues.files.removed", { name: file.title }) })');
   });
 });

@@ -15,7 +15,6 @@ describe("loading is the list's shape, a failure asks again", () => {
       "ai/AgentAiScreen.tsx",
       "ai/AgentAdvancedScreen.tsx",
       "ai/AgentSetupScreen.tsx",
-      "ai/KeyForAllScreen.tsx",
       "ai/AiAccountsScreen.tsx",
       "ai/ConnectAi.tsx",
       "usage/UsageScreen.tsx",
@@ -56,11 +55,22 @@ describe("headers: the native bar's, never one drawn in the content", () => {
     expect(screen).toContain("update.mutate({ defaultCredentialId: k.id }, { onError: failed })");
   });
 
-  test("Conectar uma IA asks its question in the bar; a plan's page names the plan there, its mark under it", () => {
+  test("Conectar uma IA: the system's own title in the bar, the question under the team's cover, the step in the page", () => {
     const sheet = source("ai/ConnectAi.tsx");
-    expect(sheet).not.toContain('variant="title2"');
     expect(sheet).toContain('t("mobile.ai.question", agentGrammar(one.name))');
-    expect(sheet).toContain("<PushedHeader title={title} subtitle={subtitle} solid={false} grouped />");
+    // The bar's title is the system's own words on every page, never a view of ours with a line under it.
+    expect(sheet).not.toContain("subtitle=");
+    expect(sheet).toContain("<PushedHeader title={title} solid={false} grouped />");
+    // The first page: the night edge to edge behind the clear bar, stretching on a pull; its question in the page, which
+    // the bar takes as its title once it has gone under it.
+    expect(sheet).toContain("<ConnectScene y={y} height={insets.top + BAR_HEIGHT + SCENE_HEIGHT} />");
+    expect(sheet).toContain('<PushedHeader title={titled ? title : ""} plate solid={false} />');
+    expect(sheet).toContain('<Text variant="display2" accessibilityRole="header">');
+    expect(source("ai/ConnectScene.tsx")).toContain("<CoverParallax y={y} style={StyleSheet.absoluteFill}>");
+    // What the question leaves open sits under it, 20 clear of the list, never glued to the list's top.
+    expect(sheet).toContain("intro: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 20, gap: 6 },");
+    // Past it, where the flow stands and for whom, as a line at the top of the page.
+    expect(sheet).toContain('style={[styles.step, view.page === "plan" ? styles.center : null]}');
     const steps = source("ai/ConnectAiSteps.tsx");
     const hero = steps.slice(steps.indexOf("function Hero("), steps.indexOf("function CliMissingCard("));
     expect(hero).not.toContain("title2");
@@ -86,19 +96,17 @@ describe("headers: the native bar's, never one drawn in the content", () => {
 });
 
 describe("pickers are the screen, never a list opening in place", () => {
-  test("Usar em todos os agentes: every run of models under its header, the agents said, Usar pinned", () => {
-    const screen = source("ai/KeyForAllScreen.tsx");
-    expect(screen).not.toContain("moreOpen");
-    expect(screen).toContain('<GroupedHeader>{t("aiAccounts.page.useAllUntested", { count: groups.untested.length })}');
-    // The agents' row is a fact, never a check that can't be unchecked.
-    const agents = screen.slice(screen.indexOf('label={t("aiAccounts.page.useAllAgents")}'));
-    expect(agents.slice(0, agents.indexOf("/>"))).not.toContain("checked");
-    // One toast for the whole save.
-    expect(screen.match(/toast\(/g)).toHaveLength(2);
+  test("Usar em todos os agentes is Usar em outros agentes on the key, every agent that can take it picked", () => {
+    const route = readFileSync(join(import.meta.dir, "../../app/(app)/(main)/key-for-all/[id].tsx"), "utf8");
+    expect(route).toContain('<AgentSetupScreen account={{ id: id ?? "", machineId: machineId ?? "", model }} />');
+    const screen = source("ai/AgentSetupScreen.tsx");
+    expect(screen).toContain("const chosenSet = agentsPicked ?? new Set(account ? can : []);");
+    // Another AI picked: the agents are picked again for it.
+    expect(screen).toMatch(/setChoice\(next\);\s+setPicked\(null\);/);
   });
 
   test("a screen's one action is the shared bar pinned under it", () => {
-    for (const file of ["ai/KeyForAllScreen.tsx", "ai/AgentSetupScreen.tsx", "ai/ConnectAi.tsx"]) {
+    for (const file of ["ai/AgentSetupScreen.tsx", "ai/ConnectAi.tsx"]) {
       const screen = source(file);
       expect([file, screen.includes("<BottomBar bottom={insets.bottom}>")]).toEqual([file, true]);
       expect([file, screen.includes("borderTopWidth")]).toEqual([file, false]);
@@ -108,10 +116,10 @@ describe("pickers are the screen, never a list opening in place", () => {
 
 test("a row that opens a choice in place wears the up-down mark, never a chevron (that pushes a screen)", () => {
   const settings = source("right-hand/SettingsScreen.tsx");
-  expect(settings).toContain("menu={!hold}");
   expect(settings).not.toContain("chevron={!hold}");
-  const mine = settings.slice(settings.indexOf("export function RightHandMine("), settings.indexOf("const KEY = "));
-  expect(mine.slice(mine.lastIndexOf("<GroupedRow"))).toContain("menu\n");
+  // The one choice's fields open their lists in place: the up-down mark.
+  const choice = source("ai/AiChoice.tsx");
+  expect(choice.match(/\bmenu(=\{!lockAccount\})?\n/g)?.length).toBe(3);
   // A plan's agent is picked on the agent picker's pushed screen: its row wears the chevron.
   expect(source("ai/ConnectAiSteps.tsx")).toContain("{...(agents.length > 1 ? { chevron: true, onPress: pick } : {})}");
 });
@@ -119,12 +127,7 @@ test("a row that opens a choice in place wears the up-down mark, never a chevron
 describe("rows and notes on the groups' edges", () => {
   test("a note under a group reads as its footer", () => {
     expect(source("ai/parts.tsx")).toContain("noteInset: { paddingHorizontal: 16, paddingTop: 8 },");
-    for (const file of [
-      "ai/AgentAiScreen.tsx",
-      "ai/KeyForAllScreen.tsx",
-      "ai/ConnectAiSteps.tsx",
-      "ai/EndpointForm.tsx",
-    ])
+    for (const file of ["ai/AgentAiScreen.tsx", "ai/ConnectAiSteps.tsx", "ai/EndpointForm.tsx"])
       expect([file, /<Note icon=[^>]*inset/.test(source(file))]).toEqual([file, true]);
   });
 
@@ -170,4 +173,10 @@ test("Answer now that fails says why when the person pressed it", () => {
   const card = source("ai/NoAiCard.tsx");
   expect(card).toContain('if (code !== "ai.still_missing") failed(error);');
   expect(card).toContain("if (tapped) failed(error);");
+});
+
+test("the plans' list says which plans don't run on the computer's system, before one is picked", () => {
+  const steps = source("ai/ConnectAiSteps.tsx");
+  expect(steps).toContain("offSystem={(choice) => planOffSystem(t, gateAt(choice))}");
+  expect(steps).toContain('? t("connectAi.offSystem", { system: offSystem(c) })');
 });
