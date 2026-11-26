@@ -242,7 +242,8 @@ function knownApps() {
     const app = index.get(plain(id)) ?? [...index.values()].find((a) => a.id === id);
     if (app) for (const name of names) add(name, app);
   }
-  for (const key of Object.keys(CONNECTOR_BRANDS)) add(key, { id: key, label: key, key, soon: false });
+  // A brand the catalog has no entry of its own for ("Meta"): its mark, under the name the AI wrote.
+  for (const key of Object.keys(CONNECTOR_BRANDS)) add(key, { id: key, label: "", key, soon: false });
   appIndex = index;
   return index;
 }
@@ -250,7 +251,7 @@ function knownApps() {
 /** An app as the AI named it: its mark and the catalog's own name when we know it, else its name as written. */
 export function firstAgentApp(name: string): FirstAgentApp {
   const known = knownApps().get(plain(name));
-  return known ? { key: known.key, label: known.label } : { key: null, label: name.trim() };
+  return known ? { key: known.key, label: known.label || name.trim() } : { key: null, label: name.trim() };
 }
 
 /** The catalog id ("Ask to connect" on its agent's checklist) of an app an option needs, or null. */
