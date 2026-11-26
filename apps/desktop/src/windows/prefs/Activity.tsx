@@ -178,7 +178,8 @@ export function Activity() {
             {loading && !kept ? (
               <PixelSpinner size={16} />
             ) : (
-              <Button size="sm" variant="ghost" onClick={() => void loadPage(cursor, true)}>
+              // The cursor is the kept organization's: another page of it would land under the new one's lines.
+              <Button size="sm" variant="ghost" disabled={kept} onClick={() => void loadPage(cursor, true)}>
                 {t("desktop.prefs.activity.showMore")}
               </Button>
             )}

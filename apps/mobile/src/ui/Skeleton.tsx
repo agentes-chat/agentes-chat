@@ -4,6 +4,7 @@ import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "
 import { useLivePaused } from "@/agent/live";
 import { useDrawingClock } from "@/sky/clock";
 import { LIST_AVATAR } from "./ListRow";
+import { SCREEN_X } from "./rhythm";
 import { useReducedMotion, useTheme } from "./theme";
 
 /**
@@ -170,7 +171,7 @@ const styles = StyleSheet.create({
   // Over the rows, from the top of their box: the stand-ins take no room while they fade.
   over: { position: "absolute", top: 0, left: 0, right: 0 },
   // Over the kept list's top edge, taking no room: the list doesn't move when it comes or goes.
-  bar: { position: "absolute", top: 0, left: 16, right: 16, height: 2, borderRadius: 1 },
+  bar: { position: "absolute", top: 0, left: SCREEN_X, right: SCREEN_X, height: 2, borderRadius: 1 },
   // The same box as `ListRow`: 16 at the sides, the 52 avatar, 12 to the text, 76 tall.
   row: {
     flexDirection: "row",
