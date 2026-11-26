@@ -128,7 +128,7 @@ import { can, getMembership, requirePermission } from "./organizations";
 import { isRightHand, personalBrain, personalModel } from "./right-hand";
 import { orgModelProvider } from "./router";
 import { readRefusal } from "./standing";
-import { paysExtraUsage, wakeAgentsBrainWaits } from "./usage-pause";
+import { agentsWaitingOn, paysExtraUsage, wakeAgentsBrainWaits, wakeAgentUsageWaits } from "./usage-pause";
 
 /*
  * "Quem pensa" (ADR 0032 §5): the brain an agent thinks with and its model,
@@ -1060,14 +1060,17 @@ async function setPersonalBrain(
   const from = current
     ? { brain: current.brain, model: current.brainModel, account: current.brainAccountId, effort: current.brainEffort }
     : null;
-  const audit = (to: unknown) =>
-    recordAudit(db, {
+  // Their DM's runs parked on a plan (its limit, its computer) go on with the new choice now, not at the old plan's reset.
+  const audit = async (to: unknown) => {
+    await recordAudit(db, {
       orgId,
       actor: { type: "person", id: userId },
       action: "agent.brain",
       target: { type: "agent", id: agent.id },
       details: { scope: "mine", from, to },
     });
+    await wakeAgentUsageWaits(db, orgId, agent.id, { person: userId }).catch(() => null);
+  };
   // A model or effort alone on the computer's own sign-in stays on it: that row has no account to keep.
   const onSignIn =
     input.account === undefined &&
@@ -1850,8 +1853,12 @@ export async function takeBackPlan(
         )
         .returning({ userId: schema.rightHandBrains.userId })
     : [];
-  // Their right hand's user lets the sign-in go now, not at the next change (`machineAgents`).
-  if (personal.length > 0) await publishMachineAgentsChanged(deps.pubsub, orgId);
+  // Their right hand's user lets the sign-in go now, not at the next change (`machineAgents`), and what waited on
+  // the plan's limit goes on with what they think with now.
+  if (personal.length > 0) {
+    await publishMachineAgentsChanged(deps.pubsub, orgId);
+    await wakeAgentsBrainWaits(deps, orgId, await agentsWaitingOn(deps.db, orgId, [accountId]));
+  }
   for (const p of personal) {
     await recordAudit(deps.db, {
       orgId,

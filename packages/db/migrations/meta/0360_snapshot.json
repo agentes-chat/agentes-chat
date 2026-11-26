@@ -1,5 +1,5 @@
 {
-  "id": "707d10b8-41d3-427f-929c-86f357681e1f",
+  "id": "1532cf48-9801-4fa3-b363-add9eacce1d7",
   "prevId": "299b5571-c4af-40e7-b885-1b700f7ead14",
   "version": "7",
   "dialect": "postgresql",
@@ -4788,112 +4788,6 @@
           ]
         }
       },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.agent_checkouts": {
-      "name": "agent_checkouts",
-      "schema": "",
-      "columns": {
-        "org_id": {
-          "name": "org_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "agent_id": {
-          "name": "agent_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "machine_id": {
-          "name": "machine_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "repos": {
-          "name": "repos",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'[]'::jsonb"
-        },
-        "sync_started_at": {
-          "name": "sync_started_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "synced_at": {
-          "name": "synced_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "credential_at": {
-          "name": "credential_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "agent_checkouts_org_id_organizations_id_fk": {
-          "name": "agent_checkouts_org_id_organizations_id_fk",
-          "tableFrom": "agent_checkouts",
-          "tableTo": "organizations",
-          "columnsFrom": [
-            "org_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "agent_checkouts_machine_id_machines_id_fk": {
-          "name": "agent_checkouts_machine_id_machines_id_fk",
-          "tableFrom": "agent_checkouts",
-          "tableTo": "machines",
-          "columnsFrom": [
-            "machine_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "agent_checkouts_org_id_agent_id_agents_org_id_id_fk": {
-          "name": "agent_checkouts_org_id_agent_id_agents_org_id_id_fk",
-          "tableFrom": "agent_checkouts",
-          "tableTo": "agents",
-          "columnsFrom": [
-            "org_id",
-            "agent_id"
-          ],
-          "columnsTo": [
-            "org_id",
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "agent_checkouts_agent_id_machine_id_pk": {
-          "name": "agent_checkouts_agent_id_machine_id_pk",
-          "columns": [
-            "agent_id",
-            "machine_id"
-          ]
-        }
-      },
-      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

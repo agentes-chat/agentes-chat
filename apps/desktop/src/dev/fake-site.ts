@@ -1,6 +1,7 @@
 /**
  * The server's devices API as the fake host answers `siteFetch` (design work and tests): this computer in each fake
- * workspace, its phones (the Pixel an agent uses for Rui, the iPhone that needs Developer Mode), an iPhone on its
+ * workspace, its phones (the Pixel an agent uses for Rui, the iPhone that needs Developer Mode, a simulator that is
+ * off), an iPhone on its
  * Wi-Fi it could use, the people and roles of "Specific people or roles", and confirming a runner's code. Writes
  * change it; `calls` keeps every request.
  */
@@ -91,6 +92,15 @@ export function createFakeSite(
           platform: "ios",
           status: { kind: "needs_you", reason: "developer_mode_off" },
         }),
+        phone({
+          id: "0b6c5a8e-0000-4000-8000-000000000003",
+          name: "iPhone 17 Pro",
+          platform: "ios",
+          phoneKind: "simulator",
+          osVersion: "26.2",
+          transport: "local",
+          status: { kind: "offline", lastSeenAt: minutesAgo(90) },
+        }),
       ],
     };
     computers.set(orgId, made);
@@ -168,6 +178,12 @@ export function createFakeSite(
       }
       if (method === "DELETE" && kind === "phones" && phone) {
         mine.phones = mine.phones.filter((p) => p !== phone);
+        return { status: 204, body: "" };
+      }
+      if (method === "POST" && kind === "phones" && phone && action === "power") {
+        phone.status = parsed?.on
+          ? { kind: "preparing", reason: "booting" }
+          : { kind: "offline", lastSeenAt: minutesAgo(0) };
         return { status: 204, body: "" };
       }
       if (method === "POST" && kind === "phones" && phone && action === "stop") {

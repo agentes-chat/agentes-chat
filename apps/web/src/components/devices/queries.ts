@@ -138,6 +138,23 @@ export function useStopPhone(orgId: string) {
   return useDevicesMutation(orgId, (id: string) => api.devices.stopPhone(orgId, id));
 }
 
+/** Ligar / Desligar a simulator or an emulator: it shows starting, or offline, at once (a refusal puts it back). */
+export function usePowerPhone(orgId: string) {
+  const api = useApi();
+  return useDevicesMutation(
+    orgId,
+    ({ id, on }: { id: string; on: boolean }) => api.devices.powerPhone(orgId, id, on),
+    ({ id, on }) => [
+      phoneEdit(orgId, id, (p) => ({
+        ...p,
+        status: on
+          ? { kind: "preparing", reason: "booting" }
+          : { kind: "offline", lastSeenAt: new Date().toISOString() },
+      })),
+    ],
+  );
+}
+
 export function useApproveRequest(orgId: string) {
   const api = useApi();
   return useDevicesMutation(orgId, ({ id, ...input }: { id: string; name?: string; audience?: DeviceAudience }) =>
