@@ -1858,8 +1858,8 @@ export const ptBR = {
       sayAny_one: "A sua IA achou um jeito de começar.",
       sayAny_other: "A sua IA achou {{n}} jeitos de começar.",
       count: {
-        tasks: { two: "duas", three: "três" },
-        ways: { two: "dois", three: "três" },
+        tasks: { one: "uma", two: "duas", three: "três" },
+        ways: { one: "um", two: "dois", three: "três" },
       },
     },
     week: {

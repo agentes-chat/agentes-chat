@@ -1923,10 +1923,13 @@ export const en = {
       say_other: "{{app}} found {{n}} ways to start.",
       sayAny_one: "Your AI found one way to start.",
       sayAny_other: "Your AI found {{n}} ways to start.",
-      /** How many options the AI sent (two or three), in words, for the lead (tasks) and the bubble (ways to start). */
+      /**
+       * How many options the AI sent, in words, for the lead (tasks) and the bubble (ways to start). `one` is for a
+       * language whose plural has no `_one` form (ja, ko, zh-Hans, id): there one option reads `_other` too.
+       */
       count: {
-        tasks: { two: "two", three: "three" },
-        ways: { two: "two", three: "three" },
+        tasks: { one: "one", two: "two", three: "three" },
+        ways: { one: "one", two: "two", three: "three" },
       },
     },
     /**
