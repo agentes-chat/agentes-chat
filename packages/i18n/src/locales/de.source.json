@@ -11401,6 +11401,81 @@
   "vault.row.never": {
     "value": "Never used"
   },
+  "vault.bulk.select": {
+    "value": "Select"
+  },
+  "vault.bulk.selection": {
+    "value": "Selected items"
+  },
+  "vault.bulk.selected": {
+    "value": {
+      "one": "{{count}} selected",
+      "other": "{{count}} selected"
+    }
+  },
+  "vault.bulk.selectAll": {
+    "value": {
+      "one": "Select all {{count}}",
+      "other": "Select all {{count}}"
+    }
+  },
+  "vault.bulk.clear": {
+    "value": "Stop selecting"
+  },
+  "vault.bulk.access": {
+    "value": "Change access"
+  },
+  "vault.bulk.accessTitle": {
+    "value": {
+      "one": "Access for {{count}} item",
+      "other": "Access for {{count}} items"
+    }
+  },
+  "vault.bulk.accessText": {
+    "value": "Each selected item gets this access."
+  },
+  "vault.bulk.accessGo": {
+    "value": {
+      "one": "Apply to {{count}} item",
+      "other": "Apply to {{count}} items"
+    }
+  },
+  "vault.bulk.accessDone": {
+    "value": {
+      "one": "Access changed for {{count}} item",
+      "other": "Access changed for {{count}} items"
+    }
+  },
+  "vault.bulk.delete": {
+    "value": "Delete"
+  },
+  "vault.bulk.deleteTitle": {
+    "value": {
+      "one": "Delete {{count}} item?",
+      "other": "Delete {{count}} items?"
+    }
+  },
+  "vault.bulk.deleteText": {
+    "value": "Your agents can no longer use them. This can't be undone."
+  },
+  "vault.bulk.deleteGo": {
+    "value": {
+      "one": "Delete {{count}}",
+      "other": "Delete {{count}}"
+    }
+  },
+  "vault.bulk.deleted": {
+    "value": {
+      "one": "{{count}} item deleted from the Vault",
+      "other": "{{count}} items deleted from the Vault"
+    }
+  },
+  "vault.bulk.kept": {
+    "value": {
+      "one": "{{count}} from a password manager stayed. Remove it there.",
+      "other": "{{count}} from a password manager stayed. Remove them there."
+    }
+  },
   "vault.kind.login": {
     "value": "Login"
   },
@@ -11922,9 +11997,6 @@
   },
   "vault.import.asPersonal": {
     "value": "Only you will see them."
-  },
-  "vault.import.asTeam": {
-    "value": "Everyone in the workspace sees them. Choose agents for each one afterwards."
   },
   "vault.import.deleteFile": {
     "value": "Delete the file afterwards: it holds your passwords unencrypted."
@@ -43925,6 +43997,18 @@
   },
   "audit.change.vault.item_deleted": {
     "value": "Deleted a Vault item"
+  },
+  "audit.change.vault.items_changed": {
+    "value": {
+      "one": "Changed who has access to {{count}} Vault item",
+      "other": "Changed who has access to {{count}} Vault items"
+    }
+  },
+  "audit.change.vault.items_deleted": {
+    "value": {
+      "one": "Deleted {{count}} Vault item",
+      "other": "Deleted {{count}} Vault items"
+    }
   },
   "audit.change.vault.item_moved": {
     "value": "Moved a Vault item between Personal and Team"

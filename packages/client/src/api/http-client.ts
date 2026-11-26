@@ -558,6 +558,9 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       update: (orgId, itemId, patch) =>
         request<VaultItem>(`${org(orgId)}/vault/items/${enc(itemId)}`, { method: "PATCH", json: patch }),
       remove: (orgId, itemId) => request<void>(`${org(orgId)}/vault/items/${enc(itemId)}`, { method: "DELETE" }),
+      setAccessMany: (orgId, ids, access) =>
+        request(`${org(orgId)}/vault/items/bulk/access`, { method: "PUT", json: { ids, access } }),
+      removeMany: (orgId, ids) => request(`${org(orgId)}/vault/items/bulk/delete`, { json: { ids } }),
       importCsv: (orgId, input) => request<VaultImportResult>(`${org(orgId)}/vault/import`, { json: input }),
       importKeys: (orgId, input) => request<VaultKeysImportResult>(`${org(orgId)}/vault/keys`, { json: input }),
       move: (orgId, itemId, scope) =>
