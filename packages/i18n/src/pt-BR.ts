@@ -2009,6 +2009,7 @@ export const ptBR = {
       leadRoutinePersonal_female:
         "Ela começa hoje mesmo, e “{{routine}}” se repete {{when}}. Tudo chega na conversa com ela, e você só aprova.",
       say: "Assim que o time ligar, a gente começa.",
+      sayPersonal: "Assim que ligar, a gente começa.",
       strip: "Os próximos 7 dias",
       today: "Hoje · {{date}}",
       tomorrow: "Amanhã, {{date}}",

@@ -2118,6 +2118,7 @@ export const en = {
       leadRoutinePersonal:
         "{{name}} starts today, and “{{routine}}” repeats {{when}}. Everything arrives in your conversation with it, and you only approve.",
       say: "As soon as the team is on, we start.",
+      sayPersonal: "As soon as it's on, we start.",
       /** The week strip, for screen readers. */
       strip: "The next 7 days",
       today: "Today · {{date}}",

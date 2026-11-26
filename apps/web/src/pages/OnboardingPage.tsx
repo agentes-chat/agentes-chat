@@ -540,11 +540,11 @@ export function OnboardingPage() {
   // No agents besides the right hand (the start left with none): the plan and AI steps speak of it, never of a team
   // that isn't there.
   const alone = team.length === 0;
+  // The team awake, as the photo, the AI step's sky and the people step show it.
+  const teamFaces: ShellFace[] = team.map((a) => ({ id: a.id, name: a.name, look: lookOf(a) }));
   // The first agent, and the option it was picked from when the newest proposal made it (null for one brought from
   // another app): its week, its line on the plan and the photo's count say what its AI proposed.
   const firstAgent = team[0];
-  // The team awake, as the photo, the AI step's sky and the people step show it.
-  const teamFaces: ShellFace[] = team.map((a) => ({ id: a.id, name: a.name, look: lookOf(a) }));
   const latest = firstAgents.data ?? null;
   const madeFrom = latest && firstAgent && latest.agentId === firstAgent.id ? latest : null;
   const firstOption = madeFrom && madeFrom.picked !== null ? (madeFrom.options[madeFrom.picked] ?? null) : null;
@@ -884,7 +884,7 @@ export function OnboardingPage() {
       const look = lookOf(firstAgent);
       return {
         cast: [lodiFace, { id: firstAgent.id, name: firstAgent.name, look, asleep: true }],
-        say: t("onboarding.week.say"),
+        say: t(personalNow ? "onboarding.week.sayPersonal" : "onboarding.week.say"),
         box: (
           <FirstWeek
             orgId={orgId}
