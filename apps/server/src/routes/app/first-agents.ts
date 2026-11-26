@@ -58,7 +58,10 @@ const FirstAgents = z
  */
 const FirstAgentsBody = z
   .object({
-    about: z.string().nullish().openapi({ description: `Up to ${FIRST_AGENT_LIMITS.about} characters.` }),
+    about: z
+      .string()
+      .nullish()
+      .openapi({ description: `Up to ${FIRST_AGENT_LIMITS.about} characters.` }),
     options: z
       .array(
         z.object({
@@ -73,7 +76,10 @@ const FirstAgentsBody = z
           routine: z
             .object({ title: z.string(), schedule: z.string(), prompt: z.string(), cron: z.string().nullish() })
             .nullish(),
-          today: z.array(z.string()).nullish().openapi({ description: `Up to ${FIRST_AGENT_LIMITS.today}.` }),
+          today: z
+            .array(z.string())
+            .nullish()
+            .openapi({ description: `Up to ${FIRST_AGENT_LIMITS.today}.` }),
           instructions: z.string().nullish(),
         }),
       )
@@ -151,7 +157,15 @@ export function firstAgentRoutes(deps: AppDeps) {
         "One agent, as you, through the right hand's team card in your DM with it (Undo for a day): its routine, its AI, its own channel in a team's workspace. Picking again answers with the same agent. 403 `create_agents_required` without the permission to create agents; 409 `first_agents.picking` while another pick of it runs.",
       request: {
         params: OrgParams.extend({ id: z.uuid() }),
-        body: body(z.object({ index: z.number().int().min(0).max(FIRST_AGENT_LIMITS.options - 1) })),
+        body: body(
+          z.object({
+            index: z
+              .number()
+              .int()
+              .min(0)
+              .max(FIRST_AGENT_LIMITS.options - 1),
+          }),
+        ),
       },
       responses: { 200: json(Picked), ...errors },
     }),

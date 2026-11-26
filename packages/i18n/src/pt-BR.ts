@@ -2050,7 +2050,8 @@ export const ptBR = {
       lead_female:
         "Você está contratando {{agent}} para {{role}}. Ela começa hoje, com {{lodi}}, e trabalha de dia e de noite.",
       leadNoRole: "Você está contratando {{agent}}. Ele começa hoje, com {{lodi}}, e trabalha de dia e de noite.",
-      leadNoRole_female: "Você está contratando {{agent}}. Ela começa hoje, com {{lodi}}, e trabalha de dia e de noite.",
+      leadNoRole_female:
+        "Você está contratando {{agent}}. Ela começa hoje, com {{lodi}}, e trabalha de dia e de noite.",
       leadMany: "Você está contratando {{names}}. Eles começam hoje, com {{lodi}}, e trabalham de dia e de noite.",
       leadAlone:
         "Você começa com o {{name}}, o RH dos agentes. Ele cria cada agente com você e trabalha de dia e de noite.",

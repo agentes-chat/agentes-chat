@@ -78,7 +78,10 @@ export function HireTeam({
     ? t("onboarding.hire.leadAlone", agentGrammar(lodi.name))
     : team.length > 1
       ? t("onboarding.hire.leadMany", {
-          names: joinNames(hired.map((a) => the(t, a.name)), t),
+          names: joinNames(
+            hired.map((a) => the(t, a.name)),
+            t,
+          ),
           lodi: the(t, lodi.name),
         })
       : t(role ? "onboarding.hire.lead" : "onboarding.hire.leadNoRole", {

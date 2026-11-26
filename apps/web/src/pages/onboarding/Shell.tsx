@@ -359,15 +359,7 @@ export function Photo({
       data-lead={i === 0 ? "" : undefined}
       style={{ "--i": i } as CSSProperties}
     >
-      <Avatar
-        kind="agent"
-        name={a.name}
-        appearance={a.look}
-        size="lg"
-        framed={false}
-        state="idle"
-        expression="happy"
-      />
+      <Avatar kind="agent" name={a.name} appearance={a.look} size="lg" framed={false} state="idle" expression="happy" />
       {i === 0 && say && <span className="onbw__say onb-photo__say">{say}</span>}
     </span>
   );

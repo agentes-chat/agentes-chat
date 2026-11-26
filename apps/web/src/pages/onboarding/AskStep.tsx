@@ -30,7 +30,18 @@ const APPS_POLL_MS = 5000;
 const STUCK_MS = 2 * 60_000;
 
 /** The assistants first in the row, the most used first; every other app of the list after them, in its order. */
-const FIRST = ["chatgpt", "claude", "gemini", "grok", "perplexity", "le_chat", "cursor", "claude_code", "codex", "vscode"];
+const FIRST = [
+  "chatgpt",
+  "claude",
+  "gemini",
+  "grok",
+  "perplexity",
+  "le_chat",
+  "cursor",
+  "claude_code",
+  "codex",
+  "vscode",
+];
 const rank = (id: string) => {
   const i = FIRST.indexOf(id);
   return i < 0 ? FIRST.length : i;
@@ -220,7 +231,9 @@ export function AskYourAi({
       <ol className="onb-ask__steps">
         {!byPaste && (
           <li>
-            <span className="onb-ask__n" aria-hidden="true">{n.connect}</span>
+            <span className="onb-ask__n" aria-hidden="true">
+              {n.connect}
+            </span>
             <div className="onb-ask__step">
               <p className="onb-ask__title">
                 <span>{t("onboarding.ask.connect")}</span>
@@ -231,16 +244,14 @@ export function AskYourAi({
                   </span>
                 )}
               </p>
-              {mcp?.available && client ? (
-                <ConnectGuide client={client} url={mcp.url} />
-              ) : (
-                <Skeleton width="70%" />
-              )}
+              {mcp?.available && client ? <ConnectGuide client={client} url={mcp.url} /> : <Skeleton width="70%" />}
             </div>
           </li>
         )}
         <li>
-          <span className="onb-ask__n" aria-hidden="true">{n.prompt}</span>
+          <span className="onb-ask__n" aria-hidden="true">
+            {n.prompt}
+          </span>
           <div className="onb-ask__step">
             <p className="onb-ask__title">
               <span>{t(byPaste ? "onboarding.ask.pasteJson" : "onboarding.ask.paste", { app: appName })}</span>
@@ -251,7 +262,9 @@ export function AskYourAi({
         </li>
         {byPaste && (
           <li>
-            <span className="onb-ask__n" aria-hidden="true">{n.answer}</span>
+            <span className="onb-ask__n" aria-hidden="true">
+              {n.answer}
+            </span>
             <PasteAnswer orgId={orgId} app={appName} onRead={(p) => onProposal(p, client ?? null)} />
           </li>
         )}

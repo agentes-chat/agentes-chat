@@ -78,7 +78,8 @@ function repeatOf(t: TFunction, rule: ApiRule | null, schedule: string): string 
   if (rule && every === 1 && (rule.freq === "daily" || rule.freq === "weekly")) {
     if (days.length === 0 || days.length === 7) return t("onboarding.week.every.day");
     if (days.length === 1 && days[0]) return t(`onboarding.week.every.${days[0]}`);
-    if (days.length === 5 && BUSINESS_DAYS.every((d) => days.includes(d))) return t("onboarding.week.every.businessDays");
+    if (days.length === 5 && BUSINESS_DAYS.every((d) => days.includes(d)))
+      return t("onboarding.week.every.businessDays");
   }
   return schedule;
 }

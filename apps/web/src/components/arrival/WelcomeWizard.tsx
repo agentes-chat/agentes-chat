@@ -284,10 +284,7 @@ function useBoard(lead: Agent | undefined, leave: (then: () => void) => void) {
             : invited > 0
               ? t("arrival.welcome.ready.rows.invited", { count: invited })
               : t("arrival.welcome.ready.rows.peopleNone"),
-      action:
-        s === "open" && invite
-          ? button(t("arrival.welcome.ready.rows.peopleAction"), () => invite.open())
-          : null,
+      action: s === "open" && invite ? button(t("arrival.welcome.ready.rows.peopleAction"), () => invite.open()) : null,
     });
   }
 

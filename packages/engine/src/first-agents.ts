@@ -296,7 +296,7 @@ async function readSchedule(
   r: { title: string; schedule: string; prompt: string; cron?: string | null },
 ) {
   for (const phrase of [r.cron, r.schedule]) {
-    if (!phrase || !phrase.trim()) continue;
+    if (!phrase?.trim()) continue;
     try {
       const read = await checkRoutine(deps, at, { schedule: phrase, prompt: r.prompt, title: r.title });
       return { phrase, cron: read.cron || null, timezone: read.timezone };
@@ -628,4 +628,3 @@ export async function pickFirstAgent(
   }
   return homeOf(db, orgId, userId, agentId);
 }
-
