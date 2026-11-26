@@ -1027,7 +1027,12 @@
         "leadWhile": "To potrwa kilka minut. Każda zaproszona osoba po dołączeniu tworzy agenta do swojej pracy.",
         "leadJoin": "Każda zaproszona osoba po dołączeniu tworzy agenta do swojej pracy.",
         "send": "Wyślij zaproszenia",
-        "later": "Zaproś później"
+        "later": "Zaproś później",
+        "sent_one": "Wysłano {{count}} zaproszenie",
+        "sent_few": "Wysłano {{count}} zaproszenia",
+        "sent_many": "Wysłano {{count}} zaproszeń",
+        "sent_other": "Wysłano {{count}} zaproszenia",
+        "opening": "Otwieranie {{org}}…"
       },
       "account": "Twoje konto",
       "switchNote": "Możesz to później zmienić bez utraty czegokolwiek."
@@ -8361,7 +8366,8 @@
       "memberHint": "Co może każdy",
       "member": "już w {{org}}",
       "memberPersonal": "już tutaj",
-      "invited": "już zaproszono"
+      "invited": "już zaproszono",
+      "sent": "zaproszono"
     },
     "dialog": {
       "title": "Zaproś do {{org}}",

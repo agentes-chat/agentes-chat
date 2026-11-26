@@ -2441,6 +2441,15 @@
   "onboarding.flow.people.later": {
     "value": "Invite later"
   },
+  "onboarding.flow.people.sent": {
+    "value": {
+      "one": "Invitation sent",
+      "other": "{{count}} invitations sent"
+    }
+  },
+  "onboarding.flow.people.opening": {
+    "value": "Opening {{org}}…"
+  },
   "onboarding.flow.account": {
     "value": "Your account"
   },
@@ -19026,6 +19035,9 @@
   },
   "members.chips.invited": {
     "value": "already invited"
+  },
+  "members.chips.sent": {
+    "value": "invited"
   },
   "members.dialog.title": {
     "value": "Invite to {{org}}"

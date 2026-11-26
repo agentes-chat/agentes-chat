@@ -1068,6 +1068,11 @@ export const en = {
         send: "Send invitations",
         /** The quiet link under the button: the workspace opens with no invitations. */
         later: "Invite later",
+        /** The button once the invitations went, while the workspace opens. */
+        sent_one: "Invitation sent",
+        sent_other: "{{count}} invitations sent",
+        /** The line under the addresses once they went: the workspace opens next. `{{org}}`: its name. */
+        opening: "Opening {{org}}…",
       },
       account: "Your account",
       /** Beside Continue on the first question: the workspace's mode changes later in Settings. */
@@ -8401,6 +8406,8 @@ export const en = {
       member: "already in {{org}}",
       memberPersonal: "already here",
       invited: "already invited",
+      /** An address the onboarding's people step has just invited, while the workspace opens. */
+      sent: "invited",
     },
     // The invite dialog, opened from Members, the workspace menu, ⌘K and a channel (ADR 0090): a step at a time, the
     // workspace's first agent asking each one in its bubble; the link on a screen of its own.

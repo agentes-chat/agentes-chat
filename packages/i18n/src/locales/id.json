@@ -970,7 +970,9 @@
         "leadWhile": "Butuh beberapa menit. Setiap orang yang kamu undang, saat bergabung, membuat agen untuk pekerjaannya sendiri.",
         "leadJoin": "Setiap orang yang kamu undang, saat bergabung, membuat agen untuk pekerjaannya sendiri.",
         "send": "Kirim undangan",
-        "later": "Undang nanti"
+        "later": "Undang nanti",
+        "sent_other": "{{count}} undangan terkirim",
+        "opening": "Membuka {{org}}…"
       },
       "account": "Akunmu",
       "switchNote": "Kamu bisa beralih nanti tanpa kehilangan apa pun."
@@ -7525,7 +7527,8 @@
       "memberHint": "Apa yang bisa dilakukan semua orang",
       "member": "sudah ada di {{org}}",
       "memberPersonal": "sudah di sini",
-      "invited": "sudah diundang"
+      "invited": "sudah diundang",
+      "sent": "diundang"
     },
     "dialog": {
       "title": "Undang ke {{org}}",

@@ -69,9 +69,10 @@
 .email-chip > .ac-select {
   flex: none;
 }
-/* Why an address isn't sent: "confira" in danger, "já está na Acme" quiet. */
+/* Why an address isn't sent: "confira" in danger, "já está na Acme" quiet; one just sent, "convidado" with its check. */
 .email-chip__bad,
-.email-chip__soft {
+.email-chip__soft,
+.email-chip__done {
   font-size: 12.5px;
   font-weight: 600;
 }
@@ -80,6 +81,13 @@
 }
 .email-chip__soft {
   color: var(--muted);
+}
+.email-chip__done {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding-inline-end: 6px;
+  color: var(--ok);
 }
 /* "(opcional)" after a field's label (a suggestion's "Quem é"). */
 .invite-optional {

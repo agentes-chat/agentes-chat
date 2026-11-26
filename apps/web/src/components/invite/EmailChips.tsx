@@ -1,5 +1,5 @@
 import { addressesIn } from "@agenteschat/client/lib/text";
-import { Avatar, Button, Select, type SelectOption } from "@agenteschat/ui";
+import { Avatar, Button, Icon, Select, type SelectOption } from "@agenteschat/ui";
 import { type ReactNode, type RefObject, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import "./invite.css";
@@ -173,7 +173,17 @@ export function ChipRole<V extends string>({
   );
 }
 
-/** Why a good address won't be sent ("já está na Acme", "já convidado") or what became of it ("convidado"). */
-export function ChipNote({ children }: { children: ReactNode }) {
-  return <span className="email-chip__soft">{children}</span>;
+/**
+ * Why a good address won't be sent ("já está na Acme", "já convidado"), quiet; or, `done`, what became of it
+ * ("convidado"), with its check.
+ */
+export function ChipNote({ children, done }: { children: ReactNode; done?: boolean }) {
+  return done ? (
+    <span className="email-chip__done">
+      <Icon name="check" size={14} />
+      {children}
+    </span>
+  ) : (
+    <span className="email-chip__soft">{children}</span>
+  );
 }

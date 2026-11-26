@@ -989,7 +989,10 @@
         "leadWhile": "Dat duurt een paar minuten. Iedereen die je uitnodigt, maakt bij het instappen de agent voor het eigen werk.",
         "leadJoin": "Iedereen die je uitnodigt, maakt bij het instappen de agent voor het eigen werk.",
         "send": "Uitnodigingen sturen",
-        "later": "Later uitnodigen"
+        "later": "Later uitnodigen",
+        "sent_one": "Uitnodiging verstuurd",
+        "sent_other": "{{count}} uitnodigingen verstuurd",
+        "opening": "{{org}} wordt geopend…"
       },
       "account": "Je account",
       "switchNote": "Je kunt later wisselen zonder iets te verliezen."
@@ -7837,7 +7840,8 @@
       "memberHint": "Wat iedereen kan doen",
       "member": "zit al in {{org}}",
       "memberPersonal": "al hier",
-      "invited": "al uitgenodigd"
+      "invited": "al uitgenodigd",
+      "sent": "uitgenodigd"
     },
     "dialog": {
       "title": "Uitnodigen voor {{org}}",

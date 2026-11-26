@@ -1037,6 +1037,9 @@ export const ptBR = {
         leadJoin: "Cada pessoa que você chamar cria, ao entrar, o agente para o trabalho dela.",
         send: "Enviar convites",
         later: "Convidar depois",
+        sent_one: "Convite enviado",
+        sent_other: "{{count}} convites enviados",
+        opening: "Abrindo a {{org}}…",
       },
       account: "Sua conta",
       switchNote: "Dá para trocar depois, sem perder nada.",
@@ -8351,6 +8354,7 @@ export const ptBR = {
       member: "já está na {{org}}",
       memberPersonal: "já está aqui",
       invited: "já convidado",
+      sent: "convidado",
     },
     // The invite dialog, opened from Members, the workspace menu, ⌘K and a channel (ADR 0090): a step at a time, the
     // workspace's first agent asking each one in its bubble; the link on a screen of its own.

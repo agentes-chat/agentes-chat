@@ -970,7 +970,9 @@
         "leadWhile": "需要几分钟。你邀请的每个人在加入时，都会为自己的工作创建一个智能体。",
         "leadJoin": "你邀请的每个人在加入时，都会为自己的工作创建一个智能体。",
         "send": "发送邀请",
-        "later": "稍后邀请"
+        "later": "稍后邀请",
+        "sent_other": "已发送 {{count}} 份邀请",
+        "opening": "正在打开 {{org}}…"
       },
       "account": "你的账号",
       "switchNote": "之后可以随时切换，不会丢失任何内容。"
@@ -7529,7 +7531,8 @@
       "memberHint": "所有人都能做的事",
       "member": "已在 {{org}} 中",
       "memberPersonal": "已在这里",
-      "invited": "已邀请"
+      "invited": "已邀请",
+      "sent": "已发出邀请"
     },
     "dialog": {
       "title": "邀请加入 {{org}}",

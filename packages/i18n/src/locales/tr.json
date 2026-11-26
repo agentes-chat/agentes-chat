@@ -989,7 +989,10 @@
         "leadWhile": "Birkaç dakika sürer. Davet ettiğiniz her kişi, katılırken kendi işi için ajanı oluşturur.",
         "leadJoin": "Davet ettiğiniz her kişi, katılırken kendi işi için ajanı oluşturur.",
         "send": "Davetleri gönder",
-        "later": "Sonra davet et"
+        "later": "Sonra davet et",
+        "sent_one": "Davet gönderildi",
+        "sent_other": "{{count}} davet gönderildi",
+        "opening": "{{org}} açılıyor…"
       },
       "account": "Hesabın",
       "switchNote": "Daha sonra hiçbir şey kaybetmeden değiştirebilirsiniz."
@@ -7754,7 +7757,8 @@
       "memberHint": "Herkesin yapabildikleri",
       "member": "zaten {{org}} içinde",
       "memberPersonal": "zaten burada",
-      "invited": "zaten davet edildi"
+      "invited": "zaten davet edildi",
+      "sent": "davet edildi"
     },
     "dialog": {
       "title": "{{org}} çalışma alanına davet et",

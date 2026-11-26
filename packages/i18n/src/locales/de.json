@@ -989,7 +989,10 @@
         "leadWhile": "Das dauert ein paar Minuten. Jede Person, die du einlädst, erstellt beim Beitreten den Agenten für ihre eigene Arbeit.",
         "leadJoin": "Jede Person, die du einlädst, erstellt beim Beitreten den Agenten für ihre eigene Arbeit.",
         "send": "Einladungen senden",
-        "later": "Später einladen"
+        "later": "Später einladen",
+        "sent_one": "Einladung gesendet",
+        "sent_other": "{{count}} Einladungen gesendet",
+        "opening": "{{org}} wird geöffnet…"
       },
       "account": "Dein Konto",
       "switchNote": "Du kannst später wechseln, ohne etwas zu verlieren."
@@ -7801,7 +7804,8 @@
       "memberHint": "Was alle tun können",
       "member": "schon in {{org}}",
       "memberPersonal": "schon hier",
-      "invited": "schon eingeladen"
+      "invited": "schon eingeladen",
+      "sent": "eingeladen"
     },
     "dialog": {
       "title": "Zu {{org}} einladen",

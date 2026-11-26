@@ -1008,7 +1008,11 @@
         "leadWhile": "Cela prend quelques minutes. Chaque personne invitée crée, en arrivant, l'agent de son propre travail.",
         "leadJoin": "Chaque personne invitée crée, en arrivant, l'agent de son propre travail.",
         "send": "Envoyer les invitations",
-        "later": "Inviter plus tard"
+        "later": "Inviter plus tard",
+        "sent_one": "Invitation envoyée",
+        "sent_many": "{{count}} invitations envoyées",
+        "sent_other": "{{count}} invitations envoyées",
+        "opening": "Ouverture de {{org}}…"
       },
       "account": "Votre compte",
       "switchNote": "Vous pourrez changer plus tard sans rien perdre."
@@ -8071,7 +8075,8 @@
       "memberHint": "Ce que tout le monde peut faire",
       "member": "déjà dans {{org}}",
       "memberPersonal": "déjà ici",
-      "invited": "déjà invité"
+      "invited": "déjà invité",
+      "sent": "invité"
     },
     "dialog": {
       "title": "Inviter dans {{org}}",

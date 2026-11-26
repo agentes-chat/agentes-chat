@@ -61,17 +61,31 @@ export function PeopleStep({
   const [draft, setDraft] = useState("");
   const [roles, setRoles] = useState<Record<string, string>>({});
   const [link, setLink] = useState(false);
+  // The addresses this step sends, then the ones it invited: the invitations list, read again as the send lands, names
+  // them as waiting, which must never read here as "already invited" (a failure) while the workspace opens.
+  const [asked, setAsked] = useState<ReadonlySet<string>>(() => new Set());
+  const [sent, setSent] = useState<ReadonlySet<string>>(() => new Set());
 
   // Who is in already, and who has an invitation waiting: said on their chip and left out of the send.
   const inAlready = new Set([email.toLowerCase(), ...members.map((m) => m.email.toLowerCase())]);
   const waiting = new Set(invitations.filter((i) => i.status === "pending").map((i) => i.email.toLowerCase()));
   const stateOf = (c: ChipAddress) =>
-    !c.valid ? "bad" : inAlready.has(c.email) ? "member" : waiting.has(c.email) ? "invited" : "ok";
-  // What's typed and not a chip yet counts, as leaving the field would make it one.
+    sent.has(c.email)
+      ? "sent"
+      : !c.valid
+        ? "bad"
+        : inAlready.has(c.email)
+          ? "member"
+          : waiting.has(c.email) && !asked.has(c.email)
+            ? "invited"
+            : "ok";
+  // What's typed and not a chip yet counts for the button, as leaving the field would make it one.
   const all = draft.trim() ? [...chips, ...chipsFrom(draft, chips)] : chips;
   const ready = all.filter((c) => stateOf(c) === "ok");
-  const bad = all.some((c) => !c.valid);
-  const leftOut = all.some((c) => stateOf(c) === "member" || stateOf(c) === "invited");
+  // The help line reads the chips alone: an address still being typed isn't finished, so it is never marked.
+  const bad = chips.some((c) => stateOf(c) === "bad");
+  const leftOut = chips.some((c) => stateOf(c) === "member" || stateOf(c) === "invited");
+  const done = sent.size > 0;
 
   // Membro, then each role this person may give, as the invite dialog offers them.
   const everyone = everyoneOf(orgRoles);
@@ -94,6 +108,7 @@ export function PeopleStep({
       setDraft("");
     }
     if (ready.length === 0 || invite.isPending || leaving) return;
+    setAsked(new Set(ready.map((c) => c.email)));
     let results: BatchInviteResult[];
     try {
       results = await invite.mutateAsync({
@@ -104,15 +119,21 @@ export function PeopleStep({
       });
     } catch {
       // Said by the failed write's toast; everything stays to send again.
+      setAsked(new Set());
       return;
     }
-    const sent = results.filter((r) => r.status === "invited");
-    if (sent.length === 1) toast.show(t("members.dialog.sent", { email: sent[0]?.email }));
-    else if (sent.length > 1) toast.show(t("members.dialog.sentMany", { count: sent.length }));
+    const went = results.filter((r) => r.status === "invited");
+    if (went.length === 1) toast.show(t("members.dialog.sent", { email: went[0]?.email }));
+    else if (went.length > 1) toast.show(t("members.dialog.sentMany", { count: went.length }));
     // An address the server reads as none stays, marked, to fix or take out; the rest went.
     const fix = new Set(results.filter((r) => r.status === "invalid_email").map((r) => r.email));
-    if (fix.size === 0) return onSent();
+    if (fix.size === 0) {
+      // Said on the step as it waits for the workspace to open: its chips invited, its button sent.
+      setSent(new Set(went.map((r) => r.email)));
+      return onSent();
+    }
     for (const address of fix) toast.show(t("members.batch.invalid_email", { email: address }), "error");
+    setAsked(new Set());
     setChips((list) =>
       list.filter((c) => !c.valid || fix.has(c.email)).map((c) => (fix.has(c.email) ? { ...c, valid: false } : c)),
     );
@@ -158,16 +179,24 @@ export function PeopleStep({
           <Button disabled={busy} onClick={onLater}>
             {t("onboarding.flow.people.later")}
           </Button>
-          <Button
-            variant="primary"
-            kbd={["↵"]}
-            data-enter=""
-            disabled={ready.length === 0 || leaving}
-            loading={invite.isPending}
-            onClick={() => void send()}
-          >
-            {ready.length > 0 ? t("members.dialog.send", { count: ready.length }) : t("onboarding.flow.people.send")}
-          </Button>
+          {done ? (
+            // Sent: the button says so, drawn as it was (never greyed back to its empty state) until the workspace opens;
+            // a press does nothing more.
+            <Button variant="primary" icon="check">
+              {t("onboarding.flow.people.sent", { count: sent.size })}
+            </Button>
+          ) : (
+            <Button
+              variant="primary"
+              kbd={["↵"]}
+              data-enter=""
+              disabled={ready.length === 0 || leaving}
+              loading={invite.isPending}
+              onClick={() => void send()}
+            >
+              {ready.length > 0 ? t("members.dialog.send", { count: ready.length }) : t("onboarding.flow.people.send")}
+            </Button>
+          )}
         </>
       }
     >
@@ -188,9 +217,11 @@ export function PeopleStep({
             morePlaceholder={t("members.dialog.moreEmails")}
             describedBy="onb-people-help"
             onEnterEmpty={() => void send()}
-            soft={(chip) => stateOf(chip) !== "ok"}
+            removable={(chip) => stateOf(chip) !== "sent"}
+            soft={(chip) => stateOf(chip) === "member" || stateOf(chip) === "invited"}
             aside={(chip) => {
               const state = stateOf(chip);
+              if (state === "sent") return <ChipNote done>{t("members.chips.sent")}</ChipNote>;
               if (state === "member") return <ChipNote>{t("members.chips.member", { org })}</ChipNote>;
               if (state === "invited") return <ChipNote>{t("members.chips.invited")}</ChipNote>;
               return (
@@ -203,12 +234,14 @@ export function PeopleStep({
               );
             }}
           />
-          <p id="onb-people-help" className="invite-help" data-bad={bad || undefined}>
-            {bad
-              ? t("members.dialog.checkMarked")
-              : leftOut
-                ? t("members.dialog.leftOut")
-                : t("members.dialog.pasteHelp")}
+          <p id="onb-people-help" className="invite-help" data-bad={(!done && bad) || undefined}>
+            {done
+              ? t("onboarding.flow.people.opening", { org })
+              : bad
+                ? t("members.dialog.checkMarked")
+                : leftOut
+                  ? t("members.dialog.leftOut")
+                  : t("members.dialog.pasteHelp")}
           </p>
           {/* The link, for whoever prefers one: a line away, never a card inside the box. */}
           {link ? (

@@ -728,6 +728,62 @@ describe("Connect an AI, then the people", () => {
     expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/c/${GENERAL_ID}`);
   });
 
+  test("an address still being typed is never marked; once finished, one that isn't an address is", async () => {
+    await renderApp("/onboarding", { api: createFakeApi(settingUp({ step: "agents", picked: true })) });
+    await settle(16);
+    expect(heading()).toBe(PEOPLE);
+    const field = screen().getByLabelText("E-mails");
+    const help = () => box().querySelector("#onb-people-help") as HTMLElement;
+    for (const value of ["b", "bruno@", "bruno@example"]) {
+      await act(async () => fireEvent.change(field, { target: { value } }));
+      expect({ value, marked: help().hasAttribute("data-bad"), line: help().textContent }).toEqual({
+        value,
+        marked: false,
+        line: "Cole uma lista, se quiser: vírgula, espaço ou uma por linha.",
+      });
+    }
+    // Enter finishes it: a chip, marked to check.
+    await act(async () => fireEvent.keyDown(field, { key: "Enter" }));
+    await settle(4);
+    expect(help().hasAttribute("data-bad")).toBe(true);
+    expect(help().textContent).toBe("Confira os e-mails marcados: eles não recebem convite.");
+  });
+
+  test("once the invitations went, the step says so while the workspace opens, never as already invited", async () => {
+    const state = settingUp({ step: "agents", picked: true });
+    const api = createFakeApi(state);
+    // The workspace takes its time to open, as a real server's does: the step is seen in between.
+    let release = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const save = api.orgs.saveOnboarding;
+    api.orgs.saveOnboarding = async (...args: Parameters<typeof save>) => {
+      await held;
+      return save(...args);
+    };
+    const { router } = await renderApp("/onboarding", { api });
+    await settle(16);
+    const field = screen().getByLabelText("E-mails");
+    await act(async () => fireEvent.change(field, { target: { value: "bruno@example.com" } }));
+    await click(button("Convidar 1 pessoa"), 20);
+    expect(calls(state, "orgs.inviteMany")).toHaveLength(1);
+    // The invitations, read again, now list the address as waiting: here it is the one just invited.
+    expect(state.invitations.map((i) => i.email)).toContain("bruno@example.com");
+    expect(button("Convite enviado")).toBeTruthy();
+    expect(screen().queryByRole("button", { name: "Enviar convites" })).toBeNull();
+    const chip = box().querySelector(".email-chip") as HTMLElement;
+    expect(chip.querySelector(".email-chip__done")?.textContent).toBe("convidado");
+    expect(chip.textContent).not.toContain("já convidado");
+    expect(chip.hasAttribute("data-soft")).toBe(false);
+    const help = box().querySelector("#onb-people-help") as HTMLElement;
+    expect(help.textContent).toBe("Abrindo a Acme…");
+    expect(help.hasAttribute("data-bad")).toBe(false);
+    await act(async () => release());
+    await settle(16);
+    expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/c/${GENERAL_ID}`);
+  });
+
   test("right after the plan, the people while the team gets ready", async () => {
     const state = settingUp({ step: "ai", picked: true });
     state.authConfig = { billingUrl: "https://billing.example.com" };

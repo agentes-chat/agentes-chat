@@ -216,11 +216,12 @@ function InviteDialog({ request, open, onClose }: { request: InviteRequest; open
   );
   const stateOf = (c: ChipAddress) =>
     !c.valid ? "bad" : members.has(c.email) ? "member" : waiting.has(c.email) ? "invited" : "ok";
-  // What's typed and not a token yet counts, as leaving the field would make it one.
+  // What's typed and not a token yet counts for the send, as leaving the field would make it one.
   const all = draft.trim() ? [...chips, ...chipsFrom(draft, chips)] : chips;
   const ready = all.filter((c) => stateOf(c) === "ok");
-  const bad = all.some((c) => !c.valid);
-  const leftOut = all.some((c) => stateOf(c) === "member" || stateOf(c) === "invited");
+  // The line under the field reads the tokens alone: an address still being typed isn't finished, so it is never marked.
+  const bad = chips.some((c) => !c.valid);
+  const leftOut = chips.some((c) => stateOf(c) === "member" || stateOf(c) === "invited");
 
   // An agent's page opens over this dialog's place: the dialog closes for it.
   const goTo = (a: Agent) => {
