@@ -1,6 +1,16 @@
 import { afterEach, expect, test } from "bun:test";
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import path from "node:path";
 import { accountCodeAad, CLI_HOME_ONLY } from "@agenteschat/adapters/machine-protocol";
 import { cutAtWord } from "@agenteschat/adapters/redact";
@@ -24,7 +34,9 @@ import {
   AGY_KEYCHAIN,
   AGY_PLANTED,
   AGY_SIGN_IN_FILE,
+  AGY_WORK_NO_CMD_AGENT,
   agyAuthOf,
+  agyChatAgent,
   agyKeychain,
   agyRuntimeDir,
   agySignInOf,
@@ -35,11 +47,13 @@ import {
 import {
   type AntigravityBrainContext,
   type AntigravityBrainTurnRequest,
+  agyTerminalSandboxUnavailable,
   antigravityChatBreach,
   antigravityChatsFile,
   antigravityProblem,
   antigravityTurnArgs,
   handleAntigravityBrainTurn,
+  hasMcpTool,
   isOurAgyTool,
   parseAgyError,
 } from "../../runner/brain-antigravity";
@@ -92,6 +106,23 @@ test("command line: headless stream-json in the sandbox; work takes edits, plan 
   const chat = antigravityTurnArgs({ prompt: "oi", locked: true }).join(" ");
   expect(chat).toContain(`--agent ${AGY_CHAT_AGENT}`);
   expect(chat).not.toContain("accept-edits");
+  const workNoCmd = antigravityTurnArgs({ prompt: "oi", workNoCmd: true }).join(" ");
+  expect(workNoCmd).toContain(`--mode accept-edits --agent ${AGY_WORK_NO_CMD_AGENT}`);
+  expect(workNoCmd).not.toContain("--dangerously-skip-permissions");
+  expect(antigravityTurnArgs({ prompt: "oi", profile: "plan", workNoCmd: true }).join(" ")).not.toContain("--agent");
+  expect(antigravityTurnArgs({ prompt: "oi", locked: true, workNoCmd: true }).join(" ")).toContain(
+    `--agent ${AGY_CHAT_AGENT}`,
+  );
+});
+
+test("terminal sandbox gate: activates only on Linux with apparmor userns=1 when work turn has MCP run_code", () => {
+  expect(agyTerminalSandboxUnavailable("linux", () => "1")).toBe(true);
+  expect(agyTerminalSandboxUnavailable("linux", () => "0")).toBe(false);
+  expect(agyTerminalSandboxUnavailable("linux", () => null)).toBe(false);
+  expect(agyTerminalSandboxUnavailable("darwin", () => "1")).toBe(false);
+  expect(hasMcpTool("post_message run_code wiki_read", "run_code")).toBe(true);
+  expect(hasMcpTool("post_message wiki_read", "run_code")).toBe(false);
+  expect(hasMcpTool(undefined, "run_code")).toBe(false);
 });
 
 test("the account's home: what a turn planted goes, our settings, our server alone and Lodi's agent; the sign-in stays", () => {
@@ -125,6 +156,40 @@ test("the account's home: what a turn planted goes, our settings, our server alo
   const agent = readFileSync(path.join(home, `.gemini/config/agents/${AGY_CHAT_AGENT}/agent.md`), "utf8");
   expect(agent).toContain("tools: []");
   expect(agent).toContain("subagent: false");
+  const workAgent = readFileSync(path.join(home, `.gemini/config/agents/${AGY_WORK_NO_CMD_AGENT}/agent.md`), "utf8");
+  expect(workAgent).toContain("commandExecutionPolicy: off");
+  expect(workAgent).toContain("write_to_file");
+  expect(workAgent).toContain("replace_file_content");
+  expect(workAgent).not.toContain("run_command");
+
+  // Re-running prepareAgyHome removes planted rogue agents/files without deleting or rewriting managed agent.md files.
+  const chatAgentPath = path.join(home, `.gemini/config/agents/${AGY_CHAT_AGENT}/agent.md`);
+  const workAgentPath = path.join(home, `.gemini/config/agents/${AGY_WORK_NO_CMD_AGENT}/agent.md`);
+  const oldDate = new Date("2020-01-01T00:00:00Z");
+  utimesSync(chatAgentPath, oldDate, oldDate);
+  utimesSync(workAgentPath, oldDate, oldDate);
+  mkdirSync(path.join(home, ".gemini/config/agents/evil-agent"), { recursive: true });
+  writeFileSync(path.join(home, ".gemini/config/agents/evil-agent/agent.md"), "rogue");
+  writeFileSync(path.join(home, `.gemini/config/agents/${AGY_CHAT_AGENT}/extra.txt`), "rogue");
+  prepareAgyHome(home, ["/usr/bin/node", "/opt/runner.mjs", "mcp"]);
+  expect(existsSync(path.join(home, ".gemini/config/agents/evil-agent"))).toBe(false);
+  expect(existsSync(path.join(home, `.gemini/config/agents/${AGY_CHAT_AGENT}/extra.txt`))).toBe(false);
+  expect(statSync(chatAgentPath).mtimeMs).toBe(oldDate.getTime());
+  expect(statSync(workAgentPath).mtimeMs).toBe(oldDate.getTime());
+
+  // A link a turn planted is never followed: neither the managed agent's file nor its folder points outside.
+  const outside = tempDir("agy-outside-");
+  dirs.push(outside);
+  writeFileSync(path.join(outside, "keep.txt"), "theirs");
+  writeFileSync(path.join(outside, "agent.md"), agyChatAgent());
+  rmSync(chatAgentPath);
+  symlinkSync(path.join(outside, "agent.md"), chatAgentPath);
+  rmSync(path.dirname(workAgentPath), { recursive: true });
+  symlinkSync(outside, path.dirname(workAgentPath));
+  prepareAgyHome(home, ["/usr/bin/agentes-runner"]);
+  expect(lstatSync(chatAgentPath).isSymbolicLink()).toBe(false);
+  expect(lstatSync(path.dirname(workAgentPath)).isSymbolicLink()).toBe(false);
+  expect(readFileSync(path.join(outside, "keep.txt"), "utf8")).toBe("theirs");
 });
 
 test("macOS: each Gemini account signs in to a keychain of its own in its folder, made once and unlocked before every run", () => {
@@ -946,4 +1011,49 @@ test.skipIf(!posix)(
     expect((await m.list()).find((a) => a.id === offline.id)).toMatchObject({ loggedIn: true, shared: true });
   },
   45_000,
+);
+
+test.skipIf(!posix)(
+  "work turn on Linux without terminal sandbox uses work-no-cmd agent only when MCP run_code is present",
+  async () => {
+    const root = tempDir("brain-agy-nocmd-");
+    dirs.push(root);
+    const { ctx, accountDir } = turnContext(root);
+    signIn(accountDir);
+    const log = path.join(root, "agy.log");
+    process.env.FAKE_AGY_LOG = log;
+
+    // 1. Linux without terminal sandbox + MCP run_code -> uses AGY_WORK_NO_CMD_AGENT in work mode.
+    await run(
+      { ...ctx, platform: "linux", terminalSandboxUnavailable: true },
+      turn({ runId: RUN.replace(/1$/, "5"), mcp: { token: "tok_run", tools: "post_message run_code" } }),
+    );
+    // 2. Same host, but turn has no run_code -> default agent (unchanged).
+    await run(
+      { ...ctx, platform: "linux", terminalSandboxUnavailable: true },
+      turn({ runId: RUN.replace(/1$/, "6"), mcp: { token: "tok_run", tools: "post_message" } }),
+    );
+    // 3. Sandbox available (e.g. macOS or Linux with userns=0) -> default agent (unchanged).
+    await run(
+      { ...ctx, platform: "linux", terminalSandboxUnavailable: false },
+      turn({ runId: RUN.replace(/1$/, "7"), mcp: { token: "tok_run", tools: "post_message run_code" } }),
+    );
+    // 4. Plan mode on sandboxless Linux -> never passes accept-edits or work-no-cmd agent.
+    await run(
+      { ...ctx, platform: "linux", terminalSandboxUnavailable: true },
+      turn({
+        runId: RUN.replace(/1$/, "8"),
+        permissions: { mode: "plan" },
+        mcp: { token: "tok_run", tools: "post_message run_code" },
+      }),
+    );
+
+    const calls = logOf(log);
+    expect(calls[0]?.args.join(" ")).toContain(`--mode accept-edits --agent ${AGY_WORK_NO_CMD_AGENT}`);
+    expect(calls[1]?.args).not.toContain("--agent");
+    expect(calls[2]?.args).not.toContain("--agent");
+    expect(calls[3]?.args).not.toContain("--agent");
+    expect(calls[3]?.args).not.toContain("accept-edits");
+  },
+  20_000,
 );

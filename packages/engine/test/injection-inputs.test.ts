@@ -308,6 +308,28 @@ describe("an outside tool that answers with an error", () => {
     await invoke({ id: "7" });
     expect(await runReadOutsideById(fx.db, fx.org.id, run.id)).toBe(true);
   });
+
+  test("Antigravity search_web and read_url_content harness calls mark the run as reading outside", async () => {
+    const fx = await setup({ reply: () => ({ chunks: ["ok"] }) });
+    f = fx;
+    for (const [line, expected] of [
+      ['view_file("README.md") -> ok', false],
+      ['search_web("latest release") -> 3 results', true],
+      ['read_url_content("https://example.com/news") -> article body', true],
+    ] as const) {
+      const msg = await postPersonMessage({ db: fx.db, pubsub: fx.pubsub }, fx.owner.id, fx.org.id, fx.general.id, {
+        body: `@dev check ${line.slice(0, 10)}`,
+      });
+      await drainOutbox(fx.db, fx.handlers);
+      const [run] = await fx.db.select().from(schema.agentRuns).where(eq(schema.agentRuns.triggerMessageId, msg.id));
+      if (!run) throw new Error("no run");
+      await fx.db
+        .update(schema.agentRuns)
+        .set({ transcript: { harnessTried: [line] } })
+        .where(eq(schema.agentRuns.id, run.id));
+      expect(await runReadOutsideById(fx.db, fx.org.id, run.id)).toBe(expected);
+    }
+  });
 });
 
 describe("remember: a rule naming an address no person wrote", () => {
