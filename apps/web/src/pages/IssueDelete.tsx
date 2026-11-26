@@ -55,7 +55,8 @@ function ConfirmDelete({ issue, onClose, onDeleted }: { issue: Issue; onClose: (
   const action = useIssueAction(org.id);
   // The board's row doesn't carry its steps: the task's own read does.
   const full = useIssue(org.id, issue.number).data ?? issue;
-  const working = issue.work && issue.work.state !== "stalled" && issue.assignee ? actors.name(issue.assignee) : null;
+  const working =
+    issue.work && issue.work.state !== "stalled" ? actors.name({ type: "agent", id: issue.work.agentId }) : null;
   return (
     <Dialog
       open
@@ -72,18 +73,16 @@ function ConfirmDelete({ issue, onClose, onDeleted }: { issue: Issue; onClose: (
         <Button
           variant="danger"
           loading={action.isPending}
-          onClick={() =>
-            action.mutate(
-              { type: "delete", id: issue.id },
-              {
-                onSuccess: () => {
-                  onClose();
-                  onDeleted();
-                  toast.show(t("issues.delete.done", { number: issue.number }));
-                },
-              },
-            )
-          }
+          onClick={() => {
+            // The task leaves the board at once, so the dialog and its page go now. The call's own promise: this
+            // dialog is gone when the answer comes (a refusal brings the task back, and its toast says why).
+            onClose();
+            onDeleted();
+            void action.mutateAsync({ type: "delete", id: issue.id }).then(
+              () => toast.show(t("issues.delete.done", { number: issue.number })),
+              () => undefined,
+            );
+          }}
         >
           {t("issues.delete.confirm")}
         </Button>

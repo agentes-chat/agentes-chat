@@ -15,6 +15,7 @@ import {
   playwrightChromes,
   SELF_TESTED,
 } from "./check";
+import { LIMIT, scoreOf, TWINS } from "./shifts";
 
 describe("geometry check", () => {
   test("a new offender is new at its width, and words or size never make one", () => {
@@ -80,7 +81,17 @@ describe("geometry check", () => {
     const rules = readFileSync(join(import.meta.dir, "rules.js"), "utf8");
     const check = readFileSync(join(import.meta.dir, "check.ts"), "utf8");
     for (const rule of ["floating", "inset", "icongap", "square"]) expect(SELF_TESTED).toContain(rule);
-    for (const rule of ["squarecol", "rim", "inlinebase", "iconmid", "fieldwidth", "corner", "clip", "cascadeorder"])
+    for (const rule of [
+      "squarecol",
+      "rim",
+      "inlinebase",
+      "iconmid",
+      "fieldwidth",
+      "corner",
+      "nest",
+      "clip",
+      "cascadeorder",
+    ])
       expect(SELF_TESTED).toContain(rule);
     for (const rule of ["pagetop", "groupedge", "menuitem", "rowpad", "emptyselect", "toolorder", "toolrow", "captop"])
       expect(SELF_TESTED).toContain(rule);
@@ -99,6 +110,9 @@ describe("geometry check", () => {
       "countfill",
     ])
       expect(SELF_TESTED).toContain(rule);
+    // A button row's state line starts at its name's words, wherever a rule moves it from.
+    for (const twin of ["bad-endline--status", "good-endline"]) expect(fixture).toContain(twin);
+    expect(rules).toContain('side: "status"');
     // A calendar item never covers another: what meets sits beside it.
     expect(SELF_TESTED).toContain("calstack");
     // The working line's stop is at its end before its time comes, not beside its words.
@@ -107,15 +121,39 @@ describe("geometry check", () => {
     for (const twin of ["bad-factwrap--line", "good-factwrap--line"]) expect(fixture).toContain(twin);
     // A title in a row that wraps a word a line is squeezed; one long address wrapping its full lines is not.
     for (const twin of ["bad-wordwrap--row", "good-wordwrap--url"]) expect(fixture).toContain(twin);
+    // A dialog's quiet line touches no bubble of the page behind it; on a bubble of its own dialog it does.
+    for (const twin of ["good-quiet--layers", "bad-quiet--dialog"]) expect(fixture).toContain(twin);
+    // A kit button's words sit in its label: cut by a box around it the button is named, ended by its own "…" nothing is.
+    for (const twin of ["bad-clipped--label", "good-clipped--label"]) expect(fixture).toContain(twin);
     expect(rules).toContain('".ac-facts__value, .ac-factline__fact"');
     // A word broken at its syllables in a box that hyphenates (a narrow calendar item's title) is no midword.
     expect(fixture).toContain("good-midword--hyphens");
     // The face on a menu's top that changes the photo (`MenuFace`) is no row: neither its height nor its room.
     for (const twin of ["good-menuitem--face", "good-rim--face"]) expect(fixture).toContain(twin);
+    // A chip field grown to a second line of tokens is still the stack's height on its first.
+    expect(fixture).toContain("good-fieldwidth--grown");
     for (const rule of SELF_TESTED) {
       expect(fixture).toContain(`bad-${rule}`);
       expect(fixture).toContain(`good-${rule}`);
       expect(`${rules}${check}`).toContain(`rule: "${rule}"`);
+    }
+  });
+
+  test("layout shifts: a screen's score is Chromium's shifts plus the jumps, and every fixture case has its twin", () => {
+    const moved = (value: number) => ({ at: 0, value, sources: ["article.ac-msg"] });
+    const score = scoreOf({ entries: [moved(0.001)], jumps: [moved(0.05), moved(0.0005)] });
+    expect(score.total).toBeCloseTo(0.0515, 6);
+    expect(score.total).toBeGreaterThan(LIMIT);
+    expect(score.worst.map((w) => [w.kind, w.value])).toEqual([
+      ["jump", 0.05],
+      ["shift", 0.001],
+      ["jump", 0.0005],
+    ]);
+    expect(scoreOf({ entries: [], jumps: [] }).total).toBe(0);
+    const fixture = readFileSync(join(import.meta.dir, "shifts-fixture.html"), "utf8");
+    for (const twin of TWINS) {
+      expect(fixture).toContain(twin);
+      expect(TWINS).toContain(twin.startsWith("bad-") ? twin.replace("bad-", "good-") : twin.replace("good-", "bad-"));
     }
   });
 

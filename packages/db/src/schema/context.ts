@@ -184,7 +184,8 @@ export const proposalTargetEnum = pgEnum("proposal_target", [
   "skill",
   "agent_settings",
 ]);
-export const proposalStatusEnum = pgEnum("proposal_status", ["pending", "accepted", "rejected", "stale"]);
+/** `undone`: applied, then put back by a person (ADR 0219). */
+export const proposalStatusEnum = pgEnum("proposal_status", ["pending", "accepted", "rejected", "stale", "undone"]);
 
 /** An app turned on or off for an agent: `request_permission`'s unit (a built-in scope or `connector:<connectionId>`). */
 export interface ProposedAccessLine {
@@ -198,11 +199,13 @@ export interface ProposedAccessLine {
  * One setting of an agent the team's right hand proposes to change (ADR 0137): its value then (`from`) and the one
  * proposed (`to`). `channel_add` / `channel_remove` / `reply_mode` name their channel in `channelId`, `skill` (on or
  * off) its skill in `skillId`; `label` is what the card shows for a value that is an id (a model's, an account's, a
- * person's or a channel's name, the skill's).
+ * person's or a channel's name, the skill's). `group` holds its department's name, or null for none. `effort` holds how
+ * hard it thinks as `agents.brain_effort` stores it (null: its default).
  */
 export interface ProposedSettingLine {
   field:
     | "model"
+    | "effort"
     | "ai_account"
     | "budget"
     | "owner"
@@ -213,6 +216,7 @@ export interface ProposedSettingLine {
     | "skill"
     | "name"
     | "look"
+    | "group"
     | "reports_to"
     | "archive"
     | "delete";
@@ -221,6 +225,10 @@ export interface ProposedSettingLine {
   channelId?: string;
   skillId?: string;
   label?: { from?: string; to?: string };
+  /** `budget`: at or below what the agent spent this month, so applying it stops the agent at once. */
+  pausesNow?: boolean;
+  /** The team's right hand's `model` or `effort`: the person whose own AI (`right_hand_brains`) it changes. */
+  person?: string;
 }
 
 /**
@@ -261,7 +269,13 @@ export const contextProposals = pgTable(
     itemIds: uuid().array().notNull().default(sql`'{}'::uuid[]`),
     status: proposalStatusEnum().notNull().default("pending"),
     decidedByUserId: text().references(() => users.id, { onDelete: "set null" }),
+    /** The agent that decided it after its review (ADR 0219); null when a person did. */
+    decidedByAgentId: uuid().references(() => agents.id, { onDelete: "set null" }),
+    /** The review's one line on why it was applied or left out (English, for the agent and the apps). */
+    review: text(),
     decidedAt: timestamp({ withTimezone: true }),
+    undoneByUserId: text().references(() => users.id, { onDelete: "set null" }),
+    undoneAt: timestamp({ withTimezone: true }),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

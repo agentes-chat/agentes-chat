@@ -1,4 +1,4 @@
-import { pairAddress } from "@agenteschat/adapters";
+import { pairAddress, TASK_LIMIT_BOUNDS } from "@agenteschat/adapters";
 import {
   approveDeviceJoin,
   cancelWifiPairing,
@@ -8,11 +8,16 @@ import {
   deleteMachine,
   denyDeviceJoin,
   forgetPhone,
+  IPHONE_REPAIR_LIMIT,
+  installHelpClis,
   listDevices,
   lookForPhones,
   normalizeUserCode,
   openConnectLink,
+  openXcode,
   pickIphoneOverWifi,
+  repairIphone,
+  setDevicesHelp,
   startWifiPairing,
   stopPhone,
   updateComputerDevice,
@@ -20,6 +25,7 @@ import {
   ValidationError,
   wifiIphones,
   wifiPairingState,
+  xcodeFix,
 } from "@agenteschat/engine";
 import { createRoute, type OpenAPIHono, z } from "@hono/zod-openapi";
 import type { Context } from "hono";
@@ -29,6 +35,7 @@ import {
   installScript,
   installScriptPowerShell,
 } from "../../runner/install-script";
+import { migrateScript, migrateScriptPowerShell } from "../../runner/migrate-script";
 import { requestLimitIp } from "../http/client-ip";
 import { apiError, errorResponse } from "../http/errors";
 import {
@@ -70,11 +77,21 @@ const Status = z
       label: z.string().optional(),
       since: z.string(),
     }),
-    z.object({ kind: z.literal("busy"), running: z.number().int(), max: z.number().int() }),
+    z.object({ kind: z.literal("busy"), running: z.number().int(), max: z.number().int().nullable() }),
     z.object({ kind: z.literal("needs_you"), reason: Reason }),
     z.object({ kind: z.literal("preparing"), reason: Reason }),
     z.object({ kind: z.literal("paused"), until: z.string().nullable() }),
-    z.object({ kind: z.literal("offline"), lastSeenAt: z.string().nullable(), withHost: z.boolean().optional() }),
+    z.object({ kind: z.literal("moving"), since: z.string() }).openapi({
+      description: "The workspace's own computer, away while it moves to another server: back in a few minutes.",
+    }),
+    z.object({
+      kind: z.literal("offline"),
+      lastSeenAt: z.string().nullable(),
+      withHost: z.boolean().optional(),
+      cause: z.enum(["unresponsive", "stopped", "dropped"]).optional().openapi({
+        description: "A computer someone brought: why it went offline (`Machine.offlineCause`). Absent: unknown.",
+      }),
+    }),
     z.object({ kind: z.literal("unsupported"), reason: Reason }),
   ])
   .openapi("DeviceStatus");
@@ -110,11 +127,29 @@ const Computer = z
     memoryGb: z.number().nullable(),
     ownerUserId: z.string().nullable(),
     belongsToWorkspace: z.boolean(),
+    spill: z.object({ own: z.boolean(), first: z.boolean() }).openapi({
+      description:
+        "\"Help when the team's computer is full or away\" (`own`): while an agent's own computer is full or away, fresh turns of its owner's agents (anyone's, on a computer marked the workspace's) may think here, on a sign-in of the agent's owner. \"Use this computer for my agents' work\" (`first`, implies `own`): its owner's agents' asks, routines and long work start here whenever it is free.",
+    }),
+    shareInternet: z.object({ on: z.boolean(), inUse: z.boolean() }).nullable().openapi({
+      description:
+        "A person's computer in a workspace with its own computer (ADR 0237): whether its owner lends it its internet, and whether the workspace's computer's web traffic goes out through it now. Null: nothing to lend to.",
+    }),
     systemMode: z.boolean().openapi({ description: "Each agent works as its own OS user there (a server install)." }),
     audience: Audience,
     status: Status,
     maxTasks: z.number().int().nullable(),
+    taskRoom: z
+      .object({ more: z.number().int(), freeGb: z.number(), cpuBusy: z.boolean(), pushHarder: z.boolean() })
+      .nullable()
+      .openapi({
+        description:
+          "Tasks start on room there, not on `maxTasks`: about how many more fit now, the free memory in GB, whether the processor stays near full, and the owner's Push harder. Null: the count decides.",
+      }),
     toolchains: z.record(z.string(), z.string()),
+    opensXcode: z.boolean().openapi({
+      description: "A Mac whose agentes.chat opens Xcode and looks at its iPhone again for the iPhone guide.",
+    }),
     lastSeenAt: z.string().nullable(),
     mayUse: z.boolean(),
     mayManage: z.boolean(),
@@ -190,6 +225,23 @@ const WifiIphones = z
   })
   .openapi("WifiIphones");
 
+const XcodeFixView = z
+  .object({
+    fix: z
+      .object({
+        kind: z.enum(["select", "update"]),
+        state: z.enum(["asking", "running", "done", "canceled", "no_answer", "failed", "unsupported"]),
+        step: z.number().int().min(0).max(3),
+        message: z.string().optional(),
+      })
+      .nullable(),
+    update: z.literal(true).optional(),
+  })
+  .openapi("XcodeFix", {
+    description:
+      "A fix of the Mac's Xcode: `asking` (macOS's password window is open on the Mac), `running` (`step` of 3 done), `done`, `canceled`, `no_answer` (nobody typed the password in 3 minutes), `failed` (`message`), `unsupported` (this Mac can't: a system-mode runner, no Xcode in /Applications). `update`: the Mac's agentes.chat is too old for it.",
+  });
+
 const MachineParams = OrgParams.extend({ machineId: z.uuid() });
 const WifiIphoneParams = MachineParams.extend({ serial: z.string().min(1).max(200) });
 const PairingParams = MachineParams.extend({ pairingId: z.uuid() });
@@ -201,6 +253,10 @@ const RequestParams = OrgParams.extend({ requestId: z.uuid() });
 const LINK_LIMIT = { limit: 20, windowMs: 10 * 60_000 };
 /** Wi-Fi pairings per person: each runs adb on the computer for up to 2 minutes. */
 const PAIR_LIMIT = { limit: 30, windowMs: 10 * 60_000 };
+/** Xcode fixes per person: each may open a password window on someone's Mac. */
+const XCODE_FIX_LIMIT = { limit: 10, windowMs: 10 * 60_000 };
+/** Xcode opened on a Mac per person: each puts a window on someone's screen. */
+const XCODE_OPEN_LIMIT = { limit: 10, windowMs: 10 * 60_000 };
 /** Installer fetches per address (`/i/{code}`): a person retrying, not someone guessing codes. */
 const SCRIPT_LIMIT = { limit: 30, windowMs: 60_000 };
 
@@ -230,7 +286,18 @@ export function deviceAppRoutes(deps: AppDeps) {
       description:
         "Every member sees every device; `requests` only the maker of their link and admins. Changes come as the `devices.changed` org event and the `machine.*` ones: refetch.",
       request: { params: OrgParams },
-      responses: { 200: json(z.object({ devices: z.array(Computer), requests: z.array(JoinRequest) })), ...errors },
+      responses: {
+        200: json(
+          z.object({
+            devices: z.array(Computer),
+            requests: z.array(JoinRequest),
+            devicesHelp: z.boolean().openapi({
+              description: "People's computers may help when the workspace's is full or away (an admin's switch).",
+            }),
+          }),
+        ),
+        ...errors,
+      },
     }),
     async (c) => {
       const { orgId } = c.req.valid("param");
@@ -240,13 +307,33 @@ export function deviceAppRoutes(deps: AppDeps) {
 
   app.openapi(
     createRoute({
+      method: "put",
+      path: "/organizations/{orgId}/devices/help",
+      tags,
+      security,
+      summary: "Let people's computers help when the workspace's computer is full or away, or stop them all",
+      description:
+        "Admins (`configure`). Off: no computer takes another's turns, whatever its owner's switch says; on again, each follows its owner's switch. Sends `devices.changed`.",
+      request: { params: OrgParams, body: body(z.object({ on: z.boolean() })) },
+      responses: { 200: json(z.object({ on: z.boolean() })), ...errors },
+    }),
+    async (c) => {
+      const { orgId } = c.req.valid("param");
+      const on = await setDevicesHelp({ db, pubsub }, c.get("user").id, orgId, c.req.valid("json").on);
+      return c.json({ on }, 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
       method: "patch",
       path: "/organizations/{orgId}/devices/computers/{machineId}",
       tags,
       security,
-      summary: "Rename a computer, change who can use it, mark it the workspace's",
+      summary:
+        "Rename a computer, change who can use it, mark it the workspace's, let it help when the team's computer is full or away, set its tasks at once",
       description:
-        "Its owner: anything. An admin: rename, mark it the workspace's, and narrow who can use someone's own computer (`device.widen_forbidden` otherwise). Never the workspace's computer (`machine.managed`).",
+        "Its owner: anything. An admin: rename, mark it the workspace's, and narrow who can use someone's own computer (`device.widen_forbidden` otherwise). Never the workspace's computer (`machine.managed`). Only its owner turns its help on (`device.spill_owner_only`), which starts installing the CLIs their agents think with that it lacks, and changes its tasks at once or Push harder (`device.tasks_owner_only`; an admin too on a computer nobody connected; never on a Cloud computer, `device.tasks_cloud`), which the computer applies: it must be online (`machine.offline`) with an app that can (`machine.outdated`). Only its owner lends its internet to the workspace's own computer (`shareInternet`, `device.share_owner_only`; on again picks it first); an admin may stop it; only a person's own computer lends (`device.share_connected_only`).",
       request: {
         params: MachineParams,
         body: body(
@@ -254,6 +341,10 @@ export function deviceAppRoutes(deps: AppDeps) {
             name: z.string().min(1).max(80).optional(),
             audience: Audience.optional(),
             belongsToWorkspace: z.boolean().optional(),
+            spill: z.object({ own: z.boolean().optional(), first: z.boolean().optional() }).optional(),
+            maxTasks: z.number().int().min(TASK_LIMIT_BOUNDS[0]).max(TASK_LIMIT_BOUNDS[1]).optional(),
+            pushHarder: z.boolean().optional(),
+            shareInternet: z.boolean().optional(),
           }),
         ),
       },
@@ -261,13 +352,18 @@ export function deviceAppRoutes(deps: AppDeps) {
     }),
     async (c) => {
       const { orgId, machineId } = c.req.valid("param");
+      const input = c.req.valid("json");
+      const machineHub = deps.extras?.sandbox?.machines?.hub;
       const device = await updateComputerDevice(
-        { db, pubsub },
+        { db, pubsub, hub: machineHub },
         c.get("user").id,
         orgId,
         machineId,
-        c.req.valid("json"),
+        input,
       );
+      // Best effort: the switch is saved, and a turn that finds no CLI there says so later.
+      if ((input.spill?.own === true || input.spill?.first === true) && machineHub)
+        await installHelpClis({ db, pubsub, hub: machineHub }, c.get("user").id, orgId, machineId).catch(() => []);
       return c.json(device, 200);
     },
   );
@@ -418,6 +514,110 @@ export function deviceAppRoutes(deps: AppDeps) {
       const { orgId, machineId } = c.req.valid("param");
       await lookForPhones({ db, hub: hub() }, c.get("user").id, orgId, machineId);
       return c.body(null, 204);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/devices/computers/{machineId}/xcode-fix",
+      tags,
+      security,
+      summary: "Fix this Mac's Xcode for an iPhone (its owner or an admin)",
+      description:
+        "`select`: the Mac puts Xcode in use, accepts its license and installs its first-launch packages; macOS asks for the Mac's password in its own window, on that Mac. `update`: the Mac gets the support files for an iPhone's newer iOS, no password. One at a time; ask `GET` for where it stands. Once done, the Mac looks at Xcode again at once.",
+      request: { params: MachineParams, body: body(z.object({ kind: z.enum(["select", "update"]) }).strict()) },
+      responses: { 200: json(XcodeFixView), 429: errorResponse("Too many fixes"), ...errors },
+    }),
+    async (c) => {
+      const { orgId, machineId } = c.req.valid("param");
+      const userId = c.get("user").id;
+      const limit = await deps.adapters.rateLimiter.consume(`xcode-fix:user:${userId}`, XCODE_FIX_LIMIT);
+      if (!limit.allowed) return apiError(c, 429, "rate_limited", "Too many tries. Try again in a few minutes.");
+      const { kind } = c.req.valid("json");
+      return c.json(await xcodeFix({ db, hub: hub() }, userId, orgId, machineId, "start", kind), 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "get",
+      path: "/organizations/{orgId}/devices/computers/{machineId}/xcode-fix",
+      tags,
+      security,
+      summary: "Where this Mac's Xcode fix stands (its owner or an admin)",
+      request: { params: MachineParams },
+      responses: { 200: json(XcodeFixView), ...errors },
+    }),
+    async (c) => {
+      const { orgId, machineId } = c.req.valid("param");
+      return c.json(await xcodeFix({ db, hub: hub() }, c.get("user").id, orgId, machineId, "status"), 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "delete",
+      path: "/organizations/{orgId}/devices/computers/{machineId}/xcode-fix",
+      tags,
+      security,
+      summary: "Stop this Mac's Xcode fix (its password window closes)",
+      request: { params: MachineParams },
+      responses: { 200: json(XcodeFixView), ...errors },
+    }),
+    async (c) => {
+      const { orgId, machineId } = c.req.valid("param");
+      return c.json(await xcodeFix({ db, hub: hub() }, c.get("user").id, orgId, machineId, "cancel"), 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/devices/computers/{machineId}/xcode-open",
+      tags,
+      security,
+      summary: "Open Xcode on this Mac (its owner or an admin)",
+      description:
+        "Xcode, open with an iPhone plugged in, shows the Developer Mode switch in the iPhone's Settings when it is hidden. `opened: false`: the Mac's agentes.chat is too old for it, or Xcode didn't open.",
+      request: { params: MachineParams },
+      responses: {
+        200: json(z.object({ opened: z.boolean() }).openapi("XcodeOpened")),
+        429: errorResponse("Too many tries"),
+        ...errors,
+      },
+    }),
+    async (c) => {
+      const { orgId, machineId } = c.req.valid("param");
+      const userId = c.get("user").id;
+      const limit = await deps.adapters.rateLimiter.consume(`xcode-open:user:${userId}`, XCODE_OPEN_LIMIT);
+      if (!limit.allowed) return apiError(c, 429, "rate_limited", "Too many tries. Try again in a few minutes.");
+      return c.json(await openXcode({ db, hub: hub() }, userId, orgId, machineId), 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/devices/phones/{phoneId}/repair",
+      tags,
+      security,
+      summary: "Repair a real iPhone's test helper (its Mac's owner or an admin)",
+      description:
+        "The Mac stops the iPhone's test helper and whatever is left of it, builds it again with the Xcode installed there now and checks it on the iPhone, in a few minutes; the phone's state shows it. What runs on the phone stops. `update`: the Mac's agentes.chat is too old for it.",
+      request: { params: PhoneParams, body: body(z.object({}).strict()) },
+      responses: {
+        200: json(z.object({ repairing: z.boolean(), update: z.literal(true).optional() }).openapi("IphoneRepair")),
+        429: errorResponse("Too many repairs"),
+        ...errors,
+      },
+    }),
+    async (c) => {
+      const { orgId, phoneId } = c.req.valid("param");
+      const userId = c.get("user").id;
+      const limit = await deps.adapters.rateLimiter.consume(`iphone-repair:user:${userId}`, IPHONE_REPAIR_LIMIT);
+      if (!limit.allowed) return apiError(c, 429, "rate_limited", "Too many tries. Try again in a few minutes.");
+      return c.json(await repairIphone({ db, hub: hub() }, userId, orgId, phoneId), 200);
     },
   );
 
@@ -628,4 +828,8 @@ export function registerConnectScripts(app: OpenAPIHono, deps: AppDeps) {
   };
   app.get("/i/:code", serve(false));
   app.get("/i/:code/ps", serve(true));
+  // `agentes-runner migrate`, run once without installing or connecting anything (ADR 0055, addendum 2026-11-16):
+  // the same for everyone, so no code and nothing of the caller's in it.
+  app.get("/migrate.sh", (c) => c.body(migrateScript(config.PUBLIC_URL), 200, SH));
+  app.get("/migrate.ps1", (c) => c.body(migrateScriptPowerShell(config.PUBLIC_URL), 200, PS));
 }

@@ -32,6 +32,10 @@ export const strings: Partial<PushStrings> = {
   machineConnectedTitle: "В рабочем пространстве новый компьютер",
   computerReadyTitle: "Компьютер вашего рабочего пространства готов",
   computerReadyBody: "Откройте страницу агента, чтобы смотреть вживую.",
+  computerDownTitle: (n) => `${n} не отвечает`,
+  computerDownBody: "Работа ваших агентов на нём ждёт. Нажмите, чтобы узнать, что делать.",
+  computerBackTitle: (n) => `${n} снова на связи`,
+  computerBackBody: (away) => `Он был недоступен ${away}. Ожидавшая работа продолжается.`,
   browserHandoffTitle: (a) => `${a}: нужна ваша помощь в браузере`,
   browserHandoffReminderTitle: (a) => `${a}: всё ещё нужна ваша помощь в браузере`,
   browserHandoffBody: "Нажмите, чтобы открыть экран.",
@@ -83,6 +87,18 @@ export const strings: Partial<PushStrings> = {
   deviceAccessTitle: (a, p, d) =>
     p ? `${a} (для ${p}) просит доступ к вашему устройству ${d}` : `${a} просит доступ к вашему устройству ${d}`,
   deviceAccessBody: "Нажмите, чтобы разрешить один раз, всегда или отказать.",
+  deviceToolTitle: (a, d) => `${a} просит включить инструмент на вашем ${d}`,
+  deviceToolBody: "Нажмите, чтобы включить в один клик.",
+  deviceCliTitle: (a, d) => `${a} просит установить программу на вашем ${d}`,
+  deviceCliBody: "Нажмите, чтобы установить в один клик.",
+  deviceFolderTitle: (a, f, d) => (f ? `${a} просит ${f} на вашем ${d}` : `${a} просит папку на вашем ${d}`),
+  deviceFolderBody: "Разрешите её в приложении на этом компьютере.",
+  adminAskTitle: (a, what, l) =>
+    what === "channel_agent"
+      ? `${a} просит добавить агента в #${l}`
+      : what === "create_agents"
+        ? `${a} просит разрешить создавать агентов`
+        : `${a} просит настроить вебхук ${l} для рутин`,
   deviceWaitingTitle: (p, d) => `Агент для ${p} ждёт ваше устройство ${d}`,
   deviceWaitingBody: "Начнёт, когда оно вернётся.",
   teamWeekReady: "Итоги недели команды готовы",
@@ -95,4 +111,5 @@ export const strings: Partial<PushStrings> = {
   joinRequestTitlePersonal: (name) => `${name} просит доступ в ваше рабочее пространство`,
   joinSuggestionTitlePersonal: (by, name) => `${by} предлагает пригласить ${name}`,
   teamWeekReadyPersonal: "Итоги вашей недели готовы",
+  teamWatchStill: (n) => `Вас всё ещё ждёт: ${n}`,
 };

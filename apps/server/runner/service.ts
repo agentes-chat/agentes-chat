@@ -49,7 +49,7 @@ export function agentLimits(memoryBytes: number, host: boolean): { each: string;
   const swapMiB = Math.floor((memoryBytes * share) / 100 / 3 / 2 ** 20);
   return {
     each: "[Slice]\nCPUWeight=100\nTasksMax=4096\n",
-    all: `[Slice]\nMemoryMax=${share}%\nMemorySwapMax=${swapMiB}M\nTasksMax=50%\n`,
+    all: `[Slice]\nMemoryMax=${share}%\nMemorySwapMax=${swapMiB}M\nTasksMax=50%\nCPUWeight=50\nIOWeight=50\n`,
   };
 }
 /**
@@ -64,22 +64,55 @@ export const agentSliceLimitsPath = (unitPath = SYSTEM_UNIT_PATH) =>
   path.join(path.dirname(unitPath), `${AGENT_SLICE_PREFIX}.slice.d`, "limits.conf");
 export const allAgentsLimitsPath = (unitPath = SYSTEM_UNIT_PATH) =>
   path.join(path.dirname(unitPath), "agents.slice.d", "limits.conf");
+/**
+ * The runner ahead of the agents when they saturate the computer, so its heartbeats, admissions and cancels keep
+ * their pace. Weights compare siblings only: `agents.slice` at 50 against `system.slice`'s default 100, the runner at
+ * 1000 within `system.slice`, for CPU and IO; and memory the kernel doesn't take back from it. No
+ * `Nice`, `IOSchedulingClass` or `OOMScoreAdjust`: the agents' scopes start from the runner's process context
+ * (`systemd-run --scope`) and would inherit them, and a negative OOM score would make their Chrome unkillable.
+ * `IOWeight` counts only where the disk's scheduler weighs (BFQ, io.cost).
+ */
+const RUNNER_RESOURCES = ["CPUWeight=1000", "IOWeight=1000", "MemoryMin=256M"];
+/** A unit's memory protection is bounded by its parent's: `system.slice` holds the runner's too. */
+export const SYSTEM_SLICE_MEMORY = "[Slice]\nMemoryMin=256M\n";
+export const systemSliceMemoryPath = (unitPath = SYSTEM_UNIT_PATH) =>
+  path.join(path.dirname(unitPath), "system.slice.d", `${SERVICE_NAME}.conf`);
 /** `agents.slice` in the cgroup tree (cgroup v2), where its counters are (`memory.events`). */
 export const AGENTS_CGROUP = "/sys/fs/cgroup/agents.slice";
 export const agentCgroup = (uid: number) => path.join(AGENTS_CGROUP, agentSlice(uid));
 /**
- * Each agent's own /tmp, /dev/shm and /run/lock (`<uid>/tmp`, `shm`, `lock`): in memory as the computer's are, on a
- * tmpfs of the agent's own at `<uid>`, in a folder only root can reach.
+ * Each agent's own /dev/shm and /run/lock (`<uid>/shm`, `lock`): in memory as the computer's are, on a tmpfs of the
+ * agent's own at `<uid>`, in a folder only root can reach. Its /tmp is `<uid>/tmp` there, bound from its folder in
+ * `AGENT_TMP_POOL` or (`agentTmpOnDisk`) in `AGENT_DISK_TMP_ROOT`.
  */
 export const AGENT_RAM_ROOT = "/run/agentes-runner-tmp";
+/**
+ * The agents' /tmp in memory (ADR 0243): one tmpfs for all of them, `<uid>` each, at most `AGENT_TMP_POOL_SHARE`% of
+ * the RAM together. Its root is root's and 0700.
+ */
+export const AGENT_TMP_POOL = "/run/agentes-runner-tmp-pool";
+/**
+ * 20%: the agents together may use 75% of the RAM (`AGENTS_SHARE`), and the kernel can't drop a tmpfs's pages, only
+ * swap them, so this keeps at least 55% for their programs whatever /tmp holds. It is also the kernel's own default
+ * for unwritten file data (`vm.dirty_ratio`), which is the budget /tmp on disk gets.
+ */
+export const AGENT_TMP_POOL_SHARE = 20;
 /** Each agent's own /var/tmp (`<uid>/var-tmp`): on disk as the computer's is, in a folder only root can reach. */
 export const AGENT_TMP_ROOT = "/var/lib/agentes-runner-tmp";
+/**
+ * The agents' /tmp on disk (`agentTmpOnDisk`), in a folder only root can reach: a filesystem of their own, `image`,
+ * made anew at every boot and mounted at `fs`, each agent's /tmp `fs/<uid>`. On the system disk: never under the
+ * workspace's paths, which the Cloud keeps on a data disk that moves and backups copy.
+ */
+export const AGENT_DISK_TMP_ROOT = "/var/cache/agentes-runner-tmp";
 export const agentTmp = (uid: number) => path.join(AGENT_RAM_ROOT, String(uid), "tmp");
 /**
- * systemd-tmpfiles' lines for them: what agents leave goes after 10 days, 30 in /var/tmp, as in a stock system. Each
- * agent's runtime dir (`run`, ADR 0169) never ages, as logind's don't: a container up for weeks keeps its state there.
+ * systemd-tmpfiles' lines for them: what agents leave goes after 10 days, 30 in /var/tmp, as in a stock system (the
+ * agents' /tmp on disk too, through its bind in the agent's tmpfs). The boot removes the image of the agents' /tmp on
+ * disk (`r!`: never on a later `--remove`), so a computer switched back to memory doesn't keep its room. Each agent's
+ * runtime dir (`run`, ADR 0169) never ages, as logind's don't: a container up for weeks keeps its state there.
  */
-export const AGENT_TMP_CLEANUP = `# agentes.chat runner: each agent's own temporary folders\ne ${AGENT_RAM_ROOT}/*/* - - - 10d\nx ${AGENT_RAM_ROOT}/*/run\ne ${AGENT_TMP_ROOT}/*/* - - - 30d\n`;
+export const AGENT_TMP_CLEANUP = `# agentes.chat runner: each agent's own temporary folders\ne ${AGENT_RAM_ROOT}/*/* - - - 10d\nx ${AGENT_RAM_ROOT}/*/run\ne ${AGENT_TMP_ROOT}/*/* - - - 30d\nr! ${AGENT_DISK_TMP_ROOT}/image\n`;
 /** In `/etc/tmpfiles.d`, two folders up from the unit's (`/etc/systemd/system`). */
 export const agentTmpCleanupPath = (unitPath = SYSTEM_UNIT_PATH) =>
   path.join(path.dirname(unitPath), "..", "..", "tmpfiles.d", `${SERVICE_NAME}.conf`);
@@ -139,6 +172,8 @@ export interface ServiceDefinition {
   keepChildren?: boolean;
   /** launchd: the file its output goes to (none: discarded). */
   log?: string;
+  /** systemd: `[Service]` lines for its share of the computer. */
+  resources?: string[];
 }
 
 /** The systemd unit of a service. `KillMode=process` keeps its children, which are in the unit's cgroup. */
@@ -158,6 +193,7 @@ export function systemdUnitText(d: ServiceDefinition, wantedBy: string): string 
     "RestartSec=5",
     `RestartPreventExitStatus=${d.finalExits.join(" ")}`,
     ...(d.keepChildren ? ["KillMode=process"] : []),
+    ...(d.resources ?? []),
     "",
     "[Install]",
     `WantedBy=${wantedBy}`,
@@ -204,7 +240,13 @@ ${[...(d.keepChildren ? ["  <key>AbandonProcessGroup</key>\n  <true/>"] : []), "
  */
 function runnerService(
   launch: Launch,
-  o: { description: string; path: string; args?: readonly string[]; manager: "systemd" | "launchd" },
+  o: {
+    description: string;
+    path: string;
+    args?: readonly string[];
+    manager: "systemd" | "launchd";
+    resources?: string[];
+  },
 ): ServiceDefinition {
   return {
     unit: SERVICE_NAME,
@@ -220,6 +262,7 @@ function runnerService(
     finalExits: [0, 2, 3],
     keepChildren: true,
     log: path.join(launch.home, "runner.log"),
+    ...(o.resources ? { resources: o.resources } : {}),
   };
 }
 
@@ -244,6 +287,7 @@ export function systemdSystemUnit(launch: Launch, args?: readonly string[]): str
       description: "agentes.chat runner (each agent as its own user)",
       path: SYSTEM_PATH,
       manager: "systemd",
+      resources: RUNNER_RESOURCES,
       ...(args ? { args } : {}),
     }),
     "multi-user.target",
@@ -390,6 +434,35 @@ export function removeUserService(d: Pick<ServiceDefinition, "unit" | "label">, 
   return file;
 }
 
+/**
+ * A runner removed from its workspace (`revoked`) takes its own login service away before it exits: a leftover
+ * launchd agent or systemd unit would start it at every login, only to be refused again. Not on `invalid_token`: a
+ * server reset or restored from a backup would uninstall runners still wanted. No `launchctl bootout` (it would kill
+ * this process mid-exit); the exit code already stops launchd and systemd from starting it again. Returns the file
+ * removed, or null when this runner wasn't started by one.
+ */
+export function removeOwnService(
+  o: { manager: string | undefined; home?: string; uid?: number; platform?: NodeJS.Platform },
+  run: RunCommand = runSync,
+): string | null {
+  const platform = o.platform ?? process.platform;
+  const home = o.home ?? os.homedir();
+  if (o.manager === "launchd" && platform === "darwin") {
+    const file = launchdPlistPath(home);
+    if (!existsSync(file)) return null;
+    rmSync(file, { force: true });
+    return file;
+  }
+  if (o.manager !== "systemd" || platform !== "linux") return null;
+  const system = (o.uid ?? process.getuid?.() ?? -1) === 0;
+  const file = system ? SYSTEM_UNIT_PATH : systemdUnitPath(home);
+  if (!existsSync(file)) return null;
+  run("systemctl", [...(system ? [] : ["--user"]), "disable", SERVICE_NAME]);
+  rmSync(file, { force: true });
+  run("systemctl", [...(system ? [] : ["--user"]), "daemon-reload"]);
+  return file;
+}
+
 /** Where the user unit or the launchd agent is installed (with systemd's state), or null. */
 export function userServiceStatus(d: Pick<ServiceDefinition, "unit" | "label">, run: RunCommand = runSync) {
   if (process.platform === "darwin") {
@@ -400,6 +473,32 @@ export function userServiceStatus(d: Pick<ServiceDefinition, "unit" | "label">, 
   if (!existsSync(file)) return null;
   const active = run("systemctl", ["--user", "is-active", d.unit]).output || "unknown";
   return `systemd user unit ${file} (${active})`;
+}
+
+/** Whether systemd keeps `user`'s services running after they log out (loginctl's Linger); null: it can't say. */
+export function lingerOn(user: string, run: RunCommand = runSync): boolean | null {
+  const r = run("loginctl", ["show-user", user, "--property=Linger"]);
+  const value = r.code === 0 ? /^Linger=(yes|no)$/m.exec(r.output)?.[1] : undefined;
+  return value === undefined ? null : value === "yes";
+}
+
+/**
+ * Turns linger on for `user` (most systems let people do it for themselves), so a user unit outlives their logout.
+ * True when it is on.
+ */
+export function keepAfterLogout(user: string, run: RunCommand = runSync): boolean {
+  if (lingerOn(user, run)) return true;
+  run("loginctl", ["enable-linger", user]);
+  return lingerOn(user, run) === true;
+}
+
+/** With the runner installed as this user's systemd unit: whether it outlives their logout. Null otherwise. */
+export function userUnitLinger(
+  o: { platform?: NodeJS.Platform; home?: string; user?: string } = {},
+  run: RunCommand = runSync,
+): boolean | null {
+  if ((o.platform ?? process.platform) !== "linux" || !existsSync(systemdUnitPath(o.home))) return null;
+  return lingerOn(o.user ?? os.userInfo().username, run);
 }
 
 /** Installs and starts the service. Returns the process exit code. */
@@ -416,7 +515,9 @@ export function installService(io: ServiceIo): number {
     if (!startUserUnit(SERVICE_NAME, systemdUnit(launch, io.args), { print, run })) return 1;
     print(`Installed ${systemdUnitPath()} and started it.`);
     print(`Logs: journalctl --user -u ${SERVICE_NAME} -f`);
-    print(`To keep it running after you log out: loginctl enable-linger ${os.userInfo().username}`);
+    const user = os.userInfo().username;
+    if (keepAfterLogout(user, run)) print(`Linger is on for ${user}: it keeps running after you log out.`);
+    else print(`It stops when you log out. To keep it running, run as root: loginctl enable-linger ${user}`);
     return 0;
   }
   if (process.platform === "darwin") {
@@ -493,6 +594,7 @@ export function installSystemService(io: SystemServiceIo): number {
   const limits: [file: string, text: string][] = [
     [agentSliceLimitsPath(file), each],
     [allAgentsLimitsPath(file), all],
+    [systemSliceMemoryPath(file), SYSTEM_SLICE_MEMORY],
     [agentTmpCleanupPath(file), AGENT_TMP_CLEANUP],
   ];
   for (const [dropIn, text] of limits) {
@@ -548,6 +650,7 @@ export function uninstallService(io: ServiceIo & { system?: boolean }): number {
     if (existsSync(SYSTEM_UNIT_PATH)) rmSync(SYSTEM_UNIT_PATH);
     rmSync(agentSliceLimitsPath(), { force: true });
     rmSync(allAgentsLimitsPath(), { force: true });
+    rmSync(systemSliceMemoryPath(), { force: true });
     rmSync(agentTmpCleanupPath(), { force: true });
     run("systemctl", ["daemon-reload"]);
     print(`Removed ${SYSTEM_UNIT_PATH}.`);

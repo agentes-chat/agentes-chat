@@ -16,6 +16,7 @@ import type { Platform } from "../control/platform";
 import type { ServerList, ServerWorkspaces } from "../control/server";
 import type { ThisMacRequest } from "../control/this-mac";
 import type { TrayState } from "../control/tray";
+import type { ReportFacts } from "../report/report";
 
 /** The app's windows (Tauri labels). */
 export type WindowName = "popover" | "welcome" | "prefs" | "notch";
@@ -50,6 +51,17 @@ export interface AppInfo {
   arch: string;
   /** The system's own version where the app reads it (macOS: `15.1`). */
   system?: string | null;
+  /** The line to copy: versions, and on Linux how it draws ("agentes.chat 0.8.9 · Linux · Ubuntu 26.04 LTS · …"). */
+  details: string;
+}
+
+/** Linux's Compatibility mode (graphics.rs): drawing without the graphics card at the next opening. */
+export interface CompatMode {
+  on: boolean;
+  /** This opening fell back: the last one, with the graphics card, never painted. True for the first ask only. */
+  fellBack: boolean;
+  /** WEBKIT_DISABLE_DMABUF_RENDERER was set when the app started: it decides (`on` says what it does), not the switch. */
+  own: boolean;
 }
 
 /** A server's answer to `siteFetch`: its status and body as text. */
@@ -113,8 +125,12 @@ export interface Host {
    * code (`site_fetch` in workspaces.rs allows only those).
    */
   siteFetch(server: string, method: string, path: string, body?: string): Promise<SiteAnswer>;
-  /** How the welcome window opens, taken once: `add` from the site's "Add a workspace", else null. */
-  welcomeMode(): Promise<"add" | null>;
+  /**
+   * How the welcome window opens, taken once: `add` from the site's "Add a workspace", `owner` when the app opened it
+   * on Run here's form to make a new owner (no account is left on the server it runs, or it was just erased), else
+   * null.
+   */
+  welcomeMode(): Promise<"add" | "owner" | null>;
   /** The welcome window in its adding mode ("Add a workspace", from Preferences). */
   addWorkspace(): Promise<void>;
   /** Takes `server` out of the list (the server and the account there stay as they are). */
@@ -138,7 +154,19 @@ export interface Host {
   showWindow(name: WindowName): Promise<void>;
   hideWindow(name: WindowName): Promise<void>;
   quit(): Promise<void>;
+  /**
+   * Asks with the system's own dialog whether to quit, and quits on yes (`quit_ask`): a window of its own, which stays
+   * up while another window takes focus. True when the person chose to quit.
+   */
+  askQuit(words: { title: string; body: string; quit: string; cancel: string }): Promise<boolean>;
   appInfo(): Promise<AppInfo>;
+  /** This computer's system, size and web view's memory, and this opening, for a problem report (vitals.rs). */
+  reportFacts(): Promise<ReportFacts>;
+  /** Linux: Compatibility mode as the next opening will have it. */
+  compatMode(): Promise<CompatMode>;
+  setCompatMode(on: boolean): Promise<void>;
+  /** Quits and opens the app again, for a setting read only when it starts. */
+  reopen(): Promise<void>;
   autostart(): Promise<boolean>;
   setAutostart(on: boolean): Promise<void>;
   notify(title: string, body: string): Promise<void>;
@@ -171,8 +199,6 @@ export interface Host {
   onMenuAction(cb: (action: MenuAction) => void): () => void;
   /** The popover listens for the site's requests now (requests sent before that wait, main_window.rs). */
   thisMacListening(): Promise<void>;
-  /** Preferences → "Show in the Dock" (dock.rs): off, the app lives in the menu bar while no window shows. */
-  setDock(show: boolean): Promise<void>;
   /** Preferences › "Let me know about messages and requests": whether the site's notifications show. */
   setSiteNotify(on: boolean): Promise<void>;
   /** The Dock's counts whenever the site changes them. */
@@ -210,6 +236,13 @@ export interface Host {
   setLocalBackups(nightly: boolean, copyTo: string | null): Promise<void>;
   /** The server here goes back to one of its backups; rejects with `start` when that backup didn't start. */
   restoreLocalServer(file: string): Promise<void>;
+  /**
+   * "Erase and start over": it stops, its folder moves whole to `eraseTo`, the app forgets it and the welcome window
+   * opens. Resolves with where its data went; when the folder couldn't move (its data stays where it was), rejects with
+   * `held` (another server uses the folder), `move` (the move itself failed; it stays stopped) or `running` (it started
+   * again meanwhile).
+   */
+  eraseLocalServer(): Promise<string>;
   /** Automatic login and start after a power failure (macOS). */
   keepRunning(): Promise<KeepRunning>;
   /** System Settings at Users & Groups or Energy (macOS). */
@@ -232,8 +265,8 @@ export interface Host {
   diskAccess(): Promise<boolean>;
   /** macOS: a short Bonjour browse, which raises the Local Network prompt the first time. Nothing says the answer. */
   askLocalNetwork(): Promise<void>;
-  /** System Settings › Privacy & Security on the permission's own list. */
-  openPrivacy(pane: MacPermission): Promise<void>;
+  /** System Settings › Privacy & Security on the permission's own list (the microphone: for voice messages). */
+  openPrivacy(pane: MacPermission | "microphone"): Promise<void>;
   /** The setup macOS may quit the app in the middle of, kept until it is finished (`prepare.rs`). */
   setupState(): Promise<SetupState | null>;
   /** Keeps it (with the main window's page, to open there again) or, null, forgets it. */

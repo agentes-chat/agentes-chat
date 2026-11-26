@@ -4,6 +4,7 @@ import { join, relative } from "node:path";
 import { resources } from "@agenteschat/i18n";
 import { LOCALES } from "@agenteschat/i18n/locale";
 import { checkLocale } from "@agenteschat/i18n/testing";
+import { uncodedCommands } from "../../../packages/i18n/test/command-code";
 import identical from "../../../packages/i18n/test/identical.json";
 import { leaves as entries } from "../../../packages/i18n/test/leaves";
 import { filesNamingMakers } from "../../../packages/i18n/test/maker-words";
@@ -53,6 +54,10 @@ test("the stores and the system list only ready languages, each with its iOS per
     | undefined;
   expect(localization?.[1].supportedLocales).toEqual(ready);
   expect(Object.keys(config.locales ?? {})).toEqual(ready);
+  const audio = config.plugins?.find((p) => Array.isArray(p) && p[0] === "expo-audio") as
+    | [string, { microphonePermission: string }]
+    | undefined;
+  expect(nativeEn.ios.NSMicrophoneUsageDescription).toBe(audio?.[1].microphonePermission ?? "");
   const keys = (o: object) => leaves(o).sort();
   for (const code of ready)
     expect(keys(JSON.parse(readFileSync(join(import.meta.dir, `../assets/locales/${code}.json`), "utf8")))).toEqual(
@@ -88,6 +93,11 @@ test("Claude and ChatGPT, not their makers, in what the phone shows", () => {
 test("no semicolon, no em dash in what the phone shows", () => {
   const trees = [featureKeysEn, featureKeysPtBR, mobileEn, mobilePtBR, nativeEn, nativePtBR];
   expect(trees.flatMap((tree) => unplainLeaves(tree))).toEqual([]);
+});
+
+test("every command, path and setting the phone shows is code", () => {
+  const trees = [featureKeysEn, featureKeysPtBR, mobileEn, mobilePtBR, nativeEn, nativePtBR];
+  expect(trees.flatMap((tree) => uncodedCommands(tree))).toEqual([]);
 });
 
 test("the phone's words are true in every setup", () => {
@@ -134,8 +144,11 @@ test("the plan's notifications have their own Activity line in both languages, n
       "browser_profile_request",
       "computer_disk_full",
       "computer_no_chrome",
+      "computer_down",
+      "computer_back",
       "desktop_taken",
       "plan_lent",
+      "plan_serves",
       "plan_model_dropped",
       "catch_up_closed",
       "catch_up_closed_asker",

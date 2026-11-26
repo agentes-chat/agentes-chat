@@ -1,9 +1,10 @@
 import type { BrainSpeed, PlanUsage } from "@agenteschat/client";
 import { SPEEDS } from "@agenteschat/client/lib/brain-advanced";
-import { type ContextLimit, contextSize } from "@agenteschat/client/lib/context-limits";
+import { autoContextLine, type ContextLimit, contextSize } from "@agenteschat/client/lib/context-limits";
 import { planMeterText } from "@agenteschat/client/lib/plan-usage";
 import { AUTO } from "@agenteschat/client/lib/providers";
 import {
+  cx,
   Icon,
   InfoHint,
   planLevel,
@@ -14,6 +15,7 @@ import {
   RadioGroup,
   Segmented,
   Switch,
+  windowAmount,
 } from "@agenteschat/ui";
 import {
   type CSSProperties,
@@ -26,6 +28,7 @@ import {
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
+import { PlanModels } from "@/components/PlanModels";
 
 /*
  * The pieces of "Quem pensa" (ADR 0032 §5, addendum 2026-11-10), drawn like the rest of the dialogs under the sky: no
@@ -34,42 +37,57 @@ import { useTranslation } from "react-i18next";
 
 /**
  * The account's limits under its row, one line per window: its name, a bar, how much is used and when it renews
- * ("Semana ▬ 86% renova sáb 18:00"). Numbers out of date say how old they are.
+ * ("Semana ▬ 86% renova sáb 18:00"). Numbers out of date say how old they are. A plan whose models have limits of
+ * their own (`models`) lists them under the windows: the quota per model, which the account's windows can't show.
  */
-export function PlanWindows({ usage }: { usage: PlanUsage }) {
+export function PlanWindows({ usage, provider }: { usage: PlanUsage; provider?: string | null }) {
   const { t, i18n } = useTranslation();
   const text = planMeterText(t, i18n.language);
   const now = Date.now();
   const rows = planWindows(usage, now);
   const line = planLine(usage, text, now);
-  if (rows.length === 0) return null;
+  const models = <PlanModels usage={usage} provider={provider ?? null} />;
+  if (rows.length === 0) return models;
   return (
-    <div className="bd-wins">
-      {rows.map((w, i) => {
-        const name = text.window(w);
-        const renews = w.resetsAt && Date.parse(w.resetsAt) > now ? text.resets(w.resetsAt) : null;
-        return (
-          <div key={`${w.kind}:${w.label ?? i}`} className="bd-win" data-level={planLevel(w.used)}>
-            <span className="bd-win__name">{name}</span>
-            <span className="bd-win__bar" aria-hidden="true">
-              <i style={{ "--used": `${Math.min(100, w.used)}%` } as CSSProperties} />
-            </span>
-            <span className="bd-win__n">{w.used}%</span>
-            <small className="bd-win__at">{renews}</small>
-          </div>
-        );
-      })}
-      {line?.stale && line.age && <small className="bd-wins__age">{line.age}</small>}
-    </div>
+    <>
+      <div className="bd-wins">
+        {rows.map((w, i) => {
+          const name = text.window(w);
+          const renews = w.resetsAt && Date.parse(w.resetsAt) > now && !w.stale ? text.resets(w.resetsAt) : null;
+          return (
+            <div
+              key={`${w.kind}:${w.label ?? i}`}
+              className="bd-win"
+              data-level={w.stale ? "ok" : planLevel(w.used)}
+              data-stale={w.stale || undefined}
+            >
+              <span className="bd-win__name">{name}</span>
+              {!w.stale && (
+                <span className="bd-win__bar" aria-hidden="true">
+                  <i style={{ "--used": `${Math.min(100, w.used)}%` } as CSSProperties} />
+                </span>
+              )}
+              <span className="bd-win__n">{windowAmount(usage, w, text)}</span>
+              <small className="bd-win__at">{renews}</small>
+            </div>
+          );
+        })}
+        {line?.stale && line.age && <small className="bd-wins__age">{line.age}</small>}
+      </div>
+      {models}
+    </>
   );
 }
 
 /**
- * A setting on one line: its name, its value, and the way in (a chevron to its screen, or down for what opens under
- * it). Without `onOpen` it only says the value.
+ * A setting on one line, as a settings list draws it: its name at the start, its value at the end before the way in (a
+ * chevron to its screen, or down for what opens under it). Without `onOpen` it only says the value; without a value it
+ * is a way on (another AI, back to the workspace's), in the same row and on the same edges.
  */
 export function BrainLine({
   label,
+  mark,
+  inner = false,
   value,
   lead,
   onOpen,
@@ -77,9 +95,15 @@ export function BrainLine({
   opensDialog = false,
   open = false,
   controls,
+  disabled = false,
 }: {
   label: string;
-  value: ReactNode;
+  /** Before the name: what the line stands for (an AI's mark in "Add account"). */
+  mark?: ReactNode;
+  /** Under a line that folds open: its name starts past that line's mark. */
+  inner?: boolean;
+  /** Said at the line's end, before its chevron; none for a line that only leads somewhere. */
+  value?: ReactNode;
   lead?: ReactNode;
   onOpen?: () => void;
   /** It opens under itself (`Fold`), not a screen of its own. */
@@ -89,10 +113,21 @@ export function BrainLine({
   open?: boolean;
   /** The fold it opens. */
   controls?: string;
+  /** Out of reach while something it changes is being saved. */
+  disabled?: boolean;
 }) {
   const body = (
     <>
-      <span className="bd-line__k">{label}</span>
+      {mark ? (
+        <span className="bd-line__k bd-line__k--mark">
+          <span className="bd-line__mark" aria-hidden="true">
+            {mark}
+          </span>
+          <span>{label}</span>
+        </span>
+      ) : (
+        <span className="bd-line__k">{label}</span>
+      )}
       <span className="bd-line__v">
         {lead}
         <span className="bd-line__text">{value}</span>
@@ -103,7 +138,8 @@ export function BrainLine({
   return (
     <button
       type="button"
-      className="bd-line"
+      className={cx("bd-line", inner && "bd-line--inner")}
+      disabled={disabled}
       onClick={onOpen}
       {...(folds
         ? { "aria-expanded": open, "aria-controls": controls }
@@ -189,10 +225,13 @@ export function SpeedField({ value, onChange }: { value: BrainSpeed; onChange: (
 export function ContextField({
   value,
   options,
+  kind,
   onChange,
 }: {
   value: ContextLimit | null;
   options: readonly ContextLimit[];
+  /** The agent's program: "Automático" says where it summarises. */
+  kind: string;
   onChange: (value: ContextLimit | null) => void;
 }) {
   const { t } = useTranslation();
@@ -209,7 +248,9 @@ export function ContextField({
           ...options.map((n) => ({ value: String(n), label: contextSize(n) })),
         ]}
       />
-      <p className="bd-fold__hint">{t(`agentPage.work.brain.contextText.${shown ?? "auto"}`)}</p>
+      <p className="bd-fold__hint">
+        {shown === null ? autoContextLine(t, kind) : t(`agentPage.work.brain.contextText.${shown}`)}
+      </p>
     </>
   );
 }
@@ -231,8 +272,8 @@ export interface PickOption {
 const PICKS_SEARCHED = 10;
 
 /**
- * Choices as rows with a radio, the same rows as the accounts' without a mark: grouped under their maker where there
- * are several, a long list under a search.
+ * Choices as rows, the same rows as the accounts' without a mark (the border marks the one picked, no radio dot):
+ * grouped under their maker where there are several, a long list under a search.
  */
 export function PickList({
   options,
@@ -361,4 +402,21 @@ export function useGlide<T extends HTMLElement>(key: unknown) {
     return () => watch.disconnect();
   }, []);
   return ref;
+}
+
+/** "Só esta conta" (ADR 0041 §6): at a limit the agent waits for its own account instead of going on with the next. */
+export function PinAccount({ on, onChange }: { on: boolean; onChange: (on: boolean) => void }) {
+  const { t } = useTranslation();
+  const id = useId();
+  return (
+    <div className="plan-replies">
+      <span className="ac-hintline">
+        <label htmlFor={id}>{t("agentPage.work.brain.pinned")}</label>
+        <InfoHint name={t("common.about", { label: t("agentPage.work.brain.pinned") })}>
+          {t("agentPage.work.brain.pinnedHint")}
+        </InfoHint>
+      </span>
+      <Switch id={id} checked={on} onCheckedChange={onChange} />
+    </div>
+  );
 }

@@ -2,6 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import { execFileSync } from "node:child_process";
 import {
   copyFileSync,
+  existsSync,
   mkdirSync,
   readdirSync,
   readFileSync,
@@ -11,8 +12,9 @@ import {
   utimesSync,
   writeFileSync,
 } from "node:fs";
+import os from "node:os";
 import path from "node:path";
-import { PUSH_ASK_RULES } from "@agenteschat/adapters/command-policy";
+import { INLINE_CODE_DENY_RULES, PUSH_ASK_RULES } from "@agenteschat/adapters/command-policy";
 import {
   BRAIN_PROFILES_PROTOCOL,
   BRAIN_PROTOCOL,
@@ -30,7 +32,7 @@ import {
   STEER_PROTOCOL,
   type WireBrainEvent,
 } from "@agenteschat/adapters/machine-protocol";
-import { accountSettingsEnv } from "../../runner/accounts";
+import { ACCOUNT_TRANSCRIPT_DAYS, accountSettingsEnv } from "../../runner/accounts";
 import {
   BRAIN_BUILTIN_TOOLS,
   BrainManager,
@@ -39,6 +41,7 @@ import {
   brainKey,
   brainProfileLaunch,
   ClaudeStreamParser,
+  CODE_SESSION_TOOLS,
   carryClaudeSession,
   claudeBrainArgs,
   claudeCapabilities,
@@ -59,6 +62,7 @@ import {
   turnContext,
   userMessageLine,
 } from "../../runner/brain";
+import { CLAUDE_SILENCE, silenceLimit } from "../../runner/brain-silence";
 import { claudeAuth } from "../../runner/executors";
 import { handleRequest } from "../../runner/handlers";
 import { chatToolsBreach, delegatedToolsBreach, type IpcReply, McpBridge, McpToolCache } from "../../runner/mcp";
@@ -116,6 +120,25 @@ test("protocol 8: brain.turn requests and brain frames parse; bad events are dro
       line({ type: "brain.event", runId: RUN(1), event: { type: "usage", input: 3.4, output: -1, source: "x" } }),
     ),
   ).toMatchObject({ event: { type: "usage", input: 3, output: 0, source: "plan" } });
+  // A turn's timings travel on its `done`; a malformed one is left out, the answer kept.
+  const done = (timings: unknown) =>
+    parseRunnerFrame(line({ type: "brain.event", runId: RUN(1), event: { type: "done", text: "ok", timings } }));
+  expect(done({ warm: false, initMs: 812.4, firstEventMs: -3 })).toMatchObject({
+    event: { type: "done", text: "ok", timings: { warm: false, initMs: 812 } },
+  });
+  expect(done({ warm: false, initMs: 90_000_000, firstEventMs: 1200 })).toMatchObject({
+    event: { type: "done", text: "ok", timings: { warm: false, firstEventMs: 1200 } },
+  });
+  expect(done({ warm: false, initMs: 90_000_000 })).not.toHaveProperty("event.timings.initMs");
+  // Where the model's time went: whole numbers from 0 up to a day, the rest left out.
+  expect(
+    done({ warm: true, firstTokenMs: 300.4, firstAssistantMs: 2100, retries: 2, retryDelayMs: -1, thinkingChars: "9" }),
+  ).toEqual({
+    type: "brain.event",
+    runId: RUN(1),
+    event: { type: "done", text: "ok", timings: { warm: true, firstTokenMs: 300, firstAssistantMs: 2100, retries: 2 } },
+  });
+  expect(done({ initMs: 5 })).toEqual({ type: "brain.event", runId: RUN(1), event: { type: "done", text: "ok" } });
 });
 
 test("hello: Claude Code's login state travels (never anything else from auth status)", async () => {
@@ -195,7 +218,7 @@ test("parser: partial deltas, our tool calls with results, usage, and the final 
         },
       }),
     ).events,
-  ).toEqual([{ type: "tool_started", id: "t2", name: "Bash" }]);
+  ).toEqual([{ type: "tool_started", id: "t2", name: "Bash", input: { command: "ls" } }]);
   const results = p.push(
     line({
       type: "user",
@@ -238,22 +261,104 @@ test("parser: partial deltas, our tool calls with results, usage, and the final 
   expect(p.session).toBe(SESSION(1));
 });
 
-test("parser: a turn's usage says how many API calls it made and the most uncached input one read", () => {
+test("parser: usage.model uses the model that answered this turn, not a stale key from resumed modelUsage or a subagent", () => {
   const p = new ClaudeStreamParser();
   p.beginTurn();
-  const call = (id: string, input: number) =>
+  // Main turn streams and answers with opus, while resumed modelUsage still lists fable first.
+  p.push(
+    line({
+      type: "stream_event",
+      session_id: SESSION(1),
+      parent_tool_use_id: null,
+      event: { type: "message_start", message: { id: "msg_1", model: "claude-opus-5-5" } },
+    }),
+  );
+  p.push(
+    line({
+      type: "assistant",
+      parent_tool_use_id: null,
+      message: { id: "msg_1", model: "claude-opus-5-5", content: [{ type: "text", text: "Hi" }] },
+    }),
+  );
+  // Synthetic error frame must not overwrite the real answering model.
+  p.push(
+    line({
+      type: "assistant",
+      parent_tool_use_id: null,
+      error: "rate_limit",
+      message: { id: "msg_err", model: "<synthetic>", content: [{ type: "text", text: "limit" }] },
+    }),
+  );
+  // A subagent on haiku speaks last, streamed and whole: still not the turn's model.
+  p.push(
+    line({
+      type: "stream_event",
+      parent_tool_use_id: "toolu_sub",
+      event: { type: "message_start", message: { id: "msg_sub", model: "claude-haiku-5-5" } },
+    }),
+  );
+  p.push(
+    line({
+      type: "assistant",
+      parent_tool_use_id: "toolu_sub",
+      message: { id: "msg_sub", model: "claude-haiku-5-5", content: [{ type: "text", text: "sub" }] },
+    }),
+  );
+  const end = p.push(
+    line({
+      type: "result",
+      subtype: "success",
+      is_error: false,
+      result: "Hi",
+      session_id: SESSION(1),
+      usage: { input_tokens: 10, output_tokens: 5 },
+      modelUsage: {
+        "claude-fable-5-2": { inputTokens: 100, outputTokens: 20 },
+        "claude-opus-5-5": { inputTokens: 10, outputTokens: 5 },
+      },
+    }),
+  );
+  expect(end.events).toEqual([{ type: "usage", input: 10, output: 5, source: "plan", model: "claude-opus-5-5" }]);
+
+  // Next turn resets turnModel so an earlier turn's model never leaks when only modelUsage is present.
+  p.beginTurn();
+  const next = p.push(
+    line({
+      type: "result",
+      subtype: "success",
+      is_error: false,
+      result: "Ok",
+      session_id: SESSION(1),
+      usage: { input_tokens: 4, output_tokens: 2 },
+      modelUsage: { "claude-sonnet-5-5": { inputTokens: 4, outputTokens: 2 } },
+    }),
+  );
+  expect(next.events).toEqual([{ type: "usage", input: 4, output: 2, source: "plan", model: "claude-sonnet-5-5" }]);
+});
+
+test("parser: a turn's usage says how many API calls it made, the most uncached and whole input one read, and the last's", () => {
+  const p = new ClaudeStreamParser();
+  p.beginTurn();
+  const call = (id: string, input: number, written = 0) =>
     p.push(
       line({
         type: "assistant",
         parent_tool_use_id: null,
-        message: { id, content: [], usage: { input_tokens: input, cache_read_input_tokens: 9000 } },
+        message: {
+          id,
+          content: [],
+          usage: { input_tokens: input, cache_read_input_tokens: 9000, cache_creation_input_tokens: written },
+        },
       }),
     );
   call("m1", 12);
   call("m2", 3400);
   // The same message said again for its next block.
   call("m2", 3400);
-  call("m3", 40);
+  // The biggest step is not the most uncached one: its context, cache included.
+  call("m3", 40, 5000);
+  // The last call, after a compaction: what the session holds now, smaller than its biggest.
+  call("m4", 20);
   const end = p.push(
     line({
       type: "result",
@@ -265,7 +370,17 @@ test("parser: a turn's usage says how many API calls it made and the most uncach
     }),
   );
   expect(end.events).toEqual([
-    { type: "usage", input: 30452, output: 30, source: "plan", cacheRead: 27000, calls: 3, maxUncached: 3400 },
+    {
+      type: "usage",
+      input: 30452,
+      output: 30,
+      source: "plan",
+      cacheRead: 27000,
+      calls: 3,
+      maxUncached: 3400,
+      maxContext: 14040,
+      lastContext: 9020,
+    },
   ]);
   // It reaches the server as said.
   expect(parseBrainEvent(end.events[0])).toEqual(end.events[0] as WireBrainEvent);
@@ -293,7 +408,7 @@ test("parser: a streamed message said again in a later assistant event (with its
       { type: "tool_use", id: "t1", name: "Bash", input: { command: "ls" } },
     ]),
     // Its own call is told as it starts (the step line), ours through the bridge never.
-  ).toEqual([{ type: "tool_started", id: "t1", name: "Bash" }]);
+  ).toEqual([{ type: "tool_started", id: "t1", name: "Bash", input: { command: "ls" } }]);
   // The next API message, never streamed (no partials for it): its text comes whole.
   expect(
     p.push(
@@ -426,6 +541,17 @@ test("parser: a failed turn says why the provider failed it, from Claude Code's 
     cause: "auth_rejected",
     httpStatus: 401,
   });
+  // A 401 the CLI got past (its login refreshed, then another error, or an answer) never reads as signed out.
+  expect(fail(retry("authentication_failed", 401), retry("server_error", 529), failed)).toMatchObject({
+    code: "claude_failed",
+  });
+  expect(
+    fail(
+      retry("authentication_failed", 401),
+      { type: "assistant", parent_tool_use_id: null, message: { id: "m2", content: [{ type: "text", text: "hi" }] } },
+      failed,
+    ),
+  ).toMatchObject({ code: "claude_failed" });
   // A 403 alone is a refused sign-in, not a disabled account.
   expect(fail(retry("authentication_failed", 403), failed)).toMatchObject({ cause: "auth_rejected", httpStatus: 403 });
   expect(
@@ -440,6 +566,19 @@ test("parser: a failed turn says why the provider failed it, from Claude Code's 
   expect(
     fail(errorFrame("invalid_request", disabled), { type: "result", is_error: true, result: disabled }),
   ).toMatchObject({ code: "claude_failed", cause: "account_disabled", httpStatus: 400 });
+  // A model the sign-in or its endpoint doesn't serve: the model's, never the sign-in's, and no retry on it.
+  const noModel =
+    "There's an issue with the selected model (claude-x). It may not exist or you may not have access to it.";
+  expect(fail({ type: "result", is_error: true, result: noModel })).toMatchObject({
+    code: "claude_failed",
+    cause: "model_unavailable",
+    retryable: false,
+  });
+  const notFound = 'API Error: 404 {"type":"error","error":{"type":"not_found_error","message":"model: claude-x"}}';
+  expect(fail({ type: "result", is_error: true, result: notFound })).toMatchObject({
+    cause: "model_unavailable",
+    httpStatus: 404,
+  });
   expect(
     fail(errorFrame("billing_error", "Credit balance is too low"), {
       type: "result",
@@ -526,6 +665,8 @@ test("command line: stream-json both ways, opus falls back to sonnet, strict MCP
   expect(lean.join(" ")).toContain("--tools Bash,Read,Edit,Write,Glob,Grep,ToolSearch");
   expect(lean.join(" ")).not.toContain("WebFetch");
   expect(lean.slice(-2)).toEqual(["--session-id", SESSION(1)]);
+  expect(fallbackModelFor("fable")).toBe("opus");
+  expect(fallbackModelFor("claude-fable-5-2")).toBe("opus");
   expect(fallbackModelFor("claude-opus-5-5")).toBe("sonnet");
   expect(fallbackModelFor("sonnet")).toBeUndefined();
   expect(JSON.parse(userMessageLine("oi"))).toEqual({
@@ -574,6 +715,18 @@ test("profiles (ADR 0053 §3): plan has our tools only, no settings files, no ed
   expect(asks).toContain("--permission-prompt-tool");
   expect(brainProfileLaunch("work", false, true, true).permissionMode).toBe("default");
   expect(brainProfileLaunch("work", false, true).permissionMode).toBe("acceptEdits");
+  // A code session's turn (ADR 0215): Claude Code's subagents and skills too, still no settings of the checkout.
+  const code = claudeBrainArgs({
+    ...base,
+    ...brainProfileLaunch("work", false, false, false, true),
+    pluginDirs: ["/b/repo"],
+  });
+  expect(at(code, "--tools")).toBe([...BRAIN_BUILTIN_TOOLS, ...CODE_SESSION_TOOLS].join(","));
+  expect(at(code, "--setting-sources")).toBe("");
+  expect(at(code, "--plugin-dir")).toBe("/b/repo");
+  // Nowhere else: a chat turn or a shared sign-in never get them.
+  expect(brainProfileLaunch("chat", false, false, false, true).builtinTools).toEqual([]);
+  expect(brainProfileLaunch("work", false, true, false, true).builtinTools).not.toContain("Agent");
 });
 
 test("protocol 41: a chat turn (the team's right hand on a plan) gets our MCP tools and nothing else", () => {
@@ -640,7 +793,9 @@ function setup(over: Partial<BrainManagerOptions> = {}) {
         .trim()
         .split("\n")
         .filter(Boolean)
-        .map((l) => JSON.parse(l) as { pid: number; args: string[]; system: string | null });
+        .map(
+          (l) => JSON.parse(l) as { pid: number; args: string[]; system: string | null; autoMemoryOff: string | null },
+        );
     } catch {
       return [];
     }
@@ -680,7 +835,14 @@ test.if(posix)(
   async () => {
     const { m, spawns, turn } = setup();
     const a = await turn(1, "first");
-    expect(a.final).toEqual({ type: "done", text: "echo 1: first", session: { id: SESSION(1) } });
+    expect(a.final).toMatchObject({ type: "done", text: "echo 1: first", session: { id: SESSION(1) } });
+    // The first turn started the process: it says how long Claude Code took to be ready and to say something.
+    const timings = (f: WireBrainEvent) => (f.type === "done" ? f.timings : undefined);
+    expect(timings(a.final)).toMatchObject({
+      warm: false,
+      initMs: expect.any(Number),
+      firstEventMs: expect.any(Number),
+    });
     expect(a.events.at(-1)).toEqual(a.final);
     expect(
       a.events
@@ -699,6 +861,8 @@ test.if(posix)(
     });
     const b = await turn(2, "second");
     expect(b.final).toMatchObject({ type: "done", text: "echo 2: second" });
+    expect(timings(b.final)).toMatchObject({ warm: true, firstEventMs: expect.any(Number) });
+    expect(timings(b.final)?.initMs).toBeUndefined();
     expect(spawns()).toHaveLength(1);
     expect(m.size).toBe(1);
     const args = spawns()[0]?.args ?? [];
@@ -1254,12 +1418,16 @@ test.if(posix)(
     const wsettings = JSON.parse(readFileSync(wargs[wargs.indexOf("--settings") + 1] as string, "utf8")) as {
       permissions: { allow: string[]; ask: string[]; deny: string[] };
     };
-    expect(wsettings.permissions.deny).toContain("Bash(python3 -c*)");
+    // Inline code reaches the prompt tool, where the server decides it (a mission's card, elsewhere ordinary work).
+    // The computer's own sign-in keeps its owner's transcript retention.
+    expect((wsettings as { cleanupPeriodDays?: number }).cleanupPeriodDays).toBeUndefined();
+    expect(wsettings.permissions.deny).not.toContain("Bash(python3 -c*)");
+    expect(wsettings.permissions.ask).toContain("Bash(python3 -c*)");
     expect(wsettings.permissions.deny).toContain("Bash(gh auth token*)");
     expect(wsettings.permissions.deny).not.toContain("Edit");
     expect(wsettings.permissions.allow).not.toContain("Bash(cat *)");
     // Every push reaches the prompt tool, even past the owner's allow rules, which reads where it goes.
-    expect(wsettings.permissions.ask).toEqual([...PUSH_ASK_RULES]);
+    expect(wsettings.permissions.ask).toEqual([...PUSH_ASK_RULES, ...INLINE_CODE_DENY_RULES]);
     const wconfig = JSON.parse(readFileSync(wargs[wargs.indexOf("--mcp-config") + 1] as string, "utf8")) as {
       mcpServers: { agentes: { env: Record<string, string> } };
     };
@@ -1290,6 +1458,8 @@ test.if(posix)(
     await turn(1, "do");
     const args = spawns()[0]?.args ?? [];
     expect(args[args.indexOf("--setting-sources") + 1]).toBe("");
+    // Claude Code's auto memory too: it lived in the sign-in's folder, which the agent's own tools can't list.
+    expect(spawns()[0]?.autoMemoryOff).toBe("1");
     expect(args.join(" ")).not.toContain("collect.example.net");
     const system = readFileSync(args[args.indexOf("--append-system-prompt-file") + 1] as string, "utf8");
     expect(system.startsWith("You are dev.")).toBe(true);
@@ -1301,6 +1471,7 @@ test.if(posix)(
     await own.turn(1, "do", { personalMcp: true });
     const oargs = own.spawns()[0]?.args ?? [];
     expect(oargs).not.toContain("--setting-sources");
+    expect(own.spawns()[0]?.autoMemoryOff).toBeNull();
     expect(readFileSync(oargs[oargs.indexOf("--append-system-prompt-file") + 1] as string, "utf8")).toBe(
       "You are dev.",
     );
@@ -1331,6 +1502,15 @@ test.if(posix)("a wrong session flag on a one-shot start is retried once with th
 test.if(posix)("no Claude Code, a canceled turn, and bad requests", async () => {
   const missing = setup({ claudeCommand: ["/nonexistent/claude-xyz"] });
   expect((await missing.turn(1, "hi")).final).toMatchObject({ code: "cli_missing", retryable: true });
+  // Through cmd.exe on Windows a missing CLI is no ENOENT: cmd says so and ends (exit 9009 there).
+  const cmd = setup({
+    claudeCommand: [
+      "/bin/sh",
+      "-c",
+      "printf \"'claude' is not recognized as an internal or external command,\\r\\noperable program or batch file.\\r\\n\" >&2; exit 1",
+    ],
+  });
+  expect((await cmd.turn(1, "hi")).final).toMatchObject({ code: "cli_missing", retryable: true });
   const { turn } = setup();
   const ac = new AbortController();
   const p = turn(2, "SLOW wait", {}, ac.signal);
@@ -1363,9 +1543,9 @@ test.if(posix)(
       },
       { signal: new AbortController().signal, output: () => {}, emit: (f) => frames.push(f) },
     )) as { runId: string; final: WireBrainEvent };
-    expect(reply).toEqual({
+    expect(reply).toMatchObject({
       runId: RUN(9),
-      final: { type: "done", text: "echo 1: hello", session: { id: SESSION(1) } },
+      final: { type: "done", text: "echo 1: hello", session: { id: SESSION(1) }, timings: { warm: false } },
     });
     expect(frames.at(-1)).toEqual({ type: "brain.done", runId: RUN(9) });
     expect(frames.at(-2)).toEqual({ type: "brain.event", runId: RUN(9), event: reply.final });
@@ -1533,6 +1713,141 @@ test.if(posix)(
   },
 );
 
+test.if(posix)("each CLI process has a temp folder of its own, gone with the process", async () => {
+  const { spawns, turn } = setup();
+  const logged = () => spawns() as unknown as { tmpdir: string | null }[];
+  await turn(1, "first", { timeZone: "America/Sao_Paulo" });
+  await turn(2, "second", { timeZone: "Asia/Tokyo" });
+  const [first, second] = logged().map((l) => l.tmpdir ?? "");
+  expect(path.dirname(first ?? "")).toBe(os.tmpdir());
+  expect(path.basename(first ?? "")).toStartWith("agentes-run-");
+  expect(second).not.toBe(first);
+  expect(existsSync(second ?? "")).toBe(true);
+  await waitFor(() => !existsSync(first ?? ""), 4000);
+});
+
+test.if(posix)(
+  "the turn's zone is the CLI's TZ, so its date is the person's; a turn in another zone restarts it, resumed",
+  async () => {
+    const { spawns, turn } = setup();
+    const logged = () => spawns() as unknown as { args: string[]; tz: string | null }[];
+    await turn(1, "first", { timeZone: "America/Sao_Paulo" });
+    expect(logged()[0]?.tz).toBe("America/Sao_Paulo");
+    await turn(2, "second", { timeZone: "America/Sao_Paulo" });
+    expect(logged()).toHaveLength(1);
+    await turn(3, "third", { timeZone: "Asia/Tokyo" });
+    expect(logged()).toHaveLength(2);
+    expect(logged()[1]?.tz).toBe("Asia/Tokyo");
+    expect(logged()[1]?.args.slice(-2)).toEqual(["--resume", SESSION(1)]);
+    // None, or one no clock knows: the computer's own.
+    await turn(4, "fourth", { timeZone: "Mars/Olympus" });
+    expect(logged()[2]?.tz).toBe(process.env.TZ ?? null);
+  },
+);
+
+test.if(posix)(
+  "a session started with no limit takes 200K once, resumed in the same session; later turns keep the process",
+  async () => {
+    const { spawns, turn } = setup();
+    const logged = () => spawns() as unknown as { args: string[]; compactWindow: string | null }[];
+    await turn(1, "first");
+    expect(logged()[0]?.compactWindow).toBeNull();
+    await turn(2, "second", { contextTokens: 200_000 });
+    expect(logged()).toHaveLength(2);
+    expect(logged()[1]?.compactWindow).toBe("200000");
+    expect(logged()[1]?.args.slice(-2)).toEqual(["--resume", SESSION(1)]);
+    // The same limit never starts the process again, however many turns follow.
+    for (const n of [3, 4, 5]) await turn(n, `turn ${n}`, { contextTokens: 200_000 });
+    expect(logged()).toHaveLength(2);
+  },
+);
+
+test.if(posix)("a turn's timings keep its API retries, its thinking and when the model first answered", async () => {
+  const { turn } = setup();
+  const r = await turn(1, "RETRYWAIT THOUGHT");
+  expect(r.final).toMatchObject({ type: "done" });
+  const t = r.final.type === "done" ? r.final.timings : undefined;
+  expect(t).toMatchObject({ warm: false, retries: 1, retryDelayMs: 800, thinkingBlocks: 2, thinkingChars: 10 });
+  // The API's first message came 50 ms before its first whole block.
+  expect((t?.firstAssistantMs ?? 0) - (t?.firstTokenMs ?? 0)).toBeGreaterThanOrEqual(40);
+  // The next turn on the process counts its own.
+  const next = await turn(2, "second");
+  expect(next.final).toMatchObject({
+    type: "done",
+    timings: { warm: true, retries: 0, retryDelayMs: 0, thinkingBlocks: 0, thinkingChars: 0 },
+  });
+});
+
+test.if(posix)(
+  "another model or effort switches on the open process; another fallback, or none of them, starts a new one",
+  async () => {
+    const { spawns, turn } = setup();
+    const a = await turn(1, "ECHOMODEL", { model: "sonnet", effort: "low" });
+    expect(a.final).toMatchObject({ type: "done", text: "model sonnet effort low" });
+    const b = await turn(2, "ECHOMODEL", { model: "haiku", effort: "high" });
+    expect(b.final).toMatchObject({ type: "done", text: "model haiku effort high", timings: { warm: true } });
+    expect(spawns()).toHaveLength(1);
+    // Opus falls back to sonnet, which only a start sets.
+    const c = await turn(3, "ECHOMODEL", { model: "opus", effort: "high" });
+    expect(c.final).toMatchObject({ type: "done", text: "model opus effort high", timings: { warm: false } });
+    expect(spawns()).toHaveLength(2);
+    expect(spawns()[1]?.args.join(" ")).toContain("--fallback-model sonnet");
+    expect(spawns()[1]?.args.slice(-2)).toEqual(["--resume", SESSION(1)]);
+    // No effort at all: the CLI would go back to the one it started with, so a new process.
+    await turn(4, "ECHOMODEL", { model: "opus" });
+    expect(spawns()).toHaveLength(3);
+  },
+);
+
+test.if(posix)(
+  "a CLI that refuses the switch, or doesn't answer it, gets a new process (one that didn't answer is not asked again)",
+  async () => {
+    try {
+      process.env.FAKE_CLAUDE_NO_SWITCH = "refuse";
+      const refused = setup();
+      await refused.turn(1, "ECHOMODEL", { model: "sonnet", effort: "low" });
+      const r = await refused.turn(2, "ECHOMODEL", { model: "haiku", effort: "low" });
+      expect(r.final).toMatchObject({ type: "done", text: "model haiku effort low" });
+      expect(refused.spawns()).toHaveLength(2);
+      expect(refused.spawns()[1]?.args.join(" ")).toContain("--model haiku");
+
+      process.env.FAKE_CLAUDE_NO_SWITCH = "silent";
+      const said: string[] = [];
+      const silent = setup({ controlReplyMs: 150, log: (l) => said.push(l) });
+      await silent.turn(1, "ECHOMODEL", { effort: "low" });
+      const s = await silent.turn(2, "ECHOMODEL", { effort: "high" });
+      expect(s.final).toMatchObject({ type: "done", text: "model null effort high" });
+      await silent.turn(3, "ECHOMODEL", { effort: "medium" });
+      expect(silent.spawns()).toHaveLength(3);
+      expect(said.filter((l) => l.includes("didn't answer a switch"))).toHaveLength(1);
+
+      // Success said, but its `--effort` stays in force: `get_settings` shows it, and a new process takes the effort.
+      process.env.FAKE_CLAUDE_NO_SWITCH = "flag_wins";
+      const flagWins = setup();
+      await flagWins.turn(1, "ECHOMODEL", { effort: "low" });
+      const f = await flagWins.turn(2, "ECHOMODEL", { effort: "high" });
+      expect(f.final).toMatchObject({ type: "done", text: "model null effort high", timings: { warm: false } });
+      expect(flagWins.spawns()).toHaveLength(2);
+    } finally {
+      delete process.env.FAKE_CLAUDE_NO_SWITCH;
+    }
+  },
+);
+
+test.if(posix)(
+  "other lines for the agent's commits (turned off, the agent renamed) restart the process, resumed",
+  async () => {
+    const { spawns, turn } = setup();
+    const nick = { agent: { ...AGENT, coAuthors: ["Co-Authored-By: Nick <noreply@agentes.chat>"] } };
+    await turn(1, "first", {}, undefined, nick);
+    await turn(2, "second", {}, undefined, nick);
+    expect(spawns()).toHaveLength(1);
+    await turn(3, "third", {}, undefined, { agent: AGENT });
+    expect(spawns()).toHaveLength(2);
+    expect(spawns()[1]?.args.slice(-2)).toEqual(["--resume", SESSION(1)]);
+  },
+);
+
 test.if(posix)(
   "an account turn runs in its folder (CLAUDE_CONFIG_DIR), a new session there; a change restarts the process",
   async () => {
@@ -1630,7 +1945,7 @@ test.if(posix)(
         [SIGNED_IN]: signedIn,
         [GO_ACCOUNT]: go,
       };
-      const { spawns, turn } = setup({
+      const { m, spawns, turn } = setup({
         accounts: { accountDir: (kind, id) => (kind === "claude_code" ? (folders[id] ?? null) : null) },
       });
       type Run = {
@@ -1676,6 +1991,11 @@ test.if(posix)(
         CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1",
         API_TIMEOUT_MS: "3000000",
       });
+      // The CLI applies that env: the model's wait is its API timeout plus its stream watchdog, not the default 10 min.
+      const proc = m.process(AGENT.id, SESSION(1));
+      expect(proc?.apiTimeoutMs).toBe(3_000_000);
+      const wait = { tools: [], compacting: false, bridgeCalls: 0, apiTimeoutMs: proc?.apiTimeoutMs };
+      expect(silenceLimit(wait, CLAUDE_SILENCE)?.ms).toBe(3_000_000 + 5 * 60_000);
       // The agent keeps its alias (the plan names the model), with no fallback model.
       expect(flag(glm, "--model")).toBe("opus");
       expect(glm?.args).not.toContain("--fallback-model");
@@ -1809,6 +2129,7 @@ test.if(posix)(
         oauthFd: string | null;
         authToken: string | null;
         settingsEnv: Record<string, string> | null;
+        cleanupDays: number | null;
       };
       const runs = () => spawns() as unknown as Run[];
       const grant = { grant: { kind: "token" as const, token: TOKEN } };
@@ -1825,6 +2146,7 @@ test.if(posix)(
       expect(JSON.stringify(first?.settingsEnv)).not.toContain("oat01");
       expect(first?.settingsEnv?.ANTHROPIC_BASE_URL).toBe("https://api.anthropic.com");
       expect(first?.settingsEnv?.CLAUDE_CODE_USE_BEDROCK).toBe("");
+      expect(first?.cleanupDays).toBe(ACCOUNT_TRANSCRIPT_DAYS);
       // What the CLI printed with it comes back redacted.
       const sent = JSON.stringify([r.final, ...r.events]);
       expect(sent).not.toContain(TOKEN);
@@ -2046,6 +2368,16 @@ test("protocol 15: brain.steer parses; steer_read events travel, empty ones are 
   expect(
     parseRunnerFrame(line({ type: "brain.event", runId: RUN(1), event: { type: "steer_read", uuids: [] } })),
   ).toBeNull();
+});
+
+test("an answer posted as it comes travels as its own event; an empty one is dropped", () => {
+  expect(
+    parseRunnerFrame(line({ type: "brain.event", runId: RUN(1), event: { type: "answer", text: "Oi! Tudo certo." } })),
+  ).toEqual({ type: "brain.event", runId: RUN(1), event: { type: "answer", text: "Oi! Tudo certo." } });
+  expect(
+    parseRunnerFrame(line({ type: "brain.event", runId: RUN(1), event: { type: "answer", text: " " } })),
+  ).toBeNull();
+  expect(parseRunnerFrame(line({ type: "brain.event", runId: RUN(1), event: { type: "answer" } }))).toBeNull();
 });
 
 test("steering: capabilities (not versions), the stdin line, and what the parser reads back", () => {
@@ -2354,6 +2686,44 @@ test.if(posix)(
   },
 );
 
+test.if(posix)(
+  "the server takes each answer as it comes: the one before the message read goes out at once, never joined",
+  async () => {
+    await withCli(NOW_CLI, async () => {
+      const { m, turn } = setup();
+      const pending = turn(1, "STEERLATE work", { answers: "each" });
+      expect((await steerWhenReady(m, RUN(1), [{ uuid: U(1), text: "one more thing" }])).status).toBe("accepted");
+      const { final, events } = await pending;
+      // Its own event as the CLI's turn ends, before the message is read; `done` holds only what came after it.
+      expect(events.filter((e) => e.type === "answer")).toEqual([{ type: "answer", text: "echo 1: STEERLATE work" }]);
+      expect(events.findIndex((e) => e.type === "answer")).toBeLessThan(
+        events.findIndex((e) => e.type === "steer_read"),
+      );
+      expect(final).toMatchObject({ type: "done", text: "echo 2: one more thing" });
+      expect(m.size).toBe(1);
+    });
+  },
+);
+
+test.if(posix)(
+  "each answer as it comes: when no next turn follows, the request ends with nothing said twice",
+  async () => {
+    await withCli(NOW_CLI, async () => {
+      // Work moved to the background that never ends: the request waits for it, then ends on the result it went on from.
+      const { turn, m } = setup({ steerBackgroundWaitMs: 200, strayWaitMs: 300, dueWaitMs: 200 });
+      const pending = turn(1, "STEERBGHANG work", { answers: "each" });
+      expect((await steerWhenReady(m, RUN(1), [{ uuid: U(1), text: "x", urgent: true }])).status).toBe("accepted");
+      const { final, events } = await pending;
+      // Out at once, while the work it moved aside runs on.
+      expect(events.filter((e) => e.type === "answer")).toEqual([
+        { type: "answer", text: "echo 1: STEERBGHANG work +now/human: x" },
+      ]);
+      // It went out already: the request ends on nothing more.
+      expect(final).toMatchObject({ type: "done", text: "" });
+    });
+  },
+);
+
 test.if(posix)("an old CLI, a one-shot turn, another agent or session: unsupported or no_turn", async () => {
   // A version new enough by number, but no capabilities said: not steerable.
   await withCli({ version: "2.1.300" }, async () => {
@@ -2490,6 +2860,8 @@ test.if(posix)("delegated: argv, files and environment are root's, with no agent
   expect(statSync(dir).mode & 0o777).toBe(0o750);
   const settings = JSON.parse(readFileSync(typed(spawn, "--settings") as string, "utf8"));
   expect(settings.disableAllHooks).toBe(true);
+  // The sign-in every agent on the computer shares keeps two weeks of their transcripts.
+  expect(settings.cleanupPeriodDays).toBe(ACCOUNT_TRANSCRIPT_DAYS);
   expect(settings.permissions).toBeUndefined();
   expect(settings.env).toEqual(accountSettingsEnv(undefined, "opus"));
   for (const flag of ["--settings", "--mcp-config", "--append-system-prompt-file"]) {
@@ -2622,7 +2994,10 @@ test.if(posix)("delegated: root refuses what the CLI asks on stdout, and the tur
   const s = delegatedSetup();
   (s.m as unknown as { log: (l: string) => void }).log = (l) => lines.push(l);
   const r = await s.turn(1, "ASKCONTROL");
-  expect(r.final).toMatchObject({ type: "done", text: "control error: Not allowed with this sign-in." });
+  // An elicitation is refused with a reason that says nobody was asked, never as if the person had declined (#198).
+  const ended = r.events.flatMap((e) => (e.type === "done" ? [e.text] : [])).join("");
+  expect(ended).toContain("nobody was shown the form");
+  expect(ended).toContain("Not allowed with this sign-in");
   expect(lines.join("\n")).toContain("control_request elicitation");
 });
 
@@ -2946,3 +3321,189 @@ test.if(posix)("turn.context: the worker's answer: the folder as the agent resol
   expect(said).toContain("?? CLAUDE.md");
   expect(said).toContain("first");
 });
+
+// ── Idle time across sleep, and warm starts (protocol 74) ────────────────────
+
+test.if(posix)(
+  "idle time is awake time: a timer that fires after the computer slept leaves the process open",
+  async () => {
+    let awake = 0;
+    const { m, turn } = setup({ idleMs: 60, clock: { read: () => awake } });
+    await turn(1, "hi");
+    const proc = m.process(AGENT.id, SESSION(1));
+    // The timers fired, but the time they waited was asleep: no awake time went by.
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    expect(m.size).toBe(1);
+    expect(proc?.exited).toBe(false);
+    // Awake past the idle time: it closes at the next look.
+    awake = 1_000;
+    await waitFor(() => m.size === 0 && proc?.exited === true, 4000);
+  },
+);
+
+test.if(posix)(
+  "a turn that starts a process says why: a new session, another launch, idle past its limit, a session from before",
+  async () => {
+    const { m, turn } = setup({ idleMs: 60, clock: { read: () => Date.now() } });
+    const cold = (f: WireBrainEvent) => (f.type === "done" ? f.timings : undefined);
+    expect(cold((await turn(1, "hi")).final)).toMatchObject({ warm: false, cold: "new_session" });
+    expect(cold((await turn(2, "again")).final)).toEqual(expect.not.objectContaining({ cold: expect.anything() }));
+    // Opus falls back to sonnet, which only a start sets.
+    expect(cold((await turn(3, "opus", { model: "opus" })).final)).toMatchObject({ warm: false, cold: "settings" });
+    await waitFor(() => m.size === 0, 4000);
+    expect(cold((await turn(4, "later", { model: "opus" })).final)).toMatchObject({ warm: false, cold: "idle" });
+    const before = { session: { id: SESSION(5), resume: true } };
+    expect(cold((await turn(5, "old", before)).final)).toMatchObject({ warm: false, cold: "restart" });
+  },
+);
+
+test.if(posix)(
+  "a new conversation takes the agent's ready process, whose session answers for the server's from then on",
+  async () => {
+    const { m, home, ws, spawns, turn } = setup({ maxProcesses: 3, readyRoom: () => true });
+    await turn(1, "hi", { system: "S1" });
+    // After the turn, a process on a session of its own, with the agent's text, for its next new conversation.
+    await waitFor(() => spawns().length === 2, 4000);
+    const ready = spawns()[1];
+    const readyId = ready?.args.at(-1) ?? "";
+    expect(ready?.system).toBe("S1");
+    expect(ready?.args.at(-2)).toBe("--session-id");
+    expect(readyId).not.toBe(SESSION(1));
+    const b = await turn(2, "there", { system: "S1", session: { id: SESSION(2), resume: false } });
+    expect(b.final).toMatchObject({ type: "done", text: "echo 1: there", session: { id: readyId } });
+    expect(b.final).toMatchObject({ timings: { warm: true } });
+    // The next one is ready for the conversation after; this one goes on on the same process.
+    await waitFor(() => spawns().length === 3, 4000);
+    const c = await turn(3, "more", { system: "S1", session: { id: SESSION(2), resume: true } });
+    expect(c.final).toMatchObject({ type: "done", text: "echo 2: more", timings: { warm: true } });
+    expect(spawns()).toHaveLength(3);
+    // Another text: the ready process isn't taken (its text would be the session's for good).
+    const d = await turn(4, "new", { system: "S2", session: { id: SESSION(4), resume: false } });
+    expect(d.final).toMatchObject({ type: "done", text: "echo 1: new", timings: { warm: false, cold: "new_session" } });
+    expect(spawns()[3]?.args.slice(-2)).toEqual(["--session-id", SESSION(4)]);
+    // A runner started again resumes the adopted conversation by the session Claude Code knows it by.
+    // Three processes open (the agent's cap): no ready one now.
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(spawns()).toHaveLength(4);
+    m.close();
+    const again = new BrainManager({
+      root: path.join(home, "brains"),
+      claudeCommand: [process.execPath, FAKE],
+      claudeHome: path.join(home, "no-claude-home"),
+      mcp: { socketPath: path.join(home, "mcp.sock"), command: ["node", "runner.mjs"] },
+      deltaMs: 5,
+    });
+    managers.push(again);
+    const folder = await agentWorkspace(ws, AGENT);
+    const e = await again.turn(
+      {
+        runId: RUN(5),
+        kind: "claude_code",
+        session: { id: SESSION(2), resume: true },
+        cwd: "",
+        system: "S1",
+        prompt: "back",
+        mcp: { token: `agr_${"t".repeat(24)}5` },
+      },
+      { agent: AGENT, folder, emit: () => {} },
+    );
+    expect(e).toMatchObject({ type: "done", timings: { warm: false, cold: "restart" } });
+    expect(spawns().at(-1)?.args.slice(-2)).toEqual(["--resume", readyId]);
+  },
+);
+
+test.if(posix)(
+  "brain.warm starts the session's process with the agent's last system text, and the turn uses it",
+  async () => {
+    const { m, ws, spawns, turn } = setup();
+    const ctx = { agent: AGENT, folder: await agentWorkspace(ws, AGENT), emit: () => {} };
+    const warm = (n: number) =>
+      m.prewarm({ kind: "claude_code", session: { id: SESSION(n), resume: false }, cwd: "" }, ctx);
+    // Before any turn of the agent's: nothing to start it with.
+    expect(await warm(2)).toEqual({ open: false, started: false });
+    expect(spawns()).toHaveLength(0);
+    await turn(1, "hi", { system: "S1" });
+    expect(await warm(2)).toEqual({ open: true, started: true });
+    // The CLI writes its line once it runs, and says `init` before any prompt: no turn of its own.
+    await waitFor(() => spawns().length === 2, 4000);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(spawns().map((s) => [s.system, s.args.at(-2), s.args.at(-1)])).toEqual([
+      ["S1", "--session-id", SESSION(1)],
+      ["S1", "--session-id", SESSION(2)],
+    ]);
+    // Open already: kept.
+    expect(await warm(2)).toEqual({ open: true, started: false });
+    const b = await turn(2, "there", { system: "S1", session: { id: SESSION(2), resume: false } });
+    expect(b.final).toMatchObject({ type: "done", text: "echo 1: there" });
+    expect(b.final).toMatchObject({ timings: { warm: true } });
+    expect(spawns()).toHaveLength(2);
+    // The agent's text changed since: the turn starts its own process, with its own text.
+    expect(await warm(3)).toEqual({ open: true, started: true });
+    await waitFor(() => spawns().length === 3, 4000);
+    const c = await turn(3, "later", { system: "S2", session: { id: SESSION(3), resume: false } });
+    expect(c.final).toMatchObject({ type: "done" });
+    expect(spawns().map((s) => s.system)).toEqual(["S1", "S1", "S1", "S2"]);
+    expect(spawns().at(-1)?.args.slice(-2)).toEqual(["--session-id", SESSION(3)]);
+  },
+);
+
+test.if(posix)(
+  "brain.warm guesses from the agent's last kept turn, not from a background turn's own text",
+  async () => {
+    const { m, ws, spawns, turn } = setup();
+    const ctx = { agent: AGENT, folder: await agentWorkspace(ws, AGENT), emit: () => {} };
+    await turn(1, "hi", { system: "S1" });
+    // A routine's run: its own text, and no process kept.
+    await turn(2, "routine", { system: "ROUTINE", keepAlive: false, session: { id: SESSION(2), resume: false } });
+    expect(await m.prewarm({ kind: "claude_code", session: { id: SESSION(3), resume: false }, cwd: "" }, ctx)).toEqual({
+      open: true,
+      started: true,
+    });
+    await waitFor(() => spawns().length === 3, 4000);
+    const c = await turn(3, "there", { system: "S1", session: { id: SESSION(3), resume: false } });
+    expect(c.final).toMatchObject({ type: "done", timings: { warm: true } });
+    expect(spawns().map((s) => s.system)).toEqual(["S1", "ROUTINE", "S1"]);
+  },
+);
+
+test.if(posix)(
+  "a second brain.warm with another launch replaces the first warm's process; the turn finds it",
+  async () => {
+    const { m, ws, spawns, turn } = setup();
+    const ctx = { agent: AGENT, folder: await agentWorkspace(ws, AGENT), emit: () => {} };
+    const warm = (model: string) =>
+      m.prewarm({ kind: "claude_code", session: { id: SESSION(2), resume: false }, cwd: "", model }, ctx);
+    await turn(1, "hi", { system: "S1", model: "sonnet" });
+    expect(await warm("sonnet")).toEqual({ open: true, started: true });
+    await waitFor(() => spawns().length === 2, 4000);
+    // The run chose the large tier since: another `--fallback-model`, which only a start sets.
+    expect(await warm("opus")).toEqual({ open: true, started: true });
+    await waitFor(() => spawns().length === 3, 4000);
+    expect(spawns()[2]?.args).toContain("--fallback-model");
+    const b = await turn(2, "there", { system: "S1", model: "opus", session: { id: SESSION(2), resume: false } });
+    expect(b.final).toMatchObject({ type: "done", timings: { warm: true } });
+    expect(spawns()).toHaveLength(3);
+    // Once a turn ran on it, a warm with another launch leaves it to the turn.
+    expect(await warm("sonnet")).toEqual({ open: true, started: false });
+    expect(spawns()).toHaveLength(3);
+  },
+);
+
+test.if(posix)(
+  "a warm replaced on a resumed session leaves no guessed text behind: the turn with its own text starts its own",
+  async () => {
+    const { m, ws, spawns, turn } = setup();
+    const ctx = { agent: AGENT, folder: await agentWorkspace(ws, AGENT), emit: () => {} };
+    const warm = (model: string) =>
+      m.prewarm({ kind: "claude_code", session: { id: SESSION(2), resume: true }, cwd: "", model }, ctx);
+    await turn(1, "hi", { system: "S1", model: "sonnet" });
+    expect(await warm("sonnet")).toEqual({ open: true, started: true });
+    await waitFor(() => spawns().length === 2, 4000);
+    expect(await warm("opus")).toEqual({ open: true, started: true });
+    await waitFor(() => spawns().length === 3, 4000);
+    // The conversation's own text: the warms' guess (S1) must not become the session's.
+    const b = await turn(2, "there", { system: "S2", model: "opus", session: { id: SESSION(2), resume: true } });
+    expect(b.final).toMatchObject({ type: "done", timings: { warm: false } });
+    expect(spawns().map((s) => s.system)).toEqual(["S1", "S1", "S1", "S2"]);
+  },
+);

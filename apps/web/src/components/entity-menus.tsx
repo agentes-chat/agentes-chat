@@ -1,23 +1,25 @@
 import type { Agent, Channel } from "@agenteschat/client";
 import {
-  keys,
   useArchiveChannel,
   useDms,
   useMarkChannelRead,
   useMuteChannel,
   usePeople,
   useRoles,
+  useUnarchiveChannel,
 } from "@agenteschat/client";
+import { hidesAgentPage } from "@agenteschat/client/lib/agent-facts";
+import { ownsAgentAs } from "@agenteschat/client/lib/agent-owner";
+import { editsAgent, managesAgent, opensDm } from "@agenteschat/client/lib/audience";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
-import { can, leavesChannel, managesChannel } from "@agenteschat/client/lib/permissions";
+import { leavesChannel, managesChannel } from "@agenteschat/client/lib/permissions";
 import { isRightHand } from "@agenteschat/client/lib/right-hand";
 import { leaves, removes } from "@agenteschat/client/lib/roles";
-import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useApi } from "@/api/context";
+import { useDirectory } from "@/hooks/useDirectory";
+import { useMyRoleIds } from "@/hooks/useMyRoleIds";
 import { useSidebarPins } from "@/hooks/useSidebarPins";
 import { requestChannelDetails } from "@/lib/channel-details";
 import { copyText, type MenuEntry } from "@/lib/context-menu";
@@ -41,26 +43,21 @@ const linkTo = (path: string) => `${window.location.origin}${path}`;
 export function useRestoreChannel() {
   const { t } = useTranslation();
   const { org } = useOrg();
-  const api = useApi();
-  const qc = useQueryClient();
   const toast = useToast();
   const navigate = useNavigate();
-  const [pending, setPending] = useState(false);
-  // The call's own promise, not a mutation's callbacks: Desfazer runs after the screen that archived it closed.
+  const unarchive = useUnarchiveChannel(org.id);
+  // Back in the channels at once (`useUnarchiveChannel`), so its page opens now and the answer comes as a toast. The
+  // call's own promise, not a mutation's callbacks: Desfazer runs after the screen that archived it closed. A refusal
+  // puts the lists back and says so once, from the app's own handler.
   const run = (channel: Pick<Channel, "id" | "name">, onDone?: () => void) => {
-    setPending(true);
-    void api.chat
-      .unarchive(org.id, channel.id)
-      .then(async () => {
-        onDone?.();
-        await qc.invalidateQueries({ queryKey: keys.channels(org.id) });
-        toast.show(t("channel.restored", { channel: channel.name }));
-        await navigate({ to: "/org/$orgId/c/$channelId", params: { orgId: org.id, channelId: channel.id } });
-      })
-      .catch((e: unknown) => toast.show(errorText(t, e), "error"))
-      .finally(() => setPending(false));
+    onDone?.();
+    void navigate({ to: "/org/$orgId/c/$channelId", params: { orgId: org.id, channelId: channel.id } });
+    void unarchive.mutateAsync(channel.id).then(
+      () => toast.show(t("channel.restored", { channel: channel.name })),
+      () => undefined,
+    );
   };
-  return { run, pending };
+  return { run, pending: unarchive.isPending };
 }
 
 /** "Arquivar canal" with "Desfazer" in its toast; leaves the channel's page when it was open. */
@@ -72,19 +69,22 @@ export function useArchiveChannelWithUndo() {
   const router = useRouter();
   const archive = useArchiveChannel(org.id);
   const restore = useRestoreChannel();
-  const run = (channel: Pick<Channel, "id" | "name">, onDone?: () => void) =>
-    archive.mutate(channel.id, {
-      onSuccess: () => {
-        onDone?.();
-        if (router.state.location.pathname.includes(`/c/${channel.id}`))
-          void navigate({ to: "/org/$orgId", params: { orgId: org.id } });
+  const run = (channel: Pick<Channel, "id" | "name">, onDone?: () => void) => {
+    // It leaves the lists at once, so its page goes now too. The call's own promise, not a mutation callback: the
+    // screen that archived it may be gone when the answer comes.
+    onDone?.();
+    if (router.state.location.pathname.includes(`/c/${channel.id}`))
+      void navigate({ to: "/org/$orgId", params: { orgId: org.id } });
+    void archive.mutateAsync(channel.id).then(
+      () =>
         toast.show(t("channel.archived", { channel: channel.name }), "info", {
           label: t("channelCategories.undo"),
           run: () => restore.run(channel),
-        });
-      },
-      onError: (e) => toast.show(errorText(t, e), "error"),
-    });
+        }),
+      // A refusal puts the channel back and says so once, from the app's own handler.
+      () => undefined,
+    );
+  };
   return { run, pending: archive.isPending };
 }
 
@@ -161,7 +161,7 @@ function useMention() {
 
 /**
  * A channel (sidebar row, channel header): mark read, its details (edit for who manages it), `extra` (the sidebar's
- * Mover para… and Nova categoria), copy link, archive.
+ * Mudar de setor), copy link, archive.
  */
 export function useChannelMenu() {
   const { t } = useTranslation();
@@ -237,9 +237,9 @@ export function useChannelMenu() {
 }
 
 /**
- * An agent (sidebar row, its face or name in a message, its card's ⋯): talk, its profile, its computer (`openComputer`,
- * where the caller knows this person may open it), mention, copy @, mark its DM read, edit (its owner and admins), its
- * link, stop while it works, its id.
+ * An agent (sidebar row, its face or name in a message, its card's ⋯): talk (where its DM opens for me, `opensDm`), its
+ * profile, its computer (`openComputer`, where the caller knows this person may open it), mention, copy @, mark its DM
+ * read, edit (who edits it), its link, stop while it works, its id.
  */
 export function useAgentMenu() {
   const { t } = useTranslation();
@@ -255,18 +255,27 @@ export function useAgentMenu() {
   const copyId = useCopyId();
   const mention = useMention();
   const pins = useSidebarPins();
+  const myRoleIds = useMyRoleIds();
+  const dir = useDirectory(org.id);
   /** `extra`: the sidebar row's own items (Mudar de grupo), after Fixar no topo. */
   return (
-    a: Pick<Agent, "id" | "name" | "handle" | "ownerUserId" | "builtin">,
+    a: Pick<
+      Agent,
+      "id" | "name" | "handle" | "ownerUserId" | "ownerRoleId" | "builtin" | "canTalk" | "canManage" | "canEdit"
+    >,
     extra: MenuEntry[] = [],
     openComputer?: () => void,
   ): MenuEntry[] => {
     const dm = dms?.find((d) => d.with.id === a.id);
-    const edits = can(org, "manage_agents") || a.ownerUserId === me.user.id;
+    // Its owner and who manages it land on its settings; who only edits how it works (its "Quem pode editar", ADR 0085
+    // addendum of 2026-11-17) on its instructions.
+    // Its owner: the person, or whoever holds the role that answers for it (ADR 0085, addendum of 2026-11-21).
+    const settles = managesAgent(a) || ownsAgentAs(a, me.user.id, myRoleIds);
+    const edits = settles || editsAgent(a);
     const working = Object.values(live.get().streams.runs).filter(
       (r) => r.agentId === a.id && isStoppable(r) && runs.canStop(r),
     );
-    const page = (tab?: "settings") =>
+    const page = (tab?: "settings" | "instructions") =>
       void navigate({
         to: "/org/$orgId/agents/$agentId",
         params: { orgId: org.id, agentId: a.id },
@@ -274,20 +283,32 @@ export function useAgentMenu() {
       });
     return [
       { kind: "header", label: a.name },
-      {
-        kind: "item",
-        id: "dm",
-        label: t("profile.dm"),
-        icon: "message",
-        run: () => void navigate({ to: "/org/$orgId/dm/agent/$agentId", params: { orgId: org.id, agentId: a.id } }),
-      },
-      {
-        kind: "item",
-        id: "profile",
-        label: t("profile.viewProfile"),
-        icon: "agent",
-        run: () => (openPanel ? openPanel(a.id) : page()),
-      },
+      // Its DM only where the server opens it: someone's private agent, or one I only edit, would refuse it (ADR 0085
+      // addendum of 2026-11-17).
+      ...(opensDm(a)
+        ? ([
+            {
+              kind: "item",
+              id: "dm",
+              label: t("profile.dm"),
+              icon: "message",
+              run: () =>
+                void navigate({ to: "/org/$orgId/dm/agent/$agentId", params: { orgId: org.id, agentId: a.id } }),
+            },
+          ] satisfies MenuEntry[])
+        : []),
+      // A teammate's private agent whose page doesn't open for me: no way to a page that isn't there.
+      ...(hidesAgentPage(dir.agentById.get(a.id))
+        ? []
+        : ([
+            {
+              kind: "item",
+              id: "profile",
+              label: t("profile.viewProfile"),
+              icon: "agent",
+              run: () => (openPanel ? openPanel(a.id) : page()),
+            },
+          ] satisfies MenuEntry[])),
       ...(openComputer
         ? ([
             {
@@ -308,7 +329,13 @@ export function useAgentMenu() {
       { kind: "separator" },
       ...(edits
         ? ([
-            { kind: "item", id: "edit", label: t("contextMenu.editAgent"), icon: "edit", run: () => page("settings") },
+            {
+              kind: "item",
+              id: "edit",
+              label: t("contextMenu.editAgent"),
+              icon: "edit",
+              run: () => page(settles ? "settings" : "instructions"),
+            },
           ] satisfies MenuEntry[])
         : []),
       {

@@ -1,5 +1,6 @@
 import { AGENT_COLORS } from "@agenteschat/tokens/look";
 import type { IssueProject, IssueProjectRef } from "../api/types";
+import { isUuid } from "./format";
 
 /** A project's name holds at most this (mirror of `PROJECT_NAME_MAX`, packages/engine/src/issue-projects.ts). */
 export const PROJECT_NAME_MAX = 80;
@@ -10,11 +11,9 @@ export const PROJECT_COLORS = AGENT_COLORS.filter((c) => c !== "sky");
 /** In a project filter and its URL: the tasks with no project. */
 export const NO_PROJECT = "none";
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 /** A project filter from a URL or a stored value: a project's id, `none`, or nothing. */
 export const projectFilterOf = (value: unknown): string | undefined =>
-  typeof value === "string" && (value === NO_PROJECT || UUID.test(value)) ? value : undefined;
+  typeof value === "string" && (value === NO_PROJECT || isUuid(value)) ? value : undefined;
 
 /**
  * The projects a task can take: the ones in use, plus the one it already has when that one is archived (so the

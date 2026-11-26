@@ -7,11 +7,16 @@ import { parseTabGlyphKey, type TabGlyphKey, tabGlyphSvg } from "./tabGlyphs";
  * draw a little bigger to sit like the system's); Material bottom navigation uses 24dp icons.
  */
 const GLYPH_PT = Platform.OS === "ios" ? 28 : 24;
+/** Android's tabs draw Google's symbols where it has one (`tabGlyphSvg`'s `material`). */
+const MATERIAL = Platform.OS === "android";
 
 const cache = new Map<string, Promise<ImageSourcePropType | null>>();
 
-/** An SVG drawn with Skia into a PNG data URI at the screen's scale (`size` in points). */
-function rasterize(svgText: string, size: number): ImageSourcePropType | null {
+/**
+ * An SVG drawn with Skia into a PNG data URI at the screen's scale (`size` in points), for the native tab bar's images
+ * (Android's glyphs, and Agentes' on iOS, where the other tabs show the system's symbols).
+ */
+export function rasterize(svgText: string, size: number): ImageSourcePropType | null {
   const scale = PixelRatio.get();
   const px = Math.max(1, Math.round(size * scale));
   // The glyph SVGs say width/height 24; Skia draws at those, not at the surface size, so a 24px glyph
@@ -28,7 +33,7 @@ function rasterize(svgText: string, size: number): ImageSourcePropType | null {
 }
 
 /**
- * Our tab glyphs as an icon "family" for the native tab bar on both platforms
+ * The tab glyphs (ours, and Google's symbols on Android) as an icon "family" for the native tab bar on both platforms
  * (`NativeTabs.Trigger.VectorIcon family={tabGlyphFamily} name="agents.selected"`). Each glyph is drawn
  * once with Skia into a PNG (a data URI with its scale, which UIKit's and Android's image loaders both
  * read); the bar tints it (template rendering on iOS, the item tint on Android). The size and color the
@@ -43,7 +48,7 @@ export const tabGlyphFamily = {
         const parsed = parseTabGlyphKey(name);
         if (!parsed) return null;
         try {
-          return rasterize(tabGlyphSvg(parsed.glyph, parsed.selected), GLYPH_PT);
+          return rasterize(tabGlyphSvg(parsed.glyph, parsed.selected, "#000000", MATERIAL), GLYPH_PT);
         } catch {
           return null;
         }

@@ -1,5 +1,6 @@
 import type { Agent, Memory, MemoryKind } from "@agenteschat/client";
-import { useMemory, useMemoryAction, useProposals } from "@agenteschat/client";
+import { useMemory, useMemoryAction } from "@agenteschat/client";
+import { FIELD_LIMITS } from "@agenteschat/client/lib/field-limits";
 import { daysBetween, relativeTime } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { memoryLine } from "@agenteschat/client/lib/proposals";
@@ -16,6 +17,7 @@ import {
   Icon,
   type IconName,
   List,
+  overLimit,
   PageHeader,
   SearchField,
   Tabs,
@@ -31,6 +33,7 @@ import { HelpLink } from "@/components/HelpLink";
 import { ErrorState, LoadingPage } from "@/components/Loading";
 import { useOrg } from "@/components/org-context";
 import { useDirectory } from "@/hooks/useDirectory";
+import { useTextLimit } from "@/hooks/useTextLimit";
 import { useLandOn } from "@/lib/land-on";
 import { lookOf } from "@/lib/look";
 
@@ -157,7 +160,6 @@ function MemoryView({ agent, item }: { agent: Agent; item?: string }) {
   const { t, i18n } = useTranslation();
   const { org, me } = useOrg();
   const memory = useMemory(org.id, agent.id);
-  const proposals = useProposals(org.id);
   const action = useMemoryAction(org.id, agent.id);
   const g = agentGrammar(agent.name);
   const [picked, setTab] = useState<MemoryTab | null>(null);
@@ -171,7 +173,6 @@ function MemoryView({ agent, item }: { agent: Agent; item?: string }) {
   useLandOn(page, item, Boolean(linked));
   const items = filterMemories(all, tab, q);
   const count = (x: MemoryTab) => all.filter((m) => inMemoryTab(m, x)).length;
-  const pendingProposals = (proposals.data ?? []).filter((p) => p.agentId === agent.id && p.status === "pending");
 
   return (
     <div className="page page--full" ref={page}>
@@ -179,20 +180,7 @@ function MemoryView({ agent, item }: { agent: Agent; item?: string }) {
         <Icon name="chevronLeft" />
         {t("memory.back", g)}
       </Link>
-      <PageHeader
-        title={t("memory.title", g)}
-        meta={t(modeKey(org, "memory.subtitle"), g)}
-        actions={
-          pendingProposals.length > 0 && (
-            <Button asChild>
-              <Link to="/org/$orgId/proposals" params={{ orgId: org.id }} search={{ agent: agent.id }}>
-                <Icon name="waiting" />
-                {t("memory.proposals", { count: pendingProposals.length })}
-              </Link>
-            </Button>
-          )
-        }
-      />
+      <PageHeader title={t("memory.title", g)} meta={t(modeKey(org, "memory.subtitle"), g)} />
 
       <div className="tabs-bar">
         <Tabs
@@ -229,7 +217,7 @@ function MemoryView({ agent, item }: { agent: Agent; item?: string }) {
             data-item-id={m.id}
             aria-label={`${t(`memory.kinds.${m.kind}`)}: ${memoryLine(t, m)}`}
           >
-            <div className="row">
+            <div className="row ac-tailrow">
               <Chip icon={KIND_ICON[m.kind]}>{t(`memory.kinds.${m.kind}`)}</Chip>
               {m.pinned && <Chip icon="pin">{t("memory.pinned")}</Chip>}
               {m.verified ? (
@@ -246,7 +234,7 @@ function MemoryView({ agent, item }: { agent: Agent; item?: string }) {
                   {t("memory.lowTrust")}
                 </Chip>
               )}
-              <span className="memory-item__used">{usageLabel(t, m)}</span>
+              <span className="memory-item__used ac-tail">{usageLabel(t, m)}</span>
             </div>
             <p className="memory-item__text">{memoryLine(t, m)}</p>
             {m.supersedes && (
@@ -262,16 +250,6 @@ function MemoryView({ agent, item }: { agent: Agent; item?: string }) {
               </span>
               {/* A row of ghosts: their words 16px apart, the last one on the item's padding line. */}
               <div className="ac-acts">
-                {(m.lowTrust || !m.verified) && (
-                  <Button
-                    variant="link"
-                    title={t("memory.confirmTitle")}
-                    disabled={action.isPending}
-                    onClick={() => action.mutate({ type: "confirm", id: m.id })}
-                  >
-                    {t("memory.confirm")}
-                  </Button>
-                )}
                 <Button variant="link" onClick={() => setEditing(m)}>
                   {t("memory.edit")}
                 </Button>
@@ -319,6 +297,7 @@ function EditMemoryDialog({
 }) {
   const { t, i18n } = useTranslation();
   const [text, setText] = useState("");
+  const limit = useTextLimit(FIELD_LIMITS.memory);
   useEffect(() => setText(memory?.text ?? ""), [memory]);
   return (
     <Dialog
@@ -338,12 +317,12 @@ function EditMemoryDialog({
             text: t("memory.editHelp", { source: memory ? `${memorySource(t, i18n.language, memory)}.` : "" }),
           }}
         >
-          <Textarea rows={3} maxLength={8000} value={text} onChange={(e) => setText(e.target.value)} />
+          <Textarea rows={3} limit={limit} value={text} onChange={(e) => setText(e.target.value)} />
         </Field>
       </DialogBody>
       <DialogFooter>
         <Button onClick={onClose}>{t("common.cancel")}</Button>
-        <Button variant="primary" disabled={!text.trim()} onClick={() => onSave(text.trim())}>
+        <Button variant="primary" disabled={!text.trim() || overLimit(text, limit)} onClick={() => onSave(text.trim())}>
           {t("common.save")}
         </Button>
       </DialogFooter>

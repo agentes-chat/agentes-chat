@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { ACCOUNTS_PROTOCOL } from "@agenteschat/adapters";
 import { and, eq, inArray, schema, sql } from "@agenteschat/db";
 import {
+  ACCOUNT_OPENED_JOB,
   type AgentSetupInput,
   applyAgentSetup,
   createAgent,
@@ -18,7 +19,7 @@ import {
   updateAgent,
   ValidationError,
 } from "../src";
-import { addMember, type Fixture, setup } from "./fixtures";
+import { addMember, everyoneWithout, type Fixture, setup } from "./fixtures";
 import { pairMachine } from "./machine-fixtures";
 
 /*
@@ -54,6 +55,8 @@ async function world() {
   };
   const mac = await pair("MacBook");
   const pc = await pair("PC");
+  // Bia is a member of a workspace whose admins took Criar agentes off Todos.
+  await everyoneWithout(fx.db, fx.org.id, "create_agents");
   const bia = await addMember(fx.db, fx.org.id, "member", "bia");
   const caio = await addMember(fx.db, fx.org.id, "admin", "caio");
   await fx.db.insert(schema.machineAccounts).values([
@@ -124,7 +127,6 @@ const ANA_CLAUDE = (mac: string) => ({
   account: ANAS,
   model: "opus",
   effort: "high",
-  fallback: true,
 });
 
 describe("Usar em outros agentes", () => {
@@ -137,7 +139,7 @@ describe("Usar em outros agentes", () => {
       { agentId: w.theo, status: "applied" },
       { agentId: w.lia, status: "skipped", reason: "other_computer", params: { computer: "PC" } },
       // Zoe keeps Bia's GLM Coding plan, which has no Opus.
-      { agentId: w.zoe, status: "skipped", reason: "model_missing", params: { plan: "GLM Coding", model: "Opus" } },
+      { agentId: w.zoe, status: "skipped", reason: "model_missing", params: { plan: "GLM Coding", model: "Opus 5.5" } },
     ];
     const preview = await applyAgentSetup(deps, fx.owner.id, fx.org.id, {
       setup: ANA_CLAUDE(w.mac),
@@ -158,7 +160,8 @@ describe("Usar em outros agentes", () => {
         brainAccountId: ANAS,
         brainModel: "opus",
         brainEffort: "high",
-        audienceMode: "owner",
+        // Who it answers stays: on the plan, its "Atender todos" decides.
+        audienceMode: "everyone",
       });
       // Each is its own change in the audit log, saying where it came from.
       const [audit] = await w.brainAudits(id);
@@ -172,7 +175,6 @@ describe("Usar em outros agentes", () => {
       account: ANAS,
       effort: "high",
       contextTokens: null,
-      fallback: true,
       autonomy: null,
     });
     // Again: they already think so.
@@ -295,8 +297,12 @@ describe("Usar em outros agentes", () => {
 });
 
 describe("Usar em outros agentes on someone else's plan (ADR 0059 §5)", () => {
+  // On a plan account its "Atender todos" opens (`ACCOUNT_OPENED_JOB`); on a computer's own sign-in, the agent.
   const planJobs = (w: Awaited<ReturnType<typeof world>>) =>
-    w.fx.db.select().from(schema.outbox).where(eq(schema.outbox.kind, PLAN_OPENED_JOB));
+    w.fx.db
+      .select()
+      .from(schema.outbox)
+      .where(inArray(schema.outbox.kind, [PLAN_OPENED_JOB, ACCOUNT_OPENED_JOB]));
 
   test("an admin letting more people talk to Ana's agent on her plan: the preview says so, and Ana gets an email", async () => {
     const w = await world();
@@ -330,16 +336,25 @@ describe("new agents start with the last setup", () => {
       model: "opus",
       effort: "high",
     });
+    // Where it thinks carries over; the model and effort start on Automático, never the other agent's pin.
     expect(await getNewAgentSetup(deps, fx.owner.id, fx.org.id)).toEqual({
       brain: "claude_code",
-      model: "opus",
+      model: "auto",
       key: null,
       contextTokens: null,
       computer: { machineId: w.mac, name: "MacBook" },
-      account: { id: ANAS, label: "Claude", provider: null, mine: true, free: true },
+      account: {
+        id: ANAS,
+        label: "Claude",
+        named: false,
+        email: null,
+        plan: null,
+        provider: null,
+        mine: true,
+        free: true,
+      },
       ownSignIn: true,
-      effort: "high",
-      fallback: true,
+      effort: "auto",
       autonomy: null,
     });
     // Anyone else sees whose it is: a plan thinks only for its owner's agents.
@@ -350,7 +365,7 @@ describe("new agents start with the last setup", () => {
     await updateAgent(fx.db, fx.owner.id, fx.org.id, w.theo, { model: "claude-haiku-5-5" });
     expect(await getNewAgentSetup(deps, fx.owner.id, fx.org.id)).toEqual({
       brain: "model",
-      model: "claude-haiku-5-5",
+      model: "auto",
       key: null,
       contextTokens: null,
       autonomy: null,
@@ -447,7 +462,7 @@ describe("the Autonomia goes with the setup", () => {
         agentId: w.zoe,
         status: "skipped",
         reason: "model_missing",
-        params: { plan: "GLM Coding", model: "Opus" },
+        params: { plan: "GLM Coding", model: "Opus 5.5" },
         autonomy: { from: "low_risk_auto", to: "never" },
       },
     ];

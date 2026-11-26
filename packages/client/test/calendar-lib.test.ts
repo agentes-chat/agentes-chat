@@ -3,10 +3,14 @@ import {
   type CalItem,
   collapseRoutines,
   dayEntries,
+  dayItemsKey,
   dayRuns,
   dragRange,
+  grownHeights,
   HOUR_PX,
   initialScrollMinutes,
+  itemOwners,
+  keptHeights,
   layoutBars,
   layoutDay,
   onDay,
@@ -117,6 +121,79 @@ describe("calendar layout", () => {
     ]);
     // Its own slot stays its slot: only what it reaches into moves.
     expect(layoutDay([short], day, [], new Map([["short", 50]]))[0]?.height).toBe(30);
+  });
+
+  test("measured heights only grow, so a layout that changes how tall it draws settles instead of flipping", () => {
+    const heights = new Map([["a", 40]]);
+    expect(grownHeights(heights, new Map([["a", 30]]))).toBe(heights);
+    expect(grownHeights(heights, new Map([["a", 40.4]]))).toBe(heights);
+    expect([
+      ...grownHeights(
+        heights,
+        new Map([
+          ["a", 52],
+          ["b", 20],
+        ]),
+      ),
+    ]).toEqual([
+      ["a", 52],
+      ["b", 20],
+    ]);
+    // Runs 40 minutes apart (29px): alone the first one wraps (44px) and takes in the second; together they draw 24px,
+    // which lets the second go again. Taking each measure as it is flips the stacks on every render.
+    const runs = [run("a", at(7)), run("b", at(7, 40))];
+    const draw = (stacks: ReturnType<typeof runStacks>) =>
+      new Map(stacks.map((s) => [s.key, s.runs.length === 1 ? 44 : 24] as const));
+    const renders = (
+      next: (before: ReadonlyMap<string, number>, drawn: Map<string, number>) => ReadonlyMap<string, number>,
+    ) => {
+      let measured: ReadonlyMap<string, number> = new Map();
+      const stackCounts: number[] = [];
+      for (let render = 0; render < 6; render++) {
+        const stacks = runStacks(runs, day, measured);
+        stackCounts.push(stacks.length);
+        measured = next(measured, draw(stacks));
+      }
+      return stackCounts;
+    };
+    expect(renders((_, drawn) => drawn)).toEqual([2, 1, 2, 1, 2, 1]);
+    expect(renders(grownHeights)).toEqual([2, 1, 1, 1, 1, 1]);
+  });
+
+  test("a change on a day measures again the clusters it was in and lands in, and only those", () => {
+    // Two runs in one stack (drawn 44px: an hour), a meeting with the one that starts inside it, one in the evening.
+    const items = [
+      run("a", at(7)),
+      run("b", at(7, 40)),
+      item("planning", at(14), at(16)),
+      item("coffee", at(15), at(15, 30)),
+      item("late", at(18), at(19)),
+    ];
+    const heights = new Map([
+      ["runs-a", 44],
+      ["planning", 86],
+      ["coffee", 60],
+      ["late", 42],
+    ]);
+    const was = dayItemsKey(items, day);
+    const after = (key: string, change: Partial<CalItem>) => {
+      const changed = items.map((it) => (it.key === key ? { ...it, ...change } : it));
+      return keptHeights(heights, was, dayItemsKey(changed, day));
+    };
+    expect(keptHeights(heights, was, was)).toBe(heights);
+    // An hour shorter: the meeting, and the one beside it, which may now go under it.
+    expect([...after("planning", { end: at(15) })]).toEqual([
+      ["runs-a", 44],
+      ["late", 42],
+    ]);
+    // A routine renamed: its run's stack.
+    expect([...after("b", { title: "Resumo do dia" })]).toEqual([
+      ["planning", 86],
+      ["coffee", 60],
+      ["late", 42],
+    ]);
+    // Moved to the evening: where it was, and the meeting it lands beside.
+    expect([...after("coffee", { start: at(18, 30), end: at(19) })]).toEqual([["runs-a", 44]]);
   });
 
   test("a day's rows for the month and the agenda: all day first, then by time, a frequent routine once", () => {
@@ -242,8 +319,17 @@ describe("calendar layout", () => {
         },
       ],
       deadlines: [
-        { issueId: "i1", number: 128, title: "Login", date: "2026-10-14", assignee: { type: "agent", id: "ag-ada" } },
-        { issueId: "i2", number: 129, title: "Nobody", date: "2026-10-14", assignee: null },
+        {
+          issueId: "i1",
+          number: 128,
+          title: "Login",
+          date: "2026-10-14",
+          assignees: [
+            { type: "agent", id: "ag-ada" },
+            { type: "person", id: "u1" },
+          ],
+        },
+        { issueId: "i2", number: 129, title: "Nobody", date: "2026-10-14", assignees: [] },
         { issueId: "i3", number: 130, title: "Older server", date: "2026-10-14" },
       ],
       proposals: [],
@@ -257,6 +343,14 @@ describe("calendar layout", () => {
       ["deadline-i2", undefined],
       ["deadline-i3", undefined],
     ]);
+    // A task due that several have counts for each of them; any other item, for its one owner.
+    const owners = (key: string) => itemOwners(items.find((it) => it.key === key) ?? {});
+    expect(owners("deadline-i1")).toEqual([
+      { type: "agent", id: "ag-ada" },
+      { type: "person", id: "u1" },
+    ]);
+    expect(owners("deadline-i2")).toEqual([]);
+    expect(owners("by-person")).toEqual([{ type: "person", id: "u-ana" }]);
   });
 
   test("overlapping events sit side by side; a later one gets the full width again", () => {

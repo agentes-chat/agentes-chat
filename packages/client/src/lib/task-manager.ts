@@ -1,7 +1,18 @@
 import type { TFunction } from "i18next";
-import type { EndedTask, HiddenTasks, ManagedTask, TaskNow, TaskWait } from "../api/types";
+import type {
+  CanceledReturn,
+  ComputerSummary,
+  EndedTask,
+  HiddenTasks,
+  ManagedTask,
+  PendingReturn,
+  TaskNow,
+  TaskWait,
+} from "../api/types";
 import { type Activity, toolActivity } from "./activity";
-import { durationText, etaMinutes } from "./computer-queue";
+import { durationText } from "./computer-queue";
+import { agentGrammar } from "./grammar";
+import { stopperOf } from "./notices";
 import { usageWhenShort } from "./plan-usage";
 import { usageWindowText } from "./usage-pause";
 
@@ -46,7 +57,7 @@ export const waitKey = (w: WaitReason) =>
     : w === "answer"
       ? "taskManager.state.answer"
       : w === "computer_busy"
-        ? "taskManager.state.computerBusy"
+        ? "queue.waiting"
         : w === "computer_offline"
           ? "taskManager.state.computerOffline"
           : w === "plan"
@@ -69,7 +80,7 @@ function backWhen(t: TFunction, locale: string, resetsAt: string | null, now: nu
 const COMPUTER_GONE = new Set(["machine_offline", "machine_dropped"]);
 
 /**
- * What a waiting task says on its row, whole: what holds it and why ("Pausada: plano a 95% da semana"), and what comes
+ * What a waiting task says on its row, whole: what holds it and why ("Pausada: plano a 99% da semana"), and what comes
  * next ("Volta sáb às 18:00"). Null when it isn't waiting.
  */
 export function taskWaitWords(
@@ -89,20 +100,15 @@ export function taskWaitWords(
       return { state: s(waitKey(reason)), next: s("taskManager.wait.okNext") };
     case "answer":
       return { state: s(waitKey(reason)), next: s("taskManager.wait.answerNext") };
-    case "computer_busy": {
-      const place = linePlace(task);
-      return {
-        state: place ? s("taskManager.state.inLine", { position: place.position }) : s(waitKey(reason)),
-        next: place?.estimatedStartAt
-          ? s("queue.startsIn", { n: etaMinutes(place.estimatedStartAt, now) })
-          : s("taskManager.wait.computerBusyNext"),
-      };
-    }
+    // One state whatever holds the turn (its computer's room or its plan sign-in's): it waits its turn in line.
+    case "computer_busy":
+      return { state: s(waitKey(reason)), next: null };
     case "computer_offline":
       if (w?.code === "work_queue")
         return { state: s("taskManager.wait.workLine"), next: s("taskManager.wait.workLineNext") };
       if (w && !COMPUTER_GONE.has(w.code))
         return { state: s("taskManager.wait.computerWait"), next: s("taskManager.wait.computerWaitNext") };
+      if (w?.moving) return { state: s("taskManager.wait.computerWait"), next: s("machines.moving.line") };
       return { state: s(waitKey(reason)), next: s("taskManager.wait.computerOfflineNext") };
     case "budget": {
       if (!paused && w?.code !== "budget") return { state: s(waitKey(reason)), next: null };
@@ -186,7 +192,7 @@ export function taskWaitGroups(tasks: ManagedTask[]): TaskWaitGroup[] {
     });
 }
 
-/** The line over a group: "9 rotinas pausadas: o plano do Claude está em 95% da semana e volta sáb às 18:00. …". */
+/** The line over a group: "9 rotinas pausadas: o plano do Claude está em 99% da semana e volta sáb às 18:00. …". */
 export function taskWaitGroupText(t: TFunction, locale: string, group: TaskWaitGroup, now = Date.now()) {
   const s = say(t);
   const { wait: w, tasks } = group;
@@ -205,6 +211,88 @@ export function taskWaitGroupText(t: TFunction, locale: string, group: TaskWaitG
   if (w.code === "budget") return s("taskManager.waitGroup.budgetOut", { ...values, when });
   if (w.scope === "model") return s("taskManager.waitGroup.modelLimit", { ...values, when });
   return s("taskManager.waitGroup.planLimit", { ...values, when });
+}
+
+/**
+ * What holds the waiting work now, one entry per cause: a plan's sign-in or a budget at its limit (`limit`, by its
+ * wait key), a computer full or away (`computer`), people asked for an ok or an answer (`person`). The cause holding
+ * the most first. An agent's own line of work holds nothing here: it waits on its other work.
+ */
+export type WaitCause =
+  | { kind: "limit"; key: string; tasks: ManagedTask[] }
+  | { kind: "computer"; key: string; machineId: string; tasks: ManagedTask[] }
+  | { kind: "person"; key: string; tasks: ManagedTask[] };
+
+export function waitCauses(tasks: ManagedTask[]): WaitCause[] {
+  const causes = new Map<string, WaitCause>();
+  for (const task of tasks) {
+    const why = waitsFor(task);
+    const machineId = task.line?.machineId ?? task.machine?.id;
+    const cause: WaitCause | null =
+      why === "ok" || why === "answer"
+        ? { kind: "person", key: "person", tasks: [] }
+        : why === "plan" || why === "budget"
+          ? { kind: "limit", key: `limit:${task.wait?.key ?? task.wait?.plan ?? why}`, tasks: [] }
+          : why === "computer_offline" && machineId && task.wait?.code !== "work_queue"
+            ? { kind: "computer", key: `${why}:${machineId}`, machineId, tasks: [] }
+            : null;
+    if (!cause) continue;
+    const found = causes.get(cause.key) ?? cause;
+    found.tasks.push(task);
+    causes.set(cause.key, found);
+  }
+  return [...causes.values()].sort(
+    (a, b) => b.tasks.length - a.tasks.length || CAUSE_ORDER[a.kind] - CAUSE_ORDER[b.kind],
+  );
+}
+
+const CAUSE_ORDER: Record<WaitCause["kind"], number> = { limit: 0, computer: 1, person: 2 };
+
+/** Causes shown at most: the ones holding the most work. "N esperando" still counts every waiting task. */
+export const CAUSES_SHOWN = 3;
+
+/** What holds the waiting work, as the task manager shows it over its sections (`waitCauses`, the first few). */
+export const shownCauses = (tasks: ManagedTask[]) => waitCauses(tasks).slice(0, CAUSES_SHOWN);
+
+/** A computer on the task manager: "2 na fila · 3 trabalhando", "Tem espaço · 1 trabalhando". */
+export function computerRoomText(t: TFunction, computer: Pick<ComputerSummary, "working" | "inLine">): string {
+  const s = say(t);
+  const room =
+    computer.inLine > 0 ? s("taskManager.queue.inLine", { count: computer.inLine }) : s("taskManager.queue.room");
+  return computer.working > 0 ? `${room} · ${s("taskManager.working", { count: computer.working })}` : room;
+}
+
+/** Computadores' computers: the ones no shown cause already names, so a full or away computer shows once. */
+export function computersBesides(computers: ComputerSummary[], causes: WaitCause[]): ComputerSummary[] {
+  const shown = new Set(causes.flatMap((c) => (c.kind === "computer" ? [c.machineId] : [])));
+  return computers.filter((c) => !shown.has(c.id));
+}
+
+/**
+ * A cause's row, the same on web and phone: a limit in its tasks' own wait words ("Plano do Claude no limite", "Volta
+ * às 16:59 · 2 tarefas"), its time the wait's own, when the work goes on (a usage meter's can differ: a refusal's
+ * reset outranks the windows); a computer with Computadores' facts.
+ */
+export function causeWords(
+  t: TFunction,
+  locale: string,
+  cause: WaitCause,
+  computers: ComputerSummary[],
+  now = Date.now(),
+): { name: string; fact: string } {
+  const s = say(t);
+  const first = cause.tasks[0] as ManagedTask;
+  const words = taskWaitWords(t, locale, first, now);
+  const count = s("taskManager.tasks", { count: cause.tasks.length });
+  if (cause.kind === "limit")
+    return { name: words?.state ?? "", fact: [words?.next, count].filter(Boolean).join(" · ") };
+  if (cause.kind === "computer") {
+    const computer = computers.find((c) => c.id === cause.machineId);
+    const name = computer?.name ?? first.machine?.name ?? "";
+    const working = computer?.working ? s("taskManager.working", { count: computer.working }) : null;
+    return { name, fact: [words?.state, count, working].filter(Boolean).join(" · ") };
+  }
+  return { name: s("taskManager.waiting", { count: cause.tasks.length }), fact: words?.next ?? "" };
 }
 
 /** Since when it counts (a long work's start, else the run's), in ms. */
@@ -266,6 +354,7 @@ function programOf(now: TaskNow | null): TaskProgram | null {
     case "runningSkillScript":
     case "runningSkillScriptAny":
     case "cloningRepo":
+    case "listingRepos":
     case "pcFiles":
       return { kind: "terminal", activity, detail };
     case "consulting":
@@ -300,29 +389,65 @@ export function programKey(p: TaskProgram): string | null {
   }
 }
 
-/** What a task is about, for its row: its label, else where it is ("Conversa com Ana", "#produto"). */
+/**
+ * What a task is about, for its row: its label, else its routine's name, else what another agent asked it, else the
+ * thread work handed off from (ADR 0084 addendum), else where it is ("Conversa com Ana", "#produto").
+ */
 export function taskTitle(
   t: TFunction,
-  task: Pick<ManagedTask, "label" | "routine" | "channelKind" | "channelName" | "betweenAgents">,
+  task: Pick<ManagedTask, "label" | "routine" | "channelKind" | "channelName" | "betweenAgents"> & {
+    delegation?: ManagedTask["delegation"];
+    subject?: ManagedTask["subject"];
+  },
 ) {
   if (task.label?.trim()) return task.label.trim();
   if (task.routine?.name) return task.routine.name;
+  if (task.betweenAgents && task.subject) return task.subject;
+  if (task.delegation?.from?.label) return task.delegation.from.label;
   return taskWhere(t, task);
 }
 
-/** Where it is: "#produto", "Conversa direta", "Conversa entre agentes", "Rotina «Backups»". */
+/**
+ * Where it is: "#produto", "Conversa direta", "Rotina «Backups»". Work one agent handed another says where it was handed
+ * off, for who reads that conversation, else "Conversa entre agentes".
+ */
 export function taskWhere(
   t: TFunction,
-  task: Pick<ManagedTask, "routine" | "channelKind" | "channelName" | "betweenAgents"> & { background?: boolean },
+  task: Pick<ManagedTask, "routine" | "channelKind" | "channelName" | "betweenAgents"> & {
+    background?: boolean;
+    delegation?: ManagedTask["delegation"];
+  },
 ) {
   if (task.background) {
     return task.routine?.name
       ? t("taskManager.where.routine", { name: task.routine.name })
       : t("taskManager.where.background");
   }
+  const from = task.delegation?.from;
+  if (task.betweenAgents && from) {
+    return from.channelKind === "channel" && from.channelName ? `#${from.channelName}` : t("taskManager.where.dm");
+  }
   if (task.betweenAgents) return t("chat.consultPanel.whereDm");
   if (task.channelKind === "dm") return t("taskManager.where.dm");
   return `#${task.channelName ?? ""}`;
+}
+
+/**
+ * Whether "Abrir na conversa" has a conversation to open: not a routine's background run, and work between agents only
+ * where it was handed off from.
+ */
+export const opensInChat = (
+  task: Pick<ManagedTask, "background" | "betweenAgents"> & { delegation?: ManagedTask["delegation"] },
+) => !task.background && (!task.betweenAgents || Boolean(task.delegation?.from));
+
+/** "ajudando a Ada": work another agent handed it, by that agent's name. */
+export function taskHelping(
+  t: TFunction,
+  task: Pick<ManagedTask, "delegation">,
+  agentName: (id: string) => string | undefined,
+) {
+  const name = task.delegation ? agentName(task.delegation.agentId) : undefined;
+  return name ? t("chat.consultPanel.helping", agentGrammar(name)) : null;
 }
 
 /** Where it is, unless its title already says it (a task with no title of its own is called by its place). */
@@ -330,10 +455,36 @@ export function taskPlace(
   t: TFunction,
   task: Pick<ManagedTask, "label" | "routine" | "channelKind" | "channelName" | "betweenAgents"> & {
     background?: boolean;
+    delegation?: ManagedTask["delegation"];
+    subject?: ManagedTask["subject"];
   },
 ) {
   const where = taskWhere(t, task);
   return where === taskTitle(t, task) ? null : where;
+}
+
+/** Where a return lands, as a row says it: "#vendas", "Conversa direta"; null for a task's conversation. */
+export const returnPlace = (t: TFunction, r: Pick<PendingReturn, "channelKind" | "channelName">) =>
+  r.channelKind === "channel" && r.channelName
+    ? `#${r.channelName}`
+    : r.channelKind === "dm"
+      ? t("taskManager.where.dm")
+      : null;
+
+/**
+ * How a canceled return ended, as "Terminadas hoje" says it: by its time, when the agent or the person left
+ * ("Retorno cancelado"), by the reader, by someone else or the agent itself ("Retorno cancelado por Ana").
+ */
+export function returnCanceledText(
+  t: TFunction,
+  r: Pick<CanceledReturn, "canceledBy">,
+  meId: string | null,
+  agentName: string,
+) {
+  const by = r.canceledBy;
+  if (!by) return t("taskManager.ended.returnCanceled");
+  if (by.kind === "person" && by.userId === meId) return t("taskManager.ended.returnCanceledYou");
+  return t("taskManager.ended.returnCanceledBy", { name: by.kind === "person" ? by.name : agentName });
 }
 
 export interface AgentTasks {
@@ -463,6 +614,26 @@ export function activityLine(activity: Record<string, number[]>, agentId: string
 /** How a task ended, for "Terminadas hoje": done, stopped (by whom) or couldn't. */
 export const endedState = (e: Pick<EndedTask, "status">): "done" | "stopped" | "failed" =>
   e.status === "done" ? "done" : e.status === "canceled" ? "stopped" : "failed";
+
+/**
+ * How a task ended, in words: done, couldn't finish, or stopped: "You stopped it" only for who stopped it, the name of
+ * anyone else or of the agent that stopped it at their word (`agentName`), and a plain "Stopped" when no person did.
+ */
+export function endedText(
+  t: TFunction,
+  task: Pick<EndedTask, "status" | "stoppedBy">,
+  meId: string | null | undefined,
+  agentName: (id: string) => string | undefined = () => undefined,
+): string {
+  const state = endedState(task);
+  if (state === "done") return t("taskManager.ended.done");
+  if (state === "failed") return t("taskManager.ended.failed");
+  const by = task.stoppedBy;
+  const stopper = by ? stopperOf({ byUserId: by.userId, byAgentId: by.agentId }, meId) : null;
+  if (stopper?.kind === "you") return t("taskManager.ended.stopped");
+  const name = stopper?.kind === "agent" ? agentName(stopper.agentId) : by?.name;
+  return name ? t("taskManager.ended.stoppedBy", { name }) : t("taskManager.state.stopped");
+}
 
 /** Since when "Terminadas hoje" counts: the local midnight. */
 export function todayStart(now = new Date()): string {

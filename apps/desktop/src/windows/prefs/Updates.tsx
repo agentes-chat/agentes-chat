@@ -5,7 +5,7 @@ import { type ReactNode, useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useHost } from "../../app";
 import { AUTO_UPDATE_PREF, autoUpdateOn, noteLines } from "../../control/version";
-import { type UpdateCheck, useLocalServer, usePref } from "../../hooks";
+import { type UpdateCheck, useAppInfo, useLocalServer, usePref } from "../../hooks";
 import { CardTitle, hintFor, PrefCard, PrefHead, PrefRow } from "../../ui/settings";
 import { useToast } from "../../ui/Toast";
 import { clock } from "../../ui/time";
@@ -25,6 +25,7 @@ export function Updates({ update }: { update: UpdateCheck }) {
   const [manual, setManual] = useState(false);
   const local = useLocalServer();
   const [autoPref, setAutoPref] = usePref<boolean | null>(AUTO_UPDATE_PREF, null);
+  const details = useAppInfo()?.details;
   useEffect(() => host.onUpdateProgress((got, total) => setProgress({ got, total })), [host]);
 
   const install = async () => {
@@ -46,6 +47,15 @@ export function Updates({ update }: { update: UpdateCheck }) {
   const percent = progress?.total ? Math.min(100, Math.floor((progress.got / progress.total) * 100)) : 0;
   // Whole: it installs now (seconds), and there is nothing left to cancel.
   const whole = percent === 100;
+
+  const copyDetails = async (line: string) => {
+    try {
+      await navigator.clipboard.writeText(line);
+      toast(t("desktop.common.copied"), "copy");
+    } catch {
+      toast(t("desktop.common.error"), "alert");
+    }
+  };
 
   const checkNow = async () => {
     const result = await update.check();
@@ -102,11 +112,22 @@ export function Updates({ update }: { update: UpdateCheck }) {
             <Switch
               id="auto-update"
               aria-describedby="auto-update-hint"
-              checked={autoUpdateOn(autoPref, local.run)}
+              checked={autoUpdateOn(autoPref)}
               onCheckedChange={setAutoPref}
             />
           }
         />
+        {details && (
+          <PrefRow
+            title={t("desktop.prefs.updates.systemDetails")}
+            desc={details}
+            end={
+              <Button variant="ghost" size="sm" icon="copy" onClick={() => void copyDetails(details)}>
+                {t("desktop.common.copy")}
+              </Button>
+            }
+          />
+        )}
       </PrefCard>
 
       {available && latest && (

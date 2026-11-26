@@ -1,3 +1,4 @@
+import type { DesktopStart } from "@agenteschat/adapters";
 import { and, asc, type Database, type Executor, eq, lt, rowsOf, type SQL, schema, sql } from "@agenteschat/db";
 import { z } from "zod";
 import { decodeCursor, encodeCursor } from "./cursor";
@@ -28,6 +29,7 @@ export type OperatorEventType =
   | "organization.created"
   | "organization.deletion_requested"
   | "organization.deletion_canceled"
+  | "organization.plan_move_requested"
   | "organization.deleted"
   | "invitation.created"
   | "agent.created"
@@ -38,9 +40,16 @@ export type OperatorEventType =
   | "task.finished"
   | "desktop_control.ended"
   | "content.viewed"
+  | "support.requested"
+  | "support.replied"
   | "platform_ai.threshold"
   | "account.failure"
-  | "machine.wake_wanted";
+  | "machine.wake_wanted"
+  | "desktop.started"
+  | "surface.cap_reached"
+  | "outside_access.granted"
+  | "outside_access.denied"
+  | "outside_access.ended";
 
 export interface OperatorEvent {
   type: OperatorEventType;
@@ -67,13 +76,37 @@ export async function recordOperatorEvent(db: Executor, ...events: OperatorEvent
   if (enabled && events.length > 0) await insertEvents(db, events);
 }
 
-/** `content.viewed`, whether events are on or not: content never leaves through the operator API without it. */
+/**
+ * `content.viewed`, whether events are on or not: content never leaves through the operator API without it. Beside
+ * what was read, why and by whom, a read may say more of itself in facts (a purpose, the ids of what proves it).
+ */
 export async function recordContentViewed(
   db: Executor,
-  view: { orgId: string; ref: string; reason: string; operator: string },
+  view: { orgId: string; ref: string; reason: string; operator: string; [fact: string]: unknown },
 ) {
   const { orgId, ...data } = view;
   await insertEvents(db, [{ type: "content.viewed", orgId, data }]);
+}
+
+/**
+ * `support.replied`, whether events are on or not: the replies a request and a day may have are counted from these.
+ * Which sentence was sent or the word `text`, and how long the operator's own words were, never the words.
+ */
+export async function recordSupportReplied(
+  db: Executor,
+  reply: {
+    orgId: string;
+    /** The member answered. */
+    userId: string;
+    requestId: string;
+    template: string;
+    chars: number;
+    assistedByAi: boolean;
+    operator: string;
+  },
+) {
+  const { orgId, userId, ...data } = reply;
+  await insertEvents(db, [{ type: "support.replied", orgId, userId, data }]);
 }
 
 /** `user.signed_up`, from a new sign-in method: the account's first one is its sign-up, later ones are links. */
@@ -196,6 +229,18 @@ export async function recordWakeWanted(
   wakeWantedAt.set(wake.machineId, now);
   const { orgId, ...data } = wake;
   await recordOperatorEvent(db, { type: "machine.wake_wanted", orgId, data });
+}
+
+/**
+ * `desktop.started`: an agent's desktop started on a computer (for a person opening it, the agent's own use or its
+ * browser), with its time in all and per step (ms), or the error code its start failed with.
+ */
+export async function recordDesktopStarted(
+  db: Executor,
+  start: { orgId: string | null; machineId: string; agentId: string } & DesktopStart,
+) {
+  const { orgId, ...data } = start;
+  await recordOperatorEvent(db, { type: "desktop.started", orgId, data });
 }
 
 /** `task.finished`: a task on a computer ended (done, failed, canceled, or interrupted for good). */

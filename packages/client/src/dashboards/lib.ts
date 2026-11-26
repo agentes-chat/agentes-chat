@@ -245,6 +245,8 @@ const NEEDS_AI_WORDS = {
   plan_not_shared: "widgets.needsAi.plan_not_shared",
   // Its run's word for the same: no person is behind a build.
   plan_unattended: "widgets.needsAi.plan_not_shared",
+  // Whoever set it up has no plan that serves them: for a build, the same plan kept to its owner.
+  plans_not_yours: "widgets.needsAi.plan_not_shared",
   computer_away: "widgets.failure.waiting_computer",
   plan_limit: "widgets.failure.waiting_plan",
   model_limit: "widgets.failure.waiting_plan",
@@ -376,7 +378,7 @@ export function widgetWaitOf(raw: unknown): WidgetWait | null {
 /**
  * A wait in the reader's words, on the widget and when Update now can't go sooner: "Waiting for Theo's plan to reset
  * at 13:00", "Waiting for Theo's budget to renew on December 1", its model's own limit as the brain card says it,
- * "Waiting for room on Theo's computer", "Waiting for Theo's AI provider, next try at 13:05".
+ * "Waiting for room on Theo's computer", "Waiting for Theo's AI to answer, next try at 13:05".
  */
 export function widgetWaitText(t: TFunction, locale: string, wait: WidgetWait, name: string, now = new Date()) {
   const when = (iso: string) => usageWhen(t, locale, iso, now);

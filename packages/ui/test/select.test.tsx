@@ -16,7 +16,7 @@ const roles = [
 function Harness({ onChange }: { onChange?: (v: string) => void }) {
   const [value, setValue] = useState("member");
   return (
-    <Field label="Papel" id="role">
+    <Field label="Cargo" id="role">
       <Select
         value={value}
         onValueChange={(v) => {
@@ -43,7 +43,7 @@ describe("Select", () => {
   test("is a labelled button with the current value, never a native select", () => {
     const { container } = render(<Harness />);
     expect(container.querySelector("select")).toBeNull();
-    const trigger = body().getByRole("combobox", { name: "Papel" });
+    const trigger = body().getByRole("combobox", { name: "Cargo" });
     expect(trigger.tagName).toBe("BUTTON");
     expect(trigger.textContent).toContain("Membro");
     expect(trigger.getAttribute("aria-expanded")).toBe("false");
@@ -52,7 +52,7 @@ describe("Select", () => {
   test("keyboard: opens with Enter, moves with arrows, picks with Enter, focus returns", async () => {
     const changes: string[] = [];
     render(<Harness onChange={(v) => changes.push(v)} />);
-    const trigger = body().getByRole("combobox", { name: "Papel" });
+    const trigger = body().getByRole("combobox", { name: "Cargo" });
     trigger.focus();
     await key(trigger, "Enter");
     const listbox = body().getByRole("listbox");
@@ -107,7 +107,7 @@ describe("Select", () => {
   test("Escape closes without changing the value", async () => {
     const changes: string[] = [];
     render(<Harness onChange={(v) => changes.push(v)} />);
-    const trigger = body().getByRole("combobox", { name: "Papel" });
+    const trigger = body().getByRole("combobox", { name: "Cargo" });
     trigger.focus();
     await key(trigger, "ArrowDown");
     expect(body().getByRole("listbox")).toBeTruthy();
@@ -120,9 +120,9 @@ describe("Select", () => {
   test("the list opens on the trigger's start edge, or on its end edge for a select that ends its row", async () => {
     for (const align of [undefined, "end"] as const) {
       const { unmount } = render(
-        <Select aria-label="Papel" value="member" onValueChange={() => {}} options={roles} align={align} />,
+        <Select aria-label="Cargo" value="member" onValueChange={() => {}} options={roles} align={align} />,
       );
-      const trigger = body().getByRole("combobox", { name: "Papel" });
+      const trigger = body().getByRole("combobox", { name: "Cargo" });
       trigger.focus();
       await key(trigger, "Enter");
       expect(body().getByRole("listbox").getAttribute("data-align")).toBe(align ?? "start");
@@ -144,7 +144,7 @@ describe("Select", () => {
     const rows = rule(`${list} .ac-menu__item`);
     expect(rows).toContain("padding: calc((var(--option-h) - var(--option-face)) / 2) var(--menu-item-px);");
     expect(rows).toContain("min-height: var(--option-h);");
-    // Every row of that list leads with a face's width, so a glyph-led choice ("Sem responsável") lines up and matches.
+    // Every row of that list leads with a face's width, so a glyph-led choice ("Admins") lines up and matches.
     expect(rule(`${list} .ac-menu__item > .ac-menu__leading`)).toContain("min-width: var(--option-face);");
     expect(rule(`${list} .ac-menu__item > .ac-menu__leading`)).toContain("translate: none;");
     expect(rule(`${list} .ac-menu__label`)).toContain("flex-direction: row;");
@@ -152,7 +152,7 @@ describe("Select", () => {
     expect(css).not.toContain(".ac-menu--select .ac-menu__leading > .ac-avatar {\n  width: 32px;");
   });
 
-  test("every option keeps a check's room at its end, shown on the chosen one; the trigger shows the chosen face", async () => {
+  test("no option has a check column: the chosen one is marked by its state; the trigger shows the chosen face", async () => {
     const faces = [
       { value: "ada", label: "Ada", description: "Dona", leading: <span className="ac-avatar">A</span> },
       { value: "bia", label: "Bia", leading: <span className="ac-avatar">B</span> },
@@ -166,7 +166,7 @@ describe("Select", () => {
     trigger.focus();
     await key(trigger, "Enter");
     const options = body().getAllByRole("option");
-    for (const option of options) expect(option.lastElementChild?.getAttribute("class")).toBe("ac-menu__check");
+    for (const option of options) expect(option.querySelector(".ac-menu__check")).toBeNull();
     expect(options[0]?.getAttribute("data-state")).toBe("checked");
     expect(options[1]?.getAttribute("data-state")).toBe("unchecked");
   });

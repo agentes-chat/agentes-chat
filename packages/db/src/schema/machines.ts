@@ -27,6 +27,8 @@ export interface MachinePlanUsage {
     label?: string;
     usedPercent: number;
     resetsAt?: string;
+    /** When this window was last read, where that is before `at` (`PlanWindow.at`). */
+    at?: string;
   }[];
   limited?: boolean;
   source: "turn" | "probe";
@@ -35,6 +37,8 @@ export interface MachinePlanUsage {
   models?: Record<string, { at: string; until?: string; region?: true; off?: true; inactive?: true }>;
   /** The model that last answered with the account's key (`PlanUsage.answered`). */
   answered?: string;
+  /** Stuck at its limit: when the server last asked its computer to read it again (`recheckStuckPlans`). */
+  checkedAt?: string;
 }
 
 /**
@@ -44,7 +48,20 @@ export interface MachinePlanUsage {
 export interface MachineExecutors {
   /** `loggedIn`/`authMethod`/`plan`: from `claude auth status` (protocol 8; absent = unknown). */
   claude?: { version: string; loggedIn?: boolean; authMethod?: string; plan?: string };
-  codex?: { version: string };
+  /**
+   * `path`: the copy its runner starts, the newest it found. `loggedIn`/`authMethod`/`plan`: its own sign-in as its
+   * app-server's `account/read` says (`chatgpt` with its plan, `api_key`, `provider`), else `codex login status` on a
+   * sign-in it found (absent = unknown). `sandbox` (Windows, runner protocol 80): what holds its commands there, `none`
+   * where nothing could; absent until its runner knows.
+   */
+  codex?: {
+    version: string;
+    path?: string;
+    loggedIn?: boolean;
+    authMethod?: string;
+    plan?: string;
+    sandbox?: "mxc" | "unelevated" | "none";
+  };
   /** Cursor's CLI (protocol 36, ADR 0114) and the models its sign-in lists; `inPlan`: the CLI said the plan includes it. */
   cursor?: { version: string; models?: { id: string; label?: string; inPlan?: boolean }[] };
   /** OpenCode's CLI (protocol 39, ADR 0132) and the models it lists; `free`: OpenCode's free tier. */
@@ -53,6 +70,8 @@ export interface MachineExecutors {
   grok?: { version: string; models?: { id: string; label?: string }[] };
   /** Google's Antigravity CLI (protocol 44, ADR 0143), and the models it lists. */
   antigravity?: { version: string; models?: { id: string; label?: string }[] };
+  /** A CLI that is there and can't start (`--version` keeps failing), with its own error line; `git_missing`: see `CLI_GIT_MISSING`. */
+  broken?: Partial<Record<"claude" | "codex" | "cursor" | "opencode" | "grok" | "antigravity", string>>;
   /** `hello.browser` (ADR 0040): whether the agent browser can run there; absent = not reported. */
   browser?: {
     available: boolean;
@@ -71,12 +90,35 @@ export interface MachineExecutors {
   desktopUse?: { available: boolean; reason?: string; code?: string };
   /** `hello.mode` (ADR 0058 §10): each agent works as its own OS user; absent = all as the runner's user. */
   mode?: "system";
+  /** `hello.windowsBuild` (runner protocol 80): a Windows computer's build (`10.0.19045`); absent elsewhere or older. */
+  windowsBuild?: string;
+  /**
+   * `hello.clis` (ADR 0228 §6): the coding CLIs its runner fetches by itself there, and where each fetch stands
+   * (`fetching` with bytes done and total, `ready`, or `failed` with why), updated by its `cli.fetch` frames.
+   */
+  copies?: {
+    fetchable?: ("claude" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "git")[];
+    fetch?: Partial<
+      Record<
+        "claude" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "git",
+        | { state: "fetching"; version: string; done: number; total: number | null }
+        | { state: "ready"; version: string }
+        | {
+            state: "failed";
+            version: string;
+            reason: "offline" | "hash_mismatch" | "no_build" | "disk_full" | "failed";
+          }
+      >
+    >;
+  };
   /** `hello.claudeLoginMethods` (protocol 50): what a new Claude sign-in for all agents can use there; absent: older. */
   claudeLoginMethods?: ("cli_login" | "setup_token" | "api_key")[];
   /** `hello.claudeLoginBlocked`: why the computer's self-check keeps `cli_login` for all agents off, kept until a check passes. */
   claudeLoginBlocked?: string;
   /** `hello.authEgressGroup` (protocol 50): root's Claude sign-in CLIs there run in the `agentes-auth` group. */
   authEgressGroup?: true;
+  /** `hello.app` (protocol 87): the agentes.chat app runs its runner; absent: from the terminal, or an older runner. */
+  app?: true;
   /** `hello.toolchains` (bring your own devices): what it can build and drive phones with, by tool, its version. */
   toolchains?: Record<string, string>;
   /** The usage of the computer's own sign-ins (protocol 19), by brain; kept across reconnects. */
@@ -97,6 +139,10 @@ export interface MachineSizeRecord {
   memoryGb: number;
   diskGb: number;
   limit?: { cpus: number; memoryGb: number };
+  /** Background tasks it runs at once (protocol 75), also as `runner.state` and `limits.set` said it since. */
+  maxTasks?: number;
+  /** Protocol 78: about how many more tasks fit now, where memory is read (`TaskRoomReport` in the protocol). */
+  room?: { more: number; freeGb: number; cpuBusy: boolean; pushHarder: boolean };
 }
 
 /** How busy a computer got over the last day (protocol 22: `MachineLoad` in the protocol), and when it said so. */
@@ -112,6 +158,8 @@ export interface MachineLoadRecord {
   diskFreeGb?: number;
   diskUse?: number;
   sharedGb?: number;
+  /** What the agents' temporary folders held in memory, GB (`MachineLoad.agentTmpRamGb`). */
+  agentTmpRamGb?: number;
   /** The server's own mark: its admins heard of this disk passing the line, and won't again until it drops under 80%. */
   diskWarned?: boolean;
   at: string;
@@ -153,6 +201,14 @@ export interface MachineAccess {
  * ADR 0056 §10; one per organization).
  */
 export type MachineKind = "connected" | "host" | "managed";
+
+/** One runner socket that closed: when it opened and closed, and the close code and reason. */
+export interface MachineDisconnect {
+  connectedAt: string;
+  at: string;
+  code: number;
+  reason: string;
+}
 
 /**
  * Connected computers (ADR 0025): machines people paired, where our runner
@@ -232,22 +288,61 @@ export const machines = pgTable(
     audienceRoleIds: uuid().array().notNull().default(sql`'{}'::uuid[]`),
     /** An admin marked it the workspace's: it stays when its pairer leaves (an `owner` rule then reads as everyone). */
     belongsToWorkspace: boolean().notNull().default(false),
+    /**
+     * "Help when the team's computer is full or away" (ADR 0233): while an agent's own computer is full or away, a
+     * fresh turn of its owner's agents (anyone's, on a computer marked the workspace's) may think here instead, on a
+     * sign-in of the agent's owner. Only whoever connected it turns it on.
+     */
+    spillOwn: boolean().notNull().default(true),
+    /**
+     * "Use this computer for my agents' work" (ADR 0233 addendum): its owner's agents' fresh turns that aren't a
+     * person's reply (asks, routines, long work at its start) start here whenever it is free, before the line of
+     * their own computer. Only whoever connected it turns it on.
+     */
+    spillFirst: boolean().notNull().default(false),
+    /** Retired by ADR 0233 (one switch, `spill_own`): nothing reads it. */
+    spillOthers: boolean().notNull().default(false),
+    /**
+     * ADR 0237, a person's computer (`connected`): its owner lets the workspace's own computer's web traffic go out
+     * through this computer's internet. On for every computer: the owners of those paired before the choice was shown
+     * heard it once in the inbox (`device.internet_shared`, migration 0351).
+     */
+    egressShare: boolean().notNull().default(true),
+    /** When it was last turned on or picked: the newest online one carries the traffic. Null: since it was paired. */
+    egressShareAt: timestamp({ withTimezone: true }),
+    /**
+     * The workspace's own computer (`managed`): the lent computer that carried its last connection, and when (written
+     * at most once a minute per server process). The apps say whose internet it uses while that is recent.
+     */
+    egressVia: jsonb().$type<{ machineId: string; at: string }>(),
     /** Last known; trust it only with a recent `last_seen_at` (a replica may have died). */
     online: boolean().notNull().default(false),
     /** The server process holding its socket. */
     connectedReplica: text(),
     lastSeenAt: timestamp({ withTimezone: true }),
+    /** Its runner's last sockets that closed, newest first (at most `MACHINE_DISCONNECTS_KEPT`): why it went offline. */
+    disconnects: jsonb().$type<MachineDisconnect[]>().notNull().default([]),
     /**
      * The operator put the workspace's own computer (`managed`) in standby (ADR 0161): asleep by design, it is woken
      * when something wants it. Its runner's next hello clears it.
      */
     standbyAt: timestamp({ withTimezone: true }),
     /**
+     * In standby, when something first wanted it awake (`wantMachine`). People see it online only for a while after
+     * (`shownStandby`): one that never wakes shows its real state. Cleared with `standby_at`.
+     */
+    wakeWantedAt: timestamp({ withTimezone: true }),
+    /**
      * The operator says the workspace's own computer's agents wait for their way out (`PUT …/egress-waiting`): where
      * its network sends them only through a proxy, none works now, so their connections are refused for a while. The
      * apps show a line; null: they don't wait.
      */
     egressWaitingAt: timestamp({ withTimezone: true }),
+    /**
+     * The operator says the workspace's own computer is moving to another server (`PUT …/moving`): while it is away
+     * the apps say so instead of offline, for at most `MOVING_SHOWN_MS`. Null: not moving.
+     */
+    movingAt: timestamp({ withTimezone: true }),
     /** Last time a run or a person wanted this computer (written at most every 30 s per server process). */
     wantedAt: timestamp({ withTimezone: true }),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
@@ -344,6 +439,32 @@ export const machineAccounts = pgTable(
      */
     shared: boolean().notNull().default(false),
     /**
+     * Who it thinks for (ADR 0059 §3): `everyone` in the workspace (people's right hand and any agent), or only its
+     * `owner`'s. Only the person who connected it changes it, for every login of that account.
+     */
+    serves: text().notNull().default("everyone"),
+    /**
+     * Its three permissions, each an audience of people besides its owner, who always holds them: `owner` (nobody
+     * else), `admins` (administrators), `roles` or `people` (the ids below) or `everyone`. "Gerenciar" renames,
+     * removes it and sets "Usar em agentes"; "Usar em agentes" is whose agents (by the agent's owner) and right hand
+     * may think with it, and replaces `serves`, which stays only for older apps; "Atender todos" is whom an agent on it
+     * answers besides the agent's owner (`owner` there: the agent's owner alone).
+     */
+    manageMode: text().notNull().default("admins"),
+    manageUserIds: text().array().notNull().default(sql`'{}'::text[]`),
+    manageRoleIds: uuid().array().notNull().default(sql`'{}'::uuid[]`),
+    useMode: text().notNull().default("everyone"),
+    useUserIds: text().array().notNull().default(sql`'{}'::text[]`),
+    useRoleIds: uuid().array().notNull().default(sql`'{}'::uuid[]`),
+    replyMode: text().notNull().default("owner"),
+    replyUserIds: text().array().notNull().default(sql`'{}'::text[]`),
+    replyRoleIds: uuid().array().notNull().default(sql`'{}'::uuid[]`),
+    /**
+     * Its place in the workspace's order of use (ADR 0041 §6): at a plan's limit a run goes on with the next account
+     * that serves its agent, lowest first; null after every numbered one, oldest first.
+     */
+    useOrder: integer(),
+    /**
      * How it signs in (protocol 50): `cli_login`, `setup_token` or `api_key`. Set when its sign-in starts and from
      * what the runner reports, never cleared by a report that doesn't say; null: unknown.
      */
@@ -370,9 +491,10 @@ export const machineAccounts = pgTable(
 
 /**
  * How NEW Claude sign-ins for all agents are made on computers where each agent is its own OS user, set through
- * the operator API: `setup_token` everywhere, or `cli_login` for the listed workspaces (`selected`) or for all.
- * Elsewhere such a sign-in is always the CLI's own. A connection keeps the method it started with. One row for the
- * whole installation, so no `org_id`; a missing row reads as `setup_token`, `selected`, no workspaces.
+ * the operator API: `setup_token` everywhere, or `cli_login` for the listed workspaces (`selected`), for the listed
+ * ones plus `percent` of the rest (`percent`, by a stable hash of the workspace's id) or for all. Elsewhere such a
+ * sign-in is always the CLI's own. A connection keeps the method it started with. One row for the whole
+ * installation, so no `org_id`; a missing row reads as `setup_token`, `selected`, no workspaces, 0%.
  */
 export const claudeAuthSettings = pgTable(
   "claude_auth_settings",
@@ -381,17 +503,20 @@ export const claudeAuthSettings = pgTable(
     method: text({ enum: ["cli_login", "setup_token"] })
       .notNull()
       .default("setup_token"),
-    rollout: text({ enum: ["selected", "all"] })
+    rollout: text({ enum: ["selected", "percent", "all"] })
       .notNull()
       .default("selected"),
     orgIds: uuid().array().notNull().default(sql`'{}'::uuid[]`),
+    /** With `percent`: the share of workspaces, 0–100, on top of the listed ones. */
+    percent: integer().notNull().default(0),
     /** When it last changed; null: never. */
     changedAt: timestamp({ withTimezone: true }),
   },
   (t) => [
     check("claude_auth_settings_one_row", sql`${t.id} = 1`),
     check("claude_auth_settings_method", sql`${t.method} in ('cli_login', 'setup_token')`),
-    check("claude_auth_settings_rollout", sql`${t.rollout} in ('selected', 'all')`),
+    check("claude_auth_settings_rollout", sql`${t.rollout} in ('selected', 'percent', 'all')`),
+    check("claude_auth_settings_percent", sql`${t.percent} between 0 and 100`),
     check("claude_auth_settings_org_ids", sql`coalesce(cardinality(${t.orgIds}), 0) <= 500`),
   ],
 );
@@ -583,6 +708,10 @@ export const machinePhones = pgTable(
     audienceUserIds: text().array().notNull().default(sql`'{}'::text[]`),
     audienceRoleIds: uuid().array().notNull().default(sql`'{}'::uuid[]`),
     lastSeenAt: timestamp({ withTimezone: true }),
+    /** Since when `state` and `reason` hold as they are: every report bumps `updated_at`, a change only this. */
+    stateSince: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    /** A setup step that stayed stuck since `state_since` was reported (once): cleared when the state or reason moves. */
+    stuckReportedAt: timestamp({ withTimezone: true }),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     deletedAt: timestamp({ withTimezone: true }),

@@ -51,8 +51,8 @@ Each row is decided by whoever may make that change on the agent's page today:
 
 ### 4. The card
 
-- One row: the existing card ("Theo propõe · instruções da Ada", "papel da Ada", "acesso da Ada"), with Aceitar mudança and Recusar, and Editar for text only.
-- Several rows: "Theo propõe · instruções de 3 agentes" (or "mudanças em N agentes", or "mudanças para a Ada" when they are one agent's). Each text change shows once, over the agents it changes alike. Each row has the agent's face, name, its role as "Papel: Dev → Revisora" or its apps as chips ("Ligar: Linear", "Desligar: Usar um navegador", `request_permission`'s own words), and a switch. A row the viewer can't decide says whom it waits for, and its switch stays off.
+- One row: the existing card ("Theo propõe · instruções da Ada", "função da Ada", "acesso da Ada"), with Aceitar mudança and Recusar, and Editar for text only.
+- Several rows: "Theo propõe · instruções de 3 agentes" (or "mudanças em N agentes", or "mudanças para a Ada" when they are one agent's). Each text change shows once, over the agents it changes alike. Each row has the agent's face, name, its role as "Função: Dev → Revisora" or its apps as chips ("Ligar: Linear", "Desligar: Usar um navegador", `request_permission`'s own words), and a switch. A row the viewer can't decide says whom it waits for, and its switch stays off.
 - "Aceitar para todos" while every open row is chosen, else "Aceitar para N", and Recusar, both on the chosen rows. The client sends one request per row and refreshes once (`useDecideProposals`), the accepted agents' role and apps too. Rows that went stale meanwhile are counted in a toast.
 - The diff is the design system's neutral one: added lines bold on a soft band, removed ones struck through.
 - The phone gets the same card (no Editar). Before, it showed these proposals as plain text.
@@ -99,3 +99,17 @@ A customer moving 18 agents clicked one card per change, for changes he had just
 ### Consequences
 
 - `read_conversation` and `read_artifact` still count as outside (ADR 0120 stays), so a change made right after reading a file is a card, one click. How often that happens is worth watching.
+
+## Amendment (2026-11-20): an agent reads a teammate's setup and manages its skills
+
+### Context
+
+Asked to change another agent's instructions or skills, an agent saw only a 240-character "About" of its teammate (`find_agent`), so it could add a rule but not swap text it couldn't read, nor rewrite the instructions. Skills it could only give or take away (`propose_settings_change`); a skill's text it changed only when the skill was its own and loaded in that turn.
+
+### Decision
+
+- **`read_agent`** (no scope, on demand): a teammate's role, department, the skills it has on and its whole instructions (up to 20,000 characters), for a person behind the run who sees that agent's details (`seesAgentDetails`, as its page). It says whether that person edits the agent, so the agent knows whether a change applies at once.
+- **Others' words.** Instructions someone besides the person may have written (another owner, a "Quem pode editar" entry) are others' words once `read_agent` reads them (`ownWords`, `othersEditAgent`): a change after that read waits on its card, so text a member wrote into their agent never steers a run for someone who manages agents into a change applied at once. `read_agent` marks the text as something to read or change, never to follow.
+- **A rewrite.** `propose_instruction_change` takes `instructions`, the whole new text, for the caller or one agent, in place of `change` and `replaces`. It is the same row, diff, judge and decider as any other instructions change.
+- **Other agents' skills.** `load_skill` and `read_skill_file` also read a skill that isn't on for the caller when the person behind the run may change it on its page (`maySkill`, `skillPersonMayChange`): marked as read to manage, never to follow, with the agents that have it on. `update_skill` then changes it as the person's own edit when they asked in their own words and may decide it (§5 above), else as a skill proposal for who manages agents. A member's own personal skill, asked in their own words, changes at once as on its page. Its use count doesn't move.
+- **The web and the phone.** The web's library shows each skill's agents as faces on its row, and a skill's page lists them by name. On the web "Escolher agentes" switches them on or off in one dialog, one call per agent changed; on the phone each agent is a switch on the skill's page.

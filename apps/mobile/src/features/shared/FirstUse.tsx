@@ -38,8 +38,10 @@ export function FirstUse({
   icon,
   busy = false,
   size = "page",
+  align,
   look,
   mood,
+  copy: words,
 }: {
   place: EmptyPlace;
   acts: boolean;
@@ -49,16 +51,22 @@ export function FirstUse({
   icon?: IconName;
   busy?: boolean;
   size?: EmptyStateProps["size"];
+  /** Among grouped lists: the words on the left, where the groups' headers start (`EmptyState`'s `align`). */
+  align?: EmptyStateProps["align"];
   look?: StickerLook;
   mood?: StickerMood;
+  /** Words of a side of the place that has its own (as a list's Pessoal tab), in place of the place's. */
+  copy?: { title: string; text: string };
 }) {
   const { t } = useTranslation();
   const fallback = useEmptyLook();
   // A personal workspace's places speak to one person (ADR 0159).
-  const copy = firstUseCopy(place, acts, isPersonal(useOrgMaybe()?.org));
+  const placeCopy = firstUseCopy(place, acts, isPersonal(useOrgMaybe()?.org));
+  const copy = words ?? placeCopy;
   return (
     <EmptyState
       size={size}
+      {...(align ? { align } : {})}
       agent={look ?? fallback}
       {...(mood ? { mood } : {})}
       title={t(copy.title)}

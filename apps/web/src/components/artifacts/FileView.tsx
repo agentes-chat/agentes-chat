@@ -1,9 +1,13 @@
 import type { ArtifactFileContent } from "@agenteschat/client";
 import { useArtifactBlob } from "@agenteschat/client";
 import {
+  extensionOf,
   fileIcon,
   formatBytes,
+  isCodeName,
   isJsonFile,
+  isMarkdownFile,
+  isOfficePreview,
   MAX_PREVIEW_BYTES,
   previewKind,
   previewType,
@@ -13,7 +17,10 @@ import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
 import { CodeBlock } from "@/components/CodeBlock";
+import { OfficePreview } from "@/components/live/office/OfficePreview";
 import { useOrg } from "@/components/org-context";
+import { Markdown } from "@/lib/markdown";
+import { FileAudio } from "./FileAudio";
 import { ImageZoom } from "./ImageZoom";
 
 /** Object URLs for blobs (swappable: test DOMs may lack `URL.createObjectURL`). */
@@ -124,6 +131,7 @@ export function FileVideo({
           onOpen={onOpen}
           actions={actions}
           onFailed={() => setFailed(true)}
+          handoff={artifactId}
         />
       </Tip>
     </div>
@@ -132,9 +140,9 @@ export function FileVideo({
 
 /**
  * An uploaded file in the viewer (its name, size and Baixar are in the viewer's header): an inline preview only for
- * raster images and PDF (a blob of exactly that type, never the file's own origin), videos in our player (a media
- * element never runs the file as a page), and the text of small text files, read-only (JSON formatted, as a code
- * block reads it).
+ * raster images and PDF (a blob of exactly that type, never the file's own origin), videos in our player and audio in
+ * the voice-message player (a media element never runs the file as a page), and the text of small text files, read-only (JSON formatted, as a code
+ * block reads it, code highlighted, Markdown drawn).
  */
 export function FileView({
   content,
@@ -153,18 +161,26 @@ export function FileView({
   const { t } = useTranslation();
   const { org } = useOrg();
   const api = useApi();
-  const kind = previewKind(content.contentType);
-  // A video streams from the download: any size plays. The rest load whole, up to the preview limit.
-  const canPreview = kind !== null && (kind === "video" || content.size <= MAX_PREVIEW_BYTES);
-  const { url, failed } = usePreviewUrl(artifactId, version, content.contentType, canPreview && kind !== "video");
-  const [videoFailed, setVideoFailed] = useState(false);
+  // An Office file is drawn from the server's reading of it (ADR 0198), never from its bytes here.
+  const read = previewKind(content.contentType, content.name);
+  const kind = isOfficePreview(read) ? null : read;
+  // A video or an audio file streams from the download: any size plays. The rest load whole, up to the preview limit.
+  const streams = kind === "video" || kind === "audio";
+  const canPreview = kind !== null && (streams || content.size <= MAX_PREVIEW_BYTES);
+  const { url, failed } = usePreviewUrl(artifactId, version, content.contentType, canPreview && !streams);
+  const [mediaFailed, setMediaFailed] = useState(false);
   const videoLabels = useVideoLabels();
+
+  // A spreadsheet, a presentation or a Word document the server reads for the apps to draw (ADR 0198).
+  if (isOfficePreview(read) && content.size <= MAX_PREVIEW_BYTES) {
+    return <OfficePreview artifactId={artifactId} version={version} content={content} title={title} kind={read} />;
+  }
 
   // A video fills the viewer, with its controls.
   if (kind === "video") {
     return (
       <div className="file-view file-view--image">
-        {videoFailed ? (
+        {mediaFailed ? (
           <p className="small muted">{t("files.previewFailed")}</p>
         ) : (
           <VideoPlayer
@@ -173,9 +189,24 @@ export function FileView({
             src={api.artifacts.fileUrl(org.id, artifactId, { version })}
             name={content.name}
             labels={videoLabels}
-            onFailed={() => setVideoFailed(true)}
+            onFailed={() => setMediaFailed(true)}
+            handoff={artifactId}
           />
         )}
+      </div>
+    );
+  }
+
+  // Audio plays in the voice-message player, from the download in parts.
+  if (kind === "audio") {
+    return (
+      <div className="file-view file-view--audio">
+        <FileAudio
+          artifactId={artifactId}
+          version={version}
+          content={content}
+          fallback={<p className="small muted">{t("files.previewFailed")}</p>}
+        />
       </div>
     );
   }
@@ -205,16 +236,25 @@ export function FileView({
         </div>
       )}
       {kind !== null && !canPreview && <p className="small muted">{t("files.tooBigToPreview")}</p>}
-      {kind === null &&
-        content.text !== undefined &&
-        (isJsonFile(content.name, content.contentType) ? (
-          <CodeBlock lang="json" text={content.text} />
-        ) : (
-          <pre className="file-view__text">
-            <code>{content.text}</code>
-          </pre>
-        ))}
+      {kind === null && content.text !== undefined && <FileText content={content} text={content.text} title={title} />}
       {kind === null && content.text === undefined && <p className="small muted">{t("files.downloadOnly")}</p>}
     </div>
+  );
+}
+
+/** A small text file's text: JSON formatted and code highlighted as a code block reads them, Markdown drawn. */
+function FileText({ content, text, title }: { content: ArtifactFileContent; text: string; title: string }) {
+  if (isJsonFile(content.name, content.contentType)) return <CodeBlock lang="json" text={text} />;
+  if (isMarkdownFile(content.name, content.contentType))
+    return (
+      <div className="file-view__doc">
+        <Markdown source={text} title={title} />
+      </div>
+    );
+  if (isCodeName(content.name)) return <CodeBlock lang={extensionOf(content.name)} text={text} />;
+  return (
+    <pre className="file-view__text">
+      <code>{text}</code>
+    </pre>
   );
 }

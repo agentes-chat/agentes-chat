@@ -24,6 +24,10 @@ export interface DeliverNoticeInput {
   trigger?: RunTrigger;
   /** It relays what a run read outside (`meta.readOutside`, ADR 0117). */
   readOutside?: boolean;
+  /** The run it is for or about: a notice of a confidential thread's run is that thread's (ADR 0190). */
+  forRunId?: string;
+  /** The run the agent goes on from, the notice coming back where it answered: its run answers there (`placeAfter`). */
+  after?: Pick<AgentRun, "threadRootId" | "replyInThread">;
 }
 
 /**
@@ -43,12 +47,29 @@ export async function deliverNotice(
     orgId: input.orgId,
     channelId: input.channelId,
     threadId: input.threadId ?? undefined,
-    author: { type: "agent", agentId: input.agentId, runId: null, hop: input.hop, stretchId: input.stretchId },
+    author: {
+      type: "agent",
+      agentId: input.agentId,
+      runId: null,
+      hop: input.hop,
+      stretchId: input.stretchId,
+      ...(input.forRunId ? { forRunId: input.forRunId } : {}),
+    },
     body: input.body ?? input.notice.text,
     meta: { notice: input.notice, ...(input.readOutside ? { readOutside: true } : {}) },
   });
   const wake = input.wake !== false && !SELF_REPORT_NOTICES.includes(input.notice.kind);
-  const runs = wake ? await createAgentRuns(tx, message, [input.agentId], input.trigger ?? "mention") : [];
+  // What came of work handed off, and work ended in a channel it is responsible for, join its turn open in a
+  // channel's main timeline too (`joinChannelRun`): two reports at once wake one turn, not two acting on the same
+  // results side by side (ADR 0095). Who is behind each still decides (`mayJoin`). Other notices keep a turn of their
+  // own there: a routine's report works within that routine's brief.
+  const joinChannelRun = input.notice.kind === "consult_reply" || input.notice.kind === "channel_work";
+  const runs = wake
+    ? await createAgentRuns(tx, message, [input.agentId], input.trigger ?? "mention", {
+        ...(input.after ? { after: input.after } : {}),
+        ...(joinChannelRun ? { joinChannelRun } : {}),
+      })
+    : [];
   return { message, runs };
 }
 

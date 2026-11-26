@@ -2,6 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import { and, eq, schema } from "@agenteschat/db";
 import { systemText } from "@agenteschat/providers";
 import {
+  AI_PLAN_ANSWER,
   addChannelMember,
   archiveAgent,
   BUILTIN_SCOPES,
@@ -15,6 +16,7 @@ import {
   ensureRightHand,
   ensureRightHands,
   exportBundle,
+  freshGrantedKeys,
   grantedScopeKeys,
   grantKey,
   insertMessage,
@@ -114,11 +116,11 @@ test("it can't be archived, deleted or given other instructions; its name, model
   expect((await exportBundle(f.db, f.owner.id, f.org.id)).agents.map((a) => a.handle)).toEqual(["dev"]);
 });
 
-test("it holds every built-in scope an agent can be given but a computer's, and its grant rows count on top", async () => {
+test("it holds every built-in scope an agent can be given, a computer's as rows it is made with, and its grant rows count on top", async () => {
   f = await setup({ rightHand: true });
   const [lodi] = await rightHandOf(f.org.id);
   if (!lodi) throw new Error("no right hand");
-  // A new built-in scope joins its list, or this fails: only a computer's stay out.
+  // A new built-in scope joins its list, or this fails: only a computer's stay out, which are rows.
   expect([...RIGHT_HAND_GRANTS].sort()).toEqual(
     Object.keys(BUILTIN_SCOPES)
       .filter((scope) => !NOT_IN_ALL.has(scope))
@@ -126,7 +128,6 @@ test("it holds every built-in scope an agent can be given but a computer's, and 
   );
   const connectionId = crypto.randomUUID();
   await f.db.insert(schema.agentScopes).values([
-    { orgId: f.org.id, agentId: lodi.id, scope: "sandbox:run" },
     { orgId: f.org.id, agentId: lodi.id, connectionId, scope: "connector:*" },
     { orgId: f.org.id, agentId: lodi.id, scope: "deny:send_dm" },
   ]);
@@ -135,8 +136,12 @@ test("it holds every built-in scope an agent can be given but a computer's, and 
   // An app given to it and a tool an admin turned off are rows, and both hold.
   expect(keys.has(grantKey(connectionId, "connector:*"))).toBe(true);
   expect(toolAccess(keys, { name: "send_dm", scope: "" })).toBe("denied");
-  // No computer of its own: a row for one gives it nothing.
-  for (const scope of NOT_IN_ALL) expect(keys.has(grantKey(null, scope))).toBe(false);
+  // Its computer's scopes are rows it is made with, so an admin takes one away like any agent's.
+  for (const scope of NOT_IN_ALL) expect(keys.has(grantKey(null, scope))).toBe(true);
+  await f.db
+    .delete(schema.agentScopes)
+    .where(and(eq(schema.agentScopes.agentId, lodi.id), eq(schema.agentScopes.scope, "desktop:use")));
+  expect((await freshGrantedKeys(f.db, f.org.id, lodi.id)).has(grantKey(null, "desktop:use"))).toBe(false);
   // What was denied to it is on like any agent's.
   for (const [name, scope] of [
     ["remember", "memory:write"],
@@ -153,7 +158,7 @@ test("it holds every built-in scope an agent can be given but a computer's, and 
     ["list_events", "calendar:read"],
   ] as const)
     expect(isAllowed(toolAccess(keys, { name, scope }))).toBe(true);
-  expect(toolAccess(keys, { name: "run_code", scope: "sandbox:run" })).toBe("off");
+  expect(toolAccess(keys, { name: "run_code", scope: "sandbox:run" })).toBe("granted");
 });
 
 test("it is in no channel and on no computer, whoever asks", async () => {
@@ -206,20 +211,28 @@ test("its prompt says what the person may do, and shows only the agents they may
   const owner = await prompt(f.owner.id);
   expect(owner).toContain("You are Lodi (@lodi)");
   expect(owner).toContain("an owner of this workspace");
-  expect(owner).toContain("They may: create agents; change any agent's settings");
+  // "Edit agents" and "Create routines" reach the agents a person talks to (ADR 0085 addendum of 2026-11-17).
+  expect(owner).toContain(
+    "They may: create agents; change the settings (model, AI account, budget, owner, who may use it) of the agents they talk to and the ones with no owner (owners and administrators: every agent), archive and delete them;",
+  );
+  expect(owner).toContain("manage the routines of the agents they talk to.");
   expect(owner).not.toContain("They can't");
+  // Asked about using their Claude plan here: the vetted answer, which leaves the terms to the person and the provider.
+  expect(owner).toContain(AI_PLAN_ANSWER);
+  expect(AI_PLAN_ANSWER).toContain("supports signing the agents in with a person's own plan");
+  expect(AI_PLAN_ANSWER).toContain("never say their use is or isn't allowed");
   expect(owner).toContain("- @cofre (Cofre)");
   expect(owner).toContain("- @dev (Dev), Developer");
   const member = await prompt(nina.id);
   expect(member).toContain("They can't: ");
-  expect(member).toMatch(/They can't: [^\n]*change any agent's settings/);
+  expect(member).toMatch(/They can't: [^\n]*change the settings \(model, [^\n]*\) of the agents they talk to/);
   expect(member).not.toContain("@cofre");
   expect(member).toContain("(1 more agent this person can't see.)");
   expect(member).toContain("Never ask for a key, password or token in the chat");
   // Only our tools, whichever CLI thinks for it (ADR 0137 §4), and no computer of its own.
   expect(member).toContain("Your tools are the agentes tools listed to you, the same an agent here can have");
   expect(member).toContain(
-    "You have no computer yet, so you run no commands, keep no files on a machine and open no browser",
+    "You have no computer here, so you run no commands, keep no files on a machine and open no browser",
   );
   expect(member).toContain("Use nothing that isn't an agentes tool");
   expect(member).toContain("never write out tokens, keys, passwords or sign-in data");

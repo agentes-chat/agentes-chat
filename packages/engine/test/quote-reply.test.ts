@@ -139,7 +139,16 @@ test("attachments: own uploads or files of the channel become meta.artifacts; fi
     channelId: f.general.id,
   });
   const message = await post("", { attachments: [mine.id] });
-  expect(message.meta.artifacts).toEqual([{ id: mine.id, version: 1, title: "notas.txt" }]);
+  expect(message.meta.artifacts).toEqual([
+    {
+      id: mine.id,
+      version: 1,
+      title: "notas.txt",
+      name: "notas.txt",
+      contentType: "text/plain; charset=utf-8",
+      size: 2,
+    },
+  ]);
   // Someone else's private Drive file can't be attached.
   const bia = await addMember(f.db, f.org.id, "member", "bia");
   const hers = await createFileArtifact(f.artifactDeps, { type: "person", userId: bia.id }, f.org.id, {
@@ -177,11 +186,14 @@ test("quotedLine / attachedLine render the meta for toTurns", () => {
     body: "segue",
     meta: { replyTo: { authorName: "Ana", excerpt: "manda o relatório" }, artifacts: [{ id: "a1", title: "r.pdf" }] },
   } as unknown as Message;
-  expect(attachedLine(m)).toBe('\n(attached files: "r.pdf" (artifact a1))');
+  expect(attachedLine(m)).toBe(
+    '\n(attached files: "r.pdf" (artifact a1); open each with read_artifact before you answer about it; if one is unreadable to you, give the reason and way out the tool gave)',
+  );
   expect(toTurns([m], "me", new Map([["u1", "Bia"]]))).toEqual([
     {
       role: "user",
-      content: '[Bia]: (replying to Ana: "manda o relatório")\nsegue\n(attached files: "r.pdf" (artifact a1))',
+      content:
+        '[Bia]: (replying to Ana: "manda o relatório")\nsegue\n(attached files: "r.pdf" (artifact a1); open each with read_artifact before you answer about it; if one is unreadable to you, give the reason and way out the tool gave)',
     },
   ]);
 });
@@ -224,13 +236,15 @@ test("toTurns: files on an agent's message are read too, its own ones as a note 
       content: [
         // A title's quotes and line breaks never break the line (some titles come from outside, e.g. an email).
         '[Files you attached to your message above: "teaser.mp4" (artifact v1), "notes final v2.txt" (artifact t1)]',
-        '[Ada]: fiz a capa\n(attached files: "capa.png" (artifact c1))',
+        '[Ada]: fiz a capa\n(attached files: "capa.png" (artifact c1); open each with read_artifact before you answer about it; if one is unreadable to you, give the reason and way out the tool gave)',
         "[Bia]: manda o vídeo pra Ana",
       ].join("\n\n"),
     },
   ]);
   expect(ownFilesNote({})).toBe("");
-  expect(attachedLine({ meta: { artifacts: [{ id: "x1" }] } })).toBe('\n(attached files: "file" (artifact x1))');
+  expect(attachedLine({ meta: { artifacts: [{ id: "x1" }] } })).toBe(
+    '\n(attached files: "file" (artifact x1); open each with read_artifact before you answer about it; if one is unreadable to you, give the reason and way out the tool gave)',
+  );
 });
 
 test("reactions: listed with the messages and published live to the channel", async () => {

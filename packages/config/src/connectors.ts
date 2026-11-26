@@ -3,12 +3,24 @@ import type { Config } from "./schema";
 /** OAuth apps of the connectors configured in this deployment (by connector id). */
 export function connectorOAuthApps(
   config: Config,
-): Record<string, { clientId: string; clientSecret: string } | undefined> {
+): Record<string, { clientId: string; clientSecret: string; configId?: string } | undefined> {
   const pair = (id?: string, secret?: string) => (id && secret ? { clientId: id, clientSecret: secret } : undefined);
   return {
     github: pair(config.CONNECTOR_GITHUB_CLIENT_ID, config.CONNECTOR_GITHUB_CLIENT_SECRET),
     sentry: pair(config.CONNECTOR_SENTRY_CLIENT_ID, config.CONNECTOR_SENTRY_CLIENT_SECRET),
     linear: pair(config.CONNECTOR_LINEAR_CLIENT_ID, config.CONNECTOR_LINEAR_CLIENT_SECRET),
+    gitlab: pair(config.CONNECTOR_GITLAB_CLIENT_ID, config.CONNECTOR_GITLAB_CLIENT_SECRET),
+    bitbucket: pair(config.CONNECTOR_BITBUCKET_CLIENT_ID, config.CONNECTOR_BITBUCKET_CLIENT_SECRET),
+    x: pair(config.CONNECTOR_X_CLIENT_ID, config.CONNECTOR_X_CLIENT_SECRET),
+    threads: pair(config.CONNECTOR_THREADS_APP_ID, config.CONNECTOR_THREADS_APP_SECRET),
+    tiktok: pair(config.CONNECTOR_TIKTOK_CLIENT_KEY, config.CONNECTOR_TIKTOK_CLIENT_SECRET),
+    // Meta Ads signs in only through its Login for Business configuration.
+    "meta-ads": config.CONNECTOR_META_ADS_CONFIG_ID
+      ? (() => {
+          const app = pair(config.CONNECTOR_META_ADS_APP_ID, config.CONNECTOR_META_ADS_APP_SECRET);
+          return app && { ...app, configId: config.CONNECTOR_META_ADS_CONFIG_ID };
+        })()
+      : undefined,
   };
 }
 
@@ -19,6 +31,20 @@ export function composioAuthConfigs(config: Pick<Config, "COMPOSIO_AUTH_CONFIGS"
       .split(",")
       .map((pair) => pair.split("=").map((part) => part.trim()))
       .filter((pair): pair is [string, string] => pair.length === 2 && Boolean(pair[0]) && Boolean(pair[1])),
+  );
+}
+
+/** `MCP_CALLER_IDENTITY` by host: the secret each listed MCP server checks the caller's statement with. */
+export function mcpCallerIdentity(config: Pick<Config, "MCP_CALLER_IDENTITY">): Map<string, string> {
+  return new Map(
+    (config.MCP_CALLER_IDENTITY ?? "")
+      .split(",")
+      .filter(Boolean)
+      .map((pair): [string, string] => {
+        // A secret may hold `=` (base64 padding): the host ends at the first one.
+        const at = pair.indexOf("=");
+        return [pair.slice(0, at), pair.slice(at + 1)];
+      }),
   );
 }
 

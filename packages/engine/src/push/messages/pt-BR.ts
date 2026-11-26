@@ -31,6 +31,10 @@ export const ptBR: PushStrings = {
   machineConnectedTitle: "Um computador novo entrou no workspace",
   computerReadyTitle: "O computador do seu workspace está pronto",
   computerReadyBody: "Abra a página de um agente para ver ao vivo.",
+  computerDownTitle: (n) => `${n} não está respondendo`,
+  computerDownBody: "O trabalho dos seus agentes nele está esperando. Toque para ver o que fazer.",
+  computerBackTitle: (n) => `${n} voltou`,
+  computerBackBody: (away) => `Ficou fora por ${away}. O trabalho que esperava continua agora.`,
   browserHandoffTitle: (a) => `${a} precisa de você no navegador`,
   browserHandoffReminderTitle: (a) => `${a} ainda precisa de você no navegador`,
   browserHandoffBody: "Toque para abrir a tela.",
@@ -80,6 +84,18 @@ export const ptBR: PushStrings = {
   deviceInUseBody: "Toque para parar.",
   deviceAccessTitle: (a, p, d) => (p ? `${a} (para ${p}) pede para usar seu ${d}` : `${a} pede para usar seu ${d}`),
   deviceAccessBody: "Toque para permitir uma vez, sempre, ou dizer não.",
+  deviceToolTitle: (a, d) => `${a} pede para você ligar uma ferramenta no seu ${d}`,
+  deviceToolBody: "Toque para ligar com um clique.",
+  deviceCliTitle: (a, d) => `${a} pede para você instalar um programa no seu ${d}`,
+  deviceCliBody: "Toque para instalar com um clique.",
+  deviceFolderTitle: (a, f, d) => (f ? `${a} pede ${f} no seu ${d}` : `${a} pede uma pasta no seu ${d}`),
+  deviceFolderBody: "Libere no app do computador.",
+  adminAskTitle: (a, what, l) =>
+    what === "channel_agent"
+      ? `${a} pede para adicionar um agente a #${l}`
+      : what === "create_agents"
+        ? `${a} pede para poder criar agentes`
+        : `${a} pede para ligar o webhook do ${l} para rotinas`,
   deviceWaitingTitle: (p, d) => `O agente de ${p} está esperando seu ${d}`,
   deviceWaitingBody: "Começa quando ele voltar.",
   teamWeekReady: "Sua semana da equipe está pronta",
@@ -91,4 +107,18 @@ export const ptBR: PushStrings = {
   joinRequestTitlePersonal: (name) => `${name} pede para entrar no seu workspace`,
   joinSuggestionTitlePersonal: (by, name) => `${by} sugeriu convidar ${name}`,
   teamWeekReadyPersonal: "Sua semana está pronta",
+  teamWatchStill: (n) => (n === 1 ? "1 coisa ainda espera você" : `${n} coisas ainda esperam você`),
+  liveActivityApproval: (a) => `${a} pede aprovação`,
+  liveActivityQuestion: (a) => `${a} tem uma pergunta`,
+  liveActivitySecret: (a) => `${a} pede um segredo`,
+  liveActivityApprovalShort: "Aprovar?",
+  liveActivityQuestionShort: "Responder?",
+  liveActivitySecretShort: "Enviar?",
+  liveActivityApprovalStep: "Esperando sua aprovação",
+  liveActivityQuestionStep: "Esperando sua resposta",
+  liveActivitySecretStep: "Esperando um segredo seu",
+  liveActivityWorking: (n) => `${n} trabalhando`,
+  liveActivityWorkingStep: "Trabalhando",
+  liveActivityQueuedStep: "Na fila",
+  liveActivityDone: "Pronto",
 };

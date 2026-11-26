@@ -11,9 +11,21 @@ import type { Judge } from "./judge";
 import type { MachineHub } from "./machine-hub";
 import { notifyAgentHold, notifyOrgStanding, resolveAgentHold } from "./notification-producers";
 import { enqueue } from "./outbox";
+import { RIGHT_HAND } from "./right-hand";
+import { unlinkAllFor } from "./surfaces/links";
 import { isAgentesCloud } from "./telemetry";
 
-const { organizations, agents, users, sessions, pushDevices, organizationMembers, machineProvisioning } = schema;
+const {
+  organizations,
+  agents,
+  users,
+  sessions,
+  pushDevices,
+  liveActivityDevices,
+  organizationMembers,
+  machineProvisioning,
+  rightHandSeats,
+} = schema;
 
 let cloudNotices = false;
 
@@ -268,10 +280,14 @@ async function agentHold(db: Executor, orgId: string, agentId: string): Promise<
   // A shared browser profile's stream goes by "profile:<id>": no agent, so no hold of its own (and no row to ask for).
   if (profileIdOfKey(agentId)) return null;
   return (await caches.standing.getOrLoad(`${orgId}:${agentId}`, async () => {
+    // A computer knows a seat of the right hand (a person's, the shared one) by the seat's id (ADR 0175): its hold is
+    // the right hand's.
+    const seatOfIt = sql`${agents.builtin} = ${RIGHT_HAND} and exists (select 1 from ${rightHandSeats} s
+      where s.id = ${agentId}::uuid and s.org_id = ${agents.orgId})`;
     const [row] = await db
       .select({ heldAt: agents.operatorHoldAt, reason: agents.operatorHoldReason })
       .from(agents)
-      .where(and(eq(agents.id, agentId), eq(agents.orgId, orgId)));
+      .where(and(eq(agents.orgId, orgId), sql`(${agents.id} = ${agentId}::uuid or (${seatOfIt}))`));
     return row?.heldAt ? { reason: row.reason } : null;
   })) as { reason: string | null } | null;
 }
@@ -436,6 +452,7 @@ async function standingWritten(
   { notify = true }: { notify?: boolean } = {},
 ) {
   caches.standing.delete(`${orgId}:`);
+  caches.membership.deletePrefix(`${orgId}:`);
   if (seen) {
     await publishOrgEvent(deps.pubsub, {
       type: "org.broadcast",
@@ -540,8 +557,7 @@ export async function deletionPending(db: Executor, userId: string) {
 
 /**
  * Blocks an account, or lets it back (the operator API). Blocked, it can't sign in (`auth.ts`), its sessions
- * and phones are gone, and every membership check reads it as no member (`getMembership`): that bites on
- * its next request, even while a browser's cookie cache still holds the session for minutes. Its open
+ * and phones are gone, and every membership check reads it as no member (`getMembership`). Its open
  * sockets in every workspace close (`membership.revoked`). Null when there is no such account.
  */
 export async function setUserBlocked(
@@ -564,6 +580,8 @@ export async function setUserBlocked(
     if (!change.blocked) return { ...row, sessionsRevoked: 0, orgIds: [] };
     const revoked = await tx.delete(sessions).where(eq(sessions.userId, userId)).returning({ id: sessions.id });
     await tx.delete(pushDevices).where(eq(pushDevices.userId, userId));
+    await tx.delete(liveActivityDevices).where(eq(liveActivityDevices.userId, userId));
+    await unlinkAllFor(tx, userId);
     const orgs = await tx
       .select({ orgId: organizationMembers.orgId })
       .from(organizationMembers)
@@ -572,7 +590,11 @@ export async function setUserBlocked(
   });
   if (!done) return null;
   const { orgIds, ...state } = done;
-  for (const orgId of orgIds)
+  // A block ended every session above: no process serves a kept one (`caches.sessions`).
+  if (state.sessionsRevoked > 0) caches.sessions.clear();
+  for (const orgId of orgIds) {
+    caches.membership.delete(`${orgId}:${userId}`);
     await publishOrgEvent(deps.pubsub, { type: "membership.revoked", orgId, userId, quiet: true });
+  }
   return state;
 }

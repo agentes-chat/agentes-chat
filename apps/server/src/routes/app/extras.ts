@@ -7,6 +7,9 @@ import type {
   GitHubAppSettings,
   GitProxyDeps,
   JevKey,
+  LiveDeps,
+  LiveDocs,
+  LiveImages,
   McpConnect,
   ModelGateway,
   ResolveHost,
@@ -53,8 +56,8 @@ export interface AppExtras {
   /** The router of messages nobody mentioned ("Responder agora" routes one again); null/absent = routing off. */
   router?: RouterDeps | null;
   /**
-   * The push relay's sender (ADR 0152, `PUSH_RELAY_SERVE`): Firebase; absent = one made from
-   * `FIREBASE_SERVICE_ACCOUNT`, null = no relay.
+   * The push relay's sender (ADR 0152, ADR 0178, `PUSH_RELAY_SERVE`): Firebase and APNs; absent = one made from
+   * `FIREBASE_SERVICE_ACCOUNT` and `APNS_KEY`, null = no relay.
    */
   pushRelaySender?: PushSender | null;
   /** The installation's Jev key, for its owner's routes (ADR 0073); absent = those routes answer 404. */
@@ -69,4 +72,10 @@ export interface AppExtras {
   /** Speech engines and what voice messages need (ADR 0100); absent: no voice messages. */
   speech?: SpeechSettings;
   voice?: VoiceDeps;
+  /** Live files (ADR 0196): the documents this process hosts; absent: their routes answer 500. */
+  live?: LiveDocs;
+  /** What the live files' engine functions take (creating one, its pictures, office files, ADR 0198). */
+  liveDeps?: LiveDeps;
+  /** Pictures on canvases (ADR 0197); absent: made from `artifacts`, `live` and the context's gateway. */
+  images?: LiveImages;
 }

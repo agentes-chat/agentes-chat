@@ -1,6 +1,24 @@
-import { type AgentStyle, keys, useAiAccounts, useSetAgentStyle, useSetShowActivity } from "@agenteschat/client";
-import { authErrorText, errorText } from "@agenteschat/client/lib/errors";
+import {
+  type AgentStyle,
+  ApiError,
+  keys,
+  useAiAccounts,
+  useAuthConfig,
+  useMe,
+  useSetAgentStyle,
+  useSetShowActivity,
+} from "@agenteschat/client";
+import { formatTimeLeft } from "@agenteschat/client/lib/actions";
+import {
+  authErrorText,
+  emailChangeRefusal,
+  errorCode,
+  errorText,
+  REAUTH_SIGN_IN,
+} from "@agenteschat/client/lib/errors";
+import { CODE_LENGTH, typedCode } from "@agenteschat/client/lib/join-requests";
 import { browserTimezone, isTimeZone, timezoneName, zoneDisplayName } from "@agenteschat/client/lib/routines";
+import { isEmail } from "@agenteschat/client/lib/text";
 import {
   AffixInput,
   Alert,
@@ -12,36 +30,44 @@ import {
   Dialog,
   DialogBody,
   DialogFooter,
+  Disclosure,
   Field,
+  Icon,
+  type IconName,
   Input,
   Locked,
   PlanMeter,
   ProviderLogo,
   Segmented,
   Switch,
+  useNow,
 } from "@agenteschat/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { type ReactNode, useEffect, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
 import type { AuthResult } from "@/auth/client";
 import { useAuth } from "@/auth/context";
+import { AppIconDialog, AppIconPicture, useAppIcon, useAppIconName } from "@/components/AppIconPicker";
 import { ChangeAvatarDialog } from "@/components/AvatarBuilder";
 import { ChatLookSettings } from "@/components/ChatLookSettings";
-import { DeleteWorkspaceDialog } from "@/components/DeleteWorkspace";
+import { DeleteWorkspaceDialog, DeletionLine, ResetWorkspaceDialog } from "@/components/DeleteWorkspace";
 import { PrefRow } from "@/components/NoticePrefs";
 import { OpenOnPhoneDialog } from "@/components/OpenOnPhone";
 import { useOrg } from "@/components/org-context";
 import { MyFace } from "@/components/ProfilePhoto";
 import { ZoneSelect } from "@/components/ZoneSelect";
 import { useDirectory } from "@/hooks/useDirectory";
+import { useSignInAgain } from "@/hooks/useSignInAgain";
 import { localePatch, rememberLocale } from "@/i18n";
+import { picksAppIcon } from "@/lib/app-icon";
 import { type MenuLook, menuLook, onMenuLookChange, setMenuLook } from "@/lib/context-menu";
 import { inDesktopApp } from "@/lib/desktop";
 import { useOpenParam } from "@/lib/open-param";
 import { ownPlanLines, planMeterText } from "@/lib/plan-usage";
 import { onSoundChoiceChange, type SoundChoice, setSoundChoice, soundChoice } from "@/lib/sounds";
+import { STORAGE_KEYS, sessionStore } from "@/lib/storage";
 import { type ThemePreference, useTheme } from "@/lib/theme";
 import { useToast } from "@/lib/toast";
 import { LanguageSelect } from "./LanguageSelect";
@@ -50,7 +76,7 @@ import { LanguageSelect } from "./LanguageSelect";
  * Configurações › Sua conta: your profile in this workspace, your time zone, whether agents' work shows under their replies,
  * how agents talk to you (ADR 0147), opening the phone app and a password
  * for an account without one, your plans' limits (ADR 0063 §5), how conversations look to you, then what this device keeps for itself (theme,
- * language, sounds, the desktop app's menus), and last, deleting the account.
+ * the app icon (ADR 0179), language, sounds, the desktop app's menus), and last, deleting the account.
  */
 export function AccountSection() {
   const { t, i18n } = useTranslation();
@@ -71,11 +97,18 @@ export function AccountSection() {
   const sounds = useSyncExternalStore(onSoundChoiceChange, soundChoice, soundChoice);
   const [profile, setProfile] = useState<"name" | "timezone" | null>(null);
   const [phone, setPhone] = useState(false);
-  // Adding a password and deleting the account: their dialogs are the account button's, kept in the address so a
-  // sign-in again comes back to them.
+  const icon = useAppIcon();
+  const iconName = useAppIconName(icon);
+  const [iconPicker, setIconPicker] = useState(false);
+  // The e-mail, adding a password and deleting the account: their dialogs are the account button's, kept in the address
+  // so a sign-in again comes back to them, as deleting the workspace is (`?delete=1`).
   const [, setAccount] = useOpenParam("account");
   const owner = org.role === "owner";
-  const [deletingOrg, setDeletingOrg] = useState(false);
+  const [deletingOrg, setDeletingOrg] = useOpenParam("delete");
+  const [resettingOrg, setResettingOrg] = useState(false);
+  // Started here: the row says so until the workspace starts over (`org.reset` reads every list again).
+  const [resetting, setResetting] = useState(false);
+  const config = useAuthConfig().data;
   const mine = dir.memberById.get(me.user.id);
   const zone = mine?.timezone || browserTimezone() || "UTC";
   return (
@@ -88,6 +121,13 @@ export function AccountSection() {
             label={t("shell.profile")}
             status={t("shell.profileHint")}
             onOpen={() => setProfile("name")}
+          />
+          <PrefRow
+            id="account-email"
+            icon="mail"
+            label={t("shell.email.label")}
+            status={me.user.email}
+            onOpen={() => setAccount("email")}
           />
           <PrefRow
             id="account-zone"
@@ -194,6 +234,15 @@ export function AccountSection() {
               />
             }
           />
+          {picksAppIcon() && (
+            <PrefRow
+              id="account-app-icon"
+              lead={<AppIconPicture pick={icon} className="settings-row__app-icon" />}
+              label={t("appIcon.title")}
+              status={iconName}
+              onOpen={() => setIconPicker(true)}
+            />
+          )}
           <PrefRow
             id="account-language"
             icon="globe"
@@ -247,30 +296,66 @@ export function AccountSection() {
             />
           )}
         </div>
+        <AppIconDialog open={iconPicker} onClose={() => setIconPicker(false)} />
       </Card>
       <Card aria-labelledby="account-delete" className="settings-danger">
-        <CardHeader
-          id="account-delete"
-          icon="trash"
-          title={t(owner ? "deleteAccount.card.title" : "deleteAccount.menu")}
-        />
-        <div className="danger-pair">
-          <div className="danger-pair__way">
-            <p className="small muted">{t("deleteAccount.card.text")}</p>
+        <CardHeader id="account-delete" icon="trash" title={t(owner ? "resetOrg.cardTitle" : "deleteAccount.menu")} />
+        <div className="settings-rows">
+          {owner && (
+            <DangerRow
+              icon="refresh"
+              title={t("resetOrg.row.title")}
+              text={resetting ? t("resetOrg.resetting", { name: org.name }) : t("resetOrg.row.text")}
+            >
+              <ul className="deletion-lines">
+                <DeletionLine icon="trash">{t("resetOrg.goes")}</DeletionLine>
+                <DeletionLine icon="check">{t("resetOrg.stays")}</DeletionLine>
+                {config?.billingUrl && <DeletionLine icon="coin">{t("resetOrg.plan")}</DeletionLine>}
+                <DeletionLine icon="refresh">{t("resetOrg.fresh")}</DeletionLine>
+              </ul>
+              <p className="small muted deletion-note">{t("resetOrg.now")}</p>
+              <Button size="sm" variant="danger" disabled={resetting} onClick={() => setResettingOrg(true)}>
+                {t("resetOrg.submit")}
+              </Button>
+            </DangerRow>
+          )}
+          {owner && (
+            <DangerRow
+              icon="trash"
+              title={t("deleteOrg.card.title")}
+              text={t("deleteOrg.card.text", { name: org.name })}
+            >
+              <ul className="deletion-lines">
+                <DeletionLine icon="message">{t("deleteOrg.goes.content")}</DeletionLine>
+                <DeletionLine icon="members">{t("deleteOrg.goes.peopleQuiet")}</DeletionLine>
+              </ul>
+              <Button size="sm" variant="danger" onClick={() => setDeletingOrg(1)}>
+                {t("deleteOrg.card.title")}
+              </Button>
+            </DangerRow>
+          )}
+          <DangerRow icon="person" title={t("deleteAccount.menu")} text={t("deleteAccount.card.text")}>
+            <ul className="deletion-lines">
+              <DeletionLine icon="person">{t("deleteAccount.intro")}</DeletionLine>
+              <DeletionLine icon="message">{t("deleteAccount.messages")}</DeletionLine>
+            </ul>
             <Button size="sm" variant="danger" onClick={() => setAccount("delete")}>
               {t("deleteAccount.menu")}
             </Button>
-          </div>
-          {owner && (
-            <div className="danger-pair__way">
-              <p className="small muted">{t("deleteOrg.card.text", { name: org.name })}</p>
-              <Button size="sm" variant="danger" onClick={() => setDeletingOrg(true)}>
-                {t("deleteOrg.card.title")}
-              </Button>
-            </div>
-          )}
+          </DangerRow>
         </div>
-        {owner && <DeleteWorkspaceDialog org={org} open={deletingOrg} onClose={() => setDeletingOrg(false)} />}
+        {owner && <DeleteWorkspaceDialog org={org} open={deletingOrg !== null} onClose={() => setDeletingOrg(null)} />}
+        {owner && (
+          <ResetWorkspaceDialog
+            org={org}
+            open={resettingOrg}
+            onClose={() => setResettingOrg(false)}
+            onStarted={() => {
+              setResettingOrg(false);
+              setResetting(true);
+            }}
+          />
+        )}
       </Card>
       <ProfileDialog focus={profile} onClose={() => setProfile(null)} />
       <OpenOnPhoneDialog open={phone} onClose={() => setPhone(false)} />
@@ -278,10 +363,245 @@ export function AccountSection() {
   );
 }
 
-class NameRefused extends Error {
+/**
+ * One way to reset or delete, as a row of Sua conta's last card: its icon and title, its line under them at the row's
+ * full width (a MediaRow: the tile never owns a column beside a sentence that wraps); opened, what it does and its
+ * button.
+ */
+function DangerRow({
+  icon,
+  title,
+  text,
+  children,
+}: {
+  icon: IconName;
+  title: string;
+  text: string;
+  children: ReactNode;
+}) {
+  return (
+    <Disclosure
+      className="danger-row"
+      summary={
+        <span className="ac-mediarow">
+          <span className="ac-mediarow__face" aria-hidden="true">
+            <span className="settings-row__icon">
+              <Icon name={icon} size={16} />
+            </span>
+          </span>
+          <span className="ac-mediarow__head">
+            <b>{title}</b>
+          </span>
+          <span className="ac-mediarow__body settings-row__status">{text}</span>
+        </span>
+      }
+    >
+      {children}
+    </Disclosure>
+  );
+}
+
+class AuthRefused extends Error {
   constructor(readonly result: Extract<AuthResult, { ok: false }>) {
     super(result.code);
   }
+}
+
+/**
+ * "E-mail": the same account under a new address (ADR 0088 §2, addendum 2026-11-13). The new address, then the code
+ * emailed to the current one, or for someone who can't open that inbox a sign-in again, which comes back here with the
+ * address typed (the dialog is kept in the address, `?account=email`). A current address never confirmed gets no code:
+ * only the sign-in again. Then a link goes to the new address, which changes once it is opened. An address never
+ * confirmed, and any on a server that sends no e-mail, changes at once.
+ */
+export function EmailDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { t } = useTranslation();
+  // Also on the sign-up's "check your inbox" screen, before any workspace.
+  const current = useMe().data?.user.email ?? "";
+  const api = useApi();
+  const qc = useQueryClient();
+  const [value, setValue] = useState("");
+  const [code, setCode] = useState("");
+  // The code's: where it went, and when another may go.
+  const [sent, setSent] = useState<{ email: string; resendAt: number } | null>(null);
+  const [done, setDone] = useState<{ status: "sent" | "changed"; email: string } | null>(null);
+  const [reauth, setReauth] = useState(false);
+  const signInAgain = useSignInAgain(current);
+  const codeOut = (email: string, resendIn: number) => setSent({ email, resendAt: Date.now() + resendIn * 1000 });
+  const change = useMutation({
+    mutationFn: (input: { newEmail: string; code?: string }) => api.account.changeEmail(input),
+    meta: { silent: true },
+    onSuccess: (r) => {
+      if (r.status === "code") {
+        codeOut(r.email, r.resendIn);
+        setCode("");
+        return;
+      }
+      setDone(r);
+      void qc.invalidateQueries({ queryKey: keys.me });
+    },
+    onError: (e) => {
+      // A code went out a moment ago (a reload, another tab): that one is still good.
+      const retryIn = e instanceof ApiError && e.code === "reauth.code_wait" ? Number(e.params?.retryIn) : 0;
+      if (retryIn > 0) codeOut(sent?.email ?? current, retryIn);
+      if (errorCode(e)?.startsWith("reauth.code")) setCode("");
+      if (errorCode(e) === REAUTH_SIGN_IN) setReauth(true);
+    },
+  });
+  const { reset } = change;
+  useEffect(() => {
+    if (!open) return;
+    // Back from signing in again: the address typed before it.
+    const typed = sessionStore.get(STORAGE_KEYS.emailChangeAsk);
+    sessionStore.remove(STORAGE_KEYS.emailChangeAsk);
+    setValue(typed ?? "");
+    setCode("");
+    setSent(null);
+    setDone(null);
+    setReauth(false);
+    reset();
+  }, [open, reset]);
+  const left = sent ? Math.max(0, sent.resendAt - Date.now()) : 0;
+  // A repaint every second while the countdown runs; the time itself is read just above.
+  useNow(left > 0 ? 1000 : false);
+  const newEmail = value.trim();
+  const ready = sent ? code.length === CODE_LENGTH : isEmail(newEmail);
+  const refused = emailChangeRefusal(change.error);
+  const said = refused && refused !== "wait" ? errorText(t, change.error) : null;
+  const addressError = refused === "address" ? said : null;
+  // Before a code field shows (the day's codes spent), a code's refusal stands on its own.
+  const codeError = refused === "code" && sent && !reauth ? said : null;
+  const other = said && !addressError && !codeError ? said : null;
+  const signIn = () => {
+    sessionStore.set(STORAGE_KEYS.emailChangeAsk, newEmail);
+    void signInAgain();
+  };
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(o) => !o && onClose()}
+      title={t("shell.email.title")}
+      closeLabel={t("common.close")}
+      width={440}
+    >
+      {done ? (
+        <>
+          <DialogBody>
+            <p aria-live="polite">
+              {t(done.status === "changed" ? "shell.email.changed" : "shell.email.sent", { email: done.email })}
+            </p>
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="primary" onClick={onClose}>
+              {t("common.close")}
+            </Button>
+          </DialogFooter>
+        </>
+      ) : (
+        <form
+          style={{ display: "contents" }}
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (reauth) signIn();
+            else if (ready && !change.isPending) change.mutate(sent ? { newEmail, code } : { newEmail });
+          }}
+        >
+          <Locked when={change.isPending}>
+            <DialogBody>
+              <Field
+                label={t("shell.email.new")}
+                id="me-email"
+                hint={{ name: t("common.about", { label: t("shell.email.label") }), text: t("shell.email.help") }}
+                error={addressError ?? undefined}
+              >
+                <Input
+                  type="email"
+                  autoComplete="email"
+                  placeholder={current}
+                  value={value}
+                  onChange={(e) => {
+                    setValue(e.target.value);
+                    // Another address takes its own code.
+                    setSent(null);
+                    setReauth(false);
+                    setCode("");
+                    reset();
+                  }}
+                  autoFocus
+                />
+              </Field>
+              {sent && !reauth && (
+                <Field
+                  label={t("proof.code")}
+                  id="me-email-code"
+                  example={t("proof.sent", { email: sent.email })}
+                  error={codeError ?? undefined}
+                  labelAside={
+                    <button
+                      type="button"
+                      className="ac-link ac-link--muted small"
+                      disabled={left > 0 || change.isPending}
+                      onClick={() => change.mutate({ newEmail })}
+                    >
+                      {left > 0 ? t("proof.resendIn", { time: formatTimeLeft(left) }) : t("proof.resend")}
+                    </button>
+                  }
+                >
+                  <Input
+                    className="ac-input--code"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    value={code}
+                    onChange={(e) => {
+                      setCode(typedCode(e.target.value));
+                      reset();
+                    }}
+                    autoFocus
+                  />
+                </Field>
+              )}
+              {sent && reauth && (
+                <p className="ac-iconline">
+                  <Icon name="lock" size={16} />
+                  <span>{t("shell.email.signInInstead")}</span>
+                </p>
+              )}
+              {sent && (
+                <p className="small">
+                  <button
+                    type="button"
+                    className="ac-link ac-link--muted"
+                    onClick={() => {
+                      // Another way to prove it: what the code was refused for no longer applies.
+                      setReauth((r) => !r);
+                      reset();
+                    }}
+                  >
+                    {t(reauth ? "shell.email.useCode" : "shell.email.cantOpen")}
+                  </button>
+                </p>
+              )}
+              {other && <Alert>{other}</Alert>}
+            </DialogBody>
+          </Locked>
+          <DialogFooter>
+            <Button type="button" onClick={onClose}>
+              {t("common.cancel")}
+            </Button>
+            {reauth ? (
+              <Button type="submit" variant="primary">
+                {t("proof.signInButton")}
+              </Button>
+            ) : (
+              <Button type="submit" variant="primary" disabled={!ready || change.isPending} loading={change.isPending}>
+                {t("shell.email.change")}
+              </Button>
+            )}
+          </DialogFooter>
+        </form>
+      )}
+    </Dialog>
+  );
 }
 
 /** "Perfil" and "Fuso horário": my name (the account's, the same in every workspace), photo, handle and time zone here. */
@@ -314,7 +634,7 @@ export function ProfileDialog({ focus, onClose }: { focus: "name" | "timezone" |
     mutationFn: async () => {
       if (name.trim() !== me.user.name) {
         const result = await auth.updateName(name.trim());
-        if (!result.ok) throw new NameRefused(result);
+        if (!result.ok) throw new AuthRefused(result);
       }
       await api.orgs.updateMe(org.id, {
         handle: handle.trim() || undefined,
@@ -329,7 +649,7 @@ export function ProfileDialog({ focus, onClose }: { focus: "name" | "timezone" |
       toast.show(t("shell.profileSaved"));
       onClose();
     },
-    onError: (e) => setError(e instanceof NameRefused ? authErrorText(t, e.result) : errorText(t, e)),
+    onError: (e) => setError(e instanceof AuthRefused ? authErrorText(t, e.result) : errorText(t, e)),
   });
   return (
     <Dialog

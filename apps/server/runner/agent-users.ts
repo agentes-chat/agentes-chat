@@ -7,18 +7,23 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
+  statfsSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import path from "node:path";
-import { AGENT_WORKER_HOMES } from "@agenteschat/adapters/command-policy";
+import { AGENT_WORKER_HOMES, GROK_ACCOUNT_HOMES } from "@agenteschat/adapters/command-policy";
 import { type AgentScope, isAccountId } from "@agenteschat/adapters/machine-protocol";
-import { isAgentUid } from "./config";
+import { agentTmpOnDisk, isAgentUid } from "./config";
 import { RunnerError } from "./errors";
 import { readJson, writeJson } from "./json-file";
 import { validateNetworkMark } from "./network-mark";
 import { agentId8 } from "./paths";
 import {
+  AGENT_DISK_TMP_ROOT,
   AGENT_RAM_ROOT,
+  AGENT_TMP_POOL,
+  AGENT_TMP_POOL_SHARE,
   AGENT_TMP_ROOT,
   agentCategorySlice,
   agentSlice,
@@ -63,22 +68,129 @@ export interface Launcher {
   tmp?: string;
 }
 
+const TMPFS = 'mount -t tmpfs -o mode=0700,size=50%,nr_inodes=1m agentes-runner-tmp "$1"';
+
 /**
- * Runs as root on the computer, before the agent's own mount namespace (`$1` its uid): the agent's tmpfs, so its
- * /tmp, /dev/shm and /run/lock are in memory as the computer's are, each with its own room. Mounted at its first
- * launch after the computer starts, under a lock: two first launches at once would stack two mounts.
+ * Root, under the lock, at an agent's first launch after a boot (`$1` its tmpfs, `$2` its uid, `$3` `AGENT_TMP_POOL`,
+ * with `tmpOnDisk` `$4` `AGENT_DISK_TMP_ROOT`): its tmpfs, for its /dev/shm, /run/lock and runtime dir, and its /tmp
+ * bound into it from its folder in one filesystem all agents' /tmp share. On disk (`tmpOnDisk`), that is `fs` there,
+ * made anew at the boot's first such launch from a sparse `image` of half what the disk has free: agents can't take the
+ * system's inodes or more than half its room, and each boot starts empty. A new file, never the old one rewritten: an
+ * agent still bound into an earlier one keeps it. No journal, since nothing in it outlives the boot. Where it can't be
+ * made (no loop devices, no mkfs.ext4), or in memory, it is the pool: one tmpfs of `AGENT_TMP_POOL_SHARE`% of the RAM
+ * for all agents, so what they leave in /tmp fills that and fails there, never the computer's memory.
  */
-const AGENT_RAM = [
-  "set -e",
-  `r=${AGENT_RAM_ROOT}`,
-  'mkdir -p "$r"',
-  'chmod 0700 "$r"',
-  'd="$r/$1"',
-  "shift",
-  'mkdir -p "$d"',
-  `flock "$r/.lock" sh -c 'mountpoint -q "$1" || mount -t tmpfs -o mode=0700,size=50%,nr_inodes=1m agentes-runner-tmp "$1"' sh "$d"`,
-  'exec "$@"',
-].join("\n");
+const tmpStep = (tmpOnDisk: boolean) =>
+  [
+    'mountpoint -q "$1" && exit',
+    't="$3"',
+    ...(tmpOnDisk
+      ? [
+          'if { mkdir -p "$4/fs" && chmod 0700 "$4" && { mountpoint -q "$4/fs" || { rm -f "$4/image" && truncate -s $(($(findmnt -bno AVAIL -T "$4") / 2)) "$4/image" && /usr/sbin/mkfs.ext4 -q -F -m 0 -i 4096 -O ^has_journal "$4/image" && mount -o loop,discard,nosuid,nodev "$4/image" "$4/fs"; }; }; } 2>/dev/null; then t="$4/fs"; fi',
+        ]
+      : []),
+    `[ "$t" != "$3" ] || mountpoint -q "$3" || { mkdir -p "$3"; mount -t tmpfs -o mode=0700,size=${AGENT_TMP_POOL_SHARE}%,nr_inodes=1m agentes-runner-tmp "$3"; }`,
+    'mkdir -p "$t/$2"',
+    TMPFS,
+    'mkdir "$1/tmp"',
+    'mount --bind "$t/$2" "$1/tmp"',
+  ].join("; ");
+
+/**
+ * Runs as root on the computer, before the agent's own mount namespace (`$1` its uid): its tmpfs and /tmp
+ * (`tmpStep`). Made at its first launch after the computer starts, under a lock (two first launches at once would
+ * stack two mounts), and kept until the next boot: whatever a later launch says, all of the agent's processes see one
+ * /tmp.
+ */
+const agentRam = (tmpOnDisk: boolean) =>
+  [
+    "set -e",
+    `r=${AGENT_RAM_ROOT}`,
+    'mkdir -p "$r"',
+    'chmod 0700 "$r"',
+    'd="$r/$1"',
+    'u="$1"',
+    "shift",
+    'mkdir -p "$d"',
+    `flock "$r/.lock" sh -ec '${tmpStep(tmpOnDisk)}' sh "$d" "$u" ${AGENT_TMP_POOL}${tmpOnDisk ? ` ${AGENT_DISK_TMP_ROOT}` : ""}`,
+    'exec "$@"',
+  ].join("\n");
+
+/**
+ * `agentRam` as it was before the pool (ADR 0185), which names the step in the containers service's hash
+ * (`ensureContainers`): the step acts only at the agent's first launch after a boot, so a running service has nothing
+ * to restart for when it changes, and restarting would stop its containers.
+ */
+const hashedRamStep = (tmpOnDisk: boolean) =>
+  [
+    "set -e",
+    `r=${AGENT_RAM_ROOT}`,
+    'mkdir -p "$r"',
+    'chmod 0700 "$r"',
+    'd="$r/$1"',
+    ...(tmpOnDisk ? ['u="$1"'] : []),
+    "shift",
+    'mkdir -p "$d"',
+    tmpOnDisk
+      ? `flock "$r/.lock" sh -ec '${[
+          'mountpoint -q "$1" && exit',
+          'mkdir -p "$2/fs"',
+          'chmod 0700 "$2"',
+          'mountpoint -q "$2/fs" || { rm -f "$2/image"; truncate -s $(($(findmnt -bno AVAIL -T "$2") / 2)) "$2/image"; /usr/sbin/mkfs.ext4 -q -F -m 0 -i 4096 -O ^has_journal "$2/image"; mount -o loop,discard,nosuid,nodev "$2/image" "$2/fs"; }',
+          'mkdir -p "$2/fs/$3"',
+          TMPFS,
+          'mkdir "$1/tmp"',
+          'mount --bind "$2/fs/$3" "$1/tmp"',
+        ].join("; ")}' sh "$d" ${AGENT_DISK_TMP_ROOT} "$u"`
+      : `flock "$r/.lock" sh -c 'mountpoint -q "$1" || ${TMPFS}' sh "$d"`,
+    'exec "$@"',
+  ].join("\n");
+
+/**
+ * What the agents' temporary folders hold in memory (bytes): the pool and each agent's own tmpfs (its /tmp too, for
+ * one mounted before the pool), each filesystem once. A folder that isn't a mount point is its parent's filesystem,
+ * never counted. 0 where there are none.
+ */
+export function agentTmpMemoryBytes(
+  root = AGENT_RAM_ROOT,
+  pool = AGENT_TMP_POOL,
+  fs: {
+    stat: (p: string) => { dev: number };
+    statfs: (p: string) => { blocks: number; bfree: number; bsize: number };
+  } = {
+    stat: statSync,
+    statfs: statfsSync,
+  },
+): number {
+  let names: string[] = [];
+  try {
+    names = readdirSync(root).filter((n) => /^\d+$/.test(n));
+  } catch {
+    // no agent launched since the boot
+  }
+  const seen = new Set<number>();
+  let total = 0;
+  for (const dir of [pool, ...names.map((n) => path.join(root, n))]) {
+    try {
+      const { dev } = fs.stat(dir);
+      if (dev === fs.stat(path.dirname(dir)).dev || seen.has(dev)) continue;
+      seen.add(dev);
+      const s = fs.statfs(dir);
+      total += (s.blocks - s.bfree) * s.bsize;
+    } catch {
+      // gone meanwhile
+    }
+  }
+  return total;
+}
+
+/**
+ * systemd-tmpfiles' lines (`--clean`) for agents with nothing running (ADR 0243): what their work left in /tmp and
+ * /dev/shm and nobody touched for 6 hours goes, long before the 10 days of `AGENT_TMP_CLEANUP`, which an agent at work
+ * keeps. tmpfiles never follows a link an agent put there, nor removes a socket in use.
+ */
+export const idleTmpLines = (uids: readonly number[]) =>
+  uids.flatMap((uid) => ["tmp", "shm"].map((f) => `e ${AGENT_RAM_ROOT}/${uid}/${f} - - - 6h\n`)).join("");
 
 /**
  * Runs as root in the agent's new mount namespace, before it becomes the agent (`$1` its uid): its own temporary
@@ -107,7 +219,19 @@ const PRIVATE_TMP_STEPS = [
   "mkdir -m 1777 /tmp/.X11-unix 2>/dev/null || :",
   "mkdir -m 1777 /tmp/.ICE-unix 2>/dev/null || :",
 ];
-const PRIVATE_TMP = [...PRIVATE_TMP_STEPS, 'exec "$@"'].join("\n");
+
+/**
+ * Root, last in a launch's view: every mount under the agents' root-only temp roots taken out of its namespace, the
+ * agent's own /tmp included, which stays bound at /tmp alone. Codex's sandbox masks its daemon folder in /tmp at every
+ * place mountinfo shows the same filesystem folder, and bwrap, as the agent, can't make a mask under a root-only
+ * folder ("Can't mkdir parents for /run/agentes-runner-tmp/<uid>/tmp/codex-daemon-<uid>"). The binds made from them
+ * (/tmp, /dev/shm, the runtime dir) keep their filesystems.
+ */
+export const HIDE_TMP_SOURCES = [
+  "for p in $(cut -d ' ' -f 5 /proc/self/mountinfo); do",
+  `  case $p in ${AGENT_RAM_ROOT}/*|${AGENT_TMP_POOL}|${AGENT_DISK_TMP_ROOT}/*) umount -l "$p" 2>/dev/null || : ;; esac`,
+  "done",
+];
 
 /**
  * Rootless containers for the agents (ADR 0169): Podman, and the set-user-ID helpers that map an agent's own ids
@@ -122,6 +246,16 @@ export const rootlessContainers = (exists: (file: string) => boolean = existsSyn
 export const agentRuntimeDir = (uid: number) => `/run/user/${uid}`;
 export const containersUnit = (uid: number) => `agentes-containers-${uid}.service`;
 const podmanSocket = (uid: number) => `unix://${agentRuntimeDir(uid)}/podman/podman.sock`;
+
+/**
+ * Docker's own rootless daemon (`docker-ce-rootless-extras`, ADR 0209): where it is, each agent's containers service
+ * runs one under the agent's user, started by the first connection to its socket, and every launch's `DOCKER_HOST`
+ * names that socket. Podman's stays `CONTAINER_HOST`.
+ */
+const DOCKER_TOOLS = ["/usr/bin/docker", "/usr/bin/dockerd", "/usr/bin/dockerd-rootless.sh", "/usr/bin/rootlesskit"];
+export const rootlessDocker = (exists: (file: string) => boolean = existsSync) =>
+  DOCKER_TOOLS.every((file) => exists(file));
+const dockerSocket = (uid: number) => `unix://${agentRuntimeDir(uid)}/docker.sock`;
 
 /** Root, in the agent's namespace before it becomes the agent (`$m` its tmpfs): its runtime dir where XDG puts it. */
 const RUNTIME_DIR = [
@@ -171,12 +305,16 @@ const NOSUID_VIEW = [
 /**
  * As the agent, the containers service's start: its own defaults where it has none (`$1` and `$2`, Podman's
  * containers.conf and storage.conf), Podman's socket and its restart of `restart: always` containers switched on,
- * then its user manager. All of it is the agent's to change; none of it keeps it apart from the others. A user manager
+ * Docker's units where the computer has rootless Docker (`$3` to `$5`, `dockerUnits`), then its user manager. All of it is the agent's to change; none of it keeps it apart from the others. A user manager
  * logs to /dev/console, which the agent can't open, unless told the journal; and one that exits at once loses its
  * unit there (journald reads that from the gone process), so the cgroup it needs is checked here first, out loud.
  */
 const CONTAINERS_START = [
   'c="$HOME/.config"',
+  // Docker's units, written at every start in the runtime dir, which systemd reads after ~/.config: a unit of the
+  // agent's own by the same name there takes their place, and `systemctl --user mask docker-api.socket` turns it off.
+  'r="$XDG_RUNTIME_DIR/systemd/user"',
+  'if [ -n "$3" ]; then mkdir -p "$r/sockets.target.wants" && printf %s "$3" > "$r/docker.service" && printf %s "$4" > "$r/docker-api.socket" && printf %s "$5" > "$r/docker-api@.service" && ln -sfn ../docker-api.socket "$r/sockets.target.wants/docker-api.socket" || :; fi',
   'mkdir -p "$c/containers" "$c/systemd/user/sockets.target.wants" "$c/systemd/user/default.target.wants" || :',
   '[ -e "$c/containers/containers.conf" ] || printf %s "$1" > "$c/containers/containers.conf" || :',
   '[ -e "$c/containers/storage.conf" ] || printf %s "$2" > "$c/containers/storage.conf" || :',
@@ -188,6 +326,58 @@ const CONTAINERS_START = [
   '[ -w "$g" ] || { echo "its user manager has no cgroup to run in ($g is not writable)" >&2; exit 1; }',
   "exec /usr/lib/systemd/systemd --user --log-target=journal",
 ].join("\n");
+
+/**
+ * The agent's Docker (ADR 0209), as three user units: rootless dockerd under its user manager, its containers' network
+ * through pasta as the agent's uid in the agent's network, the computer's loopback out of their reach, its API on a
+ * socket of its own; and `DOCKER_HOST`'s socket, whose first connection starts the daemon, so an agent that never uses
+ * Docker never pays its memory. Each connection is `docker system dial-stdio`, which keeps a half-closed stream open
+ * the other way (`docker exec -i … < file`), as systemd-socket-proxyd before systemd 258 doesn't. Absolute paths, no
+ * `%t`: these go through the system manager's ExecStart first, whose specifiers would name root's runtime dir.
+ */
+function dockerUnits(uid: number): string[] {
+  const run = agentRuntimeDir(uid);
+  const engine = `--host=unix://${run}/docker-engine.sock`;
+  return [
+    [
+      "[Unit]",
+      "Description=Docker, rootless, as this agent",
+      "[Service]",
+      "Type=notify",
+      "NotifyAccess=all",
+      "Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+      "Environment=DOCKERD_ROOTLESS_ROOTLESSKIT_NET=pasta",
+      "Environment=DOCKERD_ROOTLESS_ROOTLESSKIT_PORT_DRIVER=implicit",
+      "Environment=DOCKERD_ROOTLESS_ROOTLESSKIT_DISABLE_HOST_LOOPBACK=true",
+      `ExecStart=/usr/bin/dockerd-rootless.sh ${engine}`,
+      "Restart=on-failure",
+      "RestartSec=5",
+      "KillMode=mixed",
+      "Delegate=yes",
+    ],
+    [
+      "[Unit]",
+      "Description=Docker's API for this agent, its daemon started at the first connection",
+      "[Socket]",
+      `ListenStream=${run}/docker.sock`,
+      "SocketMode=0600",
+      "Accept=yes",
+      "MaxConnections=256",
+    ],
+    [
+      "[Unit]",
+      "Description=A connection to this agent's Docker",
+      "Requires=docker.service",
+      "After=docker.service",
+      "CollectMode=inactive-or-failed",
+      "[Service]",
+      `ExecStart=/usr/bin/docker ${engine} system dial-stdio`,
+      "StandardInput=socket",
+      "StandardOutput=socket",
+      "StandardError=journal",
+    ],
+  ].map((lines) => `${lines.join("\n")}\n`);
+}
 
 /** The identifier of its steps' lines in the journal, where the runner reads why it stopped (`containersFailure`). */
 const CONTAINERS_LOG = "agentes-containers";
@@ -331,6 +521,9 @@ export class AgentUsers {
         ids = err instanceof Error ? err.message : String(err);
       }
       if (ids) this.opts.log?.(`${user.user} has no ids for containers: ${ids}`);
+      // `/dev` beside the `/etc` it was given: a test's scratch root has none.
+      const kvm = joinKvm(user.user, path.join(path.dirname(this.opts.etc ?? "/etc"), "dev/kvm"), this.opts.run);
+      if (kvm) this.opts.log?.(`${user.user} can't use /dev/kvm: ${kvm}`);
       // A computer that can't share still serves the agent, in its own folders.
       const { shared } = this.opts;
       for (const p of shared ? joinShared(user.user, agentHome(user.user), shared, this.opts.run) : []) {
@@ -405,6 +598,24 @@ export function denySchedulers(user: string, etc = "/etc") {
 }
 
 /**
+ * The agent's user in `/dev/kvm`'s group, where the computer has one (a VM with nested virtualization, bare metal), so
+ * its emulators and VMs (Android's emulator, QEMU) run with KVM as the agent itself (ADR 0209). Each open of the device
+ * makes VMs of that opener's alone: no agent reaches another's. Never a group that is root's, nor one the device doesn't
+ * open to. Returns why it can't, or null.
+ */
+export function joinKvm(user: string, device = "/dev/kvm", run: RunCommand = runSync): string | null {
+  let kvm: { gid: number; mode: number };
+  try {
+    kvm = statSync(device);
+  } catch {
+    return null;
+  }
+  if (kvm.gid === 0 || (kvm.mode & 0o060) !== 0o060) return null;
+  const r = run("usermod", ["-aG", String(kvm.gid), user]);
+  return r.code === 0 ? null : `usermod failed (${r.code}): ${r.output.slice(0, 200)}`;
+}
+
+/**
  * An agent's subordinate uids and gids (`/etc/subuid`, `/etc/subgid`), which the users inside its rootless
  * containers map to: the 65536 from `uid << 16`. Taken from the uid alone, they are the same on every computer where
  * the agent keeps its uid (a move keeps it), so what its containers left in its home keeps owners it maps. No two
@@ -473,31 +684,33 @@ export function ensureSubids(user: Pick<AgentUser, "user" | "uid">, etc = "/etc"
 
 /**
  * Runs a command as the agent's user inside its slice (whose limits then
- * hold), with its own temporary folders (`AGENT_RAM`, `PRIVATE_TMP`), or with
- * runuser alone where systemd isn't PID 1 (a container). Absolute paths: root
- * never looks these up on a PATH. `--collect`: a scope the OOM killer ended
- * doesn't stay behind as a failed unit. `OOMPolicy=continue` (`oomPolicy`): a
- * process the kernel stops for memory takes only itself, so the command it ran
- * fails where its caller can tell, and the agent's other work goes on. sh,
- * unshare and sh each become the next program (no fork), so runuser still
- * passes SIGTERM on; with slave propagation, what the computer unmounts leaves
- * the agent's namespace too. With rootless containers (`containers`), every
- * launch has the agent's runtime dir and talks to its containers service's
- * Podman (`docker` and `podman` both, through the socket's Docker API too).
+ * hold), with its own temporary folders (`agentRam`, its /tmp on disk with
+ * `tmpOnDisk`, `PRIVATE_TMP_STEPS` and `HIDE_TMP_SOURCES`), or with `asAgent` alone where systemd isn't
+ * PID 1 (a container). Absolute paths: root never looks these up on a PATH.
+ * `--collect`: a scope the OOM killer ended doesn't stay behind as a failed
+ * unit. `OOMPolicy=continue` (`oomPolicy`): a process the kernel stops for
+ * memory takes only itself, so the command it ran fails where its caller can
+ * tell, and the agent's other work goes on. sh, unshare, sh and setpriv each
+ * become the next program (no fork), so SIGTERM reaches the command itself;
+ * with slave propagation, what the computer unmounts leaves the agent's
+ * namespace too. With rootless containers (`containers`), every launch has the
+ * agent's runtime dir and talks to its containers service's Podman (`docker`
+ * and `podman` both, through the socket's Docker API too).
  */
 export function systemLauncher(
   u: AgentUser,
   systemd = systemdBooted(),
   oomPolicy = systemd && scopeOomPolicy(),
   containers = systemd && rootlessContainers(),
+  tmpOnDisk = systemd && agentTmpOnDisk(),
+  docker = containers && rootlessDocker(),
 ): Launcher {
   const home = agentHome(u.user);
-  const runuser = ["/usr/sbin/runuser", "-u", u.user, "--"];
-  const command = [...networkPrefix(u), ...networkRestrictions(u), ...runuser];
+  const command = [...networkPrefix(u), ...networkRestrictions(u), ...asAgent(u.user)];
   const socket = podmanSocket(u.uid);
   const env = {
     ...agentEnv(u, containers),
-    ...(containers ? { CONTAINER_HOST: socket, DOCKER_HOST: socket } : {}),
+    ...(containers ? { CONTAINER_HOST: socket, DOCKER_HOST: docker ? dockerSocket(u.uid) : socket } : {}),
   };
   if (!systemd) return { prefix: command, env, home };
   return {
@@ -511,7 +724,7 @@ export function systemLauncher(
       "--",
       "/bin/sh",
       "-c",
-      AGENT_RAM,
+      agentRam(tmpOnDisk),
       "sh",
       String(u.uid),
       "/usr/bin/unshare",
@@ -521,7 +734,7 @@ export function systemLauncher(
       "--",
       "/bin/sh",
       "-c",
-      agentView(u, containers ? RUNTIME_DIR : []),
+      agentView(u, containers ? RUNTIME_DIR : [], true),
       "sh",
       String(u.uid),
       ...command,
@@ -541,8 +754,9 @@ function agentEnv(u: AgentUser, containers: boolean): Record<string, string> {
     LOGNAME: u.user,
     SHELL: AGENT_SHELL,
     // The shared `bin/` is never on it: every agent can write there, and a tool found by name would run as
-    // whichever agent called it, with that agent's files and sign-ins. Agents reach it by full path.
-    PATH: AGENT_PATH,
+    // whichever agent called it, with that agent's files and sign-ins. Agents reach it by full path. Its own
+    // ~/.local/bin is (only it writes there), last: what it installs for itself its subagents find by name too.
+    PATH: `${AGENT_PATH}:${home}/.local/bin`,
     [SHARED_BIN_ENV]: `${home}/${SHARED_LINK}/bin`,
     LANG: "C.UTF-8",
     ANDROID_ADB_SERVER_PORT: String(adbServerPort(u.uid)),
@@ -551,9 +765,12 @@ function agentEnv(u: AgentUser, containers: boolean): Record<string, string> {
   };
 }
 
-/** Root's steps in the agent's new mount namespace (`PRIVATE_TMP`, with `more` before it becomes the agent). */
-function agentView(u: AgentUser, more: string[]) {
-  const view = more.length > 0 ? [...PRIVATE_TMP_STEPS, ...more, 'exec "$@"'].join("\n") : PRIVATE_TMP;
+/**
+ * Root's steps in the agent's new mount namespace (`PRIVATE_TMP_STEPS`, then `more` before it becomes the agent, then
+ * `HIDE_TMP_SOURCES` with `hide`).
+ */
+function agentView(u: AgentUser, more: string[], hide = false) {
+  const view = [...PRIVATE_TMP_STEPS, ...more, ...(hide ? HIDE_TMP_SOURCES : []), 'exec "$@"'].join("\n");
   // A configured isolation policy gets a fresh private proc instance, never a host remount.
   return u.networkLauncher || u.networkMark || u.networkRevision
     ? `set -e\n/usr/bin/mount -t proc -o nosuid,nodev,noexec,hidepid=2 proc /proc\n${view}`
@@ -574,15 +791,23 @@ function agentView(u: AgentUser, more: string[]) {
  * only itself. A service's command line is its ExecStart=, unlike a scope's: systemd expands `$` in it, and writes it
  * to the unit's file under /run/systemd/transient with every `$` doubled, which is what runs after any daemon-reload.
  * So `--expand-environment=no` (`literal`, systemd 254 and later), which keeps it as it is in both; before 254 there is
- * no such switch, and every `$` goes doubled, which it reads as one.
+ * no such switch, and every `$` goes doubled, which it reads as one. Its view keeps the temp roots' mounts
+ * (`HIDE_TMP_SOURCES` is the launches'): `CGROUP_BACK` binds the kept cgroup2 from there after the hook, and a new
+ * command would restart every agent's containers.
  */
-export function containersCommand(u: AgentUser, literal = installedSystemd() >= 254): string[] {
+export function containersCommand(
+  u: AgentUser,
+  literal = installedSystemd() >= 254,
+  tmpOnDisk = agentTmpOnDisk(),
+  docker = rootlessDocker(),
+  ramStep = agentRam,
+): string[] {
   const env = Object.entries(agentEnv(u, true)).map(([name, value]) => `${name}=${value}`);
   const hook = networkPrefix(u);
   const command = [
     "/bin/sh",
     "-c",
-    AGENT_RAM,
+    ramStep(tmpOnDisk),
     "sh",
     String(u.uid),
     "/usr/bin/unshare",
@@ -599,11 +824,7 @@ export function containersCommand(u: AgentUser, literal = installedSystemd() >= 
     ...(hook.length > 0 ? ["/bin/sh", "-c", CGROUP_BACK, "sh", keptCgroup(u.uid)] : []),
     SETPRIV,
     "--bounding-set=-net_admin,-net_raw",
-    "--",
-    "/usr/sbin/runuser",
-    "-u",
-    u.user,
-    "--",
+    ...asAgent(u.user).slice(1),
     "/usr/bin/env",
     "-i",
     ...env,
@@ -613,6 +834,7 @@ export function containersCommand(u: AgentUser, literal = installedSystemd() >= 
     "sh",
     CONTAINERS_CONF,
     storageConf(agentHome(u.user)),
+    ...(docker ? dockerUnits(u.uid) : []),
   ];
   return [
     "/usr/bin/systemd-run",
@@ -637,14 +859,17 @@ export function containersCommand(u: AgentUser, literal = installedSystemd() >= 
 /**
  * The agent's containers service running as `containersCommand` says now: started when it isn't, and started again
  * when what it would run changed (its network hook above all: a namespace's containers live where the agent's other
- * processes do), which stops its containers. Its description carries that command's hash. One its start limit stopped
+ * processes do), which stops its containers. Its description carries that command's hash, its first step as
+ * `hashedRamStep` names it. One its start limit stopped
  * stays down for that same command, which would fail the same way: started again once the command changes, the
  * computer restarts, or someone runs `systemctl reset-failed` on it. Returns why it doesn't run, or null.
  */
 export function ensureContainers(u: AgentUser, run: RunCommand = runSync): string | null {
-  const [file = "", ...args] = containersCommand(u);
+  const tmpOnDisk = agentTmpOnDisk();
+  const [file = "", ...args] = containersCommand(u, undefined, tmpOnDisk);
+  const named = containersCommand(u, undefined, tmpOnDisk, undefined, hashedRamStep);
   const description = `agentes.chat containers ${createHash("sha256")
-    .update([file, ...args].join("\0"))
+    .update(named.join("\0"))
     .digest("hex")
     .slice(0, 16)}`;
   const unit = containersUnit(u.uid);
@@ -736,7 +961,7 @@ export function agentGid(user: string, run: RunCommand = runSync): number {
   return gid;
 }
 
-/** Commands before runuser and root's network diagnostics enter the same optional network context. */
+/** Commands before becoming the agent and root's network diagnostics enter the same optional network context. */
 export function networkPrefix(user: AgentUser): string[] {
   return user.networkLauncher ? [...trustedNetworkLauncher(user.networkLauncher), String(user.uid), "--"] : [];
 }
@@ -779,6 +1004,15 @@ export function ensureGitCacheUser(run: RunCommand = runSync): { uid: number; gi
  */
 export const AUTH_EGRESS_GROUP = "agentes-auth";
 const SETPRIV = "/usr/bin/setpriv";
+
+/**
+ * Becomes the agent's user: its own group and its groups. Never `runuser` or `su`, whose PAM session may load
+ * `pam_systemd` (Arch's `/etc/pam.d/runuser` includes `system-login`), which registers a logind session and moves the
+ * process from the agent's slice into `user-<uid>.slice/session-N.scope`: past its limits and its bind policy, so every
+ * worker's bind check failed there (#253). `setpriv` opens no PAM session and is the one the capability drops use too.
+ */
+export const asAgent = (user: string) => [SETPRIV, `--reuid=${user}`, `--regid=${user}`, "--init-groups", "--"];
+
 /** `$1` the new project, `$2` the transcript, `$3` its copy: a link stays a link, which then resumes nothing. */
 const CARRY_SESSION = 'umask 077 && mkdir -p -- "$1" && exec cp --no-dereference --remove-destination -- "$2" "$3"';
 
@@ -846,16 +1080,16 @@ export function readAccountUsers(home: string): Omit<AccountUser, "gid">[] {
   return Array.isArray(v) ? v.filter(isAccountRow).map(({ id, user, uid }) => ({ id, user, uid })) : [];
 }
 
-/** What holds agents' data. Claude's mount view hides them all; a turn's cwd must lie under one but the stores. */
+/** What holds agents' data. Claude's mount view hides them all; a turn's cwd must lie under one but the sign-ins'. */
 const AGENT_DATA_ROOTS = ["/home", SHARED_ROOT, AGENT_WORKER_HOMES, GIT_CACHE_DIR];
-export const ACCOUNT_MASKED_ROOTS = [...AGENT_DATA_ROOTS, ACCOUNT_STORES];
+export const ACCOUNT_MASKED_ROOTS = [...AGENT_DATA_ROOTS, GROK_ACCOUNT_HOMES, ACCOUNT_STORES];
 
 const inside = (root: string, p: string) => p.startsWith(`${root}/`);
 export const underMaskedRoot = (p: string) => ACCOUNT_MASKED_ROOTS.some((root) => inside(root, p));
 
 /**
  * Runs as root in the CLI's new mount namespace (`$1` the sign-in, `$2` its room under `run/`, `$3` the path the CLI
- * should see as its cwd, empty for its room). The temporary folders are new and in memory: unlike `PRIVATE_TMP`'s,
+ * should see as its cwd, empty for its room). The temporary folders are new and in memory: unlike a launch's,
  * nothing an agent wrote is in them. The masks hide every agent's data; the sign-in's own folders come back through a
  * bind taken before its parent is masked. The cwd is a new path in a mask, so no link an agent planted is followed,
  * with this room's empty folder bound on it: nothing an agent can write lies above or below the CLI.
@@ -1123,11 +1357,13 @@ export class AccountUsers {
   }
 
   /**
-   * The agent was deleted: what every sign-in holds for it goes. Its transcripts are the `projects/` folders
-   * named after a path with its user in it; one on a path it shared stays. Only root and the sign-in's user write
-   * in these folders, and `rmSync` follows no link.
+   * The agent was deleted (or a person's seat of the right hand, when they left): every process of its own user is
+   * killed, so nothing a person started as it (a shell left running, a tunnel) outlives it, and what every sign-in
+   * holds for it goes. Its transcripts are the `projects/` folders named after a path with its user in it; one on a
+   * path it shared stays. Only root and the sign-in's user write in these folders, and `rmSync` follows no link.
    */
   sweepAgent(agent: Pick<AgentUser, "user" | "uid">) {
+    this.kill(agent.uid);
     this.stopScopes(agent.uid);
     const slug = new RegExp(`(^|-)${agent.user}(-|$)`);
     for (const { id } of readAccountUsers(this.opts.home)) {

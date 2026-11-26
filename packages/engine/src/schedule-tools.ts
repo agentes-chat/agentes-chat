@@ -1,9 +1,11 @@
 import { and, eq, inArray, isNull, or, schema, sql } from "@agenteschat/db";
+import { ROUTINE_PROMPT_MAX } from "@agenteschat/tokens/routines";
 import { type AgentActionParams, recordAgentActions } from "./agent-actions";
 import { routineRow, routineSnapshot } from "./agent-undo";
 import { agentsByHandle, currentHandles, getAgentCached } from "./agents";
+import { decidesAgentApprovals } from "./approval-rules";
 import { cancelAheadApproval, cancelableAhead } from "./approvals";
-import { canTalkTo, speakerFor } from "./audience";
+import { canTalkTo, NO_OWNER, OWNER_COLUMNS, speakerFor } from "./audience";
 import { runAuthorityById } from "./authority";
 import { cardPlace } from "./consultations";
 import { getChannelCached } from "./context";
@@ -11,9 +13,11 @@ import { schedulesOf } from "./context/summaries";
 import { ForbiddenError } from "./errors";
 import { cutText, stringsOf } from "./format";
 import { watchesFor } from "./mail/watches";
+import { relayedRefusal, relayedRequest } from "./requester";
 import { isRightHand } from "./right-hand";
 import { ROUTINE_REPORT, routineReportOf } from "./routine-brief";
 import { HOOK_METHODS, routineHookKeys } from "./routine-hooks";
+import { vaultAction, vaultKeyOf } from "./routine-keys";
 import {
   cancelReminder,
   createReminder,
@@ -179,6 +183,8 @@ const EVENT_WORDS: Record<RoutineEvent, string> = {
   "deploy.succeeded": "a deploy succeeds",
   "email.received": "new mail arrives",
   "webhook.received": "its webhook address is called",
+  "telegram.message":
+    "someone writes to the workspace's Telegram bot (a private chat, or a mention or reply in a group)",
 };
 
 /** The zone a routine's times are read in (schedules and one-offs have their own). */
@@ -194,7 +200,9 @@ function whenText(t: RoutineTrigger) {
   if (t.type === "event") return `when ${EVENT_WORDS[t.event]}`;
   // Never the address itself: it is a secret, shown only in Routines.
   if (t.type === "webhook")
-    return `when ${EVENT_WORDS["webhook.received"]} with ${t.methods.join(" or ")}${t.signed ? " (signed calls only)" : ""}`;
+    return `when ${EVENT_WORDS["webhook.received"]} with ${t.methods.join(" or ")}${t.signed ? " (signed calls only)" : ""}${
+      t.groupBy ? `, calls grouped by ${t.groupBy} (each group in order, groups side by side)` : ""
+    }`;
   const from = t.filter.from?.length ? ` from ${t.filter.from.join(", ")}` : "";
   const subject = t.filter.subject ? ` with "${t.filter.subject}" in the subject` : "";
   if (t.type === "connector") return `when an email arrives in a MillionSend inbox${from}${subject}`;
@@ -337,7 +345,7 @@ async function readableChannels(ctx: ToolContext, channelIds: string[]) {
 
 /** Where a person connects a mailbox (agents can't), in the apps' words and the Portuguese they show. */
 const CONNECT_HOW =
-  "a person who manages connectors does it. On the web or the desktop app: Settings › Connectors and MCPs › Add connector › Email, then the mailbox (Gmail, Outlook, iCloud or another), and its step Who can use it lets you read it (in Portuguese, Configurações › Conectores e MCPs › Adicionar conector › Email, then Quem pode usar). Tell the person exactly this.";
+  "a person who manages connectors does it. On the web or the desktop app: Settings › Connectors and MCPs › Browse connectors › Email, then the mailbox (Gmail, Outlook, iCloud or another), and its step Who can use it lets you read it (in Portuguese, Configurações › Conectores e MCPs › Ver conectores › Email, then Quem pode usar). Tell the person exactly this.";
 /** Where a person lets an agent read a mailbox that is connected. */
 const GIVE_HOW =
   "a person who manages agents must let you. On the web or the desktop app: Settings › Connectors and MCPs › Who uses it, on the mailbox's row (in Portuguese, Configurações › Conectores e MCPs › Quem usa). On the phone app: You › Connectors and MCPs, then the mailbox (in Portuguese, Você › Conectores e MCPs). Tell the person exactly this.";
@@ -392,7 +400,11 @@ async function mailboxOf(ctx: ToolContext, raw: string) {
 async function triggerOf(ctx: ToolContext, raw: Record<string, unknown>): Promise<RoutineTriggerInput> {
   if (raw.type === "webhook") {
     const methods = Array.isArray(raw.methods) ? raw.methods.filter((m): m is string => typeof m === "string") : [];
-    return { type: "webhook", ...(methods.length > 0 ? { methods } : {}) };
+    return {
+      type: "webhook",
+      ...(methods.length > 0 ? { methods } : {}),
+      ...(typeof raw.group_by === "string" || raw.group_by === null ? { groupBy: raw.group_by } : {}),
+    };
   }
   if (raw.type === "email") {
     const from = Array.isArray(raw.from) ? raw.from.filter((v): v is string => typeof v === "string") : [];
@@ -480,7 +492,7 @@ export const SCHEDULE_INPUT = {
 const TRIGGER_SCHEMA = {
   type: "object",
   description:
-    'Instead of a schedule: run when something happens. `type: "email"` with `mailbox` (its address; left out, the only one you can read), `folder` (default the inbox) and optional filters `from` (addresses or @domains), `subject` and `text` (words). `type: "webhook"`: the routine gets an address of its own that another service calls to start it, with what it sends as the run\'s data; `methods` the HTTP methods it answers (default POST; with GET the query string is the data). `type: "event"` with `event`.',
+    'Instead of a schedule: run when something happens. `type: "email"` with `mailbox` (its address; left out, the only one you can read), `folder` (default the inbox) and optional filters `from` (addresses or @domains), `subject` and `text` (words). `type: "webhook"`: the routine gets an address of its own that another service calls to start it, with what it sends as the run\'s data; `methods` the HTTP methods it answers (default POST; with GET the query string is the data); `group_by` a dot path into each call\'s data (`conversation.id`, `contact.id`) when calls are about separate conversations: calls with the same value there run one after another, in order, and different ones run side by side ("" turns it off: every call waits in one line). Set it only from what the calls really carry, a value every call about one conversation has. `type: "event"` with `event`.',
   properties: {
     type: { type: "string", enum: ["email", "webhook", "event"] },
     event: {
@@ -499,6 +511,7 @@ const TRIGGER_SCHEMA = {
       minItems: 1,
       maxItems: HOOK_METHODS.length,
     },
+    group_by: { type: "string", maxLength: 200 },
   },
   required: ["type"],
   additionalProperties: false,
@@ -515,8 +528,28 @@ const OWN_ACTIONS_SCHEMA = {
   maxItems: 20,
   items: { type: "string", minLength: 1, maxLength: 128 },
   description:
-    "Connected-app actions the routine's job needs, which every run then does without asking a person: the exact tool names you call (for Composio's multi-execute tool, each action's slug, like SLACK_SEND_MESSAGE). Only what the person asked the routine to do (the Slack post, the email they want sent). Any other write to a connected app follows the agent's approvals, and merge, deploy, rollback and the like can't be listed. Only the agent's owner or someone who approves its actions can set this. On update it replaces the list; [] makes every action ask again.",
+    "Connected-app actions the routine's job needs, which every run then does without asking a person: the exact tool names you call (for Composio's multi-execute tool, each action's slug, like SLACK_SEND_MESSAGE). Only what the person asked the routine to do (the Slack post, the email they want sent): its other ordinary writes (update a row, a deal, an issue) already run without asking, and its other sends, deletes, payments and invites ask. Merge, deploy, rollback and the like can't be listed. Only the agent's owner or someone who approves its actions can set this. On update it replaces the list; [] makes every action ask again.",
 };
+
+/** `keys` of `create_routine` and `update_routine`: Vault keys its runs' commands may use (`vault:NAME` own actions). */
+const KEYS_SCHEMA = {
+  type: "array",
+  maxItems: 10,
+  items: { type: "string", minLength: 1, maxLength: 64 },
+  description:
+    "Vault keys the routine's commands use (`run_code`'s `keys`), by variable name as vault_list shows them: only the ones its job needs and the person asked for. Any other key asks a person first. Only the agent's owner or someone who approves its actions can set this. On update it replaces the list; [] makes every key ask again.",
+};
+
+/** A routine's own actions as sent: connected-app actions (`own_actions`) and Vault keys (`keys`, as `vault:NAME`). */
+function routineOwnActions(input: Record<string, unknown>, current: readonly string[] = []): string[] {
+  const apps = Array.isArray(input.own_actions)
+    ? stringsOf(input.own_actions).filter((a) => !vaultKeyOf(a))
+    : current.filter((a) => !vaultKeyOf(a));
+  const keys = Array.isArray(input.keys)
+    ? stringsOf(input.keys).map((k) => vaultAction(k.trim()))
+    : current.filter((a) => vaultKeyOf(a));
+  return [...apps, ...keys];
+}
 
 /** What the routine does without asking, for the agent to tell the person: by its agent's approvals level (ADR 0173). */
 async function ownActionsText(ctx: ToolContext, r: RoutineView) {
@@ -525,9 +558,25 @@ async function ownActionsText(ctx: ToolContext, r: RoutineView) {
     return " Its agent is set to never ask: every run does what its instructions say, in connected apps too, with no approval. Tell the person exactly this.";
   }
   if (level === "always") return " Its agent is set to always ask: every change a run makes asks a person first.";
-  return r.ownActions.length > 0
-    ? ` On its own, without asking, every run may: ${r.ownActions.join(", ")}. Any other action in a connected app asks a person first, unless a person approved its kind for good. Tell the person exactly this.`
-    : " Every action in a connected app asks a person first.";
+  const apps = r.ownActions.filter((a) => !vaultKeyOf(a));
+  const keys = r.ownActions.flatMap((a) => vaultKeyOf(a) ?? []);
+  const keysText =
+    keys.length > 0
+      ? ` Its commands may use these Vault keys: ${keys.join(", ")}; any other key asks a person first.`
+      : "";
+  const agent = await getAgentCached(ctx.db, ctx.orgId, r.agentId);
+  const writes =
+    r.createdByUserId !== null &&
+    (await decidesAgentApprovals(ctx.db, ctx.orgId, r.createdByUserId, agent ?? NO_OWNER));
+  const rest = writes
+    ? "Its other changes in connected apps run without asking too, except a send, a delete, a payment or an invite, which ask a person first unless a person approved its kind for good."
+    : "Any other action in a connected app asks a person first, unless a person approved its kind for good.";
+  if (apps.length > 0) {
+    return ` On its own, without asking, every run may: ${apps.join(", ")}. ${rest}${keysText} Tell the person exactly this.`;
+  }
+  return writes
+    ? ` Its changes in connected apps run without asking, except a send, a delete, a payment or an invite, which ask a person first.${keysText} Tell the person exactly this.`
+    : ` Every action in a connected app asks a person first.${keysText}`;
 }
 
 /**
@@ -558,7 +607,7 @@ export function createScheduleToolSource(deps: Omit<RoutineDeps, "db">): ToolSou
     {
       name: "schedule_reminder",
       description:
-        'Schedule a one-off reminder in this conversation: at that time you post "Reminder: …" mentioning the person (the app shows it as a reminder in their language). `when` is what the person said, in their words and language ("amanhã às 9h", "tomorrow at 9am", "in 2 hours"), read in their time zone, or ISO 8601. Write `message` in the person\'s language. Set ask_agent when, at that time, you should do something (not just remind); for a connected app\'s action then (a post, a message to send), use schedule_action instead, so the person approves it now and not at that time. If the time is ambiguous, ask with ask_user first.',
+        'Schedule a one-off reminder in this conversation: at that time you post "Reminder: …" mentioning the person (the app shows it as a reminder in their language). `when` is what the person said, in their words and language ("amanhã às 9h", "tomorrow at 9am", "in 2 hours"), read in their time zone, or ISO 8601. Write `message` in the person\'s language so it reads right on any day: it shows in Routines and in the calendar before that time, so name the day and date instead of words like today or tomorrow ("Friday, Mar 6: dentist at 3pm", not "Tomorrow: dentist"). Set ask_agent when, at that time, you should do something (not just remind); for a connected app\'s action then (a post, a message to send), use schedule_action instead, so the person approves it now and not at that time. If the time is ambiguous, ask with ask_user first.',
       scope: SCHEDULE_SCOPE,
       inputSchema: {
         type: "object",
@@ -616,14 +665,14 @@ export function createScheduleToolSource(deps: Omit<RoutineDeps, "db">): ToolSou
     {
       name: "create_routine",
       description:
-        'Create a routine: work you do on your own, in the background, on a schedule ("toda segunda às 9h", "dias úteis às 18h", "every hour") or when something happens (`trigger`). Each run gets `prompt` as its instructions and nobody watches it: it reports by handing its findings off to the conversation it reports to, where you then tell the people. It can do what you can (search the web, use your computer and browser, tell or ask other agents, post where the person can); changes in connected apps ask a person first, except the ones its job needs that you list in `own_actions` (the person asked for them, so setting it up approves them). That is this conversation by default; set `channel` (its name, with or without #) when the person wants it in a channel ("manda no #general"). `report` says when it speaks. Choose who performs it: when the person wants a specific other agent to do the work ("faz o @theo postar…", "have @theo send…"), set `agent` to that agent, so the routine is its own work, never yours relaying the ask each run. When the person says "when a new email arrives" or "when a new error comes in", use `trigger` (an email filter or an event), never a schedule that checks again and again; "when another service calls it" or "by webhook" is a webhook trigger. A routine runs at most every 15 minutes. Only admins or your owner can create routines; the person sees it with Undo.',
+        'Create a routine: work you do on your own, in the background, on a schedule ("toda segunda às 9h", "dias úteis às 18h", "every hour") or when something happens (`trigger`). Each run gets `prompt` as its instructions and nobody watches it: it reports by handing its findings off to the conversation it reports to, where you then tell the people. It can do what you can (search the web, use your computer and browser, tell or ask other agents, post where the person can); in connected apps its ordinary writes run without asking, and a send, a delete, a payment or an invite asks a person first, except the ones its job needs that you list in `own_actions` (the person asked for them, so setting it up approves them). That is this conversation by default; set `channel` (its name, with or without #) when the person wants it in a channel ("manda no #general"). `report` says when it speaks. Choose who performs it: when the person wants a specific other agent to do the work ("faz o @theo postar…", "have @theo send…"), set `agent` to that agent, so the routine is its own work, never yours relaying the ask each run. When the person says "when a new email arrives" or "when a new error comes in", use `trigger` (an email filter or an event), never a schedule that checks again and again; "when another service calls it" or "by webhook" is a webhook trigger. A routine runs at most every 15 minutes. Only admins or your owner can create routines; the person sees it with Undo.',
       scope: SCHEDULE_SCOPE,
       inputSchema: {
         type: "object",
         properties: {
           schedule: SCHEDULE_INPUT,
           trigger: TRIGGER_SCHEMA,
-          prompt: { type: "string", minLength: 1, maxLength: 10_000 },
+          prompt: { type: "string", minLength: 1, maxLength: ROUTINE_PROMPT_MAX },
           title: { type: "string", maxLength: 120 },
           channel: { type: "string", maxLength: 100, description: "Report in this channel instead of here" },
           report: REPORT_SCHEMA,
@@ -634,6 +683,7 @@ export function createScheduleToolSource(deps: Omit<RoutineDeps, "db">): ToolSou
               "The agent that does it (its handle, e.g. @theo) when it isn't you; it reports in a direct message with the person when it isn't in this conversation and no `channel` is set",
           },
           own_actions: OWN_ACTIONS_SCHEMA,
+          keys: KEYS_SCHEMA,
         },
         required: ["prompt"],
         additionalProperties: false,
@@ -642,6 +692,8 @@ export function createScheduleToolSource(deps: Omit<RoutineDeps, "db">): ToolSou
         try {
           const requester = await requesterOf(ctx);
           if (!requester) return noRequester;
+          // A routine is standing work, run again and again (ADR 0250): never set up from words relayed in.
+          if (await relayedRequest(ctx)) return relayedRefusal();
           const hasSchedule = Boolean(str(input.schedule).trim());
           const rawTrigger = input.trigger as Record<string, unknown> | undefined;
           if (hasSchedule === Boolean(rawTrigger)) {
@@ -683,7 +735,7 @@ export function createScheduleToolSource(deps: Omit<RoutineDeps, "db">): ToolSou
                 : { type: "conversation", ...conv, reminder: false },
             trigger,
             report: routineReportOf(input.report),
-            ownActions: stringsOf(input.own_actions),
+            ownActions: routineOwnActions(input),
           }).catch((error) => {
             if (performer.handle && notManager(error)) return notTheirs(performer.handle, error);
             throw error;
@@ -749,7 +801,7 @@ export function createScheduleToolSource(deps: Omit<RoutineDeps, "db">): ToolSou
               audienceRoleIds: agents.audienceRoleIds,
               consultable: agents.consultable,
               brain: agents.brain,
-              ownerUserId: agents.ownerUserId,
+              ...OWNER_COLUMNS,
             })
             .from(agents)
             .where(and(eq(agents.orgId, ctx.orgId), isNull(agents.archivedAt)));
@@ -821,12 +873,13 @@ export function createScheduleToolSource(deps: Omit<RoutineDeps, "db">): ToolSou
         properties: {
           id: { type: "string", minLength: 36, maxLength: 36 },
           channel: { type: "string", maxLength: 100 },
-          prompt: { type: "string", minLength: 1, maxLength: 10_000 },
+          prompt: { type: "string", minLength: 1, maxLength: ROUTINE_PROMPT_MAX },
           schedule: SCHEDULE_INPUT,
           trigger: TRIGGER_SCHEMA,
           title: { type: "string", minLength: 1, maxLength: 120 },
           report: REPORT_SCHEMA,
           own_actions: OWN_ACTIONS_SCHEMA,
+          keys: KEYS_SCHEMA,
           active: { type: "boolean" },
           agent: { type: "string", maxLength: 40, description: "Hand it to this agent (its handle)" },
         },
@@ -837,6 +890,7 @@ export function createScheduleToolSource(deps: Omit<RoutineDeps, "db">): ToolSou
         try {
           const requester = await requesterOf(ctx);
           if (!requester) return noRequester;
+          if (await relayedRequest(ctx)) return relayedRefusal();
           const id = str(input.id);
           const own = await ownRoutine(ctx, id, true);
           if (!own.row) return { content: own.error, isError: true };
@@ -855,8 +909,8 @@ export function createScheduleToolSource(deps: Omit<RoutineDeps, "db">): ToolSou
           if (never) return never;
           const channel = str(input.channel).trim() ? await channelTarget(ctx, requester, str(input.channel)) : null;
           const owner = own.row.agentId;
-          const methodsOf = async () => (await routineHookKeys(ctx.db, [id])).get(id)?.methods ?? null;
-          const methodsBefore = await methodsOf();
+          const hookOf = async () => (await routineHookKeys(ctx.db, [id])).get(id) ?? null;
+          const hookBefore = await hookOf();
           const routine = await updateRoutine(routineDeps(ctx), requester, ctx.orgId, id, {
             ...(str(input.agent).trim() && performer.id !== owner ? { agentId: performer.id } : {}),
             ...(channel ? { target: channel.target } : {}),
@@ -865,7 +919,9 @@ export function createScheduleToolSource(deps: Omit<RoutineDeps, "db">): ToolSou
             ...(trigger ? { trigger } : {}),
             ...(input.report !== undefined ? { report: routineReportOf(input.report) } : {}),
             ...(typeof input.active === "boolean" ? { active: input.active } : {}),
-            ...(Array.isArray(input.own_actions) ? { ownActions: stringsOf(input.own_actions) } : {}),
+            ...(Array.isArray(input.own_actions) || Array.isArray(input.keys)
+              ? { ownActions: routineOwnActions(input, own.row.ownActions) }
+              : {}),
           }).catch(async (error) => {
             if (!notManager(error)) throw error;
             const [other] =
@@ -885,11 +941,14 @@ export function createScheduleToolSource(deps: Omit<RoutineDeps, "db">): ToolSou
           if (afterRow) {
             const was: Record<string, unknown> = routineSnapshot(own.row);
             const now: Record<string, unknown> = routineSnapshot(afterRow);
-            // The methods its address answers live with the address: compared (and undone) when it had one already.
-            const methodsAfter = await methodsOf();
-            if (methodsBefore && methodsAfter) {
-              was.methods = methodsBefore;
-              now.methods = methodsAfter;
+            // The methods its address answers and its grouping live with the address: compared (and undone) when it
+            // had one already.
+            const hookAfter = await hookOf();
+            if (hookBefore && hookAfter) {
+              was.methods = hookBefore.methods;
+              now.methods = hookAfter.methods;
+              was.groupBy = hookBefore.groupBy;
+              now.groupBy = hookAfter.groupBy;
             }
             const fields = Object.keys(now).filter((k) => JSON.stringify(was[k]) !== JSON.stringify(now[k]));
             if (fields.length > 0) {
@@ -897,7 +956,17 @@ export function createScheduleToolSource(deps: Omit<RoutineDeps, "db">): ToolSou
               const words = [
                 ...new Set(
                   fields.map((f) =>
-                    ["triggerType", "phrase", "cron", "timezone", "description", "event", "rule", "methods"].includes(f)
+                    [
+                      "triggerType",
+                      "phrase",
+                      "cron",
+                      "timezone",
+                      "description",
+                      "event",
+                      "rule",
+                      "methods",
+                      "groupBy",
+                    ].includes(f)
                       ? "schedule"
                       : f === "ownActions"
                         ? "access"
@@ -926,7 +995,7 @@ export function createScheduleToolSource(deps: Omit<RoutineDeps, "db">): ToolSou
           }
           return {
             content: `Updated routine ${routine.id} ${await summaryOf(ctx, routine)}. Tell the person what changed.${
-              Array.isArray(input.own_actions) ? await ownActionsText(ctx, routine) : ""
+              Array.isArray(input.own_actions) || Array.isArray(input.keys) ? await ownActionsText(ctx, routine) : ""
             }${needsText(routine)}${trigger?.type === "webhook" && receipt ? WEBHOOK_HINT : ""}`,
             data: { routine: { id: routine.id } },
           };

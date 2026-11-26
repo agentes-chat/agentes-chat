@@ -15,8 +15,12 @@ import { daysAgo } from "../shared/logic";
  * says who and how many.
  */
 
-/** `done`: "Concluídas", what I marked done (the last 30 days), by when. */
-export type ActivityFilter = "all" | "waiting" | "done";
+/**
+ * The inbox's filters, the web's own: `requests`, the requests already decided (the approvals' list, not the
+ * notifications'); `done`, what I marked done (the last 30 days), by when.
+ */
+export type ActivityFilter = "all" | "waiting" | "mentions" | "unread" | "requests" | "done";
+export const ACTIVITY_FILTERS: readonly ActivityFilter[] = ["all", "waiting", "mentions", "unread", "requests", "done"];
 
 /**
  * Waiting ones in this order: an agent stuck in its browser or waiting for a secret (both expire in minutes), an
@@ -120,6 +124,8 @@ export function subtitleOf(
     return [origin ? say(origin) : "", l.title ?? l.text ?? ""].filter(Boolean).join(" · ");
   }
   if (n.kind === "issue_assigned") return l.title ?? l.text ?? "";
+  // What lending its internet keeps out, said once under the line that says it lends.
+  if (n.kind === "device.internet_shared") return say({ key: "devices.notice.internetSharedLine", values: {} });
   // Its title names the device and whom the agent works for (`latest.title`): only what it is doing goes under it.
   if (isDeviceNotice(n.kind)) return l.text ?? "";
   return written(l) || word || (l.text ?? l.title ?? "");
@@ -144,13 +150,15 @@ export function joinRequestLine(
   n: Pick<AppNotification, "count" | "latest">,
 ): { text: string; faces: string[] } {
   const asked = askersOf(n);
-  // A member's suggestion says who suggested it (ADR 0090).
+  // A suggestion says who suggested it (ADR 0090); an outside collaborator's request, who they work for (ADR 0191).
   const text =
     asked.total > 1
       ? t("notifications.wait.joinRequestNames", { names: namesText(t, asked.names, 2, asked.total) })
       : n.latest.suggestedBy
         ? t("notifications.wait.joinSuggestion", { by: n.latest.suggestedBy, name: asked.names[0] })
-        : t("notifications.wait.joinRequest", { count: 1, name: asked.names[0] });
+        : n.latest.outsideOf
+          ? t("notifications.wait.joinOutside", { name: asked.names[0], outsideOf: n.latest.outsideOf })
+          : t("notifications.wait.joinRequest", { count: 1, name: asked.names[0] });
   return { text, faces: asked.names.slice(0, 2) };
 }
 

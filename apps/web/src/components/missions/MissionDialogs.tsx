@@ -30,6 +30,7 @@ import {
   Menu,
   MenuItem,
   MenuSeparator,
+  overLimit,
   RadioCard,
   RadioGroup,
   SearchField,
@@ -50,6 +51,7 @@ import { useOrg } from "@/components/org-context";
 import { ThisMacButton } from "@/components/ThisMac";
 import { useComputerEdition, useNamesComputers } from "@/components/WorkspaceComputer";
 import { useDirectory } from "@/hooks/useDirectory";
+import { useTextLimit } from "@/hooks/useTextLimit";
 import { useToast } from "@/lib/toast";
 import { CommandApprovalSelect, executorOptions } from "./MissionBits";
 import "./missions.css";
@@ -108,7 +110,6 @@ export function NewMissionDialog({
         machine: e.machine,
         executors: e.executors ?? [],
         defaultExecutor: e.defaultExecutor,
-        codexTooOld: e.codexTooOld,
         commandApproval: e.commandApproval,
       },
     ];
@@ -116,6 +117,7 @@ export function NewMissionDialog({
   const agents = choices.filter((a) => a.eligible);
   const blocked = choices.filter((a) => !a.eligible);
   const [goal, setGoal] = useState(initialGoal);
+  const goalLimit = useTextLimit(2000);
   const [agentId, setAgentId] = useState(initialAgentId ?? "");
   const memberChannels = (channels.data ?? []).filter((c) => c.isMember);
   const [home, setHome] = useState<"channel" | "dm">(initialChannelId || memberChannels.length ? "channel" : "dm");
@@ -137,7 +139,7 @@ export function NewMissionDialog({
   const none = eligible.isSuccess && agents.length === 0;
   const goalId = useId();
   const submit = async () => {
-    if (!agent || !goal.trim()) return;
+    if (!agent || !goal.trim() || overLimit(goal, goalLimit)) return;
     setError(null);
     let where = channelId;
     if (home === "dm") {
@@ -194,7 +196,7 @@ export function NewMissionDialog({
               id={goalId}
               rows={3}
               value={goal}
-              maxLength={2000}
+              limit={goalLimit}
               placeholder={t("missions.new.goalPlaceholder")}
               onChange={(e) => setGoal(e.target.value)}
             />
@@ -310,14 +312,6 @@ export function NewMissionDialog({
                 onValueChange={(v) => setPicked(v as MissionExecutor)}
                 options={executorOptions(t, agent.executors, agent.name, agent.id)}
               />
-              {agent.codexTooOld && (
-                <span className="mi-hint ac-iconline">
-                  <Icon name="info" size={14} />
-                  {t("missions.new.codexOld", {
-                    computer: computerNameOf(t, org.name, agent.machine?.name ?? "", isPersonal(org)),
-                  })}
-                </span>
-              )}
             </div>
           )}
           {!none && (
@@ -383,7 +377,7 @@ export function NewMissionDialog({
         <Button onClick={() => onOpenChange(false)}>{t("common.cancel")}</Button>
         <Button
           variant="primary"
-          disabled={!goal.trim() || !agent || (home === "channel" && !channelId)}
+          disabled={!goal.trim() || overLimit(goal, goalLimit) || !agent || (home === "channel" && !channelId)}
           loading={create.isPending}
           onClick={() => void submit()}
         >
@@ -814,17 +808,14 @@ function JoinRequests({ mission, enabled }: { mission: Mission; enabled: boolean
     { value: "decide" as const, label: t("missions.share.decide") },
     { value: "comment" as const, label: t("missions.share.comment") },
   ];
-  const answer = (userId: string, name: string, outcome: "accept" | "decline") =>
-    decide.mutate(
-      { userId, outcome, role: roles[userId] ?? "comment" },
-      {
-        onSuccess: () =>
-          toast.show(
-            outcome === "accept" ? t("missions.join.accepted", { name }) : t("missions.join.declined", { name }),
-          ),
-        onError: (error) => toast.show(errorText(t, error), "error"),
-      },
+  // The row leaves at once, and the others stay free to answer; each answer says how it went.
+  const answer = (userId: string, name: string, outcome: "accept" | "decline") => {
+    const done = outcome === "accept" ? t("missions.join.accepted", { name }) : t("missions.join.declined", { name });
+    void decide.mutateAsync({ userId, outcome, role: roles[userId] ?? "comment" }).then(
+      () => toast.show(done),
+      (error: unknown) => toast.show(errorText(t, error), "error"),
     );
+  };
   return (
     <>
       <GroupHeading level={3} title={t("missions.join.title", { count: list.length })} />
@@ -835,30 +826,18 @@ function JoinRequests({ mission, enabled }: { mission: Mission; enabled: boolean
             <span className="mi-person__name">{r.name}</span>
             <span className="mi-person__actions">
               <div style={{ width: 150 }}>
-                <Locked when={decide.isPending}>
-                  <Select
-                    size="sm"
-                    aria-label={t("missions.join.roleOf", { name: r.name })}
-                    value={roles[r.userId] ?? "comment"}
-                    onValueChange={(v) => setRoles((prev) => ({ ...prev, [r.userId]: v }))}
-                    options={roleOptions}
-                  />
-                </Locked>
+                <Select
+                  size="sm"
+                  aria-label={t("missions.join.roleOf", { name: r.name })}
+                  value={roles[r.userId] ?? "comment"}
+                  onValueChange={(v) => setRoles((prev) => ({ ...prev, [r.userId]: v }))}
+                  options={roleOptions}
+                />
               </div>
-              <Button
-                size="sm"
-                variant="primary"
-                disabled={decide.isPending}
-                onClick={() => answer(r.userId, r.name, "accept")}
-              >
+              <Button size="sm" variant="primary" onClick={() => answer(r.userId, r.name, "accept")}>
                 {t("missions.join.accept")}
               </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={decide.isPending}
-                onClick={() => answer(r.userId, r.name, "decline")}
-              >
+              <Button size="sm" variant="ghost" onClick={() => answer(r.userId, r.name, "decline")}>
                 {t("missions.join.decline")}
               </Button>
             </span>

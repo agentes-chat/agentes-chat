@@ -13,7 +13,7 @@ import { and, type Database, eq, isNotNull, isNull, schema, sql } from "@agentes
 import { caches } from "../cache";
 import { randomToken, sha256 } from "../crypto";
 import { ConflictError, ValidationError } from "../errors";
-import { composioUserId } from "../mail/accounts";
+import { composioUserId, orgOfComposioUser } from "../mail/accounts";
 import { notifyComposioLimit } from "../notification-producers";
 import { requirePermission } from "../organizations";
 import { actionLevel, POSTING_ACTIONS } from "./classify";
@@ -81,6 +81,35 @@ function toolsOf(client: ComposioClient, way: ComposioWay): Promise<ComposioTool
   return pending;
 }
 
+const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
+
+/** The arguments of an action that take a file (Composio marks them `file_uploadable`), by name. */
+export function composioFileArgs(schema: unknown): string[] {
+  const properties = isRecord(schema) && isRecord(schema.properties) ? schema.properties : {};
+  return Object.entries(properties)
+    .filter(([, p]) => isRecord(p) && p.file_uploadable === true)
+    .map(([name]) => name);
+}
+
+/**
+ * An action's schema as agents see it: each argument that takes a file takes a Drive file's id instead (Composio's
+ * own shape names a key in its storage, which no agent has). The call puts the file there (`uploadComposioFiles`).
+ */
+export function withDriveFileArgs(schema: Record<string, unknown>): Record<string, unknown> {
+  const args = composioFileArgs(schema);
+  if (args.length === 0 || !isRecord(schema.properties)) return schema;
+  const properties = { ...schema.properties };
+  for (const name of args) {
+    properties[name] = {
+      type: "string",
+      file_uploadable: true,
+      description:
+        'A file of the workspace\'s Drive, by its id ("file <id>" works too): an .xlsx, a .docx, a PDF, any file as it is. A file on your computer goes to the Drive first with upload_file, which answers with its id.',
+    };
+  }
+  return { ...schema, properties };
+}
+
 /**
  * An action as an MCP tool: our name for it, and Composio's hints read by our rules. It reads only when Composio says
  * so and nothing in it sends, deletes, pays or shares; it asks whenever Composio says it destroys (a post aside,
@@ -94,7 +123,7 @@ export function composioMcpTool(way: ComposioWay, tool: ComposioTool): McpTool {
   return {
     name: composioToolName(way, tool.slug),
     description: tool.description,
-    inputSchema: tool.inputSchema,
+    inputSchema: withDriveFileArgs(tool.inputSchema),
     readOnlyHint: !asks && tool.tags.includes("readOnlyHint") ? true : null,
     destructiveHint: asks ? true : null,
   };
@@ -145,23 +174,24 @@ export function withComposio(connect: McpConnect, composio: ComposioConnectors |
       throw new ComposioOffError("Not connected through Composio");
     return composioSession(composio.client, service, {
       connectedAccountId: connection.composioAccountId,
-      userId: composioUserId(connection.orgId),
+      userId: composioUserId(connection.orgId, connection.ownerUserId),
       toolkit: service.way.toolkit,
     });
   };
 }
 
 /**
- * Starts connecting a service through Composio (ADR 0107 §4): a Connect Link for the workspace's Composio user, back
- * to our OAuth callback with our state, and the state kept with the link's account, the only one its return may
- * complete. Admins only (the caller checked).
+ * Starts connecting a service through Composio (ADR 0107 §4): a Connect Link for the workspace's Composio user (a
+ * personal connection: the person's own Composio user), back to our OAuth callback with our state, and the state kept
+ * with the link's account, the only one its return may complete. The caller checked who may connect.
  */
 export async function beginComposioConnect(
   deps: ConnectorDeps,
   actorId: string,
   orgId: string,
-  input: { serverUrl: string; label?: string; returnTo?: string; connectionId?: string },
+  input: { serverUrl: string; label?: string; returnTo?: string; connectionId?: string; personal?: boolean },
 ): Promise<{ status: "oauth"; authorizeUrl: string }> {
+  const owner = input.personal ? actorId : null;
   const service = composioServiceOf(input.serverUrl);
   const composio = deps.composio;
   if (!service || !composio) {
@@ -171,11 +201,11 @@ export async function beginComposioConnect(
     );
   }
   const serverUrl = composioToolkitUrl(service.way.toolkit);
-  if (input.connectionId) await reconnectTarget(deps.db, orgId, input.connectionId, serverUrl);
+  if (input.connectionId) await reconnectTarget(deps.db, orgId, input.connectionId, serverUrl, owner);
   const state = randomToken(32);
   const link = await composio.client.createConnectLink({
     toolkit: service.way.toolkit,
-    userId: composioUserId(orgId),
+    userId: composioUserId(orgId, owner),
     callbackUrl: `${oauthRedirectUri(deps.publicUrl)}?state=${state}`,
   });
   await deps.db.insert(oauthStates).values({
@@ -188,6 +218,7 @@ export async function beginComposioConnect(
     label: input.label?.trim() || service.preset.label,
     connectionId: input.connectionId ?? null,
     composioAccountId: link.connectedAccountId,
+    personal: owner !== null,
     expiresAt: new Date((deps.now?.() ?? new Date()).getTime() + OAUTH_STATE_TTL_MS),
   });
   // The phone app recognizes its return by the state on the link it opened.
@@ -215,7 +246,8 @@ export async function completeComposioOAuth(
   if (!row.composioAccountId || code !== row.composioAccountId) {
     throw new ConflictError("This authorization link is invalid or expired");
   }
-  const userId = composioUserId(row.orgId);
+  const owner = row.personal ? user.id : null;
+  const userId = composioUserId(row.orgId, owner);
   let remote: Awaited<ReturnType<ComposioClient["getConnectedAccount"]>> = { status: "pending", address: null };
   for (let read = 1; read <= RETURN_READS; read++) {
     remote = await composio.client.getConnectedAccount(code, userId, { readAddress: false }).catch((error: unknown) => {
@@ -243,6 +275,7 @@ export async function completeComposioOAuth(
       secret: null,
       connectionId: row.connectionId,
       composio: { accountId: code, name: remote.displayName ?? null },
+      owner,
     });
     return { ...stored, returnTo: row.returnTo };
   } catch (error) {
@@ -302,9 +335,13 @@ export async function reconcileComposioConnectors(db: Database, client: Composio
   let healed = 0;
   for (const row of rows) {
     try {
-      const remote = await client.getConnectedAccount(row.composioAccountId ?? "", composioUserId(row.orgId), {
-        readAddress: false,
-      });
+      const remote = await client.getConnectedAccount(
+        row.composioAccountId ?? "",
+        composioUserId(row.orgId, row.ownerUserId),
+        {
+          readAddress: false,
+        },
+      );
       if (remote.status !== "active") continue;
       await db
         .update(connectorConnections)
@@ -379,8 +416,9 @@ export function meterComposio(deps: {
   now?: () => Date;
 }): (call: { slug: string; userId: string }) => Promise<void> {
   return async ({ userId }) => {
-    if (!userId.startsWith("org_")) return;
-    const orgId = userId.slice("org_".length);
+    // A person's own account counts for their workspace too (`composioUserId` with a person).
+    const orgId = orgOfComposioUser(userId);
+    if (!orgId) return;
     const now = deps.now?.() ?? new Date();
     const month = monthOf(now);
     const [counted] = await deps.db

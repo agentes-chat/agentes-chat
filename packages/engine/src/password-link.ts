@@ -4,6 +4,7 @@ import { recordAudit } from "./audit";
 import { randomToken } from "./crypto";
 import { ConflictError, ForbiddenError, NotFoundError } from "./errors";
 import { getMembership, pinnedOwner, requireActiveMembership } from "./organizations";
+import { withoutTrailingSlashes } from "./url-text";
 
 const { organizationMembers, users, verifications } = schema;
 
@@ -23,6 +24,13 @@ export interface PasswordLink {
   expiresAt: Date;
 }
 
+/** Every new-password link waiting for `userId` stops working: the emailed ones and those made here. */
+export async function dropPasswordLinks(db: Executor, userId: string) {
+  await db
+    .delete(verifications)
+    .where(and(like(verifications.identifier, `${RESET_PREFIX}%`), eq(verifications.value, userId)));
+}
+
 /**
  * A new link for `userId`: any earlier one stops working. The verification is written as Better Auth writes it: this
  * server stores identifiers as they are (auth.ts sets no `storeIdentifier`), so its reset endpoint finds it.
@@ -33,9 +41,7 @@ export async function issuePasswordLink(
   userId: string,
   now = new Date(),
 ): Promise<PasswordLink> {
-  await db
-    .delete(verifications)
-    .where(and(like(verifications.identifier, `${RESET_PREFIX}%`), eq(verifications.value, userId)));
+  await dropPasswordLinks(db, userId);
   const token = randomToken(18);
   const expiresAt = new Date(now.getTime() + PASSWORD_LINK_TTL_MS);
   await db.insert(verifications).values({
@@ -44,7 +50,7 @@ export async function issuePasswordLink(
     value: userId,
     expiresAt,
   });
-  return { url: `${publicUrl.replace(/\/+$/, "")}/reset-password?token=${encodeURIComponent(token)}`, expiresAt };
+  return { url: `${withoutTrailingSlashes(publicUrl)}/reset-password?token=${encodeURIComponent(token)}`, expiresAt };
 }
 
 /**

@@ -6,6 +6,7 @@ import path from "node:path";
 import { MACHINE_OPS, type MachineRequest, type RunnerAccess } from "@agenteschat/adapters/machine-protocol";
 import type { BrowserViews } from "../../runner/browser-views";
 import {
+  agentTmpOnDisk,
   configPath,
   DEFAULT_AGENT_UID_RANGE,
   normalizeStored,
@@ -38,7 +39,9 @@ import {
   installSystemService,
   SYSTEM_UNIT_PATH,
   systemdSystemUnit,
+  systemdUnit,
   systemdVersion,
+  systemSliceMemoryPath,
 } from "../../runner/service";
 import { errorCode, removeDirs, tempDir } from "./helpers";
 
@@ -75,6 +78,10 @@ test("the system unit: root, from boot, a PATH root owns, and tasks outlive a re
   expect(unit).toContain("WantedBy=multi-user.target");
   // No User=: systemd runs a system unit as root.
   expect(unit).not.toContain("User=");
+  // Ahead of the agents (agents.slice: 50) for CPU, IO and memory, with nothing their scopes would inherit from it.
+  expect(unit).toContain("\nCPUWeight=1000\nIOWeight=1000\nMemoryMin=256M\n");
+  for (const inherited of ["Nice=", "IOSchedulingClass=", "OOMScoreAdjust="]) expect(unit).not.toContain(inherited);
+  expect(systemdUnit({ runtime: BUN, script: BUNDLE, home: "/home/ada/.agentes-runner" })).not.toContain("CPUWeight");
 });
 
 test("config: the mode and the agents' uid range are read and checked", () => {
@@ -160,6 +167,37 @@ test("config: the auth route is only ever the guard's true, and a new pairing ke
     },
   );
   expect(paired.networkAuthRoute).toBe(true);
+});
+
+test("config: each agent's /tmp on disk is only ever true, and a new pairing keeps it", () => {
+  expect(normalizeStored({ agentTmpOnDisk: true }).agentTmpOnDisk).toBe(true);
+  for (const bad of [false, "true", 1, {}]) expect(normalizeStored({ agentTmpOnDisk: bad })).toEqual({});
+  const paired = configFromGrant(
+    { mode: "system", agentTmpOnDisk: true },
+    {
+      server: "https://app.example.com",
+      grant: { machineId: "m", token: "t", name: "n", org: { id: "o", name: "O" } } as never,
+      workspace: "/w",
+      tools: { commands: true } as never,
+      desktop: false,
+    },
+  );
+  expect(paired.agentTmpOnDisk).toBe(true);
+});
+
+test("config: an organization's runner on the server's own computer takes /tmp on disk from the computer's config", () => {
+  const computer = tempDir("computer-");
+  dirs.push(computer);
+  const org = path.join(computer, "orgs", "0b4e6f2a-5c1d-4e8f-9a7b-3c2d1e0f9a8b");
+  writeConfig({ mode: "system", managedBy: "host", orgId: "o1" }, org);
+  expect(agentTmpOnDisk(org, computer)).toBe(false);
+  writeConfig({ mode: "system", agentTmpOnDisk: true }, computer);
+  expect(agentTmpOnDisk(org, computer)).toBe(true);
+  // Its own home says so too, and a computer's config that can't be read changes nothing.
+  writeFileSync(configPath(computer), "{");
+  expect(agentTmpOnDisk(org, computer)).toBe(false);
+  writeConfig({ mode: "system", managedBy: "host", orgId: "o1", agentTmpOnDisk: true }, org);
+  expect(agentTmpOnDisk(org, computer)).toBe(true);
 });
 
 test("a system home paired again stays a system home", () => {
@@ -253,20 +291,31 @@ test.if(posix)("service install --system: a system home, and it starts only when
     "MemoryMax=75%",
     "MemorySwapMax=2048M",
     "TasksMax=50%",
+    "CPUWeight=50",
+    "IOWeight=50",
     "",
   ]);
+  // The runner's memory protection holds only as far as its parent's does.
+  expect(systemSliceMemoryPath()).toBe("/etc/systemd/system/system.slice.d/agentes-runner.conf");
+  expect(readFileSync(systemSliceMemoryPath(unitPath), "utf8")).toBe("[Slice]\nMemoryMin=256M\n");
   // The swap caps follow the RAM the installer sees (rounded down to a MiB).
   expect(agentLimits(4 * 2 ** 30 + 5, false).all).toContain("\nMemorySwapMax=1024M\n");
   // Where their counters are read (memory.events).
   expect(AGENTS_CGROUP).toBe("/sys/fs/cgroup/agents.slice");
   expect(agentCgroup(21003)).toBe("/sys/fs/cgroup/agents.slice/agents-21003.slice");
-  // Each agent's own temporary folders: /tmp, /dev/shm and /run/lock in memory, /var/tmp on disk; what it leaves
-  // goes after 10 days, 30 in /var/tmp, as in a stock system.
+  // Each agent's own temporary folders: /tmp, /dev/shm and /run/lock in memory, /var/tmp on disk; what it leaves goes
+  // after 10 days, 30 in /var/tmp, as in a stock system. The boot removes the image of the agents' /tmp on disk
+  // (`r!`), in a root-only folder of the system disk that no workspace path holds.
   expect(agentTmpCleanupPath()).toBe("/etc/tmpfiles.d/agentes-runner.conf");
   expect(agentTmp(21003)).toBe("/run/agentes-runner-tmp/21003/tmp");
-  expect(readFileSync(agentTmpCleanupPath(unitPath), "utf8")).toBe(
-    "# agentes.chat runner: each agent's own temporary folders\ne /run/agentes-runner-tmp/*/* - - - 10d\nx /run/agentes-runner-tmp/*/run\ne /var/lib/agentes-runner-tmp/*/* - - - 30d\n",
-  );
+  expect(readFileSync(agentTmpCleanupPath(unitPath), "utf8").split("\n")).toEqual([
+    "# agentes.chat runner: each agent's own temporary folders",
+    "e /run/agentes-runner-tmp/*/* - - - 10d",
+    "x /run/agentes-runner-tmp/*/run",
+    "e /var/lib/agentes-runner-tmp/*/* - - - 30d",
+    "r! /var/cache/agentes-runner-tmp/image",
+    "",
+  ]);
 
   // Not connected yet: an unpaired runner would only restart in a loop.
   expect(install()).toBe(0);
@@ -328,13 +377,13 @@ test.if(posix)(
     expect(install({ args: ["host", "--server", "http://127.0.0.1:3000", "--token-file", `${h}/token`] })).toBe(0);
     expect(dropIns()).toEqual([
       "[Slice]\nCPUWeight=100\nTasksMax=4096\n",
-      "[Slice]\nMemoryMax=50%\nMemorySwapMax=682M\nTasksMax=50%\n",
+      "[Slice]\nMemoryMax=50%\nMemorySwapMax=682M\nTasksMax=50%\nCPUWeight=50\nIOWeight=50\n",
     ]);
     // The same computer for agents alone: theirs is more of it.
     expect(install()).toBe(0);
     expect(dropIns()).toEqual([
       "[Slice]\nCPUWeight=100\nTasksMax=4096\n",
-      "[Slice]\nMemoryMax=75%\nMemorySwapMax=1024M\nTasksMax=50%\n",
+      "[Slice]\nMemoryMax=75%\nMemorySwapMax=1024M\nTasksMax=50%\nCPUWeight=50\nIOWeight=50\n",
     ]);
   },
 );
@@ -453,6 +502,7 @@ test("a system-mode runner (root) without workers does no agent work; machine-le
     "account",
     "access.request",
     "access.reduce",
+    "access.allow",
     // Root refuses it, and every op with a browser profile, until profiles have OS users of their own (ADR 0110).
     "browser.profile.delete",
     "desktop.session.start",
@@ -477,13 +527,33 @@ test("a system-mode runner (root) without workers does no agent work; machine-le
     "phone.pair.cancel",
     // Pausing is the whole computer's, set by whoever runs it, not by one agent.
     "pause.set",
+    "limits.set",
     "phone.look",
     // The Mac's pick of iPhones on its Wi-Fi, kept beside the phones' locks.
     "phone.wifi",
     // Root takes an agent's holds as that agent's own user, and checks its program is its own (ADR 0176).
     "keep.start",
     "keep.end",
+    // Fixing the Mac's own Xcode is the computer's; root answers it can't (no person's screen to ask on).
+    "xcode.fix",
+    // Looking again for the coding CLIs only reads the computer's PATH: root answers it.
+    "clis.check",
+    // Root installs nothing for the agents' users (the computer's setup does): it answers unsupported.
+    "cli.install",
+    // Nor fetches their CLIs (ADR 0228 §6, outside system mode only): root answers it has none to fetch.
+    "cli.fetch",
+    // Opening Xcode on the Mac, beside its fix (listed in `MACHINE_OPS` order).
+    "xcode.open",
+    // Repairing an iPhone's test helper is the phones' process's, beside their locks.
+    "phone.repair",
+    // A problem report reads the runner's own log and state: root's.
+    "report.collect",
+    // Lending the computer's internet dials a data socket, which needs the machine token only root holds (ADR 0237).
+    "egress.dial",
   ]);
+  const install = { op: "cli.install", action: "start", tool: "claude" } as unknown as MachineRequest;
+  const installer = { ...ctx, cliInstall: () => ({ install: { tool: "claude" as const, state: "running" as const } }) };
+  expect(await handleRequest(installer, install, scope)).toEqual({ install: { tool: "claude", state: "unsupported" } });
 
   if (posix) {
     system = false;
@@ -699,9 +769,9 @@ test.if(posix)(
     expect(r.out).toBe(
       `${head}◒  Installing the packages for the agents' isolation\n◇  The packages for the agents' isolation\n`,
     );
-    // nft for the loopback guard (system mode won't start without it), ss for the bind check. Chrome's libraries
-    // come with Google Chrome's own package.
-    expect(ISOLATION_APT_PACKAGES).toEqual(["nftables", "iproute2"]);
+    // nft for the loopback guard (system mode won't start without it), ss for the bind check, setfacl for the shared
+    // folder and the cached repositories. Chrome's libraries come with Google Chrome's own package.
+    expect(ISOLATION_APT_PACKAGES).toEqual(["nftables", "iproute2", "acl"]);
     expect(r.calls).toBe(update + install(ISOLATION_APT_PACKAGES));
 
     // With --desktop: one install with the screens' packages too.

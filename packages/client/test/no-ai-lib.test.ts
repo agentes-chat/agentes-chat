@@ -33,12 +33,15 @@ import {
   gateDims,
   gateLine,
   gateRechecks,
+  isStandInLine,
   keptCardState,
   kindOf,
   mayConnectAi,
   type NoAiCard,
   noAiCardOf,
+  noAiCardShown,
   noAiLineKey,
+  noAiReceiptLine,
   noAiStatusKey,
   onlyOwnerReplies,
   ownSignInFor,
@@ -52,8 +55,11 @@ import {
   planLineFix,
   planMark,
   planOfAccount,
+  planOffSystem,
   planOfKind,
   planPickText,
+  plansNotYoursOf,
+  rightHandUnusable,
   signInAgainPlan,
   signsInOnce,
   signsInPerAgent,
@@ -97,8 +103,6 @@ const brain = (over: Partial<AgentBrain> = {}): AgentBrain => ({
   brain: "model",
   model: null,
   effectiveModel: null,
-  fallback: true,
-  extraUsage: true,
   computer: { machineId: "m1", name: "MacBook", online: true },
   options: [option("claude_code"), option("codex")],
   machines: [],
@@ -320,6 +324,17 @@ describe("the Cloud's plan gate tells the truth", () => {
     );
   });
 
+  test("a CLI at a version agentes.chat holds back: needs an update there, with its command where it has one", () => {
+    const where = { edition: "selfhost", computer: "Acme" } as const;
+    const gate = { state: "unsupported", reason: "cli_outdated" } as const;
+    expect(gateLine(enT, { gate, kind: "claude_code", ...where })?.text).toBe(
+      "Claude Code on Acme needs an update before agents can use it. Run claude update there.",
+    );
+    expect(gateLine(enT, { gate, kind: "codex", ...where })?.text).toBe(
+      "Codex on Acme needs an update before agents can use it.",
+    );
+  });
+
   test("a CLI missing from a computer ready just now may still be coming; past that it never reads as installing", () => {
     const soon = codexGate(CLOUD_INSTALL_WAIT_MS - 60_000);
     expect(soon).toEqual({ state: "unsupported", reason: "not_installed" });
@@ -347,6 +362,12 @@ describe("the Cloud's plan gate tells the truth", () => {
     const line = (ago: number) => cloudLine({ state: "offline" }, "codex", seen(ago))?.text;
     expect(line(60_000)).toContain("reconnecting");
     expect(line(CLOUD_AWAY_MS + 60_000)).toContain("away longer");
+  });
+
+  test("a computer away moving to another server says so, never to use an API key for now", () => {
+    const moving = { lastSeenAt: new Date(NOW - CLOUD_AWAY_MS - 60_000).toISOString(), moving: true };
+    const line = cloudLine({ state: "offline" }, "claude_code", moving);
+    expect(line?.text).toBe("Acme is moving to a new server… back in a few minutes");
   });
 
   function cloudLine(
@@ -410,7 +431,7 @@ describe("planGateWithoutAgent: a plan connected before its owner has any agent"
 
   test("a program that can't run says the server's reason, never a guess that it's on its way", () => {
     const noClaude = { ...MAC, brains: { claude_code: false, codex: true } };
-    const reasons = ["tool_off", "exec_off", "runner_old", "outdated", "not_installed", "not_reported"] as const;
+    const reasons = ["tool_off", "exec_off", "runner_old", "not_installed", "not_reported"] as const;
     for (const reason of reasons)
       expect(at({ computers: [{ ...noClaude, off: { claude_code: reason } }] }).gate).toEqual({
         state: "unsupported",
@@ -580,12 +601,15 @@ describe("All agents: one login per agent, the key pasted once", () => {
     expect(set("zai", [{ id: "ada" }, { id: "bo" }])).toEqual([]);
   });
 
-  test("one sign-in for all of them where the computer says so: ChatGPT's and Gemini's too", () => {
-    // Where each agent is its own OS user, Claude's, ChatGPT's and Gemini's sign-ins and plans' keys think for all.
-    expect(SHARED_SIGN_INS).toEqual({ claude_code: true, codex: true, antigravity: true, key: true });
+  test("one sign-in for all of them where the computer says so: ChatGPT's, Gemini's and Grok's too", () => {
+    // Where each agent is its own OS user, Claude's, ChatGPT's, Gemini's and Grok's sign-ins and plans' keys think for
+    // all of them.
+    expect(SHARED_SIGN_INS).toEqual({ claude_code: true, codex: true, antigravity: true, grok: true, key: true });
     const sharing = { shares: { claude_code: true, codex: true, key: true } };
     expect(signsInOnce("chatgpt", sharing)).toBe(true);
     expect(signsInOnce("gemini", sharing)).toBe(false);
+    expect(signsInOnce("grok", sharing)).toBe(false);
+    expect(signsInOnce("grok", { shares: { ...sharing.shares, grok: true } })).toBe(true);
     expect(signsInOnce("gemini", { shares: { ...sharing.shares, antigravity: true } })).toBe(true);
     expect(signsInOnce("zai", { shares: { claude_code: true, codex: false, key: false } })).toBe(false);
     expect(signsInOnce("claude", undefined)).toBe(false);
@@ -812,17 +836,13 @@ describe("why a plan can't sign in yet, in plain words (`gateLine`)", () => {
   const pt = instance.t.bind(instance) as TFunction;
   const computer = "Computador da Acme";
   const line = (gate: PlanGate, edition: "cloud" | "selfhost", kind: "claude_code" | "codex" = "codex") =>
-    gateLine(pt, { gate, edition, kind, computer, machine: { os: "linux", mode: "single" } });
+    gateLine(pt, { gate, edition, kind, computer });
   const off = (reason: Extract<PlanGate, { state: "unsupported" }>["reason"]) =>
     ({ state: "unsupported", reason }) as const;
 
   test("on the Cloud each reason says what the computer is doing, and that it comes back by itself", () => {
     expect(line(off("not_installed"), "cloud")).toEqual({
       text: "O Codex está sendo instalado no Computador da Acme. Isto muda sozinho quando terminar.",
-      rechecks: true,
-    });
-    expect(line(off("outdated"), "cloud")).toEqual({
-      text: "O Codex está sendo atualizado no Computador da Acme. Isto muda sozinho quando terminar.",
       rechecks: true,
     });
     const runner =
@@ -856,7 +876,6 @@ describe("why a plan can't sign in yet, in plain words (`gateLine`)", () => {
       "runner_old",
       "tool_off",
       "not_installed",
-      "outdated",
       "not_reported",
       "keys",
     ] as const;
@@ -896,12 +915,22 @@ describe("why a plan can't sign in yet, in plain words (`gateLine`)", () => {
       text: "O Codex não está instalado no Computador da Acme.",
       rechecks: false,
     });
-    expect(line(off("tool_off"), "selfhost")?.text).toContain("agentes-runner tools enable codex");
+    // The cause alone: its way out is the button beside it, never a path to a settings screen in the sentence.
+    expect(line(off("tool_off"), "selfhost")?.text).toBe("O Codex está desligado no Computador da Acme.");
     expect(line(off("keys"), "selfhost")?.text).toBe(pt("aiAccounts.connect.needs.keys"));
     expect(line({ state: "offline" }, "selfhost")).toEqual({
       text: pt("brain.offline", { computer }),
       rechecks: true,
     });
+  });
+
+  test('a computer a person connected to the Cloud is theirs: its words are self-host\'s, never "on our side"', () => {
+    const say = (gate: PlanGate, kind: "connected" | "managed") =>
+      gateLine(pt, { gate, edition: "cloud", kind: "codex", computer, machine: { kind } })?.text;
+    expect(say(off("tool_off"), "connected")).toBe("O Codex está desligado no Computador da Acme.");
+    expect(say(off("not_installed"), "connected")).toBe("O Codex não está instalado no Computador da Acme.");
+    expect(say({ state: "offline" }, "connected")).toBe(pt("brain.offline", { computer }));
+    expect(say(off("tool_off"), "managed")).toContain("Isso é do nosso lado");
   });
 
   test("any other gate has no line", () => {
@@ -920,10 +949,13 @@ describe("a card says the real cause, not that the agent has no AI", () => {
   });
   const card = (reason: string, extra?: Record<string, unknown>) => noAiCardOf(meta(reason, extra));
 
-  test("Connect is for who can: the agent's owner, who manages agents or keys, nobody else", () => {
+  test("Connect is for who can: the agent's owner, who manages it or keys, nobody else", () => {
     const agent = { ownerUserId: "u1" };
     expect(mayConnectAi(agent, "u1", { permissions: [] })).toBe(true);
-    expect(mayConnectAi(agent, "u2", { permissions: ["manage_agents"] })).toBe(true);
+    // Who manages it, as the server sends the agent to them (`canManage`, ADR 0085 addendum of 2026-11-17).
+    expect(mayConnectAi({ ...agent, canManage: true }, "u2", { permissions: ["manage_agents"] })).toBe(true);
+    // "Edit agents" alone doesn't reach someone's private agent.
+    expect(mayConnectAi({ ...agent, canManage: false }, "u2", { permissions: ["manage_agents"] })).toBe(false);
     expect(mayConnectAi(agent, "u2", { permissions: ["manage_credentials"] })).toBe(true);
     expect(mayConnectAi(agent, "u2", { permissions: ["post"] })).toBe(false);
     expect(mayConnectAi(null, null, { permissions: [] })).toBe(false);
@@ -933,7 +965,9 @@ describe("a card says the real cause, not that the agent has no AI", () => {
     expect(mayConnectAi(lodi, null, { permissions: [] })).toBe(false);
     expect(planLineFix("plan_not_shared", lodi, "u1", { permissions: [] })).toBe("connectMine");
     expect(planLineFix("plan_limit", lodi, "u1", { permissions: [] })).toBe("useKey");
-    expect(planLineFix("plan_limit", lodi, "u2", { permissions: ["manage_agents"] })).toBe("useKey");
+    expect(planLineFix("plan_limit", { ...lodi, canManage: true }, "u2", { permissions: ["manage_agents"] })).toBe(
+      "useKey",
+    );
     expect(planLineFix("plan_limit", lodi, "u2", { permissions: [] })).toBe("connectMine");
     expect(planLineFix("plan_limit", null, "u2", { permissions: [] })).toBeNull();
   });
@@ -980,6 +1014,30 @@ describe("a card says the real cause, not that the agent has no AI", () => {
     );
   });
 
+  test("every plan here serves only someone else: whose they are, and the person's own plan as the way out", () => {
+    const lodi = { ownerUserId: "u1", builtin: "right_hand" as const };
+    expect(card("plans_not_yours", { owner: "Walter Souza", plan: "Claude" })).toMatchObject({
+      planLine: "plans_not_yours",
+      owner: "Walter",
+      plan: "Claude",
+    });
+    expect(planLineFix("plans_not_yours", lodi, "u2", { permissions: ["manage_agents"] })).toBe("connectMine");
+    expect(pt("noAi.rightHand.plans_not_yours", { owner: "Walter", plan: "Claude" })).toBe(
+      "O Claude daqui é só de Walter. Conecte o seu e eu respondo.",
+    );
+    expect(serverBody(pt, "…", meta("plans_not_yours", { owner: "Walter Souza", plan: "Claude" }))).toBe(
+      "O Claude daqui é só de Walter. Conecte o seu e eu respondo.",
+    );
+    const status: AiStatus = {
+      any: true,
+      agents: [{ agentId: "lodi", state: "no_ai", reason: "plans_not_yours", owner: "Walter Souza", plan: "Claude" }],
+    };
+    const whose = plansNotYoursOf(status, "lodi");
+    expect(whose).toEqual({ owner: "Walter", plan: "Claude" });
+    expect(pt("noAi.notYours.receipt", whose ?? {})).toBe("Ninguém vai responder: o Claude é só de Walter");
+    expect(plansNotYoursOf(status, "other")).toBeNull();
+  });
+
   test("the right hand's run nobody asked for never says to connect your plan: only a key, for who sets its AI", () => {
     expect(card("plan_unattended")?.planLine).toBe("plan_unattended");
     expect(pt("noAi.rightHand.plan_unattended", { name: "Bento" })).toBe(
@@ -990,7 +1048,10 @@ describe("a card says the real cause, not that the agent has no AI", () => {
     );
     const rightHand = { ownerUserId: "u1", builtin: "right_hand" as const };
     expect(planLineFix("plan_unattended", rightHand, "u1", { permissions: [] })).toBe("useKey");
-    expect(planLineFix("plan_unattended", rightHand, "u2", { permissions: ["manage_agents"] })).toBe("useKey");
+    // Who manages it (the server's `canManage` on the right hand).
+    expect(
+      planLineFix("plan_unattended", { ...rightHand, canManage: true }, "u2", { permissions: ["manage_agents"] }),
+    ).toBe("useKey");
     // A member's own plan never answers it: no Connect for them.
     expect(planLineFix("plan_unattended", rightHand, "u2", { permissions: [] })).toBeNull();
   });
@@ -1008,12 +1069,17 @@ describe("a card says the real cause, not that the agent has no AI", () => {
       expect(serverBody(pt, "…", wait(code))).toBe(
         "O Codex está desligado no meu computador. Respondo quando quem cuida dele ligar.",
       );
-    for (const code of ["runner_outdated", "codex_too_old"])
+    // Its CLI at a version agentes.chat holds back reads the same: a program there to update.
+    for (const code of ["runner_outdated", "codex_too_old", "cli_outdated"])
       expect(serverBody(pt, "…", wait(code))).toBe(
         "O programa no meu computador precisa ser atualizado para o Codex responder. Respondo assim que ele for atualizado.",
       );
     expect(serverBody(pt, "…", wait("plan_not_owner"))).toBe(
       "O Codex pensaria com um plano que não é do meu dono, então não uso. Conecte a conta do meu dono na minha página.",
+    );
+    // Its computer online, its shared Claude login refused there: what can't run, and the way out.
+    expect(serverBody(pt, "…", wait("shared_login_off"))).toBe(
+      "Meu computador não consegue usar o login do Claude para todos os agentes agora. Respondo assim que conseguir. Se continuar falhando, conecte o Claude de novo em Contas de IA.",
     );
     // Its computer gone still waits for it to come back.
     expect(serverBody(pt, "…", wait("machine_offline"))).toBe(
@@ -1033,5 +1099,120 @@ describe("a notification of a body the server wrote", () => {
     );
     expect(latestText(instance.t, { text: "olha isso" })).toBe("olha isso");
     expect(latestText(instance.t, {})).toBeUndefined();
+  });
+});
+
+describe("the right hand's stand-in line (ADR 0137 §7, amended 2026-11-15)", () => {
+  const line = {
+    bodyCode: "right_hand_stand_in",
+    bodyParams: { via: "Acme OpenAI", plan: "Claude Max", why: "needsComputer" },
+    noAi: {
+      agentId: "lodi",
+      forUserId: "walter",
+      reason: "no_computer",
+      standIn: { via: "Acme OpenAI", plan: "Claude Max", why: "needsComputer" },
+      runId: "r",
+    },
+  };
+  test("is a line, never a no-AI card: no banner, no Connect", () => {
+    expect(isStandInLine(line)).toBe(true);
+    expect(noAiCardOf(line)).toEqual({
+      agentId: "lodi",
+      forUserId: null,
+      intent: "task",
+      standIn: { via: "Acme OpenAI", plan: "Claude Max", why: "needsComputer" },
+    });
+    expect(noAiCardShown(line)).toBeNull();
+    const card = { bodyCode: "no_ai", noAi: { agentId: "lodi", reason: "no_key" } };
+    expect(isStandInLine(card)).toBe(false);
+    expect(noAiCardShown(card)).not.toBeNull();
+    // An unknown reason still reads as a line.
+    expect(noAiCardOf({ noAi: { agentId: "lodi", standIn: { via: "K", plan: "P", why: "??" } } })?.standIn?.why).toBe(
+      "cant",
+    );
+  });
+  test("its words in the reader's language, in previews too", () => {
+    expect(serverBody(enT, "Answered…", line, "en")).toBe("Answered with Acme OpenAI: Claude Max needs a computer.");
+  });
+  test("the plans it can't think with: a computer's own sign-in, and an account on a computer that is away", () => {
+    const mac = { machineId: "mac", name: "MacBook", online: true, own: { claude_code: { plan: "max" } } };
+    const laptop = { machineId: "lap", name: "Laptop", online: false };
+    const acct = (id: string, machineId: string, status = "active") =>
+      ({ id, machineId, computer: machineId, status, kind: "claude_code" }) as never;
+    const out = rightHandUnusable({
+      computers: [mac, laptop] as AiComputer[],
+      accounts: [acct("on-mac", "mac"), acct("on-lap", "lap"), acct("out", "lap", "signed_out")],
+    });
+    expect(out.map((u) => [u.id, u.why])).toEqual([
+      ["mac:claude_code", "computerOnly"],
+      ["on-lap", "away"],
+    ]);
+    expect(rightHandUnusable(undefined)).toEqual([]);
+  });
+
+  test("an account signed in once per agent is one row, and none while one of its logins is the one in use", () => {
+    const laptop = { machineId: "lap", name: "Laptop", online: false };
+    const login = (id: string) =>
+      ({ id, machineId: "lap", computer: "Laptop", status: "active", kind: "claude_code", sameAs: "a1" }) as never;
+    const view = { computers: [laptop] as AiComputer[], accounts: [login("a1"), login("a2"), login("a3")] };
+    expect(rightHandUnusable(view).map((u) => [u.id, u.ids])).toEqual([["a1", ["a1", "a2", "a3"]]]);
+    expect(rightHandUnusable(view, "a2")).toEqual([]);
+  });
+});
+
+describe("a plan that doesn't run on the computer's system says so before it is picked", () => {
+  const off = { ...option("codex"), kind: "antigravity", available: false, reason: "system" } as never;
+  const windows = brain({ computer: { machineId: "m1", name: "Desktop", online: true, os: "windows" } });
+
+  test("the gate carries the system, and the picker names it", () => {
+    const g = gate({ choice: "gemini", brain: { ...windows, options: [option("claude_code"), off] } });
+    expect(g).toEqual({ state: "unsupported", reason: "system", os: "windows" });
+    expect(planOffSystem(enT, g)).toBe("Windows");
+    expect(enT("connectAi.offSystem", { system: planOffSystem(enT, g) })).toBe("Doesn't run on Windows yet");
+    // Every other reason says nothing there: its panel says why.
+    expect(planOffSystem(enT, gate())).toBeNull();
+    expect(planOffSystem(enT, { state: "unsupported", reason: "not_installed" })).toBeNull();
+  });
+
+  test("with no agent yet, the computer they'd sign in on says it too", () => {
+    const pc: AiComputer = {
+      ...MAC,
+      os: "windows",
+      brains: { claude_code: true, codex: true, antigravity: false },
+      off: { antigravity: "system" },
+    };
+    const { gate: g } = planGateWithoutAgent({ choice: "gemini", edition: "selfhost", setup: null, computers: [pc] });
+    expect(planOffSystem(enT, g)).toBe("Windows");
+  });
+});
+
+describe("noAiReceiptLine", () => {
+  const say = (why: Parameters<typeof noAiReceiptLine>[0]) => {
+    const line = noAiReceiptLine(why);
+    return line ? { text: enT(line.key, { name: "Lodi", model: line.model }), connect: line.connect } : null;
+  };
+
+  test("a plan it has that can't think there says why, with no Connect: another account wouldn't start it", () => {
+    expect(say({ code: "cli_failed" })).toEqual({
+      text: "Lodi can't answer now: the plan's AI stopped with an error.",
+      connect: false,
+    });
+    expect(say({ code: "plan_limit" })?.connect).toBe(false);
+    expect(say({ code: "model_limit", params: { model: "GPT-5.5" } })?.text).toContain("GPT-5.5");
+  });
+
+  test("a missing piece says which and keeps Connect; a plan that isn't this person's keeps Connect too", () => {
+    expect(say({ code: "cli_missing" })).toEqual({
+      text: enT("noAi.cliMissing", { name: "Lodi" }),
+      connect: true,
+    });
+    expect(say({ code: "plan_not_shared" })?.connect).toBe(true);
+  });
+
+  test("no AI at all, no reason, or one it can't word: the plain line", () => {
+    expect(noAiReceiptLine(undefined)).toBeNull();
+    expect(noAiReceiptLine({ code: "no_key" })).toBeNull();
+    expect(noAiReceiptLine({ code: "plans_not_yours" })).toBeNull();
+    expect(noAiReceiptLine({ code: "model_limit" })).toBeNull();
   });
 });

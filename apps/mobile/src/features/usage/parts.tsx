@@ -1,22 +1,24 @@
-import type { PlanAccountInfo } from "@agenteschat/client";
+import type { PlanAccountInfo, PlanUsage } from "@agenteschat/client";
 import {
   accountName,
-  accountOwner,
-  brandOf,
+  accountWhose,
   type MeterSegment,
   type MeterWindow,
   planMeterText,
+  planModelUsage,
 } from "@agenteschat/client/lib/plan-usage";
 import { planName } from "@agenteschat/client/lib/plans";
 import { mixHex } from "@agenteschat/ui/agent/engine";
 import {
   PLAN_ALMOST,
   PLAN_TONE,
+  planAgeShown,
   planLevel,
   planLine,
   planState,
   planWindows,
   renewals,
+  windowAmount,
 } from "@agenteschat/ui/plan-state";
 import { Canvas, createPicture, Picture, Skia } from "@shopify/react-native-skia";
 import { type ReactNode, useMemo, useState } from "react";
@@ -150,9 +152,9 @@ export function PlanMeter({
       ) : null}
       {rows.map((w, i) => {
         const name = text.window(w);
-        // A window that reset is empty again: its parts were the old window's.
-        const fresh = !passed(w.resetsAt);
-        const level = planLevel(w.used);
+        // A window that reset is empty again: its parts were the old window's. One read too long ago may have.
+        const fresh = !passed(w.resetsAt) && !w.stale;
+        const level = w.stale ? "ok" : planLevel(w.used);
         const tone = c[PLAN_TONE[level]];
         return (
           <View key={`${w.kind}:${w.label ?? i}`} style={styles.window}>
@@ -161,17 +163,19 @@ export function PlanMeter({
                 {name}
               </Text>
               <Text variant="small" tone="muted" style={[styles.tabular, level !== "ok" && { color: tone }]}>
-                {w.used}%
+                {windowAmount(usage, w, text)}
               </Text>
             </View>
-            <Meter
-              value={w.used}
-              label={name}
-              mark={PLAN_ALMOST}
-              color={tone}
-              {...(w.part !== undefined && fresh ? { part: w.part } : {})}
-              {...(w.segments && fresh ? { segments: w.segments } : {})}
-            />
+            {w.stale ? null : (
+              <Meter
+                value={w.used}
+                label={name}
+                mark={PLAN_ALMOST}
+                color={tone}
+                {...(w.part !== undefined && fresh ? { part: w.part } : {})}
+                {...(w.segments && fresh ? { segments: w.segments } : {})}
+              />
+            )}
             {w.note && fresh ? (
               <Text variant="caption" tone="muted">
                 {w.note}
@@ -191,18 +195,45 @@ export function PlanMeter({
           {renews}
         </Text>
       ) : null}
-      <Text variant="caption" tone="muted">
-        {text.updated(usage.at)}
-      </Text>
+      {planAgeShown(usage, now) ? (
+        <Text variant="caption" tone="muted">
+          {text.updated(usage.at)}
+        </Text>
+      ) : null}
     </View>
   );
 }
 
-/** An account's head: the maker's mark, its name and plan, its maker and whose it is. */
+/**
+ * One line per model at a limit of its own ("GLM-5.3 — Sem cota · renova sáb 18:00"), under the account's windows, as
+ * the web's `PlanModels`: its name, then where its quota stands. Nothing while no model is at a limit.
+ */
+export function PlanModels({ usage, provider }: { usage: Pick<PlanUsage, "models"> | null; provider: string | null }) {
+  const { t, i18n } = useTranslation();
+  const rows = planModelUsage(t, i18n.language, usage, provider);
+  if (rows.length === 0) return null;
+  return (
+    <View style={styles.models}>
+      {rows.map((r) => (
+        <View key={r.id} style={styles.windowLine}>
+          <Text variant="small" tone="ink2">
+            {r.label}
+          </Text>
+          <Text variant="caption" tone="danger" style={styles.grow}>
+            {r.text}
+          </Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/** An account's head: the maker's mark, its name and plan, and whose it is. */
 export function AccountHead({ account, extra }: { account: PlanAccountInfo; extra?: string | null }) {
   const { t } = useTranslation();
   const c = useColors();
-  const whose = account.email ?? accountOwner(t, account);
+  // The logo already names the maker: under the name only whose it is.
+  const sub = [accountWhose(t, account), extra].filter(Boolean).join(" · ");
   // The maker's logo, the account and its plan on one line, whose it is under them at the row's width.
   return (
     <View style={styles.acctBox}>
@@ -216,22 +247,24 @@ export function AccountHead({ account, extra }: { account: PlanAccountInfo; extr
           {account.signedOut ? <Tag text={t("usageViews.signedOut")} color={c.warn} /> : null}
         </View>
       </View>
-      <Text variant="small" tone="muted">
-        {[brandOf(account), whose, extra].filter(Boolean).join(" · ")}
-      </Text>
+      {sub ? (
+        <Text variant="small" tone="muted">
+          {sub}
+        </Text>
+      ) : null}
     </View>
   );
 }
 
-/** The small plate beside an account's name (its plan, "saiu da conta"). */
+/**
+ * A word beside an account's name (its plan, "saiu da conta"): only words in their tone, never a plate behind them,
+ * as every state the app names.
+ */
 export function Tag({ text, color }: { text: string; color: string }) {
-  const c = useColors();
   return (
-    <View style={[styles.tag, { backgroundColor: c.plate }]}>
-      <Text variant="caption" style={[styles.heavy, { color }]}>
-        {text}
-      </Text>
-    </View>
+    <Text variant="caption" style={[styles.heavy, { color }]}>
+      {text}
+    </Text>
   );
 }
 
@@ -413,12 +446,12 @@ const styles = StyleSheet.create({
   meter: { gap: 10 },
   meterCompact: { gap: 4 },
   window: { gap: 4 },
+  models: { gap: 4 },
   windowLine: { flexDirection: "row", alignItems: "baseline", gap: 8 },
   acctBox: { gap: 4 },
   acct: { flexDirection: "row", alignItems: "center", gap: 12 },
   // The name wraps instead of losing its end, the plan's tag after it, on the next line when there's no room.
   acctName: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: 7, rowGap: 4 },
-  tag: { height: 19, paddingHorizontal: 6, borderRadius: 6, borderBottomLeftRadius: 2, justifyContent: "center" },
   card: { borderRadius: 20, padding: 16, gap: 14 },
   cardHead: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
   cardFoot: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 12 },

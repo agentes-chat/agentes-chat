@@ -1,5 +1,11 @@
-import type { DesktopMode, DesktopViewState } from "@agenteschat/client";
-import { DESKTOP_CLOSE, desktopCloseState, desktopRetryMs, desktopSocketUrl } from "@agenteschat/client";
+import type { DesktopMode, DesktopOpenWhy, DesktopViewState } from "@agenteschat/client";
+import {
+  DESKTOP_CLOSE,
+  desktopCloseState,
+  desktopOpenFailed,
+  desktopRetryMs,
+  desktopSocketUrl,
+} from "@agenteschat/client";
 import type RFB from "@novnc/novnc";
 import type { RfbChannel } from "@novnc/novnc";
 import { type DesktopChannel, DesktopLink } from "../components/desktop/link";
@@ -16,7 +22,9 @@ export type ScreenEvent =
   | { type: "changed" }
   /** noVNC's session took its mode: the app's switch cover ("Assumindo o controle…") waits for it. */
   | { type: "session"; mode: DesktopMode }
-  | { type: "refused"; why: "tooLong" };
+  | { type: "refused"; why: "tooLong" }
+  /** A try to open it failed: why, and whether it stopped trying by itself (`desktopOpenFailed`). */
+  | { type: "why"; why: DesktopOpenWhy; gaveUp: boolean };
 
 /** The keys the app's key row presses, as X keysyms. */
 export const SCREEN_KEYS = {
@@ -66,6 +74,8 @@ export class ScreenSession {
   private view: DesktopViewState | null = null;
   private attempts = 0;
   private gaveUp = false;
+  /** Since when it opens: the screen gives up on failed tries once it has opened for long. */
+  private since = Date.now();
   private retryTimer: ReturnType<typeof setTimeout> | undefined;
   private switchTimer: ReturnType<typeof setTimeout> | undefined;
   private looking: ReturnType<typeof setInterval> | undefined;
@@ -77,6 +87,7 @@ export class ScreenSession {
       agentId: string;
       base: Parameters<typeof desktopSocketUrl>[0];
       preview?: boolean;
+      seat?: Parameters<typeof desktopSocketUrl>[1]["seat"];
     },
     private readonly deps: ScreenDeps,
   ) {}
@@ -90,6 +101,7 @@ export class ScreenSession {
     if (!want.connect) return this.end();
     if (!was.connect) {
       this.gaveUp = false;
+      this.since = Date.now();
       return this.open();
     }
     if (was.mode === want.mode || !this.link) return;
@@ -105,6 +117,7 @@ export class ScreenSession {
   retry() {
     this.attempts = 0;
     this.gaveUp = false;
+    this.since = Date.now();
     this.say("connecting");
     this.open();
   }
@@ -141,6 +154,7 @@ export class ScreenSession {
 
   private say(state: DesktopViewState) {
     if (state === this.view) return;
+    if (this.view === "live") this.since = Date.now();
     this.view = state;
     this.deps.post({ type: "view", state });
   }
@@ -163,12 +177,14 @@ export class ScreenSession {
     const holding = heldPicture(this.target) !== null || holdPicture(this.target);
     this.end();
     if (!holding) this.say("connecting");
-    const { orgId, agentId, base, preview } = this.place;
+    const { orgId, agentId, base, preview, seat } = this.place;
     const mode = this.want.mode;
     const socket = this.deps.createSocket(
       desktopSocketUrl(
         base,
-        preview ? { orgId, agentId, mode: "watch", preview: true } : { orgId, agentId, mode, switches: true },
+        preview
+          ? { orgId, agentId, mode: "watch", preview: true, seat }
+          : { orgId, agentId, mode, switches: true, seat },
       ),
     );
     const link = new DesktopLink(socket);
@@ -199,12 +215,14 @@ export class ScreenSession {
     const next = desktopCloseState(e.code, e.reason, { preview });
     // A card's screen that keeps dropping says so, and the card shows the frames.
     const spent = preview && next.retry !== "never" && this.attempts >= PREVIEW_RETRIES;
+    const failed = preview ? null : desktopOpenFailed(e.code, e.reason, this.since);
     if (e.code !== DESKTOP_CLOSE.controlEnded || !holdPicture(this.target)) {
       heldPicture(this.target)?.remove();
       this.say(spent ? "offline" : next.state);
     }
+    if (failed) this.deps.post({ type: "why", ...failed });
     this.deps.post({ type: "changed" });
-    if (next.retry === "never" || spent) {
+    if (next.retry === "never" || spent || failed?.gaveUp) {
       this.gaveUp = true;
       return;
     }

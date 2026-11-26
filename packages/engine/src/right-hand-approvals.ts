@@ -3,9 +3,10 @@ import { and, type Database, desc, eq, gte, inArray, isNull, ne, or, schema, sql
 import { isAutoModel } from "@agenteschat/providers";
 import { type AgentProposalCard, agentProposalOf, createProposedAgent } from "./agent-proposals";
 import { type Agent, archiveAgent, getAgent } from "./agents";
+import { editsAgentSql, managesAgent } from "./audience";
 import { recordAudit } from "./audit";
 import { messageRoot, runChain, steeredByOthers } from "./authority";
-import { autoModelFor, autoProvider, orgAutoModels } from "./auto-model";
+import { autoLine, autoModelFor, autoProvider, orgAutoModels } from "./auto-model";
 import { isComputerBrain } from "./brains/types";
 import { decideProposal, type SettingsProposalCard, settingsCardOf } from "./context/proposals";
 import { modelInfoFor } from "./credentials";
@@ -141,10 +142,11 @@ export async function getRightHandApprovals(
     settingsOf(db, orgId, userId),
     rightHandOf(db, orgId),
     usage(db, orgId, userId, now),
+    // An agent they own or edit: its skills' rows are theirs to decide too (ADR 0085 addendum of 2026-11-17).
     db
       .select({ id: agents.id })
       .from(agents)
-      .where(and(eq(agents.orgId, orgId), eq(agents.ownerUserId, userId), isNull(agents.archivedAt)))
+      .where(and(eq(agents.orgId, orgId), isNull(agents.archivedAt), editsAgentSql("agents", sql`${userId}::text`)))
       .limit(1),
   ]);
   return {
@@ -420,9 +422,14 @@ async function decideCall(
   rightHand: Agent,
   input: DecisionInput,
 ) {
-  const provider = isAutoModel(rightHand.model) ? await autoProvider(deps.db, rightHand) : null;
-  const model = provider
-    ? autoModelFor(provider, "medium", (await orgAutoModels(deps.db, rightHand.orgId))[provider])
+  const line = isAutoModel(rightHand.model) ? await autoLine(deps.db, rightHand) : null;
+  const model = line
+    ? autoModelFor(
+        line.provider,
+        "medium",
+        (await orgAutoModels(deps.db, rightHand.orgId))[line.provider],
+        line.endpoint,
+      )
     : rightHand.model;
   if (!model) return { decision: "pass" as const, reason: "" };
   const { system, user } = decisionPrompt({ ...input, personal: await isPersonalWorkspace(deps.db, rightHand.orgId) });
@@ -669,7 +676,7 @@ export async function considerCard(deps: RightHandDeps, orgId: string, messageId
 // ── Desfazer ──────────────────────────────────────────────────────────────────
 
 /**
- * Desfazer, for 24 hours, by the person it decided for or who manages agents: a new agent is archived, settings go
+ * Desfazer, for 24 hours, by the person it decided for or who manages its agent: a new agent is archived, settings go
  * back. Three undone in a week pause it until the person turns it back on.
  */
 export async function undoRightHandDecision(
@@ -685,8 +692,12 @@ export async function undoRightHandDecision(
     .from(rightHandDecisions)
     .where(and(eq(rightHandDecisions.orgId, orgId), eq(rightHandDecisions.id, decisionId)));
   if (row?.outcome !== "approved") throw new NotFoundError("Decision not found", "right_hand.not_found");
-  if (actorId !== row.forUserId && !can(membership, "manage_agents"))
-    throw new ForbiddenError("Only the person it decided for or an admin can undo it");
+  if (actorId !== row.forUserId) {
+    // Anyone else: who manages the agent it made or changed (`managesAgent`, ADR 0085 addendum of 2026-11-17).
+    const target = row.targetAgentId ? await getAgent(db, orgId, row.targetAgentId) : null;
+    const admin = target ? managesAgent(target, actorId, membership) : can(membership, "manage_agents");
+    if (!admin) throw new ForbiddenError("Only the person it decided for or an admin can undo it");
+  }
   if (row.undoneAt) throw new ConflictError("Already undone", "right_hand.undone");
   if (row.createdAt.getTime() + RIGHT_HAND_CAPS.undoMs <= Date.now())
     throw new ConflictError("Desfazer lasts 24 hours", "right_hand.undo_expired");

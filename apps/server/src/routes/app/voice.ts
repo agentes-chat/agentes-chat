@@ -2,6 +2,7 @@ import { SPEECH_PROVIDERS } from "@agenteschat/adapters";
 import {
   acceptVoiceClip,
   isAgentesCloud,
+  MAX_MESSAGE_LENGTH,
   NotFoundError,
   pinnedOwner,
   requirePermission,
@@ -14,9 +15,8 @@ import {
   voiceOn,
 } from "@agenteschat/engine";
 import { createRoute, z } from "@hono/zod-openapi";
-import type { Context } from "hono";
 import { bodyLimit } from "hono/body-limit";
-import { rangedResponse } from "../../http/byte-range";
+import { storedResponse } from "../../http/byte-range";
 import { apiError, errorResponse } from "../../http/errors";
 import { type AppDeps, body, createAppRouter, errors, json, OrgParams, requireSession, security } from "./context";
 
@@ -30,14 +30,8 @@ const KEY_WRITES = { limit: 10, windowMs: 60_000 };
 
 const ChannelParams = OrgParams.extend({ channelId: z.uuid() });
 const ClipParams = OrgParams.extend({ clipId: z.uuid() });
-
-function audioResponse(c: Context, audio: Uint8Array, contentType: string) {
-  return rangedResponse(audio, c.req.header("range"), {
-    "content-type": contentType,
-    "cache-control": "private, max-age=300",
-    "x-content-type-options": "nosniff",
-  });
-}
+// The count is the engine's to refuse (`message.too_many_attachments`), as for a typed message.
+const AttachmentIds = z.array(z.uuid());
 
 /**
  * Voice messages (ADR 0100): the app sends the finished recording and shows it at once; the message arrives over the
@@ -88,6 +82,18 @@ export function voiceRoutes(deps: AppDeps) {
                   .max(8)
                   .optional()
                   .openapi({ description: "The app's language (`pt`, `en`): a hint for engines that take one." }),
+                // Only a bound on what is parsed: the limit people are told is the engine's (`message.too_long`).
+                text: z
+                  .string()
+                  .max(MAX_MESSAGE_LENGTH * 10)
+                  .optional()
+                  .openapi({
+                    description: `Typed beside the take, up to ${MAX_MESSAGE_LENGTH} characters: the message's \`body\` starts with it, then a blank line, then the words, and \`meta.voice.text\` holds it.`,
+                  }),
+                attachments: z.string().max(4000).optional().openapi({
+                  description:
+                    "JSON array of file (artifact) ids you uploaded or of this channel, as a typed message's `attachments`: stored as the message's `meta.artifacts`.",
+                }),
               }),
             },
           },
@@ -110,6 +116,16 @@ export function voiceRoutes(deps: AppDeps) {
       }
       const file: unknown = form.file;
       if (!(file instanceof File)) throw new ValidationError("send the recording in the field file", "voice.bad_type");
+      let ids: unknown = null;
+      try {
+        ids = JSON.parse(form.attachments ?? "[]");
+      } catch {
+        ids = null;
+      }
+      const attachments = AttachmentIds.safeParse(ids);
+      if (!attachments.success) {
+        throw new ValidationError("attachments is a JSON array of file ids", "message.attachment_not_found");
+      }
       let peaks: unknown = [];
       try {
         peaks = JSON.parse(form.peaks ?? "[]");
@@ -126,6 +142,8 @@ export function voiceRoutes(deps: AppDeps) {
           threadId: form.threadId ?? null,
           replyTo: form.replyTo ?? null,
           language: form.language ?? null,
+          text: form.text ?? null,
+          attachments: attachments.data,
         });
         deps.wakeWorkers?.();
         return c.json(accepted, 202);
@@ -184,7 +202,11 @@ export function voiceRoutes(deps: AppDeps) {
       const audio = await voiceClipAudio(voice(), c.get("user").id, orgId, clipId);
       if ("expired" in audio) return apiError(c, 410, "voice.expired", "This recording is no longer kept");
       if ("url" in audio) return c.redirect(audio.url, 302);
-      return audioResponse(c, audio.body, audio.contentType);
+      return storedResponse(audio, c.req.header("range"), {
+        "content-type": audio.contentType,
+        "cache-control": "private, max-age=300",
+        "x-content-type-options": "nosniff",
+      });
     },
   );
 

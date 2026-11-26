@@ -98,6 +98,8 @@ export class ControlServer {
         return d.orgLogo();
       case "diagnostics":
         return { text: d.diagnostics() };
+      case "report":
+        return d.reportParts();
       case "access.get":
         return d.access();
       case "folders.add":
@@ -134,6 +136,16 @@ export class ControlServer {
         return d.iphoneSetup().start();
       case "iphone.open":
         return d.iphoneSetup().open(m.app === "xcode" ? "xcode" : "appStore");
+      case "iphone.fixXcode":
+        return d
+          .iphoneSetup()
+          .fixXcode(m.action === "cancel" ? "cancel" : "start", m.kind === "update" ? "update" : "select");
+      case "cli.install":
+        return d.cliInstaller().handle(m);
+      case "iphone.look":
+        return d.iphoneLook();
+      case "iphone.repair":
+        return d.iphoneRepair(str(m.serial));
       case "shutdown":
         return { stopping: true };
       default:

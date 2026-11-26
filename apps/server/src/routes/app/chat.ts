@@ -7,6 +7,7 @@ import {
   consultationConversation,
   consultationsIn,
   createChannel,
+  handedConversation,
   idRef,
   joinChannel,
   listChannelMembers,
@@ -17,14 +18,18 @@ import {
   MEDIA_REFUSALS,
   type MessageView,
   messageCard,
+  messageCards,
   openConsultationsIn,
+  pendingReturns,
   postPersonMessage,
   requireChannelAccess,
   STICKER_MOODS,
   ValidationError,
+  withPersonFacts,
 } from "@agenteschat/engine";
 import { createRoute, z } from "@hono/zod-openapi";
 import { apiError, errorResponse } from "../../http/errors";
+import { ArtifactDetail, BlockState, Choices, Poll } from "./artifacts";
 import {
   type AppDeps,
   aiStatusDeps,
@@ -38,7 +43,7 @@ import {
   requireSession,
   security,
 } from "./context";
-import { Channel, Message } from "./schemas";
+import { Channel, LiveSelection, Message, PendingReturn } from "./schemas";
 
 const tags = ["Chat"];
 const ChannelParams = OrgParams.extend({ channelId: z.uuid() });
@@ -57,10 +62,14 @@ const Consultation = z.object({
     .nullable()
     .openapi({ description: "The consulted agent's run: the cards it posts here carry it (`agentRunId`)." }),
   status: z.enum(["open", "answered", "expired", "failed"]),
-  waiting: z.enum(["approval", "input", "computer", "agents", "outage"]).nullable().openapi({
+  waiting: z.enum(["approval", "input", "computer", "agents", "outage", "queued"]).nullable().openapi({
     description:
-      "Open, and the consulted agent waits: on a person (`approval`; `input`: an answer or a secret), for its computer to come back online (`computer`), for its AI provider to come back (`outage`: it retries by itself), or, its part done, on agents it handed some to (`agents`).",
+      "Open, and the consulted agent waits: on a person (`approval`; `input`: an answer or a secret), for its computer to come back online (`computer`), for its AI provider to come back (`outage`: it retries by itself), for a worker to take its run (`queued`), or, its part done, on agents it handed some to (`agents`).",
   }),
+  waitingSince: z
+    .string()
+    .nullable()
+    .openapi({ description: "Since when it waits (`waiting`), for the row's clock; null while it works." }),
   question: z.string(),
   answer: z.string().nullable().openapi({ description: "The answer once answered; why it couldn't once failed." }),
   progress: z.object({ posts: z.number().int(), latest: z.string(), at: z.string() }).nullable().openapi({
@@ -103,8 +112,10 @@ export function chatRoutes(deps: AppDeps) {
             seenAsAdmin: r.seenAsAdmin,
             createdByUserId: r.createdByUserId,
             createdAt: r.createdAt.toISOString(),
-            categoryId: r.categoryId,
+            groupId: r.groupId,
             position: r.position,
+            replyInThreads: r.replyInThreads,
+            leadAgentId: r.leadAgentId,
             unreadCount: r.unreadCount,
             mentionCount: r.mentionCount,
             lastReadAt: iso(r.lastReadAt),
@@ -126,7 +137,7 @@ export function chatRoutes(deps: AppDeps) {
       security,
       summary: "Agents working now in the conversations you are in (any member)",
       description:
-        "Agent runs queued, running or waiting (approval or an answer) in the channels and DMs you are a member of, newest first (at most 100). Never another person's DM or a private channel you're not in. No cost.",
+        "Agent runs queued, running or waiting (approval or an answer) in the channels and DMs you are a member of, newest first (at most 100), and work agents handed each other from there (listed where it was handed off, with `forAgentId`). Never another person's DM or a private channel you're not in. No cost.",
       request: { params: OrgParams },
       responses: {
         200: json(
@@ -162,6 +173,14 @@ export function chatRoutes(deps: AppDeps) {
                     })
                     .nullable()
                     .openapi({ description: "Long work in the background (ADR 0121): its title, plan and start." }),
+                  forAgentId: z.uuid().nullable().openapi({
+                    description:
+                      "Work another agent handed it: that agent. It is listed where it was handed off (`channelId`, `threadId`), never in the two agents' DM.",
+                  }),
+                  anchorMessageId: z
+                    .uuid()
+                    .nullable()
+                    .openapi({ description: "The reply that handed it off, once posted." }),
                 })
                 .openapi("WorkingRun"),
             ),
@@ -194,7 +213,15 @@ export function chatRoutes(deps: AppDeps) {
               description:
                 "Private only: people holding one of these roles (departments) also see it and may join (ADR 0125); empty: invite only.",
             }),
-            categoryId: z.uuid().nullable().optional().openapi({ description: "Put it in this sidebar category." }),
+            groupId: z.uuid().nullable().optional().openapi({ description: "Put it in this sector (`agent-groups`)." }),
+            members: z
+              .array(z.union([z.object({ userId: z.string() }), z.object({ agentId: z.uuid() })]))
+              .max(200)
+              .optional()
+              .openapi({
+                description:
+                  "Who joins it right after you, with the same checks as adding each one. Its agents answer in threads (ADR 0214) only when another person is among them, and never in a personal workspace.",
+              }),
           }),
         ),
       },
@@ -214,8 +241,10 @@ export function chatRoutes(deps: AppDeps) {
           isMember: true,
           createdByUserId: r.createdByUserId,
           createdAt: r.createdAt.toISOString(),
-          categoryId: r.categoryId,
+          groupId: r.groupId,
           position: r.position,
+          replyInThreads: r.replyInThreads,
+          leadAgentId: r.leadAgentId,
         },
         201,
       );
@@ -428,6 +457,10 @@ export function chatRoutes(deps: AppDeps) {
                   description:
                     "Work in the background (a routine's, or long work, ADR 0121): not the conversation's working row.",
                 }),
+                replyInThread: z.boolean().openapi({
+                  description:
+                    "Asked in the main timeline, it answers in the thread under that message, as its channel said when it was asked (ADR 0214). `threadId` stays its conversation's root either way.",
+                }),
               }),
             ),
             consults: z
@@ -441,11 +474,14 @@ export function chatRoutes(deps: AppDeps) {
                   channelId: z.uuid(),
                   threadId: z.uuid().nullable(),
                   since: z.string(),
+                  kind: z
+                    .enum(["question", "note"])
+                    .openapi({ description: "A question (`ask_agent`) or work handed off (`tell_agent`)." }),
                 }),
               )
               .openapi({
                 description:
-                  "Questions agents asked from here (`ask_agent`) still without an answer: the working line says one agent is asking another until `agent.consulted`.",
+                  "Questions agents asked from here (`ask_agent`) and work they handed off (`tell_agent`) still open: the working line says it until `agent.consulted`.",
               }),
           }),
         ),
@@ -499,6 +535,7 @@ export function chatRoutes(deps: AppDeps) {
           consultations: list.map((q) => ({
             ...q,
             progress: q.progress ? { ...q.progress, at: q.progress.at.toISOString() } : null,
+            waitingSince: q.waitingSince?.toISOString() ?? null,
             createdAt: q.createdAt.toISOString(),
             answeredAt: q.answeredAt?.toISOString() ?? null,
             expiresAt: q.expiresAt.toISOString(),
@@ -517,14 +554,18 @@ export function chatRoutes(deps: AppDeps) {
       security,
       summary: "One question asked from here, opened: what the two agents said for it (read only)",
       description:
-        "The question as it went into the agents' DM, the consulted agent's messages there and the cards it posted here (approvals, questions, secret requests), oldest first. Only this question's part of their DM. 404 when it wasn't asked from this conversation.",
+        "The question as it went into the agents' DM, the consulted agent's messages there and the cards it posted here (approvals, questions, secret requests), oldest first. Only this question's part of their DM. Also from the DM of the agent it was asked of, where it left its trace, for a person who reads where it was asked. 404 otherwise.",
       request: { params: ChannelParams.extend({ consultationId: z.uuid() }) },
       responses: { 200: json(z.object({ consultation: Consultation, messages: z.array(Message) })), ...errors },
     }),
     async (c) => {
       const { orgId, channelId, consultationId } = c.req.valid("param");
-      await requireChannelAccess(db, c.get("user").id, orgId, channelId);
-      const found = await consultationConversation(db, orgId, channelId, consultationId);
+      const userId = c.get("user").id;
+      await requireChannelAccess(db, userId, orgId, channelId);
+      // Asked from here, or handed to the agent of this DM for the person who reads it (its trace here).
+      const found =
+        (await consultationConversation(db, orgId, channelId, consultationId)) ??
+        (await handedConversation(db, orgId, channelId, consultationId, userId));
       if (!found) return apiError(c, 404, "not_found", "Question not found");
       const q = found.consultation;
       return c.json(
@@ -532,6 +573,7 @@ export function chatRoutes(deps: AppDeps) {
           consultation: {
             ...q,
             progress: q.progress ? { ...q.progress, at: q.progress.at.toISOString() } : null,
+            waitingSince: q.waitingSince?.toISOString() ?? null,
             createdAt: q.createdAt.toISOString(),
             answeredAt: q.answeredAt?.toISOString() ?? null,
             expiresAt: q.expiresAt.toISOString(),
@@ -555,25 +597,62 @@ export function chatRoutes(deps: AppDeps) {
         query: z.object({
           threadId: z.uuid().optional(),
           before: z.iso.datetime().optional().openapi({ description: "Page backwards from this time." }),
-          limit: z.coerce.number().int().min(1).max(200).optional(),
-          include: z
-            .string()
+          after: z.iso
+            .datetime()
             .optional()
-            .openapi({ description: "`replies`: add reply count, last activity and the latest replies per thread." }),
+            .openapi({ description: "Page forwards from this time: the oldest `limit` after it." }),
+          around: z.uuid().optional().openapi({
+            description:
+              "The page with this top-level message in its middle (404 when it is deleted or not in this channel).",
+          }),
+          limit: z.coerce.number().int().min(1).max(200).optional(),
+          include: z.string().optional().openapi({
+            description:
+              "`replies`: add reply count, last activity and the latest replies per thread. `cards`: add `cards`, what the messages' live blocks, votes and question cards show, so they draw whole at once.",
+          }),
         }),
       },
-      responses: { 200: json(z.object({ messages: z.array(Message) })), ...errors },
+      responses: {
+        200: json(
+          z.object({
+            messages: z.array(Message),
+            cards: z
+              .object({
+                artifacts: z.array(ArtifactDetail),
+                polls: z.array(Poll),
+                choices: z.array(Choices),
+                blocks: z.array(BlockState),
+              })
+              .optional()
+              .openapi({
+                description:
+                  "With `include=cards`: each card on these messages at the version it shows, with its state (cards the reader can't see are left out).",
+              }),
+          }),
+        ),
+        ...errors,
+      },
     }),
     async (c) => {
       const { orgId, channelId } = c.req.valid("param");
       const q = c.req.valid("query");
-      const messages = await listMessages(db, c.get("user").id, orgId, channelId, {
+      const userId = c.get("user").id;
+      const include = q.include?.split(",") ?? [];
+      const messages = await listMessages(db, userId, orgId, channelId, {
         threadId: q.threadId,
         before: q.before ? new Date(q.before) : undefined,
+        after: q.after ? new Date(q.after) : undefined,
+        around: q.around,
         limit: q.limit,
-        includeReplies: q.include?.split(",").includes("replies") ?? false,
+        includeReplies: include.includes("replies"),
       });
-      return c.json({ messages }, 200);
+      const artifacts = deps.extras?.artifacts;
+      if (!include.includes("cards") || !artifacts) return c.json({ messages }, 200);
+      const cards = await messageCards(artifacts, userId, orgId, messages);
+      return c.json(
+        { messages, cards: { ...cards, artifacts: await withPersonFacts(db, userId, orgId, cards.artifacts) } },
+        200,
+      );
     },
   );
 
@@ -624,6 +703,14 @@ export function chatRoutes(deps: AppDeps) {
               description:
                 "Sent while an agent works here (it goes into its task): stop its current model call and read this message now. Without it, the agent reads it at its next step.",
             }),
+            liveRef: z
+              .object({ artifactId: z.uuid(), selection: LiveSelection.optional() })
+              .nullable()
+              .optional()
+              .openapi({
+                description:
+                  "In a live file's conversation (ADR 0199): what you had selected in the file. Stored as `meta.liveRef` ({ artifactId, kind, title, selection? }) and shown as the message's `liveRef`. Only that conversation's own file (400 `message.live_ref`).",
+              }),
             clientId: z
               .string()
               .max(64)
@@ -658,7 +745,7 @@ export function chatRoutes(deps: AppDeps) {
           user.id,
           orgId,
           channelId,
-          c.req.valid("json"),
+          { ...c.req.valid("json"), origin: "app" },
         );
       } catch (error) {
         // A GIF or sticker that can't go (ADR 0091): the request was fine, what it names can't be sent.
@@ -683,7 +770,7 @@ export function chatRoutes(deps: AppDeps) {
       security,
       summary: "Once an AI is connected, the agent answers what it couldn't (Responder agora)",
       description:
-        "The id is a no-AI card (`meta.noAi`: its agent's failed run in that conversation starts again on the person's message) or the person's message (its failed runs start again on that same message, \"Tentar de novo\" with no second copy, else a `no_ai` decision is routed again; long work goes on with its own Continuar). Who asked, the agent's owner or an admin. 409 `ai.still_missing` while there's still no AI; 409 `run.not_restartable` when that run had already done something (a tool, a reply, an approval), so starting over would repeat it; 403 `audience.only` or `audience.nobody` when the agent no longer answers who asked (an agent moved onto a plan answers only its owner until they turn on \"Atende outras pessoas\"). Pressed again, it returns the runs that answer it. On a stretch's pause card (`meta.actionCard.kind` `stretch_paused`, ADR 0089) it is Continuar: the wake-ups it holds start at hop 1 in a fresh stretch, once (pressed again, no runs); who asked, the agents' owners or an admin. On a long-work pause card (`usage_paused`, ADR 0118) it is Continuar agora: with paid extra usage off the run goes on up to the plan's own allowance, and 409 `run.continue_extra_off` once that window is used up (`run.continue_extra_used_up` when the switch is on but the plan has no extra usage left).",
+        "The id is a no-AI card (`meta.noAi`: its agent's failed run in that conversation starts again on the person's message) or the person's message (its failed runs start again on that same message, \"Tentar de novo\" with no second copy, else a `no_ai` decision is routed again; long work goes on with its own Continuar). Who asked, the agent's owner or an admin. 409 `ai.still_missing` while there's still no AI; 409 `run.not_restartable` when that run had already done something (a tool, a reply, an approval), so starting over would repeat it; 403 `audience.only` or `audience.nobody` when the agent no longer answers who asked (an agent moved onto a plan answers only its owner until they turn on \"Atende outras pessoas\"). Pressed again, it returns the runs that answer it. On a stretch's pause card (`meta.actionCard.kind` `stretch_paused`, ADR 0089) it is Continuar: the wake-ups it holds start at hop 1 in a fresh stretch, once (pressed again, no runs); who asked, the agents' owners or an admin. On a long-work pause card (`usage_paused`, ADR 0118) it is Continuar agora: where the agent's long work never uses paid extra usage (someone else's plan lent to it, or the team's right hand) the run goes on up to the plan's own allowance, and 409 `run.continue_extra_off` once that window is used up (`run.continue_extra_used_up` when the plan has no extra usage left).",
       request: { params: OrgParams.extend({ messageId: z.uuid() }) },
       responses: {
         200: json(z.object({ runs: z.array(z.object({ agentId: z.uuid(), runId: z.uuid() })) })),
@@ -710,13 +797,34 @@ export function chatRoutes(deps: AppDeps) {
 
   app.openapi(
     createRoute({
+      method: "get",
+      path: "/organizations/{orgId}/channels/{channelId}/follow-ups",
+      tags,
+      security,
+      summary: "Returns agents set here, still to come: the bar above the composer holds them",
+      description:
+        "An agent's `follow_up` brings it back to this conversation at a time (ADR 0037): a line nobody sees in the timeline, listed here while its wake is queued, the soonest first, with who may cancel it. A thread's are those with its `threadId`; the main timeline's have none. Live: a `message.created` of a `follow_up` notice here changes the list (set, canceled, come).",
+      request: { params: ChannelParams },
+      responses: { 200: json(z.object({ followUps: z.array(PendingReturn) })), ...errors },
+    }),
+    async (c) => {
+      const { orgId, channelId } = c.req.valid("param");
+      const userId = c.get("user").id;
+      await requireChannelAccess(db, userId, orgId, channelId);
+      const followUps = await pendingReturns(db, userId, orgId, { channelId });
+      return c.json({ followUps }, 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
       method: "post",
       path: "/organizations/{orgId}/messages/{messageId}/cancel-follow-up",
       tags,
       security,
-      summary: "Cancel an agent's follow-up from its line",
+      summary: "Cancel a return an agent set (its follow-up)",
       description:
-        "The id is the follow-up's line (`meta.notice.kind` `follow_up`). Anyone who can read the conversation. The line changes in place (`message.created` with the same id); at its time the agent isn't woken. 409 `follow_up.not_pending` once it came or was canceled.",
+        "The id is the return's line (`meta.notice.kind` `follow_up`, `GET …/channels/{channelId}/follow-ups`). The person it is for, the agent's owner or an admin, reading the conversation; anyone else gets 403 `follow_up.not_yours`. The line changes in place (`message.created` with the same id) and the agent's status moves (`agent.status`); at its time the agent isn't woken. 409 `follow_up.not_pending` once it came or was canceled.",
       request: { params: OrgParams.extend({ messageId: z.uuid() }) },
       responses: { 204: noContent[204], ...errors },
     }),

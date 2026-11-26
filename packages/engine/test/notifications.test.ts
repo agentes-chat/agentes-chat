@@ -16,10 +16,12 @@ import {
   listMessages,
   listNotifications,
   type MachineTaskRow,
+  markAllNotificationsDone,
   markAllNotificationsRead,
   markChannelRead,
   markNotificationDone,
   markNotificationRead,
+  markThreadRead,
   NotFoundError,
   notificationCounts,
   notificationCountsByOrg,
@@ -153,6 +155,103 @@ test("an agent's answer reaches the person who asked, merged per conversation; r
   expect((await inbox(f.owner.id)).items).toEqual([]);
 });
 
+test("reading a channel or DM reads what was said to me there; it stays in the inbox, read", async () => {
+  f = await setup();
+  const { bia } = await people();
+  const root = await post(f.owner.id, "@bia olha isso");
+  await post(f.owner.id, "@bia e aqui no fio", root.id);
+  const mine = await post(bia.id, "Subi o build");
+  await addReaction(f.db, f.owner.id, f.org.id, mine.id, "🎉", f.pubsub);
+  const dm = await openDm(f.db, f.owner.id, f.org.id, { userId: bia.id });
+  await post(f.owner.id, "Te mandei o contrato", undefined, dm.id);
+  const events = hear(bia.id);
+
+  await markChannelRead(f.db, bia.id, f.org.id, f.general.id, new Date(), f.pubsub);
+  const unread = async () =>
+    (await inbox(bia.id)).items
+      .filter((n) => n.readAt === null)
+      .map((n) => n.kind)
+      .sort();
+  // The thread's mention waits for the thread; the DM for the DM.
+  expect(await unread()).toEqual(["dm", "mention"]);
+  expect((await inbox(bia.id)).items).toHaveLength(4);
+  expect(events.some((e) => e.type === "notification.upserted" && e.alert === false)).toBe(true);
+  expect(events.some((e) => e.type === "notification.counts")).toBe(true);
+
+  await markChannelRead(f.db, bia.id, f.org.id, dm.id, new Date(), f.pubsub);
+  expect(await unread()).toEqual(["mention"]);
+  // What lands after the read is news again.
+  await post(f.owner.id, "Assinou?", undefined, dm.id);
+  expect(await unread()).toEqual(["dm", "mention"]);
+});
+
+test("reading a channel leaves a mention in one of its tasks' comments unread", async () => {
+  f = await setup();
+  const { caio } = await people();
+  const owner = { type: "person" as const, userId: f.owner.id };
+  const issue = await createIssue(deps(), owner, f.org.id, { title: "Export report as CSV", channelId: f.general.id });
+  await commentIssue(deps(), owner, f.org.id, issue.id, "@caio can you review?");
+  await drainOutbox(f.db, f.handlers);
+  const [mention] = (await inbox(caio.id)).items.filter((n) => n.kind === "mention");
+  expect(mention?.source).toMatchObject({ issueId: issue.id, channelId: f.general.id });
+
+  await markChannelRead(f.db, caio.id, f.org.id, f.general.id, new Date(), f.pubsub);
+  expect((await inbox(caio.id)).items.find((n) => n.kind === "mention")?.readAt).toBeNull();
+});
+
+test("an agent's own DM, a reminder and a routine's report are read when the DM is", async () => {
+  f = await setup();
+  const dm = await openDm(f.db, f.owner.id, f.org.id, { agentId: f.agent.id });
+  const say = async (body: string, meta: Record<string, unknown>) => {
+    const m = await insertMessage(f.db, {
+      orgId: f.org.id,
+      channelId: dm.id,
+      threadId: null,
+      author: { type: "agent", agentId: f.agent.id, runId: null, hop: 0, stretchId: null },
+      body,
+      meta,
+    });
+    // `send_dm` enqueues its own notification job.
+    await notifyMessage(deps(), f.org.id, m.id);
+  };
+  const routine = { id: "00000000-0000-4000-8000-000000000002", name: "Bom dia", runId: "r" };
+  await say("Reminder: call the bank", { reminderText: "call the bank", reminder: true, routine });
+  await say("Good morning!", { routine });
+  await say("Posso fechar o pedido?", { agentDm: { fromMessageId: "00000000-0000-4000-8000-000000000004" } });
+  expect(await notificationCounts(deps(), f.owner.id, f.org.id)).toEqual({ unread: 3, waiting: 0 });
+
+  await markChannelRead(f.db, f.owner.id, f.org.id, dm.id, new Date(), f.pubsub);
+  expect(await notificationCounts(deps(), f.owner.id, f.org.id)).toEqual({ unread: 0, waiting: 0 });
+});
+
+test("reading a thread reads its replies, the mentions in it and an agent's answer there", async () => {
+  f = await setup();
+  const { bia, caio } = await people();
+  const root = await post(f.owner.id, "Release 2.4.1 checklist");
+  await post(bia.id, "Build is green @ana", root.id);
+  await post(caio.id, "Smoke tests pass", root.id);
+  await post(bia.id, "@ana fora do fio");
+  await notify(deps(), {
+    orgId: f.org.id,
+    userIds: [f.owner.id],
+    kind: "agent_reply",
+    groupKey: "work_end:00000000-0000-4000-8000-000000000003",
+    actor: { type: "agent", id: f.agent.id },
+    source: { channelId: f.general.id, threadId: root.id },
+    latest: { text: "Pronto" },
+  });
+
+  await markThreadRead(deps(), f.owner.id, f.org.id, root.id);
+  const unread = async () =>
+    (await inbox(f.owner.id)).items.filter((n) => n.readAt === null).map((n) => [n.kind, n.latest.text]);
+  // The mention outside the thread is the channel's; the agent's answer left the inbox.
+  expect(await unread()).toEqual([["mention", "@ana fora do fio"]]);
+  expect((await inbox(f.owner.id)).items.some((n) => n.kind === "agent_reply")).toBe(false);
+
+  await post(caio.id, "Tagged", root.id);
+  expect((await unread()).map(([kind]) => kind).sort()).toEqual(["mention", "thread_reply"]);
+});
+
 test("the realtime event says whether it reaches the person's devices, by their choices", async () => {
   f = await setup();
   const { bia } = await people();
@@ -162,6 +261,89 @@ test("the realtime event says whether it reaches the person's devices, by their 
   await post(f.owner.id, "@bia e isso");
   const alerts = events.filter((e) => e.type === "notification.upserted").map((e) => e.alert);
   expect(alerts).toEqual([true, false]);
+});
+
+test("what the person brings back (Mover de volta, an undo) is no news: it comes with alert false", async () => {
+  f = await setup();
+  const { bia } = await people();
+  await post(f.owner.id, "@bia olha isso");
+  const id = (await inbox(bia.id)).items[0]?.id ?? "";
+  const events = hear(bia.id);
+  await markNotificationDone(deps(), bia.id, f.org.id, id, true);
+  await markNotificationDone(deps(), bia.id, f.org.id, id, false);
+  await markNotificationRead(deps(), bia.id, f.org.id, id, false);
+  await snoozeNotification(deps(), bia.id, f.org.id, id, new Date(Date.now() + 3_600_000));
+  await snoozeNotification(deps(), bia.id, f.org.id, id, null);
+  const upserted = events.filter((e) => e.type === "notification.upserted");
+  expect(upserted.length).toBe(3);
+  expect(upserted.map((e) => e.alert)).toEqual([false, false, false]);
+});
+
+test("Clear all moves the person's own rows in the filter to Done, never an approval or question waiting on them", async () => {
+  f = await setup();
+  const { bia, caio } = await people();
+  await makeAdmin(f.db, f.org.id, bia.id);
+  const [approval] = await f.db
+    .insert(schema.approvals)
+    .values({
+      orgId: f.org.id,
+      agentId: f.agent.id,
+      channelId: f.general.id,
+      threadRootId: crypto.randomUUID(),
+      toolUseId: "tool-1",
+      tool: "github_merge",
+      scope: "github:pr.merge",
+      params: { pr: 7 },
+      actionHash: "hash",
+      title: "Merge PR #7",
+      expiresAt: new Date(Date.now() + 3_600_000),
+    })
+    .returning();
+  const base = { orgId: f.org.id, actor: { type: "agent" as const, id: f.agent.id } };
+  await notify(deps(), {
+    ...base,
+    userIds: [bia.id],
+    kind: "approval",
+    groupKey: "approval:clear",
+    waiting: true,
+    source: { approvalId: approval?.id },
+  });
+  await notify(deps(), {
+    ...base,
+    userIds: [bia.id],
+    kind: "agent_question",
+    groupKey: "question:clear",
+    waiting: true,
+    source: {},
+  });
+  for (const key of ["a", "b"])
+    await notify(deps(), {
+      ...base,
+      userIds: [bia.id, caio.id],
+      kind: "mention",
+      groupKey: `mention:${key}`,
+      source: {},
+    });
+  await notify(deps(), { ...base, userIds: [bia.id], kind: "thread_reply", groupKey: "thread:x", source: {} });
+
+  expect((await markAllNotificationsDone(deps(), bia.id, f.org.id, "waiting")).ids).toEqual([]);
+  expect((await markAllNotificationsDone(deps(), bia.id, f.org.id, "done")).ids).toEqual([]);
+  await expect(markAllNotificationsDone(deps(), bia.id, f.org.id, "nope" as "all")).rejects.toBeInstanceOf(
+    ValidationError,
+  );
+
+  const events = hear(bia.id);
+  const mentions = await markAllNotificationsDone(deps(), bia.id, f.org.id, "mentions");
+  expect(mentions.ids).toHaveLength(2);
+  const { ids } = await markAllNotificationsDone(deps(), bia.id, f.org.id);
+  expect(ids).toHaveLength(1);
+  expect((await inbox(bia.id)).items.map((n) => n.kind).sort()).toEqual(["agent_question", "approval"]);
+  const done = await listNotifications(deps(), bia.id, f.org.id, { filter: "done" });
+  expect(done.items.map((n) => n.id).sort()).toEqual([...mentions.ids, ...ids].sort());
+  expect(events.filter((e) => e.type === "notification.removed")).toHaveLength(3);
+  expect(events.at(-1)?.type).toBe("notification.counts");
+  // Caio's copies of the same mentions are his own: untouched.
+  expect((await inbox(caio.id)).counts.all).toBe(2);
 });
 
 test("reactions to my message merge (also within 30 min after reading); my own reactions don't count", async () => {
@@ -452,7 +634,7 @@ test("issues: assigned (resolved when unassigned), status by others, comments me
   const owner = { type: "person" as const, userId: f.owner.id };
   const issue = await createIssue(deps(), owner, f.org.id, {
     title: "Export report as CSV",
-    assignee: { type: "person", id: bia.id },
+    assignees: [{ type: "person", id: bia.id }],
   });
   const [assigned] = (await inbox(bia.id)).items;
   expect(assigned).toMatchObject({
@@ -487,7 +669,7 @@ test("issues: assigned (resolved when unassigned), status by others, comments me
   expect(caioInbox.items.find((n) => n.kind === "issue_comment")?.count).toBe(1); // the agent's, not the mention
 
   // Unassigned: "assigned to you" leaves Bia's inbox.
-  await updateIssue(deps(), owner, f.org.id, issue.id, { assignee: null });
+  await updateIssue(deps(), owner, f.org.id, issue.id, { assignees: [] });
   const [row] = await f.db
     .select()
     .from(schema.notifications)

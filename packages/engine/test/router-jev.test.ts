@@ -18,6 +18,7 @@ import {
   insertMessage,
   JevOffError,
   jevCostNanoUsd,
+  jevCostOf,
   loadReplyPolicy,
   messageRouter,
   postPersonMessage,
@@ -941,6 +942,11 @@ describe("Jev strategy end to end", () => {
       costNanoUsd: jevCostNanoUsd(1200),
     });
     expect(jevCostNanoUsd(1_000_000)).toBe(42_000_000); // $0.042 per million input tokens
+    // Through OpenRouter, what it reports each call cost (USD) is recorded, in nano-USD.
+    expect(jevCostOf({ input_tokens: 476, cost: 0.000019992 })).toBe(19_992);
+    expect(jevCostOf({ input_tokens: 1000, cost: 0.0000000016 })).toBe(2);
+    expect(jevCostOf({ input_tokens: 1000 })).toBe(42_000);
+    expect(jevCostOf({ input_tokens: 1000, cost: -1 })).toBe(42_000);
   });
 
   test("on a Jev error the LLM strategy decides, and the decision says so", async () => {
@@ -1305,7 +1311,7 @@ describe("a message for the agents always gets one (R5)", () => {
 });
 
 describe("Jev on a social message", () => {
-  test("end to end: 'boa noite pessoal' gets one 🌙 and no run; 'alô???' after it gets one agent's answer", async () => {
+  test("end to end: 'boa noite pessoal' gets no reaction and no run; 'alô???' after it gets one agent's answer", async () => {
     f = await setup({ reply: () => ({ chunks: ["Boa noite! Tô aqui."] }) });
     const qa = await createAgent(
       f.db,
@@ -1329,8 +1335,8 @@ describe("Jev on a social message", () => {
     });
     const night = await post(f, "boa noite pessoal");
     await drainOutbox(f.db, handlers);
-    const reactions = await f.db.select().from(schema.messageReactions);
-    expect(reactions.map((r) => [r.messageId, r.reaction])).toEqual([[night.id, "🌙"]]);
+    // A goodnight to the room: no agent's 🌙 (only one spoken to an agent gets it).
+    expect((await f.db.select().from(schema.messageReactions)).filter((r) => r.messageId === night.id)).toEqual([]);
     expect(await f.db.select().from(schema.agentRuns)).toEqual([]);
 
     const insist = await post(f, "alô???");

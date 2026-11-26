@@ -216,7 +216,9 @@ describe("Connect an AI, the rail's last step", () => {
     state.aiStatus = { any: true, apiKey: true, agents: state.agents.map((a) => ({ agentId: a.id, state: "ready" })) };
     await act(async () => services.queryClient.invalidateQueries({ queryKey: keys.aiStatus(ORG_ID) }));
     await settle(10);
-    expect(document.querySelector(".onb-ai__connected .ac-option__title")?.textContent).toBe("Chave de API");
+    expect(document.querySelector(".onb-ai__connected .ac-optrow__title")?.textContent).toBe("Chave de API");
+    // The kit's row the choices had, its state in a chip.
+    expect(document.querySelector(".onb-ai__connected.ac-optrow .ac-chip--done")).not.toBeNull();
   });
 
   test("on agentes.chat Cloud, a plan left for later skips the step: Lodi's DM, the beta notice alone", async () => {

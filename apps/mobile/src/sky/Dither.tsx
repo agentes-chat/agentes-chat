@@ -1,9 +1,10 @@
-import { Canvas, Fill, Shader, Skia, type SkRuntimeEffect, useClock } from "@shopify/react-native-skia";
-import { useState } from "react";
+import { Canvas, Fill, Shader, Skia, type SkRuntimeEffect } from "@shopify/react-native-skia";
+import { useMemo, useState } from "react";
 import { type LayoutChangeEvent, type StyleProp, View, type ViewStyle } from "react-native";
 import { type SharedValue, useDerivedValue } from "react-native-reanimated";
 import { useLivePaused } from "@/agent/live";
 import { useReducedMotion } from "@/ui/theme";
+import { drawingFps, useDrawingClock } from "./clock";
 import { paletteUniform } from "./math";
 import { type DitherKind, shaderSource } from "./shaders";
 
@@ -48,9 +49,10 @@ export interface DitherProps {
 }
 
 /**
- * A pixel/dither drawing on a Skia shader. Time runs on the UI thread (Skia's clock), so it costs the JS
- * thread nothing; with reduced motion it is drawn once at t = 0. If the shader can't compile, the first
- * tone fills the box.
+ * A pixel/dither drawing on a Skia shader. Time runs on the UI thread (`useDrawingClock`), so it costs the JS
+ * thread nothing, and only while the drawing moves: a still one (paused off screen, or `animated={false}`) has no frame
+ * callback and is not drawn again. With reduced motion it is drawn once at t = 0. If the shader can't compile, the
+ * first tone fills the box.
  */
 export function Dither({
   kind,
@@ -66,7 +68,7 @@ export function Dither({
   style,
 }: DitherProps) {
   const reduced = useReducedMotion();
-  // Off screen (LivePause): drawn still, so Skia stops redrawing.
+  // Off screen (LivePause): its clock stops where it was, so Skia stops redrawing and it comes back without a jump.
   const paused = useLivePaused();
   const [size, setSize] = useState({ width: 0, height: 0 });
   const onLayout = (e: LayoutChangeEvent) => {
@@ -74,24 +76,37 @@ export function Dither({
     if (width !== size.width || height !== size.height) setSize({ width, height });
   };
   const effect = effectOf(kind);
-  const { pal, last } = paletteUniform(tones);
-  const moving = animated && !reduced && !paused;
-  const clock = useClock();
-  const base = {
-    size: [size.width, size.height],
-    px: pixel,
-    last,
-    fade,
-    fadeTop,
-    clear: clear ? 1 : 0,
-    pal,
-    ...(extra ?? {}),
-  };
+  // The uniforms by what they say, not by the objects handed in: a parent drawn again hands new arrays of the same
+  // tones (`softTones(…)`, `[...tones, …]`) and a new `extra`. Made anew, they rebuilt the drawing's mapper on the UI
+  // thread (Reanimated starts it again when what its worklet captures changes) and parsed the eight tones again, on
+  // every draw of the home's header, of a conversation's pill and of each card with a sky.
+  const tonesKey = tones.join("|");
+  const extraKey = extra ? JSON.stringify(extra) : "";
+  const { pal, last } = useMemo(() => paletteUniform(tonesKey ? tonesKey.split("|") : []), [tonesKey]);
+  const extraUniforms = useMemo<Record<string, number | number[]>>(
+    () => (extraKey ? JSON.parse(extraKey) : {}),
+    [extraKey],
+  );
+  const timed = animated && !reduced;
+  const clock = useDrawingClock(timed && !paused, drawingFps(kind));
+  const base = useMemo(
+    () => ({
+      size: [size.width, size.height],
+      px: pixel,
+      last,
+      fade,
+      fadeTop,
+      clear: clear ? 1 : 0,
+      pal,
+      ...extraUniforms,
+    }),
+    [size.width, size.height, pixel, last, fade, fadeTop, clear, pal, extraUniforms],
+  );
   const uniforms = useDerivedValue(() => ({
     ...base,
     ...(liveWidth ? { size: [Math.max(1, liveWidth.value), size.height] } : {}),
     ...(liveWork ? { work: liveWork.value } : {}),
-    t: moving ? clock.value / 1000 : 0,
+    t: timed ? clock.value / 1000 : 0,
   }));
 
   if (!effect)

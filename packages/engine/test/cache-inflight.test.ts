@@ -30,15 +30,16 @@ test("an invalidated read cannot overwrite a newer cached read", async () => {
   expect(cache.get("org:member")).toBe("new access");
 });
 
-test("invalidating another organization leaves an in-flight read cacheable", async () => {
+test("the cache-wide invalidation barrier also leaves an unrelated in-flight read uncached", async () => {
   enableCaches();
   const cache = new TtlCache<string>(30_000);
   const load = Promise.withResolvers<string>();
   const reading = cache.getOrLoad("org:member", () => load.promise);
   cache.deletePrefix("another:");
   load.resolve("access");
-  await reading;
-  expect(cache.get("org:member")).toBe("access");
+  expect(await reading).toBe("access");
+  expect(cache.get("org:member")).toBeUndefined();
+  expect(await cache.getOrLoad("org:member", async () => "fresh access")).toBe("fresh access");
 });
 
 test("turning caching off while a read waits does not populate it on completion", async () => {

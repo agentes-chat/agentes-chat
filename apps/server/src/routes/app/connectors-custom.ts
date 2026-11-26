@@ -12,10 +12,13 @@ import {
   MCP_PRESETS,
   mcpPreset,
   NotFoundError,
+  ownOAuthClient,
   refreshCustomServer,
+  removeOwnOAuthClient,
   requirePermission,
   revokeConnection,
   saveCustomTools,
+  setOwnOAuthClient,
   ValidationError,
   withComposio,
 } from "@agenteschat/engine";
@@ -40,6 +43,23 @@ const Decision = z.enum(["read", "write", "approval", "off"]);
 /** What connecting did: a new account, a new sign-in for one, or the same account again (nothing new). */
 export const Outcome = z.enum(["connected", "reconnected", "same_account"]);
 
+/** The person's own connection, which any member adds, instead of the team's (who manages connectors). */
+export const Personal = z.boolean().optional().openapi({
+  description:
+    "The person's own connection, which any member adds (who manages connectors adds the team's): only they see its details, and agents use it for them. GitHub connects for the team only.",
+});
+
+/**
+ * `others=1`: also everyone else's personal connections (who manages connectors only), as read-only rows. A client
+ * that doesn't send it (an older app) never gets one, so it can't show someone's as the team's.
+ */
+export const OthersQuery = z.object({
+  others: z
+    .enum(["0", "1"])
+    .optional()
+    .openapi({ description: "`1`: also everyone else's personal ones, for who manages connectors." }),
+});
+
 const CustomServer = z
   .object({
     id: z.uuid(),
@@ -49,6 +69,10 @@ const CustomServer = z
       description: "The account as the provider names it, when it says (refreshed when tools are listed).",
     }),
     authType: z.enum(["oauth", "api_key"]),
+    headerNames: z.array(z.string()).openapi({
+      description:
+        "The request headers typed for it (ADR 0186), by name: their values are never returned. Empty when it has none, and for a reader who doesn't manage connectors.",
+    }),
     iconUrl: z
       .string()
       .nullable()
@@ -95,8 +119,29 @@ const CustomServer = z
         firstSeenAt: z.string(),
       }),
     ),
+    instructions: z
+      .object({
+        text: z.string(),
+        cut: z.boolean().openapi({ description: "The server said more than agents read: `text` ends at `maxChars`." }),
+        maxChars: z.number().int(),
+      })
+      .nullable()
+      .openapi({
+        description:
+          "What the server said in `initialize` on how to use it (MCP's `instructions`), as agents read it. Null when it said nothing, and for a reader who doesn't manage connectors.",
+      }),
+    useInstructions: z.boolean().openapi({
+      description: "Agents granted its tools get `instructions`, after their own (on unless turned off).",
+    }),
     reviewedAt: z.string().nullable(),
     createdAt: z.string(),
+    ownerUserId: z.string().nullable().openapi({
+      description:
+        "A personal connection's person (ADR 0099 addendum): only they see its details and give it to agents, and its tools serve runs that person is behind. Someone else's comes with its name, service and person only, to who manages connectors. Null: the team's.",
+    }),
+    agentIds: z.array(z.uuid()).optional().openapi({
+      description: "A personal connection's agents (a grant of their own on it), in the list only.",
+    }),
   })
   .openapi("CustomServer");
 
@@ -167,10 +212,18 @@ export function customConnectorRoutes(deps: AppDeps) {
       tags,
       security,
       summary: "Custom MCP servers and their tools",
-      request: { params: OrgParams },
+      request: { params: OrgParams, query: OthersQuery },
       responses: { 200: json(z.object({ servers: z.array(CustomServer) })), ...errors },
     }),
-    async (c) => c.json({ servers: await listCustomServers(db, c.get("user").id, c.req.valid("param").orgId) }, 200),
+    async (c) =>
+      c.json(
+        {
+          servers: await listCustomServers(db, c.get("user").id, c.req.valid("param").orgId, {
+            others: c.req.valid("query").others === "1",
+          }),
+        },
+        200,
+      ),
   );
 
   app.openapi(
@@ -181,7 +234,7 @@ export function customConnectorRoutes(deps: AppDeps) {
       security,
       summary: "Connect an https MCP server: connected, OAuth to finish, or an API key is needed",
       description:
-        "A server's account is every agent's, whole (`connector:*`): its tools reach them once classified, and sensitive ones still ask for approval. The same address again is another account (\"Stripe 2\"), every agent's too; the same account again (the provider says) refreshes its sign-in (`outcome: same_account`). With `connectionId`, that account gets the new sign-in in place (`reconnected`); signing in to another account there is a 409 `connector.other_account`, and a sign-in whose account can't be checked a 409 `connector.account_unknown` (try again).",
+        "A server's account is every agent's, whole (`connector:*`): its tools reach them once classified, and sensitive ones still ask for approval. The same address again is another account (\"Stripe 2\"), every agent's too; the same account again (the provider says) refreshes its sign-in (`outcome: same_account`). With `connectionId`, that account gets the new sign-in in place (`reconnected`); signing in to another account there is a 409 `connector.other_account`, and a sign-in whose account can't be checked a 409 `connector.account_unknown` (try again). `headers` (ADR 0186) are sent with every request to the server, the key's `Authorization` on top; without a key, a server that answers with them is connected by them alone, and one that asks for a sign-in is a 400 `connector.headers_with_sign_in`. A header that isn't taken is a 400 whose `params` name it (`header`, and `index`, its place in the list): `connector.header_name`, `connector.header_value`, `connector.header_reserved`, `connector.header_twice`, `connector.header_and_key` (`Authorization` beside a key), or `connector.headers_too_many`. With `connectionId` and no `headers`, saved ones that can no longer be read are a 400 `connector.headers_unreadable`: send them again, or `[]`.",
       request: {
         params: OrgParams,
         body: body(
@@ -191,6 +244,14 @@ export function customConnectorRoutes(deps: AppDeps) {
             label: z.string().max(80).optional(),
             returnTo: z.string().max(500).optional(),
             connectionId: ReconnectId,
+            personal: Personal,
+            headers: z
+              .array(z.object({ name: z.string(), value: z.string() }))
+              .optional()
+              .openapi({
+                description:
+                  "Request headers for a server by address: at most 10, each an HTTP token for a name (64 characters) and a one-line value of printable ASCII (2,000). With `connectionId`: absent keeps the ones the account has, an empty list removes them, a list replaces them.",
+              }),
           }),
         ),
       },
@@ -247,12 +308,15 @@ export function customConnectorRoutes(deps: AppDeps) {
       path: "/organizations/{orgId}/connectors/presets/{presetId}/connect",
       tags,
       security,
-      summary: "Connect a one-click connector (admins): returns the OAuth URL to open",
+      summary:
+        "Connect a one-click connector (the team's by admins, a personal one by any member): returns the OAuth URL to open",
       description:
         "After the OAuth, our suggested classification is applied to its tools (admins can change it). No app registration needed. Accounts and `connectionId` as in `POST …/connectors/custom`. It connects by the way the catalog lists for it (the vendor's server, or Composio, ADR 0107). A `soon` one Composio doesn't serve here is refused (400 `connector.not_approved`): its vendor hasn't approved agentes.chat yet.",
       request: {
         params: OrgParams.extend({ presetId: z.string().max(60) }),
-        body: body(z.object({ returnTo: z.string().max(500).optional(), connectionId: ReconnectId })),
+        body: body(
+          z.object({ returnTo: z.string().max(500).optional(), connectionId: ReconnectId, personal: Personal }),
+        ),
       },
       responses: { 200: json(ConnectStart), ...errors },
     }),
@@ -266,12 +330,13 @@ export function customConnectorRoutes(deps: AppDeps) {
           connector: preset.id,
         });
       }
-      const { returnTo, connectionId } = c.req.valid("json");
+      const { returnTo, connectionId, personal } = c.req.valid("json");
       const started = await connectCustomServer(custom, c.get("user").id, orgId, {
         serverUrl: way?.serverUrl ?? preset.serverUrl,
         label: preset.label,
         returnTo,
         connectionId,
+        personal,
       });
       return c.json(started, 200);
     },
@@ -301,12 +366,13 @@ export function customConnectorRoutes(deps: AppDeps) {
       security,
       summary: "Save the label and the classification of each tool",
       description:
-        "Sensitive tools may only be `approval` or `off` (400 otherwise). `confirmed: false` applies a suggestion but leaves an ambiguous tool waiting for a decision.",
+        "Sensitive tools may only be `approval` or `off` (400 otherwise). `confirmed: false` applies a suggestion but leaves an ambiguous tool waiting for a decision. `useInstructions`, when given, turns the server's own instructions on or off for agents.",
       request: {
         params: ServerParams,
         body: body(
           z.object({
             label: z.string().max(80),
+            useInstructions: z.boolean().optional(),
             tools: z
               .array(
                 z.object({
@@ -366,6 +432,94 @@ export function customConnectorRoutes(deps: AppDeps) {
     async (c) => {
       const { orgId, serverId } = c.req.valid("param");
       await revokeConnection(db, c.get("user").id, orgId, serverId, composio);
+      return c.body(null, 204);
+    },
+  );
+
+  const OwnClient = z
+    .object({
+      redirectUri: z.string().openapi({ description: "The redirect URI to register in the app: our OAuth callback." }),
+      issuer: z.string().openapi({ description: "The authorization server the MCP server named." }),
+      client: z
+        .object({
+          clientId: z.string(),
+          hasSecret: z.boolean().openapi({ description: "A secret is saved (sealed: it is never returned)." }),
+          scopes: z
+            .string()
+            .nullable()
+            .openapi({ description: "What every sign-in asks for; null: what the server lists." }),
+        })
+        .nullable()
+        .openapi({
+          description:
+            "The workspace's own client for that issuer; null: none (a registration of ours, or nothing yet).",
+        }),
+    })
+    .openapi("OwnOAuthClient");
+  const ownClientDoc =
+    "A workspace's own OAuth client (ADR 0016 addendum 2026-11-21), for an MCP server that takes only clients it approved (`needs_key` with `not_approved`): one per authorization server, used by every sign-in there and never replaced by a registration of ours. Who manages connectors only. The server is asked (without credentials) which authorization server it uses; one that doesn't sign in with OAuth is a 400 `connector.no_oauth`, one whose OAuth details can't be read a 400 `connector.oauth_discovery`.";
+
+  app.openapi(
+    createRoute({
+      method: "get",
+      path: "/organizations/{orgId}/connector-oauth-clients",
+      tags,
+      security,
+      summary: "The workspace's own OAuth client for an MCP server, and the redirect URI to register",
+      description: ownClientDoc,
+      request: { params: OrgParams, query: z.object({ serverUrl: z.string().min(1).max(500) }) },
+      responses: { 200: json(OwnClient), ...errors },
+    }),
+    async (c) =>
+      c.json(
+        await ownOAuthClient(custom, c.get("user").id, c.req.valid("param").orgId, c.req.valid("query").serverUrl),
+        200,
+      ),
+  );
+
+  app.openapi(
+    createRoute({
+      method: "put",
+      path: "/organizations/{orgId}/connector-oauth-clients",
+      tags,
+      security,
+      summary: "Save the workspace's own OAuth client for an MCP server",
+      description: `${ownClientDoc} The same \`clientId\` again keeps the saved secret unless one is sent. Another \`clientId\` while accounts sign in with the saved one is a 409 \`connector.oauth_client_in_use\` (their tokens belong to it); a client id that isn't printable ASCII is a 400 \`connector.oauth_client_id\`.`,
+      request: {
+        params: OrgParams,
+        body: body(
+          z.object({
+            serverUrl: z.string().min(1).max(500),
+            clientId: z.string().min(1).max(500),
+            clientSecret: z.string().max(2000).optional(),
+            scopes: z
+              .string()
+              .max(1000)
+              .optional()
+              .openapi({ description: "Space- or comma-separated; absent: what the server lists." }),
+          }),
+        ),
+      },
+      responses: { 200: json(OwnClient), ...errors },
+    }),
+    async (c) =>
+      c.json(await setOwnOAuthClient(custom, c.get("user").id, c.req.valid("param").orgId, c.req.valid("json")), 200),
+  );
+
+  app.openapi(
+    createRoute({
+      method: "delete",
+      path: "/organizations/{orgId}/connector-oauth-clients",
+      tags,
+      security,
+      summary: "Remove the workspace's own OAuth client for an authorization server",
+      description:
+        "Refused with a 409 `connector.oauth_client_in_use` while accounts sign in with it: disconnect them first.",
+      request: { params: OrgParams, query: z.object({ issuer: z.string().min(1).max(500) }) },
+      responses: { 204: noContent[204], ...errors },
+    }),
+    async (c) => {
+      await removeOwnOAuthClient(custom, c.get("user").id, c.req.valid("param").orgId, c.req.valid("query").issuer);
       return c.body(null, 204);
     },
   );

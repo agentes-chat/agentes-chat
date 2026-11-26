@@ -9,6 +9,7 @@
  * approved from the notification.
  */
 
+import { formatSpan } from "@agenteschat/i18n/format";
 import { type AppLocale, appLocale } from "@agenteschat/i18n/locale";
 import { pushStrings } from "./push/messages";
 
@@ -49,11 +50,15 @@ export interface PushTextInput {
   screen?: string | null;
   /** `browser_handoff` still unanswered an hour later: the title says the agent still needs them. */
   reminder?: boolean;
+  /** One reminder for all the person left unread: how many things still wait, this one included (`latest.still`). */
+  still?: number | null;
   /** `usage_limit`: what happened (`latest.statusTo`) and the share of the limit used. */
   status?: string | null;
   percent?: number | null;
   /** `widget_failed`: its coded reason (ADR 0135 §6); `agent_reported` sends the agent's words in `text`. */
   reason?: string | null;
+  /** `computer_back`: how long the computer was away (ms). */
+  awayMs?: number | null;
   /** The workspace is personal (ADR 0159): the words for one person and their agents, where a team's would differ. */
   personal?: boolean;
 }
@@ -63,8 +68,17 @@ const clip = (s: string, max: number) => {
   return one.length > max ? `${one.slice(0, max - 1).trimEnd()}…` : one;
 };
 
-/** Title and body of one push, in the device's language. */
+/**
+ * Title and body of one push, in the device's language. A reminder of everything left unread says how many things
+ * wait, over the line of the one it opens.
+ */
 export function renderPush(locale: PushLocale, input: PushTextInput): { title: string; body: string } {
+  const one = renderOne(locale, input);
+  if (!input.still || input.still < 1) return one;
+  return { title: clip(pushStrings(locale).teamWatchStill(input.still), PUSH_TITLE_MAX), body: one.title };
+}
+
+function renderOne(locale: PushLocale, input: PushTextInput): { title: string; body: string } {
   const s = pushStrings(locale);
   const actor = input.actorName?.trim() || (input.actorType === "agent" ? s.anAgent : s.someone);
   // A GIF or a sticker alone (ADR 0091) says what it was where its words would go.
@@ -134,6 +148,10 @@ export function renderPush(locale: PushLocale, input: PushTextInput): { title: s
       );
     case "computer_ready":
       return out(input.personal ? s.computerReadyTitlePersonal : s.computerReadyTitle, s.computerReadyBody);
+    case "computer_down":
+      return out(s.computerDownTitle(what || s.someone), s.computerDownBody);
+    case "computer_back":
+      return out(s.computerBackTitle(what || s.someone), s.computerBackBody(formatSpan(locale, input.awayMs ?? 0)));
     case "browser_handoff":
       // What the agent asked for, in its words ("Entrar no Stripe com a conta de teste"). A desktop doesn't
       // open on the phone: its body says where it does.
@@ -187,6 +205,22 @@ export function renderPush(locale: PushLocale, input: PushTextInput): { title: s
       );
     case "device.access_request":
       return out(s.deviceAccessTitle(actor, input.title?.trim() ?? "", input.label?.trim() ?? ""), s.deviceAccessBody);
+    case "device.tool_request":
+      return out(s.deviceToolTitle(actor, input.label?.trim() ?? ""), s.deviceToolBody);
+    case "device.cli_request":
+      return out(s.deviceCliTitle(actor, input.label?.trim() ?? ""), s.deviceCliBody);
+    case "device.folder_request":
+      // The folder (`title`) and the computer (`label`): it is allowed there, never from the notification.
+      return out(s.deviceFolderTitle(actor, input.title?.trim() ?? "", input.label?.trim() ?? ""), s.deviceFolderBody);
+    case "admin_ask":
+      return out(
+        s.adminAskTitle(
+          actor,
+          input.reason ?? "",
+          (input.reason === "webhook" ? input.title : input.label)?.trim() ?? "",
+        ),
+        s.openBody,
+      );
     case "device.waiting":
       return out(s.deviceWaitingTitle(input.title?.trim() || actor, input.label?.trim() ?? ""), s.deviceWaitingBody);
     case "usage_limit":
@@ -205,6 +239,12 @@ export function renderPush(locale: PushLocale, input: PushTextInput): { title: s
         default:
           return out(s.usageRefusedTitle(actor), s.openBody);
       }
+    case "team_watch":
+      // The right hand's name, then its whole sentence: what is wrong and the one way out, in the person's language.
+      return out(actor, text || s.openBody);
+    case "budget_paused":
+      // The agent's name, then its pause line in the person's language.
+      return out(actor, text || s.openBody);
     default:
       return out(input.waiting ? s.waitingTitle : actor, text || what || s.openBody);
   }

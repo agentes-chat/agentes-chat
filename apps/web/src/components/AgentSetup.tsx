@@ -7,8 +7,11 @@ import {
   useAiStatus,
   useApi,
   useCatalog,
+  useChannels,
+  useCloseSetup,
   useConfirmSetup,
   useCredentials,
+  useDms,
   useModels,
   usePlatformKey,
   useRoles,
@@ -24,7 +27,15 @@ import {
   resourcesOf,
 } from "@agenteschat/client/lib/access-levels";
 import { channelsAfter, sameAudience } from "@agenteschat/client/lib/agent-edit";
-import { audienceModeKey, audienceModeTextKey, audienceOf, audiencePatch } from "@agenteschat/client/lib/audience";
+import { ownerPatchOf, ownerValueOf, ownsAgentAs } from "@agenteschat/client/lib/agent-owner";
+import {
+  audienceModeKey,
+  audienceModeTextKey,
+  audienceOf,
+  audiencePatch,
+  editsAgent,
+  managesAgent,
+} from "@agenteschat/client/lib/audience";
 import { setDraftFor } from "@agenteschat/client/lib/drafts";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { formatTime, joinNames } from "@agenteschat/client/lib/format";
@@ -68,6 +79,7 @@ import {
   Textarea,
   Token,
   TokenList,
+  useMorph,
 } from "@agenteschat/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
@@ -83,16 +95,19 @@ import {
 } from "@/components/AccessLevels";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { ModelSelect, modelOptions, NO_OWNER, OwnerSelect } from "@/components/AgentFields";
-import { usePlanHold } from "@/components/ai/ConnectAiSteps";
+import { useOpenAgentPanel } from "@/components/agent-panel-context";
 import { PlanReplies } from "@/components/ai/PlanReplies";
-import { useConnectAi } from "@/components/ConnectAi";
+import { usePlanHold } from "@/components/ai/plan-hold";
 import { ConnectFlow, type FlowState } from "@/components/ConnectFlow";
-import { ConnectorIcon } from "@/components/ConnectorCatalog";
+import { ConnectorIcon } from "@/components/ConnectorIcon";
 import { useChannelActions } from "@/components/channel-actions";
+import { useConnectAi } from "@/components/connect-ai-context";
 import { SetupBand } from "@/components/new-agent/SetupBand";
+import { PersonalChip } from "@/components/OwnerScope";
 import { useOrg } from "@/components/org-context";
 import { useWidenAsk } from "@/components/ReachLines";
 import { useDirectory } from "@/hooks/useDirectory";
+import { useMyRoleIds } from "@/hooks/useMyRoleIds";
 import { usePersonalView } from "@/hooks/usePersonalView";
 import { useToast } from "@/lib/toast";
 import { useVisibleChannels } from "@/pages/agent/pieces";
@@ -101,8 +116,8 @@ import "./agent-setup.css";
 /*
  * A new agent's setup checklist (ADR 0155 §2): the top of its chat, drawn by the app and never stored, in its voice.
  * Five steps (think, apps, channels, who talks to it, how it works); each button opens a small dialog with the
- * suggestion marked, nothing changes without confirming. Only who may set the agent up sees it: who manages agents
- * all the steps, its owner the ones they may change. Its profile shows the same card while something is left.
+ * suggestion marked, nothing changes without confirming. Only who may set the agent up sees it (`setupSteps`): who
+ * manages it all the steps, its owner the ones they may change. Its profile shows the same card while one is left.
  */
 
 const STEP_ICON: Record<AgentSetupStep, IconName> = {
@@ -118,11 +133,33 @@ const STEP_ICON: Record<AgentSetupStep, IconName> = {
  * personal workspace there is nobody else to talk to it: "who" waits until someone joins (ADR 0159), read live.
  */
 export function useSetupSteps(agent: Agent | undefined): AgentSetupStep[] {
-  const { org, me } = useOrg();
+  const { me } = useOrg();
   const { solo } = usePersonalView();
-  const steps = agent ? setupSteps(agent, { meId: me.user.id, admin: can(org, "manage_agents") }) : [];
+  const steps = agent
+    ? setupSteps(agent, { meId: me.user.id, admin: managesAgent(agent), edits: editsAgent(agent) })
+    : [];
   // Alone in a personal workspace there are no group conversations in sight either: no "where" (ADR 0164).
   return solo ? steps.filter((s) => s !== "who" && s !== "where") : steps;
+}
+
+/**
+ * Whether what the checklist reads has come (or failed), read as its agent's DM opens: the DM holds its conversation
+ * until then, so the checklist draws once, done or not, instead of turning over above the messages.
+ */
+export function useSetupSettled(agent: Agent | undefined): boolean {
+  const { org } = useOrg();
+  const dir = useDirectory(org.id);
+  const steps = useSetupSteps(agent);
+  const on = agent !== undefined && steps.length > 0;
+  const status = useAiStatus(org.id, on);
+  const detail = useAgentDetail(org.id, agent?.id ?? "", on);
+  const channels = useChannels(org.id);
+  const dms = useDms(org.id);
+  const apps = on && agent !== undefined && managesAgent(agent) && steps.includes("apps");
+  const access = useAgentAccess(org.id, agent?.id ?? "", apps);
+  if (!on) return true;
+  const read = [status, detail, channels, dms, ...(apps ? [access] : [])];
+  return !dir.loading && read.every((q) => !q.isPending);
 }
 
 /**
@@ -132,7 +169,7 @@ export function useSetupSteps(agent: Agent | undefined): AgentSetupStep[] {
 function useSetupProgress(agent: Agent) {
   const { org } = useOrg();
   const dir = useDirectory(org.id);
-  const admin = can(org, "manage_agents");
+  const admin = managesAgent(agent);
   const steps = useSetupSteps(agent);
   const status = useAiStatus(org.id);
   const access = useAgentAccess(org.id, agent.id, admin && steps.includes("apps"));
@@ -225,14 +262,16 @@ const roleWord = (name: string, locale: string) =>
 
 /**
  * The checklist card. `dm`: under the agent's greeting, in its voice ("Pra eu começar"); `profile`: on its page
- * ("Para o Leo começar"), gone once everything is done.
+ * ("Para o Leo começar"), gone once everything is done or closed with its ×.
  */
 export function AgentSetupCard({ agent, place }: { agent: Agent; place: "dm" | "profile" }) {
   const { t, i18n } = useTranslation();
   const { org, me } = useOrg();
   const navigate = useNavigate();
   const actions = useChannelActions();
+  const openPanel = useOpenAgentPanel();
   const connect = useConnectAi();
+  const ai = useAiStatus(org.id).data;
   const dir = useDirectory(org.id);
   const { steps, done, doneHere, all, ready, held, connectors, granted, inChannels, visible } = useSetupProgress(agent);
   const catalog = useCatalog();
@@ -245,8 +284,9 @@ export function AgentSetupCard({ agent, place }: { agent: Agent; place: "dm" | "
   const said = useDoneSay(ready, doneHere, steps.length, agent.appearance?.color, burstRef, (step) =>
     t(`agentSetup.say.${step}`, agentGrammar(agent.name)),
   );
+  const close = useCloseSetup(org.id, agent.id);
 
-  if (steps.length === 0 || (place === "profile" && all)) return null;
+  if (steps.length === 0 || (place === "profile" && (all || agent.setup?.closed))) return null;
 
   const names = (list: AccessResource[]) =>
     joinNames(
@@ -267,6 +307,8 @@ export function AgentSetupCard({ agent, place }: { agent: Agent; place: "dm" | "
   const onPlan = Boolean(agent.brain && agent.brain.kind !== "model");
   const owner = agent.ownerUserId ? dir.memberById.get(agent.ownerUserId) : undefined;
   const ownerIsMe = agent.ownerUserId === me.user.id;
+  // A role that answers for it is named by its name (ADR 0085, addendum of 2026-11-21).
+  const ownerRole = agent.ownerRoleId ? dir.roleName(agent.ownerRoleId) : undefined;
 
   const rowOf = (step: AgentSetupStep) =>
     setupRow(t, step, done.has(step), {
@@ -282,14 +324,29 @@ export function AgentSetupCard({ agent, place }: { agent: Agent; place: "dm" | "
         : null,
       firstChannel: firstChannel ? `#${firstChannel.name}` : null,
       audience: audience.mode,
-      otherOwner: !ownerIsMe && owner ? (owner.name.split(" ")[0] ?? owner.name) : null,
+      otherOwner: ownerRole ?? (!ownerIsMe && owner ? (owner.name.split(" ")[0] ?? owner.name) : null),
       onPlan,
       personal: isPersonal(org),
     });
 
+  // Others of the person's agents with no AI, the right hand aside: Connect signs in once for all of them.
+  const othersWait = (ai?.agents ?? []).some((a) => {
+    const other = a.agentId !== agent.id ? dir.agentById.get(a.agentId) : undefined;
+    return a.state === "no_ai" && other?.ownerUserId === me.user.id && !isRightHand(other);
+  });
   const act = (step: AgentSetupStep) => {
-    if (step === "ai") connect?.open({ agentId: agent.id, chat: true });
-    else setOpen(step);
+    // Its AI is its "Quem pensa", on the account list ("Adicionar conta" at its foot): in the panel beside the
+    // conversation, else on its page. With others waiting too, Connect, for all of them.
+    if (step === "ai") {
+      if (othersWait && connect) connect.open({ agentId: agent.id, chat: true });
+      else if (openPanel) openPanel(agent.id, "settings", "brain:switch");
+      else
+        void navigate({
+          to: "/org/$orgId/agents/$agentId",
+          params: { orgId: org.id, agentId: agent.id },
+          search: { tab: "settings", sec: "brain", brain: "switch" },
+        });
+    } else setOpen(step);
   };
   const confirmed = () => setOpen(null);
 
@@ -322,6 +379,8 @@ export function AgentSetupCard({ agent, place }: { agent: Agent; place: "dm" | "
       done={counted.filter((s) => done.has(s)).length}
       total={counted.length}
       place={place}
+      // On its page it may go before everything is done; in its chat it is the first message and stays.
+      {...(place === "profile" ? { onClose: () => close.mutate() } : {})}
       burstRef={burstRef}
       band={
         inChat && (
@@ -349,7 +408,6 @@ export function AgentSetupCard({ agent, place }: { agent: Agent; place: "dm" | "
             desc: planOnly ? t("agentSetup.who.todoPlanDesc") : undefined,
             action: { label: row.action, onClick: () => act(s) },
           };
-        const acts = s !== "ai" || Boolean(connect);
         // On a hold it waits for the plan, whose one button is the hold's banner.
         if (s === "ai" && held && !isDone) {
           return {
@@ -369,15 +427,11 @@ export function AgentSetupCard({ agent, place }: { agent: Agent; place: "dm" | "
           title: row.title,
           desc: row.desc,
           saying: said?.step === s ? said.text : null,
-          ...(acts
-            ? {
-                action: {
-                  label: connectFirst ? t("agentSetup.firstRun.apps.connect") : row.action,
-                  primary: s === next,
-                  onClick: () => act(s),
-                },
-              }
-            : {}),
+          action: {
+            label: connectFirst ? t("agentSetup.firstRun.apps.connect") : row.action,
+            primary: s === next,
+            onClick: () => act(s),
+          },
         };
       })}
       foot={
@@ -434,6 +488,7 @@ export function SetupCardView({
   rows,
   foot,
   band,
+  onClose,
   burstRef,
   children,
 }: {
@@ -443,19 +498,38 @@ export function SetupCardView({
   place: "dm" | "profile";
   rows: SetupCardRow[];
   foot?: ReactNode;
+  /** Its × after the count: the card goes, whatever is left. */
+  onClose?: () => void;
   /** On top of the card: a new agent's sky in its chat (`SetupBand`, ADR 0164). */
   band?: ReactNode;
   burstRef?: RefObject<HTMLCanvasElement | null>;
   children?: ReactNode;
 }) {
   const { t } = useTranslation();
+  // A row checked or a step added: the card glides to its new height.
+  const box = useRef<HTMLElement>(null);
+  useMorph(box);
   return (
-    <section className="setup-cl" aria-label={title} data-place={place}>
+    <section ref={box} className="setup-cl" aria-label={title} data-place={place}>
       <canvas ref={burstRef} className="setup-cl__burst" aria-hidden="true" tabIndex={-1} />
       {band}
       <div className="setup-cl__head">
         <b>{title}</b>
         <small>{t("agentSetup.count", { done, total })}</small>
+        {onClose && (
+          <span className="setup-cl__close ac-acts">
+            <Button
+              variant="ghost"
+              size="sm"
+              iconOnly
+              icon="close"
+              className="ac-btn--glyph"
+              aria-label={t("common.close")}
+              title={t("common.close")}
+              onClick={onClose}
+            />
+          </span>
+        )}
       </div>
       <div className="setup-cl__meter" aria-hidden="true">
         {rows
@@ -785,16 +859,24 @@ function AppsDialog({
           <ul className="level-list setup-dlg__apps" aria-label={t("access.kind.connectors")}>
             {ordered.map((r) => {
               const name = resourceName(t, r, items);
+              const personal = Boolean(r.connectionId && items.get(r.connectionId)?.ownerUserId);
               return (
                 <LevelRow
                   key={r.id}
                   icon={<ResourceIcon resource={r} items={items} name={name} />}
                   name={name}
+                  {...(personal ? { hint: t("connectors.personal.worksWhenAsked") } : {})}
                   asks={asksAt(r, level(r)).map((x) => toolLabel(t, r, x))}
                   levels={r.levels}
                   value={level(r)}
                   onChange={(l) => setLevelsDraft((d) => ({ ...d, [r.id]: l }))}
-                  tag={suggestionOf(r) ? <span className="setup-tag">{t("agentSetup.suggested")}</span> : undefined}
+                  tag={
+                    personal ? (
+                      <PersonalChip />
+                    ) : suggestionOf(r) ? (
+                      <span className="setup-tag">{t("agentSetup.suggested")}</span>
+                    ) : undefined
+                  }
                 />
               );
             })}
@@ -910,35 +992,40 @@ function WhoDialog({ agent, onClose, onSaved }: { agent: Agent; onClose: () => v
   const widen = useWidenAudience(org.id, agent.id);
   const asks = useWidenAsk(agent);
   const confirm = useConfirmSetup(org.id, agent.id);
-  const admin = can(org, "manage_agents");
+  const admin = managesAgent(agent);
   const g = agentGrammar(agent.name);
   const planKind = agent.brain && agent.brain.kind !== "model" ? agent.brain.kind : null;
   const brain = useAgentBrain(org.id, agent.id, planKind !== null).data;
   const saved = audienceOf(agent);
   const [audience, setAudience] = useState<AgentAudience>(saved);
-  const [ownerId, setOwnerId] = useState(agent.ownerUserId ?? NO_OWNER);
+  // A person's id, a role's `role:<id>` or `NO_OWNER` (ADR 0085, addendum of 2026-11-21).
+  const [ownerId, setOwnerId] = useState(ownerValueOf(agent, NO_OWNER));
   const [share, setShare] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
-  const owner = ownerId === NO_OWNER ? null : ownerId;
+  const { ownerUserId: owner, ownerRoleId } = ownerPatchOf(ownerId, NO_OWNER);
   const ownerName = owner ? dir.memberById.get(owner)?.name : undefined;
+  const ownerRole = ownerRoleId ? dir.roleName(ownerRoleId) : undefined;
   const pickedPeople = new Set(audience.userIds);
   const pickedRoles = new Set(audience.roleIds ?? []);
   // A personal workspace's family picks people first, and a role only when one is worth it (ADR 0159).
   const personal = isPersonal(org);
   const allRoles = roles.data?.roles ?? [];
   const roleList = rolePicksInSight(org, allRoles, audience.roleIds ?? [])
-    ? sortRoles(allRoles.filter((r) => !isEveryone(r)))
+    ? sortRoles(allRoles.filter((r) => !isEveryone(r) && r.id !== ownerRoleId))
     : [];
   const people = dir.members.filter((m) => m.userId !== owner);
   const modeText = (mode: AudienceMode) =>
     mode === "owner"
-      ? ownerName
-        ? t("audience.modeText.owner", { ...g, owner: owner === me.user.id ? t("agentSetup.who.you") : ownerName })
-        : t("audience.modeText.noOwner")
+      ? ownerRole
+        ? t("audience.modeText.ownerRole", { ...g, role: ownerRole })
+        : ownerName
+          ? t("audience.modeText.owner", { ...g, owner: owner === me.user.id ? t("agentSetup.who.you") : ownerName })
+          : t("audience.modeText.noOwner")
       : t(audienceModeTextKey(org, mode), g);
+  const owned = Boolean(owner || ownerRoleId);
   const valid =
     audience.mode === "everyone" ||
-    (audience.mode === "owner" ? Boolean(owner) : pickedPeople.size > 0 || pickedRoles.size > 0 || Boolean(owner));
+    (audience.mode === "owner" ? owned : pickedPeople.size > 0 || pickedRoles.size > 0 || owned);
   const shareOn = share ?? (brain ? !brain.onlyOwner : false);
   const ownerIsMe = owner === me.user.id;
   const picked = pickedPeople.size > 0 || pickedRoles.size > 0;
@@ -949,13 +1036,17 @@ function WhoDialog({ agent, onClose, onSaved }: { agent: Agent; onClose: () => v
       : t("audience.pickSomeone");
   const planOwner = dir.memberById.get(agent.ownerUserId ?? "")?.name.split(" ")[0];
   // "Você sempre pode, como responsável" under the people picked.
-  const always = ownerName
-    ? t("audience.ownerAlways", { name: ownerIsMe ? t("agentSetup.who.youCap") : ownerName })
-    : undefined;
+  const always = ownerRole
+    ? t("audience.ownerRoleAlways", { role: ownerRole })
+    : ownerName
+      ? t("audience.ownerAlways", { name: ownerIsMe ? t("agentSetup.who.youCap") : ownerName })
+      : undefined;
   const save = async () => {
     setBusy(true);
     try {
-      if (owner !== (agent.ownerUserId ?? null)) await update.mutateAsync({ ownerUserId: owner });
+      // A person or a role (ADR 0085, addendum of 2026-11-21): the server clears the other one.
+      if (owner !== (agent.ownerUserId ?? null) || ownerRoleId !== (agent.ownerRoleId ?? null))
+        await update.mutateAsync(ownerRoleId ? { ownerRoleId } : { ownerUserId: owner });
       if (!sameAudience(audience, saved)) {
         // The one save that asks first when it takes mailboxes away or opens someone else's plan (`useWidenAsk`).
         const next = audiencePatch(audience);
@@ -1089,7 +1180,10 @@ function WhoDialog({ agent, onClose, onSaved }: { agent: Agent; onClose: () => v
       {admin && (
         <Field
           label={t("newAgent.owner")}
-          hint={{ name: t("common.about", { label: t("newAgent.owner") }), text: t("agentSetup.who.ownerHelp", g) }}
+          hint={{
+            name: t("common.about", { label: t("newAgent.owner") }),
+            text: ownerRole ? t("newAgent.ownerRoleHelp", { ...g, role: ownerRole }) : t("agentSetup.who.ownerHelp", g),
+          }}
         >
           <OwnerSelect value={ownerId} onChange={setOwnerId} members={dir.members} meId={me.user.id} />
         </Field>
@@ -1101,7 +1195,8 @@ function WhoDialog({ agent, onClose, onSaved }: { agent: Agent; onClose: () => v
 /** "Como o Leo trabalha": its instructions, its monthly limit when it pays per use, its model under "Mais opções". */
 function HowDialog({ agent, onClose, onSaved }: { agent: Agent; onClose: () => void; onSaved: () => void }) {
   const { t, i18n } = useTranslation();
-  const { org } = useOrg();
+  const { org, me } = useOrg();
+  const myRoleIds = useMyRoleIds();
   const update = useUpdateAgent(org.id, agent.id);
   const models = useModels();
   const credentials = useCredentials(org.id, can(org, "manage_credentials"));
@@ -1109,8 +1204,12 @@ function HowDialog({ agent, onClose, onSaved }: { agent: Agent; onClose: () => v
   const detail = useAgentDetail(org.id, agent.id);
   const g = agentGrammar(agent.name);
   const onApi = !agent.brain || agent.brain.kind === "model";
-  // Money is for who sees it (admins): the agent's own limit, else the workspace's.
-  const seesBudget = onApi && agent.monthlyBudgetUsd !== undefined;
+  // Whoever edits it saves its instructions; its budget and model as the server's `updateAgent` takes them (ADR 0085
+  // addendum of 2026-11-17): money only from who manages it (its own limit, else the workspace's), its API model also
+  // from its owner. A save with a field the person may not change would be refused whole.
+  const manages = managesAgent(agent);
+  const seesBudget = onApi && manages && agent.monthlyBudgetUsd !== undefined;
+  const picksModel = onApi && (manages || ownsAgentAs(agent, me.user.id, myRoleIds));
   const [instructions, setInstructions] = useState(agent.instructions);
   const [budget, setBudget] = useState(agent.monthlyBudgetUsd == null ? "" : String(agent.monthlyBudgetUsd));
   const [model, setModel] = useState(agent.model);
@@ -1128,7 +1227,7 @@ function HowDialog({ agent, onClose, onSaved }: { agent: Agent; onClose: () => v
       const patch: Parameters<typeof update.mutateAsync>[0] = {};
       if (instructions !== agent.instructions) patch.instructions = instructions;
       if (seesBudget && amount !== (agent.monthlyBudgetUsd ?? null)) patch.monthlyBudgetUsd = amount;
-      if (onApi && model !== agent.model) patch.model = model;
+      if (picksModel && model !== agent.model) patch.model = model;
       if (Object.keys(patch).length > 0) await update.mutateAsync(patch);
     });
   const fallback = detail.data?.defaultBudgetUsd;
@@ -1169,7 +1268,7 @@ function HowDialog({ agent, onClose, onSaved }: { agent: Agent; onClose: () => v
           />
         </Field>
       )}
-      {onApi && (
+      {picksModel && (
         <details className="setup-dlg__more">
           <summary>
             <Icon name="chevronDown" size={16} />

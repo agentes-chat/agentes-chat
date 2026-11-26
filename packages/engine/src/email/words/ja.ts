@@ -41,6 +41,11 @@ export const words: EmailWords = {
       inviter
         ? [{ b: inviter }, `${email ? ` (${email})` : ""} から、`, { b: org }, ` に${role}として招待されました。`]
         : [{ b: org }, ` に${role}として招待されました。`],
+    starts: (channels, agents) => [
+      ...(channels ? ["最初から ", ...channels, " に参加します。"] : []),
+      ...(agents ? [...agents, " と一緒に働きます。"] : []),
+    ],
+    more: (n) => `ほか${n}件`,
     what: "agentes.chat は、人と AI エージェントが一緒に働く場所です。",
     noteFrom: (inviter, note) => [{ b: inviter ? `${inviter}: ` : "メッセージ: " }, `「${note}」`],
     button: "招待を承諾",
@@ -216,6 +221,10 @@ export const words: EmailWords = {
     preheader: "メンバーページで承認または却下してください。返答するまで何も起こりません。",
     headline: "参加リクエストがあなたの対応を待っています",
     body: (org) => [{ b: org }, " の招待リンクを開いた人が、参加をリクエストしました。"],
+    outside: (by) => [
+      { b: by },
+      " の外部協力者として参加をリクエストしました。プランの席は使わず、いつでも削除できます。",
+    ],
     note: "心当たりのある人だけを承認してください。ページで別のロールを選ばない限り、メンバーとして参加します。",
     approve: "承認",
     deny: "却下",
@@ -283,6 +292,14 @@ export const words: EmailWords = {
   deletionCode: {
     subjectWorkspace: (code) => `ワークスペース削除の確認コード: ${code}`,
     subjectAccount: (code) => `アカウント全体の削除の確認コード: ${code}`,
+    subjectReset: (code) => `ワークスペースのリセットの確認コード: ${code}`,
+    reset: (org) => [
+      "このコードを入力すると、ワークスペース ",
+      { b: org },
+      " がリセットされます。エージェント、会話、ファイル、メモリはすぐに完全に消去され、新しいワークスペースとして始まります。",
+    ],
+    whyReset: (org) =>
+      `このメールは、あなたのアカウントが agentes.chat の ${org} のリセットをリクエストしたため送信されました。`,
     preheader: "agentes.chat に入力して確定してください。有効期限は10分です。",
     headline: "確認コード",
     workspace: (org) => [
@@ -314,6 +331,54 @@ export const words: EmailWords = {
       ],
     },
   },
+  emailChange: {
+    code: {
+      subject: (code) => `メールアドレス変更の確認コード: ${code}`,
+      preheader: "agentes.chat に入力して確定してください。有効期限は10分です。",
+      headline: "確認コード",
+      body: (email, newEmail) => [
+        "このコードを入力すると、アカウント ",
+        { b: email },
+        " のメールアドレスが ",
+        { b: newEmail },
+        " に変わります。",
+      ],
+      support: (address) => [
+        "有効期限は10分で、このコードがなければメールアドレスは変わりません。心当たりがない場合は、コードを誰にも教えず、",
+        { mail: address },
+        " までご連絡ください。",
+      ],
+      noSupport:
+        "有効期限は10分で、このコードがなければメールアドレスは変わりません。心当たりがない場合は、コードを誰にも教えず、このサーバーの管理者に知らせてください。",
+      why: "あなたのアカウントから agentes.chat のメールアドレス変更がリクエストされたため、このメールをお送りしています。",
+    },
+    link: {
+      subject: "agentes.chat の新しいメールアドレスを確認してください",
+      preheader: "クリックすると、これからはこのアドレスでログインします。リンクの有効期限は1時間です。",
+      headline: "新しいメールアドレスを確認してください",
+      body: "あと一歩です。このアドレスがあなたのものか確認してください。確認後は、このアドレスでアカウントにログインします。",
+      button: "新しいメールアドレスを確認",
+      small: "リンクの有効期限は1時間です。心当たりがない場合は、このメールを無視してください。",
+      why: "agentes.chat のアカウントでこのアドレスを使うリクエストがあったため、このメールをお送りしています。",
+    },
+    changed: {
+      subject: "agentes.chat アカウントのメールアドレスが変更されました",
+      preheader: "心当たりがない場合は、7日以内ならこのアドレスに戻せます。",
+      headline: "メールアドレスが変更されました",
+      body: (email, newEmail) => [
+        "アカウント ",
+        { b: email },
+        " は、これから ",
+        { b: newEmail },
+        " でログインします。",
+      ],
+      notYou:
+        "心当たりがない場合は、7日以内にボタンを押してください。このアドレスに戻し、すべてのセッションをログアウトさせ、AIアプリの接続を解除し、その後に追加されたログイン方法を使えなくします。パスワードも消去され、次のパスワードは「パスワードを忘れた場合」から設定します。",
+      button: "自分ではありません",
+      small: "ご自身で変更した場合は、何もする必要はありません。",
+      why: "このアドレスが agentes.chat アカウントのメールアドレスだったため、このメールをお送りしています。",
+    },
+  },
   deleting: {
     subject: (day) => `参加中のワークスペースが${day}に削除されます`,
     preheader: "現在は閲覧のみです。それまではオーナーが復元できます。",
@@ -342,6 +407,43 @@ export const words: EmailWords = {
     why: (org) => `agentes.chat の ${org} に参加しているため、このメールをお送りしています。`,
     personal: {
       why: () => "agentes.chat のこのワークスペースに参加しているため、このメールをお送りしています。",
+    },
+  },
+  computerDown: {
+    subject: "コンピューターが応答していません",
+    preheader: "このコンピューターでのエージェントの作業が待機中です。",
+    headline: "コンピューターが応答していません",
+    body: (name, org, away) => [
+      { b: name },
+      " (",
+      { b: org },
+      `) が${away}応答していません。このコンピューターが必要な作業は待機し、復旧すると再開します。`,
+    ],
+    runs: "待機中のエージェントへのリクエスト",
+    calls: "待機中のWebhook呼び出し",
+    note: "すぐに続けるには、このコンピューターのページでエージェントを別のコンピューターに移してください。",
+    button: "コンピューターを開く",
+    why: (org) => `agentes.chat の ${org} のコンピューターを管理しているため、このメールをお送りしています。`,
+    back: {
+      subject: "コンピューターが復旧しました",
+      preheader: "待機していた作業を再開します。",
+      headline: "コンピューターが復旧しました",
+      runs: "待機していたエージェントへのリクエスト",
+      calls: "待機していたWebhook呼び出し",
+      body: (name, org, away) => [
+        { b: name },
+        " (",
+        { b: org },
+        `) が${away}後に復旧しました。待機していた作業を再開します。`,
+      ],
+    },
+    personal: {
+      body: (name, _org, away) => [
+        { b: name },
+        `が${away}応答していません。このコンピューターが必要な作業は待機し、復旧すると再開します。`,
+      ],
+      why: () => "agentes.chat の個人ワークスペースのコンピューターを管理しているため、このメールをお送りしています。",
+      back: { body: (name, _org, away) => [{ b: name }, `が${away}後に復旧しました。待機していた作業を再開します。`] },
     },
   },
   appConnected: {
@@ -420,6 +522,36 @@ export const words: EmailWords = {
     table: (day) => `表全体: bun run report:autonomy --day ${day}`,
     why: "このアドレスがこのサーバーの OPS_REPORT_EMAIL に設定されているため、このメールをお送りしています。1日に1回送信されます。",
   },
+  accountOpened: {
+    subject: (plan) => `あなたの ${plan} アカウントを使える人が増えました`,
+    preheader: (plan) => `その利用にはあなたの ${plan} プランとその上限が使われます。`,
+    headline: "あなたの AI アカウントを使える人が変更されました",
+    body: (by, account, plan) => [
+      { b: by },
+      ` さんが、あなたの ${plan} アカウント `,
+      { b: account },
+      ` を使える人を変更しました。その利用にはあなたのプランとその上限が使われます。`,
+    ],
+    account: "アカウント",
+    by: "変更した人",
+    setting: "権限",
+    use: "エージェントで使う",
+    reply: "全員に応答",
+    was: "変更前",
+    now: "変更後",
+    everyone: "ワークスペースの全員",
+    admins: "あなたと管理者",
+    onlyYou: "あなただけ",
+    agentOwner: "エージェントの所有者だけ",
+    note: "元に戻すには、「AI と利用状況」でアカウントを開き、権限を変更してください。",
+    button: "AI アカウントを開く",
+    why: (org) =>
+      `${org} でこの AI アカウントを接続したのがあなたで、ほかの人がそれを使える人を変更したため、このメールをお送りしています。`,
+    personal: {
+      why: () =>
+        "この AI アカウントを接続したのがあなたで、ほかの人がそれを使える人を変更したため、このメールをお送りしています。",
+    },
+  },
   planOpened: {
     subject: (plan) => `あなたの ${plan} プランで、より多くの人があなたのエージェントと話せるようになりました`,
     preheader: (plan) => `その会話にはあなたの ${plan} プランとその上限が使われます。`,
@@ -492,5 +624,74 @@ export const words: EmailWords = {
       why: () =>
         "agentes.chatのこのワークスペースはあなたのものであるため、このメールをお送りしています。このお知らせは2回だけです。",
     },
+  },
+  surface: {
+    linked: {
+      subject: (surface) => `${surface} が agentes.chat アカウントに連携されました`,
+      preheader: "これからはアシスタントがそちらで返信します。心当たりがなければ連携を解除してください。",
+      headline: (surface) => `${surface} が連携されました`,
+      body: (surface, display, org) => [
+        { b: display },
+        `（${surface}）が `,
+        { b: org },
+        " のアシスタントと話せるようになりました。",
+      ],
+      notYou:
+        "心当たりがありませんか？連携を解除してください。そこからのメッセージはすぐにアカウントに届かなくなります。",
+      button: "連携を解除",
+      small: "ご自身で行った場合は何もする必要はありません。連携はいつでも設定から解除できます。",
+      why: (surface) => `${surface} が agentes.chat アカウントに連携されたため、このメールをお送りしています。`,
+      picture: "スマートフォンでも話せるアシスタント",
+    },
+    unlinked: {
+      subject: (surface) => `${surface} と agentes.chat アカウントの連携が解除されました`,
+      preheader: "相手側の ID が変わりました。ご自身なら設定からもう一度連携してください。",
+      headline: (surface) => `${surface} の連携が解除されました`,
+      body: (surface, display) => [{ b: display }, `（${surface}）は ID が変わったため連携が解除されました。`],
+      small: "ご自身なら設定からもう一度連携してください。",
+      why: (surface) => `${surface} が agentes.chat アカウントに連携されていたため、このメールをお送りしています。`,
+      picture: "スマートフォンからは外れたアシスタント",
+    },
+    pinReset: {
+      subject: (surface) => `${surface} の PIN を設定`,
+      preheader: "チャットアプリから操作を承認するための PIN を設定してください。",
+      headline: (surface) => `${surface} の PIN を設定`,
+      body: (surface) =>
+        `${surface} から操作を承認するときに使う PIN を設定するためのリンクが依頼されました。ご本人の場合は、このボタンで開くページで設定してください。`,
+      button: "PIN を設定",
+      small:
+        "このリンクは 1 時間以内に 1 回だけ使えます。心当たりがなければ、このメールは無視してください。何も変わりません。",
+      why: (surface) => `${surface} が agentes.chat アカウントに連携されているため、このメールをお送りしています。`,
+    },
+    pinLocked: {
+      subject: (surface) => `${surface} の PIN がロックされました`,
+      preheader: "PIN が 3 回続けて間違っていました。チャットアプリからの承認は一時停止中です。",
+      headline: (surface) => `${surface} の PIN がロックされました`,
+      body: (surface, time) =>
+        `${surface} から操作を承認しようとして、間違った PIN が 3 回続けて入力されました。${surface} からの承認は ${time}の間、停止されます。`,
+      lockedFor: ["15 分", "1 時間", "24 時間"],
+      small: (surface) =>
+        `ご本人の場合は、しばらくしてからもう一度お試しください。心当たりがない場合は、通知設定で ${surface} の連携を解除してください。そこから誰も承認できなくなります。`,
+      button: "通知設定を開く",
+    },
+  },
+  supportReply: {
+    subject: "お問い合わせへの回答",
+    preheader: "agentes.chat でご依頼いただいた件についてのお知らせです。",
+    headline: "お問い合わせへの回答",
+    answers: {
+      received: "ご依頼を受け取りました。現在確認しています。",
+      need_more:
+        "対応のために、次のことを知る必要があります。何をしていたか、どうなると思っていたか、実際に何が起きたか。",
+      resolved: "ご報告いただいた問題は修正されました。",
+      handed_over: "ここからは担当者がご依頼を引き継ぎ、お返事します。",
+    },
+    from: (host) =>
+      host
+        ? ["この回答は ", { nobr: host }, " の agentes.chat サーバーの管理者からお送りしています。"]
+        : "この回答は agentes.chat からお送りしています。",
+    ai: "この回答は AI アシスタントが作成しました。",
+    reply: (address) => ["返信する場合は、", { mail: address }, " までご連絡ください。"],
+    why: "agentes.chat でお問い合わせいただいたため、このメールをお送りしています。",
   },
 };

@@ -1,4 +1,4 @@
-import type { ModelUsage } from "./types";
+import type { ModelRequest, ModelUsage } from "./types";
 
 /**
  * Prices in nano-USD per token (1e-9 USD), i.e. USD per million tokens × 1000,
@@ -20,7 +20,7 @@ export interface TokenPrices {
 export interface ProviderInfo {
   label: string;
   /** The API it speaks, which picks its adapter (`createModelProviders`). */
-  protocol: "anthropic" | "openai" | "gemini" | "openrouter" | "custom";
+  protocol: "anthropic" | "openai" | "gemini" | "openrouter" | "commandcode" | "custom";
   /** Replaces the SDK's default host. */
   baseURL?: string;
   /**
@@ -67,6 +67,8 @@ export const PROVIDERS = {
   },
   // Its models come from its public list at run time (`openrouter.ts`), never from this catalog.
   openrouter: { label: "OpenRouter", protocol: "openrouter" },
+  // Claude over Anthropic Messages, the rest over Chat Completions (`commandcode.ts`).
+  commandcode: { label: "Command Code", protocol: "commandcode" },
   // A workspace's own endpoint (ADR 0146): its address, API style and models live on its credential (`custom.ts`).
   custom: { label: "Other provider", protocol: "custom" },
 } as const satisfies Record<string, ProviderInfo>;
@@ -82,6 +84,11 @@ export interface ModelInfo {
   prices: TokenPrices;
   /** Lower prices the provider charges until a day (UTC, exclusive): `prices` apply from then on. */
   intro?: { until: string; prices: TokenPrices };
+  /**
+   * Lower prices outside the provider's peak hours (UTC, `[from, to)`, Monday to Friday; weekends are off-peak all
+   * day): `prices` are the peak ones.
+   */
+  offPeak?: { prices: TokenPrices; peakHoursUtc: readonly (readonly [number, number])[] };
   /** Prices for the whole request when its prompt exceeds `aboveInputTokens`. */
   longContext?: { aboveInputTokens: number; prices: TokenPrices };
   /** Ask the API to retry a refused request on a fallback model (Anthropic `fallbacks: "default"`). */
@@ -100,6 +107,11 @@ export interface ModelInfo {
    * a little (it can't be turned off). Absent: `none` goes as `low`.
    */
   leastThinking?: "off" | "minimal";
+  /**
+   * Returns the notes it writes between tool calls as progress-update thinking blocks, empty unless asked for with
+   * `thinking.display: "updates"` (Anthropic beta `thinking-display-updates-2026-08-18`).
+   */
+  thinkingUpdates?: true;
   /** Suggested for new agents of that provider. */
   recommended?: boolean;
   /** Its size in the provider's line, for "Automático": each run picks a tier, mapped back to a model. */
@@ -108,11 +120,22 @@ export interface ModelInfo {
   contextWindow?: number;
   /** The most output tokens one call may ask for; the gateway caps each call at it. */
   maxOutputTokens?: number;
-  /** The reasoning efforts it takes, highest first: a request's effort goes as the nearest. Absent: any. */
+  /**
+   * The reasoning efforts it takes, highest first: a request's effort goes as the nearest. Absent: any up to `high`
+   * (`effortWithin`); on OpenRouter's list, any.
+   */
   efforts?: readonly string[];
   /** It can't follow an `outputSchema`: never a pick for routing, the judge or summaries. */
   structuredOutput?: false;
-  /** In a long list (OpenRouter's): `true` is a good pick, shown first. Absent: a catalog model. */
+  /**
+   * Reads tool results' pictures (no PDFs) through its provider's Anthropic-compatible endpoint (`ProviderInfo.compat`),
+   * which otherwise gets them left out.
+   */
+  images?: true;
+  /**
+   * `false`: the pickers offer it only to a workspace with its provider's key (OpenRouter's long list, Command Code's).
+   * `true`: a long list's good pick, shown first, greyed without a key. Absent: a catalog model.
+   */
   pick?: boolean;
   /** No prices known (a workspace's own endpoint, ADR 0146): its calls cost 0 and count tokens only. */
   unpriced?: true;
@@ -131,10 +154,57 @@ export const MODEL_TIERS: readonly ModelTier[] = ["small", "medium", "large"];
 export const AUTO_MODEL = "auto";
 export const isAutoModel = (model: string | null | undefined) => model === AUTO_MODEL;
 
+type Effort = NonNullable<ModelRequest["effort"]>;
+
+/** The effort a model is sent: `xhigh` and `max` go as `high` unless its row lists them (`efforts`). */
+export function effortWithin<E extends Effort>(effort: E | undefined): Exclude<E, "xhigh" | "max"> | "high" | undefined;
+export function effortWithin<E extends Effort>(
+  effort: E | undefined,
+  info: ModelInfo | undefined,
+): E | "high" | undefined;
+export function effortWithin(effort: Effort | undefined, info?: ModelInfo): Effort | undefined {
+  return (effort === "xhigh" || effort === "max") && !info?.efforts?.includes(effort) ? "high" : effort;
+}
+
+/**
+ * An agent call's output cap when the server sets none (`AGENT_MAX_OUTPUT_TOKENS`). Thinking counts against it, so
+ * 16K cut long answers and big tool inputs at high effort: 64K where the model's row says how much it may write
+ * (up to 128K at `max`), else 16K, since sending more than a model takes is refused. At most a quarter of the
+ * window (16K at least): the cap is held back from the input budget, and a listed row's limit is often its window.
+ */
+export function agentOutputTokens(model: string, effort?: ModelRequest["effort"]): number {
+  const info = modelInfo(model);
+  const most = info?.maxOutputTokens;
+  if (!most) return 16_000;
+  const target = effortWithin(effort, info) === "max" ? 128_000 : 64_000;
+  return Math.min(most, target, Math.max(16_000, Math.floor(contextWindowOf(model) / 4)));
+}
+
 /** Context window assumed for a model without one in the catalog: the smallest current one, so runs stay inside it. */
 export const DEFAULT_CONTEXT_WINDOW = 200_000;
 
+// DeepSeek's peak hours through Command Code, at full price; the other 17 hours of a weekday and all weekend cost half.
+const DEEPSEEK_PEAK = [
+  [1, 4],
+  [6, 10],
+] as const;
+
+// Claude 5.x on its own API: every effort, and up to 128K output tokens (platform.claude.com, 2026-11-21).
+const CLAUDE_EFFORTS = ["max", "xhigh", "high", "medium", "low"] as const;
+
 export const MODEL_CATALOG: Record<string, ModelInfo> = {
+  // Claude Fable 5.2, Fable 5.1's successor at a lower price: $8 / $0.20 / $10 / $40 across its whole 1M-token
+  // window (2026-11-17). Like 5.1, no tier and no pick for routing or system tasks: people choose it.
+  "claude-fable-5-2": {
+    provider: "anthropic",
+    label: "Claude Fable 5.2",
+    prices: { input: 8000, output: 40000, cacheRead: 200, cacheWrite: 10000 },
+    contextWindow: 1_000_000,
+    maxOutputTokens: 128_000,
+    efforts: CLAUDE_EFFORTS,
+    serverSideFallback: true,
+    thinkingUpdates: true,
+  },
   // Its 1M-token window from platform.claude.com/docs/en/about-claude/models/overview, all of it at these prices
   // (2026-11-09). No tier and no pick for routing or system tasks: "Automático" never chooses it, people do.
   "claude-fable-5-1": {
@@ -142,14 +212,20 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     label: "Claude Fable 5.1",
     prices: { input: 10000, output: 50000, cacheRead: 250, cacheWrite: 12500 },
     contextWindow: 1_000_000,
+    maxOutputTokens: 128_000,
+    efforts: CLAUDE_EFFORTS,
     serverSideFallback: true,
+    thinkingUpdates: true,
   },
   "claude-opus-5-5": {
     provider: "anthropic",
     label: "Claude Opus 5.5",
     prices: { input: 4000, output: 20000, cacheRead: 200, cacheWrite: 5000 },
     contextWindow: 1_000_000,
+    maxOutputTokens: 128_000,
+    efforts: CLAUDE_EFFORTS,
     serverSideFallback: true,
+    thinkingUpdates: true,
     tier: "large",
   },
   "claude-sonnet-5-5": {
@@ -157,7 +233,10 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     label: "Claude Sonnet 5.5",
     prices: { input: 2000, output: 10000, cacheRead: 100, cacheWrite: 2500 },
     contextWindow: 1_000_000,
+    maxOutputTokens: 128_000,
+    efforts: CLAUDE_EFFORTS,
     serverSideFallback: true,
+    thinkingUpdates: true,
     recommended: true,
     tier: "medium",
   },
@@ -167,6 +246,8 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     prices: { input: 100, output: 500, cacheRead: 10, cacheWrite: 125 },
     longContext: { aboveInputTokens: 100_000, prices: { input: 500, output: 2500, cacheRead: 50, cacheWrite: 625 } },
     contextWindow: 1_000_000,
+    maxOutputTokens: 128_000,
+    efforts: CLAUDE_EFFORTS,
     serverSideFallback: false,
     cheap: true,
     router: true,
@@ -174,11 +255,41 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     tier: "small",
   },
   // OpenAI, Standard tier, checked on developers.openai.com/api/docs/pricing (2026-10-20, GPT-6.1 Terra
-  // 2026-10-31, GPT-6 Astra 2026-11-09); cache writes at the 30-minute rate. Above 272K prompt tokens, input,
-  // cached input and cache writes cost 2×, output 1.5×. Context windows from each model's page (2026-10-26,
-  // Terra's 2026-10-31, Astra's 2026-11-09).
-  // OpenAI's flagship, 5× GPT-6.1 Sol's prices: no tier and no pick for routing or system tasks, so "Automático"
-  // never chooses it, people do.
+  // 2026-10-31, GPT-6 Astra 2026-11-09, GPT-6.2 Sol and Astra 2026-11-17); cache writes at the 30-minute rate.
+  // Above 272K prompt tokens, input, cached input and cache writes cost 2×, output 1.5×. Context windows from each
+  // model's page (2026-10-26, Terra's 2026-10-31, Astra's 2026-11-09, 6.2's 2026-11-17).
+  // GPT-6.2 Astra, OpenAI's flagship ("our most capable model"), 4× GPT-6.2 Sol's prices: like GPT-6 Astra, no tier
+  // and no pick for routing or system tasks, so Automatic never chooses it, people do.
+  "gpt-6.2-astra": {
+    provider: "openai",
+    label: "GPT-6.2 Astra",
+    prices: { input: 8000, output: 40000, cacheRead: 400, cacheWrite: 10000 },
+    longContext: {
+      aboveInputTokens: 272_000,
+      prices: { input: 16000, output: 60000, cacheRead: 800, cacheWrite: 20000 },
+    },
+    contextWindow: 1_050_000,
+    serverSideFallback: false,
+    reasoning: true,
+  },
+  // GPT-6.2 Sol, OpenAI's everyday model at GPT-6.1 Sol's prices, takes its tier and its place as the suggested
+  // model (and Codex's default). It refuses reasoning effort `none`, which goes as `low` (no `leastThinking`).
+  "gpt-6.2-sol": {
+    provider: "openai",
+    label: "GPT-6.2 Sol",
+    prices: { input: 2000, output: 10000, cacheRead: 100, cacheWrite: 2500 },
+    longContext: {
+      aboveInputTokens: 272_000,
+      prices: { input: 4000, output: 15000, cacheRead: 200, cacheWrite: 5000 },
+    },
+    contextWindow: 1_050_000,
+    serverSideFallback: false,
+    reasoning: true,
+    recommended: true,
+    tier: "medium",
+  },
+  // OpenAI's previous flagship, 5× GPT-6.1 Sol's prices: no tier and no pick for routing or system tasks, so
+  // Automatic never chooses it, people do.
   "gpt-6-astra": {
     provider: "openai",
     label: "GPT-6 Astra",
@@ -202,8 +313,6 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     contextWindow: 1_050_000,
     serverSideFallback: false,
     reasoning: true,
-    recommended: true,
-    tier: "medium",
   },
   // No tier and no pick for routing or system tasks: "Automático" never chooses it, people do.
   "gpt-6.1-terra": {
@@ -243,9 +352,29 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     leastThinking: "off",
     tier: "small",
   },
-  // Gemini (Interactions API), Standard tier, from ai.google.dev/gemini-api/docs/pricing (2026-10-27). Thinking is
-  // billed as output. Caching is implicit, with no write charge, so a cache write costs the input rate (none is ever
-  // reported). Argon and 3.8 Flash cost half until the day in `intro`.
+  // Gemini (Interactions API), Standard tier, from ai.google.dev/gemini-api/docs/pricing (2026-10-27; Gemini 4 Carbon
+  // and Hydrogen 2026-11-17; Neon 2026-11-20, where the page now lives at aistudio.google.com/docs/pricing). Thinking
+  // is billed as output. Caching is implicit, with no write charge, so a cache write costs the input rate (none is
+  // ever reported). Carbon, Argon and 3.8 Flash cost half until the day in `intro`.
+  // Gemini 4 Carbon, Google's strongest reasoning model, thinks more per turn than Argon at Argon's prices: no tier
+  // and no pick for routing or system tasks, so Automatic never chooses it (Argon stays the large one), people do.
+  "gemini-4-carbon": {
+    provider: "gemini",
+    label: "Gemini 4 Carbon",
+    prices: { input: 4000, output: 20000, cacheRead: 200, cacheWrite: 4000 },
+    intro: { until: "2026-12-01", prices: { input: 2000, output: 10000, cacheRead: 100, cacheWrite: 2000 } },
+    contextWindow: 1_048_576,
+    serverSideFallback: false,
+  },
+  // Gemini 4 Neon (2026-11-18), Google's fast reasoning model, close to Carbon for less, one price across its whole
+  // window: like Carbon, no tier and no pick for system tasks, so Automatic never chooses it, people do.
+  "gemini-4-neon": {
+    provider: "gemini",
+    label: "Gemini 4 Neon",
+    prices: { input: 3000, output: 15000, cacheRead: 150, cacheWrite: 3000 },
+    contextWindow: 1_048_576,
+    serverSideFallback: false,
+  },
   "gemini-4-argon": {
     provider: "gemini",
     label: "Gemini 4 Argon",
@@ -255,6 +384,17 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     serverSideFallback: false,
     tier: "large",
   },
+  // Gemini 4 Hydrogen, Google's "recommended upgrade from Gemini 3.8 Flash", one price across its whole window: it
+  // takes 3.8 Flash's tier and its place as the suggested model.
+  "gemini-4-hydrogen": {
+    provider: "gemini",
+    label: "Gemini 4 Hydrogen",
+    prices: { input: 1500, output: 7500, cacheRead: 75, cacheWrite: 1500 },
+    contextWindow: 1_048_576,
+    serverSideFallback: false,
+    recommended: true,
+    tier: "medium",
+  },
   "gemini-3.8-flash": {
     provider: "gemini",
     label: "Gemini 3.8 Flash",
@@ -262,8 +402,6 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     intro: { until: "2027-01-01", prices: { input: 750, output: 3750, cacheRead: 75, cacheWrite: 750 } },
     contextWindow: 1_048_576,
     serverSideFallback: false,
-    recommended: true,
-    tier: "medium",
   },
   // It can't stop thinking: `minimal` is the least.
   "gemini-3.5-flash-lite": {
@@ -291,6 +429,10 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     leastThinking: "off",
     recommended: true,
     tier: "small",
+    // DeepSeek's Anthropic API guide (api-docs.deepseek.com/guides/anthropic_api, read 2026-11-25): "deepseek-flash
+    // supports images in user messages and tool_result content" (base64 PNG, JPEG, GIF, WebP); a document goes only by
+    // `file` or `text` source, so a PDF stays out. `deepseek-v4-pro` swaps a picture for "[Unsupported Image]".
+    images: true,
   },
   "deepseek-v4-pro": {
     provider: "deepseek",
@@ -360,6 +502,230 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     cheap: true,
     tier: "small",
   },
+  // Command Code at its published rates (commandcode.ai/docs/resources/pricing-limits); its model list has no prices.
+  // Claude's and GPT's rows keep their makers' long-context prices.
+  "commandcode:claude-opus-5-5": {
+    provider: "commandcode",
+    pick: false,
+    label: "Claude Opus 5.5",
+    prices: { input: 4000, output: 20000, cacheRead: 200, cacheWrite: 5000 },
+    contextWindow: 1_000_000,
+    serverSideFallback: false,
+  },
+  "commandcode:claude-sonnet-5-5": {
+    provider: "commandcode",
+    pick: false,
+    label: "Claude Sonnet 5.5",
+    prices: { input: 2000, output: 10000, cacheRead: 100, cacheWrite: 2500 },
+    contextWindow: 1_000_000,
+    serverSideFallback: false,
+    tier: "large",
+  },
+  "commandcode:claude-haiku-5-5": {
+    provider: "commandcode",
+    pick: false,
+    label: "Claude Haiku 5.5",
+    prices: { input: 100, output: 500, cacheRead: 10, cacheWrite: 125 },
+    longContext: { aboveInputTokens: 100_000, prices: { input: 500, output: 2500, cacheRead: 50, cacheWrite: 625 } },
+    contextWindow: 1_000_000,
+    serverSideFallback: false,
+    router: true,
+    leastThinking: "off",
+  },
+  "commandcode:gpt-6.1-sol": {
+    provider: "commandcode",
+    pick: false,
+    label: "GPT-6.1 Sol",
+    prices: { input: 2000, output: 10000, cacheRead: 100, cacheWrite: 2500 },
+    longContext: {
+      aboveInputTokens: 272_000,
+      prices: { input: 4000, output: 15000, cacheRead: 200, cacheWrite: 5000 },
+    },
+    contextWindow: 1_050_000,
+    serverSideFallback: false,
+  },
+  "commandcode:gpt-6-luna": {
+    provider: "commandcode",
+    pick: false,
+    label: "GPT-6 Luna",
+    prices: { input: 100, output: 500, cacheRead: 10, cacheWrite: 125 },
+    longContext: { aboveInputTokens: 272_000, prices: { input: 200, output: 750, cacheRead: 20, cacheWrite: 250 } },
+    contextWindow: 1_050_000,
+    serverSideFallback: false,
+  },
+  "commandcode:zai-org/GLM-5.3": {
+    provider: "commandcode",
+    pick: false,
+    label: "GLM-5.3",
+    prices: { input: 1400, output: 4400, cacheRead: 260, cacheWrite: 1400 },
+    contextWindow: 1_000_000,
+    serverSideFallback: false,
+    recommended: true,
+    tier: "medium",
+  },
+  "commandcode:moonshotai/Kimi-K3.1-Pro": {
+    provider: "commandcode",
+    pick: false,
+    label: "Kimi K3.1 Pro",
+    prices: { input: 2000, output: 10000, cacheRead: 200, cacheWrite: 2000 },
+    contextWindow: 1_048_576,
+    serverSideFallback: false,
+  },
+  "commandcode:deepseek/deepseek-v4-pro": {
+    provider: "commandcode",
+    pick: false,
+    label: "DeepSeek V4 Pro",
+    prices: { input: 1320, output: 3960, cacheRead: 44, cacheWrite: 1320 },
+    offPeak: {
+      prices: { input: 660, output: 1980, cacheRead: 22, cacheWrite: 660 },
+      peakHoursUtc: DEEPSEEK_PEAK,
+    },
+    contextWindow: 1_000_000,
+    serverSideFallback: false,
+  },
+  "commandcode:deepseek/deepseek-v4.1-flash": {
+    provider: "commandcode",
+    pick: false,
+    label: "DeepSeek V4.1 Flash",
+    prices: { input: 300, output: 1200, cacheRead: 6, cacheWrite: 300 },
+    offPeak: {
+      prices: { input: 150, output: 600, cacheRead: 3, cacheWrite: 150 },
+      peakHoursUtc: DEEPSEEK_PEAK,
+    },
+    contextWindow: 1_000_000,
+    serverSideFallback: false,
+    cheap: true,
+    tier: "small",
+  },
+  "commandcode:google/gemini-3.8-flash": {
+    provider: "commandcode",
+    pick: false,
+    label: "Gemini 3.8 Flash",
+    prices: { input: 1500, output: 7500, cacheRead: 150, cacheWrite: 1500 },
+    contextWindow: 1_000_000,
+    serverSideFallback: false,
+  },
+  "commandcode:deepseek/deepseek-v4.1-flash-fast": {
+    provider: "commandcode",
+    pick: false,
+    label: "DeepSeek V4.1 Flash Fast",
+    prices: { input: 320, output: 1160, cacheRead: 32, cacheWrite: 320 },
+    offPeak: {
+      prices: { input: 160, output: 580, cacheRead: 16, cacheWrite: 160 },
+      peakHoursUtc: DEEPSEEK_PEAK,
+    },
+    contextWindow: 1_000_000,
+    serverSideFallback: false,
+  },
+  "commandcode:deepseek/deepseek-v4.1-flash-ultrafast": {
+    provider: "commandcode",
+    pick: false,
+    label: "DeepSeek V4.1 Flash Ultrafast",
+    prices: { input: 2400, output: 9600, cacheRead: 48, cacheWrite: 2400 },
+    contextWindow: 1_048_576,
+    serverSideFallback: false,
+  },
+  "commandcode:z-ai/glm-5.3-flash": {
+    provider: "commandcode",
+    pick: false,
+    label: "GLM-5.3 Flash",
+    prices: { input: 150, output: 500, cacheRead: 30, cacheWrite: 150 },
+    contextWindow: 1_048_576,
+    serverSideFallback: false,
+  },
+  "commandcode:z-ai/glm-5.3-flashx": {
+    provider: "commandcode",
+    pick: false,
+    label: "GLM-5.3 FlashX",
+    prices: { input: 370, output: 1250, cacheRead: 75, cacheWrite: 370 },
+    contextWindow: 1_000_000,
+    serverSideFallback: false,
+    structuredOutput: false,
+  },
+  "commandcode:moonshotai/Kimi-K2.7-Code": {
+    provider: "commandcode",
+    pick: false,
+    label: "Kimi K2.7 Code",
+    prices: { input: 950, output: 4000, cacheRead: 190, cacheWrite: 950 },
+    contextWindow: 256_000,
+    serverSideFallback: false,
+  },
+  "commandcode:moonshotai/Kimi-K2.7-Code-Highspeed": {
+    provider: "commandcode",
+    pick: false,
+    label: "Kimi K2.7 Code HighSpeed",
+    prices: { input: 1900, output: 8000, cacheRead: 380, cacheWrite: 1900 },
+    contextWindow: 262_000,
+    serverSideFallback: false,
+  },
+  "commandcode:minimax/minimax-m3.1-flash": {
+    provider: "commandcode",
+    pick: false,
+    label: "MiniMax M3.1 Flash",
+    prices: { input: 150, output: 600, cacheRead: 15, cacheWrite: 150 },
+    contextWindow: 1_000_000,
+    serverSideFallback: false,
+    structuredOutput: false,
+  },
+  "commandcode:xiaomi/mimo-v2.6-pro": {
+    provider: "commandcode",
+    pick: false,
+    label: "MiMo V2.6 Pro",
+    prices: { input: 435, output: 870, cacheRead: 4, cacheWrite: 435 },
+    contextWindow: 1_048_576,
+    serverSideFallback: false,
+    structuredOutput: false,
+  },
+  "commandcode:xiaomi/mimo-v2.6-pro-ultraspeed": {
+    provider: "commandcode",
+    pick: false,
+    label: "MiMo V2.6 Pro UltraSpeed",
+    prices: { input: 4350, output: 8700, cacheRead: 36, cacheWrite: 4350 },
+    contextWindow: 1_048_576,
+    serverSideFallback: false,
+    structuredOutput: false,
+  },
+  "commandcode:xiaomi/mimo-v2.6-flash": {
+    provider: "commandcode",
+    pick: false,
+    label: "MiMo V2.6 Flash",
+    prices: { input: 140, output: 280, cacheRead: 3, cacheWrite: 140 },
+    contextWindow: 1_048_576,
+    serverSideFallback: false,
+    structuredOutput: false,
+  },
+  "commandcode:meta/muse-spark-1.3": {
+    provider: "commandcode",
+    pick: false,
+    label: "Muse Spark 1.3",
+    prices: { input: 1250, output: 4250, cacheRead: 150, cacheWrite: 1250 },
+    contextWindow: 1_048_576,
+    serverSideFallback: false,
+  },
+  "commandcode:meta/muse-spark-1.3-contributor": {
+    provider: "commandcode",
+    pick: false,
+    label: "Muse Spark 1.3 Contributor",
+    prices: { input: 100, output: 200, cacheRead: 2, cacheWrite: 100 },
+    contextWindow: 1_048_576,
+    serverSideFallback: false,
+  },
+  "commandcode:meta/muse-spark-open": {
+    provider: "commandcode",
+    pick: false,
+    label: "Muse Spark Open",
+    prices: { input: 1250, output: 4250, cacheRead: 150, cacheWrite: 1250 },
+    contextWindow: 1_048_576,
+    serverSideFallback: false,
+  },
+  "commandcode:meta/muse-ember": {
+    provider: "commandcode",
+    pick: false,
+    label: "Muse Ember",
+    prices: { input: 100, output: 500, cacheRead: 4, cacheWrite: 100 },
+    contextWindow: 1_048_576,
+    serverSideFallback: false,
+  },
 };
 
 /** Models a provider lists at run time (OpenRouter's, `openrouter.ts`), beside the fixed catalog. */
@@ -374,7 +740,7 @@ export function setListedModels(models: Record<string, ModelInfo>) {
  * A workspace's own endpoint's models (ADR 0146), by organization, under ids `custom:<credentialId>:<model>`: the
  * credential in the id keeps two workspaces' models (and the catalog's ids) apart. Never in `listedModels`.
  */
-let custom = new Map<string, Map<string, ModelInfo>>();
+const custom = new Map<string, Map<string, ModelInfo>>();
 /**
  * Every endpoint model this process has loaded, kept after it is removed or its key revoked: a call already running
  * still settles its cost by it. Only `modelInfo` reads it; who may call a model is `customModelOf`.
@@ -392,12 +758,36 @@ export function parseCustomModel(id: string): { credentialId: string; model: str
 
 export const isCustomModel = (id: string) => CUSTOM_ID.test(id);
 
-/** Replaces an organization's endpoint models (full ids); an empty record forgets them. */
+/** Agents work by tool calls: a model that made one first, then an untested one, then one that only talked, then failed. */
+const CHECK_RANK = { ok: 0, unchecked: 1, no_tools: 2, failed: 3 } as const;
+
+/**
+ * The one endpoint model an agent runs when nothing names one (Automático on an endpoint key, or a key just connected),
+ * as its `custom:` id: the best last test (`CHECK_RANK`), the admin's order among equals. Null when it offers none.
+ */
+export function endpointModelId(
+  credentialId: string,
+  models: readonly { id: string; check?: "ok" | "no_tools" | "failed" | null }[],
+): string | null {
+  let best: (typeof models)[number] | undefined;
+  for (const m of models) {
+    if (!best || CHECK_RANK[m.check ?? "unchecked"] < CHECK_RANK[best.check ?? "unchecked"]) best = m;
+  }
+  return best ? customModelId(credentialId, best.id) : null;
+}
+
+/**
+ * Replaces an organization's endpoint models (full ids); an empty record forgets them. Called before every model call,
+ * so in place, and nothing at all for the many organizations with no endpoint.
+ */
 export function setCustomModels(orgId: string, models: Record<string, ModelInfo>) {
-  custom = new Map(custom);
-  for (const [id, info] of Object.entries(models)) lastKnown.set(id, info);
-  if (Object.keys(models).length === 0) custom.delete(orgId);
-  else custom.set(orgId, new Map(Object.entries(models)));
+  const entries = Object.entries(models);
+  if (entries.length === 0) {
+    custom.delete(orgId);
+    return;
+  }
+  for (const [id, info] of entries) lastKnown.set(id, info);
+  custom.set(orgId, new Map(entries));
 }
 
 /** An organization's endpoint models, in the order they were set. */
@@ -461,9 +851,22 @@ export const contextWindowOf = (model: string) => modelInfo(model)?.contextWindo
 
 export const isKnownModel = (model: string) => modelInfo(model) !== undefined;
 
+/**
+ * `name` without a closing `[…]` (`claude-opus-5-5[1m]` → `claude-opus-5-5`), as `/\[[^\]]*\]$/` would cut it: from
+ * the first `[` after the last `]` before the final one. By index, since the name may come from a computer and that
+ * pattern backtracks on a long run of `[`.
+ */
+function withoutBracketSuffix(name: string): string {
+  if (!name.endsWith("]")) return name;
+  const end = name.length - 1;
+  const lastClose = end > 0 ? name.lastIndexOf("]", end - 1) : -1;
+  const open = name.indexOf("[", lastClose + 1);
+  return open >= 0 && open < end ? name.slice(0, open) : name;
+}
+
 /** The catalog id of a model a CLI named (`claude-opus-5-5[1m]`, a dated `…-20261001`); null when it has no price. */
 export function catalogModelOf(model: string | null | undefined): string | null {
-  const base = model?.replace(/\[[^\]]*\]$/, "").replace(/-\d{8}$/, "");
+  const base = model ? withoutBracketSuffix(model).replace(/-\d{8}$/, "") : model;
   return base && isKnownModel(base) ? base : null;
 }
 
@@ -485,12 +888,21 @@ const tokensCost = (p: TokenPrices, u: ModelUsage) =>
   (u.cacheWriteLongTokens ?? 0) * (LONG_CACHE_WRITE * p.input - p.cacheWrite);
 
 /**
- * What a call made at `at` pays per token: the introductory prices before their day. Budget reservations
+ * What a call made at `at` pays per token: the introductory prices before their day, the off-peak ones outside
+ * the peak hours. Budget reservations
  * (`maxCostNanoUsd`, `outputTokensWithin`) keep the list prices on purpose, so they err high while a lower price
  * lasts; give them `at` too if that ever stops agents early.
  */
-export const pricesAt = (info: ModelInfo, at = new Date()) =>
-  info.intro && at.getTime() < Date.parse(info.intro.until) ? info.intro.prices : info.prices;
+export const pricesAt = (info: ModelInfo, at = new Date()) => {
+  if (info.intro && at.getTime() < Date.parse(info.intro.until)) return info.intro.prices;
+  return info.offPeak && !atPeak(info.offPeak.peakHoursUtc, at) ? info.offPeak.prices : info.prices;
+};
+
+const atPeak = (hours: readonly (readonly [number, number])[], at: Date) => {
+  const day = at.getUTCDay();
+  const hour = at.getUTCHours();
+  return day !== 0 && day !== 6 && hours.some(([from, to]) => hour >= from && hour < to);
+};
 
 /**
  * Cost in nano-USD of one call made at `at`. Throws for models outside the catalog (we never make a call we
