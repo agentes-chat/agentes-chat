@@ -6277,7 +6277,7 @@
         "interrupted": "因服务器重启而中断。",
         "missing_credential": "工作区没有 {{provider}} 密钥。",
         "credential_revoked": "该智能体的密钥已被吊销。",
-        "credential_unreadable": "此服务器无法打开已保存的 API 密钥，通常是因为保存密钥后 AGENTES_SECRET 发生了变化。请在“AI 密钥”中重新粘贴密钥。",
+        "credential_unreadable": "无法打开已保存的 API 密钥，通常是因为保存密钥后服务器的加密密钥发生了变化。请在“AI 密钥”中重新粘贴密钥。",
         "credential_wrong_provider": "模型来自 {{modelProvider}}，但密钥来自 {{keyProvider}}。",
         "model_unlisted": "OpenRouter 不再提供 {{model}}。请在智能体设置中选择其他模型。",
         "no_ai": "智能体当时没有可用的 AI。",

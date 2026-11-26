@@ -6501,7 +6501,7 @@
         "interrupted": "Durch einen Neustart des Servers unterbrochen.",
         "missing_credential": "Der Workspace hat keinen Schlüssel für {{provider}}.",
         "credential_revoked": "Der Schlüssel dieses Agenten wurde widerrufen.",
-        "credential_unreadable": "Dieser Server kann den gespeicherten API-Schlüssel nicht öffnen, meist weil sich AGENTES_SECRET geändert hat, nachdem er gespeichert wurde. Füge den Schlüssel unter KI-Schlüssel erneut ein.",
+        "credential_unreadable": "Der gespeicherte API-Schlüssel lässt sich nicht öffnen, meist weil sich das Geheimnis des Servers geändert hat, nachdem der Schlüssel gespeichert wurde. Füge den Schlüssel unter KI-Schlüssel erneut ein.",
         "credential_wrong_provider": "Das Modell ist von {{modelProvider}}, der Schlüssel aber von {{keyProvider}}.",
         "model_unlisted": "OpenRouter bietet {{model}} nicht mehr an. Wähle in den Einstellungen des Agenten ein anderes Modell.",
         "no_ai": "Der Agent hatte keine KI verfügbar.",

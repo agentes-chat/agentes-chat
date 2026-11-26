@@ -7059,9 +7059,9 @@ export const en = {
         interrupted: "Interrupted by a server restart.",
         missing_credential: "The workspace has no {{provider}} key.",
         credential_revoked: "This agent's key was revoked.",
-        /** A saved key the server can't decrypt: the key that seals keys (AGENTES_SECRET) is not the one it was saved with. */
+        /** A saved key the server can't decrypt: its secret (AGENTES_SECRET on a self-hosted server) changed since. */
         credential_unreadable:
-          "This server can't open the saved API key, usually because AGENTES_SECRET changed after it was saved. Paste the key again in AI keys.",
+          "The saved API key can't be opened, usually because the server's secret changed after the key was saved. Paste the key again in AI keys.",
         credential_wrong_provider: "The model is from {{modelProvider}}, but the key is from {{keyProvider}}.",
         model_unlisted: "OpenRouter no longer offers {{model}}. Pick another model in the agent's settings.",
         no_ai: "The agent had no AI available.",

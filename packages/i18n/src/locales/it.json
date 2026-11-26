@@ -6757,7 +6757,7 @@
         "interrupted": "Interrotta da un riavvio del server.",
         "missing_credential": "Lo spazio di lavoro non ha una chiave {{provider}}.",
         "credential_revoked": "La chiave di questo agente è stata revocata.",
-        "credential_unreadable": "Questo server non riesce ad aprire la chiave API salvata, di solito perché AGENTES_SECRET è cambiato dopo che è stata salvata. Incolla di nuovo la chiave in Chiavi IA.",
+        "credential_unreadable": "La chiave API salvata non si può aprire, di solito perché il segreto del server è cambiato dopo che è stata salvata. Incolla di nuovo la chiave in Chiavi IA.",
         "credential_wrong_provider": "Il modello è di {{modelProvider}}, ma la chiave è di {{keyProvider}}.",
         "model_unlisted": "OpenRouter non offre più {{model}}. Scegli un altro modello nelle impostazioni dell'agente.",
         "no_ai": "L'agente non aveva un'IA disponibile.",

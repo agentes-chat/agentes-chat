@@ -6747,7 +6747,7 @@
         "interrupted": "Interrompue par un redémarrage du serveur.",
         "missing_credential": "L'espace de travail n'a pas de clé {{provider}}.",
         "credential_revoked": "La clé de cet agent a été révoquée.",
-        "credential_unreadable": "Ce serveur ne peut pas ouvrir la clé d'API enregistrée, en général parce qu'AGENTES_SECRET a changé après son enregistrement. Collez à nouveau la clé dans Clés d'IA.",
+        "credential_unreadable": "La clé d'API enregistrée ne peut pas être ouverte, en général parce que le secret du serveur a changé après son enregistrement. Collez à nouveau la clé dans Clés d'IA.",
         "credential_wrong_provider": "Le modèle vient de {{modelProvider}}, mais la clé vient de {{keyProvider}}.",
         "model_unlisted": "OpenRouter ne propose plus {{model}}. Choisissez un autre modèle dans les paramètres de l'agent.",
         "no_ai": "L'agent n'avait aucune IA disponible.",

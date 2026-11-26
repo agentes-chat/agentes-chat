@@ -6951,7 +6951,7 @@ export const ptBR = {
         missing_credential: "Falta uma chave {{provider}} no workspace.",
         credential_revoked: "A chave deste agente foi revogada.",
         credential_unreadable:
-          "Este servidor não consegue abrir a chave de API salva, geralmente porque o AGENTES_SECRET mudou depois que ela foi salva. Cole a chave de novo em Chaves de IA.",
+          "A chave de API salva não abre, geralmente porque o segredo do servidor mudou depois que ela foi salva. Cole a chave de novo em Chaves de IA.",
         credential_wrong_provider: "O modelo usa {{modelProvider}}, mas a chave é para {{keyProvider}}.",
         model_unlisted: "A OpenRouter não oferece mais {{model}}. Escolha outro modelo nas configurações do agente.",
         no_ai: "O agente estava sem uma IA disponível.",
