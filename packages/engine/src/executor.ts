@@ -189,11 +189,13 @@ import {
   agentSystemText,
   buildRunContext,
   type ContextBlock,
+  changedForSession,
   conversationText,
   getChannelCached,
   isComputerTurnBlock,
   lastRoutineRun,
   restatesReaction,
+  sessionPartsKey,
   stableFirst,
   teammatesNowAgain,
   thisTurnParts,
@@ -293,7 +295,6 @@ import {
 import { computerBackSoon, type MachineCaller } from "./machine-hub";
 import { TASK_OFFLINE_GRACE_MS } from "./machine-tasks";
 import { getMachine } from "./machines";
-import { MEDIA_TOOLS } from "./media";
 import { ownTypedSql } from "./message-origin";
 import { PLACE_KEPT_MS } from "./message-place";
 import {
@@ -665,6 +666,8 @@ export interface Transcript {
   notesAt?: number;
   /** Hash of what its computer session's system prompt depends on (`RunContext.sessionPrompt`, granted scopes). */
   promptKey?: string;
+  /** What its conversation said of the tools and lines here (`sessionPartsKey`): the next run in its session compares. */
+  sessionParts?: string;
   /** "Automático": the model tier and effort chosen for this run; a resume thinks with the same. */
   autoModel?: AutoModelRecord;
   /** Assistant text before this index was already posted to the chat (or was history, or a reply held unposted). */
@@ -2901,6 +2904,7 @@ async function executeRunInner(
       // Follows the tools loaded for the run's message: for a computer brain, read once per session.
       system.push({
         conversation: true,
+        refresh: true,
         text: '# Writing to the wiki\nOnly write to the wiki (create_wiki_page, update_wiki_page, link_to_wiki) when a person asks for it in the current message ("save this to the wiki", "document…", "update page X"; in Portuguese "salva isso na wiki", "documenta…", "atualiza a página X") or your routine\'s instructions say so. Never on your own: if you think something is worth documenting, offer and wait for the person to ask. Each edit stays in the history with your name and the name of whoever asked.',
       });
     }
@@ -2936,6 +2940,7 @@ async function executeRunInner(
       ...(toolChoice ? { toolGroups: toolChoice.groups } : every ? { toolGroups: [EVERY_TOOL] } : {}),
       ...(tools.some((t) => t.name === PASS_TOOL) ? { passListed: true } : {}),
       ...(serverNotes ? { readServerNotes: true as const } : {}),
+      sessionParts: sessionPartsKey(system),
       promptKey: sha256(
         JSON.stringify([
           ...context.sessionPrompt,
@@ -7153,9 +7158,12 @@ export const COMPUTER_REACT_NOTE =
 export const CODEX_IMAGE_NOTE =
   "# Images\nA picture you make with your image tool is shown to the people with your reply, under your text. Don't say where it appears or that it should show up; a short line about it is enough, or nothing.";
 
-/** For computer brains: a GIF or a sticker through the bridge is posted at once (`tools`: the ones it has). */
-export const computerMediaNote = (tools: string[]) =>
-  `# GIFs and stickers\nWhen you call the agentes ${tools.map((t) => `\`${t}\``).join(" or ")} tool, it is posted at once as a message of its own: unless you have something to add, end your turn right after it with an empty final reply (no confirmation that you sent it).`;
+/**
+ * For computer brains whose agent may send GIFs and stickers: one through the bridge is posted at once. Named by what
+ * they send, not by tool: which of them a run lists follows the conversation and the server, the text the agent.
+ */
+export const COMPUTER_MEDIA_NOTE =
+  "# GIFs and stickers\nWhen you call an agentes tool that sends a GIF or a sticker, it is posted at once as a message of its own: unless you have something to add, end your turn right after it with an empty final reply (no confirmation that you sent it).";
 
 /**
  * The turn as every brain receives it. The text view of the conversation is
@@ -7189,7 +7197,13 @@ function brainTurnOf(
     // The turn that starts the session taking over from a lost one reads why, whole; its later turns don't.
     const lost: ContextBlock[] =
       t.sessionLost && !plan.session?.resume ? [{ turn: true, found: true, text: sessionLostNote(t.sessionLost) }] : [];
-    return thisTurnParts([...t.system, ...lost], new Date(), options);
+    // A session resumed with other tools or lines here than it last read: those again, rather than a new session.
+    const read = plan.session?.resume ? plan.session.partsRead : undefined;
+    const again = read === undefined ? "" : changedForSession(t.system, read);
+    const changed: ContextBlock[] = again
+      ? [{ turn: true, found: true, text: isRightHand(agent) ? again : withComputerLimit(again) }]
+      : [];
+    return thisTurnParts([...t.system, ...lost, ...changed], new Date(), options);
   };
   return {
     runId: run.id,
@@ -7205,11 +7219,12 @@ function brainTurnOf(
       // (ADR 0137 §4) has only ours, so it is never told of a computer's.
       const computer = isRightHand(agent) ? `${text}\n\n${COMPUTER_SECTIONS_LINE}` : forComputerBrain(text);
       // It also sees `react` as an MCP tool and tends to echo the emoji as its final text; a GIF or a sticker, too.
-      const media = tools.filter((d) => MEDIA_TOOLS.has(d.name)).map((d) => d.name);
+      // By the agent, not by this run's tools: a conversation without them (a task's, another agent's DM) keeps the
+      // text, so the CLI started with the agent's last text is the one this turn takes.
       return [
         computer,
-        tools.some((d) => d.name === REACT_TOOL) ? COMPUTER_REACT_NOTE : "",
-        media.length > 0 ? computerMediaNote(media) : "",
+        COMPUTER_REACT_NOTE,
+        agent.mediaReplies ? COMPUTER_MEDIA_NOTE : "",
         plan.kind === "codex" && !isRightHand(agent) ? CODEX_IMAGE_NOTE : "",
       ]
         .filter(Boolean)

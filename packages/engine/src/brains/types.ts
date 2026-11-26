@@ -132,6 +132,11 @@ export interface BrainSession {
   ownFolder?: boolean;
   /** A code session's turn (ADR 0215): `cwd` is its worktree. */
   codeSession?: boolean;
+  /**
+   * Resumed from the conversation's last run: what that run's conversation said of the tools and lines here
+   * (`Transcript.sessionParts`; null: nothing kept), so the turn reads them again when they changed.
+   */
+  partsRead?: string | null;
 }
 
 export interface BrainTurn {

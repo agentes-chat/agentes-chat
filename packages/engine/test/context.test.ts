@@ -7,6 +7,7 @@ import {
   buildRunContext,
   CODE_SESSION_LINE,
   CONTINUE_THE_CONVERSATION,
+  changedForSession,
   conversationText,
   createAgent,
   deviceRoster,
@@ -20,6 +21,7 @@ import {
   PLAIN_WORDS_LINE,
   postPersonMessage,
   SAY_NOW_LINE,
+  sessionPartsKey,
   toTurns,
   WORK_IN_BACKGROUND_LINE,
   zonesElsewhere,
@@ -482,6 +484,33 @@ test("a computer brain's system text is the agent's: what a run gets by its tool
   expect(conversationText(handed.system)).not.toContain("## How you work here");
   // The model brain reads every block where it always was: the lines stay in "How you work".
   expect(systemText(asked.system)).toContain(`\n${SAY_NOW_LINE}\n${CODE_SESSION_LINE}\n${WORK_IN_BACKGROUND_LINE}`);
+  // Nor does the session's key follow them: the same session goes on, and reads them again (`changedForSession`).
+  expect(asked.sessionPrompt).toEqual(handed.sessionPrompt);
+});
+
+test("a resumed session reads what it can do and how it works here again only when they changed", () => {
+  const how = (lines: string) => ({ text: `# How you work\n- Be brief.${lines}` });
+  const can = (tools: string) => ({ conversation: true, refresh: true, text: `# What you can do\n- ${tools}` });
+  const team = (who: string) => ({ conversation: true, text: `# Your team\n- ${who}` });
+  const lines = how(`\n${SAY_NOW_LINE}`);
+  const calendar = can("Calendar: `list_events`");
+  const before = [lines, calendar, team("@ops")];
+  const read = sessionPartsKey(before);
+
+  // Only the team differs (it follows the requester, read once per session as before): nothing again.
+  expect(changedForSession([lines, calendar, team("@qa")], read)).toBe("");
+  // Another tool here: both parts again, under the turn, replacing what the session read.
+  const more = changedForSession([lines, can("Calendar: `list_events`, `create_event`"), team("@ops")], read);
+  expect(more).toContain("# This conversation, now");
+  expect(more).toContain(`### How you work here\n${SAY_NOW_LINE}`);
+  expect(more).toContain("### What you can do\n- Calendar: `list_events`, `create_event`");
+  expect(more).not.toContain("@ops");
+  // A line gone: said so, or the session would go on with it.
+  expect(changedForSession([how(""), calendar, team("@ops")], read)).toContain(
+    "### How you work here\nNo lines of its own now",
+  );
+  // Nothing kept from the run before: everything again.
+  expect(changedForSession(before, null)).toContain("### What you can do");
 });
 
 test("the devices in an agent's system text keep their order when a computer's row changes", async () => {
