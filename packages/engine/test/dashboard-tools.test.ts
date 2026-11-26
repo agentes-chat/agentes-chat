@@ -448,18 +448,18 @@ describe("share_dashboard and list_dashboards", () => {
     await f.db
       .insert(schema.dashboardWidgets)
       .values([
-        widget("Vendas", "agent_reported", "A planilha de vendas não abre para esta rotina."),
+        widget("Vendas", "agent_reported", "O relatório de exemplo veio vazio."),
         widget("Leads", "no_update"),
-        widget("Caixa", "failing", "O PostHog recusou a consulta."),
+        widget("Caixa", "failing", "O site example.com respondeu 503."),
       ]);
     await ask("quais painéis eu tenho?");
     const listed = results.at(-1) ?? "";
     expect(listed).toContain(
-      "Vendas (only when someone asks, failing: «A planilha de vendas não abre para esta rotina.»)",
+      "Vendas (only when someone asks, failing: «O relatório de exemplo veio vazio.»)",
     );
     expect(listed).toContain("Leads (only when someone asks, failing (no_update))");
     expect(listed).toContain(
-      "Caixa (only when someone asks, failing: «O PostHog recusou a consulta.»; stopped after failing in a row, until a person clicks Resolve)",
+      "Caixa (only when someone asks, failing: «O site example.com respondeu 503.»; stopped after failing in a row, until a person clicks Resolve)",
     );
   });
 
