@@ -171,6 +171,26 @@ test("system mode: the agents' copy is root's alone to change, linked onto every
   expect(readlinkSync(path.join(bin, "agy"))).toBe(again.cli.file("antigravity") as string);
 });
 
+test("system mode: a new pin replaces the runner's older copy the agents reach", async () => {
+  const bin = tempDir("bin-");
+  dirs.push(bin);
+  // The agents reach whatever `bin/agy` is (`agentsCopy` claims the pinned version for any copy they start).
+  const reach = async (_: PinCli, pinned: string) =>
+    existsSync(path.join(bin, "agy")) ? { file: "agy", version: pinned } : null;
+  const { cli, home, fetched } = copies({ shared: { bin }, own: reach });
+  const older = path.join(home, "clis", "antigravity-1.0.0", "antigravity");
+  mkdirSync(path.dirname(older), { recursive: true });
+  writeFileSync(older, '#!/bin/sh\necho "antigravity 1.0.0"\n', { mode: 0o755 });
+  symlinkSync(older, path.join(bin, "agy"));
+  await cli.check();
+  expect(fetched).toEqual(["https://downloads.example/antigravity.tar.gz"]);
+  expect(readlinkSync(path.join(bin, "agy"))).toBe(cli.file("antigravity") as string);
+  expect(existsSync(older)).toBe(false);
+  // At this pin now: nothing fetched again.
+  await cli.check();
+  expect(fetched).toHaveLength(1);
+});
+
 test("nothing fetched for a CLI nobody wants here and the person doesn't have", async () => {
   const { cli, fetched } = copies({ wanted: [] });
   await cli.check();

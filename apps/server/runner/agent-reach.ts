@@ -2,7 +2,7 @@ import { execFile } from "node:child_process";
 import { CLI_HOME_ONLY, CLI_NAMES, type RunnerInfo } from "@agenteschat/adapters/machine-protocol";
 import { AGENT_PATH, type AgentUser, PROBE_AGENT_UID, readAgentUsers, SETPRIV, systemLauncher } from "./agent-users";
 import { CLI_COMMAND } from "./cli-copies";
-import { execResult, type RunResult, versionLine } from "./executors";
+import { execResult, pickedCommand, type RunResult, versionLine } from "./executors";
 
 type Executors = NonNullable<RunnerInfo["executors"]>;
 
@@ -65,7 +65,9 @@ export async function agentsReach(found: Executors, home: string, run?: RunAs): 
   const out: Executors = { ...found };
   const broken = { ...found.broken };
   for (const cli of CLI_NAMES) {
-    if (!found[cli] || !unreached(await agentsVersion(CLI_COMMAND[cli], users, run))) continue;
+    // What an agent's turn starts (`cliSpawn`): the file the runner picked, else the command on the agent's PATH.
+    const command = pickedCommand(CLI_COMMAND[cli]) ?? CLI_COMMAND[cli];
+    if (!found[cli] || !unreached(await agentsVersion(command, users, run))) continue;
     delete out[cli];
     broken[cli] = CLI_HOME_ONLY;
   }

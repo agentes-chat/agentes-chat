@@ -260,8 +260,22 @@ export class CliCopies {
     return (this.opts.now ?? Date.now)();
   }
 
-  private ownOf(cli: PinCli) {
-    return (this.opts.own ?? ownCopy)(cli, this.pins[cli].version);
+  private async ownOf(cli: PinCli) {
+    const own = await (this.opts.own ?? ownCopy)(cli, this.pins[cli].version);
+    // The agents reaching the runner's own link to another pin's copy: kept to fall back on, never at this pin.
+    return own && (await this.linkedElsewhere(cli)) ? { ...own, version: "" } : own;
+  }
+
+  /** System mode: `bin/<command>` is the runner's own link to a copy other than this pin's. */
+  private async linkedElsewhere(cli: PinCli) {
+    const bin = this.opts.shared?.bin;
+    if (!bin) return false;
+    const was = await readlink(path.join(bin, CLI_COMMAND[cli])).catch(() => null);
+    return was !== null && this.runnerLink(was) && was !== this.file(cli);
+  }
+
+  private runnerLink(target: string) {
+    return target.startsWith(path.join(this.opts.home, "clis") + path.sep);
   }
 
   /** One fetch per CLI at a time, whoever asks; its end (ready or failed) is told. */
@@ -318,7 +332,7 @@ export class CliCopies {
     if (!bin) return;
     const to = path.join(bin, CLI_COMMAND[cli]);
     const was = await readlink(to).catch((err: { code?: string }) => (err.code === "ENOENT" ? null : undefined));
-    if (was === undefined || (was !== null && !was.startsWith(path.join(this.opts.home, "clis") + path.sep))) return;
+    if (was === undefined || (was !== null && !this.runnerLink(was))) return;
     const tmp = `${to}.${process.pid}.tmp`;
     try {
       await mkdir(bin, { recursive: true });

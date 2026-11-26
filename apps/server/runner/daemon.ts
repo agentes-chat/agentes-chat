@@ -133,7 +133,7 @@ import { EgressObservation, probeEgress } from "./egress";
 import { EGRESS_RELAY_SOCKET, startEgressRelay } from "./egress-relay";
 import { EGRESS_SHARE_FILE, EgressShare } from "./egress-share";
 import { NetworkChangingError, RUNNER_VERSION, RunnerError } from "./errors";
-import { cachedExecutors, EXECUTORS_TTL_MS, type ExecutorRun, inHomeDirs } from "./executors";
+import { cachedExecutors, EXECUTORS_TTL_MS, type ExecutorRun, inHomeDirs, setCodexForAgents } from "./executors";
 import { systemGitCache } from "./git";
 import { closeIdleUnderPressure, type HandlerContext, type RequestObserver, type RequestOutcome } from "./handlers";
 import { Holds } from "./holds";
@@ -628,6 +628,7 @@ export class RunnerDaemon implements RequestObserver {
     } catch {
       // an unreadable config starts unpaired
     }
+    setCodexForAgents(system);
     const exec =
       opts.executors ??
       cachedExecutors({

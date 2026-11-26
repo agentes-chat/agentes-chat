@@ -1,10 +1,10 @@
 import { afterEach, expect, test } from "bun:test";
-import { writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { CLI_HOME_ONLY } from "@agenteschat/adapters/machine-protocol";
 import { agentsCopy, agentsReach, type RunAs } from "../../runner/agent-reach";
 import { AGENT_USERS_FILE, PROBE_AGENT_UID } from "../../runner/agent-users";
-import { cachedExecutors, type RunResult } from "../../runner/executors";
+import { cachedExecutors, codexCandidates, type RunResult, setCliPick } from "../../runner/executors";
 import { removeDirs, tempDir } from "./helpers";
 
 /*
@@ -119,4 +119,37 @@ test("the computer's list is what the agents reach, look after look", async () =
   const { run } = computer({ "/root/.local/bin/codex": [] });
   const executors = cachedExecutors({ run: runAsRoot, reach: (f) => agentsReach(f, home, run) });
   expect(await executors.ready()).toEqual({ broken: { codex: CLI_HOME_ONLY } });
+});
+
+test("the copy the runner picked is the one asked about, as an agent's turn starts it", async () => {
+  const home = runnerHome([ANA]);
+  writeFileSync(path.join(home, "codex"), "#!/bin/sh\n", { mode: 0o755 });
+  setCliPick("codex", path.join(home, "codex"));
+  try {
+    const asked: string[] = [];
+    const run: RunAs = async (argv) => {
+      asked.push(argv.at(-2) ?? "");
+      return { status: 0, stdout: "codex-cli 0.190.0\n" };
+    };
+    expect(await agentsReach({ codex: found.codex }, home, run)).toEqual({ codex: found.codex });
+    expect(asked).toEqual([path.join(home, "codex")]);
+  } finally {
+    setCliPick("codex", undefined);
+  }
+});
+
+test("a Codex in the runner's own home is never the one the agents are given", () => {
+  const root = tempDir("root-");
+  dirs.push(root);
+  const shared = tempDir("usr-bin-");
+  dirs.push(shared);
+  for (const dir of [path.join(root, ".local", "bin"), shared]) {
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(path.join(dir, "codex"), "#!/bin/sh\n", { mode: 0o755 });
+  }
+  const pathList = `${path.join(root, ".local", "bin")}:${shared}`;
+  expect(codexCandidates(pathList, "linux", undefined, null)[0]).toBe(path.join(root, ".local", "bin", "codex"));
+  const forAgents = codexCandidates(pathList, "linux", undefined, root);
+  expect(forAgents).toContain(path.join(shared, "codex"));
+  expect(forAgents.filter((f) => f.startsWith(`${root}/`))).toEqual([]);
 });
