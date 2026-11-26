@@ -72,7 +72,15 @@ import { type BrainMachine, homeFor, useWork } from "./work";
  */
 
 /** The CLIs a computer's own sign-in can be, each one row where it can think for the agent. */
-const OWN_KINDS: readonly MachineAccountKind[] = ["claude_code", "codex", "cursor", "grok", "antigravity", "opencode"];
+const OWN_KINDS: readonly MachineAccountKind[] = [
+  "claude_code",
+  "codex",
+  "cursor",
+  "grok",
+  "antigravity",
+  "devin",
+  "opencode",
+];
 
 /** What picking a row does: it is the one in use, it thinks at once, it is taken from another agent, it signs in. */
 export type RowAct = "current" | "use" | "move" | "also" | "again" | "locked";
@@ -162,7 +170,7 @@ export function useBrainState(view: AgentBrain, opts: { added: readonly MachineA
   const cards: AiChoice[] = [
     "claude",
     "chatgpt",
-    ...(["cursor", "zen", "grok", "gemini"] as const).filter(
+    ...(["cursor", "zen", "grok", "gemini", "devin"] as const).filter(
       (c) =>
         savedCard === c ||
         [view.options, ...machines.map((m) => m.options)].flat().some((o) => o.kind === kindOf(c) && o.available),

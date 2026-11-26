@@ -576,6 +576,11 @@ export const desktopEn = {
     grokDesc: "Writes and changes code in the allowed folders, with your Grok account.",
     antigravityName: "Antigravity CLI",
     antigravityDesc: "Writes and changes code in the allowed folders, with your Gemini account.",
+    devinName: "Devin CLI",
+    devinDesc: "Writes and changes code in the allowed folders, with your Devin account.",
+    /** On Windows, in place of its install line: the Devin CLI isn't pinned there (ADR 0253). */
+    devinWindows:
+      "Devin doesn't run on Windows yet: here its CLI can't keep each account's sign-in apart. Agents think with Devin on a Mac or Linux computer.",
     found: "Found",
     notFound: "Not found",
     loggedOut: "Not signed in",

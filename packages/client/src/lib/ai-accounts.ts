@@ -458,7 +458,7 @@ export const pickable = <A extends MachineAccount>(rows: readonly ExistingAi<A>[
  */
 export const listsExisting = (agent: Pick<Agent, "builtin"> | undefined, noAi: boolean) => noAi || isRightHand(agent);
 
-export const ACCOUNT_KINDS = ["claude_code", "codex", "cursor", "opencode", "grok", "antigravity"] as const;
+export const ACCOUNT_KINDS = ["claude_code", "codex", "cursor", "opencode", "grok", "antigravity", "devin"] as const;
 
 /** A computer's own sign-in as "Seus planos" lists it ("Conta deste computador"). */
 export interface OwnSignInRow {
@@ -539,7 +539,7 @@ export const ownSignInReady = (
  * agent thinks with it: on a computer its owner connected, whatever that computer reported, and to an admin who
  * doesn't own the agent wherever it is (what it thinks with). To that admin also wherever its owner connected the
  * computer: only the person who connected it sees whether that CLI is signed in there. Never for account-only brains
- * (`antigravity`, `grok`), which cannot run without a connected account.
+ * (`antigravity`, `grok`, `devin`), which cannot run without a connected account.
  */
 export const ownSignInListed = (
   brain: Pick<AgentBrain, "ownSignIn" | "brain" | "account" | "canUsePlans">,

@@ -160,6 +160,7 @@ export const CLI_PROGRAMS: Readonly<Record<string, string>> = {
   opencode: "OpenCode",
   grok: "Grok Build",
   antigravity: "Antigravity",
+  devin: "Devin",
   // Git for Windows' portable build: Claude Code's shell on Windows (ADR 0228 §6).
   git: "Git",
 };
@@ -172,6 +173,7 @@ export const CLI_OF_BRAIN: Readonly<Record<string, string>> = {
   opencode: "opencode",
   grok: "grok",
   antigravity: "antigravity",
+  devin: "devin",
 };
 
 /** The tool a run's live line carries while its CLI is fetched on its computer (`<cli>|<computer>|<percent>`). */

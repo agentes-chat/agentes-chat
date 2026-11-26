@@ -680,6 +680,26 @@ describe("one click where a tool is off (ADR 0036 §8)", () => {
     ).toBe(t("aiAccounts.connect.needsCloud.stuck", { computer: "Computador da Acme", program: "Codex" }));
   });
 
+  test("Devin on a Windows computer: the plan's line says why it doesn't run there, and the way out", async () => {
+    const { resources } = await import("@agenteschat/i18n");
+    const i18next = (await import("i18next")).default;
+    const instance = i18next.createInstance();
+    void instance.init({ lng: "pt-BR", fallbackLng: "en", resources, initAsync: false });
+    const t = instance.t;
+    const line = (kind: "devin" | "grok", os: string) =>
+      gateLine(t, {
+        gate: { state: "unsupported", reason: "system", os },
+        edition: "selfhost",
+        kind,
+        computer: "Estudio-PC",
+      })?.text;
+    expect(line("devin", "windows")).toBe(
+      "O Estudio-PC usa Windows, onde o Devin ainda não roda: lá a CLI dele não consegue manter separado o login de cada conta. Use o Devin num computador Mac ou Linux, ou escolha outra IA.",
+    );
+    // Any other plan off its system keeps the plain line.
+    expect(line("grok", "windows")).toBe(t("brain.reasons.system", { computer: "Estudio-PC", program: "Grok Build" }));
+  });
+
   test("a CLI the apps don't install: the line to run there, for every agent's user in system mode", async () => {
     const { ptBR, resources } = await import("@agenteschat/i18n");
     const i18next = (await import("i18next")).default;

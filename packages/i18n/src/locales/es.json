@@ -3595,6 +3595,7 @@
       "cursor": "Cursor no tiene la sesión iniciada en esta computadora. Conecta una cuenta de Cursor en la página de {{name}}.",
       "grok": "Grok no tiene la sesión iniciada en esta computadora. Conecta una cuenta de Grok en la página de {{name}}.",
       "antigravity": "Gemini no tiene la sesión iniciada en esta computadora. Conecta una cuenta de Gemini en la página de {{name}}.",
+      "devin": "Devin no tiene la sesión iniciada en esta computadora. Conecta una cuenta de Devin en la página de {{name}}.",
       "opencode": "OpenCode no puede pensar en esta computadora. Conecta una clave de OpenCode en la página de {{name}}."
     },
     "notSignedInOn": {
@@ -3603,6 +3604,7 @@
       "cursor": "Cursor no tiene la sesión iniciada en {{computer}}. Conecta una cuenta de Cursor en la página de {{name}}.",
       "grok": "Grok no tiene la sesión iniciada en {{computer}}. Conecta una cuenta de Grok en la página de {{name}}.",
       "antigravity": "Gemini no tiene la sesión iniciada en {{computer}}. Conecta una cuenta de Gemini en la página de {{name}}.",
+      "devin": "Devin no tiene la sesión iniciada en {{computer}}. Conecta una cuenta de Devin en la página de {{name}}.",
       "opencode": "OpenCode no puede pensar en {{computer}}. Conecta una clave de OpenCode en la página de {{name}}."
     },
     "card": {
@@ -3661,6 +3663,7 @@
       "cursor": "Conecta tu plan de Cursor",
       "grok": "Conecta tu plan de Grok",
       "gemini": "Conecta tu plan de Gemini",
+      "devin": "Conecta tu plan de Devin",
       "zen": "Conectar OpenCode",
       "api_key": "Agrega una clave de API"
     },
@@ -3814,6 +3817,10 @@
         "warning": "Google dice que usar un plan personal de Gemini dentro de otras apps puede hacer que suspendan la cuenta. Para evitar ese riesgo, usa una clave de API de Gemini o Gemini Enterprise.",
         "windowsOne": "En Windows, una computadora usa una sola cuenta de Gemini a la vez."
       },
+      "devin": {
+        "title": "Tu plan de Devin",
+        "tiers": "Free, Pro, Max o Teams"
+      },
       "zen": {
         "title": "OpenCode",
         "tiers": "Modelos gratis, o tu clave de OpenCode"
@@ -3921,6 +3928,7 @@
       "cursor": "Cursor inició sesión como {{email}}, no como {{account}}. Cierra sesión en la página de Cursor e intenta de nuevo.",
       "grok": "Grok inició sesión como {{email}}, no como {{account}}. Cierra sesión en la página de Grok e intenta de nuevo.",
       "antigravity": "Gemini inició sesión como {{email}}, no como {{account}}. Cierra sesión en la página de Google e intenta de nuevo.",
+      "devin": "Devin inició sesión como {{email}}, no como {{account}}. Cierra sesión en la página de Devin e intenta de nuevo.",
       "opencode": "OpenCode inició sesión como {{email}}, no como {{account}}. Inténtalo de nuevo con la clave correcta."
     },
     "useAnyway": "Usar {{email}}",
@@ -6278,6 +6286,7 @@
             "cursor": "Agregar una cuenta de Cursor",
             "grok": "Agregar una cuenta de Grok",
             "antigravity": "Agregar una cuenta de Gemini",
+            "devin": "Agregar una cuenta de Devin",
             "opencode": "Agregar una clave de OpenCode"
           },
           "stepOne": {
@@ -6285,6 +6294,7 @@
             "codex": "La cuenta con tu plan",
             "cursor": "La cuenta con tu plan",
             "grok": "La cuenta con tu plan",
+            "devin": "La cuenta con tu plan",
             "antigravity": "La cuenta de Google con tu plan",
             "antigravityEnterprise": "Tu cuenta de Gemini Enterprise"
           },
@@ -6294,7 +6304,8 @@
             "codex": "Iniciar sesión con ChatGPT",
             "cursor": "Iniciar sesión con Cursor",
             "grok": "Iniciar sesión con Grok",
-            "antigravity": "Iniciar sesión con Google"
+            "antigravity": "Iniciar sesión con Google",
+            "devin": "Iniciar sesión con Devin"
           },
           "opencodeFree": "Los modelos gratis de OpenCode no necesitan clave. Una clave de la consola de OpenCode suma los de pago.",
           "cursorFinish": "Inicia sesión en la página de Cursor y el inicio de sesión termina solo en {{computer}}.",
@@ -6309,6 +6320,9 @@
           "notCode": "Eso no parece el código de Claude.",
           "stepTwoGoogle": "Pega el código que muestra Google",
           "codeLabelGoogle": "Código de Google",
+          "stepTwoDevin": "Pega el código que muestra Devin",
+          "codeHintDevin": "Pega el código que muestra la página de Devin, no la dirección de la página.",
+          "codeLabelDevin": "Código de Devin",
           "codeHintGoogle": "Pega el código que muestra la página de Google, no la dirección de la página.",
           "notCodeGoogle": "Eso es una dirección sin código. Pega el código que muestra la página de Google.",
           "send": "Enviar a {{computer}}",
@@ -6342,6 +6356,7 @@
             "cursor": "Cursor inició sesión como {{account}}, una cuenta que ya conectaste. Para usar otra, cierra sesión en la página de Cursor e inténtalo de nuevo.",
             "grok": "Grok inició sesión como {{account}}, una cuenta que ya conectaste. Para usar otra, cierra sesión en la página de Grok e inténtalo de nuevo.",
             "antigravity": "Gemini inició sesión como {{account}}, una cuenta que ya conectaste. Para usar otra, cierra sesión en la página de Google e inténtalo de nuevo.",
+            "devin": "Devin inició sesión como {{account}}, una cuenta que ya conectaste. Para usar otra, cierra sesión en la página de Devin e inténtalo de nuevo.",
             "opencode": "Esa clave de OpenCode ya está conectada como {{account}}."
           },
           "startFailed": "{{computer}} no respondió. Inténtalo de nuevo en un momento.",
@@ -11563,6 +11578,7 @@
       "cursor": "Cursor",
       "grok": "Grok",
       "antigravity": "Gemini",
+      "devin": "Devin",
       "opencode": "OpenCode",
       "needs": {
         "keys": "Actualiza agentes en la computadora para usar la clave de un plan"
@@ -13097,6 +13113,7 @@
       "cursor": "{{model}} con el plan de Cursor",
       "grok": "{{model}} con el plan de Grok",
       "gemini": "{{model}} con el plan de Gemini",
+      "devin": "{{model}} con el plan de Devin",
       "zen": "{{model}} con OpenCode",
       "coding": "{{model}} con {{plan}}",
       "claudeOf": "{{model}} con el plan de Claude de {{owner}}",
@@ -13104,6 +13121,7 @@
       "cursorOf": "{{model}} con el plan de Cursor de {{owner}}",
       "grokOf": "{{model}} con el plan de Grok de {{owner}}",
       "geminiOf": "{{model}} con el plan de Gemini de {{owner}}",
+      "devinOf": "{{model}} con el plan de Devin de {{owner}}",
       "zenOf": "{{model}} con el OpenCode de {{owner}}",
       "codingOf": "{{model}} con {{plan}} de {{owner}}",
       "claudeAuto": "Plan de Claude",
@@ -13111,6 +13129,7 @@
       "cursorAuto": "Plan de Cursor",
       "grokAuto": "Plan de Grok",
       "geminiAuto": "Plan de Gemini",
+      "devinAuto": "Plan de Devin",
       "zenAuto": "OpenCode",
       "codingAuto": "{{plan}}",
       "claudeAutoOf": "Plan de Claude de {{owner}}",
@@ -13118,6 +13137,7 @@
       "cursorAutoOf": "Plan de Cursor de {{owner}}",
       "grokAutoOf": "Plan de Grok de {{owner}}",
       "geminiAutoOf": "Plan de Gemini de {{owner}}",
+      "devinAutoOf": "Plan de Devin de {{owner}}",
       "zenAutoOf": "OpenCode de {{owner}}",
       "codingAutoOf": "{{plan}} de {{owner}}",
       "on": "{{line}} en {{computer}}"
@@ -13131,7 +13151,8 @@
       "cursor": "Cursor",
       "opencode": "OpenCode",
       "grok": "Grok Build",
-      "antigravity": "Antigravity CLI"
+      "antigravity": "Antigravity CLI",
+      "devin": "Devin CLI"
     },
     "foot": {
       "api": "A través de la API",
@@ -13144,6 +13165,7 @@
     "cursorText": "Usa el plan de Cursor de quien conectó la computadora.",
     "grokText": "Usa el plan de Grok de quien conectó la computadora.",
     "antigravityText": "Usa el plan de Gemini de quien conectó la computadora.",
+    "devinText": "Usa el plan de Devin de quien conectó la computadora.",
     "opencodeText": "Los modelos gratis de OpenCode, o la clave de OpenCode de quien conectó la computadora.",
     "cursorModel": {
       "inPlan": "Incluido en tu plan de Cursor",
@@ -13161,6 +13183,7 @@
       "home_only": "{{program}} está instalado solo para root en {{computer}}, donde los agentes no llegan.",
       "not_reported": "{{computer}} todavía está comprobando qué programas tiene. Esto cambia solo cuando termine.",
       "system": "{{program}} todavía no funciona en el sistema de {{computer}}.",
+      "systemDevin": "{{computer}} usa Windows, donde Devin todavía no funciona: allí su CLI no puede mantener separado el inicio de sesión de cada cuenta. Usa Devin en una computadora Mac o Linux, o elige otra IA.",
       "windows_sandbox": "El Windows de {{computer}} no puede aislar los comandos de {{program}}. Elige Claude o una clave de API en su lugar, o actualiza esa computadora a Windows 11 24H2 o posterior, con sus últimas actualizaciones.",
       "no_computerCloud": "Listo en cuanto {{computer}} lo esté."
     },
@@ -13206,6 +13229,7 @@
       "cursor": "Cursor · {{model}}",
       "grok": "Grok Build · {{model}}",
       "antigravity": "Antigravity CLI · {{model}}",
+      "devin": "Devin CLI · {{model}}",
       "opencode": "OpenCode · {{model}}"
     },
     "mission": {
@@ -17129,6 +17153,7 @@
         "opencode": "OpenCode",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
+        "devin": "Devin CLI",
         "commands": "los comandos",
         "browser": "el navegador",
         "desktop": "la pantalla",
@@ -17304,6 +17329,7 @@
         "cursor": "Cursor",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
+        "devin": "Devin CLI",
         "opencode": "OpenCode",
         "commands": "Comandos",
         "browser": "Navegador"
@@ -17314,6 +17340,7 @@
         "cursor": "Como Claude Code, con una cuenta de Cursor. Solo en las carpetas permitidas.",
         "grok": "Como Claude Code, con una cuenta de Grok. Solo en las carpetas permitidas.",
         "antigravity": "Como Claude Code, con una cuenta de Gemini. Solo en las carpetas permitidas.",
+        "devin": "Como Claude Code, con una cuenta de Devin. Solo en las carpetas permitidas.",
         "opencode": "Como Claude Code, con los modelos gratis de OpenCode o una clave de OpenCode. Solo en las carpetas permitidas.",
         "commands": "Ejecuta comandos en la Terminal, como pruebas y builds."
       },

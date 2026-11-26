@@ -397,6 +397,10 @@ describe("Preferences: a setting's explanation behind its ⓘ", () => {
             hint: "Writes and changes code in the allowed folders, with your Gemini account.",
           },
           {
+            title: "Devin CLI",
+            hint: "Writes and changes code in the allowed folders, with your Devin account.",
+          },
+          {
             title: "Commands",
             hint: "Tests, builds and other Terminal commands. Each one shows in Activity. Commands run as you. They can read anything you can on this Mac, agentes.chat's database and keys included. Turn them on only for workspaces you trust with all of it.",
           },
@@ -468,6 +472,21 @@ describe("Preferences: a setting's explanation behind its ⓘ", () => {
         await until(() => state("opencode") === "true");
         expect(programs.map(state)).toEqual(["true", "false", "false", "true", "false", "false"]);
       },
+    ));
+
+  test("Tools on Windows: Devin's row says why it doesn't run there, in place of its install line", () =>
+    pane(
+      "selfhost",
+      <Tools />,
+      (el) => el.querySelector("#tool-devin"),
+      (el) => {
+        const row = el.querySelector("#tool-devin")?.closest(".dk-crow") as HTMLElement;
+        expect(row.textContent).toContain(
+          "Devin doesn't run on Windows yet: here its CLI can't keep each account's sign-in apart.",
+        );
+        expect(row.textContent).not.toContain("cli.devin.ai");
+      },
+      { host: (h) => Object.assign(h, { platform: "windows" }) },
     ));
 
   test("Tools: turning Commands on for one workspace asks first, and only that workspace changes", () =>
