@@ -7,7 +7,6 @@ import { cronRule } from "@agenteschat/client/lib/routine-view";
 import { isTimeZone } from "@agenteschat/client/lib/routines";
 import {
   type AgentAppearance,
-  Avatar,
   BUSINESS_DAYS,
   dotTone,
   Icon,
@@ -20,6 +19,7 @@ import {
 import type { TFunction } from "i18next";
 import { type CSSProperties, type ReactNode, useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { AgentAvatar } from "@/components/AgentAvatar";
 import { fromApiRule } from "@/lib/recurrence";
 import { Box } from "./Shell";
 import "./week-step.css";
@@ -219,7 +219,7 @@ export function FirstWeek({
               <li key={e.key}>
                 <span className="onb-week__at">{e.at}</span>
                 <span className="onb-week__ev">
-                  <Avatar kind="agent" name={agent.name} appearance={agent.look} size="xs" framed={false} />
+                  <AgentAvatar name={agent.name} appearance={agent.look} size="xs" framed={false} />
                   <span>{e.text}</span>
                 </span>
               </li>

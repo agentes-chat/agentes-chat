@@ -4,10 +4,11 @@ import type { PlanOffer } from "@agenteschat/client/lib/billing";
 import { joinNames } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { firstJob } from "@agenteschat/client/lib/onboarding";
-import { Avatar, Button, HintLine, Spinner } from "@agenteschat/ui";
+import { Button, HintLine, Spinner } from "@agenteschat/ui";
 import type { TFunction } from "i18next";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { AgentAvatar } from "@/components/AgentAvatar";
 import { useOpenBilling } from "@/components/BillingLinkButton";
 import { lookOf } from "@/lib/look";
 import { Box, Pass, type ShellFace } from "./Shell";
@@ -165,7 +166,7 @@ export function HireTeam({
             return (
               <li key={who.id} className="ac-mediarow">
                 <span className="ac-mediarow__face">
-                  <Avatar kind="agent" name={who.name} appearance={who.look} size="sm" framed={false} />
+                  <AgentAvatar name={who.name} appearance={who.look} size="sm" framed={false} />
                 </span>
                 <span className="ac-mediarow__head">
                   <b>{who.name}</b>

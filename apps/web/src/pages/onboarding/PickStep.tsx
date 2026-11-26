@@ -2,10 +2,11 @@ import type { ConnectorDef, FirstAgentOption, FirstAgentPicked, FirstAgents } fr
 import { useCatalog, useFirstAgents, usePickFirstAgent } from "@agenteschat/client";
 import type { AppClient } from "@agenteschat/client/lib/app-clients";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
-import { Avatar, Button, dotTone, Icon, PixelSky, ProviderLogo, teamSky } from "@agenteschat/ui";
+import { Button, dotTone, Icon, PixelSky, ProviderLogo, teamSky } from "@agenteschat/ui";
 import type { TFunction } from "i18next";
 import { type CSSProperties, type ReactNode, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { AgentAvatar } from "@/components/AgentAvatar";
 import { ConnectorIcon } from "@/components/ConnectorIcon";
 import { lookOf } from "@/lib/look";
 import { Box, BoxNote } from "./Shell";
@@ -212,14 +213,7 @@ function CardSky({ option }: { option: FirstAgentOption }) {
         <span className="team-scene__row">
           <span className="team-scene__cast" data-awake="">
             <span className="team-scene__agent" data-lead="">
-              <Avatar
-                kind="agent"
-                name={option.name}
-                appearance={lookOf(option)}
-                size="lg"
-                framed={false}
-                expression="happy"
-              />
+              <AgentAvatar name={option.name} appearance={lookOf(option)} size="lg" framed={false} expression="happy" />
             </span>
           </span>
         </span>

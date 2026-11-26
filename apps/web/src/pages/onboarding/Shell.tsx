@@ -17,6 +17,7 @@ import {
 } from "@agenteschat/ui";
 import { type CSSProperties, type ReactNode, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { AgentAvatar } from "@/components/AgentAvatar";
 import { ConnectorIcon } from "@/components/ConnectorIcon";
 import { agentCoverOptions, facePool } from "@/components/Sky";
 import "@/components/arrival/arrival.css";
@@ -104,8 +105,7 @@ export function World({
                     data-lead={i === 0 ? "" : undefined}
                     style={{ "--i": i } as CSSProperties}
                   >
-                    <Avatar
-                      kind="agent"
+                    <AgentAvatar
                       name={a.name}
                       appearance={a.look}
                       size="lg"
@@ -281,8 +281,7 @@ export function Pass({
                 data-lead={i === 0 ? "" : undefined}
                 style={{ "--i": i } as CSSProperties}
               >
-                <Avatar
-                  kind="agent"
+                <AgentAvatar
                   name={a.name}
                   appearance={a.look}
                   size="lg"
@@ -367,7 +366,7 @@ export function Photo({
       data-lead={i === 0 ? "" : undefined}
       style={{ "--i": i } as CSSProperties}
     >
-      <Avatar kind="agent" name={a.name} appearance={a.look} size="lg" framed={false} state="idle" expression="happy" />
+      <AgentAvatar name={a.name} appearance={a.look} size="lg" framed={false} state="idle" expression="happy" />
       {i === 0 && say && <span className="onbw__say onb-photo__say">{say}</span>}
     </span>
   );
@@ -468,8 +467,7 @@ export function AppWall({ faces }: { faces: readonly ShellFace[] }) {
                 </span>
               ) : (
                 <span key={tile.id} className="onb-wall__tile onb-wall__tile--agent">
-                  <Avatar
-                    kind="agent"
+                  <AgentAvatar
                     name={tile.who.name}
                     appearance={tile.who.look}
                     size="md"

@@ -3,10 +3,11 @@ import { useAgents, useApps, useFirstAgents, useMe, usePasteFirstAgents } from "
 import { APP_CLIENTS, type AppClient } from "@agenteschat/client/lib/app-clients";
 import { aiAppAsk, appMark } from "@agenteschat/client/lib/apps";
 import { RIGHT_HAND_DEFAULT, rightHandOf } from "@agenteschat/client/lib/right-hand";
-import { Avatar, Button, Icon, ProviderLogo, Skeleton, SwapLabel, Textarea } from "@agenteschat/ui";
+import { Button, Icon, ProviderLogo, Skeleton, SwapLabel, Textarea } from "@agenteschat/ui";
 import type { TFunction } from "i18next";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { AgentAvatar } from "@/components/AgentAvatar";
 import { GuideExtras, GuideInstalls, GuideWords } from "@/components/AiApps";
 import { lookOf } from "@/lib/look";
 import { Box } from "./Shell";
@@ -272,8 +273,7 @@ export function AskYourAi({
         <div className="onb-ask__wait">
           {!byPaste && (
             <p className="onb-ask__line ac-iconline" role="status">
-              <Avatar
-                kind="agent"
+              <AgentAvatar
                 name={lodi?.name ?? RIGHT_HAND_DEFAULT.name}
                 appearance={lookOf(lodi) ?? RIGHT_HAND_DEFAULT.appearance}
                 size="xs"
