@@ -752,8 +752,7 @@ const styles = StyleSheet.create({
     minHeight: 28,
     paddingVertical: 2,
     paddingHorizontal: 8,
-    borderRadius: 999,
-    overflow: "hidden",
+    // Nothing clips: the orbit's rings, turned upright, reach past the line's 28 points (the dock's padding takes them).
   },
   stack: { flexDirection: "row", alignItems: "center", flexShrink: 0 },
   // The rings reach past the face into the gap on each side.

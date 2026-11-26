@@ -34,25 +34,28 @@ function ringAngle(ring: Ring, roll: number, ms: number): number {
 
 /**
  * The group one ring is drawn in: centred in the layer and turned round the face by the shared clock, so both layers
- * turn it as one and its light rides it.
+ * turn it as one and its light rides it. `still` rests it at its tilt whatever the clock has reached: Reduce Motion
+ * can turn on after the clock ran (the setting resolves after the first frames, or changes while the app is open).
  */
 function RingGroup({
   clock,
   ring,
   c,
   roll,
+  still,
   children,
 }: {
   clock: SharedValue<number>;
   ring: Ring;
   c: number;
   roll: number;
+  still: boolean;
   children: ReactNode;
 }) {
   const transform = useDerivedValue(() => [
     { translateX: c },
     { translateY: c },
-    { rotate: ringAngle(ring, roll, clock.value) },
+    { rotate: still ? (ring.tilt * Math.PI) / 180 : ringAngle(ring, roll, clock.value) },
   ]);
   return <Group transform={transform}>{children}</Group>;
 }
@@ -147,6 +150,7 @@ function Layer({
   size,
   clock,
   phases,
+  still,
   colors,
   dark,
 }: {
@@ -154,6 +158,7 @@ function Layer({
   size: number;
   clock: SharedValue<number>;
   phases: readonly Phase[];
+  still: boolean;
   colors: Colors;
   dark: boolean;
 }) {
@@ -177,6 +182,7 @@ function Layer({
             ring={ring}
             c={c}
             roll={phases[i]?.roll ?? 0}
+            still={still}
           >
             {back && (
               <Oval
@@ -236,8 +242,6 @@ export function OrbitFace({ color, size, children }: { color: string; size: numb
   const [phases] = useState(() =>
     ORBIT_RINGS.map((ring) => ({ light: Math.random() * ring.turn, roll: Math.random() * Math.abs(ring.spin) })),
   );
-  // With Reduce Motion the clock never moves: each ring rests at its own tilt, as on the web.
-  const still = useMemo(() => phases.map((p) => ({ ...p, roll: 0 })), [phases]);
   const clock = useDrawingClock(!reduced && !paused);
   return (
     <View
@@ -245,9 +249,9 @@ export function OrbitFace({ color, size, children }: { color: string; size: numb
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
     >
-      <Layer half="back" size={size} clock={clock} phases={reduced ? still : phases} colors={colors} dark={dark} />
+      <Layer half="back" size={size} clock={clock} phases={phases} still={reduced} colors={colors} dark={dark} />
       {children}
-      <Layer half="front" size={size} clock={clock} phases={reduced ? still : phases} colors={colors} dark={dark} />
+      <Layer half="front" size={size} clock={clock} phases={phases} still={reduced} colors={colors} dark={dark} />
     </View>
   );
 }
