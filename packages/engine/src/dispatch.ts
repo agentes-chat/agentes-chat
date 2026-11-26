@@ -551,7 +551,9 @@ export async function mayJoin(
   const behind = await runAuthorityById(tx, message.orgId, runId);
   if (root.kind === "person") return behind.personId === root.personId;
   if (root.kind === "agent") return behind.personId === null;
-  if (behind.kind !== "unattended" || behind.reason === "agent") return false;
+  // An integration app's message joins only a run that answers that same app (ADR 0251).
+  if (root.kind === "app") return behind.kind === "unattended" && behind.appId === root.appId;
+  if (behind.kind !== "unattended" || behind.reason === "agent" || behind.reason === "app") return false;
   const brief = await feedingBrief(tx, message.orgId, root);
   return !brief || !behind.brief || brief.routineId === behind.brief.routineId;
 }

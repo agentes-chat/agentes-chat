@@ -750,7 +750,7 @@ export const Channel = z
     lastMessage: z
       .object({
         id: z.uuid(),
-        authorType: z.enum(["person", "agent"]),
+        authorType: z.enum(["person", "agent", "app"]),
         authorId: z.string().nullable(),
         authorName: z.string().nullable().openapi({ description: "Null when the author was deleted." }),
         preview: z.string().openapi({ description: "Plain text, at most 140 characters." }),
@@ -893,7 +893,9 @@ const MessageBase = z.object({
   id: z.uuid(),
   channelId: z.uuid(),
   threadId: z.uuid().nullable(),
-  author: z.object({ type: z.enum(["person", "agent"]), id: z.string().nullable() }),
+  author: z
+    .object({ type: z.enum(["person", "agent", "app"]), id: z.string().nullable() })
+    .openapi({ description: "`app`: an integration app (ADR 0251); its name, color and sender are in `meta.app`." }),
   body: z.string(),
   mentionedAgentIds: z.array(z.uuid()),
   mentionedUserIds: z.array(z.string()).openapi({ description: "People mentioned by handle who are in the channel." }),

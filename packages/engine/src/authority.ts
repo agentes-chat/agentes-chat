@@ -35,14 +35,18 @@ export type RunAuthority =
   /** `relayed`: the person's message it roots in wasn't typed in our apps (`ownTyped`): theirs to answer, not to teach. */
   | { kind: "person"; personId: string; relayed?: true }
   | { kind: "routine"; personId: null; brief: RoutineBrief | null }
-  /** `brief`: the routine whose report or work woke it (reasons `routine_report` and `routine`), whose bounds it keeps. */
-  | { kind: "unattended"; personId: null; reason: UnattendedReason; brief?: RoutineBrief | null };
+  /**
+   * `brief`: the routine whose report or work woke it (reasons `routine_report` and `routine`), whose bounds it keeps.
+   * `appId`: the integration app whose message it answers (reason `app`).
+   */
+  | { kind: "unattended"; personId: null; reason: UnattendedReason; brief?: RoutineBrief | null; appId?: string };
 
 /**
  * Why nobody is behind an unattended run: a routine's report woke it (`routine_report`), its chain roots in a
- * routine's background run (`routine`: the end of a task one started), or an agent's own work (`agent`).
+ * routine's background run (`routine`: the end of a task one started), an agent's own work (`agent`), or an
+ * integration app's message (`app`, ADR 0251): outside text, like what a routine reads, so it keeps the same bounds.
  */
-export type UnattendedReason = "routine_report" | "routine" | "agent";
+export type UnattendedReason = "routine_report" | "routine" | "agent" | "app";
 
 /** What a message's chain roots in. */
 export type MessageRoot =
@@ -52,6 +56,8 @@ export type MessageRoot =
   | { kind: "routine"; briefMessageId: string | null }
   /** `backgroundRunId`: the routine's run that handed it off (the notice's `refs.runId`). */
   | { kind: "routine_report"; backgroundRunId: string | null }
+  /** An integration app's message (ADR 0251): nobody is behind it, whoever writes into the run later. */
+  | { kind: "app"; appId: string }
   | { kind: "agent" };
 
 export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -134,6 +140,10 @@ async function walkRoot(db: Executor, orgId: string, messageId: string, walked: 
       .from(messages)
       .where(and(eq(messages.orgId, orgId), eq(messages.id, id)))) as MessageLink[];
     if (!m) return null;
+    if (m.authorType === "app") {
+      const appId = (m.meta.app as { id?: unknown } | undefined)?.id;
+      return typeof appId === "string" ? { kind: "app", appId } : { kind: "agent" };
+    }
     if (m.authorType === "person") {
       // A routine's brief is written by its creator, but nobody is behind the work it starts.
       if (routineBriefOf(m.meta) || m.meta.background === true) return { kind: "routine", briefMessageId: id };
@@ -328,6 +338,8 @@ export async function runAuthority(db: Executor, run: AuthorityRun): Promise<Run
   }
   const root = await messageRoot(db, run.orgId, run.triggerMessageId);
   if (root.kind === "person") return root;
+  // A person writing into it never puts them behind what an app's outside text started (`steeredBy`).
+  if (root.kind === "app") return { kind: "unattended", personId: null, reason: "app", appId: root.appId };
   const steeredBy = steeredByOf(run.transcript ?? run.state);
   if (steeredBy) return { kind: "person", personId: steeredBy };
   if (root.kind === "agent") return { kind: "unattended", personId: null, reason: "agent" };
@@ -362,6 +374,7 @@ export async function feedingBrief(
  * work woke. Such text may come from outside (inbound mail, a webhook, the web) through the routine, so the run
  * never sends a credential, its writes to connected apps and its mail sends always ask a person (ADR 0038, 0053 §3),
  * except the routine's own actions on its own run and on the runs its report or a teammate's answer woke (`onOwnJob`).
+ * A run an integration app's message woke (reason `app`, ADR 0251) is fed the same way: by someone outside.
  */
 export const fedByRoutine = (authority: RunAuthority | null): boolean =>
   authority?.kind === "routine" || (authority?.kind === "unattended" && authority.reason !== "agent");
@@ -380,7 +393,7 @@ export async function runAuthorityById(db: Executor, orgId: string, runId: strin
     .where(and(eq(agentRuns.orgId, orgId), eq(agentRuns.id, runId)));
   if (!run) return { kind: "unattended", personId: null, reason: "agent" };
   const authority = await runAuthority(db, run);
-  if (authority.kind !== "unattended") return authority;
+  if (authority.kind !== "unattended" || authority.reason === "app") return authority;
   // `steeredBy` (read off the run's state copy) only for a run no person is behind yet.
   const [steered] = await db
     .select({ transcript: transcriptKeys("steeredBy") })

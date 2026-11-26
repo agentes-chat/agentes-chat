@@ -807,7 +807,7 @@ export interface ActivityLine {
   counts: boolean;
   /** Its line, when it may be the last one: a channel's top-level message, any of a DM's. Absent: a routine's call. */
   last?: {
-    authorType: "person" | "agent";
+    authorType: "person" | "agent" | "app";
     authorId: string | null;
     /** As a channel's row has it, at most `CHANNEL_PREVIEW_LENGTH` chars. */
     preview: string;

@@ -28,6 +28,8 @@ import type { ContextDeps } from "../context/summaries";
 import { sha256 } from "../crypto";
 import { openDm } from "../dms";
 import { ConflictError, ForbiddenError, NotFoundError, TooManyError, ValidationError } from "../errors";
+import { type IntegrationPrincipal, isIntegrationPrincipal } from "../integrations/apps";
+import { buildIntegrationMcpServer } from "../integrations/mcp";
 import type { Judge } from "../judge";
 import { getMessage, listMessages, type MessageView, postPersonMessage } from "../messages";
 import { getMembership } from "../organizations";
@@ -137,7 +139,7 @@ export function toolResult(data: Record<string, unknown>): CallToolResult {
   };
 }
 
-const toolError = (text: string, extra: Record<string, unknown> = {}): CallToolResult => ({
+export const toolError = (text: string, extra: Record<string, unknown> = {}): CallToolResult => ({
   isError: true,
   content: [{ type: "text", text: Object.keys(extra).length ? `${text} ${JSON.stringify(extra)}` : text }],
 });
@@ -153,7 +155,11 @@ export class AppToolError extends Error {
 }
 
 /** Engine errors as words the model can act on; anything else is reported and stays generic. */
-function errorResult(error: unknown, deps: AppsToolDeps, context: Record<string, unknown>): CallToolResult {
+export function errorResult(
+  error: unknown,
+  deps: Pick<AppsToolDeps, "report">,
+  context: Record<string, unknown>,
+): CallToolResult {
   if (error instanceof AppToolError) return toolError(error.message, error.extra);
   if (error instanceof NotFoundError) return toolError(`Not found: ${error.message}.`);
   if (error instanceof ForbiddenError) return toolError(error.message);
@@ -473,7 +479,7 @@ export function appsInstructions(p: AppPrincipal) {
  * A tool's input schema as `tools/list` shows it: the zod schema's own validation, its JSON Schema without the
  * `$schema` key every tool would repeat (clients' tool lists have a size budget).
  */
-function listed(schema: z.ZodObject) {
+export function listed(schema: z.ZodObject) {
   const standard = schema["~standard"] as unknown as {
     jsonSchema: { input: (o: unknown) => Record<string, unknown>; output: (o: unknown) => Record<string, unknown> };
   };
@@ -1023,8 +1029,10 @@ export function mcpRequestHeaders(headers: Headers, body: unknown): Headers {
  */
 export function createAppsMcpHandler(deps: AppsToolDeps, options: { version: string; maxBodyBytes: number }) {
   const build = (authInfo: AuthInfo | undefined) => {
-    const principal = authInfo?.extra?.principal as AppPrincipal | undefined;
+    const principal = authInfo?.extra?.principal as AppPrincipal | IntegrationPrincipal | undefined;
     if (!principal) throw new Error("mcp handler without a principal");
+    // An integration app (ADR 0251) gets its own three tools, never a person's.
+    if (isIntegrationPrincipal(principal)) return buildIntegrationMcpServer(deps, principal, options.version);
     return buildAppsMcpServer(deps, principal, options.version);
   };
   const modern = createMcpHandler(({ authInfo }) => build(authInfo), {
@@ -1033,13 +1041,10 @@ export function createAppsMcpHandler(deps: AppsToolDeps, options: { version: str
     maxRequestBodySize: options.maxBodyBytes,
     onerror: (error) => deps.onRefused?.(error),
   });
-  return async (request: Request, principal: AppPrincipal): Promise<Response> => {
-    const authInfo: AuthInfo = {
-      token: principal.grantId,
-      clientId: principal.grantId,
-      scopes: principal.scopes,
-      extra: { principal },
-    };
+  return async (request: Request, principal: AppPrincipal | IntegrationPrincipal): Promise<Response> => {
+    const authInfo: AuthInfo = isIntegrationPrincipal(principal)
+      ? { token: principal.appId, clientId: principal.appId, scopes: [], extra: { principal } }
+      : { token: principal.grantId, clientId: principal.grantId, scopes: principal.scopes, extra: { principal } };
     if (!(await isLegacyRequest(request, undefined, { maxRequestBodySize: options.maxBodyBytes })))
       return modern.fetch(request, { authInfo });
     const server = build(authInfo);

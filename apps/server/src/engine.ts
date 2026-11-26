@@ -97,6 +97,7 @@ import {
   createWithdrawRequestToolSource,
   createWorkspaceToolSource,
   createWorkToolSource,
+  deliverToApp,
   deviceWaitHooks,
   type EmailArt,
   emailArtAt,
@@ -108,6 +109,7 @@ import {
   GrokBrain,
   getAgentCached,
   hubBrainLink,
+  INTEGRATION_DELIVERY_JOB,
   type IntentWriter,
   isAgentesCloud,
   isRightHand,
@@ -121,6 +123,7 @@ import {
   notifyOwnerOnBudget,
   OpencodeBrain,
   officeLiveExporter,
+  outboundFetch,
   platformCapJudge,
   prepareAgentCode,
   publishUserEvent,
@@ -210,6 +213,8 @@ export interface EngineOptions {
   };
   /** Error reports (ADR 0104) for failures nothing logs: learning's (`reportLearnFailure`). */
   errors?: ErrorReporter;
+  /** Tests: where integration apps' webhooks are sent (default: `outboundFetch`). */
+  integrationFetch?: typeof fetch;
 }
 
 /**
@@ -933,6 +938,12 @@ export function buildEngine(o: EngineOptions) {
     },
   };
   const handlers = createJobHandlers(jobDeps);
+  // An agent's reply where an integration app reads, to the app's webhook (ADR 0251), through the address-checking fetch.
+  const integrationDelivery = { db, keyWrappers, fetch: o.integrationFetch ?? outboundFetch() };
+  handlers[INTEGRATION_DELIVERY_JOB] = async (job) => {
+    if (!job.orgId) return;
+    await deliverToApp(integrationDelivery, job.orgId, String(job.payload.appId), String(job.payload.messageId));
+  };
   // A failing block of one of the right hand's lanes is left out of its prompt: it shows here.
   reportLodiLaneErrors((lane, error) => {
     o.log?.warn("right hand lane failed", { lane, error: String(error) });
