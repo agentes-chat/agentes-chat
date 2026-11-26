@@ -1971,10 +1971,10 @@ export const ptBR = {
       title: "Escolha o seu primeiro agente",
       lead_one: "O seu {{app}} achou a tarefa que mais toma o seu tempo. Comece por ela.",
       lead_other:
-        "O seu {{app}} achou as {{count}} tarefas que mais tomam o seu tempo. Comece por uma: as outras ficam para depois.",
+        "O seu {{app}} achou as {{n}} tarefas que mais tomam o seu tempo. Comece por uma: as outras ficam para depois.",
       leadAny_one: "A sua IA achou a tarefa que mais toma o seu tempo. Comece por ela.",
       leadAny_other:
-        "A sua IA achou as {{count}} tarefas que mais tomam o seu tempo. Comece por uma: as outras ficam para depois.",
+        "A sua IA achou as {{n}} tarefas que mais tomam o seu tempo. Comece por uma: as outras ficam para depois.",
       eyebrow: "Proposta do seu {{app}} · passo {{n}} de {{total}}",
       eyebrowAny: "Proposta da sua IA · passo {{n}} de {{total}}",
       rank: {
@@ -1990,9 +1990,13 @@ export const ptBR = {
       create: "Criar o {{name}}",
       create_female: "Criar a {{name}}",
       say_one: "O {{app}} achou um jeito de começar.",
-      say_other: "O {{app}} achou {{count}} jeitos de começar.",
+      say_other: "O {{app}} achou {{n}} jeitos de começar.",
       sayAny_one: "A sua IA achou um jeito de começar.",
-      sayAny_other: "A sua IA achou {{count}} jeitos de começar.",
+      sayAny_other: "A sua IA achou {{n}} jeitos de começar.",
+      count: {
+        tasks: { two: "duas", three: "três" },
+        ways: { two: "dois", three: "três" },
+      },
     },
     week: {
       title: "A primeira semana do {{name}}",

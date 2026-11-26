@@ -19,7 +19,7 @@ import { ARRIVAL_BETA_ONLY, ARRIVAL_PARAM } from "@/lib/arrival";
 import { lookOf } from "@/lib/look";
 import { AskYourAi } from "./onboarding/AskStep";
 import { roleWord } from "./onboarding/HireStep";
-import { FirstAgentPick } from "./onboarding/PickStep";
+import { FirstAgentPick, optionCount } from "./onboarding/PickStep";
 import { Box, BoxNote, Pass, PickRows, type ShellFace, World } from "./onboarding/Shell";
 
 /** A member's onboarding: the hello, asking their own AI, picking from what it proposed. */
@@ -165,7 +165,9 @@ export function MemberOnboardingPage({ orgId }: { orgId: string }) {
           ...teamFaces.slice(0, FACES_SHOWN),
           ...proposal.options.map((o) => ({ id: o.handle, name: o.name, look: lookOf(o), asleep: true })),
         ],
-        say: appName ? t("onboarding.pick.say", { app: appName, count }) : t("onboarding.pick.sayAny", { count }),
+        say: appName
+          ? t("onboarding.pick.say", { app: appName, count, n: optionCount(t, count, "ways") })
+          : t("onboarding.pick.sayAny", { count, n: optionCount(t, count, "ways") }),
         marks: askedOf?.mark ? { ids: [askedOf.mark], state: "done" } : null,
         wide: true,
         box: (

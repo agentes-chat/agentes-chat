@@ -2080,10 +2080,10 @@ export const en = {
       title: "Pick your first agent",
       lead_one: "Your {{app}} found the task that takes most of your time. Start with it.",
       lead_other:
-        "Your {{app}} found the {{count}} tasks that take most of your time. Start with one: the others are for later.",
+        "Your {{app}} found the {{n}} tasks that take most of your time. Start with one: the others are for later.",
       leadAny_one: "Your AI found the task that takes most of your time. Start with it.",
       leadAny_other:
-        "Your AI found the {{count}} tasks that take most of your time. Start with one: the others are for later.",
+        "Your AI found the {{n}} tasks that take most of your time. Start with one: the others are for later.",
       eyebrow: "Proposal from your {{app}} · step {{n}} of {{total}}",
       eyebrowAny: "Your AI's proposal · step {{n}} of {{total}}",
       /** Over each card's name, in the AI's order. */
@@ -2101,9 +2101,14 @@ export const en = {
       note: "Nothing is created until you pick.",
       create: "Create {{name}}",
       say_one: "{{app}} found one way to start.",
-      say_other: "{{app}} found {{count}} ways to start.",
+      say_other: "{{app}} found {{n}} ways to start.",
       sayAny_one: "Your AI found one way to start.",
-      sayAny_other: "Your AI found {{count}} ways to start.",
+      sayAny_other: "Your AI found {{n}} ways to start.",
+      /** How many options the AI sent (two or three), in words, for the lead (tasks) and the bubble (ways to start). */
+      count: {
+        tasks: { two: "two", three: "three" },
+        ways: { two: "two", three: "three" },
+      },
     },
     /**
      * The picked agent's first week, before the plan, as a planner page. `{{routine}}`: its routine's title. `{{when}}`: how it repeats

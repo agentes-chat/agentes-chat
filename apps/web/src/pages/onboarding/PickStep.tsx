@@ -3,6 +3,7 @@ import { useCatalog, useFirstAgents, usePickFirstAgent } from "@agenteschat/clie
 import type { AppClient } from "@agenteschat/client/lib/app-clients";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { Avatar, Button, dotTone, Icon, PixelSky, ProviderLogo, teamSky } from "@agenteschat/ui";
+import type { TFunction } from "i18next";
 import { type CSSProperties, type ReactNode, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ConnectorIcon } from "@/components/ConnectorIcon";
@@ -26,6 +27,13 @@ const RANKS = ["first", "second", "third"] as const;
 const MAIL_MARKS: Record<string, Pick<ConnectorDef, "iconUrl" | "brandColor">> = {
   gmail: { iconUrl: "/connectors/gmail.svg", brandColor: "#EA4335" },
 };
+
+/**
+ * How many options the AI sent, in words ("três"), as the lead says its tasks and the bubble its ways to start: at
+ * most three come, and one has words of its own (`_one`).
+ */
+export const optionCount = (t: TFunction, count: number, noun: "tasks" | "ways") =>
+  count === 2 ? t(`onboarding.pick.count.${noun}.two`) : t(`onboarding.pick.count.${noun}.three`);
 
 /** Where each card stands: the picked one in the middle, in front; the others behind it, one each side. */
 type Place = "center" | "left" | "right" | "side";
@@ -98,8 +106,12 @@ export function FirstAgentPick({
         lead
           ? lead(options.length)
           : appName
-            ? t("onboarding.pick.lead", { app: appName, count: options.length })
-            : t("onboarding.pick.leadAny", { count: options.length })
+            ? t("onboarding.pick.lead", {
+                app: appName,
+                count: options.length,
+                n: optionCount(t, options.length, "tasks"),
+              })
+            : t("onboarding.pick.leadAny", { count: options.length, n: optionCount(t, options.length, "tasks") })
       }
       note={<BoxNote>{note ?? t("onboarding.pick.note")}</BoxNote>}
       acts={

@@ -64,7 +64,7 @@ import { AskYourAi } from "./onboarding/AskStep";
 import { TeamWelcome } from "./onboarding/CelebrateStep";
 import { HireTeam } from "./onboarding/HireStep";
 import { PeopleStep } from "./onboarding/PeopleStep";
-import { FirstAgentPick } from "./onboarding/PickStep";
+import { FirstAgentPick, optionCount } from "./onboarding/PickStep";
 import { AppWall, Box, BoxNote, Pass, PickRows, type ShellFace, World } from "./onboarding/Shell";
 import { FirstWeek } from "./onboarding/WeekStep";
 import "./onboarding.css";
@@ -790,7 +790,9 @@ export function OnboardingPage() {
             lodiFace,
             ...proposal.options.map((o) => ({ id: o.handle, name: o.name, look: lookOf(o), asleep: true })),
           ],
-          say: appName ? t("onboarding.pick.say", { app: appName, count }) : t("onboarding.pick.sayAny", { count }),
+          say: appName
+            ? t("onboarding.pick.say", { app: appName, count, n: optionCount(t, count, "ways") })
+            : t("onboarding.pick.sayAny", { count, n: optionCount(t, count, "ways") }),
           marks: askedOf?.mark ? { ids: [askedOf.mark], state: "done" } : null,
           wide: true,
           box: (
