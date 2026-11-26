@@ -557,6 +557,23 @@ test.skipIf(!posix)(
   20_000,
 );
 
+test.skipIf(!posix)(
+  "a turn that calls a tool before it writes: its first token is the call, not the words",
+  async () => {
+    const root = tempDir("brain-agy-");
+    dirs.push(root);
+    const { ctx, accountDir } = turnContext(root);
+    signIn(accountDir);
+    const done = (await run(ctx, turn({ prompt: "BRIDGE_ONLY CALL_FIRST" }))).at(-1) as Extract<
+      CodexBrainEvent,
+      { type: "done" }
+    >;
+    expect(done).toMatchObject({ type: "done", text: "Let me check. All good." });
+    const { firstTokenMs = Infinity, firstEventMs = -1 } = done.timings ?? {};
+    expect(firstEventMs - firstTokenMs).toBeGreaterThanOrEqual(250);
+  },
+);
+
 test.skipIf(!posix)("the CLI turned off on the computer refuses the turn", async () => {
   const root = tempDir("brain-agy-");
   dirs.push(root);

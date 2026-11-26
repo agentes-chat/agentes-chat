@@ -252,7 +252,7 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
     opts.emit({ type: "error", code, message, ...(retryable ? { retryable } : {}) });
   // Windows too, one Gemini account a computer there (ADR 0143 §3).
   const platform = opts.platform ?? process.platform;
-  // How the turn started, each from its start (`done.timings`): the CLI's `init`, its first event, its first words.
+  // How the turn started, from its start (`done.timings`): the CLI's `init`, its first event, the model's first output.
   const startedAt = Date.now();
   const timings: Omit<BrainTurnTimings, "warm"> = {};
   const emit = (event: CodexBrainEvent) => {
@@ -326,7 +326,6 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
       tail = out.slice(at);
       if (at > 0) {
         streamed = true;
-        timings.firstTokenMs ??= Date.now() - startedAt;
         emit({ type: "text_delta", text: out.slice(0, at) });
       }
     };
@@ -373,6 +372,9 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
       }
       if (ev.event !== "step_update" || !isRecord(ev.step_update)) return;
       const step = ev.step_update;
+      // The model's first output, a call or words, as Claude Code's `firstTokenMs` (its API's first message).
+      if (step.step_type === "agent_response" || step.step_type === "tool")
+        timings.firstTokenMs ??= Date.now() - startedAt;
       if (step.step_type === "agent_response") {
         if (typeof step.text_delta === "string" && step.text_delta) flush(step.text_delta, false);
         if (step.state === "DONE" && isRecord(step.usage)) {
