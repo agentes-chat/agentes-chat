@@ -685,6 +685,20 @@ export const DEEP_MENTION_THRESHOLD = 0.85;
 export const DEEP_WAKE_HOP = 4;
 
 /**
+ * The lines of `body` that @mention `handle`, each cut, at most three: a request to an agent in the middle of a long
+ * report to people reads as part of that report when the judge sees only the whole message (a real miss: "@kai, add
+ * the resources the code uses to your inventory" halfway through a migration plan that ends asking the person).
+ */
+export function mentionPassages(body: string, handle: string): string[] {
+  const named = new RegExp(`(^|[^\\w@.])@${handle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\w@-])`, "i");
+  return body
+    .split("\n")
+    .filter((line) => named.test(line))
+    .slice(0, 3)
+    .map((line) => cutText(line.trim(), 600));
+}
+
+/**
  * An agent's message @mentions other agents: for each, does it leave that agent nothing to do (ADR 0089, addendum
  * 2026-11-10)? A mention is credit or a reference: a name, a source, what the agent did, said, sent or was asked
  * ("via @x", "the numbers are from @x", "I asked @x"), agreement, a correction, a thanks, a plan to ask it later.
@@ -711,13 +725,14 @@ export async function mentionNeedsNothing(
       type: "noul",
       instructions: {
         agent: { handle: `@${t.handle}`, name: t.name, role: t.role },
+        named_in: mentionPassages(input.body, t.handle),
         question:
-          "Does `message` leave `agent` nothing to do, so `agent` can ignore it? A mention of an agent in another agent's message is credit or a reference, not a request: it needs `agent` only when it plainly asks `agent` itself to do or answer something now, or answers a question `agent` asked it. Naming it, citing it as the source of a number or a fact, saying what it did, said, sent, has or was asked, agreeing with it, correcting it, thanking it, reporting to people, or saying the author will ask it later asks nothing of it. `answering` is the message it replies to, when there is one.",
+          "Does `message` leave `agent` nothing to do, so `agent` can ignore it? A mention of an agent in another agent's message is credit or a reference, not a request: it needs `agent` only when it plainly asks `agent` itself to do or answer something now, or answers a question `agent` asked it. Naming it, citing it as the source of a number or a fact, saying what it did, said, sent, has or was asked, agreeing with it, correcting it, thanking it, reporting to people, or saying the author will ask it later asks nothing of it. `named_in` holds the lines of `message` that name `agent`: judge what those lines ask of it. A request to `agent` there asks it even inside a longer report to people or a message that ends asking someone else. `answering` is the message it replies to, when there is one.",
       },
       criteria: {
         true: "Nothing for the agent: it credits, cites or names the agent ('via @agent', 'the numbers are from @agent', 'I asked @agent', '@agent sent me the report', 'as @agent said', '@agent already deployed'), agrees with it or corrects it, thanks it, acknowledges or signs off, even addressed to it, tells a person to talk to it, or says the author will ask it something later ('I'll ask @agent to review it', 'want me to ask @agent?').",
         false:
-          "It plainly asks the agent itself to do or answer something now: a request, a task, an assignment or a question addressed to it ('@agent, can you pull today's costs?', '@agent please review #12'), work handed to it to take on ('@agent, here is the handover: it's yours from here'), or the answer to a question the agent asked it (`answering` is that agent's question).",
+          "It plainly asks the agent itself to do or answer something now: a request, a task, an assignment or a question addressed to it ('@agent, can you pull today's costs?', '@agent please review #12'), work handed to it to take on ('@agent, here is the handover: it's yours from here'), also when the request is one line of a longer message to people ('…the cutover plan is below. @agent, add the resources the code uses to your inventory. Do you already have the new account?'), or the answer to a question the agent asked it (`answering` is that agent's question).",
       },
     };
   });
