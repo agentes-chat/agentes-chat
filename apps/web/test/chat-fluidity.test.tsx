@@ -262,13 +262,17 @@ describe("following the bottom", () => {
 });
 
 describe("a message's attachments", () => {
-  const withFiles = async (files: [name: string, type: string][], hold = false) => {
+  const withFiles = async (
+    files: [name: string, type: string][],
+    hold = false,
+    size?: { width: number; height: number },
+  ) => {
     const state = seedState();
     const api = createFakeApi(state);
     const refs = [];
     for (const [name, type] of files) {
       const file = await api.artifacts.upload(ORG_ID, new File([new Uint8Array([1, 2, 3])], name, { type }));
-      refs.push({ id: file.id, version: 1, title: name });
+      refs.push({ id: file.id, version: 1, title: name, ...size });
     }
     const base = state.messages[0] as (typeof state.messages)[number];
     state.messages.push({
@@ -312,6 +316,24 @@ describe("a message's attachments", () => {
       expect(tile.classList.contains("artifact-tile--loading")).toBe(true);
       expect(tile.getAttribute("aria-busy")).toBe("true");
     }
+  });
+
+  test("a video whose size the server read has its shape before and after its details load, an upright one upright", async () => {
+    const ratio = (tile: HTMLElement | undefined) => {
+      const player = tile?.querySelector<HTMLElement>(".ac-video--tile");
+      return player?.hasAttribute("data-ratio") ? player.style.getPropertyValue("--ratio") : null;
+    };
+    const upright = { width: 1080, height: 1920 };
+    const [loading] = await withFiles([["clipe.mp4", "video/mp4"]], true, upright);
+    expect(ratio(loading)).toBe(String(1080 / 1920));
+    cleanup();
+    const [loaded] = await withFiles([["clipe.mp4", "video/mp4"]], false, upright);
+    expect(loaded?.querySelector("video")).not.toBeNull();
+    expect(ratio(loaded)).toBe(String(1080 / 1920));
+    cleanup();
+    // Not read (an older file): the 16:9 box, as before.
+    const [unknown] = await withFiles([["clipe.mp4", "video/mp4"]]);
+    expect(ratio(unknown)).toBeNull();
   });
 
   test("an audio file plays right in the message, in the voice-message player, its name under it", async () => {

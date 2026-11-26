@@ -8528,9 +8528,9 @@ html:not([data-pointer]) .sky-welcome__close:focus-visible {
   .ac-details.artifact-sheet--image {
     --details-pad: 16px;
     width: calc(100% - 32px);
-    height: calc(100vh - 32px);
+    height: calc(100vh - 32px - var(--window-top));
     /* biome-ignore lint/suspicious/noDuplicateProperties: dvh with a vh fallback for older browsers */
-    height: calc(100dvh - 32px);
+    height: calc(100dvh - 32px - var(--window-top));
     max-height: none;
   }
   .artifact-sheet--image .ac-details__body {

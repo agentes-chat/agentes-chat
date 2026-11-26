@@ -3046,13 +3046,14 @@ html:not([data-pointer]) .ac-tab:focus-visible {
   position: fixed;
   z-index: var(--z-dialog);
   left: 50%;
-  top: 50%;
+  /* Centred in the window's room under `--window-top`. */
+  top: calc(50% + var(--window-top) / 2);
   transform: translate(-50%, -50%);
   width: min(var(--ac-dialog-width, 600px), calc(100% - 32px));
   /* Fixed head and foot; the body scrolls (viewport minus margins). */
-  max-height: calc(100vh - 48px);
+  max-height: calc(100vh - 48px - var(--window-top));
   /* biome-ignore lint/suspicious/noDuplicateProperties: dvh with a vh fallback for older browsers */
-  max-height: calc(100dvh - 48px);
+  max-height: calc(100dvh - 48px - var(--window-top));
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -3921,12 +3922,13 @@ html:not([data-pointer]) .ac-back:focus-visible {
   position: fixed;
   z-index: var(--z-dialog);
   left: 50%;
-  top: 50%;
+  /* Centred in the window's room under `--window-top`, as `.ac-dialog`. */
+  top: calc(50% + var(--window-top) / 2);
   transform: translate(-50%, -50%);
   width: min(720px, calc(100% - 48px));
-  max-height: calc(100vh - 48px);
+  max-height: calc(100vh - 48px - var(--window-top));
   /* biome-ignore lint/suspicious/noDuplicateProperties: dvh with a vh fallback for older browsers */
-  max-height: calc(100dvh - 48px);
+  max-height: calc(100dvh - 48px - var(--window-top));
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -3968,9 +3970,9 @@ html:not([data-pointer]) .ac-back:focus-visible {
 }
 /* Always the full height: changing tabs inside never makes it jump. */
 .ac-details--fill {
-  height: calc(100vh - 48px);
+  height: calc(100vh - 48px - var(--window-top));
   /* biome-ignore lint/suspicious/noDuplicateProperties: dvh with a vh fallback for older browsers */
-  height: calc(100dvh - 48px);
+  height: calc(100dvh - 48px - var(--window-top));
 }
 .ac-details:focus {
   outline: none;
@@ -8004,13 +8006,19 @@ button.ac-voice__play:active {
   border-radius: 16px 16px 16px 4px;
   box-shadow: 0 0 0 1px var(--line);
 }
-/* One box from the first paint, the video whole inside it: its own proportions are known only once its metadata
-   loads, and a tile that took them then would move every row under it. Full screen stretches the player itself over
-   the screen (the browser's :fullscreen rules), so there the box would leave the video small in its corner. */
+/* One box from the first paint, the video whole inside it: a tile that took the video's shape once its metadata loads
+   would move every row under it. The shape the server read (`data-ratio`) is there from the start: as wide as a 16:9
+   one, an upright one as tall as 360. Unknown, 16:9. Full screen stretches the player itself over the screen (the
+   browser's :fullscreen rules), so there the box would leave the video small in its corner. */
 .ac-video--tile:not([data-full]) .ac-video__media {
   width: 320px;
   max-width: 100%;
   height: 180px;
+}
+.ac-video--tile[data-ratio]:not([data-full]) .ac-video__media {
+  width: min(320px, calc(360px * var(--ratio)));
+  height: auto;
+  aspect-ratio: var(--ratio);
 }
 .ac-video--viewer {
   width: 100%;
@@ -11216,7 +11224,7 @@ html:not([data-pointer]) .ac-filter__option:focus-visible {
     max-width: none;
   }
   .ac-palette {
-    top: calc(env(safe-area-inset-top, 0px) + 12px);
+    top: calc(env(safe-area-inset-top, 0px) + var(--window-top) + 12px);
   }
   .ac-palette__list {
     max-height: 50vh;
@@ -11234,9 +11242,9 @@ html:not([data-pointer]) .ac-filter__option:focus-visible {
     left: 0;
     transform: none;
     width: 100%;
-    max-height: calc(100vh - 12px);
+    max-height: calc(100vh - 12px - var(--window-top));
     /* biome-ignore lint/suspicious/noDuplicateProperties: dvh with a vh fallback for older browsers */
-    max-height: calc(100dvh - 12px - env(safe-area-inset-top, 0px));
+    max-height: calc(100dvh - 12px - env(safe-area-inset-top, 0px) - var(--window-top));
     border-radius: var(--radius-section) var(--radius-section) 0 0;
     padding-bottom: env(safe-area-inset-bottom, 0px);
     --dialog-pad: 16px;
@@ -11258,7 +11266,7 @@ html:not([data-pointer]) .ac-filter__option:focus-visible {
     /* biome-ignore lint/suspicious/noDuplicateProperties: dvh with a vh fallback for older browsers */
     height: 100dvh;
     border-radius: 0;
-    padding-top: env(safe-area-inset-top, 0px);
+    padding-top: calc(env(safe-area-inset-top, 0px) + var(--window-top));
     padding-bottom: env(safe-area-inset-bottom, 0px);
     --details-pad: 16px;
   }
