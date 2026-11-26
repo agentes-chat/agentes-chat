@@ -119,4 +119,4 @@ installation has its key, ADR 0073, else the small model, as every judgment does
 same rules the model reads, applied at 0.5 or more, with no `why`. A lesson still needs a model to write its rule, so
 without one it stays in memory. `reviewAskedSkill` falls back the same way. When the judge can't answer either, the
 change is left out with a line that names the cause and the way out (`NO_REVIEW`: an AI account with an API key, or the
-change made on the agent's page).
+change made by hand).

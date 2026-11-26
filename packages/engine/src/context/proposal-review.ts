@@ -134,7 +134,7 @@ const NO_WORDS = { why: "", rule: "", replaces: "" };
 
 /** Why a change was left out when neither a model nor the judge could review it: the cause, and the way out. */
 export const NO_REVIEW =
-  "Not applied: no AI account here could review it. Add one with an API key in Settings › AI accounts, or make the change on the agent's page.";
+  "Not applied: no AI account here could review it. Add one with an API key in Settings › AI and usage, or make the change yourself.";
 
 /**
  * The review on the workspace's judge (Jev where the installation has its key, ADR 0073), when the summary model can't
