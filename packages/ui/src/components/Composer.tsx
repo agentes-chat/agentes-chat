@@ -534,7 +534,10 @@ let measuring: CanvasRenderingContext2D | null | undefined;
 function textWidth(field: HTMLElement, text: string): number | null {
   if (measuring === undefined) measuring = document.createElement("canvas").getContext?.("2d") ?? null;
   if (!measuring) return null;
-  measuring.font = getComputedStyle(field).font;
+  const style = getComputedStyle(field);
+  // The computed `font` shorthand is empty once a longhand it can't represent is in play (the body's
+  // font-feature-settings); assigning it would leave the canvas at its default 10px sans-serif.
+  measuring.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
   return measuring.measureText(text).width;
 }
 
@@ -545,10 +548,18 @@ function textWidth(field: HTMLElement, text: string): number | null {
  */
 function useWideText(ref: RefObject<HTMLTextAreaElement | null>, value: string): boolean {
   const [wide, setWide] = useState(false);
+  /** The current text the box itself was just seen wrapping: measuring it back into one row must never undo that. */
+  const wrapped = useRef<string | null>(null);
+  const seen = useRef(value);
   useLayoutEffect(() => {
+    if (seen.current !== value) {
+      wrapped.current = null;
+      seen.current = value;
+    }
     const el = ref.current;
     const row = el?.closest<HTMLElement>(".ac-composer__row");
     if (!el || !row || !value) {
+      wrapped.current = null;
       setWide(false);
       return;
     }
@@ -559,9 +570,15 @@ function useWideText(ref: RefObject<HTMLTextAreaElement | null>, value: string):
     const style = getComputedStyle(el);
     if (!wide) {
       // Wrapped: taller than its one line.
-      if (el.offsetHeight > (Number.parseFloat(style.minHeight) || 0) + 2) setWide(true);
+      if (el.offsetHeight > (Number.parseFloat(style.minHeight) || 0) + 2) {
+        wrapped.current = value;
+        setWide(true);
+      }
       return;
     }
+    // The estimate below answers whether a changed text still needs the wide row. For the text just seen wrapping
+    // it is only a contradiction (font metrics differ from the field's, most often around tabs): the field wins.
+    if (wrapped.current === value) return;
     const tools = [...row.querySelectorAll<HTMLElement>(":scope > .ac-composer__tools")];
     const rowStyle = getComputedStyle(row);
     const room =
@@ -572,7 +589,10 @@ function useWideText(ref: RefObject<HTMLTextAreaElement | null>, value: string):
       (Number.parseFloat(style.paddingLeft) || 0) -
       (Number.parseFloat(style.paddingRight) || 0);
     const width = textWidth(el, value);
-    if (width !== null && width < room - 2) setWide(false);
+    if (width !== null && width < room - 2) {
+      wrapped.current = null;
+      setWide(false);
+    }
   }, [ref, value, wide]);
   return wide;
 }
