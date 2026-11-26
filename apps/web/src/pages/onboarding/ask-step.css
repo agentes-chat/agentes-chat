@@ -1,0 +1,226 @@
+/*
+ * "Peça o seu primeiro agente" (AskStep.tsx): the assistants in one row that scrolls sideways, the two numbered parts
+ * (connect, then the request to paste), the wait for the proposal and the way without a connector.
+ */
+
+/* The assistants and "Outro app de agentes" in one row, the most used first; it fades where it scrolls on. */
+.onb-ask__ais {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  min-width: 0;
+  margin: 0 calc(-1 * var(--dialog-pad));
+  padding: 2px var(--dialog-pad);
+  border: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 var(--dialog-pad), #000 calc(100% - 64px), transparent);
+  mask-image: linear-gradient(90deg, transparent 0, #000 var(--dialog-pad), #000 calc(100% - 64px), transparent);
+}
+.onb-ask__ais::-webkit-scrollbar {
+  display: none;
+}
+.onb-ask__ai {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 14px 0 8px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--line2);
+  color: var(--muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.onb-ask__ai:hover {
+  color: var(--ink);
+}
+.onb-ask__ai[aria-pressed="true"] {
+  background: var(--surface-raised);
+  box-shadow:
+    inset 0 0 0 1.5px var(--ink),
+    var(--e1);
+  color: var(--ink);
+}
+html:not([data-pointer]) .onb-ask__ai:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.onb-ask__ai .ac-brand {
+  width: 24px;
+  height: 24px;
+}
+.onb-ask__more {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  box-shadow: inset 0 0 0 1px var(--line2);
+  color: var(--muted);
+}
+
+/* The two parts, numbered: connect, then the request. */
+.onb-ask__steps {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.onb-ask__steps > li {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 12px;
+}
+.onb-ask__n {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 8px 8px 8px 3px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 13px;
+  font-weight: 700;
+}
+.onb-ask__step {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.onb-ask__title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 2px 0 0;
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 600;
+}
+.onb-ask__done {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  color: var(--ok);
+  font-size: 13px;
+  font-weight: 600;
+}
+.onb-ask__hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 19px;
+}
+/* The assistant's own steps, small: the words, then the button or what to copy under them. */
+.onb-ask__guide {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 19px;
+}
+.onb-ask__guide > li {
+  padding-left: 2px;
+}
+.onb-ask__guide > li > :not(:first-child) {
+  margin-top: 6px;
+}
+.onb-ask__guide code {
+  font-size: 12.5px;
+}
+
+/* The longer request: its start in view, the rest a scroll away, the copy button always under it. */
+.onb-ask__prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--sunken);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.onb-ask__text {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 148px;
+  overflow: auto;
+  -webkit-mask-image: linear-gradient(180deg, #000 70%, transparent);
+  mask-image: linear-gradient(180deg, #000 70%, transparent);
+}
+.onb-ask__text p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 21px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.onb-ask__copy {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.onb-ask__answer.ac-input {
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  resize: vertical;
+}
+.onb-ask__bad {
+  margin: 0;
+  color: var(--danger);
+  font-size: 13px;
+}
+
+/* The wait, under a hairline: the right hand writing, and the way without a connector at its end. */
+.onb-ask__wait {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 20px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.onb-ask__line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+.onb-ask__line .ac-avatar {
+  flex: none;
+  width: 22px;
+  height: 22px;
+}
+.onb-ask__switch {
+  margin-left: auto;
+  font-size: 14px;
+}
+.onb-ask__stuck {
+  margin: 8px 0 0;
+  color: var(--faint);
+  font-size: 13px;
+  line-height: 18px;
+}
