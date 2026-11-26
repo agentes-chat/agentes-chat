@@ -1120,7 +1120,7 @@ export async function setAgentComputerTarget(
   if (!agent || agent.archivedAt) throw new NotFoundError("Agent not found");
   if (machineId && isRightHand(agent)) {
     throw new ForbiddenError(
-      "The team's right hand always uses the workspace's own computer; no other can be chosen for it.",
+      "The team's right hand always uses the workspace's own computer, so no other can be chosen for it.",
       "agent.right_hand_computer",
     );
   }
