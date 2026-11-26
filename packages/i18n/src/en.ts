@@ -17405,6 +17405,22 @@ export const en = {
   },
   /** Bring your own devices: Settings › Devices, a device's page, the connect flows, the chat's waiting card, notices. */
   devices: {
+    permission: {
+      title: "Waiting for {{permission}} on {{computer}}",
+      next: "Allow it in the agentes.chat app there.",
+      askedBy: "Asked by {{agent}} to run {{trigger}}",
+      asked: "Needed to run {{trigger}}",
+      names: {
+        app_management: "App Management",
+        screen: "Screen Recording",
+        accessibility: "Accessibility",
+        disk: "Full Disk Access",
+        network: "Local Network",
+        camera: "Camera",
+        microphone: "Microphone",
+        automation: "Automation",
+      },
+    },
     leadCloud: "Where your agents work: the workspace computer and the devices people connect.",
     lead: "Where your agents work: the computers and phones people connect.",
     connect: "Connect a device",

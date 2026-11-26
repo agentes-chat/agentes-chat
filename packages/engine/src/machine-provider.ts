@@ -10,6 +10,7 @@ import {
   PASSWORD_CLASSES,
   PASSWORD_LENGTH,
   type PasswordClass,
+  permissionWaitText,
   policyRefusal,
   type SandboxProvider,
   SECRET_ACTIVATE_PROTOCOL,
@@ -210,10 +211,11 @@ export function createMachineSandboxProvider(hub: MachineCaller, agent: AgentSco
         },
         { signal: request.signal, onOutput },
       );
+      const wait = r.permission ? permissionWaitText((await hub.status(id))?.name ?? "the computer", r.permission) : "";
       return {
         exitCode: r.exitCode,
         stdout: r.stdout,
-        stderr: r.stderr,
+        stderr: wait ? `${r.stderr.trimEnd()}\n${wait}` : r.stderr,
         timedOut: r.timedOut,
         ...(r.canceled ? { canceled: r.canceled } : {}),
         ...(r.merge ? { merge: r.merge } : {}),

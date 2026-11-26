@@ -41424,6 +41424,42 @@
   "devices.leadCloud": {
     "value": "Where your agents work: the workspace computer and the devices people connect."
   },
+  "devices.permission.title": {
+    "value": "Waiting for {{permission}} on {{computer}}"
+  },
+  "devices.permission.next": {
+    "value": "Allow it in the agentes.chat app there."
+  },
+  "devices.permission.askedBy": {
+    "value": "Asked by {{agent}} to run {{trigger}}"
+  },
+  "devices.permission.asked": {
+    "value": "Needed to run {{trigger}}"
+  },
+  "devices.permission.names.app_management": {
+    "value": "App Management"
+  },
+  "devices.permission.names.screen": {
+    "value": "Screen Recording"
+  },
+  "devices.permission.names.accessibility": {
+    "value": "Accessibility"
+  },
+  "devices.permission.names.disk": {
+    "value": "Full Disk Access"
+  },
+  "devices.permission.names.network": {
+    "value": "Local Network"
+  },
+  "devices.permission.names.camera": {
+    "value": "Camera"
+  },
+  "devices.permission.names.microphone": {
+    "value": "Microphone"
+  },
+  "devices.permission.names.automation": {
+    "value": "Automation"
+  },
   "devices.lead": {
     "value": "Where your agents work: the computers and phones people connect."
   },

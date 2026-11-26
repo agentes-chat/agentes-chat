@@ -45,6 +45,7 @@ import {
   ListRow,
   motion,
   PersonAvatar,
+  Refreshing,
   SectionHeader,
   SkeletonList,
   SwipeRow,
@@ -194,59 +195,61 @@ export function ActivityScreen() {
     <LargeTitleScreen title={t("mobile.activity.title")} {...header} pull={pull}>
       {/* Which filter the list is on, when it isn't everything: the menu's own word, once, over the list. */}
       {filter !== "all" && filter !== "waiting" ? <SectionHeader title={t(`notifications.filter.${filter}`)} /> : null}
-      {waiting.length > 0 ? (
-        <>
-          <SectionHeader title={t("mobile.home.waiting")} count={waitingCount} />
-          <ApproveAllByAgent />
-          <LayoutAnimationConfig skipEntering skipExiting>
-            {waiting.map((n, i) => (
-              <Animated.View key={n.id} {...cardMotion}>
-                {isDeviceNotice(n.kind) ? (
-                  // A device's notice is decided on its own card (allow once, always, no): it keeps it.
-                  <View style={styles.cards}>
-                    <DeviceNoticeCard item={n} first={i === 0} />
-                  </View>
-                ) : (
-                  <WaitingRow item={n} divider={i > 0 && !isDeviceNotice(waiting[i - 1]?.kind ?? "")} />
-                )}
-              </Animated.View>
-            ))}
-          </LayoutAnimationConfig>
-        </>
-      ) : list.isLoading ? (
-        <>
-          <SectionHeader title={t("mobile.activity.day.today")} />
-          <SkeletonList rows={3} />
-          <SectionHeader title={t("mobile.activity.day.yesterday")} />
-          <SkeletonList rows={1} />
-        </>
-      ) : list.isError && !list.data ? (
-        // Nothing kept to read: the list's error, with the way to ask again.
-        <LoadFailed onRetry={() => void list.refetch()} />
-      ) : filter === "all" || filter === "waiting" ? (
-        <AllClear cheer={cheer} />
-      ) : days.length === 0 ? (
-        <EmptyState
-          size="inline"
-          title={filter === "done" ? t("mobile.activity.noneDone") : t("notifications.noneHere")}
-        />
-      ) : null}
-      {/* Kept rows under a load that failed: the line says so, what loaded stays readable. */}
-      {list.isError && list.data && !list.isLoading ? <RetryLine onRetry={() => void list.refetch()} /> : null}
-      {/* Another filter is another list: it comes whole, with no row of the last one leaving through it. */}
-      <LayoutAnimationConfig key={filter} skipEntering skipExiting>
-        {days.map(([group, groupItems]) => (
-          <Animated.View key={group} {...rowMotion}>
-            <SectionHeader title={t(`mobile.activity.day.${group satisfies DayGroup}`)} />
-            {/* Loose rows on the page, as Conversas' (no card around them). */}
-            {groupItems.map((n, i) => (
-              <Animated.View key={n.id} {...rowMotion}>
-                <ActivityRow item={n} divider={i > 0} href={notificationHref(n, ai)} busy={busy} act={act} />
-              </Animated.View>
-            ))}
-          </Animated.View>
-        ))}
-      </LayoutAnimationConfig>
+      <Refreshing busy={list.isPlaceholderData} label={t("common.loading")}>
+        {waiting.length > 0 ? (
+          <>
+            <SectionHeader title={t("mobile.home.waiting")} count={waitingCount} />
+            <ApproveAllByAgent />
+            <LayoutAnimationConfig skipEntering skipExiting>
+              {waiting.map((n, i) => (
+                <Animated.View key={n.id} {...cardMotion}>
+                  {isDeviceNotice(n.kind) ? (
+                    // A device's notice is decided on its own card (allow once, always, no): it keeps it.
+                    <View style={styles.cards}>
+                      <DeviceNoticeCard item={n} first={i === 0} />
+                    </View>
+                  ) : (
+                    <WaitingRow item={n} divider={i > 0 && !isDeviceNotice(waiting[i - 1]?.kind ?? "")} />
+                  )}
+                </Animated.View>
+              ))}
+            </LayoutAnimationConfig>
+          </>
+        ) : list.isLoading ? (
+          <>
+            <SectionHeader title={t("mobile.activity.day.today")} />
+            <SkeletonList rows={3} />
+            <SectionHeader title={t("mobile.activity.day.yesterday")} />
+            <SkeletonList rows={1} />
+          </>
+        ) : list.isError && !list.data ? (
+          // Nothing kept to read: the list's error, with the way to ask again.
+          <LoadFailed onRetry={() => void list.refetch()} />
+        ) : filter === "all" || filter === "waiting" ? (
+          <AllClear cheer={cheer} />
+        ) : days.length === 0 ? (
+          <EmptyState
+            size="inline"
+            title={filter === "done" ? t("mobile.activity.noneDone") : t("notifications.noneHere")}
+          />
+        ) : null}
+        {/* Kept rows under a load that failed: the line says so, what loaded stays readable. */}
+        {list.isError && list.data && !list.isLoading ? <RetryLine onRetry={() => void list.refetch()} /> : null}
+        {/* Another filter is another list: it comes whole, with no row of the last one leaving through it. */}
+        <LayoutAnimationConfig key={filter} skipEntering skipExiting>
+          {days.map(([group, groupItems]) => (
+            <Animated.View key={group} {...rowMotion}>
+              <SectionHeader title={t(`mobile.activity.day.${group satisfies DayGroup}`)} />
+              {/* Loose rows on the page, as Conversas' (no card around them). */}
+              {groupItems.map((n, i) => (
+                <Animated.View key={n.id} {...rowMotion}>
+                  <ActivityRow item={n} divider={i > 0} href={notificationHref(n, ai)} busy={busy} act={act} />
+                </Animated.View>
+              ))}
+            </Animated.View>
+          ))}
+        </LayoutAnimationConfig>
+      </Refreshing>
       {/* The next page, as Drive's "Mostrar mais": the kit's button, centered, its wheel while the page comes. */}
       {list.hasNextPage ? (
         <Animated.View layout={reduced ? undefined : MOVE} style={styles.more}>

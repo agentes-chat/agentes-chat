@@ -16982,6 +16982,22 @@
         "always": "{{deviceName}} sekarang dibagikan dengan mereka.",
         "no": "Kamu menolak."
       }
+    },
+    "permission": {
+      "title": "Menunggu {{permission}} di {{computer}}",
+      "next": "Izinkan di aplikasi agentes.chat di komputer itu.",
+      "askedBy": "Diminta {{agent}} untuk menjalankan {{trigger}}",
+      "asked": "Diperlukan untuk menjalankan {{trigger}}",
+      "names": {
+        "app_management": "Manajemen App",
+        "screen": "Perekaman Layar",
+        "accessibility": "Aksesibilitas",
+        "disk": "Akses Disk Penuh",
+        "network": "Jaringan Lokal",
+        "camera": "Kamera",
+        "microphone": "Mikrofon",
+        "automation": "Otomatisasi"
+      }
     }
   },
   "computers": {

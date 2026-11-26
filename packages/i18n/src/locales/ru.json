@@ -18633,6 +18633,22 @@
         "always": "Теперь у них есть доступ к {{deviceName}}.",
         "no": "Вы отказали."
       }
+    },
+    "permission": {
+      "title": "Ждёт разрешения «{{permission}}» на {{computer}}",
+      "next": "Разрешите это в приложении agentes.chat на том компьютере.",
+      "askedBy": "Нужно {{agent}}, чтобы выполнить {{trigger}}",
+      "asked": "Нужно, чтобы выполнить {{trigger}}",
+      "names": {
+        "app_management": "Управление приложениями",
+        "screen": "Запись экрана",
+        "accessibility": "Универсальный доступ",
+        "disk": "Доступ к диску",
+        "network": "Локальная сеть",
+        "camera": "Камера",
+        "microphone": "Микрофон",
+        "automation": "Автоматизация"
+      }
     }
   },
   "computers": {

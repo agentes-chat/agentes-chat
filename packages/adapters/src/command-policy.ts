@@ -351,8 +351,9 @@ export const AGENT_WORKER_HOMES = "/var/lib/agentes-runner-agents";
 
 /**
  * System mode: Grok Build's account folders (`<this>/<account id>`, 0700, the agent's user's only while lent to it).
- * Outside `AGENT_WORKER_HOMES`, whose closed (0711) folders Grok's sandbox can't bind: it binds every folder above
- * `GROK_HOME`, so each of them must be open to the agent's user (0755). Its folder names (account ids) are listable.
+ * Outside the other kinds' account folders, whose closed (0711) parents Grok's sandbox can't bind: it binds every
+ * folder above `GROK_HOME`, so each of them must be open to the agent's user (0755). Its folder names (account ids)
+ * are listable.
  */
 export const GROK_ACCOUNT_HOMES = "/var/lib/agentes-runner-grok";
 

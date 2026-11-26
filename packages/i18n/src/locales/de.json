@@ -17538,6 +17538,22 @@
         "always": "{{deviceName}} ist jetzt für sie freigegeben.",
         "no": "Du hast Nein gesagt."
       }
+    },
+    "permission": {
+      "title": "Wartet auf {{permission}} auf {{computer}}",
+      "next": "Erlaube es dort in der agentes.chat-App.",
+      "askedBy": "{{agent}} braucht es für {{trigger}}",
+      "asked": "Nötig für {{trigger}}",
+      "names": {
+        "app_management": "App-Verwaltung",
+        "screen": "Bildschirmaufnahme",
+        "accessibility": "Bedienungshilfen",
+        "disk": "Festplattenvollzugriff",
+        "network": "Lokales Netzwerk",
+        "camera": "Kamera",
+        "microphone": "Mikrofon",
+        "automation": "Automation"
+      }
     }
   },
   "computers": {

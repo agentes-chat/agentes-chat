@@ -16922,6 +16922,22 @@
         "always": "{{deviceName}}を共有しました。",
         "no": "許可しませんでした。"
       }
+    },
+    "permission": {
+      "title": "{{computer}}で{{permission}}の許可を待っています",
+      "next": "そのコンピュータのagentes.chatアプリで許可してください。",
+      "askedBy": "{{agent}}が{{trigger}}の実行に必要としています",
+      "asked": "{{trigger}}の実行に必要です",
+      "names": {
+        "app_management": "App管理",
+        "screen": "画面収録",
+        "accessibility": "アクセシビリティ",
+        "disk": "フルディスクアクセス",
+        "network": "ローカルネットワーク",
+        "camera": "カメラ",
+        "microphone": "マイク",
+        "automation": "オートメーション"
+      }
     }
   },
   "computers": {

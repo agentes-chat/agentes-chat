@@ -936,5 +936,21 @@
     "bringAllToFront": "Traer todo al frente",
     "help": "Ayuda",
     "downloaded": "Descarga completa"
+  },
+  "permissionAsk": {
+    "title": "agentes.chat necesita {{permission}}",
+    "done": "Ya lo permití",
+    "later": "Ahora no",
+    "trayTitle": "Esperando {{permission}}",
+    "why": {
+      "app_management": "Los agentes lo necesitan para cambiar apps en este {{device}}.",
+      "screen": "Los agentes lo necesitan para hacer capturas de este {{device}}.",
+      "accessibility": "Los agentes lo necesitan para hacer clic y escribir en apps de este {{device}}.",
+      "disk": "Los agentes lo necesitan para abrir tus archivos sin que macOS pregunte por cada carpeta.",
+      "network": "Los agentes lo necesitan para llegar a teléfonos y aparatos de tu red.",
+      "camera": "Los agentes lo necesitan para usar la cámara de este {{device}}.",
+      "microphone": "Los agentes lo necesitan para usar el micrófono de este {{device}}.",
+      "automation": "Los agentes lo necesitan para controlar otras apps en este {{device}}."
+    }
   }
 }

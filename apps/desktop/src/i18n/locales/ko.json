@@ -926,5 +926,21 @@
     "bringAllToFront": "모두 앞으로 가져오기",
     "help": "도움말",
     "downloaded": "다운로드 완료"
+  },
+  "permissionAsk": {
+    "title": "agentes.chat에 {{permission}} 권한이 필요해요",
+    "done": "허용했어요",
+    "later": "나중에",
+    "trayTitle": "{{permission}} 허용을 기다리는 중",
+    "why": {
+      "app_management": "에이전트가 이 {{device}}의 앱을 변경하려면 필요해요.",
+      "screen": "에이전트가 이 {{device}}의 스크린샷을 찍으려면 필요해요.",
+      "accessibility": "에이전트가 이 {{device}}의 앱에서 클릭하고 입력하려면 필요해요.",
+      "disk": "macOS가 폴더마다 묻지 않고 에이전트가 파일을 열 수 있게 해요.",
+      "network": "에이전트가 네트워크의 휴대폰과 기기에 연결하려면 필요해요.",
+      "camera": "에이전트가 이 {{device}}의 카메라를 쓰려면 필요해요.",
+      "microphone": "에이전트가 이 {{device}}의 마이크를 쓰려면 필요해요.",
+      "automation": "에이전트가 이 {{device}}의 다른 앱을 제어하려면 필요해요."
+    }
   }
 }

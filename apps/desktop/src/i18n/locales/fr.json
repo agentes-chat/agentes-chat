@@ -936,5 +936,21 @@
     "bringAllToFront": "Tout ramener au premier plan",
     "help": "Aide",
     "downloaded": "Téléchargement terminé"
+  },
+  "permissionAsk": {
+    "title": "agentes.chat a besoin de {{permission}}",
+    "done": "Je l’ai autorisé",
+    "later": "Pas maintenant",
+    "trayTitle": "En attente de {{permission}}",
+    "why": {
+      "app_management": "Les agents en ont besoin pour modifier des apps sur ce {{device}}.",
+      "screen": "Les agents en ont besoin pour faire des captures d’écran de ce {{device}}.",
+      "accessibility": "Les agents en ont besoin pour cliquer et taper dans les apps de ce {{device}}.",
+      "disk": "Les agents en ont besoin pour ouvrir vos fichiers sans que macOS demande pour chaque dossier.",
+      "network": "Les agents en ont besoin pour joindre les téléphones et appareils de votre réseau.",
+      "camera": "Les agents en ont besoin pour utiliser la caméra de ce {{device}}.",
+      "microphone": "Les agents en ont besoin pour utiliser le micro de ce {{device}}.",
+      "automation": "Les agents en ont besoin pour piloter d’autres apps sur ce {{device}}."
+    }
   }
 }

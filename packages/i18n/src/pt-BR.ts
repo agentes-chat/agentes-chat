@@ -17334,6 +17334,22 @@ export const ptBR = {
     },
   },
   devices: {
+    permission: {
+      title: "Aguardando {{permission}} em {{computer}}",
+      next: "Permita no app agentes.chat nesse computador.",
+      askedBy: "Pedido por {{agent}} para rodar {{trigger}}",
+      asked: "Necessário para rodar {{trigger}}",
+      names: {
+        app_management: "Gerenciamento de Apps",
+        screen: "Gravação de Tela",
+        accessibility: "Acessibilidade",
+        disk: "Acesso Total ao Disco",
+        network: "Rede Local",
+        camera: "Câmera",
+        microphone: "Microfone",
+        automation: "Automação",
+      },
+    },
     leadCloud: "Onde seus agentes trabalham: o computador do workspace e os dispositivos que as pessoas conectam.",
     lead: "Onde seus agentes trabalham: os computadores e celulares que as pessoas conectam.",
     connect: "Conectar um dispositivo",
