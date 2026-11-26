@@ -707,7 +707,16 @@
               const pulled = [kids[i], kids[j]].some(
                 (k) => parseFloat(style(k).marginTop) < 0 || parseFloat(style(k).marginLeft) < 0,
               );
-              if (ox > 2 && oy > 2 && !pulled)
+              // Two placed in the same cell of a grid are a stack on purpose (a deck of cards, layers): one covers the other.
+              const a1 = style(kids[i]);
+              const b1 = style(kids[j]);
+              const stacked =
+                s.display.includes("grid") &&
+                a1.gridRowStart !== "auto" &&
+                a1.gridColumnStart !== "auto" &&
+                a1.gridRowStart === b1.gridRowStart &&
+                a1.gridColumnStart === b1.gridColumnStart;
+              if (ox > 2 && oy > 2 && !pulled && !stacked)
                 out.push({
                   rule: "overlap",
                   node: kids[i],
