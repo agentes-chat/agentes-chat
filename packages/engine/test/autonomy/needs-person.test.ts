@@ -90,37 +90,43 @@ const nudged = (w: World) =>
   );
 
 for (const c of CASES) {
-  scenario(c.id, `${c.lang}: a "can't, it needs your QR code" is sent back with the hand-off, then done`, async () => {
-    handOffs.length = 0;
-    const w = await world({
-      agents: ["rui"],
-      setup: { toolSources: [fakeBrowserHandOff] },
-      judge: { followThrough: rubric },
-      script: {
-        rui: [
-          { text: c.giveUp },
-          { calls: [{ name: "browser_ask_person", input: { instructions: c.instructions } }] },
-          { text: c.final },
-        ],
-      },
-    });
-    await w.say(c.request);
-    await w.settle();
-    // The judge read a hand-off among the means; the give-up was sent back with how to hand the step over.
-    const [held] = w.judgedAs("follow_through");
-    expect(String(held?.state.reply)).toBe(c.giveUp);
-    expect(((held?.state.means ?? []) as string[]).join(" ")).toContain("browser_ask_person");
-    expect(nudged(w)).toBe(true);
-    expect(handOffs).toEqual([{ instructions: c.instructions }]);
-    // Only the final attempt is posted, never the "can't" before it.
-    expect((await w.posts("rui")).map((p) => p.body)).toEqual([c.final]);
-    await assertInvariants(w);
-  });
+  scenario(
+    c.id,
+    `${c.lang}: a "can't, it needs your QR code" is posted, sent back with the hand-off, then done`,
+    async () => {
+      handOffs.length = 0;
+      const w = await world({
+        agents: ["rui"],
+        setup: { toolSources: [fakeBrowserHandOff] },
+        judge: { followThrough: rubric },
+        script: {
+          rui: [
+            { text: c.giveUp },
+            { calls: [{ name: "browser_ask_person", input: { instructions: c.instructions } }] },
+            { text: c.final },
+          ],
+        },
+      });
+      await w.say(c.request);
+      await w.settle();
+      // The judge read a hand-off among the means; the give-up was sent back with how to hand the step over.
+      const [held] = w.judgedAs("follow_through");
+      expect(String(held?.state.reply)).toBe(c.giveUp);
+      expect(((held?.state.means ?? []) as string[]).join(" ")).toContain("browser_ask_person");
+      expect(nudged(w)).toBe(true);
+      expect(handOffs).toEqual([{ instructions: c.instructions }]);
+      // The person reads its first reply at once, while it goes on; what it got goes out below.
+      expect((await w.posts("rui")).map((p) => p.body)).toEqual([c.giveUp, c.final]);
+      await assertInvariants(w);
+    },
+  );
 }
 
 describe("a step that needs the person is never a blocker", () => {
   test("the prompt carries the rule and the consent of a person's own request", () => {
-    expect(HOW_YOU_WORK).toContain(`- ${HAND_OVER_STEP} If nothing you have can hand it over`);
+    expect(HOW_YOU_WORK).toContain(
+      `- ${HAND_OVER_STEP} Never end on a list of what's missing. If nothing you have can hand it over`,
+    );
     expect(HOW_YOU_WORK).toContain("consents to the access it needs: don't ask again or warn about privacy");
     expect(HOW_YOU_WORK).toContain("Someone else's account is not consent; passwords never come through the chat");
     expect(HOW_YOU_WORK).not.toContain("A real blocker is only");
@@ -195,6 +201,55 @@ describe("a step that needs the person is never a blocker", () => {
     expect(criteria.done).toContain("without having looked in the workspace");
     expect(criteria.untried).toContain("without first looking in the workspace");
     expect(untriedNudge([], [])).toContain("Look in the workspace first");
+  });
+
+  test("the turn-end judge: one step's report with steps left goes on, or asks for what the next step needs", async () => {
+    const { judge, asked } = capture();
+    await continuationVerdict(judge, {
+      orgId: "o",
+      agentId: "a",
+      runId: "r",
+      request: "pode seguir",
+      reply: "Passo 2 feito: a rotina está criada.",
+      means: [],
+      tried: [],
+      runKind: "conversation",
+      recent: ["agent: Passo 1 feito. Falta: 2. a rotina, 3. o teste."],
+    });
+    const [call] = asked as unknown as {
+      state: Record<string, unknown>;
+      questions: Record<string, { criteria: Record<string, string> }>;
+    }[];
+    expect(call?.state.recent).toBe("agent: Passo 1 feito. Falta: 2. a rotina, 3. o teste.");
+    const criteria = call?.questions.verdict?.criteria ?? {};
+    expect(criteria.done).toContain("one step's report with steps left is not done");
+    expect(criteria.continue).toContain("the next step is its own to start");
+    expect(criteria.ask).toContain("it only reported the step and asked for nothing");
+  });
+
+  test("the turn-end judge reads its background work: a promise about what that work brings is kept by it", async () => {
+    const { judge, asked } = capture();
+    const turn = {
+      orgId: "o",
+      agentId: "a",
+      runId: "r",
+      request: "como está indo?",
+      reply: "Está em andamento. Te mando o relatório assim que terminar.",
+      means: [],
+      tried: [],
+      runKind: "conversation" as const,
+    };
+    await continuationVerdict(judge, { ...turn, backgroundWork: ["Relatório de custos do trimestre"] });
+    await continuationVerdict(judge, turn);
+    const [beside, alone] = asked as unknown as {
+      state: Record<string, unknown>;
+      questions: Record<string, { criteria: Record<string, string> }>;
+    }[];
+    expect(beside?.state.background_work).toEqual(["Relatório de custos do trimestre"]);
+    expect(alone?.state).not.toHaveProperty("background_work");
+    const criteria = beside?.questions.verdict?.criteria ?? {};
+    expect(criteria.continue).toContain("A promise about what its `background_work` will bring is kept by that work");
+    expect(criteria.done).toContain("that work posts it here by itself: done");
   });
 
   test("the question check: a way to do the request, however it is worded, is no optional offer", async () => {

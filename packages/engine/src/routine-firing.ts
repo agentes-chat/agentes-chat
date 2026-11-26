@@ -3,6 +3,7 @@ import { and, type Database, desc, eq, inArray, isNull, lt, ne, schema, sql } fr
 import { stopRun } from "./cancel";
 import { widgetRoutineHeld } from "./dashboards/refresh-ledger";
 import { notifyRoutineStalled, notifyRoutineWaitingPlan } from "./notification-producers";
+import { enqueue } from "./outbox";
 import { deferEventRun } from "./routine-events";
 import { endRoutineRun } from "./routine-ledger";
 import { endOpenRoutineRun, pauseRoutine, ROUTINE_CATCH_UP_MS, routineJobAlive } from "./routine-state";
@@ -53,7 +54,12 @@ const waitingToStart = (event: unknown) => {
 export async function claimRoutineRun(db: Database, routineRunId: string): Promise<RunRow | null> {
   const [row] = await db
     .update(routineRuns)
-    .set({ status: "starting" })
+    .set({
+      status: "starting",
+      // What it waited behind (`queueBehindAgentRoutine`) is no event: the run's context would show it as one.
+      event: sql`case when ${routineRuns.event}->>'waitingFor' is null then ${routineRuns.event}
+        else nullif(${routineRuns.event} - 'waitingFor', '{}'::jsonb) end`,
+    })
     .where(
       and(
         eq(routineRuns.id, routineRunId),
@@ -179,7 +185,8 @@ export async function routineRunWaitingForComputer(
  *   (`superseded`; its approvals expire); a newer wait keeps it and the slot is `previous_waiting`;
  * - handed off already: its report is out, so the turn left of it holds nothing, and neither does a
  *   run that stopped moving (`ROUTINE_STALL_MS`: it is let go as `stalled`).
- * An event run never replaces another: it waits for the one working to end (gathered again).
+ * An event run never replaces another: it waits for the one working to end (gathered again). It only
+ * waits on its own line (`event.line`, ADR 0106's grouped calls): other lines run beside it.
  * Returns null when the run may start, else the code it was skipped with (or `gathered`).
  */
 export async function makeWayForRun(
@@ -189,6 +196,8 @@ export async function makeWayForRun(
   now = new Date(),
 ): Promise<string | null> {
   const { db } = deps;
+  const event = run.trigger === "event";
+  const line = typeof run.event?.line === "string" ? run.event.line : "";
   const earlier = await db
     .select({ rr: routineRuns, ar: agentRuns, alive: routineJobAlive(routineRuns.id), work: lastWork })
     .from(routineRuns)
@@ -200,10 +209,10 @@ export async function makeWayForRun(
         inArray(routineRuns.status, ["queued", "starting", "started", "reported"]),
         isNull(routineRuns.finishedAt),
         sql`(${routineRuns.createdAt}, ${routineRuns.id}) < (${run.createdAt.toISOString()}::timestamptz, ${run.id}::uuid)`,
+        event ? sql`coalesce(${routineRuns.event}->>'line', '') = ${line}` : undefined,
       ),
     )
     .orderBy(routineRuns.createdAt);
-  const event = run.trigger === "event";
   const blocked = async (code: string) => {
     if (!event) return code;
     await deferEventRun(deps, run);
@@ -263,6 +272,64 @@ export async function makeWayForRun(
     return blocked("previous_waiting");
   }
   return null;
+}
+
+/** How long a scheduled run waits behind another routine of its agent before it starts anyway. */
+export const AGENT_QUEUE_MS = 30 * 60_000;
+/** How often a run waiting behind another routine of its agent looks again. */
+export const AGENT_QUEUE_POLL_MS = 60_000;
+
+/**
+ * One routine of an agent at a time on schedule: a scheduled run whose agent is working on another routine's run
+ * goes back in line (`queued`, `event.waitingFor` names that routine for Rotinas) and looks again every
+ * `AGENT_QUEUE_POLL_MS`, for at most `AGENT_QUEUE_MS` after its slot; then it starts beside it. Two runs of one
+ * agent at once shared its computer and its temp files. A manual or event run never waits here. Returns whether it
+ * went back in line.
+ */
+export async function queueBehindAgentRoutine(
+  deps: FiringDeps,
+  routine: Pick<RoutineRow, "id" | "orgId" | "agentId">,
+  run: Pick<RunRow, "id" | "orgId" | "trigger" | "at">,
+  now = new Date(),
+): Promise<boolean> {
+  if (run.trigger !== "schedule" || now.getTime() - run.at.getTime() >= AGENT_QUEUE_MS) return false;
+  const [busy] = await deps.db
+    .select({ name: routines.name })
+    .from(routineRuns)
+    .innerJoin(agentRuns, eq(agentRuns.id, routineRuns.agentRunId))
+    .innerJoin(routines, eq(routines.id, routineRuns.routineId))
+    .where(
+      and(
+        eq(routineRuns.orgId, run.orgId),
+        eq(routineRuns.status, "started"),
+        isNull(routineRuns.finishedAt),
+        ne(routineRuns.routineId, routine.id),
+        eq(agentRuns.agentId, routine.agentId),
+        inArray(agentRuns.status, ["queued", "running"]),
+      ),
+    )
+    .limit(1);
+  if (!busy) return false;
+  return deps.db.transaction(async (tx) => {
+    const [back] = await tx
+      .update(routineRuns)
+      .set({
+        status: "queued",
+        event: sql`coalesce(${routineRuns.event}, '{}'::jsonb) || jsonb_build_object('waitingFor', ${busy.name}::text)`,
+      })
+      .where(and(eq(routineRuns.id, run.id), eq(routineRuns.status, "starting"), isNull(routineRuns.agentRunId)))
+      .returning({ id: routineRuns.id });
+    if (!back) return false;
+    await enqueue(tx, {
+      orgId: run.orgId,
+      kind: "routine.run",
+      payload: { routineRunId: run.id },
+      dedupeKey: `routine.run:${run.id}:after:${now.getTime()}`,
+      runAt: new Date(now.getTime() + AGENT_QUEUE_POLL_MS),
+      maxAttempts: 3,
+    });
+    return true;
+  });
 }
 
 /**

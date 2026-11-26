@@ -29,6 +29,7 @@ import type {
   Routine,
   RoutineHook,
   RoutineRun,
+  RoutineRunCall,
   RuleInfo,
   ScheduleParse,
   WebhookProvider,
@@ -83,7 +84,7 @@ const webhookOf = (s: { webhooks: Map<WebhookProvider, WebhookSetup> }, provider
 };
 
 const hookOf = (s: { hooks: Map<string, RoutineHook> }, routineId: string) => {
-  const hook = s.hooks.get(routineId) ?? { url: hookUrl(), signed: false, methods: ["POST"], calls: [] };
+  const hook = s.hooks.get(routineId) ?? { url: hookUrl(), signed: false, methods: ["POST"], groupBy: null, calls: [] };
   s.hooks.set(routineId, hook);
   return hook;
 };
@@ -202,6 +203,8 @@ interface Store {
   activity: Map<string, IssueActivity[]>;
   routines: Routine[];
   runs: Map<string, RoutineRun[]>;
+  /** A webhook run's calls, by its id. */
+  runCalls: Map<string, RoutineRunCall[]>;
   /** Webhook routines' addresses and calls. */
   hooks: Map<string, RoutineHook>;
   /** GitHub's and Sentry's webhooks of the workspace. */
@@ -223,6 +226,7 @@ export function createMockPlanning(
       activity: new Map(),
       routines: [],
       runs: new Map(),
+      runCalls: new Map(),
       hooks: new Map(),
       webhooks: new Map(),
       events: [],
@@ -256,7 +260,7 @@ export function createMockPlanning(
       boardRank: -n,
       description: "",
       priority: "normal",
-      assignee: null,
+      assignees: [],
       labels: [],
       dueDate: null,
       criteria: [],
@@ -271,17 +275,17 @@ export function createMockPlanning(
       ...over,
     });
     s.issues.push(
-      issue({ title: "Organizar o roadmap do trimestre", status: "done", assignee: agent(3) }),
+      issue({ title: "Organizar o roadmap do trimestre", status: "done", assignees: [agent(3)] }),
       issue({
         title: "Resumo semanal de erros do Sentry no #eng",
         status: "done",
-        assignee: agent(1),
+        assignees: [agent(1)],
         labels: ["ops"],
       }),
       issue({
         title: "Login devolve 401 depois do deploy das 9h",
         status: "in_review",
-        assignee: agent(0),
+        assignees: [agent(0)],
         priority: "high",
         labels: ["bug"],
         dueDate: day(0),
@@ -290,7 +294,7 @@ export function createMockPlanning(
       issue({
         title: "Timeout no agendamento em horários de pico",
         status: "in_progress",
-        assignee: agent(0),
+        assignees: [agent(0)],
         labels: ["bug"],
         dueDate: day(2),
         pullRequests: [{ number: 44, url: "https://github.com/acme/app/pull/44", openedBy: agent(0) }],
@@ -307,12 +311,17 @@ export function createMockPlanning(
           steps: [{ tool: "update_issue", detail: "#129", at: minutesAgo(now, 2) }],
         },
       }),
-      issue({ title: "Revisar textos do onboarding", status: "in_progress", assignee: person(1), labels: ["produto"] }),
+      issue({
+        title: "Revisar textos do onboarding",
+        status: "in_progress",
+        assignees: [person(1)],
+        labels: ["produto"],
+      }),
       issue({
         title: "Confirmação do agendamento por WhatsApp",
         status: "todo",
         priority: "high",
-        assignee: person(1),
+        assignees: [person(1)],
         labels: ["produto", "agendamento"],
         dueDate: day(4),
         description:
@@ -330,7 +339,7 @@ export function createMockPlanning(
       issue({
         title: "Tabela de concorrentes atualizada",
         status: "todo",
-        assignee: agent(2),
+        assignees: [agent(2)],
         labels: ["pesquisa"],
         dueDate: day(10),
       }),
@@ -540,7 +549,7 @@ export function createMockPlanning(
           boardRank: -ctx.now().getTime(),
           priority: input.priority ?? "normal",
           project: s.projects.find((p) => p.id === input.projectId) ?? null,
-          assignee: input.assignee ?? null,
+          assignees: input.assignees ?? [],
           labels: input.labels ?? [],
           dueDate: input.dueDate ?? null,
           criteria: (input.criteria ?? []).map((text) => ({ id: mockId("crit"), text, done: false })),
@@ -569,9 +578,22 @@ export function createMockPlanning(
         const i = await findIssue(orgId, id);
         const author = await me();
         const s = await columnsOf(orgId);
-        const { columnId, criteria, projectId, ...rest } = patch;
-        let change: Omit<IssuePatch, "columnId" | "criteria" | "projectId"> = rest;
+        const { columnId, criteria, projectId, removeFiles, ...rest } = patch;
+        let change: Omit<IssuePatch, "columnId" | "criteria" | "projectId" | "removeFiles"> = rest;
         if (projectId !== undefined) i.project = (await store(orgId)).projects.find((p) => p.id === projectId) ?? null;
+        // As the server does: off the task's attachments, still in the Drive.
+        const taken = i.artifacts.filter((f) => removeFiles?.includes(f.id));
+        if (taken.length) {
+          i.artifacts = i.artifacts.filter((f) => !taken.includes(f));
+          await log(orgId, i, {
+            kind: "event",
+            author,
+            event: "artifact_unlinked",
+            text: "removeu um arquivo",
+            textCode: "files_removed",
+            textParams: { names: taken.map((f) => f.title).join(", ") },
+          });
+        }
         // The whole list, as the backend takes it: an id keeps that criterion (and its check), none is a new one.
         if (criteria) {
           const list = criteria.filter((c) => c.text.trim());
@@ -616,6 +638,29 @@ export function createMockPlanning(
             text: `mudou o status para ${words[change.status]}`,
           });
         }
+        // As the server does: an event for each one put on the task or taken off it, none for a new order.
+        if (change.assignees) {
+          const same = (a: Actor, b: Actor) => a.type === b.type && a.id === b.id;
+          const next = change.assignees;
+          for (const assignee of next.filter((a) => !i.assignees.some((b) => same(a, b))))
+            await log(orgId, i, {
+              kind: "event",
+              author,
+              event: "assigned",
+              text: "assigned the issue",
+              textCode: "assigned",
+              assignee,
+            });
+          for (const assignee of i.assignees.filter((a) => !next.some((b) => same(a, b))))
+            await log(orgId, i, {
+              kind: "event",
+              author,
+              event: "assigned",
+              text: "removed an assignee",
+              textCode: "unassigned",
+              assignee,
+            });
+        }
         Object.assign(i, change, { updatedAt: ctx.now().toISOString() });
         return clone(i);
       },
@@ -658,7 +703,11 @@ export function createMockPlanning(
       },
       askAgent: async (orgId, id, agentId) => {
         const i = await findIssue(orgId, id);
-        i.assignee = { type: "agent", id: agentId };
+        // As the server does: the agent asked comes first among who has the task, the others stay.
+        i.assignees = [
+          { type: "agent", id: agentId },
+          ...i.assignees.filter((a) => !(a.type === "agent" && a.id === agentId)),
+        ];
         if (i.status !== "in_progress") {
           i.status = "in_progress";
           i.columnId = (await columnsOf(orgId)).columns.find((c) => c.stage === "in_progress")?.id ?? null;
@@ -828,7 +877,13 @@ export function createMockPlanning(
             description: input.trigger.at,
           };
         else if (input.trigger.type === "webhook")
-          trigger = { type: "webhook", url: null, signed: false, methods: input.trigger.methods ?? ["POST"] };
+          trigger = {
+            type: "webhook",
+            url: null,
+            signed: false,
+            methods: input.trigger.methods ?? ["POST"],
+            groupBy: input.trigger.groupBy ?? null,
+          };
         else if (input.trigger.type === "connector") trigger = { ...input.trigger, status: "active", lastError: null };
         else trigger = input.trigger;
         const agents = await ctx.lookup.agents(orgId);
@@ -875,7 +930,8 @@ export function createMockPlanning(
         else if (patch.trigger?.type === "webhook") {
           const hook = hookOf(await store(orgId), id);
           if (patch.trigger.methods) hook.methods = patch.trigger.methods;
-          r.trigger = { type: "webhook", url: hook.url, signed: false, methods: hook.methods };
+          if (patch.trigger.groupBy !== undefined) hook.groupBy = patch.trigger.groupBy?.trim() || null;
+          r.trigger = { type: "webhook", url: hook.url, signed: false, methods: hook.methods, groupBy: hook.groupBy };
         } else if (patch.trigger?.type === "connector")
           r.trigger = { ...patch.trigger, status: "active", lastError: null };
         else if (patch.trigger) r.trigger = patch.trigger;
@@ -955,6 +1011,10 @@ export function createMockPlanning(
         await findRoutine(orgId, id);
         return clone((await store(orgId)).runs.get(id) ?? []);
       },
+      runCalls: async (orgId, id, runId) => {
+        await findRoutine(orgId, id);
+        return clone((await store(orgId)).runCalls.get(runId) ?? []);
+      },
       hook: async (orgId, id) => clone(hookOf(await store(orgId), id)),
       newHookAddress: async (orgId, id) => {
         record("routines.newHookAddress", id);
@@ -962,11 +1022,11 @@ export function createMockPlanning(
         hook.url = hookUrl();
         return clone(hook);
       },
-      newHookSecret: async (orgId, id) => {
-        record("routines.newHookSecret", id);
+      newHookSecret: async (orgId, id, pasted) => {
+        record("routines.newHookSecret", pasted === undefined ? id : `${id} pasted`);
         const hook = hookOf(await store(orgId), id);
         hook.signed = true;
-        return { secret: mockId("secret"), hook: clone(hook) };
+        return { secret: pasted ?? mockId("secret"), hook: clone(hook) };
       },
       removeHookSecret: async (orgId, id) => {
         record("routines.removeHookSecret", id);
@@ -1050,7 +1110,7 @@ export function createMockPlanning(
               number: i.number,
               title: i.title,
               date: i.dueDate as string,
-              assignee: i.assignee,
+              assignees: i.assignees,
             })),
           proposals: s.proposals.filter((p) => inRange(p.start)),
         });

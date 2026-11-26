@@ -8,6 +8,7 @@ import type {
   Credential,
   DirectMessage,
   Me,
+  Memory,
   Message,
   Model,
 } from "../api/types";
@@ -17,6 +18,35 @@ import { answerAfter } from "./team-plan";
 
 /** The workspace's right hand (ADR 0137): every surface that treats it apart asks here. */
 export const isRightHand = (agent: Pick<Agent, "builtin"> | null | undefined) => agent?.builtin === "right_hand";
+
+/** One group of the right hand's memory list: what is the viewer's alone, or what everyone in one channel sees. */
+export interface MemoryAudienceGroup {
+  key: string;
+  /** Null: "Only you". */
+  channel: string | null;
+  items: Memory[];
+}
+
+/**
+ * The right hand's memory as its Memory tab groups it: "Only you" first (a preference of theirs, what came from their
+ * DM), then one group per channel it learned in, in the order the list had them. An older server sends no `onlyYou`:
+ * by channel only.
+ */
+export function memoryAudienceGroups(list: Memory[]): MemoryAudienceGroup[] {
+  const mine: Memory[] = [];
+  const byChannel = new Map<string, MemoryAudienceGroup>();
+  for (const m of list) {
+    if (m.onlyYou) {
+      mine.push(m);
+      continue;
+    }
+    const key = m.channelId ?? "";
+    const group = byChannel.get(key) ?? { key, channel: m.origin?.channel ?? null, items: [] };
+    group.items.push(m);
+    byChannel.set(key, group);
+  }
+  return [...(mine.length ? [{ key: "you", channel: null, items: mine }] : []), ...byChannel.values()];
+}
 
 /** Whether a channel's member pickers offer the agent: never the right hand, in no channel (an @mention reaches it). */
 export const joinsChannels = (agent: Pick<Agent, "builtin">) => !isRightHand(agent);
@@ -178,6 +208,10 @@ export function firstVisitOf(dms: readonly DirectMessage[] | undefined, agentId:
 /** The workspace's right hand among its agents, when this person may see it. */
 export const rightHandOf = <A extends Pick<Agent, "builtin">>(agents: readonly A[]) => agents.find(isRightHand);
 
+/** The right hand's name in a workspace, or null while its agents load or when it has none. */
+export const rightHandName = (agents: readonly Pick<Agent, "builtin" | "name">[] | undefined) =>
+  (agents && rightHandOf(agents)?.name) ?? null;
+
 /** The agents a scene of the team shows: the right hand in front (second in the row), then the others, four at most. */
 export function sceneTeam<A extends { id: string }>(agents: readonly A[], lead: A | undefined): A[] {
   const rest = agents.filter((a) => a.id !== lead?.id).slice(0, lead ? 3 : 4);
@@ -331,15 +365,23 @@ export const teamAnswered = (
 
 /**
  * Why the right hand has no computer for anyone in this workspace, as its desktop's state says it (`reason`), by the
- * line that tells it: the workspace has no computer of its own, or one where every agent is the same user. Null when
- * it has one, or for any other state (offline, starting), which its computer's own view tells.
+ * line that tells it: the workspace has no computer of its own (on a self-hosted server, this server made the agents'
+ * computer, `selfHost`). Null when it has one, or for any other state (offline, starting), which its computer's own
+ * view tells.
  */
-export const rightHandNoComputer = (reason: string | null | undefined) =>
+export const rightHandNoComputer = (reason: string | null | undefined, selfHost = false) =>
   reason === "no_home"
-    ? ("rightHand.computerNoHome" as const)
-    : reason === "not_system"
-      ? ("rightHand.computerOneUser" as const)
-      : null;
+    ? selfHost
+      ? ("rightHand.computerNoHomeServer" as const)
+      : ("rightHand.computerNoHome" as const)
+    : null;
+
+/**
+ * What its "Computador" row says of the viewer's own place: kept apart from everyone else's where each agent is its
+ * own OS user, and only a folder of the one user every agent shares on a computer that runs them all as one (`single`).
+ */
+export const rightHandComputerLine = (machine: { mode?: "system" | "single" } | null | undefined) =>
+  machine?.mode === "single" ? ("rightHand.computerOneUser" as const) : ("rightHand.computerYours" as const);
 
 /**
  * What only the right hand does, in the order its page lists them (`rightHand.powers.<id>`), each with the server's

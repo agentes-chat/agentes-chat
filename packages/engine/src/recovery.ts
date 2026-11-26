@@ -1,5 +1,5 @@
 import type { PubSub } from "@agenteschat/adapters";
-import { and, asc, type Database, desc, type Executor, eq, inArray, rowsOf, schema, sql } from "@agenteschat/db";
+import { and, asc, type Database, desc, type Executor, eq, inArray, or, rowsOf, schema, sql } from "@agenteschat/db";
 import { textOf } from "@agenteschat/providers";
 import { announceAgentStatus } from "./agent-status";
 import { publishApproval } from "./approvals";
@@ -8,10 +8,13 @@ import { onConsultedRunFinished } from "./consultations";
 import { ValidationError } from "./errors";
 import { publishChannelEvent, publishMessageCreated } from "./events";
 import type { Transcript } from "./executor";
+import type { Judge } from "./judge";
+import { queueLiveActivityRun } from "./live-activity-queue";
 import { getMessage, insertMessage, messageView } from "./messages";
-import { enqueue } from "./outbox";
+import { enqueue, jobsOfRun } from "./outbox";
 import { closeRoutineRun } from "./routine-ledger";
 import { releaseInbox } from "./run-inbox";
+import { runState } from "./run-state";
 import { revokeRunToolTokens } from "./run-tool-tokens";
 import {
   type AgentRun,
@@ -22,6 +25,7 @@ import {
   shownStatusSql,
   transitionRun,
 } from "./runs";
+import { linesSaid, withoutSaidNow } from "./say-now";
 import { cancelSecretRequests, publishSecret, syncSecretMessage } from "./secrets";
 import { USAGE_WAIT_CODES } from "./usage-pause";
 import { endWork } from "./works";
@@ -50,6 +54,9 @@ const lastBeat = sql`coalesce(${agentRuns.heartbeatAt}, ${agentRuns.startedAt}, 
 /** The sweep's clock: a run whose last beat is older than `cutoff` has no live worker. */
 type SweepTime = { now: Date; cutoff: Date };
 
+/** What the sweep needs; `judge`: whether an agent whose colleague's run it ends goes on (`reportHandOffs`). */
+type RecoveryDeps = { db: Database; pubsub?: PubSub; judge?: Judge | null };
+
 /**
  * Finds runs whose worker died (a deploy or a crash: no heartbeat for
  * `RUN_STALE_MS`) and recovers them. Called on boot and every minute.
@@ -65,7 +72,7 @@ type SweepTime = { now: Date; cutoff: Date };
  * never one this process executes: two sweeps never both take a run, nor a sweep one whose worker beats.
  */
 export async function recoverStaleRuns(
-  deps: { db: Database; pubsub?: PubSub },
+  deps: RecoveryDeps,
   options: { now?: Date; staleMs?: number; onError?: (runId: string, error: unknown) => void } = {},
 ): Promise<{ resumed: string[]; failed: string[]; requeued: string[] }> {
   const { db } = deps;
@@ -141,21 +148,30 @@ export async function recoverStaleRuns(
     });
     out.requeued.push(run.id);
   }
-  // Waiting on its plan or budget past its time with no job left to wake it (that job failed or was lost): it would
-  // wait forever, and Rotinas and the agent's status would say so. Woken now; still limited, it parks again.
+  // Waiting on its plan or budget past its time, or for room on a busy computer, with no job left to wake it (that job
+  // failed or was lost): it would wait forever, and Rotinas and the agent's status would say so. Woken now; still
+  // limited or busy, it parks again with a new job.
   const overdue = await db
     .select({
       id: agentRuns.id,
       orgId: agentRuns.orgId,
-      waitId: sql<string>`${agentRuns.transcript}->'waitingForBrain'->>'waitId'`,
+      waitId: sql<string>`${runState}->'waitingForBrain'->>'waitId'`,
     })
     .from(agentRuns)
     .where(
       and(
         eq(agentRuns.status, "waiting_input"),
-        inArray(sql<string>`${agentRuns.transcript}->'waitingForBrain'->>'code'`, [...USAGE_WAIT_CODES]),
-        sql`${agentRuns.transcript}->'waitingForBrain'->>'waitId' is not null`,
-        sql`(${agentRuns.transcript}->'waitingForBrain'->>'until')::timestamptz < ${cutoff.toISOString()}::timestamptz`,
+        sql`${runState}->'waitingForBrain'->>'waitId' is not null`,
+        or(
+          and(
+            inArray(sql<string>`${runState}->'waitingForBrain'->>'code'`, [...USAGE_WAIT_CODES]),
+            sql`(${runState}->'waitingForBrain'->>'until')::timestamptz < ${cutoff.toISOString()}::timestamptz`,
+          ),
+          and(
+            sql`${runState}->'waitingForBrain'->>'code' = 'busy'`,
+            sql`${agentRuns.updatedAt} < ${cutoff.toISOString()}::timestamptz`,
+          ),
+        ),
         sql`not ${liveJob}`,
       ),
     )
@@ -240,14 +256,13 @@ async function resume(db: Database, run: AgentRun, at: SweepTime, ran: string[])
     // a job for one wait for the computer: it would find the run running and do nothing.
     await tx
       .update(outbox)
-      .set({ status: "failed", lockedUntil: null, lastError: "its worker stopped: the run went on in a new job" })
-      .where(
-        and(
-          eq(outbox.kind, "agent_run.execute"),
-          sql`${outbox.payload}->>'runId' = ${run.id}`,
-          eq(outbox.status, "processing"),
-        ),
-      );
+      .set({
+        status: "failed",
+        lockedUntil: null,
+        lastError: "its worker stopped: the run went on in a new job",
+        lastErrorStatus: null,
+      })
+      .where(and(jobsOfRun(run.id), eq(outbox.status, "processing")));
     await enqueue(tx, {
       orgId: run.orgId,
       kind: "agent_run.execute",
@@ -261,19 +276,23 @@ async function resume(db: Database, run: AgentRun, at: SweepTime, ran: string[])
 }
 
 /** Ends the run as failed, keeps what it wrote, and tells the channel (so the live row goes away). */
-async function failInterrupted(deps: { db: Database; pubsub?: PubSub }, run: AgentRun, at: SweepTime) {
+async function failInterrupted(deps: RecoveryDeps, run: AgentRun, at: SweepTime) {
   const { db } = deps;
   const threadId = replyThreadOf(run);
   const t = (run.transcript ?? {}) as StoredTranscript;
-  // A reply held for its wording is a finished answer: it wins over the working text its rewrite wrote since.
+  // A reply held for its wording is a finished answer: it wins over the working text its rewrite wrote since. Never
+  // the line it said on the way again (`say_now`, ADR 0207).
   const said =
     t.heldWording ||
-    (t.messages ?? [])
-      .slice(t.postedUpTo ?? 0)
-      .filter((m) => m.role === "assistant")
-      .map((m) => textOf(m.content).trim())
-      .filter(Boolean)
-      .join("\n\n");
+    withoutSaidNow(
+      (t.messages ?? [])
+        .slice(t.postedUpTo ?? 0)
+        .filter((m) => m.role === "assistant")
+        .map((m) => textOf(m.content).trim())
+        .filter(Boolean)
+        .join("\n\n"),
+      await linesSaid(db, run).catch(() => []),
+    );
   const note = `_${INTERRUPTED_BY_RESTART}. Ask again to continue._`;
   const result = await db.transaction(async (tx) => {
     if (!(await claimStale(tx, run.id, at))) return null;
@@ -315,14 +334,8 @@ async function failInterrupted(deps: { db: Database; pubsub?: PubSub }, run: Age
     // Its job is done for good.
     await tx
       .update(outbox)
-      .set({ status: "failed", lockedUntil: null, lastError: INTERRUPTED_BY_RESTART })
-      .where(
-        and(
-          eq(outbox.kind, "agent_run.execute"),
-          sql`${outbox.payload}->>'runId' = ${run.id}`,
-          inArray(outbox.status, ["pending", "processing"]),
-        ),
-      );
+      .set({ status: "failed", lockedUntil: null, lastError: INTERRUPTED_BY_RESTART, lastErrorStatus: null })
+      .where(and(jobsOfRun(run.id), inArray(outbox.status, ["pending", "processing"])));
     return { message, closedSecrets, closedApprovals };
   });
   if (!result) return false;
@@ -335,8 +348,10 @@ async function failInterrupted(deps: { db: Database; pubsub?: PubSub }, run: Age
   const where = { channelId: run.channelId, threadId, agentId: run.agentId, runId: run.id };
   const bg = run.background ? { background: true as const } : {};
   if (deps.pubsub && result.message) await publishMessageCreated(deps.pubsub, messageView(result.message));
-  // Its worker died: its line went with the heartbeat already (ADR 0084 §11); the apps refresh now.
+  // Its worker died: its line went with the heartbeat already (ADR 0084 §11); the apps refresh now, and so does the
+  // Live Activity of the person behind it (ADR 0210).
   await announceAgentStatus(deps.pubsub, run.orgId, run.agentId).catch(() => {});
+  await queueLiveActivityRun(db, run).catch(() => {});
   await publishChannelEvent(deps.pubsub, {
     type: "agent.run",
     ...where,
@@ -362,13 +377,20 @@ async function failInterrupted(deps: { db: Database; pubsub?: PubSub }, run: Age
     runId: run.id,
     status: "failed",
   });
-  // It was answering another agent: the asker hears it now instead of waiting for the question to expire.
-  await onConsultedRunFinished({ db, pubsub: deps.pubsub }, run, "failed", INTERRUPTED_BY_RESTART).catch(() => {});
-  // A work ends before the release, which would drop a reply turn's own message passed on to it (`endWork` keeps it).
+  // A work ends before the release, which would drop a reply turn's own message passed on to it (`endWork` keeps it),
+  // and before the asker hears it: a handed work's end line home is what spares the asker a relay (`reportHandOffs`).
   if (run.workId) {
     const [ended] = await db.select().from(agentRuns).where(eq(agentRuns.id, run.id));
     if (ended) await endWork(deps, ended, "failed").catch(() => null);
   }
+  // It was answering another agent: the asker hears it now instead of waiting for the question to expire, and with
+  // the judge it may go on with its own step (`reportHandOffs`).
+  await onConsultedRunFinished(
+    { db, pubsub: deps.pubsub, judge: deps.judge },
+    run,
+    "failed",
+    INTERRUPTED_BY_RESTART,
+  ).catch(() => {});
   // What was sent to it and not read gets a run of its own.
   await releaseInbox(db, deps.pubsub, run, { reason: "interrupted" }).catch(() => null);
   return true;
@@ -389,11 +411,12 @@ export async function activeRunsIn(db: Database, orgId: string, channelId: strin
     kind: string;
     pending: string[] | string | null;
     background: boolean | string;
+    reply_in_thread: boolean | string;
   }>(
     // Asking its computer from the line (`computerWaitOf`) it still waits: no "thinking" row for the ask.
     await db.execute(sql`select r.id, r.agent_id, ${shownStatusSql} as status, r.thread_root_id, r.trigger_message_id, r.started_at,
-        r.heartbeat_at, r.working_since, r.created_at, c.kind, array_to_json(r.pending_message_ids) as pending,
-        (r.background or r.work_id is not null) as background
+        r.heartbeat_at, r.working_since, r.created_at, c.kind, array_to_json(r.pending_message_ids || r.after_message_ids) as pending,
+        (r.background or r.work_id is not null) as background, r.reply_in_thread
       from ${agentRuns} r join ${channels} c on c.id = r.channel_id
       where r.org_id = ${orgId}::uuid and r.channel_id = ${channelId}::uuid
         and r.status in ('queued', 'running', 'waiting_approval', 'waiting_input')
@@ -414,10 +437,13 @@ export async function activeRunsIn(db: Database, orgId: string, channelId: strin
     // How long the work it is doing now has taken (`agent_runs.working_since`, else since it was created), as a
     // length and not a time: the app counts on from it by its own clock, whatever that clock says.
     workingMs: Math.max(0, now - new Date(r.working_since ?? r.created_at).getTime()),
-    // Sent while it works and not read yet ("lê na próxima pausa"); the rest it already read.
+    // Sent while it works and not read yet ("lê na próxima pausa"); the rest it already read. A separate request left
+    // for after the task (`after_message_ids`) is unread too: a reload never says the agent read it.
     pendingMessageIds: pendingIds(r.pending),
     // A routine's work, or long work (ADR 0121): it holds no conversation's working row.
     background: r.background === true || r.background === "t",
+    // It answers in the thread under its trigger (ADR 0214): its own copy, never the channel's setting now.
+    replyInThread: r.reply_in_thread === true || r.reply_in_thread === "t",
   }));
 }
 

@@ -1,12 +1,14 @@
 import type { PubSub } from "@agenteschat/adapters";
 import { and, type Database, desc, eq, gt, gte, isNull, ne, or, schema, sql } from "@agenteschat/db";
 import { actionsFor, actionView, describeAction, publishMessageActions, UNDO_WINDOW_MS } from "./agent-actions";
-import { getAgentCached } from "./agents";
+import { getAgent } from "./agents";
+import { editsAgent, managesAgent, ownsAgent } from "./audience";
 import { recordAudit } from "./audit";
 import { caches } from "./cache";
 import { addChannelMember, archiveChannel, removeChannelMember, unarchiveChannel } from "./channels";
-import { ConflictError, ForbiddenError, NotFoundError } from "./errors";
+import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { getIssue, type IssueView, setCriterion, updateIssue, type WorkActor } from "./issues";
+import { updateChannel } from "./management";
 import { announceMessageMemories } from "./message-memories";
 import { assertActiveMembership, can, getMembership } from "./organizations";
 import { hookMethodsOf, routineHookKeys } from "./routine-hooks";
@@ -56,7 +58,7 @@ export function issueSnapshot(i: IssueView): Record<string, unknown> {
     description: i.description,
     status: i.status,
     priority: i.priority,
-    assignee: i.assignee ? { type: i.assignee.type, id: i.assignee.id } : null,
+    assignees: i.assignees.map((a) => ({ type: a.type, id: a.id })),
     labels: i.labels,
     project: i.project?.id ?? null,
     dueDate: i.dueDate,
@@ -97,7 +99,7 @@ async function applyIssueFields(
   if ("description" in values) patch.description = String(values.description ?? "");
   if ("status" in values) patch.status = values.status as IssueView["status"];
   if ("priority" in values) patch.priority = values.priority as IssueView["priority"];
-  if ("assignee" in values) patch.assignee = (values.assignee as WorkActor | null) ?? null;
+  if ("assignees" in values) patch.assignees = (values.assignees as WorkActor[] | null) ?? [];
   if ("labels" in values) patch.labels = (values.labels as string[]) ?? [];
   if ("project" in values) patch.projectId = (values.project as string | null) ?? null;
   if ("dueDate" in values) patch.dueDate = (values.dueDate as string | null) ?? null;
@@ -393,16 +395,22 @@ const handlers: Record<string, Handler> = {
     const row = await routineRow(deps.db, a.orgId, a.targetId);
     if (!row || row.deletedAt) throw new NotFoundError("The routine is gone", "action.target_gone");
     const [from, to] = direction === "undo" ? [obj(a.after), obj(a.before)] : [obj(a.before), obj(a.after)];
-    // The methods its webhook address answers are kept with the address, not on the routine.
-    const { methods: fromMethods, ...fromRow } = from;
-    const { methods: toMethods, ...toRow } = to;
+    // The methods its webhook address answers and its grouping are kept with the address, not on the routine.
+    const { methods: fromMethods, groupBy: fromGroupBy, ...fromRow } = from;
+    const { methods: toMethods, groupBy: toGroupBy, ...toRow } = to;
     const now = routineSnapshot(row);
     if (Object.keys(fromRow).some((k) => !same(now[k], fromRow[k]))) throw changedSince();
-    if (Array.isArray(toMethods)) {
-      if (!same((await routineHookKeys(deps.db, [row.id])).get(row.id)?.methods, fromMethods)) throw changedSince();
+    if (Array.isArray(toMethods) || "groupBy" in to) {
+      const hook = (await routineHookKeys(deps.db, [row.id])).get(row.id);
+      if (Array.isArray(toMethods) && !same(hook?.methods, fromMethods)) throw changedSince();
+      if ("groupBy" in to && !same(hook?.groupBy ?? null, fromGroupBy ?? null)) throw changedSince();
       await deps.db
         .update(routineHooks)
-        .set({ methods: hookMethodsOf(toMethods.map(String)), updatedAt: new Date() })
+        .set({
+          ...(Array.isArray(toMethods) ? { methods: hookMethodsOf(toMethods.map(String)) } : {}),
+          ...("groupBy" in to ? { groupBy: typeof toGroupBy === "string" ? toGroupBy : null } : {}),
+          updatedAt: new Date(),
+        })
         .where(eq(routineHooks.routineId, row.id));
     }
     await setRoutine(deps.db, row, toRow);
@@ -428,6 +436,32 @@ const handlers: Record<string, Handler> = {
         { agentId, autoReply: obj(a.after).autoReply !== false },
         { pubsub: deps.pubsub },
       );
+    }
+    return undefined;
+  },
+
+  async "channel.lead_changed"(deps, a, userId, direction) {
+    const [from, to] = direction === "undo" ? [obj(a.after), obj(a.before)] : [obj(a.before), obj(a.after)];
+    const lead = (v: unknown) => (typeof v === "string" ? v : null);
+    const [channel] = await deps.db
+      .select({ leadAgentId: channels.leadAgentId, archivedAt: channels.archivedAt })
+      .from(channels)
+      .where(and(eq(channels.orgId, a.orgId), eq(channels.id, a.targetId)));
+    if (!channel || channel.archivedAt) throw new NotFoundError("The channel is gone", "action.target_gone");
+    if (channel.leadAgentId !== lead(from.leadAgentId)) throw changedSince();
+    try {
+      await updateChannel(
+        deps.db,
+        userId,
+        a.orgId,
+        a.targetId,
+        { leadAgentId: lead(to.leadAgentId) },
+        { pubsub: deps.pubsub },
+      );
+    } catch (error) {
+      // The agent it goes back to left the channel, or was archived, since.
+      if (error instanceof ValidationError && error.code === "channel.lead_not_member") throw changedSince();
+      throw error;
     }
     return undefined;
   },
@@ -581,19 +615,29 @@ async function loadAction(db: Database, orgId: string, id: string) {
   return row;
 }
 
-/** The person the agent worked for, an admin, or the agent's owner. A change to skills: only an admin. */
+/**
+ * The person the agent worked for, who manages the agent (`managesAgent`, ADR 0085 addendum of 2026-11-17; with the
+ * agent gone, who holds "Editar qualquer agente"), or its owner. A change to its skills: who edits it (`editsAgent`),
+ * as on its page.
+ */
 async function requireMayUndo(db: Database, userId: string, a: Row) {
   const membership = await getMembership(db, userId, a.orgId);
   if (!membership) throw new NotFoundError("Action not found", "action.not_found");
   assertActiveMembership(membership);
-  if (can(membership, "manage_agents")) return;
-  // Skills are who manages agents' on the agent's page (`SETTING_GROUP`), though `setAgentSkills` takes its owner too.
+  // A settings change is on its target (the right hand's card changes another agent's): rights are that agent's, not
+  // those of the agent that wrote the card (ADR 0085 addendum of 2026-11-17).
+  const subjectId =
+    a.kind === "agent.settings_changed" && a.targetType === "agent" && a.targetId ? a.targetId : a.agentId;
+  const agent = await getAgent(db, a.orgId, subjectId);
+  if (agent ? managesAgent(agent, userId, membership) : can(membership, "manage_agents")) return;
+  // Which skills it has is who edits it (`SETTING_GROUP`), as `setAgentSkills` takes.
   const fields = (a.params as { fields?: unknown }).fields;
-  if (a.kind === "agent.settings_changed" && Array.isArray(fields) && fields.includes("skill"))
+  if (a.kind === "agent.settings_changed" && Array.isArray(fields) && fields.includes("skill")) {
+    if (agent && editsAgent(agent, userId, membership)) return;
     throw new ForbiddenError("Only an admin can undo or redo a change to an agent's skills", "action.skills_admins");
+  }
   if (a.requestedByUserId === userId) return;
-  const agent = await getAgentCached(db, a.orgId, a.agentId);
-  if (agent?.ownerUserId === userId) return;
+  if (agent && ownsAgent(agent, userId, membership.roleIds)) return;
   throw new ForbiddenError(
     "Only the person the agent worked for, its owner or an admin can undo this",
     "action.not_allowed",

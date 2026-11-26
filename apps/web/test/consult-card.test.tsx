@@ -253,6 +253,15 @@ describe("what came of work handed off (a `consult_reply` notice with `kind` `no
     expect(consultDialog()?.getAttribute("role")).toBe("dialog");
   });
 
+  test("opened from the answer's notice, the dialog names both agents even before the conversation is there", async () => {
+    await open(withResult("answered", "Passei a pasta; o Diogo abriu."));
+    await act(async () => fireEvent.click(pairButton(document.querySelector(".consult-pair"))));
+    await settle(3);
+    const title = consultDialog()?.querySelector(".consult-title")?.textContent ?? "";
+    expect(title).toContain("Ada");
+    expect(title).toContain("Atlas");
+  });
+
   test("one that couldn't be finished says so", async () => {
     await open(withResult("failed", null));
     expect(document.querySelector(".consult-pair__word")?.textContent).toBe("não terminou");
@@ -322,13 +331,17 @@ describe("the working line while an agent asks another", () => {
     await push(socket, { type: "agent.thinking", threadId: null, runId: "r-b", agentId: ATLAS_ID });
     await settle();
     expect(bar()).toBe("Ada e Atlas estão trabalhando…");
-    expect(typingBar().querySelectorAll(".ac-typing__tok")).toHaveLength(2);
+    // The first leads the conversation's last row with its rings; the other's small face is on the line.
+    const orbits = () => document.querySelectorAll(".working-tail__face .ac-orbit");
+    expect(orbits()).toHaveLength(1);
+    expect(typingBar().querySelectorAll(".ac-typing__tok")).toHaveLength(1);
     await push(socket, { type: "agent.idle", threadId: null, runId: "r-b", agentId: ATLAS_ID });
     await settle();
     expect(bar()).toBe("Ada pensando…");
-    // Alone, at work with no row in the conversation: the bar keeps its face.
-    expect(typingBar().querySelectorAll(".ac-typing__tok")).toHaveLength(1);
+    // Alone, at work with no row of its own: its face leads the last row, the line has no small face.
+    expect(orbits()).toHaveLength(1);
+    expect(typingBar().querySelectorAll(".ac-typing__tok")).toHaveLength(0);
     await act(() => new Promise((r) => setTimeout(r, 2100)));
-    expect(typingBar().querySelectorAll(".ac-typing__tok")).toHaveLength(1);
+    expect(orbits()).toHaveLength(1);
   });
 });

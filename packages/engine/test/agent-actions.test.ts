@@ -3,6 +3,7 @@ import { eq, schema } from "@agenteschat/db";
 import type { ModelRequest } from "@agenteschat/providers";
 import {
   actionsFor,
+  addChannelMember,
   commentIssue,
   createChannel,
   createContextToolSource,
@@ -21,8 +22,10 @@ import {
   insertMessage,
   linkRunActions,
   listMessages,
+  openPersonAgentDm,
   postPersonMessage,
   redoAgentAction,
+  removeChannelMember,
   replyThreadOf,
   type ToolContext,
   type ToolDefinition,
@@ -121,7 +124,7 @@ describe("act with undo: issues", () => {
     const call = await toolsOf([createIssueToolSource(f.artifactDeps)], ctx);
     const created = await call("create_issue", {
       title: "Prompt de avaliação após a assinatura",
-      assignee: "me",
+      assignees: ["me"],
       due_date: "2026-10-23",
     });
     expect(created.content).toContain("Created #1");
@@ -170,12 +173,12 @@ describe("act with undo: issues", () => {
     const call = await toolsOf([createIssueToolSource(f.artifactDeps)], ctx);
     const issue = await createIssue(deps(f), person(f.owner.id), f.org.id, { title: "Login quebra" });
     await call("update_issue", { issue: "#1", priority: "high", labels: ["bug"], due_date: "2026-11-01" });
-    await call("update_issue", { issue: "#1", assignee: "me" });
+    await call("update_issue", { issue: "#1", assignees: ["me"] });
     const m = await reply(f, ctx);
     const actions = (await actionsFor(f.db, f.org.id, [m.id])).get(m.id) ?? [];
     expect(actions.map((a) => a.kind)).toEqual(["issue.updated", "issue.assigned"]);
     expect(actions[0]?.params).toMatchObject({ fields: ["priority", "labels", "dueDate"], priority: "high" });
-    expect(actions[1]?.params).toMatchObject({ assigneeType: "agent", assigneeIsSelf: true, assigneeName: "@dev" });
+    expect(actions[1]?.params).toMatchObject({ assigneeIsSelf: true, assigneeName: "@dev", assigneeNames: ["@dev"] });
 
     // Someone changed the priority after the agent: refused, nothing changes, the receipt stays undoable.
     await updateIssue(deps(f), person(f.owner.id), f.org.id, issue.id, { priority: "low" });
@@ -192,7 +195,7 @@ describe("act with undo: issues", () => {
     await undoAgentAction(deps(f), f.owner.id, f.org.id, first.id);
     const back = await getIssue(f.db, person(f.owner.id), f.org.id, { id: issue.id });
     expect(back).toMatchObject({ priority: "normal", labels: [], dueDate: null });
-    expect(back.assignee).toEqual({ type: "agent", id: f.agent.id });
+    expect(back.assignees).toEqual([{ type: "agent", id: f.agent.id }]);
   });
 
   test("update_issue: an agent's GitHub link is a receipt, and undo takes it off", async () => {
@@ -279,7 +282,7 @@ describe("act with undo: issues", () => {
           ? { chunks: ["Abri a #1 e deixei comigo."] }
           : {
               chunks: [],
-              toolUses: [{ name: "create_issue", input: { title: "Organizar o trabalho", assignee: "me" } }],
+              toolUses: [{ name: "create_issue", input: { title: "Organizar o trabalho", assignees: ["me"] } }],
             },
     });
     await grantScopes(f.db, f.org.id, f.agent.id, [
@@ -428,5 +431,88 @@ describe("act with undo: memory, routines, channels, wiki, threads", () => {
     expect(await thread()).toMatchObject({ state: "open", title: null });
     await redoAgentAction(deps(f), f.owner.id, f.org.id, renamed?.id ?? "");
     expect((await thread()).title).toBe("Organização");
+  });
+
+  test("set_channel_lead: the agent makes itself responsible, then another in the channel; none; undo and redo", async () => {
+    f = await setup();
+    const ctx = await runContext(f, "be responsible for this channel");
+    const [lia] = await f.db
+      .insert(schema.agents)
+      .values({
+        orgId: f.org.id,
+        name: "Lia",
+        handle: "lia",
+        role: "Research",
+        instructions: "",
+        model: "claude-sonnet-5-5",
+        ownerUserId: f.owner.id,
+      })
+      .returning();
+    if (!lia) throw new Error("no agent");
+    const call = await toolsOf([createWorkspaceToolSource({ pubsub: f.pubsub })], ctx);
+    const lead = async () =>
+      (await f.db.select().from(schema.channels).where(eq(schema.channels.id, f.general.id)))[0]?.leadAgentId ?? null;
+
+    expect((await call("set_channel_lead", {})).content).toBe("You are now responsible for #general.");
+    expect(await lead()).toBe(f.agent.id);
+    expect((await call("set_channel_lead", {})).content).toContain("already is responsible");
+    // Not in the channel: nothing changes, and it is told how to bring it in.
+    await expect(call("set_channel_lead", { agent: "@lia" })).rejects.toThrow("add_agent_to_channel");
+    await addChannelMember(f.db, f.owner.id, f.org.id, f.general.id, { agentId: lia.id });
+    expect((await call("set_channel_lead", { agent: "@lia", channel: "#general" })).content).toBe(
+      "@lia is now responsible for #general, in place of @dev.",
+    );
+    // Naming one that isn't responsible clears nothing.
+    expect((await call("set_channel_lead", { agent: "@dev", responsible: false })).content).toContain(
+      "nothing changed",
+    );
+    expect(await lead()).toBe(lia.id);
+    expect((await call("set_channel_lead", { responsible: false })).content).toBe(
+      "#general has no responsible agent now.",
+    );
+    expect(await lead()).toBeNull();
+
+    const m = await reply(f, ctx);
+    const actions = (await actionsFor(f.db, f.org.id, [m.id])).get(m.id) ?? [];
+    expect(actions.map((a) => a.kind)).toEqual([
+      "channel.lead_changed",
+      "channel.lead_changed",
+      "channel.lead_changed",
+    ]);
+    const [itself, other, none] = actions;
+    expect(itself?.params).toMatchObject({ self: true, agentId: f.agent.id, previousAgentId: null });
+    expect(other?.params).toMatchObject({ self: false, agentName: "Lia", previousAgentId: f.agent.id });
+    expect(none?.params).toMatchObject({ agentId: null, previousAgentId: lia.id });
+
+    await undoAgentAction(deps(f), f.owner.id, f.org.id, none?.id ?? "");
+    expect(await lead()).toBe(lia.id);
+    await undoAgentAction(deps(f), f.owner.id, f.org.id, other?.id ?? "");
+    expect(await lead()).toBe(f.agent.id);
+    await redoAgentAction(deps(f), f.owner.id, f.org.id, other?.id ?? "");
+    expect(await lead()).toBe(lia.id);
+    // The first one's undo would take Lia's place away: changed since.
+    await expect(undoAgentAction(deps(f), f.owner.id, f.org.id, itself?.id ?? "")).rejects.toMatchObject({
+      code: "action.changed_since",
+    });
+    // Lia left the channel: going back to her is refused, the channel stays as it is.
+    await undoAgentAction(deps(f), f.owner.id, f.org.id, other?.id ?? "");
+    await removeChannelMember(f.db, f.owner.id, f.org.id, f.general.id, { agentId: lia.id });
+    await expect(redoAgentAction(deps(f), f.owner.id, f.org.id, other?.id ?? "")).rejects.toMatchObject({
+      code: "action.changed_since",
+    });
+    expect(await lead()).toBe(f.agent.id);
+  });
+
+  test("set_channel_lead: never for a routine's work, and never in a conversation that isn't a channel", async () => {
+    f = await setup();
+    const ctx = await runContext(f);
+    const call = await toolsOf([createWorkspaceToolSource({ pubsub: f.pubsub })], ctx);
+    // A routine's run: nobody asked.
+    await f.db.update(schema.agentRuns).set({ background: true }).where(eq(schema.agentRuns.id, ctx.runId));
+    await expect(call("set_channel_lead", {})).rejects.toThrow("Only a person's request");
+    await f.db.update(schema.agentRuns).set({ background: false }).where(eq(schema.agentRuns.id, ctx.runId));
+    const dm = await openPersonAgentDm(f.db, f.org.id, f.owner.id, f.agent.id);
+    const inDm = await toolsOf([createWorkspaceToolSource({ pubsub: f.pubsub })], { ...ctx, channelId: dm.id });
+    await expect(inDm("set_channel_lead", {})).rejects.toThrow("Only a channel has a responsible agent");
   });
 });

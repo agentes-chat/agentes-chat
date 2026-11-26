@@ -11,7 +11,7 @@ const { accounts, organizationMembers, organizationSettings, users } = schema;
 /**
  * What an agent writes on GitHub says whose agent it is (ADR 0156): every body ends with one line naming the agent and
  * the person it works for ("Theo, agente de Ana no agentes.chat", in the workspace owner's language), and commits
- * credit that person (`Co-authored-by`) when they linked GitHub to sign in, never with their email. Every commit also
+ * credit that person (`Co-Authored-By`) when they linked GitHub to sign in, never with their email. Every commit also
  * ends with the agent's own line (`agentCoAuthor`), unless a person asked an agent to turn it off for the workspace.
  */
 
@@ -61,13 +61,16 @@ export function creditedMessage(message: string, ...trailers: string[]) {
 }
 
 /** A name in a trailer: one line, nothing that ends it early (`<`, `>`) or breaks it (control characters). */
-const trailerName = (name: string) =>
+export const trailerName = (name: string) =>
   // biome-ignore lint/suspicious/noControlCharactersInRegex: control characters would break the trailer
   name.replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029<>]/g, "").trim();
 
-/** `Co-authored-by: Nick <noreply@agentes.chat>`: the agent's own line on its commits (its handle when its name is empty). */
+/** `Co-Authored-By: Nick <noreply@agentes.chat>`: the agent's own line on its commits (its handle when its name is empty). */
 export const agentCoAuthor = (agent: { name: string; handle: string }) =>
-  `Co-authored-by: ${trailerName(agent.name) || agent.handle} <${AGENT_CO_AUTHOR_EMAIL}>`;
+  `Co-Authored-By: ${trailerName(agent.name) || agent.handle} <${AGENT_CO_AUTHOR_EMAIL}>`;
+
+/** The capitals a runner older than protocol 85 (`CO_AUTHOR_CASE_PROTOCOL`) takes: it drops any other. */
+export const oldCoAuthorCase = (line: string) => line.replace(/^Co-Authored-By:/, "Co-authored-by:");
 
 /** Whether the workspace's agents end their commits with their own line: on unless a person asked to turn it off. */
 export async function agentCoAuthorOn(db: Executor, orgId: string): Promise<boolean> {
@@ -135,7 +138,7 @@ async function githubLogin(http: GitHubHttp, id: string, token?: string | null) 
 }
 
 /**
- * `Co-authored-by: Ana <123+ana@users.noreply.github.com>` for a person who linked GitHub to sign in (their GitHub id
+ * `Co-Authored-By: Ana <123+ana@users.noreply.github.com>` for a person who linked GitHub to sign in (their GitHub id
  * from that sign-in, the login GitHub has for it now). Null otherwise: no address is guessed.
  */
 export async function coAuthorOf(
@@ -151,7 +154,7 @@ export async function coAuthorOf(
   if (!row || !/^\d{1,20}$/.test(row.githubId)) return null;
   const login = await githubLogin(deps.http, row.githubId, deps.token);
   if (!login) return null;
-  return `Co-authored-by: ${trailerName(row.name) || login} <${row.githubId}+${login}@users.noreply.github.com>`;
+  return `Co-Authored-By: ${trailerName(row.name) || login} <${row.githubId}+${login}@users.noreply.github.com>`;
 }
 
 /** The line under what this agent writes on GitHub in this run. */

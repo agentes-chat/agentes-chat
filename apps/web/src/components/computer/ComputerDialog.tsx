@@ -16,26 +16,20 @@ import {
   liveSubLine,
   surfaceOf,
 } from "@agenteschat/client/lib/agent-computer";
+import { ownsAgentAs } from "@agenteschat/client/lib/agent-owner";
+import { managesAgent } from "@agenteschat/client/lib/audience";
 import { computerName, READY_FLASH_MS, WORKSPACE_COMPUTER_KIND } from "@agenteschat/client/lib/computer";
+import { helpingDevices, withHelping } from "@agenteschat/client/lib/devices";
 import { clockAt } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { computerKind, isPaused } from "@agenteschat/client/lib/machines";
 import { can } from "@agenteschat/client/lib/permissions";
-import { type Seat, screenId } from "@agenteschat/client/lib/seat";
-import { SeatContext, useSeat } from "@agenteschat/client/lib/seat-context";
+import { isRightHand } from "@agenteschat/client/lib/right-hand";
+import { useSeat } from "@agenteschat/client/lib/seat-context";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import { Button, ComputerPortrait, cx, Dialog, gradientOf, Icon, SkyStrip } from "@agenteschat/ui";
 import { useNavigate } from "@tanstack/react-router";
-import {
-  type CSSProperties,
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { type CSSProperties, type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { type EntrySignal, QueueButton, useAgentMachineId } from "@/components/ComputerQueue";
@@ -46,6 +40,7 @@ import { lookOf } from "@/lib/look";
 import { useSaid, useToast } from "@/lib/toast";
 import { BrowserCard, Cover, stepText } from "../browser/BrowserCard";
 import { DesktopView } from "../desktop/DesktopView";
+import { useDevices } from "../devices/queries";
 import { MachineToolButton, useToolOneClick } from "../devices/ToolOneClick";
 import { SwitchComputerDialog } from "../MachineOutages";
 import { useOrg } from "../org-context";
@@ -55,7 +50,7 @@ import { CantShowCover, ScreenNotice, Stage } from "./covers";
 import { type AgentComputerView, useAgentComputer } from "./facts";
 import { DialogHead, DialogHeadContext, type DialogHeadSlots, type KeptPicture } from "./head";
 import { KeptRunningButton } from "./KeptRunning";
-import { type OpenComputer, OpenComputerContext, OpenedComputerContext, useOpenComputer } from "./open";
+import { useOpenComputer } from "./open";
 import "./computer.css";
 
 /**
@@ -287,9 +282,9 @@ export function ComputerDialog({ agent, open, onClose }: { agent: Agent; open: b
 
 /**
  * What the stage shows, by `surfaceOf`, with the banners over a live one. The head's sub-line says only what a cover or
- * a banner doesn't: the window says each thing once.
+ * a banner doesn't: the window says each thing once. Also the Code page's Screen tab (ADR 0215), with its own slots.
  */
-function ComputerStage({
+export function ComputerStage({
   agent,
   view,
   surface,
@@ -308,7 +303,7 @@ function ComputerStage({
   const dir = useDirectory(org.id);
   const actions = useBrowserHandoffMutations(org.id);
   const navigate = useNavigate();
-  const outages = useMachineOutages(org.id, can(org, "manage_agents"));
+  const outages = useMachineOutages(org.id, managesAgent(agent));
   const [switching, setSwitching] = useState(false);
   // The screen's own held cover says it all: no pause line over it.
   const [screenHeld, setScreenHeld] = useState(false);
@@ -323,9 +318,14 @@ function ComputerStage({
   const oneClick = useToolOneClick(machine);
   const browserOneClick = Boolean(machine && oneClick && oneClick.kind !== "outdated");
   const computer = computerName(t, org.name, machine, isPersonal(org));
-  const manages = can(org, "manage_agents") || agent.ownerUserId === me.user.id;
+  // Away, the computers that help take its new work (ADR 0233): said under the cover. Never the right hand's.
+  const devices = useDevices(org.id).data;
+  const helping = isRightHand(agent) ? [] : helpingDevices(devices, agent.ownerUserId, machine?.id ?? null);
+  // Its owner: the person, or whoever holds the role that answers for it (ADR 0085, addendum of 2026-11-21).
+  const owns = ownsAgentAs(agent, me.user.id, dir.rolesOf(me.user.id));
+  const manages = managesAgent(agent) || owns;
   // Whose role gives no browser here gets Fechar, never "Assumir o navegador" (ADR 0085 §12).
-  const mayBrowser = can(org, agent.ownerUserId === me.user.id ? "own_browsers" : "control_browsers");
+  const mayBrowser = can(org, owns ? "own_browsers" : "control_browsers");
   const person = (id: string | null) => (id ? dir.memberById.get(id)?.name : undefined) ?? t("channel.unknownPerson");
   const paused = f?.edition === "selfhost" && machine && isPaused(machine, now) ? machine.paused : null;
   const waiting = waitingFor && isWaitingHandoff(waitingFor, now) ? waitingFor : null;
@@ -493,48 +493,59 @@ function ComputerStage({
   } else if (machine && !machine.online && !machine.standby) {
     const since = machine.lastSeenAt ? clockAt(i18n.language, machine.lastSeenAt) : null;
     const outage = outages.data?.outages.find((o) => o.machineId === machine.id);
-    body =
-      f.edition === "cloud" ? (
-        <>
-          <DialogHead sub={t("agentComputer.sub.notAnswering")} />
-          <Stage>
-            <Cover
-              color={color}
-              art={<ComputerPortrait kind={WORKSPACE_COMPUTER_KIND} state="offline" size={96} />}
-              text={t("agentComputer.state.notAnsweringHelp")}
-              help={t("desktop.state.retrying")}
-            />
-          </Stage>
-          {notice}
-        </>
-      ) : (
-        <>
-          <DialogHead sub={since ? t("agentComputer.sub.offline", { time: since }) : t("machines.offline")} />
-          <Stage>
-            <Cover
-              color={color}
-              art={<ComputerPortrait kind={computerKind(machine.os)} state="offline" size={96} />}
-              text={t("agentComputer.state.offline", { computer })}
-              // The head already says since when.
-              help={t("agentComputer.state.offlineHelpPlain", g)}
-              action={
-                manages &&
-                outage &&
-                outages.data && (
-                  <Button size="sm" onClick={() => setSwitching(true)}>
-                    {t("outage.switch")}
-                  </Button>
-                )
-              }
-            />
-          </Stage>
-          {notice}
-          {switching && outage && outages.data && (
-            <SwitchComputerDialog open onOpenChange={setSwitching} outage={outage} data={outages.data} />
-          )}
-        </>
-      );
-  } else if ((!machine && f.edition === "cloud") || (machine?.standby && !machine.online)) {
+    body = machine.moving ? (
+      <>
+        <DialogHead sub={t("machines.moving.short")} />
+        <Stage>
+          <Cover
+            color={color}
+            art={<ComputerPortrait kind={WORKSPACE_COMPUTER_KIND} state="paused" size={96} />}
+            text={t("machines.moving.line")}
+          />
+        </Stage>
+        {notice}
+      </>
+    ) : f.edition === "cloud" ? (
+      <>
+        <DialogHead sub={t("agentComputer.sub.notAnswering")} />
+        <Stage>
+          <Cover
+            color={color}
+            art={<ComputerPortrait kind={WORKSPACE_COMPUTER_KIND} state="offline" size={96} />}
+            text={t("agentComputer.state.notAnsweringHelp")}
+            help={withHelping(t, t("desktop.state.retrying"), helping)}
+          />
+        </Stage>
+        {notice}
+      </>
+    ) : (
+      <>
+        <DialogHead sub={since ? t("agentComputer.sub.offline", { time: since }) : t("machines.offline")} />
+        <Stage>
+          <Cover
+            color={color}
+            art={<ComputerPortrait kind={computerKind(machine.os)} state="offline" size={96} />}
+            text={t("agentComputer.state.offline", { computer })}
+            // The head already says since when.
+            help={withHelping(t, t("agentComputer.state.offlineHelpPlain", g), helping)}
+            action={
+              manages &&
+              outage &&
+              outages.data && (
+                <Button size="sm" onClick={() => setSwitching(true)}>
+                  {t("outage.switch")}
+                </Button>
+              )
+            }
+          />
+        </Stage>
+        {notice}
+        {switching && outage && outages.data && (
+          <SwitchComputerDialog open onOpenChange={setSwitching} outage={outage} data={outages.data} />
+        )}
+      </>
+    );
+  } else if ((!machine && f.edition === "cloud") || machine?.standby) {
     // The workspace's computer is ready and this agent gets it at its first hello, or it wakes: a moment more.
     body = (
       <>
@@ -555,7 +566,9 @@ function ComputerStage({
             icon="computer"
             text={t("agentComputer.state.noComputer", g)}
             action={
-              manages && (
+              // The right hand's computer is the workspace's own, never chosen (the server refuses it).
+              manages &&
+              !isRightHand(agent) && (
                 <Button size="sm" variant="primary" onClick={choose}>
                   {t("agentComputer.choose")}
                 </Button>
@@ -726,31 +739,4 @@ function WatchButton({ agent, signal }: { agent: Agent; signal: EntrySignal }) {
   );
 }
 
-/**
- * One computer dialog for the workspace: its agent page's entry, the DM's button, a computer's page and the
- * chat's cards open an agent's computer here, in place.
- */
-export function ComputerDialogProvider({ children }: { children: ReactNode }) {
-  const { org } = useOrg();
-  const dir = useDirectory(org.id);
-  const [opened, setOpened] = useState<{ agentId: string; seat?: Seat } | null>(null);
-  const agent = opened ? dir.agentById.get(opened.agentId) : undefined;
-  const open = useCallback<OpenComputer>((agentId, seat) => setOpened({ agentId, ...(seat ? { seat } : {}) }), []);
-  const close = useCallback(() => setOpened(null), []);
-  const seatOf = useMemo(
-    () => (opened?.seat ? { agentId: opened.agentId, seat: opened.seat } : undefined),
-    [opened?.agentId, opened?.seat],
-  );
-  return (
-    <OpenComputerContext.Provider value={open}>
-      <OpenedComputerContext.Provider value={agent ? agent.id : null}>{children}</OpenedComputerContext.Provider>
-      {agent && (
-        // The right hand's shared place is another screen than the viewer's own: everything the dialog reads and does
-        // goes to the one it was opened for.
-        <SeatContext.Provider value={seatOf}>
-          <ComputerDialog key={screenId(agent.id, opened?.seat)} agent={agent} open onClose={close} />
-        </SeatContext.Provider>
-      )}
-    </OpenComputerContext.Provider>
-  );
-}
+export { ComputerDialogProvider } from "./provider";

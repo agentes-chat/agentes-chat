@@ -1,5 +1,5 @@
 import type { Agent, Channel, OrgRole } from "@agenteschat/client";
-import { channelMembersQuery, useApi, useChannelCategories, useChannels, useRoles } from "@agenteschat/client";
+import { channelMembersQuery, useAgentGroups, useApi, useChannels, useRoles } from "@agenteschat/client";
 import { EVERYONE_AUDIENCE, listsAgent } from "@agenteschat/client/lib/audience";
 import { joinNames } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
@@ -16,7 +16,6 @@ import {
   inviteRefusalText,
   inviteStart,
 } from "@agenteschat/client/lib/invite-start";
-import { can } from "@agenteschat/client/lib/permissions";
 import { personalHelperRole } from "@agenteschat/client/lib/personal-view";
 import { isRightHand } from "@agenteschat/client/lib/right-hand";
 import { everyoneOf, isEveryone, sortRoles } from "@agenteschat/client/lib/roles";
@@ -170,7 +169,9 @@ export function RoleField({ choices, id }: { choices: InviteChoices; id: string 
                   </span>
                 ))
               ) : (
-                <span className="invite-role__item ac-iconline">
+                // `.ac-iconline` moves its first child onto the words' capitals: only with a mark to move, never the
+                // words themselves.
+                <span className={everyone ? "invite-role__item ac-iconline" : "invite-role__item"}>
                   {everyone && <RoleMark color={everyone.color} icon={everyone.icon} size={18} />}
                   <span>{t("roles.member")}</span>
                 </span>
@@ -194,7 +195,7 @@ type RefusedChannel = Extract<InviteRefusal, { kind: "channel" }>;
 
 /**
  * Canais: #general first, fixed; then the cargo's channels and the ones added. The list floats under the field: the
- * cargo's channels, then the sidebar's categories, each row with how many people are there and the agents by name.
+ * cargo's channels, then Canais and each sector's (ADR 0240), each row with how many people are there and the agents by name.
  */
 export function ChannelsField({
   choices,
@@ -213,7 +214,7 @@ export function ChannelsField({
   const api = useApi();
   const dir = useDirectory(org.id);
   const channels = useChannels(org.id).data ?? [];
-  const categories = useChannelCategories(org.id).data ?? [];
+  const sectors = useAgentGroups(org.id).data ?? [];
   const [listed, setListed] = useState(false);
   const personal = isPersonal(org);
   const general = channels.find((c) => c.name === "general");
@@ -260,7 +261,7 @@ export function ChannelsField({
       ];
     }),
   ];
-  const known = new Set(categories.map((g) => g.id));
+  const known = new Set(sectors.map((g) => g.id));
   const order = (list: Channel[]) =>
     [...list].sort((a, b) => (a.position ?? 0) - (b.position ?? 0) || a.name.localeCompare(b.name));
   const cargoNames = sortRoles(choices.roles.filter((r) => choices.roleIds.includes(r.id))).map((r) => r.name);
@@ -271,11 +272,12 @@ export function ChannelsField({
     },
     {
       name: personal ? t("invites.channelsPersonal") : t("shell.channels"),
-      list: order(offered.filter((c) => !fromRole.has(c.id) && (!c.categoryId || !known.has(c.categoryId)))),
+      list: order(offered.filter((c) => !fromRole.has(c.id) && (!c.groupId || !known.has(c.groupId)))),
     },
-    ...[...categories]
-      .sort((a, b) => a.position - b.position)
-      .map((g) => ({ name: g.name, list: order(offered.filter((c) => !fromRole.has(c.id) && c.categoryId === g.id)) })),
+    ...sectors.map((g) => ({
+      name: g.name,
+      list: order(offered.filter((c) => !fromRole.has(c.id) && c.groupId === g.id)),
+    })),
   ].filter((g) => g.list.length > 0);
   const said = (c: Channel) => {
     if (c.visibility === "private" && c.isMember) return t("members.dialog.where.private");
@@ -368,7 +370,8 @@ export function AgentsField({
   const { org, me } = useOrg();
   const api = useApi();
   const dir = useDirectory(org.id);
-  const viewer = { userId: me.user.id, managesAgents: can(org, "manage_agents") };
+  // Who may open an agent to them: its owner, or who manages that agent (`inviteAgentCase` reads it from the agent).
+  const viewer = { userId: me.user.id };
   const right = dir.agents.find(isRightHand);
   const listed = dir.agents.filter((a) => !isRightHand(a) && listsAgent(org, a));
   const cargoAgents = choices.own.agentIds;

@@ -8,6 +8,7 @@ import type {
   Person,
   RowHolders,
 } from "@agenteschat/client";
+import { hasAgentOwner } from "@agenteschat/client/lib/agent-owner";
 import { audienceAdmits, audienceOf, audiencePatch, modeOf } from "@agenteschat/client/lib/audience";
 import { accessInput, accessOf } from "@agenteschat/client/lib/channel-access";
 import { namesText } from "@agenteschat/client/lib/format";
@@ -194,11 +195,11 @@ export function permissionGroups(
     .filter((g) => g.rows.length > 0);
 }
 
-/** What a switch does on a cargo: save its keys, or ask who keeps what everyone has ("Quem pode", P5). */
+/** What a switch does on a cargo: save its keys, or ask who keeps what everyone has ("Quem pode"). */
 export type RowIntent = { kind: "save"; permissions: string[] } | { kind: "who" } | { kind: "admin" };
 
 /**
- * Turning a row on or off on `role` (Todos too, W10): on gives it (Todos: to everyone); off takes the cargo's own,
+ * Turning a row on or off on `role` (Todos too): on gives it (Todos: to everyone); off takes the cargo's own,
  * unless everyone has it (then "Quem pode", set to "Só alguns cargos"); on Todos off always asks, with the cargos that
  * hold it ticked. Administrador on asks first.
  */
@@ -213,7 +214,7 @@ export function rowIntent(role: OrgRole, everyone: OrgRole | undefined, row: str
 
 /**
  * Picking a computers' step on `role`: at or above Todos' it saves (a cargo keeps no key Todos already gives); below
- * Todos' it asks who keeps Todos' step, Todos going down to the one picked (W3, W10).
+ * Todos' it asks who keeps Todos' step, Todos going down to the one picked.
  */
 export function stepIntent(
   role: OrgRole,
@@ -232,7 +233,7 @@ export function stepIntent(
 // ── Quem pode ───────────────────────────────────────────────────────────────
 
 /**
- * "Quem pode {{short}}" (P5): Todos or only some cargos, and which. `step` is the computers' step Todos goes to
+ * "Quem pode {{short}}": Todos or only some cargos, and which. `step` is the computers' step Todos goes to
  * (0 for a key: nobody but the ticked); `keep` the level a ticked cargo keeps (1, or Todos' old step).
  */
 export interface WhoCan {
@@ -250,7 +251,7 @@ export const tickable = (r: OrgRole) => !isEveryone(r) && r.editable && !isAdmin
 
 /**
  * Where "Quem pode" opens. From a cargo turning off what everyone has: "Só alguns cargos", every other cargo the
- * viewer may change ticked, this one not (W4). From Todos: the cargos that already hold it ticked. For the computers
+ * viewer may change ticked, this one not. From Todos: the cargos that already hold it ticked. For the computers
  * `step` is the one picked below Todos': Todos goes down to it, the ticked keep Todos' old step.
  */
 export function whoCanStart(roles: readonly OrgRole[], row: string, from: OrgRole, step?: number): WhoCan {
@@ -367,7 +368,7 @@ export function channelAudienceLine(
   return t("mobile.roles.only", { names: roleNames(t, a.roleIds, roles) });
 }
 
-/** What a tap on a channel does on a cargo's Canais (W5's table; Todos as W10). */
+/** What a tap on a channel does on a cargo's Canais (Todos' own as any cargo's). */
 export type ChannelIntent =
   | { kind: "who" }
   | { kind: "save"; input: ReturnType<typeof accessInput>; open?: "role" | "everyone" }
@@ -392,7 +393,7 @@ export function channelIntent(role: OrgRole, channel: Channel, manages: boolean)
   return { kind: "save", input: accessInput({ mode: "roles", roleIds: [role.id] }), open: "role" };
 }
 
-/** "Quem vê #canal" (P6b): Todos, only some cargos (which), or only who is added. */
+/** "Quem vê #canal": Todos, only some cargos (which), or only who is added. */
 export interface WhoSees {
   mode: "public" | "roles" | "private";
   roleIds: ReadonlySet<string>;
@@ -456,23 +457,23 @@ export function whoSeesLines(
 /** Whether a channel's name has every word of a search, typed with its "#" or not. */
 export const channelMatches = (name: string, query: string) => matchesWords(name, query.trim().replace(/^#/, ""));
 
-/** The channels a cargo's Canais lists, in the sidebar's groups and order: no category first, then each one. */
-export function channelGroups<C extends Pick<Channel, "id" | "name" | "categoryId" | "position">>(
+/** The channels a cargo's Canais lists, in the sidebar's groups and order: no sector first, then each one (ADR 0240). */
+export function channelGroups<C extends Pick<Channel, "id" | "name" | "groupId" | "position">>(
   channels: readonly C[],
-  categories: readonly { id: string; name: string }[],
+  sectors: readonly { id: string; name: string }[],
   query = "",
 ) {
-  const known = new Set(categories.map((c) => c.id));
+  const known = new Set(sectors.map((g) => g.id));
   const hits = channels.filter((c) => channelMatches(c.name, query));
   const order = (a: C, b: C) =>
     (isGeneral(b) ? 1 : 0) - (isGeneral(a) ? 1 : 0) ||
     (a.position ?? 0) - (b.position ?? 0) ||
     a.name.localeCompare(b.name);
   const of = (id: string | null) =>
-    hits.filter((c) => (c.categoryId && known.has(c.categoryId) ? c.categoryId : null) === id).sort(order);
+    hits.filter((c) => (c.groupId && known.has(c.groupId) ? c.groupId : null) === id).sort(order);
   return [
     { id: null, name: null, channels: of(null) },
-    ...categories.map((c) => ({ id: c.id, name: c.name, channels: of(c.id) })),
+    ...sectors.map((g) => ({ id: g.id, name: g.name, channels: of(g.id) })),
   ].filter((g) => g.channels.length > 0);
 }
 
@@ -488,7 +489,10 @@ export function agentTicked(role: OrgRole, agent: Agent) {
   return mode === "everyone" || (!isEveryone(role) && mode === "people" && audienceOf(agent).roleIds.includes(role.id));
 }
 
-/** Who talks to an agent, under its name: "Todos falam", "Só Suporte e Ana", "Só Ana". */
+/**
+ * Who talks to an agent, under its name: "Todos falam", "Só Suporte e Ana", "Só Ana", "Só quem tem Tecnologia" (a
+ * role that answers for it, ADR 0085, addendum of 2026-11-21).
+ */
 export function agentAudienceLine(
   t: TFunction,
   agent: Agent,
@@ -497,17 +501,19 @@ export function agentAudienceLine(
 ) {
   const mode = modeOf(agent);
   if (mode === "everyone") return t("mobile.roles.agents.everyone");
+  const ownerRole = agent.ownerRoleId ? roles.find((r) => r.id === agent.ownerRoleId) : undefined;
+  const onlyOwner = ownerRole ? t("audience.mode.ownerRole", { role: ownerRole.name }) : t("audience.mode.owner");
   const owner = agent.ownerUserId ? nameOf(agent.ownerUserId) : undefined;
-  if (mode === "owner") return owner ? t("mobile.roles.only", { names: owner }) : t("audience.mode.owner");
+  if (mode === "owner") return owner ? t("mobile.roles.only", { names: owner }) : onlyOwner;
   const a = audienceOf(agent);
   const named = [
     ...sortRoles(roles.filter((r) => a.roleIds.includes(r.id))).map((r) => r.name),
     ...a.userIds.flatMap((id) => nameOf(id) ?? []),
   ];
-  return named.length ? t("mobile.roles.only", { names: namesText(t, named, 2) }) : t("audience.mode.owner");
+  return named.length ? t("mobile.roles.only", { names: namesText(t, named, 2) }) : onlyOwner;
 }
 
-/** What a tap on an agent does on a cargo's Agentes (W7's table; Todos as W10). */
+/** What a tap on an agent does on a cargo's Agentes (Todos' own as any cargo's). */
 export type AgentIntent = { kind: "who"; start: AgentAudience } | { kind: "save"; audience: AgentAudience };
 
 /**
@@ -538,7 +544,7 @@ export function agentIntent(role: OrgRole, agent: Agent, roles: readonly OrgRole
   if (a.roleIds.includes(role.id)) {
     const roleIds = a.roleIds.filter((id) => id !== role.id);
     if (roleIds.length === 0 && a.userIds.length === 0)
-      return agent.ownerUserId
+      return hasAgentOwner(agent)
         ? { kind: "save", audience: to("owner") }
         : { kind: "who", start: to("people", roleIds) };
     return { kind: "save", audience: to("people", roleIds, a.userIds) };
@@ -546,14 +552,17 @@ export function agentIntent(role: OrgRole, agent: Agent, roles: readonly OrgRole
   return { kind: "save", audience: to("people", [...a.roleIds, role.id], a.userIds) };
 }
 
-/** What Quem fala com's Salvar sends (P7b): the choice, "Outros agentes podem consultar" as saved. */
+/** What Quem fala com's Salvar sends: the choice, "Outros agentes podem consultar" as saved. */
 export const agentWhoPatch = (who: AgentAudience, saved: Pick<AgentAudience, "consultable">) =>
   audiencePatch({ ...who, consultable: saved.consultable });
 
-/** A people audience needs someone in it (the owner always talks to it); everyone and only the owner don't. */
-export const audienceValid = (a: AgentAudience, agent: Pick<Agent, "ownerUserId">) =>
+/**
+ * A people audience needs someone in it (the owner always talks to it); everyone and only the owner don't, but "only
+ * the owner" needs one: a person, or a role (ADR 0085, addendum of 2026-11-21).
+ */
+export const audienceValid = (a: AgentAudience, agent: Pick<Agent, "ownerUserId" | "ownerRoleId">) =>
   a.mode === "everyone" ||
-  (a.mode === "owner" ? Boolean(agent.ownerUserId) : a.userIds.length + (a.roleIds?.length ?? 0) > 0);
+  (a.mode === "owner" ? hasAgentOwner(agent) : a.userIds.length + (a.roleIds?.length ?? 0) > 0);
 
 /** Who stops talking to the agent with `next` ("Deixam de falar com Max: Carla e mais 2."), or "Ninguém perde.". */
 export function agentLosingLine(
@@ -572,7 +581,7 @@ export function agentLosingLine(
     : t("mobile.roles.nobodyLoses");
 }
 
-/** Whether neither Todos nor this cargo lets its people talk to agents: the Agentes tab says so first (W7). */
+/** Whether neither Todos nor this cargo lets its people talk to agents: the Agentes tab says so first. */
 export function talkGate(role: OrgRole, everyone: OrgRole | undefined) {
   return !isAdmin(role) && rowState(role, everyone, "talk_to_agents").level === 0;
 }
@@ -580,7 +589,7 @@ export function talkGate(role: OrgRole, everyone: OrgRole | undefined) {
 // ── A cargo's people, and the order ─────────────────────────────────────────
 
 /**
- * The question before a cargo takes mailboxes from agents (W9's mailbox step as the system's alert): one line per
+ * The question before a cargo takes mailboxes from agents (in the system's alert): one line per
  * mailbox ("Max perde bruno@example.com, a caixa de e-mail de Bruno."), then who gives it back.
  */
 export function mailLossQuestion(
@@ -625,11 +634,11 @@ export function orderSteps(order: readonly OrgRole[], id: string) {
 export const orderChanged = (order: readonly OrgRole[], saved: readonly OrgRole[]) =>
   order.some((r, i) => r.id !== saved[i]?.id);
 
-/** Whether the viewer gives and takes this cargo (P8): not Todos, below them, and they manage people. */
+/** Whether the viewer gives and takes this cargo: not Todos, below them, and they manage people. */
 export const givesRole = (org: Parameters<typeof can>[0], role: Pick<OrgRole, "kind" | "givable">) =>
   !isEveryone(role) && role.givable && can(org, "manage_members");
 
-/** The cargos a person may get from the viewer (P11): those below them whose keys they hold (`givable`). */
+/** The cargos a person may get from the viewer: those below them whose keys they hold (`givable`). */
 export const givableRoles = (roles: readonly OrgRole[]) => custom(roles).filter((r) => r.givable);
 
 /** "Começar de" for a new cargo: the templates, then "Igual a" each cargo whose keys the viewer holds. */

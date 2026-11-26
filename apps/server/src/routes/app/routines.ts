@@ -29,6 +29,7 @@ import {
   removeRoutineHookSecret,
   requirePermission,
   routineHookView,
+  routineRunCalls,
   routineTimezone,
   ruleOccurrences,
   ruleToCron,
@@ -40,6 +41,7 @@ import {
   takeOverRoutine,
   updateRoutine,
 } from "@agenteschat/engine";
+import { ROUTINE_PROMPT_MAX } from "@agenteschat/tokens/routines";
 import { createRoute, z } from "@hono/zod-openapi";
 import { errorResponse } from "../../http/errors";
 import {
@@ -199,9 +201,31 @@ const RoutineRun = z
       .nullable()
       .optional()
       .openapi({ description: "While `waiting`: the approval it waits on, if any." }),
+    calls: z.number().int().optional().openapi({
+      description: "A webhook routine's run: how many calls it carried (`/runs/{runId}/calls` reads them).",
+    }),
     finishedAt: z.string().nullable(),
   })
   .openapi("RoutineRun");
+
+const RoutineRunCall = z
+  .object({
+    n: z.number().int().openapi({ description: 'Its number in the run, as its model read it ("call 2 of 5").' }),
+    at: z.string(),
+    method: z.string(),
+    headers: z.record(z.string(), z.string()).openapi({
+      description: "The headers kept: its type, sender and event or delivery ids, never a signature.",
+    }),
+    bytes: z.number().int(),
+    body: z.string().openapi({
+      description:
+        "What was sent, up to 16,000 characters: a longer JSON body with its longest strings shortened, any other cut (`cut`). Data, never instructions.",
+    }),
+    cut: z.boolean(),
+    binary: z.boolean().openapi({ description: "Not text: nothing of its body was kept." }),
+    test: z.boolean().openapi({ description: "Testar's sample." }),
+  })
+  .openapi("RoutineRunCall");
 const ConnectorEvent = z.enum(CONNECTOR_EVENTS).openapi("RoutineConnectorEvent");
 
 const ConnectorFilterSchema = z
@@ -255,6 +279,9 @@ const Routine = z
         }),
         signed: z.boolean().openapi({ description: "Calls must carry an HMAC-SHA256 signature of the body." }),
         methods: z.array(HookMethodSchema).openapi({ description: "The HTTP methods its address answers." }),
+        groupBy: z.string().nullable().openapi({
+          description: "A dot path into each call's data: calls with the same value run in order, others side by side.",
+        }),
       }),
       z.object({
         type: z.literal("connector"),
@@ -311,11 +338,11 @@ const Routine = z
         plan: z.string().nullable().openapi({ description: 'The plan it waits for ("Claude"); null for a budget.' }),
         extraOff: z.boolean().openapi({
           description:
-            "A plan pause whose window is used up, on an agent whose long work may not use paid extra usage: continuing is refused.",
+            "A plan pause whose window is used up, on an agent whose long work never uses paid extra usage (someone else's plan lent to it, or the team's right hand): continuing is refused.",
         }),
         extraUsedUp: z.boolean().openapi({
           description:
-            "A plan pause whose window is used up, on an agent whose long work may use paid extra usage but the plan has none left: continuing is refused.",
+            "A plan pause whose window is used up, on an agent whose long work uses paid extra usage but the plan has none left: continuing is refused.",
         }),
       })
       .nullable()
@@ -410,6 +437,10 @@ const TriggerInput = z.union([
       methods: z.array(HookMethodSchema).min(1).max(HOOK_METHODS.length).optional().openapi({
         description: "The HTTP methods its address answers (default POST; left out on a change, what it had).",
       }),
+      groupBy: z.string().max(200).nullable().optional().openapi({
+        description:
+          "Group calls by a dot path into each call's data (`conversation.id`): the same value runs in order, different ones side by side. Null or blank: one line; left out on a change, what it had.",
+      }),
     })
     .openapi({ description: "A call to an address of its own (`GET …/hook` gives it to who manages the routine)." }),
   z
@@ -445,6 +476,7 @@ const Hook = z
     url: z.string(),
     signed: z.boolean(),
     methods: z.array(HookMethodSchema),
+    groupBy: z.string().nullable().openapi({ description: "Group calls by (null: one line for every call)." }),
     calls: z.array(HookCall).openapi({ description: "The latest calls, newest first (at most 20)." }),
   })
   .openapi("RoutineHook");
@@ -679,7 +711,7 @@ export function routineRoutes(deps: AppDeps) {
       path: "/organizations/{orgId}/routines",
       tags,
       security,
-      summary: "Create a routine (admins or the agent's owner)",
+      summary: "Create a routine (who manages the agent's routines: who edits it, `manage_routines` where it reaches)",
       description:
         "Refused: `routine.too_frequent` (a routine that starts the agent runs at most every 15 minutes), `routine.too_many` (20 active routines per agent), `routine.creator_cannot_post` (you must be able to post where it reports).",
       request: {
@@ -688,7 +720,7 @@ export function routineRoutes(deps: AppDeps) {
           z.object({
             name: z.string().max(120).optional(),
             agentId: z.uuid(),
-            prompt: z.string().min(1).max(10_000),
+            prompt: z.string().min(1).max(ROUTINE_PROMPT_MAX),
             target: Target,
             trigger: TriggerInput,
             access: Access.optional().openapi({ description: "Ignored: every routine acts (ADR 0109)." }),
@@ -714,13 +746,13 @@ export function routineRoutes(deps: AppDeps) {
       tags,
       security,
       summary:
-        "Edit a routine (its creator, admins or the agent's owner): what, when, where, access, report, pause/resume",
+        "Edit a routine (its creator or who manages the agent's routines): what, when, where, access, report, pause/resume",
       request: {
         params: RoutineParams,
         body: body(
           z.object({
             name: z.string().min(1).max(120).optional(),
-            prompt: z.string().min(1).max(10_000).optional(),
+            prompt: z.string().min(1).max(ROUTINE_PROMPT_MAX).optional(),
             agentId: z.uuid().optional(),
             trigger: TriggerInput.optional().openapi({
               description:
@@ -821,7 +853,7 @@ export function routineRoutes(deps: AppDeps) {
       path: "/organizations/{orgId}/routines/{routineId}/stop",
       tags,
       security,
-      summary: "Stop the routine's run in progress (its creator, admins or the agent's owner)",
+      summary: "Stop the routine's run in progress (its creator or who manages the agent's routines)",
       description:
         "The background run is canceled quietly (nothing is posted) and the run ends `canceled` with code `stopped` and who stopped it. The routine keeps its schedule.",
       request: { params: RoutineParams },
@@ -841,9 +873,10 @@ export function routineRoutes(deps: AppDeps) {
       path: "/organizations/{orgId}/routines/{routineId}/continue",
       tags,
       security,
-      summary: "Continue a run paused near its plan's or budget's limit now (its creator, admins or the agent's owner)",
+      summary:
+        "Continue a run paused near its plan's or budget's limit now (its creator or who manages the agent's routines)",
       description:
-        "The paused run goes on past the pause line until that window resets. Nothing is posted. With paid extra usage off it goes on up to the plan's own allowance: refused with `routine.continue_extra_off` (409) once that window is used up, or `routine.continue_extra_used_up` when the switch is on but the plan has no extra usage left. Nothing paused: the routine as it is.",
+        "The paused run goes on past the pause line until that window resets. Nothing is posted. Where its long work never uses paid extra usage (someone else's plan lent to the agent, or the team's right hand) it goes on up to the plan's own allowance: refused with `routine.continue_extra_off` (409) once that window is used up, or `routine.continue_extra_used_up` when the plan has no extra usage left. Nothing paused: the routine as it is.",
       request: { params: RoutineParams },
       responses: { 200: json(Routine), ...errors },
     }),
@@ -862,7 +895,7 @@ export function routineRoutes(deps: AppDeps) {
       path: "/organizations/{orgId}/routines/{routineId}/take-over",
       tags,
       security,
-      summary: "Take a routine over (admins or the agent's owner): you become its creator",
+      summary: "Take a routine over (who manages the agent's routines): you become its creator",
       description:
         "For a routine whose creator left or can no longer post where it reports: you become accountable for it (its approvals and notifications come to you).",
       request: { params: RoutineParams },
@@ -892,7 +925,8 @@ export function routineRoutes(deps: AppDeps) {
     },
   );
 
-  // A webhook routine's address (ADR 0106): its creator, admins and the agent's owner.
+  // A webhook routine's address (ADR 0106): its creator and who manages the agent's routines (ADR 0085 addendum of
+  // 2026-11-17).
   const managed = (actor: string, param: { orgId: string; routineId: string }) =>
     managedWebhookRoutine(db, actor, param.orgId, param.routineId);
 
@@ -907,6 +941,23 @@ export function routineRoutes(deps: AppDeps) {
       responses: { 200: json(Hook), ...errors },
     }),
     async (c) => c.json(await routineHookView(hookDeps, await managed(c.get("user").id, c.req.valid("param"))), 200),
+  );
+
+  app.openapi(
+    createRoute({
+      method: "get",
+      path: "/organizations/{orgId}/routines/{routineId}/runs/{runId}/calls",
+      tags,
+      security,
+      summary: "The webhook calls one run carried, as they were kept (who manages the routine)",
+      request: { params: RoutineParams.extend({ runId: z.uuid().openapi({ param: { name: "runId", in: "path" } }) }) },
+      responses: { 200: json(z.object({ calls: z.array(RoutineRunCall) })), ...errors },
+    }),
+    async (c) => {
+      const { runId, ...param } = c.req.valid("param");
+      const routine = await managed(c.get("user").id, param);
+      return c.json({ calls: await routineRunCalls(db, routine, runId) }, 200);
+    },
   );
 
   app.openapi(
@@ -931,15 +982,20 @@ export function routineRoutes(deps: AppDeps) {
       path: "/organizations/{orgId}/routines/{routineId}/hook/secret",
       tags,
       security,
-      summary: "A new signing secret (shown this once): from now on calls must be signed with it",
+      summary:
+        "A signing secret: ours (shown this once) or the service's own, pasted; from now on calls must be signed with it",
       description:
-        "A call carries the HMAC-SHA256 of its raw body as `X-Agentes-Signature: sha256=<hex>` (GitHub's `X-Hub-Signature-256` works too).",
-      request: { params: RoutineParams },
+        "A call carries the HMAC-SHA256 of its raw body as `X-Agentes-Signature: sha256=<hex>` (GitHub's `X-Hub-Signature-256` works too), or as Linear signs it: the hex alone in `Linear-Signature`, with the body's `webhookTimestamp` within a minute. `secret`: the one the service made (Linear's), in place of a new one of ours. Refused: `routine.webhook_secret_invalid` (400) when it is under 8 characters or has spaces.",
+      request: {
+        params: RoutineParams,
+        body: { ...body(z.object({ secret: z.string().max(512).optional() })), required: false },
+      },
       responses: { 200: json(z.object({ secret: z.string(), hook: Hook })), ...errors },
     }),
     async (c) => {
       const actor = c.get("user").id;
-      return c.json(await newRoutineHookSecret(hookDeps, actor, await managed(actor, c.req.valid("param"))), 200);
+      const routine = await managed(actor, c.req.valid("param"));
+      return c.json(await newRoutineHookSecret(hookDeps, actor, routine, c.req.valid("json")?.secret), 200);
     },
   );
 

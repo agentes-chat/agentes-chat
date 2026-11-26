@@ -401,27 +401,6 @@ export function DownloadSky({ clear }: { clear?: Clear }) {
 
 /* ---------- Small moments ---------- */
 
-/** A thin dithered strip sweeping in the agent's color behind the activity bar ("Theo está pensando…"). */
-export function ActivitySky({ color }: { color: AgentColor }) {
-  return (
-    <span className="ac-typing__sky" aria-hidden="true">
-      <PixelSky
-        options={{
-          pixel: 3,
-          surface: "--raised",
-          palette: (bg) => softTones(color, bg),
-          light: 0,
-          base: (u, _v, tt) => {
-            const c = ((tt * 0.32) % 1.6) - 0.3;
-            const d = u - c;
-            return 0.08 + 0.5 * Math.exp(-(d * d) / 0.035);
-          },
-        }}
-      />
-    </span>
-  );
-}
-
 /**
  * Where a picture an agent is making will show (`ImageMaking`): the picture forming out of the agent's sky, in its
  * soft tones over the conversation's background (`formingField`); whole and still with reduced motion.
@@ -454,32 +433,6 @@ export function CardSky({ color }: { color: AgentColor }) {
           base: (u, v, tt) => {
             const fade = Math.max(0, 1 - v);
             return fade * fade * (0.18 + 0.32 * u * u + 0.06 * S(u * 7 + tt * 0.5));
-          },
-        }}
-      />
-    </span>
-  );
-}
-
-/**
- * The top of a suggested connector in the catalog: a soft pixel sky in the brand's own color (the
- * ink's sky when the brand has none), fading into the card.
- */
-export function ConnectorSky({ brand }: { brand: string | null }) {
-  return (
-    <span className="catalog-feat__sky" aria-hidden="true">
-      <PixelSky
-        options={{
-          pixel: 3,
-          surface: "--raised",
-          palette: (bg) =>
-            brand
-              ? [bg, mix(bg, brand, 0.1), mix(bg, brand, 0.22), mix(bg, brand, 0.36), mix(bg, brand, 0.52)]
-              : softTones("sky", bg),
-          light: 0,
-          base: (u, v, tt) => {
-            const fade = Math.max(0, 1 - v);
-            return fade * (0.35 + 0.35 * u + 0.06 * S(u * 6 + tt * 0.4));
           },
         }}
       />
@@ -786,7 +739,8 @@ export function OnboardingProgress({ progress }: { progress: number }) {
     },
     base: (u, v, t) => {
       const now = level.current.now;
-      if (u > now) return 0.12;
+      // What is still to go is the bare track: no dotted fill, and no lit first column before a step is done.
+      if (now < 0.01 || u > now) return 0;
       const head = Math.max(0, 1 - (now - u) * 12);
       return Math.min(1, 0.45 + 0.4 * v + 0.08 * S(u * 22 + t * 1.2) + 0.2 * head);
     },

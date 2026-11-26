@@ -5,8 +5,10 @@ import {
   browserSiteUrl,
   useAgentDetail,
   useBrowserHandoffMutations,
+  useComputerSetup,
   useDesktopPicture,
   useIssues,
+  useModels,
   useRoutines,
   useUsage,
 } from "@agenteschat/client";
@@ -19,13 +21,13 @@ import {
   pictureWhen,
   surfaceOf,
 } from "@agenteschat/client/lib/agent-computer";
-import { seesDetails } from "@agenteschat/client/lib/audience";
+import { ownsAgentAs } from "@agenteschat/client/lib/agent-owner";
+import { managesAgent, seesDetails } from "@agenteschat/client/lib/audience";
 import { computerName } from "@agenteschat/client/lib/computer";
 import { ErrorBoundary } from "@agenteschat/client/lib/error-boundary";
 import { formatPercent, formatUsd, relativeTime } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
-import { STATUS_ICON } from "@agenteschat/client/lib/issues";
-import { can } from "@agenteschat/client/lib/permissions";
+import { isAssignee, STATUS_ICON } from "@agenteschat/client/lib/issues";
 import { usageShown } from "@agenteschat/client/lib/plan-usage";
 import { agentFaceWord } from "@agenteschat/client/lib/presence";
 import { isRightHand } from "@agenteschat/client/lib/right-hand";
@@ -44,7 +46,7 @@ import { useOpenComputer } from "@/components/computer/open";
 import { OpensAgent } from "@/components/OpensAgent";
 import { useOrg } from "@/components/org-context";
 import { StatusLine } from "@/components/Presence";
-import { RightHandMineRow, useRightHandMineHint } from "@/components/RightHandSettings";
+import { RightHandMineRow, useRightHandMineHint, useRightHandNoComputer } from "@/components/RightHandSettings";
 import { SidePanel } from "@/components/SidePanel";
 import { AgentCover, colorOf } from "@/components/Sky";
 import { useAgentThinks } from "@/hooks/useAgentThinks";
@@ -54,7 +56,7 @@ import { useNow } from "@/hooks/useNow";
 import { agentLine, useAgentPresence } from "@/hooks/usePresence";
 import { useWindowActive } from "@/hooks/useWindowActive";
 import { useToast } from "@/lib/toast";
-import { hasFired, routineTitle, useRoutineControls, useWhen } from "@/pages/RoutinesPage";
+import { hasFired, isDoneOnce, routineTitle, useRoutineControls, useWhen } from "@/pages/RoutinesPage";
 import { useStreams } from "@/realtime/context";
 import "./agent-sidebar.css";
 
@@ -73,21 +75,23 @@ export function AgentSidebar({ agent, onClose }: { agent: Agent; onClose?: () =>
   const body = (
     <ErrorBoundary resetKey={agent} fallback={() => null}>
       <AgentHead agent={agent} />
-      {isRightHand(agent) ? (
-        // No computer of its own, and each person's DM thinks with their own plan (ADR 0137 §11).
-        <Section title={t("agentSide.thinks")} hint={mineHint}>
-          <RightHandMineRow agent={agent} />
-        </Section>
-      ) : (
-        seesDetails(agent) && (
+      <Sections agent={agent}>
+        {seesDetails(agent) && (
           <>
             <ComputerSection agent={agent} />
             <RoutinesSection agent={agent} />
-            <ThinksSection agent={agent} />
-            <TasksSection agent={agent} />
           </>
-        )
-      )}
+        )}
+        {isRightHand(agent) ? (
+          // Each person's DM with the right hand thinks with their own AI (ADR 0137 §11).
+          <Section title={t("agentSide.thinks")} hint={mineHint}>
+            <RightHandMineRow agent={agent} />
+          </Section>
+        ) : (
+          seesDetails(agent) && <ThinksSection agent={agent} />
+        )}
+        {seesDetails(agent) && <TasksSection agent={agent} />}
+      </Sections>
     </ErrorBoundary>
   );
   if (!onClose) {
@@ -98,6 +102,30 @@ export function AgentSidebar({ agent, onClose }: { agent: Agent; onClose?: () =>
     );
   }
   return <FloatingSide onClose={onClose}>{body}</FloatingSide>;
+}
+
+/**
+ * Its computer, routines, brain and tasks: they show together, once each has what it draws (or failed to get it), so
+ * none pushes the next down when its data comes (laid out but unseen until then).
+ */
+function Sections({ agent, children }: { agent: Agent; children: ReactNode }) {
+  const { org } = useOrg();
+  const computer = useAgentComputer(agent);
+  const setup = useComputerSetup(org.id);
+  const reads = [
+    useRoutines(org.id),
+    useAgentDetail(org.id, agent.id),
+    useUsage(org.id),
+    useIssues(org.id),
+    useModels(),
+  ];
+  const computerKnown = computer.ready || computer.desktopQ.isError || setup.isError;
+  const pending = seesDetails(agent) && (!computerKnown || reads.some((q) => q.isPending));
+  return (
+    <div className="dm-side__secs" data-pending={pending || undefined}>
+      {children}
+    </div>
+  );
 }
 
 function FloatingSide({ onClose, children }: { onClose: () => void; children: ReactNode }) {
@@ -208,7 +236,19 @@ function ComputerSection({ agent }: { agent: Agent }) {
   const running = asksPicture(true, view.desktop);
   const shot = useDesktopPicture(org.id, agent.id, { enabled: active && running, working: Boolean(f?.working) });
   const nowMs = useNow(15_000);
+  const noneForHand = useRightHandNoComputer(isRightHand(agent) ? view.desktop?.reason : null);
   if (view.forbidden) return null;
+  // The right hand's computer is the workspace's own, never chosen: where there is none, why, and the way to one.
+  if (noneForHand && view.ready) {
+    return (
+      <Section title={t("agentComputer.button")}>
+        <p className="dm-side__using">
+          <span>{noneForHand.line}</span>
+        </p>
+        {noneForHand.action && <div className="dm-side__acts">{noneForHand.action}</div>}
+      </Section>
+    );
+  }
   // Its place is kept: the sections under it are faster, and would jump down when it comes.
   if (!view.ready || !f) {
     return (
@@ -297,7 +337,8 @@ function ComputerSection({ agent }: { agent: Agent }) {
             {t("agentComputer.help")}
           </Button>
         ) : button === "choose" ? (
-          (can(org, "manage_agents") || agent.ownerUserId === me.user.id) && (
+          !isRightHand(agent) &&
+          (managesAgent(agent) || ownsAgentAs(agent, me.user.id, dir.rolesOf(me.user.id))) && (
             <Button
               size="sm"
               onClick={() =>
@@ -346,7 +387,8 @@ function RoutinesSection({ agent }: { agent: Agent }) {
   const { t } = useTranslation();
   const { org } = useOrg();
   const routines = useRoutines(org.id);
-  const mine = (routines.data ?? []).filter((r) => r.agentId === agent.id);
+  // A one-off that already fired and finished is past: it stays in Routines, under its done ones, not here.
+  const mine = (routines.data ?? []).filter((r) => r.agentId === agent.id && !isDoneOnce(r));
   if (mine.length === 0) return null;
   return (
     <Section
@@ -397,8 +439,9 @@ function ThinksSection({ agent }: { agent: Agent }) {
   const dir = useDirectory(org.id);
   const thinks = useAgentThinks(agent);
   const detail = useAgentDetail(org.id, agent.id);
-  const admin = can(org, "manage_agents");
-  const owner = agent.ownerUserId ? dir.memberById.get(agent.ownerUserId) : undefined;
+  const admin = managesAgent(agent);
+  // A person's name or, when a role answers for it, the role's (ADR 0085, addendum of 2026-11-21).
+  const owner = dir.ownerName(agent);
   const usage = useUsage(org.id);
   const used = detail.data?.budgetUsedPercent ?? 0;
   const spent = usage.data?.find((u) => u.agentId === agent.id)?.costUsd;
@@ -417,7 +460,7 @@ function ThinksSection({ agent }: { agent: Agent }) {
         )}
         <div>
           <dt>{t("agentSide.owner")}</dt>
-          <dd>{owner?.name ?? t("newAgent.noOwnerOption")}</dd>
+          <dd>{owner ?? t("newAgent.noOwnerOption")}</dd>
         </div>
         {detail.data && usageShown(agent.brain, used).budget && (
           <div>
@@ -442,7 +485,7 @@ function TasksSection({ agent }: { agent: Agent }) {
   const { org } = useOrg();
   const issues = useIssues(org.id);
   const recent = (issues.data ?? [])
-    .filter((i) => i.assignee?.type === "agent" && i.assignee.id === agent.id)
+    .filter((i) => isAssignee(i, "agent", agent.id))
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
     .slice(0, ROWS);
   if (recent.length === 0) return null;

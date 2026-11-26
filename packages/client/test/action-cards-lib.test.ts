@@ -466,6 +466,7 @@ test("a card of a workspace change shows all it changes, and a card of their own
   expect(actionCardDetail(card("update_channel", { topic: "Campanha", private: true }), t)).toBe(
     "Campanha · channel.visibilityPrivate",
   );
+  expect(actionCardDetail(card("update_channel", { reply_in_threads: false }), t)).toBe("channel.replyInChannel");
   expect(actionCardDetail(card("update_role", { name: "Comercial", add_permissions: ["post"] }), t)).toBe(
     "→ Comercial · + post",
   );

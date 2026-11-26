@@ -8,7 +8,11 @@ test("what ships keeps the bar above the composer one low width, the composer's:
       .filter(([p]) => p === property)
       .at(-1)?.[1];
   const bar = '.ac-typing[data-active="true"]';
-  // One width whatever it says or shows (a turning phrase, the seconds, "Ver" or the stop coming and going): no width
+  // A bare line on the conversation's ground: no glass, no shadow (and no sky behind it).
+  expect(last(bar, "background")).toBeUndefined();
+  expect(last(bar, "box-shadow")).toBeUndefined();
+  expect(declarations(css, ".ac-typing__sky")).toEqual([]);
+  // One width whatever it says or shows (a turning phrase, the seconds, "Ver" coming and going): no width
   // of its own and no cap, so it fills the composer's column, its edges on the composer's (the channel, a thread in
   // the panel, a DM, a task's conversation alike).
   expect(last(bar, "width")).toBeUndefined();
@@ -29,33 +33,35 @@ test("what ships keeps the bar above the composer one low width, the composer's:
   expect(last(".ac-typing__people", "flex")).toBe("none");
   expect(last(".ac-typing__people", "max-width")).toBe("100%");
   expect(last(".ac-typing__typers", "text-overflow")).toBe("ellipsis");
-  // Its round buttons fit the low pill.
-  expect(last(".ac-typing .stop-run", "height")).toBe("24px");
+  // Its round buttons fit the low line; it has no stop of its own (the composer's).
+  expect(declarations(css, ".ac-typing .stop-run")).toEqual([]);
   expect(last(".ac-typing__browser.ac-btn", "height")).toBe("24px");
   // An agent's step in the bar is as wide as its words while the bar has room ("planos-concorrentes.md" whole), so
-  // the time and the stop follow them; out of room it gives way first, down to nothing.
+  // the time follows them; out of room it gives way first, down to nothing.
   expect(last(".ac-typing__step", "max-width")).toBeUndefined();
   expect(last(".ac-typing__step", "min-width")).toBe("0");
   expect(last(".ac-typing__step", "flex")).toBe("0 1000 auto");
   // One agent: its name, step, time and who types beside it are the bar's own pieces; the name wraps, never cut, and
-  // what is typed beside it wraps ahead of the stop (no box that lets it run on under it).
+  // what is typed beside it wraps ahead of Ver (no box that lets it run on under it).
   expect(
     last('.ac-typing[data-active="true"] .ac-typing__text:has(>.ac-typing__agents>.ac-typing__step)', "display"),
   ).toBe("contents");
   expect(last(".ac-typing__agents:has(>.ac-typing__step)>b", "white-space")).toBe("normal");
-  // Their boxes gone, the name and the step stand over the sky themselves: unpositioned, the sky painted over them.
-  expect(last(".ac-typing__agents:has(>.ac-typing__step)>*", "position")).toBe("relative");
   expect(last(".ac-typing__also", "white-space")).toBeUndefined();
   expect(last(".ac-typing__also", "min-width")).toBeUndefined();
-  // One agent's pieces grow nothing: the time, or else the globe, the rule before Ver or the stop, takes the room
-  // left, so the stop is at the end from the first frame and the time, when it comes, comes in on its left.
-  expect(last(".ac-typing__text+.ac-typing__elapsed", "margin-left")).toBe("auto");
+  // The time right after the words ("Ada pensando… · 14 s"), quiet as they are; the globe or the rule before Ver
+  // takes the room left, after the time or else after the words, so Ver is at the end from the first frame.
+  expect(last(".ac-typing__text+.ac-typing__elapsed", "margin-left")).toBeUndefined();
+  expect(last(".ac-typing__elapsed", "font-weight")).toBe("400");
   expect(
     last(
-      ".ac-typing__text:has(>.ac-typing__agents>.ac-typing__step)+:is(.ac-typing__browser,.ac-typing__sep,.stop-run-wrap)",
+      ".ac-typing__text:has(>.ac-typing__agents>.ac-typing__step)+:is(.ac-typing__browser,.ac-typing__sep)",
       "margin-left",
     ),
   ).toBe("auto");
+  expect(last(".ac-typing__text+.ac-typing__elapsed+:is(.ac-typing__browser,.ac-typing__sep)", "margin-left")).toBe(
+    "auto",
+  );
   // The clock's figures are all one width (`ac-num`), so the seconds never nudge it.
   expect(last(".ac-num", "font-variant-numeric")).toBe("tabular-nums");
 });
@@ -85,4 +91,48 @@ test("what ships draws who records a voice message: three still bars at every wi
   expect(
     last('.ac-typing[data-active="true"] .ac-typing__text:has(>.ac-typing__group+.ac-typing__group)', "flex-wrap"),
   ).toBe("wrap");
+});
+
+test("what ships draws the working row's rings with transforms only, still with reduced motion, paused off screen", async () => {
+  const all = await builtCss();
+  const css = topLevel(all);
+  const last = (selector: string, property: string) =>
+    declarations(css, selector)
+      .filter(([p]) => p === property)
+      .at(-1)?.[1];
+  // Still everywhere: each dot at its own place on its ring, turned by a transform alone.
+  expect(last(".ac-orbit__spin", "animation")).toBeUndefined();
+  expect(last(".ac-orbit__spin", "transform")).toBe("rotate(var(--start))");
+  // The rings take no room: they reach into the row's gap, behind and in front of the face.
+  expect(last(".ac-orbit>.ac-orbit__front", "position")).toBe("absolute");
+  expect(last(".ac-orbit>.ac-orbit__back", "position")).toBe("absolute");
+  expect(last(".ac-orbit>.ac-orbit__back", "z-index")).toBe("var(--z-under)");
+  // Their box reaches past the row: the row clips it, or the conversation would scroll by it.
+  expect(last(".working-tail", "overflow")).toBe("clip");
+  // Turning only where motion is welcome, and paused off screen.
+  const moving = atRule(all, "@media (prefers-reduced-motion: no-preference)");
+  expect(declarations(moving, ".ac-orbit__spin").find(([p]) => p === "animation")?.[1]).toContain("ac-orbit-turn");
+  expect(
+    declarations(moving, ".ac-orbit[data-paused=true] :is(.ac-orbit__spin,.ac-orbit__unspin)").find(
+      ([p]) => p === "animation-play-state",
+    )?.[1],
+  ).toBe("paused");
+  // Its keyframes move only transforms (the compositor's), never layout or paint.
+  const frames = all.match(/@keyframes ac-orbit-turn\{[^}]*\{[^}]*\}[^}]*\{[^}]*\}\}/)?.[0] ?? "";
+  expect(frames).toContain("transform:");
+  expect(frames.replace(/transform:[^;}]*/g, "")).not.toMatch(/[a-z-]+:/);
+  // The row's line is a row's, not the bar's: no height cap, the message's size.
+  const line = ".working-tail>.working-tail__body>.working-tail__line.ac-typing[data-active]";
+  expect(last(line, "max-height")).toBe("none");
+  expect(last(line, "font-size")).toBe("var(--msg-text)");
+  // Its pieces wrap whole inside the line; its globe and "Ver" stay outside them, at its end.
+  expect(last(".working-tail__words", "flex-wrap")).toBe("wrap");
+  // Its words, and what it did so far, wrap: never cut.
+  expect(
+    last(
+      ".working-tail>.working-tail__body>.working-tail__line.ac-typing[data-active] .ac-typing__text",
+      "white-space",
+    ),
+  ).toBe("normal");
+  expect(last(".working-tail__trail>li", "overflow-wrap")).toBe("anywhere");
 });

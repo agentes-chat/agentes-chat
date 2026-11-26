@@ -194,8 +194,8 @@ describe("Importar agentes on the phone: the preview", () => {
 });
 
 describe("Importar agentes on the phone: after the import", () => {
-  test("lands on the one agent's page, else on the agents tab", () => {
-    expect(landingOf(["a1"])).toEqual({ href: "/agent/a1", how: "replace" });
+  test("lands on the one agent's page once the import's screens are left, else on the agents tab", () => {
+    expect(landingOf(["a1"])).toEqual({ href: "/agent/a1", how: "open" });
     expect(landingOf(["a1", "a2"])).toEqual({ href: "/agents", how: "dismissTo" });
     expect(landingOf([])).toEqual({ href: "/agents", how: "dismissTo" });
     expect(landingOf(["a1"], { left: true })).toBeNull();
@@ -250,6 +250,7 @@ describe("todoHref", () => {
     expect(todoHref("connection")).toBe("/connectors");
     expect(todoHref("app")).toBe("/connectors");
     expect(todoHref("file")).toBe("/drive");
+    expect(todoHref("path")).toBe("/drive");
     expect(todoHref("secret")).toBeNull();
     expect(todoHref("model")).toBeNull();
   });

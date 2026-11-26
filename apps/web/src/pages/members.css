@@ -45,6 +45,8 @@
 .members-row__state {
   flex: 0 1 auto;
   min-width: 0;
+  /* What it says may hold typed text with no place to break (who an outside collaborator works for). */
+  overflow-wrap: anywhere;
   font-size: 12.5px;
   color: var(--muted);
 }
@@ -105,6 +107,11 @@
   gap: var(--space-1) var(--space-2);
   min-width: 0;
 }
+/* Who an outside collaborator works for, after their chip: up to 80 characters, any of them a place to wrap. */
+.members-roles__of {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 /* A person, a face line (`.ac-faceline`): the face at the row's top, the name's capitals on its top edge
    (`.ac-captop`), when they were last here and the row's menu on the name's line (`.ac-captail`) however the @handle
    and email wrap, their roles one step under those. The kit gives a list's face line its padding. */
@@ -148,12 +155,23 @@
   grid-area: 1 / 3;
   white-space: nowrap;
 }
-/* The row's menu ends the name's line. A row with none keeps its room, so every row's time ends on one edge: as wide
-   as the button less the plate that reaches past the row's padding line. */
-.members-person__menu {
+/* The message button, then "⋯" when the list has any, end the name's line. Each keeps its place on a row without it,
+   so every row's time ends on one edge, and the last plate reaches past the row's padding line, its icon on it. */
+.members-person > .members-person__menu {
   grid-area: 1 / 4;
-  min-width: calc(var(--control-h-sm) - var(--ghost-plate));
-  margin-inline-start: calc(-1 * var(--space-1));
+  display: grid;
+  grid-template-columns: var(--control-h-sm);
+  column-gap: var(--space-2);
+  margin-inline: calc(-1 * var(--space-1)) calc(-1 * var(--ghost-plate));
+}
+.members-person > .members-person__menu--two {
+  grid-template-columns: repeat(2, var(--control-h-sm));
+}
+.members-person__dm {
+  grid-column: 1;
+}
+.members-person__more {
+  grid-column: 2;
 }
 .members-person > .members-roles {
   grid-area: 3 / 2 / auto / -1;

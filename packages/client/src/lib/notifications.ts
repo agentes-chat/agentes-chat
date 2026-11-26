@@ -36,6 +36,7 @@ const WAITING_ORDER: NotificationKind[] = [
   "approval",
   "join_request",
   "team_watch",
+  "budget_paused",
 ];
 
 export const isSnoozed = (n: Pick<AppNotification, "snoozedUntil">, now = Date.now()) =>
@@ -216,6 +217,8 @@ export function workspaceHeadline(n: Pick<AppNotification, "kind" | "latest">) {
   if (n.kind === "composio_limit") return "connectors.composio.limitNotice" as const;
   if (n.kind === "computer_disk_full") return "machines.shared.diskFullNotice" as const;
   if (n.kind === "computer_no_chrome") return "machines.chromeMissingNotice" as const;
+  if (n.kind === "computer_down") return "machines.outage.down" as const;
+  if (n.kind === "computer_back") return "machines.outage.back" as const;
   if (n.kind === "skill_update") {
     const to = n.latest.statusTo;
     return to === "waiting"
@@ -401,6 +404,8 @@ export type OpenTarget =
   | { to: "/org/$orgId/agents/$agentId"; params: { agentId: string }; search?: { sec: "brain"; brain?: "model" } }
   | { to: "/org/$orgId/dm/person/$userId"; params: { userId: string }; search?: { m: string } }
   | { to: "/org/$orgId/issues/$number"; params: { number: string }; search?: { m: string } }
+  | { to: "/org/$orgId/drive/$fileId"; params: { fileId: string }; search?: { m: string } }
+  | { to: "/org/$orgId/code/$sessionId"; params: { sessionId: string } }
   | { to: "/org/$orgId/approvals"; search?: { open: string } }
   | { to: "/org/$orgId/proposals" }
   | { to: "/org/$orgId/routines"; search?: { open: string } }
@@ -446,11 +451,15 @@ export function openTarget(n: AppNotification): OpenTarget | null {
     return { to: "/org/$orgId/approvals", ...(s.approvalId ? { search: { open: s.approvalId } } : {}) };
   // A change someone sent to whoever decides (ADR 0137) is decided on its card in the row: the DM it came from is theirs.
   if (n.kind === "change_request") return null;
-  if (n.kind === "proposal_waiting") return { to: "/org/$orgId/proposals" };
+  // What agents applied themselves (ADR 0219) is in their history, with Undo.
+  if (n.kind === "proposal_waiting" || n.kind === "proposal_applied") return { to: "/org/$orgId/proposals" };
   // Who approves for whom (ADR 0139) is set, seen and declined in Configurações › Sua conta › Aprovações.
   if (n.kind === "approval_cover") return { to: "/org/$orgId/settings/$section", params: { section: "approvals" } };
   // What the right hand does without asking is on its own page, which its old settings address opens.
   if (n.kind === "right_hand_paused") return { to: "/org/$orgId/settings/$section", params: { section: "right_hand" } };
+  // An agent paused on its budget opens its page, where its budget is raised.
+  if (n.kind === "budget_paused" && s.agentId)
+    return { to: "/org/$orgId/agents/$agentId", params: { agentId: s.agentId } };
   // What the right hand found (ADR 0177 §1) opens where it is fixed: the plans, the connections, the agent whose
   // budget it is, the computer.
   const found = teamWatchOf(n);
@@ -528,7 +537,9 @@ export function openTarget(n: AppNotification): OpenTarget | null {
     n.kind === "machine_connected" ||
     n.kind === "computer_ready" ||
     n.kind === "computer_disk_full" ||
-    n.kind === "computer_no_chrome"
+    n.kind === "computer_no_chrome" ||
+    n.kind === "computer_down" ||
+    n.kind === "computer_back"
   )
     return s.machineId
       ? { to: "/org/$orgId/settings/computers/$machineId", params: { machineId: s.machineId } }
@@ -546,6 +557,10 @@ export function openTarget(n: AppNotification): OpenTarget | null {
   // A reply in a task's conversation (ADR 0145) opens the task at that message.
   if (s.issueNumber != null)
     return { to: "/org/$orgId/issues/$number", params: { number: String(s.issueNumber) }, ...at };
+  // One in a live file's conversation (ADR 0199) opens the file with its conversation at that message.
+  if (s.artifactId) return { to: "/org/$orgId/drive/$fileId", params: { fileId: s.artifactId }, ...at };
+  // One in a code session's conversation (ADR 0215) opens the session on the Code page.
+  if (s.codeSessionId) return { to: "/org/$orgId/code/$sessionId", params: { sessionId: s.codeSessionId } };
   // A routine that failed, paused or waits for its computer: the routine in Rotinas (its state and fix).
   // What a routine found opens the agent's message in its conversation (below); without one, the routine.
   if (ROUTINE_TROUBLE.has(n.kind) || (n.kind === "routine_finished" && !s.messageId && !s.threadId))
@@ -689,7 +704,8 @@ export function waitingCardOf(n: Pick<AppNotification, "kind" | "count" | "lates
   // A person at their limit asks for more (ADR 0141): raised or refused on the card itself.
   if (n.kind === "usage_limit") return { kind: "limit", title: "", expiresAt: null, action: "review" };
   // What the right hand found has nobody to answer: it opens where it is fixed.
-  if (n.kind === "team_watch") return { kind: "question", title: l.text ?? "", expiresAt: null, action: "open" };
+  if (n.kind === "team_watch" || n.kind === "budget_paused")
+    return { kind: "question", title: l.text ?? "", expiresAt: null, action: "open" };
   return { kind: "question", title: l.text ?? l.title ?? "", expiresAt: null, action: "answer" };
 }
 

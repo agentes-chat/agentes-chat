@@ -14,7 +14,6 @@ export const SETTINGS_PARTS: Readonly<Record<string, string>> = {
   media: "general",
   voice: "general",
   billing: "usage",
-  skills: "connectors",
   vault: "connectors",
   access: "connectors",
 };

@@ -12,9 +12,10 @@ import { useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
 import { AudienceChip } from "@/components/AgentAudience";
 import { AgentAvatar } from "@/components/AgentAvatar";
-import { AgentSetupIntro, useSetupSteps } from "@/components/AgentSetup";
+import { AgentSetupIntro, useSetupSettled, useSetupSteps } from "@/components/AgentSetup";
 import { useAgentPanelShown, useOpenAgentPanel } from "@/components/agent-panel-context";
 import { ModelPickerButton } from "@/components/ai/ModelPicker";
+import { DmMoreMenu } from "@/components/ConversationMenu";
 import { ComputerButton } from "@/components/computer/ComputerDialog";
 import { ErrorState } from "@/components/Loading";
 import { NavToggle } from "@/components/NavDrawer";
@@ -54,6 +55,10 @@ export function DmPage({ target, focusMessageId }: { target: DmTarget; focusMess
   const rightHand = isRightHand(agent);
   // A new agent's setup checklist (ADR 0155 §2) for whoever sets it up: its greeting and the checklist on top.
   const setup = useSetupSteps(agent).length > 0;
+  const setupSettled = useSetupSettled(agent);
+  // An agent's DM waits for its agent, then for its checklist's data when it has one: its rows show once, under the
+  // intro they keep, never before an intro that pushes them away.
+  const introPending = "agentId" in target && (agent ? setup && !setupSettled : dir.loading);
   // Its DM is open, from its row or any other way in: its row's "Novo" goes.
   useEffect(() => {
     if (rightHand) rightHandSeen.mark(rightHandSeenKey(me.user.id, org.id));
@@ -78,7 +83,8 @@ export function DmPage({ target, focusMessageId }: { target: DmTarget; focusMess
   }
   if (!dm.data || dir.loading) return <ChannelSkeleton dm={kind} />;
 
-  const owner = agent?.ownerUserId ? dir.memberById.get(agent.ownerUserId) : undefined;
+  // A person's name or, when a role answers for it, the role's (ADR 0085, addendum of 2026-11-21).
+  const owner = agent ? dir.ownerName(agent) : undefined;
   const role = agent ? agent.role || `@${agent.handle}` : "";
   // The right hand (ADR 0137) says what it is and whose permissions it acts with, never an owner, nor a model: each
   // person's DM with it thinks with their own AI, shown with its maker's logo in the side panel's Como pensa.
@@ -86,7 +92,7 @@ export function DmPage({ target, focusMessageId }: { target: DmTarget; focusMess
     ? rightHand
       ? `${t("rightHand.label")} · ${t("rightHand.actsAsYou")}`
       : owner
-        ? t("dm.subtitle", { role, owner: owner.name })
+        ? t("dm.subtitle", { role, owner })
         : t("dm.subtitleNoOwner", { role })
     : undefined;
   const header = ({
@@ -125,11 +131,14 @@ export function DmPage({ target, focusMessageId }: { target: DmTarget; focusMess
           {/* Its tasks (ADR 0128), while it has any: they open in the side panel. */}
           {agent && <AgentTasksPill />}
           {/* The sidebar has the computer: only a line of turns waiting for it still shows here. A viewer of its public
-              card gets the sidebar's head alone, so the way in stays for one who may still watch the computer. */}
+              card gets the sidebar's head alone, so the way in stays for one who may still watch the computer. The
+              right hand's AI is each person's own ("Sua IA" in the sidebar), so its header has no model button. */}
           {agent && !rightHand && <ModelPickerButton agent={agent} className="channel__brain" />}
-          {agent && !rightHand && <ComputerButton agent={agent} queueOnly={side?.docked && seesDetails(agent)} />}
+          {agent && <ComputerButton agent={agent} queueOnly={side?.docked && seesDetails(agent)} />}
           {/* The same field as a channel's, held to this DM. */}
           <HeaderSearch channelId={dm.data.channelId} onOpen={onSearch} searching={searching} dm />
+          {/* Its own list, as its right click elsewhere, with this conversation's background. */}
+          <DmMoreMenu channelId={dm.data.channelId} name={name} agent={agent} person={person} />
           {side && (
             <Button
               size="sm"
@@ -170,6 +179,7 @@ export function DmPage({ target, focusMessageId }: { target: DmTarget; focusMess
           : setup && agent
             ? { intro: <AgentSetupIntro agent={agent} /> }
             : {}),
+        introPending,
         dmAgentId: agent?.id,
         dmPersonId: person?.userId,
         locked:

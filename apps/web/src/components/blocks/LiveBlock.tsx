@@ -1,4 +1,11 @@
-import { type BlockChange, useArtifact, useBlockReply, useKeepBlock, useSharedBlock } from "@agenteschat/client";
+import {
+  type BlockChange,
+  newClientId,
+  useArtifact,
+  useBlockReply,
+  useKeepBlock,
+  useSharedBlock,
+} from "@agenteschat/client";
 import {
   type BlockEvent,
   type BlockHost,
@@ -8,12 +15,12 @@ import {
 } from "@agenteschat/client/lib/blocks";
 import { formatTime } from "@agenteschat/client/lib/format";
 import { PAGE_SANDBOX } from "@agenteschat/client/lib/isolated-page";
-import { Button, Menu, MenuItem, Spinner } from "@agenteschat/ui";
+import { BoundedMap, Button, Menu, MenuItem, Spinner } from "@agenteschat/ui";
 import { chartRamp } from "@agenteschat/ui/sky/chart";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useArtifactViewer } from "@/components/artifacts/ArtifactViewer";
 import { usePageUrl } from "@/components/artifacts/HtmlFrame";
+import { useArtifactViewer } from "@/components/artifacts/viewer-context";
 import { useOrg } from "@/components/org-context";
 import { CardSky, colorOf } from "@/components/Sky";
 import { useDirectory } from "@/hooks/useDirectory";
@@ -34,7 +41,7 @@ type Kept = { height?: number; open?: boolean; sent?: { text: string; at: string
  * What stays when a frame goes away (scrolled out, opened big). Its state is everyone's and lives on the server
  * (`useSharedBlock`); this is only how tall it was, whether it was shown whole and what this person sent from it.
  */
-const kept = new Map<string, Kept>();
+const kept = new BoundedMap<string, Kept>(500);
 const keptOf = (key: string): Kept => {
   const found = kept.get(key);
   if (found) return found;
@@ -231,7 +238,7 @@ export function LiveBlock({
 
   const say = (text: string, then?: () => void) =>
     reply.mutate(
-      { text, clientId: crypto.randomUUID() },
+      { text, clientId: newClientId() },
       { onSuccess: then, onError: () => toast.show(t("blocks.sendFailed"), "error") },
     );
 

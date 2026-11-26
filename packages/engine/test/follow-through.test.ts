@@ -15,16 +15,19 @@ import {
   createIssue,
   createJobHandlers,
   createPassToolSource,
+  createRole,
   drainOutbox,
   FOLLOW_UP_JOB,
   FOLLOW_UP_TOOL,
   insertMessage,
   invokeToolForRun,
+  JevOffError,
   joinChannel,
   listThreads,
   openAgentDm,
   openPersonAgentDm,
   openTaskConversation,
+  PLATFORM_CAP,
   pendingReturns,
   postPersonMessage,
   RIGHT_HAND,
@@ -34,12 +37,14 @@ import {
   STRETCH_JOB,
   STRETCH_REFUSAL,
   saveAgentStyle,
+  setMemberRoles,
   type ToolSource,
   taskManager,
   toolPolicy,
   wakeFollowUp,
 } from "../src";
 import { advance, decideTurnEnd, type TurnEnd, toolsNamed } from "../src/continuation";
+import { createLlmJudge, JudgeBudgetError, withJudgeFallback } from "../src/judge";
 import { personCanPost } from "../src/routine-state";
 import { addMember, type Fixture, setup } from "./fixtures";
 
@@ -175,16 +180,16 @@ test("the prompt asks to finish what it starts, and names follow_up only when th
   await ask(f, "@dev oi");
   await drainOutbox(f.db, f.handlers);
   const withTool = systemText(f.provider.calls[0]?.request.system ?? []);
-  expect(withTool).toContain("Finish what you start.");
-  expect(withTool).toContain("set a follow_up to come back to it");
-  expect(withTool).toContain("After a person approves or answers what you waited on, go on with the task at once");
+  expect(withTool).toContain("Before you end your turn, reread your reply.");
+  expect(withTool).toContain("set a follow_up and say when");
+  expect(withTool).toContain("After a person approves or answers what you waited on, go on at once");
   await f.close();
 
   f = await setup({ react: true, reply: () => ({ chunks: ["ok"] }) });
   await ask(f, "@dev oi");
   await drainOutbox(f.db, f.handlers);
   const without = systemText(f.provider.calls[0]?.request.system ?? []);
-  expect(without).toContain("Finish what you start.");
+  expect(without).toContain("Before you end your turn, reread your reply.");
   expect(without).not.toContain("follow_up");
 });
 
@@ -372,9 +377,9 @@ test("follow_up bounds: a day ahead at most, two per run, three per conversation
   expect(refusedAtLimit.result).toMatchObject({ content: STRETCH_REFUSAL, isError: true });
   expect((await f.db.select().from(schema.outbox).where(eq(schema.outbox.kind, STRETCH_JOB))).length).toBe(1);
 
-  // A routine's background work runs again on its own schedule: no follow-ups there.
+  // A routine's background work may set its own resume, for work it is blocked on (`routine-room.test.ts`).
   const tool = { name: FOLLOW_UP_TOOL, scope: "" };
-  expect(toolPolicy({ kind: "routine", personId: null, brief: null }, tool).action).toBe("refuse");
+  expect(toolPolicy({ kind: "routine", personId: null, brief: null }, tool).action).toBe("allow");
   expect(toolPolicy({ kind: "person", personId: f.owner.id }, tool).action).toBe("allow");
 });
 
@@ -490,7 +495,7 @@ test("in a task's conversation, read by people who are never its members, a foll
   const asBia = { type: "person" as const, userId: bia.id };
   const issue = await createIssue({ db: f.db, pubsub: f.pubsub }, asBia, f.org.id, {
     title: "Migrate the build cache",
-    assignee: { type: "agent", id: f.agent.id },
+    assignees: [{ type: "agent", id: f.agent.id }],
   });
   const at = await openTaskConversation(f.db, asBia, f.org.id, issue.id);
   await postPersonMessage({ db: f.db, pubsub: f.pubsub }, bia.id, f.org.id, at.channelId, {
@@ -835,8 +840,8 @@ describe("returns, as the apps list them (ADR 0037, amended 2026-11-13)", () => 
     await expect(cancelFollowUp(deps, caio.id, f.org.id, first)).rejects.toMatchObject({ code: "follow_up.not_yours" });
     expect(await lineState(f, first)).toBe("pending");
     // The lists say the same, per person: Caio sees them without the control.
-    const mine = async (userId: string, managesAgents = false) =>
-      (await pendingReturns(f.db, userId, f.org.id, { managesAgents })).map((r) => [r.messageId, r.canCancel]);
+    const mine = async (userId: string) =>
+      (await pendingReturns(f.db, userId, f.org.id)).map((r) => [r.messageId, r.canCancel]);
     expect(await mine(caio.id)).toEqual([
       [first, false],
       [second, false],
@@ -845,10 +850,27 @@ describe("returns, as the apps list them (ADR 0037, amended 2026-11-13)", () => 
       [first, true],
       [second, true],
     ]);
-    expect(await mine(f.owner.id, true)).toEqual([
+    expect(await mine(f.owner.id)).toEqual([
       [first, true],
       [second, true],
     ]);
+    // "Edit agents" cancels for an agent whose audience takes them (ADR 0085 addendum of 2026-11-17), never for
+    // someone's private agent.
+    const leads = await createRole(f.db, f.owner.id, f.org.id, { name: "Leads", permissions: ["manage_agents"] });
+    const dani = await addMember(f.db, f.org.id, "member", "dani");
+    await joinChannel(f.db, dani.id, f.org.id, f.general.id);
+    await setMemberRoles(f.db, f.owner.id, f.org.id, dani.id, [leads.id]);
+    expect(await mine(dani.id)).toEqual([
+      [first, true],
+      [second, true],
+    ]);
+    await f.db.update(schema.agents).set({ audienceMode: "owner" }).where(eq(schema.agents.id, f.agent.id));
+    expect(await mine(dani.id)).toEqual([
+      [first, false],
+      [second, false],
+    ]);
+    await expect(cancelFollowUp(deps, dani.id, f.org.id, first)).rejects.toMatchObject({ code: "follow_up.not_yours" });
+    await f.db.update(schema.agents).set({ audienceMode: "everyone" }).where(eq(schema.agents.id, f.agent.id));
     // The agent's owner.
     await f.db.update(schema.agents).set({ ownerUserId: caio.id }).where(eq(schema.agents.id, f.agent.id));
     expect(await mine(caio.id)).toEqual([
@@ -1455,5 +1477,136 @@ describe("a reply that names its own tools to a person", () => {
     await drainOutbox(f.db, f.handlers);
     expect(f.provider.calls.length).toBe(2);
     expect((await agentMessages(f)).map((m) => m.body)).toEqual([answer, answer]);
+  });
+});
+
+describe("a turn end's reads and judgment", () => {
+  const WAIT = 250;
+  const slowly = <T>(value: T) => Bun.sleep(WAIT).then(() => value);
+  const turn = (over: Partial<TurnEnd> = {}): TurnEnd => ({
+    state: { count: 0 },
+    kind: "conversation",
+    executed: 0,
+    bound: null,
+    quiet: false,
+    decided: null,
+    unanswered: false,
+    unreached: "",
+    judged: "Vou checar o deploy e já volto.",
+    mission: false,
+    wakesLater: () => slowly(false),
+    comesBack: () => slowly(false),
+    verdict: () => slowly("continue" as const),
+    ...over,
+  });
+  const timed = async (t: TurnEnd) => {
+    const started = performance.now();
+    const d = await decideTurnEnd(t);
+    return { d, ms: performance.now() - started };
+  };
+
+  test("overlap: what the judgment reads starts beside `wakes_later`; `comes_back` is read only after a continue", async () => {
+    let prepared = 0;
+    let judgedAt = 0;
+    const started = performance.now();
+    const { d, ms } = await timed(
+      turn({
+        prepare: () => {
+          prepared++;
+        },
+        verdict: () => {
+          judgedAt = performance.now() - started;
+          return slowly("continue" as const);
+        },
+      }),
+    );
+    expect(d).toMatchObject({ outcome: "continue", rule: "promise" });
+    expect(prepared).toBe(1);
+    expect(judgedAt).toBeGreaterThanOrEqual(WAIT - 5);
+    // wakes_later, the judgment, then comes_back: a read most turn ends (a done) never pay for.
+    expect(ms).toBeGreaterThanOrEqual(3 * WAIT - 5);
+    expect(ms).toBeLessThan(4 * WAIT);
+  });
+
+  test("the rules keep their order, and something that brings it back still spares the judgment", async () => {
+    let judged = 0;
+    const counted = () => {
+      judged++;
+      return slowly("continue" as const);
+    };
+    expect((await timed(turn({ wakesLater: () => slowly(true), verdict: counted }))).d).toMatchObject({
+      outcome: "waiting",
+      rule: "wakes_later",
+    });
+    expect(judged).toBe(0);
+    // A promise something keeps here rests on it.
+    expect((await timed(turn({ comesBack: () => slowly(true) }))).d).toMatchObject({
+      outcome: "waiting",
+      rule: "comes_back",
+    });
+    // Read only for a promise in a person's conversation.
+    expect(
+      (await timed(turn({ comesBack: () => slowly(true), verdict: () => slowly("done" as const) }))).d,
+    ).toMatchObject({ outcome: "done", rule: "judged" });
+    expect((await timed(turn({ kind: "agents_dm", comesBack: () => slowly(true) }))).d).toMatchObject({
+      outcome: "continue",
+      rule: "promise",
+    });
+    // A failed judgment, or a failed read, is what it always was (only the platform cap checks itself: below).
+    expect((await timed(turn({ verdict: () => Promise.reject(new Error("down")) }))).d).toMatchObject({
+      outcome: "done",
+      rule: "judge_error",
+    });
+    expect((await timed(turn({ wakesLater: () => Promise.reject(new Error("db")) }))).d).toMatchObject({
+      outcome: "continue",
+      rule: "promise",
+    });
+  });
+
+  test("a check refused past the platform cap: once per run the agent checks itself, held in an agents' DM; then done", async () => {
+    const down = () => Promise.reject(new Error(PLATFORM_CAP));
+    const evidence = { means: ["terminal (run_code)"], tried: ["github_get_issue #12 → ok"] };
+    const first = await decideTurnEnd(turn({ verdict: down, evidence }));
+    expect(first).toMatchObject({ outcome: "continue", rule: "untried", judgeError: true });
+    // A person's conversation got the reply already (the executor posts it and wraps this in `shownNudge`).
+    expect(first.nudge).not.toContain("Not posted yet");
+    expect((await decideTurnEnd(turn({ kind: "agents_dm", verdict: down, evidence }))).nudge).toStartWith(
+      "Not posted yet",
+    );
+    expect(first.nudge).toContain("check it yourself");
+    expect(first.nudge).toContain("terminal (run_code)");
+    expect(first.nudge).toContain("github_get_issue #12");
+    const state = advance({ count: 0 }, first, 1);
+    expect(state).toMatchObject({ count: 1, uncheckedNudged: true });
+    // Bounded: the next failure ends the run as before, even with a nudge left.
+    expect(await decideTurnEnd(turn({ state, verdict: down }))).toMatchObject({
+      outcome: "done",
+      rule: "judge_error",
+    });
+    // A routine's record isn't posted: nothing to hold.
+    const routine = await decideTurnEnd(turn({ kind: "routine", verdict: down }));
+    expect(routine).toMatchObject({ outcome: "continue", rule: "untried", judgeError: true });
+    expect(routine.nudge).not.toContain("Not posted yet");
+    // Out of the turn end's wait (a slow judge), or no judge at all (no Jev key, no small model): done at once.
+    expect(await decideTurnEnd(turn({ verdict: () => Promise.reject(new JudgeBudgetError()) }))).toMatchObject({
+      outcome: "done",
+      rule: "judge_error",
+    });
+    const noJudge = withJudgeFallback(
+      {
+        name: "jev",
+        ask: () => Promise.reject(new JevOffError()),
+      },
+      createLlmJudge({
+        gateway: { complete: () => Promise.reject(new Error("unused")) },
+        resolveModel: async () => null,
+      }),
+    );
+    const askNoJudge = () => noJudge.ask({ orgId: "org-1", kind: "continuation", state: {}, questions: {} });
+    expect(await askNoJudge().catch((e: unknown) => e)).toBeInstanceOf(JevOffError);
+    expect(await decideTurnEnd(turn({ verdict: () => askNoJudge().then(() => "done" as const) }))).toMatchObject({
+      outcome: "done",
+      rule: "judge_error",
+    });
   });
 });

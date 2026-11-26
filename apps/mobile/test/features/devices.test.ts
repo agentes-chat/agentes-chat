@@ -65,6 +65,11 @@ describe("a device's state, as its chip and the words after it", async () => {
       "with Ana's iMac",
     );
     expect(statusView(t, { kind: "busy", running: 1, max: 1 }, when).label).toBe("Busy 1/1");
+    const moving = statusView(t, { kind: "moving", since: AT }, when);
+    expect([moving.label, moving.line]).toEqual(["Moving servers", "Moving to a new server… back in a few minutes"]);
+    const dropped = statusView(t, { kind: "offline", lastSeenAt: AT, cause: "dropped" }, when);
+    expect(dropped.label).toBe("Offline");
+    expect(dropped.line).toStartWith("connection dropped at ");
   });
 });
 
@@ -225,6 +230,22 @@ describe("notices, waits and facts", async () => {
       );
       expect(deviceHref(folder)).toBe("/settings/devices/k1");
     }
+    // A computer paired before lends its internet now (ADR 0237): said plainly, in the person's language, opening it.
+    const lent = deviceNoticeOf({
+      kind: "device.internet_shared" as never,
+      source: { machineId: "k1", label: "Sam's MacBook" } as never,
+      latest: { title: "Sam's MacBook" },
+    });
+    expect(lent).toMatchObject({ kind: "device.internet_shared", machineId: "k1", device: "Sam's MacBook" });
+    if (lent) {
+      expect(deviceNoticeTitle(en, lent, "", "", "")).toBe(
+        "Agents now open websites through the internet of Sam's MacBook",
+      );
+      expect(deviceNoticeTitle(pt, lent, "", "", "")).toBe(
+        "Agora os agentes abrem sites pela internet de Sam's MacBook",
+      );
+      expect(deviceHref(lent)).toBe("/settings/devices/k1");
+    }
   });
   test("an inbox row of a device's notice says only what the agent is doing under its title", () => {
     const n = {
@@ -236,6 +257,9 @@ describe("notices, waits and facts", async () => {
     expect(placeOf(n)).toBe("");
     const waiting = { ...(n as object), kind: "device.waiting", latest: { title: "Rui" } } as never;
     expect(subtitleOf(waiting, () => "")).toBe("");
+    // A lent internet's row says what lending keeps out, in the person's language.
+    const lent = { kind: "device.internet_shared", source: { machineId: "k1" }, latest: { title: "Sam's MacBook" } };
+    expect(subtitleOf(lent as never, (w) => w.key)).toBe("devices.notice.internetSharedLine");
   });
   test("a wait for a device, from either place the run says it", () => {
     expect(

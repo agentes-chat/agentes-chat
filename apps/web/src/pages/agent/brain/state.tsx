@@ -1,7 +1,6 @@
 import type { AgentBrain, BrainKind, MachineAccount, MachineAccountKind, PlanUsage } from "@agenteschat/client";
 import {
   useAiAccounts,
-  useAiStatus,
   useComputerSetup,
   useCredentials,
   useModels,
@@ -11,14 +10,18 @@ import {
 import {
   type AccountChoice,
   accountAbout,
+  accountChain,
   accountChoices,
   accountTitle,
+  chainHasRoom,
   lendable,
   offersSignInAgain,
   ownSignInListed,
   ownSignInName,
   ownSignInTitle,
   signInOf,
+  unnamedAccount,
+  withSub,
 } from "@agenteschat/client/lib/ai-accounts";
 import { advancedContents, effortOf, viewSpeedFits } from "@agenteschat/client/lib/brain-advanced";
 import { computerNameOf, setupView } from "@agenteschat/client/lib/computer";
@@ -48,13 +51,14 @@ import {
 } from "@agenteschat/client/lib/plans";
 import { apiProviderOf, isAuto, keyLine, keySource, modelChoices } from "@agenteschat/client/lib/providers";
 import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
-import { Icon, type IconName, ProviderLogo, planState } from "@agenteschat/ui";
+import { type IconName, planState } from "@agenteschat/ui";
 import { useTranslation } from "react-i18next";
 import { modelOptions as apiModelOptions, DEFAULT_KEY } from "@/components/AgentFields";
-import type { HaveItem } from "@/components/arrival/ConnectHave";
+import { type HaveItem, haveMark, renameOf } from "@/components/arrival/ConnectHave";
 import { useOrg } from "@/components/org-context";
 import { useComputerEdition } from "@/components/WorkspaceComputer";
 import { useDirectory } from "@/hooks/useDirectory";
+import { useRenameAccount } from "@/hooks/useRenameAccount";
 import { limitOffers } from "@/lib/plan-usage";
 import { useAgentEdit } from "../context";
 import { type BrainMachine, homeFor, useWork } from "./work";
@@ -95,6 +99,7 @@ export function useBrainState(view: AgentBrain, opts: { added: readonly MachineA
   const { org } = useOrg();
   const { agent, g, saved, can, ownerFirst } = useAgentEdit();
   const work = useWork();
+  const rename = useRenameAccount();
   const dir = useDirectory(org.id);
   const edition = useComputerEdition(org.id);
   const setupQ = useComputerSetup(org.id);
@@ -104,8 +109,6 @@ export function useBrainState(view: AgentBrain, opts: { added: readonly MachineA
   const credentials = useCredentials(org.id, canDo(org, "manage_credentials"));
   const platform = usePlatformKey(org.id);
   const settings = useSettings(org.id);
-  // Answering through the API needs a key: the workspace's own, or the server's.
-  const apiKey = useAiStatus(org.id).data?.apiKey !== false;
   const ai = useAiAccounts(org.id, view.canUsePlans);
   const kind = view.brain;
   const savedCard = aiChoiceOf(view);
@@ -170,8 +173,9 @@ export function useBrainState(view: AgentBrain, opts: { added: readonly MachineA
     if (away(c))
       return {
         icon: "alert",
-        text:
-          edition === "cloud"
+        text: work.machines.data?.find((m) => m.id === where.machineId)?.moving
+          ? t("machines.moving.named", { computer: nameOf(where.name) })
+          : edition === "cloud"
             ? t("agentPage.work.brain.offCloud", { computer: nameOf(where.name) })
             : t("agentPage.work.brain.off", { computer: nameOf(where.name) }),
       };
@@ -229,7 +233,7 @@ export function useBrainState(view: AgentBrain, opts: { added: readonly MachineA
       : t("agentPage.work.brain.accountOf", { name: firstName(a.ownerName ?? "") });
     const alsoUsed =
       others.length > 0 && a.shared === true
-        ? t("agentPage.work.brain.accountAlso", { agents: namesText(t, others, 2) })
+        ? withSub(a, t("agentPage.work.brain.accountAlso", { agents: namesText(t, others, 2) }))
         : undefined;
     return {
       id: `account:${a.id}`,
@@ -239,12 +243,15 @@ export function useBrainState(view: AgentBrain, opts: { added: readonly MachineA
       account: a,
       act,
       current,
-      title: accountTitle(a),
+      title: accountTitle(t, a),
+      unnamed: unnamedAccount(a),
+      // The accounts listed here are on the agent's computer.
+      rename: renameOf(t, a, view.computer?.machineId, rename),
       // Under its owner's name the group says whose it is; the one in use says it on its own line.
       about: !a.mine && !current ? undefined : (alsoUsed ?? accountAbout(t, c, agent.name)),
       whose,
       group: a.mine ? mine : { key: `owner:${a.ownerId}`, label: whose },
-      mark: <ProviderLogo id={a.provider ?? a.kind} size="xs" />,
+      mark: haveMark(a.provider ?? a.kind),
       usage: a.usage,
       // An account lives on the agent's computer: it thinks there only if its plan runs there.
       off: act === "locked" || (!current && !runsHere(plan)),
@@ -275,9 +282,11 @@ export function useBrainState(view: AgentBrain, opts: { added: readonly MachineA
         current,
         title: ownSignInName(t, view.ownSignIn && view.canUsePlans, computerName, k),
         about: ownPlan ? ownSignInTitle(t, { kind: k, plan: ownPlan }) : undefined,
-        whose: ownersWhose,
-        group: ownersGroup,
-        mark: <ProviderLogo id={k} size="xs" />,
+        // OpenCode's free models are nobody's: a neutral word, ranked after the plans with room.
+        ...(k === "opencode"
+          ? { whose: t("connectAi.chat.free"), group: { key: "free", label: t("connectAi.chat.free") }, free: true }
+          : { whose: ownersWhose, group: ownersGroup }),
+        mark: haveMark(k),
         usage: view.ownUsage[k] ?? null,
         off: !current && !runsHere(plan),
         lends: false,
@@ -289,8 +298,6 @@ export function useBrainState(view: AgentBrain, opts: { added: readonly MachineA
   // The workspace's keys, for whoever may pick one (admins); anyone else gets the API as the agent has it.
   const all = models.data?.models ?? [];
   const apiProvider = apiProviderOf(saved.model, all);
-  const keyMark = (provider: string | undefined) =>
-    provider ? <ProviderLogo id={provider} size="xs" /> : <Icon name="key" size={20} className="arrival-have__mark" />;
   const keysGroup = { key: "keys", label: t("connectAi.chat.keys") };
   const keyCurrent = saved.key ?? DEFAULT_KEY;
   const keyRow = (keyId: string | undefined, title: string, about: string | undefined, provider?: string): BrainRow => {
@@ -307,7 +314,7 @@ export function useBrainState(view: AgentBrain, opts: { added: readonly MachineA
       about,
       whose: keysGroup.label,
       group: keysGroup,
-      mark: keyMark(provider),
+      mark: haveMark(provider),
       usage: null,
       isKey: true,
       lends: false,
@@ -354,7 +361,7 @@ export function useBrainState(view: AgentBrain, opts: { added: readonly MachineA
           : t("agentPage.work.brain.planText", { plan: planLabel(t, c) })),
     whose: ownersWhose,
     group: ownersGroup,
-    mark: c === "key" ? keyMark(apiProvider) : <ProviderLogo id={planMark(c)} size="xs" />,
+    mark: haveMark(c === "key" ? apiProvider : planMark(c)),
     usage: null,
     off: savedCard !== c && !homeOf(c),
     lends: false,
@@ -378,9 +385,24 @@ export function useBrainState(view: AgentBrain, opts: { added: readonly MachineA
   // ── the account in use ──
   const usage: PlanUsage | null = currentRow?.usage ?? null;
   const limitedNow = usage ? planState(usage).state === "limited" : false;
+  // The accounts its runs go through at a limit (ADR 0041 §6), its own first; one alone when pinned or none move on.
+  const chain =
+    kind === "model"
+      ? []
+      : accountChain(allAccounts, {
+          id: agent.id,
+          ownerId: agent.ownerUserId ?? null,
+          account: view.account,
+          pinned: view.accountPinned === true,
+          ...(view.scope ? { scope: view.scope } : {}),
+        });
+  const moves = chain.length > 1;
+  // At its limit it waits only with no other account of its chain that has room: then the way out is by hand.
+  const waitsAtLimit =
+    limitedNow && !chainHasRoom(chain, (a) => (a.usage ? planState(a.usage).state === "limited" : false));
   // At its limit, its owner's free accounts of the same plan with room, never another agent's (`limitOffers`).
   const offers =
-    limitedNow && kind !== "model"
+    waitsAtLimit && kind !== "model"
       ? limitOffers(listed, kind, view.account).flatMap(({ account }) => {
           const r = accountRow({ login: account, usedBy: account.usedBy, also: false });
           return r && !r.off && (r.act === "use" || r.act === "move") ? [r] : [];
@@ -450,7 +472,6 @@ export function useBrainState(view: AgentBrain, opts: { added: readonly MachineA
     savedCard,
     hold,
     edition,
-    apiKey,
     computerName,
     nameOf,
     homeOf,
@@ -464,6 +485,8 @@ export function useBrainState(view: AgentBrain, opts: { added: readonly MachineA
     rows,
     usage,
     limitedNow,
+    waitsAtLimit,
+    moves,
     offers,
     signedOut,
     unknown,

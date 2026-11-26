@@ -24,6 +24,8 @@ export type AppHref =
   | `/handoff/${string}`
   | `/issues/${number}`
   | `/issues/${number}?m=${string}`
+  | `/file/${string}`
+  | `/file/${string}?m=${string}`
   | `/routines/${string}`
   | `/settings/computers/${string}`
   | `/settings/devices/${string}`
@@ -51,6 +53,13 @@ export type AppHref =
   | "/ai-accounts"
   | `/board/${string}`
   | `/widget/${string}`;
+
+/**
+ * A live file, opened on its own screen (the file screen sends it on to its kind's); with `messageId`, its
+ * conversation pushed over it at that message (ADR 0199).
+ */
+export const fileHref = (fileId: string, messageId?: string | null): AppHref =>
+  isSafeId(messageId) ? `/file/${fileId}?m=${messageId}` : `/file/${fileId}`;
 
 /** `messageId`: open at that message (`m=`: paged in, scrolled to and lit for a moment). */
 export const chatHref = (channelId: string, threadId?: string | null, messageId?: string | null): AppHref => {
@@ -115,6 +124,7 @@ export interface PushPayload {
   issueNumber?: unknown;
   dashboardId?: unknown;
   widgetId?: unknown;
+  artifactId?: unknown;
 }
 
 const PUSH_IDS = [
@@ -131,6 +141,8 @@ const PUSH_IDS = [
   "topicId",
   "dashboardId",
   "widgetId",
+  // A message in a live file's conversation (ADR 0199): the file.
+  "artifactId",
   // A device's notifications (`device.*`): the phone, and the join or access request.
   "phoneId",
   "requestId",
@@ -212,6 +224,11 @@ export function hrefFromUrl(url: string): AppHref | null {
       return "/dashboards";
     case "board":
       return isSafeId(id) ? `/board/${id}` : null;
+    case "drive": {
+      // A live file, at a message of its conversation when named (ADR 0199).
+      if (!isSafeId(id)) return null;
+      return fileHref(id, queryParam(query, "m"));
+    }
     case "widget":
       return isSafeId(id) ? `/widget/${id}` : null;
     default:
@@ -257,6 +274,8 @@ export function notificationHref(
   if (n.kind === "approval") return isSafeId(s.approvalId) ? `/approval/${s.approvalId}` : null;
   // The agent's model left its plan's list: its model, to choose another.
   if (n.kind === "plan_model_dropped") return isSafeId(s.agentId) ? `/agent-model/${s.agentId}` : null;
+  // An agent paused on its budget: its page, where its budget is raised.
+  if (n.kind === "budget_paused") return isSafeId(s.agentId) ? `/agent/${s.agentId}` : "/usage";
   // Someone gave an agent the person's plan: their AI accounts, where the agents on each plan are.
   if (n.kind === "plan_lent") return "/ai-accounts";
   if (n.kind === "plan_serves") return "/usage";
@@ -275,6 +294,8 @@ export function notificationHref(
     return isSafeId(s.agentId) ? `/agent/${s.agentId}` : s.routineId ? routineHref(s.routineId) : null;
   if (n.kind === "join_request") return "/join-requests";
   if (n.kind === "proposal_waiting") return "/proposals";
+  // What agents applied today (ADR 0219): the history of their improvements, newest first, each with Undo there.
+  if (n.kind === "proposal_applied") return "/proposals";
   // Someone who joined: Membros, where they now are (the app has no "say hi" of its own for them).
   if (n.kind === "invitation_accepted") return "/me/members";
   // Who approves for whom (ADR 0139): Perfil › Aprovações, where it is set and declined.
@@ -298,7 +319,13 @@ export function notificationHref(
   if (n.kind === "widget_alert" || n.kind === "widget_failed") return widgetHref(s.widgetId, s.dashboardId);
   if (n.kind === "dashboard_proposal") return boardHref(s.dashboardId);
   // A computer's disk is almost full (ADR 0115): that computer, where its shared folder's size shows.
-  if (n.kind === "computer_disk_full" || n.kind === "computer_no_chrome")
+  // A computer that isn't answering, or is back (ADR 0241): that computer, where its agents can move elsewhere.
+  if (
+    n.kind === "computer_disk_full" ||
+    n.kind === "computer_no_chrome" ||
+    n.kind === "computer_down" ||
+    n.kind === "computer_back"
+  )
     return isSafeId(s.machineId) ? `/settings/devices/${s.machineId}` : null;
   // An agent's browser handoff (ADR 0040): its conversation, with the request's card in control.
   if (n.kind === "browser_handoff" && isSafeId(s.handoffId)) {
@@ -308,6 +335,8 @@ export function notificationHref(
   }
   if ((n.kind === "mission_finished" || n.kind === "mission_stopped") && isSafeId(s.missionId))
     return `/mission/${s.missionId}`;
+  // A message in a live file's conversation (ADR 0199): the file, which opens its conversation at that message.
+  if (isSafeId(s.artifactId)) return fileHref(s.artifactId, isSafeId(s.messageId) ? s.messageId : null);
   // A reply in a task's conversation (ADR 0145): the task, which opens its conversation at that message.
   if (s.issueNumber != null && Number.isSafeInteger(s.issueNumber))
     return isSafeId(s.messageId) ? `/issues/${s.issueNumber}?m=${s.messageId}` : `/issues/${s.issueNumber}`;

@@ -5,8 +5,11 @@ import {
   type ContextItem,
   can,
   decideProposal,
+  dmPeople,
   editContextItem,
+  editorDecides,
   ForbiddenError,
+  forgetRightHandLearned,
   getAgent,
   isHowTo,
   isPlaybook,
@@ -22,6 +25,7 @@ import {
   memoryScorecard,
   NotFoundError,
   ownerDecides,
+  ownsAgent,
   type Proposal as ProposalRow,
   requirePermission,
   resolveNotifications,
@@ -29,6 +33,7 @@ import {
   SERVER_REASONS,
   SETTING_GROUP,
   settingsGroup,
+  undoProposal,
   userVisibleChannels,
   WAITING_GROUP,
 } from "@agenteschat/engine";
@@ -92,6 +97,10 @@ const Memory = z
       .optional()
       .openapi({ description: "A `rule` the viewer may remove: its giver, the agent's owner or an admin." }),
     channelId: z.uuid().nullable().optional().openapi({ description: "Where it was learned." }),
+    onlyYou: z.boolean().optional().openapi({
+      description:
+        "Kept for the viewer alone: a preference of theirs, or learned in a DM. Else everyone who reads `channelId` sees it.",
+    }),
     updatedAt: z.string(),
     from: z
       .object({
@@ -189,12 +198,18 @@ const Proposal = z
     ),
     before: z.string().openapi({ description: "`agent_role`: the role then; `agent_access`: empty." }),
     after: z.string(),
-    status: z.enum(["pending", "accepted", "refused"]),
+    status: z.enum(["pending", "accepted", "refused", "undone"]).openapi({
+      description:
+        "`pending`: the agent's review hasn't weighed it yet (ADR 0219); `undone`: applied, then put back (`undoneBy`).",
+    }),
     stale: z
       .boolean()
       .openapi({ description: "What it was made against changed since (or its agent left); it can't be accepted." }),
     decider: z.union([
-      z.object({ type: z.literal("user"), userId: z.string(), name: z.string() }),
+      z.object({ type: z.literal("user"), userId: z.string(), name: z.string() }).openapi({
+        description:
+          "The agent's owner, besides who manages it: its instructions, role and skills (who edits it decides them, ADR 0085 addendum of 2026-11-17), or access it only loses.",
+      }),
       z.object({ type: z.literal("admins") }),
       z
         .object({ type: z.literal("account_owner") })
@@ -203,6 +218,23 @@ const Proposal = z
     canDecide: z.boolean(),
     createdAt: z.string(),
     decidedBy: z.object({ userId: z.string(), name: z.string() }).nullable(),
+    decidedByAgent: z
+      .object({ agentId: z.string(), name: z.string() })
+      .nullable()
+      .openapi({ description: "The agent whose review applied it or left it out (ADR 0219); null when a person did." }),
+    review: z.string().nullable().openapi({
+      description:
+        "The review's line, in the language of the text it changes: why it was applied or left out. Null when a person decided it.",
+    }),
+    reviewed: z.boolean().openapi({
+      description:
+        "Decided by the review, not a person (`decidedByAgent` may still be null for a workspace-wide lesson).",
+    }),
+    undoable: z.boolean().openapi({
+      description: "Applied, and the viewer may put it back (`POST …/proposals/{id}/undo`).",
+    }),
+    undoneBy: z.object({ userId: z.string(), name: z.string() }).nullable(),
+    undoneAt: z.string().nullable(),
     decidedAt: z.string().nullable(),
   })
   .openapi("Proposal");
@@ -239,11 +271,13 @@ async function memoryViews(db: Database, items: ContextItem[], visible: readonly
   const channelIds = [...new Set(items.flatMap((i) => i.channelIds))];
   const channels = channelIds.length
     ? await db
-        .select({ id: schema.channels.id, name: schema.channels.name })
+        .select({ id: schema.channels.id, name: schema.channels.name, dmKey: schema.channels.dmKey })
         .from(schema.channels)
         .where(inArray(schema.channels.id, channelIds))
     : [];
   const channelName = new Map(channels.map((c) => [c.id, c.name]));
+  // A DM with one person in it (theirs with an agent): only they read what came from it.
+  const ownDms = new Set(channels.filter((c) => c.dmKey && dmPeople(c.dmKey).length === 1).map((c) => c.id));
   const replaced = await db
     .select({
       supersededBy: schema.contextItems.supersededBy,
@@ -314,6 +348,8 @@ async function memoryViews(db: Database, items: ContextItem[], visible: readonly
       playbook: isPlaybook(i),
       disputed: i.disputed,
       channelId: i.channelIds[0] ?? null,
+      // Kept for one person (a preference, or what came from a DM): the viewer's, since nobody else lists it.
+      onlyYou: i.scopeType === "person" || (i.channelIds.length > 0 && i.channelIds.every((id) => ownDms.has(id))),
       updatedAt: i.updatedAt.toISOString(),
     };
   });
@@ -382,8 +418,10 @@ const beforeOf = (diff: string) =>
     .map((l) => l.slice(1))
     .join("\n");
 
-async function proposalViews(db: Database, rows: (ProposalRow & { canDecide: boolean })[]) {
-  const agentIds = [...new Set(rows.flatMap((r) => (r.agentId ? [r.agentId] : [])))];
+async function proposalViews(db: Database, rows: (ProposalRow & { canDecide: boolean; undoable: boolean })[]) {
+  const agentIds = [
+    ...new Set(rows.flatMap((r) => [r.agentId, r.decidedByAgentId].filter((id): id is string => !!id))),
+  ];
   const agents = agentIds.length
     ? await db.select().from(schema.agents).where(inArray(schema.agents.id, agentIds))
     : [];
@@ -392,6 +430,7 @@ async function proposalViews(db: Database, rows: (ProposalRow & { canDecide: boo
     ...new Set([
       ...agents.flatMap((a) => (a.ownerUserId ? [a.ownerUserId] : [])),
       ...rows.flatMap((r) => (r.decidedByUserId ? [r.decidedByUserId] : [])),
+      ...rows.flatMap((r) => (r.undoneByUserId ? [r.undoneByUserId] : [])),
       ...rows.flatMap((r) => (r.requestedByUserId ? [r.requestedByUserId] : [])),
     ]),
   ];
@@ -473,10 +512,14 @@ async function proposalViews(db: Database, rows: (ProposalRow & { canDecide: boo
           ? ("accepted" as const)
           : r.status === "pending"
             ? ("pending" as const)
-            : ("refused" as const),
+            : r.status === "undone"
+              ? ("undone" as const)
+              : ("refused" as const),
       stale: r.status === "stale",
+      // Its owner decides it beside who manages it (`ownerDecides`), or as who edits it (`editorDecides`, ADR 0085
+      // addendum of 2026-11-17): the apps name them.
       decider:
-        ownerDecides(r) && owner
+        (ownerDecides(r) || editorDecides(r)) && owner
           ? { type: "user" as const, userId: owner, name: users.get(owner) ?? "" }
           : r.target === "agent_settings" && settingsGroup(r) === "account"
             ? { type: "account_owner" as const }
@@ -484,6 +527,14 @@ async function proposalViews(db: Database, rows: (ProposalRow & { canDecide: boo
       canDecide: r.canDecide,
       createdAt: r.createdAt.toISOString(),
       decidedBy: r.decidedByUserId ? { userId: r.decidedByUserId, name: users.get(r.decidedByUserId) ?? "" } : null,
+      decidedByAgent: r.decidedByAgentId
+        ? { agentId: r.decidedByAgentId, name: agentById.get(r.decidedByAgentId)?.name ?? "" }
+        : null,
+      review: r.review,
+      reviewed: !r.decidedByUserId && !!r.decidedAt,
+      undoable: r.undoable,
+      undoneBy: r.undoneByUserId ? { userId: r.undoneByUserId, name: users.get(r.undoneByUserId) ?? "" } : null,
+      undoneAt: r.undoneAt ? r.undoneAt.toISOString() : null,
       decidedAt: r.decidedAt ? r.decidedAt.toISOString() : null,
     };
   });
@@ -549,7 +600,7 @@ export function memoryRoutes(deps: AppDeps) {
       const membership = await requirePermission(db, userId, orgId, "read");
       const agent = await getAgent(db, orgId, agentId);
       if (!agent) throw new NotFoundError("Agent not found");
-      if (!can(membership, "review_memory") && agent.ownerUserId !== userId)
+      if (!can(membership, "review_memory") && !ownsAgent(agent, userId, membership.roleIds))
         throw new ForbiddenError("Only the agent's owner or who reviews memory sees this");
       return c.json(await memoryScorecard(db, orgId, agentId, c.req.valid("query").days ?? 7), 200);
     },
@@ -636,6 +687,24 @@ export function memoryRoutes(deps: AppDeps) {
       );
       const views = await memoryViews(db, about, visible);
       return c.json({ memories: views.map((v) => ({ ...v, from: mine.get(v.id) ?? null })) }, 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/right-hand/forget-learned",
+      tags,
+      security,
+      summary: "Forget all the right hand learned from me on its own",
+      description:
+        "Deletes, for good, what the right hand learned or saved on its own for me alone (my preferences, what came from my DM with it). What I asked it to remember stays, and so does what it learned in a channel (that channel's).",
+      request: { params: OrgParams },
+      responses: { 200: json(z.object({ forgotten: z.number().int() })), ...errors },
+    }),
+    async (c) => {
+      const forgotten = await forgetRightHandLearned(db, c.get("user").id, c.req.valid("param").orgId);
+      return c.json({ forgotten }, 200);
     },
   );
 
@@ -752,6 +821,34 @@ export function memoryRoutes(deps: AppDeps) {
       const { orgId, proposalId } = c.req.valid("param");
       const actorId = c.get("user").id;
       await askProposal({ db, pubsub: deps.adapters.pubsub }, actorId, orgId, proposalId);
+      const [row] = await listProposals(db, actorId, orgId, { ids: [proposalId] });
+      if (!row) throw new NotFoundError("Proposal not found");
+      const [view] = await proposalViews(db, [row]);
+      return c.json(view, 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/proposals/{proposalId}/undo",
+      tags,
+      security,
+      summary: "Put back a change an agent applied (Desfazer, ADR 0219)",
+      description:
+        "By whoever may make that change on the agent's page (403 `proposal.not_allowed`), applied through the same editors as you. 409 `proposal.changed` when it changed since it was applied, `proposal.undone` when already put back, `proposal.not_applied` when it was never applied, `proposal.not_undoable` for a deleted agent. The agent that proposed it learns not to make it again; a lesson that had become a rule goes back to memory.",
+      request: { params: OrgParams.extend({ proposalId: z.uuid() }) },
+      responses: { 200: json(Proposal), ...errors },
+    }),
+    async (c) => {
+      const { orgId, proposalId } = c.req.valid("param");
+      const actorId = c.get("user").id;
+      await undoProposal(
+        { db, pubsub: deps.adapters.pubsub, blobs: deps.extras?.artifacts?.blobs },
+        actorId,
+        orgId,
+        proposalId,
+      );
       const [row] = await listProposals(db, actorId, orgId, { ids: [proposalId] });
       if (!row) throw new NotFoundError("Proposal not found");
       const [view] = await proposalViews(db, [row]);

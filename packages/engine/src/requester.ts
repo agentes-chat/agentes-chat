@@ -7,12 +7,13 @@ import {
   type RunAuthority,
   runAuthority,
   runAuthorityById,
+  transcriptKeys,
 } from "./authority";
 import type { Audience } from "./task-access";
 import type { ToolContext } from "./tools/types";
 import type { WikiActor } from "./wiki";
 
-const { agentRuns, users } = schema;
+const { agentRuns, messages, users } = schema;
 
 /**
  * The person a tool call acts for (ADR 0053): the person behind its run (`authority.ts`), or null when
@@ -30,13 +31,35 @@ export async function personBehindCall(
           orgId: agentRuns.orgId,
           triggerMessageId: agentRuns.triggerMessageId,
           background: agentRuns.background,
-          transcript: agentRuns.transcript,
+          transcript: transcriptKeys("steeredBy"),
         })
         .from(agentRuns)
         .where(and(eq(agentRuns.orgId, ctx.orgId), eq(agentRuns.id, ctx.runId)))
     : [];
   if (run) return (await runAuthority(ctx.db, run)).personId;
   return ctx.triggerMessageId ? personOfMessage(ctx.db, ctx.orgId, ctx.triggerMessageId) : null;
+}
+
+/**
+ * Who wrote the message this run answers, when a person did in their own words: one sent through an AI app carries
+ * `meta.readOutside` and counts as outside content (ADR 0119).
+ */
+export async function triggerPerson(
+  ctx: Pick<ToolContext, "orgId" | "triggerMessageId"> & { db: Executor },
+): Promise<{ id: string; body: string } | null> {
+  const [m] = await ctx.db
+    .select({ type: messages.authorType, userId: messages.authorUserId, meta: messages.meta, body: messages.body })
+    .from(messages)
+    .where(and(eq(messages.orgId, ctx.orgId), eq(messages.id, ctx.triggerMessageId)));
+  return m?.type === "person" && m.meta.readOutside !== true && m.userId ? { id: m.userId, body: m.body } : null;
+}
+
+/** The message this run answers is the own words of the person it works for: what a rule or Push harder needs. */
+export async function askedInOwnWords(
+  ctx: Pick<ToolContext, "orgId" | "runId" | "triggerMessageId"> & { db: Executor },
+) {
+  const [author, person] = await Promise.all([triggerPerson(ctx), personBehindCall(ctx)]);
+  return author !== null && author.id === person;
 }
 
 /** The person's language for the lines written for them (a template's text, the weekly check's name). */

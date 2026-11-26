@@ -52,8 +52,11 @@ export function InvitationSheet({
   // Toasts wait for the sheet to go: they'd sit under its modal. Awaited, not `mutate`'s callbacks, which an unmounted
   // sheet would never run.
   const copy = async () => {
-    if (!url || !(await copyText(url))) return;
+    if (!url) return;
+    const ok = await copyText(url);
     sheet.close();
+    // A copy the system refused says so: a button that does nothing leaves the person guessing.
+    if (!ok) return toast({ title: t("mobile.app.failed"), icon: "x" });
     successHaptic();
     toast({ title: t(`members.invitations.${words.copied}`, { email }) });
   };
@@ -137,7 +140,7 @@ export function InvitationSheet({
       key: "again",
       icon: "send",
       label: emails ? t("mobile.invitePeople.sendAgain") : t("members.invitations.renew"),
-      disabled: resent || resend.isPending,
+      disabled: (resent && !inv.undelivered) || resend.isPending,
       onPress: () => void sendAgain(),
     },
     {

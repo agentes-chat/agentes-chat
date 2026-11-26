@@ -1,6 +1,5 @@
 import {
   type ComputerDevice,
-  type DeviceAudience,
   type PhoneDevice,
   useIphoneDevMode,
   useLookForPhones,
@@ -33,7 +32,6 @@ import {
   phoneLine,
   RUNNER_UPDATE_COMMAND,
   reasonText,
-  type StepState,
   tooOldVersion,
   useIphoneRestart,
   useStalled,
@@ -76,7 +74,8 @@ import { useToast } from "@/lib/toast";
 import { FlowFooter, type FlowProps } from "./flow";
 import { DevicePortrait } from "./parts";
 import { useDevices, useUpdatePhone, useWifiPairing } from "./queries";
-import { WhoPicker, WhoSelect } from "./WhoCanUse";
+import { ShareSwitch } from "./ShareSwitch";
+import { Step } from "./Step";
 
 /**
  * The iPhones on a Mac's Wi-Fi that already trust it, offered to who may manage the Mac: "Also on this Mac's Wi-Fi:
@@ -127,64 +126,6 @@ export function WifiIphoneOffer({ host, card = false }: { host: ComputerDevice; 
 
 /** While a phone flow is open, the list is asked every 2 s too: the phone may show up between events. */
 const PHONE_POLL_MS = 2000;
-
-/**
- * One step of a live checklist: its mark (a tick, the live orbit, an alert, or its number), title, one line, extras.
- * `open` given: the step folds to its title when not open, and its title opens it (`onOpen`); a done step shows its
- * extras when open. Without it, a done step hides them. `live`: the current step's mark spins (the computer watches).
- */
-function Step({
-  state,
-  title,
-  text,
-  children,
-  live = true,
-  open,
-  onOpen,
-}: {
-  state: StepState;
-  title: ReactNode;
-  text?: ReactNode;
-  children?: ReactNode;
-  live?: boolean;
-  open?: boolean;
-  onOpen?: () => void;
-}) {
-  const shut = open === false;
-  return (
-    <li
-      className="dv-step"
-      data-state={state}
-      data-shut={shut ? "" : undefined}
-      aria-current={state === "current" ? "step" : undefined}
-    >
-      <span className="dv-step__mark" aria-hidden="true">
-        {state === "done" ? (
-          <Icon name="check" size={14} />
-        ) : state === "current" && live ? (
-          <PixelSpinner size={14} />
-        ) : state === "needs" ? (
-          <Icon name="alert" size={14} />
-        ) : null}
-      </span>
-      <div className="dv-step__head">
-        {shut && onOpen ? (
-          <button type="button" className="dv-step__title dv-step__open" aria-expanded="false" onClick={onOpen}>
-            {title}
-          </button>
-        ) : (
-          <p className="dv-step__title">{title}</p>
-        )}
-        {text && !shut && (
-          <p className="dv-step__text" role={state === "current" ? "status" : undefined}>
-            {text}
-          </p>
-        )}
-      </div>
-      {children && !shut && (open || state !== "done") && <div className="dv-step__more">{children}</div>}
-    </li>
-  );
-}
 
 /** A tiny drawing of the phone's own setting row, the row to find ringed: a tap count or its switch. */
 function SettingRowDrawing({ title, sub, taps }: { title: string; sub: string; taps?: number }) {
@@ -710,28 +651,25 @@ export function AndroidFlow({
   );
 }
 
-/** The phone showed up ready: its portrait and facts, its name and who can use it, saved on Done. */
+/**
+ * The phone showed up ready: its portrait and facts, whether the whole workspace may use it (saved at once), and its
+ * name, saved on Done.
+ */
 function PhoneConnected({ phone, host, onClose }: { phone: PhoneDevice; host: ComputerDevice; onClose: () => void }) {
   const { t } = useTranslation();
-  const { org, me } = useOrg();
+  const { org } = useOrg();
   const toast = useToast();
   const update = useUpdatePhone(org.id);
   const [name, setName] = useState(phone.name);
-  const [audience, setAudience] = useState<DeviceAudience>(
-    () => phone.audience ?? { mode: "owner", userIds: [], roleIds: [] },
-  );
-  const follows = phone.audience === null;
+  // Read from the list, which the switch's save patches at once; an iPhone follows its Mac's rule (null): no switch.
+  const audience = useDevices(org.id)
+    .data?.devices.flatMap((d) => d.phones)
+    .find((p) => p.id === phone.id)?.audience;
+  const failed = (err: unknown) => toast.show(errorText(t, err), "error");
   const done = () => {
     const clean = name.trim();
-    const input = {
-      ...(clean && clean !== phone.name ? { name: clean } : {}),
-      ...(!follows ? { audience } : {}),
-    };
-    if (Object.keys(input).length === 0) return onClose();
-    update.mutate(
-      { id: phone.id, ...input },
-      { onSuccess: onClose, onError: (err) => toast.show(errorText(t, err), "error") },
-    );
+    if (!clean || clean === phone.name) return onClose();
+    update.mutate({ id: phone.id, name: clean }, { onSuccess: onClose, onError: failed });
   };
   return (
     <>
@@ -747,17 +685,14 @@ function PhoneConnected({ phone, host, onClose }: { phone: PhoneDevice; host: Co
           <Field label={t("devices.name")} id="dv-phone-name" example={t("devices.nameHelp")}>
             <Input value={name} maxLength={80} onChange={(e) => setName(e.target.value)} />
           </Field>
-          {!follows && (
-            <>
-              <Field
-                label={t("devices.who.title")}
-                id="dv-phone-who"
-                example={t("devices.who.phoneHint", { host: host.name })}
-              >
-                <WhoSelect value={audience} onChange={setAudience} />
-              </Field>
-              <WhoPicker value={audience} onChange={setAudience} ownerUserId={me.user.id} idPrefix="dv-phone" />
-            </>
+          {audience && phone.mayManage && (
+            <ShareSwitch
+              id="dv-phone-share"
+              audience={audience}
+              saving={update.isPending}
+              hint={t("devices.who.phoneHint", { host: host.name })}
+              onChange={(next) => update.mutate({ id: phone.id, audience: next }, { onError: failed })}
+            />
           )}
         </DialogBody>
       </Locked>
@@ -1106,11 +1041,13 @@ export function IphoneFlow({
     uiAutomation:
       reason === "ui_not_authorized" ? t("devices.iphone.uiRefusedText") : t("devices.iphone.uiAutomationText"),
     helper:
-      reason === "helper_untrusted"
-        ? t("devices.iphone.helperUntrustedText")
-        : reason === "team_limit"
-          ? t("devices.iphone.teamLimitText")
-          : t("devices.iphone.helperText"),
+      reason === "ios_behind_xcode" && phone?.osVersion && sdk
+        ? t("devices.iphone.iosBehind", { ios: phone.osVersion, sdk })
+        : reason === "helper_untrusted"
+          ? t("devices.iphone.helperUntrustedText")
+          : reason === "team_limit"
+            ? t("devices.iphone.teamLimitText")
+            : t("devices.iphone.helperText"),
   };
   const more: Partial<Record<IphoneStep, ReactNode>> = {
     xcode:

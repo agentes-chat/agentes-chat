@@ -1,4 +1,11 @@
-import { BILLING_HOLDS, getOrgLimits, publishOrgEvent, setBillingHold, setOrgLimits } from "@agenteschat/engine";
+import {
+  BILLING_HOLDS,
+  getOrgLimits,
+  instanceStoredBytes,
+  publishOrgEvent,
+  setBillingHold,
+  setOrgLimits,
+} from "@agenteschat/engine";
 import { createRoute, type OpenAPIHono, z } from "@hono/zod-openapi";
 import { apiError, errorResponse } from "../http/errors";
 import { body, iso, json, OrgParams } from "../routes/app/context";
@@ -30,7 +37,8 @@ const BillingHoldResult = z
 export const Limits = z
   .object({
     members: z.number().int().min(1).max(100_000).nullable().openapi({
-      description: "People in it, blocked accounts included; agents, invitations and requests to join never count.",
+      description:
+        "People in it, blocked accounts included; agents, invitations, requests to join and outside collaborators (ADR 0191) never count.",
     }),
     membersMax: z.number().int().min(1).max(100_000).nullable().default(null).openapi({
       description:
@@ -53,6 +61,10 @@ export const Limits = z
     platformUsdPerMonth: z.number().min(0).max(100_000).nullable().openapi({
       description:
         "What the platform's own AI (Jev) may cost for it in a UTC calendar month, in US$. Past it, Jev's judgments go to the workspace's own model and only @mentions start agents.",
+    }),
+    connectorUsdPerMonth: z.number().min(0).max(100_000).nullable().default(null).openapi({
+      description:
+        "What vendors that bill this server per call (X) may charge for it in a UTC calendar month, in US$, as estimated from their price lists. A call that could take it past is refused (`connector.capped`), with nothing done. Null (or left out): no limit.",
     }),
   })
   .openapi("OperatorLimits", { description: "Null: no limit. A self-hosted server never sets any." });
@@ -77,8 +89,28 @@ export const Meters = z
     platformUsdThisMonth: z
       .number()
       .openapi({ description: "Usage billed to the platform (Jev) this UTC calendar month, in US$." }),
+    connectorUsdThisMonth: z.number().openapi({
+      description:
+        "What vendors that bill per call (X) charged for its connector calls this UTC calendar month, in US$.",
+    }),
   })
   .openapi("OperatorMeters");
+
+const StorageTotal = z
+  .object({
+    storageBytes: z.number().int().openapi({
+      description:
+        "The sum of `meters.storageBytes` over the workspaces that keep their files on this server's storage.",
+    }),
+    workspaces: z
+      .number()
+      .int()
+      .openapi({ description: "How many workspaces it is the sum of: those with at least one byte counted." }),
+    ownStorageWorkspaces: z.number().int().openapi({
+      description: "How many workspaces keep their files in a bucket of their own (`meters.ownStorage`): left out.",
+    }),
+  })
+  .openapi("OperatorStorageTotal");
 
 /** The limits in the API's shape. */
 export const limitsJson = ({ updatedAt, ...limits }: z.infer<typeof Limits> & { updatedAt: Date | null }) => ({
@@ -86,7 +118,10 @@ export const limitsJson = ({ updatedAt, ...limits }: z.infer<typeof Limits> & { 
   updatedAt: iso(updatedAt),
 });
 
-/** Billing holds and limits (ADR 0079): what a billing service applies, knowing plans this server never does. */
+/**
+ * Billing holds and limits (ADR 0079): what a billing service applies, knowing plans this server never does. With
+ * them, the storage meter summed for the whole instance.
+ */
 export function registerOperatorLimits(api: OpenAPIHono, { db, pubsub, hub }: OperatorDeps) {
   api.openapi(
     createRoute({
@@ -113,7 +148,7 @@ export function registerOperatorLimits(api: OpenAPIHono, { db, pubsub, hub }: Op
       tags,
       summary: "Set a workspace's limits",
       description:
-        "All at once. Enforced where each is used: joining and inviting (`org.members_full`), every file written to this server's storage (`storage.full`, `storage.daily_full`), the platform's AI (within a minute). Lowering one takes nothing away: people stay, files stay, only what is new is refused. Allowed whatever the workspace's standing. Setting what is already set changes nothing, `updatedAt` included.",
+        "All at once. Enforced where each is used: joining and inviting (`org.members_full`), every file written to this server's storage (`storage.full`, `storage.daily_full`), the platform's AI (within a minute), each paid connector call (`connector.capped`). Lowering one takes nothing away: people stay, files stay, only what is new is refused. Allowed whatever the workspace's standing. Setting what is already set changes nothing, `updatedAt` included.",
       request: { params: OrgParams, body: body(Limits) },
       responses: { 200: json(LimitsState), ...errors },
     }),
@@ -129,5 +164,18 @@ export function registerOperatorLimits(api: OpenAPIHono, { db, pubsub, hub }: Op
       }
       return c.json(limitsJson(limits), 200);
     },
+  );
+
+  api.openapi(
+    createRoute({
+      method: "get",
+      path: "/storage",
+      tags,
+      summary: "The bytes of files the whole instance keeps on this server's storage",
+      description:
+        "A workspace's `meters.storageBytes` (`GET /orgs/{orgId}`), summed over every workspace whose new files go to this server's storage: each version kept of the Drive's files, the skills' stored files, the voice recordings still kept and live files' pictures and documents, by the size each recorded when it was written. Left out: files in the trash, and a workspace that keeps its files in a bucket of its own, with whatever it still has on this server. Every file's row is read to answer it, and a read that runs too long ends in an error.",
+      responses: { 200: json(StorageTotal), 401: errors[401] },
+    }),
+    async (c) => c.json(await instanceStoredBytes(db), 200),
   );
 }

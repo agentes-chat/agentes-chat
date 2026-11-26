@@ -1,9 +1,14 @@
 import { createHash } from "node:crypto";
-import type { BlobStore } from "@agenteschat/adapters";
+import type { BlobStore, PubSub } from "@agenteschat/adapters";
 import { and, type Database, eq, schema, sql } from "@agenteschat/db";
-import { recordAudit } from "./audit";
+import { isAccentHex } from "@agenteschat/tokens/accent";
+import { contrastOf } from "@agenteschat/ui/agent/engine";
+import { LIGHT_INK, LOGO_PLATES } from "@agenteschat/ui/org-logo";
+import { type AuditEntry, recordAudit } from "./audit";
 import { caches } from "./cache";
 import { NotFoundError, ValidationError } from "./errors";
+import { publishOrgEvent } from "./events";
+import { decodePng } from "./office/pdf-images";
 import { getMembership, invitedOrgId, requirePermission } from "./organizations";
 
 const { users, organizationMembers, organizations } = schema;
@@ -109,7 +114,7 @@ export const PORTRAIT_CODE = /^1(\.[A-Za-z0-9]{1,24}){1,48}$/;
  * An uploaded image (base64): JPEG, PNG or WebP up to 2 MB, checked by its
  * bytes, without metadata; named by a hash of its content.
  */
-function readImage(input: { imageBase64: string; contentType: string }, code: "avatar" | "logo") {
+export function readImage(input: { imageBase64: string; contentType: string }, code: "avatar" | "logo" | "wallpaper") {
   const clean = input.imageBase64.replace(/^data:[^;]+;base64,/, "").replace(/\s+/g, "");
   if (!/^[A-Za-z0-9+/]*={0,2}$/.test(clean)) throw new ValidationError("The image isn't base64", `${code}.not_base64`);
   const bytes = new Uint8Array(Buffer.from(clean, "base64"));
@@ -123,6 +128,30 @@ function readImage(input: { imageBase64: string; contentType: string }, code: "a
   const body = stripImageMetadata(bytes, type);
   const file = `${createHash("sha256").update(body).digest("hex").slice(0, 16)}.${TYPES[type]}`;
   return { body, type, file };
+}
+
+/**
+ * `LIGHT_INK` for a PNG logo whose see-through background (a tenth of it or more) carries light ink: the mean color of
+ * what shows reads better on the dark plate than on the white one. "" for any other logo (a JPEG or WebP, opaque or
+ * dark ink, or past 4 million pixels), which gets the white plate.
+ */
+export function logoInk(body: Uint8Array, type: string): string {
+  // A 4:1 wordmark at 4096×1024 at most: past that, the white plate, rather than a big decode on an upload.
+  const png = type === "image/png" ? decodePng(body, 4096 * 1024) : null;
+  if (!png?.transparent) return "";
+  let clear = 0;
+  let shown = 0;
+  const sum = [0, 0, 0];
+  for (let i = 0; i < png.alpha.length; i++) {
+    const a = png.alpha[i] as number;
+    if (a < 128) clear++;
+    shown += a;
+    for (let k = 0; k < 3; k++) sum[k] = (sum[k] as number) + a * (png.rgb[i * 3 + k] as number);
+  }
+  if (clear * 10 < png.alpha.length || shown === 0) return "";
+  const [r, g, b] = sum.map((c) => Math.round(c / shown)) as [number, number, number];
+  const ink = `#${((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1)}`;
+  return contrastOf(ink, LOGO_PLATES.lightInk) > contrastOf(ink, LOGO_PLATES.darkInk) ? LIGHT_INK : "";
 }
 
 /**
@@ -195,56 +224,104 @@ export async function avatarFile(
 
 // ── The workspace logo ───────────────────────────────────────────────────────
 
-const LOGO_PATH = /^\/api\/app\/org-logos\/([^/]+)\/([0-9a-f]{16}\.(jpg|png|webp))$/;
+/** A logo's address; a light-ink one ends with `LIGHT_INK`, which no request carries. */
+const LOGO_PATH = new RegExp(`^/api/app/org-logos/([^/]+)/([0-9a-f]{16}\\.(jpg|png|webp))(${LIGHT_INK})?$`);
 
 /**
- * Sets the workspace logo (`PUT …/organizations/{orgId}/logo`): an admin
- * (`configure`); same checks as a photo; stored in the platform bucket and
- * served to the org's members by `GET /api/app/org-logos/{orgId}/{file}`.
- * The app crops it square (512×512) before sending. Audited.
+ * Who changes a workspace's look: a person, who needs `configure`, or null for the server's operator (the operator
+ * API, ADR 0193), recorded as the system. Returns the logo before the change.
+ */
+async function lookBefore(db: Database, actorId: string | null, orgId: string) {
+  if (actorId) await requirePermission(db, actorId, orgId, "configure");
+  const [before] = await db
+    .select({ logo: organizations.logo, accent: organizations.accent })
+    .from(organizations)
+    .where(eq(organizations.id, orgId));
+  if (!before) throw new NotFoundError("No workspace with this id");
+  return before;
+}
+
+const lookActor = (actorId: string | null): AuditEntry["actor"] =>
+  actorId ? { type: "person", id: actorId } : { type: "system", id: null };
+
+/** The workspace's logo or accent changed: its members' open apps read `GET /me` again and repaint. */
+const announceLook = (pubsub: PubSub | undefined, orgId: string) =>
+  publishOrgEvent(pubsub, { type: "org.broadcast", orgId, event: { type: "org.look", orgId } });
+
+/**
+ * Sets the workspace logo (`PUT …/organizations/{orgId}/logo`, or the operator's `PUT /orgs/{orgId}/look`): an admin
+ * (`configure`) or the operator (`actorId` null); same checks as a photo; stored in the platform bucket and
+ * served to the org's members by `GET /api/app/org-logos/{orgId}/{file}`, at an address marked when its ink is light
+ * (`logoInk`). It may arrive uncropped (a wordmark), so the apps draw it whole. Audited.
  */
 export async function setOrgLogo(
-  deps: { db: Database; blobs: BlobStore },
-  actorId: string,
+  deps: { db: Database; blobs: BlobStore; pubsub?: PubSub },
+  actorId: string | null,
   orgId: string,
   input: { imageBase64: string; contentType: string },
 ): Promise<{ logo: string }> {
-  await requirePermission(deps.db, actorId, orgId, "configure");
+  const before = await lookBefore(deps.db, actorId, orgId);
   const { body, type, file } = readImage(input, "logo");
   await deps.blobs.put(`org-logos/${orgId}/${file}`, body, { contentType: type });
-  const [before] = await deps.db
-    .select({ logo: organizations.logo })
-    .from(organizations)
-    .where(eq(organizations.id, orgId));
-  const logo = `/api/app/org-logos/${encodeURIComponent(orgId)}/${file}`;
+  const logo = `/api/app/org-logos/${encodeURIComponent(orgId)}/${file}${logoInk(body, type)}`;
   await deps.db.update(organizations).set({ logo }).where(eq(organizations.id, orgId));
   caches.orgs.delete(`${orgId}:`);
-  await removeStoredLogo(deps.blobs, orgId, before?.logo, file);
+  await removeStoredLogo(deps.blobs, orgId, before.logo, file);
   await recordAudit(deps.db, {
     orgId,
-    actor: { type: "person", id: actorId },
+    actor: lookActor(actorId),
     action: "organization.logo_changed",
     target: { type: "organization", id: orgId },
   });
+  await announceLook(deps.pubsub, orgId);
   return { logo };
 }
 
 /** Removes the workspace logo (`DELETE …/organizations/{orgId}/logo`): back to the agent mark. Audited. */
-export async function removeOrgLogo(deps: { db: Database; blobs: BlobStore }, actorId: string, orgId: string) {
-  await requirePermission(deps.db, actorId, orgId, "configure");
-  const [before] = await deps.db
-    .select({ logo: organizations.logo })
-    .from(organizations)
-    .where(eq(organizations.id, orgId));
+export async function removeOrgLogo(
+  deps: { db: Database; blobs: BlobStore; pubsub?: PubSub },
+  actorId: string | null,
+  orgId: string,
+) {
+  const before = await lookBefore(deps.db, actorId, orgId);
   await deps.db.update(organizations).set({ logo: null }).where(eq(organizations.id, orgId));
   caches.orgs.delete(`${orgId}:`);
-  await removeStoredLogo(deps.blobs, orgId, before?.logo, null);
+  await removeStoredLogo(deps.blobs, orgId, before.logo, null);
   await recordAudit(deps.db, {
     orgId,
-    actor: { type: "person", id: actorId },
+    actor: lookActor(actorId),
     action: "organization.logo_removed",
     target: { type: "organization", id: orgId },
   });
+  await announceLook(deps.pubsub, orgId);
+}
+
+/**
+ * Sets the workspace's accent (`PUT …/organizations/{orgId}/accent`, or the operator's look), a "#rrggbb" stored in
+ * lower case, or null for the default (ADR 0193). Same who-may as the logo. Audited with the old and new values when
+ * it changes.
+ */
+export async function setOrgAccent(
+  deps: { db: Database; pubsub?: PubSub },
+  actorId: string | null,
+  orgId: string,
+  accent: string | null,
+): Promise<{ accent: string | null }> {
+  if (accent !== null && !isAccentHex(accent)) throw new ValidationError("accent must be a #rrggbb color");
+  const next = accent?.toLowerCase() ?? null;
+  const before = await lookBefore(deps.db, actorId, orgId);
+  if (before.accent === next) return { accent: next };
+  await deps.db.update(organizations).set({ accent: next }).where(eq(organizations.id, orgId));
+  caches.orgs.delete(`${orgId}:`);
+  await recordAudit(deps.db, {
+    orgId,
+    actor: lookActor(actorId),
+    action: "organization.accent_changed",
+    target: { type: "organization", id: orgId },
+    details: { from: before.accent, to: next },
+  });
+  await announceLook(deps.pubsub, orgId);
+  return { accent: next };
 }
 
 async function removeStoredLogo(blobs: BlobStore, orgId: string, logo: string | null | undefined, keep: string | null) {
@@ -273,7 +350,7 @@ export async function orgLogoFile(
 /**
  * The organization's current logo, no person checked: for a connected computer (`GET /api/machines/org-logo`,
  * ADR 0036: the caller authenticated the machine token, and the machine belongs to `orgId`) and an invitation's
- * page (`invitationLogoFile`). Null without a logo. `file` (a content hash) doubles as the ETag.
+ * page (`invitationLogoFile`). Null without a logo. `file` is a content hash; `ink` is the address's light-ink mark or "".
  */
 export async function currentOrgLogo(deps: { db: Database; blobs: BlobStore }, orgId: string) {
   const [org] = await deps.db
@@ -284,7 +361,7 @@ export async function currentOrgLogo(deps: { db: Database; blobs: BlobStore }, o
   if (!m?.[2] || decodeURIComponent(m[1] ?? "") !== orgId) return null;
   const object = await deps.blobs.get(`org-logos/${orgId}/${m[2]}`);
   if (!object) return null;
-  return { file: m[2], ...object };
+  return { file: m[2], ink: m[4] ?? "", ...object };
 }
 
 /**

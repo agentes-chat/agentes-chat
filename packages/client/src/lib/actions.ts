@@ -81,7 +81,8 @@ export function actionTextValues(
   const fieldWords = (group: "issueFields" | "routineFields") =>
     fields.length
       ? joinNames(
-          fields.map((f) => t(`agentActions.${group}.${f}`, { defaultValue: f })),
+          // "assignees" is said with the words of "assignee": one field, whoever has it.
+          fields.map((f) => t(`agentActions.${group}.${f === "assignees" ? "assignee" : f}`, { defaultValue: f })),
           t,
         )
       : t("agentActions.someFields");
@@ -105,17 +106,20 @@ export function actionTextValues(
           v.priority = t(`issues.priorityLower.${str(p.priority)}`, { defaultValue: str(p.priority) });
         }
       }
-      const assigned = a.kind === "issue.assigned" || fields.includes("assignee");
+      // A server of several assignees names the field `assignees`.
+      const assigned = a.kind === "issue.assigned" || fields.includes("assignees") || fields.includes("assignee");
       if (assigned) {
-        // The server writes "person" for a member, "agent" for an agent.
-        const isViewer = viewerUserId && p.assigneeType === "person" && p.assigneeId === viewerUserId;
-        // To the agent itself, to the reader (each language's own "to you": "Te asigné"), or to nobody any more.
+        // Who was given it, by name (the server joins several; none when people only left it). A server of one
+        // assignee also says who it is, so the reader is told "you".
+        const isViewer = Boolean(viewerUserId) && p.assigneeType === "person" && str(p.assigneeId) === viewerUserId;
+        const named = str(p.assigneeName);
+        // To the agent itself, to the reader (each language's own "to you": "Te asigné"), or people only left it.
         if (a.kind === "issue.assigned") {
           if (p.assigneeIsSelf === true) v.context = "self";
           else if (isViewer) v.context = "you";
-          else if (!p.assigneeId) v.context = "none";
+          else if (!p.assigneeId && !named) v.context = "none";
         }
-        v.assignee = isViewer ? t("agentActions.you") : str(p.assigneeName) || t("agentActions.someone");
+        v.assignee = isViewer ? t("agentActions.you") : named || t("agentActions.someone");
       }
       return v;
     }
@@ -138,6 +142,12 @@ export function actionTextValues(
     }
     case "channel.agent_added":
       return { agentName: str(p.agentName), channel: str(p.channel) || a.target.title || "" };
+    case "channel.lead_changed": {
+      // Made itself responsible, another agent, or the channel left with none.
+      const channel = str(p.channel) || a.target.title || "";
+      if (!str(p.agentName)) return { channel, context: "none" };
+      return p.self === true ? { channel, context: "self" } : { agentName: str(p.agentName), channel };
+    }
     case "channel.created":
       return { name: str(p.name) || a.target.title || "" };
     case "wiki.page_created":
@@ -235,15 +245,17 @@ interface Blend {
 /**
  * The kinds whose changes blend into one row (`receiptRows`). The row says `agentActions.several.<kind>`, or the kind's
  * own sentence for a `slot`.
- * ponytail: a workspace change, a renamed conversation, a branch merge and a restricted page stay one row each, their
- * sentences saying more than a name. Give them `several` sentences once agents make many of them in one reply.
+ * ponytail: a workspace change, a renamed conversation, a channel's responsible agent, a branch merge and a restricted
+ * page stay one row each, their sentences saying more than a name. Give them `several` sentences once agents make many of them in one reply.
  */
 const BLENDS: Partial<Record<AgentActionKind, Blend>> = {
   "issue.created": { ref: hashed("number") },
   "issue.updated": { ref: hashed("number"), same: (a) => a.params.fields },
   "issue.assigned": {
     ref: hashed("number"),
-    same: (a) => [a.params.assigneeType ?? null, a.params.assigneeId ?? null],
+    // Who was given them: by id where the server says it, else by the names it wrote.
+    same: (a) =>
+      a.params.assigneeId ? [a.params.assigneeType ?? null, a.params.assigneeId] : (a.params.assigneeName ?? null),
     contexts: ["self", "you", "none"],
   },
   "memory.saved": {

@@ -6,6 +6,7 @@ import { zonedParts, zonedTime } from "./cron";
 import { type EmailLocale, emailLocale, modeStamp, queueEmail } from "./email";
 import { ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { publishChannelEvent, publishListChanged, publishMessageCreated, publishUserEvent } from "./events";
+import { assigneesOf } from "./issue-assignees";
 import { getOrgSettings } from "./management";
 import { insertMessage, messageView } from "./messages";
 import { can, requireActiveMembership, requirePermission } from "./organizations";
@@ -954,8 +955,6 @@ export async function calendarRange(deps: CalendarDeps, userId: string, orgId: s
       number: issues.number,
       title: issues.title,
       date: issues.dueDate,
-      assigneeType: issues.assigneeType,
-      assigneeId: issues.assigneeId,
     })
     .from(issues)
     .where(
@@ -968,16 +967,17 @@ export async function calendarRange(deps: CalendarDeps, userId: string, orgId: s
       ),
     )
     .orderBy(issues.dueDate, issues.number);
-  // Who has each task: the calendar opens its due date with their face.
+  // Who has each task: the calendar opens its due date with their faces.
+  const assignees = await assigneesOf(
+    db,
+    due.map((d) => d.id),
+  );
   const deadlines = due.map((d) => ({
     issueId: d.id,
     number: d.number,
     title: d.title,
     date: d.date ?? "",
-    assignee:
-      d.assigneeType && d.assigneeId
-        ? { type: d.assigneeType as CalendarActor["type"], id: d.assigneeId }
-        : (null as CalendarActor | null),
+    assignees: (assignees.get(d.id) ?? []) as CalendarActor[],
   }));
 
   const proposals = (
@@ -1071,6 +1071,7 @@ export async function proposeCalendarEvent(
     channelId: string;
     threadRootId: string;
     triggerMessageId: string;
+    replyInThread?: boolean;
   },
   input: {
     title: string;
@@ -1119,7 +1120,7 @@ export async function proposeCalendarEvent(
     const card = await insertMessage(tx, {
       orgId: run.orgId,
       channelId: run.channelId,
-      threadId: replyThreadOf(run),
+      threadId: replyThreadOf({ ...run, replyInThread: run.replyInThread === true }),
       author: { type: "agent", agentId: run.agentId, runId: run.runId, hop: 1 },
       body: `Event proposal: ${row.title}`,
       meta: {

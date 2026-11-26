@@ -3,20 +3,30 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { I18nextProvider } from "react-i18next";
 import "./styles.css";
-import { authConfigQuery, createApiClient, createSnapshot, keys, type Me, meQuery, outbox } from "@agenteschat/client";
+import {
+  authConfigQuery,
+  createApiClient,
+  createSnapshot,
+  instanceQuery,
+  keys,
+  type Me,
+  meQuery,
+  outbox,
+} from "@agenteschat/client";
 import { ErrorBoundary } from "@agenteschat/client/lib/error-boundary";
 import { errorText } from "@agenteschat/client/lib/errors";
-import { holdSkies, installTitleTips, trackInput } from "@agenteschat/ui";
+import { holdSkies, installTitleTips, trackInput, watchSight } from "@agenteschat/ui";
 import { AppProviders, type AppServices } from "./app/providers";
 import { createQueryClient } from "./app/query-client";
 import { backToSignIn } from "./app/unauthorized";
 import { createBetterAuthClient } from "./auth/better-auth";
 import { copyPillAddresses } from "./chat/link-pill-copy";
 import { ErrorScreen } from "./components/ErrorScreen";
+import { onUnknownHost, showUnknownHost } from "./components/UnknownHost";
 import { withComposerDraftsSignOut } from "./hooks/useComposerDraft";
-import { loadI18n, savedLocale, translateTabTitle } from "./i18n";
+import { brandTabTitle, loadI18n, savedLocale, translateTabTitle } from "./i18n";
 import { accountInLink, followAccountChanges, takeAccountMove, watchAccount, withoutAccount } from "./lib/accounts";
-import { startAppIcon } from "./lib/app-icon";
+import { showHostIcon, startAppIcon } from "./lib/app-icon";
 import {
   checkAppVersion,
   createVersionWatch,
@@ -43,15 +53,33 @@ import { snapshotStore } from "./lib/snapshot-store";
 import { installSounds } from "./lib/sounds";
 import { STORAGE_KEYS, sessionStore } from "./lib/storage";
 import { createToastStore } from "./lib/toast";
+import { startVitals } from "./lib/vitals";
 import { withWebPushSignOut } from "./lib/web-push";
 import { routeTree } from "./routeTree.gen";
 
+// A hostname the server doesn't answer for (ADR 0194): its one screen, and nothing else of the app starts there (no
+// session, router, socket, service worker or notifications).
+if (onUnknownHost()) {
+  const words = await loadI18n(savedLocale()).catch((error: unknown) => {
+    window.__agentesBootFailed?.();
+    throw error;
+  });
+  await showUnknownHost(words);
+}
 // Errors from the very start wait for the server to say where reports go (ADR 0104), asked before anything that can
 // fail to load (the locale's chunk): a boot that breaks is reported too.
 catchEarlyErrors();
 tolerateForeignDomEdits();
 const api = createApiClient();
 const authConfig = api.account.authConfig();
+// The session and the server's facts are asked now, beside the language's file, instead of after it, the snapshot
+// and the first route: each answer is a round trip the opening no longer waits for in turn. Not while the desktop app
+// moves this window to the account its address names (below): `me` is asked once that move is done.
+const earlyMe = accountInLink(window.location.search) && inDesktopApp() ? null : api.account.me();
+const earlyInstance = api.system.instance();
+// Handled here too: a failure before the cache takes them (offline) is the queries' to show, not an unhandled error.
+earlyMe?.catch(() => undefined);
+earlyInstance.catch(() => undefined);
 void authConfig.then(
   (config) => startErrorReports(config.errorReports ?? null),
   () => startErrorReports(null),
@@ -63,6 +91,15 @@ const i18n = await loadI18n(savedLocale()).catch((error: unknown) => {
 });
 document.documentElement.lang = i18n.language;
 translateTabTitle(i18n);
+// A registered host (ADR 0194): its name in the tabs' titles and its logo as their icon, on every page of it.
+void authConfig.then(
+  ({ host }) => {
+    if (!host) return;
+    brandTabTitle(host.name);
+    if (host.logoUrl) showHostIcon(host.logoUrl);
+  },
+  () => undefined,
+);
 // In the desktop app (ADR 0036): the site draws the window's title bar (desktop.css), with room for a Mac's
 // buttons only there; and "this Mac" is this computer's own name.
 const platform = desktopPlatform();
@@ -76,6 +113,9 @@ if (platform) {
   if (renderer) document.documentElement.dataset.desktopRenderer = renderer;
   if (renderer === "cpu") holdSkies();
 }
+// Nobody looking (hidden, in the background with the pointer elsewhere, or no input for a while): skies, agents and
+// the stylesheets' loops stand still (`data-sight`, ADR 0228).
+watchSight();
 // Focus rings only while the keys move the focus (`data-pointer` on <html>, read by the stylesheet).
 trackInput();
 // Every `title` and icon-only control says its words in the product's tooltip, not the browser's.
@@ -94,11 +134,18 @@ const queryClient = createQueryClient({
   describeError: (error) => errorText(i18n.t, error, i18n.language),
 });
 
+// How fast the app runs here, for its server (nobody's id): the opening, stalls, the heap, the reads after a return.
+startVitals(api, queryClient);
+
 // The answer above is the cache's: the sign-in guards don't ask again.
 void queryClient.prefetchQuery({ ...authConfigQuery(api), queryFn: () => authConfig });
+void queryClient.prefetchQuery({ ...instanceQuery(api), queryFn: () => earlyInstance });
+if (earlyMe) void queryClient.prefetchQuery({ ...meQuery(api), queryFn: () => earlyMe });
 
 // The last lists and chats saved on this device show at once; everything revalidates as usual.
-const snapshot = createSnapshot(queryClient, snapshotStore);
+// Saved at most every 30 s while things change (each save turns the kept lists into one string on this thread), and
+// in full whenever the tab is hidden or closed.
+const snapshot = createSnapshot(queryClient, snapshotStore, { saveAfterMs: 30_000 });
 snapshot.start();
 // Another of the browser's accounts took this tab (ADR 0183), by the workspace menu or by the address the desktop app
 // opened (`?as=`): what the one before saved or left waiting to send stays behind.
@@ -115,6 +162,7 @@ outbox.keep(queryClient, {
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden") void snapshot.flush();
 });
+window.addEventListener("pagehide", () => void snapshot.flush());
 /** Opening never waits longer than this for the snapshot (a slow disk loads from the server instead). */
 const SNAPSHOT_WAIT_MS = 300;
 
@@ -221,8 +269,8 @@ const restored = arrived
     // The saved `me` let the app open without asking: ask now (no session: sign-in, and the snapshot goes).
     if (!found) return;
     outbox.show(queryClient);
-    void queryClient
-      .fetchQuery({ ...meQuery(api), staleTime: 0 })
+    // The read started with the page answers it, when there was one.
+    void (earlyMe ?? queryClient.fetchQuery({ ...meQuery(api), staleTime: 0 }))
       .then((me) => {
         if (!me) onUnauthorized();
       })

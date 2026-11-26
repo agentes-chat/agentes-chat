@@ -23,6 +23,7 @@ import { CODEX_MCP_ENV, CODEX_MCP_SERVER, redactDeep } from "./mcp";
 import { resolveForAgent } from "./paths";
 import type { Spawn } from "./scope-gate";
 import { agentSecrets } from "./secrets";
+import { turnZoneEnv } from "./turn-zone";
 
 /**
  * The OpenCode branch of `brain.turn` (protocol 39, ADR 0132; over the Agent Client Protocol since protocol 64): one
@@ -79,6 +80,8 @@ export const OPENCODE_SILENCE_MS = 5 * 60_000;
 export interface OpencodeBrainTurnRequest {
   runId: string;
   kind: "opencode";
+  /** The zone of the turn's "Now" (`turnZoneEnv`). */
+  timeZone?: string;
   session: { id: string; resume: boolean };
   cwd?: string;
   model?: string;
@@ -957,7 +960,8 @@ export async function handleOpencodeBrainTurn(
       signal: scope.signal,
       runnerHome: ctx.runnerHome,
       ...(ctx.mcp ? { mcpCommand: ctx.mcp.command, socketPath: ctx.mcp.socketPath } : {}),
-      ...(secrets ? { env: secrets.env, redact: secrets.redact } : {}),
+      env: { ...secrets?.env, ...turnZoneEnv(req.timeZone) },
+      ...(secrets ? { redact: secrets.redact } : {}),
       ...(ctx.bin ? { bin: ctx.bin } : {}),
       ...(ctx.spawn ? { spawn: ctx.spawn } : {}),
     },

@@ -1,4 +1,4 @@
-import { ApiError, useAiStatus, useApi, useAuthConfig } from "@agenteschat/client";
+import { ApiError, newClientId, useAiStatus, useApi, useAuthConfig } from "@agenteschat/client";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { formatBytes } from "@agenteschat/client/lib/files";
 import { aiStateOf } from "@agenteschat/client/lib/no-ai";
@@ -14,6 +14,7 @@ import {
   modKey,
   overLimit,
   PixelSpinner,
+  pastedFiles,
   Textarea,
 } from "@agenteschat/ui";
 import { useMutation } from "@tanstack/react-query";
@@ -128,7 +129,7 @@ export function FeedbackDialog({ reported, onClose }: { reported: Reported | nul
   const [files, setFiles] = useState<Added[]>([]);
   const keys = useRef(0);
   // One id per message: sent again after a failure, the server sends it once.
-  const id = useRef(crypto.randomUUID());
+  const id = useRef(newClientId());
   const box = useRef<HTMLTextAreaElement>(null);
   const picker = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -246,7 +247,7 @@ export function FeedbackDialog({ reported, onClose }: { reported: Reported | nul
       }),
     onError: (error) => toast.show(errorText(t, error), "error"),
     onSuccess: () => {
-      id.current = crypto.randomUUID();
+      id.current = newClientId();
       for (const f of files) if (f.preview) URL.revokeObjectURL(f.preview);
       setSent(true);
     },
@@ -354,7 +355,7 @@ export function FeedbackDialog({ reported, onClose }: { reported: Reported | nul
               }}
               // A screenshot on the clipboard is added as a file.
               onPaste={(e) => {
-                const pasted = [...e.clipboardData.files];
+                const pasted = pastedFiles(e.clipboardData);
                 if (pasted.length === 0) return;
                 e.preventDefault();
                 add(pasted);

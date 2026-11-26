@@ -411,9 +411,9 @@ export const helpPtBR: Record<HelpSlug, HelpDocument> = {
       },
       {
         id: "proposals",
-        heading: "Mudanças propostas",
+        heading: "Melhorias dos agentes",
         blocks: [
-          "Quando uma lição se repete, o agente pode propor mudar as próprias instruções ou o contexto do workspace. Nada muda sem alguém aceitar, e dá para ajustar o texto antes. A versão anterior fica no histórico. Uma proposta recusada vira lição, para não ser proposta de novo.",
+          "Quando uma lição se repete, o agente pode propor mudar as próprias instruções ou o contexto do workspace. Uma revisão do agente aplica a mudança se ela fizer sentido, escrita como uma regra curta, ou deixa de fora e diz por quê. Toda mudança aparece em Melhorias dos agentes, e dá para desfazer. Uma mudança desfeita vira lição, para o agente não repetir.",
         ],
       },
     ],
@@ -435,6 +435,44 @@ export const helpPtBR: Record<HelpSlug, HelpDocument> = {
         blocks: [
           "Aprovar vale para uma ação exata, com os valores dela. Se o agente mudar qualquer coisa, ele pede de novo.",
           "**Aprovar sempre** deixa o agente fazer esse tipo de ação daqui em diante, com quaisquer valores, sem pedir. No pedido de uma rotina, **Sempre nesta rotina** faz o mesmo só para ela. **Aprovar sempre** aparece para qualquer tipo de ação, merge e deploy também, enquanto o agente estiver em **Só o arriscado**. **Sempre nesta rotina** não aparece para merge, deploy, rollback e afins. Para desfazer, vá em **Ferramentas e acesso** na página do agente, ou nos ajustes da rotina.",
+        ],
+      },
+      {
+        id: "tool-levels",
+        heading: "Cada ferramenta de um app conectado",
+        blocks: [
+          "Cada ferramenta de um app conectado pelo endereço tem um nível próprio, escolhido em **Configurações\u00a0›\u00a0Conectores**, nas ferramentas daquela conexão. Na página do agente, **Ferramentas e acesso** mostra quais apps e ferramentas ele pode usar.",
+          {
+            list: [
+              "**Só consulta**: lê e não muda nada. Nunca pergunta.",
+              "**Muda coisas**: cria e altera sem perguntar. Um agente em **Sempre perguntar** ainda pergunta.",
+              "**Pede sua aprovação**: pergunta na conversa antes de cada uso.",
+              "**Desligada**: os agentes não recebem.",
+            ],
+          },
+          "**Nunca perguntar**, na página do agente, vem antes de tudo isso: um agente nesse nível não pede nada, nem numa ferramenta em **Pede sua aprovação**. Quando um nível muda com pedidos esperando, os que não perguntariam mais são cancelados, e o agente faz de novo, sem cartão.",
+        ],
+      },
+      {
+        id: "sensitive",
+        heading: "Ferramentas sensíveis",
+        blocks: [
+          "Uma ferramenta que o servidor do app marca como de apagar, enviar ou pagar só pode ficar em **Pede sua aprovação** ou **Desligada**.",
+        ],
+      },
+      {
+        id: "order",
+        heading: "Em que ordem as ações aprovadas rodam",
+        blocks: [
+          "Numa mesma vez, o agente faz as ações na ordem em que pediu, seja qual for a ordem em que você aprova. Uma mensagem enviada enquanto o agente espera começa uma nova vez, e as ações dela rodam depois dos pedidos que o agente soube que já esperavam. Pedidos de conversas diferentes nunca esperam um pelo outro.",
+          "Um pedido esperando uma pessoa há mais de 30 minutos não segura nada. Uma ação aprovada que espera diz pelo quê, com **Aprovar** e **Recusar** para aquele pedido e **Rodar este agora** para seguir sem ele.",
+        ],
+      },
+      {
+        id: "many",
+        heading: "Vários de uma vez",
+        blocks: [
+          "Onde os pedidos esperam você, na web e no celular, **Aprovar todos** e **Recusar todos** decidem de uma vez todos os pedidos de um agente.",
         ],
       },
       {
@@ -840,7 +878,7 @@ export const helpPtBR: Record<HelpSlug, HelpDocument> = {
         id: "data",
         heading: "O que ele envia",
         blocks: [
-          "Uma vez por dia, o servidor manda ao agentes.chat estatísticas de uso anônimas: contagens como pessoas, agentes, tamanho das máquinas, tokens de IA usados e quantos dados os navegadores dos agentes enviam e recebem. Nunca mensagens, arquivos, nomes ou sites. `docker compose run --rm agentes telemetry` mostra exatamente o que seria enviado. Quem é dono desliga em **Configurações\u00a0›\u00a0Geral**, ou com `TELEMETRY=off` no `.env`.",
+          "Uma vez por dia, o servidor manda ao agentes.chat estatísticas de uso anônimas: contagens como pessoas, agentes, tamanho das máquinas, tokens de IA usados, quantos dados os navegadores dos agentes enviam e recebem, e com que rapidez os apps abrem e respondem. Nunca mensagens, arquivos, nomes ou sites. `docker compose run --rm agentes telemetry` mostra exatamente o que seria enviado. Quem é dono desliga em **Configurações\u00a0›\u00a0Geral**, ou com `TELEMETRY=off` no `.env`.",
           "Relatórios de erro não vão para lugar nenhum, a não ser que você defina `SENTRY_DSN` com um servidor compatível com o Sentry que você escolher. Um relatório tem o erro e onde ele aconteceu, nunca mensagens, e-mails, endereços IP, cookies ou tokens.",
         ],
       },

@@ -12,13 +12,19 @@ import {
   brainTool,
   browserNoAnswerMessage,
   browserOffMessage,
+  CLI_GIT_MISSING,
+  CLI_HOME_ONLY,
+  cliCommandWayOut,
+  cliInstallCommand,
   cliInstallFailure,
   cliOneClick,
+  codexSandboxNote,
   commandInReason,
   computerKind,
   computerState,
   desktopTargetOf,
   downloadHref,
+  egressViaText,
   folderName,
   foldersOfAgent,
   formatUserCode,
@@ -50,6 +56,7 @@ import {
   toolOnCommand,
   toolOneClick,
 } from "../src/lib/machines";
+import { gateLine } from "../src/lib/no-ai";
 import { openTarget, workspaceHeadline } from "../src/lib/notifications";
 import { accessOf, applyComputerEvent, applyMachineEvent, pauseOf } from "../src/realtime/machines";
 
@@ -265,6 +272,47 @@ describe("connected computers helpers (ADR 0036)", () => {
     expect(qc.getQueryState(picture)?.isInvalidated).toBe(false);
   });
 
+  test("a computer in standby going quiet reads online still; its hello ends the standby", () => {
+    const qc = new QueryClient();
+    const list = keys.machines("o1");
+    qc.setQueryData(list, [{ id: "m1", kind: "managed", online: true, standby: true, lastSeenAt: null }]);
+    const m1 = () => (qc.getQueryData(list) as { online: boolean; standby: boolean }[])[0];
+    applyMachineEvent(qc, "o1", { type: "machine.status", machineId: "m1", online: false } as { type: string });
+    expect(m1()).toMatchObject({ online: true, standby: true });
+    applyMachineEvent(qc, "o1", { type: "machine.status", machineId: "m1", online: true } as { type: string });
+    expect(m1()).toMatchObject({ online: true, standby: false });
+    applyMachineEvent(qc, "o1", { type: "machine.status", machineId: "m1", online: false } as { type: string });
+    expect(m1()?.online).toBe(false);
+  });
+
+  test("put in standby after it went quiet: the list and its agents' computer read online again", () => {
+    const qc = new QueryClient();
+    const list = keys.machines("o1");
+    const target = keys.computers("o1");
+    qc.setQueryData(list, [{ id: "m1", kind: "managed", online: true, standby: false, lastSeenAt: null }]);
+    qc.setQueryData(target, { target: { kind: "machine", machineId: "m1", name: "Box", online: true } });
+    const m1 = () => (qc.getQueryData(list) as { online: boolean; standby: boolean }[])[0];
+    const t1 = () => (qc.getQueryData(target) as { target: { online: boolean } }).target;
+    applyMachineEvent(qc, "o1", { type: "machine.status", machineId: "m1", online: false } as { type: string });
+    expect(m1()?.online).toBe(false);
+    expect(t1().online).toBe(false);
+    applyMachineEvent(qc, "o1", { type: "machine.updated", machineId: "m1", standby: true } as { type: string });
+    expect(m1()).toMatchObject({ online: true, standby: true });
+    expect(t1().online).toBe(true);
+  });
+
+  test("a wake that failed (or the standby taken back): no longer waking, and the list and its agents' computer refetch", () => {
+    const qc = new QueryClient();
+    const list = keys.machines("o1");
+    const target = keys.computers("o1");
+    qc.setQueryData(list, [{ id: "m1", kind: "managed", online: true, standby: true, lastSeenAt: null }]);
+    qc.setQueryData(target, { target: { kind: "machine", machineId: "m1", name: "Box", online: true } });
+    applyMachineEvent(qc, "o1", { type: "machine.updated", machineId: "m1", standby: false } as { type: string });
+    expect((qc.getQueryData(list) as { standby: boolean }[])[0]?.standby).toBe(false);
+    expect(qc.getQueryState(list)?.isInvalidated).toBe(true);
+    expect(qc.getQueryState(target)?.isInvalidated).toBe(true);
+  });
+
   test("a plan's usage moving on a computer refetches the agent list, which carries each plan's limits", () => {
     const qc = new QueryClient();
     const agents = keys.agents("o1");
@@ -359,9 +407,9 @@ describe("connected computers helpers (ADR 0036)", () => {
   });
 
   test("a sign-in's status that can't be read: reconnecting for 90 s from the first failed read, if it passes", () => {
-    // A restart that misses the runner's fifth dial (`backoffDelay`: 1, 2, 4, 8, 16, then 32 s after a drop, each up
-    // to 20 % late) has it back at the sixth: still waiting then, and for the next read 2 s on.
-    const sixthDial = [1, 2, 4, 8, 16, 32].reduce((at, s) => at + s * 1.2, 0) * 1000;
+    // A restart that misses the runner's fifth dial (`reconnectDelay`: within 1, 2, 4, 8, 16, then 32 s after a drop)
+    // has it back at the sixth: still waiting then, and for the next read 2 s on.
+    const sixthDial = [1, 2, 4, 8, 16, 32].reduce((at, s) => at + s, 0) * 1000;
     expect(LOGIN_RECONNECT_MS).toBeGreaterThan(sixthDial + 2_000);
     // The server restarting (no answer, or only the proxy's) or the computer reconnecting (offline, late).
     for (const error of [
@@ -592,6 +640,134 @@ describe("one click where a tool is off (ADR 0036 §8)", () => {
     expect(installableCli("cursor")).toBeNull();
   });
 
+  test("Codex on Windows: its own sandbox where MXC is missing, or nothing at all, in words for the computer's ⓘ", async () => {
+    const { resources } = await import("@agenteschat/i18n");
+    const i18next = (await import("i18next")).default;
+    const instance = i18next.createInstance();
+    void instance.init({ lng: "pt-BR", fallbackLng: "en", resources, initAsync: false });
+    const t = instance.t;
+    const desk = { name: "Estudio-PC" };
+    for (const codexSandbox of ["mxc", null, undefined] as const)
+      expect(codexSandboxNote(t, { ...desk, codexSandbox })).toBeNull();
+    expect(codexSandboxNote(t, { ...desk, codexSandbox: "unelevated" })).toBe(t("brain.sandboxPartial"));
+    const none = t("brain.reasons.windows_sandbox", { computer: "Estudio-PC", program: "Codex" });
+    expect(codexSandboxNote(t, { ...desk, codexSandbox: "none" })).toBe(none);
+    expect(none).toBe(
+      "O Windows do Estudio-PC não consegue isolar os comandos do Codex. Escolha o Claude ou uma chave de API, ou atualize esse computador para o Windows\u00a011\u00a024H2 ou mais novo, com as atualizações em dia.",
+    );
+    // The same words where a person picks Codex for an agent there, on the web and the phone (`gateLine`).
+    expect(
+      gateLine(t, {
+        gate: { state: "unsupported", reason: "windows_sandbox" },
+        edition: "selfhost",
+        kind: "codex",
+        computer: "Estudio-PC",
+      })?.text,
+    ).toBe(none);
+    // On the Cloud's own computers (Linux) it never happens: its line is the "on our side" one.
+    expect(
+      gateLine(t, {
+        gate: { state: "unsupported", reason: "windows_sandbox" },
+        edition: "cloud",
+        kind: "codex",
+        computer: "Computador da Acme",
+      })?.text,
+    ).toBe(t("aiAccounts.connect.needsCloud.stuck", { computer: "Computador da Acme", program: "Codex" }));
+  });
+
+  test("a CLI the apps don't install: the line to run there, for every agent's user in system mode", async () => {
+    const { ptBR, resources } = await import("@agenteschat/i18n");
+    const i18next = (await import("i18next")).default;
+    const instance = i18next.createInstance();
+    void instance.init({ lng: "pt-BR", fallbackLng: "en", resources, initAsync: false });
+    const t = instance.t;
+    const server = { kind: "connected", os: "linux", mode: "single", cliErrors: null } as Pick<
+      Machine,
+      "kind" | "os" | "mode" | "cliErrors"
+    >;
+    const system = { ...server, mode: "system" as const };
+    expect(cliInstallCommand("antigravity", server)).toBe(
+      "curl -fsSL https://antigravity.google/cli/install.sh | bash",
+    );
+    expect(cliInstallCommand("antigravity", system)).toBe(
+      "sudo env HOME=/opt/agy sh -c 'curl -fsSL https://antigravity.google/cli/install.sh | bash -s -- --skip-path' && sudo chmod -R a+rX /opt/agy && sudo ln -sf /opt/agy/.local/bin/agy /usr/local/bin/agy",
+    );
+    expect(cliInstallCommand("cursor", system)).toContain(
+      "sudo ln -sf /opt/cursor/.local/bin/agent /usr/local/bin/agent",
+    );
+    for (const no of [
+      cliInstallCommand("claude_code", server),
+      cliInstallCommand("opencode", server),
+      cliInstallCommand("antigravity", { ...server, os: "windows" }),
+      cliInstallCommand("grok", { ...server, kind: "managed" }),
+    ])
+      expect(no).toBeNull();
+    // xAI's PowerShell installer, in a line cmd runs too.
+    expect(cliInstallCommand("grok", { ...server, os: "windows" })).toBe(
+      'powershell -ExecutionPolicy Bypass -Command "irm https://x.ai/cli/install.ps1 | iex"',
+    );
+
+    const words = { program: "Antigravity CLI", computer: "srv-1" };
+    expect(cliCommandWayOut(t, "antigravity", server, "not_installed", "srv-1")?.text).toBe(
+      `${t("connectAi.cli.missing", words)} ${ptBR.connectAi.cli.runThis}`,
+    );
+    expect(cliCommandWayOut(t, "antigravity", system, "not_installed", "srv-1")?.text).toBe(
+      t("connectAi.cli.missingSystem", words),
+    );
+    const rootOnly = { ...system, cliErrors: { antigravity: CLI_HOME_ONLY } };
+    expect(cliCommandWayOut(t, "antigravity", rootOnly, "cant_start", "srv-1")).toEqual({
+      text: t("connectAi.cli.homeOnly", words),
+      command: cliInstallCommand("antigravity", system) ?? "",
+    });
+    // There and failing on its own: the CLI's own error says why, not a command.
+    const crashing = { ...system, cliErrors: { antigravity: "segfault" } };
+    expect(cliCommandWayOut(t, "antigravity", crashing, "cant_start", "srv-1")).toBeNull();
+    expect(
+      gateLine(t, {
+        gate: { state: "unsupported", reason: "cant_start" },
+        edition: "selfhost",
+        kind: "antigravity",
+        computer: "srv-1",
+        machine: rootOnly,
+      })?.text,
+    ).toBe(t("brain.reasons.home_only", words));
+  });
+
+  test("a CLI there that won't start says the CLI's own words, and Gemini on Windows says why it can't", async () => {
+    const { resources } = await import("@agenteschat/i18n");
+    const i18next = (await import("i18next")).default;
+    const instance = i18next.createInstance();
+    void instance.init({
+      lng: "pt-BR",
+      fallbackLng: "en",
+      resources,
+      initAsync: false,
+      // As the apps: React escapes.
+      interpolation: { escapeValue: false },
+    });
+    const t = instance.t;
+    const pc = { kind: "connected", os: "windows", mode: "single" } as const;
+    const cantStart = { state: "unsupported", reason: "cant_start" } as const;
+    const line = (
+      kind: "opencode" | "claude_code" | "antigravity",
+      machine: Parameters<typeof gateLine>[1]["machine"],
+      gate: Parameters<typeof gateLine>[1]["gate"] = cantStart,
+    ) => gateLine(t, { gate, edition: "selfhost", kind, computer: "PC da Bia", machine })?.text;
+    const said = "Error: Cannot find module 'opencode-windows-x64/package.json'";
+    expect(line("opencode", { ...pc, cliErrors: { opencode: said } })).toBe(
+      `O OpenCode está no PC da Bia, mas não abre: ${said}`,
+    );
+    // Claude Code's error is kept under its command's name; Git for Windows missing is a code, said in words.
+    expect(line("claude_code", { ...pc, cliErrors: { claude: "spawn EPERM" } })).toBe(
+      "O Claude Code está no PC da Bia, mas não abre: spawn EPERM",
+    );
+    expect(line("claude_code", { ...pc, cliErrors: { claude: CLI_GIT_MISSING } })).toBe(
+      t("connectAi.cli.gitMissing", { program: "Claude Code", computer: "PC da Bia" }),
+    );
+    // No words from the runner (an older one): the plain line.
+    expect(line("opencode", pc)).toBe(t("brain.reasons.cant_start", { program: "OpenCode", computer: "PC da Bia" }));
+  });
+
   test("Prefiro no Terminal: the same switches as one command, only for who turns them on, where there may be no app", () => {
     const linux: Pick<Machine, "mode" | "os"> = { mode: "single", os: "linux" };
     expect(oneClickTerminal(linux, { kind: "allow" }, ["desktop", "commands"])).toBe(
@@ -651,4 +827,18 @@ describe("one click where a tool is off (ADR 0036 §8)", () => {
     expect(browserNoAnswerMessage("the computer Desk did not answer within 120 s")).toBe(false);
     expect(browserNoAnswerMessage(null)).toBe(false);
   });
+});
+
+test("whose internet the workspace's computer uses: the computer and who connected it, only while it is online", () => {
+  const t = ((key: string, o?: Record<string, unknown>) => `${key}${o ? JSON.stringify(o) : ""}`) as never;
+  const via = { machineId: "m-ana", name: "Ana's iMac", userName: "Ana" };
+  expect(egressViaText(t, { kind: "managed", online: true, egressVia: via })).toBe(
+    'machines.egress.viaBy{"name":"Ana\'s iMac","person":"Ana"}',
+  );
+  expect(egressViaText(t, { kind: "managed", online: true, egressVia: { ...via, userName: null } })).toBe(
+    'machines.egress.via{"name":"Ana\'s iMac"}',
+  );
+  expect(egressViaText(t, { kind: "managed", online: false, egressVia: via })).toBeNull();
+  expect(egressViaText(t, { kind: "connected", online: true, egressVia: via })).toBeNull();
+  expect(egressViaText(t, { kind: "managed", online: true, egressVia: null })).toBeNull();
 });

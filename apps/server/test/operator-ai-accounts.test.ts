@@ -27,12 +27,12 @@ beforeAll(async () => {
     .returning({ id: schema.organizations.id });
   ada = orgs[0]?.id ?? "";
   lia = orgs[1]?.id ?? "";
-  const signedIn = { claude: { version: "2.1.0", loggedIn: true } };
+  const signedIn = { claude: { version: "2.1.300", loggedIn: true } };
   const m = await t.db
     .insert(schema.machines)
     .values([
       { orgId: ada, name: "Box", protocol: 50, runnerVersion: "1.2.3", executors: { mode: "system", ...signedIn } },
-      { orgId: ada, name: "Mac", protocol: 50, executors: { claude: { version: "2.1.0", loggedIn: false } } },
+      { orgId: ada, name: "Mac", protocol: 50, executors: { claude: { version: "2.1.300", loggedIn: false } } },
       { orgId: lia, name: "Lia box", protocol: 45, executors: signedIn },
       { orgId: lia, name: "Gone", executors: signedIn, deletedAt: new Date() },
     ])
@@ -55,7 +55,19 @@ beforeAll(async () => {
       providerOrgId: "org-ada",
       shared: true,
       lastUsedAt: new Date(now - HOUR),
-      usage: { windows: [], source: "probe", at: "2026-10-05T10:00:00.000Z" },
+      // A window's label and the models' own limits are never read out.
+      usage: {
+        windows: [
+          { kind: "five_hour", label: "Session", usedPercent: 100, resetsAt: "2026-10-05T14:00:00.000Z" },
+          { kind: "seven_day", usedPercent: 37.5, at: "2026-10-03T09:00:00.000Z" },
+        ],
+        limited: true,
+        source: "probe",
+        at: "2026-10-05T10:00:00.000Z",
+        checkedAt: "2026-10-05T11:00:00.000Z",
+        models: { "example-model": { at: "2026-10-05T10:00:00.000Z" } },
+        answered: "example-model",
+      },
       createdAt: new Date("2026-10-05T09:00:00Z"),
     }),
     // The same Claude account signed in on another computer: one provider account.
@@ -115,7 +127,7 @@ beforeAll(async () => {
     secretCiphertext: "v1.fake.fake.fake",
     wrappedDataKey: "fake",
     kekId: "local:v1",
-    keyHint: "abcd",
+    keyHint: "wqrs",
     revokedAt,
   });
   await t.db
@@ -154,7 +166,17 @@ async function ok<T = Record<string, unknown>>(res: Response) {
   return (await res.json()) as T;
 }
 const code = async (res: Response) => ((await res.json()) as { error: { code: string } }).error.code;
-const PRIVATE = ["ada@example.com", "Ada@Example.com", "lia@example.com", "9xyz", "abcd", "org-ada", "org-lia"];
+const PRIVATE = [
+  "ada@example.com",
+  "Ada@Example.com",
+  "lia@example.com",
+  "9xyz",
+  "wqrs",
+  "org-ada",
+  "org-lia",
+  "Session",
+  "example-model",
+];
 
 test("both reads need the token", async () => {
   expect((await get(`/analytics/ai-accounts?${RANGE}`, "Bearer wrong")).status).toBe(401);
@@ -287,10 +309,19 @@ test("the list: keyset pages newest first, agents counted once each, no email or
     lastFailureAt: null,
     usageAt: "2026-10-05T10:00:00.000Z",
     usageSource: "probe",
+    usage: {
+      limited: true,
+      checkedAt: "2026-10-05T11:00:00.000Z",
+      windows: [
+        { kind: "five_hour", usedPercent: 100, resetsAt: "2026-10-05T14:00:00.000Z", at: null },
+        { kind: "seven_day", usedPercent: 37.5, resetsAt: null, at: "2026-10-03T09:00:00.000Z" },
+      ],
+    },
     runnerVersion: "1.2.3",
     protocol: 50,
   });
-  expect(seen.find((a) => a.id === id(2))?.runnerVersion).toBeNull();
+  // No reading stored: none given.
+  expect(seen.find((a) => a.id === id(2))).toMatchObject({ runnerVersion: null, usageAt: null, usage: null });
 });
 
 test("the list's filters and bounds", async () => {

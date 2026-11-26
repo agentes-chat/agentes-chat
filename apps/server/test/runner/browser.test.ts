@@ -64,6 +64,7 @@ import {
   isWebPage,
   jpegSize,
   launchChrome,
+  listenerUidsIn,
   NAME_CONTROLS,
   type OwnChrome,
   readableDisplay,
@@ -1149,6 +1150,73 @@ describe("a person takes control while the agent's pointer and keys are going", 
       relay.server.stop(true);
     }
   });
+
+  test.if(posix)(
+    "a tab the page opens or closes while a person drives: their input and the view follow it there",
+    async () => {
+      // `agent-browser` moves its stream to a new tab, and says so, only after a command; the person's input is none.
+      let tabs = [{ targetId: "AB12CD34", url: "https://dash.example.com/login", active: true }];
+      const relay = fakeRelay((body) => (body.action === "tab_list" ? { success: true, data: { tabs } } : {}));
+      const devtools: FakeSocket[] = [];
+      const pages: FakePage[] = [];
+      const chromes = fakeChromes();
+      const t = setup({
+        startChrome: async (exe, args, profile) => ({
+          ...(await chromes.start(exe, args, profile)),
+          wsPath: "/devtools/browser/tabs",
+        }),
+        connectDevtools: (url) => {
+          const s = new FakeSocket(url);
+          devtools.push(s);
+          queueMicrotask(() => {
+            s.onopen?.();
+            s.push({ id: 1, result: {} });
+          });
+          return s;
+        },
+        connectPage: (url) => {
+          const p = new FakePage(url);
+          pages.push(p);
+          queueMicrotask(() => p.onopen?.());
+          return p;
+        },
+      });
+      try {
+        await t.act("open", ["https://dash.example.com/login"]);
+        t.page({ port: relay.port });
+        await t.manager.streamStart(dev, "control");
+        (t.sockets.at(-1) as FakeSocket).push({ type: "tabs", tabs });
+        const click = [
+          { kind: "mouse", type: "mousePressed", x: 5, y: 6, button: "left", clickCount: 1 },
+          { kind: "mouse", type: "mouseReleased", x: 5, y: 6, button: "left", clickCount: 1 },
+        ];
+        const targetsOfInput = () =>
+          pages.flatMap((p) => p.calls.filter((c) => c.method.startsWith("Input.")).map(() => p.url.split("/").at(-1)));
+        expect(await t.manager.input(dev, click)).toEqual({ accepted: 2 });
+        // The click opened a sign-in popup.
+        tabs = [
+          { targetId: "AB12CD34", url: "https://dash.example.com/login", active: false },
+          { targetId: "EF56", url: "https://id.example.com/", active: true },
+        ];
+        const cdp = devtools[0] as FakeSocket;
+        cdp.push({
+          method: "Target.attachedToTarget",
+          params: { sessionId: "s-pop", targetInfo: { type: "page", targetId: "EF56", openerId: "AB12CD34" } },
+        });
+        expect(await t.manager.input(dev, click)).toEqual({ accepted: 2 });
+        expect(targetsOfInput()).toEqual(["AB12CD34", "AB12CD34", "EF56", "EF56"]);
+        // Signed in, the popup closes itself: back to the tab that opened it.
+        tabs = [{ targetId: "AB12CD34", url: "https://dash.example.com/home", active: true }];
+        cdp.push({ method: "Target.detachedFromTarget", params: { sessionId: "s-pop" } });
+        expect(await t.manager.input(dev, click)).toEqual({ accepted: 2 });
+        expect(targetsOfInput().slice(4)).toEqual(["AB12CD34", "AB12CD34"]);
+        // Only the tab lists went on the relay, each asked once.
+        expect(relay.received.map((r) => r.body.action)).toEqual(["tab_list", "tab_list"]);
+      } finally {
+        relay.server.stop(true);
+      }
+    },
+  );
 });
 
 /** The start of a JPEG of that size, in base64: all a frame's size is read from. */
@@ -1333,6 +1401,47 @@ test.if(posix)("a started Chrome's browser endpoint comes from the second line o
   expect(await start("45680\\nws://elsewhere/devtools/browser/x")).not.toHaveProperty("wsPath");
 });
 
+test("a listener holds Chrome's 127.0.0.1 port on 127.0.0.1, any IPv4 or dual-stack IPv6, never v6-only or ::1", () => {
+  const ss = [
+    "LISTEN 0 4096 127.0.0.1:10000 0.0.0.0:* uid:20000 ino:1 sk:0",
+    "LISTEN 0 4096 0.0.0.0:10000 0.0.0.0:* ino:2 sk:0",
+    "LISTEN 0 4096 *:10000 *:* uid:1000 ino:3 sk:0",
+    "LISTEN 0 4096 [::]:10000 [::]:* uid:1001 ino:4 sk:0",
+    "LISTEN 0 4096 [::1]:10000 [::]:* uid:1002 ino:5 sk:0",
+    "LISTEN 0 4096 127.0.0.1:10001 0.0.0.0:* uid:1003 ino:6 sk:0",
+  ].join("\n");
+  expect(listenerUidsIn(ss, 10000)).toEqual([20000, 0, 1000]);
+  expect(listenerUidsIn("LISTEN 0 4096 [::]:10000 [::]:* uid:1001 ino:4 sk:0", 10000)).toEqual([]);
+});
+
+test("a fixed CDP port another program listens on fails at once, saying which port and how to free it", async () => {
+  let started = 0;
+  const start = (() => {
+    started++;
+    throw new Error("Chrome must not start");
+  }) as unknown as Parameters<typeof launchChrome>[4];
+  // Root's listener (ss leaves its uid out) or another user's, beside or without the agent's own.
+  for (const uids of [[0], [1000], [20000, 1000]]) {
+    const err = await launchChrome(
+      "/chrome",
+      ["--remote-debugging-port=10000"],
+      "/p",
+      undefined,
+      start,
+      () => uids,
+      20000,
+    ).then(
+      () => null,
+      (e: unknown) => e,
+    );
+    expect(err).toBeInstanceOf(ChromeStartError);
+    expect((err as ChromeStartError).why).toBe(
+      "Another program on this computer listens on port 10000, which this agent's browser needs. Move that program to another port or stop it (sudo ss -tlnp 'sport = :10000' shows which), then try again.",
+    );
+  }
+  expect(started).toBe(0);
+});
+
 test.if(posix)("a fixed CDP port accepts only its owned listener and ignores a stale port file", async () => {
   const dir = tempDir("chrome-fixed-");
   dirs.push(dir);
@@ -1359,7 +1468,8 @@ test.if(posix)("a fixed CDP port accepts only its owned listener and ignores a s
       dir,
       undefined,
       undefined,
-      () => true,
+      () => [20001],
+      20001,
     );
     expect(chrome).toMatchObject({ port, wsPath: "/devtools/browser/owned" });
     chrome.kill();
@@ -1600,14 +1710,14 @@ test.if(posix)(
       // Our notice, in the app's look and in one language only: the person's, English when it isn't one of the app's.
       const notice = (memory: boolean, tag?: string) =>
         decodeURIComponent(crashPage(memory, tag).slice("data:text/html;charset=utf-8,".length));
-      expect(notice(true, "pt-BR")).toContain('<html lang="pt-BR">');
+      expect(notice(true, "pt-BR")).toContain('<html lang="pt-BR" translate="no">');
       expect(notice(true, "pt-BR")).toContain("<title>A página ficou sem memória</title>");
       expect(notice(true, "pt-BR")).not.toContain("The page");
       expect(notice(false, "de")).toContain(
         "<h1>Die Seite funktioniert nicht mehr</h1><p>Der Agent wird benachrichtigt.</p>",
       );
       expect(notice(false, "de")).not.toContain("The page");
-      expect(notice(true, "xx")).toContain('<html lang="en">');
+      expect(notice(true, "xx")).toContain('<html lang="en" translate="no">');
       expect(notice(true)).toContain("<title>The page ran out of memory</title>");
       expect(notice(true)).not.toContain("página");
       expect(notice(true)).toContain("background:#fbfbfa");

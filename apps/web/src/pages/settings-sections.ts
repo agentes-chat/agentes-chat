@@ -72,8 +72,6 @@ export const SETTINGS_SECTIONS: {
   // Only where a billing service runs (ADR 0079), for who may open it.
   { id: "billing", icon: "coin", allowed: (o, server) => !!server?.billingUrl && can(o, "manage_billing") },
   { id: "connectors", icon: "plug", allowed: () => true },
-  // Every member keeps skills of their own there; the team's library is changed by who manages agents.
-  { id: "skills", icon: "bulb", allowed: () => true },
   // Every member keeps their own logins, keys and contacts there; team items show to who they're shared with (ADR 0144).
   { id: "vault", icon: "lock", allowed: () => true },
   { id: "access", icon: "agent", allowed: (o) => can(o, "manage_agents") },
@@ -148,6 +146,10 @@ export const settingsSearch = (
   person?: string;
   /** Cargos, with Criar cargo open (⌘K). */
   create?: 1;
+  /** Notificações, with the outside chat app's link dialog open (ADR 0187). */
+  link?: 1;
+  /** Conectores: the service whose page is open (a store entry's key, or a connection's). */
+  service?: string;
 } => ({
   connected: typeof search.connected === "string" ? search.connected : undefined,
   outcome: typeof search.outcome === "string" ? search.outcome : undefined,
@@ -162,4 +164,6 @@ export const settingsSearch = (
   agent: typeof search.agent === "string" ? search.agent : undefined,
   person: typeof search.person === "string" ? search.person : undefined,
   create: search.create === undefined ? undefined : 1,
+  link: search.link === undefined ? undefined : 1,
+  service: typeof search.service === "string" ? search.service : undefined,
 });

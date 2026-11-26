@@ -9,7 +9,7 @@ import {
 } from "@agenteschat/client";
 import { formatTime } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
-import { aiStateOf, noAiCardOf } from "@agenteschat/client/lib/no-ai";
+import { aiStateOf, noAiCardShown } from "@agenteschat/client/lib/no-ai";
 import { can } from "@agenteschat/client/lib/permissions";
 import {
   introCards,
@@ -24,9 +24,9 @@ import { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { MESSAGE_STICKER } from "@/chat/ChatMedia";
 import { AgentAvatar } from "@/components/AgentAvatar";
-import { usePlanHold } from "@/components/ai/ConnectAiSteps";
-import { useConnectAi } from "@/components/ConnectAi";
+import { usePlanHold } from "@/components/ai/plan-hold";
 import { useChannelActions } from "@/components/channel-actions";
+import { useConnectAi } from "@/components/connect-ai-context";
 import { FirstRunCard, useFirstRun } from "@/components/FirstRun";
 import { useOrg } from "@/components/org-context";
 import { AuthorStatus } from "@/components/Presence";
@@ -72,7 +72,7 @@ export function RightHandIntro({ agent, channelId }: { agent: Agent; channelId: 
     aiKnown,
     askStyle: org.agentStyle === null,
     held,
-    noAiCard: messages?.some((m) => noAiCardOf(m.meta)),
+    noAiCard: messages?.some((m) => noAiCardShown(m.meta)),
     checklist,
     answered: useTeamAnswered(org.id, team),
     welcomed,

@@ -87,17 +87,29 @@ export function CardFooter({ children, icon = "info" }: { children: ReactNode; i
   );
 }
 
-/** How long the first-appearance stagger lasts; rows added later don't animate. */
-export const LIST_STAGGER_MS = 400;
+/**
+ * A ref for a list whose rows it opens with should show at once, while rows added later rise in: marks the element
+ * `data-settled` a frame after it is drawn (the stylesheet's entrance for new rows hangs on it). Not React state: the
+ * mark is set once and nothing renders again for it.
+ */
+export function settleOnNextFrame(el: HTMLElement | null) {
+  if (!el || "settled" in el.dataset) return;
+  requestAnimationFrame(() => {
+    el.dataset.settled = "";
+  });
+}
 
-/** A bordered list of rows (members, invitations, agents). Rows rise in, staggered, only when it first appears. */
+/**
+ * A bordered list of rows (members, invitations, agents). The rows it opens with show at once (a page that fades its
+ * rows in reads as slow); rows added once it is on screen rise in (`ac-list--settled`, a frame after mounting).
+ */
 export function List({ className, ...rest }: HTMLAttributes<HTMLDivElement>) {
-  const [entering, setEntering] = useState(true);
+  const [settled, setSettled] = useState(false);
   useEffect(() => {
-    const timer = setTimeout(() => setEntering(false), LIST_STAGGER_MS);
-    return () => clearTimeout(timer);
+    const frame = requestAnimationFrame(() => setSettled(true));
+    return () => cancelAnimationFrame(frame);
   }, []);
-  return <div className={cx("ac-list", entering && "ac-list--stagger", className)} {...rest} />;
+  return <div className={cx("ac-list", settled && "ac-list--settled", className)} {...rest} />;
 }
 
 export interface ListRowProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "title"> {
@@ -210,13 +222,15 @@ export function EmptyState({
   );
 }
 
-/** Inline error (or neutral notice) with an icon. */
+/** Inline error (or neutral notice) with an icon: `info` for a notice that suggests rather than warns. */
 export function Alert({
   tone = "danger",
+  icon = "alert",
   children,
   className,
 }: {
   tone?: "danger" | "neutral";
+  icon?: IconName;
   children: ReactNode;
   className?: string;
 }) {
@@ -225,7 +239,7 @@ export function Alert({
       role={tone === "danger" ? "alert" : "status"}
       className={cx("ac-alert ac-iconline", tone === "neutral" && "ac-alert--neutral", className)}
     >
-      <Icon name="alert" />
+      <Icon name={icon} />
       <span>{children}</span>
     </p>
   );

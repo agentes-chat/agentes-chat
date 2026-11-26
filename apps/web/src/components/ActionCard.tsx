@@ -15,7 +15,6 @@ import {
   useRoles,
   useSkillAction,
   useSkills,
-  useSkillUsage,
 } from "@agenteschat/client";
 import {
   actionCardOf,
@@ -36,7 +35,8 @@ import {
   type UpdateSkillsCard,
 } from "@agenteschat/client/lib/action-cards";
 import { delegateUndoLine } from "@agenteschat/client/lib/approval-words";
-import { connectedItems, itemName } from "@agenteschat/client/lib/connected";
+import { createsRoutinesFor } from "@agenteschat/client/lib/audience";
+import { connectedItems, itemName, personalServesAgents } from "@agenteschat/client/lib/connected";
 import { setDraftFor } from "@agenteschat/client/lib/drafts";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { joinNames, whenAt } from "@agenteschat/client/lib/format";
@@ -48,20 +48,21 @@ import { isRightHand } from "@agenteschat/client/lib/right-hand";
 import { holdersOf } from "@agenteschat/client/lib/roles";
 import { connectorName } from "@agenteschat/client/lib/scopes";
 import { SKILL_UPDATE_TOAST } from "@agenteschat/client/lib/skills";
-import { Button, Dialog, EventPillAction, Icon, Spinner } from "@agenteschat/ui";
+import { Button, EventPillAction, Icon } from "@agenteschat/ui";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { lazy, type ReactNode, Suspense, useState } from "react";
+import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useConnectedById } from "@/components/AccessLevels";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { useOpenAgentPanel } from "@/components/agent-panel-context";
-import { useConnectAi } from "@/components/ConnectAi";
 import { ConnectFlow, type FlowState } from "@/components/ConnectFlow";
-import { ConnectorIcon } from "@/components/ConnectorCatalog";
+import { ConnectorIcon } from "@/components/ConnectorIcon";
 import { CostlyProposalCardView } from "@/components/CostlyProposalCard";
 import { CalendarProposalCardView } from "@/components/calendar/ProposalCard";
+import { useConnectAi } from "@/components/connect-ai-context";
 import { useInviteDialog } from "@/components/invite/InviteDialog";
 import { MailIcon } from "@/components/MailConnect";
+import { useNewAgent } from "@/components/new-agent/new-agent-context";
 import { useOrg } from "@/components/org-context";
 import { PersonLimitCardView } from "@/components/PeopleUsage";
 import {
@@ -80,8 +81,9 @@ import {
   WorkspaceActionCardView,
 } from "@/components/RightHandCards";
 import { DelegateNote, DelegateUndo, useDelegateLine } from "@/components/RightHandDelegate";
-import { InstallSkillDialog, SkillSheet } from "@/components/Skills";
+import { InstallSkillDialog } from "@/components/Skills";
 import { StretchCardView } from "@/components/StretchCard";
+import { skillTitle } from "@/components/skills/common";
 import { TeamPlanCardView } from "@/components/TeamPlan";
 import { TeamWeekCardView } from "@/components/TeamWeekCard";
 import { TextAction, UsagePauseCardView } from "@/components/UsagePauseCard";
@@ -98,7 +100,6 @@ import { expiryText } from "@/pages/ApprovalsPage";
 const DAY_MS = 24 * 3_600_000;
 
 /** "Criar agente" in the card's review, loaded when it opens. */
-const NewAgentPage = lazy(() => import("@/pages/NewAgentPage").then((m) => ({ default: m.NewAgentPage })));
 
 /**
  * An agent's action card (ADR 0061, `meta.actionCard`) in place of its text: what needs a person's credentials or
@@ -142,9 +143,10 @@ export function ActionCard({ message }: { message: Message }) {
   if (card.kind === "stretch_paused") return <StretchCardView message={message} card={card} />;
   if (card.kind === "usage_paused") return <UsagePauseCardView message={message} card={card} />;
   if (card.kind === "person_limit") return <PersonLimitCardView message={message} card={card} />;
-  if (card.kind === "connect_app") return <ConnectAppCardView card={card} />;
-  if (card.kind === "invite_people") return <InviteCardView card={card} />;
-  if (card.kind === "install_skill") return <InstallSkillCardView card={card} agentId={message.author.id} />;
+  if (card.kind === "connect_app") return <ConnectAppCardView card={card} morphKey={`act:${message.id}`} />;
+  if (card.kind === "invite_people") return <InviteCardView card={card} morphKey={`act:${message.id}`} />;
+  if (card.kind === "install_skill")
+    return <InstallSkillCardView card={card} agentId={message.author.id} morphKey={`act:${message.id}`} />;
   if (card.kind === "update_skills") return <UpdateSkillsCardView message={message} card={card} />;
   if (card.kind === "autonomy_proposal") return <CostlyProposalCardView message={message} card={card} />;
   if (card.kind === "team_week") return <TeamWeekCardView message={message} card={card} />;
@@ -159,7 +161,7 @@ export function ActionCard({ message }: { message: Message }) {
     : t(`connectAi.title.${card.what ?? "any"}`);
   if (done) {
     return (
-      <RequestDone done label={title}>
+      <RequestDone done label={title} morphKey={`act:${message.id}`}>
         {t("actionCard.connected")}: <b>{title}</b>
       </RequestDone>
     );
@@ -167,6 +169,7 @@ export function ActionCard({ message }: { message: Message }) {
   // The dialog says what each person may connect: Connect is everyone's.
   return (
     <RequestOpen
+      morphKey={`act:${message.id}`}
       mine={connect !== null}
       icon="plug"
       label={title}
@@ -197,10 +200,11 @@ export function ActionCard({ message }: { message: Message }) {
 /**
  * "Connect Linear" / "Add MCP" (`offer_connect_app`) as a waiting pill: "Connect" opens the same connect dialog as
  * Settings, at the catalog entry or at connecting by address with the address filled in; the person signs in or types
- * the key there. Its why and address go under it, and who may not connect reads who does there. Done once the
- * workspace has it.
+ * the key there. Its why and address go under it. Every member connects it, as their own when they may not add the
+ * team's ("Para quem" there); GitHub connects for the team only, so who may not reads who does. Done once the viewer
+ * has it, theirs or the team's.
  */
-function ConnectAppCardView({ card }: { card: ConnectAppCard }) {
+function ConnectAppCardView({ card, morphKey }: { card: ConnectAppCard; morphKey: string }) {
   const { t } = useTranslation();
   const { org } = useOrg();
   const catalog = useCatalog();
@@ -213,15 +217,17 @@ function ConnectAppCardView({ card }: { card: ConnectAppCard }) {
   const title = name ? t("actionCard.connect_app.title", { name }) : t("actionCard.connect_app.mcp");
   if (connectAppDone(card, connectedItems(connections.data ?? [], servers.data ?? [], defs))) {
     return (
-      <RequestDone done label={title}>
+      <RequestDone done label={title} morphKey={morphKey}>
         {t("actionCard.connected")}: <b>{title}</b>
       </RequestDone>
     );
   }
-  const may = can(org, "manage_connectors");
+  const admin = can(org, "manage_connectors");
+  const may = admin || personalServesAgents(card.connector);
   return (
     <>
       <RequestOpen
+        morphKey={morphKey}
         mine={may}
         icon="plug"
         label={title}
@@ -229,7 +235,11 @@ function ConnectAppCardView({ card }: { card: ConnectAppCard }) {
           may ? (
             <EventPillAction
               primary
-              onClick={() => setFlow(def ? { step: 0, def } : { step: 0, def: null, url: card.url })}
+              onClick={() =>
+                setFlow(
+                  def ? { step: 0, def, personal: !admin } : { step: 0, def: null, url: card.url, personal: !admin },
+                )
+              }
             >
               {t("actionCard.connect")}
             </EventPillAction>
@@ -262,7 +272,15 @@ function ConnectAppCardView({ card }: { card: ConnectAppCard }) {
  * card (`agentId`). Who manages agents installs it for the team or for themselves, anyone else as their own personal
  * skill. Done once the library has a skill from that link.
  */
-function InstallSkillCardView({ card, agentId }: { card: InstallSkillCard; agentId?: string | null }) {
+function InstallSkillCardView({
+  card,
+  agentId,
+  morphKey,
+}: {
+  card: InstallSkillCard;
+  agentId?: string | null;
+  morphKey: string;
+}) {
   const { t } = useTranslation();
   const { org } = useOrg();
   const admin = can(org, "manage_agents");
@@ -271,7 +289,7 @@ function InstallSkillCardView({ card, agentId }: { card: InstallSkillCard; agent
   const title = t("actionCard.install_skill.title");
   if (installSkillDone(card, skills.data ?? [])) {
     return (
-      <RequestDone done label={title}>
+      <RequestDone done label={title} morphKey={morphKey}>
         {t("actionCard.install_skill.done")}: <b>{card.url}</b>
       </RequestDone>
     );
@@ -279,6 +297,7 @@ function InstallSkillCardView({ card, agentId }: { card: InstallSkillCard; agent
   return (
     <>
       <RequestOpen
+        morphKey={morphKey}
         mine
         icon="book"
         label={title}
@@ -329,11 +348,10 @@ function UpdateSkillsCardView({ message, card }: { message: Message; card: Updat
   const may = can(org, "manage_agents");
   const skills = useSkills(org.id, true);
   const action = useSkillAction(org.id);
-  const [open, setOpen] = useState<string | null>(null);
-  const usage = useSkillUsage(org.id, open !== null);
+  const navigate = useNavigate();
   const rows = card.skillIds.map((id) => {
     const skill = skills.data?.find((s) => s.id === id);
-    return { id, name: skill?.name ?? "", state: skillUpdateState(skill, message.createdAt) };
+    return { id, name: skill ? skillTitle(skill) : "", state: skillUpdateState(skill, message.createdAt) };
   });
   const title = t("actionCard.update_skills.title", { count: rows.length });
   if (skills.data && rows.every((r) => r.state === "done")) {
@@ -356,49 +374,55 @@ function UpdateSkillsCardView({ message, card }: { message: Message; card: Updat
     );
   const named = rows.filter((r) => r.name);
   return (
-    <>
-      <RequestOpen
-        mine={may}
-        icon="book"
-        label={title}
-        below={
-          <>
-            {card.why && <p>{inlineWords(card.why)}</p>}
-            {/* A skill a line, each with its own action ("Update", "Review"): the pill's sentence covers them all. */}
-            <ul className="waitcard__lines">
-              {named.map((r) => (
-                <li key={r.id} className="ac-iconline">
-                  <Icon name={r.state === "done" ? "check" : "book"} size={14} />
-                  <span>
-                    <b>{r.name}</b>
-                    {r.state === "done" ? (
-                      <> · {t("actionCard.update_skills.done")}</>
-                    ) : !may ? (
-                      r.state === "waiting" && <> · {t("actionCard.update_skills.waiting")}</>
-                    ) : (
-                      <>
-                        {" · "}
-                        {r.state === "waiting" ? (
-                          <TextAction onClick={() => setOpen(r.id)}>{t("actionCard.update_skills.review")}</TextAction>
-                        ) : (
-                          <TextAction pending={action.isPending} onClick={() => update(r)}>
-                            {t("actionCard.update_skills.update")}
-                          </TextAction>
-                        )}
-                      </>
-                    )}
-                  </span>
-                </li>
-              ))}
-            </ul>
-            {!may && <p>{t("actionCard.update_skills.adminOnly")}</p>}
-          </>
-        }
-      >
-        {title}
-      </RequestOpen>
-      {open && <SkillSheet id={open} users={usage.get(open) ?? []} onClose={() => setOpen(null)} />}
-    </>
+    <RequestOpen
+      mine={may}
+      icon="book"
+      label={title}
+      below={
+        <>
+          {card.why && <p>{inlineWords(card.why)}</p>}
+          {/* A skill a line, each with its own action ("Update", "Review"): the pill's sentence covers them all. */}
+          <ul className="waitcard__lines">
+            {named.map((r) => (
+              <li key={r.id} className="ac-iconline">
+                <Icon name={r.state === "done" ? "check" : "book"} size={14} />
+                <span>
+                  <b>{r.name}</b>
+                  {r.state === "done" ? (
+                    <> · {t("actionCard.update_skills.done")}</>
+                  ) : !may ? (
+                    r.state === "waiting" && <> · {t("actionCard.update_skills.waiting")}</>
+                  ) : (
+                    <>
+                      {" · "}
+                      {r.state === "waiting" ? (
+                        <TextAction
+                          onClick={() =>
+                            void navigate({
+                              to: "/org/$orgId/skills/$skillId",
+                              params: { orgId: org.id, skillId: r.id },
+                            })
+                          }
+                        >
+                          {t("actionCard.update_skills.review")}
+                        </TextAction>
+                      ) : (
+                        <TextAction pending={action.isPending} onClick={() => update(r)}>
+                          {t("actionCard.update_skills.update")}
+                        </TextAction>
+                      )}
+                    </>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+          {!may && <p>{t("actionCard.update_skills.adminOnly")}</p>}
+        </>
+      }
+    >
+      {title}
+    </RequestOpen>
   );
 }
 
@@ -407,7 +431,7 @@ function UpdateSkillsCardView({ message, card }: { message: Message; card: Updat
  * invite dialog with the addresses filled in, as members; the person sends it there. Done once each address is
  * invited or a member.
  */
-function InviteCardView({ card }: { card: InviteCard }) {
+function InviteCardView({ card, morphKey }: { card: InviteCard; morphKey: string }) {
   const { t } = useTranslation();
   const { org } = useOrg();
   const invite = useInviteDialog();
@@ -421,13 +445,14 @@ function InviteCardView({ card }: { card: InviteCard }) {
   ];
   if (inviteDone(card, known)) {
     return (
-      <RequestDone done label={title}>
+      <RequestDone done label={title} morphKey={morphKey}>
         {t("actionCard.invite.done")}: <b>{card.emails.join(", ")}</b>
       </RequestDone>
     );
   }
   return (
     <RequestOpen
+      morphKey={morphKey}
       mine={mayInvite && invite !== null}
       icon="personAdd"
       label={title}
@@ -454,8 +479,9 @@ function InviteCardView({ card }: { card: InviteCard }) {
 /**
  * "Ada propõe um novo agente". While it is open, a request card like every other: the agent's reason, the draft in the
  * well (its face, name, handle and role, and the AI it would think with where the line has room), what it gets a line
- * each, and the fuse to its expiry. Criar makes it as it is, in one click, with each line the person may give; Revisar
- * opens "Criar agente" filled in with it over the conversation; Recusar says no; all three for who may create agents.
+ * each, and the fuse to its expiry. Create makes it as it is, in one click, with each line the person may give; Review
+ * opens the new agent's dialog filled in with it, the proposal beside the card; Decline says no; all three for who may
+ * create agents.
  * Then one line says what was decided, the draft and what it got behind "Ver detalhes"; created, it links to the agent
  * there.
  *
@@ -486,7 +512,7 @@ export function AgentProposalCardView({
   const create = useCreateProposedAgent(org.id);
   const makeRoutine = useCreateProposedRoutine(org.id);
   const connect = useConnectAi();
-  const [reviewing, setReviewing] = useState(false);
+  const newAgent = useNewAgent();
   const deny = useDenyAgentProposal(org.id);
   const toast = useToast();
   const openPanel = useOpenAgentPanel();
@@ -556,7 +582,7 @@ export function AgentProposalCardView({
             ? delegateUndoLine(t, i18n.language, delegate, draft.name)
             : undefined,
         time: at ? whenAt(t, i18n.language, at) : undefined,
-        action: byRightHand ? <DelegateUndo d={delegate} /> : undefined,
+        action: byRightHand ? <DelegateUndo d={delegate} agentId={card.agentId} /> : undefined,
       };
   const after = status === "created" && (card.agentId || routineLeft(card)) && (
     <div className="ac-acts">
@@ -572,17 +598,20 @@ export function AgentProposalCardView({
           </Link>
         </Button>
       )}
-      {routineLeft(card) && (card.decidedByUserId === me.user.id || can(org, "manage_routines")) && (
-        // Not made with it (the agent wasn't where it reports yet): made from here once it is.
-        <Button
-          size="sm"
-          variant="ghost"
-          loading={makeRoutine.isPending}
-          onClick={() => makeRoutine.mutate(messageId, { onError: failed })}
-        >
-          {t("newAgent.routineKeep", { name: draft.routine?.name })}
-        </Button>
-      )}
+      {routineLeft(card) &&
+        // Who created it, or who may make a routine for it (`createsRoutinesFor`: the server's `createRoutine`, ADR 0085
+        // addendum of 2026-11-17).
+        (card.decidedByUserId === me.user.id || createsRoutinesFor(dir.agentById.get(card.agentId ?? ""))) && (
+          // Not made with it (the agent wasn't where it reports yet): made from here once it is.
+          <Button
+            size="sm"
+            variant="ghost"
+            loading={makeRoutine.isPending}
+            onClick={() => makeRoutine.mutate(messageId, { onError: failed })}
+          >
+            {t("newAgent.routineKeep", { name: draft.routine?.name })}
+          </Button>
+        )}
     </div>
   );
   const end = Date.parse(card.expiresAt);
@@ -645,9 +674,26 @@ export function AgentProposalCardView({
               >
                 {test ? t("rightHand.card.createTest") : t("newAgent.create", { name: draft.name })}
               </Button>
-              <Button size="sm" disabled={busy} onClick={() => setReviewing(true)}>
-                {t(rightHand ? "rightHand.card.editFirst" : "actionCard.agentProposal.review")}
-              </Button>
+              {newAgent && (
+                // The new agent's dialog filled in with the draft, the proposal beside it (ADR 0081, ADR 0164).
+                <Button
+                  size="sm"
+                  disabled={busy}
+                  onClick={() =>
+                    newAgent.open({
+                      proposal: {
+                        messageId,
+                        card,
+                        proposerId,
+                        proposerName: proposer,
+                        ...(firstTask ? { firstTask } : {}),
+                      },
+                    })
+                  }
+                >
+                  {t(rightHand ? "rightHand.card.editFirst" : "actionCard.agentProposal.review")}
+                </Button>
+              )}
               <Button
                 size="sm"
                 variant={rightHand ? "ghost" : undefined}
@@ -681,22 +727,6 @@ export function AgentProposalCardView({
         what={draft.name}
         locked={busy || ask.isPending}
       />
-      {reviewing && (
-        // Over the conversation: creating, saying no or leaving closes it, and the person is where they were.
-        <Dialog
-          bare
-          open
-          onOpenChange={(open) => !open && setReviewing(false)}
-          title={t("actionCard.agentProposal.reviewTitle", { name: draft.name })}
-          closeLabel={t("common.close")}
-          width={1200}
-          className="newag-dialog"
-        >
-          <Suspense fallback={<Spinner />}>
-            <NewAgentPage proposalId={messageId} onClose={() => setReviewing(false)} />
-          </Suspense>
-        </Dialog>
-      )}
     </>
   );
 }

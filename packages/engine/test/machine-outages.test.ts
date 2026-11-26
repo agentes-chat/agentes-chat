@@ -29,11 +29,13 @@ let f: Fixture;
 afterEach(() => f?.close());
 
 const CLAUDE = { claude: { version: "2.1.300", loggedIn: true }, detectedAt: new Date().toISOString() };
+/** A runner (`CLI_COPIES_PROTOCOL`) that also says it fetches the Antigravity CLI itself (ADR 0228 §6). */
+const FETCHES = { ...CLAUDE, copies: { fetchable: ["antigravity"] } };
 
 async function scene() {
   f = await setup();
   const deps = { db: f.db, pubsub: f.pubsub };
-  const pair = async (name: string, os: string, online: boolean, executors: Record<string, unknown> = CLAUDE) => {
+  const pair = async (name: string, os: string, online: boolean, executors: Record<string, unknown> = FETCHES) => {
     const { machineId } = await pairMachine(deps, f.owner.id, f.org.id, {
       name,
       os,
@@ -149,7 +151,8 @@ test("outages: offline computers with computer-brain agents, waiting routines vs
     ],
   });
   expect(Date.parse(outages[0]?.offlineSince ?? "")).toBeLessThan(Date.now() - 3000_000);
-  // The PC is offline too, but nobody thinks on it: no outage; it is a target (offline).
+  // The PC is offline too, but nobody thinks on it: no outage; it is a target (offline). Each runner fetches the
+  // Antigravity CLI itself (ADR 0228 §6), so Gemini thinks there once an account signs in.
   expect(targets).toEqual([
     {
       kind: "machine",
@@ -158,7 +161,7 @@ test("outages: offline computers with computer-brain agents, waiting routines vs
       platform: "mac",
       managed: false,
       online: true,
-      brains: ["claude_code"],
+      brains: ["claude_code", "antigravity"],
       reasonOff: null,
     },
     {
@@ -168,7 +171,7 @@ test("outages: offline computers with computer-brain agents, waiting routines vs
       platform: "windows",
       managed: false,
       online: false,
-      brains: ["claude_code"],
+      brains: ["claude_code", "antigravity"],
       reasonOff: "offline",
     },
   ]);
@@ -192,7 +195,16 @@ test("outages: the workspace's own computer in standby is asleep by design, neve
     .where(eq(schema.machines.id, s.air));
   const { outages, targets } = await listMachineOutages(s.outageDeps, f.owner.id, f.org.id);
   expect(outages).toEqual([]);
-  expect(targets.find((t) => t.machineId === s.air)).toMatchObject({ managed: true, online: false });
+  // A place to move agents to, ready as people see it.
+  expect(targets.find((t) => t.machineId === s.air)).toMatchObject({ managed: true, online: true });
+  // A wake of it overdue: down, an outage.
+  await f.db
+    .update(schema.machines)
+    .set({ wakeWantedAt: new Date(Date.now() - 3 * 60_000) })
+    .where(eq(schema.machines.id, s.air));
+  const overdue = await listMachineOutages(s.outageDeps, f.owner.id, f.org.id);
+  expect(overdue.outages.map((o) => o.machineId)).toEqual([s.air]);
+  await f.db.update(schema.machines).set({ wakeWantedAt: null }).where(eq(schema.machines.id, s.air));
   // Out of standby and still away: an outage like any other.
   await f.db.update(schema.machines).set({ standbyAt: null }).where(eq(schema.machines.id, s.air));
   const after = await listMachineOutages(s.outageDeps, f.owner.id, f.org.id);
@@ -254,6 +266,7 @@ test("move: re-points agents that the target can run, resumes runs without execu
     skipped: [{ agentId: s.qa.id, reason: "brain_unavailable" }],
     resumed: 1,
     stillWaiting: 1,
+    planDropped: [],
   });
 
   const agentRow = async (id: string) => (await f.db.select().from(schema.agents).where(eq(schema.agents.id, id)))[0];
@@ -295,6 +308,49 @@ test("move: re-points agents that the target can run, resumes runs without execu
     { agentId: f.agent.id, name: "Dev", brain: "claude_code", waiting: { routines: 0, conversations: 1 } },
     { agentId: s.qa.id, name: "QA", brain: "codex", waiting: { routines: 0, conversations: 1 } },
   ]);
+});
+
+test("move: the agent's plan follows to the same person's sign-in there; else the move says it stayed behind", async () => {
+  const s = await scene();
+  const account = async (machineId: string, extra: Partial<typeof schema.machineAccounts.$inferInsert> = {}) => {
+    const id = crypto.randomUUID();
+    await f.db.insert(schema.machineAccounts).values({
+      id,
+      orgId: f.org.id,
+      machineId,
+      kind: "claude_code",
+      label: "Claude",
+      createdBy: f.owner.id,
+      ...extra,
+    });
+    return id;
+  };
+  const onAir = await account(s.air);
+  await f.db.update(schema.agents).set({ brainAccountId: onAir }).where(eq(schema.agents.id, f.agent.id));
+  const brainAccount = async () =>
+    (await f.db.select().from(schema.agents).where(eq(schema.agents.id, f.agent.id)))[0]?.brainAccountId;
+  const move = (from: string, to: string) =>
+    moveAgentsFromMachine(s.outageDeps, f.owner.id, f.org.id, from, {
+      agentIds: [f.agent.id],
+      target: { kind: "machine", machineId: to },
+    });
+
+  // On the Pro: another person's Claude, a signed-out one, and a coding plan's key are not this plan.
+  await account(s.pro, { createdBy: s.bia.id });
+  await account(s.pro, { status: "signed_out" });
+  await account(s.pro, { provider: "zai" });
+  const dropped = await move(s.air, s.pro);
+  expect(dropped.planDropped).toEqual([{ agentId: f.agent.id, kind: "claude_code", provider: null }]);
+  expect(await brainAccount()).toBeNull();
+
+  // Signed in on the Pro, then back on the Air, where the same person's Claude is: it thinks with that one, nothing
+  // to say.
+  const onPro = await account(s.pro);
+  await f.db.update(schema.agents).set({ brainAccountId: onPro }).where(eq(schema.agents.id, f.agent.id));
+  await f.db.update(schema.machines).set({ online: true, lastSeenAt: new Date() }).where(eq(schema.machines.id, s.air));
+  const followed = await move(s.pro, s.air);
+  expect(followed).toMatchObject({ moved: [f.agent.id], planDropped: [] });
+  expect(await brainAccount()).toBe(onAir);
 });
 
 test("move: offline, unknown or same target is a conflict; members move only their own", async () => {
@@ -393,7 +449,7 @@ test("end to end: the waiting note names the computer and the agent; after the m
     agentIds: [f.agent.id],
     target: { kind: "machine", machineId: pro },
   });
-  expect(result).toEqual({ moved: [f.agent.id], skipped: [], resumed: 1, stillWaiting: 0 });
+  expect(result).toEqual({ moved: [f.agent.id], skipped: [], resumed: 1, stillWaiting: 0, planDropped: [] });
   await drainOutbox(f.db, handlers);
   const [run] = await f.db.select().from(schema.agentRuns);
   expect(run?.status).toBe("done");

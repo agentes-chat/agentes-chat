@@ -3,7 +3,7 @@ import { and, type Database, type Executor, eq, inArray, isNull, or, type SQL, s
 import { recordAudit } from "./audit";
 import { notifyRoutinePaused } from "./notification-producers";
 import { channelMaySql } from "./permissions";
-import { taskReaderSql } from "./task-access";
+import { fileConversationReaderSql, taskReaderSql } from "./task-access";
 
 const { routines, routineRuns, outbox, channels, channelMembers, organizationMembers } = schema;
 
@@ -65,13 +65,15 @@ export const routineCodeText = (code: string | null | undefined) => (code && ROU
 export const routineJobAlive = (routineRunId: typeof routineRuns.id | SQL) => {
   // Always the outer row's id: a bare "id" inside the subquery would be the job's own.
   const id = routineRunId === routineRuns.id ? sql.raw(`"routine_runs"."id"`) : routineRunId;
-  return sql`exists (select 1 from ${outbox} o where o.dedupe_key = 'routine.run:' || ${id}::text
-    and o.status in ('pending', 'processing'))`;
+  // Its job, or a later one of a run queued behind another routine of its agent (`queueBehindAgentRoutine`).
+  return sql`exists (select 1 from ${outbox} o where (o.dedupe_key = 'routine.run:' || ${id}::text
+    or o.dedupe_key like 'routine.run:' || ${id}::text || ':%') and o.status in ('pending', 'processing'))`;
 };
 
 /**
  * Whether this person can still post in that conversation: a member of the organization and of it who may post there
- * (ADR 0134). A task's conversation has no people as members: whoever reads the task may post there (ADR 0145).
+ * (ADR 0134). A task's conversation has no people as members: whoever reads the task may post there (ADR 0145); a
+ * live file's, whoever reads the file (ADR 0199).
  */
 export async function personCanPost(db: Executor, orgId: string, userId: string, channelId: string): Promise<boolean> {
   const [row] = await db
@@ -80,6 +82,7 @@ export async function personCanPost(db: Executor, orgId: string, userId: string,
       member: channelMembers.id,
       archivedAt: channels.archivedAt,
       taskReader: sql<boolean>`${channels.kind} = 'task' and ${taskReaderSql(sql`${channels.id}`, sql`${userId}::text`)}`,
+      fileReader: sql<boolean>`${channels.kind} = 'file' and ${fileConversationReaderSql(sql`${channels.id}`, sql`${userId}::text`)}`,
     })
     .from(organizationMembers)
     .innerJoin(channels, and(eq(channels.id, channelId), eq(channels.orgId, orgId)))
@@ -92,7 +95,11 @@ export async function personCanPost(db: Executor, orgId: string, userId: string,
       ),
     )
     .where(and(eq(organizationMembers.orgId, orgId), eq(organizationMembers.userId, userId)));
-  const reader = row?.taskReader === true || String(row?.taskReader) === "t";
+  const reader =
+    row?.taskReader === true ||
+    String(row?.taskReader) === "t" ||
+    row?.fileReader === true ||
+    String(row?.fileReader) === "t";
   return Boolean(row && !row.archivedAt && (row.member || reader) && row.may);
 }
 

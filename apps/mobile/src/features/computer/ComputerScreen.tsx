@@ -7,34 +7,39 @@ import {
   useBrowserHandoffActions,
 } from "@agenteschat/client";
 import { cantShow, cantShowLine, liveSubLine } from "@agenteschat/client/lib/agent-computer";
+import { managesAgent } from "@agenteschat/client/lib/audience";
 import { computerName, READY_FLASH_MS, WORKSPACE_COMPUTER_KIND } from "@agenteschat/client/lib/computer";
+import { helpingDevices, withHelping } from "@agenteschat/client/lib/devices";
 import { clockAt } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { computerKind, isPaused } from "@agenteschat/client/lib/machines";
 import { can } from "@agenteschat/client/lib/permissions";
+import { isRightHand } from "@agenteschat/client/lib/right-hand";
 import { useSeat } from "@agenteschat/client/lib/seat-context";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
-import { useNavigation } from "expo-router";
+import { Stack, useNavigation } from "expo-router";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ComputerPortrait } from "@/computer/ComputerPortrait";
 import { useOrg } from "@/providers/org";
-import { IconButton, type IconName, LineIcon, Text, ToastHost, useToast } from "@/ui";
+import { type IconName, LineIcon, Text, useToast } from "@/ui";
 import { BrowserCard } from "../browser/BrowserCard";
 import { HeaderPill } from "../chat/HeaderPill";
+import { useDevices } from "../devices/queries";
 import { openSwitchComputer } from "../outages/OutageNotice";
 import { useMachineOutages } from "../outages/queries";
 import { AgentFace } from "../shared/Face";
 import { useColors, useDirectory, useMeId, useNow } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
-import { goBack } from "../shared/parts";
+import { ownsIn } from "../shared/owner";
+import { PushedHeader } from "../shared/parts";
 import { SheetHostProvider } from "../shared/SheetHost";
 import { AgentScreen } from "./AgentScreen";
 import { Cover } from "./Cover";
 import { DockText } from "./EdgeDock";
-import { KeptRunningButton } from "./KeptRunning";
+import { useKeptRunningAction } from "./KeptRunning";
 import { LiveTrail } from "./LiveTrail";
 import { offersSwitch, type PhoneStage, phoneStage, setupSub } from "./logic";
 import { SetupWait } from "./SetupWait";
@@ -44,18 +49,21 @@ import { usePickComputer } from "./usePickComputer";
 /** How often the screen's state is asked while no page shows; the page has a stream of its own. */
 const POLL_MS = 5_000;
 const PAGE_POLL_MS = 30_000;
+/** The screen's bar as pushed: shown, the edge swipe going back. */
+const BAR_SHOWN = { headerShown: true, gestureEnabled: true };
 
 /**
- * An agent's computer full screen on the phone (`/computer/<agentId>`, a full-screen modal): close, "Computador
- * da Ada" and the sub-line on top, then the web dialog's states in its words. The stage is the agent's screen where
- * its computer serves one (`AgentScreen`), and otherwise its page live (the browser card: watch, take control, tap
- * to click, type, the keys). Leaving in control of a take over (✕ or Android's back) hands it back at once; the agent's own request keeps
- * its 2 minutes.
+ * An agent's computer on the phone (`/computer/<agentId>`, pushed with the opaque bar): the bar's back, the
+ * conversation's pill with "Computador da Ada" and the sub-line, what it keeps running as a bar button; then the web
+ * dialog's states in its words. The stage is the agent's screen where its computer serves one (`AgentScreen`), and
+ * otherwise its page live (the browser card: watch, take control, tap to click, type, the keys). Leaving in control of
+ * a take over (back, the edge swipe or Android's back) hands it back at once; the agent's own request keeps its 2
+ * minutes. Its sheets are its own (`SheetHostProvider`); pickers and toasts are the app's, which present over it.
  */
 export function ComputerScreen({ agentId }: { agentId: string }) {
   const { t } = useTranslation();
   const dir = useDirectory();
-  // The app's own toasts: what leaving says shows under the view as it goes.
+  // What leaving says shows on the screen it goes back to.
   const toast = useToast();
   const actions = useBrowserHandoffActions(useOrg().orgId);
   const leave = (held: BrowserHandoff | null) => {
@@ -72,11 +80,9 @@ export function ComputerScreen({ agentId }: { agentId: string }) {
     } else toast({ title: t("agentComputer.closeAsk", g), agent: face });
   };
   return (
-    <ToastHost>
-      <SheetHostProvider>
-        <ComputerView agentId={agentId} onLeave={leave} />
-      </SheetHostProvider>
-    </ToastHost>
+    <SheetHostProvider>
+      <ComputerView agentId={agentId} onLeave={leave} />
+    </SheetHostProvider>
   );
 }
 
@@ -125,8 +131,13 @@ function ComputerView({ agentId, onLeave }: { agentId: string; onLeave: (held: B
   const g = agentGrammar(agent?.name ?? "", name);
   const machine = view.machine;
   const computer = computerName(t, org?.name ?? "", machine, isPersonal(org));
-  const manages = can(org, "manage_agents") || (Boolean(meId) && agent?.ownerUserId === meId);
+  // Who manages it (the server's `canManage`) or owns it (or holds the role that does, ADR 0085, addendum of
+  // 2026-11-21) moves it to another computer.
+  const manages = managesAgent(agent) || ownsIn(dir.memberById, meId, agent);
   const pickComputer = usePickComputer(agentId);
+  // Away, the computers that help take its new work (ADR 0233): said under the cover. Never the right hand's.
+  const devices = useDevices().data;
+  const helping = !agent || isRightHand(agent) ? [] : helpingDevices(devices, agent.ownerUserId, machine?.id ?? null);
   const person = (id: string) => dir.nameOf({ type: "person", id }) || t("channel.unknownPerson");
   // What leaving hands back: the agent's browser or screen in this person's hands.
   const mine = f?.handoff && controlledBy(f.handoff, f.userId) ? f.handoff : null;
@@ -155,25 +166,25 @@ function ComputerView({ agentId, onLeave }: { agentId: string; onLeave: (held: B
       help={t("machines.pausedHint")}
     />
   ) : null;
-  // The conversation's own header: close, then the glass pill with the agent's face and sky, "Computador da Ada"
-  // and the line of what goes on; what taking control means (ⓘ) beside it.
+  // The native bar, as the conversation's: its back, the glass pill with the agent's face and sky, "Computador da
+  // Ada" and the line of what goes on; what the agent keeps running there (ADR 0176) as a bar button, its list in a
+  // sheet.
   const title = t("agentComputer.title", g);
-  const top = (line: string, action?: ReactNode, info?: ReactNode) => (
-    <View style={[styles.top, { paddingTop: insets.top + 8 }]}>
-      <IconButton icon="x" plate label={t("mobile.common.close")} onPress={goBack} />
-      <HeaderPill
-        lead={<AgentFace agentId={agentId} size={32} framed={false} mode={f?.working ? "run" : "idle"} />}
-        title={title}
-        subtitle={line || undefined}
-        color={agentLook(agent).color}
-        working={Boolean(f?.working)}
-        label={[title, line].filter(Boolean).join(", ")}
-      />
-      {info ? <View style={styles.info}>{info}</View> : null}
-      {/* What the agent keeps running there (ADR 0176): its list in a sheet. */}
-      <KeptRunningButton agentId={agentId} />
-      {action}
-    </View>
+  const kept = useKeptRunningAction(agentId);
+  const top = (line: string) => (
+    <PushedHeader
+      title={
+        <HeaderPill
+          lead={<AgentFace agentId={agentId} size={32} framed={false} mode={f?.working ? "run" : "idle"} />}
+          title={title}
+          subtitle={line || undefined}
+          color={agentLook(agent).color}
+          working={Boolean(f?.working)}
+          label={[title, line].filter(Boolean).join(", ")}
+        />
+      }
+      {...(kept.action ? { actions: [kept.action] } : {})}
+    />
   );
 
   // The agent's screen takes the whole view: there is no page to scroll.
@@ -188,6 +199,7 @@ function ComputerView({ agentId, onLeave }: { agentId: string; onLeave: (held: B
           banner={pauseBanner}
           top={top}
         />
+        {kept.sheet}
       </View>
     );
   }
@@ -224,7 +236,6 @@ function ComputerView({ agentId, onLeave }: { agentId: string; onLeave: (held: B
         <BrowserCard
           agentId={agentId}
           run={run}
-          busy={f.working}
           handoff={f.handoff && handoffScreen(f.handoff) === "browser" ? f.handoff : null}
           canTakeOver={!f.held && !pausedUntil}
           surface
@@ -236,12 +247,21 @@ function ComputerView({ agentId, onLeave }: { agentId: string; onLeave: (held: B
   } else if (stage === "offline" && machine) {
     const since = machine.lastSeenAt ? clockAt(i18n.language, machine.lastSeenAt) : null;
     const outage = outages.outages.find((o) => o.machineId === machine.id);
-    if (f.edition === "cloud") {
+    if (machine.moving) {
+      sub = t("machines.moving.short");
+      body = (
+        <Cover
+          art={<ComputerPortrait kind={WORKSPACE_COMPUTER_KIND} state="paused" size={96} />}
+          text={t("machines.moving.line")}
+        />
+      );
+    } else if (f.edition === "cloud") {
       sub = t("agentComputer.sub.notAnswering");
       body = (
         <Cover
           art={<ComputerPortrait kind={WORKSPACE_COMPUTER_KIND} state="offline" size={96} />}
           text={t("agentComputer.state.notAnsweringHelp")}
+          help={withHelping(t, undefined, helping)}
         />
       );
     } else {
@@ -253,7 +273,7 @@ function ComputerView({ agentId, onLeave }: { agentId: string; onLeave: (held: B
           <Cover
             art={<ComputerPortrait kind={computerKind(machine.os)} state="offline" size={96} />}
             text={t("agentComputer.state.offline", { computer })}
-            help={t("agentComputer.state.offlineHelpPlain", g)}
+            help={withHelping(t, t("agentComputer.state.offlineHelpPlain", g), helping)}
             action={
               offersSwitch(f, manages, Boolean(outage)) ? (
                 <DockText
@@ -310,11 +330,15 @@ function ComputerView({ agentId, onLeave }: { agentId: string; onLeave: (held: B
 
   return (
     <View style={[styles.screen, { backgroundColor: c.bg }]}>
+      {/* The bar and the edge swipe back, whatever the agent's screen left them as (sideways, in control). */}
+      <Stack.Screen options={BAR_SHOWN} />
       {top(sub)}
+      {kept.sheet}
       <ScrollView
         style={styles.fill}
         contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + 24 }]}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
         automaticallyAdjustKeyboardInsets
       >
         {body}
@@ -346,11 +370,9 @@ function Banner({ icon, text, help, tone }: { icon: IconName; text: string; help
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   fill: { flex: 1 },
-  top: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingBottom: 10 },
-  info: { marginLeft: "auto" },
   bold: { fontWeight: "600" },
   grow: { flex: 1, minWidth: 0 },
-  body: { paddingHorizontal: 12, gap: 12 },
+  body: { paddingHorizontal: 12, paddingTop: 8, gap: 12 },
   flush: { marginTop: 0 },
   // The text and its help wrap: the icon stays on the first line instead of the block's middle.
   banner: { flexDirection: "row", alignItems: "flex-start", gap: 10, borderRadius: 14, padding: 12 },

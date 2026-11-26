@@ -2,6 +2,15 @@ import type { TFunction } from "i18next";
 import type { ConnectorDef, Message, OrgSummary, Run, RunStep } from "../api/types";
 import type { LiveCode, LiveOutput, LiveRun, LiveStep, LiveWork } from "../realtime/streams";
 import { type Activity, type ActivityKind, activityVerb, appLabel, PERMISSION_TOOL, toolActivity } from "./activity";
+import {
+  type CliLine,
+  cliLineOf,
+  cliStepOf,
+  cliVerbWord,
+  type SubagentsNow,
+  subagentsNow,
+  subagentsWords,
+} from "./cli-tools";
 import { appConnector } from "./connected";
 import { POSTGRES_MARK } from "./databases";
 import { capitalize, joinNames, lowerFirst, shortTarget } from "./format";
@@ -50,6 +59,8 @@ export interface WorkItem extends Activity {
   result?: string | null;
   /** It ran without asking under "Aprovar sempre" (`tool_result` step `autoApproved`). */
   autoApproved?: AutoApproved | null;
+  /** A call of the computer brain's own in a code session (ADR 0215): its line as a terminal shows it. */
+  cli?: CliLine;
 }
 
 /** A call a rule approved: the rule's person (null: unknown) and whether it was an "Aprovar sempre leituras" one. */
@@ -112,6 +123,8 @@ export interface WorkCall {
   /** The one call beside the screens' (their cards show those steps): its time and whether it failed. */
   ms?: number;
   failed?: true;
+  /** That call, when the computer brain's own in a code session (ADR 0215): its line (checked with `cliLineOf`). */
+  cli?: unknown;
 }
 
 /** The compact form the backend puts on the message (`meta.work`), before the steps are loaded. */
@@ -144,12 +157,27 @@ export function workMeta(meta: Record<string, unknown> | undefined): WorkMeta | 
  */
 const UNLISTED: ReadonlySet<ActivityKind> = new Set(["reacting", "findingTools"]);
 
-/** One of `meta.work`'s calls that is only lookups: ours by name, with no app it could share a logo with. */
-const onlyLookups = (c: WorkCall) => !c.connector && !c.service && UNLISTED.has(toolActivity(c.name).kind);
+/**
+ * The line an agent says before slow work (`say_now`, ADR 0207) is its own message in the conversation, never a step
+ * of the work: left out by its name, since its kind is `post_message`'s, which stays listed. Ours, also behind a
+ * computer brain's bridge (`mcp__agentes__say_now`). The server's `meta.work` leaves it out too.
+ */
+const SAY_NOW = /^(?:mcp__agentes__)?say_now$/;
+
+/** A call the block never lists: by what it does (`UNLISTED`), or the line before slow work by its name. */
+const unlisted = (tool: string, a: Pick<Activity, "kind">) =>
+  UNLISTED.has(a.kind) || SAY_NOW.test(tool.trim().toLowerCase());
+
+/** A live call the block lists: the ones it leaves out (`unlisted`) are never its lines, nor the step line's call. */
+const listedCall = (w: LiveWork): w is Extract<LiveWork, { kind: "call" }> =>
+  w.kind === "call" && !unlisted(w.tool, toolActivity(w.tool, w.connector, w.detail, w));
+
+/** One of `meta.work`'s calls the block never lists: ours by name, with no app it could share a logo with. */
+const neverListed = (c: WorkCall) => !c.connector && !c.service && unlisted(c.name, toolActivity(c.name));
 
 /** A saved reply's apps before its steps load (`meta.work.calls`): the ones `toolApps` gives once they do. */
 export const workApps = (calls: WorkCall[]) =>
-  uniqueApps(calls.filter((c) => !onlyLookups(c)).map((c) => toolActivity(c.name, c.connector, null, c)));
+  uniqueApps(calls.filter((c) => !neverListed(c)).map((c) => toolActivity(c.name, c.connector, null, c)));
 
 /**
  * How many calls a saved reply's block shows (0: no block). A reply saved before lookups were left out counted them.
@@ -157,7 +185,7 @@ export const workApps = (calls: WorkCall[]) =>
  * their count shows its total unless every call is skipped.
  */
 export function workSteps(w: WorkMeta, skip: (name: string) => boolean = () => false) {
-  if (w.calls.length > 0 && w.calls.every((c) => onlyLookups(c) || skip(c.name))) return 0;
+  if (w.calls.length > 0 && w.calls.every((c) => neverListed(c) || skip(c.name))) return 0;
   return w.calls.reduce((n, c) => (skip(c.name) && typeof c.n === "number" ? n - c.n : n), w.steps);
 }
 
@@ -172,7 +200,12 @@ const DRIVE: ActivityKind[] = ["readingDrive", "writingDrive", "exportingFile", 
 const time = (iso: string) => new Date(iso).getTime();
 
 /** Tool calls of a run (paired with their results), the apps it used and how long it took. */
-export function workFromSteps(steps: RunStep[], run?: Pick<Run, "createdAt" | "finishedAt">): Work {
+export function workFromSteps(
+  steps: RunStep[],
+  run?: Pick<Run, "createdAt" | "finishedAt">,
+  /** `quietChecks`: a code session's run, where a check that let a command through at once is no line (`quietCheck`). */
+  options: { quietChecks?: boolean } = {},
+): Work {
   const results = new Map<string, RunStep>();
   for (const s of steps) {
     const id = s.data.toolUseId;
@@ -196,6 +229,26 @@ export function workFromSteps(steps: RunStep[], run?: Pick<Run, "createdAt" | "f
         });
       continue;
     }
+    // A call of the computer brain's own in a code session (ADR 0215): one line each, as a terminal shows them.
+    const own = s.kind === "context" ? cliStepOf(s.data) : null;
+    if (own) {
+      const a = toolActivity(own.name);
+      if (unlisted(own.name, a)) continue;
+      items.push({
+        key: `cli-${own.id || s.seq}`,
+        ...a,
+        tool: own.name,
+        ms: own.ms ?? null,
+        failed: !own.ok,
+        count: 1,
+        hint: null,
+        why: null,
+        input: own.target ?? null,
+        result: own.output ?? null,
+        cli: { verb: own.verb, target: own.target, about: own.about, meta: own.meta },
+      });
+      continue;
+    }
     if (s.kind !== "tool_call") continue;
     const name = typeof s.data.name === "string" ? s.data.name : "";
     const id = typeof s.data.toolUseId === "string" ? s.data.toolUseId : `${s.seq}`;
@@ -205,7 +258,7 @@ export function workFromSteps(steps: RunStep[], run?: Pick<Run, "createdAt" | "f
       service: typeof s.data.service === "string" ? s.data.service : null,
       serviceIcon: typeof s.data.serviceIcon === "string" ? s.data.serviceIcon : null,
     });
-    if (UNLISTED.has(a.kind)) continue;
+    if (unlisted(name, a)) continue;
     const app = a.kind === "consulting" ? a.app : DRIVE.includes(a.kind) ? "Drive" : undefined;
     if (app && !connectors.includes(app)) connectors.push(app);
     const input = (s.data.input ?? {}) as Record<string, unknown>;
@@ -225,6 +278,7 @@ export function workFromSteps(steps: RunStep[], run?: Pick<Run, "createdAt" | "f
         }
       continue;
     }
+    if (options.quietChecks && check && result && !check.refused && !check.request) continue;
     const source =
       typeof input.code === "string" ? input.code : typeof input.command === "string" ? input.command : null;
     const failed = result?.data.isError === true || check?.refused === true;
@@ -240,6 +294,7 @@ export function workFromSteps(steps: RunStep[], run?: Pick<Run, "createdAt" | "f
       prev &&
       source === null &&
       !prev.code &&
+      !prev.cli &&
       !prev.failed &&
       !prev.held &&
       !prev.autoApproved &&
@@ -299,6 +354,36 @@ export function workFromSteps(steps: RunStep[], run?: Pick<Run, "createdAt" | "f
   return { steps: items, narration, connectors, durationMs };
 }
 
+/**
+ * The steps behind one reply of a run: a run that answered on the way (ADR 0112) lists each piece of work once, under
+ * the reply it led to. Each reply the run posted is a `message` step: this reply's steps are those after the reply
+ * before it (kept first, so the time counts from there), up to its own, and for its last reply whatever came after
+ * too. `whole`: the run's every step (its only reply, no reply named, or one saved without its step), timed by the run
+ * itself.
+ */
+export function replySteps(
+  steps: RunStep[],
+  messageId: string | undefined,
+): { steps: RunStep[]; whole: boolean; cli: boolean } {
+  // A code session's run (its brain's own calls are lines of their own): its checks are quiet (`workFromSteps`).
+  const cli = steps.some((s) => s.kind === "context" && cliStepOf(s.data) !== null);
+  const at = messageId ? steps.findIndex((s) => s.kind === "message" && s.data.messageId === messageId) : -1;
+  if (at < 0) return { steps, whole: true, cli };
+  let before = at - 1;
+  while (before >= 0 && steps[before]?.kind !== "message") before--;
+  const next = steps.findIndex((s, i) => i > at && s.kind === "message");
+  if (before < 0 && next < 0) return { steps, whole: true, cli };
+  return { steps: steps.slice(Math.max(before, 0), next < 0 ? steps.length : at + 1), whole: false, cli };
+}
+
+/**
+ * In a code session (ADR 0215) the computer's permission check before a command is no line of its own once it let the
+ * command through at once: the command is the brain's own line, or its subagent's or workflow's work. One that
+ * waits on a person, refused or failed stays a line.
+ */
+export const quietCheck = (w: LiveWork) =>
+  w.kind === "call" && w.tool === PERMISSION_TOOL && !w.held && !w.requestId && !w.failed && !w.why && !w.refusal;
+
 /** Calls that read as the same line ("Usou o navegador") with the same logo; an unknown tool's line names the tool. */
 export const sameActivity = (a: Activity & { tool: string }, b: Activity & { tool: string }) =>
   a.kind === b.kind &&
@@ -314,8 +399,9 @@ export const workCalls = (w: Work) => w.steps.reduce((n, s) => n + s.count, 0);
  * show) is dropped, so five browser steps and the one running read as "Usando o navegador…".
  */
 export function foldLiveWork(work: LiveWork[]): LiveWork[] {
+  // A computer brain's own call in a code session is its own line (ADR 0215).
   const plain = (w: LiveWork | undefined) =>
-    w?.kind === "call" && !w.code && w.output.length === 0 && !w.autoApproved
+    w?.kind === "call" && !w.code && w.output.length === 0 && !w.autoApproved && !w.cli
       ? { ...toolActivity(w.tool, w.connector, w.detail, w), tool: w.tool }
       : null;
   return work.filter((w, i) => {
@@ -566,6 +652,8 @@ export interface ToolLine extends Activity {
   code?: LiveCode;
   output?: LiveOutput[];
   autoApproved?: AutoApproved | null;
+  /** A call of the computer brain's own in a code session (ADR 0215): its line as a terminal shows it, never folded. */
+  cli?: CliLine;
 }
 
 /** What the block lists, in order: its calls, what the agent said between them, and the messages it read. */
@@ -575,27 +663,27 @@ export type ToolItem =
   | { kind: "steer"; key: string; messageId: string; now: boolean };
 
 const sameLine = (a: ToolLine, b: Activity & { tool: string }) =>
-  a.state !== "fail" && !a.code && !a.output && sameActivity(a, b);
+  a.state !== "fail" && !a.code && !a.output && !a.cli && sameActivity(a, b);
 
 /**
  * The live work as the block's items: a call followed by the same kind of call (no code, nothing said in
  * between, neither failed) is one line counting both, so five browser steps read "Usou o navegador ×5".
- * Reactions and tool lookups are left out (`UNLISTED`), as in `workFromSteps`. `stopped`: the run is over, so the call
- * still running shows as stopped. A call refused for its arguments reads as still at it while the agent tries again,
- * and quietly once one of the same tool works; an error only if the run ends or moves on without that.
+ * Reactions, tool lookups and the line before slow work are left out (`unlisted`), as in `workFromSteps`. `stopped`:
+ * the run is over, so the call still running shows as stopped. A call refused for its arguments reads as still at it
+ * while the agent tries again, and quietly once one of the same tool works; an error only if the run ends or moves on
+ * without that.
  */
 export function toolItemsLive(work: LiveWork[], stopped = false): ToolItem[] {
   const items: ToolItem[] = [];
-  const listed = work.flatMap((w) =>
-    w.kind === "call" && !UNLISTED.has(toolActivity(w.tool, w.connector, w.detail, w).kind) ? [w] : [],
-  );
+  const listed = work.filter(listedCall);
+  const cliRun = work.some((w) => w.kind === "call" && w.cli !== undefined);
   work.forEach((w) => {
     if (w.kind === "steer") {
       items.push({ kind: "steer", key: `steer-${w.messageId}`, messageId: w.messageId, now: w.now === true });
       return;
     }
     const a = toolActivity(w.tool, w.connector, w.detail, w);
-    if (UNLISTED.has(a.kind)) return;
+    if (unlisted(w.tool, a) || (cliRun && quietCheck(w))) return;
     const later = listed.slice(listed.indexOf(w) + 1);
     const atIt = !stopped && later.every((c) => c.slip && c.tool === w.tool);
     const trying = w.slip === true && atIt && later.length === 0;
@@ -615,6 +703,7 @@ export function toolItemsLive(work: LiveWork[], stopped = false): ToolItem[] {
     if (
       prev?.kind === "call" &&
       !hasCode &&
+      !w.cli &&
       state !== "fail" &&
       !slip &&
       !prev.line.slip &&
@@ -641,11 +730,12 @@ export function toolItemsLive(work: LiveWork[], stopped = false): ToolItem[] {
         why: w.why ? plainWhy(w.why) : null,
         ...(slip ? { slip: true } : {}),
         refusal: w.refusal ?? null,
-        input: w.command ?? null,
+        input: w.command ?? w.cli?.target ?? null,
         result: null,
         ...(autoApproved ? { autoApproved } : {}),
         ...(w.code ? { code: w.code } : {}),
         ...(w.output.length > 0 ? { output: w.output } : {}),
+        ...(w.cli ? { cli: w.cli } : {}),
       },
     });
   });
@@ -679,6 +769,7 @@ export function toolItemsSaved(work: Work): ToolItem[] {
           result: s.result ?? null,
           ...(s.autoApproved ? { autoApproved: s.autoApproved } : {}),
           ...(s.code ? { code: s.code, output: s.output ?? [] } : {}),
+          ...(s.cli ? { cli: s.cli } : {}),
         },
       },
     ];
@@ -764,45 +855,78 @@ export function toolPhrase(t: TFunction, l: Pick<ToolLine, "kind" | "app" | "too
   return t(`chat.work.step.${l.kind}`, { app: appLabel(l), tool: toolWords(t, l.tool, locale) });
 }
 
+/** Subagents still at work behind the agent's own call, in a few words: "2 subagentes", "workflow 2 de 3". */
+export const subagentsTail = (t: TFunction, busy: SubagentsNow) =>
+  busy.workflow && busy.workflow.total > 0
+    ? t("cliTools.progress.workflowShort", { done: busy.workflow.done, total: busy.workflow.total })
+    : t("cliTools.progress.agents", { count: Math.max(1, busy.agents) });
+
 /** A turn quicker than this shows nothing new: its step line says the agent's own words only past it. */
-export const STEP_WORDS_AFTER_MS = 5000;
+export const STEP_WORDS_AFTER_MS = 1500;
 
 /**
  * The waiting row's step line: what the agent does right now, verb first ("Usando o navegador · console.example.com…",
  * "Mexendo nos arquivos do PC · refresh.ts…"), from the same live work as its tool block; "Pensando…" while no step
  * runs; "Esperando aprovação…" while its last call waits on a person. `step`: the brain's own words for its latest call
- * (quoted), or its own call no `agent.tool` told.
+ * (quoted), or its own call no `agent.tool` told. `intent`: what it is about to do (`LiveRun.intent`), for "Pensando…".
  */
-export function waitStep(t: TFunction, work: LiveWork[] | undefined, step?: LiveStep): string {
+export function waitStep(
+  t: TFunction,
+  work: LiveWork[] | undefined,
+  step?: LiveStep,
+  intent?: string,
+  locale?: string,
+): string {
   const last = (work ?? []).findLast((w) => w.kind === "call");
   if (last?.kind === "call" && last.held) return t("chat.wait.held");
   if (step?.said) return t("chat.wait.said", { text: step.said });
   const now = toolNow(toolItemsLive(work ?? []));
+  // Its subagents and workflows at work (ADR 0215): what they do, while it waits on them (the call that started them
+  // still running, or over with them going on in the background).
+  const busy = subagentsNow(work);
+  const starting = now?.cli?.verb === "delegate" || now?.cli?.verb === "workflow";
+  if (busy && (now?.state !== "run" || starting)) {
+    const words = subagentsWords(t, busy, (s) => lowerFirst(s, locale));
+    return `${capitalize(words, locale)}…`;
+  }
   if (now?.state !== "run") {
-    return step?.tool ? `${capitalize(activityVerb(t, toolActivity(step.tool)))}…` : t("chat.wait.thinking");
+    if (step?.tool) return `${capitalize(activityVerb(t, toolActivity(step.tool)))}…`;
+    return intent ? `${capitalize(intent)}…` : t("chat.wait.thinking");
+  }
+  // A computer brain's own call in a code session (ADR 0215): its CLI's verb and what it works on, and its subagents
+  // still at work behind it.
+  if (now.cli) {
+    const on = now.cli.target ? shortTarget(now.cli.target) : "";
+    const doing = capitalize(cliVerbWord(t, now.cli.verb, true));
+    const behind = busy ? ` · ${subagentsTail(t, busy)}` : "";
+    return on ? `${doing} · ${on}${behind}…` : `${doing}${behind}…`;
   }
   const verb = capitalize(activityVerb(t, now));
-  // The folded line keeps its first call's hint; the step line names the call running now.
-  const hint = last?.kind === "call" && last.running ? toolHint(last.tool, now, last.detail) : now.hint;
+  // The folded line keeps its first call's hint; the step line names the call running now, one the block lists: a call
+  // it leaves out (the line before slow work, after a call refused for its arguments) never lends it its name.
+  const listed = (work ?? []).findLast(listedCall);
+  const hint = listed?.running ? toolHint(listed.tool, now, listed.detail) : now.hint;
   const target = hint ? shortTarget(hint) : "";
   return target ? `${verb} · ${target}…` : `${verb}…`;
 }
 
 /**
  * The bar's words for one agent at work: its step with a lower-case start, after its name ("Nina consultando o Email ·
- * …"), or "escrevendo…" while it writes (`running`: its words show whole once posted) and no call runs. Its own words
+ * …"), or "escrevendo…" while it writes (`running`: its words show whole once posted) and no call runs, both with
+ * what it is about to do in their place when the server wrote it (`intent`). Its own words
  * only once the turn has gone on for `STEP_WORDS_AFTER_MS`.
  */
 export function barStep(
   t: TFunction,
-  run: Pick<LiveRun, "status" | "work" | "step" | "startedAt" | "workingSince">,
+  run: Pick<LiveRun, "status" | "work" | "step" | "startedAt" | "workingSince" | "intent">,
   locale?: string,
   now = Date.now(),
 ): string {
   const calling = (run.work ?? []).some((w) => w.kind === "call" && w.running);
-  if (!calling && run.status === "running") return `${activityVerb(t, { kind: "writing" })}…`;
+  if (!calling && run.status === "running")
+    return run.intent ? `${lowerFirst(run.intent, locale)}…` : `${activityVerb(t, { kind: "writing" })}…`;
   const long = now - (run.workingSince ?? run.startedAt ?? now) >= STEP_WORDS_AFTER_MS;
-  return lowerFirst(waitStep(t, run.work, long ? run.step : undefined), locale);
+  return lowerFirst(waitStep(t, run.work, long ? run.step : undefined, run.intent, locale), locale);
 }
 
 export { formatLineTime } from "./format";
@@ -838,11 +962,16 @@ const QUIET_READS: ReadonlySet<ActivityKind> = new Set([
 /** The computer brain's own image tool (Codex's), as the runner names its call. */
 export const IMAGE_TOOL = "image_generation";
 
+/** Ours (ADR 0197): images made onto a canvas, as `agent.tool` names its call (a computer brain's through the bridge). */
+export const GENERATE_IMAGE_TOOL = "generate_image";
+const GENERATE_IMAGE_NAMES = new Set([GENERATE_IMAGE_TOOL, `mcp__agentes__${GENERATE_IMAGE_TOOL}`]);
+
 /**
- * It is making a picture now (its own image tool's step, `agent.step`): the conversation shows where the picture will
- * be until its reply, with the picture, takes its place.
+ * It is making a picture now (its own image tool's step, `agent.step`, or our `generate_image` while it runs,
+ * `agent.tool`): the conversation shows where the picture will be until its reply, with the picture, takes its place.
  */
-export const makingImage = (run: Pick<LiveRun, "step">) => run.step?.tool === IMAGE_TOOL;
+export const makingImage = (run: Pick<LiveRun, "step"> & Partial<Pick<LiveRun, "tool">>) =>
+  run.step?.tool === IMAGE_TOOL || GENERATE_IMAGE_NAMES.has(run.tool ?? "");
 
 /** A step running this long is no quick read: its card stays. */
 const LONG_STEP_MS = 4000;
@@ -887,18 +1016,22 @@ export function savedOneLine(
   const rest = w.calls.filter((c) => !skip(c.name));
   const call = workSteps(w, skip) === 1 && rest.length === 1 ? rest[0] : undefined;
   if (!call) return null;
-  const { ms, failed } = (w.steps === 1 ? (meta?.work ?? {}) : call) as { ms?: unknown; failed?: unknown };
+  type Kept = { ms?: unknown; failed?: unknown; cli?: unknown };
+  const { ms, failed, cli } = (w.steps === 1 ? (meta?.work ?? {}) : call) as Kept;
   const a = toolActivity(call.name, call.connector, null, call);
+  // A call of the computer brain's own in a code session (ADR 0215): its line as a terminal shows it.
+  const own = cliLineOf(cli);
   return {
     key: `one-${call.name}`,
     ...a,
     tool: call.name,
     state: failed === true ? "fail" : "done",
-    hint: toolHint(call.name, a),
+    hint: own ? null : toolHint(call.name, a),
     ms: typeof ms === "number" ? ms : w.steps === 1 ? w.durationMs : null,
     count: 1,
     why: null,
-    input: null,
+    input: own?.target ?? null,
     result: null,
+    ...(own ? { cli: own } : {}),
   };
 }

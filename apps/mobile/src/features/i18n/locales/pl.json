@@ -4,26 +4,12 @@
     "send": "Wyślij"
   },
   "categories": {
-    "title": "Kategorie",
     "where": "Gdzie widać #{{channel}}",
     "whereHelp": "Zmienia się dla wszystkich. Skład kanału zostaje bez zmian.",
-    "create": "Utwórz",
-    "endOfList": "Trafi na koniec listy u wszystkich.",
-    "channelCount_one": "{{count}} kanał",
-    "channelCount_few": "{{count}} kanały",
-    "channelCount_many": "{{count}} kanałów",
-    "channelCount_other": "{{count}} kanału",
-    "none": "Nie ma jeszcze kategorii.",
-    "manageHelp": "Stuknij kategorię, aby zmienić jej nazwę, przenieść ją albo usunąć.",
-    "manageHint": "Kolejność, nazwy i usuwanie",
-    "deleteTitle": "Usunąć {{name}}?",
     "order": "Miejsce na liście",
     "up": "Przesuń w górę",
     "down": "Przesuń w dół",
-    "position": "{{at}} z {{count}}.",
-    "channelPosition": "{{at}} z {{count}}.",
-    "itsChannels": "Kanały",
-    "seeAll": "Zobacz wszystkie"
+    "channelPosition": "{{at}} z {{count}}."
   },
   "blocks": {
     "send": "Wyślij",
@@ -108,7 +94,7 @@
     "chats": "Czaty",
     "threads": "Wątki",
     "agents": "Agenci",
-    "activity": "Aktywność",
+    "activity": "Odebrane",
     "search": "Szukaj",
     "withCount": "{{label}}, {{count}}"
   },
@@ -173,6 +159,7 @@
     "forwards": "Przekazuje dalej „{{subject}}”",
     "forwardsFrom": "Przekazuje dalej „{{subject}}”, od {{from}}",
     "onlyOwner": "Decyzję może podjąć tylko {{name}} albo administrator.",
+    "onlyOwnerRole": "Decydować mogą tylko osoby z rolą {{role}} albo administrator.",
     "onlyAdmins": "Decyzję może podjąć tylko administrator.",
     "notFound": "Ta prośba już nie istnieje albo nie masz do niej dostępu.",
     "trait": {
@@ -200,16 +187,16 @@
       "text": "Serwer może nie działać albo być poza twoją siecią. Czaty pojawią się same, gdy wróci.",
       "kept": "Pokazujemy to, co było już w aplikacji."
     },
-    "section": {
-      "agents": "Agenci",
-      "channels": "Kanały",
-      "people": "Osoby"
+    "pinned": "Przypięte",
+    "recent": "Ostatnie",
+    "view": {
+      "title": "Pokaż rozmowy",
+      "sectors": "Działy",
+      "dms": "Wiadomości bezpośrednie",
+      "channels": "Kanały"
     },
-    "seeAll": {
-      "agents": "Zobacz wszystkich agentów",
-      "channels": "Zobacz wszystkie kanały",
-      "people": "Zobacz wszystkie osoby"
-    },
+    "seeAll": "Zobacz wszystkie czaty",
+    "splitEmpty": "Tutaj otwierają się Twoje czaty.",
     "wait": {
       "verb": {
         "approval": "potrzebuje twojej zgody",
@@ -269,8 +256,6 @@
       "mute": "Wycisz",
       "unmute": "Włącz dźwięk"
     },
-    "firstRunLine": "{{name}} konfiguruje zespół · {{done}} z {{total}}",
-    "firstRunLinePersonal": "{{name}} konfiguruje twoich agentów · {{done}} z {{total}}",
     "first": {
       "title": "Zacznij od pierwszego agenta",
       "subtitle": "Nadaj mu nazwę i powiedz, czym się zajmuje. Pojawi się tutaj jako czat.",
@@ -305,8 +290,8 @@
     "to": "Do:",
     "people": "Osoby",
     "search": "Osoba lub agent",
-    "create": "Utwórz",
     "agentHint": "Nazwa i czym się zajmuje",
+    "create": "Utwórz",
     "chatShort": "Rozmowa",
     "chatHint": "Osoba lub agent",
     "taskHint": "Z osobą odpowiedzialną i terminem",
@@ -352,6 +337,9 @@
   },
   "chat": {
     "someone": "Ktoś",
+    "handedTo": "Przekazano: {{name}}",
+    "handedTo_female": "Przekazano: {{name}}",
+    "pairAsked": "{{from}} pyta",
     "messageTo": "Wiadomość do: {{name}}",
     "messageIn": "Wiadomość w {{channel}}",
     "reply": "Odpowiedz",
@@ -379,6 +367,7 @@
     "repliesWord_few": "odpowiedzi",
     "repliesWord_many": "odpowiedzi",
     "repliesWord_other": "odpowiedzi",
+    "dayAt": "{{day}} {{time}}",
     "thread": "Wątek",
     "closed": "zamknięty",
     "options": "Opcje",
@@ -387,8 +376,17 @@
     "here_few": "{{count}} tutaj",
     "here_many": "{{count}} tutaj",
     "here_other": "{{count}} tutaj",
+    "membersAdd": "Dodaj",
+    "membersAdded_one": "Dodano do #{{channel}}: {{count}}",
+    "membersAdded_few": "Dodano do #{{channel}}: {{count}}",
+    "membersAdded_many": "Dodano do #{{channel}}: {{count}}",
+    "membersAdded_other": "Dodano do #{{channel}}: {{count}}",
+    "memberRemoved": "{{name}} nie jest już w #{{channel}}",
+    "muted": "Wyciszono #{{channel}}",
+    "unmuted": "Wyłączono wyciszenie #{{channel}}",
     "headerAgent": "{{who}}. Otwórz profil",
     "headerChannel": "{{who}}. Opcje",
+    "headerMembers": "{{who}}. Zobacz, kto tu jest",
     "switchHint": "Przytrzymaj, aby przełączyć rozmowę",
     "switchTitle": "Przełącz rozmowę",
     "switchSearch": "Szukaj rozmów",
@@ -410,9 +408,7 @@
       "delivered": "{{name}} ma to już u siebie",
       "held": "{{name}} przeczyta to po twojej decyzji",
       "read": "Przeczytane przez: {{name}}",
-      "resolved": "{{name}} zamyka prośbę o pomoc",
-      "well": "Przeczytane",
-      "wellNow": "Przerwa na przeczytanie twojej uwagi"
+      "resolved": "{{name}} zamyka prośbę o pomoc"
     },
     "stopped": {
       "byYou": "Zatrzymano tutaj",
@@ -431,10 +427,6 @@
       "working": "{{names}} pisze",
       "mentionsYou": "ktoś cię wspomniał",
       "divider": "Nowe"
-    },
-    "connection": {
-      "down": "Brak połączenia. To, co wyślesz, pójdzie samo, gdy połączenie wróci.",
-      "back": "Znowu połączono"
     },
     "longPressHint": "Przytrzymaj, aby zareagować i zobaczyć więcej akcji",
     "file": "Plik",
@@ -473,21 +465,15 @@
     "doubleTapHint": "Stuknij dwa razy = 👍",
     "react": "Zareaguj",
     "attach": {
-      "more": "Dodaj kolejne zdjęcie lub plik",
       "remove": "Usuń {{name}}",
       "waiting": "{{name}}, czeka na wysłanie",
       "sending": "{{name}}, wysyłanie",
+      "failed": "{{name}}, nie wysłano: wyślij, aby spróbować ponownie",
+      "preparing": "Przygotowywanie plików…",
       "tooMany": "Maksymalna liczba plików w wiadomości: {{count}}."
     },
     "swipeReply": "Przesuń w prawo, aby odpowiedzieć",
     "intent": {
-      "suggest": {
-        "merge": "Śmiało, zrób merge",
-        "review": "Poproś najpierw o przegląd: {{name}}",
-        "seeChange": "Pokaż mi, co się zmieniło",
-        "summarize": "Podsumuj to w 3 punktach",
-        "nextStep": "Jaki jest następny krok?"
-      },
       "arrived": "{{name}} dołącza do zespołu",
       "meet": "Twoja pierwsza rozmowa z: {{name}}",
       "roleIntro": "{{role}} w twoim zespole. Pytaj zwykłymi słowami.",
@@ -601,10 +587,10 @@
     "camera": "Aparat",
     "photos": "Zdjęcia",
     "file": "Plik",
+    "paste": "Wklej",
+    "pasteGone": "Nie udało się odczytać skopiowanego obrazu. Skopiuj go ponownie i stuknij Wklej.",
     "media": "GIF-y",
     "noCamera": "Brak dostępu do aparatu. Zezwól na niego w Ustawieniach telefonu.",
-    "mission": "Rozpocznij misję",
-    "missionHint": "Długa praca, z planem, od początku do końca",
     "summary": "Podsumuj czat",
     "summaryHint": "Co się działo, gdy cię nie było",
     "remind": "Przypomnij mi później",
@@ -633,7 +619,6 @@
     "minuteLess": "{{n}} min wcześniej",
     "minuteMore": "{{n}} min później",
     "submit": "Przypomnij mi o tej godzinie",
-    "quick": "Zobacz szybkie terminy",
     "done": "Przypomnienie ustawione",
     "error": {
       "noAgent": "Żaden agent tutaj nie może ci przypomnieć",
@@ -693,6 +678,7 @@
     "title": "Nowa misja",
     "intro": "Agent przygotuje plan i zacznie dopiero, gdy powiesz.",
     "placeholder": "Co trzeba zrobić?",
+    "who": "Kto ją wykona",
     "submit": "Poproś o plan",
     "created": "{{name}} przygotowuje plan",
     "noAgents": "Żaden agent nie może jeszcze prowadzić misji. Podłącz komputer na stronie.",
@@ -816,10 +802,12 @@
     "section": {
       "missions": "Misje",
       "threads": "Wątki"
-    }
+    },
+    "splitEmpty": "Tutaj otwierają się Twoje wątki."
   },
   "agents": {
     "title": "Agenci",
+    "splitEmpty": "Tutaj otwierają się strony Twoich agentów.",
     "subtitle_one": "{{count}} w zespole · pracuje: {{working}}",
     "subtitle_few": "{{count}} w zespole · pracuje: {{working}}",
     "subtitle_many": "{{count}} w zespole · pracuje: {{working}}",
@@ -857,30 +845,26 @@
   "agentEdit": {
     "missing": "Ten agent już nie istnieje.",
     "saved": "Zmiany zapisane",
-    "adminsOnly": "Tylko administratorzy zmieniają nazwę, rolę i instrukcje.",
+    "adminsOnly": "Rolę i instrukcje zmienia tylko ktoś, kto może edytować tego agenta. Nazwę tylko administratorzy.",
     "discardTitle": "Odrzucić zmiany?",
     "discardText": "Twoje zmiany nie zostały jeszcze zapisane.",
     "discard": "Odrzuć",
     "keepEditing": "Edytuj dalej"
   },
   "newAgent": {
-    "leaveTitle": "Wyjść bez tworzenia?",
-    "leaveText": "Agent, którego zaczynasz tworzyć, nie powstanie.",
-    "keepGoing": "Twórz dalej",
     "identityQuestion": "Kim jest agent?",
     "identityLead": "Nazwa, jak wołać go na czacie, i twarz.",
     "handleMention": "Napisz @{{handle}}, aby go zawołać.",
     "handleFromName": "Na czacie: @{{handle}}. Pochodzi z nazwy. Możesz to zmienić.",
     "handleFromNameEmpty": "Jego @ na czacie pochodzi z nazwy.",
-    "reviewLead": "Stuknij wiersz, aby go zmienić.",
     "planHint": "Albo połącz swój plan AI: wtedy {{name}} myśli za jego pomocą, bez zużywania klucza.",
     "partly": "Agent został utworzony, ale część tego, co przynosi jego rola, nie przeszła. Popraw to w jego profilu.",
     "import": {
       "where": {
         "openbotrun": "Wybierz openbot-import.json (z Migratora OpenBot) albo openbot-transfer.json (z przeniesienia instancji). Plik .zip najpierw otwórz w aplikacji Pliki: jedno stuknięcie go rozpakuje.",
         "openmausbot": "W OpenMausBot: kliknij prawym przyciskiem zespół › Udostępnij zespół… › Zapisz plik. Potem wybierz ten plik tutaj.",
-        "hermes": "Hermes eksportuje z terminala (hermes profile export) do pliku .tar.gz, którego telefon nie otworzy. Zaimportuj go na komputerze albo wybierz tutaj pliki .md i .yaml profilu.",
-        "openclaw": "OpenClaw trzyma agentów w folderze ~/.openclaw na komputerze. Wybierz tutaj pliki .md z przestrzeni roboczej albo zaimportuj cały folder na komputerze.",
+        "hermes": "Hermes eksportuje z terminala (`hermes profile export`) do pliku .tar.gz, którego telefon nie otworzy. Zaimportuj go na komputerze albo wybierz tutaj pliki .md i .yaml profilu.",
+        "openclaw": "OpenClaw trzyma agentów w folderze `~/.openclaw` na komputerze. Wybierz tutaj pliki .md z przestrzeni roboczej albo zaimportuj cały folder na komputerze.",
         "paperclip": "Wklej poniżej link GitHub do pakietu albo wybierz jego COMPANY.md i pozostałe pliki .md.",
         "agenteschat": "W drugiej przestrzeni roboczej: Ustawienia › Import i eksport › Pobierz plik. Potem wybierz tutaj plik .json."
       },
@@ -892,7 +876,6 @@
       "archive": "Telefon nie otwiera plików .zip ani .tar.gz. W aplikacji Pliki stuknij plik .zip, żeby go rozpakować, i wybierz pliki ze środka albo zaimportuj na komputerze.",
       "privacy": "Odczytywane na tym telefonie. Pliki z kluczami i danymi logowania nigdy nie są otwierane.",
       "also": "Przenosi się też",
-      "change": "Zmień",
       "arrived_one": "Zaimportowano: {{name}}",
       "arrived_few": "Zaimportowano {{count}} agentów",
       "arrived_many": "Zaimportowano {{count}} agentów",
@@ -918,10 +901,14 @@
     "taskForM": "Zadanie dla: {{name}}",
     "taskPlaceholder": "Co trzeba zrobić?",
     "sendTask": "Wyślij zadanie",
-    "taskSent": "Zadanie wysłane"
+    "taskSent": "Zadanie wysłane",
+    "brakes": {
+      "forgetTitle": "Zapomnieć o tych odpowiedziach?",
+      "forgetText": "{{name}} znów zapyta przed taką pracą."
+    }
   },
   "activity": {
-    "title": "Aktywność",
+    "title": "Skrzynka odbiorcza",
     "chooseModel": "Wybierz inny model",
     "filter": {
       "all": "Wszystko",
@@ -945,6 +932,18 @@
       "proposal_waiting_few": "{{names}} proponują ulepszenia",
       "proposal_waiting_many": "{{names}} proponują ulepszenia",
       "proposal_waiting_other": "{{names}} proponują ulepszenia",
+      "proposal_applied_one": "Ulepszenie zastosowane przez {{names}}",
+      "proposal_applied_few": "{{count}} ulepszenia zastosowane przez {{names}}",
+      "proposal_applied_many": "{{count}} ulepszeń zastosowanych przez {{names}}",
+      "proposal_applied_other": "{{count}} ulepszenia zastosowane przez {{names}}",
+      "proposal_applied_agents_one": "Ulepszenie zastosowane przez {{names}}",
+      "proposal_applied_agents_few": "{{count}} ulepszenia zastosowane przez {{names}}",
+      "proposal_applied_agents_many": "{{count}} ulepszeń zastosowanych przez {{names}}",
+      "proposal_applied_agents_other": "{{count}} ulepszenia zastosowane przez {{names}}",
+      "proposal_applied_auto_one": "Automatycznie zastosowano ulepszenie",
+      "proposal_applied_auto_few": "Automatycznie zastosowano {{count}} ulepszenia",
+      "proposal_applied_auto_many": "Automatycznie zastosowano {{count}} ulepszeń",
+      "proposal_applied_auto_other": "Automatycznie zastosowano {{count}} ulepszenia",
       "mention_one": "{{names}} wspomina o tobie",
       "mention_few": "{{names}} wspominają o tobie",
       "mention_many": "{{names}} wspominają o tobie",
@@ -1134,6 +1133,14 @@
       "computer_no_chrome_few": "Komputery potrzebują Google Chrome. Pobierz go z google.com/chrome",
       "computer_no_chrome_many": "Komputery potrzebują Google Chrome. Pobierz go z google.com/chrome",
       "computer_no_chrome_other": "Komputery potrzebują Google Chrome. Pobierz go z google.com/chrome",
+      "computer_down_one": "Komputer nie odpowiada",
+      "computer_down_few": "Komputer nie odpowiada",
+      "computer_down_many": "Komputer nie odpowiada",
+      "computer_down_other": "Komputer nie odpowiada",
+      "computer_back_one": "Komputer znów działa",
+      "computer_back_few": "Komputer znów działa",
+      "computer_back_many": "Komputer znów działa",
+      "computer_back_other": "Komputer znów działa",
       "app_created_one": "Aplikacja AI coś dla ciebie utworzyła",
       "app_created_few": "Aplikacje AI coś dla ciebie utworzyły",
       "app_created_many": "Aplikacje AI coś dla ciebie utworzyły",
@@ -1192,6 +1199,46 @@
     "addA11y": "Dodaj {{name}} do kanału",
     "added": "{{name}} dołącza do kanału"
   },
+  "settingsSearch": {
+    "open": "Szukaj w ustawieniach",
+    "title": "Szukaj",
+    "placeholder": "Szukaj w Ty i w ustawieniach",
+    "workspace": "Ustawienia workspace",
+    "words": {
+      "status": "nieobecny, zajęty, obecność, online",
+      "account": "imię, zdjęcie, e-mail, strefa czasowa, hasło, nazwa użytkownika",
+      "deleteAccount": "usuń, skasuj, zamknij konto",
+      "workspaces": "przełącz, serwery, konta",
+      "notifications": "alerty, push, plakietki",
+      "approvals": "zatwierdzaj, deleguj",
+      "start": "otwórz, start, pierwszy ekran",
+      "activity": "narzędzia, co zrobili agenci",
+      "chatLook": "dymki, wiadomości, rozmowa",
+      "wallpaper": "tło, tapeta, zdjęcie",
+      "agentStyle": "techniczny, prosty, ton",
+      "sounds": "dźwięk, cicho, wyciszenie",
+      "appearance": "motyw, ciemny, jasny, tryb",
+      "appIcon": "ikona",
+      "language": "język, polski, angielski",
+      "about": "wersja, licencje",
+      "aiAccounts": "klucz, API, dostawca, plan, model",
+      "general": "nazwa, logo, strefa czasowa, kontekst",
+      "media": "GIF-y, naklejki",
+      "members": "osoby, zespół",
+      "invites": "zaproś, zaproszenie, link",
+      "roles": "uprawnienia, role",
+      "usage": "koszty, wydatki, plan, tokeny, budżet",
+      "connectors": "integracje, MCP, usługi",
+      "skills": "umiejętności",
+      "vault": "hasła, klucze, loginy, sekrety",
+      "access": "uprawnienia, dostęp agentów",
+      "apps": "aplikacje AI, MCP",
+      "computers": "urządzenia, maszyny, komputer, telefon",
+      "storage": "pliki, S3, przechowywanie",
+      "import": "eksport, import, migracja",
+      "audit": "dziennik, historia"
+    }
+  },
   "me": {
     "title": "Ty",
     "role": {
@@ -1240,10 +1287,6 @@
     "issuesWithMe_few": "{{count}} z tobą",
     "issuesWithMe_many": "{{count}} z tobą",
     "issuesWithMe_other": "{{count}} z tobą",
-    "proposalsWaiting_one": "{{count}} czeka",
-    "proposalsWaiting_few": "{{count}} czekają",
-    "proposalsWaiting_many": "{{count}} czeka",
-    "proposalsWaiting_other": "{{count}} czeka",
     "drive": "Drive",
     "connectors": "Konektory i MCP",
     "preferences": "Preferencje",
@@ -1260,6 +1303,8 @@
     "notificationsOnHint": "Przychodzą też w przeglądarce i aplikacji na komputer, jeśli są tam włączone.",
     "notificationsOffHint": "Włącz je, żeby dostawać tu powiadomienia. Rodzaje poniżej dotyczą wszystkich twoich urządzeń.",
     "notificationsKindsHint": "Aktywność zachowuje wszystko. To ustawienie dotyczy tej przestrzeni roboczej na wszystkich twoich urządzeniach.",
+    "liveActivity": "Agenci w Dynamic Island",
+    "liveActivityHint": "Gdy agent pracuje nad tym, o co prosisz, pojawia się u góry ekranu, w każdej aplikacji, i na ekranie blokady. Przy zamkniętej aplikacji potrzebny jest iOS 17.2 lub nowszy.",
     "version": "agentes.chat · wersja {{version}}",
     "edit": "Edytuj",
     "status": "Status",
@@ -1282,7 +1327,7 @@
     "agentStyle": "Jak mówią agenci",
     "workspaces": "Przestrzenie robocze",
     "workspacesIn": "Należysz do",
-    "workspacesFoot": "Pozostajesz zalogowany w każdym i dostajesz powiadomienia ze wszystkich. Stuknij workspace, aby go otworzyć.",
+    "workspacesFoot": "Pozostajesz zalogowany w każdym i dostajesz powiadomienia ze wszystkich.",
     "workspacesUnreachable": "Na razie brak odpowiedzi",
     "addWorkspace": "Dodaj workspace",
     "addWorkspaceCreate": "Utwórz nowy workspace",
@@ -1368,10 +1413,13 @@
       "diagram": "Diagram",
       "page": "Strona",
       "text": "Tekst",
+      "spreadsheet": "Arkusz",
+      "slides": "Prezentacja",
+      "canvas": "Tablica",
       "file": "Plik"
     },
     "more": "Więcej opcji",
-    "send": "Wyślij",
+    "sendCopy": "Wyślij kopię",
     "savePhotos": "Zapisz w Zdjęciach",
     "drive": "Zobacz w Drive",
     "saved": "Zapisano w Zdjęciach",
@@ -1385,6 +1433,7 @@
     "place": "{{index}} z {{count}}",
     "previous": "Poprzednie zdjęcie",
     "next": "Następne zdjęcie",
+    "noPreviewTitle": "Brak podglądu",
     "noPreview": "Ten plik nie otwiera się w aplikacji. Wyślij go do innej aplikacji, żeby go otworzyć.",
     "video": {
       "play": "Odtwórz",
@@ -1394,7 +1443,15 @@
       "mute": "Wycisz",
       "unmute": "Włącz dźwięk",
       "fullscreen": "Pełny ekran",
-      "open": "Otwórz"
+      "open": "Otwórz",
+      "cantPlay": "Tego filmu nie można odtworzyć na tym telefonie."
+    },
+    "talk": {
+      "hint": {
+        "pdf": "Przytrzymaj stronę, aby zaznaczyć punkt"
+      },
+      "pdfPage": "Strona {{page}} z {{count}}",
+      "pdfFailed": "Nie udało się wyświetlić tego pliku PDF."
     }
   },
   "issues": {
@@ -1448,6 +1505,7 @@
     "criteriaOf": "{{done}} z {{total}}",
     "linkMessage": "Wiadomość na #{{channel}}",
     "linkMessagePlain": "Oryginalna wiadomość",
+    "removeFileText": "Plik zostaje na Drive.",
     "subIssues": "Podzadania",
     "talk": "Czat",
     "finish": "Oznacz jako gotowe",
@@ -1489,10 +1547,12 @@
   "drive": {
     "title": "Drive",
     "search": "Szukaj w Drive",
-    "types": "Typy plików",
     "type": {
       "all": "Wszystkie",
       "documents": "Dokumenty",
+      "spreadsheets": "Arkusze",
+      "presentations": "Prezentacje",
+      "canvases": "Tablice",
       "images": "Obrazy",
       "tables": "Tabele",
       "diffs": "Zmiany w kodzie"
@@ -1506,11 +1566,13 @@
       "table": "Tabela",
       "diff": "Zmiana w kodzie",
       "image": "Obraz",
+      "spreadsheet": "Arkusz",
+      "slides": "Prezentacja",
+      "canvas": "Tablica",
       "file": "Plik"
     },
     "by": "{{name}} · {{when}}",
     "noResults": "Nic z tymi filtrami.",
-    "loadFailed": "Nie udało się wczytać Drive.",
     "more": "Pokaż więcej"
   },
   "constellation": {
@@ -1540,13 +1602,26 @@
     "uses_many": "Użyte {{count}} razy",
     "uses_other": "Użyte {{count}} razy",
     "confirmed": "Potwierdzone przez osobę",
-    "confirm": "Potwierdź",
-    "confirmedToast": "Potwierdzono",
     "details": "Szczegóły techniczne",
     "before": "Wcześniej było: {{text}}",
     "fix": "Popraw",
     "forgetTitle": "Zapomnieć to wspomnienie?",
     "forgetText": "{{name}} przestanie tego używać w kolejnych rozmowach."
+  },
+  "proposals": {
+    "title": "Ulepszenia agentów",
+    "emptyTitle": "Jeszcze nic się nie zmieniło",
+    "empty": "Gdy agent ulepszy swoje instrukcje albo instrukcje kolegi, zmiana pojawi się tutaj, z opcją Cofnij.",
+    "more": "Pokaż więcej",
+    "reviewing": "Trwa ocena…",
+    "appliedBy": "Zastosował {{name}}",
+    "appliedBy_female": "Zastosowała {{name}}",
+    "appliedAuto": "Zastosowane automatycznie",
+    "leftOutBy": "Pominął {{name}}",
+    "leftOutBy_female": "Pominęła {{name}}",
+    "leftOut": "Pominięte",
+    "undoneBy": "Cofnięte przez: {{name}}",
+    "undoneByYou": "Cofnięte przez ciebie"
   },
   "wiki": {
     "map": "Mapa stron",
@@ -1587,8 +1662,6 @@
     "openExisting": "Otwórz stronę"
   },
   "routines": {
-    "loadFailed": "Nie udało się wczytać rutyn.",
-    "anyAgent": "Wszyscy agenci",
     "create": "Utwórz",
     "when": {
       "custom": "Po swojemu",
@@ -1596,6 +1669,28 @@
       "day": "Dzień",
       "monthDay": "Dzień {{day}}",
       "lastDay": "Ostatni dzień"
+    }
+  },
+  "coding": {
+    "pill": "{{who}}. Zobacz kod",
+    "seeChanges": "Zobacz zmiany",
+    "project": "Projekt",
+    "whereSearch": "Szukaj lub wpisz nazwę",
+    "listed": "U agenta",
+    "commit": "Commit {{short}}",
+    "waiting": "Czeka na ciebie",
+    "next": {
+      "pr": "Gałąź wypchnięta, jeszcze bez pull requesta",
+      "mergeLocal": "Gotowa do scalenia z {{base}}"
+    },
+    "terminal": {
+      "keys": "Klawisze terminala",
+      "keyboard": "Klawiatura",
+      "pasteHint": "Wklej do terminala to, co skopiowano",
+      "key": {
+        "CtrlC": "Control-C, przerwij",
+        "CtrlD": "Control-D, koniec wejścia"
+      }
     }
   },
   "taskManager": {
@@ -1719,6 +1814,7 @@
       "ruleBody": "{{name}} przestaje stosować tę regułę. Kto ją ustalił, może ustalić ją ponownie.",
       "ruleRemove": "Usuń",
       "footOwner": "Poprawiać to może tylko {{name}} albo administrator.",
+      "footOwnerRole": "Poprawić to mogą tylko osoby z rolą {{role}} albo administrator.",
       "footAdmins": "Poprawiać to może tylko administrator.",
       "emptyF": "{{name}} nie zapisała jeszcze nic o tobie.",
       "emptyM": "{{name}} nie zapisał jeszcze nic o tobie.",
@@ -1768,6 +1864,7 @@
       },
       "asksYou": "Merge i publikacja wymagają twojego zatwierdzenia, chyba że agent nigdy nie pyta.",
       "asksOwner": "Merge i publikacja wymagają zatwierdzenia, które daje {{name}}, chyba że agent nigdy nie pyta.",
+      "asksOwnerRole": "Merge i publikacja wymagają zatwierdzenia przez osobę z rolą {{role}}, chyba że agent nigdy nie pyta.",
       "asksAdmins": "Merge i publikacja wymagają zatwierdzenia przez administratora, chyba że agent nigdy nie pyta.",
       "empty": "Na razie tylko rozmowa."
     }
@@ -1872,18 +1969,9 @@
   },
   "browser": {
     "card": {
-      "needs": "{{name}} potrzebuje pomocy",
-      "needsFor": "{{name}} potrzebuje pomocy · {{time}}",
-      "inControlAt": "Masz kontrolę · {{host}}",
-      "doing": "{{name}} · {{doing}}",
-      "startingF": "Otwieranie przeglądarki agenta {{name}}…",
-      "startingM": "Otwieranie przeglądarki agenta {{name}}…",
       "stopAskF": "Zamknąć przeglądarkę agenta {{name}}?",
       "stopAskM": "Zamknąć przeglądarkę agenta {{name}}?",
-      "whereF": "W przeglądarce agenta {{name}}",
-      "whereM": "W przeglądarce agenta {{name}}",
       "open": "Otwórz",
-      "expandHint": "Stuknij, aby rozwinąć",
       "stop": "Zatrzymaj",
       "giveUp": "Zrezygnuj"
     },
@@ -1891,7 +1979,6 @@
       "inControl": "Masz kontrolę",
       "helping": "Kontrolę ma {{name}}",
       "watchOnly": "Kontrolę ma {{name}}. Ty tylko oglądasz.",
-      "takeOver": "Przejmij kontrolę",
       "done": "Gotowe",
       "handBack": "Oddaj kontrolę",
       "couldnt": "Nie udało się",
@@ -1912,7 +1999,6 @@
       "closedHelpM": "Dane logowania zostaną zapisane na następny raz.",
       "stuckHelpF": "Spróbuj ponownie uruchamia przeglądarkę od nowa. Dane logowania zostają zapisane.",
       "stuckHelpM": "Spróbuj ponownie uruchamia przeglądarkę od nowa. Dane logowania zostają zapisane.",
-      "hidden": "Kontrolę ma {{name}} · ekran ukryty",
       "key": {
         "Tab": "Tab",
         "Enter": "Enter",
@@ -2000,6 +2086,7 @@
       "ui_automation_off": "Automatyzacja UI jest wyłączona",
       "xcode_missing": "Mac potrzebuje Xcode",
       "xcode_too_old": "Xcode jest za stary dla tego iPhone'a",
+      "ios_behind_xcode": "Zaktualizuj iOS tego iPhone'a",
       "device_support": "Mac przygotowuje tego iPhone'a",
       "helper_missing": "Pomocnik testowy nie jest jeszcze skonfigurowany",
       "helper_expired": "Pomocnik testowy wymaga odnowienia",
@@ -2174,7 +2261,7 @@
       "tooOld": "Ten iPhone ma iOS {{version}}, a agenci potrzebują iOS 17 lub nowszego. Zaktualizuj go, jeśli się da, albo użyj nowszego iPhone'a.",
       "xcodeOld": "Ten iPhone ma iOS {{version}}, nowszy niż zna Xcode na {{host}}. Zainstaluj tam Xcode {{major}}, a potem uruchom xcrun devicectl manage ddis update w Terminalu.",
       "teamMissing": "Xcode jest zalogowany, ale nie pokazuje jeszcze zespołu. W Xcode utwórz dowolną aplikację iOS, wybierz swój zespół w Signing & Capabilities i uruchom ją raz na tym iPhonie.",
-      "uiRefused": "Ten iPhone odrzucił stuknięcia pomocnika testowego. Odblokuj go i wpisz kod, jeśli poprosi. Jeśli to się powtarza, wyłącz i włącz Ustawienia › Deweloper › Włącz automatyzację UI.",
+      "uiRefused": "Agenci widzą ekran tego iPhone'a, ale iOS odrzuca ich stuknięcia.",
       "pluggedIn": "Jest podłączony",
       "wifi": {
         "also": "Też w sieci Wi-Fi komputera {{host}}: {{name}}",
@@ -2214,6 +2301,7 @@
       "tool_request": "{{names}} prosi Cię o włączenie: {{tool}} na {{device}}",
       "cli_request": "{{names}} prosi o zainstalowanie {{tool}} na Twoim {{device}}",
       "folder_request": "{{names}} prosi Cię o folder {{path}} na {{device}}",
+      "internet_shared": "Agenci otwierają teraz strony przez internet komputera {{device}}",
       "allowOnce": "Zezwól raz",
       "always": "Zawsze zezwalaj: {{name}}",
       "no": "Nie",
@@ -2226,7 +2314,9 @@
       "other": "Użyj innego urządzenia",
       "stop": "Przestań czekać",
       "useInstead": "Użyj zamiast tego {{name}}",
-      "none": "Żadne inne urządzenie, którego możesz użyć, nie jest gotowe."
+      "none": "Żadne inne urządzenie, którego możesz użyć, nie jest gotowe.",
+      "tried": "Ponawiam próbę z {{device}}.",
+      "stopped": "Już nie czekam na {{device}}."
     }
   },
   "connectors": {
@@ -2235,8 +2325,6 @@
     "mcps": "MCP",
     "mcpsNone": "Tu pojawiają się serwery MCP połączone przez ich adres.",
     "addMcp": "Dodaj MCP",
-    "add": "Dodaj",
-    "allServices": "Wszystkie usługi",
     "waitLine_one": "{{count}} narzędzie czeka na ciebie",
     "waitLine_few": "{{count}} narzędzia czekają na ciebie",
     "waitLine_many": "{{count}} narzędzi czeka na ciebie",
@@ -2247,12 +2335,10 @@
     "toolsWait_other": "{{count}} czeka na ciebie",
     "connectedState": "Połączone",
     "connected": "Połączone",
-    "suggested": "Sugerowane dla {{org}}",
-    "all": "Wszystkie",
+    "seeAll": "Zobacz wszystkie",
     "noResults": "Brak usługi o tej nazwie. Spróbuj jej adresu.",
     "soon": "Wkrótce",
     "loadFailed": "Nie udało się wczytać konektorów.",
-    "connectedCheck": "{{name}}, połączono",
     "adminsOnly": "Usługi łączy tylko administrator {{org}}. Poproś któregoś z nich.",
     "adminsOnlyPersonal": "Aplikacje łączy tylko osoba, która prowadzi tę przestrzeń roboczą. Poproś ją.",
     "canTitle": "Agenci będą mogli",
@@ -2299,6 +2385,34 @@
     "usedBy_few": "{{names}} korzystają",
     "usedBy_many": "{{names}} korzystają",
     "usedBy_other": "{{names}} korzystają",
+    "page": {
+      "missing": "Tej usługi nie ma już w katalogu.",
+      "connected": "Połączono",
+      "open": "Otwórz połączenie",
+      "category": "Kategoria",
+      "tools": "Narzędzia",
+      "toolsAsk_one": "{{count}} wymaga zatwierdzenia",
+      "toolsAsk_few": "{{count}} wymagają zatwierdzenia",
+      "toolsAsk_many": "{{count}} wymaga zatwierdzenia",
+      "toolsAsk_other": "{{count}} wymaga zatwierdzenia",
+      "toolsAskNone": "żadne nie wymaga zatwierdzenia",
+      "toolsLater": "po połączeniu",
+      "who": "Kto łączy",
+      "whoAdmins": "Administratorzy {{org}}",
+      "whoRuns": "Kto zarządza workspace",
+      "whoYou": "Ty, dla siebie",
+      "signIn": "Logowanie przez",
+      "how": {
+        "signIn": "Twoje konto",
+        "key": "Klucz",
+        "either": "Konto lub klucz"
+      },
+      "canTitle": "Co agenci z tym robią",
+      "address": "Adres",
+      "addressNote": "Agenci używają tego adresu z połączonym kontem. Każdy dostaje tylko to, na co pozwolisz.",
+      "host": "Łączy się z",
+      "more": "Więcej w kategorii {{category}}"
+    },
     "fromAgent": "Połącz usługę",
     "githubApp": {
       "useApp": "Użyj aplikacji agentes.chat",
@@ -2438,12 +2552,10 @@
     "planRowSub": "Logowanie na komputerze agenta, bez klucza",
     "keyRow": "Klucz",
     "keyRowSub": "Płacisz za użycie, bezpośrednio dostawcy",
-    "already": "Już w {{org}}",
     "stepOf": "{{step}} z {{total}}"
   },
   "crash": {
     "title": "Coś poszło nie tak na tym ekranie",
-    "subtitle": "Aplikacja napotkała błąd przy wyświetlaniu tego widoku. Spróbuj ponownie.",
     "retry": "Spróbuj ponownie"
   },
   "notFound": {
@@ -2472,9 +2584,8 @@
     "deleteIntro": "{{name}} od razu staje się dla wszystkich tylko do odczytu, a po 7 dniach zostaje trwale usunięta.",
     "holdDelete": "Przytrzymaj, aby usunąć",
     "deleteFailed": "Nie udało się usunąć przestrzeni roboczej. Spróbuj ponownie.",
-    "access": {
-      "how": "Stuknij wiersz, aby zmienić poziom: Brak dostępu, Odczyt, Odczyt i zapis."
-    },
+    "holdReset": "Przytrzymaj, aby zresetować",
+    "resetFailed": "Nie udało się zresetować przestrzeni roboczej. Spróbuj ponownie.",
     "logo": {
       "failed": "Nie udało się wgrać logo",
       "tooBig": "Ten obraz jest za duży. Spróbuj innego."
@@ -2502,7 +2613,6 @@
     "noMatch": "Żadna rola nie pasuje do „{{q}}”.",
     "tooMany": "Ta przestrzeń robocza ma już 100 ról. Usuń jedną, aby utworzyć kolejną.",
     "loadFailed": "Nie udało się wczytać ról. {{cause}}",
-    "backToList": "Wróć do ról",
     "nobody": "Nikt",
     "reach": {
       "permissions_one": "{{count}} uprawnienie",
@@ -2630,9 +2740,9 @@
       "everyone": "Rozmawiają wszyscy",
       "gate": "Kto ma tylko {{name}}, nie rozmawia z agentami.",
       "gateOn": "Włącz Rozmowę z agentami",
-      "locked": "Zmienić to może tylko {{owner}}, osoba odpowiedzialna za {{name}}, albo ktoś, kto edytuje każdego agenta.",
-      "locked_female": "Zmienić to może tylko {{owner}}, osoba odpowiedzialna za {{name}}, albo ktoś, kto edytuje każdego agenta.",
-      "lockedNoOwner": "Zmienić to może tylko ktoś, kto edytuje każdego agenta.",
+      "locked": "Zmienić to może tylko {{owner}}, osoba odpowiedzialna za {{name}}, albo ktoś, kto edytuje agentów.",
+      "locked_female": "Zmienić to może tylko {{owner}}, osoba odpowiedzialna za {{name}}, albo ktoś, kto edytuje agentów.",
+      "lockedNoOwner": "Zmienić to może tylko ktoś, kto edytuje agentów.",
       "none": "Nie ma jeszcze agentów.",
       "some": "Tylko niektóre role i osoby",
       "addPerson": "Dodaj osobę",
@@ -2749,7 +2859,7 @@
       "sealedHelp": "Ze względów bezpieczeństwa to, co tu zapisano, nie jest już pokazywane. Aby to zmienić, wpisz ponownie.",
       "changePassword": "Zmień hasło",
       "changeValue": "Zmień wartość",
-      "changeHelp": "Stuknij Zapisz, aby to zachować. Od tej chwili agenci używają nowej wartości.",
+      "changeHelp": "Agenci używają nowej wartości, gdy ją zapiszesz.",
       "hidden": "Ukryte",
       "saved": "Zapisano",
       "delete": "Usuń",
@@ -2768,7 +2878,7 @@
       "newPassword": "Nowe hasło",
       "keyName": "Zmienna",
       "keyNamePlaceholder": "ACME_API_KEY",
-      "keyNameHelp": "Wielkie litery, cyfry i _, na przykład ACME_API_KEY. Agenci proszą o klucz pod tą nazwą.",
+      "keyNameHelp": "Wielkie litery, cyfry i _, na przykład `ACME_API_KEY`. Agenci proszą o klucz pod tą nazwą.",
       "value": "Wartość",
       "newValue": "Nowa wartość",
       "description": "Opis",
@@ -2902,8 +3012,7 @@
     "bySelfUntil": "Ustawione przez: {{name}} · {{when}}"
   },
   "dashboards": {
-    "homeRow": "Tylko ty · twoje własne widżety",
-    "loadFailed": "Nie udało się wczytać dashboardów.",
+    "homeRow": "Tylko ty",
     "create": "Utwórz",
     "routineTarget": "jego widżet",
     "pin": {
@@ -2991,11 +3100,11 @@
     },
     "drive": {
       "title": "Wszystko, co tworzy zespół, w jednym miejscu",
-      "text": "Raporty, tabele i pliki agentów i osób zostają tutaj, łatwe do znalezienia.",
+      "text": "Raporty, tabele i pliki agentów i osób zostają tutaj.",
       "viewerTitle": "Znajdź to, co tworzy zespół",
       "viewerText": "Tutaj pojawia się to, co agenci i osoby tworzą na czatach.",
       "titlePersonal": "Wszystko, co tworzą twoi agenci, w jednym miejscu",
-      "textPersonal": "Raporty, tabele i pliki twoich agentów zostają tutaj, łatwe do znalezienia.",
+      "textPersonal": "Raporty, tabele i pliki twoich agentów zostają tutaj.",
       "viewerTitlePersonal": "Znajdź to, co tworzą twoi agenci",
       "viewerTextPersonal": "To, co agenci tworzą w twoich rozmowach, pojawia się tutaj."
     },
@@ -3007,6 +3116,10 @@
       "titlePersonal": "Przekaż swoje sprawy agentom",
       "textPersonal": "Utwórz zadanie dla agenta i śledź je do końca.",
       "viewerTitlePersonal": "Śledź pracę swoich agentów"
+    },
+    "coding": {
+      "title": "Programuj ze swoimi agentami",
+      "text": "Każda sesja to rozmowa z agentem, który pracuje na własnej gałęzi, na swoim komputerze."
     },
     "routines": {
       "title": "Zostaw powtarzalną pracę agentom",
@@ -3061,7 +3174,7 @@
       "viewerTextPersonal": "Gdy ktoś dołączy, pojawi się tutaj."
     },
     "chat": {
-      "title": "Wszystko zaczyna się od wiadomości",
+      "title": "Rozpocznij rozmowę",
       "text": "Napisz poniżej, a wszyscy tutaj to zobaczą.",
       "viewerTitle": "Tutaj pojawiają się wiadomości",
       "viewerText": "Gdy ktoś napisze, przeczytasz to tutaj."
@@ -3102,8 +3215,8 @@
     "board": {
       "title": "Zobacz to, co ważne, na jednym panelu",
       "text": "Dodaj widżet, poproś o niego agenta albo przypnij blok z czatu.",
-      "viewerTitle": "Ten panel nabiera kształtu",
-      "viewerText": "Osoba edytująca ten panel doda widżety, a one pojawią się tutaj."
+      "viewerTitle": "Widżety pojawią się tutaj",
+      "viewerText": "Dodaje je osoba edytująca ten panel."
     },
     "computers": {
       "title": "Daj agentom kolejny komputer",
@@ -3112,7 +3225,7 @@
       "viewerText": "Osoba łącząca komputery doda je, a one pojawią się tutaj."
     },
     "connectors": {
-      "title": "Daj agentom prawdziwe narzędzia",
+      "title": "Daj agentom narzędzia",
       "text": "Połącz usługę, a zaczną w niej czytać i działać.",
       "viewerTitle": "Tutaj pojawiają się narzędzia agentów",
       "viewerText": "Osoba zarządzająca konektorami połączy usługi poniżej."
@@ -3121,5 +3234,310 @@
       "title": "Nic do sprawdzenia",
       "text": "Gdy agent zrobi coś poza rozmową, pojawi się to tutaj."
     }
+  },
+  "live": {
+    "status": {
+      "opening": "Otwieranie…",
+      "saved": "Zapisano",
+      "saving": "Zapisywanie…",
+      "offline": "Brak połączenia",
+      "offlineKept": "Brak połączenia · zmiany zachowane na tym telefonie",
+      "readOnly": "Tylko do odczytu"
+    },
+    "closed": {
+      "missing": "Ten plik nie istnieje albo nie został ci udostępniony",
+      "signedOut": "Zaloguj się ponownie, aby otworzyć ten plik",
+      "broken": "Tego pliku nie da się otworzyć w aplikacji",
+      "toDrive": "Wróć do Drive"
+    },
+    "menu": {
+      "undo": "Cofnij",
+      "redo": "Ponów"
+    },
+    "here": {
+      "title": "Kto tu jest",
+      "faces_one": "Tu jest jeszcze {{count}}. Zobacz, kto",
+      "faces_few": "Tu jest jeszcze {{count}}. Zobacz, kto",
+      "faces_many": "Tu jest jeszcze {{count}}. Zobacz, kto",
+      "faces_other": "Tu jest jeszcze {{count}}. Zobacz, kto",
+      "group": {
+        "editing": "Edytują",
+        "viewing": "Oglądają"
+      },
+      "editing": "edytuje",
+      "viewing": "ogląda",
+      "editingAt": "edytuje {{where}}",
+      "viewingAt": "w {{where}}",
+      "editingSlide": "edytuje slajd {{n}}",
+      "onSlide": "na slajdzie {{n}}",
+      "editingShapes_one": "edytuje {{count}} element",
+      "editingShapes_few": "edytuje {{count}} elementy",
+      "editingShapes_many": "edytuje {{count}} elementów",
+      "editingShapes_other": "edytuje {{count}} elementu",
+      "followingName": "Śledzisz: {{name}}",
+      "stop": "Zatrzymaj",
+      "alone": "Teraz jesteś tu tylko ty",
+      "aloneHint": "Każdy, kto otworzy ten plik, pojawi się tutaj razem z tym, co robi."
+    },
+    "card": {
+      "sheets_one": "{{count}} karta",
+      "sheets_few": "{{count}} karty",
+      "sheets_many": "{{count}} kart",
+      "sheets_other": "{{count}} karty",
+      "slides_one": "{{count}} slajd",
+      "slides_few": "{{count}} slajdy",
+      "slides_many": "{{count}} slajdów",
+      "slides_other": "{{count}} slajdu",
+      "shapes_one": "{{count}} element",
+      "shapes_few": "{{count}} elementy",
+      "shapes_many": "{{count}} elementów",
+      "shapes_other": "{{count}} elementu"
+    },
+    "sheet": {
+      "edit": "Edytuj",
+      "editHint": "Wpisz w tej komórce",
+      "editing": "Edycja {{cell}}",
+      "placeholder": "Wpisz wartość lub =",
+      "empty": "Pusta",
+      "cancel": "Zostaw bez zmian",
+      "done": "Gotowe",
+      "typeKey": "Wpisz {{key}}",
+      "stats": "Suma {{sum}} · Średnia {{average}} · Liczba {{count}}",
+      "countOnly": "Liczba {{count}}",
+      "cantDo": "Tutaj nie da się tego zrobić",
+      "copied": "Skopiowano",
+      "newSheet": "Nowa karta",
+      "sheetWord": "Arkusz",
+      "duplicateSheet": "Duplikuj kartę",
+      "copyOf": "{{name}} (kopia)",
+      "deleteSheet": "Usuń kartę",
+      "deleteSheetTitle": "Usunąć {{name}}?",
+      "deleteSheetText": "Wszystko na tej karcie zniknie dla wszystkich w pliku. Cofnięcie to przywróci.",
+      "menu": {
+        "copy": "Kopiuj",
+        "paste": "Wklej",
+        "clear": "Wyczyść",
+        "rowsAbove_one": "Wstaw wiersz powyżej",
+        "rowsAbove_few": "Wstaw {{count}} wiersze powyżej",
+        "rowsAbove_many": "Wstaw {{count}} wierszy powyżej",
+        "rowsAbove_other": "Wstaw {{count}} wiersza powyżej",
+        "rowsBelow_one": "Wstaw wiersz poniżej",
+        "rowsBelow_few": "Wstaw {{count}} wiersze poniżej",
+        "rowsBelow_many": "Wstaw {{count}} wierszy poniżej",
+        "rowsBelow_other": "Wstaw {{count}} wiersza poniżej",
+        "colsLeft_one": "Wstaw kolumnę po lewej",
+        "colsLeft_few": "Wstaw {{count}} kolumny po lewej",
+        "colsLeft_many": "Wstaw {{count}} kolumn po lewej",
+        "colsLeft_other": "Wstaw {{count}} kolumny po lewej",
+        "colsRight_one": "Wstaw kolumnę po prawej",
+        "colsRight_few": "Wstaw {{count}} kolumny po prawej",
+        "colsRight_many": "Wstaw {{count}} kolumn po prawej",
+        "colsRight_other": "Wstaw {{count}} kolumny po prawej",
+        "sortUp": "Sortuj od A do Z",
+        "sortDown": "Sortuj od Z do A",
+        "deleteRows_one": "Usuń wiersz",
+        "deleteRows_few": "Usuń {{count}} wiersze",
+        "deleteRows_many": "Usuń {{count}} wierszy",
+        "deleteRows_other": "Usuń {{count}} wiersza",
+        "deleteCols_one": "Usuń kolumnę",
+        "deleteCols_few": "Usuń {{count}} kolumny",
+        "deleteCols_many": "Usuń {{count}} kolumn",
+        "deleteCols_other": "Usuń {{count}} kolumny"
+      },
+      "problem": {
+        "empty": "Wpisz coś po =",
+        "unexpected": "Coś jest nie tak w pobliżu {{text}}",
+        "paren": "Nawias nie jest zamknięty",
+        "quote": "Cudzysłów nie jest zamknięty",
+        "sheetQuote": "Cudzysłów w nazwie karty nie jest zamknięty",
+        "operand": "Brakuje wartości obok znaku",
+        "array": "Ta lista wartości jest niekompletna",
+        "range": "Ten zakres jest nieprawidłowy",
+        "sheet": "Nie ma karty o nazwie {{text}}",
+        "args": "{{fn}} ma złą liczbę wartości",
+        "tooLong": "To jest za długie na komórkę",
+        "tooDeep": "Ta formuła ma za dużo poziomów",
+        "tooFar": "To odwołanie wykracza poza limit arkusza",
+        "limit": "Arkusz osiągnął limit rozmiaru",
+        "merged": "Scalone komórki przeszkadzają",
+        "failed": "Nie udało się. Spróbuj ponownie."
+      }
+    },
+    "slides": {
+      "placeholder": {
+        "title": "Stuknij, aby dodać tytuł",
+        "text": "Stuknij, aby dodać tekst",
+        "image": "Stuknij, aby dodać zdjęcie"
+      },
+      "part": {
+        "title": "Tytuł",
+        "subtitle": "Podtytuł",
+        "body": "Tekst",
+        "caption": "Podpis",
+        "number": "Duża liczba",
+        "quote": "Cytat",
+        "shape": "Tekst w kształcie",
+        "text": "Pole tekstowe",
+        "note": "Notatka"
+      },
+      "openHint": "Otwiera slajd",
+      "editHint": "Edytuje tekst",
+      "place": "Slajd {{n}} z {{count}}",
+      "placeHidden": "Slajd {{n}} z {{count}} · ukryty podczas prezentacji",
+      "deleteTitle": "Usunąć slajd {{n}}?",
+      "deleteText": "Slajd zniknie dla wszystkich w pliku. Cofnięcie go przywróci.",
+      "notesPlaceholder": "Napisz, co powiedzieć przy tym slajdzie",
+      "pickPhoto": "Wybierz zdjęcie",
+      "tools": {
+        "text": "Tekst",
+        "photo": "Zdjęcie",
+        "sending": "Wysyłanie…"
+      }
+    },
+    "text": {
+      "title": "Tekst",
+      "noteTitle": "Notatka",
+      "done": "Gotowe",
+      "placeholder": "Wpisz tekst",
+      "titlePlaceholder": "Wpisz tytuł",
+      "hint": "Każdy wiersz to akapit."
+    },
+    "show": {
+      "nothing": "Wszystkie slajdy są ukryte, więc nie ma czego pokazać.",
+      "upright": "Ustaw telefon pionowo",
+      "sideways": "Obróć telefon poziomo"
+    },
+    "canvas": {
+      "tools": {
+        "label": "Narzędzia",
+        "select": "Zaznacz",
+        "pen": "Pióro",
+        "shapes": "Kształty",
+        "arrow": "Strzałka",
+        "note": "Notatka",
+        "text": "Tekst",
+        "photo": "Zdjęcie",
+        "comment": "Skomentuj"
+      },
+      "shapes": {
+        "rect": "Prostokąt",
+        "ellipse": "Elipsa",
+        "diamond": "Romb",
+        "triangle": "Trójkąt",
+        "star": "Gwiazda",
+        "line": "Linia"
+      },
+      "penHint": "Rysuj palcem. Dwoma palcami przesuwasz tablicę.",
+      "arrowHint": "Przeciągnij z jednego miejsca do drugiego",
+      "commentHint": "Stuknij tam, gdzie chcesz dodać komentarz",
+      "pin": "Komentarz {{n}}, autor: {{name}}",
+      "addToSelection": "Wybierz też to",
+      "emptyText": "Dodaj notatkę lub zdjęcie albo poproś agenta w rozmowie."
+    },
+    "talk": {
+      "start": "Omów {{what}}",
+      "openHint": "Otwiera rozmowę",
+      "placeholder": {
+        "spreadsheet": "Napisz o arkuszu…",
+        "slides": "Napisz o prezentacji…",
+        "canvas": "Napisz o tablicy…",
+        "document": "Napisz o dokumencie…"
+      },
+      "aboutPoint": "Komentarz do miejsca na tablicy",
+      "comment": "Komentarz",
+      "imported": "<0>{{name}}</0> zaimportował(a) z {{file}}",
+      "variationsText": "zrób warianty tego obrazu"
+    },
+    "doc": {
+      "styles": {
+        "paragraph": "Tekst",
+        "h1": "Nagłówek 1",
+        "h2": "Nagłówek 2",
+        "h3": "Nagłówek 3",
+        "quote": "Cytat",
+        "code": "Kod"
+      },
+      "style": "Styl tekstu",
+      "bold": "Pogrubienie",
+      "italic": "Kursywa",
+      "bullets": "Lista punktowana",
+      "numbers": "Lista numerowana",
+      "quote": "Cytat",
+      "link": "Dodaj link",
+      "linkChoose": "Najpierw wybierz słowa do linku",
+      "linkBad": "Ten adres nie może być linkiem",
+      "linkPlaceholder": "Adres linku",
+      "linkApply": "Dodaj link",
+      "placeholder": "Pisz tutaj",
+      "add": "Dodaj akapit",
+      "editHint": "Edytuje tę część",
+      "notHere": "Tę część edytuje się na komputerze"
+    }
+  },
+  "aiHub": {
+    "accounts": "Konta",
+    "accountsHint": "Wszystkie plany i klucze API tego workspace'u, niezależnie od tego, kto je połączył. Stuknij konto, aby zobaczyć jego limity i kto może go używać.",
+    "order": "Kolejność użycia",
+    "orderSub": "Po osiągnięciu limitu agenci przechodzą na następne konto.",
+    "skipped": "pominięte",
+    "orderGroup": "{{plan}} · {{computer}}",
+    "noOrder": "Gdy na jednym komputerze są dwa konta tej samej AI, ich kolejność pojawi się tutaj.",
+    "keyFallback": "Kontynuuj z kluczem API, gdy wszystkie plany osiągną limit",
+    "keyFallbackHint": "Po ostatnim koncie agenci korzystają z klucza API workspace'u, rozliczanego za użycie. Misje nigdy nie przechodzą na klucz.",
+    "keyFallbackLocked": "Tylko admin może to zmienić.",
+    "limits": "Limity",
+    "permissions": "Uprawnienia",
+    "manage": "Zarządzanie",
+    "manageSub": "Zmiana nazwy, ponowne logowanie, usunięcie",
+    "manageHint": "Kto może zmienić nazwę tego konta, zalogować się do niego ponownie i je usunąć. Zmienia to tylko osoba, która je połączyła.",
+    "use": "Używanie w agentach",
+    "useSub": "Wybór w Kto myśli",
+    "useHint": "Czyi agenci mogą myśleć z tym kontem i czyj Lodi. Zmienia to osoba, która nim zarządza.",
+    "reply": "Obsługa wszystkich",
+    "replySub": "Z kim rozmawiają agenci",
+    "replyHint": "Komu odpowiada agent na tym koncie oprócz swojego właściciela. Warunki Claude wymagają, by z planu korzystała osoba, która za niego płaci: sprawdź je, zanim otworzysz go dla wszystkich.",
+    "audience": {
+      "owner": "Tylko ty",
+      "ownerOf": "Tylko {{name}}",
+      "admins": "Ty i admini",
+      "adminsOf": "{{name}} i admini",
+      "roles": "Role…",
+      "people": "Osoby…",
+      "everyone": "Wszyscy",
+      "agentOwner": "Tylko właściciel agenta",
+      "rolesCount_one": "{{count}} rola",
+      "rolesCount_few": "{{count}} role",
+      "rolesCount_many": "{{count}} ról",
+      "rolesCount_other": "{{count}} roli",
+      "peopleCount_one": "{{count}} osoba",
+      "peopleCount_few": "{{count}} osoby",
+      "peopleCount_many": "{{count}} osób",
+      "peopleCount_other": "{{count}} osoby"
+    },
+    "pickRoles": "Role",
+    "pickPeople": "Osoby",
+    "pickNone": "Wybierz co najmniej jedną.",
+    "choice": {
+      "account": "Konto",
+      "model": "Model",
+      "effort": "Wysiłek",
+      "yours": "Twoje",
+      "others": "Zespołu",
+      "keys": "Klucze API",
+      "workspace": "Workspace'u",
+      "workspaceSub": "Klucz API workspace'u",
+      "key": "Klucz API",
+      "keyDefault": "domyślny workspace'u",
+      "api": "API",
+      "asksMove": "{{agent}} przestaje z niego korzystać."
+    },
+    "missionAi": "AI",
+    "missionLocked": "Kto wykonuje pracę, wybiera się przed startem. Model można zmienić w każdej chwili."
+  },
+  "surface": {
+    "on": "Włączone",
+    "codeText": "Wyślij wiadomość, która się tam otworzy, a potem wróć tutaj.",
+    "openFailed": "Nie udało się otworzyć {{surface}} na tym telefonie. Zamiast tego wyślij tam kod poniżej.",
+    "orType": "Albo wyślij tam ten kod"
   }
 }

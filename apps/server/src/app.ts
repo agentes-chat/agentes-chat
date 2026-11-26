@@ -1,4 +1,11 @@
-import { MisconfiguredError, requestLocale } from "@agenteschat/engine";
+import {
+  hostLook,
+  isAgentesCloud,
+  MisconfiguredError,
+  normalizeHost,
+  requestLocale,
+  ValidationError,
+} from "@agenteschat/engine";
 import { helpDocsUrl } from "@agenteschat/i18n/help";
 import { appLocale } from "@agenteschat/i18n/locale";
 import type { AgentesModule, Edition, ModuleContext } from "@agenteschat/modules";
@@ -11,10 +18,13 @@ import installScript from "../../../install.sh" with { type: "text" };
 import { registerAppLinks } from "./app-links";
 import { authHandler, signInPageUrl } from "./auth";
 import { apiBodyLimit } from "./http/body-limit";
-import { errorPages } from "./http/error-page";
+import { errorPages, isPageRequest } from "./http/error-page";
 import { apiError, domainErrorResponse, routeOf, validationHook } from "./http/errors";
+import { busyResponse } from "./load-shed";
 import { createLogger, type Logger, loggedPath } from "./logger";
+import { ownHosts } from "./operator/hosts";
 import { directPushSenders, relayServeSender } from "./push-senders";
+import { timeRoutes } from "./route-times";
 import { accessRoutes } from "./routes/app/access";
 import { accountRoutes } from "./routes/app/account";
 import { actionRoutes } from "./routes/app/actions";
@@ -30,6 +40,7 @@ import { browserProfileRoutes } from "./routes/app/browser-profiles";
 import { calendarRoutes } from "./routes/app/calendar";
 import { channelRoutes } from "./routes/app/channels";
 import { chatRoutes } from "./routes/app/chat";
+import { codeSessionRoutes } from "./routes/app/code-sessions";
 import { connectorRoutes } from "./routes/app/connectors";
 import { customConnectorRoutes } from "./routes/app/connectors-custom";
 import { type AppDeps, agentDetailsGate, readOnlyWhileDeleting } from "./routes/app/context";
@@ -41,10 +52,12 @@ import { dmRoutes } from "./routes/app/dms";
 import { feedbackRoutes, registerFeedbackFiles, registerFeedbackInbox } from "./routes/app/feedback";
 import { gifKeyRoutes } from "./routes/app/gif-key";
 import { gifRoutes } from "./routes/app/gifs";
+import { imageRoutes } from "./routes/app/images";
 import { inviteRoutes } from "./routes/app/invites";
 import { issueRoutes } from "./routes/app/issues";
 import { jevRoutes } from "./routes/app/jev";
 import { knowledgeRoutes } from "./routes/app/knowledge";
+import { liveRoutes } from "./routes/app/live";
 import { machineAccountRoutes } from "./routes/app/machine-accounts";
 import { mailRoutes } from "./routes/app/mail";
 import { managementRoutes } from "./routes/app/management";
@@ -53,17 +66,21 @@ import { missionRoutes } from "./routes/app/missions";
 import { notificationRoutes } from "./routes/app/notifications";
 import { personUsageRoutes } from "./routes/app/person-usage";
 import { planUsageRoutes } from "./routes/app/plan-usage";
+import { problemReportRoutes } from "./routes/app/problem-reports";
 import { pushRoutes } from "./routes/app/push";
 import { questionRoutes } from "./routes/app/questions";
+import { referralRoutes } from "./routes/app/referrals";
 import { roleRoutes } from "./routes/app/roles";
 import { routineRoutes } from "./routes/app/routines";
 import { sandboxRoutes } from "./routes/app/sandboxes";
 import { secretRoutes } from "./routes/app/secrets";
 import { skillRoutes } from "./routes/app/skills";
 import { storageRoutes } from "./routes/app/storage";
+import { surfaceRoutes } from "./routes/app/surfaces";
 import { teamWeekRoutes } from "./routes/app/team-week";
 import { telemetryRoutes } from "./routes/app/telemetry";
 import { threadRoutes } from "./routes/app/threads";
+import { thumbRoutes } from "./routes/app/thumbs";
 import { vaultRoutes } from "./routes/app/vault";
 import { speechKeyRoutes, voiceRoutes } from "./routes/app/voice";
 import { waitingRoutes } from "./routes/app/waiting";
@@ -75,6 +92,7 @@ import {
   registerNativeRoutes,
 } from "./routes/desktop";
 import { deviceAppRoutes, registerConnectLinkInfo, registerConnectScripts } from "./routes/devices";
+import { registerFonts } from "./routes/fonts";
 import { registerGitProxy } from "./routes/git";
 import { githubAppRoutes, registerGitHubAppWebhook } from "./routes/github-app";
 import { registerHealth } from "./routes/health";
@@ -93,6 +111,8 @@ export interface AppOptions {
   pingDatabase: () => Promise<void>;
   /** True once the server is shutting down: `/api/health` answers 503. */
   draining?: () => boolean;
+  /** Why this process is overloaded now (`watchLoad`), or null: the apps' reads (and `/api/health?load=1`) answer 503. */
+  overloaded?: () => string | null;
   /** Needed when modules register routes. */
   moduleContext?: ModuleContext;
   /** Database, auth and adapters. Without them only system routes are mounted (some tests). */
@@ -111,6 +131,7 @@ export interface AppOptions {
  *
  * Layout:
  * - `/api/health`         health probe
+ * - `/api/fonts/*`        public: the fonts live files use, their `@font-face` CSS and files (ADR 0220)
  * - `/api/instance`       public: what this server is, for the phone and desktop apps choosing a server
  * - `/api/auth/*`         Better Auth (sign-up, sign-in, sessions, OAuth callbacks)
  * - `/api/app/*`          private API of the web and phone apps (cookie session + CSRF, ADR 0035)
@@ -127,9 +148,11 @@ export interface AppOptions {
  * - `/api/push-relay/v1/*` other installations' phone pushes, server to server (only with PUSH_RELAY_SERVE, ADR 0152)
  * - `/mcp`                AI apps' MCP endpoint, bearer tokens only (ADR 0119); `/.well-known/oauth-*` its discovery
  * - `/api/ws`             WebSocket (real-time)
+ * - `/api/live`           WebSocket: one live file, a spreadsheet, presentation or canvas (ADR 0196)
  * - `/api/openapi.json`   OpenAPI 3.1 document; `/api/reference` interactive docs
  * - `/install`            the self-host installer, `install.sh` (`curl -fsSL <server>/install | sh`)
  * - `/i/<code>`           a new computer's installer with a connect link baked in (`/i/<code>/ps` for Windows)
+ * - `/migrate.sh`         runs `agentes-runner migrate` once, without installing (`/migrate.ps1` for Windows; ADR 0055)
  * - `/install/docker-compose.yml` the compose file of this release, which the setup downloads
  * - `/sw.js`              the web app's service worker (browser push, ADR 0071)
  * - everything else       web app (single-page app), when built
@@ -148,12 +171,15 @@ export function createApp(options: AppOptions) {
     description: "Session cookie set by `/api/auth/sign-in/*`.",
   });
 
+  registerFonts(api);
   registerHealth(api, {
     version,
-    edition: options.edition,
+    // agentes.chat itself runs the self-host image: its apps must still hide what only a self-hosted server has.
+    edition: options.services && isAgentesCloud(options.services.config.PUBLIC_URL) ? "cloud" : options.edition,
     modules: options.modules.map((m) => m.name),
     pingDatabase: options.pingDatabase,
     draining: options.draining,
+    overloaded: options.overloaded,
   });
 
   if (options.services) {
@@ -206,10 +232,17 @@ export function createApp(options: AppOptions) {
     api.route("/app", roleRoutes(deps));
     api.route("/app", storageRoutes(deps));
     api.route("/app", billingRoutes(deps));
+    api.route("/app", referralRoutes(deps));
     api.route("/app", artifactRoutes(deps));
+    api.route("/app", thumbRoutes(deps));
+    api.route("/app", liveRoutes(deps));
+    // Pictures on canvases (ADR 0197): the image models, requests and Try again.
+    api.route("/app", imageRoutes(deps));
     api.route("/app", issueRoutes(deps));
     api.route("/app", threadRoutes(deps));
     api.route("/app", missionRoutes(deps));
+    // Code sessions (ADR 0215): a request in its own worktree on the agent's computer, with its conversation.
+    api.route("/app", codeSessionRoutes(deps));
     api.route("/app", wikiRoutes(deps));
     api.route("/app", routineRoutes(deps));
     api.route("/app", calendarRoutes(deps));
@@ -225,11 +258,13 @@ export function createApp(options: AppOptions) {
     api.route("/app", teamWeekRoutes(deps));
     api.route("/app", dashboardRoutes(deps));
     api.route("/app", telemetryRoutes(deps));
+    api.route("/app", problemReportRoutes(deps));
     api.route("/app", jevRoutes(deps));
     api.route("/app", feedbackRoutes(deps));
     api.route("/app", gifKeyRoutes(deps));
     api.route("/app", speechKeyRoutes(deps));
     api.route("/app", voiceRoutes(deps));
+    api.route("/app", surfaceRoutes(deps));
     api.route("/app", webhookAdminRoutes(deps));
     api.route("/app", githubAppRoutes(deps));
     registerOauthRoutes(api, deps, { version, fetchDocument: options.appsFetchDocument });
@@ -300,6 +335,16 @@ export function createApp(options: AppOptions) {
 
   const app = new OpenAPIHono();
   app.onError((error, c) => {
+    // A typed-in address refused for being on a private network says so in the log too: a self-hoster who meant
+    // to reach it sees which host and which settings allow it (ADR 0210).
+    if (error instanceof ValidationError && error.code === "url.internal") {
+      log.warn("outbound address refused: private network", {
+        host: error.params?.host,
+        route: routeOf(c),
+        orgId: c.req.param("orgId"),
+        allowWith: "OUTBOUND_ALLOW_HOSTS or OUTBOUND_ALLOW_CIDRS",
+      });
+    }
     const mapped = domainErrorResponse(error, c);
     if (mapped) return mapped;
     log.error("unhandled error", {
@@ -319,6 +364,8 @@ export function createApp(options: AppOptions) {
   });
   // Ties a request's failure in the log to its report, and to what the client saw (`X-Request-Id`).
   app.use("/api/*", requestId());
+  // Each route's p95 over the minute, on the operator's `GET /vitals` (`route-times.ts`, `process-health.ts`).
+  app.use("/api/*", timeRoutes);
   app.use("/api/*", apiBodyLimit);
   // Security headers on every response: the app may not be framed (clickjacking of approval, merge and deploy
   // cards), <base> is pinned to our own origin, and HSTS is sent where the instance is served over TLS. `frame-src`
@@ -341,6 +388,17 @@ export function createApp(options: AppOptions) {
   });
   // A link a person opens in a browser that the API refuses: our page, never the JSON on screen (ADR 0157).
   app.use("/api/*", errorPages(options.services?.config.PUBLIC_URL));
+  // A late event loop or slow database: the apps' reads wait for a calmer moment (or, behind a proxy, another
+  // process); writes carry on. A full socket count turns new sockets away only.
+  const overloaded = options.overloaded;
+  if (overloaded) {
+    app.use("/api/app/*", async (c, next) => {
+      // A link a person opened (a provider's OAuth return with its one-time code, a download, an invite) is no read.
+      const read = c.req.method === "GET" && !isPageRequest(c.req.raw.headers, "GET");
+      const why = read ? overloaded() : null;
+      return why && why !== "sockets" ? busyResponse() : next();
+    });
+  }
   app.route("/api", api);
   if (options.services) {
     registerConnectScripts(app, { log, ...options.services });
@@ -371,7 +429,9 @@ export function createApp(options: AppOptions) {
   );
 
   if (options.webDir) {
-    const assets = serveStatic({ root: options.webDir });
+    // The build writes each script and stylesheet compressed beside it (apps/web/scripts/compress-dist.ts): a server
+    // with nothing in front of it sends 1/4 of the bytes. Pages stay plain (their HTML is rewritten for a host).
+    const assets = serveStatic({ root: options.webDir, precompressed: true });
     // Client-side routing: unknown non-API paths render the web app.
     const spa = serveStatic({ root: options.webDir, path: "index.html" });
     const isApi = (path: string) => path.startsWith("/api/");
@@ -405,10 +465,43 @@ export function createApp(options: AppOptions) {
     // index.html is always revalidated, so a new deploy shows on the next open.
     // No page of the app belongs in a search engine's index, whatever its status: sign-in pages and made-up
     // addresses all answer with the same page. A header, never a robots.txt: a crawler kept out can't read it.
+    // On a registered host (ADR 0194) the page says so on its <html> before the app knows the host, so index.html's
+    // boot rules hide the product's mark. Every page from WEB_DIR passes here, the SPA fallback included.
+    // On a hostname that is neither the server's own nor registered, the app's page is a 404 marked
+    // data-unknown-host, and the web shows only its "not set up yet" screen. Only with the operator API on: hosts
+    // register only through it, so without it every name a proxy sends is the server's own.
+    const db = options.services?.db;
+    const config = options.services?.config;
+    const own = config ? ownHosts(config) : new Set<string>();
+    const unknownHost = (host: string | undefined) => {
+      const name = normalizeHost(host);
+      return Boolean(config?.OPERATOR_API_TOKEN && name && !own.has(name));
+    };
+    const appPage = (path: string) => !path.endsWith(".html") || path === "/index.html";
     app.use("/*", async (c, next) => {
       await next();
       if (isApi(c.req.path)) return;
       const html = c.res.headers.get("content-type")?.startsWith("text/html");
+      if (html && db && c.res.ok && c.req.method === "GET") {
+        const host = c.req.header("host");
+        const mark = (await hostLook(db, host))
+          ? "data-host"
+          : appPage(c.req.path) && unknownHost(host)
+            ? "data-unknown-host"
+            : null;
+        if (mark) {
+          let page = (await c.res.text()).replace("<html", `<html ${mark}`);
+          // The web app manifest (ADR 0249) installs the product's name and icon; a registered host wears its own.
+          if (mark === "data-host") page = page.replace(/<link rel="manifest"[^>]*>\s*/, "");
+          c.res.headers.delete("content-length");
+          // The address may be registered a moment later: nothing keeps this answer.
+          if (mark === "data-unknown-host") c.res.headers.set("cache-control", "no-store");
+          c.res = new Response(page, {
+            status: mark === "data-unknown-host" ? 404 : c.res.status,
+            headers: c.res.headers,
+          });
+        }
+      }
       if (html) c.res.headers.set("x-robots-tag", "noindex");
       if (!c.res.ok || c.res.headers.has("cache-control")) return;
       if (html) c.res.headers.set("cache-control", "no-cache");

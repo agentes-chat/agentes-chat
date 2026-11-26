@@ -14,6 +14,8 @@ import {
   insertMessage,
   isHowTo,
   isPlaybook,
+  isPromotable,
+  isQuote,
   LEARNED_EXPIRE_DAYS,
   learnRun,
   learnTrust,
@@ -22,6 +24,7 @@ import {
   normalizeSubject,
   openPersonAgentDm,
   postPersonMessage,
+  proposeFromItem,
   recordContextUse,
   retrieveForRun,
   SKILL_MIN_SPREAD,
@@ -102,10 +105,17 @@ async function setup(options: Parameters<typeof baseSetup>[0] = {}) {
 }
 
 /** A run of the agent in `general`, answering a person's message (a routine's when `background`). */
-async function personRun(body = "@dev do it", background = false, meta?: Record<string, unknown>, userId = f.owner.id) {
+async function personRun(
+  body = "@dev do it",
+  background = false,
+  meta?: Record<string, unknown>,
+  userId = f.owner.id,
+  threadId?: string,
+) {
   const msg = await insertMessage(f.db, {
     orgId: f.org.id,
     channelId: f.general.id,
+    ...(threadId ? { threadId } : {}),
     author: { type: "person", userId },
     body,
     meta,
@@ -212,6 +222,33 @@ describe("agents learn on their own (ADR 0120)", () => {
     expect(await receipts()).toEqual([]);
     const marks = await memoriesFor(f.db, f.org.id, [{ id: msg.id, channelId: f.general.id, authorType: "person" }]);
     expect(marks.get(msg.id) ?? []).toEqual([]);
+  });
+
+  test("a person's 'don't… again' is learned even when the turn ends on a question to them", async () => {
+    f = await setup({
+      judge: (kind, id) => (kind === "follow_through" ? (id === "learn" ? "correction" : "ask") : undefined),
+      reply: () => ({ chunks: ["Entendi, não marco mais reunião na sexta. Que dia você prefere?"] }),
+    });
+    learnOutput = {
+      items: [
+        {
+          kind: "preference",
+          scope: "agent",
+          about_person: "",
+          title: "no Friday meetings",
+          content: "Never book meetings on Fridays.",
+          refs: ["m1"],
+        },
+      ],
+      skill_fixes: [],
+    };
+    await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, {
+      body: "@dev não marca mais reunião na sexta",
+    });
+    await drainOutbox(f.db, f.handlers);
+    const [run] = await f.db.select().from(schema.agentRuns).where(eq(schema.agentRuns.orgId, f.org.id));
+    expect(run?.status).toBe("waiting_input");
+    expect((await items()).map((i) => i.content)).toEqual(["Never book meetings on Fridays."]);
   });
 
   test("a correction replaces the preference on record, keeps the old one as history and shows the mark", async () => {
@@ -472,6 +509,137 @@ describe("agents learn on their own (ADR 0120)", () => {
     expect(await f.db.select().from(schema.skills)).toEqual([]);
   });
 
+  test("a person's long message kept after outside content stays memory: never pasted into the agent's instructions", async () => {
+    f = await setup();
+    const long = `@dev ${"Prefiro as notas de reunião em tópicos curtos, sempre com o próximo passo no fim. ".repeat(60)}`;
+    const { run } = await personRun(long);
+    await step(run, "read_issue", { id: "1" }, '<external_data untrusted="true">Release notes</external_data>');
+    await invoke(run, "remember", {
+      kind: "preference",
+      title: "Short meeting notes",
+      content: "Wants meeting notes as short bullets ending with the next step.",
+      basis: "person_said",
+    });
+    await invoke(run, "remember", {
+      kind: "fact",
+      title: "Release day: Thursday",
+      content: "Releases go out on Thursdays.",
+      basis: "person_said",
+    });
+    const kept = await items();
+    expect(kept.map((i) => [i.trust, i.verified, isQuote(i)])).toEqual([
+      ["high", true, true],
+      ["high", true, true],
+    ]);
+    for (const item of kept) {
+      const strong = { ...item, recurrence: 5, confidence: 1, relevance: 1 };
+      expect(isPromotable(strong)).toBe(false);
+      expect(await proposeFromItem(f, strong)).toBeNull();
+    }
+    // An agent's fact in its own words is memory too; the workspace's still goes to its context.
+    const fact = { ...(kept[0] as (typeof kept)[number]), evidence: [], kind: "fact" as const, recurrence: 5 };
+    expect(isPromotable({ ...fact, evidence: [{ type: "human" as const, ref: "m", at: "" }] })).toBe(false);
+    expect(isPromotable({ ...fact, agentId: null, evidence: [{ type: "human" as const, ref: "m", at: "" }] })).toBe(
+      true,
+    );
+    expect(await f.db.select().from(schema.contextProposals)).toEqual([]);
+  });
+
+  test("after outside content, memory keeps the text the person wrote or agreed to, never their whole message", async () => {
+    f = await setup();
+    const agentSays = (body: string) =>
+      insertMessage(f.db, {
+        orgId: f.org.id,
+        channelId: f.general.id,
+        author: { type: "agent", agentId: f.agent.id, runId: null, hop: 1, stretchId: null },
+        body,
+      });
+    const readPage = (run: { id: string; orgId: string }) =>
+      step(run, "web_fetch", { url: "https://vendor.example/docs" }, "<external_data>Docs</external_data>");
+    const proposal = await agentSays("Quer que eu guarde isto?\n\n> **Relatórios do financeiro saem sempre em PDF.**");
+    // A quote reply to the proposal: the proposed text is kept, not "sim, pode guardar".
+    const { run: agreed } = await personRun("sim, pode guardar", false, {
+      replyTo: {
+        messageId: proposal.id,
+        threadId: null,
+        author: { type: "agent", id: f.agent.id },
+        authorName: "Dev",
+        excerpt: "Quer que eu guarde isto?",
+      },
+    });
+    await readPage(agreed);
+    const saved = await invoke(agreed, "remember", {
+      kind: "preference",
+      title: "Financeiro em PDF",
+      content: "Relatórios do financeiro saem sempre em PDF.",
+      basis: "person_said",
+    });
+    expect(saved.isError).toBeUndefined();
+    const [kept] = await items();
+    expect([kept?.content, kept?.trust, kept && isQuote(kept)]).toEqual([
+      "Relatórios do financeiro saem sempre em PDF.",
+      "high",
+      false,
+    ]);
+
+    // A plain answer right after the proposal counts too: update_memory keeps the new proposed text.
+    await agentSays("Atualizo para: relatórios do financeiro saem em PDF e em XLSX?");
+    const { run: again } = await personRun("isso, pode trocar");
+    await readPage(again);
+    const updated = await invoke(again, "update_memory", {
+      item_id: kept?.id,
+      content: "Relatórios do financeiro saem em PDF e em XLSX.",
+    });
+    expect(updated.isError).toBeUndefined();
+    const active = async () => (await items()).filter((i) => i.status === "active");
+    expect((await active()).map((i) => i.content)).toEqual(["Relatórios do financeiro saem em PDF e em XLSX."]);
+
+    // The person's own words around the text: only the text is kept, as their quote.
+    const { run: own } = await personRun("guarda isso por favor: o fechamento do mês é no dia 5. valeu!");
+    await readPage(own);
+    await invoke(own, "remember", { kind: "fact", content: "O fechamento do mês é no dia 5", basis: "person_said" });
+    const closing = (await items()).find((i) => i.content.includes("fechamento"));
+    expect([closing?.content, closing && isQuote(closing)]).toEqual(["O fechamento do mês é no dia 5", true]);
+
+    // A reply in the thread under the proposal answers it too.
+    const inThread = await agentSays("Guardo isto? O comitê se reúne às terças.");
+    const { run: threaded } = await personRun("pode", false, undefined, f.owner.id, inThread.id);
+    await readPage(threaded);
+    expect(
+      (
+        await invoke(threaded, "remember", {
+          kind: "fact",
+          content: "O comitê se reúne às terças.",
+          basis: "person_said",
+        })
+      ).isError,
+    ).toBeUndefined();
+    expect((await items()).find((i) => i.content.includes("comitê"))?.content).toBe("O comitê se reúne às terças.");
+
+    // Part of a sentence of theirs is not what they said: "não" left out, their whole message is kept instead.
+    const { run: part } = await personRun("não mande os relatórios sem me perguntar antes");
+    await readPage(part);
+    await invoke(part, "remember", {
+      kind: "preference",
+      content: "Mande os relatórios sem me perguntar antes",
+      basis: "person_said",
+    });
+    expect((await items()).find((i) => i.content.includes("relatórios sem"))?.content).toBe(
+      "não mande os relatórios sem me perguntar antes",
+    );
+
+    // Neither theirs nor proposed: refused with a way out, nothing kept.
+    const { run: neither } = await personRun("ok");
+    await readPage(neither);
+    const refused = await invoke(neither, "remember", {
+      kind: "fact",
+      content: "Fechamento passa para o dia 10.",
+      basis: "person_said",
+    });
+    expect(refused).toMatchObject({ isError: true, content: expect.stringContaining("show them the exact text") });
+    expect(await active()).toHaveLength(4);
+  });
+
   test("who holds which access becomes a workspace fact every agent reads, from a browser run too, kept current", async () => {
     f = await setup();
     const ops = await createAgent(
@@ -543,6 +711,48 @@ describe("agents learn on their own (ADR 0120)", () => {
     expect([ads?.agentId, ads?.channelIds]).toEqual([null, [f.general.id]]);
   });
 
+  test("a turn that sets up SSH keeps how to reach the server (host, port, user, key path), never the password", async () => {
+    f = await setup();
+    const { run } = await personRun("@dev configure o acesso SSH ao vps.example.com, porta 2222, usuário deploy");
+    await step(run, "computer_run", { command: "ssh-keygen -t ed25519 -f ~/.ssh/vps_example" }, "ok");
+    const ssh = "@dev reaches vps.example.com over SSH on port 2222 as deploy with the key at ~/.ssh/vps_example";
+    const access = (title: string, key: string, content: string) => ({
+      kind: "access",
+      scope: "own",
+      about_person: "",
+      title,
+      key,
+      content,
+      refs: ["m1", "s1"],
+    });
+    learnOutput = {
+      items: [
+        access(ssh, "@dev ssh vps.example.com", ssh),
+        access("deploy password", "@dev ssh password", "password: Fake-Pa55word-not-real"),
+      ],
+      skill_fixes: [],
+    };
+    const out = await learnRun(f.context, { orgId: f.org.id, runId: run.id });
+    const prompt = systemText(
+      f.provider.calls.find((c) => isLearn(systemText(c.request.system)))?.request.system ?? "",
+    );
+    expect(prompt).toContain("the path of a key file on the agent's own computer as an access");
+    expect(out.rejected.map((r) => r.reason)).toEqual(["secret"]);
+    const saved = await items();
+    expect(saved.map((i) => [i.kind, i.content])).toEqual([["fact", ssh]]);
+    for (const part of ["port 2222", "as deploy", "~/.ssh/vps_example"]) expect(saved[0]?.content).toContain(part);
+  });
+
+  test("notes follow the language of the person the turn was for, never an example's Portuguese", async () => {
+    f = await setup();
+    await f.db.update(schema.users).set({ locale: "en" }).where(eq(schema.users.id, f.owner.id));
+    const { run } = await personRun("@dev check the deploy");
+    await learnRun(f.context, { orgId: f.org.id, runId: run.id });
+    const call = f.provider.calls.find((c) => isLearn(systemText(c.request.system)));
+    expect(systemText(call?.request.system ?? "")).not.toContain("Como gravar");
+    expect(JSON.stringify(call?.request.messages)).toContain("App language of the person this turn was for: en");
+  });
+
   test("guards: daily cap, a live run, credentials, a person's item, update_skill rules, a run that saved already", async () => {
     f = await setup();
     const today = new Date().toISOString().slice(0, 10);
@@ -553,6 +763,11 @@ describe("agents learn on their own (ADR 0120)", () => {
     await f.db.insert(schema.agentLearningDays).values({ orgId: f.org.id, agentId: f.agent.id, day: today, jobs: 20 });
     expect(await afterTurnDone(f.context, run, { judged: true, signal: "method" })).toBe(false);
     expect((await learnRun(f.context, { orgId: f.org.id, runId: run.id })).skipped).toBe("cap_reached");
+    // A person's correction is never crowded out by the day's other learning.
+    expect(await afterTurnDone(f.context, run, { judged: true, signal: "correction" })).toBe(true);
+    expect(
+      (await learnRun(f.context, { orgId: f.org.id, runId: run.id, signal: "correction" })).skipped,
+    ).toBeUndefined();
     await f.db.delete(schema.agentLearningDays);
     expect(await afterTurnDone(f.context, run, { judged: true, signal: "method" })).toBe(true);
     expect(await afterTurnDone(f.context, run, { judged: true, signal: "none" })).toBe(false);
@@ -627,7 +842,7 @@ describe("agents learn on their own (ADR 0120)", () => {
     ]);
 
     // update_skill: only after load_skill in the run, never a locked skill or another agent's; a person's skill
-    // changes at once while agents improve skills by themselves (the default), else it becomes a proposal.
+    // changes at once while agents improve skills by themselves (the default), else agents leave it alone.
     const skill = async (slug: string, extra: Partial<typeof schema.skills.$inferInsert> = {}) => {
       const [s] = await f.db
         .insert(schema.skills)
@@ -654,17 +869,13 @@ describe("agents learn on their own (ADR 0120)", () => {
     const member = await addMember(f.db, f.org.id, "member");
     const { run: memberRun } = await personRun("@dev fix the handbook", false, undefined, member.id);
     await step(memberRun, "load_skill", { name: "handbook" }, "loaded");
-    const proposed = await invoke(memberRun, "update_skill", {
+    const refused = await invoke(memberRun, "update_skill", {
       name: "handbook",
       body: "# handbook\n1. Another step.",
     });
-    expect(proposed.content).toContain("Agents don't change this skill by themselves here");
-    const [proposal] = await f.db.select().from(schema.contextProposals);
-    expect([proposal?.target, proposal?.access?.[0]?.label, proposal?.proposedText]).toEqual([
-      "skill",
-      "handbook",
-      "# handbook\n1. Another step.",
-    ]);
+    expect(refused).toMatchObject({ isError: true });
+    expect(refused.content).toContain("Agents don't change this skill on their own");
+    expect(await f.db.select().from(schema.contextProposals)).toEqual([]);
     expect(
       (await receipts()).filter((r) => r.kind === "skill.updated").map((r) => (r.before as { body: string }).body),
     ).toEqual(["# mine", "# handbook"]);
@@ -774,9 +985,12 @@ describe("learning guards", () => {
       .set({ transcript: { harnessTried: ["WebFetch(https://vendor.example/docs)"] } })
       .where(eq(schema.agentRuns.id, harness.id));
     expect(await trust(harness)).toBe("low");
-    await invoke(harness, "remember", { kind: "fact", content: "The vendor API is on v9.", basis: "person_said" });
-    // The person's own words are theirs to vouch for (ADR 0167); what the fetch said never becomes the memory.
-    expect((await items()).map((i) => [i.trust, i.content])).toEqual([["high", "@dev look into the vendor"]]);
+    // What the fetch said never becomes the memory (ADR 0167), and "look into the vendor" is too short to be it.
+    expect(
+      (await invoke(harness, "remember", { kind: "fact", content: "The vendor API is on v9.", basis: "person_said" }))
+        .isError,
+    ).toBe(true);
+    expect(await items()).toEqual([]);
 
     // A screen read: the envelope is stripped from the step, only the gateway's `outside` mark is left.
     const { run: screen } = await personRun("@dev check the dashboard");

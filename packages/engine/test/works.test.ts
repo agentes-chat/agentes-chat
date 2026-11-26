@@ -186,7 +186,7 @@ test("work_in_background: the anchor in the timeline, updates in its thread, the
     title: "Migrar a cobrança",
     status: "done",
     channelId: f.general.id,
-    assignee: { type: "agent", id: f.agent.id },
+    assignees: [{ type: "agent", id: f.agent.id }],
     blocked: null,
   });
   expect(issues[0]?.backgroundWork?.plan.map((p) => p.state)).toEqual(["done", "doing", "todo"]);
@@ -525,6 +525,9 @@ test("the promise: a nudge when no update came, then exactly one update of the s
     new Date(later.getTime() + 61_000),
   );
   expect(agentUpdate.ok).toBe(true);
+  // The update answers the nudge it hadn't read yet: it no longer waits for the run's next step.
+  const [read] = await f.db.select().from(schema.agentRuns).where(eq(schema.agentRuns.id, run.id));
+  expect(read?.pendingMessageIds).not.toContain(nudge?.id as string);
   expect(
     await checkInWork(
       deps(),
@@ -538,13 +541,26 @@ test("the promise: a nudge when no update came, then exactly one update of the s
 test("updates: 5 minutes apart unless important (then a minute), the promise clamped to 5–20", async () => {
   f = await setup();
   const run = await working("@dev roda a migração");
-  await moved(run);
+  const { work } = await moved(run);
   const t0 = new Date();
   const first = await postWorkUpdate(deps(), run.id, { text: "Começando.", nextUpdateMin: 60 }, t0);
   expect(first.ok && first.work.nextUpdateAt?.getTime()).toBe(t0.getTime() + 20 * 60_000);
   const soon = await postWorkUpdate(deps(), run.id, { text: "Mais um." }, new Date(t0.getTime() + 2 * 60_000));
   expect(soon.ok).toBe(false);
-  expect(!soon.ok && soon.reason).toStartWith("Too soon; your last update was 2 min ago.");
+  expect(!soon.ok && soon.quiet && soon.reason).toStartWith("Not posted: your last update went out 2 min ago");
+  expect(!soon.ok && soon.reason).toEndWith("send it with important.");
+  // Too soon for a line, but the plan it carried still moves the card.
+  const posted = (await messages()).filter((m) => m.meta.workUpdate).length;
+  const plan = [{ id: "s1", text: "Migrar", state: "doing" as const }];
+  const planned = await postWorkUpdate(
+    deps(),
+    run.id,
+    { text: "Migrando.", plan },
+    new Date(t0.getTime() + 2 * 60_000),
+  );
+  expect(!planned.ok && planned.quiet && planned.reason).toStartWith("Plan saved; the line was not posted");
+  expect((await workView(f.db, f.org.id, work.id))?.plan).toEqual(plan);
+  expect((await messages()).filter((m) => m.meta.workUpdate)).toHaveLength(posted);
   const important = await postWorkUpdate(
     deps(),
     run.id,
@@ -640,7 +656,7 @@ test("cards: none for a quick run nor a short auto work; card: true makes one; a
   const existing = await createIssue(deps(), { type: "person", userId: f.owner.id }, f.org.id, {
     title: "Cobrança nova",
     criteria: ["Sem perda de dados"],
-    assignee: { type: "agent", id: f.agent.id },
+    assignees: [{ type: "agent", id: f.agent.id }],
     channelId: f.general.id,
   });
   const reuse = await working("@dev pega a #1");
@@ -761,7 +777,7 @@ test("card_issue: only a card the asker reads, here or workspace-wide; elsewhere
   const elsewhere = await createIssue(deps(), { type: "person", userId: f.owner.id }, f.org.id, {
     title: "Fechamento",
     channelId: finance.id,
-    assignee: { type: "agent", id: f.agent.id },
+    assignees: [{ type: "agent", id: f.agent.id }],
   });
   const dm = await openDm(f.db, f.owner.id, f.org.id, { agentId: f.agent.id });
   const run = await working("pega a #1", undefined, dm.id);

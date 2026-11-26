@@ -95,6 +95,28 @@ describe("receipt sentence values", () => {
     expect(actionTextValues(viewer, t, "u1").assignee).toBe("Bia");
   });
 
+  test("assigned by name alone, as a server of several assignees says it: the names it joined, or nobody left", () => {
+    const two = action({
+      kind: "issue.assigned",
+      params: { number: 2, title: "T", fields: ["assignees"], assigneeName: "Ada, Bia", assigneeNames: ["Ada", "Bia"] },
+    });
+    expect(actionTextValues(two, t, "u1").assignee).toBe("Ada, Bia");
+    expect(actionTextValues(two, t, "u1").context).toBeUndefined();
+    const left = action({
+      kind: "issue.assigned",
+      params: { number: 2, title: "T", fields: ["assignees"], assigneeName: null, assigneeNames: ["Ada"] },
+    });
+    expect(actionTextValues(left, t).context).toBe("none");
+    const self = action({
+      kind: "issue.assigned",
+      params: { number: 2, title: "T", fields: ["assignees"], assigneeName: "Ada", assigneeIsSelf: true },
+    });
+    expect(actionTextValues(self, t).context).toBe("self");
+    // Changed with other fields: said with the words of the one field.
+    const more = action({ kind: "issue.updated", params: { number: 2, title: "T", fields: ["title", "assignees"] } });
+    expect(actionTextValues(more, t).fields).toBe("title e assignee");
+  });
+
   test("a change applied at once says what it changed; a card's settings stay settings", () => {
     const applied = action({
       kind: "agent.settings_changed",
@@ -129,6 +151,20 @@ describe("receipt sentence values", () => {
       params: { from: "a", to: "b" },
     });
     expect(actionTextValues(renamed, t).to).toBe("b");
+  });
+
+  test("a channel's responsible agent: another agent, the agent itself, or none (ADR 0095)", () => {
+    const lead = (params: AgentAction["params"]) =>
+      action({ kind: "channel.lead_changed", target: { type: "channel", id: "c", title: "tech" }, params });
+    expect(actionTextValues(lead({ agentName: "Theo", self: false, channel: "tech" }), t)).toEqual({
+      agentName: "Theo",
+      channel: "tech",
+    });
+    expect(actionTextValues(lead({ agentName: "Dev", self: true }), t)).toEqual({ channel: "tech", context: "self" });
+    expect(actionTextValues(lead({ agentName: null, previousAgentName: "Theo" }), t)).toEqual({
+      channel: "tech",
+      context: "none",
+    });
   });
 
   test("a deleted routine says its name; a kind this build doesn't know still gives values", () => {
@@ -237,6 +273,12 @@ describe("receipts in rows, one line each", () => {
       pt,
     );
     expect(rows.map((r) => words(r))).toEqual(["Passei para Ana as tarefas [#1] e [#2]", "Passei a [#3] para Ana · T"]);
+    // By the names alone, as a server of several assignees writes them: the same ones are one row.
+    const named = (n: number, to: string) =>
+      task(n, { kind: "issue.assigned", params: { number: n, title: "T", fields: ["assignees"], assigneeName: to } });
+    expect(receiptRows([named(1, "Ana, Bia"), named(2, "Ana, Bia"), named(3, "Ana")], pt).map((r) => words(r))).toEqual(
+      ["Passei para Ana, Bia as tarefas [#1] e [#2]", "Passei a [#3] para Ana · T"],
+    );
     // The viewer reads "você".
     const toMe = receiptRows([assigned(4, "u-me", "Eu"), assigned(5, "u-me", "Eu")], pt, "u-me")[0] as ReceiptRow;
     expect(
@@ -389,7 +431,7 @@ describe("receipts in rows, one line each", () => {
     );
   });
 
-  test("two of a kind blend for every kind but a workspace change and a renamed conversation, with their real targets", () => {
+  test("two of a kind blend for every kind but a workspace change, a renamed conversation and a channel's lead", () => {
     // Each kind's target as the server writes it: a merge's is its repository, the same for every pull request there.
     const targetOf = (kind: AgentAction["kind"], n: number): AgentAction["target"] => {
       const [group] = kind.split(".");
@@ -427,6 +469,7 @@ describe("receipts in rows, one line each", () => {
       );
     const blended = AGENT_ACTION_KINDS.filter((kind) => receiptRows(two(kind), pt)[0]?.refs);
     expect(AGENT_ACTION_KINDS.filter((kind) => !blended.includes(kind))).toEqual([
+      "channel.lead_changed",
       "thread.renamed",
       "workspace.changed",
     ]);

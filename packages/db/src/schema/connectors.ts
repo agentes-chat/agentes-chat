@@ -88,17 +88,32 @@ export const connectorConnections = pgTable(
      * now: Reconectar adds the rest. Null: a key, a server's own sign-in or Composio.
      */
     oauthScopes: text(),
+    /**
+     * A server by address: what it said in `initialize` on how to use it (MCP's `instructions`) at its last listing,
+     * trimmed and kept up to a bound; null when it said nothing (ADR 0016 addendum of 2026-11-22).
+     */
+    instructions: text(),
+    /** A server by address: agents granted its tools get `instructions` (who may change the connection turns it off). */
+    useInstructions: boolean().notNull().default(true),
     /** `active`, or `needs_reconnect` (a Composio account that stopped working: no tools until Reconectar). */
     status: text().notNull().default("active"),
     /** Why it needs reconnecting. */
     lastError: text(),
     createdByUserId: text().references(() => users.id, { onDelete: "set null" }),
+    /**
+     * A personal connection's person (the Vault's split, ADR 0144; ADR 0099 addendum): only they see its details and
+     * give it to agents, and its tools serve only runs they are behind. Null: the team's. It leaves with them.
+     */
+    ownerUserId: text().references(() => users.id, { onDelete: "cascade" }),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     revokedAt: timestamp({ withTimezone: true }),
   },
   (t) => [
-    uniqueIndex("connector_connections_one_active").on(t.orgId, t.connector).where(sql`${t.revokedAt} is null`),
+    // One live connection per catalog connector for the team, and one for each person.
+    uniqueIndex("connector_connections_one_active")
+      .on(t.orgId, t.connector, sql`coalesce(${t.ownerUserId}, '')`)
+      .where(sql`${t.revokedAt} is null`),
     uniqueIndex("connector_connections_tool_prefix").on(t.orgId, t.toolPrefix).where(sql`${t.revokedAt} is null`),
     index().on(t.orgId),
     index().on(t.composioAccountId),
@@ -138,6 +153,8 @@ export const oauthStates = pgTable(
     connectionId: uuid(),
     /** A Composio sign-in: the connected account its Connect Link made, the only one the return may complete. */
     composioAccountId: text(),
+    /** The connection it makes is its person's own (`user_id`), not the team's. */
+    personal: boolean().notNull().default(false),
     expiresAt: timestamp({ withTimezone: true }).notNull(),
     usedAt: timestamp({ withTimezone: true }),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
@@ -147,8 +164,9 @@ export const oauthStates = pgTable(
 
 /**
  * OAuth clients agentes.chat registered with an MCP server's authorization
- * server (Dynamic Client Registration, RFC 7591), one per org and issuer.
- * A client secret, when the server issues one, is sealed like other secrets.
+ * server (Dynamic Client Registration, RFC 7591), one per org and issuer, or
+ * one an admin pasted (`provided_by_person`) for a server that takes only
+ * clients it approved. A client secret is sealed like other secrets.
  */
 export const oauthClients = pgTable(
   "oauth_clients",
@@ -171,6 +189,11 @@ export const oauthClients = pgTable(
      * registered before we chose, as `none`, and a secret it gave anyway goes in the form.
      */
     tokenAuthMethod: text(),
+    /**
+     * An admin's own client (their app at the provider): never replaced by a registration of ours, kept with no
+     * connection using it, and its `scope`, when set, is the one every authorization asks for.
+     */
+    providedByPerson: boolean().notNull().default(false),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("oauth_clients_org_issuer").on(t.orgId, t.issuer)],
@@ -365,6 +388,8 @@ export const connectorUsageDays = pgTable(
     approvalsAsked: integer().notNull().default(0),
     /** Approved actions that ran. */
     approvalsGiven: integer().notNull().default(0),
+    /** What the vendor bills this server for the calls, as estimated from its price list (X), in nano-US$. */
+    costNanoUsd: bigint({ mode: "number" }).notNull().default(0),
   },
   (t) => [primaryKey({ columns: [t.day, t.connector, t.via, t.orgId, t.agentId, t.tool] }), index().on(t.orgId)],
 );
@@ -392,4 +417,39 @@ export const composioUsageDays = pgTable(
     connections: integer().notNull().default(0),
   },
   (t) => [primaryKey({ columns: [t.day, t.toolkit, t.orgId, t.action] }), index().on(t.orgId)],
+);
+
+/**
+ * What a Telegram bot connection heard (ADR 0170 §5): Telegram keeps a bot's updates for a day and has no history
+ * method, so its chats and their recent messages are only these rows (30 days). One row per update (`update_id`, by
+ * webhook or `getUpdates`), plus the bot's own sends (no `update_id`), so a chat reads as a conversation.
+ */
+export const telegramUpdates = pgTable(
+  "telegram_updates",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    orgId: uuid()
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    connectionId: uuid()
+      .notNull()
+      .references(() => connectorConnections.id, { onDelete: "cascade" }),
+    updateId: bigint({ mode: "number" }),
+    chatId: text().notNull(),
+    chatType: text().notNull(),
+    chatTitle: text(),
+    senderName: text(),
+    senderId: text(),
+    messageId: bigint({ mode: "number" }),
+    text: text(),
+    /** `message`, `edited`, `sent` (the bot's own) or `member` (the bot added, removed or made admin: `status`). */
+    kind: text().notNull(),
+    status: text(),
+    receivedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique().on(t.connectionId, t.updateId),
+    index().on(t.connectionId, t.chatId, t.receivedAt),
+    index().on(t.receivedAt),
+  ],
 );

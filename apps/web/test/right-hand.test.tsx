@@ -11,6 +11,7 @@ import {
   ENG_ID,
   type FakeState,
   fakeBrowserOf,
+  fakeMachinesOf,
   GENERAL_ID,
   LODI_ID,
   meAsAdmin,
@@ -230,11 +231,13 @@ describe("the right hand elsewhere", () => {
     await renderApp(`/org/${ORG_ID}/dm/agent/${LODI_ID}`, { api });
     await settle(8);
     const text = () => document.querySelector(".channel__messages")?.textContent;
-    expect(text()).toContain("Oi, eu sou o Lodi");
+    // The intro lands with the rows, never alone over their skeleton.
+    expect(text()).not.toContain("Oi, eu sou o Lodi");
     expect(text()).not.toContain("Como prefere que eu fale com você?");
     expect(screen().queryByRole("button", { name: "Montar o time" })).toBeNull();
     await act(async () => arrive());
     await settle(8);
+    expect(text()).toContain("Oi, eu sou o Lodi");
     expect(text()).toContain("Você acabou de entrar na Acme.");
     expect(text()).not.toContain("Como prefere que eu fale com você?");
   });
@@ -273,10 +276,19 @@ describe("the right hand elsewhere", () => {
   });
 
   test("its Computador row opens the viewer's own place, and where it has none stays and says why", async () => {
-    const page = async (desktop: { available: boolean; reason: string | null }) => {
+    const page = async (
+      desktop: { available: boolean; reason: string | null },
+      cloud = true,
+      mode?: "system" | "single",
+    ) => {
       cleanup();
-      const api = createFakeApi(withRightHand(seedState()));
+      const api = createFakeApi({ ...withRightHand(seedState()), authConfig: { cloud } });
       fakeBrowserOf.get(api)?.desktops.set(LODI_ID, desktop);
+      if (mode) {
+        const machines = fakeMachinesOf.get(api);
+        machines?.pair({ id: "machine_1", name: "Servidor", os: "linux", mode });
+        machines?.setAgents("machine_1", [{ id: LODI_ID, name: "Lodi", handle: "lodi" }]);
+      }
       await renderApp(`/org/${ORG_ID}/agents/${LODI_ID}`, { api });
       await settle(8);
       const row = [...document.querySelectorAll<HTMLElement>(".settings-row")].find((r) =>
@@ -288,7 +300,7 @@ describe("the right hand elsewhere", () => {
     const mine = await page({ available: true, reason: null });
     expect(mine.tagName).toBe("BUTTON");
     expect(mine.textContent).toContain("Seu espaço próprio no computador do workspace.");
-    // No computer of the workspace's own, or one user for every agent: nothing to open, and the reason in sight.
+    // No computer of the workspace's own: nothing to open, and the reason in sight.
     const none = await page({ available: false, reason: "no_home" });
     expect(none.tagName).toBe("DIV");
     expect(none.textContent).toContain("Ainda sem computador.");
@@ -296,10 +308,18 @@ describe("the right hand elsewhere", () => {
     expect(none.textContent).not.toContain("Configurações");
     const add = [...none.querySelectorAll("a")].find((a) => a.textContent === "Adicionar um computador");
     expect(add?.getAttribute("href")).toBe(`/org/${ORG_ID}/settings/devices`);
-    const oneUser = await page({ available: false, reason: "not_system" });
-    expect(oneUser.tagName).toBe("DIV");
+    // On a self-hosted server: no browser yet, and the guide to making this server the agents' computer.
+    const server = await page({ available: false, reason: "no_home" }, false);
+    expect(server.textContent).toContain("Ainda sem navegador.");
+    const guide = [...server.querySelectorAll("a")].find((a) => a.textContent?.startsWith("este servidor"));
+    expect(guide?.getAttribute("href")).toContain("install-on-a-server");
+    // A computer that runs every agent as one user still gives a place, and its line says what that keeps apart.
+    const oneUser = await page({ available: true, reason: null }, true, "single");
+    expect(oneUser.tagName).toBe("BUTTON");
     expect(oneUser.textContent).toContain("um só usuário");
-    expect(oneUser.querySelector("a")).toBeNull();
+    expect((await page({ available: true, reason: null }, true, "system")).textContent).toContain(
+      "Seu espaço próprio no computador do workspace.",
+    );
     // Any other state (its computer offline) is its own view's to tell.
     expect((await page({ available: false, reason: "offline" })).tagName).toBe("BUTTON");
   });

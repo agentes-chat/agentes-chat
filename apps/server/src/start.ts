@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { freemem, totalmem } from "node:os";
+import { freemem, hostname, totalmem } from "node:os";
 import { join, resolve } from "node:path";
 import {
   type Adapters,
@@ -22,7 +22,9 @@ import {
   createPhonePushSender,
   createPostgresBlobStore,
   createPostgresDatabaseDriver,
+  createPostgresPresence,
   createPostgresPubSub,
+  createPostgresRateLimiter,
   createPostgresSearchResolver,
   createRelayPushSender,
   createS3BlobStore,
@@ -49,6 +51,7 @@ import {
 import {
   APP_JOB_KINDS,
   adoptRestoredOperatorEvents,
+  allowOutbound,
   allowPrivateOutbound,
   allowsPrivateEndpoints,
   backfillMemoryTrust,
@@ -62,24 +65,34 @@ import {
   enableAccountContacts,
   enableCaches,
   enableOperatorEvents,
+  enableSvgRasterizer,
   ensureRightHands,
   type GifKey,
+  hasFontFiles,
   isAgentesCloud,
   isBlockedAddress,
   laneLimits,
   memoryBudget,
   meterComposio,
   moveIssueComments,
+  poolNeededFor,
+  publicHostAddress,
   publicHttpsFetch,
   queueEmbeddingBackfill,
   relayCredentials,
   resolveHostDns,
   retireHostTokens,
   retireMillionSendMailboxes,
+  STARTUP_RAMP_MS,
+  SURFACE_PREFIX,
+  setFontsDir,
   setMessageLinkBase,
   setRestrictionNotices,
+  setScreenJudgments,
+  setSurface,
   setWorkspaceComputers,
   shareCacheInvalidations,
+  surfaceFromConfig,
   surfaceRoomFiles,
   vapidKeys,
   vapidSubject,
@@ -89,19 +102,26 @@ import { type AgentesModule, type Edition, type ModuleContext, resolveAdapters }
 import { createModelProviders, enableOpenRouterModels } from "@agenteschat/providers";
 import { createApp } from "./app";
 import { createAuth } from "./auth";
+import { clientVitals } from "./client-vitals";
 import { buildEngine } from "./engine";
+import { watchEventLoopLag } from "./event-loop-lag";
 import { startFreezeWatch } from "./freeze-watch";
 import { checkHumanCheckAtBoot, createHumanCheck } from "./http/human-check";
+import { watchLoad } from "./load-shed";
 import { createLogger, type Logger } from "./logger";
 import { OPERATOR_API_PREFIX, serveOperatorApi } from "./operator/app";
+import { watchProcessHealth } from "./process-health";
 import { apnsKeyGaps, directPushSenders, phonePushMode, relayServeSender } from "./push-senders";
+import { createLiveSockets } from "./realtime/live";
 import { createMachineSockets } from "./realtime/machines";
 import { createStreamSockets } from "./realtime/streams";
 import { createRealtime, type SocketData } from "./realtime/ws";
+import { takeRouteTimes } from "./route-times";
+import type { AppDeps } from "./routes/app/context";
 import { workerHealth } from "./routes/health";
 import { startTelemetry } from "./telemetry";
 import { releaseOf, version } from "./version";
-import { startWorkers } from "./workers";
+import { type BootTask, startWorkers } from "./workers";
 
 /** On SIGTERM, how long runs in progress get to finish before they are handed to the next instance. */
 const RUN_DRAIN_MS = 20_000;
@@ -129,15 +149,17 @@ export interface StartOptions {
  * The engine's process-wide switches this config sets, every one of them here: `startServer` sets them at boot, and a
  * test that boots like a given setup (the Cloud) sets them the same way.
  */
-export function applyBootSwitches(config: Config) {
+export function applyBootSwitches(config: Config, log?: Logger) {
   // On agentes.chat Cloud a restriction names its kind and how to contest it, elsewhere it reads as before.
   setRestrictionNotices(config.PUBLIC_URL);
   // The links to messages that agents write and their tools return.
   setMessageLinkBase(config.PUBLIC_URL);
   // The operator API's events feed records only while that API is on (ADR 0056).
   enableOperatorEvents(Boolean(config.OPERATOR_API_TOKEN));
+  setSurface(surfaceFromConfig(config));
   // Where each workspace gets its own computer, the computers people bring are targets, never agents' homes.
   setWorkspaceComputers(config.MACHINE_PROVISIONING === "external");
+  setScreenJudgments(config.SCREEN_JUDGMENTS, config.SCREEN_JUDGMENTS_ORGS, log);
 }
 
 /**
@@ -212,7 +234,11 @@ async function boot(
     );
   }
 
-  const database = createDatabase({ url: config.DATABASE_URL, poolMax: config.DATABASE_POOL_MAX });
+  const database = createDatabase({
+    url: config.DATABASE_URL,
+    poolMax: config.DATABASE_POOL_MAX,
+    applicationName: `agentes:${config.SERVER_ROLE}:${hostname()}`,
+  });
   await prepareDatabase(database, log, config.RUN_MIGRATIONS_ON_BOOT);
   // Best effort: a replica that boots before the migrations ran (RUN_MIGRATIONS_ON_BOOT=false) still starts.
   await retireHostTokens(database.db, config.HOST_COMPUTER_TOKEN).then(
@@ -250,15 +276,35 @@ async function boot(
   let gifKey: GifKey | null = null;
   const defaults: Adapters = {
     search: createPostgresSearchResolver(database.db),
-    // PGlite (native mode) is one process: nothing to tell other replicas.
-    pubsub: database.client ? await createPostgresPubSub(postgresJsNotifier(database.client)) : createMemoryPubSub(),
-    presence: createMemoryPresence(),
-    rateLimiter: createMemoryRateLimiter(),
+    // PGlite (native mode) is one process: nothing to tell other replicas. A break in delivery stops every app's live
+    // updates, so it is reported as an error (ADR 0104), and its end says how long it lasted (ADR 0010).
+    pubsub: database.client
+      ? await createPostgresPubSub(postgresJsNotifier(database.client, database.listenClient), {
+          onTrouble: (kind, detail) => {
+            if (kind === "resumed") log.warn("realtime events reach their subscribers again", { kind, ...detail });
+            else
+              log.error("realtime events stopped reaching their subscribers", {
+                kind,
+                ...detail,
+                error: detail.error ?? kind,
+              });
+          },
+        })
+      : createMemoryPubSub(),
+    // On Postgres, several processes may each hold some of the open apps and answer some of the requests: who is
+    // online and how many tries a limit has left are counted where all of them read. The built-in database is one
+    // process's.
+    presence: database.client ? createPostgresPresence(database.db) : createMemoryPresence(),
+    rateLimiter: database.client ? createPostgresRateLimiter(database.db) : createMemoryRateLimiter(),
     keyWrapper: localKeyWrapper,
     legacyKeyWrappers: [],
     email: emailSender(config, log),
     platformCredentials: envPlatformCredentials({
       anthropic: { apiKey: config.PLATFORM_ANTHROPIC_API_KEY, workspaceId: config.PLATFORM_ANTHROPIC_WORKSPACE_ID },
+      // Image generation's providers (ADR 0197), which serve their chat models to workspaces without a key too.
+      openai: { apiKey: config.PLATFORM_OPENAI_API_KEY },
+      gemini: { apiKey: config.PLATFORM_GEMINI_API_KEY },
+      openrouter: { apiKey: config.PLATFORM_OPENROUTER_API_KEY },
     }),
     platformBlobs: platformBlobStore(config, database.db),
     // Phone app push (ADR 0035, ADR 0152, ADR 0178): only devices that registered get anything. Android straight
@@ -340,6 +386,7 @@ async function boot(
     createModelProviders({
       endpointFetch: allowsPrivateEndpoints(config) ? undefined : publicHttpsFetch(),
       version: release,
+      progressNotes: config.MODEL_PROGRESS_NOTES,
     }),
   );
   if (overridden.length > 0) log.info("adapters overridden by modules", { overridden });
@@ -369,13 +416,19 @@ async function boot(
   // Addresses a workspace names (custom MCP servers, its own bucket, pages agents read) are pinned to public ones at
   // every request, except where the operator lets workspaces reach this server's network.
   allowPrivateOutbound(allowsPrivateEndpoints(config));
+  // The private hosts and ranges the operator named pass every guard for typed addresses (ADR 0210). agentes.chat
+  // Cloud never lets a workspace reach a private network, whatever is set.
+  const outboundLists = { hosts: config.OUTBOUND_ALLOW_HOSTS, cidrs: config.OUTBOUND_ALLOW_CIDRS };
+  if (!isAgentesCloud(config.PUBLIC_URL)) allowOutbound(outboundLists);
+  else if (outboundLists.hosts.length || outboundLists.cidrs.length)
+    log.warn("OUTBOUND_ALLOW_HOSTS and OUTBOUND_ALLOW_CIDRS are ignored on agentes.chat Cloud");
   // Per-process caches for agent/org/channel config, scopes, connections, credential rows (30 s TTL).
   enableCaches();
   // A write in any process (the app, a worker) clears what every process cached of it.
   shareCacheInvalidations(adapters.pubsub);
   // OpenRouter's public model list (ADR 0087): read only while a workspace has an OpenRouter key.
   enableOpenRouterModels(fetch);
-  applyBootSwitches(config);
+  applyBootSwitches(config, log);
   enableAccountContacts(config.PUBLIC_URL, adapters.email);
   if (config.OPERATOR_API_TOKEN) {
     // Before the API serves a page: a caller restarting after a restore must find these rows first.
@@ -417,29 +470,6 @@ async function boot(
   await engine.githubApp.ready();
   await engine.speech.ready();
   log.info("voice messages", { engines: engine.speech.chain().map((e) => e.id) });
-  // Off the boot path: it calls MillionSend once per mailbox left from the withdrawn path (ADR 0102).
-  void retireMillionSendMailboxes({ db: database.db, keyWrappers: engine.mail.keyWrappers })
-    .then((r) => {
-      if (r.checked > 0)
-        log.info("MillionSend mailboxes disconnected", { checked: r.checked, webhooksLeft: r.webhooksLeft });
-    })
-    .catch((error: unknown) => log.warn("MillionSend mailboxes cleanup failed", { error: String(error) }));
-  // Off the boot path: every workspace made before the right hand gets one (ADR 0137); one query once they all have it.
-  void ensureRightHands(database.db)
-    .then((made) => {
-      if (made > 0) log.info("right hands created", { made });
-    })
-    .catch((error: unknown) => log.warn("right hands backfill failed", { error: String(error) }));
-  // Off the boot path, once (ADR 0167): untrusted memories saved from a person's own words are trusted again, and
-  // how-tos agents worked out between themselves that name nobody reach their other work.
-  void backfillMemoryTrust(database.db)
-    .then(async (r) => {
-      if (Object.keys(r.changed).length > 0) log.info("memory trust re-derived", { ...r });
-      const widened = await widenDmHowTos(database.db);
-      if (widened > 0) log.info("how-tos out of agents' DMs", { widened });
-    })
-    .catch((error: unknown) => log.warn("memory backfill failed", { error: String(error) }));
-  // Off the boot path (ADR 0167): what this model hasn't embedded yet gets its vectors, a reindex per workspace.
   const vectors = engine.embeddings;
   if (config.EMBEDDINGS_PROVIDER !== "none" && !vectors) {
     const missing = config.EMBEDDINGS_PROVIDER === "voyage" ? "VOYAGE_API_KEY" : "EMBEDDINGS_URL";
@@ -447,25 +477,72 @@ async function boot(
       because: `EMBEDDINGS_PROVIDER=${config.EMBEDDINGS_PROVIDER} needs ${missing}`,
     });
   }
-  if (vectors?.kinds) {
-    void queueEmbeddingBackfill(database.db, { model: vectors.provider.model, kinds: vectors.kinds })
-      .then((queued) => {
-        if (queued > 0) log.info("embeddings backfill queued", { workspaces: queued, model: vectors.provider.model });
-      })
-      .catch((error: unknown) => log.warn("embeddings backfill failed", { error: String(error) }));
-  }
-  // Off the boot path: tasks' comments from before their conversations move into them once (ADR 0145).
-  void moveIssueComments(database.db)
-    .then((moved) => {
-      if (moved > 0) log.info("task comments moved to conversations", { moved });
-    })
-    .catch((error: unknown) => log.warn("task comments move failed", { error: String(error) }));
-  // Off the boot path: files agents saved in rooms no person reads go to the person they worked for (ADR 0111).
-  void surfaceRoomFiles(database.db)
-    .then((moved) => {
-      if (moved > 0) log.info("files moved out of agent rooms", { moved });
-    })
-    .catch((error: unknown) => log.warn("files move out of agent rooms failed", { error: String(error) }));
+  // Off the boot path, in the process that does the database's sweeps (`BootTask`).
+  const bootTasks: BootTask[] = [
+    // MillionSend is called once per mailbox left from the withdrawn path (ADR 0102); a delete that failed goes again.
+    {
+      name: "millionsend-mailboxes",
+      run: async () => {
+        const r = await retireMillionSendMailboxes({ db: database.db, keyWrappers: engine.mail.keyWrappers });
+        if (r.checked > 0)
+          log.info("MillionSend mailboxes disconnected", { checked: r.checked, webhooksLeft: r.webhooksLeft });
+      },
+    },
+    // Every workspace made before the right hand gets one (ADR 0137): one query once they all have it.
+    {
+      name: "right-hands",
+      run: async () => {
+        const made = await ensureRightHands(database.db);
+        if (made > 0) log.info("right hands created", { made });
+      },
+    },
+    // Untrusted memories saved from a person's own words are trusted again, and how-tos agents worked out between
+    // themselves that name nobody reach their other work (ADR 0167).
+    {
+      name: "memory-trust",
+      once: true,
+      run: async () => {
+        const r = await backfillMemoryTrust(database.db);
+        if (Object.keys(r.changed).length > 0) log.info("memory trust re-derived", { ...r });
+        const widened = await widenDmHowTos(database.db);
+        if (widened > 0) log.info("how-tos out of agents' DMs", { widened });
+      },
+    },
+    // What this model hasn't embedded yet gets its vectors, a reindex per workspace (ADR 0167); a failed one goes again.
+    ...(vectors?.kinds
+      ? [
+          {
+            name: "embeddings",
+            run: async () => {
+              const queued = await queueEmbeddingBackfill(database.db, {
+                model: vectors.provider.model,
+                kinds: vectors.kinds ?? [],
+              });
+              if (queued > 0)
+                log.info("embeddings backfill queued", { workspaces: queued, model: vectors.provider.model });
+            },
+          },
+        ]
+      : []),
+    // Tasks' comments from before their conversations move into them (ADR 0145).
+    {
+      name: "issue-comments",
+      once: true,
+      run: async () => {
+        const moved = await moveIssueComments(database.db);
+        if (moved > 0) log.info("task comments moved to conversations", { moved });
+      },
+    },
+    // Files agents saved in rooms no person reads go to the person they worked for (ADR 0111).
+    {
+      name: "room-files",
+      once: true,
+      run: async () => {
+        const moved = await surfaceRoomFiles(database.db);
+        if (moved > 0) log.info("files moved out of agent rooms", { moved });
+      },
+    },
+  ];
   // A worker (`SERVER_ROLE=worker`) runs jobs only: no app, API, sockets or usage report, its health check alone. Its
   // runs reach computers through the process that holds their socket (`machine_rpc`).
   const worker = config.SERVER_ROLE === "worker";
@@ -475,9 +552,18 @@ async function boot(
     rssBytes: process.memoryUsage().rss,
     freeBytes: freemem(),
   });
+  if (database.client && config.DATABASE_POOL_MAX < poolNeededFor(config.OUTBOX_MAX_IN_FLIGHT)) {
+    log.warn("too few database connections for the job slots: jobs and requests will wait on each other", {
+      DATABASE_POOL_MAX: config.DATABASE_POOL_MAX,
+      OUTBOX_MAX_IN_FLIGHT: config.OUTBOX_MAX_IN_FLIGHT,
+      needsAtLeast: poolNeededFor(config.OUTBOX_MAX_IN_FLIGHT),
+    });
+  }
   const outbox = {
     maxInFlight: config.OUTBOX_MAX_IN_FLIGHT,
     quickSlots: config.OUTBOX_QUICK_SLOTS,
+    // The runs a restart left waiting start over a minute, the starting long slots in their first 10 seconds.
+    startupRamp: { perSecond: Math.max(1, Math.ceil(slots.long / 10)), forMs: STARTUP_RAMP_MS },
     ...(worker && { skipKinds: APP_JOB_KINDS }),
     // The built-in database is one process's, on one computer: its slots stay where they start.
     ...(database.client && {
@@ -490,6 +576,11 @@ async function boot(
     }),
   };
   log.info("job slots", { start: slots, upTo: outbox.limits ?? "fixed", memoryBytes, role: config.SERVER_ROLE });
+  // The fonts live files use (ADR 0220): served, measured with and embedded; without them, system fonts.
+  setFontsDir(config.FONTS_DIR ? resolve(config.FONTS_DIR) : null);
+  if (config.FONTS_DIR && !hasFontFiles()) log.warn("fonts", { dir: config.FONTS_DIR, found: false });
+  // SVG pictures drawn as PNGs for exports and models (ADR 0196 §8); without it they are left out of those.
+  if (!(await enableSvgRasterizer())) log.warn("svg pictures", { drawn: false, because: "resvg didn't load" });
   const workers = startWorkers({
     db: database.db,
     handlers: engine.handlers,
@@ -500,6 +591,7 @@ async function boot(
     voice: engine.voice,
     approvalDigest: { publicUrl: config.PUBLIC_URL, afterHours: config.APPROVAL_REMINDER_HOURS },
     mail: { deps: engine.mail, pollSeconds: config.MAIL_POLL_SECONDS },
+    connectors: engine.connectorDeps,
     browserLive: engine.browserLive,
     desktops: engine.desktops,
     machines: engine.machineHub,
@@ -508,6 +600,8 @@ async function boot(
       : {}),
     outbox,
     builtInDatabase: !database.client,
+    role: config.SERVER_ROLE,
+    bootTasks,
     errors,
     log,
   });
@@ -523,43 +617,73 @@ async function boot(
     pubsub: adapters.pubsub,
   });
   let stopping = false;
+  const load = worker
+    ? null
+    : watchLoad({
+        ping: database.ping,
+        sockets: () => realtime.sockets(),
+        limits: {
+          eventLoopMs: config.LOAD_SHED_EVENT_LOOP_MS,
+          dbWaitMs: config.LOAD_SHED_DB_WAIT_MS,
+          sockets: config.LOAD_SHED_MAX_SOCKETS,
+        },
+        log,
+      });
+  const overloaded = () => load?.overloaded() ?? null;
+  const services: AppDeps = {
+    db: database.db,
+    auth,
+    config,
+    adapters,
+    wakeWorkers: workers.wakeAll,
+    extras: {
+      embed: engine.gateway.embed,
+      storage: engine.storage,
+      artifacts: engine.artifacts,
+      context: engine.context,
+      sandbox: engine.sandbox,
+      browserLive: engine.browserLive,
+      streams: engine.streams,
+      talker: engine.talker,
+      router: engine.router,
+      jevKey: engine.jevKey,
+      gifKey: gifKey ?? undefined,
+      githubApp: engine.githubApp,
+      speech: engine.speech,
+      voice: engine.voice,
+      gitProxy: engine.gitProxy,
+      pushRelaySender: relayServeSender(direct),
+      live: engine.live,
+      liveDeps: engine.liveDeps,
+      images: engine.images,
+    },
+    log,
+  };
   const app = createApp({
     edition,
     version,
     modules,
     draining: () => stopping,
+    overloaded,
     moduleContext: ctx,
-    services: {
-      db: database.db,
-      auth,
-      config,
-      adapters,
-      wakeWorkers: workers.wakeAll,
-      extras: {
-        embed: engine.gateway.embed,
-        storage: engine.storage,
-        artifacts: engine.artifacts,
-        context: engine.context,
-        sandbox: engine.sandbox,
-        browserLive: engine.browserLive,
-        streams: engine.streams,
-        talker: engine.talker,
-        router: engine.router,
-        jevKey: engine.jevKey,
-        gifKey: gifKey ?? undefined,
-        githubApp: engine.githubApp,
-        speech: engine.speech,
-        voice: engine.voice,
-        gitProxy: engine.gitProxy,
-        pushRelaySender: relayServeSender(direct),
-      },
-    },
+    services,
     log,
     pingDatabase: database.ping,
     webDir: existsSync(webDir) ? webDir : undefined,
   });
   if (!worker && !existsSync(webDir)) log.warn("web app not found; serving API only", { webDir });
 
+  // Live files' sockets (ADR 0196 §3): one per open spreadsheet, presentation or canvas.
+  const liveSockets = createLiveSockets({
+    db: database.db,
+    auth,
+    config,
+    pubsub: adapters.pubsub,
+    rateLimiter: adapters.rateLimiter,
+    docs: engine.live,
+    artifacts: engine.artifacts,
+    log,
+  });
   const realtime = createRealtime({
     db: database.db,
     auth,
@@ -568,7 +692,10 @@ async function boot(
     ...adapters,
     machines: createMachineSockets(engine.machineHub),
     browserLive: engine.browserLive,
+    overloaded,
     streams: createStreamSockets({ db: database.db, auth, config, broker: engine.streams }),
+    live: liveSockets,
+    onTyping: engine.warmWhileTyping,
   });
   const publicUrl = new URL(config.PUBLIC_URL);
   const ownHosts = ownHostsOnly
@@ -616,6 +743,18 @@ async function boot(
   log.info(worker ? "running jobs only, answering /api/health alone (SERVER_ROLE=worker)" : "listening", {
     url: `http://${config.HOST}:${config.PORT}`,
   });
+  const eventLoopLag = watchEventLoopLag(log);
+  const processHealth = watchProcessHealth({
+    db: database.db,
+    log,
+    role: config.SERVER_ROLE,
+    version: release,
+    eventLoopLag,
+    clientVitals: () => clientVitals.take(),
+    heapSnapshotMb: config.HEAP_SNAPSHOT_MB,
+    heapSnapshotDir: config.HEAP_SNAPSHOT_DIR,
+    ...(worker ? {} : { routeTimes: takeRouteTimes }),
+  });
   const operator = worker
     ? null
     : serveOperatorApi({
@@ -624,13 +763,20 @@ async function boot(
         version: release,
         log,
         pubsub: adapters.pubsub,
+        blobs: adapters.platformBlobs,
         hub: engine.machineHub,
         emails: adapters.email.delivers,
         humanCheck: adapters.humanCheck,
+        eventLoopLag,
+        rateLimiter: adapters.rateLimiter,
         sessions: engine.sessions,
+        surface: services,
       });
-  if (operator) {
+  if (operator && config.OPERATOR_API_TOKEN) {
     log.info("operator API listening", { url: `http://${config.HOST}:${operator.port}${OPERATOR_API_PREFIX}` });
+  }
+  if (operator && config.SURFACE_BRIDGE_TOKEN) {
+    log.info("chat surface bridge listening", { url: `http://${config.HOST}:${operator.port}${SURFACE_PREFIX}` });
   }
   if (engine.sessions) log.info("session screening on: screens are read while people are in control (ADR 0076)");
 
@@ -644,17 +790,23 @@ async function boot(
     workers.stop();
     // The switch is the process's: a server started after this one sets its own.
     allowPrivateOutbound(false);
+    allowOutbound();
     // `/api/health` answers 503 from now on: the proxy's health check takes this instance out before it stops
     // listening, and holds new requests for the next one instead of failing them.
     if (config.SHUTDOWN_DELAY_MS > 0) await Bun.sleep(config.SHUTDOWN_DELAY_MS);
     // HTTP stops taking requests (the new deploy serves them). Not awaited: the
     // promise resolves only once every socket is closed, and browser tabs never close theirs.
     telemetry?.stop();
+    load?.stop();
+    processHealth.stop();
     void server?.stop();
     void operator?.stop();
     // Runners reconnect to the next instance, and people's desktops and terminals open again there.
     await engine.machineHub.stop();
     engine.streams.stop();
+    // People's live files open again on the next instance; what their apps sent that isn't stored yet goes again from
+    // their state vectors there. The documents stay here for the agents' tools in the runs still finishing.
+    liveSockets.stop();
     // Runs in progress get up to 20 s to finish; the rest are checkpointed and resume on the next instance. The other
     // jobs running here get as long, 5 s at least, then go back to the queue, due at once, instead of waiting out
     // their lease. A task's call cut by the stop is sent again to the next instance, which answers it from what is
@@ -673,6 +825,8 @@ async function boot(
     ]);
     if (interrupted.length > 0) log.info("runs handed back for the next instance", { runs: interrupted });
     if (handed > 0) log.info("jobs handed back for the next instance", { jobs: handed });
+    // What live files hold that isn't stored yet is stored, now that no run here changes them (ADR 0196 §4).
+    await engine.live.stop().catch((error: unknown) => log.warn("live files' last changes failed", { error }));
     // Browser tabs, left open so they saw those runs finish, reconnect to the next instance.
     await server?.stop(true);
     for (const module of modules) await module.onStop?.();
@@ -750,14 +904,17 @@ function platformBlobStore(config: Config, db: Database) {
   if (!S3_ENDPOINT || !S3_BUCKET || !S3_ACCESS_KEY_ID || !S3_SECRET_ACCESS_KEY) {
     return config.FILES_DIR ? createDiskBlobStore(config.FILES_DIR) : createPostgresBlobStore(db);
   }
-  return createS3BlobStore({
-    endpoint: S3_ENDPOINT,
-    region: config.S3_REGION,
-    bucket: S3_BUCKET,
-    accessKeyId: S3_ACCESS_KEY_ID,
-    secretAccessKey: S3_SECRET_ACCESS_KEY,
-    pathStyle: config.S3_PATH_STYLE,
-  });
+  return createS3BlobStore(
+    {
+      endpoint: S3_ENDPOINT,
+      region: config.S3_REGION,
+      bucket: S3_BUCKET,
+      accessKeyId: S3_ACCESS_KEY_ID,
+      secretAccessKey: S3_SECRET_ACCESS_KEY,
+      pathStyle: config.S3_PATH_STYLE,
+    },
+    { presign: config.S3_PRESIGNED_URLS },
+  );
 }
 
 /** At most one log line this often about push services refusing this server's signature. */
@@ -827,10 +984,11 @@ function mailAdapters(
         beforeToolCall,
       })
     : null;
-  // A mail server named by a person never resolves to our network (private, loopback, metadata).
+  // A mail server named by a person never resolves to our network (private, loopback, metadata), unless the
+  // operator allowed that host or range (ADR 0210): the same check as when the account was saved.
   const checkHost = async (host: string) => {
-    const addresses = await resolveHostDns(host);
-    if (addresses.length === 0 || addresses.some(isBlockedAddress)) throw new Error("blocked host");
+    const checked = await publicHostAddress(host);
+    if (!checked.ok) throw new Error(checked.reason === "blocked" ? "blocked host" : `no address for ${host}`);
   };
   const imapOptions = { checkHost };
   return {

@@ -3,6 +3,7 @@ import {
   AGENT_SORTS,
   AGENT_STYLES,
   agentDetail,
+  agentRights,
   agentView,
   announceMembers,
   audienceOf,
@@ -14,12 +15,16 @@ import {
   canViewCost,
   continuePausedRuns,
   continueRun,
+  editorsOf,
   GIF_RATINGS,
   getMembership,
   getOrgSettings,
   getRun,
+  hidesAgentPage,
   INVITE_CHOICES_MAX,
   INVITE_NOTE_MAX,
+  ISSUE_COLUMN_WIDTHS,
+  type ISSUE_LIST_COLUMNS,
   ISSUES_DONE,
   ISSUES_GROUPS,
   ISSUES_LAYOUTS,
@@ -44,6 +49,7 @@ import {
   mySidebarOrder,
   mySidebarToolOrder,
   mySidebarView,
+  NotFoundError,
   orgOverview,
   pickerEndpoint,
   pickerModels,
@@ -63,9 +69,11 @@ import {
   STATUS_TEXT_MAX,
   STOP_REASON_MAX,
   seesAgentDetails,
+  seesAgentFactsOnly,
   setAgentChannels,
   setAgentStyle,
   setChatPrefs,
+  setConversationWallpaper,
   setMyIssuesView,
   setMySidebarItem,
   setMySidebarItems,
@@ -98,6 +106,7 @@ import {
   json,
   keyTester,
   OrgParams,
+  requestBaseUrl,
   requireSession,
   security,
 } from "./context";
@@ -105,16 +114,19 @@ import { credentialOut } from "./credential-view";
 import {
   AgentAppearance,
   AgentAudience,
+  AgentEditors,
   ApprovalsLevel,
   CanceledReturn,
   ChatPrefs,
   Credential,
   Model,
   ModelTier,
+  OutsideOf,
   PendingReturn,
   ProviderId,
   Role,
   StartChoice,
+  Wallpaper,
   WorkState,
 } from "./schemas";
 
@@ -143,6 +155,19 @@ const IssueCardFields = z.object({
   label: z.boolean(),
 });
 
+const columnWidth = (column: (typeof ISSUE_LIST_COLUMNS)[number]) =>
+  z.number().int().min(ISSUE_COLUMN_WIDTHS[column].min).max(ISSUE_COLUMN_WIDTHS[column].max).optional();
+const IssueColumnWidths = {
+  title: columnWidth("title"),
+  project: columnWidth("project"),
+  label: columnWidth("label"),
+  priority: columnWidth("priority"),
+  due: columnWidth("due"),
+  criteria: columnWidth("criteria"),
+  pullRequest: columnWidth("pullRequest"),
+  assignee: columnWidth("assignee"),
+} satisfies Record<(typeof ISSUE_LIST_COLUMNS)[number], unknown>;
+
 const IssuesView = z
   .object({
     layout: z.enum(ISSUES_LAYOUTS),
@@ -157,10 +182,12 @@ const IssuesView = z
     showCanceled: z.boolean(),
     hideEmpty: z.boolean().default(false),
     collapsed: z.array(z.string().regex(ISSUES_VIEW_GROUP)).max(ISSUES_VIEW_MAX_COLLAPSED).default([]),
+    // Only the columns the person changed. A column the app doesn't know or a width past its column's ends: refused.
+    widths: z.strictObject(IssueColumnWidths).default({}),
   })
   .openapi("IssuesView", {
     description:
-      "How you look at Tarefas in one workspace: `board` or `list`, grouped by `stage`, `assignee` or `priority`, in `manual` order (the board's), by `priority`, by `due` date or by the last change (`updated`), what the cards show (`fields`), the assignee filter (`agent:<id>`, `person:<id>`, `none`), the priority filter and the label filter (empty: every task), which finished tasks show (`all`, `recent`: changed in the last 7 days, `hidden`), whether canceled tasks show, whether groups with no task show (`hideEmpty`), and the groups folded shut (`collapsed`: column ids, assignee keys or priorities).",
+      "How you look at Tarefas in one workspace: `board` or `list`, grouped by `stage`, `assignee` or `priority`, in `manual` order (the board's), by `priority`, by `due` date or by the last change (`updated`), what the cards show (`fields`), the assignee filter (`agent:<id>`, `person:<id>`, `none`), the priority filter and the label filter (empty: every task), which finished tasks show (`all`, `recent`: changed in the last 7 days, `hidden`), whether canceled tasks show, whether groups with no task show (`hideEmpty`), the groups folded shut (`collapsed`: column ids, assignee keys or priorities), and the widths given to the list's columns in pixels (`widths`: `title` and the card fields; only the ones changed, each between its column's least and most).",
   });
 
 const Settings = z
@@ -217,6 +244,10 @@ const Settings = z
     }),
     welcomePeople: z.boolean().openapi({
       description: "The right hand greets each person who joins the workspace, once. On by default.",
+    }),
+    rightHandLearns: z.boolean().openapi({
+      description:
+        "The right hand learns from conversations on its own, kept where it was said (each person can also turn it off for themselves, `learnOff` in `…/team-week`). Turning it off reveals nobody's memories. On by default.",
     }),
     approvalsLevel: ApprovalsLevel.openapi({
       description:
@@ -283,6 +314,7 @@ const Person = z
     roleIds: z.array(z.string()).openapi({ description: "Their roles (`org_roles` ids), not `everyone`." }),
     joinedAt: z.string(),
     lastSeenAt: z.string().nullable(),
+    outsideOf: OutsideOf,
     online: z.boolean().openapi({ description: "Seen as connected: `presence` is online, away or busy." }),
     presence: z.enum(["online", "away", "busy", "out", "hidden", "offline"]).openapi({
       description:
@@ -308,6 +340,15 @@ const InvitationWithStatus = z
     channelIds: z.array(z.string()).openapi({ description: "Channels it adds them to, besides #general (ADR 0090)." }),
     agentIds: z.array(z.string()).openapi({ description: "Agents they start with (ADR 0184), pinned on joining." }),
     status: z.enum(["pending", "expired"]),
+    undelivered: z
+      .enum(["suppressed", "rejected"])
+      .nullable()
+      .openapi({
+        description:
+          "Its last email could never be delivered: `suppressed`, the mail provider stopped mailing the address after an " +
+          "earlier bounce (sending it again asks the provider to mail it again first); `rejected`, the address was " +
+          "refused. Null while nothing says so.",
+      }),
     expiresAt: z.string(),
     createdAt: z.string(),
     invitedBy: z.string().nullable().openapi({ description: "Who sent it (their name)." }),
@@ -333,6 +374,7 @@ const AgentDetail = z
     instructions: z.string(),
     model: z.string(),
     ownerUserId: z.string().nullable(),
+    ownerRoleId: z.uuid().nullable().openapi({ description: "A role that answers for it instead of a person." }),
     credentialId: z.uuid().nullable().openapi({ description: "Null = platform key (Cloud)." }),
     budgetUsedPercent: z
       .number()
@@ -353,10 +395,23 @@ const AgentDetail = z
     audience: AgentAudience,
     audienceMode: z.enum(["everyone", "people", "owner"]),
     canTalk: z.boolean(),
+    canManage: z.boolean().openapi({ description: "Whether the current person manages it (as on the agent)." }),
+    canEdit: z.boolean().openapi({ description: "Whether the current person edits how it works (as on the agent)." }),
+    canManageRoutines: z.boolean().openapi({ description: "Whether the current person sets up its routines." }),
+    editors: AgentEditors,
     seesDetails: z.boolean().openapi({
       description:
-        "Whether the current person sees how it works (its owner, who manages agents, whoever it answers). Without it the instructions are empty and the month's numbers zero: only its public card.",
+        "Whether the current person sees how it works (who edits it and whoever it answers). Without it the instructions are empty and the month's numbers zero: only its public card.",
     }),
+    factsOnly: z.boolean().openapi({
+      description:
+        "A teammate's private agent seen through \"Editar agentes\" (ADR 0085, addendum of 2026-11-24): its facts and this month's numbers, who edits it, who made it and when, never how it works. A private agent whose page the person may not open is a 404.",
+    }),
+    createdByUserId: z.string().nullable().openapi({ description: "Who made it, for who sees its details or facts." }),
+    lastActivityAt: z
+      .string()
+      .nullable()
+      .openapi({ description: "When its last run started, for who sees its details or facts." }),
     appearance: AgentAppearance.nullable(),
     mediaReplies: z.boolean().openapi({
       description:
@@ -393,6 +448,17 @@ const Run = z
       .string()
       .nullable()
       .openapi({ description: "GitHub repository it was refused (not in the agent's repositories)." }),
+    accountSwitch: z
+      .object({
+        from: z.object({ id: z.uuid(), name: z.string() }),
+        to: z.object({ id: z.uuid(), name: z.string() }),
+        cause: z.enum(["limit", "line", "extra", "busy"]),
+      })
+      .nullable()
+      .openapi({
+        description:
+          "It went on with another account than its agent's own: the first it left, the last it moved to, and why (its plan's limit, the pause line of long work, the paid extra usage it would go into, or every run the account takes at once already thinking on it). Said in its details, never in the chat.",
+      }),
   })
   .openapi("Run");
 
@@ -444,7 +510,7 @@ const ManagedTask = z
         from: z
           .object({
             channelId: z.uuid(),
-            channelKind: z.enum(["channel", "dm", "task"]),
+            channelKind: z.enum(["channel", "dm", "task", "file", "code"]),
             channelName: z.string().nullable(),
             threadId: z.uuid().nullable(),
             messageId: z.uuid().nullable(),
@@ -509,6 +575,10 @@ const ManagedTask = z
         resetsAt: z.string().nullable(),
         since: z.string().nullable(),
         canContinue: z.boolean(),
+        moving: z
+          .boolean()
+          .optional()
+          .openapi({ description: "Its computer is away moving to another server: it comes back by itself." }),
       })
       .nullable()
       .openapi({
@@ -655,6 +725,7 @@ export function managementRoutes(deps: AppDeps) {
             mode: z.enum(WORKSPACE_MODES).optional().openapi({ description: "`team` or `personal` (ADR 0159)." }),
             teamWatch: z.boolean().optional(),
             welcomePeople: z.boolean().optional(),
+            rightHandLearns: z.boolean().optional(),
           }),
         ),
       },
@@ -684,7 +755,7 @@ export function managementRoutes(deps: AppDeps) {
       path: "/organizations/{orgId}/approvals-level",
       tags: ["Organization"],
       security,
-      summary: "Set how much the workspace's agents ask before acting (who manages agents)",
+      summary: "Set how much the workspace's agents ask before acting (owners and administrators)",
       description:
         "Every agent that follows the workspace takes the level at once; an agent with its own choice keeps it unless `everyAgent` is true, which clears every agent's own choice.",
       request: {
@@ -738,6 +809,10 @@ export function managementRoutes(deps: AppDeps) {
             approvalsWaitingForMe: z.number(),
             proposalsWaitingForMe: z.number().openapi({
               description: "Open proposals the viewer can see and decide (`GET …/proposals`, `canDecide`).",
+            }),
+            code: z.boolean().openapi({
+              description:
+                "Whether Code has anything for the viewer (ADR 0215): an agent that programs on a computer, or an open session they take part in. The apps offer Code only then.",
             }),
           }),
         ),
@@ -911,7 +986,47 @@ export function managementRoutes(deps: AppDeps) {
     }),
     async (c) => {
       const { orgId } = c.req.valid("param");
-      return c.json(await setChatPrefs(db, c.get("user").id, orgId, c.req.valid("json")), 200);
+      return c.json(await setChatPrefs(db, c.get("user").id, orgId, c.req.valid("json"), adapters.pubsub), 200);
+    },
+  );
+
+  const wallpaperRoute = {
+    path: "/organizations/{orgId}/channels/{channelId}/wallpaper",
+    tags: ["Members"],
+    security,
+    description:
+      'Yours alone, on every device: it wins over `wallpaper` in `chatPrefs` and comes back in `chatPrefs.wallpapers` (by channel id). `{ kind: "none" }` is no background here even where the others have one. A photo has to be one of yours (`PUT …/me/wallpaper-photo`): 400 `wallpaper.photo_not_yours`. Members only. Your other devices hear `chat.prefs`.',
+    responses: { 200: json(ChatPrefs), ...errors },
+  };
+  app.openapi(
+    createRoute({
+      ...wallpaperRoute,
+      method: "put",
+      summary: "Give a conversation you're in a background of its own, for you",
+      request: {
+        params: OrgParams.extend({ channelId: z.uuid() }),
+        body: body(z.object({ wallpaper: Wallpaper })),
+      },
+    }),
+    async (c) => {
+      const { orgId, channelId } = c.req.valid("param");
+      const { wallpaper } = c.req.valid("json");
+      return c.json(
+        await setConversationWallpaper(db, c.get("user").id, orgId, channelId, wallpaper, adapters.pubsub),
+        200,
+      );
+    },
+  );
+  app.openapi(
+    createRoute({
+      ...wallpaperRoute,
+      method: "delete",
+      summary: "Let a conversation follow your channels' or DMs' background again",
+      request: { params: OrgParams.extend({ channelId: z.uuid() }) },
+    }),
+    async (c) => {
+      const { orgId, channelId } = c.req.valid("param");
+      return c.json(await setConversationWallpaper(db, c.get("user").id, orgId, channelId, null, adapters.pubsub), 200);
     },
   );
 
@@ -1153,7 +1268,7 @@ export function managementRoutes(deps: AppDeps) {
     },
   );
 
-  const inviteUrl = (token: string) => `${config.PUBLIC_URL.replace(/\/$/, "")}/invite/${token}`;
+  const inviteUrl = (base: string, token: string) => `${base}/invite/${token}`;
 
   app.openapi(
     createRoute({
@@ -1168,6 +1283,7 @@ export function managementRoutes(deps: AppDeps) {
     async (c) => {
       const { orgId } = c.req.valid("param");
       const rows = await listInvitationsWithStatus(db, c.get("user").id, orgId, new Date(), config.AGENTES_SECRET);
+      const base = await requestBaseUrl(deps, c.req.raw.headers);
       return c.json(
         {
           invitations: rows.map((i) => ({
@@ -1178,10 +1294,11 @@ export function managementRoutes(deps: AppDeps) {
             channelIds: i.channelIds,
             agentIds: i.agentIds,
             status: i.status,
+            undelivered: i.undelivered,
             expiresAt: i.expiresAt.toISOString(),
             createdAt: i.createdAt.toISOString(),
             invitedBy: i.invitedBy,
-            url: i.token ? inviteUrl(i.token) : null,
+            url: i.token ? inviteUrl(base, i.token) : null,
           })),
         },
         200,
@@ -1276,6 +1393,7 @@ export function managementRoutes(deps: AppDeps) {
         ...c.req.valid("json"),
         secret: config.AGENTES_SECRET,
       });
+      const base = await requestBaseUrl(deps, c.req.raw.headers);
       for (const r of results) {
         if (r.status !== "invited") continue;
         await queueInvitationEmail(db, {
@@ -1283,7 +1401,7 @@ export function managementRoutes(deps: AppDeps) {
           invitationId: r.invitationId,
           email: r.email,
           role: "member",
-          url: inviteUrl(r.token),
+          url: inviteUrl(base, r.token),
           inviterId: c.get("user").id,
           secret: config.AGENTES_SECRET,
         });
@@ -1293,7 +1411,7 @@ export function managementRoutes(deps: AppDeps) {
         {
           results: results.map((r) =>
             r.status === "invited"
-              ? { email: r.email, status: r.status, invitationId: r.invitationId, url: inviteUrl(r.token) }
+              ? { email: r.email, status: r.status, invitationId: r.invitationId, url: inviteUrl(base, r.token) }
               : { email: r.email, status: r.status, ...(r.invitationId ? { invitationId: r.invitationId } : {}) },
           ),
         },
@@ -1315,7 +1433,7 @@ export function managementRoutes(deps: AppDeps) {
     }),
     async (c) => {
       const { orgId, invitationId } = c.req.valid("param");
-      const { invitation, token } = await resendInvitation(
+      const { invitation, token, unsuppress } = await resendInvitation(
         db,
         c.get("user").id,
         orgId,
@@ -1323,17 +1441,19 @@ export function managementRoutes(deps: AppDeps) {
         new Date(),
         config.AGENTES_SECRET,
       );
+      const base = await requestBaseUrl(deps, c.req.raw.headers);
       await queueInvitationEmail(db, {
         orgId,
         invitationId,
         email: invitation.email,
         role: invitation.role,
-        url: inviteUrl(token),
+        url: inviteUrl(base, token),
         inviterId: c.get("user").id,
         secret: config.AGENTES_SECRET,
+        unsuppress,
       });
       deps.wakeWorkers?.();
-      return c.json({ url: inviteUrl(token), expiresAt: invitation.expiresAt.toISOString() }, 200);
+      return c.json({ url: inviteUrl(base, token), expiresAt: invitation.expiresAt.toISOString() }, 200);
     },
   );
 
@@ -1544,7 +1664,11 @@ export function managementRoutes(deps: AppDeps) {
       const v = agentView(d.agent);
       const [seesCost, viewer] = await Promise.all([canViewCost(db, userId, orgId), getMembership(db, userId, orgId)]);
       const seesDetails = seesAgentDetails(d.agent, userId, viewer);
-      const month = seesDetails
+      // A private agent's link opens nothing for who sees neither its details nor its facts.
+      if (hidesAgentPage(d.agent, userId, viewer)) throw new NotFoundError("Agent not found");
+      const factsOnly = seesAgentFactsOnly(d.agent, userId, viewer);
+      const seesUsage = seesDetails || factsOnly;
+      const month = seesUsage
         ? d.month
         : { ...d.month, budgetUsedPercent: 0, tokens: 0, runs: 0, failures: 0, byDay: [] };
       return c.json(
@@ -1556,6 +1680,7 @@ export function managementRoutes(deps: AppDeps) {
           instructions: seesDetails ? v.instructions : "",
           model: v.model,
           ownerUserId: v.ownerUserId,
+          ownerRoleId: v.ownerRoleId ?? null,
           credentialId: seesDetails ? d.agent.credentialId : null,
           budgetUsedPercent: month.budgetUsedPercent,
           ...(seesCost
@@ -1572,11 +1697,16 @@ export function managementRoutes(deps: AppDeps) {
           audience: audienceOf(d.agent),
           audienceMode: d.agent.audienceMode,
           canTalk: canTalkTo(d.agent, userId, speakerOf(viewer)),
+          ...agentRights(d.agent, userId, viewer),
+          editors: seesUsage ? editorsOf(d.agent) : { userIds: [], roleIds: [] },
           seesDetails,
+          factsOnly,
           appearance: v.appearance,
           mediaReplies: v.mediaReplies,
           channels: d.channels,
           createdAt: v.createdAt.toISOString(),
+          createdByUserId: seesUsage ? d.createdByUserId : null,
+          lastActivityAt: seesUsage ? (d.lastRunAt?.toISOString() ?? null) : null,
         },
         200,
       );
@@ -1915,7 +2045,7 @@ export function managementRoutes(deps: AppDeps) {
               .openapi({ description: "Calls the server pays for (Jev), not in the total." }),
             byKind: z.array(
               z.object({
-                kind: z.enum(["agent", "router", "embedding", "summary"]),
+                kind: z.enum(["agent", "router", "embedding", "summary", "image"]),
                 calls: z.number(),
                 partialCalls: z.number(),
                 inputTokens: z.number(),

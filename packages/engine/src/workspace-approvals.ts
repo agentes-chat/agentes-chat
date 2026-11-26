@@ -1,5 +1,6 @@
 import type { PubSub } from "@agenteschat/adapters";
 import { and, count, type Database, type Executor, eq, isNull, schema } from "@agenteschat/db";
+import { releaseUnasked } from "./approvals";
 import { recordAudit } from "./audit";
 import { caches } from "./cache";
 import { ValidationError } from "./errors";
@@ -28,8 +29,10 @@ export async function agentsWithOwnApprovalsLevel(db: Executor, orgId: string): 
 }
 
 /**
- * Sets the workspace's level and gives it to every agent that follows it. `everyAgent` also clears every agent's
- * own choice, so all of them follow it from now on. Who may set any agent's level (`manage_agents`) may set this.
+ * Sets the workspace's level and gives it to every agent that follows it. `everyAgent` also clears every agent's own
+ * choice, so all of them follow it from now on. Owners and administrators only (`administrator`): the level lands on
+ * every agent, a private one too, and only they manage every agent; `manage_agents` alone doesn't reach someone's
+ * private agent (`keysReach`, ADR 0085 addendum of 2026-11-17).
  */
 export async function setWorkspaceApprovalsLevel(
   db: Database,
@@ -38,7 +41,7 @@ export async function setWorkspaceApprovalsLevel(
   level: ApprovalsLevel,
   options: { everyAgent?: boolean; pubsub?: PubSub } = {},
 ): Promise<{ level: ApprovalsLevel; ownAgents: number }> {
-  await requirePermission(db, actorId, orgId, "manage_agents");
+  await requirePermission(db, actorId, orgId, "administrator");
   if (!APPROVALS_LEVELS.includes(level)) {
     throw new ValidationError(`approvalsLevel must be one of: ${APPROVALS_LEVELS.join(", ")}`);
   }
@@ -73,6 +76,9 @@ export async function setWorkspaceApprovalsLevel(
   });
   for (const { id } of changed) caches.agents.delete(`${orgId}:${id}`);
   caches.agents.delete(`${orgId}:team`);
+  if (level === "never") {
+    await releaseUnasked({ db, pubsub: options.pubsub }, actorId, orgId, { agentIds: changed.map((a) => a.id) });
+  }
   await publishAgentsChanged(options.pubsub, orgId);
   return { level, ownAgents: everyAgent ? 0 : await agentsWithOwnApprovalsLevel(db, orgId) };
 }

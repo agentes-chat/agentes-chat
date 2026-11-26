@@ -1,4 +1,4 @@
-/* The projects page (ADR 0188): one row per project in a card, a hairline between rows. It sits in the page frame of
+/* The projects page (ADR 0250): one row per project in a card, a hairline between rows. It sits in the page frame of
    the other lists (`page page--list`); the rows keep the kit's spacing tokens, and under 640px of card each project
    reads as a MediaRow does (name and menu on its first line, the rest under it), by the card's width and not the
    window's, so a side panel counts as narrow too. */

@@ -1,4 +1,5 @@
 import { and, asc, count, type Database, desc, eq, gte, lt, or, type SQL, schema, sql } from "@agenteschat/db";
+import { confidentialThreadSql } from "./confidential";
 import { decodeCursor, encodeCursor } from "./cursor";
 import { ValidationError } from "./errors";
 import {
@@ -12,7 +13,7 @@ import {
   UuidCursor,
   uuidOf,
 } from "./operator-paging";
-import { LANE_SLOW_FOR_MS } from "./outbox";
+import { jobsOfRun, LANE_SLOW_FOR_MS } from "./outbox";
 
 /**
  * Jobs and usage for the operator API (ADR 0056): what waits in the queue or failed there, and what model calls
@@ -30,6 +31,11 @@ export const OPERATOR_JOB_ERROR_MAX = 300;
 
 const RUN_JOB = "agent_run.execute";
 
+// The run a run's job is named after (`jobOf`), as an id the runs' own index answers: null where the name holds none.
+const RUN_NAMED = sql`split_part(${outbox.dedupeKey}, ':', 2)`;
+const RUN_OF_JOB = sql`case when ${RUN_NAMED} ~ '^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$'
+  then ${RUN_NAMED}::uuid end`;
+
 // Never `payload`: a job's holds addresses, links and text.
 const jobColumns = {
   id: outbox.id,
@@ -42,6 +48,11 @@ const jobColumns = {
   lockedUntil: outbox.lockedUntil,
   lockedBy: outbox.lockedBy,
   lastError: outbox.lastError,
+  lastErrorStatus: outbox.lastErrorStatus,
+  // Read by `jobOf` and never answered: a run's job whose run is of a confidential thread (ADR 0190).
+  confidential: sql<boolean>`case when ${outbox.kind} = ${RUN_JOB} then exists (
+    select 1 from ${agentRuns} r
+    where r.id = ${RUN_OF_JOB} and ${confidentialThreadSql(sql`r.org_id`, sql`r.thread_root_id`)}) else false end`,
   dedupe: outbox.dedupeKey,
   createdAt: ms(outbox.createdAt),
   completedAt: outbox.completedAt,
@@ -54,20 +65,17 @@ type JobRow = Awaited<ReturnType<typeof selectJobs>>[number];
  * A run's jobs are all named `agent_run.execute:<run id>`, then the word that says why that job woke the run: both
  * are read from the name, which outlives the payload.
  */
-export function jobOf({ dedupe, lastError, ...job }: JobRow) {
+export function jobOf({ dedupe, lastError, confidential, ...job }: JobRow) {
   const [, runId, cause] = job.kind === RUN_JOB && dedupe ? dedupe.split(":") : [];
   return {
     ...job,
     runId: uuidOf(runId),
     cause: codeOf(cause),
-    lastError: errorText(lastError, OPERATOR_JOB_ERROR_MAX),
+    // What a run's job failed on can quote what the run was writing (a database's error names the values): of a run
+    // of a confidential thread none of it, as `runOf` gives such a run's error by its code alone.
+    lastError: confidential ? null : errorText(lastError, OPERATOR_JOB_ERROR_MAX),
   };
 }
-
-// By name, not by payload: a finished job's payload is cleared after 30 days and its name stays. Written as
-// `outbox_run_jobs_idx` is: the kind is the index's condition, and the planner reads `starts_with` as a range of it.
-export const jobsOfRun = (runId: string) =>
-  and(eq(outbox.kind, RUN_JOB), sql`starts_with(${outbox.dedupeKey}, ${`${RUN_JOB}:${runId}`})`);
 
 /**
  * A job is stuck when it has been due this long and no worker took it, or when a worker took it and its lease ran

@@ -1,9 +1,11 @@
 import type {
   AccountDeletionPlan,
+  AccountPermissions,
   ActiveRun,
   Agent,
   AgentAudience,
   AgentBrain,
+  AgentEditors,
   AgentGroup,
   AgentProposal,
   AgentProposalCard,
@@ -23,7 +25,6 @@ import type {
   Availability,
   BrainMachine,
   Channel,
-  ChannelCategory,
   ChannelMember,
   ChannelOverride,
   ComposioUsage,
@@ -77,6 +78,7 @@ import type {
   PersonLimits,
   PersonUsage,
   PlanAccountUsage,
+  ProblemReportPreview,
   Proposal,
   ReactionCount,
   RightHandApprovals,
@@ -97,6 +99,8 @@ import type {
   SpeechKey,
   StoragePlatform,
   StorageUsage,
+  SurfaceLink,
+  SurfacePage,
   TaskManagerView,
   TaskSteps,
   TeamProposalCard,
@@ -105,7 +109,7 @@ import type {
   UsageQueue,
   WorkspaceLimits,
 } from "@agenteschat/client";
-import { ApiError } from "@agenteschat/client";
+import { ApiError, codeSuggestionOf } from "@agenteschat/client";
 import { moveInGroups } from "@agenteschat/client/lib/agent-groups";
 import { answersOthers, audienceOf, listsAllAgents } from "@agenteschat/client/lib/audience";
 import type { ChatPrefs } from "@agenteschat/client/lib/chat-look";
@@ -126,7 +130,8 @@ import { createMockCustomConnectors } from "./fakes/custom-connectors";
 import { createFakeDashboards, type FakeDashboards } from "./fakes/dashboards";
 import { createFakeDatabases, type FakeDatabases } from "./fakes/databases";
 import { createFakeDevices, type FakeDevices } from "./fakes/devices";
-import { createFakeMachines, type FakeMachines } from "./fakes/machines";
+import { createFakeLive, type FakeLive } from "./fakes/live";
+import { createFakeMachines, type FakeMachines, withNamed } from "./fakes/machines";
 import { createFakeMail, type FakeMail } from "./fakes/mail";
 import { createFakeMissions } from "./fakes/missions";
 import { createFakeNotifications } from "./fakes/notifications";
@@ -207,6 +212,25 @@ export interface FakeState {
   roleMailLoss?: Record<string, RoleMailLoss[]>;
   /** Overrides `account.authConfig` (default: GitHub only, sign-up open). */
   authConfig?: Partial<AuthConfig>;
+  /**
+   * The outside chat surface (`surfaces.*`, ADR 0187); unset: the server bridges none. Set, `authConfig.surface` is
+   * true. `undo` is what `surfaces.undo` answers, or the error it throws.
+   */
+  surface?: {
+    name: string;
+    allowed?: boolean;
+    links: SurfaceLink[];
+    mintError?: ApiError;
+    confirmError?: ApiError;
+    removeError?: ApiError;
+    undo?: { unlinked: boolean; display: string | null } | ApiError;
+    /** The page a link sent on the surface opens; the decision's answer replaces it, or `decideError` is thrown. */
+    page?: SurfacePage | ApiError;
+    decideError?: ApiError;
+    pinReset?: ApiError;
+  };
+  /** Another workspace's agents, by its id (default: `agents`, whatever the workspace). */
+  agentsOf?: Record<string, Agent[]>;
   /** Overrides `account.signInOptions` (default: no account, sign-up allowed). */
   signInOptions?: SignInOptions;
   /** The server `account.phoneSignIn` names (default: https://app.agentes.chat). */
@@ -234,8 +258,6 @@ export interface FakeState {
   /** The archived channels the viewer may bring back (`chat.archived`). */
   archivedChannels?: ArchivedChannel[];
   channels: Channel[];
-  /** Sidebar categories (ADR 0080); absent: none. */
-  channelCategories?: ChannelCategory[];
   channelMembers: Record<string, ChannelMember[]>;
   messages: Message[];
   invitations: InvitationWithStatus[];
@@ -363,8 +385,12 @@ export interface FakeState {
   failPosts?: boolean | ApiError;
   /** `chat.post` waits for this (to see the pending state). */
   holdPosts?: Promise<void>;
+  /** `orgs.setAccent` waits for this (to see the pending state). */
+  setAccentGate?: Promise<void>;
   /** What `orgs.billingLink` throws (default: a link on billing.example.com). */
   billingLinkError?: ApiError;
+  /** What `account.referralsLink` throws (default: a link on refer.example.com). */
+  referralsLinkError?: ApiError;
   /** A new workspace's standing (`orgs.create`): agentes.chat Cloud starts it waiting for its first plan. */
   newWorkspaceStanding?: OrgStanding;
   /** `orgs.limits` (ADR 0079); unset = no limits, the members counted from `members`. */
@@ -387,6 +413,10 @@ export interface FakeState {
   setupResults?: Record<string, Omit<AgentSetupResult, "agentId">>;
   /** `system.telemetry`: the usage report's switch; unset = I'm not the installation's owner (null). */
   telemetry?: ServerTelemetry;
+  /** `system.previewProblemReport`: the report shown; unset = a small one with sending on. A function may wait or throw. */
+  problemReport?: ProblemReportPreview | (() => Promise<ProblemReportPreview>);
+  /** `system.sendProblemReport`: its code, or what it throws; unset = `R-7K3QXM`. */
+  problemReportSend?: { id: string } | ApiError;
   /** `system.jev`: the installation's Jev key; unset = I'm not its owner on a self-hosted server (null). */
   jev?: JevKey;
   /**
@@ -475,6 +505,8 @@ export interface FakeState {
   idRefs?: Record<string, IdRef>;
   /** The sidebar's tools in my order (`orgs.sidebarToolOrder`); unset = the default. */
   sidebarToolOrder?: SidebarItem[];
+  /** Whether Code has anything for me (`OrgOverview.code`, ADR 0215 §12); unset = no. */
+  codeWork?: boolean;
   /** How my sidebar shows the agents and what I pinned (`orgs.sidebarView`); unset = never changed. */
   sidebarView?: SidebarView;
   /**
@@ -1076,6 +1108,12 @@ function proposal(
     decider,
     createdAt: minutesAgo(minutes),
     decidedBy: null,
+    decidedByAgent: null,
+    review: null,
+    reviewed: false,
+    undoable: false,
+    undoneBy: null,
+    undoneAt: null,
     decidedAt: null,
   };
 }
@@ -1270,7 +1308,9 @@ type FakedParts =
   | "mail"
   | "databases"
   | "browser"
-  | "desktop";
+  | "desktop"
+  | "live"
+  | "code";
 
 /** The core of the fake backend, over `FakeState`. Records every call in `state.calls`. */
 /** A member as the signed-in person sees them: hidden reads as offline to everyone else (ADR 0084). */
@@ -1396,11 +1436,55 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
       mode === "everyone" || a.ownerUserId === me || (mode === "people" && (a.audience?.userIds ?? []).includes(me))
     );
   };
-  // The server's `listsAgentTo`: Equipe, its sectors and the counts name only these.
-  const listed = () => {
-    const all = listsAllAgents(state.me ? withPermissions(state.me).organizations[0] : undefined);
-    return state.agents.filter((a) => all || talksToMe(a));
+  // The server's `listsAgentTo`: Equipe, its sectors, the counts and every list name only these. Who sees every agent
+  // sees all but a private one (it answers only its owner); else who it answers, who edits it and admins.
+  const listsToMe = (a: Agent) =>
+    (listsAllAgents(state.me ? withPermissions(state.me).organizations[0] : undefined) &&
+      answersOthers(audienceOf(a), a.ownerUserId)) ||
+    talksToMe(a) ||
+    rightsOf(a).canEdit ||
+    seesCost();
+  const listed = () => state.agents.filter(listsToMe);
+  /** Whether my workspace keys include `key`, as `me` resolves them (`withPermissions`). */
+  const holds = (key: string) =>
+    (state.me ? withPermissions(state.me).organizations[0]?.permissions : undefined)?.includes(key) === true;
+  /**
+   * What I may do with an agent, as the server's `agentRights` (ADR 0085 addendum of 2026-11-17): my keys over agents
+   * reach every agent for owners and administrators, else the ones with no owner and the ones whose audience takes me;
+   * "Edit agents" there manages it; its owner, who manages it and the people its "Who can edit" names edit it; "Create
+   * routines" where the keys reach sets up its routines too. A test may set any of them on the agent itself.
+   */
+  const rightsOf = (a: Agent) => {
+    const me = state.me?.user.id ?? "";
+    const myRoles = state.members.find((m) => m.userId === me)?.roleIds ?? [];
+    const mode = a.audience?.mode ?? "everyone";
+    const reach =
+      holds("administrator") ||
+      !a.ownerUserId ||
+      a.ownerUserId === me ||
+      mode === "everyone" ||
+      (mode === "people" &&
+        ((a.audience?.userIds ?? []).includes(me) || (a.audience?.roleIds ?? []).some((r) => myRoles.includes(r))));
+    const named =
+      (a.editors?.userIds ?? []).includes(me) || (a.editors?.roleIds ?? []).some((r) => myRoles.includes(r));
+    const canManage = a.canManage ?? (holds("manage_agents") && reach);
+    const canEdit = a.canEdit ?? (a.ownerUserId === me || canManage || named);
+    const canManageRoutines = a.canManageRoutines ?? (canEdit || (holds("manage_routines") && reach));
+    return { canManage, canEdit, canManageRoutines };
   };
+  /** The agent with what I may do with it and its "Who can edit", as the server sends it (`toAgent`). */
+  const withRights = (a: Agent, seesDetails: boolean) => ({
+    ...rightsOf(a),
+    // Only who sees how it works reads who edits it.
+    editors: seesDetails
+      ? { userIds: [...(a.editors?.userIds ?? [])], roleIds: [...(a.editors?.roleIds ?? [])] }
+      : { userIds: [], roleIds: [] },
+  });
+  /** "Who can edit" as the server saves it (`setAgentEditors`): each once, its owner left out (they always edit). */
+  const savedEditors = (e: AgentEditors, ownerUserId: string | null): AgentEditors => ({
+    userIds: [...new Set(e.userIds)].filter((id) => id !== ownerUserId),
+    roleIds: [...new Set(e.roleIds)],
+  });
   // A personal workspace (ADR 0159), as `me` says.
   const personalOrg = (orgId: string) => state.me?.organizations.find((o) => o.id === orgId)?.mode === "personal";
   // A new `me` with the org's logo changed, as the server answers: what the app read before stays as it was.
@@ -1437,6 +1521,25 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         if (!state.telemetry) throw new ApiError(404, "not_found", "Not found");
         state.telemetry = { ...state.telemetry, enabled };
         return state.telemetry;
+      },
+      previewProblemReport: async (input) => {
+        log("system.previewProblemReport", input);
+        const p = state.problemReport;
+        if (typeof p === "function") return p();
+        return (
+          p ?? {
+            report: { format: 1, source: "server", place: input.place },
+            text: '{\n  "format": 1\n}',
+            send: "on",
+            missing: {},
+          }
+        );
+      },
+      sendProblemReport: async (input) => {
+        log("system.sendProblemReport", input);
+        const r = state.problemReportSend ?? { id: "R-7K3QXM" };
+        if (r instanceof ApiError) throw r;
+        return r;
       },
       sendFeedback: async (input) => {
         log("system.sendFeedback", input);
@@ -1545,8 +1648,14 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         socialProviders: { google: false, github: true },
         signupOpen: true,
         firstRun: false,
+        ...(state.surface ? { surface: true } : {}),
         ...state.authConfig,
       }),
+      referralsLink: async (returnTo) => {
+        log("account.referralsLink", returnTo);
+        if (state.referralsLinkError) throw state.referralsLinkError;
+        return { url: "https://refer.example.com/link?t=v1", expiresAt: NOW.toISOString() };
+      },
       signInOptions: async (input, humanCheck) => {
         if (humanCheck !== undefined) state.calls.push({ method: "account.signInOptions", args: [input, humanCheck] });
         return state.signInOptions ?? { account: false, password: false, providers: [], canSignUp: true };
@@ -1620,6 +1729,95 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         };
       },
     },
+    surfaces: {
+      list: async () => {
+        log("surfaces.list");
+        const sf = state.surface;
+        return sf
+          ? { surface: { name: sf.name }, allowed: sf.allowed ?? true, links: sf.links }
+          : { surface: null, allowed: false, links: [] };
+      },
+      mintCode: async (orgId) => {
+        log("surfaces.mintCode", orgId);
+        const sf = state.surface;
+        if (!sf) throw new ApiError(404, "surface.off", "Outside chat surfaces are off on this server");
+        if (sf.mintError) throw sf.mintError;
+        const n = state.calls.filter((c) => c.method === "surfaces.mintCode").length;
+        const code = `KQ7M-3XP${n}`;
+        return {
+          code,
+          openUrl: `https://chat.example.com/send?text=${code}`,
+          expiresAt: new Date(Date.now() + 10 * 60_000).toISOString(),
+        };
+      },
+      confirm: async (linkId) => {
+        log("surfaces.confirm", linkId);
+        const sf = state.surface;
+        const link = sf?.links.find((l) => l.id === linkId && l.status === "pending");
+        if (sf?.confirmError) throw sf.confirmError;
+        if (!sf || !link) throw new ApiError(404, "surface.link_gone", "This link is no longer waiting");
+        const active = { ...link, status: "active" as const, confirmedAt: new Date().toISOString(), expiresAt: null };
+        sf.links = [active];
+        return active;
+      },
+      remove: async (linkId) => {
+        log("surfaces.remove", linkId);
+        const sf = state.surface;
+        if (sf?.removeError) throw sf.removeError;
+        if (!sf?.links.some((l) => l.id === linkId)) throw new ApiError(404, "surface.link_gone", "This link is gone");
+        sf.links = sf.links.filter((l) => l.id !== linkId);
+      },
+      setNudge: async (linkId, input) => {
+        log("surfaces.setNudge", linkId, input);
+        const link = state.surface?.links.find((l) => l.id === linkId && l.status === "active");
+        if (!link) throw new ApiError(404, "surface.link_gone", "This link is gone");
+        link.nudge = { ...link.nudge, ...input };
+        return link.nudge;
+      },
+      undo: async () => {
+        log("surfaces.undo");
+        const undo = state.surface?.undo;
+        if (!undo) throw new ApiError(404, "surface.undo_gone", "This link expired or was already used");
+        if (undo instanceof ApiError) throw undo;
+        return { ...undo, surface: state.surface?.name ?? "" };
+      },
+      openPage: async (token) => {
+        log("surfaces.openPage", token);
+        const page = state.surface?.page;
+        if (!page) throw new ApiError(404, "surface.page_gone", "This link ran out");
+        if (page instanceof ApiError) throw page;
+        return page;
+      },
+      decidePage: async (token, decision, pin) => {
+        log("surfaces.decidePage", { token, decision, pin });
+        const sf = state.surface;
+        if (sf?.decideError) throw sf.decideError;
+        const page = sf?.page;
+        if (!sf || !page || page instanceof ApiError || !page.approval) {
+          throw new ApiError(404, "surface.page_gone", "This link ran out");
+        }
+        sf.page = {
+          ...page,
+          pin: { ...page.pin, set: true, lockedUntil: null },
+          approval: { ...page.approval, status: decision === "approve" ? "approved" : "refused" },
+        };
+        return sf.page;
+      },
+      emailPin: async (token) => {
+        log("surfaces.emailPin", token);
+      },
+      pinFromEmail: async (token, pin) => {
+        log("surfaces.pinFromEmail", { token, pin });
+        if (state.surface?.pinReset) throw state.surface.pinReset;
+        return { surface: state.surface?.name ?? "" };
+      },
+      setPin: async (linkId, pin) => {
+        log("surfaces.setPin", { linkId, pin });
+        const sf = state.surface;
+        if (!sf?.links.some((l) => l.id === linkId)) throw new ApiError(404, "surface.link_gone", "This link is gone");
+        sf.links = sf.links.map((l) => (l.id === linkId ? { ...l, pinSet: true } : l));
+      },
+    },
     push: {
       webKey: async () => state.webPushKey ?? null,
       register: async (input) => {
@@ -1627,6 +1825,12 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
       },
       unregister: async (token) => {
         log("push.unregister", token);
+      },
+      liveActivity: async (input) => {
+        log("push.liveActivity", input);
+      },
+      liveActivityOff: async (installId) => {
+        log("push.liveActivityOff", installId);
       },
       stale: async (ids) => {
         log("push.stale", ids);
@@ -1775,6 +1979,16 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         };
         return { dueAt };
       },
+      resetCode: async (orgId) => {
+        log("orgs.resetCode", orgId);
+        if (state.codeError) throw state.codeError;
+        return { email: requireMe().user.email, resendIn: 60 };
+      },
+      reset: async (orgId, input) => {
+        log("orgs.reset", orgId, input);
+        if (state.deletionError) throw state.deletionError;
+        return { startedAt: new Date().toISOString() };
+      },
       restore: async (orgId) => {
         log("orgs.restore", orgId);
         const me = requireMe();
@@ -1841,6 +2055,18 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         if (!org) throw new ApiError(404, "not_found", "Organization not found");
         org.chatPrefs = { ...org.chatPrefs, ...patch };
         return org.chatPrefs;
+      },
+      setConversationWallpaper: async (orgId, channelId, wallpaper) => {
+        log("orgs.setConversationWallpaper", orgId, channelId, wallpaper);
+        const org = state.me?.organizations.find((o) => o.id === orgId);
+        if (!org) throw new ApiError(404, "not_found", "Organization not found");
+        const { [channelId]: _old, ...rest } = org.chatPrefs?.wallpapers ?? {};
+        org.chatPrefs = { ...org.chatPrefs, wallpapers: wallpaper ? { ...rest, [channelId]: wallpaper } : rest };
+        return org.chatPrefs;
+      },
+      uploadWallpaperPhoto: async (orgId, input) => {
+        log("orgs.uploadWallpaperPhoto", orgId, input.contentType);
+        return { url: "/api/app/wallpapers/me/0123456789abcdef.jpg" };
       },
       sidebarItems: async () => structuredClone(state.sidebarItems ?? {}),
       setSidebarItem: async (orgId, item, place) => {
@@ -1909,10 +2135,25 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         log("orgs.removeLogo", orgId);
         setOrgLogo(orgId, null);
       },
+      setAccent: async (orgId, accent) => {
+        log("orgs.setAccent", orgId, accent);
+        if (state.setAccentGate) await state.setAccentGate;
+        if (state.me) {
+          const next = accent?.toLowerCase() ?? null;
+          state.me = {
+            ...state.me,
+            organizations: state.me.organizations.map((o) => (o.id === orgId ? { ...o, accent: next } : o)),
+          };
+        }
+        return { accent: accent?.toLowerCase() ?? null };
+      },
       billingLink: async (orgId, from, _returnTo, plan) => {
         log("orgs.billingLink", orgId, from, ...(plan ? [plan] : []));
         if (state.billingLinkError) throw state.billingLinkError;
         return { url: `https://billing.example.com/link?t=${from}`, expiresAt: NOW.toISOString() };
+      },
+      movePlan: async (orgId, to) => {
+        log("orgs.movePlan", orgId, to);
       },
       limits: async () =>
         state.limits ?? {
@@ -2065,6 +2306,7 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         budgetUsedPercent: workspacePercent(),
         approvalsWaitingForMe: state.approvals.filter((a) => a.status === "pending" && a.canDecide).length,
         proposalsWaitingForMe: state.proposals.filter((p) => p.status === "pending" && !p.stale && p.canDecide).length,
+        code: state.codeWork ?? false,
       }),
       people: async () =>
         state.members.map((m) => ({
@@ -2224,17 +2466,25 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
       list: async () => {
         const all = listsAllAgents(state.me ? withPermissions(state.me).organizations[0] : undefined);
         const ids = new Set(listed().map((a) => a.id));
-        return structuredClone(state.agentGroups ?? [])
-          .map((g) => (all ? g : { ...g, agentIds: g.agentIds.filter((id) => ids.has(id)) }))
-          .filter((g) => all || g.agentIds.length > 0);
+        return (
+          structuredClone(state.agentGroups ?? [])
+            .map((g) => ({ ...g, agentIds: g.agentIds.filter((id) => ids.has(id)), was: g.agentIds.length }))
+            // A sector holding a channel the person sees shows too (ADR 0240).
+            .filter(
+              (g) => g.agentIds.length > 0 || state.channels.some((c) => c.groupId === g.id) || (all && g.was === 0),
+            )
+            .map(({ was: _was, ...g }) => g)
+        );
       },
       create: async (orgId, input) => {
         state.calls.push({ method: "agentGroups.create", args: [orgId, input] });
         const ids = input.agentIds ?? [];
+        const made = crypto.randomUUID();
         state.agentGroups = [
           ...(state.agentGroups ?? []).map((g) => ({ ...g, agentIds: g.agentIds.filter((id) => !ids.includes(id)) })),
-          { id: crypto.randomUUID(), name: input.name, agentIds: ids },
+          { id: made, name: input.name, agentIds: ids, color: input.color, icon: input.icon },
         ];
+        for (const c of state.channels) if (input.channelIds?.includes(c.id)) c.groupId = made;
         return structuredClone(state.agentGroups);
       },
       update: async (orgId, groupId, patch) => {
@@ -2254,6 +2504,7 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
       remove: async (orgId, groupId) => {
         state.calls.push({ method: "agentGroups.remove", args: [orgId, groupId] });
         state.agentGroups = (state.agentGroups ?? []).filter((g) => g.id !== groupId);
+        for (const c of state.channels) if (c.groupId === groupId) c.groupId = null;
         return structuredClone(state.agentGroups);
       },
       move: async (orgId, agentId, input) => {
@@ -2325,34 +2576,39 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         return { previous };
       },
       team: async () => ({
-        agents: listed().map((a) => ({
-          id: a.id,
-          name: a.name,
-          handle: a.handle,
-          role: a.role,
-          appearance: a.appearance ?? null,
-          ownerUserId: a.ownerUserId,
-          reportsToAgentId: a.reportsToAgentId ?? null,
-          capabilities: ["drive", "issues"],
-          busy: false,
-          channelIds: state.channels
-            .filter((c) => (state.channelMembers[c.id] ?? []).some((m) => m.type === "agent" && m.id === a.id))
-            .map((c) => c.id),
-          canTalk: true,
-          ...(a.seesDetails === false ? { capabilities: [], canTalk: false, seesDetails: false } : {}),
-        })),
+        // A teammate's private agent seen by its facts alone (`factsOnly` set by the test) is on Equipe too.
+        agents: state.agents
+          .filter((a) => listsToMe(a) || a.factsOnly)
+          .map((a) => ({
+            id: a.id,
+            name: a.name,
+            handle: a.handle,
+            role: a.role,
+            appearance: a.appearance ?? null,
+            ownerUserId: a.ownerUserId,
+            reportsToAgentId: a.reportsToAgentId ?? null,
+            capabilities: ["drive", "issues"],
+            busy: false,
+            channelIds: state.channels
+              .filter((c) => (state.channelMembers[c.id] ?? []).some((m) => m.type === "agent" && m.id === a.id))
+              .map((c) => c.id),
+            canTalk: true,
+            canManage: rightsOf(a).canManage,
+            ...(a.seesDetails === false ? { capabilities: [], canTalk: false, seesDetails: false } : {}),
+            ...(a.factsOnly ? { factsOnly: true } : {}),
+          })),
         people: state.members
           .filter((m) => state.agents.some((a) => a.ownerUserId === m.userId))
           .map((m) => ({ id: m.userId, name: m.name, image: m.image ?? null })),
         consultations: [],
       }),
-      list: async () =>
-        state.agents.map((a) => {
+      list: async (orgId) =>
+        (state.agentsOf?.[orgId] ?? state.agents).map((a) => {
           const mode = a.audience?.mode ?? "everyone";
           const canTalk = talksToMe(a);
           const { monthlyBudgetUsd, ...rest } = a;
-          // Same rule as the backend: how it works only for who it answers, its owner and admins.
-          const seesDetails = canTalk || seesCost();
+          // Same rule as the backend: how it works only for who it answers, who edits it and admins.
+          const seesDetails = canTalk || seesCost() || rightsOf(a).canEdit;
           return {
             ...rest,
             ...(seesCost() ? { monthlyBudgetUsd } : {}),
@@ -2360,7 +2616,9 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
             budgetUsedPercent: percentOf(a),
             audienceMode: mode,
             canTalk,
+            ...withRights(a, seesDetails),
             seesDetails,
+            listed: listsToMe(a),
           };
         }),
       create: async (orgId, input) => {
@@ -2381,6 +2639,7 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
           monthlyBudgetUsd: input.monthlyBudgetUsd ?? null,
           createdAt: NOW.toISOString(),
           audience: input.audience ?? { mode: "everyone", userIds: [] },
+          ...(input.editors ? { editors: savedEditors(input.editors, input.ownerUserId ?? null) } : {}),
           ...(input.appearance ? { appearance: input.appearance } : {}),
           // As the backend: every new agent starts with its setup checklist (ADR 0155 §2), who and how done.
           setup: { role: input.setup?.role ?? null, done: ["who", "how"] },
@@ -2588,7 +2847,7 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
           agent.previousHandles = [...(agent.previousHandles ?? []).filter((h) => h !== input.handle), agent.handle];
         }
         // As the backend: a mailbox given since the person was asked refuses the save.
-        const { mailLossSeen, approvalsLevel, ...fields } = input;
+        const { mailLossSeen, approvalsLevel, editors, ...fields } = input;
         // As the backend: a level is the agent's own choice; null follows the workspace's again.
         if (approvalsLevel !== undefined)
           Object.assign(agent, {
@@ -2599,7 +2858,9 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
           throw new ApiError(409, "agent.mail_loss_changed", "It holds a mailbox you weren't asked about");
         }
         Object.assign(agent, fields);
-        return { ...agent };
+        // "Who can edit" (ADR 0085 addendum of 2026-11-17): the whole lists, after the owner it has now.
+        if (editors) agent.editors = savedEditors(editors, agent.ownerUserId);
+        return { ...agent, ...withRights(agent, true) };
       },
       confirmSetup: async (orgId, agentId, step) => {
         log("agents.confirmSetup", orgId, agentId, step);
@@ -2608,6 +2869,13 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         if (agent.setup && !agent.setup.done.includes(step)) {
           agent.setup = { ...agent.setup, done: [...agent.setup.done, step] };
         }
+        return { ...agent };
+      },
+      closeSetup: async (orgId, agentId) => {
+        log("agents.closeSetup", orgId, agentId);
+        const agent = state.agents.find((a) => a.id === agentId);
+        if (!agent) throw new ApiError(404, "not_found", "Agent not found");
+        if (agent.setup) agent.setup = { ...agent.setup, closed: true };
         return { ...agent };
       },
       mailLoss: async (orgId, agentId, audience) => {
@@ -2630,7 +2898,10 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
           { id: was.id, name: was.name, role: was.role, appearance: was.appearance ?? null, deleted: true },
         ];
       },
-      former: async () => state.former ?? [],
+      // An archived one says whether I manage it (who brings it back or deletes it for good): "Edit agents", unless the
+      // test says otherwise. A deleted one says nothing.
+      former: async () =>
+        (state.former ?? []).map((a) => (a.deleted ? a : { ...a, canManage: a.canManage ?? holds("manage_agents") })),
       models: async () => ({
         ...(state.planModels ? { planModels: state.planModels } : {}),
         defaultModel: "claude-sonnet-5-5",
@@ -2812,6 +3083,9 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
               : [{ day: 1, runs: 12, failed: 0 }],
           pendingApprovals: state.approvals.filter((x) => x.agentId === agentId && x.status === "pending").length,
           channels,
+          editors: a.editors ?? { userIds: [], roleIds: [] },
+          createdByUserId: a.ownerUserId,
+          lastActivityAt: new Date(NOW.getTime() - 2 * 3_600_000).toISOString(),
         };
       },
       channels: async (_orgId, agentId) =>
@@ -2837,7 +3111,8 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         const agent = state.agents.find((a) => a.id === agentId);
         if (me.organizations[0]?.role === "member" && agent?.ownerUserId !== me.user.id && !agent?.builtin)
           throw new ApiError(403, "agent.not_owner", "Only an admin or the agent's owner");
-        return structuredClone(brainOf(agentId));
+        const view = structuredClone(brainOf(agentId));
+        return { ...view, accounts: view.accounts.map(withNamed) };
       },
       brainMachines: async (orgId) => {
         log("agents.brainMachines", orgId);
@@ -2892,7 +3167,6 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
           brain,
           model,
           effectiveModel: brain === "model" ? null : (model ?? option?.defaultModel ?? null),
-          fallback: input.fallback ?? b.fallback,
           // ADR 0041: another brain kind starts on the computer's own account.
           account: input.account !== undefined ? input.account : changed ? null : b.account,
           effort: input.effort !== undefined ? input.effort : b.effort,
@@ -3114,47 +3388,17 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
           visibility: input.visibility ?? "public",
           isMember: true,
           createdAt: new Date().toISOString(),
-          categoryId: input.categoryId ?? null,
+          groupId: input.groupId ?? null,
         };
         state.channels.push(channel);
         state.channelMembers[channel.id] = [{ type: "person", id: state.me?.user.id ?? "" }];
         return channel;
       },
-      categories: async () => structuredClone(state.channelCategories ?? []),
-      createCategory: async (orgId, input) => {
-        log("chat.createCategory", orgId, input);
-        state.channelCategories ??= [];
-        const list = state.channelCategories;
-        if (list.some((c) => c.name.toLowerCase() === input.name.trim().toLowerCase()))
-          throw new ApiError(409, "conflict", `The category ${input.name} already exists`);
-        const category: ChannelCategory = { id: id("cat"), name: input.name.trim(), position: list.length };
-        list.push(category);
-        for (const channelId of input.channelIds ?? []) {
-          const c = state.channels.find((x) => x.id === channelId);
-          if (c) c.categoryId = category.id;
-        }
-        return { ...category };
-      },
-      renameCategory: async (orgId, categoryId, name) => {
-        log("chat.renameCategory", orgId, categoryId, name);
-        const c = state.channelCategories?.find((x) => x.id === categoryId);
-        if (!c) throw new ApiError(404, "not_found", "Category not found");
-        c.name = name.trim();
-        return { ...c };
-      },
-      deleteCategory: async (orgId, categoryId) => {
-        log("chat.deleteCategory", orgId, categoryId);
-        state.channelCategories = (state.channelCategories ?? []).filter((c) => c.id !== categoryId);
-        for (const c of state.channels) if (c.categoryId === categoryId) c.categoryId = null;
-      },
-      placeCategory: async (orgId, categoryId, beforeCategoryId) => {
-        log("chat.placeCategory", orgId, categoryId, beforeCategoryId);
-      },
       place: async (orgId, channelId, input) => {
         log("chat.place", orgId, channelId, input);
         const c = state.channels.find((x) => x.id === channelId);
         if (!c) throw new ApiError(404, "not_found", "Channel not found");
-        c.categoryId = input.categoryId;
+        c.groupId = input.groupId;
         // Like the server: before `beforeChannelId`, else at the end; the list comes back in that order.
         const rest = state.channels.filter((x) => x !== c);
         const at = rest.findIndex((x) => x.id === input.beforeChannelId);
@@ -3342,8 +3586,22 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
             ...inChannel.filter((m) => m.threadId === options.threadId),
           ]);
         }
-        // Like the server: the latest `limit` before `before`, oldest first.
-        const top = inChannel.filter((m) => m.threadId === null && (!options.before || m.createdAt < options.before));
+        if (options.around || options.after) log("chat.messages", channelId, options);
+        const all = inChannel.filter((m) => m.threadId === null);
+        // Like the server: `around` is the page with the message in its middle; gone or elsewhere is a 404.
+        if (options.around) {
+          const at = all.findIndex((m) => m.id === options.around);
+          if (at < 0) throw new ApiError(404, "not_found", "Message not found");
+          const half = Math.floor((options.limit ?? 50) / 2);
+          return structuredClone(all.slice(Math.max(0, at - half), at + (options.limit ?? 50) - half));
+        }
+        // `after`: the oldest `limit` after it.
+        if (options.after) {
+          const after = options.after;
+          return structuredClone(all.filter((m) => m.createdAt > after).slice(0, options.limit ?? 50));
+        }
+        // The latest `limit` before `before`, oldest first.
+        const top = all.filter((m) => !options.before || m.createdAt < options.before);
         return structuredClone(options.limit ? top.slice(-options.limit) : top);
       },
       post: async (orgId, channelId, input) => {
@@ -3485,6 +3743,15 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         });
         return { ...a };
       },
+      runNow: async (orgId, approvalId) => {
+        log("approvals.runNow", orgId, approvalId);
+        const a = state.approvals.find((x) => x.id === approvalId);
+        if (a?.status !== "approved" || a.executedAt || !a.afterIds?.length) {
+          throw new ApiError(409, "approval.not_waiting", "This request isn't waiting for another one");
+        }
+        Object.assign(a, { afterIds: [], canRunNow: false });
+        return { ...a };
+      },
       decideMany: async (orgId, input) => {
         log("approvals.decideMany", orgId, input.ids, input.decision, ...(input.only ? [input.only] : []));
         if (input.via) log("via", input.via);
@@ -3551,7 +3818,13 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
     },
     connectors: {
       catalog: async () => CATALOG,
-      list: async () => structuredClone(state.connections),
+      // As the backend: the team's and the viewer's own; everyone's with `others`.
+      list: async (_orgId, options) =>
+        structuredClone(
+          state.connections.filter(
+            (c) => options?.others || !c.ownerUserId || c.ownerUserId === (state.me?.user.id ?? null),
+          ),
+        ),
       connectWithKey: async (orgId, input) => {
         log("connectors.connectWithKey", orgId, { ...input, apiKey: "[redacted]" });
         const conn: Connection = {
@@ -3564,6 +3837,7 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
           tokenExpiresAt: null,
           createdAt: new Date().toISOString(),
           revokedAt: null,
+          ...(input.personal ? { ownerUserId: state.me?.user.id ?? null } : {}),
         };
         state.connections.push(conn);
         return conn;
@@ -3582,6 +3856,17 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         const conn = state.connections.find((c) => c.id === connectionId);
         if (!conn) throw new ApiError(404, "not_found", "Connection not found");
         conn.label = label;
+        return structuredClone(conn);
+      },
+      takeOffAgent: async (orgId, connectionId, agentId) => {
+        log("connectors.takeOffAgent", orgId, connectionId, agentId);
+        state.scopes[agentId] = (state.scopes[agentId] ?? []).filter((g) => g.connectionId !== connectionId);
+      },
+      moveToTeam: async (orgId, connectionId) => {
+        log("connectors.moveToTeam", orgId, connectionId);
+        const conn = state.connections.find((c) => c.id === connectionId);
+        if (!conn) throw new ApiError(404, "not_found", "Connection not found");
+        conn.ownerUserId = null;
         return structuredClone(conn);
       },
       disconnect: async (orgId, connectionId) => {
@@ -3687,6 +3972,12 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
       setArchived: async (orgId, id, archived) => patchMemory(orgId, id, { archived }),
       confirm: async (orgId, id) => patchMemory(orgId, id, { confirmed: true }),
       listTeam: async () => state.memories.filter((m) => !m.agentId && !m.archived),
+      forgetRightHandLearned: async (orgId) => {
+        log("memory.forgetRightHandLearned", orgId);
+        const before = state.memories.length;
+        state.memories = state.memories.filter((m) => !(m.onlyYou && m.learned && m.editedByUserId === null));
+        return { forgotten: before - state.memories.length };
+      },
       makeTeam: async (orgId, id) => {
         log("memory.team", orgId, id);
         const m = state.memories.find((x) => x.id === id);
@@ -3847,6 +4138,19 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
           decidedBy: { userId: state.me?.user.id ?? "", name: state.me?.user.name ?? "" },
           decidedAt: new Date().toISOString(),
           canDecide: false,
+        });
+        return structuredClone(p);
+      },
+      // As the server's undo (ADR 0219): only an applied row the viewer may put back; 409 once it changed since.
+      undo: async (orgId, id) => {
+        log("proposals.undo", orgId, id);
+        const p = findProposal(id);
+        if (p.status !== "accepted" || !p.undoable) throw new ApiError(409, "proposal.changed", "It changed since");
+        Object.assign(p, {
+          status: "undone",
+          undoable: false,
+          undoneBy: { userId: state.me?.user.id ?? "", name: state.me?.user.name ?? "" },
+          undoneAt: new Date().toISOString(),
         });
         return structuredClone(p);
       },
@@ -4047,6 +4351,12 @@ export const fakeAppsOf = new WeakMap<ApiClient, FakeApps>();
 /** The boards and widgets fake behind each `createFakeApi` client (tests add boards and finish widgets with it). */
 export const fakeDashboardsOf = new WeakMap<ApiClient, FakeDashboards>();
 
+/**
+ * The live files fake behind each `createFakeApi` client (ADR 0196): its in-memory live server, the files' pictures,
+ * image requests (`finishImages`) and Office previews. `render.tsx` routes the app's live sockets to its server.
+ */
+export const fakeLiveOf = new WeakMap<ApiClient, FakeLive>();
+
 /** Full client: fake HTTP + the real in-memory mocks (seeded like development). */
 export function createFakeApi(state: FakeState = seedState(), options: { seed?: boolean } = {}): ApiClient {
   const http = createFakeHttpApi(state);
@@ -4072,15 +4382,23 @@ export function createFakeApi(state: FakeState = seedState(), options: { seed?: 
     (orgId, id) => machines.client.remove(orgId, id),
   );
   const agentIds = async (orgId: string) => (await http.agents.list(orgId)).map((a) => a.id);
+  const ownAgentIds = async (orgId: string) =>
+    (await http.agents.list(orgId)).filter((a) => a.ownerUserId === state.me?.user.id).map((a) => a.id);
   const customConnectors = createMockCustomConnectors(
     ctx,
     (method, ...args) => state.calls.push({ method, args }),
-    async (orgId, serverId) => access.connected(serverId, await agentIds(orgId)),
+    async (orgId, serverId) => {
+      // A personal account goes on for its person's own agents, a team one for every agent.
+      const server = (await customConnectors.list(orgId)).find((x) => x.id === serverId);
+      access.connected(serverId, server?.ownerUserId ? await ownAgentIds(orgId) : await agentIds(orgId));
+    },
+    () => state.me?.user.id ?? null,
   );
   const access = createFakeAccess(
-    (orgId) => http.connectors.list(orgId),
+    (orgId, options) => http.connectors.list(orgId, options),
     (method, ...args) => state.calls.push({ method, args }),
-    (orgId) => customConnectors.list(orgId),
+    (orgId, options) => customConnectors.list(orgId, options),
+    () => state.me?.user.id ?? null,
   );
   const mail = createFakeMail(
     (method, ...args) => state.calls.push({ method, args }),
@@ -4098,6 +4416,7 @@ export function createFakeApi(state: FakeState = seedState(), options: { seed?: 
   const apps = createFakeApps((method, ...args) => state.calls.push({ method, args }), ctx.now);
   const artifacts = createMockArtifacts(ctx, (method, ...args) => state.calls.push({ method, args }));
   state.drive = artifacts;
+  const live = createFakeLive(ctx, (method, ...args) => state.calls.push({ method, args }), artifacts);
   const client: ApiClient = {
     ...http,
     apps: apps.client,
@@ -4125,8 +4444,20 @@ export function createFakeApi(state: FakeState = seedState(), options: { seed?: 
       },
     ),
     access,
+    // Someone else's personal server comes with the agents that hold it, as the backend lists it with `others`.
+    customConnectors: {
+      ...customConnectors,
+      list: async (orgId, options) =>
+        (await customConnectors.list(orgId, options)).map((x) =>
+          x.ownerUserId && x.ownerUserId !== state.me?.user.id ? { ...x, agentIds: access.holders(x.id) } : x,
+        ),
+    },
     connectors: {
       ...http.connectors,
+      takeOffAgent: async (orgId, connectionId, agentId) => {
+        await http.connectors.takeOffAgent(orgId, connectionId, agentId);
+        access.takeOff(connectionId, agentId);
+      },
       // Any kind: a server's account or a catalog connection. Names are unique in the workspace.
       rename: async (orgId, connectionId, label) => {
         const name = label.trim();
@@ -4152,9 +4483,11 @@ export function createFakeApi(state: FakeState = seedState(), options: { seed?: 
       },
       // A first connection of a connector is every agent's (a new key for it keeps their grants).
       connectWithKey: async (orgId, input) => {
-        const first = !(await http.connectors.list(orgId)).some((c) => c.connector === input.connector);
+        const first = !(await http.connectors.list(orgId)).some(
+          (c) => c.connector === input.connector && !c.ownerUserId === !input.personal,
+        );
         const connection = await http.connectors.connectWithKey(orgId, input);
-        if (first) access.connected(connection.id, await agentIds(orgId));
+        if (first) access.connected(connection.id, input.personal ? await ownAgentIds(orgId) : await agentIds(orgId));
         return connection;
       },
     },
@@ -4335,10 +4668,96 @@ export function createFakeApi(state: FakeState = seedState(), options: { seed?: 
     ),
     artifacts,
     ...createMockPlanning(ctx, (method, ...args) => state.calls.push({ method, args })),
-    customConnectors,
     mail: mail.client,
     databases: databases.client,
     dashboards: dashboards.client,
+    live: live.client,
+    // Code sessions (ADR 0215): none in these tests.
+    code: {
+      list: async () => [],
+      start: async () => ({ agents: [] }),
+      create: async () => {
+        throw new Error("code sessions aren't faked");
+      },
+      get: async () => {
+        throw new Error("code sessions aren't faked");
+      },
+      rename: async () => {
+        throw new Error("code sessions aren't faked");
+      },
+      retry: async () => {
+        throw new Error("code sessions aren't faked");
+      },
+      close: async () => {},
+      diff: async () => ({
+        scope: "base" as const,
+        base: { branch: null, sha: null },
+        files: [],
+        added: 0,
+        removed: 0,
+        truncated: false,
+      }),
+      git: async () => ({ uncommitted: 0, ahead: 0, upstream: false, local: false, pr: null, next: null }),
+      gitLog: async () => ({
+        branch: null,
+        base: { branch: null, sha: null },
+        changes: [],
+        changesMore: false,
+        commits: [],
+        more: false,
+      }),
+      files: async () => ({ paths: [], truncated: false, changes: [] }),
+      file: async (_orgId: string, _sessionId: string, path: string) => ({
+        path,
+        state: "missing" as const,
+        content: "",
+        size: 0,
+        truncated: false,
+        rev: "",
+      }),
+      saveFile: async (_orgId: string, _sessionId: string, input: { path: string; content: string }) => ({
+        path: input.path,
+        state: "ok" as const,
+        content: input.content,
+        size: input.content.length,
+        truncated: false,
+        rev: "saved",
+      }),
+      // A session an agent suggested in the chat (ADR 0215 §11): opened (just started, preparing) or kept here.
+      openSuggestion: async (orgId: string, messageId: string) => {
+        state.calls.push({ method: "code.openSuggestion", args: [orgId, messageId] });
+        const s = codeSuggestionOf(state.messages.find((m) => m.id === messageId)?.meta);
+        if (s?.status !== "pending") throw new ApiError(409, "code_session.suggestion_gone", "Answered already");
+        const now = new Date().toISOString();
+        return {
+          id: "0193f1a2-7b3c-7d4e-8f90-1a2b3c4d5e6f",
+          channelId: "ch-code-1",
+          rootId: "m-code-root-1",
+          title: s.title,
+          repo: s.repo,
+          branch: null,
+          baseBranch: null,
+          agentId: s.agentId,
+          machineId: null,
+          worktree: { state: "preparing" as const, error: null, errorCode: null },
+          local: !s.repo.includes("/"),
+          pr: null,
+          stat: { files: 0, added: 0, removed: 0, at: null },
+          work: "preparing" as const,
+          createdBy: state.me?.user.id ?? null,
+          createdAt: now,
+          lastAt: now,
+        };
+      },
+      keepHere: async (orgId: string, messageId: string) => {
+        state.calls.push({ method: "code.keepHere", args: [orgId, messageId] });
+        const s = codeSuggestionOf(state.messages.find((m) => m.id === messageId)?.meta);
+        if (s?.status !== "pending") throw new ApiError(409, "code_session.suggestion_gone", "Answered already");
+        return {
+          suggestion: { ...s, status: "here" as const, by: state.me?.user.id ?? "", at: new Date().toISOString() },
+        };
+      },
+    },
     browser: browser.client,
     desktop: browser.desktop,
     // "Trabalhando agora" and the task manager only for a test that gives the task manager (`state.taskManager`).
@@ -4367,6 +4786,71 @@ export function createFakeApi(state: FakeState = seedState(), options: { seed?: 
         }
       : {}),
   };
+  // "Contas de IA" (`hub`) as the server builds it from the same accounts, the workspace's keys and the order of use,
+  // unless a test's `setAiAccounts` gave one. Permissions start at their defaults (Gerenciar: its owner and admins,
+  // Usar em agentes: as "Quem usa" was, Atender todos: the agent's owner) and keep what a test saved.
+  const permissionsSaved = new Map<string, AccountPermissions>();
+  const seededPermissions = client.machines.setAccountPermissions;
+  client.machines.setAccountPermissions = async (orgId, accountId, input) => {
+    const saved = await seededPermissions(orgId, accountId, input);
+    const was = permissionsSaved.get(accountId);
+    permissionsSaved.set(accountId, { ...(was ?? saved.permissions), ...input } as AccountPermissions);
+    return saved;
+  };
+  const seededAi = client.machines.aiAccounts;
+  client.machines.aiAccounts = async (...args) => {
+    const view = await seededAi(...args);
+    if (view.hub) return view;
+    const nobody = { userIds: [], roleIds: [] };
+    const { groups, keyFallback, canConfigure } = await client.machines.accountOrder(args[0]);
+    return {
+      ...view,
+      hub: {
+        accounts: view.accounts.map((a) => {
+          const ownerOnly = a.serves === "owner";
+          // As the server's `sameAs`: the logins of one account on a computer share its oldest login's id.
+          const same = view.accounts.find(
+            (b) =>
+              b.machineId === a.machineId &&
+              b.kind === a.kind &&
+              b.provider === a.provider &&
+              (a.provider ? b.keyHint === a.keyHint : !!a.email && b.email?.toLowerCase() === a.email.toLowerCase()),
+          );
+          return {
+            ...a,
+            ...(a.sameAs ? {} : { sameAs: same?.id ?? a.id }),
+            permissions: permissionsSaved.get(a.sameAs ?? a.id) ??
+              permissionsSaved.get(a.id) ?? {
+                manage: { mode: "admins", ...nobody },
+                use: { mode: ownerOnly ? "owner" : "everyone", ...nobody },
+                reply: { mode: "owner", ...nobody },
+              },
+            rights: {
+              canManage: a.mine,
+              canSetManage: a.mine,
+              canUse: a.mine || !ownerOnly,
+              ...(!a.mine && ownerOnly ? { useReason: "owner_only" as const } : {}),
+              canReplyAll: a.mine,
+            },
+          };
+        }),
+        keys: state.credentials
+          .filter((c) => !c.revokedAt)
+          .map((c) => ({
+            id: c.id,
+            provider: c.provider,
+            label: c.label,
+            keyHint: c.keyHint,
+            isDefault: c.id === (state.defaultCredentialId ?? null),
+            ...(c.endpoint ? { endpoint: c.endpoint } : {}),
+          })),
+        order: groups,
+        keyFallback: keyFallback ?? false,
+        canManageKeys: true,
+        canConfigure: canConfigure ?? false,
+      },
+    };
+  };
   // As the server's: the usage views list every account on a computer, so what `setAiAccounts` set is there too, each
   // the viewer's own with its address, after the computer's own sign-in.
   const seededPlans = client.orgs.planUsage;
@@ -4384,6 +4868,7 @@ export function createFakeApi(state: FakeState = seedState(), options: { seed?: 
           kind: a.kind,
           accountId: a.id,
           label: a.label,
+          ...(a.named !== undefined ? { named: a.named } : {}),
           plan: a.plan,
           provider: a.provider,
           ownerName: a.ownerName,
@@ -4408,6 +4893,7 @@ export function createFakeApi(state: FakeState = seedState(), options: { seed?: 
   fakeMailOf.set(client, mail);
   fakeDatabasesOf.set(client, databases);
   fakeDashboardsOf.set(client, dashboards);
+  fakeLiveOf.set(client, live);
   fakeBrowserOf.set(client, browser);
   fakeAppsOf.set(client, apps);
   return client;
@@ -4420,8 +4906,6 @@ export function fakeAgentBrain(agentId: string, patch: Partial<AgentBrain> = {})
     brain: "model",
     model: null,
     effectiveModel: null,
-    fallback: true,
-    extraUsage: true,
     computer: { machineId: "machine_1", name: "MacBook", online: true },
     options: [
       { kind: "model", available: true, models: [], defaultModel: null },
@@ -4459,6 +4943,8 @@ export function fakeAgentBrain(agentId: string, patch: Partial<AgentBrain> = {})
     ownUsage: {},
     ...patch,
   };
+  // Its accounts as the server sends them: whether each name is the automatic one.
+  brain.accounts = brain.accounts.map(withNamed);
   // The computers the person may give the agent: the MacBook, with what it offers.
   if (patch.machines) return brain;
   const computer = brain.computer ?? { machineId: "machine_1", name: "MacBook", online: true };

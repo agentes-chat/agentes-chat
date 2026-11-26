@@ -15,8 +15,9 @@ import type { BrainKind } from "./brains/types";
 import { caches } from "./cache";
 import { defaultCredentials, usableCredentialRow } from "./credentials";
 import { cutText } from "./format";
-import type { Judge } from "./judge";
+import type { Judge, JudgeGroup } from "./judge";
 import { missionOfThread } from "./missions";
+import { isRightHand } from "./right-hand";
 import { orgModelProvider } from "./router";
 
 /**
@@ -37,7 +38,7 @@ export type AutoEffort = "low" | "medium" | "high";
 export const AUTO_EFFORTS: readonly AutoEffort[] = ["low", "medium", "high"];
 
 /** The judge answers within this, or the run starts on the medium tier with medium effort. */
-export const AUTO_MODEL_TIMEOUT_MS = 1500;
+export const AUTO_MODEL_TIMEOUT_MS = 800;
 
 /** What the judge decided for a run (or why it fell back). */
 export interface AutoChoice {
@@ -45,8 +46,13 @@ export interface AutoChoice {
   effort: AutoEffort;
   /** One line, for the run's `context` step. */
   reason: string;
-  /** "judge", or why it is medium/medium ("timeout", "error", "none": no judge, "kept": resumed without one). */
-  source: "judge" | "timeout" | "error" | "none" | "kept";
+  /**
+   * "judge", or why it is medium/medium ("timeout", "error", "none": no judge, "kept": resumed without one), or
+   * "conversation": the previous run's here, kept (`keptAutoChoice`).
+   */
+  source: "judge" | "timeout" | "error" | "none" | "kept" | "conversation";
+  /** The judge's probability for `tier`, where it gave one. */
+  tierP?: number;
 }
 
 /** Kept on the transcript: the choice and the API model it mapped to (stable if the keys change mid-run). */
@@ -55,7 +61,7 @@ export interface AutoModelRecord extends AutoChoice {
 }
 
 /** What a run that couldn't ask thinks with: the everyday model, ordinary effort. */
-export function fallbackChoice(source: Exclude<AutoChoice["source"], "judge">): AutoChoice {
+export function fallbackChoice(source: Exclude<AutoChoice["source"], "judge" | "conversation">): AutoChoice {
   const why: Record<typeof source, string> = {
     timeout: "The judge didn't answer in time",
     error: "The judge failed",
@@ -69,9 +75,13 @@ export function fallbackChoice(source: Exclude<AutoChoice["source"], "judge">): 
 const ACTING =
   "acting for the person with tools (opening a site, taking a screenshot, clicking or filling in a page, running a command, changing files, sending something)";
 
+/** Never the small tier either: a short message that moves work along reads like a quick turn and is not one. */
+const GOING_ON =
+  'a go-ahead or \'continue\' ("ok", "next", "pode seguir"), the next step of work already under way, setting up, configuring or testing something, or handing work to others and following it';
+
 const TIER_CRITERIA: Record<ModelTier, string> = {
-  small: `A quick, simple turn that only answers: a greeting or thanks, a short factual answer, a status, a yes/no. Little reasoning. Never ${ACTING}.`,
-  medium: `Everyday work: an answer that needs some care, ${ACTING}, a few tool calls, a summary, an ordinary fix, document or routine check.`,
+  small: `A quick, simple turn that only answers: a greeting or thanks, a short factual answer, a status, a yes/no to a plain question. Little reasoning. Never ${GOING_ON}. Never ${ACTING}.`,
+  medium: `Everyday work: an answer that needs some care, ${ACTING}, ${GOING_ON}, a few tool calls, a summary, an ordinary fix, document or routine check.`,
   large:
     "Hard or high-stakes work: deep reasoning, a long multi-step task, planning, a subtle bug, writing or reviewing substantial code, or a mistake would be costly.",
 };
@@ -115,7 +125,32 @@ export async function chooseAutoModel(
     /** It has tools beyond the conversation. */
     tools: boolean;
     timeoutMs?: number;
+    /** Asked with the run's other start judgments (`JudgeGroup`). */
+    group?: JudgeGroup;
+    /**
+     * The same work every time (a routine's prompt, `routineAutoModel`'s key): a choice the judge made for it stands
+     * for a day, unasked.
+     */
+    cacheKey?: string;
   },
+): Promise<AutoChoice> {
+  if (!input.cacheKey) return askAutoChoice(judge, input);
+  let asked = false;
+  const choice = (await caches.routineAutoModel.getOrLoad(
+    input.cacheKey,
+    () => {
+      asked = true;
+      return askAutoChoice(judge, input);
+    },
+    (c) => (c as AutoChoice).source === "judge",
+  )) as AutoChoice;
+  if (!asked) input.group?.skip("auto_model");
+  return choice;
+}
+
+async function askAutoChoice(
+  judge: Judge,
+  input: Omit<Parameters<typeof chooseAutoModel>[1], "cacheKey">,
 ): Promise<AutoChoice> {
   const about =
     "An AI agent of a team (`agent`) is about to work on `message` (`recent` is what was said before it; `run` says whether a routine started it in the background, whether it is part of a mission, whether it works on a computer with files and a shell, and whether it has tools). Missions and code work usually need more; greetings and quick questions the least.";
@@ -130,6 +165,7 @@ export async function chooseAutoModel(
         agentId: input.agentId,
         runId: input.runId,
         kind: "auto_model",
+        ...(input.group ? { group: input.group } : {}),
         state: {
           agent: {
             name: input.agent.name,
@@ -169,7 +205,17 @@ export async function chooseAutoModel(
     const tierP = percent(answers.tier?.probabilities?.[tier]);
     const effortP = percent(answers.effort?.probabilities?.[effort]);
     const reason = `${TIER_REASON[tier]}${tierP}; ${effort} effort${effortP}.`;
-    return { tier, effort, reason: reason.charAt(0).toUpperCase() + reason.slice(1), source: "judge" };
+    const p = answers.tier?.probabilities?.[tier];
+    return flooredAutoChoice(
+      {
+        tier,
+        effort,
+        reason: reason.charAt(0).toUpperCase() + reason.slice(1),
+        source: "judge",
+        ...(typeof p === "number" ? { tierP: p } : {}),
+      },
+      input,
+    );
   } catch {
     return fallbackChoice("error");
   } finally {
@@ -177,9 +223,67 @@ export async function chooseAutoModel(
   }
 }
 
+/**
+ * The small tier only when the judge is this sure of it, else the medium one. A miss there costs a turn that stops at
+ * its first step (with a long tool list the smallest models give up on the task); a miss the other way costs a few
+ * cents.
+ */
+export const AUTO_SMALL_P = 0.75;
+
+/**
+ * The floor under a judged tier: a small one the judge isn't sure of, or one in a mission (its main session works
+ * through a plan), runs medium. Every other choice stands.
+ */
+export function flooredAutoChoice(choice: AutoChoice, run: { mission: boolean }): AutoChoice {
+  if (choice.source !== "judge" || choice.tier !== "small") return choice;
+  if (!run.mission && (choice.tierP ?? 1) >= AUTO_SMALL_P) return choice;
+  const why = run.mission ? "part of a mission" : `small not sure enough${percent(choice.tierP)}`;
+  const { tierP: _, ...rest } = choice;
+  return { ...rest, tier: "medium", reason: `Everyday work (${why}); ${choice.effort} effort.` };
+}
+
+/** How long a conversation keeps its "Automático" choice: the prompt cache's longest life (`cacheTtl` 1h). */
+export const AUTO_KEEP_MS = 60 * 60_000;
+/** A bigger tier replaces the kept choice only when the judge is at least this sure of it. */
+export const AUTO_UPGRADE_P = 0.6;
+
+/**
+ * Within `AUTO_KEEP_MS` of the agent's previous run in this conversation, that run's tier and effort stand: another
+ * model or effort reads the whole prompt again uncached. A bigger tier the judge is sure of replaces them (an
+ * upgrade), and so does a judged small tier: its uncached read costs about what the big tier's cached one does, and
+ * its output a fortieth. A medium one, another effort or a judge that didn't answer waits for the hour.
+ */
+export function keptAutoChoice(
+  choice: AutoChoice,
+  previous: { updatedAt: Date; autoModel: { tier?: unknown; effort?: unknown } | null } | null,
+  now = Date.now(),
+): AutoChoice {
+  const tier = previous?.autoModel?.tier as ModelTier;
+  const effort = previous?.autoModel?.effort as AutoEffort;
+  if (!previous || now - previous.updatedAt.getTime() >= AUTO_KEEP_MS) return choice;
+  if (!MODEL_TIERS.includes(tier) || !AUTO_EFFORTS.includes(effort)) return choice;
+  if (tier === choice.tier && effort === choice.effort) return choice;
+  if (choice.source === "judge" && choice.tier === "small") return choice;
+  const bigger = MODEL_TIERS.indexOf(choice.tier) > MODEL_TIERS.indexOf(tier);
+  if (choice.source === "judge" && bigger && (choice.tierP ?? 1) >= AUTO_UPGRADE_P) return choice;
+  return {
+    tier,
+    effort,
+    reason: `Kept from the previous run here (asked: ${choice.tier} tier, ${choice.effort} effort).`,
+    source: "conversation",
+  };
+}
+
 // ── One decision, mapped per brain ───────────────────────────────────────────
 
-type AutoAgent = Pick<Agent, "model" | "brain" | "brainModel" | "brainEffort">;
+type AutoAgent = Pick<Agent, "model" | "brain" | "brainModel" | "brainEffort"> & { builtin?: string | null };
+
+/**
+ * The agent's `auto` API model thinks in a run on `kind`: on the API brain, or as the right hand's stand-in on its key
+ * (the only computer brain the API stands in for). A computer brain whose model and effort are both pinned asks nothing.
+ */
+const autoApiModelFor = (agent: AutoAgent, kind: BrainKind) =>
+  isAutoModel(agent.model) && (kind === "model" || isRightHand(agent));
 
 /** The agent's effort is `auto` and it applies to this brain (its own computer brain, like `brainEffortFor`). */
 const autoEffortFor = (agent: AutoAgent, kind: BrainKind) =>
@@ -187,12 +291,12 @@ const autoEffortFor = (agent: AutoAgent, kind: BrainKind) =>
 
 /** Some setting of the agent is `auto`: the judge is asked early, while the run's context is built. */
 export const autoWanted = (agent: AutoAgent) =>
-  isAutoModel(agent.model) ||
+  autoApiModelFor(agent, brainOf(agent.brain)) ||
   (brainOf(agent.brain) !== "model" && (isAutoModel(agent.brainModel) || isAutoModel(agent.brainEffort)));
 
-/** This run needs a choice: its API model (also what a fallback to the API uses), its brain's model or effort. */
+/** This run needs a choice: its API model, its brain's model or effort. */
 export const needsAutoChoice = (agent: AutoAgent, plan: Pick<BrainPlan, "kind" | "model">) =>
-  isAutoModel(agent.model) || isAutoModel(plan.model) || autoEffortFor(agent, plan.kind);
+  autoApiModelFor(agent, plan.kind) || isAutoModel(plan.model) || autoEffortFor(agent, plan.kind);
 
 /** A computer brain's model for a tier: Claude Code's alias (`haiku`, `sonnet`, `opus`), a Codex model. */
 export function brainModelForTier(kind: BrainKind, tier: ModelTier): string | undefined {
@@ -206,7 +310,7 @@ export function brainModelForTier(kind: BrainKind, tier: ModelTier): string | un
 
 /** What auto sets for a run with this plan. */
 export interface AutoApplied {
-  /** The API model, when the agent's model is `auto` (the model brain, and a fallback to it). */
+  /** The API model, when the agent's model is `auto`. */
   apiModel?: string;
   /** The computer brain's model, when it is `auto` (undefined with `auto` set: the CLI's default). */
   brainModel?: string;
@@ -279,7 +383,7 @@ export function autoApplied(
   endpoint?: AutoEndpoint | null,
 ): AutoApplied {
   const out: AutoApplied = {};
-  if (isAutoModel(agent.model)) {
+  if (autoApiModelFor(agent, plan.kind)) {
     const model = choice.apiModel ?? autoModelFor(provider, choice.tier, tiers, endpoint);
     if (model) out.apiModel = model;
   }
@@ -383,7 +487,11 @@ export async function agentBrainLines(
   const out = await agentBrainSummaries(db, viewerId, orgId, agents);
   for (const a of agents) {
     const line = out.get(a.id);
-    if (line?.kind === "model" && isAutoModel(a.model)) out.set(a.id, { ...line, maker: await autoProvider(db, a) });
+    if (line?.kind !== "model" || !isAutoModel(a.model)) continue;
+    const { provider, endpoint } = await autoLine(db, a);
+    // An endpoint key with no model to call fails every run as no AI (`modelReady`): it names no maker.
+    if (provider === "custom" && !autoModelFor(provider, "medium", undefined, endpoint)) continue;
+    out.set(a.id, { ...line, maker: provider });
   }
   return out;
 }

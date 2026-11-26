@@ -1,6 +1,7 @@
 import type { Channel, OrgRole, OrgRoles, Person } from "@agenteschat/client";
-import { channelMembersQuery, keys, useApi, useChannelCategories, useChannels } from "@agenteschat/client";
+import { channelMembersQuery, keys, useAgentGroups, useApi, useChannels } from "@agenteschat/client";
 import { errorText } from "@agenteschat/client/lib/errors";
+import { edit, optimistic, patchIn } from "@agenteschat/client/lib/optimistic";
 import { managesChannel } from "@agenteschat/client/lib/permissions";
 import {
   channelLeavers,
@@ -56,7 +57,7 @@ export function RoleChannels({ role, data, people }: { role: OrgRole; data: OrgR
   const qc = useQueryClient();
   const toast = useToast();
   const channels = useChannels(org.id).data ?? [];
-  const categories = useChannelCategories(org.id).data ?? [];
+  const sectors = useAgentGroups(org.id).data ?? [];
   const [query, setQuery] = useState("");
   const [saved, setSaved] = useState(false);
   const [sees, setSees] = useState<{ channel: Channel; start: Set<string> } | null>(null);
@@ -70,12 +71,15 @@ export function RoleChannels({ role, data, people }: { role: OrgRole; data: OrgR
   const save = useMutation({
     mutationFn: ({ channel, next }: { channel: Channel; next: ChannelInput }) =>
       api.chat.update(org.id, channel.id, next),
+    // The tick (and who sees it) changes at once; a refusal puts it back.
+    ...optimistic(qc, ({ channel, next }: { channel: Channel; next: ChannelInput }) => [
+      edit<Channel[]>(keys.channels(org.id), patchIn<Channel>(channel.id, next)),
+    ]),
     onSuccess: () => setSaved(true),
-    onSettled: () =>
-      Promise.all([
-        qc.invalidateQueries({ queryKey: keys.channels(org.id) }),
-        qc.invalidateQueries({ queryKey: keys.roles(org.id) }),
-      ]),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: keys.channels(org.id) });
+      void qc.invalidateQueries({ queryKey: keys.roles(org.id) });
+    },
   });
   const base = isEveryone(role);
   const name = roleName(t, role);
@@ -97,8 +101,8 @@ export function RoleChannels({ role, data, people }: { role: OrgRole; data: OrgR
   const general = (c: Channel) => c.name === "general";
   const q = fold(query.trim());
   const shown = channels.filter((c) => !q || fold(c.name).includes(q));
-  const known = new Set(categories.map((c) => c.id));
-  const loose = shown.filter((c) => !c.categoryId || !known.has(c.categoryId));
+  const known = new Set(sectors.map((g) => g.id));
+  const loose = shown.filter((c) => !c.groupId || !known.has(c.groupId));
   const order = (list: Channel[]) =>
     [...list].sort(
       (a, b) =>
@@ -108,9 +112,7 @@ export function RoleChannels({ role, data, people }: { role: OrgRole; data: OrgR
     );
   const groups = [
     { id: "loose", name: t("shell.channels"), list: order(loose) },
-    ...[...categories]
-      .sort((a, b) => a.position - b.position)
-      .map((g) => ({ id: g.id, name: g.name, list: order(shown.filter((c) => c.categoryId === g.id)) })),
+    ...sectors.map((g) => ({ id: g.id, name: g.name, list: order(shown.filter((c) => c.groupId === g.id)) })),
   ].filter((g) => g.list.length > 0);
   const membersOf = async (c: Channel) =>
     (await qc.fetchQuery(channelMembersQuery(api, org.id, c.id))).filter((m) => m.type === "person").map((m) => m.id);
@@ -151,7 +153,6 @@ export function RoleChannels({ role, data, people }: { role: OrgRole; data: OrgR
     const reach = channelReach(c);
     const on = general(c) || roleSees(role, c);
     const mine = managesChannel(c, me.user.id, org);
-    const busy = save.isPending && save.variables?.channel.id === c.id;
     const why = general(c)
       ? t("rolesPage.channels.general")
       : !mine
@@ -171,7 +172,7 @@ export function RoleChannels({ role, data, people }: { role: OrgRole; data: OrgR
         <Checkbox
           id={id}
           checked={on}
-          disabled={Boolean(why) || lock || busy}
+          disabled={Boolean(why) || lock}
           onCheckedChange={(next) => void change(c, next)}
         />
         <Icon name={c.visibility === "private" ? "lock" : "channel"} size={18} />

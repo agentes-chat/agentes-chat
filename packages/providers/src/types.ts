@@ -1,3 +1,5 @@
+import type { ImageCallOptions, ImageRequest, ImageResult } from "./images";
+
 /**
  * Provider-neutral model interface. Only the Model Gateway
  * (`@agenteschat/engine`, `createModelGateway`) calls it: no other code talks
@@ -123,9 +125,10 @@ export interface ModelRequest {
   outputSchema?: Record<string, unknown>;
   /**
    * How much reasoning to spend. Providers without the notion ignore it. Default: the provider's.
-   * `none`: the least the model allows (its catalog `leastThinking`), else `low`.
+   * `none`: the least the model allows (its catalog `leastThinking`), else `low`. `xhigh` and `max`: where the model
+   * takes them (its catalog `efforts`), else `high` (`effortWithin`).
    */
-  effort?: "none" | "low" | "medium" | "high";
+  effort?: "none" | "low" | "medium" | "high" | "xhigh" | "max";
   /**
    * `1h`: the breakpoints of the stable prefix (stable tools, system blocks marked `cache`) last an hour where the
    * provider offers it (Anthropic's extended TTL, written at 2× the input price); the conversation's tail keeps the
@@ -206,6 +209,11 @@ export interface StreamOptions {
   session?: string;
   /** Called with each text fragment as it is generated. */
   onDelta(text: string): void;
+  /**
+   * A progress note the model wrote between its calls that the API returns apart from the reply's text (Claude's
+   * progress updates, OpenAI's reasoning summaries), whole, as each one ends. Never part of `text`.
+   */
+  onNote?(text: string): void;
 }
 
 /**
@@ -225,6 +233,11 @@ export interface ModelProvider {
     request: ModelRequest,
     options: { apiKey: string; workspaceId?: string; organization?: string; project?: string },
   ): Promise<number>;
+  /**
+   * Pictures from a prompt (ADR 0197), where the provider has an image API: the request's `model` is the provider's
+   * own id. Optional: a provider without one makes none.
+   */
+  generateImage?(request: ImageRequest, options: ImageCallOptions): Promise<ImageResult>;
 }
 
 /** What the provider had already reported or sent when a stream failed. */

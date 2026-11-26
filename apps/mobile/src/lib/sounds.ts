@@ -1,9 +1,11 @@
 import { type SoundName, setSoundPlayer } from "@agenteschat/client/lib/sounds";
 import { DEFAULT_SOUND_STYLE, isSoundStyle, renderSound, SOUNDS, type SoundStyle, wavBytes } from "@agenteschat/ui/sfx";
-import { type AudioPlayer, createAudioPlayer, setAudioModeAsync } from "expo-audio";
+import { type AudioPlayer, createAudioPlayer } from "expo-audio";
 import { File, Paths } from "expo-file-system";
 import { useEffect, useSyncExternalStore } from "react";
+import { appAudio } from "./audio-mode";
 import { readValueSync, STORED, writeValue } from "./storage";
+import { playSystemSound, systemSounds } from "./voice-session";
 
 /**
  * The app's sounds on the phone (ADR 0070): synthesized by `@agenteschat/ui/sfx` into WAV files in the cache
@@ -45,11 +47,26 @@ export function setSoundChoice(next: SoundChoice) {
 const players = new Map<string, AudioPlayer>();
 const lastPlayed = new Map<SoundName, number>();
 
-function fileFor(style: SoundStyle, name: SoundName) {
-  const file = new File(Paths.cache, `sound-${VERSION}-${style}-${name}.wav`);
-  if (!file.exists) file.write(wavBytes(renderSound(style, name)));
+/**
+ * Played as the phone's voice takes the session to record (ADR 0100): on iOS as a system sound, which keeps to the
+ * ringer switch where the session now plays in silent mode. Its file carries the volume the player would set.
+ */
+const AS_SYSTEM: ReadonlySet<SoundName> = new Set(["record"]);
+
+function fileFor(style: SoundStyle, name: SoundName, system = false) {
+  const file = new File(Paths.cache, `sound-${VERSION}-${style}-${name}${system ? "-system" : ""}.wav`);
+  if (!file.exists) {
+    const samples = renderSound(style, name);
+    file.write(wavBytes(system ? samples.map((v) => v * VOLUME) : samples));
+  }
   return file;
 }
+
+/** Files for the system sounds as well, on a phone that plays them so. */
+const filesOf = (style: SoundStyle, name: SoundName) => {
+  fileFor(style, name);
+  if (systemSounds && AS_SYSTEM.has(name)) fileFor(style, name, true);
+};
 
 function playerFor(style: SoundStyle, name: SoundName) {
   const key = `${style}/${name}`;
@@ -68,9 +85,18 @@ function play(name: SoundName) {
   if (now - (lastPlayed.get(name) ?? 0) < REPEAT_MS) return;
   lastPlayed.set(name, now);
   try {
+    // On iOS, never through the voice's session: it rings in silent mode.
+    if (systemSounds && AS_SYSTEM.has(name)) {
+      playSystemSound(fileFor(choice, name, true).uri);
+      return;
+    }
     const player = playerFor(choice, name);
-    void player.seekTo(0).catch(() => {});
-    player.play();
+    // Back at the start before it plays, never both at once: `seekTo` lands later (it is async) and, landing after the
+    // sound began, played its start a second time, heard as the sound twice. A player that never played is there.
+    if (player.currentTime > 0) {
+      const start = () => player.play();
+      void player.seekTo(0).then(start, start);
+    } else player.play();
   } catch {
     // No file or no audio: silence, never an error.
   }
@@ -83,7 +109,7 @@ function warm(style: SoundStyle) {
     const name = SOUNDS[i++];
     if (!name || choice !== style) return;
     try {
-      fileFor(style, name);
+      filesOf(style, name);
     } catch {
       return;
     }
@@ -95,11 +121,7 @@ function warm(style: SoundStyle) {
 /** In the signed-in app: the player for the shared code, the audio session, the files made after the start. */
 export function useSounds() {
   useEffect(() => {
-    void setAudioModeAsync({
-      playsInSilentMode: false,
-      interruptionMode: "mixWithOthers",
-      shouldPlayInBackground: false,
-    }).catch(() => {});
+    void appAudio();
     setSoundPlayer(play);
     const timer = setTimeout(() => {
       if (choice !== "off") warm(choice);

@@ -8,22 +8,26 @@
 //! web view.
 
 mod app_icon;
+mod bench;
 mod cookies;
 mod cover;
 mod deep_link;
 mod discover;
 mod dock;
 mod graphics;
+mod health;
 mod host_sync;
 mod local_server;
 mod main_window;
 mod menus;
 mod notch;
 mod prepare;
+mod problem_report;
 mod runners;
 mod servers;
 mod tailscale;
 mod tray;
+mod vitals;
 mod window_state;
 mod workspaces;
 
@@ -333,11 +337,69 @@ fn leave(app: AppHandle, again: bool) {
     std::thread::spawn(move || {
         stop_children(&app);
         if again {
-            app.restart();
+            relaunch(&app);
         } else {
             app.exit(0);
         }
     });
+}
+
+/// Opens the app anew. On macOS, Tauri's `restart` runs `open -n` while this instance still lives, so the new one
+/// gets a Dock icon of its own beside the one kept in the Dock, and the single-instance check may hand it back to
+/// the one quitting. Here a detached shell waits for this process to end, then opens the bundle without `-n`:
+/// LaunchServices starts it in the icon already there. Not in a bundle (a dev build): Tauri's own restart.
+fn relaunch(app: &AppHandle) {
+    #[cfg(target_os = "macos")]
+    if let Some(bundle) = std::env::current_exe().ok().as_deref().and_then(bundle_of) {
+        use std::os::unix::process::CommandExt;
+        let reopened = std::env::var_os(REOPENED_VAR).is_some();
+        let spawned = Command::new("/bin/sh")
+            .arg("-c")
+            .arg(RELAUNCH_SCRIPT)
+            .arg(bundle)
+            .arg(std::process::id().to_string())
+            .args(relaunch_args(std::env::args(), reopened))
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .process_group(0)
+            .spawn();
+        if spawned.is_ok() {
+            app.exit(0);
+            return;
+        }
+    }
+    app.restart();
+}
+
+/// `$0` the bundle, `$1` the pid to wait for (at most 30 s), the rest the app's arguments.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+const RELAUNCH_SCRIPT: &str = concat!(
+    r#"pid=$1; shift; i=0; "#,
+    r#"while kill -0 "$pid" 2>/dev/null && [ $i -lt 300 ]; do sleep 0.1; i=$((i+1)); done; "#,
+    r#"exec /usr/bin/open "$0" --args "$@""#,
+);
+
+/// The `.app` a binary at `…/X.app/Contents/MacOS/x` belongs to.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+fn bundle_of(exe: &Path) -> Option<std::path::PathBuf> {
+    let macos = exe.parent()?;
+    let contents = macos.parent()?;
+    let bundle = contents.parent()?;
+    let named = |p: &Path, name: &str| p.file_name().is_some_and(|n| n == name);
+    (named(macos, "MacOS") && named(contents, "Contents") && bundle.extension().is_some_and(|e| e == "app"))
+        .then(|| bundle.to_path_buf())
+}
+
+/// The arguments the reopened app gets: its own (the program left out), `REOPENED_ARG` only for a person's Reopen.
+/// `open` hands the new app no environment of ours, so on macOS a Reopen is said with an argument.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+fn relaunch_args(args: impl Iterator<Item = String>, reopened: bool) -> Vec<String> {
+    let mut kept: Vec<String> = args.skip(1).filter(|a| a != REOPENED_ARG).collect();
+    if reopened {
+        kept.push(REOPENED_ARG.into());
+    }
+    kept
 }
 
 #[tauri::command]
@@ -350,9 +412,12 @@ fn runner_send(runners: tauri::State<'_, Runners>, home_id: String, line: String
     runners.send(&home_id, &line)
 }
 
+/// Off the main thread: it makes the home's folders and starts its runner.
 #[tauri::command]
-fn runner_add(app: AppHandle, runners: tauri::State<'_, Runners>) -> Result<String, String> {
-    runners.add(&app)
+async fn runner_add(app: AppHandle) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || app.state::<Runners>().add(&app))
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
@@ -378,13 +443,18 @@ async fn open_external(app: AppHandle, url: String) -> Result<(), String> {
     main_window::show_url(&app, page)
 }
 
+/// Off the main thread: a folder on a drive that went away keeps `is_dir` waiting.
 #[tauri::command]
-fn reveal_folder(app: AppHandle, path: String) -> Result<(), String> {
-    let p = Path::new(&path);
-    if !p.is_absolute() || !p.is_dir() {
-        return Err("not a folder".into());
-    }
-    app.opener().open_path(path, None::<&str>).map_err(|e| e.to_string())
+async fn reveal_folder(app: AppHandle, path: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let folder = Path::new(&path);
+        if !folder.is_absolute() || !folder.is_dir() {
+            return Err("not a folder".to_string());
+        }
+        app.opener().open_path(path.as_str(), None::<&str>).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
@@ -425,27 +495,38 @@ fn quit_app(app: AppHandle) {
     begin_quit(app);
 }
 
+/// Async, as every command that reads files (Linux's graphics cards and system name here): a sync command runs on
+/// the main thread, and the windows stand still while it waits.
 #[tauri::command]
-fn app_info(app: AppHandle) -> AppInfo {
-    AppInfo {
+async fn app_info(app: AppHandle) -> Result<AppInfo, String> {
+    tauri::async_runtime::spawn_blocking(move || AppInfo {
         version: app.package_info().version.to_string(),
         os: std::env::consts::OS,
         arch: std::env::consts::ARCH,
         system: prepare::system_version(),
         details: graphics::details(&app),
-    }
+    })
+    .await
+    .map_err(|e| e.to_string())
+}
+
+/// Async: start at login is a file (macOS, Linux) or the registry (Windows).
+#[tauri::command]
+async fn autostart_get(app: AppHandle) -> Result<bool, String> {
+    tauri::async_runtime::spawn_blocking(move || app.autolaunch().is_enabled().map_err(|e| e.to_string()))
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
-fn autostart_get(app: AppHandle) -> Result<bool, String> {
-    app.autolaunch().is_enabled().map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-fn autostart_set(app: AppHandle, on: bool) -> Result<(), String> {
-    let launcher = app.autolaunch();
-    let result = if on { launcher.enable() } else { launcher.disable() };
-    result.map_err(|e| e.to_string())
+async fn autostart_set(app: AppHandle, on: bool) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let launcher = app.autolaunch();
+        let result = if on { launcher.enable() } else { launcher.disable() };
+        result.map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
@@ -533,6 +614,8 @@ async fn update_install(app: AppHandle) -> Result<bool, String> {
 /// Set by a person's Reopen: the reopened app keeps the arguments it started with, `AUTOSTART_ARG` too, and opens its
 /// windows all the same.
 const REOPENED_VAR: &str = "AGENTES_DESKTOP_REOPENED";
+/// The same, as the argument macOS's relaunch passes (`relaunch_args`): `open` doesn't carry the variable.
+const REOPENED_ARG: &str = "--reopened";
 
 /// A person's Reopen: the runners and the server here finish their work first, as when quitting; then the app opens
 /// again, its windows shown.
@@ -591,10 +674,12 @@ fn migrate_login_item(app: &AppHandle) {
 }
 
 pub fn run() {
+    // The opening's start (vitals.rs).
+    vitals::started();
     // Before any thread starts: WebKitGTK reads how to draw once.
     graphics::choose();
     // Taken once: a later reopen for an update keeps a start at login in the background.
-    let reopened = std::env::var_os(REOPENED_VAR).is_some();
+    let reopened = std::env::var_os(REOPENED_VAR).is_some() || std::env::args().any(|a| a == REOPENED_ARG);
     std::env::remove_var(REOPENED_VAR);
     let builder = tauri::Builder::default()
         // First: a second launch brings the running app's window back; one carrying a link (Windows,
@@ -637,7 +722,8 @@ pub fn run() {
         .manage(window_state::LastSaved::default())
         .manage(prepare::Resumed::default())
         .manage(UpdateDownload::default())
-        .invoke_handler(tauri::generate_handler![
+        // Each command is marked as it starts: a main thread that stops answering is logged with it (health.rs).
+        .invoke_handler(health::marked(tauri::generate_handler![
             runners_list,
             runner_send,
             runner_add,
@@ -684,6 +770,10 @@ pub fn run() {
             local_server::keep_running,
             local_server::open_system_settings,
             local_server::local_server_diagnostics,
+            local_server::problem_report_parts,
+            problem_report::problem_report_on,
+            problem_report::problem_report_send,
+            vitals::problem_report_facts,
             local_server::local_server_sync,
             tailscale::tailscale_status,
             tailscale::tailscale_open,
@@ -711,80 +801,18 @@ pub fn run() {
             prepare::privacy_open,
             prepare::setup_state_get,
             prepare::setup_state_set
-        ])
-        .on_menu_event(|app, event| menus::on_event(app, event.id().as_ref()))
-        .on_window_event(|window, event| match event {
-            WindowEvent::Focused(false) if window.label() == "popover" => {
-                let _ = window.hide();
-                if let Ok(mut at) = window.app_handle().state::<PopoverClock>().0.lock() {
-                    *at = Some(Instant::now());
-                }
-            }
-            WindowEvent::Focused(true) if window.label() == main_window::LABEL => {
-                main_window::focused(window.app_handle());
-            }
-            WindowEvent::Focused(false) if window.label() == main_window::LABEL => {
-                main_window::keep_lights(window.app_handle());
-            }
-            // Closing it while agentes.chat is being set up only hides it: the setup goes on (Cancel stops it).
-            WindowEvent::CloseRequested { api, .. }
-                if window.label() == "welcome" && local_server::setting_up(window.app_handle()) =>
-            {
-                api.prevent_close();
-                let _ = window.hide();
-            }
-            // Welcome and Preferences really close (made again when they open), and a setup on screen ends with them.
-            WindowEvent::CloseRequested { .. } if MADE_ON_OPEN.contains(&window.label()) => {
-                prepare::closed(window.app_handle(), window.label());
-            }
-            WindowEvent::CloseRequested { api, .. } => {
-                // The other windows are made once and only hidden; quitting goes through "Quit".
-                api.prevent_close();
-                if window.label() == main_window::LABEL {
-                    window_state::remember(window, false);
-                    // Some Linux desktops show no tray icon: there the window stays in reach, minimized. One that
-                    // may be black (its page arrived on the graphics card and never painted) quits instead, so
-                    // opening the app again draws without the graphics card (graphics.rs `decide`).
-                    #[cfg(target_os = "linux")]
-                    {
-                        if cover::unpainted_on_gpu(window.app_handle()) {
-                            begin_quit(window.app_handle().clone());
-                            return;
-                        }
-                        let _ = window.minimize();
-                        return;
-                    }
-                    // ⌘W in full screen: out of full screen first, so no empty Space stays behind.
-                    #[cfg(not(target_os = "linux"))]
-                    if main_window::in_full_screen(window) {
-                        let _ = window.set_fullscreen(false);
-                        let window = window.clone();
-                        std::thread::spawn(move || {
-                            std::thread::sleep(Duration::from_millis(700));
-                            let _ = window.hide();
-                        });
-                        return;
-                    }
-                }
-                let _ = window.hide();
-            }
-            WindowEvent::Moved(_) if window.label() == main_window::LABEL => window_state::remember(window, true),
-            WindowEvent::Resized(_) if window.label() == main_window::LABEL => {
-                window_state::remember(window, true);
-                // Full screen in or out: the page's title bar keeps or drops the room for the buttons.
-                main_window::fit_page(window.app_handle());
-            }
-            WindowEvent::ThemeChanged(theme) if window.label() == main_window::LABEL => {
-                let color = main_window::backdrop(*theme);
-                let _ = window.set_background_color(Some(color));
-                if let Some(page) = window.app_handle().get_webview(main_window::LABEL) {
-                    let _ = page.set_background_color(Some(color));
-                }
-            }
-            _ => {}
+        ]))
+        .on_menu_event(|app, event| {
+            health::mark("menu");
+            menus::on_event(app, event.id().as_ref())
+        })
+        .on_window_event(|window, event| {
+            health::mark(window_event_name(event));
+            on_window_event(window, event)
         })
         .setup(move |app| {
             let handle = app.handle().clone();
+            health::start(&handle);
             // Before the tray (it lists them).
             servers::load(&handle);
             tray::create(&handle)?;
@@ -816,7 +844,9 @@ pub fn run() {
             if servers::current(&handle).is_none() {
                 let _ = present(&handle, "welcome");
             } else if !at_login {
-                let _ = main_window::open(&handle, resume.as_ref().and_then(|r| r.page.clone()));
+                vitals::window_at_launch();
+                let page = bench::url().or_else(|| resume.as_ref().and_then(|r| r.page.clone()));
+                let _ = main_window::open(&handle, page);
             }
             if let Some(resume) = resume {
                 let _ = present(&handle, resume.window);
@@ -828,14 +858,17 @@ pub fn run() {
             }
             // The app icon picked on this computer (ADR 0179).
             app_icon::show(&handle);
+            bench::setup_done(&handle);
             Ok(())
         });
     // After long in the background macOS may end a window's page to free memory, which leaves it blank:
     // it loads again (the site opens from the disk cache, so it is back at once).
     #[cfg(target_os = "macos")]
     let builder = builder.on_web_content_process_terminate(|webview| {
+        let app = webview.app_handle();
+        health::note(app, &format!("the web process of {} ended: loading it again", webview.label()));
         if webview.label() == main_window::LABEL {
-            cover::show(webview.app_handle(), std::time::Duration::ZERO);
+            cover::show(app);
         }
         let _ = webview.reload();
     });
@@ -864,6 +897,93 @@ pub fn run() {
     });
 }
 
+/// What the main thread is doing for a window's event, for the stall line (health.rs).
+fn window_event_name(event: &WindowEvent) -> &'static str {
+    match event {
+        WindowEvent::Resized(_) => "window resized",
+        WindowEvent::Moved(_) => "window moved",
+        WindowEvent::CloseRequested { .. } => "window close",
+        WindowEvent::Destroyed => "window destroyed",
+        WindowEvent::Focused(_) => "window focus",
+        WindowEvent::ScaleFactorChanged { .. } => "window scale",
+        WindowEvent::ThemeChanged(_) => "window theme",
+        _ => "window event",
+    }
+}
+
+fn on_window_event(window: &tauri::Window, event: &WindowEvent) {
+    match event {
+        WindowEvent::Focused(false) if window.label() == "popover" => {
+            let _ = window.hide();
+            if let Ok(mut at) = window.app_handle().state::<PopoverClock>().0.lock() {
+                *at = Some(Instant::now());
+            }
+        }
+        WindowEvent::Focused(true) if window.label() == main_window::LABEL => {
+            main_window::focused(window.app_handle());
+        }
+        WindowEvent::Focused(false) if window.label() == main_window::LABEL => {
+            main_window::keep_lights(window.app_handle());
+        }
+        // Closing it while agentes.chat is being set up only hides it: the setup goes on (Cancel stops it).
+        WindowEvent::CloseRequested { api, .. }
+            if window.label() == "welcome" && local_server::setting_up(window.app_handle()) =>
+        {
+            api.prevent_close();
+            let _ = window.hide();
+        }
+        // Welcome and Preferences really close (made again when they open), and a setup on screen ends with them.
+        WindowEvent::CloseRequested { .. } if MADE_ON_OPEN.contains(&window.label()) => {
+            prepare::closed(window.app_handle(), window.label());
+        }
+        WindowEvent::CloseRequested { api, .. } => {
+            // The other windows are made once and only hidden; quitting goes through "Quit".
+            api.prevent_close();
+            if window.label() == main_window::LABEL {
+                window_state::remember(window, false);
+                // Some Linux desktops show no tray icon: there the window stays in reach, minimized. One that
+                // may be black (its page arrived on the graphics card and never painted) quits instead, so
+                // opening the app again draws without the graphics card (graphics.rs `decide`).
+                #[cfg(target_os = "linux")]
+                {
+                    if cover::unpainted_on_gpu(window.app_handle()) {
+                        begin_quit(window.app_handle().clone());
+                        return;
+                    }
+                    let _ = window.minimize();
+                    return;
+                }
+                // ⌘W in full screen: out of full screen first, so no empty Space stays behind.
+                #[cfg(not(target_os = "linux"))]
+                if main_window::in_full_screen(window) {
+                    let _ = window.set_fullscreen(false);
+                    let window = window.clone();
+                    std::thread::spawn(move || {
+                        std::thread::sleep(Duration::from_millis(700));
+                        let _ = window.hide();
+                    });
+                    return;
+                }
+            }
+            let _ = window.hide();
+        }
+        WindowEvent::Moved(_) if window.label() == main_window::LABEL => window_state::remember(window, true),
+        WindowEvent::Resized(_) if window.label() == main_window::LABEL => {
+            window_state::remember(window, true);
+            // Full screen in or out: the page's title bar keeps or drops the room for the buttons.
+            main_window::fit_page(window.app_handle());
+        }
+        WindowEvent::ThemeChanged(theme) if window.label() == main_window::LABEL => {
+            let color = main_window::backdrop(*theme);
+            let _ = window.set_background_color(Some(color));
+            if let Some(page) = window.app_handle().get_webview(main_window::LABEL) {
+                let _ = page.set_background_color(Some(color));
+            }
+        }
+        _ => {}
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -875,6 +995,26 @@ mod tests {
         assert!(!started_at_login(args(&["agentes-chat", AUTOSTART_ARG]), true));
         assert!(!started_at_login(args(&["agentes-chat"]), false));
         assert!(!started_at_login(args(&["agentes-chat"]), true));
+    }
+
+    #[test]
+    fn a_relaunch_opens_the_bundle_it_runs_from() {
+        assert_eq!(
+            bundle_of(Path::new("/Applications/agentes.chat.app/Contents/MacOS/agentes-chat")),
+            Some(std::path::PathBuf::from("/Applications/agentes.chat.app"))
+        );
+        assert_eq!(bundle_of(Path::new("/Users/x/target/debug/agentes-chat")), None);
+        assert_eq!(bundle_of(Path::new("/Applications/x/Contents/MacOS/agentes-chat")), None);
+    }
+
+    #[test]
+    fn a_relaunch_keeps_the_arguments_and_says_a_reopen_once() {
+        let args = |list: &[&str]| list.iter().map(|a| a.to_string()).collect::<Vec<_>>().into_iter();
+        assert_eq!(relaunch_args(args(&["agentes-chat", AUTOSTART_ARG]), false), vec![AUTOSTART_ARG]);
+        assert_eq!(relaunch_args(args(&["agentes-chat", AUTOSTART_ARG]), true), vec![AUTOSTART_ARG, REOPENED_ARG]);
+        // An update after a Reopen is no Reopen: the argument isn't carried on.
+        assert_eq!(relaunch_args(args(&["agentes-chat", REOPENED_ARG]), false), Vec::<String>::new());
+        assert_eq!(relaunch_args(args(&["agentes-chat", REOPENED_ARG]), true), vec![REOPENED_ARG]);
     }
 
     #[test]

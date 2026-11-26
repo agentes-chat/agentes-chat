@@ -70,7 +70,7 @@ OpenRouter) in the app.
 | Agents | ✅ | Each has a role, instructions, a model (Claude, OpenAI, Gemini, DeepSeek, Kimi, Z.ai, MiniMax, Command Code, or any of OpenRouter's), a monthly budget checked before every call, and an owner who gets its approvals and budget alerts. |
 | Router | ✅ | A message nobody @mentioned goes to the router. Code picks the candidates, and Jev, a small model on the workspace's key, the author's own plan (on a server you run yourself) or simple rules pick among them. Up to four agents answer, or none, and the message says who picked. It never grants a permission. |
 | Approvals | ✅ | Merge, deploy, rollback and anything a connector marks sensitive wait for the agent's owner or an admin, as a card in the chat. The approved action runs once, exactly as approved. |
-| Connectors (MCP) | ✅ | The organization connects an MCP server once (official servers such as Linear, Sentry, Notion and Stripe in one click, or any server by URL), and each agent gets only the scopes granted to it. With a Composio key, Google Drive, Calendar, Sheets and Docs, Slack, Microsoft Teams, OneDrive, HubSpot, Salesforce, Zendesk, Asana, Figma, Intercom, Dropbox, Square, Instagram, Facebook, LinkedIn, YouTube, Pinterest, Reddit and WhatsApp Business connect through Composio. |
+| Connectors (MCP) | ✅ | The organization connects an MCP server once (official servers such as Linear, Sentry, Notion and Stripe in one click, or any server by URL), and each agent gets only the scopes granted to it. With a Composio key, Google Drive, Calendar, Sheets and Docs, Slack, Microsoft Teams, OneDrive, HubSpot, Salesforce, Zendesk, Asana, Figma, Canva, Intercom, Dropbox, Square, Instagram, Facebook, LinkedIn, YouTube, Pinterest, Reddit and WhatsApp Business connect through Composio. |
 | Skills | ✅ | Markdown skills (`SKILL.md`) from a zip, a GitHub link or the editor, with versions. Agents load one when a task needs it. |
 | Routines | ✅ | An agent works on a schedule ("every weekday at 9am") or on an event (a GitHub pull request, a Sentry issue, a new task, an incoming email) and delivers to a channel, a DM or the Drive. |
 | Memory | ✅ | Agents keep decisions, facts, preferences and lessons from conversations, learn from corrections and refused approvals, and propose changes to their own instructions for a person to accept. |
@@ -101,12 +101,12 @@ Architecture decisions are in [docs/adr](docs/adr).
 
 agentes.chat is licensed under the [GNU AGPL-3.0-only](LICENSE). [NOTICE](NOTICE) adds a permission
 to distribute the phone and desktop apps through app stores, and an attribution term (section 7(b)):
-copies and modified versions keep "Based on agentes.chat by Codari Global, LLC" in their About
+copies and modified versions keep "Based on agentes.chat by AGENTESCHAT, LLC" in their About
 screen. The setup CLI in `packages/setup` (`@agenteschat/setup`) is MIT. Contributions come in under
 the same terms and require our [Contributor License Agreement](CLA.md), which the CLA bot asks you
 to accept on your first pull request. Third-party notices are in [NOTICE](NOTICE) too.
 
-Codari Global, LLC also licenses agentes.chat on commercial terms, for those who change it and don't
+AGENTESCHAT, LLC also licenses agentes.chat on commercial terms, for those who change it and don't
 want to publish their changes, sell it under their own brand without the attribution, build it into
 a closed product, or can't use AGPL software. See [COMMERCIAL.md](COMMERCIAL.md).
 

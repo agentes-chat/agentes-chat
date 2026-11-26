@@ -57,7 +57,7 @@ export const issueColumns = pgTable(
 
 /**
  * A task's project (ADR 0171): a name and a colour, and, optionally, a short description and the GitHub repository its
- * work lives in (ADR 0188). A task has at most one, and a project's board is the org's board showing only its tasks.
+ * work lives in (ADR 0250). A task has at most one, and a project's board is the org's board showing only its tasks.
  * Archived: offered nowhere new, its tasks keep it.
  */
 export const issueProjects = pgTable(
@@ -72,9 +72,9 @@ export const issueProjects = pgTable(
     name: text().notNull(),
     /** One of the roles' colors (`ROLE_COLORS`). */
     color: text().notNull().default("graphite"),
-    /** A few lines on what the project is for (ADR 0188); null: none. */
+    /** A few lines on what the project is for (ADR 0250); null: none. */
     description: text(),
-    /** The one repository its work lives in, as `owner/name` (ADR 0188); null: none. */
+    /** The one repository its work lives in, as `owner/name` (ADR 0250); null: none. */
     githubRepo: text(),
     archivedAt: timestamp({ withTimezone: true }),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
@@ -86,7 +86,7 @@ export const issueProjects = pgTable(
 /**
  * Native issues. Visible to the whole org, or like the conversation they came from (`channel_id`: a DM or a private
  * channel, set by "Transformar em issue" and by an agent's `create_issue` there). Acceptance criteria are a checklist;
- * assignee is a person or an agent.
+ * who has it is in `issue_assignees`.
  */
 export const issues = pgTable(
   "issues",
@@ -108,7 +108,10 @@ export const issues = pgTable(
     priority: issuePriorityEnum().notNull().default("normal"),
     /** Its project; deleting the project clears it, the task stays. */
     projectId: uuid().references(() => issueProjects.id, { onDelete: "set null" }),
-    /** `person` or `agent`. */
+    /**
+     * Read by nothing since `issue_assignees` (ADR 0188). They stay one release, as a deploy migrates while the version
+     * before it still serves and reads them; a later migration drops them and their index.
+     */
     assigneeType: text(),
     assigneeId: text(),
     labels: text().array().notNull().default(sql`'{}'::text[]`),
@@ -155,8 +158,35 @@ export const issues = pgTable(
     index().on(t.orgId, t.projectId),
     index().on(t.parentIssueId),
     uniqueIndex().on(t.conversationChannelId),
-    // Every run reads its agent's open tasks, latest activity first (`openTasksBrief`).
+    // Of the two columns nothing reads any more; dropped with them.
     index().on(t.orgId, t.assigneeType, t.assigneeId, t.updatedAt),
+  ],
+);
+
+/**
+ * Who has a task (ADR 0188): any number of people and agents, in the order they were put (`position`, lowest first).
+ * The first agent in that order answers what names nobody in the task's conversation.
+ */
+export const issueAssignees = pgTable(
+  "issue_assignees",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    orgId: uuid()
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    issueId: uuid()
+      .notNull()
+      .references(() => issues.id, { onDelete: "cascade" }),
+    /** `person` or `agent`. */
+    assigneeType: text().notNull(),
+    assigneeId: text().notNull(),
+    position: integer().notNull().default(0),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique().on(t.issueId, t.assigneeType, t.assigneeId),
+    // Every run reads its agent's open tasks (`openTasksBrief`).
+    index().on(t.orgId, t.assigneeType, t.assigneeId),
   ],
 );
 
@@ -278,7 +308,15 @@ export const routineRuns = pgTable(
     finishedAt: timestamp({ withTimezone: true }),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [unique().on(t.routineId, t.at), unique().on(t.routineId, t.dedupeKey), index().on(t.routineId, t.createdAt)],
+  (t) => [
+    unique().on(t.routineId, t.at),
+    unique().on(t.routineId, t.dedupeKey),
+    index().on(t.routineId, t.createdAt),
+    // A run's routine, joined per run by the task list.
+    index().on(t.agentRunId),
+    // The open runs (few of all ever made), read by the reaper and the stall sweep every tick (`reapRoutineRuns`).
+    index("routine_runs_open_idx").on(t.status, t.createdAt).where(sql`${t.finishedAt} is null`),
+  ],
 );
 
 /**
@@ -303,6 +341,11 @@ export const routineHooks = pgTable("routine_hooks", {
   source: jsonb(),
   /** The HTTP methods the address answers (GET passes its query string as the call's data). */
   methods: text().array().notNull().default(sql`'{POST}'::text[]`),
+  /**
+   * "Group calls by": a dot path into a call's data (`conversation.id`). Calls with the same value there run one
+   * after another, in order; different values run side by side. Null: one line for every call.
+   */
+  groupBy: text(),
   createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
 });

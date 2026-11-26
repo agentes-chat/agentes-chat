@@ -2,17 +2,20 @@ import { type AgentScope, DESKTOP_PROTOCOL, type PubSub } from "@agenteschat/ada
 import { and, type Database, type Executor, eq, gte, inArray, schema, sql } from "@agenteschat/db";
 import { announceAgentStatus } from "./agent-status";
 import { publishApproval } from "./approvals";
+import { managesAgent, ownsAgent, REACH_COLUMNS } from "./audience";
 import { recordAudit } from "./audit";
 import { personOfMessage } from "./authority";
 import { lineMachineOf, publishQueueChanged } from "./computer-queue";
 import { INBOX_JOB } from "./dispatch";
 import { ConflictError, ForbiddenError, NotFoundError } from "./errors";
 import { publishChannelEvent, publishMessageCreated } from "./events";
+import { queueLiveActivityRun } from "./live-activity-queue";
 import type { MachineHub } from "./machine-hub";
 import { cancelOrgTasks, type TaskCall } from "./machine-tasks";
 import { insertMessage, type Message, messageView } from "./messages";
 import { resolveQuestionNotifications } from "./notification-producers";
 import { can, type Membership, requireActiveMembership } from "./organizations";
+import { jobsOfRun } from "./outbox";
 import { type AgentQuestionRow, publishQuestion, syncQuestionMessage } from "./questions";
 import { isRightHandId } from "./right-hand";
 import { seatScopes } from "./right-hand-seats";
@@ -37,10 +40,6 @@ const { agentRuns, agents, approvals, agentQuestions, outbox, messages, channels
 
 /** Cross-instance: the worker running the run aborts it (LISTEN/NOTIFY with the Postgres pub/sub). */
 export const RUN_CANCEL_TOPIC = "system:run-cancel";
-
-/** How often a running run's worker says it is alive; after `RUN_STALE_MS` without it, the run is recovered. */
-export const RUN_HEARTBEAT_MS = 20_000;
-export const RUN_STALE_MS = 2 * 60_000;
 
 /** Runs executing in this process, by id: canceling aborts the model stream, tools and code. */
 const active = new Map<string, AbortController>();
@@ -185,21 +184,59 @@ const continuedBy = sql`coalesce(${messages.meta}->'canceled'->>'continuedByUser
   ${messages.meta}->'stepLimit'->>'continuedByUserId')`;
 export const runRequester = sql<string | null>`coalesce(${messages.authorUserId}, ${continuedBy})`;
 
+/** A run's agent as `managesAgent` reads it (`REACH_COLUMNS`). */
+type RunAgent = Parameters<typeof managesAgent>[0];
+
+/**
+ * A run as the rules over stopping it read it. `agent`: its agent's `REACH_COLUMNS`, when the caller's select has them
+ * (nothing is read for it then).
+ */
+interface StoppableRun {
+  run: { orgId: string; agentId: string; triggerMessageId: string };
+  requester: string | null;
+  ownerUserId: string | null;
+  /** Its agent's owner role (ADR 0085, addendum of 2026-11-21): whoever holds it may as its owner. */
+  ownerRoleId?: string | null;
+  agent?: RunAgent;
+}
+
+/** Whether the person answers for the run's agent (`ownsAgent`): its owner, or holding its owner role. */
+const ownsRunAgent = (row: Pick<StoppableRun, "ownerUserId" | "ownerRoleId">, userId: string, membership: Membership) =>
+  ownsAgent({ ownerUserId: row.ownerUserId, ownerRoleId: row.ownerRoleId ?? null }, userId, membership.roleIds);
+
 /**
  * Who may stop a run, continue it, or start it again ("Responder agora"): who asked for it (`runRequester`), the
- * person behind its work (a run another agent woke works for them too, ADR 0089), the agent's owner, or an admin.
+ * person behind its work (a run another agent woke works for them too, ADR 0089), the agent's owner, or who manages
+ * the agent (`managesRunAgent`). A caller checking many runs passes each one's `agent`: nothing is read for it then.
  */
-export async function mayStopRun(
-  db: Executor,
-  userId: string,
-  membership: Membership,
-  row: { run: { orgId: string; triggerMessageId: string }; requester: string | null; ownerUserId: string | null },
-) {
-  if (row.requester === userId || row.ownerUserId === userId || can(membership, "manage_agents")) return true;
+export async function mayStopRun(db: Executor, userId: string, membership: Membership, row: StoppableRun) {
+  if (row.requester === userId || ownsRunAgent(row, userId, membership)) return true;
+  if (await managesRunAgent(db, userId, membership, row)) return true;
   return (await personOfMessage(db, row.run.orgId, row.run.triggerMessageId)) === userId;
 }
 
-export { canceledBy } from "./runs";
+/**
+ * Whether the person decides for an agent's runs as an admin: who manages that agent (`managesAgent`, ADR 0085 addendum
+ * of 2026-11-17), never who merely holds "Edit agents" over a private agent. The agent is `row.agent`, or read here
+ * (its `REACH_COLUMNS` only); one no longer there leaves the key alone.
+ */
+async function managesRunAgent(
+  db: Executor,
+  userId: string,
+  membership: Membership,
+  row: Pick<StoppableRun, "run" | "agent">,
+) {
+  if (!can(membership, "manage_agents")) return false;
+  const [agent] = row.agent
+    ? [row.agent]
+    : await db
+        .select(REACH_COLUMNS)
+        .from(agents)
+        .where(and(eq(agents.orgId, row.run.orgId), eq(agents.id, row.run.agentId)));
+  return !agent || managesAgent(agent, userId, membership);
+}
+
+export { canceledBy, RUN_HEARTBEAT_MS, RUN_STALE_MS } from "./runs";
 
 /**
  * Stops an agent's run (`POST …/runs/{runId}/cancel`), for who may (`mayStopRun`).
@@ -235,7 +272,9 @@ export async function cancelRun(
   const [row] = await db
     .select({
       run: agentRuns,
+      agent: REACH_COLUMNS,
       ownerUserId: agents.ownerUserId,
+      ownerRoleId: agents.ownerRoleId,
       requester: runRequester,
       channelKind: channels.kind,
     })
@@ -258,8 +297,8 @@ export async function cancelRun(
     await tellAgentStopped(deps, row.run, row.run.status, userId, options.reason, helpers, by).catch(() => null);
     return { id: row.run.id, status: row.run.status, previousStatus: row.run.status };
   }
-  // The agent's owner or an admin decides for the whole conversation; who asked, only for what they sent.
-  const forAll = row.ownerUserId === userId || can(membership, "manage_agents");
+  // The agent's owner or who manages it decides for the whole conversation; who asked, only for what they sent.
+  const forAll = ownsRunAgent(row, userId, membership) || (await managesRunAgent(db, userId, membership, row));
   const stopped = await stopRun(
     deps,
     orgId,
@@ -399,15 +438,7 @@ export async function stopRun(
       closedSecrets = await cancelSecretRequests(tx, run.id);
       for (const r of closedSecrets) await syncSecretMessage(tx, r);
       // Jobs of this run that haven't started never will.
-      await tx
-        .delete(outbox)
-        .where(
-          and(
-            eq(outbox.kind, "agent_run.execute"),
-            eq(outbox.status, "pending"),
-            sql`${outbox.payload}->>'runId' = ${run.id}`,
-          ),
-        );
+      await tx.delete(outbox).where(and(jobsOfRun(run.id), eq(outbox.status, "pending")));
       await recordAudit(tx, {
         orgId,
         // The right hand's stop is its own, on behalf of the person whose word it acted on.
@@ -510,8 +541,9 @@ export async function stopRun(
       ...(actor.agentId ? { byAgentId: actor.agentId } : {}),
     });
   await publishChannelEvent(deps.pubsub, { type: "agent.run", ...where, ...bg, status: "canceled" });
-  // Its line ends with the run (ADR 0084 §11).
+  // Its line ends with the run (ADR 0084 §11), and so does its place in its person's Live Activity (ADR 0210).
   await announceAgentStatus(deps.pubsub, run.orgId, run.agentId).catch(() => {});
+  await queueLiveActivityRun(db, run).catch(() => {});
   if (line) await publishQueueChanged(deps.pubsub, run.orgId, line);
   if (previous !== "running" && run.background) {
     await publishChannelEvent(deps.pubsub, { type: "agent.idle", ...where, ...bg });
@@ -548,6 +580,58 @@ export async function stopRun(
     }
   }
   return { id: run.id, status: run.status, previousStatus: previous, ...(joined.length ? { joined } : {}) };
+}
+
+/** The run a follow-up to another agent took over (`rerouteBurst`): it stops with nothing said. */
+export const REROUTED = "rerouted";
+
+/**
+ * A person's follow-up went to another agent (it @mentions it, or the router gave it to it) within `quietMs` of their
+ * message the router gave to this one: that run, while it has shown nothing (no message of its own) and the follow-up
+ * isn't in its inbox too, stops quietly (`REROUTED`), and the agent the follow-up went to answers, reading both
+ * (ADR 0112). A run a person started by name (a mention, a DM) is theirs to keep.
+ */
+export async function rerouteBurst(
+  deps: { db: Database; pubsub?: PubSub },
+  run: { id: string; agentId: string },
+  followUp: Pick<Message, "id" | "orgId" | "channelId" | "threadId" | "authorUserId" | "createdAt">,
+  quietMs: number,
+) {
+  if (!followUp.authorUserId) return [];
+  const { db } = deps;
+  const since = new Date(followUp.createdAt.getTime() - quietMs);
+  const taken = await db
+    .select({ run: agentRuns, channelKind: channels.kind })
+    .from(agentRuns)
+    .innerJoin(messages, and(eq(messages.orgId, agentRuns.orgId), eq(messages.id, agentRuns.triggerMessageId)))
+    .leftJoin(channels, eq(channels.id, agentRuns.channelId))
+    .where(
+      and(
+        eq(agentRuns.orgId, followUp.orgId),
+        eq(agentRuns.channelId, followUp.channelId),
+        eq(agentRuns.trigger, "router"),
+        inArray(agentRuns.status, ["queued", "running"]),
+        eq(agentRuns.background, false),
+        sql`${agentRuns.agentId} <> ${run.agentId}::uuid`,
+        sql`not (${followUp.id}::uuid = any(${agentRuns.pendingMessageIds}))`,
+        sql`${agentRuns.replyMessageId} is null`,
+        eq(messages.authorUserId, followUp.authorUserId),
+        sql`${messages.threadId} is not distinct from ${followUp.threadId ?? null}::uuid`,
+        gte(messages.createdAt, since),
+        sql`${messages.createdAt} <= ${followUp.createdAt.toISOString()}::timestamptz`,
+        sql`${messages.id} <> ${followUp.id}::uuid`,
+        sql`not exists (select 1 from ${messages} said where said.org_id = ${agentRuns.orgId}
+          and said.agent_run_id = ${agentRuns.id} and said.created_at >= ${since.toISOString()}::timestamptz)`,
+      ),
+    );
+  const stopped: string[] = [];
+  for (const { run: before, channelKind } of taken) {
+    const done = await stopRun(deps, followUp.orgId, before, channelKind, { type: "system", reason: REROUTED }).catch(
+      () => null,
+    );
+    if (done) stopped.push(done.id);
+  }
+  return stopped;
 }
 
 /**

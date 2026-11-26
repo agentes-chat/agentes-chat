@@ -1,4 +1,4 @@
-import type { PubSub } from "@agenteschat/adapters";
+import { holdEvents, type PubSub } from "@agenteschat/adapters";
 import {
   and,
   arrayContains,
@@ -22,16 +22,37 @@ import {
   parseCustomModel,
 } from "@agenteschat/providers";
 import { isIdHandle } from "@agenteschat/ui/names";
-import type { AgentAppearance } from "./appearance";
+import { type AgentAppearance, type AppearanceInput, setAgentAppearance } from "./appearance";
 import { dropAgentRules } from "./approval-rules";
-import { answersOthers, audienceOf, canTalkTo, speakerFor } from "./audience";
+import { releaseUnasked } from "./approvals";
+import {
+  ACCESS_COLUMNS,
+  type AgentAccessFields,
+  type AgentEditors,
+  type AgentOwnerFields,
+  type AudienceInput,
+  agentOwnerIds,
+  answersOthers,
+  audienceOf,
+  canTalkTo,
+  editsAgent,
+  managesAgent,
+  ownsAgent,
+  ownsOrManagesAgent,
+  REACH_COLUMNS,
+  setAgentAudience,
+  setAgentEditors,
+  speakerFor,
+} from "./audience";
 import { recordAudit } from "./audit";
 import { type AutonomySettings, autonomySettings, chosenAutonomy } from "./autonomy-settings";
 import { isComputerBrain } from "./brains/types";
+import { resolveBudgetPaused } from "./budget-paused-rows";
 import { caches } from "./cache";
+import { hasLearnedSection, moveLearnedSections } from "./context/learned-sections";
 import { modelInfoFor, usableCredentialRow } from "./credentials";
 import { ConflictError, ForbiddenError, isUniqueViolation, NotFoundError, ValidationError } from "./errors";
-import { publishAgentsChanged } from "./events";
+import { publishAgentsChanged, publishListChanged } from "./events";
 import type { CommandApproval } from "./missions";
 import { recordOperatorEvent } from "./operator-events";
 import { can, getMembership, type Membership, requireActiveMembership, requirePermission } from "./organizations";
@@ -46,7 +67,7 @@ import {
   PERSONAL_AGENT_SCOPES,
 } from "./tools/scopes";
 import { orgDefaultAgentBudget, resyncBudgetCounter } from "./usage";
-import { resumeBudgetWaits } from "./usage-pause";
+import { resumeBudgetWaits, wakeAgentsBrainWaits } from "./usage-pause";
 import { workspaceApprovalsLevel } from "./workspace-approvals";
 import { isPersonalWorkspace } from "./workspace-mode";
 
@@ -99,6 +120,11 @@ export interface AgentInput {
   model?: string;
   credentialId?: string | null;
   ownerUserId?: string | null;
+  /**
+   * A role that answers for it instead of a person (ADR 0085, addendum of 2026-11-21): one of the workspace's own.
+   * Naming one clears `ownerUserId`, and naming a person clears this: an agent has one or the other.
+   */
+  ownerRoleId?: string | null;
   monthlyBudgetNanoUsd?: number | null;
   /** It may follow a light reply with a sticker or a GIF (ADR 0091), as often as the workspace allows. */
   mediaReplies?: boolean;
@@ -186,7 +212,34 @@ export async function validateAgentFields(db: Database, orgId: string, input: Pa
   if (input.ownerUserId && !(await getMembership(db, input.ownerUserId, orgId))) {
     throw new ValidationError("ownerUserId must be a member of this organization");
   }
+  if (input.ownerUserId && input.ownerRoleId) {
+    throw new ValidationError("An agent answers to a person or a role, not both", "agent.owner_both");
+  }
+  if (input.ownerRoleId) {
+    // `everyone` is every member: an agent the whole workspace answers for has no owner (the admins decide).
+    const [role] = await db
+      .select({ id: schema.orgRoles.id })
+      .from(schema.orgRoles)
+      .where(
+        and(
+          eq(schema.orgRoles.orgId, orgId),
+          eq(schema.orgRoles.id, input.ownerRoleId),
+          eq(schema.orgRoles.kind, "custom"),
+        ),
+      );
+    if (!role)
+      throw new ValidationError("ownerRoleId must be one of this workspace's roles", "agent.owner_role_unknown");
+  }
 }
+
+/**
+ * Who answers for the agent after a change naming either (`AgentInput`): a role clears the person and a person (or
+ * nobody) the role. Undefined when the change names neither.
+ */
+const ownerAfter = (input: Pick<AgentInput, "ownerUserId" | "ownerRoleId">): AgentOwnerFields | undefined =>
+  input.ownerUserId === undefined && input.ownerRoleId === undefined
+    ? undefined
+    : { ownerUserId: input.ownerRoleId ? null : (input.ownerUserId ?? null), ownerRoleId: input.ownerRoleId ?? null };
 
 /** What a person's new agent thinks with when nobody picks a model: "Automático". */
 export const NEW_AGENT_DEFAULTS = { model: AUTO_MODEL } as const;
@@ -207,7 +260,6 @@ export function setupOfAgent(a: Agent): schema.AgentSetup {
     account: a.brainAccountId,
     effort: a.brainEffort,
     contextTokens: a.contextTokens,
-    fallback: a.brainFallback,
     autonomy,
   };
 }
@@ -254,6 +306,13 @@ export async function createAgent(
     autonomy?: CommandApproval;
     audienceMode?: Agent["audienceMode"];
     /**
+     * Who talks to it, who edits it besides its owner and its look, from the start (ADR 0085 addendum of 2026-11-17):
+     * whoever may create it sets them, as its owner and its Autonomia below.
+     */
+    audience?: AudienceInput;
+    editors?: AgentEditors;
+    appearance?: AppearanceInput;
+    /**
      * The ready-made role it starts from, for its setup checklist's suggestions (ADR 0155 §2); null: none. From its
      * card (ADR 0164): how it introduced itself, the personal starter it began as and the apps it was made to use.
      */
@@ -264,10 +323,13 @@ export async function createAgent(
   options: { remember?: boolean; via?: string; pubsub?: PubSub } = {},
 ): Promise<Agent> {
   const membership = await requirePermission(db, actorId, orgId, "create_agents");
-  const { autonomy, audienceMode, setup, approvalsLevel, ...fields } = input;
+  const { autonomy, audienceMode, audience, editors, appearance, setup, approvalsLevel, ...fields } = input;
   // `create_agents` makes the creator's own agent (ADR 0085 §5): another owner, or none, is for who edits any agent.
   // So whoever gets this far may also set its Autonomia (ADR 0094): an admin or the new agent's owner.
-  if (input.ownerUserId !== undefined && input.ownerUserId !== actorId && !can(membership, "manage_agents")) {
+  if (
+    ((input.ownerUserId !== undefined && input.ownerUserId !== actorId) || input.ownerRoleId) &&
+    !can(membership, "manage_agents")
+  ) {
     throw new ForbiddenError("Only an admin can create an agent for someone else or with no owner");
   }
   // How much it asks (ADR 0173) is for who edits any agent, at its creation too.
@@ -294,13 +356,13 @@ export async function createAgent(
     ...(fields.autonomyBrakes !== undefined ? { autonomyBrakes: chosenAutonomy(fields.autonomyBrakes) } : {}),
   });
   await validateAgentFields(db, orgId, values);
-  const ownerUserId = input.ownerUserId === undefined ? actorId : input.ownerUserId;
+  const ownerUserId = input.ownerRoleId ? null : input.ownerUserId === undefined ? actorId : input.ownerUserId;
   // A personal workspace's new agent answers only its owner until someone says otherwise (ADR 0159): who joins later
   // (family) isn't answered, nor shown its details, by every agent made while the person was alone. Only a default:
   // an audience given wins (the apps send theirs), agents already there keep theirs, and the right hand, made
   // elsewhere, answers everyone. With no owner nobody would be answered: everyone, as in a team's.
   const personal = await isPersonalWorkspace(db, orgId);
-  const audience = audienceMode ?? (ownerUserId && personal ? ("owner" as const) : undefined);
+  const mode = audienceMode ?? (ownerUserId && personal ? ("owner" as const) : undefined);
   // Another agent's old handle still names that agent.
   const [held] = await db
     .select({ id: agents.id })
@@ -312,103 +374,158 @@ export async function createAgent(
   const brainAuto = isAutoModel(values.model) ? { brainModel: AUTO_MODEL, brainEffort: AUTO_MODEL } : {};
   // One still being prepared gives itself to the agents with none when it is ready.
   const home = await workspaceHomeId(db, orgId);
+  // A personal workspace's agent starts with broad access (ADR 0159 §3a): every app connected there and its
+  // calendar. Only from someone who may give access, so a family member's own agent starts as a team's does.
+  // Sensitive tools still ask a person on every call; mail, databases and the computer keep their own switches.
+  const broad = personal && can(membership, "manage_agents");
+  let agent: Agent;
   try {
-    const [agent] = await db
-      .insert(agents)
-      .values({
-        ...values,
-        ...brainAuto,
-        ...(await approvalsLevelFields(db, orgId, approvalsLevel)),
-        machineId: home,
+    // One transaction: a value refused on the way (a role of its audience that isn't the workspace's) makes no agent.
+    agent = await db.transaction(async (raw) => {
+      const tx = raw as unknown as Database;
+      const [row] = await tx
+        .insert(agents)
+        .values({
+          ...values,
+          ...brainAuto,
+          ...(await approvalsLevelFields(tx, orgId, approvalsLevel)),
+          machineId: home,
+          orgId,
+          ownerUserId,
+          // Every new agent starts with its setup checklist, whichever way it was made (ADR 0155 §2).
+          setup: newSetup(setup?.role, setup),
+          ...(autonomy ? { missionCommandApproval: autonomy } : {}),
+          ...(mode ? { audienceMode: mode } : {}),
+          // The moment of this insert, not its transaction's start (`now()`): agents made together (a template team)
+          // keep the order they were made in, which the agents' list and every screen after it follow.
+          createdAt: sql`clock_timestamp()`,
+        })
+        .returning();
+      if (!row) throw new Error("agent insert returned nothing");
+      await recordAudit(tx, {
         orgId,
-        ownerUserId,
-        // Every new agent starts with its setup checklist, whichever way it was made (ADR 0155 §2).
-        setup: newSetup(setup?.role, setup),
-        ...(autonomy ? { missionCommandApproval: autonomy } : {}),
-        ...(audience ? { audienceMode: audience } : {}),
-        // The moment of this insert, not its transaction's start (`now()`): agents made together (a template team)
-        // keep the order they were made in, which the agents' list and every screen after it follow.
-        createdAt: sql`clock_timestamp()`,
-      })
-      .returning();
-    if (!agent) throw new Error("agent insert returned nothing");
-    // Every agent may read context, keep its own notes and use its computer; everything else is granted explicitly.
-    await grantScopes(
-      db,
-      orgId,
-      agent.id,
-      DEFAULT_AGENT_SCOPES.map((scope) => ({ connectionId: null, scope })),
-    );
-    // A personal workspace's agent starts with broad access (ADR 0159 §3a): every app connected there and its
-    // calendar. Only from someone who may give access, so a family member's own agent starts as a team's does.
-    // Sensitive tools still ask a person on every call; mail, databases and the computer keep their own switches.
-    const broad = personal && can(membership, "manage_agents");
-    if (broad) {
-      const apps = await db
-        .select({ id: connectorConnections.id })
-        .from(connectorConnections)
-        .where(eq(connectorConnections.orgId, orgId));
+        actor: { type: "person", id: actorId },
+        action: "agent.created",
+        target: { type: "agent", id: row.id },
+        details: {
+          name: row.name,
+          handle: row.handle,
+          model: row.model,
+          ...(autonomy ? { autonomy } : {}),
+          ...(broad ? { access: "broad" } : {}),
+          ...(options.via ? { via: options.via } : {}),
+        },
+      });
+      // Who talks to it, who edits it and its look are its creator's to set, by the checks above (ADR 0085 addendum of
+      // 2026-11-17): none asks again whether they reach it, since an audience that leaves them out would refuse the rest.
+      let made = row;
+      if (audience) made = await setAgentAudience(tx, actorId, orgId, made.id, audience, undefined, { checked: true });
+      if (editors) made = await setAgentEditors(tx, actorId, orgId, made.id, editors, { checked: true });
+      if (appearance) made = await setAgentAppearance(tx, actorId, orgId, made.id, appearance, { checked: true });
+      // Every agent may read context, keep its own notes and use its computer; everything else is granted explicitly.
       await grantScopes(
-        db,
+        tx,
         orgId,
-        agent.id,
-        [
-          ...PERSONAL_AGENT_SCOPES.map((scope) => ({ connectionId: null, scope })),
-          ...apps.map((c) => ({ connectionId: c.id, scope: CONNECTOR_ALL })),
-        ],
-        actorId,
+        made.id,
+        DEFAULT_AGENT_SCOPES.map((scope) => ({ connectionId: null, scope })),
       );
-    }
-    // Skills the org marked "default for new agents".
-    const defaults = await db
-      .select({ id: schema.skills.id })
-      .from(schema.skills)
-      .where(
-        and(
-          eq(schema.skills.orgId, orgId),
-          eq(schema.skills.defaultForNewAgents, true),
-          isNull(schema.skills.deletedAt),
-        ),
-      );
-    if (defaults.length > 0) {
-      await db
-        .insert(schema.agentSkills)
-        .values(defaults.map((s) => ({ orgId, agentId: agent.id, skillId: s.id, enabled: true })))
-        .onConflictDoNothing();
-    }
-    // Every agent has a budget (its own or the org's default): the month's counter exists
-    // from the start, so the first call reserves in one statement.
-    caches.agents.delete(`${orgId}:team`);
-    await resyncBudgetCounter(db, orgId, agent.id);
-    await recordOperatorEvent(db, { type: "agent.created", orgId, userId: actorId, data: { agentId: agent.id } });
-    await recordAudit(db, {
-      orgId,
-      actor: { type: "person", id: actorId },
-      action: "agent.created",
-      target: { type: "agent", id: agent.id },
-      details: {
-        name: agent.name,
-        handle: agent.handle,
-        model: agent.model,
-        ...(autonomy ? { autonomy } : {}),
-        ...(broad ? { access: "broad" } : {}),
-        ...(options.via ? { via: options.via } : {}),
-      },
+      if (broad) {
+        const apps = await tx
+          .select({ id: connectorConnections.id })
+          .from(connectorConnections)
+          .where(
+            and(
+              eq(connectorConnections.orgId, orgId),
+              isNull(connectorConnections.revokedAt),
+              isNull(connectorConnections.ownerUserId),
+            ),
+          );
+        await grantScopes(
+          tx,
+          orgId,
+          made.id,
+          [
+            ...PERSONAL_AGENT_SCOPES.map((scope) => ({ connectionId: null, scope })),
+            ...apps.map((c) => ({ connectionId: c.id, scope: CONNECTOR_ALL })),
+          ],
+          actorId,
+        );
+      }
+      // Its owner's personal connections go on for it, as for their other agents (ADR 0099 addendum).
+      if (made.ownerUserId) {
+        const own = await tx
+          .select({ id: connectorConnections.id })
+          .from(connectorConnections)
+          .where(
+            and(
+              eq(connectorConnections.orgId, orgId),
+              isNull(connectorConnections.revokedAt),
+              eq(connectorConnections.ownerUserId, made.ownerUserId),
+            ),
+          );
+        if (own.length > 0)
+          await grantScopes(
+            tx,
+            orgId,
+            made.id,
+            own.map((c) => ({ connectionId: c.id, scope: CONNECTOR_ALL })),
+            made.ownerUserId,
+          );
+      }
+      // Skills the org marked "default for new agents".
+      const defaults = await tx
+        .select({ id: schema.skills.id })
+        .from(schema.skills)
+        .where(
+          and(
+            eq(schema.skills.orgId, orgId),
+            eq(schema.skills.defaultForNewAgents, true),
+            isNull(schema.skills.deletedAt),
+          ),
+        );
+      if (defaults.length > 0) {
+        await tx
+          .insert(schema.agentSkills)
+          .values(defaults.map((s) => ({ orgId, agentId: made.id, skillId: s.id, enabled: true })))
+          .onConflictDoNothing();
+      }
+      // Every agent has a budget (its own or the org's default): the month's counter exists
+      // from the start, so the first call reserves in one statement.
+      await resyncBudgetCounter(tx, orgId, made.id);
+      await recordOperatorEvent(tx, { type: "agent.created", orgId, userId: actorId, data: { agentId: made.id } });
+      // A model or key the creator picked is their latest choice; "Automático" with the default key is no choice.
+      if (options.remember && (!isAutoModel(made.model) || made.credentialId)) {
+        await rememberAgentSetup(tx, membership, setupOfAgent(made));
+      }
+      return made;
     });
-    // A model or key the creator picked is their latest choice; "Automático" with the default key is no choice.
-    if (options.remember && (!isAutoModel(agent.model) || agent.credentialId)) {
-      await rememberAgentSetup(db, membership, setupOfAgent(agent));
-    }
-    await publishAgentsChanged(options.pubsub, orgId);
-    return agent;
   } catch (error) {
     if (isUniqueViolation(error)) throw handleTaken(values.handle, await takenHandles(db, orgId));
     throw error;
   }
+  caches.agents.delete(`${orgId}:team`);
+  agent = await moveOwnLearned(db, actorId, agent, options.pubsub);
+  await publishAgentsChanged(options.pubsub, orgId);
+  return agent;
+}
+
+/**
+ * A "## Learned" section an agent was created, copied, imported or saved with becomes its memory at once (ADR 0017
+ * §6), as the person's lessons; the agent comes back without it.
+ */
+async function moveOwnLearned(db: Database, actorId: string, agent: Agent, pubsub?: PubSub): Promise<Agent> {
+  if (!hasLearnedSection(agent.instructions)) return agent;
+  if ((await moveLearnedSections(db, agent.orgId, { agentId: agent.id, actorId })) > 0)
+    await publishListChanged(pubsub, agent.orgId, "memory");
+  const [row] = await db.select().from(agents).where(eq(agents.id, agent.id));
+  return row ?? agent;
 }
 
 /** Whose plan the agent's computer brain thinks with: its account's owner, else whoever connected its computer. */
-async function planOwner(db: Database, agent: Agent): Promise<string | null> {
+async function planOwner(
+  db: Database,
+  agent: Pick<Agent, "orgId" | "machineId" | "brainAccountId">,
+): Promise<string | null> {
   if (!agent.machineId) return null;
   const { machineAccounts, machines } = schema;
   const [row] = agent.brainAccountId
@@ -424,57 +541,83 @@ async function planOwner(db: Database, agent: Agent): Promise<string | null> {
 }
 
 /**
- * An agent's new owner decides its approvals (those waiting or approved ahead move to them, inbox included), and one
- * who couldn't talk to it before takes it out of the mailboxes other people gave it (`dropForeignMailGrants`).
+ * An agent's new owner (a person, or whoever holds its new owner role) decides its approvals (those waiting or approved
+ * ahead move to them, inbox included), and one who couldn't talk to it before takes it out of the mailboxes other
+ * people gave it (`dropForeignMailGrants`): a person keeps their own; for a role, only the actor's stay.
  */
 export async function handOver(
   deps: { db: Database; pubsub?: PubSub },
   actorId: string,
-  before: Agent,
-  ownerUserId: string | null,
+  before: Pick<Agent, "id" | "orgId"> & AgentAccessFields,
+  owner: AgentOwnerFields,
 ) {
   // Loaded here: approvals build on this module.
   const { repointApprovals } = await import("./approvals");
-  const newcomer = ownerUserId && !canTalkTo(before, ownerUserId, await speakerFor(deps.db, before.orgId, ownerUserId));
-  if (newcomer) await dropForeignMailGrants(deps.db, before.orgId, before.id, ownerUserId, actorId);
-  await repointApprovals(deps, before.orgId, [before.id], ownerUserId);
+  const newOwners = await agentOwnerIds(deps.db, before.orgId, owner);
+  let newcomer = false;
+  for (const id of newOwners)
+    if (!canTalkTo(before, id, await speakerFor(deps.db, before.orgId, id))) {
+      newcomer = true;
+      break;
+    }
+  if (newcomer) {
+    const keeper = owner.ownerUserId ?? actorId;
+    await dropForeignMailGrants(deps.db, before.orgId, before.id, keeper, actorId);
+  }
+  await repointApprovals(deps, before.orgId, [before.id], owner);
 }
 
 /** The right hand's instructions, role, owner and the rest are the product's (ADR 0137): only `RIGHT_HAND_EDITABLE` changes. */
-async function refuseRightHandFields(db: Database, orgId: string, agentId: string, patch: Partial<AgentInput>) {
+function refuseRightHandFields(agent: Pick<Agent, "builtin">, patch: Partial<AgentInput>) {
   const fixed = Object.keys(patch).filter(
     (k) => patch[k as keyof AgentInput] !== undefined && !RIGHT_HAND_EDITABLE.has(k),
   );
-  if (fixed.length > 0 && isRightHand(await getAgent(db, orgId, agentId)))
-    throw rightHandPermanent(`changed this way (${fixed.join(", ")})`);
+  if (fixed.length > 0 && isRightHand(agent)) throw rightHandPermanent(`changed this way (${fixed.join(", ")})`);
 }
 
-/** What an agent's owner may change besides admins: its API model, among the keys the workspace connected. */
+/** What an agent's owner may change besides who manages it: its API model, among the keys the workspace connected. */
 const OWNER_MODEL_FIELDS: ReadonlySet<string> = new Set(["model", "credentialId"]);
 
+/** What whoever edits an agent changes (`editsAgent`, ADR 0085 addendum of 2026-11-17): how it works, not its reach. */
+const EDITOR_FIELDS: ReadonlySet<string> = new Set(["instructions", "role"]);
+
 /**
- * Who may make this change: admins anything; the agent's owner only its API model and which of the workspace's keys
- * it uses (`OWNER_MODEL_FIELDS`), as they choose its plan's model. Connecting keys and budgets stay admins'.
+ * Who may make this change of an agent's fields: who manages it anything (`managesAgent`); who edits it its
+ * instructions and role (`EDITOR_FIELDS`); its owner also its API model and which of the workspace's keys it uses
+ * (`OWNER_MODEL_FIELDS`), as they choose its plan's model. Connecting keys, budgets and what it may use stay who
+ * manages it, and so does a change of nothing.
  */
-async function updateAgentMembership(
-  db: Database,
-  actorId: string,
-  orgId: string,
-  agentId: string,
-  patch: Partial<AgentInput>,
-) {
-  const membership = await requireActiveMembership(db, actorId, orgId);
-  if (can(membership, "manage_agents")) return membership;
-  const fields = Object.entries(patch).filter(([, v]) => v !== undefined);
-  const modelOnly = fields.length > 0 && fields.every(([k]) => OWNER_MODEL_FIELDS.has(k));
-  const [row] = modelOnly
-    ? await db
-        .select({ ownerUserId: agents.ownerUserId })
-        .from(agents)
-        .where(and(eq(agents.id, agentId), eq(agents.orgId, orgId), isNull(agents.deletedAt)))
-    : [];
-  if (row?.ownerUserId !== actorId) throw new ForbiddenError();
-  return membership;
+function mayUpdateFields(a: AgentAccessFields, userId: string, membership: Membership, patch: Partial<AgentInput>) {
+  if (managesAgent(a, userId, membership)) return true;
+  const fields = Object.keys(patch).filter((k) => patch[k as keyof AgentInput] !== undefined);
+  const allowed = (k: string) =>
+    (EDITOR_FIELDS.has(k) && editsAgent(a, userId, membership)) ||
+    (OWNER_MODEL_FIELDS.has(k) && ownsAgent(a, userId, membership.roleIds));
+  return fields.length > 0 && fields.every(allowed);
+}
+
+/**
+ * What `updateAgent` reads of the agent, once and never its instructions: what decides who may make the change
+ * (`ACCESS_COLUMNS`), whether it is the right hand, what a new model, key or brakes start from, and what a new owner
+ * takes over (its plan, its approvals).
+ */
+async function agentToUpdate(db: Executor, orgId: string, agentId: string) {
+  const [row] = await db
+    .select({
+      id: agents.id,
+      orgId: agents.orgId,
+      builtin: agents.builtin,
+      model: agents.model,
+      credentialId: agents.credentialId,
+      autonomyBrakes: agents.autonomyBrakes,
+      machineId: agents.machineId,
+      brainAccountId: agents.brainAccountId,
+      ...ACCESS_COLUMNS,
+    })
+    .from(agents)
+    .where(and(eq(agents.id, agentId), eq(agents.orgId, orgId), isNull(agents.deletedAt)));
+  if (!row) throw new NotFoundError("Agent not found");
+  return row;
 }
 
 /** An agent's stored level: its own choice, or the workspace's (null or none given) while it follows it. */
@@ -490,22 +633,20 @@ export async function updateAgent(
   orgId: string,
   agentId: string,
   patch: Partial<AgentInput>,
-  options: { remember?: boolean; pubsub?: PubSub } = {},
+  /** `checked`: the caller already decided who may (`mayUpdateFields`), against the agent as it was (`editAgent`). */
+  options: { remember?: boolean; pubsub?: PubSub; checked?: boolean } = {},
 ): Promise<Agent> {
-  const membership = await updateAgentMembership(db, actorId, orgId, agentId, patch);
-  await refuseRightHandFields(db, orgId, agentId, patch);
-  let current: Promise<Agent | null> | undefined;
-  const currentAgent = () => {
-    current ??= getAgent(db, orgId, agentId);
-    return current;
-  };
+  const membership = await requireActiveMembership(db, actorId, orgId);
+  const current = await agentToUpdate(db, orgId, agentId);
+  if (!options.checked && !mayUpdateFields(current, actorId, membership, patch)) throw new ForbiddenError();
+  refuseRightHandFields(current, patch);
   // A model named as its endpoint lists it, on the agent's endpoint key (or the one sent with it): its full id. A known
   // model sent alone is a catalog or OpenRouter pick (the picker sends endpoint models by their full id), even when the
   // endpoint lists the same id, so it moves keys below instead.
   if (patch.model && !isAutoModel(patch.model) && !parseCustomModel(patch.model)) {
     const sentKey = patch.credentialId !== undefined;
     if (sentKey || !(await modelInfoFor(db, patch.model, orgId))) {
-      const credentialId = sentKey ? patch.credentialId : (await currentAgent())?.credentialId;
+      const credentialId = sentKey ? patch.credentialId : current.credentialId;
       const qualified = await endpointModel(db, orgId, { model: patch.model, credentialId });
       if (qualified.model !== patch.model) patch = { ...patch, model: qualified.model };
     }
@@ -513,8 +654,7 @@ export async function updateAgent(
   // A model of another provider than the agent's own key (the model picker sends only the model): the key would refuse
   // every turn, so the agent goes on the workspace's default key for the new provider.
   if (patch.credentialId === undefined && patch.model && !isAutoModel(patch.model) && !parseCustomModel(patch.model)) {
-    const current = await currentAgent();
-    if (current?.credentialId) {
+    if (current.credentialId) {
       const [key, model] = await Promise.all([
         usableCredentialRow(db, orgId, current.credentialId),
         modelInfoFor(db, patch.model, orgId),
@@ -524,12 +664,11 @@ export async function updateAgent(
   }
   // The connect flow may send only the key when the agent is already on Automatic.
   if (patch.credentialId !== undefined || isAutoModel(patch.model)) {
-    const current = await currentAgent();
     const selected = await endpointModel(db, orgId, {
-      model: patch.model ?? current?.model,
-      credentialId: patch.credentialId === undefined ? current?.credentialId : patch.credentialId,
+      model: patch.model ?? current.model,
+      credentialId: patch.credentialId === undefined ? current.credentialId : patch.credentialId,
     });
-    if (selected.model && selected.model !== (patch.model ?? current?.model))
+    if (selected.model && selected.model !== (patch.model ?? current.model))
       patch = { ...patch, model: selected.model };
   }
   const cleaned =
@@ -538,25 +677,18 @@ export async function updateAgent(
   const input =
     cleaned.autonomyBrakes === undefined
       ? cleaned
-      : {
-          ...cleaned,
-          autonomyBrakes: chosenAutonomy({
-            ...(await getAgent(db, orgId, agentId))?.autonomyBrakes,
-            ...cleaned.autonomyBrakes,
-          }),
-        };
+      : { ...cleaned, autonomyBrakes: chosenAutonomy({ ...current.autonomyBrakes, ...cleaned.autonomyBrakes }) };
   await validateAgentFields(db, orgId, input);
   const handle = input.handle;
-  if (handle !== undefined) {
-    const taken = await takenHandles(db, orgId, agentId);
-    if (taken.has(handle)) throw handleTaken(handle, taken);
-  }
-  const owner = input.ownerUserId;
-  const before = owner !== undefined ? await getAgent(db, orgId, agentId) : null;
+  const taken = handle === undefined ? null : await takenHandles(db, orgId, agentId);
+  if (handle !== undefined && taken?.has(handle)) throw handleTaken(handle, taken);
+  const next = ownerAfter(input);
+  const owner = next?.ownerUserId;
+  const before = next ? current : null;
   // A plan thinks only for its owner's agents (ADR 0059 §3): a new owner who doesn't own it sends the agent back
-  // to the API; one who does decides for themselves whether anyone else talks to it.
+  // to the API; one who does decides for themselves whether anyone else talks to it. A role owns no plan.
   const handover =
-    before && before.ownerUserId !== owner && isComputerBrain(before.brain)
+    before && next && before.ownerUserId !== owner && isComputerBrain(before.brain)
       ? owner && (await planOwner(db, before)) === owner
         ? answersOthers(audienceOf(before), owner)
           ? { audienceMode: "owner" as const }
@@ -571,27 +703,36 @@ export async function updateAgent(
           previousHandles: sql`case when ${agents.handle} = ${handle} then ${agents.previousHandles}
             else array_append(array_remove(${agents.previousHandles}, ${handle}::text), ${agents.handle}) end`,
         };
-  const { approvalsLevel, ...stored } = input;
+  // A new owner always edits it: they (or its new owner role) leave its "Quem pode editar" (ADR 0085 addendum of
+  // 2026-11-17).
+  const editors = owner
+    ? { editorUserIds: sql`array_remove(${agents.editorUserIds}, ${owner}::text)` }
+    : next?.ownerRoleId
+      ? { editorRoleIds: sql`array_remove(${agents.editorRoleIds}, ${next.ownerRoleId}::uuid)` }
+      : {};
+  const { approvalsLevel, ownerUserId: _person, ownerRoleId: _role, ...stored } = input;
   const level = approvalsLevel === undefined ? {} : await approvalsLevelFields(db, orgId, approvalsLevel);
   let agent: Agent | undefined;
   try {
     [agent] = await db
       .update(agents)
-      .set({ ...stored, ...level, ...handover, ...previous, updatedAt: new Date() })
+      .set({ ...stored, ...(next ?? {}), ...level, ...handover, ...previous, ...editors, updatedAt: new Date() })
       .where(and(eq(agents.id, agentId), eq(agents.orgId, orgId), isNull(agents.deletedAt)))
       .returning();
   } catch (error) {
-    if (handle !== undefined && isUniqueViolation(error))
-      throw handleTaken(handle, await takenHandles(db, orgId, agentId));
+    // Taken since it was read: that read still names a free one, and a read now would fail inside a caller's
+    // transaction (`editAgent`), which the violation aborted.
+    if (handle !== undefined && taken && isUniqueViolation(error)) throw handleTaken(handle, taken);
     throw error;
   }
   if (!agent) throw new NotFoundError("Agent not found");
+  if (input.instructions !== undefined) agent = await moveOwnLearned(db, actorId, agent, options.pubsub);
   caches.agents.delete(`${orgId}:${agentId}`);
   caches.agents.delete(`${orgId}:team`);
-  if (before && before.ownerUserId !== agent.ownerUserId) {
+  if (before && (before.ownerUserId !== agent.ownerUserId || before.ownerRoleId !== agent.ownerRoleId)) {
     // What its old owner approved for good was theirs to decide: the new owner is asked again.
     await dropAgentRules(db, orgId, [agentId], { type: "person", id: actorId });
-    await handOver({ db, pubsub: options.pubsub }, actorId, before, agent.ownerUserId);
+    await handOver({ db, pubsub: options.pubsub }, actorId, before, agent);
   }
   if (input.name !== undefined || handle !== undefined) {
     // What other runs read of it (who is in a channel, archived and old handles) names it as it is now.
@@ -611,6 +752,7 @@ export async function updateAgent(
         reason: "owner_changed",
       },
     });
+    await wakeAgentsBrainWaits({ db, pubsub: options.pubsub }, orgId, [agentId]);
   }
   // Which fields changed, not the instructions' text (they can be long and say anything); the rest as set.
   const changed = Object.keys(input).filter((k) => input[k as keyof typeof input] !== undefined);
@@ -624,10 +766,15 @@ export async function updateAgent(
       details: { name: agent.name, changed, ...shown },
     });
   }
+  // Set to never ask: what it still waits on would not ask now, so its runs call it again (`releaseUnasked`).
+  if (approvalsLevel !== undefined && agent.approvalsLevel === "never") {
+    await releaseUnasked({ db, pubsub: options.pubsub }, actorId, orgId, { agentIds: [agentId] });
+  }
   if (input.monthlyBudgetNanoUsd !== undefined) {
     await resyncBudgetCounter(db, orgId, agentId);
     // Its runs that wait for the budget look again now: one that still doesn't fit parks again quietly.
     await resumeBudgetWaits(db, orgId, agentId);
+    await resolveBudgetPaused({ db, pubsub: options.pubsub }, orgId, [agentId]);
   }
   // Its API model or key is "Quem pensa" only while it thinks through the API.
   const thinking = input.model !== undefined || input.credentialId !== undefined;
@@ -636,6 +783,99 @@ export async function updateAgent(
   }
   await publishAgentsChanged(options.pubsub, orgId);
   return agent;
+}
+
+/**
+ * The gate of what only who manages the agent does (`managesAgent`): "Editar qualquer agente" where it reaches (ADR 0085
+ * addendum of 2026-11-17). Archived ones too, so an archive's Undo finds it. 403 for anyone else, 404 when there is
+ * none. Reads what the rule needs of it (`REACH_COLUMNS`), never its instructions.
+ */
+export async function requireAgentManager(db: Database, actorId: string, orgId: string, agentId: string) {
+  const membership = await requirePermission(db, actorId, orgId, "manage_agents");
+  const [agent] = await db
+    .select({ id: agents.id, ...REACH_COLUMNS })
+    .from(agents)
+    .where(and(eq(agents.id, agentId), eq(agents.orgId, orgId), isNull(agents.deletedAt)));
+  if (!agent) throw new NotFoundError("Agent not found");
+  if (!managesAgent(agent, actorId, membership)) throw new ForbiddenError();
+  return { agent, membership };
+}
+
+/** One change of an agent as `PATCH …/agents/{agentId}` sends it: its fields, who talks to it, who edits it, its look. */
+export interface AgentEdit {
+  /** `updateAgent`'s. */
+  fields?: Partial<AgentInput>;
+  audience?: AudienceInput;
+  /** With `audience`: the mailboxes the person agreed it loses (`setAgentAudience`). */
+  mailLossSeen?: readonly string[];
+  editors?: AgentEditors;
+  /** Its look; null: the default one. */
+  appearance?: AppearanceInput | null;
+}
+
+/**
+ * One change of an agent, every part decided against the agent as it was (ADR 0085 addendum of 2026-11-17): its fields
+ * by `updateAgent`'s rule (`mayUpdateFields`), who talks to it, who edits it and its look by its owner or who manages
+ * it (`ownsOrManagesAgent`). A part the person may not make refuses the whole change before anything is saved. The
+ * parts then go in that order in one transaction without asking again, since one may take away the reach that allowed
+ * the next (narrowing who talks to it, handing it to someone else); a value refused on the way saves none of them.
+ * Nothing at all is a change of no fields, which only who manages it makes.
+ */
+export async function editAgent(
+  deps: { db: Database; pubsub?: PubSub },
+  actorId: string,
+  orgId: string,
+  agentId: string,
+  edit: AgentEdit,
+): Promise<Agent> {
+  const { db } = deps;
+  const { audience, mailLossSeen, editors, appearance } = edit;
+  const theirs = audience !== undefined || editors !== undefined || appearance !== undefined;
+  const fields = edit.fields ?? (theirs ? undefined : {});
+  const membership = await requireActiveMembership(db, actorId, orgId);
+  const [agent] = await db
+    .select({ archivedAt: agents.archivedAt, ...ACCESS_COLUMNS })
+    .from(agents)
+    .where(and(eq(agents.id, agentId), eq(agents.orgId, orgId), isNull(agents.deletedAt)));
+  if (!agent) throw new NotFoundError("Agent not found");
+  if (fields && !mayUpdateFields(agent, actorId, membership, fields)) throw new ForbiddenError();
+  // Who talks to an archived agent, who edits it and its look stay as they were (`setAgentAudience`).
+  if (theirs && agent.archivedAt) throw new NotFoundError("Agent not found");
+  if ((audience || editors) && !ownsOrManagesAgent(agent, actorId, membership))
+    throw new ForbiddenError("Only the agent's owner or an admin can change who talks to it");
+  if (appearance !== undefined && !ownsOrManagesAgent(agent, actorId, membership))
+    throw new ForbiddenError("Only the agent's owner or an admin can change its look");
+  const events = holdEvents(deps.pubsub);
+  const checked = true;
+  let saved: Agent | undefined;
+  try {
+    saved = await db.transaction(async (raw) => {
+      const tx = raw as unknown as Database;
+      let row: Agent | undefined;
+      if (fields) row = await updateAgent(tx, actorId, orgId, agentId, fields, { pubsub: events.pubsub, checked });
+      if (audience) row = await setAgentAudience(tx, actorId, orgId, agentId, audience, mailLossSeen, { checked });
+      if (editors) row = await setAgentEditors(tx, actorId, orgId, agentId, editors, { checked });
+      if (appearance !== undefined)
+        row = await setAgentAppearance(tx, actorId, orgId, agentId, appearance, { pubsub: events.pubsub, checked });
+      return row;
+    });
+  } finally {
+    // Again once it settles: a read while it ran may have kept the agent as it was, or as it was about to be.
+    forgetAgentCaches(orgId, agentId);
+  }
+  if (!saved) throw new NotFoundError("Agent not found");
+  if (audience || editors) await publishAgentsChanged(events.pubsub, orgId);
+  await events.flush();
+  return saved;
+}
+
+/** What this process keeps of an agent and of what names it: the agent, the team, the archived, old handles, channels. */
+function forgetAgentCaches(orgId: string, agentId: string) {
+  caches.agents.delete(`${orgId}:${agentId}`);
+  caches.agents.delete(`${orgId}:team`);
+  caches.agents.delete(`${orgId}:archived`);
+  caches.agents.delete(`${orgId}:old-handles`);
+  caches.channelMembers.deletePrefix(`${orgId}:`);
 }
 
 export async function archiveAgent(
@@ -647,7 +887,7 @@ export async function archiveAgent(
   /** The caller already checked who may (the right hand's Desfazer, ADR 0139: the person it created it for). */
   checked = false,
 ) {
-  if (!checked) await requirePermission(db, actorId, orgId, "manage_agents");
+  if (!checked) await requireAgentManager(db, actorId, orgId, agentId);
   await refuseRightHand(db, orgId, agentId, "archived");
   const [gone] = await db
     .update(agents)
@@ -665,13 +905,12 @@ export async function archiveAgent(
     // What waits on its plan or budget won't run: its notes say so now. Loaded here: the usage pause loads agents.
     const { stopAgentUsageWaits } = await import("./usage-pause");
     await stopAgentUsageWaits({ db, pubsub }, orgId, agentId).catch(() => null);
+    // It leaves every task it was on (ADR 0188): an archived agent answers no task's conversation and starts no work.
+    const { unassignGone } = await import("./issues");
+    await unassignGone({ db, pubsub }, orgId, { type: "agent", id: agentId }).catch(() => null);
   }
-  caches.agents.delete(`${orgId}:${agentId}`);
-  caches.agents.delete(`${orgId}:team`);
-  caches.agents.delete(`${orgId}:archived`);
-  caches.agents.delete(`${orgId}:old-handles`);
   // Its channel memberships stay: what runs read of a channel's members leaves it out from now on.
-  caches.channelMembers.deletePrefix(`${orgId}:`);
+  forgetAgentCaches(orgId, agentId);
   if (gone) await publishAgentsChanged(pubsub, orgId);
 }
 
@@ -686,7 +925,7 @@ export async function unarchiveAgent(
   agentId: string,
   options: { pubsub?: PubSub } = {},
 ) {
-  await requirePermission(db, actorId, orgId, "manage_agents");
+  await requireAgentManager(db, actorId, orgId, agentId);
   const [back] = await db
     .update(agents)
     .set({ archivedAt: null, updatedAt: new Date() })
@@ -700,11 +939,7 @@ export async function unarchiveAgent(
     target: { type: "agent", id: agentId },
     details: { name: back.name, handle: back.handle },
   });
-  caches.agents.delete(`${orgId}:${agentId}`);
-  caches.agents.delete(`${orgId}:team`);
-  caches.agents.delete(`${orgId}:archived`);
-  caches.agents.delete(`${orgId}:old-handles`);
-  caches.channelMembers.deletePrefix(`${orgId}:`);
+  forgetAgentCaches(orgId, agentId);
   await publishAgentsChanged(options.pubsub, orgId);
 }
 
@@ -730,9 +965,11 @@ export async function getAgent(db: Database, orgId: string, agentId: string): Pr
 /**
  * Agents no longer in the team (archived or deleted) as what they left behind shows them: name, role and look,
  * so their old messages, threads and reports still say who wrote them. Never offered anywhere an agent is picked.
+ * An archived one says whether the viewer manages it (`canManage`: `managesAgent`, ADR 0085 addendum of 2026-11-17), so
+ * brings it back or deletes it for good (`requireAgentManager`); a deleted one has nobody to manage it any more.
  */
 export async function listFormerAgents(db: Database, actorId: string, orgId: string) {
-  await requirePermission(db, actorId, orgId, "read");
+  const membership = await requirePermission(db, actorId, orgId, "read");
   const rows = await db
     .select({
       id: agents.id,
@@ -740,14 +977,18 @@ export async function listFormerAgents(db: Database, actorId: string, orgId: str
       role: agents.role,
       appearance: agents.appearance,
       deletedAt: agents.deletedAt,
+      ...REACH_COLUMNS,
     })
     .from(agents)
     .where(and(eq(agents.orgId, orgId), isNotNull(agents.archivedAt)))
     .orderBy(asc(agents.createdAt));
-  return rows.map(({ deletedAt, ...a }) => ({
-    ...a,
+  return rows.map((a) => ({
+    id: a.id,
+    name: a.name,
+    role: a.role,
     appearance: (a.appearance ?? null) as AgentAppearance | null,
-    deleted: deletedAt !== null,
+    deleted: a.deletedAt !== null,
+    ...(a.deletedAt === null ? { canManage: managesAgent(a, actorId, membership) } : {}),
   }));
 }
 
@@ -763,6 +1004,8 @@ export const agentView = (a: Agent) => ({
   instructions: a.instructions,
   model: a.model,
   ownerUserId: a.ownerUserId,
+  /** A role that answers for it instead of a person (ADR 0085, addendum of 2026-11-21); null for most. */
+  ownerRoleId: a.ownerRoleId ?? null,
   hasCredential: a.credentialId !== null,
   monthlyBudgetNanoUsd: a.monthlyBudgetNanoUsd,
   /** Its look (color, eyes, accessory); null = the default. */

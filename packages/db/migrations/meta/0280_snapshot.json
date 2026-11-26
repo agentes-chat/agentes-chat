@@ -1,5 +1,5 @@
 {
-  "id": "e104c835-2192-4354-8ec8-a46015ee19be",
+  "id": "0034e02b-3657-470a-975e-547337bb184f",
   "prevId": "3ed711ce-65d1-40e6-b020-c98d8ae7485c",
   "version": "7",
   "dialect": "postgresql",
@@ -18059,6 +18059,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "last_error_status": {
+          "name": "last_error_status",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "dedupe_key": {
           "name": "dedupe_key",
           "type": "text",
@@ -26158,18 +26164,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "github_repo": {
-          "name": "github_repo",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         }
       },
       "indexes": {

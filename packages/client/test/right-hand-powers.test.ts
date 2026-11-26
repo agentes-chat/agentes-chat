@@ -1,16 +1,28 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { RIGHT_HAND_POWERS, rightHandNoComputer } from "../src/lib/right-hand";
+import {
+  memoryAudienceGroups,
+  RIGHT_HAND_POWERS,
+  rightHandComputerLine,
+  rightHandNoComputer,
+} from "../src/lib/right-hand";
 
 test("why it has no computer for anyone is told by its own line, and any other state by none", () => {
   expect(rightHandNoComputer("no_home")).toBe("rightHand.computerNoHome");
-  expect(rightHandNoComputer("not_system")).toBe("rightHand.computerOneUser");
-  for (const reason of [null, undefined, "offline", "no_desktop", "not_allowed"]) {
+  // A self-hosted server's own computer is the way to one: its line says so.
+  expect(rightHandNoComputer("no_home", true)).toBe("rightHand.computerNoHomeServer");
+  for (const reason of [null, undefined, "offline", "no_desktop", "not_allowed", "not_system"]) {
     expect(rightHandNoComputer(reason)).toBeNull();
   }
-  // The reasons are the ones its desktop's state gives where it has no seat.
+  // The reason is the one its desktop's state gives where it has no seat.
   const engine = readFileSync(new URL("../../engine/src/desktop.ts", import.meta.url), "utf8");
-  expect(engine).toContain('agent.reason === "not_system" ? "not_system" : "no_home"');
+  expect(engine).toContain('if ("reason" in agent) return refused(STREAM_CLOSE.notFound, "no_home");');
+});
+
+test("a computer that runs every agent as one user gives a place that says so", () => {
+  expect(rightHandComputerLine({ mode: "single" })).toBe("rightHand.computerOneUser");
+  expect(rightHandComputerLine({ mode: "system" })).toBe("rightHand.computerYours");
+  expect(rightHandComputerLine(null)).toBe("rightHand.computerYours");
 });
 
 test("every power the page lists stands on a grant the server gives the right hand", () => {
@@ -26,4 +38,41 @@ test("every power the page lists stands on a grant the server gives the right ha
   const rows = /RIGHT_HAND_COMPUTER_GRANTS = \[([^\]]*)\]/.exec(source)?.[1] ?? "";
   for (const scope of ["sandbox:run", "browser:use", "desktop:use"]) expect(rows).toContain(`"${scope}"`);
   expect(source).toContain("export const rightHandReaches");
+});
+
+test("the right hand's memories group as Only you first, then one group per channel; an older server's by channel", () => {
+  const base = {
+    agentId: "lodi",
+    kind: "fact" as const,
+    source: "",
+    uses: 0,
+    lastUsedAt: null,
+    pinned: false,
+    archived: false,
+    lowTrust: false,
+    verified: true,
+    supersedes: null,
+    editedByUserId: null,
+    updatedAt: "2026-11-24T10:00:00.000Z",
+  };
+  const at = (id: string, channel: string | null, onlyYou?: boolean) => ({
+    ...base,
+    id,
+    text: id,
+    channelId: channel ? `c-${channel}` : null,
+    origin: { by: "agent" as const, name: null, channel, at: base.updatedAt },
+    ...(onlyYou === undefined ? {} : { onlyYou }),
+  });
+  const groups = memoryAudienceGroups([
+    at("a", "eng", false),
+    at("b", null, true),
+    at("c", "ops", false),
+    at("d", "eng", false),
+  ]);
+  expect(groups.map((g) => [g.key, g.channel, g.items.map((m) => m.id)])).toEqual([
+    ["you", null, ["b"]],
+    ["c-eng", "eng", ["a", "d"]],
+    ["c-ops", "ops", ["c"]],
+  ]);
+  expect(memoryAudienceGroups([at("x", "eng")]).map((g) => g.key)).toEqual(["c-eng"]);
 });

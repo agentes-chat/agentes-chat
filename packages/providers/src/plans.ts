@@ -166,7 +166,7 @@ export const CODING_PLANS = {
       // models answer only once the OpenCode workspace allows the Global region, the ones that train on what
       // they're sent only once it allows that (paid and free are separate switches); none has an alias, so
       // "Automático" never picks one.
-      // The fallback for `modelsUrl` (31 on 2026-11-09, all of them here), and what only we know of each model:
+      // The fallback for `modelsUrl` (32 on 2026-11-17, all of them here), and what only we know of each model:
       // its alias and tag. Zen's own free models (`deepseek-v4.1-flash-free`, `glm-5.3-flash-free`, `big-pickle`…)
       // aren't Go's: OpenCode serves its free tier only to the OpenCode CLI ("Free-tier chat models require
       // OpenCode", opencode.ai/v2/docs/console/models, read 2026-11-06), so they can't answer through Claude Code.
@@ -180,6 +180,7 @@ export const CODING_PLANS = {
         { id: "kimi-k3.1-pro", label: "Kimi K3.1 Pro", tag: "smart", maker: "moonshot" },
         { id: "kimi-k3", label: "Kimi K3", maker: "moonshot" },
         { id: "kimi-k2.7-code", label: "Kimi K2.7 Code", maker: "moonshot" },
+        { id: "qwen4-max", label: "Qwen4 Max", maker: "Alibaba" },
         { id: "qwen3.8-max", label: "Qwen3.8 Max", tag: "smart", maker: "Alibaba" },
         { id: "qwen3.8-flash", label: "Qwen3.8 Flash", tag: "cheap", maker: "Alibaba" },
         { id: "qwen3.7-plus", label: "Qwen3.7 Plus", tag: "cheap", maker: "Alibaba" },
@@ -203,6 +204,7 @@ export const CODING_PLANS = {
         { id: "hy3", label: "Hy3", tag: "cheap", maker: "Tencent" },
         { id: "hy4", label: "Hy4", maker: "Tencent" },
         { id: "hy4-preview", label: "Hy4 Preview", maker: "Tencent" },
+        { id: "hy4-flash-free", label: "Hy4 Flash Free", free: true, maker: "Tencent" },
         { id: "step-5-preview", label: "Step 5 Preview", maker: "StepFun" },
         {
           id: "muse-spark-1.3-contributor",
@@ -217,7 +219,6 @@ export const CODING_PLANS = {
           maker: "Meta",
         },
         { id: "beam-free", label: "Beam Free", free: true, maker: "Reflection" },
-        { id: "crouton-alpha-free", label: "Crouton Alpha Free", free: true, maker: "OpenCode" },
         {
           id: "iceman-contributor-free",
           label: "Iceman Contributor Free",
@@ -239,9 +240,12 @@ export const CODING_PLANS = {
 
 /**
  * The models ChatGPT's Fast mode serves (developers.openai.com/api/docs/guides/fast-mode, ids as Codex lists them in
- * its `service_tiers`, codex-cli 0.166.0). Codex drops the tier without a word for any other model.
+ * its `service_tiers`, codex-cli 0.166.0; GPT-6.2 Sol and Astra from the guide and the pricing page's Fast table,
+ * 2026-11-17). Codex drops the tier without a word for any other model.
  */
 export const FAST_MODE_MODELS: readonly string[] = [
+  "gpt-6.2-sol",
+  "gpt-6.2-astra",
   "gpt-6.1-sol",
   "gpt-6.1-terra",
   "gpt-6-astra",
@@ -377,6 +381,8 @@ export function planForTurn(plan: CodingPlan, value: unknown): CodingPlan {
 }
 
 const isAlias = (v: unknown): v is PlanAlias => PLAN_ALIASES.some((a) => a === v);
+/** Claude Code's aliases no plan maps (`fable`): Claude's own sign-in runs them as they are, a plan's runs `sonnet`. */
+const isClaudeOnlyAlias = (v: unknown) => v === "fable";
 
 /**
  * The model a stored value runs on a plan: one of its models by id, the model of an alias, else (`auto`, an alias
@@ -478,14 +484,14 @@ export const isPlanModelId = (v: string) => planModelById(v) !== undefined;
 
 /**
  * The `--model` of a Claude Code turn for a stored value: an alias as is (on a plan, the plan names its model);
- * with a plan, one of its models by id; without one, a Claude id. Anything else (another plan's model, none) runs
- * `sonnet`.
+ * with a plan, one of its models by id; without one, `fable` or a Claude id. Anything else (another plan's model,
+ * none) runs `sonnet`.
  */
 export function claudeCodeModel(plan: CodingPlan | undefined, value: unknown): string {
   if (isAlias(value)) return value;
   if (typeof value !== "string") return "sonnet";
   if (plan) return plan.claudeCode.models.some((m) => m.id === value) ? value : "sonnet";
-  return /^claude-/.test(value) ? value : "sonnet";
+  return isClaudeOnlyAlias(value) || /^claude-/.test(value) ? value : "sonnet";
 }
 
 /**
@@ -497,7 +503,7 @@ export function claudeCodeModel(plan: CodingPlan | undefined, value: unknown): s
 export function droppedPlanModel(provider: unknown, value: unknown): PlanModel | null {
   const plan = isPlanId(provider) ? learned.get(provider) : undefined;
   if (!isPlanId(provider) || !plan?.modelsUrl) return null;
-  if (typeof value !== "string" || isAlias(value) || /^claude-/.test(value)) return null;
+  if (typeof value !== "string" || isAlias(value) || isClaudeOnlyAlias(value) || /^claude-/.test(value)) return null;
   if (plan.claudeCode.models.some((m) => m.id === value) || planModelById(value)) return null;
   const table: readonly PlanModel[] = CODING_PLANS[provider].claudeCode.models;
   return table.find((m) => m.id === value) ?? { id: value, label: value };
@@ -553,6 +559,35 @@ export const SHARED_SIGN_INS: Readonly<Record<"claude_code" | "codex" | "antigra
   key: true,
 };
 
+/** Computer brains whose CLI never thinks with the computer's own sign-in, only a connected account (ADR 0142, ADR 0143 §3). */
+export const ACCOUNT_ONLY_BRAINS = ["antigravity", "grok"] as const;
+export const accountOnlyBrain = (kind: string) => (ACCOUNT_ONLY_BRAINS as readonly string[]).includes(kind);
+
+/**
+ * The kinds whose subscriptions a run may go on with at a plan's limit, each within its own kind (ADR 0041 §6). Never
+ * Antigravity: Google forbids automating account rotation (ADR 0143). Not Grok, Cursor or OpenCode.
+ */
+export const NEXT_ACCOUNT_KINDS: readonly string[] = ["claude_code", "codex"];
+
+/** What an account's place in the order of use is read from (`compareInOrder`). */
+export interface OrderKey {
+  ownerId: string | null;
+  /** Its place among its computer's accounts of its kind, 0 first; null or absent: after the placed ones. */
+  useOrder?: number | null;
+}
+
+const placeOf = (a: OrderKey) => a.useOrder ?? Number.MAX_SAFE_INTEGER;
+
+/**
+ * The one order of use (ADR 0041 §6), the engine's `accountOrderSql` in SQL: `person`'s own accounts first, then by
+ * place, the unplaced after. A stable sort keeps the rest as given, which is oldest first everywhere.
+ */
+export const compareInOrder =
+  (person: string | null) =>
+  (a: OrderKey, b: OrderKey): number =>
+    Number(person !== null && b.ownerId === person) - Number(person !== null && a.ownerId === person) ||
+    placeOf(a) - placeOf(b);
+
 /** Whether a new sign-in of an account (its CLI's kind, and a coding plan's `provider`) is made for all agents. */
 export const sharedSignIn = (kind: string, provider?: string | null) =>
   isPlanId(provider)
@@ -602,18 +637,70 @@ export const GROK_BUILD_MODELS: readonly { id: string; label: string }[] = [
 
 /**
  * The Antigravity CLI's models (ADR 0143) where the agent's computer listed none (`agy models` asks Google: none
- * offline), each slug a model at one thinking level, and the plans that include it (antigravity.google/docs/models,
- * read 2026-11-04): Gemini 4 Argon on paid Google AI Pro, Ultra and Enterprise, Gemini 3.8 Flash on every plan, the
- * older Flash and 3.1 Pro on Enterprise only. What the CLI lists comes first; with none chosen its own default runs.
+ * offline, none before an account here signed in), each slug a model at one thinking level, `xhigh` being the
+ * "Extra" one, and the plans that include it (antigravity.google/docs/models, read 2026-11-20): Gemini 4 Neon, the
+ * CLI's own default, and Argon on paid Google AI Pro, Ultra and Enterprise, Hydrogen on Pro (not its trial), Ultra
+ * and Enterprise, Gemini 3.8 Flash on every plan; Carbon on Ultra and Enterprise only, and the older Flash and 3.1
+ * Pro on Enterprise only, are left to the CLI's own listing. What the CLI lists comes first; with none chosen its own
+ * default runs.
  * ponytail: hand-copied list, the CLI's own listing replaces it wherever the runner reports one.
  */
 export const ANTIGRAVITY_MODELS: readonly { id: string; label: string }[] = [
+  { id: "gemini-4-neon-high", label: "Gemini 4 Neon (High)" },
+  { id: "gemini-4-neon-xhigh", label: "Gemini 4 Neon (XHigh)" },
+  { id: "gemini-4-neon-medium", label: "Gemini 4 Neon (Medium)" },
+  { id: "gemini-4-neon-low", label: "Gemini 4 Neon (Low)" },
+  { id: "gemini-4-hydrogen-high", label: "Gemini 4 Hydrogen (High)" },
+  { id: "gemini-4-hydrogen-xhigh", label: "Gemini 4 Hydrogen (XHigh)" },
+  { id: "gemini-4-hydrogen-medium", label: "Gemini 4 Hydrogen (Medium)" },
+  { id: "gemini-4-hydrogen-low", label: "Gemini 4 Hydrogen (Low)" },
   { id: "gemini-4-argon-high", label: "Gemini 4 Argon (High)" },
   { id: "gemini-4-argon-medium", label: "Gemini 4 Argon (Medium)" },
+  { id: "gemini-4-argon-low", label: "Gemini 4 Argon (Low)" },
   { id: "gemini-3.8-flash-high", label: "Gemini 3.8 Flash (High)" },
   { id: "gemini-3.8-flash-medium", label: "Gemini 3.8 Flash (Medium)" },
   { id: "gemini-3.8-flash-low", label: "Gemini 3.8 Flash (Low)" },
 ];
+
+/**
+ * The Antigravity CLI's own catalog decides which models it lists and runs: 1.5.0 has Gemini 4 Argon and 3.8 Flash
+ * only, Gemini 4 Neon and Hydrogen came with 1.5.12 (on a Gemini API key) and 1.5.13 (Google AI Pro and Ultra, with
+ * the app's 2.34.0; changelog read 2026-11-21). An older CLI never lists them, whatever the account's plan.
+ */
+export const ANTIGRAVITY_NEON_CLI = "1.5.13";
+
+/** The reserve's models an older CLI (before `ANTIGRAVITY_NEON_CLI`) doesn't know. */
+export const ANTIGRAVITY_NEW_MODEL = /^gemini-4-(?:neon|hydrogen)-/;
+
+/**
+ * Gemini 4 Argon comes with exactly the plans that have Neon and Hydrogen (paid Google AI Pro, Ultra and Enterprise;
+ * antigravity.google/docs/models): a listing with Argon and neither of them was taken by an older CLI.
+ */
+export const ANTIGRAVITY_PAID_MODEL = /^gemini-4-argon-/;
+
+/** The Antigravity CLI also lists other makers' models (Claude, GPT-OSS): the Gemini plan offers Gemini only. */
+export const isAntigravityGemini = (id: string) => id.startsWith("gemini-");
+
+/** An Antigravity model's name from the reserve (`gemini-4-argon-high` → "Gemini 4 Argon (High)"); else the slug. */
+export const antigravityLabel = (id: string) => ANTIGRAVITY_MODELS.find((m) => m.id === id)?.label ?? id;
+
+/**
+ * A CLI's version as numbers, read anywhere in its `--version` line (`agy 1.5.0`, `1.5.14`); null without one. Each
+ * part at most nine digits: the line comes from the computer, and an unbounded run of digits would be slow to search.
+ */
+export function cliVersionOf(line: string | null | undefined): [number, number, number] | null {
+  const m = /(\d{1,9})\.(\d{1,9})\.(\d{1,9})/.exec(line ?? "");
+  return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : null;
+}
+
+/** Whether a `--version` line is at least `min` (`1.5.13`); null when the line has no version. */
+export function cliVersionAtLeast(line: string | null | undefined, min: string): boolean | null {
+  const have = cliVersionOf(line);
+  const want = cliVersionOf(min);
+  if (!have || !want) return null;
+  for (let i = 0; i < 3; i++) if (have[i] !== want[i]) return (have[i] ?? 0) > (want[i] ?? 0);
+  return true;
+}
 
 /**
  * An Antigravity CLI account's `provider` when it signs in to Gemini Enterprise (`oauth-business`, ADR 0143); none:
@@ -632,5 +719,11 @@ export const signInProviderOf = (provider: string | null | undefined): string | 
 export const providerFitsChoice = (provider: string | null | undefined, choice: string, coding: boolean) =>
   coding ? provider === choice : !provider || provider === GEMINI_ENTERPRISE_PROVIDER;
 
-/** An Antigravity model slug's model in the catalog: `gemini-4-argon-high` → `gemini-4-argon`. */
-export const antigravityBaseModel = (slug: string) => slug.replace(/-(?:low|medium|high)$/, "");
+/**
+ * An Antigravity model slug's thinking level, the slug's last word (`gemini-4-neon-xhigh` → `xhigh`): a slug that
+ * names one takes no `--effort`.
+ */
+export const ANTIGRAVITY_LEVEL = /-(?:low|medium|high|xhigh)$/;
+
+/** An Antigravity model slug's model in the catalog: `gemini-4-argon-high` → `gemini-4-argon`, `…-neon-xhigh` too. */
+export const antigravityBaseModel = (slug: string) => slug.replace(ANTIGRAVITY_LEVEL, "");

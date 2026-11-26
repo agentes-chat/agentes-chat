@@ -12,13 +12,16 @@ import {
   schema,
   sql,
 } from "@agenteschat/db";
+import { managesAgentSql, ownsAgentSql } from "./audience";
+import type { BrainPlan } from "./brains/select";
 import { TtlCache } from "./cache";
 import { NotFoundError } from "./errors";
 import { publishOrgEvent } from "./events";
-import { getMachine } from "./machines";
-import { can, requirePermission } from "./organizations";
+import { getMachine, shownMoving } from "./machines";
+import { requirePermission } from "./organizations";
 import { enqueue } from "./outbox";
-import { replyThreadOf } from "./runs";
+import { runState } from "./run-state";
+import { RUN_STALE_MS, replyThreadOf } from "./runs";
 
 const { agentRuns, agents, channelMembers, channels, messages } = schema;
 
@@ -43,10 +46,7 @@ export const ROOM_BEHIND_RETRY_MS = 10_000;
  */
 export const ROOM_RANK_AGE_MS = 10 * 60_000;
 
-const inLine = and(
-  eq(agentRuns.status, "waiting_input"),
-  sql`${agentRuns.transcript}->'waitingForBrain'->>'code' = 'busy'`,
-);
+const inLine = and(eq(agentRuns.status, "waiting_input"), sql`${runState}->'waitingForBrain'->>'code' = 'busy'`);
 const waitingForRoom = (machineId: string) => and(eq(agentRuns.waitingMachineId, machineId), inLine);
 /**
  * The line as people read it: also the run asking from it (`computerWaitOf`), which the computer may still refuse.
@@ -54,18 +54,70 @@ const waitingForRoom = (machineId: string) => and(eq(agentRuns.waitingMachineId,
  */
 const shownInLine = (machineId: string) =>
   and(eq(agentRuns.waitingMachineId, machineId), or(inLine, eq(agentRuns.status, "running")));
-const waitIdSql = sql<string | null>`${agentRuns.transcript}->'waitingForBrain'->>'waitId'`;
-const peopleSql = sql`coalesce((${agentRuns.transcript}->>'roomPeople')::boolean, false)`;
-const askedSql = sql`coalesce((${agentRuns.transcript}->>'roomAsked')::boolean, false)`;
+const waitIdSql = sql<string | null>`${runState}->'waitingForBrain'->>'waitId'`;
+const peopleSql = sql`coalesce((${runState}->>'roomPeople')::boolean, false)`;
+const askedSql = sql`coalesce((${runState}->>'roomAsked')::boolean, false)`;
 /**
  * Its place in the line: since it started waiting for room, or, a wake that waited outside any run first, since then
  * (`roomOrderSince`). The note after `COMPUTER_QUEUE_NOTE_MS` reads `roomWaitSince` alone.
  */
-const sinceSql = sql`coalesce((${agentRuns.transcript}->>'roomOrderSince')::bigint, (${agentRuns.transcript}->>'roomWaitSince')::bigint, 0)`;
+const sinceSql = sql`coalesce((${runState}->>'roomOrderSince')::bigint, (${runState}->>'roomWaitSince')::bigint, 0)`;
 /** A run's rank in the line: 0 a person waits on it, 1 work a person asked for lately (or waiting long), 2 the rest. */
 const rankSql = (now: number) =>
   sql<number>`(case when ${peopleSql} then 0 when ${askedSql} or ${sinceSql} < ${now - ROOM_RANK_AGE_MS}::bigint then 1 else 2 end)`;
 export type RoomRank = 0 | 1 | 2;
+
+/**
+ * Which gate held a run waiting for room, kept on its wait step (`room`): another run ahead in the line, its plan
+ * sign-in at its cap, `ROOM_ASK_SPACING_MS`, or the runner's own room check (`no_slot`, free memory on Linux).
+ */
+export type RoomWaitCause = "line" | "sign_in" | "spacing" | "memory";
+
+/** A Claude plan sign-in a run thinks with: its account, or its computer's own sign-in (`own`). */
+export interface SignInSlot {
+  key: string;
+  /** Runs it takes at once; 0 or less: no limit. */
+  cap: number;
+}
+
+/**
+ * The plan sign-in this plan's turn holds a slot of: Claude Code on a subscription (its account, or its computer's own
+ * sign-in). Never an API key nor a coding plan's key (`provider`), nor another brain.
+ */
+export function signInSlotOf(plan: Pick<BrainPlan, "kind" | "account">, cap: number): SignInSlot | undefined {
+  if (plan.kind !== "claude_code" || plan.account?.provider || cap <= 0) return undefined;
+  return { key: plan.account?.id ?? "own", cap };
+}
+
+/** A computer's own sign-in is that computer's; an account is the workspace's, whichever computer its runs think on. */
+const ownSignIn = (key: string) => key === "own";
+
+/**
+ * The sign-in a run in line waits to think with (`signInWait`), whatever held it (its cap, the line, the spacing):
+ * only runs on that same sign-in hold it back. A run without one (the computer's memory, or no plan sign-in) holds
+ * back the whole line.
+ */
+const signInWaitSql = sql<string | null>`${runState}->'signInWait'->>'key'`;
+
+/** A run working on a sign-in now, holding one of its slots: one whose worker died stops counting once its heartbeat is stale. */
+const holdsSlot = (orgId: string, now: number) =>
+  and(
+    eq(agentRuns.orgId, orgId),
+    eq(agentRuns.status, "running"),
+    sql`${agentRuns.heartbeatAt} > ${new Date(now - RUN_STALE_MS).toISOString()}::timestamptz`,
+  );
+
+/** The workspace's accounts with every slot taken now, so a run at its own sign-in's cap goes on with another one. */
+export async function fullSignIns(db: Executor, orgId: string, cap: number): Promise<Set<string>> {
+  const key = sql<string>`${runState}->'roomAsk'->>'signIn'`;
+  const rows = await db
+    .select({ key })
+    .from(agentRuns)
+    .where(and(holdsSlot(orgId, Date.now()), sql`${key} is not null`, sql`${key} <> 'own'`))
+    .groupBy(key)
+    .having(sql`count(*) >= ${cap}`);
+  return new Set(rows.map((r) => r.key));
+}
 
 /** The run first in line for room on this computer, with the wait its job must carry. */
 export async function roomHead(
@@ -124,6 +176,27 @@ export async function kickRoomQueue(db: Database, machineId: string, at?: Date) 
 }
 
 /**
+ * A run on this sign-in left its slot (it ended, or waits on something else): the first run in line waiting for that
+ * sign-in looks again now, not at its next retry.
+ */
+export async function kickSignInLine(db: Executor, machineId: string, key: string) {
+  const [head] = await db
+    .select({ id: agentRuns.id, orgId: agentRuns.orgId, waitId: waitIdSql })
+    .from(agentRuns)
+    .where(and(ownSignIn(key) ? waitingForRoom(machineId) : inLine, sql`${signInWaitSql} = ${key}`))
+    .orderBy(rankSql(Date.now()), sinceSql, agentRuns.id)
+    .limit(1);
+  if (!head?.waitId) return;
+  await enqueue(db, {
+    orgId: head.orgId,
+    kind: "agent_run.execute",
+    payload: { runId: head.id, wait: head.waitId },
+    dedupeKey: `agent_run.execute:${head.id}:sign-in-freed:${head.waitId}`,
+    maxAttempts: 4,
+  });
+}
+
+/**
  * Whether this run may send its computer turn now. Null: go (its ask is recorded, and the next in line is asked
  * once the spacing is over). Otherwise it is behind: `retryAt` is when it may look again. Behind when a run waiting
  * for room ranks ahead of it (by rank, then the longest wait), or, for agents' work, when another run asked
@@ -135,7 +208,8 @@ export async function roomGate(
   run: { id: string; orgId: string },
   machineId: string,
   place: { rank: RoomRank; since: number },
-): Promise<{ retryAt: number } | null> {
+  signIn?: SignInSlot,
+): Promise<{ retryAt: number; cause: RoomWaitCause } | null> {
   const now = Date.now();
   const rank = place.rank === 2 && place.since < now - ROOM_RANK_AGE_MS ? 1 : place.rank;
   const behind = await db.transaction(async (tx) => {
@@ -148,29 +222,48 @@ export async function roomGate(
           waitingForRoom(machineId),
           sql`${agentRuns.id} <> ${run.id}`,
           sql`(${rankSql(now)}, ${sinceSql}, ${agentRuns.id}) < (${rank}::int, ${place.since}::bigint, ${run.id}::uuid)`,
+          // A run held only by another sign-in's limit doesn't hold this one back.
+          sql`(${signInWaitSql} is null or ${signInWaitSql} = ${signIn?.key ?? ""})`,
         ),
       )
       .limit(1);
-    if (ahead) return { retryAt: now + ROOM_BEHIND_RETRY_MS };
+    if (ahead) return { retryAt: now + ROOM_BEHIND_RETRY_MS, cause: "line" as const };
+    if (signIn) {
+      if (!ownSignIn(signIn.key))
+        await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`sign-in:${signIn.key}`}))`);
+      const [taken] = await tx
+        .select({ n: sql<number>`count(*)::int` })
+        .from(agentRuns)
+        .where(
+          and(
+            holdsSlot(run.orgId, now),
+            sql`${agentRuns.id} <> ${run.id}`,
+            ownSignIn(signIn.key) ? sql`${runState}->'roomAsk'->>'machineId' = ${machineId}` : undefined,
+            sql`${runState}->'roomAsk'->>'signIn' = ${signIn.key}`,
+          ),
+        );
+      if (Number(taken?.n ?? 0) >= signIn.cap)
+        return { retryAt: now + ROOM_BEHIND_RETRY_MS, cause: "sign_in" as const };
+    }
     if (rank > 0) {
       const [last] = await tx
-        .select({ at: sql<string>`max((${agentRuns.transcript}->'roomAsk'->>'at')::bigint)` })
+        .select({ at: sql<string>`max((${runState}->'roomAsk'->>'at')::bigint)` })
         .from(agentRuns)
         .where(
           and(
             eq(agentRuns.orgId, run.orgId),
             eq(agentRuns.status, "running"),
             sql`${agentRuns.id} <> ${run.id}`,
-            sql`${agentRuns.transcript}->'roomAsk'->>'machineId' = ${machineId}`,
+            sql`${runState}->'roomAsk'->>'machineId' = ${machineId}`,
           ),
         );
       const at = Number(last?.at ?? 0);
-      if (now - at < ROOM_ASK_SPACING_MS) return { retryAt: at + ROOM_ASK_SPACING_MS };
+      if (now - at < ROOM_ASK_SPACING_MS) return { retryAt: at + ROOM_ASK_SPACING_MS, cause: "spacing" as const };
     }
     await tx
       .update(agentRuns)
       .set({
-        transcript: sql`jsonb_set(coalesce(${agentRuns.transcript}, '{}'::jsonb), '{roomAsk}', ${JSON.stringify({ machineId, at: now })}::jsonb)`,
+        transcript: sql`jsonb_set(coalesce(${agentRuns.transcript}, '{}'::jsonb), '{roomAsk}', ${JSON.stringify({ machineId, at: now, ...(signIn ? { signIn: signIn.key } : {}) })}::jsonb)`,
       })
       .where(eq(agentRuns.id, run.id));
     return null;
@@ -246,6 +339,8 @@ export interface QueueWaiting extends QueueAccess {
 export interface ComputerQueue {
   machineId: string;
   name: string;
+  /** It is away moving to another server: the line waits for it, and its dialog says so. */
+  moving: boolean;
   working: QueueWorking[];
   waiting: QueueWaiting[];
 }
@@ -259,18 +354,20 @@ const agentsOnlySql = (kind: SQL, dmKey: SQL) =>
 
 /**
  * Who sees a run's work, for a select naming its columns: the members of its conversation and, for work no person is
- * a member of (a routine's background run, two agents' private conversation), admins (`manage_agents`) and the agent's
- * owner. Other people's DMs stay theirs. The task manager, a task's steps and the rows of the line read it. Never
- * NULL: an agent with no owner would make it so, and `not` of that drops the run from the hidden counts too.
+ * a member of (a routine's background run, two agents' private conversation), who manages the agent (`manages`: a
+ * value, or SQL per run such as `managesAgentSql`, ADR 0085 addendum of 2026-11-17) and the agent's owner (`owns`:
+ * `ownsAgentSql` for the viewer, its owner role's holders too, ADR 0085 addendum of 2026-11-21). Other people's DMs
+ * stay theirs. The task manager, a task's steps and the rows of the line read it. Never NULL: an agent with no owner
+ * would make it so, and `not` of that drops the run from the hidden counts too.
  */
 export const seesRunSql = (
-  run: { channelId: SQL; kind: SQL; dmKey: SQL; background: SQL; ownerUserId: SQL },
+  run: { channelId: SQL; kind: SQL; dmKey: SQL; background: SQL; owns: SQL<boolean> },
   userId: string,
   orgId: string,
-  manages: boolean,
+  manages: boolean | SQL<boolean>,
 ) => sql<boolean>`coalesce(exists (select 1 from ${channelMembers} cm
     where cm.org_id = ${orgId}::uuid and cm.channel_id = ${run.channelId} and cm.user_id = ${userId})
-  or ((${run.background} or ${agentsOnlySql(run.kind, run.dmKey)}) and (${manages} or ${run.ownerUserId} = ${userId})), false)`;
+  or ((${run.background} or ${agentsOnlySql(run.kind, run.dmKey)}) and (${manages} or ${run.owns})), false)`;
 
 /** A running turn's estimated end is never sooner than this from now: an estimate never reads as "any second". */
 export const QUEUE_END_FLOOR_MS = 30_000;
@@ -336,8 +433,10 @@ export function estimateQueue(
   return { ends, overdue, starts, after };
 }
 
-// ponytail: per-process cache, a minute stale at most; the read touches at most 300 finished runs' transcripts.
-const typicalCache = new TtlCache<TypicalTurns>(60_000, 1000);
+// A median of up to 20 turns over 14 days moves little in 10 minutes; the read touches up to 300 finished runs (their
+// `state`, or the transcript of a run that ended before it).
+// ponytail: per-process cache; a duration column written when the run ends would spare the read.
+const typicalCache = new TtlCache<TypicalTurns>(10 * 60_000, 1000);
 
 /**
  * The median of each agent's latest `TYPICAL_TURNS` finished computer turns, from its ask (`roomAsk.at`) to the
@@ -348,17 +447,17 @@ export async function typicalTurns(db: Database, orgId: string): Promise<Typical
     const rows = rowsOf<{ agent_id: string | null; ms: string | number | null }>(
       await db.execute(sql`
         with recent as (
-          select agent_id, finished_at, transcript from agent_runs
+          select agent_id, finished_at, coalesce(state, transcript) as t from agent_runs
           where org_id = ${orgId}::uuid and status = 'done' and brain is not null and brain <> 'model'
             and finished_at > now() - interval '14 days'
           order by finished_at desc
           limit 300
         ), turns as (
           select agent_id,
-            extract(epoch from finished_at) * 1000 - (transcript->'roomAsk'->>'at')::bigint as ms,
+            extract(epoch from finished_at) * 1000 - (t->'roomAsk'->>'at')::bigint as ms,
             row_number() over (partition by agent_id order by finished_at desc) as n
           from recent
-          where transcript ? 'roomAsk'
+          where t ? 'roomAsk'
         )
         select agent_id, percentile_cont(0.5) within group (order by ms) as ms
         from turns where n <= ${TYPICAL_TURNS} and ms > 0
@@ -401,7 +500,11 @@ export async function computerQueue(
   machineId: string,
   now = Date.now(),
 ): Promise<ComputerQueue> {
-  const manages = can(await requirePermission(db, actorId, orgId, "read"), "manage_agents");
+  await requirePermission(db, actorId, orgId, "read");
+  // Who manages each run's agent (`managesAgentSql`), never every holder of "Editar qualquer agente".
+  const manages = managesAgentSql("agents", sql`${actorId}::text`);
+  // Its owner, or holding its owner role now (ADR 0085, addendum of 2026-11-21).
+  const owns = ownsAgentSql("agents", sql`${actorId}::text`);
   const machine = await getMachine(db, orgId, machineId);
   if (!machine) throw new NotFoundError("Computer not found", "machine.not_found");
   const cols = {
@@ -410,20 +513,22 @@ export async function computerQueue(
     channelId: agentRuns.channelId,
     threadRootId: agentRuns.threadRootId,
     triggerMessageId: agentRuns.triggerMessageId,
+    replyInThread: agentRuns.replyInThread,
     workId: agentRuns.workId,
     background: agentRuns.background,
     authorType: messages.authorType,
     authorUserId: messages.authorUserId,
     authorAgentId: messages.authorAgentId,
     viaRoutine: sql<unknown>`${messages.meta}->'routine'`,
-    ownerUserId: agents.ownerUserId,
+    owns,
+    manages,
     sees: seesRunSql(
       {
         channelId: sql`${agentRuns.channelId}`,
         kind: sql`${channels.kind}`,
         dmKey: sql`${channels.dmKey}`,
         background: sql`${agentRuns.background}`,
-        ownerUserId: sql`${agents.ownerUserId}`,
+        owns,
       },
       actorId,
       orgId,
@@ -439,7 +544,7 @@ export async function computerQueue(
       .innerJoin(agents, eq(agents.id, agentRuns.agentId))
       .leftJoin(channels, eq(channels.id, agentRuns.channelId))
       .leftJoin(messages, trigger);
-  const askAt = sql<string>`(${agentRuns.transcript}->'roomAsk'->>'at')::bigint`;
+  const askAt = sql<string>`(${runState}->'roomAsk'->>'at')::bigint`;
   const [workingRows, waitingRows, typical] = await Promise.all([
     lineRows({ askAt })
       .where(
@@ -447,7 +552,7 @@ export async function computerQueue(
           eq(agentRuns.orgId, orgId),
           eq(agentRuns.status, "running"),
           isNull(agentRuns.waitingMachineId),
-          sql`${agentRuns.transcript}->'roomAsk'->>'machineId' = ${machineId}`,
+          sql`${runState}->'roomAsk'->>'machineId' = ${machineId}`,
         ),
       )
       .orderBy(askAt),
@@ -463,6 +568,7 @@ export async function computerQueue(
     channelId: string;
     threadRootId: string;
     triggerMessageId: string;
+    replyInThread: boolean;
     sees: boolean;
     agentsOnly: boolean;
   }) => ({
@@ -470,13 +576,19 @@ export async function computerQueue(
     threadId: replyThreadOf(r),
     agents: r.sees && r.agentsOnly,
   });
-  const access = (r: { sees: boolean; ownerUserId: string | null; authorUserId: string | null }) => ({
+  const access = (r: {
+    sees: boolean;
+    manages: boolean | null;
+    owns: boolean | null;
+    authorUserId: string | null;
+  }) => ({
     canOpen: r.sees,
-    canStop: manages || r.ownerUserId === actorId || r.authorUserId === actorId,
+    canStop: r.manages === true || r.owns === true || r.authorUserId === actorId,
   });
   return {
     machineId,
     name: machine.name,
+    moving: shownMoving(machine),
     working: working.map((r, i) => ({
       runId: r.runId,
       agentId: r.agentId,
@@ -513,7 +625,7 @@ export async function agentLineRank(db: Executor, orgId: string, agentId: string
 /** For a select naming an agent: its computer has runs waiting for room (it is full, and work queues on it). */
 export const computerCrowdedSql = (agentId: SQL) => sql<boolean>`exists (select 1 from ${agentRuns} w
   join ${agents} ca on ca.machine_id = w.waiting_machine_id
-  where ca.id = ${agentId} and w.status = 'waiting_input' and w.transcript->'waitingForBrain'->>'code' = 'busy')`;
+  where ca.id = ${agentId} and w.status = 'waiting_input' and coalesce(w.state, w.transcript)->'waitingForBrain'->>'code' = 'busy')`;
 
 /** Of these agents, the ones whose computer has runs waiting for room. */
 export async function crowdedAgents(db: Executor, orgId: string, agentIds: string[]): Promise<Set<string>> {

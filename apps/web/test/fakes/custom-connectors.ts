@@ -8,16 +8,26 @@
  *          reconnects that account in place; `headers` alone connect, are refused with a sign-in, and on a
  *          reconnect stay when absent, go with `[]` and are replaced by a list)
  * - POST   /api/app/organizations/{orgId}/connectors/custom/{id}/refresh (re-list tools)
- * - PUT    /api/app/organizations/{orgId}/connectors/custom/{id}/tools { label, tools: [{ name, access, label, confirmed? }] }
+ * - PUT    /api/app/organizations/{orgId}/connectors/custom/{id}/tools { label, tools: [{ name, access, label, confirmed? }], useInstructions? }
  *          (`access`: read | write | approval | off; sensitive tools only approval | off)
  * - DELETE /api/app/organizations/{orgId}/connectors/custom/{id}
+ * - GET/PUT/DELETE /api/app/organizations/{orgId}/connector-oauth-clients (the workspace's own OAuth app, one per
+ *          issuer: here one per server's origin; the secret is never returned)
  * The mock never talks to the URL: it pretends the server offers a ticket
- * tool set, needs an API key unless the URL contains "oauth", and gains one
- * new tool on the first refresh. Tools come classified as the backend does
+ * tool set, needs an API key unless the URL contains "oauth", sends its own
+ * instructions when the URL contains "rules" (the worst ones with "worst"),
+ * and gains one new tool on the first refresh. Tools come classified as the backend does
  * (annotations, the verb; `close_ticket` is ambiguous: the judge suggests
  * "write" and it waits for a decision; `delete_customer` is sensitive).
  */
-import { type ApiClient, ApiError, type CustomServer, type CustomTool, type ToolAccess } from "@agenteschat/client";
+import {
+  type ApiClient,
+  ApiError,
+  type CustomServer,
+  type CustomTool,
+  type OwnOAuthClient,
+  type ToolAccess,
+} from "@agenteschat/client";
 import { partsOf } from "@agenteschat/client/lib/tool-review";
 import { clone, type MockContext, MockNotFoundError, mockId } from "./context";
 
@@ -29,6 +39,43 @@ const TOOLS: [name: string, description: string, readOnly: boolean | null][] = [
   ["delete_customer", "Permanently delete a customer and their data.", false],
 ];
 const LATER: [string, string, boolean | null] = ["export_tickets", "Export tickets as CSV.", true];
+/** What a server whose address says "rules" answers `initialize` with (MCP's `instructions`). */
+export const MOCK_INSTRUCTIONS = "Call get_ticket before close_ticket.\nAsk the person before delete_customer.";
+
+/**
+ * The worst instructions a real server sends (an address that says "worst"): Markdown, an address and a token with no
+ * place to break, what would be a mention, an internal id's chip and a link anywhere else, a table, other scripts,
+ * emoji, runs of blank lines, and more than agents read, so the screen shows its first 4,000 characters, cut.
+ */
+export const WORST_INSTRUCTIONS = [
+  "# Northwind Industries Holdings — Billing & Subscriptions MCP server (v2026.07.28-rc.3)",
+  "",
+  "## Before you call anything",
+  "",
+  "1. Always call `billing_get_customer_subscription_summary_with_invoices` before `billing_apply_subscription_change_immediately`.",
+  "2. Ask the person to confirm **every** destructive call (cancel, refund, delete) in the conversation, quoting the exact customer id, e.g. `cus_01HZX8Q7M3V5N9K2P4R6T8W0Y2A4C6E8G0J2L4N6Q8S0U2W4Y6`.",
+  "3. Full policy: https://docs.northwind-industries-holdings.example.com/integrations/mcp/billing-and-subscriptions/instructions/v2026-07-28/confirmation-before-destructive-calls?utm_source=mcp&utm_medium=instructions",
+  "4. Escalations go to @ada; the case is artifact 0193b1c2-3d4e-7f50-8a6b-1c2d3e4f5a6b, see [the runbook](https://runbook.example.com/billing).",
+  "",
+  "",
+  "",
+  "| Tool | Reads | Writes | Asks |",
+  "| --- | --- | --- | --- |",
+  "| billing_list_invoices | yes | no | no |",
+  "| billing_refund_invoice | no | yes | always |",
+  "",
+  "Mehrwertsteuer-Rückerstattungsbearbeitungsgebühren apply to EU refunds. 請求書の払い戻しは必ず確認してください。 الرجاء تأكيد كل عملية استرداد. 🧾💳✅",
+  "",
+  "```json",
+  '{"customer":"cus_01HZX8Q7M3V5N9K2P4R6T8W0Y2A4C6E8G0J2L4N6Q8S0U2W4Y6","amount_cents":1284000,"currency":"EUR"}',
+  "```",
+  "",
+  ...Array.from(
+    { length: 40 },
+    (_, i) =>
+      `- Rule ${i + 1}: when a customer on the ${i % 2 ? "annual" : "monthly"} plan asks for a change, read their open invoices first, never prorate by hand, and say which invoice the change lands on.`,
+  ),
+].join("\n");
 
 /** How the backend classifies each (classify.ts): level, source, reason, sensitive. */
 const CLASS: Record<string, [ToolAccess, NonNullable<CustomTool["suggestionSource"]>, string, boolean]> = {
@@ -67,10 +114,19 @@ export function createMockCustomConnectors(
   log: (method: string, ...args: unknown[]) => void = () => {},
   /** An account connected (the backend gives it to every agent). */
   onConnected: (orgId: string, serverId: string) => Promise<void> = async () => {},
+  /** Who is asking: lists hold the team's servers and theirs, and everyone's with `others`, as the backend's do. */
+  meId: () => string | null = () => null,
 ): ApiClient["customConnectors"] & {
   rename(orgId: string, id: string, label: string): CustomServer | null;
 } {
   const byOrg = new Map<string, CustomServer[]>();
+  const ownClients = new Map<string, NonNullable<OwnOAuthClient["client"]>>();
+  const issuerOf = (serverUrl: string) => new URL(serverUrl).origin;
+  const ownView = (orgId: string, serverUrl: string): OwnOAuthClient => ({
+    redirectUri: "https://chat.example.com/api/app/connectors/oauth/callback",
+    issuer: issuerOf(serverUrl),
+    client: clone(ownClients.get(`${orgId}|${issuerOf(serverUrl)}`) ?? null),
+  });
   const refreshed = new Set<string>();
   const list = (orgId: string) => {
     let l = byOrg.get(orgId);
@@ -86,7 +142,8 @@ export function createMockCustomConnectors(
     return s;
   };
   return {
-    list: async (orgId) => clone(list(orgId)),
+    list: async (orgId, options) =>
+      clone(list(orgId).filter((s) => options?.others || !s.ownerUserId || s.ownerUserId === meId())),
     connect: async (orgId, input) => {
       log("customConnectors.connect", orgId, {
         ...input,
@@ -121,8 +178,15 @@ export function createMockCustomConnectors(
         authType: oauth ? "oauth" : "api_key",
         headerNames,
         tools: TOOLS.map((t) => tool(t, now)),
+        instructions: input.serverUrl.includes("worst")
+          ? { text: WORST_INSTRUCTIONS.slice(0, 4000), cut: WORST_INSTRUCTIONS.length > 4000, maxChars: 4000 }
+          : input.serverUrl.includes("rules")
+            ? { text: MOCK_INSTRUCTIONS, cut: false, maxChars: 4000 }
+            : null,
+        useInstructions: true,
         reviewedAt: null,
         createdAt: now.toISOString(),
+        ...(input.personal ? { ownerUserId: meId() } : {}),
       };
       list(orgId).push(server);
       await onConnected(orgId, server.id);
@@ -147,6 +211,7 @@ export function createMockCustomConnectors(
       log("customConnectors.saveTools", orgId, id, structuredClone(input));
       const s = find(orgId, id);
       s.label = input.label;
+      if (input.useInstructions !== undefined) s.useInstructions = input.useInstructions;
       for (const t of input.tools) {
         const existing = s.tools.find((x) => x.name === t.name);
         if (existing) {
@@ -169,6 +234,29 @@ export function createMockCustomConnectors(
         orgId,
         list(orgId).filter((x) => x.id !== id),
       );
+    },
+    ownClient: async (orgId, serverUrl) => ownView(orgId, serverUrl),
+    setOwnClient: async (orgId, input) => {
+      log("customConnectors.setOwnClient", orgId, {
+        ...input,
+        clientSecret: input.clientSecret ? "[redacted]" : undefined,
+      });
+      const key = `${orgId}|${issuerOf(input.serverUrl)}`;
+      const before = ownClients.get(key);
+      ownClients.set(key, {
+        clientId: input.clientId,
+        hasSecret: Boolean(input.clientSecret) || (before?.clientId === input.clientId && before.hasSecret),
+        scopes:
+          input.scopes
+            ?.split(/[\s,]+/)
+            .filter(Boolean)
+            .join(" ") || null,
+      });
+      return ownView(orgId, input.serverUrl);
+    },
+    removeOwnClient: async (orgId, issuer) => {
+      log("customConnectors.removeOwnClient", orgId, issuer);
+      if (!ownClients.delete(`${orgId}|${issuer}`)) throw new MockNotFoundError("No client of yours for it");
     },
   };
 }

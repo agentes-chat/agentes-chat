@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { LoadingLine } from "@/components/Loading";
 import { OpenOnPhoneDialog } from "@/components/OpenOnPhone";
 import { useOrg } from "@/components/org-context";
+import { SurfacePrefRow } from "@/components/SurfaceLink";
 import { useBrowserNotices } from "@/components/WebPush";
 import { inDesktopApp } from "@/lib/desktop";
 import { useToast } from "@/lib/toast";
@@ -61,8 +62,7 @@ export function NoticePrefsSection() {
             id="notice-phone"
             icon="phone"
             label={t("noticePrefs.phone")}
-            hint={phones > 0 ? t("noticePrefs.phoneOn") : undefined}
-            status={phones > 0 ? undefined : t("noticePrefs.phoneOff")}
+            hint={t(phones > 0 ? "noticePrefs.phoneOn" : "noticePrefs.phoneOff")}
             control={
               prefs.data &&
               (phones > 0 ? (
@@ -70,13 +70,14 @@ export function NoticePrefsSection() {
                   {t("noticePrefs.on")}
                 </Chip>
               ) : (
-                <Button size="sm" icon="phone" onClick={() => setPhoneCode(true)}>
-                  {t("shell.openOnPhone")}
+                <Button size="sm" icon="phone" aria-label={t("shell.openOnPhone")} onClick={() => setPhoneCode(true)}>
+                  {t("noticePrefs.phoneOpen")}
                 </Button>
               ))
             }
           />
           <PrefRow id="notice-mac" icon="computerMac" label={t("noticePrefs.mac")} hint={t("noticePrefs.macHelp")} />
+          <SurfacePrefRow />
         </div>
         <OpenOnPhoneDialog open={phoneCode} onClose={() => setPhoneCode(false)} />
       </Card>
@@ -159,6 +160,8 @@ export function PrefRow({
 }) {
   const { t } = useTranslation();
   const toggle = isValidElement(control) && control.type === Switch;
+  // One button (or the chip that stands for its outcome) keeps the name's line at every width (`.settings-row--button`).
+  const button = isValidElement(control) && (control.type === Button || control.type === Chip);
   const switchId = toggle ? ((control.props as { id?: string }).id ?? `${id}-switch`) : undefined;
   const described = [hint && !onOpen && `${id}-help`, status && `${id}-status`].filter(Boolean).join(" ");
   const end = toggle
@@ -180,6 +183,15 @@ export function PrefRow({
       {lead ?? (icon && <Icon name={icon} size={16} />)}
     </span>
   );
+  const statusLine = status && (
+    <span
+      className="settings-row__status"
+      id={`${id}-status`}
+      title={onOpen && typeof status === "string" ? status : undefined}
+    >
+      {status}
+    </span>
+  );
   const words = (
     <span className={actions ? "settings-row__text" : "settings-row__text ac-actrow__text"}>
       {hint && !onOpen ? (
@@ -192,21 +204,18 @@ export function PrefRow({
       ) : (
         name
       )}
-      {status && (
-        <span className="settings-row__status" id={`${id}-status`}>
-          {status}
-        </span>
-      )}
+      {!actions && statusLine}
     </span>
   );
-  // The icon and the words are the line's words: controls under them start from the row's edge, never leaving the
-  // icon a column beside three lines.
+  // The icon and the name share a line; the status goes under them and the controls under or beside the whole, both
+  // from the row's edge, never leaving the icon a column beside three lines.
   if (actions)
     return (
       <div className="settings-row settings-row--lead settings-row--acts ac-actline">
         <span className="settings-row__lead">
           {face}
           {words}
+          {statusLine}
         </span>
         <span className="settings-row__end">{actions}</span>
       </div>
@@ -234,7 +243,9 @@ export function PrefRow({
       className={
         toggle
           ? "settings-row ac-actrow settings-row--lead settings-row--toggle"
-          : "settings-row ac-actrow settings-row--lead"
+          : button
+            ? "settings-row ac-actrow settings-row--lead settings-row--button"
+            : "settings-row ac-actrow settings-row--lead"
       }
     >
       {body}

@@ -1,11 +1,32 @@
 import { type AccountKind, isAccountKind, type PubSub, ROUTE_PROTOCOL, ROUTE_TIMEOUT_MS } from "@agenteschat/adapters";
 import { and, asc, type Database, type Executor, eq, isNotNull, isNull, schema } from "@agenteschat/db";
+import { compareInOrder } from "@agenteschat/providers/plans";
 import { recordPlanUsage, toolOff } from "./brains/claude-code";
 import { publishChannelEvent } from "./events";
 import type { MachineCaller } from "./machine-hub";
 import { parseRouterJson, RouterSkip, type RouterStrategy, routerPrompt, scoresOf } from "./router";
 
-const { agents, machineAccounts, machines } = schema;
+const { agents, instanceTelemetry, machineAccounts, machines } = schema;
+
+/** Never changes after the migration that sets it, so read once per database. */
+const fallbackOf = new WeakMap<object, Promise<boolean>>();
+
+/**
+ * Whether this installation lets a person's own plan pick who answers: only one that had a workspace before it
+ * became opt-in (`instance_telemetry.router_plan_fallback`). A new installation never routes on anyone's plan.
+ */
+export function routerPlanFallback(db: Executor): Promise<boolean> {
+  let known = fallbackOf.get(db);
+  if (!known) {
+    known = db
+      .select({ on: instanceTelemetry.routerPlanFallback })
+      .from(instanceTelemetry)
+      .where(eq(instanceTelemetry.id, 1))
+      .then(([row]) => row?.on === true);
+    fallbackOf.set(db, known);
+  }
+  return known;
+}
 
 /** A plan sign-in that may pick who answers its owner's messages (ADR 0074 §3). */
 export interface PlanSignIn {
@@ -21,11 +42,13 @@ export interface PlanSignIn {
 
 /**
  * The plan sign-ins that may pick who answers, `userId`'s own (or anyone's, for `ai-status`), Claude before
- * ChatGPT, the most recently used first: an active CLI sign-in the person made (never a coding plan's key)
+ * ChatGPT, each in the order of use (`compareInOrder`), the computer's own sign-ins after: an active CLI sign-in the
+ * person made (never a coding plan's key)
  * that one of their own agents thinks with, once, and the computer's own Claude Code sign-in where the person
  * paired that computer, one of their agents thinks with it and it is signed in with a plan (`claude.ai`). Codex
  * doesn't say how it is signed in, so a computer's own Codex sign-in never counts. Only computers online now
  * that speak `brain.route`, aren't paused and would run it: not on Windows, and with that CLI switched on there.
+ * None where the installation keeps people's plans out of routing (`routerPlanFallback`).
  */
 export async function planSignInsOf(
   db: Executor,
@@ -33,6 +56,7 @@ export async function planSignInsOf(
   orgId: string,
   userId?: string,
 ): Promise<PlanSignIn[]> {
+  if (!(await routerPlanFallback(db))) return [];
   const [lent, own] = await Promise.all([
     db
       .select({
@@ -40,7 +64,8 @@ export async function planSignInsOf(
         kind: machineAccounts.kind,
         machineId: machineAccounts.machineId,
         ownerId: machineAccounts.createdBy,
-        usedAt: machineAccounts.lastUsedAt,
+        useOrder: machineAccounts.useOrder,
+        createdAt: machineAccounts.createdAt,
         agentId: agents.id,
         handle: agents.handle,
       })
@@ -87,7 +112,7 @@ export async function planSignInsOf(
       )
       .orderBy(asc(agents.createdAt)),
   ]);
-  const found: (PlanSignIn & { usedAt: number })[] = [];
+  const found: (PlanSignIn & { useOrder: number | null; at: number })[] = [];
   for (const r of lent) {
     // One per account: one made for all agents thinks for several of them (protocol 29).
     // Cursor's, OpenCode's, Grok's and Antigravity's CLIs pick nobody (`brain.route` is Claude Code's and Codex's).
@@ -107,7 +132,8 @@ export async function planSignInsOf(
       accountId: r.accountId,
       kind: r.kind,
       ownerId: r.ownerId,
-      usedAt: r.usedAt?.getTime() ?? 0,
+      useOrder: r.useOrder,
+      at: r.createdAt.getTime(),
     });
   }
   // One per computer: its own sign-in is one folder, whichever agent thinks with it.
@@ -119,9 +145,11 @@ export async function planSignInsOf(
       accountId: null,
       kind: "claude_code",
       ownerId: r.ownerId,
-      usedAt: 0,
+      useOrder: null,
+      at: Number.MAX_SAFE_INTEGER,
     });
   }
+  const inOrder = compareInOrder(userId ?? null);
   const ids = [...new Set(found.map((s) => s.machineId))];
   const statuses = new Map(
     await Promise.all(ids.map(async (id) => [id, await hub.status(id).catch(() => null)] as const)),
@@ -134,8 +162,14 @@ export async function planSignInsOf(
       // A sign-in made with a key is neither a plan nor free.
       return s.accountId !== null || status.executors.claude?.authMethod === "claude.ai";
     })
-    .sort((a, b) => (a.kind === b.kind ? b.usedAt - a.usedAt : a.kind === "claude_code" ? -1 : 1))
-    .map(({ usedAt: _, ...s }) => s);
+    .sort((a, b) =>
+      a.kind === b.kind
+        ? Number(a.accountId === null) - Number(b.accountId === null) || inOrder(a, b) || a.at - b.at
+        : a.kind === "claude_code"
+          ? -1
+          : 1,
+    )
+    .map(({ useOrder: _, at: _at, ...s }) => s);
 }
 
 const tokens = (n: unknown) => (typeof n === "number" && Number.isFinite(n) ? Math.max(0, Math.round(n)) : 0);

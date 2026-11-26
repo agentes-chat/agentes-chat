@@ -58,6 +58,12 @@ export const NotificationSource = z.object({
     .optional()
     .openapi({ description: "`widget_alert`, `widget_failed`, `dashboard_proposal`: the board (ADR 0135)." }),
   widgetId: z.string().optional().openapi({ description: "`widget_alert`, `widget_failed`: the widget." }),
+  artifactId: z.string().optional().openapi({
+    description: "A message in a live file's conversation (ADR 0199): the file, opened with it at `messageId`.",
+  }),
+  codeSessionId: z.string().optional().openapi({
+    description: "A message in a code session's conversation (ADR 0215): the session, opened on the Code page.",
+  }),
   accountId: z
     .string()
     .optional()
@@ -108,6 +114,18 @@ const Notification = z
         .openapi({ description: "`join_request`: the first two people who asked, in the order they asked." }),
       diskUse: z.number().optional().openapi({ description: "`computer_disk_full`: the share of the disk in use." }),
       diskFreeGb: z.number().optional().openapi({ description: "`computer_disk_full`: the GB left on it." }),
+      since: z
+        .string()
+        .optional()
+        .openapi({ description: "`computer_down`, `computer_back`: when the outage began (ISO)." }),
+      runs: z
+        .number()
+        .int()
+        .optional()
+        .openapi({ description: "`computer_down`, `computer_back`: the runs that waited for the computer." }),
+      calls: z.number().int().optional().openapi({
+        description: "`computer_down`, `computer_back`: the webhook calls its agents' routines took meanwhile.",
+      }),
       failures: z
         .array(
           z.object({

@@ -262,7 +262,7 @@ describe("a row with no bubble in a DM", () => {
 });
 
 describe("a reply being written in Bolhas", () => {
-  test("no bubble while it works: the bar says it writes, and how long it has been at it", async () => {
+  test("no bubble while it works: the last row says it writes, and how long it has been at it", async () => {
     const state = seedState();
     const channelId = seedDm(state, { type: "agent", id: ADA_ID }, { body: "x" });
     const r = await renderApp(`/org/${ORG_ID}/dm/agent/${ADA_ID}`, { api: createFakeApi(withChatPrefs(state)) });
@@ -280,7 +280,9 @@ describe("a reply being written in Bolhas", () => {
     expect(document.querySelector('article[data-run-id="r-live"]')).toBeNull();
     const bar = document.querySelector('.ac-typing[data-active="true"]') as HTMLElement;
     expect(bar.querySelector(".ac-typing__text")?.textContent).toBe("Ada escrevendo…");
-    expect(bar.querySelector(".ac-typing__elapsed")?.textContent).toMatch(/\d s$/);
+    // Started a minute before the seed's clock: well past a minute by the real one.
+    expect(bar.querySelector(".run-tail__clock")?.textContent).not.toBe("");
+    expect(bar.closest(".working-tail")).not.toBeNull();
   });
 });
 
@@ -452,4 +454,13 @@ describe("opening at the last read message", () => {
     await openUnread({ openAt: "latest" });
     expect(document.querySelector(".channel__unread")).toBeNull();
   });
+});
+
+test("in bubbles, the cards under someone else's words are bubbles of that message", () => {
+  const looks = readFileSync(new URL("../src/chat/looks.css", import.meta.url), "utf8");
+  expect(looks).toMatch(
+    /\.ac-msg\[data-look="bubbles"\]:not\(\.ac-msg--own\)\s*\.ac-msg__body\s*:is\(\.ag-rc:not\(\.ag-rc--talk\), \.ag-rcg, \.ac-workline\.handed-line, \.rq\) \{\s*background: var\(--msg-bubble\);\s*box-shadow: none;\s*border-radius: 6px 18px 18px 6px;/,
+  );
+  expect(looks).toContain('.ac-msg[data-look="bubbles"]:not(.ac-msg--own) .rq > .ac-approval__sky {\n  display: none;');
+  expect(looks).toMatch(/\.ac-msg__body > \.ac-msg__text ~ :is\(\.ag-rcs, \.handed-line, \.rq\) \{\s*margin-top: 3px;/);
 });

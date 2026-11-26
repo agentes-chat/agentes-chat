@@ -51,20 +51,24 @@ export function whenWords(t: TFunction, locale: string, iso: string, now = new D
  * A request to join's chips, as on the web: "Not verified" only where nobody proved the address (a server without
  * email, or a request typed before codes), then when it was asked. A server from before codes sends only
  * `confirmed`, which meant the same there. A member's suggestion says who made it instead: nobody at that address
- * asked, and approving it sends the email invitation, so its address has nothing to prove here (ADR 0090 §7).
+ * asked, and approving it sends the email invitation, so its address has nothing to prove here (ADR 0090 §7). An
+ * outside collaborator's request says who they work for (ADR 0191).
  */
 export function requestChips(
   t: TFunction,
   locale: string,
-  r: Pick<JoinRequest, "createdAt" | "verified" | "confirmed" | "suggestedBy">,
+  r: Pick<JoinRequest, "createdAt" | "verified" | "confirmed" | "suggestedBy" | "outsideOf">,
   now = new Date(),
 ): { unverified: string | null; asked: string } {
   const by = r.suggestedBy ?? null;
+  const when = whenWords(t, locale, r.createdAt, now);
   return {
     unverified: by || (r.verified ?? r.confirmed) ? null : t("members.requests.unverified"),
-    asked: by
-      ? t("members.requests.suggested", { name: by, when: whenWords(t, locale, r.createdAt, now) })
-      : askedLabel(t, locale, r.createdAt, now),
+    asked: r.outsideOf
+      ? t("members.requests.outside", { outsideOf: r.outsideOf, when })
+      : by
+        ? t("members.requests.suggested", { name: by, when })
+        : askedLabel(t, locale, r.createdAt, now),
   };
 }
 
@@ -72,13 +76,15 @@ export function requestChips(
 export function waitingLine(
   t: TFunction,
   locale: string,
-  r: Pick<JoinRequest, "email" | "createdAt" | "verified" | "confirmed" | "suggestedBy">,
+  r: Pick<JoinRequest, "email" | "createdAt" | "verified" | "confirmed" | "suggestedBy" | "outsideOf">,
   now = new Date(),
 ) {
   const when = whenWords(t, locale, r.createdAt, now);
-  const how = r.suggestedBy
-    ? t("members.requests.suggested", { name: r.suggestedBy, when })
-    : t("members.requests.viaLink", { when });
+  const how = r.outsideOf
+    ? t("members.requests.outside", { outsideOf: r.outsideOf, when })
+    : r.suggestedBy
+      ? t("members.requests.suggested", { name: r.suggestedBy, when })
+      : t("members.requests.viaLink", { when });
   const { unverified } = requestChips(t, locale, r, now);
   return [how, r.email, unverified ? lowerFirst(unverified, locale) : null].filter(Boolean).join(" · ");
 }
@@ -88,9 +94,22 @@ export function focusedFirst<R extends { id: string }>(requests: readonly R[], f
   return [...requests].sort((a, b) => (a.id === focus ? 0 : 1) - (b.id === focus ? 0 : 1));
 }
 
+/** One name order per language, made once: `localeCompare` with a language builds a collator on every comparison. */
+const nameOrders = new Map<string, Intl.Collator>();
+const nameOrder = (locale?: string): Intl.Collator => {
+  const key = locale ?? "";
+  let order = nameOrders.get(key);
+  if (!order) {
+    order = new Intl.Collator(locale, { sensitivity: "base" });
+    nameOrders.set(key, order);
+  }
+  return order;
+};
+
 /** The people of the workspace as Membros lists them: by name, in the person's language's order. */
 export function membersByName<M extends { name: string }>(members: readonly M[], locale?: string): M[] {
-  return [...members].sort((a, b) => a.name.localeCompare(b.name, locale, { sensitivity: "base" }));
+  const order = nameOrder(locale);
+  return [...members].sort((a, b) => order.compare(a.name, b.name));
 }
 
 /**
@@ -123,21 +142,17 @@ export function memberLine(
   return `${handle}${roleLine(t, person, roles) ?? t("roles.member")} · ${lowerFirst(seen, locale)}`;
 }
 
+/** An outside collaborator's line on Membros (ADR 0191): "Outside · Northwind"; null for anyone else. */
+export const outsideLine = (t: TFunction, person: Pick<Person, "outsideOf">) =>
+  person.outsideOf ? `${t("members.outside.chip")} · ${person.outsideOf}` : null;
+
 /**
- * What a person's row offers in its menu, in order: a message to anyone but oneself, their cargos when the viewer may
- * give one (P11, "Cargos de Carla"), then removing them (or leaving, on one's own row) when the viewer may. Empty: the
- * row has no menu.
+ * What a person's row offers in its menu, in order: their cargos when the viewer may give one (P11, "Cargos de
+ * Carla"), then removing them (or leaving, on one's own row) when the viewer may. The message is the row's own button,
+ * so a plain member's rows have no menu. Empty: the row has no menu.
  */
-export function memberActions(
-  mine: boolean,
-  removable: boolean,
-  cargos = false,
-): ("dm" | "roles" | "remove" | "leave")[] {
-  return [
-    ...(mine ? [] : (["dm"] as const)),
-    ...(cargos ? (["roles"] as const) : []),
-    ...(removable ? ([mine ? "leave" : "remove"] as const) : []),
-  ];
+export function memberActions(mine: boolean, removable: boolean, cargos = false): ("roles" | "remove" | "leave")[] {
+  return [...(cargos ? (["roles"] as const) : []), ...(removable ? ([mine ? "leave" : "remove"] as const) : [])];
 }
 
 /** The people who may invite here (ADR 0085): the owners, and whoever holds a role that gives it. */
@@ -190,18 +205,22 @@ export const invitationExpired = (
 export function invitationLine(
   t: TFunction,
   locale: string,
-  invitation: Pick<InvitationWithStatus, "role" | "roleIds" | "expiresAt"> & {
+  invitation: Pick<InvitationWithStatus, "role" | "roleIds" | "expiresAt" | "undelivered"> & {
     status?: InvitationWithStatus["status"];
   },
   roles: readonly OrgRole[],
   extra: { resentUntil?: string | undefined; sender?: string | null | undefined } = {},
   now = new Date(),
 ) {
-  const state = extra.resentUntil
-    ? t("members.invitations.resentState", { date: formatShortDate(locale, extra.resentUntil) })
-    : invitationExpired(invitation, now)
-      ? t("members.invitations.expired", { when: whenWords(t, locale, invitation.expiresAt, now) })
-      : t("members.invitations.expires", { left: timeLeft(t, invitation.expiresAt, now) ?? "" });
+  const expired = invitationExpired(invitation, now);
+  const state =
+    invitation.undelivered && !expired
+      ? t(`members.invitations.undelivered.${invitation.undelivered}`)
+      : extra.resentUntil
+        ? t("members.invitations.resentState", { date: formatShortDate(locale, extra.resentUntil) })
+        : expired
+          ? t("members.invitations.expired", { when: whenWords(t, locale, invitation.expiresAt, now) })
+          : t("members.invitations.expires", { left: timeLeft(t, invitation.expiresAt, now) ?? "" });
   return [invitationRoles(t, invitation, roles), extra.sender, lowerFirst(state, locale)].filter(Boolean).join(" · ");
 }
 
@@ -444,7 +463,7 @@ export interface ChannelPick {
 }
 
 /**
- * Canais' groups: what the picked cargos bring first ("Do cargo Suporte"), then the rest in the sidebar's categories
+ * Canais' groups: what the picked cargos bring first ("Do cargo Suporte"), then the rest in the sidebar's sectors
  * and order, #general on top, ticked and fixed. On offer, as the server takes them: the public channels, the private
  * ones the viewer is in, and those limited to a picked cargo. A search keeps the ones it names, and a group left
  * without any goes.
@@ -454,9 +473,9 @@ export function channelPicks(
   args: {
     channels: readonly Pick<
       Channel,
-      "id" | "name" | "visibility" | "isMember" | "audienceRoleIds" | "categoryId" | "position"
+      "id" | "name" | "visibility" | "isMember" | "audienceRoleIds" | "groupId" | "position"
     >[];
-    categories: readonly { id: string; name: string }[];
+    sectors: readonly { id: string; name: string }[];
     roles: readonly OrgRole[];
     draft: Pick<InviteDraft, "roleIds" | "added" | "removed">;
     query?: string;
@@ -488,7 +507,7 @@ export function channelPicks(
   const rest = offered.filter((c) => !own.includes(c.id));
   return [
     ...(mine.length ? [{ title: fromCargosTitle(t, roles, draft.roleIds), picks: mine.map(pick) }] : []),
-    ...channelGroups(rest, args.categories).map((g) => ({ title: g.name, picks: g.channels.map(pick) })),
+    ...channelGroups(rest, args.sectors).map((g) => ({ title: g.name, picks: g.channels.map(pick) })),
   ];
 }
 
@@ -515,7 +534,7 @@ export function agentPicks(
   t: TFunction,
   args: {
     agents: readonly Agent[];
-    viewer: { userId: string; managesAgents: boolean };
+    viewer: { userId: string };
     roles: readonly OrgRole[];
     draft: Pick<InviteDraft, "roleIds" | "added" | "removed">;
     ownerName: (userId: string | null) => string | null;
@@ -531,7 +550,10 @@ export function agentPicks(
   const pick = (a: Agent): AgentPick => {
     const owners = args.mailboxOwners(a.id);
     const kind = inviteAgentCase(a, viewer, own, owners ?? []);
-    const owner = args.ownerName(a.ownerUserId);
+    // A role that answers for it is named as its owner (ADR 0085, addendum of 2026-11-21).
+    const owner = a.ownerRoleId
+      ? (roles.find((r) => r.id === a.ownerRoleId)?.name ?? null)
+      : args.ownerName(a.ownerUserId);
     const sub =
       kind === "everyone"
         ? a.role
@@ -569,11 +591,8 @@ export function agentPicks(
 }
 
 /** Whether Agentes asks whose mailboxes an agent holds: restricted, not a picked cargo's, and the viewer's to open. */
-export const asksMailboxes = (
-  a: Agent,
-  viewer: { userId: string; managesAgents: boolean },
-  cargoAgentIds: readonly string[],
-) => inviteAgentCase(a, viewer, cargoAgentIds) === "opens";
+export const asksMailboxes = (a: Agent, viewer: { userId: string }, cargoAgentIds: readonly string[]) =>
+  inviteAgentCase(a, viewer, cargoAgentIds) === "opens";
 
 /**
  * The lines under Agentes: a person who won't talk to agents (neither Todos nor a picked cargo lets them, the field
@@ -586,7 +605,7 @@ export function agentLines(
     roleIds: readonly string[];
     agents: readonly Agent[];
     agentIds: readonly string[];
-    viewer: { userId: string; managesAgents: boolean };
+    viewer: { userId: string };
   },
 ): { off: boolean; lines: string[] } {
   const everyone = everyoneOf(args.roles);
@@ -617,16 +636,18 @@ export function agentLines(
 export function requestLine(
   t: TFunction,
   locale: string,
-  r: Pick<JoinRequest, "createdAt" | "suggestedBy" | "link">,
+  r: Pick<JoinRequest, "createdAt" | "suggestedBy" | "link" | "outsideOf">,
   gives: readonly string[],
   now = new Date(),
 ) {
   const when = whenWords(t, locale, r.createdAt, now);
-  const how = r.suggestedBy
-    ? t("members.requests.suggested", { name: r.suggestedBy, when })
-    : r.link?.createdBy
-      ? t("invites.viaLinkOf", { name: r.link.createdBy, when })
-      : t("members.requests.viaLink", { when });
+  const how = r.outsideOf
+    ? t("members.requests.outside", { outsideOf: r.outsideOf, when })
+    : r.suggestedBy
+      ? t("members.requests.suggested", { name: r.suggestedBy, when })
+      : r.link?.createdBy
+        ? t("invites.viaLinkOf", { name: r.link.createdBy, when })
+        : t("members.requests.viaLink", { when });
   return [how, ...gives].join(" · ");
 }
 

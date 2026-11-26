@@ -94,7 +94,7 @@ export async function markChannelDeleted(tx: Executor, orgId: string, channelId:
       archivedAt: sql`coalesce(${channels.archivedAt}, now())`,
       deletedAt: new Date(),
       name: deletedChannelName(channelId),
-      categoryId: null,
+      groupId: null,
     })
     .where(and(eq(channels.id, channelId), isNull(channels.deletedAt)))
     .returning({ id: channels.id });

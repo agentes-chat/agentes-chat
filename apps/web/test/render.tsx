@@ -1,5 +1,6 @@
 import type { ApiClient, SocketFactory } from "@agenteschat/client";
 import { errorText } from "@agenteschat/client/lib/errors";
+import { shownWhole } from "@agenteschat/client/lib/message-length";
 import { domWindow } from "@agenteschat/ui/testing/dom";
 import {
   createMemoryHistory,
@@ -23,6 +24,7 @@ import { STORAGE_KEYS, sessionStore } from "@/lib/storage";
 import { createToastStore } from "@/lib/toast";
 import { RealtimeProvider } from "@/realtime/context";
 import { routeTree } from "@/routeTree.gen";
+import { fakeLiveOf } from "./fake-api";
 import { createFakeAuth } from "./fake-auth";
 import { fakeSockets } from "./fake-socket";
 
@@ -140,7 +142,8 @@ export async function renderPage(
   },
 ) {
   forgetExits();
-  const sockets = fakeSockets();
+  // A live file's socket reaches the fake API's live server (ADR 0196); the rest are the test's to drive.
+  const sockets = fakeSockets({ live: fakeLiveOf.get(options.api)?.server });
   const createSocket = options.createSocket ?? sockets.factory;
   const services = makeServices(options.api, options.auth, createSocket);
   const me = await options.api.account.me();
@@ -191,10 +194,12 @@ export async function renderApp(
     forgetComposerDrafts();
     sessionStore.remove(STORAGE_KEYS.flowReturn);
   }
+  // Messages shown whole live as long as the app does: a reload, or the next test, starts with none.
+  shownWhole.clear();
   // Each app starts in its own language (pt-BR), whatever page language a test before it showed (`showIn`).
   document.documentElement.lang = "";
   forgetExits();
-  const sockets = fakeSockets();
+  const sockets = fakeSockets({ live: fakeLiveOf.get(options.api)?.server });
   // An ended session is answered as the app answers it (`main.tsx`).
   const services: AppServices = makeServices(options.api, options.auth, options.createSocket ?? sockets.factory, () =>
     backToSignIn({ router, ...services }),

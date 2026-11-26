@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { type AppLocale, localeInfo } from "@agenteschat/i18n/locale";
 /**
  * At most `max` UTF-16 units of `text`, never half of a pair (an emoji) at the end: Postgres refuses jsonb that
@@ -7,6 +8,46 @@ export const cutText = (text: string, max: number) => text.slice(0, max).replace
 
 /** `cutText` for text people read: a cut ends in "…", never passing for the whole. */
 export const cutMarked = (text: string, max: number) => (text.length > max ? `${cutText(text, max - 1)}…` : text);
+
+/**
+ * A JSON object or array as compact JSON within `max` characters, its longest strings shortened first (each cut one
+ * ends in "…"): every key, number and short value stays, where a cut at the end drops whole fields. Null when the text
+ * isn't one, when even its keys alone don't fit, or when written again it would say another number (an id past 2^53).
+ */
+export function shortenJson(text: string, max: number): string | null {
+  let value: unknown;
+  try {
+    value = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  if (typeof value !== "object" || value === null || changesNumbers(value)) return null;
+  const capped = (cap: number) =>
+    JSON.stringify(value, (_key, v) => (typeof v === "string" && v.length > cap ? `${cutText(v, cap)}…` : v));
+  if (capped(0).length > max) return null;
+  let [lo, hi] = [0, text.length];
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    if (capped(mid).length <= max) lo = mid;
+    else hi = mid - 1;
+  }
+  return capped(lo);
+}
+
+/** A parsed JSON value holding a number that `JSON.stringify` would not write back as it was read. */
+const changesNumbers = (v: unknown): boolean =>
+  typeof v === "number"
+    ? !Number.isFinite(v) || (Number.isInteger(v) && !Number.isSafeInteger(v))
+    : typeof v === "object" && v !== null && Object.values(v).some(changesNumbers);
+
+/** A sentence's words as they compare: lower case, no accents, no punctuation or emoji, single spaces. */
+export const plainWords = (s: string) =>
+  s
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/\p{M}/gu, "")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
 
 /** "Ana's", for the English the agents read. */
 export const possessive = (name: string) => `${name}'s`;
@@ -45,6 +86,19 @@ export function wordCount(text: string) {
 }
 
 /** `cutText` from the end: the last `max` units, never half of a pair at the start. */
+/**
+ * `text` without the characters `strip` takes at its ends (`"end"`: only at its end), read by index. Not by a pattern
+ * like `/^-+|-+$/g`: titles, names and paths come from people and programs, and such a pattern reads each run that
+ * doesn't reach the end again from each of its characters, quadratic in the run's length.
+ */
+export function trimEdges(text: string, strip: (c: string) => boolean, edges: "both" | "end" = "both"): string {
+  let start = 0;
+  let end = text.length;
+  if (edges === "both") while (start < end && strip(text.charAt(start))) start++;
+  while (end > start && strip(text.charAt(end - 1))) end--;
+  return text.slice(start, end);
+}
+
 export const cutTextEnd = (text: string, max: number) =>
   text.slice(Math.max(0, text.length - max)).replace(/^[\uDC00-\uDFFF]/, "");
 
@@ -55,6 +109,24 @@ export const stringsOf = (value: unknown): string[] =>
 /** `value` when it is a whole number from `min` to `max`, else null: a stored hour or weekday that may hold anything. */
 export const wholeIn = (value: unknown, min: number, max: number): number | null =>
   typeof value === "number" && Number.isInteger(value) && value >= min && value <= max ? value : null;
+
+/** A JSON object, never an array: what Postgres's `jsonb_typeof` calls `object`. */
+export const isJsonObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+/** What sits at a dot path in a JSON value (`conversation.id`, `items.0.id`), else undefined. */
+export const valueAtPath = (value: unknown, path: string) =>
+  path
+    .split(".")
+    .reduce<unknown>((v, k) => (v && typeof v === "object" ? (v as Record<string, unknown>)[k] : undefined), value);
+
+/** `value` when it is a finite number from `min` to `max`, else null: a stored measure that may hold anything. */
+export const numberIn = (value: unknown, min: number, max: number): number | null =>
+  typeof value === "number" && Number.isFinite(value) && value >= min && value <= max ? value : null;
+
+/** A measure the database worked out, to the nearest whole; null where it measured nothing. */
+export const wholeOrNull = (value: unknown): number | null =>
+  value === null || value === undefined ? null : Math.round(Number(value));
 
 /** Postgres text and jsonb refuse NUL and lone UTF-16 surrogates: `text` without either. */
 export const pgSafeText = (text: string) =>
@@ -98,6 +170,15 @@ export function textOfBytes(bytes: Uint8Array): string | null {
   }
 }
 
+/** A moment as m:ss (h:mm:ss past an hour). */
+export function clockOf(seconds: number): string {
+  const s = Math.floor(seconds);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const ss = String(s % 60).padStart(2, "0");
+  return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${ss}` : `${m}:${ss}`;
+}
+
 /** `2.3 MB`, `12 KB`, `512 bytes`, `50.0 GB`: sizes in the English agents read. */
 export function formatBytes(n: number) {
   if (n < 1024) return `${n} bytes`;
@@ -124,6 +205,17 @@ export function dayAndTime(at: Date, timeZone: string, locale: AppLocale) {
 export function utcDayMs(day: string) {
   const ms = Date.parse(`${day}T00:00:00Z`);
   return /^2\d{3}-\d\d-\d\d$/.test(day) && !Number.isNaN(ms) && new Date(ms).toISOString().startsWith(day) ? ms : null;
+}
+
+/**
+ * The next time from `now` at `id`'s own moment of the UTC day (from a hash of it), and that day's date: daily work
+ * per workspace lands spread over the whole day, each at the same time every day, never all at once after a tick.
+ */
+export function dailySlot(id: string, now: Date): { at: Date; day: string } {
+  const day = 86_400_000;
+  const at = now.getTime() - (now.getTime() % day) + (createHash("sha256").update(id).digest().readUInt32BE(0) % day);
+  const slot = new Date(at < now.getTime() ? at + day : at);
+  return { at: slot, day: slot.toISOString().slice(0, 10) };
 }
 
 /** The value under `key`, made and kept the first time it is asked for. */
@@ -174,3 +266,43 @@ export function tableToCsv(columns: string[], rows: string[][]): string {
   const cell = (v: string) => (/[",\r\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
   return [columns, ...rows].map((r) => r.map(cell).join(",")).join("\r\n");
 }
+
+/**
+ * A Markdown link or image: its words, its address. Every part is bounded or stops at the next `[`, so a text of
+ * nothing but brackets is read once, not once per bracket: this runs in the server's own thread on text a model wrote.
+ */
+const LINK = /!?\[([^\][]*)\]\(([^)\s]{0,2048})\)/g;
+
+/**
+ * Text with nothing an app turns into a link, whatever grammar the app reads it by. Two things hold for what comes
+ * back, anywhere in it, code included: no `](`, so nothing reads as a Markdown link, and no `://` with something
+ * right after it, so nothing reads as an address. Each app pairs backticks and fences its own way, so what one shows
+ * as code another shows as words: an address wrapped as code would be a link there.
+ *
+ * An address loses its `http://` or `https://`. Outside code a link or an image keeps its words alone (its address
+ * when it has none). What this takes for code is for looks only: there a link stays as typed, its joint pulled apart.
+ */
+export function inertLinks(text: string): string {
+  return (
+    text
+      .split(/(```[\s\S]*?```|`[^`\n]+`)/)
+      .map((part, i) =>
+        i % 2 ? part : part.replace(LINK, (_, words: string, address: string) => words.trim() || address),
+      )
+      .join("")
+      .replace(/https?:\/\//gi, "")
+      // What dropping a scheme put together again ("hthttps://tps://"), and any other scheme: pulled apart, which
+      // only adds a space and so puts nothing together.
+      .replace(/:\/\/(?=\S)/g, ":// ")
+      // Last: a scheme dropped between "]" and "(" makes a joint.
+      .replaceAll("](", "] (")
+  );
+}
+
+/** A JSON value with every string in it made inert (`inertLinks`). */
+export const inertJson = <T>(value: T): T =>
+  JSON.parse(JSON.stringify(value, (_key, v) => (typeof v === "string" ? inertLinks(v) : v)));
+
+/** Whole seconds from an ISO time to `now`, never negative; null when there is no readable time. */
+export const secondsBefore = (now: Date, at: string | null | undefined) =>
+  at && Number.isFinite(Date.parse(at)) ? Math.max(0, Math.round((now.getTime() - Date.parse(at)) / 1000)) : null;

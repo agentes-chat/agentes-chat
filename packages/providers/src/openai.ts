@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import OpenAI, { toFile } from "openai";
 import type {
   FunctionTool,
   Response,
@@ -6,7 +6,18 @@ import type {
   ResponseOutputItem,
   ResponseStreamEvent,
 } from "openai/resources/responses/responses";
-import { MODEL_CATALOG } from "./catalog";
+import { effortWithin, MODEL_CATALOG } from "./catalog";
+import {
+  decodeImage,
+  type ImageRequest,
+  type ImageResult,
+  type ImageUsage,
+  imageBlockedError,
+  imagePixels,
+  imageTypeOf,
+  MAX_IMAGES_PER_REQUEST,
+  type MadeImage,
+} from "./images";
 import {
   type ContentBlock,
   deniedError,
@@ -42,7 +53,14 @@ import {
  * - Mid-stream failures carry what was received (`ProviderError.partial`).
  */
 export function createOpenAIProvider(
-  options: { baseURL?: string; maxRetries?: number /** Tests only: scripted transport. */; fetch?: typeof fetch } = {},
+  options: {
+    baseURL?: string;
+    maxRetries?: number;
+    /** Ask reasoning models for their reasoning summaries (`reasoning.summary: "auto"`), sent to `onNote`. Default on. */
+    progressNotes?: boolean;
+    /** Tests only: scripted transport. */
+    fetch?: typeof fetch;
+  } = {},
 ): ModelProvider {
   const client = (apiKey: string, organization?: string, project?: string) =>
     new OpenAI({
@@ -56,7 +74,7 @@ export function createOpenAIProvider(
 
   return {
     id: "openai",
-    async stream(input, { apiKey, organization, project, onDelta }): Promise<ModelResult> {
+    async stream(input, { apiKey, organization, project, onDelta, onNote }): Promise<ModelResult> {
       const request = laidOut(input);
       const partial: PartialUsage = {
         inputTokens: null,
@@ -66,8 +84,8 @@ export function createOpenAIProvider(
         outputChars: 0,
       };
       const info = MODEL_CATALOG[request.model];
-      const effort = request.effort === "none" && info?.leastThinking !== "off" ? "low" : request.effort;
-      try {
+      const effort = request.effort === "none" && info?.leastThinking !== "off" ? "low" : effortWithin(request.effort);
+      const call = async (summary: boolean) => {
         const stream = client(apiKey, organization, project).responses.stream(
           {
             model: request.model,
@@ -89,7 +107,9 @@ export function createOpenAIProvider(
                   },
                 }
               : {}),
-            ...(info?.reasoning && effort ? { reasoning: { effort } } : {}),
+            ...(info?.reasoning && effort
+              ? { reasoning: { effort, ...(summary ? { summary: "auto" as const } : {}) } }
+              : {}),
           },
           { signal: request.signal },
         );
@@ -99,6 +119,8 @@ export function createOpenAIProvider(
             onDelta(event.delta);
           } else if (event.type === "response.function_call_arguments.delta") {
             partial.outputChars += event.delta.length;
+          } else if (event.type === "response.reasoning_summary_text.done" && event.text.trim()) {
+            onNote?.(event.text.trim());
           }
         });
         const response = await stream.finalResponse();
@@ -107,14 +129,127 @@ export function createOpenAIProvider(
           throw new OpenAI.APIError(undefined, response.error ?? undefined, response.error?.message, undefined);
         }
         return fromResponse(response as unknown as Response);
+      };
+      // A model reasoning not at all (`none`) has nothing to summarize.
+      const summary = options.progressNotes !== false && Boolean(info?.reasoning && effort) && effort !== "none";
+      try {
+        try {
+          return await call(summary);
+        } catch (error) {
+          // An organization OpenAI hasn't verified is refused reasoning summaries: the same call goes without them.
+          if (!summary || !refusesSummary(error) || partial.outputChars > 0) throw error;
+          return await call(false);
+        }
       } catch (error) {
         const mapped = openAIError(error);
         if (partial.outputChars > 0) mapped.partial = partial;
         throw mapped;
       }
     },
+    generateImage: (request, { apiKey, organization, project }) =>
+      openAIImages(client(apiKey, organization, project), request),
   };
 }
+
+/** A 400 about reasoning summaries (an organization not verified for them): worth the call without them. */
+const refusesSummary = (error: unknown) =>
+  error instanceof OpenAI.BadRequestError && /summar|verif/i.test(error.message);
+
+/** A picture GPT Image refused to make: its moderation, in the API's codes or words. */
+const IMAGE_REFUSED =
+  /moderation_blocked|content_policy_violation|safety system|content policy|image_generation_user_error/i;
+
+/** A failure of the Images API in every adapter's words, a refused prompt as `imageBlockedError`. */
+function imageError(error: unknown): ProviderError {
+  if (error instanceof ProviderError) return error;
+  if (error instanceof OpenAI.APIError && error.status === 400) {
+    const said = saidIn(error);
+    if (IMAGE_REFUSED.test(`${error.code ?? ""} ${said ?? ""}`)) return imageBlockedError(said);
+  }
+  return openAIError(error);
+}
+
+/** GPT Image's first models take only their three sizes; the newer ones any `WIDTHxHEIGHT` in steps of 16. */
+const takesThreeSizes = (model: string) => /^gpt-image-1/.test(model) || /^dall-e/.test(model);
+
+/**
+ * Pictures over OpenAI's Images API, also any server that speaks it (ADR 0197, a workspace's endpoint, ADR 0146):
+ * `images.generate`, or `images.edit` with the references as the pictures to start from; `n` pictures a call, called
+ * again for the rest when a server makes fewer. GPT Image answers in base64 with token usage, asked here for medium
+ * quality WebP; another server (`compatible`) is asked for base64 (`response_format`) and sent one reference, the most
+ * every server takes, and a picture it answers with as an address is read with `fetchUrl`. A refused prompt is
+ * `imageBlockedError`; a failure after some pictures came returns those, with the failure in `error`.
+ */
+export async function openAIImages(
+  client: OpenAI,
+  request: ImageRequest,
+  options: { compatible?: boolean; fetchUrl?: (url: string) => Promise<Uint8Array> } = {},
+): Promise<ImageResult> {
+  const count = Math.max(1, Math.min(MAX_IMAGES_PER_REQUEST, Math.floor(request.count)));
+  const size = imagePixels(request.aspect, request.size ?? "1K", takesThreeSizes(request.model));
+  const refs = options.compatible ? (request.references ?? []).slice(0, 1) : (request.references ?? []);
+  const made: MadeImage[] = [];
+  const usage: ImageUsage = { textInputTokens: 0, imageInputTokens: 0, outputTokens: 0 };
+  let reported = false;
+  for (let call = 0; call < count && made.length < count; call++) {
+    const n = count - made.length;
+    const common = {
+      model: request.model,
+      prompt: request.prompt,
+      n,
+      size,
+      ...(options.compatible
+        ? { response_format: "b64_json" as const }
+        : { quality: "medium" as const, output_format: "webp" as const, output_compression: 90 }),
+    };
+    try {
+      const response =
+        refs.length > 0
+          ? await client.images.edit(
+              {
+                ...common,
+                image: await Promise.all(
+                  refs.map((r, i) =>
+                    toFile(Buffer.from(r.data, "base64"), `reference-${i + 1}.${extensionOf(r.mediaType)}`, {
+                      type: r.mediaType,
+                    }),
+                  ),
+                ),
+              },
+              { signal: request.signal },
+            )
+          : await client.images.generate(common, { signal: request.signal });
+      const u = response.usage;
+      if (u) {
+        reported = true;
+        const image = u.input_tokens_details?.image_tokens ?? 0;
+        usage.imageInputTokens += image;
+        usage.textInputTokens += u.input_tokens_details?.text_tokens ?? Math.max(0, u.input_tokens - image);
+        usage.outputTokens += u.output_tokens;
+      }
+      const before = made.length;
+      for (const item of response.data ?? []) {
+        if (made.length >= count) break;
+        if (typeof item.b64_json === "string" && item.b64_json) made.push(decodeImage(item.b64_json));
+        else if (typeof item.url === "string" && item.url && options.fetchUrl) {
+          const bytes = await options.fetchUrl(item.url);
+          const mediaType = imageTypeOf(bytes);
+          if (!mediaType) throw new ProviderError("could not read the provider's picture", true);
+          made.push({ mediaType, bytes });
+        }
+      }
+      if (made.length === before) throw new ProviderError("the provider sent no picture", true);
+    } catch (error) {
+      const failure = request.signal?.aborted ? new ProviderError("request aborted", false) : imageError(error);
+      if (made.length === 0) throw failure;
+      return { images: made, ...(reported ? { usage } : {}), error: failure };
+    }
+  }
+  return { images: made, ...(reported ? { usage } : {}) };
+}
+
+const extensionOf = (mediaType: string) =>
+  mediaType === "image/jpeg" ? "jpg" : mediaType === "image/webp" ? "webp" : mediaType === "image/gif" ? "gif" : "png";
 
 function toTools(request: ModelRequest): FunctionTool[] {
   return stableToolsFirst(request.tools ?? []).map((t) => ({

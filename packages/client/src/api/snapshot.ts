@@ -1,7 +1,8 @@
 import { type DehydratedState, dehydrate, hydrate, type Query, type QueryClient } from "@tanstack/react-query";
+import { artifactRefs, isCardKind } from "../lib/artifacts";
 import { ME_HASH } from "./keys";
 import { MISSIONS_WAITING_COUNT } from "./missions";
-import type { Me, Message } from "./types";
+import type { Artifact, Me, Message } from "./types";
 
 /**
  * A snapshot of the conversations on this device: opening the app shows the
@@ -29,7 +30,42 @@ export const SNAPSHOT_CHATS = 10;
 export const SNAPSHOT_MESSAGES = 50;
 /** Older snapshots are ignored (the app loads from the server). */
 export const SNAPSHOT_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+/** A change's longest wait to be saved, unless the app asks for another (`SnapshotOptions.saveAfterMs`). */
 const SAVE_DELAY_MS = 2_000;
+/** A save that is due waits for a quiet moment of the thread, never longer than this. */
+const IDLE_WAIT_MS = 5_000;
+
+export interface SnapshotOptions {
+  /**
+   * How long after a change the next save runs; the changes in between ride along with it. A save is the whole
+   * snapshot (every list and the recent chats turned into one string) on the thread that draws, so an app where that
+   * thread also moves the screens (the phone) saves less often and on `flush` when it goes to the background.
+   */
+  saveAfterMs?: number;
+}
+
+type IdleCallbacks = {
+  requestIdleCallback?: (run: () => void, options: { timeout: number }) => unknown;
+  cancelIdleCallback?: (handle: unknown) => void;
+};
+
+/**
+ * Runs `run` once the thread is idle (at the latest after `IDLE_WAIT_MS`) where the platform says when (a browser, the
+ * phone), else on the next turn. Never at once, so the caller holds the returned cancel before `run` can start.
+ */
+function whenIdle(run: () => void): () => void {
+  const idle = globalThis as unknown as IdleCallbacks;
+  if (typeof idle.requestIdleCallback === "function") {
+    try {
+      const handle = idle.requestIdleCallback(run, { timeout: IDLE_WAIT_MS });
+      return () => idle.cancelIdleCallback?.(handle);
+    } catch {
+      // A platform that has the call but can't serve it: the next turn instead.
+    }
+  }
+  const timer = setTimeout(run, 0);
+  return () => clearTimeout(timer);
+}
 
 interface Snapshot {
   v: number;
@@ -55,23 +91,72 @@ const ORG_LISTS = new Set([
   "overview",
   "issues-view",
 ]);
-/** `["org", orgId, "channel", channelId, <part>]`: kept for the chats in the snapshot. */
-const CHAT_PARTS = new Set(["messages", "roster", "members"]);
+/**
+ * `["org", orgId, "channel", channelId, <part>]`: kept for the chats in the snapshot. With its messages, what changes
+ * their rows (the agents' questions to each other here, and the threads' links below, `chatThreads`): a chat opened
+ * from the snapshot shows its rows whole, and none grows under the person once the server answers.
+ */
+const CHAT_PARTS = new Set(["messages", "roster", "members", "consultations"]);
 
 const isMe = (key: readonly unknown[]) => key.length === 1 && key[0] === "me";
+/** `["org", orgId, "threads", "channel", channelId, "all"]`: a chat's threads, for the links under their roots. */
+const chatThreads = (key: readonly unknown[]) =>
+  key.length === 6 && key[0] === "org" && key[2] === "threads" && key[3] === "channel" && key[5] === "all"
+    ? { chat: `${key[1]}/${key[4]}`, part: "threads" }
+    : null;
 const chatPart = (key: readonly unknown[]) =>
   key.length === 5 && key[0] === "org" && key[2] === "channel" && CHAT_PARTS.has(key[4] as string)
     ? { chat: `${key[1]}/${key[3]}`, part: key[4] as string }
-    : null;
+    : chatThreads(key);
 const isOrgList = (key: readonly unknown[]) => key.length === 3 && key[0] === "org" && ORG_LISTS.has(key[2] as string);
 /** `["org", orgId, "missions", "list", <query>]`: only the sidebar's count of the missions waiting for me. */
 const WAITING_COUNT = JSON.stringify(MISSIONS_WAITING_COUNT);
 const isWaitingCount = (key: readonly unknown[]) =>
   key.length === 5 && key[0] === "org" && key[2] === "missions" && key[3] === "list" && key[4] === WAITING_COUNT;
+/**
+ * `["org", orgId, "threads", "list", <filters>]`: the threads and missions of the conversation list. Without them a
+ * launch drew the list from its channels and DMs alone, and the threads came in from the server a moment later,
+ * between them, moving every row under them (seen on a phone). Only their first page is written (`firstPage`).
+ */
+const isThreadList = (key: readonly unknown[]) =>
+  key.length === 5 && key[0] === "org" && key[2] === "threads" && key[3] === "list";
 /** Always kept (a chat's parts only for the most recent chats). */
-const isKept = (key: readonly unknown[]) => isMe(key) || isOrgList(key) || isWaitingCount(key);
+const isKept = (key: readonly unknown[]) => isMe(key) || isOrgList(key) || isWaitingCount(key) || isThreadList(key);
 
-/** The queries worth keeping: the allow-list, loaded, and only the chats most recently updated. */
+/** A paged list's first page only: the newest, what a launch shows; the rest loads as the person scrolls. */
+export function firstPage(data: unknown): unknown {
+  if (!data || typeof data !== "object") return data;
+  const { pages, pageParams } = data as { pages?: unknown; pageParams?: unknown };
+  if (!Array.isArray(pages) || !Array.isArray(pageParams)) return data;
+  return { pages: pages.slice(0, 1), pageParams: pageParams.slice(0, 1) };
+}
+
+/** A kept chat's cards at most (`cardQueries`, each with its state): a block's page can be large. */
+const SNAPSHOT_CARDS = 40;
+
+/**
+ * What the kept chats' cards show (a live block, a vote, a question card: `["org", orgId, "artifacts", "one", …]`,
+ * `polls`, `choices`, `blocks`), so a chat opened from the snapshot draws them whole too, never a file's tile that
+ * turns into the card when the server answers.
+ */
+function cardQueries(loaded: Query[], chats: Query[]): Query[] {
+  const ids = new Set(
+    chats.flatMap((q) =>
+      chatPart(q.queryKey)?.part === "messages" && Array.isArray(q.state.data)
+        ? trimMessages(q.state.data as Message[]).flatMap((m) => artifactRefs(m.meta).map((r) => r.id))
+        : [],
+    ),
+  );
+  return loaded
+    .filter(({ queryKey: [org, , list, a, b], state }) => {
+      if (org !== "org") return false;
+      if (list === "artifacts") return a === "one" && ids.has(b as string) && isCardKind((state.data as Artifact).kind);
+      return (list === "polls" || list === "choices" || list === "blocks") && ids.has(a as string);
+    })
+    .slice(0, SNAPSHOT_CARDS * 2);
+}
+
+/** The queries worth keeping: the allow-list, loaded, and only the chats most recently updated, with their cards. */
 export function pickSnapshotQueries(queries: Query[], chats = SNAPSHOT_CHATS): Query[] {
   const loaded = queries.filter((q) => q.state.status === "success" && q.state.data != null);
   const recent = loaded
@@ -80,25 +165,44 @@ export function pickSnapshotQueries(queries: Query[], chats = SNAPSHOT_CHATS): Q
     .slice(0, chats)
     .map((q) => chatPart(q.queryKey)?.chat);
   const kept = new Set(recent);
-  return loaded.filter((q) => {
+  const picked = loaded.filter((q) => {
     if (isKept(q.queryKey)) return true;
     const c = chatPart(q.queryKey);
     return c !== null && kept.has(c.chat);
   });
+  return [...picked, ...cardQueries(loaded, picked)];
 }
 
 /** A conversation's newest messages, without the ones still sending or that failed (they live in memory only). */
 export const trimMessages = (list: Message[], max = SNAPSHOT_MESSAGES): Message[] =>
   list.filter((m) => !m.local).slice(-max);
 
-export function createSnapshot(qc: QueryClient, storage: SnapshotStorage) {
+export function createSnapshot(qc: QueryClient, storage: SnapshotStorage, options: SnapshotOptions = {}) {
+  const saveAfterMs = options.saveAfterMs ?? SAVE_DELAY_MS;
   let owner: string | null = null;
+  /** A save waiting for its time, then for a quiet moment (`whenIdle`). */
   let timer: ReturnType<typeof setTimeout> | null = null;
+  let idle: (() => void) | null = null;
+  /** Counts the wipes: a write that was on its way while one ran is taken back. */
+  let wipes = 0;
+  /**
+   * Whether something kept changed since the last save, as `start` follows the cache: a flush with nothing new writes
+   * nothing. Not followed (no `start`), a flush always writes.
+   */
+  let dirty = true;
+  let following = false;
 
   const currentOwner = () => qc.getQueryData<Me | null>(["me"])?.user.id ?? null;
 
-  const save = async () => {
+  const cancel = () => {
+    if (timer) clearTimeout(timer);
     timer = null;
+    idle?.();
+    idle = null;
+  };
+
+  const save = async () => {
+    dirty = false;
     const me = qc.getQueryData<Me | null>(["me"]);
     if (!me) return;
     // Waiting for its deletion: the server alone says so at every opening, never a copy from disk whose session may
@@ -115,16 +219,30 @@ export function createSnapshot(qc: QueryClient, storage: SnapshotStorage) {
     for (const q of state.queries) {
       if (chatPart(q.queryKey)?.part === "messages" && Array.isArray(q.state.data)) {
         q.state = { ...q.state, data: trimMessages(q.state.data as Message[]) };
+      } else if (isThreadList(q.queryKey)) {
+        q.state = { ...q.state, data: firstPage(q.state.data) };
       }
     }
     const snapshot: Snapshot = { v: SNAPSHOT_VERSION, savedAt: Date.now(), owner: who, state };
+    const at = wipes;
     await storage.write(JSON.stringify(snapshot)).catch(() => {});
+    // Signed out while it was being written: nothing of that person stays.
+    if (wipes !== at) await storage.remove().catch(() => {});
+  };
+
+  /** Time for the save that waited: it runs at the thread's next quiet moment. */
+  const due = () => {
+    timer = null;
+    idle = whenIdle(() => {
+      idle = null;
+      void save();
+    });
   };
 
   const wipe = async () => {
     owner = null;
-    if (timer) clearTimeout(timer);
-    timer = null;
+    wipes += 1;
+    cancel();
     await storage.remove().catch(() => {});
   };
 
@@ -151,13 +269,22 @@ export function createSnapshot(qc: QueryClient, storage: SnapshotStorage) {
         return false;
       }
       owner = snapshot.owner;
-      hydrate(qc, snapshot.state);
+      // Show what was saved right away, then revalidate every restored query against the server on mount regardless of
+      // its `staleTime` (a change saved right before a reload, or elsewhere, must never sit behind a fresh snapshot).
+      hydrate(qc, {
+        ...snapshot.state,
+        queries: snapshot.state.queries.map((q) => ({ ...q, state: { ...q.state, isInvalidated: true } })),
+      });
       return true;
     },
 
-    /** Saves after changes (a couple of seconds after the last one) and drops the snapshot with its owner. Returns the stop. */
+    /**
+     * Saves after changes (`saveAfterMs` after the first one, at a quiet moment) and drops the snapshot with its owner.
+     * Returns the stop.
+     */
     start(): () => void {
-      return qc.getQueryCache().subscribe((event) => {
+      following = true;
+      const off = qc.getQueryCache().subscribe((event) => {
         const q = event.query;
         if (q.queryHash === ME_HASH) {
           if (event.type === "removed") return void wipe();
@@ -168,16 +295,26 @@ export function createSnapshot(qc: QueryClient, storage: SnapshotStorage) {
             if (who) void qc.resetQueries({ queryKey: ["org"] });
           }
         }
-        if (event.type !== "updated" && event.type !== "added") return;
+        // Only new data is worth a save: a request starting, failing or marked stale changes nothing kept.
+        if (event.type !== "updated" || (event.action.type !== "success" && event.action.type !== "setState")) return;
         if (!isKept(q.queryKey) && !chatPart(q.queryKey)) return;
-        if (!timer) timer = setTimeout(() => void save(), SAVE_DELAY_MS);
+        dirty = true;
+        if (!timer && !idle) timer = setTimeout(due, saveAfterMs);
       });
+      return () => {
+        following = false;
+        off();
+      };
     },
 
-    /** Saves now (the page is being hidden or the app goes to the background). */
+    /**
+     * Saves now (the page is being hidden or the app goes to the background), if anything kept changed since the last
+     * save: the whole snapshot is one string written on the thread that draws, and a stay away right after a save
+     * (the notification shade, a quick look at another app) has nothing new to write.
+     */
     flush: () => {
-      if (timer) clearTimeout(timer);
-      return save();
+      cancel();
+      return dirty || !following ? save() : Promise.resolve();
     },
 
     wipe,

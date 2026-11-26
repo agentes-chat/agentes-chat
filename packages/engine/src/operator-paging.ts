@@ -1,4 +1,4 @@
-import { type Database, eq, schema, sql } from "@agenteschat/db";
+import { type Database, eq, type SQL, schema, sql } from "@agenteschat/db";
 import { z } from "zod";
 import { UUID } from "./authority";
 import { encodeCursor } from "./cursor";
@@ -59,11 +59,29 @@ export const orgExists = async (db: Database, orgId: string) =>
       .where(eq(schema.organizations.id, orgId))
   ).length > 0;
 
+// An analytics read over many rows: compiling it costs more than it saves, and one that still runs long is stopped,
+// so a slow plan ends in an error and gives its connection back.
+export const heavyRead = (db: Database, statement: SQL) =>
+  db.transaction(async (tx) => {
+    await tx.execute(sql`set local jit = off`);
+    await tx.execute(sql`set local statement_timeout = '20s'`);
+    return tx.execute(statement);
+  });
+
 // What a JSON column or a job's name holds is returned only when shaped like what the code writes there: a code, an
 // id. Anything else in its place reads as absent, so text never leaves through a field meant for a code.
 export const CODE = /^[A-Za-z][\w.:/-]{0,99}$/;
 export const codeOf = (v: unknown) => (typeof v === "string" && CODE.test(v) ? v : null);
 export const uuidOf = (v: unknown) => (typeof v === "string" && UUID.test(v) ? v : null);
+const Instant = z.iso.datetime({ offset: true });
+/** A time a JSON column or a query holds, when it is written as an ISO 8601 instant: that instant, in UTC. */
+export function instantOf(v: unknown) {
+  const at = Instant.safeParse(v).success ? new Date(v as string) : null;
+  return at && !Number.isNaN(at.getTime()) ? at.toISOString() : null;
+}
+/** A word, when a list written in the code holds it: its shape alone would let any one word through as a fact. */
+export const listedOf = <T extends string>(list: readonly T[], v: unknown): T | null =>
+  list.find((word) => word === v) ?? null;
 /** An id or a name that may start with a digit (an account's id, a time zone, `owner/repository`): one word of it. */
 const WORD = /^[\w.:/+-]{1,200}$/;
 export const wordOf = (v: unknown) => (typeof v === "string" && WORD.test(v) ? v : null);

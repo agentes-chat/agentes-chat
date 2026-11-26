@@ -141,7 +141,7 @@ function socketsFor() {
     desktops.push(s);
     return s as unknown as ReturnType<SocketFactory>;
   };
-  return { factory, desktops };
+  return { factory, desktops, realtime };
 }
 
 /** Ada on a Linux computer of the workspace's, which serves screens; self-host, or with `cloud` the Cloud's own. */
@@ -160,9 +160,16 @@ async function backend(desktop: Partial<DesktopStatus>, cloud = false) {
   return { state, api, fake, machines, machine: m, sockets: socketsFor() };
 }
 
+/**
+ * Ada as the server sends her to me, the way the app hands her to the dialog: with what I may do with her (whether I
+ * manage her, `canManage`, ADR 0085 addendum of 2026-11-17).
+ */
+const adaOf = async (b: Awaited<ReturnType<typeof backend>>) =>
+  (await b.api.agents.list(ORG_ID)).find((a) => a.id === ADA_ID) as Agent;
+
 async function dialog(desktop: Partial<DesktopStatus> = RUNNING, cloud = false) {
   const b = await backend(desktop, cloud);
-  const ada = b.state.agents.find((a) => a.id === ADA_ID) as Agent;
+  const ada = await adaOf(b);
   let closed = 0;
   const r = await renderPage(<ComputerDialog agent={ada} open onClose={() => closed++} />, {
     api: b.api,
@@ -357,7 +364,7 @@ describe("the agent's screen in the computer dialog", () => {
     const b = await backend({ ...RUNNING, canControl: false, controlRefusal: "owner_plan" }, true);
     b.state.scopes[ADA_ID] = [...(b.state.scopes[ADA_ID] ?? []), { connectionId: null, scope: "browser:use" }];
     b.fake.settings.set(ADA_ID, { allowedDomains: null, available: true, reason: null, detail: null, machine: null });
-    const ada = b.state.agents.find((a) => a.id === ADA_ID) as Agent;
+    const ada = await adaOf(b);
     await renderPage(<ComputerDialog agent={ada} open onClose={() => {}} />, {
       api: b.api,
       org: true,
@@ -386,7 +393,7 @@ describe("the agent's screen in the computer dialog", () => {
     b.state.roles = (b.state.roles ?? []).map((r) =>
       r.kind === "everyone" ? { ...r, permissions: r.permissions.filter((p) => p !== "own_computers") } : r,
     );
-    const ada = b.state.agents.find((a) => a.id === ADA_ID) as Agent;
+    const ada = await adaOf(b);
     await renderPage(<ComputerDialog agent={ada} open onClose={() => {}} />, {
       api: b.api,
       org: true,
@@ -417,7 +424,6 @@ describe("the agent's screen in the computer dialog", () => {
     expect(rfb().options).toEqual({ shared: true });
     expect(rfb()).toMatchObject({
       viewOnly: true,
-      showDotCursor: false,
       qualityLevel: 3,
       compressionLevel: 2,
       scaleViewport: true,
@@ -437,6 +443,21 @@ describe("the agent's screen in the computer dialog", () => {
     expect(view().queryByRole("button", { name: "Recolher" })).toBeNull();
     // Watching gives no way to type into it.
     expect(view().queryByRole("textbox", { name: "Digitar no computador da Ada" })).toBeNull();
+  });
+
+  test("watching, the agent's pointer from the realtime socket draws its cursor over the screen", async () => {
+    const t = await dialog();
+    await connected();
+    const socket = t.sockets.realtime.last();
+    await act(async () => socket.open());
+    const pointer = { x: 640, y: 450, width: 1280, height: 900, act: "click" };
+    await act(async () =>
+      socket.push({ type: "event", scope: "user", event: { type: "agent.desktop.pointer", agentId: ADA_ID, pointer } }),
+    );
+    await settle(4);
+    const cursor = document.querySelector(".dsk-screen .brw-cur") as HTMLElement | null;
+    expect(cursor).not.toBeNull();
+    expect(cursor?.textContent).toContain("Ada");
   });
 
   test("Live once a picture is there: a screen that just started stays black a moment, and says Opening meanwhile", async () => {
@@ -612,7 +633,7 @@ describe("the agent's screen in the computer dialog", () => {
     await settle(4);
     expect(t.sockets.desktops.at(-1)?.url).toEndWith("&mode=control");
     expect(t.sockets.desktops[0]?.closed).toBe(true);
-    expect(rfb()).toMatchObject({ viewOnly: false, showDotCursor: true, qualityLevel: 6, focusOnClick: false });
+    expect(rfb()).toMatchObject({ viewOnly: false, qualityLevel: 6, focusOnClick: false });
     await connected();
     // The person's keys go to the screen at once, through a field over it.
     expect(document.activeElement === view().getByRole("textbox", { name: "Digitar no computador da Ada" })).toBe(true);
@@ -776,7 +797,7 @@ describe("the agent's screen in the computer dialog", () => {
     expect(ws.sent).toEqual([MODE("control")]);
     expect(rfb()).not.toBe(watching);
     expect(watching.canvas.isConnected).toBe(false);
-    expect(rfb()).toMatchObject({ viewOnly: false, showDotCursor: true, qualityLevel: 6, got: [[82, 70, 66]] });
+    expect(rfb()).toMatchObject({ viewOnly: false, qualityLevel: 6, got: [[82, 70, 66]] });
     expect(still()).not.toBeNull();
     expect(screen().getByText("Assumindo o controle…")).toBeTruthy();
     await connected();
@@ -832,7 +853,7 @@ describe("the agent's screen in the computer dialog", () => {
     await settle(4);
     expect(t.sockets.desktops).toHaveLength(1);
     expect(ws.sent).toEqual([MODE("control"), MODE("watch")]);
-    expect(rfb()).toMatchObject({ viewOnly: true, showDotCursor: false, qualityLevel: 3 });
+    expect(rfb()).toMatchObject({ viewOnly: true, qualityLevel: 3 });
     expect(sub()).toBe("Ao vivo · você está assistindo");
     expect(still()).not.toBeNull();
     expect(screen().queryByText("Abrindo o computador da Ada…")).toBeNull();
@@ -844,7 +865,7 @@ describe("the agent's screen in the computer dialog", () => {
     const b = await backend(RUNNING);
     const mine = { ...controlOf(ADA_ID, "u-walter"), id: "h-mine" };
     b.fake.handoffs.set(mine.id, mine);
-    const ada = b.state.agents.find((a) => a.id === ADA_ID) as Agent;
+    const ada = await adaOf(b);
     await renderPage(<ComputerDialog agent={ada} open onClose={() => undefined} />, {
       api: b.api,
       org: true,
@@ -956,7 +977,43 @@ describe("the agent's screen in the computer dialog", () => {
     await settle(4);
     expect(still()).toBeNull();
     expect(screen().getByText("Abrindo o computador da Ada…")).toBeTruthy();
-    expect(screen().getByText("Tentando de novo…")).toBeTruthy();
+    expect(screen().getByText("O Servidor de casa não está respondendo.")).toBeTruthy();
+  });
+
+  test("a screen that doesn't open says why with Tentar de novo, and after 2 minutes stops trying by itself", async () => {
+    const t = await dialog({ ...RUNNING, running: false });
+    expect(screen().getByText("Abrindo o computador da Ada…")).toBeTruthy();
+    expect(view().queryByRole("button", { name: "Tentar de novo" })).toBeNull();
+    // The computer was late: still opening, now with the cause and a way to try at once.
+    await act(async () => t.sockets.desktops[0]?.serverClose(4408, "timeout"));
+    await settle(4);
+    expect(screen().getByText("Abrindo o computador da Ada…")).toBeTruthy();
+    expect(screen().getByText("O Servidor de casa demorou a responder.")).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(/acord|dormi|desperta|wak|sleep/i);
+    await act(async () => new Promise((r) => setTimeout(r, 1100)));
+    await settle(4);
+    expect(t.sockets.desktops).toHaveLength(2);
+    // Two minutes on, a try that fails again is the last one: no spinner over an endless wait.
+    try {
+      setSystemTime(new Date(Date.now() + 121_000));
+      await act(async () => t.sockets.desktops[1]?.serverClose(1006));
+      await settle(4);
+      expect(screen().getByText("Não deu para abrir a tela da Ada.")).toBeTruthy();
+      expect(screen().getByText("A conexão caiu.")).toBeTruthy();
+      expect(screen().queryByText("Abrindo o computador da Ada…")).toBeNull();
+    } finally {
+      setSystemTime();
+    }
+    await act(async () => new Promise((r) => setTimeout(r, 1100)));
+    await settle(2);
+    expect(t.sockets.desktops).toHaveLength(2);
+    // Tentar de novo opens it afresh, its cause gone until a try fails again.
+    await click(view().getByRole("button", { name: "Tentar de novo" }));
+    expect(t.sockets.desktops).toHaveLength(3);
+    expect(screen().getByText("Abrindo o computador da Ada…")).toBeTruthy();
+    expect(screen().queryByText("A conexão caiu.")).toBeNull();
+    await connected();
+    expect(sub()).toBe("Ao vivo · você está assistindo");
   });
 
   test("a hand back keeps the last picture dimmed under Devolvendo à Ada… until the watcher draws, never the cold cover", async () => {
@@ -1441,14 +1498,14 @@ describe("the dialog's size (computer.css)", () => {
     // body's 20 px on every side (the head's inset) and the line under it, kept whether a line shows there or not,
     // and 42 px of the page above and below, so a notice along its top stays whole.
     const frame = rule(text, ".ac-dialog.cmp-dialog:where(:has(.dsk, .cmp-stage, .cmp-prep, .brw-ac.is-surface))");
-    expect(frame).toContain("--cmp-around: calc(124px + var(--cmp-line))");
+    expect(frame).toContain("--cmp-around: calc(128px + var(--cmp-line))");
     expect(frame).toContain("--cmp-room: calc(100dvh - 84px - var(--cmp-bar, 0px) - var(--cmp-around))");
     expect(frame).toContain("--cmp-screen: min(96vw - 40px, 1280px, var(--cmp-room) * 1280 / 900)");
     expect(frame).toContain("width: calc(var(--cmp-screen) + 40px)");
     expect(frame).toContain("height: calc(var(--cmp-screen) * 900 / 1280 + var(--cmp-around))");
     // Sized once: nothing that comes and goes (a banner, a request, the note) gives the window room of its own.
     expect(text).not.toMatch(/--cmp-(extra|over|under)/);
-    expect(text).toContain(".ac-dialog.cmp-dialog {\n  --cmp-button: var(--control-h-sm);\n  --cmp-line: 22px;\n}");
+    expect(text).toContain(".ac-dialog.cmp-dialog {\n  --cmp-line: 22px;\n}");
     // No state sizes the dialog on its own: no rule but the frame's (and full screen's) gives it a height.
     expect(text.match(/\n {0,2}height: calc\(var\(--cmp-screen\)[^;]*;/g)).toHaveLength(1);
     expect(rule(text, ".cmp-body")).toContain("padding: 20px");
@@ -1698,31 +1755,33 @@ describe("the dialog's size (computer.css)", () => {
     expect(document.querySelector(".dsk-line")).toBeNull();
   });
 
-  test("the head's row stands one gap between what shows: the close and full screen reach out by their glyphs' air", async () => {
-    // Full screen's arrows leave 2.7 of their icon's 20 units on each side; the dialog's × (the kit's) 5.2.
+  test("the head's icon buttons are whole 32 px squares 8 apart, with no plate under the pointer", async () => {
     const text = await css();
-    expect(rule(text, ".cmp-acts > .cmp-full")).toContain("--glyph-air: calc(var(--control-icon-sm) * 2.7 / 20)");
+    // Full screen keeps its whole box: no air of its own that would shrink its square or bring it over the close's.
+    expect(text).not.toContain("--glyph-air");
     const kit = await Bun.file(
       new URL("../../../packages/ui/src/styles/components.css", import.meta.url).pathname,
     ).text();
-    expect(rule(kit, ".ac-dialog__close > .ac-btn--glyph")).toContain(
-      "--glyph-air: calc(var(--control-icon-sm) * 5.2 / 20)",
+    // After the head's actions the kit's close is one more whole square, 8 from the one before it.
+    expect(rule(kit, ".ac-actline:has(> .ac-dialog__acts) + .ac-dialog__close > .ac-btn--glyph")).toContain(
+      "--glyph-air: 0px",
     );
-    // The kit reaches out by that air; its plate and ring keep to the box less it on every side, a square under the
-    // glyph, so they end where a neighbour's plate starts.
-    expect(rule(kit, ".ac-acts > .ac-btn--glyph")).toContain(
-      "margin-inline: calc(-1 * (var(--ghost-plate) + var(--glyph-air, 0px)))",
+    expect(rule(kit, ".ac-actline:has(> .ac-dialog__acts) + .ac-dialog__close")).toContain(
+      "margin-inline-start: calc(var(--space-2) + 2 * var(--ghost-plate) - var(--space-3))",
     );
-    expect(rule(kit, ".ac-btn--ghost.ac-btn--glyph::before")).toContain("inset: var(--glyph-air, 0px)");
-    expect(rule(kit, ".ac-btn--ghost.ac-btn--glyph > *")).toContain("position: relative");
-    expect(rule(kit, ".ac-btn--ghost.ac-btn--glyph:hover::before")).toContain("background: var(--plate)");
-    // Rings only for the keys (`trackInput`): with the pointer, a focused button looks as it does unfocused.
-    expect(rule(kit, "html:not([data-pointer]) .ac-btn--ghost.ac-btn--glyph:focus-visible::before")).toContain(
-      "box-shadow: var(--focus-ring)",
+    expect(
+      rule(
+        kit,
+        ".ac-acts > :is(.ac-btn--ghost.ac-btn--icon, .ac-btn--glyph):has(+ :is(.ac-btn--ghost.ac-btn--icon, .ac-btn--glyph))",
+      ),
+    ).toContain("margin-inline-end: calc(var(--space-2) - var(--ghost-plate) - var(--glyph-air, 0px))");
+    // A hover only brightens the icon.
+    const hover = rule(
+      kit,
+      ':is(.ac-dialog__head, .ac-details__head)\n  .ac-btn--ghost:is(.ac-btn--icon, .ac-btn--glyph):is(:hover, [aria-pressed="true"], [data-state="open"])',
     );
-    expect(rule(kit, "html:not([data-pointer]) .ac-btn--ghost.ac-btn--glyph:focus-visible")).toContain(
-      "box-shadow: none",
-    );
+    expect(hover).toContain("background: transparent");
+    expect(hover).toContain("color: var(--ink)");
     await dialog();
     await connected();
     expect(view().getByRole("button", { name: "Tela cheia" }).className).toContain("cmp-full ac-btn--glyph");
@@ -1755,27 +1814,17 @@ describe("the dialog's size (computer.css)", () => {
     expect(view().getByRole("button", { name: "Assumir o controle" }).classList.contains("cmp-take")).toBe(true);
   });
 
-  test("the head's controls sit on the name's capitals in every state, as every dialog's close does", async () => {
+  test("the head is one centred block: as much room over the face, the name and its line as under them, the controls on its middle", async () => {
     const text = await css();
-    const head = rule(text, ".cmp-dialog :is(.ac-dialog__acts, .ac-dialog__close)");
-    expect(head).toContain("align-self: flex-start");
-    // The name's 24 px line round a 32 px control (40 on touch), lifted to its capitals' middle as the kit lifts a
-    // one-line head's, whatever the line under the name says, or while it says nothing.
-    expect(head).toContain("margin-top: calc((24px - var(--cmp-button)) / 2 - var(--title-cap-mid, var(--cap-mid)))");
-    const kit = await Bun.file(
-      new URL("../../../packages/ui/src/styles/components.css", import.meta.url).pathname,
-    ).text();
-    expect(rule(kit, ".ac-dialog__title")).toContain("line-height: 24px");
-    expect(
-      rule(kit, ".ac-dialog__title + .ac-dialog__acts,\n.ac-actline:has(> .ac-dialog__title) + .ac-dialog__close"),
-    ).toContain("translate: 0 calc(-1 * var(--title-cap-mid, var(--cap-mid)))");
+    expect(rule(text, ".cmp-dialog .ac-dialog__head")).toContain("padding-block: var(--space-4)");
+    expect(rule(text, ".cmp-dialog :is(.ac-dialog__acts, .ac-dialog__close)")).toContain("align-self: center");
+    expect(rule(text, ".cmp-dialog .ac-dialog__lead:has(+ .ac-actline > .ac-dialog__titles)")).toContain(
+      "align-self: center",
+    );
+    // No lift of their own: in full screen's bar too they sit on the middle of both lines.
+    expect(text).not.toMatch(/ac-dialog__close\) \{[^}]*margin-top/);
     // The line under the name keeps its room while empty, so the name and the controls stay where they are.
     expect(rule(text, ".cmp-sub:empty::before")).toContain('content: "\\00a0"');
-    // Full screen's bar is its own box: the controls in its middle, beside both lines (the kit's 24 + 18 px).
-    expect(rule(text, ".cmp-dialog.is-screen-only :is(.ac-dialog__acts, .ac-dialog__close)")).toContain(
-      "margin-top: calc((24px + 18px - var(--cmp-button)) / 2)",
-    );
-    expect(rule(kit, ".ac-dialog__sub")).toContain("line-height: 18px");
   });
 
   test("the head's gaps read even by what shows: Take control's ring and shadow get their room", async () => {
@@ -1790,7 +1839,7 @@ describe("the dialog's size (computer.css)", () => {
 
   test("what comes over or under the screen takes the screen's room, never the window's", async () => {
     const text = await css();
-    expect(text).toContain(".ac-dialog.cmp-dialog {\n  --cmp-button: var(--control-h-sm);\n  --cmp-line: 22px;\n}");
+    expect(text).toContain(".ac-dialog.cmp-dialog {\n  --cmp-line: 22px;\n}");
     // Its head's small buttons keep their 32 px plates on touch too.
     expect(text).not.toContain("@media (pointer: coarse) {\n  .ac-dialog.cmp-dialog {\n    --cmp-button:");
     // A banner, the request and the hand-back bar sit in the body's column with the screen's stage, which gets what they leave
@@ -1829,12 +1878,13 @@ describe("the dialog's size (computer.css)", () => {
     expect(desktop).toContain("--titlebar-h: calc(48px / var(--app-zoom, 1))");
   });
 
-  test("the desktop app: the ⌘K field stands midway between the window's edge and the work's sheet", async () => {
+  test("the desktop app: the bar's buttons stand midway between the window's edge and the work's sheet, no ⌘K field in it", async () => {
     const desktop = await Bun.file(new URL("../src/desktop.css", import.meta.url).pathname).text();
     const layout = await Bun.file(new URL("../src/layout.css", import.meta.url).pathname).text();
-    // A 32px field centred in the 48px bar: 8px over it and 8px under it, the sheet starting right under the bar.
+    // 32px buttons centred in the 48px bar: 8px over them and 8px under them, the sheet starting right under the bar.
+    // ⌘K stays in the sidebar, as on the web.
     expect(desktop).toContain("--titlebar-h: calc(48px / var(--app-zoom, 1))");
-    expect(desktop.split("\n.titlebar__search {")[1]?.split("}")[0]).toContain("height: var(--control-h-sm)");
+    expect(desktop).not.toContain(".titlebar__search");
     expect(layout.split("\n.shell__work {")[1]?.split("}")[0]).toContain("padding: 8px 8px 8px 0");
     const wide = desktop.split("@media (min-width: 761px) {\n  html[data-desktop] .titlebar {")[1]?.split("\n}\n")[0];
     expect(wide).toContain("html[data-desktop] .shell__work {\n    padding-top: 0;");

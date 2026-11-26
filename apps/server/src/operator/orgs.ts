@@ -1,8 +1,21 @@
 import { isWorkAreaAnswer, WORK_AREA_ANSWERS } from "@agenteschat/client/lib/work-area";
-import { operatorListOrgs, operatorOrg, operatorUser } from "@agenteschat/engine";
+import { eq, schema } from "@agenteschat/db";
+import {
+  liveProcesses,
+  operatorListOrgs,
+  operatorOrg,
+  operatorUser,
+  PROCESS_LIVE_MS,
+  RUN_CLAIM_WINDOW_MS,
+  removeOrgLogo,
+  runClaimWaits,
+  setOrgAccent,
+  setOrgLogo,
+} from "@agenteschat/engine";
 import { createRoute, type OpenAPIHono, z } from "@hono/zod-openapi";
 import { apiError, errorResponse } from "../http/errors";
-import { iso, json, OrgParams } from "../routes/app/context";
+import { body, iso, json, OrgParams } from "../routes/app/context";
+import { AccentColor } from "../routes/app/schemas";
 import type { OperatorDeps } from "./app";
 import { LimitsState, limitsJson, Meters } from "./limits";
 import { Standing, StandingState, standingJson, UserParams } from "./standing";
@@ -47,8 +60,98 @@ const Health = z
     ok: z.literal(true),
     version: z.string(),
     botCheck: BotCheck.openapi({ description: "The bot check before public forms (ADR 0075)." }),
+    eventLoopLag: z
+      .object({ p50Ms: z.number(), p99Ms: z.number(), maxMs: z.number(), at: z.string() })
+      .nullable()
+      .openapi({
+        description:
+          "How late this process ran what was due over its last minute, from the runtime's own sampling (also logged as `event loop lag`). Null: no minute ended yet.",
+      }),
   })
   .openapi("OperatorHealth");
+
+const ms = (description: string) => z.number().int().nullable().openapi({ description });
+
+/** One measure across the apps' reports of a minute. */
+const ClientVitalStat = z
+  .object({ n: z.number().int(), p50: z.number(), p95: z.number(), max: z.number() })
+  .openapi("OperatorClientVitalStat");
+
+const Vitals = z
+  .object({
+    at: z.string(),
+    processes: z
+      .array(
+        z.object({
+          id: z.uuid(),
+          role: z.string().openapi({ description: "`SERVER_ROLE`: `all` (the app and jobs) or `worker`." }),
+          version: z.string(),
+          startedAt: z.string(),
+          seenAt: z.string().openapi({ description: "When it last wrote these, about once a minute." }),
+          rssBytes: z.number().int(),
+          heapUsedBytes: z.number().int(),
+          heapTotalBytes: z.number().int(),
+          eventLoopP99Ms: z.number().nullable().openapi({
+            description: "How late its event loop ran what was due over its last minute; null before one ended.",
+          }),
+          eventLoopMaxMs: z.number().nullable(),
+          heapSnapshot: z
+            .object({ at: z.string(), file: z.string() })
+            .nullable()
+            .openapi({ description: "The heap snapshot it wrote (`HEAP_SNAPSHOT_MB`), in `HEAP_SNAPSHOT_DIR`." }),
+          routes: z
+            .array(
+              z.object({
+                route: z.string().openapi({ description: "Method and route as registered, ids left out." }),
+                count: z.number().int(),
+                p95Ms: z.number().int(),
+                maxMs: z.number().int(),
+                totalMs: z.number().int(),
+              }),
+            )
+            .openapi({
+              description:
+                "The HTTP routes that took it the most time over its last minute, the most first. Empty for a worker.",
+            }),
+          clientVitals: z
+            .record(
+              z.string(),
+              z.object({
+                reports: z.number().int(),
+                coldStartMs: ClientVitalStat.optional(),
+                firstRowsMs: ClientVitalStat.optional(),
+                jsLagP95Ms: ClientVitalStat.optional(),
+                jsLagMaxMs: ClientVitalStat.optional(),
+                heapBytes: ClientVitalStat.optional(),
+                webviewBytes: ClientVitalStat.optional(),
+                getsPerReturn: ClientVitalStat.optional(),
+                reconnects: ClientVitalStat.optional(),
+              }),
+            )
+            .nullable()
+            .openapi({
+              description:
+                "What the apps that reported to it over its last minute measured, by platform (`ios`, `android`, `web`, and the desktop app on each system: `macos`, `windows`, `linux`): cold start to the first screen and to the first rows, JavaScript stalls, heap, the desktop's web view memory (`webviewBytes`), reads after each return to the app, socket reconnects. Null: no report.",
+            }),
+        }),
+      )
+      .openapi({
+        description: `Every process on this database that wrote its vitals in the last ${PROCESS_LIVE_MS / 60_000} minutes (the app's and every worker's), the newest first.`,
+      }),
+    runClaims: z
+      .object({
+        windowSeconds: z.number().int(),
+        runs: z.number().int().openapi({ description: "Runs claimed in the window plus runs still waiting." }),
+        queued: z.number().int().openapi({ description: "Runs still waiting for a worker." }),
+        p50Ms: ms("Of `runs`: how long each waited from its creation to its claim, or until now if still waiting."),
+        p95Ms: ms("The same, 95th percentile. Null: no run."),
+        oldestQueuedMs: ms("How long the run waiting longest has waited. Null: none waits."),
+      })
+      .openapi({
+        description: `How long agents' runs for people wait for a worker (routines' background runs, which wait behind them by design, left out): those claimed in the last ${RUN_CLAIM_WINDOW_MS / 60_000} minutes and those still waiting (created in the last hour). Growing while every process looks idle: jobs aren't being claimed.`,
+      }),
+  })
+  .openapi("OperatorVitals");
 
 const OrgSummary = z
   .object({
@@ -56,7 +159,10 @@ const OrgSummary = z
     name: z.string(),
     createdAt: z.string(),
     standing: StandingState,
-    members: z.number().int(),
+    members: z
+      .number()
+      .int()
+      .openapi({ description: "The people its `members` limit counts: no outside collaborators." }),
     agents: z.number().int().openapi({ description: "Not archived." }),
   })
   .openapi("OperatorOrgSummary");
@@ -99,7 +205,10 @@ const Org = z
       )
       .openapi({ description: "Owners and admins, owners first." }),
     counts: z.object({
-      members: z.number().int(),
+      members: z
+        .number()
+        .int()
+        .openapi({ description: "The people its `members` limit counts: no outside collaborators (ADR 0191)." }),
       agents: z.number().int().openapi({ description: "Not archived." }),
       channels: z.number().int().openapi({ description: "Channels, not archived; no direct messages." }),
       machines: z.number().int().openapi({ description: "Connected computers." }),
@@ -159,7 +268,39 @@ const User = z
   })
   .openapi("OperatorUser");
 
-export function registerOperatorOrgs(api: OpenAPIHono, { db, version, humanCheck }: OperatorDeps) {
+const Look = z
+  .object({
+    accent: AccentColor.nullable()
+      .optional()
+      .openapi({ description: "Its accent color; null: the default. Left out: left as it is." }),
+    logo: z
+      .object({
+        contentType: z.enum(["image/jpeg", "image/png", "image/webp"]),
+        base64: z.string().min(1).max(3_000_000).openapi({ description: "The image's bytes in base64, up to 2 MB." }),
+      })
+      .nullable()
+      .optional()
+      .openapi({
+        description:
+          "Its logo, any shape (the apps draw it whole, at 512×512 at most, on a plate that keeps its ink legible: a PNG whose see-through background carries light ink gets a dark one); checked by its bytes, metadata removed. Null: back to the agent mark. Left out: left as it is.",
+      }),
+  })
+  .openapi("OperatorLook");
+
+const LookState = z
+  .object({
+    accent: AccentColor.nullable(),
+    logo: z.string().nullable().openapi({
+      description:
+        "Where its members' apps load the logo, ending with `#ink=light` when its ink is light; null: the agent mark.",
+    }),
+  })
+  .openapi("OperatorLookState");
+
+export function registerOperatorOrgs(
+  api: OpenAPIHono,
+  { db, version, humanCheck, eventLoopLag, pubsub, blobs }: OperatorDeps,
+) {
   const started = new Date();
   api.openapi(
     createRoute({
@@ -177,7 +318,54 @@ export function registerOperatorOrgs(api: OpenAPIHono, { db, version, humanCheck
         passed: 0,
         testing: false,
       };
-      return c.json({ ok: true as const, version, botCheck: { ...check, since: check.since.toISOString() } }, 200);
+      return c.json(
+        {
+          ok: true as const,
+          version,
+          botCheck: { ...check, since: check.since.toISOString() },
+          eventLoopLag: eventLoopLag?.() ?? null,
+        },
+        200,
+      );
+    },
+  );
+
+  api.openapi(
+    createRoute({
+      method: "get",
+      path: "/vitals",
+      tags,
+      summary: "Each server process's memory and event loop delay, and how long runs wait to be claimed",
+      responses: { 200: json(Vitals), 401: errors[401] },
+    }),
+    async (c) => {
+      const now = new Date();
+      const [processes, claims] = await Promise.all([liveProcesses(db, now), runClaimWaits(db, now)]);
+      return c.json(
+        {
+          at: now.toISOString(),
+          processes: processes.map((p) => ({
+            id: p.id,
+            role: p.role,
+            version: p.version,
+            startedAt: p.startedAt.toISOString(),
+            seenAt: p.seenAt.toISOString(),
+            rssBytes: p.rssBytes,
+            heapUsedBytes: p.heapUsedBytes,
+            heapTotalBytes: p.heapTotalBytes,
+            eventLoopP99Ms: p.eventLoopP99Ms,
+            eventLoopMaxMs: p.eventLoopMaxMs,
+            heapSnapshot:
+              p.heapSnapshotAt && p.heapSnapshotFile
+                ? { at: p.heapSnapshotAt.toISOString(), file: p.heapSnapshotFile }
+                : null,
+            routes: p.routes ?? [],
+            clientVitals: p.clientVitals ?? null,
+          })),
+          runClaims: claims,
+        },
+        200,
+      );
     },
   );
 
@@ -235,6 +423,39 @@ export function registerOperatorOrgs(api: OpenAPIHono, { db, version, humanCheck
         },
         200,
       );
+    },
+  );
+
+  api.openapi(
+    createRoute({
+      method: "put",
+      path: "/orgs/{orgId}/look",
+      tags,
+      summary: "Set a workspace's logo and accent color (ADR 0193)",
+      description:
+        "What its members see in their apps, at once: a hosted service can give several workspaces one look. Recorded in the workspace's audit as done by the system, as when its admins change them in Settings, who can still change them afterwards. A logo that isn't a JPEG, PNG or WebP of up to 2 MB is refused (`logo.type`, `logo.too_large`, `logo.not_base64`, `logo.empty`) and nothing changes.",
+      request: { params: OrgParams, body: body(Look) },
+      responses: { 200: json(LookState), ...errors },
+    }),
+    async (c) => {
+      const { orgId } = c.req.valid("param");
+      const { accent, logo } = c.req.valid("json");
+      const look = async () =>
+        (
+          await db
+            .select({ accent: schema.organizations.accent, logo: schema.organizations.logo })
+            .from(schema.organizations)
+            .where(eq(schema.organizations.id, orgId))
+        )[0];
+      if (!(await look())) return apiError(c, 404, "not_found", "No workspace with this id");
+      if (logo !== undefined) {
+        if (!blobs) throw new Error("the operator API needs the platform's blob store to set a logo");
+        if (logo) await setOrgLogo({ db, blobs, pubsub }, null, orgId, { imageBase64: logo.base64, ...logo });
+        else await removeOrgLogo({ db, blobs, pubsub }, null, orgId);
+      }
+      if (accent !== undefined) await setOrgAccent({ db, pubsub }, null, orgId, accent);
+      const after = await look();
+      return c.json({ accent: after?.accent ?? null, logo: after?.logo ?? null }, 200);
     },
   );
 

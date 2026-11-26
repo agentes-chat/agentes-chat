@@ -8,6 +8,11 @@ import type { VoiceSend } from "./outbox";
  */
 /** How long a press is held before it records. */
 export const HOLD_MS = 220;
+/**
+ * The take's start sound (`record`) rings for under this long, and the recorder starts after it: the microphone would
+ * take it into the take. Below the time a person takes to start speaking after the haptic.
+ */
+export const START_SOUND_MS = 90;
 /** How far left deletes, and how far up locks. */
 export const CANCEL_X = -110;
 export const LOCK_Y = -70;
@@ -47,7 +52,7 @@ export function columnsIn(width: number): number {
 /**
  * A played wave's columns on `width`: how many, and where the first starts. They leave the handle's width and 2 at
  * both ends, centred on whole points, so at 0:00 the handle stands before the first column and at the end after the
- * last, flush with the wave's ends, as WhatsApp's dot does.
+ * last, flush with the wave's ends: the handle never covers a column at either end.
  */
 export function playedColumns(width: number): { count: number; start: number } {
   const count = columnsIn(width - 2 * (WAVE_HANDLE + 2));

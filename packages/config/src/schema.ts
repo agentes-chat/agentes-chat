@@ -1,3 +1,4 @@
+import { isIP } from "node:net";
 import { z } from "zod";
 import { parseFirebaseServiceAccount, parsePemKey } from "./pem";
 
@@ -32,6 +33,7 @@ export interface EnvVarDefinition {
     | "Email for agents"
     | "Push"
     | "Operator"
+    | "Chat surfaces"
     | "Usage report"
     | "Observability";
   /** Example value for docs. Never a real secret. */
@@ -61,6 +63,31 @@ function isOrigin(value: string): boolean {
 
 /** Claude model ids accepted as defaults. Prices live in `@agenteschat/providers` (`MODEL_CATALOG`). */
 const modelId = z.string().regex(/^[a-z0-9][a-z0-9.-]*$/, "must be a model id such as claude-sonnet-5-5");
+
+/** A comma-separated list, trimmed and normalized, empty entries dropped; each entry checked by `ok`. */
+const commaList = (ok: (entry: string) => boolean, message: string, normalize = (entry: string) => entry) =>
+  z
+    .string()
+    .optional()
+    .transform((value) =>
+      (value ?? "")
+        .split(",")
+        .map((entry) => normalize(entry.trim()))
+        .filter(Boolean),
+    )
+    .refine((entries) => entries.every(ok), message);
+
+const HOST_LABELS = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/;
+/** A host name, or `*.` and a suffix of two labels or more (never a whole top-level domain). */
+const allowedHost = (entry: string) =>
+  !isIP(entry) && HOST_LABELS.test(entry.startsWith("*.") ? entry.slice(2) : entry);
+/** An IPv4 or IPv6 address, alone or with a prefix length in range. */
+const allowedRange = (entry: string) => {
+  const [address = "", bits, ...rest] = entry.split("/");
+  const family = isIP(address);
+  if (!family || rest.length > 0) return false;
+  return bits === undefined || (/^\d{1,3}$/.test(bits) && Number(bits) <= (family === 6 ? 128 : 32));
+};
 
 export const envVars = {
   NODE_ENV: {
@@ -141,16 +168,40 @@ export const envVars = {
       "Directory containing the built web app (single-page app). Served by this server when it exists; otherwise only the API runs.",
     section: "Server",
   },
+  FONTS_DIR: {
+    schema: z.string().optional(),
+    description:
+      "Directory of the fonts live files use (ADR 0220): the catalog built by `scripts/fonts/build.py` (the image sets it). Served at `/api/fonts/*`, read to measure text, draw pictures and embed fonts in PDFs. Unset: the catalog is still offered, and every app and export falls back to system fonts.",
+    section: "Server",
+  },
   SHUTDOWN_DELAY_MS: {
     schema: z.coerce.number().int().min(0).max(5_000).default(0),
     description:
       "On SIGTERM, how long the server keeps serving while `/api/health` answers 503, before it stops taking requests. Behind a reverse proxy with an active health check (and a retry window), set it above the check's interval so the proxy stops sending requests here first and holds them for the next instance instead of failing them (2000 for a check every second). 0 (default): stop taking requests at once.",
     section: "Server",
   },
+  LOAD_SHED_EVENT_LOOP_MS: {
+    schema: z.coerce.number().int().min(0).default(500),
+    description:
+      "Load shedding: while the event loop's p99 delay over the last 5 seconds is above this, the process is overloaded. It then answers new WebSocket connections and the apps' reads (`GET /api/app/*`, not links a person opens) with 503 and a `Retry-After` of 5 to 15 seconds instead of queueing everyone. `/api/health` says `overloaded`, still with 200; `/api/health?load=1` answers 503 then, for a proxy's active health check across several app processes (never a single process's: it would take out the only one). Writes, sign-in and open sockets carry on. 0: off.",
+    section: "Server",
+  },
+  LOAD_SHED_DB_WAIT_MS: {
+    schema: z.coerce.number().int().min(0).default(2_000),
+    description:
+      "Load shedding: while a `select 1` (waiting for one of the `DATABASE_POOL_MAX` connections included) takes longer than this, the process is overloaded (see `LOAD_SHED_EVENT_LOOP_MS`). 0: off.",
+    section: "Server",
+  },
+  LOAD_SHED_MAX_SOCKETS: {
+    schema: z.coerce.number().int().min(0).default(4_000),
+    description:
+      "Load shedding: at this many of the apps' open sockets in one process, it is overloaded (see `LOAD_SHED_EVENT_LOOP_MS`): a new one is turned away until some close, and behind a proxy goes to another process. Each person has at most 50 per process. 0: no cap.",
+    section: "Server",
+  },
   OUTBOX_MAX_IN_FLIGHT: {
     schema: z.coerce.number().int().min(1).default(48),
     description:
-      "How many jobs one server process runs at once besides its requests: agents' runs, routines, a message's routing, notifications, emails. Agents' runs spend most of their time waiting for their model or their computer, so this can be far above the number of CPUs. A job holds a database connection only while it reads or writes (`DATABASE_POOL_MAX`).",
+      "How many jobs one server process runs at once besides its requests: agents' runs, routines, a message's routing, notifications, emails. Agents' runs spend most of their time waiting for their model or their computer, so this can be far above the number of CPUs. A job holds a database connection only while it reads or writes (`DATABASE_POOL_MAX`). Native mode (`agentes-server`, with the database built in: one process, one connection) defaults to 16, 4 of them quick (`OUTBOX_QUICK_SLOTS`).",
     section: "Server",
   },
   OUTBOX_QUICK_SLOTS: {
@@ -162,7 +213,7 @@ export const envVars = {
   OUTBOX_MAX_IN_FLIGHT_CEILING: {
     schema: z.coerce.number().int().min(1).optional(),
     description:
-      "At most this many jobs at once in one process, however far the slots could grow. While jobs wait for a slot (a burst of routines, a busy hour), the slots double every 30 seconds from `OUTBOX_MAX_IN_FLIGHT`: agents' runs as far as half the process's memory holds them (about 4 MB each while they wait), quick jobs to 4 per database connection (`DATABASE_POOL_MAX`); they shrink back once nothing waits. Unset (default): only those limits. Set it to `OUTBOX_MAX_IN_FLIGHT` to keep the slots fixed. With the built-in database they never grow.",
+      "At most this many jobs at once in one process, however far the slots could grow. While jobs wait for a slot (a burst of routines, a busy hour), the slots double every 30 seconds from `OUTBOX_MAX_IN_FLIGHT`: agents' runs as far as half the process's memory holds them (about 4 MB each while they wait), quick jobs to 4 per database connection (`DATABASE_POOL_MAX`); they shrink back once nothing waits. After a restart, agents' runs already waiting start as a ramp over the first minute, not all at once. Unset (default): 8 jobs per database connection (160 with 20). Set it to `OUTBOX_MAX_IN_FLIGHT` to keep the slots fixed. With the built-in database they never grow.",
     section: "Server",
   },
   SERVER_ROLE: {
@@ -187,7 +238,7 @@ export const envVars = {
   DATABASE_POOL_MAX: {
     schema: z.coerce.number().int().min(1).default(20),
     description:
-      "Maximum number of open connections per agentes.chat process, shared by its HTTP requests and its jobs (`OUTBOX_MAX_IN_FLIGHT`). Keep it, times the number of processes, under the database's `max_connections`.",
+      "Maximum number of open connections per agentes.chat process, shared by its HTTP requests and its jobs (`OUTBOX_MAX_IN_FLIGHT`). Give it at least one per 4 job slots (12 for the default 48): below that the server warns as it starts. Keep it, times the number of processes, under the database's `max_connections`.",
     section: "Database",
   },
   RUN_MIGRATIONS_ON_BOOT: {
@@ -353,6 +404,12 @@ export const envVars = {
       "Unused: new agents start on Automático (`auto`, each run picks the model and effort), whatever this says. Still checked when set; to be removed.",
     section: "Agents",
   },
+  MODEL_PROGRESS_NOTES: {
+    schema: z.stringbool().default(true),
+    description:
+      "Ask the models that keep their notes between tool calls apart from the reply (Claude's progress updates, OpenAI's reasoning summaries) to send them, so the conversation shows what an agent is doing while it works. Their reasoning stays hidden either way. Off = only the words a model writes as text.",
+    section: "Agents",
+  },
   ROUTER_ENABLED: {
     schema: z.stringbool().default(true),
     description:
@@ -393,6 +450,28 @@ export const envVars = {
       "Jev model for judgments over images (an agent finding a target on a screenshot of its browser or desktop). Needs a release that takes images.",
     section: "Agents",
   },
+  SCREEN_JUDGMENTS: {
+    schema: z.enum(["full", "small", "shadow"]).default("full"),
+    description:
+      "What an agent's screen checks and finds send the judge. `full` (default): the whole page, up to 60k characters. `small`: what matters of a long page (its top, what changed, the lines with the check's words), and no judgment when the quoted words a check names are on the screen. `shadow`: both at once; `full` decides, `small` is only compared, and each judgment writes a `screen judgment shadow` log line (a warning when they disagree) with both decisions and sizes, never the page's text. `shadow` asks the judge twice. Applies to `SCREEN_JUDGMENTS_ORGS`.",
+    section: "Agents",
+  },
+  SCREEN_JUDGMENTS_ORGS: {
+    schema: z
+      .string()
+      .optional()
+      .transform((value) =>
+        value
+          ?.split(",")
+          .map((entry) => entry.trim())
+          .filter(Boolean),
+      )
+      .pipe(z.array(z.uuid()).optional()),
+    description:
+      "The organization ids (separated by commas) that get `SCREEN_JUDGMENTS`; every other organization gets `full`. Unset (default): every organization gets it.",
+    section: "Agents",
+    example: "00000000-0000-4000-8000-000000000000",
+  },
   OPENAI_CHEAP_MODEL: {
     schema: modelId.default("gpt-6-luna"),
     description:
@@ -411,8 +490,15 @@ export const envVars = {
     section: "Agents",
   },
   AGENT_MAX_OUTPUT_TOKENS: {
-    schema: z.coerce.number().int().min(256).max(128_000).default(16_000),
-    description: "Upper bound on tokens an agent may generate in one reply.",
+    schema: z.coerce.number().int().min(256).max(128_000).optional(),
+    description:
+      "Upper bound on tokens an agent may generate in one model call, thinking included. Unset: 64,000 on models whose limit is known (up to 128,000 at maximum effort), 16,000 on the rest. The agent's monthly budget is still reserved before each call.",
+    section: "Agents",
+  },
+  CLAUDE_PLAN_CONCURRENCY: {
+    schema: z.coerce.number().int().min(0).max(50).optional(),
+    description:
+      "An optional cap on how many agent runs one Claude plan sign-in (a subscription, never an API key) works on at once. Past it, the next run waits in line like any other and starts as soon as one ends. Unset or 0: no cap.",
     section: "Agents",
   },
   AGENT_MAX_TOOL_TURNS: {
@@ -451,11 +537,50 @@ export const envVars = {
       "Workspace id for the platform key, when the key is not scoped to a workspace (sent as `anthropic-workspace-id`).",
     section: "Agents",
   },
+  PLATFORM_OPENAI_API_KEY: {
+    schema: z.string().optional(),
+    description:
+      "The server's own OpenAI API key. Workspaces without an OpenAI key of their own use it to generate images on canvases (GPT Image, ADR 0197) and for agents on OpenAI models. Usage is still recorded per organization.",
+    section: "Agents",
+    secret: true,
+  },
+  PLATFORM_GEMINI_API_KEY: {
+    schema: z.string().optional(),
+    description:
+      "The server's own Gemini API key. Workspaces without a Gemini key of their own use it to generate images on canvases (Nano Banana, ADR 0197) and for agents on Gemini models. Usage is still recorded per organization.",
+    section: "Agents",
+    secret: true,
+  },
+  PLATFORM_OPENROUTER_API_KEY: {
+    schema: z.string().optional(),
+    description:
+      "The server's own OpenRouter API key. Workspaces without an OpenRouter key of their own use it to generate images on canvases (ADR 0197) and for agents on OpenRouter models. Usage is still recorded per organization.",
+    section: "Agents",
+    secret: true,
+  },
   MODEL_ENDPOINTS_PRIVATE: {
     schema: z.stringbool().optional(),
     description:
-      "Whether a workspace's own model endpoint (Settings › AI keys › Other provider) may be on this server's network or over http: an Ollama, vLLM, LM Studio or LiteLLM next to it. The same switch covers the other addresses a workspace names: custom MCP servers and their sign-in, its own bucket, server icons and the pages agents read. Unset: allowed, except on agentes.chat Cloud (https://app.agentes.chat) and with `ALLOW_SIGNUP=true`, where only public https addresses are, checked again at every connection.",
+      "Whether a workspace's own model endpoint (Settings › AI keys › Other provider) may be on this server's network or over http: an Ollama, vLLM, LM Studio or LiteLLM next to it. The other addresses a workspace names (custom MCP servers and their sign-in, its own bucket, server icons, the pages agents read) reach a private network only through `OUTBOUND_ALLOW_CIDRS` or `OUTBOUND_ALLOW_HOSTS`. Unset: allowed, except on agentes.chat Cloud (https://app.agentes.chat) and with `ALLOW_SIGNUP=true`, where only public https addresses are, checked again at every connection.",
     section: "Agents",
+  },
+  OUTBOUND_ALLOW_HOSTS: {
+    schema: commaList(
+      allowedHost,
+      "must be host names or *.suffixes such as *.tail1234.ts.net, comma-separated",
+      (host) => host.toLowerCase(),
+    ),
+    description:
+      "Comma-separated host names, or `*.` suffixes, that addresses a workspace types (custom MCP servers and their sign-in, its own bucket, a database, a mail server, a password manager, the pages its agents read) may reach on a private network, such as a Tailscale tailnet or a LAN, whatever they resolve to, checked again at every connection. Loopback and cloud metadata addresses stay refused, and agentes.chat Cloud ignores it. Name a narrow suffix: everyone who can make a name under it can point it at your network. Unset: none.",
+    section: "Security",
+    example: "*.tail1234.ts.net,nas.example.com",
+  },
+  OUTBOUND_ALLOW_CIDRS: {
+    schema: commaList(allowedRange, "must be IP addresses or CIDR ranges such as 100.64.0.0/10, comma-separated"),
+    description:
+      "Comma-separated IP ranges (CIDR) or addresses that addresses a workspace types may reach, as with `OUTBOUND_ALLOW_HOSTS`: Tailscale's are `100.64.0.0/10` and `fd7a:115c:a1e0::/48`. Loopback, link-local and cloud metadata addresses stay refused even inside a range, and agentes.chat Cloud ignores it. Unset: none.",
+    section: "Security",
+    example: "100.64.0.0/10,fd7a:115c:a1e0::/48",
   },
   SUMMARY_MODEL: {
     schema: modelId.default("claude-haiku-5-5"),
@@ -743,6 +868,90 @@ export const envVars = {
   CONNECTOR_LINEAR_CLIENT_SECRET: {
     schema: z.string().optional(),
     description: "Client secret of the Linear OAuth app for the Linear connector.",
+    section: "Connectors",
+    secret: true,
+  },
+  CONNECTOR_GITLAB_CLIENT_ID: {
+    schema: z.string().optional(),
+    description:
+      "Application ID of this server's GitLab application (gitlab.com › Preferences › Applications, confidential, scopes `api` and `write_repository`), so people connect GitLab by signing in (ADR 0227). Set together with `CONNECTOR_GITLAB_CLIENT_SECRET`. Redirect URI: `{PUBLIC_URL}/api/app/connectors/oauth/callback`. Without it, GitLab connects with an access token, as a GitLab of one's own always does.",
+    section: "Connectors",
+  },
+  CONNECTOR_GITLAB_CLIENT_SECRET: {
+    schema: z.string().optional(),
+    description: "Secret of the GitLab application for the GitLab connector.",
+    section: "Connectors",
+    secret: true,
+  },
+  CONNECTOR_BITBUCKET_CLIENT_ID: {
+    schema: z.string().optional(),
+    description:
+      "Key of this server's Bitbucket OAuth consumer (a workspace's settings › OAuth consumers; permissions: Account read, Repositories write, Pull requests write), so people connect Bitbucket by signing in (ADR 0227). Set together with `CONNECTOR_BITBUCKET_CLIENT_SECRET`. Callback URL: `{PUBLIC_URL}/api/app/connectors/oauth/callback`. Without it, Bitbucket connects with an access token.",
+    section: "Connectors",
+  },
+  CONNECTOR_BITBUCKET_CLIENT_SECRET: {
+    schema: z.string().optional(),
+    description: "Secret of the Bitbucket OAuth consumer for the Bitbucket connector.",
+    section: "Connectors",
+    secret: true,
+  },
+  CONNECTOR_X_CLIENT_ID: {
+    schema: z.string().optional(),
+    description:
+      "OAuth 2.0 client id of this server's X app (console.x.com, type Web App, Automated App or Bot; Read and write), for the X connector (ADR 0170). Set together with `CONNECTOR_X_CLIENT_SECRET`. Callback URL: `{PUBLIC_URL}/api/app/connectors/oauth/callback`. Without it, X isn't offered. Steps: docs/social-apps-checklist.md.",
+    section: "Connectors",
+  },
+  CONNECTOR_X_CLIENT_SECRET: {
+    schema: z.string().optional(),
+    description: "OAuth 2.0 client secret of this server's X app (not its API key).",
+    section: "Connectors",
+    secret: true,
+  },
+  CONNECTOR_X_CALLS_PER_MONTH: {
+    schema: z.coerce.number().int().min(0).default(0),
+    description:
+      "X calls a workspace may make per calendar month (UTC): X bills this server's app per post written and read. At the cap its X tools stop until the next month. 0: no cap.",
+    section: "Connectors",
+  },
+  CONNECTOR_THREADS_APP_ID: {
+    schema: z.string().optional(),
+    description:
+      "Threads app id of this server's Meta app with the Threads use case (its own id, not the main app's), for the Threads connector (ADR 0170). Set together with `CONNECTOR_THREADS_APP_SECRET`. Redirect URI: `{PUBLIC_URL}/api/app/connectors/oauth/callback`; uninstall and delete callbacks: `{PUBLIC_URL}/api/webhooks/meta/deauthorize` and `/api/webhooks/meta/data-deletion`. Without it, Threads isn't offered. Steps: docs/social-apps-checklist.md.",
+    section: "Connectors",
+  },
+  CONNECTOR_THREADS_APP_SECRET: {
+    schema: z.string().optional(),
+    description: "Threads app secret of this server's Meta app for Threads.",
+    section: "Connectors",
+    secret: true,
+  },
+  CONNECTOR_META_ADS_APP_ID: {
+    schema: z.string().optional(),
+    description:
+      "App id of this server's Meta business app (Marketing API), for the Meta Ads connector (ADR 0170). Set together with `CONNECTOR_META_ADS_APP_SECRET` and `CONNECTOR_META_ADS_CONFIG_ID`. Valid OAuth redirect URI: `{PUBLIC_URL}/api/app/connectors/oauth/callback`; deauthorize and data deletion callbacks as for Threads. Without them, Meta Ads isn't offered.",
+    section: "Connectors",
+  },
+  CONNECTOR_META_ADS_APP_SECRET: {
+    schema: z.string().optional(),
+    description: "App secret of this server's Meta business app for Meta Ads.",
+    section: "Connectors",
+    secret: true,
+  },
+  CONNECTOR_META_ADS_CONFIG_ID: {
+    schema: z.string().optional(),
+    description:
+      "Configuration ID of the app's Facebook Login for Business configuration (a system-user token that doesn't expire; ad accounts and Pages).",
+    section: "Connectors",
+  },
+  CONNECTOR_TIKTOK_CLIENT_KEY: {
+    schema: z.string().optional(),
+    description:
+      "Client key of this server's TikTok for Developers app (Login Kit for Web and the Content Posting API), for the TikTok connector (ADR 0170). Set together with `CONNECTOR_TIKTOK_CLIENT_SECRET`. Redirect URI: `{PUBLIC_URL}/api/app/connectors/oauth/callback`. Without it, TikTok isn't offered.",
+    section: "Connectors",
+  },
+  CONNECTOR_TIKTOK_CLIENT_SECRET: {
+    schema: z.string().optional(),
+    description: "Client secret of this server's TikTok app.",
     section: "Connectors",
     secret: true,
   },
@@ -1039,6 +1248,12 @@ export const envVars = {
       "Path-style bucket URLs (`https://endpoint/bucket/key`), for MinIO, Garage and similar stores. Off: virtual-hosted URLs (`https://bucket.endpoint/key`), as R2 and AWS expect.",
     section: "Storage",
   },
+  S3_PRESIGNED_URLS: {
+    schema: z.stringbool().default(true),
+    description:
+      "Browsers and the apps download files of the platform bucket straight from it, by short-lived presigned links the server hands out after its own checks (videos and downloads; previews still come through the server). Only for an `https` `S3_ENDPOINT`: an `http` one is never linked to. Set to `false` when browsers can't reach `S3_ENDPOINT` (a bucket on a private network): the server then sends every file itself.",
+    section: "Storage",
+  },
   HOST_COMPUTER_TOKEN: {
     schema: z
       .string()
@@ -1088,11 +1303,66 @@ export const envVars = {
     example: "<output of openssl rand -base64 48>",
     secret: true,
   },
+  OPERATOR_API_REVEAL_TOKEN: {
+    schema: z
+      .string()
+      .min(32, "must be at least 32 characters. Generate one with `openssl rand -base64 48`")
+      .optional(),
+    description:
+      "A third token for the operator API, for the one thing the other two never do: read a single piece of what a workspace wrote (a message, a step of a run, an agent's instructions), one at a time, with a stated reason, for a member who asked for help or to diagnose a run that failed or got stuck (`POST /reveal/...`, ADR 0056). Every such read is recorded first and shows in that workspace's audit log. Leave it unset unless a tool of yours needs it: setting it makes you a reader of your workspaces' content, which you must tell them, and makes the server keep what members write in the feedback form for 90 days. Needs `OPERATOR_API_TOKEN` and must differ from it and from `OPERATOR_API_READ_TOKEN`. Unset (default): every path under `/reveal` answers 403 and none of those words are kept. Generate with `openssl rand -base64 48`.",
+    section: "Operator",
+    example: "<output of openssl rand -base64 48>",
+    secret: true,
+  },
   OPERATOR_API_PORT: {
     schema: z.coerce.number().int().min(1).max(65535).default(3001),
     description:
-      "Port of the operator API's listener, on the same `HOST`; only with `OPERATOR_API_TOKEN`. The compose file doesn't publish it: containers on the same Docker network reach it as `agentes:3001`.",
+      "Port of the operator API's listener, on the same `HOST`; only with `OPERATOR_API_TOKEN` or `SURFACE_BRIDGE_TOKEN`. The compose file doesn't publish it: containers on the same Docker network reach it as `agentes:3001`.",
     section: "Operator",
+  },
+  SURFACE_BRIDGE_TOKEN: {
+    schema: z
+      .string()
+      .min(32, "must be at least 32 characters. Generate one with `openssl rand -base64 48`")
+      .optional(),
+    description:
+      "Turns on the bridge for an outside chat surface (ADR 0187): `/api/surface/v1` on the operator API's listener (`OPERATOR_API_PORT`), called with this value as `Authorization: Bearer` by a separate service of yours that carries people's messages between a chat app and their DM with the workspace's assistant. It can post as any linked person into that DM and read every reply sent to linked people, so never publish that port or put it behind your reverse proxy. It opens nothing under `/api/operator/v1`, and the operator tokens don't open the bridge. Needs `SURFACE_NAME` and `SURFACE_OPEN_URL`, and must differ from every operator token. Unset (default): no bridge, nothing recorded, no row in the apps. Generate with `openssl rand -base64 48`.",
+    section: "Chat surfaces",
+    example: "<output of openssl rand -base64 48>",
+    secret: true,
+  },
+  SURFACE_NAME: {
+    schema: z.string().trim().min(1).max(32).optional(),
+    description:
+      "The chat surface's name as people and the assistant read it, in settings and in the assistant's instructions. Only with `SURFACE_BRIDGE_TOKEN`. Its lower-cased form is what stored links are keyed by: changing it (even its capitals) ends every link, silently.",
+    section: "Chat surfaces",
+    example: "Example Chat",
+  },
+  SURFACE_OPEN_URL: {
+    schema: z
+      .url({ protocol: /^https$/ })
+      .refine((url) => url.split("{text}").length === 2, "must hold {text} once")
+      .optional(),
+    description:
+      "An `https://` address that opens a chat with the surface's account with a text already typed: `{text}` (once) is replaced by the linking code. Only with `SURFACE_BRIDGE_TOKEN`.",
+    section: "Chat surfaces",
+    example: "https://chat.example.com/open?text={text}",
+  },
+  SURFACE_ONLY: {
+    schema: z
+      .string()
+      .optional()
+      .transform((value) =>
+        value
+          ?.split(",")
+          .map((entry) => entry.trim().toLowerCase())
+          .filter(Boolean),
+      )
+      .pipe(z.array(z.email()).optional()),
+    description:
+      "While you try the surface out: only the accounts with these emails (separated by commas) may link it; nobody else sees its row. Only with `SURFACE_BRIDGE_TOKEN`. Unset (default): everyone may.",
+    section: "Chat surfaces",
+    example: "you@example.com",
   },
   SUPPORT_EMAIL: {
     schema: z.email().optional(),
@@ -1159,6 +1429,24 @@ export const envVars = {
     example: "<output of openssl rand -base64 48>",
     secret: true,
   },
+  REFERRALS_URL: {
+    schema: z.url({ protocol: /^https$/ }).optional(),
+    description:
+      "Your referral service's address (ADR 0192). Signed-in people get Refer and earn in their menu, and `/refer`, which open it signed in as them. Needs `REFERRALS_LINK_SECRET`, or `BILLING_LINK_SECRET` when this server also has a billing service, to sign the link. Unset (default): no referrals anywhere.",
+    section: "Operator",
+    example: "https://refer.example.com",
+  },
+  REFERRALS_LINK_SECRET: {
+    schema: z
+      .string()
+      .min(32, "must be at least 32 characters; generate one with `openssl rand -base64 48`")
+      .optional(),
+    description:
+      "Signs the link to the referral service (HMAC-SHA256, 5 minutes). The referral service holds the same value. Unset (default): `BILLING_LINK_SECRET` signs it. Generate with `openssl rand -base64 48`.",
+    section: "Operator",
+    example: "<output of openssl rand -base64 48>",
+    secret: true,
+  },
   BILLING_HOLD_NEW_WORKSPACES: {
     schema: z.stringbool().default(false),
     description:
@@ -1183,12 +1471,18 @@ export const envVars = {
       .transform((on) => (on ? "on" : "off") as "on" | "off")
       .default("on"),
     description:
-      "Send anonymous usage statistics to agentes.chat once a day: counts such as people, agents, machine sizes, AI tokens used and how much data the agents' browsers send and receive. Never messages, files, names or sites. `off` stops it, whatever the switch in Settings → General says (the installation's owner can turn it off there too). `docker compose run --rm agentes telemetry` prints exactly what would be sent (https://agentes.chat/docs/install-on-a-server#data).",
+      "Send anonymous usage statistics to agentes.chat once a day: counts such as people, agents, machine sizes, AI tokens used, how much data the agents' browsers send and receive, and how fast the apps open and run. Never messages, files, names or sites. `off` stops it, whatever the switch in Settings → General says (the installation's owner can turn it off there too). `docker compose run --rm agentes telemetry` prints exactly what would be sent (https://agentes.chat/docs/install-on-a-server#data).",
     section: "Usage report",
   },
   TELEMETRY_URL: {
     schema: z.url().default("https://telemetry.agentes.chat/v1/report"),
     description: "Where the usage report is sent (the report as JSON in a POST).",
+    section: "Usage report",
+  },
+  PROBLEM_REPORT_URL: {
+    schema: z.union([z.literal("off"), z.url()]).default("https://telemetry.agentes.chat/v1/problem-report"),
+    description:
+      "Where Send a report sends a report someone chose to send after seeing it in full (versions, which settings are set, what failed, recent log lines; never messages, pages, names or keys). Sent even with `TELEMETRY=off`, since a person clicked Send. `off`: the button only copies the report.",
     section: "Usage report",
   },
   INSTALL_MODE: {
@@ -1234,6 +1528,23 @@ export const envVars = {
     schema: z.string().min(1).max(64).default("production"),
     description: "The environment error reports are filed under (`production`, `staging`).",
     section: "Observability",
+  },
+  HEAP_SNAPSHOT_MB: {
+    schema: z.coerce.number().int().min(64).optional(),
+    description:
+      "Once a process's JavaScript heap passes this many MiB, it writes one heap snapshot to `HEAP_SNAPSHOT_DIR` (once per process start), to find what holds the memory. Writing it pauses the process for seconds to minutes and takes about as much memory again as the heap, so set it well under the process's memory limit. The file holds everything in the process's memory in clear (decrypted keys, sessions, messages), readable by the server's user alone: delete it once read. No process writes one while the folder holds 3. Unset (default): never.",
+    section: "Observability",
+    example: "3072",
+  },
+  HEAP_SNAPSHOT_DIR: {
+    schema: z
+      .string()
+      .regex(/^(\/|[A-Za-z]:[\\/]|\\\\)/, "must be an absolute path")
+      .optional(),
+    description:
+      "Absolute path of the folder `HEAP_SNAPSHOT_MB` writes its snapshot to; in a container, a mounted volume, or it is gone with the container. Unset: the system's temporary folder.",
+    section: "Observability",
+    example: "/data/heap",
   },
 } satisfies Record<string, EnvVarDefinition>;
 

@@ -1,11 +1,14 @@
 import {
   addMinutes,
   type CalItem,
+  dayItemsKey,
   dragRange,
+  grownHeights,
   HOUR_PX,
   hourLabel,
   initialScrollMinutes,
   isRunMark,
+  keptHeights,
   layoutBars,
   layoutDay,
   minutesOfDay,
@@ -33,6 +36,7 @@ import { RoutineBand } from "./RoutineBand";
 import { RunsPopover } from "./RunsPopover";
 
 const HOURS = Array.from({ length: 24 }, (_, h) => h);
+const NO_HEIGHTS: ReadonlyMap<string, number> = new Map();
 /** Movement before a press on a chip becomes a drag (px). */
 const DRAG_SLOP = 4;
 
@@ -49,6 +53,12 @@ interface Gesture {
   dMin: number;
   dDay: number;
   moved: boolean;
+}
+
+/** A day's measured heights (px, by key), and what the day held when they were measured (`dayItemsKey`). */
+interface DayMeasure {
+  held: string;
+  heights: ReadonlyMap<string, number>;
 }
 
 /**
@@ -120,15 +130,29 @@ export function TimeGrid({
   }, [daysKey, loading]);
 
   // How tall each block and stack of runs is drawn: a name that wraps reaches past its slot, and what starts under it
-  // then goes beside it, never under it (`layoutDay`, `runStacks`). Set only when a height changed.
-  const [heights, setHeights] = useState<ReadonlyMap<string, number>>(() => new Map());
+  // then goes beside it, never under it (`layoutDay`, `runStacks`). For one set of days at one width they only grow
+  // (`grownHeights`), so the layout settles; other days or another width measure again from nothing, and on a day
+  // whose items changed (`dayItemsKey`), so does whatever met the change (`keptHeights`), drawn first without its
+  // height. The grid's own width, not the scroll area's: a scrollbar that comes and goes with what is drawn must not
+  // start it over.
+  const [measured, setMeasured] = useState<{ at: string; days: readonly DayMeasure[] }>(() => ({ at: "", days: [] }));
+  const held = days.map((d) => dayItemsKey(items, d));
+  const heightsOn = (i: number) => {
+    const day = measured.at.startsWith(`${daysKey}@`) ? measured.days[i] : undefined;
+    return day ? keptHeights(day.heights, day.held, held[i] as string) : NO_HEIGHTS;
+  };
   useLayoutEffect(() => {
-    const drawn = new Map<string, number>();
-    for (const el of scroller.current?.querySelectorAll<HTMLElement>("[data-measure]") ?? [])
-      if (el.offsetHeight > 0) drawn.set(el.dataset.measure ?? "", el.offsetHeight);
-    const moved =
-      drawn.size !== heights.size || [...drawn].some(([key, h]) => Math.abs((heights.get(key) ?? 0) - h) > 0.5);
-    if (moved) setHeights(drawn);
+    const at = `${daysKey}@${scroller.current?.parentElement?.clientWidth ?? 0}`;
+    const cols = scroller.current?.querySelectorAll<HTMLElement>(".cal-week__col");
+    const next = held.map((h, i): DayMeasure => {
+      const drawn = new Map<string, number>();
+      for (const el of cols?.[i]?.querySelectorAll<HTMLElement>("[data-measure]") ?? [])
+        if (el.offsetHeight > 0) drawn.set(el.dataset.measure ?? "", el.offsetHeight);
+      const was = measured.at === at ? measured.days[i] : undefined;
+      const heights = grownHeights(was ? keptHeights(was.heights, was.held, h) : NO_HEIGHTS, drawn);
+      return was?.held === h && was.heights === heights ? was : { held: h, heights };
+    });
+    if (measured.at !== at || next.some((day, i) => day !== measured.days[i])) setMeasured({ at, days: next });
   });
 
   const colAt = (clientX: number, clientY: number) => {
@@ -316,6 +340,7 @@ export function TimeGrid({
             ))}
           </div>
           {days.map((d, i) => {
+            const heights = heightsOn(i);
             // A stack of runs is one item beside the meetings it meets: a meeting at the same time sits beside it.
             const stacks = runStacks(items, d, heights);
             const placed = layoutDay(

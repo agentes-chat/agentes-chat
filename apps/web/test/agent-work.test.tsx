@@ -102,14 +102,14 @@ describe("the sidebar's agents", () => {
     expect(head?.querySelector(".sidebar__section-working")?.textContent).toBe("1 trabalhando");
   });
 
-  test("an agent free again reads Disponível, never amber Ausente; its role comes back", async () => {
+  test("an agent idle a while reads Inativo, never a person's Ausente; its role comes back", async () => {
     const state = seedState();
     state.agentStatuses = [status(ATLAS_ID, { presence: "away", activeAt: ago(120) })];
     await renderApp(`/org/${ORG_ID}/c/${GENERAL_ID}`, { api: createFakeApi(state) });
     await settle(8);
     const atlas = agentRow(ATLAS_ID);
-    expect(atlas.querySelector(".ac-presence")?.getAttribute("data-presence")).toBe("online");
-    expect(atlas.querySelector(".ac-avatar__badge")?.getAttribute("title")).toBe("Disponível");
+    expect(atlas.querySelector(".ac-presence")?.getAttribute("data-presence")).toBe("away");
+    expect(atlas.querySelector(".ac-avatar__badge")?.getAttribute("title")).toBe("Inativo");
     expect(atlas.querySelector(".work-line")).toBeNull();
     expect(atlas.querySelector(".sidebar__item-role.ac-tag")?.textContent).toBe("Ops");
   });

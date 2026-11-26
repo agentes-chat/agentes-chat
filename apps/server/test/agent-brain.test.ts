@@ -22,7 +22,6 @@ interface Brain {
   brain: string;
   model: string | null;
   effectiveModel: string | null;
-  fallback: boolean;
   computer: { machineId: string; name: string; online: boolean } | null;
   options: { kind: string; available: boolean; reason?: string; models: { value: string }[] }[];
   machines: { machineId: string; name: string; online: boolean; options: { kind: string; available: boolean }[] }[];
@@ -90,14 +89,16 @@ function pairMac(api: (path: string, init?: Parameters<ReturnType<typeof browser
   return pairComputer(t, api, { ...RUNNER, exec: true }, { name: "mac" });
 }
 
-test("agent brain: defaults, who may, letting others talk to a plan, what the computer has, model and fallback", async () => {
+test("agent brain: defaults, who may, letting others talk to a plan, what the computer has, and the model", async () => {
   const { api, asBia, agentId } = await workspace();
 
-  // Defaults: the model (API), fallback on, nothing to offer without a computer.
+  // Defaults: the model (API), nothing to offer without a computer. The removed switches stay in the view for older
+  // phone builds, read-only and true to what happens: never the API for the computer, extra usage on the own plan.
   const first = await api(`/agents/${agentId}/brain`);
   expect(first.status).toBe(200);
   const fresh = (await first.json()) as Brain;
-  expect(fresh).toMatchObject({ brain: "model", model: null, effectiveModel: null, fallback: true, computer: null });
+  expect(fresh).toMatchObject({ brain: "model", model: null, effectiveModel: null, computer: null });
+  expect(fresh).toMatchObject({ fallback: false, extraUsage: true });
   // Accounts (ADR 0041): none without a computer.
   expect(fresh).toMatchObject({
     account: null,
@@ -119,6 +120,7 @@ test("agent brain: defaults, who may, letting others talk to a plan, what the co
     ["antigravity", false, "no_computer"],
   ]);
   expect(fresh.options.find((o) => o.kind === "claude_code")?.models.map((m) => m.value)).toEqual([
+    "fable",
     "opus",
     "sonnet",
     "haiku",
@@ -193,10 +195,18 @@ test("agent brain: defaults, who may, letting others talk to a plan, what the co
     "everyone",
   ]);
 
-  // Model and fallback change without confirming again; bad models are refused.
-  const fallbackOff = await api(`/agents/${agentId}/brain`, { method: "PUT", json: { fallback: false } });
-  expect(fallbackOff.status).toBe(200);
-  expect(await fallbackOff.json()).toMatchObject({ brain: "claude_code", model: "opus", fallback: false });
+  // An older app's removed switches are taken and ignored: nothing changes and nothing is audited for them.
+  const stored = (await t.db.select().from(schema.agents).where(eq(schema.agents.id, agentId)))[0];
+  const ignored = await api(`/agents/${agentId}/brain`, {
+    method: "PUT",
+    json: { fallback: false, extraUsage: false },
+  });
+  expect(ignored.status).toBe(200);
+  const ignoredView = (await ignored.json()) as Brain;
+  expect(ignoredView).toMatchObject({ brain: "claude_code", model: "opus" });
+  expect(ignoredView).toMatchObject({ fallback: false, extraUsage: true });
+  expect((await t.db.select().from(schema.agents).where(eq(schema.agents.id, agentId)))[0]).toEqual(stored);
+  // The model changes without confirming again; bad models are refused.
   const sonnet = (await (
     await api(`/agents/${agentId}/brain`, { method: "PUT", json: { model: null } })
   ).json()) as Brain;
@@ -206,16 +216,16 @@ test("agent brain: defaults, who may, letting others talk to a plan, what the co
 
   // Persisted, and audited.
   const [row] = await t.db.select().from(schema.agents).where(eq(schema.agents.id, agentId));
-  expect(row).toMatchObject({ brain: "claude_code", brainModel: null, brainFallback: false });
+  expect(row).toMatchObject({ brain: "claude_code", brainModel: null });
   const audit = await t.db.select().from(schema.auditLog).where(eq(schema.auditLog.action, "agent.brain"));
-  expect(audit.length).toBe(3);
+  expect(audit.length).toBe(2);
   expect(JSON.stringify(audit.map((a) => a.details))).not.toMatch(/acceptedPlanTerms|audience/);
 
   // Codex appears once the computer has a recent one; any model name is taken as typed.
   await t.db
     .update(schema.machines)
     .set({
-      executors: { claude: { version: "2.1.0" }, codex: { version: "codex-cli 0.170.0" }, detectedAt: "2026-10-17" },
+      executors: { claude: { version: "2.1.300" }, codex: { version: "codex-cli 0.170.0" }, detectedAt: "2026-10-17" },
     })
     .where(eq(schema.machines.id, mac.machineId));
   const codex = await api(`/agents/${agentId}/brain`, {
@@ -227,7 +237,7 @@ test("agent brain: defaults, who may, letting others talk to a plan, what the co
 
   // Back to the API: no confirmation, the model is cleared.
   const back = await api(`/agents/${agentId}/brain`, { method: "PUT", json: { brain: "model" } });
-  expect(await back.json()).toMatchObject({ brain: "model", model: null, fallback: false });
+  expect(await back.json()).toMatchObject({ brain: "model", model: null });
 });
 
 test("Outros agentes podem consultar: the audience carries the switch, on by default, kept when absent", async () => {
@@ -347,7 +357,7 @@ test("the agent list carries a plan agent's account and its last windows, for ev
   const week = usage("seven_day", 40);
   await t.db
     .update(schema.machines)
-    .set({ executors: { claude: { version: "2.1.0", plan: "max" }, ownUsage: { claude_code: week } } })
+    .set({ executors: { claude: { version: "2.1.300", plan: "max" }, ownUsage: { claude_code: week } } })
     .where(eq(schema.machines.id, mac.machineId));
   expect(await brainOf(api)).toMatchObject({ account: "Claude Max", usage: week });
   expect(await brainOf(asBia)).toMatchObject({ account: "Claude Max", usage: week });
@@ -404,7 +414,7 @@ test("a new agent starts on Automático on every brain; one with a fixed model k
   await t.db
     .update(schema.machines)
     .set({
-      executors: { claude: { version: "2.1.0" }, codex: { version: "codex-cli 0.170.0" }, detectedAt: "2026-10-17" },
+      executors: { claude: { version: "2.1.300" }, codex: { version: "codex-cli 0.170.0" }, detectedAt: "2026-10-17" },
     })
     .where(eq(schema.machines.id, mac.machineId));
   for (const id of [eva.id, fixedId]) {
@@ -451,9 +461,10 @@ test("one agent's setup on others (ADR 0094): a preview keeps nothing, each agen
   const brainOf = async (id: string) => (await (await api(`/agents/${id}/brain`)).json()) as Brain;
   const newAgentSetup = async () => ((await (await api("/agent-setup")).json()) as { setup: unknown }).setup;
   // Dev was created on Sonnet with the workspace's key, Eva on Automático: Dev's is the last pick.
+  // Its key carries over; its model starts on Automático.
   const created = {
     brain: "model",
-    model: "claude-sonnet-5-5",
+    model: "auto",
     key: credentialId,
     contextTokens: null,
     autonomy: null,
@@ -471,11 +482,11 @@ test("one agent's setup on others (ADR 0094): a preview keeps nothing, each agen
   expect(await brainOf(eva.id)).toMatchObject({ brain: "claude_code", model: "opus", effort: "high" });
   expect(await newAgentSetup()).toMatchObject({
     brain: "claude_code",
-    model: "opus",
+    model: "auto",
     computer: { machineId: mac.machineId, name: "mac" },
     account: null,
     ownSignIn: true,
-    effort: "high",
+    effort: "auto",
   });
 
   // A member changes only their own agents; creating agents (Todos' by default), she reads what new ones start with.

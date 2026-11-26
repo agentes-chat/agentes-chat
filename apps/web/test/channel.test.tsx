@@ -68,7 +68,7 @@ describe("Canal", () => {
 
   test("subscribes to the channel over the WebSocket", async () => {
     const { socket } = await open();
-    expect(socket.url).toBe(`ws://localhost:3000/api/ws?orgId=${ORG_ID}`);
+    expect(socket.url).toMatch(new RegExp(`^ws://localhost:3000/api/ws\\?orgId=${ORG_ID}&tab=\\w+$`));
     expect(socket.sent).toContainEqual({ type: "subscribe", channelId: ENG_ID });
   });
 
@@ -95,7 +95,7 @@ describe("Canal", () => {
     expect((box as HTMLTextAreaElement).value).toBe("");
   });
 
-  test("an agent at work: the bar and the running ring say it, none of its words; then its final message, whole", async () => {
+  test("an agent at work: the last row and its rings say it, none of its words; then its final message, whole", async () => {
     const withDm = seedState();
     seedDm(withDm, { type: "agent", id: ATLAS_ID });
     const { socket } = await open(withDm);
@@ -109,10 +109,11 @@ describe("Canal", () => {
     await settle();
     expect(document.querySelector(".ac-msg--streaming")).toBeNull();
     expect(document.body.textContent).not.toContain("Os 401 no Sentry caíram de 312 para");
-    const bar = document.querySelector('.ac-typing[data-active="true"]') as HTMLElement;
-    expect(bar.textContent).toContain("Atlas");
-    expect(bar.textContent).toContain("escrevendo…");
-    expect(bar.querySelector(".ac-avatar--running")).not.toBeNull();
+    // The conversation's last row says it: its face with its rings, its name and what it does.
+    const tail = document.querySelector(".working-tail") as HTMLElement;
+    expect(tail.textContent).toContain("Atlas");
+    expect(tail.textContent).toContain("escrevendo…");
+    expect(tail.querySelector(".ac-orbit .ac-avatar--running")).not.toBeNull();
     // Its DM in the sidebar shows the ring too.
     const nav = screen().getByRole("navigation", { name: "Navegação do workspace" });
     expect(nav.querySelector(".ac-avatar--running")).not.toBeNull();
@@ -468,14 +469,13 @@ describe("Canal", () => {
       expect(bar.textContent).toContain("Fazer um merge");
       await act(async () => fireEvent.click(within(bar).getByRole("button", { name: "Ver" })));
       expect(card.classList.contains("rq--flash")).toBe(true);
-      // Ada at work meanwhile: the line still says the request, and keeps her stop at its end.
+      // Ada at work meanwhile: the line still says the request (no stop in it), and the composer stops her.
       const run = { type: "agent.run", channelId: ENG_ID, threadId: null, runId: "r-live", agentId: ADA_ID };
       await act(async () => socket.push({ type: "event", channelId: ENG_ID, event: { ...run, status: "running" } }));
       await settle(2);
       expect(bar.textContent).toContain("Ada espera sua aprovação");
-      const stop = within(bar).getByRole("button", { name: "Parar" });
-      expect(bar.lastElementChild?.contains(stop)).toBe(true);
-      await act(async () => fireEvent.click(stop));
+      expect(within(bar).queryByRole("button", { name: "Parar" })).toBeNull();
+      await act(async () => fireEvent.click(screen().getByRole("button", { name: "Parar a Ada" })));
       await settle(2);
       expect(state.calls.some((c) => c.method === "agents.cancelRun")).toBe(true);
     } finally {

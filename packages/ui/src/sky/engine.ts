@@ -15,6 +15,8 @@
  * element's CSS background shows.
  */
 import { onScreenNow } from "../device";
+import { onSight } from "../sight";
+import { PAINT_ATTRS } from "../theme";
 import {
   blobsAt,
   type CalmZone,
@@ -112,7 +114,7 @@ function watchTheme() {
     themeVersion++;
     redrawSkies();
   });
-  themeWatch.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme", "class"] });
+  themeWatch.observe(document.documentElement, { attributes: true, attributeFilter: [...PAINT_ATTRS, "class"] });
 }
 
 const REDUCE = "(prefers-reduced-motion: reduce)";
@@ -120,9 +122,24 @@ const REDUCE = "(prefers-reduced-motion: reduce)";
 export const prefersReducedMotion = () =>
   typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia(REDUCE).matches;
 
-/** Every sky held still (`holdSkies`), and what each live sky does when that changes. */
+/** Every sky held still (`holdSkies`, or nobody looking: `sight`), and what each live sky does then. */
 let held = false;
+let away = false;
 const onHold = new Set<() => void>();
+
+const setHeld = (next: { held?: boolean; away?: boolean }) => {
+  const before = held || away;
+  held = next.held ?? held;
+  away = next.away ?? away;
+  if (before !== (held || away)) for (const changed of onHold) changed();
+};
+
+/**
+ * Nobody looking (`sight` not present: hidden, behind another window, or no input for a while): the skies stand
+ * still, and the first input or the window coming forward moves them again. A hidden desktop window keeps running its
+ * page (no throttling there), where each frame of a sky costs a core's time for nothing.
+ */
+onSight((now) => setHeld({ away: now !== "present" }));
 
 /**
  * Holds every sky still, as with reduced motion: drawn once, and again on a resize or a theme change. For the Linux
@@ -131,12 +148,10 @@ const onHold = new Set<() => void>();
  * busy and made clicks slow.
  */
 export function holdSkies(hold = true) {
-  if (held === hold) return;
-  held = hold;
-  for (const changed of onHold) changed();
+  setHeld({ held: hold });
 }
 
-export const skiesHeld = () => held;
+export const skiesHeld = () => held || away;
 
 interface Sky {
   dirty: boolean;
@@ -189,7 +204,7 @@ export function startSky(canvas: HTMLCanvasElement, get: () => SkyOptions): () =
   if (!ctx || !parent) return () => {};
   const host: HTMLElement = parent;
   const motion = typeof window.matchMedia === "function" ? window.matchMedia(REDUCE) : null;
-  let reduced = held || motion?.matches === true;
+  let reduced = skiesHeld() || motion?.matches === true;
   let w = 0;
   let h = 0;
   let px = 0;
@@ -416,7 +431,7 @@ export function startSky(canvas: HTMLCanvasElement, get: () => SkyOptions): () =
   watchTheme();
   // The setting can change while the page is open: a still sky starts moving, a moving one stops.
   const onMotion = () => {
-    reduced = held || motion?.matches === true;
+    reduced = skiesHeld() || motion?.matches === true;
     sky.dirty = true;
     wake();
   };

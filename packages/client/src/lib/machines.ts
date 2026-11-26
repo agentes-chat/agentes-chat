@@ -117,6 +117,86 @@ export const CLI_INSTALL_POLL_MS = 1500;
 /** `Machine.cliErrors`' word for Claude Code on Windows without Git for Windows (mirror of `CLI_GIT_MISSING`). */
 export const CLI_GIT_MISSING = "git_missing";
 
+/** `Machine.cliErrors`' word for a CLI only in root's own `~/.local/bin` in system mode (mirror of `CLI_HOME_ONLY`). */
+export const CLI_HOME_ONLY = "home_only";
+
+/**
+ * Each vendor's own installer, for the CLIs the apps don't install; each puts its command in `~/.local/bin`. `windows`:
+ * its PowerShell installer, started through `powershell` so the line runs in cmd too (xAI's puts `grok.exe` in
+ * `%USERPROFILE%\.grok\bin`).
+ */
+const CLI_INSTALLERS: Record<string, { script: string; bin: string; opt: string; flags: string; windows?: string }> = {
+  antigravity: {
+    script: "curl -fsSL https://antigravity.google/cli/install.sh | bash",
+    bin: "agy",
+    opt: "/opt/agy",
+    flags: " -s -- --skip-path",
+  },
+  grok: {
+    script: "curl -fsSL https://x.ai/cli/install.sh | bash",
+    bin: "grok",
+    opt: "/opt/grok",
+    flags: "",
+    windows: 'powershell -ExecutionPolicy Bypass -Command "irm https://x.ai/cli/install.ps1 | iex"',
+  },
+  cursor: { script: "curl https://cursor.com/install -fsS | bash", bin: "agent", opt: "/opt/cursor", flags: "" },
+};
+
+/**
+ * The terminal line that installs `kind`'s CLI on a computer someone connected, where the apps don't install it. In
+ * system mode every agent's user must run it, so it goes under `/opt` with a link in `/usr/local/bin`
+ * (SELF_HOSTING.md). Null: no such line (Windows but Grok Build, the workspace's own computer, Claude Code and Codex,
+ * OpenCode).
+ */
+export function cliInstallCommand(kind: string, m: Pick<Machine, "kind" | "os" | "mode">): string | null {
+  const it = CLI_INSTALLERS[kind];
+  if (!it || m.kind === "managed") return null;
+  if (m.os === "windows") return it.windows ?? null;
+  if (m.os !== "linux" && m.os !== "darwin") return null;
+  if (m.mode !== "system") return it.script;
+  return `sudo env HOME=${it.opt} sh -c '${it.script}${it.flags}' && sudo chmod -R a+rX ${it.opt} && sudo ln -sf ${it.opt}/.local/bin/${it.bin} /usr/local/bin/${it.bin}`;
+}
+
+/**
+ * What a card says where `kind`'s CLI is missing on `m` and the apps can't install it: the cause and the line to run
+ * there (`cliInstallCommand`). Too old for agentes.chat (`cli_outdated`): the same line, which installs the newest.
+ * Null where there is no such line, or the CLI is there and fails on its own.
+ */
+export function cliCommandWayOut(
+  t: TFunction,
+  kind: MachineAccountKind,
+  m: Pick<Machine, "kind" | "os" | "mode" | "cliErrors">,
+  reason: "not_installed" | "cant_start" | "cli_outdated",
+  computer: string,
+): { text: string; command: string } | null {
+  const command = cliInstallCommand(kind, m);
+  const homeOnly = m.cliErrors?.[kind] === CLI_HOME_ONLY;
+  if (!command || (reason === "cant_start" && !homeOnly)) return null;
+  const words = { program: t(`brain.card.${kind}`), computer };
+  if (reason === "cli_outdated") {
+    const outdated = t("brain.reasons.cli_outdated", words);
+    return { text: t("common.joinSentences", { a: outdated, b: t("connectAi.cli.runThis") }), command };
+  }
+  const text = homeOnly
+    ? t("connectAi.cli.homeOnly", words)
+    : m.mode === "system"
+      ? t("connectAi.cli.missingSystem", words)
+      : t("common.joinSentences", { a: t("connectAi.cli.missing", words), b: t("connectAi.cli.runThis") });
+  return { text, command };
+}
+
+/**
+ * What holds Codex's commands on a Windows computer, when that says something (`Machine.codexSandbox`): Codex's own
+ * sandbox where MXC is missing (writes held, the internet only partly blocked), or nothing at all. Null with MXC, on
+ * another system, or while unknown.
+ */
+export function codexSandboxNote(t: TFunction, m: Pick<Machine, "name" | "codexSandbox">): string | null {
+  if (m.codexSandbox === "unelevated") return t("brain.sandboxPartial");
+  if (m.codexSandbox === "none")
+    return t("brain.reasons.windows_sandbox", { computer: m.name, program: t("brain.card.codex") });
+  return null;
+}
+
 /** Where Git for Windows is downloaded, which Claude Code needs on Windows. */
 export const GIT_FOR_WINDOWS_URL = "https://git-scm.com/downloads/win";
 
@@ -529,9 +609,9 @@ export const otherThanHint = (hint: string | null | undefined, account: Pick<Mac
 
 /**
  * How long a sign-in's status reads may keep failing before it fails: a server restart and the runner's reconnect.
- * After a drop the runner dials again 1, 2, 4, 8, 16, then 32 s apart (`backoffDelay` in the runner, ±20 %). A restart
- * of up to about 30 s (deploy/deploy.sh) can miss the fifth dial, at 25 to 37 s, and wait for the sixth, at up to
- * 76 s; this covers it and the next read.
+ * After a drop the runner dials again at a random point within 1, 2, 4, 8, 16, then 32 s (`reconnectDelay` in
+ * `lib/backoff.ts`). A restart of up to about 30 s (deploy/deploy.sh) can miss the fifth dial, at up to 31 s, and wait
+ * for the sixth, at up to 63 s; this covers it and the next read.
  */
 export const LOGIN_RECONNECT_MS = 90_000;
 
@@ -567,4 +647,19 @@ export function loginRead(status: { isError: boolean; error: unknown; errorUpdat
   if (!status.isError) return null;
   if (!(status.error instanceof LoginReadError)) return "failed";
   return status.errorUpdatedAt - status.error.since < LOGIN_RECONNECT_MS ? "reconnecting" : "noAnswer";
+}
+
+const OS_CODES = new Set(["linux", "darwin", "windows", "other"]);
+
+/** "macOS", "Windows", or the server's own words when it sends a full name with a version ("Ubuntu 24.04"). */
+export const osName = (t: TFunction, os: string) =>
+  OS_CODES.has(os) ? (t as unknown as (key: string) => string)(`machines.os.${os}`) : os;
+
+/** ADR 0237: "Agents use the internet of Ana's laptop (Ana)" while a person's computer lends its internet; else null. */
+export function egressViaText(t: TFunction, m: Pick<Machine, "kind" | "online" | "egressVia">): string | null {
+  const via = m.kind === "managed" && m.online ? m.egressVia : null;
+  if (!via) return null;
+  return via.userName
+    ? t("machines.egress.viaBy", { name: via.name, person: via.userName })
+    : t("machines.egress.via", { name: via.name });
 }

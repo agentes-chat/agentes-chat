@@ -1,5 +1,5 @@
 import { and, desc, type Executor, eq, inArray, isNull, or, schema, sql } from "@agenteschat/db";
-import { type AuthorityRun, fedByRoutine, type RunAuthority, runAuthority } from "./authority";
+import { type AuthorityRun, fedByRoutine, type RunAuthority, runAuthority, transcriptKeys } from "./authority";
 import { caches, cachesEnabled } from "./cache";
 import { postedBySql } from "./message-place";
 
@@ -77,7 +77,8 @@ export interface OutsideMemo {
 
 /**
  * Whether a run read content from outside the org (ADR 0117): its computer brain fetched the web itself, one of its
- * tool results came from outside (the gateway's `outside` mark), or its conversation already relays outside content
+ * tool results came from outside (the gateway's `outside` mark), its prompt holds connected servers' own instructions
+ * (`Transcript.readServerNotes`), or its conversation already relays outside content
  * (`conversationReadOutside`). What such a run posts carries `meta.readOutside`, so the next agent reads it as
  * relayed and memory built from it stays low trust. It never stops, asks or refuses anything by itself. Once true it
  * stays true, so it is remembered per run (`caches.readOutsideRuns`); `memo` keeps the conversation's answer for the
@@ -100,15 +101,20 @@ export async function runReadOutside(
   return read;
 }
 
-/** What the run read with its own calls, its conversation aside. */
+/** What the run read itself, its conversation aside: its own calls, and servers' instructions in its prompt. */
 async function readOutsideItself(db: Executor, run: OutsideRun): Promise<boolean> {
   const tried = run.transcript?.harnessTried;
   return (
+    run.transcript?.readServerNotes === true ||
     (Array.isArray(tried) && tried.some((l) => typeof l === "string" && HARNESS_OUTSIDE.test(l))) ||
     stepReadOutside(db, run)
   );
 }
 
+/**
+ * One of the run's tool results came from outside, or a message with `meta.readOutside` (a forwarded one, say) was
+ * steered into it while it worked. One statement for both: every run asks this.
+ */
 async function stepReadOutside(db: Executor, run: OutsideRun): Promise<boolean> {
   const [step] = await db
     .select({ id: agentRunSteps.id })
@@ -116,8 +122,15 @@ async function stepReadOutside(db: Executor, run: OutsideRun): Promise<boolean> 
     .where(
       and(
         eq(agentRunSteps.runId, run.id),
-        eq(agentRunSteps.kind, "tool_result"),
-        sql`${agentRunSteps.data}->'data'->>'outside' = 'true'`,
+        or(
+          and(eq(agentRunSteps.kind, "tool_result"), sql`${agentRunSteps.data}->'data'->>'outside' = 'true'`),
+          and(
+            eq(agentRunSteps.kind, "context"),
+            sql`exists (select 1 from messages m
+              where m.org_id = ${run.orgId} and m.meta->>'readOutside' = 'true'
+                and m.id in (select jsonb_array_elements_text(${agentRunSteps.data}->'steeredMessageIds')::uuid))`,
+          ),
+        ),
       ),
     )
     .limit(1);
@@ -144,7 +157,7 @@ async function outsideRun(db: Executor, orgId: string, runId: string) {
       orgId: agentRuns.orgId,
       triggerMessageId: agentRuns.triggerMessageId,
       background: agentRuns.background,
-      transcript: agentRuns.transcript,
+      transcript: transcriptKeys("steeredBy", "harnessTried", "readServerNotes"),
     })
     .from(agentRuns)
     .where(and(eq(agentRuns.orgId, orgId), eq(agentRuns.id, runId)));

@@ -31,12 +31,15 @@ import { publishChannelEvent, publishMessageCreated } from "./events";
 import type { Transcript } from "./executor";
 import { cutText, fromNow, pgSafeJson, stringsOf } from "./format";
 import type { Judge } from "./judge";
+import { queueLiveActivityRun } from "./live-activity-queue";
 import { getMessage, insertMessage, type Message, messageView } from "./messages";
 import { notifyCatchUpClosed, notifyCatchUpClosedAsker } from "./notification-producers";
 import { openRequestsOf } from "./open-requests";
 import { withdrawQuestion } from "./questions";
 import { releaseInbox } from "./run-inbox";
 import { resumeRunWithResult } from "./run-resume";
+import { joinsRun, placeAfter } from "./run-scope";
+import { runState } from "./run-state";
 import { type AgentRun, addRunStep, computerWaitOf, replyThreadOf, transitionRun, usageWaitOf } from "./runs";
 import { withdrawSecretRequest } from "./secrets";
 import type { ToolDefinition, ToolSource } from "./tools/types";
@@ -77,13 +80,18 @@ export const CLOSED_NOTE_CODE = "catch_up_closed";
  * already be answered here. One statement.
  */
 export async function scheduleParkedChecks(db: Executor, m: Message) {
-  if (m.deletedAt || m.meta.notice || m.meta.usageWait || m.meta.talker) return;
+  // A line before slow work (`say_now`, ADR 0207) answers nothing a waiting run asked.
+  if (m.deletedAt || m.meta.notice || m.meta.usageWait || m.meta.talker || m.meta.sayNow) return;
   if (m.authorType !== "person" && m.authorType !== "agent") return;
   const card = m.authorType === "agent" && Boolean(m.meta.questionId || m.meta.secretRequest || m.meta.browserHandoff);
   // One check per run and window, a whole window after the first message in it: the replies it brings come in.
   const now = Date.now();
   const slot = Math.floor(now / EARLY_CHECK_MS);
   const thread = m.threadId;
+  // In the main timeline it reaches the runs it may join (`joinsRun`). It called several agents when it started runs of
+  // more than one (in a channel that replies in threads each answers under it, joining none, ADR 0214 §5).
+  const several = sql`((select count(*) from ${agentRuns} sr where sr.org_id = ${m.orgId}::uuid
+    and sr.trigger_message_id = ${m.id}::uuid) > 1)`;
   await db.execute(sql`insert into ${outbox} (id, org_id, kind, payload, dedupe_key, max_attempts, next_attempt_at)
     select gen_random_uuid(), r.org_id, ${EARLY_CHECK_JOB}, jsonb_build_object('runId', r.id),
       ${`${EARLY_CHECK_JOB}:`} || r.id || ${`:${slot}`}, 2, ${new Date(now + EARLY_CHECK_MS).toISOString()}::timestamptz
@@ -95,7 +103,7 @@ export async function scheduleParkedChecks(db: Executor, m: Message) {
         thread
           ? sql`((r.thread_root_id = ${thread}::uuid and r.thread_root_id <> r.trigger_message_id)
             or r.trigger_message_id = ${thread}::uuid or ${thread}::uuid = any(r.pending_message_ids))`
-          : sql`r.thread_root_id = r.trigger_message_id`
+          : joinsRun(sql`r`, { main: { userId: m.authorUserId, several } })
       }
     on conflict do nothing`);
 }
@@ -305,6 +313,7 @@ async function closeParked(deps: ParkedDeps, run: AgentRun, r: Release): Promise
       passed: true,
     });
   await announceAgentStatus(deps.pubsub, run.orgId, run.agentId).catch(() => {});
+  await queueLiveActivityRun(db, run).catch(() => {});
   const line = lineMachineOf(run);
   if (line) await publishQueueChanged(deps.pubsub, run.orgId, line);
   // A note that also speaks for later turns waiting here is theirs now; this run's says why it didn't answer.
@@ -391,7 +400,7 @@ async function closeAside(deps: ParkedDeps, run: AgentRun, r: Release): Promise<
           orgId: run.orgId,
           agentId: run.agentId,
           channelId: run.channelId,
-          threadRootId: last.threadId ?? last.id,
+          ...placeAfter(run, last),
           triggerMessageId: last.id,
           trigger: run.trigger,
           hop: run.hop,
@@ -549,17 +558,26 @@ async function checkRequests(deps: ParkedDeps, judge: Judge, run: AgentRun, trig
 export const quietEnd = (run: Pick<AgentRun, "transcript">) =>
   transcriptOf(run).passListed ? "call `pass`" : "end your turn without writing anything";
 
-/** A run's transcript with `requestId`'s waiting call reading `text` (`mootRequests`), free to stay quiet after it. */
-export const withMootRequest = (requestId: string, text: string) =>
-  sql`jsonb_set(jsonb_set(coalesce(${agentRuns.transcript}, '{}'::jsonb), '{mootRequests}',
+/**
+ * A run's transcript with `requestId`'s waiting call reading `text` (`mootRequests`), free to stay quiet after it.
+ * `takenOver`: the agent's own newer run here withdrew it and answers the person, so the calls it had made by then
+ * are kept (`Transcript.takenOver`): woken with nothing more done, it ends without a word.
+ */
+export const withMootRequest = (requestId: string, text: string, takenOver = false) => {
+  const moot = sql`jsonb_set(jsonb_set(coalesce(${agentRuns.transcript}, '{}'::jsonb), '{mootRequests}',
     coalesce(${agentRuns.transcript}->'mootRequests', '{}'::jsonb) || jsonb_build_object(${requestId}::text, ${text}::text)),
     '{requestMoot}', 'true'::jsonb)`;
+  return takenOver
+    ? sql`jsonb_set(${moot}, '{takenOver}', coalesce(${agentRuns.transcript}->'executedCalls', '0'::jsonb))`
+    : moot;
+};
 
 /**
  * Withdraws a request of the run's that nobody needs to answer anymore (its need was met here, or the agent withdrew it
  * in another turn): its waiting call reads `text` instead of "nobody will answer" (`mootRequests`), and the run may
  * stay quiet after it (`requestMoot`). A person answering at the same moment wins: their answer is what the call reads,
- * and the run owes them one. False, with nothing withdrawn, when the run no longer waits.
+ * and the run owes them one. False, with nothing withdrawn, when the run no longer waits. `takenOver`: withdrawn by the
+ * agent's own newer run here (`withdraw_request`), as `withMootRequest` keeps it.
  */
 export async function withdrawMoot(
   deps: Pick<ParkedDeps, "db" | "pubsub">,
@@ -567,10 +585,11 @@ export async function withdrawMoot(
   request: { id: string; kind: "browser" | "desktop" | "secret" | "question" },
   text: string,
   reason: string | null,
+  takenOver = false,
 ) {
   const marked = await deps.db
     .update(agentRuns)
-    .set({ transcript: withMootRequest(request.id, text) })
+    .set({ transcript: withMootRequest(request.id, text, takenOver) })
     .where(
       and(
         eq(agentRuns.id, run.id),
@@ -628,7 +647,7 @@ async function parkedOn(
         eq(agentRuns.background, false),
         sql`${agentRuns.workId} is null`,
         sql`(${agentRuns.waitingMachineId} is not null
-          or ${agentRuns.transcript}->'waitingForBrain'->>'code' in ('plan_limit', 'budget', 'usage_pause'))`,
+          or ${runState}->'waitingForBrain'->>'code' in ('plan_limit', 'budget', 'usage_pause'))`,
         sql`(${agentRuns.triggerMessageId} = any(${list}::uuid[]) or ${agentRuns.pendingMessageIds} && ${list}::uuid[])`,
       ),
     )
@@ -738,7 +757,9 @@ export function createReleaseAsksToolSource(deps: { pubsub?: PubSub } = {}): Too
         };
       const caller = await getAgentCached(ctx.db, ctx.orgId, ctx.agentId);
       const who = { name: caller?.name ?? "Another agent", agentId: ctx.agentId };
-      const reason = cutText(String(input.reason ?? "").trim(), 300);
+      // From a confidential thread (ADR 0190) no reason goes with it: the step it is written in is the other
+      // agent's run's, which may belong to another thread.
+      const reason = ctx.confidential ? "" : cutText(String(input.reason ?? "").trim(), 300);
       let released = 0;
       for (const p of found) {
         const held = [p.run.triggerMessageId, ...p.run.pendingMessageIds].filter((id) => handled.includes(id));

@@ -10,17 +10,19 @@ import { useOrg } from "@/providers/org";
 import { Button, Text, useToast } from "@/ui";
 import { router } from "@/ui/navigation";
 import { AskButtons } from "../chat/asks";
+import { useRowDirectory } from "../chat/row-data";
 import { useColors, useDirectory, useOrgId, useWhen } from "../shared/hooks";
 import { Tile } from "../shared/parts";
 import { WaitingCard } from "../shared/WaitingCard";
 import { type DeviceNotice, deviceHref, deviceNoticeOf, deviceNoticeTitle, joinFacts } from "./logic";
-import { JoinButtons } from "./parts";
+import { JoinButtons, JoinInternetLine } from "./parts";
 import { useDeviceMutation, useDevices } from "./queries";
 import { ToolOneClickButton } from "./ToolOneClick";
 
 /** Whom the agent works for, by first name ("" when it's the viewer or nobody says). */
 export function useNoticePerson(n: Pick<AppNotification, "kind" | "source" | "latest">) {
-  const dir = useDirectory();
+  // The app's one directory (`WorkspaceRowData`): Atividade's rows and the island ask for it per notice.
+  const dir = useRowDirectory();
   const id = deviceNoticeOf(n)?.forUserId;
   return id ? firstName(dir.nameOf({ type: "person", id })) : "";
 }
@@ -166,6 +168,7 @@ function JoinNotice({ n, d }: { n: AppNotification; d: DeviceNotice }) {
         <Text variant="small" tone="muted">
           {joinFacts(t, request)}
         </Text>
+        <JoinInternetLine />
       </WaitingCard>
     );
   // Answered elsewhere, or out of time: the card opens the devices.
@@ -237,13 +240,38 @@ function AccessNotice({ n, d, first }: { n: AppNotification; d: DeviceNotice; fi
   );
 }
 
-/** Under an inbox row: Stop while an agent holds the viewer's phone. */
+/** Under an inbox row: Stop while an agent holds the viewer's phone, Turn off a computer's internet lent to agents. */
 export function DeviceNoticeActions({ item: n }: { item: AppNotification }) {
   const { t } = useTranslation();
   const toast = useToast();
   const done = useDone(n);
   const d = deviceNoticeOf(n);
   const stop = useDeviceMutation((api, orgId, id: string) => api.devices.stopPhone(orgId, id));
+  const lendOff = useDeviceMutation((api, orgId, id: string) =>
+    api.devices.updateComputer(orgId, id, { shareInternet: false }),
+  );
+  if (d?.kind === "device.internet_shared" && d.machineId && !n.doneAt) {
+    const machineId = d.machineId;
+    return (
+      <View style={styles.row}>
+        <Button
+          variant="secondary"
+          size="sm"
+          label={t("devices.notice.internetOff")}
+          loading={lendOff.isPending}
+          onPress={() =>
+            lendOff.mutate(machineId, {
+              onSuccess: () => {
+                done();
+                toast({ title: t("devices.notice.internetOffDone", { deviceName: d.device }), icon: "check" });
+              },
+              onError: (err) => toast({ title: errorText(t, err), icon: "x" }),
+            })
+          }
+        />
+      </View>
+    );
+  }
   if (d?.kind !== "device.in_use" || !d.phoneId || n.doneAt) return null;
   const phoneId = d.phoneId;
   return (

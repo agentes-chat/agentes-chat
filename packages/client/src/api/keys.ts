@@ -14,6 +14,8 @@ export const keys = {
   me: ["me"] as const,
   accountDeletion: ["account-deletion"] as const,
   phoneSignIn: ["phone-sign-in"] as const,
+  /** My outside chat surface links (ADR 0187): per account, not per workspace. */
+  surfaceLinks: ["surface-links"] as const,
   /** The server's Web Push key (ADR 0071); `null` = Web Push off on this server. */
   webPushKey: ["push", "web-key"] as const,
   models: ["models"] as const,
@@ -46,7 +48,6 @@ export const keys = {
   channelCard: (orgId: string, channelId: string) => ["org", orgId, "channel", channelId, "card"] as const,
   messageCard: (orgId: string, messageId: string) => ["org", orgId, "message", messageId, "card"] as const,
   idRef: (orgId: string, id: string) => ["org", orgId, "ref", id] as const,
-  channelCategories: (orgId: string) => ["org", orgId, "channel-categories"] as const,
   channelMembers: (orgId: string, channelId: string) => ["org", orgId, "channel", channelId, "members"] as const,
   channelPermissions: (orgId: string, channelId: string) =>
     ["org", orgId, "channel", channelId, "permissions"] as const,
@@ -65,6 +66,7 @@ export const keys = {
   agentRepos: (orgId: string, agentId: string) => ["org", orgId, "agent", agentId, "repositories"] as const,
   agentMergeRepos: (orgId: string, agentId: string) => ["org", orgId, "agent", agentId, "merge-repositories"] as const,
   customServers: (orgId: string) => ["org", orgId, "custom-servers"] as const,
+  ownOAuthClient: (orgId: string, serverUrl: string) => ["org", orgId, "own-oauth-client", serverUrl] as const,
   scopes: (orgId: string, agentId: string) => ["org", orgId, "agent", agentId, "scopes"] as const,
   /** What the agent runs without asking ("Aprovar sempre"). */
   approvalCovers: (orgId: string) => ["org", orgId, "approval-covers"] as const,
@@ -84,6 +86,8 @@ export const keys = {
   /** Every single agent's reads (its page, its brain). */
   agentPages: (orgId: string) => ["org", orgId, "agent"] as const,
   aiAccounts: (orgId: string) => ["org", orgId, "ai-accounts"] as const,
+  /** Under `aiAccounts`: the same `machine.updated` event refetches it. */
+  accountOrder: (orgId: string) => ["org", orgId, "ai-accounts", "order"] as const,
   accountLogin: (orgId: string, machineId: string, loginId: string) =>
     ["org", orgId, "machine", machineId, "account-login", loginId] as const,
   agentChannels: (orgId: string, agentId: string) => ["org", orgId, "agent", agentId, "channels"] as const,
@@ -168,6 +172,8 @@ export const keys = {
   skillSettings: (orgId: string) => ["org", orgId, "skills", "settings"] as const,
   agentSkills: (orgId: string, agentId: string) => ["org", orgId, "skills", "agent", agentId] as const,
   learnedSkills: (orgId: string, agentId: string) => ["org", orgId, "skills", "learned", agentId] as const,
+  skillSuggestions: (orgId: string, agentId: string) => ["org", orgId, "skills", "suggest", agentId] as const,
+  agentLearnsSkills: (orgId: string, agentId: string) => ["org", orgId, "skills", "learns", agentId] as const,
   access: (orgId: string) => ["org", orgId, "access"] as const,
   agentAccess: (orgId: string, agentId: string) => ["org", orgId, "access", "agent", agentId] as const,
   issues: (orgId: string) => ["org", orgId, "issues"] as const,
@@ -184,6 +190,8 @@ export const keys = {
   /** How many threads I follow have an unread reply (the Threads entry's mark). */
   unreadThreads: (orgId: string) => ["org", orgId, "threads", "unread"] as const,
   unreadTasks: (orgId: string) => ["org", orgId, "issues", "unread"] as const,
+  /** Live files whose conversation has a reply I haven't read (ADR 0199): under the Drive's, read again with it. */
+  unreadFiles: (orgId: string) => ["org", orgId, "artifacts", "unread"] as const,
   channelThreads: (orgId: string, channelId: string, tab: string) =>
     ["org", orgId, "threads", "channel", channelId, tab] as const,
   /** The messages of a thread's context range (another channel's, or this one's). */
@@ -200,10 +208,13 @@ export const keys = {
   routines: (orgId: string) => ["org", orgId, "routines"] as const,
   routineRuns: (orgId: string, id: string) => ["org", orgId, "routines", "runs", id] as const,
   routineHook: (orgId: string, id: string) => ["org", orgId, "routines", "hook", id] as const,
+  routineRunCalls: (orgId: string, id: string, runId: string) =>
+    ["org", orgId, "routines", "runs", id, "calls", runId] as const,
   webhookSetup: (orgId: string, provider: string) => ["org", orgId, "routines", "webhook", provider] as const,
   calendar: (orgId: string) => ["org", orgId, "calendar"] as const,
   calendarRange: (orgId: string, from: string) => ["org", orgId, "calendar", from] as const,
   artifactList: (orgId: string, filters: object) => ["org", orgId, "artifacts", "list", filters] as const,
+  driveFolders: (orgId: string) => ["org", orgId, "artifacts", "folders"] as const,
   artifact: (orgId: string, id: string, version?: number) =>
     ["org", orgId, "artifacts", "one", id, version ?? "latest"] as const,
   artifactVersions: (orgId: string, id: string) => ["org", orgId, "artifacts", "versions", id] as const,

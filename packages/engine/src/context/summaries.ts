@@ -1,7 +1,9 @@
 import type { ErrorReporter, PubSub, SearchIndexResolver } from "@agenteschat/adapters";
-import { and, type Database, desc, eq, gte, inArray, isNull, lt, schema } from "@agenteschat/db";
+import { and, type Database, desc, eq, gte, inArray, isNull, lt, schema, sql } from "@agenteschat/db";
+import { isConfidential } from "../confidential";
 import { cutText, cutTextEnd } from "../format";
 import type { ModelGateway } from "../gateway";
+import type { IntentWriter } from "../intent-line";
 import { createLlmJudge, type Judge } from "../judge";
 import type { Message } from "../messages";
 import { cheapModelForOrg } from "../router";
@@ -28,6 +30,8 @@ export interface ContextDeps {
   judge?: Judge;
   /** Reads schedules and moments people write (schedule-reader.ts); default: the org's cheap model. Tests pass a fake. */
   schedules?: ScheduleReader;
+  /** The working line's first words at a run's start (`intent-line.ts`); absent: none. */
+  intents?: IntentWriter;
   /** Where learning's failures are reported (ADR 0104, `reportLearnFailure`); absent: not reported. */
   errors?: ErrorReporter;
 }
@@ -106,7 +110,8 @@ export async function loadThread(
     .select()
     .from(messages)
     .where(and(eq(messages.orgId, orgId), eq(messages.id, threadRootId), isNull(messages.deletedAt)));
-  if (!root) return null;
+  // A confidential thread (ADR 0190) is nothing to summarize, reflect on or learn from: no other model reads it.
+  if (!root || isConfidential(root.meta)) return null;
   const replies = await db
     .select()
     .from(messages)
@@ -267,6 +272,8 @@ export async function ensurePeriodSummary(
         isNull(messages.deletedAt),
         gte(messages.createdAt, period.from),
         lt(messages.createdAt, period.to),
+        // A confidential thread's messages (ADR 0190) are in no period's summary.
+        sql`coalesce(${messages.meta}->>'confidential', '') <> 'true'`,
       ),
     )
     // The newest 500 of the period, oldest first (a busy week keeps its latest days).

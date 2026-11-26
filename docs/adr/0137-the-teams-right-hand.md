@@ -1,6 +1,6 @@
 # 0137. The team's right hand
 
-- Status: Accepted; §6 and §7 amended 2026-11-06 by ADR 0079 §7 (built: engine, server, the shared client, the web and the phone app); amended 2026-11-03 (§5, a person alone with the team; §4 and §6 written as decided); amended 2026-11-04 (§8, agents act on agentes.chat through their tools, never by signing in to it); amended 2026-11-04 (§4, it starts everything a person does in the app, as cards); amended 2026-11-04 (§1, §4 and §7: it thinks with a person's plan through Claude Code or OpenCode, locked down and checked before each turn; then through Codex and Cursor too, the owner accepting their residual risk); amended 2026-11-04 (§4: through Grok Build too, checked on its `init` like Claude Code, ADR 0142); amended 2026-11-04 (§4: through the Antigravity CLI too, as an agent with no tool of its own, checked on its `init` and every step, ADR 0143); amended 2026-11-04 (§9, "Semana da equipe": a weekly card in each admin's DM, from stored data); amended 2026-11-04 (§10: the team set up from three questions, one team card, team templates); amended 2026-11-04 (§4: the team map's drag posts its settings card, ADR 0148); amended 2026-11-05 (§11, each person's own AI); amended 2026-11-06 (§12, it reads the Drive and the wiki for the person); amended 2026-11-06 (§13, the one you talk to: it sees the team and hands work on); amended 2026-11-11 (§4: a teammate's skills on its settings card); amended 2026-11-12 (§4: every agent asks for its own settings on the same card, always a click); amended 2026-11-12 (§4, §12, §13: it has a normal agent's tools); amended 2026-11-12 (§1, §4, §13: a computer of its own, a seat per person, ADR 0175); amended 2026-11-12 (§11: a routine or widget a person set up thinks with that person's AI)
+- Status: Accepted; §6 and §7 amended 2026-11-06 by ADR 0079 §7 (built: engine, server, the shared client, the web and the phone app); amended 2026-11-03 (§5, a person alone with the team; §4 and §6 written as decided); amended 2026-11-04 (§8, agents act on agentes.chat through their tools, never by signing in to it); amended 2026-11-04 (§4, it starts everything a person does in the app, as cards); amended 2026-11-04 (§1, §4 and §7: it thinks with a person's plan through Claude Code or OpenCode, locked down and checked before each turn; then through Codex and Cursor too, the owner accepting their residual risk); amended 2026-11-04 (§4: through Grok Build too, checked on its `init` like Claude Code, ADR 0142); amended 2026-11-04 (§4: through the Antigravity CLI too, as an agent with no tool of its own, checked on its `init` and every step, ADR 0143); amended 2026-11-04 (§9, "Semana da equipe": a weekly card in each admin's DM, from stored data); amended 2026-11-04 (§10: the team set up from three questions, one team card, team templates); amended 2026-11-04 (§4: the team map's drag posts its settings card, ADR 0148); amended 2026-11-05 (§11, each person's own AI); amended 2026-11-06 (§12, it reads the Drive and the wiki for the person); amended 2026-11-06 (§13, the one you talk to: it sees the team and hands work on); amended 2026-11-11 (§4: a teammate's skills on its settings card); amended 2026-11-12 (§4: every agent asks for its own settings on the same card, always a click); amended 2026-11-12 (§4, §12, §13: it has a normal agent's tools); amended 2026-11-12 (§1, §4, §13: a computer of its own, a seat per person, ADR 0175); amended 2026-11-12 (§11: a routine or widget a person set up thinks with that person's AI); amended 2026-11-23 (§2, §5: the router may pick it in a channel); §5 amended 2026-11-23 by ADR 0095 (in a channel with a responsible agent, that agent takes the pick for a person alone with the agents)
 - Date: 2026-11-03
 - Supersedes: ADR 0093 (the team's coordinator)
 - Amends: ADR 0081 (one-click Criar and Criar e testar on the right hand's cards), ADR 0092 §5 (a teammate's settings, on the right hand's card)
@@ -88,7 +88,7 @@ Amended 2026-11-04: on a plan, the plan's owner pays, as for any agent on a plan
 ## Consequences
 
 - Every workspace gets one more agent row. Lists that count "the team" leave it out; its row is its entry: the first row of Agentes, where the agents' DMs live (the web sidebar and Conversas on the phone), on a soft tint of the agent blue with "seu braço direito", outside the section's sorting and pins, never dragged or hidden, and still shown while Agentes is closed (alone on top of Conversas while there is no Agentes section); never under Mensagens diretas. Amended 2026-11-09 (ADR 0162): the workspace's agent count under its name ("1 membro · 4 agentes") counts it, as it lists it right under that count; "seu braço direito" is its one role name everywhere (its panel, its card and the phone's screens too, never the stored "Workspace assistant"); and it is never away (ADR 0084 §15).
-- `agents.coordinator` and its index stay in the database, read and written by nothing, until no running version selects them (`check:migrations`); a later migration drops them. Workspaces that had a coordinator get an ordinary agent back, and nothing is posted.
+- `agents.coordinator` and its index stay in the database, read and written by nothing, until no running version selects them (`check:migrations`); a later migration drops them. *2026-11-23:* the column left the schema and the index was dropped (migration `0326_unused_agent_columns`); the column goes with the release after that one. Workspaces that had a coordinator get an ordinary agent back, and nothing is posted.
 - Stored decisions keep their strategy `rule:coordinator`, read as the default rule's line, and still count toward the per-channel cap for their hour.
 - `PATCH …/agents/{agentId}` ignores an incoming `coordinator` and answers 200, because phones without an over-the-air update still send it.
 - Every proposal made in conversation now keeps who asked for it (`requested_by_user_id`).
@@ -472,7 +472,7 @@ threw its rows away. The owner decided it has every tool an agent can have, by d
   - **The Vault** (`vaultPersonOfRun`): a personal item for its owner, a team item for its audience, only in that DM.
     Called in a channel, or by a routine that reports anywhere else, it reaches only team items open to everyone and
     shared with it.
-  - **A mailbox** (`mailboxUserCheck`): only for the person who connected it, in that DM. Being in its audience opens
+  - **A mailbox** (`personalUseCheck`; a person's own connection too, which no one else's run gets anywhere): only for the person who connected it, in that DM. Being in its audience opens
     no one else's mailbox, since its audience is everyone. Its routine watches a mailbox only when the routine's
     creator connected it (`watchesFor`, checked when the routine is saved and again as mail arrives, so a routine
     taken over by someone else gets none), and `create_routine` names only that person's mailboxes. The mailbox's
@@ -549,3 +549,79 @@ seat (a stored id the computer takes for an agent's), with its own Linux user, h
 - This replaces §11's "A run with no person behind it thinks with the workspace's" for runs a routine feeds. `plan_unattended` is left for work no person set up, or whose people are all gone.
 - A person's plan now pays for builds nobody is watching, on the schedule they chose, and for readers of a shared board. It stops when they leave the workspace, lose sight of the board, or someone else rewrites the instructions.
 - §11's consequence "a person's plan on a computer that is away doesn't fall to the workspace's" still holds in a DM. Unattended work does fall over, since nobody is there to read why it waits.
+
+## Amendment (2026-11-15): it always has a runnable AI when the workspace has one (§7)
+
+### Context
+
+§7 (amended 2026-11-04) made the right hand the one agent that never falls back: whenever its plan couldn't think, its run failed with `no_ai`, and its routines too. A workspace could have a working AI next to it (an API key, or another plan on a computer that was online) and still read "Lodi has no AI". Two cases made that common. A plan the workspace's Claude was signed in with on a computer only (the CLI's own sign-in, which names no account, while the right hand thinks only with an account) gave its brain no computer at all. And `servingPlanFor` picked a plan by "mine, then most room", ignoring whether its computer was online or was the workspace's own, so a laptop that slept at night failed the night's routine.
+
+`agents.machine_id` is null for the right hand by design (ADR 0175), so a readout of its row shows no computer whether it works or not. Its seats (ADR 0175) are for its tools only and are made on first use: neither was the cause.
+
+### Decision
+
+- **The plan it picks by itself.** `servingPlans` ranks the plans that may think for a person: on the workspace's own computer first (`workspaceHomeId`; in Cloud the always-on one), then on a computer online now, then their own, then the most room. `servingPlanFor` takes the first, for a person and now also for work nobody is behind (only plans that serve everyone), and also when the workspace's brain is a plan with no account. A plan signed in on Cloud's computer therefore thinks for the right hand without anyone choosing it.
+- **The stand-in.** When its plan can't think now, `rightHandStandIn` (`right-hand.ts`) is the one place the order lives: another plan that serves the person on a computer online now (checked through the live status), else the workspace's API key (`modelReady`, the check the AI status uses). `agentAiState` returns `ready` with `standIn`, so the DM shows it available and routines run. `resolveBrain` returns the stand-in's plan (`BrainPlan.standIn`). Mid-turn (its computer dropped, its CLI failed) the executor hands the turn to the key as any agent's fallback does. Its CLI stopped for tools of its own (`tools_not_locked`) and a turn whose tools already ran there are never handed over.
+- **One line, never silent.** A run that thought through a stand-in posts one quiet line under its reply, at most once per conversation every 6 hours (`postStandInLine`, `bodyCode: right_hand_stand_in`): "Answered with Acme OpenAI: Claude Max needs a computer.", with "Change", which opens its settings. The reply carries no fallback note of its own.
+- **Nothing at all.** With no other plan online and no key, the run fails `no_ai` with its card as before. Its way out is the workspace's: on a billing hold the plan (`plan_hold`), otherwise Connect. There is no button of the right hand's own to give it a computer.
+- **What can't think, shown.** The dialog that picks its AI lists, dimmed under the others, the plans it can't think with now, each with why: a computer's own sign-in, and an account on a computer that is away. On self-host, who may connect computers also gets "Connect a computer".
+
+### Consequences
+
+- This replaces "It never stands in on an API key" in §7's 2026-11-04 amendment, and §11's "a person's plan on a computer that is away doesn't fall to the workspace's": a person whose own plan can't think is answered by what can, with the line saying so.
+- An API key may now be spent for the right hand without anyone choosing it, only while its plan can't think, and the line says so each time it starts. Its budget stops it as any agent's does.
+- `mayFallBack` still excludes it: other agents' fallback rules are unchanged.
+
+## Amendment (2026-11-18): the same AI choices and computer as any agent (§4, §11)
+
+### Context
+
+Its own AI could only be a plan signed in as an account. A person whose computer was already signed in to their plan
+(the usual self-hosted setup, where people pair their own Mac or PC) could give any agent of theirs that sign-in, but
+not their own DM with the right hand, so the only way left was an API key. Its DM also showed no computer, though it
+has one since ADR 0175.
+
+### Decision
+
+- A person's own AI for the right hand may be the plan their own computer is signed in to (`account: null` with a
+  plan's brain on `PUT …/brain`, scope `mine`), on a computer they paired, as for any agent they own.
+  `right_hand_brains` keeps the computer (`machine_id`) when there is no account. It serves that person alone.
+  `account: null` on its own, or `brain: "model"`, still goes back to the workspace's AI.
+- The workspace's AI (scope `workspace`) still takes only a plan signed in as an account: it serves everyone, and a
+  computer's own sign-in is one person's.
+- Its DM shows its computer as any agent's: the header's computer button and the side panel's Computador, Rotinas
+  and Tarefas, on web and phone. Its side panel's Como pensa stays the person's own AI. Its computer is never chosen:
+  where the workspace has none, the panel says why and gives the way to one.
+
+### Consequences
+
+Self-hosted people connect their right hand's AI the way they connect any agent's. Its plan turns stay locked down
+(§4): the same `chat` turn and runner check, now also on a computer's own sign-in.
+
+## Amendment (2026-11-23): the router may pick it in a channel (§2, §5)
+
+### Context
+
+It was in no channel and the router never picked it, so a channel's question about setting the team up or how the
+app works went to a channel agent that could not do it, or to nobody. The owner decided it answers in a channel when
+it is the best fit.
+
+### Decision
+
+- For a person's message in a channel (`rightHandReaches`: a channel, not a DM or a task) that has at least one agent
+  of its own that replies by itself, the right hand is one more candidate (`RoutingCandidate.rightHand`), described
+  to the step by `RIGHT_HAND_ROUTING_ABOUT`, under the same audience rules. An agent's message never brings it in.
+- It answers only when the step's scores pick it (`selectAgents`, at the full `minScore`, never the lower bar of a
+  channel's only agent) or the person keeps talking with it (a reply to it, a follow-up). It is never the channel's
+  only agent (R2), the failure default or the alone pick (R5, `bestPlaced`), nor counted as one of the channel's
+  agents for those rules. A message for every agent brings it in only as the top pick, never as a second voice.
+- A channel with no agent of its own is people talking: the router asks nothing there, as before, and an @mention
+  still reaches the right hand.
+- The receipts list it as having read a message only when it answers it, so channel messages don't all read "seen by
+  Lodi".
+- Its prompt's "Where you are" for a channel says it was named or found the best fit.
+
+### Consequences
+
+This replaces "the router never picks it" in §2 and in the 2026-11-12 amendment. Its channel runs work in the shared
+seat (ADR 0175) and think with the AI of the person behind the message, as a mention's do.

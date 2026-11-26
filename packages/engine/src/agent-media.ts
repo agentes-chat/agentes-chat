@@ -22,6 +22,7 @@ import { getMessage, insertMessage, type Message, messageView } from "./messages
 import { missionOfThread } from "./missions";
 import { enqueue } from "./outbox";
 import { routineBriefOf } from "./routine-brief";
+import { inChannelRun } from "./run-scope";
 import { standingRefusal } from "./standing";
 import { isPersonalWorkspace } from "./workspace-mode";
 
@@ -143,6 +144,8 @@ export interface AgentMediaDeps {
  */
 const NOT_A_LIGHT_REPLY = [
   "talker",
+  // The line before slow work (ADR 0207): the reply comes after it.
+  "sayNow",
   "notice",
   "noAi",
   "actionCard",
@@ -154,6 +157,7 @@ const NOT_A_LIGHT_REPLY = [
   "issueTaken",
   "missionLink",
   "missionSuggestion",
+  "codeSuggestion",
   "background",
   "routine",
   "viaRoutine",
@@ -166,6 +170,8 @@ const NOT_A_LIGHT_REPLY = [
   "brainInterrupted",
   "canceled",
   "interrupted",
+  // A confidential thread's reply (ADR 0190): no judge reads it, and no GIF search gets words chosen from it.
+  "confidential",
   MEDIA_AFTER_KEY,
 ] as const;
 
@@ -496,9 +502,7 @@ async function conversationSkip(db: Executor, reply: Message, at: Date): Promise
         eq(agentRuns.channelId, reply.channelId),
         inArray(agentRuns.status, ["queued", "running"]),
         eq(agentRuns.background, false),
-        reply.threadId
-          ? eq(agentRuns.threadRootId, reply.threadId)
-          : sql`${agentRuns.threadRootId} = ${agentRuns.triggerMessageId}`,
+        reply.threadId ? eq(agentRuns.threadRootId, reply.threadId) : inChannelRun(sql`${agentRuns}`),
       ),
     )
     .limit(1);

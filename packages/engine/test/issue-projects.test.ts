@@ -258,16 +258,20 @@ describe("task projects", () => {
     f = await setup();
     const deps = { db: f.db, pubsub: f.pubsub };
     const project = await createIssueProject(deps, f.owner.id, f.org.id, { name: "Padaria Lia" });
-    const assignee = { type: "agent" as const, id: f.agent.id };
-    await createIssue(deps, person(f.owner.id), f.org.id, { title: "Pedido no site", assignee, projectId: project.id });
-    await createIssue(deps, person(f.owner.id), f.org.id, { title: "Sem projeto", assignee });
+    const assignees = [{ type: "agent" as const, id: f.agent.id }];
+    await createIssue(deps, person(f.owner.id), f.org.id, {
+      title: "Pedido no site",
+      assignees,
+      projectId: project.id,
+    });
+    await createIssue(deps, person(f.owner.id), f.org.id, { title: "Sem projeto", assignees });
     const brief = await openTasksBrief(f.db, f.org.id, f.agent.id, f.general.id, false);
     expect(brief).toContain("Pedido no site (todo, project Padaria Lia)");
     expect(brief).toContain("Sem projeto (todo)");
   });
 });
 
-describe("task project details (ADR 0188)", () => {
+describe("task project details (ADR 0250)", () => {
   test("a project takes a short description and one repository, written as owner/name or pasted as its address", async () => {
     f = await setup();
     const deps = { db: f.db, pubsub: f.pubsub };
@@ -356,7 +360,7 @@ describe("task project details (ADR 0188)", () => {
   });
 });
 
-describe("list_projects (ADR 0188)", () => {
+describe("list_projects (ADR 0250)", () => {
   test("an agent reads the live projects with what each is for and its repository; the archived only when asked", async () => {
     f = await setup();
     const deps = { db: f.db, pubsub: f.pubsub };

@@ -7,6 +7,15 @@
  */
 
 export {
+  type AccentPalette,
+  type AccentTokens,
+  accentPalette,
+  accentSky,
+  contrastRatio,
+  DEFAULT_ACCENT,
+  isAccentHex,
+} from "@agenteschat/tokens/accent";
+export {
   ACCESSORIES,
   ACCESSORY_REACH,
   AGENT_GRADIENTS,
@@ -19,6 +28,7 @@ export {
   drawAccessory,
   drawAgent,
   drawEyes,
+  drawnKey,
   EXPRESSIONS,
   type Expression,
   EYE_STYLES,
@@ -51,6 +61,7 @@ export {
   stickerSeed,
   WAVE_SECONDS,
 } from "./agent/stickers";
+export { BoundedMap } from "./bounded-map";
 export {
   BRAIN_GRID,
   BRAIN_KINDS,
@@ -124,6 +135,7 @@ export {
 } from "./components/Chip";
 export { ChipField, type ChipFieldOption, type ChipFieldProps, type ChipFieldToken } from "./components/ChipField";
 export { CodeInput, type CodeInputProps } from "./components/CodeInput";
+export { codeAndBold } from "./components/CodeWords";
 export { ColorDot, dotTone } from "./components/ColorDot";
 export { ColorPicker, type ColorPickerLabels } from "./components/ColorPicker";
 export { CommandPalette, filterPalette, type PaletteItem } from "./components/CommandPalette";
@@ -166,6 +178,7 @@ export {
   useUnsavedInDialog,
 } from "./components/Dialog";
 export { Diff, type DiffBlock, type DiffKind, type DiffLine, diffBlocks, diffLines } from "./components/Diff";
+export { Disclosure } from "./components/Disclosure";
 export { drawEffort, EffortPixels, type EffortStep } from "./components/EffortPixels";
 export {
   EMOJI_COLUMNS,
@@ -211,10 +224,13 @@ export {
   type FilterChipProps,
   type FilterOption,
 } from "./components/FilterChip";
+export { FilterMenu, type FilterMenuChip } from "./components/FilterMenu";
 export { FoldRow } from "./components/FoldRow";
 export { GroupHeading } from "./components/GroupHeading";
 export { type Hosting, HostingScene, type Place, PlaceScene } from "./components/HostingScene";
 export { HintLine, type HintLineProps, InfoHint, type InfoHintProps } from "./components/InfoHint";
+export { InlineName, type InlineNameProps } from "./components/InlineName";
+export { type Journey, JourneyScene } from "./components/JourneyScene";
 export { isApple, Kbd, modKey, shortcut } from "./components/Kbd";
 export { Logo, LogoMark, type LogoProps } from "./components/Logo";
 export {
@@ -256,7 +272,14 @@ export {
   MessageText,
 } from "./components/Message";
 export { stopPlayback } from "./components/media-playback";
-export { OptionList, type OptionListItem, type OptionListProps } from "./components/OptionList";
+export {
+  type OptionLinkItem,
+  OptionLinks,
+  OptionList,
+  type OptionListItem,
+  type OptionListProps,
+} from "./components/OptionList";
+export { OrbitGlyph } from "./components/OrbitGlyph";
 export { PageHeader, type PageHeaderProps } from "./components/PageHeader";
 export {
   PixelDone,
@@ -287,11 +310,13 @@ export {
   type PlanMeterUsage,
   type PlanMeterWindow,
   type PlanState,
+  planAgeShown,
   planAttention,
   planLevel,
   planLine,
   planState,
   planWindows,
+  windowAmount,
 } from "./components/PlanMeter";
 export { Popover } from "./components/Popover";
 export { type BadgePresence, PresenceBadge, type PresenceBadgeProps } from "./components/PresenceBadge";
@@ -323,6 +348,7 @@ export {
   PlanStrip,
   type PlanStripCell,
   planCellPixel,
+  type RunBar,
   RunKey,
   RunLane,
   RunMark,
@@ -353,7 +379,6 @@ export {
   SkeletonRow,
   Spinner,
   skeletonOnScreen,
-  TopProgress,
   useDelayed,
 } from "./components/Skeleton";
 export { StepTrack, type StepTrackState, type StepTrackStep } from "./components/StepTrack";
@@ -364,18 +389,18 @@ export {
   CardHeader,
   EmptyState,
   type EmptyStateProps,
-  LIST_STAGGER_MS,
   List,
   ListRow,
   type ListRowProps,
   Meter,
   OptionCard,
   Steps,
+  settleOnNextFrame,
 } from "./components/Surfaces";
 export { type TabItem, TabPanel, Tabs } from "./components/Tabs";
 export { normalizeTime, TimeSelect, type TimeSelectProps, timeOptions } from "./components/TimeSelect";
 export { TimezoneSelect, type TimezoneSelectLabels, type TimezoneSelectProps } from "./components/TimezoneSelect";
-export { Tip, type TipProps } from "./components/Tip";
+export { TIP_HOLD_MS, Tip, type TipProps } from "./components/Tip";
 export { Token, TokenList, type TokenProps } from "./components/Token";
 export {
   ToolBlock,
@@ -383,6 +408,7 @@ export {
   type ToolBlockItem,
   type ToolBlockLine,
   type ToolBlockState,
+  ToolLink,
 } from "./components/ToolBlock";
 export {
   FilterToggle,
@@ -450,6 +476,7 @@ export {
   formatShortcutHint,
   insertText,
   linkSelection,
+  pasteLink,
   prefixLines,
   type TextEdit,
   wrapSelection,
@@ -468,6 +495,7 @@ export { HOVERLESS, matchesNow, TOUCH, useMatchMedia } from "./hooks/useMatchMed
 export { useNow } from "./hooks/useNow";
 export { type ScrollSides, useScrollSides } from "./hooks/useScrollSides";
 export { Icon, type IconName, type IconProps, iconNames, icons } from "./icons/Icon";
+export { arriveAfter, crossFade, glideHeight, MorphRoom, useMorph } from "./motion";
 export { driveFolder, initialsOf, isIdHandle } from "./names";
 export {
   BGS as PERSON_BACKGROUNDS,
@@ -502,7 +530,9 @@ export {
   zonedInstant,
 } from "./recurrence";
 export { fold, matchesWords } from "./search";
-export { pixelBurst, pixelConfetti } from "./sky/burst";
+export { IDLE_MS, onSight, type Sight, sight, watchSight } from "./sight";
+export { workspaceSky } from "./sky/accent";
+export { pixelBurst, pixelConfetti, pixelVeil } from "./sky/burst";
 export { ditherCells, ditherSvg, ditherTones, ditherUrl } from "./sky/dither";
 export {
   drawSprite,
@@ -542,7 +572,14 @@ export {
   workspaceInk,
   workspaceTones,
 } from "./sky/workspace";
-export { onThemeChange, switchTheme, THEME_SWITCHING_ATTR, type Theme } from "./theme";
+export {
+  ACCENT_ATTR,
+  onThemeChange,
+  PAINT_ATTRS,
+  switchTheme,
+  THEME_SWITCHING_ATTR,
+  type Theme,
+} from "./theme";
 export {
   allZones,
   cityOf,
@@ -559,6 +596,7 @@ export {
   zoneOptions,
 } from "./timezones";
 export { installTitleTips, TITLE_TIP_GRACE_MS, TITLE_TIP_ID, TITLE_TIP_OPEN_MS } from "./title-tips";
+export { dragsFiles, pastedFiles, transferFiles } from "./transfer";
 export { DitherLine, fillEnds, paintCells, paintLineArea, useElementWidth } from "./widgets/ChartPieces";
 export { formatWidgetNumber, formatWithUnit, useCountUp, widgetDigits } from "./widgets/format";
 export { ditherTile, WIDGET_CELL, widgetTileVars, widgetTones } from "./widgets/tiles";

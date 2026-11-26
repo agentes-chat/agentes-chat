@@ -1,7 +1,25 @@
-import type { BlobStoreResolver, PubSub, SpeechEngine } from "@agenteschat/adapters";
+import type { BlobStore, BlobStoreResolver, PubSub, SpeechEngine } from "@agenteschat/adapters";
 import { firstWords, typingTopic } from "@agenteschat/adapters";
-import { and, asc, count, type Database, desc, eq, gt, gte, isNull, lt, ne, schema, sql } from "@agenteschat/db";
+import {
+  and,
+  asc,
+  count,
+  type Database,
+  desc,
+  eq,
+  gt,
+  gte,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  ne,
+  or,
+  schema,
+  sql,
+} from "@agenteschat/db";
 import { requireChannelAccess } from "./channels";
+import { markChannelRead } from "./dms";
 import { ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { publishTyping, publishUserEvent } from "./events";
 import type { Judge } from "./judge";
@@ -9,6 +27,7 @@ import type { MessageVoice } from "./message-preview";
 import { attachmentRefsFor, MAX_MESSAGE_LENGTH, postPersonMessage } from "./messages";
 import { can } from "./organizations";
 import { enqueue } from "./outbox";
+import { tellSurfaceVoiceDropped } from "./surfaces/deliveries";
 
 const { voiceClips, agents, channels, organizationMembers, organizationSettings, users } = schema;
 
@@ -70,7 +89,7 @@ export interface VoiceDeps {
 /** How long an engine has a recording to itself before the next one starts beside it: 19 s for 88 s of audio. */
 export const hedgeAfterMs = (durationMs: number) => 8_000 + durationMs / 8;
 
-function cleanPeaks(peaks: unknown): number[] {
+export function cleanPeaks(peaks: unknown): number[] {
   if (!Array.isArray(peaks)) return [];
   return peaks.slice(0, MAX_PEAKS).map((p) => {
     const n = Number(p);
@@ -138,6 +157,8 @@ export async function acceptVoiceClip(
     text?: string | null;
     /** Files (artifact ids) sent with it, checked as a typed message's. */
     attachments?: string[] | null;
+    /** Where it came from when not an app (an outside chat surface): posted as the message's `meta.via`. */
+    via?: Record<string, unknown> | null;
   },
 ): Promise<{ clipId: string }> {
   const { membership } = await requireChannelAccess(deps.db, userId, orgId, channelId);
@@ -194,6 +215,7 @@ export async function acceptVoiceClip(
         language: input.language?.slice(0, 8) ?? null,
         text,
         attachments,
+        via: input.via ?? null,
       })
       .onConflictDoNothing()
       .returning({ id: voiceClips.id });
@@ -256,6 +278,10 @@ async function dropClip(deps: VoiceDeps, clip: Clip, reason: "silent" | "refused
   }
   const place = await deps.blobs.forConfig(clip.orgId, clip.storageConfigId);
   await place.delete(clip.blobKey).catch(() => undefined);
+  // Sent from an outside chat surface: the in-app event reaches nobody there.
+  if (clip.via && clip.userId) {
+    await tellSurfaceVoiceDropped(deps, { orgId: clip.orgId, userId: clip.userId, via: clip.via });
+  }
 }
 
 /**
@@ -348,8 +374,9 @@ export async function transcribeVoiceClip(deps: VoiceDeps, clipId: string, optio
   // The typed text may use the whole length a message has: the words then keep what is left of it.
   const spoken = words ? words.text : VOICE_NO_WORDS_BODY;
   const said = typed ? spoken.slice(0, Math.max(0, MAX_MESSAGE_LENGTH - typed.length - 2)) : spoken;
+  let message: Awaited<ReturnType<typeof postPersonMessage>>;
   try {
-    const message = await postPersonMessage(
+    message = await postPersonMessage(
       { db: deps.db, pubsub: deps.pubsub, judge: deps.judge ?? undefined },
       clip.userId,
       clip.orgId,
@@ -360,7 +387,10 @@ export async function transcribeVoiceClip(deps: VoiceDeps, clipId: string, optio
         attachments: clip.attachments ?? undefined,
         clientId: clip.clientId,
         replyTo: clip.replyTo,
-        meta: { voice },
+        meta: {
+          voice,
+          ...(clip.via ? { via: clip.via, ...(clip.via.forwarded === true ? { readOutside: true } : {}) } : {}),
+        },
       },
     );
     await deps.db
@@ -378,15 +408,29 @@ export async function transcribeVoiceClip(deps: VoiceDeps, clipId: string, optio
     }
     throw error;
   }
+  // Heard on the surface, not in an app: the person has read their DM up to it, as a typed surface message. After
+  // the clip is sent, so losing the DM now can't drop a recording a message already plays.
+  if (clip.via) {
+    await markChannelRead(
+      deps.db,
+      clip.userId,
+      clip.orgId,
+      clip.channelId,
+      new Date(message.createdAt),
+      deps.pubsub,
+    ).catch((error: unknown) => {
+      if (!(error instanceof NotFoundError)) throw error;
+    });
+  }
 }
 
-/** A recording to play, for who can read its channel: a signed link where the store has them, else the bytes. */
+/** A recording to play, for who can read its channel: a signed link where the store has them, else where it is kept. */
 export async function voiceClipAudio(
   deps: Pick<VoiceDeps, "db" | "blobs" | "retentionDays">,
   userId: string,
   orgId: string,
   clipId: string,
-): Promise<{ expired: true } | { url: string } | { body: Uint8Array; contentType: string }> {
+): Promise<{ expired: true } | { url: string } | { store: BlobStore; key: string; size: number; contentType: string }> {
   const [clip] = await deps.db
     .select()
     .from(voiceClips)
@@ -398,11 +442,9 @@ export async function voiceClipAudio(
     return { expired: true };
   }
   const store = await deps.blobs.forConfig(orgId, clip.storageConfigId);
-  const url = await store.signedUrl(clip.blobKey, { expiresInSeconds: 300 });
+  const url = await store.signedUrl(clip.blobKey, { expiresInSeconds: 300, contentType: clip.contentType });
   if (url) return { url };
-  const object = await store.get(clip.blobKey);
-  if (!object) throw new NotFoundError();
-  return { body: object.body, contentType: clip.contentType };
+  return { store, key: clip.blobKey, size: clip.size, contentType: clip.contentType };
 }
 
 const SWEEP_PAGE = 200;
@@ -460,6 +502,46 @@ async function dropAudio(deps: Pick<VoiceDeps, "db" | "blobs">, clip: ClipAudio)
   const store = await deps.blobs.forConfig(clip.orgId, clip.storageConfigId);
   await store.delete(clip.blobKey);
   await deps.db.update(voiceClips).set({ audioDeletedAt: new Date() }).where(eq(voiceClips.id, clip.id));
+}
+
+/**
+ * A thread's voice messages lose the words made out of them, and their recordings leave storage where `blobs` says
+ * how (one that can't be deleted now stays for the next call).
+ */
+export async function dropThreadVoice(
+  deps: { db: Database; blobs?: BlobStoreResolver },
+  thread: { orgId: string; channelId: string; rootMessageId: string },
+) {
+  const clips = await deps.db
+    .select({
+      id: voiceClips.id,
+      orgId: voiceClips.orgId,
+      storageConfigId: voiceClips.storageConfigId,
+      blobKey: voiceClips.blobKey,
+      heard: voiceClips.audioDeletedAt,
+    })
+    .from(voiceClips)
+    .where(
+      and(
+        eq(voiceClips.orgId, thread.orgId),
+        eq(voiceClips.channelId, thread.channelId),
+        or(eq(voiceClips.threadId, thread.rootMessageId), eq(voiceClips.messageId, thread.rootMessageId)),
+        or(isNotNull(voiceClips.text), isNull(voiceClips.audioDeletedAt)),
+      ),
+    );
+  if (clips.length === 0) return;
+  await deps.db
+    .update(voiceClips)
+    .set({ text: null })
+    .where(
+      inArray(
+        voiceClips.id,
+        clips.map((c) => c.id),
+      ),
+    );
+  const blobs = deps.blobs;
+  if (!blobs) return;
+  for (const clip of clips) if (!clip.heard) await dropAudio({ db: deps.db, blobs }, clip).catch(() => undefined);
 }
 
 /** A deleted channel's recordings leave storage now, whatever the retention (a failure throws, so its job retries). */

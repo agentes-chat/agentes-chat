@@ -162,26 +162,26 @@ export const desktopEn = {
     cloudText: "Always on. We take care of everything, you just use it.",
     here: "On this {{device}}",
     hereText: "Your agents work while the app is open.",
-    box: "On a computer that's always on",
-    boxText: "A Mac mini or an office computer, installed once.",
+    box: "On a server or VPS",
+    boxText: "Always on, even with this app closed. You install it once.",
     goCloud: "Continue in the cloud",
     goHere: "Get this {{device}} ready",
     goBox: "See how to install",
     haveOne: "Have one already?",
     haveOneLink: "Sign in by its address",
   },
-  /** "Num computador sempre ligado": the one-command install, and the instructions to send to whoever installs it. */
+  /** "On a server or VPS": the one-command install, and the instructions to send to whoever installs it. */
   install: {
-    title: "Install on a computer that's always on",
+    title: "Install on a server or VPS",
     lead: "It's done once. Then it keeps running by itself, even with this app closed.",
-    step1: "On the computer that stays on, open the Terminal and paste this",
+    step1: "On the server, open the Terminal (or connect over SSH) and paste this",
     step2: "At the end a link shows up. Open it here and that's it.",
     noLink: "No link?",
     someoneElse: "Someone else will install it?",
     copy: "Copy the instructions",
     copied: "Instructions copied",
     /** What "Copy the instructions" puts on the clipboard, to send to whoever installs it. */
-    text: "To install agentes.chat on a computer that stays on (a Mac mini, an office computer or a server):\n\n1. On that computer, open the Terminal and paste this:\n{{command}}\n\n2. At the end a link shows up. Send it to me: it opens the workspace in the app.",
+    text: "To install agentes.chat on a server or VPS (or a computer that stays on, like a Mac mini):\n\n1. On the server, open the Terminal (or connect over SSH) and paste this:\n{{command}}\n\n2. At the end a link shows up. Send it to me: it opens the workspace in the app.",
   },
   connect: {
     title: "Sign in to a workspace that already exists",
@@ -252,7 +252,7 @@ export const desktopEn = {
     getTailscale: "Get Tailscale",
     usage: "Send anonymous usage statistics to agentes.chat",
     usageText:
-      "Counts such as people, agents, machine sizes, AI tokens used and how much data the agents' browsers send and receive. Never messages, files, names or sites.",
+      "Counts such as people, agents, machine sizes, AI tokens used, how much data the agents' browsers send and receive, and how fast the apps open and run. Never messages, files, names or sites.",
     start: "Start",
     setting: "Getting everything ready",
     /** Under the form, beside a sleeping agent: what closing the app does. */
@@ -509,6 +509,16 @@ export const desktopEn = {
     linkBody: "If you didn't ask for this, choose Not now.",
     waiting: "Waiting for {{by}} to let it in…",
     done: "Connected to {{org}}",
+    /** Once it's in: one switch, off, that lets the whole workspace use it (Preferences › This Mac holds the rest). */
+    share: "Let the whole workspace use it",
+    /** A workspace with its own computer opens websites through this one's internet (ADR 0237); on by default. */
+    internet: "Agents use this computer's internet",
+    internetOn: "Websites the agents open see your location",
+    internetOff: "Off: agents use their usual connection",
+    internetHint:
+      "The workspace's agents open websites through this computer's connection. Only websites, up to 5 GB a day, and never anything on your own network. While this computer is offline, they use their usual connection.",
+    shareOff: "Only you for now",
+    shareHint: "Everyone's agents in {{org}} can run tasks on it, as your user.",
     addFolders: "Add folders",
     expired: "This link expired. Make a new one in Devices.",
     openDevices: "Open Devices",
@@ -869,6 +879,8 @@ export const desktopEn = {
       brainMax: "Open conversations",
       brainMaxDesc: "How many stay open in each workspace. More of them answer faster but use more memory.",
       brainIdle: "Close an idle conversation after",
+      /** Under a limit whose number differs between the workspaces this computer works for. `values`: "Acme 3, Beta 12". */
+      mixed: "Not the same everywhere: {{values}}. A change here sets all of them.",
       folder: "Agents' folder",
       folderDesc: "One folder per workspace, with a folder for each agent.",
     },
@@ -931,6 +943,36 @@ export const desktopEn = {
     openOther: "Open {{server}}",
     onlyHereWorking: "Turning off access from your devices…",
     onlyHereFailed: "Couldn't turn off access from your devices.",
+  },
+  /** "Send a report" from the app (the cover over a server that won't start, Preferences › Activity). */
+  report: {
+    button: "Send a report",
+    title: "Send a report to agentes.chat",
+    noteLabel: "What happened? (optional)",
+    notePlaceholder: "What you were doing when it stopped",
+    emailLabel: "Email for a reply (optional)",
+    emailHelp: "Only if you want an answer.",
+    showAll: "See everything that's sent",
+    copy: "Copy report",
+    copied: "Copied",
+    send: "Send",
+    sending: "Sending…",
+    cancel: "Cancel",
+    sentTitle: "Report {{id}} sent",
+    sentText: "If you write to us, mention this code.",
+    sentTextReply: "We'll answer at {{email}}. Mention this code if you write to us.",
+    copyCode: "Copy code",
+    done: "Done",
+    errorRate: "Too many reports in a short time. Try again in {{minutes}} min, or copy the report.",
+    errorUnreachable: "agentes.chat didn't answer. Try again, or copy the report.",
+    errorRefused: "agentes.chat didn't accept this report (it may be from an older version). Copy the report instead.",
+    emailInvalid: "That email doesn't look right. Fix it or leave it empty.",
+    coverLead:
+      "The agentes.chat team gets this app's version, the server's setup steps and the last lines of its log. No names, addresses or keys.",
+    computerLead:
+      "The agentes.chat team gets this computer's app version, its state and the last lines of its log. No names, addresses or keys.",
+    oldApp: "This computer's agentes.chat app is too old to add its details. Update it, then try again.",
+    offApp: "Sending is off in this app (PROBLEM_REPORT_URL=off). Copy the report to share it.",
   },
   menu: {
     about: "About agentes.chat",

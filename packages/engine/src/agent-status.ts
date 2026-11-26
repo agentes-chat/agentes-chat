@@ -1,14 +1,17 @@
 import type { PubSub } from "@agenteschat/adapters";
 import { and, type Database, eq, inArray, isNull, schema, sql } from "@agenteschat/db";
 import { type AgentWork, agentWorkFor, bareWork } from "./agent-work";
+import { caches, forgetOrgReads } from "./cache";
 import { publishOrgEvent } from "./events";
 import { type PendingReturn, pendingReturns } from "./follow-through";
 import { cutText } from "./format";
-import type { Judge } from "./judge";
+import type { Judge, JudgeGroup } from "./judge";
+import { queueLiveActivityRun } from "./live-activity-queue";
 import { requirePermission } from "./organizations";
-import { type OutOfOffice, type OutOfOfficeOptions, outOfOffice } from "./out-of-office";
+import { type OutOfOffice, outOfOffice } from "./out-of-office";
 import { rightHandId } from "./right-hand";
 import { routineSeer } from "./routines";
+import { runState } from "./run-state";
 import { outageParkedSql } from "./runs";
 import { toolGroupKey } from "./tools/directory";
 import type { ToolContext, ToolDefinition, ToolSource } from "./tools/types";
@@ -91,12 +94,14 @@ export interface AgentStatusView {
   working: boolean;
   /** For one viewer (`agentStatuses`): its most important work and where it shows (`agent-work.ts`); null: none. */
   work?: AgentWork | null;
+  /** Work of its waits on its monthly budget (long work paused near it included): the team-stalled line names it. */
+  budgetPaused?: true;
 }
 
 /** A run going this long is heavy work: the agent reads as busy. */
 export const AGENT_HEAVY_AFTER_MS = 2 * 60_000;
-/** No run for this long: away. */
-export const AGENT_AWAY_AFTER_MS = 30 * 60_000;
+/** Nothing done for this long (no run, or one only waiting since its last change): away. */
+export const AGENT_AWAY_AFTER_MS = 10 * 60_000;
 /** A running run counts only with a heartbeat this recent: a dead worker's run stops counting at once (§11). */
 export const AGENT_HEARTBEAT_FRESH_MS = 90_000;
 /** A run waiting longer than this keeps the agent online but loses its line (§11). */
@@ -127,14 +132,15 @@ export async function agentStatuses(
   actorId: string,
   orgId: string,
   now = new Date(),
-  options: Pick<OutOfOfficeOptions, "hasModel"> = {},
 ): Promise<(AgentStatusView & { work: AgentWork | null })[]> {
   await requirePermission(db, actorId, orgId, "read");
   const [list, sees, work, rightHand, returns] = await Promise.all([
-    loadAgentStatuses(db, orgId, now, undefined, options),
+    caches.orgReads.getOrLoad(`${orgId}:statuses`, () => loadAgentStatuses(db, orgId, now)) as Promise<
+      AgentStatusView[]
+    >,
     routineSeer(db, orgId, actorId),
     agentWorkFor(db, actorId, orgId, new Date(now.getTime() - AGENT_HEARTBEAT_FRESH_MS)),
-    rightHandId(db, orgId),
+    caches.orgReads.getOrLoad(`${orgId}:right-hand`, () => rightHandId(db, orgId)) as Promise<string | null>,
     pendingReturns(db, actorId, orgId),
   ]);
   const later = laterWork(returns);
@@ -190,14 +196,13 @@ const rightHandFor = (s: AgentStatusView, w: AgentWork | null): AgentStatusView 
 
 /**
  * Every agent's presence and line in an organization, at `now` (no permission check), or only `ids`'. Checked on
- * read, no job. `hasModel` (the gateway's key check) tells whether a plan at its limit still falls back to a model.
+ * read, no job.
  */
 export async function loadAgentStatuses(
   db: Database,
   orgId: string,
   now = new Date(),
   ids?: string[],
-  options: Pick<OutOfOfficeOptions, "hasModel"> = {},
 ): Promise<AgentStatusView[]> {
   if (ids?.length === 0) return [];
   const ofAgents = ids ? [inArray(agents.id, ids)] : [];
@@ -210,8 +215,9 @@ export async function loadAgentStatuses(
         model: agents.model,
         credentialId: agents.credentialId,
         brain: agents.brain,
-        brainFallback: agents.brainFallback,
         brainAccountId: agents.brainAccountId,
+        brainAccountPinned: agents.brainAccountPinned,
+        ownerUserId: agents.ownerUserId,
         machineId: agents.machineId,
         monthlyBudgetNanoUsd: agents.monthlyBudgetNanoUsd,
         heldAt: agents.operatorHoldAt,
@@ -250,22 +256,19 @@ export async function loadAgentStatuses(
         waitingMachineId: agentRuns.waitingMachineId,
         outage: outageParkedSql,
         // A long-work pause (ADR 0118) reads as the wait on what it paused on.
-        waitCode: sql<string | null>`case when ${agentRuns.transcript}->'waitingForBrain'->>'code' = 'usage_pause'
-          then (case when ${agentRuns.transcript}->'waitingForBrain'->>'source' = 'budget' then 'budget' else 'plan_limit' end)
-          else ${agentRuns.transcript}->'waitingForBrain'->>'code' end`,
+        waitCode: sql<string | null>`case when ${runState}->'waitingForBrain'->>'code' = 'usage_pause'
+          then (case when ${runState}->'waitingForBrain'->>'source' = 'budget' then 'budget' else 'plan_limit' end)
+          else ${runState}->'waitingForBrain'->>'code' end`,
         /** A conversation's catch-up: waiting on its plan or budget itself (not long work paused near one). */
         catchUp: sql<"plan_limit" | "budget" | null>`case when ${agentRuns.status} = 'waiting_input'
-          and ${agentRuns.transcript}->'waitingForBrain'->>'code' in ('plan_limit', 'budget')
-          then ${agentRuns.transcript}->'waitingForBrain'->>'code' end`,
-        resetsAt: sql<string | null>`${agentRuns.transcript}->'waitingForBrain'->>'resetsAt'`,
+          and ${runState}->'waitingForBrain'->>'code' in ('plan_limit', 'budget')
+          then ${runState}->'waitingForBrain'->>'code' end`,
+        resetsAt: sql<string | null>`${runState}->'waitingForBrain'->>'resetsAt'`,
       })
       .from(agentRuns)
       .where(and(eq(agentRuns.orgId, orgId), inArray(agentRuns.status, [...ACTIVE, ...WAITING]), ...ofRuns)),
   ]);
-  const [works, outs] = await Promise.all([
-    liveWorksByAgent(db, orgId, ids),
-    outOfOffice(db, orgId, list, { now, ...options }),
-  ]);
+  const [works, outs] = await Promise.all([liveWorksByAgent(db, orgId, ids), outOfOffice(db, orgId, list, { now })]);
   const publicIds = await publicChannelIds(
     db,
     orgId,
@@ -324,19 +327,32 @@ export async function loadAgentStatuses(
       mine.some((w) => w.status === "live" && (w.state === null || w.state === "working"));
     const outNow = out && !thinking;
     if (outNow && stored?.line.by !== "self") status = outLine(out, catchUps.length);
-    // Away is for an agent idle a while since it last worked: one just made counts from its making, and the right hand,
-    // where the workspace's people come to talk, never idles away.
-    const fresh = activeAt ?? new Date(a.createdAt);
+    // Away is for an agent idle a while since it last worked: one just made counts from its making. A run parked on an
+    // approval or an answer counts only from its last change, so days of waiting don't keep it online.
+    const lastMove = Math.max(
+      new Date(a.lastRunAt ?? a.createdAt).getTime(),
+      ...runs.map((r) => r.updatedAt.getTime()),
+    );
     const presence: AgentPresence = a.heldAt
       ? "offline"
       : outNow
         ? "out"
         : heavy
           ? "busy"
-          : runs.length > 0 || a.builtin === "right_hand" || ms - fresh.getTime() < AGENT_AWAY_AFTER_MS
+          : working.length > 0 || mine.length > 0 || ms - lastMove < AGENT_AWAY_AFTER_MS
             ? "online"
             : "away";
-    return { agentId: a.id, presence, status, activeAt: activeAt?.toISOString() ?? null, working: thinking };
+    const budgetPaused =
+      out?.reason === "budget" ||
+      alive.some((r) => r.agentId === a.id && r.status === "waiting_input" && r.waitCode === "budget");
+    return {
+      agentId: a.id,
+      presence,
+      status,
+      activeAt: activeAt?.toISOString() ?? null,
+      working: thinking,
+      ...(budgetPaused ? { budgetPaused: true as const } : {}),
+    };
   });
 }
 
@@ -509,8 +525,12 @@ export function lineInEnglish(line: AgentStatusLine): string | null {
   return line.kind ? words[line.kind] : null;
 }
 
-/** Tells the apps an agent's presence or line moved (a run started or ended, a line changed): ids only. */
+/**
+ * Tells the apps an agent's presence or line moved (a run started or ended, a line changed): ids only. The workspace's
+ * kept statuses and work go first (`forgetOrgReads`), so the reads this event sets off see the change.
+ */
 export async function announceAgentStatus(pubsub: PubSub | undefined, orgId: string, agentId: string) {
+  await forgetOrgReads(pubsub, orgId);
   await publishOrgEvent(pubsub, { type: "org.broadcast", orgId, event: { type: "agent.status", orgId, agentId } });
 }
 
@@ -524,10 +544,14 @@ export interface StatusCandidate {
   text: string;
 }
 
-/** What it is doing, by the group of the tool it uses; null = nothing worth a line (chat, memory, skills). */
+/**
+ * What it is doing, by the group of the tool it uses; null = nothing worth a line (chat, memory, skills). A person's
+ * own connection's tool says nothing: everyone who may talk to the agent reads the line.
+ */
 export function activityOf(
-  tool: Pick<ToolDefinition, "name" | "scope" | "connectionId" | "connectorLabel">,
+  tool: Pick<ToolDefinition, "name" | "scope" | "connectionId" | "connectorLabel" | "ownerUserId">,
 ): Omit<StatusCandidate, "key"> | null {
+  if (tool.ownerUserId) return null;
   const group = toolGroupKey(tool);
   const label = tool.connectorLabel?.trim();
   if (group === "browser") return { kind: "browsing", subject: null, text: "Browsing the web" };
@@ -675,6 +699,16 @@ export interface StatusPick {
 }
 
 /**
+ * A run whose only line says what its work is for (a task, a mission) shows it at once, as it would without Jev:
+ * asking first held it back by a model round trip. Any other sole line (where it answers, what a tool could do) still
+ * waits for Jev, who keeps a quick reply from saying anything (§8). Not weighed, so it doesn't make the agent busy.
+ */
+export const soleStatusPick = (candidates: StatusCandidate[]): StatusPick | null => {
+  const [only] = candidates;
+  return candidates.length === 1 && only && STICKY.has(only.kind) ? { line: only.key, heavy: 0, worth: 1 } : null;
+};
+
+/**
  * The run's line and whether it is busy, as it starts (§8–9): Jev's pick when it rated it worth showing, else no
  * line; without Jev, only what the work is for (task, mission, routine). Never replaces the agent's own words while
  * they hold.
@@ -692,9 +726,11 @@ export async function startRunStatus(
       : undefined
     : candidates.find((c) => STICKY.has(c.kind));
   const busy = (pick?.heavy ?? 0) >= AGENT_HEAVY_PROBABILITY;
-  await writeAutoLine(deps, run, chosen ?? null, { busy, now, keepOwn: true });
+  const wrote = await writeAutoLine(deps, run, chosen ?? null, { busy, now, keepOwn: true });
   // Its run started: the presence moved even when the line stays (the agent's own words, another run's).
   await announceAgentStatus(deps.pubsub, run.orgId, run.agentId).catch(() => {});
+  // What it does now, on the phone of the person behind it (ADR 0210).
+  if (chosen && wrote) await queueLiveActivityRun(deps.db, run).catch(() => {});
 }
 
 /** Jev's pick for a run as it starts (§8–9): a request of its own, beside the run, never in its way. */
@@ -708,15 +744,21 @@ export async function askRunStatus(
     message: string;
     recent: string[];
     candidates: StatusCandidate[];
+    /** Asked with the run's other start judgments (`JudgeGroup`). */
+    group?: JudgeGroup;
   },
 ): Promise<StatusPick | null> {
-  if (input.candidates.length === 0) return null;
+  if (input.candidates.length === 0) {
+    input.group?.skip("agent_status");
+    return null;
+  }
   const answers = await judge.ask({
     orgId: input.orgId,
     agentId: input.agentId,
     runId: input.runId,
     kind: "agent_status",
     calibrated: true,
+    ...(input.group ? { group: input.group } : {}),
     state: {
       agent: { name: input.agent.name, role: input.agent.role, instructions: cutText(input.agent.instructions, 1500) },
       message: cutText(input.message, 2000),
@@ -784,7 +826,7 @@ async function writeAutoLine(
 export async function followWork(
   deps: { db: Database; pubsub?: PubSub; judge?: Judge | null },
   ctx: Pick<ToolContext, "orgId" | "agentId" | "runId">,
-  tool: Pick<ToolDefinition, "name" | "scope" | "connectionId" | "connectorLabel">,
+  tool: Pick<ToolDefinition, "name" | "scope" | "connectionId" | "connectorLabel" | "ownerUserId">,
   now = new Date(),
 ): Promise<void> {
   if (!ctx.runId) return;
@@ -824,6 +866,7 @@ export async function followWork(
     const stale = still !== null && still < AGENT_LINE_STALE_BELOW;
     if (stale && (await writeAutoLine(deps, target, act, { now, keepOwn: false }))) {
       await announceAgentStatus(deps.pubsub, ctx.orgId, ctx.agentId).catch(() => {});
+      await queueLiveActivityRun(deps.db, target).catch(() => {});
     }
     return;
   }
@@ -840,6 +883,7 @@ export async function followWork(
   if (a.at && now.getTime() - a.at.getTime() < AGENT_LINE_EVERY_MS) return;
   if (await writeAutoLine(deps, target, act, { now, keepOwn: true })) {
     await announceAgentStatus(deps.pubsub, ctx.orgId, ctx.agentId).catch(() => {});
+    await queueLiveActivityRun(deps.db, { ...target, background: run?.background }).catch(() => {});
   }
 }
 
@@ -940,6 +984,8 @@ export function createSetStatusToolSource(deps: { pubsub?: PubSub } = {}): ToolS
         )
         .where(and(eq(agents.orgId, ctx.orgId), eq(agents.id, ctx.agentId)));
       await announceAgentStatus(deps.pubsub, ctx.orgId, ctx.agentId);
+      // Its own words, on the phone of the person behind its run (ADR 0210).
+      if (ctx.runId) await queueLiveActivityRun(ctx.db, { id: ctx.runId, orgId: ctx.orgId }).catch(() => {});
       return { content: text ? "Status set." : "Status cleared." };
     },
   };

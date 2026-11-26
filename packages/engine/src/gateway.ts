@@ -1,8 +1,9 @@
 import type { ErrorReporter, KeyWrapper, PlatformCredentials, PubSub, SearchKind } from "@agenteschat/adapters";
-import { and, type Database, desc, type Executor, eq, gte, isNull, lt, rowsOf, schema, sql } from "@agenteschat/db";
+import { and, type Database, desc, type Executor, eq, isNull, lt, rowsOf, schema, sql } from "@agenteschat/db";
 import {
   costNanoUsd,
   customModelOf,
+  customModelsOf,
   type EmbeddingProvider,
   type EmbeddingResult,
   type Endpoint,
@@ -10,6 +11,14 @@ import {
   endpointKeyCheck,
   ensureOpenRouterModels,
   estimateTokens,
+  IMAGE_CATALOG,
+  IMAGE_MODEL_IDS,
+  type ImageModelInfo,
+  type ImageRequest,
+  type ImageResult,
+  type ImageUsage,
+  imageCostNanoUsd,
+  imageModelInfo,
   isCustomModel,
   isKnownModel,
   isOpenRouterModel,
@@ -17,6 +26,10 @@ import {
   keyCheckRequest,
   keyFailureWords,
   keyRefusalOf,
+  looksLikeImageModel,
+  MAX_IMAGE_PROMPT_CHARS,
+  MAX_IMAGE_REFERENCES,
+  type MadeImage,
   type ModelInfo,
   type ModelMessage,
   type ModelProvider,
@@ -24,6 +37,7 @@ import {
   type ModelResult,
   type ModelUsage,
   maxCostNanoUsd,
+  maxImageCostNanoUsd,
   modelInfo,
   modelProvider,
   openRouterListed,
@@ -36,6 +50,7 @@ import {
   type ToolSpec,
 } from "@agenteschat/providers";
 import { type Agent, getAgent } from "./agents";
+import { agentOwnerIds } from "./audience";
 import { caches } from "./cache";
 import { decryptCredential, usableCredentialRow } from "./credentials";
 import { loadEndpointModels } from "./endpoints";
@@ -45,7 +60,7 @@ import { maySql, type RolePermission } from "./permissions";
 import { addPersonSpend, assertPersonUnderLimit, personSpendAdded } from "./person-usage";
 import { assertCanWork, standingRefusal } from "./standing";
 import { maskValues, redactCredentials } from "./tool-detail";
-import { budgetPercent, monthStartUtc, withEffectiveBudget } from "./usage";
+import { budgetPercent, monthStartUtc, budgetPeriodOf as periodOf, withEffectiveBudget } from "./usage";
 
 const {
   usageRecords,
@@ -123,6 +138,8 @@ export interface GatewayCall {
   /** The agent's conversation, the same on each of its calls (`StreamOptions.session`). */
   session?: string;
   onDelta(text: string): void;
+  /** A note the model wrote between its calls, apart from its text (`StreamOptions.onNote`). */
+  onNote?(text: string): void;
   signal?: AbortSignal;
 }
 
@@ -155,6 +172,35 @@ export interface GatewayResult extends ModelResult {
   maxTokens: number;
 }
 
+/**
+ * Pictures asked for (ADR 0197): by an agent (billed to its budget, with the person behind its run) or by a person
+ * from a canvas (`agentId` null: their own monthly limit, ADR 0141).
+ */
+export interface ImageCall {
+  orgId: string;
+  agentId: string | null;
+  /** The agent row, when the caller already has it (saves a lookup). */
+  agent?: Agent;
+  /** Who asked: recorded on the usage row, added to their month and checked against their limit before the call. */
+  personId: string | null;
+  runId?: string | null;
+  /** `model` is an id of `IMAGE_CATALOG` or a workspace endpoint's `custom:` id; the provider gets its own. */
+  request: Omit<ImageRequest, "signal">;
+  signal?: AbortSignal;
+}
+
+export interface ImageGatewayResult {
+  images: MadeImage[];
+  /** The catalog's id it was made and recorded with. */
+  model: string;
+  provider: string;
+  usage?: ImageUsage;
+  usageRecordId: string;
+  costNanoUsd: number;
+  /** Some pictures were made, then the provider failed: why the rest weren't (masked like every failure). */
+  error?: ProviderError;
+}
+
 /** Reservations older than this are considered abandoned (a worker died mid-call) and released. */
 export const RESERVATION_TTL_MS = 15 * 60_000;
 /** Below this many output tokens a call isn't worth making: the budget counts as exhausted. */
@@ -174,8 +220,6 @@ export type KeyCheck =
   | { state: "ok"; record(credentialId: string): Promise<void> }
   | { state: "unchecked" }
   | { state: "refused"; refusal: KeyRefusal; said: string };
-
-const periodOf = (now: Date) => monthStartUtc(now).toISOString().slice(0, 10);
 
 /** The call's own key first: a key of an unusual shape is one no pattern knows. */
 const withoutKey = (text: string, apiKey: string) => redactCredentials(maskValues(text, [apiKey]));
@@ -392,8 +436,8 @@ export function createModelGateway(deps: ModelGatewayDeps) {
     input: {
       orgId: string;
       agentId: string | null;
-      kind: "agent" | "router" | "summary";
-      runId?: string;
+      kind: "agent" | "router" | "summary" | "image";
+      runId?: string | null;
       personId?: string | null;
       credentialId: string | null;
       provider: string;
@@ -434,16 +478,29 @@ export function createModelGateway(deps: ModelGatewayDeps) {
   }
 
   /**
-   * Reserves the worst-case cost of a call against the agent's counter for
-   * this month, under a row lock. Returns the reservation and the output cap
-   * that fits. Throws BudgetExceededError when nothing useful fits.
+   * Reserves the worst-case cost of a model call against the agent's counter for this month (`reserveBudget`),
+   * shrinking the output cap to what fits. Throws BudgetExceededError when nothing useful fits.
    */
-  async function reserve(
+  async function reserve(agent: Agent, model: string, promptTokens: number, maxTokens: number, longCache = false) {
+    const fit = (left: number) => {
+      const cap = Math.min(maxTokens, outputTokensWithin(model, promptTokens, left, longCache));
+      return cap < Math.min(MIN_OUTPUT_TOKENS, maxTokens)
+        ? null
+        : { amount: maxCostNanoUsd(model, promptTokens, cap, longCache), maxTokens: cap };
+    };
+    return reserveBudget(agent, { amount: maxCostNanoUsd(model, promptTokens, maxTokens, longCache), fit }, maxTokens);
+  }
+
+  /**
+   * Reserves `ask.amount` (a call's worst case, computed by the caller) against the agent's counter for this month,
+   * under a row lock. When less is left, `ask.fit` says what smaller call fits (a model call's lower output cap) or
+   * that none does. Returns the reservation and the output cap that fits. Throws BudgetExceededError when nothing
+   * useful fits.
+   */
+  async function reserveBudget(
     agent: Agent,
-    model: string,
-    promptTokens: number,
+    ask: { amount: number; fit(left: number): { amount: number; maxTokens: number } | null },
     maxTokens: number,
-    longCache = false,
   ): Promise<{
     reservation: Pick<typeof budgetReservations.$inferSelect, "id" | "agentId" | "periodStart"> | null;
     maxTokens: number;
@@ -453,7 +510,7 @@ export function createModelGateway(deps: ModelGatewayDeps) {
     const at = now();
     const period = periodOf(at);
     // Fast path, one statement: the worst case fits under the budget → reserve it atomically.
-    const amount = maxCostNanoUsd(model, promptTokens, maxTokens, longCache);
+    const amount = ask.amount;
     const id = Bun.randomUUIDv7();
     const fast = rowsOf<{ ok: number }>(
       await db.execute(sql`with upd as (
@@ -480,11 +537,11 @@ export function createModelGateway(deps: ModelGatewayDeps) {
           orgId: agent.orgId,
           agentId: agent.id,
           periodStart: period,
-          // First call of the month (or first since budgets existed): start from the agent's own recorded calls
-          // (`agentSpendThisMonth`).
+          // First call of the month (or first since budgets existed): start from the agent's own recorded calls and
+          // pictures (`agentSpendThisMonth`).
           spentNanoUsd: sql`(select coalesce(sum(${usageRecords.costNanoUsd}), 0) from ${usageRecords}
             where ${usageRecords.orgId} = ${agent.orgId} and ${usageRecords.agentId} = ${agent.id}
-            and ${usageRecords.kind} = 'agent'
+            and ${usageRecords.kind} in ('agent', 'image')
             and ${usageRecords.createdAt} >= ${monthStartUtc(at).toISOString()}::timestamptz)`,
         })
         .onConflictDoNothing();
@@ -508,37 +565,36 @@ export function createModelGateway(deps: ModelGatewayDeps) {
       const reserved = row.reservedNanoUsd - expired.reduce((n, e) => n + e.amount, 0);
 
       let cap = maxTokens;
+      let held = amount;
       if (agent.monthlyBudgetNanoUsd !== null) {
         const left = agent.monthlyBudgetNanoUsd - row.spentNanoUsd - reserved;
-        cap = Math.min(maxTokens, outputTokensWithin(model, promptTokens, left, longCache));
-        if (left <= 0 || cap < Math.min(MIN_OUTPUT_TOKENS, maxTokens)) {
+        const fits = left > 0 ? ask.fit(left) : null;
+        if (!fits) {
           if (expired.length > 0)
             await tx
               .update(agentBudgetPeriods)
               .set({ reservedNanoUsd: Math.max(0, reserved) })
               .where(and(eq(agentBudgetPeriods.agentId, agent.id), eq(agentBudgetPeriods.periodStart, period)));
           const room = agent.monthlyBudgetNanoUsd - row.spentNanoUsd;
-          const byReservations =
-            reserved > 0 &&
-            room > 0 &&
-            outputTokensWithin(model, promptTokens, room, longCache) >= Math.min(MIN_OUTPUT_TOKENS, maxTokens);
+          const byReservations = reserved > 0 && room > 0 && ask.fit(room) !== null;
           throw new BudgetExceededError(agent.id, row.spentNanoUsd, agent.monthlyBudgetNanoUsd, byReservations);
         }
+        cap = fits.maxTokens;
+        held = fits.amount;
       }
-      const amount = maxCostNanoUsd(model, promptTokens, cap, longCache);
       const [reservation] = await tx
         .insert(budgetReservations)
         .values({
           orgId: agent.orgId,
           agentId: agent.id,
           periodStart: period,
-          amountNanoUsd: amount,
+          amountNanoUsd: held,
           expiresAt: new Date(at.getTime() + RESERVATION_TTL_MS),
         })
         .returning();
       await tx
         .update(agentBudgetPeriods)
-        .set({ reservedNanoUsd: Math.max(0, reserved) + amount, updatedAt: at })
+        .set({ reservedNanoUsd: Math.max(0, reserved) + held, updatedAt: at })
         .where(and(eq(agentBudgetPeriods.agentId, agent.id), eq(agentBudgetPeriods.periodStart, period)));
       if (!reservation) throw new Error("reservation insert returned nothing");
       return { reservation, maxTokens: cap };
@@ -594,15 +650,19 @@ export function createModelGateway(deps: ModelGatewayDeps) {
   async function settleCall(input: {
     agent: Agent;
     reservation: Pick<typeof budgetReservations.$inferSelect, "id" | "agentId" | "periodStart"> | null;
-    runId?: string;
+    runId?: string | null;
     personId?: string | null;
     credentialId: string | null;
     provider: string;
     model: string;
     usage: ModelUsage;
     reportedCost?: number;
+    /** `image`: pictures (ADR 0197), recorded at the image model asked for; absent: a model call (`agent`). */
+    kind?: "agent" | "image";
+    requestedModel?: string;
   }) {
     const { agent, usage } = input;
+    const kind = input.kind ?? "agent";
     const pricedModel = isKnownModel(input.model) ? input.model : agent.model;
     // ponytail: OpenRouter may route to an upstream dearer than its listed price, so a call can spend past what it
     // reserved; the counter takes the reported cost. Its `provider.max_price` would cap the route.
@@ -616,10 +676,11 @@ export function createModelGateway(deps: ModelGatewayDeps) {
         ), u as (
           insert into ${usageRecords} (id, org_id, agent_id, kind, run_id, credential_id, provider, model, requested_model,
             input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cost_nano_usd, partial, person_id, created_at)
-          values (${id}::uuid, ${agent.orgId}::uuid, ${agent.id}::uuid, 'agent', ${input.runId ?? null}::uuid,
-            ${input.credentialId}::uuid, ${input.provider}, ${input.model}, ${agent.model}, ${usage.inputTokens},
-            ${usage.outputTokens}, ${usage.cacheReadTokens}, ${usage.cacheWriteTokens}, ${cost}, false,
-            ${input.personId ?? null}, ${at}::timestamptz)
+          values (${id}::uuid, ${agent.orgId}::uuid, ${agent.id}::uuid, ${kind}::usage_kind,
+            ${input.runId ?? null}::uuid, ${input.credentialId}::uuid, ${input.provider}, ${input.model},
+            ${input.requestedModel ?? agent.model}, ${usage.inputTokens}, ${usage.outputTokens},
+            ${usage.cacheReadTokens}, ${usage.cacheWriteTokens}, ${cost}, false, ${input.personId ?? null},
+            ${at}::timestamptz)
           returning id
         ), p as (
           insert into ${agentBudgetPeriods} (org_id, agent_id, period_start, spent_nano_usd, reserved_nano_usd, updated_at)
@@ -686,6 +747,56 @@ export function createModelGateway(deps: ModelGatewayDeps) {
       .onConflictDoNothing()
       .returning({ id: schema.outbox.id });
     if (first) await deps.onBudgetThreshold({ agent, level: "exhausted", spentNanoUsd: spent, budgetNanoUsd: budget });
+  }
+
+  /**
+   * The key for an image model's provider (ADR 0197): a workspace endpoint's own, else the agent's credential when it
+   * is of that provider (never another provider's: an agent on Claude makes pictures on the workspace's Gemini key),
+   * else the workspace's default for it, else the platform's.
+   */
+  async function imageKey(orgId: string, provider: string, model: string, agent: Agent | null): Promise<Key> {
+    const pinned = pinnedKey(model);
+    if (pinned) return resolveKey(orgId, provider, pinned);
+    const own = agent?.credentialId ? await usableCredentialRow(db, orgId, agent.credentialId) : null;
+    return resolveKey(orgId, provider, own?.provider === provider ? agent?.credentialId : null);
+  }
+
+  /** Whether a call to `provider` would find a key (the workspace's default, else the platform's), none decrypted. */
+  async function providerHasKey(orgId: string, provider: string): Promise<boolean> {
+    try {
+      const defaultId = await orgDefaultCredentialId(orgId, provider);
+      if (defaultId && (await usableCredentialRow(db, orgId, defaultId))?.provider === provider) return true;
+      const platform = deps.platformCredentials;
+      return platform.available
+        ? await platform.available(orgId, provider)
+        : (await platform.resolve(orgId, provider)) !== null;
+    } catch {
+      return false;
+    }
+  }
+
+  /** A request within what the model takes: 1 to its most pictures, its aspect and size, references where taken. */
+  function checkedImageRequest(info: ImageModelInfo, request: ImageCall["request"]): ImageCall["request"] {
+    const prompt = request.prompt.trim();
+    if (!prompt) throw new ValidationError("Say what the picture should show");
+    if (prompt.length > MAX_IMAGE_PROMPT_CHARS)
+      throw new ValidationError(`The prompt is over ${MAX_IMAGE_PROMPT_CHARS} characters`);
+    const count = Math.floor(request.count);
+    if (!Number.isFinite(count) || count < 1 || count > info.maxCount)
+      throw new ValidationError(`Ask for 1 to ${info.maxCount} pictures`);
+    if (!info.aspects.includes(request.aspect))
+      throw new ValidationError(`${info.label} doesn't make ${request.aspect} pictures`);
+    const size = request.size ?? "1K";
+    if (!info.sizes.includes(size)) throw new ValidationError(`${info.label} doesn't make ${size} pictures`);
+    const references = request.references ?? [];
+    if (references.length > (info.refs ? MAX_IMAGE_REFERENCES : 0))
+      throw new ValidationError(
+        info.refs
+          ? `At most ${MAX_IMAGE_REFERENCES} pictures to start from`
+          : `${info.label} takes no pictures to start from`,
+        "images.reference",
+      );
+    return { ...request, prompt, count, size, ...(references.length ? { references } : { references: undefined }) };
   }
 
   return {
@@ -777,6 +888,7 @@ export function createModelGateway(deps: ModelGatewayDeps) {
           endpoint: key.endpoint,
           ...(call.session ? { session: call.session } : {}),
           onDelta: call.onDelta,
+          ...(call.onNote ? { onNote: call.onNote } : {}),
         });
       } catch (error) {
         const usage = error instanceof ProviderError ? await partialUsage(error, provider, request, key) : null;
@@ -835,6 +947,167 @@ export function createModelGateway(deps: ModelGatewayDeps) {
     },
 
     /**
+     * Pictures (ADR 0197), mirroring `stream`: the workspace's standing (and the agent's hold), the model checked
+     * against the image catalog (or the workspace's endpoint), the key for the image model's provider (`imageKey`),
+     * the person's limit when someone is behind the call, the agent's budget reserved at the request's worst case
+     * (`maxImageCostNanoUsd`) before the call, then the call, and one `usage_records` row of kind `image` with the
+     * cost the provider reported or the catalog's, the run, the agent and the person. A failed call is settled at what
+     * the provider billed: nothing, as none reports a charge for a picture it didn't make. A call that made some
+     * pictures before failing is recorded for those, with the failure in `error`.
+     */
+    async generateImages(call: ImageCall): Promise<ImageGatewayResult> {
+      await assertCanWork(db, call.orgId, call.agentId);
+      const model = call.request.model;
+      const info = imageModelInfo(model);
+      if (!info) throw new ValidationError(`Image model ${model} is not in the catalog`, "images.model_unavailable");
+      let endpointPrices: { input: number; output: number } | undefined;
+      if (info.provider === "custom") {
+        await loadEndpointModels(db, call.orgId);
+        const own = customModelOf(call.orgId, model);
+        if (!own)
+          throw new ValidationError("This image model was removed from its endpoint", "images.model_unavailable");
+        if (own.prices.input > 0 || own.prices.output > 0)
+          endpointPrices = { input: own.prices.input, output: own.prices.output };
+      }
+      const request = checkedImageRequest(info, call.request);
+      const provider = providerFor(info.provider);
+      if (!provider.generateImage)
+        throw new ValidationError(`${label(info.provider)} makes no pictures here`, "images.model_unavailable");
+      let agent: Agent | null = null;
+      if (call.agentId) {
+        const row =
+          call.agent && call.agent.id === call.agentId && call.agent.orgId === call.orgId
+            ? call.agent
+            : await getAgent(db, call.orgId, call.agentId);
+        if (!row || row.archivedAt) throw new NotFoundError("Agent not found");
+        agent = await withEffectiveBudget(db, row);
+      }
+      const key = await imageKey(call.orgId, info.provider, model, agent);
+      if (key.endpoint && key.endpoint.style !== "openai")
+        throw new ValidationError("This endpoint makes no pictures", "images.model_unavailable");
+      const personId = call.personId ?? null;
+      if (personId) await assertPersonUnderLimit(db, call.orgId, personId, now());
+      const worst = maxImageCostNanoUsd(model, request, endpointPrices);
+      const { reservation } = agent
+        ? await reserveBudget(
+            agent,
+            { amount: worst, fit: (left) => (left >= worst ? { amount: worst, maxTokens: 0 } : null) },
+            0,
+          ).catch(async (error: unknown) => {
+            if (error instanceof BudgetExceededError && !error.byReservations && agent)
+              await budgetExhausted(agent, error.spentNanoUsd).catch(() => {});
+            throw error;
+          })
+        : { reservation: null };
+
+      let result: ImageResult;
+      try {
+        result = await provider.generateImage(
+          { ...request, model: info.apiModel, ...(call.signal ? { signal: call.signal } : {}) },
+          {
+            apiKey: key.apiKey,
+            workspaceId: key.workspaceId,
+            organization: key.organization,
+            project: key.project,
+            endpoint: key.endpoint,
+          },
+        );
+        if (result.images.length === 0) throw result.error ?? new ProviderError("the provider sent no picture", true);
+      } catch (error) {
+        if (agent) {
+          const settled = agent;
+          await db.transaction((tx) => settle(tx, reservation, 0, settled));
+        }
+        throw masked(error, label(info.provider), key);
+      }
+
+      const cost = imageCostNanoUsd(model, request, result, endpointPrices);
+      const usage: ModelUsage = {
+        inputTokens: (result.usage?.textInputTokens ?? 0) + (result.usage?.imageInputTokens ?? 0),
+        outputTokens: result.usage?.outputTokens ?? 0,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+      };
+      let usageRecordId: string;
+      if (agent) {
+        const { record, spent, personSpent } = await settleCall({
+          agent,
+          reservation,
+          runId: call.runId,
+          personId,
+          credentialId: key.credentialId,
+          provider: info.provider,
+          model,
+          requestedModel: model,
+          usage,
+          reportedCost: cost,
+          kind: "image",
+        });
+        usageRecordId = record.id;
+        await checkThresholds(agent, spent, record.cost);
+        if (personId && personSpent !== null)
+          await personSpendAdded(
+            db,
+            { orgId: call.orgId, personId, amountNanoUsd: record.cost, at: now() },
+            personSpent,
+          );
+      } else {
+        const record = await recordUsage(db, {
+          orgId: call.orgId,
+          agentId: null,
+          kind: "image",
+          runId: call.runId,
+          personId,
+          credentialId: key.credentialId,
+          provider: info.provider,
+          model,
+          requestedModel: model,
+          usage,
+          reportedCost: cost,
+          partial: false,
+        });
+        usageRecordId = record.id;
+        if (personId) await addPersonSpend(db, { orgId: call.orgId, personId, amountNanoUsd: record.cost, at: now() });
+      }
+      const failed = result.error ? masked(result.error, label(info.provider), key) : undefined;
+      return {
+        images: result.images,
+        model,
+        provider: info.provider,
+        ...(result.usage ? { usage: result.usage } : {}),
+        usageRecordId,
+        costNanoUsd: cost,
+        ...(failed instanceof ProviderError ? { error: failed } : {}),
+      };
+    },
+
+    /**
+     * The image models a workspace can use now (ADR 0197), in the catalog's order (its default first), then its own
+     * endpoints' image models: those whose provider has a key it would call with (its own or the platform's) and an
+     * adapter that makes pictures. No key is decrypted.
+     */
+    async availableImageModels(orgId: string): Promise<string[]> {
+      const providers = new Map<string, boolean>();
+      const out: string[] = [];
+      for (const id of IMAGE_MODEL_IDS) {
+        const provider = IMAGE_CATALOG[id]?.provider;
+        if (!provider || !deps.providers[provider]?.generateImage) continue;
+        if (!providers.has(provider)) providers.set(provider, await providerHasKey(orgId, provider));
+        if (providers.get(provider)) out.push(id);
+      }
+      if (deps.providers.custom?.generateImage) {
+        await loadEndpointModels(db, orgId).catch(() => undefined);
+        for (const [id] of customModelsOf(orgId)) {
+          const parsed = parseCustomModel(id);
+          if (!parsed || !looksLikeImageModel(parsed.model)) continue;
+          const row = await usableCredentialRow(db, orgId, parsed.credentialId);
+          if (row?.provider === "custom" && row.options?.endpoint?.style === "openai") out.push(id);
+        }
+      }
+      return out;
+    },
+
+    /**
      * Usage of a non-model service called for an org (e.g. the Jev router):
      * recorded like every call, with its kind and provider, billed to the server's own key (`platform`).
      */
@@ -847,6 +1120,8 @@ export function createModelGateway(deps: ModelGatewayDeps) {
       kind: "router" | "agent";
       provider: string;
       model: string;
+      /** What was asked for, when it isn't the model: a Jev call's judgment (`auto_model`), so spend per judgment shows. */
+      requestedModel?: string;
       inputTokens: number;
       outputTokens: number;
       costNanoUsd: number;
@@ -861,7 +1136,7 @@ export function createModelGateway(deps: ModelGatewayDeps) {
           credentialId: null,
           provider: input.provider,
           model: input.model,
-          requestedModel: input.model,
+          requestedModel: input.requestedModel ?? input.model,
           inputTokens: input.inputTokens,
           outputTokens: input.outputTokens,
           costNanoUsd: input.costNanoUsd,
@@ -1051,29 +1326,15 @@ export function createModelGateway(deps: ModelGatewayDeps) {
 
 export type ModelGateway = ReturnType<typeof createModelGateway>;
 
-/** Reserved and spent amounts of an agent this month (from the gateway's counter). */
-export async function agentBudgetState(db: Database, orgId: string, agentId: string, at = new Date()) {
-  const [row] = await db
-    .select()
-    .from(agentBudgetPeriods)
-    .where(
-      and(
-        eq(agentBudgetPeriods.orgId, orgId),
-        eq(agentBudgetPeriods.agentId, agentId),
-        gte(agentBudgetPeriods.periodStart, periodOf(at)),
-      ),
-    );
-  return { spentNanoUsd: row?.spentNanoUsd ?? 0, reservedNanoUsd: row?.reservedNanoUsd ?? 0 };
-}
-
 /**
  * Budget hook that tells the agent's owner over the WebSocket
- * (`budget.warning` / `budget.exhausted`); an agent without an owner tells
+ * (`budget.warning` / `budget.exhausted`), or everyone holding its owner role; an agent with neither tells
  * the organization's admins.
  */
 export function notifyOwnerOnBudget(pubsub: PubSub, db?: Database): NonNullable<ModelGatewayDeps["onBudgetThreshold"]> {
   return async ({ agent, level, spentNanoUsd, budgetNanoUsd }) => {
-    const recipients = agent.ownerUserId ? [agent.ownerUserId] : db ? await adminIds(db, agent.orgId) : [];
+    const owners = db ? await agentOwnerIds(db, agent.orgId, agent) : agent.ownerUserId ? [agent.ownerUserId] : [];
+    const recipients = owners.length > 0 ? owners : db ? await adminIds(db, agent.orgId) : [];
     for (const userId of recipients) {
       // A percentage only: owners who aren't admins never see money.
       await publishUserEvent(pubsub, agent.orgId, userId, {

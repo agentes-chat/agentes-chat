@@ -1,4 +1,4 @@
-import { useAgentGroupAction } from "@agenteschat/client";
+import { useAgentGroupAction, useChannelName } from "@agenteschat/client";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -12,18 +12,24 @@ import { successHaptic } from "../shared/parts";
 /** The web's name field (the server takes up to this many characters). */
 const NAME_MAX = 80;
 
-/** The first setor from the phone: its name is all it needs. Its color, icon and lead are set on the web. */
-export function NewSectorScreen() {
+/**
+ * A setor from the phone: its name is all it needs, and a channel's Setor brings that channel along (`channelId`, ADR
+ * 0240). Its color, icon and lead are set on the web. The field waits for the person's tap: a screen that opens never
+ * raises the keyboard by itself.
+ */
+export function NewSectorScreen({ channelId }: { channelId?: string }) {
   const { t } = useTranslation();
   const c = useColors();
   const words = useFieldText("body");
   const toast = useToast();
-  const action = useAgentGroupAction(useOrgId());
+  const orgId = useOrgId();
+  const action = useAgentGroupAction(orgId);
+  const channelName = useChannelName(orgId, channelId);
   const [name, setName] = useState("");
   const save = () => {
     if (!name.trim() || action.isPending) return;
     action.mutate(
-      { type: "create", name: name.trim() },
+      { type: "create", name: name.trim(), ...(channelId ? { channelIds: [channelId] } : {}) },
       {
         onSuccess: () => {
           successHaptic();
@@ -36,6 +42,7 @@ export function NewSectorScreen() {
   return (
     <SettingsPage
       title={t("agentGroups.newGroup")}
+      {...(channelId ? { subtitle: `#${channelName ?? ""}` } : {})}
       action={{ label: t("agentGroups.create"), onPress: save, disabled: action.isPending || !name.trim() }}
     >
       <Gap />
@@ -48,7 +55,6 @@ export function NewSectorScreen() {
             placeholderTextColor={c.faint}
             maxLength={NAME_MAX}
             editable={!action.isPending}
-            autoFocus
             autoCapitalize="words"
             returnKeyType="done"
             onSubmitEditing={save}

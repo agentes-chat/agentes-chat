@@ -5,6 +5,7 @@ import {
   ASKS_PROTOCOL,
   BRAIN_PROFILES_PROTOCOL,
   BRAIN_PROTOCOL,
+  BRAIN_WARM_PROTOCOL,
   type BrainTurnRequest,
   brainTopic,
   CLI_GIT_MISSING,
@@ -18,14 +19,17 @@ import {
   type WireBrainEvent,
 } from "@agenteschat/adapters";
 import { type Database, schema } from "@agenteschat/db";
+import { CLI_FLOORS, CLI_UPDATE_COMMAND, cliVersionProblem, type FloorCli } from "@agenteschat/providers/cli-floors";
 import { autoContextFor } from "@agenteschat/providers/context-limits";
 import { getAgentCached } from "../agents";
+import { fetchesCli } from "../cli-fetch";
 import type { CodeSetup } from "../git/machine";
 import { type MachineCaller, MachineRequestError, type MachineStatus } from "../machine-hub";
 import { MachineDroppedError, MachineOfflineError, MachinePausedError, pausedMessage } from "../machines";
 import { addPersonSpend } from "../person-usage";
 import { apiNano } from "../plan-usage";
 import { runnerUpdateWay } from "../runner-update";
+import { noteModelRefusal, skipRefusedModel, withFailureCause } from "./failure-causes";
 import { computerPrompt, systemWithConversation } from "./prompt";
 import {
   askingPermissions,
@@ -57,8 +61,8 @@ import {
  * - Before sending anything the machine is checked: offline, commands off,
  *   an older runner, no Claude Code, or not logged in (the agent's account,
  *   ADR 0041, when it has one) end the turn at once
- *   with an `error` whose `retryable: true` tells the engine it may fall back
- *   to the model brain (ADR 0032 §5).
+ *   with an `error` whose `retryable: true` tells the engine the run may wait
+ *   for the computer (ADR 0032 §5).
  *
  * - Live steering (runner protocol 15): once the turn is sent, the brain
  *   hands the engine `steer` (`BrainIO.steerable`): a person's messages go to
@@ -103,6 +107,9 @@ export interface ClaudeCodeBrainDeps {
   /** How long a `brain.steer` may take (default `STEER_CALL_MS`). */
   steerTimeoutMs?: number;
 }
+
+/** A `brain.warm` answers once the CLI started, or a cold worker came up first; past this nobody waits on it. */
+export const WARM_CALL_MS = 30_000;
 
 /** A `brain.steer` answers at once (it only writes to the CLI's stdin): longer means the computer is in trouble. */
 export const STEER_CALL_MS = 2000;
@@ -169,7 +176,7 @@ const err = (code: string, message: string, retryable: boolean): BrainEvent => (
 /**
  * Why the agent's account can't take the turn (ADR 0041; null: it can): a
  * runner older than accounts, or an account its CLI signed out. It never
- * falls back to another account (the model fallback still may answer).
+ * falls back to another account.
  */
 export function accountUnavailable(
   status: { name?: string; protocol?: number; kind?: string; executors?: { mode?: string } } | null,
@@ -242,6 +249,43 @@ export function cliMissingMessage(
     : `${program} is on ${status.name} but can't start: ${said}`;
 }
 
+/**
+ * A CLI the computer reports at a version agentes.chat holds back (`CLI_FLOORS`): older than its floor, or a blocked one.
+ * Its turns wait (`cli_outdated` is in `UNAVAILABLE_CODES`) until the runner reports a newer one (`executors.changed`
+ * resumes them), never sent to fail there. Null: it may run.
+ */
+export function cliOutdated(
+  status: {
+    name?: string | null;
+    executors?:
+      | (Partial<Record<FloorCli, { version: string }>> & Pick<schema.MachineExecutors, "copies" | "mode">)
+      | null;
+    kind?: string | null;
+    os?: string;
+    protocol?: number;
+  },
+  cli: FloorCli,
+  program: string,
+  floors = CLI_FLOORS,
+): { code: "cli_outdated"; message: string } | null {
+  // Its runner fetches the pinned CLI itself (ADR 0228 §6): the turn goes, and the runner brings it first.
+  if (fetchesCli(status, cli)) return null;
+  const problem = cliVersionProblem(cli, status.executors?.[cli]?.version, floors);
+  if (!problem) return null;
+  const where = status.name || "the computer";
+  const command = CLI_UPDATE_COMMAND[cli];
+  const how = command
+    ? `Update it there (${command}).`
+    : "Update it there, from the agent's settings or with the installer it came from.";
+  return {
+    code: "cli_outdated",
+    message:
+      problem.kind === "too_old"
+        ? `${program} ${problem.version} on ${where} is older than ${problem.min}, the oldest version agentes.chat works with. ${how}`
+        : `${program} ${problem.version} on ${where} has a known problem with agentes.chat. ${how}`,
+  };
+}
+
 /** Why the turn can't go to this machine now (null: it can). With an account, the account decides the sign-in. */
 export function claudeCodeAvailability(status: MachineStatus | null, account?: BrainAccount): BrainEvent | null {
   if (!status) return err("machine_offline", "The agent's computer is not connected to the organization.", true);
@@ -261,7 +305,11 @@ export function claudeCodeAvailability(status: MachineStatus | null, account?: B
     );
   }
   const ex = status.executors ?? {};
-  if (ex.detectedAt && !ex.claude) return err("cli_missing", cliMissingMessage("Claude Code", status, "claude"), true);
+  if (ex.detectedAt && !ex.claude && !fetchesCli(status, "claude")) {
+    return err("cli_missing", cliMissingMessage("Claude Code", status, "claude"), true);
+  }
+  const old = cliOutdated(status, "claude", "Claude Code");
+  if (old) return err(old.code, old.message, true);
   if (account) {
     const e = accountUnavailable(status, account, "claude_code");
     return e ? err(e.code, e.message, true) : null;
@@ -341,7 +389,8 @@ export function claudeCodeCallError(error: unknown): BrainEvent {
   return err("runner_error", error instanceof Error ? error.message : String(error), false);
 }
 
-const toBrainEvent = (e: WireBrainEvent): BrainEvent => e as BrainEvent;
+/** A runner's event, with the cause its words say where the runner gave none (`withFailureCause`). */
+const toBrainEvent = (e: WireBrainEvent): BrainEvent => withFailureCause(e as BrainEvent);
 const isFinal = (e: BrainEvent) => e.type === "done" || e.type === "error";
 
 type Item = { kind: "event"; event: BrainEvent } | { kind: "stream_end" } | { kind: "reply"; final: BrainEvent };
@@ -381,7 +430,48 @@ class Queue {
 export function createClaudeCodeBrain(deps: ClaudeCodeBrainDeps): Brain {
   return {
     kind: "claude_code",
-    async *run(turn: BrainTurn, io: BrainIO): AsyncIterable<BrainEvent> {
+    // The launch the turn below sends (its folder before `prepare` moves it to a checkout), without its words.
+    async warm(turn: BrainTurn) {
+      const session = turn.session;
+      if (!session || deps.keepAlive === false) return;
+      const status = await deps.hub.status(session.machineId).catch(() => null);
+      if (!status || status.protocol < BRAIN_WARM_PROTOCOL || claudeCodeAvailability(status, turn.account)) return;
+      try {
+        const [agent, personalMcp, asked] = await Promise.all([
+          deps.agentScope(turn),
+          Promise.resolve(deps.personalMcp?.(turn) ?? false),
+          deps.permissions?.(turn),
+        ]);
+        const permissions = askingPermissions(asked, true);
+        if (permissions?.mode === "chat") return;
+        await deps.hub.call<"brain.warm">(
+          session.machineId,
+          {
+            op: "brain.warm",
+            runId: turn.runId,
+            kind: "claude_code",
+            session: { id: session.id, resume: session.resume },
+            cwd: session.cwd,
+            ...(turn.model ? { model: turn.model } : {}),
+            personalMcp,
+            // A code session's turn starts with its own tools (ADR 0215 §6): the warm process the same, or it isn't
+            // the one the turn takes.
+            ...(session.codeSession ? { codeSession: true } : {}),
+            ...(permissions ? { permissions } : {}),
+            ...accountFields(status.protocol, turn),
+            ...contextFields(status.protocol, turn, "claude_code"),
+            ...(turn.timeZone ? { timeZone: turn.timeZone } : {}),
+            agent,
+          },
+          { timeoutMs: WARM_CALL_MS },
+        );
+      } catch {
+        // the turn starts its CLI itself
+      }
+    },
+    async *run(asked: BrainTurn, io: BrainIO): AsyncIterable<BrainEvent> {
+      // A model the sign-in refused lately goes out as the CLI's default; a new refusal is remembered (as Codex's).
+      const turn = skipRefusedModel("claude_code", asked);
       const session = turn.session;
       if (!session) {
         yield err("no_session", "This agent has no computer for Claude Code.", true);
@@ -446,10 +536,14 @@ export function createClaudeCodeBrain(deps: ClaudeCodeBrainDeps): Brain {
           mcp: { token: deps.mcpToken?.(turn) ?? randomBytes(24).toString("base64url") },
           keepAlive: deps.keepAlive !== false,
           personalMcp: personalMcp && !chat,
+          ...(session.codeSession && !chat ? { codeSession: true } : {}),
           ...(permissions ? { permissions } : {}),
           ...accountFields(status?.protocol, turn),
           ...contextFields(status?.protocol, turn, "claude_code"),
           ...(turn.personWaiting ? { personWaiting: true } : {}),
+          ...(turn.timeZone ? { timeZone: turn.timeZone } : {}),
+          // Each answer the turn finishes before it goes on is its own message (ADR 0112).
+          answers: "each",
         };
         deps.hub
           .call<"brain.turn">(
@@ -487,10 +581,14 @@ export function createClaudeCodeBrain(deps: ClaudeCodeBrainDeps): Brain {
         for (;;) {
           const item = await queue.next(replyFinal ? (streamEnded ? 0 : (deps.finalGraceMs ?? 1500)) : undefined);
           if (item === null) {
-            if (replyFinal) yield replyFinal;
+            if (replyFinal) {
+              noteModelRefusal("claude_code", asked, replyFinal);
+              yield replyFinal;
+            }
             return;
           }
           if (item.kind === "event") {
+            noteModelRefusal("claude_code", asked, item.event);
             yield item.event;
             if (isFinal(item.event)) return;
           } else if (item.kind === "stream_end") {

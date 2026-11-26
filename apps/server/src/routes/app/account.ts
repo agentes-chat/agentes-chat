@@ -1,9 +1,11 @@
+import { retryInSeconds } from "@agenteschat/adapters";
 import { isLoopback } from "@agenteschat/client/lib/server";
 import { isWorkAreaAnswer, WORK_AREA_ANSWERS } from "@agenteschat/client/lib/work-area";
 import {
   acceptInvitation,
   accountDeletionPlan,
   addHostComputer,
+  adoptDeviceZone,
   announceMembers,
   announceProfile,
   avatarFile,
@@ -12,14 +14,18 @@ import {
   canCreateWorkspace,
   changeMemberRole,
   clearPassword,
+  closedRefusal,
   cloudNotice,
   countUsers,
   createInvitation,
   createOrganization,
   type DeletionDeps,
   deriveSecret,
+  emailConfirmation,
   getOrganization,
+  HOST_LOGO_PATH,
   hasPassword,
+  hostLook,
   INVITE_CHOICES_MAX,
   invitationLogoFile,
   invitationState,
@@ -45,6 +51,7 @@ import {
   removeAvatar,
   removeMember,
   removeOrgLogo,
+  requestReset,
   requireOwnerToDelete,
   requirePermission,
   resolvePermissions,
@@ -59,10 +66,13 @@ import {
   setAvatar,
   setMyLocale,
   setMyWorkArea,
+  setOrgAccent,
   setOrgLogo,
   settleJoinRequests,
+  setWallpaperPhoto,
   signInOptions,
   soleOwnerRefusal,
+  surfaceOn,
   toldReason,
   USER_LOCALES,
   undoEmailChange,
@@ -72,6 +82,7 @@ import {
   updateOrganization,
   updateOrgSettings,
   WORKSPACE_MODES,
+  wallpaperPhotoFile,
   workspaceContents,
   workspaceDeletions,
   workspaceMode,
@@ -109,14 +120,17 @@ import {
   json,
   noContent,
   OrgParams,
+  requestBaseUrl,
   requireSession,
   security,
 } from "./context";
-import { Invitation, Member, Organization, Role } from "./schemas";
+import { AccentColor, Invitation, Member, Organization, Role } from "./schemas";
 
 const tags = ["Account"];
 /** E-mail lookups on the sign-in screen: enough for typos and a few accounts, not for listing who has one. */
 const SIGN_IN_OPTIONS_PER_IP = { limit: 30, windowMs: 10 * 60_000 };
+/** The same on registered hosts, which run no bot check (ADR 0194), counted apart. */
+const SIGN_IN_OPTIONS_PER_IP_ON_HOSTS = { limit: 10, windowMs: 10 * 60_000 };
 /** A workspace's deletions in a day: deleting and restoring it over and over can't email its people all day. */
 const DELETIONS_PER_DAY = { limit: 3, windowMs: 86_400_000 };
 /** Workspaces a person makes in a day: making and deleting them over and over can't churn the Cloud's computers. */
@@ -159,6 +173,14 @@ const Me = z
       }),
       emailVerified: z.boolean().openapi({
         description: "The person opened the link that confirms their email address.",
+      }),
+      emailConfirmation: z.enum(["required", "reminder"]).nullable().openapi({
+        description:
+          "On a server that sends email, an address never confirmed (ADR 0006, addendum 2026-11-22): `required` while the account is in no workspace, which then makes none (403 `org.create_unconfirmed`) until the link is opened, so the apps show only “check your inbox”; `reminder` for one already in a workspace, which keeps working under a line that asks for it. Null otherwise.",
+      }),
+      emailUndelivered: z.enum(["suppressed", "rejected"]).nullable().openapi({
+        description:
+          "The last confirmation or reset email to the address could never be delivered: `suppressed`, the mail provider stopped mailing it after an earlier bounce (a new link asks the provider to mail it again first); `rejected`, the address was refused. Null once one goes, or when nothing says so.",
       }),
       confirmsOnThisMac: z.boolean().openapi({
         description:
@@ -239,6 +261,12 @@ export function accountRoutes(deps: AppDeps) {
         image: account.image,
         hasPassword: password,
         emailVerified: verified,
+        emailConfirmation: emailConfirmation({
+          emailDelivers: deps.adapters.email.delivers === true,
+          verified,
+          workspaces: memberships.length,
+        }),
+        emailUndelivered: account.emailUndelivered,
         confirmsOnThisMac: onThisMac,
         locale: account.locale,
         localeAuto: account.localeAuto,
@@ -263,8 +291,10 @@ export function accountRoutes(deps: AppDeps) {
           permissions: [...m.permissions],
           rank: m.rank,
           logo: m.orgLogo ?? null,
+          accent: m.orgAccent ?? null,
           ...(m.orgCreatedAt ? { createdAt: m.orgCreatedAt.toISOString() } : {}),
           ...(m.start ? { start: m.start } : {}),
+          ...(m.paysPlan ? { paysPlan: true as const } : {}),
           showActivity: m.showActivity ?? false,
           agentStyle: m.agentStyle ?? null,
           chatPrefs: m.chatPrefs ?? {},
@@ -307,8 +337,13 @@ export function accountRoutes(deps: AppDeps) {
     emails: { publicUrl: config.PUBLIC_URL, support: config.SUPPORT_EMAIL },
   };
   /** The proof a deletion takes (`deletionProof`). */
-  const prove = (c: { req: { raw: Request } }, userId: string, orgId: string | null, proof: z.infer<typeof Proof>) =>
-    deletionProof(deps.auth, proofDeps(), c.req.raw.headers, userId, orgId, proof);
+  const prove = (
+    c: { req: { raw: Request } },
+    userId: string,
+    orgId: string | null,
+    proof: z.infer<typeof Proof>,
+    reset = false,
+  ) => deletionProof(deps.auth, proofDeps(), c.req.raw.headers, userId, orgId, proof, reset);
   for (const path of [
     "/me",
     "/me/unread",
@@ -318,6 +353,7 @@ export function accountRoutes(deps: AppDeps) {
     "/account",
     "/account/*",
     "/avatars/*",
+    "/wallpapers/*",
     "/org-logos/*",
     "/organizations",
     "/organizations/*",
@@ -371,13 +407,17 @@ export function accountRoutes(deps: AppDeps) {
               description:
                 "The billing service (BILLING_URL, ADR 0079): owners and admins open a workspace's plan and billing there through `POST …/billing-link`. Null: no billing.",
             }),
+            referralsUrl: z.string().nullable().openapi({
+              description:
+                "The referral service (REFERRALS_URL, ADR 0192): a signed-in person opens it through `POST /api/app/referrals-link`. Null: no referrals.",
+            }),
             cloud: z.boolean().openapi({
               description:
                 "One of agentes.chat's own servers (`cloud` in `GET /api/instance`): the apps show no About screen there, which every other server shows.",
             }),
             turnstileSiteKey: z.string().nullable().openapi({
               description:
-                "The bot check's site key (`TURNSTILE_SITE_KEY`, ADR 0075): pages run Cloudflare Turnstile and send its token in `x-captcha-response`. Null: no check, and nothing loads from Cloudflare.",
+                "The bot check's site key (`TURNSTILE_SITE_KEY`, ADR 0075): pages run Cloudflare Turnstile and send its token in `x-captcha-response`. Null: no check, and nothing loads from Cloudflare; always null on a registered host (`host`), which runs no check.",
             }),
             errorReports: z
               .object({ dsn: z.string(), environment: z.string(), release: z.string() })
@@ -393,6 +433,25 @@ export function accountRoutes(deps: AppDeps) {
                 description:
                   "The same for the phone app (`SENTRY_MOBILE_DSN`, else `SENTRY_WEB_DSN`); `release` is the server's, the app files its reports under its own.",
               }),
+            surface: z.boolean().openapi({
+              description:
+                "An outside chat surface is bridged (`SURFACE_BRIDGE_TOKEN`, ADR 0187). Whether this account may link it is `GET /api/app/me/surface-links`'s `allowed`.",
+            }),
+            host: z
+              .object({
+                name: z.string(),
+                accent: z.string().nullable().openapi({ description: "`#rrggbb`; null: the default." }),
+                logoUrl: z.string().nullable().openapi({
+                  description:
+                    "Its logo (`GET /api/host-look/logo`), ending with `#ink=light` when its ink is light; null: none.",
+                }),
+                poweredBy: z.boolean().openapi({ description: "Its pages end with the powered-by line." }),
+              })
+              .nullable()
+              .openapi({
+                description:
+                  "This request's host is one the server's operator registered (ADR 0194): the pages before sign-in show its look, and sign-in is by email alone (`socialProviders` all off). Null on any other host.",
+              }),
           }),
         ),
       },
@@ -403,19 +462,28 @@ export function accountRoutes(deps: AppDeps) {
       const ownerWaits = users === 0 && signupPolicy(config).ownerByLink;
       const reportsTo = (dsn: string | undefined) =>
         dsn ? { dsn, environment: config.SENTRY_ENVIRONMENT, release: releaseOf(config) } : null;
+      const look = await hostLook(db, c.req.header("host"));
       return c.json(
         {
-          ...authUiConfig(config),
+          ...authUiConfig(config, Boolean(look)),
           signupOpen: await signupOpen(db, config, users),
           firstRun: users === 0 && !ownerWaits,
           ownerClaim: users === 0 && Boolean(config.OWNER_CLAIM_SHA256),
           passwordReset: deps.adapters.email.delivers === true,
           workspaceComputer: config.MACHINE_PROVISIONING === "external",
           billingUrl: config.BILLING_URL ?? null,
+          referralsUrl: config.REFERRALS_URL ?? null,
           cloud: isAgentesCloud(config.PUBLIC_URL),
-          turnstileSiteKey: deps.adapters.humanCheck?.siteKey ?? null,
+          turnstileSiteKey: look ? null : (deps.adapters.humanCheck?.siteKey ?? null),
           errorReports: reportsTo(config.SENTRY_WEB_DSN),
           mobileErrorReports: reportsTo(config.SENTRY_MOBILE_DSN ?? config.SENTRY_WEB_DSN),
+          surface: surfaceOn() !== null,
+          host: look && {
+            name: look.name,
+            accent: look.accent,
+            logoUrl: look.logo ? `${HOST_LOGO_PATH}?v=${look.logo.split("/").pop()}` : null,
+            poweredBy: look.poweredBy,
+          },
         },
         200,
       );
@@ -457,7 +525,7 @@ export function accountRoutes(deps: AppDeps) {
             }),
             pass: z.string().optional().openapi({
               description:
-                "Only with the bot check on: sent as `x-captcha-response` in place of a token, it stands for the check at this address's sign-in, sign-up or password reset, from the same network, for ten minutes and a few calls (ADR 0075).",
+                "Only with the bot check on, and never on a registered host: sent as `x-captcha-response` in place of a token, it stands for the check at this address's sign-in, sign-up or password reset, from the same network, for ten minutes and a few calls (ADR 0075).",
             }),
           }),
         ),
@@ -467,19 +535,23 @@ export function accountRoutes(deps: AppDeps) {
     }),
     async (c) => {
       const ip = requestLimitIp(c.req.raw.headers, config.TRUSTED_PROXIES);
-      const limit = await deps.adapters.rateLimiter.consume(`sign-in-options:${ip}`, SIGN_IN_OPTIONS_PER_IP);
-      if (!limit.allowed) return apiError(c, 429, "rate_limited", "Too many requests. Try again later.");
-      const refused = await humanCheckRefusal(
-        deps.adapters.humanCheck,
-        c.req.raw.headers,
-        "email-lookup",
-        config.TRUSTED_PROXIES,
+      const look = await hostLook(db, c.req.header("host"));
+      const limit = await deps.adapters.rateLimiter.consume(
+        look ? `sign-in-options:hosts:${ip}` : `sign-in-options:${ip}`,
+        look ? SIGN_IN_OPTIONS_PER_IP_ON_HOSTS : SIGN_IN_OPTIONS_PER_IP,
       );
+      if (!limit.allowed) {
+        c.header("Retry-After", String(retryInSeconds(limit.resetAt)));
+        return apiError(c, 429, "rate_limited", "Too many requests. Try again later.");
+      }
+      // Where no check runs, no pass either: it would stand for the check on the main address.
+      const check = look ? null : (deps.adapters.humanCheck ?? null);
+      const refused = await humanCheckRefusal(check, db, c.req.raw.headers, "email-lookup", config.TRUSTED_PROXIES);
       if (refused) return apiError(c, 403, refused.code, refused.message);
       const { email, access } = c.req.valid("json");
       const found = await signInOptions(db, email, signupPolicy(config), access);
       // Checked once: the step after this one, for this address, goes with the pass and no second check.
-      if (!deps.adapters.humanCheck) return c.json(found, 200);
+      if (!check) return c.json(found, 200);
       const pass = humanPassesFor(deriveSecret(config.AGENTES_SECRET, "human-pass")).issue(email, ip);
       return c.json({ ...found, pass }, 200);
     },
@@ -957,10 +1029,21 @@ export function accountRoutes(deps: AppDeps) {
             leaves: z
               .array(z.object({ id: z.uuid(), name: z.string(), role: Role }))
               .openapi({ description: "Workspaces with others in them, which they leave." }),
-            soleOwner: z.array(z.object({ id: z.uuid(), name: z.string() })).openapi({
-              description:
-                "Workspaces they are the only owner of, with others in them and not being deleted: make someone else an owner, or delete the workspace, first (`sole_owner`).",
-            }),
+            soleOwner: z
+              .array(
+                z.object({
+                  id: z.uuid(),
+                  name: z.string(),
+                  onlyOutside: z.boolean().openapi({
+                    description:
+                      "Everyone else in it is an outside collaborator, who can't be an owner: invite a member and make them an owner first.",
+                  }),
+                }),
+              )
+              .openapi({
+                description:
+                  "Workspaces they are the only owner of, with others in them and not being deleted: make someone else an owner, or delete the workspace, first (`sole_owner`, with `params.onlyOutside` when every one has only outside collaborators besides them).",
+              }),
             computers: z.array(z.object({ orgId: z.uuid(), id: z.uuid(), name: z.string() })).openapi({
               description:
                 "Computers they connected in the workspaces they leave, not in system mode: removed with the account.",
@@ -1043,7 +1126,7 @@ export function accountRoutes(deps: AppDeps) {
       security,
       summary: "Change your account's email address",
       description:
-        "The same account under `newEmail` (ADR 0088 §2, addendum 2026-11-13), the only way to change it: Better Auth's `/api/auth/change-email` is off. Refused for the address it has (400 `email.same`) and for one another account just left (409 `email.held`, held 7 days for its “This wasn't me”). On a server that sends email it takes the 6-digit `code` emailed to the account's current address for this new one, with every emailed code's rules (`reauth.code_wrong`, `reauth.code_expired`, `reauth.code_tries`, 429 `reauth.code_wait` with `retryIn` and `reauth.code_limit`), or a sign-in in the last 10 minutes instead. Without either it emails that code and answers 202 `code`, except to an address the account never confirmed, which gets no code (403 `reauth.sign_in`: a fresh sign-in is the proof there). With the proof, 200 `sent`: a link goes to `newEmail` and the address changes once it is opened, when the old one, only if the account had confirmed it, gets a notice with “This wasn't me” (`POST /email-undo`). 5 links an hour and 10 a day per account (429 `rate_limited`). On a server that sends no email, 200 `changed` at once, as an unconfirmed address only (409 `email.no_mail` for a confirmed one, 409 `email.taken` when another account has it).",
+        "The same account under `newEmail` (ADR 0088 §2, addendum 2026-11-13), the only way to change it: Better Auth's `/api/auth/change-email` is off. Refused for the address it has (400 `email.same`) and for one another account just left (409 `email.held`, held 7 days for its “This wasn't me”). On a server that sends email it takes the 6-digit `code` emailed to the account's current address for this new one, with every emailed code's rules (`reauth.code_wrong`, `reauth.code_expired`, `reauth.code_tries`, 429 `reauth.code_wait` with `retryIn` and `reauth.code_limit`), or a sign-in in the last 10 minutes instead. Without either it emails that code and answers 202 `code`, except to an address the account never confirmed, which gets no code (403 `reauth.sign_in`: a fresh sign-in is the proof there). With the proof, 200 `sent`: a link goes to `newEmail` and the address changes once it is opened, when the old one, only if the account had confirmed it, gets a notice with “This wasn't me” (`POST /email-undo`). An address never confirmed changes at once instead (200 `changed`, 409 `email.taken` when another account has it), and the link that confirms it goes to the new one. 5 links an hour and 10 a day per account (429 `rate_limited`). On a server that sends no email, 200 `changed` at once, as an unconfirmed address only (409 `email.no_mail` for a confirmed one, 409 `email.taken` when another account has it).",
       request: {
         body: body(
           z.object({
@@ -1234,6 +1317,46 @@ export function accountRoutes(deps: AppDeps) {
     },
   );
 
+  app.openapi(
+    createRoute({
+      method: "put",
+      path: "/organizations/{orgId}/me/wallpaper-photo",
+      tags,
+      security,
+      summary: "Send a photo for a conversation's background (JPEG, PNG or WebP up to 2 MB; metadata is removed)",
+      description:
+        'Only you see it. The answer\'s `url` goes into a background (`{ kind: "photo", url, dim, x, y }`) with `PUT …/me/chat` or `PUT …/channels/{channelId}/wallpaper`; photos none of your backgrounds shows any more are removed when you send one. The apps shrink it first.',
+      request: {
+        params: OrgParams,
+        body: body(
+          z.object({
+            imageBase64: z
+              .string()
+              .min(1)
+              .max(3_000_000)
+              .openapi({ description: "The image bytes in base64 (a data: URL prefix is accepted)." }),
+            contentType: z.enum(["image/jpeg", "image/png", "image/webp"]),
+          }),
+        ),
+      },
+      responses: {
+        200: json(z.object({ url: z.string() })),
+        429: errorResponse("Too many photos"),
+        ...errors,
+      },
+    }),
+    async (c) => {
+      const user = c.get("user");
+      await requirePermission(db, user.id, c.req.valid("param").orgId, "read");
+      const limit = await deps.adapters.rateLimiter.consume(`wallpaper:${user.id}`, { limit: 20, windowMs: 3600_000 });
+      if (!limit.allowed) return apiError(c, 429, "rate_limited", "Too many photos. Try again later.");
+      return c.json(
+        await setWallpaperPhoto({ db, blobs: deps.adapters.platformBlobs }, user.id, c.req.valid("json")),
+        200,
+      );
+    },
+  );
+
   // The workspace logo: an admin uploads it; every member sees it.
   app.openapi(
     createRoute({
@@ -1268,7 +1391,12 @@ export function accountRoutes(deps: AppDeps) {
       const limit = await deps.adapters.rateLimiter.consume(`org-logo:${orgId}`, { limit: 20, windowMs: 3600_000 });
       if (!limit.allowed) return apiError(c, 429, "rate_limited", "Too many logo changes. Try again later.");
       return c.json(
-        await setOrgLogo({ db, blobs: deps.adapters.platformBlobs }, user.id, orgId, c.req.valid("json")),
+        await setOrgLogo(
+          { db, blobs: deps.adapters.platformBlobs, pubsub: deps.adapters.pubsub },
+          user.id,
+          orgId,
+          c.req.valid("json"),
+        ),
         200,
       );
     },
@@ -1285,8 +1413,39 @@ export function accountRoutes(deps: AppDeps) {
       responses: { 204: noContent[204], ...errors },
     }),
     async (c) => {
-      await removeOrgLogo({ db, blobs: deps.adapters.platformBlobs }, c.get("user").id, c.req.valid("param").orgId);
+      await removeOrgLogo(
+        { db, blobs: deps.adapters.platformBlobs, pubsub: deps.adapters.pubsub },
+        c.get("user").id,
+        c.req.valid("param").orgId,
+      );
       return c.body(null, 204);
+    },
+  );
+
+  // The workspace's accent (ADR 0193): an admin picks it; every member's apps paint with it.
+  app.openapi(
+    createRoute({
+      method: "put",
+      path: "/organizations/{orgId}/accent",
+      tags,
+      security,
+      summary: "Set the workspace's accent color, or null for the default. Admins.",
+      request: { params: OrgParams, body: body(z.object({ accent: AccentColor.nullable() })) },
+      responses: {
+        200: json(z.object({ accent: AccentColor.nullable() })),
+        429: errorResponse("Too many accent changes (`rate_limited`)"),
+        ...errors,
+      },
+    }),
+    async (c) => {
+      const user = c.get("user");
+      const { orgId } = c.req.valid("param");
+      const { accent } = c.req.valid("json");
+      await requirePermission(db, user.id, orgId, "configure");
+      // Each change makes every member's open apps refetch.
+      const limit = await deps.adapters.rateLimiter.consume(`org-accent:${orgId}`, { limit: 20, windowMs: 3600_000 });
+      if (!limit.allowed) return apiError(c, 429, "rate_limited", "Too many color changes. Try again later.");
+      return c.json(await setOrgAccent({ db, pubsub: deps.adapters.pubsub }, user.id, orgId, accent), 200);
     },
   );
 
@@ -1297,6 +1456,18 @@ export function accountRoutes(deps: AppDeps) {
         { db, blobs: deps.adapters.platformBlobs },
         c.get("user").id,
         c.req.param("orgId"),
+        c.req.param("file"),
+      ),
+    ),
+  );
+
+  // A background's photo, for its owner only.
+  app.get("/wallpapers/:userId/:file", async (c) =>
+    imageFile(
+      await wallpaperPhotoFile(
+        { db, blobs: deps.adapters.platformBlobs },
+        c.get("user").id,
+        c.req.param("userId"),
         c.req.param("file"),
       ),
     ),
@@ -1323,7 +1494,7 @@ export function accountRoutes(deps: AppDeps) {
       security,
       summary: "Create an organization (you become its owner)",
       description:
-        "Its owner sets it up in the onboarding, already past its first step (`onboarding` in `GET /me` until `PATCH …/onboarding` says it's finished, or `finished` here). While they have one they haven't finished, that one comes back (200) instead of a new one, so a stale tab or a second press makes no other, even one waiting for its first plan; `timezone`, `memberTimezone` and `finished` apply to it as they would to a new one. The answer says where it opens (`rightHandId`) and carries `GET /me` as it is now, so an app opens it without asking again. 403 `org.create_refused` while your account is blocked or you are in a workspace suspended or on a hold the billing service didn't set; 403 `org.create_unpaid` (`params.orgId`) while you own a workspace waiting for its first plan; 403 `org.create_invite_only` on agentes.chat Cloud while sign-up is by invitation, unless early access allowed the person's account and its address is confirmed (ADR 0078). With BILLING_HOLD_NEW_WORKSPACES it starts on the `payment` hold (ADR 0079). 429 after 10 tries in a day; 401 once your account is deleted.",
+        "Its owner sets it up in the onboarding, already past its first step (`onboarding` in `GET /me` until `PATCH …/onboarding` says it's finished, or `finished` here). While they have one they haven't finished, that one comes back (200) instead of a new one, so a stale tab or a second press makes no other, even one waiting for its first plan; `timezone`, `memberTimezone` and `finished` apply to it as they would to a new one. The answer says where it opens (`rightHandId`) and carries `GET /me` as it is now, so an app opens it without asking again. 403 `org.create_refused` while your account is blocked or you are in a workspace suspended or on a hold the billing service didn't set; 403 `org.create_unpaid` (`params.orgId`) while you own a workspace waiting for its first plan; 403 `org.create_invite_only` on agentes.chat Cloud while sign-up is by invitation, unless early access allowed the person's account and its address is confirmed (ADR 0078). 403 `org.create_unconfirmed` on a server that sends email, for an account in no workspace whose address was never confirmed (`emailConfirmation` `required` in `GET /me`, ADR 0006). With BILLING_HOLD_NEW_WORKSPACES it starts on the `payment` hold (ADR 0079). 429 after 10 tries in a day; 401 once your account is deleted.",
       request: {
         body: body(
           z.object({
@@ -1356,6 +1527,16 @@ export function accountRoutes(deps: AppDeps) {
       const { teamSize, timezone, memberTimezone, finished, ...input } = c.req.valid("json");
       const user = c.get("user");
       const userId = user.id;
+      if (deps.adapters.email.delivers === true) {
+        const [verified, memberships] = await Promise.all([isEmailVerified(db, userId), listMemberships(db, userId)]);
+        const asked = emailConfirmation({
+          emailDelivers: true,
+          verified: verified === true,
+          workspaces: memberships.length,
+        });
+        if (asked === "required")
+          return apiError(c, 403, "org.create_unconfirmed", "Open the link we sent to your email first.");
+      }
       if (!(await deps.adapters.rateLimiter.consume(`new-workspace:${userId}`, WORKSPACES_PER_DAY)).allowed) {
         return apiError(c, 429, "rate_limited", "Too many new workspaces today. Try again tomorrow.");
       }
@@ -1449,6 +1630,7 @@ export function accountRoutes(deps: AppDeps) {
           // What the agents know of the workspace: only for who configures it.
           context: can(membership, "configure") ? (org?.context ?? "") : "",
           logo: org?.logo ?? null,
+          accent: org?.accent ?? null,
           mode: await workspaceMode(db, orgId),
         },
         200,
@@ -1532,6 +1714,80 @@ export function accountRoutes(deps: AppDeps) {
       if (deps.adapters.email.delivers !== true)
         return apiError(c, 409, "reauth.no_email", "This server doesn't send email. Give your password.");
       const sent = await sendDeletionCode(codes, user.id, orgId);
+      deps.wakeWorkers?.();
+      return c.json(sent, 202);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/reset",
+      tags,
+      security,
+      summary: "Reset a workspace (owners)",
+      description: `Erases everything made in it, at once and for good: its agents (the right hand too), conversations, files, tasks, routines, memory and browser profiles. It keeps its name, plan, people, roles, invitations, AI accounts, computers, connectors, the Vault and usage, and starts over like a new one: the right hand, #general with everyone in it, and the onboarding. Its people's apps hear an \`org.reset\` org event once it is done. ${PROOF_TEXT.replace("POST …/deletion/code", "POST …/reset/code").replace("for this deletion only", "for this reset only")} A workspace takes 3 resets a day (429). Already under way, it answers 202 before any proof. 403 \`forbidden\` for anyone but an owner, \`org.suspended\` while suspended, \`org.deleting\` while it is being deleted.`,
+      request: { params: OrgParams, body: body(Proof) },
+      responses: {
+        202: json(
+          z.object({
+            reset: z.object({ startedAt: z.string().openapi({ description: "When it started." }) }),
+          }),
+          "Resetting",
+        ),
+        ...errors,
+        429: errorResponse(
+          "Too many tries today (`reauth.code_limit`), or password tries or resets of it today (`rate_limited`)",
+        ),
+      },
+    }),
+    async (c) => {
+      const user = c.get("user");
+      const { orgId } = c.req.valid("param");
+      const refusal = closedRefusal((await requireOwnerToDelete(db, user.id, orgId)).standing);
+      if (refusal) throw refusal;
+      const under = (await getOrganization(db, orgId))?.resetRequestedAt;
+      if (under) return c.json({ reset: { startedAt: under.toISOString() } }, 202);
+      await prove(c, user.id, orgId, c.req.valid("json"), true);
+      const limiter = deps.adapters.rateLimiter;
+      const key = `org-reset:${orgId}`;
+      if (!(await limiter.consume(key, DELETIONS_PER_DAY)).allowed) {
+        return apiError(c, 429, "rate_limited", "This workspace was reset too many times today. Try again tomorrow.");
+      }
+      // Only a reset this request started counts against the day's.
+      const { startedAt, started } = await requestReset(db, user.id, orgId).catch(async (error) => {
+        await limiter.release(key);
+        throw error;
+      });
+      if (!started) await limiter.release(key);
+      deps.wakeWorkers?.();
+      return c.json({ reset: { startedAt: startedAt.toISOString() } }, 202);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/reset/code",
+      tags,
+      security,
+      summary: "Email a code to reset a workspace (owners)",
+      description:
+        "To your own address: the proof `POST …/reset` takes, for this workspace only, with the same rules as `POST …/deletion/code`. 409 `reauth.no_email` on a server that sends no email: the password is the proof there. 403 `forbidden` for anyone but an owner, `org.suspended` while suspended.",
+      request: { params: OrgParams },
+      responses: {
+        202: Sent,
+        ...errors,
+        429: errorResponse("Too many codes (`reauth.code_wait`, `reauth.code_limit`)"),
+      },
+    }),
+    async (c) => {
+      const user = c.get("user");
+      const { orgId } = c.req.valid("param");
+      await requireOwnerToDelete(db, user.id, orgId);
+      if (deps.adapters.email.delivers !== true)
+        return apiError(c, 409, "reauth.no_email", "This server doesn't send email. Give your password.");
+      const sent = await sendDeletionCode(codes, user.id, orgId, new Date(), true);
       deps.wakeWorkers?.();
       return c.json(sent, 202);
     },
@@ -1765,7 +2021,7 @@ export function accountRoutes(deps: AppDeps) {
         ...c.req.valid("json"),
         secret: config.AGENTES_SECRET,
       });
-      const url = `${config.PUBLIC_URL.replace(/\/$/, "")}/invite/${token}`;
+      const url = `${await requestBaseUrl(deps, c.req.raw.headers)}/invite/${token}`;
       await queueInvitationEmail(db, {
         orgId: invitation.orgId,
         invitationId: invitation.id,
@@ -1829,6 +2085,24 @@ export function accountRoutes(deps: AppDeps) {
                 "as confirmed. A copied link has none.",
             }),
         }),
+        body: {
+          required: false,
+          content: {
+            "application/json": {
+              schema: z.object({
+                timeZone: z
+                  .string()
+                  .max(64)
+                  .optional()
+                  .openapi({
+                    description:
+                      "The IANA zone of the device accepting: the person's zone in the workspace while they have none " +
+                      "of their own. An unknown one is ignored.",
+                  }),
+              }),
+            },
+          },
+        },
       },
       responses: { 200: json(z.object({ orgId: z.uuid() })), ...errors },
     }),
@@ -1836,6 +2110,7 @@ export function accountRoutes(deps: AppDeps) {
       const user = c.get("user");
       const mail = { secret: config.AGENTES_SECRET, proof: c.req.valid("query").mail };
       const joined = await acceptInvitation(db, user, c.req.valid("param").token, new Date(), mail);
+      await adoptDeviceZone(db, joined.orgId, user.id, c.req.valid("json")?.timeZone);
       await announceMembers(deps.adapters.pubsub, joined.orgId, joined.agents);
       // A request to join they had waiting closed as they joined: the admins' notice goes with the last one.
       await settleJoinRequests({ db, pubsub: deps.adapters.pubsub }, joined.orgId);

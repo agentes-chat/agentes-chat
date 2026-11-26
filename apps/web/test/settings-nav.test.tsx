@@ -104,7 +104,6 @@ describe("finding the settings", () => {
       ["invites", "Convites", "members"],
       ["access", "Agentes e acesso", "connectors"],
       ["connectors", "Conectores e MCPs", "connectors"],
-      ["skills", "Skills", "connectors"],
       ["storage", "Armazenamento", "storage"],
       ["devices", "Dispositivos", "devices"],
       ["usage", "IA e uso", "usage"],
@@ -130,6 +129,11 @@ describe("finding the settings", () => {
     const org = document.querySelector(".settings__org") as HTMLElement;
     expect(org.classList.contains("ac-iconline")).toBe(true);
     expect(org.textContent).toBe(name);
+    // The pages' own header, as the inbox's: the title, and the workspace on the line under it.
+    const head = org.closest(".ac-pagehead") as HTMLElement;
+    expect(head.closest("nav")?.getAttribute("aria-label")).toBe("Seções das configurações");
+    expect(head.querySelector("h1.ac-pagehead__title")?.textContent).toBe("Configurações");
+    expect(org.parentElement?.className).toBe("ac-pagehead__meta");
   });
 
   test("Sobre o agentes.chat: for a member too, with the license's attribution, the version and the source", async () => {
@@ -139,7 +143,7 @@ describe("finding the settings", () => {
     await go("settings/about", state);
     expect(screen().getAllByRole("heading", { level: 2, name: "Sobre o agentes.chat" }).length).toBeGreaterThan(0);
     const site = screen().getByRole("link", { name: "agentes.chat" });
-    expect(site.closest("h2")?.textContent).toBe("Baseado no agentes.chat da Codari Global, LLC");
+    expect(site.closest("h2")?.textContent).toBe("Baseado no agentes.chat da AGENTESCHAT, LLC");
     expect(site.getAttribute("href")).toBe("https://agentes.chat");
     expect(screen().getByText("2026.11.06.1")).toBeTruthy();
     expect(screen().getByRole("link", { name: "GNU Affero General Public License v3" }).getAttribute("href")).toBe(
@@ -150,7 +154,7 @@ describe("finding the settings", () => {
         .getByRole("link", { name: /git\.example\.com\/fork/ })
         .getAttribute("href"),
     ).toBe("https://git.example.com/fork");
-    expect(screen().getByText("Copyright © 2026 Codari Global, LLC e colaboradores")).toBeTruthy();
+    expect(screen().getByText("Copyright © 2026 AGENTESCHAT, LLC e colaboradores")).toBeTruthy();
   });
 
   test("Sobre o agentes.chat only on a self-hosted server: agentes.chat Cloud lists it nowhere, its link opens Sua conta", async () => {

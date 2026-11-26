@@ -86,10 +86,14 @@ test("one computer per organization of the first account, its own token each; no
   expect(acme?.token).toStartWith("agm_");
   const row = await authenticateMachine(t.db, acme?.token ?? "");
   expect(row).toMatchObject({ kind: "host", orgId, pairedByUserId: await userId("owner@example.com") });
-  // The agent with no computer uses it now.
+  // The agent with no computer uses it now, and the right hand has its places there whatever users it keeps.
   const list = (await (await api("/machines")).json()) as { machines: { kind: string; agents: { id: string }[] }[] };
   expect(list.machines).toEqual([
-    expect.objectContaining({ kind: "host", name: "Servidor", agents: [expect.objectContaining({ id: agentId })] }),
+    expect.objectContaining({
+      kind: "host",
+      name: "Servidor",
+      agents: [expect.objectContaining({ id: agentId }), expect.objectContaining({ handle: "lodi" })],
+    }),
   ]);
   expect(await t.db.select().from(schema.machines).where(eq(schema.machines.orgId, betaId))).toEqual([]);
 
@@ -164,4 +168,25 @@ test("the OpenAPI document lists the sync and the organization's switch", async 
   const doc = (await (await t.app.request("/api/openapi.json")).json()) as { paths: Record<string, unknown> };
   expect(Object.keys(doc.paths)).toContain("/machines/host/sync");
   expect(Object.keys(doc.paths)).toContain("/app/organizations/{orgId}/machines/host");
+});
+
+test("an uncustomized host computer name follows hostname changes on sync and hello, while a custom name stays", async () => {
+  const { api, orgId } = await start();
+  const [first] = await synced({ name: "vps-old", hostname: "vps-old" });
+  expect(first?.token).toStartWith("agm_");
+  // Migrated to a new host while holding the org token (`have`): uncustomized name updates with hostname.
+  await synced({ name: "vps-new", hostname: "vps-new", have: [orgId] });
+  const afterSync = (await (await api("/machines")).json()) as {
+    machines: { id: string; name: string; hostname: string }[];
+  };
+  expect(afterSync.machines[0]).toMatchObject({ name: "vps-new", hostname: "vps-new" });
+
+  // Once renamed by an admin, its custom display name stays when the OS hostname changes again.
+  const machineId = afterSync.machines[0]?.id ?? "";
+  expect((await api(`/machines/${machineId}`, { method: "PATCH", json: { name: "Production Box" } })).status).toBe(200);
+  await synced({ name: "vps-newer", hostname: "vps-newer", have: [orgId] });
+  const afterRename = (await (await api("/machines")).json()) as {
+    machines: { id: string; name: string; hostname: string }[];
+  };
+  expect(afterRename.machines[0]).toMatchObject({ name: "Production Box", hostname: "vps-newer" });
 });

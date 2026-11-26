@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { Channel, DirectMessage, OrgSummary } from "@agenteschat/client";
 import { previewBody, serverBody } from "@agenteschat/client/lib/message-body";
 import { resources } from "@agenteschat/i18n";
@@ -6,20 +8,24 @@ import i18next from "i18next";
 import {
   appBadgeCount,
   buildConversations,
+  closedUnread,
   hiddenAgentIds,
-  homeSections,
+  homeViewOf,
   isListedThread,
   isListKind,
   isQuietGeneral,
+  keptWhenClosed,
   missionState,
   missionsWaiting,
   missionWaitingItems,
   openQuestions,
   parseCollapsed,
+  recentRows,
   rowBadge,
   rowName,
   rowPlace,
   rowsOfKind,
+  sectorSections,
   THREAD_SECTIONS,
   threadRowLines,
   threadRows,
@@ -296,7 +302,7 @@ describe("Esperando você", () => {
   });
 });
 
-describe("the home by kind", () => {
+describe("the home's Recentes", () => {
   const person = (channelId: string, name: string, minutesAgo: number): DirectMessage => ({
     ...dm(channelId, name, 0, minutesAgo),
     with: { type: "person", id: `u-${name}`, name, handle: null },
@@ -317,50 +323,49 @@ describe("the home by kind", () => {
     ],
   });
 
-  test("Agentes, Canais, Pessoas: the first five by latest activity and how many in all; threads stay out", () => {
-    const s = homeSections(rows);
-    expect(s.map((x) => [x.key, x.total, x.more])).toEqual([
-      ["agents", 7, true],
-      ["channels", 1, false],
-      ["people", 1, false],
+  test("agents, people and channels in one list by latest activity, with no grouping; threads stay out", () => {
+    // A channel with no message yet goes last; threads and missions have their own tab.
+    expect(recentRows(rows).map((r) => r.key)).toEqual([
+      "d:d0",
+      "d:p1",
+      "d:d1",
+      "d:d2",
+      "d:d3",
+      "d:d4",
+      "d:d5",
+      "d:d6",
+      "c:c1",
     ]);
-    expect(s[0]?.rows.map((r) => r.key)).toEqual(["d:d0", "d:d1", "d:d2", "d:d3", "d:d4"]);
-    expect(s.flatMap((x) => x.rows).some((r) => r.kind === "thread" || r.kind === "mission")).toBe(false);
+    expect(recentRows([])).toEqual([]);
   });
 
-  test("empty sections are left out", () => {
-    const only = buildConversations({ channels: [], dms: [person("p1", "Ana", 1)], threads: [] });
-    expect(homeSections(only).map((x) => x.key)).toEqual(["people"]);
-    expect(homeSections([])).toEqual([]);
-  });
-
-  test("Agentes leaves out the agents that don't answer me, and who manages agents sees all", () => {
-    const agents = [
+  test("Recentes leaves out the agents whose DM wouldn't open for me, and who manages one keeps it", () => {
+    // The server's flags are each viewer's own: A answers neither of them, and only the manager manages it.
+    const forMember = [
       { id: "a-A", canTalk: false },
+      { id: "a-B", canTalk: true },
+    ];
+    const forManager = [
+      { id: "a-A", canTalk: false, canManage: true },
       { id: "a-B", canTalk: true },
     ];
     const dms = [dm("d0", "A", 1, 5), dm("d1", "B", 0, 9), person("p1", "Ana", 1)];
     const member: OrgSummary = { id: "o1", name: "Acme", role: "member", permissions: ["read", "talk_to_agents"] };
     const manager: OrgSummary = { ...member, permissions: ["read", "talk_to_agents", "manage_agents"] };
-    expect([...hiddenAgentIds(member, agents)]).toEqual(["a-A"]);
-    expect([...hiddenAgentIds(manager, agents)]).toEqual([]);
-    const hiddenAgents = (org: OrgSummary) => hiddenAgentIds(org, agents);
-    const agentRows = (org: OrgSummary) =>
-      homeSections(buildConversations({ channels: [], dms, threads: [], hiddenAgents: hiddenAgents(org) })).map((x) => [
-        x.key,
-        x.rows.map((r) => r.key),
-      ]);
-    expect(agentRows(member)).toEqual([
-      ["agents", ["d:d1"]],
-      ["people", ["d:p1"]],
-    ]);
-    expect(agentRows(manager)).toEqual([
-      ["agents", ["d:d0", "d:d1"]],
-      ["people", ["d:p1"]],
-    ]);
+    const hiddenOf = { member: hiddenAgentIds(member, forMember), manager: hiddenAgentIds(manager, forManager) };
+    expect([...hiddenOf.member]).toEqual(["a-A"]);
+    expect([...hiddenOf.manager]).toEqual([]);
+    // "Edit agents" alone doesn't reach someone's private agent, and being among its editors opens no DM either (ADR
+    // 0085 addendum of 2026-11-17): its DM stays off the lists.
+    const editedOnly = { id: "a-A", canTalk: false, canManage: false, canEdit: true };
+    expect([...hiddenAgentIds(manager, [editedOnly])]).toEqual(["a-A"]);
+    const recentOf = (hidden: ReadonlySet<string>) =>
+      recentRows(buildConversations({ channels: [], dms, threads: [], hiddenAgents: hidden })).map((r) => r.key);
+    expect(recentOf(hiddenOf.member)).toEqual(["d:p1", "d:d1"]);
+    expect(recentOf(hiddenOf.manager)).toEqual(["d:p1", "d:d0", "d:d1"]);
     // The tab's badge counts what the home lists: A's unread stays out for the member.
-    expect(unreadConversationCount({ channels: [], dms, hiddenAgents: hiddenAgents(member) })).toBe(0);
-    expect(unreadConversationCount({ channels: [], dms, hiddenAgents: hiddenAgents(manager) })).toBe(1);
+    expect(unreadConversationCount({ channels: [], dms, hiddenAgents: hiddenOf.member })).toBe(0);
+    expect(unreadConversationCount({ channels: [], dms, hiddenAgents: hiddenOf.manager })).toBe(1);
   });
 
   test("the Threads tab: threads and missions by latest activity", () => {
@@ -388,20 +393,21 @@ describe("the home by kind", () => {
     expect(unreadThreadCount(built)).toBe(1);
   });
 
-  test("the pushed lists are the sections' Ver todos; threads are a tab", () => {
-    expect(["agents", "channels", "people"].every(isListKind)).toBe(true);
-    expect(isListKind("threads")).toBe(false);
-    expect(isListKind("nope")).toBe(false);
+  test("the pushed list is Recentes' See all; threads are a tab, and the kinds the home no longer has land home", () => {
+    expect(isListKind("recent")).toBe(true);
+    for (const kind of ["agents", "channels", "people", "category-mkt", "threads", "nope"])
+      expect({ kind, list: isListKind(kind) }).toEqual({ kind, list: false });
   });
 
   test("collapsed sections are remembered as a list; anything unreadable is none", () => {
     expect(parseCollapsed(null)).toEqual([]);
     expect(parseCollapsed("{oops")).toEqual([]);
     expect(parseCollapsed('{"a":1}')).toEqual([]);
-    expect(parseCollapsed('["people","x","agents"]')).toEqual(["agents", "people"]);
-    expect(toggleCollapsed([], "people")).toEqual(["people"]);
-    expect(toggleCollapsed(["people"], "agents")).toEqual(["agents", "people"]);
-    expect(toggleCollapsed(["agents", "people"], "agents")).toEqual(["people"]);
+    // The home's own keys, in its order; the sections it no longer has (Agentes, a category) are dropped.
+    expect(parseCollapsed('["recent","x","agents","category:mkt","widgets"]')).toEqual(["widgets", "recent"]);
+    expect(toggleCollapsed([], "pinned")).toEqual(["pinned"]);
+    expect(toggleCollapsed(["recent"], "widgets")).toEqual(["widgets", "recent"]);
+    expect(toggleCollapsed(["widgets", "recent"], "widgets")).toEqual(["recent"]);
   });
 
   test("collapsed groups of agents take any ids: one workspace's stay when another's change", () => {
@@ -691,5 +697,150 @@ describe("the app icon's number", () => {
     const src = await Bun.file(new URL("../../src/features/shared/queries.ts", import.meta.url)).text();
     const hook = src.slice(src.indexOf("export function useAppIconBadge"));
     expect(hook).toContain("() => () => void Notifications.setBadgeCountAsync(0)");
+  });
+});
+
+describe("Conversas by sector (a team's Setores)", () => {
+  test("each sector's agents, then the agents in none, the direct messages and the channels; empty ones left out", () => {
+    const dm = (id: string, type: "agent" | "person", at: string) =>
+      ({
+        kind: "dm",
+        key: `dm:${id}`,
+        channelId: `c-${id}`,
+        with: { type, id, name: id, handle: id },
+        last: null,
+        at,
+        unread: 0,
+        working: false,
+      }) as const;
+    const channel = {
+      kind: "channel",
+      key: "ch:geral",
+      channelId: "geral",
+      name: "geral",
+      topic: "",
+      groupId: null,
+      last: null,
+      at: "2026-11-22T09:00:00Z",
+      unread: 0,
+      mentions: 0,
+    } as const;
+    const rows = [
+      dm("atlas", "agent", "3"),
+      dm("bruno", "person", "2"),
+      dm("theo", "agent", "1"),
+      dm("otto", "agent", "0"),
+      channel,
+    ];
+    const groups = [
+      { id: "g1", name: "Design", agentIds: ["atlas"], color: "violet", icon: "pen" },
+      { id: "g2", name: "Marketing", agentIds: ["theo"] },
+      { id: "g3", name: "Vendas", agentIds: ["nina"] },
+    ];
+    const sections = sectorSections(rows, groups);
+    expect(sections.map((s) => [s.key, s.rows.map((r) => r.key)])).toEqual([
+      ["sector:g1", ["dm:atlas"]],
+      ["sector:g2", ["dm:theo"]],
+      ["agents", ["dm:otto"]],
+      ["dms", ["dm:bruno"]],
+      ["channels", ["ch:geral"]],
+    ]);
+    expect(sections[0]?.group).toEqual({ id: "g1", name: "Design", color: "violet", icon: "pen" });
+    expect(homeViewOf("sectors")).toBe("sectors");
+    expect(homeViewOf(null)).toBe("recent");
+    expect(homeViewOf("anything")).toBe("recent");
+  });
+
+  test("a sector holds its channels after its agents (ADR 0240); channels in none stay in Canais", () => {
+    const agent = (id: string, at: string, over: { unread?: number; working?: boolean } = {}) =>
+      ({
+        kind: "dm",
+        key: `dm:${id}`,
+        channelId: `c-${id}`,
+        with: { type: "agent", id, name: id, handle: id },
+        last: null,
+        at,
+        unread: over.unread ?? 0,
+        working: over.working ?? false,
+      }) as const;
+    const channel = (
+      id: string,
+      groupId: string | null,
+      at: string,
+      over: { unread?: number; mentions?: number } = {},
+    ) =>
+      ({
+        kind: "channel",
+        key: `ch:${id}`,
+        channelId: id,
+        name: id,
+        topic: "",
+        groupId,
+        last: null,
+        at,
+        unread: over.unread ?? 0,
+        mentions: over.mentions ?? 0,
+      }) as const;
+    const rows = [
+      agent("ada", "5"),
+      agent("bento", "4", { unread: 2 }),
+      agent("clara", "3", { working: true }),
+      channel("suporte-n1", "sup", "2", { unread: 3 }),
+      channel("bugs", "sup", "1"),
+      channel("geral", null, "6"),
+      channel("old", "gone", "0"),
+    ];
+    const groups = [{ id: "sup", name: "Suporte", agentIds: ["ada", "bento", "clara"] }];
+    const sections = sectorSections(rows, groups);
+    expect(sections.map((s) => [s.key, s.rows.map((r) => r.key), s.channelsFrom])).toEqual([
+      ["sector:sup", ["dm:ada", "dm:bento", "dm:clara", "ch:suporte-n1", "ch:bugs"], 3],
+      // A channel whose sector isn't listed shows with the ones in none.
+      ["channels", ["ch:geral", "ch:old"], 0],
+    ]);
+    // Closed: one line that keeps who wrote to me, who works and the unread channels, and one count for them all.
+    const sector = sections[0]?.rows ?? [];
+    expect(sector.filter(keptWhenClosed).map((r) => r.key)).toEqual(["dm:bento", "dm:clara", "ch:suporte-n1"]);
+    expect(closedUnread(sector)).toBe(5);
+    expect(closedUnread([channel("muted", "sup", "1", { mentions: 1 })])).toBe(1);
+  });
+
+  test("the view is a bar button with the system's menu, only in a team; an agent's row says its role", () => {
+    const home = readFileSync(join(import.meta.dir, "../../src/features/chats/ChatsScreen.tsx"), "utf8");
+    expect(home).toContain('return [personal ? "recent" : view, choose];');
+    expect(home).toContain("return { ...tabHeader, actions: [viewAction, ...tabHeader.actions] };");
+    expect(home).toContain('checked: view === "recent"');
+    const row = readFileSync(join(import.meta.dir, "../../src/features/chats/ConversationRowView.tsx"), "utf8");
+    expect(row).toContain("const role = facts.role;");
+    expect(readFileSync(join(import.meta.dir, "../../src/features/chats/rowFacts.ts"), "utf8")).toContain(
+      "role: agentDm ? dir.agentById.get(r.with.id)?.role?.trim() || null : null,",
+    );
+    // Beside the name as a tag, as the web's lists show it (not a line of its own).
+    expect(row).toContain("{...(role ? { titleAside: <Tag label={role} /> } : {})}");
+    expect(row).not.toContain("{facts.place ?? role}");
+    const bar = readFileSync(join(import.meta.dir, "../../src/ui/headerActions.tsx"), "utf8");
+    expect(bar).toContain('state: m.checked ? ("on" as const) : ("off" as const)');
+  });
+});
+
+describe("an agent's role as the web's tag", () => {
+  test("a soft plate as wide as its words, the small corner, muted words on an 18-point line, one line", () => {
+    const tag = readFileSync(join(import.meta.dir, "../../src/ui/Tag.tsx"), "utf8");
+    expect(tag).toContain("plate: { flexShrink: 1, minWidth: 0, paddingHorizontal: 6, borderRadius: RADIUS.sm },");
+    expect(tag).toContain("backgroundColor: colors.plateSoft");
+    expect(tag).toContain("words: { lineHeight: 18 },");
+    expect(tag).toContain("numberOfLines={1}");
+    // Beside the title on its line, the title keeping its words and the tag ending in "…" first.
+    const row = readFileSync(join(import.meta.dir, "../../src/ui/ListRow.tsx"), "utf8");
+    expect(row).toContain('titleRow: { flexDirection: "row", alignItems: "center", gap: 6 },');
+  });
+});
+
+describe("a handed work's bubble", () => {
+  test("Stop is the kit's icon button on the bubble's row, and the bubble grows with its words", () => {
+    const line = readFileSync(join(import.meta.dir, "../../src/features/chat/WorkLine.tsx"), "utf8");
+    expect(line).toContain(
+      '<IconButton icon="stop" small label={halt.label} disabled={halt.disabled} onPress={halt.onPress} />',
+    );
+    expect(line).toContain("handedWords: { flexShrink: 1, minWidth: 0, gap: 1 },");
   });
 });

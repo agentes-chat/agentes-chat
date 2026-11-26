@@ -1,7 +1,16 @@
 import { afterEach, expect, test } from "bun:test";
 import { createMemoryRateLimiter, orgTopic } from "@agenteschat/adapters";
 import { eq, schema } from "@agenteschat/db";
-import { type Browser, browser, createTestServer, joinByInvitation, seedOrg, signUp, type TestServer } from "./harness";
+import {
+  type Browser,
+  browser,
+  createTestServer,
+  joinByInvitation,
+  seedOrg,
+  signUp,
+  type TestServer,
+  unconfirm,
+} from "./harness";
 
 let t: TestServer;
 afterEach(() => t.close());
@@ -332,6 +341,7 @@ test("signed in: a confirmed address joins at approval; an unconfirmed one gets 
   // Not confirmed: the account's own address proves itself with a code, which never confirms the account.
   const cris = browser(t);
   await signUp(cris, "cris@example.com");
+  await unconfirm(t, "cris@example.com");
   expect(await errorCode(await ask(cris, token, {}))).toBe("join.code_needed");
   const code = await codeFor(cris, token);
   expect(mailTo("cris@example.com").filter((m) => m.subject.startsWith(code))).toHaveLength(1);
@@ -419,6 +429,7 @@ test("an account that never confirmed its address reads no one else's answer, no
   expect(denied.status).toBe(204);
   const notOtto = browser(t);
   await signUp(notOtto, "otto@corp.com");
+  await unconfirm(t, "otto@corp.com");
   const preview = (await (await notOtto(`/api/app/invitations/${token}`)).json()) as { you?: unknown };
   expect(preview.you).toEqual({ member: false, email: "otto@corp.com", request: null });
   // Asking needs the code from Otto's mailbox.
@@ -574,6 +585,7 @@ test("sign-up from the invitation's email: no 'confirm your email'; from a copie
   expect((await signUpWith("dani@example.com", { token: dani })).status).toBe(200);
   expect((await signUpWith("bia@example.com", { token: ana, mail })).status).toBe(200);
   expect((await signUpWith("caio@example.com")).status).toBe(200);
+  for (const email of ["ana@example.com", "dani@example.com"]) await unconfirm(t, email);
   await t.drain();
   const confirmations = t.email.sent.filter((m) => m.subject === "Confirme seu e-mail no agentes.chat");
   expect(confirmations.map((m) => m.to[0]).sort()).toEqual(["bia@example.com", "caio@example.com", "dani@example.com"]);
@@ -670,4 +682,37 @@ test("links and invitations carry cargos, channels and agents; a link has a life
   expect(await (await anon(`/api/app/invitations/${chosenToken}`)).json()).toMatchObject({ kind: "link", full: true });
   const asked = await ask(anon, chosenToken, { name: "Gus", email: "gus@example.com" });
   expect([asked.status, await errorCode(asked)]).toEqual([409, "join.link_full"]);
+});
+
+test("accepting an invitation, the device's zone is the person's in the workspace", async () => {
+  const { owner, orgId } = await start();
+  const zoneOf = async (email: string) => {
+    const [row] = await t.db
+      .select({ timezone: schema.organizationMembers.timezone })
+      .from(schema.organizationMembers)
+      .innerJoin(schema.users, eq(schema.users.id, schema.organizationMembers.userId))
+      .where(eq(schema.users.email, email));
+    return row?.timezone;
+  };
+  const invite = async (email: string) => {
+    const res = await owner(`/api/app/organizations/${orgId}/invitations`, { json: { email } });
+    return ((await res.json()) as { url: string }).url.split("/invite/")[1] ?? "";
+  };
+  const ruiToken = await invite("rui@example.com");
+  const rui = browser(t);
+  await signUp(rui, "rui@example.com");
+  expect(
+    (
+      await rui(`/api/app/invitations/${ruiToken}/accept`, {
+        json: { timeZone: "Europe/Lisbon" },
+      })
+    ).status,
+  ).toBe(200);
+  expect(await zoneOf("rui@example.com")).toBe("Europe/Lisbon");
+  // No zone, or one no clock knows: the workspace's.
+  const kaiToken = await invite("kai@example.com");
+  const kai = browser(t);
+  await signUp(kai, "kai@example.com");
+  await kai(`/api/app/invitations/${kaiToken}/accept`, { json: { timeZone: "Mars/Olympus" } });
+  expect(await zoneOf("kai@example.com")).toBeNull();
 });

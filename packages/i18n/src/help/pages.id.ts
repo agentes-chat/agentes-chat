@@ -441,6 +441,44 @@ export const helpId: Partial<Record<HelpSlug, HelpDocument>> = {
         ],
       },
       {
+        id: "tool-levels",
+        heading: "Setiap alat dari aplikasi yang terhubung",
+        blocks: [
+          "Setiap alat dari aplikasi yang terhubung lewat alamatnya punya level sendiri, yang dipilih di **Pengaturan\u00a0›\u00a0Konektor**, pada alat koneksi itu. Di halaman agen, **Alat dan akses** menunjukkan aplikasi dan alat mana yang boleh dipakainya.",
+          {
+            list: [
+              "**Hanya melihat**: membaca dan tidak mengubah apa pun. Tidak pernah bertanya.",
+              "**Mengubah sesuatu**: membuat dan mengubah tanpa bertanya. Agen di **Selalu tanya** tetap bertanya.",
+              "**Minta persetujuanmu**: bertanya di percakapan sebelum setiap pemakaian.",
+              "**Mati**: agen tidak mendapatkannya.",
+            ],
+          },
+          "**Jangan pernah tanya** di halaman agen berlaku di atas semua ini: agen di level itu tidak meminta apa pun, termasuk untuk alat di **Minta persetujuanmu**. Jika level berubah saat ada permintaan yang menunggu, permintaan yang tidak akan bertanya lagi dibatalkan, dan agen mengerjakannya lagi tanpa kartu.",
+        ],
+      },
+      {
+        id: "sensitive",
+        heading: "Alat sensitif",
+        blocks: [
+          "Alat yang ditandai server aplikasinya sebagai alat untuk menghapus, mengirim, atau membayar hanya bisa di **Minta persetujuanmu** atau **Mati**.",
+        ],
+      },
+      {
+        id: "order",
+        heading: "Urutan tindakan yang disetujui berjalan",
+        blocks: [
+          "Dalam satu giliran, agen menjalankan tindakannya sesuai urutan ia memintanya, apa pun urutan kamu menyetujuinya. Pesan yang dikirim saat agen menunggu memulai giliran baru, dan tindakannya berjalan setelah permintaan yang agen tahu sudah menunggu. Permintaan dari percakapan yang berbeda tidak pernah saling menunggu.",
+          "Permintaan yang sudah menunggu seseorang lebih dari 30 menit tidak menahan apa pun. Tindakan yang disetujui dan masih menunggu menyebutkan apa yang ditunggunya, dengan **Setujui** dan **Tolak** untuk permintaan itu serta **Jalankan ini sekarang** untuk lanjut tanpanya.",
+        ],
+      },
+      {
+        id: "many",
+        heading: "Beberapa sekaligus",
+        blocks: [
+          "Di tempat permintaan menunggumu, di web dan di ponsel, **Setujui semua** dan **Tolak semua** memutuskan semua permintaan satu agen sekaligus.",
+        ],
+      },
+      {
         id: "who",
         heading: "Siapa yang menyetujui",
         blocks: [
@@ -844,7 +882,7 @@ export const helpId: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "data",
         heading: "Yang dikirim",
         blocks: [
-          "Sekali sehari server mengirim statistik pemakaian anonim ke agentes.chat: hitungan seperti jumlah orang, agen, ukuran mesin, token AI yang dipakai, dan berapa banyak data yang dikirim dan diterima browser para agen. Tidak pernah pesan, file, nama, atau situs. `docker compose run --rm agentes telemetry` menampilkan persis apa yang akan dikirim. Pemilik mematikannya di **Pengaturan\u00a0›\u00a0Umum**, atau dengan `TELEMETRY=off` di `.env`.",
+          "Sekali sehari server mengirim statistik pemakaian anonim ke agentes.chat: hitungan seperti jumlah orang, agen, ukuran mesin, token AI yang dipakai, berapa banyak data yang dikirim dan diterima browser para agen, dan seberapa cepat aplikasi terbuka dan berjalan. Tidak pernah pesan, file, nama, atau situs. `docker compose run --rm agentes telemetry` menampilkan persis apa yang akan dikirim. Pemilik mematikannya di **Pengaturan\u00a0›\u00a0Umum**, atau dengan `TELEMETRY=off` di `.env`.",
           "Laporan galat tidak dikirim ke mana pun kecuali kamu mengatur `SENTRY_DSN` ke server yang kompatibel dengan Sentry pilihanmu. Laporan berisi galat dan tempat terjadinya, tidak pernah pesan, email, alamat IP, cookie, atau token.",
         ],
       },

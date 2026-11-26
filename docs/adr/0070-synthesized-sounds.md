@@ -25,3 +25,15 @@ Sounds could be recorded or generated as files, or computed. Generated sound eff
 - `expo-audio` is a native module, so the phone app needs a new build before the sounds play there.
 - Rendering costs a few milliseconds per sound on the web (once) and more on the phone (once per style, one sound per tick).
 - Push notifications on the phone keep the system sound. A custom push sound would need the files bundled into the app, which is left for later.
+
+## Addendum (2026-11-17): `discard`, a voice that goes, and the session given back
+
+- A ninth sound, `discard`: a recording thrown away on the phone (slid off, or the take's trash). It is something the person did, never an error, so it is quieter and shorter than `error`, and it falls where `send` rises. It exists in the three styles.
+- A voice message that goes plays `send`, the same sound as a message of words.
+- On the phone, a voice that plays or records takes over the audio session: it is heard in silent mode, and the person's music pauses. The session was never given back, so after one voice message every sound of the app rang in silent mode and stopped the music. `apps/mobile/src/lib/audio-mode.ts` now has one owner at a time. `appAudio` sets the app's sounds (mixed with the music, silent in silent mode). `voiceAudio` is for a voice. `releaseVoiceAudio` gives the session back 600 ms after a voice stops, unless another voice takes it first.
+- The voice's sounds play only once the recorder has stopped and the session is back. While it records, a sound would be recorded into the take and would ring in silent mode, so starting and locking a take have a haptic but no sound.
+
+## Addendum (2026-11-22): `record`, a take that starts
+
+- A tenth sound, `record`: a voice message starts recording on the phone (the hold on the microphone). It is a short pick-up rising where `discard` falls, quiet, and over in under 0.1 s. It exists in the three styles, and in `sky` it has no room (`DRY`), since a room's tail would be recorded.
+- This replaces the last point above for the start of a take. The two reasons it had no sound are met another way. The recorder starts once the sound has rung (ADR 0100), so the take doesn't hold it. On iOS it plays as a system sound (`modules/voice-session`), which keeps to the ringer switch while the voice's session plays in silent mode. Its file carries the player's volume. Android has no ringer switch for the app's sounds and plays it like the others. Locking a take still has a haptic and no sound.

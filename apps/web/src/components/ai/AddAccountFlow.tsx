@@ -1,6 +1,6 @@
 import type { AccountLoginStart, AccountLoginStatus, MachineAccount, MachineAccountKind } from "@agenteschat/client";
-import { keys, useAccountLogin, useAiAccounts, useApi } from "@agenteschat/client";
-import { accountTitle, reusableAccount, signInOf } from "@agenteschat/client/lib/ai-accounts";
+import { keys, useAccountLogin, useAiAccounts, useApi, useMachines } from "@agenteschat/client";
+import { accountInLine, accountTitle, reusableAccount, signInOf } from "@agenteschat/client/lib/ai-accounts";
 import { knownErrorText } from "@agenteschat/client/lib/errors";
 import {
   beginLogin,
@@ -15,7 +15,7 @@ import {
   otherThanHint,
 } from "@agenteschat/client/lib/machines";
 import { GEMINI_ENTERPRISE_PROVIDER, planKeyFits, signInKey } from "@agenteschat/client/lib/plans";
-import { accountCodeAad, sealSecret } from "@agenteschat/client/lib/secret-box";
+import { accountCodeAad, INSECURE_CONTEXT, sealSecret } from "@agenteschat/client/lib/secret-box";
 import { AffixInput, Button, cx, Icon, InfoHint, Locked, ProviderLogo, SettingNote, SwapLabel } from "@agenteschat/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
@@ -23,7 +23,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useOrg } from "@/components/org-context";
 import { inDesktopApp } from "@/lib/desktop";
-import { openPopup, openWaitingPopup, sendPopup } from "@/lib/popup";
+import { openSignInTab, openWaitingTab, sendSignInTab } from "@/lib/sign-in-tab";
 
 /*
  * "Add account" (ADR 0041 §2, ADR 0059): the computer starts the
@@ -142,7 +142,7 @@ export function AddAccount(props: AddAccountProps) {
   }, [reuse, offers, ai.isPending, ai.data, props.machineId, props.kind, props.provider]);
   if (reuse === undefined) return <Icon name="spinner" size={14} />;
   const chosen = reuse ? (pick ?? (signInOf(reuse) === "signed_out" ? "again" : undefined)) : "new";
-  const label = reuse ? accountTitle(reuse) : "";
+  const label = reuse ? accountInLine(t, reuse) : "";
   const another = (
     <Button size="sm" onClick={() => setPick("new")}>
       {t("connectAi.another")}
@@ -262,11 +262,8 @@ export function OpenPage({
         target="_blank"
         rel="noopener noreferrer"
         // In a dialog, the desktop app's link routing (lib/desktop.ts) takes the click before React's `onClick`. The
-        // app opens no popup (its window.open goes to the browser and returns null): the link itself goes there, once.
-        onClickCapture={(e) => {
-          if (!inDesktopApp() && openPopup(href)) e.preventDefault();
-          onOpened?.();
-        }}
+        // link itself opens the new tab (in the app, the browser), once.
+        onClickCapture={() => onOpened?.()}
       >
         <Icon name="external" size={14} />
         {children}
@@ -310,6 +307,9 @@ function AddAccountFlow({
   // Gemini: a personal Google account, or (chosen under it, or the account's own) Gemini Enterprise.
   const [enterprise, setEnterprise] = useState(provider === GEMINI_ENTERPRISE_PROVIDER);
   const signInProvider = keyProvider ?? (kind === "antigravity" && enterprise ? GEMINI_ENTERPRISE_PROVIDER : undefined);
+  // On Windows the Antigravity CLI keeps its sign-in in the user's one Credential Manager (ADR 0143).
+  const machines = useMachines(org.id, kind === "antigravity");
+  const windows = kind === "antigravity" && machines.data?.find((m) => m.id === machineId)?.os === "windows";
   const [login, setLogin] = useState<AccountLoginStart | null>(null);
   const [starting, setStarting] = useState(false);
   // Why the sign-in didn't start, in the person's language.
@@ -319,7 +319,7 @@ function AddAccountFlow({
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   // The code or key didn't go: the computer away for now (`loginReadPasses`), or refused.
-  const [sendFailed, setSendFailed] = useState<"away" | "refused" | null>(null);
+  const [sendFailed, setSendFailed] = useState<"away" | "refused" | "insecure" | null>(null);
   const [pasteFailed, setPasteFailed] = useState(false);
   const [copied, setCopied] = useState(false);
   // "Copy link": the sign-in's link on its way to the clipboard (it may begin the sign-in first), then copied.
@@ -350,7 +350,7 @@ function AddAccountFlow({
   const result = status.data;
   const read = loginRead(status);
 
-  const begin = async (popup?: Window | null): Promise<AccountLoginStart | null> => {
+  const begin = async (tab?: Window | null): Promise<AccountLoginStart | null> => {
     setStarting(true);
     setStartFailed(null);
     try {
@@ -360,16 +360,16 @@ function AddAccountFlow({
         hint,
       });
       if (gone.current) {
-        popup?.close();
+        tab?.close();
         void api.machines.cancelAccountLogin(org.id, machineId, l.loginId).catch(() => undefined);
         return null;
       }
       running.current = [...running.current, { machineId, loginId: l.loginId }];
       setLogin(l);
-      if (popup) sendPopup(popup, l.url);
+      if (tab) sendSignInTab(tab, l.url);
       return l;
     } catch (error) {
-      popup?.close();
+      tab?.close();
       if (!gone.current)
         setStartFailed(knownErrorText(t, error) ?? t("agentPage.work.brain.add.startFailed", { computer }));
       return null;
@@ -489,7 +489,13 @@ function AddAccountFlow({
       onSent?.();
     } catch (error) {
       // Never sent again by itself: a call that got no answer may have reached the computer.
-      setSendFailed(loginReadPasses(error) ? "away" : "refused");
+      setSendFailed(
+        (error as { code?: string }).code === INSECURE_CONTEXT
+          ? "insecure"
+          : loginReadPasses(error)
+            ? "away"
+            : "refused",
+      );
     } finally {
       setSending(false);
     }
@@ -626,11 +632,13 @@ function AddAccountFlow({
       {pasteFailed && <SettingNote icon="alert">{t("aiAccounts.add.pasteFailed")}</SettingNote>}
       {sendFailed && (
         <SettingNote icon="alert">
-          {sendFailed === "away"
-            ? t("agentPage.work.brain.add.startFailed", { computer })
-            : plan
-              ? t("aiAccounts.add.keySendFailed")
-              : t("agentPage.work.brain.add.sendFailed")}
+          {sendFailed === "insecure"
+            ? t("secret.insecureContext")
+            : sendFailed === "away"
+              ? t("agentPage.work.brain.add.startFailed", { computer })
+              : plan
+                ? t("aiAccounts.add.keySendFailed")
+                : t("agentPage.work.brain.add.sendFailed")}
         </SettingNote>
       )}
     </>
@@ -652,7 +660,7 @@ function AddAccountFlow({
           ? plan
             ? t("aiAccounts.add.duplicateKey", { account: shown.duplicate.label })
             : t(`agentPage.work.brain.add.duplicate.${kind}`, {
-                account: shown.duplicate.account?.email ?? shown.duplicate.label,
+                account: shown.duplicate.account ? accountInLine(t, shown.duplicate.account) : shown.duplicate.label,
               })
           : notShared
             ? t("agentPage.work.brain.add.geminiNotShared", { computer })
@@ -696,11 +704,11 @@ function AddAccountFlow({
 
   // Opened on the click itself, then sent to the provider's page once the computer has it.
   const start = () => {
-    const popup = openWaitingPopup(kind);
+    const tab = openWaitingTab(kind);
     setOpened(true);
-    // The desktop app has no popup: its page goes to the browser (main_window.rs).
-    void begin(popup).then((l) => {
-      if (l && inDesktopApp()) openPopup(l.url);
+    // The desktop app has no waiting tab: its page goes to the browser (main_window.rs).
+    void begin(tab).then((l) => {
+      if (l && inDesktopApp()) openSignInTab(l.url);
     });
   };
   const openAgain = (url: string) => (
@@ -853,6 +861,7 @@ function AddAccountFlow({
     steps = (
       <>
         {!enterprise && <SettingNote icon="alert">{t("connectAi.plan.gemini.warning")}</SettingNote>}
+        {windows && <SettingNote icon="info">{t("connectAi.plan.gemini.windowsOne")}</SettingNote>}
         {firstStep(
           signInLabel ?? t("agentPage.work.brain.add.open.antigravity"),
           <StepTitle
@@ -977,7 +986,7 @@ function AddAccountFlow({
             {instead && (
               <Button onClick={instead.use}>
                 <span className="ai-panel__use">
-                  {t("connectAi.useAnyway", { email: instead.account.email ?? instead.account.label })}
+                  {t("connectAi.useAnyway", { email: accountTitle(t, instead.account) })}
                 </span>
               </Button>
             )}
@@ -1008,7 +1017,7 @@ function AddAccountFlow({
               {retry}
               <Button size="sm" onClick={instead.use}>
                 <span className="ai-panel__use">
-                  {t("connectAi.useAnyway", { email: instead.account.email ?? instead.account.label })}
+                  {t("connectAi.useAnyway", { email: accountTitle(t, instead.account) })}
                 </span>
               </Button>
             </span>

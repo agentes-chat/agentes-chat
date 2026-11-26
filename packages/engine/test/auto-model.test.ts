@@ -7,6 +7,7 @@ import {
   modelForTier,
   parseOpenRouterModels,
   setOpenRouterModels,
+  systemText,
 } from "@agenteschat/providers";
 import { CODING_PLANS, planModel } from "@agenteschat/providers/plans";
 import fixture from "../../providers/test/fixtures/openrouter-models.json";
@@ -25,13 +26,16 @@ import {
   createCredential,
   createFakeJudge,
   drainOutbox,
+  fallbackChoice,
   getAgent,
   isBrainEffortSetting,
   type Judge,
+  keptAutoChoice,
   NEW_AGENT_DEFAULTS,
   needsAutoChoice,
   normalizeBrainModel,
   postPersonMessage,
+  QUICK_TURN_NOTE,
   updateAgent,
   updateOrgSettings,
   ValidationError,
@@ -84,13 +88,48 @@ describe("chooseAutoModel", () => {
 
   test("acting for the person with tools is never the small tier: it only answers", async () => {
     const judge = createFakeJudge(() => "medium");
-    await chooseAutoModel(judge, { ...input, message: "me manda um print do dinzo.com.br" });
+    await chooseAutoModel(judge, { ...input, message: "abre example.com e tira uma captura da tela" });
     const tier = judge.calls[0]?.questions.tier as { criteria: Record<string, string> } | undefined;
     const acting =
       "acting for the person with tools (opening a site, taking a screenshot, clicking or filling in a page, running a command, changing files, sending something)";
     expect(tier?.criteria.small).toStartWith("A quick, simple turn that only answers: a greeting or thanks,");
     expect(tier?.criteria.small).toEndWith(`Never ${acting}.`);
     expect(tier?.criteria.medium).toContain(acting);
+  });
+
+  test("a go-ahead, a next step or setup work is never the small tier, however short the message", async () => {
+    const judge = createFakeJudge(() => "medium");
+    await chooseAutoModel(judge, { ...input, message: "pode seguir" });
+    const tier = judge.calls[0]?.questions.tier as { criteria: Record<string, string> } | undefined;
+    for (const words of ["a go-ahead or 'continue'", "the next step of work already under way", "configuring"]) {
+      expect(tier?.criteria.small).toContain(words);
+      expect(tier?.criteria.medium).toContain(words);
+    }
+  });
+
+  test("the small tier only when the judge is sure, and never in a mission: else medium", async () => {
+    const unsure = (p: number): Judge => ({
+      name: "unsure",
+      ask: async () => ({
+        tier: { choice: "small", probabilities: { small: p, medium: 1 - p } },
+        effort: { choice: "low", probabilities: { low: 1 } },
+      }),
+    });
+    const quick = { ...input, mission: false, message: "valeu" };
+    expect(await chooseAutoModel(unsure(0.9), quick)).toMatchObject({ tier: "small", tierP: 0.9 });
+    const floored = await chooseAutoModel(unsure(0.6), quick);
+    expect(floored).toMatchObject({ tier: "medium", effort: "low", source: "judge" });
+    expect(floored.reason).toBe("Everyday work (small not sure enough (60%)); low effort.");
+    expect(floored.tierP).toBeUndefined();
+    expect(await chooseAutoModel(unsure(0.95), { ...quick, mission: true })).toMatchObject({
+      tier: "medium",
+      reason: "Everyday work (part of a mission); low effort.",
+    });
+    // A floored small in a conversation that ran bigger keeps that bigger tier for the hour.
+    const now = Date.now();
+    expect(
+      keptAutoChoice(floored, { updatedAt: new Date(now - 60_000), autoModel: { tier: "large", effort: "high" } }, now),
+    ).toMatchObject({ tier: "large", source: "conversation" });
   });
 
   test("never blocks the run: a timeout, a failure or an answer off the list is medium/medium, and says why", async () => {
@@ -101,6 +140,9 @@ describe("chooseAutoModel", () => {
       reason: "The judge didn't answer in time: medium tier, medium effort.",
       source: "timeout",
     });
+    // Past 0.8 s the run doesn't wait for it.
+    const late: Judge = { name: "late", ask: () => Bun.sleep(900).then(() => ({})) };
+    expect(await chooseAutoModel(late, input)).toMatchObject({ source: "timeout" });
     const broken: Judge = {
       name: "broken",
       ask: async () => {
@@ -113,6 +155,48 @@ describe("chooseAutoModel", () => {
   });
 });
 
+test("keptAutoChoice: a conversation keeps its tier and effort for the hour; a sure, bigger tier or a small one replaces them", () => {
+  const now = Date.parse("2026-11-21T12:00:00Z");
+  const prev = (tier: string, effort: string, minutesAgo = 10) => ({
+    updatedAt: new Date(now - minutesAgo * 60_000),
+    autoModel: { tier, effort },
+  });
+  const judged = (tier: "small" | "medium" | "large", effort: "low" | "medium" | "high", tierP?: number) => ({
+    tier,
+    effort,
+    reason: "r",
+    source: "judge" as const,
+    ...(tierP === undefined ? {} : { tierP }),
+  });
+  // A downgrade to medium, or the same tier at another effort, waits for the hour.
+  expect(keptAutoChoice(judged("medium", "low"), prev("large", "high"), now)).toMatchObject({
+    tier: "large",
+    effort: "high",
+    source: "conversation",
+  });
+  // A judged small tier goes through: cheaper than the big tier even with its cache.
+  expect(keptAutoChoice(judged("small", "low"), prev("large", "high"), now)).toEqual(judged("small", "low"));
+  expect(keptAutoChoice(judged("medium", "high"), prev("medium", "low"), now)).toMatchObject({
+    effort: "low",
+    source: "conversation",
+  });
+  // A judge that didn't answer doesn't move it either.
+  expect(keptAutoChoice(fallbackChoice("timeout"), prev("small", "low"), now)).toMatchObject({
+    tier: "small",
+    source: "conversation",
+  });
+  // A bigger tier the judge is sure of is an upgrade; one it isn't sure of is not.
+  expect(keptAutoChoice(judged("large", "high", 0.9), prev("medium", "medium"), now)).toEqual(
+    judged("large", "high", 0.9),
+  );
+  expect(keptAutoChoice(judged("large", "high", 0.4), prev("medium", "medium"), now).tier).toBe("medium");
+  // Past the hour, nothing before it, or the same choice: the new one as it is.
+  expect(keptAutoChoice(judged("small", "low"), prev("large", "high", 61), now)).toEqual(judged("small", "low"));
+  expect(keptAutoChoice(judged("small", "low"), null, now)).toEqual(judged("small", "low"));
+  expect(keptAutoChoice(judged("small", "low"), prev("small", "low"), now).source).toBe("judge");
+  expect(keptAutoChoice(judged("small", "low"), { updatedAt: new Date(now), autoModel: null }, now).tier).toBe("small");
+});
+
 describe("one decision, mapped per brain", () => {
   const agent = { model: AUTO_MODEL, brain: "model", brainModel: null, brainEffort: null };
   const choice = { tier: "small" as const, effort: "low" as const };
@@ -122,7 +206,7 @@ describe("one decision, mapped per brain", () => {
     expect(modelForTier("anthropic", "medium")).toBe("claude-sonnet-5-5");
     expect(modelForTier("anthropic", "large")).toBe("claude-opus-5-5");
     expect(modelForTier("openai", "small")).toBe("gpt-6-luna");
-    expect(modelForTier("openai", "large")).toBe("gpt-6.1-sol");
+    expect(modelForTier("openai", "large")).toBe("gpt-6.2-sol");
     expect(modelForTier("nobody", "large")).toBeNull();
   });
 
@@ -131,7 +215,7 @@ describe("one decision, mapped per brain", () => {
     expect(brainModelForTier("claude_code", "medium")).toBe("sonnet");
     expect(brainModelForTier("claude_code", "large")).toBe("opus");
     expect(brainModelForTier("codex", "small")).toBe("gpt-6-luna");
-    expect(brainModelForTier("codex", "large")).toBe("gpt-6.1-sol");
+    expect(brainModelForTier("codex", "large")).toBe("gpt-6.2-sol");
     expect(brainModelForTier("model", "large")).toBeUndefined();
   });
 
@@ -151,7 +235,7 @@ describe("one decision, mapped per brain", () => {
     const applied = autoApplied(agent, plan, choice, "anthropic");
     expect(applied).toEqual({ apiModel: "claude-haiku-5-5", effort: "low" });
     expect(autoApplied(agent, plan, { tier: "large", effort: "high" }, "openai")).toEqual({
-      apiModel: "gpt-6.1-sol",
+      apiModel: "gpt-6.2-sol",
       effort: "high",
     });
     const run = withAuto({ ...agent, id: "a" }, plan, applied);
@@ -243,11 +327,20 @@ describe("one decision, mapped per brain", () => {
     expect(pick("medium", { medium: "claude-sonnet-5-5" })).toBe("~z-ai/glm-latest");
   });
 
-  test("an API model on auto with a computer brain: the API model is chosen too (a fallback thinks with it)", () => {
-    const both = { model: AUTO_MODEL, brain: "codex", brainModel: "gpt-6-sol", brainEffort: null };
-    const plan: BrainPlan = { kind: "codex", model: "gpt-6-sol" };
-    expect(needsAutoChoice(both, plan)).toBe(true);
-    expect(autoApplied(both, plan, choice, "anthropic")).toEqual({ apiModel: "claude-haiku-5-5" });
+  test("an API model on auto with a computer brain whose model and effort are pinned: nothing is asked", () => {
+    const both = { model: AUTO_MODEL, brain: "codex", brainModel: "gpt-6-sol", brainEffort: "high" };
+    const plan: BrainPlan = { kind: "codex", model: "gpt-6-sol", effort: "high" };
+    expect(autoWanted(both)).toBe(false);
+    expect(needsAutoChoice(both, plan)).toBe(false);
+    expect(autoApplied(both, plan, choice, "anthropic")).toEqual({});
+    expect(withAuto(both, plan, {}).plan).toEqual(plan);
+    // Its effort left to the CLI's default is no auto either.
+    expect(needsAutoChoice({ ...both, brainEffort: null }, { kind: "codex", model: "gpt-6-sol" })).toBe(false);
+    // The right hand stands in on its key with the API model: that one is still chosen.
+    const lodi = { ...both, builtin: "right_hand" };
+    expect(autoWanted(lodi)).toBe(true);
+    expect(needsAutoChoice(lodi, plan)).toBe(true);
+    expect(autoApplied(lodi, plan, choice, "anthropic")).toEqual({ apiModel: "claude-haiku-5-5" });
   });
 
   test("nothing on auto: nothing to choose (a stale computer setting on the API brain asks nobody)", () => {
@@ -289,6 +382,39 @@ describe("the maker beside an agent on Automático", () => {
       .set({ revokedAt: new Date() })
       .where(eq(schema.providerCredentials.id, key.id));
     expect((await line())?.maker).toBe("anthropic");
+  });
+
+  test("an endpoint key with no model to call names no maker, as its runs find no AI", async () => {
+    f = await setup();
+    const key = await createCredential(
+      f.db,
+      f.keyWrapper,
+      f.owner.id,
+      f.org.id,
+      {
+        provider: "custom",
+        label: "GW",
+        apiKey: "gw-key-1234567",
+        endpoint: { style: "openai", baseURL: "https://gw.example/v1", models: [{ id: "llama-4" }] },
+      },
+      { net: { allowPrivate: true } },
+    );
+    // Written as the row keeps it: saving Automático on an endpoint key pins one of its models instead.
+    await f.db
+      .update(schema.agents)
+      .set({ model: AUTO_MODEL, credentialId: key.id })
+      .where(eq(schema.agents.id, f.agent.id));
+    const line = async () => {
+      const agent = await getAgent(f.db, f.org.id, f.agent.id);
+      return agent ? (await agentBrainLines(f.db, f.owner.id, f.org.id, [agent])).get(agent.id) : undefined;
+    };
+    expect((await line())?.maker).toBe("custom");
+    await f.db
+      .update(schema.providerCredentials)
+      .set({ options: { endpoint: { style: "openai", baseURL: "https://gw.example/v1", models: [] } } })
+      .where(eq(schema.providerCredentials.id, key.id));
+    expect(await line()).toMatchObject({ kind: "model" });
+    expect((await line())?.maker).toBeUndefined();
   });
 });
 
@@ -390,12 +516,62 @@ describe("a run of an agent on Automático", () => {
     const asked = (f.context.judge as ReturnType<typeof createFakeJudge>).calls.filter((c) => c.kind === "auto_model");
     expect(asked).toHaveLength(1);
 
-    // A new run decides again.
+    // A new run here within the hour keeps the conversation's model: a medium one would read it all uncached.
+    tier.current = "medium";
     await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, {
       body: "@dev obrigado!",
     });
     await drainOutbox(f.db, f.handlers);
-    expect(f.provider.calls.at(-1)?.request.model).toBe("claude-haiku-5-5");
+    expect(f.provider.calls.at(-1)?.request).toMatchObject({ model: "claude-opus-5-5", effort: "high" });
+  });
+
+  test("a conversation keeps its model for the hour: a sure, bigger tier upgrades it, medium waits, small goes", async () => {
+    const tier = { current: "medium" };
+    f = await setup({ judge: judgeAnswers(tier), reply: () => ({ chunks: ["Oi!"] }) });
+    await updateAgent(f.db, f.owner.id, f.org.id, f.agent.id, { model: AUTO_MODEL });
+    const ask = async (body: string) => {
+      await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, { body });
+      await drainOutbox(f.db, f.handlers);
+      return f.provider.calls.at(-1)?.request.model;
+    };
+    expect(await ask("@dev revisa o PR")).toBe("claude-sonnet-5-5");
+    tier.current = "large";
+    expect(await ask("@dev agora refatora a cobrança toda")).toBe("claude-opus-5-5");
+    tier.current = "medium";
+    expect(await ask("@dev e o teste?")).toBe("claude-opus-5-5");
+    tier.current = "small";
+    expect(await ask("@dev valeu")).toBe("claude-haiku-5-5");
+    const steps = await f.db.select().from(schema.agentRunSteps).where(eq(schema.agentRunSteps.kind, "context"));
+    const kept = steps
+      .map((s) => s.data.autoModel as { source?: string } | undefined)
+      .filter((a) => a?.source === "conversation");
+    expect(kept).toEqual([expect.objectContaining({ tier: "large", model: "claude-opus-5-5" })]);
+    tier.current = "large";
+    expect(await ask("@dev refatora o resto")).toBe("claude-opus-5-5");
+    const hoursAgo = new Date(Date.now() - 2 * 3600_000);
+    await f.db.update(schema.agentRuns).set({ finishedAt: hoursAgo, updatedAt: hoursAgo });
+    tier.current = "medium";
+    expect(await ask("@dev oi de novo")).toBe("claude-sonnet-5-5");
+  });
+
+  test("a quick turn (small tier, low effort) is told to answer from what it has; any other turn is not", async () => {
+    const answer = { tier: "small", effort: "low" };
+    f = await setup({
+      judge: (kind, id) => (kind === "auto_model" ? (id === "tier" ? answer.tier : answer.effort) : undefined),
+      reply: () => ({ chunks: ["Oi!"] }),
+    });
+    await updateAgent(f.db, f.owner.id, f.org.id, f.agent.id, { model: AUTO_MODEL });
+    const ask = async (body: string) => {
+      await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, { body });
+      await drainOutbox(f.db, f.handlers);
+      return systemText(f.provider.calls.at(-1)?.request.system ?? "");
+    };
+    expect(await ask("@dev oi")).toContain(QUICK_TURN_NOTE);
+    answer.effort = "high";
+    expect(await ask("@dev oi de novo")).not.toContain("# A quick turn");
+    answer.tier = "medium";
+    answer.effort = "low";
+    expect(await ask("@dev revisa o PR")).not.toContain("# A quick turn");
   });
 
   test("the judge fails: the run still answers, on the medium tier with medium effort, and says why", async () => {
@@ -632,7 +808,8 @@ describe("a run of an agent on Automático", () => {
     await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, { body: "@dev oi" });
     await drainOutbox(f.db, f.handlers);
     expect(f.provider.calls[0]?.request.model).toBe("claude-sonnet-5-5");
-    expect(f.provider.calls[0]?.request.effort).toBeUndefined();
+    // No effort set: high, never the API's own default (medium on some models).
+    expect(f.provider.calls[0]?.request.effort).toBe("high");
     const judge = f.context.judge as ReturnType<typeof createFakeJudge>;
     expect(judge.calls.some((c) => c.kind === "auto_model")).toBe(false);
   });
@@ -642,8 +819,8 @@ describe("a run of an agent on Automático", () => {
     await f.db.update(schema.agents).set({ brainEffort: "max" }).where(eq(schema.agents.id, f.agent.id));
     await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, { body: "@dev oi" });
     await drainOutbox(f.db, f.handlers);
-    // The API takes low, medium and high: max goes as high.
-    expect(f.provider.calls[0]?.request).toMatchObject({ model: "claude-sonnet-5-5", effort: "high" });
+    // Sonnet 5.5 takes max (a model without it gets high from its adapter).
+    expect(f.provider.calls[0]?.request).toMatchObject({ model: "claude-sonnet-5-5", effort: "max" });
     const judge = f.context.judge as ReturnType<typeof createFakeJudge>;
     expect(judge.calls.some((c) => c.kind === "auto_model")).toBe(false);
   });

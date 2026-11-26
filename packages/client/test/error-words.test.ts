@@ -99,6 +99,13 @@ describe("a failed request in the person's words (errorText)", () => {
     expect(errorText(en, error)).toBe("common.ourSide");
   });
 
+  test("the only owner whose others are all outside collaborators hears the way out that works", () => {
+    const refusal = (onlyOutside: boolean) =>
+      new ApiError(409, "sole_owner", "You are the only owner", { organizations: ["Acme"], onlyOutside });
+    expect(errorText(pt, refusal(true))).toBe("errors.said.soleOwnerOutside");
+    expect(errorText(pt, refusal(false))).toBe("errors.said.soleOwner");
+  });
+
   test("a computer that can't take it: offline, paused, too slow or commands off in words; its own refusal as said", () => {
     expect(errorText(pt, new ApiError(409, "machine.offline", "Mac is offline", { name: "Mac" }))).toBe(
       "errors.machine.offline",
@@ -320,6 +327,13 @@ test("a computer that can't connect Claude this way is said in the person's lang
   expect(errorText(said, refusal)).toBe("errors.machine.accountMethodUnsupported");
 });
 
+test("a CLI that doesn't run on the computer's system refuses its sign-in in the person's words", () => {
+  const instance = i18next.createInstance();
+  void instance.init({ lng: "en", resources, initAsync: false });
+  const refusal = new ApiError(409, "account.system", "x", { program: "Grok Build", computer: "PC" });
+  expect(errorText(instance.t, refusal)).toBe("Grok Build doesn't run on PC's system yet.");
+});
+
 test("an agent that doesn't answer this person says whom it answers, in the person's words", () => {
   const instance = i18next.createInstance();
   void instance.init({ lng: "pt-BR", fallbackLng: "en", resources, initAsync: false });
@@ -389,6 +403,45 @@ test("a provider refused this server's own OAuth app: what's wrong and who fixes
  * hit goes in `KNOWN` instead.
  */
 const PLAIN_LINE = new Set([
+  // A code session (ADR 0215): the apps start one only with words in the field and rename one only to a name, build
+  // its git and file requests themselves, never offer removing who must stay, and retry only a failed worktree.
+  "code_session.empty",
+  "code_session.empty_title",
+  "code_session.commit_sha",
+  "code_session.file_path",
+  "code_session.member_stays",
+  "code_session.not_failed",
+  // A file's conversation (ADR 0199): the apps start one only on a live file, never offer a task's or a file's
+  // conversation to join, leave or rename, and build a message's `liveRef` from the selection themselves.
+  "artifact.no_conversation",
+  // An audio file's wave: kept by the apps on their own after measuring it, silently, and only for an audio file.
+  "artifact.not_audio",
+  "artifact.wave_invalid",
+  "channel.file_conversation",
+  "channel.task_conversation",
+  "message.live_ref",
+  // The apps offer "Agents reply in threads" only in a regular channel's details (ADR 0214).
+  "channel.reply_in_threads",
+  // The apps offer Resolve only on a comment with a pin on a picture, a video or a PDF (ADR 0208).
+  "message.not_comment",
+  // Only an agent writes an SVG picture (ADR 0196 §8): the refusal goes back to its tool call, never to a person.
+  "live.svg_invalid",
+  // Only an agent writes the markup `add_html` lays out (ADR 0220 §4): the refusal goes back to its tool call.
+  "live.html_invalid",
+  "live.html_too_large",
+  // Only the outside chat surface's service meets these, on its own bridge routes (ADR 0187).
+  "surface.busy",
+  "surface.claim_limit",
+  "surface.file_gone",
+  "surface.rate_limited",
+  "surface.unlinked",
+  // Only the operator API ends an outside collaborator's access (ADR 0191): no person in the apps meets its refusal.
+  "outside_access.member",
+  // Only the operator API registers the hosts a server answers on (ADR 0194): no person in the apps meets these.
+  "host.invalid",
+  "host.own",
+  "host.too_many",
+  "host.needs_https",
   // Only an agent names a project by a name that isn't one, and the pickers offer only projects that exist.
   "issue_project.unknown",
   "issue_project.not_found",
@@ -413,6 +466,12 @@ const PLAIN_LINE = new Set([
   "account.invalid_plan",
   // "Quem usa" offers only Todos and Só eu: another value is a client fault.
   "account.invalid_serves",
+  // An order's place comes from a drag or Move up and Move down, never typed: a bad one is a client fault.
+  "account.invalid_order",
+  // A permission comes from its select (Só você … Todos, the roles and people offered): another value is a client fault.
+  "account.invalid_permission",
+  // The API-key switch sends on or off only.
+  "ai.invalid_key_fallback",
   // A workspace change's card offers Apply, Dismiss and Send on only to whom may (`mayApplyCard`).
   "action_card.not_allowed",
   "action_card.not_requester",
@@ -441,6 +500,8 @@ const PLAIN_LINE = new Set([
   "claude_auth.invalid",
   "claude_auth.unknown_org",
   "connector.key_too_short",
+  // A one-click connection is never offered "Passar para a equipe" (`connectionActs`), so only an API client meets this.
+  "connector.move_one_click",
   "connector.oauth_only",
   "connector.sensitive_tool",
   "context.changes_permissions",
@@ -499,6 +560,15 @@ const PLAIN_LINE = new Set([
   "request_expired",
   "request_unknown",
   "request_used",
+  // Only the operator API's reveal door and its replies refuse with these (ADR 0056): no person in the apps meets them.
+  "reveal.limit_day",
+  "reveal.limit_minute",
+  "reveal.limit_request",
+  "reveal.limit_untold",
+  "reveal.limit_workspace",
+  "reveal.no_email",
+  "reveal.no_error",
+  "reveal.request_old",
   "right_hand.missing",
   "right_hand_approvals.budget",
   // "Quem pode" sends only the rows and steps the cargo page draws (`areaRows`, `rowMax`): another is a client fault.

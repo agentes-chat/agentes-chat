@@ -512,7 +512,7 @@ test("stale numbers, covered clicks and runner refusals reach the agent as plain
   // Switched off on the computer: the reply carries the switch, so the chat shows its one click.
   const off = await b.call("browser_read", {});
   expect(off.content).toContain("turns it on with the button under your reply");
-  expect(off.data).toEqual({ toolOff: { machineId: b.machineId, tool: "browser" } });
+  expect(off.data).toEqual({ code: "tool.failed", toolOff: { machineId: b.machineId, tool: "browser" } });
   b.s.error = new MachineRequestError("browser_unavailable", "Chrome not found");
   expect((await b.call("browser_read", {})).content).toContain("Chrome not found");
 

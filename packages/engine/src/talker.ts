@@ -2,14 +2,15 @@ import type { PubSub } from "@agenteschat/adapters";
 import { and, type Database, desc, type Executor, eq, gt, schema, sql } from "@agenteschat/db";
 import { type Agent, getAgentCached } from "./agents";
 import { runBrainOf } from "./brains/select";
-import { endsAsking } from "./brakes";
+import { threadIsConfidential } from "./confidential";
 import { publishMessageCreated } from "./events";
 import type { ModelGateway } from "./gateway";
+import type { SteerHandling } from "./judge";
 import { landedAfterSql } from "./message-place";
 import { insertMessage, type Message, messageView } from "./messages";
 import type { Notice } from "./notices";
 import { holdsMessages } from "./run-hold";
-import { type AgentRun, addRunStep, computerWaitOf, isTerminal, replyThreadOf, usageWaitOf } from "./runs";
+import { type AgentRun, addRunStep, computerWaitOf, isTerminal, replyThreadOf } from "./runs";
 import { runStretchOf } from "./stretch";
 import { loadTalkerSnapshot, type TalkerSnapshot } from "./talker-snapshot";
 import type { WaitMessageOutcome } from "./waits";
@@ -25,6 +26,17 @@ export interface TalkerInput {
   live: boolean;
   /** What the message did to the run's wait, if it waited. */
   waited: WaitMessageOutcome | null;
+  /**
+   * How the triage said the agent takes the message (`steerHandling`), null without a judge. A quick question or a
+   * separate request left for after the task gets its answer now, even from a task that reads messages soon: that
+   * read answers only at the task's end.
+   */
+  handling?: SteerHandling | null;
+  /**
+   * The message is the agent's own to answer as it takes it in, with a line on the way (`say_now`, ADR 0207 addendum
+   * of 2026-11-24): nothing speaks for it.
+   */
+  ownLine?: boolean;
 }
 
 /**
@@ -52,7 +64,9 @@ export type TalkerSkip =
   | "ended"
   | "held"
   | "answered"
-  | "no_agent";
+  | "no_agent"
+  | "confidential"
+  | "own_line";
 
 /**
  * Whether the conversation layer is worth a model call at all (code decides;
@@ -64,13 +78,19 @@ export type TalkerSkip =
  * `TALKER_QUIET_MS` (a long tool). Skipped: background work, a
  * message that ended the wait, a model-brain run moving along (it reads the
  * message within seconds at its next step), and a second reply within
- * `TALKER_MIN_GAP_MS` or with no new person message since the last one.
+ * `TALKER_MIN_GAP_MS` or with no new person message since the last one. A message the triage said is a quick question
+ * or a separate request for after the task (`handling`) is considered from a run moving along too. A correction or an
+ * addition the agent answers itself as it takes it in (`ownLine`) is skipped: two voices would answer one message.
  */
 export function talkerPolicy(input: {
   run: Pick<AgentRun, "status" | "background"> & Partial<Pick<AgentRun, "startedAt" | "createdAt">>;
   brain: string;
   message: Pick<Message, "body" | "createdAt">;
   waited: WaitMessageOutcome | null;
+  /** How the triage said the agent takes the message (`TalkerInput.handling`). */
+  handling?: SteerHandling | null;
+  /** The agent says its own line as it takes the message in (`TalkerInput.ownLine`). */
+  ownLine?: boolean;
   /** The run's latest sign of life (its last step, else its start). */
   lastActivityAt: Date;
   /** Its last fast reply on this run. */
@@ -82,8 +102,9 @@ export function talkerPolicy(input: {
   if (input.waited?.outcome === "resolved") return "resolved";
   // The message woke the run from its wait: the task itself reads it and answers now.
   if (input.waited?.outcome === "woke") return "reads_soon";
+  if (input.ownLine) return "own_line";
   const waiting = run.status === "waiting_input" || run.status === "waiting_approval" || input.waited !== null;
-  // A computer brain that only just started takes it with its first turn (the rest of a burst, `waitForBurst`) or
+  // A computer brain that only just started takes it with its first turn (the rest of a burst, ADR 0112) or
   // live in it: "noted, after this step" would answer a request it is about to read.
   const start = run.startedAt ?? run.createdAt;
   const busy =
@@ -91,7 +112,9 @@ export function talkerPolicy(input: {
     (input.brain !== "model"
       ? !start || now.getTime() - start.getTime() >= TALKER_QUIET_MS
       : now.getTime() - input.lastActivityAt.getTime() >= TALKER_QUIET_MS);
-  if (!waiting && !busy) return "reads_soon";
+  // Asked how it goes, or handed a separate request: the task would answer only at its end.
+  const answersNow = input.handling === "answer" || input.handling === "queue";
+  if (!waiting && !busy && !answersNow) return "reads_soon";
   const last = input.lastReplyAt;
   if (last && (now.getTime() - last.getTime() < TALKER_MIN_GAP_MS || last >= input.message.createdAt)) {
     return "rate_limited";
@@ -106,6 +129,7 @@ const SYSTEM = (name: string) =>
     "- Use only the facts in `snapshot`. Never claim a result, progress or decision that isn't there. Never invent what the task found.",
     "- Never promise an action the task may not take, and never say you did something. You can't run tools, change anything or grant anything.",
     '- When the task will handle the message (a correction, a new instruction, more detail), say briefly that it\'s noted and when it will be read (e.g. "Anotado, leio assim que terminar este passo.").',
+    '- When `snapshot.afterTask` is true, the message is a separate request the agent takes up right after the current task: say briefly that it\'s noted and comes after it (e.g. "Anotado, faço assim que terminar o relatório.").',
     "- A question you can answer from the snapshot (status, what it's doing, what it waits on): answer it plainly. People can't see or use the task's tools: say in everyday words what it does, never the name of a tool (the names in `steps`), a function or a parameter.",
     "- While `waitingOn` names its computer, the task isn't working and has no step to finish: say what it waits for and that it reads the message once it gets there. Never say it is working.",
     "- If the message only asks to stop or cancel, or is small talk that needs no answer, or the conversation already answered it: pass.",
@@ -176,7 +200,10 @@ async function lastActivityAt(db: Database, run: AgentRun): Promise<Date> {
   const [step] = await db
     .select({ createdAt: agentRunSteps.createdAt })
     .from(agentRunSteps)
-    .where(eq(agentRunSteps.runId, run.id))
+    // What was decided about a message (the triage, this layer's own decision) is no sign the task moves.
+    .where(
+      and(eq(agentRunSteps.runId, run.id), sql`not (${agentRunSteps.data} ?| array['steerTriage', 'talkerDecision'])`),
+    )
     .orderBy(desc(agentRunSteps.seq))
     .limit(1);
   const start = run.startedAt ?? run.createdAt;
@@ -213,14 +240,20 @@ const promptOf = (s: TalkerSnapshot) => JSON.stringify({ snapshot: s }, null, 1)
  * A reply is posted as the agent in the run's conversation (`meta.talker`,
  * `meta.notice` `talker_reply`) and queued on the run, so the task reads
  * "[You already told them, while you worked]: …" with the person's message
- * and doesn't say it twice. Any failure or timeout is a pass.
+ * and doesn't say it twice. Any failure or timeout is a pass. Each decision is kept on the run's trail (a `context`
+ * step with `talkerDecision`, its outcome as `reason`), so a message nobody answered fast can be told why.
  */
 export function createTalker(deps: TalkerDeps): Talker {
   const now = deps.now ?? (() => new Date());
   return {
-    async consider({ run: landed, message, live, waited }) {
-      const decide = (outcome: TalkerSkip | "pass" | "reply" | "error") =>
+    async consider({ run: landed, message, live, waited, handling = null, ownLine = false }) {
+      const decide = async (outcome: TalkerSkip | "pass" | "reply" | "error") => {
         deps.onDecision?.({ runId: landed.id, messageId: message.id, outcome });
+        await addRunStep(deps.db, landed, "context", {
+          talkerDecision: { messageId: message.id },
+          reason: outcome,
+        }).catch(() => {});
+      };
       // Cheap checks first: most messages to a working run need no model call.
       if (landed.background) return decide("background");
       const agent = await getAgentCached(deps.db, landed.orgId, landed.agentId);
@@ -232,10 +265,12 @@ export function createTalker(deps: TalkerDeps): Talker {
       ]);
       const skip = talkerPolicy({
         run: landed,
-        // The brain this run thinks with, not the agent's stored one (a fallback runs on the model).
+        // The brain this run thinks with, not the agent's stored one (a mission's may differ).
         brain: runBrainOf(landed, agent),
         message,
         waited,
+        handling,
+        ownLine,
         lastActivityAt: activity,
         lastReplyAt: replied,
         now: at,
@@ -244,6 +279,9 @@ export function createTalker(deps: TalkerDeps): Talker {
       // The run as it is now (a wait may have moved it); the policy judged it as the message found it.
       const [run] = await deps.db.select().from(agentRuns).where(eq(agentRuns.id, landed.id));
       if (!run || isTerminal(run.status)) return decide("ended");
+      // The snapshot is made of the run's own steps and words: in a confidential thread (ADR 0190) those go to the
+      // run's model and to no other, so nobody answers for it meanwhile.
+      if (await threadIsConfidential(deps.db, run.orgId, run.threadRootId)) return decide("confidential");
       // No model call for a reply that can't be posted (checked again before posting: it may pause meanwhile).
       if (await heldOrHandedOn(deps.db, run, message.id)) return decide("held");
       try {
@@ -257,22 +295,20 @@ export function createTalker(deps: TalkerDeps): Talker {
           message,
           live,
           waited,
+          handling,
           now: at,
         });
         const answer = await ask(deps, run, agent, snapshot);
-        // A question the cheap model let pass ("??", "what are you doing?") still hears where the work is (ADR 0131 §2).
-        if (answer === null && !endsAsking(message.body)) return decide("pass");
-        // The cheap model couldn't answer (no API key, an outage, too slow): the server's own status line, so a
-        // person asking a working agent always hears what it does (ADR 0131 §2).
-        // A computer brain's turn that didn't take the message live reads it only when that turn ends.
-        const turn = run.status === "running" && !live && runBrainOf(run, agent) !== "model";
-        const reply =
-          typeof answer === "string" ? { text: answer, meta: {} } : await statusReply(deps.db, run, at, { turn });
+        // Only words the model wrote go out as the agent (ADR 0131 addendum of 2026-11-19): a pass, or a model that
+        // couldn't answer (no API key, an outage, too slow), posts nothing in its place. The message's receipt says
+        // where it stands (read, in its computer's line, waiting for it or for the plan), and the task answers it
+        // when it reads it.
+        if (typeof answer !== "string") return decide(answer === null ? "pass" : "error");
         const waits = run.status !== "running" || computerWaitOf(run) !== null;
-        const posted = await postReply(deps, run, agent, message, reply.text, at, reply.meta, waits);
-        decide(posted ?? "reply");
+        const posted = await postReply(deps, run, agent, message, answer, at, {}, waits);
+        await decide(posted ?? "reply");
       } catch {
-        decide("error");
+        await decide("error");
       }
     },
   };
@@ -280,65 +316,6 @@ export function createTalker(deps: TalkerDeps): Talker {
 
 /** `ask`'s answer when the model gave none (an error or the timeout), as opposed to a pass. */
 const FAILED = Symbol("failed");
-
-/**
- * The server's status line for a working run (ADR 0131 §2): that it can't answer yet, how long it has worked, how many
- * steps, when it reads the message (its next step, or `turn`: when its computer's turn ends) and what it does now (its
- * automatic status line), worded by the apps (`talker_status`); the English is the fallback.
- */
-export async function statusReply(db: Executor, run: AgentRun, now: Date, options: { turn?: boolean } = {}) {
-  // Parked on its plan or budget it isn't working: the wait is the plan's, and it is back at the reset (`until`).
-  const usage = usageWaitOf(run);
-  if (usage) {
-    const until = (run.transcript as { waitingForBrain?: { resetsAt?: string } } | null)?.waitingForBrain?.resetsAt;
-    return {
-      text:
-        usage === "budget"
-          ? "I'm waiting for my monthly budget to renew. I'll read your message then, or sooner if an admin raises the limit."
-          : "I'm waiting for my plan to come back. I'll read your message when it's back.",
-      meta: {
-        bodyCode: "talker_status",
-        bodyParams: { minutes: "0", steps: "0", wait: usage, ...(until ? { until } : {}) },
-      },
-    };
-  }
-  const wait = computerWaitOf(run);
-  if (wait === "away") {
-    return {
-      text: "Waiting for my computer to come back. I'll read your message as soon as it's back.",
-      meta: { bodyCode: "talker_status", bodyParams: { minutes: "0", steps: "0", wait } },
-    };
-  }
-  if (wait === "queued") {
-    const since = (run.transcript as { roomWaitSince?: number } | null)?.roomWaitSince ?? run.updatedAt.getTime();
-    const minutes = Math.max(1, Math.round((now.getTime() - since) / 60_000));
-    return {
-      text: `Waiting for the computer (${minutes} min). I'll read your message when my turn comes.`,
-      meta: { bodyCode: "talker_status", bodyParams: { minutes: String(minutes), steps: "0", wait } },
-    };
-  }
-  const [a] = await db
-    .select({ runId: schema.agents.statusRunId, kind: schema.agents.statusKind, subject: schema.agents.statusSubject })
-    .from(schema.agents)
-    .where(eq(schema.agents.id, run.agentId));
-  const line = a?.runId === run.id && a.kind ? { kind: a.kind, subject: a.subject ?? "" } : null;
-  const start = run.startedAt ?? run.createdAt;
-  const minutes = Math.max(1, Math.round((now.getTime() - start.getTime()) / 60_000));
-  const steps = (run.transcript as { executedCalls?: unknown } | null)?.executedCalls;
-  const count = typeof steps === "number" && steps > 0 ? steps : 0;
-  return {
-    text: `I'm in the middle of a task (${minutes} min${count ? `, ${count} steps` : ""}) and can't answer yet. Your message is queued and I'll read it ${options.turn ? "when this round of work ends" : "at my next step"}.`,
-    meta: {
-      bodyCode: "talker_status",
-      bodyParams: {
-        minutes: String(minutes),
-        steps: String(count),
-        ...(options.turn ? { reads: "turn" } : {}),
-        ...(line ? { kind: line.kind, subject: line.subject } : {}),
-      },
-    },
-  };
-}
 
 /** The cheap model's decision: the reply's text, null to pass, or `FAILED` (timeout, error). */
 async function ask(deps: TalkerDeps, run: AgentRun, agent: Agent, snapshot: TalkerSnapshot) {

@@ -1,4 +1,5 @@
 import {
+  type ComputerDevice,
   type ComputerQueue,
   type QueueWaiting,
   type QueueWorking,
@@ -23,11 +24,12 @@ import {
   queueView,
   queueWhereText,
 } from "@agenteschat/client/lib/computer-queue";
+import { SPILL_USES, type SpillUse, spillOfUse, spillUseOf } from "@agenteschat/client/lib/devices";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { devicePlanName } from "@agenteschat/client/lib/no-ai";
 import { type ReactNode, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import Animated, { FadeIn, FadeOut, LayoutAnimationConfig, LinearTransition } from "react-native-reanimated";
 import {
   Button,
@@ -39,6 +41,8 @@ import {
   Icon,
   type IconName,
   PressScale,
+  SHEET_X,
+  SkeletonList,
   Text,
   useReducedMotion,
   useToast,
@@ -48,7 +52,9 @@ import { useComputerSays, useWatchableComputer } from "../chat/DmComputerButton"
 import { openComputer } from "../computer/AgentComputerRow";
 import { StatusLine } from "../devices/parts";
 import { useDeviceMutation, useDevices } from "../devices/queries";
+import { chooseAction } from "../settings/parts";
 import { AgentFace, OpensAgent } from "../shared/Face";
+import { LoadFailed } from "../shared/FirstUse";
 import { useColors, useDirectory, useMeId, useNow, useOrgId } from "../shared/hooks";
 import { SheetTitle } from "../shared/PromptForm";
 import { useSheet } from "../shared/SheetHost";
@@ -143,9 +149,12 @@ export function QueueSheet({ machineId, computer }: { machineId: string; compute
   const reduced = useReducedMotion();
   if (!q.data) {
     return q.isError ? (
-      <Text tone="muted">{t("mobile.app.failed")}</Text>
+      <LoadFailed onRetry={() => void q.refetch()} />
     ) : (
-      <ActivityIndicator color={c.muted} style={styles.loading} />
+      // Loading: the line's own rows (a face and two lines), at the sheet's edges as a list's rows, never a spinner.
+      <View style={styles.bleed}>
+        <SkeletonList rows={3} />
+      </View>
     );
   }
   const view = queueView(q.data, meId ?? "");
@@ -156,15 +165,12 @@ export function QueueSheet({ machineId, computer }: { machineId: string; compute
   return (
     <>
       <View accessible accessibilityRole="header" accessibilityLabel={t("queue.label", { name: q.data.name })}>
-        <SheetTitle title={q.data.name} subtitle={queueStatusText(t, view, now)} />
+        <SheetTitle title={q.data.name} subtitle={queueStatusText(t, view, q.data)} />
       </View>
       <View style={styles.group}>
-        <GroupHead title={t("queue.workingNow", { n: view.working.length })} />
-        {fill ? (
-          <Text variant="small" tone="ink2">
-            {fill}
-          </Text>
-        ) : null}
+        {/* What fills the computer now beside the head, as "In line" says when all of it starts: on a line of its own
+            it read as a loose sentence over the rows. */}
+        <GroupHead title={t("queue.workingNow", { n: view.working.length })} aside={fill || null} />
         {view.working.length === 0 ? (
           <Text variant="small" tone="muted">
             {t("queue.nothingWorking")}
@@ -205,8 +211,9 @@ export function QueueSheet({ machineId, computer }: { machineId: string; compute
 }
 
 /**
- * "More computers, shorter line": my other online computers, each with its switch for my replies to start there while
- * this one is full (`spill.own`). Nothing when I have none.
+ * "Your computers": my other computers, each with how it helps (`spillUseOf`): not at all, while this one is full or
+ * away (`spill.own`), or first for my agents' work (`spill.first`). Nothing when I have none, or while an admin turned
+ * devices' help off for the workspace.
  */
 function SpillHere({ machineId }: { machineId: string }) {
   const { t } = useTranslation();
@@ -215,13 +222,26 @@ function SpillHere({ machineId }: { machineId: string }) {
   const toast = useToast();
   const devices = useDevices();
   const accounts = useAiAccounts(useOrgId()).data;
-  const spill = useDeviceMutation((api, orgId, input: { id: string; own: boolean }) =>
-    api.devices.updateComputer(orgId, input.id, { spill: { own: input.own } }),
+  const spill = useDeviceMutation((api, orgId, input: { id: string; use: SpillUse }) =>
+    api.devices.updateComputer(orgId, input.id, { spill: spillOfUse(input.use) }),
   );
+  const choose = (d: ComputerDevice) =>
+    chooseAction(
+      t("queue.spill.use.label", { name: d.name }),
+      SPILL_USES.map((use) => ({
+        label: t(`queue.spill.use.${use}`),
+        checked: use === spillUseOf(d),
+        onPress: () => {
+          if (use !== spillUseOf(d))
+            spill.mutate({ id: d.id, use }, { onError: (err) => toast({ title: errorText(t, err), icon: "x" }) });
+        },
+      })),
+      t("common.cancel"),
+    );
   const mine = (devices.data?.devices ?? []).filter(
     (d) => d.id !== machineId && d.ownerUserId === meId && d.machineKind === "connected" && !d.systemMode,
   );
-  if (mine.length === 0) return null;
+  if (mine.length === 0 || devices.data?.devicesHelp === false) return null;
   const plan = (name: string | null) => (name ? t("queue.spill.plan", { plan: name }) : undefined);
   return (
     <View style={[styles.group, styles.nextGroup, { borderTopColor: c.line }]}>
@@ -234,14 +254,10 @@ function SpillHere({ machineId }: { machineId: string }) {
             label={d.name}
             below={<StatusLine status={d.status} />}
             belowText={plan(devicePlanName(t, accounts, d.id))}
-            toggle={d.spill.own}
+            value={t(`queue.spill.use.${spillUseOf(d)}`)}
+            menu
             disabled={spill.isPending}
-            onPress={() =>
-              spill.mutate(
-                { id: d.id, own: !d.spill.own },
-                { onError: (err) => toast({ title: errorText(t, err), icon: "x" }) },
-              )
-            }
+            onPress={() => choose(d)}
           />
         ))}
       </GroupedList>
@@ -327,7 +343,11 @@ function GroupHead({ title, aside }: { title: string; aside?: string | null }) {
   );
 }
 
-/** A line of the sheet with its stop beside it. */
+/**
+ * A line of the sheet with its stop beside it: the stop square on its round plate (`compact`), on the row's first
+ * line. With the word, the button took a third of the row: the time was pushed off the name and the second line
+ * wrapped under it.
+ */
 function ActiveLine({
   row,
   act,
@@ -342,11 +362,14 @@ function ActiveLine({
     <View style={styles.active}>
       <View style={styles.grow}>{children}</View>
       {row.canStop ? (
-        <StopButton
-          label={t("taskManager.actions.stop")}
-          stopping={act.stopping.has(row.runId)}
-          onPress={() => act.stop(row.runId)}
-        />
+        <View style={styles.stop}>
+          <StopButton
+            compact
+            label={t("taskManager.actions.stop")}
+            stopping={act.stopping.has(row.runId)}
+            onPress={() => act.stop(row.runId)}
+          />
+        </View>
       ) : null}
     </View>
   );
@@ -364,7 +387,8 @@ function WorkingRow({
   act: RowActions;
 }) {
   const { t } = useTranslation();
-  const elapsed = durationText(t, Math.max(0, now - Date.parse(w.startedAt)));
+  // How long it has run stays whole on its line ("35 s" broke after the number where the line wrapped).
+  const elapsed = durationText(t, Math.max(0, now - Date.parse(w.startedAt))).replaceAll(" ", NBSP);
   return (
     <ActiveLine row={w} act={act}>
       <QueueLine
@@ -476,11 +500,13 @@ export function QueueLine({
   );
 }
 
+/** A no-break space. */
+const NBSP = "\u00A0";
 const ROW_IN = FadeIn.duration(160);
 const ROW_OUT = FadeOut.duration(120);
 
 const styles = StyleSheet.create({
-  loading: { marginVertical: 24 },
+  bleed: { marginHorizontal: -SHEET_X },
   button: { height: 40, borderRadius: 20 },
   counted: { flexGrow: 1, flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10 },
   head: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 8 },
@@ -492,7 +518,9 @@ const styles = StyleSheet.create({
   rows: { marginHorizontal: -8, gap: 2 },
   // The face (20) on the first line (small, 20 tall).
   row: { flexDirection: "row", alignItems: "flex-start", gap: 10, padding: 8, borderRadius: 10 },
-  active: { flexDirection: "row", alignItems: "center", gap: 4 },
+  active: { flexDirection: "row", alignItems: "flex-start", gap: 4 },
+  // The stop's plate (32) centered on the row's first line (20 tall, under the row's 8 of padding).
+  stop: { marginTop: 2 },
   grow: { flex: 1, minWidth: 0 },
   text: { flex: 1, minWidth: 0 },
   l1: { flexDirection: "row", alignItems: "center", gap: 6, minHeight: 20 },

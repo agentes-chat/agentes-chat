@@ -12,6 +12,7 @@ import {
   useSettings,
   useUpdateAgent,
 } from "@agenteschat/client";
+import { ownsAgentAs } from "@agenteschat/client/lib/agent-owner";
 import { type WorkPlaceNames, workDetail } from "@agenteschat/client/lib/agent-work";
 import {
   audienceLines,
@@ -38,6 +39,7 @@ import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import {
   Avatar,
   Button,
+  Disclosure,
   EmojiPickerPopover,
   Icon,
   Locked,
@@ -52,7 +54,8 @@ import {
 } from "@agenteschat/ui";
 import { useNavigate } from "@tanstack/react-router";
 import type { TFunction } from "i18next";
-import { type ReactNode, useRef, useState } from "react";
+import { type ReactNode, type RefObject, useLayoutEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { AudienceChoice, audienceValid } from "@/components/AgentAudience";
 import { AgentAvatar } from "@/components/AgentAvatar";
@@ -67,8 +70,10 @@ import { LetMeTalkButton, useWidenAsk } from "@/components/ReachLines";
 import { useEmojiLabels } from "@/components/Reactions";
 import { RolesPicker } from "@/components/roles/RolesPicker";
 import { colorOf, ProfileSky } from "@/components/Sky";
+import { TextAction } from "@/components/UsagePauseCard";
 import { SeeUsageQueue } from "@/components/UsageQueue";
 import { useDirectory } from "@/hooks/useDirectory";
+import { useOpenConversation } from "@/hooks/useOpenConversation";
 import { type AgentShown, agentLine, personLine, useAgentPresence, usePersonPresence } from "@/hooks/usePresence";
 import { type MenuEntry, tidy } from "@/lib/context-menu";
 import { entityMenu } from "@/lib/entity-menu";
@@ -110,58 +115,85 @@ export function ProfileTrigger({
   const { t } = useTranslation();
   // Hover leaves the focus where it is (the box someone types in), a press or a key brings it in.
   const card = useHoverCard(HOVER_OPEN_MS);
-  const { org } = useOrg();
-  const dir = useDirectory(org.id);
-  const agentEntries = useAgentMenu();
-  const personEntries = usePersonMenu();
   const button = useRef<HTMLButtonElement>(null);
   // The trigger takes the focus before the card goes: what opens from the card (the agent's panel) gives it back there.
   const leave = () => {
     if (document.activeElement?.closest(".mcard__frame")) button.current?.focus();
     card.close();
   };
+  // The right click's entries come from a builder mounted the first time they are asked for, at once (`flushSync`):
+  // its hooks (the directory, conversations, pins, live runs…) cost every trigger on every render, and a conversation
+  // draws two triggers a message, nearly all of them never right-clicked.
+  const [menuWanted, setMenuWanted] = useState(false);
+  const build = useRef<(() => MenuEntry[]) | null>(null);
   const menu = entityMenu(() => {
-    if (actor.type === "agent") {
-      const agent = dir.agentById.get(actor.id);
-      return agent ? agentEntries(agent) : [];
-    }
-    const member = dir.memberById.get(actor.id);
-    return member ? personEntries(member, () => button.current?.click()) : [];
+    if (!build.current) flushSync(() => setMenuWanted(true));
+    return build.current?.() ?? [];
   });
   return (
-    <Popover
-      hover={card}
-      label={t("profile.cardLabel")}
-      side={side}
-      className={`profile-card mcard mcard--${actor.type}`}
-      trigger={
-        <button
-          ref={button}
-          type="button"
-          {...menu}
-          className={className ? `profile-trigger ${className}` : "profile-trigger"}
-          aria-label={label}
-          aria-describedby={describedBy}
-          aria-haspopup="dialog"
-          tabIndex={decorative ? -1 : undefined}
-          aria-hidden={decorative || undefined}
-        >
-          {children}
-        </button>
-      }
-    >
-      {card.open && (
-        // A press inside a card the pointer opened keeps it (its menus and pickers open outside it).
-        <div className="mcard__frame" onPointerDownCapture={() => card.open === "hover" && card.onOpenChange(true)}>
-          {actor.type === "agent" ? (
-            <AgentCard agentId={actor.id} onDone={leave} />
-          ) : (
-            <PersonCard userId={actor.id} onDone={leave} />
-          )}
-        </div>
-      )}
-    </Popover>
+    <>
+      {menuWanted && <ProfileMenuBuilder actor={actor} build={build} openCard={() => button.current?.click()} />}
+      <Popover
+        hover={card}
+        label={t("profile.cardLabel")}
+        side={side}
+        className={`profile-card mcard mcard--${actor.type}`}
+        trigger={
+          <button
+            ref={button}
+            type="button"
+            {...menu}
+            className={className ? `profile-trigger ${className}` : "profile-trigger"}
+            aria-label={label}
+            aria-describedby={describedBy}
+            aria-haspopup="dialog"
+            tabIndex={decorative ? -1 : undefined}
+            aria-hidden={decorative || undefined}
+          >
+            {children}
+          </button>
+        }
+      >
+        {card.open && (
+          // A press inside a card the pointer opened keeps it (its menus and pickers open outside it).
+          <div className="mcard__frame" onPointerDownCapture={() => card.open === "hover" && card.onOpenChange(true)}>
+            {actor.type === "agent" ? (
+              <AgentCard agentId={actor.id} onDone={leave} />
+            ) : (
+              <PersonCard userId={actor.id} onDone={leave} />
+            )}
+          </div>
+        )}
+      </Popover>
+    </>
   );
+}
+
+/** The entries of a trigger's right click, as the agent's or the person's menu has them (`ProfileTrigger`). */
+function ProfileMenuBuilder({
+  actor,
+  build,
+  openCard,
+}: {
+  actor: Actor;
+  build: RefObject<(() => MenuEntry[]) | null>;
+  openCard: () => void;
+}) {
+  const { org } = useOrg();
+  const dir = useDirectory(org.id);
+  const agentEntries = useAgentMenu();
+  const personEntries = usePersonMenu();
+  useLayoutEffect(() => {
+    build.current = () => {
+      if (actor.type === "agent") {
+        const agent = dir.agentById.get(actor.id);
+        return agent ? agentEntries(agent) : [];
+      }
+      const member = dir.memberById.get(actor.id);
+      return member ? personEntries(member, openCard) : [];
+    };
+  });
+  return null;
 }
 
 /** Discord's shape: the banner, its round buttons (a shortcut, then ⋯), the big face over its edge, then the body. */
@@ -321,6 +353,7 @@ function PersonCard({ userId, onDone }: { userId: string; onDone: () => void }) 
   const handle = person?.handle ?? member?.handle;
   const joinedAt = person?.joinedAt ?? member?.joinedAt;
   const owner = (person?.role ?? member?.role) === "owner";
+  const outsideOf = person?.outsideOf ?? member?.outsideOf;
   // The roles they hold, top first (ADR 0085); who manages members gives and takes the ones below their own.
   const roleIds = person?.roleIds ?? member?.roleIds ?? [];
   const held = rolesOf({ roleIds }, roles);
@@ -420,6 +453,12 @@ function PersonCard({ userId, onDone }: { userId: string; onDone: () => void }) 
         </section>
       )}
       <dl className="profile-card__facts">
+        {outsideOf && (
+          <>
+            <dt>{t("members.outside.title")}</dt>
+            <dd>{outsideOf}</dd>
+          </>
+        )}
         {person && shown && (
           <>
             <dt>{t("profile.presence")}</dt>
@@ -575,17 +614,33 @@ function AgentCardBody({ agent, onDone }: { agent: Agent; onDone: () => void }) 
   const agentEntries = useAgentMenu();
   const openComputer = useOpenComputer();
   const opensComputer = useOpensComputer(agent);
-  const seesSpend = can(org, "view_usage") || agent.ownerUserId === me.user.id;
+  const myRoleIds = dir.rolesOf(me.user.id);
+  const seesSpend = can(org, "view_usage") || ownsAgentAs(agent, me.user.id, myRoleIds);
   const details = seesDetails(agent);
   const g = agentGrammar(agent.name);
-  const owner = agent.ownerUserId ? dir.memberById.get(agent.ownerUserId)?.name : null;
+  // A person, or the role that answers for it (ADR 0085, addendum of 2026-11-21).
+  const owner = dir.ownerName(agent);
+  const ownerRole = agent.ownerRoleId ? dir.roleName(agent.ownerRoleId) : undefined;
   // Its presence from its work and its line (ADR 0084): its own words or what it is doing now, and where.
   const shown = useAgentPresence(agent.id);
   const line = agentLine(t, shown?.line ?? null, i18n.language);
   const workingIn = useStreams((s) => agentWorkingIn(s, agent.id));
   const busy = workingIn !== null;
   const here = workingIn ? channels?.find((c) => c.id === workingIn)?.name : undefined;
+  const openConversation = useOpenConversation();
+  const workPlace = shown?.work?.channelId ? { ...shown.work, channelId: shown.work.channelId } : null;
   const lines = audienceLines(agent, roles, dir.members);
+  const why =
+    shown &&
+    agentWhy(
+      t,
+      shown,
+      {
+        agentName: (id) => dir.agentById.get(id)?.name,
+        channelName: (id) => channels?.find((c) => c.id === id)?.name,
+      },
+      i18n.language,
+    );
   const toComputer = opensComputer
     ? () => {
         onDone();
@@ -649,10 +704,23 @@ function AgentCardBody({ agent, onDone }: { agent: Agent; onDone: () => void }) 
                 ? t("profile.nowIn", { channel: here })
                 : shown.line.by === "self"
                   ? t("presence.bySelf", { name: agent.name })
-                  : t("presence.byAuto")}
+                  : shown.work?.private
+                    ? t("presence.byPrivate")
+                    : t("presence.byAuto")}
             </small>
             {/* Out of office with conversations waiting (ADR 0118): what it picks up when it is back, in order. */}
             {isOutOfOffice(shown.line) && shown.line.count ? <SeeUsageQueue agentId={agent.id} /> : null}
+            {/* Where it works, when the reader reads that conversation: the thread or the message it works from. */}
+            {workPlace && (
+              <TextAction
+                onClick={() => {
+                  onDone();
+                  openConversation(workPlace);
+                }}
+              >
+                {t("presence.openWork")}
+              </TextAction>
+            )}
           </span>
         </div>
       )}
@@ -660,7 +728,7 @@ function AgentCardBody({ agent, onDone }: { agent: Agent; onDone: () => void }) 
         <section className="mcard__section" aria-label={t("profile.audience")}>
           <div className="mcard__label-row">
             <span className="mcard__label">{t("profile.audience")}</span>
-            {canEditAudience(org, agent, me.user.id) && <AudienceEdit agent={agent} />}
+            {canEditAudience(org, agent, me.user.id, myRoleIds) && <AudienceEdit agent={agent} />}
           </div>
           <ul className="mcard__who">
             {lines.map((l) =>
@@ -683,51 +751,44 @@ function AgentCardBody({ agent, onDone }: { agent: Agent; onDone: () => void }) 
             )}
           </ul>
           {owner && modeOf(agent) === "people" && (
-            <span className="small muted">{t("audience.ownerAlways", { name: owner })}</span>
+            <span className="small muted">
+              {ownerRole
+                ? t("audience.ownerRoleAlways", { role: ownerRole })
+                : t("audience.ownerAlways", { name: owner })}
+            </span>
           )}
         </section>
       )}
+      {/* Its face's dot and its line already say where it stands: the fact only for a why worth saying (no AI,
+          paused, whom it helps). */}
       <dl className="profile-card__facts">
-        {shown && (
+        {why && (
           <>
             <dt>{t("profile.presence")}</dt>
-            <dd>
-              {[
-                agentFaceWord(t, shown.presence),
-                agentWhy(
-                  t,
-                  shown,
-                  {
-                    agentName: (id) => dir.agentById.get(id)?.name,
-                    channelName: (id) => channels?.find((c) => c.id === id)?.name,
-                  },
-                  i18n.language,
-                ),
-              ]
-                .filter(Boolean)
-                .join(" · ")}
-            </dd>
+            <dd>{why}</dd>
           </>
         )}
         <dt>{t("profile.owner")}</dt>
         <dd>{owner ?? t("profile.noOwner")}</dd>
-        {details && (
-          <>
+      </dl>
+      {details && (
+        <Disclosure summary={t("common.details")} className="profile-card__more">
+          <dl className="profile-card__facts">
             <dt>{t("profile.model")}</dt>
             <dd>
               <ModelPickerButton agent={agent} size="row" className="profile-card__brain" />
             </dd>
-          </>
-        )}
-      </dl>
-      {seesSpend && details && <Spend agent={agent} locale={i18n.language} />}
+          </dl>
+          {seesSpend && <Spend agent={agent} locale={i18n.language} />}
+        </Disclosure>
+      )}
       {canTalk(agent) ? (
         <MessageBox target={{ agentId: agent.id }} label={t("home.ask.label", g)} onSent={onDone} />
       ) : (
         <>
           <p className="small muted">{audienceNotice(t, agent, (id) => dir.memberById.get(id)?.name, dir.roleName)}</p>
           <div className="profile-card__actions">
-            {audienceWithMe(org, agent, me.user.id) ? (
+            {audienceWithMe(org, agent, me.user.id, myRoleIds) ? (
               <LetMeTalkButton agent={agent} />
             ) : (
               <AskAccessButton agent={agent} />
@@ -751,7 +812,7 @@ function AudienceEdit({ agent }: { agent: Agent }) {
   const g = agentGrammar(agent.name);
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<AgentAudience>(() => audienceOf(agent));
-  const valid = audienceValid(draft, agent.ownerUserId);
+  const valid = audienceValid(draft, agent.ownerUserId ?? agent.ownerRoleId);
   return (
     <>
       <Popover
@@ -778,6 +839,7 @@ function AudienceEdit({ agent }: { agent: Agent }) {
             value={draft}
             onChange={setDraft}
             ownerUserId={agent.ownerUserId}
+            ownerRoleId={agent.ownerRoleId}
             agentName={agent.name}
             idPrefix={`mcard-audience-${agent.id}`}
             onPlan={engineOfBrain(agent.brain?.kind) !== "agent"}
@@ -822,7 +884,7 @@ function AudienceEdit({ agent }: { agent: Agent }) {
 function agentWhy(t: TFunction, shown: AgentShown, names: WorkPlaceNames, locale: string): string | null {
   const key = agentWhyKey(shown.presence, shown.noAi);
   if (key) return t(`presence.agentWhy.${key}`);
-  if (shown.presence === "online" && shown.work?.state !== "later") return null;
+  if ((shown.presence === "online" || shown.presence === "away") && shown.work?.state !== "later") return null;
   return workDetail(t, shown.work, names, locale);
 }
 

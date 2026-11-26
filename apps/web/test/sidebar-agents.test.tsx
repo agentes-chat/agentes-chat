@@ -88,7 +88,7 @@ describe("Agentes and its groups", () => {
     expect(rowsIn(section("Integrations"))).toEqual(["Atlas"]);
     expect(head("Integrations").querySelector(".sidebar__section-count")?.textContent).toBe("1");
     // An empty group is for who arranges the agents: it says where they go.
-    expect(section("Diretoria").textContent).toContain("Arraste agentes para cá");
+    expect(section("Diretoria").textContent).toContain("Arraste agentes ou canais para cá");
     // Every agent is listed: no row under them says so again.
     expect(nav().querySelector(".sidebar__see-all")).toBeNull();
   });
@@ -178,12 +178,20 @@ describe("Agentes and its groups", () => {
   test("with Ver todos os agentes off on Todos, a member's sidebar points at no agent that doesn't talk to them", async () => {
     const hidingAda = (state: State) => {
       const ada = state.agents.find((a) => a.id === ADA_ID);
-      if (ada) Object.assign(ada, { ownerUserId: "u-other", audience: { mode: "owner", userIds: [] } });
+      if (ada) Object.assign(ada, { ownerUserId: "u-other", audience: { mode: "people", userIds: ["u-third"] } });
       return asMember(state);
     };
     await go(hidingAda(seedState()));
     expect(rowsIn(section("Agentes"))).toEqual(["Atlas"]);
     expect(within(nav()).getByRole("link", { name: "Mais 1 agente na Equipe" })).toBeTruthy();
+    cleanup();
+    // Someone else's private agent (it answers only its owner) is unlisted: not even counted.
+    const personal = asMember(seedState());
+    const ada = personal.agents.find((a) => a.id === ADA_ID);
+    if (ada) Object.assign(ada, { ownerUserId: "u-other", audience: { mode: "owner", userIds: [] } });
+    await go(personal);
+    expect(rowsIn(section("Agentes"))).toEqual(["Atlas"]);
+    expect(nav().querySelector(".sidebar__see-all")).toBeNull();
     cleanup();
     const off = hidingAda(seedState());
     off.roles = seedRoles().map((r) =>

@@ -24,7 +24,9 @@ export type KeyPurpose =
   | "invitation-mail"
   | "routine-hooks"
   | "human-pass"
-  | "github-app-manifest";
+  | "github-app-manifest"
+  | "operator-input-digest"
+  | "connector-media";
 
 function deriveKey(masterSecret: string, purpose: KeyPurpose): Buffer {
   return Buffer.from(hkdfSync("sha256", masterSecret, "agentes.chat", `agentes.chat/${purpose}/v1`, 32));
@@ -133,6 +135,11 @@ export function inviteLinkToken(masterSecret: string, linkId: string): string {
   return createHmac("sha256", deriveKey(masterSecret, "invite-links")).update(linkId).digest("base64url");
 }
 
+/** The signature of a link a vendor fetches a Drive file from for an hour (ADR 0170: Threads' and TikTok's media). */
+export function connectorMediaSignature(masterSecret: string, payload: string): string {
+  return createHmac("sha256", deriveKey(masterSecret, "connector-media")).update(payload).digest("base64url");
+}
+
 /**
  * The token of an email invitation (ADR 0090): an HMAC of its id, as a workspace's link, so its link can be copied
  * again and sending it again keeps it, while only its hash is stored.
@@ -153,6 +160,18 @@ export function invitationMailProof(masterSecret: string, invitationId: string):
 /** The token in a routine's webhook address (ADR 0106), made the same way from its hook's key id. */
 export function routineHookToken(masterSecret: string, keyId: string): string {
   return createHmac("sha256", deriveKey(masterSecret, "routine-hooks")).update(keyId).digest("base64url");
+}
+
+/**
+ * What stands for a tool call's input in the operator API (ADR 0056): an HMAC of a hash of the input, keyed by this
+ * server's secret and tied to the call's workspace, cut to 16 hex characters. Two calls of one workspace with equal
+ * inputs have the same digest; it compares with no other workspace's or server's, and leads back to nothing.
+ */
+export function operatorInputDigest(masterSecret: string, orgId: string, inputHash: string): string {
+  return createHmac("sha256", deriveKey(masterSecret, "operator-input-digest"))
+    .update(`${orgId}:${inputHash}`)
+    .digest("hex")
+    .slice(0, 16);
 }
 
 /** A compact JWS (RFC 7515) of `claims` as a JWT, signed HS256 with the secret's UTF-8 bytes. */

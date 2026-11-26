@@ -9,8 +9,8 @@ import {
   type IconName,
   InfoHint,
   Locked,
-  prefersReducedMotion,
   Spinner,
+  useMorph,
 } from "@agenteschat/ui";
 import {
   createContext,
@@ -20,7 +20,6 @@ import {
   type Ref,
   useContext,
   useEffect,
-  useLayoutEffect,
   useRef,
   useState,
 } from "react";
@@ -31,7 +30,8 @@ import "./request-card.css";
 
 /**
  * What an agent can ask of a person in the conversation: each says so in the card's header and in the bar.
- * "proposal": a change to the workspace's context or an agent's instructions; "agent": a new agent.
+ * "proposal": a change to the workspace's context or an agent's instructions; "agent": a new agent; "code": a code
+ * session for a change asked in the chat (ADR 0215 §11).
  */
 export type RequestKind =
   | "approval"
@@ -42,7 +42,8 @@ export type RequestKind =
   | "proposal"
   | "agent"
   | "team"
-  | "firstTask";
+  | "firstTask"
+  | "code";
 
 /**
  * A request waiting for the viewer, as its card registers it: the bar above the composer says it. `runId`: the run that
@@ -172,18 +173,11 @@ export type RequestAnswer = {
 };
 
 /**
- * How tall each waiting card last stood, by request: the card that takes its place once answered (often another
- * component instance, its caller's branches differ) grows or shrinks from there instead of jumping.
- */
-const waitingHeights = new Map<string, number>();
-const SETTLE_MS = 220;
-
-/**
  * One card for every request an agent makes in the conversation, so each reads the same way and its decision
  * sits in the same place: a quiet header (what kind of request, and who else it waits for), the agent's own
  * words, what will happen drawn edge to edge (its preview, as an attachment's cover), the object on a line of its own between
  * hairlines with "Ver …" under its words opening it whole, anything to fill in, and the footer strip with the decision on
- * the left and the time left on the right. One surface: nothing inside has a background of its own.
+ * the left and the time left ending its line, or under it from the same edge when there's no room. One surface: nothing inside has a background of its own.
  *
  * Decided (`answer`), it is the same card: the header, the words and the object stay where they were, and the footer
  * strip says how it ended, who did it and when, in the buttons' place.
@@ -200,6 +194,7 @@ export function RequestCard({
   mine: waitsOnMe,
   waitingFor,
   who,
+  asker,
   source,
   lead,
   headless = false,
@@ -232,6 +227,8 @@ export function RequestCard({
   waitingFor?: string;
   /** Who asks, before the kind ("Ada · Pergunta"), where the card stands away from its conversation. */
   who?: ReactNode;
+  /** Another agent than the conversation's own asks here (work handed to it): "Atlas asks you". */
+  asker?: string;
   /** Where it was asked, after the kind ("Thread · #eng"), where the card stands away from its conversation. */
   source?: ReactNode;
   /** The agent's own words: what it asks. None on a card whose object says it all (one of a summary's). */
@@ -278,28 +275,9 @@ export function RequestCard({
   const ended = over || Boolean(answer);
   // Nothing waits on the viewer once it is decided.
   const mine = waitsOnMe && !ended;
-  // No dependency list: its height is read after every draw, so the answered card starts from the last one.
-  useLayoutEffect(() => {
-    const el = root.current;
-    if (!el) return;
-    const height = el.offsetHeight;
-    if (!ended) {
-      if (height) waitingHeights.set(id, height);
-      return;
-    }
-    const from = waitingHeights.get(id);
-    waitingHeights.delete(id);
-    if (!from || !height || from === height || prefersReducedMotion() || !el.animate) return;
-    el.animate(
-      [
-        { height: `${from}px`, overflow: "clip" },
-        { height: `${height}px`, overflow: "clip" },
-      ],
-      { duration: SETTLE_MS, easing: "ease-out" },
-    );
-  });
-  // A waiting card that left the screen for good (scrolled out of a long list) is no start for a later one.
-  useEffect(() => () => void waitingHeights.delete(id), [id]);
+  // Answered, it glides from its last height to the new one as its waiting look fades out over it, also when the
+  // answered card is another instance (its caller's branches differ): the same request's id carries it over.
+  useMorph(root, { key: id, live: !ended });
   // Waiting for the viewer: in the conversation's list, with what the bar says (kept current in place).
   useEffect(() => {
     const el = root.current;
@@ -331,9 +309,9 @@ export function RequestCard({
     </div>
   ) : (
     (actions || end) && (
-      <div className="rq__foot">
+      <div className="rq__foot ac-tailrow">
         {actions}
-        {end && <span className="rq__end">{end}</span>}
+        {end && <span className="rq__end ac-tail">{end}</span>}
         {under && <span className="rq__under">{under}</span>}
       </div>
     )
@@ -358,7 +336,7 @@ export function RequestCard({
                   {" · "}
                 </>
               )}
-              {askKindWords(t, kind, Boolean(mine))}
+              {asker && mine ? t("chat.request.asksYou", { name: asker }) : askKindWords(t, kind, Boolean(mine))}
               {source && <span className="rq__source"> · {source}</span>}
             </span>
           )}
@@ -444,6 +422,7 @@ export function RequestDone({
   action,
   time,
   note,
+  morphKey,
   children,
 }: {
   /** It went through. */
@@ -458,6 +437,8 @@ export function RequestDone({
   time?: string;
   /** A quiet line under the pill (when one approved ahead runs, when it ran): a long time never squeezes the words. */
   note?: ReactNode;
+  /** The same key as the `RequestOpen` it replaces: it glides and fades from it. */
+  morphKey?: string;
   /** The words: what it was and how it ended. */
   children: ReactNode;
 }) {
@@ -476,6 +457,7 @@ export function RequestDone({
   return (
     <EventPill
       className="rq-done"
+      morphKey={morphKey}
       role="group"
       aria-label={label}
       mark={
@@ -532,6 +514,8 @@ export function RequestOpen({
   /** Always under the frame: the why, what it gives, who may decide. */
   below?: ReactNode;
   time?: string;
+  /** The same key as the `RequestDone` that takes its place once decided. */
+  morphKey?: string;
   /** The one sentence: what it asks. */
   children: ReactNode;
 }) {
