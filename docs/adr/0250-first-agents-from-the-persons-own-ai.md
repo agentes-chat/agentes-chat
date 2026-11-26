@@ -53,9 +53,10 @@ fits "show me three, I pick one, on the onboarding's own page".
    mailbox's provider, else null), the routine's schedule read with the routines' own reader in the person's time zone
    (`cron` and `timezone`, null when neither the cron nor the words read), and a look with a different color for each
    option, one no agent there wears when there is one. It is audited (`first_agents.proposed`, with the source and the
-   app), limited to 10 an hour per person and workspace, and the person's apps hear `first_agents.received`. The
-   onboarding has no socket (it is outside the workspace's realtime provider), so it also reads the newest proposal
-   every few seconds while it waits. `GET …/first-agents` answers only the caller's own newest one.
+   app), limited to 10 an hour per person and workspace, and the person's apps hear `first_agents.received`: inside the
+   workspace, its realtime provider reads the newest proposal again. The onboarding has no socket (it is outside that
+   provider), so it also reads the newest proposal every few seconds while it waits. `GET …/first-agents` answers only
+   the caller's own newest one.
 
 4. **Picking makes one agent through the team card.** `pickFirstAgent` needs `create_agents` (members have it by
    default; without it, `create_agents_required`). It builds a one-agent team from the option and makes it through
