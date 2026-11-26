@@ -197,6 +197,18 @@ describe("numbered lists", () => {
     expect(parseMarkdown("1. a\n\nfim").map((b) => b.type)).toEqual(["list", "paragraph"]);
   });
 
+  test("an indented code block, quote or table after a blank stays a block, and the next item keeps its number", () => {
+    for (const detail of ["   ```bash\n   npm i\n   ```", "   > note", "   | x | y |\n   |---|---|\n   | 1 | 2 |"]) {
+      const blocks = parseMarkdown(`1. Install:\n\n${detail}\n\n2. Run`);
+      expect(blocks.map((b) => b.type)).toEqual([
+        "list",
+        detail.includes("```") ? "code" : detail.includes(">") ? "quote" : "table",
+        "list",
+      ]);
+      expect(blocks[2]).toEqual({ type: "list", ordered: true, start: 2, items: ["Run"] });
+    }
+  });
+
   test("a list that starts past 1 keeps its first number", () => {
     expect(parseMarkdown("intro\n3. c\n4. d")).toEqual([
       { type: "paragraph", text: "intro" },
