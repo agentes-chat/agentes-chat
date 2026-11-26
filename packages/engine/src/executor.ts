@@ -62,6 +62,7 @@ import {
   type AutoModels,
   autoApplied,
   autoLine,
+  autoModelFor,
   autoWanted,
   chooseAutoModel,
   fallbackChoice,
@@ -4245,6 +4246,16 @@ async function executeRunInner(
       !onlyThisComputer &&
       !plan.missionId &&
       (await planKeyFallbackOn(db, run.orgId));
+    // An agent on a computer brain with "Automático" as its API model never had that model chosen (only the right
+    // hand's is, `autoApiModelFor`): the key thinks with the workspace's model for the run's tier ("Modelos do
+    // Automático"), or "auto" reads as no credential and the run waits for its plan instead.
+    if (keyAfterPlans && isAutoModel(thinker.model)) {
+      const line = await autoLine(db, thinker).catch((): AutoLine => ({ provider: "anthropic" }));
+      if (line.provider === "openrouter") await ensureOpenRouterModels();
+      const tiers = (await orgAutoModels(db, run.orgId).catch((): AutoModels => ({})))[line.provider];
+      const model = autoModelFor(line.provider, t.autoModel?.tier ?? "medium", tiers, line.endpoint);
+      if (model) thinker = { ...thinker, model };
+    }
     // Just gone or waking from standby, the right hand waits without a word as any agent does: a standby the person
     // never sees must not read as its computer away (ADR 0161).
     if (

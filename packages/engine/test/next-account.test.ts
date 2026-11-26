@@ -506,6 +506,23 @@ test("every account at its limit with Continuar com a chave de API on: the works
   expect((await agentRow(fx))?.brainAccountId).toBe(OWN1);
 });
 
+test("every account at its limit with the key on and Automático as its API model: the key answers on the workspace's tier", async () => {
+  // A computer brain's agent on "Automático" never had its API model chosen (only the right hand's is): the key took
+  // "auto" as a model, found no credential for it and the run waited for the plan instead.
+  const { fx, walter, account, usage } = await world({ model: "auto" });
+  await account(WALTER_ALL, walter.id);
+  await usage(OWN1, 100);
+  await usage(WALTER_ALL, 100);
+  await setPlanKeyFallback(fx.db, fx.owner.id, fx.org.id, true);
+  const { brain, seen } = scripted(() => answers);
+  await ask(fx);
+  await drainOutbox(fx.db, handlersWith(fx, brain));
+  expect(seen).toHaveLength(0);
+  const [run] = await runs(fx);
+  expect(run).toMatchObject({ status: "done", brain: "model" });
+  expect(await notes(fx, "plan_limit_all_wait")).toHaveLength(0);
+});
+
 test("an agent pinned to its account waits for it, as before", async () => {
   const { fx, account, usage } = await world({ brainAccountPinned: true });
   await account(OWN2, fx.owner.id);

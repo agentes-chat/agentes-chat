@@ -244,7 +244,8 @@ export function AiAccountsTab({ keys }: { keys?: ReactNode }) {
         action={
           !nothing && (
             <span className="aa-acts">
-              {hub.order.length > 0 && (
+              {/* Its admins reach "Continuar com a chave de API" here even before any account has a place. */}
+              {(hub.order.length > 0 || hub.canConfigure) && (
                 <Button
                   size="sm"
                   variant="ghost"
