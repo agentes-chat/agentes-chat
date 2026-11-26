@@ -1,0 +1,863 @@
+/*
+ * The welcome wizard's pictures (ADR 0160, addendum of 2026-11-26): the app's own pieces on the team's sky or on a soft
+ * wash of one hue, in both themes. Every picture is drawn here as its animation ends; what moves lives under
+ * `prefers-reduced-motion: no-preference` further down, so whoever asked for less motion gets each one whole and still.
+ * The box they draw in is `.wiz__art` (welcome-wizard.css), a container (`wiz-art`) so a narrow dialog redraws them.
+ */
+/* ---------- the team's sky, and a line said over it ---------- */
+.team-scene.wiz-sky {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+}
+.wiz-say {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 40%;
+  display: block;
+  width: max-content;
+  max-width: 260px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-lg) var(--radius-lg) var(--radius-lg) var(--radius-xs);
+  background: var(--raised);
+  box-shadow: 0 10px 30px -10px rgb(0 20 60 / 0.45);
+  color: var(--ink);
+  font-size: 13.5px;
+  font-weight: 550;
+  line-height: 1.38;
+  text-align: start;
+  text-wrap: pretty;
+}
+
+/* ---------- 1. Hello: the team on the sky, the person among them ---------- */
+.wiz-cast {
+  position: absolute;
+  inset: auto 0 26px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 16px;
+}
+.wiz-cast__one {
+  position: relative;
+  display: block;
+  flex: none;
+}
+.wiz-cast__one .ac-avatar {
+  width: 52px;
+  height: 52px;
+}
+.wiz-cast__one[data-lead] .ac-avatar {
+  width: 64px;
+  height: 64px;
+}
+/* The person: a photo or initials, ringed in white so it reads on the sky. */
+.wiz-cast__me .ac-avatar {
+  width: 50px;
+  height: 50px;
+  box-shadow:
+    0 0 0 3px #fff,
+    0 8px 18px -6px rgb(0 20 60 / 0.45);
+}
+
+/* ---------- 2. The agent's computer: a screen with the team's sky, a site, its cursor and its finding ---------- */
+.wiz-pc-art {
+  --wash-top: color-mix(in srgb, #3f88f5 8%, var(--raised));
+  --wash-foot: color-mix(in srgb, #3f88f5 3%, var(--raised));
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(90% 80% at 30% 0%, color-mix(in srgb, #3f88f5 18%, transparent), transparent 65%),
+    linear-gradient(180deg, var(--wash-top), var(--wash-foot));
+}
+.wiz-pc {
+  position: absolute;
+  top: 30px;
+  left: 44px;
+  width: 372px;
+  padding: 8px;
+  border-radius: 14px;
+  background: #121826;
+  box-shadow: 0 24px 50px -24px rgb(10 20 50 / 0.6);
+}
+.wiz-pc__screen {
+  position: relative;
+  height: 178px;
+  overflow: hidden;
+  border-radius: 7px;
+  /* The cursor's way is measured in the screen's own width (`cqw`), so it lands on the same row at any size. */
+  container-type: inline-size;
+}
+/* A site is a site: light, whatever the app's theme. */
+.wiz-win {
+  position: absolute;
+  top: 16px;
+  right: 34px;
+  left: 22px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 14px 30px -14px rgb(0 20 60 / 0.55);
+  color: #1b2333;
+}
+.wiz-win__bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 8px;
+  background: #eef1f6;
+}
+.wiz-win__bar i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #cfd5df;
+}
+.wiz-win__bar span {
+  margin-inline-start: 8px;
+  padding: 1px 8px;
+  border-radius: 5px;
+  background: #fff;
+  color: #5b6475;
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+.wiz-win__page {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px 14px;
+}
+.wiz-win__page > b {
+  width: 46%;
+  height: 10px;
+  border-radius: 5px;
+  background: #1b2333;
+}
+.wiz-win__rows {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.wiz-win__rows li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 64px 58px;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 2px;
+  font-size: 11.5px;
+}
+.wiz-win__rows li > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wiz-win__rows li + li {
+  border-top: 1px solid #edf0f4;
+}
+/* The row the cursor found. */
+.wiz-win__rows li:first-child {
+  background: rgb(239 68 68 / 0.09);
+}
+.wiz-win__rows em {
+  color: #5b6475;
+  font-style: normal;
+  font-weight: 650;
+  text-align: end;
+  white-space: nowrap;
+}
+.wiz-win__rows em[data-state="late"] {
+  color: #d63c3c;
+}
+.wiz-win__rows em[data-state="paid"] {
+  color: #2f8a55;
+}
+.wiz-cursor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 15px;
+  height: 19px;
+  fill: #fff;
+  stroke: #10172a;
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 2px 2px rgb(0 0 0 / 0.3));
+  transform: translate(calc(100cqw - 112px), 86px);
+}
+.wiz-pc__who {
+  position: absolute;
+  right: 54px;
+  bottom: 26px;
+}
+.wiz-pc__who > .ac-avatar {
+  width: 60px;
+  height: 60px;
+}
+.wiz-say.wiz-pc__say {
+  right: -10px;
+  left: auto;
+  bottom: calc(100% + 10px);
+  width: 172px;
+  font-size: 13px;
+}
+
+/* ---------- 3. Channels: the list, a question, the agent typing, its answer ---------- */
+.wiz-chan {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: 158px minmax(0, 1fr);
+  align-content: center;
+  gap: 20px;
+  padding: 0 28px;
+  background:
+    radial-gradient(120% 100% at 100% 0%, color-mix(in srgb, #3f88f5 14%, transparent), transparent 60%),
+    linear-gradient(180deg, color-mix(in srgb, #3f88f5 6%, var(--raised)), var(--raised));
+}
+.wiz-chan__list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.wiz-chan__list li {
+  display: flex;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: 9px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.wiz-chan__hash {
+  color: var(--faint);
+}
+.wiz-chan__list li[data-on] {
+  background: var(--raised);
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 6px 14px -10px rgb(10 30 70 / 0.35);
+  color: var(--ink);
+}
+.wiz-chan__talk {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding-top: 4px;
+}
+.wiz-msg {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.wiz-msg > .ac-avatar {
+  flex: none;
+  width: 30px;
+  height: 30px;
+}
+.wiz-msg p {
+  margin: 0;
+  padding: 8px 12px 9px;
+  border-radius: 4px 14px 14px 14px;
+  background: var(--raised);
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 8px 18px -12px rgb(10 30 70 / 0.35);
+  font-size: 13.5px;
+  line-height: 19px;
+}
+.wiz-msg p b {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 650;
+}
+/* The agent typing shows only while it plays: still, its answer is already there. */
+.wiz-typing {
+  display: none;
+  overflow: hidden;
+}
+.wiz-dots {
+  display: inline-flex;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 4px 14px 14px 14px;
+  background: var(--raised);
+  box-shadow: 0 0 0 1px var(--line);
+}
+.wiz-dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+/* ---------- 4. Wiki: the page being written, the pages behind it, the agent at work ---------- */
+.wiz-wiki {
+  --wash-top: color-mix(in srgb, #f59e0b 4%, var(--raised));
+  --wash-foot: color-mix(in srgb, #f59e0b 10%, var(--raised));
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(90% 80% at 50% 100%, color-mix(in srgb, #f59e0b 14%, transparent), transparent 70%),
+    linear-gradient(180deg, var(--wash-top), var(--wash-foot));
+}
+.wiz-sheet {
+  position: absolute;
+  top: 36px;
+  left: calc(50% - 120px);
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  width: 240px;
+  height: 178px;
+  padding: 18px 20px;
+  border-radius: 14px;
+  background: var(--raised);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, #b45309 12%, transparent),
+    0 18px 40px -20px rgb(120 70 10 / 0.45);
+  color: var(--ink);
+}
+.wiz-sheet b {
+  margin-bottom: 2px;
+  font-size: 14.5px;
+  font-weight: 650;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wiz-sheet--back {
+  opacity: 0.92;
+  transform: translateX(var(--x)) rotate(var(--r)) scale(0.86);
+}
+.wiz-sheet--left {
+  --x: -118px;
+  --r: -7deg;
+}
+.wiz-sheet--right {
+  --x: 118px;
+  --r: 6deg;
+  align-items: flex-end;
+}
+.wiz-sheet--front {
+  z-index: 1;
+}
+.wiz-sheet--front i {
+  display: block;
+  width: var(--w);
+  height: 8px;
+  border-radius: 4px;
+  background: color-mix(in srgb, #f59e0b 16%, var(--line));
+  transform-origin: left;
+}
+.wiz-sheet__who {
+  position: absolute;
+  right: -16px;
+  bottom: -14px;
+}
+.wiz-sheet__who > .ac-avatar {
+  width: 44px;
+  height: 44px;
+}
+
+/* ---------- 5. Memory: notes drift in to the agent, the rings breathe ---------- */
+.wiz-mem {
+  --wash-top: color-mix(in srgb, #8b5cf6 3%, var(--raised));
+  --wash-foot: color-mix(in srgb, #8b5cf6 7%, var(--raised));
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(60% 70% at 50% 55%, color-mix(in srgb, #8b5cf6 16%, transparent), transparent 70%),
+    linear-gradient(180deg, var(--wash-top), var(--wash-foot));
+}
+.wiz-mem__who,
+.wiz-mem__ring {
+  position: absolute;
+  top: 54%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+.wiz-mem__who > .ac-avatar {
+  width: 72px;
+  height: 72px;
+}
+.wiz-mem__ring {
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, #8b5cf6 30%, transparent);
+}
+.wiz-mem__ring--2 {
+  width: 170px;
+  height: 170px;
+  opacity: 0.5;
+}
+.wiz-note {
+  --k: 1;
+  position: absolute;
+  top: 54%;
+  left: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 11px;
+  border-radius: 10px;
+  background: var(--raised);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, #8b5cf6 14%, transparent),
+    0 10px 24px -14px rgb(60 20 140 / 0.45);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  transform: translate(-50%, -50%) translate(calc(var(--x) * var(--k)), var(--y));
+}
+.wiz-note .ac-icon {
+  color: #8b5cf6;
+}
+.wiz-note[data-n="a"] {
+  --x: -150px;
+  --y: -62px;
+  --i: 0;
+}
+.wiz-note[data-n="b"] {
+  --x: 150px;
+  --y: -50px;
+  --i: 1;
+}
+.wiz-note[data-n="c"] {
+  --x: -160px;
+  --y: 48px;
+  --i: 2;
+}
+.wiz-note[data-n="d"] {
+  --x: 160px;
+  --y: 60px;
+  --i: 3;
+}
+
+/* ---------- 6. Routines: the clock at 9:00, the routine's card, then the ok it waits for ---------- */
+/* On the sky, whatever the theme: a white plate. */
+.wiz-clock {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  width: 108px;
+  height: 46px;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 0.92);
+  box-shadow: 0 10px 24px -12px rgb(0 20 60 / 0.5);
+  color: #10172a;
+  font-family: var(--font-dot);
+  font-size: 28px;
+  font-weight: 900;
+  transform: translateX(-50%);
+}
+.wiz-clock > span {
+  grid-area: 1 / 1;
+}
+.wiz-clock__was {
+  opacity: 0;
+}
+.wiz-card {
+  position: absolute;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(404px, calc(100% - 32px));
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--raised);
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 14px 30px -14px rgb(0 20 60 / 0.5);
+  transform: translateX(-50%);
+}
+.wiz-card > .ac-avatar {
+  flex: none;
+  width: 30px;
+  height: 30px;
+}
+.wiz-card__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 13.5px;
+  line-height: 18px;
+}
+.wiz-card__text b {
+  font-weight: 650;
+}
+.wiz-card__text span {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.wiz-card > .ac-icon {
+  color: var(--muted);
+}
+.wiz-card--routine {
+  top: 82px;
+}
+.wiz-card--ask {
+  top: 154px;
+}
+.wiz-card__acts {
+  display: flex;
+  flex: none;
+  gap: 6px;
+}
+
+/* ---------- 7. Ready: the beta word over the team ---------- */
+.wiz-beta {
+  position: absolute;
+  inset: 16px 0 auto;
+  color: rgb(255 255 255 / 0.9);
+  font-family: var(--font-dot);
+  font-size: 88px;
+  font-weight: 900;
+  line-height: 96px;
+  letter-spacing: 0.06em;
+  text-align: center;
+  text-indent: 0.06em;
+  text-shadow: 0 2px 0 rgb(10 40 120 / 0.18);
+  pointer-events: none;
+}
+
+/* ---------- a narrow dialog (a phone): each picture keeps what tells its story ---------- */
+@container wiz-art (max-width: 540px) {
+  .wiz-say {
+    max-width: 200px;
+  }
+  .wiz-cast__one .ac-avatar {
+    width: 46px;
+    height: 46px;
+  }
+  .wiz-cast__one[data-lead] .ac-avatar {
+    width: 56px;
+    height: 56px;
+  }
+  .wiz-pc {
+    top: 22px;
+    right: 16px;
+    left: 16px;
+    width: auto;
+  }
+  .wiz-pc__screen {
+    height: 150px;
+  }
+  .wiz-pc__who {
+    right: 14px;
+    bottom: 10px;
+  }
+  .wiz-pc__who > .ac-avatar {
+    width: 48px;
+    height: 48px;
+  }
+  .wiz-say.wiz-pc__say {
+    right: 0;
+    width: 160px;
+  }
+  .wiz-chan {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 0 var(--dialog-pad);
+  }
+  .wiz-chan__list {
+    display: none;
+  }
+  .wiz-sheet {
+    top: 24px;
+  }
+  .wiz-sheet--left {
+    --x: -96px;
+  }
+  .wiz-sheet--right {
+    --x: 96px;
+  }
+  .wiz-note {
+    --k: 0.42;
+  }
+  .wiz-note[data-n="a"] {
+    --y: -84px;
+  }
+  .wiz-note[data-n="d"] {
+    --y: 70px;
+  }
+  .wiz-note[data-n="b"],
+  .wiz-note[data-n="c"] {
+    display: none;
+  }
+  .wiz-card__acts > .ac-btn:first-child {
+    display: none;
+  }
+  .wiz-beta {
+    font-size: 58px;
+    line-height: 72px;
+  }
+}
+
+/* ---------- the motion: each picture plays once as its step opens, then breathes ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  /* 1. One after another, then each bobs on its own beat; the right hand speaks once they're up. */
+  .wiz-rise {
+    animation:
+      wiz-rise 0.7s cubic-bezier(0.2, 0.9, 0.25, 1.15) both,
+      wiz-bob 3.4s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 0.12s + 0.1s), calc(var(--i) * 0.3s + 1.2s);
+  }
+  .wiz-cast .wiz-say {
+    animation: wiz-pop 0.45s ease-out 0.9s both;
+  }
+  /* 2. The screen, the site, the cursor's way to the late row and its click, the row marked, the line said. */
+  .wiz-pc {
+    animation: wiz-pop 0.45s ease-out both;
+  }
+  .wiz-win {
+    animation: wiz-pop 0.4s ease-out 0.35s both;
+  }
+  .wiz-cursor {
+    animation:
+      wiz-move 1s cubic-bezier(0.4, 0, 0.2, 1) 0.7s both,
+      wiz-click 0.25s ease-in-out 1.62s;
+  }
+  .wiz-win__rows li:first-child {
+    animation: wiz-mark 0.5s ease-out 1.75s both;
+  }
+  .wiz-pc__who {
+    animation: wiz-bob 2.6s ease-in-out infinite;
+  }
+  .wiz-pc__say {
+    animation: wiz-pop 0.45s ease-out 2s both;
+  }
+  /* 3. The question, the agent typing for a moment, its answer. */
+  .wiz-in {
+    animation: wiz-pop 0.45s ease-out var(--d) both;
+  }
+  .wiz-typing {
+    display: flex;
+    animation: wiz-typing 2.1s ease both;
+  }
+  .wiz-dots i {
+    animation: wiz-bob 0.9s ease-in-out infinite;
+  }
+  .wiz-dots i:nth-child(2) {
+    animation-delay: 0.15s;
+  }
+  .wiz-dots i:nth-child(3) {
+    animation-delay: 0.3s;
+  }
+  /* 4. The pages fan out, the front one's lines are written one by one. */
+  .wiz-sheet--back {
+    animation: wiz-fan 0.7s cubic-bezier(0.2, 0.9, 0.25, 1.1) 0.1s both;
+  }
+  .wiz-sheet--front {
+    animation: wiz-pop 0.5s ease-out both;
+  }
+  .wiz-sheet--front i {
+    animation: wiz-line 0.5s ease-out both;
+    animation-delay: calc(var(--i) * 0.28s + 0.4s);
+  }
+  .wiz-sheet__who {
+    animation: wiz-bob 2.4s ease-in-out infinite;
+  }
+  /* 5. The notes drift in from further out, then float; the rings breathe out from the agent. */
+  .wiz-note {
+    animation:
+      wiz-drift 0.9s cubic-bezier(0.2, 0.9, 0.25, 1) both,
+      wiz-float 4s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 0.25s + 0.2s), calc(var(--i) * 0.5s + 1.4s);
+  }
+  .wiz-mem__ring {
+    width: 110px;
+    height: 110px;
+    opacity: 1;
+    animation: wiz-ring 3s ease-out infinite;
+  }
+  .wiz-mem__ring--2 {
+    animation-delay: 1.5s;
+  }
+  /* 6. 8:59 turns 9:00, the routine's card comes, then the ask, whose Approve calls softly. */
+  .wiz-clock__was {
+    animation: wiz-out 0.3s ease-in 0.7s both;
+  }
+  .wiz-clock__now {
+    animation: wiz-tick 0.35s ease-out 0.95s both;
+  }
+  .wiz-card--routine {
+    animation: wiz-slide 0.5s cubic-bezier(0.2, 0.9, 0.25, 1.1) 1.25s both;
+  }
+  .wiz-card--ask {
+    animation: wiz-slide 0.5s cubic-bezier(0.2, 0.9, 0.25, 1.1) 1.9s both;
+  }
+  .wiz-pulse {
+    animation: wiz-ping 1.8s ease-out 2.6s infinite;
+  }
+  /* 7. The word comes, the team bobs under it. */
+  .wiz-beta {
+    animation: wiz-pop 0.6s ease-out 0.15s both;
+  }
+  .wiz-bob {
+    animation: wiz-bob 3.2s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 0.35s);
+  }
+}
+
+@keyframes wiz-tick {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@keyframes wiz-rise {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes wiz-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+@keyframes wiz-pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes wiz-move {
+  from {
+    transform: translate(60px, 150px);
+  }
+  to {
+    transform: translate(calc(100cqw - 112px), 86px);
+  }
+}
+@keyframes wiz-click {
+  0%,
+  100% {
+    transform: translate(calc(100cqw - 112px), 86px);
+  }
+  50% {
+    transform: translate(calc(100cqw - 112px), 86px) scale(0.8);
+  }
+}
+@keyframes wiz-mark {
+  from {
+    background: transparent;
+  }
+}
+@keyframes wiz-typing {
+  0%,
+  38% {
+    max-height: 0;
+    margin-bottom: 0;
+    opacity: 0;
+  }
+  46%,
+  90% {
+    max-height: 40px;
+    margin-bottom: 12px;
+    opacity: 1;
+  }
+  100% {
+    max-height: 0;
+    margin-bottom: 0;
+    opacity: 0;
+  }
+}
+@keyframes wiz-fan {
+  from {
+    opacity: 0;
+    transform: translateX(0) rotate(0) scale(0.86);
+  }
+}
+@keyframes wiz-line {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes wiz-drift {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) translate(calc(var(--x) * var(--k) * 1.5), calc(var(--y) * 1.5)) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) translate(calc(var(--x) * var(--k)), var(--y));
+  }
+}
+@keyframes wiz-float {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) translate(calc(var(--x) * var(--k)), var(--y));
+  }
+  50% {
+    transform: translate(-50%, -50%) translate(calc(var(--x) * var(--k)), calc(var(--y) - 5px));
+  }
+}
+@keyframes wiz-ring {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.7);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(2.2);
+  }
+}
+@keyframes wiz-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+@keyframes wiz-slide {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%);
+  }
+}
+@keyframes wiz-ping {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--ink) 35%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 10px transparent;
+  }
+}

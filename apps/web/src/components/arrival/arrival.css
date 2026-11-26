@@ -1,6 +1,6 @@
 /*
- * What a person meets right after the onboarding (ADR 0160): the beta notice, Connect an AI with the team on its
- * stage, and the feedback form. One pixel sky for the three, with the workspace's own agents on it.
+ * What a person meets right after the onboarding (ADR 0160): Connect an AI with the team on its stage, and the
+ * feedback form (the welcome wizard has its own sheets). One pixel sky for them, with the workspace's own agents on it.
  */
 
 /* ---------- the team on its sky ---------- */
@@ -225,48 +225,6 @@
   width: 16px;
   height: 16px;
   color: var(--faint);
-}
-
-/* ---------- the beta notice ---------- */
-/* The word in the dot font: an occasion of its own, like a big number. */
-.arrival-beta__word {
-  position: absolute;
-  inset: 20px 0 auto;
-  font-family: var(--font-dot);
-  font-size: 46px;
-  font-weight: 900;
-  line-height: 1;
-  letter-spacing: 0.14em;
-  text-indent: 0.14em;
-  text-align: center;
-  color: #fff;
-  pointer-events: none;
-}
-.arrival-points {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  margin: 0;
-  padding: 6px 0 4px;
-  list-style: none;
-}
-/* An `.ac-iconline`: the icon on the title's line, never centered against the two lines. */
-.arrival-points li {
-  gap: 12px;
-}
-.arrival-points .ac-icon {
-  color: var(--muted);
-}
-.arrival-points b {
-  display: block;
-  font-weight: 600;
-}
-.arrival-points span {
-  display: block;
-  color: var(--muted);
-  font-size: 14px;
-  line-height: 20px;
-  text-wrap: pretty;
 }
 
 /* ---------- Connect an AI, with the team on its stage ---------- */

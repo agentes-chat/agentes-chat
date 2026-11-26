@@ -1,8 +1,8 @@
 # 0160. The arrival after the onboarding, and feedback by email
 
-- Status: Accepted. Amended 2026-11-16 (the addendum on support requests: a record that a member asked, and where their words are kept)
+- Status: Accepted. Amended 2026-11-16 (the addendum on support requests: a record that a member asked, and where their words are kept), 2026-11-26 (the welcome wizard in place of the beta notice)
 - Date: 2026-11-09
-- Code: web `components/arrival/*` (`Arrival`, `BetaDialog`, `TeamScene`, `ConnectChoices`, `FeedbackDialog`,
+- Code: web `components/arrival/*` (`Arrival`, `WelcomeWizard`, `WelcomeArt`, `TeamScene`, `ConnectChoices`, `FeedbackDialog`,
   `FeedbackMark`), `components/ConnectAi.tsx` (`ConnectAiRequest.arrival`), `pages/OnboardingPage.tsx`
   (`?arrival=1`); server `routes/app/feedback.ts` (`POST /api/app/feedback`, `…/feedback/files`, `GET /api/feedback-files/{token}`), `auth.ts` (`auth-config.feedback`);
   engine `feedback.ts` (jobs `feedback.send`, `feedback.file.purge`), `feedback-tools.ts` (`send_feedback`, `offer_feedback`), `feedback-offers.ts` (`decideFeedbackOffer`, `APP_FAULT_HINT`); server `POST …/feedback/offers/{messageId}`; web `components/FeedbackOffer.tsx`, phone `features/chat/FeedbackOffer.tsx`; config `FEEDBACK_EMAIL`, `FEEDBACK_RELAY`, `FEEDBACK_URL`, `FEEDBACK_INBOX`; the inbox `POST /api/feedback/inbox` (`registerFeedbackInbox`, `relayQueuedFeedback`, `sendRelayedFeedback`); web
@@ -214,3 +214,42 @@ A feedback was one email and nothing else: "Nothing is stored beyond the outbox 
 - **For how long.** The words 90 days, the row a year (a daily sweep). It goes with its workspace or with the person's account. Words kept while the token was set stay their 90 days when it is taken away: the door is closed then, so nothing reads them, and the sweep drops them by their age.
 - **Who reads it.** Nobody in the apps. The operator API lists a workspace's requests without their words, and gives the words only through its reveal door, one at a time, on record, and shown in the workspace's audit log.
 - **What the form says is unchanged**: who reads the feedback. On a server that keeps the words, its operator owes its workspaces that notice (ADR 0056).
+
+## Addendum (2026-11-26): the welcome wizard in place of the beta notice
+
+The beta notice said one thing (the product is in beta) to someone about to meet everything else for the first time:
+what an agent's computer is, where a question goes, what the wiki and the memory are, and that routines run alone
+while anything serious waits for them. They found each of those by stumbling on it, and the onboarding no longer
+walks them through a team. This supersedes §2's first half: the notice is now the wizard's last step.
+
+- **What it is.** A dialog in seven short steps (`WelcomeWizard`): the welcome (the right hand, the person and the
+  person's own agents rise on the day sky, the right hand saying who it is), every agent's own computer (it opens
+  sites, uses apps and runs code alone; the person watches live or takes control), a subject per channel, the wiki as
+  the workspace's documentation, memory the person reviews, routines and the approvals that wait for an ok, and "All
+  set to begin". Each step has a picture on top, its title and one or two sentences, dots for where it is, Skip
+  (straight to the last step), Back and Next; the last one's button is "Get started". Enter goes on.
+- **Pictures made of the app.** Each picture (`WelcomeArt`) is drawn with the app's own pieces (the team's sky, the
+  living avatars, a message, a card, the kit's buttons) and the workspace's real agents: the person's first agent at
+  work, else the right hand, by its real name and look. They are decorative and inert: the step's words say the
+  same, and their sample words (a site's list of payments, a chat, notes, a routine) are never the person's data and
+  name no brand. A personal workspace (ADR 0159) has its own samples and words, its third step about conversations
+  instead of channels. Each picture plays once as its step opens; for whoever asked for less motion each is drawn
+  whole and still, as its animation ends.
+- **The last step is the first-run list.** "All set to begin" shows the beta word over the team and the right hand's
+  first-run rows (ADR 0155 §6, ADR 0162) as the data has them, from the same facts as its card (`useFirstRun`): the
+  plan (in force by its name when this tab bought it, or its way to Checkout while the workspace waits for its first
+  one), the AI ("Claude connected"), people (on the team or invited) and the apps ("Choose"). A row still open has its
+  button, which closes the wizard and opens its own way (Connect, the invite dialog, the connectors' page, billing);
+  rows that open with the plan say so with no button. Above them, how many are left and that the same list stays in
+  the person's conversation with the right hand; with nothing left, that everything is in place. Under them, the beta
+  line: it gets better every week and a failure is ours, and, only where the server takes feedback, that "Send
+  feedback" is at the bottom of the sidebar. The rows are the owners', as the card's: anyone else sees none.
+- **Once per person and workspace.** Asked for by the address as before (`?arrival=1`, `?arrival=beta`), and this
+  browser now keeps that it was on screen for that person there (`welcomeSeen`, a `STORAGE_KEYS` entry), so a reload
+  or the same address again opens nothing. Another browser can show it once more: nothing is stored on the server.
+- **The same sequence.** A paid moment that came with it still comes first (ADR 0079, `usePaidMoment`); after "Get
+  started", Esc or a press outside, Connect an AI follows as it followed the notice (`?arrival=1`, someone who may
+  connect, an agent that can't think, no paid moment waiting). A last-step row that leads somewhere of its own
+  replaces that hand-off. Its code loads when it first opens (`lazyDialog`), so the workspace's first page doesn't
+  carry it.
+- New strings under `arrival.welcome`; `arrival.beta` is gone.

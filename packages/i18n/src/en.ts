@@ -23207,28 +23207,160 @@ export const en = {
       talk: "Talk to {{name}}",
     },
   },
-  /** Right after the onboarding (ADR 0160): the beta notice, then Connect an AI with the team beside it. */
+  /** Right after the onboarding (ADR 0160): the welcome wizard, then Connect an AI with the team beside it. */
   arrival: {
-    beta: {
-      /** Drawn large over the sky: the word itself, in capitals. */
-      word: "BETA",
-      title: "You're early. We're glad.",
-      text: "agentes.chat is in beta: you can already do real work with it, and we're still polishing.",
-      weekly: {
-        title: "It gets better every week",
-        text: "New things and fixes come out all the time.",
+    /**
+     * The welcome wizard (ADR 0160, addendum of 2026-11-26): seven short steps, each under a moving picture drawn with
+     * the app's own pieces. The pictures are decorative: their sample words (a list of payments, a chat, notes) are
+     * never the person's data, and each step's title and text say it in words. `*Personal` keys are a personal
+     * workspace's (ADR 0159).
+     */
+    welcome: {
+      /** For screen readers, where the dots show it. */
+      stepOf: "Step {{n}} of {{total}}",
+      /** Goes straight to the last step, the one with what is left to do. */
+      skip: "Skip",
+      next: "Next",
+      /** The last step's button: the wizard closes on the workspace. */
+      start: "Get started",
+      hello: {
+        /** `{{org}}`: the workspace's name. `{{first}}`: the person's first name; `titleNoName` when it isn't known. */
+        title: "Welcome to {{org}}, {{first}}",
+        titleNoName: "Welcome to {{org}}",
+        titlePersonal: "Welcome, {{first}}",
+        titleNoNamePersonal: "Welcome",
+        text: "Here you and the agents work together, by day and by night. In a minute, the essentials.",
+        textPersonal: "Here you and your agents work together, by day and by night. In a minute, the essentials.",
+        /** The right hand's line, in a bubble over it, as the team rises. `{{name}}`: its name. */
+        say: "Hi, {{first}}! I'm {{name}}, HR for the agents.",
+        sayNoName: "Hi! I'm {{name}}, HR for the agents.",
       },
-      fails: {
-        title: "Sometimes something fails",
-        text: "If it gets stuck or looks odd, the problem is ours, not yours.",
+      computer: {
+        title: "Every agent has its own computer",
+        text: "On it, they open sites, use apps and run code, on their own. Whenever you like, you watch live or take control.",
+        /** The picture: a site's payments on the agent's screen, its cursor finding the late one. Sample words. */
+        tab: "Payments",
+        rows: {
+          a: { name: "Sunrise Clinic", amount: "$890", state: "12 days" },
+          b: { name: "Riverside Clinic", amount: "$640", state: "5 days" },
+          c: { name: "Harbor Dental", amount: "$1,120", state: "Paid" },
+        },
+        /** The agent's line beside its screen. */
+        say: "2 clinics are late. The reminders are ready for your OK.",
+        tabPersonal: "This month's bills",
+        rowsPersonal: {
+          a: { name: "Power", amount: "$89", state: "Due today" },
+          b: { name: "Phone", amount: "$45", state: "In 5 days" },
+          c: { name: "Rent", amount: "$1,400", state: "Paid" },
+        },
+        sayPersonal: "The power bill is due today. The payment is ready for your OK.",
       },
-      /** Only where the feedback form exists. */
-      feedback: {
-        title: "Your feedback decides what comes next",
-        text: "Tell us what was missing or got in your way. We read everything.",
+      channels: {
+        title: "Every subject in its channel",
+        titlePersonal: "Every subject in its conversation",
+        text: "Write as you would to someone on the team. Whoever knows the subject answers, person or agent. To talk to an agent, just call it by name.",
+        textPersonal:
+          "Write as you would to someone you trust. Each agent takes care of its subject, and to talk to one, just call it by name.",
+        /** The picture's list, the second one open: channel names (no #), or a personal workspace's subjects. */
+        list: { a: "support", b: "billing", c: "finance", d: "sales" },
+        listPersonal: { a: "Home", b: "Bills", c: "Trips", d: "Health" },
+        /** The person's question in the picture, then the agent's answer. Sample words. */
+        ask: "Has Sunrise Clinic paid?",
+        answer: "Yesterday at 2:20 PM. I marked it as paid and told finance.",
+        askPersonal: "Did the power bill get paid?",
+        answerPersonal: "Yesterday at 2:20 PM. I saved the receipt.",
       },
-      /** "Send feedback" is the row at the bottom of the sidebar (`feedback.open`): the same words. */
-      where: "To write to us, use Send feedback, at the bottom of the sidebar.",
+      wiki: {
+        title: "The wiki is {{org}}'s documentation",
+        titlePersonal: "The wiki keeps what matters",
+        text: "The company's shared documentation: processes, prices, how to talk to customers. The agents read it before they answer and write to it when they learn something new.",
+        textPersonal:
+          "Your notes in one place: bills, documents, how you like things done. Your agents read them before they answer and write when they learn something new.",
+        /** The picture's pages: one being written in front, two behind it. Sample titles. */
+        pages: { left: "Prices", right: "What {{org}} does", front: "Payment reminders" },
+        pagesPersonal: { left: "Documents", right: "About me", front: "Household bills" },
+      },
+      memory: {
+        title: "They remember what matters",
+        text: "With every conversation, they keep preferences, decisions and who takes care of what. You review what becomes memory.",
+        /** What the agent learned, drifting in to it. `{{first}}`: the person's first name. Sample notes. */
+        notes: {
+          a: "{{org}} closes at 6 PM",
+          b: "{{first}} likes short summaries",
+          c: "Reminders on weekdays only",
+          d: "Sunrise Clinic pays on the 10th",
+        },
+        notesPersonal: {
+          a: "Workout at 6 PM, three times a week",
+          b: "{{first}} likes short summaries",
+          c: "Reminders on weekdays only",
+          d: "Rent is due on the 10th",
+        },
+        /** Note `b` when the person's name isn't known. */
+        likes: "Likes short summaries",
+      },
+      routines: {
+        title: "Work that happens on its own",
+        text: "Routines run at the time you ask, like “every day at 9”. And anything serious, like sending, paying or deleting, waits for your OK.",
+        /** The picture: a routine's card as the clock turns 9:00, then an action waiting for the person. */
+        routine: "Daily summary",
+        routineText: "2 payments came in, 2 are late",
+        ask: "Send the payment reminder to 3 clinics?",
+        routinePersonal: "Your day",
+        routineTextPersonal: "3 emails need a reply, 1 bill is due today",
+        askPersonal: "Pay the $89 power bill?",
+        /** `{{name}}`: the agent asking. */
+        asks: "{{name}} asks for your OK",
+        refuse: "Decline",
+        approve: "Approve",
+      },
+      ready: {
+        title: "All set to begin",
+        /** Drawn large over the sky: the word itself, in capitals. */
+        word: "BETA",
+        /** How many rows of the list below are still open. */
+        left_one: "Just one thing left.",
+        left_other: "{{count}} things left.",
+        /** The same list stays on the right hand's card, in the person's conversation with it. `{{name}}`: its name. */
+        later:
+          "If you leave it for later, this list stays in your conversation with {{name}}, for you to finish whenever you like.",
+        none: "Everything is in place. Now just talk to the team.",
+        nonePersonal: "Everything is in place. Now just talk to your agents.",
+        /** The beta line under the list: `beta` in bold, then the rest. */
+        beta: "We're in beta.",
+        betaText: "It gets better every week, and if something fails, the problem is ours.",
+        /** `{{where}}`: the sidebar row's own words (`feedback.open`). Only where the server takes feedback. */
+        feedback: "Tell us what's missing in {{where}}, at the bottom of the sidebar.",
+        /** The list's rows: done, or still to do with their button. */
+        rows: {
+          /** `{{plan}}`: the plan's name, as the billing service writes it ("Team"). */
+          plan: "{{plan}} plan active",
+          planAny: "Plan active",
+          planTodo: "Turn the team on",
+          planTodoPersonal: "Turn your agents on",
+          planAction: "See plans",
+          /** `{{label}}`: what the team thinks with ("Claude"). */
+          ai: "{{label}} connected",
+          aiAny: "An AI is connected",
+          aiTodo: "Connect an AI",
+          aiAction: "Connect",
+          people_one: "{{count}} person on the team",
+          people_other: "{{count}} people on the team",
+          /** Invited, not in yet. */
+          invited_one: "{{count}} person invited",
+          invited_other: "{{count}} people invited",
+          peopleNone: "Just you for now",
+          peopleTodo: "Invite the people you work with",
+          peopleAction: "Invite",
+          /** `{{apps}}`: the apps connected, joined as the language lists names ("Gmail and Drive"). */
+          apps_one: "{{apps}} connected",
+          apps_other: "{{apps}} connected",
+          appsNone: "No apps for now",
+          appsTodo: "Connect your work apps",
+          appsTodoPersonal: "Connect your apps",
+          appsAction: "Choose",
+        },
+      },
     },
     /** Over the sky where the workspace's agents stand: asleep at night, then awake by day. */
     stage: {

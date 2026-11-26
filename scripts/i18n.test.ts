@@ -3,11 +3,11 @@ import { flatten } from "../packages/i18n/test/check-locale";
 import { outdatedKeys, SURFACES } from "./i18n";
 
 /**
- * These speak of writing to us and send nobody to a support channel: the beta notice's line names the app's own
- * feedback form, and a sent report shows the code to quote when writing about it. By surface and key.
+ * These speak of writing to us and send nobody to a support channel: a sent report shows the code to quote when
+ * writing about it. By surface and key.
  */
 const WRITTEN_TO: Record<string, string[]> = {
-  app: ["arrival.beta.where", "problemReport.sentText", "problemReport.sentTextReply"],
+  app: ["problemReport.sentText", "problemReport.sentTextReply"],
   desktop: ["report.sentText", "report.sentTextReply"],
 };
 
