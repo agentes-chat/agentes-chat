@@ -291,6 +291,11 @@ test("a connected computer marked the workspace's and open to everyone is the ri
   expect(runner.sent.slice(framesBefore).some((frame) => frame.type === "agents")).toBe(true);
   expect((await runCode(mine)).isError).toBeFalsy();
   expect(ran.map((r) => r.agent)).toEqual([await seatId(f.owner.id)]);
+
+  // Connected by a member who is no admin: whoever runs it would read every member's right hand there.
+  const member = await addMember(f.db, f.org.id, "member", "Pat Example");
+  await f.db.update(schema.machines).set({ pairedByUserId: member.id }).where(eq(schema.machines.id, machineId));
+  expect(JSON.stringify((await runCode(mine)).content)).toContain(noHome);
 });
 
 test("the hub refuses the agent's own id for anything but its locked chat turn", async () => {

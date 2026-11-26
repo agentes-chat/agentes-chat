@@ -267,12 +267,13 @@ export function setupOfAgent(a: Agent): schema.AgentSetup {
 
 /**
  * The workspace's own computer once it has connected (ADR 0056 §10), else null: managed, else the server's own, else
- * a connected one an admin marked the workspace's and opened to everyone (a self-hosted server's VPS, ADR 0175 §3).
- * Open to everyone, every member's agents already run there, so a seat of the right hand gives nobody more.
+ * a connected one marked the workspace's and opened to everyone (a self-hosted server's VPS, ADR 0175 §3) whose
+ * pairer is still an admin. Every member's right hand keeps its sign-ins and files there, and whoever runs a
+ * connected computer reads all of it: only someone already trusted with the whole workspace may be that person.
  */
 export async function workspaceHomeId(db: Executor, orgId: string): Promise<string | null> {
-  const [home] = await db
-    .select({ id: machines.id })
+  const rows = await db
+    .select({ id: machines.id, kind: machines.kind, pairedBy: machines.pairedByUserId })
     .from(machines)
     .where(
       and(
@@ -283,15 +284,19 @@ export async function workspaceHomeId(db: Executor, orgId: string): Promise<stri
             eq(machines.kind, "connected"),
             eq(machines.belongsToWorkspace, true),
             eq(machines.audienceMode, "everyone"),
+            isNotNull(machines.pairedByUserId),
           ),
         ),
         isNotNull(machines.tokenHash),
         isNull(machines.deletedAt),
       ),
     )
-    .orderBy(sql`case ${machines.kind} when 'managed' then 0 when 'host' then 1 else 2 end`, asc(machines.createdAt))
-    .limit(1);
-  return home?.id ?? null;
+    .orderBy(sql`case ${machines.kind} when 'managed' then 0 when 'host' then 1 else 2 end`, asc(machines.createdAt));
+  for (const m of rows) {
+    if (m.kind !== "connected") return m.id;
+    if (m.pairedBy && can(await getMembership(db, m.pairedBy, orgId), "configure")) return m.id;
+  }
+  return null;
 }
 
 /**
