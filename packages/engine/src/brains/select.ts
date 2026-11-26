@@ -704,11 +704,13 @@ async function sessionFor(
   accountId: string | null,
   options: { fresh?: boolean; promptKey?: string; peek?: boolean },
   now: Date,
-): Promise<{ id: string; resume: boolean }> {
+): Promise<{ id: string; resume: boolean; partsRead?: string | null; refreshRead?: string[] }> {
   if (run.brainSessionId) {
     return { id: run.brainSessionId, resume: await sessionUsed(db, run, kind, run.brainSessionId) };
   }
   let id: string | null = null;
+  let partsRead: string | null = null;
+  let refreshRead: string[] = [];
   if (!options.fresh && !run.background) {
     const { agentRuns, agentRunSteps, usageRecords, messages } = schema;
     const [last] = await db
@@ -731,6 +733,13 @@ async function sessionFor(
           (select max(u.input_tokens + u.cache_read_tokens + u.cache_write_tokens)
             from ${usageRecords} u where u.run_id = "agent_runs"."id" and u.provider = ${kind}), 0)`.mapWith(Number),
         promptKey: sql<string | null>`${runState}->>'promptKey'`,
+        // Not in `state`: read on this one row only.
+        partsRead: sql<string | null>`${agentRuns.transcript}->>'sessionParts'`,
+        refreshRead: sql<
+          string[]
+        >`jsonb_path_query_array(${agentRuns.transcript}->'system', '$[*] ? (@.refresh == true).text')::text`.mapWith(
+          (v: string | null) => (v ? (JSON.parse(v) as string[]) : []),
+        ),
       })
       .from(agentRuns)
       .where(
@@ -777,12 +786,16 @@ async function sessionFor(
       (options.promptKey === undefined || last.promptKey === options.promptKey)
     ) {
       id = last.sessionId;
+      partsRead = last.partsRead;
+      refreshRead = last.refreshRead;
     }
   }
   const sessionId = id ?? brainSessionId(agent.id, `${conversation}:${run.id}`, kind);
   if (!options.peek)
     await db.update(schema.agentRuns).set({ brainSessionId: sessionId }).where(eq(schema.agentRuns.id, run.id));
-  return { id: sessionId, resume: id ? await sessionUsed(db, run, kind, sessionId) : false };
+  return id
+    ? { id: sessionId, resume: await sessionUsed(db, run, kind, sessionId), partsRead, refreshRead }
+    : { id: sessionId, resume: false };
 }
 
 /**

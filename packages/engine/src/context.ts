@@ -45,6 +45,7 @@ import {
   handOffsFrom,
 } from "./consultations";
 import { teamMemoryForPrompt } from "./context/tools";
+import { sha256 } from "./crypto";
 import { widgetRunContext } from "./dashboards/refresh-context";
 import { deviceRoster, osName, switchesOff } from "./device-resolve";
 import { isAgentOnlyDm } from "./dms";
@@ -453,18 +454,114 @@ export interface ContextBlock extends SystemBlock {
    * conversation of the agent and the cached prefix is shared. The model brain reads it where it is.
    */
   conversation?: boolean;
+  /**
+   * A conversation block that follows the run's tools (what it can do here, writing to the wiki): a resumed computer
+   * session reads it again when it changed (`changedForSession`), instead of a new session starting.
+   */
+  refresh?: boolean;
 }
 
 export const isConversationBlock = (block: SystemBlock) => (block as ContextBlock).conversation === true;
+
+/**
+ * "How you work"'s lines a run gets by where it runs and who asked (`sayNowApplies`, `codeSuggestionApplies`,
+ * `workMayStart`): a computer brain reads them in "# This conversation", not in its system text (`agentSystemText`).
+ */
+const RUN_LINES = [SAY_NOW_LINE, CODE_SESSION_LINE, WORK_IN_BACKGROUND_LINE].map((line) => `\n${line}`);
+
+const agentBlocks = (system: readonly SystemBlock[]) =>
+  system.filter((b) => !isComputerTurnBlock(b) && !isConversationBlock(b));
+
+/**
+ * A computer brain's system text: what holds for the agent, the same in each of its conversations, so the CLI a
+ * computer starts before the turn comes (`brain.warm`, with the agent's last text) is the one the turn takes, and new
+ * sessions share the cached prefix. The model brain reads every block where it is.
+ */
+export function agentSystemText(system: readonly SystemBlock[]): string {
+  return agentBlocks(system)
+    .map((b) => withoutRunLines(b.text))
+    .join("\n\n");
+}
+
+/** A block of the agent's as its computer session's system text holds it (`agentSystemText`). */
+export const withoutRunLines = (text: string) => RUN_LINES.reduce((t, line) => t.replace(line, ""), text);
+
+const runLinesOf = (system: readonly SystemBlock[]) =>
+  RUN_LINES.filter((line) => agentBlocks(system).some((b) => b.text.includes(line)));
+
+const HOW_HERE = "# How you work here";
+
+/** What a resumed session reads again when it changed: how it works here and what it can do here. */
+const sessionParts = (system: readonly SystemBlock[]) => [
+  `${HOW_HERE}${runLinesOf(system).join("")}`,
+  ...system.filter((b) => (b as ContextBlock).refresh && b.text.trim()).map((b) => b.text),
+];
+
+/** Which `sessionParts` a run's conversation has, for the next run in its session to compare (`changedForSession`). */
+export const sessionPartsKey = (system: readonly SystemBlock[]) => sha256(JSON.stringify(sessionParts(system)));
+
+const headingOf = (text: string) => text.split("\n", 1)[0] ?? "";
+
+/**
+ * A refresh block against the same block the session read (`old`): only its lines that are new or gone. "What you can
+ * do" is ~15 KB and a changed one differs in ~1.4 KB at the median (production, 2026-11), so the whole block again
+ * would be ten times what the turn needs.
+ */
+function changedLines(old: string, text: string): string {
+  const was = new Set(old.split("\n"));
+  const now = new Set(text.split("\n"));
+  const added = [...now].filter((l) => l.trim() && !was.has(l));
+  const gone = [...was].filter((l) => l.trim() && !now.has(l));
+  return [
+    `${headingOf(text)} (changed lines)`,
+    ...(added.length > 0 ? ["New or changed:", ...added] : []),
+    ...(gone.length > 0 ? ["No longer holds:", ...gone] : []),
+  ].join("\n");
+}
+
+/**
+ * For a computer session resumed with other tools or lines here than it last read (`read`, its last run's
+ * `sessionPartsKey`; null: unknown): those parts again, as a found block of the turn. "" when they are the same. The
+ * team, a brief or a summary are read once per session as before. With `before` (the last run's refresh blocks), a
+ * block it also had says only its changed lines.
+ */
+export function changedForSession(
+  system: readonly SystemBlock[],
+  read: string | null,
+  before: readonly string[] | null = null,
+): string {
+  if (read === sessionPartsKey(system)) return "";
+  const [how = HOW_HERE, ...rest] = sessionParts(system);
+  const was = read === null ? [] : (before ?? []);
+  const parts = rest.flatMap((text) => {
+    const old = was.find((b) => headingOf(b) === headingOf(text));
+    if (old === undefined) return [text];
+    return old === text ? [] : [changedLines(old, text)];
+  });
+  const gone = was
+    .filter((b) => !rest.some((t) => headingOf(t) === headingOf(b)))
+    .map((b) => `${headingOf(b)}\nNo longer holds here.`);
+  return [
+    "# This conversation, now",
+    'What you can do here and how you work here changed since this session read "# This conversation". A part below replaces what it said of it; a part marked "(changed lines)" lists only its lines that are new or no longer hold.',
+    how === HOW_HERE ? `${HOW_HERE}\nNo lines of its own now: what it listed earlier no longer holds.` : how,
+    ...parts,
+    ...gone,
+  ]
+    .map((t, i) => (i < 2 ? t : t.replace(/^# /, "### ")))
+    .join("\n\n");
+}
 
 /**
  * What a computer brain reads as "# This conversation" at the start of its session (and again after it compacted
  * its history), one level under it; "" when there is nothing.
  */
 export function conversationText(system: readonly SystemBlock[]): string {
-  const parts = system
-    .filter((b) => isConversationBlock(b) && !isComputerTurnBlock(b) && b.text.trim())
-    .map((b) => b.text);
+  const runLines = runLinesOf(system);
+  const parts = [
+    ...(runLines.length > 0 ? [`${HOW_HERE}${runLines.join("")}`] : []),
+    ...system.filter((b) => isConversationBlock(b) && !isComputerTurnBlock(b) && b.text.trim()).map((b) => b.text),
+  ];
   if (parts.length === 0) return "";
   return ["# This conversation", ...parts.map((t) => t.replace(/^# /, "## "))].join("\n\n");
 }
@@ -1280,7 +1377,9 @@ export async function buildRunContext(
           .filter(Boolean)
           .join("\n\n"),
     },
-    ...(capabilities ? [{ text: capabilities }] : []),
+    // Follows the run's tools (the groups loaded for its message, what it may use there): for a computer brain, read
+    // once per session.
+    ...(capabilities ? [{ conversation: true, refresh: true, text: capabilities }] : []),
     // Follows the requester (whose part of the team it names).
     ...(team ? [{ conversation: true, text: team }] : []),
     ...(options.skills && options.skills.length > 0
@@ -1501,8 +1600,9 @@ export async function buildRunContext(
       (taskAsked && taskHere ? taskHere.issueId : null) ??
       (typeof trigger.meta?.issueId === "string" ? trigger.meta.issueId : null),
     sessionPrompt: [
-      // The rules, the organization's context and the agent's block (name, role, instructions).
-      ...system.slice(0, 3).map((b) => b.text),
+      // The rules, the organization's context and the agent's block (name, role, instructions), as the session's system
+      // text holds them: a line "# This conversation" carries isn't one (`changedForSession` brings it).
+      ...system.slice(0, 3).map((b) => withoutRunLines(b.text)),
       // The roster, not "# Your team": that text follows the requester, so a person and an agent taking turns
       // would start a new session every turn.
       JSON.stringify(

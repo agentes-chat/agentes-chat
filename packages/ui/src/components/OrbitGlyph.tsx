@@ -7,6 +7,9 @@ import type { AgentAppearance } from "./AgentLook";
 /** The glyph's half side in the overlay's units. */
 const HALF = 50;
 
+/** Where in its turn each ring's light and the ring itself start, in seconds. */
+type Phase = { light: number; roll: number };
+
 /** One piece of the light, in degrees of its ring (`pathLength` 360). */
 const PIECE = ORBIT_LIGHT.arc / ORBIT_LIGHT.steps;
 
@@ -57,9 +60,10 @@ function Light({ ring, i, phase }: { ring: (typeof ORBIT_RINGS)[number]; i: numb
 /**
  * One layer of the orbit: the far one (`back`, behind the glyph) holds both rings whole and the light on their far
  * halves; the near one only the light on their near halves, so the light passes over the face while no line ever
- * crosses it. Each ring is a circle squashed and tilted by static groups.
+ * crosses it. Each ring is a circle squashed and tilted by static groups, then turned slowly round the face
+ * (`ac-orbit__roll`, the same in both layers) with its light and its near and far halves on it.
  */
-function Layer({ half, id, phases }: { half: "back" | "front"; id: string; phases: readonly number[] }) {
+function Layer({ half, id, phases }: { half: "back" | "front"; id: string; phases: readonly Phase[] }) {
   const box = ORBIT_SPAN * 2 * HALF;
   return (
     <svg
@@ -73,24 +77,33 @@ function Layer({ half, id, phases }: { half: "back" | "front"; id: string; phase
           <rect x={-box} y={half === "back" ? -box : 0} width={box * 2} height={box} />
         </clipPath>
       </defs>
-      {ORBIT_RINGS.map((ring, i) => (
-        // biome-ignore lint/suspicious/noArrayIndexKey: a fixed list of rings
-        <g key={i} className={`ac-orbit__ring ac-orbit__ring--${i + 1}`} transform={`rotate(${ring.tilt})`}>
-          <g transform={`scale(1 ${ring.flat})`}>
-            {half === "back" && <circle className="ac-orbit__path" r={ring.r * HALF} />}
-            <g clipPath={`url(#${id}-${half})`}>
-              <Light ring={ring} i={i} phase={phases[i] ?? 0} />
+      {ORBIT_RINGS.map((ring, i) => {
+        const roll = {
+          "--spin": `${Math.abs(ring.spin)}s`,
+          animationDelay: `${-(phases[i]?.roll ?? 0)}s`,
+          animationDirection: ring.spin < 0 ? "reverse" : undefined,
+        };
+        return (
+          // biome-ignore lint/suspicious/noArrayIndexKey: a fixed list of rings
+          <g key={i} className={`ac-orbit__ring ac-orbit__ring--${i + 1}`} transform={`rotate(${ring.tilt})`}>
+            <g className="ac-orbit__roll" style={roll as CSSProperties}>
+              <g transform={`scale(1 ${ring.flat})`}>
+                {half === "back" && <circle className="ac-orbit__path" r={ring.r * HALF} />}
+                <g clipPath={`url(#${id}-${half})`}>
+                  <Light ring={ring} i={i} phase={phases[i]?.light ?? 0} />
+                </g>
+              </g>
             </g>
           </g>
-        </g>
-      ))}
+        );
+      })}
     </svg>
   );
 }
 
 /**
- * An agent at work: its glyph with two tilted rings around it, in its own colours. The rings stay behind the glyph; on
- * each a light runs round, a fading arc with a small dot at its head, over the face on the near half and behind it on
+ * An agent at work: its glyph with two tilted rings around it, in its own colours, each slowly turning round it. The
+ * rings stay behind the glyph; on each a light runs round, a fading arc with a small dot at its head, over the face on the near half and behind it on
  * the far one. Each glyph starts at its own point of the turn, so faces side by side never move in step. Only
  * transforms move; the rings hold still with reduced motion and pause off screen.
  */
@@ -109,7 +122,9 @@ export function OrbitGlyph({
   const id = useId().replace(/:/g, "");
   const host = useRef<HTMLSpanElement>(null);
   // Where in its turn each ring starts, once per glyph.
-  const [phases] = useState(() => ORBIT_RINGS.map((ring) => Math.random() * ring.turn));
+  const [phases] = useState(() =>
+    ORBIT_RINGS.map((ring) => ({ light: Math.random() * ring.turn, roll: Math.random() * Math.abs(ring.spin) })),
+  );
   useEffect(() => {
     const el = host.current;
     if (!el || typeof IntersectionObserver === "undefined") return;

@@ -132,6 +132,13 @@ export interface BrainSession {
   ownFolder?: boolean;
   /** A code session's turn (ADR 0215): `cwd` is its worktree. */
   codeSession?: boolean;
+  /**
+   * Resumed from the conversation's last run: what that run's conversation said of the tools and lines here
+   * (`Transcript.sessionParts`; null: nothing kept), so the turn reads them again when they changed.
+   */
+  partsRead?: string | null;
+  /** With `partsRead`: that run's blocks of what it can do here, so the turn says only their changed lines. */
+  refreshRead?: string[];
 }
 
 export interface BrainTurn {
@@ -220,7 +227,12 @@ export interface BrainIO {
    * `null` when it ends. Brains that can't never call it.
    */
   steerable?(steer: ((messages: SteerMessage[]) => Promise<SteerReply>) | null): void;
+  /** A step before the model has the turn (`inPhase`): `null` once it is over. */
+  phase?(phase: BrainPhase | null): void;
 }
+
+/** What a turn waits on before its model: `code`, the agent's checkouts being updated (`prepareAgentCode`). */
+export type BrainPhase = "code";
 
 export type BrainEvent =
   | { type: "text_delta"; text: string }
@@ -304,7 +316,8 @@ export interface Brain {
   run(turn: BrainTurn, io: BrainIO): AsyncIterable<BrainEvent>;
   /**
    * The run was claimed: its computer starts the CLI its turn will most likely use now, while the engine builds the
-   * turn (`brain.warm`). Best effort, never fails; `turn` has no words yet.
+   * turn (`brain.warm`). Best effort, never fails; `turn` has no words yet. True: the computer said the session's CLI
+   * is open now, so the turn starts no process.
    */
-  warm?(turn: BrainTurn): Promise<void>;
+  warm?(turn: BrainTurn): Promise<boolean | undefined>;
 }

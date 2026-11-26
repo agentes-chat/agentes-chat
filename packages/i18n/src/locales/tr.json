@@ -18892,6 +18892,7 @@
     "namesMore": "{{first}} ve {{count}} kişi daha",
     "wait": {
       "thinking": "Düşünüyor…",
+      "code": "Kodu güncelliyor…",
       "held": "Onay bekleniyor…",
       "said": "“{{text}}”"
     },

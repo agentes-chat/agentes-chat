@@ -45,8 +45,10 @@ env:
 # commit's image matters); a release tag's run is never cancelled. A pull request's runs and a manual run
 # on its branch are two groups.
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref_type != 'tag' }}
+  # Main keeps every run: a merge must not cancel the run of the one before it, or a busy day leaves no
+  # commit with a finished, green run to deploy. Branches still cancel their superseded runs.
+  group: ci-${{ github.ref }}-${{ github.ref == 'refs/heads/main' && github.sha || 'latest' }}
+  cancel-in-progress: ${{ github.ref_type != 'tag' && github.ref != 'refs/heads/main' }}
 
 defaults:
   run:

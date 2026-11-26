@@ -65,15 +65,18 @@ import {
  * The phone's widget (ADR 0135): a block an agent keeps up to date, drawn from its spec like the web's. Numbers in
  * the app's sans at weight 700 with tabular figures; charts as the chat draws them (a clean stroke in the agent's
  * deep tone over a dither in its light one: the line is the chat's own); bars and a goal's fill as outlined shapes
- * filled with the same 2-point Bayer dither. A chart's unit is one small tag above it (each bar reads only its
+ * filled with the same 2-point Bayer dither. A chart's unit is one quiet word above it (each bar reads only its
  * number); a note is a muted caption under a hairline. A number's trend (and a bare line on a board) runs edge to
- * edge along the card's bottom. While the agent builds it, a dither sweep; while it updates, the last data stays,
+ * edge along the card's bottom. Text has four roles: the title a label (13 semibold); what the card shows leads (the
+ * number, a summary's first sentence at 17 semibold); then text at 15 and the detail at 13. While the agent builds it, a dither sweep; while it updates, the last data stays,
  * dimmed; when it failed, dimmed with the reason under it.
  */
 
 /** The card's padding: the edge-to-edge chart cancels it. */
 const PAD_X = 18;
 const PAD_Y = 16;
+/** The home strip's card breathes the same all round (ADR 0135 §15). */
+const COMPACT_PAD = 16;
 /** The build's band crosses the field once in this long, easing in and out. */
 const SWEEP_MS = 1400;
 const SWEEP_EASE = Easing.inOut(Easing.quad);
@@ -108,6 +111,8 @@ export const WidgetBody = memo(function WidgetBody({
   big = false,
   bleed = false,
   compact = false,
+  wide = false,
+  mark,
   onLayout,
 }: {
   spec: WidgetSpec | null;
@@ -119,8 +124,12 @@ export const WidgetBody = memo(function WidgetBody({
   big?: boolean;
   /** The card draws the trend (or the bare line) along its bottom (`bleedSeries`): not here. */
   bleed?: boolean;
-  /** The home's strip: a smaller number, one line of note, the first rows only. */
+  /** The home's strip: the card's height, whole sentences only, the first rows only. */
   compact?: boolean;
+  /** The strip's card takes two columns (an M or L widget): a line's note fits beside its number. */
+  wide?: boolean;
+  /** A state's mark (updating, waiting, failed) beside a number or a goal's share, where a small card has room. */
+  mark?: ReactNode;
   /** Where the data ends: the card measures the room left under it (its horizon). */
   onLayout?: (e: LayoutChangeEvent) => void;
 }) {
@@ -148,8 +157,11 @@ export const WidgetBody = memo(function WidgetBody({
   const dim = compact ? 1 : status === "updating" ? 0.45 : status === "failed" ? 0.5 : 1;
   return (
     // On the strip the columns take the card's room; anything else ends where its data does.
-    <View onLayout={onLayout} style={[{ opacity: dim }, compact && spec.kind === "bars" && styles.fill]}>
-      <SpecBody spec={spec} color={look.color} big={big} bleed={bleed} compact={compact} />
+    <View
+      onLayout={onLayout}
+      style={[{ opacity: dim }, compact && (spec.kind === "bars" || spec.kind === "text") && styles.fill]}
+    >
+      <SpecBody spec={spec} color={look.color} big={big} bleed={bleed} compact={compact} wide={wide} mark={mark} />
     </View>
   );
 });
@@ -160,42 +172,52 @@ function SpecBody({
   big,
   bleed,
   compact,
+  wide,
+  mark,
 }: {
   spec: WidgetSpec;
   color: AgentColorName;
   big: boolean;
   bleed: boolean;
   compact: boolean;
+  wide: boolean;
+  mark?: ReactNode;
 }) {
   switch (spec.kind) {
     case "kpi":
-      return <Kpi spec={spec} color={color} big={big} bleed={bleed} compact={compact} />;
+      return <Kpi spec={spec} color={color} big={big} bleed={bleed} compact={compact} mark={mark} />;
     case "goal":
-      return <Goal spec={spec} color={color} big={big} />;
+      return <Goal spec={spec} color={color} big={big} compact={compact} mark={mark} />;
     case "bars":
       return compact ? <CompactBars spec={spec} color={color} /> : <Bars spec={spec} color={color} big={big} />;
     case "line":
-      return <LineBody spec={spec} color={color} big={big} bleed={bleed} />;
+      return compact ? (
+        <CompactLine spec={spec} wide={wide} />
+      ) : (
+        <LineBody spec={spec} color={color} big={big} bleed={bleed} />
+      );
     case "list":
       return <List spec={spec} compact={compact} />;
     case "text":
-      return <Summary spec={spec} color={color} compact={compact} />;
+      return <Summary spec={spec} compact={compact} />;
   }
 }
 
-/** The big number: what comes before and after it smaller, how it moved, its trend. */
+/** The big number: what comes before and after it smaller, how it moved and the note each on a line, its trend. */
 function Kpi({
   spec,
   color,
   big,
   bleed,
   compact = false,
+  mark,
 }: {
   spec: KpiWidgetSpec;
   color: AgentColorName;
   big: boolean;
   bleed: boolean;
   compact?: boolean;
+  mark?: ReactNode;
 }) {
   const { i18n } = useTranslation();
   const { colors: c } = useTheme();
@@ -214,35 +236,34 @@ function Kpi({
     <View>
       {/* What comes before the number ("US$") is a text of its own on the number's baseline: as the first, smaller
           part of the number's text, Android set the line's height by it and cut the top off the digits. */}
-      <View style={styles.figure}>
-        {spec.prefix ? <Text style={[styles.affix, { color: c.muted }]}>{spec.prefix}</Text> : null}
-        <Text
-          variant="display"
-          numberOfLines={1}
-          style={[
-            styles.num,
-            big ? styles.numBig : compact ? styles.numCompact : null,
-            styles.shrink,
-            { color: c.ink },
-          ]}
-        >
-          {formatWidgetNumber(spec.value, i18n.language)}
-          {spec.suffix ? <Text style={[styles.affix, { color: c.muted }]}>{` ${spec.suffix}`}</Text> : null}
-        </Text>
+      <View style={styles.numRow}>
+        <View style={[styles.figure, styles.grow]}>
+          {spec.prefix ? <Text style={[styles.affix, { color: c.muted }]}>{spec.prefix}</Text> : null}
+          <Text
+            variant="display"
+            numberOfLines={1}
+            style={[styles.num, big ? styles.numBig : null, styles.shrink, { color: c.ink }]}
+          >
+            {formatWidgetNumber(spec.value, i18n.language)}
+            {spec.suffix ? <Text style={[styles.affix, { color: c.muted }]}>{` ${spec.suffix}`}</Text> : null}
+          </Text>
+        </View>
+        {mark}
       </View>
-      {spec.delta || spec.note ? (
-        <Text variant="footnote" tone="ink2" numberOfLines={compact ? 1 : 2}>
-          {/* On the strip the change is a quiet word (one accent per screen: the waiting strip's); on a board, its color. */}
-          {spec.delta ? (
-            <Text
-              variant="footnote"
-              style={compact ? { color: c.muted } : [styles.strong, { color: spec.delta.up ? c.ok : c.danger }]}
-            >
-              {spec.delta.text}
-            </Text>
-          ) : null}
-          {spec.delta && spec.note ? " " : null}
-          {spec.note ?? null}
+      {/* How it moved, on a line of its own (the quiet ink on the strip, one accent per screen: the waiting strip's;
+          its color on a board), then the agent's note: neither cuts the other. */}
+      {spec.delta ? (
+        <Text
+          variant="label"
+          numberOfLines={1}
+          style={[styles.delta, { color: compact ? c.ink2 : spec.delta.up ? c.ok : c.danger }]}
+        >
+          {spec.delta.text}
+        </Text>
+      ) : null}
+      {spec.note ? (
+        <Text variant="footnote" tone={compact ? "faint" : "muted"} numberOfLines={compact ? 1 : 2}>
+          {spec.note}
         </Text>
       ) : null}
       {trend ? (
@@ -254,28 +275,51 @@ function Kpi({
   );
 }
 
-/** Progress towards a goal: the share, a track filled with the dither, the line and the note. */
-function Goal({ spec, color, big }: { spec: GoalWidgetSpec; color: AgentColorName; big: boolean }) {
+/**
+ * Progress towards a goal: the share, a track filled with the dither, the line and the note. On the strip a thinner
+ * track and the line alone, whole in two lines (the note is on the widget's screen).
+ */
+function Goal({
+  spec,
+  color,
+  big,
+  compact = false,
+  mark,
+}: {
+  spec: GoalWidgetSpec;
+  color: AgentColorName;
+  big: boolean;
+  compact?: boolean;
+  mark?: ReactNode;
+}) {
   const { colors: c, scheme } = useTheme();
   const tones = widgetTones(color, scheme === "dark");
   const [width, onLayout] = useWidth();
-  const height = big ? 16 : 12;
+  const height = big ? 16 : compact ? 8 : 12;
   // Inside the track's 1.5-point border.
   const inner = height - 3;
+  const radius = Math.min(3, (inner - 1.5) / 2);
   const fill = Math.round(Math.max(0, width - 3) * goalShare(spec.pct));
   return (
     <View>
-      <Text variant="display" numberOfLines={1} style={[styles.num, big ? styles.numBig : null, { color: c.ink }]}>
-        {Math.round(spec.pct)}
-        <Text style={[styles.affix, { color: c.muted }]}>%</Text>
-      </Text>
+      <View style={styles.numRow}>
+        <Text
+          variant="display"
+          numberOfLines={1}
+          style={[styles.num, big ? styles.numBig : null, styles.shrink, { color: c.ink }]}
+        >
+          {Math.round(spec.pct)}
+          <Text style={[styles.affix, { color: c.muted }]}>%</Text>
+        </Text>
+        {mark}
+      </View>
       <View onLayout={onLayout} style={[styles.track, { height, borderColor: c.line2 }]}>
         {fill > 3 ? (
           <Canvas style={{ width: fill, height: inner }}>
             <DitherShape
               width={fill}
               height={inner}
-              shape={roundRectPath(0.75, 0.75, fill - 1.5, inner - 1.5, 3)}
+              shape={roundRectPath(0.75, 0.75, fill - 1.5, inner - 1.5, radius)}
               fill={tones.fill}
               stroke={tones.stroke}
             />
@@ -284,7 +328,7 @@ function Goal({ spec, color, big }: { spec: GoalWidgetSpec; color: AgentColorNam
       </View>
       <Text variant="footnote" tone="ink2" numberOfLines={big ? 3 : 2}>
         {spec.line}
-        {spec.note ? (
+        {spec.note && !compact ? (
           <Text variant="footnote" tone="faint">
             {` · ${spec.note}`}
           </Text>
@@ -363,33 +407,28 @@ function Bars({ spec, color, big }: { spec: BarsWidgetSpec; color: AgentColorNam
 }
 
 /**
- * The home's strip: the columns alone, as tall as the card has room for and standing on the card's bottom edge (the
- * card runs them down to it, as a trend); what they count is a quiet word above them, starting where the title does.
- * Their values and labels are on the widget's screen (the card is one button named by its title).
+ * The home's strip: each column in a slot of its own over its label (every n-th when they don't all fit), as tall as
+ * the card has room for. What they count is at the title line's end (`WidgetCard`); their values are on the widget's
+ * screen (the card is one button named by its title).
  */
 function CompactBars({ spec, color }: { spec: BarsWidgetSpec; color: AgentColorName }) {
   const { colors: c, scheme } = useTheme();
   const tones = widgetTones(color, scheme === "dark");
   const [box, setBox] = useState({ width: 0, height: 0 });
   const n = spec.values.length;
-  const gap = n > 8 ? 3 : 6;
-  const slot = n > 0 ? Math.max(0, (box.width - gap * (n - 1)) / n) : 0;
-  const bw = Math.min(28, slot);
+  const slot = n > 0 ? box.width / n : 0;
+  // The slot less a gap, never wider than 26.
+  const bw = Math.max(0, Math.min(26, slot - (n > 12 ? 3 : 10)));
+  const words = barWords(n, box.width);
   const room = box.height;
   const max = Math.max(0, ...spec.values) || 1;
-  const unit = spec.unit?.trim();
   return (
     <View style={[styles.fill, styles.compactBars]}>
-      {unit ? (
-        <Text variant="caption" tone="faint" numberOfLines={1} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
-          {unit}
-        </Text>
-      ) : null}
       <View
         onLayout={(e) =>
           setBox({ width: Math.round(e.nativeEvent.layout.width), height: Math.round(e.nativeEvent.layout.height) })
         }
-        style={[styles.fill, styles.barsCompact, { gap }]}
+        style={[styles.fill, styles.barsCompact]}
       >
         {bw > 1 && room > 4
           ? spec.values.map((v, i) => {
@@ -397,20 +436,61 @@ function CompactBars({ spec, color }: { spec: BarsWidgetSpec; color: AgentColorN
               const alert = spec.alertIndex === i;
               return (
                 // biome-ignore lint/suspicious/noArrayIndexKey: the bars of one widget, in order
-                <Canvas key={i} style={{ width: bw, height: h }}>
-                  <DitherShape
-                    width={bw}
-                    height={h}
-                    shape={topRoundedPath(0.75, 0.75, bw - 1.5, h - 0.75, 4)}
-                    outline={topRoundedPath(0.75, 0.75, bw - 1.5, h - 0.75, 4, false)}
-                    fill={tones.fill}
-                    stroke={alert ? c.warn : tones.stroke}
-                  />
-                </Canvas>
+                <View key={i} style={styles.slot}>
+                  <Canvas style={{ width: bw, height: h }}>
+                    <DitherShape
+                      width={bw}
+                      height={h}
+                      shape={topRoundedPath(0.75, 0.75, bw - 1.5, h - 0.75, 4)}
+                      outline={topRoundedPath(0.75, 0.75, bw - 1.5, h - 0.75, 4, false)}
+                      fill={tones.fill}
+                      stroke={alert ? c.warn : tones.stroke}
+                    />
+                  </Canvas>
+                </View>
               );
             })
           : null}
       </View>
+      <View style={styles.axisCompact}>
+        {spec.labels.map((label, i) => (
+          <Text
+            // biome-ignore lint/suspicious/noArrayIndexKey: the labels, in order
+            key={i}
+            variant="caption"
+            tone="faint"
+            numberOfLines={1}
+            maxFontSizeMultiplier={CHROME_MAX_SCALE}
+            style={styles.axisLabel}
+          >
+            {i % words.every === 0 || i === n - 1 ? label : ""}
+          </Text>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+/**
+ * A line on the home's strip: what it is now (its last value, the unit after it) as the card's number and, on a wide
+ * card, the note beside it. The line itself runs along the card's foot (`bleedSeries`).
+ */
+function CompactLine({ spec, wide }: { spec: LineWidgetSpec; wide: boolean }) {
+  const { i18n } = useTranslation();
+  const { colors: c } = useTheme();
+  const last = spec.values[spec.values.length - 1];
+  const unit = spec.unit?.trim();
+  return (
+    <View style={styles.numRow}>
+      <Text variant="display" numberOfLines={1} style={[styles.num, styles.shrink, { color: c.ink }]}>
+        {last === undefined ? "" : formatWidgetNumber(last, i18n.language)}
+        {unit ? <Text style={[styles.affix, { color: c.muted }]}>{` ${unit}`}</Text> : null}
+      </Text>
+      {wide && spec.note ? (
+        <Text variant="footnote" tone="muted" numberOfLines={2} style={styles.grow}>
+          {spec.note}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -438,21 +518,19 @@ function LineBody({
   );
 }
 
-/** What a chart's values count, once, as a small tag above it ("runs per day"). */
+/** What a chart's values count, once, as a quiet word above it ("runs per day"): a word, never a tag on a plate. */
 function UnitTag({ unit }: { unit?: string | undefined }) {
-  const { colors: c } = useTheme();
   if (!unit?.trim()) return null;
   return (
-    <View style={[styles.unit, { backgroundColor: c.plate }]}>
-      <Text
-        variant="caption"
-        numberOfLines={1}
-        maxFontSizeMultiplier={CHROME_MAX_SCALE}
-        style={[styles.unitText, { color: c.ink2 }]}
-      >
-        {unit.trim()}
-      </Text>
-    </View>
+    <Text
+      variant="footnote"
+      tone="faint"
+      numberOfLines={1}
+      maxFontSizeMultiplier={CHROME_MAX_SCALE}
+      style={styles.unit}
+    >
+      {unit.trim()}
+    </Text>
   );
 }
 
@@ -524,10 +602,11 @@ function List({ spec, compact = false }: { spec: ListWidgetSpec; compact?: boole
           style={[
             styles.row,
             compact ? styles.rowCompact : null,
+            compact && i === 0 ? styles.rowFirst : null,
             i > 0 ? { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.line2 } : null,
           ]}
         >
-          <Text variant={compact ? "footnote" : "subhead"} tone="ink" numberOfLines={1} style={styles.grow}>
+          <Text variant="subhead" tone="ink" numberOfLines={1} style={styles.grow}>
             {row.text}
           </Text>
           {row.meta ? (
@@ -549,25 +628,48 @@ function List({ spec, compact = false }: { spec: ListWidgetSpec; compact?: boole
   );
 }
 
-/** A few sentences, each after a small mark in the agent's tone. */
-function Summary({ spec, color, compact = false }: { spec: TextWidgetSpec; color: AgentColorName; compact?: boolean }) {
-  const { scheme } = useTheme();
-  const tones = widgetTones(color, scheme === "dark");
+/**
+ * A few sentences: the first leads (17 semibold), the rest quieter at 15. On the home's strip only whole sentences
+ * show: one that would end past the card's room isn't drawn (it is on the widget's screen), never cut in the middle.
+ */
+function Summary({ spec, compact = false }: { spec: TextWidgetSpec; compact?: boolean }) {
+  const [room, setRoom] = useState(0);
+  const [ends, setEnds] = useState<number[]>([]);
+  const [lead, ...rest] = spec.items;
+  const fits = (i: number) => !compact || (room > 0 && (ends[i] ?? Number.POSITIVE_INFINITY) <= room);
   return (
-    <View style={styles.items}>
-      {(compact ? spec.items.slice(0, 2) : spec.items).map((item, i) => (
-        // biome-ignore lint/suspicious/noArrayIndexKey: the sentences of one widget, in order
-        <View key={i} style={styles.item}>
-          <View style={[styles.mark, { backgroundColor: tones.stroke }]} />
-          <Text
-            variant={compact ? "footnote" : "subhead"}
-            tone="ink"
-            numberOfLines={compact ? 2 : undefined}
-            style={styles.grow}
-          >
-            {item}
-          </Text>
-        </View>
+    <View
+      style={[styles.items, compact && styles.fill]}
+      onLayout={compact ? (e) => setRoom(Math.floor(e.nativeEvent.layout.height)) : undefined}
+    >
+      {lead ? (
+        <Text variant="title" numberOfLines={compact ? 3 : undefined}>
+          {lead}
+        </Text>
+      ) : null}
+      {rest.map((item, i) => (
+        <Text
+          // biome-ignore lint/suspicious/noArrayIndexKey: the sentences of one widget, in order
+          key={i}
+          variant="subhead"
+          tone="muted"
+          onLayout={
+            compact
+              ? (e) => {
+                  const end = Math.ceil(e.nativeEvent.layout.y + e.nativeEvent.layout.height);
+                  setEnds((was) => {
+                    if (was[i] === end) return was;
+                    const next = [...was];
+                    next[i] = end;
+                    return next;
+                  });
+                }
+              : undefined
+          }
+          style={fits(i) ? null : styles.hidden}
+        >
+          {item}
+        </Text>
       ))}
     </View>
   );
@@ -690,8 +792,9 @@ export function WidgetCard({
   /** What a screen reader says for the whole card when it opens. */
   label?: string;
   /**
-   * The home's strip (ADR 0135 §15): every card as tall as the others (`COMPACT_HEIGHT`), the app's card, the data
-   * small and clipped to it, never dimmed; its state (updating, failed) a mark on the title line; the trend kept.
+   * The home's strip (ADR 0135 §15): every card as tall as the others (`COMPACT_HEIGHT`) and one or two columns wide
+   * (`w`), the app's card breathing 16 all round, the data clipped to it and never dimmed, sentences only whole; its
+   * state (updating, waiting, failed) a mark beside its number, or at the title line's end; the trend kept.
    */
   compact?: boolean;
 }) {
@@ -701,6 +804,7 @@ export function WidgetCard({
   const card = useSurface();
   // The home's strip: the app's card (lit top, cut corner), as every card that stands on the page.
   const surface = compact ? [card, styles.compact] : soft;
+  const padX = compact ? COMPACT_PAD : PAD_X;
   const look = useAgentLook(w.agentId);
   const words = useWidgetWords();
   // A 2-high (L) widget on a board draws its data big, as on its own screen.
@@ -716,8 +820,21 @@ export function WidgetCard({
       <BuildingSweep still color={look.color} text={words.wait(w)} />
     ) : undefined;
   const drawn = shownBody === undefined && (status === "ok" || status === "updating" || status === "failed");
-  const bleed = drawn ? bleedSeries(w.spec, large) : null;
-  const bleedHeight = compact ? 34 : w.spec?.kind === "line" ? (large ? 120 : 76) : large ? 72 : 48;
+  const kind = w.spec?.kind;
+  const bleed = drawn ? bleedSeries(w.spec, large, compact) : null;
+  const bleedHeight = compact ? (kind === "line" ? 56 : 34) : kind === "line" ? (large ? 120 : 76) : large ? 72 : 48;
+  // The strip has no footer: updating is the agent's orbit, a wait or a failure a mark. Beside a number or a goal's
+  // share, where there is room, else at the title line's end: a small card's title stays whole.
+  const mark = compact ? (
+    <>
+      {status === "updating" ? <PixelOrbit color={look.color} size={16} /> : null}
+      {waits ? <Icon name="pause" size={14} color={c.muted} /> : null}
+      {status === "failed" ? <Icon name={w.needsAi ? "bolt" : "info"} size={14} color={c.warn} /> : null}
+    </>
+  ) : null;
+  const markByNumber = drawn && (kind === "kpi" || kind === "goal");
+  // What a strip's columns count, in words at the title line's end.
+  const unitEnd = compact && w.spec?.kind === "bars" ? w.spec.unit?.trim() : undefined;
   const foot = footer !== undefined ? footer : compact ? null : <WidgetFoot widget={w} />;
   // A card with room to spare under its data gets the agents' horizon at its foot, as on the web: not under a trend
   // (it already runs along the foot), not on the big preview, not while it builds.
@@ -741,17 +858,17 @@ export function WidgetCard({
             onLayout={(e) => {
               const { width, height } = e.nativeEvent.layout;
               setFrame((f) => (f.width === width && f.height === height ? f : { width, height }));
-              frameRef.current?.measureInWindow((x) => setWaveX(Math.round(x - PAD_X)));
+              frameRef.current?.measureInWindow((x) => setWaveX(Math.round(x - padX)));
             }}
           />
           {dataHeight > 0 && frame.width > 0 ? (
             <CardHorizon
-              width={frame.width + 2 * PAD_X}
+              width={frame.width + 2 * padX}
               room={room}
               surface={compact ? c.raised : soft.backgroundColor}
               x={waveX}
               {...(compact ? { minRoom: COMPACT_HORIZON_ROOM } : {})}
-              style={styles.horizon}
+              style={compact ? [styles.horizon, styles.horizonCompact] : styles.horizon}
             />
           ) : null}
         </>
@@ -760,20 +877,28 @@ export function WidgetCard({
         <View style={[styles.head, large ? styles.headTop : null]}>
           {/* On the home's strip the title stands alone: whose it is shows when it works (the orbit), not before. */}
           {compact ? null : <AgentFace agentId={w.agentId} size={16} live={false} />}
-          <Text variant="caption" tone="muted" numberOfLines={large ? 2 : 1} style={[styles.title, styles.grow]}>
+          <Text variant="label" tone="muted" numberOfLines={large ? 2 : 1} style={[styles.title, styles.grow]}>
             {title}
           </Text>
-          {/* The strip has no footer: updating is its orbit, a wait or a failure its mark, on the title line. */}
-          {compact && status === "updating" ? <PixelOrbit color={look.color} size={16} /> : null}
-          {compact && waits ? <Icon name="pause" size={13} color={c.muted} /> : null}
-          {compact && status === "failed" ? <Icon name={w.needsAi ? "bolt" : "info"} size={13} color={c.warn} /> : null}
+          {unitEnd ? (
+            <Text
+              variant="footnote"
+              tone="faint"
+              numberOfLines={1}
+              maxFontSizeMultiplier={CHROME_MAX_SCALE}
+              style={styles.unitEnd}
+            >
+              {unitEnd}
+            </Text>
+          ) : null}
+          {markByNumber ? null : mark}
         </View>
       ) : (
         head
       )}
       {above}
       <View
-        style={compact ? [styles.bodyCompact, w.spec?.kind === "bars" && styles.toEdge] : styles.body}
+        style={compact ? styles.bodyCompact : styles.body}
         onLayout={horizon ? (e) => setBodyTop(e.nativeEvent.layout.y) : undefined}
       >
         {shownBody === undefined ? (
@@ -785,6 +910,8 @@ export function WidgetCard({
             big={large}
             bleed={Boolean(bleed)}
             compact={compact}
+            wide={w.w === 2}
+            mark={markByNumber ? mark : undefined}
             {...(horizon ? { onLayout: (e: LayoutChangeEvent) => setDataHeight(e.nativeEvent.layout.height) } : {})}
           />
         ) : (
@@ -793,7 +920,13 @@ export function WidgetCard({
       </View>
       {foot}
       {bleed ? (
-        <View style={[styles.bleedBox, status === "ok" || compact ? null : styles.dim]}>
+        <View
+          style={[
+            styles.bleedBox,
+            compact ? styles.bleedBoxCompact : null,
+            status === "ok" || compact ? null : styles.dim,
+          ]}
+        >
           <BleedLine values={bleed} color={look.color} height={bleedHeight} />
         </View>
       ) : null}
@@ -894,7 +1027,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   cardIn: { gap: 10, flexGrow: 1 },
-  cardInCompact: { gap: 6 },
+  cardInCompact: { gap: 8 },
   head: { flexDirection: "row", alignItems: "center", gap: 6, minWidth: 0 },
   // A big card's title may take two lines: the 16 face on the first (its line is 16 tall).
   headTop: { alignItems: "flex-start" },
@@ -917,15 +1050,9 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     justifyContent: "center",
   },
-  unit: {
-    alignSelf: "flex-start",
-    maxWidth: "100%",
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 1,
-    marginBottom: 4,
-  },
-  unitText: { fontWeight: "600" },
+  unit: { marginBottom: 4 },
+  // The strip's unit at the title line's end: the title gives way first.
+  unitEnd: { flexShrink: 0, maxWidth: "45%" },
   bars: { flexDirection: "row", alignItems: "flex-end", paddingTop: 18 },
   bar: { flex: 1, minWidth: 0, alignItems: "center", justifyContent: "flex-end", height: "100%" },
   barValue: { fontWeight: "700", fontVariant: ["tabular-nums"], marginBottom: 3 },
@@ -933,11 +1060,11 @@ const styles = StyleSheet.create({
   axisLabel: { flex: 1, minWidth: 0, textAlign: "center" },
   note: { marginTop: 14, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth },
   row: { flexDirection: "row", alignItems: "baseline", gap: 8, paddingVertical: 6 },
-  meta: { flexShrink: 0, maxWidth: "45%" },
+  meta: { flexShrink: 0, maxWidth: "45%", fontVariant: ["tabular-nums"] },
   grow: { flex: 1, minWidth: 0 },
-  items: { gap: 4 },
-  item: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
-  mark: { width: 5, height: 5, borderRadius: 1.5, marginTop: 8 },
+  items: { gap: 6 },
+  // A sentence that would end past the strip card's room keeps its place but isn't drawn.
+  hidden: { opacity: 0 },
   building: { gap: 8 },
   field: { borderRadius: 6, overflow: "hidden" },
   band: { position: "absolute", top: 0, bottom: 0 },
@@ -949,14 +1076,19 @@ const styles = StyleSheet.create({
   dim: { opacity: 0.45 },
   // Out to the card's sides and bottom edge, under its text: the card's corners clip it.
   horizon: { left: -PAD_X, bottom: -PAD_Y },
-  compact: { height: COMPACT_HEIGHT, flexGrow: 0, gap: 6 },
+  compact: { height: COMPACT_HEIGHT, flexGrow: 0, gap: 8, paddingHorizontal: COMPACT_PAD },
   fill: { flex: 1, minHeight: 0 },
-  compactBars: { gap: 6 },
-  // The first column starts where the title does and the last ends where it would; all stand on the card's edge.
-  barsCompact: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" },
+  compactBars: { gap: 4 },
+  // Each column centred in its slot, over its label in the same slot.
+  barsCompact: { flexDirection: "row", alignItems: "flex-end" },
+  slot: { flex: 1, minWidth: 0, alignItems: "center" },
+  axisCompact: { flexDirection: "row" },
   bodyCompact: { flex: 1, minHeight: 0, minWidth: 0, overflow: "hidden" },
-  // The strip's columns run down to the card's bottom edge, as a trend does: the card's padding cancelled there.
-  toEdge: { marginBottom: -PAD_Y },
-  numCompact: { fontSize: 28, lineHeight: 34, letterSpacing: -0.7 },
-  rowCompact: { paddingVertical: 3 },
+  rowCompact: { paddingVertical: 7 },
+  rowFirst: { paddingTop: 0 },
+  // A number (or a line's last value) and what stands beside it: a state's mark, a wide line's note.
+  numRow: { flexDirection: "row", alignItems: "center", gap: 12, minWidth: 0 },
+  delta: { marginTop: 2 },
+  bleedBoxCompact: { marginHorizontal: -COMPACT_PAD },
+  horizonCompact: { left: -COMPACT_PAD },
 });

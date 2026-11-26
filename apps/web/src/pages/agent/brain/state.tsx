@@ -28,6 +28,7 @@ import { computerNameOf, setupView } from "@agenteschat/client/lib/computer";
 import { contextChoices, isContextLimit } from "@agenteschat/client/lib/context-limits";
 import { holdText } from "@agenteschat/client/lib/errors";
 import { firstName, namesText } from "@agenteschat/client/lib/format";
+import { machineTitle } from "@agenteschat/client/lib/machines";
 import {
   type AiChoice,
   aiChoiceOf,
@@ -114,7 +115,11 @@ export function useBrainState(view: AgentBrain, opts: { added: readonly MachineA
   const savedCard = aiChoiceOf(view);
   const machines = view.machines;
   const nameOf = (name: string) => computerNameOf(t, org.name, name, isPersonal(org));
-  const computerName = nameOf(view.computer?.name ?? "");
+  const computerRow = work.machines.data?.find((m) => m.id === view.computer?.machineId);
+  // The server's own computer has no name until its runner's first sync: said as that computer meanwhile.
+  const computerName = nameOf(
+    machineTitle(computerRow ?? { name: view.computer?.name ?? "" }, t("machines.host.label")),
+  );
 
   // A coding plan thinks through Claude Code on the agent's computer, where its key is: it never moves.
   const homeOf = (c: AiChoice) => {
@@ -200,7 +205,7 @@ export function useBrainState(view: AgentBrain, opts: { added: readonly MachineA
         hold: holdText(t, org.standing),
         kind: k,
         computer: computerName,
-        machine: work.machines.data?.find((m) => m.id === view.computer?.machineId),
+        machine: computerRow,
       })?.text ?? null
     );
   };

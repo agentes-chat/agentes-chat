@@ -2269,7 +2269,9 @@ export interface BrainTurnTimings {
  * fresh session the server started for an old one), or the end of the session's last process: idle past its limit,
  * closed for another conversation of the agent (its cap) or for memory, another launch asked (folder, permissions,
  * account, sign-in), a warm start with another system text, exited by itself, closed after its turn (canceled,
- * died, a background turn), or a session that ran before with no process left in this runner (it restarted).
+ * died, a background turn), or a session that ran before with no process left in this runner (it restarted). A warm
+ * start that came to nothing says why: started with another launch than its turn's (`warm_settings`), or asked before
+ * this runner ran a turn of the agent's, so with no system text to start it with (`no_launch`); `cap` too.
  */
 export const BRAIN_COLD_CAUSES = [
   "new_session",
@@ -2281,6 +2283,8 @@ export const BRAIN_COLD_CAUSES = [
   "exited",
   "closed",
   "restart",
+  "warm_settings",
+  "no_launch",
 ] as const;
 export type BrainColdCause = (typeof BRAIN_COLD_CAUSES)[number];
 

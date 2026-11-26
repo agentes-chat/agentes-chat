@@ -666,6 +666,27 @@ export const gateRechecks = (gate: PlanGate, edition: Edition | null) =>
     !gate.overdue &&
     (gate.reason === "not_reported" || (edition === "cloud" && gate.reason !== "tool_off")));
 
+/**
+ * How long the server's own computer may take to connect the first time: its runner asks for its token every minute
+ * (`agentes-runner host`), the desktop app at once when the site tells it of a new workspace and every five minutes
+ * otherwise. Past this, it is offline like any other computer.
+ */
+export const HOST_CONNECT_WAIT_MS = 5 * 60_000;
+
+/**
+ * The server's own computer (ADR 0060 §3), added with a new workspace and not connected yet: its row exists before the
+ * runner here gets its token, so a plan's panel says it is connecting, with its steps waiting, instead of offline.
+ */
+export const hostConnecting = (
+  gate: PlanGate,
+  machine: Pick<Machine, "kind" | "lastSeenAt" | "createdAt"> | null | undefined,
+  now = Date.now(),
+) =>
+  gate.state === "offline" &&
+  machine?.kind === "host" &&
+  machine.lastSeenAt === null &&
+  now - Date.parse(machine.createdAt) < HOST_CONNECT_WAIT_MS;
+
 /** The Cloud's line per reason a plan can't sign in on the workspace's computer (`aiAccounts.connect.needsCloud.*`). */
 const CLOUD_REASON = {
   no_computer: "preparing",
