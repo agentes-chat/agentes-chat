@@ -7321,8 +7321,8 @@
   },
   "receipts.outage": {
     "value": {
-      "one": "{{names}}: the AI provider is down · retries by itself",
-      "other": "{{names}}: the AI provider is down · retries by itself"
+      "one": "{{names}}: the AI isn't answering · retries by itself",
+      "other": "{{names}}: the AI isn't answering · retries by itself"
     }
   },
   "receipts.queued": {
@@ -7380,7 +7380,7 @@
     "value": "Waiting for an answer"
   },
   "receipts.status.outage": {
-    "value": "The AI provider is down · retries by itself"
+    "value": "The AI isn't answering · retries by itself"
   },
   "receipts.status.queued": {
     "value": "In line"
@@ -10862,7 +10862,7 @@
     "value": "Waiting for the budget to reset"
   },
   "presence.agent.provider_down": {
-    "value": "The AI provider is down · retries by itself"
+    "value": "The AI isn't answering · retries by itself"
   },
   "presence.agent.out_of_plan": {
     "value": "Out of plan limit"
@@ -47548,6 +47548,9 @@
   },
   "chat.body.brain_unavailable_plan_owner": {
     "value": "{{brain}} would think with a plan that isn't my owner's, so I won't use it. Connect my owner's account on my page."
+  },
+  "chat.body.brain_unavailable_shared_login": {
+    "value": "My computer can't run Claude's sign-in for all agents right now. I'll answer once it can; if it keeps failing, connect Claude again in AI accounts."
   },
   "chat.body.provider_unavailable": {
     "value": "My AI provider isn't answering right now. I'll answer as soon as it's back."

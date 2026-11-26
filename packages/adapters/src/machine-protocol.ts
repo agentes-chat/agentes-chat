@@ -49,6 +49,13 @@ export const BRIDGE_PROTOCOL = 8;
 export const RUN_TOOL_TOKEN_PREFIX = "agr_";
 export const isRunToolToken = (v: unknown): v is string =>
   typeof v === "string" && v.length <= 100 && /^agr_[A-Za-z0-9_-]{20,96}$/.test(v);
+/** How the runner's refusals of a turn on Claude's own login for all agents begin (older runners end them otherwise). */
+export const SHARED_LOGIN_REFUSED = "This computer can't run this Claude sign-in";
+/** The runner's refusal while that login's switch is off on the computer or its self-check fails. */
+export const SHARED_LOGIN_OFF = `${SHARED_LOGIN_REFUSED} right now. Try again later, or remove it in AI accounts and connect Claude again.`;
+/** A computer brain's error that is such a refusal: the computer is online, its shared Claude login is what can't run. */
+export const sharedLoginRefused = (code: string, message: string) =>
+  code === "unsupported" && message.startsWith(SHARED_LOGIN_REFUSED);
 /**
  * From this protocol on, the runner runs conversational brain turns
  * (`brain.turn`, ADR 0032): Claude Code thinks for an agent on the machine,

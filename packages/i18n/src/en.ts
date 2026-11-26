@@ -3155,8 +3155,9 @@ export const en = {
     failed_other: "{{names}} couldn't answer",
     asking_one: "{{names}} is waiting for an answer",
     asking_other: "{{names}} are waiting for an answer",
-    outage_one: "{{names}}: the AI provider is down · retries by itself",
-    outage_other: "{{names}}: the AI provider is down · retries by itself",
+    /** Parked on an outage: its provider down, or its computer's AI refusing while the computer is online. */
+    outage_one: "{{names}}: the AI isn't answering · retries by itself",
+    outage_other: "{{names}}: the AI isn't answering · retries by itself",
     queued_one: "{{names}} is in line",
     queued_other: "{{names}} are in line",
     away_one: "{{names}} is waiting for the computer",
@@ -3178,7 +3179,7 @@ export const en = {
       claimed: "Answering",
       waiting: "Waiting for approval",
       asking: "Waiting for an answer",
-      outage: "The AI provider is down · retries by itself",
+      outage: "The AI isn't answering · retries by itself",
       queued: "In line",
       away: "Waiting for the computer",
       plan: "Waiting on the plan",
@@ -4836,7 +4837,7 @@ export const en = {
       queued_computer: "In line",
       waiting_plan: "Waiting on the plan",
       waiting_budget: "Waiting for the budget to reset",
-      provider_down: "The AI provider is down · retries by itself",
+      provider_down: "The AI isn't answering · retries by itself",
       out_of_plan: "Out of plan limit",
       out_of_budget: "Monthly budget spent",
       /** The members column's one line ("Out of limit · back at 1:00 AM"). */
@@ -20034,6 +20035,9 @@ export const en = {
         "The program on my computer needs an update before {{brain}} can answer. I'll answer once it's updated.",
       brain_unavailable_plan_owner:
         "{{brain}} would think with a plan that isn't my owner's, so I won't use it. Connect my owner's account on my page.",
+      /** The computer is online, but Claude's sign-in for all agents can't run there (its switch off, its self-check failing). */
+      brain_unavailable_shared_login:
+        "My computer can't run Claude's sign-in for all agents right now. I'll answer once it can; if it keeps failing, connect Claude again in AI accounts.",
       provider_unavailable: "My AI provider isn't answering right now. I'll answer as soon as it's back.",
       provider_wait_rate_limit:
         "{{provider}} is limiting requests on this key right now. I'll answer as soon as it lets me.",

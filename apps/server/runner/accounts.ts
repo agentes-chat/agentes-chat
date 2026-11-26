@@ -40,6 +40,7 @@ import {
   providerOrgIdOf,
   providerOrgNameOf,
   type RunnerAccountInfo,
+  SHARED_LOGIN_REFUSED,
   TOKEN_RECHECK_MS,
   type WireSecretBox,
 } from "@agenteschat/adapters/machine-protocol";
@@ -1756,7 +1757,7 @@ export class AccountManager {
   /** The Claude CLI as the sign-in's own user, with the runner's proxies as root's own CLIs have them. */
   private sharedCli(id: string): { command: string[]; env: NodeJS.ProcessEnv; cwd: string } {
     const l = this.opts.sharedLogin?.launcher(id);
-    if (!l) throw new RunnerError("unsupported", "This computer can't run this Claude sign-in");
+    if (!l) throw new RunnerError("unsupported", SHARED_LOGIN_REFUSED);
     const env: NodeJS.ProcessEnv = { ...l.env };
     for (const k of NETWORK_ENV) if (process.env[k]) env[k] = process.env[k];
     return { command: this.sharedCommand(l.prefix), env, cwd: l.home };
